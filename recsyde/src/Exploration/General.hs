@@ -17,7 +17,7 @@ symmetricSets :: (Symmetric a) => [a] -> [[a]]
 symmetricSets [] = []
 symmetricSets [a] = [[a]]
 symmetricSets (a:as) = let
-  equivalents = a:[a' | a' <- as, symmetrion a' == symmetrion a]
+  equivalents = a:[a' | a' <- as, (symmetrion a') == (symmetrion a)]
   nonequiv = [a' | a' <- as, symmetrion a' /= symmetrion a]
   in
   equivalents : symmetricSets nonequiv

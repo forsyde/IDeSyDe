@@ -1,7 +1,7 @@
 module Exploration.General where
 
 class Symmetric a where
-  symmetrion :: (Eq b) => a -> b
+  symme :: (Eq b) => a -> b
 
 class Valued a where
   value :: (Ord v) => a -> v
@@ -17,8 +17,8 @@ symmetricSets :: (Symmetric a) => [a] -> [[a]]
 symmetricSets [] = []
 symmetricSets [a] = [[a]]
 symmetricSets (a:as) = let
-  equivalents = a:[a' | a' <- as, (symmetrion a') == (symmetrion a)]
-  nonequiv = [a' | a' <- as, symmetrion a' /= symmetrion a]
+  equivalents = a : [a' | a' <- as, symme a' == symme a]
+  nonequiv = [a' | a' <- as, symme a' /= symme a]
   in
   equivalents : symmetricSets nonequiv
 

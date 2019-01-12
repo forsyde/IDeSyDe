@@ -1,7 +1,9 @@
 module Exploration.General where
 
 class Symmetric a where
-  symme :: (Eq b) => a -> b
+  (~=~) :: a -> a -> Bool
+  (~/~) :: a -> a -> Bool
+  (~/~) a a' = not $ a ~=~ a'
 
 class Valued a where
   value :: (Ord v) => a -> v
@@ -17,10 +19,19 @@ symmetricSets :: (Symmetric a) => [a] -> [[a]]
 symmetricSets [] = []
 symmetricSets [a] = [[a]]
 symmetricSets (a:as) = let
-  equivalents = a : [a' | a' <- as, symme a' == symme a]
-  nonequiv = [a' | a' <- as, symme a' /= symme a]
+  equivalents = a : [a' | a' <- as, a' ~=~ a]
+  nonequiv = [a' | a' <- as, a' ~/~ a]
   in
   equivalents : symmetricSets nonequiv
+
+symmetricPairSets :: (Symmetric a) => [(x, a)] -> [[(x, a)]]
+symmetricPairSets [] = []
+symmetricPairSets [(x, a)] = [[(x, a)]]
+symmetricPairSets ((x, a):xas) = let
+  equivalents = (x, a) : [(x', a') | (x', a') <- xas, a' ~=~ a]
+  nonequiv = [(x', a') | (x', a') <- xas, a' ~/~ a]
+  in
+  equivalents : symmetricPairSets nonequiv
 
 searchGoal :: (Symmetric a, Valued a) =>
   [(a -> x -> [a])] -> [([x], a)] -> [([x], a)]
@@ -31,7 +42,7 @@ searchGoal rs j_k
   | otherwise = searchGoal rs j_kp
   where
   s_kp = concat [(xs, a') | r <- rs, (x:xs, a) <- j_k, a' <- r a x]
-  j_kp = map minBy . (\(xs,a) -> value a) $ symmetricSets s_kp
+  j_kp = map minBy . (\(xs,a) -> value a) $ symmetricPairSets s_kp
     
   
 

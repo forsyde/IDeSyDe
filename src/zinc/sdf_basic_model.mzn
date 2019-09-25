@@ -69,24 +69,24 @@ constraint forall(a1 in sdf_actors, a2 in sdf_actors where a1 != a2)
  next[a1] = a2 <-> completion_time[a1] < completion_time[a2]
 );
 
-constraint forall(an in sdf_actors)
-(
- completion_time[an] >= max(a in sdf_actors where mapping[a] = mapping[an]) (completion_time[a] + sdf_actor_wcet[a, mapping[a]])
-);
+% constraint forall(an in sdf_actors)
+% (
+%  completion_time[an] >= max(a in sdf_actors where mapping[a] = mapping[an]) (completion_time[a] + sdf_actor_wcet[a, mapping[a]])
+% );
 
 
-% the time for the next completion time is always greater
-constraint forall(an in sdf_actors)
-(
- completion_time[an] >= max(a in sdf_actors where next[a] = an)
- (completion_time[a] + sdf_actor_wcet[a, mapping[a]] + sdf_channel_wcct[mapping[a], mapping[an]])
-);
+% % the time for the next completion time is always greater
+% constraint forall(an in sdf_actors)
+% (
+%  completion_time[an] >= max(a in sdf_actors where next[a] = an)
+%  (completion_time[a] + sdf_actor_wcet[a, mapping[a]] + sdf_channel_wcct[mapping[a], mapping[an]])
+% );
 
 % define the local throughput of each PE
 % constraint forall(pe in processing_elems)
 % (
 %  local_throughput[pe] = max(actor in sdf_actors where mapping[actor] = pe) (completion_time[actor])
-%  - min(actor in sdf_actors where mapping[actor] = pe) (completion_time[actor] - sdf_actor_wcet[actor, mapping[actor]])
+%  - min(actor in sdf_acstors where mapping[actor] = pe) (completion_time[actor] - sdf_actor_wcet[actor, mapping[actor]])
 % );
 
 % define the global throughput

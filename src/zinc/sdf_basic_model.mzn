@@ -38,6 +38,11 @@ constraint forall(actor in sdf_actors)
  completion_time[actor] >= 0
 );
 
+constraint forall(pe in processing_elems)
+(
+  local_throughput[pe] >= 0;
+);
+
 % the tokens cannot be negative
 constraint forall(step in sdf_steps, channel in sdf_channels)
 (
@@ -78,11 +83,11 @@ constraint forall(an in sdf_actors)
 );
 
 % define the local throughput of each PE
-% constraint forall(pe in processing_elems)
-% (
-%  local_throughput[pe] = max(actor in sdf_actors where mapping[actor] = pe) (completion_time[actor])
-%  - min(actor in sdf_actors where mapping[actor] = pe) (completion_time[actor] - sdf_actor_wcet[actor, mapping[actor]])
-% );
+constraint forall(pe in processing_elems)
+(
+ local_throughput[pe] = max(actor in sdf_actors where mapping[actor] = pe) (completion_time[actor])
+ - min(actor in sdf_actors where mapping[actor] = pe) (completion_time[actor] - sdf_actor_wcet[actor, mapping[actor]])
+);
 
 % define the global throughput
 constraint global_throughput = max(local_throughput);

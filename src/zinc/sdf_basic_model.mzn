@@ -4,7 +4,6 @@ set of int: sdf_actors; % this assumes that the sdf actors are flattened, i.r. 1
 int: REPEAT = max(sdf_actors)+1;
 set of int: sdf_actors_repeat = 1..REPEAT; 
 set of int: sdf_steps = 1..max(sdf_actors); % buffers AFTER firing each actor
-set of int: sdf_steps_zero = 0..max(sdf_actors); % buffers AFTER firing each actor
 set of int: sdf_channels;
 set of int: processing_elems;
 array[sdf_channels] of int: initial_tokens;
@@ -20,7 +19,7 @@ array[sdf_actors] of var sdf_actors_repeat: next;
 %% dependent variables that help in the decision making
 % we can limit each guy by the rep. vector later
 array[sdf_actors_repeat] of var 0..max(sdf_actors): indegree;
-array[sdf_steps_zero, sdf_channels] of var int: tokens;
+array[sdf_steps, sdf_channels] of var int: tokens;
 array[sdf_actors] of var int: completion_time;
 array[sdf_actors] of var sdf_steps: steps;
 
@@ -59,23 +58,34 @@ constraint forall(pe in processing_elems) (local_throughput[pe] >= 0);
 constraint forall(step in sdf_steps, channel in sdf_channels) (tokens[step, channel] >= 0);
 
 % step and time bijection
-% constraint forall(a1 in sdf_actors, a2 in sdf_actors)
-% (
-%   completion_time[a1] <= completion_time[a2] <-> steps[a1] <= steps[a2]
-% );
+constraint forall(a1 in sdf_actors, a2 in sdf_actors)
+(
+  completion_time[a1] <= completion_time[a2] <-> steps[a1] <= steps[a2]
+);
 
 % from the moc perspective, the next paramters gives away from the buffers evolves
-constraint tokens[0, ..] = initial_tokens;
-% constraint forall(step in sdf_steps, channel in sdf_channels)
-% (
-%  tokens[step, channel] = tokens[step-1, channel] + 
-%   sum(a in sdf_actors where steps[a] = step) (sdf_topology[a, channel])
-% );
-
-constraint forall(a1 in sdf_actors, a2 in sdf_actors where a1 != a2)
+constraint tokens[1, ..] = initial_tokens;
+constraint forall(step in 1..max(sdf_actors)-1, channel in sdf_channels)
 (
- next[a1] = a2 <-> completion_time[a1] < completion_time[a2]
+ tokens[step+1, channel] = tokens[step, channel] + 
+  sum(a in sdf_actors where steps[a] = step) (sdf_topology[a, channel])
 );
+constraint forall(c in sdf_channels)
+(
+ tokens[1, c] = tokens[max(sdf_actors), c] + 
+ sum(a in sdf_actors where steps[a] = max(sdf_actors)) (sdf_topology[a, c])
+);
+
+constraint forall(a in sdf_actors, k in 1..max(sdf_actors))
+(
+ sum(c in sdf_channels) (tokens[k, c] + sdf_topology[a, c] < 0) > 0 -> steps[a] != k
+);
+ 
+
+% constraint forall(a1 in sdf_actors, a2 in sdf_actors where a1 != a2)
+% (
+%  next[a1] = a2 <-> completion_time[a1] < completion_time[a2]
+% );
 
 % constraint forall(an in sdf_actors)
 % (
@@ -85,7 +95,7 @@ constraint forall(a1 in sdf_actors, a2 in sdf_actors where a1 != a2)
 % the time for the next completion time is always greater
 constraint forall(an in sdf_actors)
 (
- completion_time[an] >= sdf_actor_wcet[an, mapping[an]] + max(a in sdf_actors where next[a] = an)
+ completion_time[an] = sdf_actor_wcet[an, mapping[an]] + max(a in sdf_actors where next[a] = an)
   (completion_time[a] + sdf_channel_wcct[mapping[a], mapping[an]])
 );
 
@@ -104,6 +114,9 @@ solve :: seq_search([
           int_search(next, input_order, indomain_min)
           ]) satisfy;
 
-% output [show(mapping), "\n",
-% 	show(next), "\n",
-% 	show(indegree)];
+output [show(mapping), "\n",
+	show(next), "\n",
+	show(completion_time), "\n",
+	show(steps), "\n",
+	show2d(tokens), "\n",
+	show(indegree)];

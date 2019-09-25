@@ -85,8 +85,8 @@ constraint forall(a1 in sdf_actors, a2 in sdf_actors where a1 != a2)
 % the time for the next completion time is always greater
 constraint forall(an in sdf_actors)
 (
- completion_time[an] >= max(a in sdf_actors where next[a] = an)
-  (completion_time[a] + sdf_actor_wcet[an, mapping[an]] + sdf_channel_wcct[mapping[a], mapping[an]])
+ completion_time[an] >= sdf_actor_wcet[an, mapping[an]] + max(a in sdf_actors where next[a] = an)
+  (completion_time[a] + sdf_channel_wcct[mapping[a], mapping[an]])
 );
 
 % define the local throughput of each PE

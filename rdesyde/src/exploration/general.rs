@@ -40,6 +40,7 @@ pub fn greedy_backtracking_exploration<X, C: Valued + Symmetric>(
     initial_configuration: C
     ) -> Option<C>
 {
+    let mut ranks = vec![]
     let mut open = vec![(decisions, initial_configuration)];
     let mut best = initial_configuration;
     while let Some((xs, c)) = open.pop() {

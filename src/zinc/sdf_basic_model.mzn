@@ -1,9 +1,12 @@
 include "globals.mzn";
 
+enum event_type = {FIRE, COMPLETE};
 set of int: sdf_actors; % this assumes that the sdf actors are flattened, i.r. 1,1,1,1,2,2,3,3,3... knowing the rep. vector.
+int: n_sdf_actors = max(sdf_actors);
 int: REPEAT = max(sdf_actors)+1;
 set of int: sdf_actors_repeat = 1..REPEAT; 
-set of int: sdf_steps = 1..max(sdf_actors); % buffers AFTER firing each actor
+set of int: sdf_events = 1..max(sdf_actors); % buffers AFTER firing each actor
+set of int: sdf_events_repeat = 1..REPEAT;
 set of int: sdf_channels;
 set of int: processing_elems;
 array[sdf_channels] of int: initial_tokens;
@@ -19,9 +22,10 @@ array[sdf_actors] of var sdf_actors_repeat: next;
 %% dependent variables that help in the decision making
 % we can limit each guy by the rep. vector later
 array[sdf_actors_repeat] of var 0..max(sdf_actors): indegree;
-array[sdf_steps, sdf_channels] of var int: tokens;
-array[sdf_actors] of var int: completion_time;
-array[sdf_actors] of var sdf_steps: steps;
+array[sdf_events_repeat, sdf_channels, event_type] of var int: tokens;
+array[sdf_events, event_type] of var int: tag;
+array[sdf_events, event_type] of var sdf_actors: events;
+
 
 %% dependent metrics
 array[processing_elems] of var int: local_throughput;
@@ -43,68 +47,69 @@ constraint forall(a in sdf_actors, b in sdf_actors_repeat where a != b)
   next[a] = b <-> indegree[a] < indegree[b]
 );
 
-constraint forall(pe in processing_elems, a1 in sdf_actors, a2 in sdf_actors where a1 != a2)
+constraint forall(a in sdf_actors)
+(
+ tag[a, COMPLETE] >= tag[a, FIRE] - sdf_actor_wcet[a, mapping[a]]
+);
+
+constraint forall(pe in processing_elems, a1, a2 in sdf_actors where a1 != a2)
 (
  % all_different([next[a] | a in sdf_actors where mapping[a] = pe])
  mapping[a1] = mapping[a2] -> next[a1] != next[a2]
 );
 
 %timing only positive
-constraint forall(actor in sdf_actors) (completion_time[actor] >= 0);
+constraint forall(actor in sdf_actors) (tag[actor, FIRE] >= 0);
+
+constraint forall(actor in sdf_actors) (tag[actor, COMPLETE] >= 0);
 
 constraint forall(pe in processing_elems) (local_throughput[pe] >= 0);
 
 % the tokens cannot be negative
-constraint forall(step in sdf_steps, channel in sdf_channels) (tokens[step, channel] >= 0);
+constraint forall(event in sdf_events_repeat, channel in sdf_channels) (tokens[event, channel, FIRE] >= 0);
 
-% step and time bijection
-constraint forall(a1 in sdf_actors, a2 in sdf_actors)
+constraint forall(event in sdf_events_repeat, channel in sdf_channels) (tokens[event, channel, COMPLETE] >= 0);
+
+% event and time bijection
+constraint forall(a1, a2 in sdf_actors, et1, et2 in event_type)
 (
-  completion_time[a1] <= completion_time[a2] <-> steps[a1] <= steps[a2]
+  tag[a1, et1] <= tag[a2, et2] <-> events[a1, et1] <= events[a2, et2]
 );
+
 
 % from the moc perspective, the next paramters gives away from the buffers evolves
-constraint tokens[1, ..] = initial_tokens;
-constraint forall(step in 1..max(sdf_actors)-1, channel in sdf_channels)
-(
- tokens[step+1, channel] = tokens[step, channel] + 
-  sum(a in sdf_actors where steps[a] = step) (sdf_topology[a, channel])
-);
-constraint forall(c in sdf_channels)
-(
- tokens[1, c] = tokens[max(sdf_actors), c] + 
- sum(a in sdf_actors where steps[a] = max(sdf_actors)) (sdf_topology[a, c])
-);
-
-constraint forall(a in sdf_actors, k in 1..max(sdf_actors))
-(
- sum(c in sdf_channels) (tokens[k, c] + sdf_topology[a, c] < 0) > 0 -> steps[a] != k
-);
- 
-
-% constraint forall(a1 in sdf_actors, a2 in sdf_actors where a1 != a2)
+constraint tokens[1, .., COMPLETE] = initial_tokens;
+% constraint forall(event in sdf_events, channel in sdf_channels)
 % (
-%  next[a1] = a2 <-> completion_time[a1] < completion_time[a2]
+%  tokens[event+1, channel] = tokens[event, channel] + 
+%   sum(a in sdf_actors where events[a] = event) (sdf_topology[a, channel])
+% );
+constraint tokens[REPEAT, .., COMPLETE] = initial_tokens;
+
+
+% constraint forall(a in sdf_actors, k in sdf_events, c in sdf_channels)
+% (
+%   events[a] = k -> (tokens[k, c] + sdf_topology[a, c] >= 0)
 % );
 
 % constraint forall(an in sdf_actors)
 % (
-%  completion_time[an] >= max(a in sdf_actors where next[a] = an /\ mapping[a] = mapping[an]) (completion_time[a] + sdf_actor_wcet[a, mapping[a]])
+%  start_time[an] >= max(a in sdf_actors where next[a] = an /\ mapping[a] = mapping[an]) (start_time[a] + sdf_actor_wcet[a, mapping[a]])
 % );
 
 % the time for the next completion time is always greater
-constraint forall(an in sdf_actors)
-(
- completion_time[an] = sdf_actor_wcet[an, mapping[an]] + max(a in sdf_actors where next[a] = an)
-  (completion_time[a] + sdf_channel_wcct[mapping[a], mapping[an]])
-);
+% constraint forall(an in sdf_actors)
+% (
+%  start_time[an] >= max(a in sdf_actors where next[a] = an)
+%   (completion_time[a] + sdf_channel_wcct[mapping[a], mapping[an]])
+% );
 
 % define the local throughput of each PE
-constraint forall(pe in processing_elems)
-(
- local_throughput[pe] = max(actor in sdf_actors where mapping[actor] = pe) (completion_time[actor])
- - min(actor in sdf_actors where mapping[actor] = pe) (completion_time[actor] - sdf_actor_wcet[actor, mapping[actor]])
-);
+% constraint forall(pe in processing_elems)
+% (
+%  local_throughput[pe] = max(actor in sdf_actors where mapping[actor] = pe) (completion_time[actor])
+%  - min(actor in sdf_actors where mapping[actor] = pe) (start_time[actor])
+% );
 
 % define the global throughput
 constraint global_throughput = max(local_throughput);
@@ -114,9 +119,9 @@ solve :: seq_search([
           int_search(next, input_order, indomain_min)
           ]) satisfy;
 
-output [show(mapping), "\n",
-	show(next), "\n",
-	show(completion_time), "\n",
-	show(steps), "\n",
-	show2d(tokens), "\n",
-	show(indegree)];
+output ["mapping: ", show(mapping), "\n",
+	"next: ", show(next), "\n",
+	"tag: ", show2d(tag), "\n",
+	"events: ", show2d(events), "\n",
+	"tokens: ", show3d(tokens), "\n",
+	"indegree: ", show(indegree)];

@@ -31,6 +31,7 @@ array[sdf_actors, sdf_actors] of var bool: next;
 %% dependent metrics
 array[processing_elems] of var int: local_throughput;
 var int: global_throughput;
+var int: global_latency;
 
 constraint forall(a, b in sdf_actors, c in sdf_channels) (
   flow[a, b, c] >= 0
@@ -49,11 +50,11 @@ constraint forall(a, b in sdf_actors) (
 );
 
 constraint forall(a, b, c in sdf_actors where a != b /\ b != c) (
-  mapping[a] = mapping[b] /\ mapping[a] = mapping[c] ->
+  mapping[b] = mapping[c] ->
     next[a, b] xor next[a, c]
 );
 
-% constraint at_least(1, rank, 1);
+constraint at_least(1, rank, 1);
 
 % constraint forall(c in sdf_channels) (
 %   sum(a in sdf_actors where rank[a] = 1) (
@@ -77,7 +78,9 @@ constraint forall(a in sdf_actors where rank[a] = 1) (
 );
 
 constraint forall(aprev, a in sdf_actors where aprev < SINK /\ SOURCE < a) (
-   next[aprev, a] -> tag[aprev] + sdf_actor_wcet[aprev, mapping[aprev]] <= tag[a]
+   next[aprev, a] -> tag[aprev] + sdf_actor_wcet[aprev, mapping[aprev]] + 
+     sdf_channel_wcct[mapping[aprev], mapping[a]]
+   <= tag[a]
 );
 
 % constraint tag[SINK] = max(a in sdf_actors where next[a, SINK]) (tag[a]);
@@ -99,15 +102,24 @@ constraint cumulative(tag,
 
 constraint forall(pe in processing_elems) (local_throughput[pe] >= 0);
 
+constraint forall(pe in processing_elems) (
+  local_throughput[pe] = max(a in sdf_actors where mapping[a] = pe) (tag[a] + sdf_actor_wcet[a, mapping[a]]) - 
+    min(a in sdf_actors where mapping[a] = pe) (tag[a])
+);
+
 % define the global throughput
 constraint global_throughput = max(local_throughput);
 
+constraint global_latency = max(a in sdf_actors) (tag[a] + sdf_actor_wcet[a, mapping[a]]);
+
 solve :: seq_search([
           int_search(mapping, input_order, indomain_min)
-          ]) minimize global_throughput;
+          ]) minimize global_throughput * global_latency;
 
 output ["mapping: ", show(mapping), "\n",
 	"flow: ", show3d(flow), "\n",
-% 	"next: ", show2d(next), "\n",
+	"next: ", show2d(next), "\n",
 	"tag: ", show(tag), "\n",
-	"rank: ", show(rank), "\n"];
+	"rank: ", show(rank), "\n",
+	"Throughput: ", show(global_throughput), "\n",
+	"Latency: ", show(global_latency), "\n"];

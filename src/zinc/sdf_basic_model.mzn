@@ -1,11 +1,16 @@
 include "globals.mzn";
 
 set of int: sdf_actors; % this assumes that the sdf actors are flattened, i.r. 1,1,1,1,2,2,3,3,3... knowing the rep. vector.
-int: n_sdf_actors = max(sdf_actors);
-int: SINK = max(sdf_actors)+1;
-int: SOURCE = 0;
 set of int: sdf_channels;
 set of int: processing_elems;
+
+set of int: steps = 1..n_sdf_actors;
+
+int: n_sdf_actors = max(sdf_actors);
+int: n_processing_elems = max(processing_elems);
+int: SOURCE = 0;
+int: SINK = n_sdf_actors+1;
+
 array[sdf_channels] of int: initial_tokens;
 array[sdf_actors, processing_elems] of int: sdf_actor_wcet;
 array[sdf_actors, sdf_channels] of int: sdf_topology;
@@ -14,59 +19,83 @@ array[processing_elems, processing_elems] of int: sdf_channel_wcct;
 %% true decision variables
 % using the maximum for simplicty, maybe we can change it later
 array[sdf_actors] of var processing_elems: mapping;
-array[SOURCE..SINK, SOURCE..SINK] of var bool: next;
+array[sdf_actors, sdf_actors, sdf_channels] of var int: flow;
 
 %% dependent variables that help in the decision making
 % we can limit each guy by the rep. vector later
 % array[sdf_actors_repeat] of var 0..max(sdf_actors): indegree;
-array[SOURCE..SINK, sdf_channels] of var int: tokens;
-array[SOURCE..SINK] of var 0..sum(sdf_topology): tag;
+array[sdf_actors] of var 1..n_sdf_actors: rank;
+array[sdf_actors] of var 0..sum(sdf_actor_wcet): tag;
+array[sdf_actors, sdf_actors] of var bool: next;
 
 %% dependent metrics
 array[processing_elems] of var int: local_throughput;
 var int: global_throughput;
 
-constraint forall(a in SOURCE..SINK) (next[a, a] = false);
-
-constraint forall(a in SOURCE..SINK) (next[a, SOURCE] = false);
-
-constraint forall(a in SOURCE..SINK) (next[SINK, a] = false);
-
-constraint next[SOURCE, SINK] = false;
-
-% token flow
-constraint tokens[SOURCE, ..] = initial_tokens;
-
-constraint tokens[SINK, ..] = initial_tokens;
-
-constraint forall(a in sdf_actors, c in sdf_channels) (
-  tokens[a, c] = sum(a_prev in SOURCE..n_sdf_actors where next[a_prev, a]) (tokens[a_prev, c]) +
-    sdf_topology[a, c]
-);
-
-constraint forall(c in sdf_channels) (
-  tokens[SINK, c] = sum(a_prev in SOURCE..n_sdf_actors where next[a_prev, SINK]) (tokens[a_prev, c])
+constraint forall(a, b in sdf_actors, c in sdf_channels) (
+  flow[a, b, c] >= 0
 );
 
 constraint forall(a in sdf_actors, c in sdf_channels) (
-  tokens[a, c] > 0
+  flow[a, a, c] = 0
 );
 
-% forking on different PEs if are next
-% constraint forall(a1 in SOURCE..n_sdf_actors, a2, a3 in sdf_actors) (
-%   next[a1, a2] /\ next[a1, a3] <-> mapping[a2] != mapping[a3]
+constraint forall(a, b in sdf_actors) (
+  sum(c in sdf_channels) (flow[a, b, c]) > 0 -> rank[a] < rank[b]
+);
+
+constraint forall(a, b in sdf_actors) (
+  sum(c in sdf_channels) (flow[a, b, c]) > 0 -> next[a, b] = true
+);
+
+constraint forall(a, b, c in sdf_actors where a != b /\ b != c) (
+  mapping[a] = mapping[b] /\ mapping[a] = mapping[c] ->
+    next[a, b] xor next[a, c]
+);
+
+% constraint at_least(1, rank, 1);
+
+% constraint forall(c in sdf_channels) (
+%   sum(a in sdf_actors where rank[a] = 1) (
+%     sum(b in sdf_actors where b != a) (flow[a, b, c]) - sdf_topology[a, c]
+%   )
+%   =
+%   initial_tokens[c]
 % );
 
-%everyone must be executed at least once
-constraint forall(a in sdf_actors) (
- sum(b in 1..SINK) (next[a, b]) > 0
+constraint forall(a in sdf_actors, c in sdf_channels) (
+  sum(aprev in sdf_actors where a != aprev) (flow[aprev, a, c]) + sdf_topology[a, c] =
+  sum(anext in sdf_actors where a != anext) (flow[a, anext, c])
 );
 
-% the source must hae at least one output
-constraint sum(a in sdf_actors) (next[SOURCE, a]) > 0;
+constraint forall(a, b in sdf_actors, c in sdf_channels) (
+  sdf_topology[a, c] = 0 -> flow[a, b, c] = 0
+);
 
-% at least one actor finishes at sink
-constraint sum(a in sdf_actors) (next[a, SINK]) > 0;
+constraint forall(a in sdf_actors where rank[a] = 1) (
+  tag[a] = 0
+);
+
+constraint forall(aprev, a in sdf_actors where aprev < SINK /\ SOURCE < a) (
+   next[aprev, a] -> tag[aprev] + sdf_actor_wcet[aprev, mapping[aprev]] <= tag[a]
+);
+
+% constraint tag[SINK] = max(a in sdf_actors where next[a, SINK]) (tag[a]);
+
+constraint forall(a, b in sdf_actors where a != b) (
+  mapping[a] = mapping[b] -> 
+    tag[a] + sdf_actor_wcet[a, mapping[a]] <= tag[b] \/
+    tag[b] + sdf_actor_wcet[b, mapping[b]] <= tag[a]    
+);
+
+constraint forall(a, b in sdf_actors where a != b) (
+  mapping[a] = mapping[b] -> rank[a] != rank[b]
+);
+
+constraint cumulative(tag, 
+                      [sdf_actor_wcet[a, mapping[a]] | a in sdf_actors],
+                      [1 | a in sdf_actors],
+                      n_processing_elems);
 
 constraint forall(pe in processing_elems) (local_throughput[pe] >= 0);
 
@@ -74,12 +103,11 @@ constraint forall(pe in processing_elems) (local_throughput[pe] >= 0);
 constraint global_throughput = max(local_throughput);
 
 solve :: seq_search([
-          int_search(mapping, input_order, indomain_min),
-          int_search(next, input_order, indomain_min),
-          int_search(tokens, first_fail, indomain_min)
-          ]) satisfy;
+          int_search(mapping, input_order, indomain_min)
+          ]) minimize global_throughput;
 
 output ["mapping: ", show(mapping), "\n",
-	"next: ", show2d(next), "\n",
+	"flow: ", show3d(flow), "\n",
+% 	"next: ", show2d(next), "\n",
 	"tag: ", show(tag), "\n",
-	"tokens: ", show2d(tokens)];
+	"rank: ", show(rank), "\n"];

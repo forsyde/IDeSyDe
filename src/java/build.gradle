@@ -13,6 +13,7 @@ plugins {
 	// Apply the application plugin to add support for building an application
 	id 'application'
 	id 'eclipse'
+	id 'idea'
 }
 
 // In this section you declare where to find the dependencies of your project
@@ -40,8 +41,9 @@ dependencies {
 	// annotationProcessor 'info.picocli:picocli-codegen:4.0.4'
 	
 	implementation 'app4mc:org.eclipse.app4mc.amalthea.model:0.9.6:201910311059'
-	// implementation 'app4mc:content:0.9.6'
 
+    implementation 'javax.json:javax.json-api:1.1'
+    implementation 'org.glassfish:javax.json:1.1'
 
 	// Use JUnit test framework
 	testImplementation 'junit:junit:4.12'

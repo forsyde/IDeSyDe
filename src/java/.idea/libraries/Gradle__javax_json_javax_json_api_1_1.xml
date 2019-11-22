@@ -1,0 +1,11 @@
+<component name="libraryTable">
+  <library name="Gradle: javax.json:javax.json-api:1.1">
+    <CLASSES>
+      <root url="jar://$USER_HOME$/.gradle/caches/modules-2/files-2.1/javax.json/javax.json-api/1.1/e708aaf715872f220cc932fd4350189559628c66/javax.json-api-1.1.jar!/" />
+    </CLASSES>
+    <JAVADOC />
+    <SOURCES>
+      <root url="jar://$USER_HOME$/.gradle/caches/modules-2/files-2.1/javax.json/javax.json-api/1.1/231556566049a9604b28ea9660f8dcfe97c864ba/javax.json-api-1.1-sources.jar!/" />
+    </SOURCES>
+  </library>
+</component>

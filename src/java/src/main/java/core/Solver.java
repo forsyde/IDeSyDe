@@ -11,8 +11,8 @@ import java.util.Optional;
  */
 public interface Solver {
   
-	public Optional<DecisionSet> solve(DecisionSet dset);
+	Optional<DecisionSet> solve(DecisionSet dset);
 	
-	public boolean solvable(DecisionSet dset);
+	boolean solvable(DecisionSet dset);
 	
 }

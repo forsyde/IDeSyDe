@@ -1,6 +1,7 @@
 import java.io.File;
 import java.util.concurrent.Callable;
 
+import io.InputFileTransformer;
 import picocli.CommandLine;
 import picocli.CommandLine.Command;
 import picocli.CommandLine.Option;
@@ -32,6 +33,9 @@ public class DeSyDeCLI implements Callable<Integer> {
 		if (inputFiles == null || inputFiles.length < 2) {
 			System.out.println("At least two files are required: ForSyDe System Models and Hardware Description Models.");
 			System.out.println((inputFiles == null ? 0 : inputFiles.length) + " files were supplied.");
+		} else {
+			InputFileTransformer inputFileTransformer = new InputFileTransformer(inputFiles);
+			inputFileTransformer.getForSyDeDescription();
 		}
 		return 0;
 	}

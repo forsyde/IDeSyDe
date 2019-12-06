@@ -5,8 +5,10 @@ package forsyde.model;
 import java.util.*;
 import com.fasterxml.jackson.annotation.*;
 
+@JsonIdentityInfo(generator = ObjectIdGenerators.PropertyGenerator.class, property = "id")
 public class Process {
     private ProcessConstructor constructor;
+    private String id;
     private Map<String, Signal> inputSignals;
     private Map<String, Signal> internalSignals;
     private Map<String, Signal> outputSignals;
@@ -16,6 +18,11 @@ public class Process {
     public ProcessConstructor getConstructor() { return constructor; }
     @JsonProperty("constructor")
     public void setConstructor(ProcessConstructor value) { this.constructor = value; }
+
+    @JsonProperty("id")
+    public String getID() { return id; }
+    @JsonProperty("id")
+    public void setID(String value) { this.id = value; }
 
     @JsonProperty("inputSignals")
     public Map<String, Signal> getInputSignals() { return inputSignals; }

@@ -35,7 +35,7 @@ public class Converter {
 
     private static void instantiateMapper() {
         ObjectMapper mapper = new ObjectMapper();
-        reader = mapper.readerFor(ForSyDeDescription.class);
+        reader = mapper.reader(ForSyDeDescription.class);
         writer = mapper.writerFor(ForSyDeDescription.class);
     }
 

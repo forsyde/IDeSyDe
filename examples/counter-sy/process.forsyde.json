@@ -1,0 +1,82 @@
+{
+  "descriptionVersion": 1,
+  "id": "counterDescription",
+  "processes": {
+    "counterSY": {
+      "id": "counterSY",
+      "processes": {
+        "mapSY": {
+          "id": "mapSY_in",
+          "constructor": {
+            "name": "mapSY",
+            "parameters": {},
+            "functionArguments": {
+              "mapped": "bool2int"
+            }
+          },
+          "inputSignals": {
+            "map_in": "s_in"
+          },
+          "outputSignals": {
+            "map_out": "s_num"
+          }
+        },
+        "mooreSY": {
+          "id": "mooreSY",
+          "constructor": {
+            "name": "mooreSY",
+            "parameters": {},
+            "functionArguments": {
+              "next_state": "+",
+              "out_state": "identity"
+            },
+            "valueArguments": {
+              "initial_value": "0"
+            }
+          },
+          "inputSignals": {
+            "input": "s_num"
+          },
+          "outputSignals": {
+            "output": "s_out"
+          }
+        }
+      },
+      "internalSignals": {
+        "s_num": {
+          "id": "s_num",
+          "signalType": "Integer"
+        }
+      },
+      "inputSignals": {
+        "s_in": {
+          "id": "s_in",
+          "signalType": "Boolean"
+        }
+      },
+      "outputSignals": {
+        "s_out": {
+          "id": "s_out",
+          "signalType": "Integer"
+        }
+      }
+    }
+  },
+  "functions": {
+    "bool2int": {
+      "id": "bool2int",
+      "inputs": {"in": "Boolean"},
+      "outputs": {"out": "Integer"}
+    },
+    "+": {
+      "id": "+",
+      "inputs": {"l": "Integer", "r": "Integer"},
+      "outputs": {"result": "Integer"}
+    },
+    "identity": {
+      "id": "identity",
+      "inputs": {"in": "Integer"},
+      "outputs": {"out": "Integer"}
+    }
+  }
+}

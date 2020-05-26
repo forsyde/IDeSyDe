@@ -273,7 +273,6 @@ class Identifier:
         # for loop is necessary in favor of while because all rules
         # may fail
         for i in range(len(rules)):
-            print(identified)
             for rule in rules.copy():
                 problem = rule.execute(identified)
                 if problem:

@@ -1,10 +1,22 @@
 import copy
 
 from ForSyDe.Model.IO import ForSyDeIO
+from ForSyDe.Model.Common import Element
+from ForSyDe.Model.Common import Definition
 from ForSyDe.Model.Common import Graph
-from ForSyDe.Model.Application import Application, Process, Constructor, Function,\
-    Implementation
-from ForSyDe.Model.Platform import Platform, Computation, Communication, Storage
+from ForSyDe.Model.Common import Table
+from ForSyDe.Model.Common import TableEntry
+from ForSyDe.Model.Application import Application
+from ForSyDe.Model.Application import Process
+from ForSyDe.Model.Application import Constructor
+from ForSyDe.Model.Application import Function
+from ForSyDe.Model.Application import Implementation
+from ForSyDe.Model.Platform import Platform
+from ForSyDe.Model.Platform import Computation
+from ForSyDe.Model.Platform import Communication
+from ForSyDe.Model.Platform import Storage
+from ForSyDe.Model.Extra import Extra
+from ForSyDe.Model.Refinement import Refinement
 
 class ModelFlattener:
 
@@ -23,8 +35,7 @@ class ModelFlattener:
         app_copy.processNetlist = Graph()
         # copy the nodes deeply unless they are nested elements
         app_copy.processNetlist.nodes = [
-            copy.copy(n) if isinstance(n, Application) else \
-            copy.deepcopy(n) for n in application.processNetlist.nodes
+            n.copy() for n in application.processNetlist.nodes
         ]
         # scope the ids for the application elements
         for n in app_copy.processNetlist.nodes:
@@ -43,7 +54,7 @@ class ModelFlattener:
                 app_copy.implementations.append(n.definition)
         # simply copy all the edges
         app_copy.processNetlist.edges = [
-            copy.copy(e) for e in application.processNetlist.edges
+            e.copy() for e in application.processNetlist.edges
         ]
         # scope the edges ids and properly reference the newly created nodes in them
         for e in app_copy.processNetlist.edges:
@@ -69,8 +80,7 @@ class ModelFlattener:
         plat_copy.hwNetlist = Graph()
         # copy the nodes deeply unless they are nested elements
         plat_copy.hwNetlist.nodes = [
-            copy.copy(n) if isinstance(n, Platform) else \
-            copy.deepcopy(n) for n in platform.hwNetlist.nodes
+            n.copy() for n in platform.hwNetlist.nodes
         ]
         # scope the ids for the platform elements
         for n in plat_copy.hwNetlist.nodes:
@@ -86,7 +96,7 @@ class ModelFlattener:
             elif isinstance(n.definition, Storage):
                 plat_copy.storages.append(n.definition)
         plat_copy.hwNetlist.edges = [
-            copy.copy(e) for e in platform.hwNetlist.edges
+            e.copy() for e in platform.hwNetlist.edges
         ]
         # scope the edges ids and properly reference the newly created nodes in them
         for e in plat_copy.hwNetlist.edges:
@@ -118,18 +128,28 @@ class ModelFlattener:
         # save the suffixes to be used later for rescuing the copies
         suffixes = dict()
         for m in self.model.applications:
-            for i in range(count[m]):
-                # copy enough information as to not mess with the orignal model
-                plat_copy = self._copy_application(m, '--' + str(i))
-                suffixes[plat_copy] = '--' + str(i)
-                copies[m].add(plat_copy)
+            # copy enough information as to not mess with the original model
+            if count[m] > 1:
+                for i in range(count[m]):
+                    app_copy = self._copy_application(m, '--' + str(i))
+                    suffixes[app_copy] = '--' + str(i)
+                    copies[m].add(app_copy)
+            else:
+                app_copy = self._copy_application(m, '')
+                suffixes[app_copy] = ''
+                copies[m].add(app_copy)
         for m in copies:
             # reset imports for for the copies
             for p in copies[m]:
                 p.imported = []
             self.flattened.applications += list(copies[m])
-        # singleton elements can be safely removed
-        copies = {m : copies[m] for m in copies if len(copies[m]) > 1}
+        # if there are bindings to elements to be replicated, fail until something can be decided for it
+        for m in copies:
+            for n in m.processNetlist.nodes:
+                for e in self.model.refinement.bindingsGraph.edges:
+                    if (e.toNode == n or e.fromNode == n) and len(copies[m]) > 1:
+                        raise ValueError("{0} needs to be flattened but has bindings to it." +
+                                         " This is not semantically supported yet.".format(m))
         # idx stands for index
         copies_idx = {m.identifier : m for m in copies}
         # connect the nodes to the flattened definitions
@@ -180,18 +200,28 @@ class ModelFlattener:
         # save the suffixes to be used later for rescuing the copies
         suffixes = dict()
         for m in self.model.platforms:
-            for i in range(count[m]):
-                # copy enough information as to not mess with the orignal model
-                plat_copy = self._copy_platform(m, '--' + str(i))
-                suffixes[plat_copy] = '--' + str(i)
+            # copy enough information as to not mess with the original model
+            if count[m] > 1:
+                for i in range(count[m]):
+                    plat_copy = self._copy_platform(m, '--' + str(i))
+                    suffixes[plat_copy] = '--' + str(i)
+                    copies[m].add(plat_copy)
+            else:
+                plat_copy = self._copy_platform(m, '')
+                suffixes[plat_copy] = ''
                 copies[m].add(plat_copy)
         for m in copies:
             # reset imports for for the copies
             for p in copies[m]:
                 p.imported = []
             self.flattened.platforms += list(copies[m])
-        # singleton elements can be safely removed
-        copies = {m : copies[m] for m in copies if len(copies[m]) > 1}
+        # if there are bindings to elements to be replicated, fail until something can be decided for it
+        for m in copies:
+            for n in m.hwNetlist.nodes:
+                for e in self.model.refinement.bindingsGraph.edges:
+                    if (e.toNode == n or e.fromNode == n) and len(copies[m]) > 1:
+                        raise ValueError("{0} needs to be flattened but has bindings to it." +
+                                         " This is not semantically supported yet.".format(m))
         # idx stands for index
         copies_idx = {m.identifier : m for m in copies}
         # connect the nodes to the flattened definitions
@@ -225,11 +255,82 @@ class ModelFlattener:
                                 n.identifier:
                             e.fromExported = n
 
+    def _flatten_extras(self):
+        '''
+        This internal function does a cross product for the scoped platforms
+        and applications created all possible extra entries,
+        since it is just a matter of repeating the
+        information within every scope. This is achived via the identifier scoping
+        done earlier.
+        '''
+        self.flattened.extras = Extra()
+        for t in self.model.extras.information:
+            new_t = Table(identifier = t.identifier,
+                          namesValues = [n for n in t.namesValues],
+                          namesReferences = [n for n in t.namesReferences])
+            for e in t.entries:
+                crossProduct = []
+                for r in e.references:
+                    toAdd = []
+                    directClone = None
+                    # first, find out all the elements that were cloned
+                    # and scoped
+                    # then, find out the elements that were simply cloned
+                    for i in self.flattened.iterContained():
+                        if type(r) == type(i) and r.identifier in i.identifier\
+                               and '--' in i.identifier:
+                            toAdd.append(i)
+                        elif type(r) == type(i) and r.identifier == i.identifier:
+                            directClone = i
+                    # finish by building it
+                    # only do the 'cross' product if there are scoped elements,
+                    # otherwise increase the elements so that no product is made
+                    if len(crossProduct) == 0:
+                        if len(toAdd) == 0:
+                            crossProduct += [[directClone]]
+                        else:
+                            crossProduct = [[add] for add in toAdd]
+                    else:
+                        if len(toAdd) == 0:
+                            crossProduct = [old + [directClone] for old in crossProduct]
+                        else:
+                            crossProduct = [old + [add] for old in crossProduct for add\
+                                                  in toAdd]
+                for prod in crossProduct:
+                    # create the new entry, copying the values and
+                    # adding it for the scoped product
+                    new_e = TableEntry(values = [v for v in e.values],
+                                       references = prod)
+                    new_t.entries.append(new_e)
+            self.flattened.extras.information.append(new_t)
+
+    def _flatten_refinement(self):
+        # make a direct shallow copy
+        self.flattened.refinement = self.model.refinement.copy()
+        # now correct the references
+        for n in self.flattened.refinement.bindingsGraph.nodes:
+            for elem in self.flattened.iterContained():
+                if isinstance(elem, Definition):
+                    if n.definition.identifier == elem.identifier:
+                        n.definition = elem
+        for e in self.flattened.refinement.bindingsGraph.edges:
+            for elem in self.flattened.iterContained():
+                if isinstance(elem, Element):
+                    if e.toNode.identifier == elem.identifier:
+                        e.toNode = elem
+                    elif e.fromNode.identifier == elem.identifier:
+                        e.fromNode = elem
+                    elif e.toExported and e.toExported.identifier == elem.identifier:
+                        e.toExported = elem
+                    elif e.fromExported and e.fromExported.identifier == elem.identifier:
+                        e.fromExported = elem
+
     def flatten(self):
         if not self.flattened:
             # creat the new flattened element
             self.flattened = ForSyDeIO()
-            # use the helper functions for flattening unflattened nested elements
             self._flatten_platform()
             self._flatten_application()
+            self._flatten_extras()
+            self._flatten_refinement()
         return self.flattened

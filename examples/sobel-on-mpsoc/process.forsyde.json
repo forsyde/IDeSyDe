@@ -1,0 +1,125 @@
+{
+  "descriptionVersion": 1,
+  "id": "sobelDescription",
+  "processes": {
+    "sobel": {
+      "id": "sobel",
+      "processes": {
+        "getPxSDF": {
+          "id": "getPxSDF",
+          "constructor": {
+            "name": "mapSDF",
+            "parameters": {
+              "inputs": [],
+              "outputs": [1, 1]
+            },
+            "functionArguments": {
+              "mapped": "getPxFunc"
+            }
+          },
+          "inputSignals": {},
+          "outputSignals": {
+            "getOutX": "getPxOutXSig",
+            "getOutY": "getPxOutYSig"
+          }
+        },
+        "gxSDF": {
+          "id": "gxSDF",
+          "constructor": {
+            "name": "mapSDF",
+            "parameters": {
+              "inputs": [9],
+              "outputs": [1]
+            },
+            "functionArguments": {
+              "mapped": "gxFunc"
+            }
+          },
+          "inputSignals": {
+            "gxIn": "getPxOutXSig"
+          },
+          "outputSignals": {
+            "gxOut": "gxOutSig"
+          }
+        },
+        "gySDF": {
+          "id": "gySDF",
+          "constructor": {
+            "name": "mapSDF",
+            "parameters": {
+              "inputs": [9],
+              "outputs": [1]
+            },
+            "functionArguments": {
+              "mapped": "gyFunc"
+            }
+          },
+          "inputSignals": {
+            "gyIn": "getPxOutYSig"
+          },
+          "outputSignals": {
+            "gyOut": "gyOutSig"
+          }
+        },
+        "absSDF": {
+          "id": "absSDF",
+          "constructor": {
+            "name": "mapSDF",
+            "parameters": {
+              "inputs": [1, 1],
+              "outputs": []
+            },
+            "functionArguments": {
+              "mapped": "absFunc"
+            }
+          },
+          "inputSignals": {
+            "absXin": "gxOutSig",
+            "absYin": "gyOutSig"
+          },
+          "outputSignals": {}
+        }
+      },
+      "internalSignals": {
+        "getPxOutX": {
+          "id": "getPxOutXSig",
+          "signalType": "Integer"
+        },
+        "getPxOutY": {
+          "id": "getPxOutYSig",
+          "signalType": "Integer"
+        },
+        "gxOut": {
+          "id": "gxOutSig",
+          "signalType": "Integer"
+        },
+        "gyOut": {
+          "id": "gyOutSig",
+          "signalType": "Integer"
+        }
+      }
+    }
+  },
+  "functions": {
+    "getPx": {
+      "id": "getPxFunc",
+      "inputs": {},
+      "outputs": {"px": "Integer", "py": "Integer"}
+    },
+    "gx": {
+      "id": "gxFunc",
+      "inputs": {"x": "Integer"},
+      "outputs": {"Gx": "Integer"}
+    },
+    "gy": {
+      "id": "gyFunc",
+      "inputs": {"y": "Integer"},
+      "outputs": {"Gy": "Integer"}
+    },
+    "abs": {
+      "id": "absFunc",
+      "inputs": {"x": "Integer", "y": "Integer"},
+      "outputs": {}
+    }
+  }
+}

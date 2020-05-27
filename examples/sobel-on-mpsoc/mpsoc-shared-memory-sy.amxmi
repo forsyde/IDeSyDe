@@ -1,0 +1,96 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<am:Amalthea xmi:version="2.0" xmlns:xmi="http://www.omg.org/XMI" xmlns:am="http://app4mc.eclipse.org/amalthea/0.9.5" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance">
+  <swModel>
+    <tasks name="mainProcess" preemption="non_preemptive" multipleTaskActivationLimit="0">
+      <callGraph>
+        <items xsi:type="am:SchedulePoint"/>
+        <items xsi:type="am:ChannelReceive" data="globalInput_signal?type=Channel" elements="0" receiveOperation="FIFO_Read" dataMustBeNew="false" elementIndex="0" lowerBound="0"/>
+        <items xsi:type="am:RunnableCall" runnable="bool2int?type=Runnable"/>
+        <items xsi:type="am:ChannelSend" data="preI_signal?type=Channel" elements="1"/>
+      </callGraph>
+    </tasks>
+    <tasks name="" multipleTaskActivationLimit="0">
+      <callGraph>
+        <items xsi:type="am:ChannelReceive" data="preI_signal?type=Channel" elements="1" receiveOperation="FIFO_Read" dataMustBeNew="true" elementIndex="0" lowerBound="0"/>
+        <items xsi:type="am:RunnableCall" runnable="summation?type=Runnable"/>
+        <items xsi:type="am:ChannelSend" data="globalOutput_signal?type=Channel" elements="1"/>
+      </callGraph>
+    </tasks>
+    <runnables name="summation" callback="false" service="false" asilLevel="D">
+      <callGraph>
+        <items xsi:type="am:Ticks">
+          <default xsi:type="am:DiscreteValueConstant" value="6"/>
+        </items>
+      </callGraph>
+    </runnables>
+    <runnables name="bool2int" callback="false" service="false" asilLevel="D">
+      <callGraph>
+        <items xsi:type="am:Ticks">
+          <default xsi:type="am:DiscreteValueConstant" value="6"/>
+        </items>
+      </callGraph>
+    </runnables>
+    <channels name="preI_signal" displayName="" defaultElements="0" maxElements="1"/>
+    <channels name="globalInput_signal" defaultElements="0" maxElements="1"/>
+    <channels name="globalOutput_signal" defaultElements="0" maxElements="1"/>
+  </swModel>
+  <hwModel>
+    <definitions xsi:type="am:ProcessingUnitDefinition" name="Bare Metal CPU" puType="CPU"/>
+    <definitions xsi:type="am:MemoryDefinition" name="Shared Memory" memoryType="SRAM"/>
+    <definitions xsi:type="am:ConnectionHandlerDefinition" name="Avalon Fabric" policy="RoundRobin" maxBurstSize="32" maxConcurrentTransfers="1"/>
+    <definitions xsi:type="am:MemoryDefinition" name="On Chip Memory" memoryType="PCM"/>
+    <structures name="">
+      <modules xsi:type="am:ProcessingUnit" name="CPU 1" powerDomain="Common+Power+Domain?type=PowerDomain" frequencyDomain="Common+Freq+Domain?type=FrequencyDomain" definition="Bare+Metal+CPU?type=ProcessingUnitDefinition">
+        <ports name="CPU 1 Data" bitWidth="0" priority="0"/>
+        <accessElements name="CPU 1 Shared Mem" destination="Shared+Memory+1?type=Memory">
+          <accessPath name="CPU 1 Mem Path" pathElements="Avalon+Bus?type=ConnectionHandler Avalon+Bus/CPU+1+-+Shared+Memory+1?type=HwConnection" startAddress="0x0" endAddress="0x0" memOffset="0x0"/>
+        </accessElements>
+        <accessElements name="CPU 1 On Chip Access" destination="On+Chip+Memory+1?type=Memory"/>
+      </modules>
+      <modules xsi:type="am:Memory" name="Shared Memory 1" powerDomain="Common+Power+Domain?type=PowerDomain" frequencyDomain="Common+Freq+Domain?type=FrequencyDomain" definition="Shared+Memory?type=MemoryDefinition">
+        <ports name="Shared Memory Port" bitWidth="32" priority="0" portType="responder" portInterface="custom"/>
+      </modules>
+      <modules xsi:type="am:ProcessingUnit" name="CPU 2" powerDomain="Common+Power+Domain?type=PowerDomain" frequencyDomain="Common+Freq+Domain?type=FrequencyDomain" definition="Bare+Metal+CPU?type=ProcessingUnitDefinition">
+        <ports name="CPU 2 Data" bitWidth="0" priority="0"/>
+        <accessElements name="CPU 2 On Chip Access" destination="Shared+Memory+1?type=Memory">
+          <accessPath name="CPU 2 Mem Path" pathElements="Avalon+Bus?type=ConnectionHandler Avalon+Bus/CPU+2+-+Shared+Memory+1?type=HwConnection" startAddress="0x0" endAddress="0x0" memOffset="0x0"/>
+        </accessElements>
+        <accessElements name="CPU 2 On Chip Access" destination="On+Chip+Memory+2?type=Memory"/>
+      </modules>
+      <modules xsi:type="am:ConnectionHandler" name="Avalon Bus" powerDomain="Common+Power+Domain?type=PowerDomain" frequencyDomain="Common+Freq+Domain?type=FrequencyDomain" definition="Avalon+Fabric?type=ConnectionHandlerDefinition">
+        <ports name="CPU 1" bitWidth="32" priority="0" portType="initiator" portInterface="custom"/>
+        <ports name="CPU 2" bitWidth="0" priority="0"/>
+        <ports name="Shared Memory 1" bitWidth="0" priority="0"/>
+        <internalConnections name="CPU 1 - Shared Memory 1" port1="Avalon+Bus/CPU+1?type=HwPort" port2="Avalon+Bus/Shared+Memory+1?type=HwPort"/>
+        <internalConnections name="CPU 2 - Shared Memory 1" port1="Avalon+Bus/CPU+2?type=HwPort" port2="Avalon+Bus/Shared+Memory+1?type=HwPort"/>
+      </modules>
+      <modules xsi:type="am:Memory" name="On Chip Memory 1" powerDomain="Common+Power+Domain?type=PowerDomain" frequencyDomain="Common+Freq+Domain?type=FrequencyDomain" definition="On+Chip+Memory?type=MemoryDefinition">
+        <ports name="On Chip Memory 1" bitWidth="32" priority="0" portType="responder" portInterface="custom"/>
+      </modules>
+      <modules xsi:type="am:Memory" name="On Chip Memory 2" powerDomain="Common+Power+Domain?type=PowerDomain" frequencyDomain="Common+Freq+Domain?type=FrequencyDomain" definition="On+Chip+Memory?type=MemoryDefinition">
+        <ports name="On Chip Memory 2" bitWidth="32" priority="0" portType="responder" portInterface="custom"/>
+      </modules>
+    </structures>
+    <domains xsi:type="am:FrequencyDomain" name="Common Freq Domain" clockGating="false"/>
+    <domains xsi:type="am:PowerDomain" name="Common Power Domain" powerGating="false"/>
+  </hwModel>
+  <osModel>
+    <operatingSystems name="Bare Metal OS">
+      <taskSchedulers name="Static Cyclic Scheduler">
+        <schedulingAlgorithm xsi:type="am:UserSpecificSchedulingAlgorithm"/>
+      </taskSchedulers>
+    </operatingSystems>
+  </osModel>
+  <mappingModel>
+    <schedulerAllocation scheduler="Static+Cyclic+Scheduler?type=TaskScheduler" executingPU="CPU+1?type=ProcessingUnit"/>
+    <schedulerAllocation scheduler="Static+Cyclic+Scheduler?type=TaskScheduler" executingPU="CPU+2?type=ProcessingUnit"/>
+    <taskAllocation task="mainProcess?type=Task" scheduler="Static+Cyclic+Scheduler?type=TaskScheduler" affinity="CPU+1?type=ProcessingUnit">
+      <customProperties key="order">
+        <value xsi:type="am:IntegerObject" value="0"/>
+      </customProperties>
+    </taskAllocation>
+    <memoryMapping abstractElement="preI_signal?type=Channel" memory="Shared+Memory+1?type=Memory" memoryPositionAddress="0x0"/>
+    <memoryMapping abstractElement="bool2int?type=Runnable" memory="On+Chip+Memory+1?type=Memory" memoryPositionAddress="0x0"/>
+    <memoryMapping abstractElement="summation?type=Runnable" memory="On+Chip+Memory+2?type=Memory" memoryPositionAddress="0x0"/>
+  </mappingModel>
+</am:Amalthea>

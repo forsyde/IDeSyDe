@@ -1,0 +1,9 @@
+tasks = 1..4;
+cpms = 1..2;
+
+periods = [10, 5, 7, 9];
+deadlines = periods;
+wcet = [4, 1, 3, 4];
+
+high_prio = [{2, 3, 4}, {}, {2}, {2, 3}];
+

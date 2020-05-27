@@ -22,15 +22,15 @@ array[mandatory_tasks] of var int: task_priority;
 array[mandatory_tasks, cores] of var int: task_wcet_per_core;
 
 constraint forall(r in runnables) (
-  runnable_partition[r] in admissible_runnable_partition[r];
+  runnable_partition[r] in admissible_runnable_partition[r]
 );
 
 constraint forall(tau in mandatory_tasks) (
-  task_mapping[tau] in admissible_task_mapping[tau];
+  task_mapping[tau] in admissible_task_mapping[tau]
 );
 
 constraint forall(s in mandatory_schedulers) (
-  scheduler_mapping[s] in admissible_scheduler_mapping[s];
+  scheduler_mapping[s] in admissible_scheduler_mapping[s]
 );
 
 constraint forall(tau in mandatory_tasks) (
@@ -60,8 +60,11 @@ constraint forall(s in mandatory_schedulers) (
   count(c in cores) (scheduler_mapping[s, c] = true) > 0
 );
 
-predicate unicore_schedulibility() =
-  forall(tau in mandatory_tasks) (
+predicate unicore_schedulibility(
+  mapped_tasks,
+  scheduler
+) =
+  forall(tau in mapped_tasks) (
     exists(t in 1..task_deadline[tau]) (
     let { var mandatory_schedulers: s = task_mapping[tau],
           var opt cores: c = scheduler_mapping[task_mapping[tau]] 
@@ -69,14 +72,15 @@ predicate unicore_schedulibility() =
       t 
       >= 
       task_wcet_per_core[tau, c] + sum(tau2 in mandatory_tasks where 
-        s = task_mapping[tau2] and
+        s = task_mapping[tau2] /\
         task_priority[tau2] > task_priority[tau]) 
         (task_wcet_per_core[tau2, c] * ceil(t / task_period[tau2]))
     )
-  )
+  );
 
 constraint forall(s in mandatory_schedulers) (
   if count(c in cores) (scheduler_mapping[s, c] = true) = 1 then
     unicore_schedulibility()
   else
+    true
 );

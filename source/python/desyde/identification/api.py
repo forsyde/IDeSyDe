@@ -1,4 +1,5 @@
 import desyde.preprocessing as pre
+import desyde.identification.rules as idenrules
 
 class Identifier:
     '''
@@ -8,9 +9,9 @@ class Identifier:
     '''
 
     _rules_classes = [
-        DECombToSporadicTaskRule,
-        SporadicTaskToFixedPrioritySchedulerRule,
-        FixedPSchedulerToCoresRule
+        idenrules.DECombToSporadicTaskRule,
+        idenrules.SporadicTaskToFixedPrioritySchedulerRule,
+        idenrules.FixedPSchedulerToCoresRule
     ]
 
     def __init__(self, model):

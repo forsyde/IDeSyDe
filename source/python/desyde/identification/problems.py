@@ -1,3 +1,7 @@
+import importlib.resources as libres
+
+import minizinc as mzn
+
 class IdentifiableProblem:
     '''
     Base class (interface) for all identifiable problems
@@ -68,3 +72,9 @@ class Comb_Task_Scheduler_Core(IdentifiableProblem):
 
     def is_proper_identification(self):
         return True
+
+    def solve(self):
+        model_str = libres.read_text('desyde.zinc', 'comb_task_scheduler_core.mzn')
+        model = mzn.Model()
+        model.add_string(model_str)
+        print(model_str)

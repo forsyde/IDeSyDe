@@ -1,6 +1,7 @@
 import ForSyDe.Model.Application as forapp
 import ForSyDe.Model.Platform as forplat
 import ForSyDe.Model.Refinement as forref
+import desyde.identification.problems as problems
 
 class IdentificationRule:
     '''
@@ -59,7 +60,7 @@ class DECombToSporadicTaskRule(IdentificationRule):
     def execute(self, identified = set()):
         self._collect_sets(identified)
         if self.mandatory_task_nodes and self.comb_nodes:
-            return DEComb_SporadicTasks(
+            return problems.DEComb_SporadicTasks(
                 comb_nodes = self.comb_nodes,
                 mandatory_task_nodes = self.mandatory_task_nodes,
                 comb_task_edges = self.comb_task_edges
@@ -86,7 +87,7 @@ class SporadicTaskToFixedPrioritySchedulerRule(IdentificationRule):
     def _collect_sets(self, identified = set()):
         combAndTasks = None
         for prob in identified:
-            if isinstance(prob, DEComb_SporadicTasks):
+            if isinstance(prob, problems.DEComb_SporadicTasks):
                 combAndTasks = prob
                 continue
         if combAndTasks:
@@ -109,7 +110,7 @@ class SporadicTaskToFixedPrioritySchedulerRule(IdentificationRule):
         self._collect_sets(identified)
         if self.mandatory_task_nodes and self.comb_nodes and\
                 self.mandatory_schedulers:
-            return Comb_Task_Scheduler(
+            return problems.Comb_Task_Scheduler(
                 comb_nodes = self.comb_nodes,
                 mandatory_task_nodes = self.mandatory_task_nodes,
                 mandatory_schedulers = self.mandatory_schedulers,
@@ -140,7 +141,7 @@ class FixedPSchedulerToCoresRule(IdentificationRule):
     def _collect_sets(self, identified = set()):
         combAndTasksAndScheds = None
         for prob in identified:
-            if isinstance(prob, Comb_Task_Scheduler):
+            if isinstance(prob, problems.Comb_Task_Scheduler):
                 combAndTasksAndScheds = prob
                 continue
         if combAndTasksAndScheds:
@@ -164,7 +165,7 @@ class FixedPSchedulerToCoresRule(IdentificationRule):
         self._collect_sets(identified)
         if self.mandatory_task_nodes and self.comb_nodes and\
                 self.mandatory_schedulers and self.cores:
-            return Comb_Task_Scheduler_Core(
+            return problems.Comb_Task_Scheduler_Core(
                 comb_nodes = self.comb_nodes,
                 mandatory_task_nodes = self.mandatory_task_nodes,
                 mandatory_schedulers = self.mandatory_schedulers,

@@ -1,2 +1,2 @@
-pyomo
+minizinc
 forsyde-python-model

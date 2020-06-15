@@ -2,8 +2,10 @@ package desyde.preprocessing;
 
 import java.util.HashMap;
 import java.util.HashSet;
+import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
+import java.util.Optional;
 import java.util.Set;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
@@ -11,6 +13,7 @@ import java.util.stream.Stream;
 import ForSyDe.Model.Application.CompoundProcess;
 import ForSyDe.Model.Core.Definition;
 import ForSyDe.Model.Core.Edge;
+import ForSyDe.Model.Core.Graph;
 import ForSyDe.Model.Core.Identifiable;
 import ForSyDe.Model.Core.Port;
 import ForSyDe.Model.Core.Vertex;
@@ -20,14 +23,6 @@ public class Unroller {
 	
 	ForSyDeIO model;
 	ForSyDeIO flattenedModel;
-	
-	Map<Vertex, HashSet<Vertex>> vertexCopies = new HashMap<>();
-	Map<Port, HashSet<Port>> portsCopies = new HashMap<>();
-	Map<Definition, HashSet<Definition>> defsCopies = new HashMap<>();
-	Map<Edge, HashSet<Edge>> edgesCopies = new HashMap<>();
-	Set<Vertex> vertexes = new HashSet<>();
-	Set<Edge> edges = new HashSet<>();
-	Set<Definition> defs = new HashSet<>();
 	
 	public ForSyDeIO unrollModel(ForSyDeIO model) {
 		if (this.model != model || flattenedModel == null) {
@@ -54,62 +49,50 @@ public class Unroller {
 		// count via Dprog number of copies
 		Map<Definition, Integer> numCopies = countNumberOfCopies(model);
 		// create all vertexes, ports and definition copies
-		vertexCopies.clear();
-		portsCopies.clear();
-		defsCopies.clear();
-		edgesCopies.clear();
+		Map<Vertex, HashSet<Vertex>> vertexCopies = new HashMap<>();
+		Map<Port, HashSet<Port>> portsCopies = new HashMap<>();
+		Map<Definition, HashSet<Definition>> defsCopies = new HashMap<>();
+		Map<Edge, HashSet<Edge>> edgesCopies = new HashMap<>();
 		// topmost entities, the vertexes are guaranteed to be simple
 		model.streamContained().filter(e -> e instanceof Vertex).map(e -> (Vertex) e).forEach(v -> {
 			HashSet<Vertex> set = new HashSet<>();
 			set.add(v.containedCopy());
 			vertexCopies.put(v, set);
 		});
+		// create all copies by iterating the definitions
 		for(Definition d : defs) {
-			d.streamContained().filter(e -> e instanceof Vertex).map(e -> (Vertex) e).forEach(v -> {
+			d.streamContained().filter(e -> e instanceof Vertex).map(e -> (Vertex) e)
+			.forEach(vert -> {
 				// vertexes
 				if (numCopies.get(d) > 1) {
 					HashSet<Vertex> set = new HashSet<>();
-					for(int i = 1; i <= numCopies.get(d); i++) {
-						Vertex copy = v.containedCopy();
+					for (int i = 1; i <= numCopies.get(d); i++) {
+						Vertex copy = vert.containedCopy();
 						copy.identifier += '/' + String.valueOf(i);
 						set.add(copy);
 					}
-					vertexCopies.put(v, set);
+					vertexCopies.put(vert, set);
 				} else {
 					HashSet<Vertex> set = new HashSet<>();
-					set.add(v.containedCopy());
-					vertexCopies.put(v, set);
+					set.add(vert.containedCopy());
+					vertexCopies.put(vert, set);
 				}
-				// ports
+			});
+			d.streamContained().filter(e -> e instanceof Port).map(p -> (Port) p)
+			.forEach(p -> {
+				// ports of vertexes
 				if (numCopies.get(d) > 1) {
 					HashSet<Port> set = new HashSet<>();
-					for(Port p : v.inPorts) {
-						for(int i = 1; i <= numCopies.get(d); i++) {
-							Port copy = p.containedCopy();
-							copy.identifier += '/' + String.valueOf(i);
-							set.add(copy);	
-						}
-						portsCopies.put(p, set);
+					for (int i = 1; i <= numCopies.get(d); i++) {
+						Port copy = p.containedCopy();
+						copy.identifier += '/' + String.valueOf(i);
+						set.add(copy);	
 					}
-					for(Port p : v.outPorts) {
-						for(int i = 1; i <= numCopies.get(d); i++) {
-							Port copy = p.containedCopy();
-							copy.identifier += '/' + String.valueOf(i);
-							set.add(copy);	
-						}
-						portsCopies.put(p, set);
-					}
+					portsCopies.put(p, set);
 				} else {
-					for(Port p : v.inPorts) {
-						HashSet<Port> set = new HashSet<>();
-						set.add(p.containedCopy());
-						portsCopies.put(p, set);
-					}
-					for(Port p : v.outPorts) {
-						HashSet<Port> set = new HashSet<>();
-						set.add(p.containedCopy());
-						portsCopies.put(p, set);
-					}
+					HashSet<Port> set = new HashSet<>();
+					set.add(p.containedCopy());
+					portsCopies.put(p, set);
 				}	
 			});
 			// definitions
@@ -126,8 +109,8 @@ public class Unroller {
 				set.add(d.containedCopy());
 				defsCopies.put(d, set);
 			}
+			// edges
 			d.streamContained().filter(e -> e instanceof Edge).map(e -> (Edge) e).forEach(e -> {
-				// edges
 				if (numCopies.get(d) > 1) {
 					HashSet<Edge> set = new HashSet<>();
 					for(int i = 1; i <= numCopies.get(d); i++) {
@@ -142,34 +125,87 @@ public class Unroller {
 					edgesCopies.put(e, set);
 				}
 			});
-		}	
+		}
+		// initiate re-referencing stage
+		HashSet<Identifiable> visited = new HashSet<>();
+		// first, make all vertexes point to their new Clones
+		for (Vertex v : vertexes) {
+			for (Vertex copy : vertexCopies.get(v)) {
+				Definition d = defsCopies.get(v.definition).stream()
+						.filter(de -> !visited.contains(de))
+						.findAny().get();
+				copy.definition = d;
+				copy.inPorts.clear();
+				copy.outPorts.clear();
+				for (Port p : v.inPorts) {
+					Port pCopy = portsCopies.get(p).stream()
+							.filter(e -> !visited.contains(e))
+							.findAny().get();
+					copy.inPorts.add(pCopy);
+					visited.add(pCopy);
+				}
+				for (Port p : v.outPorts) {
+					Port pCopy = portsCopies.get(p).stream()
+							.filter(e -> !visited.contains(e))
+							.findAny().get();
+					copy.outPorts.add(pCopy);
+					visited.add(pCopy);
+				}
+				visited.add(d);
+			}
+		}
+		// then for the ports
+		visited.clear();
+		vertexes.stream().flatMap(v -> Stream.concat(v.inPorts.stream(), v.outPorts.stream()))
+		.filter(p -> p.definer != null)
+		.forEach(p -> {
+			for (Port copy : portsCopies.get(p)) {
+				Port definerCopy = portsCopies.get(p.definer).stream()
+						.filter(pc -> !visited.contains(pc))
+						.findAny().get();
+				copy.definer = definerCopy;
+			}			
+			visited.add(p);
+		});
 		// now put everything together nesting wise
+		visited.clear();
 		for (Definition d : defs) {
 			for (Definition copy : defsCopies.get(d)) {
-				// TODO maybe later a general method can be made for adding vertexes arbitrarily, but for now 
-				// this suffices.
-				if (d instanceof CompoundProcess) {
-					CompoundProcess dProc = (CompoundProcess) d;
-					CompoundProcess copyProc = (CompoundProcess) copy;
-					copyProc.netlist.vertexes.clear();
-					copyProc.netlist.edges.clear();
-					for (Vertex v : dProc.netlist.vertexes) {
-						Vertex vCopy = vertexCopies.get(v).iterator().next();
-						copyProc.netlist.vertexes.add(vCopy);
-						vertexCopies.get(v).remove(vCopy);
+				// takes care of recreating the graphs when they are children
+				// assumes there will always be only one graph contained
+				Optional<Identifiable> gOpt = d.streamContained().filter(e -> e instanceof Graph).findAny();
+				if (gOpt.isPresent()) {
+					Graph g = (Graph) gOpt.get();
+					Graph gCopy = (Graph) copy.streamContained().filter(e -> e instanceof Graph).findAny().get(); 
+					gCopy.vertexes.clear();
+					gCopy.edges.clear();
+					for (Vertex v : g.vertexes) {
+						Vertex vCopy = vertexCopies.get(v).stream()
+								.filter(ver -> !visited.contains(ver))
+								.findAny().get();
+						gCopy.vertexes.add(vCopy);
+						visited.add(vCopy);
+						// including ports
+						for(Port p : v.inPorts) {
+							Port pCopy = portsCopies.get(p).stream()
+									.filter(ver -> !visited.contains(ver))
+									.findAny().get();
+							vCopy.inPorts.add(pCopy);
+						}
 					}
-					for (Edge e : dProc.netlist.edges) {
-						Edge eCopy = edgesCopies.get(e).iterator().next();
-						copyProc.netlist.edges.add(eCopy);
-						edgesCopies.get(e).remove(eCopy);
+					for (Edge e : g.edges) {
+						Edge eCopy = edgesCopies.get(e).stream()
+								.filter(ver -> !visited.contains(ver))
+								.findAny().get();
+						gCopy.edges.add(eCopy);
+						visited.add(eCopy);
 					}
 				}
-				// TODO the same must be done for platforms and bindings
 				// finish by adding the definition
 				flattenedModel.definitions.add(copy);
 			}
 		}
-		//TODO missing to make the 
+	
 		// add topmost vertexes to model
 		for (Vertex v : model.applications) {
 			Vertex vCopy = vertexCopies.get(v).iterator().next();

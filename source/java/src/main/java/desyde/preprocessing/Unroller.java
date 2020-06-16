@@ -49,86 +49,20 @@ public class Unroller {
 		// count via Dprog number of copies
 		Map<Definition, Integer> numCopies = countNumberOfCopies(model);
 		// create all vertexes, ports and definition copies
-		Map<Vertex, HashSet<Vertex>> vertexCopies = new HashMap<>();
-		Map<Port, HashSet<Port>> portsCopies = new HashMap<>();
-		Map<Definition, HashSet<Definition>> defsCopies = new HashMap<>();
-		Map<Edge, HashSet<Edge>> edgesCopies = new HashMap<>();
+		Map<Vertex, Set<Vertex>> vertexCopies = cloneVertexes(defs, numCopies);
+		Map<Port, Set<Port>> portsCopies = clonePorts(defs, numCopies);
+		Map<Definition, Set<Definition>> defsCopies = cloneDefinitions(defs, numCopies);
+		Map<Edge, Set<Edge>> edgesCopies = cloneEdges(defs, numCopies);
 		// topmost entities, the vertexes are guaranteed to be simple
 		model.streamContained().filter(e -> e instanceof Vertex).map(e -> (Vertex) e).forEach(v -> {
 			HashSet<Vertex> set = new HashSet<>();
 			set.add(v.containedCopy());
 			vertexCopies.put(v, set);
 		});
-		// create all copies by iterating the definitions
-		for(Definition d : defs) {
-			d.streamContained().filter(e -> e instanceof Vertex).map(e -> (Vertex) e)
-			.forEach(vert -> {
-				// vertexes
-				if (numCopies.get(d) > 1) {
-					HashSet<Vertex> set = new HashSet<>();
-					for (int i = 1; i <= numCopies.get(d); i++) {
-						Vertex copy = vert.containedCopy();
-						copy.identifier += '/' + String.valueOf(i);
-						set.add(copy);
-					}
-					vertexCopies.put(vert, set);
-				} else {
-					HashSet<Vertex> set = new HashSet<>();
-					set.add(vert.containedCopy());
-					vertexCopies.put(vert, set);
-				}
-			});
-			d.streamContained().filter(e -> e instanceof Port).map(p -> (Port) p)
-			.forEach(p -> {
-				// ports of vertexes
-				if (numCopies.get(d) > 1) {
-					HashSet<Port> set = new HashSet<>();
-					for (int i = 1; i <= numCopies.get(d); i++) {
-						Port copy = p.containedCopy();
-						copy.identifier += '/' + String.valueOf(i);
-						set.add(copy);	
-					}
-					portsCopies.put(p, set);
-				} else {
-					HashSet<Port> set = new HashSet<>();
-					set.add(p.containedCopy());
-					portsCopies.put(p, set);
-				}	
-			});
-			// definitions
-			if (numCopies.get(d) > 1) {
-				HashSet<Definition> set = new HashSet<>();
-				for(int i = 1; i <= numCopies.get(d); i++) {
-					Definition copy = d.containedCopy();
-					copy.identifier += '/' + String.valueOf(i);
-					set.add(copy);
-				}
-				defsCopies.put(d, set);
-			} else {
-				HashSet<Definition> set = new HashSet<>();
-				set.add(d.containedCopy());
-				defsCopies.put(d, set);
-			}
-			// edges
-			d.streamContained().filter(e -> e instanceof Edge).map(e -> (Edge) e).forEach(e -> {
-				if (numCopies.get(d) > 1) {
-					HashSet<Edge> set = new HashSet<>();
-					for(int i = 1; i <= numCopies.get(d); i++) {
-						Edge copy = e.containedCopy();
-						copy.identifier += '/' + String.valueOf(i);
-						set.add(copy);
-					}
-					edgesCopies.put(e, set);
-				} else {
-					HashSet<Edge> set = new HashSet<>();
-					set.add(e.containedCopy());
-					edgesCopies.put(e, set);
-				}
-			});
-		}
+		
 		// initiate re-referencing stage
 		HashSet<Identifiable> visited = new HashSet<>();
-		// first, make all vertexes point to their new Clones
+		// first, make all vertexes and ports point to their new Clones
 		for (Vertex v : vertexes) {
 			for (Vertex copy : vertexCopies.get(v)) {
 				Definition d = defsCopies.get(v.definition).stream()
@@ -154,51 +88,51 @@ public class Unroller {
 				visited.add(d);
 			}
 		}
-		// then for the ports
-		visited.clear();
-		vertexes.stream().flatMap(v -> Stream.concat(v.inPorts.stream(), v.outPorts.stream()))
-		.filter(p -> p.definer != null)
-		.forEach(p -> {
-			for (Port copy : portsCopies.get(p)) {
-				Port definerCopy = portsCopies.get(p.definer).stream()
-						.filter(pc -> !visited.contains(pc))
-						.findAny().get();
-				copy.definer = definerCopy;
-			}			
-			visited.add(p);
-		});
 		// now put everything together nesting wise
 		visited.clear();
 		for (Definition d : defs) {
 			for (Definition copy : defsCopies.get(d)) {
 				// takes care of recreating the graphs when they are children
 				// assumes there will always be only one graph contained
+				Set<Identifiable> scopedCopies = new HashSet<>();
 				Optional<Identifiable> gOpt = d.streamContained().filter(e -> e instanceof Graph).findAny();
 				if (gOpt.isPresent()) {
+					// modify totally the copied graph
+					
 					Graph g = (Graph) gOpt.get();
 					Graph gCopy = (Graph) copy.streamContained().filter(e -> e instanceof Graph).findAny().get(); 
 					gCopy.vertexes.clear();
 					gCopy.edges.clear();
+					// add all the vertexes copies to this new graph
 					for (Vertex v : g.vertexes) {
 						Vertex vCopy = vertexCopies.get(v).stream()
 								.filter(ver -> !visited.contains(ver))
 								.findAny().get();
 						gCopy.vertexes.add(vCopy);
 						visited.add(vCopy);
-						// including ports
-						for(Port p : v.inPorts) {
-							Port pCopy = portsCopies.get(p).stream()
-									.filter(ver -> !visited.contains(ver))
-									.findAny().get();
-							vCopy.inPorts.add(pCopy);
-						}
+						scopedCopies.add(vCopy);
 					}
+					// add all the edges to this new graph
 					for (Edge e : g.edges) {
 						Edge eCopy = edgesCopies.get(e).stream()
 								.filter(ver -> !visited.contains(ver))
 								.findAny().get();
 						gCopy.edges.add(eCopy);
 						visited.add(eCopy);
+						// change the vertex to newly copied vertexes
+						eCopy.toVertex = vertexCopies.get(eCopy.toVertex).stream()
+								.filter(v -> scopedCopies.contains(v))
+								.findAny().get();
+						eCopy.fromVertex = vertexCopies.get(eCopy.fromVertex).stream()
+								.filter(v -> scopedCopies.contains(v))
+								.findAny().get();
+						// change the ports to a newly copied port
+						eCopy.toPort = portsCopies.get(e.toPort).stream()
+								.filter(p -> eCopy.toVertex.inPorts.contains(p) || eCopy.toVertex.outPorts.contains(p))
+								.findAny().get();
+						eCopy.fromPort = portsCopies.get(e.fromPort).stream()
+								.filter(p -> eCopy.fromVertex.inPorts.contains(p) || eCopy.fromVertex.outPorts.contains(p))
+								.findAny().get();
 					}
 				}
 				// finish by adding the definition
@@ -266,5 +200,163 @@ public class Unroller {
 		}
 		return numCopies;
 	}
+	
+	private Map<Vertex, Set<Vertex>> cloneVertexes(Set<Definition> defs, Map<Definition, Integer> numCopies) {
+		Map<Vertex, Set<Vertex>> vertexCopies = new HashMap<>();
+		for(Definition d : defs) {
+			d.streamContained().filter(e -> e instanceof Vertex).map(e -> (Vertex) e)
+			.forEach(vert -> {
+				// vertexes
+				if (numCopies.get(d) > 1) {
+					HashSet<Vertex> set = new HashSet<>();
+					for (int i = 1; i <= numCopies.get(d); i++) {
+						Vertex copy = vert.containedCopy();
+						copy.identifier += '/' + String.valueOf(i);
+						set.add(copy);
+					}
+					vertexCopies.put(vert, set);
+				} else {
+					HashSet<Vertex> set = new HashSet<>();
+					set.add(vert.containedCopy());
+					vertexCopies.put(vert, set);
+				}
+			});
+		}
+		return vertexCopies;
+	}
+	
+	private Map<Edge, Set<Edge>> cloneEdges(Set<Definition> defs, Map<Definition, Integer> numCopies) {
+		Map<Edge, Set<Edge>> edgesCopies = new HashMap<>();
+		for(Definition d : defs) {
+			d.streamContained().filter(e -> e instanceof Edge).map(e -> (Edge) e).forEach(e -> {
+				if (numCopies.get(d) > 1) {
+					HashSet<Edge> set = new HashSet<>();
+					for(int i = 1; i <= numCopies.get(d); i++) {
+						Edge copy = e.containedCopy();
+						copy.identifier += '/' + String.valueOf(i);
+						set.add(copy);
+					}
+					edgesCopies.put(e, set);
+				} else {
+					HashSet<Edge> set = new HashSet<>();
+					set.add(e.containedCopy());
+					edgesCopies.put(e, set);
+				}
+			});
+		}
+		return edgesCopies;
+	}
+	
+	private Map<Definition, Set<Definition>> cloneDefinitions(Set<Definition> defs, Map<Definition, Integer> numCopies) {
+		Map<Definition, Set<Definition>> defsCopies = new HashMap<>();
+		for(Definition d : defs) {
+			if (numCopies.get(d) > 1) {
+				HashSet<Definition> set = new HashSet<>();
+				for(int i = 1; i <= numCopies.get(d); i++) {
+					Definition copy = d.containedCopy();
+					copy.identifier += '/' + String.valueOf(i);
+					set.add(copy);
+				}
+				defsCopies.put(d, set);
+			} else {
+				HashSet<Definition> set = new HashSet<>();
+				set.add(d.containedCopy());
+				defsCopies.put(d, set);
+			}
+		}
+		return defsCopies;
+	}
+	
+	private Map<Port, Set<Port>> clonePorts(Set<Definition> defs, Map<Definition, Integer> numCopies) {
+		Map<Port, Set<Port>> portsCopies = new HashMap<>();
+		for(Definition d : defs) {
+			d.streamContained().filter(e -> e instanceof Port).map(p -> (Port) p)
+			.forEach(p -> {
+				// ports of vertexes
+				if (numCopies.get(d) > 1) {
+					HashSet<Port> set = new HashSet<>();
+					for (int i = 1; i <= numCopies.get(d); i++) {
+						Port copy = p.containedCopy();
+						copy.identifier += '/' + String.valueOf(i);
+						set.add(copy);	
+					}
+					portsCopies.put(p, set);
+				} else {
+					HashSet<Port> set = new HashSet<>();
+					set.add(p.containedCopy());
+					portsCopies.put(p, set);
+				}	
+			});
+		}
+		return portsCopies;
+	}
 
 }
+
+//create all copies by iterating the definitions
+//		for(Definition d : defs) {
+//			d.streamContained().filter(e -> e instanceof Vertex).map(e -> (Vertex) e)
+//			.forEach(vert -> {
+//				// vertexes
+//				if (numCopies.get(d) > 1) {
+//					HashSet<Vertex> set = new HashSet<>();
+//					for (int i = 1; i <= numCopies.get(d); i++) {
+//						Vertex copy = vert.containedCopy();
+//						copy.identifier += '/' + String.valueOf(i);
+//						set.add(copy);
+//					}
+//					vertexCopies.put(vert, set);
+//				} else {
+//					HashSet<Vertex> set = new HashSet<>();
+//					set.add(vert.containedCopy());
+//					vertexCopies.put(vert, set);
+//				}
+//			});
+//			d.streamContained().filter(e -> e instanceof Port).map(p -> (Port) p)
+//			.forEach(p -> {
+//				// ports of vertexes
+//				if (numCopies.get(d) > 1) {
+//					HashSet<Port> set = new HashSet<>();
+//					for (int i = 1; i <= numCopies.get(d); i++) {
+//						Port copy = p.containedCopy();
+//						copy.identifier += '/' + String.valueOf(i);
+//						set.add(copy);	
+//					}
+//					portsCopies.put(p, set);
+//				} else {
+//					HashSet<Port> set = new HashSet<>();
+//					set.add(p.containedCopy());
+//					portsCopies.put(p, set);
+//				}	
+//			});
+//			// definitions
+//			if (numCopies.get(d) > 1) {
+//				HashSet<Definition> set = new HashSet<>();
+//				for(int i = 1; i <= numCopies.get(d); i++) {
+//					Definition copy = d.containedCopy();
+//					copy.identifier += '/' + String.valueOf(i);
+//					set.add(copy);
+//				}
+//				defsCopies.put(d, set);
+//			} else {
+//				HashSet<Definition> set = new HashSet<>();
+//				set.add(d.containedCopy());
+//				defsCopies.put(d, set);
+//			}
+//			// edges
+//			d.streamContained().filter(e -> e instanceof Edge).map(e -> (Edge) e).forEach(e -> {
+//				if (numCopies.get(d) > 1) {
+//					HashSet<Edge> set = new HashSet<>();
+//					for(int i = 1; i <= numCopies.get(d); i++) {
+//						Edge copy = e.containedCopy();
+//						copy.identifier += '/' + String.valueOf(i);
+//						set.add(copy);
+//					}
+//					edgesCopies.put(e, set);
+//				} else {
+//					HashSet<Edge> set = new HashSet<>();
+//					set.add(e.containedCopy());
+//					edgesCopies.put(e, set);
+//				}
+//			});
+//		}

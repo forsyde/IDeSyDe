@@ -12,8 +12,8 @@ public class unrollTest {
 	@Test
 	public void test() {
 		try {
-			File f = new File("test-for-unroll.xmi");
-			ForSyDeIO fio = ForSyDeIO.parseXML(f);
+			File f = new File("silly.xmi");
+			ForSyDeIO fio = ForSyDeIO.parseXMI(f);
 			Unroller ur = new Unroller();
 			ur.unrollModel(fio);
 		} catch (Exception e) {

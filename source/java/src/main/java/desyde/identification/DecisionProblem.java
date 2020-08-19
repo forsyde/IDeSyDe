@@ -2,10 +2,9 @@ package desyde.identification;
 
 import ForSyDe.Model.IO.ForSyDeIO;
 
-public abstract class Cover {
+public abstract class DecisionProblem {
 	
 	ForSyDeIO model;
-	ForSyDeIO flattenedModel;
 
 	public Boolean isSolvable() {
 		return false;

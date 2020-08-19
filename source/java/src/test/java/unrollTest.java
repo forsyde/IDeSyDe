@@ -5,6 +5,7 @@ import java.io.File;
 import org.junit.Test;
 
 import ForSyDe.Model.IO.ForSyDeIO;
+import ForSyDe.Model.IO.ForSyDeIOXMIDriver;
 import desyde.preprocessing.Unroller;
 
 public class unrollTest {
@@ -13,7 +14,7 @@ public class unrollTest {
 	public void test() {
 		try {
 			File f = new File("silly.xmi");
-			ForSyDeIO fio = ForSyDeIO.parseXMI(f);
+			ForSyDeIO fio = (new ForSyDeIOXMIDriver()).parse(f);
 			Unroller ur = new Unroller();
 			ur.unrollModel(fio);
 		} catch (Exception e) {

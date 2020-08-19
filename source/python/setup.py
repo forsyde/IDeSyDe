@@ -7,10 +7,12 @@ setup(name='desyde',
       author='Rodolfo Jordao',
       author_email='jordao@kth.se',
       license='MIT',
+      python_requires='>=3.7',
       packages=['desyde'],
       #packages=find_namespace_packages(include=["desyde.*"]),
       install_requires=[
           'forsyde-python-model',
+          'minizinc'
       ],
       entry_points = {
           "console_scripts": [

@@ -1,3 +1,7 @@
+import importlib.resources as libres
+
+import minizinc as mzn
+
 class IdentifiableProblem:
     '''
     Base class (interface) for all identifiable problems
@@ -21,7 +25,7 @@ class IdentifiableProblem:
         '''
         Solve this problem.
         '''
-        raise NotImplemented("Problem {0} has no means to be solved".format(self))
+        raise NotImplementedError("Problem {0} has no means to be solved".format(self))
 
 class DEComb_SporadicTasks(IdentifiableProblem):
 
@@ -68,3 +72,24 @@ class Comb_Task_Scheduler_Core(IdentifiableProblem):
 
     def is_proper_identification(self):
         return True
+
+    def solve(self):
+        model_str = libres.read_text('desyde.zinc', 'comb_task_scheduler_core.mzn')
+        model = mzn.Model()
+        model.add_string(model_str)
+
+        # fill in parameters
+        model['runnables'] = self.comb_nodes
+        model['mandatory_tasks'] = self.mandatory_task_nodes
+        model['mandatory_schedulers'] = self.mandatory_schedulers
+        model['cores'] = self.cores
+
+        # generate post-processed sets
+        admissible_runnable_partition = [set() for r in self.comb_nodes]
+        for r in self.comb_nodes:
+            admissible = set(t for t in self.mandatory_task_nodes
+                             for e in self.comb_task_edges if
+                             e.fromNode == r and e.toNode == t)
+            print(admissible)
+        model['admissible_runnable_partition'] = admissible_runnable_partition
+        print(model_str)

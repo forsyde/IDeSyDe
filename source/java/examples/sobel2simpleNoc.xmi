@@ -1,0 +1,15 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<ForSyDe.Model.IO:ForSyDeIO xmi:version="2.0" xmlns:xmi="http://www.omg.org/XMI" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xmlns:ForSyDe.Model.Application="https://forsyde.github.io/ForSyDe/Model/Application" xmlns:ForSyDe.Model.IO="https://forsyde.github.io/ForSyDe/IO" xsi:schemaLocation="https://forsyde.github.io/ForSyDe/Model/Application ../../forsyde-io/ecore/forsyde.ecore#//Model/Application https://forsyde.github.io/ForSyDe/IO ../../forsyde-io/ecore/forsyde.ecore#//Model/IO">
+  <applications xsi:type="ForSyDe.Model.Application:CompoundProcess" identifier="sobel/proc">
+    <ports identifier="sobel/in"/>
+    <ports identifier="sobel/out"/>
+    <vertexes xsi:type="ForSyDe.Model.Application:ConstructedProcess" identifier="sobel/getPx/proc"/>
+    <vertexes xsi:type="ForSyDe.Model.Application:ConstructedProcess" identifier="sobel/Gx/proc"/>
+    <vertexes xsi:type="ForSyDe.Model.Application:ConstructedProcess" identifier="sobel/Gy/proc"/>
+    <vertexes xsi:type="ForSyDe.Model.Application:ConstructedProcess" identifier="sobel/abs/proc"/>
+    <vertexes xsi:type="ForSyDe.Model.Application:Signal" identifier="sobel/gx/sig"/>
+    <vertexes xsi:type="ForSyDe.Model.Application:Signal" identifier="sobel/gy/sig"/>
+    <vertexes xsi:type="ForSyDe.Model.Application:Signal" identifier="sobel/absx/sig"/>
+    <vertexes xsi:type="ForSyDe.Model.Application:Signal" identifier="sobel/absy/sig"/>
+  </applications>
+</ForSyDe.Model.IO:ForSyDeIO>

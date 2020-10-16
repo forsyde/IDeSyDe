@@ -1,0 +1,13 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<project version="4">
+  <component name="CompilerConfiguration">
+    <bytecodeTargetLevel>
+      <module name="emf" target="1.8" />
+      <module name="emf.main" target="1.8" />
+      <module name="emf.test" target="1.8" />
+      <module name="forsyde.java" target="1.8" />
+      <module name="forsyde.java.main" target="1.8" />
+      <module name="forsyde.java.test" target="1.8" />
+    </bytecodeTargetLevel>
+  </component>
+</project>

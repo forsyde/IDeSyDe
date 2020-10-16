@@ -3,7 +3,9 @@ package desyde.java.cli;
 import java.io.File;
 import java.io.IOException;
 import java.nio.file.Files;
+import java.nio.file.Paths;
 import java.util.HashMap;
+import java.util.Set;
 import java.util.concurrent.Callable;
 
 import javax.xml.parsers.DocumentBuilder;
@@ -14,13 +16,16 @@ import org.w3c.dom.Document;
 import org.w3c.dom.Element;
 import org.xml.sax.SAXException;
 
-import ForSyDe.Model.IO.ForSyDeIO;
+import com.sun.tools.javac.util.List;
+
+import desyde.java.prolog.jpl.JPLEngine;
 import picocli.CommandLine;
 import picocli.CommandLine.Command;
+import picocli.CommandLine.Option;
 import picocli.CommandLine.Parameters;
 
 @Command(
-		name = "desyder", 
+		name = "DeSyDe(R)", 
 		mixinStandardHelpOptions = true, 
 		version = "0.1.0",
 		description = "ForSyDe's Design Space Exploration (Refactored) Tool"
@@ -31,14 +36,20 @@ public class CLI implements Callable<Integer> {
     		index = "0",
 			paramLabel = "<ForSyDeIO file>",
     		description = "The ForSyDe IO Model in XMI format to be processed."
-    		)
+    	)
     private File input;
 
-    //@Option(names = {"-a", "--algorithm"}, description = "MD5, SHA-1, SHA-256, ...")
-    //private String algorithm = "MD5";
+    @Option(
+		names = {"-p", "--prolog"}, 
+		description = "How to connect to a prolog engine. It can be a string of the form 'cmd://<command>' or 'jpl'", 
+		defaultValue = "jpl" 
+	)
+    private String prologEngine = "jpl";
 
 	public static void main(String[] args) {
 		try {
+			JPLEngine engine = JPLEngine.getInstance();
+			engine.singleQuery(Set.of(Paths.get("../prolog/rules.pro")), "", null);
 	        int exitCode = new CommandLine(new CLI()).execute(args);
 	        System.exit(exitCode);
 		} catch (Exception e) {

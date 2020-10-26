@@ -12,6 +12,10 @@ import javax.xml.parsers.DocumentBuilder;
 import javax.xml.parsers.DocumentBuilderFactory;
 import javax.xml.parsers.ParserConfigurationException;
 
+import org.jpl7.Atom;
+import org.jpl7.Compound;
+import org.jpl7.Query;
+import org.jpl7.Term;
 import org.w3c.dom.Document;
 import org.w3c.dom.Element;
 import org.xml.sax.SAXException;
@@ -49,7 +53,7 @@ public class CLI implements Callable<Integer> {
 	public static void main(String[] args) {
 		try {
 			JPLEngine engine = JPLEngine.getInstance();
-			engine.singleQuery(Set.of(Paths.get("../prolog/rules.pro")), "", null);
+			engine.singleQuery(Set.of("rules.pl"), "sdfActor(X)", null);
 	        int exitCode = new CommandLine(new CLI()).execute(args);
 	        System.exit(exitCode);
 		} catch (Exception e) {

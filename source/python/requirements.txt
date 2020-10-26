@@ -1,2 +1,2 @@
 minizinc
-forsyde-python-model
+pyswip

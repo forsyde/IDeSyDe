@@ -53,6 +53,7 @@ dependencies {
     // testCompile dependency to testCompile 'org.testng:testng:6.8.1' and add
     // 'test.useTestNG()' to your build script.
     testImplementation 'junit:junit:4.12'
+
 }
 
 
@@ -74,8 +75,11 @@ eclipse {
   }
 }
 
-
 application {
     //mainModule = 'desyde.java.cli' // name defined in module-info.java
     mainClassName = 'desyde.java.cli.CLI'
+}
+
+startScripts {
+	classpath += files('/usr/local/lib/swipl/lib')
 }

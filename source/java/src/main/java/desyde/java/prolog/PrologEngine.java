@@ -13,16 +13,16 @@ import java.util.function.Function;
  * @author rjordao
  *
  */
-public interface PrologEngine {
+public abstract class PrologEngine {
 	
-	public <T> Optional<Map<String, T>> singleQuery(
-			Set<Path> files,
+	public abstract <T> Optional<Map<String, T>> singleQuery(
+			Set<String> filesPaths,
 			String query,
 			Function<String, T> parser
 		);
 	
-	public <T> Iterable<Map<String, T>> multiQuery(
-			Set<Path> files,
+	public abstract <T> Iterable<Map<String, T>> multiQuery(
+			Set<String> filesPaths,
 			String query,
 			Function<String, T> parser
 		);

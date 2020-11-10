@@ -21,7 +21,11 @@ port('AbsCons', 'constructed', 'Output').
 port('AbsCons', 'mapped', 'Input').
 port('getPx', 'constructor', 'Description').
 port('Gx', 'constructor', 'Description').
+port('Gx', 'resx', 'Output').
+port('Gx', 'gx', 'Input').
 port('Gy', 'constructor', 'Description').
+port('Gy', 'resy', 'Output').
+port('Gy', 'gy', 'Input').
 port('Abs', 'constructor', 'Description').
 port('gxsig', 'fifoOut', 'Description').
 port('gxsig', 'fifoIn', 'Description').

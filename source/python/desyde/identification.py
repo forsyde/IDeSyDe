@@ -1,74 +1,65 @@
-import ForSyDe.Model.Application as forapp
-import ForSyDe.Model.Platform as forplat
-import ForSyDe.Model.Refinement as forref
-import desyde.identification.problems as problems
+from typing import Any, Optional
 
-class IdentificationRule:
-    '''
-    Base class (interface) for all identification rules to be implemented.
-    Always assume the model passed is flat.
-    '''
+import numpy as np
+from forsyde.io.python import ForSyDeModel
 
-    def __init__(self, model):
-        '''
-        The model is the original model to be identified and identified are
-        the current already identified subproblems
-        '''
-        self.model = model
+from interfaces import LogicalEngine
 
-    def _collect_sets(self, identified = set()):
-        '''
-        Collection routines are used to filter the model for any elements of interest
-        '''
-        raise NotImplemented("This rule did not implement its collection routine")
 
-    def execute(self, identified = set()):
-        '''
-        Produce the new identified subproblem, or None if failed
-        '''
+class DecisionProblem(object):
+
+    """Docstring for DecisionProblem. """
+
+    def __init__(self):
+        """TODO: to be defined. """
+    
+    def identify(self, logical_engine: LogicalEngine, db: str) -> bool:
+        """TODO: Docstring for identify.
+
+        :db: TODO
+        :returns: TODO
+
+        """
+        return False
+
+    def is_solveable(self, solver: Any) -> bool:
+        """
+        This function returns `True` if `solver` can be used to solve the decision problem.
+        `False` Otherwise.
+
+        :solver: A Solver for decision problems.
+        :returns: `True` if `solver` can do it, `False` otherwise.
+        """
+        return False
+
+    def solve(self, solver: Any, input_model: ForSyDeModel) -> Optional[ForSyDeModel]:
         return None
 
+class SDFToSlotMultiCore(DecisionProblem):
 
-class DECombToSporadicTaskRule(IdentificationRule):
+    """Docstring for SDFToSlotMultiCore. """
 
-    def __init__(self, model):
-        '''
-        The model is the original model to be identified and identified are
-        the current already identified subproblems
-        '''
-        super().__init__(model)
-        self.comb_nodes = set()
-        self.mandatory_task_nodes = set()
-        self.optional_task_nodes = set()
-        self.comb_task_edges = set()
+    def __init__(self):
+        """TODO: to be defined. """
+        DecisionProblem.__init__(self)
+        self.sdf_actors = set()
+        self.sdf_channels = set()
+        self.sdf_topology = np.array()
+        self.slots = set()
+        self.cores = set()
+        self.fabrics = set()
 
-    def _collect_sets(self, identified = set()):
-        for app in self.model.applications:
-            for node in app.processNetlist.nodes:
-                if isinstance(node.definition, forapp.Process):
-                    if node.definition.constructor.moc == forapp.MoC.DE:
-                        self.comb_nodes.add(node)
-        if self.model.refinement:
-            for bind in self.model.refinement.bindingsGraph.nodes:
-                if bind.definition.category == forref.BindingCategory.SporadicTask:
-                    self.mandatory_task_nodes.add(bind)
-        for edge in self.model.refinement.bindingsGraph.edges:
-            if edge.toNode in self.comb_nodes.union(self.mandatory_task_nodes) and\
-                edge.fromNode in self.comb_nodes.union(self.mandatory_task_nodes):
-                self.comb_task_edges.add(edge)
+    def identify(self, logical_engine: LogicalEngine, db: str) -> bool:
+        """TODO: Docstring for identify.
+        :returns: TODO
 
-    def execute(self, identified = set()):
-        self._collect_sets(identified)
-        if self.mandatory_task_nodes and self.comb_nodes:
-            return problems.DEComb_SporadicTasks(
-                comb_nodes = self.comb_nodes,
-                mandatory_task_nodes = self.mandatory_task_nodes,
-                comb_task_edges = self.comb_task_edges
-            )
-        else:
-            return None
+        """
+        for a in logical_engine.query(db, 'sdfActor(X)'):
+            print(a)
+        return False
+        
 
-class SporadicTaskToFixedPrioritySchedulerRule(IdentificationRule):
+class SporadicTaskToFixedPriorityScheduler(DecisionProblem):
 
     def __init__(self, model):
         '''
@@ -87,7 +78,7 @@ class SporadicTaskToFixedPrioritySchedulerRule(IdentificationRule):
     def _collect_sets(self, identified = set()):
         combAndTasks = None
         for prob in identified:
-            if isinstance(prob, problems.DEComb_SporadicTasks):
+            if isinstance(prob, DEComb_SporadicTasks):
                 combAndTasks = prob
                 continue
         if combAndTasks:
@@ -110,7 +101,7 @@ class SporadicTaskToFixedPrioritySchedulerRule(IdentificationRule):
         self._collect_sets(identified)
         if self.mandatory_task_nodes and self.comb_nodes and\
                 self.mandatory_schedulers:
-            return problems.Comb_Task_Scheduler(
+            return Comb_Task_Scheduler(
                 comb_nodes = self.comb_nodes,
                 mandatory_task_nodes = self.mandatory_task_nodes,
                 mandatory_schedulers = self.mandatory_schedulers,
@@ -141,7 +132,7 @@ class FixedPSchedulerToCoresRule(IdentificationRule):
     def _collect_sets(self, identified = set()):
         combAndTasksAndScheds = None
         for prob in identified:
-            if isinstance(prob, problems.Comb_Task_Scheduler):
+            if isinstance(prob, Comb_Task_Scheduler):
                 combAndTasksAndScheds = prob
                 continue
         if combAndTasksAndScheds:
@@ -165,7 +156,7 @@ class FixedPSchedulerToCoresRule(IdentificationRule):
         self._collect_sets(identified)
         if self.mandatory_task_nodes and self.comb_nodes and\
                 self.mandatory_schedulers and self.cores:
-            return problems.Comb_Task_Scheduler_Core(
+            return Comb_Task_Scheduler_Core(
                 comb_nodes = self.comb_nodes,
                 mandatory_task_nodes = self.mandatory_task_nodes,
                 mandatory_schedulers = self.mandatory_schedulers,
@@ -176,3 +167,35 @@ class FixedPSchedulerToCoresRule(IdentificationRule):
             )
         else:
             return None
+
+
+class Identifier:
+    '''
+    Class to invoke all rules in a iterative way for a model.
+
+    Everytime a new rule is added, don't forget to add it to the rule set.
+    '''
+
+    _rules_classes = [
+        DECombToSporadicTaskRule,
+        SporadicTaskToFixedPrioritySchedulerRule,
+        FixedPSchedulerToCoresRule
+    ]
+
+    def __init__(self, model):
+        self.model = model
+        self.flat_model = pre.ModelFlattener(model).flatten()
+
+    def identify(self):
+        rules = set(rule(self.flat_model) for rule in self.__class__._rules_classes)
+        identified = set()
+        # for loop is necessary in favor of while because all rules
+        # may fail
+        for i in range(len(rules)):
+            for rule in rules.copy():
+                problem = rule.execute(identified)
+                if problem:
+                    identified.add(problem)
+                    rules.discard(rule)
+        return set(i for i in identified if i.is_proper_identification())
+

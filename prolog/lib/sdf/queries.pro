@@ -1,5 +1,5 @@
 :- module('std_sdf_queries', [sdf_actor/1, sdf_channel/1]).
-:- use_module('std/types.pro').
+:- use_module('lib/types.pro').
 
 sdf_actor(X) :- vertex(X, T1),
                 is_type(T1, 'Process'),

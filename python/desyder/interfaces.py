@@ -5,8 +5,3 @@ from forsyde.io.python import ForSyDeModel
 import minizinc
 
 
-class MinizincDecideable(abc.ABC):
-
-    @abc.abstractmethod
-    def get_minizinc_model(self) -> minizinc.Model:
-        return minizinc.Model()

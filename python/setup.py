@@ -1,4 +1,4 @@
-from setuptools import setup, find_namespace_packages
+from setuptools import setup
 
 setup(name='desyder',
       version='0.1.2',
@@ -9,10 +9,12 @@ setup(name='desyder',
       license='MIT',
       python_requires='>=3.7',
       packages=['desyder'],
+      include_package_data=True,
       #packages=find_namespace_packages(include=["desyde.*"]),
       install_requires=[
           'forsyde-io-python',
-          'minizinc'
+          'minizinc',
+          'numpy'
       ],
       entry_points={
           "console_scripts": [

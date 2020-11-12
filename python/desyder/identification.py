@@ -1,48 +1,60 @@
+import abc
 import importlib.resources as resources
-from typing import Any, Optional
+from typing import Any, List
 
 import minizinc
 import numpy as np
 from forsyde.io.python import ForSyDeModel
 
-from desyder.interfaces import MinizincDecideable
 
-class DecisionProblem(object):
+class MinizincAble(abc.ABC):
+
+    @abc.abstractmethod
+    def get_minizinc_model(self) -> minizinc.Model:
+        return minizinc.Model()
+
+class DecisionProblem(abc.ABC):
 
     """Docstring for DecisionProblem. """
 
     def __init__(self):
         """TODO: to be defined. """
+        self.is_identified = False
+        self.fix_point = False
 
-    def identify(self, model: ForSyDeModel) -> bool:
+    def identify(self,
+                 model: ForSyDeModel,
+                 identified: List["DecisionProblem"]
+                 ) -> List["DecisionProblem"]:
+        if not self.fix_point:
+            self.is_identified = self._identify(model, identified)
+        return self.is_identified
+
+    @abc.abstractmethod
+    def _identify(self,
+                  model: ForSyDeModel,
+                  identified: List["DecisionProblem"]
+                  ) -> List["DecisionProblem"]:
         """TODO: Docstring for identify.
 
         :db: TODO
         :returns: TODO
 
         """
-        return False
-
-    def is_solveable(self, solver: Any) -> bool:
-        """
-        This function returns `True` if `solver` can be used to
-        solve the decision problem.  `False` Otherwise.
-
-        :solver: A Solver for decision problems.
-        :returns: `True` if `solver` can do it, `False` otherwise.
-        """
-        return False
+        return self.is_identified
 
 
-class SDFExecution(DecisionProblem, MinizincDecideable):
+class SDFExecution(DecisionProblem, MinizincAble):
 
     def __init__(self):
         DecisionProblem.__init__(self)
         self.sdf_actors = []
         self.sdf_channels = []
-        self.sdf_topology = np.array()
+        self.sdf_topology = np.zeros((0, 0))
 
-    def identify(self, model: ForSyDeModel) -> bool:
+    def _identify(self,
+                  model: ForSyDeModel,
+                  identified: List[DecisionProblem]) -> List[DecisionProblem]:
         """TODO: Docstring for identify.
         :returns: TODO
 
@@ -60,13 +72,13 @@ class SDFExecution(DecisionProblem, MinizincDecideable):
         for row in model.query_view('sdf_topology'):
             a_index = self.sdf_actors.index(row['actor_id'])
             c_index = self.sdf_channels.index(row['channel_id'])
-            self.sdf_topology[a_index, c_index] = int(row['token'])
+            self.sdf_topology[a_index, c_index] = int(row['tokens'])
         # necessity check for SDF consistency (null space not empty)
         # later need to implement PASS maybe
-        if 0 not in np.linalg.eigvals(self.sdf_topology):
-            return False
-        else:
-            return True
+        self.is_identified = np.linalg.matrix_rank(self.sdf_topology) == \
+            min(self.sdf_topology.shape) - 1
+        self.fix_point = True
+        return self.is_identified
 
     def get_minizinc_model(self):
         model = minizinc.Model()
@@ -82,19 +94,22 @@ class SDFExecution(DecisionProblem, MinizincDecideable):
         model['max_tokens'] = range(1, 10)
         return model
 
-class SDFToSlots(SDFExecution):
+
+class SDFToSlots(DecisionProblem, MinizincAble):
 
     def __init__(self):
-        SDFExecution.__init__(self)
+        DecisionProblem.__init__(self)
         self.slots = []
 
-    def identify(self, model: ForSyDeModel) -> bool:
+    def identify(self,
+                 model: ForSyDeModel,
+                 identified: List[DecisionProblem]) -> bool:
         """TODO: Docstring for identify.
         :returns: TODO
 
         """
         parent = super(SDFExecution, self).identify(model)
-        return parent and False
+        return False
 
 
 class SDFToSlotMultiCore(SDFToSlots):

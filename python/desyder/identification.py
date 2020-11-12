@@ -5,7 +5,7 @@ import minizinc
 import numpy as np
 from forsyde.io.python import ForSyDeModel
 
-from interfaces import MinizincDecideable
+from desyder.interfaces import MinizincDecideable
 
 class DecisionProblem(object):
 
@@ -70,8 +70,16 @@ class SDFExecution(DecisionProblem, MinizincDecideable):
 
     def get_minizinc_model(self):
         model = minizinc.Model()
-        model_txt = resources.read_text('desyder.minizinc', 'sdf_linear_dmodel.mzn')
-        model.add_file
+        model_txt = resources.read_text(
+            'desyder.minizinc',
+            'sdf_linear_dmodel.mzn'
+        )
+        model.add_string(model_txt)
+        model['sdf_actors'] = range(1, len(self.sdf_actors)+1)
+        model['sdf_channels'] = range(1, len(self.sdf_channels)+1)
+        model['max_steps'] = range(1, len(self.sdf_actors)+1)
+        # TODO Change this later!!!
+        model['max_tokens'] = range(1, 10)
         return model
 
 class SDFToSlots(SDFExecution):

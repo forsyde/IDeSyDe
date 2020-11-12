@@ -1,4 +1,3 @@
 minizinc
-pyswip
 forsyde-io-python
 numpy

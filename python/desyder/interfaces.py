@@ -7,6 +7,6 @@ import minizinc
 
 class MinizincDecideable(abc.ABC):
 
-    @abs.abstractmethod
+    @abc.abstractmethod
     def get_minizinc_model(self) -> minizinc.Model:
         return minizinc.Model()

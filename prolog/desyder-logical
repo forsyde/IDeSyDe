@@ -19,7 +19,6 @@ main_process_entry([Model|Rest]) :-
 
 main_process_args(['sdf_actors'|Rest]) :-
   findall(X, sdf_actor(X), L),
-  write('asd'),
   write(L),
   main_process_args(Rest).
 
@@ -31,7 +30,7 @@ main_read_model(ModelStream) :-
 
 main_read_model(ModelStream) :-
   read_term(ModelStream, T, []),
-  assertz(T),
+  asserta(T),
   main_read_model(ModelStream).
 
  

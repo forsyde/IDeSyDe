@@ -1,22 +1,22 @@
 from setuptools import setup, find_namespace_packages
 
-setup(name='desyde',
-      version='0.1.1',
+setup(name='desyder',
+      version='0.1.2',
       description='Analytical Design Space Exploration for ForSyDe',
       url='http://github.com/rojods/desyder',
       author='Rodolfo Jordao',
       author_email='jordao@kth.se',
       license='MIT',
       python_requires='>=3.7',
-      packages=['desyde'],
+      packages=['desyder'],
       #packages=find_namespace_packages(include=["desyde.*"]),
       install_requires=[
-          'forsyde-python-model',
+          'forsyde-io-python',
           'minizinc'
       ],
-      entry_points = {
+      entry_points={
           "console_scripts": [
-              "desyder = desyde.cli:cli_entry"
+              "desyder = desyder.cli:cli_entry"
           ]
       },
       zip_safe=True)

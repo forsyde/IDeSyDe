@@ -4,6 +4,10 @@ from typing import Any, List
 
 import minizinc
 import numpy as np
+import sympy
+
+import desyder.math as mathutil
+import desyder.sdf as sdfapi
 from forsyde.io.python import ForSyDeModel
 
 
@@ -20,13 +24,13 @@ class DecisionProblem(abc.ABC):
     def __init__(self):
         """TODO: to be defined. """
         self.is_identified = False
-        self.fix_point = False
+        self.at_fix_point = False
 
     def identify(self,
                  model: ForSyDeModel,
                  identified: List["DecisionProblem"]
                  ) -> List["DecisionProblem"]:
-        if not self.fix_point:
+        if not self.at_fix_point:
             self.is_identified = self._identify(model, identified)
         return self.is_identified
 
@@ -51,10 +55,12 @@ class SDFExecution(DecisionProblem, MinizincAble):
         self.sdf_actors = []
         self.sdf_channels = []
         self.sdf_topology = np.zeros((0, 0))
+        self.repetition_vector = []
+        self.sdf_pass = []
 
     def _identify(self,
                   model: ForSyDeModel,
-                  identified: List[DecisionProblem]) -> List[DecisionProblem]:
+                  identified: List[DecisionProblem]) -> bool:
         """TODO: Docstring for identify.
         :returns: TODO
 
@@ -66,18 +72,28 @@ class SDFExecution(DecisionProblem, MinizincAble):
             c['channel_id'] for c in model.query_view('sdf_channels')
         )
         self.sdf_topology = np.zeros(
-            (len(self.sdf_actors), len(self.sdf_channels)),
+            (len(self.sdf_channels), len(self.sdf_actors)),
             dtype=int
         )
         for row in model.query_view('sdf_topology'):
             a_index = self.sdf_actors.index(row['actor_id'])
             c_index = self.sdf_channels.index(row['channel_id'])
-            self.sdf_topology[a_index, c_index] = int(row['tokens'])
+            self.sdf_topology[c_index, a_index] = int(row['tokens'])
         # necessity check for SDF consistency (null space not empty)
         # later need to implement PASS maybe
-        self.is_identified = np.linalg.matrix_rank(self.sdf_topology) == \
-            min(self.sdf_topology.shape) - 1
-        self.fix_point = True
+        null_space = sympy.Matrix(self.sdf_topology).nullspace()
+        if len(null_space) == 1:
+            repetition_vector = mathutil.integralize_vector(null_space[0])
+            repetition_vector = np.array(repetition_vector, dtype=int)
+            initial_tokens = np.zeros((self.sdf_topology.shape[0], 1))
+            schedule = sdfapi.get_PASS(self.sdf_topology,
+                                       repetition_vector,
+                                       initial_tokens)
+            if schedule != []:
+                self.repetition_vector = repetition_vector
+                self.sdf_pass = [self.sdf_actors[idx] for idx in schedule]
+                self.is_identified = True
+        self.at_fix_point = True
         return self.is_identified
 
     def get_minizinc_model(self):
@@ -89,9 +105,15 @@ class SDFExecution(DecisionProblem, MinizincAble):
         model.add_string(model_txt)
         model['sdf_actors'] = range(1, len(self.sdf_actors)+1)
         model['sdf_channels'] = range(1, len(self.sdf_channels)+1)
-        model['max_steps'] = range(1, len(self.sdf_actors)+1)
-        # TODO Change this later!!!
-        model['max_tokens'] = range(1, 10)
+        model['max_steps'] = len(self.sdf_pass)
+        cloned_firings = np.array([
+            self.repetition_vector.transpose()
+            for i in range(len(self.sdf_channels))
+        ])
+        model['max_tokens'] = np.amax(
+            cloned_firings * np.absolute(self.sdf_topology)
+        )
+        model['activations'] = self.repetition_vector
         return model
 
 
@@ -108,17 +130,16 @@ class SDFToSlots(DecisionProblem, MinizincAble):
         :returns: TODO
 
         """
-        parent = super(SDFExecution, self).identify(model)
         return False
 
 
-class SDFToSlotMultiCore(SDFToSlots):
+class SDFToSlotMultiCore(DecisionProblem, MinizincAble):
 
     """Docstring for SDFToSlotMultiCore. """
 
     def __init__(self):
         """TODO: to be defined. """
-        SDFToSlots.__init__(self)
+        DecisionProblem.__init__(self)
         self.cores = set()
         self.fabrics = set()
 
@@ -127,8 +148,7 @@ class SDFToSlotMultiCore(SDFToSlots):
         :returns: TODO
 
         """
-        parent = super(SDFToSlots, self).identify(model)
-        return parent and False
+        return False
 
 
 # class SporadicTaskToFixedPriorityScheduler(DecisionProblem):

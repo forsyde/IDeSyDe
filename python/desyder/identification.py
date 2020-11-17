@@ -70,8 +70,8 @@ class SDFExecution(DecisionProblem, MinizincAble):
         self.sdf_pass = []
 
     def identify(self,
-                  model: ForSyDeModel,
-                  subproblems: List[DecisionProblem]) -> bool:
+                 model: ForSyDeModel,
+                 subproblems: List[DecisionProblem]) -> bool:
         """TODO: Docstring for identify.
         :returns: TODO
 

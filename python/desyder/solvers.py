@@ -12,7 +12,7 @@ class Solver(abc.ABC):
     def can_solve(problem: DecisionProblem) -> bool:
         return False
 
-    @abs.abstractmethod
+    @abc.abstractmethod
     def solve(problem: DecisionProblem) -> Optional[ForSyDeModel]:
         return None
 

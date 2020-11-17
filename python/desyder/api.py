@@ -1,4 +1,4 @@
-from typing import List, Set, Optional
+from typing import List, Set, Optional, Type
 
 from forsyde.io.python import ForSyDeModel
 
@@ -10,7 +10,7 @@ class DeSyDeR(object):
 
     def __init__(self):
         self.standard_problems = set(
-            c() for c in DecisionProblem.__subclasses__()
+            c for c in DecisionProblem.__subclasses__()
         )
         self.standard_solvers = set(
             s() for s in Solver.__subclasses__()
@@ -19,17 +19,27 @@ class DeSyDeR(object):
     def identify_problems(
         self,
         model: ForSyDeModel,
-        problems: Optional[Set[DecisionProblem]] = None
+        problems: Set[Type[DecisionProblem]] = set(),
+        solvers: Set[Type[Solver]] = set()
     ) -> List[DecisionProblem]:
-        if problems is None:
+        if not problems:
             problems = self.standard_problems
-        candidates = set(p for p in problems if not p.at_fix_point)
-        identified = set(p for p in problems if p.is_identified)
-        while len(candidates) > 0:
-            identified = set(
-                p for p in problems if p.identify(model, problems)
-            )
-            candidates = set(
-                p for p in problems if not p.at_fix_point
-            )
+        if not solvers:
+            solvers = self.standard_solvers
+        max_iterations = len(model) + len(problems)
+        candidates = [p for p in problems]
+        identified = []
+        iterations = 0
+        while len(candidates) > 0 and iterations < max_iterations:
+            # generate all trials and keep track of which subproblem
+            # made the trial
+            for c in candidates:
+                (fixed, subprob) = c.identify(model, identified)
+                # join with the identified
+                if subprob:
+                    identified.append(subprob)
+                # take away candidates at fixpoint
+                if fixed:
+                    candidates.remove(c)
+            iterations += 1
         return identified

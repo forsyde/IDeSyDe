@@ -1,6 +1,7 @@
 import abc
 import importlib.resources as resources
-from typing import Any, List, Union, Tuple
+from dataclasses import dataclass, field
+from typing import Any, List, Union, Tuple, Set, Optional
 
 import minizinc
 import numpy as np
@@ -25,7 +26,7 @@ class MinizincAble(abc.ABC):
     def get_mzn_model_name(self) -> str:
         return ""
 
-    def build_mzn_model(self):
+    def build_mzn_model(self, model=minizinc.Model()):
         model_txt = resources.read_text(
             'desyder.minizinc',
             self.get_mzn_model_name()
@@ -39,71 +40,72 @@ class DecisionProblem(abc.ABC):
 
     """Docstring for DecisionProblem. """
 
-    def __init__(self):
-        """TODO: to be defined. """
-        self.is_identified = False
-        self.at_fix_point = False
-
-    @abc.abstractmethod
+    @abc.abstractclassmethod
     def identify(
-            self,
+            cls,
             model: ForSyDeModel,
             subproblems: List["DecisionProblem"]
-            ) -> bool:
+            ) -> Tuple[bool, Optional["DecisionProblem"]]:
         """TODO: Docstring for identify.
 
         :db: TODO
         :returns: TODO
 
         """
-        return self.is_identified
+        return (True, None)
 
 
+@dataclass
 class SDFExecution(DecisionProblem, MinizincAble):
 
-    def __init__(self):
-        DecisionProblem.__init__(self)
-        self.sdf_actors = []
-        self.sdf_channels = []
-        self.sdf_topology = np.zeros((0, 0))
-        self.repetition_vector = []
-        self.sdf_pass = []
+    sdf_actors: List[str] = field(default_factory=lambda: [])
+    sdf_channels: List[str] = field(default_factory=lambda: [])
+    sdf_topology: np.ndarray = np.zeros((0, 0))
+    sdf_repetition_vector: List[int] = field(default_factory=lambda: [])
+    sdf_pass: List[str] = field(default_factory=lambda: [])
 
-    def identify(self,
-                 model: ForSyDeModel,
-                 subproblems: List[DecisionProblem]) -> bool:
+    @classmethod
+    def identify(cls, model, identified):
         """TODO: Docstring for identify.
         :returns: TODO
 
         """
-        self.sdf_actors = list(
-            a['actor_id'] for a in model.query_view('sdf_actors')
+        sdf_actors = list(
+            a['vertex_id'] for a in model.query_view('sdf_actors')
         )
-        self.sdf_channels = list(
-            c['channel_id'] for c in model.query_view('sdf_channels')
+        sdf_channels = list(
+            c['vertex_id'] for c in model.query_view('sdf_channels')
         )
-        self.sdf_topology = np.zeros(
-            (len(self.sdf_channels), len(self.sdf_actors)),
+        sdf_topology = np.zeros(
+            (len(sdf_channels), len(sdf_actors)),
             dtype=int
         )
         for row in model.query_view('sdf_topology'):
-            a_index = self.sdf_actors.index(row['actor_id'])
-            c_index = self.sdf_channels.index(row['channel_id'])
-            self.sdf_topology[c_index, a_index] = int(row['tokens'])
-        null_space = sympy.Matrix(self.sdf_topology).nullspace()
+            a_index = sdf_actors.index(row['actor_id'])
+            c_index = sdf_channels.index(row['channel_id'])
+            sdf_topology[c_index, a_index] = int(row['tokens'])
+        null_space = sympy.Matrix(sdf_topology).nullspace()
         if len(null_space) == 1:
             repetition_vector = mathutil.integralize_vector(null_space[0])
             repetition_vector = np.array(repetition_vector, dtype=int)
-            initial_tokens = np.zeros((self.sdf_topology.shape[0], 1))
-            schedule = sdfapi.get_PASS(self.sdf_topology,
+            initial_tokens = np.zeros((sdf_topology.shape[0], 1))
+            schedule = sdfapi.get_PASS(sdf_topology,
                                        repetition_vector,
                                        initial_tokens)
             if schedule != []:
-                self.repetition_vector = repetition_vector
-                self.sdf_pass = [self.sdf_actors[idx] for idx in schedule]
-                self.is_identified = True
-        self.at_fix_point = True
-        return self.is_identified
+                sdf_pass = [sdf_actors[idx] for idx in schedule]
+                return (
+                    True,
+                    SDFExecution(
+                        sdf_actors,
+                        sdf_channels,
+                        sdf_topology,
+                        repetition_vector,
+                        sdf_pass
+                    )
+                )
+        else:
+            return (False, None)
 
     def populate_mzn_model(self, model):
         model['sdf_actors'] = range(1, len(self.sdf_actors)+1)
@@ -123,67 +125,89 @@ class SDFExecution(DecisionProblem, MinizincAble):
         return 'sdf_linear_dmodel.mzn'
 
 
+@dataclass
 class SDFToSlots(DecisionProblem, MinizincAble):
 
-    def __init__(self):
-        DecisionProblem.__init__(self)
-        self.sdf_subproblem = None
-        self.tasks = []
+    sdf_subproblem: SDFExecution
+    orderings: List[str] = field(default_factory=lambda: [])
 
-    def identify(self,
-                 model: ForSyDeModel,
-                 subproblems: List[DecisionProblem]) -> bool:
+    @classmethod
+    def identify(cls, model, identified):
         """TODO: Docstring for identify.
         :returns: TODO
 
         """
-        for prob in subproblems:
-            if isinstance(prob, SDFExecution):
-                self.sdf_subproblem = prob
-                break
-        if self.sdf_subproblem:
-            self.tasks = list(
-                r['vertex_id'] for r in model.query_view('tasks')
+        sdf_subproblem = next(
+            (p for p in identified if isinstance(p, SDFExecution)),
+            None)
+        if sdf_subproblem:
+            orderings = list(
+                r['vertex_id'] for r in model.query_view('orderings')
             )
-            if self.sdf_subproblem.is_identified and len(self.tasks):
-                self.is_identified = True
-            if self.sdf_subproblem.at_fix_point:
-                self.at_fix_point = True
+            if orderings:
+                return (
+                    True,
+                    SDFToSlots(
+                        sdf_subproblem,
+                        orderings
+                    )
+                )
+            else:
+                return (True, None)
         else:
-            self.is_identified = False
-            self.at_fix_point = True
-        return self.is_identified
+            return (False, None)
 
     def populate_mzn_model(self, model):
         self.sdf_subproblem.populate_mzn_model(model)
-        model['static_orders'] = range(len(self.tasks))
+        model['static_orders'] = range(len(self.orderings))
         return model
 
     def get_mzn_model_name(self):
         return 'sdf_order_linear_dmodel.mzn'
 
 
+@dataclass
 class SDFToSlotMultiCore(DecisionProblem, MinizincAble):
 
-    """Docstring for SDFToSlotMultiCore. """
+    sdf_to_slots_sub: SDFToSlots
+    cpus: List[str] = field(default_factory=lambda: [])
+    bus: List[str] = field(default_factory=lambda: [])
 
-    def __init__(self):
-        """TODO: to be defined. """
-        DecisionProblem.__init__(self)
-        self.cores = set()
-        self.fabrics = set()
-
-    def identify(self, model, identified):
+    @classmethod
+    def identify(cls, model, identified):
         """TODO: Docstring for identify.
         :returns: TODO
 
         """
-        self.at_fix_point = True
-        self.is_identified = True
-        return self.is_identified
+        sdf_to_slot_sub = next(
+            (p for p in identified if isinstance(p, SDFToSlots)),
+            None)
+        if sdf_to_slot_sub:
+            cpus = list(
+                r['vertex_id'] for r in
+                model.query_view('tdma_mpsoc_processing_units')
+            )
+            bus = next((
+                r['vertex_id'] for r in
+                model.query_view('tdma_mpsoc_bus')
+            ), None)
+            if cpus and bus:
+                return (
+                    True,
+                    SDFToSlotMultiCore(
+                        sdf_to_slot_sub,
+                        cpus,
+                        bus
+                    )
+                )
+            else:
+                return (True, None)
+        else:
+            return (False, None)
 
     def get_mzn_model_name(self):
         return "sdf_mpsoc_linear_dmodel.mzn"
 
     def populate_mzn_model(self, model):
+        self.sdf_to_slot_sub.populate_mzn_model(model)
         return model

@@ -171,7 +171,8 @@ class SDFToSlotMultiCore(DecisionProblem, MinizincAble):
 
     sdf_to_slots_sub: SDFToSlots
     cpus: List[str] = field(default_factory=lambda: [])
-    bus: List[str] = field(default_factory=lambda: [])
+    bus: Optional[str] = None
+    bus_slots: Optional[int] = None
 
     @classmethod
     def identify(cls, model, identified):
@@ -191,13 +192,18 @@ class SDFToSlotMultiCore(DecisionProblem, MinizincAble):
                 r['vertex_id'] for r in
                 model.query_view('tdma_mpsoc_bus')
             ), None)
+            bus_slots = next((
+                r['slots'] for r in
+                model.query_view('tdma_mpsoc_bus_slots')
+            ), None)
             if cpus and bus:
                 return (
                     True,
                     SDFToSlotMultiCore(
                         sdf_to_slot_sub,
                         cpus,
-                        bus
+                        bus,
+                        bus_slots
                     )
                 )
             else:

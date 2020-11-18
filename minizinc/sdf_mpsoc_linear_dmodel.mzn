@@ -1,0 +1,90 @@
+include "globals.mzn";
+
+% model parameters-
+int: max_bus_slots;
+int: max_tokens;
+int: max_steps;
+
+set of int: sdf_actors; % not flattened
+set of int: sdf_channels;
+set of int: processing_units;
+
+array[sdf_channels] of int: initial_tokens;
+array[sdf_actors] of int: activations;
+array[sdf_channels, sdf_actors] of int: sdf_topology;
+array[sdf_actors, processing_units] of int: wcet;
+array[sdf_channels] of int: wcct_per_token;
+
+% deduced model parameters
+set of int: steps0 = 0..max_steps;
+set of int: steps = 1..max_steps;
+set of int: bus_slots = 1..max_bus_slots;
+
+% variables
+array[sdf_channels, processing_units, steps0] of var 0..max_tokens: buffer;
+array[sdf_channels, processing_units, processing_units, bus_slots, steps0] of var 0..max_tokens: send;
+array[sdf_actors, processing_units, steps] of var 0..max(activations): mapped_actors;
+array[processing_units, steps0] of var int: cpu_time;
+array[steps0] of var int: bus_slots_used;
+
+% unable any communiation at the 'pre' time, or initial state
+constraint sum(send[.., .., .., .., 0]) = 0;
+
+% sdf semantics: repetion vector constraint
+constraint forall(a in sdf_actors) (
+  sum(mapped_actors[a, .., ..]) = activations[a]
+);
+
+% sdf semantics: final state
+constraint forall(c in sdf_channels) (
+  sum(buffer[c, .., 0]) = initial_tokens[c]
+);
+
+% sdf semantics: initial state
+constraint forall(c in sdf_channels) (
+  sum(buffer[c, .., max_steps]) = initial_tokens[c]
+);
+
+% sdf semantics: firing with communication
+constraint forall(t in steps, c in sdf_channels, p in processing_units) (
+  buffer[c, p, t] = sum(a in sdf_actors) (sdf_topology[c, a]*mapped_actors[a, p, t]) + buffer[c, p, t-1] 
+  + sum(s in bus_slots, pp in processing_units where p != pp) (send[c, pp, p, s, t-1])
+  - sum(s in bus_slots, pp in processing_units where p != pp) (send[c, p, pp, s, t])
+);
+
+% sdf semantics: no buffer is ever negative
+constraint forall(c in sdf_channels, t in steps0, p in processing_units) (
+  buffer[c, p, t] >= 0
+);
+
+% timing for the cpus
+constraint forall(t in steps, p in processing_units) (
+  cpu_time[p, t] >= cpu_time[p, t-1] + sum(a in sdf_actors) (wcet[a, p] * mapped_actors[a, p, t-1])
+);
+
+constraint forall(t in steps, p, pp in processing_units where p != pp) (
+  cpu_time[p, t] >= cpu_time[pp, t-1] + sum(s in bus_slots, c in sdf_channels) (
+    wcct_per_token[c] * send[c, pp, p, s, t-1]
+  )
+);
+
+% cannot use more than max bus slots per step
+constraint forall(t in steps) (
+  % TODO: this is not correct! Need to check how to make each use less than bus slots.
+  count_geq(array1d(send[.., .., .., .., t]), 0, max_bus_slots)
+);
+
+% constrain a channel to choose only and one only slot
+
+
+
+% each slot can only admit one event
+% constraint forall(t in steps) (
+%   sum(a in sdf_actors, p in static_orders) (mapped_actors[a, o, t]) <= 1
+% );
+
+solve 
+  :: int_search(mapped_actors, first_fail, indomain_min, complete)
+  :: int_search(buffer, first_fail, indomain_min, complete)
+  :: int_search(send, first_fail, indomain_min, complete)
+  satisfy;

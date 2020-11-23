@@ -81,6 +81,16 @@ class DecisionModel(abc.ABC):
                 return o[key]
         return KeyError
 
+    def __contains__(self, key):
+        key = str(key)
+        if key in self.__dict__:
+            return True
+        for k in self.__dict__:
+            o = self.__dict__[k]
+            if isinstance(o, DecisionModel) and key in o:
+                return True
+        return False
+
 
 @dataclass
 class SDFExecution(DecisionModel):

@@ -75,7 +75,6 @@ class DecisionModel(abc.ABC):
         if key in self.__dict__:
             return self.__dict__[key]
         for k in self.__dict__:
-
             o = self.__dict__[k]
             if isinstance(o, DecisionModel) and key in o:
                 return o[key]

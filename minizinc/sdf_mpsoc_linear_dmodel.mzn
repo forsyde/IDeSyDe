@@ -13,7 +13,10 @@ array[sdf_channels] of int: initial_tokens;
 array[sdf_actors] of int: activations;
 array[sdf_channels, sdf_actors] of int: sdf_topology;
 array[sdf_actors, processing_units] of int: wcet;
-array[sdf_channels] of int: wcct_per_token;
+% this numbers are 'per channel token'
+array[sdf_channels, processing_units, processing_units] of int: wcct;
+array[sdf_channels, processing_units] of int: send_overhead;
+array[sdf_channels, processing_units] of int: read_overhead;
 
 % deduced model parameters
 set of int: steps0 = 0..max_steps;
@@ -60,6 +63,9 @@ constraint forall(c in sdf_channels, t in steps0, p in processing_units) (
 % timing for the cpus
 constraint forall(t in steps, p in processing_units) (
   cpu_time[p, t] >= cpu_time[p, t-1] + sum(a in sdf_actors) (wcet[a, p] * mapped_actors[a, p, t-1])
+    + sum(c in sdf_channels, pp in processing_units where p != pp) (
+        send_overhead_per_token[c, p]*sum(send[c, p, pp, .., t-1])
+      + read_overhead_per_token[c, p]*sum(send[c, pp, p, .., t])
 );
 
 constraint forall(t in steps, p, pp in processing_units where p != pp) (
@@ -70,15 +76,19 @@ constraint forall(t in steps, p, pp in processing_units where p != pp) (
 
 % cannot use more than max bus slots per step
 constraint forall(t in steps) (
-  % TODO: this is not correct! Need to check how to make each use less than bus slots.
-  count_geq(array1d(send[.., .., .., .., t]), 0, max_bus_slots)
+  % The number of times a channels do not use the bus (zero) must be GEQ than $c*p^2 - bslots$
+  count_geq(array1d(send[.., .., .., .., t]), 0, 
+    length(sdf_channels) * length(processing_units) * length(processing_units) - max_bus_slots
+  )
 );
 
 % constrain a channel to choose only and one only slot
+constraint forall(c in sdf_channels) (
+  count_geq(array1d(send[c, .., .., .., ..]), 0, 1)
+);
 
+% each slot can only admit one eventrodolfo1
 
-
-% each slot can only admit one event
 % constraint forall(t in steps) (
 %   sum(a in sdf_actors, p in static_orders) (mapped_actors[a, o, t]) <= 1
 % );

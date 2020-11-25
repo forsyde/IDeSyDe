@@ -20,7 +20,7 @@ def make_exe(dist):
 
     # Enable support for non-classified "file" resources to be added to
     # resource collections.
-    # policy.allow_files = True
+    policy.allow_files = True
 
     # Control support for loading Python extensions and other shared libraries
     # from memory. This is only supported on Windows and is ignored on other
@@ -49,7 +49,7 @@ def make_exe(dist):
 
     # Package Python extensions in the distribution not having a dependency on
     # GPL licensed software.
-    # policy.extension_module_filter = "no-gpl"
+    policy.extension_module_filter = "no-gpl"
 
     # Controls whether the file scanner attempts to classify files and emit
     # resource-specific values.
@@ -64,11 +64,11 @@ def make_exe(dist):
 
     # Toggle whether Python module source code for modules in the Python
     # distribution's standard library are included.
-    # policy.include_distribution_sources = False
+    policy.include_distribution_sources = False
 
     # Toggle whether Python package resource files for the Python standard
     # library are included.
-    # policy.include_distribution_resources = False
+    policy.include_distribution_resources = False
 
     # Controls the `add_include` attribute of `File` resources.
     # policy.include_file_resources = False
@@ -87,14 +87,14 @@ def make_exe(dist):
     # an optional fallback.
 
     # Use in-memory location for adding resources by default.
-    # policy.resources_location = "in-memory"
+    policy.resources_location = "in-memory"
 
     # Use filesystem-relative location for adding resources by default.
     # policy.resources_location = "filesystem-relative:prefix"
 
     # Attempt to add resources relative to the built binary when
     # `resources_location` fails.
-    # policy.resources_location_fallback = "filesystem-relative:prefix"
+    policy.resources_location_fallback = "filesystem-relative:prefix"
 
     # Clear out a fallback resource location.
     # policy.resources_location_fallback = None
@@ -122,14 +122,14 @@ def make_exe(dist):
     python_config = dist.make_python_interpreter_config()
 
     # Make the embedded interpreter behave like a `python` process.
-    # python_config.config_profile = "python"
+    python_config.config_profile = "python"
 
     # Set initial value for `sys.path`. If the string `$ORIGIN` exists in
     # a value, it will be expanded to the directory of the built executable.
     # python_config.module_search_paths = ["$ORIGIN/lib"]
 
     # Use jemalloc as Python's memory allocator
-    # python_config.raw_allocator = "jemalloc"
+    python_config.raw_allocator = "jemalloc"
 
     # Use the system allocator as Python's memory allocator.
     # python_config.raw_allocator = "system"
@@ -153,10 +153,10 @@ def make_exe(dist):
     # python_config.write_modules_directory_env = "/tmp/oxidized/loaded_modules"
 
     # Evaluate a string as Python code when the interpreter starts.
-    # python_config.run_command = "<code>"
+    # python_config.run_command = "from desyder.cli import cli_entry; cli_entry()"
 
     # Run a Python module as __main__ when the interpreter starts.
-    # python_config.run_module = "<module>"
+    python_config.run_module = "desyder.cli"
 
     # Run a Python file when the interpreter starts.
     # python_config.run_filename = "/path/to/file"
@@ -165,7 +165,7 @@ def make_exe(dist):
     # resources, and other options. The returned object represents the
     # standalone executable that will be built.
     exe = dist.to_python_executable(
-        name=".",
+        name="desyder",
 
         # If no argument passed, the default `PythonPackagingPolicy` for the
         # distribution is used.
@@ -177,7 +177,7 @@ def make_exe(dist):
 
     # Install tcl/tk support files to a specified directory so the `tkinter` Python
     # module works.
-    # exe.tcl_files_path = "lib"
+    exe.tcl_files_path = "lib/tcl"
 
     # Make the executable a console application on Windows.
     # exe.windows_subsystem = "console"

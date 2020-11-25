@@ -32,7 +32,7 @@ array[steps0] of var int: bus_slots_used;
 
 % unable any communiation at the 'pre' time, or initial state
 constraint sum(send[.., .., .., .., 0]) = 0;
-
+  
 % sdf semantics: repetion vector constraint
 constraint forall(a in sdf_actors) (
   sum(mapped_actors[a, .., ..]) = activations[a]

@@ -1,0 +1,25 @@
+[tool.poetry]
+name = "desyder"
+version = "0.1.0"
+description = "ForSyDe's Design Space Exploration Tool"
+authors = ["jordao <jordao@kth.se>"]
+license = "MIT"
+
+[tool.poetry.dependencies]
+python = "^3.7"
+numpy = "*"
+sympy = "*"
+minizinc = "*"
+# forsyde-io-python = "^0.1.2"
+forsyde-io-python = { path = "../../forsyde-io/python/", develop = true }
+
+[tool.poetry.dev-dependencies]
+mypy = "*"
+sphinx = "^3"
+
+[build-system]
+requires = ["poetry-core>=1.0.0"]
+build-backend = "poetry.core.masonry.api"
+
+[tool.poetry.scripts]
+desydercli = "desyder.cli:cli_entry"

@@ -304,6 +304,10 @@ class SDFToMultiCore(DecisionModel, MinizincAble):
         array[processing_units, steps0] of var int: cpu_time;
         array[steps0] of var int: bus_slots_used;
         '''
+        print(type(results['mapped_actors']))
+        print(type(results['send']))
+        print(results['mapped_actors'])
+        print(results['send'])
         return ForSyDeModel()
 
 

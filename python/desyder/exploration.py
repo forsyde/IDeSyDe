@@ -102,7 +102,6 @@ class MinizincExplorer(Explorer):
         instance = Instance(backend_solver, mzn_model)
         decision_model.populate_mzn_model(instance)
         result = await instance.solve_async()
-        print(result)
         return decision_model.rebuild_forsyde_model(result, original_model)
 
     def dominates(self, other, decision_model):

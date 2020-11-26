@@ -57,13 +57,17 @@ def cli_entry():
     explorer_and_models = choose_explorer(models_chosen)
     logger.info(f'{len(explorer_and_models)} Explorer(s) and Model(s) chosen')
     if len(explorer_and_models) == 0:
-        print('No model or explorer could be chosen. Exiting.')
+        print('No model or explorer could be chosen. Exiting')
     elif len(explorer_and_models) == 1:
         (e, m) = explorer_and_models[0]  # there is only one.
+        logger.info('Initiating design space exploration')
         out_model = e.explore(m, in_model)
-        print(out_model)
+        logger.info('Design space explored')
+        logger.info(f'Writting output model out_{args.model}')
+        out_model.write('out_' + args.model)
     else:
-        print('More than one chosen model and explorer. Exiting.')
+        print('More than one chosen model and explorer. Exiting')
+    logging.info('Done')
 
 
 if __name__ == "__main__":

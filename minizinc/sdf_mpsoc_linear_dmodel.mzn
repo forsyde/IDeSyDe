@@ -1,5 +1,8 @@
 include "globals.mzn";
 
+% objectives
+enum objectives = {THROUGHPUT, LATENCY};
+
 % model parameters-
 int: max_bus_slots;
 int: max_tokens;
@@ -18,6 +21,9 @@ array[sdf_channels, processing_units, processing_units] of int: wcct;
 array[sdf_channels, processing_units] of int: send_overhead;
 array[sdf_channels, processing_units] of int: read_overhead;
 
+% objectives
+array[objectives] of int: objective_weights;
+
 % deduced model parameters
 set of int: steps0 = 0..max_steps;
 set of int: steps = 1..max_steps;
@@ -31,10 +37,8 @@ array[processing_units, steps0] of var 0..sum(wcet): cpu_time;
 
 % objectives
 array[processing_units] of var 0..sum(wcet): cpu_throughput;
-var 0..sum(wcet): global_throughput;
 array[processing_units] of var 0..sum(wcet): cpu_latency;
-var 0..sum(wcet): global_latency;
-
+array[objectives] of var int: objective;
 
 % unable any communiation at the 'pre' time, or initial state
 constraint sum(send[.., .., .., .., 0]) = 0;
@@ -101,16 +105,16 @@ constraint forall(p in processing_units) (
   cpu_throughput[p] = cpu_time[p, max_steps] - cpu_time[p, 0]
 );
 
-constraint global_throughput = max(cpu_throughput);
+constraint objective[THROUGHPUT] = max(cpu_throughput);
 
 constraint forall(p in processing_units) (
   cpu_latency[p] = cpu_time[p, max_steps]
 );
 
-constraint global_latency = max(cpu_latency);
+constraint objective[LATENCY] = max(cpu_latency);
 
 solve 
   :: int_search(mapped_actors, first_fail, indomain_min, complete)
   :: int_search(buffer, first_fail, indomain_min, complete)
   :: int_search(send, first_fail, indomain_min, complete)
-  satisfy;
+  minimize sum(o in objectives) (objective_weights[o] * objective[o]);

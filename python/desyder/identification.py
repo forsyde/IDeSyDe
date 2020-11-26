@@ -21,7 +21,11 @@ import sympy
 from minizinc import Model as MznModel
 from minizinc import Instance as MznInstance
 from minizinc import Result as MznResult
-from forsyde.io.python import ForSyDeModel, Vertex
+from forsyde.io.python import ForSyDeModel
+from forsyde.io.python import Vertex
+from forsyde.io.python import Edge
+from forsyde.io.python import Port
+from forsyde.io.python.types import TypesFactory
 
 import desyder.math as mathutil
 import desyder.sdf as sdfapi
@@ -334,6 +338,10 @@ class SDFToMultiCore(DecisionModel, MinizincAble):
             len(self['sdf_channels']),
             len(self.cores)
         ), dtype=int)).tolist()
+        # TODO: find a way to hardcode this less, but curently
+        # it is a bijection with the number of objs supported
+        # in the model. There's only 2 for now.
+        mzn['objective_weights'] = [0, 0]
         return mzn
 
     def rebuild_forsyde_model(self, results, original_model):
@@ -347,11 +355,63 @@ class SDFToMultiCore(DecisionModel, MinizincAble):
         array[processing_units, steps0] of var int: cpu_time;
         array[steps0] of var int: bus_slots_used;
         '''
-        print(type(results['mapped_actors']))
-        print(type(results['send']))
-        print(results['mapped_actors'])
-        print(results['send'])
-        return ForSyDeModel()
+        new_model = original_model.copy()
+        for (aidx, a) in enumerate(results['mapped_actors']):
+            actor = self['sdf_actors'][aidx]
+            for (pidx, p) in enumerate(a):
+                ordering = self['orderings'][pidx]
+                core = self.cores[pidx]
+                for (t, v) in enumerate(p):
+                    if 0 < v and v < 2:
+                        # TODO: fix multiple addition of elements here
+                        if not new_model.has_edge(ordering.identifier, core.identifier):
+                            edge = Edge(
+                                ordering,
+                                core,
+                                None,
+                                None,
+                                TypesFactory.build_type('Mapping')
+                            )
+                            new_model.add_edge(
+                                ordering.identifier,
+                                core.identifier,
+                                data=edge
+                            )
+                        if not new_model.has_edge(actor.identifier, ordering.identifier):
+                            ord_port = Port(
+                                identifier = f'slot{t}',
+                                port_type = TypesFactory.build_type('OrderedExecution')
+                            )
+                            ordering.ports.add(ord_port)
+                            act_port = Port(
+                                identifier = 'host',
+                                port_type = TypesFactory.build_type('Host')
+                            )
+                            actor.ports.add(act_port)
+                            edge = Edge(
+                                actor,
+                                ordering,
+                                act_port,
+                                ord_port,
+                                TypesFactory.build_type('Scheduling')
+                            )
+                            new_model.add_edge(
+                                ordering.identifier,
+                                core.identifier,
+                                data=edge
+                            )
+                    elif v > 1:
+                        raise ValueError("Solution with pass must be implemented")
+        for (cidx, c) in enumerate(results['send']):
+            channel = self['sdf_channels'][cidx]
+            for (pidx, p) in enumerate(c):
+                sender = self.cores[pidx]
+                for (ppidx, pp) in enumerate(p):
+                    reciever = self.cores[ppidx]
+                    for (sidx, s) in enumerate(pp):
+                        for (t, v) in enumerate(s):
+                            pass
+        return new_model
 
 
 @dataclass

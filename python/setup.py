@@ -1,4 +1,4 @@
-from setuptools import setup
+from setuptools import find_packages, setup
 
 setup(name='desyder',
       version='0.1.2',
@@ -8,9 +8,8 @@ setup(name='desyder',
       author_email='jordao@kth.se',
       license='MIT',
       python_requires='>=3.7',
-      packages=['desyder'],
       include_package_data=True,
-      #packages=find_namespace_packages(include=["desyde.*"]),
+      packages=find_packages(),
       install_requires=[
           'forsyde-io-python',
           'minizinc',
@@ -18,7 +17,7 @@ setup(name='desyder',
       ],
       entry_points={
           "console_scripts": [
-              "desyder = desyder.cli:cli_entry"
+              "desydercli = desyder.cli:cli_entry"
           ]
       },
       zip_safe=True)

@@ -364,7 +364,7 @@ class SDFToMultiCore(DecisionModel, MinizincAble):
                 for (t, v) in enumerate(p):
                     if 0 < v and v < 2:
                         # TODO: fix multiple addition of elements here
-                        if not new_model.has_edge(ordering.identifier, core.identifier):
+                        if not new_model.has_edge(ordering, core):
                             edge = Edge(
                                 ordering,
                                 core,
@@ -373,11 +373,11 @@ class SDFToMultiCore(DecisionModel, MinizincAble):
                                 TypesFactory.build_type('Mapping')
                             )
                             new_model.add_edge(
-                                ordering.identifier,
-                                core.identifier,
+                                ordering,
+                                core,
                                 data=edge
                             )
-                        if not new_model.has_edge(actor.identifier, ordering.identifier):
+                        if not new_model.has_edge(actor, ordering):
                             ord_port = Port(
                                 identifier = f'slot{t}',
                                 port_type = TypesFactory.build_type('OrderedExecution')
@@ -396,8 +396,8 @@ class SDFToMultiCore(DecisionModel, MinizincAble):
                                 TypesFactory.build_type('Scheduling')
                             )
                             new_model.add_edge(
-                                ordering.identifier,
-                                core.identifier,
+                                ordering,
+                                core,
                                 data=edge
                             )
                     elif v > 1:

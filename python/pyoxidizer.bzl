@@ -211,6 +211,8 @@ def make_exe(dist):
     #    packages=["foo", "bar"],
     #))
 
+    # exe.add_python_resources(exe.setup_py_install('.'))
+
     # Discover Python files from a virtualenv and add them to our embedded
     # context.
     #exe.add_python_resources(exe.read_virtualenv(path="/path/to/venv"))

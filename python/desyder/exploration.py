@@ -1,6 +1,6 @@
 import abc
 import importlib.resources as res
-from typing import Optional
+from typing import Optional, Set, Tuple
 
 from forsyde.io.python import ForSyDeModel
 from minizinc import Model, Solver, Instance
@@ -18,6 +18,21 @@ class Explorer(abc.ABC):
     async def explore(decision_model: DecisionModel) -> Optional[ForSyDeModel]:
         return None
 
+    @abc.abstractmethod
+    def dominates(
+        self,
+        other: "Explorer",
+        decision_model: DecisionModel
+    ) -> (bool, bool):
+        '''
+        This interface returns domination of one explorer over
+        another regarding (completude, speed). If the explorer
+        is likely to run faster for the given decision model, then
+        it returns (_, True). Likewise, if the explorer _is_ guaranteed
+        to guarantee more complete solution(s), it returns (True, _).
+        '''
+        return (False, False)
+
 
 class MinizincExplorer(Explorer):
 
@@ -31,3 +46,19 @@ class MinizincExplorer(Explorer):
         instance = Instance(mzn_model, backend_solver)
         decision_model.populate_mzn_model(instance)
         return await instance.solve_async()
+
+    def dominates(self, other, decision_model):
+        # leave it as a default complete method for now
+        return (True, False)
+
+
+def _get_standard_explorers() -> Set[Explorer]:
+    return set(s() for s in Explorer.__subclasses__())
+
+
+def explore_decision_model(
+    model: ForSyDeModel,
+    decision_model: Set[DecisionModel],
+    explorers: Set[Explorer] = _get_standard_explorers()
+) -> Optional[ForSyDeModel]:
+    return ForSyDeModel()

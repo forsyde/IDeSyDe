@@ -1,7 +1,20 @@
+'''
+The identification module provides all types/classes and methods
+to perform DSI as specified in the papers that follows:
+
+    [DSI-DATE2022]
+
+It should _not_ depend in the exploration module, pragmatically
+or conceptually, but only on other modules that provides model
+utilities, like SDF analysis or SY analysis.
+'''
 import abc
+import concurrent.futures
 import importlib.resources as resources
+import os
 from dataclasses import dataclass, field
-from typing import List, Union, Tuple, Set, Optional, Dict
+from enum import Flag, auto
+from typing import List, Union, Tuple, Set, Optional, Dict, Type, Iterable
 
 import numpy as np
 import sympy
@@ -12,6 +25,10 @@ from forsyde.io.python import ForSyDeModel, Vertex
 
 import desyder.math as mathutil
 import desyder.sdf as sdfapi
+
+
+class ChoiceCriteria(Flag):
+    DOMINANCE = auto()
 
 
 class MinizincAble(abc.ABC):
@@ -49,6 +66,10 @@ class DecisionModel(abc.ABC):
 
     """
     Docstring for DecisionModel.
+
+    A dict like interface is implemented for decision models
+    for convenience, which recursively checks any other partial
+    identifications that the model may have.
     """
 
     @abc.abstractclassmethod
@@ -65,12 +86,15 @@ class DecisionModel(abc.ABC):
         """
         return (True, None)
 
+    def __iter__(self):
+        for k in self.__dict__:
+            o = self.__dict__[k]
+            if isinstance(o, DecisionModel):
+                yield from o
+            else:
+                yield k
+
     def __getitem__(self, key):
-        '''
-        A dict like interface is implemented for decision models
-        for convenience, which recursively checks any other partial
-        identifications that the model may have.
-        '''
         key = str(key)
         if key in self.__dict__:
             return self.__dict__[key]
@@ -89,6 +113,24 @@ class DecisionModel(abc.ABC):
             if isinstance(o, DecisionModel) and key in o:
                 return True
         return False
+
+    def dominates(self, other: "DecisionModel") -> bool:
+        '''
+        This function returns if one partial identification dominates
+        the other.
+        '''
+        # other - self
+        other_diff = set(
+            k for k in other if k not in self
+        )
+        # self - other
+        self_diff = set(
+            k for k in self if k not in other
+        )
+        # other is fully contained in self and itersection is consistent
+        return len(other_diff) == 0\
+            and len(self_diff) >= 0
+            # and all(self[k] == other[k] for k in other if k in self)
 
 
 @dataclass
@@ -331,3 +373,125 @@ class SDFToMultiCoreCharacterized(DecisionModel, MinizincAble):
 
     def populate_mzn_model(mzn):
         return mzn
+
+
+def _get_standard_problems() -> Iterable[Type[DecisionModel]]:
+    return set(c for c in DecisionModel.__subclasses__())
+
+
+def identify_decision_models(
+    model: ForSyDeModel,
+    problems: Set[Type[DecisionModel]] = _get_standard_problems()
+) -> List[DecisionModel]:
+    '''
+    This function runs the Design Space Identification scheme,
+    as presented in paper [DSI-DATE'2021], so that problems can
+    be automatically solved from the given input model.
+
+    If the argument **problems** is not passed,
+    the API uses all subclasses found during runtime that implement
+    the interfaces DecisionModel and Explorer.
+    '''
+    max_iterations = len(model) + len(problems)
+    candidates = [p for p in problems]
+    identified = []
+    iterations = 0
+    while len(candidates) > 0 and iterations < max_iterations:
+        trials = ((c, c.identify(model, identified)) for c in candidates)
+        for (c, (fixed, subprob)) in trials:
+            # join with the identified
+            if subprob:
+                identified.append(subprob)
+            # take away candidates at fixpoint
+            if fixed:
+                candidates.remove(c)
+        iterations += 1
+    return identified
+
+
+def identify_decision_models_parallel(
+    model: ForSyDeModel,
+    problems: Set[Type[DecisionModel]] = set(),
+    concurrent_idents: int = os.cpu_count()-1
+) -> List[DecisionModel]:
+    '''
+    This function runs the Design Space Identification scheme,
+    as presented in paper [DSI-DATE'2021], so that problems can
+    be automatically solved from the given input model. It also
+    uses parallelism to run as many identifications as possible
+    simultaneously.
+
+    If the argument **problems** is not passed,
+    the API uses all subclasses found during runtime that implement
+    the interfaces DecisionModel and Explorer.
+    '''
+    max_iterations = len(model) + len(problems)
+    candidates = [p for p in problems]
+    identified = []
+    iterations = 0
+    with concurrent.futures.ProcessPoolExecutor(
+            max_workers=concurrent_idents) as executor:
+        while len(candidates) > 0 and iterations < max_iterations:
+            # generate all trials and keep track of which subproblem
+            # made the trial
+            futures = {
+                c: executor.submit(c.identify, model, identified)
+                for c in candidates
+            }
+            concurrent.futures.wait(futures.values())
+            for c in futures:
+                (fixed, subprob) = futures[c].result()
+                # join with the identified
+                if subprob:
+                    identified.append(subprob)
+                # take away candidates at fixpoint
+                if fixed:
+                    candidates.remove(c)
+            iterations += 1
+        return identified
+
+
+def choose_decision_models(
+    models: List[DecisionModel],
+    criteria: ChoiceCriteria = ChoiceCriteria.DOMINANCE
+) -> List[DecisionModel]:
+    if criteria & ChoiceCriteria.DOMINANCE == ChoiceCriteria.DOMINANCE:
+        dominant = []
+        length = 0
+        length_before = None
+        while length != length_before:
+            length_before = length
+            dominant = [m for m in models if any(
+               m.dominates(o) for o in models if o != m
+            ) and not any(
+               o.dominates(m) for o in dominant if o != m
+            )]
+            length = len(dominant)
+        return dominant
+    else:
+        return models
+
+
+async def identify_decision_models_async(
+    model: ForSyDeModel,
+    problems: Set[Type[DecisionModel]] = set()
+) -> List[DecisionModel]:
+    '''
+    AsyncIO version of the same function. Wraps the non-async version.
+    '''
+    return identify_decision_models(model, problems)
+
+
+async def identify_decision_models_parallel_async(
+    model: ForSyDeModel,
+    problems: Set[Type[DecisionModel]] = set(),
+    concurrent_idents: int = os.cpu_count()-1
+) -> List[DecisionModel]:
+    '''
+    AsyncIO version of the same function. Wraps the non-async version.
+    '''
+    return identify_decision_models_parallel(
+        model,
+        problems,
+        concurrent_idents
+    )

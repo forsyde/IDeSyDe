@@ -4,6 +4,8 @@ import logging
 
 from forsyde.io.python import ForSyDeModel
 
+from desyder.identification import identify_decision_models
+from desyder.identification import choose_decision_models
 from desyder.api import DeSyDeR
 
 
@@ -45,14 +47,18 @@ def cli_entry():
     logger.debug('Arguments parsed')
     in_model = ForSyDeModel.from_file(args.model)
     logger.info('Model parsed')
-    api = DeSyDeR()
-    loop = asyncio.get_event_loop()
     logger.debug('DeSyDeR API created')
-    identified = loop.run_until_complete(
-        api.identify_problems(in_model)
-    )
-    logger.info(f'{len(identified)} Problems identified')
+    identified = identify_decision_models(in_model)
+    logger.info(f'{len(identified)} Decision model(s) identified')
     logger.debug(f"Decision models identified: {identified}")
+    chosen = choose_decision_models(identified)
+    logger.info(f'{len(chosen)} Decision model(s) chosen')
+    if len(chosen) == 0:
+        print('No model could be chosen. Exiting.')
+    elif len(chosen) == 1:
+        pass
+    else:
+        print('More than one chosen model: impossible to decide. Exiting.')
 
 
 if __name__ == "__main__":

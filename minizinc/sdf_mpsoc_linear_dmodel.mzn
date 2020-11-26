@@ -27,8 +27,14 @@ set of int: bus_slots = 1..max_bus_slots;
 array[sdf_channels, processing_units, steps0] of var 0..max_tokens: buffer;
 array[sdf_channels, processing_units, processing_units, bus_slots, steps0] of var 0..max_tokens: send;
 array[sdf_actors, processing_units, steps] of var 0..max(activations): mapped_actors;
-array[processing_units, steps0] of var int: cpu_time;
-array[steps0] of var int: bus_slots_used;
+array[processing_units, steps0] of var 0..sum(wcet): cpu_time;
+
+% objectives
+array[processing_units] of var 0..sum(wcet): cpu_throughput;
+var 0..sum(wcet): global_throughput;
+array[processing_units] of var 0..sum(wcet): cpu_latency;
+var 0..sum(wcet): global_latency;
+
 
 % unable any communiation at the 'pre' time, or initial state
 constraint sum(send[.., .., .., .., 0]) = 0;
@@ -51,8 +57,8 @@ constraint forall(c in sdf_channels) (
 % sdf semantics: firing with communication
 constraint forall(t in steps, c in sdf_channels, p in processing_units) (
   buffer[c, p, t] = sum(a in sdf_actors) (sdf_topology[c, a]*mapped_actors[a, p, t]) + buffer[c, p, t-1] 
-  + sum(s in bus_slots, pp in processing_units where p != pp) (send[c, pp, p, s, t-1])
-  - sum(s in bus_slots, pp in processing_units where p != pp) (send[c, p, pp, s, t])
+   + sum(s in bus_slots, pp in processing_units where p != pp) (send[c, pp, p, s, t-1])
+   - sum(s in bus_slots, pp in processing_units where p != pp) (send[c, p, pp, s, t])
 );
 
 % sdf semantics: no buffer is ever negative
@@ -61,37 +67,47 @@ constraint forall(c in sdf_channels, t in steps0, p in processing_units) (
 );
 
 % timing for the cpus
+constraint forall(p in processing_units) (
+    cpu_time[p, 0] = 0
+);
+
 constraint forall(t in steps, p in processing_units) (
-  cpu_time[p, t] >= cpu_time[p, t-1] + sum(a in sdf_actors) (wcet[a, p] * mapped_actors[a, p, t-1])
+  cpu_time[p, t] >= cpu_time[p, t-1] + sum(a in sdf_actors) (wcet[a, p] * mapped_actors[a, p, t])
     + sum(c in sdf_channels, pp in processing_units where p != pp) (
-        send_overhead_per_token[c, p]*sum(send[c, p, pp, .., t-1])
-      + read_overhead_per_token[c, p]*sum(send[c, pp, p, .., t])
+        send_overhead[c, p]*sum(send[c, p, pp, .., t])
+      + read_overhead[c, p]*sum(send[c, pp, p, .., t-1])
+      )
 );
 
 constraint forall(t in steps, p, pp in processing_units where p != pp) (
   cpu_time[p, t] >= cpu_time[pp, t-1] + sum(s in bus_slots, c in sdf_channels) (
-    wcct_per_token[c] * send[c, pp, p, s, t-1]
+    wcct[c, pp, p] * send[c, pp, p, s, t-1]
   )
 );
 
 % cannot use more than max bus slots per step
 constraint forall(t in steps) (
-  % The number of times a channels do not use the bus (zero) must be GEQ than $c*p^2 - bslots$
-  count_geq(array1d(send[.., .., .., .., t]), 0, 
-    length(sdf_channels) * length(processing_units) * length(processing_units) - max_bus_slots
-  )
+  sum(c in sdf_channels, p, pp in processing_units, l in bus_slots) (send[c, p, pp, l, t] > 0) <= max_bus_slots
 );
+
 
 % constrain a channel to choose only and one only slot
-constraint forall(c in sdf_channels) (
-  count_geq(array1d(send[c, .., .., .., ..]), 0, 1)
+constraint forall(c in sdf_channels, t in steps, l, ll in bus_slots where l != ll) (
+  sum(send[c, .., .., l, t-1]) > 0 -> sum(send[c, .., .., ll, t-1]) = 0
 );
 
-% each slot can only admit one eventrodolfo1
+% calculate the objectives
+constraint forall(p in processing_units) (
+  cpu_throughput[p] = cpu_time[p, max_steps] - cpu_time[p, 0]
+);
 
-% constraint forall(t in steps) (
-%   sum(a in sdf_actors, p in static_orders) (mapped_actors[a, o, t]) <= 1
-% );
+constraint global_throughput = max(cpu_throughput);
+
+constraint forall(p in processing_units) (
+  cpu_latency[p] = cpu_time[p, max_steps]
+);
+
+constraint global_latency = max(cpu_latency);
 
 solve 
   :: int_search(mapped_actors, first_fail, indomain_min, complete)

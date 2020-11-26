@@ -217,18 +217,18 @@ class SDFToOrders(DecisionModel, MinizincAble):
             return (False, None)
 
     def populate_mzn_model(self, mzn):
-        mzn['sdf_actors'] = range(1, len(self.sdf_actors)+1)
-        mzn['sdf_channels'] = range(1, len(self.sdf_channels)+1)
-        mzn['max_steps'] = len(self.sdf_pass)
+        mzn['sdf_actors'] = range(1, len(self['sdf_actors'])+1)
+        mzn['sdf_channels'] = range(1, len(self['sdf_channels'])+1)
+        mzn['max_steps'] = len(self['sdf_pass'])
         cloned_firings = np.array([
-            self.repetition_vector.transpose()
-            for i in range(len(self.sdf_channels))
+            self['sdf_repetition_vector'].transpose()
+            for i in range(1, len(self['sdf_channels'])+1)
         ])
         mzn['max_tokens'] = np.amax(
-            cloned_firings * np.absolute(self.sdf_topology)
+            cloned_firings * np.absolute(self['sdf_topology'])
         )
-        mzn['activations'] = self.repetition_vector
-        mzn['static_orders'] = range(len(self.orderings))
+        mzn['activations'] = self['sdf_repetition_vector'][:, 0].tolist()
+        mzn['static_orders'] = range(1, len(self.orderings)+1)
         return mzn
 
     def get_mzn_model_name(self):
@@ -244,7 +244,7 @@ class SDFToOrders(DecisionModel, MinizincAble):
 class SDFToMultiCore(DecisionModel, MinizincAble):
 
     sdf_orders_sub: SDFToOrders
-    cpus: List[Vertex] = field(default_factory=lambda: [])
+    cores: List[Vertex] = field(default_factory=lambda: [])
     bus: Optional[Vertex] = None
 
     @classmethod
@@ -253,17 +253,17 @@ class SDFToMultiCore(DecisionModel, MinizincAble):
             (p for p in identified if isinstance(p, SDFToOrders)),
             None)
         if sdf_to_slot_sub:
-            cpus = list(
+            cores = list(
                 c for c in model.query_vertexes('tdma_mpsoc_processing_units')
             )
             busses = [b for b in model.query_vertexes('tdma_mpsoc_bus')]
-            if len(cpus) + len(busses) == len(sdf_to_slot_sub.orderings)\
+            if len(cores) + len(busses) == len(sdf_to_slot_sub.orderings)\
                     and len(busses) == 1:
                 return (
                     True,
                     SDFToMultiCore(
                         sdf_to_slot_sub,
-                        cpus,
+                        cores,
                         busses[0],
                     )
                 )
@@ -297,42 +297,43 @@ class SDFToMultiCore(DecisionModel, MinizincAble):
         array[sdf_channels, processing_units] of int: send_overhead;
         array[sdf_channels, processing_units] of int: read_overhead;
         '''
-        mzn['max_bus_slots'] = self.bus.properties['slots']
+        mzn['max_bus_slots'] = int(self.bus.properties['slots'])
         mzn['max_steps'] = len(self['sdf_actors'])
         cloned_firings = np.array([
-            self.repetition_vector.transpose()
-            for i in range(len(self['sdf_channels']))
+            self['sdf_repetition_vector'].transpose()
+            for i in range(1, len(self['sdf_channels'])+1)
         ])
         max_tokens = np.amax(
             cloned_firings * np.absolute(self['sdf_topology'])
         )
-        mzn['max_tokens'] = max_tokens
+        mzn['max_tokens'] = int(max_tokens)
         mzn['sdf_actors'] = range(1, len(self['sdf_actors'])+1)
         mzn['sdf_channels'] = range(1, len(self['sdf_channels'])+1)
-        mzn['processing_units'] = range(1, len(self.processing_units)+1)
+        mzn['processing_units'] = range(1, len(self.cores)+1)
         # TODO: The semantics of prefixes must be captures and put here!
         # for the moment, this always assumes zero starting tokens
         mzn['initial_tokens'] = [0 for c in self['sdf_channels']]
-        mzn['activations'] = self['repetition_vector']
-        mzn['sdf_topology'] = self['sdf_topology']
+        # vector is in column format
+        mzn['activations'] = self['sdf_repetition_vector'][:, 0].tolist()
+        mzn['sdf_topology'] = self['sdf_topology'].tolist()
         # almost unitary assumption
-        mzn['wcet'] = max_tokens * np.ones((
+        mzn['wcet'] = (max_tokens * np.ones((
             len(self['sdf_actors']),
-            len(self.processing_units)
-        ))
-        mzn['wcct'] = np.ones((
+            len(self.cores)
+        ), dtype=int)).tolist()
+        mzn['wcct'] = (np.ones((
             len(self['sdf_channels']),
-            len(self.processing_units),
-            len(self.processing_units)
-        ))
-        mzn['send_overhead'] = np.zeros((
+            len(self.cores),
+            len(self.cores)
+        ), dtype=int)).tolist()
+        mzn['send_overhead'] = (np.zeros((
             len(self['sdf_channels']),
-            len(self.processing_units)
-        ))
-        mzn['read_overhead'] = np.zeros((
+            len(self.cores)
+        ), dtype=int)).tolist()
+        mzn['read_overhead'] = (np.zeros((
             len(self['sdf_channels']),
-            len(self.processing_units)
-        ))
+            len(self.cores)
+        ), dtype=int)).tolist()
         return mzn
 
     def rebuild_forsyde_model(self, results, original_model):
@@ -455,7 +456,7 @@ def choose_decision_models(
     models: List[DecisionModel],
     criteria: ChoiceCriteria = ChoiceCriteria.DOMINANCE
 ) -> List[DecisionModel]:
-    if criteria & ChoiceCriteria.DOMINANCE == ChoiceCriteria.DOMINANCE:
+    if criteria & ChoiceCriteria.DOMINANCE:
         dominant = []
         length = 0
         length_before = None

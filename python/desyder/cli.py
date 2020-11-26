@@ -6,6 +6,7 @@ from forsyde.io.python import ForSyDeModel
 
 from desyder.identification import identify_decision_models
 from desyder.identification import choose_decision_models
+from desyder.exploration import choose_explorer
 from desyder.api import DeSyDeR
 
 
@@ -51,14 +52,18 @@ def cli_entry():
     identified = identify_decision_models(in_model)
     logger.info(f'{len(identified)} Decision model(s) identified')
     logger.debug(f"Decision models identified: {identified}")
-    chosen = choose_decision_models(identified)
-    logger.info(f'{len(chosen)} Decision model(s) chosen')
-    if len(chosen) == 0:
-        print('No model could be chosen. Exiting.')
-    elif len(chosen) == 1:
-        pass
+    models_chosen = choose_decision_models(identified)
+    logger.info(f'{len(models_chosen)} Decision model(s) chosen')
+    explorer_and_models = choose_explorer(models_chosen)
+    logger.info(f'{len(explorer_and_models)} Explorer(s) and Model(s) chosen')
+    if len(explorer_and_models) == 0:
+        print('No model or explorer could be chosen. Exiting.')
+    elif len(explorer_and_models) == 1:
+        (e, m) = explorer_and_models[0]  # there is only one.
+        out_model = e.explore(m, in_model)
+        print(out_model)
     else:
-        print('More than one chosen model: impossible to decide. Exiting.')
+        print('More than one chosen model and explorer. Exiting.')
 
 
 if __name__ == "__main__":

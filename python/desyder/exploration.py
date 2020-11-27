@@ -41,8 +41,7 @@ class Explorer(abc.ABC):
     @abc.abstractmethod
     async def explore(
         self,
-        decision_model: DecisionModel,
-        original_model: ForSyDeModel
+        decision_model: DecisionModel
     ) -> Optional[ForSyDeModel]:
         return None
 
@@ -76,14 +75,12 @@ class MinizincExplorer(Explorer):
     def explore(
         self,
         decision_model,
-        original_model,
         backend_solver_name='gecode'
     ):
         loop = asyncio.get_event_loop()
         return loop.run_until_complete(
             self.explore_async(
                 decision_model,
-                original_model,
                 backend_solver_name
             )
         )
@@ -91,7 +88,6 @@ class MinizincExplorer(Explorer):
     async def explore_async(
         self,
         decision_model,
-        original_model,
         backend_solver_name='gecode'
     ):
         mzn_model_name = decision_model.get_mzn_model_name()
@@ -102,7 +98,7 @@ class MinizincExplorer(Explorer):
         instance = Instance(backend_solver, mzn_model)
         decision_model.populate_mzn_model(instance)
         result = await instance.solve_async()
-        return decision_model.rebuild_forsyde_model(result, original_model)
+        return decision_model.rebuild_forsyde_model(result)
 
     def dominates(self, other, decision_model):
         # leave it as a default complete method for now
@@ -140,11 +136,3 @@ def choose_explorer(
             length = len(dominant)
         return dominant
     return []
-
-
-def explore_decision_model(
-    model: ForSyDeModel,
-    decision_model: Set[DecisionModel],
-    explorers: Set[Explorer] = _get_standard_explorers(),
-) -> Optional[ForSyDeModel]:
-    return ForSyDeModel()

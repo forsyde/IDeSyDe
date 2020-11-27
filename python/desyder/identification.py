@@ -51,10 +51,9 @@ class MinizincAble(abc.ABC):
     @abc.abstractmethod
     def rebuild_forsyde_model(
         self,
-        result: MznResult,
-        original_model: ForSyDeModel
+        result: MznResult
     ) -> ForSyDeModel:
-        return original_model
+        return ForSyDeModel()
 
     def build_mzn_model(self, mzn=MznModel()):
         model_txt = resources.read_text(
@@ -117,6 +116,28 @@ class DecisionModel(abc.ABC):
             if isinstance(o, DecisionModel) and key in o:
                 return True
         return False
+
+    def covered_vertexes(self) -> Iterable[Vertex]:
+        for o in self:
+            if isinstance(o, Vertex):
+                yield o
+
+    def covered_edges(self) -> Iterable[Edge]:
+        for o in self:
+            if isinstance(o, Edge):
+                yield o
+
+    def covered_model(self) -> ForSyDeModel:
+        model = ForSyDeModel()
+        for v in self.covered_vertexes():
+            model.add_node(v, label=v.identifier)
+        for e in self.covered_edges():
+            model.add_edge(
+                e.source_vertex,
+                e.target_vertex,
+                data=e
+            )
+        return model
 
     def dominates(self, other: "DecisionModel") -> bool:
         '''
@@ -238,7 +259,7 @@ class SDFToOrders(DecisionModel, MinizincAble):
     def get_mzn_model_name(self):
         return 'sdf_order_linear_dmodel.mzn'
 
-    def rebuild_forsyde_model(self, results, original_model):
+    def rebuild_forsyde_model(self, results):
         print(results['send'])
         print(results['mapped'])
         return ForSyDeModel()
@@ -344,7 +365,7 @@ class SDFToMultiCore(DecisionModel, MinizincAble):
         mzn['objective_weights'] = [0, 0]
         return mzn
 
-    def rebuild_forsyde_model(self, results, original_model):
+    def rebuild_forsyde_model(self, results):
         '''
         rebuild from the following variables:
 
@@ -355,7 +376,7 @@ class SDFToMultiCore(DecisionModel, MinizincAble):
         array[processing_units, steps0] of var int: cpu_time;
         array[steps0] of var int: bus_slots_used;
         '''
-        new_model = original_model.copy()
+        new_model = self.covered_model()
         for (aidx, a) in enumerate(results['mapped_actors']):
             actor = self['sdf_actors'][aidx]
             for (pidx, p) in enumerate(a):
@@ -375,7 +396,7 @@ class SDFToMultiCore(DecisionModel, MinizincAble):
                             new_model.add_edge(
                                 ordering,
                                 core,
-                                data=edge
+                                object=edge
                             )
                         if not new_model.has_edge(actor, ordering):
                             ord_port = Port(
@@ -398,7 +419,7 @@ class SDFToMultiCore(DecisionModel, MinizincAble):
                             new_model.add_edge(
                                 ordering,
                                 core,
-                                data=edge
+                                object=edge
                             )
                     elif v > 1:
                         raise ValueError("Solution with pass must be implemented")

@@ -12,7 +12,7 @@ numpy = "*"
 sympy = "*"
 minizinc = "*"
 # forsyde-io-python = "^0.1.2"
-forsyde-io-python = { path = "../../forsyde-io/python/", develop = true }
+forsyde-io-python = { path = "../../forsyde-io/python/" }
 
 [tool.poetry.dev-dependencies]
 mypy = "*"

@@ -2,13 +2,12 @@ import argparse
 import asyncio
 import logging
 
+import networkx as nx
 from forsyde.io.python import ForSyDeModel
 
 from desyder.identification import identify_decision_models
 from desyder.identification import choose_decision_models
 from desyder.exploration import choose_explorer
-from desyder.api import DeSyDeR
-
 
 description = '''
 DeSyDe - Analytical Design Space Exploration for ForSyDe
@@ -31,6 +30,14 @@ def cli_entry():
 
                         Note that capitalization is done internally, so
                         info and INFO are equally valid.
+                        ''')
+    parser.add_argument('-o', '--output',
+                        type=str,
+                        action='append',
+                        nargs=1,
+                        help='''
+                        Output files, which can be another model or
+                        graph visualization formats.
                         ''')
     args = parser.parse_args()
     logger = logging.getLogger('CLI')
@@ -56,17 +63,23 @@ def cli_entry():
     logger.info(f'{len(models_chosen)} Decision model(s) chosen')
     explorer_and_models = choose_explorer(models_chosen)
     logger.info(f'{len(explorer_and_models)} Explorer(s) and Model(s) chosen')
+    model_decisions = None
     if len(explorer_and_models) == 0:
         print('No model or explorer could be chosen. Exiting')
     elif len(explorer_and_models) == 1:
         (e, m) = explorer_and_models[0]  # there is only one.
         logger.info('Initiating design space exploration')
-        out_model = e.explore(m, in_model)
+        model_decisions = e.explore(m)
         logger.info('Design space explored')
-        logger.info(f'Writting output model out_{args.model}')
-        out_model.write('out_' + args.model)
     else:
         print('More than one chosen model and explorer. Exiting')
+    if model_decisions:
+        out_model = nx.compose(in_model, model_decisions)
+        outputs = [i[0] for i in args.output]\
+            if args.output else [f'out_{args.model}']
+        for out_file in outputs:
+            out_model.write(out_file)
+            logger.info(f'Writting output model {out_file}')
     logging.info('Done')
 
 

@@ -4,6 +4,7 @@ version = "0.1.0"
 description = "ForSyDe's Design Space Exploration Tool"
 authors = ["jordao <jordao@kth.se>"]
 license = "MIT"
+include = ["desyder/minizinc"]
 
 [tool.poetry.dependencies]
 python = "^3.7"

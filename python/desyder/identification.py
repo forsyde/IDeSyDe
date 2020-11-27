@@ -417,8 +417,8 @@ class SDFToMultiCore(DecisionModel, MinizincAble):
                                 TypesFactory.build_type('Scheduling')
                             )
                             new_model.add_edge(
+                                actor,
                                 ordering,
-                                core,
                                 object=edge
                             )
                     elif v > 1:

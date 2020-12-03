@@ -444,17 +444,170 @@ class SDFToMultiCoreCharacterized(DecisionModel, MinizincAble):
     send_overhead: np.ndarray = np.array((0, 0), dtype=int)
     read_overhead: np.ndarray = np.array((0, 0), dtype=int)
 
-    def __init__(self):
-        pass
-
-    def identify(model, idenfitied):
-        return (True, None)
+    @classmethod
+    def identify(cls, model, identified):
+        res = None
+        sdf_to_mpsoc_sub = next(
+            (p for p in identified if isinstance(p, SDFToMultiCore)),
+            None)
+        if sdf_to_mpsoc_sub:
+            wcet = None
+            wcct = None
+            if next(model.query_view('count_wcet'))['count'] ==\
+              len(sdf_to_mpsoc_sub['cores']) * len(sdf_to_mpsoc_sub['sdf_actors']):
+                wcet = np.zeros(
+                    (
+                        len(sdf_to_mpsoc_sub['cores']),
+                        len(sdf_to_mpsoc_sub['sdf_actors']),
+                    ),
+                    dtype=int
+                )
+                for row in model.query_view('wcet'):
+                    app_index = next(
+                        idx for (idx, v) in enumerate(sdf_to_mpsoc_sub['sdf_actors'])
+                        if v.identifier == row['app_id']
+                    )
+                    plat_index = next(
+                        idx for (idx, v) in enumerate(sdf_to_mpsoc_sub['cores'])
+                        if v.identifier == row['plat_id']
+                    )
+                    wcet[app_index, plat_index] = int(row['wcet_time'])
+            if next(model.query_view('count_signal_wcct'))['count'] ==\
+              len(sdf_to_mpsoc_sub['sdf_channels']) *\
+              len(sdf_to_mpsoc_sub['cores']) *\
+              len(sdf_to_mpsoc_sub['cores']):
+                wcct = np.zeros(
+                    (
+                        len(sdf_to_mpsoc_sub['sdf_channels']),
+                        len(sdf_to_mpsoc_sub['cores']),
+                        len(sdf_to_mpsoc_sub['cores'])
+                    ),
+                    dtype=int
+                )
+                for row in model.query_view('signal_wcct'):
+                    sender_index = next(
+                        idx for (idx, v) in enumerate(sdf_to_mpsoc_sub['cores'])
+                        if v.identifier == row['sender_id']
+                    )
+                    reciever_index = next(
+                        idx for (idx, v) in enumerate(sdf_to_mpsoc_sub['cores'])
+                        if v.identifier == row['reciever_id']
+                    )
+                    signal_index = next(
+                        idx for (idx, v) in enumerate(sdf_to_mpsoc_sub['sdf_channels'])
+                        if v.identifier == row['signal_id']
+                    )
+                    wcct[signal_index, sender_index, reciever_index] = int(row['wcct_time'])
+            if wcet is not None and wcct is not None:
+                res = cls(
+                    sdf_to_mpsoc_sub=sdf_to_mpsoc_sub,
+                    wcet=wcet,
+                    wcct=wcct
+                )
+        if res:
+            return (True, res)
+        elif sdf_to_mpsoc_sub and not res:
+            return (True, None)
+        else:
+            return (False, None)
 
     def get_mzn_model_name(self):
-        return "sdf_mpsoc_linear_dmodel"
+        return "sdf_mpsoc_linear_dmodel.mzn"
 
-    def populate_mzn_model(mzn):
+    def populate_mzn_model(self, mzn):
+        mzn['max_bus_slots'] = int(self['bus'].properties['slots'])
+        mzn['max_steps'] = len(self['sdf_actors'])
+        cloned_firings = np.array([
+            self['sdf_repetition_vector'].transpose()
+            for i in range(1, len(self['sdf_channels'])+1)
+        ])
+        max_tokens = np.amax(
+            cloned_firings * np.absolute(self['sdf_topology'])
+        )
+        mzn['max_tokens'] = int(max_tokens)
+        mzn['sdf_actors'] = range(1, len(self['sdf_actors'])+1)
+        mzn['sdf_channels'] = range(1, len(self['sdf_channels'])+1)
+        mzn['processing_units'] = range(1, len(self['cores'])+1)
+        # TODO: The semantics of prefixes must be captures and put here!
+        # for the moment, this always assumes zero starting tokens
+        mzn['initial_tokens'] = [0 for c in self['sdf_channels']]
+        # vector is in column format
+        mzn['activations'] = self['sdf_repetition_vector'][:, 0].tolist()
+        mzn['sdf_topology'] = self['sdf_topology'].tolist()
+        mzn['wcet'] = self.wcet.tolist()
+        mzn['wcct'] = self.wcct.tolist()
+        mzn['send_overhead'] = (np.zeros((
+            len(self['sdf_channels']),
+            len(self['cores'])
+        ), dtype=int)).tolist()
+        mzn['read_overhead'] = (np.zeros((
+            len(self['sdf_channels']),
+            len(self['cores'])
+        ), dtype=int)).tolist()
+        # TODO: find a way to hardcode this less, but curently
+        # it is a bijection with the number of objs supported
+        # in the model. There's only 2 for now.
+        mzn['objective_weights'] = [0, 0]
         return mzn
+
+    def rebuild_forsyde_model(self, results):
+        new_model = self.covered_model()
+        for (aidx, a) in enumerate(results['mapped_actors']):
+            actor = self['sdf_actors'][aidx]
+            for (pidx, p) in enumerate(a):
+                ordering = self['orderings'][pidx]
+                core = self['cores'][pidx]
+                for (t, v) in enumerate(p):
+                    if 0 < v and v < 2:
+                        # TODO: fix multiple addition of elements here
+                        if not new_model.has_edge(ordering, core):
+                            edge = Edge(
+                                ordering,
+                                core,
+                                None,
+                                None,
+                                TypesFactory.build_type('Mapping')
+                            )
+                            new_model.add_edge(
+                                ordering,
+                                core,
+                                object=edge
+                            )
+                        if not new_model.has_edge(actor, ordering):
+                            ord_port = Port(
+                                identifier = f'slot{t}',
+                                port_type = TypesFactory.build_type('OrderedExecution')
+                            )
+                            ordering.ports.add(ord_port)
+                            act_port = Port(
+                                identifier = 'host',
+                                port_type = TypesFactory.build_type('Host')
+                            )
+                            actor.ports.add(act_port)
+                            edge = Edge(
+                                actor,
+                                ordering,
+                                act_port,
+                                ord_port,
+                                TypesFactory.build_type('Scheduling')
+                            )
+                            new_model.add_edge(
+                                actor,
+                                ordering,
+                                object=edge
+                            )
+                    elif v > 1:
+                        raise ValueError("Solution with pass must be implemented")
+        for (cidx, c) in enumerate(results['send']):
+            channel = self['sdf_channels'][cidx]
+            for (pidx, p) in enumerate(c):
+                sender = self['cores'][pidx]
+                for (ppidx, pp) in enumerate(p):
+                    reciever = self['cores'][ppidx]
+                    for (sidx, s) in enumerate(pp):
+                        for (t, v) in enumerate(s):
+                            pass
+        return new_model
 
 
 def _get_standard_problems() -> Iterable[Type[DecisionModel]]:
@@ -474,7 +627,7 @@ def identify_decision_models(
     the API uses all subclasses found during runtime that implement
     the interfaces DecisionModel and Explorer.
     '''
-    max_iterations = len(model) + len(problems)
+    max_iterations = len(model) * len(problems)
     candidates = [p for p in problems]
     identified = []
     iterations = 0
@@ -507,7 +660,7 @@ def identify_decision_models_parallel(
     the API uses all subclasses found during runtime that implement
     the interfaces DecisionModel and Explorer.
     '''
-    max_iterations = len(model) + len(problems)
+    max_iterations = len(model) * len(problems)
     candidates = [p for p in problems]
     identified = []
     iterations = 0

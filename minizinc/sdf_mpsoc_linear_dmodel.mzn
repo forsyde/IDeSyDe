@@ -3,23 +3,25 @@ include "globals.mzn";
 % objectives
 enum objectives = {THROUGHPUT, LATENCY};
 
-% model parameters-
-int: max_bus_slots;
+% model parameters
 int: max_tokens;
 int: max_steps;
 
 set of int: sdf_actors; % not flattened
 set of int: sdf_channels;
-set of int: processing_units;
+set of int: procs;
+set of int: comm_units;
+set of int: units = procs union comm_units;
 
 array[sdf_channels] of int: initial_tokens;
 array[sdf_actors] of int: activations;
 array[sdf_channels, sdf_actors] of int: sdf_topology;
-array[sdf_actors, processing_units] of int: wcet;
+array[sdf_actors, procs] of int: wcet;
 % this numbers are 'per channel token'
-array[sdf_channels, processing_units, processing_units] of int: wcct;
-array[sdf_channels, processing_units] of int: send_overhead;
-array[sdf_channels, processing_units] of int: read_overhead;
+array[sdf_channels, units, units] of int: wcct;
+array[units] of set of int: units_neighs;
+% array[sdf_channels, procs] of int: send_overhead;
+% array[sdf_channels, procs] of int: read_overhead;
 
 % objectives
 array[objectives] of int: objective_weights;
@@ -27,22 +29,34 @@ array[objectives] of int: objective_weights;
 % deduced model parameters
 set of int: steps0 = 0..max_steps;
 set of int: steps = 1..max_steps;
-set of int: bus_slots = 1..max_bus_slots;
 
 % variables
-array[sdf_channels, processing_units, steps0] of var 0..max_tokens: buffer;
-array[sdf_channels, processing_units, processing_units, bus_slots, steps0] of var 0..max_tokens: send;
-array[sdf_actors, processing_units, steps] of var 0..max(activations): mapped_actors;
-array[processing_units, steps0] of var 0..sum(wcet): cpu_time;
+array[sdf_channels, procs, steps0] of var 0..max_tokens: buffer;
+array[sdf_channels, units, units, steps0] of var 0..max_tokens: send;
+array[sdf_actors, procs, steps] of var 0..max(activations): mapped_actors;
+array[units, steps0] of var 0..sum(wcet): time;
 
 % objectives
-array[processing_units] of var 0..sum(wcet): cpu_throughput;
-array[processing_units] of var 0..sum(wcet): cpu_latency;
+array[procs] of var 0..sum(wcet): cpu_throughput;
+array[procs] of var 0..sum(wcet): cpu_latency;
 array[objectives] of var int: objective;
 
 % unable any communiation at the 'pre' time, or initial state
-constraint sum(send[.., .., .., .., 0]) = 0;
-  
+constraint forall(c in sdf_channels, p,pp in units) (
+    send[c, p, pp, 0] = 0
+);
+
+% unable any communication between elements
+constraint forall(c in sdf_channels, p in units, t in steps) (
+    send[c, p, p, t] = 0
+);
+
+% unable any communication between non neighbors
+constraint forall(c in sdf_channels, p, pp in units, t in steps where not (pp in units_neighs[p])) (
+    send[c, p, pp, t] = 0
+);
+
+    
 % sdf semantics: repetion vector constraint
 constraint forall(a in sdf_actors) (
   sum(mapped_actors[a, .., ..]) = activations[a]
@@ -59,56 +73,60 @@ constraint forall(c in sdf_channels) (
 );
 
 % sdf semantics: firing with communication
-constraint forall(t in steps, c in sdf_channels, p in processing_units) (
+constraint forall(t in steps, c in sdf_channels, p in procs) (
   buffer[c, p, t] = sum(a in sdf_actors) (sdf_topology[c, a]*mapped_actors[a, p, t]) + buffer[c, p, t-1] 
-   + sum(s in bus_slots, pp in processing_units where p != pp) (send[c, pp, p, s, t-1])
-   - sum(s in bus_slots, pp in processing_units where p != pp) (send[c, p, pp, s, t])
+   + sum(pp in units_neighs[p]) (send[c, pp, p, t])
+   - sum(pp in units_neighs[p]) (send[c, p, pp, t])
 );
 
 % sdf semantics: no buffer is ever negative
-constraint forall(c in sdf_channels, t in steps0, p in processing_units) (
+constraint forall(c in sdf_channels, t in steps0, p in procs) (
   buffer[c, p, t] >= 0
 );
 
-% timing for the cpus
-constraint forall(p in processing_units) (
-    cpu_time[p, 0] = 0
+% platform semantics: communication elements never hold data
+constraint forall(c in sdf_channels, p in comm_units, t in steps) (
+  sum(pp in units_neighs[p]) (send[c, pp, p, t]) = sum(pp in units_neighs[p]) (send[c, p, pp, t])
 );
 
-constraint forall(t in steps, p in processing_units) (
-  cpu_time[p, t] >= cpu_time[p, t-1] + sum(a in sdf_actors) (wcet[a, p] * mapped_actors[a, p, t])
-    + sum(c in sdf_channels, pp in processing_units where p != pp) (
-        send_overhead[c, p]*sum(send[c, p, pp, .., t])
-      + read_overhead[c, p]*sum(send[c, pp, p, .., t-1])
-      )
+% timing for the elements
+%% must start at zero
+constraint forall(p in units) (
+    time[p, 0] = 0
 );
 
-constraint forall(t in steps, p, pp in processing_units where p != pp) (
-  cpu_time[p, t] >= cpu_time[pp, t-1] + sum(s in bus_slots, c in sdf_channels) (
-    wcct[c, pp, p] * send[c, pp, p, s, t-1]
+%% timing between processing steps
+constraint forall(t in steps, p in procs) (
+  time[p, t] >= time[p, t-1] + sum(a in sdf_actors) (wcet[a, p] * mapped_actors[a, p, t])
+);
+
+%% timign with communication
+constraint forall(t in steps, p in units, pp in units_neighs[p]) (
+  time[p, t] >= time[pp, t-1] + sum(c in sdf_channels) (
+    wcct[c, pp, p] * send[c, pp, p, t]
   )
 );
 
-% cannot use more than max bus slots per step
-constraint forall(t in steps) (
-  sum(c in sdf_channels, p, pp in processing_units, l in bus_slots) (send[c, p, pp, l, t] > 0) <= max_bus_slots
-);
-
-
 % constrain a channel to choose only and one only slot
-constraint forall(c in sdf_channels, t in steps, l, ll in bus_slots where l != ll) (
-  sum(send[c, .., .., l, t-1]) > 0 -> sum(send[c, .., .., ll, t-1]) = 0
+% constraint forall(c in sdf_channels, t in steps, l, ll in bus_slots where l != ll) (
+%   sum(send[c, .., .., l, t-1]) > 0 -> sum(send[c, .., .., ll, t-1]) = 0
+% );
+
+% symmetry breaking
+%% if next step is empty, all next ones are also empty
+constraint forall(p in procs, t in 1..max_steps-1) (
+  sum(mapped_actors[.., p, t]) = 0 -> sum(mapped_actors[.., p, t+1]) = 0
 );
 
 % calculate the objectives
-constraint forall(p in processing_units) (
-  cpu_throughput[p] = cpu_time[p, max_steps] - cpu_time[p, 0]
+constraint forall(p in procs) (
+  cpu_throughput[p] = time[p, max_steps] - time[p, 0]
 );
 
 constraint objective[THROUGHPUT] = max(cpu_throughput);
 
-constraint forall(p in processing_units) (
-  cpu_latency[p] = cpu_time[p, max_steps]
+constraint forall(p in procs) (
+  cpu_latency[p] = time[p, max_steps]
 );
 
 constraint objective[LATENCY] = max(cpu_latency);

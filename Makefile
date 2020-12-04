@@ -1,8 +1,11 @@
+PYTHON_DIR := python
 MINIZINC_DIR := minizinc
 PYTHON_MINIZINC_DIR := python/desyder/minizinc
 
-all:\
-	python-minizinc
+all: python-minizinc
+
+install: python-minizinc
+	$(MAKE) -C $(PYTHON_DIR) install
 
 # getting all python files
 python-minizinc:

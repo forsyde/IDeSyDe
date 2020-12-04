@@ -270,59 +270,70 @@ class SDFToMultiCore(DecisionModel, MinizincAble):
 
     sdf_orders_sub: SDFToOrders
     cores: List[Vertex] = field(default_factory=lambda: [])
-    bus: Optional[Vertex] = None
+    busses: List[Vertex] = field(default_factory=lambda: [])
+    connections: List[Edge] = field(default_factory=lambda: [])
 
     @classmethod
     def identify(cls, model, identified):
+        res = None
         sdf_to_slot_sub = next(
             (p for p in identified if isinstance(p, SDFToOrders)),
             None)
         if sdf_to_slot_sub:
-            cores = list(
-                c for c in model.query_vertexes('tdma_mpsoc_processing_units')
-            )
-            busses = [b for b in model.query_vertexes('tdma_mpsoc_bus')]
-            if len(cores) + len(busses) == len(sdf_to_slot_sub.orderings)\
-                    and len(busses) == 1:
-                return (
-                    True,
-                    SDFToMultiCore(
-                        sdf_to_slot_sub,
-                        cores,
-                        busses[0],
-                    )
+            cores = list(model.query_vertexes('tdma_mpsoc_procs'))
+            busses = list(model.query_vertexes('tdma_mpsoc_bus'))
+            # this strange code access the in memory vertexes
+            # representation my going through the labels (ids)
+            # first, hence the get_vertex function.
+            connections = []
+            for core in cores:
+                for (v, adjdict) in model.adj[core].items():
+                    for (n, e) in adjdict.items():
+                        eobj = e['object']
+                        if v in busses and eobj not in connections:
+                            connections.append(eobj)
+            for bus in busses:
+                for (v, adjdict) in model.adj[bus].items():
+                    for (n, e) in adjdict.items():
+                        eobj = e['object']
+                        if v in cores and eobj not in connections:
+                            connections.append(eobj)
+            if len(cores) + len(busses) >= len(sdf_to_slot_sub.orderings):
+                res = SDFToMultiCore(
+                    sdf_to_slot_sub,
+                    cores,
+                    busses,
+                    connections
                 )
-            else:
-                return (True, None)
+        if res:
+            return (True, res)
+        elif not res and sdf_to_slot_sub:
+            return (True, None)
         else:
             return (False, None)
 
     def get_mzn_model_name(self):
         return "sdf_mpsoc_linear_dmodel.mzn"
 
-    def populate_mzn_model(self, mzn):
-        '''
-        models pieces that are filled:
-
-        % model parameters-
-        int: max_bus_slots;
-        int: max_tokens;
-        int: max_steps;
-
-        set of int: sdf_actors; % not flattened
-        set of int: sdf_channels;
-        set of int: processing_units;
-
-        array[sdf_channels] of int: initial_tokens;
-        array[sdf_actors] of int: activations;
-        array[sdf_channels, sdf_actors] of int: sdf_topology;
-        array[sdf_actors, processing_units] of int: wcet;
-        % this numbers are 'per channel token'
-        array[sdf_channels, processing_units, processing_units] of int: wcct;
-        array[sdf_channels, processing_units] of int: send_overhead;
-        array[sdf_channels, processing_units] of int: read_overhead;
-        '''
-        mzn['max_bus_slots'] = int(self.bus.properties['slots'])
+    def populate_mzn_model_nowcet(self, mzn):
+        # enumerate the processors in the model
+        cores_enum = {
+            p.identifier: i+1 for (i, p) in enumerate(self.cores)
+        }
+        # for homgeneity, also expand the processors
+        # to themselves
+        expansions = {p:[p] for p in cores_enum}
+        # expand all TDMAs to their slot elements
+        comm_enum = {}
+        comm_enum_index = len(cores_enum)
+        for (i, bus) in enumerate(self.busses):
+            expansions[bus.identifier] = []
+            for s in range(1, bus.properties['slots']+1):
+                comm_enum_index += 1
+                comm_enum[f'{bus.identifier}_slot_{s}'] = comm_enum_index
+                expansions[bus.identifier].append(f'{bus.identifier}_slot_{s}')
+        # unify processors and bus slots
+        units_enum = {**cores_enum, **comm_enum}
         mzn['max_steps'] = len(self['sdf_actors'])
         cloned_firings = np.array([
             self['sdf_repetition_vector'].transpose()
@@ -334,31 +345,52 @@ class SDFToMultiCore(DecisionModel, MinizincAble):
         mzn['max_tokens'] = int(max_tokens)
         mzn['sdf_actors'] = range(1, len(self['sdf_actors'])+1)
         mzn['sdf_channels'] = range(1, len(self['sdf_channels'])+1)
-        mzn['processing_units'] = range(1, len(self.cores)+1)
+        mzn['procs'] = set(cores_enum.values())
+        mzn['comm_units'] = set(comm_enum.values())
+        mzn['units_neighs'] = [
+            set(
+                units_enum[ex]
+                for e in self.connections
+                for ex in expansions[e.target_vertex.identifier]
+                if e.source_vertex.identifier == u
+            ).union(
+            set(
+                units_enum[ex]
+                for e in self.connections
+                for ex in expansions[e.source_vertex.identifier]
+                if e.target_vertex.identifier == u
+            ))
+            for (u, uidx) in units_enum.items()
+        ]
         # TODO: The semantics of prefixes must be captures and put here!
         # for the moment, this always assumes zero starting tokens
         mzn['initial_tokens'] = [0 for c in self['sdf_channels']]
         # vector is in column format
         mzn['activations'] = self['sdf_repetition_vector'][:, 0].tolist()
         mzn['sdf_topology'] = self['sdf_topology'].tolist()
+        return mzn
+
+    def populate_mzn_model(self, mzn):
+        # use the general method withotu faking data
+        self.populate_mzn_model_nowcet(mzn)
         # almost unitary assumption
-        mzn['wcet'] = (max_tokens * np.ones((
+        mzn['wcet'] = (mzn['max_tokens'] * np.ones((
             len(self['sdf_actors']),
             len(self.cores)
         ), dtype=int)).tolist()
         mzn['wcct'] = (np.ones((
             len(self['sdf_channels']),
-            len(self.cores),
-            len(self.cores)
+            len(mzn['procs']) + len(mzn['comm_units']),
+            len(mzn['procs']) + len(mzn['comm_units'])
         ), dtype=int)).tolist()
-        mzn['send_overhead'] = (np.zeros((
-            len(self['sdf_channels']),
-            len(self.cores)
-        ), dtype=int)).tolist()
-        mzn['read_overhead'] = (np.zeros((
-            len(self['sdf_channels']),
-            len(self.cores)
-        ), dtype=int)).tolist()
+        # mzn['send_overhead'] = (np.zeros((
+        #     len(self['sdf_channels']),
+        #     len(self.cores)
+        # ), dtype=int)).tolist()
+        # mzn['read_overhead'] = (np.zeros((
+        #     len(self['sdf_channels']),
+        #     len(self.cores)
+        # ), dtype=int)).tolist()
         # TODO: find a way to hardcode this less, but curently
         # it is a bijection with the number of objs supported
         # in the model. There's only 2 for now.
@@ -370,10 +402,10 @@ class SDFToMultiCore(DecisionModel, MinizincAble):
         rebuild from the following variables:
 
         % variables
-        array[sdf_channels, processing_units, steps0] of var 0..max_tokens: buffer;
-        array[sdf_channels, processing_units, processing_units, bus_slots, steps0] of var 0..max_tokens: send;
-        array[sdf_actors, processing_units, steps] of var 0..max(activations): mapped_actors;
-        array[processing_units, steps0] of var int: cpu_time;
+        array[sdf_channels, procs, steps0] of var 0..max_tokens: buffer;
+        array[sdf_channels, procs, procs, bus_slots, steps0] of var 0..max_tokens: send;
+        array[sdf_actors, procs, steps] of var 0..max(activations): mapped_actors;
+        array[procs, steps0] of var int: cpu_time;
         array[steps0] of var int: bus_slots_used;
         '''
         new_model = self.covered_model()
@@ -423,15 +455,14 @@ class SDFToMultiCore(DecisionModel, MinizincAble):
                             )
                     elif v > 1:
                         raise ValueError("Solution with pass must be implemented")
-        for (cidx, c) in enumerate(results['send']):
-            channel = self['sdf_channels'][cidx]
-            for (pidx, p) in enumerate(c):
-                sender = self.cores[pidx]
-                for (ppidx, pp) in enumerate(p):
-                    reciever = self.cores[ppidx]
-                    for (sidx, s) in enumerate(pp):
-                        for (t, v) in enumerate(s):
-                            pass
+        # for (cidx, c) in enumerate(results['send']):
+        #     channel = self['sdf_channels'][cidx]
+        #     for (pidx, p) in enumerate(c):
+        #         sender = self.cores[pidx]
+        #         for (ppidx, pp) in enumerate(p):
+        #             reciever = self.cores[ppidx]
+        #             for (t, v) in enumerate(pp):
+        #                 pass
         return new_model
 
 
@@ -515,25 +546,9 @@ class SDFToMultiCoreCharacterized(DecisionModel, MinizincAble):
         return "sdf_mpsoc_linear_dmodel.mzn"
 
     def populate_mzn_model(self, mzn):
-        mzn['max_bus_slots'] = int(self['bus'].properties['slots'])
-        mzn['max_steps'] = len(self['sdf_actors'])
-        cloned_firings = np.array([
-            self['sdf_repetition_vector'].transpose()
-            for i in range(1, len(self['sdf_channels'])+1)
-        ])
-        max_tokens = np.amax(
-            cloned_firings * np.absolute(self['sdf_topology'])
-        )
-        mzn['max_tokens'] = int(max_tokens)
-        mzn['sdf_actors'] = range(1, len(self['sdf_actors'])+1)
-        mzn['sdf_channels'] = range(1, len(self['sdf_channels'])+1)
-        mzn['processing_units'] = range(1, len(self['cores'])+1)
-        # TODO: The semantics of prefixes must be captures and put here!
-        # for the moment, this always assumes zero starting tokens
-        mzn['initial_tokens'] = [0 for c in self['sdf_channels']]
-        # vector is in column format
-        mzn['activations'] = self['sdf_repetition_vector'][:, 0].tolist()
-        mzn['sdf_topology'] = self['sdf_topology'].tolist()
+        # use the non faked part of the covered problem
+        # to save some code
+        self.sdf_to_mpsoc_sub.populate_mzn_model_nowcet(mzn)
         mzn['wcet'] = self.wcet.tolist()
         mzn['wcct'] = self.wcct.tolist()
         mzn['send_overhead'] = (np.zeros((

@@ -114,9 +114,9 @@ constraint forall(t in steps, p in units, pp in units_neighs[p]) (
 
 % symmetry breaking
 %% if next step is empty, all next ones are also empty
-constraint forall(p in procs, t in 1..max_steps-1) (
-  sum(mapped_actors[.., p, t]) = 0 -> sum(mapped_actors[.., p, t+1]) = 0
-);
+% constraint forall(p in procs, t in 1..max_steps-1) (
+%   sum(mapped_actors[.., p, t]) = 0 -> sum(mapped_actors[.., p, t+1]) = 0
+% );
 
 % calculate the objectives
 constraint forall(p in procs) (

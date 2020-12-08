@@ -315,25 +315,58 @@ class SDFToMultiCore(DecisionModel, MinizincAble):
     def get_mzn_model_name(self):
         return "sdf_mpsoc_linear_dmodel.mzn"
 
-    def populate_mzn_model_nowcet(self, mzn):
+    def numbered_hw_units(self) -> Dict[str, int]:
+        """
+        """
+        numbers = {}
+        cur = 0
+        for p in self.cores:
+            numbers[p.identifier] = cur
+            cur += 1
+        for p in self.busses:
+            numbers[p.identifier] = cur
+            cur += 1
+        return numbers
+
+    def expanded_hw_units(self) -> Tuple[Dict[str, List[str]], Dict[str, int]]:
+        """Returns HW vertexes expasions for this decision model.
+
+        Returns:
+            A tuple that contains the _identifiers_ of the elements in the
+            forsyde model relating before and after expansion. In particular,
+            TDMA busses are expanded to each TDM slot as different elements.
+            This eases reasoning about multiple level of communication.
+        """
         # enumerate the processors in the model
-        cores_enum = {
-            p.identifier: i+1 for (i, p) in enumerate(self.cores)
+        units_enum = {
+            p.identifier: i for (i, p) in enumerate(self.cores)
         }
         # for homgeneity, also expand the processors
         # to themselves
-        expansions = {p:[p] for p in cores_enum}
+        expansions = {p: [p] for p in units_enum}
         # expand all TDMAs to their slot elements
-        comm_enum = {}
-        comm_enum_index = len(cores_enum)
+        units_enum_index = len(units_enum)
         for (i, bus) in enumerate(self.busses):
             expansions[bus.identifier] = []
-            for s in range(1, bus.properties['slots']+1):
-                comm_enum_index += 1
-                comm_enum[f'{bus.identifier}_slot_{s}'] = comm_enum_index
+            for s in range(bus.properties['slots']):
+                units_enum[f'{bus.identifier}_slot_{s}'] = units_enum_index
+                units_enum_index += 1
                 expansions[bus.identifier].append(f'{bus.identifier}_slot_{s}')
         # unify processors and bus slots
-        units_enum = {**cores_enum, **comm_enum}
+        return (expansions, units_enum)
+
+    def populate_mzn_model_nowcet(self, mzn):
+        (expansions, units_enum) = self.expanded_hw_units()
+        cores_enum = {}
+        for (e, el) in expansions.items():
+            if any(p.identifier == e for p in self['cores']):
+                for ex in el:
+                    cores_enum[ex] = units_enum[ex]
+        comm_enum = {}
+        for (e, el) in expansions.items():
+            if any(p.identifier == e for p in self['busses']):
+                for ex in el:
+                    comm_enum[ex] = units_enum[ex]
         mzn['max_steps'] = len(self['sdf_actors'])
         cloned_firings = np.array([
             self['sdf_repetition_vector'].transpose()
@@ -345,8 +378,8 @@ class SDFToMultiCore(DecisionModel, MinizincAble):
         mzn['max_tokens'] = int(max_tokens)
         mzn['sdf_actors'] = range(1, len(self['sdf_actors'])+1)
         mzn['sdf_channels'] = range(1, len(self['sdf_channels'])+1)
-        mzn['procs'] = set(cores_enum.values())
-        mzn['comm_units'] = set(comm_enum.values())
+        mzn['procs'] = set(i+1 for i in cores_enum.values())
+        mzn['comm_units'] = set(i+1 for i in comm_enum.values())
         mzn['units_neighs'] = [
             set(
                 units_enum[ex]
@@ -371,7 +404,7 @@ class SDFToMultiCore(DecisionModel, MinizincAble):
         return mzn
 
     def populate_mzn_model(self, mzn):
-        # use the general method withotu faking data
+        # use the general method without faking data
         self.populate_mzn_model_nowcet(mzn)
         # almost unitary assumption
         mzn['wcet'] = (mzn['max_tokens'] * np.ones((
@@ -391,9 +424,8 @@ class SDFToMultiCore(DecisionModel, MinizincAble):
         #     len(self['sdf_channels']),
         #     len(self.cores)
         # ), dtype=int)).tolist()
-        # TODO: find a way to hardcode this less, but curently
-        # it is a bijection with the number of objs supported
-        # in the model. There's only 2 for now.
+        # since we are using the same minizinc model for more than
+        # one decision model, we have to force it all zero here.
         mzn['objective_weights'] = [0, 0]
         return mzn
 
@@ -472,6 +504,8 @@ class SDFToMultiCoreCharacterized(DecisionModel, MinizincAble):
     sdf_to_mpsoc_sub: SDFToMultiCore
     wcet: np.ndarray = np.array((0, 0), dtype=int)
     wcct: np.ndarray = np.array((0, 0, 0), dtype=int)
+    throughput_importance: int = 0
+    latency_importance: int = 0
     send_overhead: np.ndarray = np.array((0, 0), dtype=int)
     read_overhead: np.ndarray = np.array((0, 0), dtype=int)
 
@@ -482,58 +516,69 @@ class SDFToMultiCoreCharacterized(DecisionModel, MinizincAble):
             (p for p in identified if isinstance(p, SDFToMultiCore)),
             None)
         if sdf_to_mpsoc_sub:
+            sdf_actors = sdf_to_mpsoc_sub['sdf_actors']
+            cores = sdf_to_mpsoc_sub['cores']
             wcet = None
             wcct = None
             if next(model.query_view('count_wcet'))['count'] ==\
-              len(sdf_to_mpsoc_sub['cores']) * len(sdf_to_mpsoc_sub['sdf_actors']):
+                    len(cores) * len(sdf_actors):
                 wcet = np.zeros(
                     (
-                        len(sdf_to_mpsoc_sub['cores']),
-                        len(sdf_to_mpsoc_sub['sdf_actors']),
+                        len(cores),
+                        len(sdf_actors),
                     ),
                     dtype=int
                 )
                 for row in model.query_view('wcet'):
                     app_index = next(
-                        idx for (idx, v) in enumerate(sdf_to_mpsoc_sub['sdf_actors'])
+                        idx for (idx, v) in enumerate(sdf_actors)
                         if v.identifier == row['app_id']
                     )
                     plat_index = next(
-                        idx for (idx, v) in enumerate(sdf_to_mpsoc_sub['cores'])
+                        idx for (idx, v) in enumerate(cores)
                         if v.identifier == row['plat_id']
                     )
                     wcet[app_index, plat_index] = int(row['wcet_time'])
+            sdf_channels = sdf_to_mpsoc_sub['sdf_channels']
+            busses = sdf_to_mpsoc_sub['busses']
+            units = cores + busses
+            connections = sdf_to_mpsoc_sub['connections']
             if next(model.query_view('count_signal_wcct'))['count'] ==\
-              len(sdf_to_mpsoc_sub['sdf_channels']) *\
-              len(sdf_to_mpsoc_sub['cores']) *\
-              len(sdf_to_mpsoc_sub['cores']):
-                wcct = np.zeros(
-                    (
-                        len(sdf_to_mpsoc_sub['sdf_channels']),
-                        len(sdf_to_mpsoc_sub['cores']),
-                        len(sdf_to_mpsoc_sub['cores'])
-                    ),
-                    dtype=int
-                )
+                    len(sdf_channels) * 2 * len(connections):
+                wcct = np.zeros((len(sdf_channels), len(units), len(units)), dtype=int)
                 for row in model.query_view('signal_wcct'):
                     sender_index = next(
-                        idx for (idx, v) in enumerate(sdf_to_mpsoc_sub['cores'])
+                        idx for (idx, v) in enumerate(units)
                         if v.identifier == row['sender_id']
                     )
                     reciever_index = next(
-                        idx for (idx, v) in enumerate(sdf_to_mpsoc_sub['cores'])
+                        idx for (idx, v) in enumerate(units)
                         if v.identifier == row['reciever_id']
                     )
                     signal_index = next(
-                        idx for (idx, v) in enumerate(sdf_to_mpsoc_sub['sdf_channels'])
+                        idx for (idx, v) in enumerate(sdf_channels)
                         if v.identifier == row['signal_id']
                     )
                     wcct[signal_index, sender_index, reciever_index] = int(row['wcct_time'])
+            # although there should be only one Th vertex
+            # per application, we apply maximun just in case
+            # someone forgot to make sure there is only one annotation
+            # per application
+            throughput_importance = 0
+            throughput_targets = list(model.query_vertexes('min_throughput_targets'))
+            if all(v in throughput_targets for v in sdf_to_mpsoc_sub['sdf_actors']):
+                throughput_importance = max(
+                    (int(v.properties['apriori_importance'])
+                     for v in model.query_vertexes('min_throughput')),
+                    default=0
+                )
             if wcet is not None and wcct is not None:
                 res = cls(
                     sdf_to_mpsoc_sub=sdf_to_mpsoc_sub,
                     wcet=wcet,
-                    wcct=wcct
+                    wcct=wcct,
+                    throughput_importance=throughput_importance,
+                    latency_importance=0
                 )
         if res:
             return (True, res)
@@ -548,21 +593,65 @@ class SDFToMultiCoreCharacterized(DecisionModel, MinizincAble):
     def populate_mzn_model(self, mzn):
         # use the non faked part of the covered problem
         # to save some code
+        pre_units_enum = self.sdf_to_mpsoc_sub.numbered_hw_units()
+        (expansions, units_enum) = self.sdf_to_mpsoc_sub.expanded_hw_units()
+        cores_enum = {}
+        cores_expansions = {}
+        for (e, el) in expansions.items():
+            if any(p.identifier == e for p in self['cores']):
+                cores_expansions[e] = el
+                for ex in el:
+                    cores_enum[ex] = units_enum[ex]
+        comm_enum = {}
+        comm_expansions = {}
+        for (e, el) in expansions.items():
+            if any(p.identifier == e for p in self['busses']):
+                comm_expansions[e] = el
+                for ex in el:
+                    comm_enum[ex] = units_enum[ex]
         self.sdf_to_mpsoc_sub.populate_mzn_model_nowcet(mzn)
-        mzn['wcet'] = self.wcet.tolist()
-        mzn['wcct'] = self.wcct.tolist()
-        mzn['send_overhead'] = (np.zeros((
-            len(self['sdf_channels']),
-            len(self['cores'])
-        ), dtype=int)).tolist()
-        mzn['read_overhead'] = (np.zeros((
-            len(self['sdf_channels']),
-            len(self['cores'])
-        ), dtype=int)).tolist()
-        # TODO: find a way to hardcode this less, but curently
-        # it is a bijection with the number of objs supported
-        # in the model. There's only 2 for now.
-        mzn['objective_weights'] = [0, 0]
+        wcet_expanded = np.zeros(
+            (
+                len(self['sdf_actors']),
+                sum(len(el) for el in cores_expansions.values())
+            ),
+            dtype=int
+        )
+        for (aidx, a) in enumerate(self['sdf_actors']):
+            for (eidx, e) in enumerate(self['cores']):
+                for ex in expansions[e.identifier]:
+                    exidx = units_enum[ex]
+                    wcet_expanded[aidx, exidx] = self.wcet[aidx, eidx]
+        wcct_expanded = np.zeros(
+            (
+                len(self['sdf_channels']),
+                sum(len(el) for el in expansions.values()),
+                sum(len(el) for el in expansions.values())
+            ),
+            dtype=int
+        )
+        for (cidx, c) in enumerate(self['sdf_channels']):
+            for (e, eidx) in pre_units_enum.items():
+                for (e2, e2idx) in pre_units_enum.items():
+                    for ex in expansions[e]:
+                        exidx = units_enum[ex]
+                        for ex2 in expansions[e2]:
+                            ex2idx = units_enum[ex2]
+                            wcct_expanded[cidx, exidx, ex2idx] = self.wcct[cidx, eidx, e2idx]
+        mzn['wcet'] = wcet_expanded.tolist()
+        mzn['wcct'] = wcct_expanded.tolist()
+        # mzn['send_overhead'] = (np.zeros((
+        #     len(self['sdf_channels']),
+        #     len(self['cores'])
+        # ), dtype=int)).tolist()
+        # mzn['read_overhead'] = (np.zeros((
+        #     len(self['sdf_channels']),
+        #     len(self['cores'])
+        # ), dtype=int)).tolist()
+        mzn['objective_weights'] = [
+            self.throughput_importance,
+            self.latency_importance
+        ]
         return mzn
 
     def rebuild_forsyde_model(self, results):
@@ -613,15 +702,16 @@ class SDFToMultiCoreCharacterized(DecisionModel, MinizincAble):
                             )
                     elif v > 1:
                         raise ValueError("Solution with pass must be implemented")
+        (expansions, enum_items) = self.sdf_to_mpsoc_sub.expanded_hw_units()
+        items_enums = {i: p for (i, p) in enum_items.items()}
         for (cidx, c) in enumerate(results['send']):
             channel = self['sdf_channels'][cidx]
             for (pidx, p) in enumerate(c):
-                sender = self['cores'][pidx]
+                # sender = self['cores'][pidx]
                 for (ppidx, pp) in enumerate(p):
-                    reciever = self['cores'][ppidx]
-                    for (sidx, s) in enumerate(pp):
-                        for (t, v) in enumerate(s):
-                            pass
+                    # reciever = self['cores'][ppidx]
+                    for (t, v) in enumerate(pp):
+                        pass
         return new_model
 
 

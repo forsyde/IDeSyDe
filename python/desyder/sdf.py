@@ -5,7 +5,7 @@ import numpy as np
 def get_PASS(sdf_topology: np.ndarray,
              repetition_vector: np.ndarray,
              initial_tokens: Optional[np.ndarray] = None
-             ) -> List[str]:
+             ) -> List[int]:
     if initial_tokens is None:
         initial_tokens = np.zeros((sdf_topology.shape[2], 1))
     tokens = initial_tokens

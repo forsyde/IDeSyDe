@@ -45,7 +45,9 @@ class DecisionModel(abc.ABC):
     identifications that the model may have.
     """
 
+    
     @abc.abstractclassmethod
+    @classmethod
     def identify(
             cls,
             model: ForSyDeModel,
@@ -852,7 +854,7 @@ class SDFToMultiCoreCharacterizedJobs(DecisionModel, MinizincAble):
         return new_model
 
 
-def _get_standard_problems() -> Iterable[Type[DecisionModel]]:
+def _get_standard_problems() -> Set[Type[DecisionModel]]:
     return set(c for c in DecisionModel.__subclasses__())
 
 
@@ -871,7 +873,7 @@ def identify_decision_models(
     '''
     max_iterations = len(model) * len(problems)
     candidates = [p for p in problems]
-    identified = []
+    identified: List[DecisionModel] = []
     iterations = 0
     while len(candidates) > 0 and iterations < max_iterations:
         trials = ((c, c.identify(model, identified)) for c in candidates)
@@ -889,7 +891,7 @@ def identify_decision_models(
 def identify_decision_models_parallel(
     model: ForSyDeModel,
     problems: Set[Type[DecisionModel]] = set(),
-    concurrent_idents: int = os.cpu_count()-1
+    concurrent_idents: int = os.cpu_count() or 1
 ) -> List[DecisionModel]:
     '''
     This function runs the Design Space Identification scheme,
@@ -904,7 +906,7 @@ def identify_decision_models_parallel(
     '''
     max_iterations = len(model) * len(problems)
     candidates = [p for p in problems]
-    identified = []
+    identified: List[DecisionModel] = []
     iterations = 0
     with concurrent.futures.ProcessPoolExecutor(
             max_workers=concurrent_idents) as executor:
@@ -956,7 +958,7 @@ async def identify_decision_models_async(
 async def identify_decision_models_parallel_async(
     model: ForSyDeModel,
     problems: Set[Type[DecisionModel]] = set(),
-    concurrent_idents: int = os.cpu_count()-1
+    concurrent_idents: int = os.cpu_count() or 1
 ) -> List[DecisionModel]:
     '''
     AsyncIO version of the same function. Wraps the non-async version.

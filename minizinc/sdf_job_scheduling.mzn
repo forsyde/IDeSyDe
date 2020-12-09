@@ -30,13 +30,13 @@ array[objectives] of int: objective_weights;
 % variables
 % array[jobs] of var procs: mapping;
 array[jobs] of var 0..(sum(wcet)+sum(wcct)): job_start;
-array[jobs] of var 0..max(wcet): job_duration;
+array[jobs] of var min(wcet)..max(wcet): job_duration;
 array[jobs] of var 0..(sum(wcet)+sum(wcct)): job_end;
 array[sdf_channels, jobs, jobs] of var 0..max_tokens: job_send;
 array[sdf_channels, jobs] of var 0..max_tokens: buffer_start;
 array[sdf_channels, jobs] of var 0..max_tokens: buffer_end;
-array[jobs, units] of var opt 0..(sum(wcet)+sum(wcct)): start;
-array[jobs, units] of var 0..max(wcet): duration;
+array[jobs, procs] of var opt 0..(sum(wcet)+sum(wcct)): start;
+array[jobs, procs] of var min(wcet)..max(wcet): duration;
 
 
 % objectives

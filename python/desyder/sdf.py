@@ -1,4 +1,4 @@
-from typing import List, Optional
+from typing import List, Optional, Dict, Tuple
 
 import numpy as np
 
@@ -32,3 +32,11 @@ def get_PASS(sdf_topology: np.ndarray,
 
 def check_sdf_consistency(sdf_topology) -> bool:
     return False
+
+
+def sdf_to_hsdf(
+        sdf_topology: np.ndarray,
+        repetition_vector: np.ndarray,
+        initial_tokens: np.ndarray
+        ) -> Tuple[Dict[int, List[int]], np.ndarray]:
+    pass

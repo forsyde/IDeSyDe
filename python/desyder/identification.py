@@ -35,36 +35,6 @@ class ChoiceCriteria(Flag):
     DOMINANCE = auto()
 
 
-class MinizincAble(abc.ABC):
-
-    @abc.abstractmethod
-    def populate_mzn_model(
-            self,
-            model: Union[MznModel, MznInstance]
-    ) -> Union[MznModel, MznInstance]:
-        return model
-
-    @abc.abstractmethod
-    def get_mzn_model_name(self) -> str:
-        return ""
-
-    @abc.abstractmethod
-    def rebuild_forsyde_model(
-        self,
-        result: MznResult
-    ) -> ForSyDeModel:
-        return ForSyDeModel()
-
-    def build_mzn_model(self, mzn=MznModel()):
-        model_txt = resources.read_text(
-            'desyder.minizinc',
-            self.get_mzn_model_name()
-        )
-        mzn.add_string(model_txt)
-        self.populate_mzn_model(mzn)
-        return mzn
-
-
 class DecisionModel(abc.ABC):
 
     """
@@ -156,6 +126,37 @@ class DecisionModel(abc.ABC):
         return len(other_diff) == 0\
             and len(self_diff) >= 0
             # and all(self[k] == other[k] for k in other if k in self)
+
+
+class MinizincAble(abc.ABC):
+
+    @abc.abstractmethod
+    def populate_mzn_model(
+            self,
+            model: Union[MznModel, MznInstance]
+    ) -> Union[MznModel, MznInstance]:
+        return model
+
+    @abc.abstractmethod
+    def get_mzn_model_name(self) -> str:
+        return ""
+
+    @abc.abstractmethod
+    def rebuild_forsyde_model(
+        self,
+        result: MznResult
+    ) -> ForSyDeModel:
+        return ForSyDeModel()
+
+    def build_mzn_model(self, mzn=MznModel()):
+        model_txt = resources.read_text(
+            'desyder.minizinc',
+            self.get_mzn_model_name()
+        )
+        mzn.add_string(model_txt)
+        self.populate_mzn_model(mzn)
+        return mzn
+
 
 
 @dataclass
@@ -328,7 +329,9 @@ class SDFToMultiCore(DecisionModel, MinizincAble):
             cur += 1
         return numbers
 
-    def expanded_hw_units(self) -> Tuple[Dict[str, List[str]], Dict[str, int]]:
+    def expanded_hw_units(self) -> Tuple[
+            Dict[str, List[str]], Dict[str, int], Dict[str, int], Dict[str, int]
+            ]:
         """Returns HW vertexes expasions for this decision model.
 
         Returns:
@@ -344,29 +347,22 @@ class SDFToMultiCore(DecisionModel, MinizincAble):
         # for homgeneity, also expand the processors
         # to themselves
         expansions = {p: [p] for p in units_enum}
+        cores_enum = {p: i for (p, i) in units_enum.items()}
         # expand all TDMAs to their slot elements
+        comm_enum = dict()
         units_enum_index = len(units_enum)
         for (i, bus) in enumerate(self.busses):
             expansions[bus.identifier] = []
             for s in range(bus.properties['slots']):
                 units_enum[f'{bus.identifier}_slot_{s}'] = units_enum_index
+                comm_enum[f'{bus.identifier}_slot_{s}'] = units_enum_index
                 units_enum_index += 1
                 expansions[bus.identifier].append(f'{bus.identifier}_slot_{s}')
         # unify processors and bus slots
-        return (expansions, units_enum)
+        return (expansions, units_enum, cores_enum, comm_enum)
 
     def populate_mzn_model_nowcet(self, mzn):
-        (expansions, units_enum) = self.expanded_hw_units()
-        cores_enum = {}
-        for (e, el) in expansions.items():
-            if any(p.identifier == e for p in self['cores']):
-                for ex in el:
-                    cores_enum[ex] = units_enum[ex]
-        comm_enum = {}
-        for (e, el) in expansions.items():
-            if any(p.identifier == e for p in self['busses']):
-                for ex in el:
-                    comm_enum[ex] = units_enum[ex]
+        (expansions, units_enum, cores_enum, comm_enum) = self.expanded_hw_units()
         mzn['max_steps'] = len(self['sdf_actors'])
         cloned_firings = np.array([
             self['sdf_repetition_vector'].transpose()
@@ -590,11 +586,17 @@ class SDFToMultiCoreCharacterized(DecisionModel, MinizincAble):
     def get_mzn_model_name(self):
         return "sdf_mpsoc_linear_dmodel.mzn"
 
+    def numbered_hw_units(self):
+        return self.sdf_to_mpsoc_sub.numbered_hw_units()
+
+    def expanded_hw_units(self):
+        return self.sdf_to_mpsoc_sub.expanded_hw_units()
+
     def populate_mzn_model(self, mzn):
         # use the non faked part of the covered problem
         # to save some code
         pre_units_enum = self.sdf_to_mpsoc_sub.numbered_hw_units()
-        (expansions, units_enum) = self.sdf_to_mpsoc_sub.expanded_hw_units()
+        (expansions, units_enum, cores_enum, comm_enum) = self.sdf_to_mpsoc_sub.expanded_hw_units()
         cores_enum = {}
         cores_expansions = {}
         for (e, el) in expansions.items():
@@ -655,6 +657,9 @@ class SDFToMultiCoreCharacterized(DecisionModel, MinizincAble):
         return mzn
 
     def rebuild_forsyde_model(self, results):
+        print(results['mapped_actors'])
+        print(results['objective'])
+        print(results['time'])
         new_model = self.covered_model()
         for (aidx, a) in enumerate(results['mapped_actors']):
             actor = self['sdf_actors'][aidx]
@@ -664,41 +669,39 @@ class SDFToMultiCoreCharacterized(DecisionModel, MinizincAble):
                 for (t, v) in enumerate(p):
                     if 0 < v and v < 2:
                         # TODO: fix multiple addition of elements here
-                        if not new_model.has_edge(ordering, core):
-                            edge = Edge(
-                                ordering,
-                                core,
-                                None,
-                                None,
-                                TypesFactory.build_type('Mapping')
+                        if not new_model.has_edge(core, ordering):
+                            exec_port = Port(
+                                'execution',
+                                TypesFactory.build_type('AbstractGrouping'),
                             )
+                            core.ports.add(exec_port)
                             new_model.add_edge(
-                                ordering,
                                 core,
-                                object=edge
+                                ordering,
+                                object=Edge(
+                                    core,
+                                    ordering,
+                                    exec_port,
+                                    None,
+                                    TypesFactory.build_type('Mapping')
+                                )
                             )
-                        if not new_model.has_edge(actor, ordering):
+                        if not new_model.has_edge(ordering, actor):
                             ord_port = Port(
-                                identifier = f'slot{t}',
-                                port_type = TypesFactory.build_type('OrderedExecution')
+                                identifier = f'slot[{t}]',
+                                port_type = TypesFactory.build_type('Process')
                             )
                             ordering.ports.add(ord_port)
-                            act_port = Port(
-                                identifier = 'host',
-                                port_type = TypesFactory.build_type('Host')
-                            )
-                            actor.ports.add(act_port)
-                            edge = Edge(
-                                actor,
-                                ordering,
-                                act_port,
-                                ord_port,
-                                TypesFactory.build_type('Scheduling')
-                            )
                             new_model.add_edge(
-                                actor,
                                 ordering,
-                                object=edge
+                                actor,
+                                object=Edge(
+                                    ordering,
+                                    actor,
+                                    ord_port,
+                                    None,
+                                    TypesFactory.build_type('Scheduling')
+                                )
                             )
                     elif v > 1:
                         raise ValueError("Solution with pass must be implemented")
@@ -712,6 +715,140 @@ class SDFToMultiCoreCharacterized(DecisionModel, MinizincAble):
                     # reciever = self['cores'][ppidx]
                     for (t, v) in enumerate(pp):
                         pass
+        return new_model
+
+@dataclass
+class SDFToMultiCoreCharacterizedJobs(DecisionModel, MinizincAble):
+
+    sdf_mpsoc_char_sub: SDFToMultiCoreCharacterized
+    jobs: List[str] = field(default_factory=lambda: [])
+
+    @classmethod
+    def identify(cls, model, identified):
+        res = None
+        sdf_mpsoc_char_sub = next(
+            (p for p in identified if isinstance(p, SDFToMultiCoreCharacterized)),
+            None)
+        if sdf_mpsoc_char_sub:
+            jobs = {
+                f"{a.identifier}_{i}": (a.identifier, aidx)
+                for (aidx, a) in enumerate(sdf_mpsoc_char_sub['sdf_actors'])
+                for i in sdf_mpsoc_char_sub['sdf_repetition_vector'][aidx]
+            }
+            res = cls(
+                sdf_mpsoc_char_sub=sdf_mpsoc_char_sub,
+                jobs=jobs
+            )
+        if res:
+            return (True, res)
+        else:
+            return (False, None)
+
+    def get_mzn_model_name(self):
+        return "sdf_job_scheduling.mzn"
+
+    def populate_mzn_model(self, mzn):
+        # use the non faked part of the covered problem
+        # to save some code
+        pre_units_enum = self.sdf_mpsoc_char_sub.numbered_hw_units()
+        (expansions, units_enum, cores_enum, comm_enum) = self.sdf_mpsoc_char_sub.expanded_hw_units()
+        cores_enum = {}
+        cores_expansions = {}
+        for (e, el) in expansions.items():
+            if any(p.identifier == e for p in self['cores']):
+                cores_expansions[e] = el
+                for ex in el:
+                    cores_enum[ex] = units_enum[ex]
+        comm_enum = {}
+        comm_expansions = {}
+        for (e, el) in expansions.items():
+            if any(p.identifier == e for p in self['busses']):
+                comm_expansions[e] = el
+                for ex in el:
+                    comm_enum[ex] = units_enum[ex]
+        wcet_expanded = np.zeros(
+            (
+                len(self['sdf_actors']),
+                sum(len(el) for el in cores_expansions.values())
+            ),
+            dtype=int
+        )
+        for (aidx, a) in enumerate(self['sdf_actors']):
+            for (eidx, e) in enumerate(self['cores']):
+                for ex in expansions[e.identifier]:
+                    exidx = units_enum[ex]
+                    wcet_expanded[aidx, exidx] = self['wcet'][aidx, eidx]
+        wcct_expanded = np.zeros(
+            (
+                len(self['sdf_channels']),
+                sum(len(el) for el in expansions.values()),
+                sum(len(el) for el in expansions.values())
+            ),
+            dtype=int
+        )
+        for (cidx, c) in enumerate(self['sdf_channels']):
+            for (e, eidx) in pre_units_enum.items():
+                for (e2, e2idx) in pre_units_enum.items():
+                    for ex in expansions[e]:
+                        exidx = units_enum[ex]
+                        for ex2 in expansions[e2]:
+                            ex2idx = units_enum[ex2]
+                            wcct_expanded[cidx, exidx, ex2idx] = self['wcct'][cidx, eidx, e2idx]
+        cloned_firings = np.array([
+            self['sdf_repetition_vector'].transpose()
+            for i in range(1, len(self['sdf_channels'])+1)
+        ])
+        max_tokens = np.amax(
+            cloned_firings * np.absolute(self['sdf_topology'])
+        )
+        mzn['max_tokens'] = int(max_tokens)
+        mzn['sdf_actors'] = range(1, len(self['sdf_actors'])+1)
+        mzn['sdf_channels'] = range(1, len(self['sdf_channels'])+1)
+        mzn['procs'] = set(i+1 for i in cores_enum.values())
+        mzn['comm_units'] = set(i+1 for i in comm_enum.values())
+        mzn['jobs'] = range(1, len(self.jobs)+1)
+        # mzn['activations'] = self['sdf_repetition_vector'][:, 0].tolist()
+        mzn['jobs_actors'] = [
+            aidx+1
+            for (j, (label, aidx)) in self.jobs.items()
+        ]
+        # TODO: must fix the delays in the model
+        mzn['initial_tokens'] = [0 for a in self['sdf_actors']]
+        mzn['sdf_topology'] = self['sdf_topology'].tolist()
+        mzn['wcet'] = wcet_expanded.tolist()
+        mzn['wcct'] = wcct_expanded.tolist()
+        mzn['units_neighs'] = [
+            set(
+                units_enum[ex]
+                for e in self['connections']
+                for ex in expansions[e.target_vertex.identifier]
+                if e.source_vertex.identifier == u
+            ).union(
+            set(
+                units_enum[ex]
+                for e in self['connections']
+                for ex in expansions[e.source_vertex.identifier]
+                if e.target_vertex.identifier == u
+            ))
+            for (u, uidx) in units_enum.items()
+        ]
+        # mzn['send_overhead'] = (np.zeros((
+        #     len(self['sdf_channels']),
+        #     len(self['cores'])
+        # ), dtype=int)).tolist()
+        # mzn['read_overhead'] = (np.zeros((
+        #     len(self['sdf_channels']),
+        #     len(self['cores'])
+        # ), dtype=int)).tolist()
+        mzn['objective_weights'] = [
+            self['throughput_importance'],
+            self['latency_importance']
+        ]
+        return mzn
+
+    def rebuild_forsyde_model(self, results):
+        new_model = self.covered_model()
+        print(results)
         return new_model
 
 
@@ -796,18 +933,12 @@ def choose_decision_models(
     criteria: ChoiceCriteria = ChoiceCriteria.DOMINANCE
 ) -> List[DecisionModel]:
     if criteria & ChoiceCriteria.DOMINANCE:
-        dominant = []
-        length = 0
-        length_before = None
-        while length != length_before:
-            length_before = length
-            dominant = [m for m in models if any(
-               m.dominates(o) for o in models if o != m
-            ) and not any(
-               o.dominates(m) for o in dominant if o != m
-            )]
-            length = len(dominant)
-        return dominant
+        non_dominated = [m for m in models]
+        for m in models:
+            for other in models:
+                if m in non_dominated and m != other and other.dominates(m):
+                    non_dominated.remove(m)
+        return non_dominated
     else:
         return models
 

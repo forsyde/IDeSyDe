@@ -34,7 +34,7 @@ set of int: steps = 1..max_steps;
 array[sdf_channels, procs, steps0] of var 0..max_tokens: buffer;
 array[sdf_channels, units, units, steps0] of var 0..max_tokens: send;
 array[sdf_actors, procs, steps] of var 0..max(activations): mapped_actors;
-array[units, steps0] of var 0..sum(wcet): time;
+array[units, steps0] of var int: time;
 
 % objectives
 array[procs] of var 0..sum(wcet): cpu_throughput;
@@ -90,9 +90,14 @@ constraint forall(c in sdf_channels, p in comm_units, t in steps) (
 );
 
 % timing for the elements
-%% must start at zero
+%% one processor must start at zero
 constraint forall(p in units) (
     time[p, 0] = 0
+);
+
+%% monotonically increasing
+constraint forall(p in units, t in steps) (
+    time[p, t] >= time[p, t-1]
 );
 
 %% timing between processing steps
@@ -102,7 +107,7 @@ constraint forall(t in steps, p in procs) (
 
 %% timign with communication
 constraint forall(t in steps, p in units, pp in units_neighs[p]) (
-  time[p, t] >= time[pp, t-1] + sum(c in sdf_channels) (
+  time[p, t] >= time[pp, t] + sum(c in sdf_channels) (
     wcct[c, pp, p] * send[c, pp, p, t]
   )
 );
@@ -120,7 +125,13 @@ constraint forall(t in steps, p in units, pp in units_neighs[p]) (
 
 % calculate the objectives
 constraint forall(p in procs) (
-  cpu_throughput[p] = time[p, max_steps] - time[p, 0]
+  cpu_throughput[p] = sum(t in steps) (
+    if sum(mapped_actors[.., p, t]) > 0 then
+        time[p, t] - time[p, t-1]
+    else
+        0
+    endif
+  )
 );
 
 constraint objective[THROUGHPUT] = max(cpu_throughput);

@@ -51,7 +51,7 @@ class Explorer(abc.ABC):
         self,
         other: "Explorer",
         decision_model: DecisionModel
-    ) -> (bool, bool):
+    ) -> Tuple[bool, bool]:
         '''Domination function in terms of speed and completion.
 
         This interface returns domination of one explorer over

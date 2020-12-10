@@ -35,7 +35,7 @@ class DeSyDeR(object):
         self,
         model: ForSyDeModel,
         problems: Set[Type[DecisionModel]] = set(),
-        concurrent_idents: int = os.cpu_count()-1
+        concurrent_idents: int = os.cpu_count() or 1
     ) -> List[DecisionModel]:
         '''
         This function runs the Design Space Identification scheme,
@@ -49,7 +49,7 @@ class DeSyDeR(object):
         problems = self.standard_problems if not problems else problems
         max_iterations = len(model) + len(problems)
         candidates = [p for p in problems]
-        identified = []
+        identified: List[DecisionModel] = []
         iterations = 0
         with concurrent.futures.ProcessPoolExecutor(
                 max_workers=concurrent_idents) as executor:

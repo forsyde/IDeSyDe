@@ -733,7 +733,7 @@ class SDFToMultiCoreCharacterizedJobs(DecisionModel, MinizincAble):
             jobs = {
                 f"{a.identifier}_{i}": (a.identifier, aidx)
                 for (aidx, a) in enumerate(sdf_mpsoc_char_sub['sdf_actors'])
-                for i in sdf_mpsoc_char_sub['sdf_repetition_vector'][aidx]
+                    for i in sdf_mpsoc_char_sub['sdf_repetition_vector'][aidx]
             }
             res = cls(
                 sdf_mpsoc_char_sub=sdf_mpsoc_char_sub,

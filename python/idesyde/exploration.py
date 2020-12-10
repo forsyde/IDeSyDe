@@ -29,14 +29,21 @@ class Explorer(abc.ABC):
 
     @abc.abstractclassmethod
     def is_complete(cls) -> bool:
-        '''
-        If the Explorer is complete (exhaustive) for the given
-        decision model, it should return True. False otherwise.
+        '''Get full completeness information
+
+        Returns:
+            True if the Explorer is complete (exhaustive) for the given
+            decision model. False otherwise.
         '''
         return False
 
     @abc.abstractmethod
     def can_explore(self, decision_model: DecisionModel) -> bool:
+        '''Determines if exploration is possible.
+        Returns:
+            True if 'decision_model' can be explored (solved) by
+            this explorer. False otherwise.
+        '''
         return False
 
     @abc.abstractmethod
@@ -51,17 +58,21 @@ class Explorer(abc.ABC):
         self,
         other: "Explorer",
         decision_model: DecisionModel
-    ) -> Tuple[bool, bool]:
-        '''Domination function in terms of speed and completion.
+    ) -> Tuple[int, int]:
+        '''Get comparison information regarding efficiency and completude
 
-        This interface returns domination of one explorer over
-        another regarding completude and speed. If the explorer
-        is likely to run faster for the given decision model, then
-        it returns (_, True). Likewise, if the explorer _is_ guaranteed
-        to guarantee more complete solution(s), it returns (True, _).
+        Returns:
+            A tuple of ints, both ranging from -100 to 100 to indicate the
+            level of higher efficiency and more completude from 'self'
+            to 'other. Example,
 
+                res = (50, -75)
+
+            indicates that 'other' is 50 "percent" more efficient but
+            it is 75 "percent" less complete than 'self'. That is, it would
+            be a less accurate but faster choice.
         '''
-        return (False, False)
+        return (0, 0)
 
 
 class MinizincExplorer(Explorer):

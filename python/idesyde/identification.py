@@ -8,13 +8,12 @@ It should _not_ depend in the exploration module, pragmatically
 or conceptually, but only on other modules that provides model
 utilities, like SDF analysis or SY analysis.
 '''
-import abc
 import concurrent.futures
 import importlib.resources as resources
 import os
 from dataclasses import dataclass, field
 from enum import Flag, auto
-from typing import List, Union, Tuple, Set, Optional, Dict, Type, Iterable
+from typing import List, Union, Tuple, Set, Optional, Dict, Type, Iterable, Any
 
 import numpy as np
 import sympy
@@ -32,32 +31,45 @@ import idesyde.sdf as sdfapi
 
 
 class ChoiceCriteria(Flag):
+    '''Flag to indicate decision model subsumption
+    '''
     DOMINANCE = auto()
 
 
-class DecisionModel(abc.ABC):
+@dataclass
+class DecisionModel(object):
 
-    """
-    Docstring for DecisionModel.
+    """Decision Models interface for the DSI procedure.
 
     A dict like interface is implemented for decision models
     for convenience, which recursively checks any other partial
     identifications that the model may have.
     """
 
-    
-    @abc.abstractclassmethod
+    dominated_models: Set[Type["DecisionModel"]] = field(
+        default_factory=lambda: set()
+    )
+
     @classmethod
     def identify(
             cls,
             model: ForSyDeModel,
             subproblems: List["DecisionModel"]
     ) -> Tuple[bool, Optional["DecisionModel"]]:
-        """TODO: Docstring for identify.
+        """Perform identification procedure and obtain a new Decision Model
 
-        :db: TODO
-        :returns: TODO
+        This class function analyses the given design model (ForSyDe Model)
+        and returns a decision model which partially idenfity it. It
+        indicates when it can still be executed or not via a tuple.
 
+        Arguments:
+            model: Input ForSyDe model.
+            subproblems: Decision Models that have already been identified.
+
+        Returns:
+            A tuple where the first element indicates if any decision model
+            belonging to 'cls' can still be identified and a decision model
+            that partially identifies 'model' in the second element.
         """
         return (True, None)
 
@@ -90,16 +102,31 @@ class DecisionModel(abc.ABC):
         return False
 
     def covered_vertexes(self) -> Iterable[Vertex]:
+        '''Get vertexes partially identified by the Decision Model.
+
+        Returns:
+            Iterable for the vertexes.
+        '''
         for o in self:
             if isinstance(o, Vertex):
                 yield o
 
     def covered_edges(self) -> Iterable[Edge]:
+        '''Get edges partially identified by the Decision Model.
+
+        Returns:
+            Iterable for the edges.
+        '''
         for o in self:
             if isinstance(o, Edge):
                 yield o
 
     def covered_model(self) -> ForSyDeModel:
+        '''Returns the covered ForSyDe Model.
+        Returns:
+            A copy of the vertexes and edges that this decision
+            model partially identified.
+        '''
         model = ForSyDeModel()
         for v in self.covered_vertexes():
             model.add_node(v, label=v.identifier)
@@ -114,36 +141,69 @@ class DecisionModel(abc.ABC):
     def dominates(self, other: "DecisionModel") -> bool:
         '''
         This function returns if one partial identification dominates
-        the other.
+        the other. It also takes in consideration the explicit
+        model domination set from 'self'.
+
+        Args:
+            other: the other decision model to be checked.
+
+        Returns:
+            True if 'self' dominates other. False otherwise.
         '''
-        # other - self
-        other_diff = set(
-            k for k in other if k not in self
-        )
-        # self - other
-        self_diff = set(
-            k for k in self if k not in other
-        )
-        # other is fully contained in self and itersection is consistent
-        return len(other_diff) == 0\
-            and len(self_diff) >= 0
+        if any(isinstance(other, t) for t in self.dominated_models):
+            return True
+        else:
+            # other - self
+            other_diff = set(
+                k for k in other if k not in self
+            )
+            # self - other
+            self_diff = set(
+                k for k in self if k not in other
+            )
+            # other is fully contained in self and itersection is consistent
+            return len(other_diff) == 0\
+                and len(self_diff) >= 0
             # and all(self[k] == other[k] for k in other if k in self)
 
 
-class MinizincAble(abc.ABC):
+class MinizincAble(object):
+    '''Interface that enables consumption by minizinc-based solvers.
+    '''
 
-    @abc.abstractmethod
+    def get_mzn_data(self) -> Dict[str, Any]:
+        '''Build the input minizinc dictionary
+
+        As the minizinc library has a dict-like interface but
+        is immutable once a value is set, this pre-filling diciotnary
+        is passed aroudn before feeding the minizinc interface for
+        better code reuse.
+
+        Returns:
+            A dictionary containing all the data necessary to run
+            the minizinc model attached to this decision model.
+        '''
+        return dict()
+
     def populate_mzn_model(
             self,
             model: Union[MznModel, MznInstance]
     ) -> Union[MznModel, MznInstance]:
+        data_dict = self.get_mzn_data()
+        for k in data_dict:
+            model[k] = data_dict[k]
         return model
 
-    @abc.abstractmethod
     def get_mzn_model_name(self) -> str:
+        '''Get the number of the minizinc file for this class.
+
+        Returns:
+            the name of the file that represents this decision model.
+            Although a method, it is expected that the string return
+            is constant, i.e. static.
+        '''
         return ""
 
-    @abc.abstractmethod
     def rebuild_forsyde_model(
         self,
         result: MznResult
@@ -158,7 +218,6 @@ class MinizincAble(abc.ABC):
         mzn.add_string(model_txt)
         self.populate_mzn_model(mzn)
         return mzn
-
 
 
 @dataclass
@@ -221,8 +280,8 @@ class SDFExecution(DecisionModel):
 @dataclass
 class SDFToOrders(DecisionModel, MinizincAble):
 
-    sdf_exec_sub: SDFExecution
     orderings: List[Vertex] = field(default_factory=lambda: [])
+    sdf_exec_sub: SDFExecution
 
     @classmethod
     def identify(cls, model, identified):
@@ -244,37 +303,36 @@ class SDFToOrders(DecisionModel, MinizincAble):
         else:
             return (False, None)
 
-    def populate_mzn_model(self, mzn):
-        mzn['sdf_actors'] = range(1, len(self['sdf_actors'])+1)
-        mzn['sdf_channels'] = range(1, len(self['sdf_channels'])+1)
-        mzn['max_steps'] = len(self['sdf_pass'])
+    def get_data_data(self):
+        data = dict()
+        data['sdf_actors'] = range(1, len(self['sdf_actors'])+1)
+        data['sdf_channels'] = range(1, len(self['sdf_channels'])+1)
+        data['max_steps'] = len(self['sdf_pass'])
         cloned_firings = np.array([
             self['sdf_repetition_vector'].transpose()
             for i in range(1, len(self['sdf_channels'])+1)
         ])
-        mzn['max_tokens'] = np.amax(
+        data['max_tokens'] = np.amax(
             cloned_firings * np.absolute(self['sdf_topology'])
         )
-        mzn['activations'] = self['sdf_repetition_vector'][:, 0].tolist()
-        mzn['static_orders'] = range(1, len(self.orderings)+1)
-        return mzn
+        data['activations'] = self['sdf_repetition_vector'][:, 0].tolist()
+        data['static_orders'] = range(1, len(self.orderings)+1)
+        return data
 
     def get_mzn_model_name(self):
         return 'sdf_order_linear_dmodel.mzn'
 
     def rebuild_forsyde_model(self, results):
-        print(results['send'])
-        print(results['mapped'])
         return ForSyDeModel()
 
 
 @dataclass
 class SDFToMultiCore(DecisionModel, MinizincAble):
 
-    sdf_orders_sub: SDFToOrders
     cores: List[Vertex] = field(default_factory=lambda: [])
     busses: List[Vertex] = field(default_factory=lambda: [])
     connections: List[Edge] = field(default_factory=lambda: [])
+    sdf_orders_sub: SDFToOrders
 
     @classmethod
     def identify(cls, model, identified):
@@ -286,7 +344,7 @@ class SDFToMultiCore(DecisionModel, MinizincAble):
             cores = list(model.query_vertexes('tdma_mpsoc_procs'))
             busses = list(model.query_vertexes('tdma_mpsoc_bus'))
             # this strange code access the in memory vertexes
-            # representation my going through the labels (ids)
+            # representation by going through the labels (ids)
             # first, hence the get_vertex function.
             connections = []
             for core in cores:
@@ -331,17 +389,8 @@ class SDFToMultiCore(DecisionModel, MinizincAble):
             cur += 1
         return numbers
 
-    def expanded_hw_units(self) -> Tuple[
-            Dict[str, List[str]], Dict[str, int], Dict[str, int], Dict[str, int]
-            ]:
-        """Returns HW vertexes expasions for this decision model.
-
-        Returns:
-            A tuple that contains the _identifiers_ of the elements in the
-            forsyde model relating before and after expansion. In particular,
-            TDMA busses are expanded to each TDM slot as different elements.
-            This eases reasoning about multiple level of communication.
-        """
+    def get_mzn_data(self):
+        data = self.sdf_orders_sub.get_mzn_data()
         # enumerate the processors in the model
         units_enum = {
             p.identifier: i for (i, p) in enumerate(self.cores)
@@ -360,25 +409,9 @@ class SDFToMultiCore(DecisionModel, MinizincAble):
                 comm_enum[f'{bus.identifier}_slot_{s}'] = units_enum_index
                 units_enum_index += 1
                 expansions[bus.identifier].append(f'{bus.identifier}_slot_{s}')
-        # unify processors and bus slots
-        return (expansions, units_enum, cores_enum, comm_enum)
-
-    def populate_mzn_model_nowcet(self, mzn):
-        (expansions, units_enum, cores_enum, comm_enum) = self.expanded_hw_units()
-        mzn['max_steps'] = len(self['sdf_actors'])
-        cloned_firings = np.array([
-            self['sdf_repetition_vector'].transpose()
-            for i in range(1, len(self['sdf_channels'])+1)
-        ])
-        max_tokens = np.amax(
-            cloned_firings * np.absolute(self['sdf_topology'])
-        )
-        mzn['max_tokens'] = int(max_tokens)
-        mzn['sdf_actors'] = range(1, len(self['sdf_actors'])+1)
-        mzn['sdf_channels'] = range(1, len(self['sdf_channels'])+1)
-        mzn['procs'] = set(i+1 for i in cores_enum.values())
-        mzn['comm_units'] = set(i+1 for i in comm_enum.values())
-        mzn['units_neighs'] = [
+        data['procs'] = set(i+1 for i in cores_enum.values())
+        data['comm_units'] = set(i+1 for i in comm_enum.values())
+        data['units_neighs'] = [
             set(
                 units_enum[ex]
                 for e in self.connections
@@ -393,51 +426,20 @@ class SDFToMultiCore(DecisionModel, MinizincAble):
             ))
             for (u, uidx) in units_enum.items()
         ]
-        # TODO: The semantics of prefixes must be captures and put here!
-        # for the moment, this always assumes zero starting tokens
-        mzn['initial_tokens'] = [0 for c in self['sdf_channels']]
-        # vector is in column format
-        mzn['activations'] = self['sdf_repetition_vector'][:, 0].tolist()
-        mzn['sdf_topology'] = self['sdf_topology'].tolist()
-        return mzn
-
-    def populate_mzn_model(self, mzn):
-        # use the general method without faking data
-        self.populate_mzn_model_nowcet(mzn)
         # almost unitary assumption
-        mzn['wcet'] = (mzn['max_tokens'] * np.ones((
+        data['wcet'] = (data['max_tokens'] * np.ones((
             len(self['sdf_actors']),
             len(self.cores)
         ), dtype=int)).tolist()
-        mzn['wcct'] = (np.ones((
+        data['wcct'] = (np.ones((
             len(self['sdf_channels']),
-            len(mzn['procs']) + len(mzn['comm_units']),
-            len(mzn['procs']) + len(mzn['comm_units'])
+            len(data['procs']) + len(data['comm_units']),
+            len(data['procs']) + len(data['comm_units'])
         ), dtype=int)).tolist()
-        # mzn['send_overhead'] = (np.zeros((
-        #     len(self['sdf_channels']),
-        #     len(self.cores)
-        # ), dtype=int)).tolist()
-        # mzn['read_overhead'] = (np.zeros((
-        #     len(self['sdf_channels']),
-        #     len(self.cores)
-        # ), dtype=int)).tolist()
-        # since we are using the same minizinc model for more than
-        # one decision model, we have to force it all zero here.
-        mzn['objective_weights'] = [0, 0]
-        return mzn
+        data['objective_weights'] = [0, 0]
+        return data
 
     def rebuild_forsyde_model(self, results):
-        '''
-        rebuild from the following variables:
-
-        % variables
-        array[sdf_channels, procs, steps0] of var 0..max_tokens: buffer;
-        array[sdf_channels, procs, procs, bus_slots, steps0] of var 0..max_tokens: send;
-        array[sdf_actors, procs, steps] of var 0..max(activations): mapped_actors;
-        array[procs, steps0] of var int: cpu_time;
-        array[steps0] of var int: bus_slots_used;
-        '''
         new_model = self.covered_model()
         for (aidx, a) in enumerate(results['mapped_actors']):
             actor = self['sdf_actors'][aidx]
@@ -499,13 +501,13 @@ class SDFToMultiCore(DecisionModel, MinizincAble):
 @dataclass
 class SDFToMultiCoreCharacterized(DecisionModel, MinizincAble):
 
-    sdf_to_mpsoc_sub: SDFToMultiCore
     wcet: np.ndarray = np.array((0, 0), dtype=int)
     wcct: np.ndarray = np.array((0, 0, 0), dtype=int)
     throughput_importance: int = 0
     latency_importance: int = 0
     send_overhead: np.ndarray = np.array((0, 0), dtype=int)
     read_overhead: np.ndarray = np.array((0, 0), dtype=int)
+    sdf_to_mpsoc_sub: SDFToMultiCore
 
     @classmethod
     def identify(cls, model, identified):
@@ -588,32 +590,10 @@ class SDFToMultiCoreCharacterized(DecisionModel, MinizincAble):
     def get_mzn_model_name(self):
         return "sdf_mpsoc_linear_dmodel.mzn"
 
-    def numbered_hw_units(self):
-        return self.sdf_to_mpsoc_sub.numbered_hw_units()
-
-    def expanded_hw_units(self):
-        return self.sdf_to_mpsoc_sub.expanded_hw_units()
-
-    def populate_mzn_model(self, mzn):
+    def get_mzn_data(self):
+        data = self.sdf_to_mpsoc_sub.get_data_data()
         # use the non faked part of the covered problem
         # to save some code
-        pre_units_enum = self.sdf_to_mpsoc_sub.numbered_hw_units()
-        (expansions, units_enum, cores_enum, comm_enum) = self.sdf_to_mpsoc_sub.expanded_hw_units()
-        cores_enum = {}
-        cores_expansions = {}
-        for (e, el) in expansions.items():
-            if any(p.identifier == e for p in self['cores']):
-                cores_expansions[e] = el
-                for ex in el:
-                    cores_enum[ex] = units_enum[ex]
-        comm_enum = {}
-        comm_expansions = {}
-        for (e, el) in expansions.items():
-            if any(p.identifier == e for p in self['busses']):
-                comm_expansions[e] = el
-                for ex in el:
-                    comm_enum[ex] = units_enum[ex]
-        self.sdf_to_mpsoc_sub.populate_mzn_model_nowcet(mzn)
         wcet_expanded = np.zeros(
             (
                 len(self['sdf_actors']),
@@ -642,21 +622,21 @@ class SDFToMultiCoreCharacterized(DecisionModel, MinizincAble):
                         for ex2 in expansions[e2]:
                             ex2idx = units_enum[ex2]
                             wcct_expanded[cidx, exidx, ex2idx] = self.wcct[cidx, eidx, e2idx]
-        mzn['wcet'] = wcet_expanded.tolist()
-        mzn['wcct'] = wcct_expanded.tolist()
-        # mzn['send_overhead'] = (np.zeros((
+        data['wcet'] = wcet_expanded.tolist()
+        data['wcct'] = wcct_expanded.tolist()
+        # data['send_overhead'] = (np.zeros((
         #     len(self['sdf_channels']),
         #     len(self['cores'])
         # ), dtype=int)).tolist()
-        # mzn['read_overhead'] = (np.zeros((
+        # data['read_overhead'] = (np.zeros((
         #     len(self['sdf_channels']),
         #     len(self['cores'])
         # ), dtype=int)).tolist()
-        mzn['objective_weights'] = [
+        data['objective_weights'] = [
             self.throughput_importance,
             self.latency_importance
         ]
-        return mzn
+        return data
 
     def rebuild_forsyde_model(self, results):
         print(results['mapped_actors'])
@@ -722,8 +702,8 @@ class SDFToMultiCoreCharacterized(DecisionModel, MinizincAble):
 @dataclass
 class SDFToMultiCoreCharacterizedJobs(DecisionModel, MinizincAble):
 
-    sdf_mpsoc_char_sub: SDFToMultiCoreCharacterized
     jobs: List[str] = field(default_factory=lambda: [])
+    sdf_mpsoc_char_sub: SDFToMultiCoreCharacterized
 
     @classmethod
     def identify(cls, model, identified):

@@ -1,9 +1,9 @@
 from setuptools import find_packages, setup
 
-setup(name='desyder',
+setup(name='idesyde',
       version='0.1.2',
       description='Analytical Design Space Exploration for ForSyDe',
-      url='http://github.com/rojods/desyder',
+      url='http://github.com/rojods/idesyde',
       author='Rodolfo Jordao',
       author_email='jordao@kth.se',
       license='MIT',
@@ -17,7 +17,7 @@ setup(name='desyder',
       ],
       entry_points={
           "console_scripts": [
-              "desydercli = desyder.cli:cli_entry"
+              "idesydecli = idesyde.cli:cli_entry"
           ]
       },
       zip_safe=True)

@@ -5,9 +5,9 @@ import logging
 import networkx as nx
 from forsyde.io.python import ForSyDeModel
 
-from desyder.identification import identify_decision_models
-from desyder.identification import choose_decision_models
-from desyder.exploration import choose_explorer
+from idesyde.identification import identify_decision_models
+from idesyde.identification import choose_decision_models
+from idesyde.exploration import choose_explorer
 
 description = '''
 DeSyDe - Analytical Design Space Exploration for ForSyDe

@@ -4,8 +4,8 @@ from typing import List, Set, Optional, Type
 
 from forsyde.io.python import ForSyDeModel
 
-from desyder.identification import DecisionModel
-from desyder.exploration import Explorer
+from idesyde.identification import DecisionModel
+from idesyde.exploration import Explorer
 
 
 class DeSyDeR(object):

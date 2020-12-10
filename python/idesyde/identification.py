@@ -27,8 +27,8 @@ from forsyde.io.python import Edge
 from forsyde.io.python import Port
 from forsyde.io.python.types import TypesFactory
 
-import desyder.math as mathutil
-import desyder.sdf as sdfapi
+import idesyde.math as mathutil
+import idesyde.sdf as sdfapi
 
 
 class ChoiceCriteria(Flag):
@@ -152,7 +152,7 @@ class MinizincAble(abc.ABC):
 
     def build_mzn_model(self, mzn=MznModel()):
         model_txt = resources.read_text(
-            'desyder.minizinc',
+            'idesyde.minizinc',
             self.get_mzn_model_name()
         )
         mzn.add_string(model_txt)

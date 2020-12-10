@@ -8,7 +8,7 @@ from typing import Optional, Set, Tuple, List
 from forsyde.io.python import ForSyDeModel
 from minizinc import Model, Solver, Instance
 
-from desyder.identification import DecisionModel, MinizincAble
+from idesyde.identification import DecisionModel, MinizincAble
 
 
 class ExplorerCriteria(Flag):
@@ -92,7 +92,7 @@ class MinizincExplorer(Explorer):
         backend_solver_name='gecode'
     ):
         mzn_model_name = decision_model.get_mzn_model_name()
-        mzn_model_str = res.read_text('desyder.minizinc', mzn_model_name)
+        mzn_model_str = res.read_text('idesyde.minizinc', mzn_model_name)
         mzn_model = Model()
         mzn_model.add_string(mzn_model_str)
         backend_solver = Solver.lookup(backend_solver_name)

@@ -269,11 +269,11 @@ class SDFExecution(DecisionModel):
             if schedule != []:
                 sdf_pass = [sdf_actors[idx] for idx in schedule]
                 res = SDFExecution(
-                    sdf_actors,
-                    sdf_channels,
-                    sdf_topology,
-                    repetition_vector,
-                    sdf_pass
+                    sdf_actors=sdf_actors,
+                    sdf_channels=sdf_channels,
+                    sdf_topology=sdf_topology,
+                    sdf_repetition_vector=repetition_vector,
+                    sdf_pass=sdf_pass
                 )
         # conditions for fixpoints and partial identification
         if res:
@@ -319,22 +319,26 @@ class SDFToOrders(DecisionModel, MinizincAble):
     def compute_deduced_properties(self):
         sub = self.sdf_exec_sub
         cloned_firings = np.array([
-            sub.sdf_repetition_vector.transpose()
+            np.array(sub.sdf_repetition_vector).transpose()
             for i in range(1, len(sub.sdf_channels)+1)
-        ])
-        self.max_tokens = np.amax(
+        ], dtype=int)
+        self.max_tokens = int(np.amax(
             cloned_firings * np.absolute(sub.sdf_topology)
-        )
+        ))
 
     def get_mzn_data(self):
         data = dict()
         sub = self.sdf_exec_sub
         data['sdf_actors'] = range(1, len(sub.sdf_actors)+1)
         data['sdf_channels'] = range(1, len(sub.sdf_channels)+1)
+        data['sdf_topology'] = sub.sdf_topology.tolist()
         data['max_steps'] = len(sub.sdf_pass)
         data['max_tokens'] = self.max_tokens
         data['activations'] = sub.sdf_repetition_vector[:, 0].tolist()
         data['static_orders'] = range(1, len(self.orderings)+1)
+        # TODO: find a awya to compute the initial tokens
+        # reliably
+        data['initial_tokens'] = [0 for c in sub.sdf_channels]
         return data
 
     def get_mzn_model_name(self):
@@ -395,13 +399,13 @@ class SDFToMultiCore(DecisionModel, MinizincAble):
                     for (n, e) in adjdict.items():
                         eobj = e['object']
                         if v in busses and eobj not in connections:
-                            connections.append(eobj)
+                            connections.add(eobj)
             for bus in busses:
                 for (v, adjdict) in model.adj[bus].items():
                     for (n, e) in adjdict.items():
                         eobj = e['object']
                         if v in cores and eobj not in connections:
-                            connections.append(eobj)
+                            connections.add(eobj)
             if len(cores) + len(busses) >= len(sdf_orders_sub.orderings):
                 res = SDFToMultiCore(
                     sdf_orders_sub=sdf_orders_sub,
@@ -411,7 +415,7 @@ class SDFToMultiCore(DecisionModel, MinizincAble):
                 )
         # conditions for fixpoints and partial identification
         if res:
-            res.compute_deduced_properties(model)
+            res.compute_deduced_properties()
             return (True, res)
         elif not res and sdf_orders_sub:
             return (True, None)
@@ -486,16 +490,16 @@ class SDFToMultiCore(DecisionModel, MinizincAble):
         data['comm_units'] = set(i+1 for i in self.expanded_comm_enum.values())
         data['units_neighs'] = [
             set(
-                expanded_units_enum[el.target_vertex]+1
+                expanded_units_enum[ex.target_vertex]+1
                 for (e, el) in self.edge_expansions.items()
                 for ex in el
-                if el.source_vertex == u
+                if ex.source_vertex == u
             ).union(
                 set(
-                    expanded_units_enum[el.source_vertex]+1
+                    expanded_units_enum[ex.source_vertex]+1
                     for (e, el) in self.edge_expansions.items()
                     for ex in el
-                    if el.target_vertex == u
+                    if ex.target_vertex == u
                 ))
             for (u, uidx) in expanded_units_enum.items()
         ]
@@ -513,6 +517,8 @@ class SDFToMultiCore(DecisionModel, MinizincAble):
         # since the minizinc model requires objective weights,
         # we just disconsder them
         data['objective_weights'] = [0, 0]
+        # take away spurius extras
+        data.pop('static_orders')
         return data
 
     def rebuild_forsyde_model(self, results):
@@ -584,6 +590,10 @@ class SDFToMultiCoreCharacterized(DecisionModel, MinizincAble):
     send_overhead: np.ndarray = np.array((0, 0), dtype=int)
     read_overhead: np.ndarray = np.array((0, 0), dtype=int)
 
+    # deduced properties
+    expanded_wcet: np.ndarray = np.array((0, 0), dtype=int)
+    expanded_wcct: np.ndarray = np.array((0, 0, 0), dtype=int)
+
     @classmethod
     def identify(cls, model, identified):
         res = None
@@ -599,7 +609,9 @@ class SDFToMultiCoreCharacterized(DecisionModel, MinizincAble):
             connections = sdf_mpsoc_sub.connections
             wcet = None
             wcct = None
-            if next(model.query_view('count_wcet'))['count'] == len(cores) * len(sdf_actors):
+            count_wcet: int = next(model.query_view('count_wcet'))['count']
+            count_wcct: int = next(model.query_view('count_signal_wcct'))['count']
+            if count_wcet == len(cores) * len(sdf_actors):
                 wcet = np.zeros(
                     (
                         len(cores),
@@ -617,7 +629,7 @@ class SDFToMultiCoreCharacterized(DecisionModel, MinizincAble):
                         if v.identifier == row['plat_id']
                     )
                     wcet[app_index, plat_index] = int(row['wcet_time'])
-            if next(model.query_view('count_signal_wcct'))['count'] == 2 * len(sdf_channels) * len(connections):
+            if count_wcct == 2 * len(sdf_channels) * len(connections):
                 wcct = np.zeros((len(sdf_channels), len(units), len(units)), dtype=int)
                 for row in model.query_view('signal_wcct'):
                     sender_index = next(
@@ -654,49 +666,66 @@ class SDFToMultiCoreCharacterized(DecisionModel, MinizincAble):
                     latency_importance=0
                 )
         if res:
+            res.compute_deduced_properties()
             return (True, res)
         elif sdf_mpsoc_sub and not res:
             return (True, None)
         else:
             return (False, None)
 
+    def compute_deduced_properties(self):
+        sdf_actors = self.sdf_mpsoc_sub.sdf_orders_sub.sdf_exec_sub.sdf_actors
+        sdf_channels = self.sdf_mpsoc_sub.sdf_orders_sub.sdf_exec_sub.sdf_channels
+        vertex_expansions = self.sdf_mpsoc_sub.vertex_expansions
+        units_enum = {
+            **self.sdf_mpsoc_sub.cores_enum,
+            **self.sdf_mpsoc_sub.comm_enum
+        }
+        expanded_units_enum = {
+            **self.sdf_mpsoc_sub.expanded_cores_enum,
+            **self.sdf_mpsoc_sub.expanded_comm_enum,
+        }
+        cores_enum = self.sdf_mpsoc_sub.cores_enum
+        expanded_cores_enum = self.sdf_mpsoc_sub.expanded_cores_enum
+        expanded_wcet = np.zeros(
+            (
+                len(sdf_actors),
+                len(expanded_cores_enum)
+            ),
+            dtype=int
+        )
+        for (aidx, a) in enumerate(sdf_actors):
+            for (e, eidx) in cores_enum.items():
+                for ex in vertex_expansions[e]:
+                    exidx = units_enum[ex]
+                    expanded_wcet[aidx, exidx] = self.wcet[aidx, eidx]
+        expanded_wcct = np.zeros(
+            (
+                len(sdf_channels),
+                len(expanded_units_enum),
+                len(expanded_units_enum)
+            ),
+            dtype=int
+        )
+        for (cidx, c) in enumerate(sdf_channels):
+            for (e, eidx) in units_enum.items():
+                for (e2, e2idx) in units_enum.items():
+                    for ex in vertex_expansions[e]:
+                        for ex2 in vertex_expansions[e2]:
+                            exidx = expanded_units_enum[ex]
+                            ex2idx = expanded_units_enum[ex2]
+                            expanded_wcct[cidx, exidx, ex2idx] = self.wcct[cidx, eidx, e2idx]
+        self.expanded_wcet = expanded_wcet
+        self.expanded_wcct = expanded_wcct
+
     def get_mzn_model_name(self):
         return "sdf_mpsoc_linear_dmodel.mzn"
 
     def get_mzn_data(self):
-        data = self.sdf_mpsoc_sub.get_data_data()
-        # use the non faked part of the covered problem
-        # to save some code
-        wcet_expanded = np.zeros(
-            (
-                len(self['sdf_actors']),
-                sum(len(el) for el in cores_expansions.values())
-            ),
-            dtype=int
-        )
-        for (aidx, a) in enumerate(self['sdf_actors']):
-            for (eidx, e) in enumerate(self['cores']):
-                for ex in expansions[e.identifier]:
-                    exidx = units_enum[ex]
-                    wcet_expanded[aidx, exidx] = self.wcet[aidx, eidx]
-        wcct_expanded = np.zeros(
-            (
-                len(self['sdf_channels']),
-                sum(len(el) for el in expansions.values()),
-                sum(len(el) for el in expansions.values())
-            ),
-            dtype=int
-        )
-        for (cidx, c) in enumerate(self['sdf_channels']):
-            for (e, eidx) in pre_units_enum.items():
-                for (e2, e2idx) in pre_units_enum.items():
-                    for ex in expansions[e]:
-                        exidx = units_enum[ex]
-                        for ex2 in expansions[e2]:
-                            ex2idx = units_enum[ex2]
-                            wcct_expanded[cidx, exidx, ex2idx] = self.wcct[cidx, eidx, e2idx]
-        data['wcet'] = wcet_expanded.tolist()
-        data['wcct'] = wcct_expanded.tolist()
+        data = self.sdf_mpsoc_sub.get_mzn_data()
+        # remake the wcet and wcct with proper data
+        data['wcet'] = self.expanded_wcet.tolist()
+        data['wcct'] = self.expanded_wcct.tolist()
         # data['send_overhead'] = (np.zeros((
         #     len(self['sdf_channels']),
         #     len(self['cores'])
@@ -712,15 +741,16 @@ class SDFToMultiCoreCharacterized(DecisionModel, MinizincAble):
         return data
 
     def rebuild_forsyde_model(self, results):
-        print(results['mapped_actors'])
-        print(results['objective'])
-        print(results['time'])
         new_model = self.covered_model()
+        sdf_actors = self.sdf_mpsoc_sub.sdf_orders_sub.sdf_exec_sub.sdf_actors
+        sdf_channels = self.sdf_mpsoc_sub.sdf_orders_sub.sdf_exec_sub.sdf_channels
+        orderings = self.sdf_mpsoc_sub.sdf_orders_sub.orderings
+        cores = self.sdf_mpsoc_sub.cores
         for (aidx, a) in enumerate(results['mapped_actors']):
-            actor = self['sdf_actors'][aidx]
+            actor = sdf_actors[aidx]
             for (pidx, p) in enumerate(a):
-                ordering = self['orderings'][pidx]
-                core = self['cores'][pidx]
+                ordering = orderings[pidx]
+                core = cores[pidx]
                 for (t, v) in enumerate(p):
                     if 0 < v and v < 2:
                         # TODO: fix multiple addition of elements here
@@ -760,24 +790,29 @@ class SDFToMultiCoreCharacterized(DecisionModel, MinizincAble):
                             )
                     elif v > 1:
                         raise ValueError("Solution with pass must be implemented")
-        (expansions, enum_items) = self.sdf_mpsoc_sub.expanded_hw_units()
-        items_enums = {i: p for (i, p) in enum_items.items()}
-        for (cidx, c) in enumerate(results['send']):
-            channel = self['sdf_channels'][cidx]
-            for (pidx, p) in enumerate(c):
-                # sender = self['cores'][pidx]
-                for (ppidx, pp) in enumerate(p):
-                    # reciever = self['cores'][ppidx]
-                    for (t, v) in enumerate(pp):
-                        pass
+        # TODO: fix the communication part
+        # (expansions, enum_items) = self.sdf_mpsoc_sub.expanded_hw_units()
+        # items_enums = {i: p for (i, p) in enum_items.items()}
+        # for (cidx, c) in enumerate(results['send']):
+        #     channel = self['sdf_channels'][cidx]
+        #     for (pidx, p) in enumerate(c):
+        #         # sender = self['cores'][pidx]
+        #         for (ppidx, pp) in enumerate(p):
+        #             # reciever = self['cores'][ppidx]
+        #             for (t, v) in enumerate(pp):
+        #                 pass
         return new_model
 
 
 @dataclass
 class SDFToMultiCoreCharacterizedJobs(DecisionModel, MinizincAble):
 
-    sdf_mpsoc_char_sub: SDFToMultiCoreCharacterized
-    jobs: List[str] = field(default_factory=list)
+    # this partial identification is not dominated by self
+    sdf_mpsoc_char_sub: SDFToMultiCoreCharacterized = SDFToMultiCoreCharacterized()
+
+    # properties
+    jobs: Set[Vertex] = field(default_factory=set)
+    jobs_actors: Dict[Vertex, Tuple[Vertex, int]] = field(default_factory=dict)
 
     @classmethod
     def identify(cls, model, identified):
@@ -786,13 +821,23 @@ class SDFToMultiCoreCharacterizedJobs(DecisionModel, MinizincAble):
             (p for p in identified if isinstance(p, SDFToMultiCoreCharacterized)),
             None)
         if sdf_mpsoc_char_sub:
-            jobs = {
-                f"{a.identifier}_{i}": (a.identifier, aidx)
-                for (aidx, a) in enumerate(sdf_mpsoc_char_sub['sdf_actors'])
-                    for i in sdf_mpsoc_char_sub['sdf_repetition_vector'][aidx]
+            sdf_actors = sdf_mpsoc_char_sub.\
+                sdf_mpsoc_sub.\
+                sdf_orders_sub.\
+                sdf_exec_sub.sdf_actors
+            sdf_repetition_vector = sdf_mpsoc_char_sub.\
+                sdf_mpsoc_sub.\
+                sdf_orders_sub.\
+                sdf_exec_sub.sdf_repetition_vector
+            jobs_actors = {
+                Vertex(identifier=f"{a.identifier}_{i}"): (a, aidx)
+                for (aidx, a) in enumerate(sdf_actors)
+                for i in sdf_repetition_vector[aidx]
             }
+            jobs = set(jobs_actors.keys())
             res = cls(
                 sdf_mpsoc_char_sub=sdf_mpsoc_char_sub,
+                jobs_actors=jobs_actors,
                 jobs=jobs
             )
         if res:
@@ -803,108 +848,35 @@ class SDFToMultiCoreCharacterizedJobs(DecisionModel, MinizincAble):
     def get_mzn_model_name(self):
         return "sdf_job_scheduling.mzn"
 
-    def populate_mzn_model(self, mzn):
+    def get_mzn_data(self):
         # use the non faked part of the covered problem
         # to save some code
-        pre_units_enum = self.sdf_mpsoc_char_sub.numbered_hw_units()
-        (expansions, units_enum, cores_enum, comm_enum) = self.sdf_mpsoc_char_sub.expanded_hw_units()
-        cores_enum = {}
-        cores_expansions = {}
-        for (e, el) in expansions.items():
-            if any(p.identifier == e for p in self['cores']):
-                cores_expansions[e] = el
-                for ex in el:
-                    cores_enum[ex] = units_enum[ex]
-        comm_enum = {}
-        comm_expansions = {}
-        for (e, el) in expansions.items():
-            if any(p.identifier == e for p in self['busses']):
-                comm_expansions[e] = el
-                for ex in el:
-                    comm_enum[ex] = units_enum[ex]
-        wcet_expanded = np.zeros(
-            (
-                len(self['sdf_actors']),
-                sum(len(el) for el in cores_expansions.values())
-            ),
-            dtype=int
-        )
-        for (aidx, a) in enumerate(self['sdf_actors']):
-            for (eidx, e) in enumerate(self['cores']):
-                for ex in expansions[e.identifier]:
-                    exidx = units_enum[ex]
-                    wcet_expanded[aidx, exidx] = self['wcet'][aidx, eidx]
-        wcct_expanded = np.zeros(
-            (
-                len(self['sdf_channels']),
-                sum(len(el) for el in expansions.values()),
-                sum(len(el) for el in expansions.values())
-            ),
-            dtype=int
-        )
-        for (cidx, c) in enumerate(self['sdf_channels']):
-            for (e, eidx) in pre_units_enum.items():
-                for (e2, e2idx) in pre_units_enum.items():
-                    for ex in expansions[e]:
-                        exidx = units_enum[ex]
-                        for ex2 in expansions[e2]:
-                            ex2idx = units_enum[ex2]
-                            wcct_expanded[cidx, exidx, ex2idx] = self['wcct'][cidx, eidx, e2idx]
-        cloned_firings = np.array([
-            self['sdf_repetition_vector'].transpose()
-            for i in range(1, len(self['sdf_channels'])+1)
-        ])
-        max_tokens = np.amax(
-            cloned_firings * np.absolute(self['sdf_topology'])
-        )
-        mzn['max_tokens'] = int(max_tokens)
-        mzn['sdf_actors'] = range(1, len(self['sdf_actors'])+1)
-        mzn['sdf_channels'] = range(1, len(self['sdf_channels'])+1)
-        mzn['procs'] = set(i+1 for i in cores_enum.values())
-        mzn['comm_units'] = set(i+1 for i in comm_enum.values())
-        mzn['jobs'] = range(1, len(self.jobs)+1)
-        # mzn['activations'] = self['sdf_repetition_vector'][:, 0].tolist()
-        mzn['jobs_actors'] = [
-            aidx+1
-            for (j, (label, aidx)) in self.jobs.items()
+        data = self.sdf_mpsoc_char_sub.get_mzn_data()
+        data['jobs'] = set(int(i)+1 for (i, v) in enumerate(self.jobs))
+        # data['activations'] = self['sdf_repetition_vector'][:, 0].tolist()
+        data['jobs_actors'] = [
+            int(aidx)+1 for (k, (actor, aidx)) in self.jobs_actors.items()
         ]
-        # TODO: must fix the delays in the model
-        mzn['initial_tokens'] = [0 for a in self['sdf_actors']]
-        mzn['sdf_topology'] = self['sdf_topology'].tolist()
-        mzn['wcet'] = wcet_expanded.tolist()
-        mzn['wcct'] = wcct_expanded.tolist()
-        mzn['units_neighs'] = [
-            set(
-                units_enum[ex]
-                for e in self['connections']
-                for ex in expansions[e.target_vertex.identifier]
-                if e.source_vertex.identifier == u
-            ).union(
-            set(
-                units_enum[ex]
-                for e in self['connections']
-                for ex in expansions[e.source_vertex.identifier]
-                if e.target_vertex.identifier == u
-            ))
-            for (u, uidx) in units_enum.items()
-        ]
-        # mzn['send_overhead'] = (np.zeros((
+        # data['send_overhead'] = (np.zeros((
         #     len(self['sdf_channels']),
         #     len(self['cores'])
         # ), dtype=int)).tolist()
-        # mzn['read_overhead'] = (np.zeros((
+        # data['read_overhead'] = (np.zeros((
         #     len(self['sdf_channels']),
         #     len(self['cores'])
         # ), dtype=int)).tolist()
-        mzn['objective_weights'] = [
+        data['objective_weights'] = [
             self['throughput_importance'],
             self['latency_importance']
         ]
-        return mzn
+        # delete spurious elements
+        data.pop('max_steps')
+        data.pop('activations')
+        return data
 
     def rebuild_forsyde_model(self, results):
-        new_model = self.covered_model()
         print(results)
+        new_model = self.covered_model()
         return new_model
 
 

@@ -1,6 +1,6 @@
 PYTHON_DIR := python
 MINIZINC_DIR := minizinc
-PYTHON_MINIZINC_DIR := python/desyder/minizinc
+PYTHON_MINIZINC_DIR := python/idesyde/minizinc
 
 all: python-minizinc
 

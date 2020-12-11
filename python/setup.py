@@ -17,7 +17,7 @@ setup(name='idesyde',
       ],
       entry_points={
           "console_scripts": [
-              "idesydecli = idesyde.cli:cli_entry"
+              "idesyde = idesyde.cli:cli_entry"
           ]
       },
       zip_safe=True)

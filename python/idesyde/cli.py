@@ -10,7 +10,13 @@ from idesyde.identification import choose_decision_models
 from idesyde.exploration import choose_explorer
 
 description = '''
-DeSyDe - Analytical Design Space Exploration for ForSyDe
+  ___  ___        ___        ___       
+ |_ _||   \  ___ / __| _  _ |   \  ___ 
+  | | | |) |/ -_)\__ \| || || |) |/ -_)
+ |___||___/ \___||___/ \_, ||___/ \___|
+                       |__/
+
+Automated Identification and Exlopration of Design Spaces in ForSyDe
 '''
 
 
@@ -39,7 +45,14 @@ def cli_entry():
                         Output files, which can be another model or
                         graph visualization formats.
                         ''')
+    parser.add_argument('-q', '--quiet',
+                        action='store_true',
+                        help='''
+                        Skip printing logo, version and name.
+                        ''')
     args = parser.parse_args()
+    if not args.quiet:
+        print(description)
     logger = logging.getLogger('CLI')
     logger.setLevel(
         getattr(logging, args.verbosity.upper(), 'INFO')

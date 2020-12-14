@@ -8,6 +8,7 @@ It should _not_ depend in the exploration module, pragmatically
 or conceptually, but only on other modules that provides model
 utilities, like SDF analysis or SY analysis.
 '''
+import abc
 import concurrent.futures
 import importlib.resources as resources
 import os
@@ -100,6 +101,9 @@ class DecisionModel(object):
             if isinstance(o, DecisionModel) and key in o:
                 return True
         return False
+
+    def __hash__(self):
+        return hash((self.covered_vertexes(), self.covered_edges()))
 
     def compute_deduced_properties(self) -> None:
         '''Compute deducible properties for this decision model'''
@@ -224,6 +228,23 @@ class MinizincAble(object):
         return mzn
 
 
+class IdentificationRule(abc.ABCMeta):
+
+    def __call__(
+            self,
+            model: ForSyDeModel,
+            subproblems: Set[DecisionModel]
+    ) -> Tuple[bool, Optional[DecisionModel]]:
+        return self.identify(model, subproblems)
+
+    @abc.abstractmethod
+    def identify(
+            model: ForSyDeModel,
+            subproblems: Set[DecisionModel]
+    ) -> Tuple[bool, Optional[DecisionModel]]:
+        return (True, None)
+
+
 @dataclass
 class SDFExecution(DecisionModel):
 
@@ -242,6 +263,8 @@ class SDFExecution(DecisionModel):
     sdf_topology: np.ndarray = np.zeros((0, 0))
     sdf_repetition_vector: np.ndarray = np.zeros((0))
     sdf_pass: List[str] = field(default_factory=list)
+
+    sdf_max_tokens: np.ndarray = np.zeros((0))
 
     @classmethod
     def identify(cls, model, identified):
@@ -277,9 +300,22 @@ class SDFExecution(DecisionModel):
                 )
         # conditions for fixpoints and partial identification
         if res:
+            res.compute_deduced_properties()
             return (True, res)
         else:
             return (False, None)
+
+    def covered_vertexes(self):
+        return self.sdf_actors + self.sdf_channels
+
+
+    def compute_deduced_properties(self):
+        self.max_tokens = np.zeros((len(self.sdf_channels)), dtype=int)
+        for (cidx, c) in enumerate(self.sdf_channels):
+            self.max_tokens[cidx] = max(
+                self.sdf_topology[cidx, aidx] * self.sdf_repetition_vector[aidx]
+                for (aidx, a) in enumerate(self.sdf_actors)
+            )
 
 
 @dataclass
@@ -290,9 +326,6 @@ class SDFToOrders(DecisionModel, MinizincAble):
 
     # partial identification
     orderings: List[Vertex] = field(default_factory=list)
-
-    # deduced properties
-    max_tokens: int = 0
 
     @classmethod
     def identify(cls, model, identified):
@@ -317,14 +350,15 @@ class SDFToOrders(DecisionModel, MinizincAble):
             return (False, None)
 
     def compute_deduced_properties(self):
-        sub = self.sdf_exec_sub
-        cloned_firings = np.array([
-            np.array(sub.sdf_repetition_vector).transpose()
-            for i in range(1, len(sub.sdf_channels)+1)
-        ], dtype=int)
-        self.max_tokens = int(np.amax(
-            cloned_firings * np.absolute(sub.sdf_topology)
-        ))
+        pass
+        # sub = self.sdf_exec_sub
+        # cloned_firings = np.array([
+        #     np.array(sub.sdf_repetition_vector).transpose()
+        #     for i in range(1, len(sub.sdf_channels)+1)
+        # ], dtype=int)
+        # self.max_tokens = int(np.amax(
+        #     cloned_firings * np.absolute(sub.sdf_topology)
+        # ))
 
     def get_mzn_data(self):
         data = dict()
@@ -333,7 +367,7 @@ class SDFToOrders(DecisionModel, MinizincAble):
         data['sdf_channels'] = range(1, len(sub.sdf_channels)+1)
         data['sdf_topology'] = sub.sdf_topology.tolist()
         data['max_steps'] = len(sub.sdf_pass)
-        data['max_tokens'] = self.max_tokens
+        data['max_tokens'] = sub.max_tokens.tolist()
         data['activations'] = sub.sdf_repetition_vector[:, 0].tolist()
         data['static_orders'] = range(1, len(self.orderings)+1)
         # TODO: find a awya to compute the initial tokens
@@ -509,9 +543,8 @@ class SDFToMultiCore(DecisionModel, MinizincAble):
             len(self['sdf_actors']),
             len(self.cores)
         ), dtype=int)).tolist()
-        data['wcct'] = (np.ones((
+        data['token_wcct'] = (np.ones((
             len(self['sdf_channels']),
-            len(data['procs']) + len(data['comm_units']),
             len(data['procs']) + len(data['comm_units'])
         ), dtype=int)).tolist()
         # since the minizinc model requires objective weights,
@@ -584,7 +617,7 @@ class SDFToMultiCoreCharacterized(DecisionModel, MinizincAble):
 
     # elements that are partially identified
     wcet: np.ndarray = np.array((0, 0), dtype=int)
-    wcct: np.ndarray = np.array((0, 0, 0), dtype=int)
+    token_wcct: np.ndarray = np.zeros((0, 0))
     throughput_importance: int = 0
     latency_importance: int = 0
     send_overhead: np.ndarray = np.array((0, 0), dtype=int)
@@ -592,7 +625,7 @@ class SDFToMultiCoreCharacterized(DecisionModel, MinizincAble):
 
     # deduced properties
     expanded_wcet: np.ndarray = np.array((0, 0), dtype=int)
-    expanded_wcct: np.ndarray = np.array((0, 0, 0), dtype=int)
+    expanded_token_wcct: np.ndarray = np.zeros((0, 0), dtype=int)
 
     @classmethod
     def identify(cls, model, identified):
@@ -606,11 +639,10 @@ class SDFToMultiCoreCharacterized(DecisionModel, MinizincAble):
             cores = sdf_mpsoc_sub.cores
             busses = sdf_mpsoc_sub.busses
             units = cores + busses
-            connections = sdf_mpsoc_sub.connections
             wcet = None
-            wcct = None
+            token_wcct = None
             count_wcet: int = next(model.query_view('count_wcet'))['count']
-            count_wcct: int = next(model.query_view('count_signal_wcct'))['count']
+            count_token_wcct: int = next(model.query_view('count_token_signal_wcct'))['count']
             if count_wcet == len(cores) * len(sdf_actors):
                 wcet = np.zeros(
                     (
@@ -629,22 +661,18 @@ class SDFToMultiCoreCharacterized(DecisionModel, MinizincAble):
                         if v.identifier == row['plat_id']
                     )
                     wcet[app_index, plat_index] = int(row['wcet_time'])
-            if count_wcct == 2 * len(sdf_channels) * len(connections):
-                wcct = np.zeros((len(sdf_channels), len(units), len(units)), dtype=int)
-                for row in model.query_view('signal_wcct'):
-                    sender_index = next(
-                        idx for (idx, v) in enumerate(units)
-                        if v.identifier == row['sender_id']
-                    )
-                    reciever_index = next(
-                        idx for (idx, v) in enumerate(units)
-                        if v.identifier == row['reciever_id']
-                    )
+            if count_token_wcct == len(sdf_channels) * len(busses):
+                token_wcct = np.zeros((len(sdf_channels), len(units)), dtype=int)
+                for row in model.query_view('signal_token_wcct'):
                     signal_index = next(
                         idx for (idx, v) in enumerate(sdf_channels)
                         if v.identifier == row['signal_id']
                     )
-                    wcct[signal_index, sender_index, reciever_index] = int(row['wcct_time'])
+                    comm_index = next(
+                        idx for (idx, v) in enumerate(units)
+                        if v.identifier == row['comm_id']
+                    )
+                    token_wcct[signal_index, comm_index] = int(row['wcct_time'])
             # although there should be only one Th vertex
             # per application, we apply maximun just in case
             # someone forgot to make sure there is only one annotation
@@ -657,11 +685,11 @@ class SDFToMultiCoreCharacterized(DecisionModel, MinizincAble):
                      for v in model.query_vertexes('min_throughput')),
                     default=0
                 )
-            if wcet is not None and wcct is not None:
+            if wcet is not None and token_wcct is not None:
                 res = cls(
                     sdf_mpsoc_sub=sdf_mpsoc_sub,
                     wcet=wcet,
-                    wcct=wcct,
+                    token_wcct=token_wcct,
                     throughput_importance=throughput_importance,
                     latency_importance=0
                 )
@@ -697,26 +725,23 @@ class SDFToMultiCoreCharacterized(DecisionModel, MinizincAble):
         for (aidx, a) in enumerate(sdf_actors):
             for (e, eidx) in cores_enum.items():
                 for ex in vertex_expansions[e]:
-                    exidx = units_enum[ex]
+                    exidx = expanded_units_enum[ex]
                     expanded_wcet[aidx, exidx] = self.wcet[aidx, eidx]
-        expanded_wcct = np.zeros(
+        expanded_token_wcct = np.zeros(
             (
                 len(sdf_channels),
-                len(expanded_units_enum),
                 len(expanded_units_enum)
             ),
             dtype=int
         )
         for (cidx, c) in enumerate(sdf_channels):
             for (e, eidx) in units_enum.items():
-                for (e2, e2idx) in units_enum.items():
-                    for ex in vertex_expansions[e]:
-                        for ex2 in vertex_expansions[e2]:
-                            exidx = expanded_units_enum[ex]
-                            ex2idx = expanded_units_enum[ex2]
-                            expanded_wcct[cidx, exidx, ex2idx] = self.wcct[cidx, eidx, e2idx]
+                for ex in vertex_expansions[e]:
+                    exidx = expanded_units_enum[ex]
+                    expanded_token_wcct[cidx, exidx] = self.token_wcct[cidx, eidx]
         self.expanded_wcet = expanded_wcet
-        self.expanded_wcct = expanded_wcct
+        # self.expanded_wcct = expanded_wcct
+        self.expanded_token_wcct = expanded_token_wcct
 
     def get_mzn_model_name(self):
         return "sdf_mpsoc_linear_dmodel.mzn"
@@ -725,15 +750,7 @@ class SDFToMultiCoreCharacterized(DecisionModel, MinizincAble):
         data = self.sdf_mpsoc_sub.get_mzn_data()
         # remake the wcet and wcct with proper data
         data['wcet'] = self.expanded_wcet.tolist()
-        data['wcct'] = self.expanded_wcct.tolist()
-        # data['send_overhead'] = (np.zeros((
-        #     len(self['sdf_channels']),
-        #     len(self['cores'])
-        # ), dtype=int)).tolist()
-        # data['read_overhead'] = (np.zeros((
-        #     len(self['sdf_channels']),
-        #     len(self['cores'])
-        # ), dtype=int)).tolist()
+        data['token_wcct'] = self.expanded_token_wcct.tolist()
         data['objective_weights'] = [
             self.throughput_importance,
             self.latency_importance
@@ -857,14 +874,6 @@ class SDFToMultiCoreCharacterizedJobs(DecisionModel, MinizincAble):
         data['jobs_actors'] = [
             int(aidx)+1 for (k, (actor, aidx)) in self.jobs_actors.items()
         ]
-        # data['send_overhead'] = (np.zeros((
-        #     len(self['sdf_channels']),
-        #     len(self['cores'])
-        # ), dtype=int)).tolist()
-        # data['read_overhead'] = (np.zeros((
-        #     len(self['sdf_channels']),
-        #     len(self['cores'])
-        # ), dtype=int)).tolist()
         data['objective_weights'] = [
             self['throughput_importance'],
             self['latency_importance']

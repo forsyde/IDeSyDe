@@ -4,7 +4,6 @@ include "globals.mzn";
 enum objectives = {THROUGHPUT, LATENCY};
 
 % model parameters
-int: max_tokens;
 int: max_steps;
 
 set of int: sdf_actors; % not flattened
@@ -13,12 +12,13 @@ set of int: procs;
 set of int: comm_units;
 set of int: units = procs union comm_units;
 
+array[sdf_channels] of int: max_tokens;
 array[sdf_channels] of int: initial_tokens;
 array[sdf_actors] of int: activations;
 array[sdf_channels, sdf_actors] of int: sdf_topology;
 array[sdf_actors, procs] of int: wcet;
 % this numbers are 'per channel token'
-array[sdf_channels, units, units] of int: wcct;
+array[sdf_channels, units] of int: token_wcct;
 array[units] of set of int: units_neighs;
 % array[sdf_channels, procs] of int: send_overhead;
 % array[sdf_channels, procs] of int: read_overhead;
@@ -31,8 +31,8 @@ set of int: steps0 = 0..max_steps;
 set of int: steps = 1..max_steps;
 
 % variables
-array[sdf_channels, procs, steps0] of var 0..max_tokens: buffer;
-array[sdf_channels, units, units, steps0] of var 0..max_tokens: send;
+array[sdf_channels, procs, steps0] of var 0..max(max_tokens): buffer;
+array[sdf_channels, units, units, steps0] of var 0..max(max_tokens): send;
 array[sdf_actors, procs, steps] of var 0..max(activations): mapped_actors;
 array[units, steps0] of var int: time;
 
@@ -106,11 +106,11 @@ constraint forall(t in steps, p in procs) (
 );
 
 %% timign with communication
-constraint forall(t in steps, p in units, pp in units_neighs[p]) (
-  time[p, t] >= time[pp, t] + sum(c in sdf_channels) (
-    wcct[c, pp, p] * send[c, pp, p, t]
-  )
-);
+% constraint forall(t in steps, p in units, pp in units_neighs[p]) (
+%   time[p, t] >= time[pp, t] + sum(c in sdf_channels) (
+%     wcct[c, pp, p] * send[c, pp, p, t]
+%   )
+% );
 
 % constrain a channel to choose only and one only slot
 % constraint forall(c in sdf_channels, t in steps, l, ll in bus_slots where l != ll) (

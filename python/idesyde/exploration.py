@@ -10,6 +10,7 @@ from minizinc import Model, Solver, Instance
 
 from idesyde.identification import DecisionModel, MinizincAble
 
+logging.basicConfig(filename="minizinc-python.log", level=logging.DEBUG)
 
 class ExplorerCriteria(Flag):
     FAST = auto()

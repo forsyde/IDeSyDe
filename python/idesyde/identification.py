@@ -308,7 +308,6 @@ class SDFExecution(DecisionModel):
     def covered_vertexes(self):
         return self.sdf_actors + self.sdf_channels
 
-
     def compute_deduced_properties(self):
         self.max_tokens = np.zeros((len(self.sdf_channels)), dtype=int)
         for (cidx, c) in enumerate(self.sdf_channels):

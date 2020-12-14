@@ -86,10 +86,19 @@ constraint forall(c in sdf_channels, j in jobs, p in units) (
 
 
 %sdf semantics
+constraint forall(c in sdf_channels) (
+  network_flow(
+    array2d(1..length(jobs)*length(jobs), 1..2, [ if i mod 2 = 0 then jj else j endif | j, jj in jobs, i in 1..2 ]),
+    [sdf_topology[c, jobs_actors[j]] | j in jobs ],
+    [job_send[c, j, jj] | j, jj in jobs ]
+  )
+);
+constraint forall(c in sdf_channels, j in jobs) (
+  0 <= sdf_topology[c, jobs_actors[j]] - sum(jj in jobs) (job_send[c, j, jj]) + sum(jj in jobs) (job_send[c, jj, j])
+);
 constraint forall(c in sdf_channels, j in jobs) (
   buffer_start[c, j] = sum(jj in jobs where j != jj) (job_send[c, jj, j] + buffer_end[c, jj])
 );
-
 constraint forall(c in sdf_channels, j in jobs) (
   buffer_end[c, j] = sdf_topology[c, jobs_actors[j]] + buffer_start[c, j]
                    - sum(jj in jobs where j != jj) (job_send[c, j, jj])
@@ -111,6 +120,13 @@ constraint forall(j, jj in jobs, c in sdf_channels where j != jj) (
 );
 
 %% the paths between units must be connected
+constraint forall(c in sdf_channels, j, jj in jobs) (
+  network_flow(
+    array2d(1..length(units)*length(units), 1..2, [if i mod 2 == 0 then p else pp endif | p, pp in units, i in 1..2]),
+    [0 | p in units],
+    [transfers[c, j, jj, p, pp] | p, pp in units]
+  )
+);
 constraint forall(c in sdf_channels, j, jj in jobs, p in units where j != jj) (
   sum(pb in units_neighs[p]) (transfers[c, j, jj, pb, p]) = 
   sum(pa in units_neighs[p]) (transfers[c, j, jj, p, pa])
@@ -118,24 +134,19 @@ constraint forall(c in sdf_channels, j, jj in jobs, p in units where j != jj) (
 
 % timing semantics
 constraint forall(j, jj in jobs where j != jj) (
-  sum(job_send[.., j, jj]) > 0 -> job_start[j] + job_duration[j] <= job_start[jj]
+  exists(c in sdf_channels) (job_send[c, j, jj] > 0) -> job_start[j] + job_duration[j] <= job_start[jj]
 );
 constraint forall(c in sdf_channels, j, jj in jobs where j != jj) (
   job_send[c, j, jj] > 0 -> 
-  job_start[j] + job_duration[j] <= transfers_start[c, j, jj, mapping[j]]
+  job_start[j] + job_duration[j] <= transfers_start[c, j, jj, mapping[j]] /\
+  transfers_start[c, j, jj, mapping[jj]] <= job_start[jj]
 );
-% constraint forall(c in sdf_channels, j, jj in jobs, p, pp in units where j != jj /\ p != pp) (
-%   transfers[c, j, jj, p, pp] > 0 ->
-  
-%   transfers_start[c, j, jj, p] + transfers[c, j, jj, p, pp] * token_wcct[c, p]
-%   <= transfers_start[c, j, jj, pp]
-% );
 
-% constraint forall(c in sdf_channels, j, jj in jobs, p, pp in units where j != jj /\ p != pp) (
-%   transfers[c, j, jj, p, pp] > 0 ->
-%   transfers_start[c, j, jj, p] + transfers[c, j, jj, p, pp] * token_wcct[c, p]
-%   <= transfers_start[c, j, jj, pp]
-% );
+constraint forall(c in sdf_channels, j, jj in jobs, p, pp in units where j != jj /\ p != pp) (
+  transfers[c, j, jj, p, pp] > 0 ->
+  transfers_start[c, j, jj, p] + transfers[c, j, jj, p, pp] * token_wcct[c, p]
+  <= transfers_start[c, j, jj, pp]
+);
 
 constraint forall(j in jobs, p in procs) (
   mapping[j] = p <-> occurs(start[j, p])
@@ -150,10 +161,6 @@ constraint forall(p in procs) (
 % inferred constraint
 constraint cumulative(job_start, job_duration, [1|i in jobs], length(procs));
 
-% constraint forall(j, jj in jobs, c in sdf_channels, p in units) (
-%   transfers_duration[c, j, jj, p] = 
-%   sum(ps in units) (token_wcct[c, p] * transfers[c, j, jj, p, ps])
-% );
 constraint forall(p in units) (
   disjunctive(
     [transfers_start[c, j, jj, p] | j, jj in jobs, c in sdf_channels where j != jj],

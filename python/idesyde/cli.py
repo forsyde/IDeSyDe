@@ -7,7 +7,7 @@ from forsyde.io.python import ForSyDeModel
 
 from idesyde.identification import identify_decision_models
 from idesyde.identification import choose_decision_models
-from idesyde.exploration import choose_explorer
+from idesyde.exploration import choose_explorer, MinizincExplorer
 
 description = '''
   ___  ___        ___        ___       
@@ -50,6 +50,13 @@ def cli_entry():
                         help='''
                         Skip printing logo, version and name.
                         ''')
+    parser.add_argument('--mzn-solver',
+                        type=str,
+                        default='gecode',
+                        help='''
+                        Minizinc solver to be used for decision models
+                        that are solved by them.
+                        ''')
     args = parser.parse_args()
     if not args.quiet:
         print(description)
@@ -82,7 +89,10 @@ def cli_entry():
     elif len(explorer_and_models) == 1:
         (e, m) = explorer_and_models[0]  # there is only one.
         logger.info('Initiating design space exploration')
-        model_decisions = e.explore(m)
+        if isinstance(e, MinizincExplorer):
+            model_decisions = e.explore(m, backend_solver_name=args.mzn_solver)
+        else:
+            model_decisions = e.explore(m)
         logger.info('Design space explored')
     else:
         print('More than one chosen model and explorer. Exiting')

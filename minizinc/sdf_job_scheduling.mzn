@@ -35,8 +35,8 @@ array[sdf_channels, jobs] of var 0..max(max_tokens): buffer_end;
 array[sdf_channels, jobs] of var 0..max(max_tokens): buffer_start;
 array[sdf_channels, jobs, jobs] of var 0..max(max_tokens): job_send;
 array[sdf_channels, jobs, jobs, units, units] of var 0..max(max_tokens): transfers;
-array[sdf_channels, jobs, jobs, units] of var 0..sum(wcet): transfers_start;
-array[sdf_channels, jobs, jobs, units] of var 0..max(token_wcct): transfers_duration;
+array[jobs, jobs, units] of var 0..sum(wcet): transfers_start;
+array[jobs, jobs, units] of var 0..max(token_wcct): transfers_duration;
 
 % objectives
 array[jobs] of var 0..sum(wcet): job_throughput;
@@ -77,11 +77,11 @@ constraint forall(j in jobs) (
   min(wcet[jobs_actors[j], ..]) <= job_duration[j] /\
   job_duration[j] <= max(wcet[jobs_actors[j], ..])
 );
-constraint forall(c in sdf_channels, j, jj in jobs, p in units where j != jj) (
-  transfers_duration[c, j, jj, p] <= token_wcct[c, p]
+constraint forall(j, jj in jobs, p in units where j != jj) (
+  transfers_duration[j, jj, p] <= sum(c in sdf_channels) (max_tokens[c] * token_wcct[c, p])
 );
 constraint forall(c in sdf_channels, j in jobs, p in units) (
-  transfers_duration[c, j, j, p] = 0
+  transfers_duration[j, j, p] = 0
 );
 
 
@@ -136,17 +136,22 @@ constraint forall(c in sdf_channels, j, jj in jobs, p in units where j != jj) (
 constraint forall(j, jj in jobs where j != jj) (
   exists(c in sdf_channels) (job_send[c, j, jj] > 0) -> job_start[j] + job_duration[j] <= job_start[jj]
 );
-constraint forall(c in sdf_channels, j, jj in jobs where j != jj) (
-  job_send[c, j, jj] > 0 -> 
-  job_start[j] + job_duration[j] <= transfers_start[c, j, jj, mapping[j]] /\
-  transfers_start[c, j, jj, mapping[jj]] <= job_start[jj]
+constraint forall(j, jj in jobs, p, pp in units where j != jj /\ p != pp) (
+  job_start[j] <= job_start[jj] ->
+  job_start[j] <= transfers_start[j, jj, p] /\
+  transfers_start[j, jj, pp] <= job_start[jj]
+);
+constraint forall(j, jj in jobs where j != jj) (
+  exists(c in sdf_channels) (job_send[c, j, jj] > 0) -> 
+  job_start[j] + job_duration[j] <= transfers_start[j, jj, mapping[j]] /\
+  transfers_start[j, jj, mapping[jj]] <= job_start[jj]
 );
 
-constraint forall(c in sdf_channels, j, jj in jobs, p, pp in units where j != jj /\ p != pp) (
-  transfers[c, j, jj, p, pp] > 0 ->
-  transfers_start[c, j, jj, p] + transfers[c, j, jj, p, pp] * token_wcct[c, p]
-  <= transfers_start[c, j, jj, pp]
-);
+% constraint forall(c in sdf_channels, j, jj in jobs, p, pp in units where j != jj /\ p != pp) (
+%   transfers[c, j, jj, p, pp] > 0 ->
+%   transfers_start[c, j, jj, p] + transfers[c, j, jj, p, pp] * token_wcct[c, p]
+%   <= transfers_start[c, j, jj, pp]
+% );
 
 constraint forall(j in jobs, p in procs) (
   mapping[j] = p <-> occurs(start[j, p])
@@ -163,8 +168,8 @@ constraint cumulative(job_start, job_duration, [1|i in jobs], length(procs));
 
 constraint forall(p in units) (
   disjunctive(
-    [transfers_start[c, j, jj, p] | j, jj in jobs, c in sdf_channels where j != jj],
-    [transfers_duration[c, j, jj, p] | j, jj in jobs, c in sdf_channels where j != jj]
+    [transfers_start[j, jj, p] | j, jj in jobs where j != jj],
+    [transfers_duration[j, jj, p] | j, jj in jobs where j != jj]
   )
 );
 

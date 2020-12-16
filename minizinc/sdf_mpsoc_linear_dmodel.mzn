@@ -20,8 +20,7 @@ array[sdf_actors, procs] of int: wcet;
 % this numbers are 'per channel token'
 array[sdf_channels, units] of int: token_wcct;
 array[units] of set of int: units_neighs;
-% array[sdf_channels, procs] of int: send_overhead;
-% array[sdf_channels, procs] of int: read_overhead;
+
 
 % objectives
 array[objectives] of int: objective_weights;
@@ -31,31 +30,64 @@ set of int: steps0 = 0..max_steps;
 set of int: steps = 1..max_steps;
 
 % variables
-array[sdf_channels, procs, steps0] of var 0..max(max_tokens): buffer;
-array[sdf_channels, units, units, steps0] of var 0..max(max_tokens): send;
 array[sdf_actors, procs, steps] of var 0..max(activations): mapped_actors;
-array[units, steps0] of var int: time;
+array[procs, steps0] of var 0..sum(wcet): start;
+array[procs, steps] of var 0..sum(wcet): busy_time;
+array[sdf_channels, procs, steps0] of var 0..max(max_tokens): buffer;
+array[sdf_channels, procs, procs, steps0, steps0] of var 0..max(max_tokens): send;
+array[sdf_channels, units, units, steps0, steps0] of var 0..max(max_tokens): send_fabric;
+array[sdf_channels, units, units, steps] of var 0..length(comm_units) * max(max_tokens) * max(token_wcct): send_duration;
+%array[sdf_channels, units, units, steps] of var 0..token_wcct(token_wcct): send_time;
+%array[sdf_channels, units, units] of var opt 0..max(max_tokens): send;
 
 % objectives
-array[procs] of var 0..sum(wcet): cpu_throughput;
+array[procs, steps0] of var 0..sum(wcet): local_throughput;
 array[procs] of var 0..sum(wcet): cpu_latency;
-array[objectives] of var int: objective;
+array[objectives] of var 0..2*sum(wcet): objective;
 
-% unable any communiation at the 'pre' time, or initial state
-constraint forall(c in sdf_channels, p,pp in units) (
-    send[c, p, pp, 0] = 0
+% tigthen bounds
+constraint forall(c in sdf_channels, t in steps0, p in procs) (
+  buffer[c, p, t] <= max_tokens[c]
 );
+constraint forall(c in sdf_channels, p,pp in procs, t in steps0) (
+  send[c, p, pp, 0, t] = 0
+);
+constraint forall(c in sdf_channels, p,pp in procs) (
+  send[c, p, pp, max_steps] = 0
+);
+constraint forall(c in sdf_channels, p, pp in procs, t in steps) (
+  send[c, p, pp, t] <= max_tokens[c]
+);
+constraint forall(c in sdf_channels, p in procs, t in steps) (
+  send[c, p, p, t] = 0
+);
+constraint forall(p in procs) (
+  start[p, 0] = 0
+);
+constraint forall(p in procs, t in steps) (
+  0 <= start[p, t] /\
+  start[p, t] <= sum(wcet[.., p])
+);
+constraint forall(p in procs, t in steps) (
+  local_throughput[p, t] <= sum(wcet[.., p])
+);
+constraint forall(c in sdf_channels, t in steps, p, pp in units) (
+  send_fabric[c, p, pp, t] <= max_tokens[c]
+);
+constraint forall(c in sdf_channels, p in units, t in steps) (
+  send_fabric[c, p, p, t] = 0
+);
+constraint forall(c in sdf_channels, p, pp in units, t in steps) (
+  not(pp in units_neighs[p]) -> send_fabric[c, p, pp, t] = 0
+);
+constraint forall(c in sdf_channels, p, pp in units, t in steps) (
+  not(pp in units_neighs[p]) -> send_duration[c, p, pp, t] = 0
+);
+
+
+% unable any communiation at the 'pre' start, or initial state
 
 % unable any communication between elements
-constraint forall(c in sdf_channels, p in units, t in steps) (
-    send[c, p, p, t] = 0
-);
-
-% unable any communication between non neighbors
-constraint forall(c in sdf_channels, p, pp in units, t in steps where not (pp in units_neighs[p])) (
-    send[c, p, pp, t] = 0
-);
-
     
 % sdf semantics: repetion vector constraint
 constraint forall(a in sdf_actors) (
@@ -75,8 +107,8 @@ constraint forall(c in sdf_channels) (
 % sdf semantics: firing with communication
 constraint forall(t in steps, c in sdf_channels, p in procs) (
   buffer[c, p, t] = sum(a in sdf_actors) (sdf_topology[c, a]*mapped_actors[a, p, t]) + buffer[c, p, t-1] 
-   + sum(pp in units_neighs[p]) (send[c, pp, p, t])
-   - sum(pp in units_neighs[p]) (send[c, p, pp, t])
+   + sum(pp in procs, tt in steps where tt) (send[c, pp, p, tt, t])
+   - sum(pp in procs, tt in steps where tt) (send[c, p, pp, t, tt])
 );
 
 % sdf semantics: no buffer is ever negative
@@ -85,29 +117,41 @@ constraint forall(c in sdf_channels, t in steps0, p in procs) (
 );
 
 % platform semantics: communication elements never hold data
-constraint forall(c in sdf_channels, p in comm_units, t in steps) (
-  sum(pp in units_neighs[p]) (send[c, pp, p, t]) = sum(pp in units_neighs[p]) (send[c, p, pp, t])
+% constraint forall(c in sdf_channels, p in comm_units, t in steps) (
+%   sum(pp in units_neighs[p]) (send[c, pp, p, t]) = sum(pp in units_neighs[p]) (send[c, p, pp, t])
+% );
+constraint forall(c in sdf_channels, t in steps) (
+  network_flow(
+    array2d(1..length(units)*length(units), 1..2,
+      [if i mod 2 == 0 then pp else p endif | p, pp in units, i in 1..2]
+    ),
+    [0 | p in units],
+    [send_fabric[c, p, pp, t] | p, pp in units]
+  )
 );
 
-% timing for the elements
-%% one processor must start at zero
-constraint forall(p in units) (
-    time[p, 0] = 0
+constraint forall(c in sdf_channels, p, pp in procs, t in steps) (
+  send[c, p, pp, t] = sum(ps in units) (send_fabric[c, p, ps, t]) /\
+  send[c, p, pp, t] = sum(ps in units) (send_fabric[c, ps, pp, t])
+);
+
+constraint forall(p in procs, t in steps) (
+  busy_time[p, t] = sum(a in sdf_actors) (wcet[a, p] * mapped_actors[a, p, t])
 );
 
 %% monotonically increasing
-constraint forall(p in units, t in steps) (
-    time[p, t] >= time[p, t-1]
+constraint forall(p in procs, t in steps) (
+    start[p, t] >= start[p, t-1]
 );
 
 %% timing between processing steps
 constraint forall(t in steps, p in procs) (
-  time[p, t] >= time[p, t-1] + sum(a in sdf_actors) (wcet[a, p] * mapped_actors[a, p, t])
+  start[p, t] >= start[p, t-1] + busy_time[p, t]
 );
 
 %% timign with communication
 % constraint forall(t in steps, p in units, pp in units_neighs[p]) (
-%   time[p, t] >= time[pp, t] + sum(c in sdf_channels) (
+%   start[p, t] >= start[pp, t] + sum(c in sdf_channels) (
 %     wcct[c, pp, p] * send[c, pp, p, t]
 %   )
 % );
@@ -125,25 +169,30 @@ constraint forall(t in steps, p in procs) (
 
 % calculate the objectives
 constraint forall(p in procs) (
-  cpu_throughput[p] = sum(t in steps) (
-    if sum(mapped_actors[.., p, t]) > 0 then
-        time[p, t] - time[p, t-1]
-    else
-        0
-    endif
-  )
+  local_throughput[p, 0] = 0
+);
+constraint forall(p in procs, t in steps) (
+  sum(mapped_actors[.., p, t]) > 0 \/ local_throughput[p, t-1] > 0 ->
+  local_throughput[p, t] = start[p, t] - start[p, t-1] + local_throughput[p, t-1]
+);
+constraint forall(p in procs, t in steps) (
+  sum(mapped_actors[.., p, t]) = 0 /\ local_throughput[p, t-1] = 0 ->
+  local_throughput[p, t] = 0
 );
 
-constraint objective[THROUGHPUT] = max(cpu_throughput);
+constraint objective[THROUGHPUT] = max(local_throughput);
 
 constraint forall(p in procs) (
-  cpu_latency[p] = time[p, max_steps]
+  cpu_latency[p] = start[p, max_steps]
 );
 
-constraint objective[LATENCY] = max(cpu_latency);
+constraint objective[LATENCY] = max(p in procs) (
+  start[p, max_steps] + busy_time[p, max_steps]
+);
 
-solve 
-  :: int_search(mapped_actors, first_fail, indomain_min, complete)
+solve
+  :: int_search(mapped_actors, first_fail, indomain_max, complete)
   :: int_search(buffer, first_fail, indomain_min, complete)
   :: int_search(send, first_fail, indomain_min, complete)
+  :: restart_luby(sum(activations) * length(procs))
   minimize sum(o in objectives) (objective_weights[o] * objective[o]);

@@ -50,10 +50,11 @@ def cli_entry():
                         Output files, which can be another model or
                         graph visualization formats.
                         ''')
-    parser.add_argument('-q', '--quiet',
-                        action='store_true',
+    parser.add_argument('--decision-model',
+                        action='append',
+                        nargs=1,
                         help='''
-                        Skip printing logo, version and name.
+                        Filter decision model to match these short names.
                         ''')
     parser.add_argument('--mzn-solver',
                         type=str,
@@ -78,7 +79,8 @@ def cli_entry():
     identified = identify_decision_models(in_model)
     logger.info(f'{len(identified)} Decision model(s) identified')
     logger.debug(f"Decision models identified: {identified}")
-    models_chosen = choose_decision_models(identified)
+    desired_names = [i[0] for i in args.decision_model] if args.decision_model else []
+    models_chosen = choose_decision_models(identified, desired_names=desired_names)
     logger.info(f'{len(models_chosen)} Decision model(s) chosen')
     explorer_and_models = choose_explorer(models_chosen)
     logger.info(f'{len(explorer_and_models)} Explorer(s) and Model(s) chosen')

@@ -739,6 +739,7 @@ class SDFToMultiCoreCharacterized(DecisionModel, MinizincAble):
 
     def rebuild_forsyde_model(self, results):
         new_model = self.covered_model()
+        print(results)
         sdf_actors = self.sdf_mpsoc_sub.sdf_orders_sub.sdf_exec_sub.sdf_actors
         sdf_channels = self.sdf_mpsoc_sub.sdf_orders_sub.sdf_exec_sub.sdf_channels
         orderings = self.sdf_mpsoc_sub.sdf_orders_sub.orderings
@@ -946,8 +947,11 @@ def identify_decision_models_parallel(
 
 def choose_decision_models(
     models: List[DecisionModel],
-    criteria: ChoiceCriteria = ChoiceCriteria.DOMINANCE
+    criteria: ChoiceCriteria = ChoiceCriteria.DOMINANCE,
+    desired_names: List[str] = []
 ) -> List[DecisionModel]:
+    if desired_names:
+        models = [m for m in models if m.short_name() in desired_names]
     if criteria & ChoiceCriteria.DOMINANCE:
         non_dominated = [m for m in models]
         for m in models:

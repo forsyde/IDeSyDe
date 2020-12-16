@@ -47,10 +47,6 @@ class DecisionModel(object):
     identifications that the model may have.
     """
 
-    dominated_models: Set[Type["DecisionModel"]] = field(
-        default_factory=lambda: set()
-    )
-
     @classmethod
     def identify(
             cls,
@@ -74,36 +70,11 @@ class DecisionModel(object):
         """
         return (True, None)
 
-    def __iter__(self):
-        for k in self.__dict__:
-            o = self.__dict__[k]
-            if isinstance(o, DecisionModel):
-                yield from o
-            else:
-                yield k
-
-    def __getitem__(self, key):
-        key = str(key)
-        if key in self.__dict__:
-            return self.__dict__[key]
-        for k in self.__dict__:
-            o = self.__dict__[k]
-            if isinstance(o, DecisionModel) and key in o:
-                return o[key]
-        return KeyError
-
-    def __contains__(self, key):
-        key = str(key)
-        if key in self.__dict__:
-            return True
-        for k in self.__dict__:
-            o = self.__dict__[k]
-            if isinstance(o, DecisionModel) and key in o:
-                return True
-        return False
-
     def __hash__(self):
         return hash((self.covered_vertexes(), self.covered_edges()))
+
+    def short_name(self) -> str:
+        return str(self.__class__.__name__)
 
     def compute_deduced_properties(self) -> None:
         '''Compute deducible properties for this decision model'''
@@ -115,9 +86,7 @@ class DecisionModel(object):
         Returns:
             Iterable for the vertexes.
         '''
-        for o in self:
-            if isinstance(o, Vertex):
-                yield o
+        raise NotImplementedError
 
     def covered_edges(self) -> Iterable[Edge]:
         '''Get edges partially identified by the Decision Model.
@@ -125,9 +94,7 @@ class DecisionModel(object):
         Returns:
             Iterable for the edges.
         '''
-        for o in self:
-            if isinstance(o, Edge):
-                yield o
+        return []
 
     def covered_model(self) -> ForSyDeModel:
         '''Returns the covered ForSyDe Model.
@@ -158,21 +125,14 @@ class DecisionModel(object):
         Returns:
             True if 'self' dominates other. False otherwise.
         '''
-        if any(isinstance(other, t) for t in self.dominated_models):
-            return True
-        else:
-            # other - self
-            other_diff = set(
-                k for k in other if k not in self
-            )
-            # self - other
-            self_diff = set(
-                k for k in self if k not in other
-            )
-            # other is fully contained in self and itersection is consistent
-            return len(other_diff) == 0\
-                and len(self_diff) >= 0
-            # and all(self[k] == other[k] for k in other if k in self)
+        # other - self
+        vertexes_other = set(other.covered_vertexes())
+        vertexes_self = set(self.covered_vertexes())
+        edges_other = set(other.covered_edges())
+        edges_self = set(self.covered_edges())
+        # other is fully contained in self and itersection is consistent
+        return len(vertexes_self.difference(vertexes_other)) > 0\
+            or len(edges_self.difference(edges_other)) > 0
 
 
 class MinizincAble(object):
@@ -258,8 +218,8 @@ class SDFExecution(DecisionModel):
     SDF topology and the PASS with all elements included.
     """
 
-    sdf_actors: List[Vertex] = field(default_factory=list)
-    sdf_channels: List[Vertex] = field(default_factory=list)
+    sdf_actors: Set[Vertex] = field(default_factory=set)
+    sdf_channels: Set[Vertex] = field(default_factory=set)
     sdf_topology: np.ndarray = np.zeros((0, 0))
     sdf_repetition_vector: np.ndarray = np.zeros((0))
     sdf_pass: List[str] = field(default_factory=list)
@@ -306,7 +266,8 @@ class SDFExecution(DecisionModel):
             return (False, None)
 
     def covered_vertexes(self):
-        return self.sdf_actors + self.sdf_channels
+        yield from self.sdf_actors
+        yield from self.sdf_channels
 
     def compute_deduced_properties(self):
         self.max_tokens = np.zeros((len(self.sdf_channels)), dtype=int)
@@ -324,7 +285,7 @@ class SDFToOrders(DecisionModel, MinizincAble):
     sdf_exec_sub: SDFExecution = SDFExecution()
 
     # partial identification
-    orderings: List[Vertex] = field(default_factory=list)
+    orderings: Set[Vertex] = field(default_factory=set)
 
     @classmethod
     def identify(cls, model, identified):
@@ -347,6 +308,10 @@ class SDFToOrders(DecisionModel, MinizincAble):
             return (True, None)
         else:
             return (False, None)
+
+    def covered_vertexes(self):
+        yield from self.orderings
+        yield from self.sdf_exec_sub.covered_vertexes()
 
     def compute_deduced_properties(self):
         pass
@@ -388,8 +353,8 @@ class SDFToMultiCore(DecisionModel, MinizincAble):
     sdf_orders_sub: SDFToOrders = SDFToOrders()
 
     # partially identified
-    cores: List[Vertex] = field(default_factory=list)
-    busses: List[Vertex] = field(default_factory=list)
+    cores: Set[Vertex] = field(default_factory=set)
+    busses: Set[Vertex] = field(default_factory=set)
     connections: List[Edge] = field(default_factory=list)
 
     # deduced properties
@@ -411,8 +376,6 @@ class SDFToMultiCore(DecisionModel, MinizincAble):
     expanded_comm_enum: Dict[Vertex, int] = field(
         default_factory=dict
     )
-
-
 
     @classmethod
     def identify(cls, model, identified):
@@ -454,6 +417,11 @@ class SDFToMultiCore(DecisionModel, MinizincAble):
             return (True, None)
         else:
             return (False, None)
+
+    def covered_vertexes(self):
+        yield from self.cores
+        yield from self.busses
+        yield from self.sdf_orders_sub.covered_vertexes()
 
     def get_mzn_model_name(self):
         return "sdf_mpsoc_linear_dmodel.mzn"
@@ -539,11 +507,11 @@ class SDFToMultiCore(DecisionModel, MinizincAble):
         # since the minizinc model requires wcet and wcct,
         # we fake it with almost unitary assumption
         data['wcet'] = (data['max_tokens'] * np.ones((
-            len(self['sdf_actors']),
+            len(data['sdf_actors']),
             len(self.cores)
         ), dtype=int)).tolist()
         data['token_wcct'] = (np.ones((
-            len(self['sdf_channels']),
+            len(data['sdf_channels']),
             len(data['procs']) + len(data['comm_units'])
         ), dtype=int)).tolist()
         # since the minizinc model requires objective weights,
@@ -615,6 +583,9 @@ class SDFToMultiCoreCharacterized(DecisionModel, MinizincAble):
     sdf_mpsoc_sub: SDFToMultiCore = SDFToMultiCore()
 
     # elements that are partially identified
+    wcet_vertexes: Set[Vertex] = field(default_factory=set)
+    token_wcct_vertexes: Set[Vertex] = field(default_factory=set)
+    goals_vertexes: Set[Vertex] = field(default_factory=set)
     wcet: np.ndarray = np.array((0, 0), dtype=int)
     token_wcct: np.ndarray = np.zeros((0, 0))
     throughput_importance: int = 0
@@ -676,9 +647,10 @@ class SDFToMultiCoreCharacterized(DecisionModel, MinizincAble):
             # per application, we apply maximun just in case
             # someone forgot to make sure there is only one annotation
             # per application
+            goals_vertexes = set(model.query_vertexes('min_throughput'))
             throughput_importance = 0
             throughput_targets = list(model.query_vertexes('min_throughput_targets'))
-            if all(v in throughput_targets for v in sdf_mpsoc_sub['sdf_actors']):
+            if all(v in throughput_targets for v in sdf_actors):
                 throughput_importance = max(
                     (int(v.properties['apriori_importance'])
                      for v in model.query_vertexes('min_throughput')),
@@ -687,10 +659,13 @@ class SDFToMultiCoreCharacterized(DecisionModel, MinizincAble):
             if wcet is not None and token_wcct is not None:
                 res = cls(
                     sdf_mpsoc_sub=sdf_mpsoc_sub,
+                    wcet_vertexes=set(model.query_vertexes('wcet')),
+                    token_wcct_vertexes=set(model.query_vertexes('signal_token_wcct')),
                     wcet=wcet,
                     token_wcct=token_wcct,
                     throughput_importance=throughput_importance,
-                    latency_importance=0
+                    latency_importance=0,
+                    goals_vertexes=goals_vertexes
                 )
         if res:
             res.compute_deduced_properties()
@@ -699,6 +674,12 @@ class SDFToMultiCoreCharacterized(DecisionModel, MinizincAble):
             return (True, None)
         else:
             return (False, None)
+
+    def covered_vertexes(self):
+        yield from self.wcet_vertexes
+        yield from self.token_wcct_vertexes
+        yield from self.goals_vertexes
+        yield from self.sdf_mpsoc_sub.covered_vertexes()
 
     def compute_deduced_properties(self):
         sdf_actors = self.sdf_mpsoc_sub.sdf_orders_sub.sdf_exec_sub.sdf_actors
@@ -861,6 +842,9 @@ class SDFToMultiCoreCharacterizedJobs(DecisionModel, MinizincAble):
         else:
             return (False, None)
 
+    def covered_vertexes(self):
+        yield from self.sdf_mpsoc_char_sub.covered_vertexes()
+
     def get_mzn_model_name(self):
         return "sdf_job_scheduling.mzn"
 
@@ -872,10 +856,6 @@ class SDFToMultiCoreCharacterizedJobs(DecisionModel, MinizincAble):
         # data['activations'] = self['sdf_repetition_vector'][:, 0].tolist()
         data['jobs_actors'] = [
             int(aidx)+1 for (k, (actor, aidx)) in self.jobs_actors.items()
-        ]
-        data['objective_weights'] = [
-            self['throughput_importance'],
-            self['latency_importance']
         ]
         # delete spurious elements
         data.pop('max_steps')

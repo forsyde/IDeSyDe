@@ -12,6 +12,7 @@ from idesyde.identification import DecisionModel, MinizincAble
 
 logging.basicConfig(filename="minizinc-python.log", level=logging.DEBUG)
 
+
 class ExplorerCriteria(Flag):
     FAST = auto()
     COMPLETE = auto()
@@ -74,6 +75,9 @@ class Explorer(abc.ABC):
             be a less accurate but faster choice.
         '''
         return (0, 0)
+
+    def short_name(self) -> str:
+        return str(self.__class__.__name__)
 
 
 class MinizincExplorer(Explorer):

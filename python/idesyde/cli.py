@@ -1,6 +1,7 @@
 import argparse
 import asyncio
 import logging
+import random
 
 import networkx as nx
 from forsyde.io.python import ForSyDeModel
@@ -9,8 +10,9 @@ from idesyde.identification import identify_decision_models
 from idesyde.identification import choose_decision_models
 from idesyde.exploration import choose_explorer, MinizincExplorer
 
+
 description = '''
-  ___  ___        ___        ___       
+  ___  ___        ___        ___
  |_ _||   \  ___ / __| _  _ |   \  ___ 
   | | | |) |/ -_)\__ \| || || |) |/ -_)
  |___||___/ \___||___/ \_, ||___/ \___|
@@ -21,7 +23,10 @@ Automated Identification and Exlopration of Design Spaces in ForSyDe
 
 
 def cli_entry():
-    parser = argparse.ArgumentParser(description=description)
+    parser = argparse.ArgumentParser(
+        description=description,
+        formatter_class=argparse.RawDescriptionHelpFormatter
+    )
     parser.add_argument('model',
                         type=str,
                         help='Input ForSyDe-IO model to DeSyDe')
@@ -58,18 +63,12 @@ def cli_entry():
                         that are solved by them.
                         ''')
     args = parser.parse_args()
-    if not args.quiet:
-        print(description)
     logger = logging.getLogger('CLI')
-    logger.setLevel(
-        getattr(logging, args.verbosity.upper(), 'INFO')
-    )
+    logger.setLevel(getattr(logging, args.verbosity.upper(), 'INFO'))
     consoleLogHandler = logging.StreamHandler()
-    consoleLogHandler.setLevel(
-        getattr(logging, args.verbosity.upper(), 'INFO')
-    )
+    consoleLogHandler.setLevel(getattr(logging, args.verbosity.upper(), 'INFO'))
     consoleLogHandler.setFormatter(
-        logging.Formatter('[%(levelname)s\t%(asctime)s] %(message)s')
+        logging.Formatter('[{levelname:<8}{asctime}] {message}', style='{')
     )
     logger.addHandler(consoleLogHandler)
     logger.debug('Arguments parsed')
@@ -83,21 +82,20 @@ def cli_entry():
     logger.info(f'{len(models_chosen)} Decision model(s) chosen')
     explorer_and_models = choose_explorer(models_chosen)
     logger.info(f'{len(explorer_and_models)} Explorer(s) and Model(s) chosen')
-    model_decisions = None
-    if len(explorer_and_models) == 0:
-        print('No model or explorer could be chosen. Exiting')
-    elif len(explorer_and_models) == 1:
-        (e, m) = explorer_and_models[0]  # there is only one.
-        logger.info('Initiating design space exploration')
-        if isinstance(e, MinizincExplorer):
-            model_decisions = e.explore(m, backend_solver_name=args.mzn_solver)
+    resulting_model = None
+    if len(explorer_and_models) > 0:
+        if len(explorer_and_models) > 1:
+            logger.warn("More than one explorer and model chosen. Picking one randomly")
+        (explorer, model) = random.choice(explorer_and_models)
+        logger.info(f'Exploring {model.short_name()} with {explorer.short_name()}')
+        if isinstance(explorer, MinizincExplorer):
+            resulting_model = explorer.explore(model, backend_solver_name=args.mzn_solver)
         else:
-            model_decisions = e.explore(m)
-        logger.info('Design space explored')
-    else:
-        print('More than one chosen model and explorer. Exiting')
-    if model_decisions:
-        out_model = nx.compose(in_model, model_decisions)
+            resulting_model = explorer.explore(model)
+        logger.info('Exploration complete')
+    if resulting_model:
+        out_model = nx.compose(in_model, resulting_model)
+        print(args.output)
         outputs = [i[0] for i in args.output]\
             if args.output else [f'out_{args.model}']
         for out_file in outputs:

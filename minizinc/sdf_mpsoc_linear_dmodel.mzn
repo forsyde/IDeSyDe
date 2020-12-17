@@ -72,11 +72,6 @@ constraint forall(c in sdf_channels, p, pp in units, t, tt in steps) (
   not(pp in units_neighs[p]) -> send_duration[c, p, pp, t, tt] = 0
 );
 
-
-% unable any communiation at the 'pre' start, or initial state
-
-% unable any communication between elements
-    
 % sdf semantics: repetion vector constraint
 constraint forall(a in sdf_actors) (
   sum(mapped_actors[a, .., ..]) = activations[a]

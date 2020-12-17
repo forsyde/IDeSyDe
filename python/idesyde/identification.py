@@ -31,6 +31,14 @@ import idesyde.math as mathutil
 import idesyde.sdf as sdfapi
 
 
+def print_list(d, s=""):
+    if type(d) == list:
+        for (i, v) in enumerate(d):
+            print_list(v, s=s+f"{i} ")
+    elif d:
+        print(f"{s}: {d}")
+
+
 class ChoiceCriteria(Flag):
     '''Flag to indicate decision model subsumption
     '''
@@ -330,7 +338,7 @@ class SDFToOrders(DecisionModel, MinizincAble):
         data['sdf_actors'] = range(1, len(sub.sdf_actors)+1)
         data['sdf_channels'] = range(1, len(sub.sdf_channels)+1)
         data['sdf_topology'] = sub.sdf_topology.tolist()
-        data['max_steps'] = len(sub.sdf_pass)
+        # data['max_steps'] = len(sub.sdf_pass)
         data['max_tokens'] = sub.max_tokens.tolist()
         data['activations'] = sub.sdf_repetition_vector[:, 0].tolist()
         data['static_orders'] = range(1, len(self.orderings)+1)
@@ -740,6 +748,8 @@ class SDFToMultiCoreCharacterized(DecisionModel, MinizincAble):
     def rebuild_forsyde_model(self, results):
         new_model = self.covered_model()
         print(results)
+        print_list(results["mapped_actors"])
+        print_list(results["flow"])
         sdf_actors = self.sdf_mpsoc_sub.sdf_orders_sub.sdf_exec_sub.sdf_actors
         sdf_channels = self.sdf_mpsoc_sub.sdf_orders_sub.sdf_exec_sub.sdf_channels
         orderings = self.sdf_mpsoc_sub.sdf_orders_sub.orderings
@@ -859,7 +869,7 @@ class SDFToMultiCoreCharacterizedJobs(DecisionModel, MinizincAble):
             int(aidx)+1 for (k, (actor, aidx)) in self.jobs_actors.items()
         ]
         # delete spurious elements
-        data.pop('max_steps')
+        # data.pop('max_steps')
         data.pop('activations')
         return data
 

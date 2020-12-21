@@ -545,7 +545,8 @@ class SDFToMultiCore(DecisionModel, MinizincAble):
                     source_vertex_port=Port(
                         identifier="execution",
                         port_type=TypesFactory.build_type('AbstractOrdering')
-                    )
+                    ),
+                    edge_type=TypesFactory.build_type("Mapping")
                 )
                 new_model.add_edge(core, ordering, object=new_edge)
             slot = 0
@@ -570,7 +571,8 @@ class SDFToMultiCore(DecisionModel, MinizincAble):
                             source_vertex_port=Port(
                                 identifier=f"slot[{slot}]",
                                 port_type=TypesFactory.build_type("Process")
-                            )
+                            ),
+                            edge_type=TypesFactory.build_type("Scheduling")
                         )
                         new_model.add_edge(ordering, actor, object=new_edge)
                         slot += 1
@@ -587,7 +589,8 @@ class SDFToMultiCore(DecisionModel, MinizincAble):
                     source_vertex_port=Port(
                         identifier="timeslots",
                         port_type=TypesFactory.build_type('AbstractOrdering')
-                    )
+                    ),
+                    edge_type=TypesFactory.build_type("Mapping")
                 )
                 new_model.add_edge(comm, ordering, object=new_edge)
             for (c, cidx) in sdf_channels_enum.items():
@@ -606,7 +609,8 @@ class SDFToMultiCore(DecisionModel, MinizincAble):
                             target_vertex=c,
                             source_vertex_port=Port(
                                 identifier=f"slot[{slotidx}]"
-                            )
+                            ),
+                            edge_type=TypesFactory.build_type("Scheduling")
                         )
                         new_model.add_edge(ordering, c, object=new_edge)
         return new_model

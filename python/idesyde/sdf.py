@@ -6,6 +6,27 @@ def get_PASS(sdf_topology: np.ndarray,
              repetition_vector: np.ndarray,
              initial_tokens: Optional[np.ndarray] = None
              ) -> List[int]:
+    '''Returns the PASS of a SDF graph
+
+    The calculation follows almost exactly what is dictated in the
+    87 paper by LSV (Reference to be added later), except with some
+    minor adaptations for numpy usage.
+
+    Arguments:
+        sdf_topology: The topology matrix of the SDF graph.
+        repetition_vector: Number of firings for each Actor.
+        initial_tokens: Initial tokens in each channels.
+
+    Returns:
+        A list of integers, each representing the index of the
+        actor fired, in the order returned. E.g.
+
+            [1, 9, 4]
+
+        means:
+
+            Actor 1 fires, then 9 then 4.
+    '''
     if initial_tokens is None:
         initial_tokens = np.zeros((sdf_topology.shape[2], 1))
     tokens = initial_tokens

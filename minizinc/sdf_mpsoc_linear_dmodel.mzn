@@ -151,6 +151,13 @@ constraint forall(c in sdf_channels, t, tt in steps, p, pp in procs) (
   start[pp, tt] >= start[p, t] + busy_time[p,t] + sum(send_duration[c, p, pp, t, tt, ..])
 );
 
+constraint forall(u in comm_units) (
+  disjunctive(
+    [start[p, t] | p, pp in procs, t, tt in steps, c in sdf_channels],
+    [send_duration[c, p, pp, t, tt, u] | p, pp in procs, t, tt in steps, c in sdf_channels],
+  )
+);
+
 % symmetry breaking
 % the "space-time cut" constraint, to be explained better later.
 constraint forall(c in sdf_channels, t, tt in steps, p, pp in procs) (
@@ -171,11 +178,11 @@ constraint forall(c in sdf_channels, t, tt in steps, p, pp in procs) (
 
 %
 constraint forall(t, tt in steps, p, pp in procs) (
-  sum(c in sdf_channels) (flow[c, p, pp, t, tt]) >= 
+  sum(c in sdf_channels) (flow[c, p, pp, t, tt]) > 0 ->
   sum(c in sdf_channels, t2, tt2 in steps where t < t2 /\ tt2 < tt) (flow[c, p, pp, t2, tt2]) +
   sum(c in sdf_channels, t2, tt2 in steps where t2 < t /\ tt < tt2) (flow[c, p, pp, t2, tt2]) +
   sum(c in sdf_channels, t2, tt2 in steps where t < t2 /\ tt2 < tt) (flow[c, pp, p, tt2, t2]) +
-  sum(c in sdf_channels, t2, tt2 in steps where t2 < t /\ tt < tt2) (flow[c, pp, p, tt2, t2])
+  sum(c in sdf_channels, t2, tt2 in steps where t2 < t /\ tt < tt2) (flow[c, pp, p, tt2, t2]) = 0
 );
 
 % at least one slot must start from zero for symmetry breaking

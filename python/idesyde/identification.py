@@ -243,15 +243,18 @@ class SDFExecution(DecisionModel):
         res = None
         sdf_actors = set(a for a in model.query_vertexes('sdf_actors'))
         sdf_channels = set(c for c in model.query_vertexes('sdf_channels'))
+        sdf_actors_enum = {k: i for (i, k) in enumerate(sdf_actors)}
+        sdf_channels_enum = {k: i for (i, k) in enumerate(sdf_channels)}
+        inv_sdf_actors_enum = dict(enumerate(sdf_actors))
         sdf_topology = np.zeros(
             (len(sdf_channels), len(sdf_actors)),
             dtype=int
         )
         for row in model.query_view('sdf_topology'):
-            a_index = next(idx for (idx, v) in enumerate(sdf_actors)
-                           if v.identifier == row['actor_id'])
-            c_index = next(idx for (idx, v) in enumerate(sdf_channels)
-                           if v.identifier == row['channel_id'])
+            a_index = next(idx for (a, idx) in sdf_actors_enum.items()
+                           if a.identifier == row['actor_id'])
+            c_index = next(idx for (c, idx) in sdf_channels_enum.items()
+                           if c.identifier == row['channel_id'])
             sdf_topology[c_index, a_index] = int(row['tokens'])
         null_space = sympy.Matrix(sdf_topology).nullspace()
         if len(null_space) == 1:
@@ -262,13 +265,15 @@ class SDFExecution(DecisionModel):
                                        repetition_vector,
                                        initial_tokens)
             if schedule != []:
-                sdf_pass = [sdf_actors[idx] for idx in schedule]
+                sdf_pass = [inv_sdf_actors_enum[idx] for idx in schedule]
                 res = SDFExecution(
                     sdf_actors=sdf_actors,
                     sdf_channels=sdf_channels,
                     sdf_topology=sdf_topology,
                     sdf_repetition_vector=repetition_vector,
-                    sdf_pass=sdf_pass
+                    sdf_pass=sdf_pass,
+                    sdf_actors_enum=sdf_actors_enum,
+                    sdf_channels_enum=sdf_channels_enum
                 )
         # conditions for fixpoints and partial identification
         if res:
@@ -288,8 +293,6 @@ class SDFExecution(DecisionModel):
                 self.sdf_topology[cidx, aidx] * self.sdf_repetition_vector[aidx]
                 for (aidx, a) in enumerate(self.sdf_actors)
             )
-        self.sdf_actors_enum = {k: i for (i, k) in enumerate(self.sdf_actors)}
-        self.sdf_channels_enum = {k: i for (i, k) in enumerate(self.sdf_channels)}
 
 
 @dataclass
@@ -385,6 +388,7 @@ class SDFToMultiCore(DecisionModel, MinizincAble):
     expanded_comm_enum: Dict[Vertex, int] = field(
         default_factory=dict
     )
+    max_steps: int = 1
 
     @classmethod
     def identify(cls, model, identified):
@@ -435,19 +439,6 @@ class SDFToMultiCore(DecisionModel, MinizincAble):
     def get_mzn_model_name(self):
         return "sdf_mpsoc_linear_dmodel.mzn"
 
-    def numbered_hw_units(self) -> Dict[str, int]:
-        """
-        """
-        numbers = {}
-        cur = 0
-        for p in self.cores:
-            numbers[p.identifier] = cur
-            cur += 1
-        for p in self.busses:
-            numbers[p.identifier] = cur
-            cur += 1
-        return numbers
-
     def compute_deduced_properties(self):
         self.sdf_orders_sub.compute_deduced_properties()
         vertex_expansions = {p: set([p]) for p in self.cores}
@@ -468,6 +459,10 @@ class SDFToMultiCore(DecisionModel, MinizincAble):
                 expanded_comm_enum[bus_slot] = units_enum_index
                 vertex_expansions[bus].add(bus_slot)
                 units_enum_index += 1
+        firings = int(np.sum(self.sdf_orders_sub.sdf_exec_sub.sdf_repetition_vector))
+        max_steps = firings // len(expanded_cores_enum)
+        if firings % len(expanded_cores_enum) > 0:
+            max_steps += 1
         # now go through all the connections and
         # create copies of them as necessary to accomodate
         # the newly created processor and comm elements
@@ -489,6 +484,7 @@ class SDFToMultiCore(DecisionModel, MinizincAble):
         self.expanded_comm_enum = expanded_comm_enum
         self.cores_enum = cores_enum
         self.comm_enum = comm_enum
+        self.max_steps = max_steps
 
     def get_mzn_data(self):
         data = self.sdf_orders_sub.get_mzn_data()
@@ -531,57 +527,88 @@ class SDFToMultiCore(DecisionModel, MinizincAble):
         return data
 
     def rebuild_forsyde_model(self, results):
-        sdf_exec_sub = self.sdf_orders_sub.sdf_exec_sub
         new_model = self.covered_model()
-        for (aidx, a) in enumerate(results['mapped_actors']):
-            actor = sdf_exec_sub.sdf_actors[aidx]
-            for (pidx, p) in enumerate(a):
-                ordering = self.sdf_orders_sub.orderings[pidx]
-                core = self.cores[pidx]
-                for (t, v) in enumerate(p):
-                    if 0 < v and v < 2:
-                        # TODO: fix multiple addition of elements here
-                        if not new_model.has_edge(core, ordering):
-                            edge = Edge(
-                                core,
-                                ordering,
-                                None,
-                                None,
-                                TypesFactory.build_type('Mapping')
+        max_steps = self.max_steps
+        sdf_topology = self.sdf_orders_sub.sdf_exec_sub.sdf_topology
+        sdf_actors_enum = self.sdf_orders_sub.sdf_exec_sub.sdf_actors_enum
+        sdf_channels_enum = self.sdf_orders_sub.sdf_exec_sub.sdf_channels_enum
+        inv_sdf_actors_enum = {i: k for (k, i) in sdf_actors_enum.items()}
+        orderings_enum = self.sdf_orders_sub.orderings_enum
+        cores_enum = self.cores_enum
+        inv_orderings_enum = {i: k for (k, i) in orderings_enum.items()}
+        for (core, pidx) in cores_enum.items():
+            ordering = inv_orderings_enum[pidx]
+            if not new_model.has_edge(core, ordering, key="object"):
+                new_edge = Edge(
+                    source_vertex=core,
+                    target_vertex=ordering,
+                    source_vertex_port=Port(
+                        identifier="execution",
+                        port_type=TypesFactory.build_type('AbstractOrdering')
+                    )
+                )
+                new_model.add_edge(core, ordering, object=new_edge)
+            slot = 0
+            for t in range(max_steps):
+                sdf_pass = sdfapi.get_PASS(
+                    sdf_topology,
+                    np.array([[
+                        results["mapped_actors"][a][pidx][t]
+                        for a in sdf_actors_enum.values()
+                    ]]).transpose(),
+                    np.array([[
+                        results["buffer_start"][c][pidx][t]
+                        for c in sdf_channels_enum.values()
+                    ]]).transpose()
+                )
+                for aidx in sdf_pass:
+                    actor = inv_sdf_actors_enum[aidx]
+                    if not new_model.has_edge(ordering, actor, key="object"):
+                        new_edge = Edge(
+                            source_vertex=ordering,
+                            target_vertex=actor,
+                            source_vertex_port=Port(
+                                identifier=f"slot[{slot}]",
+                                port_type=TypesFactory.build_type("Process")
                             )
-                            new_model.add_edge(
-                                core,
-                                ordering,
-                                object=edge
+                        )
+                        new_model.add_edge(ordering, actor, object=new_edge)
+                        slot += 1
+        comm_enum = self.comm_enum
+        expanded_comm_enum = self.expanded_comm_enum
+        vertex_expansions = self.vertex_expansions
+        for (comm, commidx) in comm_enum.items():
+            slot_expansions = vertex_expansions[comm]
+            ordering = inv_orderings_enum[commidx]
+            if not new_model.has_edge(comm, ordering, key="object"):
+                new_edge = Edge(
+                    source_vertex=comm,
+                    target_vertex=ordering,
+                    source_vertex_port=Port(
+                        identifier="timeslots",
+                        port_type=TypesFactory.build_type('AbstractOrdering')
+                    )
+                )
+                new_model.add_edge(comm, ordering, object=new_edge)
+            for (c, cidx) in sdf_channels_enum.items():
+                for slot in slot_expansions:
+                    # shift ocmmunication elemnets to zero due to to way minizinc
+                    # return its results
+                    slotidx = expanded_comm_enum[slot] - max(cores_enum.values()) - 1
+                    if any((results['send_allocation'][cidx][p][pp][t][tt][slotidx] > 0
+                            for p in cores_enum.values()
+                            for pp in cores_enum.values()
+                            for t in range(max_steps)
+                            for tt in range(max_steps)))\
+                            and not new_model.has_edge(ordering, c, key="object"):
+                        new_edge = Edge(
+                            source_vertex=ordering,
+                            target_vertex=c,
+                            source_vertex_port=Port(
+                                identifier=f"slot[{slotidx}]"
                             )
-                        if not new_model.has_edge(ordering, actor):
-                            ord_port = Port(
-                                identifier=f'slot{t}',
-                                port_type=TypesFactory.build_type('Process')
-                            )
-                            ordering.ports.add(ord_port)
-                            edge = Edge(
-                                ordering,
-                                actor,
-                                ord_port,
-                                None,
-                                TypesFactory.build_type('Scheduling')
-                            )
-                            new_model.add_edge(
-                                ordering,
-                                actor,
-                                object=edge
-                            )
-                    elif v > 1:
-                        raise ValueError("Solution with pass must be implemented")
-        # for (cidx, c) in enumerate(results['send']):
-        #     channel = self['sdf_channels'][cidx]
-        #     for (pidx, p) in enumerate(c):
-        #         sender = self.cores[pidx]
-        #         for (ppidx, pp) in enumerate(p):
-        #             reciever = self.cores[ppidx]
-        #             for (t, v) in enumerate(pp):
-        #                 pass
+                        )
+                        new_model.add_edge(ordering, c, object=new_edge)
         return new_model
 
 
@@ -740,8 +767,7 @@ class SDFToMultiCoreCharacterized(DecisionModel, MinizincAble):
         cores = self.sdf_mpsoc_sub.cores
         data = self.sdf_mpsoc_sub.get_mzn_data()
         # remake the wcet and wcct with proper data
-        data['max_steps'] = len(sdf_actors) // len(cores)
-        data['max_steps'] += 1 if len(sdf_actors) % len(cores) > 0 else 0
+        data['max_steps'] = self.sdf_mpsoc_sub.max_steps
         data['wcet'] = self.expanded_wcet.tolist()
         data['token_wcct'] = self.expanded_token_wcct.tolist()
         data['objective_weights'] = [
@@ -750,100 +776,8 @@ class SDFToMultiCoreCharacterized(DecisionModel, MinizincAble):
         ]
         return data
 
-    def rebuild_forsyde_model_actors(self, results, model):
-        sdf_actors = self.sdf_mpsoc_sub.sdf_orders_sub.sdf_exec_sub.sdf_actors
-        sdf_channels = self.sdf_mpsoc_sub.sdf_orders_sub.sdf_exec_sub.sdf_channels
-        orderings_enum = self.sdf_mpsoc_sub.sdf_orders_sub.orderings_enum
-        cores_enum = self.sdf_mpsoc_sub.cores_enum
-
-
     def rebuild_forsyde_model(self, results):
-        new_model = self.covered_model()
-        sdf_actors = self.sdf_mpsoc_sub.sdf_orders_sub.sdf_exec_sub.sdf_actors
-        sdf_channels = self.sdf_mpsoc_sub.sdf_orders_sub.sdf_exec_sub.sdf_channels
-        orderings_enum = self.sdf_mpsoc_sub.sdf_orders_sub.orderings_enum
-        cores_enum = self.sdf_mpsoc_sub.cores_enum
-        for (aidx, a) in enumerate(results['mapped_actors']):
-            actor = sdf_actors[aidx]
-            for (pidx, p) in enumerate(a):
-                ordering = orderings_enum[pidx]
-                core = cores_enum[pidx]
-                for (t, v) in enumerate(p):
-                    if 0 < v and v < 2:
-                        # TODO: fix multiple addition of elements here
-                        if not new_model.has_edge(core, ordering):
-                            exec_port = Port(
-                                'execution',
-                                TypesFactory.build_type('AbstractGrouping'),
-                            )
-                            core.ports.add(exec_port)
-                            new_model.add_edge(
-                                core,
-                                ordering,
-                                object=Edge(
-                                    core,
-                                    ordering,
-                                    exec_port,
-                                    None,
-                                    TypesFactory.build_type('Mapping')
-                                )
-                            )
-                        if not new_model.has_edge(ordering, actor):
-                            ord_port = Port(
-                                identifier = f'slot[{t}]',
-                                port_type = TypesFactory.build_type('Process')
-                            )
-                            ordering.ports.add(ord_port)
-                            new_model.add_edge(
-                                ordering,
-                                actor,
-                                object=Edge(
-                                    ordering,
-                                    actor,
-                                    ord_port,
-                                    None,
-                                    TypesFactory.build_type('Scheduling')
-                                )
-                            )
-                    elif v > 1:
-                        raise ValueError("Solution with pass must be implemented")
-        cores_enum = self.sdf_mpsoc_sub.expanded_cores_enum
-        comm_enum = self.sdf_mpsoc_sub.expanded_comm_enum
-        inv_comm_enum = {v: k for (k, v) in comm_enum.items()}
-        vertex_expansions = self.sdf_mpsoc_sub.vertex_expansions
-        inv_vertex_expansions = {e: k for (k, v) in vertex_expansions.items() for e in v}
-        for (c, cl) in enumerate(results['send_allocation']):
-            channel = sdf_channels[c]
-            for (p, pl) in enumerate(cl):
-                # sender = self['cores'][pidx]
-                for (pp, ppl) in enumerate(pl):
-                    # reciever = self['cores'][ppidx]
-                    for (t, tl) in enumerate(ppl):
-                        for (tt, ttl) in enumerate(tl):
-                            for (u, v) in enumerate(ttl):
-                                expanded_comm = inv_comm_enum[u + len(cores_enum)]
-                                original_comm = inv_vertex_expansions[expanded_comm]
-                                if v > 0:
-                                    # it uses the comm resource
-                                    # look into expansions to figure out slot
-                                    if not new_model.has_edge(ordering, channel):
-                                        ord_port = Port(
-                                            identifier = f'timeslot[{t}]',
-                                            port_type = TypesFactory.build_type('Signal')
-                                        )
-                                        ordering.ports.add(ord_port)
-                                        new_model.add_edge(
-                                            ordering,
-                                            actor,
-                                            object=Edge(
-                                                ordering,
-                                                actor,
-                                                ord_port,
-                                                None,
-                                                TypesFactory.build_type('Scheduling')
-                                            )
-                                        )
-        return new_model
+        return self.sdf_mpsoc_sub.rebuild_forsyde_model(results)
 
 
 @dataclass
@@ -908,7 +842,6 @@ class SDFToMultiCoreCharacterizedJobs(DecisionModel, MinizincAble):
         return data
 
     def rebuild_forsyde_model(self, results):
-        print(results)
         new_model = self.covered_model()
         return new_model
 

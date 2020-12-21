@@ -97,7 +97,6 @@ def cli_entry():
         logger.info('Exploration complete')
     if resulting_model:
         out_model = nx.compose(in_model, resulting_model)
-        print(args.output)
         outputs = [i[0] for i in args.output]\
             if args.output else [f'out_{args.model}']
         for out_file in outputs:

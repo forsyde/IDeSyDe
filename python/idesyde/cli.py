@@ -1,14 +1,14 @@
 import argparse
-import asyncio
 import logging
 import random
 
 import networkx as nx
 from forsyde.io.python import ForSyDeModel
 
-from idesyde.identification import identify_decision_models
-from idesyde.identification import choose_decision_models
-from idesyde.exploration import choose_explorer, MinizincExplorer
+from idesyde.identification.api import identify_decision_models
+from idesyde.identification.api import choose_decision_models
+from idesyde.exploration import choose_explorer
+from idesyde.exploration import MinizincExplorer
 
 
 description = '''

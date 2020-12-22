@@ -3,12 +3,18 @@ import asyncio
 import logging
 import importlib.resources as res
 from enum import Flag, auto
-from typing import Optional, Set, Tuple, List
+from typing import Optional
+from typing import Set
+from typing import Tuple
+from typing import List
 
 from forsyde.io.python import ForSyDeModel
-from minizinc import Model, Solver, Instance
+from minizinc import Model
+from minizinc import Solver
+from minizinc import Instance
 
-from idesyde.identification import DecisionModel, MinizincAble
+from idesyde.identification.interfaces import DecisionModel
+from idesyde.identification.interfaces import MinizincableDecisionModel
 
 logging.basicConfig(filename="minizinc-python.log", level=logging.DEBUG)
 
@@ -87,7 +93,7 @@ class MinizincExplorer(Explorer):
         return True
 
     def can_explore(self, decision_model):
-        return isinstance(decision_model, MinizincAble)
+        return isinstance(decision_model, MinizincableDecisionModel)
 
     def explore(
         self,

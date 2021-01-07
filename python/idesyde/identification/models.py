@@ -161,14 +161,14 @@ class SDFToMultiCore(MinizincableDecisionModel):
         data = self.sdf_orders_sub.get_mzn_data()
         # expanded_units_enum = {**self.expanded_cores_enum, **self.expanded_comm_enum}
         data['procs'] = set(i + 1 for (p, i) in self.expanded_enum.items()
-                            if p.vertex_type.is_refinement(AbstractProcessingElement))
+                            if p.is_type(AbstractProcessingElement))
         data['comm_units'] = set(i + 1 for (c, i) in self.expanded_enum.items()
-                                 if c.vertex_type.is_refinement(AbstractCommunicationElement))
+                                 if c.is_type(AbstractCommunicationElement))
         data['units_neighs'] = [
-            set(expanded_enum[ex.target_vertex] + 1 for (e, el) in self.edge_expansions.items() for ex in el
+            set(self.expanded_enum[ex.target_vertex] + 1 for (e, el) in self.edge_expansions.items() for ex in el
                 if ex.source_vertex == u).union(
-                    set(expanded_enum[ex.source_vertex] + 1 for (e, el) in self.edge_expansions.items() for ex in el
-                        if ex.target_vertex == u)) for (u, uidx) in expanded_enum.items()
+                    set(self.expanded_enum[ex.source_vertex] + 1 for (e, el) in self.edge_expansions.items()
+                        for ex in el if ex.target_vertex == u)) for (u, uidx) in self.expanded_enum.items()
         ]
         # since the minizinc model requires wcet and wcct,
         # we fake it with almost unitary assumption
@@ -186,14 +186,11 @@ class SDFToMultiCore(MinizincableDecisionModel):
         new_model = self.covered_model()
         max_steps = self.max_steps
         sdf_topology = self.sdf_orders_sub.sdf_exec_sub.sdf_topology
-        sdf_actors_enum = self.sdf_orders_sub.sdf_exec_sub.sdf_actors_enum
-        sdf_channels_enum = self.sdf_orders_sub.sdf_exec_sub.sdf_channels_enum
-        inv_sdf_actors_enum = {i: k for (k, i) in sdf_actors_enum.items()}
-        orderings_enum = self.sdf_orders_sub.orderings_enum
-        cores_enum = self.cores_enum
-        inv_orderings_enum = {i: k for (k, i) in orderings_enum.items()}
-        for (core, pidx) in cores_enum.items():
-            ordering = inv_orderings_enum[pidx]
+        sdf_actors = self.sdf_orders_sub.sdf_exec_sub.sdf_actors
+        sdf_channels = self.sdf_orders_sub.sdf_exec_sub.sdf_channels
+        orderings = self.sdf_orders_sub.orderings
+        for (pidx, core) in enumerate(self.cores):
+            ordering = orderings[pidx]
             if not new_model.has_edge(core, ordering, key="object"):
                 new_edge = Edge(source_vertex=core,
                                 target_vertex=ordering,
@@ -205,10 +202,10 @@ class SDFToMultiCore(MinizincableDecisionModel):
             for t in range(max_steps):
                 sdf_pass = sdfapi.get_PASS(
                     sdf_topology,
-                    np.array([[results["mapped_actors"][a][pidx][t] for a in sdf_actors_enum.values()]]).transpose(),
-                    np.array([[results["buffer_start"][c][pidx][t] for c in sdf_channels_enum.values()]]).transpose())
+                    np.array([[results["mapped_actors"][a][pidx][t] for a in range(len(sdf_actors))]]).transpose(),
+                    np.array([[results["buffer_start"][c][pidx][t] for c in range(len(sdf_channels)]]).transpose())
                 for aidx in sdf_pass:
-                    actor = inv_sdf_actors_enum[aidx]
+                    actor = sdf_actors[aidx]
                     if not new_model.has_edge(ordering, actor, key="object"):
                         new_edge = Edge(source_vertex=ordering,
                                         target_vertex=actor,
@@ -217,12 +214,11 @@ class SDFToMultiCore(MinizincableDecisionModel):
                                         edge_type=TypesFactory.build_type("Scheduling"))
                         new_model.add_edge(ordering, actor, object=new_edge)
                         slot += 1
-        comm_enum = self.comm_enum
-        expanded_comm_enum = self.expanded_comm_enum
         vertex_expansions = self.vertex_expansions
-        for (comm, commidx) in comm_enum.items():
+        expanded_enum = self.expanded_enum
+        for (commidx, comm) in enumerate(self.busses):
             slot_expansions = vertex_expansions[comm]
-            ordering = inv_orderings_enum[commidx]
+            ordering = orderings[commidx + len(self.cores)]
             if not new_model.has_edge(comm, ordering, key="object"):
                 new_edge = Edge(source_vertex=comm,
                                 target_vertex=ordering,
@@ -230,11 +226,11 @@ class SDFToMultiCore(MinizincableDecisionModel):
                                                         port_type=TypesFactory.build_type('AbstractOrdering')),
                                 edge_type=TypesFactory.build_type("Mapping"))
                 new_model.add_edge(comm, ordering, object=new_edge)
-            for (c, cidx) in sdf_channels_enum.items():
+            for (cidx, c) in enumerate(sdf_channels):
                 for slot in slot_expansions:
                     # shift ocmmunication elemnets to zero due to to way minizinc
                     # return its results
-                    slotidx = expanded_comm_enum[slot] - max(cores_enum.values()) - 1
+                    slotidx = expanded_enum[slot] - max(cores_enum.values()) - 1
                     if any((results['send_allocation'][cidx][p][pp][t][tt][slotidx] > 0
                             for p in cores_enum.values()
                             for pp in cores_enum.values()

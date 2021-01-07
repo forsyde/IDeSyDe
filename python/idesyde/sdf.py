@@ -2,10 +2,10 @@ from typing import List, Optional, Dict, Tuple
 
 import numpy as np
 
+
 def get_PASS(sdf_topology: np.ndarray,
              repetition_vector: np.ndarray,
-             initial_tokens: Optional[np.ndarray] = None
-             ) -> List[int]:
+             initial_tokens: Optional[np.ndarray] = None) -> List[int]:
     '''Returns the PASS of a SDF graph
 
     The calculation follows almost exactly what is dictated in the
@@ -55,9 +55,6 @@ def check_sdf_consistency(sdf_topology) -> bool:
     return False
 
 
-def sdf_to_hsdf(
-        sdf_topology: np.ndarray,
-        repetition_vector: np.ndarray,
-        initial_tokens: np.ndarray
-        ) -> Tuple[Dict[int, List[int]], np.ndarray]:
+def sdf_to_hsdf(sdf_topology: np.ndarray, repetition_vector: np.ndarray,
+                initial_tokens: np.ndarray) -> Tuple[Dict[int, List[int]], np.ndarray]:
     pass

@@ -17,9 +17,7 @@ from idesyde.identification.models import SDFToMultiCoreCharacterizedJobs
 class SDFExecRule(IdentificationRule):
     def identify(self, model, identified):
         res = None
-        sdf_actors = [
-            a for a in model.adj[c] for c in model.vertexes_by_type(SDFComb) if a.vertex_type.is_refinement(Process)
-        ]
+        sdf_actors = [a for a in model.adj[c] for c in model.vertexes_by_type(SDFComb) if a.is_type(Process)]
         sdf_channels = [c for c in model.vertexes_by_type(Signal) if any(c in model.adj[a] for a in sdf_actors)]
         sdf_topology = np.zeros((len(sdf_channels), len(sdf_actors)), dtype=int)
         for (a_index, actor) in enumerate(sdf_actors):

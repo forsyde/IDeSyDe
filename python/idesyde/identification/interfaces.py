@@ -1,4 +1,3 @@
-import abc
 import importlib.resources as resources
 from dataclasses import dataclass
 from typing import Union
@@ -9,9 +8,9 @@ from typing import Dict
 from typing import Iterable
 from typing import Any
 
-from forsyde.io.python import ForSyDeModel
-from forsyde.io.python import Vertex
-from forsyde.io.python import Edge
+from forsyde.io.python.api import ForSyDeModel
+from forsyde.io.python.core import Vertex
+from forsyde.io.python.core import Edge
 from minizinc import Model as MznModel
 from minizinc import Instance as MznInstance
 from minizinc import Result as MznResult
@@ -78,11 +77,7 @@ class DecisionModel(object):
         for v in self.covered_vertexes():
             model.add_node(v, label=v.identifier)
         for e in self.covered_edges():
-            model.add_edge(
-                e.source_vertex,
-                e.target_vertex,
-                data=e
-            )
+            model.add_edge(e.source_vertex, e.target_vertex, data=e)
         return model
 
     def dominates(self, other: "DecisionModel") -> bool:
@@ -129,10 +124,7 @@ class MinizincableDecisionModel(DecisionModel):
         '''
         return dict()
 
-    def populate_mzn_model(
-            self,
-            model: Union[MznModel, MznInstance]
-    ) -> Union[MznModel, MznInstance]:
+    def populate_mzn_model(self, model: Union[MznModel, MznInstance]) -> Union[MznModel, MznInstance]:
         '''Populate a minizinc model data dictionary
 
         Returns:
@@ -154,10 +146,7 @@ class MinizincableDecisionModel(DecisionModel):
         '''
         return ""
 
-    def rebuild_forsyde_model(
-        self,
-        result: MznResult
-    ) -> ForSyDeModel:
+    def rebuild_forsyde_model(self, result: MznResult) -> ForSyDeModel:
         '''Reconstruct a ForSyDeIO Model from the DecisionModel
 
         Returns:
@@ -167,9 +156,7 @@ class MinizincableDecisionModel(DecisionModel):
         '''
         return ForSyDeModel()
 
-    def build_mzn_model(self,
-                        mzn: Union[MznModel, MznInstance] = MznModel()
-                        ) -> Union[MznModel, MznInstance]:
+    def build_mzn_model(self, mzn: Union[MznModel, MznInstance] = MznModel()) -> Union[MznModel, MznInstance]:
         '''Builds the memory representaton of the minizinc model
 
         It uses the minizinc models packaged inside the python modules
@@ -179,10 +166,7 @@ class MinizincableDecisionModel(DecisionModel):
             Minzinc model populated with the information that the
             decision model can fill.
         '''
-        model_txt = resources.read_text(
-            'idesyde.minizinc',
-            self.get_mzn_model_name()
-        )
+        model_txt = resources.read_text('idesyde.minizinc', self.get_mzn_model_name())
         mzn.add_string(model_txt)
         self.populate_mzn_model(mzn)
         return mzn
@@ -198,11 +182,7 @@ class IdentificationRule(object):
     available at a given run.
     """
 
-    def identify(
-            self,
-            model: ForSyDeModel,
-            identified: Set[DecisionModel]
-    ) -> Tuple[bool, Optional[DecisionModel]]:
+    def identify(self, model: ForSyDeModel, identified: Set[DecisionModel]) -> Tuple[bool, Optional[DecisionModel]]:
         """Perform identification procedure and obtain a new Decision Model
 
         This class function analyses the given design model (ForSyDe Model)

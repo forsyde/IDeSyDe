@@ -2,14 +2,13 @@ import argparse
 import logging
 import random
 
+import forsyde.io.python.api as forsyde_io
 import networkx as nx
-from forsyde.io.python import ForSyDeModel
 
 from idesyde.identification.api import identify_decision_models
 from idesyde.identification.api import choose_decision_models
 from idesyde.exploration import choose_explorer
 from idesyde.exploration import MinizincExplorer
-
 
 description = '''
   ___  ___        ___        ___
@@ -23,13 +22,8 @@ Automated Identification and Exlopration of Design Spaces in ForSyDe
 
 
 def cli_entry():
-    parser = argparse.ArgumentParser(
-        description=description,
-        formatter_class=argparse.RawDescriptionHelpFormatter
-    )
-    parser.add_argument('model',
-                        type=str,
-                        help='Input ForSyDe-IO model to DeSyDe')
+    parser = argparse.ArgumentParser(description=description, formatter_class=argparse.RawDescriptionHelpFormatter)
+    parser.add_argument('model', type=str, help='Input ForSyDe-IO model to DeSyDe')
     parser.add_argument('--verbosity',
                         type=str,
                         default="INFO",
@@ -42,7 +36,8 @@ def cli_entry():
                         Note that capitalization is done internally, so
                         info and INFO are equally valid.
                         ''')
-    parser.add_argument('-o', '--output',
+    parser.add_argument('-o',
+                        '--output',
                         type=str,
                         action='append',
                         nargs=1,
@@ -68,12 +63,10 @@ def cli_entry():
     logger.setLevel(getattr(logging, args.verbosity.upper(), 'INFO'))
     consoleLogHandler = logging.StreamHandler()
     consoleLogHandler.setLevel(getattr(logging, args.verbosity.upper(), 'INFO'))
-    consoleLogHandler.setFormatter(
-        logging.Formatter('[{levelname:<8}{asctime}] {message}', style='{')
-    )
+    consoleLogHandler.setFormatter(logging.Formatter('[{levelname:<8}{asctime}] {message}', style='{'))
     logger.addHandler(consoleLogHandler)
     logger.debug('Arguments parsed')
-    in_model = ForSyDeModel.from_file(args.model)
+    in_model = forsyde_io.load_model(args.model)
     logger.info('Model parsed')
     logger.debug('DeSyDeR API created')
     identified = identify_decision_models(in_model)

@@ -1,8 +1,14 @@
 import networkx as nx
-import networkx as nx
 import numpy as np
 import sympy
-from forsyde.io.python import Vertex
+from forsyde.io.python.core import Vertex
+from forsyde.io.python.types import SDFCombType
+from forsyde.io.python.types import ProcessType
+from forsyde.io.python.types import SignalType
+from forsyde.io.python.types import AbstractOrderingType
+from forsyde.io.python.types import AbstractProcessingComponentType
+from forsyde.io.python.types import AbstractCommunicationComponentType
+from forsyde.io.python.types import WCETType
 
 import idesyde.math as mathutil
 import idesyde.sdf as sdfapi
@@ -15,20 +21,32 @@ from idesyde.identification.models import SDFToMultiCoreCharacterizedJobs
 
 
 class SDFExecRule(IdentificationRule):
+
     def identify(self, model, identified):
         res = None
-        sdf_actors = [a for a in model.adj[c] for c in model.vertexes_by_type(SDFComb) if a.is_type(Process)]
-        sdf_channels = [c for c in model.vertexes_by_type(Signal) if any(c in model.adj[a] for a in sdf_actors)]
+        constructors = [c for c in model.get_vertexes(SDFCombType.get_instance())]
+        sdf_actors = [
+            a for c in constructors for a in model.adj[c] if a.is_type(ProcessType.get_instance())
+        ]
+        sdf_channels = [
+            c for c in model.get_vertexes(SignalType.get_instance()) if any(c in model.adj[a] for a in sdf_actors)
+        ]
         sdf_topology = np.zeros((len(sdf_channels), len(sdf_actors)), dtype=int)
         for (a_index, actor) in enumerate(sdf_actors):
+            constructor = next(c for c in constructors if actor in model.adj[c])
             for (c_index, channel) in enumerate(sdf_channels):
                 # channel is in the forwards path, therefore written to
-                if channel in model.adj[actor]:
-                    tokens = int(actor.properties["production"][channel.identifier])
+                # TODO: Fix here!!!
+                for (edix, edata, extra) in model.edges[actor, channel]:
+                    print(extra)
+                    edge = edata['object']
+                    print(edge)
+                if channel in model[actor]:
+                    tokens = int(constructor.properties["production"][channel.identifier])
                     sdf_topology[c_index, a_index] = tokens
                 # channel is in the backwards path, therefore read from
                 elif actor in model.adj[channel]:
-                    tokens = -int(actor.properties["consumption"][channel.identifier])
+                    tokens = -int(constructor.properties["consumption"][channel.identifier])
                     sdf_topology[c_index, a_index] = tokens
         null_space = sympy.Matrix(sdf_topology).nullspace()
         if len(null_space) == 1:
@@ -53,11 +71,12 @@ class SDFExecRule(IdentificationRule):
 
 
 class SDFOrderRule(IdentificationRule):
+
     def identify(self, model, identified):
         res = None
         sdf_exec_sub = next((p for p in identified if isinstance(p, SDFExecution)), None)
         if sdf_exec_sub:
-            orderings = list(model.vertexes_by_type(AbstractOrdering))
+            orderings = list(model.get_vertexes(AbstractOrderingType.get_instance()))
             if orderings:
                 res = SDFToOrders(sdf_exec_sub=sdf_exec_sub, orderings=orderings)
         # conditions for fixpoints and partial identification
@@ -71,15 +90,16 @@ class SDFOrderRule(IdentificationRule):
 
 
 class SDFToCoresRule(IdentificationRule):
+
     def identify(self, model, identified):
         res = None
         sdf_orders_sub = next((p for p in identified if isinstance(p, SDFToOrders)), None)
         if sdf_orders_sub:
             undirected = nx.to_undirected(model)
-            cores = list(model.vertexes_by_type(AbstractProcessingElement))
+            cores = list(model.get_vertexes(AbstractProcessingComponentType.get_instance()))
             # connects to any processor
             busses = [
-                c for c in model.vertexes_by_type(AbstractCommunicationElement) if any(
+                c for c in model.get_vertexes(AbstractCommunicationComponentType.get_instance()) if any(
                     nx.has_path(undirected, p, c) for p in cores)
             ]
             # this strange code access the in memory vertexes
@@ -111,6 +131,7 @@ class SDFToCoresRule(IdentificationRule):
 
 
 class SDFToCoresCharacterizedRule(IdentificationRule):
+
     def identify(self, model, identified):
         res = None
         sdf_mpsoc_sub = next((p for p in identified if isinstance(p, SDFToMultiCore)), None)
@@ -119,37 +140,42 @@ class SDFToCoresCharacterizedRule(IdentificationRule):
             sdf_channels = sdf_mpsoc_sub.sdf_orders_sub.sdf_exec_sub.sdf_channels
             cores = sdf_mpsoc_sub.cores
             busses = sdf_mpsoc_sub.busses
-            units = cores.union(busses)
+            units = cores + busses
+            wcet_vertexes = list(model.get_vertexes(WCETType.get_instance()))
+            token_wcct_vertexes = list(model.get_vertexes(WCCTType.get_instance()))
             wcet = None
             token_wcct = None
-            count_wcet: int = next(model.query_view('count_wcet'))['count']
-            count_token_wcct: int = next(model.query_view('count_token_signal_wcct'))['count']
-            if count_wcet == len(cores) * len(sdf_actors):
+            # information is available for all actors and channels
+            info_actors_is_ok = all(
+                any(a in model.adj[w] and p in model.adj[w] for w in wcet_vertexes) for a in sdf_actors for p in cores)
+            info_channels_is_ok = all(
+                any(c in model.adj[w] and u in model.adj[w] for w in token_wcct_vertexes) for c in sdf_channels
+                for u in units)
+            if info_actors_is_ok and info_channels_is_ok:
                 wcet = np.zeros((
                     len(cores),
                     len(sdf_actors),
-                ), dtype=int)
-                for row in model.query_view('wcet'):
-                    app_index = next(idx for (idx, v) in enumerate(sdf_actors) if v.identifier == row['app_id'])
-                    plat_index = next(idx for (idx, v) in enumerate(cores) if v.identifier == row['plat_id'])
-                    wcet[app_index, plat_index] = int(row['wcet_time'])
-            if count_token_wcct == len(sdf_channels) * len(busses):
+                ), dtype=int, fill_value=np.inf)
+                for w in wcet_vertexes:
+                    for (adix, a) in enumerate(v in model.adj[w] for v in sdf_actors):
+                        for (pidx, p) in enumerate(v in model.adj[w] for v in cores):
+                            wcet[aidx, pidx] = int(w.properties['time'])
                 token_wcct = np.zeros((len(sdf_channels), len(units)), dtype=int)
-                for row in model.query_view('signal_token_wcct'):
-                    signal_index = next(idx for (idx, v) in enumerate(sdf_channels) if v.identifier == row['signal_id'])
-                    comm_index = next(idx for (idx, v) in enumerate(units) if v.identifier == row['comm_id'])
-                    token_wcct[signal_index, comm_index] = int(row['wcct_time'])
+                for w in token_wcct_vertexes:
+                    for (cidx, c) in enumerate(v in model.adj[w] for v in sdf_channels):
+                        for (uidx, u) in enumerate(v in model.adj[w] for v in units):
+                            token_wcct[cidx, udix] = int(w.properties['time'])
             # although there should be only one Th vertex
             # per application, we apply maximun just in case
             # someone forgot to make sure there is only one annotation
             # per application
-            goals_vertexes = set(model.query_vertexes('min_throughput'))
+            goals_vertexes = list(model.get_vertexes(GoalType.get_instance()))
+            throughput_vertexes = [v for v in goals_vertexes if v.is_type(MinimunThroughputType.get_instance())]
             throughput_importance = 0
-            throughput_targets = list(model.query_vertexes('min_throughput_targets'))
-            if all(v in throughput_targets for v in sdf_actors):
-                throughput_importance = max(
-                    (int(v.properties['apriori_importance']) for v in model.query_vertexes('min_throughput')),
-                    default=0)
+            # check that all actors are covered by a throughput goal
+            if all(any(a in x.node_connected_component(model, g) for g in throughput_vertexes) for a in sdf_actors):
+                throughput_importance = max((int(v.properties['apriori_importance']) for v in throughput_vertexes),
+                                            default=0)
             if wcet is not None and token_wcct is not None:
                 res = SDFToMultiCoreCharacterized(sdf_mpsoc_sub=sdf_mpsoc_sub,
                                                   wcet_vertexes=set(model.query_vertexes('wcet')),
@@ -169,6 +195,7 @@ class SDFToCoresCharacterizedRule(IdentificationRule):
 
 
 class SDFMulticoreToJobsRule(IdentificationRule):
+
     def identify(self, model, identified):
         res = None
         sdf_mpsoc_char_sub = next((p for p in identified if isinstance(p, SDFToMultiCoreCharacterized)), None)

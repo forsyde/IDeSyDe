@@ -1,8 +1,13 @@
 import networkx as nx
 import numpy as np
 import sympy
+from typing import List
+from typing import Dict
+from typing import Tuple
+
 from forsyde.io.python.core import Vertex
 from forsyde.io.python.types import SDFCombType
+from forsyde.io.python.types import SDFDelayType
 from forsyde.io.python.types import ProcessType
 from forsyde.io.python.types import SignalType
 from forsyde.io.python.types import AbstractOrderingType
@@ -20,27 +25,62 @@ from idesyde.identification.models import SDFToMultiCoreCharacterized
 from idesyde.identification.models import SDFToMultiCoreCharacterizedJobs
 
 
-class SDFExecRule(IdentificationRule):
+class SDFAppRule(IdentificationRule):
 
     def identify(self, model, identified):
-        res = None
+        '''This Rule identifies (H)SDF applications that are valid
+
+        To be valid, the (H)SDF applications must:
+            1. The topology matrix must have a null space of dimension 1,
+                if there exists at least one channel in the application.
+            2. There must be a PASS for the application.
+        '''
+        result = None
         constructors = [c for c in model.get_vertexes(SDFCombType.get_instance())]
-        sdf_actors = [
-            a for c in constructors for a in model.adj[c] if a.is_type(ProcessType.get_instance())
+        delay_constructors = [c for c in model.get_vertexes(SDFDelayType.get_instance())]
+        # 1: find the actors
+        sdf_actors: List[Vertex] = [
+            a for c in constructors for a in model.adj[c]
+            if a.is_type(ProcessType.get_instance())
         ]
-        sdf_channels = [
-            c for c in model.get_vertexes(SignalType.get_instance()) if any(c in model.adj[a] for a in sdf_actors)
+        # 1: find the delays
+        sdf_delays: List[Vertex] = [
+            a for c in delay_constructors for a in model.adj[c]
+            if a.is_type(ProcessType.get_instance())
         ]
+        # 1: get connected signals
+        sdf_channels: List[Tuple[Vertex, Vertex, List[Vertex]]] = [
+            (s, t, [])
+            for s in sdf_actors
+            for t in sdf_actors
+            if s != t
+        ]
+        # 1: check the model for the paths between actors
+        for (cidx, (s, t, _)) in enumerate(sdf_channels):
+            for path in nx.all_simple_paths(model, s, t):
+                # check if all elements in the path are signals or delays
+                if all(
+                        v.is_type(SignalType.get_instance()) or
+                        v in sdf_delays
+                        for v in path
+                ):
+                    sdf_channels[cidx] = (s, t, path)
+        # 1: remove all pre-built sdf channels that are empty
+        sdf_channels = [(s, t, e) for (s, t, e) in sdf_channels if e]
+        # 2: define the initial tokens by counting the delays on every path
+        initial_tokens = np.array(
+            [len(v for v in p if v in sdf_delays) for (_, _, p) in sdf_channels],
+            dtype=int
+        )
+        # 1: build the topology matrix
         sdf_topology = np.zeros((len(sdf_channels), len(sdf_actors)), dtype=int)
         for (a_index, actor) in enumerate(sdf_actors):
             constructor = next(c for c in constructors if actor in model.adj[c])
             for (c_index, channel) in enumerate(sdf_channels):
                 # channel is in the forwards path, therefore written to
-                # TODO: Fix here!!!
+                # TODO: Fix here!!! Not ready for production!
                 for (edix, edata, extra) in model.edges[actor, channel]:
-                    print(extra)
                     edge = edata['object']
-                    print(edge)
                 if channel in model[actor]:
                     tokens = int(constructor.properties["production"][channel.identifier])
                     sdf_topology[c_index, a_index] = tokens
@@ -48,6 +88,7 @@ class SDFExecRule(IdentificationRule):
                 elif actor in model.adj[channel]:
                     tokens = -int(constructor.properties["consumption"][channel.identifier])
                     sdf_topology[c_index, a_index] = tokens
+        # 1.4 calculate the null space
         null_space = sympy.Matrix(sdf_topology).nullspace()
         if len(null_space) == 1:
             repetition_vector = mathutil.integralize_vector(null_space[0])
@@ -57,15 +98,15 @@ class SDFExecRule(IdentificationRule):
             schedule = sdfapi.get_PASS(sdf_topology, repetition_vector, initial_tokens)
             if schedule != []:
                 sdf_pass = [sdf_actors[idx] for idx in schedule]
-                res = SDFExecution(sdf_actors=sdf_actors,
+                result = SDFExecution(sdf_actors=sdf_actors,
                                    sdf_channels=sdf_channels,
                                    sdf_topology=sdf_topology,
                                    sdf_repetition_vector=repetition_vector,
                                    sdf_pass=sdf_pass)
         # conditions for fixpoints and partial identification
-        if res:
-            res.compute_deduced_properties()
-            return (True, res)
+        if result:
+            result.compute_deduced_properties()
+            return (True, result)
         else:
             return (False, None)
 
@@ -223,5 +264,5 @@ class SDFMulticoreToJobsRule(IdentificationRule):
 
 
 _standard_rules_classes = [
-    SDFExecRule, SDFOrderRule, SDFToCoresRule, SDFToCoresCharacterizedRule, SDFMulticoreToJobsRule
+    SDFAppRule, SDFOrderRule, SDFToCoresRule, SDFToCoresCharacterizedRule, SDFMulticoreToJobsRule
 ]

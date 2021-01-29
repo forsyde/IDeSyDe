@@ -37,9 +37,11 @@ class SDFExecution(DecisionModel):
     """
 
     sdf_actors: List[Vertex] = field(default_factory=list)
-    sdf_channels: List[Vertex] = field(default_factory=set)
+    sdf_delays: List[Vertex] = field(default_factory=list)
+    sdf_channels: List[Tuple[Vertex, Vertex, List[Vertex]]] = field(default_factory=list)
     sdf_topology: np.ndarray = np.zeros((0, 0))
     sdf_repetition_vector: np.ndarray = np.zeros((0))
+    sdf_initial_tokens: np.ndarray = np.zeros((0))
     sdf_pass: List[Vertex] = field(default_factory=list)
 
     sdf_max_tokens: np.ndarray = np.zeros((0))

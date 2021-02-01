@@ -7,7 +7,7 @@ from typing import Tuple
 
 from forsyde.io.python.core import Vertex
 from forsyde.io.python.types import SDFCombType
-from forsyde.io.python.types import SDFDelayType
+from forsyde.io.python.types import SDFPrefixType
 from forsyde.io.python.types import ProcessType
 from forsyde.io.python.types import SignalType
 from forsyde.io.python.types import AbstractOrderingType
@@ -37,7 +37,7 @@ class SDFAppRule(IdentificationRule):
         '''
         result = None
         constructors = [c for c in model.get_vertexes(SDFCombType.get_instance())]
-        delay_constructors = [c for c in model.get_vertexes(SDFDelayType.get_instance())]
+        delay_constructors = [c for c in model.get_vertexes(SDFPrefixType.get_instance())]
         # 1: find the actors
         sdf_actors: List[Vertex] = [
             a for c in constructors for a in model.adj[c]

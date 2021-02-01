@@ -3,12 +3,20 @@ import asyncio
 import logging
 import importlib.resources as res
 from enum import Flag, auto
-from typing import Optional, Set, Tuple, List
+from typing import Optional
+from typing import Set
+from typing import Tuple
+from typing import List
 
-from forsyde.io.python import ForSyDeModel
-from minizinc import Model, Solver, Instance
+from forsyde.io.python.api import ForSyDeModel
+from minizinc import Model
+from minizinc import Solver
+from minizinc import Instance
 
-from idesyde.identification import DecisionModel, MinizincAble
+from idesyde.identification.interfaces import DecisionModel
+from idesyde.identification.interfaces import MinizincableDecisionModel
+
+logging.basicConfig(filename="minizinc-python.log", level=logging.DEBUG)
 
 
 class ExplorerCriteria(Flag):
@@ -47,18 +55,11 @@ class Explorer(abc.ABC):
         return False
 
     @abc.abstractmethod
-    async def explore(
-        self,
-        decision_model: DecisionModel
-    ) -> Optional[ForSyDeModel]:
+    async def explore(self, decision_model: DecisionModel) -> Optional[ForSyDeModel]:
         return None
 
     @abc.abstractmethod
-    def dominates(
-        self,
-        other: "Explorer",
-        decision_model: DecisionModel
-    ) -> Tuple[int, int]:
+    def dominates(self, other: "Explorer", decision_model: DecisionModel) -> Tuple[int, int]:
         '''Get comparison information regarding efficiency and completude
 
         Returns:
@@ -74,6 +75,9 @@ class Explorer(abc.ABC):
         '''
         return (0, 0)
 
+    def short_name(self) -> str:
+        return str(self.__class__.__name__)
+
 
 class MinizincExplorer(Explorer):
 
@@ -82,26 +86,13 @@ class MinizincExplorer(Explorer):
         return True
 
     def can_explore(self, decision_model):
-        return isinstance(decision_model, MinizincAble)
+        return isinstance(decision_model, MinizincableDecisionModel)
 
-    def explore(
-        self,
-        decision_model,
-        backend_solver_name='gecode'
-    ):
+    def explore(self, decision_model, backend_solver_name='gecode'):
         loop = asyncio.get_event_loop()
-        return loop.run_until_complete(
-            self.explore_async(
-                decision_model,
-                backend_solver_name
-            )
-        )
+        return loop.run_until_complete(self.explore_async(decision_model, backend_solver_name))
 
-    async def explore_async(
-        self,
-        decision_model,
-        backend_solver_name='gecode'
-    ):
+    async def explore_async(self, decision_model, backend_solver_name='gecode'):
         mzn_model_name = decision_model.get_mzn_model_name()
         mzn_model_str = res.read_text('idesyde.minizinc', mzn_model_name)
         mzn_model = Model()
@@ -121,17 +112,11 @@ def _get_standard_explorers() -> Set[Explorer]:
     return set(s() for s in Explorer.__subclasses__())
 
 
-def choose_explorer(
-    decision_models: List[DecisionModel],
-    explorers: Set[Explorer] = _get_standard_explorers(),
-    criteria: ExplorerCriteria = ExplorerCriteria.COMPLETE
-) -> List[Tuple[Explorer, DecisionModel]]:
+def choose_explorer(decision_models: List[DecisionModel],
+                    explorers: Set[Explorer] = _get_standard_explorers(),
+                    criteria: ExplorerCriteria = ExplorerCriteria.COMPLETE) -> List[Tuple[Explorer, DecisionModel]]:
     if criteria & ExplorerCriteria.COMPLETE:
-        dominant = [
-            (e, m) for e in explorers
-            for m in decision_models
-            if e.can_explore(m)
-        ]
+        dominant = [(e, m) for e in explorers for m in decision_models if e.can_explore(m)]
         length = len(dominant)
         length_before = None
         while length != length_before:
@@ -140,10 +125,7 @@ def choose_explorer(
                 (e, m) for (e, m) in dominant
                 # keep only the (e,m) that are not dominates by anyone else for m.
                 # [0] comes from the fact that we look only at completude
-                if not any(
-                    o.dominates(e, m)[0] for (o, om) in dominant
-                    if m == om and o != e
-                )
+                if not any(o.dominates(e, m)[0] for (o, om) in dominant if m == om and o != e)
             ]
             length = len(dominant)
         return dominant

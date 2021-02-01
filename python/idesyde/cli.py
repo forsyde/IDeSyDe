@@ -1,16 +1,17 @@
 import argparse
-import asyncio
 import logging
+import random
 
+import forsyde.io.python.api as forsyde_io
 import networkx as nx
-from forsyde.io.python import ForSyDeModel
 
-from idesyde.identification import identify_decision_models
-from idesyde.identification import choose_decision_models
+from idesyde.identification.api import identify_decision_models
+from idesyde.identification.api import choose_decision_models
 from idesyde.exploration import choose_explorer
+from idesyde.exploration import MinizincExplorer
 
 description = '''
-  ___  ___        ___        ___       
+  ___  ___        ___        ___
  |_ _||   \  ___ / __| _  _ |   \  ___ 
   | | | |) |/ -_)\__ \| || || |) |/ -_)
  |___||___/ \___||___/ \_, ||___/ \___|
@@ -21,10 +22,8 @@ Automated Identification and Exlopration of Design Spaces in ForSyDe
 
 
 def cli_entry():
-    parser = argparse.ArgumentParser(description=description)
-    parser.add_argument('model',
-                        type=str,
-                        help='Input ForSyDe-IO model to DeSyDe')
+    parser = argparse.ArgumentParser(description=description, formatter_class=argparse.RawDescriptionHelpFormatter)
+    parser.add_argument('model', type=str, help='Input ForSyDe-IO model to DeSyDe')
     parser.add_argument('--verbosity',
                         type=str,
                         default="INFO",
@@ -37,7 +36,8 @@ def cli_entry():
                         Note that capitalization is done internally, so
                         info and INFO are equally valid.
                         ''')
-    parser.add_argument('-o', '--output',
+    parser.add_argument('-o',
+                        '--output',
                         type=str,
                         action='append',
                         nargs=1,
@@ -45,49 +45,51 @@ def cli_entry():
                         Output files, which can be another model or
                         graph visualization formats.
                         ''')
-    parser.add_argument('-q', '--quiet',
-                        action='store_true',
+    parser.add_argument('--decision-model',
+                        action='append',
+                        nargs=1,
                         help='''
-                        Skip printing logo, version and name.
+                        Filter decision model to match these short names.
+                        ''')
+    parser.add_argument('--mzn-solver',
+                        type=str,
+                        default='gecode',
+                        help='''
+                        Minizinc solver to be used for decision models
+                        that are solved by them.
                         ''')
     args = parser.parse_args()
-    if not args.quiet:
-        print(description)
     logger = logging.getLogger('CLI')
-    logger.setLevel(
-        getattr(logging, args.verbosity.upper(), 'INFO')
-    )
+    logger.setLevel(getattr(logging, args.verbosity.upper(), 'INFO'))
     consoleLogHandler = logging.StreamHandler()
-    consoleLogHandler.setLevel(
-        getattr(logging, args.verbosity.upper(), 'INFO')
-    )
-    consoleLogHandler.setFormatter(
-        logging.Formatter('[%(levelname)s\t%(asctime)s] %(message)s')
-    )
+    consoleLogHandler.setLevel(getattr(logging, args.verbosity.upper(), 'INFO'))
+    consoleLogHandler.setFormatter(logging.Formatter('[{levelname:<8}{asctime}] {message}', style='{'))
     logger.addHandler(consoleLogHandler)
     logger.debug('Arguments parsed')
-    in_model = ForSyDeModel.from_file(args.model)
+    in_model = forsyde_io.load_model(args.model)
     logger.info('Model parsed')
     logger.debug('DeSyDeR API created')
     identified = identify_decision_models(in_model)
     logger.info(f'{len(identified)} Decision model(s) identified')
     logger.debug(f"Decision models identified: {identified}")
-    models_chosen = choose_decision_models(identified)
+    desired_names = [i[0] for i in args.decision_model] if args.decision_model else []
+    models_chosen = choose_decision_models(identified, desired_names=desired_names)
     logger.info(f'{len(models_chosen)} Decision model(s) chosen')
     explorer_and_models = choose_explorer(models_chosen)
     logger.info(f'{len(explorer_and_models)} Explorer(s) and Model(s) chosen')
-    model_decisions = None
-    if len(explorer_and_models) == 0:
-        print('No model or explorer could be chosen. Exiting')
-    elif len(explorer_and_models) == 1:
-        (e, m) = explorer_and_models[0]  # there is only one.
-        logger.info('Initiating design space exploration')
-        model_decisions = e.explore(m)
-        logger.info('Design space explored')
-    else:
-        print('More than one chosen model and explorer. Exiting')
-    if model_decisions:
-        out_model = nx.compose(in_model, model_decisions)
+    resulting_model = None
+    if len(explorer_and_models) > 0:
+        if len(explorer_and_models) > 1:
+            logger.warn("More than one explorer and model chosen. Picking one randomly")
+        (explorer, model) = random.choice(explorer_and_models)
+        logger.info(f'Exploring {model.short_name()} with {explorer.short_name()}')
+        if isinstance(explorer, MinizincExplorer):
+            resulting_model = explorer.explore(model, backend_solver_name=args.mzn_solver)
+        else:
+            resulting_model = explorer.explore(model)
+        logger.info('Exploration complete')
+    if resulting_model:
+        out_model = nx.compose(in_model, resulting_model)
         outputs = [i[0] for i in args.output]\
             if args.output else [f'out_{args.model}']
         for out_file in outputs:

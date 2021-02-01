@@ -1,7 +1,7 @@
 from setuptools import find_packages, setup
 
 setup(name='idesyde',
-      version='0.1.2',
+      version='0.1.4',
       description='Analytical Design Space Exploration for ForSyDe',
       url='http://github.com/rojods/idesyde',
       author='Rodolfo Jordao',
@@ -10,14 +10,6 @@ setup(name='idesyde',
       python_requires='>=3.7',
       include_package_data=True,
       packages=find_packages(),
-      install_requires=[
-          'forsyde-io-python',
-          'minizinc',
-          'numpy'
-      ],
-      entry_points={
-          "console_scripts": [
-              "idesyde = idesyde.cli:cli_entry"
-          ]
-      },
+      install_requires=['forsyde-io-python', 'minizinc', 'numpy'],
+      entry_points={"console_scripts": ["idesyde = idesyde.cli:cli_entry"]},
       zip_safe=True)

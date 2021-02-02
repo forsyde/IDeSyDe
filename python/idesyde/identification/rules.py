@@ -6,17 +6,17 @@ from typing import Dict
 from typing import Tuple
 
 from forsyde.io.python.core import Vertex
-from forsyde.io.python.types import SDFCombType
-from forsyde.io.python.types import SDFPrefixType
-from forsyde.io.python.types import ProcessType
-from forsyde.io.python.types import SignalType
-from forsyde.io.python.types import AbstractOrderingType
-from forsyde.io.python.types import AbstractProcessingComponentType
-from forsyde.io.python.types import AbstractCommunicationComponentType
-from forsyde.io.python.types import WCETType
+from forsyde.io.python.types import SDFComb
+from forsyde.io.python.types import SDFPrefix
+from forsyde.io.python.types import Process
+from forsyde.io.python.types import Signal
+from forsyde.io.python.types import AbstractOrdering
+from forsyde.io.python.types import AbstractProcessingComponent
+from forsyde.io.python.types import AbstractCommunicationComponent
+from forsyde.io.python.types import WCET
 
-import idesyde.math as mathutil
-import idesyde.sdf as sdfapi
+import idesyde.math as math_util
+import idesyde.sdf as sdf_lib
 from idesyde.identification.interfaces import IdentificationRule
 from idesyde.identification.models import SDFExecution
 from idesyde.identification.models import SDFToOrders
@@ -28,50 +28,33 @@ from idesyde.identification.models import SDFToMultiCoreCharacterizedJobs
 class SDFAppRule(IdentificationRule):
 
     def identify(self, model, identified):
-        '''This Rule identifies (H)SDF applications that are valid
+        '''This Rule identifies (H)SDF applications that are consistent.
 
-        To be valid, the (H)SDF applications must:
+        To be consistent, the (H)SDF applications must:
             1. The topology matrix must have a null space of dimension 1,
                 if there exists at least one channel in the application.
             2. There must be a PASS for the application.
         '''
         result = None
-        constructors = [c for c in model.get_vertexes(SDFCombType.get_instance())]
-        delay_constructors = [c for c in model.get_vertexes(SDFPrefixType.get_instance())]
+        constructors = [c for c in model if isinstance(c, SDFComb)]
+        delay_constructors = [c for c in model if isinstance(c, SDFPrefix)]
         # 1: find the actors
-        sdf_actors: List[Vertex] = [
-            a for c in constructors for a in model.adj[c]
-            if a.is_type(ProcessType.get_instance())
-        ]
+        sdf_actors: List[Vertex] = [a for c in constructors for a in model.adj[c] if isinstance(a, Process)]
         # 1: find the delays
-        sdf_delays: List[Vertex] = [
-            a for c in delay_constructors for a in model.adj[c]
-            if a.is_type(ProcessType.get_instance())
-        ]
+        sdf_delays: List[Vertex] = [a for c in delay_constructors for a in model.adj[c] if isinstance(a, Process)]
         # 1: get connected signals
-        sdf_channels: List[Tuple[Vertex, Vertex, List[Vertex]]] = [
-            (s, t, [])
-            for s in sdf_actors
-            for t in sdf_actors
-            if s != t
-        ]
+        sdf_channels: List[Tuple[Vertex, Vertex,
+                                 List[Vertex]]] = [(s, t, []) for s in sdf_actors for t in sdf_actors if s != t]
         # 1: check the model for the paths between actors
         for (cidx, (s, t, _)) in enumerate(sdf_channels):
             for path in nx.all_simple_paths(model, s, t):
                 # check if all elements in the path are signals or delays
-                if all(
-                        v.is_type(SignalType.get_instance()) or
-                        v in sdf_delays
-                        for v in path
-                ):
+                if all(v.is_type(Signal.get_instance()) or v in sdf_delays for v in path):
                     sdf_channels[cidx] = (s, t, path)
         # 1: remove all pre-built sdf channels that are empty
         sdf_channels = [(s, t, e) for (s, t, e) in sdf_channels if e]
         # 2: define the initial tokens by counting the delays on every path
-        initial_tokens = np.array(
-            [len(v for v in p if v in sdf_delays) for (_, _, p) in sdf_channels],
-            dtype=int
-        )
+        initial_tokens = np.array([len(v for v in p if v in sdf_delays) for (_, _, p) in sdf_channels], dtype=int)
         # 1: build the topology matrix
         sdf_topology = np.zeros((len(sdf_channels), len(sdf_actors)), dtype=int)
         for (a_index, actor) in enumerate(sdf_actors):
@@ -88,21 +71,24 @@ class SDFAppRule(IdentificationRule):
                 elif actor in model.adj[channel]:
                     tokens = -int(constructor.properties["consumption"][channel.identifier])
                     sdf_topology[c_index, a_index] = tokens
-        # 1.4 calculate the null space
+        # 1: calculate the null space
         null_space = sympy.Matrix(sdf_topology).nullspace()
         if len(null_space) == 1:
-            repetition_vector = mathutil.integralize_vector(null_space[0])
+            # 2: transform the vector into the least integer multiple possible
+            repetition_vector = math_util.integralize_vector(null_space[0])
+            # 2: cast it to a numpy
             repetition_vector = np.array(repetition_vector, dtype=int)
-            # TODO: this must be fixed since it always assumes zero tokens!
-            initial_tokens = np.zeros((sdf_topology.shape[0], 1))
-            schedule = sdfapi.get_PASS(sdf_topology, repetition_vector, initial_tokens)
+            # 2: calculate a PASS!
+            schedule = sdf_lib.get_PASS(sdf_topology, repetition_vector, initial_tokens)
+            # and if it exists, create the model with the schedule
             if schedule != []:
                 sdf_pass = [sdf_actors[idx] for idx in schedule]
                 result = SDFExecution(sdf_actors=sdf_actors,
-                                   sdf_channels=sdf_channels,
-                                   sdf_topology=sdf_topology,
-                                   sdf_repetition_vector=repetition_vector,
-                                   sdf_pass=sdf_pass)
+                                      sdf_channels=sdf_channels,
+                                      sdf_topology=sdf_topology,
+                                      sdf_repetition_vector=repetition_vector,
+                                      sdf_initial_tokens=initial_tokens,
+                                      sdf_pass=sdf_pass)
         # conditions for fixpoints and partial identification
         if result:
             result.compute_deduced_properties()
@@ -112,12 +98,17 @@ class SDFAppRule(IdentificationRule):
 
 
 class SDFOrderRule(IdentificationRule):
+    '''This Rule Identifies possible parallel ordered schedules atop 'SDFExecution'.
+
+    Since only the ordered schedules are considered, the "time" in the resulting
+    model is still abstract.
+    '''
 
     def identify(self, model, identified):
         res = None
         sdf_exec_sub = next((p for p in identified if isinstance(p, SDFExecution)), None)
         if sdf_exec_sub:
-            orderings = list(model.get_vertexes(AbstractOrderingType.get_instance()))
+            orderings = [o for o in model if isinstance(o, AbstractOrdering)]
             if orderings:
                 res = SDFToOrders(sdf_exec_sub=sdf_exec_sub, orderings=orderings)
         # conditions for fixpoints and partial identification
@@ -137,10 +128,11 @@ class SDFToCoresRule(IdentificationRule):
         sdf_orders_sub = next((p for p in identified if isinstance(p, SDFToOrders)), None)
         if sdf_orders_sub:
             undirected = nx.to_undirected(model)
-            cores = list(model.get_vertexes(AbstractProcessingComponentType.get_instance()))
+            cores = [p for p in model if isinstance(p, AbstractProcessingComponent)]
+            comms = [p for p in model if isinstance(p, AbstractCommunicationComponent)]
             # connects to any processor
             busses = [
-                c for c in model.get_vertexes(AbstractCommunicationComponentType.get_instance()) if any(
+                c for c in model.get_vertexes(AbstractCommunicationComponent.get_instance()) if any(
                     nx.has_path(undirected, p, c) for p in cores)
             ]
             # this strange code access the in memory vertexes
@@ -182,8 +174,8 @@ class SDFToCoresCharacterizedRule(IdentificationRule):
             cores = sdf_mpsoc_sub.cores
             busses = sdf_mpsoc_sub.busses
             units = cores + busses
-            wcet_vertexes = list(model.get_vertexes(WCETType.get_instance()))
-            token_wcct_vertexes = list(model.get_vertexes(WCCTType.get_instance()))
+            wcet_vertexes = list(model.get_vertexes(WCET.get_instance()))
+            token_wcct_vertexes = list(model.get_vertexes(WCCT.get_instance()))
             wcet = None
             token_wcct = None
             # information is available for all actors and channels
@@ -210,8 +202,8 @@ class SDFToCoresCharacterizedRule(IdentificationRule):
             # per application, we apply maximun just in case
             # someone forgot to make sure there is only one annotation
             # per application
-            goals_vertexes = list(model.get_vertexes(GoalType.get_instance()))
-            throughput_vertexes = [v for v in goals_vertexes if v.is_type(MinimunThroughputType.get_instance())]
+            goals_vertexes = list(model.get_vertexes(Goal.get_instance()))
+            throughput_vertexes = [v for v in goals_vertexes if v.is_type(MinimunThroughput.get_instance())]
             throughput_importance = 0
             # check that all actors are covered by a throughput goal
             if all(any(a in x.node_connected_component(model, g) for g in throughput_vertexes) for a in sdf_actors):

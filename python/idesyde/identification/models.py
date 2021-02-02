@@ -8,11 +8,18 @@ from typing import List
 import numpy as np
 
 import idesyde.sdf as sdfapi
-from forsyde.io.python import ForSyDeModel
-from forsyde.io.python import Vertex
-from forsyde.io.python import Edge
-from forsyde.io.python import Port
-from forsyde.io.python.types import TypesFactory
+from forsyde.io.python.api import ForSyDeModel
+from forsyde.io.python.core import Vertex
+from forsyde.io.python.core import Edge
+from forsyde.io.python.core import Port
+from forsyde.io.python.types import SDFCombType
+from forsyde.io.python.types import ProcessType
+from forsyde.io.python.types import SignalType
+from forsyde.io.python.types import AbstractOrderingType
+from forsyde.io.python.types import MappingType
+from forsyde.io.python.types import SchedulingType
+from forsyde.io.python.types import AbstractProcessingComponentType
+from forsyde.io.python.types import AbstractCommunicationComponentType
 from idesyde.identification.interfaces import DecisionModel
 from idesyde.identification.interfaces import MinizincableDecisionModel
 
@@ -29,16 +36,15 @@ class SDFExecution(DecisionModel):
     SDF topology and the PASS with all elements included.
     """
 
-    sdf_actors: Set[Vertex] = field(default_factory=set)
-    sdf_channels: Set[Vertex] = field(default_factory=set)
+    sdf_actors: List[Vertex] = field(default_factory=list)
+    sdf_delays: List[Vertex] = field(default_factory=list)
+    sdf_channels: List[Tuple[Vertex, Vertex, List[Vertex]]] = field(default_factory=list)
     sdf_topology: np.ndarray = np.zeros((0, 0))
     sdf_repetition_vector: np.ndarray = np.zeros((0))
+    sdf_initial_tokens: np.ndarray = np.zeros((0))
     sdf_pass: List[Vertex] = field(default_factory=list)
 
     sdf_max_tokens: np.ndarray = np.zeros((0))
-
-    sdf_actors_enum: Dict[Vertex, int] = field(default_factory=dict)
-    sdf_channels_enum: Dict[Vertex, int] = field(default_factory=dict)
 
     def covered_vertexes(self):
         yield from self.sdf_actors
@@ -47,10 +53,8 @@ class SDFExecution(DecisionModel):
     def compute_deduced_properties(self):
         self.max_tokens = np.zeros((len(self.sdf_channels)), dtype=int)
         for (cidx, c) in enumerate(self.sdf_channels):
-            self.max_tokens[cidx] = max(
-                self.sdf_topology[cidx, aidx] * self.sdf_repetition_vector[aidx]
-                for (aidx, a) in enumerate(self.sdf_actors)
-            )
+            self.max_tokens[cidx] = max(self.sdf_topology[cidx, aidx] * self.sdf_repetition_vector[aidx]
+                                        for (aidx, a) in enumerate(self.sdf_actors))
 
 
 @dataclass
@@ -60,9 +64,7 @@ class SDFToOrders(MinizincableDecisionModel):
     sdf_exec_sub: SDFExecution = SDFExecution()
 
     # partial identification
-    orderings: Set[Vertex] = field(default_factory=set)
-
-    orderings_enum: Dict[Vertex, int] = field(default_factory=dict)
+    orderings: List[Vertex] = field(default_factory=list)
 
     def covered_vertexes(self):
         yield from self.orderings
@@ -74,14 +76,14 @@ class SDFToOrders(MinizincableDecisionModel):
     def get_mzn_data(self):
         data = dict()
         sub = self.sdf_exec_sub
-        data['sdf_actors'] = range(1, len(sub.sdf_actors)+1)
-        data['sdf_channels'] = range(1, len(sub.sdf_channels)+1)
+        data['sdf_actors'] = range(1, len(sub.sdf_actors) + 1)
+        data['sdf_channels'] = range(1, len(sub.sdf_channels) + 1)
         data['sdf_topology'] = sub.sdf_topology.tolist()
         data['max_steps'] = len(sub.sdf_pass) // len(self.orderings)
         data['max_steps'] += 1 if len(sub.sdf_pass) % len(self.orderings) > 0 else 0
         data['max_tokens'] = sub.max_tokens.tolist()
         data['activations'] = sub.sdf_repetition_vector[:, 0].tolist()
-        data['static_orders'] = range(1, len(self.orderings)+1)
+        data['static_orders'] = range(1, len(self.orderings) + 1)
         # TODO: find a awya to compute the initial tokens
         # reliably
         data['initial_tokens'] = [0 for c in sub.sdf_channels]
@@ -101,29 +103,17 @@ class SDFToMultiCore(MinizincableDecisionModel):
     sdf_orders_sub: SDFToOrders = SDFToOrders()
 
     # partially identified
-    cores: Set[Vertex] = field(default_factory=set)
-    busses: Set[Vertex] = field(default_factory=set)
+    cores: List[Vertex] = field(default_factory=list)
+    busses: List[Vertex] = field(default_factory=list)
     connections: List[Edge] = field(default_factory=list)
 
     # deduced properties
-    vertex_expansions: Dict[Vertex, List[Vertex]] = field(
-        default_factory=dict
-    )
-    edge_expansions: Dict[Edge, List[Edge]] = field(
-        default_factory=dict
-    )
-    cores_enum: Dict[Vertex, int] = field(
-        default_factory=dict
-    )
-    comm_enum: Dict[Vertex, int] = field(
-        default_factory=dict
-    )
-    expanded_cores_enum: Dict[Vertex, int] = field(
-        default_factory=dict
-    )
-    expanded_comm_enum: Dict[Vertex, int] = field(
-        default_factory=dict
-    )
+    vertex_expansions: Dict[Vertex, List[Vertex]] = field(default_factory=dict)
+    edge_expansions: Dict[Edge, List[Edge]] = field(default_factory=dict)
+    # cores_enum: Dict[Vertex, int] = field(default_factory=dict)
+    # comm_enum: Dict[Vertex, int] = field(default_factory=dict)
+    # expanded_cores_enum: Dict[Vertex, int] = field(default_factory=dict)
+    expanded_enum: Dict[Vertex, int] = field(default_factory=dict)
     max_steps: int = 1
 
     def covered_vertexes(self):
@@ -136,27 +126,21 @@ class SDFToMultiCore(MinizincableDecisionModel):
 
     def compute_deduced_properties(self):
         self.sdf_orders_sub.compute_deduced_properties()
-        vertex_expansions = {p: set([p]) for p in self.cores}
-        edge_expansions = {e: set() for e in self.connections}
-        cores_enum = {p: i for (i, p) in enumerate(self.cores)}
-        expanded_cores_enum = {p: i for (i, p) in enumerate(self.cores)}
+        vertex_expansions = {p: [p] for p in self.cores}
+        edge_expansions = {e: [] for e in self.connections}
+        expanded_enum = {p: i for (i, p) in enumerate(self.cores)}
         # expand all TDMAs to their slot elements
-        comm_enum = dict()
-        expanded_comm_enum = dict()
-        units_enum_index = len(cores_enum)
+        units_enum_index = len(expanded_enum)
         for (i, bus) in enumerate(self.busses):
-            comm_enum[bus] = i + len(cores_enum)
-            vertex_expansions[bus] = set()
+            vertex_expansions[bus] = []
             for s in range(bus.properties['slots']):
-                bus_slot = Vertex(
-                    identifier=f'{bus.identifier}_slot_{s}'
-                )
-                expanded_comm_enum[bus_slot] = units_enum_index
-                vertex_expansions[bus].add(bus_slot)
+                bus_slot = Vertex(identifier=f'{bus.identifier}_slot_{s}')
+                expanded_enum[bus_slot] = units_enum_index
+                vertex_expansions[bus].append(bus_slot)
                 units_enum_index += 1
         firings = int(np.sum(self.sdf_orders_sub.sdf_exec_sub.sdf_repetition_vector))
-        max_steps = firings // len(expanded_cores_enum)
-        if firings % len(expanded_cores_enum) > 0:
+        max_steps = firings // len(self.cores)
+        if firings % len(self.cores) > 0:
             max_steps += 1
         # now go through all the connections and
         # create copies of them as necessary to accomodate
@@ -167,53 +151,34 @@ class SDFToMultiCore(MinizincableDecisionModel):
                     if e.source_vertex == v and e.target_vertex == o:
                         for v_new in l:
                             for o_new in ol:
-                                expanded_e = Edge(
-                                    source_vertex=v_new,
-                                    target_vertex=o_new,
-                                    edge_type=e.edge_type
-                                )
+                                expanded_e = Edge(source_vertex=v_new, target_vertex=o_new, edge_type=e.edge_type)
                                 edge_expansions[e].add(expanded_e)
         self.vertex_expansions = vertex_expansions
         self.edge_expansions = edge_expansions
-        self.expanded_cores_enum = expanded_cores_enum
-        self.expanded_comm_enum = expanded_comm_enum
-        self.cores_enum = cores_enum
-        self.comm_enum = comm_enum
+        self.expanded_enum = expanded_enum
+        # self.expanded_comm_enum = expanded_comm_enum
+        # self.cores_enum = cores_enum
+        # self.comm_enum = comm_enum
         self.max_steps = max_steps
 
     def get_mzn_data(self):
         data = self.sdf_orders_sub.get_mzn_data()
-        expanded_units_enum = {
-            **self.expanded_cores_enum,
-            **self.expanded_comm_enum
-        }
-        data['procs'] = set(i+1 for i in self.expanded_cores_enum.values())
-        data['comm_units'] = set(i+1 for i in self.expanded_comm_enum.values())
+        # expanded_units_enum = {**self.expanded_cores_enum, **self.expanded_comm_enum}
+        data['procs'] = set(i + 1 for (p, i) in self.expanded_enum.items()
+                            if p.is_type(AbstractProcessingComponentType))
+        data['comm_units'] = set(i + 1 for (c, i) in self.expanded_enum.items()
+                                 if c.is_type(AbstractCommunicationComponentType))
         data['units_neighs'] = [
-            set(
-                expanded_units_enum[ex.target_vertex]+1
-                for (e, el) in self.edge_expansions.items()
-                for ex in el
-                if ex.source_vertex == u
-            ).union(
-                set(
-                    expanded_units_enum[ex.source_vertex]+1
-                    for (e, el) in self.edge_expansions.items()
-                    for ex in el
-                    if ex.target_vertex == u
-                ))
-            for (u, uidx) in expanded_units_enum.items()
+            set(self.expanded_enum[ex.target_vertex] + 1 for (e, el) in self.edge_expansions.items() for ex in el
+                if ex.source_vertex == u).union(
+                    set(self.expanded_enum[ex.source_vertex] + 1 for (e, el) in self.edge_expansions.items()
+                        for ex in el if ex.target_vertex == u)) for (u, uidx) in self.expanded_enum.items()
         ]
         # since the minizinc model requires wcet and wcct,
         # we fake it with almost unitary assumption
-        data['wcet'] = (data['max_tokens'] * np.ones((
-            len(data['sdf_actors']),
-            len(self.cores)
-        ), dtype=int)).tolist()
-        data['token_wcct'] = (np.ones((
-            len(data['sdf_channels']),
-            len(data['procs']) + len(data['comm_units'])
-        ), dtype=int)).tolist()
+        data['wcet'] = (data['max_tokens'] * np.ones((len(data['sdf_actors']), len(self.cores)), dtype=int)).tolist()
+        data['token_wcct'] = (np.ones((len(data['sdf_channels']), len(data['procs']) + len(data['comm_units'])),
+                                      dtype=int)).tolist()
         # since the minizinc model requires objective weights,
         # we just disconsder them
         data['objective_weights'] = [0, 0]
@@ -225,88 +190,56 @@ class SDFToMultiCore(MinizincableDecisionModel):
         new_model = self.covered_model()
         max_steps = self.max_steps
         sdf_topology = self.sdf_orders_sub.sdf_exec_sub.sdf_topology
-        sdf_actors_enum = self.sdf_orders_sub.sdf_exec_sub.sdf_actors_enum
-        sdf_channels_enum = self.sdf_orders_sub.sdf_exec_sub.sdf_channels_enum
-        inv_sdf_actors_enum = {i: k for (k, i) in sdf_actors_enum.items()}
-        orderings_enum = self.sdf_orders_sub.orderings_enum
-        cores_enum = self.cores_enum
-        inv_orderings_enum = {i: k for (k, i) in orderings_enum.items()}
-        for (core, pidx) in cores_enum.items():
-            ordering = inv_orderings_enum[pidx]
+        sdf_actors = self.sdf_orders_sub.sdf_exec_sub.sdf_actors
+        sdf_channels = self.sdf_orders_sub.sdf_exec_sub.sdf_channels
+        orderings = self.sdf_orders_sub.orderings
+        for (pidx, core) in enumerate(self.cores):
+            ordering = orderings[pidx]
             if not new_model.has_edge(core, ordering, key="object"):
-                new_edge = Edge(
-                    source_vertex=core,
-                    target_vertex=ordering,
-                    source_vertex_port=Port(
-                        identifier="execution",
-                        port_type=TypesFactory.build_type('AbstractOrdering')
-                    ),
-                    edge_type=TypesFactory.build_type("Mapping")
-                )
+                new_edge = Edge(source_vertex=core,
+                                target_vertex=ordering,
+                                source_vertex_port=Port(identifier="execution", port_type=AbstractOrderingType()),
+                                edge_type=MappingType())
                 new_model.add_edge(core, ordering, object=new_edge)
             slot = 0
             for t in range(max_steps):
                 sdf_pass = sdfapi.get_PASS(
                     sdf_topology,
-                    np.array([[
-                        results["mapped_actors"][a][pidx][t]
-                        for a in sdf_actors_enum.values()
-                    ]]).transpose(),
-                    np.array([[
-                        results["buffer_start"][c][pidx][t]
-                        for c in sdf_channels_enum.values()
-                    ]]).transpose()
-                )
+                    np.array([[results["mapped_actors"][a][pidx][t] for a in range(len(sdf_actors))]]).transpose(),
+                    np.array([[results["buffer_start"][c][pidx][t] for c in range(len(sdf_channels))]]).transpose())
                 for aidx in sdf_pass:
-                    actor = inv_sdf_actors_enum[aidx]
+                    actor = sdf_actors[aidx]
                     if not new_model.has_edge(ordering, actor, key="object"):
-                        new_edge = Edge(
-                            source_vertex=ordering,
-                            target_vertex=actor,
-                            source_vertex_port=Port(
-                                identifier=f"slot[{slot}]",
-                                port_type=TypesFactory.build_type("Process")
-                            ),
-                            edge_type=TypesFactory.build_type("Scheduling")
-                        )
+                        new_edge = Edge(source_vertex=ordering,
+                                        target_vertex=actor,
+                                        source_vertex_port=Port(identifier=f"slot[{slot}]", port_type=ProcessType()),
+                                        edge_type=SchedulingType())
                         new_model.add_edge(ordering, actor, object=new_edge)
                         slot += 1
-        comm_enum = self.comm_enum
-        expanded_comm_enum = self.expanded_comm_enum
         vertex_expansions = self.vertex_expansions
-        for (comm, commidx) in comm_enum.items():
+        expanded_enum = self.expanded_enum
+        for (commidx, comm) in enumerate(self.busses):
             slot_expansions = vertex_expansions[comm]
-            ordering = inv_orderings_enum[commidx]
+            ordering = orderings[commidx + len(self.cores)]
             if not new_model.has_edge(comm, ordering, key="object"):
-                new_edge = Edge(
-                    source_vertex=comm,
-                    target_vertex=ordering,
-                    source_vertex_port=Port(
-                        identifier="timeslots",
-                        port_type=TypesFactory.build_type('AbstractOrdering')
-                    ),
-                    edge_type=TypesFactory.build_type("Mapping")
-                )
+                new_edge = Edge(source_vertex=comm,
+                                target_vertex=ordering,
+                                source_vertex_port=Port(identifier="timeslots", port_type=AbstractOrderingType()),
+                                edge_type=MappingType())
                 new_model.add_edge(comm, ordering, object=new_edge)
-            for (c, cidx) in sdf_channels_enum.items():
-                for slot in slot_expansions:
-                    # shift ocmmunication elemnets to zero due to to way minizinc
-                    # return its results
-                    slotidx = expanded_comm_enum[slot] - max(cores_enum.values()) - 1
-                    if any((results['send_allocation'][cidx][p][pp][t][tt][slotidx] > 0
-                            for p in cores_enum.values()
-                            for pp in cores_enum.values()
+            for (cidx, c) in enumerate(sdf_channels):
+                for (slotidx, slot) in enumerate(slot_expansions):
+                    unitidx = expanded_enum[slot]
+                    if any((results['send_allocation'][cidx][p][pp][t][tt][unitidx] > 0
+                            for (pidx, p) in enumerate(self.cores)
+                            for (ppidx, pp) in enumerate(self.cores)
                             for t in range(max_steps)
                             for tt in range(max_steps)))\
                             and not new_model.has_edge(ordering, c, key="object"):
-                        new_edge = Edge(
-                            source_vertex=ordering,
-                            target_vertex=c,
-                            source_vertex_port=Port(
-                                identifier=f"slot[{slotidx}]"
-                            ),
-                            edge_type=TypesFactory.build_type("Scheduling")
-                        )
+                        new_edge = Edge(source_vertex=ordering,
+                                        target_vertex=c,
+                                        source_vertex_port=Port(identifier=f"slot[{slotidx}]"),
+                                        edge_type=SchedulingType())
                         new_model.add_edge(ordering, c, object=new_edge)
         return new_model
 
@@ -318,9 +251,9 @@ class SDFToMultiCoreCharacterized(MinizincableDecisionModel):
     sdf_mpsoc_sub: SDFToMultiCore = SDFToMultiCore()
 
     # elements that are partially identified
-    wcet_vertexes: Set[Vertex] = field(default_factory=set)
-    token_wcct_vertexes: Set[Vertex] = field(default_factory=set)
-    goals_vertexes: Set[Vertex] = field(default_factory=set)
+    wcet_vertexes: List[Vertex] = field(default_factory=list)
+    token_wcct_vertexes: List[Vertex] = field(default_factory=list)
+    goals_vertexes: List[Vertex] = field(default_factory=list)
     wcet: np.ndarray = np.array((0, 0), dtype=int)
     token_wcct: np.ndarray = np.zeros((0, 0))
     throughput_importance: int = 0
@@ -342,40 +275,23 @@ class SDFToMultiCoreCharacterized(MinizincableDecisionModel):
         sdf_actors = self.sdf_mpsoc_sub.sdf_orders_sub.sdf_exec_sub.sdf_actors
         sdf_channels = self.sdf_mpsoc_sub.sdf_orders_sub.sdf_exec_sub.sdf_channels
         vertex_expansions = self.sdf_mpsoc_sub.vertex_expansions
-        units_enum = {
-            **self.sdf_mpsoc_sub.cores_enum,
-            **self.sdf_mpsoc_sub.comm_enum
-        }
-        expanded_units_enum = {
-            **self.sdf_mpsoc_sub.expanded_cores_enum,
-            **self.sdf_mpsoc_sub.expanded_comm_enum,
-        }
-        cores_enum = self.sdf_mpsoc_sub.cores_enum
-        expanded_cores_enum = self.sdf_mpsoc_sub.expanded_cores_enum
-        expanded_wcet = np.zeros(
-            (
-                len(sdf_actors),
-                len(expanded_cores_enum)
-            ),
-            dtype=int
-        )
+        cores = self.sdf_mpsoc_sub.cores
+        busses = self.sdf_mpsoc_sub.busses
+        expanded_enum = self.sdf_mpsoc_sub.expanded_enum
+        expanded_wcet = np.zeros((len(sdf_actors), sum(len(l) for (v, l) in vertex_expansions.items() if v in cores)),
+                                 dtype=int)
         for (aidx, a) in enumerate(sdf_actors):
-            for (e, eidx) in cores_enum.items():
-                for ex in vertex_expansions[e]:
-                    exidx = expanded_units_enum[ex]
-                    expanded_wcet[aidx, exidx] = self.wcet[aidx, eidx]
+            for (pidx, p) in enumerate(cores):
+                for ex in vertex_expansions[p]:
+                    exidx = expanded_enum[ex]
+                    expanded_wcet[aidx, exidx] = self.wcet[aidx, pidx]
         expanded_token_wcct = np.zeros(
-            (
-                len(sdf_channels),
-                len(expanded_units_enum)
-            ),
-            dtype=int
-        )
+            (len(sdf_channels), sum(len(l) for (v, l) in vertex_expansions.items() if v in busses)), dtype=int)
         for (cidx, c) in enumerate(sdf_channels):
-            for (e, eidx) in units_enum.items():
-                for ex in vertex_expansions[e]:
-                    exidx = expanded_units_enum[ex]
-                    expanded_token_wcct[cidx, exidx] = self.token_wcct[cidx, eidx]
+            for (bidx, b) in enumerate(busses):
+                for ex in vertex_expansions[b]:
+                    exidx = expanded_enum[ex]
+                    expanded_token_wcct[cidx, exidx] = self.token_wcct[cidx, bidx]
         self.expanded_wcet = expanded_wcet
         # self.expanded_wcct = expanded_wcct
         self.expanded_token_wcct = expanded_token_wcct
@@ -389,10 +305,7 @@ class SDFToMultiCoreCharacterized(MinizincableDecisionModel):
         data['max_steps'] = self.sdf_mpsoc_sub.max_steps
         data['wcet'] = self.expanded_wcet.tolist()
         data['token_wcct'] = self.expanded_token_wcct.tolist()
-        data['objective_weights'] = [
-            self.throughput_importance,
-            self.latency_importance
-        ]
+        data['objective_weights'] = [self.throughput_importance, self.latency_importance]
         return data
 
     def rebuild_forsyde_model(self, results):
@@ -406,7 +319,7 @@ class SDFToMultiCoreCharacterizedJobs(MinizincableDecisionModel):
     sdf_mpsoc_char_sub: SDFToMultiCoreCharacterized = SDFToMultiCoreCharacterized()
 
     # properties
-    jobs: Set[Vertex] = field(default_factory=set)
+    jobs: List[Vertex] = field(default_factory=list)
     jobs_actors: Dict[Vertex, Tuple[Vertex, int]] = field(default_factory=dict)
 
     def covered_vertexes(self):
@@ -419,11 +332,9 @@ class SDFToMultiCoreCharacterizedJobs(MinizincableDecisionModel):
         # use the non faked part of the covered problem
         # to save some code
         data = self.sdf_mpsoc_char_sub.get_mzn_data()
-        data['jobs'] = set(int(i)+1 for (i, v) in enumerate(self.jobs))
+        data['jobs'] = set(int(i) + 1 for (i, v) in enumerate(self.jobs))
         # data['activations'] = self['sdf_repetition_vector'][:, 0].tolist()
-        data['jobs_actors'] = [
-            int(aidx)+1 for (k, (actor, aidx)) in self.jobs_actors.items()
-        ]
+        data['jobs_actors'] = [int(aidx) + 1 for (k, (actor, aidx)) in self.jobs_actors.items()]
         # delete spurious elements
         data.pop('max_steps')
         data.pop('activations')

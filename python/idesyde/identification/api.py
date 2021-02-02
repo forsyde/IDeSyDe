@@ -6,7 +6,7 @@ from typing import Set
 from typing import List
 
 import idesyde.identification.rules as ident_rules
-from forsyde.io.python import ForSyDeModel
+from forsyde.io.python.api import ForSyDeModel
 from idesyde.identification.interfaces import DecisionModel
 from idesyde.identification.interfaces import IdentificationRule
 
@@ -23,15 +23,11 @@ class ChoiceCriteria(Flag):
 
 
 def _get_standard_rules() -> Set[IdentificationRule]:
-    return set(
-        r_class() for r_class in ident_rules._standard_rules_classes
-    )
+    return set(r_class() for r_class in ident_rules._standard_rules_classes)
 
 
 def identify_decision_models(
-    model: ForSyDeModel,
-    rules: Set[IdentificationRule] = _get_standard_rules()
-) -> List[DecisionModel]:
+    model: ForSyDeModel, rules: Set[IdentificationRule] = _get_standard_rules()) -> List[DecisionModel]:
     '''
     This function runs the Design Space Identification scheme,
     as presented in paper [DSI-DATE'2021], so that problems can
@@ -58,11 +54,9 @@ def identify_decision_models(
     return identified
 
 
-def identify_decision_models_parallel(
-    model: ForSyDeModel,
-    rules: Set[IdentificationRule] = _get_standard_rules(),
-    concurrent_idents: int = os.cpu_count() or 1
-) -> List[DecisionModel]:
+def identify_decision_models_parallel(model: ForSyDeModel,
+                                      rules: Set[IdentificationRule] = _get_standard_rules(),
+                                      concurrent_idents: int = os.cpu_count() or 1) -> List[DecisionModel]:
     '''
     This function runs the Design Space Identification scheme,
     as presented in paper [DSI-DATE'2021], so that problems can
@@ -78,15 +72,11 @@ def identify_decision_models_parallel(
     allowed_rules = [r for r in rules]
     identified: List[DecisionModel] = []
     iterations = 0
-    with concurrent.futures.ProcessPoolExecutor(
-            max_workers=concurrent_idents) as executor:
+    with concurrent.futures.ProcessPoolExecutor(max_workers=concurrent_idents) as executor:
         while len(allowed_rules) > 0 and iterations < max_iterations:
             # generate all trials and keep track of which subproblem
             # made the trial
-            futures = {
-                r: executor.submit(r.identify, model, identified)
-                for r in allowed_rules
-            }
+            futures = {r: executor.submit(r.identify, model, identified) for r in allowed_rules}
             concurrent.futures.wait(futures.values())
             for r in futures:
                 (fixed, subprob) = futures[r].result()
@@ -100,11 +90,9 @@ def identify_decision_models_parallel(
         return identified
 
 
-def choose_decision_models(
-    models: List[DecisionModel],
-    criteria: ChoiceCriteria = ChoiceCriteria.DOMINANCE,
-    desired_names: List[str] = []
-) -> List[DecisionModel]:
+def choose_decision_models(models: List[DecisionModel],
+                           criteria: ChoiceCriteria = ChoiceCriteria.DOMINANCE,
+                           desired_names: List[str] = []) -> List[DecisionModel]:
     '''Filter out decision models based on some criteria
 
     This function enables super identifications to subsume
@@ -133,25 +121,17 @@ def choose_decision_models(
 
 
 async def identify_decision_models_async(
-    model: ForSyDeModel,
-    rules: Set[IdentificationRule] = _get_standard_rules()
-) -> List[DecisionModel]:
+    model: ForSyDeModel, rules: Set[IdentificationRule] = _get_standard_rules()) -> List[DecisionModel]:
     '''
     AsyncIO version of the same function. Wraps the non-async version.
     '''
     return identify_decision_models(model, rules)
 
 
-async def identify_decision_models_parallel_async(
-    model: ForSyDeModel,
-    rules: Set[IdentificationRule] = _get_standard_rules(),
-    concurrent_idents: int = os.cpu_count() or 1
-) -> List[DecisionModel]:
+async def identify_decision_models_parallel_async(model: ForSyDeModel,
+                                                  rules: Set[IdentificationRule] = _get_standard_rules(),
+                                                  concurrent_idents: int = os.cpu_count() or 1) -> List[DecisionModel]:
     '''
     AsyncIO version of the same function. Wraps the non-async version.
     '''
-    return identify_decision_models_parallel(
-        model,
-        rules,
-        concurrent_idents
-    )
+    return identify_decision_models_parallel(model, rules, concurrent_idents)

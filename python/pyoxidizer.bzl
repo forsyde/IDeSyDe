@@ -156,7 +156,7 @@ def make_exe(dist):
     # python_config.run_command = "from desyder.cli import cli_entry; cli_entry()"
 
     # Run a Python module as __main__ when the interpreter starts.
-    python_config.run_module = "desyder.cli"
+    python_config.run_module = "idesyde.cli"
 
     # Run a Python file when the interpreter starts.
     # python_config.run_filename = "/path/to/file"
@@ -165,7 +165,7 @@ def make_exe(dist):
     # resources, and other options. The returned object represents the
     # standalone executable that will be built.
     exe = dist.to_python_executable(
-        name="desyder",
+        name="idesyde",
 
         # If no argument passed, the default `PythonPackagingPolicy` for the
         # distribution is used.

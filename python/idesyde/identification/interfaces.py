@@ -3,6 +3,7 @@ from dataclasses import dataclass
 from typing import Union
 from typing import Tuple
 from typing import Set
+from typing import List
 from typing import Optional
 from typing import Dict
 from typing import Iterable
@@ -105,7 +106,7 @@ class DecisionModel(object):
 class MinizincableDecisionModel(DecisionModel):
     '''DecisionModel Interface that enables consumption by minizinc-based solvers.
 
-    A refinement of the DecisionModle interface, models that satisfy this
+    A refinement of the DecisionModel interface, models that satisfy this
     also must implment a few additional methods that enable automated exploration
     by minizinc-able solvers such as Gecode, Chuffed etc.
     '''
@@ -182,7 +183,7 @@ class IdentificationRule(object):
     available at a given run.
     """
 
-    def identify(self, model: ForSyDeModel, identified: Set[DecisionModel]) -> Tuple[bool, Optional[DecisionModel]]:
+    def identify(self, model: ForSyDeModel, identified: List[DecisionModel]) -> Tuple[bool, Optional[DecisionModel]]:
         """Perform identification procedure and obtain a new Decision Model
 
         This class function analyses the given design model (ForSyDe Model)

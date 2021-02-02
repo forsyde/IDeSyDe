@@ -22,12 +22,12 @@ class ChoiceCriteria(Flag):
     DOMINANCE = auto()
 
 
-def _get_standard_rules() -> Set[IdentificationRule]:
-    return set(r_class() for r_class in ident_rules._standard_rules_classes)
+def _get_standard_rules() -> List[IdentificationRule]:
+    return list(r_class() for r_class in ident_rules._standard_rules_classes)
 
 
 def identify_decision_models(
-    model: ForSyDeModel, rules: Set[IdentificationRule] = _get_standard_rules()) -> List[DecisionModel]:
+    model: ForSyDeModel, rules: List[IdentificationRule] = _get_standard_rules()) -> List[DecisionModel]:
     '''
     This function runs the Design Space Identification scheme,
     as presented in paper [DSI-DATE'2021], so that problems can
@@ -55,7 +55,7 @@ def identify_decision_models(
 
 
 def identify_decision_models_parallel(model: ForSyDeModel,
-                                      rules: Set[IdentificationRule] = _get_standard_rules(),
+                                      rules: List[IdentificationRule] = _get_standard_rules(),
                                       concurrent_idents: int = os.cpu_count() or 1) -> List[DecisionModel]:
     '''
     This function runs the Design Space Identification scheme,
@@ -121,7 +121,7 @@ def choose_decision_models(models: List[DecisionModel],
 
 
 async def identify_decision_models_async(
-    model: ForSyDeModel, rules: Set[IdentificationRule] = _get_standard_rules()) -> List[DecisionModel]:
+    model: ForSyDeModel, rules: List[IdentificationRule] = _get_standard_rules()) -> List[DecisionModel]:
     '''
     AsyncIO version of the same function. Wraps the non-async version.
     '''
@@ -129,7 +129,7 @@ async def identify_decision_models_async(
 
 
 async def identify_decision_models_parallel_async(model: ForSyDeModel,
-                                                  rules: Set[IdentificationRule] = _get_standard_rules(),
+                                                  rules: List[IdentificationRule] = _get_standard_rules(),
                                                   concurrent_idents: int = os.cpu_count() or 1) -> List[DecisionModel]:
     '''
     AsyncIO version of the same function. Wraps the non-async version.

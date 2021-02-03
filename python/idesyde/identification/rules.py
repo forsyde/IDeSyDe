@@ -221,12 +221,11 @@ class SDFToCoresCharacterizedRule(IdentificationRule):
             sdf_channels = sdf_mpsoc_sub.sdf_orders_sub.sdf_exec_sub.sdf_channels
             cores = sdf_mpsoc_sub.cores
             comms = sdf_mpsoc_sub.comms
-            units = cores + comms
             wcet_vertexes = [w for w in model if isinstance(w, WCET)]  # list(model.get_vertexes(WCET.get_instance()))
             token_wcct_vertexes = [w for w in model
                                    if isinstance(w, WCCT)]  # list(model.get_vertexes(WCCT.get_instance()))
             wcet = np.zeros((len(cores), len(sdf_actors)), dtype=int)
-            token_wcct = np.zeros((len(sdf_channels), len(units)), dtype=int)
+            token_wcct = np.zeros((len(sdf_channels), len(comms)), dtype=int)
             # information is available for all actors
             # for all p,a; exists a wcet connected to them
             # actors_characterized = all(

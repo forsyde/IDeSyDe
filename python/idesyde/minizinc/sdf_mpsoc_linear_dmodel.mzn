@@ -10,7 +10,6 @@ set of int: sdf_actors; % not flattened
 set of int: sdf_channels;
 set of int: procs;
 set of int: comms;
-set of int: units = procs union comms;
 
 array[sdf_channels] of int: max_tokens;
 array[sdf_channels] of int: initial_tokens;
@@ -113,15 +112,16 @@ constraint forall(t in steps, c in sdf_channels, p in procs) (
 %     [send_comms[c, p, pp, t, tt, uu] - send_comms[c, p, pp, t, tt, u] | u, uu in comms]
 %   )
 % );
-constraint forall(c in sdf_channels, p, pp in procs, t, tt in steps, u in path[p, pp]) (
-  send_duration[c, p, pp, t, tt, u] = token_wcct[u] * flow[c, p, pp, t, tt]
+constraint forall(c in sdf_channels, p, pp in procs, t, tt in steps, u in comms) (
+  path[p, pp, u] > 0 ->
+  send_duration[c, p, pp, t, tt, u] = token_wcct[c, u] * flow[c, p, pp, t, tt]
 );
 
-constraint forall(c in sdf_channels, p, pp in procs, t, tt in steps, u in path[p, pp]) (
-  flow[c, p, pp, t, tt]
-  start[p, t] + busy_time[p, t] <= send_start[c, p, pp, t, tt, u] /\
-  send_start[c, p, pp, t, tt, u] <= start[pp, tt] 
-);
+% constraint forall(c in sdf_channels, p, pp in procs, t, tt in steps, u in path[p, pp]) (
+%   flow[c, p, pp, t, tt]
+%   start[p, t] + busy_time[p, t] <= send_start[c, p, pp, t, tt, u] /\
+%   send_start[c, p, pp, t, tt, u] <= start[pp, tt] 
+% );
 
 % constraint forall(c in sdf_channels, p, pp in procs, t, tt in steps where p != pp) (
 %   flow[c, p, pp, t, tt] = sum(u in comms where u in units_neighs[p]) 
@@ -146,14 +146,14 @@ constraint forall(p in procs, t in min(steps)+1..max(steps)) (
 
 %% timign with communication
 %% The sum is only reasonably tight if the paths are always fixed between processors!
-constraint forall(c, in sdf_channels, t, tt in steps, p, pp in procs, u in comms) (
+constraint forall(c in sdf_channels, t, tt in steps, p, pp in procs, u in comms) (
   start[p, t] <= send_start[c, p, pp, t, tt, u]
 );
 
-constraint forall(c, in sdf_channels, t, tt in steps, p, pp in procs, u, uu in comms) (
+constraint forall(c in sdf_channels, t, tt in steps, p, pp in procs, u, uu in comms) (
   path[p, pp, u] > 0 /\ path[p, pp, u] = path[p, pp, uu] - 1 ->
   send_start[c, p, pp, t, tt, u] <= send_start[c, p, pp, t, tt, uu]
-)
+);
 
 constraint forall(c in sdf_channels, t, tt in steps, p, pp in procs) (
   flow[c, p, pp, t, tt] > 0 ->

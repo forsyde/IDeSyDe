@@ -94,17 +94,17 @@ class DecisionModel(object):
             True if 'self' dominates other. False otherwise.
         '''
         # other - self
-        # vertexes_other = set(other.covered_vertexes())
-        # vertexes_self = set(self.covered_vertexes())
-        # edges_other = set(other.covered_edges())
-        # edges_self = set(self.covered_edges())
+        vertexes_other = set(other.covered_vertexes())
+        vertexes_self = set(self.covered_vertexes())
+        edges_other = set(other.covered_edges())
+        edges_self = set(self.covered_edges())
         # other is fully contained in self and itersection is consistent
-        return all(v in other.covered_vertexes() for v in self.covered_vertexes())\
-            and all(e in other.covered_edges() for e in self.covered_edges())\
-            and not any(v in self.covered_vertexes() for v in other.covered_vertexes())\
-            and not all(e in self.covered_edges() for e in other.covered_edges())
-        # return len(vertexes_self.difference(vertexes_other)) > 0\
-        #     or len(edges_self.difference(edges_other)) > 0
+        # return all(v in other.covered_vertexes() for v in self.covered_vertexes())\
+        #     and all(e in other.covered_edges() for e in self.covered_edges())\
+        #     and not any(v in self.covered_vertexes() for v in other.covered_vertexes())\
+        #     and not all(e in self.covered_edges() for e in other.covered_edges())
+        return len(vertexes_self.difference(vertexes_other)) > 0\
+            or len(edges_self.difference(edges_other)) > 0
 
 
 class MinizincableDecisionModel(DecisionModel):

@@ -14,6 +14,9 @@ from forsyde.io.python.types import AbstractOrdering
 from forsyde.io.python.types import AbstractProcessingComponent
 from forsyde.io.python.types import AbstractCommunicationComponent
 from forsyde.io.python.types import WCET
+from forsyde.io.python.types import WCCT
+from forsyde.io.python.types import Goal
+from forsyde.io.python.types import MinimumThroughput
 
 import idesyde.math as math_util
 import idesyde.sdf as sdf_lib
@@ -47,9 +50,11 @@ class SDFAppRule(IdentificationRule):
                                  List[Vertex]]] = [(s, t, []) for s in sdf_actors for t in sdf_actors if s != t]
         # 1: check the model for the paths between actors
         for (cidx, (s, t, _)) in enumerate(sdf_channels):
-            for path in nx.all_simple_paths(model, s, t):
+            for path in nx.all_shortest_paths(model, s, t):
+                # take away the source and target nodes
+                path = path[1:-2]
                 # check if all elements in the path are signals or delays
-                if all(v.is_type(Signal.get_instance()) or v in sdf_delays for v in path):
+                if all(isinstance(v, Signal) or v in sdf_delays for v in path):
                     sdf_channels[cidx] = (s, t, path)
         # 1: remove all pre-built sdf channels that are empty
         sdf_channels = [(s, t, e) for (s, t, e) in sdf_channels if e]
@@ -57,20 +62,37 @@ class SDFAppRule(IdentificationRule):
         initial_tokens = np.array([len(v for v in p if v in sdf_delays) for (_, _, p) in sdf_channels], dtype=int)
         # 1: build the topology matrix
         sdf_topology = np.zeros((len(sdf_channels), len(sdf_actors)), dtype=int)
-        for (a_index, actor) in enumerate(sdf_actors):
-            constructor = next(c for c in constructors if actor in model.adj[c])
-            for (c_index, channel) in enumerate(sdf_channels):
-                # channel is in the forwards path, therefore written to
-                # TODO: Fix here!!! Not ready for production!
-                for (edix, edata, extra) in model.edges[actor, channel]:
-                    edge = edata['object']
-                if channel in model[actor]:
-                    tokens = int(constructor.properties["production"][channel.identifier])
-                    sdf_topology[c_index, a_index] = tokens
-                # channel is in the backwards path, therefore read from
-                elif actor in model.adj[channel]:
-                    tokens = -int(constructor.properties["consumption"][channel.identifier])
-                    sdf_topology[c_index, a_index] = tokens
+        for (cidx, (s, t, path)) in enumerate(sdf_channels):
+            sidx = sdf_actors.index(s)
+            tidx = sdf_actors.index(t)
+            # get the constructor of the actors
+            s_constructor = next(c for c in constructors if s in model.adj[c])
+            t_constructor = next(c for c in constructors if t in model.adj[c])
+            # look in their properties what is the production associated
+            # with the channel, for the source...
+            sdf_topology[cidx, sidx] = int(next(
+                v for (k, v) in s_constructor.get_production().items()
+                if k in (sig.identifier for sig in path)
+            ))
+            # .. and for the target
+            sdf_topology[cidx, tidx] = -int(next(
+                v for (k, v) in t_constructor.get_consumption().items()
+                if k in (sig.identifier for sig in path)
+            ))
+        # for (a_index, actor) in enumerate(sdf_actors):
+        #     constructor = next(c for c in constructors if actor in model.adj[c])
+        #     for (c_index, channel) in enumerate(sdf_channels):
+        #         # channel is in the forwards path, therefore written to
+        #         # TODO: Fix here!!! Not ready for production!
+        #         for (edix, edata, extra) in model.edges[actor, channel]:
+        #             edge = edata['object']
+        #         if channel in model[actor]:
+        #             tokens = int(constructor.properties["production"][channel.identifier])
+        #             sdf_topology[c_index, a_index] = tokens
+        #         # channel is in the backwards path, therefore read from
+        #         elif actor in model.adj[channel]:
+        #             tokens = -int(constructor.properties["consumption"][channel.identifier])
+        #             sdf_topology[c_index, a_index] = tokens
         # 1: calculate the null space
         null_space = sympy.Matrix(sdf_topology).nullspace()
         if len(null_space) == 1:
@@ -122,37 +144,35 @@ class SDFOrderRule(IdentificationRule):
 
 
 class SDFToCoresRule(IdentificationRule):
+    '''This 'IdentificationRule' identifies processing units atop 'SDFToOrders'
+
+    The 'AbstractProcessingComponent' can communicate with each other
+    if they are connected by one or more 'AbstractCommunicationComponent's.
+    Otherwise, the processors are considered unreachable islands.
+
+    It is assumed that the shortest path between two 'AbstractProcessingComponent'
+    is _always_ the one chosen for data communication. Regardless on how
+    the 'AbstractCommunicationComponent' communicates.
+    '''
 
     def identify(self, model, identified):
         res = None
         sdf_orders_sub = next((p for p in identified if isinstance(p, SDFToOrders)), None)
         if sdf_orders_sub:
-            undirected = nx.to_undirected(model)
             cores = [p for p in model if isinstance(p, AbstractProcessingComponent)]
             comms = [p for p in model if isinstance(p, AbstractCommunicationComponent)]
-            # connects to any processor
-            busses = [
-                c for c in model.get_vertexes(AbstractCommunicationComponent.get_instance()) if any(
-                    nx.has_path(undirected, p, c) for p in cores)
-            ]
-            # this strange code access the in memory vertexes
-            # representation by going through the labels (ids)
-            # first, hence the get_vertex function.
-            connections = set()
-            for core in cores:
-                for (v, adjdict) in model.adj[core].items():
-                    for (n, e) in adjdict.items():
-                        eobj = e['object']
-                        if v in busses and eobj not in connections:
-                            connections.add(eobj)
-            for bus in busses:
-                for (v, adjdict) in model.adj[bus].items():
-                    for (n, e) in adjdict.items():
-                        eobj = e['object']
-                        if v in cores and eobj not in connections:
-                            connections.add(eobj)
-            if len(cores) + len(busses) >= len(sdf_orders_sub.orderings):
-                res = SDFToMultiCore(sdf_orders_sub=sdf_orders_sub, cores=cores, busses=busses, connections=connections)
+            # find all cores that are connected between each other
+            connections = [(s, t, []) for s in cores for t in cores if s != t]
+            for (cidx, (s, t, _)) in enumerate(connections):
+                for path in nx.all_shortest_paths(model, s, t):
+                    path = path[1:-2]
+                    if all(isinstance(v, AbstractCommunicationComponent) for v in path):
+                        connections[cidx] = (s, t, path)
+            # take away any non connected paths
+            connections = [(s, t, p) for (s, t, p) in connections if p]
+            # there must be orderings for both execution and communication
+            if len(cores) + len(comms) >= len(sdf_orders_sub.orderings):
+                res = SDFToMultiCore(sdf_orders_sub=sdf_orders_sub, cores=cores, comms=comms, connections=connections)
         # conditions for fixpoints and partial identification
         if res:
             res.compute_deduced_properties()
@@ -172,47 +192,65 @@ class SDFToCoresCharacterizedRule(IdentificationRule):
             sdf_actors = sdf_mpsoc_sub.sdf_orders_sub.sdf_exec_sub.sdf_actors
             sdf_channels = sdf_mpsoc_sub.sdf_orders_sub.sdf_exec_sub.sdf_channels
             cores = sdf_mpsoc_sub.cores
-            busses = sdf_mpsoc_sub.busses
-            units = cores + busses
-            wcet_vertexes = list(model.get_vertexes(WCET.get_instance()))
-            token_wcct_vertexes = list(model.get_vertexes(WCCT.get_instance()))
-            wcet = None
-            token_wcct = None
-            # information is available for all actors and channels
-            info_actors_is_ok = all(
-                any(a in model.adj[w] and p in model.adj[w] for w in wcet_vertexes) for a in sdf_actors for p in cores)
-            info_channels_is_ok = all(
-                any(c in model.adj[w] and u in model.adj[w] for w in token_wcct_vertexes) for c in sdf_channels
-                for u in units)
-            if info_actors_is_ok and info_channels_is_ok:
-                wcet = np.zeros((
-                    len(cores),
-                    len(sdf_actors),
-                ), dtype=int, fill_value=np.inf)
-                for w in wcet_vertexes:
-                    for (adix, a) in enumerate(v in model.adj[w] for v in sdf_actors):
-                        for (pidx, p) in enumerate(v in model.adj[w] for v in cores):
-                            wcet[aidx, pidx] = int(w.properties['time'])
-                token_wcct = np.zeros((len(sdf_channels), len(units)), dtype=int)
-                for w in token_wcct_vertexes:
-                    for (cidx, c) in enumerate(v in model.adj[w] for v in sdf_channels):
-                        for (uidx, u) in enumerate(v in model.adj[w] for v in units):
-                            token_wcct[cidx, udix] = int(w.properties['time'])
+            comms = sdf_mpsoc_sub.comms
+            units = cores + comms
+            wcet_vertexes = [w for w in model if isinstance(w, WCET)] # list(model.get_vertexes(WCET.get_instance()))
+            token_wcct_vertexes = [w for w in model if isinstance(w, WCCT)] # list(model.get_vertexes(WCCT.get_instance()))
+            wcet = np.zeros((len(cores), len(sdf_actors)), dtype=int)
+            token_wcct = np.zeros((len(sdf_channels), len(units)), dtype=int)
+            # information is available for all actors
+            # for all p,a; exists a wcet connected to them
+            # actors_characterized = all(
+            #     any(
+            #         len(nx.all_simple_paths(model, w, p)) > 0 and
+            #         len(nx.all_simple_paths(model, w, a)) > 0
+            #         for w in wcet_vertexes
+            #     )
+            #     for a in sdf_actors for p in cores
+            # )
+            # info is available for all signals within a channel
+            # forall p,c; exists a wcct connect to them (all signals in c)
+            # channels_characterized = all(
+            #     any(
+            #         len(nx.all_simple_paths(model, w, p)) > 0 and
+            #         all(len(nx.all_simple_paths(model, w, s)) > 0 for s in channel if isinstance(s, Signal))
+            #         for w in token_wcct_vertexes
+            #     )
+            #     for (_, _, channel) in sdf_channels for p in comms
+            # )
+            for (aidx, a) in enumerate(sdf_actors):
+                for (pidx, p) in enumerate(cores):
+                    w = next((v for v in nx.predecessors(a)
+                              if v in nx.predecessors(p)
+                              and isinstance(v, WCET)), None)
+                    wcet[aidx, pidx] = int(w.properties['time']) if w else 0
+            for (cidx, c) in enumerate(sdf_channels):
+                for (pidx, p) in enumerate(comms):
+                    w = next((v for v in nx.predecessors(c)
+                              if v in nx.predecessors(p)
+                              and isinstance(v, WCET)), None)
+                    token_wcct[aidx, pidx] = int(w.properties['time']) if w else 0
             # although there should be only one Th vertex
             # per application, we apply maximun just in case
             # someone forgot to make sure there is only one annotation
             # per application
-            goals_vertexes = list(model.get_vertexes(Goal.get_instance()))
-            throughput_vertexes = [v for v in goals_vertexes if v.is_type(MinimunThroughput.get_instance())]
+            goals_vertexes = [v for v in model if isinstance(v, Goal)]
+            throughput_vertexes = [v for v in goals_vertexes if isinstance(v, MinimumThroughput)]
             throughput_importance = 0
             # check that all actors are covered by a throughput goal
-            if all(any(a in x.node_connected_component(model, g) for g in throughput_vertexes) for a in sdf_actors):
+            if all(
+                    any(
+                        len(nx.all_simple_paths(model, g, a)) > 0 
+                        for a in sdf_actors for g in throughput_vertexes
+                    )
+            ):
                 throughput_importance = max((int(v.properties['apriori_importance']) for v in throughput_vertexes),
                                             default=0)
-            if wcet is not None and token_wcct is not None:
+            # if all wcets are valid, the model is considered characterized
+            if 0 not in np.unique(wcet):
                 res = SDFToMultiCoreCharacterized(sdf_mpsoc_sub=sdf_mpsoc_sub,
-                                                  wcet_vertexes=set(model.query_vertexes('wcet')),
-                                                  token_wcct_vertexes=set(model.query_vertexes('signal_token_wcct')),
+                                                  wcet_vertexes=wcet_vertexes,
+                                                  token_wcct_vertexes=token_wcct_vertexes,
                                                   wcet=wcet,
                                                   token_wcct=token_wcct,
                                                   throughput_importance=throughput_importance,

@@ -104,8 +104,8 @@ class SDFToMultiCore(MinizincableDecisionModel):
 
     # partially identified
     cores: List[Vertex] = field(default_factory=list)
-    busses: List[Vertex] = field(default_factory=list)
-    connections: List[Edge] = field(default_factory=list)
+    comms: List[Vertex] = field(default_factory=list)
+    connections: List[Tuple[Vertex, Vertex, Edge]] = field(default_factory=list)
 
     # deduced properties
     vertex_expansions: Dict[Vertex, List[Vertex]] = field(default_factory=dict)
@@ -118,7 +118,7 @@ class SDFToMultiCore(MinizincableDecisionModel):
 
     def covered_vertexes(self):
         yield from self.cores
-        yield from self.busses
+        yield from self.comms
         yield from self.sdf_orders_sub.covered_vertexes()
 
     def get_mzn_model_name(self):
@@ -131,7 +131,7 @@ class SDFToMultiCore(MinizincableDecisionModel):
         expanded_enum = {p: i for (i, p) in enumerate(self.cores)}
         # expand all TDMAs to their slot elements
         units_enum_index = len(expanded_enum)
-        for (i, bus) in enumerate(self.busses):
+        for (i, bus) in enumerate(self.comms):
             vertex_expansions[bus] = []
             for s in range(bus.properties['slots']):
                 bus_slot = Vertex(identifier=f'{bus.identifier}_slot_{s}')
@@ -218,7 +218,7 @@ class SDFToMultiCore(MinizincableDecisionModel):
                         slot += 1
         vertex_expansions = self.vertex_expansions
         expanded_enum = self.expanded_enum
-        for (commidx, comm) in enumerate(self.busses):
+        for (commidx, comm) in enumerate(self.comms):
             slot_expansions = vertex_expansions[comm]
             ordering = orderings[commidx + len(self.cores)]
             if not new_model.has_edge(comm, ordering, key="object"):
@@ -276,7 +276,7 @@ class SDFToMultiCoreCharacterized(MinizincableDecisionModel):
         sdf_channels = self.sdf_mpsoc_sub.sdf_orders_sub.sdf_exec_sub.sdf_channels
         vertex_expansions = self.sdf_mpsoc_sub.vertex_expansions
         cores = self.sdf_mpsoc_sub.cores
-        busses = self.sdf_mpsoc_sub.busses
+        comms = self.sdf_mpsoc_sub.comms
         expanded_enum = self.sdf_mpsoc_sub.expanded_enum
         expanded_wcet = np.zeros((len(sdf_actors), sum(len(l) for (v, l) in vertex_expansions.items() if v in cores)),
                                  dtype=int)
@@ -286,9 +286,9 @@ class SDFToMultiCoreCharacterized(MinizincableDecisionModel):
                     exidx = expanded_enum[ex]
                     expanded_wcet[aidx, exidx] = self.wcet[aidx, pidx]
         expanded_token_wcct = np.zeros(
-            (len(sdf_channels), sum(len(l) for (v, l) in vertex_expansions.items() if v in busses)), dtype=int)
+            (len(sdf_channels), sum(len(l) for (v, l) in vertex_expansions.items() if v in comms)), dtype=int)
         for (cidx, c) in enumerate(sdf_channels):
-            for (bidx, b) in enumerate(busses):
+            for (bidx, b) in enumerate(comms):
                 for ex in vertex_expansions[b]:
                     exidx = expanded_enum[ex]
                     expanded_token_wcct[cidx, exidx] = self.token_wcct[cidx, bidx]

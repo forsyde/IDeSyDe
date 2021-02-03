@@ -80,7 +80,7 @@ def cli_entry():
     resulting_model = None
     if len(explorer_and_models) > 0:
         if len(explorer_and_models) > 1:
-            logger.warn("More than one explorer and model chosen. Picking one randomly")
+            logger.warning("More than one explorer and model chosen. Picking one randomly")
         (explorer, model) = random.choice(explorer_and_models)
         logger.info(f'Exploring {model.short_name()} with {explorer.short_name()}')
         if isinstance(explorer, MinizincExplorer):

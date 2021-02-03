@@ -1,84 +1,81 @@
-<ForSyDe>
+<ForSyDeModel>
   <Vertex id="getPxCons" type="SDFComb">
     <Port id="combinator" type="Function"/>
-    <Port id="constructed" type="Process"/>
-    <Port id="result" type="Process"/>
+    <Port id="output" type="Process"/>
     <Property name="production">
-      <Property name="gx">6</Property>
-      <Property name="gy">6</Property>
+      <Property name="gx" type="Integer">6</Property>
+      <Property name="gy" type="Integer">6</Property>
     </Property>
   </Vertex>
   <Vertex id="GxCons" type="SDFComb">
     <Port id="combinator" type="Function"/>
-    <Port id="constructed" type="Process"/>
-    <Port id="result" type="Process"/>
+    <Port id="output" type="Process"/>
     <Property name="consumption">
-      <Property name="gx">6</Property>
+      <Property name="gx" type="Integer">6</Property>
     </Property>
-      <Property name="production"><Property name="resx">1</Property>
+    <Property name="production">
+      <Property name="resx">1</Property>
     </Property>
   </Vertex>
   <Vertex id="GyCons" type="SDFComb">
     <Port id="combinator" type="Function"/>
-    <Port id="constructed" type="Process"/>
-    <Port id="result" type="Process"/>
+    <Port id="output" type="Process"/>
     <Property name="consumption">
-      <Property name="gy">6</Property>
+      <Property name="gy" type="Integer">6</Property>
     </Property>
     <Property name="production">
-      <Property name="resy">1</Property>
+      <Property name="resy" type="Integer">1</Property>
     </Property>
   </Vertex>
   <Vertex id="AbsCons" type="SDFComb">
     <Port id="combinator" type="Function"/>
-    <Port id="constructed" type="Process"/>
-    <Port id="result" type="Process"/>
+    <Port id="output" type="Process"/>
     <Property name="consumption">
-      <Property name="resx">1</Property>
-      <Property name="resy">1</Property>
+      <Property name="resx" type="Integer">1</Property>
+      <Property name="resy" type="Integer">1</Property>
     </Property>
   </Vertex>
   <Vertex id="getPx" type="Process">
-    <Port id="gy" type="Output"/>
-    <Port id="imgInput" type="Input"/>
-    <Port id="gx" type="Output"/>
+    <Port id="gy" type="Integer"/>
+    <Port id="imgInput" type="Integer"/>
+    <Port id="gx" type="Integer"/>
   </Vertex>
   <Vertex id="Gx" type="Process">
     <Port id="resx" type="Output"/>
-    <Port id="gx" type="Input"/>
+    <Port id="gx" type="Integer"/>
   </Vertex>
   <Vertex id="Gy" type="Process">
-    <Port id="gy" type="Input"/>
-    <Port id="resy" type="Output"/>
+    <Port id="gy" type="Integer"/>
+    <Port id="resy" type="Integer"/>
   </Vertex>
   <Vertex id="Abs" type="Process">
-    <Port id="imgOutput" type="Output"/>
-    <Port id="resy" type="Input"/>
-    <Port id="resx" type="Input"/>
+    <Port id="imgOutput" type="Integer"/>
+    <Port id="resy" type="Integer"/>
+    <Port id="resx" type="Integer"/>
   </Vertex>
   <Vertex id="gxsig" type="Signal">
-    <Port id="fifoOut" type="Output"/>
-    <Port id="fifoIn" type="Input"/>
-    <Property name="size">8</Property>
+    <Port id="fifoOut" type="Integer"/>
+    <Port id="fifoIn" type="Integer"/>
+    <Property name="size" type="Integer">8</Property>
   </Vertex>
   <Vertex id="gysig" type="Signal">
-    <Port id="fifoOut" type="Output"/>
-    <Port id="fifoIn" type="Input"/>
-    <Property name="size">8</Property>
+    <Port id="fifoOut" type="Integer"/>
+    <Port id="fifoIn" type="Integer"/>
+    <Property name="size" type="Integer">8</Property>
   </Vertex>
   <Vertex id="absxsig" type="Signal">
-    <Port id="fifoOut" type="Output"/>
-    <Port id="fifoIn" type="Input"/>
-    <Property name="size">8</Property>
+    <Port id="fifoOut" type="Integer"/>
+    <Port id="fifoIn" type="Integer"/>
+    <Property name="size" type="Integer">8</Property>
   </Vertex>
   <Vertex id="absysig" type="Signal">
-    <Port id="fifoOut" type="Output"/>
-    <Port id="fifoIn" type="Input"/>
-    <Property name="size">8</Property>
+    <Port id="fifoOut" type="Integer"/>
+    <Port id="fifoIn" type="Integer"/>
+    <Property name="size" type="Integer">8</Property>
   </Vertex>
   <Vertex id="sobel" type="Process">
-    <Port id="imgOutput" type="Output"/>
-    <Port id="imgInput" type="Input"/>
+    <Port id="imgOutput" type="Integer"/>
+    <Port id="imgInput" type="Integer"/>
   </Vertex>
   <Vertex id="order_1" type="AbstractOrdering"/>
   <Vertex id="order_2" type="AbstractOrdering"/>
@@ -98,84 +95,99 @@
     <Port id="communication" type="AbstractHardwarePort"/>
   </Vertex>
   <Vertex id="tdmabus1" type="TimeDivisionMultiplexer">
+    <Port id="communication" type="AbstractHardwarePort"/>
     <Port id="requester" type="AbstractHardwarePort"/>
-    <Property name="slots">4</Property>
+    <Property name="slots" type="Integer">4</Property>
   </Vertex>
   <Vertex id="getPxWCET" type="WCET">
     <Port id="process" type="Process"/>
     <Port id="platform" type="AbstractProcessingComponent"/>
     <Port id="application" type="Process"/>
     <Port id="processor" type="AbstractProcessingComponent"/>
-    <Property name="time">4356</Property>
+    <Property name="time" type="Integer">4356</Property>
   </Vertex>
   <Vertex id="gxWCET" type="WCET">
     <Port id="process" type="Process"/>
     <Port id="platform" type="AbstractProcessingComponent"/>
     <Port id="application" type="Process"/>
     <Port id="processor" type="AbstractProcessingComponent"/>
-    <Property name="time">4147</Property>
+    <Property name="time" type="Integer">4147</Property>
   </Vertex>
   <Vertex id="gyWCET" type="WCET">
     <Port id="process" type="Process"/>
     <Port id="platform" type="AbstractProcessingComponent"/>
     <Port id="application" type="Process"/>
     <Port id="processor" type="AbstractProcessingComponent"/>
-    <Property name="time">4146</Property>
+    <Property name="time" type="Integer">4146</Property>
   </Vertex>
   <Vertex id="absWCET" type="WCET">
     <Port id="process" type="Process"/>
     <Port id="platform" type="AbstractProcessingComponent"/>
     <Port id="application" type="Process"/>
     <Port id="processor" type="AbstractProcessingComponent"/>
-    <Property name="time">1411</Property>
+    <Property name="time" type="Integer">1411</Property>
   </Vertex>
   <Vertex id="gxsigWCCT" type="WCCT">
     <Port id="reciever" type="AbstractPhysicalComponent"/>
     <Port id="sender" type="AbstractPhysicalComponent"/>
     <Port id="signal" type="Signal"/>
-    <Property name="time">1</Property>
+    <Property name="time" type="Integer">1</Property>
   </Vertex>
   <Vertex id="gysigWCCT" type="WCCT">
     <Port id="reciever" type="AbstractPhysicalComponent"/>
     <Port id="sender" type="AbstractPhysicalComponent"/>
     <Port id="signal" type="Signal"/>
-    <Property name="time">1</Property>
+    <Property name="time" type="Integer">1</Property>
   </Vertex>
   <Vertex id="absxsigWCCT" type="WCCT">
     <Port id="reciever" type="AbstractPhysicalComponent"/>
     <Port id="sender" type="AbstractPhysicalComponent"/>
     <Port id="signal" type="Signal"/>
-    <Property name="time">1</Property>
+    <Property name="time" type="Integer">1</Property>
   </Vertex>
   <Vertex id="absysigWCCT" type="WCCT">
     <Port id="reciever" type="AbstractPhysicalComponent"/>
     <Port id="sender" type="AbstractPhysicalComponent"/>
     <Port id="signal" type="Signal"/>
-    <Property name="time">1</Property>
+    <Property name="time" type="Integer">1</Property>
   </Vertex>
   <Vertex id="min_throughput_obj" type="MinimumThroughput">
-    <Property name="apriori_importance">1</Property>
+    <Property name="apriori_importance" type="Integer">1</Property>
   </Vertex>
-  <Edge source_id="getPxCons" target_id="getPx" type="Construction" source_port_id="constructed"/>
-  <Edge source_id="GxCons" target_id="Gx" type="Construction" source_port_id="constructed"/>
-  <Edge source_id="GyCons" target_id="Gy" type="Construction" source_port_id="constructed"/>
-  <Edge source_id="AbsCons" target_id="Abs" type="Construction" source_port_id="constructed"/>
-  <Edge source_id="getPx" target_id="gxsig" type="Output" source_port_id="gx"/>
-  <Edge source_id="getPx" target_id="gysig" type="Output" source_port_id="gx"/>
-  <Edge source_id="Gx" target_id="absxsig" type="Output" source_port_id="resx"/>
-  <Edge source_id="Gx" target_id="gxsig" type="Input" source_port_id="gx"/>
-  <Edge source_id="Gy" target_id="absysig" type="Output" source_port_id="resy"/>
-  <Edge source_id="Gy" target_id="gysig" type="Input" source_port_id="gy"/>
-  <Edge source_id="Abs" target_id="absxsig" type="Input" source_port_id="resx"/>
-  <Edge source_id="Abs" target_id="absysig" type="Input" source_port_id="resy"/>
+  <Edge source_id="getPxCons" target_id="getPx" type="Output" source_port_id="output"/>
+  <Edge source_id="GxCons" target_id="Gx" type="Output" source_port_id="output"/>
+  <Edge source_id="GyCons" target_id="Gy" type="Output" source_port_id="output"/>
+  <Edge source_id="AbsCons" target_id="Abs" type="Output" source_port_id="output"/>
+  <Edge source_id="getPx" target_id="gxsig" type="Output" source_port_id="gx" target_port_id="fifoIn"/>
+  <!-- <Edge source_id="gxsig" target_id="getPx" type="Input" source_port_id="fifoIn" target_port_id="gx"/> -->
+  <Edge source_id="getPx" target_id="gysig" type="Output" source_port_id="gy" target_port_id="fifoIn"/>
+  <!-- <Edge source_id="gysig" target_id="getPx" type="Input" source_port_id="fifoIn" target_port_id="gx"/> -->
+
+  <Edge source_id="Gx" target_id="absxsig" type="Output" source_port_id="resx" target_port_id="fifoIn"/>
+  <!-- <Edge source_id="absxsig" target_id="Gx" type="Input" source_port_id="fifoIn" target_port_id="resx"/> -->
+  <!-- <Edge source_id="Gx" target_id="gxsig" type="Input" source_port_id="gx" target_port_id="fifoOut"/> -->
+  <Edge source_id="gxsig" target_id="Gx" type="Output" source_port_id="fifoOut" target_port_id="gx"/>
+
+  <Edge source_id="Gy" target_id="absysig" type="Output" source_port_id="resy" target_port_id="fifoIn"/>
+  <!-- <Edge source_id="absysig" target_id="Gy" type="Input" source_port_id="fifoIn" target_port_id="resy"/> -->
+  <!-- <Edge source_id="Gy" target_id="gysig" type="Input" source_port_id="gy" target_port_id="fifoOut"/> -->
+  <Edge source_id="gysig" target_id="Gy" type="Output" source_port_id="fifoOut" target_port_id="gy"/>
+  <!-- <Edge source_id="Abs" target_id="absxsig" type="Input" source_port_id="resx" target_port_id="fifoOut"/> -->
+  <Edge source_id="absxsig" target_id="Abs" type="Output" source_port_id="fifoOut" target_port_id="resx"/>
+  <!-- <Edge source_id="Abs" target_id="absysig" type="Input" source_port_id="resy" target_port_id="fifoOut"/> -->
+  <Edge source_id="absysig" target_id="Abs" type="Output" source_port_id="fifoOut" target_port_id="resy"/>
   <Edge source_id="sobel" target_id="getPx" type="Expansion" source_port_id="imgInput" target_port_id="imgInput"/>
   <Edge source_id="sobel" target_id="Abs" type="Expansion" source_port_id="imgOutput" target_port_id="imgOutput"/>
-  <Edge source_id="sobel" target_id="Gx" type="Expansion"/>
-  <Edge source_id="sobel" target_id="Gy" type="Expansion"/>
+  <!-- <Edge source_id="sobel" target_id="Gx" type="Expansion"/>
+  <Edge source_id="sobel" target_id="Gy" type="Expansion"/> -->
   <Edge source_id="tile1" target_id="tdmabus1" type="AbstractPhysicalConnection" source_port_id="communication"/>
   <Edge source_id="tile2" target_id="tdmabus1" type="AbstractPhysicalConnection" source_port_id="communication"/>
   <Edge source_id="tile3" target_id="tdmabus1" type="AbstractPhysicalConnection" source_port_id="communication"/>
   <Edge source_id="tile4" target_id="tdmabus1" type="AbstractPhysicalConnection" source_port_id="communication"/>
+  <Edge source_id="tdmabus1" target_id="tile1" type="AbstractPhysicalConnection" source_port_id="communication"/>
+  <Edge source_id="tdmabus1" target_id="tile2" type="AbstractPhysicalConnection" source_port_id="communication"/>
+  <Edge source_id="tdmabus1" target_id="tile3" type="AbstractPhysicalConnection" source_port_id="communication"/>
+  <Edge source_id="tdmabus1" target_id="tile4" type="AbstractPhysicalConnection" source_port_id="communication"/>
   <Edge source_id="getPxWCET" target_id="getPx" type="Annotation" source_port_id="application"/>
   <Edge source_id="getPxWCET" target_id="tile1" type="Annotation" source_port_id="platform"/>
   <Edge source_id="getPxWCET" target_id="tile2" type="Annotation" source_port_id="platform"/>
@@ -205,4 +217,4 @@
   <Edge source_id="absysigWCCT" target_id="tdmabus1" type="Annotation"/>
   <Edge source_id="absysigWCCT" target_id="absysig" type="Annotation"/>
   <Edge source_id="min_throughput_obj" target_id="sobel" type="Annotation"/>
-</ForSyDe>
+</ForSyDeModel>

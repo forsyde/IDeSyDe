@@ -1,0 +1,12 @@
+sdf_actors = 1..4;
+sdf_channels = 1..4;
+max_tokens = 6;
+max_steps = 4;
+activations = [1, 1, 1, 1];
+
+sdf_topology = [| 6, 6, 0, 0   
+	        | -6, 0, 1, 0  
+		| 0, -6, 0, 1  
+		| 0, 0, -1, -1 |];
+
+initial_tokens = [0, 0, 0, 0];

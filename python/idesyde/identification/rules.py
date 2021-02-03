@@ -16,7 +16,9 @@ from forsyde.io.python.types import AbstractCommunicationComponent
 from forsyde.io.python.types import WCET
 from forsyde.io.python.types import WCCT
 from forsyde.io.python.types import Goal
+from forsyde.io.python.types import Output
 from forsyde.io.python.types import MinimumThroughput
+from forsyde.io.python.types import TimeDivisionMultiplexer
 
 import idesyde.math as math_util
 import idesyde.sdf as sdf_lib
@@ -46,53 +48,59 @@ class SDFAppRule(IdentificationRule):
         # 1: find the delays
         sdf_delays: List[Vertex] = [a for c in delay_constructors for a in model.adj[c] if isinstance(a, Process)]
         # 1: get connected signals
-        sdf_channels: List[Tuple[Vertex, Vertex,
-                                 List[Vertex]]] = [(s, t, []) for s in sdf_actors for t in sdf_actors if s != t]
+        sdf_channels: List[Tuple[Vertex, Vertex, List[Vertex]]] = []
         # 1: check the model for the paths between actors
-        for (cidx, (s, t, _)) in enumerate(sdf_channels):
-            for path in nx.all_shortest_paths(model, s, t):
-                # take away the source and target nodes
-                path = path[1:-2]
-                # check if all elements in the path are signals or delays
-                if all(isinstance(v, Signal) or v in sdf_delays for v in path):
-                    sdf_channels[cidx] = (s, t, path)
+        for s in sdf_actors:
+            for t in sdf_actors:
+                if s != t:
+                    try:
+                        for path in nx.all_shortest_paths(model, s, t):
+                            # take away the source and target nodes
+                            path = path[1:-1]
+                            # check if all elements in the path are signals or delays
+                            if all(isinstance(v, Signal) or v in sdf_delays for v in path):
+                                sdf_channels.append((s, t, path))
+                    except nx.exception.NetworkXNoPath:
+                        pass
+        # for (cidx, (s, t, _)) in enumerate(sdf_channels):
+        #     for path in nx.all_shortest_paths(model, s, t):
+        #         # take away the source and target nodes
+        #         path = path[1:-1]
+        #         # check if all elements in the path are signals or delays
+        #         if all(isinstance(v, Signal) or v in sdf_delays for v in path):
+        #             sdf_channels[cidx] = (s, t, path)
         # 1: remove all pre-built sdf channels that are empty
-        sdf_channels = [(s, t, e) for (s, t, e) in sdf_channels if e]
+        # sdf_channels = [(s, t, e) for (s, t, e) in sdf_channels if e]
+        # 1: remove all channels that are not Output-output only
+        # sdf_channels = [(s, t, p) for (s, t, p) in sdf_channels if all(
+        #     isinstance(e["object"], Output) for (_, e) in model[s][t].items())]
         # 2: define the initial tokens by counting the delays on every path
-        initial_tokens = np.array([len(v for v in p if v in sdf_delays) for (_, _, p) in sdf_channels], dtype=int)
+        initial_tokens = np.array([sum(1 for v in p if v in sdf_delays) for (_, _, p) in sdf_channels], dtype=int)
         # 1: build the topology matrix
         sdf_topology = np.zeros((len(sdf_channels), len(sdf_actors)), dtype=int)
         for (cidx, (s, t, path)) in enumerate(sdf_channels):
             sidx = sdf_actors.index(s)
             tidx = sdf_actors.index(t)
+            # get the relevant port for the source and target actors
+            # in this channel, assuming there is only one edge
+            # connecting them
+            # TODO: maybe find a way to generalize properly to multigraphs?
+            out_port = next(v["object"].source_vertex_port for (k, v) in model[s][path[0]].items())
+            in_port = next(v["object"].target_vertex_port for (k, v) in model[path[-1]][t].items())
             # get the constructor of the actors
-            s_constructor = next(c for c in constructors if s in model.adj[c])
-            t_constructor = next(c for c in constructors if t in model.adj[c])
+            s_constructor = next(c for c in constructors if s in model[c])
+            t_constructor = next(c for c in constructors if t in model[c])
             # look in their properties what is the production associated
             # with the channel, for the source...
-            sdf_topology[cidx, sidx] = int(next(
-                v for (k, v) in s_constructor.get_production().items()
-                if k in (sig.identifier for sig in path)
-            ))
+            sdf_topology[cidx, sidx] = int(s_constructor.get_production()[out_port.identifier])
+            sdf_topology[cidx, tidx] = -int(t_constructor.get_consumption()[in_port.identifier])
+            # if out_port.identifier in s_constructor.get_production():
+            # else:
+            #     sdf_topology[cidx, sidx] = int(s_constructor.get_consumption()[out_port.identifier])
             # .. and for the target
-            sdf_topology[cidx, tidx] = -int(next(
-                v for (k, v) in t_constructor.get_consumption().items()
-                if k in (sig.identifier for sig in path)
-            ))
-        # for (a_index, actor) in enumerate(sdf_actors):
-        #     constructor = next(c for c in constructors if actor in model.adj[c])
-        #     for (c_index, channel) in enumerate(sdf_channels):
-        #         # channel is in the forwards path, therefore written to
-        #         # TODO: Fix here!!! Not ready for production!
-        #         for (edix, edata, extra) in model.edges[actor, channel]:
-        #             edge = edata['object']
-        #         if channel in model[actor]:
-        #             tokens = int(constructor.properties["production"][channel.identifier])
-        #             sdf_topology[c_index, a_index] = tokens
-        #         # channel is in the backwards path, therefore read from
-        #         elif actor in model.adj[channel]:
-        #             tokens = -int(constructor.properties["consumption"][channel.identifier])
-        #             sdf_topology[c_index, a_index] = tokens
+            # if in_port.identifier in t_constructor.get_production():
+            #     sdf_topology[cidx, tidx] = -int(s_constructor.get_production()[in_port.identifier])
+            # else:
         # 1: calculate the null space
         null_space = sympy.Matrix(sdf_topology).nullspace()
         if len(null_space) == 1:
@@ -162,17 +170,35 @@ class SDFToCoresRule(IdentificationRule):
             cores = [p for p in model if isinstance(p, AbstractProcessingComponent)]
             comms = [p for p in model if isinstance(p, AbstractCommunicationComponent)]
             # find all cores that are connected between each other
-            connections = [(s, t, []) for s in cores for t in cores if s != t]
-            for (cidx, (s, t, _)) in enumerate(connections):
-                for path in nx.all_shortest_paths(model, s, t):
-                    path = path[1:-2]
-                    if all(isinstance(v, AbstractCommunicationComponent) for v in path):
-                        connections[cidx] = (s, t, path)
+            connections: List[Tuple[Vertex, Vertex, List[Vertex]]] = []
+            for s in cores:
+                for t in cores:
+                    if s != t:
+                        try:
+                            for path in nx.all_shortest_paths(model, s, t):
+                                path = path[1:-1]
+                                if all(isinstance(v, AbstractCommunicationComponent) for v in path):
+                                    connections.append((s, t, path))
+                        except nx.exception.NetworkXNoPath:
+                            pass
+            # for (cidx, (s, t, _)) in enumerate(connections):
+            #     for path in nx.all_shortest_paths(model, s, t):
+            #         path = path[1:-1]
+            #         if all(isinstance(v, AbstractCommunicationComponent) for v in path):
+            #             connections[cidx] = (s, t, path)
             # take away any non connected paths
-            connections = [(s, t, p) for (s, t, p) in connections if p]
+            # connections = [(s, t, p) for (s, t, p) in connections if p]
             # there must be orderings for both execution and communication
+            comms_capacity = [1 for c in comms]
+            for (i, c) in enumerate(comms):
+                if isinstance(c, TimeDivisionMultiplexer):
+                    comms_capacity[i] = int(c.get_slots())
             if len(cores) + len(comms) >= len(sdf_orders_sub.orderings):
-                res = SDFToMultiCore(sdf_orders_sub=sdf_orders_sub, cores=cores, comms=comms, connections=connections)
+                res = SDFToMultiCore(sdf_orders_sub=sdf_orders_sub,
+                                     cores=cores,
+                                     comms=comms,
+                                     connections=connections,
+                                     comms_capacity=comms_capacity)
         # conditions for fixpoints and partial identification
         if res:
             res.compute_deduced_properties()
@@ -184,6 +210,8 @@ class SDFToCoresRule(IdentificationRule):
 
 
 class SDFToCoresCharacterizedRule(IdentificationRule):
+    '''This 'IdentificationRule' add WCET and WCCT atop 'SDFToCoresRule'
+    '''
 
     def identify(self, model, identified):
         res = None
@@ -194,8 +222,9 @@ class SDFToCoresCharacterizedRule(IdentificationRule):
             cores = sdf_mpsoc_sub.cores
             comms = sdf_mpsoc_sub.comms
             units = cores + comms
-            wcet_vertexes = [w for w in model if isinstance(w, WCET)] # list(model.get_vertexes(WCET.get_instance()))
-            token_wcct_vertexes = [w for w in model if isinstance(w, WCCT)] # list(model.get_vertexes(WCCT.get_instance()))
+            wcet_vertexes = [w for w in model if isinstance(w, WCET)]  # list(model.get_vertexes(WCET.get_instance()))
+            token_wcct_vertexes = [w for w in model
+                                   if isinstance(w, WCCT)]  # list(model.get_vertexes(WCCT.get_instance()))
             wcet = np.zeros((len(cores), len(sdf_actors)), dtype=int)
             token_wcct = np.zeros((len(sdf_channels), len(units)), dtype=int)
             # information is available for all actors
@@ -218,18 +247,23 @@ class SDFToCoresCharacterizedRule(IdentificationRule):
             #     )
             #     for (_, _, channel) in sdf_channels for p in comms
             # )
+            # iterate through all actors and processes and note down
+            # the WCET resulting from their interaction
             for (aidx, a) in enumerate(sdf_actors):
                 for (pidx, p) in enumerate(cores):
-                    w = next((v for v in nx.predecessors(a)
-                              if v in nx.predecessors(p)
-                              and isinstance(v, WCET)), None)
-                    wcet[aidx, pidx] = int(w.properties['time']) if w else 0
-            for (cidx, c) in enumerate(sdf_channels):
+                    wcet[aidx, pidx] = max(
+                        (int(w.properties['time'])
+                         for w in model.predecessors(a) if w in model.predecessors(p) and isinstance(w, WCET)),
+                        default=0)
+            # iterate through all elements of a channel and take the
+            # maximum of the WCCTs for that path, since in a channels it is
+            # expected that the data type is the same along the entire path
+            for (cidx, (_, _, path)) in enumerate(sdf_channels):
                 for (pidx, p) in enumerate(comms):
-                    w = next((v for v in nx.predecessors(c)
-                              if v in nx.predecessors(p)
-                              and isinstance(v, WCET)), None)
-                    token_wcct[aidx, pidx] = int(w.properties['time']) if w else 0
+                    token_wcct[cidx, pidx] = max(
+                        (int(w.properties['time']) for e in path
+                         for w in model.predecessors(e) if w in model.predecessors(p) and isinstance(w, WCCT)),
+                        default=0)
             # although there should be only one Th vertex
             # per application, we apply maximun just in case
             # someone forgot to make sure there is only one annotation
@@ -239,11 +273,8 @@ class SDFToCoresCharacterizedRule(IdentificationRule):
             throughput_importance = 0
             # check that all actors are covered by a throughput goal
             if all(
-                    any(
-                        len(nx.all_simple_paths(model, g, a)) > 0 
-                        for a in sdf_actors for g in throughput_vertexes
-                    )
-            ):
+                    sum(1 for p in nx.all_simple_paths(model, g, a)) > 0 for g in throughput_vertexes
+                    for a in sdf_actors):
                 throughput_importance = max((int(v.properties['apriori_importance']) for v in throughput_vertexes),
                                             default=0)
             # if all wcets are valid, the model is considered characterized

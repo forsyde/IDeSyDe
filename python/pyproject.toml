@@ -1,6 +1,6 @@
 [tool.poetry]
 name = "idesyde"
-version = "0.1.3"
+version = "0.1.4"
 description = "ForSyDe's Identification and Design Space Exploration Tool"
 authors = ["jordao <jordao@kth.se>"]
 license = "MIT"
@@ -11,7 +11,7 @@ python = "^3.7"
 numpy = "*"
 sympy = "*"
 minizinc = "*"
-forsyde-io-python = "^0.1.2"
+forsyde-io-python = "0.2.^0"
 # forsyde-io-python = { path = "../../forsyde-io/python/" }
 
 [tool.poetry.dev-dependencies]

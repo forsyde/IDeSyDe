@@ -206,51 +206,58 @@ class SDFToMultiCore(MinizincableDecisionModel):
         for (pidx, core) in enumerate(self.cores):
             ordering = orderings[pidx]
             if not new_model.has_edge(core, ordering, key="object"):
-                new_edge = Edge(source_vertex=core,
+                new_edge = AbstractMapping(source_vertex=core,
                                 target_vertex=ordering,
-                                source_vertex_port=Port(identifier="execution", port_type=AbstractOrdering()),
-                                edge_type=AbstractMapping())
+                                source_vertex_port=Port(identifier="execution", port_type=AbstractOrdering))
                 new_model.add_edge(core, ordering, object=new_edge)
             slot = 0
             for t in range(max_steps):
                 sdf_pass = sdfapi.get_PASS(
                     sdf_topology,
-                    np.array([[results["mapped_actors"][a][pidx][t] for a in range(len(sdf_actors))]]).transpose(),
-                    np.array([[results["buffer_start"][c][pidx][t] for c in range(len(sdf_channels))]]).transpose())
+                    np.array([[results["mapped_actors"][a][pidx][t] for (a, _) in enumerate(sdf_actors)]]).transpose(),
+                    np.array([[results["buffer_start"][c][pidx][t] for (c, _) in enumerate(sdf_channels)]]).transpose())
                 for aidx in sdf_pass:
                     actor = sdf_actors[aidx]
                     if not new_model.has_edge(ordering, actor, key="object"):
-                        new_edge = Edge(source_vertex=ordering,
+                        new_edge = AbstractScheduling(source_vertex=ordering,
                                         target_vertex=actor,
-                                        source_vertex_port=Port(identifier=f"slot[{slot}]", port_type=Process()),
-                                        edge_type=AbstractScheduling())
+                                        source_vertex_port=Port(identifier=f"slot[{slot}]", port_type=Process))
                         new_model.add_edge(ordering, actor, object=new_edge)
                         slot += 1
-        vertex_expansions = self.vertex_expansions
-        expanded_enum = self.expanded_enum
         for (commidx, comm) in enumerate(self.comms):
-            slot_expansions = vertex_expansions[comm]
             ordering = orderings[commidx + len(self.cores)]
             if not new_model.has_edge(comm, ordering, key="object"):
-                new_edge = Edge(source_vertex=comm,
+                new_edge = AbstractMapping(source_vertex=comm,
                                 target_vertex=ordering,
-                                source_vertex_port=Port(identifier="timeslots", port_type=AbstractOrdering()),
-                                edge_type=AbstractMapping())
+                                source_vertex_port=Port(identifier="timeslots", port_type=AbstractOrdering))
                 new_model.add_edge(comm, ordering, object=new_edge)
-            for (cidx, c) in enumerate(sdf_channels):
-                for (slotidx, slot) in enumerate(slot_expansions):
-                    unitidx = expanded_enum[slot]
-                    if any((results['send_allocation'][cidx][p][pp][t][tt][unitidx] > 0
-                            for (pidx, p) in enumerate(self.cores)
-                            for (ppidx, pp) in enumerate(self.cores)
-                            for t in range(max_steps)
-                            for tt in range(max_steps)))\
-                            and not new_model.has_edge(ordering, c, key="object"):
-                        new_edge = Edge(source_vertex=ordering,
-                                        target_vertex=c,
-                                        source_vertex_port=Port(identifier=f"slot[{slotidx}]"),
-                                        edge_type=AbstractScheduling())
-                        new_model.add_edge(ordering, c, object=new_edge)
+            slots = [0 for c in sdf_channels]
+            for (c, (s, t, path)) in enumerate(sdf_channels):
+                clashes = [
+                    slots[cc]
+                    for (p, _) in enumerate(self.cores)
+                    for (pp, _) in enumerate(self.cores)
+                    for t in range(max_steps)
+                    for tt in range(max_steps)
+                    for cc in range(c)
+                    if
+                    results["send_start"][c][p][pp][t][tt][commidx] +
+                    results["send_duration"][c][p][pp][t][tt][commidx]
+                    >= results["send_start"][cc][p][pp][t][tt][commidx]
+                    or
+                    results["send_start"][cc][p][pp][t][tt][commidx] +
+                    results["send_duration"][cc][p][pp][t][tt][commidx]
+                    >= results["send_start"][c][p][pp][t][tt][commidx]
+                ]
+                slots[c] = min(
+                    slot for slot in range(self.comms_capacity[commidx])
+                    if slot not in clashes
+                )
+                for e in path:
+                    new_edge = AbstractScheduling(source_vertex=ordering,
+                                    target_vertex=e,
+                                    source_vertex_port=Port(identifier=f"slot[{slots[c]}]"))
+                    new_model.add_edge(ordering, e, object=new_edge)
         return new_model
 
 

@@ -39,7 +39,7 @@ array[sdf_channels, procs, steps] of var 0..max(max_tokens): buffer_end;
 array[sdf_channels, procs, procs, steps, steps] of var 0..max(max_tokens): flow;
 % array[sdf_channels, procs, procs, steps, steps] of var 0..length(comms) * max(max_tokens) * max(token_wcct): send_duration;
 % array[sdf_channels, procs, procs, steps, steps, comms] of var 0..max(max_tokens): send_comms;
-array[sdf_channels, procs, procs, steps, steps, comms] of var 0..sum(wcet)+sum(token_wcct): send_start;
+array[sdf_channels, procs, procs, steps, steps, comms] of var 0..sum(wcet)+max(max_tokens) * sum(token_wcct): send_start;
 array[sdf_channels, procs, procs, steps, steps, comms] of var 0..length(comms) * max(max_tokens) * max(token_wcct): send_duration;
 %array[sdf_channels, units, units] of var opt 0..max(max_tokens): send;
 
@@ -150,14 +150,19 @@ constraint forall(c, in sdf_channels, t, tt in steps, p, pp in procs, u in comms
   start[p, t] <= send_start[c, p, pp, t, tt, u]
 );
 
+constraint forall(c, in sdf_channels, t, tt in steps, p, pp in procs, u in comms) (
+  path[p, pp, u] = 1 ->
+  start[p, t] <= send_start[c, p, pp, t, tt, u]
+);
+
 constraint forall(c, in sdf_channels, t, tt in steps, p, pp in procs, u, uu in comms) (
   path[p, pp, u] > 0 /\ path[p, pp, u] = path[p, pp, uu] - 1 ->
-  send_start[c, p, pp, t, tt, u] <= send_start[c, p, pp, t, tt, uu]
+  send_start[c, p, pp, t, tt, u] + send_duration[c, p, pp, t, tt, u] = send_start[c, p, pp, t, tt, uu]
 )
 
 constraint forall(c in sdf_channels, t, tt in steps, p, pp in procs) (
   flow[c, p, pp, t, tt] > 0 ->
-  start[pp, tt] >= start[p, t] + busy_time[p,t] + sum(send_duration[c, p, pp, t, tt, ..])
+  start[pp, tt] => start[p, t] + busy_time[p,t] + sum(send_duration[c, p, pp, t, tt, ..])
 );
 
 constraint forall(u in comms) (
@@ -213,7 +218,7 @@ constraint forall(p in procs, t in min(steps)+1..max(steps)) (
   local_throughput[p, t] >= busy_time[p, t] + local_throughput[p, t-1]
 );
 constraint forall(p in procs, t in min(steps)+1..max(steps)-1) (
-  local_throughput[p, t] >= start[p, t+1] - (start[p, t-1] + busy_time[p, t-1])
+  local_throughput[p, t] = start[p, t+1] - (start[p, t-1] + busy_time[p, t-1])
 );
 
 constraint objective[THROUGHPUT] = max(local_throughput);
@@ -223,11 +228,11 @@ constraint objective[LATENCY] = max(p in procs) (
 );
 
 solve
-  :: warm_start(
-       [mapped_actors[a, p, t] | a in sdf_actors, p in procs, t in steps],
-       [if t <= activations[a mod p] then 1 else 0 endif |
-        a in sdf_actors, p in procs, t in steps]
-     )
+  % :: warm_start(
+  %      [mapped_actors[a, p, t] | a in sdf_actors, p in procs, t in steps],
+  %      [if t <= activations[a mod p] then 1 else 0 endif |
+  %       a in sdf_actors, p in procs, t in steps]
+  %    )
   % :: int_search(mapped_actors, first_fail, indomain_max, complete)
   % :: int_search(buffer, first_fail, indomain_min, complete)
   % :: int_search(send, first_fail, indomain_min, complete)

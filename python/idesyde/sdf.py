@@ -55,6 +55,17 @@ def check_sdf_consistency(sdf_topology) -> bool:
     return False
 
 
-def sdf_to_hsdf(sdf_topology: np.ndarray, repetition_vector: np.ndarray,
-                initial_tokens: np.ndarray) -> Tuple[Dict[int, List[int]], np.ndarray]:
-    pass
+def sdf_to_hsdf(actors: List[Vertex],
+                channels: List[Tuple[Vertex, Vertex, List[Vertex]]],
+                topology: np.ndarray,
+                repetition_vector: np.ndarray,
+                initial_tokens: np.ndarray) -> Tuple[List[Vertex], np.ndarray]:
+    jobs = [a for (i, a) in enumerate(actors) for j in range(repetition_vector[i])]
+    next_job = np.zeros((len(jobs), len(jobs)), dtype=bool)
+    for (i, (s, t, p)) in enumerate(channels):
+        
+    for j in jobs:
+        for jj in jobs:
+            if j != jj:
+                pass
+    return (actors, np.zeros((0,0), dtype=bool))

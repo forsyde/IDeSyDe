@@ -100,12 +100,9 @@ class SDFToOrders(MinizincableDecisionModel):
 @dataclass
 class SDFToMultiCore(MinizincableDecisionModel):
 
-    # covered decision models
-    sdf_orders_sub: SDFToOrders = SDFToOrders()
-
     # partially identified
-    cores: List[Vertex] = field(default_factory=list)
-    comms: List[Vertex] = field(default_factory=list)
+    cores: List[List[Vertex]] = field(default_factory=list)
+    comms: List[List[Vertex]] = field(default_factory=list)
     connections: List[Tuple[Vertex, Vertex, List[Vertex]]] = field(default_factory=list)
     comms_capacity: List[int] = field(default_factory=int)
 
@@ -331,31 +328,55 @@ class SDFToMultiCoreCharacterized(MinizincableDecisionModel):
 
 
 @dataclass
-class SDFToMultiCoreCharacterizedJobs(MinizincableDecisionModel):
+class CharacterizedJobShop(MinizincableDecisionModel):
 
-    # this partial identification is not dominated by self
-    sdf_mpsoc_char_sub: SDFToMultiCoreCharacterized = SDFToMultiCoreCharacterized()
+    # models that were abstracted in jobs
+    originals: List[DecisionModel] = field(default_factory=list)
 
     # properties
     jobs: List[Vertex] = field(default_factory=list)
-    jobs_actors: Dict[Vertex, Tuple[Vertex, int]] = field(default_factory=dict)
+    # the virtual processors and communicators should go from
+    # most physical -> cyber
+    procs: List[List[Vertex]] = field(default_factory=list)
+    comms: List[List[Vertex]] = field(default_factory=list)
+    comm_capacity: List[int] = field(default_factory=list)
+    next_job: List[Tuple[Vertex, Vertex]] = field(default_factory=list)
+    wcet_vertexes: List[Vertex] = field(default_factory=list)
+    wcct_vertexes: List[Vertex] = field(default_factory=list)
+    wcet: np.ndarray = np.zeros((0, 0), dtype=int)
+    wcct: np.ndarray = np.zeros((0, 0, 0), dtype=int)
+    paths: List[Tuple[Vertex, Vertex, List[Vertex]]] = field(default_factory=list)
 
     def covered_vertexes(self):
-        yield from self.sdf_mpsoc_char_sub.covered_vertexes()
+        yield from self.jobs
+        for p in self.procs:
+            yield from p            
+        for p in self.comms:
+            yield from p
+        yield from self.wcct_vertexes
+        yield from self.wcct_vertexes
 
     def get_mzn_model_name(self):
         return "sdf_job_scheduling.mzn"
 
     def get_mzn_data(self):
-        # use the non faked part of the covered problem
-        # to save some code
-        data = self.sdf_mpsoc_char_sub.get_mzn_data()
-        data['jobs'] = set(int(i) + 1 for (i, v) in enumerate(self.jobs))
+        data = dict()
+        data['jobs'] = set(i+1 for (i, _) in enumerate(self.jobs))
+        data['procs'] = set(i+1 for (i, _) in enumerate(self.procs))
+        data['comms'] = set(i+1 for (i, _) in enumerate(self.comms))
+        data['comm_capacity'] = self.comm_capacity
         # data['activations'] = self['sdf_repetition_vector'][:, 0].tolist()
-        data['jobs_actors'] = [int(aidx) + 1 for (k, (actor, aidx)) in self.jobs_actors.items()]
         # delete spurious elements
-        data.pop('max_steps')
-        data.pop('activations')
+        data['next'] = [[(s, t) in self.next_job for t in self.jobs] for s in self.jobs]
+        data['path'] = [[[0 for c in self.comms] for t in self.procs] for s in self.procs]
+        for (s, t, p) in self.paths:
+            sidx = self.procs.index(s)
+            tidx = self.procs.index(t)
+            for (e, u) in p:
+                uidx = self.comms.index(u)
+                data['path'][sidx][tidx][uidx] = e
+        data['wcet'] = self.wcet.tolist()
+        data['wcct'] = self.wcct.tolist()
         return data
 
     def rebuild_forsyde_model(self, results):

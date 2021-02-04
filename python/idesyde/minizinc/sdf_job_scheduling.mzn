@@ -4,19 +4,15 @@ include "globals.mzn";
 enum objectives = {THROUGHPUT, LATENCY};
 
 % model parameters
-set of int: sdf_actors;
-set of int: sdf_channels;
 set of int: procs;
 set of int: comms;
-
 set of int: jobs;
 
 array[jobs] of opt int: release;
 array[jobs] of opt int: deadline;
 array[jobs, jobs] of bool: next;
-array[sdf_channels] of int: max_tokens;
 array[jobs, procs] of int: wcet;
-array[jobs, units] of int: wcct;
+array[jobs, jobs, comms] of int: wcct;
 array[proc, procs, comms] of int: path;
 array[comms] of int: comm_capacity;
 
@@ -72,6 +68,10 @@ constraint forall(p in procs) (
 constraint cumulative(job_start, job_duration, [1|i in jobs], length(procs));
 
 % communication concerns
+constraint forall(p, pp in procs, j, jj in jobs, u, uu in path[p, pp] where next[j, jj]) (
+  path[p, pp, u] = path[p, pp, uu] - 1 ->
+  comm_start[j, jj, u] + comm_duration[j, jj, u] <= comm_start[j, jj, uu]
+);
 constraint forall(p, pp in procs, j, jj in jobs where next[j, jj]) (
   occurs(start[j, p]) /\ occurs(start[jj, pp] -> (
     p != pp -> forall(u in path[p, pp]) (comm_duration[j, jj, u] = wcct[j, jj, u]) /\

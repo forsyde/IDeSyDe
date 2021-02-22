@@ -1,7 +1,7 @@
 from typing import List, Optional, Dict, Tuple
 
 import numpy as np
-
+from forsyde.io.python.core import Vertex
 
 def get_PASS(sdf_topology: np.ndarray,
              repetition_vector: np.ndarray,
@@ -63,7 +63,7 @@ def sdf_to_hsdf(actors: List[Vertex],
     jobs = [a for (i, a) in enumerate(actors) for j in range(repetition_vector[i])]
     next_job = np.zeros((len(jobs), len(jobs)), dtype=bool)
     for (i, (s, t, p)) in enumerate(channels):
-        
+        pass
     for j in jobs:
         for jj in jobs:
             if j != jj:

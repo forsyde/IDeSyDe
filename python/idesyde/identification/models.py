@@ -100,6 +100,9 @@ class SDFToOrders(MinizincableDecisionModel):
 @dataclass
 class SDFToMultiCore(MinizincableDecisionModel):
 
+    # sub identifications
+    sdf_orders_sub: SDFToOrders = SDFToOrders()
+
     # partially identified
     cores: List[List[Vertex]] = field(default_factory=list)
     comms: List[List[Vertex]] = field(default_factory=list)
@@ -204,8 +207,8 @@ class SDFToMultiCore(MinizincableDecisionModel):
             ordering = orderings[pidx]
             if not new_model.has_edge(core, ordering, key="object"):
                 new_edge = AbstractMapping(source_vertex=core,
-                                target_vertex=ordering,
-                                source_vertex_port=Port(identifier="execution", port_type=AbstractOrdering))
+                                           target_vertex=ordering,
+                                           source_vertex_port=Port(identifier="execution", port_type=AbstractOrdering))
                 new_model.add_edge(core, ordering, object=new_edge)
             slot = 0
             for t in range(max_steps):
@@ -217,43 +220,33 @@ class SDFToMultiCore(MinizincableDecisionModel):
                     actor = sdf_actors[aidx]
                     if not new_model.has_edge(ordering, actor, key="object"):
                         new_edge = AbstractScheduling(source_vertex=ordering,
-                                        target_vertex=actor,
-                                        source_vertex_port=Port(identifier=f"slot[{slot}]", port_type=Process))
+                                                      target_vertex=actor,
+                                                      source_vertex_port=Port(identifier=f"slot[{slot}]",
+                                                                              port_type=Process))
                         new_model.add_edge(ordering, actor, object=new_edge)
                         slot += 1
         for (commidx, comm) in enumerate(self.comms):
             ordering = orderings[commidx + len(self.cores)]
             if not new_model.has_edge(comm, ordering, key="object"):
                 new_edge = AbstractMapping(source_vertex=comm,
-                                target_vertex=ordering,
-                                source_vertex_port=Port(identifier="timeslots", port_type=AbstractOrdering))
+                                           target_vertex=ordering,
+                                           source_vertex_port=Port(identifier="timeslots", port_type=AbstractOrdering))
                 new_model.add_edge(comm, ordering, object=new_edge)
             slots = [0 for c in sdf_channels]
             for (c, (s, t, path)) in enumerate(sdf_channels):
                 clashes = [
-                    slots[cc]
-                    for (p, _) in enumerate(self.cores)
-                    for (pp, _) in enumerate(self.cores)
-                    for t in range(max_steps)
-                    for tt in range(max_steps)
-                    for cc in range(c)
-                    if
-                    results["send_start"][c][p][pp][t][tt][commidx] +
-                    results["send_duration"][c][p][pp][t][tt][commidx]
-                    >= results["send_start"][cc][p][pp][t][tt][commidx]
-                    or
-                    results["send_start"][cc][p][pp][t][tt][commidx] +
-                    results["send_duration"][cc][p][pp][t][tt][commidx]
-                    >= results["send_start"][c][p][pp][t][tt][commidx]
+                    slots[cc] for (p, _) in enumerate(self.cores) for (pp, _) in enumerate(self.cores)
+                    for t in range(max_steps) for tt in range(max_steps) for cc in range(c)
+                    if results["send_start"][c][p][pp][t][tt][commidx] +
+                    results["send_duration"][c][p][pp][t][tt][commidx] >= results["send_start"][cc][p][pp][t][tt]
+                    [commidx] or results["send_start"][cc][p][pp][t][tt][commidx] + results["send_duration"][cc][p][pp]
+                    [t][tt][commidx] >= results["send_start"][c][p][pp][t][tt][commidx]
                 ]
-                slots[c] = min(
-                    slot for slot in range(self.comms_capacity[commidx])
-                    if slot not in clashes
-                )
+                slots[c] = min(slot for slot in range(self.comms_capacity[commidx]) if slot not in clashes)
                 for e in path:
                     new_edge = AbstractScheduling(source_vertex=ordering,
-                                    target_vertex=e,
-                                    source_vertex_port=Port(identifier=f"slot[{slots[c]}]"))
+                                                  target_vertex=e,
+                                                  source_vertex_port=Port(identifier=f"slot[{slots[c]}]"))
                     new_model.add_edge(ordering, e, object=new_edge)
         return new_model
 
@@ -350,7 +343,7 @@ class CharacterizedJobShop(MinizincableDecisionModel):
     def covered_vertexes(self):
         yield from self.jobs
         for p in self.procs:
-            yield from p            
+            yield from p
         for p in self.comms:
             yield from p
         yield from self.wcct_vertexes
@@ -361,9 +354,9 @@ class CharacterizedJobShop(MinizincableDecisionModel):
 
     def get_mzn_data(self):
         data = dict()
-        data['jobs'] = set(i+1 for (i, _) in enumerate(self.jobs))
-        data['procs'] = set(i+1 for (i, _) in enumerate(self.procs))
-        data['comms'] = set(i+1 for (i, _) in enumerate(self.comms))
+        data['jobs'] = set(i + 1 for (i, _) in enumerate(self.jobs))
+        data['procs'] = set(i + 1 for (i, _) in enumerate(self.procs))
+        data['comms'] = set(i + 1 for (i, _) in enumerate(self.comms))
         data['comm_capacity'] = self.comm_capacity
         # data['activations'] = self['sdf_repetition_vector'][:, 0].tolist()
         # delete spurious elements

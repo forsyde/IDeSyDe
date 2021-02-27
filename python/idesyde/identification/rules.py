@@ -44,11 +44,9 @@ class SDFAppRule(IdentificationRule):
         constructors = [c for c in model if isinstance(c, SDFComb)]
         delay_constructors = [c for c in model if isinstance(c, SDFPrefix)]
         # 1: find the actors
-        sdf_actors: List[Vertex] = [
-            a for c in constructors for a in model.adj[c] if isinstance(a, Process)]
+        sdf_actors: List[Vertex] = [a for c in constructors for a in model.adj[c] if isinstance(a, Process)]
         # 1: find the delays
-        sdf_delays: List[Vertex] = [
-            a for c in delay_constructors for a in model.adj[c] if isinstance(a, Process)]
+        sdf_delays: List[Vertex] = [a for c in delay_constructors for a in model.adj[c] if isinstance(a, Process)]
         # 1: get connected signals
         sdf_channels: List[Tuple[Vertex, Vertex, List[Vertex]]] = []
         # 1: check the model for the paths between actors
@@ -77,11 +75,9 @@ class SDFAppRule(IdentificationRule):
         # sdf_channels = [(s, t, p) for (s, t, p) in sdf_channels if all(
         #     isinstance(e["object"], Output) for (_, e) in model[s][t].items())]
         # 2: define the initial tokens by counting the delays on every path
-        initial_tokens = np.array(
-            [sum(1 for v in p if v in sdf_delays) for (_, _, p) in sdf_channels], dtype=int)
+        initial_tokens = np.array([sum(1 for v in p if v in sdf_delays) for (_, _, p) in sdf_channels], dtype=int)
         # 1: build the topology matrix
-        sdf_topology = np.zeros(
-            (len(sdf_channels), len(sdf_actors)), dtype=int)
+        sdf_topology = np.zeros((len(sdf_channels), len(sdf_actors)), dtype=int)
         for (cidx, (s, t, path)) in enumerate(sdf_channels):
             sidx = sdf_actors.index(s)
             tidx = sdf_actors.index(t)
@@ -89,17 +85,14 @@ class SDFAppRule(IdentificationRule):
             # in this channel, assuming there is only one edge
             # connecting them
             # TODO: maybe find a way to generalize properly to multigraphs?
-            out_port = next(v["object"].source_vertex_port for (
-                k, v) in model[s][path[0]].items())
-            in_port = next(v["object"].target_vertex_port for (
-                k, v) in model[path[-1]][t].items())
+            out_port = next(v["object"].source_vertex_port for (k, v) in model[s][path[0]].items())
+            in_port = next(v["object"].target_vertex_port for (k, v) in model[path[-1]][t].items())
             # get the constructor of the actors
             s_constructor = next(c for c in constructors if s in model[c])
             t_constructor = next(c for c in constructors if t in model[c])
             # look in their properties what is the production associated
             # with the channel, for the source...
-            sdf_topology[cidx, sidx] = int(
-                s_constructor.get_production()[out_port.identifier])
+            sdf_topology[cidx, sidx] = int(s_constructor.get_production()[out_port.identifier])
             sdf_topology[cidx, tidx] = - \
                 int(t_constructor.get_consumption()[in_port.identifier])
             # if out_port.identifier in s_constructor.get_production():
@@ -117,8 +110,7 @@ class SDFAppRule(IdentificationRule):
             # 2: cast it to a numpy
             repetition_vector = np.array(repetition_vector, dtype=int)
             # 2: calculate a PASS!
-            schedule = sdf_lib.get_PASS(
-                sdf_topology, repetition_vector, initial_tokens)
+            schedule = sdf_lib.get_PASS(sdf_topology, repetition_vector, initial_tokens)
             # and if it exists, create the model with the schedule
             if schedule != []:
                 sdf_pass = [sdf_actors[idx] for idx in schedule]
@@ -145,13 +137,11 @@ class SDFOrderRule(IdentificationRule):
 
     def identify(self, model, identified):
         res = None
-        sdf_exec_sub = next(
-            (p for p in identified if isinstance(p, SDFExecution)), None)
+        sdf_exec_sub = next((p for p in identified if isinstance(p, SDFExecution)), None)
         if sdf_exec_sub:
             orderings = [o for o in model if isinstance(o, AbstractOrdering)]
             if orderings:
-                res = SDFToOrders(sdf_exec_sub=sdf_exec_sub,
-                                  orderings=orderings)
+                res = SDFToOrders(sdf_exec_sub=sdf_exec_sub, orderings=orderings)
         # conditions for fixpoints and partial identification
         if res:
             res.compute_deduced_properties()
@@ -176,13 +166,10 @@ class SDFToCoresRule(IdentificationRule):
 
     def identify(self, model, identified):
         res = None
-        sdf_orders_sub = next(
-            (p for p in identified if isinstance(p, SDFToOrders)), None)
+        sdf_orders_sub = next((p for p in identified if isinstance(p, SDFToOrders)), None)
         if sdf_orders_sub:
-            cores = [p for p in model if isinstance(
-                p, AbstractProcessingComponent)]
-            comms = [p for p in model if isinstance(
-                p, AbstractCommunicationComponent)]
+            cores = [p for p in model if isinstance(p, AbstractProcessingComponent)]
+            comms = [p for p in model if isinstance(p, AbstractCommunicationComponent)]
             # find all cores that are connected between each other
             connections: List[Tuple[Vertex, Vertex, List[Vertex]]] = []
             for s in cores:
@@ -229,8 +216,7 @@ class SDFToCoresCharacterizedRule(IdentificationRule):
 
     def identify(self, model, identified):
         res = None
-        sdf_mpsoc_sub = next(
-            (p for p in identified if isinstance(p, SDFToMultiCore)), None)
+        sdf_mpsoc_sub = next((p for p in identified if isinstance(p, SDFToMultiCore)), None)
         if sdf_mpsoc_sub:
             sdf_actors = sdf_mpsoc_sub.sdf_orders_sub.sdf_exec_sub.sdf_actors
             sdf_channels = sdf_mpsoc_sub.sdf_orders_sub.sdf_exec_sub.sdf_channels
@@ -284,8 +270,7 @@ class SDFToCoresCharacterizedRule(IdentificationRule):
             # someone forgot to make sure there is only one annotation
             # per application
             goals_vertexes = [v for v in model if isinstance(v, Goal)]
-            throughput_vertexes = [
-                v for v in goals_vertexes if isinstance(v, MinimumThroughput)]
+            throughput_vertexes = [v for v in goals_vertexes if isinstance(v, MinimumThroughput)]
             throughput_importance = 0
             # check that all actors are covered by a throughput goal
             if all(
@@ -323,49 +308,40 @@ class SDFMulticoreToJobsRule(IdentificationRule):
                 sdf_mpsoc_sub.\
                 sdf_orders_sub.\
                 sdf_exec_sub.sdf_actors
-            sdf_repetition_vector = sdf_mpsoc_char_sub.\
-                sdf_mpsoc_sub.\
-                sdf_orders_sub.\
-                sdf_exec_sub.sdf_repetition_vector
             jobs, next_job = sdf_lib.sdf_to_hsdf(
+                sdf_mpsoc_char_sub.sdf_mpsoc_sub.sdf_orders_sub.sdf_exec_sub.sdf_actors,
+                sdf_mpsoc_char_sub.sdf_mpsoc_sub.sdf_orders_sub.sdf_exec_sub.sdf_channels,
                 sdf_mpsoc_char_sub.sdf_mpsoc_sub.sdf_orders_sub.sdf_exec_sub.sdf_topology,
                 sdf_mpsoc_char_sub.sdf_mpsoc_sub.sdf_orders_sub.sdf_exec_sub.sdf_repetition_vector,
-                sdf_mpsoc_char_sub.sdf_mpsoc_sub.sdf_orders_sub.sdf_exec_sub.sdf_initial_tokens
-            )# [a for (i, a) in enumerate(sdf_actors)
-                    # for j in range(sdf_repetition_vector[i])]
-            # one ordering per processor
+                sdf_mpsoc_char_sub.sdf_mpsoc_sub.sdf_orders_sub.sdf_exec_sub.sdf_initial_tokens)
             procs = []
             for (i, p) in enumerate(sdf_mpsoc_char_sub.sdf_mpsoc_sub.cores):
-                ordering = sdf_mpsoc_char_sub.sdf_mpsoc_sub.ordering[i]
-                procs.append([p, ordering])
+                orderings = sdf_mpsoc_char_sub.sdf_mpsoc_sub.sdf_orders_sub.orderings[i]
+                procs.append([p, orderings])
             # one ordering per comm
             comms = []
             for (i, p) in enumerate(sdf_mpsoc_char_sub.sdf_mpsoc_sub.comms):
-                ordering = sdf_mpsoc_char_sub.sdf_mpsoc_sub.ordering[i + len(procs)]
-                comms.append([p, ordering])
+                orderings = sdf_mpsoc_char_sub.sdf_mpsoc_sub.sdf_orders_sub.orderings[i + len(procs)]
+                comms.append([p, orderings])
             # fetch the wccts and wcets
             wcet = np.zeros((len(jobs), len(procs)), dtype=int)
             wcct = np.zeros((len(jobs), len(jobs), len(comms)), dtype=int)
-            for j in jobs:
-                for (i, p) in enumerate(sdf_mpsoc_char_sub.sdf_mpsoc_sub.cores):
-                    a = sdf_actors.index(j)
+            for (j, job) in enumerate(jobs):
+                a = sdf_actors.index(job)
+                for (i, _) in enumerate(sdf_mpsoc_char_sub.sdf_mpsoc_sub.cores):
                     wcet[j, i] = sdf_mpsoc_char_sub.wcet[a, i]
-            for j in jobs:
-                for jj in jobs:
-                    for (i, p) in enumerate(sdf_mpsoc_char_sub.sdf_mpsoc_sub.comms):
-                        aa = sdf_actors.index(jj)
-                        wcct[j, jj, p] = sdf_mpsoc_char_sub.wcct[a, aa, p]
-            res=CharacterizedJobShop(
-                comms=comms,
-                procs=procs,
-                jobs=jobs,
-            )
+                for (jj, jjob) in enumerate(jobs):
+                    aa = sdf_actors.index(jjob)
+                    for (i, _) in enumerate(sdf_mpsoc_char_sub.sdf_mpsoc_sub.comms):
+                        # TODO: Fix here with SDF channels!!!
+                        wcct[j, jj, i] = 0  #sdf_mpsoc_char_sub.token_wcct[a, aa, i]
+            res = CharacterizedJobShop(comms=comms, procs=procs, jobs=jobs, next_job=next_job)
         if res:
             return (True, res)
         else:
             return (False, None)
 
 
-_standard_rules_classes=[
+_standard_rules_classes = [
     SDFAppRule, SDFOrderRule, SDFToCoresRule, SDFToCoresCharacterizedRule, SDFMulticoreToJobsRule
 ]

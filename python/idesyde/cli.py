@@ -22,7 +22,9 @@ Automated Identification and Exlopration of Design Spaces in ForSyDe
 
 
 def cli_entry():
-    parser = argparse.ArgumentParser(description=description, formatter_class=argparse.RawDescriptionHelpFormatter)
+    parser = argparse.ArgumentParser(prog="idesyde",
+                                     description=description,
+                                     formatter_class=argparse.RawDescriptionHelpFormatter)
     parser.add_argument('model', type=str, help='Input ForSyDe-IO model to DeSyDe')
     parser.add_argument('--verbosity',
                         type=str,

@@ -208,7 +208,7 @@ class SDFToMultiCore(MinizincableDecisionModel):
             if not new_model.has_edge(core, ordering, key="object"):
                 new_edge = AbstractMapping(source_vertex=core,
                                            target_vertex=ordering,
-                                           source_vertex_port=Port(identifier="execution", port_type=AbstractOrdering))
+                                           source_vertex_port=Port(identifier="execution"))
                 new_model.add_edge(core, ordering, object=new_edge)
             slot = 0
             for t in range(max_steps):
@@ -221,8 +221,7 @@ class SDFToMultiCore(MinizincableDecisionModel):
                     if not new_model.has_edge(ordering, actor, key="object"):
                         new_edge = AbstractScheduling(source_vertex=ordering,
                                                       target_vertex=actor,
-                                                      source_vertex_port=Port(identifier=f"slot[{slot}]",
-                                                                              port_type=Process))
+                                                      source_vertex_port=Port(identifier=f"slot[{slot}]"))
                         new_model.add_edge(ordering, actor, object=new_edge)
                         slot += 1
         for (commidx, comm) in enumerate(self.comms):
@@ -230,7 +229,7 @@ class SDFToMultiCore(MinizincableDecisionModel):
             if not new_model.has_edge(comm, ordering, key="object"):
                 new_edge = AbstractMapping(source_vertex=comm,
                                            target_vertex=ordering,
-                                           source_vertex_port=Port(identifier="timeslots", port_type=AbstractOrdering))
+                                           source_vertex_port=Port(identifier="timeslots"))
                 new_model.add_edge(comm, ordering, object=new_edge)
             slots = [0 for c in sdf_channels]
             for (c, (s, t, path)) in enumerate(sdf_channels):

@@ -95,7 +95,7 @@ def cli_entry():
         outputs = [i[0] for i in args.output]\
             if args.output else [f'out_{args.model}']
         for out_file in outputs:
-            out_model.write(out_file)
+            forsyde_io.write_model(out_model, out_file)
             logger.info(f'Writting output model {out_file}')
     logging.info('Done')
 

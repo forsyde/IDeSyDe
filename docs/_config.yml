@@ -22,7 +22,7 @@ title: IDeSyDe
 email: jordao@kth.se
 description: >- # this means to ignore newlines until "baseurl:"
   Identification and and Exploration of Design Spaces
-baseurl: "/idesyde" # the subpath of your site, e.g. /blog
+baseurl: "/IDeSyDe" # the subpath of your site, e.g. /blog
 url: "" # the base hostname & protocol for your site, e.g. http://example.com
 # twitter_username: jekyllrb
 github_username: forsyde

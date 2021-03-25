@@ -34,7 +34,7 @@ def make_exe(dist):
     # policy.bytecode_optimize_level_two = True
 
     # Package all available Python extensions in the distribution.
-    # policy.extension_module_filter = "all"
+    policy.extension_module_filter = "all"
 
     # Package the minimum set of Python extensions in the distribution needed
     # to run a Python interpreter. Various functionality from the Python
@@ -49,7 +49,7 @@ def make_exe(dist):
 
     # Package Python extensions in the distribution not having a dependency on
     # GPL licensed software.
-    policy.extension_module_filter = "no-gpl"
+    # policy.extension_module_filter = "no-gpl"
 
     # Controls whether the file scanner attempts to classify files and emit
     # resource-specific values.
@@ -64,18 +64,18 @@ def make_exe(dist):
 
     # Toggle whether Python module source code for modules in the Python
     # distribution's standard library are included.
-    policy.include_distribution_sources = False
+    # policy.include_distribution_sources = False
 
     # Toggle whether Python package resource files for the Python standard
     # library are included.
-    policy.include_distribution_resources = False
+    # policy.include_distribution_resources = False
 
     # Controls the `add_include` attribute of `File` resources.
     # policy.include_file_resources = False
 
     # Controls the `add_include` attribute of `PythonModuleSource` not in
     # the standard library.
-    # policy.include_non_distribution_sources = True
+    policy.include_non_distribution_sources = True
 
     # Toggle whether files associated with tests are included.
     # policy.include_test = False
@@ -87,14 +87,14 @@ def make_exe(dist):
     # an optional fallback.
 
     # Use in-memory location for adding resources by default.
-    policy.resources_location = "in-memory"
+    # policy.resources_location = "in-memory"
 
     # Use filesystem-relative location for adding resources by default.
     # policy.resources_location = "filesystem-relative:prefix"
 
     # Attempt to add resources relative to the built binary when
     # `resources_location` fails.
-    policy.resources_location_fallback = "filesystem-relative:prefix"
+    # policy.resources_location_fallback = "filesystem-relative:prefix"
 
     # Clear out a fallback resource location.
     # policy.resources_location_fallback = None
@@ -122,17 +122,40 @@ def make_exe(dist):
     python_config = dist.make_python_interpreter_config()
 
     # Make the embedded interpreter behave like a `python` process.
-    python_config.config_profile = "python"
+    # python_config.config_profile = "python"
 
     # Set initial value for `sys.path`. If the string `$ORIGIN` exists in
     # a value, it will be expanded to the directory of the built executable.
     # python_config.module_search_paths = ["$ORIGIN/lib"]
 
-    # Use jemalloc as Python's memory allocator
-    python_config.raw_allocator = "jemalloc"
+    # Use jemalloc as Python's memory allocator.
+    # python_config.allocator_backend = "jemalloc"
 
-    # Use the system allocator as Python's memory allocator.
-    # python_config.raw_allocator = "system"
+    # Use mimalloc as Python's memory allocator.
+    # python_config.allocator_backend = "mimalloc"
+
+    # Use snmalloc as Python's memory allocator.
+    # python_config.allocator_backend = "snmalloc"
+
+    # Let Python choose which memory allocator to use. (This will likely
+    # use the malloc()/free() linked into the program.
+    # python_config.allocator_backend = "default"
+
+    # Enable the use of a custom allocator backend with the "raw" memory domain.
+    # python_config.allocator_raw = True
+
+    # Enable the use of a custom allocator backend with the "mem" memory domain.
+    # python_config.allocator_mem = True
+
+    # Enable the use of a custom allocator backend with the "obj" memory domain.
+    # python_config.allocator_obj = True
+
+    # Enable the use of a custom allocator backend with pymalloc's arena
+    # allocator.
+    # python_config.allocator_pymalloc_arena = True
+
+    # Enable Python memory allocator debug hooks.
+    # python_config.allocator_debug = True
 
     # Control whether `oxidized_importer` is the first importer on
     # `sys.meta_path`.
@@ -140,7 +163,7 @@ def make_exe(dist):
 
     # Enable the standard path-based importer which attempts to load
     # modules from the filesystem.
-    python_config.filesystem_importer = True
+    # python_config.filesystem_importer = True
 
     # Set `sys.frozen = True`
     # python_config.sys_frozen = True
@@ -153,10 +176,10 @@ def make_exe(dist):
     # python_config.write_modules_directory_env = "/tmp/oxidized/loaded_modules"
 
     # Evaluate a string as Python code when the interpreter starts.
-    # python_config.run_command = "from desyder.cli import cli_entry; cli_entry()"
+    # python_config.run_command = "<code>"
 
     # Run a Python module as __main__ when the interpreter starts.
-    python_config.run_module = "idesyde.cli"
+    # python_config.run_module = "<module>"
 
     # Run a Python file when the interpreter starts.
     # python_config.run_filename = "/path/to/file"
@@ -177,7 +200,18 @@ def make_exe(dist):
 
     # Install tcl/tk support files to a specified directory so the `tkinter` Python
     # module works.
-    exe.tcl_files_path = "lib/tcl"
+    # exe.tcl_files_path = "lib"
+
+    # Never attempt to copy Windows runtime DLLs next to the built executable.
+    # exe.windows_runtime_dlls_mode = "never"
+
+    # Copy Windows runtime DLLs next to the built executable when they can be
+    # located.
+    # exe.windows_runtime_dlls_mode = "when-present"
+
+    # Copy Windows runtime DLLs next to the build executable and error if this
+    # cannot be done.
+    # exe.windows_runtime_dlls_mode = "always"
 
     # Make the executable a console application on Windows.
     # exe.windows_subsystem = "console"
@@ -201,7 +235,14 @@ def make_exe(dist):
 
     # Invoke `pip install` using a requirements file and add the collected resources
     # to our binary.
-    exe.add_python_resources(exe.pip_install(["-r", "requirements.txt"]))
+    for resource in exe.pip_install(["-r", "requirements.txt"]):
+      resource.add_location = "in-memory"
+      exe.add_python_resource(resource)
+    #exe.add_python_resources(exe.pip_install(["-r", "requirements.txt"]))
+
+    
+    #exe.add_python_resources(exe.pip_install(["forsyde.io.python"]))
+    
 
     # Read Python files from a local directory and add them to our embedded
     # context, taking just the resources belonging to the `foo` and `bar`
@@ -210,8 +251,6 @@ def make_exe(dist):
     #    path="/src/mypackage",
     #    packages=["foo", "bar"],
     #))
-
-    # exe.add_python_resources(exe.setup_py_install('.'))
 
     # Discover Python files from a virtualenv and add them to our embedded
     # context.
@@ -233,7 +272,7 @@ def make_install(exe):
     files = FileManifest()
 
     # Add the generated executable to our install layout in the root directory.
-    files.add_python_resource(".", exe)
+    files.add_python_resource("idesyde", exe)
 
     return files
 
@@ -252,5 +291,5 @@ resolve_targets()
 # Everything below this is typically managed by PyOxidizer and doesn't need
 # to be updated by people.
 
-PYOXIDIZER_VERSION = "0.10.3"
+PYOXIDIZER_VERSION = "0.11.0"
 PYOXIDIZER_COMMIT = "UNKNOWN"

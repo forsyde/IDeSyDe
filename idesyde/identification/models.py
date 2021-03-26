@@ -21,6 +21,8 @@ from forsyde.io.python.types import AbstractScheduling
 from forsyde.io.python.types import AbstractProcessingComponent
 from forsyde.io.python.types import AbstractCommunicationComponent
 from idesyde.identification.interfaces import DecisionModel
+from idesyde.identification.interfaces import DirectDecisionModel
+from idesyde.identification.interfaces import CompositeDecisionModel
 from idesyde.identification.interfaces import MinizincableDecisionModel
 
 
@@ -320,6 +322,47 @@ class SDFToMultiCoreCharacterized(MinizincableDecisionModel):
 
 
 @dataclass
+class SDFToMPSoCClusteringMzn(MinizincableDecisionModel):
+    """SDF 2 MPSoC clustering approach decision model
+
+    This decision model executes a polynomial time algorithm
+    whenever called by an explorer to obtain the minimum number
+    of clusters that the SDF actors are mapped onto. These clusters
+    are then mapped onto the platform.
+    """
+
+    # covered partial identifications
+    sdf_mpsoc_char_sub: SDFToMultiCoreCharacterized = SDFToMultiCoreCharacterized()
+
+    # elements that are partially identified
+
+    # deduced properties
+    num_clusters: int = 1
+    # expanded_wcet: np.ndarray = np.array((0, 0), dtype=int)
+    # expanded_token_wcct: np.ndarray = np.zeros((0, 0), dtype=int)
+
+    def covered_vertexes(self):
+        yield from self.sdf_mpsoc_char_sub.covered_vertexes()
+
+    def compute_deduced_properties(self):
+        # conservative estimation of the number of clusters
+        self.num_clusters = int(
+            self.sdf_mpsoc_char_sub.sdf_mpsoc_sub.sdf_orders_sub.sdf_exec_sub.sdf_repetition_vector.sum()
+        )
+
+    def get_mzn_model_name(self):
+        return "sdf_mpsoc_linear_cluster.mzn"
+
+    def get_mzn_data(self):
+        data = self.sdf_mpsoc_char_sub.get_mzn_data()
+        # remake the wcet and wcct with proper data
+        return data
+
+    def rebuild_forsyde_model(self, results):
+        return self.sdf_mpsoc_char_sub.rebuild_forsyde_model(results)
+
+
+@dataclass
 class CharacterizedJobShop(MinizincableDecisionModel):
 
     # models that were abstracted in jobs
@@ -357,7 +400,7 @@ class CharacterizedJobShop(MinizincableDecisionModel):
         data['procs'] = set(i + 1 for (i, _) in enumerate(self.procs))
         data['comms'] = set(i + 1 for (i, _) in enumerate(self.comms))
         data['comm_capacity'] = self.comm_capacity
-        # data['activations'] = self['sdf_repetition_vector'][:, 0].tolist()
+        # data['activations'] = self['self.sdf_mpsoc_sub.sdf_mpsoc_sub.sdf_orders_sub.sdf_exec_sub.sdf_repetition_vector
         # delete spurious elements
         data['next'] = [[(s, t) in self.next_job for t in self.jobs] for s in self.jobs]
         data['path'] = [[[0 for c in self.comms] for t in self.procs] for s in self.procs]

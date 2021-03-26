@@ -60,7 +60,7 @@ def sdf_to_hsdf(actors: List[Vertex], channels: List[Tuple[Vertex, Vertex, List[
                 repetition_vector: np.ndarray,
                 initial_tokens: np.ndarray) -> Tuple[List[Vertex], List[Tuple[Vertex, Vertex]]]:
     jobs = [a for (i, a) in enumerate(actors) for _ in range(int(repetition_vector[i]))]
-    next_job = []
+    next_job: List[List[Vertex]] = []
     for (i, (s, t, p)) in enumerate(channels):
         pass
     for j in jobs:

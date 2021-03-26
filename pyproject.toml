@@ -3,14 +3,23 @@ name = "idesyde"
 version = "0.1.6"
 description = "Generic Design Space Exploration for models based system design"
 authors = ["jordao <jordao@kth.se>"]
+maintainers = ["jordao <jordao@kth.se>"]
 license = "MIT"
+readme = "README.md"
+homepage = "https://forsyde.github.io/IDeSyDe/"
+repository = "https://github.com/forsyde/IDeSyDe"
+documentation = "https://forsyde.github.io/IDeSyDe/"
+include = [ "idesyde/minizinc/*.mzn" ]
+
+[tool.poetry.scripts]
+idesyde = 'idesyde.cli:cli_entry'
 
 [tool.poetry.dependencies]
 python = "^3.7"
-forsyde-io-python = "0.2.5^"
-numpy = "1.20.1"
-sympy = "1.7.1"
-minizinc = "0.4.2"
+forsyde-io-python = "^0.2"
+numpy = "^1.20"
+sympy = "^1.7"
+minizinc = "^0.4"
 
 [tool.poetry.dev-dependencies]
 

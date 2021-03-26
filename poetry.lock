@@ -121,7 +121,7 @@ mpmath = ">=0.19"
 [metadata]
 lock-version = "1.1"
 python-versions = "^3.7"
-content-hash = "fbb1f6124662019bd601019792bbcdd96bcc5fbda4e47406d375254ebe23190a"
+content-hash = "440c1e0de0e322771018fff4d15e9ba5636aab4e66a274d5b9bbd5d66fb9a700"
 
 [metadata.files]
 decorator = [

@@ -35,7 +35,7 @@ sources:
   forsydeio: https://github.com/forsyde/forsyde-io
   idesyde: https://github.com/forsyde/IDeSyDe
 versions:
-  idesyde: "0.1.3"
+  idesyde: "0.1.6"
   forsydeio: "0.2.5"
 
 # Build settings
@@ -73,5 +73,5 @@ aux_links:
   '<img src="https://forsyde.github.io/assets/images/forsyde-logo.svg" height="40" width="60"/>':
   - "https://forsyde.github.io"
   '<img src="https://cdn.worldvectorlogo.com/logos/github-icon.svg" height="40" width="40"/>':
-  - "https://github.com/forsyde/forsyde-io"
+  - "https://github.com/forsyde/IDeSyDe"
 color_scheme: "light"

@@ -109,7 +109,7 @@ class SDFToMultiCore(MinizincableDecisionModel):
     cores: List[List[Vertex]] = field(default_factory=list)
     comms: List[List[Vertex]] = field(default_factory=list)
     connections: List[Tuple[Vertex, Vertex, List[Vertex]]] = field(default_factory=list)
-    comms_capacity: List[int] = field(default_factory=int)
+    comms_capacity: List[int] = field(default_factory=list)
 
     # deduced properties
     # vertex_expansions: Dict[Vertex, List[Vertex]] = field(default_factory=dict)
@@ -319,6 +319,19 @@ class SDFToMultiCoreCharacterized(MinizincableDecisionModel):
 
     def rebuild_forsyde_model(self, results):
         return self.sdf_mpsoc_sub.rebuild_forsyde_model(results)
+
+
+@dataclass
+class SDFToMPSoCClusteringDirect(DirectDecisionModel):
+    """SDF 2 MPSoC clustering approach greedy decision model"""
+
+    # covered partial identifications
+    sdf_mpsoc_char_sub: SDFToMultiCoreCharacterized = SDFToMultiCoreCharacterized()
+
+    # elements that are partially identified
+
+    def execute(self):
+        return None
 
 
 @dataclass

@@ -109,7 +109,7 @@ class DecisionModel(object):
 
 
 class DirectDecisionModel(DecisionModel):
-    '''DecisionModel interface that is solvable in pure python.
+    '''DecisionModel interface that is solvable in python.
 
     As some decision problems can greatly benefit from fast pre-solving
     algorithms that run in polynomial time, this decision model provides

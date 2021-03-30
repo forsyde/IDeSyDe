@@ -87,14 +87,14 @@ def make_exe(dist):
     # an optional fallback.
 
     # Use in-memory location for adding resources by default.
-    # policy.resources_location = "in-memory"
+    policy.resources_location = "in-memory"
 
     # Use filesystem-relative location for adding resources by default.
     # policy.resources_location = "filesystem-relative:prefix"
 
     # Attempt to add resources relative to the built binary when
     # `resources_location` fails.
-    # policy.resources_location_fallback = "filesystem-relative:prefix"
+    policy.resources_location_fallback = "filesystem-relative:lib"
 
     # Clear out a fallback resource location.
     # policy.resources_location_fallback = None
@@ -126,7 +126,7 @@ def make_exe(dist):
 
     # Set initial value for `sys.path`. If the string `$ORIGIN` exists in
     # a value, it will be expanded to the directory of the built executable.
-    # python_config.module_search_paths = ["$ORIGIN/lib"]
+    python_config.module_search_paths = ["$ORIGIN/lib"]
 
     # Use jemalloc as Python's memory allocator.
     # python_config.allocator_backend = "jemalloc"
@@ -179,7 +179,7 @@ def make_exe(dist):
     # python_config.run_command = "<code>"
 
     # Run a Python module as __main__ when the interpreter starts.
-    # python_config.run_module = "<module>"
+    python_config.run_module = "idesyde"
 
     # Run a Python file when the interpreter starts.
     # python_config.run_filename = "/path/to/file"
@@ -225,6 +225,9 @@ def make_exe(dist):
     # objects to the binary, with a load location as defined by the packaging
     # policy's resource location attributes.
     #exe.add_python_resources(exe.pip_download(["pyflakes==2.2.0"]))
+    for resource in exe.pip_download(["lxml>=4.6.3", "numpy>=1.20.1", "networkx>=2.5"]):
+        resource.add_location = "filesystem-relative:lib"
+        exe.add_python_resource(resource)
 
     # Invoke `pip install` with our Python distribution to install a single package.
     # `pip_install()` returns objects representing installed files.
@@ -235,12 +238,10 @@ def make_exe(dist):
 
     # Invoke `pip install` using a requirements file and add the collected resources
     # to our binary.
-    for resource in exe.pip_install(["-r", "requirements.txt"]):
-      resource.add_location = "in-memory"
-      exe.add_python_resource(resource)
     #exe.add_python_resources(exe.pip_install(["-r", "requirements.txt"]))
 
-    
+    # install the main package
+    exe.add_python_resources(exe.pip_install([CWD]))
     #exe.add_python_resources(exe.pip_install(["forsyde.io.python"]))
     
 

@@ -66,12 +66,12 @@ jobs:
       run: cargo install --version ${{ env.PYOXIDIZER_VERSION }} pyoxidizer
     - name: Regen Setup.py from poetry file
       run: |
-        cd ${{ env.GITHUB_WORKSPACE }}
+        cd $GITHUB_WORKSPACE
         poetry update
         poetry export
     - name: Run PyOxidizer
       run: |
-        cd ${{ env.GITHUB_WORKSPACE }}
+        cd $GITHUB_WORKSPACE
         pyoxidizer build
   build-apple:
     runs-on: macos-latest

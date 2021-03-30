@@ -8,15 +8,13 @@ on:
     branches: [ develop ]
   pull_request:
     branches: [ develop ]
-defaults:
-  env:
-    PYTHON_VERSION: 3.9
-    POETRY_VERSION: 1.1.5
-    RURST_VERSION: 1.49.0
-    PYXODIZIER_VERSION: 0.11.0
-  
 jobs:
   build-linux:
+    env:
+      PYTHON_VERSION: 3.9
+      POETRY_VERSION: 1.1.5
+      RURST_VERSION: 1.49.0
+      PYXODIZIER_VERSION: 0.11.0
     runs-on: ubuntu-latest
     steps:
     - uses: actions/checkout@v2
@@ -45,6 +43,11 @@ jobs:
         pyoxidizer build
   build-windows:
     runs-on: windows-latest
+    env:
+      PYTHON_VERSION: 3.9
+      POETRY_VERSION: 1.1.5
+      RURST_VERSION: 1.49.0
+      PYXODIZIER_VERSION: 0.11.0
     steps:
     - uses: actions/checkout@v2
     - name: Set up Python ${{ env.PYTHON_VERSION }}
@@ -72,6 +75,11 @@ jobs:
         pyoxidizer build
   build-apple:
     runs-on: macos-latest
+    env:
+      PYTHON_VERSION: 3.9
+      POETRY_VERSION: 1.1.5
+      RURST_VERSION: 1.49.0
+      PYXODIZIER_VERSION: 0.11.0
     steps:
     - uses: actions/checkout@v2
     - name: Set up Python ${{ env.PYTHON_VERSION }}

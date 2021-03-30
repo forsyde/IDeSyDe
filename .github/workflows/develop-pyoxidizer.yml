@@ -31,7 +31,7 @@ jobs:
       with:
         rust-version: ${{ env.RUST_VERSION }}
     - name: Install PyOxidizer
-      run: cargo install --version ${{ env.PYOXIDIZER_VERSION }} pyxodizier
+      run: cargo install --version ${{ env.PYOXIDIZER_VERSION }} pyoxidizer
     - name: Regen Setup.py from poetry file
       run: |
         cd ${{ env.GITHUB_WORKSPACE }}
@@ -63,7 +63,7 @@ jobs:
       with:
         rust-version: ${{ env.RUST_VERSION }}
     - name: Install PyOxidizer
-      run: cargo install --version ${{ env.PYOXIDIZER_VERSION }} pyxodizier
+      run: cargo install --version ${{ env.PYOXIDIZER_VERSION }} pyoxidizer
     - name: Regen Setup.py from poetry file
       run: |
         cd ${{ env.GITHUB_WORKSPACE }}
@@ -95,7 +95,7 @@ jobs:
       with:
         rust-version: ${{ env.RUST_VERSION }}
     - name: Install PyOxidizer
-      run: cargo install --version ${{ env.PYOXIDIZER_VERSION }} pyxodizier
+      run: cargo install --version ${{ env.PYOXIDIZER_VERSION }} pyoxidizer
     - name: Regen Setup.py from poetry file
       run: |
         cd ${{ env.GITHUB_WORKSPACE }}

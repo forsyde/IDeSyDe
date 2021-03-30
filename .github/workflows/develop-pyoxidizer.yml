@@ -40,7 +40,7 @@ jobs:
     - name: Run PyOxidizer
       run: |
         cd ${{ env.GITHUB_WORKSPACE }}
-        pyoxidizer run -- --help
+        pyoxidizer build
   build-linux:
     runs-on: ubuntu-latest
   build-windows:

@@ -10,8 +10,7 @@ on:
     branches: [ develop ]
 
 jobs:
-  default:
-    runs-on: ubuntu-latest
+  defaults:
     env:
       PYTHON_VERSION: 3.9
       POETRY_VERSION: 1.1.5

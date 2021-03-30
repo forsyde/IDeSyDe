@@ -25,7 +25,7 @@ jobs:
     - name: Poetry Install
       uses: knowsuchagency/poetry-install@v2
       with:
-        poetry_version: ${{ env.POETRY_VERSION }}
+        poetry-version: ${{ env.POETRY_VERSION }}
     - name: Setup Rust
       uses: ATiltedTree/setup-rust@v1.0.4
       with:
@@ -57,7 +57,7 @@ jobs:
     - name: Poetry Install
       uses: knowsuchagency/poetry-install@v2
       with:
-        poetry_version: ${{ env.POETRY_VERSION }}
+        poetry-version: ${{ env.POETRY_VERSION }}
     - name: Setup Rust
       uses: ATiltedTree/setup-rust@v1.0.4
       with:
@@ -89,7 +89,7 @@ jobs:
     - name: Poetry Install
       uses: knowsuchagency/poetry-install@v2
       with:
-        poetry_version: ${{ env.POETRY_VERSION }}
+        poetry-version: ${{ env.POETRY_VERSION }}
     - name: Setup Rust
       uses: ATiltedTree/setup-rust@v1.0.4
       with:

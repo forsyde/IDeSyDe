@@ -43,7 +43,7 @@ jobs:
     - name: Zip IDeSyDe
       uses: papeloto/action-zip@v1
       with:
-        files: ${{ github.workspace }}/build/target/x86_64-unknown-linux-gnu/release/install/idesyde
+        files: ${{ github.workspace }}/build/x86_64-unknown-linux-gnu/release/install/idesyde
         recursive: true
         dest: idesyde-x86_64-unknown-linux-gnu.zip
     - name: Upload binaries to release
@@ -91,7 +91,7 @@ jobs:
     - name: Zip IDeSyDe
       uses: papeloto/action-zip@v1
       with:
-        files: ${{ github.workspace }}build/target/x86_64-pc-windows-msvc/release/install/idesyde
+        files: ${{ github.workspace }}build/x86_64-pc-windows-msvc/release/install/idesyde
         recursive: true
         dest: idesyde-x86_64-pc-windows-msvc.zip
     - name: Upload binaries to release
@@ -139,7 +139,7 @@ jobs:
     - name: Zip IDeSyDe
       uses: papeloto/action-zip@v1
       with:
-        files: ${{ github.workspace }}/build/target/x86_64-apple-darwin/release/install/idesyde
+        files: ${{ github.workspace }}/build/x86_64-apple-darwin/release/install/idesyde
         recursive: true
         dest: idesyde-x86_64-apple-darwin.zip
     - name: Upload binaries to release

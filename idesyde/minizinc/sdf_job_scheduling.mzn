@@ -1,7 +1,7 @@
 include "globals.mzn";
 
 % objectives
-enum objectives = {THROUGHPUT, LATENCY};
+enum objectives = {MIN_LATENCY, MAX_LATENCY};
 
 % model parameters
 set of int: procs;
@@ -15,6 +15,9 @@ array[jobs, procs] of int: wcet;
 array[jobs, jobs, comms] of int: wcct;
 array[proc, procs, comms] of int: path;
 array[comms] of int: comm_capacity;
+
+% extra model parameters
+set of set of procs: topologically_symmetric;
 
 % objectives
 array[objectives] of int: objective_weights;
@@ -31,8 +34,9 @@ array[jobs, jobs, comm] of var int: comm_duration;
 
 % objectives
 int: max_makespan = sum(wcet)+sum(wcct)
-array[jobs] of var 0..max_makespan: job_throughput;
-array[objectives] of var 0..max_makespan: objective;
+array[jobs] of var max(wcet)..max_makespan: job_min_latency;
+array[jobs] of var sum(wcet)/length(procs)..max_makespan: job_max_latency;
+array[objectives] of var max(wcet)..max_makespan: objective;
 
 % tighten bounds for faster exploration
 constraint forall(j in jobs, p in procs) (
@@ -94,14 +98,14 @@ constraint forall(j, jj in jobs where next[j, jj]) (
 constraint forall(j in jobs) (
   job_throughput[j] >= job_duration[j]
 );
-constraint objective[THROUGHPUT] = max(j in jobs) (job_throughput[j]);
+constraint objective[MIN_LATENCY] = max(j in jobs) (job_throughput[j]);
 
-constraint objective[LATENCY] = max(j in jobs) (job_start[j] + job_duration[j]);
+constraint objective[MAX_LATENCY] = max(j in jobs) (job_start[j] + job_duration[j]);
 
-constraint objective[THROUGHPUT] <= objective[LATENCY];
+constraint objective[MIN_LATENCY] <= MIN_LATENCY[MAX_LATENCY];
 
 solve
   :: warm_start(start, [i mod length(procs) | i in jobs])
   :: int_search(job_start, first_fail, indomain_min)
   :: restart_luby(length(jobs) * length(units))
-  minimize sum(o in objectives) (objective_weights[o] * objective[o]);
+  minimize max(o in objectives) (objective_weights[o] * objective[o]);

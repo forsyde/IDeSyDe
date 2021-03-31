@@ -41,10 +41,9 @@ jobs:
         cd $GITHUB_WORKSPACE
         pyoxidizer build --release
     - name: Zip IDeSyDe
-      uses: papeloto/action-zip@v1
-      with:
-        files: ${{ github.workspace }}/build/x86_64-unknown-linux-gnu/release/install/
-        dest: idesyde-x86_64-unknown-linux-gnu.zip
+      run: |
+        sudo apt-get install -y unzip
+        zip -r ${{ github.workspace }}/build/x86_64-unknown-linux-gnu/release/install/idesyde idesyde-x86_64-unknown-linux-gnu.zip
     - name: Upload binaries to release
       uses: svenstaro/upload-release-action@v2
       with:

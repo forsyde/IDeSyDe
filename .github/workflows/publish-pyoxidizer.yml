@@ -1,4 +1,4 @@
-name: Test PyOxidizer for IDeSyDe
+name: Publish PyOxidizer for IDeSyDe
 
 on:
   release:

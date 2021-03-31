@@ -44,7 +44,7 @@ jobs:
     - name: Run PyOxidizer
       run: |
         cd $GITHUB_WORKSPACE
-        pyoxidizer build
+        pyoxidizer run -h
   test-windows:
     env:
       PYTHON_VERSION: 3.9
@@ -77,7 +77,7 @@ jobs:
     - name: Run PyOxidizer
       run: |
         cd $GITHUB_WORKSPACE
-        pyoxidizer build
+        pyoxidizer run -h
   test-apple:
     env:
       PYTHON_VERSION: 3.9
@@ -110,4 +110,4 @@ jobs:
     - name: Run PyOxidizer
       run: |
         cd $GITHUB_WORKSPACE
-        pyoxidizer build
+        pyoxidizer run -h

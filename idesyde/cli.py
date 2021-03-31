@@ -17,7 +17,7 @@ description = '''
  |___||___/ \___||___/ \_, ||___/ \___|
                        |__/
 
-Automated Identification and Exlopration of Design Spaces in ForSyDe
+Automated Identification and Exploration of Design Spaces in ForSyDe
 '''
 
 

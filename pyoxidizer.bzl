@@ -53,10 +53,10 @@ def make_exe(dist):
 
     # Controls whether the file scanner attempts to classify files and emit
     # resource-specific values.
-    # policy.file_scanner_classify_files = True
+    policy.file_scanner_classify_files = True
 
     # Controls whether `File` instances are emitted by the file scanner.
-    # policy.file_scanner_emit_files = False
+    # policy.file_scanner_emit_files = True
 
     # Controls the `add_include` attribute of "classified" resources
     # (`PythonModuleSource`, `PythonPackageResource`, etc).
@@ -71,11 +71,11 @@ def make_exe(dist):
     # policy.include_distribution_resources = False
 
     # Controls the `add_include` attribute of `File` resources.
-    # policy.include_file_resources = False
+    # policy.include_file_resources = True
 
     # Controls the `add_include` attribute of `PythonModuleSource` not in
     # the standard library.
-    policy.include_non_distribution_sources = True
+    # policy.include_non_distribution_sources = True
 
     # Toggle whether files associated with tests are included.
     # policy.include_test = False
@@ -109,7 +109,9 @@ def make_exe(dist):
 
     # Configure policy values to handle files as files and not attempt
     # to classify files as specific types.
-    # policy.set_resource_handling_mode("files")
+    policy.set_resource_handling_mode("files")
+
+    # policy.register_resource_callback(include_files_callback)
 
     # This variable defines the configuration of the embedded Python
     # interpreter. By default, the interpreter will run a Python REPL
@@ -225,9 +227,10 @@ def make_exe(dist):
     # objects to the binary, with a load location as defined by the packaging
     # policy's resource location attributes.
     #exe.add_python_resources(exe.pip_download(["pyflakes==2.2.0"]))
-    for resource in exe.pip_download(["lxml>=4.6.3", "numpy>=1.20.1", "networkx>=2.5"]):
-        resource.add_location = "filesystem-relative:lib"
-        exe.add_python_resource(resource)
+    # for resource in exe.pip_download(["lxml>=4.6.3", "numpy>=1.20.1", "networkx>=2.5", CWD]):
+    #     resource.add_include = True
+    #     resource.add_location = "filesystem-relative:lib"
+    #     exe.add_python_resource(resource)
 
     # Invoke `pip install` with our Python distribution to install a single package.
     # `pip_install()` returns objects representing installed files.
@@ -241,17 +244,17 @@ def make_exe(dist):
     #exe.add_python_resources(exe.pip_install(["-r", "requirements.txt"]))
 
     # install the main package
-    exe.add_python_resources(exe.pip_install([CWD]))
-    #exe.add_python_resources(exe.pip_install(["forsyde.io.python"]))
-    
+    for resource in exe.pip_install([CWD]):
+        resource.add_include = True
+        resource.add_location = "filesystem-relative:lib"
+        exe.add_python_resource(resource)
 
     # Read Python files from a local directory and add them to our embedded
     # context, taking just the resources belonging to the `foo` and `bar`
     # Python packages.
-    #exe.add_python_resources(exe.read_package_root(
-    #    path="/src/mypackage",
-    #    packages=["foo", "bar"],
-    #))
+    # for resource in exe.read_package_root(path="idesyde", packages=["idesyde"]):
+    #     resource.add_location = "in-memory"
+    #     exe.add_python_resource(resource)
 
     # Discover Python files from a virtualenv and add them to our embedded
     # context.

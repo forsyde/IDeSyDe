@@ -1,8 +1,8 @@
 from setuptools import find_packages, setup
 
 setup(name='idesyde',
-      version='0.1.6',
-      description='Analytical Design Space Exploration for ForSyDe',
+      version='0.1.7',
+      description='Analytical Design Space Identification and Exploration for ForSyDe',
       url='http://github.com/forsyde/IDeSyDe',
       author='Rodolfo Jordao',
       author_email='jordao@kth.se',

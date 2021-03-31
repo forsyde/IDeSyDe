@@ -8,6 +8,7 @@ on:
     branches: [ develop ]
   pull_request:
     branches: [ develop ]
+
 jobs:
   test-linux:
     env:
@@ -92,7 +93,6 @@ jobs:
         python-version: ${{ env.PYTHON_VERSION }}
     - name: Set up pip properly
       run: python -m pip install --upgrade pip
-    - name: Poetry Install
     - uses: abatilo/actions-poetry@v2.1.0
       with:
         poetry-version: ${{ env.POETRY_VERSION }}

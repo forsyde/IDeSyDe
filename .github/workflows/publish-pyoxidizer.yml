@@ -5,7 +5,7 @@ on:
     types: [created]
 
 jobs:
-  test-linux:
+  publish-linux:
     env:
       PYTHON_VERSION: 3.9
       POETRY_VERSION: 1.1.5
@@ -54,7 +54,7 @@ jobs:
         tag: ${{ github.ref }}
         overwrite: true
         body: "Zip with Libs for x86_64 linux distros"
-  test-windows:
+  publish-windows:
     env:
       PYTHON_VERSION: 3.9
       POETRY_VERSION: 1.1.5
@@ -101,7 +101,7 @@ jobs:
         tag: ${{ github.ref }}
         overwrite: true
         body: "Zip with Libs for x86_64 Windows"
-  test-apple:
+  publish-apple:
     env:
       PYTHON_VERSION: 3.9
       POETRY_VERSION: 1.1.5

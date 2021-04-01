@@ -43,7 +43,7 @@ jobs:
     - name: Zip IDeSyDe
       run: |
         sudo apt-get install -y unzip
-        zip -r ${{ github.workspace }}/build/x86_64-unknown-linux-gnu/release/install/idesyde idesyde-x86_64-unknown-linux-gnu.zip
+        zip -r idesyde-x86_64-unknown-linux-gnu.zip ${{ github.workspace }}/build/x86_64-unknown-linux-gnu/release/install/idesyde 
     - name: Upload binaries to release
       uses: svenstaro/upload-release-action@v2
       with:

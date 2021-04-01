@@ -87,10 +87,7 @@ jobs:
         cd $GITHUB_WORKSPACE
         pyoxidizer build --release
     - name: Zip IDeSyDe
-      uses: papeloto/action-zip@v1
-      with:
-        files: ${{ github.workspace }}build/x86_64-pc-windows-msvc/release/install/
-        dest: idesyde-x86_64-pc-windows-msvc.zip
+      run: zip -r idesyde-x86_64-windows-msvc.zip ${{ github.workspace }}/build/x86_64-windows-msvc/release/install/idesyde 
     - name: Upload binaries to release
       uses: svenstaro/upload-release-action@v2
       with:
@@ -134,10 +131,7 @@ jobs:
         cd $GITHUB_WORKSPACE
         pyoxidizer build --release
     - name: Zip IDeSyDe
-      uses: papeloto/action-zip@v1
-      with:
-        files: ${{ github.workspace }}/build/x86_64-apple-darwin/release/install/
-        dest: idesyde-x86_64-apple-darwin.zip
+      run: zip -r idesyde-x86_64-apple-darwin.zip ${{ github.workspace }}/build/x86_64-apple-darwin/release/install/idesyde 
     - name: Upload binaries to release
       uses: svenstaro/upload-release-action@v2
       with:

@@ -1,0 +1,32 @@
+---
+name: "Release nightly out of the develop branch"
+
+on:
+  push:
+    branches:
+      - "develop"
+
+jobs:
+  pre-release-linux:
+    name: "Pre Release"
+    runs-on: "ubuntu-latest"
+    steps:
+      - uses: actions/checkout@v2
+      - name: Prepare IDeSyDe distribution
+        uses: ./.github/actions/build-pyoxidizer
+        with:
+          build-dir: ${{ env.github-workspace }}
+      - name: Zip IDeSyDe
+        run: |
+          sudo apt-get install -y unzip
+          cd ${{ github.workspace }}/build/x86_64-unknown-linux-gnu/release/install
+          zip -r idesyde-x86_64-unknown-linux-gnu.zip idesyde 
+      - uses: "marvinpinto/action-automatic-releases@latest"
+        with:
+          repo_token: "${{ secrets.GITHUB_TOKEN }}"
+          automatic_release_tag: "nigthly"
+          prerelease: true
+          title: "Nightly development Build"
+          files: |
+            ${{ github.workspace }}/build/x86_64-unknown-linux-gnu/release/install/idesyde-x86_64-unknown-linux-gnu.zip
+            *.jar

@@ -1,0 +1,51 @@
+name: 'Genreate PyOxidizer Bundle'
+description: 'Wrapper around common usage'
+inputs:
+  build-dir:
+    description: "Place to issue all commands"
+    required: true
+    default: "."
+  python-version:
+    description: "Self-evident"
+    required: true
+    default: "3.9"
+  rust-version: 
+    description: "Self-evident"
+    required: true
+    default: "1.49.0"
+  pyoxidizer-version:  # id of input
+    description: "Self-evident"
+    required: true
+    default: '0.11'
+  release-build:
+    description: "Tells if rust builds it as release"
+    required: true
+runs:
+  using: "composite"
+  steps:
+  - name: Set up Python ${{ inputs.python-version }}
+    uses: actions/setup-python@v2
+    with:
+      python-version: ${{ inputs.python-version }}
+  - name: Set up pip properly (Linux)
+    run: |
+      python -m pip install --upgrade pip
+      pip install subprocess32
+  - uses: abatilo/actions-poetry@v2.1.0
+    with:
+      poetry-version: ${{ inputs.poetry-version }}
+  - name: Setup Rust
+    uses: ATiltedTree/setup-rust@v1.0.4
+    with:
+      rust-version: ${{ input.rust-version }}
+  - name: Regen Setup.py from poetry file
+    run: |
+      cd ${{ inputs.build-dir }}
+      poetry update
+      poetry export -o requirements.txt
+  - name: Install PyOxidizer
+    run: cargo install --version ${{ inputs.pyoxidizer-version }} pyoxidizer
+  - name: Run PyOxidizer
+    run: |
+      cd ${{ inputs.build-dir }}
+      pyoxidizer build --release

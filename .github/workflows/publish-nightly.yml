@@ -8,7 +8,7 @@ on:
 
 jobs:
   make-release:
-    needs: [publish-linux]
+    needs: [publish-linux, publish-macos]
     runs-on: ubuntu-lastest
     steps:
       - uses: "marvinpinto/action-automatic-releases@latest"
@@ -19,6 +19,7 @@ jobs:
           title: "Nightly development Build"
           files: |
             ${{ needs.publish-linux.output.zip-file }}
+            ${{ needs.publish-macos.output.zip-file }}
   publish-linux:
     env:
       PYTHON_VERSION: 3.8
@@ -104,6 +105,8 @@ jobs:
       RUST_VERSION: 1.49.0
       PYOXIDIZER_VERSION: 0.11.0
     runs-on: macos-latest
+    outputs:
+      zip-file: ${{ github.workspace }}/build/x86_64-apple-darwin/release/install/idesyde-x86_64-apple-darwin.zip
     steps:
     - uses: actions/checkout@v2
     - name: Set up Python ${{ env.PYTHON_VERSION }}
@@ -131,4 +134,6 @@ jobs:
         cd $GITHUB_WORKSPACE
         pyoxidizer build --release
     - name: Zip IDeSyDe
-      run: zip -r idesyde-x86_64-apple-darwin.zip ${{ github.workspace }}/build/x86_64-apple-darwin/release/install/idesyde 
+      run: |
+        cd ${{ github.workspace }}/build/x86_64-apple-darwin/release/install
+        zip -r idesyde-x86_64-apple-darwin.zip idesyde 

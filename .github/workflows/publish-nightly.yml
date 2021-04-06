@@ -9,7 +9,7 @@ on:
 jobs:
   make-release:
     needs: [publish-linux, publish-apple]
-    runs-on: ubuntu-lastest
+    runs-on: ubuntu-latest
     steps:
       - uses: "marvinpinto/action-automatic-releases@latest"
         with:

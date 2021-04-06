@@ -8,7 +8,7 @@ on:
 
 jobs:
   make-release:
-    needs: [publish-linux, publish-macos]
+    needs: [publish-linux, publish-apple]
     runs-on: ubuntu-lastest
     steps:
       - uses: "marvinpinto/action-automatic-releases@latest"
@@ -19,7 +19,7 @@ jobs:
           title: "Nightly development Build"
           files: |
             ${{ needs.publish-linux.output.zip-file }}
-            ${{ needs.publish-macos.output.zip-file }}
+            ${{ needs.publish-apple.output.zip-file }}
   publish-linux:
     env:
       PYTHON_VERSION: 3.8

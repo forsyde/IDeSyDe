@@ -1,3 +1,4 @@
+import math
 from typing import List, Optional, Dict, Tuple
 
 import numpy as np
@@ -56,15 +57,19 @@ def check_sdf_consistency(sdf_topology) -> bool:
     return False
 
 
-def sdf_to_hsdf(actors: List[Vertex], channels: List[Tuple[Vertex, Vertex, List[Vertex]]], topology: np.ndarray,
+def sdf_to_jobs(actors: List[Vertex], channels: List[Tuple[Vertex, Vertex, List[Vertex]]], topology: np.ndarray,
                 repetition_vector: np.ndarray,
-                initial_tokens: np.ndarray) -> Tuple[List[Vertex], List[Tuple[Vertex, Vertex]]]:
-    jobs = [a for (i, a) in enumerate(actors) for _ in range(int(repetition_vector[i]))]
-    next_job: List[List[Vertex]] = []
-    for (i, (s, t, p)) in enumerate(channels):
-        pass
-    for j in jobs:
-        for jj in jobs:
-            if j != jj:
-                pass
+                initial_tokens: np.ndarray) -> Tuple[List[Vertex], List[Tuple[int, int]]]:
+    jobs: List[Vertex] = [a for (i, a) in enumerate(actors) for _ in int(repetition_vector[i])]
+    next_job: List[Tuple[Vertex, Vertex]] = []
+    for (cidx, (s, t, _)) in enumerate(channels):
+        idxs = actors.index(s)
+        idxt = actors.index(t)
+        production = topology[cidx, idxs]
+        consumption = topology[cidx, idxt]
+        for fires in range(repetition_vector[idxs]):
+            for firet in range(repetition_vector[idxt]):
+                if ((production * fires) //
+                        consumption) == firet and production * fires + int(initial_tokens[cidx]) < consumption * firet:
+                    next_job.append((repetition_vector[idxs] * idxs + fires, repetition_vector[idxt] * idxt + firet))
     return (jobs, next_job)

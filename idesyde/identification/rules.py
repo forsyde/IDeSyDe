@@ -228,28 +228,6 @@ class SDFToCoresCharacterizedRule(IdentificationRule):
                                    if isinstance(w, WCCT)]  # list(model.get_vertexes(WCCT.get_instance()))
             wcet = np.zeros((len(cores), len(sdf_actors)), dtype=int)
             token_wcct = np.zeros((len(sdf_channels), len(comms)), dtype=int)
-            # information is available for all actors
-            # for all p,a; exists a wcet connected to them
-            # actors_characterized = all(
-            #     any(
-            #         len(nx.all_simple_paths(model, w, p)) > 0 and
-            #         len(nx.all_simple_paths(model, w, a)) > 0
-            #         for w in wcet_vertexes
-            #     )
-            #     for a in sdf_actors for p in cores
-            # )
-            # info is available for all signals within a channel
-            # forall p,c; exists a wcct connect to them (all signals in c)
-            # channels_characterized = all(
-            #     any(
-            #         len(nx.all_simple_paths(model, w, p)) > 0 and
-            #         all(len(nx.all_simple_paths(model, w, s)) > 0 for s in channel if isinstance(s, Signal))
-            #         for w in token_wcct_vertexes
-            #     )
-            #     for (_, _, channel) in sdf_channels for p in comms
-            # )
-            # iterate through all actors and processes and note down
-            # the WCET resulting from their interaction
             for (aidx, a) in enumerate(sdf_actors):
                 for (pidx, p) in enumerate(cores):
                     wcet[aidx, pidx] = max(
@@ -304,11 +282,9 @@ class SDFMulticoreToJobsRule(IdentificationRule):
         sdf_mpsoc_char_sub: SDFToMultiCoreCharacterized = next(
             (p for p in identified if isinstance(p, SDFToMultiCoreCharacterized)), None)
         if sdf_mpsoc_char_sub:
-            sdf_actors = sdf_mpsoc_char_sub.\
-                sdf_mpsoc_sub.\
-                sdf_orders_sub.\
-                sdf_exec_sub.sdf_actors
-            jobs, next_job = sdf_lib.sdf_to_hsdf(
+            sdf_actors = sdf_mpsoc_char_sub.sdf_mpsoc_sub.sdf_orders_sub.sdf_exec_sub.sdf_actors
+            sdf_channels = sdf_mpsoc_char_sub.sdf_mpsoc_sub.sdf_orders_sub.sdf_exec_sub.sdf_channels
+            jobs, weak_next, strong_next = sdf_lib.sdf_to_jobs(
                 sdf_mpsoc_char_sub.sdf_mpsoc_sub.sdf_orders_sub.sdf_exec_sub.sdf_actors,
                 sdf_mpsoc_char_sub.sdf_mpsoc_sub.sdf_orders_sub.sdf_exec_sub.sdf_channels,
                 sdf_mpsoc_char_sub.sdf_mpsoc_sub.sdf_orders_sub.sdf_exec_sub.sdf_topology,
@@ -320,22 +296,44 @@ class SDFMulticoreToJobsRule(IdentificationRule):
                 procs.append([p, orderings])
             # one ordering per comm
             comms = []
+            comm_capacity = []
             for (i, p) in enumerate(sdf_mpsoc_char_sub.sdf_mpsoc_sub.comms):
                 orderings = sdf_mpsoc_char_sub.sdf_mpsoc_sub.sdf_orders_sub.orderings[i + len(procs)]
                 comms.append([p, orderings])
+                if isinstance(p, TimeDivisionMultiplexer):
+                    comm_capacity.append(p.get_slots())
+                else:
+                    comm_capacity.append(1)
             # fetch the wccts and wcets
             wcet = np.zeros((len(jobs), len(procs)), dtype=int)
             wcct = np.zeros((len(jobs), len(jobs), len(comms)), dtype=int)
             for (j, job) in enumerate(jobs):
+                # for every job, which is a repetition of an actor a, build up ther wcet
                 a = sdf_actors.index(job)
-                for (i, _) in enumerate(sdf_mpsoc_char_sub.sdf_mpsoc_sub.cores):
+                for (i, p) in enumerate(sdf_mpsoc_char_sub.sdf_mpsoc_sub.cores):
                     wcet[j, i] = sdf_mpsoc_char_sub.wcet[a, i]
+                # now iterate through every:
+                #  other job, with the corresponding
+                #  channel between then and,
+                #  every comm element in the pat between these jobs,
+                # and build up the additive WCCT in such communication path.
                 for (jj, jjob) in enumerate(jobs):
-                    aa = sdf_actors.index(jjob)
-                    for (i, _) in enumerate(sdf_mpsoc_char_sub.sdf_mpsoc_sub.comms):
-                        # TODO: Fix here with SDF channels!!!
-                        wcct[j, jj, i] = 0  #sdf_mpsoc_char_sub.token_wcct[a, aa, i]
-            res = CharacterizedJobShop(comms=comms, procs=procs, jobs=jobs, next_job=next_job)
+                    for (cidx, (s, t, _)) in enumerate(sdf_channels):
+                        if s == job and t == jjob:
+                            for (i, p) in enumerate(sdf_mpsoc_char_sub.sdf_mpsoc_sub.comms):
+                                wcct[j, jj, i] = sdf_mpsoc_char_sub.token_wcct[cidx, i]
+            res = CharacterizedJobShop(
+                originals=[sdf_mpsoc_char_sub],
+                comm_capacity=comm_capacity,
+                comms=comms,
+                procs=procs,
+                jobs=jobs,
+                weak_next=weak_next,
+                strong_next=strong_next,
+                wcet=wcet,
+                wcct=wcct,
+                paths=sdf_mpsoc_char_sub.sdf_mpsoc_sub.connections,
+                objective_weights=[sdf_mpsoc_char_sub.throughput_importance, sdf_mpsoc_char_sub.latency_importance])
         if res:
             return (True, res)
         else:

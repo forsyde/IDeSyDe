@@ -7,7 +7,6 @@ from typing import List
 
 import numpy as np
 
-import idesyde.sdf as sdfapi
 from forsyde.io.python.api import ForSyDeModel
 from forsyde.io.python.core import Vertex
 from forsyde.io.python.core import Edge
@@ -24,6 +23,8 @@ from idesyde.identification.interfaces import DecisionModel
 from idesyde.identification.interfaces import DirectDecisionModel
 from idesyde.identification.interfaces import CompositeDecisionModel
 from idesyde.identification.interfaces import MinizincableDecisionModel
+
+import idesyde.sdf as sdfapi
 
 
 @dataclass
@@ -281,29 +282,6 @@ class SDFToMultiCoreCharacterized(MinizincableDecisionModel):
 
     def compute_deduced_properties(self):
         pass
-        # sdf_actors = self.sdf_mpsoc_sub.sdf_orders_sub.sdf_exec_sub.sdf_actors
-        # sdf_channels = self.sdf_mpsoc_sub.sdf_orders_sub.sdf_exec_sub.sdf_channels
-        # vertex_expansions = self.sdf_mpsoc_sub.vertex_expansions
-        # cores = self.sdf_mpsoc_sub.cores
-        # comms = self.sdf_mpsoc_sub.comms
-        # expanded_enum = self.sdf_mpsoc_sub.expanded_enum
-        # expanded_wcet = np.zeros((len(sdf_actors), sum(len(l) for (v, l) in vertex_expansions.items() if v in cores)),
-        #                          dtype=int)
-        # for (aidx, a) in enumerate(sdf_actors):
-        #     for (pidx, p) in enumerate(cores):
-        #         for ex in vertex_expansions[p]:
-        #             exidx = expanded_enum[ex]
-        #             expanded_wcet[aidx, exidx] = self.wcet[aidx, pidx]
-        # expanded_token_wcct = np.zeros(
-        #     (len(sdf_channels), sum(len(l) for (v, l) in vertex_expansions.items() if v in comms)), dtype=int)
-        # for (cidx, c) in enumerate(sdf_channels):
-        #     for (bidx, b) in enumerate(comms):
-        #         for ex in vertex_expansions[b]:
-        #             exidx = expanded_enum[ex]
-        #             expanded_token_wcct[cidx, exidx] = self.token_wcct[cidx, bidx]
-        # self.expanded_wcet = expanded_wcet
-        # self.expanded_wcct = expanded_wcct
-        # self.expanded_token_wcct = expanded_token_wcct
 
     def get_mzn_model_name(self):
         return "sdf_mpsoc_linear_dmodel.mzn"
@@ -351,6 +329,7 @@ class SDFToMPSoCClusteringMzn(MinizincableDecisionModel):
 
     # deduced properties
     num_clusters: int = 1
+
     # expanded_wcet: np.ndarray = np.array((0, 0), dtype=int)
     # expanded_token_wcct: np.ndarray = np.zeros((0, 0), dtype=int)
 
@@ -360,8 +339,7 @@ class SDFToMPSoCClusteringMzn(MinizincableDecisionModel):
     def compute_deduced_properties(self):
         # conservative estimation of the number of clusters
         self.num_clusters = int(
-            self.sdf_mpsoc_char_sub.sdf_mpsoc_sub.sdf_orders_sub.sdf_exec_sub.sdf_repetition_vector.sum()
-        )
+            self.sdf_mpsoc_char_sub.sdf_mpsoc_sub.sdf_orders_sub.sdf_exec_sub.sdf_repetition_vector.sum())
 
     def get_mzn_model_name(self):
         return "sdf_mpsoc_linear_cluster.mzn"
@@ -388,12 +366,12 @@ class CharacterizedJobShop(MinizincableDecisionModel):
     procs: List[List[Vertex]] = field(default_factory=list)
     comms: List[List[Vertex]] = field(default_factory=list)
     comm_capacity: List[int] = field(default_factory=list)
-    next_job: List[Tuple[Vertex, Vertex]] = field(default_factory=list)
-    wcet_vertexes: List[Vertex] = field(default_factory=list)
-    wcct_vertexes: List[Vertex] = field(default_factory=list)
+    weak_next: List[Tuple[int, int]] = field(default_factory=list)
+    strong_next: List[Tuple[int, int]] = field(default_factory=list)
     wcet: np.ndarray = np.zeros((0, 0), dtype=int)
     wcct: np.ndarray = np.zeros((0, 0, 0), dtype=int)
     paths: List[Tuple[Vertex, Vertex, List[Vertex]]] = field(default_factory=list)
+    objective_weights: List[int] = field(default_factory=list)
 
     def covered_vertexes(self):
         yield from self.jobs
@@ -401,11 +379,11 @@ class CharacterizedJobShop(MinizincableDecisionModel):
             yield from p
         for p in self.comms:
             yield from p
-        yield from self.wcct_vertexes
-        yield from self.wcct_vertexes
+        for m in self.originals:
+            yield from m.covered_vertexes()
 
     def get_mzn_model_name(self):
-        return "sdf_job_scheduling.mzn"
+        return "dependent_job_scheduling.mzn"
 
     def get_mzn_data(self):
         data = dict()
@@ -415,18 +393,29 @@ class CharacterizedJobShop(MinizincableDecisionModel):
         data['comm_capacity'] = self.comm_capacity
         # data['activations'] = self['self.sdf_mpsoc_sub.sdf_mpsoc_sub.sdf_orders_sub.sdf_exec_sub.sdf_repetition_vector
         # delete spurious elements
-        data['next'] = [[(s, t) in self.next_job for t in self.jobs] for s in self.jobs]
+        data['weak_next'] = [[(sidx, tidx) in self.weak_next for (tidx, _) in enumerate(self.jobs)]
+                             for (sidx, _) in enumerate(self.jobs)]
+        data['strong_next'] = [[(sidx, tidx) in self.strong_next for (tidx, _) in enumerate(self.jobs)]
+                               for (sidx, _) in enumerate(self.jobs)]
         data['path'] = [[[0 for c in self.comms] for t in self.procs] for s in self.procs]
-        for (s, t, p) in self.paths:
-            sidx = self.procs.index(s)
-            tidx = self.procs.index(t)
-            for (e, u) in p:
-                uidx = self.comms.index(u)
-                data['path'][sidx][tidx][uidx] = e
+        for (s, t, path) in self.paths:
+            for (e, u) in enumerate(path):
+                for (pidx, p) in enumerate(self.procs):
+                    for (ppidx, pp) in enumerate(self.procs):
+                        for (cidx, c) in enumerate(self.comms):
+                            if s in p and t in pp and u in c:
+                                data['path'][pidx][ppidx][cidx] = e + 1
         data['wcet'] = self.wcet.tolist()
         data['wcct'] = self.wcct.tolist()
+        data['release'] = [0 for j in self.jobs]
+        data['deadline'] = [0 for j in self.jobs]
+        data['objective_weights'] = self.objective_weights
         return data
 
     def rebuild_forsyde_model(self, results):
         new_model = self.covered_model()
+        # TODO: rebuild it
+        for (j, plist) in enumerate(results["start"]):
+            for (p, t) in enumerate(plist):
+                print(j, p, t)
         return new_model

@@ -23,6 +23,11 @@ minizinc = "^0.4"
 
 [tool.poetry.dev-dependencies]
 
+[tool.black]
+line-length = 120
+target-version = ['py37']
+include = '\.pyi?$'
+
 [build-system]
 requires = ["poetry-core>=1.0.0"]
 build-backend = "poetry.core.masonry.api"

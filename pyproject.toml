@@ -12,12 +12,11 @@ documentation = "https://forsyde.github.io/IDeSyDe/"
 include = [ "idesyde/minizinc/*.mzn" ]
 
 [tool.poetry.scripts]
-zidesyde = 'idesyde.cli:cli_entry'
+idesyde = 'idesyde.cli:cli_entry'
 
 [tool.poetry.dependencies]
 python = "^3.7"
-# forsyde-io-python = "^0.2.6"
-forsyde-io-python = "../forsyde-io/python"
+forsyde-io-python = "^0.2.6"
 numpy = "^1.20"
 sympy = "^1.7"
 minizinc = "^0.4"

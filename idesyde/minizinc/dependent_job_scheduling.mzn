@@ -77,7 +77,11 @@ constraint forall(p, pp in procs, j, jj in jobs, u, uu in comms where strong_nex
 );
 constraint forall(p, pp in procs, j, jj in jobs, u in comms where strong_next[j, jj] /\ path[p, pp, u] > 0) (
   occurs(start[j, p]) /\ occurs(start[jj, pp]) -> 
-  start[j, p] <= comm_start[j, jj, u] /\ comm_start[j, jj, u] + comm_duration[j, jj, u] <= start[jj, pp]
+  start[j, p] + duration[j, p] <= comm_start[j, jj, u] 
+);
+constraint forall(p, pp in procs, j, jj in jobs, u in comms where strong_next[j, jj] /\ path[p, pp, u] > 0) (
+  occurs(start[j, p]) /\ occurs(start[jj, pp]) -> 
+  comm_start[j, jj, u] + comm_duration[j, jj, u] <= start[jj, pp]
 );
 constraint forall(p in comms) (
  cumulative(

@@ -1,3 +1,4 @@
+import itertools
 from dataclasses import dataclass
 from dataclasses import field
 from typing import Tuple
@@ -420,7 +421,7 @@ class CharacterizedJobShop(MinizincableDecisionModel):
         for (jidx, plist) in enumerate(results["start"]):
             j = self.jobs[jidx]
             for (pidx, t) in enumerate(plist):
-                if t:
+                if t is not None:
                     # create the mapping between elements of the abstract
                     # processing machine
                     for (p, pp) in zip(self.procs[pidx][:-1], self.procs[pidx][1:]):
@@ -437,26 +438,27 @@ class CharacterizedJobShop(MinizincableDecisionModel):
                         if 'trigger-time' not in p.properties:
                             p.properties['trigger-time'] = {}
                         p.properties['trigger-time'][t] = j.identifier
-        for (jidx, jjlist) in enumerate(results["comm_start"]):
-            j = self.jobs[jidx]
-            for (jjidx, ulist) in enumerate(jjlist):
-                jj = self.jobs[jjidx]
-                for (uidx, t) in enumerate(ulist):
-                    if t:
-                        # create the mapping between elements of the abstract
-                        # processing communicator
-                        for (p, pp) in zip(self.comms[uidx][:-1], self.comms[uidx][1:]):
-                            if not new_model.has_edge(p, pp, key="object"):
-                                new_edge = AbstractMapping(source_vertex=p, target_vertex=pp)
-                                new_model.add_edge(p, pp, object=new_edge)
-                        # add the comm job to this one communicator, assuming the
-                        # last element is the one represeting the machine's
-                        # interface
-                        u = self.comms[uidx][-1]
-                        if not new_model.has_edge(u, j, key="object"):
-                            new_edge = AbstractScheduling(source_vertex=u, target_vertex=j)
-                            new_model.add_edge(p, j, object=new_edge)
+        for (s, t, path) in self.comm_jobs:
+            s_idxs = (i for (i, j) in enumerate(self.jobs) if j == s)
+            t_idxs = (i for (i, j) in enumerate(self.jobs) if j == t)
+            for (s_idx, t_idx, (u_idx, u)) in itertools.product(s_idxs, t_idxs, enumerate(self.comms)):
+                t = results["comm_start"][s_idx][t_idx][u_idx]
+                if t is not None:
+                    # create the mapping between elements of the abstract
+                    # processing communicator
+                    for (p, pp) in zip(u[:-1], u[1:]):
+                        if not new_model.has_edge(p, pp, key="object"):
+                            new_edge = AbstractMapping(source_vertex=p, target_vertex=pp)
+                            new_model.add_edge(p, pp, object=new_edge)
+                    # add the comm job to this one communicator, assuming the
+                    # last element is the one represeting the machine's
+                    # interface
+                    p = u[-1]
+                    for c in path:
+                        if not new_model.has_edge(p, c, key="object"):
+                            new_edge = AbstractScheduling(source_vertex=p, target_vertex=c)
+                            new_model.add_edge(p, c, object=new_edge)
                             if 'trigger-time' not in p.properties:
                                 p.properties['trigger-time'] = {}
-                            p.properties['trigger-time'][j.identifier] = t
+                            p.properties['trigger-time'][c.identifier] = t
         return new_model

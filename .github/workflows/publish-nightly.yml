@@ -42,7 +42,7 @@ jobs:
         poetry update
         poetry install
         mkdir -p dist
-        poetry run shiv -o dist/idesyde.pyz -c idesyde idesyde
+        poetry run shiv --site-packages=$(find $(poetry env info -p) -name "site-packages") --upgrade -o dist/idesyde.pyz -c idesyde idesyde
     - name: Upload binaries to release
       uses: svenstaro/upload-release-action@v2
       with:
@@ -166,7 +166,7 @@ jobs:
         poetry update
         poetry install
         mkdir -p dist
-        poetry run shiv -o dist/idesyde.pyz -c idesyde idesyde
+        poetry run shiv --site-packages=$(find $(poetry env info -p) -name "site-packages") --upgrade -o dist/idesyde.pyz -c idesyde idesyde
     - name: Upload binaries to release
       uses: svenstaro/upload-release-action@v2
       with:

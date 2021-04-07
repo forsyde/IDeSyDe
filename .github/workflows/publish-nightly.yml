@@ -38,7 +38,7 @@ jobs:
         poetry-version: ${{ matrix.poetry }}
     - name: Make shiv from poetry file
       run: |
-        cd $GITHUB_WORKSPACE
+        cd ${{ github.workspace }}
         poetry update
         poetry install
         mkdir -p dist
@@ -79,7 +79,7 @@ jobs:
       run: cargo install --version ${{ env.PYOXIDIZER_VERSION }} pyoxidizer
     - name: Run PyOxidizer
       run: |
-        cd $GITHUB_WORKSPACE
+        cd ${{ github.workspace }}
         pyoxidizer build --release
     - name: Zip IDeSyDe
       run: |
@@ -121,17 +121,17 @@ jobs:
         poetry update
         poetry install
         mkdir -p dist
-        poetry run shiv --site-packages=$(find $(poetry env info -p) -name "site-packages") --upgrade -o dist/idesyde.pyz -c idesyde idesyde
+        poetry run shiv -o dist\idesyde.pyz -c idesyde idesyde
     - name: Upload binaries to release
       uses: svenstaro/upload-release-action@v2
       with:
         repo_token: ${{ secrets.GITHUB_TOKEN }}
-        file: ${{ github.workspace }}/dist/idesyde.pyz
+        file: ${{ github.workspace }}\dist\desyde.pyz
         asset_name: IDeSyDe-nightly-x86_64-windows-msvc-py${{ matrix.python }}.pyz
         tag: "nightly"
         overwrite: true
         body: "Python zip with Libs for x86_64 windows" 
-  publish-windows:
+  publish-windows-bin:
     needs: make-tag
     env:
       PYTHON_VERSION: 3.9
@@ -161,12 +161,14 @@ jobs:
         cd ${{ github.workspace }}
         pyoxidizer build --release
     - name: Zip IDeSyDe
-      run: zip -r idesyde-x86_64-windows-msvc.zip ${{ github.workspace }}/build/x86_64-windows-msvc/release/install/idesyde 
+      run: |
+        cd ${{ github.workspace }}\build\x86_64-windows-msvc\release\install
+        zip -r idesyde-x86_64-windows-msvc.zip idesyde 
     - name: Upload binaries to release
       uses: svenstaro/upload-release-action@v2
       with:
         repo_token: ${{ secrets.GITHUB_TOKEN }}
-        file: idesyde-x86_64-pc-windows-msvc.zip
+        file: ${{ github.workspace }}\build\x86_64-windows-msvc\release\install\idesyde-x86_64-pc-windows-msvc.zip
         asset_name: IDeSyDe-x86_64-pc-windows-msvc.zip
         tag: "nightly"
         overwrite: true
@@ -193,7 +195,7 @@ jobs:
         poetry-version: ${{ matrix.poetry }}
     - name: Regen Setup.py from poetry file
       run: |
-        cd $GITHUB_WORKSPACE
+        cd ${{ github.workspace }}
         poetry update
         poetry install
         mkdir -p dist
@@ -234,12 +236,12 @@ jobs:
       run: cargo install --version ${{ env.PYOXIDIZER_VERSION }} pyoxidizer
     - name: Regen Setup.py from poetry file
       run: |
-        cd $GITHUB_WORKSPACE
+        cd ${{ github.workspace }}
         poetry update
         poetry export -o requirements.txt
     - name: Run PyOxidizer
       run: |
-        cd $GITHUB_WORKSPACE
+        cd ${{ github.workspace }}
         pyoxidizer build --release
     - name: Zip IDeSyDe
       run: |

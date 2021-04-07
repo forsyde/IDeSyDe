@@ -163,7 +163,7 @@ jobs:
     - name: Zip IDeSyDe
       run: |
         cd ${{ github.workspace }}\build\x86_64-windows-msvc\release\install
-        zip -r idesyde-x86_64-windows-msvc.zip idesyde 
+        Compress-Archive -path '.\idesyde' -destinationpath '.\idesyde-x86_64-windows-msvc.zip' 
     - name: Upload binaries to release
       uses: svenstaro/upload-release-action@v2
       with:

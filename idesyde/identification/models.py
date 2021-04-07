@@ -361,6 +361,7 @@ class CharacterizedJobShop(MinizincableDecisionModel):
 
     # properties
     jobs: List[Vertex] = field(default_factory=list)
+    comm_jobs: List[Tuple[Vertex, Vertex, List[Vertex]]] = field(default_factory=list)
     # the virtual processors and communicators should go from
     # most physical -> cyber
     procs: List[List[Vertex]] = field(default_factory=list)
@@ -414,8 +415,48 @@ class CharacterizedJobShop(MinizincableDecisionModel):
 
     def rebuild_forsyde_model(self, results):
         new_model = self.covered_model()
-        # TODO: rebuild it
-        for (j, plist) in enumerate(results["start"]):
-            for (p, t) in enumerate(plist):
-                print(j, p, t)
+        # TODO: Must find a better and more general way to rebuild the
+        # job shop abstraction
+        for (jidx, plist) in enumerate(results["start"]):
+            j = self.jobs[jidx]
+            for (pidx, t) in enumerate(plist):
+                if t:
+                    # create the mapping between elements of the abstract
+                    # processing machine
+                    for (p, pp) in zip(self.procs[pidx][:-1], self.procs[pidx][1:]):
+                        if not new_model.has_edge(p, pp, key="object"):
+                            new_edge = AbstractMapping(source_vertex=p, target_vertex=pp)
+                            new_model.add_edge(p, pp, object=new_edge)
+                    # add the job to this one machine, assuming the
+                    # last element is the one represeting the machine's
+                    # interface
+                    p = self.procs[pidx][-1]
+                    if not new_model.has_edge(p, j, key="object"):
+                        new_edge = AbstractScheduling(source_vertex=p, target_vertex=j)
+                        new_model.add_edge(p, j, object=new_edge)
+                        if 'trigger-time' not in p.properties:
+                            p.properties['trigger-time'] = {}
+                        p.properties['trigger-time'][t] = j.identifier
+        for (jidx, jjlist) in enumerate(results["comm_start"]):
+            j = self.jobs[jidx]
+            for (jjidx, ulist) in enumerate(jjlist):
+                jj = self.jobs[jjidx]
+                for (uidx, t) in enumerate(ulist):
+                    if t:
+                        # create the mapping between elements of the abstract
+                        # processing communicator
+                        for (p, pp) in zip(self.comms[uidx][:-1], self.comms[uidx][1:]):
+                            if not new_model.has_edge(p, pp, key="object"):
+                                new_edge = AbstractMapping(source_vertex=p, target_vertex=pp)
+                                new_model.add_edge(p, pp, object=new_edge)
+                        # add the comm job to this one communicator, assuming the
+                        # last element is the one represeting the machine's
+                        # interface
+                        u = self.comms[uidx][-1]
+                        if not new_model.has_edge(u, j, key="object"):
+                            new_edge = AbstractScheduling(source_vertex=u, target_vertex=j)
+                            new_model.add_edge(p, j, object=new_edge)
+                            if 'trigger-time' not in p.properties:
+                                p.properties['trigger-time'] = {}
+                            p.properties['trigger-time'][j.identifier] = t
         return new_model

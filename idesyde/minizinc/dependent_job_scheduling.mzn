@@ -1,7 +1,7 @@
 include "globals.mzn";
 
 % objectives
-enum objectives = {MIN_LATENCY, MAX_LATENCY};
+enum objectives = {LATENCY_MIN, LATENCY_MAX};
 
 % model parameters
 set of int: procs;
@@ -29,9 +29,7 @@ array[jobs] of var 0..max_makespan: job_start;
 array[jobs] of var min(wcet)..max(wcet): job_duration;
 array[jobs, procs] of var opt 0..max_makespan: start;
 array[jobs, procs] of var min(wcet)..max(wcet): duration;
-array[jobs, jobs] of var 0..max_makespan: comm_job_start;
-array[jobs, jobs] of var 0..max(wcct): comm_job_duration;
-array[jobs, jobs, comms] of var opt 0..max_makespan: comm_start;
+array[jobs, jobs, comms] of var 0..max_makespan: comm_start;
 array[jobs, jobs, comms] of var min(wcct)..max(wcct): comm_duration;
 
 % objectives
@@ -60,12 +58,6 @@ constraint forall(j, jj in jobs where weak_next[j, jj]) (
 constraint forall(j, jj in jobs where strong_next[j, jj]) (
   job_start[j] + job_duration[j] <= job_start[jj]
 );
-constraint forall(j, jj in jobs where strong_next[j, jj]) (
-  job_start[j] + job_duration[j] <= comm_job_start[j, jj]
-);
-constraint forall(j, jj in jobs where strong_next[j, jj]) (
-  comm_job_start[j, jj] + comm_job_duration[j, jj] <= job_start[jj]
-);
 
 % processors can only run one job at a time
 constraint forall(j in jobs) (
@@ -79,27 +71,22 @@ constraint forall(p in procs) (
 constraint cumulative(job_start, job_duration, [1|i in jobs], length(procs));
 
 % communication concerns
-constraint forall(j, jj in jobs, p, pp in procs where strong_next[j ,jj] /\ p != pp) (
-  occurs(start[j, p]) /\ occurs(start[jj, pp]) -> 
-  sum(u in comms where path[p, pp, u] > 0) (wcct[j, jj, u]) <= comm_job_duration[j, jj]
-);
 constraint forall(p, pp in procs, j, jj in jobs, u, uu in comms where strong_next[j, jj]) (
   path[p, pp, u] = path[p, pp, uu] - 1 ->
   comm_start[j, jj, u] + comm_duration[j, jj, u] <= comm_start[j, jj, uu]
 );
-
- constraint forall(p, pp in procs, j, jj in jobs, u in comms where strong_next[j, jj] /\ path[p, pp, u] > 0) (
-  occurs(start[j, p]) /\ occurs(start[jj, pp]) -> comm_duration[j, jj, u] = wcct[j, jj, u] 
+constraint forall(p, pp in procs, j, jj in jobs, u in comms where strong_next[j, jj] /\ path[p, pp, u] > 0) (
+  occurs(start[j, p]) /\ occurs(start[jj, pp]) -> 
+  start[j, p] <= comm_start[j, jj, u] /\ comm_start[j, jj, u] + comm_duration[j, jj, u] <= start[jj, pp]
 );
-% TODO: find a better way to respect this damn limit
-%constraint forall(p in comms) (
- %cumulative(
-   %[comm_start[j, jj, p] | j, jj in jobs where strong_next[j, jj]],
-   %[comm_duration[j, jj, p] | j, jj in jobs where strong_next[j, jj]],
-   %[1 | j, jj in jobs where strong_next[j, jj]],
-   %comm_capacity[p]
- %)
-%);
+constraint forall(p in comms) (
+ cumulative(
+   [comm_start[j, jj, p] | j, jj in jobs where strong_next[j, jj]],
+   [comm_duration[j, jj, p] | j, jj in jobs where strong_next[j, jj]],
+   [1 | j, jj in jobs where strong_next[j, jj]],
+   comm_capacity[p]
+ )
+);
 
 %objectives
 constraint forall(j, jj in jobs, p in procs) (
@@ -112,17 +99,17 @@ constraint forall(j, jj in jobs where strong_next[j, jj] \/ weak_next[j, jj]) (
 constraint forall(j in jobs) (
   job_min_latency[j] >= job_duration[j]
 );
-constraint objective[MIN_LATENCY] = max(j in jobs) (job_min_latency[j]);
+constraint objective[LATENCY_MIN] = max(j in jobs) (job_min_latency[j]);
 
-constraint objective[MAX_LATENCY] = max(j in jobs) (job_start[j] + job_duration[j]);
+constraint objective[LATENCY_MAX] = max(j in jobs) (job_start[j] + job_duration[j]);
 
-constraint objective[MIN_LATENCY] <= objective[MAX_LATENCY];
+constraint objective[LATENCY_MIN] <= objective[LATENCY_MAX];
 
 
 solve
   % :: warm_start(start, [i mod length(procs) | i in jobs])
   :: int_search(job_start, first_fail, indomain_min)
-  :: int_search([comm_job_start[j, jj] | j, jj in jobs], first_fail, indomain_min)
+  :: int_search([comm_start[j, jj, u] | j, jj in jobs, u in comms], first_fail, indomain_min)
   :: restart_luby(length(jobs))
   minimize max(o in objectives) (objective_weights[o] * objective[o]);
 

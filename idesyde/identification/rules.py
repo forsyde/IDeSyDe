@@ -328,6 +328,7 @@ class SDFMulticoreToJobsRule(IdentificationRule):
                 comms=comms,
                 procs=procs,
                 jobs=jobs,
+                comm_jobs=sdf_channels,
                 weak_next=weak_next,
                 strong_next=strong_next,
                 wcet=wcet,

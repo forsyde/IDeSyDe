@@ -126,7 +126,7 @@ jobs:
       uses: svenstaro/upload-release-action@v2
       with:
         repo_token: ${{ secrets.GITHUB_TOKEN }}
-        file: ${{ github.workspace }}\dist\desyde.pyz
+        file: ${{ github.workspace }}\dist\idesyde.pyz
         asset_name: IDeSyDe-nightly-x86_64-windows-msvc-py${{ matrix.python }}.pyz
         tag: "nightly"
         overwrite: true

@@ -48,7 +48,7 @@ jobs:
       with:
         repo_token: ${{ secrets.GITHUB_TOKEN }}
         file: ${{ github.workspace }}/dist/idesyde.pyz
-        asset_name: IDeSyDe-nightly-x86_64-linux-gnu-py{{ matrix.python }}.pyz
+        asset_name: IDeSyDe-nightly-x86_64-linux-gnu-py${{ matrix.python }}.pyz
         tag: "nightly"
         overwrite: true
         body: "Python zip with Libs for x86_64 linux distros"
@@ -172,7 +172,7 @@ jobs:
       with:
         repo_token: ${{ secrets.GITHUB_TOKEN }}
         file: idesyde.pyz
-        asset_name: IDeSyDe-nightly-x86_64-apple-darwin-py{{ matrix.python }}.pyz
+        asset_name: IDeSyDe-nightly-x86_64-apple-darwin-py${{ matrix.python }}.pyz
         tag: "nightly"
         overwrite: true
         body: "Python zip for x86_64 MacOS"

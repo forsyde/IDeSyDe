@@ -171,7 +171,7 @@ jobs:
       uses: svenstaro/upload-release-action@v2
       with:
         repo_token: ${{ secrets.GITHUB_TOKEN }}
-        file: idesyde.pyz
+        file: ${{ github.workspace }}/dist/idesyde.pyz
         asset_name: IDeSyDe-nightly-x86_64-apple-darwin-py${{ matrix.python }}.pyz
         tag: "nightly"
         overwrite: true

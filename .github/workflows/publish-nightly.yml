@@ -4,7 +4,7 @@ name: "Release nightly out of the develop branch"
 on:
   push:
     branches:
-      - "develop"
+      - "master"
 
 jobs:
   make-tag:

@@ -7,8 +7,7 @@ on:
       - "develop"
 
 jobs:
-  make-release:
-    needs: [publish-linux, publish-apple]
+  make-tag:
     runs-on: ubuntu-latest
     steps:
       - uses: "marvinpinto/action-automatic-releases@latest"
@@ -17,57 +16,61 @@ jobs:
           automatic_release_tag: "nigthly"
           prerelease: true
           title: "Nightly development Build"
-          files: |
-            ${{ needs.publish-linux.output.zip-file }}
-            ${{ needs.publish-apple.output.zip-file }}
   publish-linux:
+    needs: make-tag
     env:
       PYTHON_VERSION: 3.8
       POETRY_VERSION: 1.1.5
       RUST_VERSION: 1.49.0
       PYOXIDIZER_VERSION: 0.11.0
     runs-on: ubuntu-18.04
-    outputs:
-      zip-file: ${{ github.workspace }}/build/x86_64-unknown-linux-gnu/release/install/idesyde-x86_64-unknown-linux-gnu.zip
     steps:
-      - uses: actions/checkout@v2
-      - name: Set up Python ${{ env.PYTHON_VERSION }}
-        uses: actions/setup-python@v2
-        with:
-          python-version: ${{ env.PYTHON_VERSION }}
-      - name: Set up pip properly
-        run: python -m pip install --upgrade pip
-      - uses: abatilo/actions-poetry@v2.1.0
-        with:
-          poetry-version: ${{ env.POETRY_VERSION }}
-      - name: Setup Rust
-        uses: ATiltedTree/setup-rust@v1.0.4
-        with:
-          rust-version: ${{ env.RUST_VERSION }}
-      - name: Install PyOxidizer
-        run: cargo install --version ${{ env.PYOXIDIZER_VERSION }} pyoxidizer
-      - name: Regen Setup.py from poetry file
-        run: |
-          cd $GITHUB_WORKSPACE
-          poetry update
-          poetry export -o requirements.txt
-      - name: Run PyOxidizer
-        run: |
-          cd $GITHUB_WORKSPACE
-          pyoxidizer build --release
-      - name: Zip IDeSyDe
-        run: |
-          sudo apt-get install -y unzip
-          cd ${{ github.workspace }}/build/x86_64-unknown-linux-gnu/release/install
-          zip -r idesyde-x86_64-unknown-linux-gnu.zip idesyde
+    - uses: actions/checkout@v2
+    - name: Set up Python ${{ env.PYTHON_VERSION }}
+      uses: actions/setup-python@v2
+      with:
+        python-version: ${{ env.PYTHON_VERSION }}
+    - name: Set up pip properly
+      run: python -m pip install --upgrade pip
+    - uses: abatilo/actions-poetry@v2.1.0
+      with:
+        poetry-version: ${{ env.POETRY_VERSION }}
+    - name: Setup Rust
+      uses: ATiltedTree/setup-rust@v1.0.4
+      with:
+        rust-version: ${{ env.RUST_VERSION }}
+    - name: Install PyOxidizer
+      run: cargo install --version ${{ env.PYOXIDIZER_VERSION }} pyoxidizer
+    - name: Regen Setup.py from poetry file
+      run: |
+        cd $GITHUB_WORKSPACE
+        poetry update
+        poetry export -o requirements.txt
+    - name: Run PyOxidizer
+      run: |
+        cd $GITHUB_WORKSPACE
+        pyoxidizer build --release
+    - name: Zip IDeSyDe
+      run: |
+        sudo apt-get install -y unzip
+        cd ${{ github.workspace }}/build/x86_64-unknown-linux-gnu/release/install
+        zip -r idesyde-x86_64-unknown-linux-gnu.zip idesyde
+    - name: Upload binaries to release
+      uses: svenstaro/upload-release-action@v2
+      with:
+        repo_token: ${{ secrets.GITHUB_TOKEN }}
+        file: ${{ github.workspace }}/build/x86_64-unknown-linux-gnu/release/install/idesyde-x86_64-unknown-linux-gnu.zip
+        asset_name: IDeSyDe-x86_64-unknown-linux-gnu.zip
+        tag: "nightly"
+        overwrite: true
+        body: "Zip with Libs for x86_64 linux distros"
   publish-windows:
+    needs: make-tag
     env:
       PYTHON_VERSION: 3.9
       POETRY_VERSION: 1.1.5
       RUST_VERSION: 1.49.0
       PYOXIDIZER_VERSION: 0.11.0
-    outputs:
-      zip-file: ${{ github.workspace }}/build/x86_64-windows-msvc/release/install/idesyde-x86_64-windows-msvc.zip
     runs-on: windows-latest
     steps:
     - uses: actions/checkout@v2
@@ -96,18 +99,24 @@ jobs:
         cd $GITHUB_WORKSPACE
         pyoxidizer build --release
     - name: Zip IDeSyDe
-      run: |
-        cd ${{ github.workspace }}/build/x86_64-windows-msvc/release/install/
-        Compress-Archive -DestinationPath idesyde-x86_64-windows-msvc.zip -Path idesyde 
+      run: zip -r idesyde-x86_64-windows-msvc.zip ${{ github.workspace }}/build/x86_64-windows-msvc/release/install/idesyde 
+    - name: Upload binaries to release
+      uses: svenstaro/upload-release-action@v2
+      with:
+        repo_token: ${{ secrets.GITHUB_TOKEN }}
+        file: idesyde-x86_64-pc-windows-msvc.zip
+        asset_name: IDeSyDe-x86_64-pc-windows-msvc.zip
+        tag: "nightly"
+        overwrite: true
+        body: "Zip with Libs for x86_64 Windows"
   publish-apple:
+    needs: make-tag
     env:
       PYTHON_VERSION: 3.9
       POETRY_VERSION: 1.1.5
       RUST_VERSION: 1.49.0
       PYOXIDIZER_VERSION: 0.11.0
     runs-on: macos-latest
-    outputs:
-      zip-file: ${{ github.workspace }}/build/x86_64-apple-darwin/release/install/idesyde-x86_64-apple-darwin.zip
     steps:
     - uses: actions/checkout@v2
     - name: Set up Python ${{ env.PYTHON_VERSION }}
@@ -135,6 +144,13 @@ jobs:
         cd $GITHUB_WORKSPACE
         pyoxidizer build --release
     - name: Zip IDeSyDe
-      run: |
-        cd ${{ github.workspace }}/build/x86_64-apple-darwin/release/install
-        zip -r idesyde-x86_64-apple-darwin.zip idesyde 
+      run: zip -r idesyde-x86_64-apple-darwin.zip ${{ github.workspace }}/build/x86_64-apple-darwin/release/install/idesyde 
+    - name: Upload binaries to release
+      uses: svenstaro/upload-release-action@v2
+      with:
+        repo_token: ${{ secrets.GITHUB_TOKEN }}
+        file: idesyde-x86_64-apple-darwin.zip
+        asset_name: IDeSyDe-x86_64-apple-darwin.zip
+        tag: "nightly"
+        overwrite: true
+        body: "Zip with Libs for x86_64 MacOS"

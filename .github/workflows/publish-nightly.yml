@@ -18,35 +18,37 @@ jobs:
           title: "Nightly development Build"
   publish-linux-pyz:
     needs: make-tag
-    env:
-      PYTHON_VERSION: 3.8
-      POETRY_VERSION: 1.1.5
-      RUST_VERSION: 1.49.0
-      PYOXIDIZER_VERSION: 0.11.0
+    strategy:
+      matrix:
+        python: [3.7, 3.8, 3.9]
+        poetry: [1.1.5]
+        rust: [1.49.0]
+        pyoxidizer: [0.11.0]
     runs-on: ubuntu-18.04
     steps:
     - uses: actions/checkout@v2
-    - name: Set up Python ${{ env.PYTHON_VERSION }}
+    - name: Set up Python ${{ matrix.python }}
       uses: actions/setup-python@v2
       with:
-        python-version: ${{ env.PYTHON_VERSION }}
+        python-version: ${{ matrix.python }}
     - name: Set up pip properly
       run: python -m pip install --upgrade pip
     - uses: abatilo/actions-poetry@v2.1.0
       with:
-        poetry-version: ${{ env.POETRY_VERSION }}
-    - name: Make shiv from peotry file
+        poetry-version: ${{ matrix.poetry }}
+    - name: Make shiv from poetry file
       run: |
         cd $GITHUB_WORKSPACE
         poetry update
         poetry install
+        mkdir -p dist
         poetry run shiv -o dist/idesyde.pyz -c idesyde idesyde
     - name: Upload binaries to release
       uses: svenstaro/upload-release-action@v2
       with:
         repo_token: ${{ secrets.GITHUB_TOKEN }}
         file: ${{ github.workspace }}/dist/idesyde.pyz
-        asset_name: IDeSyDe-nightly-x86_64-unknown-linux-gnu.pyz
+        asset_name: IDeSyDe-nightly-x86_64-linux-gnu-py{{ matrix.python }}.pyz
         tag: "nightly"
         overwrite: true
         body: "Python zip with Libs for x86_64 linux distros"
@@ -140,35 +142,37 @@ jobs:
         body: "Zip with Libs for x86_64 Windows"
   publish-apple-pyz:
     needs: make-tag
-    env:
-      PYTHON_VERSION: 3.9
-      POETRY_VERSION: 1.1.5
-      RUST_VERSION: 1.49.0
-      PYOXIDIZER_VERSION: 0.11.0
+    strategy:
+      matrix:
+        python: [3.7, 3.8, 3.9]
+        poetry: [1.1.5]
+        rust: [1.49.0]
+        pyoxidizer: [0.11.0]
     runs-on: macos-latest
     steps:
     - uses: actions/checkout@v2
-    - name: Set up Python ${{ env.PYTHON_VERSION }}
+    - name: Set up Python ${{ matrix.python }}
       uses: actions/setup-python@v2
       with:
-        python-version: ${{ env.PYTHON_VERSION }}
+        python-version: ${{ matrix.python }}
     - name: Set up pip properly
       run: python -m pip install --upgrade pip
     - uses: abatilo/actions-poetry@v2.1.0
       with:
-        poetry-version: ${{ env.POETRY_VERSION }}
+        poetry-version: ${{ matrix.poetry }}
     - name: Regen Setup.py from poetry file
       run: |
         cd $GITHUB_WORKSPACE
         poetry update
         poetry install
-        poetry run shiv --site-packages=$(poetry env info -p) -o dist/idesyde.pyz -c idesyde idesyde
+        mkdir -p dist
+        poetry run shiv -o dist/idesyde.pyz -c idesyde idesyde
     - name: Upload binaries to release
       uses: svenstaro/upload-release-action@v2
       with:
         repo_token: ${{ secrets.GITHUB_TOKEN }}
         file: idesyde.pyz
-        asset_name: IDeSyDe-nightly-x86_64-apple-darwin.pyz
+        asset_name: IDeSyDe-nightly-x86_64-apple-darwin-py{{ matrix.python }}.pyz
         tag: "nightly"
         overwrite: true
         body: "Python zip for x86_64 MacOS"

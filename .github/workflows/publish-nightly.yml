@@ -35,12 +35,12 @@ jobs:
     - uses: abatilo/actions-poetry@v2.1.0
       with:
         poetry-version: ${{ env.POETRY_VERSION }}
-    - name: Regen Setup.py from poetry file
+    - name: Make shiv from peotry file
       run: |
         cd $GITHUB_WORKSPACE
         poetry update
         poetry install
-        poetry run shiv --site-packages=$(poetry env info -p) -o dist/idesyde.pyz -c idesyde idesyde
+        poetry run shiv -o dist/idesyde.pyz -c idesyde idesyde
     - name: Upload binaries to release
       uses: svenstaro/upload-release-action@v2
       with:

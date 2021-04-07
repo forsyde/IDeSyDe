@@ -117,7 +117,7 @@ jobs:
         poetry-version: ${{ matrix.poetry }}
     - name: Make shiv from poetry file
       run: |
-        cd $GITHUB_WORKSPACE
+        cd ${{ github.workspace }}
         poetry update
         poetry install
         mkdir -p dist

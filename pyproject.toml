@@ -1,6 +1,6 @@
 [tool.poetry]
 name = "idesyde"
-version = "0.1.8"
+version = "0.1.9"
 description = "Generic Design Space Exploration for models based system design"
 authors = ["jordao <jordao@kth.se>"]
 maintainers = ["jordao <jordao@kth.se>"]
@@ -16,12 +16,14 @@ idesyde = 'idesyde.cli:cli_entry'
 
 [tool.poetry.dependencies]
 python = "^3.7"
-forsyde-io-python = "^0.2.6"
+forsyde-io-python = "^0.2.8"
+#forsyde-io-python = { path = '../forsyde-io/python', develop = true }
 numpy = "^1.20"
 sympy = "^1.7"
 minizinc = "^0.4"
 
 [tool.poetry.dev-dependencies]
+shiv = "^0.4.0"
 
 [tool.black]
 line-length = 120

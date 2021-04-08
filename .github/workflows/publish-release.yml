@@ -6,7 +6,6 @@ on:
 
 jobs:
   publish-linux-pyz:
-    needs: make-tag
     strategy:
       matrix:
         python: [3.7, 3.8, 3.9]
@@ -42,7 +41,6 @@ jobs:
         overwrite: true
         body: "Python zip with Libs for x86_64 linux distros"
   publish-linux-bin:
-    needs: make-tag
     env:
       PYTHON_VERSION: 3.8
       POETRY_VERSION: 1.1.5
@@ -85,7 +83,6 @@ jobs:
         overwrite: true
         body: "Executable zip with Libs for x86_64 linux distros"
   publish-windows-pyz:
-    needs: make-tag
     strategy:
       matrix:
         python: [3.7, 3.8, 3.9]
@@ -121,7 +118,6 @@ jobs:
         overwrite: true
         body: "Python zip with Libs for x86_64 windows" 
   publish-windows-bin:
-    needs: make-tag
     env:
       PYTHON_VERSION: 3.9
       POETRY_VERSION: 1.1.5
@@ -163,7 +159,6 @@ jobs:
         overwrite: true
         body: "Zip with Libs for x86_64 Windows"
   publish-apple-pyz:
-    needs: make-tag
     strategy:
       matrix:
         python: [3.7, 3.8, 3.9]
@@ -199,7 +194,6 @@ jobs:
         overwrite: true
         body: "Python zip for x86_64 MacOS"
   publish-apple-bin:
-    needs: make-tag
     env:
       PYTHON_VERSION: 3.9
       POETRY_VERSION: 1.1.5

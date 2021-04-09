@@ -177,24 +177,17 @@ class SDFToCoresRule(IdentificationRule):
                     if s != t:
                         try:
                             for path in nx.all_shortest_paths(model, s, t):
-                                path = path[1:-1]
+                                path = path[1:-1]  # take away the end points, the processors themselves
                                 if all(isinstance(v, AbstractCommunicationComponent) for v in path):
                                     connections.append((s, t, path))
                         except nx.exception.NetworkXNoPath:
                             pass
-            # for (cidx, (s, t, _)) in enumerate(connections):
-            #     for path in nx.all_shortest_paths(model, s, t):
-            #         path = path[1:-1]
-            #         if all(isinstance(v, AbstractCommunicationComponent) for v in path):
-            #             connections[cidx] = (s, t, path)
-            # take away any non connected paths
-            # connections = [(s, t, p) for (s, t, p) in connections if p]
             # there must be orderings for both execution and communication
             comms_capacity = [1 for c in comms]
             for (i, c) in enumerate(comms):
                 if isinstance(c, TimeDivisionMultiplexer):
                     comms_capacity[i] = int(c.get_slots())
-            if len(cores) + len(comms) >= len(sdf_orders_sub.orderings):
+            if len(cores) + len(comms) <= len(sdf_orders_sub.orderings):
                 res = SDFToMultiCore(sdf_orders_sub=sdf_orders_sub,
                                      cores=cores,
                                      comms=comms,
@@ -226,7 +219,7 @@ class SDFToCoresCharacterizedRule(IdentificationRule):
             wcet_vertexes = [w for w in model if isinstance(w, WCET)]
             token_wcct_vertexes = [w for w in model
                                    if isinstance(w, WCCT)]  # list(model.get_vertexes(WCCT.get_instance()))
-            wcet = np.zeros((len(cores), len(sdf_actors)), dtype=int)
+            wcet = np.zeros((len(sdf_actors), len(cores)), dtype=int)
             token_wcct = np.zeros((len(sdf_channels), len(comms)), dtype=int)
             for (aidx, a) in enumerate(sdf_actors):
                 for (pidx, p) in enumerate(cores):

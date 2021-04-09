@@ -5,6 +5,7 @@ import random
 import forsyde.io.python.api as forsyde_io
 import networkx as nx
 
+from idesyde import LOGGER_NAME
 from idesyde.identification.api import identify_decision_models
 from idesyde.identification.api import choose_decision_models
 from idesyde.exploration import choose_explorer
@@ -61,12 +62,17 @@ def cli_entry():
                         that are solved by them.
                         ''')
     args = parser.parse_args()
-    logger = logging.getLogger('CLI')
-    logger.setLevel(getattr(logging, args.verbosity.upper(), 'INFO'))
-    consoleLogHandler = logging.StreamHandler()
-    consoleLogHandler.setLevel(getattr(logging, args.verbosity.upper(), 'INFO'))
-    consoleLogHandler.setFormatter(logging.Formatter('[{levelname:<8}{asctime}] {message}', style='{'))
-    logger.addHandler(consoleLogHandler)
+    logging.basicConfig(format='[{name:<10} | {levelname:<8} | {asctime}] {message}',
+                        style='{',
+                        level=getattr(logging, args.verbosity.upper(), 'INFO'),
+                        force=True)
+    logger = logging.getLogger(LOGGER_NAME)
+    # logger.setLevel(getattr(logging, args.verbosity.upper(), 'INFO'))
+    # logger.addHandler(logging.StreamHandler(format='[{levelname:<8}{asctime}] {name}: {message}', style='{'))
+    # consoleLogHandler = logging.StreamHandler()
+    # consoleLogHandler.setLevel(getattr(logging, args.verbosity.upper(), 'INFO'))
+    # consoleLogHandler.setFormatter(logging.Formatter('[{levelname:<8}{asctime}] {name}: {message}', style='{'))
+    # logger.addHandler(consoleLogHandler)
     logger.debug('Arguments parsed')
     in_model = forsyde_io.load_model(args.model)
     logger.info('Model parsed')
@@ -97,7 +103,7 @@ def cli_entry():
         for out_file in outputs:
             forsyde_io.write_model(out_model, out_file)
             logger.info(f'Writting output model {out_file}')
-    logging.info('Done')
+    logger.info('Done')
 
 
 if __name__ == "__main__":

@@ -31,15 +31,15 @@ set of int: steps = 1..max_steps;
 
 % variables
 array[sdf_actors, procs, steps] of var 0..max(activations): mapped_actors;
-array[procs, steps] of var 0..sum(wcet)+sum(token_wcct): start;
+array[procs, steps] of var 0..sum(wcet): start;
 array[procs, steps] of var 0..sum(wcet): busy_time;
-array[sdf_channels, procs, steps] of var 0..max(max_tokens): buffer_start;
-array[sdf_channels, procs, steps] of var 0..max(max_tokens): buffer_end;
-array[sdf_channels, procs, procs, steps, steps] of var 0..max(max_tokens): flow;
+% array[sdf_channels, procs, steps] of var 0..max(max_tokens): buffer_start;
+% array[sdf_channels, procs, steps] of var 0..max(max_tokens): buffer_end;
+array[sdf_actors, procs, procs, steps, steps] of var 0..max(activations): flow;
 % array[sdf_channels, procs, procs, steps, steps] of var 0..length(comms) * max(max_tokens) * max(token_wcct): send_duration;
 % array[sdf_channels, procs, procs, steps, steps, comms] of var 0..max(max_tokens): send_comms;
-array[sdf_channels, procs, procs, steps, steps, comms] of var 0..sum(wcet)+sum(token_wcct): send_start;
-array[sdf_channels, procs, procs, steps, steps, comms] of var 0..length(comms) * max(max_tokens) * max(token_wcct): send_duration;
+% array[sdf_actors, procs, procs, steps, steps, comms] of var 0..sum(wcet)+sum(token_wcct): send_start;
+% array[sdf_actors, procs, procs, steps, steps, comms] of var 0..length(comms) * max(max_tokens) * max(token_wcct): send_duration;
 %array[sdf_channels, units, units] of var opt 0..max(max_tokens): send;
 
 % objectives
@@ -47,16 +47,16 @@ array[procs, steps] of var 0..sum(wcet): local_throughput;
 array[objectives] of var 0..2*sum(wcet): objective;
 
 % tigthen bounds
-constraint forall(c in sdf_channels, p in procs, t in steps) (
-  buffer_start[c, p, t] <= max_tokens[c] /\
-  buffer_end[c, p, t] <= max_tokens[c] /\
-  flow[c, p, p, t, t] = 0
-);
-constraint forall(c in sdf_channels, p, pp in procs, t, tt in steps) (
-  flow[c, p, pp, t, tt] <= max_tokens[c]
-);
-constraint forall(c in sdf_channels, p in procs, t, tt in steps where tt != t + 1) (
-  flow[c, p, p, t, tt] = 0
+% constraint forall(c in sdf_channels, p in procs, t in steps) (
+%   buffer_start[c, p, t] <= max_tokens[c] /\
+%   buffer_end[c, p, t] <= max_tokens[c] /\
+%   flow[c, p, p, t, t] = 0
+% );
+% constraint forall(c in sdf_channels, p, pp in procs, t, tt in steps) (
+%   flow[c, p, pp, t, tt] <= max_tokens[c]
+% );
+constraint forall(a in sdf_actors, p in procs, t, tt in steps where tt != t + 1) (
+  flow[a, p, p, t, tt] = 0
 );
 constraint forall(p in procs, t in steps) (
   0 <= start[p, t] /\
@@ -72,35 +72,48 @@ constraint forall(p in procs, t in steps) (
 constraint forall(a in sdf_actors) (
   sum(mapped_actors[a, .., ..]) = activations[a]
 );
-
-constraint forall(c in sdf_channels, p in procs, t in steps) (
-  buffer_start[c, p, t] +
-  sum(a in sdf_actors) (sdf_topology[c, a]*mapped_actors[a, p, t]) =
-  buffer_end[c, p, t]
+constraint forall(a in sdf_actors, p, pp in procs, t, tt in steps) (
+  flow[a, p, pp, t, tt] <= activations[a]
 );
-
-constraint forall(c in sdf_channels, p in procs, t in steps) (
-  buffer_start[c, p, t] = sum(pp in procs, tt in steps) (flow[c, pp, p, tt, t]) /\
-  buffer_end[c, p, t] = sum(pp in procs, tt in steps) (flow[c, p, pp, t, tt])
+constraint forall(a in sdf_actors, p in procs, t in steps) (
+  sum(pp in procs, tt in steps) (flow[a, pp, p, tt, t]) +
+  mapped_actors[a, p, t] =
+  sum(pp in procs, tt in steps) (flow[a, p, pp, t, tt])
 );
+% constraint forall(c in sdf_channels, p in procs, t in steps) (
+%   buffer_start[c, p, t] +
+%   sum(a in sdf_actors) (sdf_topology[c, a]*mapped_actors[a, p, t]) =
+%   buffer_end[c, p, t]
+% );
+
+% constraint forall(c in sdf_channels, p in procs, t in steps) (
+%   buffer_start[c, p, t] = sum(pp in procs, tt in steps) (flow[c, pp, p, tt, t]) /\
+%   buffer_end[c, p, t] = sum(pp in procs, tt in steps) (flow[c, p, pp, t, tt])
+% );
 
 % sdf semantics: everything positive
 constraint forall(c in sdf_channels, p in procs, t in steps) (
-  buffer_start[c, p, t] >= 0 /\
-  buffer_end[c, p, t] >= 0
+  sum(a in sdf_actors) (sdf_topology[c, a]*mapped_actors[a, p, t]) +
+  sum(a in sdf_actors, pp in procs, tt in steps) (sdf_topology[c, a]*flow[a, pp, p, tt, t])
+  >= 0
 );
+
+% constraint forall(c in sdf_channels, p in procs, t in steps) (
+%   buffer_start[c, p, t] >= 0 /\
+%   buffer_end[c, p, t] >= 0
+% );
 
 % sdf semantics: initial state
-constraint forall(c in sdf_channels) (
-  sum(buffer_start[c, .., min(steps)]) >= initial_tokens[c]
-);
+% constraint forall(c in sdf_channels) (
+%   sum(buffer_start[c, .., min(steps)]) >= initial_tokens[c]
+% );
 
 % sdf semantics: firing with communication
-constraint forall(t in steps, c in sdf_channels, p in procs) (
-  sum(pp in procs, tt in steps) (flow[c, pp, p, tt, t]) +
-  sum(a in sdf_actors) (sdf_topology[c, a]*mapped_actors[a, p, t]) =
-  sum(pp in procs, tt in steps) (flow[c, p, pp, t, tt])
-);
+% constraint forall(t in steps, c in sdf_channels, p in procs) (
+%   sum(pp in procs, tt in steps) (flow[c, pp, p, tt, t]) +
+%   sum(a in sdf_actors) (sdf_topology[c, a]*mapped_actors[a, p, t]) =
+%   sum(pp in procs, tt in steps) (flow[c, p, pp, t, tt])
+% );
 
 % platform semantics: communication elements never hold data
 % constraint forall(c in sdf_channels, p, pp in procs, t, tt in steps) (
@@ -112,10 +125,10 @@ constraint forall(t in steps, c in sdf_channels, p in procs) (
 %     [send_comms[c, p, pp, t, tt, uu] - send_comms[c, p, pp, t, tt, u] | u, uu in comms]
 %   )
 % );
-constraint forall(c in sdf_channels, p, pp in procs, t, tt in steps, u in comms) (
-  path[p, pp, u] > 0 ->
-  send_duration[c, p, pp, t, tt, u] = token_wcct[c, u] * flow[c, p, pp, t, tt]
-);
+% constraint forall(c in sdf_channels, p, pp in procs, t, tt in steps, u in comms) (
+%   path[p, pp, u] > 0 ->
+%   send_duration[c, p, pp, t, tt, u] = token_wcct[c, u] * flow[c, p, pp, t, tt]
+% );
 
 % constraint forall(c in sdf_channels, p, pp in procs, t, tt in steps, u in path[p, pp]) (
 %   flow[c, p, pp, t, tt]
@@ -146,55 +159,55 @@ constraint forall(p in procs, t in min(steps)+1..max(steps)) (
 
 %% timign with communication
 %% The sum is only reasonably tight if the paths are always fixed between processors!
-constraint forall(c in sdf_channels, t, tt in steps, p, pp in procs, u in comms) (
-  start[p, t] <= send_start[c, p, pp, t, tt, u]
+% constraint forall(c in sdf_channels, t, tt in steps, p, pp in procs, u in comms) (
+%   start[p, t] <= send_start[c, p, pp, t, tt, u]
+% );
+
+% constraint forall(c in sdf_channels, t, tt in steps, p, pp in procs, u, uu in comms) (
+%   path[p, pp, u] > 0 /\ path[p, pp, u] = path[p, pp, uu] - 1 ->
+%   send_start[c, p, pp, t, tt, u] <= send_start[c, p, pp, t, tt, uu]
+% );
+
+constraint forall(a in sdf_actors, t, tt in steps, p, pp in procs) (
+  flow[a, p, pp, t, tt] > 0 ->
+  start[pp, tt] >= start[p, t] + busy_time[p,t]
 );
 
-constraint forall(c in sdf_channels, t, tt in steps, p, pp in procs, u, uu in comms) (
-  path[p, pp, u] > 0 /\ path[p, pp, u] = path[p, pp, uu] - 1 ->
-  send_start[c, p, pp, t, tt, u] <= send_start[c, p, pp, t, tt, uu]
-);
-
-constraint forall(c in sdf_channels, t, tt in steps, p, pp in procs) (
-  flow[c, p, pp, t, tt] > 0 ->
-  start[pp, tt] >= start[p, t] + busy_time[p,t] + sum(send_duration[c, p, pp, t, tt, ..])
-);
-
-constraint forall(u in comms) (
-  cumulative(
-    [send_start[c, p, pp, t, tt, u] | p, pp in procs, t, tt in steps, c in sdf_channels],
-    [send_duration[c, p, pp, t, tt, u] | p, pp in procs, t, tt in steps, c in sdf_channels],
-    [1 | p, pp in procs, t, tt in steps, c in sdf_channels],
-    comms_capacity[u]
-  )
-);
+% constraint forall(u in comms) (
+%   cumulative(
+%     [send_start[c, p, pp, t, tt, u] | p, pp in procs, t, tt in steps, c in sdf_channels],
+%     [send_duration[c, p, pp, t, tt, u] | p, pp in procs, t, tt in steps, c in sdf_channels],
+%     [1 | p, pp in procs, t, tt in steps, c in sdf_channels],
+%     comms_capacity[u]
+%   )
+% );
 
 % symmetry breaking
 % the "space-time cut" constraint, to be explained better later.
-constraint forall(c in sdf_channels, t, tt in steps, p, pp in procs) (
-  flow[c, p, pp, t, tt] > 0 ->
-  forall(t2, tt2 in steps where t < t2 /\ tt2 < tt) (flow[c, p, pp, t2, tt2] = 0) /\
-  forall(t2, tt2 in steps where t2 < t /\ tt < tt2) (flow[c, p, pp, t2, tt2] = 0) /\
-  forall(t2, tt2 in steps where t < t2 /\ tt2 < tt) (flow[c, pp, p, tt2, t2] = 0) /\
-  forall(t2, tt2 in steps where t2 < t /\ tt < tt2) (flow[c, pp, p, tt2, t2] = 0)
-);
+% constraint forall(c in sdf_channels, t, tt in steps, p, pp in procs) (
+%   flow[c, p, pp, t, tt] > 0 ->
+%   forall(t2, tt2 in steps where t < t2 /\ tt2 < tt) (flow[c, p, pp, t2, tt2] = 0) /\
+%   forall(t2, tt2 in steps where t2 < t /\ tt < tt2) (flow[c, p, pp, t2, tt2] = 0) /\
+%   forall(t2, tt2 in steps where t < t2 /\ tt2 < tt) (flow[c, pp, p, tt2, t2] = 0) /\
+%   forall(t2, tt2 in steps where t2 < t /\ tt < tt2) (flow[c, pp, p, tt2, t2] = 0)
+% );
  
-constraint forall(c in sdf_channels, t, tt in steps, p, pp in procs) (
-  flow[c, p, pp, t, tt] > 0 ->
-  sum(t2, tt2 in steps where t < t2 /\ tt2 < tt) (flow[c, p, pp, t2, tt2]) = 0 /\
-  sum(t2, tt2 in steps where t2 < t /\ tt < tt2) (flow[c, p, pp, t2, tt2]) = 0 /\
-  sum(t2, tt2 in steps where t < t2 /\ tt2 < tt) (flow[c, pp, p, tt2, t2]) = 0 /\
-  sum(t2, tt2 in steps where t2 < t /\ tt < tt2) (flow[c, pp, p, tt2, t2]) = 0
-);
+% constraint forall(c in sdf_channels, t, tt in steps, p, pp in procs) (
+%   flow[c, p, pp, t, tt] > 0 ->
+%   sum(t2, tt2 in steps where t < t2 /\ tt2 < tt) (flow[c, p, pp, t2, tt2]) = 0 /\
+%   sum(t2, tt2 in steps where t2 < t /\ tt < tt2) (flow[c, p, pp, t2, tt2]) = 0 /\
+%   sum(t2, tt2 in steps where t < t2 /\ tt2 < tt) (flow[c, pp, p, tt2, t2]) = 0 /\
+%   sum(t2, tt2 in steps where t2 < t /\ tt < tt2) (flow[c, pp, p, tt2, t2]) = 0
+% );
 
-%
-constraint forall(t, tt in steps, p, pp in procs) (
-  sum(c in sdf_channels) (flow[c, p, pp, t, tt]) > 0 ->
-  sum(c in sdf_channels, t2, tt2 in steps where t < t2 /\ tt2 < tt) (flow[c, p, pp, t2, tt2]) +
-  sum(c in sdf_channels, t2, tt2 in steps where t2 < t /\ tt < tt2) (flow[c, p, pp, t2, tt2]) +
-  sum(c in sdf_channels, t2, tt2 in steps where t < t2 /\ tt2 < tt) (flow[c, pp, p, tt2, t2]) +
-  sum(c in sdf_channels, t2, tt2 in steps where t2 < t /\ tt < tt2) (flow[c, pp, p, tt2, t2]) = 0
-);
+% %
+% constraint forall(t, tt in steps, p, pp in procs) (
+%   sum(c in sdf_channels) (flow[c, p, pp, t, tt]) > 0 ->
+%   sum(c in sdf_channels, t2, tt2 in steps where t < t2 /\ tt2 < tt) (flow[c, p, pp, t2, tt2]) +
+%   sum(c in sdf_channels, t2, tt2 in steps where t2 < t /\ tt < tt2) (flow[c, p, pp, t2, tt2]) +
+%   sum(c in sdf_channels, t2, tt2 in steps where t < t2 /\ tt2 < tt) (flow[c, pp, p, tt2, t2]) +
+%   sum(c in sdf_channels, t2, tt2 in steps where t2 < t /\ tt < tt2) (flow[c, pp, p, tt2, t2]) = 0
+% );
 
 % at least one slot must start from zero for symmetry breaking
 constraint forall(p in procs) (

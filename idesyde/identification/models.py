@@ -63,7 +63,7 @@ class SDFExecution(DecisionModel):
 
 
 @dataclass
-class SDFToOrders(MinizincableDecisionModel):
+class SDFToOrders(DecisionModel):
 
     # sub identifications
     sdf_exec_sub: SDFExecution = SDFExecution()
@@ -102,7 +102,7 @@ class SDFToOrders(MinizincableDecisionModel):
 
 
 @dataclass
-class SDFToMultiCore(MinizincableDecisionModel):
+class SDFToMultiCore(DecisionModel):
 
     # sub identifications
     sdf_orders_sub: SDFToOrders = SDFToOrders()
@@ -221,7 +221,7 @@ class SDFToMultiCore(MinizincableDecisionModel):
                 sdf_pass = sdfapi.get_PASS(
                     sdf_topology,
                     np.array([[results["mapped_actors"][a][pidx][t] for (a, _) in enumerate(sdf_actors)]]).transpose(),
-                    np.array([[results["buffer_start"][c][pidx][t] for (c, _) in enumerate(sdf_channels)]]).transpose())
+                    np.array([[results["flow"][a][pidx][t] for (c, _) in enumerate(sdf_channels)]]).transpose())
                 for aidx in sdf_pass:
                     actor = sdf_actors[aidx]
                     if not new_model.has_edge(ordering, actor, key="object"):
@@ -257,7 +257,7 @@ class SDFToMultiCore(MinizincableDecisionModel):
 
 
 @dataclass
-class SDFToMultiCoreCharacterized(MinizincableDecisionModel):
+class SDFToMultiCoreCharacterized(DecisionModel):
 
     # covered partial identifications
     sdf_mpsoc_sub: SDFToMultiCore = SDFToMultiCore()

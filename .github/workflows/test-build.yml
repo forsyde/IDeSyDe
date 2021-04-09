@@ -1,23 +1,14 @@
 ---
-name: "Release nightly out of the develop branch"
+name: "Building executables"
 
 on:
   push:
     branches:
       - "master"
+      - "develop"
 
 jobs:
-  make-tag:
-    runs-on: ubuntu-latest
-    steps:
-      - uses: "marvinpinto/action-automatic-releases@latest"
-        with:
-          repo_token: "${{ secrets.GITHUB_TOKEN }}"
-          automatic_release_tag: "nightly"
-          prerelease: true
-          title: "Nightly development Build"
   publish-linux-pyz:
-    needs: make-tag
     strategy:
       matrix:
         python: [3.7, 3.8, 3.9]
@@ -43,17 +34,7 @@ jobs:
         poetry install
         mkdir -p dist
         poetry run shiv --site-packages=$(find $(poetry env info -p) -name "site-packages") --upgrade -o dist/idesyde.pyz -c idesyde idesyde
-    - name: Upload binaries to release
-      uses: svenstaro/upload-release-action@v2
-      with:
-        repo_token: ${{ secrets.GITHUB_TOKEN }}
-        file: ${{ github.workspace }}/dist/idesyde.pyz
-        asset_name: IDeSyDe-nightly-x86_64-linux-gnu-py${{ matrix.python }}.pyz
-        tag: "nightly"
-        overwrite: true
-        body: "Python zip with Libs for x86_64 linux distros"
   publish-linux-bin:
-    needs: make-tag
     env:
       PYTHON_VERSION: 3.8
       POETRY_VERSION: 1.1.5
@@ -81,22 +62,7 @@ jobs:
       run: |
         cd ${{ github.workspace }}
         pyoxidizer build --release
-    - name: Zip IDeSyDe
-      run: |
-        sudo apt-get install -y unzip
-        cd ${{ github.workspace }}/build/x86_64-unknown-linux-gnu/release/install
-        zip -r idesyde-x86_64-unknown-linux-gnu.zip idesyde
-    - name: Upload binaries to release
-      uses: svenstaro/upload-release-action@v2
-      with:
-        repo_token: ${{ secrets.GITHUB_TOKEN }}
-        file: ${{ github.workspace }}/build/x86_64-unknown-linux-gnu/release/install/idesyde-x86_64-unknown-linux-gnu.zip
-        asset_name: IDeSyDe-nightly-x86_64-unknown-linux-gnu.zip
-        tag: "nightly"
-        overwrite: true
-        body: "Executable zip with Libs for x86_64 linux distros"
   publish-windows-pyz:
-    needs: make-tag
     strategy:
       matrix:
         python: [3.7, 3.8, 3.9]
@@ -122,17 +88,7 @@ jobs:
         poetry install
         mkdir -p dist
         poetry run shiv -o dist\idesyde.pyz -c idesyde idesyde
-    - name: Upload binaries to release
-      uses: svenstaro/upload-release-action@v2
-      with:
-        repo_token: ${{ secrets.GITHUB_TOKEN }}
-        file: ${{ github.workspace }}\dist\idesyde.pyz
-        asset_name: IDeSyDe-nightly-x86_64-windows-msvc-py${{ matrix.python }}.pyz
-        tag: "nightly"
-        overwrite: true
-        body: "Python zip with Libs for x86_64 windows" 
   publish-windows-bin:
-    needs: make-tag
     env:
       PYTHON_VERSION: 3.9
       POETRY_VERSION: 1.1.5
@@ -160,21 +116,7 @@ jobs:
       run: |
         cd ${{ github.workspace }}
         pyoxidizer build --release
-    - name: Zip IDeSyDe
-      run: |
-        cd ${{ github.workspace }}\build\x86_64-pc-windows-msvc\release\install
-        Compress-Archive -path '.\idesyde' -destinationpath '.\idesyde-x86_64-pc-windows-msvc.zip' 
-    - name: Upload binaries to release
-      uses: svenstaro/upload-release-action@v2
-      with:
-        repo_token: ${{ secrets.GITHUB_TOKEN }}
-        file: ${{ github.workspace }}\build\x86_64-pc-windows-msvc\release\install\idesyde-x86_64-pc-windows-msvc.zip
-        asset_name: IDeSyDe-x86_64-pc-windows-msvc.zip
-        tag: "nightly"
-        overwrite: true
-        body: "Zip with Libs for x86_64 Windows"
   publish-apple-pyz:
-    needs: make-tag
     strategy:
       matrix:
         python: [3.7, 3.8, 3.9]
@@ -200,17 +142,7 @@ jobs:
         poetry install
         mkdir -p dist
         poetry run shiv --site-packages=$(find $(poetry env info -p) -name "site-packages") --upgrade -o dist/idesyde.pyz -c idesyde idesyde
-    - name: Upload binaries to release
-      uses: svenstaro/upload-release-action@v2
-      with:
-        repo_token: ${{ secrets.GITHUB_TOKEN }}
-        file: ${{ github.workspace }}/dist/idesyde.pyz
-        asset_name: IDeSyDe-nightly-x86_64-apple-darwin-py${{ matrix.python }}.pyz
-        tag: "nightly"
-        overwrite: true
-        body: "Python zip for x86_64 MacOS"
   publish-apple-bin:
-    needs: make-tag
     env:
       PYTHON_VERSION: 3.9
       POETRY_VERSION: 1.1.5
@@ -243,16 +175,3 @@ jobs:
       run: |
         cd ${{ github.workspace }}
         pyoxidizer build --release
-    - name: Zip IDeSyDe
-      run: |
-        cd ${{ github.workspace }}/build/x86_64-apple-darwin/release/install
-        zip -r idesyde-x86_64-apple-darwin.zip idesyde 
-    - name: Upload binaries to release
-      uses: svenstaro/upload-release-action@v2
-      with:
-        repo_token: ${{ secrets.GITHUB_TOKEN }}
-        file: ${{ github.workspace }}/build/x86_64-apple-darwin/release/install/idesyde-x86_64-apple-darwin.zip
-        asset_name: IDeSyDe-nightly-x86_64-apple-darwin.zip
-        tag: "nightly"
-        overwrite: true
-        body: "Zip with Libs for x86_64 MacOS"

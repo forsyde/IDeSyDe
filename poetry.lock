@@ -16,20 +16,15 @@ python-versions = ">=2.6, !=3.0.*, !=3.1.*"
 
 [[package]]
 name = "forsyde-io-python"
-version = "0.2.8"
+version = "0.2.10"
 description = "Python supporting libraries for ForSyDe IO"
 category = "main"
 optional = false
-python-versions = "^3.7"
-develop = true
+python-versions = ">=3.7,<4.0"
 
 [package.dependencies]
-networkx = "^2.5"
-pydot = "^1.4.1"
-
-[package.source]
-type = "directory"
-url = "../forsyde-io/python"
+networkx = ">=2.5,<3.0"
+pydot = ">=1.4.1,<2.0.0"
 
 [[package]]
 name = "minizinc"
@@ -130,7 +125,7 @@ mpmath = ">=0.19"
 [metadata]
 lock-version = "1.1"
 python-versions = "^3.7"
-content-hash = "cecb67335910a9fd0841b52e4ee2ba7a167dc4c1390606ac439d0652c5e8ef51"
+content-hash = "16a252204e3c3d742c74531cea539a61f529cbac87d9de74c44a0c8e1736cd99"
 
 [metadata.files]
 click = [
@@ -141,7 +136,10 @@ decorator = [
     {file = "decorator-4.4.2-py2.py3-none-any.whl", hash = "sha256:41fa54c2a0cc4ba648be4fd43cff00aedf5b9465c9bf18d64325bc225f08f760"},
     {file = "decorator-4.4.2.tar.gz", hash = "sha256:e3a62f0520172440ca0dcc823749319382e377f37f140a0b99ef45fecb84bfe7"},
 ]
-forsyde-io-python = []
+forsyde-io-python = [
+    {file = "forsyde-io-python-0.2.10.tar.gz", hash = "sha256:a48323d6d2e5d7f5e1901920dc9a7d9bbb0dc1de07d0a7f8a15d23fd4e4e6a68"},
+    {file = "forsyde_io_python-0.2.10-py3-none-any.whl", hash = "sha256:5490730b536afb497a1390c5ec7433c9a139cc13cf79b9e55b44e9c2fbb4de0c"},
+]
 minizinc = [
     {file = "minizinc-0.4.2-py3-none-any.whl", hash = "sha256:d4327468b7cdc1b1379c6fa50350393d2d0903ac1be55235f534992b4f7b2538"},
     {file = "minizinc-0.4.2.tar.gz", hash = "sha256:c0e5fae557df0b757bbe4dbec70f7b033b2acc0acabea213e3bbcb0b41d8efeb"},

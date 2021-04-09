@@ -1,3 +1,4 @@
+import functools
 import itertools
 from dataclasses import dataclass
 from dataclasses import field
@@ -71,6 +72,9 @@ class SDFToOrders(DecisionModel):
     # partial identification
     orderings: List[Vertex] = field(default_factory=list)
 
+    # pre mappings
+    pre_scheduling: List[Edge] = field(default_factory=list)
+
     def covered_vertexes(self):
         yield from self.orderings
         yield from self.sdf_exec_sub.covered_vertexes()
@@ -114,12 +118,6 @@ class SDFToMultiCore(DecisionModel):
     comms_capacity: List[int] = field(default_factory=list)
 
     # deduced properties
-    # vertex_expansions: Dict[Vertex, List[Vertex]] = field(default_factory=dict)
-    # edge_expansions: Dict[Edge, List[Edge]] = field(default_factory=dict)
-    # cores_enum: Dict[Vertex, int] = field(default_factory=dict)
-    # comm_enum: Dict[Vertex, int] = field(default_factory=dict)
-    # expanded_cores_enum: Dict[Vertex, int] = field(default_factory=dict)
-    # expanded_enum: Dict[Vertex, int] = field(default_factory=dict)
     max_steps: int = 1
     comms_path: List[List[List[int]]] = field(default_factory=list)
 
@@ -376,6 +374,7 @@ class CharacterizedJobShop(MinizincableDecisionModel):
     wcct: np.ndarray = np.zeros((0, 0, 0), dtype=int)
     paths: List[Tuple[Vertex, Vertex, List[Vertex]]] = field(default_factory=list)
     objective_weights: List[int] = field(default_factory=list)
+    pre_mapping: Dict[int, int] = field(default_factory=dict)
 
     def covered_vertexes(self):
         yield from self.jobs
@@ -401,19 +400,19 @@ class CharacterizedJobShop(MinizincableDecisionModel):
                              for (sidx, _) in enumerate(self.jobs)]
         data['strong_next'] = [[(sidx, tidx) in self.strong_next for (tidx, _) in enumerate(self.jobs)]
                                for (sidx, _) in enumerate(self.jobs)]
-        data['path'] = [[[0 for c in self.comms] for t in self.procs] for s in self.procs]
-        for (s, t, path) in self.paths:
+        data['path'] = [[[0 for _ in self.comms] for _ in self.procs] for _ in self.procs]
+        for ((s, t, path), (pidx, p), (ppidx, pp), (cidx, c)) in itertools.product(self.paths, enumerate(self.procs),
+                                                                                   enumerate(self.procs),
+                                                                                   enumerate(self.comms)):
             for (e, u) in enumerate(path):
-                for (pidx, p) in enumerate(self.procs):
-                    for (ppidx, pp) in enumerate(self.procs):
-                        for (cidx, c) in enumerate(self.comms):
-                            if s in p and t in pp and u in c:
-                                data['path'][pidx][ppidx][cidx] = e + 1
+                if s in p and t in pp and u in c:
+                    data['path'][pidx][ppidx][cidx] = e + 1
         data['wcet'] = self.wcet.tolist()
         data['wcct'] = self.wcct.tolist()
         data['release'] = [0 for j in self.jobs]
         data['deadline'] = [0 for j in self.jobs]
         data['objective_weights'] = self.objective_weights
+        data['pre_mapping'] = [self.pre_mapping.get(i, None) for (i, _) in enumerate(self.jobs)]
         return data
 
     def rebuild_forsyde_model(self, results):

@@ -1,6 +1,6 @@
 [tool.poetry]
 name = "idesyde"
-version = "0.1.10"
+version = "0.1.11"
 description = "Generic Design Space Exploration for models based system design"
 authors = ["jordao <jordao@kth.se>"]
 maintainers = ["jordao <jordao@kth.se>"]

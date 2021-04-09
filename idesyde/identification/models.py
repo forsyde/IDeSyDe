@@ -190,7 +190,9 @@ class SDFToMultiCore(MinizincableDecisionModel):
         # ]
         # since the minizinc model requires wcet and wcct,
         # we fake it with almost unitary assumption
-        data['wcet'] = (data['max_tokens'] * np.ones((len(data['sdf_actors']), len(self.cores)), dtype=int)).tolist()
+        data['wcet'] = np.matmul(
+            np.identity(len(data['sdf_actors'])) * data['max_tokens'],
+            np.ones((len(data['sdf_actors']), len(self.cores)), dtype=int)).tolist()
         data['token_wcct'] = (np.ones((len(data['sdf_channels']), len(data['procs']) + len(data['comms'])),
                                       dtype=int)).tolist()
         # since the minizinc model requires objective weights,

@@ -6,6 +6,7 @@ from typing import Tuple
 from typing import Set
 from typing import Dict
 from typing import List
+from typing import Sequence
 
 import numpy as np
 
@@ -16,7 +17,7 @@ from forsyde.io.python.core import Port
 from forsyde.io.python.types import SDFComb
 from forsyde.io.python.types import Process
 from forsyde.io.python.types import Signal
-from forsyde.io.python.types import AbstractOrdering
+from forsyde.io.python.types import TimeTriggeredScheduler
 from forsyde.io.python.types import AbstractMapping
 from forsyde.io.python.types import AbstractScheduling
 from forsyde.io.python.types import AbstractProcessingComponent
@@ -41,13 +42,13 @@ class SDFExecution(DecisionModel):
     SDF topology and the PASS with all elements included.
     """
 
-    sdf_actors: List[Vertex] = field(default_factory=list)
-    sdf_delays: List[Vertex] = field(default_factory=list)
-    sdf_channels: List[Tuple[Vertex, Vertex, List[Vertex]]] = field(default_factory=list)
+    sdf_actors: Sequence[Vertex] = field(default_factory=list)
+    sdf_delays: Sequence[Vertex] = field(default_factory=list)
+    sdf_channels: Sequence[Tuple[Vertex, Vertex, Sequence[Vertex]]] = field(default_factory=list)
     sdf_topology: np.ndarray = np.zeros((0, 0))
     sdf_repetition_vector: np.ndarray = np.zeros((0))
     sdf_initial_tokens: np.ndarray = np.zeros((0))
-    sdf_pass: List[Vertex] = field(default_factory=list)
+    sdf_pass: Sequence[Vertex] = field(default_factory=list)
 
     sdf_max_tokens: np.ndarray = np.zeros((0))
 
@@ -70,10 +71,10 @@ class SDFToOrders(DecisionModel):
     sdf_exec_sub: SDFExecution = SDFExecution()
 
     # partial identification
-    orderings: List[Vertex] = field(default_factory=list)
+    orderings: Sequence[TimeTriggeredScheduler] = field(default_factory=list)
 
     # pre mappings
-    pre_scheduling: List[Edge] = field(default_factory=list)
+    pre_scheduling: Sequence[Edge] = field(default_factory=list)
 
     def covered_vertexes(self):
         yield from self.orderings
@@ -112,16 +113,16 @@ class SDFToMultiCore(DecisionModel):
     sdf_orders_sub: SDFToOrders = SDFToOrders()
 
     # partially identified
-    cores: List[List[Vertex]] = field(default_factory=list)
-    comms: List[List[Vertex]] = field(default_factory=list)
-    connections: List[Tuple[Vertex, Vertex, List[Vertex]]] = field(default_factory=list)
-    comms_capacity: List[int] = field(default_factory=list)
+    cores: Sequence[AbstractProcessingComponent] = field(default_factory=list)
+    comms: Sequence[AbstractCommunicationComponent] = field(default_factory=list)
+    connections: Sequence[Tuple[Vertex, Vertex, Sequence[Vertex]]] = field(default_factory=list)
+    comms_capacity: Sequence[int] = field(default_factory=list)
 
-    pre_mapping: List[Edge] = field(default_factory=list)
+    pre_mapping: Sequence[Edge] = field(default_factory=list)
 
     # deduced properties
     max_steps: int = 1
-    comms_path: List[List[List[int]]] = field(default_factory=list)
+    comms_path: Sequence[Sequence[Sequence[int]]] = field(default_factory=list)
 
     def covered_vertexes(self):
         yield from self.cores
@@ -263,9 +264,9 @@ class SDFToMultiCoreCharacterized(DecisionModel):
     sdf_mpsoc_sub: SDFToMultiCore = SDFToMultiCore()
 
     # elements that are partially identified
-    wcet_vertexes: List[Vertex] = field(default_factory=list)
-    token_wcct_vertexes: List[Vertex] = field(default_factory=list)
-    goals_vertexes: List[Vertex] = field(default_factory=list)
+    wcet_vertexes: Sequence[Vertex] = field(default_factory=list)
+    token_wcct_vertexes: Sequence[Vertex] = field(default_factory=list)
+    goals_vertexes: Sequence[Vertex] = field(default_factory=list)
     wcet: np.ndarray = np.zeros((0, 0), dtype=int)
     token_wcct: np.ndarray = np.zeros((0, 0), dtype=int)
     throughput_importance: int = 0
@@ -360,23 +361,24 @@ class SDFToMPSoCClusteringMzn(MinizincableDecisionModel):
 class CharacterizedJobShop(MinizincableDecisionModel):
 
     # models that were abstracted in jobs
-    originals: List[DecisionModel] = field(default_factory=list)
+    originals: Sequence[DecisionModel] = field(default_factory=list)
 
     # properties
-    jobs: List[Vertex] = field(default_factory=list)
-    comm_jobs: List[Tuple[Vertex, Vertex, List[Vertex]]] = field(default_factory=list)
+    jobs: Sequence[Vertex] = field(default_factory=list)
+    comm_jobs: Sequence[Tuple[Vertex, Vertex, Sequence[Vertex]]] = field(default_factory=list)
     # the virtual processors and communicators should go from
     # most physical -> cyber
-    procs: List[List[Vertex]] = field(default_factory=list)
-    comms: List[List[Vertex]] = field(default_factory=list)
-    comm_capacity: List[int] = field(default_factory=list)
-    weak_next: List[Tuple[int, int]] = field(default_factory=list)
-    strong_next: List[Tuple[int, int]] = field(default_factory=list)
+    procs: Sequence[Sequence[Vertex]] = field(default_factory=list)
+    comms: Sequence[Sequence[Vertex]] = field(default_factory=list)
+    comm_capacity: Sequence[int] = field(default_factory=list)
+    weak_next: Sequence[Tuple[int, int]] = field(default_factory=list)
+    strong_next: Sequence[Tuple[int, int]] = field(default_factory=list)
     wcet: np.ndarray = np.zeros((0, 0), dtype=int)
     wcct: np.ndarray = np.zeros((0, 0, 0), dtype=int)
-    paths: List[Tuple[Vertex, Vertex, List[Vertex]]] = field(default_factory=list)
-    objective_weights: List[int] = field(default_factory=list)
-    pre_mapping: Dict[int, int] = field(default_factory=dict)
+    paths: Sequence[Tuple[Vertex, Vertex, Sequence[Vertex]]] = field(default_factory=list)
+    objective_weights: Sequence[int] = field(default_factory=list)
+    pre_mapping: List[int] = field(default_factory=list)
+    pre_scheduling: List[int] = field(default_factory=list)
 
     def covered_vertexes(self):
         yield from self.jobs
@@ -414,7 +416,8 @@ class CharacterizedJobShop(MinizincableDecisionModel):
         data['release'] = [0 for j in self.jobs]
         data['deadline'] = [0 for j in self.jobs]
         data['objective_weights'] = self.objective_weights
-        data['pre_mapping'] = [self.pre_mapping.get(i, -1) for (i, _) in enumerate(self.jobs)]
+        data['pre_mapping'] = self.pre_mapping
+        data['pre_scheduling'] = self.pre_scheduling
         return data
 
     def rebuild_forsyde_model(self, results):

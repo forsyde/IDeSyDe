@@ -1,7 +1,8 @@
-from typing import List
+from typing import List, Sequence
 from typing import Dict
 from typing import Tuple
 from typing import Optional
+from typing import Optional, Iterator
 import itertools
 
 import networkx as nx
@@ -23,6 +24,7 @@ from forsyde.io.python.types import Goal
 from forsyde.io.python.types import Output
 from forsyde.io.python.types import MinimumThroughput
 from forsyde.io.python.types import TimeDivisionMultiplexer
+from forsyde.io.python.types import TimeTriggeredScheduler
 from forsyde.io.python.types import AbstractMapping
 from forsyde.io.python.types import AbstractScheduling
 
@@ -149,7 +151,7 @@ def identify_sdf_parallel(model: ForSyDeModel, identified: List[DecisionModel]):
     res = None
     sdf_exec_sub = next((p for p in identified if isinstance(p, SDFExecution)), None)
     if sdf_exec_sub:
-        orderings = [o for o in model if isinstance(o, AbstractOrdering)]
+        orderings = [o for o in model if isinstance(o, TimeTriggeredScheduler)]
         if orderings:
             pre_scheduling = []
             for (a, o) in itertools.product(sdf_exec_sub.sdf_actors, orderings):
@@ -293,7 +295,8 @@ def identify_sdf_multi_core_instrumented(model: ForSyDeModel, identified: List[D
 
 
 @register_identification_rule
-def identify_jobs_from_sdf_multicore(model: ForSyDeModel, identified: List[DecisionModel]):
+def identify_jobs_from_sdf_multicore(model: ForSyDeModel,
+                                     identified: List[DecisionModel]) -> Tuple[bool, Optional[DecisionModel]]:
     res = None
     sdf_mpsoc_char_sub: Optional[SDFToMultiCoreCharacterized] = next(
         (p for p in identified if isinstance(p, SDFToMultiCoreCharacterized)), None)
@@ -306,20 +309,37 @@ def identify_jobs_from_sdf_multicore(model: ForSyDeModel, identified: List[Decis
             sdf_mpsoc_char_sub.sdf_mpsoc_sub.sdf_orders_sub.sdf_exec_sub.sdf_topology,
             sdf_mpsoc_char_sub.sdf_mpsoc_sub.sdf_orders_sub.sdf_exec_sub.sdf_repetition_vector,
             sdf_mpsoc_char_sub.sdf_mpsoc_sub.sdf_orders_sub.sdf_exec_sub.sdf_initial_tokens)
+        cores = sdf_mpsoc_char_sub.sdf_mpsoc_sub.cores
+        orderings = sdf_mpsoc_char_sub.sdf_mpsoc_sub.sdf_orders_sub.orderings
         procs = []
-        for (i, p) in enumerate(sdf_mpsoc_char_sub.sdf_mpsoc_sub.cores):
-            orderings = sdf_mpsoc_char_sub.sdf_mpsoc_sub.sdf_orders_sub.orderings[i]
-            procs.append([p, orderings])
+        for (p, o) in itertools.product(cores, orderings):
+            if model.has_edge(p, o):
+                procs.append([p, o])
+        for (p, o) in zip(cores, orderings):
+            if not any(p == l[0] or o == l[1] for l in procs):
+                procs.append([p, o])
         # one ordering per comm
         comms = []
         comm_capacity = []
-        for (i, p) in enumerate(sdf_mpsoc_char_sub.sdf_mpsoc_sub.comms):
-            orderings = sdf_mpsoc_char_sub.sdf_mpsoc_sub.sdf_orders_sub.orderings[i + len(procs)]
-            comms.append([p, orderings])
-            if isinstance(p, TimeDivisionMultiplexer):
-                comm_capacity.append(p.get_slots())
+        for (c, o) in itertools.product(sdf_mpsoc_char_sub.sdf_mpsoc_sub.comms, reversed(orderings)):
+            if model.has_edge(c, o):
+                comms.append([c, o])
+        for (c, o) in zip(sdf_mpsoc_char_sub.sdf_mpsoc_sub.comms, reversed(orderings)):
+            if not any(c == l[0] or o == l[1] for l in comms):
+                comms.append([c, o])
+        for l in comms:
+            c = l[0]
+            if isinstance(c, TimeDivisionMultiplexer):
+                comm_capacity.append(c.get_slots())
             else:
                 comm_capacity.append(1)
+        # for (i, p) in enumerate(sdf_mpsoc_char_sub.sdf_mpsoc_sub.comms):
+        #     orderings = sdf_mpsoc_char_sub.sdf_mpsoc_sub.sdf_orders_sub.orderings[i + len(procs)]
+        #     comms.append([p, orderings])
+        #     if isinstance(p, TimeDivisionMultiplexer):
+        #         comm_capacity.append(p.get_slots())
+        #     else:
+        #         comm_capacity.append(1)
         # fetch the wccts and wcets
         wcet = np.zeros((len(jobs), len(procs)), dtype=int)
         wcct = np.zeros((len(jobs), len(jobs), len(comms)), dtype=int)
@@ -338,13 +358,24 @@ def identify_jobs_from_sdf_multicore(model: ForSyDeModel, identified: List[Decis
                     if s == job and t == jjob:
                         for (i, p) in enumerate(sdf_mpsoc_char_sub.sdf_mpsoc_sub.comms):
                             wcct[j, jj, i] = sdf_mpsoc_char_sub.token_wcct[cidx, i]
+        orderings = sdf_mpsoc_char_sub.sdf_mpsoc_sub.sdf_orders_sub.orderings
+        pre_scheduling = [-1 for (j, _) in enumerate(jobs)]
+        pre_mapping = [-1 for (j, _) in enumerate(jobs)]
         for a in sdf_actors:
-            mappings = (e for e in sdf_mpsoc_char_sub.sdf_mpsoc_sub.sdf_orders_sub.pre_scheduling if e.t == a)
-            filtered_jobs = ((j, job) for (j, job) in enumerate(jobs) if job == a)
-            for ((j, job), e) in zip(enumerate(jobs), mappings):
-                # TODO: Continue make the pre mapping routines here
-                pass
-        pre_mapping = []
+            # go through the trigger times to fetch when the actor might be
+            # activated
+            connected_orderings: Iterator[TimeTriggeredScheduler] = (
+                o for o in orderings if model.has_edge(o, a) and a.identifier in o.get_trigger_time().values())
+            triggers: Iterator[int] = sorted((int(k) for (k, v) in o.get_trigger_time().items() if v == a.identifier
+                                              for o in connected_orderings))
+            start_index = jobs.index(a)
+            for (i, t) in enumerate(triggers):
+                # pass all the timings to the job
+                pre_scheduling[start_index + i] = t
+                # check if the time triggered scheduled belong to a machine already
+                for (p, proc) in enumerate(procs):
+                    if all(nx.has_path(model, component, a) for component in proc):
+                        pre_mapping[start_index + i] = p
         res = CharacterizedJobShop(
             originals=[sdf_mpsoc_char_sub],
             comm_capacity=comm_capacity,
@@ -357,7 +388,8 @@ def identify_jobs_from_sdf_multicore(model: ForSyDeModel, identified: List[Decis
             wcet=wcet,
             wcct=wcct,
             paths=sdf_mpsoc_char_sub.sdf_mpsoc_sub.connections,
-            pre_mapping=dict(),
+            pre_mapping=pre_mapping,
+            pre_scheduling=pre_scheduling,
             objective_weights=[sdf_mpsoc_char_sub.throughput_importance, sdf_mpsoc_char_sub.latency_importance])
     if res:
         return (True, res)

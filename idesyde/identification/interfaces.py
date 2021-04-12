@@ -9,6 +9,7 @@ from typing import Optional
 from typing import Dict
 from typing import Iterable
 from typing import Any
+from typing import Sequence
 
 from forsyde.io.python.api import ForSyDeModel
 from forsyde.io.python.core import Vertex
@@ -223,7 +224,7 @@ class CompositeDecisionModel(DecisionModel):
             the 'root' case.
             2. the final results is produced by the tuple (None, result).
         '''
-        return []
+        return current
 
 
 class IdentificationRule(object):
@@ -268,5 +269,3 @@ class IdentificationRule(object):
 
     def __hash__(self):
         return hash(self.short_name())
-
-

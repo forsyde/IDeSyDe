@@ -348,6 +348,7 @@ class SDFMulticoreToJobsRule(IdentificationRule):
                 wcet=wcet,
                 wcct=wcct,
                 paths=sdf_mpsoc_char_sub.sdf_mpsoc_sub.connections,
+                pre_mapping=dict(),
                 objective_weights=[sdf_mpsoc_char_sub.throughput_importance, sdf_mpsoc_char_sub.latency_importance])
         if res:
             return (True, res)

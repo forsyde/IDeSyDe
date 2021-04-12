@@ -117,6 +117,8 @@ class SDFToMultiCore(DecisionModel):
     connections: List[Tuple[Vertex, Vertex, List[Vertex]]] = field(default_factory=list)
     comms_capacity: List[int] = field(default_factory=list)
 
+    pre_mapping: List[Edge] = field(default_factory=list)
+
     # deduced properties
     max_steps: int = 1
     comms_path: List[List[List[int]]] = field(default_factory=list)
@@ -412,7 +414,7 @@ class CharacterizedJobShop(MinizincableDecisionModel):
         data['release'] = [0 for j in self.jobs]
         data['deadline'] = [0 for j in self.jobs]
         data['objective_weights'] = self.objective_weights
-        data['pre_mapping'] = [self.pre_mapping.get(i, None) for (i, _) in enumerate(self.jobs)]
+        data['pre_mapping'] = [self.pre_mapping.get(i, -1) for (i, _) in enumerate(self.jobs)]
         return data
 
     def rebuild_forsyde_model(self, results):

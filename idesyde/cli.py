@@ -62,17 +62,16 @@ def cli_entry():
                         that are solved by them.
                         ''')
     args = parser.parse_args()
-    logging.basicConfig(format='[{name:<10} | {levelname:<8} | {asctime}] {message}',
-                        style='{',
-                        level=getattr(logging, args.verbosity.upper(), 'INFO'),
-                        force=True)
+    # logging.basicConfig(format='[{name:<10} | {levelname:<8} | {asctime}] {message}',
+    #                     style='{',
+    #                     level=getattr(logging, args.verbosity.upper(), 'INFO'),
+    #                     force=True)
     logger = logging.getLogger(LOGGER_NAME)
-    # logger.setLevel(getattr(logging, args.verbosity.upper(), 'INFO'))
-    # logger.addHandler(logging.StreamHandler(format='[{levelname:<8}{asctime}] {name}: {message}', style='{'))
-    # consoleLogHandler = logging.StreamHandler()
-    # consoleLogHandler.setLevel(getattr(logging, args.verbosity.upper(), 'INFO'))
-    # consoleLogHandler.setFormatter(logging.Formatter('[{levelname:<8}{asctime}] {name}: {message}', style='{'))
-    # logger.addHandler(consoleLogHandler)
+    logger.setLevel(getattr(logging, args.verbosity.upper(), 'INFO'))
+    consoleLogHandler = logging.StreamHandler()
+    consoleLogHandler.setLevel(getattr(logging, args.verbosity.upper(), 'INFO'))
+    consoleLogHandler.setFormatter(logging.Formatter('[{name:<10} | {levelname:<8} | {asctime}] {message}', style='{'))
+    logger.addHandler(consoleLogHandler)
     logger.debug('Arguments parsed')
     in_model = forsyde_io.load_model(args.model)
     logger.info('Model parsed')

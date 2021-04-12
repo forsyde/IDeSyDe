@@ -10,6 +10,7 @@ set of int: jobs;
 
 array[jobs] of int: release;
 array[jobs] of int: deadline;
+array[jobs] of opt procs: pre_mapped;
 array[jobs, jobs] of bool: weak_next;
 array[jobs, jobs] of bool: strong_next;
 array[jobs, procs] of int: wcet;
@@ -36,6 +37,11 @@ array[jobs, jobs, comms] of var min(wcct)..max(wcct): comm_duration;
 array[jobs] of var max(wcet)..max_makespan: job_min_latency;
 array[jobs] of var max(wcet)..max_makespan: job_max_latency;
 array[objectives] of var max(wcet)..max_makespan: objective;
+
+% apply pre mapping
+constraint forall(j in jobs, p in procs) (
+  pre_mapped[j] = p -> occurs(start[j, p]) /\ forall(pp in procs where p != pp) (!occurs(start[j, pp]))
+);
 
 % tighten bounds for faster exploration
 constraint forall(j in jobs, p in procs) (

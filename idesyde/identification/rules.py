@@ -1,9 +1,11 @@
-import networkx as nx
-import numpy as np
-import sympy
 from typing import List
 from typing import Dict
 from typing import Tuple
+import itertools
+
+import networkx as nx
+import numpy as np
+import sympy
 
 from forsyde.io.python.core import Vertex
 from forsyde.io.python.types import SDFComb
@@ -19,6 +21,8 @@ from forsyde.io.python.types import Goal
 from forsyde.io.python.types import Output
 from forsyde.io.python.types import MinimumThroughput
 from forsyde.io.python.types import TimeDivisionMultiplexer
+from forsyde.io.python.types import AbstractMapping
+from forsyde.io.python.types import AbstractScheduling
 
 import idesyde.math as math_util
 import idesyde.sdf as sdf_lib
@@ -141,7 +145,12 @@ class SDFOrderRule(IdentificationRule):
         if sdf_exec_sub:
             orderings = [o for o in model if isinstance(o, AbstractOrdering)]
             if orderings:
-                res = SDFToOrders(sdf_exec_sub=sdf_exec_sub, orderings=orderings)
+                pre_scheduling = []
+                for (a, o) in itertools.product(sdf_exec_sub.sdf_actors, orderings):
+                    for (ek, ed) in model.get_edge_data(o, a, default=dict()).items():
+                        if isinstance(ed['object'], AbstractScheduling):
+                            pre_scheduling.append(ed['object'])
+                res = SDFToOrders(sdf_exec_sub=sdf_exec_sub, orderings=orderings, pre_scheduling=pre_scheduling)
         # conditions for fixpoints and partial identification
         if res:
             res.compute_deduced_properties()
@@ -172,27 +181,32 @@ class SDFToCoresRule(IdentificationRule):
             comms = [p for p in model if isinstance(p, AbstractCommunicationComponent)]
             # find all cores that are connected between each other
             connections: List[Tuple[Vertex, Vertex, List[Vertex]]] = []
-            for s in cores:
-                for t in cores:
-                    if s != t:
-                        try:
-                            for path in nx.all_shortest_paths(model, s, t):
-                                path = path[1:-1]  # take away the end points, the processors themselves
-                                if all(isinstance(v, AbstractCommunicationComponent) for v in path):
-                                    connections.append((s, t, path))
-                        except nx.exception.NetworkXNoPath:
-                            pass
+            for (s, t) in itertools.product(cores, cores):
+                if s != t:
+                    try:
+                        for path in nx.all_shortest_paths(model, s, t):
+                            path = path[1:-1]  # take away the end points, the processors themselves
+                            if all(isinstance(v, AbstractCommunicationComponent) for v in path):
+                                connections.append((s, t, path))
+                    except nx.exception.NetworkXNoPath:
+                        pass
             # there must be orderings for both execution and communication
             comms_capacity = [1 for c in comms]
             for (i, c) in enumerate(comms):
                 if isinstance(c, TimeDivisionMultiplexer):
                     comms_capacity[i] = int(c.get_slots())
             if len(cores) + len(comms) <= len(sdf_orders_sub.orderings):
+                pre_mapping = []
+                for (o, p) in itertools.product(sdf_orders_sub.orderings, cores):
+                    for (ek, ed) in model.get_edge_data(p, o, default=dict()).items():
+                        if isinstance(ed['object'], AbstractMapping):
+                            pre_mapping.append(ed['object'])
                 res = SDFToMultiCore(sdf_orders_sub=sdf_orders_sub,
                                      cores=cores,
                                      comms=comms,
                                      connections=connections,
-                                     comms_capacity=comms_capacity)
+                                     comms_capacity=comms_capacity,
+                                     pre_mapping=pre_mapping)
         # conditions for fixpoints and partial identification
         if res:
             res.compute_deduced_properties()
@@ -315,6 +329,13 @@ class SDFMulticoreToJobsRule(IdentificationRule):
                         if s == job and t == jjob:
                             for (i, p) in enumerate(sdf_mpsoc_char_sub.sdf_mpsoc_sub.comms):
                                 wcct[j, jj, i] = sdf_mpsoc_char_sub.token_wcct[cidx, i]
+            for a in sdf_actors:
+                mappings = (e for e in sdf_mpsoc_char_sub.sdf_mpsoc_sub.sdf_orders_sub.pre_scheduling if e.t == a)
+                filtered_jobs = ((j, job) for (j, job) in enumerate(jobs) if job == a)
+                for ((j, job), e) in zip(enumerate(jobs), mappings):
+                    # TODO: Continue make the pre mapping routines here
+                    pass
+            pre_mapping = []
             res = CharacterizedJobShop(
                 originals=[sdf_mpsoc_char_sub],
                 comm_capacity=comm_capacity,

@@ -424,26 +424,37 @@ class CharacterizedJobShop(MinizincableDecisionModel):
         new_model = self.covered_model()
         # TODO: Must find a better and more general way to rebuild the
         # job shop abstraction
-        for (jidx, plist) in enumerate(results["start"]):
-            j = self.jobs[jidx]
-            for (pidx, t) in enumerate(plist):
+        throughput = max(results['job_min_latency'])
+        triggers = results['start']
+        start_time = [
+            min((triggers[j][p] for (j, _) in enumerate(self.jobs) if triggers[j][p] is not None))
+            for (p, _) in enumerate(self.procs)
+        ]
+        for (j, job) in enumerate(self.jobs):
+            for (pidx, proc) in enumerate(self.procs):
+                t = triggers[j][pidx]
                 if t is not None:
                     # create the mapping between elements of the abstract
                     # processing machine
-                    for (p, pp) in zip(self.procs[pidx][:-1], self.procs[pidx][1:]):
+                    for (p, pp) in zip(proc[:-1], proc[1:]):
                         if not new_model.has_edge(p, pp, key="object"):
+                            edata = new_model.get_edge_data(p, pp, default=dict())
                             new_edge = AbstractMapping(source_vertex=p, target_vertex=pp)
-                            new_model.add_edge(p, pp, object=new_edge)
+                            if not any('object' in edict and edict['object'] == new_edge
+                                       for (_, edict) in edata.items()):
+                                new_model.add_edge(p, pp, object=new_edge)
                     # add the job to this one machine, assuming the
                     # last element is the one represeting the machine's
                     # interface
-                    p = self.procs[pidx][-1]
-                    if not new_model.has_edge(p, j, key="object"):
-                        new_edge = AbstractScheduling(source_vertex=p, target_vertex=j)
-                        new_model.add_edge(p, j, object=new_edge)
+                    p = proc[-1]
+                    if not new_model.has_edge(p, job, key="object"):
+                        new_edge = AbstractScheduling(source_vertex=p, target_vertex=job)
+                        new_model.add_edge(p, job, object=new_edge)
+                        p.properties['start-time'] = start_time[pidx]
                         if 'trigger-time' not in p.properties:
                             p.properties['trigger-time'] = {}
-                        p.properties['trigger-time'][t] = j.identifier
+                        p.properties['trigger-time'][t - start_time[pidx]] = job.identifier
+                        p.properties['period'] = throughput
         for (s, t, path) in self.comm_jobs:
             s_idxs = (i for (i, j) in enumerate(self.jobs) if j == s)
             t_idxs = (i for (i, j) in enumerate(self.jobs) if j == t)

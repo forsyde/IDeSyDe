@@ -1,5 +1,6 @@
 import functools
 import itertools
+import logging
 from dataclasses import dataclass
 from dataclasses import field
 from typing import Tuple
@@ -22,12 +23,15 @@ from forsyde.io.python.types import AbstractMapping
 from forsyde.io.python.types import AbstractScheduling
 from forsyde.io.python.types import AbstractProcessingComponent
 from forsyde.io.python.types import AbstractCommunicationComponent
+from idesyde import LOGGER_NAME
 from idesyde.identification.interfaces import DecisionModel
 from idesyde.identification.interfaces import DirectDecisionModel
 from idesyde.identification.interfaces import CompositeDecisionModel
 from idesyde.identification.interfaces import MinizincableDecisionModel
 
 import idesyde.sdf as sdfapi
+
+_logger = logging.getLogger(LOGGER_NAME)
 
 
 @dataclass
@@ -54,8 +58,9 @@ class SDFExecution(DecisionModel):
 
     def covered_vertexes(self):
         yield from self.sdf_actors
-        for (_, _, p) in self.sdf_channels:
-            yield from p
+        for (_, _, paths) in self.sdf_channels:
+            for p in paths:
+                yield from p
 
     def compute_deduced_properties(self):
         self.max_tokens = np.zeros((len(self.sdf_channels)), dtype=int)
@@ -94,9 +99,7 @@ class SDFToOrders(DecisionModel):
         data['max_tokens'] = sub.max_tokens.tolist()
         data['activations'] = sub.sdf_repetition_vector[:, 0].tolist()
         data['static_orders'] = range(1, len(self.orderings) + 1)
-        # TODO: find a awya to compute the initial tokens
-        # reliably
-        data['initial_tokens'] = [0 for c in sub.sdf_channels]
+        data['initial_tokens'] = sub.sdf_initial_tokens
         return data
 
     def get_mzn_model_name(self):
@@ -358,7 +361,7 @@ class SDFToMPSoCClusteringMzn(MinizincableDecisionModel):
 
 
 @dataclass
-class CharacterizedJobShop(MinizincableDecisionModel):
+class JobScheduling(MinizincableDecisionModel):
 
     # models that were abstracted in jobs
     originals: Sequence[DecisionModel] = field(default_factory=list)
@@ -373,12 +376,13 @@ class CharacterizedJobShop(MinizincableDecisionModel):
     comm_capacity: Sequence[int] = field(default_factory=list)
     weak_next: Sequence[Tuple[int, int]] = field(default_factory=list)
     strong_next: Sequence[Tuple[int, int]] = field(default_factory=list)
-    wcet: np.ndarray = np.zeros((0, 0), dtype=int)
-    wcct: np.ndarray = np.zeros((0, 0, 0), dtype=int)
+    # wcet: np.ndarray = np.zeros((0, 0), dtype=int)
+    # wcct: np.ndarray = np.zeros((0, 0, 0), dtype=int)
     paths: Sequence[Tuple[Vertex, Vertex, Sequence[Vertex]]] = field(default_factory=list)
     objective_weights: Sequence[int] = field(default_factory=list)
     pre_mapping: List[int] = field(default_factory=list)
     pre_scheduling: List[int] = field(default_factory=list)
+    goals_vertexes: Sequence[Vertex] = field(default_factory=list)
 
     def covered_vertexes(self):
         yield from self.jobs
@@ -388,6 +392,7 @@ class CharacterizedJobShop(MinizincableDecisionModel):
             yield from p
         for m in self.originals:
             yield from m.covered_vertexes()
+        yield from self.goals_vertexes
 
     def get_mzn_model_name(self):
         return "dependent_job_scheduling.mzn"
@@ -411,13 +416,14 @@ class CharacterizedJobShop(MinizincableDecisionModel):
             for (e, u) in enumerate(path):
                 if s in p and t in pp and u in c:
                     data['path'][pidx][ppidx][cidx] = e + 1
-        data['wcet'] = self.wcet.tolist()
-        data['wcct'] = self.wcct.tolist()
+        data['wcet'] = [[1 for _ in self.procs] for _ in self.jobs]
+        data['wcct'] = [[[0 for _ in self.comms] for _ in self.jobs] for _ in self.jobs]
         data['release'] = [0 for j in self.jobs]
         data['deadline'] = [0 for j in self.jobs]
         data['objective_weights'] = self.objective_weights
         data['pre_mapping'] = self.pre_mapping
         data['pre_scheduling'] = self.pre_scheduling
+        _logger.debug(data)
         return data
 
     def rebuild_forsyde_model(self, results):
@@ -468,3 +474,37 @@ class CharacterizedJobShop(MinizincableDecisionModel):
                                 p.properties['trigger-time'] = {}
                             p.properties['trigger-time'][c.identifier] = t
         return new_model
+
+
+@dataclass
+class InstrumentedJobScheduling(MinizincableDecisionModel):
+
+    # child model
+    sub_job_scheduling: JobScheduling = JobScheduling()
+
+    # properties
+    jobs: Sequence[Vertex] = field(default_factory=list)
+    comm_jobs: Sequence[Tuple[Vertex, Vertex, Sequence[Vertex]]] = field(default_factory=list)
+    # the virtual processors and communicators should go from
+    # most physical -> cyber
+    wcet_vertexes: Sequence[Vertex] = field(default_factory=list)
+    wcct_vertexes: Sequence[Vertex] = field(default_factory=list)
+    wcet: np.ndarray = np.zeros((0, 0), dtype=int)
+    wcct: np.ndarray = np.zeros((0, 0, 0), dtype=int)
+
+    def covered_vertexes(self):
+        yield from self.sub_job_scheduling.covered_vertexes()
+        yield from self.wcet_vertexes
+        yield from self.wcct_vertexes
+
+    def get_mzn_model_name(self):
+        return "dependent_job_scheduling.mzn"
+
+    def get_mzn_data(self):
+        data = self.sub_job_scheduling.get_mzn_data()
+        data['wcet'] = self.wcet.tolist()
+        data['wcct'] = self.wcct.tolist()
+        return data
+
+    def rebuild_forsyde_model(self, results):
+        return self.sub_job_scheduling.rebuild_forsyde_model(results)

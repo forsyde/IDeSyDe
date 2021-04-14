@@ -10,7 +10,7 @@ set of int: jobs;
 
 array[jobs] of int: release;
 array[jobs] of int: deadline;
-array[jobs] of (procs union {-1}): pre_mapping;
+array[jobs] of (procs union {0}): pre_mapping;
 array[jobs] of int: pre_scheduling;
 array[jobs, jobs] of bool: weak_next;
 array[jobs, jobs] of bool: strong_next;

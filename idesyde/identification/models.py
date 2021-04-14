@@ -120,7 +120,7 @@ class SDFToMultiCore(DecisionModel):
     # partially identified
     cores: Sequence[AbstractProcessingComponent] = field(default_factory=list)
     comms: Sequence[AbstractCommunicationComponent] = field(default_factory=list)
-    connections: Dict[Tuple[Vertex, Vertex], Sequence[Vertex]] = field(default_factory=dict)
+    connections: Dict[Tuple[Vertex, Vertex], Sequence[Sequence[Vertex]]] = field(default_factory=dict)
     comms_capacity: Sequence[int] = field(default_factory=list)
 
     pre_mapping: Sequence[Edge] = field(default_factory=list)
@@ -174,12 +174,15 @@ class SDFToMultiCore(DecisionModel):
         # self.comm_enum = comm_enum
         self.max_steps = max_steps
         self.comms_path = [[[0 for c in self.comms] for t in self.cores] for s in self.cores]
-        for (s, t, p) in self.connections:
+        for (s, t) in self.connections:
+            p = self.connections[(s, t)]
             sidx = self.cores.index(s)
             tidx = self.cores.index(t)
-            for (i, u) in enumerate(p):
-                uidx = self.comms.index(u)
-                self.comms_path[sidx][tidx][uidx] = i + 1
+            if len(p) > 0:
+                # TODO: find a way to tackle multiple paths later
+                for (i, u) in enumerate(p[0]):
+                    uidx = self.comms.index(u)
+                    self.comms_path[sidx][tidx][uidx] = i + 1
 
     def get_mzn_data(self):
         data = self.sdf_orders_sub.get_mzn_data()
@@ -244,7 +247,8 @@ class SDFToMultiCore(DecisionModel):
                                            source_vertex_port=Port(identifier="timeslots"))
                 new_model.add_edge(comm, ordering, object=new_edge)
             slots = [0 for c in sdf_channels]
-            for (c, (s, t, path)) in enumerate(sdf_channels):
+            for (c, (s, t)) in enumerate(sdf_channels):
+                path = sdf_channels[(s, t)]
                 clashes = [
                     slots[cc] for (p, _) in enumerate(self.cores) for (pp, _) in enumerate(self.cores)
                     for t in range(max_steps) for tt in range(max_steps) for cc in range(c)
@@ -370,8 +374,8 @@ class JobScheduling(MinizincableDecisionModel):
 
     # properties
     jobs: Sequence[Vertex] = field(default_factory=list)
-    weak_next: Dict[int, Sequence[int]] = field(default_factory=list)
-    strong_next: Dict[int, Sequence[int]] = field(default_factory=list)
+    weak_next: Dict[int, Sequence[int]] = field(default_factory=dict)
+    strong_next: Dict[int, Sequence[int]] = field(default_factory=dict)
     comm_jobs: Dict[Tuple[int, int], Sequence[Sequence[Vertex]]] = field(default_factory=dict)
     # the virtual processors and communicators should go from
     # most physical -> cyber
@@ -410,9 +414,11 @@ class JobScheduling(MinizincableDecisionModel):
         data['strong_next'] = [[tidx in self.strong_next[sidx] for (tidx, _) in enumerate(self.jobs)]
                                for (sidx, _) in enumerate(self.jobs)]
         data['path'] = [[[0 for _ in self.comms] for _ in self.procs] for _ in self.procs]
-        for ((s, t, path), (pidx, p), (ppidx, pp), (cidx, c)) in itertools.product(self.paths, enumerate(self.procs),
-                                                                                   enumerate(self.procs),
-                                                                                   enumerate(self.comms)):
+        for ((s, t), (pidx, p), (ppidx, pp), (cidx, c)) in itertools.product(self.paths, enumerate(self.procs),
+                                                                             enumerate(self.procs),
+                                                                             enumerate(self.comms)):
+            # TODO: find later a way to make the paths more flexible
+            path = self.paths[(s, t)][0]
             for (e, u) in enumerate(path):
                 if s in p and t in pp and u in c:
                     data['path'][pidx][ppidx][cidx] = e + 1
@@ -421,7 +427,8 @@ class JobScheduling(MinizincableDecisionModel):
         data['release'] = [0 for j in self.jobs]
         data['deadline'] = [0 for j in self.jobs]
         data['objective_weights'] = self.objective_weights
-        data['pre_mapping'] = self.pre_mapping
+        # we need to sum 1 since the procs set start 1 and not zero.
+        data['pre_mapping'] = [i + 1 for i in self.pre_mapping]
         data['pre_scheduling'] = self.pre_scheduling
         return data
 

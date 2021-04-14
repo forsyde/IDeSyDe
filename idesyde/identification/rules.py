@@ -5,6 +5,7 @@ from typing import Optional
 from typing import Optional, Iterator
 import itertools
 import logging
+import math
 
 import networkx as nx
 import numpy as np
@@ -19,7 +20,9 @@ from forsyde.io.python.types import Signal
 from forsyde.io.python.types import AbstractGrouping
 from forsyde.io.python.types import AbstractProcessingComponent
 from forsyde.io.python.types import InstrumentedProcessorTile
+from forsyde.io.python.types import InstrumentedCommunicationInterconnect
 from forsyde.io.python.types import InstrumentedFunction
+from forsyde.io.python.types import InstrumentedSignal
 from forsyde.io.python.types import AbstractCommunicationComponent
 from forsyde.io.python.types import AbstractPhysicalComponent
 from forsyde.io.python.types import WCET
@@ -206,14 +209,14 @@ def identify_sdf_multi_core(model: ForSyDeModel, identified: List[DecisionModel]
         cores = [p for p in model if isinstance(p, AbstractProcessingComponent)]
         comms = [p for p in model if isinstance(p, AbstractCommunicationComponent)]
         # find all cores that are connected between each other
-        connections: List[Tuple[Vertex, Vertex, List[Vertex]]] = []
+        connections: Dict[Tuple[Vertex, Vertex], Sequence[Sequence[Vertex]]] = {}
         for (s, t) in itertools.product(cores, cores):
             if s != t:
                 try:
-                    for path in nx.all_shortest_paths(model, s, t):
-                        path = path[1:-1]  # take away the end points, the processors themselves
-                        if all(isinstance(v, AbstractCommunicationComponent) for v in path):
-                            connections.append((s, t, path))
+                    connections[(s, t)] = [
+                        path[1:-1] for path in nx.all_shortest_paths(model, s, t) if all(
+                            isinstance(v, AbstractCommunicationComponent) for v in path[1:-1])
+                    ]
                 except nx.exception.NetworkXNoPath:
                     pass
         # there must be orderings for both execution and communication
@@ -396,7 +399,7 @@ def identify_jobs_from_sdf_multicore(model: ForSyDeModel,
                         pre_mapping[start_index + i] = p
         res = InstrumentedJobScheduling(
             sub_job_scheduling=JobScheduling(
-                abstracted=sdf_mpsoc_char_sub.covered_vertexes(),
+                abstracted=list(sdf_mpsoc_char_sub.covered_vertexes()),
                 comms=comms,
                 procs=procs,
                 jobs=jobs,
@@ -410,7 +413,7 @@ def identify_jobs_from_sdf_multicore(model: ForSyDeModel,
                 objective_weights=[sdf_mpsoc_char_sub.throughput_importance, sdf_mpsoc_char_sub.latency_importance]),
             comm_capacity=comm_capacity,
             # TODO: make this more general later
-            proc_capacity=[len(jobs) for _ in procs],
+            # proc_capacity=[len(jobs) for _ in procs],
             wcet=wcet,
             wcct=wcct,
             wcet_vertexes=sdf_mpsoc_char_sub.wcet_vertexes,
@@ -467,10 +470,9 @@ def identify_jobs_from_multi_sdf(model: ForSyDeModel,
             for (p, proc) in enumerate(procs):
                 # try to find if there's a path between the job and the
                 # processors. Assume every edge is a different mapping
-                hits = sum(1 for path in nx.all_simple_paths(model, proc[0], a)
-                           if all(isinstance(e, AbstractPhysicalComponent) or
-                                  isinstance(e, AbstractGrouping) for e in path[1:-1])
-                           and len(path) == 3)
+                hits = sum(1 for path in nx.all_simple_paths(model, proc[0], a) if all(
+                    isinstance(e, AbstractPhysicalComponent) or isinstance(e, AbstractGrouping)
+                    for e in path[1:-1]) and len(path) == 3)
                 for i in range(hits):
                     pre_mapping[start_index + i] = p
             # go through the trigger times to fetch when the actor might be
@@ -531,7 +533,22 @@ def identify_instrumentation_in_jobs_from_sdf(model: ForSyDeModel, identified: L
                 wcet[jidx, pidx] += p.get_clock_cycles_per_float_op() * impl.get_max_float_operations()
                 wcet[jidx, pidx] += p.get_clock_cycles_per_integer_op() * impl.get_max_int_operations()
                 wcet[jidx, pidx] += p.get_clock_cycles_per_boolean_op() * impl.get_max_boolean_operations()
+                wcet[jidx, pidx] = math.ceil(float(wcet[jidx, pidx]) / float(p.get_min_frequency_hz()))
             wcct = np.zeros((len(sub_jobs.jobs), len(sub_jobs.jobs), len(sub_jobs.comms)), dtype=np.uint64)
+            for ((jidx, j), (jjidx, jj), (pidx, p)) in itertools.product(enumerate(sub_jobs.jobs),
+                                                                         enumerate(sub_jobs.jobs),
+                                                                         enumerate(sub_jobs.comms)):
+                if (j, jj) in sub_sdf.sdf_channels:
+                    paths = sub_sdf.sdf_channels[(j, jj)]
+                    # add up all the signals in a channel, for every commuication element in the
+                    # connection path
+                    wcct[jidx, jjidx, pidx] = sum(
+                        math.ceil(
+                            float(
+                                sum(c.get_max_elem_size_bytes() * c.get_max_elem_count() for path in paths
+                                    for c in path if isinstance(c, InstrumentedSignal))) /
+                            float(u.get_max_bandwith_bytes_per_sec())) for u in p
+                        if isinstance(u, InstrumentedCommunicationInterconnect))
             res = InstrumentedJobScheduling(sub_job_scheduling=sub_jobs, wcet=wcet, wcct=wcct)
     if res:
         return (True, res)

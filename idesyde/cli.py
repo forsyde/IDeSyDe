@@ -75,7 +75,7 @@ def cli_entry():
     logger.debug('Arguments parsed')
     in_model = forsyde_io.load_model(args.model)
     logger.info('Model parsed')
-    logger.debug('DeSyDeR API created')
+    logger.debug('IDeSyDe API created')
     identified = identify_decision_models(in_model)
     logger.info(f'{len(identified)} Decision model(s) identified')
     logger.debug(f"Decision models identified: {identified}")

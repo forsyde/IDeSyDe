@@ -380,14 +380,14 @@ def identify_jobs_from_sdf_multicore(model: ForSyDeModel,
                         for (i, p) in enumerate(sdf_mpsoc_char_sub.sdf_mpsoc_sub.comms):
                             wcct[j, jj, i] = sdf_mpsoc_char_sub.token_wcct[cidx, i]
         orderings = sdf_mpsoc_char_sub.sdf_mpsoc_sub.sdf_orders_sub.orderings
-        pre_scheduling = [-1 for (j, _) in enumerate(jobs)]
+        pre_scheduling = [0 for (j, _) in enumerate(jobs)]
         pre_mapping = [-1 for (j, _) in enumerate(jobs)]
         for a in sdf_actors:
             # go through the trigger times to fetch when the actor might be
             # activated
             connected_orderings: Iterator[TimeTriggeredScheduler] = (
                 o for o in orderings if model.has_edge(o, a) and a.identifier in o.get_trigger_time().values())
-            triggers: Iterator[int] = sorted((int(k) for (k, v) in o.get_trigger_time().items() if v == a.identifier
+            triggers: Sequence[int] = sorted((int(k) for (k, v) in o.get_trigger_time().items() if v == a.identifier
                                               for o in connected_orderings))
             start_index = jobs.index(a)
             for (i, t) in enumerate(triggers):
@@ -397,20 +397,19 @@ def identify_jobs_from_sdf_multicore(model: ForSyDeModel,
                 for (p, proc) in enumerate(procs):
                     if all(nx.has_path(model, component, a) for component in proc):
                         pre_mapping[start_index + i] = p
-        res = InstrumentedJobScheduling(
-            sub_job_scheduling=JobScheduling(
-                abstracted=list(sdf_mpsoc_char_sub.covered_vertexes()),
-                comms=comms,
-                procs=procs,
-                jobs=jobs,
-                comm_jobs=sdf_channels,
-                weak_next=weak_next,
-                strong_next=strong_next,
-                paths=sdf_mpsoc_char_sub.sdf_mpsoc_sub.connections,
-                pre_mapping=pre_mapping,
-                pre_scheduling=pre_scheduling,
-                goals_vertexes=sdf_mpsoc_char_sub.goals_vertexes,
-                objective_weights=[sdf_mpsoc_char_sub.throughput_importance, sdf_mpsoc_char_sub.latency_importance]),
+        res = JobScheduling(
+            abstracted=list(sdf_mpsoc_char_sub.covered_vertexes()),
+            comms=comms,
+            procs=procs,
+            jobs=jobs,
+            comm_jobs=sdf_channels,
+            weak_next=weak_next,
+            strong_next=strong_next,
+            paths=sdf_mpsoc_char_sub.sdf_mpsoc_sub.connections,
+            pre_mapping=pre_mapping,
+            pre_scheduling=pre_scheduling,
+            goals_vertexes=sdf_mpsoc_char_sub.goals_vertexes,
+            objective_weights=[sdf_mpsoc_char_sub.throughput_importance, sdf_mpsoc_char_sub.latency_importance],
             comm_capacity=comm_capacity,
             # TODO: make this more general later
             # proc_capacity=[len(jobs) for _ in procs],
@@ -477,9 +476,9 @@ def identify_jobs_from_multi_sdf(model: ForSyDeModel,
                     pre_mapping[start_index + i] = p
             # go through the trigger times to fetch when the actor might be
             # activated
-            connected_orderings: Iterator[TimeTriggeredScheduler] = (
+            connected_orderings: Sequence[TimeTriggeredScheduler] = (
                 o for o in orderings if model.has_edge(o, a) and a.identifier in o.get_trigger_time().values())
-            triggers: Iterator[int] = sorted((int(k) for (k, v) in o.get_trigger_time().items() if v == a.identifier
+            triggers: Sequence[int] = sorted((int(k) for (k, v) in o.get_trigger_time().items() if v == a.identifier
                                               for o in connected_orderings))
             start_index = jobs.index(a)
             for (i, t) in enumerate(triggers):
@@ -510,7 +509,9 @@ def identify_jobs_from_multi_sdf(model: ForSyDeModel,
                             pre_mapping=pre_mapping,
                             pre_scheduling=pre_scheduling,
                             goals_vertexes=goals_vertexes,
-                            objective_weights=[throughput_importance, latency_importance])
+                            objective_weights=[throughput_importance, latency_importance],
+                            wcet=np.zeros((len(jobs), len(procs)), dtype=np.uint64),
+                            wcct=np.zeros((len(jobs), len(jobs), len(comms)), dtype=np.uint64))
     if res:
         return (True, res)
     elif sdf_multicore_sub and not res:
@@ -525,15 +526,25 @@ def identify_instrumentation_in_jobs_from_sdf(model: ForSyDeModel, identified: L
     sub_jobs: Optional[JobScheduling] = next((p for p in identified if isinstance(p, JobScheduling)), None)
     sub_sdf: Optional[SDFExecution] = next((p for p in identified if isinstance(p, SDFExecution)), None)
     if sub_jobs and sub_sdf:
+        time_scale = 1
         instrumented_procs = [p for proc in sub_jobs.procs for p in proc if isinstance(p, InstrumentedProcessorTile)]
         if all(a in sub_sdf.sdf_impl for a in sub_jobs.jobs) and len(instrumented_procs) == len(sub_jobs.procs):
-            wcet = np.zeros((len(sub_jobs.jobs), len(instrumented_procs)), dtype=np.uint64)
+            worst_cycles = np.zeros((len(sub_jobs.jobs), len(instrumented_procs)), dtype=np.uint64)
             for ((jidx, j), (pidx, p)) in itertools.product(enumerate(sub_jobs.jobs), enumerate(instrumented_procs)):
                 impl = sub_sdf.sdf_impl[j]
-                wcet[jidx, pidx] += p.get_clock_cycles_per_float_op() * impl.get_max_float_operations()
-                wcet[jidx, pidx] += p.get_clock_cycles_per_integer_op() * impl.get_max_int_operations()
-                wcet[jidx, pidx] += p.get_clock_cycles_per_boolean_op() * impl.get_max_boolean_operations()
-                wcet[jidx, pidx] = math.ceil(float(wcet[jidx, pidx]) / float(p.get_min_frequency_hz()))
+                worst_cycles[jidx, pidx] += p.get_clock_cycles_per_float_op() * impl.get_max_float_operations()
+                worst_cycles[jidx, pidx] += p.get_clock_cycles_per_integer_op() * impl.get_max_int_operations()
+                worst_cycles[jidx, pidx] += p.get_clock_cycles_per_boolean_op() * impl.get_max_boolean_operations()
+                # wcet[jidx, pidx] = math.ceil(float(wcet[jidx, pidx]) / float(p.get_min_frequency_hz()))
+            frequency_matrix = np.zeros((len(sub_jobs.jobs), len(instrumented_procs)), dtype=np.uint64)
+            for ((jidx, j), (pidx, p)) in itertools.product(enumerate(sub_jobs.jobs), enumerate(instrumented_procs)):
+                frequency_matrix[jidx, pidx] = p.get_min_frequency_hz()
+            # scale up until it
+            min_clocks = np.amin(worst_cycles[worst_cycles > 0])
+            max_freq = np.amax(frequency_matrix[frequency_matrix > 0])
+            while (time_scale * min_clocks) // max_freq == 0:
+                time_scale *= 1000
+            wcet = ((time_scale * worst_cycles) / frequency_matrix).astype(np.uint64)
             wcct = np.zeros((len(sub_jobs.jobs), len(sub_jobs.jobs), len(sub_jobs.comms)), dtype=np.uint64)
             for ((jidx, j), (jjidx, jj), (pidx, p)) in itertools.product(enumerate(sub_jobs.jobs),
                                                                          enumerate(sub_jobs.jobs),
@@ -549,7 +560,22 @@ def identify_instrumentation_in_jobs_from_sdf(model: ForSyDeModel, identified: L
                                     for c in path if isinstance(c, InstrumentedSignal))) /
                             float(u.get_max_bandwith_bytes_per_sec())) for u in p
                         if isinstance(u, InstrumentedCommunicationInterconnect))
-            res = InstrumentedJobScheduling(sub_job_scheduling=sub_jobs, wcet=wcet, wcct=wcct)
+                    wcct = (np.ceil(wcct / time_scale)).astype(np.uint64)
+            res = JobScheduling(abstracted=list(sub_jobs.covered_vertexes()),
+                                comms=sub_jobs.comms,
+                                procs=sub_jobs.procs,
+                                jobs=sub_jobs.jobs,
+                                comm_jobs=sub_jobs.comm_jobs,
+                                weak_next=sub_jobs.weak_next,
+                                strong_next=sub_jobs.strong_next,
+                                paths=sub_jobs.paths,
+                                pre_mapping=sub_jobs.pre_mapping,
+                                pre_scheduling=sub_jobs.pre_scheduling,
+                                goals_vertexes=sub_jobs.goals_vertexes,
+                                objective_weights=sub_jobs.objective_weights,
+                                wcet=wcet,
+                                wcct=wcct,
+                                time_scale=time_scale)
     if res:
         return (True, res)
     elif sub_jobs and sub_sdf and not res:

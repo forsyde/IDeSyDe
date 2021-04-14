@@ -21,7 +21,9 @@ array[comms] of int: comm_capacity;
 
 % extra model parameters
 % set of set of procs: topologically_symmetric;
-int: max_makespan = max(p in procs) (sum(j in jobs) (wcet[j, p]));
+% the +1 comes from the fact jobs withotu duration should also be considered
+% in reality, so make the case for when the WCET is totally zero
+int: max_makespan = max(p in procs) (sum(j in jobs) (wcet[j, p] + 1));
 
 % objectives
 array[objectives] of int: objective_weights;
@@ -78,6 +80,10 @@ constraint forall(j in jobs) (
 % processors only run disjunctive
 constraint forall(p in procs) (
   disjunctive(start[.., p], wcet[.., p])
+);
+% even if jobs have zero duration by input, they should always start at different times
+constraint forall(p in procs) (
+  disjunctive(start[.., p], [1 | j in jobs])
 );
 % inferred constraint
 constraint cumulative(job_start, job_duration, [1|i in jobs], length(procs));

@@ -381,13 +381,20 @@ class JobScheduling(MinizincableDecisionModel):
     # most physical -> cyber
     procs: Sequence[Sequence[Vertex]] = field(default_factory=list)
     comms: Sequence[Sequence[Vertex]] = field(default_factory=list)
-    # wcet: np.ndarray = np.zeros((0, 0), dtype=int)
-    # wcct: np.ndarray = np.zeros((0, 0, 0), dtype=int)
+    procs_capacity: Sequence[int] = field(default_factory=list)
+    comm_capacity: Sequence[int] = field(default_factory=list)
+    # the virtual processors and communicators should go from
+    # most physical -> cyber
+    wcet_vertexes: Sequence[Vertex] = field(default_factory=list)
+    wcct_vertexes: Sequence[Vertex] = field(default_factory=list)
+    wcet: np.ndarray = np.zeros((0, 0), dtype=int)
+    wcct: np.ndarray = np.zeros((0, 0, 0), dtype=int)
     paths: Dict[Tuple[Vertex, Vertex], Sequence[Vertex]] = field(default_factory=dict)
     objective_weights: Sequence[int] = field(default_factory=list)
     pre_mapping: List[int] = field(default_factory=list)
     pre_scheduling: List[int] = field(default_factory=list)
     goals_vertexes: Sequence[Vertex] = field(default_factory=list)
+    time_scale: int = 1  # multiply the time line for the whole problem
 
     def covered_vertexes(self):
         yield from self.abstracted
@@ -397,6 +404,18 @@ class JobScheduling(MinizincableDecisionModel):
         for p in self.comms:
             yield from p
         yield from self.goals_vertexes
+        yield from self.wcet_vertexes
+        yield from self.wcct_vertexes
+
+    def dominates(self, other: "DecisionModel") -> bool:
+        if super().dominates(other):
+            return True
+        elif isinstance(other, JobScheduling):
+            # it's the same identification, but with the times.
+            return len(set(self.covered_vertexes()).difference(other.covered_vertexes())) == 0\
+                and np.count_nonzero(self.wcet) > np.count_nonzero(other.wcet)
+        else:
+            return False
 
     def get_mzn_model_name(self):
         return "dependent_job_scheduling.mzn"
@@ -422,8 +441,8 @@ class JobScheduling(MinizincableDecisionModel):
             for (e, u) in enumerate(path):
                 if s in p and t in pp and u in c:
                     data['path'][pidx][ppidx][cidx] = e + 1
-        data['wcet'] = [[1 for _ in self.procs] for _ in self.jobs]
-        data['wcct'] = [[[0 for _ in self.comms] for _ in self.jobs] for _ in self.jobs]
+        data['wcet'] = self.wcet.tolist()
+        data['wcct'] = self.wcct.tolist()
         data['release'] = [0 for j in self.jobs]
         data['deadline'] = [0 for j in self.jobs]
         data['objective_weights'] = self.objective_weights
@@ -439,7 +458,7 @@ class JobScheduling(MinizincableDecisionModel):
         throughput = max(results['job_min_latency'])
         triggers = results['start']
         start_time = [
-            min((triggers[j][p] for (j, _) in enumerate(self.jobs) if triggers[j][p] is not None))
+            min((triggers[j][p] for (j, _) in enumerate(self.jobs) if triggers[j][p] is not None), default=0)
             for (p, _) in enumerate(self.procs)
         ]
         for (j, job) in enumerate(self.jobs):
@@ -467,6 +486,7 @@ class JobScheduling(MinizincableDecisionModel):
                             p.properties['trigger-time'] = {}
                         p.properties['trigger-time'][t - start_time[pidx]] = job.identifier
                         p.properties['period'] = throughput
+                        p.properties['time-scale'] = self.time_scale
         for (sidx, tidx) in self.comm_jobs:
             paths = self.comm_jobs[(sidx, tidx)]
             for ((procsi, procs), (procti, proct)) in itertools.product(enumerate(self.procs), repeat=2):
@@ -527,6 +547,7 @@ class InstrumentedJobScheduling(MinizincableDecisionModel):
         data = self.sub_job_scheduling.get_mzn_data()
         data['wcet'] = self.wcet.tolist()
         data['wcct'] = self.wcct.tolist()
+        # print(data)
         return data
 
     def rebuild_forsyde_model(self, results):

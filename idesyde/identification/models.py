@@ -63,6 +63,8 @@ class SDFExecution(DecisionModel):
         for paths in self.sdf_channels.values():
             for p in paths:
                 yield from p
+        yield from self.sdf_constructors.values()
+        yield from self.sdf_impl.values()
 
     def compute_deduced_properties(self):
         self.max_tokens = np.zeros((len(self.sdf_channels)), dtype=int)
@@ -385,8 +387,7 @@ class JobScheduling(MinizincableDecisionModel):
     comm_capacity: Sequence[int] = field(default_factory=list)
     # the virtual processors and communicators should go from
     # most physical -> cyber
-    wcet_vertexes: Sequence[Vertex] = field(default_factory=list)
-    wcct_vertexes: Sequence[Vertex] = field(default_factory=list)
+    job_colocation: Dict[int, Sequence[int]] = field(default_factory=dict)
     wcet: np.ndarray = np.zeros((0, 0), dtype=int)
     wcct: np.ndarray = np.zeros((0, 0, 0), dtype=int)
     paths: Dict[Tuple[Vertex, Vertex], Sequence[Vertex]] = field(default_factory=dict)
@@ -404,8 +405,6 @@ class JobScheduling(MinizincableDecisionModel):
         for p in self.comms:
             yield from p
         yield from self.goals_vertexes
-        yield from self.wcet_vertexes
-        yield from self.wcct_vertexes
 
     def dominates(self, other: "DecisionModel") -> bool:
         if super().dominates(other):
@@ -449,6 +448,9 @@ class JobScheduling(MinizincableDecisionModel):
         # we need to sum 1 since the procs set start 1 and not zero.
         data['pre_mapping'] = [i + 1 for i in self.pre_mapping]
         data['pre_scheduling'] = self.pre_scheduling
+        data['allowed_mapping'] = [[
+            p in self.job_colocation[j] if j in self.job_colocation else True for (p, _) in enumerate(self.procs)
+        ] for (j, _) in enumerate(self.jobs)]
         return data
 
     def rebuild_forsyde_model(self, results):
@@ -547,7 +549,6 @@ class InstrumentedJobScheduling(MinizincableDecisionModel):
         data = self.sub_job_scheduling.get_mzn_data()
         data['wcet'] = self.wcet.tolist()
         data['wcct'] = self.wcct.tolist()
-        # print(data)
         return data
 
     def rebuild_forsyde_model(self, results):

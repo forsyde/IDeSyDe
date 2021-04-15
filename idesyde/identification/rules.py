@@ -2,8 +2,9 @@ from typing import List, Sequence
 from typing import Dict
 from typing import Tuple
 from typing import Optional
-from typing import Optional, Iterator
+from typing import Iterator
 import itertools
+import functools
 import logging
 import math
 
@@ -23,6 +24,7 @@ from forsyde.io.python.types import InstrumentedProcessorTile
 from forsyde.io.python.types import InstrumentedCommunicationInterconnect
 from forsyde.io.python.types import InstrumentedFunction
 from forsyde.io.python.types import InstrumentedSignal
+from forsyde.io.python.types import LocationRequirement
 from forsyde.io.python.types import AbstractCommunicationComponent
 from forsyde.io.python.types import AbstractPhysicalComponent
 from forsyde.io.python.types import WCET
@@ -398,7 +400,8 @@ def identify_jobs_from_sdf_multicore(model: ForSyDeModel,
                     if all(nx.has_path(model, component, a) for component in proc):
                         pre_mapping[start_index + i] = p
         res = JobScheduling(
-            abstracted=list(sdf_mpsoc_char_sub.covered_vertexes()),
+            abstracted=list(sdf_mpsoc_char_sub.covered_vertexes()) + sdf_mpsoc_char_sub.wcet_vertexes +
+            sdf_mpsoc_char_sub.token_wcct_vertexes,
             comms=comms,
             procs=procs,
             jobs=jobs,
@@ -414,9 +417,7 @@ def identify_jobs_from_sdf_multicore(model: ForSyDeModel,
             # TODO: make this more general later
             # proc_capacity=[len(jobs) for _ in procs],
             wcet=wcet,
-            wcct=wcct,
-            wcet_vertexes=sdf_mpsoc_char_sub.wcet_vertexes,
-            wcct_vertexes=sdf_mpsoc_char_sub.token_wcct_vertexes)
+            wcct=wcct)
     if res:
         return (True, res)
     else:
@@ -575,11 +576,102 @@ def identify_instrumentation_in_jobs_from_sdf(model: ForSyDeModel, identified: L
                                 objective_weights=sub_jobs.objective_weights,
                                 wcet=wcet,
                                 wcct=wcct,
-                                time_scale=time_scale)
+                                time_scale=time_scale,
+                                job_colocation=sub_jobs.job_colocation)
     if res:
         return (True, res)
     elif sub_jobs and sub_sdf and not res:
         return (True, None)
+    else:
+        return (False, None)
+
+
+@register_identification_rule
+def identify_colocation_in_jobs_from_sdf(model: ForSyDeModel, identified: List[DecisionModel]):
+    res = None
+    sub_jobs: Optional[JobScheduling] = next((p for p in identified if isinstance(p, JobScheduling)), None)
+    sub_sdf: Optional[SDFExecution] = next((p for p in identified if isinstance(p, SDFExecution)), None)
+    if sub_jobs and sub_sdf:
+        colocation: Dict[int, List[int]] = dict()
+        location_vertexes = [l for l in model if isinstance(l, LocationRequirement)]
+        located_jobs = {l: [(i, j) for (i, j) in enumerate(sub_jobs.jobs) if j in model[l]] for l in location_vertexes}
+        located_procs = {
+            l: [(i, p) for (i, p) in enumerate(sub_jobs.procs) if any(u in model[l] for u in p)]
+            for l in location_vertexes
+        }
+        for l in location_vertexes:
+            jobs = located_jobs[l]
+            procs = located_procs[l]
+            for (i, j) in jobs:
+                colocation[i] = [pi for (pi, p) in procs]
+        res = JobScheduling(abstracted=list(sub_jobs.covered_vertexes()) + location_vertexes,
+                            comms=sub_jobs.comms,
+                            procs=sub_jobs.procs,
+                            jobs=sub_jobs.jobs,
+                            comm_jobs=sub_jobs.comm_jobs,
+                            weak_next=sub_jobs.weak_next,
+                            strong_next=sub_jobs.strong_next,
+                            paths=sub_jobs.paths,
+                            pre_mapping=sub_jobs.pre_mapping,
+                            pre_scheduling=sub_jobs.pre_scheduling,
+                            goals_vertexes=sub_jobs.goals_vertexes,
+                            objective_weights=sub_jobs.objective_weights,
+                            wcet=sub_jobs.wcet,
+                            wcct=sub_jobs.wcct,
+                            time_scale=sub_jobs.time_scale,
+                            job_colocation=colocation)
+    if res:
+        return (True, res)
+    elif sub_jobs and sub_sdf and not res:
+        return (True, None)
+    else:
+        return (False, None)
+
+
+@register_identification_rule
+def identify_merge_job_scheduling_simple(model: ForSyDeModel,
+                                         identified: List[DecisionModel]) -> Tuple[bool, Optional[DecisionModel]]:
+    res = None
+    sub_jobs: Sequence[JobScheduling] = [p for p in identified if isinstance(p, JobScheduling)]
+    if len(sub_jobs) > 1:
+        equal_jobs = all(set(sub2.jobs) == set(sub1.jobs) for sub1 in sub_jobs for sub2 in sub_jobs)
+        equal_procs = all(
+            set(u for p in sub1.procs for u in p) == set(u for p in sub2.procs for u in p) for sub1 in sub_jobs
+            for sub2 in sub_jobs)
+        equal_comms = all(
+            set(u for p in sub1.comms for u in p) == set(u for p in sub2.comms for u in p) for sub1 in sub_jobs
+            for sub2 in sub_jobs)
+        if equal_jobs and equal_procs and equal_comms:
+            wcet = np.zeros(sub_jobs[0].wcet.shape, dtype=np.uint64)
+            wcct = np.zeros(sub_jobs[0].wcct.shape, dtype=np.uint64)
+            colocation = {}
+            for s in sub_jobs:
+                wcet = np.maximum(wcet, s.wcet)
+                wcct = np.maximum(wcct, s.wcct)
+                for (i, _) in enumerate(s.jobs):
+                    if i in colocation and i in s.job_colocation:
+                        colocation[i] = set(colocation[i]).union(set(s.job_colocation[i]))
+                    elif i in s.job_colocation:
+                        colocation[i] = s.job_colocation[i]
+            abstracted = functools.reduce(lambda s1, s2: s1.union(s2), map(lambda s: set(s.abstracted), sub_jobs))
+            res = JobScheduling(abstracted=abstracted,
+                                comms=sub_jobs[0].comms,
+                                procs=sub_jobs[0].procs,
+                                jobs=sub_jobs[0].jobs,
+                                comm_jobs=sub_jobs[0].comm_jobs,
+                                weak_next=sub_jobs[0].weak_next,
+                                strong_next=sub_jobs[0].strong_next,
+                                paths=sub_jobs[0].paths,
+                                pre_mapping=sub_jobs[0].pre_mapping,
+                                pre_scheduling=sub_jobs[0].pre_scheduling,
+                                goals_vertexes=sub_jobs[0].goals_vertexes,
+                                objective_weights=sub_jobs[0].objective_weights,
+                                wcet=wcet,
+                                wcct=wcct,
+                                time_scale=max(s.time_scale for s in sub_jobs),
+                                job_colocation=colocation)
+    if res and all(v in res.abstracted for v in model.nodes):
+        return (True, res)
     else:
         return (False, None)
 

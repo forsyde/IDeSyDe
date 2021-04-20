@@ -1,13 +1,21 @@
+from idesyde.identification.models import JobType
 import math
-from typing import List, Sequence, Optional, Dict, Tuple
+from typing import List
+from typing import Sequence
+from typing import Optional
+from typing import Dict
+from typing import Tuple
+from typing import Collection
 
 import numpy as np
 from forsyde.io.python.core import Vertex
 
+JobType = Tuple[int, Vertex]
+
 
 def get_PASS(sdf_topology: np.ndarray,
              repetition_vector: np.ndarray,
-             initial_tokens: Optional[np.ndarray] = None) -> Sequence[int]:
+             initial_tokens: Optional[np.ndarray] = None) -> Collection[int]:
     '''Returns the PASS of a SDF graph
 
     The calculation follows almost exactly what is dictated in the
@@ -59,9 +67,9 @@ def check_sdf_consistency(sdf_topology) -> bool:
 
 
 def sdf_to_jobs(
-        actors: Sequence[Vertex], channels: Dict[Tuple[Vertex, Vertex], Sequence[Sequence[Vertex]]], topology: np.ndarray,
-        repetition_vector: np.ndarray,
-        initial_tokens: np.ndarray) -> Tuple[Sequence[Vertex], Dict[int, Sequence[int]], Dict[int, Sequence[int]]]:
+        actors: Collection[Vertex], channels: Dict[Tuple[Vertex, Vertex], Collection[Collection[Vertex]]],
+        topology: np.ndarray, repetition_vector: np.ndarray,
+        initial_tokens: np.ndarray) -> Tuple[List[JobType], Dict[JobType, List[JobType]], Dict[JobType, List[JobType]]]:
     '''Create job graph out of a SDF graph.
 
     This function returns a precedence graph of sdf 'jobs' so that any
@@ -87,11 +95,11 @@ def sdf_to_jobs(
     if repetition_vector.shape[1] != 1:
         raise TypeError("The repetition vector should be a column vector.")
     q_vector = repetition_vector.reshape(repetition_vector.size)
-    actor_fire = [(a, q) for (i, a) in enumerate(actors) for q in range(1, int(q_vector[i]) + 1)]
-    strong_next: Dict[int, List[int]] = {i: [] for (i, _) in enumerate(actor_fire)}
+    jobs = [(q, a) for (i, a) in enumerate(actors) for q in range(1, int(q_vector[i]) + 1)]
+    strong_next: Dict[JobType, List[JobType]] = {j: [] for (i, j) in enumerate(jobs)}
     for (cidx, (s, t)) in enumerate(channels):
-        idxs = actors.index(s)
-        idxt = actors.index(t)
+        idxs = next((i for (i, a) in enumerate(actors) if a == s), -1)
+        idxt = next((i for (i, a) in enumerate(actors) if a == t), -1)
         production = topology[cidx, idxs]
         consumption = topology[cidx, idxt]
         fires = 1
@@ -100,9 +108,7 @@ def sdf_to_jobs(
             if production * (fires - 1) + int(initial_tokens[cidx]) + consumption * firet >= 0:
                 firet += 1
             else:
-                poss = actor_fire.index((s, fires))
-                post = actor_fire.index((t, firet))
-                strong_next[poss].append(post)
+                strong_next[(fires, s)].append((firet, t))
                 fires += 1
         # for fires in range(q_vector[idxs]):
         #     for firet in range(q_vector[idxt]):
@@ -110,10 +116,9 @@ def sdf_to_jobs(
         #             poss = actor_fire.index((s, fires))
         #             post = actor_fire.index((t, firet))
         #             strong_next.append((poss, post))
-    jobs = [a for (a, q) in actor_fire]
-    weak_next: Dict[int,  List[int]] = {i: [] for (i, _) in enumerate(jobs)}
-    for ((i, j), (inext, jnext)) in zip(enumerate(jobs[:-1]), enumerate(jobs[1:])):
-        if j == jnext:
+    weak_next: Dict[JobType, List[JobType]] = {j: [] for (_, j) in enumerate(jobs)}
+    for ((i, j), (inext, jnext)) in zip(jobs[:-1], jobs[1:]):
+        if j == jnext and inext == i + 1:
             # the +1 comes from the fact that we dont start at 0
-            weak_next[i].append(inext + 1)
+            weak_next[(i, j)].append((inext, jnext))
     return (jobs, weak_next, strong_next)

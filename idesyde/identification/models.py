@@ -7,7 +7,8 @@ from typing import Tuple
 from typing import Set
 from typing import Dict
 from typing import List
-from typing import Sequence
+from typing import Collection
+from typing import Iterable
 
 import numpy as np
 
@@ -33,6 +34,8 @@ import idesyde.sdf as sdfapi
 
 _logger = logging.getLogger(LOGGER_NAME)
 
+JobType = Tuple[int, Vertex]
+
 
 @dataclass
 class SDFExecution(DecisionModel):
@@ -46,15 +49,15 @@ class SDFExecution(DecisionModel):
     SDF topology and the PASS with all elements included.
     """
 
-    sdf_actors: Sequence[Vertex] = field(default_factory=list)
+    sdf_actors: Collection[Vertex] = field(default_factory=list)
     sdf_constructors: Dict[Vertex, Vertex] = field(default_factory=dict)
     sdf_impl: Dict[Vertex, Vertex] = field(default_factory=dict)
-    sdf_delays: Sequence[Vertex] = field(default_factory=list)
-    sdf_channels: Dict[Tuple[Vertex, Vertex], Sequence[Sequence[Vertex]]] = field(default_factory=dict)
+    sdf_delays: Collection[Vertex] = field(default_factory=list)
+    sdf_channels: Dict[Tuple[Vertex, Vertex], Collection[Collection[Vertex]]] = field(default_factory=dict)
     sdf_topology: np.ndarray = np.zeros((0, 0))
     sdf_repetition_vector: np.ndarray = np.zeros((0))
     sdf_initial_tokens: np.ndarray = np.zeros((0))
-    sdf_pass: Sequence[Vertex] = field(default_factory=list)
+    sdf_pass: Collection[Vertex] = field(default_factory=list)
 
     sdf_max_tokens: np.ndarray = np.zeros((0))
 
@@ -80,10 +83,10 @@ class SDFToOrders(DecisionModel):
     sdf_exec_sub: SDFExecution = SDFExecution()
 
     # partial identification
-    orderings: Sequence[TimeTriggeredScheduler] = field(default_factory=list)
+    orderings: Collection[TimeTriggeredScheduler] = field(default_factory=list)
 
     # pre mappings
-    pre_scheduling: Sequence[Edge] = field(default_factory=list)
+    pre_scheduling: Collection[Edge] = field(default_factory=list)
 
     def covered_vertexes(self):
         yield from self.sdf_exec_sub.covered_vertexes()
@@ -120,16 +123,16 @@ class SDFToMultiCore(DecisionModel):
     sdf_orders_sub: SDFToOrders = SDFToOrders()
 
     # partially identified
-    cores: Sequence[AbstractProcessingComponent] = field(default_factory=list)
-    comms: Sequence[AbstractCommunicationComponent] = field(default_factory=list)
-    connections: Dict[Tuple[Vertex, Vertex], Sequence[Sequence[Vertex]]] = field(default_factory=dict)
-    comms_capacity: Sequence[int] = field(default_factory=list)
+    cores: Collection[AbstractProcessingComponent] = field(default_factory=list)
+    comms: Collection[AbstractCommunicationComponent] = field(default_factory=list)
+    connections: Dict[Tuple[Vertex, Vertex], Collection[Collection[Vertex]]] = field(default_factory=dict)
+    comms_capacity: Collection[int] = field(default_factory=list)
 
-    pre_mapping: Sequence[Edge] = field(default_factory=list)
+    pre_mapping: Collection[Edge] = field(default_factory=list)
 
     # deduced properties
     max_steps: int = 1
-    comms_path: Sequence[Sequence[Sequence[int]]] = field(default_factory=list)
+    comms_path: Collection[Collection[Collection[int]]] = field(default_factory=list)
 
     def covered_vertexes(self):
         yield from self.sdf_orders_sub.covered_vertexes()
@@ -275,9 +278,9 @@ class SDFToMultiCoreCharacterized(DecisionModel):
     sdf_mpsoc_sub: SDFToMultiCore = SDFToMultiCore()
 
     # elements that are partially identified
-    wcet_vertexes: Sequence[Vertex] = field(default_factory=list)
-    token_wcct_vertexes: Sequence[Vertex] = field(default_factory=list)
-    goals_vertexes: Sequence[Vertex] = field(default_factory=list)
+    wcet_vertexes: Collection[Vertex] = field(default_factory=list)
+    token_wcct_vertexes: Collection[Vertex] = field(default_factory=list)
+    goals_vertexes: Collection[Vertex] = field(default_factory=list)
     wcet: np.ndarray = np.zeros((0, 0), dtype=int)
     token_wcct: np.ndarray = np.zeros((0, 0), dtype=int)
     throughput_importance: int = 0
@@ -372,29 +375,30 @@ class SDFToMPSoCClusteringMzn(MinizincableDecisionModel):
 class JobScheduling(MinizincableDecisionModel):
 
     # models that were abstracted in jobs
-    abstracted: Sequence[Vertex] = field(default_factory=list)
+    abstracted: Collection[Vertex] = field(default_factory=list)
 
     # properties
-    jobs: Sequence[Vertex] = field(default_factory=list)
-    weak_next: Dict[int, Sequence[int]] = field(default_factory=dict)
-    strong_next: Dict[int, Sequence[int]] = field(default_factory=dict)
-    comm_jobs: Dict[Tuple[int, int], Sequence[Sequence[Vertex]]] = field(default_factory=dict)
+    jobs: Collection[JobType] = field(default_factory=list)
+    weak_next: Dict[JobType, Collection[JobType]] = field(default_factory=dict)
+    strong_next: Dict[JobType, Collection[JobType]] = field(default_factory=dict)
+    comm_jobs: Dict[Tuple[JobType, JobType], Collection[Collection[Vertex]]] = field(default_factory=dict)
+    pre_mapping: Dict[JobType, int] = field(default_factory=dict)
+    pre_scheduling: Dict[JobType, int] = field(default_factory=dict)
     # the virtual processors and communicators should go from
     # most physical -> cyber
-    procs: Sequence[Sequence[Vertex]] = field(default_factory=list)
-    comms: Sequence[Sequence[Vertex]] = field(default_factory=list)
-    procs_capacity: Sequence[int] = field(default_factory=list)
-    comm_capacity: Sequence[int] = field(default_factory=list)
+    procs: Collection[Collection[Vertex]] = field(default_factory=list)
+    comms: Collection[Collection[Vertex]] = field(default_factory=list)
+    procs_capacity: Collection[int] = field(default_factory=list)
+    comm_capacity: Collection[int] = field(default_factory=list)
     # the virtual processors and communicators should go from
     # most physical -> cyber
-    job_colocation: Dict[int, Sequence[int]] = field(default_factory=dict)
+    job_allowed_location: Dict[JobType, Collection[int]] = field(default_factory=dict)
     wcet: np.ndarray = np.zeros((0, 0), dtype=int)
     wcct: np.ndarray = np.zeros((0, 0, 0), dtype=int)
-    paths: Dict[Tuple[Vertex, Vertex], Sequence[Vertex]] = field(default_factory=dict)
-    objective_weights: Sequence[int] = field(default_factory=list)
-    pre_mapping: List[int] = field(default_factory=list)
-    pre_scheduling: List[int] = field(default_factory=list)
-    goals_vertexes: Sequence[Vertex] = field(default_factory=list)
+    paths: Dict[Tuple[Vertex, Vertex], Collection[Collection[Vertex]]] = field(default_factory=dict)
+    objective_weights: Collection[int] = field(default_factory=list)
+
+    goals_vertexes: Collection[Vertex] = field(default_factory=list)
     time_scale: int = 1  # multiply the time line for the whole problem
 
     def covered_vertexes(self):
@@ -405,6 +409,10 @@ class JobScheduling(MinizincableDecisionModel):
         for p in self.comms:
             yield from p
         yield from self.goals_vertexes
+
+    def covered_edges(self) -> Iterable[Edge]:
+        for ((i, j), p) in self.pre_mapping.items():
+            model.get_edge_data()
 
     def dominates(self, other: "DecisionModel") -> bool:
         if super().dominates(other):
@@ -436,7 +444,7 @@ class JobScheduling(MinizincableDecisionModel):
                                                                              enumerate(self.procs),
                                                                              enumerate(self.comms)):
             # TODO: find later a way to make the paths more flexible
-            path = self.paths[(s, t)][0]
+            path = next(self.paths[(s, t)])
             for (e, u) in enumerate(path):
                 if s in p and t in pp and u in c:
                     data['path'][pidx][ppidx][cidx] = e + 1
@@ -446,8 +454,14 @@ class JobScheduling(MinizincableDecisionModel):
         data['deadline'] = [0 for j in self.jobs]
         data['objective_weights'] = self.objective_weights
         # we need to sum 1 since the procs set start 1 and not zero.
-        data['pre_mapping'] = [i + 1 for i in self.pre_mapping]
-        data['pre_scheduling'] = self.pre_scheduling
+        data['pre_mapping'] = [
+            self.pre_mapping[(i, j)] if (i, j) in self.pre_mapping else 0
+            for (idx, (i, j)) in enumerate(self.pre_mapping)
+        ]
+        data['pre_scheduling'] = [
+            self.pre_scheduling[(i, j)] if (i, j) in self.pre_scheduling else 0
+            for (idx, (i, j)) in enumerate(self.pre_scheduling)
+        ]
         data['allowed_mapping'] = [[
             p in self.job_colocation[j] if j in self.job_colocation else True for (p, _) in enumerate(self.procs)
         ] for (j, _) in enumerate(self.jobs)]
@@ -518,38 +532,60 @@ class JobScheduling(MinizincableDecisionModel):
         return new_model
 
 
+# @dataclass
+# class InstrumentedJobScheduling(MinizincableDecisionModel):
+
+#     # child model
+#     sub_job_scheduling: JobScheduling = JobScheduling()
+
+#     # properties
+#     procs_capacity: Collection[int] = field(default_factory=list)
+#     comm_capacity: Collection[int] = field(default_factory=list)
+#     # the virtual processors and communicators should go from
+#     # most physical -> cyber
+#     wcet_vertexes: Collection[Vertex] = field(default_factory=list)
+#     wcct_vertexes: Collection[Vertex] = field(default_factory=list)
+#     wcet: np.ndarray = np.zeros((0, 0), dtype=int)
+#     wcct: np.ndarray = np.zeros((0, 0, 0), dtype=int)
+
+#     def dominates(self, other):
+#         return super().dominates(other) or (other == self.sub_job_scheduling)
+
+#     def covered_vertexes(self):
+#         yield from self.sub_job_scheduling.covered_vertexes()
+#         yield from self.wcet_vertexes
+#         yield from self.wcct_vertexes
+
+#     def get_mzn_model_name(self):
+#         return "dependent_job_scheduling.mzn"
+
+#     def get_mzn_data(self):
+#         data = self.sub_job_scheduling.get_mzn_data()
+#         data['wcet'] = self.wcet.tolist()
+#         data['wcct'] = self.wcct.tolist()
+#         return data
+
+#     def rebuild_forsyde_model(self, results):
+#         return self.sub_job_scheduling.rebuild_forsyde_model(results)
+
+
 @dataclass
-class InstrumentedJobScheduling(MinizincableDecisionModel):
+class TimeTriggeredPlatform(DecisionModel):
 
-    # child model
-    sub_job_scheduling: JobScheduling = JobScheduling()
+    schedulers: Collection[Vertex] = field(default_factory=list)
+    core_scheduler: Dict[Vertex, Vertex] = field(default_factory=dict)
+    comm_scheduler: Dict[Vertex, Vertex] = field(default_factory=dict)
+    paths: Dict[Tuple[Vertex, Vertex], Collection[Collection[Vertex]]] = field(default_factory=dict)
+    core_memory: Dict[Vertex, int] = field(default_factory=dict)
+    comms_bandwidth: Dict[Vertex, int] = field(default_factory=dict)
 
-    # properties
-    procs_capacity: Sequence[int] = field(default_factory=list)
-    comm_capacity: Sequence[int] = field(default_factory=list)
-    # the virtual processors and communicators should go from
-    # most physical -> cyber
-    wcet_vertexes: Sequence[Vertex] = field(default_factory=list)
-    wcct_vertexes: Sequence[Vertex] = field(default_factory=list)
-    wcet: np.ndarray = np.zeros((0, 0), dtype=int)
-    wcct: np.ndarray = np.zeros((0, 0, 0), dtype=int)
+    abstracted: Collection[Vertex] = field(default_factory=set)
 
-    def dominates(self, other):
-        return super().dominates(other) or (other == self.sub_job_scheduling)
-
-    def covered_vertexes(self):
-        yield from self.sub_job_scheduling.covered_vertexes()
-        yield from self.wcet_vertexes
-        yield from self.wcct_vertexes
-
-    def get_mzn_model_name(self):
-        return "dependent_job_scheduling.mzn"
-
-    def get_mzn_data(self):
-        data = self.sub_job_scheduling.get_mzn_data()
-        data['wcet'] = self.wcet.tolist()
-        data['wcct'] = self.wcct.tolist()
-        return data
-
-    def rebuild_forsyde_model(self, results):
-        return self.sub_job_scheduling.rebuild_forsyde_model(results)
+    def covered_vertexes(self) -> Iterable[Vertex]:
+        yield from self.abstracted
+        yield from self.schedulers
+        for pl in self.cores.values():
+            yield from pl
+        for ll in self.paths.values():
+            for l in ll:
+                yield from l

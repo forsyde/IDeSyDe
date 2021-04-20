@@ -49,19 +49,19 @@ jobs:
     runs-on: ubuntu-18.04
     steps:
     - uses: actions/checkout@v2
-    - name: Cache node modules
-      uses: actions/cache@v2
-      env:
-        cache-name: cache-idesyde-cargo
-      with:
-        # npm cache files are stored in `~/.npm` on Linux/macOS
-        path: ~/.cargo
-        key: ${{ runner.os }}-${{ env.cache-name }}-${{ env.rust-version }}-${{ env.pyoxidizer-version }}
-        restore-keys: |
-          ${{ runner.os }}-${{ env.cache-name }}-${{ env.rust-version }}-${{ env.pyoxidizer-version }}
-          ${{ runner.os }}-${{ env.cache-name }}-${{ env.rust-version }}-
-          ${{ runner.os }}-${{ env.cache-name }}-
-          ${{ runner.os }}-
+    # - name: Cache node modules
+    #   uses: actions/cache@v2
+    #   env:
+    #     cache-name: cache-idesyde-cargo
+    #   with:
+    #     # npm cache files are stored in `~/.npm` on Linux/macOS
+    #     path: ~/.cargo
+    #     key: ${{ runner.os }}-${{ env.cache-name }}-${{ env.rust-version }}-${{ env.pyoxidizer-version }}
+    #     restore-keys: |
+    #       ${{ runner.os }}-${{ env.cache-name }}-${{ env.rust-version }}-${{ env.pyoxidizer-version }}
+    #       ${{ runner.os }}-${{ env.cache-name }}-${{ env.rust-version }}-
+    #       ${{ runner.os }}-${{ env.cache-name }}-
+    #       ${{ runner.os }}-
     - name: Set up Python ${{ env.python-version }}
       uses: actions/setup-python@v2
       with:

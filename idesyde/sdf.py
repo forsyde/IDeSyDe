@@ -59,9 +59,9 @@ def check_sdf_consistency(sdf_topology) -> bool:
 
 
 def sdf_to_jobs(
-        actors: Sequence[Vertex], channels: Sequence[Tuple[Vertex, Vertex, Sequence[Vertex]]], topology: np.ndarray,
+        actors: Sequence[Vertex], channels: Dict[Tuple[Vertex, Vertex], Sequence[Sequence[Vertex]]], topology: np.ndarray,
         repetition_vector: np.ndarray,
-        initial_tokens: np.ndarray) -> Tuple[Sequence[Vertex], Sequence[Tuple[int, int]], Sequence[Tuple[int, int]]]:
+        initial_tokens: np.ndarray) -> Tuple[Sequence[Vertex], Dict[int, Sequence[int]], Dict[int, Sequence[int]]]:
     '''Create job graph out of a SDF graph.
 
     This function returns a precedence graph of sdf 'jobs' so that any
@@ -87,20 +87,33 @@ def sdf_to_jobs(
     if repetition_vector.shape[1] != 1:
         raise TypeError("The repetition vector should be a column vector.")
     q_vector = repetition_vector.reshape(repetition_vector.size)
-    actor_fire = [(a, q) for (i, a) in enumerate(actors) for q in range(int(q_vector[i]))]
-    strong_next: List[Tuple[int, int]] = []
-    for (cidx, (s, t, _)) in enumerate(channels):
+    actor_fire = [(a, q) for (i, a) in enumerate(actors) for q in range(1, int(q_vector[i]) + 1)]
+    strong_next: Dict[int, List[int]] = {i: [] for (i, _) in enumerate(actor_fire)}
+    for (cidx, (s, t)) in enumerate(channels):
         idxs = actors.index(s)
         idxt = actors.index(t)
         production = topology[cidx, idxs]
         consumption = topology[cidx, idxt]
-        for fires in range(q_vector[idxs]):
-            for firet in range(q_vector[idxt]):
-                if production * fires + int(initial_tokens[cidx]) >= consumption * (firet + 1):
-                    poss = actor_fire.index((s, fires))
-                    post = actor_fire.index((t, firet))
-                    strong_next.append((poss, post))
-    weak_next: List[Tuple[int, int]] = [(i + q, i + q + 1) for (i, a) in enumerate(actors)
-                                        for q in range(int(q_vector[i]) - 1)]
+        fires = 1
+        firet = 1
+        while firet <= q_vector[idxt]:
+            if production * (fires - 1) + int(initial_tokens[cidx]) + consumption * firet >= 0:
+                firet += 1
+            else:
+                poss = actor_fire.index((s, fires))
+                post = actor_fire.index((t, firet))
+                strong_next[poss].append(post)
+                fires += 1
+        # for fires in range(q_vector[idxs]):
+        #     for firet in range(q_vector[idxt]):
+        #         if production * fires + int(initial_tokens[cidx]) < consumption * (firet + 1):
+        #             poss = actor_fire.index((s, fires))
+        #             post = actor_fire.index((t, firet))
+        #             strong_next.append((poss, post))
     jobs = [a for (a, q) in actor_fire]
+    weak_next: Dict[int,  List[int]] = {i: [] for (i, _) in enumerate(jobs)}
+    for ((i, j), (inext, jnext)) in zip(enumerate(jobs[:-1]), enumerate(jobs[1:])):
+        if j == jnext:
+            # the +1 comes from the fact that we dont start at 0
+            weak_next[i].append(inext + 1)
     return (jobs, weak_next, strong_next)

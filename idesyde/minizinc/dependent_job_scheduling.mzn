@@ -10,7 +10,7 @@ set of int: jobs;
 
 array[jobs] of int: release;
 array[jobs] of int: deadline;
-array[jobs] of (procs union {-1}): pre_mapping;
+array[jobs] of (procs union {0}): pre_mapping;
 array[jobs] of int: pre_scheduling;
 array[jobs, jobs] of bool: weak_next;
 array[jobs, jobs] of bool: strong_next;
@@ -18,10 +18,13 @@ array[jobs, procs] of int: wcet;
 array[jobs, jobs, comms] of int: wcct;
 array[procs, procs, comms] of int: path;
 array[comms] of int: comm_capacity;
+array[jobs, procs] of bool: allowed_mapping;
 
 % extra model parameters
 % set of set of procs: topologically_symmetric;
-int: max_makespan = max(p in procs) (sum(j in jobs) (wcet[j, p]));
+% the +1 comes from the fact jobs withotu duration should also be considered
+% in reality, so make the case for when the WCET is totally zero
+int: max_makespan = max(p in procs) (sum(j in jobs) (wcet[j, p] + 1));
 
 % objectives
 array[objectives] of int: objective_weights;
@@ -56,6 +59,9 @@ constraint forall(j in jobs, p in procs) (
 constraint forall(j, jj in jobs, p in comms) (
   comm_duration[j, jj, p] = wcct[j, jj, p]
 );
+constraint forall(j in jobs, p in procs) (
+  not(allowed_mapping[j, p]) -> start[j, p] = <>
+);
 constraint forall(j in jobs where release[j] > 0) (
   release[j] <= job_start[j]  
 );
@@ -79,21 +85,25 @@ constraint forall(j in jobs) (
 constraint forall(p in procs) (
   disjunctive(start[.., p], wcet[.., p])
 );
+% even if jobs have zero duration by input, they should always start at different times
+constraint forall(p in procs) (
+  disjunctive(start[.., p], [1 | j in jobs])
+);
 % inferred constraint
 constraint cumulative(job_start, job_duration, [1|i in jobs], length(procs));
 
 % communication concerns
-constraint forall(p, pp in procs, j, jj in jobs, u, uu in comms where strong_next[j, jj]) (
-  path[p, pp, u] = path[p, pp, uu] - 1 ->
-  comm_start[j, jj, u] + comm_duration[j, jj, u] <= comm_start[j, jj, uu]
-);
+/* constraint forall(p, pp in procs, j, jj in jobs, u, uu in comms where strong_next[j, jj]) ( */
+/*   path[p, pp, u] > 0 /\ path[p, pp, u] = path[p, pp, uu] - 1 -> */
+/*   comm_start[j, jj, u] + comm_duration[j, jj, u] <= comm_start[j, jj, uu] */
+/* ); */
+/* constraint forall(p, pp in procs, j, jj in jobs, u in comms where strong_next[j, jj] /\ path[p, pp, u] > 0) ( */
+/*   occurs(start[j, p]) /\ occurs(start[jj, pp]) -> */ 
+/*   start[j, p] + duration[j, p] <= comm_start[j, jj, u] */ 
+/* ); */
 constraint forall(p, pp in procs, j, jj in jobs, u in comms where strong_next[j, jj] /\ path[p, pp, u] > 0) (
   occurs(start[j, p]) /\ occurs(start[jj, pp]) -> 
-  start[j, p] + duration[j, p] <= comm_start[j, jj, u] 
-);
-constraint forall(p, pp in procs, j, jj in jobs, u in comms where strong_next[j, jj] /\ path[p, pp, u] > 0) (
-  occurs(start[j, p]) /\ occurs(start[jj, pp]) -> 
-  comm_start[j, jj, u] + comm_duration[j, jj, u] <= start[jj, pp]
+  start[j, p] + sum(u in comms where path[p, pp, u] > 0) (comm_duration[j, jj, u]) <= start[jj, pp]
 );
 constraint forall(p in comms) (
  cumulative(
@@ -115,9 +125,12 @@ constraint forall(j, jj in jobs where strong_next[j, jj] \/ weak_next[j, jj]) (
 constraint forall(j in jobs) (
   job_min_latency[j] >= job_duration[j]
 );
-constraint objective[LATENCY_MIN] = max(j in jobs) (job_min_latency[j]);
+constraint forall(j in jobs) (
+  job_start[j] + job_duration[j] <= job_max_latency[j]
+);
+constraint objective[LATENCY_MIN] = max(job_min_latency);
 
-constraint objective[LATENCY_MAX] = max(j in jobs) (job_start[j] + job_duration[j]);
+constraint objective[LATENCY_MAX] = max(job_max_latency);
 
 constraint objective[LATENCY_MIN] <= objective[LATENCY_MAX];
 

@@ -1,5 +1,5 @@
 import math
-from typing import List, Optional, Dict, Tuple
+from typing import List, Sequence, Optional, Dict, Tuple
 
 import numpy as np
 from forsyde.io.python.core import Vertex
@@ -7,7 +7,7 @@ from forsyde.io.python.core import Vertex
 
 def get_PASS(sdf_topology: np.ndarray,
              repetition_vector: np.ndarray,
-             initial_tokens: Optional[np.ndarray] = None) -> List[int]:
+             initial_tokens: Optional[np.ndarray] = None) -> Sequence[int]:
     '''Returns the PASS of a SDF graph
 
     The calculation follows almost exactly what is dictated in the
@@ -58,9 +58,10 @@ def check_sdf_consistency(sdf_topology) -> bool:
     return False
 
 
-def sdf_to_jobs(actors: List[Vertex], channels: List[Tuple[Vertex, Vertex, List[Vertex]]], topology: np.ndarray,
-                repetition_vector: np.ndarray,
-                initial_tokens: np.ndarray) -> Tuple[List[Vertex], List[Tuple[int, int]], List[Tuple[int, int]]]:
+def sdf_to_jobs(
+        actors: Sequence[Vertex], channels: Sequence[Tuple[Vertex, Vertex, Sequence[Vertex]]], topology: np.ndarray,
+        repetition_vector: np.ndarray,
+        initial_tokens: np.ndarray) -> Tuple[Sequence[Vertex], Sequence[Tuple[int, int]], Sequence[Tuple[int, int]]]:
     '''Create job graph out of a SDF graph.
 
     This function returns a precedence graph of sdf 'jobs' so that any
@@ -86,8 +87,7 @@ def sdf_to_jobs(actors: List[Vertex], channels: List[Tuple[Vertex, Vertex, List[
     if repetition_vector.shape[1] != 1:
         raise TypeError("The repetition vector should be a column vector.")
     q_vector = repetition_vector.reshape(repetition_vector.size)
-    jobs = [(a, q) for (i, a) in enumerate(actors)
-            for q in range(int(q_vector[i]))]
+    actor_fire = [(a, q) for (i, a) in enumerate(actors) for q in range(int(q_vector[i]))]
     strong_next: List[Tuple[int, int]] = []
     for (cidx, (s, t, _)) in enumerate(channels):
         idxs = actors.index(s)
@@ -97,11 +97,10 @@ def sdf_to_jobs(actors: List[Vertex], channels: List[Tuple[Vertex, Vertex, List[
         for fires in range(q_vector[idxs]):
             for firet in range(q_vector[idxt]):
                 if production * fires + int(initial_tokens[cidx]) >= consumption * (firet + 1):
-                    poss = jobs.index((s, fires))
-                    post = jobs.index((t, firet))
+                    poss = actor_fire.index((s, fires))
+                    post = actor_fire.index((t, firet))
                     strong_next.append((poss, post))
-    weak_next: List[Tuple[int, int]] = [
-        (i+q, i+q+1) for (i, a) in enumerate(actors) for q in range(int(q_vector[i])-1)
-    ]
-    jobs = [a for (a, q) in jobs]
+    weak_next: List[Tuple[int, int]] = [(i + q, i + q + 1) for (i, a) in enumerate(actors)
+                                        for q in range(int(q_vector[i]) - 1)]
+    jobs = [a for (a, q) in actor_fire]
     return (jobs, weak_next, strong_next)

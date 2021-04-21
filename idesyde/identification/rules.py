@@ -1,13 +1,14 @@
-from typing import List
+from typing import Generator, List, Sequence
 from typing import Collection
 from typing import Dict
 from typing import Tuple
 from typing import Optional
 from typing import Iterator
 import itertools
-import functools
+from functools import reduce
 import logging
 import math
+import operator
 
 import networkx as nx
 import numpy as np
@@ -338,7 +339,8 @@ def identify_jobs_from_sdf_multicore(model: ForSyDeModel,
             sdf_mpsoc_char_sub.sdf_mpsoc_sub.sdf_orders_sub.sdf_exec_sub.sdf_initial_tokens)
         cores = sdf_mpsoc_char_sub.sdf_mpsoc_sub.cores
         orderings = sdf_mpsoc_char_sub.sdf_mpsoc_sub.sdf_orders_sub.orderings
-        procs = []
+        procs: Sequence[Sequence[Vertex]] = []
+        procs_capacity: Dict[Sequence[Vertex], int] = {}
         for (p, o) in itertools.product(cores, orderings):
             if model.has_edge(p, o):
                 procs.append([p, o])
@@ -346,31 +348,18 @@ def identify_jobs_from_sdf_multicore(model: ForSyDeModel,
             if not any(p == l[0] or o == l[1] for l in procs):
                 procs.append([p, o])
         # one ordering per comm
-        comms = []
-        comm_capacity = []
+        comms: Sequence[Sequence[Vertex]] = []
         for (c, o) in itertools.product(sdf_mpsoc_char_sub.sdf_mpsoc_sub.comms, reversed(orderings)):
             if model.has_edge(c, o):
                 comms.append([c, o])
         for (c, o) in zip(sdf_mpsoc_char_sub.sdf_mpsoc_sub.comms, reversed(orderings)):
             if not any(c == l[0] or o == l[1] for l in comms):
                 comms.append([c, o])
-        for l in comms:
-            c = l[0]
-            if isinstance(c, TimeDivisionMultiplexer):
-                comm_capacity.append(c.get_slots())
-            else:
-                comm_capacity.append(1)
-        # for (i, p) in enumerate(sdf_mpsoc_char_sub.sdf_mpsoc_sub.comms):
-        #     orderings = sdf_mpsoc_char_sub.sdf_mpsoc_sub.sdf_orders_sub.orderings[i + len(procs)]
-        #     comms.append([p, orderings])
-        #     if isinstance(p, TimeDivisionMultiplexer):
-        #         comm_capacity.append(p.get_slots())
-        #     else:
-        #         comm_capacity.append(1)
+        comm_capacity: Dict[Sequence[Vertex], int] = {l: max(c.get_slots() if isinstance(c, TimeDivisionMultiplexer) else 1 for c in l) for l in comms}
         # fetch the wccts and wcets
-        wcet = np.zeros((len(jobs), len(procs)), dtype=int)
-        wcct = np.zeros((len(jobs), len(jobs), len(comms)), dtype=int)
-        for (j, job) in enumerate(jobs):
+        wcet = {}
+        wcct = {}
+        for (j, job) in jobs:
             # for every job, which is a repetition of an actor a, build up ther wcet
             a = sdf_actors.index(job)
             for (i, p) in enumerate(sdf_mpsoc_char_sub.sdf_mpsoc_sub.cores):
@@ -386,23 +375,22 @@ def identify_jobs_from_sdf_multicore(model: ForSyDeModel,
                         for (i, p) in enumerate(sdf_mpsoc_char_sub.sdf_mpsoc_sub.comms):
                             wcct[j, jj, i] = sdf_mpsoc_char_sub.token_wcct[cidx, i]
         orderings = sdf_mpsoc_char_sub.sdf_mpsoc_sub.sdf_orders_sub.orderings
-        pre_scheduling = [0 for (j, _) in enumerate(jobs)]
-        pre_mapping = [-1 for (j, _) in enumerate(jobs)]
-        for a in sdf_actors:
+        pre_scheduling: Dict[JobType, int] = {}
+        pre_mapping: Dict[JobType, Sequence[Vertex]] = {}
+        for (i, a) in jobs:
             # go through the trigger times to fetch when the actor might be
             # activated
-            connected_orderings: Iterator[TimeTriggeredScheduler] = (
+            connected_orderings: Generator[TimeTriggeredScheduler, None, None] = (
                 o for o in orderings if model.has_edge(o, a) and a.identifier in o.get_trigger_time().values())
             triggers: Collection[int] = sorted((int(k) for (k, v) in o.get_trigger_time().items() if v == a.identifier
                                                 for o in connected_orderings))
-            start_index = jobs.index(a)
             for (i, t) in enumerate(triggers):
                 # pass all the timings to the job
-                pre_scheduling[start_index + i] = t
+                pre_scheduling[(i, a)] = t
                 # check if the time triggered scheduled belong to a machine already
                 for (p, proc) in enumerate(procs):
                     if all(nx.has_path(model, component, a) for component in proc):
-                        pre_mapping[start_index + i] = p
+                        pre_mapping[(i, a)] = proc
         res = JobScheduling(
             abstracted=set(sdf_mpsoc_char_sub.covered_vertexes()) | set(sdf_mpsoc_char_sub.wcet_vertexes)
             | set(sdf_mpsoc_char_sub.token_wcct_vertexes),
@@ -420,6 +408,7 @@ def identify_jobs_from_sdf_multicore(model: ForSyDeModel,
             comm_capacity=comm_capacity,
             # TODO: make this more general later
             # proc_capacity=[len(jobs) for _ in procs],
+            procs_capacity=procs_capacity,
             wcet=wcet,
             wcct=wcct)
     if res:
@@ -467,8 +456,8 @@ def identify_jobs_from_multi_sdf(model: ForSyDeModel,
             else:
                 comm_capacity.append(1)
         orderings = sdf_multicore_sub.sdf_orders_sub.orderings
-        pre_scheduling = {j: 0 for j in jobs}  #[-1 for (j, _) in enumerate(jobs)]
-        pre_mapping = {j: 0 for j in jobs}  #[-1 for (j, _) in enumerate(jobs)]
+        pre_scheduling: Dict[JobType, int] = {j: 0 for j in jobs}  #[-1 for (j, _) in enumerate(jobs)]
+        pre_mapping: Dict[JobType, Sequence[Vertex]] = {j: [] for j in jobs}  #[-1 for (j, _) in enumerate(jobs)]
         for a in sdf_actors:
             for (p, proc) in enumerate(procs):
                 # try to find if there's a path between the job and the
@@ -485,7 +474,7 @@ def identify_jobs_from_multi_sdf(model: ForSyDeModel,
                 # count the remaining paths now
                 hits = sum(1 for _ in paths)
                 for i in range(hits):
-                    pre_mapping[(i, a)] = p
+                    pre_mapping[(i, a)] = proc
             # go through the trigger times to fetch when the actor might be
             # activated
             connected_orderings: Iterator[TimeTriggeredScheduler] = (
@@ -521,8 +510,8 @@ def identify_jobs_from_multi_sdf(model: ForSyDeModel,
                             pre_scheduling=pre_scheduling,
                             goals_vertexes=goals_vertexes,
                             objective_weights=[throughput_importance, latency_importance],
-                            wcet=np.zeros((len(jobs), len(procs)), dtype=np.uint64),
-                            wcct=np.zeros((len(jobs), len(jobs), len(comms)), dtype=np.uint64))
+                            wcet={},
+                            wcct={})
     if res:
         return (True, res)
     elif sdf_multicore_sub and not res:
@@ -542,7 +531,7 @@ def identify_instrumentation_in_jobs_from_sdf(model: ForSyDeModel, identified: L
         if all(a in sub_sdf.sdf_impl for (_, a) in sub_jobs.jobs) and len(instrumented_procs) == len(sub_jobs.procs):
             worst_cycles = np.zeros((len(sub_jobs.jobs), len(instrumented_procs)), dtype=np.uint64)
             for ((jidx, j), (pidx, p)) in itertools.product(sub_jobs.jobs, enumerate(instrumented_procs)):
-                impl = sub_sdf.sdf_impl[j]
+                impl: InstrumentedFunction = sub_sdf.sdf_impl[j]
                 worst_cycles[jidx, pidx] += p.get_clock_cycles_per_float_op() * impl.get_max_float_operations()
                 worst_cycles[jidx, pidx] += p.get_clock_cycles_per_integer_op() * impl.get_max_int_operations()
                 worst_cycles[jidx, pidx] += p.get_clock_cycles_per_boolean_op() * impl.get_max_boolean_operations()
@@ -596,7 +585,8 @@ def identify_instrumentation_in_jobs_from_sdf(model: ForSyDeModel, identified: L
 
 
 @register_identification_rule
-def identify_location_req_in_jobs_from_sdf(model: ForSyDeModel, identified: List[DecisionModel]):
+def identify_location_req_in_jobs_from_sdf(model: ForSyDeModel,
+                                           identified: List[DecisionModel]) -> IdentificationOutput:
     res = None
     sub_jobs: Optional[JobScheduling] = next((p for p in identified if isinstance(p, JobScheduling)), None)
     sub_sdf: Optional[SDFExecution] = next((p for p in identified if isinstance(p, SDFExecution)), None)
@@ -640,45 +630,74 @@ def identify_location_req_in_jobs_from_sdf(model: ForSyDeModel, identified: List
 @register_identification_rule
 def identify_merge_job_scheduling_simple(model: ForSyDeModel,
                                          identified: List[DecisionModel]) -> Tuple[bool, Optional[DecisionModel]]:
-    res = None
     sub_jobs: Collection[JobScheduling] = [p for p in identified if isinstance(p, JobScheduling)]
-    if len(sub_jobs) > 1:
-        equal_jobs = all(set(sub2.jobs) == set(sub1.jobs) for sub1 in sub_jobs for sub2 in sub_jobs)
-        equal_procs = all(
-            set(u for p in sub1.procs for u in p) == set(u for p in sub2.procs for u in p) for sub1 in sub_jobs
-            for sub2 in sub_jobs)
-        equal_comms = all(
-            set(u for p in sub1.comms for u in p) == set(u for p in sub2.comms for u in p) for sub1 in sub_jobs
-            for sub2 in sub_jobs)
-        if equal_jobs and equal_procs and equal_comms:
-            wcet = np.zeros(sub_jobs[0].wcet.shape, dtype=np.uint64)
-            wcct = np.zeros(sub_jobs[0].wcct.shape, dtype=np.uint64)
-            location_req = {}
-            for s in sub_jobs:
-                wcet = np.maximum(wcet, s.wcet)
-                wcct = np.maximum(wcct, s.wcct)
-                for (i, _) in enumerate(s.jobs):
-                    if i in location_req and i in s.job_allowed_location:
-                        location_req[i] = set(location_req[i]).union(set(s.job_allowed_location[i]))
-                    elif i in s.job_allowed_location:
-                        location_req[i] = s.job_allowed_location[i]
-            abstracted = functools.reduce(lambda s1, s2: s1.union(s2), map(lambda s: set(s.abstracted), sub_jobs))
-            res = JobScheduling(abstracted=abstracted,
-                                comms=sub_jobs[0].comms,
-                                procs=sub_jobs[0].procs,
-                                jobs=sub_jobs[0].jobs,
-                                comm_jobs=sub_jobs[0].comm_jobs,
-                                weak_next=sub_jobs[0].weak_next,
-                                strong_next=sub_jobs[0].strong_next,
-                                paths=sub_jobs[0].paths,
-                                pre_mapping=sub_jobs[0].pre_mapping,
-                                pre_scheduling=sub_jobs[0].pre_scheduling,
-                                goals_vertexes=sub_jobs[0].goals_vertexes,
-                                objective_weights=sub_jobs[0].objective_weights,
-                                wcet=wcet,
-                                wcct=wcct,
-                                time_scale=max(s.time_scale for s in sub_jobs),
-                                job_allowed_location=location_req)
+    merge_list_list = lambda it: reduce(lambda l1, l2: l1 + [p for p in l2 if p not in l1], it, initial=[])
+    if len(sub_jobs) <= 1:
+        return (False, None)
+    covered: Sequence[Vertex] = reduce(operator.or_, (set(m.covered_vertexes()) for m in identified),
+                                                 initial=set())
+    jobs: Sequence[JobType] = reduce(operator.or_, set(sub.jobs) for sub in sub_jobs, initial=set())
+    procs: Sequence[Sequence[Vertex]] = reduce(lambda l1, l2: l1 + [p for p in l2 if p not in l1], (s.procs for s in sub_jobs), initial=[])
+    comms: Sequence[Sequence[Vertex]] = reduce(lambda l1, l2: l1 + [p for p in l2 if p not in l1], (s.comms for s in sub_jobs), initial=[])
+    comm_jobs = {}
+    weak_next = {}
+    strong_next = {}
+    paths = {}
+    for s in sub_jobs:
+        for (j1, j2) in s.comm_jobs:
+            comm_jobs[(j1, j2)] = (set(comm_jobs[(j1, j2)]) | set(s.comm_jobs[(j1, j2)])) if (j1, j2) in comm_jobs else s.comm_jobs[(j2, j2)]
+    weak_next = {j: reduce(operator.or_, (s.weak_next for s in sub_jobs), initial=set()) for j in jobs}
+    strong_next = {j: reduce(operator.or_, (s.strong_next for s in sub_jobs), initial=set()) for j in jobs}
+    for s in sub_jobs:
+        for (j1, j2) in s.paths:
+            paths[(j1, j2)] = (set(paths[(j1, j2)]) | set(s.paths[(j1, j2)])) if (j1, j2) in paths else s.paths[(j2, j2)]
+    # TODO: Continue the merge algorithm!
+    #pre_mapping = {j: pidx }
+    res = JobScheduling(
+        jobs = jobs,
+        procs = procs,
+        comms = comms,
+        comm_jobs=comm_jobs,
+        weak_next=weak_next,
+        strong_next=strong_next,
+        paths=paths,
+        pre_mapping=sub_jobs[0].pre_mapping,
+        pre_scheduling=sub_jobs[0].pre_scheduling,
+        goals_vertexes=sub_jobs[0].goals_vertexes,
+        objective_weights=sub_jobs[0].objective_weights,
+        wcet=wcet,
+        wcct=wcct,
+        time_scale=max(s.time_scale for s in sub_jobs),
+        job_allowed_location=location_req
+    )
+    wcet = {}
+    wcct = {}
+    location_req = {}
+    for s in sub_jobs:
+        wcet = np.maximum(wcet, s.wcet)
+        wcct = np.maximum(wcct, s.wcct)
+        for (i, _) in enumerate(s.jobs):
+            if i in location_req and i in s.job_allowed_location:
+                location_req[i] = set(location_req[i]).union(set(s.job_allowed_location[i]))
+            elif i in s.job_allowed_location:
+                location_req[i] = s.job_allowed_location[i]
+    abstracted = reduce(lambda s1, s2: s1.union(s2), map(lambda s: set(s.abstracted), sub_jobs))
+    res = JobScheduling(abstracted=abstracted,
+                        comms=sub_jobs[0].comms,
+                        procs=sub_jobs[0].procs,
+                        jobs=sub_jobs[0].jobs,
+                        comm_jobs=sub_jobs[0].comm_jobs,
+                        weak_next=sub_jobs[0].weak_next,
+                        strong_next=sub_jobs[0].strong_next,
+                        paths=sub_jobs[0].paths,
+                        pre_mapping=sub_jobs[0].pre_mapping,
+                        pre_scheduling=sub_jobs[0].pre_scheduling,
+                        goals_vertexes=sub_jobs[0].goals_vertexes,
+                        objective_weights=sub_jobs[0].objective_weights,
+                        wcet=wcet,
+                        wcct=wcct,
+                        time_scale=max(s.time_scale for s in sub_jobs),
+                        job_allowed_location=location_req)
     if res and all(v in res.abstracted for v in model.nodes):
         return (True, res)
     else:

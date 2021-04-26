@@ -62,6 +62,20 @@ class DecisionModel(object):
         '''
         raise NotImplementedError
 
+    def is_maximal(self, model: ForSyDeModel) -> bool:
+        '''Checks if the model is a maximal partial identification
+
+        In the same way graph covering can be maximal, partial
+        idenfitications can be maximal, so that no further vertexes
+        in the given 'model' can be added to the decision model by
+        any possible identification step/rule.
+
+        Returns:
+            True if no further partial identifications can be made,
+            and false Otherwise.
+        '''
+        return False
+
     def covered_edges(self) -> Iterable[Edge]:
         '''Get edges partially identified by the Decision Model.
 

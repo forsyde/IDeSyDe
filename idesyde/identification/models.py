@@ -588,20 +588,34 @@ class JobScheduling(MinizincableDecisionModel):
 @dataclass
 class TimeTriggeredPlatform(DecisionModel):
 
-    schedulers: Sequence[Vertex] = field(default_factory=list)
-    core_scheduler: Dict[Vertex, Vertex] = field(default_factory=dict)
-    comm_scheduler: Dict[Vertex, Vertex] = field(default_factory=dict)
+    schedulers: Sequence[TimeTriggeredScheduler] = field(default_factory=list)
+    cores: Sequence[AbstractProcessingComponent] = field(default_factory=list)
+    comms: Sequence[AbstractCommunicationComponent] = field(default_factory=list)
+    core_scheduler: Dict[AbstractProcessingComponent, TimeTriggeredScheduler] = field(default_factory=dict)
+    comm_scheduler: Dict[AbstractCommunicationComponent, TimeTriggeredScheduler] = field(default_factory=dict)
     paths: Dict[Tuple[Vertex, Vertex], Sequence[Sequence[Vertex]]] = field(default_factory=dict)
-    core_memory: Dict[Vertex, int] = field(default_factory=dict)
-    comms_bandwidth: Dict[Vertex, int] = field(default_factory=dict)
+    core_memory: Dict[AbstractProcessingComponent, int] = field(default_factory=dict)
+    comms_bandwidth: Dict[AbstractCommunicationComponent, int] = field(default_factory=dict)
 
-    abstracted: Sequence[Vertex] = field(default_factory=set)
+    abstracted: Sequence[Vertex] = field(default_factory=list)
 
     def covered_vertexes(self) -> Iterable[Vertex]:
         yield from self.abstracted
         yield from self.schedulers
-        for pl in self.cores.values():
-            yield from pl
+        yield from self.cores
+        yield from self.comms
         for ll in self.paths.values():
-            for l in ll:
-                yield from l
+            for li in ll:
+                yield from li
+
+    def is_maximal(self, model: ForSyDeModel) -> bool:
+        tt_schedulers = all(v in self.schedulers for v in model if isinstance(v, TimeTriggeredScheduler))
+        cores = all(v in self.cores for v in model if isinstance(v, AbstractProcessingComponent))
+        comms = all(v in self.comms for v in model if isinstance(v, AbstractCommunicationComponent))
+        return tt_schedulers and cores and comms
+
+    @classmethod
+    def identifiable(cls, model: ForSyDeModel) -> Iterable[Vertex]:
+        yield from (v for v in model if isinstance(v, TimeTriggeredScheduler))
+        yield from (v for v in model if isinstance(v, AbstractProcessingComponent))
+        yield from (v for v in model if isinstance(v, AbstractCommunicationComponent))

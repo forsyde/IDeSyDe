@@ -442,6 +442,8 @@ class JobScheduling(MinizincableDecisionModel):
             # it's the same identification, but with the times.
             count_self = sum(1 if self.wcet[(j, p)] > 0 else 0 for (j, p) in self.wcet.items())
             count_other = sum(1 if self.wcet[(j, p)] > 0 else 0 for (j, p) in other.wcet.items())
+            print(count_self)
+            print(count_other)
             return super().dominates(other) and (count_self >= count_other)
         elif super().dominates(other):
             return True

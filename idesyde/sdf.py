@@ -9,6 +9,7 @@ from typing import Collection
 
 import numpy as np
 from forsyde.io.python.core import Vertex
+from forsyde.io.python.types import Process
 
 JobType = Tuple[int, Vertex]
 
@@ -67,7 +68,7 @@ def check_sdf_consistency(sdf_topology) -> bool:
 
 
 def sdf_to_jobs(
-        actors: Collection[Vertex], channels: Dict[Tuple[Vertex, Vertex], Sequence[Sequence[Vertex]]],
+        actors: Collection[Vertex], channels: Dict[Tuple[Process, Process], Sequence[Sequence[Vertex]]],
         topology: np.ndarray, repetition_vector: np.ndarray,
         initial_tokens: np.ndarray) -> Tuple[List[JobType], Dict[JobType, List[JobType]], Dict[JobType, List[JobType]]]:
     '''Create job graph out of a SDF graph.

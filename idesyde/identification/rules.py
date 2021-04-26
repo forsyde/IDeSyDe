@@ -64,9 +64,9 @@ _logger = logging.getLogger(LOGGER_NAME)
 IdentificationOutput = Tuple[bool, Optional[DecisionModel]]
 
 
-def _hash_sequence(l):
+def _hash_sequence(li):
     v = 0
-    for e in l:
+    for e in li:
         v = hash((v, e))
     return v
 
@@ -251,18 +251,19 @@ def identify_sdf_multi_core(model: ForSyDeModel, identified: List[DecisionModel]
             if isinstance(c, TimeDivisionMultiplexer):
                 comms_capacity[i] = int(c.get_slots())
         if len(cores) + len(comms) <= len(sdf_orders_sub.orderings):
-            pre_mapping = []
-            for (o, p) in itertools.product(sdf_orders_sub.orderings, cores):
-                for (ek, ed) in model.get_edge_data(p, o, default=dict()).items():
-                    if isinstance(ed["object"], AbstractMapping):
-                        pre_mapping.append(ed["object"])
+            # TODO: this pre mapping has nothing to do with the newest 2021-04-26 view of it.
+            # pre_mapping = []
+            # for ((oidx, o), (pidx, p)) in itertools.product(enumerate(sdf_orders_sub.orderings), enumerate(cores)):
+            #     for (ek, ed) in model.get_edge_data(p, o, default=dict()).items():
+            #         if isinstance(ed["object"], AbstractMapping):
+            #             pre_mapping.append(ed["object"])
             res = SDFToMultiCore(
                 sdf_orders_sub=sdf_orders_sub,
                 cores=cores,
                 comms=comms,
                 connections=cast(Dict[Tuple[Vertex, Vertex], Sequence[Sequence[Vertex]]], connections),
-                comms_capacity=comms_capacity,
-                pre_mapping=pre_mapping,
+                comms_capacity=comms_capacity
+                # pre_mapping=pre_mapping,
             )
     # conditions for fixpoints and partial identification
     if res:
@@ -438,7 +439,7 @@ def identify_jobs_from_sdf_multicore(
             if (actor1, actor2) in sdf_channels
         }
         res = JobScheduling(
-            abstracted=cast(
+            abstracted_vertexes=cast(
                 Sequence[Vertex],
                 set(sdf_mpsoc_char_sub.covered_vertexes())
                 | set(sdf_mpsoc_char_sub.wcet_vertexes)
@@ -495,7 +496,6 @@ def identify_jobs_from_multi_sdf(
             procs.append([p, o])
     # one ordering per comm
     procs_capacity: Dict[ProcType, int] = {}
-    procs_key = {i: _hash_sequence(p) for (i, p) in enumerate(procs)}
     comms: List[Sequence[Vertex]] = [
         [c, o]
         for (c, o) in itertools.product(sdf_multicore_sub.comms, reversed(orderings))
@@ -516,7 +516,6 @@ def identify_jobs_from_multi_sdf(
     pre_mapping: Dict[JobType, ProcType] = {}
     for a in sdf_actors:
         for (pidx, proc) in enumerate(procs):
-            pkey = procs_key[pidx]
             # try to find if there's a path between the job and the
             # processors. Assume every edge is a different mapping
             core = next(u for u in proc if isinstance(u, AbstractProcessingComponent))
@@ -529,13 +528,13 @@ def identify_jobs_from_multi_sdf(
             except nx.exception.NetworkXNoPath:
                 pass
             # can only have one actor, the one in the loop
-            paths = (path for path in paths if sum(1 for u in path if isinstance(u, Process)) == 1)
+            paths = [path for path in paths if sum(1 for u in path if isinstance(u, Process)) == 1]
             # cn only have one core, the one in the loop
-            paths = (path for path in paths if sum(1 for u in path if isinstance(u, AbstractProcessingComponent)) == 1)
+            paths = [path for path in paths if sum(1 for u in path if isinstance(u, AbstractProcessingComponent)) == 1]
             # count the remaining paths now
             hits = sum(1 for _ in paths)
             for i in range(hits):
-                pre_mapping[(i, a)] = pkey
+                pre_mapping[(i, a)] = pidx
         # go through the trigger times to fetch when the actor might be
         # activated
         connected_orderings: Iterator[TimeTriggeredScheduler] = (
@@ -565,7 +564,7 @@ def identify_jobs_from_multi_sdf(
         if (js, jt) in sdf_channels
     }
     res = JobScheduling(
-        abstracted=list(sdf_multicore_sub.covered_vertexes()),
+        abstracted_vertexes=list(sdf_multicore_sub.covered_vertexes()),
         comms=comms,
         procs=procs,
         jobs=jobs,
@@ -605,14 +604,16 @@ def identify_instrumentation_in_jobs_from_sdf(model: ForSyDeModel, identified: L
         )
         if jobs_instrumented and len(instrumented_procs) == len(sub_jobs.procs):
             worst_cycles = np.zeros((len(sub_jobs.jobs), len(instrumented_procs)), dtype=np.uint64)
-            for ((jidx, j), (pidx, p)) in itertools.product(sub_jobs.jobs, enumerate(instrumented_procs)):
-                impl = cast(InstrumentedFunction, sub_sdf.sdf_impl[j])
+            for ((jidx, (i, a)), (pidx, p)) in itertools.product(
+                enumerate(sub_jobs.jobs), enumerate(instrumented_procs)
+            ):
+                impl = cast(InstrumentedFunction, sub_sdf.sdf_impl[a])
                 worst_cycles[jidx, pidx] += p.get_clock_cycles_per_float_op() * impl.get_max_float_operations()
                 worst_cycles[jidx, pidx] += p.get_clock_cycles_per_integer_op() * impl.get_max_int_operations()
                 worst_cycles[jidx, pidx] += p.get_clock_cycles_per_boolean_op() * impl.get_max_boolean_operations()
                 # wcet[jidx, pidx] = math.ceil(float(wcet[jidx, pidx]) / float(p.get_min_frequency_hz()))
             frequency_matrix = np.zeros((len(sub_jobs.jobs), len(instrumented_procs)), dtype=np.uint64)
-            for ((jidx, j), (pidx, p)) in itertools.product(sub_jobs.jobs, enumerate(instrumented_procs)):
+            for ((jidx, j), (pidx, p)) in itertools.product(enumerate(sub_jobs.jobs), enumerate(instrumented_procs)):
                 frequency_matrix[jidx, pidx] = p.get_min_frequency_hz()
             # scale up until it
             min_clocks = np.amin(worst_cycles[worst_cycles > 0])
@@ -645,7 +646,18 @@ def identify_instrumentation_in_jobs_from_sdf(model: ForSyDeModel, identified: L
                     )
                     wcct = (np.ceil(wcct / time_scale)).astype(np.uint64)
             # make an new decision model by shallow copy
-            res = sub_jobs.new(wcet=wcet, wcct=wcct, time_scale=time_scale)
+            wcet_dict = {
+                (j, pidx): int(wcet[jidx, pidx])
+                for (jidx, j) in enumerate(sub_jobs.jobs)
+                for (pidx, p) in enumerate(sub_jobs.procs)
+            }
+            wcct_dict = {
+                (j, jj, cidx): int(wcct[jidx, jjidx, cidx])
+                for (jidx, j) in enumerate(sub_jobs.jobs)
+                for (jjdix, jj) in enumerate(sub_jobs.jobs)
+                for (cidx, comm) in enumerate(sub_jobs.comms)
+            }
+            res = sub_jobs.new(wcet=wcet_dict, wcct=wcct_dict, time_scale=time_scale)
     if res:
         return (True, res)
     elif sub_jobs and sub_sdf and not res:
@@ -675,7 +687,7 @@ def identify_location_req_in_jobs_from_sdf(
             for (i, j) in jobs:
                 location_req[j] = [pi for (pi, p) in procs]
         res = sub_jobs.new(
-            abstracted=set(sub_jobs.covered_vertexes()) | set(location_vertexes), job_allowed_location=location_req
+            abstracted_vertexes=set(sub_jobs.covered_vertexes()) | set(location_vertexes), job_allowed_location=location_req
         )
     if res:
         return (True, res)
@@ -701,7 +713,7 @@ def identify_merge_job_scheduling_simple(
     comm_channels: Dict[Tuple[JobType, JobType], Sequence[Sequence[Vertex]]] = {}
     weak_next: Dict[JobType, Sequence[JobType]] = {}
     strong_next: Dict[JobType, Sequence[JobType]] = {}
-    paths = {}
+    paths: Dict[Tuple[Vertex, Vertex], Sequence[Sequence[Vertex]]] = {}
     # mapping and location require special treatment since
     # the indexes of the virtual machines might the same
     # but htey still might be different machines altogther.
@@ -710,14 +722,28 @@ def identify_merge_job_scheduling_simple(
     # Later we rescue the indexes easily
     pre_mapping_proctype = {}
     location_req_proctype: Dict[JobType, Sequence[ProcType]] = {}
-    pre_scheduling = {}
-    goals_vertexes = set()
-    objective_weights = []
+    pre_scheduling: Dict[JobType, int] = {}
+    goals_vertexes: Sequence[Vertex] = set()
+    objective_weights: Sequence[int] = []
+    wcet: Dict[Tuple[JobType, ProcType], int] = {}
+    wcct: Dict[Tuple[JobType, JobType, ProcType], int] = {}
     for sub in sub_jobs:
         procs_keys = set(_hash_sequence(k) for k in procs)
         procs += [proc for proc in sub.procs if _hash_sequence(proc) not in procs_keys]
         comms_keys = set(_hash_sequence(k) for k in comms)
         comms += [comm for comm in sub.comms if _hash_sequence(comm) not in comms_keys]
+        for ((j, p), val) in sub.wcet.items():
+            pkey = _hash_sequence(p)
+            if (j, pkey) in wcet:
+                wcet[(j, pkey)] = max(wcet[(j, pkey)], val)
+            else:
+                wcet[(j, pkey)] = val
+        for ((j, jj, p), val) in sub.wcct.items():
+            pkey = _hash_sequence(p)
+            if (j, pkey) in wcct:
+                wcct[(j, jj, pkey)] = max(wcct[(j, jj, pkey)], val)
+            else:
+                wcct[(j, jj, pkey)] = val
         for ((j1, j2), ch) in sub.comm_channels.items():
             if (j1, j2) in comm_channels:
                 comm_keys = set(_hash_sequence(li) for li in comm_channels[(j1, j2)])
@@ -751,19 +777,11 @@ def identify_merge_job_scheduling_simple(
     procs_inv = {_hash_sequence(p): pidx for (pidx, p) in enumerate(procs)}
     pre_mapping = {j: procs_inv[j] for j in jobs if j in pre_mapping_proctype}
     location_req = {j: set(procs_inv[p] for p in location_req_proctype[j]) for j in jobs if j in location_req_proctype}
+    wcet = {(j, procs_inv[p]): v for ((j, p), v) in wcet.items()}
+    wcct = {(j, jj, procs_inv[p]): v for ((j, jj, p), v) in wcct.items()}
     # merge the worst cases by always tkaing the maximum in case of clash
-    wcet: Dict[Tuple[JobType, ProcType], int] = reduce(
-        lambda d1, d2: {k: max(d1[k], d2[k]) if k in d1 and k in d2 else d2[k] for k in d2},
-        (s.wcet for s in sub_jobs),
-        dict(),
-    )
-    wcct: Dict[Tuple[JobType, JobType, ProcType], int] = reduce(
-        lambda d1, d2: {k: max(d1[k], d2[k]) if k in d1 and k in d2 else d2[k] for k in d2},
-        (s.wcct for s in sub_jobs),
-        dict(),
-    )
     res = JobScheduling(
-        abstracted=reduce(operator.or_, (set(s.abstracted) for s in sub_jobs), set()),
+        abstracted_vertexes=reduce(operator.or_, (set(s.abstracted_vertexes) for s in sub_jobs), set()),
         jobs=jobs,
         procs=procs,
         comms=comms,
@@ -825,7 +843,7 @@ def identify_time_triggered_platform(
     for (o, comm) in itertools.product(schedulers, comms):
         if comm not in comm_scheduler and o not in comm_scheduler.values():
             comm_scheduler[comm] = o
-    abstracted = cast(Sequence[Vertex], set(schedulers) | set(cores) | set(comms))
+    abstracted_vertexes = cast(Sequence[Vertex], set(schedulers) | set(cores) | set(comms))
     res = TimeTriggeredPlatform(
         schedulers=schedulers,
         comms_bandwidth=comms_bandwidth,
@@ -833,7 +851,7 @@ def identify_time_triggered_platform(
         core_scheduler=core_scheduler,
         comm_scheduler=comm_scheduler,
         paths=path,
-        abstracted=abstracted,
+        abstracted_vertexes=abstracted_vertexes,
     )
     return (True, res)
 
@@ -882,7 +900,7 @@ def identify_jobs_sdf_time_trigger_multicore(model: ForSyDeModel, identified: Li
         if (js, jt) in sdf_app_sub.sdf_channels
     }
     res = JobScheduling(
-        abstracted=set(sdf_app_sub.covered_vertexes())
+        abstracted_vertexes=set(sdf_app_sub.covered_vertexes())
         | set(time_trig_platform_sub.covered_vertexes())
         | set(goals_vertexes),
         jobs=jobs,

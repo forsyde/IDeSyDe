@@ -37,7 +37,7 @@ import idesyde.sdf as sdfapi
 
 _logger = logging.getLogger(LOGGER_NAME)
 
-JobType = Tuple[int, Vertex]
+JobType = Tuple[int, Process]
 # the types for abstract processors and communications
 ProcType = int
 CommType = int
@@ -78,8 +78,10 @@ class SDFExecution(DecisionModel):
     def compute_deduced_properties(self):
         self.max_tokens = np.zeros((len(self.sdf_channels)), dtype=int)
         for (cidx, c) in enumerate(self.sdf_channels):
-            self.max_tokens[cidx] = max(self.sdf_topology[cidx, aidx] * self.sdf_repetition_vector[aidx]
-                                        for (aidx, a) in enumerate(self.sdf_actors))
+            self.max_tokens[cidx] = max(
+                self.sdf_topology[cidx, aidx] * self.sdf_repetition_vector[aidx]
+                for (aidx, a) in enumerate(self.sdf_actors)
+            )
 
 
 @dataclass
@@ -104,19 +106,19 @@ class SDFToOrders(DecisionModel):
     def get_mzn_data(self):
         data = dict()
         sub = self.sdf_exec_sub
-        data['sdf_actors'] = range(1, len(sub.sdf_actors) + 1)
-        data['sdf_channels'] = range(1, len(sub.sdf_channels) + 1)
-        data['sdf_topology'] = sub.sdf_topology.tolist()
-        data['max_steps'] = len(sub.sdf_pass) // len(self.orderings)
-        data['max_steps'] += 1 if len(sub.sdf_pass) % len(self.orderings) > 0 else 0
-        data['max_tokens'] = sub.max_tokens.tolist()
-        data['activations'] = sub.sdf_repetition_vector[:, 0].tolist()
-        data['static_orders'] = range(1, len(self.orderings) + 1)
-        data['initial_tokens'] = sub.sdf_initial_tokens
+        data["sdf_actors"] = range(1, len(sub.sdf_actors) + 1)
+        data["sdf_channels"] = range(1, len(sub.sdf_channels) + 1)
+        data["sdf_topology"] = sub.sdf_topology.tolist()
+        data["max_steps"] = len(sub.sdf_pass) // len(self.orderings)
+        data["max_steps"] += 1 if len(sub.sdf_pass) % len(self.orderings) > 0 else 0
+        data["max_tokens"] = sub.max_tokens.tolist()
+        data["activations"] = sub.sdf_repetition_vector[:, 0].tolist()
+        data["static_orders"] = range(1, len(self.orderings) + 1)
+        data["initial_tokens"] = sub.sdf_initial_tokens
         return data
 
     def get_mzn_model_name(self):
-        return 'sdf_order_linear_dmodel.mzn'
+        return "sdf_order_linear_dmodel.mzn"
 
     def rebuild_forsyde_model(self, results):
         return ForSyDeModel()
@@ -198,10 +200,10 @@ class SDFToMultiCore(DecisionModel):
     def get_mzn_data(self):
         data = self.sdf_orders_sub.get_mzn_data()
         # expanded_units_enum = {**self.expanded_cores_enum, **self.expanded_comm_enum}
-        data['procs'] = set(i + 1 for (i, _) in enumerate(self.cores))
-        data['comms'] = set(i + 1 for (i, _) in enumerate(self.comms))
-        data['path'] = self.comms_path
-        data['comms_capacity'] = self.comms_capacity
+        data["procs"] = set(i + 1 for (i, _) in enumerate(self.cores))
+        data["comms"] = set(i + 1 for (i, _) in enumerate(self.comms))
+        data["path"] = self.comms_path
+        data["comms_capacity"] = self.comms_capacity
         # data['units_neighs'] = [
         #     set(self.expanded_enum[ex.target_vertex] + 1 for (e, el) in self.edge_expansions.items() for ex in el
         #         if ex.source_vertex == u).union(
@@ -210,73 +212,76 @@ class SDFToMultiCore(DecisionModel):
         # ]
         # since the minizinc model requires wcet and wcct,
         # we fake it with almost unitary assumption
-        data['wcet'] = np.matmul(
-            np.identity(len(data['sdf_actors'])) * data['max_tokens'],
-            np.ones((len(data['sdf_actors']), len(self.cores)), dtype=int)).tolist()
-        data['token_wcct'] = (np.ones((len(data['sdf_channels']), len(data['procs']) + len(data['comms'])),
-                                      dtype=int)).tolist()
+        data["wcet"] = np.matmul(
+            np.identity(len(data["sdf_actors"])) * data["max_tokens"],
+            np.ones((len(data["sdf_actors"]), len(self.cores)), dtype=int),
+        ).tolist()
+        data["token_wcct"] = (
+            np.ones((len(data["sdf_channels"]), len(data["procs"]) + len(data["comms"])), dtype=int)
+        ).tolist()
         # since the minizinc model requires objective weights,
         # we just disconsder them
-        data['objective_weights'] = [0, 0]
+        data["objective_weights"] = [0, 0]
         # take away spurius extras
-        data.pop('static_orders')
+        data.pop("static_orders")
         return data
 
-	# This is commented out because this decision model is not suppose
-	# to be solved anymore.
-    # def rebuild_forsyde_model(self, results):
-    #     new_model = self.covered_model()
-    #     max_steps = self.max_steps
-    #     sdf_topology = self.sdf_orders_sub.sdf_exec_sub.sdf_topology
-    #     sdf_actors = self.sdf_orders_sub.sdf_exec_sub.sdf_actors
-    #     sdf_channels = self.sdf_orders_sub.sdf_exec_sub.sdf_channels
-    #     orderings = self.sdf_orders_sub.orderings
-    #     for (pidx, core) in enumerate(self.cores):
-    #         ordering = orderings[pidx]
-    #         if not new_model.has_edge(core, ordering, key="object"):
-    #             new_edge = AbstractMapping(source_vertex=core,
-    #                                        target_vertex=ordering,
-    #                                        source_vertex_port=Port(identifier="execution"))
-    #             new_model.add_edge(core, ordering, object=new_edge)
-    #         slot = 0
-    #         for t in range(max_steps):
-    #             sdf_pass = sdfapi.get_PASS(
-    #                 sdf_topology,
-    #                 np.array([[results["mapped_actors"][a][pidx][t] for (a, _) in enumerate(sdf_actors)]]).transpose(),
-    #                 np.array([[results["flow"][a][pidx][t] for (c, _) in enumerate(sdf_channels)]]).transpose())
-    #             for aidx in sdf_pass:
-    #                 actor = sdf_actors[aidx]
-    #                 if not new_model.has_edge(ordering, actor, key="object"):
-    #                     new_edge = AbstractScheduling(source_vertex=ordering,
-    #                                                   target_vertex=actor,
-    #                                                   source_vertex_port=Port(identifier=f"slot[{slot}]"))
-    #                     new_model.add_edge(ordering, actor, object=new_edge)
-    #                     slot += 1
-    #     for (commidx, comm) in enumerate(self.comms):
-    #         ordering = orderings[commidx + len(self.cores)]
-    #         if not new_model.has_edge(comm, ordering, key="object"):
-    #             new_edge = AbstractMapping(source_vertex=comm,
-    #                                        target_vertex=ordering,
-    #                                        source_vertex_port=Port(identifier="timeslots"))
-    #             new_model.add_edge(comm, ordering, object=new_edge)
-    #         slots = [0 for c in sdf_channels]
-    #         for (c, (s, t)) in enumerate(sdf_channels):
-    #             path = sdf_channels[(s, t)]
-    #             clashes = [
-    #                 slots[cc] for (p, _) in enumerate(self.cores) for (pp, _) in enumerate(self.cores)
-    #                 for t in range(max_steps) for tt in range(max_steps) for cc in range(c)
-    #                 if results["send_start"][c][p][pp][t][tt][commidx] +
-    #                 results["send_duration"][c][p][pp][t][tt][commidx] >= results["send_start"][cc][p][pp][t][tt]
-    #                 [commidx] or results["send_start"][cc][p][pp][t][tt][commidx] + results["send_duration"][cc][p][pp]
-    #                 [t][tt][commidx] >= results["send_start"][c][p][pp][t][tt][commidx]
-    #             ]
-    #             slots[c] = min(slot for slot in range(self.comms_capacity[commidx]) if slot not in clashes)
-    #             for e in path:
-    #                 new_edge = AbstractScheduling(source_vertex=ordering,
-    #                                               target_vertex=e,
-    #                                               source_vertex_port=Port(identifier=f"slot[{slots[c]}]"))
-    #                 new_model.add_edge(ordering, e, object=new_edge)
-    #     return new_model
+
+# This is commented out because this decision model is not suppose
+# to be solved anymore.
+# def rebuild_forsyde_model(self, results):
+#     new_model = self.covered_model()
+#     max_steps = self.max_steps
+#     sdf_topology = self.sdf_orders_sub.sdf_exec_sub.sdf_topology
+#     sdf_actors = self.sdf_orders_sub.sdf_exec_sub.sdf_actors
+#     sdf_channels = self.sdf_orders_sub.sdf_exec_sub.sdf_channels
+#     orderings = self.sdf_orders_sub.orderings
+#     for (pidx, core) in enumerate(self.cores):
+#         ordering = orderings[pidx]
+#         if not new_model.has_edge(core, ordering, key="object"):
+#             new_edge = AbstractMapping(source_vertex=core,
+#                                        target_vertex=ordering,
+#                                        source_vertex_port=Port(identifier="execution"))
+#             new_model.add_edge(core, ordering, object=new_edge)
+#         slot = 0
+#         for t in range(max_steps):
+#             sdf_pass = sdfapi.get_PASS(
+#                 sdf_topology,
+#                 np.array([[results["mapped_actors"][a][pidx][t] for (a, _) in enumerate(sdf_actors)]]).transpose(),
+#                 np.array([[results["flow"][a][pidx][t] for (c, _) in enumerate(sdf_channels)]]).transpose())
+#             for aidx in sdf_pass:
+#                 actor = sdf_actors[aidx]
+#                 if not new_model.has_edge(ordering, actor, key="object"):
+#                     new_edge = AbstractScheduling(source_vertex=ordering,
+#                                                   target_vertex=actor,
+#                                                   source_vertex_port=Port(identifier=f"slot[{slot}]"))
+#                     new_model.add_edge(ordering, actor, object=new_edge)
+#                     slot += 1
+#     for (commidx, comm) in enumerate(self.comms):
+#         ordering = orderings[commidx + len(self.cores)]
+#         if not new_model.has_edge(comm, ordering, key="object"):
+#             new_edge = AbstractMapping(source_vertex=comm,
+#                                        target_vertex=ordering,
+#                                        source_vertex_port=Port(identifier="timeslots"))
+#             new_model.add_edge(comm, ordering, object=new_edge)
+#         slots = [0 for c in sdf_channels]
+#         for (c, (s, t)) in enumerate(sdf_channels):
+#             path = sdf_channels[(s, t)]
+#             clashes = [
+#                 slots[cc] for (p, _) in enumerate(self.cores) for (pp, _) in enumerate(self.cores)
+#                 for t in range(max_steps) for tt in range(max_steps) for cc in range(c)
+#                 if results["send_start"][c][p][pp][t][tt][commidx] +
+#                 results["send_duration"][c][p][pp][t][tt][commidx] >= results["send_start"][cc][p][pp][t][tt]
+#                 [commidx] or results["send_start"][cc][p][pp][t][tt][commidx] + results["send_duration"][cc][p][pp]
+#                 [t][tt][commidx] >= results["send_start"][c][p][pp][t][tt][commidx]
+#             ]
+#             slots[c] = min(slot for slot in range(self.comms_capacity[commidx]) if slot not in clashes)
+#             for e in path:
+#                 new_edge = AbstractScheduling(source_vertex=ordering,
+#                                               target_vertex=e,
+#                                               source_vertex_port=Port(identifier=f"slot[{slots[c]}]"))
+#                 new_model.add_edge(ordering, e, object=new_edge)
+#     return new_model
 
 
 @dataclass
@@ -315,10 +320,10 @@ class SDFToMultiCoreCharacterized(DecisionModel):
     def get_mzn_data(self):
         data = self.sdf_mpsoc_sub.get_mzn_data()
         # remake the wcet and wcct with proper data
-        data['max_steps'] = self.sdf_mpsoc_sub.max_steps
-        data['wcet'] = self.wcet.tolist()
-        data['token_wcct'] = self.token_wcct.tolist()
-        data['objective_weights'] = [self.throughput_importance, self.latency_importance]
+        data["max_steps"] = self.sdf_mpsoc_sub.max_steps
+        data["wcet"] = self.wcet.tolist()
+        data["token_wcct"] = self.token_wcct.tolist()
+        data["objective_weights"] = [self.throughput_importance, self.latency_importance]
         return data
 
     def rebuild_forsyde_model(self, results):
@@ -365,7 +370,8 @@ class SDFToMPSoCClusteringMzn(MinizincableDecisionModel):
     def compute_deduced_properties(self):
         # conservative estimation of the number of clusters
         self.num_clusters = int(
-            self.sdf_mpsoc_char_sub.sdf_mpsoc_sub.sdf_orders_sub.sdf_exec_sub.sdf_repetition_vector.sum())
+            self.sdf_mpsoc_char_sub.sdf_mpsoc_sub.sdf_orders_sub.sdf_exec_sub.sdf_repetition_vector.sum()
+        )
 
     def get_mzn_model_name(self):
         return "sdf_mpsoc_linear_cluster.mzn"
@@ -382,8 +388,9 @@ class SDFToMPSoCClusteringMzn(MinizincableDecisionModel):
 @dataclass
 class JobScheduling(MinizincableDecisionModel):
 
-    # models that were abstracted in jobs
-    abstracted: Sequence[Vertex] = field(default_factory=list)
+    # models that were abstracted_vertexes in jobs
+    abstracted_vertexes: Sequence[Vertex] = field(default_factory=list)
+    abstracted_edges: Sequence[Edge] = field(default_factory=list)
 
     # properties
     jobs: Sequence[JobType] = field(default_factory=list)
@@ -418,7 +425,7 @@ class JobScheduling(MinizincableDecisionModel):
         return new_copy
 
     def covered_vertexes(self):
-        yield from self.abstracted
+        yield from self.abstracted_vertexes
         yield from self.jobs
         for p in self.procs:
             yield from p
@@ -431,12 +438,13 @@ class JobScheduling(MinizincableDecisionModel):
     #         model.get_edge_data()
 
     def dominates(self, other: "DecisionModel") -> bool:
-        if super().dominates(other):
-            return True
-        elif isinstance(other, JobScheduling):
+        if isinstance(other, JobScheduling):
             # it's the same identification, but with the times.
-            return len(set(self.covered_vertexes()).difference(other.covered_vertexes())) == 0\
-                and np.count_nonzero(self.wcet) > np.count_nonzero(other.wcet)
+            count_self = sum(1 if self.wcet[(j, p)] > 0 else 0 for (j, p) in self.wcet.items())
+            count_other = sum(1 if self.wcet[(j, p)] > 0 else 0 for (j, p) in other.wcet.items())
+            return super().dominates(other) and (count_self >= count_other)
+        elif super().dominates(other):
+            return True
         else:
             return False
 
@@ -445,50 +453,62 @@ class JobScheduling(MinizincableDecisionModel):
 
     def get_mzn_data(self):
         data = dict()
-        data['jobs'] = set(i + 1 for (i, _) in enumerate(self.jobs))
-        data['procs'] = set(i + 1 for (i, _) in enumerate(self.procs))
-        data['comms'] = set(i + 1 for (i, _) in enumerate(self.comms))
-        data['comm_capacity'] = [len(self.jobs) for _ in self.comms]
+        data["jobs"] = set(i + 1 for (i, _) in enumerate(self.jobs))
+        data["procs"] = set(i + 1 for (i, _) in enumerate(self.procs))
+        data["comms"] = set(i + 1 for (i, _) in enumerate(self.comms))
+        data["comm_capacity"] = [len(self.jobs) for _ in self.comms]
         # data['activations'] = self['self.sdf_mpsoc_sub.sdf_mpsoc_sub.sdf_orders_sub.sdf_exec_sub.sdf_repetition_vector
         # delete spurious elements
-        data['weak_next'] = [[tidx in self.weak_next[sidx] for (tidx, _) in enumerate(self.jobs)]
-                             for (sidx, _) in enumerate(self.jobs)]
-        data['strong_next'] = [[tidx in self.strong_next[sidx] for (tidx, _) in enumerate(self.jobs)]
-                               for (sidx, _) in enumerate(self.jobs)]
-        data['path'] = [[[0 for _ in self.comms] for _ in self.procs] for _ in self.procs]
-        for ((s, t), (pidx, p), (ppidx, pp), (cidx, c)) in itertools.product(self.paths, enumerate(self.procs),
-                                                                             enumerate(self.procs),
-                                                                             enumerate(self.comms)):
+        data["weak_next"] = [[t in self.weak_next[s] for t in self.jobs] for s in self.jobs]
+        data["strong_next"] = [[t in self.strong_next[s] for t in self.jobs] for s in self.jobs]
+        data["path"] = [[[0 for _ in self.comms] for _ in self.procs] for _ in self.procs]
+        for ((s, t), (pidx, p), (ppidx, pp), (cidx, c)) in itertools.product(
+            self.paths, enumerate(self.procs), enumerate(self.procs), enumerate(self.comms)
+        ):
             # TODO: find later a way to make the paths more flexible
-            path = next(self.paths[(s, t)])
+            path = next(iter(self.paths[(s, t)]))
             for (e, u) in enumerate(path):
                 if s in p and t in pp and u in c:
-                    data['path'][pidx][ppidx][cidx] = e + 1
-        data['wcet'] = self.wcet.tolist()
-        data['wcct'] = self.wcct.tolist()
-        data['release'] = [0 for j in self.jobs]
-        data['deadline'] = [0 for j in self.jobs]
-        data['objective_weights'] = self.objective_weights
+                    data["path"][pidx][ppidx][cidx] = e + 1
+        data["wcet"] = [
+            [self.wcet[(j, pidx)] if (j, pidx) in self.wcet else 0 for (pidx, p) in enumerate(self.procs)]
+            for j in self.jobs
+        ]
+        data["wcct"] = [
+            [
+                [self.wcct[(s, t, pidx)] if (s, t, pidx) in self.wcct else 0 for (pidx, p) in enumerate(self.comms)]
+                for t in self.jobs
+            ]
+            for s in self.jobs
+        ]
+        data["release"] = [0 for j in self.jobs]
+        data["deadline"] = [0 for j in self.jobs]
+        data["objective_weights"] = self.objective_weights
         # we need to sum 1 since the procs set start 1 and not zero.
-        data['pre_mapping'] = [
-            self.pre_mapping[(i, j)] if (i, j) in self.pre_mapping else 0
-            for (idx, (i, j)) in enumerate(self.pre_mapping)
+        data["pre_mapping"] = [
+            self.pre_mapping[j] if j in self.pre_mapping else 0
+            for j in self.jobs
         ]
-        data['pre_scheduling'] = [
-            self.pre_scheduling[(i, j)] if (i, j) in self.pre_scheduling else 0
-            for (idx, (i, j)) in enumerate(self.pre_scheduling)
+        data["pre_scheduling"] = [
+            self.pre_scheduling[j] if j in self.pre_scheduling else 0
+            for j in self.jobs
         ]
-        data['allowed_mapping'] = [[
-            p in self.job_colocation[j] if j in self.job_colocation else True for (p, _) in enumerate(self.procs)
-        ] for (j, _) in enumerate(self.jobs)]
+        data["allowed_mapping"] = [
+            [
+                p in self.job_allowed_location[j] if j in self.job_allowed_location else True
+                for (p, _) in enumerate(self.procs)
+            ]
+            for j in self.jobs
+        ]
+        print(data)
         return data
 
     def rebuild_forsyde_model(self, results):
         new_model = self.covered_model()
         # todo: must find a better and more general way to rebuild the
         # job shop abstraction
-        throughput = max(results['job_min_latency'])
-        triggers = results['start']
+        throughput = max(results["job_min_latency"])
+        triggers = results["start"]
         start_time = [
             min((triggers[j][p] for (j, _) in enumerate(self.jobs) if triggers[j][p] is not None), default=0)
             for (p, _) in enumerate(self.procs)
@@ -503,8 +523,9 @@ class JobScheduling(MinizincableDecisionModel):
                         if not new_model.has_edge(p, pp, key="object"):
                             edata = new_model.get_edge_data(p, pp, default=dict())
                             new_edge = AbstractMapping(source_vertex=p, target_vertex=pp)
-                            if not any('object' in edict and edict['object'] == new_edge
-                                       for (_, edict) in edata.items()):
+                            if not any(
+                                "object" in edict and edict["object"] == new_edge for (_, edict) in edata.items()
+                            ):
                                 new_model.add_edge(p, pp, object=new_edge)
                     # add the job to this one machine, assuming the
                     # last element is the one represeting the machine's
@@ -513,20 +534,18 @@ class JobScheduling(MinizincableDecisionModel):
                     if not new_model.has_edge(p, job, key="object"):
                         new_edge = AbstractScheduling(source_vertex=p, target_vertex=job)
                         new_model.add_edge(p, job, object=new_edge)
-                        p.properties['start-time'] = start_time[pidx]
-                        if 'trigger-time' not in p.properties:
-                            p.properties['trigger-time'] = {}
-                        p.properties['trigger-time'][t - start_time[pidx]] = job.identifier
-                        p.properties['period'] = throughput
-                        p.properties['time-scale'] = self.time_scale
+                        p.properties["start-time"] = start_time[pidx]
+                        if "trigger-time" not in p.properties:
+                            p.properties["trigger-time"] = {}
+                        p.properties["trigger-time"][t - start_time[pidx]] = job.identifier
+                        p.properties["period"] = throughput
+                        p.properties["time-scale"] = self.time_scale
         for (sidx, tidx) in self.comm_channels:
             paths = self.comm_channels[(sidx, tidx)]
             for ((procsi, procs), (procti, proct)) in itertools.product(enumerate(self.procs), repeat=2):
                 for (ui, u) in enumerate(self.comms):
                     t = results["comm_start"][sidx][tidx][ui]
-                    if procsi != procti and results["start"][sidx][procsi] \
-                            and results["start"][tidx][procti]\
-                            and t > 0:
+                    if procsi != procti and results["start"][sidx][procsi] and results["start"][tidx][procti] and t > 0:
                         # create the mapping between elements of the abstract
                         # processing communicator
                         for (p, pp) in zip(u[:-1], u[1:]):
@@ -542,9 +561,9 @@ class JobScheduling(MinizincableDecisionModel):
                                 if not new_model.has_edge(p, c, key="object"):
                                     new_edge = AbstractScheduling(source_vertex=p, target_vertex=c)
                                     new_model.add_edge(p, c, object=new_edge)
-                                    if 'trigger-time' not in p.properties:
-                                        p.properties['trigger-time'] = {}
-                                    p.properties['trigger-time'][c.identifier] = t
+                                    if "trigger-time" not in p.properties:
+                                        p.properties["trigger-time"] = {}
+                                    p.properties["trigger-time"][c.identifier] = t
         return new_model
 
 
@@ -597,10 +616,10 @@ class TimeTriggeredPlatform(DecisionModel):
     core_memory: Dict[AbstractProcessingComponent, int] = field(default_factory=dict)
     comms_bandwidth: Dict[AbstractCommunicationComponent, int] = field(default_factory=dict)
 
-    abstracted: Sequence[Vertex] = field(default_factory=list)
+    abstracted_vertexes: Sequence[Vertex] = field(default_factory=list)
 
     def covered_vertexes(self) -> Iterable[Vertex]:
-        yield from self.abstracted
+        yield from self.abstracted_vertexes
         yield from self.schedulers
         yield from self.cores
         yield from self.comms

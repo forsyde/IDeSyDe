@@ -1,6 +1,7 @@
 import concurrent.futures
 import os
 import importlib
+import itertools
 from enum import Flag
 from enum import auto
 from typing import List
@@ -11,7 +12,8 @@ from typing import Optional
 # import idesyde.identification.rules as ident_rules
 from forsyde.io.python.api import ForSyDeModel
 from idesyde.identification.interfaces import DecisionModel
-#from idesyde.identification.interfaces import IdentificationRule
+
+# from idesyde.identification.interfaces import IdentificationRule
 
 IdentificationRuleType = Callable[[ForSyDeModel, List[DecisionModel]], Tuple[bool, Optional[DecisionModel]]]
 
@@ -19,13 +21,14 @@ _registered_rules: List[IdentificationRuleType] = list()
 
 
 class ChoiceCriteria(Flag):
-    '''Flag to indicate decision model choice
+    """Flag to indicate decision model choice
 
     If many models are identified at once, and they are
     super identifications of each other, a choice between them
     may be necessary. This flag represents some possibilities
     for such choice
-    '''
+    """
+
     DOMINANCE = auto()
 
 
@@ -33,25 +36,26 @@ def _get_registered_rules(include_internal: bool = True) -> List[IdentificationR
     # read standard modules for rules
     # TODO: maybe there's a future proof way of doing this...
     if include_internal:
-        importlib.import_module('idesyde.identification.rules')
+        importlib.import_module("idesyde.identification.rules")
     return _registered_rules  # if _registered_rules else list(r_class() for r_class in ident_rules._standard_rules_classes)
 
 
 def register_identification_rule(func: IdentificationRuleType):
-    '''Decorator to register a rule to be used in the identification procedure
-    
+    """Decorator to register a rule to be used in the identification procedure
+
     Arguments:
         func: must be a function of signature [ForSyDeModel, List[DecisionModel]] -> (bool, Optional[DecisionModel]).
             The first boolean indicates a fixpoint for the rule and the second result is the partially identified
             Decision model, if any.
-    '''
+    """
     _registered_rules.append(func)
     return func
 
 
 def identify_decision_models(
-    model: ForSyDeModel, rules: List[IdentificationRuleType] = _get_registered_rules()) -> List[DecisionModel]:
-    '''
+    model: ForSyDeModel, rules: List[IdentificationRuleType] = _get_registered_rules()
+) -> List[DecisionModel]:
+    """
     This function runs the Design Space Identification scheme,
     as presented in paper [DSI-DATE'2021], so that problems can
     be automatically solved from the given input model.
@@ -59,7 +63,7 @@ def identify_decision_models(
     If the argument **problems** is not passed,
     the API uses all subclasses found during runtime that implement
     the interfaces DecisionModel and Explorer.
-    '''
+    """
     max_iterations = len(model) * len(rules)
     allowed_rules = [rule for rule in rules]
     identified: List[DecisionModel] = []
@@ -77,10 +81,12 @@ def identify_decision_models(
     return identified
 
 
-def identify_decision_models_parallel(model: ForSyDeModel,
-                                      rules: List[IdentificationRuleType] = _get_registered_rules(),
-                                      concurrent_idents: int = os.cpu_count() or 1) -> List[DecisionModel]:
-    '''
+def identify_decision_models_parallel(
+    model: ForSyDeModel,
+    rules: List[IdentificationRuleType] = _get_registered_rules(),
+    concurrent_idents: int = os.cpu_count() or 1,
+) -> List[DecisionModel]:
+    """
     This function runs the Design Space Identification scheme,
     as presented in paper [DSI-DATE'2021], so that problems can
     be automatically solved from the given input model. It also
@@ -90,7 +96,7 @@ def identify_decision_models_parallel(model: ForSyDeModel,
     If the argument **problems** is not passed,
     the API uses all subclasses found during runtime that implement
     the interfaces DecisionModel and Explorer.
-    '''
+    """
     max_iterations = len(model) * len(rules)
     allowed_rules = [rule for rule in rules]
     identified: List[DecisionModel] = []
@@ -113,10 +119,10 @@ def identify_decision_models_parallel(model: ForSyDeModel,
         return identified
 
 
-def choose_decision_models(models: List[DecisionModel],
-                           criteria: ChoiceCriteria = ChoiceCriteria.DOMINANCE,
-                           desired_names: List[str] = []) -> List[DecisionModel]:
-    '''Filter out decision models based on some criteria
+def choose_decision_models(
+    models: List[DecisionModel], criteria: ChoiceCriteria = ChoiceCriteria.DOMINANCE, desired_names: List[str] = []
+) -> List[DecisionModel]:
+    """Filter out decision models based on some criteria
 
     This function enables super identifications to subsume
     sub identifications in the end, otherwise for the final
@@ -129,32 +135,44 @@ def choose_decision_models(models: List[DecisionModel],
         provided _and_ on specific names for some DecisionModels.
         The last option is particularly interesting for debugging
         and advanced solution techniques.
-    '''
+    """
     if desired_names:
         models = [m for m in models if m.short_name() in desired_names]
     if criteria & ChoiceCriteria.DOMINANCE:
-        non_dominated = [m for m in models]
-        for m in models:
-            for other in models:
-                if m in non_dominated and m != other and other.dominates(m):
-                    non_dominated.remove(m)
-        return non_dominated
-    else:
-        return models
+        # build up a "dominance graph" and retain
+        # only the subset of model that dominates all others,
+        # including themselves
+        model_enum = list(enumerate(models))
+        dominance = {i: {j: m.dominates(other) for (j, other) in model_enum} for (i, m) in model_enum}
+        # it's like the floyd warshall algorithm
+        for (m, s, t) in itertools.product(range(len(models)), repeat=3):
+            if dominance[s][m] and dominance[m][t]:
+                dominance[s][t] = True
+        # retain only those models that either are not dominated or dominate
+        # those that dominate them as well, i.e. cyclic dominance or no order possible.
+        models = [
+            m
+            for (i, m) in model_enum
+            if all(dominance[i][j] for (j, other) in model_enum if i != j and dominance[j][i])
+        ]
+    return models
 
 
 async def identify_decision_models_async(
-    model: ForSyDeModel, rules: List[IdentificationRuleType] = _get_registered_rules()) -> List[DecisionModel]:
-    '''
+    model: ForSyDeModel, rules: List[IdentificationRuleType] = _get_registered_rules()
+) -> List[DecisionModel]:
+    """
     AsyncIO version of the same function. Wraps the non-async version.
-    '''
+    """
     return identify_decision_models(model, rules)
 
 
-async def identify_decision_models_parallel_async(model: ForSyDeModel,
-                                                  rules: List[IdentificationRuleType] = _get_registered_rules(),
-                                                  concurrent_idents: int = os.cpu_count() or 1) -> List[DecisionModel]:
-    '''
+async def identify_decision_models_parallel_async(
+    model: ForSyDeModel,
+    rules: List[IdentificationRuleType] = _get_registered_rules(),
+    concurrent_idents: int = os.cpu_count() or 1,
+) -> List[DecisionModel]:
+    """
     AsyncIO version of the same function. Wraps the non-async version.
-    '''
+    """
     return identify_decision_models_parallel(model, rules, concurrent_idents)

@@ -155,7 +155,11 @@ def choose_decision_models(
             for (i, m) in model_enum
             if all(dominance[i][j] for (j, other) in model_enum if i != j and dominance[j][i])
         ]
-    return models
+    unique_models: List[DecisionModel] = []
+    for m in models:
+        if not any(o == m for o in unique_models):
+            unique_models.append(m)
+    return unique_models
 
 
 async def identify_decision_models_async(

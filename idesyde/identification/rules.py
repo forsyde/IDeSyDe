@@ -670,31 +670,29 @@ def identify_instrumentation_in_jobs_from_sdf(model: ForSyDeModel, identified: L
 def identify_location_req_in_jobs_from_sdf(
     model: ForSyDeModel, identified: List[DecisionModel]
 ) -> IdentificationOutput:
-    res = None
-    sub_jobs: Optional[JobScheduling] = next((p for p in identified if isinstance(p, JobScheduling)), None)
-    sub_sdf: Optional[SDFExecution] = next((p for p in identified if isinstance(p, SDFExecution)), None)
-    if sub_jobs and sub_sdf:
+    sub_jobs: Sequence[JobScheduling] = [p for p in identified if isinstance(p, JobScheduling)]
+    location_vertexes = [li for li in model if isinstance(li, LocationRequirement)]
+    # check if any of the sub problems already covered the requirements
+    if any(all(lver in sub.covered_vertexes() for lver in location_vertexes) for sub in sub_jobs):
+        return (True, None)
+    for sub in sub_jobs:
         location_req: Dict[JobType, Collection[int]] = dict()
-        location_vertexes = [li for li in model if isinstance(li, LocationRequirement)]
-        located_jobs = {l: [(i, j) for (i, j) in enumerate(sub_jobs.jobs) if j in model[l]] for l in location_vertexes}
+        located_jobs = {l: [(i, j) for (i, j) in sub.jobs if j in model[l]] for l in location_vertexes}
         located_procs = {
-            l: [(i, p) for (i, p) in enumerate(sub_jobs.procs) if any(u in model[l] for u in p)]
-            for l in location_vertexes
+            l: [(i, p) for (i, p) in enumerate(sub.procs) if any(u in model[l] for u in p)] for l in location_vertexes
         }
         for l in location_vertexes:
             jobs = located_jobs[l]
             procs = located_procs[l]
             for (i, j) in jobs:
-                location_req[j] = [pi for (pi, p) in procs]
-        res = sub_jobs.new(
-            abstracted_vertexes=set(sub_jobs.covered_vertexes()) | set(location_vertexes), job_allowed_location=location_req
+                location_req[(i, j)] = [pi for (pi, p) in procs]
+        res = sub.new(
+            abstracted_vertexes=set(sub.covered_vertexes()) | set(location_vertexes),
+            job_allowed_location=location_req,
         )
-    if res:
-        return (True, res)
-    elif sub_jobs and sub_sdf and not res:
-        return (True, None)
-    else:
-        return (False, None)
+        if res not in identified:
+            return (False, res)
+    return (False, None)
 
 
 @register_identification_rule
@@ -733,13 +731,13 @@ def identify_merge_job_scheduling_simple(
         comms_keys = set(_hash_sequence(k) for k in comms)
         comms += [comm for comm in sub.comms if _hash_sequence(comm) not in comms_keys]
         for ((j, p), val) in sub.wcet.items():
-            pkey = _hash_sequence(p)
+            pkey = _hash_sequence(sub.procs[p])
             if (j, pkey) in wcet:
                 wcet[(j, pkey)] = max(wcet[(j, pkey)], val)
             else:
                 wcet[(j, pkey)] = val
         for ((j, jj, p), val) in sub.wcct.items():
-            pkey = _hash_sequence(p)
+            pkey = _hash_sequence(sub.procs[p])
             if (j, pkey) in wcct:
                 wcct[(j, jj, pkey)] = max(wcct[(j, jj, pkey)], val)
             else:
@@ -766,7 +764,7 @@ def identify_merge_job_scheduling_simple(
                 pre_mapping_proctype[j] = _hash_sequence(sub.procs[p])
         for (j, ps) in sub.job_allowed_location.items():
             if j not in location_req_proctype:
-                location_req_proctype[j] = {_hash_sequence(p) for pidx in ps for p in sub.procs[pidx]}
+                location_req_proctype[j] = {_hash_sequence(sub.procs[pidx]) for pidx in ps}
         goals_vertexes = goals_vertexes.union(set(sub.goals_vertexes))
         # We kee padding objective weights if new list elements are found
         # since it is reasonable to assume that a model has the same amount
@@ -798,10 +796,12 @@ def identify_merge_job_scheduling_simple(
         time_scale=max(s.time_scale for s in sub_jobs),
         job_allowed_location=location_req,
     )
-    if res and all(v in covered for v in model.nodes):
-        return (True, res)
-    else:
+    if res in identified and all(v in covered for v in model.nodes):
+        return (True, None)
+    if res in identified and not all(v in covered for v in model.nodes):
         return (False, None)
+    else:
+        return (False, res)
 
 
 @register_identification_rule
@@ -915,3 +915,40 @@ def identify_jobs_sdf_time_trigger_multicore(model: ForSyDeModel, identified: Li
         comms=[[p, o] for (p, o) in time_trig_platform_sub.comm_scheduler.items()],
     )
     return (True, res)
+
+
+@register_identification_rule
+def identify_jobs_insturmentation_vertexes(
+    model: ForSyDeModel, identified: List[DecisionModel]
+) -> IdentificationOutput:
+    sub_jobs: Sequence[JobScheduling] = [p for p in identified if isinstance(p, JobScheduling)]
+    wcet_vertexes = set(li for li in model if isinstance(li, WCET))
+    wcct_vertexes = set(li for li in model if isinstance(li, WCCT))
+    abstracted = wcet_vertexes | wcct_vertexes
+    # check if any of the sub problems already covered the requirements
+    if any(all(v in sub.covered_vertexes() for v in abstracted) for sub in sub_jobs):
+        return (True, None)
+    for sub in sub_jobs:
+        wcet: Dict[Tuple[JobType, ProcType], int] = dict()
+        wcct: Dict[Tuple[JobType, JobType, CommType], int] = dict()
+        for ((i, job), (pidx, p)) in itertools.product(sub.jobs, enumerate(sub.procs)):
+            core = next(u for u in p if isinstance(u, AbstractProcessingComponent))
+            # get the maximum value of all the WCET relationships between the job and the processing unit
+            wcet[((i, job), pidx)] = max(
+                int(w.get_time()) for w in wcet_vertexes if core in model[w] and job in model[w]
+            )
+        for ((((i, job), (j, job2)), channels), (pidx, p)) in itertools.product(sub.comm_channels.items(), enumerate(sub.comms)):
+            comm = next(u for u in p if isinstance(u, AbstractCommunicationComponent))
+            # get the sum of all maximum values between channels and the communication units
+            wcct[((i, job), (j, job2), pidx)] = sum(
+                max(int(w.get_time()) for w in wcct_vertexes if comm in model[w] and c in model[w])
+                for channel in channels for c in channel
+            )
+        res = sub.new(
+            abstracted_vertexes=set(sub.covered_vertexes()) | set(abstracted),
+            wcet=wcet,
+            wcct=wcct
+        )
+        if res not in identified:
+            return (False, res)
+    return (False, None)

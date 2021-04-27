@@ -43,6 +43,17 @@ ProcType = int
 CommType = int
 
 
+def _extended_eq(a, b):
+    if isinstance(a, dict) and isinstance(b, dict):
+        return all(ka in b and _extended_eq(a[ka], b[ka]) for ka in a) and all(
+            kb in a and _extended_eq(a[kb], b[kb]) for kb in b
+        )
+    elif isinstance(a, list) and isinstance(b, list):
+        return len(a) == len(b) and all(_extended_eq(va, vb) for (va, vb) in zip(a, b))
+    else:
+        return a == b
+
+
 @dataclass
 class SDFExecution(DecisionModel):
     """
@@ -418,15 +429,52 @@ class JobScheduling(MinizincableDecisionModel):
     goals_vertexes: Sequence[Vertex] = field(default_factory=list)
     time_scale: int = 1  # multiply the time line for the whole problem
 
+    def __gt__(self, o):
+        if isinstance(o, JobScheduling):
+            return self.dominates(o)
+        else:
+            return False
+
+    def __lt__(self, o):
+        if isinstance(o, JobScheduling):
+            return o.dominates(self)
+        else:
+            return False
+
+    # def __eq__(self, o):
+    #     if isinstance(o, JobScheduling):
+    #         return set(self.abstracted_vertexes) == set(o.abstracted_vertexes) and\
+    #             set(self.abstracted_edges) == set(o.abstracted_edges) and\
+    #             set(self.jobs) == set(o.jobs) and\
+    #             _extended_eq(self.weak_next, o.weak_next) and\
+    #             _extended_eq(self.strong_next, o.strong_next) and\
+    #             _extended_eq(self.comm_channels, o.comm_channels) and\
+    #             _extended_eq(self.pre_mapping, o.pre_mapping) and\
+    #             _extended_eq(self.pre_scheduling, o.pre_scheduling) and\
+    #             _extended_eq(self.procs, o.procs) and\
+    #             _extended_eq(self.comms, o.comms) and\
+    #             _extended_eq(self.procs_capacity, o.procs_capacity) and\
+    #             _extended_eq(self.comm_capacity, o.comm_capacity) and\
+    #             _extended_eq(self.job_allowed_location, o.job_allowed_location) and\
+    #             _extended_eq(self.wcet, o.wcet) and\
+    #             _extended_eq(self.wcct, o.wcct) and\
+    #             _extended_eq(self.paths, o.paths) and\
+    #             _extended_eq(self.objective_weights, o.objective_weights) and\
+    #             _extended_eq(self.goals_vertexes, o.goals_vertexes) and\
+    #             self.time_scale == o.time_scale
+    #     else:
+    #         return False
+
     def new(self, **kwargs):
         new_copy = copy.copy(self)
         for (k, arg) in kwargs.items():
-            setattr(new_copy, k, getattr(self, k))
+            setattr(new_copy, k, arg)
         return new_copy
 
     def covered_vertexes(self):
         yield from self.abstracted_vertexes
-        yield from self.jobs
+        for (_, a) in self.jobs:
+            yield a
         for p in self.procs:
             yield from p
         for p in self.comms:
@@ -440,10 +488,8 @@ class JobScheduling(MinizincableDecisionModel):
     def dominates(self, other: "DecisionModel") -> bool:
         if isinstance(other, JobScheduling):
             # it's the same identification, but with the times.
-            count_self = sum(1 if self.wcet[(j, p)] > 0 else 0 for (j, p) in self.wcet.items())
-            count_other = sum(1 if self.wcet[(j, p)] > 0 else 0 for (j, p) in other.wcet.items())
-            print(count_self)
-            print(count_other)
+            count_self = sum(1 if v > 0 else 0 for v in self.wcet.values()) + sum(1 if v > 0 else 0 for v in self.wcct.values())
+            count_other = sum(1 if v > 0 else 0 for v in other.wcet.values()) + sum(1 if v > 0 else 0 for v in self.wcct.values())
             return super().dominates(other) and (count_self >= count_other)
         elif super().dominates(other):
             return True
@@ -487,14 +533,8 @@ class JobScheduling(MinizincableDecisionModel):
         data["deadline"] = [0 for j in self.jobs]
         data["objective_weights"] = self.objective_weights
         # we need to sum 1 since the procs set start 1 and not zero.
-        data["pre_mapping"] = [
-            self.pre_mapping[j] if j in self.pre_mapping else 0
-            for j in self.jobs
-        ]
-        data["pre_scheduling"] = [
-            self.pre_scheduling[j] if j in self.pre_scheduling else 0
-            for j in self.jobs
-        ]
+        data["pre_mapping"] = [self.pre_mapping[j] if j in self.pre_mapping else 0 for j in self.jobs]
+        data["pre_scheduling"] = [self.pre_scheduling[j] if j in self.pre_scheduling else 0 for j in self.jobs]
         data["allowed_mapping"] = [
             [
                 p in self.job_allowed_location[j] if j in self.job_allowed_location else True
@@ -502,7 +542,6 @@ class JobScheduling(MinizincableDecisionModel):
             ]
             for j in self.jobs
         ]
-        print(data)
         return data
 
     def rebuild_forsyde_model(self, results):
@@ -515,7 +554,7 @@ class JobScheduling(MinizincableDecisionModel):
             min((triggers[j][p] for (j, _) in enumerate(self.jobs) if triggers[j][p] is not None), default=0)
             for (p, _) in enumerate(self.procs)
         ]
-        for (j, job) in enumerate(self.jobs):
+        for (j, job) in self.jobs:
             for (pidx, proc) in enumerate(self.procs):
                 t = triggers[j][pidx]
                 if t is not None:
@@ -542,8 +581,9 @@ class JobScheduling(MinizincableDecisionModel):
                         p.properties["trigger-time"][t - start_time[pidx]] = job.identifier
                         p.properties["period"] = throughput
                         p.properties["time-scale"] = self.time_scale
-        for (sidx, tidx) in self.comm_channels:
-            paths = self.comm_channels[(sidx, tidx)]
+        for ((s, t), paths) in self.comm_channels.items():
+            sidx = self.jobs.index(s)
+            tidx = self.jobs.index(t)
             for ((procsi, procs), (procti, proct)) in itertools.product(enumerate(self.procs), repeat=2):
                 for (ui, u) in enumerate(self.comms):
                     t = results["comm_start"][sidx][tidx][ui]

@@ -702,8 +702,8 @@ def identify_merge_job_scheduling_simple(
     sub_jobs: Collection[JobScheduling] = [p for p in identified if isinstance(p, JobScheduling)]
     if len(sub_jobs) <= 1:
         return (False, None)
-    covered: Sequence[Vertex] = reduce(operator.or_, (set(m.covered_vertexes()) for m in identified), set())
-    jobs: Sequence[JobType] = reduce(operator.or_, (set(sub.jobs) for sub in sub_jobs), set())
+    covered: Sequence[Vertex] = list(reduce(operator.or_, (set(m.covered_vertexes()) for m in identified), set()))
+    jobs: Sequence[JobType] = list(reduce(operator.or_, (set(sub.jobs) for sub in sub_jobs), set()))
     procs: List[Sequence[Vertex]] = []
     procs_keys: Set[ProcType] = set()
     comms: List[Sequence[Vertex]] = []
@@ -746,19 +746,23 @@ def identify_merge_job_scheduling_simple(
             if (j1, j2) in comm_channels:
                 comm_keys = set(_hash_sequence(li) for li in comm_channels[(j1, j2)])
                 comm_channels[(j1, j2)] += [li for li in ch if _hash_sequence(li) not in comm_keys]
+            else:
+                comm_channels[(j1, j2)] = list(ch)
         for ((v1, v2), ch) in sub.paths.items():
             if (v1, v2) in paths:
                 paths_keys = set(_hash_sequence(li) for li in paths[(v1, v2)])
                 paths[(v1, v2)] += [li for li in ch if _hash_sequence(li) not in paths_keys]
+            else:
+                paths[(v1, v2)] = list(ch)
         for (j, actor) in sub.jobs:
             if (j, actor) in weak_next:
-                weak_next[(j, actor)] = set(weak_next[(j, actor)]) | set(sub.weak_next[(j, actor)])
+                weak_next[(j, actor)] = list(set(weak_next[(j, actor)]) | set(sub.weak_next[(j, actor)]))
             else:
-                weak_next[(j, actor)] = sub.weak_next[(j, actor)]
+                weak_next[(j, actor)] = list(sub.weak_next[(j, actor)])
             if (j, actor) in strong_next:
-                strong_next[(j, actor)] = set(strong_next[(j, actor)]) | set(sub.strong_next[(j, actor)])
+                strong_next[(j, actor)] = list(set(strong_next[(j, actor)]) | set(sub.strong_next[(j, actor)]))
             else:
-                strong_next[(j, actor)] = sub.strong_next[(j, actor)]
+                strong_next[(j, actor)] = list(sub.strong_next[(j, actor)])
         for (j, p) in sub.pre_mapping.items():
             if j not in pre_mapping_proctype:
                 pre_mapping_proctype[j] = _hash_sequence(sub.procs[p])
@@ -834,13 +838,13 @@ def identify_time_triggered_platform(
     }
     # TODO: Identify also connected memory elements!
 
-    core_scheduler = {p: o for p in cores for o in schedulers if nx.has_path(model, p, o)}
-    comm_scheduler = {p: o for p in comms for o in schedulers if nx.has_path(model, p, o)}
+    core_scheduler = {p: o for p in cores for o in schedulers if o in model[p]}
+    comm_scheduler = {p: o for p in comms for o in schedulers if o in model[p]}
     # second pass to now put all free schedulers together
     for (o, core) in itertools.product(schedulers, cores):
         if core not in core_scheduler and o not in core_scheduler.values():
             core_scheduler[core] = o
-    for (o, comm) in itertools.product(schedulers, comms):
+    for (o, comm) in itertools.product(reversed(schedulers), comms):
         if comm not in comm_scheduler and o not in comm_scheduler.values():
             comm_scheduler[comm] = o
     abstracted_vertexes = cast(Sequence[Vertex], set(schedulers) | set(cores) | set(comms))

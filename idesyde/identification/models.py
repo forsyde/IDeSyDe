@@ -488,8 +488,12 @@ class JobScheduling(MinizincableDecisionModel):
     def dominates(self, other: "DecisionModel") -> bool:
         if isinstance(other, JobScheduling):
             # it's the same identification, but with the times.
-            count_self = sum(1 if v > 0 else 0 for v in self.wcet.values()) + sum(1 if v > 0 else 0 for v in self.wcct.values())
-            count_other = sum(1 if v > 0 else 0 for v in other.wcet.values()) + sum(1 if v > 0 else 0 for v in self.wcct.values())
+            count_self = sum(1 if v > 0 else 0 for v in self.wcet.values()) + sum(
+                1 if v > 0 else 0 for v in self.wcct.values()
+            )
+            count_other = sum(1 if v > 0 else 0 for v in other.wcet.values()) + sum(
+                1 if v > 0 else 0 for v in self.wcct.values()
+            )
             return super().dominates(other) and (count_self >= count_other)
         elif super().dominates(other):
             return True
@@ -550,11 +554,24 @@ class JobScheduling(MinizincableDecisionModel):
         # job shop abstraction
         throughput = max(results["job_min_latency"])
         triggers = results["start"]
+        # get the starting times for the execution and communication schedules
         start_time = [
             min((triggers[j][p] for (j, _) in enumerate(self.jobs) if triggers[j][p] is not None), default=0)
             for (p, _) in enumerate(self.procs)
         ]
-        for (j, job) in self.jobs:
+        start_time_comm = [
+            min(
+                (
+                    results["comm_start"][j][jj][p]
+                    for (j, _) in enumerate(self.jobs)
+                    for (jj, _) in enumerate(self.jobs)
+                    if results["comm_start"][j][jj][p] is not None
+                ),
+                default=0,
+            )
+            for (p, _) in enumerate(self.comms)
+        ]
+        for (j, (i, job)) in enumerate(self.jobs):
             for (pidx, proc) in enumerate(self.procs):
                 t = triggers[j][pidx]
                 if t is not None:
@@ -562,6 +579,7 @@ class JobScheduling(MinizincableDecisionModel):
                     # processing machine
                     for (p, pp) in zip(proc[:-1], proc[1:]):
                         if not new_model.has_edge(p, pp, key="object"):
+                            # print(p.identifier, pp.identifier)
                             edata = new_model.get_edge_data(p, pp, default=dict())
                             new_edge = AbstractMapping(source_vertex=p, target_vertex=pp)
                             if not any(
@@ -571,41 +589,50 @@ class JobScheduling(MinizincableDecisionModel):
                     # add the job to this one machine, assuming the
                     # last element is the one represeting the machine's
                     # interface
-                    p = proc[-1]
-                    if not new_model.has_edge(p, job, key="object"):
-                        new_edge = AbstractScheduling(source_vertex=p, target_vertex=job)
-                        new_model.add_edge(p, job, object=new_edge)
-                        p.properties["start-time"] = start_time[pidx]
-                        if "trigger-time" not in p.properties:
-                            p.properties["trigger-time"] = {}
-                        p.properties["trigger-time"][t - start_time[pidx]] = job.identifier
-                        p.properties["period"] = throughput
-                        p.properties["time-scale"] = self.time_scale
+                    scheduler = proc[-1]
+                    if not new_model.has_edge(scheduler, job, key="object"):
+                        new_edge = AbstractScheduling(source_vertex=scheduler, target_vertex=job)
+                        new_model.add_edge(scheduler, job, object=new_edge)
+                        scheduler.properties["start-time"] = start_time[pidx]
+                        if "trigger-time" not in scheduler.properties:
+                            scheduler.properties["trigger-time"] = {}
+                        scheduler.properties["trigger-time"][t - start_time[pidx]] = job.identifier
+                        scheduler.properties["period"] = throughput
+                        scheduler.properties["time-scale"] = self.time_scale
         for ((s, t), paths) in self.comm_channels.items():
             sidx = self.jobs.index(s)
             tidx = self.jobs.index(t)
-            for ((procsi, procs), (procti, proct)) in itertools.product(enumerate(self.procs), repeat=2):
-                for (ui, u) in enumerate(self.comms):
-                    t = results["comm_start"][sidx][tidx][ui]
-                    if procsi != procti and results["start"][sidx][procsi] and results["start"][tidx][procti] and t > 0:
-                        # create the mapping between elements of the abstract
-                        # processing communicator
-                        for (p, pp) in zip(u[:-1], u[1:]):
-                            if not new_model.has_edge(p, pp, key="object"):
-                                new_edge = AbstractMapping(source_vertex=p, target_vertex=pp)
+            for (ui, u) in enumerate(self.comms):
+                t = results["comm_start"][sidx][tidx][ui]
+                # if procsi != procti and results["start"][sidx][procsi] and results["start"][tidx][procti] and t > 0:
+                if t > 0:
+                # for ((procsi, procs), (procti, proct)) in itertools.product(enumerate(self.procs), repeat=2):
+                #     print(sidx, tidx, procsi, procti, t)
+                    # create the mapping between elements of the abstract
+                    # processing communicator
+                    for (p, pp) in zip(u[:-1], u[1:]):
+                        # print(p.identifier, pp.identifier)
+                        if not new_model.has_edge(p, pp, key="object"):
+                            new_edge = AbstractMapping(source_vertex=p, target_vertex=pp)
+                            if not any(
+                                "object" in edict and edict["object"] == new_edge for (_, edict) in edata.items()
+                            ):
                                 new_model.add_edge(p, pp, object=new_edge)
-                        # add the comm job to this one communicator, assuming the
-                        # last element is the one represeting the machine's
-                        # interface
-                        p = u[-1]
-                        for path in paths:
-                            for c in path:
-                                if not new_model.has_edge(p, c, key="object"):
-                                    new_edge = AbstractScheduling(source_vertex=p, target_vertex=c)
-                                    new_model.add_edge(p, c, object=new_edge)
-                                    if "trigger-time" not in p.properties:
-                                        p.properties["trigger-time"] = {}
-                                    p.properties["trigger-time"][c.identifier] = t
+                    # add the comm job to this one communicator, assuming the
+                    # last element is the one represeting the machine's
+                    # interface
+                    scheduler = u[-1]
+                    for path in paths:
+                        for c in path:
+                            if not new_model.has_edge(scheduler, c, key="object"):
+                                new_edge = AbstractScheduling(source_vertex=scheduler, target_vertex=c)
+                                new_model.add_edge(scheduler, c, object=new_edge)
+                                scheduler.properties["start-time"] = start_time_comm[ui]
+                                if "trigger-time" not in scheduler.properties:
+                                    scheduler.properties["trigger-time"] = {}
+                                scheduler.properties["trigger-time"][t - start_time_comm[ui]] = c.identifier
+                                scheduler.properties["period"] = throughput
+                                scheduler.properties["time-scale"] = self.time_scale
         return new_model
 
 

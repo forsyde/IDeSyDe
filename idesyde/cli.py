@@ -1,6 +1,7 @@
 import argparse
 import logging
 import random
+from pathlib import Path
 
 import forsyde.io.python.api as forsyde_io
 import networkx as nx
@@ -43,14 +44,12 @@ def cli_entry():
                         '--output',
                         type=str,
                         action='append',
-                        nargs=1,
                         help='''
                         Output files, which can be another model or
                         graph visualization formats.
                         ''')
     parser.add_argument('--decision-model',
                         action='append',
-                        nargs=1,
                         help='''
                         Filter decision model to match these short names.
                         ''')
@@ -79,7 +78,7 @@ def cli_entry():
     identified = identify_decision_models(in_model)
     logger.info(f'{len(identified)} Decision model(s) identified')
     logger.debug(f"Decision models identified: {identified}")
-    desired_names = [i[0] for i in args.decision_model] if args.decision_model else []
+    desired_names = [i for i in args.decision_model] if args.decision_model else []
     models_chosen = choose_decision_models(identified, desired_names=desired_names)
     logger.info(f'{len(models_chosen)} Decision model(s) chosen')
     explorer_and_models = choose_explorer(models_chosen)
@@ -97,8 +96,7 @@ def cli_entry():
         logger.info('Exploration complete')
     if resulting_model:
         out_model = nx.compose(in_model, resulting_model)
-        outputs = [i[0] for i in args.output]\
-            if args.output else [f'out_{args.model}']
+        outputs = [i for i in args.output] if args.output else ['out_' + Path(args.model).stem + '.forxml']
         for out_file in outputs:
             forsyde_io.write_model(out_model, out_file)
             logger.info(f'Writting output model {out_file}')

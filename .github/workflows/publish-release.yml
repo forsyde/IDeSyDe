@@ -5,6 +5,33 @@ on:
     types: [created]
 
 jobs:
+  publish-pypi:
+    runs-on: ubuntu-latest
+    steps:
+    - uses: actions/checkout@v2
+    - uses: little-core-labs/get-git-tag@v3.0.1
+      id: tagName
+      with:
+        tagRegex: "refs/tags/(.*)" 
+        tagRegexGroup: 1
+    - uses: actions/setup-python@v2
+      with:
+        python-version: '3.x'
+    - uses: abatilo/actions-poetry@v2.1.0
+      with:
+        poetry-version: '1.1.5'
+    - name: generate additional code for python supporting libs
+      run: |
+        cd $GITHUB_WORKSPACE
+        poetry update
+        poetry install
+        poetry run generate ${{ steps.tagName.outputs.tag }}
+    - name: Build and publish core and generated code
+      run: |
+        cd $GITHUB_WORKSPACE/python
+        poetry update
+        poetry build
+        poetry publish -u __token__ -p ${{ secrets.IDESYDE_PYPI_TOKEN }}
   publish-linux-pyz:
     strategy:
       matrix:

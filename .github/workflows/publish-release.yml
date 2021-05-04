@@ -5,6 +5,33 @@ on:
     types: [created]
 
 jobs:
+  publish-pypi:
+    runs-on: ubuntu-latest
+    steps:
+    - uses: actions/checkout@v2
+    - uses: little-core-labs/get-git-tag@v3.0.1
+      id: tagName
+      with:
+        tagRegex: "refs/tags/(.*)" 
+        tagRegexGroup: 1
+    - uses: actions/setup-python@v2
+      with:
+        python-version: '3.x'
+    - uses: abatilo/actions-poetry@v2.1.0
+      with:
+        poetry-version: '1.1.5'
+    - name: generate additional code for python supporting libs
+      run: |
+        cd $GITHUB_WORKSPACE
+        poetry update
+        poetry install
+        poetry run generate ${{ steps.tagName.outputs.tag }}
+    - name: Build and publish core and generated code
+      run: |
+        cd $GITHUB_WORKSPACE/python
+        poetry update
+        poetry build
+        poetry publish -u __token__ -p ${{ secrets.IDESYDE_PYPI_TOKEN }}
   publish-linux-pyz:
     strategy:
       matrix:
@@ -15,6 +42,11 @@ jobs:
     runs-on: ubuntu-18.04
     steps:
     - uses: actions/checkout@v2
+    - uses: little-core-labs/get-git-tag@v3.0.1
+      id: tagName
+      with:
+        tagRegex: "refs/tags/(.*)" 
+        tagRegexGroup: 1
     - name: Set up Python ${{ matrix.python }}
       uses: actions/setup-python@v2
       with:
@@ -36,7 +68,7 @@ jobs:
       with:
         repo_token: ${{ secrets.GITHUB_TOKEN }}
         file: ${{ github.workspace }}/dist/idesyde.pyz
-        asset_name: IDeSyDe-${{ github.ref }}-x86_64-linux-gnu-py${{ matrix.python }}.pyz
+        asset_name: IDeSyDe-${{ steps.tagName.outpsuts.tag }}-x86_64-linux-gnu-py${{ matrix.python }}.pyz
         tag: "${{ github.ref }}"
         overwrite: true
         body: "Python zip with Libs for x86_64 linux distros"
@@ -49,6 +81,11 @@ jobs:
     runs-on: ubuntu-18.04
     steps:
     - uses: actions/checkout@v2
+    - uses: little-core-labs/get-git-tag@v3.0.1
+      id: tagName
+      with:
+        tagRegex: "refs/tags/(.*)" 
+        tagRegexGroup: 1
     # - name: Cache node modules
     #   uses: actions/cache@v2
     #   env:
@@ -91,7 +128,7 @@ jobs:
       with:
         repo_token: ${{ secrets.GITHUB_TOKEN }}
         file: ${{ github.workspace }}/build/x86_64-unknown-linux-gnu/release/install/idesyde-x86_64-unknown-linux-gnu.zip
-        asset_name: IDeSyDe-${{ github.ref }}-x86_64-unknown-linux-gnu.zip
+        asset_name: IDeSyDe-${{ steps.tagName.outputs.tag }}-x86_64-unknown-linux-gnu.zip
         tag: "${{ github.ref }}"
         overwrite: true
         body: "Executable zip with Libs for x86_64 linux distros"
@@ -105,6 +142,11 @@ jobs:
     runs-on: windows-latest
     steps:
     - uses: actions/checkout@v2
+    - uses: little-core-labs/get-git-tag@v3.0.1
+      id: tagName
+      with:
+        tagRegex: "refs/tags/(.*)"
+        tagRegexGroup: 1
     - name: Set up Python ${{ matrix.python }}
       uses: actions/setup-python@v2
       with:
@@ -126,7 +168,7 @@ jobs:
       with:
         repo_token: ${{ secrets.GITHUB_TOKEN }}
         file: ${{ github.workspace }}\dist\idesyde.pyz
-        asset_name: IDeSyDe-${{ github.ref }}-x86_64-windows-msvc-py${{ matrix.python }}.pyz
+        asset_name: IDeSyDe-${{ steps.tagName.outputs.tag }}-x86_64-windows-msvc-py${{ matrix.python }}.pyz
         tag: "${{ github.ref }}"
         overwrite: true
         body: "Python zip with Libs for x86_64 windows" 
@@ -139,6 +181,11 @@ jobs:
     runs-on: windows-latest
     steps:
     - uses: actions/checkout@v2
+    - uses: little-core-labs/get-git-tag@v3.0.1
+      id: tagName
+      with:
+        tagRegex: "refs/tags/(.*)"
+        tagRegexGroup: 1
     - name: Set up Python ${{ env.python-version }}
       uses: actions/setup-python@v2
       with:
@@ -167,7 +214,7 @@ jobs:
       with:
         repo_token: ${{ secrets.GITHUB_TOKEN }}
         file: ${{ github.workspace }}\build\x86_64-pc-windows-msvc\release\install\idesyde-x86_64-pc-windows-msvc.zip
-        asset_name: IDeSyDe-x86_64-pc-windows-msvc.zip
+        asset_name: IDeSyDe-${{ steps.tagName.outputs.tag }}-x86_64-pc-windows-msvc.zip
         tag: "${{ github.ref }}"
         overwrite: true
         body: "Zip with Libs for x86_64 Windows"
@@ -181,6 +228,11 @@ jobs:
     runs-on: macos-latest
     steps:
     - uses: actions/checkout@v2
+    - uses: little-core-labs/get-git-tag@v3.0.1
+      id: tagName
+      with:
+        tagRegex: "refs/tags/(.*)"
+        tagRegexGroup: 1
     - name: Set up Python ${{ matrix.python }}
       uses: actions/setup-python@v2
       with:
@@ -202,7 +254,7 @@ jobs:
       with:
         repo_token: ${{ secrets.GITHUB_TOKEN }}
         file: ${{ github.workspace }}/dist/idesyde.pyz
-        asset_name: IDeSyDe-${{ github.ref }}-x86_64-apple-darwin-py${{ matrix.python }}.pyz
+        asset_name: IDeSyDe-${{ steps.tagName.outputs.tag }}-x86_64-apple-darwin-py${{ matrix.python }}.pyz
         tag: "${{ github.ref }}"
         overwrite: true
         body: "Python zip for x86_64 MacOS"
@@ -215,6 +267,11 @@ jobs:
     runs-on: macos-latest
     steps:
     - uses: actions/checkout@v2
+    - uses: little-core-labs/get-git-tag@v3.0.1
+      id: tagName
+      with:
+        tagRegex: "refs/tags/(.*)"
+        tagRegexGroup: 1
     - name: Set up Python ${{ env.python-version }}
       uses: actions/setup-python@v2
       with:
@@ -248,7 +305,7 @@ jobs:
       with:
         repo_token: ${{ secrets.GITHUB_TOKEN }}
         file: ${{ github.workspace }}/build/x86_64-apple-darwin/release/install/idesyde-x86_64-apple-darwin.zip
-        asset_name: IDeSyDe-${{ github.ref }}-x86_64-apple-darwin.zip
+        asset_name: IDeSyDe-${{ steps.tagName.outputs.tag }}-x86_64-apple-darwin.zip
         tag: "${{ github.ref }}"
         overwrite: true
         body: "Zip with Libs for x86_64 MacOS"

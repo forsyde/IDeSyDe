@@ -10,9 +10,14 @@ Just like any other tool(chain) in the market, IDeSyDe is no silver bullet.
 
 Being able to use it, let alone make sense of what is happening, requires, sadly,
 that you understand some minimal abstractions and make some connections of your own.
+Here's a a quick flow chart to aid explain the situation:
+
+![]({{ site.baseurl }}/assets/images/svg/idesyde-usage-flow.svg)
+
+
 Since the tool takes a model that resembles an engineer's perspective of an embedded system,
 and not a set of equations, there are basically two questions to be answered by you to
-gauge how out-of-the-box the experience will be:
+gauge how out-of-the-box the experience will be, as highl:
 
 1. Are your system models reliably described by the model covered in [ForSyDe IO]({{ site.projects.forsydeio }})?
 2. Are there identification rules and models for your system models in IDeSyDe?

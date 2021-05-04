@@ -3,7 +3,7 @@ import math
 from typing import List
 from typing import Sequence
 from typing import Optional
-from typing import Dict
+from typing import Mapping
 from typing import Tuple
 from typing import Collection
 
@@ -68,9 +68,9 @@ def check_sdf_consistency(sdf_topology) -> bool:
 
 
 def sdf_to_jobs(
-        actors: Collection[Vertex], channels: Dict[Tuple[Process, Process], Sequence[Sequence[Vertex]]],
+        actors: Collection[Vertex], channels: Mapping[Tuple[Process, Process], Sequence[Sequence[Vertex]]],
         topology: np.ndarray, repetition_vector: np.ndarray,
-        initial_tokens: np.ndarray) -> Tuple[List[JobType], Dict[JobType, List[JobType]], Dict[JobType, List[JobType]]]:
+        initial_tokens: np.ndarray) -> Tuple[List[JobType], Mapping[JobType, List[JobType]], Mapping[JobType, List[JobType]]]:
     '''Create job graph out of a SDF graph.
 
     This function returns a precedence graph of sdf 'jobs' so that any
@@ -97,7 +97,7 @@ def sdf_to_jobs(
         raise TypeError("The repetition vector should be a column vector.")
     q_vector = repetition_vector.reshape(repetition_vector.size)
     jobs = [(q, a) for (i, a) in enumerate(actors) for q in range(1, int(q_vector[i]) + 1)]
-    strong_next: Dict[JobType, List[JobType]] = {j: [] for (i, j) in enumerate(jobs)}
+    strong_next: Mapping[JobType, List[JobType]] = {j: [] for (i, j) in enumerate(jobs)}
     for (cidx, (s, t)) in enumerate(channels):
         idxs = next((i for (i, a) in enumerate(actors) if a == s), -1)
         idxt = next((i for (i, a) in enumerate(actors) if a == t), -1)
@@ -117,7 +117,7 @@ def sdf_to_jobs(
         #             poss = actor_fire.index((s, fires))
         #             post = actor_fire.index((t, firet))
         #             strong_next.append((poss, post))
-    weak_next: Dict[JobType, List[JobType]] = {j: [] for (_, j) in enumerate(jobs)}
+    weak_next: Mapping[JobType, List[JobType]] = {j: [] for (_, j) in enumerate(jobs)}
     for ((i, j), (inext, jnext)) in zip(jobs[:-1], jobs[1:]):
         if j == jnext and inext == i + 1:
             # the +1 comes from the fact that we dont start at 0

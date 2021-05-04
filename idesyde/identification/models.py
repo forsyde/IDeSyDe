@@ -6,7 +6,7 @@ from dataclasses import dataclass
 from dataclasses import field
 from typing import Sequence, Tuple
 from typing import Set
-from typing import Dict
+from typing import Mapping
 from typing import List
 from typing import Collection
 from typing import Iterable
@@ -67,10 +67,10 @@ class SDFExecution(DecisionModel):
     """
 
     sdf_actors: Sequence[Process] = field(default_factory=list)
-    sdf_constructors: Dict[Process, SDFComb] = field(default_factory=dict)
-    sdf_impl: Dict[Process, Function] = field(default_factory=dict)
+    sdf_constructors: Mapping[Process, SDFComb] = field(default_factory=dict)
+    sdf_impl: Mapping[Process, Function] = field(default_factory=dict)
     sdf_delays: Sequence[SDFPrefix] = field(default_factory=list)
-    sdf_channels: Dict[Tuple[Process, Process], Sequence[Sequence[Vertex]]] = field(default_factory=dict)
+    sdf_channels: Mapping[Tuple[Process, Process], Sequence[Sequence[Vertex]]] = field(default_factory=dict)
     sdf_topology: np.ndarray = np.zeros((0, 0))
     sdf_repetition_vector: np.ndarray = np.zeros((0))
     sdf_initial_tokens: np.ndarray = np.zeros((0))
@@ -144,7 +144,7 @@ class SDFToMultiCore(DecisionModel):
     # partially identified
     cores: Sequence[AbstractProcessingComponent] = field(default_factory=list)
     comms: Sequence[AbstractCommunicationComponent] = field(default_factory=list)
-    connections: Dict[Tuple[Vertex, Vertex], Sequence[Sequence[Vertex]]] = field(default_factory=dict)
+    connections: Mapping[Tuple[Vertex, Vertex], Sequence[Sequence[Vertex]]] = field(default_factory=dict)
     comms_capacity: Sequence[int] = field(default_factory=list)
 
     pre_mapping: Sequence[Edge] = field(default_factory=list)
@@ -400,30 +400,31 @@ class SDFToMPSoCClusteringMzn(MinizincableDecisionModel):
 class JobScheduling(MinizincableDecisionModel):
 
     # models that were abstracted_vertexes in jobs
-    abstracted_vertexes: Sequence[Vertex] = field(default_factory=list)
-    abstracted_edges: Sequence[Edge] = field(default_factory=list)
+    abstracted_vertexes: Set[Vertex] = field(default_factory=set)
+    abstracted_edges: Set[Edge] = field(default_factory=set)
 
     # properties
     jobs: Sequence[JobType] = field(default_factory=list)
-    weak_next: Dict[JobType, Sequence[JobType]] = field(default_factory=dict)
-    strong_next: Dict[JobType, Sequence[JobType]] = field(default_factory=dict)
-    comm_channels: Dict[Tuple[JobType, JobType], Sequence[Sequence[Vertex]]] = field(default_factory=dict)
-    pre_mapping: Dict[JobType, ProcType] = field(default_factory=dict)
-    pre_scheduling: Dict[JobType, int] = field(default_factory=dict)
+    weak_next: Mapping[JobType, Sequence[JobType]] = field(default_factory=dict)
+    strong_next: Mapping[JobType, Sequence[JobType]] = field(default_factory=dict)
+    comm_channels: Mapping[Tuple[JobType, JobType], Sequence[Sequence[Vertex]]] = field(default_factory=dict)
+    pre_mapping: Mapping[JobType, ProcType] = field(default_factory=dict)
+    pre_scheduling: Mapping[JobType, int] = field(default_factory=dict)
     # the virtual processors and communicators should go from
     # most physical -> cyber
     procs: Sequence[Sequence[Vertex]] = field(default_factory=list)
-    # procs_key: Dict[int, ProcType] = field(default_factory=dict)
+    # procs_key: Mapping[int, ProcType] = field(default_factory=dict)
     comms: Sequence[Sequence[Vertex]] = field(default_factory=list)
-    # comms_key: Dict[int, CommType] = field(default_factory=dict)
-    procs_capacity: Dict[ProcType, int] = field(default_factory=dict)
-    comm_capacity: Dict[CommType, int] = field(default_factory=dict)
+    # comms_key: Mapping[int, CommType] = field(default_factory=dict)
+    proc_capacity: Mapping[ProcType, int] = field(default_factory=dict)
+    comm_capacity: Mapping[CommType, int] = field(default_factory=dict)
+    job_capacity_req: Mapping[Tuple[JobType, ProcType], int] = field(default_factory=dict)
     # the virtual processors and communicators should go from
     # most physical -> cyber
-    job_allowed_location: Dict[JobType, Sequence[ProcType]] = field(default_factory=dict)
-    wcet: Dict[Tuple[JobType, ProcType], int] = field(default_factory=dict)
-    wcct: Dict[Tuple[JobType, JobType, CommType], int] = field(default_factory=dict)
-    paths: Dict[Tuple[Vertex, Vertex], Sequence[Sequence[Vertex]]] = field(default_factory=dict)
+    job_allowed_location: Mapping[JobType, Sequence[ProcType]] = field(default_factory=dict)
+    wcet: Mapping[Tuple[JobType, ProcType], int] = field(default_factory=dict)
+    wcct: Mapping[Tuple[JobType, JobType, CommType], int] = field(default_factory=dict)
+    paths: Mapping[Tuple[Vertex, Vertex], Sequence[Sequence[Vertex]]] = field(default_factory=dict)
     objective_weights: Sequence[int] = field(default_factory=list)
 
     goals_vertexes: Sequence[Vertex] = field(default_factory=list)
@@ -453,7 +454,7 @@ class JobScheduling(MinizincableDecisionModel):
     #             _extended_eq(self.pre_scheduling, o.pre_scheduling) and\
     #             _extended_eq(self.procs, o.procs) and\
     #             _extended_eq(self.comms, o.comms) and\
-    #             _extended_eq(self.procs_capacity, o.procs_capacity) and\
+    #             _extended_eq(self.proc_capacity, o.proc_capacity) and\
     #             _extended_eq(self.comm_capacity, o.comm_capacity) and\
     #             _extended_eq(self.job_allowed_location, o.job_allowed_location) and\
     #             _extended_eq(self.wcet, o.wcet) and\
@@ -508,7 +509,12 @@ class JobScheduling(MinizincableDecisionModel):
         data["jobs"] = set(i + 1 for (i, _) in enumerate(self.jobs))
         data["procs"] = set(i + 1 for (i, _) in enumerate(self.procs))
         data["comms"] = set(i + 1 for (i, _) in enumerate(self.comms))
-        data["comm_capacity"] = [len(self.jobs) for _ in self.comms]
+        data["comm_capacity"] = [self.comm_capacity.get(idx, 0) for (idx, c) in enumerate(self.comms)]
+        data["proc_capacity"] = [self.proc_capacity.get(idx, 0) for (idx, p) in enumerate(self.procs)]
+        data["job_capacity_req"] = [
+            [self.job_capacity_req.get((i, pidx), 0) for (pidx, p) in enumerate(self.procs)]
+            for (i, j) in enumerate(self.jobs)
+        ]
         # data['activations'] = self['self.sdf_mpsoc_sub.sdf_mpsoc_sub.sdf_orders_sub.sdf_exec_sub.sdf_repetition_vector
         # delete spurious elements
         data["weak_next"] = [[t in self.weak_next[s] for t in self.jobs] for s in self.jobs]
@@ -606,8 +612,8 @@ class JobScheduling(MinizincableDecisionModel):
                 t = results["comm_start"][sidx][tidx][ui]
                 # if procsi != procti and results["start"][sidx][procsi] and results["start"][tidx][procti] and t > 0:
                 if t > 0:
-                # for ((procsi, procs), (procti, proct)) in itertools.product(enumerate(self.procs), repeat=2):
-                #     print(sidx, tidx, procsi, procti, t)
+                    # for ((procsi, procs), (procti, proct)) in itertools.product(enumerate(self.procs), repeat=2):
+                    #     print(sidx, tidx, procsi, procti, t)
                     # create the mapping between elements of the abstract
                     # processing communicator
                     for (p, pp) in zip(u[:-1], u[1:]):
@@ -643,7 +649,7 @@ class JobScheduling(MinizincableDecisionModel):
 #     sub_job_scheduling: JobScheduling = JobScheduling()
 
 #     # properties
-#     procs_capacity: Sequence[int] = field(default_factory=list)
+#     proc_capacity: Sequence[int] = field(default_factory=list)
 #     comm_capacity: Sequence[int] = field(default_factory=list)
 #     # the virtual processors and communicators should go from
 #     # most physical -> cyber
@@ -679,11 +685,11 @@ class TimeTriggeredPlatform(DecisionModel):
     schedulers: Sequence[TimeTriggeredScheduler] = field(default_factory=list)
     cores: Sequence[AbstractProcessingComponent] = field(default_factory=list)
     comms: Sequence[AbstractCommunicationComponent] = field(default_factory=list)
-    core_scheduler: Dict[AbstractProcessingComponent, TimeTriggeredScheduler] = field(default_factory=dict)
-    comm_scheduler: Dict[AbstractCommunicationComponent, TimeTriggeredScheduler] = field(default_factory=dict)
-    paths: Dict[Tuple[Vertex, Vertex], Sequence[Sequence[Vertex]]] = field(default_factory=dict)
-    core_memory: Dict[AbstractProcessingComponent, int] = field(default_factory=dict)
-    comms_bandwidth: Dict[AbstractCommunicationComponent, int] = field(default_factory=dict)
+    core_scheduler: Mapping[AbstractProcessingComponent, TimeTriggeredScheduler] = field(default_factory=dict)
+    comm_scheduler: Mapping[AbstractCommunicationComponent, TimeTriggeredScheduler] = field(default_factory=dict)
+    paths: Mapping[Tuple[Vertex, Vertex], Sequence[Sequence[Vertex]]] = field(default_factory=dict)
+    core_memory: Mapping[AbstractProcessingComponent, int] = field(default_factory=dict)
+    comms_bandwidth: Mapping[AbstractCommunicationComponent, int] = field(default_factory=dict)
 
     abstracted_vertexes: Sequence[Vertex] = field(default_factory=list)
 

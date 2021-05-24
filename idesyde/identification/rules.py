@@ -6,6 +6,7 @@ from typing import Optional
 from typing import Iterator
 from typing import cast
 from typing import Set
+from typing import Mapping
 import itertools
 import copy
 from functools import reduce
@@ -19,28 +20,32 @@ import sympy  # type: ignore
 
 from forsyde.io.python.core import Vertex
 from forsyde.io.python.core import ForSyDeModel
-from forsyde.io.python.types import Function, SDFComb
-from forsyde.io.python.types import SDFPrefix
-from forsyde.io.python.types import Process
-from forsyde.io.python.types import Signal
-from forsyde.io.python.types import AbstractGrouping
-from forsyde.io.python.types import AbstractProcessingComponent
-from forsyde.io.python.types import InstrumentedProcessorTile
-from forsyde.io.python.types import InstrumentedCommunicationInterconnect
-from forsyde.io.python.types import InstrumentedFunction
-from forsyde.io.python.types import InstrumentedSignal
-from forsyde.io.python.types import LocationRequirement
-from forsyde.io.python.types import AbstractCommunicationComponent
-from forsyde.io.python.types import AbstractPhysicalComponent
-from forsyde.io.python.types import WCET
-from forsyde.io.python.types import WCCT
-from forsyde.io.python.types import Goal
-from forsyde.io.python.types import Output
-from forsyde.io.python.types import MinimumThroughput
-from forsyde.io.python.types import TimeDivisionMultiplexer
-from forsyde.io.python.types import TimeTriggeredScheduler
-from forsyde.io.python.types import AbstractMapping
-from forsyde.io.python.types import AbstractScheduling
+from forsyde.io.python.types import VertexTrait
+from forsyde.io.python.types import EdgeTrait
+from forsyde.io.python.types import VertexAcessor as V
+
+# from forsyde.io.python.types import Function, SDFComb
+# from forsyde.io.python.types import SDFPrefix
+# from forsyde.io.python.types import Process
+# from forsyde.io.python.types import Signal
+# from forsyde.io.python.types import AbstractGrouping
+# from forsyde.io.python.types import AbstractProcessingComponent
+# from forsyde.io.python.types import InstrumentedProcessorTile
+# from forsyde.io.python.types import InstrumentedCommunicationInterconnect
+# from forsyde.io.python.types import InstrumentedFunction
+# from forsyde.io.python.types import InstrumentedSignal
+# from forsyde.io.python.types import LocationRequirement
+# from forsyde.io.python.types import AbstractCommunicationComponent
+# from forsyde.io.python.types import AbstractPhysicalComponent
+# from forsyde.io.python.types import WCET
+# from forsyde.io.python.types import WCCT
+# from forsyde.io.python.types import Goal
+# from forsyde.io.python.types import Output
+# from forsyde.io.python.types import MinimumThroughput
+# from forsyde.io.python.types import TimeDivisionMultiplexer
+# from forsyde.io.python.types import TimeTriggeredScheduler
+# from forsyde.io.python.types import AbstractMapping
+# from forsyde.io.python.types import AbstractScheduling
 
 import idesyde.math as math_util
 import idesyde.sdf as sdf_lib
@@ -81,15 +86,15 @@ def identify_sdf_app(model: ForSyDeModel, identified: List[DecisionModel]):
         2. There must be a PASS for the application.
     """
     result = None
-    constructors: Sequence[SDFComb] = [c for c in model if isinstance(c, SDFComb)]
-    delay_constructors: Sequence[SDFPrefix] = [c for c in model if isinstance(c, SDFPrefix)]
+    sdf_actors: Sequence[Vertex] = [c for c in model if c.has_trait(VertexTrait.SDFComb)]
+    delay_constructors: Sequence[Vertex] = [c for c in model if c.has_trait(VertexTrait.SDFPrefix)]
     # 1: find the actors
-    sdf_actors: List[Vertex] = [a for c in constructors for a in model[c] if isinstance(a, Process)]
+    # sdf_actors: List[Vertex] = [a for c in constructors for a in model[c] if isinstance(a, Process)]
     # there are garanteed to be the correct vertexes by construction
-    sdf_constructors = {a: c for a in sdf_actors for c in constructors if a in model[c]}
-    sdf_impl = {a: i for a in sdf_actors for i in model[sdf_constructors[a]] if isinstance(i, InstrumentedFunction)}
+    # sdf_constructors = {a: c for a in sdf_actors for c in constructors if a in model[c]}
+    sdf_impl = {a: i for a in sdf_actors for i in model[a] if i.has_trait(VertexTrait.InstrumentedFunction)}
     # 1: find the delays
-    sdf_delays: List[Vertex] = [a for c in delay_constructors for a in model[c] if isinstance(a, Process)]
+    sdf_delays: List[Vertex] = [a for c in delay_constructors for a in model[c] if a.has_trait(VertexTrait.SDFPrefix)]
     # 1: get connected signals
     sdf_channels = {}
     # 1: check the model for the paths between actors
@@ -101,7 +106,9 @@ def identify_sdf_app(model: ForSyDeModel, identified: List[DecisionModel]):
                     paths: Sequence[Sequence[Vertex]] = [path[1:-1] for path in nx.all_shortest_paths(model, s, t)]
                     # check if all elements in the path are signals or delays
                     paths_filtered: Sequence[Sequence[Vertex]] = [
-                        path for path in paths if all(isinstance(v, Signal) or (v in sdf_delays) for v in path)
+                        path
+                        for path in paths
+                        if all(v.has_trait(VertexTrait.Signal) or (v in sdf_delays) for v in path)
                     ]
                     if len(paths) > 0:
                         sdf_channels[(s, t)] = paths_filtered
@@ -109,7 +116,7 @@ def identify_sdf_app(model: ForSyDeModel, identified: List[DecisionModel]):
                     #     # take away the source and target nodes
                     #     path = path[1:-1]
                     #     # check if all elements in the path are signals or delays
-                    #     if all(isinstance(v, Signal) or v in sdf_delays for v in path):
+                    #     if all(v.has_trait(VertexTrait.Signal) or v in sdf_delays for v in path):
                     #         sdf_channels.append((s, t, path))
                 except nx.exception.NetworkXNoPath:
                     pass
@@ -118,7 +125,7 @@ def identify_sdf_app(model: ForSyDeModel, identified: List[DecisionModel]):
     #         # take away the source and target nodes
     #         path = path[1:-1]
     #         # check if all elements in the path are signals or delays
-    #         if all(isinstance(v, Signal) or v in sdf_delays for v in path):
+    #         if all(v.has_trait(VertexTrait.Signal) or v in sdf_delays for v in path):
     #             sdf_channels[cidx] = (s, t, path)
     # 1: remove all pre-built sdf channels that are empty
     # sdf_channels = [(s, t, e) for (s, t, e) in sdf_channels if e]
@@ -138,13 +145,13 @@ def identify_sdf_app(model: ForSyDeModel, identified: List[DecisionModel]):
             # get the relevant port for the source and target actors
             # in this channel, assuming there is only one edge
             # connecting them
-            out_port = next(v["object"].source_vertex_port for (k, v) in model[s][path[0]].items())
-            in_port = next(v["object"].target_vertex_port for (k, v) in model[path[-1]][t].items())
+            out_port = next(v["object"].source_port for (k, v) in model[s][path[0]].items())
+            in_port = next(v["object"].target_port for (k, v) in model[path[-1]][t].items())
             # get the constructor of the actors
             # look in their properties what is the production associated
             # with the channel, for the source...
-            sdf_topology[cidx, sidx] += int(sdf_constructors[s].get_production()[out_port.identifier])
-            sdf_topology[cidx, tidx] -= int(sdf_constructors[t].get_consumption()[in_port.identifier])
+            sdf_topology[cidx, sidx] += int(V.get_production(s)[out_port.identifier])
+            sdf_topology[cidx, tidx] -= int(V.get_consumption(t)[in_port.identifier])
         # if out_port.identifier in s_constructor.get_production():
         # else:
         #     sdf_topology[cidx, sidx] = int(s_constructor.get_consumption()[out_port.identifier])
@@ -166,7 +173,6 @@ def identify_sdf_app(model: ForSyDeModel, identified: List[DecisionModel]):
             sdf_pass = [sdf_actors[idx] for idx in schedule]
             result = SDFExecution(
                 sdf_actors=sdf_actors,
-                sdf_constructors=cast(Dict[Vertex, Vertex], sdf_constructors),
                 sdf_impl=cast(Dict[Vertex, Vertex], sdf_impl),
                 sdf_channels=sdf_channels,
                 sdf_topology=sdf_topology,
@@ -195,12 +201,12 @@ def identify_sdf_parallel(model: ForSyDeModel, identified: List[DecisionModel]):
     res = None
     sdf_exec_sub = next((p for p in identified if isinstance(p, SDFExecution)), None)
     if sdf_exec_sub:
-        orderings = [o for o in model if isinstance(o, TimeTriggeredScheduler)]
+        orderings = [o for o in model if o.has_trait(VertexTrait.TimeTriggeredScheduler)]
         if orderings:
             pre_scheduling = []
             for (a, o) in itertools.product(sdf_exec_sub.sdf_actors, orderings):
                 for (ek, ed) in model.get_edge_data(o, a, default=dict()).items():
-                    if isinstance(ed["object"], AbstractScheduling):
+                    if ed["object"].has_trait(EdgeTrait.AbstractScheduling):
                         pre_scheduling.append(ed["object"])
             res = SDFToOrders(sdf_exec_sub=sdf_exec_sub, orderings=orderings, pre_scheduling=pre_scheduling)
     # conditions for fixpoints and partial identification
@@ -231,8 +237,8 @@ def identify_sdf_multi_core(model: ForSyDeModel, identified: List[DecisionModel]
     res = None
     sdf_orders_sub = next((p for p in identified if isinstance(p, SDFToOrders)), None)
     if sdf_orders_sub:
-        cores = [p for p in model if isinstance(p, AbstractProcessingComponent)]
-        comms = [p for p in model if isinstance(p, AbstractCommunicationComponent)]
+        cores = [p for p in model if p.has_trait(VertexTrait.AbstractProcessingComponent)]
+        comms = [p for p in model if p.has_trait(VertexTrait.AbstractCommunicationComponent)]
         # find all cores that are connected between each other
         connections: Dict[Tuple[Vertex, Vertex], Collection[Collection[Vertex]]] = {}
         for (s, t) in itertools.product(cores, cores):
@@ -241,15 +247,15 @@ def identify_sdf_multi_core(model: ForSyDeModel, identified: List[DecisionModel]
                     connections[(s, t)] = [
                         path[1:-1]
                         for path in nx.all_shortest_paths(model, s, t)
-                        if all(isinstance(v, AbstractCommunicationComponent) for v in path[1:-1])
+                        if all(v.has_trait(VertexTrait.AbstractCommunicationComponent) for v in path[1:-1])
                     ]
                 except nx.exception.NetworkXNoPath:
                     pass
         # there must be orderings for both execution and communication
-        comms_capacity = [1 for c in comms]
+        comms_capacity = [0 for c in comms]
         for (i, c) in enumerate(comms):
-            if isinstance(c, TimeDivisionMultiplexer):
-                comms_capacity[i] = int(c.get_slots())
+            if c.has_trait(VertexTrait.TimeDivisionMultiplexer):
+                comms_capacity[i] = int(V.get_slots(c))
         if len(cores) + len(comms) <= len(sdf_orders_sub.orderings):
             # TODO: this pre mapping has nothing to do with the newest 2021-04-26 view of it.
             # pre_mapping = []
@@ -289,15 +295,15 @@ def identify_sdf_multi_core_instrumented(model: ForSyDeModel, identified: List[D
         cores = sdf_mpsoc_sub.cores
         comms = sdf_mpsoc_sub.comms
         # list(model.get_vertexes(WCET.get_instance()))
-        wcet_vertexes = [w for w in model if isinstance(w, WCET)]
+        wcet_vertexes = [w for w in model if w.has_trait(VertexTrait.WCET)]
         # list(model.get_vertexes(WCCT.get_instance()))
-        token_wcct_vertexes = [w for w in model if isinstance(w, WCCT)]
+        token_wcct_vertexes = [w for w in model if w.has_trait(VertexTrait.WCCT)]
         wcet = np.zeros((len(sdf_actors), len(cores)), dtype=int)
         token_wcct = np.zeros((len(sdf_channels), len(comms)), dtype=int)
         for (aidx, a) in enumerate(sdf_actors):
             for (pidx, p) in enumerate(cores):
                 wcet[aidx, pidx] = max(
-                    (w.get_time() for w in wcet_vertexes if (a in model[w]) and (p in model[w])), default=1
+                    (V.get_time(w) for w in wcet_vertexes if (a in model[w]) and (p in model[w])), default=1
                 )
                 # (int(w.properties['time'])
                 #  for w in model.predecessors(a) if w in model.predecessors(p) and isinstance(w, WCET)),
@@ -309,7 +315,7 @@ def identify_sdf_multi_core_instrumented(model: ForSyDeModel, identified: List[D
             paths = sdf_channels[(s, t)]
             for (pidx, comm) in enumerate(comms):
                 token_wcct[cidx, pidx] = sum(
-                    int(w.get_time())
+                    int(V.get_time(w))
                     for path in paths
                     for e in path
                     for w in token_wcct_vertexes
@@ -319,8 +325,8 @@ def identify_sdf_multi_core_instrumented(model: ForSyDeModel, identified: List[D
         # per application, we apply maximun just in case
         # someone forgot to make sure there is only one annotation
         # per application
-        goals_vertexes = [v for v in model if isinstance(v, Goal)]
-        throughput_vertexes = [v for v in goals_vertexes if isinstance(v, MinimumThroughput)]
+        goals_vertexes = [v for v in model if v.has_trait(VertexTrait.Goal)]
+        throughput_vertexes = [v for v in goals_vertexes if v.has_trait(VertexTrait.MinimumThroughput)]
         throughput_importance = 0
         # check that all actors are covered by a throughput goal
         if all(sum(1 for p in nx.all_simple_paths(model, g, a)) > 0 for g in throughput_vertexes for a in sdf_actors):
@@ -377,7 +383,7 @@ def identify_jobs_from_sdf_multicore(
         for (p, o) in zip(cores, orderings):
             if not any(p in li or o in li for li in procs):
                 procs.append([p, o])
-        procs_capacity: Dict[ProcType, int] = {}
+        proc_capacity: Dict[ProcType, int] = {}
         # one ordering per comm
         comms: List[Sequence[Vertex]] = [
             [c, o]
@@ -388,7 +394,7 @@ def identify_jobs_from_sdf_multicore(
             if not any(comm in li or order in li for li in comms):
                 comms.append([comm, order])
         comm_capacity: Dict[CommType, int] = {
-            i: max(c.get_slots() if isinstance(c, TimeDivisionMultiplexer) else 1 for c in li)
+            i: max(V.get_slots(c) if c.has_trait(VertexTrait.TimeDivisionMultiplexer) else 0 for c in li)
             for (i, li) in enumerate(comms)
         }
         # fetch the wccts and wcets
@@ -415,7 +421,7 @@ def identify_jobs_from_sdf_multicore(
         for (i, actor) in jobs:
             # go through the trigger times to fetch when the actor might be
             # activated
-            connected_orderings: Generator[TimeTriggeredScheduler, None, None] = (
+            connected_orderings: Generator[Vertex, None, None] = (
                 o for o in orderings if model.has_edge(o, a) and actor.identifier in o.get_trigger_time().values()
             )
             triggers: Collection[int] = sorted(
@@ -457,7 +463,7 @@ def identify_jobs_from_sdf_multicore(
             goals_vertexes=sdf_mpsoc_char_sub.goals_vertexes,
             objective_weights=[sdf_mpsoc_char_sub.throughput_importance, sdf_mpsoc_char_sub.latency_importance],
             comm_capacity=comm_capacity,
-            procs_capacity=procs_capacity,
+            proc_capacity=proc_capacity,
             wcet=wcet,
             wcct=wcct,
         )
@@ -495,7 +501,7 @@ def identify_jobs_from_multi_sdf(
         if not any(p in li or o in li for li in procs):
             procs.append([p, o])
     # one ordering per comm
-    procs_capacity: Dict[ProcType, int] = {}
+    proc_capacity: Dict[ProcType, int] = {}
     comms: List[Sequence[Vertex]] = [
         [c, o]
         for (c, o) in itertools.product(sdf_multicore_sub.comms, reversed(orderings))
@@ -509,7 +515,7 @@ def identify_jobs_from_multi_sdf(
     comm_capacity: Dict[CommType, int] = {}
     comms_key = {i: _hash_sequence(p) for (i, p) in enumerate(comms)}
     for (cidx, comm) in enumerate(comms):
-        cap = min((c.get_slots() for c in comm if isinstance(c, TimeDivisionMultiplexer)), default=1)
+        cap = min((V.get_slots(c) or 0 for c in comm if c.has_trait(VertexTrait.TimeDivisionMultiplexer)), default=0)
         ckey = comms_key[cidx]
         comm_capacity[ckey] = cap
     pre_scheduling: Dict[JobType, int] = {}
@@ -518,7 +524,7 @@ def identify_jobs_from_multi_sdf(
         for (pidx, proc) in enumerate(procs):
             # try to find if there's a path between the job and the
             # processors. Assume every edge is a different mapping
-            core = next(u for u in proc if isinstance(u, AbstractProcessingComponent))
+            core = next(u for u in proc if u.has_trait(VertexTrait.AbstractProcessingComponent))
             # use shortest path algorithms since we want a clear path without any
             # repetitions or cycles
             paths = []
@@ -528,20 +534,24 @@ def identify_jobs_from_multi_sdf(
             except nx.exception.NetworkXNoPath:
                 pass
             # can only have one actor, the one in the loop
-            paths = [path for path in paths if sum(1 for u in path if isinstance(u, Process)) == 1]
+            paths = [path for path in paths if sum(1 for u in path if u.has_trait(VertexTrait.SDFComb)) == 1]
             # cn only have one core, the one in the loop
-            paths = [path for path in paths if sum(1 for u in path if isinstance(u, AbstractProcessingComponent)) == 1]
+            paths = [
+                path
+                for path in paths
+                if sum(1 for u in path if u.has_trait(VertexTrait.AbstractProcessingComponent)) == 1
+            ]
             # count the remaining paths now
             hits = sum(1 for _ in paths)
             for i in range(hits):
                 pre_mapping[(i, a)] = pidx
         # go through the trigger times to fetch when the actor might be
         # activated
-        connected_orderings: Iterator[TimeTriggeredScheduler] = (
+        connected_orderings: Iterator[Vertex] = (
             o for o in orderings if model.has_edge(o, a) and a.identifier in o.get_trigger_time().values()
         )
         triggers: Collection[int] = sorted(
-            (int(k) for (k, v) in o.get_trigger_time().items() if v == a.identifier for o in connected_orderings)
+            (int(k) for (k, v) in V.get_trigger_time(o).items() if v == a.identifier for o in connected_orderings)
         )
         for (i, time) in enumerate(triggers):
             # pass all the timings to the job
@@ -550,8 +560,8 @@ def identify_jobs_from_multi_sdf(
             # for (p, proc) in enumerate(procs):
             #     if all(nx.has_path(model, component, a) for component in proc):
             #         pre_mapping[start_index + i] = p
-    goals_vertexes = [v for v in model if isinstance(v, Goal)]
-    throughput_vertexes = [v for v in goals_vertexes if isinstance(v, MinimumThroughput)]
+    goals_vertexes = [v for v in model if v.has_trait(VertexTrait.Goal)]
+    throughput_vertexes = [v for v in goals_vertexes if v.has_trait(VertexTrait.MinimumThroughput)]
     throughput_importance = 0
     latency_importance = 0
     # check that all actors are covered by a throughput goal
@@ -564,7 +574,7 @@ def identify_jobs_from_multi_sdf(
         if (js, jt) in sdf_channels
     }
     res = JobScheduling(
-        abstracted_vertexes=list(sdf_multicore_sub.covered_vertexes()),
+        abstracted_vertexes=set(sdf_multicore_sub.covered_vertexes()),
         comms=comms,
         procs=procs,
         jobs=jobs,
@@ -576,7 +586,7 @@ def identify_jobs_from_multi_sdf(
         pre_scheduling=pre_scheduling,
         goals_vertexes=goals_vertexes,
         objective_weights=[throughput_importance, latency_importance],
-        procs_capacity=procs_capacity,
+        proc_capacity=proc_capacity,
         wcet={},
         wcct={},
     )
@@ -596,18 +606,22 @@ def identify_instrumentation_in_jobs_from_sdf(model: ForSyDeModel, identified: L
     sub_sdf: Optional[SDFExecution] = next((p for p in identified if isinstance(p, SDFExecution)), None)
     if sub_jobs and sub_sdf:
         time_scale = 1
-        instrumented_procs: List[InstrumentedProcessorTile] = [
-            p for (pdix, procs) in enumerate(sub_jobs.procs) for p in procs if isinstance(p, InstrumentedProcessorTile)
+        instrumented_procs: List[Vertex] = [
+            p
+            for (pdix, procs) in enumerate(sub_jobs.procs)
+            for p in procs
+            if p.has_trait(VertexTrait.InstrumentedProcessorTile)
         ]
         jobs_instrumented = all(
-            a in sub_sdf.sdf_impl and isinstance(sub_sdf.sdf_impl[a], InstrumentedFunction) for (_, a) in sub_jobs.jobs
+            a in sub_sdf.sdf_impl and sub_sdf.sdf_impl[a].has_trait(VertexTrait.InstrumentedFunction)
+            for (_, a) in sub_jobs.jobs
         )
         if jobs_instrumented and len(instrumented_procs) == len(sub_jobs.procs):
             worst_cycles = np.zeros((len(sub_jobs.jobs), len(instrumented_procs)), dtype=np.uint64)
             for ((jidx, (i, a)), (pidx, p)) in itertools.product(
                 enumerate(sub_jobs.jobs), enumerate(instrumented_procs)
             ):
-                impl = cast(InstrumentedFunction, sub_sdf.sdf_impl[a])
+                impl = sub_sdf.sdf_impl[a]
                 worst_cycles[jidx, pidx] += p.get_clock_cycles_per_float_op() * impl.get_max_float_operations()
                 worst_cycles[jidx, pidx] += p.get_clock_cycles_per_integer_op() * impl.get_max_int_operations()
                 worst_cycles[jidx, pidx] += p.get_clock_cycles_per_boolean_op() * impl.get_max_boolean_operations()
@@ -636,13 +650,13 @@ def identify_instrumentation_in_jobs_from_sdf(model: ForSyDeModel, identified: L
                                     c.get_max_elem_size_bytes() * c.get_max_elem_count()
                                     for path in paths
                                     for c in path
-                                    if isinstance(c, InstrumentedSignal)
+                                    if c.has_trait(VertexTrait.InstrumentedSignal)
                                 )
                             )
                             / float(u.get_max_bandwith_bytes_per_sec())
                         )
                         for u in comm
-                        if isinstance(u, InstrumentedCommunicationInterconnect)
+                        if u.has_trait(VertexTrait.InstrumentedCommunicationInterconnect)
                     )
                     wcct = (np.ceil(wcct / time_scale)).astype(np.uint64)
             # make an new decision model by shallow copy
@@ -671,7 +685,7 @@ def identify_location_req_in_jobs_from_sdf(
     model: ForSyDeModel, identified: List[DecisionModel]
 ) -> IdentificationOutput:
     sub_jobs: Sequence[JobScheduling] = [p for p in identified if isinstance(p, JobScheduling)]
-    location_vertexes = [li for li in model if isinstance(li, LocationRequirement)]
+    location_vertexes = [li for li in model if li.has_trait(VertexTrait.LocationRequirement)]
     # check if any of the sub problems already covered the requirements
     if any(all(lver in sub.covered_vertexes() for lver in location_vertexes) for sub in sub_jobs):
         return (True, None)
@@ -705,9 +719,9 @@ def identify_merge_job_scheduling_simple(
     covered: Sequence[Vertex] = list(reduce(operator.or_, (set(m.covered_vertexes()) for m in identified), set()))
     jobs: Sequence[JobType] = list(reduce(operator.or_, (set(sub.jobs) for sub in sub_jobs), set()))
     procs: List[Sequence[Vertex]] = []
-    procs_keys: Set[ProcType] = set()
+    proc_capacity: Mapping[ProcType, int] = {}
+    comm_capacity: Mapping[CommType, int] = {}
     comms: List[Sequence[Vertex]] = []
-    comms_keys: Set[CommType] = set()
     comm_channels: Dict[Tuple[JobType, JobType], Sequence[Sequence[Vertex]]] = {}
     weak_next: Dict[JobType, Sequence[JobType]] = {}
     strong_next: Dict[JobType, Sequence[JobType]] = {}
@@ -720,6 +734,7 @@ def identify_merge_job_scheduling_simple(
     # Later we rescue the indexes easily
     pre_mapping_proctype = {}
     location_req_proctype: Dict[JobType, Sequence[ProcType]] = {}
+    job_capacity_req_proctype: Mapping[Tuple[JobType, ProcType], int] = {}
     pre_scheduling: Dict[JobType, int] = {}
     goals_vertexes: Sequence[Vertex] = set()
     objective_weights: Sequence[int] = []
@@ -769,6 +784,15 @@ def identify_merge_job_scheduling_simple(
         for (j, ps) in sub.job_allowed_location.items():
             if j not in location_req_proctype:
                 location_req_proctype[j] = {_hash_sequence(sub.procs[pidx]) for pidx in ps}
+        for (pidx, v) in sub.proc_capacity.items():
+            key = _hash_sequence(sub.procs[pidx])
+            proc_capacity[key] = max(v, proc_capacity.get(key, 0))
+        for (p, v) in sub.comm_capacity.items():
+            key = _hash_sequence(sub.comms[p])
+            comm_capacity[key] = max(v, comm_capacity.get(key, 0))
+        for ((j, proc), cap) in sub.job_capacity_req.items():
+            key = (j, _hash_sequence(sub.procs[proc]))
+            job_capacity_req_proctype[key] = max(job_capacity_req_proctype.get(key, 0), cap)
         goals_vertexes = goals_vertexes.union(set(sub.goals_vertexes))
         # We kee padding objective weights if new list elements are found
         # since it is reasonable to assume that a model has the same amount
@@ -777,10 +801,14 @@ def identify_merge_job_scheduling_simple(
             objective_weights += sub.objective_weights[len(objective_weights) :]
     # revert back the mapping  and location from hashes to indexes
     procs_inv = {_hash_sequence(p): pidx for (pidx, p) in enumerate(procs)}
-    pre_mapping = {j: procs_inv[j] for j in jobs if j in pre_mapping_proctype}
+    comms_inv = {_hash_sequence(p): pidx for (pidx, p) in enumerate(comms)}
+    pre_mapping = {j: procs_inv[pre_mapping_proctype[j]] for j in jobs if j in pre_mapping_proctype}
     location_req = {j: set(procs_inv[p] for p in location_req_proctype[j]) for j in jobs if j in location_req_proctype}
     wcet = {(j, procs_inv[p]): v for ((j, p), v) in wcet.items()}
     wcct = {(j, jj, procs_inv[p]): v for ((j, jj, p), v) in wcct.items()}
+    job_capacity_req = {(j, procs_inv[p]): cap for ((j, p), cap) in job_capacity_req_proctype.items()}
+    proc_capacity = {procs_inv[k]: v for (k, v) in proc_capacity.items()}
+    comm_capacity = {comms_inv[k]: v for (k, v) in comm_capacity.items()}
     # merge the worst cases by always tkaing the maximum in case of clash
     res = JobScheduling(
         abstracted_vertexes=reduce(operator.or_, (set(s.abstracted_vertexes) for s in sub_jobs), set()),
@@ -799,6 +827,9 @@ def identify_merge_job_scheduling_simple(
         wcct=wcct,
         time_scale=max(s.time_scale for s in sub_jobs),
         job_allowed_location=location_req,
+        job_capacity_req=job_capacity_req,
+        proc_capacity=proc_capacity,
+        comm_capacity=comm_capacity,
     )
     if res in identified and all(v in covered for v in model.nodes):
         return (True, None)
@@ -812,9 +843,9 @@ def identify_merge_job_scheduling_simple(
 def identify_time_triggered_platform(
     model: ForSyDeModel, identified: Collection[DecisionModel]
 ) -> IdentificationOutput:
-    schedulers = [o for o in model if isinstance(o, TimeTriggeredScheduler)]
-    cores = [p for p in model if isinstance(p, AbstractProcessingComponent)]
-    comms = [p for p in model if isinstance(p, AbstractCommunicationComponent)]
+    schedulers = [o for o in model if o.has_trait(VertexTrait.TimeTriggeredScheduler)]
+    cores = [p for p in model if p.has_trait(VertexTrait.AbstractProcessingComponent)]
+    comms = [p for p in model if p.has_trait(VertexTrait.AbstractCommunicationComponent)]
     # find all cores that are connected between each other
     path: Dict[Tuple[Vertex, Vertex], Sequence[Sequence[Vertex]]] = {}
     # check if there are enough schedulers
@@ -830,14 +861,13 @@ def identify_time_triggered_platform(
                 pass
     # there must be orderings for both execution and communication
     comms_bandwidth = {
-        c: c.get_max_bandwith_bytes_per_sec() if isinstance(c, InstrumentedCommunicationInterconnect) else 0
+        c: c.get_max_bandwith_bytes_per_sec() if c.has_trait(VertexTrait.InstrumentedCommunicationInterconnect) else 0
         for c in comms
     }
     core_memory = {
-        p: p.get_max_memory_internal_bytes() if isinstance(p, InstrumentedProcessorTile) else 0 for p in cores
+        p: p.get_max_memory_internal_bytes() if p.has_trait(VertexTrait.InstrumentedProcessorTile) else 0 for p in cores
     }
     # TODO: Identify also connected memory elements!
-
     core_scheduler = {p: o for p in cores for o in schedulers if o in model[p]}
     comm_scheduler = {p: o for p in comms for o in schedulers if o in model[p]}
     # second pass to now put all free schedulers together
@@ -890,8 +920,8 @@ def identify_jobs_sdf_time_trigger_multicore(model: ForSyDeModel, identified: Li
         sdf_app_sub.sdf_repetition_vector,
         sdf_app_sub.sdf_initial_tokens,
     )
-    goals_vertexes = [v for v in model if isinstance(v, Goal)]
-    throughput_vertexes = [v for v in goals_vertexes if isinstance(v, MinimumThroughput)]
+    goals_vertexes = [v for v in model if v.has_trait(VertexTrait.Goal)]
+    throughput_vertexes = [v for v in goals_vertexes if v.has_trait(VertexTrait.MinimumThroughput)]
     throughput_importance = 0
     latency_importance = 0
     # check that all actors are covered by a throughput goal
@@ -903,6 +933,12 @@ def identify_jobs_sdf_time_trigger_multicore(model: ForSyDeModel, identified: Li
         for (jti, jt) in jobs
         if (js, jt) in sdf_app_sub.sdf_channels
     }
+    job_capacity_req: Mapping[Tuple[JobType, ProcType], int] = {}
+    for (jidx, (j, a)) in enumerate(jobs):
+        impl = sdf_app_sub.sdf_impl.get(a, None)
+        for (pidx, p) in enumerate(time_trig_platform_sub.core_scheduler):
+            if impl and impl.has_trait(VertexTrait.InstrumentedFunction):
+                job_capacity_req[(jidx, pidx)] = impl.get_max_memory_size_in_bytes()
     res = JobScheduling(
         abstracted_vertexes=set(sdf_app_sub.covered_vertexes())
         | set(time_trig_platform_sub.covered_vertexes())
@@ -911,8 +947,15 @@ def identify_jobs_sdf_time_trigger_multicore(model: ForSyDeModel, identified: Li
         comm_channels=comm_channels,
         weak_next=weak_next,
         strong_next=strong_next,
-        procs_capacity=[time_trig_platform_sub.core_memory[p] for p in time_trig_platform_sub.core_scheduler],
-        comm_capacity=[time_trig_platform_sub.comms_bandwidth[p] for p in time_trig_platform_sub.comm_scheduler],
+        proc_capacity={
+            idx: time_trig_platform_sub.core_memory[proc]
+            for (idx, proc) in enumerate(time_trig_platform_sub.core_scheduler)
+        },
+        comm_capacity={
+            idx: time_trig_platform_sub.comms_bandwidth[p]
+            for (idx, p) in enumerate(time_trig_platform_sub.comm_scheduler)
+        },
+        job_capacity_req=job_capacity_req,
         goals_vertexes=goals_vertexes,
         objective_weights=[throughput_importance, latency_importance],
         procs=[[p, o] for (p, o) in time_trig_platform_sub.core_scheduler.items()],
@@ -926,8 +969,8 @@ def identify_jobs_insturmentation_vertexes(
     model: ForSyDeModel, identified: List[DecisionModel]
 ) -> IdentificationOutput:
     sub_jobs: Sequence[JobScheduling] = [p for p in identified if isinstance(p, JobScheduling)]
-    wcet_vertexes = set(li for li in model if isinstance(li, WCET))
-    wcct_vertexes = set(li for li in model if isinstance(li, WCCT))
+    wcet_vertexes = set(li for li in model if li.has_trait(VertexTrait.WCET))
+    wcct_vertexes = set(li for li in model if li.has_trait(VertexTrait.WCCT))
     abstracted = wcet_vertexes | wcct_vertexes
     # check if any of the sub problems already covered the requirements
     if any(all(v in sub.covered_vertexes() for v in abstracted) for sub in sub_jobs):
@@ -936,23 +979,22 @@ def identify_jobs_insturmentation_vertexes(
         wcet: Dict[Tuple[JobType, ProcType], int] = dict()
         wcct: Dict[Tuple[JobType, JobType, CommType], int] = dict()
         for ((i, job), (pidx, p)) in itertools.product(sub.jobs, enumerate(sub.procs)):
-            core = next(u for u in p if isinstance(u, AbstractProcessingComponent))
+            core = next(u for u in p if u.has_trait(VertexTrait.AbstractProcessingComponent))
             # get the maximum value of all the WCET relationships between the job and the processing unit
             wcet[((i, job), pidx)] = max(
-                int(w.get_time()) for w in wcet_vertexes if core in model[w] and job in model[w]
+                int(V.get_time(w)) for w in wcet_vertexes if core in model[w] and job in model[w]
             )
-        for ((((i, job), (j, job2)), channels), (pidx, p)) in itertools.product(sub.comm_channels.items(), enumerate(sub.comms)):
-            comm = next(u for u in p if isinstance(u, AbstractCommunicationComponent))
+        for ((((i, job), (j, job2)), channels), (pidx, p)) in itertools.product(
+            sub.comm_channels.items(), enumerate(sub.comms)
+        ):
+            comm = next(u for u in p if u.has_trait(VertexTrait.AbstractCommunicationComponent))
             # get the sum of all maximum values between channels and the communication units
             wcct[((i, job), (j, job2), pidx)] = sum(
-                max(int(w.get_time()) for w in wcct_vertexes if comm in model[w] and c in model[w])
-                for channel in channels for c in channel
+                max(int(V.get_time(w)) for w in wcct_vertexes if comm in model[w] and c in model[w])
+                for channel in channels
+                for c in channel
             )
-        res = sub.new(
-            abstracted_vertexes=set(sub.covered_vertexes()) | set(abstracted),
-            wcet=wcet,
-            wcct=wcct
-        )
+        res = sub.new(abstracted_vertexes=set(sub.covered_vertexes()) | set(abstracted), wcet=wcet, wcct=wcct)
         if res not in identified:
             return (False, res)
     return (False, None)

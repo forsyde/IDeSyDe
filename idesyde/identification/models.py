@@ -17,16 +17,19 @@ from forsyde.io.python.api import ForSyDeModel
 from forsyde.io.python.core import Vertex
 from forsyde.io.python.core import Edge
 from forsyde.io.python.core import Port
-from forsyde.io.python.types import SDFComb
-from forsyde.io.python.types import SDFPrefix
-from forsyde.io.python.types import Process
-from forsyde.io.python.types import Signal
-from forsyde.io.python.types import Function
-from forsyde.io.python.types import TimeTriggeredScheduler
-from forsyde.io.python.types import AbstractMapping
-from forsyde.io.python.types import AbstractScheduling
-from forsyde.io.python.types import AbstractProcessingComponent
-from forsyde.io.python.types import AbstractCommunicationComponent
+
+# from forsyde.io.python.types import SDFComb
+# from forsyde.io.python.types import SDFPrefix
+# from forsyde.io.python.types import Process
+# from forsyde.io.python.types import Signal
+# from forsyde.io.python.types import Function
+# from forsyde.io.python.types import TimeTriggeredScheduler
+# from forsyde.io.python.types import AbstractMapping
+# from forsyde.io.python.types import AbstractScheduling
+# from forsyde.io.python.types import AbstractProcessingComponent
+# from forsyde.io.python.types import AbstractCommunicationComponent
+from forsyde.io.python.types import VertexTrait
+from forsyde.io.python.types import EdgeTrait
 from idesyde import LOGGER_NAME
 from idesyde.identification.interfaces import DecisionModel
 from idesyde.identification.interfaces import DirectDecisionModel
@@ -37,7 +40,7 @@ import idesyde.sdf as sdfapi
 
 _logger = logging.getLogger(LOGGER_NAME)
 
-JobType = Tuple[int, Process]
+JobType = Tuple[int, Vertex]
 # the types for abstract processors and communications
 ProcType = int
 CommType = int
@@ -66,11 +69,11 @@ class SDFExecution(DecisionModel):
     SDF topology and the PASS with all elements included.
     """
 
-    sdf_actors: Sequence[Process] = field(default_factory=list)
-    sdf_constructors: Mapping[Process, SDFComb] = field(default_factory=dict)
-    sdf_impl: Mapping[Process, Function] = field(default_factory=dict)
-    sdf_delays: Sequence[SDFPrefix] = field(default_factory=list)
-    sdf_channels: Mapping[Tuple[Process, Process], Sequence[Sequence[Vertex]]] = field(default_factory=dict)
+    sdf_actors: Sequence[Vertex] = field(default_factory=list)
+    # sdf_constructors: Mapping[Process, SDFComb] = field(default_factory=dict)
+    sdf_impl: Mapping[Vertex, Vertex] = field(default_factory=dict)
+    sdf_delays: Sequence[Vertex] = field(default_factory=list)
+    sdf_channels: Mapping[Tuple[Vertex, Vertex], Sequence[Sequence[Vertex]]] = field(default_factory=dict)
     sdf_topology: np.ndarray = np.zeros((0, 0))
     sdf_repetition_vector: np.ndarray = np.zeros((0))
     sdf_initial_tokens: np.ndarray = np.zeros((0))
@@ -83,7 +86,7 @@ class SDFExecution(DecisionModel):
         for paths in self.sdf_channels.values():
             for p in paths:
                 yield from p
-        yield from self.sdf_constructors.values()
+        # yield from self.sdf_constructors.values()
         yield from self.sdf_impl.values()
 
     def compute_deduced_properties(self):
@@ -102,7 +105,7 @@ class SDFToOrders(DecisionModel):
     sdf_exec_sub: SDFExecution = SDFExecution()
 
     # partial identification
-    orderings: Sequence[TimeTriggeredScheduler] = field(default_factory=list)
+    orderings: Sequence[Vertex] = field(default_factory=list)
 
     # pre mappings
     pre_scheduling: Sequence[Edge] = field(default_factory=list)
@@ -142,8 +145,8 @@ class SDFToMultiCore(DecisionModel):
     sdf_orders_sub: SDFToOrders = SDFToOrders()
 
     # partially identified
-    cores: Sequence[AbstractProcessingComponent] = field(default_factory=list)
-    comms: Sequence[AbstractCommunicationComponent] = field(default_factory=list)
+    cores: Sequence[Vertex] = field(default_factory=list)
+    comms: Sequence[Vertex] = field(default_factory=list)
     connections: Mapping[Tuple[Vertex, Vertex], Sequence[Sequence[Vertex]]] = field(default_factory=dict)
     comms_capacity: Sequence[int] = field(default_factory=list)
 
@@ -587,7 +590,9 @@ class JobScheduling(MinizincableDecisionModel):
                         if not new_model.has_edge(p, pp, key="object"):
                             # print(p.identifier, pp.identifier)
                             edata = new_model.get_edge_data(p, pp, default=dict())
-                            new_edge = AbstractMapping(source_vertex=p, target_vertex=pp)
+                            new_edge = Edge(
+                                source=p, target=pp, edge_traits={EdgeTrait.AbstractMapping}
+                            )
                             if not any(
                                 "object" in edict and edict["object"] == new_edge for (_, edict) in edata.items()
                             ):
@@ -597,12 +602,14 @@ class JobScheduling(MinizincableDecisionModel):
                     # interface
                     scheduler = proc[-1]
                     if not new_model.has_edge(scheduler, job, key="object"):
-                        new_edge = AbstractScheduling(source_vertex=scheduler, target_vertex=job)
+                        new_edge = Edge(
+                            source=scheduler, target=job, edge_traits={EdgeTrait.AbstractScheduling}
+                        )
                         new_model.add_edge(scheduler, job, object=new_edge)
-                        scheduler.properties["start-time"] = start_time[pidx]
-                        if "trigger-time" not in scheduler.properties:
-                            scheduler.properties["trigger-time"] = {}
-                        scheduler.properties["trigger-time"][t - start_time[pidx]] = job.identifier
+                        scheduler.properties["start_time"] = start_time[pidx]
+                        if "trigger_time" not in scheduler.properties:
+                            scheduler.properties["trigger_time"] = {}
+                        scheduler.properties["trigger_time"][t - start_time[pidx]] = job.identifier
                         scheduler.properties["period"] = throughput
                         scheduler.properties["time-scale"] = self.time_scale
         for ((s, t), paths) in self.comm_channels.items():
@@ -619,7 +626,7 @@ class JobScheduling(MinizincableDecisionModel):
                     for (p, pp) in zip(u[:-1], u[1:]):
                         # print(p.identifier, pp.identifier)
                         if not new_model.has_edge(p, pp, key="object"):
-                            new_edge = AbstractMapping(source_vertex=p, target_vertex=pp)
+                            new_edge = Edge(source=p, target=pp, edge_traits={EdgeTrait.AbstractMapping})
                             if not any(
                                 "object" in edict and edict["object"] == new_edge for (_, edict) in edata.items()
                             ):
@@ -631,7 +638,7 @@ class JobScheduling(MinizincableDecisionModel):
                     for path in paths:
                         for c in path:
                             if not new_model.has_edge(scheduler, c, key="object"):
-                                new_edge = AbstractScheduling(source_vertex=scheduler, target_vertex=c)
+                                new_edge = Edge(source=scheduler, target=c, edge_traits={EdgeTrait.AbstractScheduling})
                                 new_model.add_edge(scheduler, c, object=new_edge)
                                 scheduler.properties["start-time"] = start_time_comm[ui]
                                 if "trigger-time" not in scheduler.properties:
@@ -682,14 +689,14 @@ class JobScheduling(MinizincableDecisionModel):
 @dataclass
 class TimeTriggeredPlatform(DecisionModel):
 
-    schedulers: Sequence[TimeTriggeredScheduler] = field(default_factory=list)
-    cores: Sequence[AbstractProcessingComponent] = field(default_factory=list)
-    comms: Sequence[AbstractCommunicationComponent] = field(default_factory=list)
-    core_scheduler: Mapping[AbstractProcessingComponent, TimeTriggeredScheduler] = field(default_factory=dict)
-    comm_scheduler: Mapping[AbstractCommunicationComponent, TimeTriggeredScheduler] = field(default_factory=dict)
+    schedulers: Sequence[Vertex] = field(default_factory=list)
+    cores: Sequence[Vertex] = field(default_factory=list)
+    comms: Sequence[Vertex] = field(default_factory=list)
+    core_scheduler: Mapping[Vertex, Vertex] = field(default_factory=dict)
+    comm_scheduler: Mapping[Vertex, Vertex] = field(default_factory=dict)
     paths: Mapping[Tuple[Vertex, Vertex], Sequence[Sequence[Vertex]]] = field(default_factory=dict)
-    core_memory: Mapping[AbstractProcessingComponent, int] = field(default_factory=dict)
-    comms_bandwidth: Mapping[AbstractCommunicationComponent, int] = field(default_factory=dict)
+    core_memory: Mapping[Vertex, int] = field(default_factory=dict)
+    comms_bandwidth: Mapping[Vertex, int] = field(default_factory=dict)
 
     abstracted_vertexes: Sequence[Vertex] = field(default_factory=list)
 
@@ -703,13 +710,13 @@ class TimeTriggeredPlatform(DecisionModel):
                 yield from li
 
     def is_maximal(self, model: ForSyDeModel) -> bool:
-        tt_schedulers = all(v in self.schedulers for v in model if isinstance(v, TimeTriggeredScheduler))
-        cores = all(v in self.cores for v in model if isinstance(v, AbstractProcessingComponent))
-        comms = all(v in self.comms for v in model if isinstance(v, AbstractCommunicationComponent))
+        tt_schedulers = all(v in self.schedulers for v in model if isinstance(v, Vertex))
+        cores = all(v in self.cores for v in model if isinstance(v, Vertex))
+        comms = all(v in self.comms for v in model if isinstance(v, Vertex))
         return tt_schedulers and cores and comms
 
     @classmethod
     def identifiable(cls, model: ForSyDeModel) -> Iterable[Vertex]:
-        yield from (v for v in model if isinstance(v, TimeTriggeredScheduler))
-        yield from (v for v in model if isinstance(v, AbstractProcessingComponent))
-        yield from (v for v in model if isinstance(v, AbstractCommunicationComponent))
+        yield from (v for v in model if isinstance(v, Vertex))
+        yield from (v for v in model if isinstance(v, Vertex))
+        yield from (v for v in model if isinstance(v, Vertex))

@@ -6,16 +6,12 @@ from typing import List
 
 from idesyde.identification.interfaces import DecisionModel
 from idesyde.exploration.interfaces import Explorer
+from idesyde.exploration.interfaces import ExplorerCriteria
 
 logging.basicConfig(filename="minizinc-python.log", level=logging.DEBUG)
 
 
 _registered_explorers: List[Explorer] = list()
-
-
-class ExplorerCriteria(Flag):
-    FAST = auto()
-    COMPLETE = auto()
 
 
 def _get_standard_explorers(include_internal: bool = True) -> List[Explorer]:

@@ -110,16 +110,25 @@ class DecisionModel(object):
             True if 'self' dominates other. False otherwise.
         """
         # other - self
-        vertexes_other = set(other.covered_vertexes())
-        vertexes_self = set(self.covered_vertexes())
-        edges_other = set(other.covered_edges())
-        edges_self = set(self.covered_edges())
-        # other is fully contained in self and itersection is consistent
-        # return all(v in other.covered_vertexes() for v in self.covered_vertexes())\
-        #     and all(e in other.covered_edges() for e in self.covered_edges())\
-        #     and not any(v in self.covered_vertexes() for v in other.covered_vertexes())\
-        #     and not all(e in self.covered_edges() for e in other.covered_edges())
-        return vertexes_self.issuperset(vertexes_other) and edges_self.issuperset(edges_other)
+        for o in other.covered_vertexes():
+            v = next((vs for vs in self.covered_vertexes() if vs.identifier == o.identifier), default=None)
+            if o is None or not v.refines(o):
+                return False
+        for o in other.covered_edges():
+            v = next((vs for vs in self.covered_edges() if vs.identifier == o.identifier), default=None)
+            if o is None or not v.refines(o):
+                return False
+        return True
+        # vertexes_other = set(other.covered_vertexes())
+        # vertexes_self = set(self.covered_vertexes())
+        # edges_other = set(other.covered_edges())
+        # edges_self = set(self.covered_edges())
+        # # other is fully contained in self and itersection is consistent
+        # # return all(v in other.covered_vertexes() for v in self.covered_vertexes())\
+        # #     and all(e in other.covered_edges() for e in self.covered_edges())\
+        # #     and not any(v in self.covered_vertexes() for v in other.covered_vertexes())\
+        # #     and not all(e in self.covered_edges() for e in other.covered_edges())
+        # return vertexes_self.issuperset(vertexes_other) and edges_self.issuperset(edges_other)
 
 
 class DirectDecisionModel(DecisionModel):

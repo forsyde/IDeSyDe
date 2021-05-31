@@ -17,7 +17,7 @@ idesyde = 'idesyde.cli:cli_entry'
 [tool.poetry.dependencies]
 python = "^3.7"
 forsyde-io-python = "^0.3.3"
-numpy = "^1.20"
+# numpy = "^1.20"
 sympy = "^1.7"
 minizinc = "^0.4"
 

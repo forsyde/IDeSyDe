@@ -49,7 +49,6 @@ fn main() {
                 // configuration. This calls `Py_RunMain()`, which finalizes the
                 // Python interpreter.
                 interp.py_runmain()
-                interp.py_runmain()
             }
             Err(msg) => {
                 eprintln!("error instantiating embedded Python interpreter: {}", msg);

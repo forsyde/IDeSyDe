@@ -361,3 +361,28 @@ Thumbs.db #thumbnail cache on Windows
 # Added by cargo
 
 /target
+
+
+# Created by https://www.toptal.com/developers/gitignore/api/scala,sbt
+# Edit at https://www.toptal.com/developers/gitignore?templates=scala,sbt
+
+### SBT ###
+# Simple Build Tool
+# http://www.scala-sbt.org/release/docs/Getting-Started/Directories.html#configuring-version-control
+
+dist/*
+target/
+lib_managed/
+src_managed/
+project/boot/
+project/plugins/project/
+.history
+.cache
+.lib/
+.bsp
+
+### Scala ###
+*.class
+*.log
+
+# End of https://www.toptal.com/developers/gitignore/api/scala,sbt

@@ -41,41 +41,55 @@ class DecisionModel(object):
         return hash((self.covered_vertexes(), self.covered_edges()))
 
     def short_name(self) -> str:
-        '''Get the short name representation for the decision model
+        """Get the short name representation for the decision model
 
         If this method is not overriden in classes implementing this
         interface, then it will simply return the full name of the class.
 
         This short name exist mainly for debugging and informational purposes.
-        '''
+        """
         return str(self.__class__.__name__)
 
     def compute_deduced_properties(self) -> None:
-        '''Compute deducible properties for this decision model'''
+        """Compute deducible properties for this decision model"""
         pass
 
     def covered_vertexes(self) -> Iterable[Vertex]:
-        '''Get vertexes partially identified by the Decision Model.
+        """Get vertexes partially identified by the Decision Model.
 
         Returns:
             Iterable for the vertexes.
-        '''
+        """
         raise NotImplementedError
 
+    def is_maximal(self, model: ForSyDeModel) -> bool:
+        """Checks if the model is a maximal partial identification
+
+        In the same way graph covering can be maximal, partial
+        idenfitications can be maximal, so that no further vertexes
+        in the given 'model' can be added to the decision model by
+        any possible identification step/rule.
+
+        Returns:
+            True if no further partial identifications can be made,
+            and false Otherwise.
+        """
+        return False
+
     def covered_edges(self) -> Iterable[Edge]:
-        '''Get edges partially identified by the Decision Model.
+        """Get edges partially identified by the Decision Model.
 
         Returns:
             Iterable for the edges.
-        '''
+        """
         return []
 
     def covered_model(self) -> ForSyDeModel:
-        '''Returns the covered ForSyDe Model.
+        """Returns the covered ForSyDe Model.
         Returns:
             A copy of the vertexes and edges that this decision
             model partially identified.
-        '''
+        """
         model = ForSyDeModel()
         for v in self.covered_vertexes():
             model.add_node(v, label=v.identifier)
@@ -84,7 +98,7 @@ class DecisionModel(object):
         return model
 
     def dominates(self, other: "DecisionModel") -> bool:
-        '''
+        """
         This function returns if one partial identification dominates
         the other. It also takes in consideration the explicit
         model domination set from 'self'.
@@ -94,23 +108,31 @@ class DecisionModel(object):
 
         Returns:
             True if 'self' dominates other. False otherwise.
-        '''
+        """
         # other - self
-        vertexes_other = set(other.covered_vertexes())
-        vertexes_self = set(self.covered_vertexes())
-        edges_other = set(other.covered_edges())
-        edges_self = set(self.covered_edges())
-        # other is fully contained in self and itersection is consistent
-        # return all(v in other.covered_vertexes() for v in self.covered_vertexes())\
-        #     and all(e in other.covered_edges() for e in self.covered_edges())\
-        #     and not any(v in self.covered_vertexes() for v in other.covered_vertexes())\
-        #     and not all(e in self.covered_edges() for e in other.covered_edges())
-        return len(vertexes_self.difference(vertexes_other)) > 0\
-            or len(edges_self.difference(edges_other)) > 0
+        for o in other.covered_vertexes():
+            v = next((vs for vs in self.covered_vertexes() if vs.identifier == o.identifier), default=None)
+            if o is None or not v.refines(o):
+                return False
+        for o in other.covered_edges():
+            v = next((vs for vs in self.covered_edges() if vs.identifier == o.identifier), default=None)
+            if o is None or not v.refines(o):
+                return False
+        return True
+        # vertexes_other = set(other.covered_vertexes())
+        # vertexes_self = set(self.covered_vertexes())
+        # edges_other = set(other.covered_edges())
+        # edges_self = set(self.covered_edges())
+        # # other is fully contained in self and itersection is consistent
+        # # return all(v in other.covered_vertexes() for v in self.covered_vertexes())\
+        # #     and all(e in other.covered_edges() for e in self.covered_edges())\
+        # #     and not any(v in self.covered_vertexes() for v in other.covered_vertexes())\
+        # #     and not all(e in self.covered_edges() for e in other.covered_edges())
+        # return vertexes_self.issuperset(vertexes_other) and edges_self.issuperset(edges_other)
 
 
 class DirectDecisionModel(DecisionModel):
-    '''DecisionModel interface that is solvable in python.
+    """DecisionModel interface that is solvable in python.
 
     As some decision problems can greatly benefit from fast pre-solving
     algorithms that run in polynomial time, this decision model provides
@@ -119,22 +141,22 @@ class DirectDecisionModel(DecisionModel):
     Although not mandatory, and definitively not checked, any model
     DirectDecisionModel _should_ be complete (i.e. the solution is exact)
     in polynomial time.
-    '''
+    """
 
     def execute(self) -> Any:
         return None
 
 
 class MinizincableDecisionModel(DecisionModel):
-    '''DecisionModel Interface that enables consumption by minizinc-based solvers.
+    """DecisionModel Interface that enables consumption by minizinc-based solvers.
 
     A refinement of the DecisionModel interface, models that satisfy this
     also must implment a few additional methods that enable automated exploration
     by minizinc-able solvers such as Gecode, Chuffed etc.
-    '''
+    """
 
     def get_mzn_data(self) -> Dict[str, Any]:
-        '''Build the input minizinc dictionary
+        """Build the input minizinc dictionary
 
         As the minizinc library has a dict-like interface but
         is immutable once a value is set, this pre-filling diciotnary
@@ -144,43 +166,43 @@ class MinizincableDecisionModel(DecisionModel):
         Returns:
             A dictionary containing all the data necessary to run
             the minizinc model attached to this decision model.
-        '''
+        """
         return dict()
 
     def populate_mzn_model(self, model: Union[MznModel, MznInstance]) -> Union[MznModel, MznInstance]:
-        '''Populate a minizinc model data dictionary
+        """Populate a minizinc model data dictionary
 
         Returns:
             Either an instance or a model with the data
             which then be solved by a minizinc solver.
-        '''
+        """
         data_dict = self.get_mzn_data()
         for k in data_dict:
             model[k] = data_dict[k]
         return model
 
     def get_mzn_model_name(self) -> str:
-        '''Get the number of the minizinc file for this class.
+        """Get the number of the minizinc file for this class.
 
         Returns:
             the name of the file that represents this decision model.
             Although a method, it is expected that the string return
             is constant, i.e. static.
-        '''
+        """
         return ""
 
     def rebuild_forsyde_model(self, result: MznResult) -> ForSyDeModel:
-        '''Reconstruct a ForSyDeIO Model from the DecisionModel
+        """Reconstruct a ForSyDeIO Model from the DecisionModel
 
         Returns:
             A subset of the original ForSyDe IO model that was used
             to create this DecisionModel, with the added decisions
             mainly in format of edges.
-        '''
+        """
         return ForSyDeModel()
 
     def build_mzn_model(self, mzn: Union[MznModel, MznInstance] = MznModel()) -> Union[MznModel, MznInstance]:
-        '''Builds the memory representaton of the minizinc model
+        """Builds the memory representaton of the minizinc model
 
         It uses the minizinc models packaged inside the python modules
         via the 'get_mzn_model_name' function.
@@ -188,15 +210,15 @@ class MinizincableDecisionModel(DecisionModel):
         Returns:
             Minzinc model populated with the information that the
             decision model can fill.
-        '''
-        model_txt = resources.read_text('idesyde.minizinc', self.get_mzn_model_name())
+        """
+        model_txt = resources.read_text("idesyde.minizinc", self.get_mzn_model_name())
         mzn.add_string(model_txt)
         self.populate_mzn_model(mzn)
         return mzn
 
 
 class CompositeDecisionModel(DecisionModel):
-    '''DecisionModel interface that enables composite problems to be described.
+    """DecisionModel interface that enables composite problems to be described.
 
     This extension of the DecisionModel provides minimal functions that can be
     recursively used by an explorer so that data is propagated properly between
@@ -209,10 +231,10 @@ class CompositeDecisionModel(DecisionModel):
     via lazy generation, coding full search algorithms here is not intention.
     Gluing together much more efficient and faster solvers to do such search is
     the intention.
-    '''
+    """
 
     def generate(self, current: Iterator[Tuple[DecisionModel, Any]]) -> Iterator[Tuple[DecisionModel, Any]]:
-        '''Generate next batch of contained decision models, lazily.
+        """Generate next batch of contained decision models, lazily.
 
         The iterator capture the flow of information by
         iterating through tuples of (model, input-data) which the explorers
@@ -223,7 +245,7 @@ class CompositeDecisionModel(DecisionModel):
             1. It should always handle the empty `current` case, which generates
             the 'root' case.
             2. the final results is produced by the tuple (None, result).
-        '''
+        """
         return current
 
 
@@ -258,13 +280,13 @@ class IdentificationRule(object):
         return (True, None)
 
     def short_name(self) -> str:
-        '''Get the short name representation for the identification rule
+        """Get the short name representation for the identification rule
 
         If this method is not overriden in classes implementing this
         interface, then it will simply return the full name of the class.
 
         This short name exist mainly hashing.
-        '''
+        """
         return str(self.__class__.__name__)
 
     def __hash__(self):

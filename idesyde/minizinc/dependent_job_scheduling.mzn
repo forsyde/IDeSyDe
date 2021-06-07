@@ -18,7 +18,9 @@ array[jobs, procs] of int: wcet;
 array[jobs, jobs, comms] of int: wcct;
 array[procs, procs, comms] of int: path;
 array[comms] of int: comm_capacity;
+array[procs] of int: proc_capacity;
 array[jobs, procs] of bool: allowed_mapping;
+array[jobs, procs] of int: job_capacity_req;
 
 % extra model parameters
 % set of set of procs: topologically_symmetric;
@@ -56,8 +58,11 @@ constraint forall(j in jobs) (
 constraint forall(j in jobs, p in procs) (
   duration[j, p] = wcet[j, p]
 );
-constraint forall(j, jj in jobs, p in comms) (
+constraint forall(j, jj in jobs, p in comms where j != jj) (
   comm_duration[j, jj, p] = wcct[j, jj, p]
+);
+constraint forall(j in jobs, p in comms) (
+  comm_duration[j, j, p] = 0
 );
 constraint forall(j in jobs, p in procs) (
   not(allowed_mapping[j, p]) -> start[j, p] = <>
@@ -92,20 +97,31 @@ constraint forall(p in procs) (
 % inferred constraint
 constraint cumulative(job_start, job_duration, [1|i in jobs], length(procs));
 
+% respect maximum size of each processor
+constraint forall(p in procs where proc_capacity[p] > 0) (
+  sum(j in jobs where occurs(start[j, p])) (job_capacity_req[j, p]) <= proc_capacity[p]
+);
+
 % communication concerns
-/* constraint forall(p, pp in procs, j, jj in jobs, u, uu in comms where strong_next[j, jj]) ( */
-/*   path[p, pp, u] > 0 /\ path[p, pp, u] = path[p, pp, uu] - 1 -> */
-/*   comm_start[j, jj, u] + comm_duration[j, jj, u] <= comm_start[j, jj, uu] */
-/* ); */
-/* constraint forall(p, pp in procs, j, jj in jobs, u in comms where strong_next[j, jj] /\ path[p, pp, u] > 0) ( */
-/*   occurs(start[j, p]) /\ occurs(start[jj, pp]) -> */ 
-/*   start[j, p] + duration[j, p] <= comm_start[j, jj, u] */ 
-/* ); */
+constraint forall(p, pp in procs, j, jj in jobs, u, uu in comms where strong_next[j, jj]) (
+  path[p, pp, u] > 0 /\ path[p, pp, u] = path[p, pp, uu] - 1 /\ occurs(start[j, p]) /\ occurs(start[jj, pp]) ->
+  comm_start[j, jj, u] + comm_duration[j, jj, u] <= comm_start[j, jj, uu]
+);
+% constraint forall(p, pp in procs, j, jj in jobs, u in comms where strong_next[j, jj] /\ path[p, pp, u] > 0) (
+%   occurs(start[j, p]) /\ occurs(start[jj, pp]) -> 
+%   start[j, p] + duration[j, p] <= comm_start[j, jj, u]
+% );
+constraint forall(j, jj in jobs, u in comms where strong_next[j, jj]) (
+  job_start[j] + job_duration[j] <= comm_start[j, jj, u]
+);
+constraint forall(j, jj in jobs, u in comms where strong_next[j, jj]) (
+  comm_start[j, jj, u] <= job_start[jj] + job_duration[jj]
+);
 constraint forall(p, pp in procs, j, jj in jobs, u in comms where strong_next[j, jj] /\ path[p, pp, u] > 0) (
-  occurs(start[j, p]) /\ occurs(start[jj, pp]) -> 
+  % occurs(start[j, p]) /\ occurs(start[jj, pp]) -> 
   start[j, p] + sum(u in comms where path[p, pp, u] > 0) (comm_duration[j, jj, u]) <= start[jj, pp]
 );
-constraint forall(p in comms) (
+constraint forall(p in comms where comm_capacity[p] > 0) (
  cumulative(
    [comm_start[j, jj, p] | j, jj in jobs where strong_next[j, jj]],
    [comm_duration[j, jj, p] | j, jj in jobs where strong_next[j, jj]],

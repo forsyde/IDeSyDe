@@ -1,6 +1,6 @@
-package identification.models
+package idesyde.identification.models
 
-import identification.interfaces.DecisionModel
+import idesyde.identification.interfaces.DecisionModel
 import forsyde.io.java.core.Vertex
 
 // class TimeTriggeredPlatform(DecisionModel):
@@ -25,22 +25,25 @@ final case class LimitedTimeTriggeredPlatform(
     val procElemsMaxCyclesPerOp: Seq[Map[String, Int]]
 ) extends DecisionModel {
 
-    def coveredVertexes() = {
-        for (pset <- processingElems; p <- pset) yield p
-        for (cset <- communicationElems; c <- cset) yield c
+  def coveredVertexes() = {
+    for (pset <- processingElems; p <- pset) yield p
+    for (cset <- communicationElems; c <- cset) yield c
+  }
+
+  def coveredEdges() = Seq()
+
+  override def dominates(o: DecisionModel) = {
+    val extra = o match {
+      case o: LimitedTimeTriggeredPlatform => domiantes_equal(o)
+      case _                               => true
     }
+    super.dominates(o) && extra
+  }
 
-    def coveredEdges() = Seq()
-
-    override def dominates(o: DecisionModel) = {
-        val extra = o match {
-            case o: LimitedTimeTriggeredPlatform => domiantes_equal(o)
-            case _ => true
-        }
-        super.dominates(o) && extra
-    }
-
-    def domiantes_equal(o: LimitedTimeTriggeredPlatform) =
-        this.procElemsMaxMemory.count(i => i > 0) >= o.procElemsMaxMemory.count(i => i > 0) &&
-        this.commElemsMinBandwidth.count(i => i > 0) >= o.commElemsMinBandwidth.count(i => i > 0)
+  def domiantes_equal(o: LimitedTimeTriggeredPlatform) =
+    this.procElemsMaxMemory.count(i => i > 0) >= o.procElemsMaxMemory.count(i =>
+      i > 0
+    ) &&
+      this.commElemsMinBandwidth.count(i => i > 0) >= o.commElemsMinBandwidth
+        .count(i => i > 0)
 }

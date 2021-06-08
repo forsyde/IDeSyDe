@@ -1,6 +1,6 @@
-package identification.models
+package idesyde.identification.models
 
-import identification.interfaces.DecisionModel
+import idesyde.identification.interfaces.DecisionModel
 import forsyde.io.java.core.Vertex
 
 // class SDFExecution(DecisionModel):
@@ -51,30 +51,31 @@ final case class SDFApplication(
     val impl: Map[Vertex, Vertex],
     val repetitionVector: Seq[Int],
     val sdfPass: Seq[Vertex]
-    ) extends DecisionModel {
+) extends DecisionModel {
 
-    override def dominates(o: DecisionModel) = {
-        val extra: Boolean = o match {
-            case o: SDFApplication => dominates_sdf(o)
-            case _ => true
-        }
-        super.dominates(o) && extra
+  override def dominates(o: DecisionModel) = {
+    val extra: Boolean = o match {
+      case o: SDFApplication => dominates_sdf(o)
+      case _                 => true
     }
-    
-        
-    def dominates_sdf(other: SDFApplication) =
-        repetitionVector.count(i => i > 0) >= other.repetitionVector.count(i => i > 0) &&
-        sdfPass.size >= other.sdfPass.size
+    super.dominates(o) && extra
+  }
 
-    def coveredVertexes() = {
-        for (a <- actors) yield a
-        for (d <- delays) yield d
-        for ((_, paths) <- channels; path <- paths; elem <- path) yield elem
-        for ((_, v) <- impl) yield v
-    }
+  def dominates_sdf(other: SDFApplication) =
+    repetitionVector.count(i => i > 0) >= other.repetitionVector.count(i =>
+      i > 0
+    ) &&
+      sdfPass.size >= other.sdfPass.size
 
-    def coveredEdges() = {
-        // TODO: Needs to be properly implemented later
-        Seq()
-    }
+  def coveredVertexes() = {
+    for (a <- actors) yield a
+    for (d <- delays) yield d
+    for ((_, paths) <- channels; path <- paths; elem <- path) yield elem
+    for ((_, v) <- impl) yield v
+  }
+
+  def coveredEdges() = {
+    // TODO: Needs to be properly implemented later
+    Seq()
+  }
 }

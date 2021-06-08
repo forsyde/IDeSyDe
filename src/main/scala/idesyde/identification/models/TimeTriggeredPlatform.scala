@@ -1,6 +1,6 @@
-package identification.models
+package idesyde.identification.models
 
-import identification.interfaces.DecisionModel
+import idesyde.identification.interfaces.DecisionModel
 import forsyde.io.java.core.Vertex
 
 // class TimeTriggeredPlatform(DecisionModel):
@@ -22,10 +22,10 @@ final case class TimeTriggeredPlatform(
     val commBetweenProcs: Map[(Int, Int), Seq[Seq[Int]]]
 ) extends DecisionModel {
 
-    def coveredVertexes() = {
-        for (pset <- processingElems; p <- pset) yield p
-        for (cset <- communicationElems; c <- cset) yield c
-    }
+  def coveredVertexes() = {
+    for (pset <- processingElems; p <- pset) yield p
+    for (cset <- communicationElems; c <- cset) yield c
+  }
 
-    def coveredEdges() = Seq()
+  def coveredEdges() = Seq()
 }

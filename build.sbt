@@ -18,7 +18,7 @@ libraryDependencies ++= Seq(
 )
 
 // segments to be able to use python
-libraryDependencies += "me.shadaj" %% "scalapy-core" % "0.5.0"
+libraryDependencies += ("me.shadaj" %% "scalapy-core" % "0.5.0").cross(CrossVersion.for3Use2_13)
 
 lazy val pythonLdFlags = {
   val withoutEmbed = "python3-config --ldflags".!!

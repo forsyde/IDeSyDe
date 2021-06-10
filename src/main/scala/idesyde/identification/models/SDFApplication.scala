@@ -42,35 +42,30 @@ import forsyde.io.java.core.Vertex
 //                 for (aidx, a) in enumerate(self.sdf_actors)
 //             )
 
-final case class SDFApplication(
-    val actors: Seq[Vertex],
-    val delays: Seq[Vertex],
-    val channels: Map[(Int, Int), Seq[Seq[Vertex]]],
-    val topology: Seq[Seq[Int]],
-    val initialTokens: Seq[Int],
+final case class SdfApplication(
+    val actors: Set[Vertex],
+    val delays: Set[Vertex],
+    val channels: Map[(Vertex, Vertex), Seq[Vertex]],
+    val topology: Map[Vertex, Map[Vertex, Int]],
+    val initialTokens: Map[Vertex, Int],
     val impl: Map[Vertex, Vertex],
-    val repetitionVector: Seq[Int],
-    val sdfPass: Seq[Vertex]
+    val repetitionVector: Seq[Vertex]
 ) extends DecisionModel {
 
   override def dominates(o: DecisionModel) = {
     val extra: Boolean = o match {
-      case o: SDFApplication => dominates_sdf(o)
+      case o: SdfApplication => dominatesSdf(o)
       case _                 => true
     }
     super.dominates(o) && extra
   }
 
-  def dominates_sdf(other: SDFApplication) =
-    repetitionVector.count(i => i > 0) >= other.repetitionVector.count(i =>
-      i > 0
-    ) &&
-      sdfPass.size >= other.sdfPass.size
+  def dominatesSdf(other: SdfApplication) = repetitionVector.size >= other.repetitionVector.size
 
   def coveredVertexes() = {
     for (a <- actors) yield a
     for (d <- delays) yield d
-    for ((_, paths) <- channels; path <- paths; elem <- path) yield elem
+    for ((_, path) <- channels; elem <- path) yield elem
     for ((_, v) <- impl) yield v
   }
 

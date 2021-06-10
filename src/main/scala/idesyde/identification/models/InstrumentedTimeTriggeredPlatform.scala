@@ -16,14 +16,18 @@ import forsyde.io.java.core.Vertex
 
 //     abstracted_vertexes: Sequence[Vertex] = field(default_factory=list)
 
-final case class LimitedTimeTriggeredPlatform(
-    val processingElems: Seq[Set[Vertex]],
-    val communicationElems: Seq[Set[Vertex]],
-    val commBetweenProcs: Map[(Int, Int), Seq[Seq[Int]]],
-    val procElemsMaxMemory: Seq[Int],
-    val commElemsMinBandwidth: Seq[Int],
-    val procElemsMaxCyclesPerOp: Seq[Map[String, Int]]
+final case class InstrumentedTimeTriggeredPlatform(
+    val identifiedPlatform: TimeTriggeredPlatform,
+    val procElemsMaxMemory: Map[Vertex, Int],
+    val commElemsMinBandwidth: Map[Vertex, Int],
+    val procElemsMaxCyclesPerOp: Map[Vertex, Map[String, Int]]
 ) extends DecisionModel {
+
+  def processingElems = identifiedPlatform.processingElems
+
+  def communicationElems = identifiedPlatform.communicationElems
+
+  def commBetweenProcs = identifiedPlatform.commBetweenProcs
 
   def coveredVertexes() = {
     for (pset <- processingElems; p <- pset) yield p
@@ -32,18 +36,14 @@ final case class LimitedTimeTriggeredPlatform(
 
   def coveredEdges() = Seq()
 
-  override def dominates(o: DecisionModel) = {
-    val extra = o match {
-      case o: LimitedTimeTriggeredPlatform => domiantes_equal(o)
-      case _                               => true
-    }
-    super.dominates(o) && extra
+  override def dominates(o: DecisionModel) = o match {
+    case o: InstrumentedTimeTriggeredPlatform => super.dominates(o) && dominatesTTPlatform(o)
+    case _ => super.dominates(o)
   }
 
-  def domiantes_equal(o: LimitedTimeTriggeredPlatform) =
-    this.procElemsMaxMemory.count(i => i > 0) >= o.procElemsMaxMemory.count(i =>
-      i > 0
-    ) &&
-      this.commElemsMinBandwidth.count(i => i > 0) >= o.commElemsMinBandwidth
-        .count(i => i > 0)
+  def dominatesTTPlatform(o: InstrumentedTimeTriggeredPlatform) =
+    procElemsMaxMemory.exists((k, v) => v != 0 && o.procElemsMaxMemory.getOrElse(k, 0) != 0) &&
+    commElemsMinBandwidth.exists((k, v) => v != 0 && o.commElemsMinBandwidth.getOrElse(k, 0) != 0) &&
+    procElemsMaxMemory.exists((k, v) => v != 0 && o.procElemsMaxMemory.getOrElse(k, 0) != 0)
+
 }

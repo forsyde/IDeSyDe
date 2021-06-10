@@ -17,9 +17,9 @@ import forsyde.io.java.core.Vertex
 //     abstracted_vertexes: Sequence[Vertex] = field(default_factory=list)
 
 final case class TimeTriggeredPlatform(
-    val processingElems: Seq[Set[Vertex]],
-    val communicationElems: Seq[Set[Vertex]],
-    val commBetweenProcs: Map[(Int, Int), Seq[Seq[Int]]]
+    val processingElems: Set[Set[Vertex]],
+    val communicationElems: Set[Set[Vertex]],
+    val commBetweenProcs: Map[(Vertex, Vertex), Seq[Seq[Vertex]]]
 ) extends DecisionModel {
 
   def coveredVertexes() = {

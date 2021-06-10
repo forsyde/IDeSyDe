@@ -5,7 +5,6 @@ import org.apache.commons.math3.linear.MatrixUtils
 import org.apache.commons.math3.fraction.Fraction
 import org.apache.commons.math3.fraction.FractionField
 
-// import me.shadaj.scalapy.py
 
 object SDFUtils {
 

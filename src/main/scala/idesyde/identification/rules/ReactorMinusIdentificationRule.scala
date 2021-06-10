@@ -34,16 +34,9 @@ final case class ReactorMinusIdentificationRule()
     val dateReactiveReactors = reactors.filter(!periodicReactors.contains(_))
     // check if at every data chain has at least one periodic reactor
     val isReactorMinus =
-      reactors.forall(r1 =>
-        reactors.forall(r2 =>
-          AllDirectedPaths(model)
-            .getAllPaths(r1, r2, true, null)
-            .asScala
-            .forall(path =>
-              !path.getVertexList.asScala.toSet
-                .intersect(periodicReactors)
-                .isEmpty
-            )
+      reactors.forall(t =>
+        periodicReactors.exists(s =>
+          !AllDirectedPaths(model).getAllPaths(s, t, true, null).isEmpty
         )
       )
     // the model is indeed Reactor-, so proceed to build it

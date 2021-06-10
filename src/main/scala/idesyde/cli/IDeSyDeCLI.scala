@@ -23,7 +23,7 @@ class IDeSyDeCLI extends Callable[Int] {
     paramLabel = "Input Model",
     description = Array("input models to perform analysis")
   )
-  var inputModels: Seq[File] = Seq()
+  var inputModels: Array[File] = Array()
 
   @Option(
     names = Array("-o", "--output"),
@@ -32,6 +32,14 @@ class IDeSyDeCLI extends Callable[Int] {
   var outputModel: File = File("forsyde-output.forxml")
 
   def call(): Int = {
+    val validInputs = inputModels.filter(f =>
+      f.getName.endsWith("forsyde.xml") || f.getName.endsWith("forxml")
+    )
+    if (validInputs.isEmpty) {
+      println(
+        "At least one input model '.forsyde.xml' | '.forxml' is necessary"
+      )
+    } else {}
     0
   }
 }

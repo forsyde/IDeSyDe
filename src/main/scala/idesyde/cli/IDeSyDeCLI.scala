@@ -3,6 +3,8 @@ package idesyde.cli
 import java.util.concurrent.Callable
 import picocli.CommandLine.*
 import java.io.File
+import forsyde.io.java.core.ForSyDeModel
+import forsyde.io.java.drivers.ForSyDeModelHandler
 
 @Command(
   name = "idesyde",
@@ -42,4 +44,6 @@ class IDeSyDeCLI extends Callable[Int] {
     } else {}
     0
   }
+
+  //def mergeInputs(inputs: Array[File]): ForSyDeModel = inputs.map(f => ForSyDeModelHandler.loadModel(f.getName)).reduce((m1, m2) => m1.)
 }

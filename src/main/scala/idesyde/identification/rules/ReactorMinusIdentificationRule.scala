@@ -5,13 +5,13 @@ import idesyde.identification.models.ReactorMinusApplication
 import forsyde.io.java.core.ForSyDeModel
 import idesyde.identification.interfaces.DecisionModel
 import forsyde.io.java.core.VertexTrait
-import forsyde.io.java.core.{VertexPropertyAcessor => V}
 import java.util.stream.Collectors
 import scala.jdk.StreamConverters.*
 import collection.JavaConverters.*
 
 import org.jgrapht.alg.shortestpath.AllDirectedPaths
 import forsyde.io.java.core.Vertex
+import forsyde.io.java.typed.acessor.ReactorTimerAcessor
 
 final case class ReactorMinusIdentificationRule()
     extends IdentificationRule[ReactorMinusApplication] {
@@ -51,10 +51,10 @@ final case class ReactorMinusIdentificationRule()
       val periods = periodicTuples
         .map((t, r) =>
           (
-            r ->
-              (V.getPeriodNumeratorPerSec(r).orElse(0) / V
-                .getPeriodDenominatorPerSec(r)
-                .orElse(1)).toDouble
+            r -> (
+              ReactorTimerAcessor.getPeriodNumeratorPerSec(r).map(_.doubleValue).orElse(0) / 
+              ReactorTimerAcessor.getPeriodDenominatorPerSec(r).map(_.doubleValue).orElse(1)
+              ).toDouble
           )
         )
         .toMap
@@ -65,13 +65,11 @@ final case class ReactorMinusIdentificationRule()
         signals,
         periods,
         reactors
-          .map(r => r -> V.getMaxMemorySizeInBytes(r).orElse(0).toInt)
+          .map(r => r -> 0)//V.getMaxMemorySizeInBytes(r).orElse(0).toInt)
           .toMap,
         signals.values
           .map(s =>
-            s -> (V
-              .getMaxElemSizeBytes(s)
-              .orElse(0) * V.getMaxElemCount(s).orElse(0)).toInt
+            s -> 0 //(V.getMaxElemSizeBytes(s).orElse(0) * V.getMaxElemCount(s).orElse(0)).toInt
           )
           .toMap
       )

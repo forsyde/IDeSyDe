@@ -7,8 +7,10 @@ lazy val root = project
     scalaVersion := "3.0.0"
   )
 
+resolvers += Resolver.mavenLocal
+
 libraryDependencies ++= Seq(
-  "io.github.forsyde" % "forsyde-io-java" % "0.3.5",
+  "io.github.forsyde" % "forsyde-io-java" % "0.3.7",
   "info.picocli" % "picocli" % "4.2.0",
   "info.picocli" % "picocli-codegen" % "4.2.0" % "provided"
 )

@@ -2,15 +2,20 @@ package idesyde.identification.models
 
 import idesyde.identification.interfaces.DecisionModel
 import forsyde.io.java.core.Vertex
+import forsyde.io.java.typed.prototypes.ReactorActor
+import forsyde.io.java.typed.prototypes.ReactorTimer
+import forsyde.io.java.typed.prototypes.ReactorElement
+import forsyde.io.java.typed.prototypes.Signal
+import org.apache.commons.math3.fraction.Fraction
 
 final case class ReactorMinusApplication(
-    val timers: Set[Vertex],
-    val periodicReactors: Set[Vertex],
-    val dateReactiveReactors: Set[Vertex],
-    val signals: Map[(Vertex, Vertex), Vertex],
-    val periods: Map[Vertex, Double],
-    val reactorSize: Map[Vertex, Int],
-    val signalSize: Map[Vertex, Int]
+    val timers: Set[ReactorTimer],
+    val periodicReactors: Set[ReactorActor],
+    val dateReactiveReactors: Set[ReactorActor],
+    val signals: Map[(ReactorActor, ReactorActor), Signal],
+    val periods: Map[ReactorActor, Fraction],
+    val reactorSize: Map[ReactorActor, Int],
+    val signalSize: Map[Signal, Int]
 ) extends DecisionModel {
 
   def coveredVertexes() = {

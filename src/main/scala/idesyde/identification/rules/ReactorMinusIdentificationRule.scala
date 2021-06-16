@@ -11,7 +11,10 @@ import collection.JavaConverters.*
 
 import org.jgrapht.alg.shortestpath.AllDirectedPaths
 import forsyde.io.java.core.Vertex
-import forsyde.io.java.typed.acessor.ReactorTimerAcessor
+import forsyde.io.java.typed.prototypes.ReactorActor
+import forsyde.io.java.typed.prototypes.ReactorTimer
+import forsyde.io.java.typed.prototypes.Signal
+import org.apache.commons.math3.fraction.Fraction
 
 final case class ReactorMinusIdentificationRule()
     extends IdentificationRule[ReactorMinusApplication] {
@@ -20,42 +23,43 @@ final case class ReactorMinusIdentificationRule()
     val reactors =
       model.vertexSet.stream
         .toScala(LazyList)
-        .filter(_.hasTrait(VertexTrait.ReactorActor))
+        .filter(ReactorActor.conforms(_))
+        .map(v => v.asInstanceOf[ReactorActor])
         .toSet
     val timers =
       model.vertexSet.stream
         .toScala(LazyList)
-        .filter(_.hasTrait(VertexTrait.ReactorTimer))
+        .filter(ReactorTimer.conforms(_))
+        .map(v => v.asInstanceOf[ReactorTimer])
         .toSet
-    val periodicTuples =
-      for (r <- reactors; t <- timers; if model.containsEdge(t, r)) yield (t, r)
-    val periodicReactors =
-      reactors.filter(periodicTuples.map((t, r) => r).contains(_))
-    val dateReactiveReactors = reactors.filter(!periodicReactors.contains(_))
-    // check if at every data chain has at least one periodic reactor
     val isReactorMinus =
-      reactors.forall(t =>
-        periodicReactors.exists(s =>
-          !AllDirectedPaths(model).getAllPaths(s, t, true, null).isEmpty
+      reactors.forall(r =>
+        timers.exists(t =>
+          !AllDirectedPaths(model).getAllPaths(t, r, true, null).isEmpty
         )
       )
     // the model is indeed Reactor-, so proceed to build it
     if (isReactorMinus) {
+      val periodicReactors = reactors.filter(r => 
+        model.incomingEdgesOf(e).stream().map(e => e.source)
+      )
+      val dateReactiveReactors = reactors.filter(!periodicReactors.contains(_))
+      // check if at every data chain has at least one periodic reactor
       val signalTuples =
         for (
           r1 <- reactors;
           r2 <- reactors;
           paths <- AllDirectedPaths(model).getAllPaths(r1, r2, true, 3).asScala
-        ) yield ((r1, r2), paths.getVertexList.get(1))
+        ) yield ((r1, r2), paths.getVertexList.get(1).asInstanceOf[Signal])
       val signals = signalTuples.toMap
-      val periods = periodicTuples
-        .map((t, r) =>
-          (
-            r -> (
-              ReactorTimerAcessor.getPeriodNumeratorPerSec(r).map(_.doubleValue).orElse(0) / 
-              ReactorTimerAcessor.getPeriodDenominatorPerSec(r).map(_.doubleValue).orElse(1)
-              ).toDouble
-          )
+      val periods = reactors
+        .map(r => r // TODO: continue jhere
+          // (
+          //   t -> (
+          //     t.getPeriodNumeratorPerSec() / 
+          //     t.getPeriodDenominatorPerSec()
+          //     ).toDouble
+          // )
         )
         .toMap
       val decisionModel = ReactorMinusApplication(
@@ -76,6 +80,11 @@ final case class ReactorMinusIdentificationRule()
       (true, Option(decisionModel))
     } else (false, Option.empty)
     (false, Option.empty)
+  }
+
+  def calculatePeriod(model: ForSyDeModel , v: Vertex): Fraction = v match {
+    case v: ReactorTimer => Fraction(v.getOffsetNumeratorPerSec, v.getOffsetDenominatorPerSec)
+    case _ => Fraction(0)
   }
 
 }

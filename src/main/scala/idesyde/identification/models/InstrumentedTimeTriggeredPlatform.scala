@@ -37,13 +37,20 @@ final case class InstrumentedTimeTriggeredPlatform(
   def coveredEdges() = Seq()
 
   override def dominates(o: DecisionModel) = o match {
-    case o: InstrumentedTimeTriggeredPlatform => super.dominates(o) && dominatesTTPlatform(o)
+    case o: InstrumentedTimeTriggeredPlatform =>
+      super.dominates(o) && dominatesTTPlatform(o)
     case _ => super.dominates(o)
   }
 
   def dominatesTTPlatform(o: InstrumentedTimeTriggeredPlatform) =
-    procElemsMaxMemory.exists((k, v) => v != 0 && o.procElemsMaxMemory.getOrElse(k, 0) != 0) &&
-    commElemsMinBandwidth.exists((k, v) => v != 0 && o.commElemsMinBandwidth.getOrElse(k, 0) != 0) &&
-    procElemsMaxMemory.exists((k, v) => v != 0 && o.procElemsMaxMemory.getOrElse(k, 0) != 0)
+    procElemsMaxMemory.exists((k, v) =>
+      v != 0 && o.procElemsMaxMemory.getOrElse(k, 0) != 0
+    ) &&
+      commElemsMinBandwidth.exists((k, v) =>
+        v != 0 && o.commElemsMinBandwidth.getOrElse(k, 0) != 0
+      ) &&
+      procElemsMaxMemory.exists((k, v) =>
+        v != 0 && o.procElemsMaxMemory.getOrElse(k, 0) != 0
+      )
 
 }

@@ -11,10 +11,12 @@ import collection.JavaConverters.*
 
 import org.jgrapht.alg.shortestpath.AllDirectedPaths
 import forsyde.io.java.core.Vertex
-import forsyde.io.java.typed.prototypes.ReactorActor
-import forsyde.io.java.typed.prototypes.ReactorTimer
-import forsyde.io.java.typed.prototypes.Signal
 import org.apache.commons.math3.fraction.Fraction
+import forsyde.io.java.typed.interfaces.ReactorActor
+import forsyde.io.java.typed.interfaces.ReactorTimer
+import forsyde.io.java.typed.interfaces.Signal
+import forsyde.io.java.core.VertexInterface
+import org.apache.commons.math3.util.ArithmeticUtils
 
 final case class ReactorMinusIdentificationRule()
     extends IdentificationRule[ReactorMinusApplication] {
@@ -40,8 +42,15 @@ final case class ReactorMinusIdentificationRule()
       )
     // the model is indeed Reactor-, so proceed to build it
     if (isReactorMinus) {
-      val periodicReactors = reactors.filter(r => 
-        model.incomingEdgesOf(e).stream().map(e => e.source)
+      val periodicReactors = reactors.filter(r =>
+        model
+          .incomingEdgesOf(r)
+          .stream()
+          .allMatch(e =>
+            ReactorTimer.conforms(e.getSource) && e.getTargetPort
+              .orElse("")
+              .equals("triggers")
+          )
       )
       val dateReactiveReactors = reactors.filter(!periodicReactors.contains(_))
       // check if at every data chain has at least one periodic reactor
@@ -53,14 +62,7 @@ final case class ReactorMinusIdentificationRule()
         ) yield ((r1, r2), paths.getVertexList.get(1).asInstanceOf[Signal])
       val signals = signalTuples.toMap
       val periods = reactors
-        .map(r => r // TODO: continue jhere
-          // (
-          //   t -> (
-          //     t.getPeriodNumeratorPerSec() / 
-          //     t.getPeriodDenominatorPerSec()
-          //     ).toDouble
-          // )
-        )
+        .map(r => r -> calculatePeriod(model, r))
         .toMap
       val decisionModel = ReactorMinusApplication(
         timers,
@@ -69,12 +71,10 @@ final case class ReactorMinusIdentificationRule()
         signals,
         periods,
         reactors
-          .map(r => r -> 0)//V.getMaxMemorySizeInBytes(r).orElse(0).toInt)
+          .map(r => r -> 0)
           .toMap,
         signals.values
-          .map(s =>
-            s -> 0 //(V.getMaxElemSizeBytes(s).orElse(0) * V.getMaxElemCount(s).orElse(0)).toInt
-          )
+          .map(s => s -> 0)
           .toMap
       )
       (true, Option(decisionModel))
@@ -82,9 +82,23 @@ final case class ReactorMinusIdentificationRule()
     (false, Option.empty)
   }
 
-  def calculatePeriod(model: ForSyDeModel , v: Vertex): Fraction = v match {
-    case v: ReactorTimer => Fraction(v.getOffsetNumeratorPerSec, v.getOffsetDenominatorPerSec)
-    case _ => Fraction(0)
-  }
+  def calculatePeriod(model: ForSyDeModel, v: VertexInterface): Fraction =
+    v match {
+      case v: ReactorTimer =>
+        Fraction(v.getOffsetNumeratorPerSec, v.getOffsetDenominatorPerSec)
+      case _ =>
+        model
+          .incomingEdgesOf(v)
+          .stream()
+          .map(it => calculatePeriod(model, it.getSource))
+          // the GCD of a nunch of fractions n1/d1, n2/d2... is gcd(n1, n2,...)/lcm(d1, d2,...). You can check.
+          .reduce((t1, t2) =>
+            Fraction(
+              ArithmeticUtils.gcd(t1.getNumerator, t2.getNumerator),
+              ArithmeticUtils.lcm(t1.getDenominator, t2.getDenominator)
+            )
+          )
+          .get
+    }
 
 }

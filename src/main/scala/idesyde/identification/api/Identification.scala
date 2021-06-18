@@ -6,6 +6,7 @@ import idesyde.identification.interfaces.DecisionModel
 import forsyde.io.java.core.VertexTrait
 import java.util.stream.Collectors
 import scala.jdk.CollectionConverters.*
+import forsyde.io.java.core.Trait
 
 object Identification {
 
@@ -24,7 +25,7 @@ object Identification {
         identified
     }
 
-    protected def modelTraitCombinations(model: ForSyDeModel): Set[Set[VertexTrait]] =
-        model.vertexSet.stream.map(_.vertexTraits.asScala.toSet).collect(Collectors.toSet).asScala.toSet
+    protected def modelTraitCombinations(model: ForSyDeModel): Set[Set[Trait]] =
+        model.vertexSet.stream.map(_.getTraits.asScala.toSet).collect(Collectors.toSet).asScala.toSet
 
 }

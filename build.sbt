@@ -15,6 +15,8 @@ libraryDependencies ++= Seq(
   "info.picocli" % "picocli-codegen" % "4.2.0" % "provided"
 )
 libraryDependencies += "org.apache.commons" % "commons-math3" % "3.6.1"
+// libraryDependencies += ("org.typelevel" %% "cats-core" % "2.3.0")
+//   .withCrossVersion(CrossVersion.for3Use2_13)
 
 // segments to be able to use python
 // libraryDependencies += ("me.shadaj" %% "scalapy-core" % "0.5.0").cross(

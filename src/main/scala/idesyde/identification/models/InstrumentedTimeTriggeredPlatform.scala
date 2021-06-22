@@ -31,7 +31,7 @@ final case class InstrumentedTimeTriggeredPlatform(
 
   def coveredVertexes() = {
     for (pset <- processingElems; p <- pset) yield p
-    for (cset <- communicationElems; c <- cset) yield c
+    for (cset <- communicationElems; c <- cset) yield c.getViewedVertex
   }
 
   def coveredEdges() = Seq()

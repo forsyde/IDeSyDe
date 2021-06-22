@@ -5,7 +5,7 @@ import idesyde.identification.models.ReactorMinusApplication
 import forsyde.io.java.core.ForSyDeModel
 import idesyde.identification.interfaces.DecisionModel
 import org.apache.commons.math3.fraction.Fraction
-import forsyde.io.java.typed.interfaces.InstrumentedFunction
+import forsyde.io.java.typed.viewers.InstrumentedFunction
 
 final case class EnrichReactorMemoryMinusIdent()
     extends IdentificationRule[ReactorMinusApplication] {
@@ -31,10 +31,9 @@ final case class EnrichReactorMemoryMinusIdent()
         // and return it at the very last moment, with a default value of 0
         val newReactorSizes = oneEmpty.reactorSize
           .map((r, v) => (r, r.getReactionImplementationPort(model)))
+          .filter((r, f) => f.isPresent && InstrumentedFunction.conforms(f.get.getViewedVertex))
           .map((r, f) =>
-            r -> f
-              .filter(InstrumentedFunction.conforms(_))
-              .map(_.asInstanceOf[InstrumentedFunction])
+            r -> InstrumentedFunction.safeCast(f.get().getViewedVertex)
               .map(_.getMaxMemorySizeInBytes.toInt)
               .orElse(0)
           )

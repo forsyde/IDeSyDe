@@ -12,11 +12,11 @@ import collection.JavaConverters.*
 import org.jgrapht.alg.shortestpath.AllDirectedPaths
 import forsyde.io.java.core.Vertex
 import org.apache.commons.math3.fraction.Fraction
-import forsyde.io.java.typed.interfaces.ReactorActor
-import forsyde.io.java.typed.interfaces.ReactorTimer
-import forsyde.io.java.typed.interfaces.Signal
-import forsyde.io.java.core.VertexInterface
 import org.apache.commons.math3.util.ArithmeticUtils
+import org.apache.commons.math3.analysis.function.Sin
+import forsyde.io.java.typed.viewers.ReactorActor
+import forsyde.io.java.typed.viewers.ReactorTimer
+import forsyde.io.java.typed.viewers.Signal
 
 final case class ReactorMinusIdentificationRule()
     extends IdentificationRule[ReactorMinusApplication] {
@@ -26,39 +26,49 @@ final case class ReactorMinusIdentificationRule()
       model.vertexSet.stream
         .toScala(LazyList)
         .filter(ReactorActor.conforms(_))
-        .map(v => v.asInstanceOf[ReactorActor])
+        .map(ReactorActor.safeCast(_).get)
         .toSet
     val timers =
       model.vertexSet.stream
         .toScala(LazyList)
         .filter(ReactorTimer.conforms(_))
-        .map(v => v.asInstanceOf[ReactorTimer])
+        .map(ReactorTimer.safeCast(_).get)
         .toSet
     val isReactorMinus =
       reactors.forall(r =>
         timers.exists(t =>
-          !AllDirectedPaths(model).getAllPaths(t, r, true, null).isEmpty
+          !AllDirectedPaths(model).getAllPaths(t.getViewedVertex, r.getViewedVertex, true, null).isEmpty
         )
       )
     // the model is indeed Reactor-, so proceed to build it
     if (isReactorMinus) {
-      val periodicReactors = timers.map(t => 
-        model.incomingEdgesOf(t).stream().map(e => e.getTarget)
-        .filter(_.isInstanceOf[ReactorActor])
-        .map(_.asInstanceOf[ReactorActor])
-        .filter(reactors.contains(_)).findFirst.get
+      val periodicReactors = reactors.filter(r => 
+        model.incomingEdgesOf(r.getViewedVertex).stream().map(_.getSource)
+        .flatMap(ReactorTimer.safeCast(_).stream).anyMatch(timers.contains(_))
       )
       val dateReactiveReactors = reactors.filter(!periodicReactors.contains(_))
       // check if at every data chain has at least one periodic reactor
+      // reactors.map(r1 =>
+      //   reactors.map(r2 => {
+      //     val paths = AllDirectedPaths(model).getAllPaths(r1, r2, true, 3).asScala;
+      //     paths.foreach(p => {
+      //       if (p.getLength == 2) {
+      //         println(s"from ${r1.getIdentifier} to ${r2.getIdentifier}")
+      //         paths.foreach(p => println(p.getVertexList))  
+      //       }
+      //     })
+      //   })
+      // )
       val signalTuples =
         for (
           r1 <- reactors;
           r2 <- reactors;
-          paths <- AllDirectedPaths(model).getAllPaths(r1, r2, true, 3).asScala
-        ) yield ((r1, r2), paths.getVertexList.get(1).asInstanceOf[Signal])
+          path <- AllDirectedPaths(model).getAllPaths(r1.getViewedVertex, r2.getViewedVertex, true, 3).asScala;
+          if path.getLength == 2
+        ) yield ((r1, r2), Signal.safeCast(path.getVertexList.get(1)).get)
       val signals = signalTuples.toMap
       val periods = reactors
-        .map(r => r -> calculatePeriod(model, r)
+        .map(r => r -> calculatePeriod(model, r.getViewedVertex)
           // (
           //   t -> (
           //     t.getPeriodNumeratorPerSec() / 
@@ -67,6 +77,7 @@ final case class ReactorMinusIdentificationRule()
           // )
         )
         .toMap
+      println(periods.map((k, v) => k.getViewedVertex.getIdentifier -> v))
       val decisionModel = ReactorMinusApplication(
         timers,
         periodicReactors,
@@ -84,23 +95,30 @@ final case class ReactorMinusIdentificationRule()
     } else (false, Option.empty)
   }
 
-  def calculatePeriod(model: ForSyDeModel, v: VertexInterface): Fraction =
-    v match {
-      case v: ReactorTimer =>
-        Fraction(v.getOffsetNumeratorPerSec, v.getOffsetDenominatorPerSec)
-      case _ =>
-        model
-          .incomingEdgesOf(v)
-          .stream()
-          .map(it => calculatePeriod(model, it.getSource))
-          // the GCD of a nunch of fractions n1/d1, n2/d2... is gcd(n1, n2,...)/lcm(d1, d2,...). You can check.
-          .reduce((t1, t2) =>
-            Fraction(
-              ArithmeticUtils.gcd(t1.getNumerator, t2.getNumerator),
-              ArithmeticUtils.lcm(t1.getDenominator, t2.getDenominator)
-            )
+  def calculatePeriod(model: ForSyDeModel, v: Vertex): Fraction = {
+    println(v.getIdentifier)
+    if (ReactorTimer.conforms(v)) {
+      val t = ReactorTimer.safeCast(v).get
+      println("timer!")
+      val f = Fraction(t.getOffsetNumeratorPerSec, t.getOffsetDenominatorPerSec)
+      println(f)
+      f
+    } else if (ReactorActor.conforms(v) || Signal.conforms(v)) {
+      println("not timer!")
+      model
+        .incomingEdgesOf(v)
+        .stream()
+        .map(_.getSource)
+        .filter(i => ReactorTimer.conforms(i) || ReactorActor.conforms(i) || Signal.conforms(i))
+        .map(calculatePeriod(model, _))
+        // the GCD of a nunch of fractions n1/d1, n2/d2 ... is gcd(n1, n2,...)/lcm(d1, d2,...). You can check.
+        .reduce((t1, t2) =>
+          Fraction(
+            ArithmeticUtils.gcd(t1.getNumerator, t2.getNumerator),
+            ArithmeticUtils.lcm(t1.getDenominator, t2.getDenominator)
           )
-          .get
-    }
-
+        )
+        .get
+    } else Fraction(0)
+  }
 }

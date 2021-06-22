@@ -1,10 +1,11 @@
 package idesyde.identification.models
 
-import forsyde.io.java.typed.interfaces.AbstractProcessingComponent
-import forsyde.io.java.typed.interfaces.AbstractCommunicationComponent
-import forsyde.io.java.typed.interfaces.ReactorActor
-import forsyde.io.java.typed.interfaces.Signal
+
 import idesyde.identification.interfaces.DecisionModel
+import forsyde.io.java.typed.viewers.ReactorActor
+import forsyde.io.java.typed.viewers.Signal
+import forsyde.io.java.typed.viewers.AbstractProcessingComponent
+import forsyde.io.java.typed.viewers.AbstractCommunicationComponent
 
 type ReactorJobType = (ReactorActor, Int)
 

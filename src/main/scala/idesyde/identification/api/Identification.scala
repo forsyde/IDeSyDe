@@ -31,7 +31,7 @@ object Identification {
         while (activeRules.size > 0 && iters < maxIters) {
             val ruleResults = activeRules.map(r => (r, r.identify(model, identified)))
             identified = ruleResults.filter((r, res) => !res._2.isEmpty).map((r, res) => res._2.get)
-            activeRules = ruleResults.filter((r, res) => res._1).map((r, res) => r)
+            activeRules = ruleResults.filter((r, res) => res._1).map(_._1)
             iters += 1
         }
         identified

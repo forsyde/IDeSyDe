@@ -1,7 +1,8 @@
 package idesyde.identification.interfaces
 
-import forsyde.io.java.core.VertexInterface
-import forsyde.io.java.core.EdgeInterface
+import forsyde.io.java.core.Edge
+import forsyde.io.java.core.Vertex
+
 
 trait DecisionModel {
 
@@ -13,8 +14,8 @@ trait DecisionModel {
         .coveredEdges()
         .forall(v => this.coveredEdges().exists(vv => v.equals(vv)))
 
-  def coveredVertexes(): Iterable[VertexInterface]
+  def coveredVertexes(): Iterable[Vertex]
 
-  def coveredEdges(): Iterable[EdgeInterface]
+  def coveredEdges(): Iterable[Edge]
 
 }

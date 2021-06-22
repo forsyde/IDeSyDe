@@ -5,8 +5,8 @@ import idesyde.identification.models.SdfApplication
 import forsyde.io.java.core.ForSyDeModel
 import idesyde.identification.interfaces.DecisionModel
 import forsyde.io.java.core.VertexTrait
-import forsyde.io.java.typed.interfaces.SDFComb
-import forsyde.io.java.typed.interfaces.SDFPrefix
+import forsyde.io.java.typed.viewers.SDFComb
+import forsyde.io.java.typed.viewers.SDFPrefix
 
 final case class SDFAppIdentificationRule()
     extends IdentificationRule[SdfApplication] {

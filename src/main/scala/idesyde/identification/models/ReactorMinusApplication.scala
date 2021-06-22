@@ -1,12 +1,11 @@
 package idesyde.identification.models
 
 import idesyde.identification.interfaces.DecisionModel
-import forsyde.io.java.typed.interfaces.ReactorActor
-import forsyde.io.java.typed.interfaces.ReactorTimer
-import forsyde.io.java.typed.interfaces.ReactorElement
-import forsyde.io.java.typed.interfaces.Signal
 import org.apache.commons.math3.fraction.Fraction
 import org.apache.commons.math3.util.ArithmeticUtils
+import forsyde.io.java.typed.viewers.ReactorTimer
+import forsyde.io.java.typed.viewers.ReactorActor
+import forsyde.io.java.typed.viewers.Signal
 
 final case class ReactorMinusApplication(
     val timers: Set[ReactorTimer],
@@ -31,9 +30,9 @@ final case class ReactorMinusApplication(
   }
 
   def coveredVertexes() = {
-    for (v <- periodicReactors) yield v
-    for (v <- dateReactiveReactors) yield v
-    for ((_, c) <- signals) yield c
+    for (v <- periodicReactors) yield v.getViewedVertex
+    for (v <- dateReactiveReactors) yield v.getViewedVertex
+    for ((_, c) <- signals) yield c.getViewedVertex
   }
 
   def coveredEdges() = Seq()

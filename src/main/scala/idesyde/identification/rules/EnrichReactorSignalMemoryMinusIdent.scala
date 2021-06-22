@@ -5,8 +5,7 @@ import idesyde.identification.models.ReactorMinusApplication
 import forsyde.io.java.core.ForSyDeModel
 import idesyde.identification.interfaces.DecisionModel
 import org.apache.commons.math3.fraction.Fraction
-import forsyde.io.java.typed.interfaces.InstrumentedFunction
-import forsyde.io.java.typed.interfaces.InstrumentedSignal
+import forsyde.io.java.typed.viewers.InstrumentedSignal
 
 final case class EnrichReactorSignalMemoryMinusIdent()
     extends IdentificationRule[ReactorMinusApplication] {
@@ -32,8 +31,7 @@ final case class EnrichReactorSignalMemoryMinusIdent()
         // and return it at the very last moment, with a default value of 0
         val newSignalSizes = oneEmpty.signalSize
           .map((s, v) =>
-            s -> InstrumentedSignal
-              .safeCast(s)
+            s -> InstrumentedSignal.safeCast(s.getViewedVertex)
               .map(i => i.getMaxElemCount * i.getMaxElemSizeBytes)
               .orElse(0)
           )

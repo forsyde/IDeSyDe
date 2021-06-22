@@ -29,9 +29,10 @@ object Identification {
         val maxIters = rules.size * countTraits(model)
         var iters = 0
         while (activeRules.size > 0 && iters < maxIters) {
+            println(activeRules.size)
             val ruleResults = activeRules.map(r => (r, r.identify(model, identified)))
-            identified = ruleResults.filter((r, res) => !res._2.isEmpty).map((r, res) => res._2.get)
-            activeRules = ruleResults.filter((r, res) => res._1).map(_._1)
+            identified = identified.union(ruleResults.filter((r, res) => !res._2.isEmpty).map((r, res) => res._2.get).toSet) 
+            activeRules = ruleResults.filter((r, res) => !res._1).map(_._1)
             iters += 1
         }
         identified

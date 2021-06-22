@@ -37,14 +37,20 @@ final case class ReactorMinusIdentificationRule()
     val isReactorMinus =
       reactors.forall(r =>
         timers.exists(t =>
-          !AllDirectedPaths(model).getAllPaths(t.getViewedVertex, r.getViewedVertex, true, null).isEmpty
+          !AllDirectedPaths(model)
+            .getAllPaths(t.getViewedVertex, r.getViewedVertex, true, null)
+            .isEmpty
         )
       )
     // the model is indeed Reactor-, so proceed to build it
     if (isReactorMinus) {
-      val periodicReactors = reactors.filter(r => 
-        model.incomingEdgesOf(r.getViewedVertex).stream().map(_.getSource)
-        .flatMap(ReactorTimer.safeCast(_).stream).anyMatch(timers.contains(_))
+      val periodicReactors = reactors.filter(r =>
+        model
+          .incomingEdgesOf(r.getViewedVertex)
+          .stream()
+          .map(_.getSource)
+          .flatMap(ReactorTimer.safeCast(_).stream)
+          .anyMatch(timers.contains(_))
       )
       val dateReactiveReactors = reactors.filter(!periodicReactors.contains(_))
       // check if at every data chain has at least one periodic reactor
@@ -54,7 +60,7 @@ final case class ReactorMinusIdentificationRule()
       //     paths.foreach(p => {
       //       if (p.getLength == 2) {
       //         println(s"from ${r1.getIdentifier} to ${r2.getIdentifier}")
-      //         paths.foreach(p => println(p.getVertexList))  
+      //         paths.foreach(p => println(p.getVertexList))
       //       }
       //     })
       //   })
@@ -63,21 +69,22 @@ final case class ReactorMinusIdentificationRule()
         for (
           r1 <- reactors;
           r2 <- reactors;
-          path <- AllDirectedPaths(model).getAllPaths(r1.getViewedVertex, r2.getViewedVertex, true, 3).asScala;
+          path <- AllDirectedPaths(model)
+            .getAllPaths(r1.getViewedVertex, r2.getViewedVertex, true, 3)
+            .asScala;
           if path.getLength == 2
         ) yield ((r1, r2), Signal.safeCast(path.getVertexList.get(1)).get)
       val signals = signalTuples.toMap
       val periods = reactors
         .map(r => r -> calculatePeriod(model, r.getViewedVertex)
-          // (
-          //   t -> (
-          //     t.getPeriodNumeratorPerSec() / 
-          //     t.getPeriodDenominatorPerSec()
-          //     ).toDouble
-          // )
+        // (
+        //   t -> (
+        //     t.getPeriodNumeratorPerSec() /
+        //     t.getPeriodDenominatorPerSec()
+        //     ).toDouble
+        // )
         )
         .toMap
-      println(periods.map((k, v) => k.getViewedVertex.getIdentifier -> v))
       val decisionModel = ReactorMinusApplication(
         timers,
         periodicReactors,
@@ -96,20 +103,18 @@ final case class ReactorMinusIdentificationRule()
   }
 
   def calculatePeriod(model: ForSyDeModel, v: Vertex): Fraction = {
-    println(v.getIdentifier)
     if (ReactorTimer.conforms(v)) {
       val t = ReactorTimer.safeCast(v).get
-      println("timer!")
-      val f = Fraction(t.getOffsetNumeratorPerSec, t.getOffsetDenominatorPerSec)
-      println(f)
-      f
+      Fraction(t.getPeriodNumeratorPerSec, t.getPeriodDenominatorPerSec)
     } else if (ReactorActor.conforms(v) || Signal.conforms(v)) {
-      println("not timer!")
       model
         .incomingEdgesOf(v)
         .stream()
         .map(_.getSource)
-        .filter(i => ReactorTimer.conforms(i) || ReactorActor.conforms(i) || Signal.conforms(i))
+        .filter(i =>
+          ReactorTimer.conforms(i) || ReactorActor.conforms(i) || Signal
+            .conforms(i)
+        )
         .map(calculatePeriod(model, _))
         // the GCD of a nunch of fractions n1/d1, n2/d2 ... is gcd(n1, n2,...)/lcm(d1, d2,...). You can check.
         .reduce((t1, t2) =>

@@ -40,8 +40,11 @@ final case class ReactorMinusIdentificationRule()
       )
     // the model is indeed Reactor-, so proceed to build it
     if (isReactorMinus) {
-      val periodicReactors = reactors.filter(r => 
-        model.incomingEdgesOf(e).stream().map(e => e.source)
+      val periodicReactors = timers.map(t => 
+        model.incomingEdgesOf(t).stream().map(e => e.target)
+        .filter(_.isInstanceOf[ReactorActor])
+        .map(_.asInstanceOf[ReactorActor])
+        .filter(reactors.contains(_)).findFirst.get
       )
       val dateReactiveReactors = reactors.filter(!periodicReactors.contains(_))
       // check if at every data chain has at least one periodic reactor
@@ -53,7 +56,7 @@ final case class ReactorMinusIdentificationRule()
         ) yield ((r1, r2), paths.getVertexList.get(1).asInstanceOf[Signal])
       val signals = signalTuples.toMap
       val periods = reactors
-        .map(r => r // TODO: continue jhere
+        .map(r => r -> calculatePeriod(model, r)
           // (
           //   t -> (
           //     t.getPeriodNumeratorPerSec() / 
@@ -69,7 +72,7 @@ final case class ReactorMinusIdentificationRule()
         signals,
         periods,
         reactors
-          .map(r => r -> 0)//V.getMaxMemorySizeInBytes(r).orElse(0).toInt)
+          .map(r => r -> r.getReactionImplementationPort(model))
           .toMap,
         signals.values
           .map(s =>
@@ -79,7 +82,6 @@ final case class ReactorMinusIdentificationRule()
       )
       (true, Option(decisionModel))
     } else (false, Option.empty)
-    (false, Option.empty)
   }
 
   def calculatePeriod(model: ForSyDeModel , v: Vertex): Fraction = v match {

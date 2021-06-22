@@ -45,5 +45,5 @@ class IDeSyDeCLI extends Callable[Int] {
     0
   }
 
-  //def mergeInputs(inputs: Array[File]): ForSyDeModel = inputs.map(f => ForSyDeModelHandler.loadModel(f.getName)).reduce((m1, m2) => m1.)
+  // def mergeInputs(inputs: Array[File]): ForSyDeModel = inputs.map(f => ForSyDeModelHandler.loadModel(f.getName)).reduce((m1, m2) => m1.)
 }

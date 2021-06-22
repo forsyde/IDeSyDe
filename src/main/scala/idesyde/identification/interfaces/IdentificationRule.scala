@@ -1,6 +1,7 @@
 package idesyde.identification.interfaces
 
 import forsyde.io.java.core.ForSyDeModel
+import idesyde.identification.api.Identification
 
 trait IdentificationRule[Out <: DecisionModel] {
 

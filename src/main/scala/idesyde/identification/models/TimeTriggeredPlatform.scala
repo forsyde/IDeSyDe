@@ -2,24 +2,17 @@ package idesyde.identification.models
 
 import idesyde.identification.interfaces.DecisionModel
 import forsyde.io.java.core.Vertex
-
-// class TimeTriggeredPlatform(DecisionModel):
-
-//     schedulers: Sequence[Vertex] = field(default_factory=list)
-//     cores: Sequence[Vertex] = field(default_factory=list)
-//     comms: Sequence[Vertex] = field(default_factory=list)
-//     core_scheduler: Mapping[Vertex, Vertex] = field(default_factory=dict)
-//     comm_scheduler: Mapping[Vertex, Vertex] = field(default_factory=dict)
-//     paths: Mapping[Tuple[Vertex, Vertex], Sequence[Sequence[Vertex]]] = field(default_factory=dict)
-//     core_memory: Mapping[Vertex, int] = field(default_factory=dict)
-//     comms_bandwidth: Mapping[Vertex, int] = field(default_factory=dict)
-
-//     abstracted_vertexes: Sequence[Vertex] = field(default_factory=list)
+import forsyde.io.java.typed.interfaces.AbstractProcessingComponent
+import forsyde.io.java.typed.interfaces.AbstractCommunicationComponent
+import forsyde.io.java.core.VertexInterface
 
 final case class TimeTriggeredPlatform(
-    val processingElems: Set[Set[Vertex]],
-    val communicationElems: Set[Set[Vertex]],
-    val commBetweenProcs: Map[(Vertex, Vertex), Seq[Seq[Vertex]]]
+    val processingElems: Set[Set[AbstractProcessingComponent]],
+    val communicationElems: Set[Set[AbstractCommunicationComponent]],
+    val commBetweenProcs: Map[
+      (AbstractProcessingComponent, AbstractProcessingComponent),
+      Seq[Seq[VertexInterface]]
+    ]
 ) extends DecisionModel {
 
   def coveredVertexes() = {

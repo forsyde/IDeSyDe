@@ -11,10 +11,12 @@ import collection.JavaConverters.*
 
 import org.jgrapht.alg.shortestpath.AllDirectedPaths
 import forsyde.io.java.core.Vertex
-import forsyde.io.java.typed.prototypes.ReactorActor
-import forsyde.io.java.typed.prototypes.ReactorTimer
-import forsyde.io.java.typed.prototypes.Signal
 import org.apache.commons.math3.fraction.Fraction
+import forsyde.io.java.typed.interfaces.ReactorActor
+import forsyde.io.java.typed.interfaces.ReactorTimer
+import forsyde.io.java.typed.interfaces.Signal
+import forsyde.io.java.core.VertexInterface
+import org.apache.commons.math3.util.ArithmeticUtils
 
 final case class ReactorMinusIdentificationRule()
     extends IdentificationRule[ReactorMinusApplication] {
@@ -41,7 +43,7 @@ final case class ReactorMinusIdentificationRule()
     // the model is indeed Reactor-, so proceed to build it
     if (isReactorMinus) {
       val periodicReactors = timers.map(t => 
-        model.incomingEdgesOf(t).stream().map(e => e.target)
+        model.incomingEdgesOf(t).stream().map(e => e.getTarget)
         .filter(_.isInstanceOf[ReactorActor])
         .map(_.asInstanceOf[ReactorActor])
         .filter(reactors.contains(_)).findFirst.get
@@ -72,21 +74,33 @@ final case class ReactorMinusIdentificationRule()
         signals,
         periods,
         reactors
-          .map(r => r -> r.getReactionImplementationPort(model))
+          .map(r => r -> 0)
           .toMap,
         signals.values
-          .map(s =>
-            s -> 0 //(V.getMaxElemSizeBytes(s).orElse(0) * V.getMaxElemCount(s).orElse(0)).toInt
-          )
+          .map(s => s -> 0)
           .toMap
       )
       (true, Option(decisionModel))
     } else (false, Option.empty)
   }
 
-  def calculatePeriod(model: ForSyDeModel , v: Vertex): Fraction = v match {
-    case v: ReactorTimer => Fraction(v.getOffsetNumeratorPerSec, v.getOffsetDenominatorPerSec)
-    case _ => Fraction(0)
-  }
+  def calculatePeriod(model: ForSyDeModel, v: VertexInterface): Fraction =
+    v match {
+      case v: ReactorTimer =>
+        Fraction(v.getOffsetNumeratorPerSec, v.getOffsetDenominatorPerSec)
+      case _ =>
+        model
+          .incomingEdgesOf(v)
+          .stream()
+          .map(it => calculatePeriod(model, it.getSource))
+          // the GCD of a nunch of fractions n1/d1, n2/d2... is gcd(n1, n2,...)/lcm(d1, d2,...). You can check.
+          .reduce((t1, t2) =>
+            Fraction(
+              ArithmeticUtils.gcd(t1.getNumerator, t2.getNumerator),
+              ArithmeticUtils.lcm(t1.getDenominator, t2.getDenominator)
+            )
+          )
+          .get
+    }
 
 }

@@ -13,7 +13,7 @@ jobs:
       - uses: "marvinpinto/action-automatic-releases@latest"
         with:
           repo_token: "${{ secrets.GITHUB_TOKEN }}"
-          automatic_release_tag: "develop"
+          automatic_release_tag: "develop-build"
           prerelease: true
           title: "Bleeding edge development Build"
   publish-linux-pyz:
@@ -51,7 +51,7 @@ jobs:
         repo_token: ${{ secrets.GITHUB_TOKEN }}
         file: ${{ github.workspace }}/dist/idesyde.pyz
         asset_name: IDeSyDe-develop-x86_64-linux-gnu-py${{ matrix.python }}.pyz
-        tag: "develop"
+        tag: "develop-build"
         overwrite: true
         body: "Python zip with Libs for x86_64 linux distros"
   publish-linux-bin:
@@ -96,7 +96,7 @@ jobs:
         repo_token: ${{ secrets.GITHUB_TOKEN }}
         file: ${{ github.workspace }}/build/x86_64-unknown-linux-gnu/release/install/idesyde-x86_64-unknown-linux-gnu.zip
         asset_name: IDeSyDe-develop-x86_64-unknown-linux-gnu.zip
-        tag: "develop"
+        tag: "develop-build"
         overwrite: true
         body: "Executable zip with Libs for x86_64 linux distros"
   publish-windows-pyz:
@@ -134,7 +134,7 @@ jobs:
         repo_token: ${{ secrets.GITHUB_TOKEN }}
         file: ${{ github.workspace }}\dist\idesyde.pyz
         asset_name: IDeSyDe-develop-x86_64-windows-msvc-py${{ matrix.python }}.pyz
-        tag: "develop"
+        tag: "develop-build"
         overwrite: true
         body: "Python zip with Libs for x86_64 windows" 
   publish-windows-bin:
@@ -178,7 +178,7 @@ jobs:
         repo_token: ${{ secrets.GITHUB_TOKEN }}
         file: ${{ github.workspace }}\build\x86_64-pc-windows-msvc\release\install\idesyde-x86_64-pc-windows-msvc.zip
         asset_name: IDeSyDe-x86_64-pc-windows-msvc.zip
-        tag: "develop"
+        tag: "develop-build"
         overwrite: true
         body: "Zip with Libs for x86_64 Windows"
   publish-apple-pyz:
@@ -216,7 +216,7 @@ jobs:
         repo_token: ${{ secrets.GITHUB_TOKEN }}
         file: ${{ github.workspace }}/dist/idesyde.pyz
         asset_name: IDeSyDe-develop-x86_64-apple-darwin-py${{ matrix.python }}.pyz
-        tag: "develop"
+        tag: "develop-build"
         overwrite: true
         body: "Python zip for x86_64 MacOS"
   publish-apple-bin:
@@ -265,6 +265,6 @@ jobs:
         repo_token: ${{ secrets.GITHUB_TOKEN }}
         file: ${{ github.workspace }}/build/x86_64-apple-darwin/release/install/idesyde-x86_64-apple-darwin.zip
         asset_name: IDeSyDe-develop-x86_64-apple-darwin.zip
-        tag: "develop"
+        tag: "develop-build"
         overwrite: true
         body: "Zip with Libs for x86_64 MacOS"

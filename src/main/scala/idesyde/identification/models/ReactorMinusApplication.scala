@@ -6,33 +6,34 @@ import org.apache.commons.math3.util.ArithmeticUtils
 import forsyde.io.java.typed.viewers.ReactorTimer
 import forsyde.io.java.typed.viewers.ReactorActor
 import forsyde.io.java.typed.viewers.Signal
+import forsyde.io.java.typed.viewers.LinguaFrancaTimer
+import forsyde.io.java.typed.viewers.LinguaFrancaReaction
+import forsyde.io.java.typed.viewers.LinguaFrancaReactor
+import forsyde.io.java.typed.viewers.LinguaFrancaSignal
 
 final case class ReactorMinusApplication(
-    val timers: Set[ReactorTimer],
-    val periodicReactors: Set[ReactorActor],
-    val dateReactiveReactors: Set[ReactorActor],
-    val signals: Map[(ReactorActor, ReactorActor), Signal],
-    val periods: Map[ReactorActor, Fraction],
-    val reactorSize: Map[ReactorActor, Int],
-    val signalSize: Map[Signal, Int]
+    val reactions: Set[LinguaFrancaReaction],
+    val reactors: Set[LinguaFrancaReactor],
+    val channels: Map[(LinguaFrancaReaction, LinguaFrancaReaction), LinguaFrancaSignal],
+    val containmentFunction: Map[LinguaFrancaReaction, LinguaFrancaReactor],
+    val priorityRelation: Set[(LinguaFrancaReaction, LinguaFrancaReaction)],
+    val periodFunction: Map[LinguaFrancaReaction, Fraction],
+    val sizeFunction: Map[LinguaFrancaReaction | LinguaFrancaReactor | LinguaFrancaSignal, Int]
 ) extends DecisionModel {
 
-  lazy val hyperPeriod: Fraction = {
-    periods
-      .map(_._2)
-      // the LCM of a nunch of fractions n1/d1, n2/d2... is lcm(n1, n2,...)/gcd(d1, d2,...). You can check.
-      .reduce((frac1, frac2) =>
-        Fraction(
-          ArithmeticUtils.lcm(frac1.getNumerator, frac2.getNumerator),
-          ArithmeticUtils.gcd(frac1.getDenominator, frac2.getDenominator)
-        )
-      )
-  }
+  def hyperPeriod(): Fraction = periodFunction.values.reduce((frac1, frac2) =>
+    // the LCM of a nunch of fractions n1/d1, n2/d2... is lcm(n1, n2,...)/gcd(d1, d2,...). You can check.
+    Fraction(
+      ArithmeticUtils.lcm(frac1.getNumerator, frac2.getNumerator),
+      ArithmeticUtils.gcd(frac1.getDenominator, frac2.getDenominator)
+    )
+  )
 
   def coveredVertexes() = {
-    for (v <- periodicReactors) yield v.getViewedVertex
-    for (v <- dateReactiveReactors) yield v.getViewedVertex
-    for ((_, c) <- signals) yield c.getViewedVertex
+    for (v <- reactions) yield v.getViewedVertex
+    for (v <- reactors) yield v.getViewedVertex
+    // for (a <- reactor; t <- a.get)
+    for ((_, c) <- channels) yield c.getViewedVertex
   }
 
   def coveredEdges() = Seq()
@@ -43,11 +44,10 @@ final case class ReactorMinusApplication(
       case _                          => true
     })
 
-  def dominatesReactorMinus(o: ReactorMinusApplication): Boolean =
-    reactorSize.size >= o.reactorSize.size &&
-      reactorSize.exists((k, v) =>
-        v != 0 && reactorSize.getOrElse(k, 0) == 0
-      ) &&
-      signalSize.size >= o.signalSize.size &&
-      signalSize.exists((k, v) => v != 0 && signalSize.getOrElse(k, 0) == 0)
+  def dominatesReactorMinus(o: ReactorMinusApplication): Boolean = {
+    // has more information about sizes
+    o.sizeFunction.keySet.subsetOf(sizeFunction.keySet) && (
+      sizeFunction.count((k, v) => v > 0) > o.sizeFunction.count((k, v) => v > 0)
+    )
+  }
 }

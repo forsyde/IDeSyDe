@@ -20,7 +20,6 @@ final case class EnrichReactorMemoryMinusIdent()
         .map(_.asInstanceOf[ReactorMinusApplication])
     if (!reactorDecisionModels.isEmpty) {
       // Check if at least one decision model has already periods greater than zero
-      println("One reactor found!")
       val characterized =
         reactorDecisionModels.exists(m => m.reactorSize.exists(_._2 > 0))
       if (!characterized) {
@@ -28,7 +27,6 @@ final case class EnrichReactorMemoryMinusIdent()
         // there's at least one model in the set and at least one not characterized
         val oneEmpty =
           reactorDecisionModels.find(_.reactorSize.values.forall(_ == 0)).get
-        println(oneEmpty)
         // use an applicative style to compute the periods inside the optional
         // and return it at the very last moment, with a default value of 0
         val newReactorSizes = oneEmpty.reactorSize

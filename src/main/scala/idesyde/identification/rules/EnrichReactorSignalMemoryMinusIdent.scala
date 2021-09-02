@@ -27,7 +27,6 @@ final case class EnrichReactorSignalMemoryMinusIdent()
         // there's at least one model in the set and at least one not characterized
         val oneEmpty =
           reactorDecisionModels.find(_.signalSize.values.forall(_ == 0)).get
-        println("Adding signals")
         // use an applicative style to compute the periods inside the optional
         // and return it at the very last moment, with a default value of 0
         val newSignalSizes = oneEmpty.signalSize
@@ -37,7 +36,6 @@ final case class EnrichReactorSignalMemoryMinusIdent()
               .map(i => i.getMaxElemCount * i.getMaxElemSizeBytes)
               .orElse(0)
           )
-        println(newSignalSizes)
         // Done, enriched one model and fix point
         (true, Option(oneEmpty.copy(signalSize = newSignalSizes)))
       } else {

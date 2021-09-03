@@ -3,23 +3,26 @@ package idesyde.identification.models
 import idesyde.identification.interfaces.DecisionModel
 import org.apache.commons.math3.fraction.Fraction
 import org.apache.commons.math3.util.ArithmeticUtils
-import forsyde.io.java.typed.viewers.ReactorTimer
-import forsyde.io.java.typed.viewers.ReactorActor
-import forsyde.io.java.typed.viewers.Signal
 import forsyde.io.java.typed.viewers.LinguaFrancaTimer
 import forsyde.io.java.typed.viewers.LinguaFrancaReaction
 import forsyde.io.java.typed.viewers.LinguaFrancaReactor
 import forsyde.io.java.typed.viewers.LinguaFrancaSignal
 
 final case class ReactorMinusApplication(
-    val reactions: Set[LinguaFrancaReaction],
+    val pureReactions: Set[LinguaFrancaReaction],
+    val periodicReactions: Set[LinguaFrancaReaction],
     val reactors: Set[LinguaFrancaReactor],
     val channels: Map[(LinguaFrancaReaction, LinguaFrancaReaction), LinguaFrancaSignal],
     val containmentFunction: Map[LinguaFrancaReaction, LinguaFrancaReactor],
     val priorityRelation: Set[(LinguaFrancaReaction, LinguaFrancaReaction)],
     val periodFunction: Map[LinguaFrancaReaction, Fraction],
-    val sizeFunction: Map[LinguaFrancaReaction | LinguaFrancaReactor | LinguaFrancaSignal, Int]
+    val sizeFunction: Map[LinguaFrancaReaction | LinguaFrancaReactor | LinguaFrancaSignal, Long]
 ) extends DecisionModel {
+
+  def reactions(): Set[LinguaFrancaReaction] = {
+    for (r <- pureReactions) yield r
+    for (r <- periodicReactions) yield r
+  }
 
   def hyperPeriod(): Fraction = periodFunction.values.reduce((frac1, frac2) =>
     // the LCM of a nunch of fractions n1/d1, n2/d2... is lcm(n1, n2,...)/gcd(d1, d2,...). You can check.
@@ -30,7 +33,7 @@ final case class ReactorMinusApplication(
   )
 
   def coveredVertexes() = {
-    for (v <- reactions) yield v.getViewedVertex
+    for (v <- reactions()) yield v.getViewedVertex
     for (v <- reactors) yield v.getViewedVertex
     // for (a <- reactor; t <- a.get)
     for ((_, c) <- channels) yield c.getViewedVertex

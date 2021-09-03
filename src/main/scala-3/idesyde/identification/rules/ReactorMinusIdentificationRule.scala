@@ -14,7 +14,6 @@ import forsyde.io.java.core.Vertex
 import org.apache.commons.math3.fraction.Fraction
 import org.apache.commons.math3.util.ArithmeticUtils
 import org.apache.commons.math3.analysis.function.Sin
-import forsyde.io.java.typed.viewers.LinguaFrancaActor
 import forsyde.io.java.typed.viewers.LinguaFrancaTimer
 import forsyde.io.java.typed.viewers.LinguaFrancaSignal
 import forsyde.io.java.typed.viewers.LinguaFrancaReactor
@@ -38,7 +37,7 @@ final case class LinguaFrancaMinusIdentificationRule()
       .filter(LinguaFrancaReaction.conforms(_))
       .map(LinguaFrancaReaction.safeCast(_).get)
       .toSet
-    val signals = vertexes
+    val channels = vertexes
       .filter(LinguaFrancaSignal.conforms(_))
       .map(LinguaFrancaSignal.safeCast(_).get)
       .toSet
@@ -49,51 +48,27 @@ final case class LinguaFrancaMinusIdentificationRule()
     given Set[LinguaFrancaElement]  = elements
     given Set[LinguaFrancaReactor]  = reactors
     given Set[LinguaFrancaReaction] = reactions
-    given Set[LinguaFrancaSignal]   = signals
+    given Set[LinguaFrancaSignal]   = channels
     given Set[LinguaFrancaTimer]    = timers
     if (conformsToReactorMinus(model)) {
-      val periodFunction = timers
-        .flatMap(t =>
-          reactions
-            .filter(r => model.containsEdge(t.getViewedVertex, r.getViewedVertex))
-            .map(r => (r, t))
-        )
-        .map((r, t) =>
-          r -> Fraction(
-            t.getPeriodNumeratorPerSec,
-            t.getPeriodDenominatorPerSec
+      (
+        true,
+        Option(
+          ReactorMinusApplication(
+            pureReactions = filterOnlyPure(model),
+            periodicReactions = filterOnlyPeriodic(model),
+            reactors = reactors,
+            channels = channelsAsReactionConnections(model),
+            containmentFunction = deriveContainmentFunction(model),
+            priorityRelation = computePriorityRelation(model),
+            periodFunction = computePeriodFunction(model),
+            sizeFunction = computeSizesFunction(model)
           )
         )
-        .toMap
-      (true, Option.empty)
+      )
     } else {
       (true, Option.empty)
     }
-  }
-
-  def calculatePeriod(model: ForSyDeModel, v: Vertex): Fraction = {
-    if (LinguaFrancaTimer.conforms(v)) {
-      val t = LinguaFrancaTimer.safeCast(v).get
-      Fraction(t.getPeriodNumeratorPerSec, t.getPeriodDenominatorPerSec)
-    } else if (LinguaFrancaReactor.conforms(v) || LinguaFrancaSignal.conforms(v)) {
-      model
-        .incomingEdgesOf(v)
-        .stream()
-        .map(_.getSource)
-        .filter(i =>
-          LinguaFrancaTimer.conforms(i) || LinguaFrancaReactor.conforms(i)
-            || LinguaFrancaSignal.conforms(i)
-        )
-        .map(calculatePeriod(model, _))
-        // the GCD of a nunch of fractions n1/d1, n2/d2 ... is gcd(n1, n2,...)/lcm(d1, d2,...). You can check.
-        .reduce((t1, t2) =>
-          Fraction(
-            ArithmeticUtils.gcd(t1.getNumerator, t2.getNumerator),
-            ArithmeticUtils.lcm(t1.getDenominator, t2.getDenominator)
-          )
-        )
-        .get
-    } else Fraction(0)
   }
 
   def conformsToReactorMinus(model: ForSyDeModel)(using
@@ -122,15 +97,30 @@ final case class LinguaFrancaMinusIdentificationRule()
     reactors.forall(_.getChildrenActorsPort(model).isEmpty)
 
   /** Checks if all reactions are either periodic or pure.
+    *
+    * @param model
+    *   The input model to check
+    * @return
+    *   whether all reactions are either periodic or pure.
     */
   def onlyPeriodicOrPure(model: ForSyDeModel)(using
       timers: Set[LinguaFrancaTimer],
       reactions: Set[LinguaFrancaReaction]
-  ): Boolean = reactions.forall(r =>
-    (timers.count(t => model.containsEdge(t.getViewedVertex, r.getViewedVertex)) == 1 && !reactions
-      .exists(r2 => model.containsEdge(r2.getViewedVertex, r.getViewedVertex)))
-      || (timers.count(t => model.containsEdge(t.getViewedVertex, r.getViewedVertex)) == 0)
-  )
+  ): Boolean = 
+    filterOnlyPeriodic(model).intersect(filterOnlyPure(model)).isEmpty
+
+  def filterOnlyPeriodic(model: ForSyDeModel)(using
+      timers: Set[LinguaFrancaTimer],
+      reactions: Set[LinguaFrancaReaction]
+  ): Set[LinguaFrancaReaction] =
+    reactions.filter(r => timers.count(t => model.hasConnection(t, r)) == 1 && !reactions
+      .exists(r2 => model.hasConnection(r2, r)))
+
+  def filterOnlyPure(model: ForSyDeModel)(using
+      timers: Set[LinguaFrancaTimer],
+      reactions: Set[LinguaFrancaReaction]
+  ): Set[LinguaFrancaReaction] =
+    reactions.filter(r => (timers.count(t => model.hasConnection(t, r)) == 0))
 
   /** Checks if every timer can reach every reaction in the model. I.e. there is at least one simple
     * path between them.
@@ -150,15 +140,71 @@ final case class LinguaFrancaMinusIdentificationRule()
   def noReactionIsLoose(model: ForSyDeModel)(using
       reactors: Set[LinguaFrancaReactor],
       reactions: Set[LinguaFrancaReaction]
-  ): Boolean =
-    reactions.forall(r => reactors.exists(a => a.getReactionsPort(model).asScala.contains(r)))
+  ): Boolean = reactions.forall(r => reactors.exists(a => a.getReactionsPort(model).contains(r)))
 
   def computeSizesFunction(model: ForSyDeModel)(using
       reactors: Set[LinguaFrancaReactor],
+      channels: Set[LinguaFrancaSignal],
+      reactions: Set[LinguaFrancaReaction]
+  ): Map[LinguaFrancaReactor | LinguaFrancaSignal | LinguaFrancaReaction, Long] = {
+    val elemSet: Set[LinguaFrancaReactor | LinguaFrancaSignal | LinguaFrancaReaction] =
+      (reactors ++ channels ++ reactions)
+    elemSet
+      .map(e =>
+        e -> (e match {
+          case s: LinguaFrancaSignal   => s.getSizeInBits
+          case a: LinguaFrancaReactor  => a.getStateSizesInBits.asScala.map(_.toLong).sum
+          case r: LinguaFrancaReaction => r.getSizeInBits
+          case _                       => 0L
+        }).asInstanceOf[Long]
+      )
+      .toMap
+  }
+
+  def computePriorityRelation(model: ForSyDeModel)(using
+      reactors: Set[LinguaFrancaReactor],
+      reactions: Set[LinguaFrancaReaction]
+  ): Set[(LinguaFrancaReaction, LinguaFrancaReaction)] = {
+    Set.empty
+  }
+
+  def computePeriodFunction(model: ForSyDeModel)(using
       timers: Set[LinguaFrancaTimer],
       reactions: Set[LinguaFrancaReaction]
-  ): Map[LinguaFrancaReactor | LinguaFrancaTimer | LinguaFrancaReaction, Int] = {
-    // val reactorSizes = reactors.map(_.getStateSizesInBits)
-    Map.empty
-  }
+  ): Map[LinguaFrancaReaction, Fraction] =
+    timers
+      .flatMap(t =>
+        reactions
+          .filter(r => model.hasConnection(t, r))
+          .map(r => (r, t))
+      )
+      .map((r, t) =>
+        r -> Fraction(
+          t.getPeriodNumeratorPerSec,
+          t.getPeriodDenominatorPerSec
+        )
+      )
+      .toMap
+
+  def channelsAsReactionConnections(model: ForSyDeModel)(using
+      reactions: Set[LinguaFrancaReaction],
+      channels: Set[LinguaFrancaSignal]
+  ): Map[(LinguaFrancaReaction, LinguaFrancaReaction), LinguaFrancaSignal] =
+    channels
+      .map(c =>
+        {
+          val src = reactions.find(model.hasConnection(_, c)).get
+          val dst = reactions.find(model.hasConnection(c, _)).get
+          (src, dst)
+        } -> c
+      )
+      .toMap
+
+  def deriveContainmentFunction(model: ForSyDeModel)(using
+      reactors: Set[LinguaFrancaReactor],
+      reactions: Set[LinguaFrancaReaction]
+  ): Map[LinguaFrancaReaction, LinguaFrancaReactor] =
+    reactions.map(r => r -> 
+      reactors.find(model.hasConnection(_, r)).get
+    ).toMap
 }

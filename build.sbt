@@ -3,18 +3,23 @@ lazy val root = project
   .settings(
     name := "IDeSyDe",
     description := "",
-    version := "0.2.1",
+    version := "0.2.2",
     scalaVersion := "3.0.0"
   )
 
 resolvers += Resolver.mavenLocal
 
 libraryDependencies ++= Seq(
-  "io.github.forsyde" % "forsyde-io-java" % "0.3.7",
+  "io.github.forsyde" % "forsyde-io-java" % "0.3.8",
   "info.picocli" % "picocli" % "4.2.0",
-  "info.picocli" % "picocli-codegen" % "4.2.0" % "provided"
+  "info.picocli" % "picocli-codegen" % "4.2.0" % "provided",
+  "org.apache.commons" % "commons-math3" % "3.6.1"
 )
-libraryDependencies += "org.apache.commons" % "commons-math3" % "3.6.1"
+libraryDependencies += "org.apache.logging.log4j" % "log4j-api" % "2.14.1"
+libraryDependencies += "org.apache.logging.log4j" % "log4j-core" % "2.14.1"
+// libraryDependencies += "org.apache.logging.log4j" %% "log4j-api-scala" % "11.0"
+// https://mvnrepository.com/artifact/org.slf4j/slf4j-api
+// https://mvnrepository.com/artifact/org.slf4j/slf4j-simple
 // libraryDependencies += ("org.typelevel" %% "cats-core" % "2.3.0")
 //   .withCrossVersion(CrossVersion.for3Use2_13)
 
@@ -38,3 +43,10 @@ libraryDependencies += "org.apache.commons" % "commons-math3" % "3.6.1"
 // }
 
 // javaOptions += s"-Djna.library.path=$pythonLibsDir"
+
+
+// TODO: figure out what is
+assembly / assemblyMergeStrategy  := {
+ case PathList("META-INF", xs @ _*) => MergeStrategy.discard
+ case x => MergeStrategy.first
+}

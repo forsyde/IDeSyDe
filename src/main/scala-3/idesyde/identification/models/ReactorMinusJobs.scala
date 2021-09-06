@@ -7,14 +7,19 @@ import forsyde.io.java.typed.viewers.GenericDigitalStorage
 import forsyde.io.java.typed.viewers.GenericDigitalInterconnect
 import idesyde.identification.interfaces.DecisionModel
 import org.apache.commons.math3.fraction.Fraction
+import forsyde.io.java.typed.viewers.LinguaFrancaReactor
 
 type ReactorJobType = (LinguaFrancaReaction, Fraction, Fraction)
-type JobChannelType = (ReactorJobType, ReactorJobType, LinguaFrancaSignal)
+type CommChannelType = (ReactorJobType, ReactorJobType, LinguaFrancaSignal)
+type StateChannelType = (ReactorJobType, ReactorJobType, LinguaFrancaReactor)
 type ResourceType   = GenericProcessingModule | GenericDigitalStorage | GenericDigitalInterconnect
 
 final case class ReactorMinusJobs(
-    val jobs: Set[ReactorJobType],
-    val channels: Map[(ReactorJobType, ReactorJobType), LinguaFrancaSignal],
+    val periodicJobs: Set[ReactorJobType],
+    val pureJobs: Set[ReactorJobType],
+    val pureChannels: Set[CommChannelType],
+    val stateChannels: Set[StateChannelType],
+    val outerStateChannels: Set[StateChannelType],
     val reactorMinusApp: ReactorMinusApplication
 ) extends DecisionModel {
     

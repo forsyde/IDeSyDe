@@ -19,9 +19,13 @@ import forsyde.io.java.typed.viewers.LinguaFrancaSignal
 import forsyde.io.java.typed.viewers.LinguaFrancaReactor
 import forsyde.io.java.typed.viewers.LinguaFrancaElement
 import forsyde.io.java.typed.viewers.LinguaFrancaReaction
+import org.apache.logging.log4j.LogManager
 
-final case class LinguaFrancaMinusIdentificationRule()
-    extends IdentificationRule[ReactorMinusApplication] {
+final case class ReactorMinusIdentificationRule()
+    extends IdentificationRule[ReactorMinusApplication]() {
+
+  val logger = LogManager.getLogger(classOf[ReactorMinusIdentificationRule])
+  
 
   def identify(model: ForSyDeModel, identified: Set[DecisionModel]) = {
     val vertexes = model.vertexSet.asScala
@@ -51,6 +55,7 @@ final case class LinguaFrancaMinusIdentificationRule()
     given Set[LinguaFrancaSignal]   = channels
     given Set[LinguaFrancaTimer]    = timers
     if (conformsToReactorMinus(model)) {
+      logger.debug("Conforming Reactor- model found.")
       (
         true,
         Option(
@@ -67,6 +72,7 @@ final case class LinguaFrancaMinusIdentificationRule()
         )
       )
     } else {
+      logger.debug("No conforming Reactor- model found.")
       (true, Option.empty)
     }
   }
@@ -94,7 +100,7 @@ final case class LinguaFrancaMinusIdentificationRule()
   def isNotHierarchical(model: ForSyDeModel)(using
       reactors: Set[LinguaFrancaReactor]
   ): Boolean =
-    reactors.forall(_.getChildrenActorsPort(model).isEmpty)
+    reactors.forall(_.getChildrenReactorsPort(model).isEmpty)
 
   /** Checks if all reactions are either periodic or pure.
     *
@@ -162,11 +168,15 @@ final case class LinguaFrancaMinusIdentificationRule()
   }
 
   def computePriorityRelation(model: ForSyDeModel)(using
-      reactors: Set[LinguaFrancaReactor],
-      reactions: Set[LinguaFrancaReaction]
-  ): Set[(LinguaFrancaReaction, LinguaFrancaReaction)] = {
-    Set.empty
-  }
+      reactors: Set[LinguaFrancaReactor]
+  ): Set[(LinguaFrancaReaction, LinguaFrancaReaction)] =
+    reactors.flatMap(a => {
+      val orderedReactions = a.getReactionsPort(model).asScala.toArray
+      for (
+        i <- Seq.range(0, orderedReactions.size-1);
+        j <- Seq.range(i+1, orderedReactions.size)
+      ) yield (orderedReactions(i), orderedReactions(j))
+    }).toSet
 
   def computePeriodFunction(model: ForSyDeModel)(using
       timers: Set[LinguaFrancaTimer],
@@ -207,4 +217,5 @@ final case class LinguaFrancaMinusIdentificationRule()
     reactions.map(r => r -> 
       reactors.find(model.hasConnection(_, r)).get
     ).toMap
+
 }

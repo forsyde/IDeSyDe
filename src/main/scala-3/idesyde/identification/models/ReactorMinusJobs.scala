@@ -8,10 +8,13 @@ import forsyde.io.java.typed.viewers.GenericDigitalInterconnect
 import idesyde.identification.interfaces.DecisionModel
 import org.apache.commons.math3.fraction.Fraction
 import forsyde.io.java.typed.viewers.LinguaFrancaReactor
+import org.jgrapht.graph.SimpleDirectedGraph
+import forsyde.io.java.typed.viewers.LinguaFrancaElement
 
 type ReactorJobType = (LinguaFrancaReaction, Fraction, Fraction)
 type CommChannelType = (ReactorJobType, ReactorJobType, LinguaFrancaSignal)
 type StateChannelType = (ReactorJobType, ReactorJobType, LinguaFrancaReactor)
+type ChannelType = (ReactorJobType, ReactorJobType, LinguaFrancaElement)
 type ResourceType   = GenericProcessingModule | GenericDigitalStorage | GenericDigitalInterconnect
 
 final case class ReactorMinusJobs(
@@ -21,7 +24,7 @@ final case class ReactorMinusJobs(
     val stateChannels: Set[StateChannelType],
     val outerStateChannels: Set[StateChannelType],
     val reactorMinusApp: ReactorMinusApplication
-) extends DecisionModel {
+    ) extends SimpleDirectedGraph[ReactorJobType, ChannelType](classOf[ChannelType]) with DecisionModel {
     
     def coveredVertexes() = reactorMinusApp.coveredVertexes()
 

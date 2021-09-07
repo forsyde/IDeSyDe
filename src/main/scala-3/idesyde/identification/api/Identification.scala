@@ -28,8 +28,9 @@ object Identification {
   ): Set[? <: DecisionModel] = {
     var identified: Set[DecisionModel] = Set()
     var activeRules                    = rules ++ getStandardRules()
-    val maxIters                       = rules.size * countTraits(model)
+    val maxIters                       = activeRules.size * countTraits(model)
     var iters                          = 0
+    scribe.info(s"Performing identification with ${activeRules.size} rules for $maxIters iterations.")
     while (activeRules.size > 0 && iters < maxIters) {
       val ruleResults = activeRules.map(r => (r, r.identify(model, identified)))
       identified = identified.union(

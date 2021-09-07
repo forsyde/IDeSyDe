@@ -1,23 +1,24 @@
 package idesyde.identification.rules
 
-import idesyde.identification.interfaces.IdentificationRule
-import idesyde.identification.models.ReactorMinusJobs
 import forsyde.io.java.core.ForSyDeModel
-import idesyde.identification.interfaces.DecisionModel
-import idesyde.identification.models.ReactorMinusApplication
-import collection.JavaConverters.*
-import forsyde.io.java.typed.viewers.LinguaFrancaTimer
-import forsyde.io.java.typed.viewers.LinguaFrancaReactor
-import forsyde.io.java.typed.viewers.LinguaFrancaReaction
-import forsyde.io.java.typed.viewers.LinguaFrancaSignal
-import forsyde.io.java.typed.viewers.GenericProcessingModule
-import forsyde.io.java.typed.viewers.GenericDigitalStorage
 import forsyde.io.java.typed.viewers.GenericDigitalInterconnect
+import forsyde.io.java.typed.viewers.GenericDigitalStorage
+import forsyde.io.java.typed.viewers.GenericProcessingModule
+import forsyde.io.java.typed.viewers.LinguaFrancaReaction
+import forsyde.io.java.typed.viewers.LinguaFrancaReactor
+import forsyde.io.java.typed.viewers.LinguaFrancaSignal
+import forsyde.io.java.typed.viewers.LinguaFrancaTimer
+import idesyde.identification.interfaces.DecisionModel
+import idesyde.identification.interfaces.IdentificationRule
+import idesyde.identification.models.ReactorMinusApplication
+import idesyde.identification.models.ReactorMinusJobs
 import org.apache.commons.math3.fraction.Fraction
 import org.jgrapht.alg.shortestpath.AllDirectedPaths
-import org.jgrapht.graph.SimpleDirectedGraph
 import org.jgrapht.graph.DefaultEdge
+import org.jgrapht.graph.SimpleDirectedGraph
 import org.jgrapht.traverse.BreadthFirstIterator
+
+import collection.JavaConverters.*
 
 type ReactorJobType = (LinguaFrancaReaction, Fraction, Fraction)
 type CommChannelType = (ReactorJobType, ReactorJobType, LinguaFrancaSignal)
@@ -39,10 +40,15 @@ final case class ReactorMinusToJobsRule() extends IdentificationRule[ReactorMinu
       scribe.debug(s"${periodicJobs.size} periodic jobs computed")
       val pureJobs = computePureJobs(model, periodicJobs)
       scribe.debug(s"${pureJobs.size} pure jobs computed")
-      val jobs = periodicJobs.union(pureJobs)
+      val jobs = periodicJobs ++ pureJobs
+      given Map[LinguaFrancaReaction, Set[ReactorJobType]] = reactorMinus.reactions().map(r => r -> jobs.filter(_._1 == r)).toMap
       val pureChannels = computePureChannels(model, jobs)
       scribe.debug(s"${pureChannels.size} pure job channels computed")
-      val stateChannels = computeTimelyChannels(model, jobs).union(computePriorityChannels(model, jobs))
+      val timeChannels = computeTimelyChannels(model, jobs)
+      scribe.debug(s"${timeChannels.size} time job channels computed")
+      val prioChannels = computePriorityChannels(model, jobs)
+      scribe.debug(s"${prioChannels.size} prio job channels computed")
+      val stateChannels = timeChannels.union(prioChannels)
       scribe.debug(s"${stateChannels.size} state job channels computed")
       val outerStateChannels = computeHyperperiodChannels(model, jobs, stateChannels)
       (true, Option(ReactorMinusJobs(
@@ -109,18 +115,19 @@ final case class ReactorMinusToJobsRule() extends IdentificationRule[ReactorMinu
 
   def computePureChannels(
       model: ForSyDeModel, jobs: Set[ReactorJobType]
-  )(using reactorMinus: ReactorMinusApplication): Set[CommChannelType] =
-    for (
-      j <- jobs;
-      jj <- jobs;
-      // if the dst job is a pure job
-      if reactorMinus.pureReactions.contains(jj._1);
-      // if the original reaction channels exist
-      originalChannel = reactorMinus.channels.get((j._1, jj._1));
-      if !originalChannel.isEmpty;
+  )(using reactorMinus: ReactorMinusApplication, reactionsToJobs: Map[LinguaFrancaReaction, Set[ReactorJobType]]): Set[CommChannelType] =
+    (for (
+      ((r, rr) -> c) <- reactorMinus.channels;
+      j <- reactionsToJobs(r);
+      jj <- reactionsToJobs(rr);
       // if the triggering time is the same
-      if j._2.equals(jj._2)
-    ) yield (j, jj, originalChannel.get)
+      if j._2.equals(jj._2) && reactorMinus.pureReactions.contains(rr)
+      // if the dst job is a pure job
+      // if reactorMinus.pureReactions.contains(jj._1);
+      // if the original reaction channels exist
+      //originalChannel = reactorMinus.channels.get((j._1, jj._1));
+      // if !originalChannel.isEmpty;
+    ) yield (j, jj, c)).toSet
 
   def computePriorityChannels(
       model: ForSyDeModel, jobs: Set[ReactorJobType]
@@ -130,9 +137,9 @@ final case class ReactorMinusToJobsRule() extends IdentificationRule[ReactorMinu
       jset = jobs.filter(j => reactorMinus.containmentFunction(j._1) == a);
       j <- jset; jj <- jset;
       // different but same release time
-      if j._2.equals(jj._2);
+      if j._2.equals(jj._2)//;
       // higher priority
-      if reactorMinus.priorityRelation.contains((j._1, jj._1))
+      // if reactorMinus.priorityRelation.contains((j._1, jj._1))
     ) yield (j, jj, a)
 
   def computeTimelyChannels(
@@ -140,9 +147,12 @@ final case class ReactorMinusToJobsRule() extends IdentificationRule[ReactorMinu
   )(using reactorMinus: ReactorMinusApplication): Set[StateChannelType] =
     for (
       a <- reactorMinus.reactors;
-      jset = jobs.filter(j => reactorMinus.containmentFunction(j._1) == a).toSeq.sortBy(_._2);
-      // TODO: also consider the prioritized sucessor!
-      js <- jset.sliding(2)
+      js <- jobs.filter(j => reactorMinus.containmentFunction(j._1) == a).toSeq
+        // the ordering of j and jj is reversed due to priority being `gt`
+        .sortWith((j, jj) => reactorMinus.priorityRelation(jj._1, j._1)) 
+        .sortBy(_._2)
+        .sliding(2)
+      // js <- jset.sliding(2)
       // go through jobs to check if jj is the most immediate and most prioritize sucessor
       // if !jobs.exists(o => 
       //   // triggering time
@@ -157,7 +167,9 @@ final case class ReactorMinusToJobsRule() extends IdentificationRule[ReactorMinu
   )(using reactorMinus: ReactorMinusApplication): Set[StateChannelType] =
     for (
       a <- reactorMinus.reactors;
-      jset = jobs.filter(j => reactorMinus.containmentFunction(j._1) == a).toSeq.sortBy(_._2);
+      jset = jobs.filter(j => reactorMinus.containmentFunction(j._1) == a).toSeq
+        .sortWith((j, jj) => reactorMinus.priorityRelation(jj._1, j._1)) 
+        .sortBy(_._2);
       j = jset.last; jj = jset.head
       // same reactor
       // reactor = reactorMinus.containmentFunction.get(j._1);

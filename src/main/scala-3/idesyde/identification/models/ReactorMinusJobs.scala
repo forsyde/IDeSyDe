@@ -24,9 +24,15 @@ final case class ReactorMinusJobs(
     val stateChannels: Set[StateChannelType],
     val outerStateChannels: Set[StateChannelType],
     val reactorMinusApp: ReactorMinusApplication
-    ) extends SimpleDirectedGraph[ReactorJobType, ChannelType](classOf[ChannelType]) with DecisionModel {
-    
+) extends SimpleDirectedGraph[ReactorJobType, ChannelType](classOf[ChannelType]) with DecisionModel {
+
     def coveredVertexes() = reactorMinusApp.coveredVertexes()
 
     def coveredEdges() = reactorMinusApp.coveredEdges()
+
+    override def dominates(o: DecisionModel) =
+        super.dominates(o) && (o match {
+            case o: ReactorMinusApplication => reactorMinusApp == o
+            case _                          => true
+        })
 }

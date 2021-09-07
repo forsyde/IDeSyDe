@@ -266,10 +266,10 @@ final case class ReactorMinusIdentificationRule()
   def onlyNonHierarchicalReactors(model: ForSyDeModel)(using
       reactors: Set[LinguaFrancaReactor]
   ): Set[LinguaFrancaReactor] =
-    reactors.filterNot(a =>
-      a.getChildrenReactorsPort(model).isEmpty ||
-        (a.getReactionsPort(model)
-          .isEmpty && a.getStateNames.isEmpty && a.getStateSizesInBits.isEmpty)
+    reactors.filter(a =>
+      a.getChildrenReactorsPort(model).isEmpty 
+      // ||  (a.getReactionsPort(model)
+      //     .isEmpty && a.getStateNames.isEmpty && a.getStateSizesInBits.isEmpty)
     )
 
 }

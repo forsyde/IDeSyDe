@@ -15,8 +15,10 @@ libraryDependencies ++= Seq(
   "info.picocli" % "picocli-codegen" % "4.2.0" % "provided",
   "org.apache.commons" % "commons-math3" % "3.6.1"
 )
-libraryDependencies += "org.apache.logging.log4j" % "log4j-api" % "2.14.1"
-libraryDependencies += "org.apache.logging.log4j" % "log4j-core" % "2.14.1"
+libraryDependencies += "com.outr" %% "scribe" % "3.5.5"
+// libraryDependencies += "com.outr" %%% "scribe" % "3.5.3"
+// libraryDependencies += "org.apache.logging.log4j" % "log4j-api" % "2.14.1"
+// libraryDependencies += "org.apache.logging.log4j" % "log4j-core" % "2.14.1"
 // libraryDependencies += "org.apache.logging.log4j" %% "log4j-api-scala" % "11.0"
 // https://mvnrepository.com/artifact/org.slf4j/slf4j-api
 // https://mvnrepository.com/artifact/org.slf4j/slf4j-simple

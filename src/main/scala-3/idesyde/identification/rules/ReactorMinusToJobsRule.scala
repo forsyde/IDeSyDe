@@ -93,8 +93,11 @@ final case class ReactorMinusToJobsRule() extends IdentificationRule[ReactorMinu
       model: ForSyDeModel, periodicJobs: Set[ReactorJobType]
   )(using reactorMinus: ReactorMinusApplication): Set[ReactorJobType] = {
     // first, get all pure jobs from the periodic ones, even with activation overlap
+    // val paths = AllDirectedPaths(reactorMinus)
     val overlappedPureJobs = for (
         j <- periodicJobs;
+        //r <- reactorMinus.pureReactions;
+        //if paths.getAllPaths(j._1, r, true, null).isEmpty
         iterator = BreadthFirstIterator(reactorMinus, j._1);
         r <- iterator.asScala.filter(reactorMinus.pureReactions.contains(_))
         // r <- reactorMinus.pureReactions;

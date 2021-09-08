@@ -9,13 +9,11 @@ trait DecisionModel {
   def dominates(other: DecisionModel): Boolean =
     other
       .coveredVertexes()
-      .forall(v => this.coveredVertexes().exists(vv => v.equals(vv))) &&
-      other
-        .coveredEdges()
-        .forall(v => this.coveredEdges().exists(vv => v.equals(vv)))
+      .forall(v => this.coveredVertexes().exists(vv => v.equals(vv)))
+//      && other
+//        .coveredEdges()
+//        .forall(v => this.coveredEdges().exists(vv => v.equals(vv)))
 
   def coveredVertexes(): Iterable[Vertex]
-
-  def coveredEdges(): Iterable[Edge]
 
 }

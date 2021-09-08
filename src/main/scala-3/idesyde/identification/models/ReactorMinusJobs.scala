@@ -5,7 +5,7 @@ import forsyde.io.java.typed.viewers.LinguaFrancaSignal
 import forsyde.io.java.typed.viewers.GenericProcessingModule
 import forsyde.io.java.typed.viewers.GenericDigitalStorage
 import forsyde.io.java.typed.viewers.GenericDigitalInterconnect
-import idesyde.identification.interfaces.DecisionModel
+import idesyde.identification.DecisionModel
 import org.apache.commons.math3.fraction.Fraction
 import forsyde.io.java.typed.viewers.LinguaFrancaReactor
 import org.jgrapht.graph.SimpleDirectedGraph
@@ -26,9 +26,9 @@ final case class ReactorMinusJobs(
     val reactorMinusApp: ReactorMinusApplication
 ) extends SimpleDirectedGraph[ReactorJobType, ChannelType](classOf[ChannelType]) with DecisionModel {
 
-    def coveredVertexes() = reactorMinusApp.coveredVertexes()
+    def coveredVertexes = reactorMinusApp.coveredVertexes
 
-    def coveredEdges() = reactorMinusApp.coveredEdges()
+    def coveredEdges = reactorMinusApp.coveredEdges
 
     override def dominates(o: DecisionModel) =
         super.dominates(o) && (o match {

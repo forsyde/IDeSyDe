@@ -58,7 +58,7 @@ class IDeSyDeCLI extends Callable[Int] {
         mhead
       }
       val identified = Identification.identifyDecisionModels(mergedModel)
-      scribe.info(s"Identification finished with ${identified.size} decision models.")
+      scribe.info(s"Identification finished with ${identified.size} decision model(s).")
     }
     0
   }

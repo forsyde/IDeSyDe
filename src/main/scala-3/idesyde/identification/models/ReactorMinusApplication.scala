@@ -1,6 +1,6 @@
 package idesyde.identification.models
 
-import idesyde.identification.interfaces.DecisionModel
+import idesyde.identification.DecisionModel
 import org.apache.commons.math3.fraction.Fraction
 import org.apache.commons.math3.util.ArithmeticUtils
 import forsyde.io.java.typed.viewers.LinguaFrancaTimer
@@ -38,14 +38,14 @@ final case class ReactorMinusApplication(
     )
   )
 
-  def coveredVertexes() = {
+  def coveredVertexes = {
     for (v <- reactions()) yield v.getViewedVertex
     for (v <- reactors) yield v.getViewedVertex
     // for (a <- reactor; t <- a.get)
     for ((_, c) <- channels) yield c.getViewedVertex
   }
 
-  def coveredEdges() = Seq()
+  def coveredEdges = Seq()
 
   override def dominates(o: DecisionModel) =
     super.dominates(o) && (o match {

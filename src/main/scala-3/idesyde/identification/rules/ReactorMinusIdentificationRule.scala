@@ -1,9 +1,9 @@
 package idesyde.identification.rules
 
-import idesyde.identification.interfaces.IdentificationRule
+import idesyde.identification.IdentificationRule
 import idesyde.identification.models.ReactorMinusApplication
 import forsyde.io.java.core.ForSyDeModel
-import idesyde.identification.interfaces.DecisionModel
+import idesyde.identification.DecisionModel
 import forsyde.io.java.core.VertexTrait
 import java.util.stream.Collectors
 import scala.jdk.StreamConverters.*

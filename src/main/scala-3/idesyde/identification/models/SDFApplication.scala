@@ -1,6 +1,6 @@
 package idesyde.identification.models
 
-import idesyde.identification.interfaces.DecisionModel
+import idesyde.identification.DecisionModel
 import forsyde.io.java.core.Vertex
 
 // class SDFExecution(DecisionModel):
@@ -62,7 +62,7 @@ final case class SdfApplication(
 
   def dominatesSdf(other: SdfApplication) = repetitionVector.size >= other.repetitionVector.size
 
-  def coveredVertexes() = {
+  def coveredVertexes = {
     for (a <- actors) yield a
     for (d <- delays) yield d
     for ((_, path) <- channels; elem <- path) yield elem

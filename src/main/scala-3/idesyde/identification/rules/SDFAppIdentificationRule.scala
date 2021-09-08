@@ -1,9 +1,9 @@
 package idesyde.identification.rules
 
-import idesyde.identification.interfaces.IdentificationRule
+import idesyde.identification.IdentificationRule
 import idesyde.identification.models.SdfApplication
 import forsyde.io.java.core.ForSyDeModel
-import idesyde.identification.interfaces.DecisionModel
+import idesyde.identification.DecisionModel
 import forsyde.io.java.core.VertexTrait
 import forsyde.io.java.typed.viewers.SDFComb
 import forsyde.io.java.typed.viewers.SDFPrefix

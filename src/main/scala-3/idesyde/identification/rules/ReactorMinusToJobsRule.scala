@@ -8,8 +8,8 @@ import forsyde.io.java.typed.viewers.LinguaFrancaReaction
 import forsyde.io.java.typed.viewers.LinguaFrancaReactor
 import forsyde.io.java.typed.viewers.LinguaFrancaSignal
 import forsyde.io.java.typed.viewers.LinguaFrancaTimer
-import idesyde.identification.interfaces.DecisionModel
-import idesyde.identification.interfaces.IdentificationRule
+import idesyde.identification.DecisionModel
+import idesyde.identification.IdentificationRule
 import idesyde.identification.models.ReactorMinusApplication
 import idesyde.identification.models.ReactorMinusJobs
 import org.apache.commons.math3.fraction.Fraction
@@ -76,7 +76,7 @@ final case class ReactorMinusToJobsRule() extends IdentificationRule[ReactorMinu
         LinguaFrancaReaction.conforms(v) ||
         LinguaFrancaSignal.conforms(v)
     )
-    val covered = identified.flatMap(_.coveredVertexes())
+    val covered = identified.flatMap(_.coveredVertexes)
     covered.subsetOf(coverable)
   }
 

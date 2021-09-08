@@ -1,8 +1,8 @@
 package idesyde.identification.api
 
 import forsyde.io.java.core.ForSyDeModel
-import idesyde.identification.interfaces.IdentificationRule
-import idesyde.identification.interfaces.DecisionModel
+import idesyde.identification.IdentificationRule
+import idesyde.identification.DecisionModel
 import forsyde.io.java.core.VertexTrait
 
 import java.util.stream.Collectors
@@ -16,6 +16,7 @@ import org.jgrapht.graph.DefaultEdge
 import org.jgrapht.alg.connectivity.GabowStrongConnectivityInspector
 
 import collection.JavaConverters.*
+import idesyde.identification.rules.SchedulableNetDigHWIdentRule
 
 object Identification {
 
@@ -24,14 +25,15 @@ object Identification {
       SDFAppIdentificationRule(),
       ReactorMinusIdentificationRule(),
       ReactorMinusToJobsRule(),
-      NetworkedDigitalHWIdentRule()
+      NetworkedDigitalHWIdentRule(),
+      SchedulableNetDigHWIdentRule()
     )
 
   def identifyDecisionModels(
       model: ForSyDeModel,
       rules: Set[IdentificationRule[? <: DecisionModel]] = Set.empty,
       loggingLevel: Level = Level.INFO
-  ): Set[? <: DecisionModel] = {
+  ): Set[? <: DecisionModel] = 
     var identified: Set[DecisionModel] = Set()
     var activeRules                    = rules ++ getStandardRules()
     val maxIters                       = activeRules.size * countTraits(model)
@@ -60,11 +62,13 @@ object Identification {
     // condense it for comparison
     val dominanceCondensation = GabowStrongConnectivityInspector(dominanceGraph).getCondensation()
     // keep only the SCC which are leaves
-    dominanceCondensation.vertexSet.asScala
+    val dominant = dominanceCondensation.vertexSet.asScala
           .filter(g => dominanceCondensation.outgoingEdgesOf(g).isEmpty)
           .flatMap(g => g.vertexSet.asScala)
           .toSet
-  }
+    scribe.info(s"droppped ${identified.size - dominant.size} dominated decision model(s).")
+    dominant
+  end identifyDecisionModels
 
   protected def countTraits(model: ForSyDeModel): Integer =
     model.vertexSet.stream.flatMap(_.getTraits.stream).distinct.count.toInt

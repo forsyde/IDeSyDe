@@ -1,4 +1,4 @@
-package idesyde.identification.interfaces
+package idesyde.identification
 
 import forsyde.io.java.core.ForSyDeModel
 import idesyde.identification.api.Identification

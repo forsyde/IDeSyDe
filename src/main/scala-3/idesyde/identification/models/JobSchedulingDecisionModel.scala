@@ -1,6 +1,6 @@
 package idesyde.identification.models
 
-import idesyde.identification.interfaces.DecisionModel
+import idesyde.identification.DecisionModel
 
 trait JobSchedulingDecisionModel[J, C, R] extends DecisionModel {
 

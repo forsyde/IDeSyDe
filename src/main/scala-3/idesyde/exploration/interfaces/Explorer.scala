@@ -1,6 +1,6 @@
 package idesyde.exploration.interfaces
 
-import idesyde.identification.interfaces.DecisionModel
+import idesyde.identification.DecisionModel
 import forsyde.io.java.core.ForSyDeModel
 
 trait Explorer[M <: DecisionModel] {

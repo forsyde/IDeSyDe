@@ -22,7 +22,12 @@ final case class SchedulableNetDigHWIdentRule()
     val hardwareDecisionModelOpt = identified
       .find(_.isInstanceOf[NetworkedDigitalHardware])
       .map(_.asInstanceOf[NetworkedDigitalHardware])
-    if (!hardwareDecisionModelOpt.isEmpty) {
+    if (
+      hardwareDecisionModelOpt.isDefined && SchedulableNetDigHWIdentRule.canIdentify(
+        model,
+        identified
+      )
+    ) {
       val hardwareDecisionModel = hardwareDecisionModelOpt.get
       val timeTrigSchedulers = model.vertexSet.asScala
         .filter(TimeTriggeredScheduler.conforms(_))
@@ -35,50 +40,30 @@ final case class SchedulableNetDigHWIdentRule()
       given Set[TimeTriggeredScheduler]  = timeTrigSchedulers
       given Set[RoundRobinScheduler]     = roundRobinSchedulers
       given Set[GenericProcessingModule] = hardwareDecisionModel.processingElems
-      if (everyPEIsSchedulable(model)) {
-        val schedulersFromPEs = computeSchedulersFromPEs(model)
-        scribe.debug("found a conforming Schedulable Networked HW Model.")
-        (
-          true,
-          Option(
-            SchedulableNetworkedDigHW(
-              hardware = hardwareDecisionModel,
-              schedulersFromPEs = schedulersFromPEs,
-              timeTriggeredPEs = computeTimeTriggeredPEs(model),
-              roundRobinPEs = computeRoundRobinPEs(model)
-            )
-          )
-        )
-      } else 
-        scribe.debug("Not conforming Schedulable Networked HW Model: not all PEs have schedulers.")
-        (true, Option.empty)
-    } else if (canIdentify(model, identified)) {
+      val schedulersFromPEs              = computeSchedulersFromPEs(model)
+      val decisionModel = SchedulableNetworkedDigHW(
+        hardware = hardwareDecisionModel,
+        schedulersFromPEs = schedulersFromPEs,
+        timeTriggeredPEs = computeTimeTriggeredPEs(model),
+        roundRobinPEs = computeRoundRobinPEs(model)
+      )
+      scribe.debug(
+        "found a conforming Schedulable Networked HW Model with: " +
+          s"${timeTrigSchedulers.size} TT schedulers, " +
+          s"${roundRobinSchedulers.size} RR schedulers"
+      )
+      (
+        true,
+        Option(decisionModel)
+      )
+      // scribe.debug("Not conforming Schedulable Networked HW Model: not all PEs have schedulers.")
+      // (true, Option.empty)
+    } else if (NetworkedDigitalHWIdentRule.canIdentify(model, identified)) {
       (false, Option.empty)
     } else {
       (true, Option.empty)
     }
   end identify
-
-  def canIdentify(model: ForSyDeModel, identified: Set[DecisionModel]): Boolean =
-    val vertexesLeft = model.vertexSet.asScala
-      .diff(identified.flatMap(_.coveredVertexes))
-    vertexesLeft.exists(v =>
-      TimeTriggeredScheduler.conforms(v) ||
-        RoundRobinScheduler.conforms(v)
-    ) &&
-    vertexesLeft.exists(v => GenericProcessingModule.conforms(v))
-  end canIdentify
-
-  def everyPEIsSchedulable(model: ForSyDeModel)(using
-      processingElems: Set[GenericProcessingModule],
-      timeTrigSchedulers: Set[TimeTriggeredScheduler],
-      roundRobinSchedulers: Set[RoundRobinScheduler]
-  ): Boolean =
-    processingElems.forall(v =>
-      timeTrigSchedulers.exists(t => model.hasConnection(v, t) || model.hasConnection(t, v)) ||
-        roundRobinSchedulers.exists(t => model.hasConnection(v, t) || model.hasConnection(t, v))
-    )
-  end everyPEIsSchedulable
 
   def computeSchedulersFromPEs(
       model: ForSyDeModel
@@ -121,3 +106,44 @@ final case class SchedulableNetDigHWIdentRule()
 //   def hasSchedulers(model: ForSyDeModel)
 
 }
+
+object SchedulableNetDigHWIdentRule:
+
+  def canIdentify(model: ForSyDeModel, identified: Set[DecisionModel]): Boolean =
+    val timeTrigSchedulers = model.vertexSet.asScala
+      .filter(TimeTriggeredScheduler.conforms(_))
+      .map(TimeTriggeredScheduler.safeCast(_).get())
+      .toSet
+    val roundRobinSchedulers = model.vertexSet.asScala
+      .filter(RoundRobinScheduler.conforms(_))
+      .map(RoundRobinScheduler.safeCast(_).get())
+      .toSet
+    val processingElems = model.vertexSet.asScala
+      .filter(GenericProcessingModule.conforms(_))
+      .map(GenericProcessingModule.safeCast(_).get())
+      .toSet
+    given Set[TimeTriggeredScheduler]  = timeTrigSchedulers
+    given Set[RoundRobinScheduler]     = roundRobinSchedulers
+    given Set[GenericProcessingModule] = processingElems
+    val vertexesLeft = model.vertexSet.asScala
+      .diff(identified.flatMap(_.coveredVertexes))
+    vertexesLeft.exists(v =>
+      TimeTriggeredScheduler.conforms(v) ||
+        RoundRobinScheduler.conforms(v)
+    ) &&
+    vertexesLeft.exists(v => GenericProcessingModule.conforms(v)) &&
+    everyPEIsSchedulable(model)
+  end canIdentify
+
+  def everyPEIsSchedulable(model: ForSyDeModel)(using
+      processingElems: Set[GenericProcessingModule],
+      timeTrigSchedulers: Set[TimeTriggeredScheduler],
+      roundRobinSchedulers: Set[RoundRobinScheduler]
+  ): Boolean =
+    processingElems.forall(v =>
+      timeTrigSchedulers.exists(t => model.hasConnection(v, t) || model.hasConnection(t, v)) ||
+        roundRobinSchedulers.exists(t => model.hasConnection(v, t) || model.hasConnection(t, v))
+    )
+  end everyPEIsSchedulable
+
+end SchedulableNetDigHWIdentRule

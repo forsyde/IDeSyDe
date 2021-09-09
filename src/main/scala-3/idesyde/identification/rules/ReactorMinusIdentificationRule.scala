@@ -1,14 +1,13 @@
 package idesyde.identification.rules
 
 import idesyde.identification.IdentificationRule
-import idesyde.identification.models.ReactorMinusApplication
 import forsyde.io.java.core.ForSyDeModel
 import idesyde.identification.DecisionModel
 import forsyde.io.java.core.VertexTrait
+
 import java.util.stream.Collectors
 import scala.jdk.StreamConverters.*
 import collection.JavaConverters.*
-
 import org.jgrapht.alg.shortestpath.AllDirectedPaths
 import forsyde.io.java.core.Vertex
 import org.apache.commons.math3.fraction.Fraction
@@ -21,144 +20,67 @@ import forsyde.io.java.typed.viewers.LinguaFrancaElement
 import forsyde.io.java.typed.viewers.LinguaFrancaReaction
 import forsyde.io.java.typed.viewers.ModelOfComputation
 import forsyde.io.java.core.OpaqueTrait
+import idesyde.identification.models.reactor.ReactorMinusApplication
+import scala.annotation.meta.companionObject
 
 final case class ReactorMinusIdentificationRule()
     extends IdentificationRule[ReactorMinusApplication]() {
 
   def identify(model: ForSyDeModel, identified: Set[DecisionModel]) = {
-    val vertexes = model.vertexSet.asScala
-    val elements = vertexes
-      .filter(LinguaFrancaElement.conforms(_))
-      .map(LinguaFrancaElement.safeCast(_).get)
-      .toSet
-    val reactors = elements
-      .filter(LinguaFrancaReactor.conforms(_))
-      .map(LinguaFrancaReactor.safeCast(_).get)
-      .toSet
-    val reactions = elements
-      .filter(LinguaFrancaReaction.conforms(_))
-      .map(LinguaFrancaReaction.safeCast(_).get)
-      .toSet
-    val channels = elements
-      .filter(LinguaFrancaSignal.conforms(_))
-      .map(LinguaFrancaSignal.safeCast(_).get)
-      .toSet
-    val timers = elements
-      .filter(LinguaFrancaTimer.conforms(_))
-      .map(LinguaFrancaTimer.safeCast(_).get)
-      .toSet
-    given Set[LinguaFrancaElement]  = elements
-    given Set[LinguaFrancaReactor]  = reactors
-    given Set[LinguaFrancaReaction] = reactions
-    given Set[LinguaFrancaSignal]   = channels
-    given Set[LinguaFrancaTimer]    = timers
-    if (conformsToReactorMinus(model)) {
-      scribe.debug("Conforming Reactor- model found.")
+    if (ReactorMinusIdentificationRule.canIdentify(model, identified)) {
+      val vertexes = model.vertexSet.asScala
+      val elements = vertexes
+        .filter(LinguaFrancaElement.conforms(_))
+        .map(LinguaFrancaElement.safeCast(_).get)
+        .toSet
+      val reactors = elements
+        .filter(LinguaFrancaReactor.conforms(_))
+        .map(LinguaFrancaReactor.safeCast(_).get)
+        .toSet
+      val reactions = elements
+        .filter(LinguaFrancaReaction.conforms(_))
+        .map(LinguaFrancaReaction.safeCast(_).get)
+        .toSet
+      val channels = elements
+        .filter(LinguaFrancaSignal.conforms(_))
+        .map(LinguaFrancaSignal.safeCast(_).get)
+        .toSet
+      val timers = elements
+        .filter(LinguaFrancaTimer.conforms(_))
+        .map(LinguaFrancaTimer.safeCast(_).get)
+        .toSet
+      given Set[LinguaFrancaElement]  = elements
+      given Set[LinguaFrancaReactor]  = reactors
+      given Set[LinguaFrancaReaction] = reactions
+      given Set[LinguaFrancaSignal]   = channels
+      given Set[LinguaFrancaTimer]    = timers
+      val decisionModel = ReactorMinusApplication(
+        pureReactions = ReactorMinusIdentificationRule.filterOnlyPure(model),
+        periodicReactions = ReactorMinusIdentificationRule.filterOnlyPeriodic(model),
+        reactors = onlyNonHierarchicalReactors(model),
+        channels = channelsAsReactionConnections(model),
+        containmentFunction = deriveContainmentFunction(model),
+        priorityRelation = computePriorityRelation(model),
+        periodFunction = computePeriodFunction(model),
+        sizeFunction = computeSizesFunction(model)
+      )
+      scribe.debug(
+        "Conforming Reactor- model found with:" +
+          s"${decisionModel.pureReactions.size} pure reaction(s), " +
+          s"${decisionModel.periodicReactions.size} periodic reaction(s), " +
+          s"${decisionModel.reactors.size} reactor(s), " +
+          s"${decisionModel.channels.size} channel(s) and " +
+          s"hyperperiod of${decisionModel.hyperPeriod}"
+      )
       (
         true,
-        Option(
-          ReactorMinusApplication(
-            pureReactions = filterOnlyPure(model),
-            periodicReactions = filterOnlyPeriodic(model),
-            reactors = onlyNonHierarchicalReactors(model),
-            channels = channelsAsReactionConnections(model),
-            containmentFunction = deriveContainmentFunction(model),
-            priorityRelation = computePriorityRelation(model),
-            periodFunction = computePeriodFunction(model),
-            sizeFunction = computeSizesFunction(model)
-          )
-        )
+        Option(decisionModel)
       )
     } else {
       scribe.debug("No conforming Reactor- model found.")
       (true, Option.empty)
     }
   }
-
-  def conformsToReactorMinus(model: ForSyDeModel)(using
-      elements: Set[LinguaFrancaElement],
-      reactors: Set[LinguaFrancaReactor],
-      timers: Set[LinguaFrancaTimer],
-      reactions: Set[LinguaFrancaReaction]
-  ): Boolean = {
-    val traits    = hasOnlyAcceptableTraits(model)
-    val hierarchy = isTriviallyHierarchical(model)
-    // val wellformed  = noReactionIsLoose(model)
-    val isSimple    = onlyPeriodicOrPure(model)
-    val allPeriodic = allReactionsPeriodicable(model)
-    scribe.debug(s"Model has only acceptable traits: $traits")
-    scribe.debug(s"Model has no hierarchy-: $hierarchy")
-    // scribe.debug(s"Model has no loose reactions: $wellformed")
-    scribe.debug(s"Model has only periodic or pure reactions: $isSimple")
-    scribe.debug(s"Model has only periodicable reactions: $allPeriodic")
-    traits &&
-    hierarchy &&
-    // wellformed &&
-    isSimple &&
-    allPeriodic
-  }
-
-  def hasOnlyAcceptableTraits(model: ForSyDeModel)(using
-      elements: Set[LinguaFrancaElement]
-  ): Boolean =
-    elements.forall(v =>
-      LinguaFrancaReactor.conforms(v) ||
-        LinguaFrancaTimer.conforms(v) ||
-        LinguaFrancaReaction.conforms(v) ||
-        LinguaFrancaSignal.conforms(v)
-    )
-
-  def isTriviallyHierarchical(model: ForSyDeModel)(using
-      reactors: Set[LinguaFrancaReactor]
-  ): Boolean =
-    reactors.forall(a =>
-      a.getChildrenReactorsPort(model).isEmpty ||
-        (a.getReactionsPort(model)
-          .isEmpty && a.getStateNames.isEmpty && a.getStateSizesInBits.isEmpty)
-    )
-
-  /** Checks if all reactions are either periodic or pure.
-    *
-    * @param model
-    *   The input model to check
-    * @return
-    *   whether all reactions are either periodic or pure.
-    */
-  def onlyPeriodicOrPure(model: ForSyDeModel)(using
-      timers: Set[LinguaFrancaTimer],
-      reactions: Set[LinguaFrancaReaction]
-  ): Boolean =
-    filterOnlyPeriodic(model).intersect(filterOnlyPure(model)).isEmpty
-
-  def filterOnlyPeriodic(model: ForSyDeModel)(using
-      timers: Set[LinguaFrancaTimer],
-      reactions: Set[LinguaFrancaReaction]
-  ): Set[LinguaFrancaReaction] =
-    reactions.filter(r =>
-      timers.count(t => model.hasConnection(t, r)) == 1 && !reactions
-        .exists(r2 => model.hasConnection(r2, r))
-    )
-
-  def filterOnlyPure(model: ForSyDeModel)(using
-      timers: Set[LinguaFrancaTimer],
-      reactions: Set[LinguaFrancaReaction]
-  ): Set[LinguaFrancaReaction] =
-    reactions.filter(r => (timers.count(t => model.hasConnection(t, r)) == 0))
-
-  /** Checks if every timer can reach every reaction in the model. I.e. there is at least one simple
-    * path between them.
-    */
-  def allReactionsPeriodicable(model: ForSyDeModel)(using
-      timers: Set[LinguaFrancaTimer],
-      reactions: Set[LinguaFrancaReaction]
-  ): Boolean =
-    reactions.forall(r =>
-      timers.exists(t =>
-        !AllDirectedPaths(model)
-          .getAllPaths(t.getViewedVertex, r.getViewedVertex, true, null)
-          .isEmpty
-      )
-    )
 
   def noReactionIsLoose(model: ForSyDeModel)(using
       reactors: Set[LinguaFrancaReactor],
@@ -216,21 +138,24 @@ final case class ReactorMinusIdentificationRule()
       )
       .toMap
 
-  /**
-   * this function build up the channels for the reactor- model, but there's
-   * a catch. The function assumes (as currently does the adapter in ForSyDeIO)
-   * that the organization from reaction to reaction follows the pattern:
-   * 
-   * reaction -> [same port] reactor -> signal -> reactor -> [same port] -> reaction
-   * 
-   * If the model to be identified does not follow this pattern, this function
-   * _has undefined behavior_.
-   * 
-   * @param model The input design model.
-   * @param reactors The implicitly identified reactors
-   * @param reactions The implicitly identified reactions
-   * @param channels The implicitly identified channels
-   */
+  /** this function build up the channels for the reactor- model, but there's a catch. The function
+    * assumes (as currently does the adapter in ForSyDeIO) that the organization from reaction to
+    * reaction follows the pattern:
+    *
+    * reaction -> [same port] reactor -> signal -> reactor -> [same port] -> reaction
+    *
+    * If the model to be identified does not follow this pattern, this function _has undefined
+    * behavior_.
+    *
+    * @param model
+    *   The input design model.
+    * @param reactors
+    *   The implicitly identified reactors
+    * @param reactions
+    *   The implicitly identified reactions
+    * @param channels
+    *   The implicitly identified channels
+    */
   def channelsAsReactionConnections(model: ForSyDeModel)(using
       reactors: Set[LinguaFrancaReactor],
       reactions: Set[LinguaFrancaReaction],
@@ -266,10 +191,108 @@ final case class ReactorMinusIdentificationRule()
   def onlyNonHierarchicalReactors(model: ForSyDeModel)(using
       reactors: Set[LinguaFrancaReactor]
   ): Set[LinguaFrancaReactor] =
-    reactors.filter(a =>
-      a.getChildrenReactorsPort(model).isEmpty 
-      // ||  (a.getReactionsPort(model)
-      //     .isEmpty && a.getStateNames.isEmpty && a.getStateSizesInBits.isEmpty)
+    reactors.filter(a => a.getChildrenReactorsPort(model).isEmpty
+    // ||  (a.getReactionsPort(model)
+    //     .isEmpty && a.getStateNames.isEmpty && a.getStateSizesInBits.isEmpty)
     )
 
 }
+
+object ReactorMinusIdentificationRule:
+
+  def canIdentify(model: ForSyDeModel, identified: Set[DecisionModel]): Boolean = {
+    val vertexes = model.vertexSet.asScala
+    val elements = vertexes
+      .filter(LinguaFrancaElement.conforms(_))
+      .map(LinguaFrancaElement.safeCast(_).get)
+      .toSet
+    val reactors = elements
+      .filter(LinguaFrancaReactor.conforms(_))
+      .map(LinguaFrancaReactor.safeCast(_).get)
+      .toSet
+    val reactions = elements
+      .filter(LinguaFrancaReaction.conforms(_))
+      .map(LinguaFrancaReaction.safeCast(_).get)
+      .toSet
+    val channels = elements
+      .filter(LinguaFrancaSignal.conforms(_))
+      .map(LinguaFrancaSignal.safeCast(_).get)
+      .toSet
+    val timers = elements
+      .filter(LinguaFrancaTimer.conforms(_))
+      .map(LinguaFrancaTimer.safeCast(_).get)
+      .toSet
+    given Set[LinguaFrancaElement]  = elements
+    given Set[LinguaFrancaReactor]  = reactors
+    given Set[LinguaFrancaReaction] = reactions
+    given Set[LinguaFrancaSignal]   = channels
+    given Set[LinguaFrancaTimer]    = timers
+    hasOnlyAcceptableTraits(model) &&
+    isTriviallyHierarchical(model) &&
+    // noReactionIsLoose(model)
+    onlyPeriodicOrPure(model) &&
+    allReactionsPeriodicable(model)
+  }
+
+  def hasOnlyAcceptableTraits(model: ForSyDeModel)(using
+      elements: Set[LinguaFrancaElement]
+  ): Boolean =
+    elements.forall(v =>
+      LinguaFrancaReactor.conforms(v) ||
+        LinguaFrancaTimer.conforms(v) ||
+        LinguaFrancaReaction.conforms(v) ||
+        LinguaFrancaSignal.conforms(v)
+    )
+
+  def filterOnlyPeriodic(model: ForSyDeModel)(using
+      timers: Set[LinguaFrancaTimer],
+      reactions: Set[LinguaFrancaReaction]
+  ): Set[LinguaFrancaReaction] =
+    reactions.filter(r =>
+      timers.count(t => model.hasConnection(t, r)) == 1 && !reactions
+        .exists(r2 => model.hasConnection(r2, r))
+    )
+
+  def filterOnlyPure(model: ForSyDeModel)(using
+      timers: Set[LinguaFrancaTimer],
+      reactions: Set[LinguaFrancaReaction]
+  ): Set[LinguaFrancaReaction] =
+    reactions.filter(r => (timers.count(t => model.hasConnection(t, r)) == 0))
+
+  /** Checks if all reactions are either periodic or pure.
+    *
+    * @param model
+    *   The input model to check
+    * @return
+    *   whether all reactions are either periodic or pure.
+    */
+  def onlyPeriodicOrPure(model: ForSyDeModel)(using
+      timers: Set[LinguaFrancaTimer],
+      reactions: Set[LinguaFrancaReaction]
+  ): Boolean =
+    filterOnlyPeriodic(model).intersect(filterOnlyPure(model)).isEmpty
+
+  /** Checks if every timer can reach every reaction in the model. I.e. there is at least one simple
+    * path between them.
+    */
+  def allReactionsPeriodicable(model: ForSyDeModel)(using
+      timers: Set[LinguaFrancaTimer],
+      reactions: Set[LinguaFrancaReaction]
+  ): Boolean =
+    reactions.forall(r =>
+      timers.exists(t =>
+        !AllDirectedPaths(model)
+          .getAllPaths(t.getViewedVertex, r.getViewedVertex, true, null)
+          .isEmpty
+      )
+    )
+
+  def isTriviallyHierarchical(model: ForSyDeModel)(using
+      reactors: Set[LinguaFrancaReactor]
+  ): Boolean =
+    reactors.forall(a =>
+      a.getChildrenReactorsPort(model).isEmpty ||
+        (a.getReactionsPort(model)
+          .isEmpty && a.getStateNames.isEmpty && a.getStateSizesInBits.isEmpty)
+    )
+end ReactorMinusIdentificationRule

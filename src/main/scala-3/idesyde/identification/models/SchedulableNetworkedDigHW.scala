@@ -4,7 +4,7 @@ import forsyde.io.java.core.Vertex
 import forsyde.io.java.typed.viewers.{GenericDigitalInterconnect, GenericProcessingModule, RoundRobinScheduler, TimeTriggeredScheduler}
 import idesyde.identification.DecisionModel
 
-case class SchedulableNetworkedDigHW (
+final case class SchedulableNetworkedDigHW (
     val hardware: NetworkedDigitalHardware,
     val timeTriggeredPEs: Set[GenericProcessingModule],
     val roundRobinPEs: Set[GenericProcessingModule],

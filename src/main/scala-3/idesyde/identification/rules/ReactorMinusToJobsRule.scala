@@ -10,8 +10,10 @@ import forsyde.io.java.typed.viewers.LinguaFrancaSignal
 import forsyde.io.java.typed.viewers.LinguaFrancaTimer
 import idesyde.identification.DecisionModel
 import idesyde.identification.IdentificationRule
-import idesyde.identification.models.ReactorMinusApplication
-import idesyde.identification.models.ReactorMinusJobs
+import idesyde.identification.models.reactor.ReactorMinusJobs
+import idesyde.identification.models.reactor.ReactorMinusApplication
+import idesyde.identification.models.reactor.ReactionJob
+import idesyde.identification.models.reactor.ReactionChannel
 import org.apache.commons.math3.fraction.Fraction
 import org.jgrapht.alg.shortestpath.AllDirectedPaths
 import org.jgrapht.graph.DefaultEdge
@@ -20,105 +22,87 @@ import org.jgrapht.traverse.BreadthFirstIterator
 
 import collection.JavaConverters.*
 
-type ReactorJobType = (LinguaFrancaReaction, Fraction, Fraction)
-type CommChannelType = (ReactorJobType, ReactorJobType, LinguaFrancaSignal)
-type StateChannelType = (ReactorJobType, ReactorJobType, LinguaFrancaReactor)
 type ResourceType   = GenericProcessingModule | GenericDigitalStorage | GenericDigitalInterconnect
 
 final case class ReactorMinusToJobsRule() extends IdentificationRule[ReactorMinusJobs] {
 
   def identify(model: ForSyDeModel, identified: Set[DecisionModel]) =
-    if (hasIdentifiedReactorMinus(identified)) {
-      scribe.debug("Conforming Reactor- jobs model found.")
-      val reactorMinus = identified
-        .find(_.isInstanceOf[ReactorMinusApplication])
-        .get
-        .asInstanceOf[ReactorMinusApplication]
+    val reactorMinusOpt = identified
+            .find(_.isInstanceOf[ReactorMinusApplication])
+            .map(_.asInstanceOf[ReactorMinusApplication])
+    if (reactorMinusOpt.isDefined) {
+      val reactorMinus = reactorMinusOpt.get
       given ReactorMinusApplication = reactorMinus
-      scribe.debug(s"LCM is ${reactorMinus.hyperPeriod()}")
       val periodicJobs = computePeriodicJobs(model)
-      scribe.debug(s"${periodicJobs.size} periodic jobs computed")
       val pureJobs = computePureJobs(model, periodicJobs)
-      scribe.debug(s"${pureJobs.size} pure jobs computed")
       val jobs = periodicJobs ++ pureJobs
-      given Map[LinguaFrancaReaction, Set[ReactorJobType]] = reactorMinus.reactions().map(r => r -> jobs.filter(_._1 == r)).toMap
-      val pureChannels = computePureChannels(model, jobs)
-      scribe.debug(s"${pureChannels.size} pure job channels computed")
-      val timeChannels = computeTimelyChannels(model, jobs)
-      scribe.debug(s"${timeChannels.size} time job channels computed")
-      val prioChannels = computePriorityChannels(model, jobs)
-      scribe.debug(s"${prioChannels.size} prio job channels computed")
-      val stateChannels = timeChannels.union(prioChannels)
-      scribe.debug(s"${stateChannels.size} state job channels computed")
-      val outerStateChannels = computeHyperperiodChannels(model, jobs, stateChannels)
-      (true, Option(ReactorMinusJobs(
-        reactorMinusApp = reactorMinus,
-        periodicJobs = periodicJobs,
-        pureJobs = pureJobs,
-        pureChannels = pureChannels,
-        stateChannels = stateChannels,
-        outerStateChannels = outerStateChannels
-      )))
-    } else if (!canIdentify(model, identified)) {
+      given Map[LinguaFrancaReaction, Set[ReactionJob]] = reactorMinus.reactions.map(r => r -> jobs.filter(_.srcReaction == r)).toMap
+      val stateChannels = computeTimelyChannels(model, jobs).union(computePriorityChannels(model, jobs))
+      val decisionModel = ReactorMinusJobs(
+              reactorMinusApp = reactorMinus,
+              periodicJobs = periodicJobs,
+              pureJobs = pureJobs,
+              pureChannels = computePureChannels(model, jobs),
+              stateChannels = stateChannels,
+              outerStateChannels = computeHyperperiodChannels(model, jobs, stateChannels)
+            )
+      scribe.debug(s"Conforming ReactorMinusJobs found with Reactor-: " +
+              s"${decisionModel.periodicJobs.size} per. Job(s), " +
+              s"${decisionModel.pureJobs.size} pure Job(s) " +
+              s"${decisionModel.pureChannels.size} pure channel(s), " +
+              s"${decisionModel.stateChannels.size} inner state channel(s) and " +
+              s"${decisionModel.outerStateChannels.size} outer state channels")
+      (true, Option(decisionModel))
+      } else if (ReactorMinusIdentificationRule.canIdentify(model, identified)) {
+      (false, Option.empty)
+    } else {
       scribe.debug("Cannot conform Reactor- jobs in the model.")
       (true, Option.empty)
-    } else {
-      (false, Option.empty)
     }
 
   def hasIdentifiedReactorMinus(identified: Set[DecisionModel]): Boolean =
     identified.exists(_.isInstanceOf[ReactorMinusApplication])
 
-  def canIdentify(model: ForSyDeModel, identified: Set[DecisionModel]): Boolean = {
-    val coverable = model.vertexSet.asScala.filter(v =>
-      LinguaFrancaReactor.conforms(v) ||
-        LinguaFrancaTimer.conforms(v) ||
-        LinguaFrancaReaction.conforms(v) ||
-        LinguaFrancaSignal.conforms(v)
-    )
-    val covered = identified.flatMap(_.coveredVertexes)
-    covered.subsetOf(coverable)
-  }
 
   def computePeriodicJobs(
       model: ForSyDeModel
-  )(using reactorMinus: ReactorMinusApplication): Set[ReactorJobType] =
+  )(using reactorMinus: ReactorMinusApplication): Set[ReactionJob] =
     for (
       r <- reactorMinus.periodicReactions; 
-      period = reactorMinus.periodFunction.getOrElse(r, reactorMinus.hyperPeriod());
-      i <- Seq.range(0, reactorMinus.hyperPeriod().divide(period).getNumerator)
-    ) yield (r, period.multiply(i), period.multiply(i + 1))
+      period = reactorMinus.periodFunction.getOrElse(r, reactorMinus.hyperPeriod);
+      i <- Seq.range(0, reactorMinus.hyperPeriod.divide(period).getNumerator)
+    ) yield ReactionJob(r, period.multiply(i), period.multiply(i + 1))
 
   def computePureJobs(
-      model: ForSyDeModel, periodicJobs: Set[ReactorJobType]
-  )(using reactorMinus: ReactorMinusApplication): Set[ReactorJobType] = {
+      model: ForSyDeModel, periodicJobs: Set[ReactionJob]
+  )(using reactorMinus: ReactorMinusApplication): Set[ReactionJob] = {
     // first, get all pure jobs from the periodic ones, even with activation overlap
     // val paths = AllDirectedPaths(reactorMinus)
     val overlappedPureJobs = for (
         j <- periodicJobs;
         //r <- reactorMinus.pureReactions;
         //if paths.getAllPaths(j._1, r, true, null).isEmpty
-        iterator = BreadthFirstIterator(reactorMinus, j._1);
+        iterator = BreadthFirstIterator(reactorMinus, j.srcReaction);
         r <- iterator.asScala.filter(reactorMinus.pureReactions.contains(_))
         // r <- reactorMinus.pureReactions;
         // paths = AllDirectedPaths(reactorMinus).getAllPaths(j._1, r, true, null)
         // if !paths.isEmpty
     ) yield {
       // scribe.debug(s"between ${j._1.getIdentifier} and ${r.getIdentifier}: ${paths.size} paths")
-      (r, j._2, j._3)
+      ReactionJob(r, j.trigger, j.deadline)
     }
     val nonOverlapDeadline = overlappedPureJobs.map(j => j -> 
         // filter for higher start and same reaction, then get the trigger time, if any.
-        overlappedPureJobs.filter(jj => j._2.compareTo(jj._2) < 0).filter(jj => jj._1 == j._1)
+        overlappedPureJobs.filter(jj => j.trigger.compareTo(jj.trigger) < 0).filter(jj => jj._1 == j._1)
         .minByOption(_._2).map(_._2).getOrElse(j._3)
     ).toMap
     // return the pure jobs with the newly computed dadlines
-    overlappedPureJobs.map(j => (j._1, j._2, nonOverlapDeadline.getOrElse(j, j._3)))
+    overlappedPureJobs.map(j => ReactionJob(j.srcReaction, j.trigger, nonOverlapDeadline.getOrElse(j, j.deadline)))
   }
 
   def computePureChannels(
-      model: ForSyDeModel, jobs: Set[ReactorJobType]
-  )(using reactorMinus: ReactorMinusApplication, reactionsToJobs: Map[LinguaFrancaReaction, Set[ReactorJobType]]): Set[CommChannelType] =
+      model: ForSyDeModel, jobs: Set[ReactionJob]
+        )(using reactorMinus: ReactorMinusApplication, reactionsToJobs: Map[LinguaFrancaReaction, Set[ReactionJob]]): Set[ReactionChannel] =
     (for (
       ((r, rr) -> c) <- reactorMinus.channels;
       j <- reactionsToJobs(r);
@@ -130,11 +114,11 @@ final case class ReactorMinusToJobsRule() extends IdentificationRule[ReactorMinu
       // if the original reaction channels exist
       //originalChannel = reactorMinus.channels.get((j._1, jj._1));
       // if !originalChannel.isEmpty;
-    ) yield (j, jj, c)).toSet
+    ) yield ReactionChannel.CommReactionChannel(j, jj, c)).toSet
 
   def computePriorityChannels(
-      model: ForSyDeModel, jobs: Set[ReactorJobType]
-  )(using reactorMinus: ReactorMinusApplication): Set[StateChannelType] =
+      model: ForSyDeModel, jobs: Set[ReactionJob]
+        )(using reactorMinus: ReactorMinusApplication): Set[ReactionChannel] =
     for (
       a <- reactorMinus.reactors;
       jset = jobs.filter(j => reactorMinus.containmentFunction(j._1) == a);
@@ -143,11 +127,11 @@ final case class ReactorMinusToJobsRule() extends IdentificationRule[ReactorMinu
       if j._2.equals(jj._2)//;
       // higher priority
       // if reactorMinus.priorityRelation.contains((j._1, jj._1))
-    ) yield (j, jj, a)
+          ) yield ReactionChannel(j, jj, a)
 
   def computeTimelyChannels(
-      model: ForSyDeModel, jobs: Set[ReactorJobType]
-  )(using reactorMinus: ReactorMinusApplication): Set[StateChannelType] =
+      model: ForSyDeModel, jobs: Set[ReactionJob]
+        )(using reactorMinus: ReactorMinusApplication): Set[ReactionChannel] =
     for (
       a <- reactorMinus.reactors;
       js <- jobs.filter(j => reactorMinus.containmentFunction(j._1) == a).toSeq
@@ -163,11 +147,11 @@ final case class ReactorMinusToJobsRule() extends IdentificationRule[ReactorMinu
       //   // higher priority
       //   reactorMinus.priorityRelation.contains((o._1, jj._1))
       //   )
-    ) yield (js.head, js.last, a)
+          ) yield ReactionChannel(js.head, js.last, a)
 
   def computeHyperperiodChannels(
-      model: ForSyDeModel, jobs: Set[ReactorJobType], stateChannels: Set[StateChannelType]
-  )(using reactorMinus: ReactorMinusApplication): Set[StateChannelType] =
+        model: ForSyDeModel, jobs: Set[ReactionJob], stateChannels: Set[ReactionChannel]
+          )(using reactorMinus: ReactorMinusApplication): Set[ReactionChannel] =
     for (
       a <- reactorMinus.reactors;
       jset = jobs.filter(j => reactorMinus.containmentFunction(j._1) == a).toSeq
@@ -182,6 +166,12 @@ final case class ReactorMinusToJobsRule() extends IdentificationRule[ReactorMinu
       //   // triggering time
       //   stateChannels.contains((o, j, reactor.get)) || stateChannels.contains((jj, o, reactor.get))
       //   )
-    ) yield (j, jj, a)
+          ) yield ReactionChannel(j, jj, a)
 
 }
+
+object ReactorMinusToJobsRule:
+
+  def canIdentify(model: ForSyDeModel, identified: Set[DecisionModel]): Boolean = ReactorMinusIdentificationRule.canIdentify(model, identified)
+
+end ReactorMinusToJobsRule

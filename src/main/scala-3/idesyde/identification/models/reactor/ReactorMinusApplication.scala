@@ -1,15 +1,11 @@
-package idesyde.identification.models
+package idesyde.identification.models.reactor
 
+import forsyde.io.java.typed.viewers.{LinguaFrancaReaction, LinguaFrancaReactor, LinguaFrancaSignal}
 import idesyde.identification.DecisionModel
 import org.apache.commons.math3.fraction.Fraction
 import org.apache.commons.math3.util.ArithmeticUtils
-import forsyde.io.java.typed.viewers.LinguaFrancaTimer
-import forsyde.io.java.typed.viewers.LinguaFrancaReaction
-import forsyde.io.java.typed.viewers.LinguaFrancaReactor
-import forsyde.io.java.typed.viewers.LinguaFrancaSignal
-import org.jgrapht.Graph
-import org.jgrapht.graph.DefaultEdge
 import org.jgrapht.graph.SimpleDirectedGraph
+
 import collection.JavaConverters.*
 
 final case class ReactorMinusApplication(
@@ -22,15 +18,15 @@ final case class ReactorMinusApplication(
     val periodFunction: Map[LinguaFrancaReaction, Fraction],
     val sizeFunction: Map[LinguaFrancaReaction | LinguaFrancaReactor | LinguaFrancaSignal, Long]
 ) extends SimpleDirectedGraph[LinguaFrancaReaction, LinguaFrancaSignal](classOf[LinguaFrancaSignal])
-    with DecisionModel {
-    
-  for (r <- pureReactions) addVertex(r)
-  for (r <- periodicReactions) addVertex(r)
+    with DecisionModel:
+
+  for (r               <- pureReactions) addVertex(r)
+  for (r               <- periodicReactions) addVertex(r)
   for (((r1, r2) -> c) <- channels) addEdge(r1, r2, c)
 
-  def reactions(): Set[LinguaFrancaReaction] = vertexSet.asScala.toSet
+  def reactions: Set[LinguaFrancaReaction] = vertexSet.asScala.toSet
 
-  def hyperPeriod(): Fraction = periodFunction.values.reduce((frac1, frac2) =>
+  def hyperPeriod: Fraction = periodFunction.values.reduce((frac1, frac2) =>
     // the LCM of a nunch of fractions n1/d1, n2/d2... is lcm(n1, n2,...)/gcd(d1, d2,...). You can check.
     Fraction(
       ArithmeticUtils.lcm(frac1.getNumerator, frac2.getNumerator),
@@ -39,7 +35,7 @@ final case class ReactorMinusApplication(
   )
 
   def coveredVertexes = {
-    for (v <- reactions()) yield v.getViewedVertex
+    for (v <- reactions) yield v.getViewedVertex
     for (v <- reactors) yield v.getViewedVertex
     // for (a <- reactor; t <- a.get)
     for ((_, c) <- channels) yield c.getViewedVertex
@@ -60,4 +56,4 @@ final case class ReactorMinusApplication(
     )
   }
 
-}
+end ReactorMinusApplication

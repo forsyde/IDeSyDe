@@ -17,16 +17,18 @@ import org.jgrapht.alg.connectivity.GabowStrongConnectivityInspector
 
 import collection.JavaConverters.*
 import idesyde.identification.rules.SchedulableNetDigHWIdentRule
+import idesyde.identification.rules.ReactorMinusJobsDSEIdentRule
 
 object Identification {
 
-  def getStandardRules(): Set[IdentificationRule[? <: DecisionModel]] =
+  def standardRules: Set[IdentificationRule[? <: DecisionModel]] =
     Set[IdentificationRule[? <: DecisionModel]](
       SDFAppIdentificationRule(),
       ReactorMinusIdentificationRule(),
       ReactorMinusToJobsRule(),
       NetworkedDigitalHWIdentRule(),
-      SchedulableNetDigHWIdentRule()
+      SchedulableNetDigHWIdentRule(),
+      ReactorMinusJobsDSEIdentRule()
     )
 
   def identifyDecisionModels(
@@ -35,7 +37,7 @@ object Identification {
       loggingLevel: Level = Level.INFO
   ): Set[? <: DecisionModel] = 
     var identified: Set[DecisionModel] = Set()
-    var activeRules                    = rules ++ getStandardRules()
+    var activeRules                    = rules ++ standardRules
     val maxIters                       = activeRules.size * countTraits(model)
     var iters                          = 0
     scribe.info(

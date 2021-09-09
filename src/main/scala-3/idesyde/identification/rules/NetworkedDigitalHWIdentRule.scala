@@ -21,31 +21,28 @@ final case class NetworkedDigitalHWIdentRule()
       model: ForSyDeModel,
       identified: Set[DecisionModel]
   ): (Boolean, Option[NetworkedDigitalHardware]) = {
-    val platformVertexes = model
-      .vertexSet()
-      .asScala
-      .filter(e => AbstractDigitalModule.conforms(e))
-    val processingElements = platformVertexes
-      .filter(e => GenericProcessingModule.conforms(e))
-      .map(e => GenericProcessingModule.safeCast(e).get())
-      .toSet
-    val memoryElements = platformVertexes
-      .filter(e => GenericDigitalStorage.conforms(e))
-      .map(e => GenericDigitalStorage.safeCast(e).get())
-      .toSet
-    val communicationElements = platformVertexes
-      .filter(e => GenericDigitalInterconnect.conforms(e))
-      .map(e => GenericDigitalInterconnect.safeCast(e).get())
-      .toSet
-    val platformElements = processingElements ++ communicationElements ++ memoryElements
-    given Set[GenericProcessingModule]    = processingElements
-    given Set[GenericDigitalStorage]      = memoryElements
-    given Set[GenericDigitalInterconnect] = communicationElements
-    given Set[AbstractDigitalModule] = platformElements
-    scribe.debug(s"hasValidTraits: ${hasOneProcessor(model)}")
-    scribe.debug(s"hasOnlyValidLinks: ${hasOnlyValidLinks(model)}")
-    scribe.debug(s"processingElementsHaveMemory: ${processingElementsHaveMemory(model)}")
-    if (hasOneProcessor(model) && hasOnlyValidLinks(model) && processingElementsHaveMemory(model)) {
+    if (NetworkedDigitalHWIdentRule.canIdentify(model, identified)) {
+      val platformVertexes = model
+            .vertexSet()
+            .asScala
+            .filter(e => AbstractDigitalModule.conforms(e))
+      val processingElements = platformVertexes
+        .filter(e => GenericProcessingModule.conforms(e))
+        .map(e => GenericProcessingModule.safeCast(e).get())
+        .toSet
+      val memoryElements = platformVertexes
+        .filter(e => GenericDigitalStorage.conforms(e))
+        .map(e => GenericDigitalStorage.safeCast(e).get())
+        .toSet
+      val communicationElements = platformVertexes
+        .filter(e => GenericDigitalInterconnect.conforms(e))
+        .map(e => GenericDigitalInterconnect.safeCast(e).get())
+        .toSet
+      val platformElements = processingElements ++ communicationElements ++ memoryElements
+      given Set[GenericProcessingModule]    = processingElements
+      given Set[GenericDigitalStorage]      = memoryElements
+      given Set[GenericDigitalInterconnect] = communicationElements
+      given Set[AbstractDigitalModule] = platformElements
       val links =
         for (e <- platformElements; ee <- platformElements; if model.hasConnection(e, ee))
           yield (e, ee)
@@ -72,11 +69,15 @@ final case class NetworkedDigitalHWIdentRule()
     } else (true, Option.empty)
   }
 
+}
+
+object NetworkedDigitalHWIdentRule:
+
   def hasOneProcessor(model: ForSyDeModel): Boolean =
-    model
-      .vertexSet()
-      .asScala
-      .exists(v => GenericProcessingModule.conforms(v))
+      model
+        .vertexSet()
+        .asScala
+        .exists(v => GenericProcessingModule.conforms(v))
 
   def hasOnlyValidLinks(model: ForSyDeModel)(using
       procElems: Set[GenericProcessingModule],
@@ -100,19 +101,32 @@ final case class NetworkedDigitalHWIdentRule()
       memElems.exists(mem => 
         !paths.getAllPaths(pe.getViewedVertex, mem.getViewedVertex, true, null).isEmpty
         )
-      // !paths
-      //   .getAllPaths(
-      //     Set(pe.getViewedVertex).asJava,
-      //     memElems.map(_.getViewedVertex).asJava,
-      //     true,
-      //     null
-      //   )
-        // .isEmpty
-//      memElems.exists(mem =>
-//        paths.getAllPaths(pe.getViewedVertex, mem.getViewedVertex, true, null).asScala
-//          .exists(p => p.getVertexList.asScala.ex)
-//      )
     )
   }
 
-}
+  def canIdentify(model: ForSyDeModel, identified: Set[DecisionModel]): Boolean =
+    val platformVertexes = model
+          .vertexSet()
+          .asScala
+          .filter(e => AbstractDigitalModule.conforms(e))
+    val processingElements = platformVertexes
+      .filter(e => GenericProcessingModule.conforms(e))
+      .map(e => GenericProcessingModule.safeCast(e).get())
+      .toSet
+    val memoryElements = platformVertexes
+      .filter(e => GenericDigitalStorage.conforms(e))
+      .map(e => GenericDigitalStorage.safeCast(e).get())
+      .toSet
+    val communicationElements = platformVertexes
+      .filter(e => GenericDigitalInterconnect.conforms(e))
+      .map(e => GenericDigitalInterconnect.safeCast(e).get())
+      .toSet
+    val platformElements = processingElements ++ communicationElements ++ memoryElements
+    given Set[GenericProcessingModule]    = processingElements
+    given Set[GenericDigitalStorage]      = memoryElements
+    given Set[GenericDigitalInterconnect] = communicationElements
+    given Set[AbstractDigitalModule] = platformElements
+    hasOneProcessor(model) && hasOnlyValidLinks(model) && processingElementsHaveMemory(model)
+  end canIdentify
+
+end NetworkedDigitalHWIdentRule

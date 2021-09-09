@@ -8,13 +8,25 @@ import idesyde.identification.models.reactor.ReactionJob
 import forsyde.io.java.typed.viewers.GenericProcessingModule
 import org.apache.commons.math3.fraction.Fraction
 
-final case class ReactorMinusJobsDSEIdentRule() extends IdentificationRule[ReactorMinusJobsMapAndSched]:
+final case class ReactorMinusJobsDSEIdentRule()
+    extends IdentificationRule[ReactorMinusJobsMapAndSched]:
 
-    override def identify(model: ForSyDeModel, identified: Set[DecisionModel]): (Boolean, Option[ReactorMinusJobsMapAndSched]) =
-        (true, Option.empty)
-    end identify
+  override def identify(
+      model: ForSyDeModel,
+      identified: Set[DecisionModel]
+  ): (Boolean, Option[ReactorMinusJobsMapAndSched]) =
+    (true, Option.empty)
+  end identify
 
-
-    def computeWCETFunction(model: ForSyDeModel): Map[(ReactionJob, GenericProcessingModule), Fraction] = Map.empty
+  def computeWCETFunction(model: ForSyDeModel)(using
+      jobs: Set[ReactionJob],
+      procElems: Set[GenericProcessingModule]
+  ): Map[(ReactionJob, GenericProcessingModule), Fraction] =
+    val iter = for (
+      j  <- jobs;
+      pe <- procElems;
+      r = j.srcReaction
+    ) yield (j, pe) -> Fraction(0)
+    iter.toMap
 
 end ReactorMinusJobsDSEIdentRule

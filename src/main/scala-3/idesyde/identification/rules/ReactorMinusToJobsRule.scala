@@ -14,7 +14,7 @@ import idesyde.identification.models.reactor.ReactorMinusJobs
 import idesyde.identification.models.reactor.ReactorMinusApplication
 import idesyde.identification.models.reactor.ReactionJob
 import idesyde.identification.models.reactor.ReactionChannel
-import org.apache.commons.math3.fraction.Fraction
+import org.apache.commons.math3.fraction.BigFraction
 import org.jgrapht.alg.shortestpath.AllDirectedPaths
 import org.jgrapht.graph.DefaultEdge
 import org.jgrapht.graph.SimpleDirectedGraph
@@ -68,9 +68,9 @@ final case class ReactorMinusToJobsRule() extends IdentificationRule[ReactorMinu
       model: ForSyDeModel
   )(using reactorMinus: ReactorMinusApplication): Set[ReactionJob] =
     for (
-      r <- reactorMinus.periodicReactions; 
+      r <- reactorMinus.periodicReactions;
       period = reactorMinus.periodFunction.getOrElse(r, reactorMinus.hyperPeriod);
-      i <- Seq.range(0, reactorMinus.hyperPeriod.divide(period).getNumerator)
+      i <- Seq.range(0, reactorMinus.hyperPeriod.divide(period).getNumerator.intValue)
     ) yield ReactionJob(r, period.multiply(i), period.multiply(i + 1))
 
   def computePureJobs(

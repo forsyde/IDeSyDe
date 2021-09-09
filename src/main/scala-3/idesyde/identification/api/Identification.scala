@@ -65,10 +65,11 @@ object Identification {
     val dominanceCondensation = GabowStrongConnectivityInspector(dominanceGraph).getCondensation()
     // keep only the SCC which are leaves
     val dominant = dominanceCondensation.vertexSet.asScala
-          .filter(g => dominanceCondensation.outgoingEdgesOf(g).isEmpty)
+          .filter(g => dominanceCondensation.incomingEdgesOf(g).isEmpty)
           .flatMap(g => g.vertexSet.asScala)
           .toSet
     scribe.info(s"droppped ${identified.size - dominant.size} dominated decision model(s).")
+    scribe.debug(s"domitant: ${dominant.map(m => m.getClass.getName)}")
     dominant
   end identifyDecisionModels
 

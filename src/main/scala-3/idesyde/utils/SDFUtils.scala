@@ -2,8 +2,8 @@ package idesyde.utils
 
 import org.apache.commons.math3.linear.FieldMatrix
 import org.apache.commons.math3.linear.MatrixUtils
-import org.apache.commons.math3.fraction.Fraction
-import org.apache.commons.math3.fraction.FractionField
+import org.apache.commons.math3.fraction.BigFraction
+import org.apache.commons.math3.fraction.BigFractionField
 
 
 object SDFUtils {
@@ -15,11 +15,11 @@ object SDFUtils {
     // convert the common Scala matrix in to a field for commons math
     val topologyTransposed =
       MatrixUtils
-        .createFieldMatrix(topology.map(_.map(Fraction(_)).toArray).toArray)
+        .createFieldMatrix(topology.map(_.map(BigFraction(_)).toArray).toArray)
         .transpose
     // make an identity for the kernel algorithm
     val identity = MatrixUtils.createFieldIdentityMatrix(
-      FractionField.getInstance,
+      BigFractionField.getInstance,
       topologyTransposed.getColumnDimension
     )
     for (i <- 0 until topologyTransposed.getColumnDimension) {

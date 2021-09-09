@@ -2,7 +2,7 @@ package idesyde.identification.models.reactor
 
 import forsyde.io.java.typed.viewers.{LinguaFrancaReaction, LinguaFrancaReactor, LinguaFrancaSignal}
 import idesyde.identification.DecisionModel
-import org.apache.commons.math3.fraction.Fraction
+import org.apache.commons.math3.fraction.BigFraction
 import org.apache.commons.math3.util.ArithmeticUtils
 import org.jgrapht.graph.SimpleDirectedGraph
 
@@ -15,7 +15,7 @@ final case class ReactorMinusApplication(
     val channels: Map[(LinguaFrancaReaction, LinguaFrancaReaction), LinguaFrancaSignal],
     val containmentFunction: Map[LinguaFrancaReaction, LinguaFrancaReactor],
     val priorityRelation: Set[(LinguaFrancaReaction, LinguaFrancaReaction)],
-    val periodFunction: Map[LinguaFrancaReaction, Fraction],
+    val periodFunction: Map[LinguaFrancaReaction, BigFraction],
     val sizeFunction: Map[LinguaFrancaReaction | LinguaFrancaReactor | LinguaFrancaSignal, Long]
 ) extends SimpleDirectedGraph[LinguaFrancaReaction, LinguaFrancaSignal](classOf[LinguaFrancaSignal])
     with DecisionModel:
@@ -26,11 +26,11 @@ final case class ReactorMinusApplication(
 
   def reactions: Set[LinguaFrancaReaction] = vertexSet.asScala.toSet
 
-  def hyperPeriod: Fraction = periodFunction.values.reduce((frac1, frac2) =>
-    // the LCM of a nunch of fractions n1/d1, n2/d2... is lcm(n1, n2,...)/gcd(d1, d2,...). You can check.
-    Fraction(
-      ArithmeticUtils.lcm(frac1.getNumerator, frac2.getNumerator),
-      ArithmeticUtils.gcd(frac1.getDenominator, frac2.getDenominator)
+  def hyperPeriod: BigFraction = periodFunction.values.reduce((frac1, frac2) =>
+    // the LCM of a nunch of BigFractions n1/d1, n2/d2... is lcm(n1, n2,...)/gcd(d1, d2,...). You can check.
+    BigFraction(
+      ArithmeticUtils.lcm(frac1.getNumerator.longValue, frac2.getNumerator.longValue),
+      ArithmeticUtils.gcd(frac1.getDenominator.longValue, frac2.getDenominator.longValue)
     )
   )
 

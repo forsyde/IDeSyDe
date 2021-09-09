@@ -12,7 +12,7 @@ import org.jgrapht.graph.{DefaultEdge, DirectedPseudograph, SimpleDirectedGraph}
 import forsyde.io.java.core.ForSyDeModel
 import forsyde.io.java.core.Edge
 import forsyde.io.java.typed.viewers.RoundRobinInterconnect
-import org.apache.commons.math3.fraction.Fraction
+import org.apache.commons.math3.fraction.BigFraction
 
 // type GenericPlatformElement = GenericProcessingModule | GenericDigitalInterconnect | GenericDigitalStorage
 
@@ -39,17 +39,17 @@ final case class NetworkedDigitalHardware(
 
   def coveredEdges = Set.empty
 
-  def allocatedCommWeights: Map[(GenericDigitalInterconnect, GenericProcessingModule), Fraction] =
+  def allocatedCommWeights: Map[(GenericDigitalInterconnect, GenericProcessingModule), BigFraction] =
     (for (
       ce <- communicationElems;
       pe <- processingElems
     ) yield ce match {
       case rr: RoundRobinInterconnect =>
-        (rr, pe) -> Fraction(
+        (rr, pe) -> BigFraction(
           rr.getAllocatedWeights.getOrDefault(pe.getIdentifier, 0),
           rr.getTotalWeights
         )
-      case _ => (ce, pe) -> Fraction(0)
+      case _ => (ce, pe) -> BigFraction(0)
     }).toMap
 
   def bandWidthBitPerSec: Map[(GenericDigitalInterconnect, GenericProcessingModule), Long] =

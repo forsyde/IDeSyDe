@@ -10,7 +10,7 @@ import scala.jdk.StreamConverters.*
 import collection.JavaConverters.*
 import org.jgrapht.alg.shortestpath.AllDirectedPaths
 import forsyde.io.java.core.Vertex
-import org.apache.commons.math3.fraction.Fraction
+import org.apache.commons.math3.fraction.BigFraction
 import org.apache.commons.math3.util.ArithmeticUtils
 import org.apache.commons.math3.analysis.function.Sin
 import forsyde.io.java.typed.viewers.LinguaFrancaTimer
@@ -123,7 +123,7 @@ final case class ReactorMinusIdentificationRule()
   def computePeriodFunction(model: ForSyDeModel)(using
       timers: Set[LinguaFrancaTimer],
       reactions: Set[LinguaFrancaReaction]
-  ): Map[LinguaFrancaReaction, Fraction] =
+  ): Map[LinguaFrancaReaction, BigFraction] =
     timers
       .flatMap(t =>
         reactions
@@ -131,7 +131,7 @@ final case class ReactorMinusIdentificationRule()
           .map(r => (r, t))
       )
       .map((r, t) =>
-        r -> Fraction(
+        r -> BigFraction(
           t.getPeriodNumeratorPerSec,
           t.getPeriodDenominatorPerSec
         )

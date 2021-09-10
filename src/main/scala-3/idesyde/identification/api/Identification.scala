@@ -69,6 +69,7 @@ object Identification {
           .flatMap(g => g.vertexSet.asScala)
           .toSet
     scribe.info(s"droppped ${identified.size - dominant.size} dominated decision model(s).")
+    // TODO: find a non reflective way to get names of decision models
     scribe.debug(s"domitant: ${dominant.map(m => m.getClass.getName)}")
     dominant
   end identifyDecisionModels

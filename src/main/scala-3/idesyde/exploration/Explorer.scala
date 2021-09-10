@@ -3,13 +3,12 @@ package idesyde.exploration
 import idesyde.identification.DecisionModel
 import forsyde.io.java.core.ForSyDeModel
 import scala.concurrent.Future
+import scala.concurrent.ExecutionContext
 
 trait Explorer[M <: DecisionModel] {
 
-  def canExplore(decisionModel: M): Boolean
+  def explore(decisionModel: M)(using ExecutionContext): Future[ForSyDeModel]
 
-  def explore(decisionModel: M): Future[ForSyDeModel]
-
-  def dominates(other: Explorer[M]): Seq[Boolean]
+  def dominates(other: Explorer[M], decisionModel: M): Boolean
 
 }

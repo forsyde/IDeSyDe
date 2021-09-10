@@ -16,6 +16,8 @@ libraryDependencies ++= Seq(
   "org.apache.commons" % "commons-math3" % "3.6.1"
 )
 libraryDependencies += "com.outr" %% "scribe" % "3.5.5"
+libraryDependencies += "com.google.ortools" % "ortools-java" % "9.0.9048"
+libraryDependencies += "com.google.ortools" % "ortools-linux-x86-64" % "9.0.9048"
 // libraryDependencies += "com.outr" %%% "scribe" % "3.5.3"
 // libraryDependencies += "org.apache.logging.log4j" % "log4j-api" % "2.14.1"
 // libraryDependencies += "org.apache.logging.log4j" % "log4j-core" % "2.14.1"

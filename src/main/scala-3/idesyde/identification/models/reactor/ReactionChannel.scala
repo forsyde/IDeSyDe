@@ -3,17 +3,17 @@ package idesyde.identification.models.reactor
 import forsyde.io.java.typed.viewers.LinguaFrancaSignal
 import forsyde.io.java.typed.viewers.LinguaFrancaReactor
 
-enum ReactionChannel:
+enum ReactionChannel(val src: ReactionJob, val dst: ReactionJob):
   case CommReactionChannel(
-      val src: ReactionJob,
-      val dst: ReactionJob,
+      override val src: ReactionJob,
+      override val dst: ReactionJob,
       val channel: LinguaFrancaSignal
-  ) extends ReactionChannel
+  ) extends ReactionChannel(src, dst)
   case StateReactionChannel(
-      val src: ReactionJob,
-      val dst: ReactionJob,
+      override val src: ReactionJob,
+      override val dst: ReactionJob,
       val reactor: LinguaFrancaReactor
-  ) extends ReactionChannel
+  ) extends ReactionChannel(src, dst)
 
 object ReactionChannel:
 

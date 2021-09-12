@@ -86,6 +86,8 @@ final case class ReactorMinusApplication(
     val paths = AllDirectedPaths(reactionOnlyGraph)
       .getAllPaths(sources.asJava, sinks.asJava, true, null)
       .asScala
-    paths.map(p => p.getVertexList.asScala.toSeq).toSet
+    paths.map(p => p.getVertexList.asScala.toSeq)
+      .distinctBy(l => (l.head, l.last))
+      .toSet
 
 end ReactorMinusApplication

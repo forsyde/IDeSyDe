@@ -69,8 +69,9 @@ final case class ReactorMinusIdentificationRule()
           s"${decisionModel.pureReactions.size} pure reaction(s), " +
           s"${decisionModel.periodicReactions.size} periodic reaction(s), " +
           s"${decisionModel.reactors.size} reactor(s), " +
-          s"${decisionModel.channels.size} channel(s) and " +
-          s"hyperperiod of${decisionModel.hyperPeriod}"
+          s"${decisionModel.channels.size} channel(s)," +
+          s"${decisionModel.unambigousTriggerChains.size} trivial chain(s) and " +
+          s"hyperperiod of ${decisionModel.hyperPeriod}"
       )
       (
         true,
@@ -279,9 +280,10 @@ object ReactorMinusIdentificationRule:
       timers: Set[LinguaFrancaTimer],
       reactions: Set[LinguaFrancaReaction]
   ): Boolean =
+    val allPaths = AllDirectedPaths(model)
     reactions.forall(r =>
       timers.exists(t =>
-        !AllDirectedPaths(model)
+        !allPaths
           .getAllPaths(t.getViewedVertex, r.getViewedVertex, true, null)
           .isEmpty
       )

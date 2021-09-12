@@ -7,7 +7,13 @@ import org.apache.commons.math3.util.ArithmeticUtils
 import org.jgrapht.graph.SimpleDirectedGraph
 
 import collection.JavaConverters.*
+import org.jgrapht.graph.DefaultEdge
+import org.jgrapht.alg.connectivity.GabowStrongConnectivityInspector
+import org.jgrapht.alg.shortestpath.AllDirectedPaths
+import org.jgrapht.graph.DirectedPseudograph
+import org.jgrapht.graph.DefaultDirectedGraph
 
+/** */
 final case class ReactorMinusApplication(
     val pureReactions: Set[LinguaFrancaReaction],
     val periodicReactions: Set[LinguaFrancaReaction],
@@ -24,9 +30,9 @@ final case class ReactorMinusApplication(
   for (r               <- periodicReactions) addVertex(r)
   for (((r1, r2) -> c) <- channels) addEdge(r1, r2, c)
 
-  def reactions: Set[LinguaFrancaReaction] = vertexSet.asScala.toSet
+  val reactions: Set[LinguaFrancaReaction] = vertexSet.asScala.toSet
 
-  def hyperPeriod: BigFraction = periodFunction.values.reduce((frac1, frac2) =>
+  val hyperPeriod: BigFraction = periodFunction.values.reduce((frac1, frac2) =>
     // the LCM of a nunch of BigFractions n1/d1, n2/d2... is lcm(n1, n2,...)/gcd(d1, d2,...). You can check.
     BigFraction(
       ArithmeticUtils.lcm(frac1.getNumerator.longValue, frac2.getNumerator.longValue),
@@ -41,8 +47,6 @@ final case class ReactorMinusApplication(
     for ((_, c) <- channels) yield c.getViewedVertex
   }
 
-  def coveredEdges = Seq()
-
   override def dominates(o: DecisionModel) =
     super.dominates(o) && (o match {
       case o: ReactorMinusApplication => dominatesReactorMinus(o)
@@ -55,5 +59,33 @@ final case class ReactorMinusApplication(
       sizeFunction.count((k, v) => v > 0) > o.sizeFunction.count((k, v) => v > 0)
     )
   }
+
+  /** Get all trivial trigger chains.
+    * @return
+    *   all paths between unambigous sinks and sources in the model. that is, those which have
+    *   absolutely no incoming edges or outgoing edges.
+    */
+  val unambigousTriggerChains: Set[Seq[LinguaFrancaReaction]] =
+    val reactionOnlyGraph = SimpleDirectedGraph[LinguaFrancaReaction, DefaultEdge](classOf[DefaultEdge])
+    for (r <- vertexSet.asScala) reactionOnlyGraph.addVertex(r)
+    for (
+      r <- vertexSet.asScala; rr <- vertexSet.asScala; 
+      if r != rr;
+      if containsEdge(
+        r,
+        rr
+      ) || (containmentFunction(r) == containmentFunction(rr))
+          ) reactionOnlyGraph.addEdge(r, rr)
+    val consensedReactionGraph = GabowStrongConnectivityInspector(reactionOnlyGraph).getCondensation
+    val sources = consensedReactionGraph.vertexSet.asScala
+      .filter(g => consensedReactionGraph.incomingEdgesOf(g).isEmpty)
+      .flatMap(g => g.vertexSet.asScala)
+    val sinks = consensedReactionGraph.vertexSet.asScala
+      .filter(g => consensedReactionGraph.outgoingEdgesOf(g).isEmpty)
+      .flatMap(g => g.vertexSet.asScala)
+    val paths = AllDirectedPaths(reactionOnlyGraph)
+      .getAllPaths(sources.asJava, sinks.asJava, true, null)
+      .asScala
+    paths.map(p => p.getVertexList.asScala.toSeq).toSet
 
 end ReactorMinusApplication

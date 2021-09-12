@@ -8,12 +8,12 @@ enum ReactionChannel:
       val src: ReactionJob,
       val dst: ReactionJob,
       val channel: LinguaFrancaSignal
-  )
+  ) extends ReactionChannel
   case StateReactionChannel(
       val src: ReactionJob,
       val dst: ReactionJob,
       val reactor: LinguaFrancaReactor
-  )
+  ) extends ReactionChannel
 
 object ReactionChannel:
 

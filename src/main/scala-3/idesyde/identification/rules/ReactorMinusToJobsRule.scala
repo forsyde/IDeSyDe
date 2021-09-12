@@ -36,7 +36,11 @@ final case class ReactorMinusToJobsRule() extends IdentificationRule[ReactorMinu
       val periodicJobs = computePeriodicJobs(model)
       val pureJobs = computePureJobs(model, periodicJobs)
       val jobs = periodicJobs ++ pureJobs
-      given Map[LinguaFrancaReaction, Set[ReactionJob]] = reactorMinus.reactions.map(r => r -> jobs.filter(_.srcReaction == r)).toMap
+      val reactionsToJobs = jobs.groupBy(_.srcReaction)
+      given Map[LinguaFrancaReaction, Set[ReactionJob]] = reactionsToJobs
+      given Map[LinguaFrancaReactor, Seq[ReactionJob]] = reactorMinus.reactors.map(a => 
+        a -> a.getReactionsPort(model).asScala.toSeq.flatMap(reactionsToJobs(_))
+        ).toMap
       val stateChannels = computeTimelyChannels(model, jobs).union(computePriorityChannels(model, jobs))
       val decisionModel = ReactorMinusJobs(
               reactorMinusApp = reactorMinus,
@@ -50,8 +54,9 @@ final case class ReactorMinusToJobsRule() extends IdentificationRule[ReactorMinu
               s"${decisionModel.periodicJobs.size} per. Job(s), " +
               s"${decisionModel.pureJobs.size} pure Job(s) " +
               s"${decisionModel.pureChannels.size} pure channel(s), " +
-              s"${decisionModel.stateChannels.size} inner state channel(s) and " +
-              s"${decisionModel.outerStateChannels.size} outer state channels")
+              s"${decisionModel.stateChannels.size} inner state channel(s), " +
+              s"${decisionModel.outerStateChannels.size} outer state channels, and" +
+              s"${decisionModel.unambigousJobTriggerChains.size} job trigger chains")
       (true, Option(decisionModel))
       } else if (ReactorMinusIdentificationRule.canIdentify(model, identified)) {
       (false, Option.empty)
@@ -74,30 +79,49 @@ final case class ReactorMinusToJobsRule() extends IdentificationRule[ReactorMinu
     ) yield ReactionJob(r, period.multiply(i), period.multiply(i + 1))
 
   def computePureJobs(
-      model: ForSyDeModel, periodicJobs: Set[ReactionJob]
+        model: ForSyDeModel, periodicJobs: Set[ReactionJob]
   )(using reactorMinus: ReactorMinusApplication): Set[ReactionJob] = {
     // first, get all pure jobs from the periodic ones, even with activation overlap
     // val paths = AllDirectedPaths(reactorMinus)
-    val overlappedPureJobs = for (
-        j <- periodicJobs;
-        //r <- reactorMinus.pureReactions;
-        //if paths.getAllPaths(j._1, r, true, null).isEmpty
-        iterator = BreadthFirstIterator(reactorMinus, j.srcReaction);
-        r <- iterator.asScala.filter(reactorMinus.pureReactions.contains(_))
-        // r <- reactorMinus.pureReactions;
-        // paths = AllDirectedPaths(reactorMinus).getAllPaths(j._1, r, true, null)
-        // if !paths.isEmpty
-    ) yield {
-      // scribe.debug(s"between ${j._1.getIdentifier} and ${r.getIdentifier}: ${paths.size} paths")
-      ReactionJob(r, j.trigger, j.deadline)
-    }
-    val nonOverlapDeadline = overlappedPureJobs.map(j => j -> 
-        // filter for higher start and same reaction, then get the trigger time, if any.
-        overlappedPureJobs.filter(jj => j.trigger.compareTo(jj.trigger) < 0).filter(jj => jj._1 == j._1)
-        .minByOption(_._2).map(_._2).getOrElse(j._3)
-    ).toMap
+    val periodicReactionToJobs = periodicJobs.groupBy(_.srcReaction)
+    val overlappedPureJobs = reactorMinus.periodicReactions.flatMap(r => {
+      val iterator = BreadthFirstIterator(reactorMinus, r)
+      val periodicJobs = periodicReactionToJobs(r)
+      var pureJobSet: Set[ReactionJob] = Set()
+      while 
+        iterator.hasNext
+      do
+        val cur = iterator.next
+        if (reactorMinus.pureReactions.contains(cur))
+          pureJobSet = pureJobSet ++ periodicJobs.map(j => ReactionJob(cur, j.trigger, j.deadline))
+      pureJobSet
+    })
+    //   for (
+    //     periodicReaction <- reactorMinus.periodicReactions;
+    //     //r <- reactorMinus.pureReactions;
+    //     //if paths.getAllPaths(j._1, r, true, null).isEmpty
+    //     iterator = BreadthFirstIterator(reactorMinus, periodicReaction);
+    //     r <- iterator.
+    //     // r <- reactorMinus.pureReactions;
+    //     // paths = AllDirectedPaths(reactorMinus).getAllPaths(j._1, r, true, null)
+    //     // if !paths.isEmpty
+    // ) yield {
+    //   // scribe.debug(s"between ${j._1.getIdentifier} and ${r.getIdentifier}: ${paths.size} paths")
+    //   ReactionJob(r, j.trigger, j.deadline)
+    // }
+    val sortedOverlap = overlappedPureJobs.toSeq.sortBy(_.trigger)
+    val nonOverlapDeadlineSaveLast = (for (
+      i <- 0 until (sortedOverlap.size - 1);
+      job = sortedOverlap(i);
+      nextJob = sortedOverlap(i+1)
+    ) yield ReactionJob(job.srcReaction, job.trigger, if nextJob.trigger.compareTo(job.deadline) > 0 then job.deadline else nextJob.trigger)).toSet
+    nonOverlapDeadlineSaveLast + sortedOverlap.last
+    // .map(j => j -> 
+    //     // filter for higher start and same reaction, then get the trigger time, if any.
+    //     overlappedPureJobs.filter(jj => j.trigger.compareTo(jj.trigger) < 0).filter(jj => jj._1 == j._1)
+    //     .minByOption(_._2).map(_._2).getOrElse(j._3)
+    // ).toMap
     // return the pure jobs with the newly computed dadlines
-    overlappedPureJobs.map(j => ReactionJob(j.srcReaction, j.trigger, nonOverlapDeadline.getOrElse(j, j.deadline)))
   }
 
   def computePureChannels(
@@ -108,7 +132,7 @@ final case class ReactorMinusToJobsRule() extends IdentificationRule[ReactorMinu
       j <- reactionsToJobs(r);
       jj <- reactionsToJobs(rr);
       // if the triggering time is the same
-      if j._2.equals(jj._2) && reactorMinus.pureReactions.contains(rr)
+      if j != jj && j._2.equals(jj._2) && reactorMinus.pureReactions.contains(rr)
       // if the dst job is a pure job
       // if reactorMinus.pureReactions.contains(jj._1);
       // if the original reaction channels exist
@@ -118,23 +142,23 @@ final case class ReactorMinusToJobsRule() extends IdentificationRule[ReactorMinu
 
   def computePriorityChannels(
       model: ForSyDeModel, jobs: Set[ReactionJob]
-        )(using reactorMinus: ReactorMinusApplication): Set[ReactionChannel] =
+        )(using reactorMinus: ReactorMinusApplication, reactorToJobs: Map[LinguaFrancaReactor, Seq[ReactionJob]]): Set[ReactionChannel] =
     for (
       a <- reactorMinus.reactors;
-      jset = jobs.filter(j => reactorMinus.containmentFunction(j._1) == a);
+      jset = reactorToJobs(a); //jobs.filter(j => reactorMinus.containmentFunction(j._1) == a);
       j <- jset; jj <- jset;
       // different but same release time
-      if j._2.equals(jj._2)//;
+      if j != jj && j._2.equals(jj._2)//;
       // higher priority
       // if reactorMinus.priorityRelation.contains((j._1, jj._1))
           ) yield ReactionChannel(j, jj, a)
 
   def computeTimelyChannels(
       model: ForSyDeModel, jobs: Set[ReactionJob]
-        )(using reactorMinus: ReactorMinusApplication): Set[ReactionChannel] =
+  )(using reactorMinus: ReactorMinusApplication, reactorToJobs: Map[LinguaFrancaReactor, Seq[ReactionJob]]): Set[ReactionChannel] =
     for (
       a <- reactorMinus.reactors;
-      js <- jobs.filter(j => reactorMinus.containmentFunction(j._1) == a).toSeq
+      js <- reactorToJobs(a) // jobs.filter(j => reactorMinus.containmentFunction(j._1) == a).toSeq
         // the ordering of j and jj is reversed due to priority being `gt`
         .sortWith((j, jj) => reactorMinus.priorityRelation(jj._1, j._1)) 
         .sortBy(_._2)
@@ -151,10 +175,10 @@ final case class ReactorMinusToJobsRule() extends IdentificationRule[ReactorMinu
 
   def computeHyperperiodChannels(
         model: ForSyDeModel, jobs: Set[ReactionJob], stateChannels: Set[ReactionChannel]
-          )(using reactorMinus: ReactorMinusApplication): Set[ReactionChannel] =
+  )(using reactorMinus: ReactorMinusApplication, reactorToJobs: Map[LinguaFrancaReactor, Seq[ReactionJob]]): Set[ReactionChannel] =
     for (
       a <- reactorMinus.reactors;
-      jset = jobs.filter(j => reactorMinus.containmentFunction(j._1) == a).toSeq
+      jset = reactorToJobs(a) // jobs.filter(j => reactorMinus.containmentFunction(j._1) == a).toSeq
         .sortWith((j, jj) => reactorMinus.priorityRelation(jj._1, j._1)) 
         .sortBy(_._2);
       j = jset.last; jj = jset.head

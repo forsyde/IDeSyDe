@@ -14,12 +14,13 @@ final case class ReactorMinusJobsMapAndSchedMzn(val sourceModel: ReactorMinusJob
 
   val coveredVertexes = sourceModel.coveredVertexes
 
+  // TODO: fix here, not found in jar
   def mznModel =
-    val input     = getClass.getResourceAsStream("/minizinc/reactorminus_jobs_to_networkedHW.mzn")
-    val src       = Source.fromInputStream(input)
-    val mznString = src.getLines.mkString
-    src.close
-    mznString
+    // val input     = getClass.getResourceAsStream("/minizinc/reactorminus_jobs_to_networkedHW.mzn")
+    // val src       = Source.fromResource(input)
+    // val mznString = src.getLines.mkString
+    // src.close
+    Source.fromResource("minizinc/reactorminus_jobs_to_networkedHW.mzn").mkString
 
   def mznInputs =
     val multiplier = sourceModel.reactorMinusJobs.jobs.map(_.trigger).map(_.getDenominatorAsLong)

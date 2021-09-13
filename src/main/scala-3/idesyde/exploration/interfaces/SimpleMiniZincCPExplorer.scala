@@ -12,8 +12,6 @@ import idesyde.identification.DecisionModel
 trait SimpleMiniZincCPExplorer[M <: MiniZincDecisionModel] extends Explorer:
 
   def canExplore(decisionModel: DecisionModel): Boolean =
-    val res = "minizinc".!
-    scribe.debug(res.toString)
-    res == 0
+    "minizinc".! == 1
 
   

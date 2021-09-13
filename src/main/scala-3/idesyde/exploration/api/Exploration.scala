@@ -45,7 +45,9 @@ object Exploration:
           .asScala
         m -> dominant
       end for
-    modelToExplorers.flatMap((m, es) => es.map(_ -> m))
+    val res = modelToExplorers.flatMap((m, es) => es.map(_ -> m))
+    scribe.debug(s"chosen models: ${res.map(_.getClass.toString)}")
+    res
 
     
 

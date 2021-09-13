@@ -9,6 +9,7 @@ import idesyde.identification.api.Identification
 import scribe.Level
 import idesyde.identification.interfaces.MiniZincDecisionModel
 import idesyde.exploration.api.Exploration
+import scala.concurrent.ExecutionContext
 
 @Command(
   name = "idesyde",
@@ -24,6 +25,8 @@ Automated Identification and Exploration of Design Spaces in ForSyDe
 """)
 )
 class IDeSyDeCLI extends Callable[Int]:
+
+  given ExecutionContext = ExecutionContext.global
 
   @Parameters(
     paramLabel = "Input Model",
@@ -66,6 +69,8 @@ class IDeSyDeCLI extends Callable[Int]:
       // identified.foreach(m => m match {
       //   case mzn: MiniZincDecisionModel => scribe.debug(s"mzn model: ${mzn.mznInputs.toString}")
       // })
+      val (explorer, decisionModel) = chosen.head
+      val results = explorer.explore(decisionModel)
     }
     0
   }

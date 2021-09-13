@@ -13,12 +13,12 @@ import idesyde.identification.models.NetworkedDigitalHardware
 import forsyde.io.java.typed.viewers.GenericProcessingModule
 
 final case class SchedulableNetDigHWIdentRule()
-    extends IdentificationRule[SchedulableNetworkedDigHW] {
+    extends IdentificationRule {
 
   override def identify(
       model: ForSyDeModel,
       identified: Set[DecisionModel]
-  ): (Boolean, Option[SchedulableNetworkedDigHW]) =
+  ): (Boolean, Option[DecisionModel]) =
     val hardwareDecisionModelOpt = identified
       .find(_.isInstanceOf[NetworkedDigitalHardware])
       .map(_.asInstanceOf[NetworkedDigitalHardware])
@@ -110,28 +110,29 @@ final case class SchedulableNetDigHWIdentRule()
 object SchedulableNetDigHWIdentRule:
 
   def canIdentify(model: ForSyDeModel, identified: Set[DecisionModel]): Boolean =
-    val timeTrigSchedulers = model.vertexSet.asScala
+    val vertexes = model.vertexSet.asScala
+    val timeTrigSchedulers = vertexes
       .filter(TimeTriggeredScheduler.conforms(_))
       .map(TimeTriggeredScheduler.safeCast(_).get())
       .toSet
-    val roundRobinSchedulers = model.vertexSet.asScala
+    val roundRobinSchedulers = vertexes
       .filter(RoundRobinScheduler.conforms(_))
       .map(RoundRobinScheduler.safeCast(_).get())
       .toSet
-    val processingElems = model.vertexSet.asScala
+    val processingElems = vertexes
       .filter(GenericProcessingModule.conforms(_))
       .map(GenericProcessingModule.safeCast(_).get())
       .toSet
     given Set[TimeTriggeredScheduler]  = timeTrigSchedulers
     given Set[RoundRobinScheduler]     = roundRobinSchedulers
     given Set[GenericProcessingModule] = processingElems
-    val vertexesLeft = model.vertexSet.asScala
-      .diff(identified.flatMap(_.coveredVertexes))
-    vertexesLeft.exists(v =>
+    // val vertexesLeft = vertexes
+    //   .diff(identified.flatMap(_.coveredVertexes))
+    vertexes.exists(v =>
       TimeTriggeredScheduler.conforms(v) ||
         RoundRobinScheduler.conforms(v)
     ) &&
-    vertexesLeft.exists(v => GenericProcessingModule.conforms(v)) &&
+    vertexes.exists(v => GenericProcessingModule.conforms(v)) &&
     everyPEIsSchedulable(model)
   end canIdentify
 

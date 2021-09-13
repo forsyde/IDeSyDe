@@ -1,4 +1,4 @@
-package idesyde.exploration
+package idesyde.exploration.interfaces
 
 import idesyde.identification.DecisionModel
 import idesyde.identification.interfaces.OrToolsCPDecisionModel
@@ -7,15 +7,15 @@ import scala.concurrent.ExecutionContext
 import scala.concurrent.Future
 import forsyde.io.java.core.ForSyDeModel
 import com.google.ortools.sat.CpSolver
+import idesyde.exploration.Explorer
 
-trait SimpleOrToolsCPExplorer[M <: OrToolsCPDecisionModel] extends Explorer[M]: 
+trait SimpleOrToolsCPExplorer extends Explorer: 
 
-    def explore(decisionModel: M)(using ExecutionContext): Future[ForSyDeModel] = 
+    def explore(decisionModel: OrToolsCPDecisionModel, orignalDesignModel: ForSyDeModel)(using ExecutionContext): Future[Option[ForSyDeModel]] = 
         val cpModel = decisionModel.cpModel
-        val rebuilder = decisionModel.rebuildModelFunction
         val solver = CpSolver()
         Future({
             val status = solver.solve(cpModel)
-            rebuilder(cpModel)
+            Option(decisionModel.rebuildDesignModel(cpModel, orignalDesignModel))
         })
         

@@ -24,7 +24,7 @@ import collection.JavaConverters.*
 
 type ResourceType = GenericProcessingModule | GenericDigitalStorage | GenericDigitalInterconnect
 
-final case class ReactorMinusToJobsRule() extends IdentificationRule[ReactorMinusJobs] {
+final case class ReactorMinusToJobsRule() extends IdentificationRule {
 
   def identify(model: ForSyDeModel, identified: Set[DecisionModel]) =
     val reactorMinusOpt = identified

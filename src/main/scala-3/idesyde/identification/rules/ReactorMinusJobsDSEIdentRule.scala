@@ -15,12 +15,12 @@ import idesyde.identification.models.reactor.ReactorMinusJobs
 import idesyde.identification.models.SchedulableNetworkedDigHW
 
 final case class ReactorMinusJobsDSEIdentRule()
-    extends IdentificationRule[ReactorMinusJobsMapAndSched]:
+    extends IdentificationRule:
 
   override def identify(
       model: ForSyDeModel,
       identified: Set[DecisionModel]
-  ): (Boolean, Option[ReactorMinusJobsMapAndSched]) =
+  ): (Boolean, Option[DecisionModel]) =
     val reactorJobsModelOpt = identified.find(_.isInstanceOf[ReactorMinusJobs]).map(_.asInstanceOf[ReactorMinusJobs])
     val schedulablePlatformOpt = identified.find(_.isInstanceOf[SchedulableNetworkedDigHW]).map(_.asInstanceOf[SchedulableNetworkedDigHW])
     if (reactorJobsModelOpt.isDefined && schedulablePlatformOpt.isDefined) {

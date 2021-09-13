@@ -62,7 +62,7 @@ final case class SdfApplication(
 
   def dominatesSdf(other: SdfApplication) = repetitionVector.size >= other.repetitionVector.size
 
-  def coveredVertexes = {
+  val coveredVertexes = {
     for (a <- actors) yield a
     for (d <- delays) yield d
     for ((_, path) <- channels; elem <- path) yield elem

@@ -7,6 +7,8 @@ import forsyde.io.java.core.ForSyDeModel
 import forsyde.io.java.drivers.ForSyDeModelHandler
 import idesyde.identification.api.Identification
 import scribe.Level
+import idesyde.identification.interfaces.MiniZincDecisionModel
+import idesyde.exploration.api.Exploration
 
 @Command(
   name = "idesyde",
@@ -21,7 +23,7 @@ import scribe.Level
 Automated Identification and Exploration of Design Spaces in ForSyDe
 """)
 )
-class IDeSyDeCLI extends Callable[Int] {
+class IDeSyDeCLI extends Callable[Int]:
 
   @Parameters(
     paramLabel = "Input Model",
@@ -59,16 +61,21 @@ class IDeSyDeCLI extends Callable[Int] {
       }
       val identified = Identification.identifyDecisionModels(mergedModel)
       scribe.info(s"Identification finished with ${identified.size} decision model(s).")
+      val chosen = Exploration.chooseExplorersAndModels(identified)
+      scribe.info(s"Total of ${chosen.size} combo of decision model(s) and explorer(s) chosen.")
+      // identified.foreach(m => m match {
+      //   case mzn: MiniZincDecisionModel => scribe.debug(s"mzn model: ${mzn.mznInputs.toString}")
+      // })
     }
     0
   }
 
-  def setLoggingLevel(loggingLevel: Level) = {
-    scribe.info(s"Set logging levels to ${loggingLevel.name}.")
+  def setLoggingLevel(loggingLevel: Level) =
     scribe.Logger.root
       .clearHandlers()
       .clearModifiers()
       .withHandler(minimumLevel = Some(loggingLevel))
       .replace()
-  }
-}
+    scribe.info(s"logging levels set to ${loggingLevel.name}.")
+
+end IDeSyDeCLI

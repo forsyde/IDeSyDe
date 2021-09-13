@@ -10,12 +10,12 @@ import forsyde.io.java.typed.viewers.SDFPrefix
 import java.util.stream.Collectors
 
 final case class SDFAppIdentificationRule()
-    extends IdentificationRule[SdfApplication] {
+    extends IdentificationRule {
 
   def identify(
       model: ForSyDeModel,
       identified: Set[DecisionModel]
-  ): (Boolean, Option[SdfApplication]) = {
+  ): (Boolean, Option[DecisionModel]) = {
     val sdf_actors =
       model.vertexSet.stream
         .filter(SDFComb.conforms(_))

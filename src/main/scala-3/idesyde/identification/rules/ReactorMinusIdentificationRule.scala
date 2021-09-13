@@ -24,7 +24,7 @@ import idesyde.identification.models.reactor.ReactorMinusApplication
 import scala.annotation.meta.companionObject
 
 final case class ReactorMinusIdentificationRule()
-    extends IdentificationRule[ReactorMinusApplication]() {
+    extends IdentificationRule {
 
   def identify(model: ForSyDeModel, identified: Set[DecisionModel]) = {
     if (ReactorMinusIdentificationRule.canIdentify(model, identified)) {

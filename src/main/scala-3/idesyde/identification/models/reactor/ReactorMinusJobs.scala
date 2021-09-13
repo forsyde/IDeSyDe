@@ -53,7 +53,7 @@ final case class ReactorMinusJobs(
   val reactionToJobs: Map[LinguaFrancaReaction, Set[ReactionJob]] =
     reactorMinusApp.reactions.map(r => r -> jobs.filter(j => j.srcReaction == r).toSet).toMap
 
-  def coveredVertexes = reactorMinusApp.coveredVertexes
+  val coveredVertexes = reactorMinusApp.coveredVertexes
 
   override def dominates(o: DecisionModel) =
     super.dominates(o) && (o match {

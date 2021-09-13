@@ -13,7 +13,7 @@ final case class ReactorMinusJobsMapAndSched(
     val utilityFunction: Map[(ReactionJob, GenericProcessingModule), BigFraction]
 ) extends DecisionModel() {
 
-  def coveredVertexes = reactorMinusJobs.coveredVertexes ++ platform.coveredVertexes
+  val coveredVertexes = reactorMinusJobs.coveredVertexes ++ platform.coveredVertexes
 
 //   def wcetFunction: Map[(ReactionJob, GenericProcessingModule), BigFraction] =
 //     (for (

@@ -15,12 +15,12 @@ import collection.JavaConverters.*
 import org.jgrapht.graph.AsSubgraph
 
 final case class NetworkedDigitalHWIdentRule()
-    extends IdentificationRule[NetworkedDigitalHardware] {
+    extends IdentificationRule {
 
   override def identify(
       model: ForSyDeModel,
       identified: Set[DecisionModel]
-  ): (Boolean, Option[NetworkedDigitalHardware]) = {
+  ): (Boolean, Option[DecisionModel]) = {
     if (NetworkedDigitalHWIdentRule.canIdentify(model, identified)) {
       val platformVertexes = model
             .vertexSet()

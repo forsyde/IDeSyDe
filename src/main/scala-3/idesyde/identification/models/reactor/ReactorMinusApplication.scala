@@ -40,7 +40,7 @@ final case class ReactorMinusApplication(
     )
   )
 
-  def coveredVertexes = {
+  val coveredVertexes = {
     for (v <- reactions) yield v.getViewedVertex
     for (v <- reactors) yield v.getViewedVertex
     // for (a <- reactor; t <- a.get)

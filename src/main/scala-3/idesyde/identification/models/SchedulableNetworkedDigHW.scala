@@ -12,6 +12,6 @@ final case class SchedulableNetworkedDigHW (
     val schedulersFromPEs: Map[GenericProcessingModule, TimeTriggeredScheduler | RoundRobinScheduler]
                                      ) extends DecisionModel {
 
-  override def coveredVertexes: Iterable[Vertex] = hardware.coveredVertexes ++
+  val coveredVertexes: Iterable[Vertex] = hardware.coveredVertexes ++
     schedulersFromPEs.values.map(_.getViewedVertex).toSet
 }

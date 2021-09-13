@@ -44,11 +44,9 @@ array[Jobs, ProcessingElems] of int: jobUtilization;
 array[Jobs, ProcessingElems] of bool: jobCanBeExecuted;
 %% the masks are defined as follows:
 %%   if a job `srcJob` is the starting point og 
-array[Jobs, Jobs] of bool: firstAndLastJobInChainMask;
 % job channels
 array[JobChannels] of Jobs: jobChannelSrc;
 array[JobChannels] of Jobs: jobChannelDst;
-array[JobChannels] of int: jobChannelSize;
 % for platform
 array[RoundRobinElems] of int: roundRobinElemsMinSlice;
 array[RoundRobinElems] of int: roundRobinElemsMaxSlice;

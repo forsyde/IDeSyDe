@@ -11,6 +11,8 @@ import scala.concurrent.Future
 import forsyde.io.java.core.ForSyDeModel
 import java.nio.file.Files
 import idesyde.identification.DecisionModel
+import java.nio.file.Paths
+import java.nio.file.StandardOpenOption
 
 final case class ReactorMinusGecodeMiniZincExplorer() extends SimpleMiniZincCPExplorer[ReactorMinusJobsMapAndSchedMzn]:
 
@@ -50,12 +52,14 @@ final case class ReactorMinusGecodeMiniZincExplorer() extends SimpleMiniZincCPEx
   def explore(decisionModel: DecisionModel)(using ExecutionContext) =
     decisionModel match
       case m: ReactorMinusJobsMapAndSchedMzn =>
-        val modelFile = Files.createTempFile("idesyde-minizinc-model", ".mzn")
-        val dataFile = Files.createTempFile("idesyde-minizinc-data", ".json")
+        // val modelFile = Files.createTempFile("idesyde-minizinc-model", ".mzn")
+        // val dataFile = Files.createTempFile("idesyde-minizinc-data", ".json")
+        val modelPath = Paths.get("idesyde-minizinc-model.mzn")
+        val dataPath = Paths.get("idesyde-minizinc-data.json")
         val dataJson = ujson.Obj.from(m.mznInputs.map((k, v) => k -> v.toJson(true)))
-        val dataOutStream = Files.newOutputStream(dataFile)
-        Files.write(modelFile, m.mznModel.getBytes)
-        dataJson.writeBytesTo(dataOutStream)
+        val dataOutStream = Files.newOutputStream(dataPath, StandardOpenOption.CREATE,StandardOpenOption.WRITE)
+        Files.write(modelPath, m.mznModel.getBytes, StandardOpenOption.CREATE, StandardOpenOption.WRITE)
+        dataJson.writeBytesTo(dataOutStream, 2, false)
         dataOutStream.close
         Future(Option(ForSyDeModel()))
       case _ => Future(Option.empty)

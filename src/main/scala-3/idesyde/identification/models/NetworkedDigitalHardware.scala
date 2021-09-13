@@ -37,6 +37,9 @@ final case class NetworkedDigitalHardware(
     for (s <- storageElems) yield s.getViewedVertex
   }
 
+  val platformElements: Set[AbstractDigitalModule] =
+    processingElems ++ communicationElems ++ storageElems
+
   val allocatedCommWeights: Map[(GenericDigitalInterconnect, GenericProcessingModule), BigFraction] =
     (for (
       ce <- communicationElems;

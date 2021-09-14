@@ -57,8 +57,8 @@ final case class ReactorMinusGecodeMiniZincExplorer() extends SimpleMiniZincCPEx
         val modelPath = Paths.get("idesyde-minizinc-model.mzn")
         val dataPath = Paths.get("idesyde-minizinc-data.json")
         val dataJson = ujson.Obj.from(m.mznInputs.map((k, v) => k -> v.toJson(true)))
-        val dataOutStream = Files.newOutputStream(dataPath, StandardOpenOption.CREATE,StandardOpenOption.WRITE)
-        Files.write(modelPath, m.mznModel.getBytes, StandardOpenOption.CREATE, StandardOpenOption.WRITE)
+        val dataOutStream = Files.newOutputStream(dataPath, StandardOpenOption.CREATE,StandardOpenOption.WRITE, StandardOpenOption.TRUNCATE_EXISTING)
+        Files.write(modelPath, m.mznModel.getBytes, StandardOpenOption.CREATE, StandardOpenOption.WRITE, StandardOpenOption.TRUNCATE_EXISTING)
         dataJson.writeBytesTo(dataOutStream, 2, false)
         dataOutStream.close
         Future(Option(ForSyDeModel()))

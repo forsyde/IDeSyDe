@@ -13,13 +13,14 @@ import forsyde.io.java.core.ForSyDeModel
 import forsyde.io.java.core.Edge
 import forsyde.io.java.typed.viewers.RoundRobinInterconnect
 import org.apache.commons.math3.fraction.BigFraction
+import forsyde.io.java.typed.viewers.GenericMemoryModule
 
 // type GenericPlatformElement = GenericProcessingModule | GenericDigitalInterconnect | GenericDigitalStorage
 
 final case class NetworkedDigitalHardware(
     val processingElems: Set[GenericProcessingModule],
     val communicationElems: Set[GenericDigitalInterconnect],
-    val storageElems: Set[GenericDigitalStorage],
+    val storageElems: Set[GenericMemoryModule],
     val links: Set[(AbstractDigitalModule, AbstractDigitalModule)],
     val paths: Map[(AbstractDigitalModule, AbstractDigitalModule), Seq[GenericDigitalInterconnect]]
 ) extends SimpleDirectedGraph[AbstractDigitalModule, DefaultEdge](classOf[DefaultEdge])
@@ -40,7 +41,7 @@ final case class NetworkedDigitalHardware(
   val platformElements: Set[AbstractDigitalModule] =
     processingElems ++ communicationElems ++ storageElems
 
-  val allocatedCommWeights: Map[(GenericDigitalInterconnect, GenericProcessingModule), BigFraction] =
+  val allocatedBandwidthFraction: Map[(GenericDigitalInterconnect, GenericProcessingModule), BigFraction] =
     (for (
       ce <- communicationElems;
       pe <- processingElems
@@ -54,7 +55,7 @@ final case class NetworkedDigitalHardware(
     }).toMap
 
   val bandWidthBitPerSec: Map[(GenericDigitalInterconnect, GenericProcessingModule), Long] =
-    allocatedCommWeights.map((ce2pe, frac) => {
+    allocatedBandwidthFraction.map((ce2pe, frac) => {
       val ce = ce2pe._1
       // TODO this computation might not be numerically stable for large numbers. to double check later.
       ce2pe -> frac

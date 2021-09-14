@@ -14,11 +14,14 @@ enum MiniZincData:
         l match
           case d: Double  => ujson.Num(d)
           case i: Int     => ujson.Num(i)
-          case ii: Long     => ujson.Num(ii)
+          //TODO: fix the precision
+          case ii: Long     => ujson.Num(ii.toDouble.round)
           case s: String  => ujson.Str(s)
           case b: Boolean => ujson.Bool(b)
         end match
-      case MznArray(a) => ujson.Arr(a.map(_.toJson(false)))
+      case MznArray(a) => 
+        val arrEntries = a.map(_.toJson(false))
+        ujson.Arr.from(arrEntries)
       case MznSet(s)   => 
         val setEntry = "set" -> s.map(_.toJson(false))
         ujson.Obj(setEntry)

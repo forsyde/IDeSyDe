@@ -73,7 +73,7 @@ object Identification {
           .toSet
     scribe.info(s"droppped ${identified.size - dominant.size} dominated decision model(s).")
     // TODO: find a non reflective way to get names of decision models
-    scribe.debug(s"domitant: ${dominant.map(m => m.getClass.getName)}")
+    scribe.debug(s"domitant: ${dominant.map(m => m.uniqueIdentifier)}")
     dominant
   end identifyDecisionModels
 

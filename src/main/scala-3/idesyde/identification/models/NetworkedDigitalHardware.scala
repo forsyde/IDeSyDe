@@ -65,4 +65,6 @@ final case class NetworkedDigitalHardware(
         .longValue
     })
 
+  override val uniqueIdentifier = "NetworkedDigitalHardware"
+
 }

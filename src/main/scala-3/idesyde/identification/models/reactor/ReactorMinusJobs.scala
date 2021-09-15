@@ -20,6 +20,7 @@ import org.jgrapht.alg.shortestpath.CHManyToManyShortestPaths
 import org.jgrapht.graph.SimpleDirectedWeightedGraph
 import org.jgrapht.alg.shortestpath.DijkstraManyToManyShortestPaths
 import org.jgrapht.alg.connectivity.GabowStrongConnectivityInspector
+import org.jgrapht.alg.shortestpath.FloydWarshallShortestPaths
 
 final case class ReactorMinusJobs(
     val periodicJobs: Set[ReactionJob],
@@ -33,19 +34,10 @@ final case class ReactorMinusJobs(
 
   for (j <- periodicJobs) addVertex(j)
   for (j <- pureJobs) addVertex(j)
-  for (c <- pureChannels) c match {
-    case ReactionChannel.CommReactionChannel(src, dst, s) => addEdge(src, dst, c)
-    case _                                                => true
-  }
-  for (c <- stateChannels) c match {
-    case ReactionChannel.StateReactionChannel(src, dst, r) => addEdge(src, dst, c)
-    case _                                                 => true
-  }
-  for (c <- outerStateChannels) c match {
-    case ReactionChannel.StateReactionChannel(src, dst, r) => addEdge(src, dst, c)
-    case _                                                 => true
-  }
-
+  for (c <- pureChannels) addEdge(c.src, c.dst, c)
+  for (c <- stateChannels) addEdge(c.src, c.dst, c)
+  for (c <- outerStateChannels) addEdge(c.src, c.dst, c)
+    
   val jobs: Set[ReactionJob] = pureJobs.union(periodicJobs)
 
   val channels: Set[ReactionChannel] = pureChannels ++ stateChannels ++ outerStateChannels
@@ -61,7 +53,7 @@ final case class ReactorMinusJobs(
       case _                          => true
     })
 
-  val unambigousJobTriggerChains: Set[Seq[ReactionJob]] =
+  lazy val unambigousJobTriggerChains: Set[Seq[ReactionJob]] =
     for (c <- channels)
       setEdgeWeight(
         c,
@@ -79,32 +71,53 @@ final case class ReactorMinusJobs(
     // val reactionToJobs = jobs.groupBy(_.srcReaction)
     val graphAlgorithm = CHManyToManyShortestPaths(this)
     reactorTriggerChains.map(l => {
-      val sources = reactionToJobs(l.head)
-      val filteredSources = sources.filter(j =>
+      val allSources = reactionToJobs(l.head)
+      val sources = allSources.filter(j =>
         incomingEdgesOf(j)
           .stream()
           .map(_.src)
-          .noneMatch(jj => sources.contains(jj) && jj.trigger.compareTo(j.trigger) < 0)
+          .noneMatch(jj => allSources.contains(jj) && jj.trigger.compareTo(j.trigger) < 0)
       )
-      val sinks = reactionToJobs(l.last)
-      val filteredSinks = sinks.filter(j =>
+      val debugIterator = DepthFirstIterator(this, sources.asJava)
+      while debugIterator.hasNext() do
+        val n = debugIterator.next()
+        val top = debugIterator.getStack.peek
+        scribe.debug(s"top ${top.toString}, n ${n.toString}")
+      val allSinks = reactionToJobs(l.last)
+      val sinks = allSinks.filter(j =>
         outgoingEdgesOf(j)
           .stream()
           .map(_.dst)
-          .noneMatch(jj => sinks.contains(jj) && jj.deadline.compareTo(j.deadline) > 0)
+          .noneMatch(jj => allSinks.contains(jj) && jj.deadline.compareTo(j.deadline) > 0)
       )
-      val allPaths = graphAlgorithm.getManyToManyPaths(filteredSources.asJava, filteredSinks.asJava)
-      for (
-        src <- filteredSources;
-        dst <- filteredSinks;
-        p = Option(allPaths.getPath(src, dst));
+      // val allPaths = graphAlgorithm.getManyToManyPaths(sources.asJava, sinks.asJava)
+      scribe.debug(s"from ${l.head.getIdentifier} to ${l.last.getIdentifier}")
+      scribe.debug(s"sources ${sources.map(_.toString)}")
+      scribe.debug(s"sinks ${sinks.map(_.toString)}")
+      val s = for (
+        src <- sources;
+        dst <- sinks;
+        p = Option(graphAlgorithm.getPath(src, dst))
+        // {
+        //   val ps = 
+        //   scribe.debug(s"src ${src.toString} to ${dst.toString}: ${ps.map(_.getLength).getOrElse(-1).toString}")
+        //   ps
+        // };
         if p.isDefined;
-        if l.forall(r => p.get.getVertexList.stream().anyMatch(v => v.srcReaction == r))
-      ) yield p.get
-    }).map(jpaths => jpaths.maxBy(p => {
-      val lastJobOfPath = p.getVertexList.get(p.getLength - 1)
-      p.getWeight + lastJobOfPath.deadline.subtract(lastJobOfPath.trigger).doubleValue
-    })).map(p => p.getVertexList.asScala.toSeq)
+        if l.forall(r => p.get.getVertexList.stream().anyMatch(v => v.srcReaction.equals(r)))
+      ) yield {
+        scribe.debug(s"${src.toString} to ${dst.toString}, ${p.get.getLength}")
+        p.get
+      }
+      scribe.debug(s"resulting set ${s.size}")
+      s
+    }).map(jpaths => {
+      scribe.debug(s"size ${jpaths.size}")
+      jpaths.maxBy(p => {
+        val lastJobOfPath = p.getVertexList.get(p.getLength - 1)
+        p.getWeight + lastJobOfPath.deadline.subtract(lastJobOfPath.trigger).doubleValue
+      })
+    }).map(p => p.getVertexList.asScala.toSeq)
       
 
 
@@ -121,5 +134,7 @@ final case class ReactorMinusJobs(
         Set.empty
       case _ => Set.empty
     }
+
+  override val uniqueIdentifier = "ReactorMinusJobs"
 
 end ReactorMinusJobs

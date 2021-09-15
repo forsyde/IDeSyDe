@@ -14,4 +14,6 @@ final case class SchedulableNetworkedDigHW (
 
   val coveredVertexes: Iterable[Vertex] = hardware.coveredVertexes ++
     schedulersFromPEs.values.map(_.getViewedVertex).toSet
+
+  override val uniqueIdentifier = "SchedulableNetworkedDigHW"
 }

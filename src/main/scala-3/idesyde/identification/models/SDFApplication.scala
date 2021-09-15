@@ -42,7 +42,7 @@ import forsyde.io.java.core.Vertex
 //                 for (aidx, a) in enumerate(self.sdf_actors)
 //             )
 
-final case class SdfApplication(
+final case class SDFApplication(
     val actors: Set[Vertex],
     val delays: Set[Vertex],
     val channels: Map[(Vertex, Vertex), Seq[Vertex]],
@@ -54,13 +54,13 @@ final case class SdfApplication(
 
   override def dominates(o: DecisionModel) = {
     val extra: Boolean = o match {
-      case o: SdfApplication => dominatesSdf(o)
+      case o: SDFApplication => dominatesSdf(o)
       case _                 => true
     }
     super.dominates(o) && extra
   }
 
-  def dominatesSdf(other: SdfApplication) = repetitionVector.size >= other.repetitionVector.size
+  def dominatesSdf(other: SDFApplication) = repetitionVector.size >= other.repetitionVector.size
 
   val coveredVertexes = {
     for (a <- actors) yield a
@@ -69,8 +69,6 @@ final case class SdfApplication(
     for ((_, v) <- impl) yield v
   }
 
-  def coveredEdges() = {
-    // TODO: Needs to be properly implemented later
-    Seq()
-  }
+  override val uniqueIdentifier = "SDFApplication"
+
 }

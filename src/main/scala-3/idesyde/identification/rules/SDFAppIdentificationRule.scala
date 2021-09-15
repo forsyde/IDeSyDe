@@ -1,7 +1,7 @@
 package idesyde.identification.rules
 
 import idesyde.identification.IdentificationRule
-import idesyde.identification.models.SdfApplication
+import idesyde.identification.models.SDFApplication
 import forsyde.io.java.core.ForSyDeModel
 import idesyde.identification.DecisionModel
 import forsyde.io.java.core.VertexTrait

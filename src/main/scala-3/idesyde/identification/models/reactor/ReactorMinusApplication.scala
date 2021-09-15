@@ -65,7 +65,7 @@ final case class ReactorMinusApplication(
     *   all paths between unambigous sinks and sources in the model. that is, those which have
     *   absolutely no incoming edges or outgoing edges.
     */
-  val unambigousTriggerChains: Set[Seq[LinguaFrancaReaction]] =
+  lazy val unambigousTriggerChains: Set[Seq[LinguaFrancaReaction]] =
     val reactionOnlyGraph = SimpleDirectedGraph[LinguaFrancaReaction, DefaultEdge](classOf[DefaultEdge])
     for (r <- vertexSet.asScala) reactionOnlyGraph.addVertex(r)
     for (
@@ -89,5 +89,7 @@ final case class ReactorMinusApplication(
     paths.map(p => p.getVertexList.asScala.toSeq)
       .distinctBy(l => (l.head, l.last))
       .toSet
+
+  override val uniqueIdentifier = "ReactorMinusApplication"
 
 end ReactorMinusApplication

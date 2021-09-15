@@ -256,4 +256,6 @@ final case class ReactorMinusJobsMapAndSchedMzn(val sourceModel: ReactorMinusJob
       case _                                => true
     })
 
+  override val uniqueIdentifier = "ReactorMinusJobsMapAndSchedMzn"
+
 end ReactorMinusJobsMapAndSchedMzn

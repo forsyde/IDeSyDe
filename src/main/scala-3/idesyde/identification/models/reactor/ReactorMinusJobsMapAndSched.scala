@@ -25,4 +25,6 @@ final case class ReactorMinusJobsMapAndSched(
 //             (r, p) -> BigFraction(0)
 //         }).toMap
 
+  override val uniqueIdentifier = "ReactorMinusJobsMapAndSched"
+
 }

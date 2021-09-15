@@ -37,7 +37,6 @@ final case class ReactorMinusToJobsRule() extends IdentificationRule {
       val pureJobs                                      = computePureJobs(model, periodicJobs)
       val jobs                                          = periodicJobs ++ pureJobs
       val reactionsToJobs                               = jobs.groupBy(_.srcReaction)
-      given Map[LinguaFrancaReaction, Set[ReactionJob]] = reactionsToJobs
       given Map[LinguaFrancaReactor, Seq[ReactionJob]] = reactorMinus.reactors
         .map(a => a -> a.getReactionsPort(model).asScala.toSeq.flatMap(reactionsToJobs(_)))
         .toMap
@@ -51,14 +50,16 @@ final case class ReactorMinusToJobsRule() extends IdentificationRule {
         stateChannels = stateChannels,
         outerStateChannels = computeHyperperiodChannels(model, jobs, stateChannels)
       )
+      scribe.debug(s"reaction to jobs ${reactionsToJobs.map((r, js) => r.getIdentifier -> js.size)}")
+      // scribe.debug(s"channels ${decisionModel.channels.map(c => c.src.toString + "->" + c.dst.toString)}")
       scribe.debug(
         s"Conforming ReactorMinusJobs found with Reactor-: " +
           s"${decisionModel.periodicJobs.size} per. Job(s), " +
           s"${decisionModel.pureJobs.size} pure Job(s) " +
           s"${decisionModel.pureChannels.size} pure channel(s), " +
           s"${decisionModel.stateChannels.size} inner state channel(s), " +
-          s"${decisionModel.outerStateChannels.size} outer state channels, and " +
-          s"${decisionModel.unambigousJobTriggerChains.size} job trigger chains"
+          s"${decisionModel.outerStateChannels.size} outer state channels, and "
+          // s"${decisionModel.unambigousJobTriggerChains.size} job trigger chains"
       )
       (true, Option(decisionModel))
     } else if (ReactorMinusIdentificationRule.canIdentify(model, identified)) {
@@ -93,10 +94,15 @@ final case class ReactorMinusToJobsRule() extends IdentificationRule {
       var pureJobSet: Set[ReactionJob] = Set()
       while iterator.hasNext do
         val cur = iterator.next
+        scribe.debug(s"r ${r.getIdentifier} and cur ${cur.getIdentifier}")
         if (reactorMinus.pureReactions.contains(cur))
-          pureJobSet = pureJobSet ++ periodicJobs.map(j => ReactionJob(cur, j.trigger, j.deadline))
+          pureJobSet = pureJobSet ++ periodicJobs.map(j => {
+            if (j.trigger.equals(j.deadline))scribe.error(s"${j.toString} has equal trigger and deadline!")
+            ReactionJob(cur, j.trigger, j.deadline)
+          })
       pureJobSet
     })
+    
     //   for (
     //     periodicReaction <- reactorMinus.periodicReactions;
     //     //r <- reactorMinus.pureReactions;
@@ -110,38 +116,42 @@ final case class ReactorMinusToJobsRule() extends IdentificationRule {
     //   // scribe.debug(s"between ${j._1.getIdentifier} and ${r.getIdentifier}: ${paths.size} paths")
     //   ReactionJob(r, j.trigger, j.deadline)
     // }
+    scribe.debug(s"pure size ${overlappedPureJobs.size}")
     val sortedOverlap = overlappedPureJobs
       .groupBy(j => (j.srcReaction, j.trigger))
       .map((_, js) => js.minBy(_.deadline))
       .toSeq
+      .distinct
       .sortBy(_.trigger)
-    val nonOverlapDeadlineSaveLast = (for (
-      i <- 0 until (sortedOverlap.size - 1);
-      job     = sortedOverlap(i);
-      nextJob = sortedOverlap(i + 1)
-    )
-      yield ReactionJob(
-        job.srcReaction,
-        job.trigger,
-        if nextJob.trigger.compareTo(job.deadline) > 0 then job.deadline else nextJob.trigger
-      )).toSet
-    nonOverlapDeadlineSaveLast + sortedOverlap.last
+    scribe.debug(s"sorted pure size ${sortedOverlap.size}")      
+    // val nonOverlapDeadlineSaveLast = (for (
+    //   i <- 0 until (sortedOverlap.size - 1);
+    //   job     = sortedOverlap(i);
+    //   nextJob = sortedOverlap(i + 1)
+    // )
+    //   yield ReactionJob(
+    //     job.srcReaction,
+    //     job.trigger,
+    //     if nextJob.trigger.compareTo(job.deadline) > 0 then job.deadline else nextJob.trigger
+    //   )).toSet
+    // nonOverlapDeadlineSaveLast + sortedOverlap.last
+    sortedOverlap.toSet 
   }
 
   def computePureChannels(
       model: ForSyDeModel,
       jobs: Set[ReactionJob]
   )(using
-      reactorMinus: ReactorMinusApplication,
-      reactionsToJobs: Map[LinguaFrancaReaction, Set[ReactionJob]]
+      reactorMinus: ReactorMinusApplication
   ): Set[ReactionChannel] =
+    val reactionToJobs = jobs.groupBy(_.srcReaction)
     (for (
       ((r, rr) -> c) <- reactorMinus.channels;
       if reactorMinus.pureReactions.contains(rr);
-      j              <- reactionsToJobs(r);
-      jj             <- reactionsToJobs(rr);
+      j              <- reactionToJobs(r);
+      jj             <- reactionToJobs(rr);
       // if the triggering time is the same
-      if j != jj && j._2.equals(jj._2)
+      if j != jj && j.trigger.equals(jj.trigger)
       // if the dst job is a pure job
       // if reactorMinus.pureReactions.contains(jj._1);
       // if the original reaction channels exist

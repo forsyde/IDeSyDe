@@ -35,7 +35,7 @@ final case class ReactorMinusJobsMapAndSchedMzn(val sourceModel: ReactorMinusJob
     .diff(sourceModel.reactorMinusJobs.outerStateChannels)
     .toSeq
   lazy val platformOrdered    = sourceModel.platform.hardware.platformElements.toSeq
-  lazy val jobChainsOrdered = sourceModel.reactorMinusJobs.unambigousJobTriggerChains.toSeq
+  lazy val jobChainsOrdered = sourceModel.reactorMinusJobs.unambigousEndToEndJobs.toSeq
 
   lazy val mznModel = Source.fromResource("minizinc/reactorminus_jobs_to_networkedHW.mzn").mkString
 
@@ -236,10 +236,10 @@ final case class ReactorMinusJobsMapAndSchedMzn(val sourceModel: ReactorMinusJob
         })
       ),
       "firstInChain" -> MiniZincData(
-        jobChainsOrdered.map(js => jobsOrdered.indexOf(js.head) + 1)
+        jobChainsOrdered.map((src, _) => jobsOrdered.indexOf(src) + 1)
       ),
       "lastInChain" -> MiniZincData(
-        jobChainsOrdered.map(js => jobsOrdered.indexOf(js.last) + 1)
+        jobChainsOrdered.map((_, dst) => jobsOrdered.indexOf(dst) + 1)
       ),
       "objLambda" -> MiniZincData(0)
     )

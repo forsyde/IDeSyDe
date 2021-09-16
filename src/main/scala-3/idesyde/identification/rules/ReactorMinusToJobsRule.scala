@@ -50,7 +50,7 @@ final case class ReactorMinusToJobsRule() extends IdentificationRule {
         stateChannels = stateChannels,
         outerStateChannels = computeHyperperiodChannels(model, jobs, stateChannels)
       )
-      scribe.debug(s"reaction to jobs ${reactionsToJobs.map((r, js) => r.getIdentifier -> js.size)}")
+      for (j <- jobs) if (j.deadline.compareTo(j.trigger) <= 0) scribe.error(s"${j.toString} has equal trigger and deadline!")
       // scribe.debug(s"channels ${decisionModel.channels.map(c => c.src.toString + "->" + c.dst.toString)}")
       scribe.debug(
         s"Conforming ReactorMinusJobs found with Reactor-: " +
@@ -94,48 +94,31 @@ final case class ReactorMinusToJobsRule() extends IdentificationRule {
       var pureJobSet: Set[ReactionJob] = Set()
       while iterator.hasNext do
         val cur = iterator.next
-        scribe.debug(s"r ${r.getIdentifier} and cur ${cur.getIdentifier}")
         if (reactorMinus.pureReactions.contains(cur))
           pureJobSet = pureJobSet ++ periodicJobs.map(j => {
-            if (j.trigger.equals(j.deadline))scribe.error(s"${j.toString} has equal trigger and deadline!")
             ReactionJob(cur, j.trigger, j.deadline)
           })
       pureJobSet
     })
-    
-    //   for (
-    //     periodicReaction <- reactorMinus.periodicReactions;
-    //     //r <- reactorMinus.pureReactions;
-    //     //if paths.getAllPaths(j._1, r, true, null).isEmpty
-    //     iterator = BreadthFirstIterator(reactorMinus, periodicReaction);
-    //     r <- iterator.
-    //     // r <- reactorMinus.pureReactions;
-    //     // paths = AllDirectedPaths(reactorMinus).getAllPaths(j._1, r, true, null)
-    //     // if !paths.isEmpty
-    // ) yield {
-    //   // scribe.debug(s"between ${j._1.getIdentifier} and ${r.getIdentifier}: ${paths.size} paths")
-    //   ReactionJob(r, j.trigger, j.deadline)
-    // }
-    scribe.debug(s"pure size ${overlappedPureJobs.size}")
     val sortedOverlap = overlappedPureJobs
       .groupBy(j => (j.srcReaction, j.trigger))
       .map((_, js) => js.minBy(_.deadline))
-      .toSeq
-      .distinct
-      .sortBy(_.trigger)
-    scribe.debug(s"sorted pure size ${sortedOverlap.size}")      
-    // val nonOverlapDeadlineSaveLast = (for (
-    //   i <- 0 until (sortedOverlap.size - 1);
-    //   job     = sortedOverlap(i);
-    //   nextJob = sortedOverlap(i + 1)
-    // )
-    //   yield ReactionJob(
-    //     job.srcReaction,
-    //     job.trigger,
-    //     if nextJob.trigger.compareTo(job.deadline) > 0 then job.deadline else nextJob.trigger
-    //   )).toSet
+    // sortedOverlap.toSet
+    sortedOverlap.groupBy(_.srcReaction)
+    .flatMap((r, js) => {
+      val jsSorted = js.toSeq.sortBy(_.trigger)
+      val nonOverlap = for (
+        i <- 0 until (jsSorted.size - 1);
+        job     = jsSorted(i);
+        nextJob = jsSorted(i + 1)
+      ) yield ReactionJob(
+        job.srcReaction,
+        job.trigger,
+        if job.deadline.compareTo(nextJob.trigger) <= 0 then job.deadline else nextJob.trigger
+      )
+      nonOverlap.appended(jsSorted.last)
+    }).toSet
     // nonOverlapDeadlineSaveLast + sortedOverlap.last
-    sortedOverlap.toSet 
   }
 
   def computePureChannels(
@@ -152,11 +135,6 @@ final case class ReactorMinusToJobsRule() extends IdentificationRule {
       jj             <- reactionToJobs(rr);
       // if the triggering time is the same
       if j != jj && j.trigger.equals(jj.trigger)
-      // if the dst job is a pure job
-      // if reactorMinus.pureReactions.contains(jj._1);
-      // if the original reaction channels exist
-      //originalChannel = reactorMinus.channels.get((j._1, jj._1));
-      // if !originalChannel.isEmpty;
     ) yield ReactionChannel(j, jj, c)).toSet
 
   def computePriorityChannels(
@@ -174,9 +152,7 @@ final case class ReactorMinusToJobsRule() extends IdentificationRule {
       j :: jj :: _ <- jset
         .sortWith((j, jj) => reactorMinus.priorityRelation(jj._1, j._1))
         .sliding(2);
-      // different but same release time
-      // higher priority
-      if j != jj //&& reactorMinus.priorityRelation.contains((j._1, jj._1))
+      if j != jj
     ) yield ReactionChannel(j, jj, a)
 
   def computeTimelyChannels(
@@ -196,13 +172,6 @@ final case class ReactorMinusToJobsRule() extends IdentificationRule {
         .sortBy((t, js) => t)
         .map((t, js) => js.sortWith((j, jj) => reactorMinus.priorityRelation(jj._1, j._1)))
         .sliding(2)
-      // .flatMap((t, js) => Seq(js.head, js.last))
-      // .toSeq
-      // .sortWith((j, jj) =>
-      //   j.trigger.compareTo(jj.trigger) < 0 || (j.trigger
-      //     .compareTo(jj.trigger) == 0 && reactorMinus.priorityRelation(jj._1, j._1))
-      // )
-      // .sliding(2)
     ) yield ReactionChannel(js.last, jjs.head, a)
 
   def computeHyperperiodChannels(

@@ -70,7 +70,7 @@ final case class ReactorMinusIdentificationRule()
           s"${decisionModel.periodicReactions.size} periodic reaction(s), " +
           s"${decisionModel.reactors.size} reactor(s), " +
           s"${decisionModel.channels.size} channel(s)," +
-          s"${decisionModel.unambigousTriggerChains.size} trivial chain(s) and " +
+          s"${decisionModel.unambigousEndToEndReactions.size} trivial chain(s) and " +
           s"hyperperiod of ${decisionModel.hyperPeriod}"
       )
       (

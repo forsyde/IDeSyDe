@@ -53,7 +53,7 @@ final case class ReactorMinusJobs(
       case _                          => true
     })
 
-  lazy val unambigousJobTriggerChains: Set[Seq[ReactionJob]] =
+  lazy val unambigousEndToEndJobs: Set[(ReactionJob, ReactionJob)] =
     for (c <- channels)
       setEdgeWeight(
         c,
@@ -66,62 +66,40 @@ final case class ReactorMinusJobs(
         c.dst.trigger.add(reactorMinusApp.hyperPeriod).subtract(c.src.trigger).doubleValue
       )
     // scribe.debug(s"SSC ${GabowStrongConnectivityInspector(this).getCondensation.vertexSet.size}")
-    val reactorTriggerChains = reactorMinusApp.unambigousTriggerChains
+    val endToEndReactions = reactorMinusApp.unambigousEndToEndReactions
     // val allPathsCalculator = AllDirectedPaths(this)
     // val reactionToJobs = jobs.groupBy(_.srcReaction)
     val graphAlgorithm = CHManyToManyShortestPaths(this)
-    reactorTriggerChains.map(l => {
-      val allSources = reactionToJobs(l.head)
+    endToEndReactions.map((src, dst) => {
+      val allSources = reactionToJobs(src)
       val sources = allSources.filter(j =>
         incomingEdgesOf(j)
           .stream()
           .map(_.src)
-          .noneMatch(jj => allSources.contains(jj) && jj.trigger.compareTo(j.trigger) < 0)
+          .filter(jj => allSources.contains(jj))
+          .noneMatch(jj => jj.trigger.compareTo(j.trigger) < 0)
       )
-      val debugIterator = DepthFirstIterator(this, sources.asJava)
-      while debugIterator.hasNext() do
-        val n = debugIterator.next()
-        val top = debugIterator.getStack.peek
-        scribe.debug(s"top ${top.toString}, n ${n.toString}")
-      val allSinks = reactionToJobs(l.last)
+      val allSinks = reactionToJobs(dst)
       val sinks = allSinks.filter(j =>
         outgoingEdgesOf(j)
           .stream()
           .map(_.dst)
-          .noneMatch(jj => allSinks.contains(jj) && jj.deadline.compareTo(j.deadline) > 0)
+          .filter(jj => allSinks.contains(jj))
+          .allMatch(jj => jj.deadline.compareTo(j.deadline) <= 0)
       )
-      // val allPaths = graphAlgorithm.getManyToManyPaths(sources.asJava, sinks.asJava)
-      scribe.debug(s"from ${l.head.getIdentifier} to ${l.last.getIdentifier}")
-      scribe.debug(s"sources ${sources.map(_.toString)}")
-      scribe.debug(s"sinks ${sinks.map(_.toString)}")
-      val s = for (
+      for (
         src <- sources;
         dst <- sinks;
         p = Option(graphAlgorithm.getPath(src, dst))
-        // {
-        //   val ps = 
-        //   scribe.debug(s"src ${src.toString} to ${dst.toString}: ${ps.map(_.getLength).getOrElse(-1).toString}")
-        //   ps
-        // };
-        if p.isDefined;
-        if l.forall(r => p.get.getVertexList.stream().anyMatch(v => v.srcReaction.equals(r)))
-      ) yield {
-        scribe.debug(s"${src.toString} to ${dst.toString}, ${p.get.getLength}")
-        p.get
-      }
-      scribe.debug(s"resulting set ${s.size}")
-      s
+        if p.isDefined
+      ) yield p.get
     }).map(jpaths => {
-      scribe.debug(s"size ${jpaths.size}")
       jpaths.maxBy(p => {
         val lastJobOfPath = p.getVertexList.get(p.getLength - 1)
         p.getWeight + lastJobOfPath.deadline.subtract(lastJobOfPath.trigger).doubleValue
       })
-    }).map(p => p.getVertexList.asScala.toSeq)
+    }).map(p => (p.getVertexList.get(0), p.getVertexList.get(p.getVertexList.size() - 1)))
       
-
-
-
   def getPathsFromReaction(
       reactionChain: Seq[LinguaFrancaReaction],
       explored: Set[ReactionJob] = Set.empty

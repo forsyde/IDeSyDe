@@ -167,88 +167,91 @@ int: maxUtilization = sum(j in Jobs) (
   max([jobUtilization[j, p] | p in ProcessingElems])
 );
 var minUtilization..maxUtilization: totalUtilization;
-% int: minLatency = sum(l in JobChains) (
-%   min(jobWcet[lastInChain[l], ..]) + jobRelease[lastInChain[l]] - jobDeadline[firstInChain[l]]
-% );
-% int: maxLatency = sum(l in JobChains) (
-%   jobDeadline[lastInChain[l]] - jobRelease[firstInChain[l]] - max(jobWcet[firstInChain[l], ..])
-% );
-% array[JobChains] of var int: latencies;
+int: minLatency = sum(l in JobChains) (
+  min(jobWcet[lastInChain[l], ..]) + jobRelease[lastInChain[l]] - jobDeadline[firstInChain[l]]
+);
+int: maxLatency = sum(l in JobChains) (
+  jobDeadline[lastInChain[l]] - jobRelease[firstInChain[l]] - max(jobWcet[firstInChain[l], ..])
+);
+array[JobChains] of var int: latencies;
 %% tighten the bounds
-% constraint forall(l in JobChains) (
-%   min(jobWcet[lastInChain[l], ..]) + jobRelease[lastInChain[l]] - jobDeadline[firstInChain[l]] <= latencies[l]  /\
-%   latencies[l] <= jobDeadline[lastInChain[l]] - jobRelease[firstInChain[l]] - max(jobWcet[firstInChain[l], ..])
-% );
-% var int: totalLatencies;
+constraint forall(l in JobChains) (
+  0 <= latencies[l]
+);
+constraint forall(l in JobChains) (
+  min(jobWcet[lastInChain[l], ..]) + jobRelease[lastInChain[l]] - jobDeadline[firstInChain[l]] <= latencies[l]  /\
+  latencies[l] <= jobDeadline[lastInChain[l]] - jobRelease[firstInChain[l]] - max(jobWcet[firstInChain[l], ..])
+);
+var int: totalLatencies;
 
 
 % baseline constraints
 %% memory contraints
-% constraint bin_packing_capa(
-%   memoryMaximumCapacity,
-%   reactorMapping ++ channelMapping,
-%   reactorSize ++ channelSize
-% );
+constraint bin_packing_capa(
+  memoryMaximumCapacity,
+  reactorMapping ++ channelMapping,
+  reactorSize ++ channelSize
+);
 
 % data movements constraints
 %% instruction
-% constraint forall(j in Jobs, mem in MemoryElems, pe in ProcessingElems) (
-%   let {int: r = originalReaction[j]; int: a = containingReactor[r]} in
-%     if reactorMapping[a] = mem /\ jobExecution[j] = pe then
-%       jobInstDuration[j, pe] = sum(ce in CommunicationElems where 1 < platformPaths[mem, pe, ce] /\ platformPaths[mem, pe, ce] < platformPaths[mem, pe, pe]) 
-%         (jobDataSize[j] / allocatedBandwidth[ce, pe])
-%     else
-%       jobInstDuration[j, pe] = 0
-%     endif
-% );
+constraint forall(j in Jobs, mem in MemoryElems, pe in ProcessingElems) (
+  let {int: r = originalReaction[j]; int: a = containingReactor[r]} in
+    if reactorMapping[a] = mem /\ jobExecution[j] = pe then
+      jobInstDuration[j, pe] = sum(ce in CommunicationElems where 1 < platformPaths[mem, pe, ce] /\ platformPaths[mem, pe, ce] < platformPaths[mem, pe, pe]) 
+        (jobDataSize[j] / allocatedBandwidth[ce, pe])
+    else
+      jobInstDuration[j, pe] = 0
+    endif
+);
 %% data
-% constraint forall(j in Jobs, c in Channels, mem in MemoryElems, pe in ProcessingElems where channelDst[c] = originalReaction[j]) (
-%   let {int: r = originalReaction[j]; int: a = containingReactor[r]} in
-%   if reactorMapping[a] = mem /\ jobExecution[j] = pe then
-%     jobDataDuration[j, pe] = sum(ce in CommunicationElems where 1 < platformPaths[mem, pe, ce] /\ platformPaths[mem, pe, ce] < platformPaths[mem, pe, pe]) 
-%       (channelSize[c] / allocatedBandwidth[ce, pe])
-%   else
-%     jobDataDuration[j, pe] = 0
-%   endif
-% );
+constraint forall(j in Jobs, c in Channels, mem in MemoryElems, pe in ProcessingElems where channelDst[c] = originalReaction[j]) (
+  let {int: r = originalReaction[j]; int: a = containingReactor[r]} in
+  if reactorMapping[a] = mem /\ jobExecution[j] = pe then
+    jobDataDuration[j, pe] = sum(ce in CommunicationElems where 1 < platformPaths[mem, pe, ce] /\ platformPaths[mem, pe, ce] < platformPaths[mem, pe, pe]) 
+      (channelSize[c] / allocatedBandwidth[ce, pe])
+  else
+    jobDataDuration[j, pe] = 0
+  endif
+);
 %% write
-% constraint forall(j in Jobs, c in Channels, mem in MemoryElems, pe in ProcessingElems where channelSrc[c] = originalReaction[j]) (
-%   let {int: r = originalReaction[j]; int: a = containingReactor[r]} in
-%   if reactorMapping[a] = mem /\ jobExecution[j] = pe then
-%     jobOutDuration[j, pe] = sum(ce in CommunicationElems where 0 < platformPaths[pe, mem, ce] /\ platformPaths[pe, mem, ce] < platformPaths[pe, mem, mem]) 
-%       (channelSize[c] / allocatedBandwidth[ce, pe])
-%   else
-%     jobDataDuration[j, pe] = 0
-%   endif
-% );
+constraint forall(j in Jobs, c in Channels, mem in MemoryElems, pe in ProcessingElems where channelSrc[c] = originalReaction[j]) (
+  let {int: r = originalReaction[j]; int: a = containingReactor[r]} in
+  if reactorMapping[a] = mem /\ jobExecution[j] = pe then
+    jobOutDuration[j, pe] = sum(ce in CommunicationElems where 0 < platformPaths[pe, mem, ce] /\ platformPaths[pe, mem, ce] < platformPaths[pe, mem, mem]) 
+      (channelSize[c] / allocatedBandwidth[ce, pe])
+  else
+    jobDataDuration[j, pe] = 0
+  endif
+);
 
 % time-triggered constraints
-% constraint forall(p in TimeTriggeredElems) (
-%   disjunctive(
-%   [jobStartingTime[j, p] | j in Jobs],
-%   [jobDuration[j, p] | j in Jobs])
-% );
+constraint forall(p in TimeTriggeredElems) (
+  disjunctive(
+  [jobStartingTime[j, p] | j in Jobs],
+  [jobDuration[j, p] | j in Jobs])
+);
 %% implied constraint
-% constraint cumulative(
-%   [jobStartingTime[j, p] | j in Jobs, p in TimeTriggeredElems], 
-%   [jobDuration[j, p] | j in Jobs, p in TimeTriggeredElems], 
-%   [1 | j in Jobs, p in ProcessingElems], 
-%   length(TimeTriggeredElems)
-%   );
+constraint cumulative(
+  [jobStartingTime[j, p] | j in Jobs, p in TimeTriggeredElems], 
+  [jobDuration[j, p] | j in Jobs, p in TimeTriggeredElems], 
+  [1 | j in Jobs, p in TimeTriggeredElems], 
+  length(TimeTriggeredElems)
+  );
 %% when to count execution
-% constraint forall(j in Jobs, p in TimeTriggeredElems) (
-%   if (jobExecution[j] = p) then 
-%     jobExeDuration[j, p] = jobWcet[j, p]
-%   else
-%     jobExeDuration[j, p] = 0
-%   endif
-% );
+constraint forall(j in Jobs, p in TimeTriggeredElems) (
+  if (jobExecution[j] = p) then 
+    jobExeDuration[j, p] = jobWcet[j, p]
+  else
+    jobExeDuration[j, p] = 0
+  endif
+);
 
 % round-robin constraints
 %% round-robin period
-% constraint forall(p in RoundRobinElems) (
-%   sum(jobTimeSlice[.., p]) <= roundRobinPeriod[p]
-% );
+constraint forall(p in RoundRobinElems) (
+  sum(jobTimeSlice[.., p]) <= roundRobinPeriod[p]
+);
 %% minimum time slice allocation
 % constraint forall(j in Jobs, p in RoundRobinElems) (
 %   if(jobExecution[j] = p) then 
@@ -256,11 +259,11 @@ var minUtilization..maxUtilization: totalUtilization;
 %   endif
 % );
 %% exe duration calculation
-% constraint forall(j in Jobs, p in RoundRobinElems) (
-%   if (jobExecution[j] = p) then
-%   roundRobinPeriod[p] * jobWcet[j, p] = jobTimeSlice[j, p] * jobExeDuration[j, p]
-%   endif
-% );
+constraint forall(j in Jobs, p in RoundRobinElems) (
+  if (jobExecution[j] = p) then
+  roundRobinPeriod[p] * jobWcet[j, p] = jobTimeSlice[j, p] * jobExeDuration[j, p]
+  endif
+);
 
 % precedence constraints
 % set of int: JobPrecedenceChannels = JobPureChannels union JobInnerStateChannels;
@@ -269,8 +272,8 @@ var minUtilization..maxUtilization: totalUtilization;
 % );
 
 % objectives
-% constraint totalUtilization = sum(p in ProcessingElems, j in Jobs where jobExecution[j] = p) (jobUtilization[j, p]);
-% constraint totalLatencies = sum(l in JobChains) (latencies[l]);
+constraint totalUtilization = sum(p in ProcessingElems, j in Jobs where jobExecution[j] = p) (jobUtilization[j, p]);
+constraint totalLatencies = sum(l in JobChains) (latencies[l]);
 
 
 solve

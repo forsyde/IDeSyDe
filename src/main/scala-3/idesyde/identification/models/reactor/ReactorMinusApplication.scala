@@ -12,6 +12,8 @@ import org.jgrapht.alg.connectivity.GabowStrongConnectivityInspector
 import org.jgrapht.alg.shortestpath.AllDirectedPaths
 import org.jgrapht.graph.DirectedPseudograph
 import org.jgrapht.graph.DefaultDirectedGraph
+import org.jgrapht.alg.shortestpath.DijkstraManyToManyShortestPaths
+import java.util.stream.Collectors
 
 /** */
 final case class ReactorMinusApplication(
@@ -60,12 +62,12 @@ final case class ReactorMinusApplication(
     )
   }
 
-  /** Get all trivial trigger chains.
+  /** Get all trivial source and destination of trigger chains.
     * @return
     *   all paths between unambigous sinks and sources in the model. that is, those which have
     *   absolutely no incoming edges or outgoing edges.
     */
-  lazy val unambigousTriggerChains: Set[Seq[LinguaFrancaReaction]] =
+  lazy val unambigousEndToEndReactions: Set[(LinguaFrancaReaction, LinguaFrancaReaction)] =
     val reactionOnlyGraph = SimpleDirectedGraph[LinguaFrancaReaction, DefaultEdge](classOf[DefaultEdge])
     for (r <- vertexSet.asScala) reactionOnlyGraph.addVertex(r)
     for (
@@ -77,18 +79,25 @@ final case class ReactorMinusApplication(
       ) || (containmentFunction(r) == containmentFunction(rr))
           ) reactionOnlyGraph.addEdge(r, rr)
     val consensedReactionGraph = GabowStrongConnectivityInspector(reactionOnlyGraph).getCondensation
-    val sources = consensedReactionGraph.vertexSet.asScala
+    val sources = consensedReactionGraph.vertexSet.stream
       .filter(g => consensedReactionGraph.incomingEdgesOf(g).isEmpty)
-      .flatMap(g => g.vertexSet.asScala)
-    val sinks = consensedReactionGraph.vertexSet.asScala
+      .flatMap(g => g.vertexSet.stream)
+      .collect(Collectors.toSet)
+    val sinks = consensedReactionGraph.vertexSet.stream
       .filter(g => consensedReactionGraph.outgoingEdgesOf(g).isEmpty)
-      .flatMap(g => g.vertexSet.asScala)
-    val paths = AllDirectedPaths(reactionOnlyGraph)
-      .getAllPaths(sources.asJava, sinks.asJava, true, null)
-      .asScala
-    paths.map(p => p.getVertexList.asScala.toSeq)
-      .distinctBy(l => (l.head, l.last))
-      .toSet
+      .flatMap(g => g.vertexSet.stream)
+      .collect(Collectors.toSet)
+    val paths = DijkstraManyToManyShortestPaths(reactionOnlyGraph)
+      .getManyToManyPaths(sources, sinks)
+    val mutableSet = for (
+      src <- sources.asScala;
+      dst <- sinks.asScala;
+      if paths.getPath(src, dst) != null
+    ) yield (src, dst)
+    mutableSet.toSet
+    // paths.map(p => p.getVertexList.asScala.toSeq)
+    //   .distinctBy(l => (l.head, l.last))
+    //   .toSet
 
   override val uniqueIdentifier = "ReactorMinusApplication"
 

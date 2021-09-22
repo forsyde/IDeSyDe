@@ -99,6 +99,12 @@ final case class ReactorMinusApplication(
     //   .distinctBy(l => (l.head, l.last))
     //   .toSet
 
+  /** @return the jobs graph computed out of this Reaction- model, in
+    * a lazy fashion since the computation can be slightly demanding
+    * for bigger grapghs.
+    */
+  lazy val jobGraph = ReactorMinusAppJobGraph(this)
+
   override val uniqueIdentifier = "ReactorMinusApplication"
 
 end ReactorMinusApplication

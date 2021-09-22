@@ -26,7 +26,7 @@ object Identification {
     Set[IdentificationRule](
       SDFAppIdentificationRule(),
       ReactorMinusIdentificationRule(),
-      ReactorMinusToJobsRule(),
+      // ReactorMinusToJobsRule(),
       NetworkedDigitalHWIdentRule(),
       SchedulableNetDigHWIdentRule(),
       ReactorMinusJobsDSEIdentRule(),

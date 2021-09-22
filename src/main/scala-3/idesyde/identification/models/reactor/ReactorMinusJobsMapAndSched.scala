@@ -7,17 +7,17 @@ import forsyde.io.java.typed.viewers.GenericProcessingModule
 import org.apache.commons.math3.fraction.BigFraction
 
 final case class ReactorMinusJobsMapAndSched(
-    val reactorMinusJobs: ReactorMinusJobs,
+    val reactorMinus: ReactorMinusApplication,
     val platform: SchedulableNetworkedDigHW,
     val wcetFunction: Map[(ReactionJob, GenericProcessingModule), BigFraction],
     val utilityFunction: Map[(ReactionJob, GenericProcessingModule), BigFraction]
 ) extends DecisionModel() {
 
-  val coveredVertexes = reactorMinusJobs.coveredVertexes ++ platform.coveredVertexes
+  val coveredVertexes = reactorMinus.coveredVertexes ++ platform.coveredVertexes
 
 //   def wcetFunction: Map[(ReactionJob, GenericProcessingModule), BigFraction] =
 //     (for (
-//         r <- reactorMinusJobs.jobs; 
+//         r <- reactorMinusJobs.jobs;
 //         p <- platform.hardware.processingElems;
 //         if r.srcReaction.get
 //         ) yield {

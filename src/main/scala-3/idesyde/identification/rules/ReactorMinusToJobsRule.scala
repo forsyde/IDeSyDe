@@ -10,7 +10,6 @@ import forsyde.io.java.typed.viewers.LinguaFrancaSignal
 import forsyde.io.java.typed.viewers.LinguaFrancaTimer
 import idesyde.identification.DecisionModel
 import idesyde.identification.IdentificationRule
-import idesyde.identification.models.reactor.ReactorMinusJobs
 import idesyde.identification.models.reactor.ReactorMinusApplication
 import idesyde.identification.models.reactor.ReactionJob
 import idesyde.identification.models.reactor.ReactionChannel
@@ -22,8 +21,7 @@ import org.jgrapht.traverse.BreadthFirstIterator
 
 import collection.JavaConverters.*
 
-type ResourceType = GenericProcessingModule | GenericDigitalStorage | GenericDigitalInterconnect
-
+@deprecated
 final case class ReactorMinusToJobsRule() extends IdentificationRule {
 
   def identify(model: ForSyDeModel, identified: Set[DecisionModel]) =
@@ -31,37 +29,39 @@ final case class ReactorMinusToJobsRule() extends IdentificationRule {
       .find(_.isInstanceOf[ReactorMinusApplication])
       .map(_.asInstanceOf[ReactorMinusApplication])
     if (reactorMinusOpt.isDefined) {
-      val reactorMinus                                  = reactorMinusOpt.get
-      given ReactorMinusApplication                     = reactorMinus
-      val periodicJobs                                  = computePeriodicJobs(model)
-      val pureJobs                                      = computePureJobs(model, periodicJobs)
-      val jobs                                          = periodicJobs ++ pureJobs
-      val reactionsToJobs                               = jobs.groupBy(_.srcReaction)
+      val reactorMinus              = reactorMinusOpt.get
+      given ReactorMinusApplication = reactorMinus
+      val periodicJobs              = computePeriodicJobs(model)
+      val pureJobs                  = computePureJobs(model, periodicJobs)
+      val jobs                      = periodicJobs ++ pureJobs
+      val reactionsToJobs           = jobs.groupBy(_.srcReaction)
       given Map[LinguaFrancaReactor, Seq[ReactionJob]] = reactorMinus.reactors
         .map(a => a -> a.getReactionsPort(model).asScala.toSeq.flatMap(reactionsToJobs(_)))
         .toMap
       val stateChannels =
         computeTimelyChannels(model, jobs).union(computePriorityChannels(model, jobs))
-      val decisionModel = ReactorMinusJobs(
-        reactorMinusApp = reactorMinus,
-        periodicJobs = periodicJobs,
-        pureJobs = pureJobs,
-        pureChannels = computePureChannels(model, jobs),
-        stateChannels = stateChannels,
-        outerStateChannels = computeHyperperiodChannels(model, jobs, stateChannels)
-      )
-      for (j <- jobs) if (j.deadline.compareTo(j.trigger) <= 0) scribe.error(s"${j.toString} has equal trigger and deadline!")
+      // val decisionModel = ReactorMinusJobs(
+      //   reactorMinusApp = reactorMinus,
+      //   periodicJobs = periodicJobs,
+      //   pureJobs = pureJobs,
+      //   pureChannels = computePureChannels(model, jobs),
+      //   stateChannels = stateChannels,
+      //   outerStateChannels = computeHyperperiodChannels(model, jobs, stateChannels)
+      // )
+      for (j <- jobs)
+        if (j.deadline.compareTo(j.trigger) <= 0)
+          scribe.error(s"${j.toString} has equal trigger and deadline!")
       // scribe.debug(s"channels ${decisionModel.channels.map(c => c.src.toString + "->" + c.dst.toString)}")
-      scribe.debug(
-        s"Conforming ReactorMinusJobs found with Reactor-: " +
-          s"${decisionModel.periodicJobs.size} per. Job(s), " +
-          s"${decisionModel.pureJobs.size} pure Job(s) " +
-          s"${decisionModel.pureChannels.size} pure channel(s), " +
-          s"${decisionModel.stateChannels.size} inner state channel(s), " +
-          s"${decisionModel.outerStateChannels.size} outer state channels, and "
-          // s"${decisionModel.unambigousJobTriggerChains.size} job trigger chains"
-      )
-      (true, Option(decisionModel))
+      // scribe.debug(
+      //   s"Conforming ReactorMinusJobs found with Reactor-: " +
+      //     s"${decisionModel.periodicJobs.size} per. Job(s), " +
+      //     s"${decisionModel.pureJobs.size} pure Job(s) " +
+      //     s"${decisionModel.pureChannels.size} pure channel(s), " +
+      //     s"${decisionModel.stateChannels.size} inner state channel(s), " +
+      //     s"${decisionModel.outerStateChannels.size} outer state channels, and "
+      //   // s"${decisionModel.unambigousJobTriggerChains.size} job trigger chains"
+      // )
+      (true, Option.empty)
     } else if (ReactorMinusIdentificationRule.canIdentify(model, identified)) {
       (false, Option.empty)
     } else {
@@ -104,20 +104,24 @@ final case class ReactorMinusToJobsRule() extends IdentificationRule {
       .groupBy(j => (j.srcReaction, j.trigger))
       .map((_, js) => js.minBy(_.deadline))
     // sortedOverlap.toSet
-    sortedOverlap.groupBy(_.srcReaction)
-    .flatMap((r, js) => {
-      val jsSorted = js.toSeq.sortBy(_.trigger)
-      val nonOverlap = for (
-        i <- 0 until (jsSorted.size - 1);
-        job     = jsSorted(i);
-        nextJob = jsSorted(i + 1)
-      ) yield ReactionJob(
-        job.srcReaction,
-        job.trigger,
-        if job.deadline.compareTo(nextJob.trigger) <= 0 then job.deadline else nextJob.trigger
-      )
-      nonOverlap.appended(jsSorted.last)
-    }).toSet
+    sortedOverlap
+      .groupBy(_.srcReaction)
+      .flatMap((r, js) => {
+        val jsSorted = js.toSeq.sortBy(_.trigger)
+        val nonOverlap =
+          for (
+            i <- 0 until (jsSorted.size - 1);
+            job     = jsSorted(i);
+            nextJob = jsSorted(i + 1)
+          )
+            yield ReactionJob(
+              job.srcReaction,
+              job.trigger,
+              if job.deadline.compareTo(nextJob.trigger) <= 0 then job.deadline else nextJob.trigger
+            )
+        nonOverlap.appended(jsSorted.last)
+      })
+      .toSet
     // nonOverlapDeadlineSaveLast + sortedOverlap.last
   }
 
@@ -131,8 +135,8 @@ final case class ReactorMinusToJobsRule() extends IdentificationRule {
     (for (
       ((r, rr) -> c) <- reactorMinus.channels;
       if reactorMinus.pureReactions.contains(rr);
-      j              <- reactionToJobs(r);
-      jj             <- reactionToJobs(rr);
+      j  <- reactionToJobs(r);
+      jj <- reactionToJobs(rr);
       // if the triggering time is the same
       if j != jj && j.trigger.equals(jj.trigger)
     ) yield ReactionChannel(j, jj, c)).toSet
@@ -185,10 +189,10 @@ final case class ReactorMinusToJobsRule() extends IdentificationRule {
     for (
       a <- reactorMinus.reactors;
       jset = reactorToJobs(a) // jobs.filter(j => reactorMinus.containmentFunction(j._1) == a).toSeq
-              .groupBy(_.trigger)
-              .toSeq
-              .sortBy((t, js) => t)
-              .map((t, js) => js.sortWith((j, jj) => reactorMinus.priorityRelation(jj._1, j._1)));
+        .groupBy(_.trigger)
+        .toSeq
+        .sortBy((t, js) => t)
+        .map((t, js) => js.sortWith((j, jj) => reactorMinus.priorityRelation(jj._1, j._1)));
       js = jset.head; jjs = jset.last
       // same reactor
       // reactor = reactorMinus.containmentFunction.get(j._1);
@@ -202,6 +206,7 @@ final case class ReactorMinusToJobsRule() extends IdentificationRule {
 
 }
 
+@deprecated
 object ReactorMinusToJobsRule:
 
   def canIdentify(model: ForSyDeModel, identified: Set[DecisionModel]): Boolean =

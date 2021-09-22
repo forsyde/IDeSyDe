@@ -10,6 +10,8 @@ import scribe.Level
 import idesyde.identification.interfaces.MiniZincDecisionModel
 import idesyde.exploration.api.Exploration
 import scala.concurrent.ExecutionContext
+import java.nio.file.Path
+import java.nio.file.Paths
 
 @Command(
   name = "idesyde",
@@ -32,13 +34,13 @@ class IDeSyDeCLI extends Callable[Int]:
     paramLabel = "Input Model",
     description = Array("input models to perform analysis")
   )
-  var inputModels: Array[File] = Array()
+  var inputModels: Array[Path] = Array()
 
   @Option(
     names = Array("-o", "--output"),
     description = Array("output model to output after analysis")
   )
-  var outputModel: File = File("forsyde-output.forxml")
+  var outputModel: Path = Paths.get("forsyde-output.forxml")
 
   @Option(
     names = Array("-v", "--verbosity"),
@@ -49,7 +51,7 @@ class IDeSyDeCLI extends Callable[Int]:
   def call(): Int = {
     setLoggingLevel(Level.get(verbosityLevel).getOrElse(Level.Info))
     val validInputs =
-      inputModels.filter(f => f.getName.endsWith("forsyde.xml") || f.getName.endsWith("forxml"))
+      inputModels.filter(f => f.toString.endsWith("forsyde.xml") || f.toString.endsWith("forxml"))
     if (validInputs.isEmpty) {
       println(
         "At least one input model '.forsyde.xml' | '.forxml' is necessary"
@@ -70,7 +72,7 @@ class IDeSyDeCLI extends Callable[Int]:
       //   case mzn: MiniZincDecisionModel => scribe.debug(s"mzn model: ${mzn.mznInputs.toString}")
       // })
       val (explorer, decisionModel) = chosen.head
-      val results = explorer.explore(decisionModel)
+      val results                   = explorer.explore(decisionModel)
     }
     0
   }

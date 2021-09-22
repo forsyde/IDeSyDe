@@ -20,83 +20,78 @@ final case class ReactorMinusJobsMapAndSchedMzn(val sourceModel: ReactorMinusJob
 
   val coveredVertexes = sourceModel.coveredVertexes
 
-  lazy val multiplier = sourceModel.reactorMinusJobs.jobs
+  lazy val multiplier = sourceModel.reactorMinus.jobGraph.jobs
     .map(_.trigger)
     .map(_.getDenominatorAsLong)
     .reduce((d1, d2) => ArithmeticUtils.lcm(d1, d2))
-  lazy val hyperPeriod     = sourceModel.reactorMinusJobs.reactorMinusApp.hyperPeriod
-  lazy val multHyperPeriod = hyperPeriod.multiply(multiplier).longValue
-  lazy val reactionToJobs = sourceModel.reactorMinusJobs.jobs.groupBy(_.srcReaction)
-  lazy val reactorsOrdered    = sourceModel.reactorMinusJobs.reactorMinusApp.reactors.toSeq
-  lazy val reactionsOrdered   = sourceModel.reactorMinusJobs.reactorMinusApp.reactions.toSeq
-  lazy val channelsOrdered    = sourceModel.reactorMinusJobs.reactorMinusApp.channels.toSeq
-  lazy val jobsOrdered        = sourceModel.reactorMinusJobs.jobs.toSeq
-  lazy val jobChannelsOrdered = sourceModel.reactorMinusJobs.channels
-    .diff(sourceModel.reactorMinusJobs.outerStateChannels)
-    .toSeq
+  lazy val hyperPeriod        = sourceModel.reactorMinus.hyperPeriod
+  lazy val multHyperPeriod    = hyperPeriod.multiply(multiplier).longValue
+  lazy val reactionToJobs     = sourceModel.reactorMinus.jobGraph.jobs.groupBy(_.srcReaction)
+  lazy val reactorsOrdered    = sourceModel.reactorMinus.reactors.toSeq
+  lazy val reactionsOrdered   = sourceModel.reactorMinus.reactions.toSeq
+  lazy val channelsOrdered    = sourceModel.reactorMinus.channels.toSeq
+  lazy val jobsOrdered        = sourceModel.reactorMinus.jobGraph.jobs.toSeq
+  lazy val jobChannelsOrdered = sourceModel.reactorMinus.jobGraph.inChannels.toSeq
   lazy val platformOrdered    = sourceModel.platform.hardware.platformElements.toSeq
-  lazy val jobChainsOrdered = sourceModel.reactorMinusJobs.unambigousEndToEndJobs.toSeq
+  lazy val jobChainsOrdered   = sourceModel.reactorMinus.jobGraph.unambigousEndToEndJobs.toSeq
 
   lazy val mznModel = Source.fromResource("minizinc/reactorminus_jobs_to_networkedHW.mzn").mkString
 
   lazy val mznInputs =
     Map(
-      "hyperPeriod" -> MiniZincData(multHyperPeriod),
-      "nReactors" -> MiniZincData(reactorsOrdered.length),
-      "nReactions" -> MiniZincData(reactionsOrdered.length),
-      "nChannels"  -> MiniZincData(channelsOrdered.length),
-      "nJobs"      -> MiniZincData(jobsOrdered.length),
-      "nJobChannels" -> MiniZincData(jobChannelsOrdered.length),
+      "hyperPeriod"    -> MiniZincData(multHyperPeriod),
+      "nReactors"      -> MiniZincData(reactorsOrdered.length),
+      "nReactions"     -> MiniZincData(reactionsOrdered.length),
+      "nChannels"      -> MiniZincData(channelsOrdered.length),
+      "nJobs"          -> MiniZincData(jobsOrdered.length),
+      "nJobChannels"   -> MiniZincData(jobChannelsOrdered.length),
       "nPlatformElems" -> MiniZincData(platformOrdered.length),
-      "nJobChains" -> MiniZincData(jobChainsOrdered.length),
-      "isTimeTriggeredElem" -> MiniZincData(
-        platformOrdered.map(p => {
-          p match
-            case pp: GenericProcessingModule =>
-              sourceModel.platform.timeTriggeredPEs.contains(pp)
-            case _ => 
-              false
-          // p.isInstanceOf[GenericProcessingModule] && sourceModel.platform.timeTriggeredPEs.contains(p.asInstanceOf[GenericProcessingModule]))
+      "nJobChains"     -> MiniZincData(jobChainsOrdered.length),
+      "isTimeTriggeredElem" -> MiniZincData(platformOrdered.map(p => {
+        p match
+          case pp: GenericProcessingModule =>
+            sourceModel.platform.timeTriggeredPEs.contains(pp)
+          case _ =>
+            false
+        // p.isInstanceOf[GenericProcessingModule] && sourceModel.platform.timeTriggeredPEs.contains(p.asInstanceOf[GenericProcessingModule]))
       })),
-      "isRoundRobinElem" -> MiniZincData(
-        platformOrdered.map(p => {
-          p match
-            case pp: GenericProcessingModule =>
-              sourceModel.platform.roundRobinPEs.contains(pp)
-            case _ => 
-              false
-          // p.isInstanceOf[GenericProcessingModule] && sourceModel.platform.roundRobinPEs.contains(p.asInstanceOf[GenericProcessingModule]))
+      "isRoundRobinElem" -> MiniZincData(platformOrdered.map(p => {
+        p match
+          case pp: GenericProcessingModule =>
+            sourceModel.platform.roundRobinPEs.contains(pp)
+          case _ =>
+            false
+        // p.isInstanceOf[GenericProcessingModule] && sourceModel.platform.roundRobinPEs.contains(p.asInstanceOf[GenericProcessingModule]))
       })),
-      "isProcessingElem" -> MiniZincData(
-        platformOrdered.map(p => {
-          p match
-            case pp: GenericProcessingModule =>
-              sourceModel.platform.hardware.processingElems.contains(pp)
-            case _ => false
-          // p.isInstanceOf[GenericProcessingModule] && sourceModel.platform.hardware.processingElems.contains(p.asInstanceOf[GenericProcessingModule]))
+      "isProcessingElem" -> MiniZincData(platformOrdered.map(p => {
+        p match
+          case pp: GenericProcessingModule =>
+            sourceModel.platform.hardware.processingElems.contains(pp)
+          case _ => false
+        // p.isInstanceOf[GenericProcessingModule] && sourceModel.platform.hardware.processingElems.contains(p.asInstanceOf[GenericProcessingModule]))
       })),
-      "isCommunicationElem" -> MiniZincData(
-        platformOrdered.map(p => {
-          p match
-            case pp: GenericDigitalInterconnect =>
-              sourceModel.platform.hardware.communicationElems.contains(pp)
-            case _ => false
-          // p.isInstanceOf[GenericDigitalInterconnect] && sourceModel.platform.hardware.communicationElems.contains(p.asInstanceOf[GenericDigitalInterconnect]))
+      "isCommunicationElem" -> MiniZincData(platformOrdered.map(p => {
+        p match
+          case pp: GenericDigitalInterconnect =>
+            sourceModel.platform.hardware.communicationElems.contains(pp)
+          case _ => false
+        // p.isInstanceOf[GenericDigitalInterconnect] && sourceModel.platform.hardware.communicationElems.contains(p.asInstanceOf[GenericDigitalInterconnect]))
       })),
-      "isMemoryElem" -> MiniZincData(
-        platformOrdered.map(p => {
-          p match
-            case pp: GenericMemoryModule =>
-              sourceModel.platform.hardware.storageElems.contains(pp)
-            case _ => false
-          // p.isInstanceOf[GenericMemoryModule] && sourceModel.platform.hardware.storageElems.contains(p.asInstanceOf[GenericMemoryModule]))
+      "isMemoryElem" -> MiniZincData(platformOrdered.map(p => {
+        p match
+          case pp: GenericMemoryModule =>
+            sourceModel.platform.hardware.storageElems.contains(pp)
+          case _ => false
+        // p.isInstanceOf[GenericMemoryModule] && sourceModel.platform.hardware.storageElems.contains(p.asInstanceOf[GenericMemoryModule]))
       })),
       "reactorSize" -> MiniZincData(
         reactorsOrdered.map(a => a.getStateSizesInBits.stream.mapToLong(l => l).sum)
       ),
       "containingReactor" -> MiniZincData(
         reactionsOrdered.map(r =>
-          reactorsOrdered.indexOf(sourceModel.reactorMinusJobs.reactorMinusApp.containmentFunction(r)) + 1
+          reactorsOrdered.indexOf(
+            sourceModel.reactorMinus.containmentFunction(r)
+          ) + 1
         )
       ),
       "channelSize" -> MiniZincData(
@@ -126,44 +121,44 @@ final case class ReactorMinusJobsMapAndSchedMzn(val sourceModel: ReactorMinusJob
       "jobWcet" -> MiniZincData(
         jobsOrdered.map(j => {
           platformOrdered
-          .map(p => {
-            p match
-              case pe: GenericProcessingModule =>
-                sourceModel.wcetFunction
-                  .getOrElse((j, pe), BigFraction.ZERO)
-                  .multiply(multiplier)
-                  .doubleValue
-                  .ceil
-                  .toLong
-              case _ => 0
-          })
+            .map(p => {
+              p match
+                case pe: GenericProcessingModule =>
+                  sourceModel.wcetFunction
+                    .getOrElse((j, pe), BigFraction.ZERO)
+                    .multiply(multiplier)
+                    .doubleValue
+                    .ceil
+                    .toLong
+                case _ => 0
+            })
         })
       ),
       "jobUtilization" -> MiniZincData(
         jobsOrdered.map(j => {
           platformOrdered
-          .map(p => {
-            p match
-              case pe: GenericProcessingModule =>
-                sourceModel.wcetFunction
-                  .getOrElse((j, pe), BigFraction.ZERO)
-                  .divide(hyperPeriod)
-                  .percentageValue
-                  .ceil
-                  .toLong
-              case _ => 0
-          })
+            .map(p => {
+              p match
+                case pe: GenericProcessingModule =>
+                  sourceModel.wcetFunction
+                    .getOrElse((j, pe), BigFraction.ZERO)
+                    .divide(hyperPeriod)
+                    .percentageValue
+                    .ceil
+                    .toLong
+                case _ => 0
+            })
         })
       ),
       "jobCanBeExecuted" -> MiniZincData(
         jobsOrdered.map(j => {
           platformOrdered
-          .map(p => {
-            p match
-              case pe: GenericProcessingModule =>
-                sourceModel.wcetFunction.contains((j, pe))
-              case _ => false
-          })
+            .map(p => {
+              p match
+                case pe: GenericProcessingModule =>
+                  sourceModel.wcetFunction.contains((j, pe))
+                case _ => false
+            })
         })
       ),
       "jobChannelSrc" -> MiniZincData(
@@ -210,30 +205,31 @@ final case class ReactorMinusJobsMapAndSchedMzn(val sourceModel: ReactorMinusJob
       ),
       "allocatedBandwidth" -> MiniZincData(
         platformOrdered
-        .map(com => {
-          platformOrdered
-          .map(pe => {
-            com match
-              case c: GenericDigitalInterconnect =>
-                pe match
-                  case p: GenericProcessingModule =>
-                    Math.floorDiv(
-                      sourceModel.platform.hardware.bandWidthBitPerSec.getOrElse((c, p), 0.toLong),
-                      multiplier
-                    )
+          .map(com => {
+            platformOrdered
+              .map(pe => {
+                com match
+                  case c: GenericDigitalInterconnect =>
+                    pe match
+                      case p: GenericProcessingModule =>
+                        Math.floorDiv(
+                          sourceModel.platform.hardware.bandWidthBitPerSec
+                            .getOrElse((c, p), 0.toLong),
+                          multiplier
+                        )
+                      case _ => 0
                   case _ => 0
-              case _ => 0
+              })
           })
-        })
       ),
       "memoryMaximumCapacity" -> MiniZincData(
         platformOrdered
-        .map(p => {
-          p match
-            case m: GenericMemoryModule =>
-              m.getMaxMemoryInBits
-            case _ => 0
-        })
+          .map(p => {
+            p match
+              case m: GenericMemoryModule =>
+                m.getMaxMemoryInBits
+              case _ => 0
+          })
       ),
       "firstInChain" -> MiniZincData(
         jobChainsOrdered.map((src, _) => jobsOrdered.indexOf(src) + 1)

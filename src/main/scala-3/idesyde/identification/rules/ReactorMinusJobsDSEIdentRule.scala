@@ -11,33 +11,37 @@ import forsyde.io.java.typed.viewers.ProfiledProcessingModule
 import org.apache.commons.math3.fraction.BigFraction
 
 import collection.JavaConverters.*
-import idesyde.identification.models.reactor.ReactorMinusJobs
 import idesyde.identification.models.SchedulableNetworkedDigHW
+import idesyde.identification.models.reactor.ReactorMinusApplication
 
-final case class ReactorMinusJobsDSEIdentRule()
-    extends IdentificationRule:
+final case class ReactorMinusJobsDSEIdentRule() extends IdentificationRule:
 
   override def identify(
       model: ForSyDeModel,
       identified: Set[DecisionModel]
   ): (Boolean, Option[DecisionModel]) =
-    val reactorJobsModelOpt = identified.find(_.isInstanceOf[ReactorMinusJobs]).map(_.asInstanceOf[ReactorMinusJobs])
-    val schedulablePlatformOpt = identified.find(_.isInstanceOf[SchedulableNetworkedDigHW]).map(_.asInstanceOf[SchedulableNetworkedDigHW])
-    if (reactorJobsModelOpt.isDefined && schedulablePlatformOpt.isDefined) {
-      val reactorJobsModel = reactorJobsModelOpt.get
-      val schedulablePlatform = schedulablePlatformOpt.get
-      given Set[ReactionJob] = reactorJobsModel.jobs
+    val reactorMinusOpt =
+      identified
+        .find(_.isInstanceOf[ReactorMinusApplication])
+        .map(_.asInstanceOf[ReactorMinusApplication])
+    val schedulablePlatformOpt = identified
+      .find(_.isInstanceOf[SchedulableNetworkedDigHW])
+      .map(_.asInstanceOf[SchedulableNetworkedDigHW])
+    if (reactorMinusOpt.isDefined && schedulablePlatformOpt.isDefined) {
+      val reactorMinus                   = reactorMinusOpt.get
+      val schedulablePlatform            = schedulablePlatformOpt.get
+      given Set[ReactionJob]             = reactorMinus.jobGraph.jobs
       given Set[GenericProcessingModule] = schedulablePlatform.hardware.processingElems
-      given BigFraction = reactorJobsModel.reactorMinusApp.hyperPeriod
+      given BigFraction                  = reactorMinus.hyperPeriod
       val decisionModel = ReactorMinusJobsMapAndSched(
-        reactorMinusJobs = reactorJobsModel,
+        reactorMinus = reactorMinus,
         platform = schedulablePlatform,
         wcetFunction = computeWCETFunction(model),
         utilityFunction = computeUtilityFunction(model)
       )
       scribe.debug(s"Identified conformin Reactor- DSE problem")
       (true, Option(decisionModel))
-    } else if(ReactorMinusJobsDSEIdentRule.canIdentify(model, identified))
+    } else if (ReactorMinusJobsDSEIdentRule.canIdentify(model, identified))
       (false, Option.empty)
     else
       (true, Option.empty)
@@ -57,15 +61,15 @@ final case class ReactorMinusJobsDSEIdentRule()
       (reqName, reqSet) <- {
         // scribe.debug(s"trying $pe with ${j.srcReaction.getImplementationPort(model).get}")
         j.srcReaction
-        .getImplementationPort(model)
-        .flatMap(ProfiledFunction.safeCast(_))
-        .map(f => f.getRequirements.asScala.toMap)
-        .orElse(Map.empty)};
+          .getImplementationPort(model)
+          .flatMap(ProfiledFunction.safeCast(_))
+          .map(f => f.getRequirements.asScala.toMap)
+          .orElse(Map.empty)
+      };
       if provSet.keySet.equals(reqSet.keySet)
     )
       // TODO: find a numerically stabler way to compute this function
-      yield 
-        (j, pe) -> BigFraction(
+      yield (j, pe) -> BigFraction(
         provSet.asScala.map(op => op._2 * reqSet.get(op._1)).sum[Long].intValue,
         pe.getNominalFrequencyInHertz.toInt
       )
@@ -82,7 +86,7 @@ final case class ReactorMinusJobsDSEIdentRule()
       pe <- procElems;
       wcet = wcetFunction.get((j, pe))
       if wcet.isDefined
-    ) 
+    )
       yield (j, pe) ->
         wcet.get.divide(hyperPeriod)
     iter.toMap
@@ -92,7 +96,7 @@ end ReactorMinusJobsDSEIdentRule
 object ReactorMinusJobsDSEIdentRule:
 
   def canIdentify(model: ForSyDeModel, identified: Set[DecisionModel]) =
-    ReactorMinusToJobsRule.canIdentify(model, identified) &&
-    SchedulableNetDigHWIdentRule.canIdentify(model, identified)
+    ReactorMinusIdentificationRule.canIdentify(model, identified) &&
+      SchedulableNetDigHWIdentRule.canIdentify(model, identified)
 
 end ReactorMinusJobsDSEIdentRule

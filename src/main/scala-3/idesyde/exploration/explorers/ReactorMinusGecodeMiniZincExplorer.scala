@@ -14,32 +14,37 @@ import idesyde.identification.DecisionModel
 import java.nio.file.Paths
 import java.nio.file.StandardOpenOption
 
-final case class ReactorMinusGecodeMiniZincExplorer() extends SimpleMiniZincCPExplorer[ReactorMinusJobsMapAndSchedMzn]:
+final case class ReactorMinusGecodeMiniZincExplorer()
+    extends SimpleMiniZincCPExplorer[ReactorMinusJobsMapAndSchedMzn]:
 
   override def canExplore(decisionModel: DecisionModel): Boolean =
     super.canExplore(decisionModel) &&
-    "minizinc --solvers".!!.contains("org.gecode.gecode") &&
-    decisionModel.isInstanceOf[ReactorMinusJobsMapAndSchedMzn]
+      "minizinc --solvers".!!.contains("org.gecode.gecode") &&
+      decisionModel.isInstanceOf[ReactorMinusJobsMapAndSchedMzn]
 
   def estimateTimeUntilFeasibility(decisionModel: DecisionModel): Duration =
     decisionModel match
       case m: ReactorMinusJobsMapAndSchedMzn =>
         val nonMznDecisionModel = m.sourceModel
-        Duration.ofSeconds(nonMznDecisionModel.reactorMinusJobs.jobs.size * nonMznDecisionModel.reactorMinusJobs.channels.size * 3)
+        Duration.ofSeconds(
+          nonMznDecisionModel.reactorMinus.jobGraph.jobs.size * nonMznDecisionModel.reactorMinus.jobGraph.channels.size * 3
+        )
       case _ => Duration.ZERO
 
   def estimateTimeUntilOptimality(decisionModel: DecisionModel): Duration =
     decisionModel match
       case m: ReactorMinusJobsMapAndSchedMzn =>
         val nonMznDecisionModel = m.sourceModel
-        Duration.ofMinutes(nonMznDecisionModel.reactorMinusJobs.jobs.size * nonMznDecisionModel.reactorMinusJobs.channels.size * nonMznDecisionModel.platform.coveredVertexes.size * 3)
+        Duration.ofMinutes(
+          nonMznDecisionModel.reactorMinus.jobGraph.jobs.size * nonMznDecisionModel.reactorMinus.jobGraph.channels.size * nonMznDecisionModel.platform.coveredVertexes.size * 3
+        )
       case _ => Duration.ZERO
 
-  def estimateMemoryUntilFeasibility(decisionModel: DecisionModel): Long = 
+  def estimateMemoryUntilFeasibility(decisionModel: DecisionModel): Long =
     decisionModel match
       case m: ReactorMinusJobsMapAndSchedMzn =>
         val nonMznDecisionModel = m.sourceModel
-        128 * nonMznDecisionModel.reactorMinusJobs.jobs.size * nonMznDecisionModel.reactorMinusJobs.channels.size
+        128 * nonMznDecisionModel.reactorMinus.jobGraph.jobs.size * nonMznDecisionModel.reactorMinus.jobGraph.channels.size
       case _ => 0
 
   def estimateMemoryUntilOptimality(decisionModel: DecisionModel): Long =
@@ -55,10 +60,21 @@ final case class ReactorMinusGecodeMiniZincExplorer() extends SimpleMiniZincCPEx
         // val modelFile = Files.createTempFile("idesyde-minizinc-model", ".mzn")
         // val dataFile = Files.createTempFile("idesyde-minizinc-data", ".json")
         val modelPath = Paths.get("idesyde-minizinc-model.mzn")
-        val dataPath = Paths.get("idesyde-minizinc-data.json")
-        val dataJson = ujson.Obj.from(m.mznInputs.map((k, v) => k -> v.toJson(true)))
-        val dataOutStream = Files.newOutputStream(dataPath, StandardOpenOption.CREATE,StandardOpenOption.WRITE, StandardOpenOption.TRUNCATE_EXISTING)
-        Files.write(modelPath, m.mznModel.getBytes, StandardOpenOption.CREATE, StandardOpenOption.WRITE, StandardOpenOption.TRUNCATE_EXISTING)
+        val dataPath  = Paths.get("idesyde-minizinc-data.json")
+        val dataJson  = ujson.Obj.from(m.mznInputs.map((k, v) => k -> v.toJson(true)))
+        val dataOutStream = Files.newOutputStream(
+          dataPath,
+          StandardOpenOption.CREATE,
+          StandardOpenOption.WRITE,
+          StandardOpenOption.TRUNCATE_EXISTING
+        )
+        Files.write(
+          modelPath,
+          m.mznModel.getBytes,
+          StandardOpenOption.CREATE,
+          StandardOpenOption.WRITE,
+          StandardOpenOption.TRUNCATE_EXISTING
+        )
         dataJson.writeBytesTo(dataOutStream, 2, false)
         dataOutStream.close
         Future(Option(ForSyDeModel()))

@@ -21,7 +21,7 @@ final case class ReactorMinusToNetHWOrToolsExplorer() extends Explorer:
     decisionModel match
       case m: ReactorMinusJobsMapAndSched =>
         Duration.ofSeconds(
-          m.reactorMinusJobs.jobs.size * m.reactorMinusJobs.channels.size
+          m.reactorMinus.jobGraph.jobs.size * m.reactorMinus.jobGraph.channels.size
         )
       case _ => Duration.ZERO
 
@@ -29,14 +29,14 @@ final case class ReactorMinusToNetHWOrToolsExplorer() extends Explorer:
     decisionModel match
       case m: ReactorMinusJobsMapAndSched =>
         Duration.ofMinutes(
-          m.reactorMinusJobs.jobs.size * m.reactorMinusJobs.channels.size * m.platform.coveredVertexes.size
+          m.reactorMinus.jobGraph.jobs.size * m.reactorMinus.jobGraph.channels.size * m.platform.coveredVertexes.size
         )
       case _ => Duration.ZERO
 
   def estimateMemoryUntilFeasibility(decisionModel: DecisionModel): Long =
     decisionModel match
       case m: ReactorMinusJobsMapAndSched =>
-        256 * m.reactorMinusJobs.jobs.size * m.reactorMinusJobs.channels.size
+        256 * m.reactorMinus.jobGraph.jobs.size * m.reactorMinus.jobGraph.channels.size
       case _ => 0
 
   def estimateMemoryUntilOptimality(decisionModel: DecisionModel): Long =

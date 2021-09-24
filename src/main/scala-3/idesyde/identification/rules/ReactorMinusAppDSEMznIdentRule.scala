@@ -1,12 +1,12 @@
 package idesyde.identification.rules
 
 import idesyde.identification.IdentificationRule
-import idesyde.identification.models.reactor.ReactorMinusJobsMapAndSchedMzn
+import idesyde.identification.models.reactor.ReactorMinusAppMapAndSchedMzn
 import idesyde.identification.DecisionModel
 import forsyde.io.java.core.ForSyDeModel
-import idesyde.identification.models.reactor.ReactorMinusJobsMapAndSched
+import idesyde.identification.models.reactor.ReactorMinusAppMapAndSched
 
-final case class ReactorMinusJobsDSEMznIdentRule()
+final case class ReactorMinusAppDSEMznIdentRule()
     extends IdentificationRule:
 
   def identify(
@@ -14,23 +14,23 @@ final case class ReactorMinusJobsDSEMznIdentRule()
       identified: Set[DecisionModel]
   ): (Boolean, Option[DecisionModel]) =
     val dseModelOpt = identified
-      .find(_.isInstanceOf[ReactorMinusJobsMapAndSched])
-      .map(_.asInstanceOf[ReactorMinusJobsMapAndSched])
+      .find(_.isInstanceOf[ReactorMinusAppMapAndSched])
+      .map(_.asInstanceOf[ReactorMinusAppMapAndSched])
     if (dseModelOpt.isDefined)
-      val decisionModel = ReactorMinusJobsMapAndSchedMzn(sourceModel = dseModelOpt.get)
+      val decisionModel = ReactorMinusAppMapAndSchedMzn(sourceModel = dseModelOpt.get)
       (true, Option(decisionModel))
     else if (ReactorMinusJobsDSEMznIdentRule.canIdentify(model, identified))
       (false, Option.empty)
     else
       (true, Option.empty)
 
-end ReactorMinusJobsDSEMznIdentRule
+end ReactorMinusAppDSEMznIdentRule
 
 object ReactorMinusJobsDSEMznIdentRule:
 
   def canIdentify(
       model: ForSyDeModel,
       identified: Set[DecisionModel]
-  ): Boolean = ReactorMinusJobsDSEIdentRule.canIdentify(model, identified)
+  ): Boolean = ReactorMinusAppDSEIdentRule.canIdentify(model, identified)
 
 end ReactorMinusJobsDSEMznIdentRule

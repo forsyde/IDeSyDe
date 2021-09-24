@@ -1,7 +1,7 @@
 package idesyde.identification.rules
 
 import idesyde.identification.IdentificationRule
-import idesyde.identification.models.reactor.ReactorMinusJobsMapAndSched
+import idesyde.identification.models.reactor.ReactorMinusAppMapAndSched
 import forsyde.io.java.core.ForSyDeModel
 import idesyde.identification.DecisionModel
 import idesyde.identification.models.reactor.ReactionJob
@@ -14,7 +14,7 @@ import collection.JavaConverters.*
 import idesyde.identification.models.SchedulableNetworkedDigHW
 import idesyde.identification.models.reactor.ReactorMinusApplication
 
-final case class ReactorMinusJobsDSEIdentRule() extends IdentificationRule:
+final case class ReactorMinusAppDSEIdentRule() extends IdentificationRule:
 
   override def identify(
       model: ForSyDeModel,
@@ -33,7 +33,7 @@ final case class ReactorMinusJobsDSEIdentRule() extends IdentificationRule:
       given Set[ReactionJob]             = reactorMinus.jobGraph.jobs
       given Set[GenericProcessingModule] = schedulablePlatform.hardware.processingElems
       given BigFraction                  = reactorMinus.hyperPeriod
-      val decisionModel = ReactorMinusJobsMapAndSched(
+      val decisionModel = ReactorMinusAppMapAndSched(
         reactorMinus = reactorMinus,
         platform = schedulablePlatform,
         wcetFunction = computeWCETFunction(model),
@@ -41,7 +41,7 @@ final case class ReactorMinusJobsDSEIdentRule() extends IdentificationRule:
       )
       scribe.debug(s"Identified conformin Reactor- DSE problem")
       (true, Option(decisionModel))
-    } else if (ReactorMinusJobsDSEIdentRule.canIdentify(model, identified))
+    } else if (ReactorMinusAppDSEIdentRule.canIdentify(model, identified))
       (false, Option.empty)
     else
       (true, Option.empty)
@@ -91,12 +91,12 @@ final case class ReactorMinusJobsDSEIdentRule() extends IdentificationRule:
         wcet.get.divide(hyperPeriod)
     iter.toMap
 
-end ReactorMinusJobsDSEIdentRule
+end ReactorMinusAppDSEIdentRule
 
-object ReactorMinusJobsDSEIdentRule:
+object ReactorMinusAppDSEIdentRule:
 
   def canIdentify(model: ForSyDeModel, identified: Set[DecisionModel]) =
     ReactorMinusIdentificationRule.canIdentify(model, identified) &&
       SchedulableNetDigHWIdentRule.canIdentify(model, identified)
 
-end ReactorMinusJobsDSEIdentRule
+end ReactorMinusAppDSEIdentRule

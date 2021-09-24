@@ -6,7 +6,7 @@ import idesyde.identification.models.SchedulableNetworkedDigHW
 import forsyde.io.java.typed.viewers.GenericProcessingModule
 import org.apache.commons.math3.fraction.BigFraction
 
-final case class ReactorMinusJobsMapAndSched(
+final case class ReactorMinusAppMapAndSched(
     val reactorMinus: ReactorMinusApplication,
     val platform: SchedulableNetworkedDigHW,
     val wcetFunction: Map[(ReactionJob, GenericProcessingModule), BigFraction],
@@ -25,6 +25,6 @@ final case class ReactorMinusJobsMapAndSched(
 //             (r, p) -> BigFraction(0)
 //         }).toMap
 
-  override val uniqueIdentifier = "ReactorMinusJobsMapAndSched"
+  override val uniqueIdentifier = "ReactorMinusAppMapAndSched"
 
 }

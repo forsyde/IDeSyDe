@@ -4,8 +4,8 @@ import idesyde.exploration.Explorer
 import idesyde.identification.DecisionModel
 import scala.concurrent.Future
 import idesyde.exploration.ExplorationCriteria
-import idesyde.exploration.explorers.ReactorMinusGecodeMiniZincExplorer
-import idesyde.exploration.ReactorMinusToNetHWOrToolsExplorer
+import idesyde.exploration.explorers.GecodeMiniZincExplorer
+import idesyde.exploration.OrToolsExplorer
 import org.jgrapht.graph.SimpleDirectedGraph
 import org.jgrapht.graph.DefaultEdge
 import org.jgrapht.alg.connectivity.GabowStrongConnectivityInspector
@@ -16,8 +16,8 @@ import collection.JavaConverters.*
 object Exploration:
 
   val defaultExplorers: Set[Explorer] = Set(
-    ReactorMinusGecodeMiniZincExplorer(),
-    ReactorMinusToNetHWOrToolsExplorer()
+    GecodeMiniZincExplorer(),
+    OrToolsExplorer()
   )
 
   def chooseExplorersAndModels(

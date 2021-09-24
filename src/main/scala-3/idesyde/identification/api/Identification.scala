@@ -17,8 +17,8 @@ import org.jgrapht.alg.connectivity.GabowStrongConnectivityInspector
 
 import collection.JavaConverters.*
 import idesyde.identification.rules.SchedulableNetDigHWIdentRule
-import idesyde.identification.rules.ReactorMinusJobsDSEIdentRule
-import idesyde.identification.rules.ReactorMinusJobsDSEMznIdentRule
+import idesyde.identification.rules.ReactorMinusAppDSEIdentRule
+import idesyde.identification.rules.ReactorMinusAppDSEMznIdentRule
 
 object Identification {
 
@@ -29,8 +29,8 @@ object Identification {
       // ReactorMinusToJobsRule(),
       NetworkedDigitalHWIdentRule(),
       SchedulableNetDigHWIdentRule(),
-      ReactorMinusJobsDSEIdentRule(),
-      ReactorMinusJobsDSEMznIdentRule()
+      ReactorMinusAppDSEIdentRule(),
+      ReactorMinusAppDSEMznIdentRule()
     )
 
   def identifyDecisionModels(

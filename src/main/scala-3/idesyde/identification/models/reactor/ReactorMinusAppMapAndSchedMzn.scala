@@ -15,7 +15,7 @@ import org.apache.commons.math3.fraction.BigFraction
 import forsyde.io.java.typed.viewers.RoundRobinScheduler
 import forsyde.io.java.typed.viewers.GenericMemoryModule
 
-final case class ReactorMinusJobsMapAndSchedMzn(val sourceModel: ReactorMinusJobsMapAndSched)
+final case class ReactorMinusAppMapAndSchedMzn(val sourceModel: ReactorMinusAppMapAndSched)
     extends MiniZincDecisionModel:
 
   val coveredVertexes = sourceModel.coveredVertexes
@@ -248,10 +248,10 @@ final case class ReactorMinusJobsMapAndSchedMzn(val sourceModel: ReactorMinusJob
 
   override def dominates(other: DecisionModel): Boolean =
     super.dominates(other) && (other match {
-      case mzn: ReactorMinusJobsMapAndSched => sourceModel == mzn
+      case mzn: ReactorMinusAppMapAndSched => sourceModel == mzn
       case _                                => true
     })
 
-  override val uniqueIdentifier = "ReactorMinusJobsMapAndSchedMzn"
+  override val uniqueIdentifier = "ReactorMinusAppMapAndSchedMzn"
 
-end ReactorMinusJobsMapAndSchedMzn
+end ReactorMinusAppMapAndSchedMzn

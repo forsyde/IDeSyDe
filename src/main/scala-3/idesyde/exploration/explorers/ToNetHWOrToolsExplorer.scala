@@ -1,6 +1,6 @@
 package idesyde.exploration
 
-import idesyde.identification.models.reactor.ReactorMinusJobsMapAndSched
+import idesyde.identification.models.reactor.ReactorMinusAppMapAndSched
 import idesyde.identification.DecisionModel
 import scala.concurrent.Future
 import forsyde.io.java.core.ForSyDeModel
@@ -8,7 +8,7 @@ import scala.concurrent.ExecutionContext
 import java.time.Duration
 import java.time.temporal.Temporal
 
-final case class ReactorMinusToNetHWOrToolsExplorer() extends Explorer:
+final case class OrToolsExplorer() extends Explorer:
 
   def canExplore(decisionModel: DecisionModel) = false
 
@@ -19,7 +19,7 @@ final case class ReactorMinusToNetHWOrToolsExplorer() extends Explorer:
 
   def estimateTimeUntilFeasibility(decisionModel: DecisionModel): Duration =
     decisionModel match
-      case m: ReactorMinusJobsMapAndSched =>
+      case m: ReactorMinusAppMapAndSched =>
         Duration.ofSeconds(
           m.reactorMinus.jobGraph.jobs.size * m.reactorMinus.jobGraph.channels.size
         )
@@ -27,7 +27,7 @@ final case class ReactorMinusToNetHWOrToolsExplorer() extends Explorer:
 
   def estimateTimeUntilOptimality(decisionModel: DecisionModel): Duration =
     decisionModel match
-      case m: ReactorMinusJobsMapAndSched =>
+      case m: ReactorMinusAppMapAndSched =>
         Duration.ofMinutes(
           m.reactorMinus.jobGraph.jobs.size * m.reactorMinus.jobGraph.channels.size * m.platform.coveredVertexes.size
         )
@@ -35,12 +35,12 @@ final case class ReactorMinusToNetHWOrToolsExplorer() extends Explorer:
 
   def estimateMemoryUntilFeasibility(decisionModel: DecisionModel): Long =
     decisionModel match
-      case m: ReactorMinusJobsMapAndSched =>
+      case m: ReactorMinusAppMapAndSched =>
         256 * m.reactorMinus.jobGraph.jobs.size * m.reactorMinus.jobGraph.channels.size
       case _ => 0
 
   def estimateMemoryUntilOptimality(decisionModel: DecisionModel): Long =
     decisionModel match
-      case m: ReactorMinusJobsMapAndSched =>
+      case m: ReactorMinusAppMapAndSched =>
         100 * estimateMemoryUntilFeasibility(decisionModel)
       case _ => 0

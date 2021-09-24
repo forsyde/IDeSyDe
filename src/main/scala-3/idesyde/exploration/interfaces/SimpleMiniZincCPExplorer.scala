@@ -9,9 +9,12 @@ import scala.concurrent.Future
 import scala.sys.process._
 import idesyde.identification.DecisionModel
 
-trait SimpleMiniZincCPExplorer[M <: MiniZincDecisionModel] extends Explorer:
+trait SimpleMiniZincCPExplorer extends Explorer:
 
   def canExplore(decisionModel: DecisionModel): Boolean =
-    "minizinc".! == 1
+    decisionModel match
+      case m: MiniZincDecisionModel => "minizinc".! == 1
+      case _ => false
+    
 
   

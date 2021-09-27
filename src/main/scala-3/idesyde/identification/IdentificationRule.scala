@@ -2,7 +2,6 @@ package idesyde.identification
 
 import forsyde.io.java.core.ForSyDeModel
 import idesyde.identification.api.Identification
-import org.slf4j.event.Level
 
 trait IdentificationRule() {
 

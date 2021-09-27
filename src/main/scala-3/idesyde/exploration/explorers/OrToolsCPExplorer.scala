@@ -8,7 +8,7 @@ import scala.concurrent.ExecutionContext
 import java.time.Duration
 import java.time.temporal.Temporal
 
-final case class OrToolsExplorer() extends Explorer:
+final case class OrToolsCPExplorer() extends Explorer:
 
   def canExplore(decisionModel: DecisionModel) = false
 

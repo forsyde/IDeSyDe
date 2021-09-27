@@ -10,7 +10,6 @@ import forsyde.io.java.core.Trait
 
 import scala.collection.mutable.HashSet
 import idesyde.identification.rules.{NetworkedDigitalHWIdentRule, ReactorMinusIdentificationRule, ReactorMinusToJobsRule, SDFAppIdentificationRule}
-import org.slf4j.event.Level
 import org.jgrapht.graph.SimpleDirectedGraph
 import org.jgrapht.graph.DefaultEdge
 import org.jgrapht.alg.connectivity.GabowStrongConnectivityInspector
@@ -35,8 +34,7 @@ object Identification {
 
   def identifyDecisionModels(
       model: ForSyDeModel,
-      rules: Set[IdentificationRule] = Set.empty,
-      loggingLevel: Level = Level.INFO
+      rules: Set[IdentificationRule] = Set.empty
   ): Set[DecisionModel] = 
     var identified: Set[DecisionModel] = Set()
     var activeRules                    = rules ++ standardRules
@@ -63,16 +61,13 @@ object Identification {
       iters += 1
     }
     // condense it for comparison
-    scribe.debug("getting condensed")
     val dominanceCondensation = GabowStrongConnectivityInspector(dominanceGraph).getCondensation()
-    scribe.debug("done condensed")
     // keep only the SCC which are leaves
     val dominant = dominanceCondensation.vertexSet.asScala
           .filter(g => dominanceCondensation.incomingEdgesOf(g).isEmpty)
           .flatMap(g => g.vertexSet.asScala)
           .toSet
     scribe.info(s"droppped ${identified.size - dominant.size} dominated decision model(s).")
-    // TODO: find a non reflective way to get names of decision models
     scribe.debug(s"domitant: ${dominant.map(m => m.uniqueIdentifier)}")
     dominant
   end identifyDecisionModels

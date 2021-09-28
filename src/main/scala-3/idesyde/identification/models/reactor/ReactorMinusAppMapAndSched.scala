@@ -17,28 +17,40 @@ final case class ReactorMinusAppMapAndSched(
   val coveredVertexes = reactorMinus.coveredVertexes ++ platform.coveredVertexes
 
   lazy val jobWcetFunction: Map[(ReactionJob, GenericProcessingModule), BigFraction] =
-    reactorMinus.jobGraph.jobs.flatMap(j => 
-      platform.hardware.processingElems.map(p => 
-        (j, p) -> wcetFunction((j.srcReaction, p))
+    reactorMinus.jobGraph.jobs
+      .flatMap(j =>
+        platform.hardware.processingElems.map(p => (j, p) -> wcetFunction((j.srcReaction, p)))
       )
-    ).toMap
+      .toMap
 
   lazy val jobUtilityFunction: Map[(ReactionJob, GenericProcessingModule), BigFraction] =
-    reactorMinus.jobGraph.jobs.flatMap(j => 
-      platform.hardware.processingElems.map(p => 
-        (j, p) -> utilityFunction((j.srcReaction, p))
+    reactorMinus.jobGraph.jobs
+      .flatMap(j =>
+        platform.hardware.processingElems.map(p => (j, p) -> utilityFunction((j.srcReaction, p)))
       )
-    ).toMap
+      .toMap
 
-//   def wcetFunction: Map[(ReactionJob, GenericProcessingModule), BigFraction] =
-//     (for (
-//         r <- reactorMinusJobs.jobs;
-//         p <- platform.hardware.processingElems;
-//         if r.srcReaction.get
-//         ) yield {
+  lazy val executionSymmetricRelation: Set[(GenericProcessingModule, GenericProcessingModule)] =
+    for (
+      p  <- platform.hardware.processingElems;
+      pp <- platform.hardware.processingElems;
+      // the subset of the WCET function for each process must be identical
+      if p == pp || wcetFunction.filter((rp, _) => rp._2 == p) == wcetFunction.filter((rp, _) => rp._2 == pp)
+    )
+      yield (p, pp)
 
-//             (r, p) -> BigFraction(0)
-//         }).toMap
+  lazy val executionSymmetricGroups: Set[Set[GenericProcessingModule]] =
+    platform.hardware.processingElems.map(p =>
+      platform.hardware.processingElems.filter(pp => executionSymmetricRelation.contains(p, pp))
+    )
+
+  lazy val computationallySymmetricGroups: Set[Set[GenericProcessingModule]] =
+    for (
+      exeSet  <- executionSymmetricGroups;
+      topoSet <- platform.topologicallySymmetricGroups;
+      d = exeSet.intersect(topoSet);
+      if d.size > 0
+    ) yield d
 
   override val uniqueIdentifier = "ReactorMinusAppMapAndSched"
 

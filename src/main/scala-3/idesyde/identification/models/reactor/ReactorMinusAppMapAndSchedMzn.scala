@@ -35,6 +35,12 @@ final case class ReactorMinusAppMapAndSchedMzn(val sourceModel: ReactorMinusAppM
   lazy val platformOrdered    = sourceModel.platform.hardware.platformElements.toSeq
   lazy val reactionChainsOrdered = sourceModel.reactorMinus.unambigousEndToEndReactions.toSeq
   lazy val jobChainsOrdered   = sourceModel.reactorMinus.jobGraph.unambigousEndToEndJobs.toSeq
+  lazy val symmetryGroupsOrdered = sourceModel.computationallySymmetricGroups.toSeq
+
+  // TODO: Fix the damn symmetry breaking
+  scribe.debug(s"topo ${sourceModel.platform.topologicallySymmetricGroups.map(_.map(_.getIdentifier))}")
+  scribe.debug(s"exe ${sourceModel.executionSymmetricGroups.map(_.map(_.getIdentifier))}")
+  scribe.debug(s"full ${sourceModel.computationallySymmetricGroups.map(_.map(_.getIdentifier))}")
 
   lazy val mznModel = Source.fromResource("minizinc/reactorminus_to_networkedHW.mzn").mkString
 
@@ -246,7 +252,14 @@ final case class ReactorMinusAppMapAndSchedMzn(val sourceModel: ReactorMinusAppM
       "lastInChain" -> MiniZincData(
         reactionChainsOrdered.map((_, dst) => reactionsOrdered.indexOf(dst) + 1)
       ),
-      "objLambda" -> MiniZincData(0)
+      "objLambda" -> MiniZincData(0),
+      "platformElemsSymmetryGroups" -> MiniZincData(
+        platformOrdered.map(p => p match {
+          case pe: GenericProcessingModule => 
+            symmetryGroupsOrdered.indexWhere(s => s.contains(pe)) + 1
+          case _ => 0
+        })
+      )
     )
 
   def rebuildFromMznOutputs(

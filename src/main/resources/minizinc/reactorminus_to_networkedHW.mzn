@@ -27,6 +27,7 @@ array[PlatformElems] of bool: isRoundRobinElem;
 array[PlatformElems] of bool: isProcessingElem;
 array[PlatformElems] of bool: isCommunicationElem;
 array[PlatformElems] of bool: isMemoryElem;
+array[PlatformElems] of int: platformElemsSymmetryGroups;
 
 % inferred sets
 set of int: TimeTriggeredElems = {p | p in PlatformElems where isTimeTriggeredElem[p]};
@@ -286,6 +287,17 @@ constraint forall(c in JobChannels, j, jj in Jobs, p, pp in ProcessingElems wher
 constraint totalUtilization = sum(p in ProcessingElems, r in Reactions where reactionExecution[r] = p) (reactionUtilization[r, p]);
 % constraint totalLatencies = sum(l in ReactionChains) (latencies[l]);
 
+% symmetry breaking
+constraint forall(p, pp in ProcessingElems where platformElemsSymmetryGroups[p] > 0 /\ platformElemsSymmetryGroups[p] = platformElemsSymmetryGroups[pp] /\ p < pp) (
+  sum(r in Reactions where reactionExecution[r] = p) (reactionUtilization[r, p]) >=
+  sum(r in Reactions where reactionExecution[r] = pp) (reactionUtilization[r, pp])
+);
+
+% constraint forall(p, pp in ProcessingElems where platformElemsSymmetryGroups[p] = platformElemsSymmetryGroups[pp] /\ p < pp) (
+%   sum(r in Reactions where reactionExecution[r] = p) (reactionUtilization[r, p]) =
+%   sum(r in Reactions where reactionExecution[r] = pp) (reactionUtilization[r, pp]) ->
+%   max(r in Reactions where reactionExecution[r] = pp) ()
+% );
 
 solve
   % :: warm_start(start, [i mod length(procs) | i in jobs])

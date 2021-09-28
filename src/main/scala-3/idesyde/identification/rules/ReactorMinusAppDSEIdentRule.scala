@@ -13,6 +13,7 @@ import org.apache.commons.math3.fraction.BigFraction
 import collection.JavaConverters.*
 import idesyde.identification.models.SchedulableNetworkedDigHW
 import idesyde.identification.models.reactor.ReactorMinusApplication
+import forsyde.io.java.typed.viewers.LinguaFrancaReaction
 
 final case class ReactorMinusAppDSEIdentRule() extends IdentificationRule:
 
@@ -30,14 +31,11 @@ final case class ReactorMinusAppDSEIdentRule() extends IdentificationRule:
     if (reactorMinusOpt.isDefined && schedulablePlatformOpt.isDefined) {
       val reactorMinus                   = reactorMinusOpt.get
       val schedulablePlatform            = schedulablePlatformOpt.get
-      given Set[ReactionJob]             = reactorMinus.jobGraph.jobs
-      given Set[GenericProcessingModule] = schedulablePlatform.hardware.processingElems
-      given BigFraction                  = reactorMinus.hyperPeriod
       val decisionModel = ReactorMinusAppMapAndSched(
         reactorMinus = reactorMinus,
         platform = schedulablePlatform,
-        wcetFunction = computeWCETFunction(model),
-        utilityFunction = computeUtilityFunction(model)
+        wcetFunction = computeWCETFunction(model, reactorMinus.reactions, schedulablePlatform.hardware.processingElems),
+        utilityFunction = computeUtilityFunction(model, reactorMinus.reactions, schedulablePlatform.hardware.processingElems, reactorMinus.hyperPeriod)
       )
       scribe.debug(s"Identified conformin Reactor- DSE problem")
       (true, Option(decisionModel))
@@ -47,12 +45,12 @@ final case class ReactorMinusAppDSEIdentRule() extends IdentificationRule:
       (true, Option.empty)
   end identify
 
-  def computeWCETFunction(model: ForSyDeModel)(using
-      jobs: Set[ReactionJob],
+  def computeWCETFunction(model: ForSyDeModel,
+      reactions: Set[LinguaFrancaReaction],
       procElems: Set[GenericProcessingModule]
-  ): Map[(ReactionJob, GenericProcessingModule), BigFraction] =
+  ): Map[(LinguaFrancaReaction, GenericProcessingModule), BigFraction] =
     val iter = for (
-      j  <- jobs;
+      r  <- reactions;
       pe <- procElems;
       (provName, provSet) <- ProfiledProcessingModule
         .safeCast(pe)
@@ -60,7 +58,7 @@ final case class ReactorMinusAppDSEIdentRule() extends IdentificationRule:
         .orElse(Map.empty);
       (reqName, reqSet) <- {
         // scribe.debug(s"trying $pe with ${j.srcReaction.getImplementationPort(model).get}")
-        j.srcReaction
+        r
           .getImplementationPort(model)
           .flatMap(ProfiledFunction.safeCast(_))
           .map(f => f.getRequirements.asScala.toMap)
@@ -69,25 +67,25 @@ final case class ReactorMinusAppDSEIdentRule() extends IdentificationRule:
       if provSet.keySet.equals(reqSet.keySet)
     )
       // TODO: find a numerically stabler way to compute this function
-      yield (j, pe) -> BigFraction(
+      yield (r, pe) -> BigFraction(
         provSet.asScala.map(op => op._2 * reqSet.get(op._1)).sum[Long].intValue,
         pe.getNominalFrequencyInHertz.toInt
       )
     iter.toMap
 
-  def computeUtilityFunction(model: ForSyDeModel)(using
-      jobs: Set[ReactionJob],
+  def computeUtilityFunction(model: ForSyDeModel,
+      reactions: Set[LinguaFrancaReaction],
       procElems: Set[GenericProcessingModule],
       hyperPeriod: BigFraction
-  ): Map[(ReactionJob, GenericProcessingModule), BigFraction] =
-    val wcetFunction = computeWCETFunction(model)
+  ): Map[(LinguaFrancaReaction, GenericProcessingModule), BigFraction] =
+    val wcetFunction = computeWCETFunction(model, reactions, procElems)
     val iter = for (
-      j  <- jobs;
+      r  <- reactions;
       pe <- procElems;
-      wcet = wcetFunction.get((j, pe))
+      wcet = wcetFunction.get((r, pe))
       if wcet.isDefined
     )
-      yield (j, pe) ->
+      yield (r, pe) ->
         wcet.get.divide(hyperPeriod)
     iter.toMap
 

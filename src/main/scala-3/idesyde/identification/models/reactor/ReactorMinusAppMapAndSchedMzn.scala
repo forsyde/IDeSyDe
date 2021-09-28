@@ -33,9 +33,10 @@ final case class ReactorMinusAppMapAndSchedMzn(val sourceModel: ReactorMinusAppM
   lazy val jobsOrdered        = sourceModel.reactorMinus.jobGraph.jobs.toSeq
   lazy val jobChannelsOrdered = sourceModel.reactorMinus.jobGraph.inChannels.toSeq
   lazy val platformOrdered    = sourceModel.platform.hardware.platformElements.toSeq
+  lazy val reactionChainsOrdered = sourceModel.reactorMinus.unambigousEndToEndReactions.toSeq
   lazy val jobChainsOrdered   = sourceModel.reactorMinus.jobGraph.unambigousEndToEndJobs.toSeq
 
-  lazy val mznModel = Source.fromResource("minizinc/reactorminus_jobs_to_networkedHW.mzn").mkString
+  lazy val mznModel = Source.fromResource("minizinc/reactorminus_to_networkedHW.mzn").mkString
 
   lazy val mznInputs =
     Map(
@@ -46,7 +47,15 @@ final case class ReactorMinusAppMapAndSchedMzn(val sourceModel: ReactorMinusAppM
       "nJobs"          -> MiniZincData(jobsOrdered.length),
       "nJobChannels"   -> MiniZincData(jobChannelsOrdered.length),
       "nPlatformElems" -> MiniZincData(platformOrdered.length),
-      "nJobChains"     -> MiniZincData(jobChainsOrdered.length),
+      "nReactionChains"     -> MiniZincData(reactionChainsOrdered.length),
+      "isFixedPriorityElem" -> MiniZincData(platformOrdered.map(p => {
+        p match
+          case pp: GenericProcessingModule =>
+            sourceModel.platform.fixedPriorityPEs.contains(pp)
+          case _ =>
+            false
+        // p.isInstanceOf[GenericProcessingModule] && sourceModel.platform.timeTriggeredPEs.contains(p.asInstanceOf[GenericProcessingModule]))
+      })),
       "isTimeTriggeredElem" -> MiniZincData(platformOrdered.map(p => {
         p match
           case pp: GenericProcessingModule =>
@@ -112,20 +121,20 @@ final case class ReactorMinusAppMapAndSchedMzn(val sourceModel: ReactorMinusAppM
       "jobDeadline" -> MiniZincData(
         jobsOrdered.map(j => j.deadline.multiply(multiplier).longValue)
       ),
-      "jobDataSize" -> MiniZincData(
-        jobsOrdered.map(j => {
+      "reactionDataSize" -> MiniZincData(
+        reactionsOrdered.map(j => {
           // TODO: fix this properly
           0
         })
       ),
-      "jobWcet" -> MiniZincData(
-        jobsOrdered.map(j => {
+      "reactionWcet" -> MiniZincData(
+        reactionsOrdered.map(r => {
           platformOrdered
             .map(p => {
               p match
                 case pe: GenericProcessingModule =>
                   sourceModel.wcetFunction
-                    .getOrElse((j, pe), BigFraction.ZERO)
+                    .getOrElse((r, pe), BigFraction.ZERO)
                     .multiply(multiplier)
                     .doubleValue
                     .ceil
@@ -134,14 +143,14 @@ final case class ReactorMinusAppMapAndSchedMzn(val sourceModel: ReactorMinusAppM
             })
         })
       ),
-      "jobUtilization" -> MiniZincData(
-        jobsOrdered.map(j => {
+      "reactionUtilization" -> MiniZincData(
+        reactionsOrdered.map(r => {
           platformOrdered
             .map(p => {
               p match
                 case pe: GenericProcessingModule =>
                   sourceModel.wcetFunction
-                    .getOrElse((j, pe), BigFraction.ZERO)
+                    .getOrElse((r, pe), BigFraction.ZERO)
                     .divide(hyperPeriod)
                     .percentageValue
                     .ceil
@@ -150,13 +159,13 @@ final case class ReactorMinusAppMapAndSchedMzn(val sourceModel: ReactorMinusAppM
             })
         })
       ),
-      "jobCanBeExecuted" -> MiniZincData(
-        jobsOrdered.map(j => {
+      "reactionCanBeExecuted" -> MiniZincData(
+        reactionsOrdered.map(r => {
           platformOrdered
             .map(p => {
               p match
                 case pe: GenericProcessingModule =>
-                  sourceModel.wcetFunction.contains((j, pe))
+                  sourceModel.wcetFunction.contains((r, pe))
                 case _ => false
             })
         })
@@ -167,7 +176,21 @@ final case class ReactorMinusAppMapAndSchedMzn(val sourceModel: ReactorMinusAppM
       "jobChannelDst" -> MiniZincData(
         jobChannelsOrdered.map(c => jobsOrdered.indexOf(c.dst) + 1)
       ),
-      "roundRobinElemsMinSlice" -> MiniZincData(
+      // "roundRobinElemsMinSlice" -> MiniZincData(
+      //   platformOrdered
+      //     .map(p => {
+      //       p match
+      //         case pe: GenericProcessingModule =>
+      //           if (sourceModel.platform.roundRobinPEs.contains(pe))
+      //             sourceModel.platform.schedulersFromPEs(pe) match
+      //               case s: RoundRobinScheduler =>
+      //                 s.getMinimumTimeSliceInCycles
+      //               case _ => 0
+      //           else 0
+      //         case _ => 0
+      //     })
+      // ),
+      "roundRobinElemsMaxSlices" -> MiniZincData(
         platformOrdered
           .map(p => {
             p match
@@ -175,21 +198,7 @@ final case class ReactorMinusAppMapAndSchedMzn(val sourceModel: ReactorMinusAppM
                 if (sourceModel.platform.roundRobinPEs.contains(pe))
                   sourceModel.platform.schedulersFromPEs(pe) match
                     case s: RoundRobinScheduler =>
-                      s.getMinimumTimeSliceInCycles
-                    case _ => 0
-                else 0
-              case _ => 0
-          })
-      ),
-      "roundRobinElemsMaxSlice" -> MiniZincData(
-        platformOrdered
-          .map(p => {
-            p match
-              case pe: GenericProcessingModule =>
-                if (sourceModel.platform.roundRobinPEs.contains(pe))
-                  sourceModel.platform.schedulersFromPEs(pe) match
-                    case s: RoundRobinScheduler =>
-                      s.getMaximumTimeSliceInCycles
+                      Math.floorDiv(s.getMaximumTimeSliceInCycles, s.getMinimumTimeSliceInCycles) 
                     case _ => 0
                 else 0
               case _ => 0
@@ -232,10 +241,10 @@ final case class ReactorMinusAppMapAndSchedMzn(val sourceModel: ReactorMinusAppM
           })
       ),
       "firstInChain" -> MiniZincData(
-        jobChainsOrdered.map((src, _) => jobsOrdered.indexOf(src) + 1)
+        reactionChainsOrdered.map((src, _) => reactionsOrdered.indexOf(src) + 1)
       ),
       "lastInChain" -> MiniZincData(
-        jobChainsOrdered.map((_, dst) => jobsOrdered.indexOf(dst) + 1)
+        reactionChainsOrdered.map((_, dst) => reactionsOrdered.indexOf(dst) + 1)
       ),
       "objLambda" -> MiniZincData(0)
     )

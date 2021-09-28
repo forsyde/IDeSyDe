@@ -155,7 +155,7 @@ constraint forall(j in Reactions, p in ProcessingElems) (
 %   jobRelease[j] + jobWcet[j, p] <= reactionInstDuration[j, p] + reactionExeDuration[j, p] + reactionOutDuration[j, p]
 % );
 
-array[RoundRobinElems] of var 0..hyperPeriod: roundRobinPeriod;
+array[PlatformElems] of var int: roundRobinPeriod;
 %% tighten the bounds for roundRobinPeriod
 constraint forall(pe in RoundRobinElems) (
   0 <= roundRobinPeriod[pe]
@@ -191,6 +191,13 @@ constraint bin_packing_capa(
   memoryMaximumCapacity,
   reactorMapping ++ channelMapping,
   reactorSize ++ channelSize
+);
+constraint forall(r in Reactions, p in ProcessingElems) (
+ if reactionExecution[r] = p then  
+   reactionExeDuration[r, p] = reactionWcet[r, p]
+ else
+   reactionExeDuration[r, p] = 0
+ endif
 );
 
 % data movements constraints
@@ -239,13 +246,13 @@ constraint forall(r in Reactions, c in Channels, mem in MemoryElems, pe in Proce
 %   length(TimeTriggeredElems)
 %   );
 %% when to count execution
-constraint forall(r in Reactions, p in ProcessingElems) (
-  if (reactionExecution[r] = p) then 
-    reactionExeDuration[r, p] = reactionWcet[r, p]
-  else
-    reactionExeDuration[r, p] = 0
-  endif
-);
+% constraint forall(r in Reactions, p in TimeTriggeredElems) (
+%   if (reactionExecution[r] = p) then 
+%     reactionExeDuration[r, p] = reactionWcet[r, p]
+%   else
+%     reactionExeDuration[r, p] = 0
+%   endif
+% );
 
 % round-robin constraints
 %% round-robin period
@@ -254,25 +261,29 @@ constraint forall(p in RoundRobinElems) (
 );
 %% minimum time slice allocation
 constraint forall(r in Reactions, p in RoundRobinElems) (
-  if(reactionExecution[r] = p) then 
+  if reactionExecution[r] = p then 
     0 < reactionRRSlices[r, p] /\ reactionRRSlices[r, p] <= roundRobinElemsMaxSlices[p]
+  else
+    reactionRRSlices[r, p] = 0
   endif
 );
 %% exe duration calculation
 constraint forall(r in Reactions, p in RoundRobinElems) (
   if (reactionExecution[r] = p) then
-  reactionRRSlices[r, p] * reactionResponseTime[r, p] = reactionDuration[r, p] * roundRobinPeriod[p]
+  roundRobinPeriod[p] * reactionResponseTime[r, p] >= reactionRRSlices[r, p] * reactionDuration[r, p]
   endif
 );
 
 % precedence constraints
 % set of int: JobPrecedenceChannels = JobPureChannels union JobInnerStateChannels;
 constraint forall(c in JobChannels, j, jj in Jobs, p, pp in ProcessingElems where jobChannelSrc[c] = j /\ jobChannelDst[c] = jj) (
-  jobStartingTime[j, p] + reactionDuration[j, p] <= reactionDuration[jj, pp]
+  let {Reactions: r = originalReaction[j], Reactions: rr = originalReaction[jj]} in
+  reactionResponseTime[r, p] + reactionDuration[r, p] - reactionResponseTime[rr, pp] >= 
+  jobRelease[j] - jobRelease[jj]
 );
 
 % objectives
-% constraint totalUtilization = sum(p in ProcessingElems, j in Jobs where reactionExecution[j] = p) (jobUtilization[j, p]);
+constraint totalUtilization = sum(p in ProcessingElems, r in Reactions where reactionExecution[r] = p) (reactionUtilization[r, p]);
 % constraint totalLatencies = sum(l in ReactionChains) (latencies[l]);
 
 
@@ -281,7 +292,8 @@ solve
   :: int_search(reactionResponseTime, first_fail, indomain_min)
   :: int_search(reactionRRSlices, first_fail, indomain_max)
   :: int_search(roundRobinPeriod, first_fail, indomain_min)
-  :: restart_luby(length(Jobs))
+  :: int_search(reactionExecution, first_fail, indomain_min)
+  :: restart_luby(length(Reactions) * length(ProcessingElems))
   minimize totalUtilization ; %+ objLambda * totalLatencies;
 
 % output [show(max_makespan), "\n", show(objective), "\n", show2d(start), "\n", show(job_min_latency)];

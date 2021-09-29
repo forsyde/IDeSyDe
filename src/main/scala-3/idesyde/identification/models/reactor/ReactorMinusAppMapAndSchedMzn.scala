@@ -37,11 +37,6 @@ final case class ReactorMinusAppMapAndSchedMzn(val sourceModel: ReactorMinusAppM
   lazy val jobChainsOrdered   = sourceModel.reactorMinus.jobGraph.unambigousEndToEndJobs.toSeq
   lazy val symmetryGroupsOrdered = sourceModel.computationallySymmetricGroups.toSeq
 
-  // TODO: Fix the damn symmetry breaking
-  scribe.debug(s"topo ${sourceModel.platform.topologicallySymmetricGroups.map(_.map(_.getIdentifier))}")
-  scribe.debug(s"exe ${sourceModel.executionSymmetricGroups.map(_.map(_.getIdentifier))}")
-  scribe.debug(s"full ${sourceModel.computationallySymmetricGroups.map(_.map(_.getIdentifier))}")
-
   lazy val mznModel = Source.fromResource("minizinc/reactorminus_to_networkedHW.mzn").mkString
 
   lazy val mznInputs =

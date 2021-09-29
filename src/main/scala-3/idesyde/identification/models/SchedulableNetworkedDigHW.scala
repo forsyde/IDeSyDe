@@ -9,6 +9,14 @@ import forsyde.io.java.typed.viewers.{
 }
 import idesyde.identification.DecisionModel
 import forsyde.io.java.typed.viewers.FixedPriorityScheduler
+import scala.annotation.tailrec
+import org.jgrapht.graph.SimpleGraph
+import org.jgrapht.graph.DefaultEdge
+import org.jgrapht.alg.connectivity.GabowStrongConnectivityInspector
+
+import collection.JavaConverters.*
+import java.util.stream.Collectors
+import org.jgrapht.alg.connectivity.ConnectivityInspector
 
 final case class SchedulableNetworkedDigHW(
     val hardware: NetworkedDigitalHardware,
@@ -36,7 +44,10 @@ final case class SchedulableNetworkedDigHW(
       if p == pp || hardware.storageElems.count(mm => {
         hardware.paths.getOrElse((m, p), Seq()).map(c => hardware.bandWidthBitPerSec(c, p)).sum +
           hardware.paths.getOrElse((p, m), Seq()).map(c => hardware.bandWidthBitPerSec(c, p)).sum ==
-          hardware.paths.getOrElse((mm, pp), Seq()).map(c => hardware.bandWidthBitPerSec(c, pp)).sum +
+          hardware.paths
+            .getOrElse((mm, pp), Seq())
+            .map(c => hardware.bandWidthBitPerSec(c, pp))
+            .sum +
           hardware.paths.getOrElse((pp, mm), Seq()).map(c => hardware.bandWidthBitPerSec(c, pp)).sum
       }) == 1
     ) yield (p, pp)
@@ -52,12 +63,16 @@ final case class SchedulableNetworkedDigHW(
       if p == pp || hardware.storageElems.count(mm => {
         hardware.paths.getOrElse((m, p), Seq()).map(c => hardware.bandWidthBitPerSec(c, p)).sum +
           hardware.paths.getOrElse((p, m), Seq()).map(c => hardware.bandWidthBitPerSec(c, p)).sum ==
-          hardware.paths.getOrElse((mm, pp), Seq()).map(c => hardware.bandWidthBitPerSec(c, pp)).sum +
+          hardware.paths
+            .getOrElse((mm, pp), Seq())
+            .map(c => hardware.bandWidthBitPerSec(c, pp))
+            .sum +
           hardware.paths.getOrElse((pp, mm), Seq()).map(c => hardware.bandWidthBitPerSec(c, pp)).sum
       }) == 1
     ) yield (p, pp)
 
-  lazy val roundRobinTopologySymmetryRelation: Set[(GenericProcessingModule, GenericProcessingModule)] =
+  lazy val roundRobinTopologySymmetryRelation
+      : Set[(GenericProcessingModule, GenericProcessingModule)] =
     for (
       p  <- roundRobinPEs;
       pp <- roundRobinPEs;
@@ -67,21 +82,42 @@ final case class SchedulableNetworkedDigHW(
       if p == pp || hardware.storageElems.count(mm => {
         hardware.paths.getOrElse((m, p), Seq()).map(c => hardware.bandWidthBitPerSec(c, p)).sum +
           hardware.paths.getOrElse((p, m), Seq()).map(c => hardware.bandWidthBitPerSec(c, p)).sum ==
-          hardware.paths.getOrElse((mm, pp), Seq()).map(c => hardware.bandWidthBitPerSec(c, pp)).sum +
+          hardware.paths
+            .getOrElse((mm, pp), Seq())
+            .map(c => hardware.bandWidthBitPerSec(c, pp))
+            .sum +
           hardware.paths.getOrElse((pp, mm), Seq()).map(c => hardware.bandWidthBitPerSec(c, pp)).sum
       }) == 1
     ) yield (p, pp)
 
+  lazy val topologySymmetryRelationGraph: SimpleGraph[GenericProcessingModule, DefaultEdge] =
+    val graph = SimpleGraph[GenericProcessingModule, DefaultEdge](classOf[DefaultEdge])
+    hardware.processingElems.foreach(p => graph.addVertex(p))
+    for (
+      p  <- hardware.processingElems;
+      pp <- hardware.processingElems - p;
+      // TODO: this check should be a bit more robust... is it always master to slave?
+      // can it be in any direction? After this design decision, it becomes better.
+      // Currently we assume master to slace
+      // TODO: the fact that the bandwith must get with a default value is not safe,
+      // this should be removed later
+      if hardware.storageElems.forall(m => 
+        hardware.storageElems.exists(mm => {
+            hardware.paths.contains((p, m)) &&
+            hardware.paths.contains((pp, mm)) &&
+            hardware.paths((p, m)).map(c => hardware.bandWidthBitPerSec((c, p))).sum ==
+            hardware.paths((pp, mm)).map(c => hardware.bandWidthBitPerSec((c, pp))).sum
+          })
+        )
+    ) graph.addEdge(p, pp)
+    graph
+
   lazy val topologicallySymmetricGroups: Set[Set[GenericProcessingModule]] =
-    fixedPriorityPEs.map(p =>
-      fixedPriorityPEs.filter(pp => fixedPriorityTopologySymmetryRelation.contains(p, pp))
-    ) ++
-      timeTriggeredPEs.map(p =>
-        timeTriggeredPEs.filter(pp => timeTriggeredTopologySymmetryRelation.contains(p, pp))
-      ) ++
-      roundRobinPEs.map(p =>
-        roundRobinPEs.filter(pp => roundRobinTopologySymmetryRelation.contains(p, pp))
-      )
+    ConnectivityInspector(topologySymmetryRelationGraph).connectedSets.stream
+      .map(g => g.asScala.toSet)
+      .collect(Collectors.toSet)
+      .asScala
+      .toSet
 
   override val uniqueIdentifier = "SchedulableNetworkedDigHW"
 }

@@ -15,15 +15,19 @@ import forsyde.io.java.typed.viewers.RoundRobinInterconnect
 import org.apache.commons.math3.fraction.BigFraction
 import forsyde.io.java.typed.viewers.GenericMemoryModule
 
+import scala.jdk.OptionConverters.*
+import collection.JavaConverters.*
+import org.jgrapht.alg.shortestpath.FloydWarshallShortestPaths
+import org.jgrapht.graph.SimpleGraph
+
 // type GenericPlatformElement = GenericProcessingModule | GenericDigitalInterconnect | GenericDigitalStorage
 
 final case class NetworkedDigitalHardware(
     val processingElems: Set[GenericProcessingModule],
     val communicationElems: Set[GenericDigitalInterconnect],
     val storageElems: Set[GenericMemoryModule],
-    val links: Set[(AbstractDigitalModule, AbstractDigitalModule)],
-    val paths: Map[(AbstractDigitalModule, AbstractDigitalModule), Seq[GenericDigitalInterconnect]]
-) extends SimpleDirectedGraph[AbstractDigitalModule, DefaultEdge](classOf[DefaultEdge])
+    val links: Set[(AbstractDigitalModule, AbstractDigitalModule)]
+) extends SimpleGraph[AbstractDigitalModule, DefaultEdge](classOf[DefaultEdge])
     with DecisionModel {
 
   for (pe <- processingElems) addVertex(pe)
@@ -44,11 +48,14 @@ final case class NetworkedDigitalHardware(
   val allocatedBandwidthFraction: Map[(GenericDigitalInterconnect, GenericProcessingModule), BigFraction] =
     (for (
       ce <- communicationElems;
-      pe <- processingElems
-    ) yield ce match {
-      case rr: RoundRobinInterconnect =>
-        (rr, pe) -> BigFraction(
-          rr.getAllocatedWeights.getOrDefault(pe.getIdentifier, 0),
+      pe <- processingElems;
+      rrOpt = RoundRobinInterconnect.safeCast(ce).toScala
+    ) yield rrOpt match {
+      case Some(rr) =>
+        (ce, pe) -> BigFraction(
+          // the ID has to be taken from the vertex directly dues to viewers
+          // prefixing the IDs in the sake of unambiguity
+          rr.getAllocatedWeights.getOrDefault(pe.getViewedVertex.getIdentifier, 0),
           rr.getTotalWeights
         )
       case _ => (ce, pe) -> BigFraction(0)
@@ -64,6 +71,18 @@ final case class NetworkedDigitalHardware(
         )
         .longValue
     })
+
+  lazy val paths: Map[(AbstractDigitalModule, AbstractDigitalModule), Seq[GenericDigitalInterconnect]] =
+    val pathAlgorithm = FloydWarshallShortestPaths(this)
+    (for (
+      e <- platformElements; ee <- platformElements - e;
+      // multiple levels of call required since getPath may be null
+      path  = pathAlgorithm.getPath(e, ee);
+      vList = if (path != null) path.getVertexList.asScala else Seq.empty;
+      if !vList.isEmpty;
+      vPath = vList.filter(_ != e).filter(_ != ee).toSeq;
+      if vPath.forall(GenericDigitalInterconnect.conforms(_))
+    ) yield (e, ee) -> vPath.map(GenericDigitalInterconnect.safeCast(_).get())).toMap
 
   override val uniqueIdentifier = "NetworkedDigitalHardware"
 

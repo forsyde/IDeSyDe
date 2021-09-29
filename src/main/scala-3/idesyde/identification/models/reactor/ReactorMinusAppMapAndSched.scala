@@ -6,6 +6,14 @@ import idesyde.identification.models.SchedulableNetworkedDigHW
 import forsyde.io.java.typed.viewers.GenericProcessingModule
 import org.apache.commons.math3.fraction.BigFraction
 import forsyde.io.java.typed.viewers.LinguaFrancaReaction
+import org.jgrapht.graph.SimpleGraph
+import org.jgrapht.graph.DefaultEdge
+import org.jgrapht.alg.connectivity.GabowStrongConnectivityInspector
+
+import collection.JavaConverters.*
+import java.util.stream.Collectors
+import org.jgrapht.alg.connectivity.ConnectivityInspector
+import org.jgrapht.graph.AsSubgraph
 
 final case class ReactorMinusAppMapAndSched(
     val reactorMinus: ReactorMinusApplication,
@@ -30,27 +38,41 @@ final case class ReactorMinusAppMapAndSched(
       )
       .toMap
 
-  lazy val executionSymmetricRelation: Set[(GenericProcessingModule, GenericProcessingModule)] =
+  lazy val executionSymmetricRelationGraph: SimpleGraph[GenericProcessingModule, DefaultEdge] =
+    val graph = SimpleGraph[GenericProcessingModule, DefaultEdge](classOf[DefaultEdge])
+    platform.hardware.processingElems.foreach(p => graph.addVertex(p))
     for (
       p  <- platform.hardware.processingElems;
-      pp <- platform.hardware.processingElems;
+      pp <- platform.hardware.processingElems - p;
       // the subset of the WCET function for each process must be identical
-      if p == pp || wcetFunction.filter((rp, _) => rp._2 == p) == wcetFunction.filter((rp, _) => rp._2 == pp)
-    )
-      yield (p, pp)
+      if reactorMinus.reactions.forall(r => 
+        // either both cannot execute the reaction or they must have identical WCET
+        (!wcetFunction.contains((r, p)) && !wcetFunction.contains((r, pp))) ||
+        wcetFunction.contains((r, p)) == wcetFunction.contains((r, pp))
+      )
+    ) graph.addEdge(p, pp)
+    graph
 
   lazy val executionSymmetricGroups: Set[Set[GenericProcessingModule]] =
-    platform.hardware.processingElems.map(p =>
-      platform.hardware.processingElems.filter(pp => executionSymmetricRelation.contains(p, pp))
-    )
+    ConnectivityInspector(executionSymmetricRelationGraph).connectedSets.stream
+      .map(g => g.asScala.toSet)
+      .collect(Collectors.toSet)
+      .asScala
+      .toSet
 
   lazy val computationallySymmetricGroups: Set[Set[GenericProcessingModule]] =
-    for (
-      exeSet  <- executionSymmetricGroups;
-      topoSet <- platform.topologicallySymmetricGroups;
-      d = exeSet.intersect(topoSet);
-      if d.size > 0
-    ) yield d
+    val intersectGraph = AsSubgraph(executionSymmetricRelationGraph)
+    executionSymmetricRelationGraph.edgeSet.stream.forEach(e =>
+      val src = executionSymmetricRelationGraph.getEdgeSource(e)
+      val dst = executionSymmetricRelationGraph.getEdgeTarget(e)
+      if (!platform.topologySymmetryRelationGraph.containsEdge(src, dst)) 
+        intersectGraph.removeEdge(e)
+    )
+    ConnectivityInspector(intersectGraph).connectedSets.stream
+      .map(g => g.asScala.toSet)
+      .collect(Collectors.toSet)
+      .asScala
+      .toSet
 
   override val uniqueIdentifier = "ReactorMinusAppMapAndSched"
 

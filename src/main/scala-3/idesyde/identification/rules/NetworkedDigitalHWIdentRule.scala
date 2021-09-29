@@ -40,21 +40,9 @@ final case class NetworkedDigitalHWIdentRule()
         .map(e => GenericDigitalInterconnect.safeCast(e).get())
         .toSet
       val platformElements = processingElements ++ communicationElements ++ memoryElements
-      given Set[GenericProcessingModule]    = processingElements
-      given Set[GenericMemoryModule]      = memoryElements
-      given Set[GenericDigitalInterconnect] = communicationElements
-      given Set[AbstractDigitalModule] = platformElements
       val links =
         for (e <- platformElements; ee <- platformElements; if model.hasConnection(e, ee))
           yield (e, ee)
-      val shortestPaths = FloydWarshallShortestPaths(model)
-      val paths = (for (
-        e <- platformElements; ee <- platformElements;
-        // multiple levels of call required since getPath may be null
-        path  = shortestPaths.getPath(e.getViewedVertex, ee.getViewedVertex);
-        vList = if (path != null) path.getVertexList.asScala.toSeq else Seq.empty
-        if !vList.isEmpty && vList.forall(GenericDigitalInterconnect.conforms(_))
-      ) yield (e, ee) -> vList.map(GenericDigitalInterconnect.safeCast(_).get())).toMap
       (
         true,
         Option(
@@ -62,8 +50,7 @@ final case class NetworkedDigitalHWIdentRule()
             processingElems = processingElements,
             communicationElems = communicationElements,
             storageElems = memoryElements,
-            links = links,
-            paths = paths
+            links = links
           )
         )
       )
@@ -80,9 +67,8 @@ object NetworkedDigitalHWIdentRule:
         .asScala
         .exists(v => GenericProcessingModule.conforms(v))
 
-  def hasOnlyValidLinks(model: ForSyDeModel)(using
+  def hasOnlyValidLinks(model: ForSyDeModel,
       procElems: Set[GenericProcessingModule],
-      memElems: Set[GenericMemoryModule],
       connElems: Set[GenericDigitalInterconnect]
   ): Boolean = !procElems.exists(pe =>
     procElems.exists(pe2 => model.hasConnection(pe, pe2) || model.hasConnection(pe2, pe))
@@ -90,11 +76,10 @@ object NetworkedDigitalHWIdentRule:
     connElems.exists(pe2 => model.hasConnection(pe, pe2) || model.hasConnection(pe2, pe))
   )
 
-  def processingElementsHaveMemory(model: ForSyDeModel)(using
+  def processingElementsHaveMemory(model: ForSyDeModel,
       platElems: Set[AbstractDigitalModule],
       procElems: Set[GenericProcessingModule],
-      memElems: Set[GenericMemoryModule],
-      connElems: Set[GenericDigitalInterconnect]
+      memElems: Set[GenericMemoryModule]
   ): Boolean = {
     val platGraph = AsSubgraph(model, platElems.map(_.getViewedVertex).asJava)
     val paths = AllDirectedPaths(platGraph)
@@ -123,11 +108,8 @@ object NetworkedDigitalHWIdentRule:
       .map(e => GenericDigitalInterconnect.safeCast(e).get())
       .toSet
     val platformElements = processingElements ++ communicationElements ++ memoryElements
-    given Set[GenericProcessingModule]    = processingElements
-    given Set[GenericMemoryModule]      = memoryElements
-    given Set[GenericDigitalInterconnect] = communicationElements
-    given Set[AbstractDigitalModule] = platformElements
-    hasOneProcessor(model) && hasOnlyValidLinks(model) && processingElementsHaveMemory(model)
+    hasOneProcessor(model) && hasOnlyValidLinks(model, processingElements, communicationElements) &&
+     processingElementsHaveMemory(model, platformElements, processingElements, memoryElements)
   end canIdentify
 
 end NetworkedDigitalHWIdentRule

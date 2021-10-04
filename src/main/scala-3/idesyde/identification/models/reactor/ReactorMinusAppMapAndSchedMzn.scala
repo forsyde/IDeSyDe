@@ -20,28 +20,29 @@ final case class ReactorMinusAppMapAndSchedMzn(val sourceModel: ReactorMinusAppM
 
   val coveredVertexes = sourceModel.coveredVertexes
 
-  lazy val multiplier = sourceModel.reactorMinus.jobGraph.jobs
-    .map(_.trigger)
-    .map(_.getDenominatorAsLong)
+  val multiplier = 
+    sourceModel.reactorMinus.jobGraph.jobs.map(_.trigger).map(_.getDenominatorAsLong)
     .reduce((d1, d2) => ArithmeticUtils.lcm(d1, d2))
-  lazy val hyperPeriod        = sourceModel.reactorMinus.hyperPeriod
-  lazy val multHyperPeriod    = hyperPeriod.multiply(multiplier).longValue
-  lazy val reactionToJobs     = sourceModel.reactorMinus.jobGraph.jobs.groupBy(_.srcReaction)
-  lazy val reactorsOrdered    = sourceModel.reactorMinus.reactors.toSeq
-  lazy val reactionsOrdered   = sourceModel.reactorMinus.reactions.toSeq
-  lazy val channelsOrdered    = sourceModel.reactorMinus.channels.toSeq
-  lazy val jobsOrdered        = sourceModel.reactorMinus.jobGraph.jobs.toSeq
-  lazy val jobChannelsOrdered = sourceModel.reactorMinus.jobGraph.inChannels.toSeq
-  lazy val platformOrdered    = sourceModel.platform.hardware.platformElements.toSeq
-  lazy val reactionChainsOrdered = sourceModel.reactorMinus.unambigousEndToEndReactions.toSeq
-  lazy val jobChainsOrdered   = sourceModel.reactorMinus.jobGraph.unambigousEndToEndJobs.toSeq
-  lazy val symmetryGroupsOrdered = sourceModel.computationallySymmetricGroups.toSeq
+  val hyperPeriod        = sourceModel.reactorMinus.hyperPeriod
+  val reactionToJobs     = sourceModel.reactorMinus.jobGraph.jobs.groupBy(_.srcReaction)
+  val reactorsOrdered    = sourceModel.reactorMinus.reactors.toSeq
+  val reactionsOrdered   = sourceModel.reactorMinus.reactions.toSeq
+  val channelsOrdered    = sourceModel.reactorMinus.channels.toSeq
+  val jobsOrdered        = sourceModel.reactorMinus.jobGraph.jobs.toSeq
+  val jobChannelsOrdered = sourceModel.reactorMinus.jobGraph.inChannels.toSeq
+  val platformOrdered    = sourceModel.platform.hardware.platformElements.toSeq
+  val reactionChainsOrdered = sourceModel.reactorMinus.unambigousEndToEndReactions.toSeq
+  val jobChainsOrdered   = sourceModel.reactorMinus.jobGraph.unambigousEndToEndJobs.toSeq
+  val symmetryGroupsOrdered = sourceModel.computationallySymmetricGroups.toSeq
 
-  lazy val mznModel = Source.fromResource("minizinc/reactorminus_to_networkedHW.mzn").mkString
+  val mznModel = Source.fromResource("minizinc/reactorminus_to_networkedHW.mzn").mkString
+  // scribe.debug(platformOrdered.toString)
+  // scribe.debug(reactionsOrdered.toString)
+  // scribe.debug(sourceModel.wcetFunction.map((p, t) => p._1.getIdentifier + "-" + p._2.getIdentifier -> t).toString)
 
-  lazy val mznInputs =
+  val mznInputs =
     Map(
-      "hyperPeriod"    -> MiniZincData(multHyperPeriod),
+      "hyperPeriod"    -> MiniZincData(hyperPeriod.multiply(multiplier).getNumeratorAsLong),
       "nReactors"      -> MiniZincData(reactorsOrdered.length),
       "nReactions"     -> MiniZincData(reactionsOrdered.length),
       "nChannels"      -> MiniZincData(channelsOrdered.length),
@@ -117,15 +118,18 @@ final case class ReactorMinusAppMapAndSchedMzn(val sourceModel: ReactorMinusAppM
         jobsOrdered.map(j => reactionsOrdered.indexOf(j.srcReaction) + 1)
       ),
       "jobRelease" -> MiniZincData(
-        jobsOrdered.map(j => j.trigger.multiply(multiplier).longValue)
+        jobsOrdered.map(j => j.trigger.multiply(multiplier).getNumeratorAsLong)
       ),
       "jobDeadline" -> MiniZincData(
-        jobsOrdered.map(j => j.deadline.multiply(multiplier).longValue)
+        jobsOrdered.map(j => j.deadline.multiply(multiplier).getNumeratorAsLong)
       ),
       "reactionDataSize" -> MiniZincData(
-        reactionsOrdered.map(j => {
-          // TODO: fix this properly
-          0
+        reactionsOrdered.map(r => {
+          val sizeFunction = sourceModel.reactorMinus.sizeFunction
+          val containmentFunction = sourceModel.reactorMinus.containmentFunction
+          val a = containmentFunction(r)
+          val rs = sourceModel.reactorMinus.reactions.filter(rr => rr != r && containmentFunction(rr) == a)
+          sizeFunction(a) - rs.map(sizeFunction(_)).sum
         })
       ),
       "reactionWcet" -> MiniZincData(
@@ -138,9 +142,7 @@ final case class ReactorMinusAppMapAndSchedMzn(val sourceModel: ReactorMinusAppM
                     .getOrElse((r, pe), BigFraction.ZERO)
                     .multiply(multiplier)
                     .doubleValue
-                    .ceil
-                    .toLong
-                case _ => 0
+                case _ => 0.0
             })
         })
       ),
@@ -222,11 +224,8 @@ final case class ReactorMinusAppMapAndSchedMzn(val sourceModel: ReactorMinusAppM
                   case c: GenericDigitalInterconnect =>
                     pe match
                       case p: GenericProcessingModule =>
-                        Math.floorDiv(
-                          sourceModel.platform.hardware.bandWidthBitPerSec
-                            .getOrElse((c, p), 0.toLong),
-                          multiplier
-                        )
+                        sourceModel.platform.hardware.bandWidthBitPerSec
+                            .getOrElse((c, p), 0.toLong) * multiplier
                       case _ => 0
                   case _ => 0
               })
@@ -241,12 +240,12 @@ final case class ReactorMinusAppMapAndSchedMzn(val sourceModel: ReactorMinusAppM
               case _ => 0
           })
       ),
-      "firstInChain" -> MiniZincData(
-        reactionChainsOrdered.map((src, _) => reactionsOrdered.indexOf(src) + 1)
-      ),
-      "lastInChain" -> MiniZincData(
-        reactionChainsOrdered.map((_, dst) => reactionsOrdered.indexOf(dst) + 1)
-      ),
+      // "firstInChain" -> MiniZincData(
+      //   reactionChainsOrdered.map((src, _) => reactionsOrdered.indexOf(src) + 1)
+      // ),
+      // "lastInChain" -> MiniZincData(
+      //   reactionChainsOrdered.map((_, dst) => reactionsOrdered.indexOf(dst) + 1)
+      // ),
       "objLambda" -> MiniZincData(0),
       "platformElemsSymmetryGroups" -> MiniZincData(
         platformOrdered.map(p => p match {
@@ -254,6 +253,18 @@ final case class ReactorMinusAppMapAndSchedMzn(val sourceModel: ReactorMinusAppM
             symmetryGroupsOrdered.indexWhere(s => s.contains(pe)) + 1
           case _ => 0
         })
+      ),
+      "jobHigherPriority" -> MiniZincData(
+        jobsOrdered.map(j =>
+          jobsOrdered.map(jj => 
+            sourceModel.reactorMinus.jobGraph.jobPriorityPartialOrder.contains((j, jj))
+            ))
+      ),
+      "jobInterferes" -> MiniZincData(
+        jobsOrdered.map(j =>
+          jobsOrdered.map(jj => 
+            sourceModel.reactorMinus.jobGraph.jobInterferes.contains((j, jj))
+            ))
       )
     )
 

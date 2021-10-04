@@ -52,24 +52,19 @@ final case class ReactorMinusAppDSEIdentRule() extends IdentificationRule:
     val iter = for (
       r  <- reactions;
       pe <- procElems;
-      (provName, provSet) <- ProfiledProcessingModule
+      (provisionName, provisionSet) <- ProfiledProcessingModule
         .safeCast(pe)
         .map(pe => pe.getProvisions.asScala.toMap)
         .orElse(Map.empty);
-      (reqName, reqSet) <- {
-        // scribe.debug(s"trying $pe with ${j.srcReaction.getImplementationPort(model).get}")
-        r
-          .getImplementationPort(model)
+      (requirementName, requirementSet) <- r.getImplementationPort(model)
           .flatMap(ProfiledFunction.safeCast(_))
           .map(f => f.getRequirements.asScala.toMap)
-          .orElse(Map.empty)
-      };
-      if provSet.keySet.equals(reqSet.keySet)
+          .orElse(Map.empty);
+      if provisionSet.keySet.equals(requirementSet.keySet)
     )
-      // TODO: find a numerically stabler way to compute this function
       yield (r, pe) -> BigFraction(
-        provSet.asScala.map(op => op._2 * reqSet.get(op._1)).sum[Long].intValue,
-        pe.getNominalFrequencyInHertz.toInt
+        provisionSet.asScala.map(op => op._2 * requirementSet.get(op._1)).sum[Long],
+        pe.getNominalFrequencyInHertz
       )
     iter.toMap
 

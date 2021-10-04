@@ -67,7 +67,7 @@ final case class ReactorMinusApplication(
     *   all paths between unambigous sinks and sources in the model. that is, those which have
     *   absolutely no incoming edges or outgoing edges.
     */
-  lazy val unambigousEndToEndReactions: Set[(LinguaFrancaReaction, LinguaFrancaReaction)] =
+  lazy val unambigousEndToEndReactions: Map[(LinguaFrancaReaction, LinguaFrancaReaction), Seq[LinguaFrancaReaction]] =
     val reactionOnlyGraph = SimpleDirectedGraph[LinguaFrancaReaction, DefaultEdge](classOf[DefaultEdge])
     for (r <- vertexSet.asScala) reactionOnlyGraph.addVertex(r)
     for (
@@ -92,12 +92,21 @@ final case class ReactorMinusApplication(
     val mutableSet = for (
       src <- sources.asScala;
       dst <- sinks.asScala;
-      if paths.getPath(src, dst) != null
-    ) yield (src, dst)
-    mutableSet.toSet
-    // paths.map(p => p.getVertexList.asScala.toSeq)
-    //   .distinctBy(l => (l.head, l.last))
-    //   .toSet
+      path = paths.getPath(src, dst);
+      if path != null
+    ) yield (src, dst) -> path.getVertexList.asScala.toSeq
+    mutableSet.toMap
+
+  // def collectContributingReactions(remainingReactions: Seq[LinguaFrancaReaction]): Set[LinguaFrancaReaction] =
+  //   remainingReactions match
+  //     case 
+  //   end match
+
+  lazy val chainContributingReactions: Map[(LinguaFrancaReaction, LinguaFrancaReaction), Seq[LinguaFrancaReaction]] =
+    unambigousEndToEndReactions.map((srcdst, reactionPath) => srcdst -> {
+      for (r :: rr :: _ <- reactionPath.sliding(2);
+      if pureReactions.contains(r) && periodicReactions.contains(rr)) yield r
+    }.toSeq)
 
   /** @return the jobs graph computed out of this Reaction- model, in
     * a lazy fashion since the computation can be slightly demanding

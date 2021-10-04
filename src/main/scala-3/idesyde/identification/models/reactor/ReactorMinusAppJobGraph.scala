@@ -22,6 +22,7 @@ import org.jgrapht.alg.shortestpath.DijkstraManyToManyShortestPaths
 import org.jgrapht.alg.connectivity.GabowStrongConnectivityInspector
 import org.jgrapht.alg.shortestpath.FloydWarshallShortestPaths
 import org.jgrapht.traverse.BreadthFirstIterator
+import org.apache.commons.math3.fraction.BigFraction
 
 final case class ReactorMinusAppJobGraph(
     reactorMinus: ReactorMinusApplication
@@ -71,6 +72,8 @@ final case class ReactorMinusAppJobGraph(
 
   val jobs: Set[ReactionJob] = pureJobs.union(periodicJobs)
 
+  for (j <- periodicJobs) if j.trigger.equals(j.deadline) then scribe.error(s"Job ${j.toString} has trigger == deadline! Behavior may be undefined")
+
   val reactionToJobs: Map[LinguaFrancaReaction, Set[ReactionJob]] =
     jobs.groupBy(j => j.srcReaction)
 
@@ -112,7 +115,8 @@ final case class ReactorMinusAppJobGraph(
         .groupBy(_.trigger)
         .toSeq
         .sortBy((t, js) => t)
-        .map((t, js) => js.toSeq.sortWith((j, jj) => reactorMinus.priorityRelation(jj._1, j._1)))
+        .map((t, js) => 
+          js.toSeq.sortWith((j, jj) => reactorMinus.priorityRelation(jj._1, j._1)))
         .sliding(2)
     ) yield ReactionChannel(js.last, jjs.head, a)
   
@@ -164,7 +168,8 @@ final case class ReactorMinusAppJobGraph(
     // val allPathsCalculator = AllDirectedPaths(this)
     // val reactionToJobs = jobs.groupBy(_.srcReaction)
     val graphAlgorithm = CHManyToManyShortestPaths(this)
-    endToEndReactions.map((src, dst) => {
+    endToEndReactions.map((srcdst, reactionPath) => {
+      val (src, dst) = srcdst
       val allSources = reactionToJobs(src)
       val sources = allSources.filter(j =>
         incomingEdgesOf(j)
@@ -192,7 +197,7 @@ final case class ReactorMinusAppJobGraph(
         val lastJobOfPath = p.getVertexList.get(p.getLength - 1)
         p.getWeight + lastJobOfPath.deadline.subtract(lastJobOfPath.trigger).doubleValue
       })
-    }).map(p => (p.getVertexList.get(0), p.getVertexList.get(p.getVertexList.size() - 1)))
+    }).map(p => (p.getVertexList.get(0), p.getVertexList.get(p.getVertexList.size() - 1))).toSet
       
   def getPathsFromReaction(
       reactionChain: Seq[LinguaFrancaReaction],
@@ -206,6 +211,23 @@ final case class ReactorMinusAppJobGraph(
         Set.empty
       case _ => Set.empty
     }
+  
+  lazy val jobPriorityPartialOrder: Set[(ReactionJob, ReactionJob)] = 
+    val inChannelJobs = reactorMinus.jobGraph.inChannels.map(c => (c.src, c.dst))
+    for (
+      j <- reactorMinus.jobGraph.jobs;
+      jj <- reactorMinus.jobGraph.jobs - j;
+      if !inChannelJobs.contains((jj, j)) &&
+        j.deadline.subtract(j.trigger).compareTo(jj.deadline.subtract(jj.trigger)) > 0
+    ) yield (j, jj)
+
+  lazy val jobInterferes: Set[(ReactionJob, ReactionJob)] =
+    for (
+      j <- reactorMinus.jobGraph.jobs;
+      jj <- reactorMinus.jobGraph.jobs - j;
+      // the cross product (deadline(j) - trigger(jj)) * (deadline(jj) - trigger(j)) < 0 means they intersect
+      if j.deadline.subtract(jj.trigger).multiply(jj.deadline.subtract(j.trigger)).compareTo(BigFraction.ZERO) > 0
+    ) yield (j, jj)
 
   val uniqueIdentifier = reactorMinus.uniqueIdentifier + "JobGraph"
 

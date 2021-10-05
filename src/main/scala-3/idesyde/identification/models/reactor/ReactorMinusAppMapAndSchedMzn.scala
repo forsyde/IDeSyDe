@@ -32,13 +32,14 @@ final case class ReactorMinusAppMapAndSchedMzn(val sourceModel: ReactorMinusAppM
   val jobChannelsOrdered = sourceModel.reactorMinus.jobGraph.inChannels.toSeq
   val platformOrdered    = sourceModel.platform.hardware.platformElements.toSeq
   val reactionChainsOrdered = sourceModel.reactorMinus.unambigousEndToEndReactions.toSeq
-  val jobChainsOrdered   = sourceModel.reactorMinus.jobGraph.unambigousEndToEndJobs.toSeq
+  val jobChainsOrdered   = sourceModel.reactorMinus.jobGraph.unambigousEndToEndJobs
   val symmetryGroupsOrdered = sourceModel.computationallySymmetricGroups.toSeq
 
   val mznModel = Source.fromResource("minizinc/reactorminus_to_networkedHW.mzn").mkString
   // scribe.debug(platformOrdered.toString)
   // scribe.debug(reactionsOrdered.toString)
   // scribe.debug(sourceModel.wcetFunction.map((p, t) => p._1.getIdentifier + "-" + p._2.getIdentifier -> t).toString)
+  
 
   val mznInputs =
     Map(

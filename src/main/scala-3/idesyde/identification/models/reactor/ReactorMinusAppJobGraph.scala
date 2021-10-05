@@ -151,7 +151,7 @@ final case class ReactorMinusAppJobGraph(
   for (c <- stateChannels) addEdge(c.src, c.dst, c)
   for (c <- outerStateChannels) addEdge(c.src, c.dst, c)
 
-  lazy val unambigousEndToEndJobs: Set[(ReactionJob, ReactionJob)] =
+  lazy val unambigousEndToEndJobs: Map[(ReactionJob, ReactionJob), Seq[ReactionJob]] =
     for (c <- channels)
       setEdgeWeight(
         c,
@@ -191,13 +191,13 @@ final case class ReactorMinusAppJobGraph(
         dst <- sinks;
         p = Option(graphAlgorithm.getPath(src, dst))
         if p.isDefined
-      ) yield p.get
+      ) yield (src, dst) -> p.get
     }).map(jpaths => {
-      jpaths.maxBy(p => {
+      jpaths.maxBy((_, p) => {
         val lastJobOfPath = p.getVertexList.get(p.getLength - 1)
         p.getWeight + lastJobOfPath.deadline.subtract(lastJobOfPath.trigger).doubleValue
       })
-    }).map(p => (p.getVertexList.get(0), p.getVertexList.get(p.getVertexList.size() - 1))).toSet
+    }).map((srcdst, p) => srcdst -> p.getVertexList.asScala.toSeq).toMap
       
   def getPathsFromReaction(
       reactionChain: Seq[LinguaFrancaReaction],

@@ -22,7 +22,7 @@ final case class ReactorMinusAppMapAndSchedMzn(val sourceModel: ReactorMinusAppM
 
   var multiplier =
     sourceModel.reactorMinus.jobGraph.jobs
-      .map(_.trigger)
+      .flatMap(j => Seq(j.trigger, j.deadline))
       .map(_.getDenominatorAsLong)
       .reduce((d1, d2) => ArithmeticUtils.lcm(d1, d2))
   while (
@@ -40,8 +40,8 @@ final case class ReactorMinusAppMapAndSchedMzn(val sourceModel: ReactorMinusAppM
   lazy val jobsOrdered           = sourceModel.reactorMinus.jobGraph.jobs.toSeq
   lazy val jobChannelsOrdered    = sourceModel.reactorMinus.jobGraph.inChannels.toSeq
   val platformOrdered            = sourceModel.platform.hardware.platformElements.toSeq
-  val reactionChainsOrdered      = sourceModel.reactorMinus.unambigousEndToEndReactions.toSeq
-  lazy val jobChainsOrdered      = sourceModel.reactorMinus.jobGraph.unambigousEndToEndJobs
+  lazy val reactionChainsOrdered = sourceModel.reactorMinus.unambigousEndToEndReactions.toSeq
+  lazy val fixedLatenciesOrdered = sourceModel.reactorMinus.unambigousEndToEndFixedLatencies
   lazy val symmetryGroupsOrdered = sourceModel.computationallySymmetricGroups.toSeq
 
   val mznModel = Source.fromResource("minizinc/reactorminus_to_networkedHW.mzn").mkString
@@ -251,12 +251,22 @@ final case class ReactorMinusAppMapAndSchedMzn(val sourceModel: ReactorMinusAppM
               case _ => 0
           })
       ),
-      // "firstInChain" -> MiniZincData(
-      //   reactionChainsOrdered.map((src, _) => reactionsOrdered.indexOf(src) + 1)
-      // ),
-      // "lastInChain" -> MiniZincData(
-      //   reactionChainsOrdered.map((_, dst) => reactionsOrdered.indexOf(dst) + 1)
-      // ),
+      "reactionChainStart" -> MiniZincData(
+        reactionChainsOrdered.map((srcdst, _) => reactionsOrdered.indexOf(srcdst._1) + 1)
+      ),
+      "reactionChainEnd" -> MiniZincData(
+        reactionChainsOrdered.map((srcdst, _) => reactionsOrdered.indexOf(srcdst._2) + 1)
+      ),
+      "reactionChainFixedLatency" -> MiniZincData(
+        reactionChainsOrdered.map((srcdst, _) =>
+          fixedLatenciesOrdered
+            .getOrElse(srcdst, BigFraction.ZERO)
+            .multiply(multiplier)
+            .doubleValue
+            .ceil
+            .toLong
+        )
+      ),
       "objLambda" -> MiniZincData(0),
       "platformElemsSymmetryGroups" -> MiniZincData(
         platformOrdered.map(p =>

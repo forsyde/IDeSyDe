@@ -114,6 +114,9 @@ final case class ReactorMinusApplication(
     */
   lazy val jobGraph = ReactorMinusAppJobGraph(this)
 
+  lazy val unambigousEndToEndFixedLatencies:  Map[(LinguaFrancaReaction, LinguaFrancaReaction), BigFraction] = 
+    jobGraph.jobLevelFixedLatencies.map((srcdst, w) => (srcdst._1.srcReaction, srcdst._2.srcReaction) -> w)
+
   override val uniqueIdentifier = "ReactorMinusApplication"
 
 end ReactorMinusApplication

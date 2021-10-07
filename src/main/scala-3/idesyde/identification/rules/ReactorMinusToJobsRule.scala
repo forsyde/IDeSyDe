@@ -31,6 +31,7 @@ final case class ReactorMinusToJobsRule() extends IdentificationRule {
     if (reactorMinusOpt.isDefined) {
       val reactorMinus              = reactorMinusOpt.get
       given ReactorMinusApplication = reactorMinus
+      given Ordering[LinguaFrancaReaction] = reactorMinus.reactionsOrdering
       val periodicJobs              = computePeriodicJobs(model)
       val pureJobs                  = computePureJobs(model, periodicJobs)
       val jobs                      = periodicJobs ++ pureJobs
@@ -146,7 +147,8 @@ final case class ReactorMinusToJobsRule() extends IdentificationRule {
       jobs: Set[ReactionJob]
   )(using
       reactorMinus: ReactorMinusApplication,
-      reactorToJobs: Map[LinguaFrancaReactor, Seq[ReactionJob]]
+      reactorToJobs: Map[LinguaFrancaReactor, Seq[ReactionJob]],
+      order: Ordering[LinguaFrancaReaction]
   ): Set[ReactionChannel] =
     for (
       a <- reactorMinus.reactors;
@@ -154,7 +156,7 @@ final case class ReactorMinusToJobsRule() extends IdentificationRule {
         _.trigger
       );
       j :: jj :: _ <- jset
-        .sortWith((j, jj) => reactorMinus.priorityRelation(jj._1, j._1))
+        .sortBy(_.srcReaction)
         .sliding(2);
       if j != jj
     ) yield ReactionChannel(j, jj, a)
@@ -164,7 +166,8 @@ final case class ReactorMinusToJobsRule() extends IdentificationRule {
       jobs: Set[ReactionJob]
   )(using
       reactorMinus: ReactorMinusApplication,
-      reactorToJobs: Map[LinguaFrancaReactor, Seq[ReactionJob]]
+      reactorToJobs: Map[LinguaFrancaReactor, Seq[ReactionJob]],
+      order: Ordering[LinguaFrancaReaction]
   ): Set[ReactionChannel] =
     for (
       a <- reactorMinus.reactors;
@@ -174,7 +177,7 @@ final case class ReactorMinusToJobsRule() extends IdentificationRule {
         .groupBy(_.trigger)
         .toSeq
         .sortBy((t, js) => t)
-        .map((t, js) => js.sortWith((j, jj) => reactorMinus.priorityRelation(jj._1, j._1)))
+        .map((t, js) => js.sortBy(_.srcReaction))
         .sliding(2)
     ) yield ReactionChannel(js.last, jjs.head, a)
 
@@ -184,7 +187,8 @@ final case class ReactorMinusToJobsRule() extends IdentificationRule {
       stateChannels: Set[ReactionChannel]
   )(using
       reactorMinus: ReactorMinusApplication,
-      reactorToJobs: Map[LinguaFrancaReactor, Seq[ReactionJob]]
+      reactorToJobs: Map[LinguaFrancaReactor, Seq[ReactionJob]],
+      order: Ordering[LinguaFrancaReaction]
   ): Set[ReactionChannel] =
     for (
       a <- reactorMinus.reactors;
@@ -192,7 +196,7 @@ final case class ReactorMinusToJobsRule() extends IdentificationRule {
         .groupBy(_.trigger)
         .toSeq
         .sortBy((t, js) => t)
-        .map((t, js) => js.sortWith((j, jj) => reactorMinus.priorityRelation(jj._1, j._1)));
+        .map((t, js) => js.sortBy(_.srcReaction));
       js = jset.head; jjs = jset.last
       // same reactor
       // reactor = reactorMinus.containmentFunction.get(j._1);

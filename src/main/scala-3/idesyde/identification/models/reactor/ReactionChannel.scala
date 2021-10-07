@@ -15,6 +15,9 @@ enum ReactionChannel(val src: ReactionJob, val dst: ReactionJob):
       val reactor: LinguaFrancaReactor
   ) extends ReactionChannel(src, dst)
 
+
+end ReactionChannel
+
 object ReactionChannel:
 
   def apply(src: ReactionJob, dst: ReactionJob, extra: LinguaFrancaSignal | LinguaFrancaReactor): ReactionChannel =

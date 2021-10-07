@@ -55,7 +55,7 @@ final case class ReactorMinusIdentificationRule() extends IdentificationRule {
         reactors = onlyNonHierarchicalReactors(model, reactors),
         channels = channelsAsReactionConnections(model, reactors, reactions, channels),
         containmentFunction = deriveContainmentFunction(model, reactors, reactions),
-        priorityRelation = computePriorityRelation(model, reactors),
+        reactionIndex = computeReactionIndex(model, reactors),
         periodFunction = computePeriodFunction(model, timers, reactions),
         sizeFunction = computeSizesFunction(model, reactors, channels, reactions)
       )
@@ -105,19 +105,14 @@ final case class ReactorMinusIdentificationRule() extends IdentificationRule {
       .toMap
   }
 
-  def computePriorityRelation(
+  def computeReactionIndex(
       model: ForSyDeModel,
       reactors: Set[LinguaFrancaReactor]
-  ): Set[(LinguaFrancaReaction, LinguaFrancaReaction)] =
+  ): Map[LinguaFrancaReaction, Int] =
     reactors
       .flatMap(a => {
-        val orderedReactions = a.getReactionsPort(model).asScala.toArray
-        for (
-          i <- Seq.range(0, orderedReactions.size - 1);
-          j <- Seq.range(i + 1, orderedReactions.size)
-        ) yield (orderedReactions(i), orderedReactions(j))
-      })
-      .toSet
+        a.getReactionsPort(model).asScala.toIndexedSeq.zipWithIndex.map((r, i) => r -> i)
+      }).toMap
 
   def computePeriodFunction(
       model: ForSyDeModel,

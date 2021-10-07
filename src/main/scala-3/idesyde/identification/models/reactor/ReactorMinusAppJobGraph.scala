@@ -24,10 +24,31 @@ import org.jgrapht.alg.shortestpath.FloydWarshallShortestPaths
 import org.jgrapht.traverse.BreadthFirstIterator
 import org.apache.commons.math3.fraction.BigFraction
 import org.apache.commons.math3.util.ArithmeticUtils
+import org.jgrapht.graph.AsWeightedGraph
+import org.jgrapht.alg.interfaces.ShortestPathAlgorithm
+import org.jgrapht.util.VertexToIntegerMapping
+import org.jgrapht.graph.DefaultEdge
+import forsyde.io.java.typed.viewers.LinguaFrancaSignal
+
+// sealed class ReactionJobOrdering(
+//     val reactionsPartialOrder: PartialOrdering[LinguaFrancaReaction],
+//     val longestPathsBetweenJobs: ShortestPathAlgorithm[LinguaFrancaReaction, LinguaFrancaSignal]
+// ) extends Ordering[ReactionJob] {
+
+//   def compare(j: ReactionJob, jj: ReactionJob): Int =
+//     if j.trigger.compareTo(jj.trigger) < 0 then -1
+//     else if
+//     // if !reactionsPartialOrder
+//     //     .lteq(j.srcReaction, jj.srcReaction) && longestPathsBetweenJobs.getPath(j, jj) == null
+//     // then j.deadline.subtract(j.trigger).compareTo(jj.deadline.subtract(jj.trigger))
+//     else 1
+// }
 
 final case class ReactorMinusAppJobGraph(
     reactorMinus: ReactorMinusApplication
-) extends SimpleDirectedWeightedGraph[ReactionJob, ReactionChannel](classOf[ReactionChannel]):
+) extends SimpleDirectedGraph[ReactionJob, ReactionChannel](classOf[ReactionChannel]):
+
+  given Ordering[LinguaFrancaReaction] = reactorMinus.reactionsOrdering
 
   val periodicJobs: Set[ReactionJob] = for (
     r <- reactorMinus.periodicReactions;
@@ -108,7 +129,7 @@ final case class ReactorMinusAppJobGraph(
       );
       if jset.size > 1;
       j :: jj :: _ <- jset.toSeq
-        .sortWith((j, jj) => reactorMinus.priorityRelation(jj._1, j._1))
+        .sortBy(_.srcReaction)
         .sliding(2);
       if j != jj
     ) yield ReactionChannel(j, jj, a)
@@ -122,7 +143,7 @@ final case class ReactorMinusAppJobGraph(
         .groupBy(_.trigger)
         .toSeq
         .sortBy((t, js) => t)
-        .map((t, js) => js.toSeq.sortWith((j, jj) => reactorMinus.priorityRelation(jj._1, j._1)))
+        .map((t, js) => js.toSeq.sortBy(_.srcReaction))
         .sliding(2)
     ) yield ReactionChannel(js.last, jjs.head, a)
 
@@ -135,7 +156,7 @@ final case class ReactorMinusAppJobGraph(
         .groupBy(_.trigger)
         .toSeq
         .sortBy((t, js) => t)
-        .map((t, js) => js.toSeq.sortWith((j, jj) => reactorMinus.priorityRelation(jj._1, j._1)));
+        .map((t, js) => js.toSeq.sortBy(_.srcReaction));
       js = jset.head; jjs = jset.last
       // same reactor
       // reactor = reactorMinus.containmentFunction.get(j._1);
@@ -157,23 +178,42 @@ final case class ReactorMinusAppJobGraph(
   for (c <- stateChannels) addEdge(c.src, c.dst, c)
   for (c <- outerStateChannels) addEdge(c.src, c.dst, c)
 
+  val longestPathsBetweenJobs =
+    val newWeights = (inChannels.map(c =>
+      c -> reactorMinus.hyperPeriod
+        .subtract(c.dst.trigger.subtract(c.src.trigger))
+        .doubleValue
+        .asInstanceOf[java.lang.Double]
+    )
+      ++ outerStateChannels.map(c =>
+        c -> c.dst.trigger
+          .add(reactorMinus.hyperPeriod)
+          .subtract(c.src.trigger)
+          .doubleValue
+          .asInstanceOf[java.lang.Double]
+      )).toMap.asJava
+    FloydWarshallShortestPaths(AsWeightedGraph(this, newWeights))
+
+  def checkJobPathIsReactionpath[LR <: Seq[LinguaFrancaReaction], LJ <: Seq[ReactionJob]](
+      reactions: LR,
+      jobs: LJ
+  ): Boolean =
+    val reactionIter = reactions.iterator
+    val jobIter      = jobs.iterator
+    while (reactionIter.hasNext && jobIter.hasNext) {
+      val r = reactionIter.next
+      var j = jobIter.next
+      while (j.srcReaction == r && jobIter.hasNext) {
+        j = jobIter.next
+      }
+    }
+    !reactionIter.hasNext && !jobIter.hasNext
+
   lazy val jobLevelFixedLatencies: Map[(ReactionJob, ReactionJob), BigFraction] =
-    for (c <- inChannels)
-      setEdgeWeight(
-        c,
-        reactorMinus.hyperPeriod.subtract(c.dst.trigger.subtract(c.src.trigger)).doubleValue
-      )
-    // redefine for outers
-    for (c <- outerStateChannels)
-      setEdgeWeight(
-        c,
-        c.dst.trigger.add(reactorMinus.hyperPeriod).subtract(c.src.trigger).doubleValue
-      )
     // scribe.debug(s"SSC ${GabowStrongConnectivityInspector(this).getCondensation.vertexSet.size}")
     val endToEndReactions = reactorMinus.unambigousEndToEndReactions
     // val allPathsCalculator = AllDirectedPaths(this)
     // val reactionToJobs = jobs.groupBy(_.srcReaction)
-    val graphAlgorithm = FloydWarshallShortestPaths(this)
     endToEndReactions
       .map((srcdst, reactionPath) => {
         val (src, dst) = srcdst
@@ -196,9 +236,11 @@ final case class ReactorMinusAppJobGraph(
         for (
           srcJob <- sources;
           dstJob <- sinks;
-          p = Option(graphAlgorithm.getPath(srcJob, dstJob))
-          if p.isDefined
-        ) yield (srcJob, dstJob) -> p.get
+          pOpt = Option(longestPathsBetweenJobs.getPath(srcJob, dstJob))
+          if pOpt.isDefined;
+          p = pOpt.get;
+          if checkJobPathIsReactionpath(reactionPath.toList, p.getVertexList.asScala.toList)
+        ) yield (srcJob, dstJob) -> p
       })
       .map(jpaths => {
         jpaths.maxBy((_, p) => {
@@ -210,42 +252,26 @@ final case class ReactorMinusAppJobGraph(
       .map((srcdst, p) =>
         // redo the computation between ends, which is enough to get the static latency,
         srcdst ->
-          p.getVertexList.get(p.getVertexList.size - 1).trigger.subtract(p.getVertexList.get(0).trigger)
+          p.getVertexList
+            .get(p.getVertexList.size - 1)
+            .trigger
+            .subtract(p.getVertexList.get(0).trigger)
       )
       .toMap
 
-  def getPathsFromReaction(
-      reactionChain: Seq[LinguaFrancaReaction],
-      explored: Set[ReactionJob] = Set.empty
-  )(using
-      reactionToJobs: Map[LinguaFrancaReaction, Set[ReactionJob]]
-  ): Set[Seq[ReactionJob]] =
-    reactionChain match {
-      case r :: rs =>
-        val jobs = reactionToJobs(r)
-        Set.empty
-      case _ => Set.empty
-    }
+  lazy val jobPrecedenceOrdering: Ordering[ReactionJob] = new Ordering[ReactionJob] {
 
-  lazy val jobPriorityPartialOrder: Set[(ReactionJob, ReactionJob)] =
-    val inChannelJobs = reactorMinus.jobGraph.inChannels.map(c => (c.src, c.dst))
-    for (
-      j  <- reactorMinus.jobGraph.jobs;
-      jj <- reactorMinus.jobGraph.jobs - j;
-      if !inChannelJobs.contains((jj, j)) &&
-        j.deadline.subtract(j.trigger).compareTo(jj.deadline.subtract(jj.trigger)) > 0
-    ) yield (j, jj)
+    def compare(j: ReactionJob, jj: ReactionJob): Int =
+      if j.trigger.compareTo(jj.trigger) == 0 then
+        reactorMinus.reactionsOrdering.compare(j.srcReaction, jj.srcReaction)
+      else j.trigger.compareTo(jj.trigger)
+  }
 
-  lazy val jobInterferes: Set[(ReactionJob, ReactionJob)] =
-    for (
-      j  <- reactorMinus.jobGraph.jobs;
-      jj <- reactorMinus.jobGraph.jobs - j;
-      // the cross product (deadline(j) - trigger(jj)) * (deadline(jj) - trigger(j)) < 0 means they intersect
-      if j.deadline
-        .subtract(jj.trigger)
-        .multiply(jj.deadline.subtract(j.trigger))
-        .compareTo(BigFraction.ZERO) < 0
-    ) yield (j, jj)
+  lazy val jobPriorityOrdering: Ordering[ReactionJob] = new Ordering[ReactionJob] {
+
+    def compare(j: ReactionJob, jj: ReactionJob): Int =
+      reactorMinus.reactionsOrdering.compare(j.srcReaction, jj.srcReaction)
+  }
 
   val uniqueIdentifier = reactorMinus.uniqueIdentifier + "JobGraph"
 

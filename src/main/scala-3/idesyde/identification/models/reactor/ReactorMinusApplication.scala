@@ -14,6 +14,23 @@ import org.jgrapht.graph.DirectedPseudograph
 import org.jgrapht.graph.DefaultDirectedGraph
 import org.jgrapht.alg.shortestpath.DijkstraManyToManyShortestPaths
 import java.util.stream.Collectors
+import org.jgrapht.traverse.BreadthFirstIterator
+
+// sealed class ReactionsPartialOrder(
+//     val containmentFunction: Map[LinguaFrancaReaction, LinguaFrancaReactor],
+//     val reactionIndex: Set[(LinguaFrancaReaction, LinguaFrancaReaction)]
+// ) extends PartialOrdering[LinguaFrancaReaction] {
+
+//   inline def lteq(x: LinguaFrancaReaction, y: LinguaFrancaReaction): Boolean =
+//     containmentFunction(x) == containmentFunction(y) && reactionIndex.contains((x, y))
+
+//   inline def tryCompare(x: LinguaFrancaReaction, y: LinguaFrancaReaction): Option[Int] =
+//     if containmentFunction(x) == containmentFunction(y) then
+//       if reactionIndex.contains((x, y)) then Option(-1)
+//       else if reactionIndex.contains((y, x)) then Option(1)
+//       else Option(0)
+//     else Option.empty
+// }
 
 /** */
 final case class ReactorMinusApplication(
@@ -22,7 +39,7 @@ final case class ReactorMinusApplication(
     val reactors: Set[LinguaFrancaReactor],
     val channels: Map[(LinguaFrancaReaction, LinguaFrancaReaction), LinguaFrancaSignal],
     val containmentFunction: Map[LinguaFrancaReaction, LinguaFrancaReactor],
-    val priorityRelation: Set[(LinguaFrancaReaction, LinguaFrancaReaction)],
+    val reactionIndex: Map[LinguaFrancaReaction, Int],
     val periodFunction: Map[LinguaFrancaReaction, BigFraction],
     val sizeFunction: Map[LinguaFrancaReaction | LinguaFrancaReactor | LinguaFrancaSignal, Long]
 ) extends SimpleDirectedGraph[LinguaFrancaReaction, LinguaFrancaSignal](classOf[LinguaFrancaSignal])
@@ -49,6 +66,47 @@ final case class ReactorMinusApplication(
     for ((_, c) <- channels) yield c.getViewedVertex
   }
 
+  lazy val reactionsOnlyGraph =
+    val g = SimpleDirectedGraph[LinguaFrancaReaction, DefaultEdge](classOf[DefaultEdge])
+    for (r <- vertexSet.asScala) g.addVertex(r)
+    for (
+      r <- vertexSet.asScala; rr <- vertexSet.asScala;
+      if r != rr;
+      if containsEdge(
+        r,
+        rr
+      )
+    ) g.addEdge(r, rr)
+    g
+
+  lazy val reactionsOnlyWithPropagationsGraph =
+    val g = SimpleDirectedGraph[LinguaFrancaReaction, DefaultEdge](classOf[DefaultEdge])
+    for (r <- vertexSet.asScala) g.addVertex(r)
+    for (
+      r <- vertexSet.asScala; rr <- vertexSet.asScala;
+      if r != rr;
+      if containsEdge(
+        r,
+        rr
+      ) || (containmentFunction(r) == containmentFunction(rr) && reactionIndex(r) < reactionIndex(rr))
+    ) g.addEdge(r, rr)
+    g
+  lazy val reactionsOrdering = new Ordering[LinguaFrancaReaction] {
+
+    val reachable: Set[(LinguaFrancaReaction, LinguaFrancaReaction)] =
+      reactionsOnlyWithPropagationsGraph.vertexSet.asScala
+      .filter(v => reactionsOnlyWithPropagationsGraph.incomingEdgesOf(v).isEmpty)
+      .flatMap(src => {
+        BreadthFirstIterator(reactionsOnlyWithPropagationsGraph, src).asScala
+        .filter(v => v != src)
+        .map(dst => (src, dst))
+      }).toSet
+
+    def compare(x: LinguaFrancaReaction, y: LinguaFrancaReaction): Int =
+      if containmentFunction(x) == containmentFunction(y) then reactionIndex(x).compareTo(reactionIndex(y))
+      else if reachable.contains((x, y)) then -1 else 1
+  }
+
   override def dominates(o: DecisionModel) =
     super.dominates(o) && (o match {
       case o: ReactorMinusApplication => dominatesReactorMinus(o)
@@ -67,55 +125,40 @@ final case class ReactorMinusApplication(
     *   all paths between unambigous sinks and sources in the model. that is, those which have
     *   absolutely no incoming edges or outgoing edges.
     */
-  lazy val unambigousEndToEndReactions: Map[(LinguaFrancaReaction, LinguaFrancaReaction), Seq[LinguaFrancaReaction]] =
-    val reactionOnlyGraph = SimpleDirectedGraph[LinguaFrancaReaction, DefaultEdge](classOf[DefaultEdge])
-    for (r <- vertexSet.asScala) reactionOnlyGraph.addVertex(r)
-    for (
-      r <- vertexSet.asScala; rr <- vertexSet.asScala; 
-      if r != rr;
-      if containsEdge(
-        r,
-        rr
-      ) || (containmentFunction(r) == containmentFunction(rr))
-          ) reactionOnlyGraph.addEdge(r, rr)
-    val consensedReactionGraph = GabowStrongConnectivityInspector(reactionOnlyGraph).getCondensation
-    val sources = consensedReactionGraph.vertexSet.stream
+  lazy val unambigousEndToEndReactions
+      : Map[(LinguaFrancaReaction, LinguaFrancaReaction), Seq[LinguaFrancaReaction]] =   
+    val consensedReactionGraph = GabowStrongConnectivityInspector(reactionsOnlyWithPropagationsGraph).getCondensation
+    val sourcesJava = consensedReactionGraph.vertexSet.stream
       .filter(g => consensedReactionGraph.incomingEdgesOf(g).isEmpty)
       .flatMap(g => g.vertexSet.stream)
       .collect(Collectors.toSet)
-    val sinks = consensedReactionGraph.vertexSet.stream
+    val sinksJava = consensedReactionGraph.vertexSet.stream
       .filter(g => consensedReactionGraph.outgoingEdgesOf(g).isEmpty)
       .flatMap(g => g.vertexSet.stream)
       .collect(Collectors.toSet)
-    val paths = DijkstraManyToManyShortestPaths(reactionOnlyGraph)
-      .getManyToManyPaths(sources, sinks)
+    val paths = DijkstraManyToManyShortestPaths(reactionsOnlyWithPropagationsGraph)
+      .getManyToManyPaths(sourcesJava, sinksJava)
+    val sources = sourcesJava.asScala
+    val sinks = sinksJava.asScala
     val mutableSet = for (
-      src <- sources.asScala;
-      dst <- sinks.asScala;
+      src <- sources;
+      dst <- sinks;
       path = paths.getPath(src, dst);
       if path != null
     ) yield (src, dst) -> path.getVertexList.asScala.toSeq
     mutableSet.toMap
 
-  // def collectContributingReactions(remainingReactions: Seq[LinguaFrancaReaction]): Set[LinguaFrancaReaction] =
-  //   remainingReactions match
-  //     case 
-  //   end match
-
-  lazy val chainContributingReactions: Map[(LinguaFrancaReaction, LinguaFrancaReaction), Seq[LinguaFrancaReaction]] =
-    unambigousEndToEndReactions.map((srcdst, reactionPath) => srcdst -> {
-      for (r :: rr :: _ <- reactionPath.sliding(2);
-      if pureReactions.contains(r) && periodicReactions.contains(rr)) yield r
-    }.toSeq)
-
-  /** @return the jobs graph computed out of this Reaction- model, in
-    * a lazy fashion since the computation can be slightly demanding
-    * for bigger grapghs.
+  /** @return
+    *   the jobs graph computed out of this Reaction- model, in a lazy fashion since the computation
+    *   can be slightly demanding for bigger grapghs.
     */
   lazy val jobGraph = ReactorMinusAppJobGraph(this)
 
-  lazy val unambigousEndToEndFixedLatencies:  Map[(LinguaFrancaReaction, LinguaFrancaReaction), BigFraction] = 
-    jobGraph.jobLevelFixedLatencies.map((srcdst, w) => (srcdst._1.srcReaction, srcdst._2.srcReaction) -> w)
+  lazy val unambigousEndToEndFixedLatencies
+      : Map[(LinguaFrancaReaction, LinguaFrancaReaction), BigFraction] =
+    jobGraph.jobLevelFixedLatencies.map((srcdst, w) =>
+      (srcdst._1.srcReaction, srcdst._2.srcReaction) -> w
+    )
 
   override val uniqueIdentifier = "ReactorMinusApplication"
 

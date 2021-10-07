@@ -267,7 +267,7 @@ final case class ReactorMinusAppMapAndSchedMzn(val sourceModel: ReactorMinusAppM
             .toLong
         )
       ),
-      "objLambda" -> MiniZincData(0),
+      "objPercentage" -> MiniZincData(100),
       "platformElemsSymmetryGroups" -> MiniZincData(
         platformOrdered.map(p =>
           p match {
@@ -279,15 +279,14 @@ final case class ReactorMinusAppMapAndSchedMzn(val sourceModel: ReactorMinusAppM
       ),
       "jobHigherPriority" -> MiniZincData(
         jobsOrdered.map(j =>
-          jobsOrdered.map(jj =>
-            sourceModel.reactorMinus.jobGraph.jobPriorityPartialOrder.contains((j, jj))
-          )
+          jobsOrdered.map(jj => {
+            given Ordering[ReactionJob]    = sourceModel.reactorMinus.jobGraph.jobPriorityOrdering
+            j > jj
+          })
         )
       ),
       "jobInterferes" -> MiniZincData(
-        jobsOrdered.map(j =>
-          jobsOrdered.map(jj => sourceModel.reactorMinus.jobGraph.jobInterferes.contains((j, jj)))
-        )
+        jobsOrdered.map(j => jobsOrdered.map(jj => j.interferes(jj)))
       )
     )
 

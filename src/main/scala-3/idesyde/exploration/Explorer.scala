@@ -8,7 +8,7 @@ import java.time.Duration
 
 trait Explorer {
 
-  def explore(decisionModel: DecisionModel)(using ExecutionContext): Future[Option[ForSyDeModel]]
+  def explore(decisionModel: DecisionModel)(using ExecutionContext): LazyList[ExplorationSolution[ForSyDeModel]]
 
   def canExplore(decisionModel: DecisionModel): Boolean
 

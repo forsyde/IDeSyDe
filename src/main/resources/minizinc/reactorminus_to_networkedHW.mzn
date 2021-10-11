@@ -1,21 +1,21 @@
 include "globals.mzn";
 
 % objectives
-int: objLambda;
+int: objPercentage;
 
 % model parameters
 int: hyperPeriod;
 int: nReactors;
 int: nReactions;
 int: nChannels;
-int: nJobs;
-int: nJobChannels;
+% int: nJobs;
+% int: nJobChannels;
 
 set of int: Reactors = 1..nReactors;
 set of int: Reactions = 1..nReactions;
 set of int: Channels = 1..nChannels;
-set of int: Jobs = 1..nJobs;
-set of int: JobChannels = 1..nJobChannels;
+% set of int: Jobs = 1..nJobs;
+% set of int: JobChannels = 1..nJobChannels;
 
 
 % platform elements
@@ -47,6 +47,11 @@ array[Reactors] of int: reactorSize;
 % reactions
 array[Reactions] of Reactors: containingReactor;
 array[Reactions] of int: reactionDataSize;
+array[Reactions] of int: reactionLatestRelease;
+array[Reactions] of int: reactionRelativeDeadline;
+array[Reactions, Reactions] of int: reactionMinimumForwardLatency;
+array[Reactions, Reactions] of bool: reactionPriorityLTEQ; % jobHigherPriority[j, jj] <-> j >> jj <-> j has higher prio than jj
+array[Reactions, Reactions] of bool: reactionInterferes;
 array[Reactions, PlatformElems] of int: reactionWcet;
 array[Reactions, PlatformElems] of int: reactionUtilization;
 array[Reactions, PlatformElems] of bool: reactionCanBeExecuted;
@@ -54,21 +59,7 @@ array[Reactions, PlatformElems] of bool: reactionCanBeExecuted;
 array[Channels] of int: channelSize;
 array[Channels] of Reactions: channelSrc;
 array[Channels] of Reactions: channelDst;
-% jobs 
-array[Jobs] of Reactions: originalReaction;
-array[Jobs] of int: jobRelease;
-array[Jobs] of int: jobDeadline;
-array[Jobs, Jobs] of bool: jobHigherPriority; % jobHigherPriority[j, jj] <-> j >> jj <-> j has higher prio than jj
-array[Jobs, Jobs] of bool: jobInterferes;
-function int: jobDataSize(Jobs: job) = reactionDataSize[containingReactor[job]];
-function float: jobWcet(Jobs: job, PlatformElems: p) = reactionWcet[originalReaction[job], p];
-function int: jobUtilization(Jobs: job, PlatformElems: p) = reactionUtilization[originalReaction[job], p];
-function bool: jobCanBeExecuted(Jobs: job, PlatformElems: p) = reactionCanBeExecuted[originalReaction[job], p];
-%% the masks are defined as follows:
-%%   if a job `srcJob` is the starting point og 
-% job channels
-array[JobChannels] of Jobs: jobChannelSrc;
-array[JobChannels] of Jobs: jobChannelDst;
+
 % for platform
 % array[PlatformElems] of int: roundRobinElemsMinSlice;
 array[PlatformElems] of int: roundRobinElemsMaxSlices;
@@ -79,6 +70,12 @@ array[PlatformElems] of int: memoryMaximumCapacity;
 array[ReactionChains] of Reactions: reactionChainStart;
 array[ReactionChains] of Reactions: reactionChainEnd;
 array[ReactionChains] of int: reactionChainFixedLatency;
+
+% additional sets
+set of int: IndependentReactions = {
+  rr | rr in Reactions where not(exists(r in Reactions) (reactionMinimumForwardLatency[r, rr] >= 0))
+};
+set of int: DependentReactions = {r | r in Reactions where not(r in IndependentReactions)};
 
 % main decision variables
 array[Reactors] of var MemoryElems: reactorMapping;
@@ -92,9 +89,7 @@ constraint forall(j in Reactions, p in ProcessingElems where reactionCanBeExecut
 );
 %% tighten bound of jobStartingTime:
 constraint forall(r in Reactions, p in ProcessingElems) (
-    0 <= reactionResponseTime[r, p] /\ reactionResponseTime[r, p] <= %trace(show(r) ++ ": " ++ show(min(j in Jobs where originalReaction[j] = r) (jobDeadline[j] - jobRelease[j])) ++ "\n")
-    min(j in Jobs where originalReaction[j] = r) (jobDeadline[j] - jobRelease[j])
-  % )
+    0 <= reactionResponseTime[r, p] /\ reactionResponseTime[r, p] <= reactionRelativeDeadline[r] 
 );
 constraint forall(r in Reactions, p in PlatformElems where not(p in ProcessingElems)) (
   reactionResponseTime[r, p] = 0
@@ -163,7 +158,7 @@ constraint forall(r in Reactions, pe in ProcessingElems) (
 );
 %% make the equality and tighten the bounds for reactionDuration
 constraint forall(r in Reactions, pe in ProcessingElems) (
-  0 <= reactionDuration[r, pe] /\ reactionDuration[r, pe] <= min(j in Jobs where originalReaction[j] = r) (jobDeadline[j] - jobRelease[j])
+  0 <= reactionDuration[r, pe] /\ reactionDuration[r, pe] <= reactionRelativeDeadline[r] %min(j in Jobs where originalReaction[j] = r) (jobDeadline[j] - jobRelease[j])
 );
 constraint forall(r in Reactions, p in PlatformElems where not(p in ProcessingElems)) (
   reactionDuration[r, p] = 0 /\
@@ -178,6 +173,10 @@ constraint forall(pe in RoundRobinElems) (
   0 <= roundRobinPeriod[pe]
   /\ roundRobinPeriod[pe] <= roundRobinElemsMaxSlices[pe]
 );
+constraint forall(pe in PlatformElems where not(pe in RoundRobinElems)) (
+  roundRobinPeriod[pe] = 0
+);
+
 
 % objectives
 int: minUtilization = sum(j in Reactions) (
@@ -187,21 +186,20 @@ int: maxUtilization = sum(j in Reactions) (
   max([reactionUtilization[j, p] | p in ProcessingElems])
 );
 var minUtilization..maxUtilization: totalUtilization;
-% int: minLatency = sum(l in ReactionChains) (
-%   min(reactionWcet[lastInChain[l], ..]) + jobRelease[lastInChain[l]] - jobDeadline[firstInChain[l]]
-% );
-% int: maxLatency = sum(l in ReactionChains) (
-%   jobDeadline[lastInChain[l]] - jobRelease[firstInChain[l]] - max(reactionWcet[firstInChain[l], ..])
-% );
-array[ReactionChains] of var int: latencies;
-var int: totalLatencies;
+int: minTotalLatencies = sum(l in ReactionChains) (reactionChainFixedLatency[l]);
+int: maxTotalLatencies = sum(l in ReactionChains) (
+  let {Reactions: lst = reactionChainEnd[l]; Reactions: fst = reactionChainStart[l]} in
+  reactionRelativeDeadline[lst] + reactionLatestRelease[lst]
+);
+array[ReactionChains] of var min(reactionChainFixedLatency)..hyperPeriod: latencies;
+var minTotalLatencies..maxTotalLatencies: totalLatencies;
 %% tighten the bounds
 constraint forall(l in ReactionChains) (
   reactionChainFixedLatency[l] <= latencies[l]
 );
 constraint forall(l in ReactionChains) (
   let {Reactions: lst = reactionChainEnd[l]; Reactions: fst = reactionChainStart[l]} in
-  latencies[l] <= max(j, jj in Jobs where originalReaction[j] = fst /\ originalReaction[jj] = lst) (jobDeadline[jj] - jobRelease[j])
+  latencies[l] <= reactionRelativeDeadline[lst] + reactionLatestRelease[lst]
 );
 
 
@@ -214,7 +212,7 @@ constraint bin_packing_capa(
 );
 constraint forall(r in Reactions, pe in ProcessingElems) (
   if (reactionExecution[r] = pe) then
-    reactionExeDuration[r, pe] = reactionWcet[r, pe] div 55
+    reactionExeDuration[r, pe] = reactionWcet[r, pe]
   else
     reactionExeDuration[r, pe] = 0
   endif
@@ -223,10 +221,9 @@ constraint forall(r in Reactions, pe in ProcessingElems) (
 % constraint forall(r in Reactions, p in ProcessingElems) (
 %   (reactionExecution[r] = p) * reactionWcet[r, p] / 10.0 <= reactionResponseTime[r, p]
 % );
-constraint forall(j in Jobs, p in ProcessingElems) (
-  let {Reactions: r = originalReaction[j]} in
+constraint forall(r in Reactions, p in ProcessingElems) (
   if (reactionExecution[r] = p) then
-    reactionResponseTime[r, p] <= (jobDeadline[j] - jobRelease[j])
+    reactionResponseTime[r, p] <= reactionRelativeDeadline[r]
   else
     reactionResponseTime[r, p] = 0
   endif
@@ -267,76 +264,29 @@ constraint forall(r in Reactions, mem in MemoryElems, pe in ProcessingElems) (
   endif
 );
 
-% time-triggered constraints
-% constraint forall(p in TimeTriggeredElems) (
-%   disjunctive(
-%   [jobStartingTime[j, p] | j in Jobs],
-%   [reactionDuration[j, p] | j in Jobs])
-% );
-%% implied constraintjobTimeSlice
-% constraint cumulative(
-%   [jobStartingTime[j, p] | j in Jobs, p in TimeTriggeredElems], 
-%   [reactionDuration[j, p] | j in Jobs, p in TimeTriggeredElems], 
-%   [1 | j in Jobs, p in ProcessingElems], 
-%   length(TimeTriggeredElems)
-%   );
-%% when to count execution
-% constraint forall(r in Reactions, p in TimeTriggeredElems) (
-%   if (reactionExecution[r] = p) then 
-%     reactionExeDuration[r, p] = reactionWcet[r, p]
-%   else
-%     reactionExeDuration[r, p] = 0
-%   endif
-% );
 
 % fixed-priority constraints
-% constraint forall(j in Jobs, p in FixedPriorityElems) (
-%   let {Reactions: r = originalReaction[j]} in
-%   reactionResponseTime[r, p] <= reactionDuration[r, p] + hyperPeriod * (1 - (reactionExecution[r] = p))
-%    % + sum(jj in Jobs where jobHigherPriority[jj, j] /\ jobInterferes[jj, j] /\ j != jj) (reactionDuration[originalReaction[jj], p])
-% );
-%% with dependencies
-% array[Jobs, PlatformElems] of var float: jobResponseTime;
-% constraint forall(j in Jobs, p in ProcessingElems) (
-%   let {Reactions: r = originalReaction[j]} in
-%   (reactionExecution[r] = p) * reactionWcet[r, p]  <= jobResponseTime[j, p]
-% );
-% constraint forall(j in Jobs, p in ProcessingElems) (
-%   let {Reactions: r = originalReaction[j]} in
-%   jobResponseTime[j, p] <= (jobDeadline[j] - jobRelease[j]) * (reactionExecution[r] = p)
-% );
 constraint forall(j in Reactions, p in FixedPriorityElems) (
   reactionDuration[j, p] = reactionInstDuration[j, p] + reactionDataDuration[j, p] + reactionExeDuration[j, p] + reactionOutDuration[j, p]
 );
-constraint forall(j in Jobs, p in FixedPriorityElems where not(exists(c in JobChannels) (jobChannelDst[c] = j))) (
-  let {Reactions: r = originalReaction[j]} in
+constraint forall(r in IndependentReactions, p in FixedPriorityElems) (
   if (reactionExecution[r] = p) then
-    reactionDuration[r, p] <= reactionResponseTime[r, p]
+    reactionDuration[r, p] + 
+    sum(rr in Reactions where reactionPriorityLTEQ[r, rr] /\ reactionInterferes[rr, r] /\ reactionExecution[rr] = p /\ rr != r) (reactionDuration[rr, p]) 
+    = reactionResponseTime[r, p]
   else
    reactionResponseTime[r, p] = 0
   endif
 );
-constraint forall(c in JobChannels, pp in FixedPriorityElems, p in ProcessingElems) (
-  let {
-    Jobs: j = jobChannelSrc[c]; 
-    Jobs: jj = jobChannelDst[c]; 
-    Reactions: r = originalReaction[j]; 
-    Reactions: rr = originalReaction[jj]
-  } in
-  % if (reactionExecution[rr] = pp) then
+constraint forall(r in Reactions, rr in Reactions, pp in FixedPriorityElems, p in ProcessingElems where reactionMinimumForwardLatency[r, rr] >= 0 /\ r != rr) (
   if (reactionExecution[rr] = pp /\ reactionExecution[r] = p) then
-  reactionResponseTime[rr, pp] + (jobRelease[jj] - jobRelease[j])  >= reactionDuration[rr, pp] + reactionResponseTime[r, p]
-  + sum(jjj in Jobs where jobHigherPriority[jjj, jj] /\ jobInterferes[jjj, jj] /\ reactionExecution[originalReaction[jjj]] = pp /\ jjj != jj /\ jjj != j) 
-      (reactionDuration[originalReaction[jjj], pp])
+  reactionResponseTime[rr, pp] + reactionMinimumForwardLatency[r, rr] >= reactionDuration[rr, pp] + reactionResponseTime[r, p]
+  + sum(rrr in Reactions where reactionPriorityLTEQ[rr, rrr] /\ reactionInterferes[rrr, rr] /\ reactionExecution[rrr] = pp /\ rrr != rr /\ rrr != r) 
+      (reactionDuration[rrr, pp])
   endif
 );
-% constraint forall(j in Jobs, p in ProcessingElems) (
-%   let {Reactions: r = originalReaction[j]} in
-%   jobResponseTime[j, p] <= reactionResponseTime[r, p]
-% );
 
 % round-robin constraints
-% round-robin period
 
 %% minimum time slice allocation
 constraint forall(r in Reactions, p in RoundRobinElems) (
@@ -351,7 +301,7 @@ constraint forall(p in RoundRobinElems) (
 );
 constraint forall(r in Reactions, p in RoundRobinElems) (
   if (reactionExecution[r] = p) then
-    reactionDuration[r, p] * reactionRRSlices[r, p] >= 
+    reactionDuration[r, p] * reactionRRSlices[r, p] = 
     roundRobinElemsMaxSlices[p] * (reactionInstDuration[r, p] + reactionDataDuration[r, p] + reactionExeDuration[r, p] + reactionOutDuration[r, p])
   else
     reactionDuration[r, p] = 0
@@ -359,55 +309,42 @@ constraint forall(r in Reactions, p in RoundRobinElems) (
 );
 
 %% with dependencies
-constraint forall(j in Jobs, p in RoundRobinElems where not(exists(c in JobChannels) (jobChannelDst[c] = j))) (
-  let {Reactions: r = originalReaction[j]} in
+constraint forall(r in IndependentReactions, p in RoundRobinElems) (
   if (reactionExecution[r] = p) then
-    reactionDuration[r, p] <= reactionResponseTime[r, p]
+    reactionDuration[r, p] = reactionResponseTime[r, p]
   else 
     reactionResponseTime[r, p] = 0
   endif
 );
-constraint forall(c in JobChannels, pp in RoundRobinElems, p in ProcessingElems) (
-  let {
-    Jobs: j = jobChannelSrc[c]; 
-    Jobs: jj = jobChannelDst[c]; 
-    Reactions: r = originalReaction[j]; 
-    Reactions: rr = originalReaction[jj]
-  } in
-  % if (reactionExecution[rr] = pp) then
+constraint forall(r in Reactions, rr in Reactions, pp in RoundRobinElems, p in ProcessingElems where reactionMinimumForwardLatency[r, rr] >= 0 /\ r != rr) (
   if (reactionExecution[rr] = pp /\ reactionExecution[r] = p) then
-    reactionResponseTime[rr, pp] + (jobRelease[jj] - jobRelease[j]) >= reactionDuration[rr, pp] + reactionResponseTime[r, p]
+    reactionResponseTime[rr, pp] + reactionMinimumForwardLatency[r, rr] >= reactionDuration[rr, pp] + reactionResponseTime[r, p]
   endif
 );
 
-
-% precedence constraints
-% set of int: JobPrecedenceChannels = JobPureChannels union JobInnerStateChannels;
-% constraint forall(c in JobChannels, j, jj in Jobs, p, pp in ProcessingElems where jobChannelSrc[c] = j /\ jobChannelDst[c] = jj) (
-%   let {Reactions: r = originalReaction[j], Reactions: rr = originalReaction[jj]} in
-%   reactionResponseTime[rr, pp] >= (reactionDuration[rr, pp] + reactionResponseTime[r, p]) - (jobRelease[jj] - jobRelease[j])
-% );
 
 % objectives
 constraint totalUtilization = sum(p in ProcessingElems, r in Reactions where reactionExecution[r] = p) (reactionUtilization[r, p]);
 
 constraint forall(l in ReactionChains, p, pp in ProcessingElems) (
   let {Reactions: lst = reactionChainEnd[l]; Reactions: fst = reactionChainStart[l]} in
-  latencies[l] >= reactionResponseTime[lst, p] - (reactionResponseTime[fst, pp] - reactionDuration[fst, pp]) + reactionChainFixedLatency[l]
+  if (reactionExecution[lst] = p /\ reactionExecution[fst] = pp) then
+  latencies[l] = reactionResponseTime[lst, p] - (reactionResponseTime[fst, pp] - reactionDuration[fst, pp]) + reactionChainFixedLatency[l]
+  endif
 );
 constraint totalLatencies = sum(l in ReactionChains) (latencies[l]);
 
 % symmetry breaking
-% constraint symmetry_breaking_constraint(forall(p, pp in ProcessingElems where platformElemsSymmetryGroups[p] > 0 /\ platformElemsSymmetryGroups[pp] > 0 /\ platformElemsSymmetryGroups[p] = platformElemsSymmetryGroups[pp] /\ p < pp) (
-%   sum(r in Reactions where reactionExecution[r] = p) (reactionUtilization[r, p]) >=
-%   sum(r in Reactions where reactionExecution[r] = pp) (reactionUtilization[r, pp])
-% ));
+constraint symmetry_breaking_constraint(forall(p, pp in ProcessingElems where platformElemsSymmetryGroups[p] > 0 /\ platformElemsSymmetryGroups[pp] > 0 /\ platformElemsSymmetryGroups[p] = platformElemsSymmetryGroups[pp] /\ p < pp) (
+  sum(r in Reactions where reactionExecution[r] = p) (reactionUtilization[r, p]) >=
+  sum(r in Reactions where reactionExecution[r] = pp) (reactionUtilization[r, pp])
+));
 
-% constraint symmetry_breaking_constraint(forall(p, pp in ProcessingElems where platformElemsSymmetryGroups[p] > 0 /\ platformElemsSymmetryGroups[pp] > 0 /\ platformElemsSymmetryGroups[p] = platformElemsSymmetryGroups[pp] /\ p < pp) (
-%   sum(r in Reactions where reactionExecution[r] = p) (reactionUtilization[r, p]) =
-%   sum(r in Reactions where reactionExecution[r] = pp) (reactionUtilization[r, pp]) ->
-%   count(r in Reactions) (reactionExecution[r] = p) >= count(r in Reactions) (reactionExecution[r] = pp)
-% ));
+constraint symmetry_breaking_constraint(forall(p, pp in ProcessingElems where platformElemsSymmetryGroups[p] > 0 /\ platformElemsSymmetryGroups[pp] > 0 /\ platformElemsSymmetryGroups[p] = platformElemsSymmetryGroups[pp] /\ p < pp) (
+  sum(r in Reactions where reactionExecution[r] = p) (reactionUtilization[r, p]) =
+  sum(r in Reactions where reactionExecution[r] = pp) (reactionUtilization[r, pp]) ->
+  count(r in Reactions) (reactionExecution[r] = p) >= count(r in Reactions) (reactionExecution[r] = pp)
+));
 
 solve
   :: warm_start(reactionExecution, [arg_min(p in ProcessingElems where reactionCanBeExecuted[r, p]) (reactionWcet[r, p]) | r in Reactions])
@@ -416,19 +353,20 @@ solve
   % :: int_search(roundRobinPeriod, first_fail, indomain_min)
   :: int_search(reactionExecution, first_fail, indomain_min)
   :: int_search(reactionUtilization, first_fail, indomain_min)
+  :: int_search(latencies, first_fail, indomain_min)
   :: restart_luby(length(Reactions) * length(ProcessingElems))
-  minimize totalUtilization ; %+ objLambda * totalLatencies;
+  minimize 100 * totalUtilization * minTotalLatencies + objPercentage * totalLatencies * minUtilization;
 
-output [
-  "reactorMapping = ", show(reactorMapping), "\n", 
-  "channelMapping = ", show(channelMapping), "\n", 
-  "reactionExecution = ", show(reactionExecution), "\n", 
-  "reactionResponseTime = ", show2d(reactionResponseTime), "\n", 
-  "reactionRRSlices = ", show2d(reactionRRSlices), "\n", 
-  "reactionDuration = ", show2d(reactionDuration), "\n", 
-  "reactionExeDuration = ", show2d(reactionExeDuration), "\n", 
-  "reactionInstDuration = ", show2d(reactionInstDuration), "\n", 
-  "reactionDataDuration = ", show2d(reactionDataDuration), "\n", 
-  "reactionOutDuration = ", show2d(reactionOutDuration), "\n", 
-  "totalUtilization = ", show(totalUtilization), "\n",
-  "latencies = ", show(latencies)];
+% output [
+%   "reactorMapping = ", show(reactorMapping), "\n", 
+%   "channelMapping = ", show(channelMapping), "\n", 
+%   "reactionExecution = ", show(reactionExecution), "\n", 
+%   "reactionResponseTime = ", show2d(reactionResponseTime), "\n", 
+%   "reactionRRSlices = ", show2d(reactionRRSlices), "\n", 
+%   "reactionDuration = ", show2d(reactionDuration), "\n", 
+%   "reactionExeDuration = ", show2d(reactionExeDuration), "\n", 
+%   "reactionInstDuration = ", show2d(reactionInstDuration), "\n", 
+%   "reactionDataDuration = ", show2d(reactionDataDuration), "\n", 
+%   "reactionOutDuration = ", show2d(reactionOutDuration), "\n", 
+%   "totalUtilization = ", show(totalUtilization), "\n",
+%   "latencies = ", show(latencies)];

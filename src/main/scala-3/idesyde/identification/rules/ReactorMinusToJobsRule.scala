@@ -31,7 +31,7 @@ final case class ReactorMinusToJobsRule() extends IdentificationRule {
     if (reactorMinusOpt.isDefined) {
       val reactorMinus              = reactorMinusOpt.get
       given ReactorMinusApplication = reactorMinus
-      given Ordering[LinguaFrancaReaction] = reactorMinus.reactionsOrdering
+      given Ordering[LinguaFrancaReaction] = reactorMinus.reactionsPriorityOrdering
       val periodicJobs              = computePeriodicJobs(model)
       val pureJobs                  = computePureJobs(model, periodicJobs)
       val jobs                      = periodicJobs ++ pureJobs

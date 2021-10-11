@@ -14,6 +14,7 @@ import forsyde.io.java.typed.viewers.GenericDigitalStorage
 import org.apache.commons.math3.fraction.BigFraction
 import forsyde.io.java.typed.viewers.RoundRobinScheduler
 import forsyde.io.java.typed.viewers.GenericMemoryModule
+import forsyde.io.java.typed.viewers.LinguaFrancaReaction
 
 final case class ReactorMinusAppMapAndSchedMzn(val sourceModel: ReactorMinusAppMapAndSched)
     extends MiniZincDecisionModel:
@@ -51,12 +52,12 @@ final case class ReactorMinusAppMapAndSchedMzn(val sourceModel: ReactorMinusAppM
 
   val mznInputs =
     Map(
-      "hyperPeriod"     -> MiniZincData(hyperPeriod.multiply(multiplier).getNumeratorAsLong),
-      "nReactors"       -> MiniZincData(reactorsOrdered.length),
-      "nReactions"      -> MiniZincData(reactionsOrdered.length),
-      "nChannels"       -> MiniZincData(channelsOrdered.length),
-      "nJobs"           -> MiniZincData(jobsOrdered.length),
-      "nJobChannels"    -> MiniZincData(jobChannelsOrdered.length),
+      "hyperPeriod" -> MiniZincData(hyperPeriod.multiply(multiplier).getNumeratorAsLong),
+      "nReactors"   -> MiniZincData(reactorsOrdered.length),
+      "nReactions"  -> MiniZincData(reactionsOrdered.length),
+      "nChannels"   -> MiniZincData(channelsOrdered.length),
+      // "nJobs"           -> MiniZincData(jobsOrdered.length),
+      // "nJobChannels"    -> MiniZincData(jobChannelsOrdered.length),
       "nPlatformElems"  -> MiniZincData(platformOrdered.length),
       "nReactionChains" -> MiniZincData(reactionChainsOrdered.length),
       "isFixedPriorityElem" -> MiniZincData(platformOrdered.map(p => {
@@ -123,15 +124,15 @@ final case class ReactorMinusAppMapAndSchedMzn(val sourceModel: ReactorMinusAppM
       "channelDst" -> MiniZincData(
         channelsOrdered.map((rr, c) => reactionsOrdered.indexOf(rr._2) + 1)
       ),
-      "originalReaction" -> MiniZincData(
-        jobsOrdered.map(j => reactionsOrdered.indexOf(j.srcReaction) + 1)
-      ),
-      "jobRelease" -> MiniZincData(
-        jobsOrdered.map(j => j.trigger.multiply(multiplier).getNumeratorAsLong)
-      ),
-      "jobDeadline" -> MiniZincData(
-        jobsOrdered.map(j => j.deadline.multiply(multiplier).getNumeratorAsLong)
-      ),
+      // "originalReaction" -> MiniZincData(
+      //   jobsOrdered.map(j => reactionsOrdered.indexOf(j.srcReaction) + 1)
+      // ),
+      // "jobRelease" -> MiniZincData(
+      //   jobsOrdered.map(j => j.trigger.multiply(multiplier).getNumeratorAsLong)
+      // ),
+      // "jobDeadline" -> MiniZincData(
+      //   jobsOrdered.map(j => j.deadline.multiply(multiplier).getNumeratorAsLong)
+      // ),
       "reactionDataSize" -> MiniZincData(
         reactionsOrdered.map(r => {
           val sizeFunction        = sourceModel.reactorMinus.sizeFunction
@@ -140,6 +141,42 @@ final case class ReactorMinusAppMapAndSchedMzn(val sourceModel: ReactorMinusAppM
           val rs =
             sourceModel.reactorMinus.reactions.filter(rr => rr != r && containmentFunction(rr) == a)
           sizeFunction(a) - rs.map(sizeFunction(_)).sum
+        })
+      ),
+      "reactionLatestRelease" -> MiniZincData(
+        reactionsOrdered
+          .map(r => {
+            reactionToJobs(r).map(j => j.trigger.multiply(multiplier).getNumeratorAsLong).max
+          })
+      ),
+      "reactionRelativeDeadline" -> MiniZincData(
+        reactionsOrdered
+          .map(r => {
+            reactionToJobs(r).map(j =>
+              j.deadline.subtract(j.trigger).multiply(multiplier).getNumeratorAsLong
+            ).min
+          })
+      ),
+      "reactionMinimumForwardLatency" -> MiniZincData(
+        reactionsOrdered.map(r => {
+          reactionsOrdered.map(rr => {
+            // given reactionsPriorityOrdering: Ordering[LinguaFrancaReaction] =
+            //   sourceModel.reactorMinus.reactionsPriorityOrdering
+            if r != rr && (sourceModel.reactorMinus.containsEdge(r, rr) || sourceModel.reactorMinus
+                .containmentFunction(r) == sourceModel.reactorMinus.containmentFunction(rr))
+            then
+            // if reactionsPriorityOrdering.compare(r, rr) > 0 then
+              reactionToJobs(r)
+                .flatMap(j => {
+                  reactionToJobs(rr)
+                    .filter(jj => sourceModel.reactorMinus.jobGraph.containsEdge(j, jj))
+                    .map(jj => {
+                      jj.trigger.subtract(j.trigger).multiply(multiplier).getNumeratorAsLong
+                    })
+                })
+                .min
+            else -1
+          })
         })
       ),
       "reactionWcet" -> MiniZincData(
@@ -184,12 +221,32 @@ final case class ReactorMinusAppMapAndSchedMzn(val sourceModel: ReactorMinusAppM
             })
         })
       ),
-      "jobChannelSrc" -> MiniZincData(
-        jobChannelsOrdered.map(c => jobsOrdered.indexOf(c.src) + 1)
+      "reactionPriorityLTEQ" -> MiniZincData(
+        reactionsOrdered.map(r =>
+          reactionsOrdered.map(rr => {
+            given reactionOrdering: Ordering[LinguaFrancaReaction] =
+              sourceModel.reactorMinus.reactionsPriorityOrdering
+            reactionOrdering.compare(r, rr) <= 0
+          })
+        )
       ),
-      "jobChannelDst" -> MiniZincData(
-        jobChannelsOrdered.map(c => jobsOrdered.indexOf(c.dst) + 1)
+      "reactionInterferes" -> MiniZincData(
+        reactionsOrdered.map(r =>
+          reactionsOrdered.map(rr => {
+            reactionToJobs(r).exists(j => {
+              reactionToJobs(rr).exists(jj => {
+                jj.interferes(j)
+              })
+            })
+          })
+        )
       ),
+      // "jobChannelSrc" -> MiniZincData(
+      //   jobChannelsOrdered.map(c => jobsOrdered.indexOf(c.src) + 1)
+      // ),
+      // "jobChannelDst" -> MiniZincData(
+      //   jobChannelsOrdered.map(c => jobsOrdered.indexOf(c.dst) + 1)
+      // ),
       // "roundRobinElemsMinSlice" -> MiniZincData(
       //   platformOrdered
       //     .map(p => {
@@ -276,17 +333,6 @@ final case class ReactorMinusAppMapAndSchedMzn(val sourceModel: ReactorMinusAppM
             case _ => 0
           }
         )
-      ),
-      "jobHigherPriority" -> MiniZincData(
-        jobsOrdered.map(j =>
-          jobsOrdered.map(jj => {
-            given Ordering[ReactionJob]    = sourceModel.reactorMinus.jobGraph.jobPriorityOrdering
-            j > jj
-          })
-        )
-      ),
-      "jobInterferes" -> MiniZincData(
-        jobsOrdered.map(j => jobsOrdered.map(jj => j.interferes(jj)))
       )
     )
 

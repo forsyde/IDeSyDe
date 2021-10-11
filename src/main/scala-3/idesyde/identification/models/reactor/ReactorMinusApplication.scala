@@ -91,20 +91,29 @@ final case class ReactorMinusApplication(
       ) || (containmentFunction(r) == containmentFunction(rr) && reactionIndex(r) < reactionIndex(rr))
     ) g.addEdge(r, rr)
     g
-  lazy val reactionsOrdering = new Ordering[LinguaFrancaReaction] {
+  
+  lazy val reactionsReachability: Set[(LinguaFrancaReaction, LinguaFrancaReaction)] =
+    reactionsOnlyWithPropagationsGraph.vertexSet.asScala
+    .filter(v => reactionsOnlyWithPropagationsGraph.incomingEdgesOf(v).isEmpty)
+    .flatMap(src => {
+      BreadthFirstIterator(reactionsOnlyWithPropagationsGraph, src).asScala
+      .filter(v => v != src)
+      .map(dst => (src, dst))
+    }).toSet
 
-    val reachable: Set[(LinguaFrancaReaction, LinguaFrancaReaction)] =
-      reactionsOnlyWithPropagationsGraph.vertexSet.asScala
-      .filter(v => reactionsOnlyWithPropagationsGraph.incomingEdgesOf(v).isEmpty)
-      .flatMap(src => {
-        BreadthFirstIterator(reactionsOnlyWithPropagationsGraph, src).asScala
-        .filter(v => v != src)
-        .map(dst => (src, dst))
-      }).toSet
+    /** This ordering orders the reactions in the model according to
+      * reactor containment and if x > y, then x has _higher_ priority
+      * than y, and should always have execution precedence/priority.
+      */
+  lazy val reactionsPriorityOrdering = new Ordering[LinguaFrancaReaction] {
 
     def compare(x: LinguaFrancaReaction, y: LinguaFrancaReaction): Int =
-      if containmentFunction(x) == containmentFunction(y) then reactionIndex(x).compareTo(reactionIndex(y))
-      else if reachable.contains((x, y)) then -1 else 1
+      if containmentFunction(x) == containmentFunction(y) then reactionIndex(y).compareTo(reactionIndex(x))
+      else if reactionsReachability.contains((x, y)) then 1 
+      else if reactionsReachability.contains((y, x)) then -1 
+      else 0
+      // it is reversed because the smaller period takes precedence
+      // periodFunction(y).compareTo(periodFunction(x))
   }
 
   override def dominates(o: DecisionModel) =
@@ -150,7 +159,7 @@ final case class ReactorMinusApplication(
 
   /** @return
     *   the jobs graph computed out of this Reaction- model, in a lazy fashion since the computation
-    *   can be slightly demanding for bigger grapghs.
+    *   can be slightly demanding for bigger graphs.
     */
   lazy val jobGraph = ReactorMinusAppJobGraph(this)
 

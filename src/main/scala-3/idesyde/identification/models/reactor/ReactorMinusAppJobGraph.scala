@@ -48,7 +48,7 @@ final case class ReactorMinusAppJobGraph(
     reactorMinus: ReactorMinusApplication
 ) extends SimpleDirectedGraph[ReactionJob, ReactionChannel](classOf[ReactionChannel]):
 
-  given Ordering[LinguaFrancaReaction] = reactorMinus.reactionsOrdering
+  given Ordering[LinguaFrancaReaction] = reactorMinus.reactionsPriorityOrdering
 
   val periodicJobs: Set[ReactionJob] = for (
     r <- reactorMinus.periodicReactions;
@@ -178,6 +178,12 @@ final case class ReactorMinusAppJobGraph(
   for (c <- stateChannels) addEdge(c.src, c.dst, c)
   for (c <- outerStateChannels) addEdge(c.src, c.dst, c)
 
+  // lazy val jobsOnlyGraph = 
+  //   val g = SimpleDirectedGraph[ReactionJob, DefaultEdge](classOf[DefaultEdge])
+  //   for (j <- jobs) g.addVertex(j)
+  //   for (c <- channels) g.addEdge(c.src, c.dst)
+  //   g
+
   val longestPathsBetweenJobs =
     val newWeights = (inChannels.map(c =>
       c -> reactorMinus.hyperPeriod
@@ -263,14 +269,14 @@ final case class ReactorMinusAppJobGraph(
 
     def compare(j: ReactionJob, jj: ReactionJob): Int =
       if j.trigger.compareTo(jj.trigger) == 0 then
-        reactorMinus.reactionsOrdering.compare(j.srcReaction, jj.srcReaction)
+        reactorMinus.reactionsPriorityOrdering.compare(j.srcReaction, jj.srcReaction)
       else j.trigger.compareTo(jj.trigger)
   }
 
   lazy val jobPriorityOrdering: Ordering[ReactionJob] = new Ordering[ReactionJob] {
 
     def compare(j: ReactionJob, jj: ReactionJob): Int =
-      reactorMinus.reactionsOrdering.compare(j.srcReaction, jj.srcReaction)
+      reactorMinus.reactionsPriorityOrdering.compare(j.srcReaction, jj.srcReaction)
   }
 
   val uniqueIdentifier = reactorMinus.uniqueIdentifier + "JobGraph"

@@ -19,12 +19,13 @@ trait SimpleMiniZincCPExplorer extends Explorer:
 
   def canExplore(decisionModel: DecisionModel): Boolean =
     decisionModel match
-      case m: MiniZincDecisionModel => "minizinc".! == 1
+      // Just discard the minizinc output
+      case m: MiniZincDecisionModel => "minizinc".!(ProcessLogger(out => ())) == 1
       case _                        => false
 
   def explorationSolve(
       decisionModel: DecisionModel,
-      minizincSolverName: String = "chuffed",
+      minizincSolverName: String = "gecode",
       tempModelFileName: String = "idesyde-minizinc-model.mzn",
       tempDataFileName: String = "idesyde-minizinc-data.json"
   )(using ExecutionContext): LazyList[String] =
@@ -51,20 +52,17 @@ trait SimpleMiniZincCPExplorer extends Explorer:
         dataJson.writeBytesTo(dataOutStream, 2, false)
         dataOutStream.close
         // initiate solution procedure
-        s"minizinc --solver ${minizincSolverName} -a ${tempModelFileName} ${tempDataFileName}"
-          .lazyLines
+        s"minizinc --solver ${minizincSolverName} -a ${tempModelFileName} ${tempDataFileName}".lazyLines
           .filterNot(l => l.startsWith("%"))
           // .map(l => mutable.StringBuilder(l))
-          .scanLeft("")((b1, b2) => 
+          .scanLeft("")((b1, b2) =>
             // b1.head.addString(b2)
-            if (b1.endsWith("----------")) then
-              b2
-              // b1 ++ List.empty
-            else
-              b1 ++ b2
-            )
+            if (b1.endsWith("----------")) then b2
+            // b1 ++ List.empty
+            else b1 ++ b2
+          )
           // .map(sb => sb.toString)
           .filter(s => s.endsWith("----------"))
       case _ => LazyList.empty
 
-    // def 
+// def

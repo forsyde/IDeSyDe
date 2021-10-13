@@ -15,7 +15,7 @@ final case class OrToolsCPExplorer() extends Explorer:
   def explore(decisionModel: DecisionModel)(using
       ExecutionContext
   ) =
-    Future(Option(ForSyDeModel()))
+    LazyList.empty
 
   def estimateTimeUntilFeasibility(decisionModel: DecisionModel): Duration =
     decisionModel match

@@ -11,6 +11,9 @@ int: nChannels;
 % int: nJobs;
 % int: nJobChannels;
 
+% aux model parameters
+int: maxReactionInterferences;
+
 set of int: Reactors = 1..nReactors;
 set of int: Reactions = 1..nReactions;
 set of int: Channels = 1..nChannels;
@@ -51,7 +54,8 @@ array[Reactions] of int: reactionLatestRelease;
 array[Reactions] of int: reactionRelativeDeadline;
 array[Reactions, Reactions] of int: reactionMinimumForwardLatency;
 array[Reactions, Reactions] of bool: reactionPriorityLTEQ; % jobHigherPriority[j, jj] <-> j >> jj <-> j has higher prio than jj
-array[Reactions, Reactions] of bool: reactionInterferes;
+array[Reactions, Reactions] of int: reactionMaxNumberInterferences;
+array[Reactions, Reactions, 1..maxReactionInterferences] of int: reactionInterferencesStart;
 array[Reactions, PlatformElems] of int: reactionWcet;
 array[Reactions, PlatformElems] of int: reactionUtilization;
 array[Reactions, PlatformElems] of bool: reactionCanBeExecuted;
@@ -110,7 +114,8 @@ array[Reactions, PlatformElems] of var 0..hyperPeriod: reactionDataDuration;
 array[Reactions, PlatformElems] of var 0..hyperPeriod: reactionExeDuration;
 array[Reactions, PlatformElems] of var 0..hyperPeriod: reactionOutDuration;
 array[Reactions, PlatformElems] of var 0..hyperPeriod: reactionDuration;
-array[PlatformElems] of var 0..max(roundRobinElemsMaxSlices): roundRobinPeriod;
+array[Reactions, Reactions] of var 0..maxReactionInterferences: reactionInterferences;
+% array[PlatformElems] of var 0..max(roundRobinElemsMaxSlices): roundRobinPeriod;
 %% tighten the bounds for reactionInstDuration
 %% this line is lengthy, but one must remember that platformPaths starts from 1 until the length of the path.
 %% So this computation takes into account only CEs between the ME and the PE
@@ -169,12 +174,17 @@ constraint forall(r in Reactions, p in PlatformElems where not(p in ProcessingEl
 );
 
 %% tighten the bounds for roundRobinPeriod
-constraint forall(pe in RoundRobinElems) (
-  0 <= roundRobinPeriod[pe]
-  /\ roundRobinPeriod[pe] <= roundRobinElemsMaxSlices[pe]
-);
-constraint forall(pe in PlatformElems where not(pe in RoundRobinElems)) (
-  roundRobinPeriod[pe] = 0
+% constraint forall(pe in RoundRobinElems) (
+%   0 <= roundRobinPeriod[pe]
+%   /\ roundRobinPeriod[pe] <= roundRobinElemsMaxSlices[pe]
+% );
+% constraint forall(pe in PlatformElems where not(pe in RoundRobinElems)) (
+%   roundRobinPeriod[pe] = 0
+% );
+
+%% tighten the bounds for reactionInterferences
+constraint forall(r, rr in Reactions) (
+  reactionInterferences[r, rr] <= reactionMaxNumberInterferences[r, rr]
 );
 
 
@@ -266,13 +276,29 @@ constraint forall(r in Reactions, mem in MemoryElems, pe in ProcessingElems) (
 
 
 % fixed-priority constraints
+constraint forall(r, rr in Reactions where r != rr) (
+  % let {ProcessingElems: p = reactionExecution[r]; ProcessingElems: pp = reactionExecution[rr]} in
+  if (reactionExecution[r] = reactionExecution[rr]) then
+    reactionInterferences[r, rr] = count(i in 1..reactionMaxNumberInterferences[r,rr]) (
+      reactionInterferencesStart[r, rr, i] <= reactionResponseTime[rr, reactionExecution[rr]]
+    )
+    % piecewise_linear(
+    %   reactionResponseTime[rr, reactionExecution[rr]], 
+    %   reactionInterferences[r, rr], 
+    %   [reactionInterferencesStart[r, rr, i] | i in 1..reactionMaxNumberInterferences[r,rr]], 
+    %   [i | i in 1..reactionMaxNumberInterferences[r,rr]]
+    %   )
+  else
+    reactionInterferences[r, rr] = 0
+  endif
+);
 constraint forall(j in Reactions, p in FixedPriorityElems) (
   reactionDuration[j, p] = reactionInstDuration[j, p] + reactionDataDuration[j, p] + reactionExeDuration[j, p] + reactionOutDuration[j, p]
 );
 constraint forall(r in IndependentReactions, p in FixedPriorityElems) (
   if (reactionExecution[r] = p) then
     reactionDuration[r, p] + 
-    sum(rr in Reactions where reactionPriorityLTEQ[r, rr] /\ reactionInterferes[rr, r] /\ reactionExecution[rr] = p /\ rr != r) (reactionDuration[rr, p]) 
+    sum(rr in Reactions where reactionExecution[rr] = p /\ rr != r) (reactionDuration[rr, p] * reactionInterferences[rr, r]) 
     = reactionResponseTime[r, p]
   else
    reactionResponseTime[r, p] = 0
@@ -281,8 +307,8 @@ constraint forall(r in IndependentReactions, p in FixedPriorityElems) (
 constraint forall(r in Reactions, rr in Reactions, pp in FixedPriorityElems, p in ProcessingElems where reactionMinimumForwardLatency[r, rr] >= 0 /\ r != rr) (
   if (reactionExecution[rr] = pp /\ reactionExecution[r] = p) then
   reactionResponseTime[rr, pp] + reactionMinimumForwardLatency[r, rr] >= reactionDuration[rr, pp] + reactionResponseTime[r, p]
-  + sum(rrr in Reactions where reactionPriorityLTEQ[rr, rrr] /\ reactionInterferes[rrr, rr] /\ reactionExecution[rrr] = pp /\ rrr != rr /\ rrr != r) 
-      (reactionDuration[rrr, pp])
+  + sum(rrr in Reactions where reactionExecution[rrr] = pp /\ rrr != rr /\ rrr != r) 
+      (reactionDuration[rrr, pp] * reactionInterferences[rrr, rr])
   endif
 );
 

@@ -88,32 +88,35 @@ final case class ReactorMinusApplication(
       if containsEdge(
         r,
         rr
-      ) || (containmentFunction(r) == containmentFunction(rr) && reactionIndex(r) < reactionIndex(rr))
+      ) || (containmentFunction(r) == containmentFunction(rr) && reactionIndex(r) < reactionIndex(
+        rr
+      ))
     ) g.addEdge(r, rr)
     g
-  
+
   lazy val reactionsReachability: Set[(LinguaFrancaReaction, LinguaFrancaReaction)] =
     reactionsOnlyWithPropagationsGraph.vertexSet.asScala
-    .filter(v => reactionsOnlyWithPropagationsGraph.incomingEdgesOf(v).isEmpty)
-    .flatMap(src => {
-      BreadthFirstIterator(reactionsOnlyWithPropagationsGraph, src).asScala
-      .filter(v => v != src)
-      .map(dst => (src, dst))
-    }).toSet
+      .filter(v => reactionsOnlyWithPropagationsGraph.incomingEdgesOf(v).isEmpty)
+      .flatMap(src => {
+        BreadthFirstIterator(reactionsOnlyWithPropagationsGraph, src).asScala
+          .filter(v => v != src)
+          .map(dst => (src, dst))
+      })
+      .toSet
 
-    /** This ordering orders the reactions in the model according to
-      * reactor containment and if x > y, then x has _higher_ priority
-      * than y, and should always have execution precedence/priority.
-      */
+  /** This ordering orders the reactions in the model according to reactor containment and if x > y,
+    * then x has _higher_ priority than y, and should always have execution precedence/priority.
+    */
   lazy val reactionsPriorityOrdering = new Ordering[LinguaFrancaReaction] {
 
     def compare(x: LinguaFrancaReaction, y: LinguaFrancaReaction): Int =
-      if containmentFunction(x) == containmentFunction(y) then reactionIndex(y).compareTo(reactionIndex(x))
-      else if reactionsReachability.contains((x, y)) then 1 
-      else if reactionsReachability.contains((y, x)) then -1 
+      if containmentFunction(x) == containmentFunction(y) then
+        reactionIndex(y).compareTo(reactionIndex(x))
+      else if reactionsReachability.contains((x, y)) then 1
+      else if reactionsReachability.contains((y, x)) then -1
       else 0
-      // it is reversed because the smaller period takes precedence
-      // periodFunction(y).compareTo(periodFunction(x))
+    // it is reversed because the smaller period takes precedence
+    // periodFunction(y).compareTo(periodFunction(x))
   }
 
   override def dominates(o: DecisionModel) =
@@ -135,8 +138,10 @@ final case class ReactorMinusApplication(
     *   absolutely no incoming edges or outgoing edges.
     */
   lazy val unambigousEndToEndReactions
-      : Map[(LinguaFrancaReaction, LinguaFrancaReaction), Seq[LinguaFrancaReaction]] =   
-    val consensedReactionGraph = GabowStrongConnectivityInspector(reactionsOnlyWithPropagationsGraph).getCondensation
+      : Map[(LinguaFrancaReaction, LinguaFrancaReaction), Seq[LinguaFrancaReaction]] =
+    val consensedReactionGraph = GabowStrongConnectivityInspector(
+      reactionsOnlyWithPropagationsGraph
+    ).getCondensation
     val sourcesJava = consensedReactionGraph.vertexSet.stream
       .filter(g => consensedReactionGraph.incomingEdgesOf(g).isEmpty)
       .flatMap(g => g.vertexSet.stream)
@@ -148,7 +153,7 @@ final case class ReactorMinusApplication(
     val paths = DijkstraManyToManyShortestPaths(reactionsOnlyWithPropagationsGraph)
       .getManyToManyPaths(sourcesJava, sinksJava)
     val sources = sourcesJava.asScala
-    val sinks = sinksJava.asScala
+    val sinks   = sinksJava.asScala
     val mutableSet = for (
       src <- sources;
       dst <- sinks;
@@ -168,6 +173,23 @@ final case class ReactorMinusApplication(
     jobGraph.jobLevelFixedLatencies.map((srcdst, w) =>
       (srcdst._1.srcReaction, srcdst._2.srcReaction) -> w
     )
+
+  /** The left-to-right maximal interference analysis results
+    * @return
+    *   returns a Map of reactions (src, dst) with a sequence of points, which give the maximum and
+    *   thoughest set of points in which Reaction 'src' interferes with 'dst', if any.
+    */
+  lazy val maximalInterferencePoints
+      : Map[(LinguaFrancaReaction, LinguaFrancaReaction), Seq[BigFraction]] =
+    (for (r <- reactions; rr <- reactions - r; if reactionsPriorityOrdering.compare(r, rr) >= 0) yield
+      val (j, jSeq) = jobGraph.reactionToJobs(r).map(j =>
+        j -> jobGraph.reactionToJobs(rr).filter(jj => j.interferes(jj)).map(jj => jj.trigger).toList
+      ).maxBy((j, jjStartSeq) => 
+        jjStartSeq.map(jjTrigger => j.deadline.subtract(jjTrigger).doubleValue).sum
+      )
+      (r, rr) -> jSeq.map(jjTrigger => jjTrigger.subtract(j.trigger))
+    ).toMap
+        
 
   override val uniqueIdentifier = "ReactorMinusApplication"
 

@@ -14,11 +14,11 @@ import idesyde.identification.DecisionModel
 import java.nio.file.Paths
 import java.nio.file.StandardOpenOption
 
-final case class GecodeMiniZincExplorer() extends SimpleMiniZincCPExplorer:
+final case class ChuffedMiniZincExplorer() extends SimpleMiniZincCPExplorer:
 
   override def canExplore(decisionModel: DecisionModel): Boolean =
     super.canExplore(decisionModel) &&
-      "minizinc --solvers".!!.contains("org.gecode.gecode")
+      "minizinc --solvers".!!.contains("org.chuffed.chuffed")
 
   def estimateTimeUntilFeasibility(decisionModel: DecisionModel): Duration =
     decisionModel match

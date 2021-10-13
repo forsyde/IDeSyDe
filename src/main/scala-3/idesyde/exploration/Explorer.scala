@@ -8,7 +8,7 @@ import java.time.Duration
 
 trait Explorer {
 
-  def explore(decisionModel: DecisionModel)(using ExecutionContext): LazyList[ExplorationSolution[ForSyDeModel]]
+  def explore(decisionModel: DecisionModel)(using ExecutionContext): LazyList[ForSyDeModel]
 
   def canExplore(decisionModel: DecisionModel): Boolean
 
@@ -20,24 +20,28 @@ trait Explorer {
 
   def estimateMemoryUntilOptimality(decisionModel: DecisionModel): Long
 
-  def dominates(o: Explorer, m: DecisionModel, criteria: Set[ExplorationCriteria] = Set()): Boolean =
-    val c = 
+  def dominates(
+      o: Explorer,
+      m: DecisionModel,
+      criteria: Set[ExplorationCriteria] = Set()
+  ): Boolean =
+    val c =
       (if (criteria.contains(ExplorationCriteria.TimeUntilFeasibility))
-        estimateTimeUntilFeasibility(m).compareTo(o.estimateTimeUntilFeasibility(m)) > 0
-      else
-        true) &&
-      (if (criteria.contains(ExplorationCriteria.TimeUntilOptimality))
-        estimateTimeUntilOptimality(m).compareTo(o.estimateTimeUntilOptimality(m)) > 0
-      else
-        true) &&
-      (if (criteria.contains(ExplorationCriteria.MemoryUntilFeasibility))
-        estimateMemoryUntilFeasibility(m) > o.estimateMemoryUntilFeasibility(m)
-      else
-        true) &&
-      (if (criteria.contains(ExplorationCriteria.MemoryUntilOptimality))
-        estimateMemoryUntilOptimality(m) > o.estimateMemoryUntilOptimality(m)
-      else
-        true)
+         estimateTimeUntilFeasibility(m).compareTo(o.estimateTimeUntilFeasibility(m)) > 0
+       else
+         true) &&
+        (if (criteria.contains(ExplorationCriteria.TimeUntilOptimality))
+           estimateTimeUntilOptimality(m).compareTo(o.estimateTimeUntilOptimality(m)) > 0
+         else
+           true) &&
+        (if (criteria.contains(ExplorationCriteria.MemoryUntilFeasibility))
+           estimateMemoryUntilFeasibility(m) > o.estimateMemoryUntilFeasibility(m)
+         else
+           true) &&
+        (if (criteria.contains(ExplorationCriteria.MemoryUntilOptimality))
+           estimateMemoryUntilOptimality(m) > o.estimateMemoryUntilOptimality(m)
+         else
+           true)
     c && canExplore(m) && o.canExplore(m)
-    
+
 }

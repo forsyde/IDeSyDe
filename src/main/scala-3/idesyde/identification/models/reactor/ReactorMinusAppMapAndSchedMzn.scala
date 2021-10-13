@@ -44,6 +44,7 @@ final case class ReactorMinusAppMapAndSchedMzn(val sourceModel: ReactorMinusAppM
   lazy val reactionChainsOrdered = sourceModel.reactorMinus.unambigousEndToEndReactions.toSeq
   lazy val fixedLatenciesOrdered = sourceModel.reactorMinus.unambigousEndToEndFixedLatencies
   lazy val symmetryGroupsOrdered = sourceModel.computationallySymmetricGroups.toSeq
+  val maxReactionInterferences = sourceModel.reactorMinus.maximalInterferencePoints.map(_._2.length).max
 
   val mznModel = Source.fromResource("minizinc/reactorminus_to_networkedHW.mzn").mkString
   // scribe.debug(platformOrdered.toString)
@@ -60,6 +61,7 @@ final case class ReactorMinusAppMapAndSchedMzn(val sourceModel: ReactorMinusAppM
       // "nJobChannels"    -> MiniZincData(jobChannelsOrdered.length),
       "nPlatformElems"  -> MiniZincData(platformOrdered.length),
       "nReactionChains" -> MiniZincData(reactionChainsOrdered.length),
+      "maxReactionInterferences" -> MiniZincData(maxReactionInterferences),
       "isFixedPriorityElem" -> MiniZincData(platformOrdered.map(p => {
         p match
           case pp: GenericProcessingModule =>
@@ -124,15 +126,6 @@ final case class ReactorMinusAppMapAndSchedMzn(val sourceModel: ReactorMinusAppM
       "channelDst" -> MiniZincData(
         channelsOrdered.map((rr, c) => reactionsOrdered.indexOf(rr._2) + 1)
       ),
-      // "originalReaction" -> MiniZincData(
-      //   jobsOrdered.map(j => reactionsOrdered.indexOf(j.srcReaction) + 1)
-      // ),
-      // "jobRelease" -> MiniZincData(
-      //   jobsOrdered.map(j => j.trigger.multiply(multiplier).getNumeratorAsLong)
-      // ),
-      // "jobDeadline" -> MiniZincData(
-      //   jobsOrdered.map(j => j.deadline.multiply(multiplier).getNumeratorAsLong)
-      // ),
       "reactionDataSize" -> MiniZincData(
         reactionsOrdered.map(r => {
           val sizeFunction        = sourceModel.reactorMinus.sizeFunction
@@ -230,37 +223,24 @@ final case class ReactorMinusAppMapAndSchedMzn(val sourceModel: ReactorMinusAppM
           })
         )
       ),
-      "reactionInterferes" -> MiniZincData(
+      "reactionMaxNumberInterferences" -> MiniZincData(
         reactionsOrdered.map(r =>
           reactionsOrdered.map(rr => {
-            reactionToJobs(r).exists(j => {
-              reactionToJobs(rr).exists(jj => {
-                jj.interferes(j)
-              })
-            })
+            sourceModel.reactorMinus.maximalInterferencePoints.getOrElse((r, rr), Seq.empty).size
           })
         )
       ),
-      // "jobChannelSrc" -> MiniZincData(
-      //   jobChannelsOrdered.map(c => jobsOrdered.indexOf(c.src) + 1)
-      // ),
-      // "jobChannelDst" -> MiniZincData(
-      //   jobChannelsOrdered.map(c => jobsOrdered.indexOf(c.dst) + 1)
-      // ),
-      // "roundRobinElemsMinSlice" -> MiniZincData(
-      //   platformOrdered
-      //     .map(p => {
-      //       p match
-      //         case pe: GenericProcessingModule =>
-      //           if (sourceModel.platform.roundRobinPEs.contains(pe))
-      //             sourceModel.platform.schedulersFromPEs(pe) match
-      //               case s: RoundRobinScheduler =>
-      //                 s.getMinimumTimeSliceInCycles
-      //               case _ => 0
-      //           else 0
-      //         case _ => 0
-      //     })
-      // ),
+      "reactionInterferencesStart" -> MiniZincData(
+        reactionsOrdered.map(r =>
+          reactionsOrdered.map(rr => {
+            val seq = sourceModel.reactorMinus.maximalInterferencePoints.getOrElse((r, rr), Seq.empty)
+            seq.map(_.multiply(multiplier).getNumeratorAsLong).padTo(
+              maxReactionInterferences, 
+              seq.maxOption.map(_.multiply(multiplier).getNumeratorAsLong).getOrElse(0L)
+            )
+          })
+        )
+      ),
       "roundRobinElemsMaxSlices" -> MiniZincData(
         platformOrdered
           .map(p => {

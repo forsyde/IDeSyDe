@@ -114,7 +114,8 @@ final case class ReactorMinusApplication(
         reactionIndex(y).compareTo(reactionIndex(x))
       else if reactionsReachability.contains((x, y)) then 1
       else if reactionsReachability.contains((y, x)) then -1
-      else 0
+      // TODO: fix this approximation to a strict total order
+      else periodFunction.getOrElse(y, BigFraction.ZERO).compareTo(periodFunction.getOrElse(x, BigFraction.ZERO))
     // it is reversed because the smaller period takes precedence
     // periodFunction(y).compareTo(periodFunction(x))
   }

@@ -233,7 +233,7 @@ final case class ReactorMinusAppMapAndSchedMzn(val sourceModel: ReactorMinusAppM
       "reactionInterferencesStart" -> MiniZincData(
         reactionsOrdered.map(r =>
           reactionsOrdered.map(rr => {
-            val seq = sourceModel.reactorMinus.maximalInterferencePoints.getOrElse((r, rr), Seq.empty)
+            val seq = sourceModel.reactorMinus.maximalInterferencePoints.getOrElse((r, rr), Seq.empty).sorted
             seq.map(_.multiply(multiplier).getNumeratorAsLong).padTo(
               maxReactionInterferences, 
               seq.maxOption.map(_.multiply(multiplier).getNumeratorAsLong).getOrElse(0L)
@@ -304,7 +304,7 @@ final case class ReactorMinusAppMapAndSchedMzn(val sourceModel: ReactorMinusAppM
             .toLong
         )
       ),
-      "objPercentage" -> MiniZincData(100),
+      "objPercentage" -> MiniZincData(50),
       "platformElemsSymmetryGroups" -> MiniZincData(
         platformOrdered.map(p =>
           p match {

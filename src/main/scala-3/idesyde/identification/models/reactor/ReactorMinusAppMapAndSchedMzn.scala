@@ -33,6 +33,22 @@ final case class ReactorMinusAppMapAndSchedMzn(val sourceModel: ReactorMinusAppM
   ) {
     multiplier = multiplier * 10
   }
+  // TODO: It seems like some solvers cant handle longs.. so we do this hack for now.
+  var memoryMultipler: Long =
+    (sourceModel.reactorMinus.sizeFunction.values ++
+      sourceModel.platform.hardware.storageElems.map(_.getMaxMemoryInBits.asInstanceOf[Long]))
+      .filter(_ > 0L)
+      .reduce((l1, l2) => ArithmeticUtils.gcd(l1, l2))
+  while (
+    (sourceModel.reactorMinus.sizeFunction.values ++
+      sourceModel.platform.hardware.storageElems.map(
+        _.getMaxMemoryInBits.asInstanceOf[Long]
+      ) ++ 
+      sourceModel.platform.hardware.bandWidthBitPerSec.values.map(_ * multiplier)
+      ).max / memoryMultipler > Integer.MAX_VALUE.toLong
+  ) {
+    memoryMultipler *= 10L
+  }
   val hyperPeriod                = sourceModel.reactorMinus.hyperPeriod
   val reactionToJobs             = sourceModel.reactorMinus.jobGraph.jobs.groupBy(_.srcReaction)
   val reactorsOrdered            = sourceModel.reactorMinus.reactors.toSeq
@@ -40,11 +56,19 @@ final case class ReactorMinusAppMapAndSchedMzn(val sourceModel: ReactorMinusAppM
   val channelsOrdered            = sourceModel.reactorMinus.channels.toSeq
   lazy val jobsOrdered           = sourceModel.reactorMinus.jobGraph.jobs.toSeq
   lazy val jobChannelsOrdered    = sourceModel.reactorMinus.jobGraph.inChannels.toSeq
-  val platformOrdered            = sourceModel.platform.hardware.platformElements.toSeq
+  val platformOrdered            = sourceModel.platform.hardware.platformElements.toSeq.sortBy(p =>
+    p match {
+      case pe: GenericProcessingModule => 
+        reactionsOrdered.map(r => sourceModel.wcetFunction.getOrElse((r, pe), BigFraction.ZERO).multiply(multiplier).getNumeratorAsLong)
+        .sum / reactionsOrdered.size.toLong
+      case _ => 0L
+    }
+  )
   lazy val reactionChainsOrdered = sourceModel.reactorMinus.unambigousEndToEndReactions.toSeq
   lazy val fixedLatenciesOrdered = sourceModel.reactorMinus.unambigousEndToEndFixedLatencies
   lazy val symmetryGroupsOrdered = sourceModel.computationallySymmetricGroups.toSeq
-  val maxReactionInterferences = sourceModel.reactorMinus.maximalInterferencePoints.map(_._2.length).max
+  val maxReactionInterferences =
+    sourceModel.reactorMinus.maximalInterferencePoints.map(_._2.length).max
 
   val mznModel = Source.fromResource("minizinc/reactorminus_to_networkedHW.mzn").mkString
   // scribe.debug(platformOrdered.toString)
@@ -59,8 +83,8 @@ final case class ReactorMinusAppMapAndSchedMzn(val sourceModel: ReactorMinusAppM
       "nChannels"   -> MiniZincData(channelsOrdered.length),
       // "nJobs"           -> MiniZincData(jobsOrdered.length),
       // "nJobChannels"    -> MiniZincData(jobChannelsOrdered.length),
-      "nPlatformElems"  -> MiniZincData(platformOrdered.length),
-      "nReactionChains" -> MiniZincData(reactionChainsOrdered.length),
+      "nPlatformElems"           -> MiniZincData(platformOrdered.length),
+      "nReactionChains"          -> MiniZincData(reactionChainsOrdered.length),
       "maxReactionInterferences" -> MiniZincData(maxReactionInterferences),
       "isFixedPriorityElem" -> MiniZincData(platformOrdered.map(p => {
         p match
@@ -108,7 +132,7 @@ final case class ReactorMinusAppMapAndSchedMzn(val sourceModel: ReactorMinusAppM
         // p.isInstanceOf[GenericMemoryModule] && sourceModel.platform.hardware.storageElems.contains(p.asInstanceOf[GenericMemoryModule]))
       })),
       "reactorSize" -> MiniZincData(
-        reactorsOrdered.map(a => a.getStateSizesInBits.stream.mapToLong(l => l).sum)
+        reactorsOrdered.map(a => sourceModel.reactorMinus.sizeFunction(a) / memoryMultipler)
       ),
       "containingReactor" -> MiniZincData(
         reactionsOrdered.map(r =>
@@ -118,7 +142,7 @@ final case class ReactorMinusAppMapAndSchedMzn(val sourceModel: ReactorMinusAppM
         )
       ),
       "channelSize" -> MiniZincData(
-        channelsOrdered.map((rr, c) => c.getSizeInBits)
+        channelsOrdered.map((rr, c) => sourceModel.reactorMinus.sizeFunction(c) / memoryMultipler)
       ),
       "channelSrc" -> MiniZincData(
         channelsOrdered.map((rr, c) => reactionsOrdered.indexOf(rr._1) + 1)
@@ -133,7 +157,7 @@ final case class ReactorMinusAppMapAndSchedMzn(val sourceModel: ReactorMinusAppM
           val a                   = containmentFunction(r)
           val rs =
             sourceModel.reactorMinus.reactions.filter(rr => rr != r && containmentFunction(rr) == a)
-          sizeFunction(a) - rs.map(sizeFunction(_)).sum
+          (sizeFunction(a) - rs.map(sizeFunction(_)).sum) / memoryMultipler
         })
       ),
       "reactionLatestRelease" -> MiniZincData(
@@ -145,9 +169,9 @@ final case class ReactorMinusAppMapAndSchedMzn(val sourceModel: ReactorMinusAppM
       "reactionRelativeDeadline" -> MiniZincData(
         reactionsOrdered
           .map(r => {
-            reactionToJobs(r).map(j =>
-              j.deadline.subtract(j.trigger).multiply(multiplier).getNumeratorAsLong
-            ).min
+            reactionToJobs(r)
+              .map(j => j.deadline.subtract(j.trigger).multiply(multiplier).getNumeratorAsLong)
+              .min
           })
       ),
       "reactionMinimumForwardLatency" -> MiniZincData(
@@ -158,7 +182,7 @@ final case class ReactorMinusAppMapAndSchedMzn(val sourceModel: ReactorMinusAppM
             if r != rr && (sourceModel.reactorMinus.containsEdge(r, rr) || sourceModel.reactorMinus
                 .containmentFunction(r) == sourceModel.reactorMinus.containmentFunction(rr))
             then
-            // if reactionsPriorityOrdering.compare(r, rr) > 0 then
+              // if reactionsPriorityOrdering.compare(r, rr) > 0 then
               reactionToJobs(r)
                 .flatMap(j => {
                   reactionToJobs(rr)
@@ -223,6 +247,13 @@ final case class ReactorMinusAppMapAndSchedMzn(val sourceModel: ReactorMinusAppM
           })
         )
       ),
+      "reactionReachesLeftToRight" -> MiniZincData(
+        reactionsOrdered.map(r =>
+          reactionsOrdered.map(rr => {
+            sourceModel.reactorMinus.reactionsExtendedReachability.contains((r, rr))
+          })
+        )
+      ),
       "reactionMaxNumberInterferences" -> MiniZincData(
         reactionsOrdered.map(r =>
           reactionsOrdered.map(rr => {
@@ -233,11 +264,15 @@ final case class ReactorMinusAppMapAndSchedMzn(val sourceModel: ReactorMinusAppM
       "reactionInterferencesStart" -> MiniZincData(
         reactionsOrdered.map(r =>
           reactionsOrdered.map(rr => {
-            val seq = sourceModel.reactorMinus.maximalInterferencePoints.getOrElse((r, rr), Seq.empty).sorted
-            seq.map(_.multiply(multiplier).getNumeratorAsLong).padTo(
-              maxReactionInterferences, 
-              seq.maxOption.map(_.multiply(multiplier).getNumeratorAsLong).getOrElse(0L)
-            )
+            val seq = sourceModel.reactorMinus.maximalInterferencePoints
+              .getOrElse((r, rr), Seq.empty)
+              .sorted
+            seq
+              .map(_.multiply(multiplier).getNumeratorAsLong)
+              .padTo(
+                maxReactionInterferences,
+                seq.maxOption.map(_.multiply(multiplier).getNumeratorAsLong).getOrElse(0L)
+              )
           })
         )
       ),
@@ -273,7 +308,7 @@ final case class ReactorMinusAppMapAndSchedMzn(val sourceModel: ReactorMinusAppM
                     pe match
                       case p: GenericProcessingModule =>
                         sourceModel.platform.hardware.bandWidthBitPerSec
-                          .getOrElse((c, p), 0.toLong) * multiplier
+                          .getOrElse((c, p), 0.toLong) * multiplier / memoryMultipler
                       case _ => 0
                   case _ => 0
               })
@@ -284,7 +319,7 @@ final case class ReactorMinusAppMapAndSchedMzn(val sourceModel: ReactorMinusAppM
           .map(p => {
             p match
               case m: GenericMemoryModule =>
-                m.getMaxMemoryInBits
+                m.getMaxMemoryInBits / memoryMultipler
               case _ => 0
           })
       ),

@@ -32,7 +32,24 @@ import org.jgrapht.traverse.BreadthFirstIterator
 //     else Option.empty
 // }
 
-/** */
+/**
+ * This is a subset of the Reactor MoC in order to unambiguously calculate a finite event time-horizon,
+ * the hyperPeriod,
+ * and subsequently, analyze and schedule over this time-horizon.
+ * This subset is refereed as Reactor-, and it is a restriction of
+ * the constructs allowed in Reactor. 
+ * 
+ * Specifically, we assume that reactor hierarchies are considered flattened,
+ * either before analysis or by design. Then, reactions are either pure or periodic.
+ * 
+ * @param reactors the containers for the reactions.
+ * @param periodicReactions triggered by only one timer.
+ * @param pureReactions triggered by any number of reactions or input ports.
+ * @param containmentFunction relates every reaction to its containing reactor.
+ * @param reactionIndex the index in which a reaction appears in its reactor. Used for priority analysis.
+ * @param periodFunction gives the period for every periodic reaction in the model.
+ * @param channels mapping of edges between reactions and the channels that their information.
+ */
 final case class ReactorMinusApplication(
     val pureReactions: Set[LinguaFrancaReaction],
     val periodicReactions: Set[LinguaFrancaReaction],
@@ -40,8 +57,8 @@ final case class ReactorMinusApplication(
     val channels: Map[(LinguaFrancaReaction, LinguaFrancaReaction), LinguaFrancaSignal],
     val containmentFunction: Map[LinguaFrancaReaction, LinguaFrancaReactor],
     val reactionIndex: Map[LinguaFrancaReaction, Int],
-    val periodFunction: Map[LinguaFrancaReaction, BigFraction],
-    val sizeFunction: Map[LinguaFrancaReaction | LinguaFrancaReactor | LinguaFrancaSignal, Long]
+    val periodFunction: Map[LinguaFrancaReaction, BigFraction]
+    // val sizeFunction: Map[LinguaFrancaReaction | LinguaFrancaReactor | LinguaFrancaSignal, Long]
 ) extends SimpleDirectedGraph[LinguaFrancaReaction, LinguaFrancaSignal](classOf[LinguaFrancaSignal])
     with DecisionModel:
 
@@ -49,7 +66,27 @@ final case class ReactorMinusApplication(
   for (r               <- periodicReactions) addVertex(r)
   for (((r1, r2) -> c) <- channels) addEdge(r1, r2, c)
 
+
+  /** This ordering orders the reactions in the model according to reactor containment and if x > y,
+    * then x has _higher_ priority than y, and should always have execution precedence/priority.
+    */
+  lazy val reactionsPriorityOrdering = new Ordering[LinguaFrancaReaction] {
+
+    def compare(x: LinguaFrancaReaction, y: LinguaFrancaReaction): Int =
+      if containmentFunction(x) == containmentFunction(y) then
+        reactionIndex(y).compareTo(reactionIndex(x))
+      else if reactionsPropagates.contains((x, y)) then 1
+      else if reactionsPropagates.contains((y, x)) then -1
+      // TODO: fix this approximation to a strict total order
+      else periodFunction.getOrElse(y, BigFraction.ZERO).compareTo(periodFunction.getOrElse(x, BigFraction.ZERO))
+    // it is reversed because the smaller period takes precedence
+    // periodFunction(y).compareTo(periodFunction(x))
+  }
+  given Ordering[LinguaFrancaReaction] = reactionsPriorityOrdering
+
   val reactions: Set[LinguaFrancaReaction] = vertexSet.asScala.toSet
+
+  lazy val reactionsOrdered = reactions.toList.sorted
 
   val hyperPeriod: BigFraction = periodFunction.values.reduce((frac1, frac2) =>
     // the LCM of a nunch of BigFractions n1/d1, n2/d2... is lcm(n1, n2,...)/gcd(d1, d2,...). You can check.
@@ -66,16 +103,27 @@ final case class ReactorMinusApplication(
     for ((_, c) <- channels) yield c.getViewedVertex
   }
 
-  lazy val reactionsOnlyGraph =
+  val sizeFunction: Map[LinguaFrancaReactor | LinguaFrancaSignal | LinguaFrancaReaction, Long] = {
+    val elemSet: Set[LinguaFrancaReactor | LinguaFrancaSignal | LinguaFrancaReaction] =
+      (reactors ++ channels.values ++ reactions)
+    elemSet
+      .map(e =>
+        e -> (e match {
+          case s: LinguaFrancaSignal   => s.getSizeInBits
+          case a: LinguaFrancaReactor  => a.getStateSizesInBits.asScala.map(_.toLong).sum
+          case r: LinguaFrancaReaction => r.getSizeInBits
+        }).asInstanceOf[Long]
+      )
+      .toMap
+  }
+
+  lazy val reactionsOnlyExtendedConnectionsGraph =
     val g = SimpleDirectedGraph[LinguaFrancaReaction, DefaultEdge](classOf[DefaultEdge])
     for (r <- vertexSet.asScala) g.addVertex(r)
     for (
       r <- vertexSet.asScala; rr <- vertexSet.asScala;
       if r != rr;
-      if containsEdge(
-        r,
-        rr
-      )
+      if containsEdge(r, rr) || containmentFunction(r) == containmentFunction(rr)
     ) g.addEdge(r, rr)
     g
 
@@ -94,7 +142,7 @@ final case class ReactorMinusApplication(
     ) g.addEdge(r, rr)
     g
 
-  lazy val reactionsReachability: Set[(LinguaFrancaReaction, LinguaFrancaReaction)] =
+  lazy val reactionsPropagates: Set[(LinguaFrancaReaction, LinguaFrancaReaction)] =
     reactionsOnlyWithPropagationsGraph.vertexSet.asScala
       .filter(v => reactionsOnlyWithPropagationsGraph.incomingEdgesOf(v).isEmpty)
       .flatMap(src => {
@@ -103,22 +151,17 @@ final case class ReactorMinusApplication(
           .map(dst => (src, dst))
       })
       .toSet
+  
+  lazy val reactionsExtendedReachability: Set[(LinguaFrancaReaction, LinguaFrancaReaction)] =
+    reactionsOnlyExtendedConnectionsGraph.vertexSet.asScala
+      .filter(v => !reactionsOnlyExtendedConnectionsGraph.outgoingEdgesOf(v).isEmpty)
+      .flatMap(src => {
+        BreadthFirstIterator(reactionsOnlyExtendedConnectionsGraph, src).asScala
+          .filter(v => v != src)
+          .map(dst => (src, dst))
+      })
+      .toSet
 
-  /** This ordering orders the reactions in the model according to reactor containment and if x > y,
-    * then x has _higher_ priority than y, and should always have execution precedence/priority.
-    */
-  lazy val reactionsPriorityOrdering = new Ordering[LinguaFrancaReaction] {
-
-    def compare(x: LinguaFrancaReaction, y: LinguaFrancaReaction): Int =
-      if containmentFunction(x) == containmentFunction(y) then
-        reactionIndex(y).compareTo(reactionIndex(x))
-      else if reactionsReachability.contains((x, y)) then 1
-      else if reactionsReachability.contains((y, x)) then -1
-      // TODO: fix this approximation to a strict total order
-      else periodFunction.getOrElse(y, BigFraction.ZERO).compareTo(periodFunction.getOrElse(x, BigFraction.ZERO))
-    // it is reversed because the smaller period takes precedence
-    // periodFunction(y).compareTo(periodFunction(x))
-  }
 
   override def dominates(o: DecisionModel) =
     super.dominates(o) && (o match {

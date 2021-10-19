@@ -56,8 +56,8 @@ final case class ReactorMinusIdentificationRule() extends IdentificationRule {
         channels = channelsAsReactionConnections(model, reactors, reactions, channels),
         containmentFunction = deriveContainmentFunction(model, reactors, reactions),
         reactionIndex = computeReactionIndex(model, reactors),
-        periodFunction = computePeriodFunction(model, timers, reactions),
-        sizeFunction = computeSizesFunction(model, reactors, channels, reactions)
+        periodFunction = computePeriodFunction(model, timers, reactions)
+        // sizeFunction = computeSizesFunction(model, reactors, channels, reactions)
       )
       scribe.debug(
         "Conforming Reactor- model found with:" +

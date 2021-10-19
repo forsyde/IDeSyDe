@@ -15,6 +15,7 @@ import org.jgrapht.graph.AsSubgraph
 import org.jgrapht.GraphPath
 import java.util.stream.Collectors
 import scala.collection.mutable.Buffer
+import scala.collection.mutable.Map as MutableMap
 import scala.annotation.tailrec
 import org.jgrapht.alg.shortestpath.CHManyToManyShortestPaths
 import org.jgrapht.graph.SimpleDirectedWeightedGraph
@@ -32,6 +33,7 @@ import forsyde.io.java.typed.viewers.LinguaFrancaSignal
 import org.jgrapht.sux4j.SuccinctDirectedGraph
 import org.jgrapht.alg.util.Pair
 import it.unimi.dsi.fastutil.ints.IntIntPair
+import scala.collection.mutable
 
 // sealed class ReactionJobOrdering(
 //     val reactionsPartialOrder: PartialOrdering[LinguaFrancaReaction],
@@ -78,18 +80,53 @@ final case class ReactorMinusAppJobGraph(
   val pureJobs: Set[ReactionJob] = {
     // first, get all pure jobs from the periodic ones, even with activation overlap
     // val paths = AllDirectedPaths(reactorMinus)
+    // var delaysMutableMap       = MutableMap.from(reactorMinus.reactions.map(r => r -> BigFraction.ZERO))
+    // var overlappedPureJobs = mutable.Set[ReactionJob]()
+    // periodicJobs.foreach(j =>
+    //   delaysMutableMap(j.srcReaction) = BigFraction.ZERO
+    //   val iterator     = BreadthFirstIterator(reactorMinus, j.srcReaction)
+    //   var computedPureJobs = Buffer[ReactionJob]()
+    //   var computedPureChannels = Buffer[ReactionChannel]()
+    //   while iterator.hasNext do
+    //     val cur = iterator.next
+    //     if (reactorMinus.pureReactions.contains(cur))
+    //       // go up the tree and calculate the accumulated delay
+    //       val prev = cur
+    //       val link = iterator.getSpanningTreeEdge(prev)
+    //       if prev != null && link != null then
+    //         delaysMutableMap(cur) = delaysMutableMap(prev).add(
+    //           BigFraction(link.getAfterSecsNumerator, link.getAfterSecsDenominator)
+    //         )
+    //       computedPureJobs += ReactionJob(
+    //           cur,
+    //           j.trigger.add(delaysMutableMap(cur)),
+    //           j.deadline
+    //         )
+    // )
     val periodicReactionToJobs = periodicJobs.groupBy(_.srcReaction)
-    val overlappedPureJobs = reactorMinus.periodicReactions.flatMap(r => {
-      val iterator                     = BreadthFirstIterator(reactorMinus, r)
-      val periodicJobs                 = periodicReactionToJobs(r)
-      var pureJobSet: Set[ReactionJob] = Set()
+    var overlappedPureJobs     = mutable.Set[ReactionJob]()
+    reactorMinus.periodicReactions.foreach(r => {
+      val iterator     = BreadthFirstIterator(reactorMinus, r)
+      var delays       = MutableMap.from(reactorMinus.reactions.map(r => r -> BigFraction.ZERO))
+      val periodicJobs = periodicReactionToJobs(r)
+
       while iterator.hasNext do
         val cur = iterator.next
         if (reactorMinus.pureReactions.contains(cur))
-          pureJobSet = pureJobSet ++ periodicJobs.map(j => {
-            ReactionJob(cur, j.trigger, j.deadline)
+          // go up the tree and calculate the accumulated delay
+          val prev = cur
+          val link = iterator.getSpanningTreeEdge(prev)
+          if prev != null && link != null then
+            delays += (cur -> delays(prev).add(
+              BigFraction(link.getAfterSecsNumerator, link.getAfterSecsDenominator)
+            ))
+          overlappedPureJobs = overlappedPureJobs ++ periodicJobs.map(j => {
+            ReactionJob(
+              cur,
+              j.trigger.add(delays(cur)),
+              j.deadline
+            )
           })
-      pureJobSet
     })
     val sortedOverlap = overlappedPureJobs
       .groupBy(j => (j.srcReaction, j.trigger))
@@ -137,7 +174,9 @@ final case class ReactorMinusAppJobGraph(
       j  <- reactionToJobs(r);
       jj <- reactionToJobs(rr);
       // if the triggering time is the same
-      if j != jj && j.trigger.equals(jj.trigger)
+      if j != jj && j.trigger
+        .add(BigFraction.ONE.multiply(c.getAfterSecsNumerator).divide(c.getAfterSecsDenominator))
+        .equals(jj.trigger)
     ) yield ReactionChannel(j, jj, c)).toSet
 
   val priorityChannels: Set[ReactionChannel] =
@@ -198,32 +237,47 @@ final case class ReactorMinusAppJobGraph(
   for (c <- outerStateChannels) addEdge(c.src, c.dst, c)
 
   val jobsOrdered = jobs.toList.sorted
-  // lazy val jobsOnlyGraph = 
+  // lazy val jobsOnlyGraph =
   //   val g = SimpleDirectedGraph[ReactionJob, DefaultEdge](classOf[DefaultEdge])
   //   for (j <- jobs) g.addVertex(j)
   //   for (c <- channels) g.addEdge(c.src, c.dst)
   //   g
   private lazy val succintJobGraph: SuccinctDirectedGraph = {
-    SuccinctDirectedGraph(jobs.size, channels.map(c => 
-      Pair(jobsOrdered.indexOf(c.src).asInstanceOf[java.lang.Integer], jobsOrdered.indexOf(c.dst).asInstanceOf[java.lang.Integer])
-    ).toList.asJava)
+    SuccinctDirectedGraph(
+      jobs.size,
+      channels
+        .map(c =>
+          Pair(
+            jobsOrdered.indexOf(c.src).asInstanceOf[java.lang.Integer],
+            jobsOrdered.indexOf(c.dst).asInstanceOf[java.lang.Integer]
+          )
+        )
+        .toList
+        .asJava
+    )
   }
 
   val longestPathsBetweenJobs =
     val newWeights = (inChannels.map(c =>
-      IntIntPair.of(jobsOrdered.indexOf(c.src).asInstanceOf[java.lang.Integer], jobsOrdered.indexOf(c.dst).asInstanceOf[java.lang.Integer])
-      -> reactorMinus.hyperPeriod
-        .subtract(c.dst.trigger.subtract(c.src.trigger))
-        .doubleValue
-        .asInstanceOf[java.lang.Double]
-    )
-      ++ outerStateChannels.map(c =>
-        IntIntPair.of(jobsOrdered.indexOf(c.src).asInstanceOf[java.lang.Integer], jobsOrdered.indexOf(c.dst).asInstanceOf[java.lang.Integer])
-        -> c.dst.trigger
-          .add(reactorMinus.hyperPeriod)
-          .subtract(c.src.trigger)
+      IntIntPair.of(
+        jobsOrdered.indexOf(c.src).asInstanceOf[java.lang.Integer],
+        jobsOrdered.indexOf(c.dst).asInstanceOf[java.lang.Integer]
+      )
+        -> reactorMinus.hyperPeriod
+          .subtract(c.dst.trigger.subtract(c.src.trigger))
           .doubleValue
           .asInstanceOf[java.lang.Double]
+    )
+      ++ outerStateChannels.map(c =>
+        IntIntPair.of(
+          jobsOrdered.indexOf(c.src).asInstanceOf[java.lang.Integer],
+          jobsOrdered.indexOf(c.dst).asInstanceOf[java.lang.Integer]
+        )
+          -> c.dst.trigger
+            .add(reactorMinus.hyperPeriod)
+            .subtract(c.src.trigger)
+            .doubleValue
+            .asInstanceOf[java.lang.Double]
       )).toMap.asJava
     FloydWarshallShortestPaths(AsWeightedGraph(succintJobGraph, newWeights))
 
@@ -300,11 +354,11 @@ final case class ReactorMinusAppJobGraph(
       .map((srcdst, p) =>
         // redo the computation between ends, which is enough to get the static latency,
         (jobsOrdered(srcdst._1), jobsOrdered(srcdst._2))
-        -> {
-          val endJob = jobsOrdered(p.getVertexList.get(p.getVertexList.size - 1))
-          val firstJob = jobsOrdered(p.getVertexList.get(0))
-          endJob.trigger.subtract(firstJob.trigger)
-        }
+          -> {
+            val endJob   = jobsOrdered(p.getVertexList.get(p.getVertexList.size - 1))
+            val firstJob = jobsOrdered(p.getVertexList.get(0))
+            endJob.trigger.subtract(firstJob.trigger)
+          }
       )
       .toMap
 

@@ -86,6 +86,7 @@ final case class ReactorMinusAppMapAndSchedMzn(val sourceModel: ReactorMinusAppM
       "nPlatformElems"           -> MiniZincData(platformOrdered.length),
       "nReactionChains"          -> MiniZincData(reactionChainsOrdered.length),
       "maxReactionInterferences" -> MiniZincData(maxReactionInterferences),
+      "minProcessingCores" -> MiniZincData(sourceModel.minProcessingCores),
       "isFixedPriorityElem" -> MiniZincData(platformOrdered.map(p => {
         p match
           case pp: GenericProcessingModule =>
@@ -174,7 +175,7 @@ final case class ReactorMinusAppMapAndSchedMzn(val sourceModel: ReactorMinusAppM
               .min
           })
       ),
-      "reactionMinimumForwardLatency" -> MiniZincData(
+      "reactionInitialRelativeOffset" -> MiniZincData(
         reactionsOrdered.map(r => {
           reactionsOrdered.map(rr => {
             // given reactionsPriorityOrdering: Ordering[LinguaFrancaReaction] =
@@ -186,7 +187,9 @@ final case class ReactorMinusAppMapAndSchedMzn(val sourceModel: ReactorMinusAppM
               reactionToJobs(r)
                 .flatMap(j => {
                   reactionToJobs(rr)
-                    .filter(jj => sourceModel.reactorMinus.jobGraph.containsEdge(j, jj))
+                    .filter(jj => 
+                      sourceModel.reactorMinus.jobGraph.containsEdge(j, jj)
+                    )
                     .map(jj => {
                       jj.trigger.subtract(j.trigger).multiply(multiplier).getNumeratorAsLong
                     })

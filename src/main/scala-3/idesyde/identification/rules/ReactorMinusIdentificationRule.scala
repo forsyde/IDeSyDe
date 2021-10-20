@@ -22,8 +22,9 @@ import forsyde.io.java.typed.viewers.ModelOfComputation
 import forsyde.io.java.core.OpaqueTrait
 import idesyde.identification.models.reactor.ReactorMinusApplication
 import scala.annotation.meta.companionObject
+import java.util.concurrent.ThreadPoolExecutor
 
-final case class ReactorMinusIdentificationRule() extends IdentificationRule {
+final case class ReactorMinusIdentificationRule(executor: ThreadPoolExecutor) extends IdentificationRule {
 
   def identify(model: ForSyDeModel, identified: Set[DecisionModel]) = {
     if (ReactorMinusIdentificationRule.canIdentify(model, identified)) {
@@ -56,7 +57,8 @@ final case class ReactorMinusIdentificationRule() extends IdentificationRule {
         channels = channelsAsReactionConnections(model, reactors, reactions, channels),
         containmentFunction = deriveContainmentFunction(model, reactors, reactions),
         reactionIndex = computeReactionIndex(model, reactors),
-        periodFunction = computePeriodFunction(model, timers, reactions)
+        periodFunction = computePeriodFunction(model, timers, reactions),
+        executor = executor
         // sizeFunction = computeSizesFunction(model, reactors, channels, reactions)
       )
       scribe.debug(

@@ -74,6 +74,17 @@ final case class ReactorMinusAppMapAndSched(
       .asScala
       .toSet
 
+  /**
+   * The min number of processing cores is ideally the rank of the 'boolean'
+   * matrix formed by th WCET function.
+   * 
+   * @return the min number of processing cores
+   */
+  lazy val minProcessingCores: Int =
+    platform.hardware.processingElems.map(p =>
+      reactorMinus.reactions.filter(r => wcetFunction.contains((r, p)))
+      ).size
+
   override val uniqueIdentifier = "ReactorMinusAppMapAndSched"
 
 }

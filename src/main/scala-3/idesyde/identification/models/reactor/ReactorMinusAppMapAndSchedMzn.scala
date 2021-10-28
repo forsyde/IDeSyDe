@@ -26,13 +26,17 @@ final case class ReactorMinusAppMapAndSchedMzn(val sourceModel: ReactorMinusAppM
       .flatMap(j => Seq(j.trigger, j.deadline))
       .map(_.getDenominatorAsLong)
       .reduce((d1, d2) => ArithmeticUtils.lcm(d1, d2))
+  
   while (
     sourceModel.wcetFunction.values
+      .filter(v => v.getNumeratorAsLong > 0L)
       .map(_.multiply(multiplier))
-      .forall(v => v.getNumeratorAsLong / 1e3 < v.getDenominatorAsLong)
+      // .exists(v => v.getNumeratorAsLong / 1e3 < v.getDenominatorAsLong)
+      .exists(v => v.doubleValue < 1.0)
   ) {
     multiplier = multiplier * 10
   }
+  
   // TODO: It seems like some solvers cant handle longs.. so we do this hack for now.
   var memoryMultipler: Long =
     (sourceModel.reactorMinus.sizeFunction.values ++
@@ -49,6 +53,7 @@ final case class ReactorMinusAppMapAndSchedMzn(val sourceModel: ReactorMinusAppM
   ) {
     memoryMultipler *= 10L
   }
+  
   val hyperPeriod                = sourceModel.reactorMinus.hyperPeriod
   val reactionToJobs             = sourceModel.reactorMinus.jobGraph.jobs.groupBy(_.srcReaction)
   val reactorsOrdered            = sourceModel.reactorMinus.reactors.toSeq
@@ -342,7 +347,7 @@ final case class ReactorMinusAppMapAndSchedMzn(val sourceModel: ReactorMinusAppM
             .toLong
         )
       ),
-      "objPercentage" -> MiniZincData(50),
+      "objPercentage" -> MiniZincData(0),
       "platformElemsSymmetryGroups" -> MiniZincData(
         platformOrdered.map(p =>
           p match {

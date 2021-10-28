@@ -22,6 +22,9 @@ final case class ReactorMinusAppMapAndSched(
     val utilityFunction: Map[(LinguaFrancaReaction, GenericProcessingModule), BigFraction]
 ) extends DecisionModel() {
 
+  // for (r <- reactorMinus.reactions; p <- platform.hardware.processingElems)
+  //   println(s"${r.getIdentifier}, ${p.getIdentifier}, ${wcetFunction.getOrElse((r, p), BigFraction.ZERO).toString}")
+
   val coveredVertexes = reactorMinus.coveredVertexes ++ platform.coveredVertexes
 
   lazy val jobWcetFunction: Map[(ReactionJob, GenericProcessingModule), BigFraction] =

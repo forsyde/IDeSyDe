@@ -15,6 +15,7 @@ libraryDependencies ++= Seq(
   "info.picocli" % "picocli-codegen" % "4.2.0" % "provided",
   "org.apache.commons" % "commons-math3" % "3.6.1"
 )
+libraryDependencies += "com.github.scopt" %% "scopt" % "4.0.1"
 libraryDependencies += "com.outr" %% "scribe" % "3.5.5"
 libraryDependencies += "com.google.ortools" % "ortools-java" % "9.0.9048"
 libraryDependencies += "com.google.ortools" % "ortools-linux-x86-64" % "9.0.9048"

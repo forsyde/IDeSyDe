@@ -186,17 +186,19 @@ final case class ReactorMinusApplication(
   lazy val unambigousEndToEndReactions
       : Map[(LinguaFrancaReaction, LinguaFrancaReaction), Seq[LinguaFrancaReaction]] =
     val consensedReactionGraph = GabowStrongConnectivityInspector(
-      reactionsOnlyWithPropagationsGraph
+      reactionsOnlyExtendedConnectionsGraph
     ).getCondensation
     val sourcesJava = consensedReactionGraph.vertexSet.stream
       .filter(g => consensedReactionGraph.incomingEdgesOf(g).isEmpty)
       .flatMap(g => g.vertexSet.stream)
+      .filter(periodicReactions.contains(_))
       .collect(Collectors.toSet)
     val sinksJava = consensedReactionGraph.vertexSet.stream
       .filter(g => consensedReactionGraph.outgoingEdgesOf(g).isEmpty)
       .flatMap(g => g.vertexSet.stream)
+      .filter(periodicReactions.contains(_))
       .collect(Collectors.toSet)
-    val paths = DijkstraManyToManyShortestPaths(reactionsOnlyWithPropagationsGraph)
+    val paths = DijkstraManyToManyShortestPaths(reactionsOnlyExtendedConnectionsGraph)
       .getManyToManyPaths(sourcesJava, sinksJava)
     val sources = sourcesJava.asScala
     val sinks   = sinksJava.asScala

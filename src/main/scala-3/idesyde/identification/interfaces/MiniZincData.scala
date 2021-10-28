@@ -37,6 +37,8 @@ end MiniZincData
 
 object MiniZincData:
 
+  val arrayRegex = "array(\\d+)d\\(((?:\\d+\\.\\.\\d+, )+)\\[(.+)\\]\\)".r
+
   def apply(x: Double | Int | Long | String | Boolean | Seq[?] | Set[?]) =
     x match {
       case arr: Seq[?] => MiniZincData.fromArray(arr)
@@ -61,4 +63,24 @@ object MiniZincData:
       case subset: Set[?] => MiniZincData.fromSet(subset)
     }
   }))
+
+  def fromResultString(s: String): MiniZincData =
+    val stripped = s.strip
+    if (stripped.startsWith("array")) then
+      arrayRegex.findFirstMatchIn(stripped) match
+        case Some(m) =>
+          val dimensions = m.group(1).toInt
+          val indexes = m.group(2)
+          val data = m.group(3)
+          scribe.debug(dimensions.toString)
+          scribe.debug(indexes)
+          scribe.debug(data)
+          MznArray(Seq.empty)
+        case _ => MznArray(Seq.empty)
+      MznLiteral(1)
+    else if (stripped.contains('.')) then
+      MznLiteral(stripped.toDouble)
+    else
+      MznLiteral(stripped.toLong)  
+
 end MiniZincData

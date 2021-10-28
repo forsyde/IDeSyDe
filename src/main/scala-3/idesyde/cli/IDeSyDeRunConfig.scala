@@ -24,7 +24,7 @@ case class IDeSyDeRunConfig (
           inputModelsPaths.filter(f => modelHandler.canLoadModel(f))
         if (validInputs.isEmpty) {
           println(
-            "At least one input model '.forsyde.xml' | '.forxml' is necessary"
+            "At least one valid model is necessary"
           )
         } else {
           scribe.info("Reading and merging input models.")

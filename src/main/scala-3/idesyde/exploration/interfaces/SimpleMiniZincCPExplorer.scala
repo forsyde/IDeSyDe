@@ -15,9 +15,9 @@ import idesyde.identification.interfaces.MiniZincData
 import scala.collection.mutable.Buffer
 import scala.collection.mutable
 
-import me.shadaj.scalapy.py
+// import me.shadaj.scalapy.py
 
-val minizinc = py.module("minizinc")
+// val minizinc = py.module("minizinc")
 
 trait SimpleMiniZincCPExplorer extends Explorer:
 
@@ -25,8 +25,7 @@ trait SimpleMiniZincCPExplorer extends Explorer:
     decisionModel match
       // Just discard the minizinc output
       case m: MiniZincDecisionModel => 
-        "minizinc".!(ProcessLogger(out => ())) == 1 &&
-        "python -m pip list".!!.contains("minizinc")
+        "minizinc".!(ProcessLogger(out => ())) == 1
       case _                        => false
 
   def explorationSolve(
@@ -37,7 +36,7 @@ trait SimpleMiniZincCPExplorer extends Explorer:
       extraHeader: String = "",
       extraInstruction: String = "",
       callExtraFlags: List[String] = List.empty
-  )(using ExecutionContext): LazyList[String] =
+  )(using ExecutionContext): LazyList[Map[String, MiniZincData]] =
     decisionModel match
       case m: MiniZincDecisionModel =>
         // val modelFile = Files.createTempFile("idesyde-minizinc-model", ".mzn")
@@ -68,15 +67,20 @@ trait SimpleMiniZincCPExplorer extends Explorer:
             s"${tempModelFileName} ${tempDataFileName}"
         command.lazyLines
           .filterNot(l => l.startsWith("%"))
-          // .map(l => mutable.StringBuilder(l))
-          .scanLeft("")((b1, b2) =>
+          .scanLeft((Map.empty[String, MiniZincData], mutable.Map.empty[String, MiniZincData]))((b1, b2) =>
             // b1.head.addString(b2)
-            if (b1.endsWith("----------")) then b2
+            val (_, accum) = b1
+            if (b2.endsWith("----------")) then (accum.toMap, mutable.Map.empty)
             // b1 ++ List.empty
-            else b1 ++ b2
+            else {
+              val splitStr = b2.split(" = ")
+              accum(splitStr.head) = MiniZincData.fromResultString(splitStr.last)
+              b1
+            }
           )
           // .map(sb => sb.toString)
-          .filter(s => s.endsWith("----------"))
+          .filter((res, builder) => !res.isEmpty && builder.isEmpty)
+          .map(m => m._1)
       case _ => LazyList.empty
 
 // def

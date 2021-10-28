@@ -13,6 +13,7 @@ import java.nio.file.Files
 import idesyde.identification.DecisionModel
 import java.nio.file.Paths
 import java.nio.file.StandardOpenOption
+import idesyde.exploration.explorers.ChuffedMiniZincExplorer
 
 final case class ChuffedMiniZincExplorer() extends SimpleMiniZincCPExplorer:
 
@@ -55,6 +56,27 @@ final case class ChuffedMiniZincExplorer() extends SimpleMiniZincCPExplorer:
   def explore(decisionModel: DecisionModel)(using ExecutionContext) =
     decisionModel match
       case m: ReactorMinusAppMapAndSchedMzn =>
-        val resString = explorationSolve(m, "gecode")
+        val resString = explorationSolve(m, 
+        "chuffed", 
+        callExtraFlags = List("-f"),
+        extraHeader = ChuffedMiniZincExplorer.extraHeaderReactorMinusAppMapAndSchedMzn,
+        extraInstruction = ChuffedMiniZincExplorer.extraInstReactorMinusAppMapAndSchedMzn
+        )
         LazyList.empty
       case _ => LazyList.empty
+
+end ChuffedMiniZincExplorer
+
+
+object ChuffedMiniZincExplorer:
+
+  val extraHeaderReactorMinusAppMapAndSchedMzn: String = "include \"chuffed.mzn\";\n"
+
+  val extraInstReactorMinusAppMapAndSchedMzn: String =
+    """
+    solve
+    :: restart_luby(length(Reactions) * length(ProcessingElems))
+    minimize goal;
+    """
+
+end ChuffedMiniZincExplorer

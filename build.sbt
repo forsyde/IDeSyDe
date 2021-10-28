@@ -30,28 +30,28 @@ libraryDependencies += "org.jgrapht" % "jgrapht-unimi-dsi" % "1.5.1"
 //   .withCrossVersion(CrossVersion.for3Use2_13)
 
 // segments to be able to use python
-libraryDependencies += ("me.shadaj" %% "scalapy-core" % "0.5.0").cross(
-  CrossVersion.for3Use2_13
-)
+// libraryDependencies += ("me.shadaj" %% "scalapy-core" % "0.5.0").cross(
+//   CrossVersion.for3Use2_13
+// )
 
-fork := true
+// fork := true
 
-import scala.sys.process._
-lazy val pythonLdFlags = {
-  val withoutEmbed = "python3-config --ldflags".!!
-  if (withoutEmbed.contains("-lpython")) {
-    withoutEmbed.split(' ').map(_.trim).filter(_.nonEmpty).toSeq
-  } else {
-    val withEmbed = "python3-config --ldflags --embed".!!
-    withEmbed.split(' ').map(_.trim).filter(_.nonEmpty).toSeq
-  }
-}
+// import scala.sys.process._
+// lazy val pythonLdFlags = {
+//   val withoutEmbed = "python3-config --ldflags".!!
+//   if (withoutEmbed.contains("-lpython")) {
+//     withoutEmbed.split(' ').map(_.trim).filter(_.nonEmpty).toSeq
+//   } else {
+//     val withEmbed = "python3-config --ldflags --embed".!!
+//     withEmbed.split(' ').map(_.trim).filter(_.nonEmpty).toSeq
+//   }
+// }
 
-lazy val pythonLibsDir = {
-  pythonLdFlags.find(_.startsWith("-L")).get.drop("-L".length)
-}
+// lazy val pythonLibsDir = {
+//   pythonLdFlags.find(_.startsWith("-L")).get.drop("-L".length)
+// }
 
-javaOptions += s"-Djna.library.path=$pythonLibsDir"
+// javaOptions += s"-Djna.library.path=$pythonLibsDir"
 
 
 // TODO: figure out what is

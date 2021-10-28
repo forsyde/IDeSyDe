@@ -56,19 +56,11 @@ final case class GecodeMiniZincExplorer() extends SimpleMiniZincCPExplorer:
   def explore(decisionModel: DecisionModel)(using ExecutionContext) =
     decisionModel match
       case m: ReactorMinusAppMapAndSchedMzn =>
-        val resString = explorationSolve(m, "gecode", 
+        val results = explorationSolve(m, "gecode", 
         extraHeader = GecodeMiniZincExplorer.extraHeaderReactorMinusAppMapAndSchedMzn,
         extraInstruction = GecodeMiniZincExplorer.extraInstReactorMinusAppMapAndSchedMzn)
-        resString.foreach(s => 
-          scribe.debug(s)
-          scribe.debug(s.split(";").toString)
-          s.split(";")
-           .filter(_.contains("="))
-           .map(line =>
-            line.split(" = ") match
-              case Array(name, data, _*) =>
-                name -> MiniZincData.fromResultString(data)
-          )
+        results.foreach(s => 
+          scribe.debug(s.toString)
           // ForSyDeModel()
         )
         LazyList.empty
@@ -84,14 +76,6 @@ object GecodeMiniZincExplorer:
     """
     solve
     :: warm_start(reactionExecution, [arg_min(p in ProcessingElems where reactionCanBeExecuted[r, p]) (reactionWcet[r, p]) | r in Reactions])
-    :: seq_search([
-      int_search(reactionExecution, input_order, indomain_min),
-      int_search(reactionResponseTime,  smallest, indomain_min),
-      int_search(reactionOffsetTime,  smallest, indomain_min),
-      int_search(reactionRRSlices, first_fail, indomain_max),
-      int_search(reactionUtilization, first_fail, indomain_min),
-      int_search(latenciesVariation, first_fail, indomain_min)
-    ])
     :: restart_luby(length(Reactions) * length(ProcessingElems))
     :: relax_and_reconstruct(reactionExecution, 20)
     minimize goal;

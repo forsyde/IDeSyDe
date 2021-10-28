@@ -26,13 +26,17 @@ final case class ReactorMinusAppMapAndSchedMzn(val sourceModel: ReactorMinusAppM
       .flatMap(j => Seq(j.trigger, j.deadline))
       .map(_.getDenominatorAsLong)
       .reduce((d1, d2) => ArithmeticUtils.lcm(d1, d2))
+  
   while (
     sourceModel.wcetFunction.values
+      .filter(v => v.getNumeratorAsLong > 0L)
       .map(_.multiply(multiplier))
-      .forall(v => v.getNumeratorAsLong / 1e3 < v.getDenominatorAsLong)
+      // .exists(v => v.getNumeratorAsLong / 1e3 < v.getDenominatorAsLong)
+      .exists(v => v.doubleValue < 1.0)
   ) {
     multiplier = multiplier * 10
   }
+  
   // TODO: It seems like some solvers cant handle longs.. so we do this hack for now.
   var memoryMultipler: Long =
     (sourceModel.reactorMinus.sizeFunction.values ++
@@ -49,6 +53,7 @@ final case class ReactorMinusAppMapAndSchedMzn(val sourceModel: ReactorMinusAppM
   ) {
     memoryMultipler *= 10L
   }
+  
   val hyperPeriod                = sourceModel.reactorMinus.hyperPeriod
   val reactionToJobs             = sourceModel.reactorMinus.jobGraph.jobs.groupBy(_.srcReaction)
   val reactorsOrdered            = sourceModel.reactorMinus.reactors.toSeq
@@ -86,6 +91,7 @@ final case class ReactorMinusAppMapAndSchedMzn(val sourceModel: ReactorMinusAppM
       "nPlatformElems"           -> MiniZincData(platformOrdered.length),
       "nReactionChains"          -> MiniZincData(reactionChainsOrdered.length),
       "maxReactionInterferences" -> MiniZincData(maxReactionInterferences),
+      "minProcessingCores" -> MiniZincData(sourceModel.minProcessingCores),
       "isFixedPriorityElem" -> MiniZincData(platformOrdered.map(p => {
         p match
           case pp: GenericProcessingModule =>
@@ -174,7 +180,7 @@ final case class ReactorMinusAppMapAndSchedMzn(val sourceModel: ReactorMinusAppM
               .min
           })
       ),
-      "reactionMinimumForwardLatency" -> MiniZincData(
+      "reactionInitialRelativeOffset" -> MiniZincData(
         reactionsOrdered.map(r => {
           reactionsOrdered.map(rr => {
             // given reactionsPriorityOrdering: Ordering[LinguaFrancaReaction] =
@@ -186,7 +192,9 @@ final case class ReactorMinusAppMapAndSchedMzn(val sourceModel: ReactorMinusAppM
               reactionToJobs(r)
                 .flatMap(j => {
                   reactionToJobs(rr)
-                    .filter(jj => sourceModel.reactorMinus.jobGraph.containsEdge(j, jj))
+                    .filter(jj => 
+                      sourceModel.reactorMinus.jobGraph.containsEdge(j, jj)
+                    )
                     .map(jj => {
                       jj.trigger.subtract(j.trigger).multiply(multiplier).getNumeratorAsLong
                     })
@@ -339,7 +347,7 @@ final case class ReactorMinusAppMapAndSchedMzn(val sourceModel: ReactorMinusAppM
             .toLong
         )
       ),
-      "objPercentage" -> MiniZincData(50),
+      "objPercentage" -> MiniZincData(0),
       "platformElemsSymmetryGroups" -> MiniZincData(
         platformOrdered.map(p =>
           p match {

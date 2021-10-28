@@ -25,7 +25,7 @@ final case class ChuffedMiniZincExplorer() extends SimpleMiniZincCPExplorer:
       case m: ReactorMinusAppMapAndSchedMzn =>
         val nonMznDecisionModel = m.sourceModel
         Duration.ofSeconds(
-          nonMznDecisionModel.reactorMinus.jobGraph.jobs.size * nonMznDecisionModel.reactorMinus.jobGraph.channels.size * 3
+          nonMznDecisionModel.reactorMinus.jobGraph.jobs.size * nonMznDecisionModel.reactorMinus.jobGraph.channels.size * 10
         )
       case _ => Duration.ZERO
 
@@ -55,8 +55,6 @@ final case class ChuffedMiniZincExplorer() extends SimpleMiniZincCPExplorer:
   def explore(decisionModel: DecisionModel)(using ExecutionContext) =
     decisionModel match
       case m: ReactorMinusAppMapAndSchedMzn =>
-        // val modelFile = Files.createTempFile("idesyde-minizinc-model", ".mzn")
-        // val dataFile = Files.createTempFile("idesyde-minizinc-data", ".json")
         val resString = explorationSolve(m, "gecode")
         LazyList.empty
       case _ => LazyList.empty

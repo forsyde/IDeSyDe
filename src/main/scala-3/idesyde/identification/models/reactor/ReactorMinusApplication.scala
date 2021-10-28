@@ -15,6 +15,7 @@ import org.jgrapht.graph.DefaultDirectedGraph
 import org.jgrapht.alg.shortestpath.DijkstraManyToManyShortestPaths
 import java.util.stream.Collectors
 import org.jgrapht.traverse.BreadthFirstIterator
+import java.util.concurrent.ThreadPoolExecutor
 
 // sealed class ReactionsPartialOrder(
 //     val containmentFunction: Map[LinguaFrancaReaction, LinguaFrancaReactor],
@@ -57,7 +58,8 @@ final case class ReactorMinusApplication(
     val channels: Map[(LinguaFrancaReaction, LinguaFrancaReaction), LinguaFrancaSignal],
     val containmentFunction: Map[LinguaFrancaReaction, LinguaFrancaReactor],
     val reactionIndex: Map[LinguaFrancaReaction, Int],
-    val periodFunction: Map[LinguaFrancaReaction, BigFraction]
+    val periodFunction: Map[LinguaFrancaReaction, BigFraction],
+    executor: ThreadPoolExecutor
     // val sizeFunction: Map[LinguaFrancaReaction | LinguaFrancaReactor | LinguaFrancaSignal, Long]
 ) extends SimpleDirectedGraph[LinguaFrancaReaction, LinguaFrancaSignal](classOf[LinguaFrancaSignal])
     with DecisionModel:
@@ -184,17 +186,19 @@ final case class ReactorMinusApplication(
   lazy val unambigousEndToEndReactions
       : Map[(LinguaFrancaReaction, LinguaFrancaReaction), Seq[LinguaFrancaReaction]] =
     val consensedReactionGraph = GabowStrongConnectivityInspector(
-      reactionsOnlyWithPropagationsGraph
+      reactionsOnlyExtendedConnectionsGraph
     ).getCondensation
     val sourcesJava = consensedReactionGraph.vertexSet.stream
       .filter(g => consensedReactionGraph.incomingEdgesOf(g).isEmpty)
       .flatMap(g => g.vertexSet.stream)
+      .filter(periodicReactions.contains(_))
       .collect(Collectors.toSet)
     val sinksJava = consensedReactionGraph.vertexSet.stream
       .filter(g => consensedReactionGraph.outgoingEdgesOf(g).isEmpty)
       .flatMap(g => g.vertexSet.stream)
+      .filter(periodicReactions.contains(_))
       .collect(Collectors.toSet)
-    val paths = DijkstraManyToManyShortestPaths(reactionsOnlyWithPropagationsGraph)
+    val paths = DijkstraManyToManyShortestPaths(reactionsOnlyExtendedConnectionsGraph)
       .getManyToManyPaths(sourcesJava, sinksJava)
     val sources = sourcesJava.asScala
     val sinks   = sinksJava.asScala
@@ -210,13 +214,13 @@ final case class ReactorMinusApplication(
     *   the jobs graph computed out of this Reaction- model, in a lazy fashion since the computation
     *   can be slightly demanding for bigger graphs.
     */
-  lazy val jobGraph = ReactorMinusAppJobGraph(this)
+  lazy val jobGraph = ReactorMinusAppJobGraph(this, executor)
 
   lazy val unambigousEndToEndFixedLatencies
       : Map[(LinguaFrancaReaction, LinguaFrancaReaction), BigFraction] =
-    jobGraph.jobLevelFixedLatencies.map((srcdst, w) =>
-      (srcdst._1.srcReaction, srcdst._2.srcReaction) -> w
-    )
+    jobGraph.jobLevelFixedLatencies
+    .groupBy((srcdst, w) => (srcdst._1.srcReaction, srcdst._2.srcReaction))
+    .map((srcdst, w) => srcdst -> w.values.max)
 
   /** The left-to-right maximal interference analysis results
     * @return

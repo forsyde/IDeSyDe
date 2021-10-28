@@ -105,8 +105,8 @@ final case class SchedulableNetworkedDigHW(
         hardware.storageElems.exists(mm => {
             hardware.paths.contains((p, m)) &&
             hardware.paths.contains((pp, mm)) &&
-            hardware.paths((p, m)).map(c => hardware.bandWidthBitPerSec((c, p))).sum ==
-            hardware.paths((pp, mm)).map(c => hardware.bandWidthBitPerSec((c, pp))).sum
+            hardware.paths((p, m)).map(c => 1.0 / hardware.bandWidthBitPerSec((c, p))).sum ==
+            hardware.paths((pp, mm)).map(c => 1.0 / hardware.bandWidthBitPerSec((c, pp))).sum
           })
         )
     ) graph.addEdge(p, pp)

@@ -22,6 +22,9 @@ final case class ReactorMinusAppMapAndSched(
     val utilityFunction: Map[(LinguaFrancaReaction, GenericProcessingModule), BigFraction]
 ) extends DecisionModel() {
 
+  // for (r <- reactorMinus.reactions; p <- platform.hardware.processingElems)
+  //   println(s"${r.getIdentifier}, ${p.getIdentifier}, ${wcetFunction.getOrElse((r, p), BigFraction.ZERO).toString}")
+
   val coveredVertexes = reactorMinus.coveredVertexes ++ platform.coveredVertexes
 
   lazy val jobWcetFunction: Map[(ReactionJob, GenericProcessingModule), BigFraction] =
@@ -73,6 +76,17 @@ final case class ReactorMinusAppMapAndSched(
       .collect(Collectors.toSet)
       .asScala
       .toSet
+
+  /**
+   * The min number of processing cores is ideally the rank of the 'boolean'
+   * matrix formed by th WCET function.
+   * 
+   * @return the min number of processing cores
+   */
+  lazy val minProcessingCores: Int =
+    platform.hardware.processingElems.map(p =>
+      reactorMinus.reactions.filter(r => wcetFunction.contains((r, p)))
+      ).size
 
   override val uniqueIdentifier = "ReactorMinusAppMapAndSched"
 

@@ -45,6 +45,8 @@ final case class NetworkedDigitalHardware(
   val platformElements: Set[AbstractDigitalModule] =
     processingElems ++ communicationElems ++ storageElems
 
+  lazy val processingElemsOrdered = processingElems.toList
+
   val allocatedBandwidthFraction: Map[(GenericDigitalInterconnect, GenericProcessingModule), BigFraction] =
     (for (
       ce <- communicationElems;

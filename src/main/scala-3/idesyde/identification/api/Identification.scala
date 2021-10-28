@@ -18,13 +18,15 @@ import collection.JavaConverters.*
 import idesyde.identification.rules.SchedulableNetDigHWIdentRule
 import idesyde.identification.rules.ReactorMinusAppDSEIdentRule
 import idesyde.identification.rules.ReactorMinusAppDSEMznIdentRule
+import java.util.concurrent.Executors
+import java.util.concurrent.ThreadPoolExecutor
 
 object Identification {
 
   val standardRules: Set[IdentificationRule] =
     Set[IdentificationRule](
       SDFAppIdentificationRule(),
-      ReactorMinusIdentificationRule(),
+      ReactorMinusIdentificationRule(Executors.newFixedThreadPool(1).asInstanceOf[ThreadPoolExecutor]),
       // ReactorMinusToJobsRule(),
       NetworkedDigitalHWIdentRule(),
       SchedulableNetDigHWIdentRule(),

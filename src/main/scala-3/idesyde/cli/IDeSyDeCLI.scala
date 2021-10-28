@@ -50,21 +50,23 @@ class IDeSyDeCLI extends Callable[Int]:
 
   def call(): Int = {
     setLoggingLevel(Level.get(verbosityLevel).getOrElse(Level.Info))
+    val modelHandler = ForSyDeModelHandler()
     val validInputs =
-      inputModels.filter(f => f.toString.endsWith("forsyde.xml") || f.toString.endsWith("forxml"))
+      inputModels.filter(f => modelHandler.canLoadModel(f))
     if (validInputs.isEmpty) {
       println(
         "At least one input model '.forsyde.xml' | '.forxml' is necessary"
       )
     } else {
       scribe.info("Reading and merging input models.")
-      val models = validInputs.map(i => ForSyDeModelHandler().loadModel(i))
-      val mergedModel = {
-        val mhead = models.head
-        models.tail.foreach(mhead.mergeInPlace(_))
-        mhead
-      }
-      val identified = Identification.identifyDecisionModels(mergedModel)
+      val model = validInputs.map(i => modelHandler.loadModel(i))
+        .foldLeft(ForSyDeModel())(
+          (merged, m) => 
+            merged.mergeInPlace(m)
+            merged
+        )
+
+      val identified = Identification.identifyDecisionModels(model)
       scribe.info(s"Identification finished with ${identified.size} decision model(s).")
       val chosen = Exploration.chooseExplorersAndModels(identified)
       scribe.info(s"Total of ${chosen.size} combo of decision model(s) and explorer(s) chosen.")

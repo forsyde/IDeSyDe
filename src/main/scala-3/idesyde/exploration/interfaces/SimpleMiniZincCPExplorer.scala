@@ -33,7 +33,10 @@ trait SimpleMiniZincCPExplorer extends Explorer:
       decisionModel: DecisionModel,
       minizincSolverName: String = "gecode",
       tempModelFileName: String = "idesyde-minizinc-model.mzn",
-      tempDataFileName: String = "idesyde-minizinc-data.json"
+      tempDataFileName: String = "idesyde-minizinc-data.json",
+      extraHeader: String = "",
+      extraInstruction: String = "",
+      callExtraFlags: List[String] = List.empty
   )(using ExecutionContext): LazyList[String] =
     decisionModel match
       case m: MiniZincDecisionModel =>
@@ -50,7 +53,7 @@ trait SimpleMiniZincCPExplorer extends Explorer:
         )
         Files.write(
           modelPath,
-          m.mznModel.getBytes,
+          (extraHeader + m.mznModel + extraInstruction).getBytes,
           StandardOpenOption.CREATE,
           StandardOpenOption.WRITE,
           StandardOpenOption.TRUNCATE_EXISTING
@@ -58,7 +61,12 @@ trait SimpleMiniZincCPExplorer extends Explorer:
         dataJson.writeBytesTo(dataOutStream, 2, false)
         dataOutStream.close
         // initiate solution procedure
-        s"minizinc --solver ${minizincSolverName} -a ${tempModelFileName} ${tempDataFileName}".lazyLines
+        val command = 
+          s"minizinc --solver ${minizincSolverName} " +
+            "-a " +
+            callExtraFlags.foldLeft("")((f1, f2) => f1 + " " + f2) + 
+            s"${tempModelFileName} ${tempDataFileName}"
+        command.lazyLines
           .filterNot(l => l.startsWith("%"))
           // .map(l => mutable.StringBuilder(l))
           .scanLeft("")((b1, b2) =>

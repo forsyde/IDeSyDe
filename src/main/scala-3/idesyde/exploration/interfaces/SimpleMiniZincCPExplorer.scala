@@ -15,12 +15,18 @@ import idesyde.identification.interfaces.MiniZincData
 import scala.collection.mutable.Buffer
 import scala.collection.mutable
 
+import me.shadaj.scalapy.py
+
+val minizinc = py.module("minizinc")
+
 trait SimpleMiniZincCPExplorer extends Explorer:
 
   def canExplore(decisionModel: DecisionModel): Boolean =
     decisionModel match
       // Just discard the minizinc output
-      case m: MiniZincDecisionModel => "minizinc".!(ProcessLogger(out => ())) == 1
+      case m: MiniZincDecisionModel => 
+        "minizinc".!(ProcessLogger(out => ())) == 1 &&
+        "python -m pip list".!!.contains("minizinc")
       case _                        => false
 
   def explorationSolve(

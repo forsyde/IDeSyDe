@@ -1,10 +1,12 @@
 lazy val root = project
   .in(file("."))
+  .enablePlugins(NativeImagePlugin)
   .settings(
     name := "IDeSyDe",
     description := "",
     version := "0.2.2",
-    scalaVersion := "3.1.0"
+    scalaVersion := "3.1.0",
+    Compile / mainClass := Some("idesyde.IDeSyDeStandalone")
   )
 
 resolvers += Resolver.mavenLocal

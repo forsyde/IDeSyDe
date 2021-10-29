@@ -1,5 +1,4 @@
 from idesyde.identification.models import JobType
-import math
 from typing import List
 from typing import Sequence
 from typing import Optional
@@ -7,16 +6,14 @@ from typing import Mapping
 from typing import Tuple
 from typing import Collection
 
-import numpy as np
+# import numpy as np
 from forsyde.io.python.core import Vertex
 
-JobType = Tuple[int, Vertex]
 
-
-def get_PASS(sdf_topology: np.ndarray,
-             repetition_vector: np.ndarray,
-             initial_tokens: Optional[np.ndarray] = None) -> Collection[int]:
-    '''Returns the PASS of a SDF graph
+def get_PASS(
+    sdf_topology: List[List[int]], repetition_vector: List[int], initial_tokens: Optional[List[int]] = None
+) -> Collection[int]:
+    """Returns the PASS of a SDF graph
 
     The calculation follows almost exactly what is dictated in the
     87 paper by LSV (Reference to be added later), except with some
@@ -36,25 +33,29 @@ def get_PASS(sdf_topology: np.ndarray,
         means:
 
             Actor 1 fires, then 9 then 4.
-    '''
-    if initial_tokens is None:
-        initial_tokens = np.zeros((sdf_topology.shape[2], 1))
-    tokens = initial_tokens
-    repetition = np.array(repetition_vector, copy=True)
+    """
+    tokens = [b for b in initial_tokens] if initial_tokens is not None else [0 for _ in sdf_topology]
+    repetition = [q for q in repetition_vector]
     firings: List[int] = []
-    num_firings = int(repetition.sum())
-    fire_vector = np.zeros((sdf_topology.shape[1], 1))
+    num_firings = sum(repetition)
+    # we know the maximum number of steps
     for _ in range(num_firings):
+        # we try firing every actor
         for (idx, q) in enumerate(repetition):
+            # if they can be fired
             if q > 0:
-                fire_vector.fill(0)
-                fire_vector[idx] = 1
-                candidate = np.dot(sdf_topology, fire_vector) + tokens
-                if (candidate >= 0).all():
+                # we do the do product
+                for (channeln, col) in enumerate(sdf_topology):
+                    tokens[channeln] += col[idx]
+                # and check if anything didnt go negative
+                if all(v >= 0 for v in tokens):
                     repetition[idx] -= 1
-                    tokens = candidate
                     firings.append(idx)
                     break
+                # if so, we roll back and try gain
+                else:
+                    for (channeln, col) in enumerate(sdf_topology):
+                        tokens[channeln] -= col[idx]
     # if the schedule could not be built, return an empty list
     if len(firings) < num_firings:
         return []
@@ -67,16 +68,19 @@ def check_sdf_consistency(sdf_topology) -> bool:
 
 
 def sdf_to_jobs(
-        actors: Collection[Vertex], channels: Mapping[Tuple[Vertex, Vertex], Sequence[Sequence[Vertex]]],
-        topology: np.ndarray, repetition_vector: np.ndarray,
-        initial_tokens: np.ndarray) -> Tuple[List[JobType], Mapping[JobType, List[JobType]], Mapping[JobType, List[JobType]]]:
-    '''Create job graph out of a SDF graph.
+    actors: Collection[Vertex],
+    channels: Mapping[Tuple[Vertex, Vertex], Sequence[Sequence[Vertex]]],
+    topology: List[List[int]],
+    repetition_vector: List[int],
+    initial_tokens: Optional[List[int]],
+) -> Tuple[List[JobType], Mapping[JobType, List[JobType]], Mapping[JobType, List[JobType]]]:
+    """Create job graph out of a SDF graph.
 
     This function returns a precedence graph of sdf 'jobs' so that any
     scheduling algorithm can work upon then directly if it is a variant
     of job shop scheduling. The returned graph has the notions of _weak_
     and _strong_ precedences:
-    
+
         - if j2 weak proceeds j1, j1 must start before j2 starts.
         - if j2 strong proceeds j2, j1 must finish before j2 starts.
 
@@ -91,21 +95,20 @@ def sdf_to_jobs(
     Returns:
         A tuple containing 1) the actors as jobs, 2) the weak procededences
         and the 3) strong procedences.
-    '''
-    if repetition_vector.shape[1] != 1:
-        raise TypeError("The repetition vector should be a column vector.")
-    q_vector = repetition_vector.reshape(repetition_vector.size)
+    """
+    q_vector = [q for q in repetition_vector]
     jobs = [(q, a) for (i, a) in enumerate(actors) for q in range(1, int(q_vector[i]) + 1)]
     strong_next: Mapping[JobType, List[JobType]] = {j: [] for (i, j) in enumerate(jobs)}
+    initial_tokens_internal = initial_tokens if initial_tokens else [0 for _ in actors]
     for (cidx, (s, t)) in enumerate(channels):
         idxs = next((i for (i, a) in enumerate(actors) if a == s), -1)
         idxt = next((i for (i, a) in enumerate(actors) if a == t), -1)
-        production = topology[cidx, idxs]
-        consumption = topology[cidx, idxt]
+        production = topology[cidx][idxs]
+        consumption = topology[cidx][idxt]
         fires = 1
         firet = 1
         while firet <= q_vector[idxt]:
-            if production * (fires - 1) + int(initial_tokens[cidx]) + consumption * firet >= 0:
+            if production * (fires - 1) + initial_tokens_internal[cidx] + consumption * firet >= 0:
                 firet += 1
             else:
                 strong_next[(fires, s)].append((firet, t))

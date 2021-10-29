@@ -1,8 +1,7 @@
-import numpy as np
 import sympy
 
 
-def integralize_vector(vec: sympy.Matrix):
+def integralize_vector(vec: sympy.Matrix) -> sympy.Matrix:
     '''Scale vector to have all elements as integers
 
     Arguments:

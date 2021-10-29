@@ -12,11 +12,13 @@ import java.util.stream.Collectors
 
 import collection.JavaConverters.*
 import idesyde.exploration.OrToolsCPExplorer
+import idesyde.exploration.explorers.ChuffedMiniZincExplorer
 
 object Exploration:
 
   val defaultExplorers: Set[Explorer] = Set(
     GecodeMiniZincExplorer(),
+    ChuffedMiniZincExplorer(),
     OrToolsCPExplorer()
   )
 
@@ -50,7 +52,6 @@ object Exploration:
       end for
     // flat map the model to set of explorers to map of model to explorers
     val modelToExplorers = modelToExplorerSet.flatMap((m, es) => es.map(_ -> m))
-    scribe.debug(s"chosen models: ${modelToExplorers.map(_.getClass.toString)}")
     modelToExplorers
 
     

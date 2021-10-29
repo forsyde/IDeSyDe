@@ -44,6 +44,16 @@ case class IDeSyDeRunConfig (
           // })
           val (explorer, decisionModel) = chosen.head
           val results                   = explorer.explore(decisionModel)(using executionContext)
+          var numSols = 0
+          results.foreach(result =>
+            scribe.debug(s"writing solution at ${outputModelPath.toString}")
+            modelHandler.writeModel(model.merge(result), outputModelPath)
+            numSols += 1
+          )
+          if (numSols > 0)
+            scribe.info(s"Finished exploration with ${numSols} solution(s)")
+          else
+            scribe.info(s"Finished exploration with no solution")
         }
 
     def setLoggingLevel(loggingLevel: Level) =

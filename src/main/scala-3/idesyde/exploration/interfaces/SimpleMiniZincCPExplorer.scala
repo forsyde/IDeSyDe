@@ -63,18 +63,18 @@ trait SimpleMiniZincCPExplorer extends Explorer:
         val command = 
           s"minizinc --solver ${minizincSolverName} " +
             "-a " +
-            callExtraFlags.foldLeft("")((f1, f2) => f1 + " " + f2) + 
+            callExtraFlags.foldLeft("")((f1, f2) => f1 + " " + f2) + " " +
             s"${tempModelFileName} ${tempDataFileName}"
         command.lazyLines
           .filterNot(l => l.startsWith("%"))
           .scanLeft((Map.empty[String, MiniZincData], mutable.Map.empty[String, MiniZincData]))((b1, b2) =>
             // b1.head.addString(b2)
             val (_, accum) = b1
-            if (b2.endsWith("----------")) then (accum.toMap, mutable.Map.empty)
+            if (b2.endsWith("----------") || b2.endsWith("==========")) then (accum.toMap, mutable.Map.empty)
             // b1 ++ List.empty
             else {
-              val splitStr = b2.split(" = ")
-              accum(splitStr.head) = MiniZincData.fromResultString(splitStr.last)
+              val splitStr = b2.split("=")
+              accum(splitStr.head.strip) = MiniZincData.fromResultString(splitStr.last.strip)
               b1
             }
           )

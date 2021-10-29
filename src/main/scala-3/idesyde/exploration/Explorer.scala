@@ -27,19 +27,19 @@ trait Explorer {
   ): Boolean =
     val c =
       (if (criteria.contains(ExplorationCriteria.TimeUntilFeasibility))
-         estimateTimeUntilFeasibility(m).compareTo(o.estimateTimeUntilFeasibility(m)) > 0
+         estimateTimeUntilFeasibility(m).compareTo(o.estimateTimeUntilFeasibility(m)) < 0
        else
          true) &&
         (if (criteria.contains(ExplorationCriteria.TimeUntilOptimality))
-           estimateTimeUntilOptimality(m).compareTo(o.estimateTimeUntilOptimality(m)) > 0
+           estimateTimeUntilOptimality(m).compareTo(o.estimateTimeUntilOptimality(m)) < 0
          else
            true) &&
         (if (criteria.contains(ExplorationCriteria.MemoryUntilFeasibility))
-           estimateMemoryUntilFeasibility(m) > o.estimateMemoryUntilFeasibility(m)
+           estimateMemoryUntilFeasibility(m) < o.estimateMemoryUntilFeasibility(m)
          else
            true) &&
         (if (criteria.contains(ExplorationCriteria.MemoryUntilOptimality))
-           estimateMemoryUntilOptimality(m) > o.estimateMemoryUntilOptimality(m)
+           estimateMemoryUntilOptimality(m) < o.estimateMemoryUntilOptimality(m)
          else
            true)
     c && canExplore(m) && o.canExplore(m)

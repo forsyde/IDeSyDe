@@ -1,5 +1,5 @@
 include "globals.mzn";
-include "gecode.mzn";
+
 
 % objectives
 int: objPercentage;
@@ -319,7 +319,7 @@ constraint forall(r in Reactions, p in RoundRobinElems) (
 % with dependencies
 constraint forall(r in Reactions, pp in RoundRobinElems) (
   if (reactionExecution[r] = pp) then
-    reactionResponseTime[r] = reactionDuration[r] + reactionOffsetTime[r]
+    reactionResponseTime[r] >= reactionDuration[r] + reactionOffsetTime[r]
   endif
 );
 
@@ -372,21 +372,22 @@ constraint symmetry_breaking_constraint(forall(p, pp in ProcessingElems where pl
 %     int_search(latenciesVariation, first_fail, indomain_min)
 %   ])
 %   :: restart_luby(length(Reactions) * length(ProcessingElems))
-%   :: relax_and_reconstruct(reactionExecution, 20)
+%   % :: relax_and_reconstruct(reactionExecution, 20)
 %   minimize goal;
 
 % output [
-%   "reactorMapping = ", show(reactorMapping), "\n", 
-%   "channelMapping = ", show(channelMapping), "\n", 
-%   "reactionExecution = ", show(reactionExecution), "\n", 
-%   "reactionResponseTime = ", show(reactionResponseTime), "\n", 
-%   "reactionOffsetTime = ", show(reactionOffsetTime), "\n", 
-%   "reactionRRSlices = ", show2d(reactionRRSlices), "\n", 
-%   "reactionDuration = ", show(reactionDuration), "\n", 
-%   "reactionExeDuration = ", show(reactionExeDuration), "\n", 
-%   "reactionInstDuration = ", show(reactionInstDuration), "\n", 
-%   "reactionDataDuration = ", show(reactionDataDuration), "\n", 
-%   "reactionOutDuration = ", show(reactionOutDuration), "\n", 
-%   "reactionInterferences = ", show2d(reactionInterferences), "\n", 
-%   "totalUtility = ", show(totalUtility), "\n",
-%   "latenciesVariation = ", show(latenciesVariation)];
+%   "reactorMapping = \n", show(reactorMapping), "\n", 
+%   "channelMapping = \n", show(channelMapping), "\n", 
+%   "reactionExecution = \n", show(reactionExecution), "\n", 
+%   "reactionResponseTime = \n", show(reactionResponseTime), "\n", 
+%   "slackTime = \n", show([reactionRelativeDeadline[r] - reactionResponseTime[r] | r in Reactions]), "\n", 
+%   "reactionOffsetTime = \n", show(reactionOffsetTime), "\n", 
+%   "reactionRRSlices = \n", show2d(reactionRRSlices), "\n", 
+%   "reactionDuration = \n", show(reactionDuration), "\n", 
+%   "reactionExeDuration = \n", show(reactionExeDuration), "\n", 
+%   "reactionInstDuration = \n", show(reactionInstDuration), "\n", 
+%   "reactionDataDuration = \n", show(reactionDataDuration), "\n", 
+%   "reactionOutDuration = \n", show(reactionOutDuration), "\n", 
+%   "reactionInterferences = \n", show2d(reactionInterferences), "\n", 
+%   "totalUtility = \n", show(totalUtility), "\n",
+%   "latenciesVariation = \n", show(latenciesVariation)];

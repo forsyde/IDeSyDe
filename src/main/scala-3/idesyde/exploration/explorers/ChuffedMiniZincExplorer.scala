@@ -15,7 +15,7 @@ import java.nio.file.Paths
 import java.nio.file.StandardOpenOption
 import idesyde.exploration.explorers.ChuffedMiniZincExplorer
 
-final case class ChuffedMiniZincExplorer() extends SimpleMiniZincCPExplorer:
+final case class ChuffedMiniZincExplorer() extends SimpleMiniZincCPExplorer with ReactorMinusDSEMznMerger:
 
   override def canExplore(decisionModel: DecisionModel): Boolean =
     super.canExplore(decisionModel) &&
@@ -26,7 +26,7 @@ final case class ChuffedMiniZincExplorer() extends SimpleMiniZincCPExplorer:
       case m: ReactorMinusAppMapAndSchedMzn =>
         val nonMznDecisionModel = m.sourceModel
         Duration.ofSeconds(
-          nonMznDecisionModel.reactorMinus.jobGraph.jobs.size * nonMznDecisionModel.reactorMinus.jobGraph.channels.size * 10
+          nonMznDecisionModel.reactorMinus.jobGraph.jobs.size * nonMznDecisionModel.reactorMinus.jobGraph.channels.size * 5
         )
       case _ => Duration.ZERO
 
@@ -35,7 +35,7 @@ final case class ChuffedMiniZincExplorer() extends SimpleMiniZincCPExplorer:
       case m: ReactorMinusAppMapAndSchedMzn =>
         val nonMznDecisionModel = m.sourceModel
         Duration.ofMinutes(
-          nonMznDecisionModel.reactorMinus.jobGraph.jobs.size * nonMznDecisionModel.reactorMinus.jobGraph.channels.size * nonMznDecisionModel.platform.coveredVertexes.size * 3
+          nonMznDecisionModel.reactorMinus.jobGraph.jobs.size * nonMznDecisionModel.reactorMinus.jobGraph.channels.size * nonMznDecisionModel.platform.coveredVertexes.size
         )
       case _ => Duration.ZERO
 
@@ -56,13 +56,12 @@ final case class ChuffedMiniZincExplorer() extends SimpleMiniZincCPExplorer:
   def explore(decisionModel: DecisionModel)(using ExecutionContext) =
     decisionModel match
       case m: ReactorMinusAppMapAndSchedMzn =>
-        val resString = explorationSolve(m, 
-        "chuffed", 
-        callExtraFlags = List("-f"),
-        extraHeader = ChuffedMiniZincExplorer.extraHeaderReactorMinusAppMapAndSchedMzn,
-        extraInstruction = ChuffedMiniZincExplorer.extraInstReactorMinusAppMapAndSchedMzn
-        )
-        LazyList.empty
+        explorationSolve(m, 
+          "chuffed", 
+          callExtraFlags = List("-f"),
+          extraHeader = ChuffedMiniZincExplorer.extraHeaderReactorMinusAppMapAndSchedMzn,
+          extraInstruction = ChuffedMiniZincExplorer.extraInstReactorMinusAppMapAndSchedMzn
+        ).map(result => mergeResults(m, result))
       case _ => LazyList.empty
 
 end ChuffedMiniZincExplorer

@@ -344,7 +344,19 @@ final case class ReactorMinusAppJobGraph(
                   ps.getPath(i, ii).getVertexList.asScala.map(pi => jobsOrdered(pi)).toSeq
                 )
               )
-              .map((jj, ii) => (j, jj) -> jj.trigger.subtract(j.trigger))
+              // sum the jobd one by one in order to account for inter-hyperperiod cycles
+              .map((jj, ii) => (j, jj) -> ps.getPath(i, ii).getVertexList.asScala.sliding(2).foldLeft(BigFraction.ZERO)((s, l) => {
+                if jobsOrdered(l.head).trigger.compareTo(jobsOrdered(l.last).trigger) >= 0 then
+                  s.add(
+                    jobsOrdered(l.head).trigger.subtract(jobsOrdered(l.last).trigger)
+                  )
+                else
+                  s.add(
+                    reactorMinus.hyperPeriod.add(
+                      jobsOrdered(l.last).trigger.subtract(jobsOrdered(l.head).trigger)
+                    )
+                  )
+              }))
           )
       })
       .flatMap(a => a)

@@ -6,8 +6,8 @@ import scala.collection.mutable.Buffer
 
 enum MiniZincData:
   case MznLiteral(val literal: Double | Int | Long | String | Boolean) extends MiniZincData
-  case MznArray(val values: Seq[MiniZincData] | Buffer[MiniZincData]) extends MiniZincData
-  case MznSet(val values: Set[MiniZincData])
+  case MznArray(val values: Seq[MiniZincData]) extends MiniZincData
+  case MznSet(val values: Set[MiniZincData]) extends MiniZincData
   case MznEnum(val values: Seq[String]) extends MiniZincData
 
   def toJson(root: Boolean = false): ujson.Value =
@@ -41,67 +41,62 @@ object MiniZincData:
 
   val arrayRegex = "array(\\d+)d\\(((?:\\d+\\.\\.\\d+, )+)\\[(.+)\\]\\)".r
 
-  def apply(x: Double | Int | Long | String | Boolean | Seq[?] | Set[?] | Buffer[?]) =
-    x match {
-      case arr: Seq[?] => MiniZincData.fromArray(arr)
-      case buf: Buffer[?] => MiniZincData.fromArray(buf)
-      case subset: Set[?] => MiniZincData.fromSet(subset)
-      case l: (Double | Int | Long | String | Boolean | String) => MiniZincData.fromLiteral(l)
-    }
+  def apply(e: Double | Int | Long | String | Boolean | Seq[?] | Set[?]) =
+    if (e.isInstanceOf[Double | Int | Long | Boolean | String]) then MiniZincData.fromLiteral(e.asInstanceOf[Double | Int | Long | Boolean | String])
+    else if (e.isInstanceOf[Seq[?]]) then MiniZincData.fromArray(e.asInstanceOf[Seq[?]]) 
+    else if (e.isInstanceOf[Set[?]]) then MiniZincData.fromSet(e.asInstanceOf[Set[?]])
+    else throw MatchError(e)
 
   def fromLiteral(l: Double | Int | Long | String | Boolean): MiniZincData = MiniZincData.MznLiteral(l)
 
-  def fromArray(a: Seq[?] | Buffer[?]): MiniZincData = MiniZincData.MznArray(a.map(e => {
-    e match {
-      case l: (Double | Int | Long | Boolean | String) => MiniZincData.fromLiteral(l)
-      case arr: Seq[?] => MiniZincData.fromArray(arr)
-      case subset: Set[?] => MiniZincData.fromSet(subset)
-    }
+  def fromArray(a: Seq[?]): MiniZincData = MiniZincData.MznArray(a.map(e => {
+    if (e.isInstanceOf[Double | Int | Long | Boolean | String]) then MiniZincData.fromLiteral(e.asInstanceOf[Double | Int | Long | Boolean | String])
+    else if (e.isInstanceOf[Seq[?]]) then MiniZincData.fromArray(e.asInstanceOf[Seq[?]]) 
+    else if (e.isInstanceOf[List[?]]) then MiniZincData.fromArray(e.asInstanceOf[List[?]]) 
+    else if (e.isInstanceOf[Set[?]]) then MiniZincData.fromSet(e.asInstanceOf[Set[?]])
+    else throw MatchError(e)
   }))
 
+
   def fromSet(s: Set[?]): MiniZincData = MiniZincData.MznSet(s.map(e => {
-    e match {
-      case l: (Double | Int | Long | Boolean | String) => MiniZincData.fromLiteral(l)
-      case arr: Seq[?] => MiniZincData.fromArray(arr)
-      case subset: Set[?] => MiniZincData.fromSet(subset)
-    }
+    if (e.isInstanceOf[Double | Int | Long | Boolean | String]) then MiniZincData.fromLiteral(e.asInstanceOf[Double | Int | Long | Boolean | String])
+    else if (e.isInstanceOf[Seq[?]]) then MiniZincData.fromArray(e.asInstanceOf[Seq[?]]) 
+    else if (e.isInstanceOf[Set[?]]) then MiniZincData.fromSet(e.asInstanceOf[Set[?]])
+    else throw MatchError(e)
   }))
 
   def fromResultString(s: String): MiniZincData =
-    val stripped = s.strip
+    val stripped = s.strip.dropRight(1) // The 1 refers to the trailing ";" in every message
     if (stripped.startsWith("array")) then
       arrayRegex.findFirstMatchIn(stripped) match
         case Some(m) =>
           val dimensions = m.group(1).toInt
-          val sizes = m.group(2).split(", ").map(s => 
-            val innerSplit = s.split("..")
-            val start = innerSplit.head.toInt
-            val end = innerSplit.last.toInt
-            end - start
+          val sizes = m.group(2).split(",").dropRight(1).map(s => 
+            val innerSplit = s.strip.split('.')
+            val start = innerSplit(0)
+            val end = innerSplit(innerSplit.length - 1)
+            end.toInt - start.toInt
           )
-          val data = m.group(3).split(", ").map(s => 
-            if (s.contains(".")) then MiniZincData(s.toDouble)
-            else MiniZincData(s.toInt)
+          val data = m.group(3).split(",").map(s => 
+            if (s.contains(".")) then MiniZincData(s.strip.toDouble)
+            else MiniZincData(s.strip.toInt)
           )
-          var topArray: Buffer[MiniZincData] = Buffer.empty
-          var queue = Queue((0, 0, topArray))
-          while (!queue.isEmpty)
-            val (dim, offset, array) = queue.front
-            if (dim < dimensions)
-              val newBuffers: Array[Buffer[MiniZincData]] = Array.fill(sizes(dim))(Buffer.empty)
-              for (i <- 0 until dim)
-                queue.addOne((dim + 1, offset * sizes(dim) + i, newBuffers(i)))
-              array.addAll(newBuffers.map(b => MiniZincData(b)))
-            else
-              array.addAll(
-                data.slice(offset, offset + sizes(dim))
-              )
-          MiniZincData(topArray.toSeq)
+          fromFlatArray(dimensions, sizes.toIndexedSeq, data.toIndexedSeq)
         case _ => 
           MznArray(Seq.empty)
     else if (stripped.contains('.')) then
       MznLiteral(stripped.toDouble)
     else
-      MznLiteral(stripped.toLong)  
+      MznLiteral(stripped.toLong)
+
+  
+  def fromFlatArray(dim: Int, sizes: Seq[Int], data: Seq[MiniZincData], offset: Int = 0): MiniZincData.MznArray =
+    if dim == 1 then
+      MiniZincData.MznArray(data.slice(offset, offset + sizes.head))
+    else
+      MiniZincData.MznArray(
+        for (i <- 0 until sizes.head) yield
+          fromFlatArray(dim - 1, sizes.tail, data, sizes.head * offset + i)
+      )
 
 end MiniZincData

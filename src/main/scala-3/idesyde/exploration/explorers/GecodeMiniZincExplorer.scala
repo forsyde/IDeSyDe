@@ -14,8 +14,9 @@ import idesyde.identification.DecisionModel
 import java.nio.file.Paths
 import java.nio.file.StandardOpenOption
 import idesyde.identification.interfaces.MiniZincData
+import forsyde.io.java.core.EdgeTrait
 
-final case class GecodeMiniZincExplorer() extends SimpleMiniZincCPExplorer:
+final case class GecodeMiniZincExplorer() extends SimpleMiniZincCPExplorer with ReactorMinusDSEMznMerger:
 
   override def canExplore(decisionModel: DecisionModel): Boolean =
     super.canExplore(decisionModel) &&
@@ -34,7 +35,7 @@ final case class GecodeMiniZincExplorer() extends SimpleMiniZincCPExplorer:
     decisionModel match
       case m: ReactorMinusAppMapAndSchedMzn =>
         val nonMznDecisionModel = m.sourceModel
-        Duration.ofMinutes(
+        Duration.ofHours(
           nonMznDecisionModel.reactorMinus.jobGraph.jobs.size * nonMznDecisionModel.reactorMinus.jobGraph.channels.size * nonMznDecisionModel.platform.coveredVertexes.size 
         )
       case _ => Duration.ZERO
@@ -59,12 +60,9 @@ final case class GecodeMiniZincExplorer() extends SimpleMiniZincCPExplorer:
         val results = explorationSolve(m, "gecode", 
         extraHeader = GecodeMiniZincExplorer.extraHeaderReactorMinusAppMapAndSchedMzn,
         extraInstruction = GecodeMiniZincExplorer.extraInstReactorMinusAppMapAndSchedMzn)
-        results.foreach(s => 
-          scribe.debug(s.toString)
-          // ForSyDeModel()
-        )
-        LazyList.empty
+        results.map(result => mergeResults(m, result))
       case _ => LazyList.empty
+
 
 end GecodeMiniZincExplorer
 

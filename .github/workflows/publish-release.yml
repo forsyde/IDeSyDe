@@ -5,307 +5,307 @@ on:
     types: [created]
 
 jobs:
-  publish-pypi:
-    runs-on: ubuntu-latest
-    steps:
-    - uses: actions/checkout@v2
-    - uses: little-core-labs/get-git-tag@v3.0.1
-      id: tagName
-      with:
-        tagRegex: "refs/tags/(.*)" 
-        tagRegexGroup: 1
-    - uses: actions/setup-python@v2
-      with:
-        python-version: '3.x'
-    - uses: abatilo/actions-poetry@v2.1.0
-      with:
-        poetry-version: '1.1.5'
-    - name: generate additional code for python supporting libs
-      run: |
-        cd $GITHUB_WORKSPACE
-        poetry update
-        poetry install
-        poetry run generate ${{ steps.tagName.outputs.tag }}
-    - name: Build and publish core and generated code
-      run: |
-        cd $GITHUB_WORKSPACE/python
-        poetry update
-        poetry build
-        poetry publish -u __token__ -p ${{ secrets.IDESYDE_PYPI_TOKEN }}
-  publish-linux-pyz:
-    strategy:
-      matrix:
-        python: [3.7, 3.8, 3.9]
-        poetry: [1.1.5]
-        rust: [1.49.0]
-        pyoxidizer: [0.11.0]
-    runs-on: ubuntu-18.04
-    steps:
-    - uses: actions/checkout@v2
-    - uses: little-core-labs/get-git-tag@v3.0.1
-      id: tagName
-      with:
-        tagRegex: "refs/tags/(.*)" 
-        tagRegexGroup: 1
-    - name: Set up Python ${{ matrix.python }}
-      uses: actions/setup-python@v2
-      with:
-        python-version: ${{ matrix.python }}
-    - name: Set up pip properly
-      run: python -m pip install --upgrade pip
-    - uses: abatilo/actions-poetry@v2.1.0
-      with:
-        poetry-version: ${{ matrix.poetry }}
-    - name: Make shiv from poetry file
-      run: |
-        cd ${{ github.workspace }}
-        poetry update
-        poetry install
-        mkdir -p dist
-        poetry run shiv --site-packages=$(find $(poetry env info -p) -name "site-packages") --upgrade -o dist/idesyde.pyz -c idesyde idesyde
-    - name: Upload binaries to release
-      uses: svenstaro/upload-release-action@v2
-      with:
-        repo_token: ${{ secrets.GITHUB_TOKEN }}
-        file: ${{ github.workspace }}/dist/idesyde.pyz
-        asset_name: IDeSyDe-${{ steps.tagName.outpsuts.tag }}-x86_64-linux-gnu-py${{ matrix.python }}.pyz
-        tag: "${{ github.ref }}"
-        overwrite: true
-        body: "Python zip with Libs for x86_64 linux distros"
-  publish-linux-bin:
-    env:
-      python-version: 3.8
-      poetry-version: 1.1.5
-      rust-version: 1.49.0
-      pyoxidizer-version: 0.11.0
-    runs-on: ubuntu-18.04
-    steps:
-    - uses: actions/checkout@v2
-    - uses: little-core-labs/get-git-tag@v3.0.1
-      id: tagName
-      with:
-        tagRegex: "refs/tags/(.*)" 
-        tagRegexGroup: 1
-    # - name: Cache node modules
-    #   uses: actions/cache@v2
-    #   env:
-    #     cache-name: cache-idesyde-cargo
-    #   with:
-    #     # npm cache files are stored in `~/.npm` on Linux/macOS
-    #     path: ~/.cargo
-    #     key: ${{ runner.os }}-${{ env.cache-name }}-${{ env.rust-version }}-${{ env.pyoxidizer-version }}
-    #     restore-keys: |
-    #       ${{ runner.os }}-${{ env.cache-name }}-${{ env.rust-version }}-${{ env.pyoxidizer-version }}
-    #       ${{ runner.os }}-${{ env.cache-name }}-${{ env.rust-version }}-
-    #       ${{ runner.os }}-${{ env.cache-name }}-
-    #       ${{ runner.os }}-
-    - name: Set up Python ${{ env.python-version }}
-      uses: actions/setup-python@v2
-      with:
-        python-version: ${{ env.python-version }}
-    - name: Set up pip properly
-      run: python -m pip install --upgrade pip
-    - uses: abatilo/actions-poetry@v2.1.0
-      with:
-        poetry-version: ${{ env.poetry-version }}
-    - name: Setup Rust
-      uses: ATiltedTree/setup-rust@v1.0.4
-      with:
-        rust-version: ${{ env.rust-version }}
-    - name: Install PyOxidizer
-      run: cargo install --version ${{ env.pyoxidizer-version }} pyoxidizer
-    - name: Run PyOxidizer
-      run: |
-        cd ${{ github.workspace }}
-        pyoxidizer build --release
-    - name: Zip IDeSyDe
-      run: |
-        sudo apt-get install -y unzip
-        cd ${{ github.workspace }}/build/x86_64-unknown-linux-gnu/release/install
-        zip -r idesyde-x86_64-unknown-linux-gnu.zip idesyde
-    - name: Upload binaries to release
-      uses: svenstaro/upload-release-action@v2
-      with:
-        repo_token: ${{ secrets.GITHUB_TOKEN }}
-        file: ${{ github.workspace }}/build/x86_64-unknown-linux-gnu/release/install/idesyde-x86_64-unknown-linux-gnu.zip
-        asset_name: IDeSyDe-${{ steps.tagName.outputs.tag }}-x86_64-unknown-linux-gnu.zip
-        tag: "${{ github.ref }}"
-        overwrite: true
-        body: "Executable zip with Libs for x86_64 linux distros"
-  publish-windows-pyz:
-    strategy:
-      matrix:
-        python: [3.7, 3.8, 3.9]
-        poetry: [1.1.5]
-        rust: [1.49.0]
-        pyoxidizer: [0.11.0]
-    runs-on: windows-latest
-    steps:
-    - uses: actions/checkout@v2
-    - uses: little-core-labs/get-git-tag@v3.0.1
-      id: tagName
-      with:
-        tagRegex: "refs/tags/(.*)"
-        tagRegexGroup: 1
-    - name: Set up Python ${{ matrix.python }}
-      uses: actions/setup-python@v2
-      with:
-        python-version: ${{ matrix.python }}
-    - name: Set up pip properly
-      run: python -m pip install --upgrade pip
-    - uses: abatilo/actions-poetry@v2.1.0
-      with:
-        poetry-version: ${{ matrix.poetry }}
-    - name: Make shiv from poetry file
-      run: |
-        cd ${{ github.workspace }}
-        poetry update
-        poetry install
-        mkdir -p dist
-        poetry run shiv -o dist\idesyde.pyz -c idesyde idesyde
-    - name: Upload binaries to release
-      uses: svenstaro/upload-release-action@v2
-      with:
-        repo_token: ${{ secrets.GITHUB_TOKEN }}
-        file: ${{ github.workspace }}\dist\idesyde.pyz
-        asset_name: IDeSyDe-${{ steps.tagName.outputs.tag }}-x86_64-windows-msvc-py${{ matrix.python }}.pyz
-        tag: "${{ github.ref }}"
-        overwrite: true
-        body: "Python zip with Libs for x86_64 windows" 
-  publish-windows-bin:
-    env:
-      python-version: 3.9
-      poetry-version: 1.1.5
-      rust-version: 1.49.0
-      pyoxidizer-version: 0.11.0
-    runs-on: windows-latest
-    steps:
-    - uses: actions/checkout@v2
-    - uses: little-core-labs/get-git-tag@v3.0.1
-      id: tagName
-      with:
-        tagRegex: "refs/tags/(.*)"
-        tagRegexGroup: 1
-    - name: Set up Python ${{ env.python-version }}
-      uses: actions/setup-python@v2
-      with:
-        python-version: ${{ env.python-version }}
-    - name: Set up pip properly
-      run: python -m pip install --upgrade pip
-    - uses: abatilo/actions-poetry@v2.1.0
-      with:
-        poetry-version: ${{ env.poetry-version }}
-    - name: Setup Rust
-      uses: ATiltedTree/setup-rust@v1.0.4
-      with:
-        rust-version: ${{ env.rust-version }}
-    - name: Install PyOxidizer
-      run: cargo install --version ${{ env.pyoxidizer-version }} pyoxidizer
-    - name: Run PyOxidizer
-      run: |
-        cd ${{ github.workspace }}
-        pyoxidizer build --release
-    - name: Zip IDeSyDe
-      run: |
-        cd ${{ github.workspace }}\build\x86_64-pc-windows-msvc\release\install
-        Compress-Archive -path '.\idesyde' -destinationpath '.\idesyde-x86_64-pc-windows-msvc.zip' 
-    - name: Upload binaries to release
-      uses: svenstaro/upload-release-action@v2
-      with:
-        repo_token: ${{ secrets.GITHUB_TOKEN }}
-        file: ${{ github.workspace }}\build\x86_64-pc-windows-msvc\release\install\idesyde-x86_64-pc-windows-msvc.zip
-        asset_name: IDeSyDe-${{ steps.tagName.outputs.tag }}-x86_64-pc-windows-msvc.zip
-        tag: "${{ github.ref }}"
-        overwrite: true
-        body: "Zip with Libs for x86_64 Windows"
-  publish-apple-pyz:
-    strategy:
-      matrix:
-        python: [3.7, 3.8, 3.9]
-        poetry: [1.1.5]
-        rust: [1.49.0]
-        pyoxidizer: [0.11.0]
-    runs-on: macos-latest
-    steps:
-    - uses: actions/checkout@v2
-    - uses: little-core-labs/get-git-tag@v3.0.1
-      id: tagName
-      with:
-        tagRegex: "refs/tags/(.*)"
-        tagRegexGroup: 1
-    - name: Set up Python ${{ matrix.python }}
-      uses: actions/setup-python@v2
-      with:
-        python-version: ${{ matrix.python }}
-    - name: Set up pip properly
-      run: python -m pip install --upgrade pip
-    - uses: abatilo/actions-poetry@v2.1.0
-      with:
-        poetry-version: ${{ matrix.poetry }}
-    - name: Regen Setup.py from poetry file
-      run: |
-        cd ${{ github.workspace }}
-        poetry update
-        poetry install
-        mkdir -p dist
-        poetry run shiv --site-packages=$(find $(poetry env info -p) -name "site-packages") --upgrade -o dist/idesyde.pyz -c idesyde idesyde
-    - name: Upload binaries to release
-      uses: svenstaro/upload-release-action@v2
-      with:
-        repo_token: ${{ secrets.GITHUB_TOKEN }}
-        file: ${{ github.workspace }}/dist/idesyde.pyz
-        asset_name: IDeSyDe-${{ steps.tagName.outputs.tag }}-x86_64-apple-darwin-py${{ matrix.python }}.pyz
-        tag: "${{ github.ref }}"
-        overwrite: true
-        body: "Python zip for x86_64 MacOS"
-  publish-apple-bin:
-    env:
-      python-version: 3.9
-      poetry-version: 1.1.5
-      rust-version: 1.49.0
-      pyoxidizer-version: 0.11.0
-    runs-on: macos-latest
-    steps:
-    - uses: actions/checkout@v2
-    - uses: little-core-labs/get-git-tag@v3.0.1
-      id: tagName
-      with:
-        tagRegex: "refs/tags/(.*)"
-        tagRegexGroup: 1
-    - name: Set up Python ${{ env.python-version }}
-      uses: actions/setup-python@v2
-      with:
-        python-version: ${{ env.python-version }}
-    - name: Set up pip properly
-      run: python -m pip install --upgrade pip
-    - uses: abatilo/actions-poetry@v2.1.0
-      with:
-        poetry-version: ${{ env.poetry-version }}
-    - name: Setup Rust
-      uses: ATiltedTree/setup-rust@v1.0.4
-      with:
-        rust-version: ${{ env.rust-version }}
-    - name: Install PyOxidizer
-      run: cargo install --version ${{ env.pyoxidizer-version }} pyoxidizer
-    - name: Regen Setup.py from poetry file
-      run: |
-        cd ${{ github.workspace }}
-        poetry update
-        poetry export -o requirements.txt
-    - name: Run PyOxidizer
-      run: |
-        cd ${{ github.workspace }}
-        pyoxidizer build --release
-    - name: Zip IDeSyDe
-      run: |
-        cd ${{ github.workspace }}/build/x86_64-apple-darwin/release/install
-        zip -r idesyde-x86_64-apple-darwin.zip idesyde 
-    - name: Upload binaries to release
-      uses: svenstaro/upload-release-action@v2
-      with:
-        repo_token: ${{ secrets.GITHUB_TOKEN }}
-        file: ${{ github.workspace }}/build/x86_64-apple-darwin/release/install/idesyde-x86_64-apple-darwin.zip
-        asset_name: IDeSyDe-${{ steps.tagName.outputs.tag }}-x86_64-apple-darwin.zip
-        tag: "${{ github.ref }}"
-        overwrite: true
-        body: "Zip with Libs for x86_64 MacOS"
+  # publish-pypi:
+  #   runs-on: ubuntu-latest
+  #   steps:
+  #   - uses: actions/checkout@v2
+  #   - uses: little-core-labs/get-git-tag@v3.0.1
+  #     id: tagName
+  #     with:
+  #       tagRegex: "refs/tags/(.*)" 
+  #       tagRegexGroup: 1
+  #   - uses: actions/setup-python@v2
+  #     with:
+  #       python-version: '3.x'
+  #   - uses: abatilo/actions-poetry@v2.1.0
+  #     with:
+  #       poetry-version: '1.1.5'
+  #   - name: generate additional code for python supporting libs
+  #     run: |
+  #       cd $GITHUB_WORKSPACE
+  #       poetry update
+  #       poetry install
+  #       poetry run generate ${{ steps.tagName.outputs.tag }}
+  #   - name: Build and publish core and generated code
+  #     run: |
+  #       cd $GITHUB_WORKSPACE/python
+  #       poetry update
+  #       poetry build
+  #       poetry publish -u __token__ -p ${{ secrets.IDESYDE_PYPI_TOKEN }}
+  # publish-linux-pyz:
+  #   strategy:
+  #     matrix:
+  #       python: [3.7, 3.8, 3.9]
+  #       poetry: [1.1.5]
+  #       rust: [1.49.0]
+  #       pyoxidizer: [0.11.0]
+  #   runs-on: ubuntu-18.04
+  #   steps:
+  #   - uses: actions/checkout@v2
+  #   - uses: little-core-labs/get-git-tag@v3.0.1
+  #     id: tagName
+  #     with:
+  #       tagRegex: "refs/tags/(.*)" 
+  #       tagRegexGroup: 1
+  #   - name: Set up Python ${{ matrix.python }}
+  #     uses: actions/setup-python@v2
+  #     with:
+  #       python-version: ${{ matrix.python }}
+  #   - name: Set up pip properly
+  #     run: python -m pip install --upgrade pip
+  #   - uses: abatilo/actions-poetry@v2.1.0
+  #     with:
+  #       poetry-version: ${{ matrix.poetry }}
+  #   - name: Make shiv from poetry file
+  #     run: |
+  #       cd ${{ github.workspace }}
+  #       poetry update
+  #       poetry install
+  #       mkdir -p dist
+  #       poetry run shiv --site-packages=$(find $(poetry env info -p) -name "site-packages") --upgrade -o dist/idesyde.pyz -c idesyde idesyde
+  #   - name: Upload binaries to release
+  #     uses: svenstaro/upload-release-action@v2
+  #     with:
+  #       repo_token: ${{ secrets.GITHUB_TOKEN }}
+  #       file: ${{ github.workspace }}/dist/idesyde.pyz
+  #       asset_name: IDeSyDe-${{ steps.tagName.outpsuts.tag }}-x86_64-linux-gnu-py${{ matrix.python }}.pyz
+  #       tag: "${{ github.ref }}"
+  #       overwrite: true
+  #       body: "Python zip with Libs for x86_64 linux distros"
+  # publish-linux-bin:
+  #   env:
+  #     python-version: 3.8
+  #     poetry-version: 1.1.5
+  #     rust-version: 1.49.0
+  #     pyoxidizer-version: 0.11.0
+  #   runs-on: ubuntu-18.04
+  #   steps:
+  #   - uses: actions/checkout@v2
+  #   - uses: little-core-labs/get-git-tag@v3.0.1
+  #     id: tagName
+  #     with:
+  #       tagRegex: "refs/tags/(.*)" 
+  #       tagRegexGroup: 1
+  #   # - name: Cache node modules
+  #   #   uses: actions/cache@v2
+  #   #   env:
+  #   #     cache-name: cache-idesyde-cargo
+  #   #   with:
+  #   #     # npm cache files are stored in `~/.npm` on Linux/macOS
+  #   #     path: ~/.cargo
+  #   #     key: ${{ runner.os }}-${{ env.cache-name }}-${{ env.rust-version }}-${{ env.pyoxidizer-version }}
+  #   #     restore-keys: |
+  #   #       ${{ runner.os }}-${{ env.cache-name }}-${{ env.rust-version }}-${{ env.pyoxidizer-version }}
+  #   #       ${{ runner.os }}-${{ env.cache-name }}-${{ env.rust-version }}-
+  #   #       ${{ runner.os }}-${{ env.cache-name }}-
+  #   #       ${{ runner.os }}-
+  #   - name: Set up Python ${{ env.python-version }}
+  #     uses: actions/setup-python@v2
+  #     with:
+  #       python-version: ${{ env.python-version }}
+  #   - name: Set up pip properly
+  #     run: python -m pip install --upgrade pip
+  #   - uses: abatilo/actions-poetry@v2.1.0
+  #     with:
+  #       poetry-version: ${{ env.poetry-version }}
+  #   - name: Setup Rust
+  #     uses: ATiltedTree/setup-rust@v1.0.4
+  #     with:
+  #       rust-version: ${{ env.rust-version }}
+  #   - name: Install PyOxidizer
+  #     run: cargo install --version ${{ env.pyoxidizer-version }} pyoxidizer
+  #   - name: Run PyOxidizer
+  #     run: |
+  #       cd ${{ github.workspace }}
+  #       pyoxidizer build --release
+  #   - name: Zip IDeSyDe
+  #     run: |
+  #       sudo apt-get install -y unzip
+  #       cd ${{ github.workspace }}/build/x86_64-unknown-linux-gnu/release/install
+  #       zip -r idesyde-x86_64-unknown-linux-gnu.zip idesyde
+  #   - name: Upload binaries to release
+  #     uses: svenstaro/upload-release-action@v2
+  #     with:
+  #       repo_token: ${{ secrets.GITHUB_TOKEN }}
+  #       file: ${{ github.workspace }}/build/x86_64-unknown-linux-gnu/release/install/idesyde-x86_64-unknown-linux-gnu.zip
+  #       asset_name: IDeSyDe-${{ steps.tagName.outputs.tag }}-x86_64-unknown-linux-gnu.zip
+  #       tag: "${{ github.ref }}"
+  #       overwrite: true
+  #       body: "Executable zip with Libs for x86_64 linux distros"
+  # publish-windows-pyz:
+  #   strategy:
+  #     matrix:
+  #       python: [3.7, 3.8, 3.9]
+  #       poetry: [1.1.5]
+  #       rust: [1.49.0]
+  #       pyoxidizer: [0.11.0]
+  #   runs-on: windows-latest
+  #   steps:
+  #   - uses: actions/checkout@v2
+  #   - uses: little-core-labs/get-git-tag@v3.0.1
+  #     id: tagName
+  #     with:
+  #       tagRegex: "refs/tags/(.*)"
+  #       tagRegexGroup: 1
+  #   - name: Set up Python ${{ matrix.python }}
+  #     uses: actions/setup-python@v2
+  #     with:
+  #       python-version: ${{ matrix.python }}
+  #   - name: Set up pip properly
+  #     run: python -m pip install --upgrade pip
+  #   - uses: abatilo/actions-poetry@v2.1.0
+  #     with:
+  #       poetry-version: ${{ matrix.poetry }}
+  #   - name: Make shiv from poetry file
+  #     run: |
+  #       cd ${{ github.workspace }}
+  #       poetry update
+  #       poetry install
+  #       mkdir -p dist
+  #       poetry run shiv -o dist\idesyde.pyz -c idesyde idesyde
+  #   - name: Upload binaries to release
+  #     uses: svenstaro/upload-release-action@v2
+  #     with:
+  #       repo_token: ${{ secrets.GITHUB_TOKEN }}
+  #       file: ${{ github.workspace }}\dist\idesyde.pyz
+  #       asset_name: IDeSyDe-${{ steps.tagName.outputs.tag }}-x86_64-windows-msvc-py${{ matrix.python }}.pyz
+  #       tag: "${{ github.ref }}"
+  #       overwrite: true
+  #       body: "Python zip with Libs for x86_64 windows" 
+  # publish-windows-bin:
+  #   env:
+  #     python-version: 3.9
+  #     poetry-version: 1.1.5
+  #     rust-version: 1.49.0
+  #     pyoxidizer-version: 0.11.0
+  #   runs-on: windows-latest
+  #   steps:
+  #   - uses: actions/checkout@v2
+  #   - uses: little-core-labs/get-git-tag@v3.0.1
+  #     id: tagName
+  #     with:
+  #       tagRegex: "refs/tags/(.*)"
+  #       tagRegexGroup: 1
+  #   - name: Set up Python ${{ env.python-version }}
+  #     uses: actions/setup-python@v2
+  #     with:
+  #       python-version: ${{ env.python-version }}
+  #   - name: Set up pip properly
+  #     run: python -m pip install --upgrade pip
+  #   - uses: abatilo/actions-poetry@v2.1.0
+  #     with:
+  #       poetry-version: ${{ env.poetry-version }}
+  #   - name: Setup Rust
+  #     uses: ATiltedTree/setup-rust@v1.0.4
+  #     with:
+  #       rust-version: ${{ env.rust-version }}
+  #   - name: Install PyOxidizer
+  #     run: cargo install --version ${{ env.pyoxidizer-version }} pyoxidizer
+  #   - name: Run PyOxidizer
+  #     run: |
+  #       cd ${{ github.workspace }}
+  #       pyoxidizer build --release
+  #   - name: Zip IDeSyDe
+  #     run: |
+  #       cd ${{ github.workspace }}\build\x86_64-pc-windows-msvc\release\install
+  #       Compress-Archive -path '.\idesyde' -destinationpath '.\idesyde-x86_64-pc-windows-msvc.zip' 
+  #   - name: Upload binaries to release
+  #     uses: svenstaro/upload-release-action@v2
+  #     with:
+  #       repo_token: ${{ secrets.GITHUB_TOKEN }}
+  #       file: ${{ github.workspace }}\build\x86_64-pc-windows-msvc\release\install\idesyde-x86_64-pc-windows-msvc.zip
+  #       asset_name: IDeSyDe-${{ steps.tagName.outputs.tag }}-x86_64-pc-windows-msvc.zip
+  #       tag: "${{ github.ref }}"
+  #       overwrite: true
+  #       body: "Zip with Libs for x86_64 Windows"
+  # publish-apple-pyz:
+  #   strategy:
+  #     matrix:
+  #       python: [3.7, 3.8, 3.9]
+  #       poetry: [1.1.5]
+  #       rust: [1.49.0]
+  #       pyoxidizer: [0.11.0]
+  #   runs-on: macos-latest
+  #   steps:
+  #   - uses: actions/checkout@v2
+  #   - uses: little-core-labs/get-git-tag@v3.0.1
+  #     id: tagName
+  #     with:
+  #       tagRegex: "refs/tags/(.*)"
+  #       tagRegexGroup: 1
+  #   - name: Set up Python ${{ matrix.python }}
+  #     uses: actions/setup-python@v2
+  #     with:
+  #       python-version: ${{ matrix.python }}
+  #   - name: Set up pip properly
+  #     run: python -m pip install --upgrade pip
+  #   - uses: abatilo/actions-poetry@v2.1.0
+  #     with:
+  #       poetry-version: ${{ matrix.poetry }}
+  #   - name: Regen Setup.py from poetry file
+  #     run: |
+  #       cd ${{ github.workspace }}
+  #       poetry update
+  #       poetry install
+  #       mkdir -p dist
+  #       poetry run shiv --site-packages=$(find $(poetry env info -p) -name "site-packages") --upgrade -o dist/idesyde.pyz -c idesyde idesyde
+  #   - name: Upload binaries to release
+  #     uses: svenstaro/upload-release-action@v2
+  #     with:
+  #       repo_token: ${{ secrets.GITHUB_TOKEN }}
+  #       file: ${{ github.workspace }}/dist/idesyde.pyz
+  #       asset_name: IDeSyDe-${{ steps.tagName.outputs.tag }}-x86_64-apple-darwin-py${{ matrix.python }}.pyz
+  #       tag: "${{ github.ref }}"
+  #       overwrite: true
+  #       body: "Python zip for x86_64 MacOS"
+  # publish-apple-bin:
+  #   env:
+  #     python-version: 3.9
+  #     poetry-version: 1.1.5
+  #     rust-version: 1.49.0
+  #     pyoxidizer-version: 0.11.0
+  #   runs-on: macos-latest
+  #   steps:
+  #   - uses: actions/checkout@v2
+  #   - uses: little-core-labs/get-git-tag@v3.0.1
+  #     id: tagName
+  #     with:
+  #       tagRegex: "refs/tags/(.*)"
+  #       tagRegexGroup: 1
+  #   - name: Set up Python ${{ env.python-version }}
+  #     uses: actions/setup-python@v2
+  #     with:
+  #       python-version: ${{ env.python-version }}
+  #   - name: Set up pip properly
+  #     run: python -m pip install --upgrade pip
+  #   - uses: abatilo/actions-poetry@v2.1.0
+  #     with:
+  #       poetry-version: ${{ env.poetry-version }}
+  #   - name: Setup Rust
+  #     uses: ATiltedTree/setup-rust@v1.0.4
+  #     with:
+  #       rust-version: ${{ env.rust-version }}
+  #   - name: Install PyOxidizer
+  #     run: cargo install --version ${{ env.pyoxidizer-version }} pyoxidizer
+  #   - name: Regen Setup.py from poetry file
+  #     run: |
+  #       cd ${{ github.workspace }}
+  #       poetry update
+  #       poetry export -o requirements.txt
+  #   - name: Run PyOxidizer
+  #     run: |
+  #       cd ${{ github.workspace }}
+  #       pyoxidizer build --release
+  #   - name: Zip IDeSyDe
+  #     run: |
+  #       cd ${{ github.workspace }}/build/x86_64-apple-darwin/release/install
+  #       zip -r idesyde-x86_64-apple-darwin.zip idesyde 
+  #   - name: Upload binaries to release
+  #     uses: svenstaro/upload-release-action@v2
+  #     with:
+  #       repo_token: ${{ secrets.GITHUB_TOKEN }}
+  #       file: ${{ github.workspace }}/build/x86_64-apple-darwin/release/install/idesyde-x86_64-apple-darwin.zip
+  #       asset_name: IDeSyDe-${{ steps.tagName.outputs.tag }}-x86_64-apple-darwin.zip
+  #       tag: "${{ github.ref }}"
+  #       overwrite: true
+  #       body: "Zip with Libs for x86_64 MacOS"

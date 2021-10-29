@@ -1,3 +1,5 @@
+package idesyde
+
 import picocli.CommandLine
 import idesyde.cli.IDeSyDeCLI
 import idesyde.cli.IDeSyDeCLIParser
@@ -9,16 +11,15 @@ import forsyde.io.java.drivers.ForSyDeModelHandler
 import forsyde.io.java.core.ForSyDeModel
 import scala.concurrent.ExecutionContext
 
-object Main {
+object IDeSyDeStandalone {
 
-  @main
-  def executeCLI(args: String*): Unit =
+  def main(args: Array[String]): Unit =
     // System.exit(CommandLine(IDeSyDeCLI()).execute(args *))
     IDeSyDeCLIParser().parse(args, IDeSyDeRunConfig(executionContext = ExecutionContext.global)) match {
       case Some(runConfig) =>
         runConfig.run()
       case _ =>
-        println("problem")
+        println("problem encountered while parsing!!")
     }
 
 

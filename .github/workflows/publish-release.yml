@@ -4,7 +4,7 @@ on:
   release:
     types: [created]
 
-jobs:
+# jobs:
   # publish-pypi:
   #   runs-on: ubuntu-latest
   #   steps:

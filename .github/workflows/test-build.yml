@@ -12,7 +12,7 @@ jobs:
     strategy:
       matrix:
         os: [ubuntu-latest, macos-latest, windows-latest]
-        java: ["opendk@1.11.0", "opendjk@1.15.0", "graalvm@"]
+        java: ["openjdk@1.11.0", "openjdk@1.15.0", "graalvm@"]
     runs-on: ${{ matrix.os }}
     steps:
     - uses: actions/checkout@v2

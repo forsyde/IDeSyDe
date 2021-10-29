@@ -30,6 +30,9 @@ If you answered _no_ to 1, it means IDeSyDe cannot even know your system model, 
 
 Eventually a better description of the models identified and supported by IDeSyDe will also contain one page in their own respect.
 
+> The following sections are out of date! IDeSyDe has migrated to a JVM project. Majorly scala. Proper installation instructions
+> are to come. For now you can downloaded the latest jars from the github webpage.
+
 # Installation
 
 As a majorly Python-based project, there's no failsafe way to distribute the tool to you, the designer,

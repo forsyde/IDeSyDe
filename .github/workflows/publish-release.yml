@@ -4,6 +4,36 @@ on:
   release:
     types: [created]
 
+jobs:
+  publish-java-build:
+    runs-on: ubuntu-latest
+    steps:
+    - uses: actions/checkout@v2
+    - uses: little-core-labs/get-git-tag@v3.0.1
+      id: tagName
+      with:
+        tagRegex: "refs/tags/(.*)" 
+        tagRegexGroup: 1
+    - name: Set up JDK ${{ matrix.java }}
+      uses: olafurpg/setup-scala@v11
+      with:
+        java-version: ${{ matrix.java }}
+        # server-id: io.github.forsyde # Value of the distributionManagement/repository/id field of the pom.xml
+        # settings-path: ${{ github.workspace }} # location for the settings.xml file
+    - name: Build with sbt (All)
+      # if: ${{ matrix.os != 'windows-latest' }}
+      run: |
+        cd ${{ github.workspace }}
+        sbt assembly
+    - name: Upload binaries to release
+      uses: svenstaro/upload-release-action@v2
+      with:
+        repo_token: ${{ secrets.GITHUB_TOKEN }}
+        file: ${{ github.workspace }}/target/scala-3.1.0/IDeSyDe-assembly-${{ steps.tagName.outputs.tag }}.jar
+        asset_name: IDeSyDe-standalone-${{ steps.tagName.outputs.tag }}-all.jar
+        tag: "${{ github.ref }}"
+        overwrite: true
+        body: "Executable IDeSyDe jar"
 # jobs:
   # publish-pypi:
   #   runs-on: ubuntu-latest

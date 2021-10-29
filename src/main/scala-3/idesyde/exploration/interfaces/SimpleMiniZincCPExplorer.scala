@@ -74,7 +74,7 @@ trait SimpleMiniZincCPExplorer extends Explorer:
             // b1 ++ List.empty
             else {
               val splitStr = b2.split("=")
-              accum(splitStr.head.strip) = MiniZincData.fromResultString(splitStr.last.strip)
+              accum(splitStr.head.trim) = MiniZincData.fromResultString(splitStr.last.trim)
               b1
             }
           )

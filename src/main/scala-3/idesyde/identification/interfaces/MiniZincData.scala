@@ -66,20 +66,20 @@ object MiniZincData:
   }))
 
   def fromResultString(s: String): MiniZincData =
-    val stripped = s.strip.dropRight(1) // The 1 refers to the trailing ";" in every message
+    val stripped = s.trim.dropRight(1) // The 1 refers to the trailing ";" in every message
     if (stripped.startsWith("array")) then
       arrayRegex.findFirstMatchIn(stripped) match
         case Some(m) =>
           val dimensions = m.group(1).toInt
           val sizes = m.group(2).split(",").dropRight(1).map(s => 
-            val innerSplit = s.strip.split('.')
+            val innerSplit = s.trim.split('.')
             val start = innerSplit(0)
             val end = innerSplit(innerSplit.length - 1)
             end.toInt - start.toInt
           )
           val data = m.group(3).split(",").map(s => 
-            if (s.contains(".")) then MiniZincData(s.strip.toDouble)
-            else MiniZincData(s.strip.toInt)
+            if (s.contains(".")) then MiniZincData(s.trim.toDouble)
+            else MiniZincData(s.trim.toInt)
           )
           fromFlatArray(dimensions, sizes.toIndexedSeq, data.toIndexedSeq)
         case _ => 

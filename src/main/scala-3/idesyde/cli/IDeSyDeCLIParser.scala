@@ -16,12 +16,15 @@ class IDeSyDeCLIParser extends scopt.OptionParser[IDeSyDeRunConfig]("idesyde"):
         """
     )
     arg[File]("<inputModel> [<inputModel> ...]")
+        .minOccurs(1)
         .unbounded()
         .action((f, x) => x.copy(inputModelsPaths = x.inputModelsPaths.appended(f.toPath)))
 
     opt[File]('o', "out")
         .valueName("<outputModel>")
-        .action((f, x) => x.copy(outputModelPath = f.toPath))
+        .minOccurs(1)
+        .unbounded()
+        .action((f, x) => x.copy(outputModelPaths = x.outputModelPaths.appended(f.toPath)))
 
     opt[String]('v', "verbosity")
         .valueName("<verbosityLevel>")

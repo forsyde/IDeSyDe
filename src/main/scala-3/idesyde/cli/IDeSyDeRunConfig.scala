@@ -11,8 +11,8 @@ import forsyde.io.java.core.ForSyDeModel
 import scala.concurrent.ExecutionContext
 
 case class IDeSyDeRunConfig (
-    inputModelsPaths: Buffer[Path] = Buffer.empty,
-    outputModelPath: Path = Paths.get("idesyde-result.forsyde.xml"),
+    inputModelsPaths: Seq[Path] = Seq.empty,
+    outputModelPaths: Seq[Path] = Seq.empty,
     verbosityLevel: String = "INFO",
     executionContext: ExecutionContext
 ):
@@ -46,9 +46,11 @@ case class IDeSyDeRunConfig (
           val results                   = explorer.explore(decisionModel)(using executionContext)
           var numSols = 0
           results.foreach(result =>
-            scribe.debug(s"writing solution at ${outputModelPath.toString}")
-            modelHandler.writeModel(model.merge(result), outputModelPath)
-            numSols += 1
+            outputModelPaths.foreach(outpath =>
+              scribe.debug(s"writing solution at ${outpath.toString}")
+              modelHandler.writeModel(model.merge(result), outpath)
+              numSols += 1
+            )
           )
           if (numSols > 0)
             scribe.info(s"Finished exploration with ${numSols} solution(s)")

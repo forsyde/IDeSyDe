@@ -9,6 +9,7 @@ import idesyde.identification.api.Identification
 import idesyde.exploration.api.Exploration
 import forsyde.io.java.core.ForSyDeModel
 import scala.concurrent.ExecutionContext
+import java.nio.file.Files
 
 case class IDeSyDeRunConfig (
     inputModelsPaths: Seq[Path] = Seq.empty,
@@ -47,6 +48,7 @@ case class IDeSyDeRunConfig (
           var numSols = 0
           results.foreach(result =>
             outputModelPaths.foreach(outpath =>
+              if !(Files.exists(outpath)) then Files.createFile(outpath)
               scribe.debug(s"writing solution at ${outpath.toString}")
               modelHandler.writeModel(model.merge(result), outpath)
               numSols += 1

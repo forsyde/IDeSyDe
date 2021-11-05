@@ -17,7 +17,7 @@ trait ReactorMinusDSEMznMerger:
             case MiniZincData.MznLiteral(j) => j.asInstanceOf[Int]
             case _ => 0
         )
-        for (i <- 0 until values.length)
+        for (i <- 0 until decisionModel.reactorsOrdered.size)
           val reactor = decisionModel.reactorsOrdered(i)
           val mem = decisionModel.platformOrdered(valuesConverted(i) - 1) // -1 due to minizinc starting from 1
           if (!outModel.containsVertex(reactor.getViewedVertex)) outModel.addVertex(reactor.getViewedVertex)
@@ -31,7 +31,7 @@ trait ReactorMinusDSEMznMerger:
             case MiniZincData.MznLiteral(j) => j.asInstanceOf[Int]
             case _ => 0
         )
-        for (i <- 0 until values.length)
+        for (i <- 0 until decisionModel.channelsOrdered.size)
           val (_, channel) = decisionModel.channelsOrdered(i)
           val mem = decisionModel.platformOrdered(valuesConverted(i) - 1) // -1 due to minizinc starting from 1
           if (!outModel.containsVertex(channel.getViewedVertex)) outModel.addVertex(channel.getViewedVertex)
@@ -45,7 +45,7 @@ trait ReactorMinusDSEMznMerger:
             case MiniZincData.MznLiteral(j) => j.asInstanceOf[Int]
             case _ => 0
         )
-        for (i <- 0 until values.length)
+        for (i <- 0 until decisionModel.reactionsOrdered.size)
           val reaction = decisionModel.reactionsOrdered(i)
           val pe = decisionModel.platformOrdered(valuesConverted(i) - 1) // -1 due to minizinc starting from 1
           pe match 

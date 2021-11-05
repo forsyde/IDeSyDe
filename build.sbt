@@ -9,10 +9,10 @@ lazy val root = project
     Compile / mainClass := Some("idesyde.IDeSyDeStandalone")
   )
 
-// resolvers += Resolver.mavenLocal
+resolvers += Resolver.mavenLocal
 
 libraryDependencies ++= Seq(
-  "io.github.forsyde" % "forsyde-io-java" % "0.3.8",
+  "io.github.forsyde" % "forsyde-io-java" % "0.3.9",
   "info.picocli" % "picocli" % "4.2.0",
   "info.picocli" % "picocli-codegen" % "4.2.0" % "provided",
   "org.apache.commons" % "commons-math3" % "3.6.1"

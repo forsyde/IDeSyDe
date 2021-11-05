@@ -75,7 +75,7 @@ object MiniZincData:
             val innerSplit = s.trim.split('.')
             val start = innerSplit(0)
             val end = innerSplit(innerSplit.length - 1)
-            end.toInt - start.toInt
+            end.toInt - start.toInt + 1 // sum + 1 because 1 is included in the index set
           )
           val data = m.group(3).split(",").map(s => 
             if (s.contains(".")) then MiniZincData(s.trim.toDouble)

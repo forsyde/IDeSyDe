@@ -5,6 +5,8 @@ import forsyde.io.java.core.Vertex
 import forsyde.io.java.typed.viewers.SDFComb
 import forsyde.io.java.typed.viewers.SDFPrefix
 import forsyde.io.java.typed.viewers.SDFSignal
+import org.jgrapht.graph.SimpleDirectedGraph
+
 
 // class SDFExecution(DecisionModel):
 //     """
@@ -48,27 +50,28 @@ import forsyde.io.java.typed.viewers.SDFSignal
 final case class SDFApplication(
     val actors: Seq[SDFComb],
     val delays: Seq[SDFPrefix],
-    val implementations: Map[SDFComb, Vertex]
-) extends SimpleDirectedGraph[SDFComb | SDFPrefix | SDFSignal, StandardEdge](
-      classOf[LinguaFrancaSignal]
+    val signals: Seq[SDFSignal],
+    // val implementations: Map[SDFComb, Vertex]
+) extends SimpleDirectedGraph[SDFComb | SDFPrefix, SDFSignal](
+      classOf[SDFSignal]
     )
     with DecisionModel:
 
-  override def dominates(o: DecisionModel) = {
-    val extra: Boolean = o match {
-      case o: SDFApplication => dominatesSdf(o)
-      case _                 => true
-    }
-    super.dominates(o) && extra
-  }
+  // override def dominates(o: DecisionModel) = {
+  //   val extra: Boolean = o match {
+  //     case o: SDFApplication => dominatesSdf(o)
+  //     case _                 => true
+  //   }
+  //   super.dominates(o) && extra
+  // }
 
-  def dominatesSdf(other: SDFApplication) = repetitionVector.size >= other.repetitionVector.size
+  // def dominatesSdf(other: SDFApplication) = repetitionVector.size >= other.repetitionVector.size
 
   val coveredVertexes = {
-    for (a <- actors) yield a
-    for (d <- delays) yield d
-    for ((_, path) <- channels; elem <- path) yield elem
-    for ((_, v) <- impl) yield v
+    for (a <- actors) yield a.getViewedVertex
+    for (d <- delays) yield d.getViewedVertex
+    for (s <- signals) yield s.getViewedVertex
+    // for ((_, v) <- implementations) yield v
   }
 
   override val uniqueIdentifier = "SDFApplication"

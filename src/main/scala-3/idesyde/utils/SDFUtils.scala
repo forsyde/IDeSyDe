@@ -4,6 +4,7 @@ import org.apache.commons.math3.linear.FieldMatrix
 import org.apache.commons.math3.linear.MatrixUtils
 import org.apache.commons.math3.fraction.BigFraction
 import org.apache.commons.math3.fraction.BigFractionField
+import org.apache.commons.math3.linear.SingularValueDecomposition
 
 
 object SDFUtils {
@@ -13,16 +14,16 @@ object SDFUtils {
       initialTokens: Seq[Int]
   ): Seq[Int] = {
     // convert the common Scala matrix in to a field for commons math
-    val topologyTransposed =
+    val topologyMatrix =
       MatrixUtils
         .createFieldMatrix(topology.map(_.map(BigFraction(_)).toArray).toArray)
-        .transpose
+    val svd = SingularValueDecomposition(topologyMatrix)
     // make an identity for the kernel algorithm
     val identity = MatrixUtils.createFieldIdentityMatrix(
       BigFractionField.getInstance,
-      topologyTransposed.getColumnDimension
+      topologyMatrix.getColumnDimension
     )
-    for (i <- 0 until topologyTransposed.getColumnDimension) {
+    for (i <- 0 until topologyMatrix.getColumnDimension) {
       // do the pivoting
       // calculate the modification
       // effect on both matrices

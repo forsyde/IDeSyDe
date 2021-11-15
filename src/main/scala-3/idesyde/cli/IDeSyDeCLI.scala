@@ -55,15 +55,15 @@ class IDeSyDeCLI extends Callable[Int]:
       inputModels.filter(f => modelHandler.canLoadModel(f))
     if (validInputs.isEmpty) {
       println(
-        "At least one input model '.forsyde.xml' | '.forxml' is necessary"
+        "At least one valid input model is necessary"
       )
     } else {
       scribe.info("Reading and merging input models.")
-      val model = validInputs.map(i => modelHandler.loadModel(i))
-        .foldLeft(ForSyDeModel())(
-          (merged, m) => 
-            merged.mergeInPlace(m)
-            merged
+      val model = validInputs
+        .map(i => modelHandler.loadModel(i))
+        .foldLeft(ForSyDeModel())((merged, m) =>
+          merged.mergeInPlace(m)
+          merged
         )
 
       val identified = Identification.identifyDecisionModels(model)

@@ -2,6 +2,9 @@ package idesyde.identification.models
 
 import idesyde.identification.DecisionModel
 import forsyde.io.java.core.Vertex
+import forsyde.io.java.typed.viewers.SDFComb
+import forsyde.io.java.typed.viewers.SDFPrefix
+import forsyde.io.java.typed.viewers.SDFSignal
 
 // class SDFExecution(DecisionModel):
 //     """
@@ -43,14 +46,13 @@ import forsyde.io.java.core.Vertex
 //             )
 
 final case class SDFApplication(
-    val actors: Set[Vertex],
-    val delays: Set[Vertex],
-    val channels: Map[(Vertex, Vertex), Seq[Vertex]],
-    val topology: Map[Vertex, Map[Vertex, Int]],
-    val initialTokens: Map[Vertex, Int],
-    val impl: Map[Vertex, Vertex],
-    val repetitionVector: Seq[Vertex]
-) extends DecisionModel {
+    val actors: Seq[SDFComb],
+    val delays: Seq[SDFPrefix],
+    val implementations: Map[SDFComb, Vertex]
+) extends SimpleDirectedGraph[SDFComb | SDFPrefix | SDFSignal, StandardEdge](
+      classOf[LinguaFrancaSignal]
+    )
+    with DecisionModel:
 
   override def dominates(o: DecisionModel) = {
     val extra: Boolean = o match {
@@ -71,4 +73,4 @@ final case class SDFApplication(
 
   override val uniqueIdentifier = "SDFApplication"
 
-}
+end SDFApplication

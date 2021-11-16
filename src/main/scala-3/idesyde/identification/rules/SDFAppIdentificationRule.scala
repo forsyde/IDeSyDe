@@ -8,28 +8,44 @@ import forsyde.io.java.core.VertexTrait
 import forsyde.io.java.typed.viewers.SDFComb
 import forsyde.io.java.typed.viewers.SDFPrefix
 import java.util.stream.Collectors
+import forsyde.io.java.typed.viewers.SDFSignal
 
 final case class SDFAppIdentificationRule()
-    extends IdentificationRule {
+    extends IdentificationRule:
 
   def identify(
       model: ForSyDeModel,
       identified: Set[DecisionModel]
   ): (Boolean, Option[DecisionModel]) = {
-    val sdf_actors =
+    val sdfActors =
       model.vertexSet.stream
         .filter(SDFComb.conforms(_))
         .map(SDFComb.safeCast(_).get)
         .collect(Collectors.toSet)
-    val sdf_delays =
+    val sdfDelays =
       model.vertexSet.stream
         .filter(SDFPrefix.conforms(_))
         .map(SDFPrefix.safeCast(_).get)
         .collect(Collectors.toSet)
-    if (sdf_actors.size == 0 && sdf_delays.size == 0) {
+    val sdfSignals = model.vertexSet.stream
+        .filter(SDFSignal.conforms(_))
+        .map(SDFSignal.safeCast(_).get)
+        .collect(Collectors.toSet)
+    if (sdfActors.size == 0 && sdfDelays.size == 0) {
       (true, Option.empty)
     } else {
+
       (false, Option.empty)
     }
   }
-}
+
+end SDFAppIdentificationRule
+
+object SDFAppIdentificationRule:
+
+  def signalsAlwaysConnect(model: ForSyDeModel, sdfSignals: Seq[SDFSignal]): Boolean =
+    sdfSignals.forall(s => 
+      s.getFifoInPort(model).isPresent && s.getFifoOutPort(model).isPresent
+      )
+
+end SDFAppIdentificationRule

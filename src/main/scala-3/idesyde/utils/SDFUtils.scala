@@ -16,8 +16,9 @@ object SDFUtils {
     // convert the common Scala matrix in to a field for commons math
     val topologyMatrix =
       MatrixUtils
-        .createFieldMatrix(topology.map(_.map(BigFraction(_)).toArray).toArray)
+        .createRealMatrix(topology.map(_.map(_.toDouble).toArray).toArray)
     val svd = SingularValueDecomposition(topologyMatrix)
+    
     // make an identity for the kernel algorithm
     val identity = MatrixUtils.createFieldIdentityMatrix(
       BigFractionField.getInstance,

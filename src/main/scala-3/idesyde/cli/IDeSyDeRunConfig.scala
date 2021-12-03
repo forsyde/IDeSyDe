@@ -7,7 +7,7 @@ import scribe.Level
 import forsyde.io.java.drivers.ForSyDeModelHandler
 import idesyde.identification.api.Identification
 import idesyde.exploration.api.Exploration
-import forsyde.io.java.core.ForSyDeModel
+import forsyde.io.java.core.ForSyDeSystemGraph
 import scala.concurrent.ExecutionContext
 import java.nio.file.Files
 
@@ -30,7 +30,7 @@ case class IDeSyDeRunConfig (
         } else {
           scribe.info("Reading and merging input models.")
           val model = validInputs.map(i => modelHandler.loadModel(i))
-            .foldLeft(ForSyDeModel())(
+            .foldLeft(ForSyDeSystemGraph())(
               (merged, m) => 
                 merged.mergeInPlace(m)
                 merged

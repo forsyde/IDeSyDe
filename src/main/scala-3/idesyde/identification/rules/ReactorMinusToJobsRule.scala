@@ -1,6 +1,6 @@
 package idesyde.identification.rules
 
-import forsyde.io.java.core.ForSyDeModel
+import forsyde.io.java.core.ForSyDeSystemGraph
 import forsyde.io.java.typed.viewers.GenericDigitalInterconnect
 import forsyde.io.java.typed.viewers.GenericDigitalStorage
 import forsyde.io.java.typed.viewers.GenericProcessingModule
@@ -24,7 +24,7 @@ import collection.JavaConverters.*
 @deprecated
 final case class ReactorMinusToJobsRule() extends IdentificationRule {
 
-  def identify(model: ForSyDeModel, identified: Set[DecisionModel]) =
+  def identify(model: ForSyDeSystemGraph, identified: Set[DecisionModel]) =
     val reactorMinusOpt = identified
       .find(_.isInstanceOf[ReactorMinusApplication])
       .map(_.asInstanceOf[ReactorMinusApplication])
@@ -74,7 +74,7 @@ final case class ReactorMinusToJobsRule() extends IdentificationRule {
     identified.exists(_.isInstanceOf[ReactorMinusApplication])
 
   def computePeriodicJobs(
-      model: ForSyDeModel
+      model: ForSyDeSystemGraph
   )(using reactorMinus: ReactorMinusApplication): Set[ReactionJob] =
     for (
       r <- reactorMinus.periodicReactions;
@@ -83,7 +83,7 @@ final case class ReactorMinusToJobsRule() extends IdentificationRule {
     ) yield ReactionJob(r, period.multiply(i), period.multiply(i + 1))
 
   def computePureJobs(
-      model: ForSyDeModel,
+      model: ForSyDeSystemGraph,
       periodicJobs: Set[ReactionJob]
   )(using reactorMinus: ReactorMinusApplication): Set[ReactionJob] = {
     // first, get all pure jobs from the periodic ones, even with activation overlap
@@ -127,7 +127,7 @@ final case class ReactorMinusToJobsRule() extends IdentificationRule {
   }
 
   def computePureChannels(
-      model: ForSyDeModel,
+      model: ForSyDeSystemGraph,
       jobs: Set[ReactionJob]
   )(using
       reactorMinus: ReactorMinusApplication
@@ -143,7 +143,7 @@ final case class ReactorMinusToJobsRule() extends IdentificationRule {
     ) yield ReactionChannel(j, jj, c)).toSet
 
   def computePriorityChannels(
-      model: ForSyDeModel,
+      model: ForSyDeSystemGraph,
       jobs: Set[ReactionJob]
   )(using
       reactorMinus: ReactorMinusApplication,
@@ -162,7 +162,7 @@ final case class ReactorMinusToJobsRule() extends IdentificationRule {
     ) yield ReactionChannel(j, jj, a)
 
   def computeTimelyChannels(
-      model: ForSyDeModel,
+      model: ForSyDeSystemGraph,
       jobs: Set[ReactionJob]
   )(using
       reactorMinus: ReactorMinusApplication,
@@ -182,7 +182,7 @@ final case class ReactorMinusToJobsRule() extends IdentificationRule {
     ) yield ReactionChannel(js.last, jjs.head, a)
 
   def computeHyperperiodChannels(
-      model: ForSyDeModel,
+      model: ForSyDeSystemGraph,
       jobs: Set[ReactionJob],
       stateChannels: Set[ReactionChannel]
   )(using
@@ -213,7 +213,7 @@ final case class ReactorMinusToJobsRule() extends IdentificationRule {
 @deprecated
 object ReactorMinusToJobsRule:
 
-  def canIdentify(model: ForSyDeModel, identified: Set[DecisionModel]): Boolean =
+  def canIdentify(model: ForSyDeSystemGraph, identified: Set[DecisionModel]): Boolean =
     ReactorMinusIdentificationRule.canIdentify(model, identified)
 
 end ReactorMinusToJobsRule

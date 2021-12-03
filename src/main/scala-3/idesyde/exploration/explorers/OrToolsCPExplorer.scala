@@ -3,7 +3,7 @@ package idesyde.exploration
 import idesyde.identification.models.reactor.ReactorMinusAppMapAndSched
 import idesyde.identification.DecisionModel
 import scala.concurrent.Future
-import forsyde.io.java.core.ForSyDeModel
+import forsyde.io.java.core.ForSyDeSystemGraph
 import scala.concurrent.ExecutionContext
 import java.time.Duration
 import java.time.temporal.Temporal

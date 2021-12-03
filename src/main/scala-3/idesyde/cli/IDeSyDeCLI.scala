@@ -3,7 +3,7 @@ package idesyde.cli
 import java.util.concurrent.Callable
 import picocli.CommandLine.*
 import java.io.File
-import forsyde.io.java.core.ForSyDeModel
+import forsyde.io.java.core.ForSyDeSystemGraph
 import forsyde.io.java.drivers.ForSyDeModelHandler
 import idesyde.identification.api.Identification
 import scribe.Level
@@ -61,7 +61,7 @@ class IDeSyDeCLI extends Callable[Int]:
       scribe.info("Reading and merging input models.")
       val model = validInputs
         .map(i => modelHandler.loadModel(i))
-        .foldLeft(ForSyDeModel())((merged, m) =>
+        .foldLeft(ForSyDeSystemGraph())((merged, m) =>
           merged.mergeInPlace(m)
           merged
         )

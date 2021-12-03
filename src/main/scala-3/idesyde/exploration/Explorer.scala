@@ -1,14 +1,14 @@
 package idesyde.exploration
 
 import idesyde.identification.DecisionModel
-import forsyde.io.java.core.ForSyDeModel
+import forsyde.io.java.core.ForSyDeSystemGraph
 import scala.concurrent.Future
 import scala.concurrent.ExecutionContext
 import java.time.Duration
 
 trait Explorer {
 
-  def explore(decisionModel: DecisionModel)(using ExecutionContext): LazyList[ForSyDeModel]
+  def explore(decisionModel: DecisionModel)(using ExecutionContext): LazyList[ForSyDeSystemGraph]
 
   def canExplore(decisionModel: DecisionModel): Boolean
 

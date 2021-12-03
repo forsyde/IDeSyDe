@@ -1,14 +1,9 @@
 package idesyde
 
-import picocli.CommandLine
 import idesyde.cli.IDeSyDeCLI
 import idesyde.cli.IDeSyDeCLIParser
 import idesyde.cli.IDeSyDeRunConfig
 import scribe.Level
-import idesyde.identification.api.Identification
-import idesyde.exploration.api.Exploration
-import forsyde.io.java.drivers.ForSyDeModelHandler
-import forsyde.io.java.core.ForSyDeModel
 import scala.concurrent.ExecutionContext
 
 object IDeSyDeStandalone {

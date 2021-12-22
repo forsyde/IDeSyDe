@@ -1,11 +1,16 @@
+ThisBuild / organization := "io.github.forsyde"
+ThisBuild / version      := "0.2.3"
+ThisBuild / scalaVersion := "3.1.0"
+
+
 lazy val root = project
   .in(file("."))
-  .settings(
+/*   .settings(
     name := "IDeSyDe",
     description := "",
     version := "0.2.3",
     scalaVersion := "3.1.0"
-  )
+  ) */
   .aggregate(common, cli)
 
 lazy val common = (project in file("common"))

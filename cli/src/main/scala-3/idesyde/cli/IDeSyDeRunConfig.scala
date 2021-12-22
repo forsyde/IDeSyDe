@@ -4,7 +4,7 @@ import java.nio.file.Path
 import java.nio.file.Paths
 import scala.collection.mutable.Buffer
 import scribe.Level
-import forsyde.io.java.drivers.ForSyDeSystemGraphHandler
+import forsyde.io.java.drivers.ForSyDeModelHandler
 import idesyde.identification.api.Identification
 import idesyde.exploration.api.Exploration
 import forsyde.io.java.core.ForSyDeSystemGraph
@@ -19,7 +19,7 @@ case class IDeSyDeRunConfig (
 
     def run(): Unit = 
         setLoggingLevel(Level.get(verbosityLevel).getOrElse(Level.Info))
-        val modelHandler = ForSyDeSystemGraphHandler()
+        val modelHandler = ForSyDeModelHandler()
         val validInputs =
           inputModelsPaths.filter(f => modelHandler.canLoadModel(f))
         if (validInputs.isEmpty) {
@@ -37,23 +37,25 @@ case class IDeSyDeRunConfig (
 
           val identified = Identification.identifyDecisionModels(model)
           scribe.info(s"Identification finished with ${identified.size} decision model(s).")
-          val chosen = Exploration.chooseExplorersAndModels(identified)
-          scribe.info(s"Total of ${chosen.size} combo of decision model(s) and explorer(s) chosen.")
-          // identified.foreach(m => m match {
-          //   case mzn: MiniZincDecisionModel => scribe.debug(s"mzn model: ${mzn.mznInputs.toString}")
-          // })
-          val (explorer, decisionModel) = chosen.head
-          val results                   = explorer.explore(decisionModel)(using executionContext)
-          var numSols = 0
-          results.foreach(result =>
-            scribe.debug(s"writing solution at ${outputModelPath.toString}")
-            modelHandler.writeModel(model.merge(result), outputModelPath)
-            numSols += 1
-          )
-          if (numSols > 0)
-            scribe.info(s"Finished exploration with ${numSols} solution(s)")
-          else
-            scribe.info(s"Finished exploration with no solution")
+          if (identified.size > 0)
+            val chosen = Exploration.chooseExplorersAndModels(identified)
+            scribe.info(s"Total of ${chosen.size} combo of decision model(s) and explorer(s) chosen.")
+            // identified.foreach(m => m match {
+            //   case mzn: MiniZincDecisionModel => scribe.debug(s"mzn model: ${mzn.mznInputs.toString}")
+            // })
+            val (explorer, decisionModel) = chosen.head
+            val results                   = explorer.explore(decisionModel)(using executionContext)
+            var numSols = 0
+            results.foreach(result =>
+              scribe.debug(s"writing solution at ${outputModelPath.toString}")
+              modelHandler.writeModel(model.merge(result), outputModelPath)
+              numSols += 1
+            )
+            if (numSols > 0)
+              scribe.info(s"Finished exploration with ${numSols} solution(s)")
+            else
+              scribe.info(s"Finished exploration with no solution")
+          scribe.info("Finished successfully")
         }
 
     def setLoggingLevel(loggingLevel: Level) =

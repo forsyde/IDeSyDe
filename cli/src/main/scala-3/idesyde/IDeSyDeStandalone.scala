@@ -7,8 +7,8 @@ import idesyde.cli.IDeSyDeRunConfig
 import scribe.Level
 import idesyde.identification.api.Identification
 import idesyde.exploration.api.Exploration
-import forsyde.io.java.drivers.ForSyDeModelHandler
-import forsyde.io.java.core.ForSyDeModel
+import forsyde.io.java.drivers.ForSyDeSystemGraphHandler
+import forsyde.io.java.core.ForSyDeSystemGraph
 import scala.concurrent.ExecutionContext
 
 object IDeSyDeStandalone {

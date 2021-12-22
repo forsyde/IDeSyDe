@@ -2,7 +2,7 @@ package idesyde.identification.rules
 
 import idesyde.identification.IdentificationRule
 import idesyde.identification.models.SDFApplication
-import forsyde.io.java.core.ForSyDeModel
+import forsyde.io.java.core.ForSyDeSystemGraph
 import idesyde.identification.DecisionModel
 import forsyde.io.java.core.VertexTrait
 import forsyde.io.java.typed.viewers.SDFComb
@@ -13,7 +13,7 @@ final case class SDFAppIdentificationRule()
     extends IdentificationRule {
 
   def identify(
-      model: ForSyDeModel,
+      model: ForSyDeSystemGraph,
       identified: Set[DecisionModel]
   ): (Boolean, Option[DecisionModel]) = {
     val sdf_actors =

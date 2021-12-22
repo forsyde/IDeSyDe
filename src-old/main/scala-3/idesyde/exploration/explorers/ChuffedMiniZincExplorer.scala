@@ -8,7 +8,7 @@ import java.time.Duration
 import idesyde.exploration.interfaces.SimpleMiniZincCPExplorer
 import scala.concurrent.ExecutionContext
 import scala.concurrent.Future
-import forsyde.io.java.core.ForSyDeModel
+import forsyde.io.java.core.ForSyDeSystemGraph
 import java.nio.file.Files
 import idesyde.identification.DecisionModel
 import java.nio.file.Paths

@@ -1,6 +1,6 @@
 package idesyde.identification.api
 
-import forsyde.io.java.core.ForSyDeModel
+import forsyde.io.java.core.ForSyDeSystemGraph
 import idesyde.identification.IdentificationRule
 import idesyde.identification.DecisionModel
 import forsyde.io.java.core.VertexTrait
@@ -35,7 +35,7 @@ object Identification {
     )
 
   def identifyDecisionModels(
-      model: ForSyDeModel,
+      model: ForSyDeSystemGraph,
       rules: Set[IdentificationRule] = Set.empty
   ): Set[DecisionModel] = 
     var identified: Set[DecisionModel] = Set()
@@ -74,7 +74,7 @@ object Identification {
     dominant
   end identifyDecisionModels
 
-  protected def countTraits(model: ForSyDeModel): Integer =
+  protected def countTraits(model: ForSyDeSystemGraph): Integer =
     model.vertexSet.stream.flatMap(_.getTraits.stream).distinct.count.toInt
 
 }

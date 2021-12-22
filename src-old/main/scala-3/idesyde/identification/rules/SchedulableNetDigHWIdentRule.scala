@@ -2,7 +2,7 @@ package idesyde.identification.rules
 
 import idesyde.identification.IdentificationRule
 import idesyde.identification.models.SchedulableNetworkedDigHW
-import forsyde.io.java.core.ForSyDeModel
+import forsyde.io.java.core.ForSyDeSystemGraph
 import idesyde.identification.DecisionModel
 
 import collection.JavaConverters.*
@@ -18,7 +18,7 @@ import java.util.stream.Collectors
 final case class SchedulableNetDigHWIdentRule() extends IdentificationRule {
 
   override def identify(
-      model: ForSyDeModel,
+      model: ForSyDeSystemGraph,
       identified: Set[DecisionModel]
   ): (Boolean, Option[DecisionModel]) =
     val hardwareDecisionModelOpt = identified
@@ -85,7 +85,7 @@ final case class SchedulableNetDigHWIdentRule() extends IdentificationRule {
   end identify
 
   def computeSchedulersFromPEs(
-      model: ForSyDeModel,
+      model: ForSyDeSystemGraph,
       processingElems: Set[GenericProcessingModule],
       fixedPrioritySchedulers: Set[FixedPriorityScheduler],
       timeTrigSchedulers: Set[TimeTriggeredScheduler],
@@ -106,7 +106,7 @@ final case class SchedulableNetDigHWIdentRule() extends IdentificationRule {
   end computeSchedulersFromPEs
 
   def computeFixedPriorityPEs(
-      model: ForSyDeModel,
+      model: ForSyDeSystemGraph,
       processingElems: Set[GenericProcessingModule],
       fixedPriorityPEs: Set[FixedPriorityScheduler]
   ): Set[GenericProcessingModule] =
@@ -116,7 +116,7 @@ final case class SchedulableNetDigHWIdentRule() extends IdentificationRule {
   end computeFixedPriorityPEs
 
   def computeTimeTriggeredPEs(
-      model: ForSyDeModel,
+      model: ForSyDeSystemGraph,
       processingElems: Set[GenericProcessingModule],
       timeTrigSchedulers: Set[TimeTriggeredScheduler]
   ): Set[GenericProcessingModule] =
@@ -126,7 +126,7 @@ final case class SchedulableNetDigHWIdentRule() extends IdentificationRule {
   end computeTimeTriggeredPEs
 
   def computeRoundRobinPEs(
-      model: ForSyDeModel,
+      model: ForSyDeSystemGraph,
       processingElems: Set[GenericProcessingModule],
       roundRobinSchedulers: Set[RoundRobinScheduler]
   ): Set[GenericProcessingModule] =
@@ -135,13 +135,13 @@ final case class SchedulableNetDigHWIdentRule() extends IdentificationRule {
     )
   end computeRoundRobinPEs
 
-//   def hasSchedulers(model: ForSyDeModel)
+//   def hasSchedulers(model: ForSyDeSystemGraph)
 
 }
 
 object SchedulableNetDigHWIdentRule:
 
-  def canIdentify(model: ForSyDeModel, identified: Set[DecisionModel]): Boolean =
+  def canIdentify(model: ForSyDeSystemGraph, identified: Set[DecisionModel]): Boolean =
     val platformVertexes = model.vertexSet.stream
       .filter(PlatformAbstraction.conforms(_))
       .collect(Collectors.toSet)
@@ -172,7 +172,7 @@ object SchedulableNetDigHWIdentRule:
   end canIdentify
 
   def everyPEIsSchedulable(
-      model: ForSyDeModel,
+      model: ForSyDeSystemGraph,
       processingElems: Set[GenericProcessingModule],
       fixedPriorityPEs: Set[FixedPriorityScheduler],
       timeTrigSchedulers: Set[TimeTriggeredScheduler],

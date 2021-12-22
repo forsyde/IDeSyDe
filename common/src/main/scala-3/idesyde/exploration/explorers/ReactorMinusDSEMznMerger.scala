@@ -2,14 +2,14 @@ package idesyde.exploration.explorers
 
 import idesyde.identification.models.reactor.ReactorMinusAppMapAndSchedMzn
 import idesyde.identification.interfaces.MiniZincData
-import forsyde.io.java.core.ForSyDeModel
+import forsyde.io.java.core.ForSyDeSystemGraph
 import forsyde.io.java.core.EdgeTrait
 import forsyde.io.java.typed.viewers.GenericProcessingModule
 
 trait ReactorMinusDSEMznMerger:
   
-  def mergeResults(decisionModel: ReactorMinusAppMapAndSchedMzn, results: Map[String, MiniZincData]): ForSyDeModel =
-    val outModel = ForSyDeModel()
+  def mergeResults(decisionModel: ReactorMinusAppMapAndSchedMzn, results: Map[String, MiniZincData]): ForSyDeSystemGraph =
+    val outModel = ForSyDeSystemGraph()
     results("reactorMapping") match
       case MiniZincData.MznArray(values) =>
         val valuesConverted = values.map(i => 

@@ -4,10 +4,10 @@ import java.nio.file.Path
 import java.nio.file.Paths
 import scala.collection.mutable.Buffer
 import scribe.Level
-import forsyde.io.java.drivers.ForSyDeModelHandler
+import forsyde.io.java.drivers.ForSyDeSystemGraphHandler
 import idesyde.identification.api.Identification
 import idesyde.exploration.api.Exploration
-import forsyde.io.java.core.ForSyDeModel
+import forsyde.io.java.core.ForSyDeSystemGraph
 import scala.concurrent.ExecutionContext
 
 case class IDeSyDeRunConfig (
@@ -19,7 +19,7 @@ case class IDeSyDeRunConfig (
 
     def run(): Unit = 
         setLoggingLevel(Level.get(verbosityLevel).getOrElse(Level.Info))
-        val modelHandler = ForSyDeModelHandler()
+        val modelHandler = ForSyDeSystemGraphHandler()
         val validInputs =
           inputModelsPaths.filter(f => modelHandler.canLoadModel(f))
         if (validInputs.isEmpty) {
@@ -29,7 +29,7 @@ case class IDeSyDeRunConfig (
         } else {
           scribe.info("Reading and merging input models.")
           val model = validInputs.map(i => modelHandler.loadModel(i))
-            .foldLeft(ForSyDeModel())(
+            .foldLeft(ForSyDeSystemGraph())(
               (merged, m) => 
                 merged.mergeInPlace(m)
                 merged

@@ -2,7 +2,7 @@ package idesyde.identification.rules
 
 import idesyde.identification.IdentificationRule
 import idesyde.identification.models.reactor.ReactorMinusAppMapAndSched
-import forsyde.io.java.core.ForSyDeModel
+import forsyde.io.java.core.ForSyDeSystemGraph
 import idesyde.identification.DecisionModel
 import idesyde.identification.models.reactor.ReactionJob
 import forsyde.io.java.typed.viewers.GenericProcessingModule
@@ -18,7 +18,7 @@ import forsyde.io.java.typed.viewers.LinguaFrancaReaction
 final case class ReactorMinusAppDSEIdentRule() extends IdentificationRule:
 
   override def identify(
-      model: ForSyDeModel,
+      model: ForSyDeSystemGraph,
       identified: Set[DecisionModel]
   ): (Boolean, Option[DecisionModel]) =
     val reactorMinusOpt =
@@ -45,7 +45,7 @@ final case class ReactorMinusAppDSEIdentRule() extends IdentificationRule:
       (true, Option.empty)
   end identify
 
-  def computeWCETFunction(model: ForSyDeModel,
+  def computeWCETFunction(model: ForSyDeSystemGraph,
       reactions: Set[LinguaFrancaReaction],
       procElems: Set[GenericProcessingModule]
   ): Map[(LinguaFrancaReaction, GenericProcessingModule), BigFraction] =
@@ -68,7 +68,7 @@ final case class ReactorMinusAppDSEIdentRule() extends IdentificationRule:
       )
     iter.toMap
 
-  def computeUtilityFunction(model: ForSyDeModel,
+  def computeUtilityFunction(model: ForSyDeSystemGraph,
       reactions: Set[LinguaFrancaReaction],
       procElems: Set[GenericProcessingModule],
       hyperPeriod: BigFraction
@@ -88,7 +88,7 @@ end ReactorMinusAppDSEIdentRule
 
 object ReactorMinusAppDSEIdentRule:
 
-  def canIdentify(model: ForSyDeModel, identified: Set[DecisionModel]) =
+  def canIdentify(model: ForSyDeSystemGraph, identified: Set[DecisionModel]) =
     ReactorMinusIdentificationRule.canIdentify(model, identified) &&
       SchedulableNetDigHWIdentRule.canIdentify(model, identified)
 

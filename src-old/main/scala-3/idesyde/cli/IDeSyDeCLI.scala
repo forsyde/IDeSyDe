@@ -3,8 +3,8 @@ package idesyde.cli
 import java.util.concurrent.Callable
 import picocli.CommandLine.*
 import java.io.File
-import forsyde.io.java.core.ForSyDeModel
-import forsyde.io.java.drivers.ForSyDeModelHandler
+import forsyde.io.java.core.ForSyDeSystemGraph
+import forsyde.io.java.drivers.ForSyDeSystemGraphHandler
 import idesyde.identification.api.Identification
 import scribe.Level
 import idesyde.identification.interfaces.MiniZincDecisionModel
@@ -50,7 +50,7 @@ class IDeSyDeCLI extends Callable[Int]:
 
   def call(): Int = {
     setLoggingLevel(Level.get(verbosityLevel).getOrElse(Level.Info))
-    val modelHandler = ForSyDeModelHandler()
+    val modelHandler = ForSyDeSystemGraphHandler()
     val validInputs =
       inputModels.filter(f => modelHandler.canLoadModel(f))
     if (validInputs.isEmpty) {
@@ -60,7 +60,7 @@ class IDeSyDeCLI extends Callable[Int]:
     } else {
       scribe.info("Reading and merging input models.")
       val model = validInputs.map(i => modelHandler.loadModel(i))
-        .foldLeft(ForSyDeModel())(
+        .foldLeft(ForSyDeSystemGraph())(
           (merged, m) => 
             merged.mergeInPlace(m)
             merged

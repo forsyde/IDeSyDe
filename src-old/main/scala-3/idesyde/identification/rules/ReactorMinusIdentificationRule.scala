@@ -1,7 +1,7 @@
 package idesyde.identification.rules
 
 import idesyde.identification.IdentificationRule
-import forsyde.io.java.core.ForSyDeModel
+import forsyde.io.java.core.ForSyDeSystemGraph
 import idesyde.identification.DecisionModel
 import forsyde.io.java.core.VertexTrait
 
@@ -26,7 +26,7 @@ import java.util.concurrent.ThreadPoolExecutor
 
 final case class ReactorMinusIdentificationRule(executor: ThreadPoolExecutor) extends IdentificationRule {
 
-  def identify(model: ForSyDeModel, identified: Set[DecisionModel]) = {
+  def identify(model: ForSyDeSystemGraph, identified: Set[DecisionModel]) = {
     if (ReactorMinusIdentificationRule.canIdentify(model, identified)) {
       val vertexes = model.vertexSet.asScala
       val elements = vertexes
@@ -81,7 +81,7 @@ final case class ReactorMinusIdentificationRule(executor: ThreadPoolExecutor) ex
   }
 
   def noReactionIsLoose(
-      model: ForSyDeModel,
+      model: ForSyDeSystemGraph,
       reactors: Set[LinguaFrancaReactor],
       reactions: Set[LinguaFrancaReaction]
   ): Boolean = reactions.forall(r => {
@@ -89,7 +89,7 @@ final case class ReactorMinusIdentificationRule(executor: ThreadPoolExecutor) ex
   })
 
   def computeSizesFunction(
-      model: ForSyDeModel,
+      model: ForSyDeSystemGraph,
       reactors: Set[LinguaFrancaReactor],
       channels: Set[LinguaFrancaSignal],
       reactions: Set[LinguaFrancaReaction]
@@ -108,7 +108,7 @@ final case class ReactorMinusIdentificationRule(executor: ThreadPoolExecutor) ex
   }
 
   def computeReactionIndex(
-      model: ForSyDeModel,
+      model: ForSyDeSystemGraph,
       reactors: Set[LinguaFrancaReactor]
   ): Map[LinguaFrancaReaction, Int] =
     reactors
@@ -117,7 +117,7 @@ final case class ReactorMinusIdentificationRule(executor: ThreadPoolExecutor) ex
       }).toMap
 
   def computePeriodFunction(
-      model: ForSyDeModel,
+      model: ForSyDeSystemGraph,
       timers: Set[LinguaFrancaTimer],
       reactions: Set[LinguaFrancaReaction]
   ): Map[LinguaFrancaReaction, BigFraction] =
@@ -154,7 +154,7 @@ final case class ReactorMinusIdentificationRule(executor: ThreadPoolExecutor) ex
     *   The implicitly identified channels
     */
   def channelsAsReactionConnections(
-      model: ForSyDeModel,
+      model: ForSyDeSystemGraph,
       reactors: Set[LinguaFrancaReactor],
       reactions: Set[LinguaFrancaReaction],
       channels: Set[LinguaFrancaSignal]
@@ -176,7 +176,7 @@ final case class ReactorMinusIdentificationRule(executor: ThreadPoolExecutor) ex
       .toMap
 
   def deriveContainmentFunction(
-      model: ForSyDeModel,
+      model: ForSyDeSystemGraph,
       reactors: Set[LinguaFrancaReactor],
       reactions: Set[LinguaFrancaReaction]
   ): Map[LinguaFrancaReaction, LinguaFrancaReactor] =
@@ -188,7 +188,7 @@ final case class ReactorMinusIdentificationRule(executor: ThreadPoolExecutor) ex
       .toMap
 
   def onlyNonHierarchicalReactors(
-      model: ForSyDeModel,
+      model: ForSyDeSystemGraph,
       reactors: Set[LinguaFrancaReactor]
   ): Set[LinguaFrancaReactor] =
     reactors.filter(a => a.getChildrenReactorsPort(model).isEmpty
@@ -200,7 +200,7 @@ final case class ReactorMinusIdentificationRule(executor: ThreadPoolExecutor) ex
 
 object ReactorMinusIdentificationRule:
 
-  def canIdentify(model: ForSyDeModel, identified: Set[DecisionModel]): Boolean = {
+  def canIdentify(model: ForSyDeSystemGraph, identified: Set[DecisionModel]): Boolean = {
     val vertexes = model.vertexSet.asScala
     val elements = vertexes
       .filter(LinguaFrancaElement.conforms(_))
@@ -229,7 +229,7 @@ object ReactorMinusIdentificationRule:
     allReactionsPeriodicable(model, timers, reactions)
   }
 
-  def hasOnlyAcceptableTraits(model: ForSyDeModel, elements: Set[LinguaFrancaElement]): Boolean =
+  def hasOnlyAcceptableTraits(model: ForSyDeSystemGraph, elements: Set[LinguaFrancaElement]): Boolean =
     elements.forall(v =>
       LinguaFrancaReactor.conforms(v) ||
         LinguaFrancaTimer.conforms(v) ||
@@ -238,7 +238,7 @@ object ReactorMinusIdentificationRule:
     )
 
   def filterOnlyPeriodic(
-      model: ForSyDeModel,
+      model: ForSyDeSystemGraph,
       timers: Set[LinguaFrancaTimer],
       reactions: Set[LinguaFrancaReaction]
   ): Set[LinguaFrancaReaction] =
@@ -248,7 +248,7 @@ object ReactorMinusIdentificationRule:
     )
 
   def filterOnlyPure(
-      model: ForSyDeModel,
+      model: ForSyDeSystemGraph,
       timers: Set[LinguaFrancaTimer],
       reactions: Set[LinguaFrancaReaction]
   ): Set[LinguaFrancaReaction] =
@@ -262,7 +262,7 @@ object ReactorMinusIdentificationRule:
     *   whether all reactions are either periodic or pure.
     */
   def onlyPeriodicOrPure(
-      model: ForSyDeModel,
+      model: ForSyDeSystemGraph,
       timers: Set[LinguaFrancaTimer],
       reactions: Set[LinguaFrancaReaction]
   ): Boolean =
@@ -274,7 +274,7 @@ object ReactorMinusIdentificationRule:
     * path between them.
     */
   def allReactionsPeriodicable(
-      model: ForSyDeModel,
+      model: ForSyDeSystemGraph,
       timers: Set[LinguaFrancaTimer],
       reactions: Set[LinguaFrancaReaction]
   ): Boolean =
@@ -287,7 +287,7 @@ object ReactorMinusIdentificationRule:
       )
     )
 
-  def isTriviallyHierarchical(model: ForSyDeModel, reactors: Set[LinguaFrancaReactor]): Boolean =
+  def isTriviallyHierarchical(model: ForSyDeSystemGraph, reactors: Set[LinguaFrancaReactor]): Boolean =
     reactors.forall(a =>
       a.getChildrenReactorsPort(model).isEmpty ||
         (a.getReactionsPort(model)

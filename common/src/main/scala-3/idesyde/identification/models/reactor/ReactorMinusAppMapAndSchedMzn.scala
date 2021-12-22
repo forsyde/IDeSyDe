@@ -2,7 +2,7 @@ package idesyde.identification.models.reactor
 
 import idesyde.identification.interfaces.MiniZincDecisionModel
 import scala.io.Source
-import forsyde.io.java.core.ForSyDeModel
+import forsyde.io.java.core.ForSyDeSystemGraph
 import idesyde.identification.interfaces.MiniZincData
 import scala.concurrent.Future
 import scala.concurrent.ExecutionContext
@@ -361,9 +361,9 @@ final case class ReactorMinusAppMapAndSchedMzn(val sourceModel: ReactorMinusAppM
 
   def rebuildFromMznOutputs(
       output: Map[String, MiniZincData],
-      originalModel: ForSyDeModel
-  ): ForSyDeModel =
-    ForSyDeModel()
+      originalModel: ForSyDeSystemGraph
+  ): ForSyDeSystemGraph =
+    ForSyDeSystemGraph()
 
   override def dominates(other: DecisionModel): Boolean =
     super.dominates(other) && (other match {

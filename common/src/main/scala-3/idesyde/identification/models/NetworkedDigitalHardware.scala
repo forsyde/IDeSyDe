@@ -9,7 +9,7 @@ import forsyde.io.java.typed.viewers.{
   GenericProcessingModule
 }
 import org.jgrapht.graph.{DefaultEdge, DirectedPseudograph, SimpleDirectedGraph}
-import forsyde.io.java.core.ForSyDeModel
+import forsyde.io.java.core.ForSyDeSystemGraph
 import forsyde.io.java.core.Edge
 import forsyde.io.java.typed.viewers.RoundRobinInterconnect
 import org.apache.commons.math3.fraction.BigFraction

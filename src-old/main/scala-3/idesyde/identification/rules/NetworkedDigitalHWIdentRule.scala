@@ -1,6 +1,6 @@
 package idesyde.identification.rules
 
-import forsyde.io.java.core.ForSyDeModel
+import forsyde.io.java.core.ForSyDeSystemGraph
 import forsyde.io.java.typed.viewers.{
   AbstractDigitalModule,
   GenericDigitalInterconnect,
@@ -19,7 +19,7 @@ final case class NetworkedDigitalHWIdentRule()
     extends IdentificationRule {
 
   override def identify(
-      model: ForSyDeModel,
+      model: ForSyDeSystemGraph,
       identified: Set[DecisionModel]
   ): (Boolean, Option[DecisionModel]) = {
     if (NetworkedDigitalHWIdentRule.canIdentify(model, identified)) {
@@ -61,13 +61,13 @@ final case class NetworkedDigitalHWIdentRule()
 
 object NetworkedDigitalHWIdentRule:
 
-  def hasOneProcessor(model: ForSyDeModel): Boolean =
+  def hasOneProcessor(model: ForSyDeSystemGraph): Boolean =
       model
         .vertexSet()
         .asScala
         .exists(v => GenericProcessingModule.conforms(v))
 
-  def hasOnlyValidLinks(model: ForSyDeModel,
+  def hasOnlyValidLinks(model: ForSyDeSystemGraph,
       procElems: Set[GenericProcessingModule],
       connElems: Set[GenericDigitalInterconnect]
   ): Boolean = !procElems.exists(pe =>
@@ -76,7 +76,7 @@ object NetworkedDigitalHWIdentRule:
     connElems.exists(pe2 => model.hasConnection(pe, pe2) || model.hasConnection(pe2, pe))
   )
 
-  def processingElementsHaveMemory(model: ForSyDeModel,
+  def processingElementsHaveMemory(model: ForSyDeSystemGraph,
       platElems: Set[AbstractDigitalModule],
       procElems: Set[GenericProcessingModule],
       memElems: Set[GenericMemoryModule]
@@ -90,7 +90,7 @@ object NetworkedDigitalHWIdentRule:
     )
   }
 
-  def canIdentify(model: ForSyDeModel, identified: Set[DecisionModel]): Boolean =
+  def canIdentify(model: ForSyDeSystemGraph, identified: Set[DecisionModel]): Boolean =
     val platformVertexes = model
           .vertexSet()
           .asScala

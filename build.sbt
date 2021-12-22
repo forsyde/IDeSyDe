@@ -61,7 +61,7 @@ libraryDependencies += "org.jgrapht"  % "jgrapht-unimi-dsi" % "1.5.1"
 // javaOptions += s"-Djna.library.path=$pythonLibsDir"
 
 // TODO: figure out what is
-assembly / assemblyMergeStrategy := {
+ThisBuild / assembly / assemblyMergeStrategy := {
   case PathList("META-INF", xs @ _*) => MergeStrategy.discard
   case x                             => MergeStrategy.first
 }

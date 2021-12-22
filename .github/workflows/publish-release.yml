@@ -9,12 +9,9 @@ jobs:
     runs-on: ubuntu-latest
     steps:
     - uses: actions/checkout@v2
-    - uses: little-core-labs/get-git-tag@v3.0.1
-      id: tagName
-      with:
-        tagRegex: "refs/tags/(.*)" 
-        tagRegexGroup: 1
-    - name: Set up JDK ${{ matrix.java }}
+    - id: get_version
+      uses: battila7/get-version-action@v2
+    - name: Set up JDK 11
       uses: olafurpg/setup-scala@v11
       with:
         java-version: "openjdk@1.11.0"
@@ -29,8 +26,8 @@ jobs:
       uses: svenstaro/upload-release-action@v2
       with:
         repo_token: ${{ secrets.GITHUB_TOKEN }}
-        file: ${{ github.workspace }}/target/scala-3.1.0/IDeSyDe-assembly-${{ steps.tagName.outputs.tag }}.jar
-        asset_name: IDeSyDe-standalone-${{ steps.tagName.outputs.tag }}-all.jar
+        file: ${{ github.workspace }}/cli/target/scala-3.1.0/cli-assembly-${{ steps.get_version.outputs.version }}-all.jar
+        asset_name: idesyde-${{ steps.get_version.outputs.version }}-standalone.jar
         tag: "${{ github.ref }}"
         overwrite: true
         body: "Executable IDeSyDe jar"

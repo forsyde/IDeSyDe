@@ -33,24 +33,29 @@ import java.util.concurrent.ThreadPoolExecutor
 //     else Option.empty
 // }
 
-/**
- * This is a subset of the Reactor MoC in order to unambiguously calculate a finite event time-horizon,
- * the hyperPeriod,
- * and subsequently, analyze and schedule over this time-horizon.
- * This subset is refereed as Reactor-, and it is a restriction of
- * the constructs allowed in Reactor. 
- * 
- * Specifically, we assume that reactor hierarchies are considered flattened,
- * either before analysis or by design. Then, reactions are either pure or periodic.
- * 
- * @param reactors the containers for the reactions.
- * @param periodicReactions triggered by only one timer.
- * @param pureReactions triggered by any number of reactions or input ports.
- * @param containmentFunction relates every reaction to its containing reactor.
- * @param reactionIndex the index in which a reaction appears in its reactor. Used for priority analysis.
- * @param periodFunction gives the period for every periodic reaction in the model.
- * @param channels mapping of edges between reactions and the channels that their information.
- */
+/** This is a subset of the Reactor MoC in order to unambiguously calculate a finite event
+  * time-horizon, the hyperPeriod, and subsequently, analyze and schedule over this time-horizon.
+  * This subset is refereed as Reactor-, and it is a restriction of the constructs allowed in
+  * Reactor.
+  *
+  * Specifically, we assume that reactor hierarchies are considered flattened, either before
+  * analysis or by design. Then, reactions are either pure or periodic.
+  *
+  * @param reactors
+  *   the containers for the reactions.
+  * @param periodicReactions
+  *   triggered by only one timer.
+  * @param pureReactions
+  *   triggered by any number of reactions or input ports.
+  * @param containmentFunction
+  *   relates every reaction to its containing reactor.
+  * @param reactionIndex
+  *   the index in which a reaction appears in its reactor. Used for priority analysis.
+  * @param periodFunction
+  *   gives the period for every periodic reaction in the model.
+  * @param channels
+  *   mapping of edges between reactions and the channels that their information.
+  */
 final case class ReactorMinusApplication(
     val pureReactions: Set[LinguaFrancaReaction],
     val periodicReactions: Set[LinguaFrancaReaction],
@@ -68,7 +73,6 @@ final case class ReactorMinusApplication(
   for (r               <- periodicReactions) addVertex(r)
   for (((r1, r2) -> c) <- channels) addEdge(r1, r2, c)
 
-
   /** This ordering orders the reactions in the model according to reactor containment and if x > y,
     * then x has _higher_ priority than y, and should always have execution precedence/priority.
     */
@@ -80,7 +84,10 @@ final case class ReactorMinusApplication(
       else if reactionsPropagates.contains((x, y)) then 1
       else if reactionsPropagates.contains((y, x)) then -1
       // TODO: fix this approximation to a strict total order
-      else periodFunction.getOrElse(y, BigFraction.ZERO).compareTo(periodFunction.getOrElse(x, BigFraction.ZERO))
+      else
+        periodFunction
+          .getOrElse(y, BigFraction.ZERO)
+          .compareTo(periodFunction.getOrElse(x, BigFraction.ZERO))
     // it is reversed because the smaller period takes precedence
     // periodFunction(y).compareTo(periodFunction(x))
   }
@@ -120,7 +127,7 @@ final case class ReactorMinusApplication(
   }
 
   lazy val reactionsOnlyExtendedConnectionsGraph =
-    val g = SimpleDirectedGraph[LinguaFrancaReaction, DefaultEdge](classOf[DefaultEdge])
+    val g = SimpleDirectedGraph[LinguaFrancaReaction, DefaultEdge](() => DefaultEdge())
     for (r <- vertexSet.asScala) g.addVertex(r)
     for (
       r <- vertexSet.asScala; rr <- vertexSet.asScala;
@@ -130,7 +137,7 @@ final case class ReactorMinusApplication(
     g
 
   lazy val reactionsOnlyWithPropagationsGraph =
-    val g = SimpleDirectedGraph[LinguaFrancaReaction, DefaultEdge](classOf[DefaultEdge])
+    val g = SimpleDirectedGraph[LinguaFrancaReaction, DefaultEdge](() => DefaultEdge())
     for (r <- vertexSet.asScala) g.addVertex(r)
     for (
       r <- vertexSet.asScala; rr <- vertexSet.asScala;
@@ -153,7 +160,7 @@ final case class ReactorMinusApplication(
           .map(dst => (src, dst))
       })
       .toSet
-  
+
   lazy val reactionsExtendedReachability: Set[(LinguaFrancaReaction, LinguaFrancaReaction)] =
     reactionsOnlyExtendedConnectionsGraph.vertexSet.asScala
       .filter(v => !reactionsOnlyExtendedConnectionsGraph.outgoingEdgesOf(v).isEmpty)
@@ -163,7 +170,6 @@ final case class ReactorMinusApplication(
           .map(dst => (src, dst))
       })
       .toSet
-
 
   override def dominates(o: DecisionModel) =
     super.dominates(o) && (o match {
@@ -219,8 +225,8 @@ final case class ReactorMinusApplication(
   lazy val unambigousEndToEndFixedLatencies
       : Map[(LinguaFrancaReaction, LinguaFrancaReaction), BigFraction] =
     jobGraph.jobLevelFixedLatencies
-    .groupBy((srcdst, w) => (srcdst._1.srcReaction, srcdst._2.srcReaction))
-    .map((srcdst, w) => srcdst -> w.values.max)
+      .groupBy((srcdst, w) => (srcdst._1.srcReaction, srcdst._2.srcReaction))
+      .map((srcdst, w) => srcdst -> w.values.max)
 
   /** The left-to-right maximal interference analysis results
     * @return
@@ -229,15 +235,22 @@ final case class ReactorMinusApplication(
     */
   lazy val maximalInterferencePoints
       : Map[(LinguaFrancaReaction, LinguaFrancaReaction), Seq[BigFraction]] =
-    (for (r <- reactions; rr <- reactions - r; if reactionsPriorityOrdering.compare(r, rr) >= 0) yield
-      val (j, jSeq) = jobGraph.reactionToJobs(r).map(j =>
-        j -> jobGraph.reactionToJobs(rr).filter(jj => j.interferes(jj)).map(jj => jj.trigger).toList
-      ).maxBy((j, jjStartSeq) => 
-        jjStartSeq.map(jjTrigger => j.deadline.subtract(jjTrigger).doubleValue).sum
-      )
-      (r, rr) -> jSeq.map(jjTrigger => jjTrigger.subtract(j.trigger))
+    (for (r <- reactions; rr <- reactions - r; if reactionsPriorityOrdering.compare(r, rr) >= 0)
+      yield
+        val (j, jSeq) = jobGraph
+          .reactionToJobs(r)
+          .map(j =>
+            j -> jobGraph
+              .reactionToJobs(rr)
+              .filter(jj => j.interferes(jj))
+              .map(jj => jj.trigger)
+              .toList
+          )
+          .maxBy((j, jjStartSeq) =>
+            jjStartSeq.map(jjTrigger => j.deadline.subtract(jjTrigger).doubleValue).sum
+          )
+        (r, rr) -> jSeq.map(jjTrigger => jjTrigger.subtract(j.trigger))
     ).toMap
-        
 
   override val uniqueIdentifier = "ReactorMinusApplication"
 

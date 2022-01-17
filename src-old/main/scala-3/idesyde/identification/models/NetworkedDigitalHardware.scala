@@ -27,7 +27,7 @@ final case class NetworkedDigitalHardware(
     val communicationElems: Set[GenericDigitalInterconnect],
     val storageElems: Set[GenericMemoryModule],
     val links: Set[(AbstractDigitalModule, AbstractDigitalModule)]
-) extends SimpleGraph[AbstractDigitalModule, DefaultEdge](classOf[DefaultEdge])
+) extends SimpleGraph[AbstractDigitalModule, DefaultEdge](() => DefaultEdge())
     with DecisionModel {
 
   for (pe <- processingElems) addVertex(pe)
@@ -47,7 +47,8 @@ final case class NetworkedDigitalHardware(
 
   lazy val processingElemsOrdered = processingElems.toList
 
-  val allocatedBandwidthFraction: Map[(GenericDigitalInterconnect, GenericProcessingModule), BigFraction] =
+  val allocatedBandwidthFraction
+      : Map[(GenericDigitalInterconnect, GenericProcessingModule), BigFraction] =
     (for (
       ce <- communicationElems;
       pe <- processingElems;
@@ -74,7 +75,8 @@ final case class NetworkedDigitalHardware(
         .longValue
     })
 
-  lazy val paths: Map[(AbstractDigitalModule, AbstractDigitalModule), Seq[GenericDigitalInterconnect]] =
+  lazy val paths
+      : Map[(AbstractDigitalModule, AbstractDigitalModule), Seq[GenericDigitalInterconnect]] =
     val pathAlgorithm = FloydWarshallShortestPaths(this)
     (for (
       e <- platformElements; ee <- platformElements - e;

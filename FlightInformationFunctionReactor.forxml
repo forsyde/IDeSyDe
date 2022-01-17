@@ -1,0 +1,759 @@
+<?xml version='1.0' encoding='UTF-8'?>
+<graphml xmlns="http://graphml.graphdrawing.org/xmlns">
+  <graph id="model" edgedefault="directed">
+    <!-- The start of the application model -->
+    <node id="applications/FLF/P1ATimer" traits="ReactorTimer">
+      <port name="output"/>
+      <data attr.name="period_numerator_per_sec" attr.type="int">1</data>
+    </node>
+    <node id="applications/FLF/P1A" traits="ReactorActor">
+      <port name="Sensors"/>
+      <port name="ADC1Altitude"/>
+      <port name="INS1SpeedVector"/>
+      <port name="INS2SpeedVector"/>
+      <port name="INS1LoadFactor"/>
+      <port name="INS2LoadFactor"/>
+      <port name="triggers"/>
+      <port name="reaction_implementation"/>
+      <data attr.name="production" attr.type="object">
+        <data attr.name="ADC1Altitude" attr.type="integer">1</data>
+        <data attr.name="INS1SpeedVector" attr.type="integer">1</data>
+        <data attr.name="INS2SpeedVector" attr.type="integer">1</data>
+        <data attr.name="INS1LoadFactor" attr.type="integer">1</data>
+        <data attr.name="INS2LoadFactor" attr.type="integer">1</data>
+      </data>
+    </node>
+    <node id="applications/FLF/AltitudeCalcTimer" traits="ReactorTimer">
+      <port name="output"/>
+      <data attr.name="period_numerator_per_sec" attr.type="int">1</data>
+    </node>
+    <node id="applications/FLF/AltitudeCalc" traits="ReactorActor">
+      <port name="ADC1Altitude"/>
+      <port name="Acc"/>
+      <port name="Altitude"/>
+      <port name="triggers"/>
+      <port name="reaction_implementation"/>
+      <data attr.name="consumption" attr.type="object">
+        <data attr.name="ADC1Altitude" attr.type="integer">1</data>
+        <data attr.name="Acc" attr.type="integer">1</data>
+      </data>
+      <data attr.name="production" attr.type="object">
+        <data attr.name="Altitude" attr.type="integer">1</data>
+      </data>
+    </node>
+    <node id="applications/FLF/FormatSpeedVectorCalcTimer" traits="ReactorTimer">
+      <port name="output"/>
+      <data attr.name="period_numerator_per_sec" attr.type="int">1</data>
+    </node>
+    <node id="applications/FLF/FormatSpeedVectorCalc" traits="ReactorActor">
+      <port name="INS1SpeedVector"/>
+      <port name="INS2SpeedVector"/>
+      <port name="InternalSpeedVector"/>
+      <port name="triggers"/>
+      <port name="reaction_implementation"/>
+      <data attr.name="consumption" attr.type="object">
+        <data attr.name="INS1SpeedVector" attr.type="integer">1</data>
+        <data attr.name="INS2SpeedVector" attr.type="integer">1</data>
+      </data>
+      <data attr.name="production" attr.type="object">
+        <data attr.name="InternalSpeedVector" attr.type="integer">1</data>
+      </data>
+    </node>
+    <node id="applications/FLF/SpeedVectorCalcTimer" traits="ReactorTimer">
+      <port name="output"/>
+      <data attr.name="period_numerator_per_sec" attr.type="int">1</data>
+    </node>
+    <node id="applications/FLF/SpeedVectorCalc" traits="ReactorActor">
+      <port name="InternalSpeedVector"/>
+      <port name="SpeedVector"/>
+      <port name="Speed"/>
+      <port name="triggers"/>
+      <port name="reaction_implementation"/>
+      <data attr.name="consumption" attr.type="object">
+        <data attr.name="InternalSpeedVector" attr.type="integer">1</data>
+      </data>
+      <data attr.name="production" attr.type="object">
+        <data attr.name="SpeedVector" attr.type="integer">1</data>
+        <data attr.name="Speed" attr.type="integer">1</data>
+      </data>
+    </node>
+    <node id="applications/FLF/HeadingCalcTimer" traits="ReactorTimer">
+      <port name="output"/>
+      <data attr.name="period_numerator_per_sec" attr.type="int">1</data>
+    </node>
+    <node id="applications/FLF/HeadingCalc" traits="ReactorActor">
+      <port name="SpeedVector"/>
+      <port name="Heading"/>
+      <port name="triggers"/>
+      <port name="reaction_implementation"/>
+      <data attr.name="consumption" attr.type="object">
+        <data attr.name="SpeedVector" attr.type="integer">2</data>
+      </data>
+      <data attr.name="production" attr.type="object">
+        <data attr.name="Heading" attr.type="integer">2</data>
+      </data>
+    </node>
+    <node id="applications/FLF/FormatLoadFactorCalcTimer" traits="ReactorTimer">
+      <port name="output"/>
+      <data attr.name="period_numerator_per_sec" attr.type="int">1</data>
+    </node>
+    <node id="applications/FLF/FormatLoadFactorCalc" traits="ReactorActor">
+      <port name="INS1LoadFactor"/>
+      <port name="INS2LoadFactor"/>
+      <port name="InternalLoadFactor"/>
+      <port name="triggers"/>
+      <port name="reaction_implementation"/>
+      <data attr.name="consumption" attr.type="object">
+        <data attr.name="INS1LoadFactor" attr.type="integer">2</data>
+        <data attr.name="INS2LoadFactor" attr.type="integer">2</data>
+      </data>
+      <data attr.name="production" attr.type="object">
+        <data attr.name="InternalLoadFactor" attr.type="integer">1</data>
+      </data>
+    </node>
+    <node id="applications/FLF/LoadFactorCalcTimer" traits="ReactorTimer">
+      <port name="output"/>
+      <data attr.name="period_numerator_per_sec" attr.type="int">1</data>
+    </node>
+    <node id="applications/FLF/LoadFactorCalc" traits="ReactorActor">
+      <port name="InternalLoadFactor"/>
+      <port name="LoadFactor"/>
+      <port name="triggers"/>
+      <port name="reaction_implementation"/>
+      <data attr.name="consumption" attr.type="object">
+        <data attr.name="InternalLoadFactor" attr.type="integer">1</data>
+      </data>
+      <data attr.name="production" attr.type="object">
+        <data attr.name="LoadFactor" attr.type="integer">1</data>
+      </data>
+    </node>
+    <node id="applications/FLF/AccCalcTimer" traits="ReactorTimer">
+      <port name="output"/>
+      <data attr.name="period_numerator_per_sec" attr.type="int">1</data>
+    </node>
+    <node id="applications/FLF/AccCalc" traits="ReactorActor">
+      <port name="LoadFactor"/>
+      <port name="Acc"/>
+      <port name="triggers"/>
+      <port name="reaction_implementation"/>
+      <data attr.name="consumption" attr.type="object">
+        <data attr.name="LoadFactor" attr.type="integer">1</data>
+      </data>
+      <data attr.name="production" attr.type="object">
+        <data attr.name="Acc" attr.type="integer">2</data>
+      </data>
+    </node>
+    <node id="applications/FLF/P2ATimer" traits="ReactorTimer">
+      <port name="output"/>
+      <data attr.name="period_numerator_per_sec" attr.type="int">1</data>
+    </node>
+    <node id="applications/FLF/P2A" traits="ReactorActor">
+      <port name="Altitude"/>
+      <port name="Speed"/>
+      <port name="Heading"/>
+      <port name="triggers"/>
+      <port name="reaction_implementation"/>
+      <data attr.name="consumption" attr.type="object">
+        <data attr.name="Altitude" attr.type="integer">1</data>
+        <data attr.name="Speed" attr.type="integer">1</data>
+        <data attr.name="Heading" attr.type="integer">1</data>
+      </data>
+    </node>
+    <node id="applications/FLF/P1AImpl" traits="InstrumentedFunction">
+      <port name="Sensors"/>
+      <port name="ADC1Altitude"/>
+      <port name="INS1SpeedVector"/>
+      <port name="INS2SpeedVector"/>
+      <port name="INS1LoadFactor"/>
+      <port name="INS2LoadFactor"/>
+      <data attr.name="max_operations" attr.type="object">
+        <data attr.name="float" attr.type="integer">0</data>
+        <data attr.name="int" attr.type="integer">0</data>
+        <data attr.name="boolean" attr.type="integer">0</data>
+      </data>
+      <data attr.name="max_memory_size_in_bytes" attr.type="integer">0</data>
+    </node>
+    <node id="applications/FLF/AltitudeCalcImpl" traits="InstrumentedFunction">
+      <port name="ADC1Altitude"/>
+      <port name="Acc"/>
+      <port name="Altitude"/>
+      <data attr.name="max_operations" attr.type="object">
+        <data attr.name="float" attr.type="integer">6000000</data>
+        <data attr.name="int" attr.type="integer">0</data>
+        <data attr.name="boolean" attr.type="integer">0</data>
+      </data>
+      <data attr.name="max_memory_size_in_bytes" attr.type="integer">6000</data>
+    </node>
+    <node id="applications/FLF/FormatSpeedVectorCalcImpl" traits="InstrumentedFunction">
+      <port name="INS1SpeedVector"/>
+      <port name="INS2SpeedVector"/>
+      <port name="InternalSpeedVector"/>
+      <data attr.name="max_operations" attr.type="object">
+        <data attr.name="float" attr.type="integer">1200000</data>
+        <data attr.name="int" attr.type="integer">0</data>
+        <data attr.name="boolean" attr.type="integer">0</data>
+      </data>
+      <data attr.name="max_memory_size_in_bytes" attr.type="integer">2000</data>
+    </node>
+    <node id="applications/FLF/SpeedVectorCalcImpl" traits="InstrumentedFunction">
+      <port name="InternalSpeedVector"/>
+      <port name="SpeedVector"/>
+      <port name="Speed"/>
+      <data attr.name="max_operations" attr.type="object">
+        <data attr.name="float" attr.type="integer">4200000</data>
+        <data attr.name="int" attr.type="integer">0</data>
+        <data attr.name="boolean" attr.type="integer">0</data>
+      </data>
+      <data attr.name="max_memory_size_in_bytes" attr.type="integer">8000</data>
+    </node>
+    <node id="applications/FLF/HeadingCalcImpl" traits="InstrumentedFunction">
+      <port name="SpeedVector"/>
+      <port name="Heading"/>
+      <data attr.name="max_operations" attr.type="object">
+        <data attr.name="float" attr.type="integer">6000000</data>
+        <data attr.name="int" attr.type="integer">0</data>
+        <data attr.name="boolean" attr.type="integer">0</data>
+      </data>
+      <data attr.name="max_memory_size_in_bytes" attr.type="integer">8000</data>
+    </node>
+    <node id="applications/FLF/FormatLoadFactorCalcImpl" traits="InstrumentedFunction">
+      <port name="INS1LoadFactor"/>
+      <port name="INS2LoadFactor"/>
+      <port name="InternalLoadFactor"/>
+      <data attr.name="max_operations" attr.type="object">
+        <data attr.name="float" attr.type="integer">1200000</data>
+        <data attr.name="int" attr.type="integer">0</data>
+        <data attr.name="boolean" attr.type="integer">0</data>
+      </data>
+      <data attr.name="max_memory_size_in_bytes" attr.type="integer">2000</data>
+    </node>
+    <node id="applications/FLF/LoadFactorCalcImpl" traits="InstrumentedFunction">
+      <port name="InternalLoadFactor"/>
+      <port name="LoadFactor"/>
+      <data attr.name="max_operations" attr.type="object">
+        <data attr.name="float" attr.type="integer">12000000</data>
+        <data attr.name="int" attr.type="integer">0</data>
+        <data attr.name="boolean" attr.type="integer">0</data>
+      </data>
+      <data attr.name="max_memory_size_in_bytes" attr.type="integer">10000</data>
+    </node>
+    <node id="applications/FLF/AccCalcImpl" traits="InstrumentedFunction">
+      <port name="LoadFactor"/>
+      <port name="Acc"/>
+      <data attr.name="max_operations" attr.type="object">
+        <data attr.name="float" attr.type="integer">9000000</data>
+        <data attr.name="int" attr.type="integer">0</data>
+        <data attr.name="boolean" attr.type="integer">0</data>
+      </data>
+      <data attr.name="max_memory_size_in_bytes" attr.type="integer">12000</data>
+    </node>
+    <node id="applications/FLF/P2AImpl" traits="InstrumentedFunction">
+      <port name="Altitude"/>
+      <port name="Speed"/>
+      <port name="Heading"/>
+      <data attr.name="max_operations" attr.type="object">
+        <data attr.name="float" attr.type="integer">0</data>
+        <data attr.name="int" attr.type="integer">0</data>
+        <data attr.name="boolean" attr.type="integer">0</data>
+      </data>
+      <data attr.name="max_memory_size_in_bytes" attr.type="integer">0</data>
+    </node>
+    <node id="applications/signals/ADC1AltitudeSignal" traits="InstrumentedSignal">
+      <port name="fifoIn"/>
+      <port name="fifoOut"/>
+      <data attr.name="max_elem_size_bytes" attr.type="integer">200</data>
+    </node>
+    <node id="applications/signals/INS1SpeedVectorSignal" traits="InstrumentedSignal">
+      <port name="fifoIn"/>
+      <port name="fifoOut"/>
+      <data attr.name="max_elem_size_bytes" attr.type="integer">1000</data>
+    </node>
+    <node id="applications/signals/INS2SpeedVectorSignal" traits="InstrumentedSignal">
+      <port name="fifoIn"/>
+      <port name="fifoOut"/>
+      <data attr.name="max_elem_size_bytes" attr.type="integer">1000</data>
+    </node>
+    <node id="applications/signals/INS1LoadFactorSignal" traits="InstrumentedSignal">
+      <port name="fifoIn"/>
+      <port name="fifoOut"/>
+      <data attr.name="max_elem_size_bytes" attr.type="integer">1000</data>
+    </node>
+    <node id="applications/signals/INS2LoadFactorSignal" traits="InstrumentedSignal">
+      <port name="fifoIn"/>
+      <port name="fifoOut"/>
+      <data attr.name="max_elem_size_bytes" attr.type="integer">1000</data>
+    </node>
+    <node id="applications/signals/InternalSpeedVectorSignal" traits="InstrumentedSignal">
+      <port name="fifoIn"/>
+      <port name="fifoOut"/>
+      <data attr.name="max_elem_size_bytes" attr.type="integer">1000</data>
+    </node>
+    <node id="applications/signals/SpeedVectorSignal" traits="InstrumentedSignal">
+      <port name="fifoIn"/>
+      <port name="fifoOut"/>
+      <data attr.name="max_elem_size_bytes" attr.type="integer">1000</data>
+    </node>
+    <node id="applications/signals/InternalLoadFactorSignal" traits="InstrumentedSignal">
+      <port name="fifoIn"/>
+      <port name="fifoOut"/>
+      <data attr.name="max_elem_size_bytes" attr.type="integer">1000</data>
+    </node>
+    <node id="applications/signals/LoadFactorSignal" traits="InstrumentedSignal">
+      <port name="fifoIn"/>
+      <port name="fifoOut"/>
+      <data attr.name="max_elem_size_bytes" attr.type="integer">1000</data>
+    </node>
+    <node id="applications/signals/AccSignal" traits="InstrumentedSignal">
+      <port name="fifoIn"/>
+      <port name="fifoOut"/>
+      <data attr.name="max_elem_size_bytes" attr.type="integer">500</data>
+    </node>
+    <node id="applications/signals/AltitudeSignal" traits="InstrumentedSignal">
+      <port name="fifoIn"/>
+      <port name="fifoOut"/>
+      <data attr.name="max_elem_size_bytes" attr.type="integer">200</data>
+    </node>
+    <node id="applications/signals/SpeedSignal" traits="InstrumentedSignal">
+      <port name="fifoIn"/>
+      <port name="fifoOut"/>
+      <data attr.name="max_elem_size_bytes" attr.type="integer">1000</data>
+    </node>
+    <node id="applications/signals/HeadingSignal" traits="InstrumentedSignal">
+      <port name="fifoIn"/>
+      <port name="fifoOut"/>
+      <data attr.name="max_elem_size_bytes" attr.type="integer">500</data>
+    </node>
+    <!-- <node id="FlightInformationFunction" traits="Process"> -->
+    <!--   <port name="Sensors"/> -->
+    <!--   <port name="Display1"/> -->
+    <!-- </node> -->
+    <!--
+    <edge source="applications/FLF/P1A" target="applications/FLF/P1A" traits="Output" sourceport="output"/>
+    <edge source="applications/FLF/AltitudeCalc" target="applications/FLF/AltitudeCalc" traits="Output" sourceport="output"/>
+    <edge source="applications/FLF/FormatSpeedVectorCalc" target="applications/FLF/FormatSpeedVectorCalc" traits="Output" sourceport="output"/>
+    <edge source="applications/FLF/SpeedVectorCalc" target="applications/FLF/SpeedVectorCalc" traits="Output" sourceport="output"/>
+    <edge source="applications/FLF/HeadingCalc" target="applications/FLF/HeadingCalc" traits="Output" sourceport="output"/>
+    <edge source="applications/FLF/FormatLoadFactorCalc" target="applications/FLF/FormatLoadFactorCalc" traits="Output" sourceport="output"/>
+    <edge source="applications/FLF/LoadFactorCalc" target="applications/FLF/LoadFactorCalc" traits="Output" sourceport="output"/>
+    <edge source="applications/FLF/AccCalc" target="applications/FLF/AccCalc" traits="Output" sourceport="output"/>
+    <edge source="applications/FLF/P2A" target="applications/FLF/P2A" traits="Output" sourceport="output"/>
+        -->
+
+    <edge source="applications/FLF/P1ATimer" target="applications/FLF/P1A" traits="Output" sourceport="output" targetport="triggers"/>
+    <edge source="applications/FLF/AltitudeCalcTimer" target="applications/FLF/AltitudeCalc" traits="Output" sourceport="output" targetport="triggers"/>
+    <edge source="applications/FLF/FormatSpeedVectorCalcTimer" target="applications/FLF/FormatSpeedVectorCalc" traits="Output" sourceport="output" targetport="triggers"/>
+    <edge source="applications/FLF/SpeedVectorCalcTimer" target="applications/FLF/SpeedVectorCalc" traits="Output" sourceport="output" targetport="triggers"/>
+    <edge source="applications/FLF/HeadingCalcTimer" target="applications/FLF/HeadingCalc" traits="Output" sourceport="output" targetport="triggers"/>
+    <edge source="applications/FLF/FormatLoadFactorCalcTimer" target="applications/FLF/FormatLoadFactorCalc" traits="Output" sourceport="output" targetport="triggers"/>
+    <edge source="applications/FLF/LoadFactorCalcTimer" target="applications/FLF/LoadFactorCalc" traits="Output" sourceport="output" targetport="triggers"/>
+    <edge source="applications/FLF/AccCalcTimer" target="applications/FLF/AccCalc" traits="Output" sourceport="output" targetport="triggers"/>
+    <edge source="applications/FLF/P2ATimer" target="applications/FLF/P2A" traits="Output" sourceport="output" targetport="triggers"/>
+
+    <edge source="applications/FLF/P1A" target="applications/FLF/P1AImpl" traits="Input" sourceport="reaction_implementation"/>
+    <edge source="applications/FLF/AltitudeCalc" target="applications/FLF/AltitudeCalcImpl" traits="Input" sourceport="reaction_implementation"/>
+    <edge source="applications/FLF/FormatSpeedVectorCalc" target="applications/FLF/FormatSpeedVectorCalcImpl" traits="Input" sourceport="reaction_implementation"/>
+    <edge source="applications/FLF/SpeedVectorCalc" target="applications/FLF/SpeedVectorCalcImpl" traits="Input" sourceport="reaction_implementation"/>
+    <edge source="applications/FLF/HeadingCalc" target="applications/FLF/HeadingCalcImpl" traits="Input" sourceport="reaction_implementation"/>
+    <edge source="applications/FLF/FormatLoadFactorCalc" target="applications/FLF/FormatLoadFactorCalcImpl" traits="Input" sourceport="reaction_implementation"/>
+    <edge source="applications/FLF/LoadFactorCalc" target="applications/FLF/LoadFactorCalcImpl" traits="Input" sourceport="reaction_implementation"/>
+    <edge source="applications/FLF/AccCalc" target="applications/FLF/AccCalcImpl" traits="Input" sourceport="reaction_implementation"/>
+    <edge source="applications/FLF/P2A" target="applications/FLF/P2AImpl" traits="Input" sourceport="reaction_implementation"/>
+
+    <edge source="applications/FLF/P1A" target="applications/signals/ADC1AltitudeSignal" traits="Output" sourceport="ADC1Altitude" targetport="fifoIn"/>
+    <edge source="applications/signals/ADC1AltitudeSignal" target="applications/FLF/AltitudeCalc" traits="Output" sourceport="fifoOut" targetport="ADC1Altitude"/>
+    <edge source="applications/FLF/P1A" target="applications/signals/INS1SpeedVectorSignal" traits="Output" sourceport="INS1SpeedVector" targetport="fifoIn"/>
+    <edge source="applications/signals/INS1SpeedVectorSignal" target="applications/FLF/FormatSpeedVectorCalc" traits="Output" sourceport="fifoOut" targetport="INS1SpeedVector"/>
+    <edge source="applications/FLF/P1A" target="applications/signals/INS2SpeedVectorSignal" traits="Output" sourceport="INS2SpeedVector" targetport="fifoIn"/>
+    <edge source="applications/signals/INS2SpeedVectorSignal" target="applications/FLF/FormatSpeedVectorCalc" traits="Output" sourceport="fifoOut" targetport="INS2SpeedVector"/>
+    <edge source="applications/FLF/P1A" target="applications/signals/INS1LoadFactorSignal" traits="Output" sourceport="INS1LoadFactor" targetport="fifoIn"/>
+    <edge source="applications/signals/INS1LoadFactorSignal" target="applications/FLF/FormatLoadFactorCalc" traits="Output" sourceport="fifoOut" targetport="INS1LoadFactor"/>
+    <edge source="applications/FLF/P1A" target="applications/signals/INS2LoadFactorSignal" traits="Output" sourceport="INS2LoadFactor" targetport="fifoIn"/>
+    <edge source="applications/signals/INS2LoadFactorSignal" target="applications/FLF/FormatLoadFactorCalc" traits="Output" sourceport="fifoOut" targetport="INS2LoadFactor"/>
+    <edge source="applications/FLF/HeadingCalc" target="applications/signals/HeadingSignal" traits="Output" sourceport="Heading" targetport="fifoIn"/>
+    <edge source="applications/signals/HeadingSignal" target="applications/FLF/P2A" traits="Output" sourceport="fifoOut" targetport="Heading"/>
+    <edge source="applications/FLF/SpeedVectorCalc" target="applications/signals/SpeedSignal" traits="Output" sourceport="Speed" targetport="fifoIn"/>
+    <edge source="applications/signals/SpeedSignal" target="applications/FLF/P2A" traits="Output" sourceport="fifoOut" targetport="Speed"/>
+    <edge source="applications/FLF/AltitudeCalc" target="applications/signals/AltitudeSignal" traits="Output" sourceport="Altitude" targetport="fifoIn"/>
+    <edge source="applications/signals/AltitudeSignal" target="applications/FLF/P2A" traits="Output" sourceport="fifoOut" targetport="Altitude"/>
+    <edge source="applications/FLF/SpeedVectorCalc" target="applications/signals/SpeedVectorSignal" traits="Output" sourceport="SpeedVector" targetport="fifoIn"/>
+    <edge source="applications/signals/SpeedVectorSignal" target="applications/FLF/HeadingCalc" traits="Output" sourceport="fifoOut" targetport="SpeedVector"/>
+    <edge source="applications/FLF/FormatSpeedVectorCalc" target="applications/signals/InternalSpeedVectorSignal" traits="Output" sourceport="InternalSpeedVector" targetport="fifoIn"/>
+    <edge source="applications/signals/InternalSpeedVectorSignal" target="applications/FLF/SpeedVectorCalc" traits="Output" sourceport="fifoOut" targetport="InternalSpeedVector"/>
+    <edge source="applications/FLF/AccCalc" target="applications/signals/AccSignal" traits="Output" sourceport="Acc" targetport="fifoIn"/>
+    <edge source="applications/signals/AccSignal" target="applications/FLF/AltitudeCalc" traits="Output" sourceport="fifoOut" targetport="Acc"/>
+    <edge source="applications/FLF/LoadFactorCalc" target="applications/signals/LoadFactorSignal" traits="Output" sourceport="LoadFactor" targetport="fifoIn"/>
+    <edge source="applications/signals/LoadFactorSignal" target="applications/FLF/AccCalc" traits="Output" sourceport="fifoOut" targetport="LoadFactor"/>
+    <edge source="applications/FLF/FormatLoadFactorCalc" target="applications/signals/InternalLoadFactorSignal" traits="Output" sourceport="InternalLoadFactor" targetport="fifoIn"/>
+    <edge source="applications/signals/InternalLoadFactorSignal" target="applications/FLF/LoadFactorCalc" traits="Output" sourceport="fifoOut" targetport="InternalLoadFactor"/>
+
+
+    <!--  The end of the application model -->
+    <!--  The start of the midel platform model -->
+    <node id="platform/schedulers/time_triggered_schedule_1" traits="TimeTriggeredScheduler">
+      <port name="trigger[0]" />
+      <port name="trigger[1]" />
+    </node>
+    <node id="platform/schedulers/time_triggered_schedule_2" traits="TimeTriggeredScheduler">
+      <port name="trigger[0]" />
+      <port name="trigger[1]" />
+    </node>
+    <node id="platform/schedulers/time_triggered_schedule_3" traits="TimeTriggeredScheduler"/>
+    <node id="platform/schedulers/time_triggered_schedule_4" traits="TimeTriggeredScheduler"/>
+    <node id="platform/schedulers/time_triggered_schedule_5" traits="TimeTriggeredScheduler"/>
+    <node id="platform/schedulers/time_triggered_schedule_6" traits="TimeTriggeredScheduler"/>
+    <node id="platform/schedulers/time_triggered_schedule_7" traits="TimeTriggeredScheduler"/>
+    <node id="platform/schedulers/time_triggered_schedule_8" traits="TimeTriggeredScheduler"/>
+    <node id="platform/schedulers/time_triggered_schedule_9" traits="TimeTriggeredScheduler"/>
+
+    <!--  The end of the midel platform model -->
+    <!--  The start of the platform model -->
+    <node id="platform/hardware/RDC1" traits="InstrumentedProcessorTile">
+      <port name="communication"/>
+      <data attr.name="min_frequency_hz" attr.type="integer">200000000</data>
+      <data attr.name="max_memory_internal_bytes" attr.type="integer">0</data>
+      <data attr.name="clock_cycles_per_operation" attr.type="object">
+        <data attr.name="float" attr.type="integer">0</data>
+        <data attr.name="integer" attr.type="integer">0</data>
+        <data attr.name="boolean" attr.type="integer">0</data>
+      </data>
+    </node>
+    <node id="platform/hardware/RDC3" traits="InstrumentedProcessorTile">
+      <port name="communication"/>
+      <data attr.name="min_frequency_hz" attr.type="integer">200000000</data>
+      <data attr.name="max_memory_internal_bytes" attr.type="integer">0</data>
+      <data attr.name="clock_cycles_per_operation" attr.type="object">
+        <data attr.name="float" attr.type="integer">0</data>
+        <data attr.name="integer" attr.type="integer">0</data>
+        <data attr.name="boolean" attr.type="integer">0</data>
+      </data>
+    </node>
+    <node id="platform/hardware/node1/ARM-R5-1" traits="InstrumentedProcessorTile">
+      <port name="communication"/>
+      <data attr.name="min_frequency_hz" attr.type="integer">200000000</data>
+      <data attr.name="max_memory_internal_bytes" attr.type="integer">32000</data>
+      <data attr.name="clock_cycles_per_operation" attr.type="object">
+        <data attr.name="float" attr.type="integer">6</data>
+        <data attr.name="integer" attr.type="integer">2</data>
+        <data attr.name="boolean" attr.type="integer">1</data>
+      </data>
+    </node>
+    <node id="platform/hardware/node1/ARM-R5-2" traits="InstrumentedProcessorTile">
+      <port name="communication"/>
+      <data attr.name="min_frequency_hz" attr.type="integer">200000000</data>
+      <data attr.name="max_memory_internal_bytes" attr.type="integer">32000</data>
+      <data attr.name="clock_cycles_per_operation" attr.type="object">
+        <data attr.name="float" attr.type="integer">6</data>
+        <data attr.name="integer" attr.type="integer">2</data>
+        <data attr.name="boolean" attr.type="integer">1</data>
+      </data>
+    </node>
+    <!-- <node id="platform/hardware/ARM-A53-1" traits="InstrumentedProcessorTile"> -->
+    <!--   <port name="communication"/> -->
+    <!--   <data attr.name="min_frequency_hz" attr.type="integer">200000000</data> -->
+    <!--   <data attr.name="max_memory_internal_bytes" attr.type="integer">32000</data> -->
+    <!-- <data attr.name="clock_cycles_per_operation" attr.type="object"> -->
+    <!--   <data attr.name="float" attr.type="integer">6</data> -->
+    <!--   <data attr.name="integer" attr.type="integer">2</data> -->
+    <!--   <data attr.name="boolean" attr.type="integer">1</data> -->
+    <!-- </data> -->
+    <!-- </node> -->
+    <!-- <node id="platform/hardware/ARM-A53-2" traits="InstrumentedProcessorTile"> -->
+    <!--   <port name="communication"/> -->
+    <!--   <data attr.name="min_frequency_hz" attr.type="integer">200000000</data> -->
+    <!--   <data attr.name="max_memory_internal_bytes" attr.type="integer">32000</data> -->
+    <!-- <data attr.name="clock_cycles_per_operation" attr.type="object"> -->
+    <!--   <data attr.name="float" attr.type="integer">6</data> -->
+    <!--   <data attr.name="integer" attr.type="integer">2</data> -->
+    <!--   <data attr.name="boolean" attr.type="integer">1</data> -->
+    <!-- </data> -->
+    <!-- </node> -->
+    <!-- <node id="platform/hardware/ARM-A53-3" traits="InstrumentedProcessorTile"> -->
+    <!--   <port name="communication"/> -->
+    <!--   <data attr.name="min_frequency_hz" attr.type="integer">200000000</data> -->
+    <!--   <data attr.name="max_memory_internal_bytes" attr.type="integer">32000</data> -->
+    <!-- <data attr.name="clock_cycles_per_operation" attr.type="object"> -->
+    <!--   <data attr.name="float" attr.type="integer">6</data> -->
+    <!--   <data attr.name="integer" attr.type="integer">2</data> -->
+    <!--   <data attr.name="boolean" attr.type="integer">1</data> -->
+    <!-- </data> -->
+    <!-- </node> -->
+    <!-- <node id="platform/hardware/ARM-A53-4" traits="InstrumentedProcessorTile"> -->
+    <!--   <port name="communication"/> -->
+    <!--   <data attr.name="min_frequency_hz" attr.type="integer">200000000</data> -->
+    <!--   <data attr.name="max_memory_internal_bytes" attr.type="integer">32000</data> -->
+    <!-- <data attr.name="clock_cycles_per_operation" attr.type="object"> -->
+    <!--   <data attr.name="float" attr.type="integer">6</data> -->
+    <!--   <data attr.name="integer" attr.type="integer">2</data> -->
+    <!--   <data attr.name="boolean" attr.type="integer">1</data> -->
+    <!-- </data> -->
+    <!-- </node> -->
+    <node id="platform/hardware/node1/On-Chip-OCM-RAM" traits="InstrumentedCommunicationInterconnect">
+      <port name="communication"/>
+      <!-- 4 bytes per clock cycle -->
+      <data attr.name="max_bandwith_bytes_per_sec" attr.type="integer">800000000</data>
+    </node>
+    <edge source="platform/hardware/node1/ARM-R5-1" target="platform/hardware/node1/On-Chip-OCM-RAM" sourceport="communication" targetport="communication" traits="AbstractPhysicalConnection"/>
+    <edge source="platform/hardware/node1/ARM-R5-2" target="platform/hardware/node1/On-Chip-OCM-RAM" sourceport="communication" targetport="communication" traits="AbstractPhysicalConnection"/>
+    <edge source="platform/hardware/node1/On-Chip-OCM-RAM" target="platform/hardware/node1/ARM-R5-1" sourceport="communication" targetport="communication" traits="AbstractPhysicalConnection"/>
+    <edge source="platform/hardware/node1/On-Chip-OCM-RAM" target="platform/hardware/node1/ARM-R5-2" sourceport="communication" targetport="communication" traits="AbstractPhysicalConnection"/>
+    <node id="platform/hardware/EthernetSwitch" traits="InstrumentedCommunicationInterconnect">
+      <port name="communication"/>
+      <!-- 100 Mbps -->
+      <data attr.name="max_bandwith_bytes_per_sec" attr.type="integer">100000000</data>
+    </node>
+    <edge source="platform/hardware/RDC1" target="platform/hardware/EthernetSwitch" sourceport="communication" targetport="communication" traits="AbstractPhysicalConnection"/>
+    <edge source="platform/hardware/EthernetSwitch" target="platform/hardware/RDC1" sourceport="communication" targetport="communication" traits="AbstractPhysicalConnection"/>
+    <edge source="platform/hardware/RDC3" target="platform/hardware/EthernetSwitch" sourceport="communication" targetport="communication" traits="AbstractPhysicalConnection"/>
+    <edge source="platform/hardware/EthernetSwitch" target="platform/hardware/RDC3" sourceport="communication" targetport="communication" traits="AbstractPhysicalConnection"/>
+    <edge source="platform/hardware/node1/On-Chip-OCM-RAM" target="platform/hardware/EthernetSwitch" sourceport="communication" targetport="communication" traits="AbstractPhysicalConnection"/>
+    <edge source="platform/hardware/EthernetSwitch" target="platform/hardware/node1/On-Chip-OCM-RAM" sourceport="communication" targetport="communication" traits="AbstractPhysicalConnection"/>
+    <!-- <edge source="platform/hardware/ARM-A53-1" target="platform/hardware/node1/On-Chip-OCM-RAM" sourceport="communication" targetport="communication" traits="AbstractPhysicalConnection"/> -->
+    <!-- <edge source="platform/hardware/ARM-A53-2" target="platform/hardware/node1/On-Chip-OCM-RAM" sourceport="communication" targetport="communication" traits="AbstractPhysicalConnection"/> -->
+    <!-- <edge source="platform/hardware/ARM-A53-3" target="platform/hardware/node1/On-Chip-OCM-RAM" sourceport="communication" targetport="communication" traits="AbstractPhysicalConnection"/> -->
+    <!-- <edge source="platform/hardware/ARM-A53-4" target="platform/hardware/node1/On-Chip-OCM-RAM" sourceport="communication" targetport="communication" traits="AbstractPhysicalConnection"/> -->
+    <!-- <edge source="platform/hardware/node1/On-Chip-OCM-RAM" target="platform/hardware/ARM-A53-1" sourceport="communication" targetport="communication" traits="AbstractPhysicalConnection"/> -->
+    <!-- <edge source="platform/hardware/node1/On-Chip-OCM-RAM" target="platform/hardware/ARM-A53-2" sourceport="communication" targetport="communication" traits="AbstractPhysicalConnection"/> -->
+    <!-- <edge source="platform/hardware/node1/On-Chip-OCM-RAM" target="platform/hardware/ARM-A53-3" sourceport="communication" targetport="communication" traits="AbstractPhysicalConnection"/> -->
+    <!-- <edge source="platform/hardware/node1/On-Chip-OCM-RAM" target="platform/hardware/ARM-A53-4" sourceport="communication" targetport="communication" traits="AbstractPhysicalConnection"/> -->
+    <!--  The end of the platform model -->
+    <!--  The start of the WCETs of the actors -->
+    <edge source="platform/schedulers/time_triggered_schedule_1" target="applications/FLF/P1A" sourceport="trigger[0]" traits="AbstractScheduling"/>
+    <edge source="platform/schedulers/time_triggered_schedule_1" target="applications/FLF/P1A" sourceport="trigger[1]" traits="AbstractScheduling"/>
+    <edge source="platform/hardware/RDC1" target="platform/schedulers/time_triggered_schedule_1" traits="AbstractMapping"/>
+    <edge source="platform/schedulers/time_triggered_schedule_2" target="applications/FLF/P2A" sourceport="trigger[0]" traits="AbstractScheduling"/>
+    <edge source="platform/schedulers/time_triggered_schedule_2" target="applications/FLF/P2A" sourceport="trigger[1]" traits="AbstractScheduling"/>
+    <edge source="platform/hardware/RDC3" target="platform/schedulers/time_triggered_schedule_2" traits="AbstractMapping"/>
+    <!-- <node id="platform/hardware/RDC1WCET" traits="WCET">
+      <port name="processor"/>
+      <port name="process"/>
+      <port name="platform"/>
+      <port name="application"/>
+      <data attr.name="time" attr.type="integer">4356</data>
+    </node>
+    <node id="applications/FLF/AltitudeCalcWCET" traits="WCET">
+      <port name="processor"/>
+      <port name="process"/>
+      <port name="platform"/>
+      <port name="application"/>
+      <data attr.name="time" attr.type="integer">4147</data>
+    </node>
+    <node id="applications/FLF/FormatSpeedVectorCalcWCET" traits="WCET">
+      <port name="processor"/>
+      <port name="process"/>
+      <port name="platform"/>
+      <port name="application"/>
+      <data attr.name="time" attr.type="integer">4146</data>
+    </node>
+    <node id="applications/FLF/SpeedVectorCalcWCET" traits="WCET">
+      <port name="processor"/>
+      <port name="process"/>
+      <port name="platform"/>
+      <port name="application"/>
+      <data attr.name="time" attr.type="integer">1411</data>
+    </node>
+    <node id="applications/FLF/HeadingCalcWCET" traits="WCET">
+      <port name="processor"/>
+      <port name="process"/>
+      <port name="platform"/>
+      <port name="application"/>
+      <data attr.name="time" attr.type="integer">4356</data>
+    </node>
+    <node id="applications/FLF/FormatLoadFactorCalcWCET" traits="WCET">
+      <port name="processor"/>
+      <port name="process"/>
+      <port name="platform"/>
+      <port name="application"/>
+      <data attr.name="time" attr.type="integer">4147</data>
+    </node>
+    <node id="applications/FLF/LoadFactorCalcWCET" traits="WCET">
+      <port name="processor"/>
+      <port name="process"/>
+      <port name="platform"/>
+      <port name="application"/>
+      <data attr.name="time" attr.type="integer">4146</data>
+    </node>
+    <node id="applications/FLF/AccCalcWCET" traits="WCET">
+      <port name="processor"/>
+      <port name="process"/>
+      <port name="platform"/>
+      <port name="application"/>
+      <data attr.name="time" attr.type="integer">1411</data>
+    </node>
+    <node id="platform/hardware/RDC3WCET" traits="WCET">
+      <port name="processor"/>
+      <port name="process"/>
+      <port name="platform"/>
+      <port name="application"/>
+      <data attr.name="time" attr.type="integer">1411</data>
+    </node> -->
+    <!--  The end of the WCETs of the actors -->
+    <!--  The start of the WCCTs of the arcs -->
+    <!-- <node id="ADC1Altitude" traits="WCCT">
+      <port name="signal"/>
+      <port name="reciever"/>
+      <port name="sender"/>
+      <data attr.name="time" attr.type="integer">1</data>
+    </node>
+    <node id="INS1SpeedVector" traits="WCCT">
+      <port name="signal"/>
+      <port name="reciever"/>
+      <port name="sender"/>
+      <data attr.name="time" attr.type="integer">1</data>
+    </node>
+    <node id="INS2SpeedVector" traits="WCCT">
+      <port name="signal"/>
+      <port name="reciever"/>
+      <port name="sender"/>
+      <data attr.name="time" attr.type="integer">1</data>
+    </node>
+    <node id="INS1LoadFactor" traits="WCCT">
+      <port name="signal"/>
+      <port name="reciever"/>
+      <port name="sender"/>
+      <data attr.name="time" attr.type="integer">1</data>
+    </node>
+    <node id="INS2LoadFactor" traits="WCCT">
+      <port name="signal"/>
+      <port name="reciever"/>
+      <port name="sender"/>
+      <data attr.name="time" attr.type="integer">1</data>
+    </node>
+    <node id="InternalSpeedVector" traits="WCCT">
+      <port name="signal"/>
+      <port name="reciever"/>
+      <port name="sender"/>
+      <data attr.name="time" attr.type="integer">1</data>
+    </node>
+    <node id="SpeedVector" traits="WCCT">
+      <port name="signal"/>
+      <port name="reciever"/>
+      <port name="sender"/>
+      <data attr.name="time" attr.type="integer">1</data>
+    </node>
+    <node id="Speed" traits="WCCT">
+      <port name="signal"/>
+      <port name="reciever"/>
+      <port name="sender"/>
+      <data attr.name="time" attr.type="integer">1</data>
+    </node>
+    <node id="Altitude" traits="WCCT">
+      <port name="signal"/>
+      <port name="reciever"/>
+      <port name="sender"/>
+      <data attr.name="time" attr.type="integer">1</data>
+    </node>
+    <node id="Heading" traits="WCCT">
+      <port name="signal"/>
+      <port name="reciever"/>
+      <port name="sender"/>
+      <data attr.name="time" attr.type="integer">1</data>
+    </node>
+    <node id="InternalLoadFactor" traits="WCCT">
+      <port name="signal"/>
+      <port name="reciever"/>
+      <port name="sender"/>
+      <data attr.name="time" attr.type="integer">1</data>
+    </node>
+    <node id="LoadFactor" traits="WCCT">
+      <port name="signal"/>
+      <port name="reciever"/>
+      <port name="sender"/>
+      <data attr.name="time" attr.type="integer">1</data>
+    </node>
+    <node id="Acc" traits="WCCT">
+      <port name="signal"/>
+      <port name="reciever"/>
+      <port name="sender"/>
+      <data attr.name="time" attr.type="integer">1</data>
+    </node> -->
+    <!--  The end of the WCCTs of the arcs -->
+    <node id="annotations/requirements/hard-location" traits="LocationRequirement">
+      <port name="process"/>
+      <port name="processing_unit"/>
+    </node>
+    <node id="annotations/requirements/hard-location-P1A" traits="LocationRequirement">
+      <port name="process"/>
+      <port name="processing_unit"/>
+    </node>
+    <node id="annotations/requirements/hard-location-P2A" traits="LocationRequirement">
+      <port name="process"/>
+      <port name="processing_unit"/>
+    </node>
+    <edge source="annotations/requirements/hard-location" target="applications/FLF/AltitudeCalc" sourceport="process" traits="Annotation"/>
+    <edge source="annotations/requirements/hard-location" target="applications/FLF/FormatSpeedVectorCalc" sourceport="process" traits="Annotation"/>
+    <edge source="annotations/requirements/hard-location" target="applications/FLF/SpeedVectorCalc" sourceport="process" traits="Annotation"/>
+    <edge source="annotations/requirements/hard-location" target="applications/FLF/HeadingCalc" sourceport="process" traits="Annotation"/>
+    <edge source="annotations/requirements/hard-location" target="applications/FLF/FormatLoadFactorCalc" sourceport="process" traits="Annotation"/>
+    <edge source="annotations/requirements/hard-location" target="applications/FLF/LoadFactorCalc" sourceport="process" traits="Annotation"/>
+    <edge source="annotations/requirements/hard-location" target="applications/FLF/AccCalc" sourceport="process" traits="Annotation"/>
+    <edge source="annotations/requirements/hard-location" target="platform/hardware/node1/ARM-R5-1" sourceport="processing_unit" traits="Annotation"/>
+    <edge source="annotations/requirements/hard-location" target="platform/hardware/node1/ARM-R5-2" sourceport="processing_unit" traits="Annotation"/>
+    <edge source="annotations/requirements/hard-location-P1A" target="applications/FLF/P1A" sourceport="process" traits="Annotation"/>
+    <edge source="annotations/requirements/hard-location-P1A" target="platform/hardware/RDC1" sourceport="processing_unit" traits="Annotation"/>
+    <edge source="annotations/requirements/hard-location-P2A" target="applications/FLF/P2A" sourceport="process" traits="Annotation"/>
+    <edge source="annotations/requirements/hard-location-P2A" target="platform/hardware/RDC3" sourceport="processing_unit" traits="Annotation"/>
+    <!--  The start of the objectives -->
+    <node id="annotations/goals/min_throughput_obj" traits="MinimumThroughput">
+      <data attr.name="apriori_importance" attr.type="integer">1</data>
+    </node>
+    <edge source="annotations/goals/min_throughput_obj" target="applications/FLF/P1A" traits="Annotation"/>
+    <edge source="annotations/goals/min_throughput_obj" target="applications/FLF/AltitudeCalc" traits="Annotation"/>
+    <edge source="annotations/goals/min_throughput_obj" target="applications/FLF/FormatSpeedVectorCalc" traits="Annotation"/>
+    <edge source="annotations/goals/min_throughput_obj" target="applications/FLF/SpeedVectorCalc" traits="Annotation"/>
+    <edge source="annotations/goals/min_throughput_obj" target="applications/FLF/HeadingCalc" traits="Annotation"/>
+    <edge source="annotations/goals/min_throughput_obj" target="applications/FLF/FormatLoadFactorCalc" traits="Annotation"/>
+    <edge source="annotations/goals/min_throughput_obj" target="applications/FLF/LoadFactorCalc" traits="Annotation"/>
+    <edge source="annotations/goals/min_throughput_obj" target="applications/FLF/AccCalc" traits="Annotation"/>
+    <edge source="annotations/goals/min_throughput_obj" target="applications/FLF/P2A" traits="Annotation"/>
+    <!--  The end of the objectives -->
+    <!--  The start of the relations -->
+
+    <!-- <edge source="getPx" target="gysig" traits="Output" sourceport="gy" targetport="fifoIn"/> -->
+    <!-- <edge source="Gx" target="absxsig" traits="Output" sourceport="resx" targetport="fifoIn"/> -->
+    <!-- <edge source="Gy" target="absysig" traits="Output" sourceport="resy" targetport="fifoIn"/> -->
+    <!-- <edge source="gxsig" target="Gx" traits="Output" sourceport="fifoOut" targetport="gx"/> -->
+    <!-- <edge source="gysig" target="Gy" traits="Output" sourceport="fifoOut" targetport="gy"/> -->
+    <!-- <edge source="absxsig" target="Abs" traits="Output" sourceport="fifoOut" targetport="resx"/> -->
+    <!-- <edge source="absysig" target="Abs" traits="Output" sourceport="fifoOut" targetport="resy"/> -->
+    <!-- <edge source="sobel" target="getPx" traits="Expansion" sourceport="imgInput" targetport="imgInput"/> -->
+    <!-- <edge source="sobel" target="Abs" traits="Expansion" sourceport="imgOutput" targetport="imgOutput"/> -->
+    <!-- <edge source="tile1" target="tdmabus1" traits="AbstractPhysicalConnection" sourceport="communication"/> -->
+    <!-- <edge source="tile2" target="tdmabus1" traits="AbstractPhysicalConnection" sourceport="communication"/> -->
+    <!-- <edge source="tile3" target="tdmabus1" traits="AbstractPhysicalConnection" sourceport="communication"/> -->
+    <!-- <edge source="tile4" target="tdmabus1" traits="AbstractPhysicalConnection" sourceport="communication"/> -->
+    <!-- <edge source="tdmabus1" target="tile1" traits="AbstractPhysicalConnection" sourceport="communication"/> -->
+    <!-- <edge source="tdmabus1" target="tile2" traits="AbstractPhysicalConnection" sourceport="communication"/> -->
+    <!-- <edge source="tdmabus1" target="tile3" traits="AbstractPhysicalConnection" sourceport="communication"/> -->
+    <!-- <edge source="tdmabus1" target="tile4" traits="AbstractPhysicalConnection" sourceport="communication"/> -->
+    <!-- <edge source="getPxWCET" target="getPx" traits="Annotation" sourceport="application"/> -->
+    <!-- <edge source="getPxWCET" target="tile1" traits="Annotation" sourceport="platform"/> -->
+    <!-- <edge source="getPxWCET" target="tile2" traits="Annotation" sourceport="platform"/> -->
+    <!-- <edge source="getPxWCET" target="tile3" traits="Annotation" sourceport="platform"/> -->
+    <!-- <edge source="getPxWCET" target="tile4" traits="Annotation" sourceport="platform"/> -->
+    <!-- <edge source="gxWCET" target="Gx" traits="Annotation" sourceport="application"/> -->
+    <!-- <edge source="gxWCET" target="tile1" traits="Annotation" sourceport="platform"/> -->
+    <!-- <edge source="gxWCET" target="tile2" traits="Annotation" sourceport="platform"/> -->
+    <!-- <edge source="gxWCET" target="tile3" traits="Annotation" sourceport="platform"/> -->
+    <!-- <edge source="gxWCET" target="tile4" traits="Annotation" sourceport="platform"/> -->
+    <!-- <edge source="gyWCET" target="Gy" traits="Annotation" sourceport="application"/> -->
+    <!-- <edge source="gyWCET" target="tile1" traits="Annotation" sourceport="platform"/> -->
+    <!-- <edge source="gyWCET" target="tile2" traits="Annotation" sourceport="platform"/> -->
+    <!-- <edge source="gyWCET" target="tile3" traits="Annotation" sourceport="platform"/> -->
+    <!-- <edge source="gyWCET" target="tile4" traits="Annotation" sourceport="platform"/> -->
+    <!-- <edge source="absWCET" target="Abs" traits="Annotation" sourceport="application"/> -->
+    <!-- <edge source="absWCET" target="tile1" traits="Annotation" sourceport="platform"/> -->
+    <!-- <edge source="absWCET" target="tile2" traits="Annotation" sourceport="platform"/> -->
+    <!-- <edge source="absWCET" target="tile3" traits="Annotation" sourceport="platform"/> -->
+    <!-- <edge source="absWCET" target="tile4" traits="Annotation" sourceport="platform"/> -->
+    <!-- <edge source="gxsigWCCT" target="gxsig" traits="Annotation"/> -->
+    <!-- <edge source="gxsigWCCT" target="tdmabus1" traits="Annotation"/> -->
+    <!-- <edge source="gysigWCCT" target="gysig" traits="Annotation"/> -->
+    <!-- <edge source="gysigWCCT" target="tdmabus1" traits="Annotation"/> -->
+    <!-- <edge source="absxsigWCCT" target="absxsig" traits="Annotation"/> -->
+    <!-- <edge source="absxsigWCCT" target="tdmabus1" traits="Annotation"/> -->
+    <!-- <edge source="absysigWCCT" target="tdmabus1" traits="Annotation"/> -->
+    <!-- <edge source="absysigWCCT" target="absysig" traits="Annotation"/> -->
+    <!-- <edge source="min_throughput_obj" target="sobel" traits="Annotation"/> -->
+    <!-- The end of the relations -->
+  </graph>
+</graphml>

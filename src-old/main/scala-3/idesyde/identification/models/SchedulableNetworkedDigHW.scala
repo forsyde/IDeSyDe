@@ -91,7 +91,7 @@ final case class SchedulableNetworkedDigHW(
     ) yield (p, pp)
 
   lazy val topologySymmetryRelationGraph: SimpleGraph[GenericProcessingModule, DefaultEdge] =
-    val graph = SimpleGraph[GenericProcessingModule, DefaultEdge](classOf[DefaultEdge])
+    val graph = SimpleGraph[GenericProcessingModule, DefaultEdge](() => DefaultEdge())
     hardware.processingElems.foreach(p => graph.addVertex(p))
     for (
       p  <- hardware.processingElems;
@@ -101,14 +101,14 @@ final case class SchedulableNetworkedDigHW(
       // Currently we assume master to slace
       // TODO: the fact that the bandwith must get with a default value is not safe,
       // this should be removed later
-      if hardware.storageElems.forall(m => 
+      if hardware.storageElems.forall(m =>
         hardware.storageElems.exists(mm => {
-            hardware.paths.contains((p, m)) &&
-            hardware.paths.contains((pp, mm)) &&
-            hardware.paths((p, m)).map(c => 1.0 / hardware.bandWidthBitPerSec((c, p))).sum ==
+          hardware.paths.contains((p, m)) &&
+          hardware.paths.contains((pp, mm)) &&
+          hardware.paths((p, m)).map(c => 1.0 / hardware.bandWidthBitPerSec((c, p))).sum ==
             hardware.paths((pp, mm)).map(c => 1.0 / hardware.bandWidthBitPerSec((c, pp))).sum
-          })
-        )
+        })
+      )
     ) graph.addEdge(p, pp)
     graph
 

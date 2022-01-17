@@ -9,7 +9,12 @@ import java.util.stream.Collectors
 import forsyde.io.java.core.Trait
 
 import scala.collection.mutable.HashSet
-import idesyde.identification.rules.{NetworkedDigitalHWIdentRule, ReactorMinusIdentificationRule, ReactorMinusToJobsRule, SDFAppIdentificationRule}
+import idesyde.identification.rules.{
+  NetworkedDigitalHWIdentRule,
+  ReactorMinusIdentificationRule,
+  ReactorMinusToJobsRule,
+  SDFAppIdentificationRule
+}
 import org.jgrapht.graph.SimpleDirectedGraph
 import org.jgrapht.graph.DefaultEdge
 import org.jgrapht.alg.connectivity.GabowStrongConnectivityInspector
@@ -26,7 +31,9 @@ object Identification {
   val standardRules: Set[IdentificationRule] =
     Set[IdentificationRule](
       SDFAppIdentificationRule(),
-      ReactorMinusIdentificationRule(Executors.newFixedThreadPool(1).asInstanceOf[ThreadPoolExecutor]),
+      ReactorMinusIdentificationRule(
+        Executors.newFixedThreadPool(1).asInstanceOf[ThreadPoolExecutor]
+      ),
       // ReactorMinusToJobsRule(),
       NetworkedDigitalHWIdentRule(),
       SchedulableNetDigHWIdentRule(),
@@ -37,18 +44,19 @@ object Identification {
   def identifyDecisionModels(
       model: ForSyDeSystemGraph,
       rules: Set[IdentificationRule] = Set.empty
-  ): Set[DecisionModel] = 
+  ): Set[DecisionModel] =
     var identified: Set[DecisionModel] = Set()
     var activeRules                    = rules ++ standardRules
     val maxIters                       = activeRules.size * countTraits(model)
     var iters                          = 0
-    val dominanceGraph = SimpleDirectedGraph[DecisionModel, DefaultEdge](classOf[DefaultEdge])
+    val dominanceGraph = SimpleDirectedGraph[DecisionModel, DefaultEdge](() => DefaultEdge())
     scribe.info(
       s"Performing identification with ${activeRules.size} rules for $maxIters iterations."
     )
     while (activeRules.size > 0 && iters < maxIters) {
       val ruleResults = activeRules.map(r => (r, r.identify(model, identified)))
-      val newIdentified = ruleResults.filter((r, res) => !res._2.isEmpty).map((r, res) => res._2.get).toSet
+      val newIdentified =
+        ruleResults.filter((r, res) => !res._2.isEmpty).map((r, res) => res._2.get).toSet
       // scribe.debug("building dominance graph")
       for (m <- newIdentified) dominanceGraph.addVertex(m)
       for (m <- newIdentified; mm <- identified; if m.dominates(mm)) dominanceGraph.addEdge(m, mm)
@@ -66,9 +74,9 @@ object Identification {
     val dominanceCondensation = GabowStrongConnectivityInspector(dominanceGraph).getCondensation()
     // keep only the SCC which are leaves
     val dominant = dominanceCondensation.vertexSet.asScala
-          .filter(g => dominanceCondensation.incomingEdgesOf(g).isEmpty)
-          .flatMap(g => g.vertexSet.asScala)
-          .toSet
+      .filter(g => dominanceCondensation.incomingEdgesOf(g).isEmpty)
+      .flatMap(g => g.vertexSet.asScala)
+      .toSet
     scribe.info(s"droppped ${identified.size - dominant.size} dominated decision model(s).")
     scribe.debug(s"domitant: ${dominant.map(m => m.uniqueIdentifier)}")
     dominant

@@ -12,15 +12,15 @@
 // resolvers += Resolver.mavenLocal
 
 libraryDependencies ++= Seq(
-  "io.github.forsyde" % "forsyde-io-java-core" % "0.4.1",
-  "org.apache.commons" % "commons-math3" % "3.6.1"
+  "io.github.forsyde"  % "forsyde-io-java-core" % "0.4.1",
+  "org.apache.commons" % "commons-math3"        % "3.6.1"
 )
 libraryDependencies += "com.outr" %% "scribe" % "3.5.5"
 // libraryDependencies += "com.google.ortools" % "ortools-java" % "9.0.9048"
 // libraryDependencies += "com.google.ortools" % "ortools-linux-x86-64" % "9.0.9048"
-libraryDependencies += "com.lihaoyi" %% "upickle" % "1.4.0"
-libraryDependencies += "org.jgrapht" % "jgrapht-unimi-dsi" % "1.5.1"
-libraryDependencies += "org.choco-solver" %% "choco-solver" % "4.10.8"
+libraryDependencies += "com.lihaoyi"      %% "upickle"           % "1.4.0"
+libraryDependencies += "org.jgrapht"       % "jgrapht-unimi-dsi" % "1.5.1"
+libraryDependencies += "org.choco-solver" %% "choco-solver"      % "4.10.8"
 // libraryDependencies += "org.apache.logging.log4j" % "log4j-api" % "2.14.1"
 // libraryDependencies += "org.apache.logging.log4j" % "log4j-core" % "2.14.1"
 // libraryDependencies += "org.apache.logging.log4j" %% "log4j-api-scala" % "11.0"
@@ -52,6 +52,5 @@ libraryDependencies += "org.choco-solver" %% "choco-solver" % "4.10.8"
 // }
 
 // javaOptions += s"-Djna.library.path=$pythonLibsDir"
-
 
 // /Compile / resourceDirectory := baseDirectory.value / "resources"

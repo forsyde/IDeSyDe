@@ -27,7 +27,7 @@ final case class NetworkedDigitalHardware(
     val communicationElems: Set[GenericDigitalInterconnect],
     val storageElems: Set[GenericMemoryModule],
     val links: Set[(AbstractDigitalModule, AbstractDigitalModule)]
-) extends SimpleGraph[AbstractDigitalModule, DefaultEdge](() => DefaultEdge())
+) extends SimpleGraph[AbstractDigitalModule, DefaultEdge](classOf[DefaultEdge])
     with DecisionModel {
 
   for (pe <- processingElems) addVertex(pe)

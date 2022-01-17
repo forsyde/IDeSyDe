@@ -127,7 +127,7 @@ final case class ReactorMinusApplication(
   }
 
   lazy val reactionsOnlyExtendedConnectionsGraph =
-    val g = SimpleDirectedGraph[LinguaFrancaReaction, DefaultEdge](() => DefaultEdge())
+    val g = SimpleDirectedGraph[LinguaFrancaReaction, DefaultEdge](classOf[DefaultEdge])
     for (r <- vertexSet.asScala) g.addVertex(r)
     for (
       r <- vertexSet.asScala; rr <- vertexSet.asScala;
@@ -137,7 +137,7 @@ final case class ReactorMinusApplication(
     g
 
   lazy val reactionsOnlyWithPropagationsGraph =
-    val g = SimpleDirectedGraph[LinguaFrancaReaction, DefaultEdge](() => DefaultEdge())
+    val g = SimpleDirectedGraph[LinguaFrancaReaction, DefaultEdge](classOf[DefaultEdge])
     for (r <- vertexSet.asScala) g.addVertex(r)
     for (
       r <- vertexSet.asScala; rr <- vertexSet.asScala;

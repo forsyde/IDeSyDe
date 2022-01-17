@@ -49,3 +49,5 @@ It is always good to know designs are not possible before they crash!
 ## How can I use it?
 
 That depends on how big the current identification library is!
+Check out [Installation]({{ site.baseurl }}/installation) for instructions on how to install IDeSyDe
+in your machine.

@@ -5,17 +5,43 @@ on:
   push:
     branches:
       - "master"
-
 jobs:
-  make-tag:
+  publish-java-build:
     runs-on: ubuntu-latest
     steps:
-      - uses: "marvinpinto/action-automatic-releases@latest"
-        with:
-          repo_token: "${{ secrets.GITHUB_TOKEN }}"
-          automatic_release_tag: "nightly"
-          prerelease: true
-          title: "Nightly development Build"
+    - uses: actions/checkout@v2
+    - uses: "marvinpinto/action-automatic-releases@latest"
+      with:
+        repo_token: "${{ secrets.GITHUB_TOKEN }}"
+        automatic_release_tag: "nightly"
+        prerelease: true
+        title: "Nightly development Build"
+    - name: Set up JDK 11
+      uses: olafurpg/setup-scala@v11
+      with:
+        java-version: "openjdk@1.11.0"
+        # server-id: io.github.forsyde # Value of the distributionManagement/repository/id field of the pom.xml
+        # settings-path: ${{ github.workspace }} # location for the settings.xml file
+    - name: Build with sbt (All)
+      # if: ${{ matrix.os != 'windows-latest' }}
+      run: |
+        cd ${{ github.workspace }}
+        sbt assembly
+    - name: Get latest assembly
+      run: |
+        cd ${{ github.workspace }}
+        echo "latestCLI=$(ls ./cli/target/scala-3.1.0/cli* | tail -1)" >> $GITHUB_ENV
+    - name: Upload binaries to release
+      uses: svenstaro/upload-release-action@v2
+      with:
+        repo_token: ${{ secrets.GITHUB_TOKEN }}
+        file: ${{ github.workspace }}/${{ env.latestCLI }}
+        asset_name: idesyde-nightly-standalone.jar
+        tag: "nightly"
+        overwrite: true
+        body: "Executable IDeSyDe jar"
+jobs:
+
   # publish-cross-jar:
   #   needs: make-tag
   #   strategy:

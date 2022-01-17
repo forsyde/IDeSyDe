@@ -35,8 +35,8 @@ sources:
   forsydeio: https://github.com/forsyde/forsyde-io
   idesyde: https://github.com/forsyde/IDeSyDe
 versions:
-  idesyde: "0.1.6"
-  forsydeio: "0.2.5"
+  idesyde: "0.2.2"
+  forsydeio: "0.3.8"
 
 # Build settings
 # remote_theme: forsyde/forsyde-web-theme
@@ -46,6 +46,7 @@ plugins:
   - jekyll-remote-theme
 
 remote_theme: pmarsceill/just-the-docs
+#theme: "just-the-docs"
 
 # Exclude from processing.
 # The following items will not be processed, by default.

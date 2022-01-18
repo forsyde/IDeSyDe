@@ -42,7 +42,7 @@ final case class ReactorMinusAppMapAndSched(
       .toMap
 
   lazy val executionSymmetricRelationGraph: SimpleGraph[GenericProcessingModule, DefaultEdge] =
-    val graph = SimpleGraph[GenericProcessingModule, DefaultEdge](() => DefaultEdge())
+    val graph = SimpleGraph[GenericProcessingModule, DefaultEdge](classOf[DefaultEdge])
     platform.hardware.processingElems.foreach(p => graph.addVertex(p))
     for (
       p  <- platform.hardware.processingElems;

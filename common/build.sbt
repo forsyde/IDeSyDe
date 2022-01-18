@@ -12,8 +12,8 @@
 // resolvers += Resolver.mavenLocal
 
 libraryDependencies ++= Seq(
-  "io.github.forsyde" % "forsyde-io-java-core" % "0.4.1",
-  "org.apache.commons" % "commons-math3" % "3.6.1"
+  "io.github.forsyde"  % "forsyde-io-java-core" % "0.4.1",
+  "org.apache.commons" % "commons-math3"        % "3.6.1"
 )
 libraryDependencies += "com.outr" %% "scribe" % "3.5.5"
 // libraryDependencies += "com.google.ortools" % "ortools-java" % "9.0.9048"
@@ -52,6 +52,5 @@ libraryDependencies += "org.choco-solver" % "choco-solver" % "4.10.8"
 // }
 
 // javaOptions += s"-Djna.library.path=$pythonLibsDir"
-
 
 // /Compile / resourceDirectory := baseDirectory.value / "resources"

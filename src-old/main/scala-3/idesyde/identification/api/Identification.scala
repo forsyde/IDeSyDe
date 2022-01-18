@@ -49,7 +49,7 @@ object Identification {
     var activeRules                    = rules ++ standardRules
     val maxIters                       = activeRules.size * countTraits(model)
     var iters                          = 0
-    val dominanceGraph = SimpleDirectedGraph[DecisionModel, DefaultEdge](() => DefaultEdge())
+    val dominanceGraph = SimpleDirectedGraph[DecisionModel, DefaultEdge](classOf[DefaultEdge])
     scribe.info(
       s"Performing identification with ${activeRules.size} rules for $maxIters iterations."
     )

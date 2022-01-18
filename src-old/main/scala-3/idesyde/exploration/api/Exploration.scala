@@ -34,7 +34,7 @@ object Exploration:
     // based on the criteria supplied
     val modelToExplorerSet =
       for (m <- explorableModels) yield
-        val dominanceGraph = SimpleDirectedGraph[Explorer, DefaultEdge](() => DefaultEdge())
+        val dominanceGraph = SimpleDirectedGraph[Explorer, DefaultEdge](classOf[DefaultEdge])
         for (e <- explorers) if (e.canExplore(m)) dominanceGraph.addVertex(e)
         dominanceGraph.vertexSet
           .stream()

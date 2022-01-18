@@ -1,6 +1,8 @@
-import org.chocosolver.solver.Model;
-import org.chocosolver.solver.variables.IntVar;
-import org.chocosolver.solver.variables.Variable;
+import forsyde.io.java.core.ForSyDeSystemGraph
+import idesyde.identification.DecisionModel
+import org.chocosolver.solver.Model
+import org.chocosolver.solver.variables.IntVar
+import org.chocosolver.solver.variables.Variable
 
 trait ChocoCPDecisionModel extends DecisionModel:
 

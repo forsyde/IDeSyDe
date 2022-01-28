@@ -13,14 +13,10 @@ import forsyde.io.java.core.Vertex
 import org.apache.commons.math3.fraction.BigFraction
 import org.apache.commons.math3.util.ArithmeticUtils
 import org.apache.commons.math3.analysis.function.Sin
-import forsyde.io.java.typed.viewers.LinguaFrancaTimer
-import forsyde.io.java.typed.viewers.LinguaFrancaSignal
-import forsyde.io.java.typed.viewers.LinguaFrancaReactor
-import forsyde.io.java.typed.viewers.LinguaFrancaElement
-import forsyde.io.java.typed.viewers.LinguaFrancaReaction
-import forsyde.io.java.typed.viewers.ModelOfComputation
 import forsyde.io.java.core.OpaqueTrait
+import forsyde.io.java.typed.viewers.moc.linguafranca.{LinguaFrancaElem, LinguaFrancaReaction, LinguaFrancaReactor, LinguaFrancaSignal, LinguaFrancaTimer}
 import idesyde.identification.models.reactor.ReactorMinusApplication
+
 import scala.annotation.meta.companionObject
 import java.util.concurrent.ThreadPoolExecutor
 
@@ -30,8 +26,8 @@ final case class ReactorMinusIdentificationRule(executor: ThreadPoolExecutor) ex
     if (ReactorMinusIdentificationRule.canIdentify(model, identified)) {
       val vertexes = model.vertexSet.asScala
       val elements = vertexes
-        .filter(LinguaFrancaElement.conforms(_))
-        .map(LinguaFrancaElement.safeCast(_).get)
+        .filter(LinguaFrancaElem.conforms(_))
+        .map(LinguaFrancaElem.safeCast(_).get)
         .toSet
       val reactors = elements
         .filter(LinguaFrancaReactor.conforms(_))
@@ -203,8 +199,8 @@ object ReactorMinusIdentificationRule:
   def canIdentify(model: ForSyDeSystemGraph, identified: Set[DecisionModel]): Boolean = {
     val vertexes = model.vertexSet.asScala
     val elements = vertexes
-      .filter(LinguaFrancaElement.conforms(_))
-      .map(LinguaFrancaElement.safeCast(_).get)
+      .filter(LinguaFrancaElem.conforms(_))
+      .map(LinguaFrancaElem.safeCast(_).get)
       .toSet
     val reactors = elements
       .filter(LinguaFrancaReactor.conforms(_))
@@ -229,7 +225,7 @@ object ReactorMinusIdentificationRule:
     allReactionsPeriodicable(model, timers, reactions)
   }
 
-  def hasOnlyAcceptableTraits(model: ForSyDeSystemGraph, elements: Set[LinguaFrancaElement]): Boolean =
+  def hasOnlyAcceptableTraits(model: ForSyDeSystemGraph, elements: Set[LinguaFrancaElem]): Boolean =
     elements.forall(v =>
       LinguaFrancaReactor.conforms(v) ||
         LinguaFrancaTimer.conforms(v) ||

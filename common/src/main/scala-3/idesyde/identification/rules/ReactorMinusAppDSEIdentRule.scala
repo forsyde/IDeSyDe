@@ -5,15 +5,15 @@ import idesyde.identification.models.reactor.ReactorMinusAppMapAndSched
 import forsyde.io.java.core.ForSyDeSystemGraph
 import idesyde.identification.DecisionModel
 import idesyde.identification.models.reactor.ReactionJob
-import forsyde.io.java.typed.viewers.GenericProcessingModule
-import forsyde.io.java.typed.viewers.ProfiledFunction
-import forsyde.io.java.typed.viewers.ProfiledProcessingModule
 import org.apache.commons.math3.fraction.BigFraction
 
 import collection.JavaConverters.*
-import idesyde.identification.models.SchedulableNetworkedDigHW
 import idesyde.identification.models.reactor.ReactorMinusApplication
-import forsyde.io.java.typed.viewers.LinguaFrancaReaction
+import idesyde.identification.models.platform.SchedulableNetworkedDigHW
+import forsyde.io.java.typed.viewers.moc.linguafranca.LinguaFrancaReaction
+import forsyde.io.java.typed.viewers.platform.GenericProcessingModule
+import forsyde.io.java.typed.viewers.platform.InstrumentedProcessingModule
+import forsyde.io.java.typed.viewers.impl.InstrumentedExecutable
 
 final case class ReactorMinusAppDSEIdentRule() extends IdentificationRule:
 
@@ -52,19 +52,19 @@ final case class ReactorMinusAppDSEIdentRule() extends IdentificationRule:
     val iter = for (
       r  <- reactions;
       pe <- procElems;
-      (provisionName, provisionSet) <- ProfiledProcessingModule
+      (provisionName, provisionSet) <- InstrumentedProcessingModule
         .safeCast(pe)
-        .map(pe => pe.getProvisions.asScala.toMap)
+        .map(pe => pe.getModalInstructionsPerCycle.asScala.toMap)
         .orElse(Map.empty);
       (requirementName, requirementSet) <- r.getImplementationPort(model)
-          .flatMap(ProfiledFunction.safeCast(_))
-          .map(f => f.getRequirements.asScala.toMap)
+          .flatMap(InstrumentedExecutable.safeCast(_))
+          .map(f => f.getOperationRequirements.asScala.toMap)
           .orElse(Map.empty);
       if provisionSet.keySet.equals(requirementSet.keySet)
     )
       yield (r, pe) -> BigFraction(
-        provisionSet.asScala.map(op => op._2 * requirementSet.get(op._1)).sum[Long],
-        pe.getNominalFrequencyInHertz
+        provisionSet.asScala.map(op => op._2 * requirementSet.get(op._1)).map(_.ceil.toLong).sum,
+        pe.getOperatingFrequencyInHertz
       )
     iter.toMap
 

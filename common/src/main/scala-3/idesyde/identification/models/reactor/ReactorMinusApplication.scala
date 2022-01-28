@@ -1,6 +1,5 @@
 package idesyde.identification.models.reactor
 
-import forsyde.io.java.typed.viewers.{LinguaFrancaReaction, LinguaFrancaReactor, LinguaFrancaSignal}
 import idesyde.identification.DecisionModel
 import org.apache.commons.math3.fraction.BigFraction
 import org.apache.commons.math3.util.ArithmeticUtils
@@ -16,6 +15,11 @@ import org.jgrapht.alg.shortestpath.DijkstraManyToManyShortestPaths
 import java.util.stream.Collectors
 import org.jgrapht.traverse.BreadthFirstIterator
 import java.util.concurrent.ThreadPoolExecutor
+
+import forsyde.io.java.typed.viewers.moc.linguafranca.LinguaFrancaSignal
+import forsyde.io.java.typed.viewers.moc.linguafranca.LinguaFrancaReactor
+import forsyde.io.java.typed.viewers.moc.linguafranca.LinguaFrancaReaction
+
 
 // sealed class ReactionsPartialOrder(
 //     val containmentFunction: Map[LinguaFrancaReaction, LinguaFrancaReactor],

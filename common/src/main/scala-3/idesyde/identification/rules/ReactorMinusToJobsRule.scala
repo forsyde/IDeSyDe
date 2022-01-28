@@ -1,13 +1,6 @@
 package idesyde.identification.rules
 
 import forsyde.io.java.core.ForSyDeSystemGraph
-import forsyde.io.java.typed.viewers.GenericDigitalInterconnect
-import forsyde.io.java.typed.viewers.GenericDigitalStorage
-import forsyde.io.java.typed.viewers.GenericProcessingModule
-import forsyde.io.java.typed.viewers.LinguaFrancaReaction
-import forsyde.io.java.typed.viewers.LinguaFrancaReactor
-import forsyde.io.java.typed.viewers.LinguaFrancaSignal
-import forsyde.io.java.typed.viewers.LinguaFrancaTimer
 import idesyde.identification.DecisionModel
 import idesyde.identification.IdentificationRule
 import idesyde.identification.models.reactor.ReactorMinusApplication
@@ -20,6 +13,8 @@ import org.jgrapht.graph.SimpleDirectedGraph
 import org.jgrapht.traverse.BreadthFirstIterator
 
 import collection.JavaConverters.*
+import forsyde.io.java.typed.viewers.moc.linguafranca.LinguaFrancaReaction
+import forsyde.io.java.typed.viewers.moc.linguafranca.LinguaFrancaReactor
 
 @deprecated
 final case class ReactorMinusToJobsRule() extends IdentificationRule {

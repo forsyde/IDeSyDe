@@ -1,19 +1,18 @@
 package idesyde.identification.rules
 
 import idesyde.identification.IdentificationRule
-import idesyde.identification.models.SchedulableNetworkedDigHW
 import forsyde.io.java.core.ForSyDeSystemGraph
 import idesyde.identification.DecisionModel
 
 import collection.JavaConverters.*
-import forsyde.io.java.typed.viewers.TimeTriggeredScheduler
-import forsyde.io.java.typed.viewers.RoundRobinScheduler
-import forsyde.io.java.typed.viewers.AbstractDigitalModule
-import idesyde.identification.models.NetworkedDigitalHardware
-import forsyde.io.java.typed.viewers.GenericProcessingModule
-import forsyde.io.java.typed.viewers.FixedPriorityScheduler
-import forsyde.io.java.typed.viewers.PlatformAbstraction
+import idesyde.identification.models.platform.{NetworkedDigitalHardware, SchedulableNetworkedDigHW}
+
 import java.util.stream.Collectors
+import forsyde.io.java.typed.viewers.platform.runtime.FixedPriorityScheduler
+import forsyde.io.java.typed.viewers.platform.runtime.TimeTriggeredScheduler
+import forsyde.io.java.typed.viewers.platform.runtime.RoundRobinScheduler
+import forsyde.io.java.typed.viewers.platform.GenericProcessingModule
+import forsyde.io.java.typed.viewers.platform.PlatformElem
 
 final case class SchedulableNetDigHWIdentRule() extends IdentificationRule {
 
@@ -143,7 +142,7 @@ object SchedulableNetDigHWIdentRule:
 
   def canIdentify(model: ForSyDeSystemGraph, identified: Set[DecisionModel]): Boolean =
     val platformVertexes = model.vertexSet.stream
-      .filter(PlatformAbstraction.conforms(_))
+      .filter(PlatformElem.conforms(_))
       .collect(Collectors.toSet)
       .asScala
       .toSet

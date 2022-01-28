@@ -1,7 +1,8 @@
 package idesyde.identification.models.reactor
 
-import forsyde.io.java.typed.viewers.LinguaFrancaReaction
 
+
+import forsyde.io.java.typed.viewers.moc.linguafranca.LinguaFrancaReaction
 import org.apache.commons.math3.fraction.BigFraction
 
 final case class ReactionJob(

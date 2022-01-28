@@ -1,11 +1,11 @@
 package idesyde.identification.models.reactor
 
+import forsyde.io.java.typed.viewers.moc.linguafranca.LinguaFrancaReaction
+import forsyde.io.java.typed.viewers.platform.GenericProcessingModule
 import idesyde.identification.models.reactor.ReactionJob
 import idesyde.identification.DecisionModel
-import idesyde.identification.models.SchedulableNetworkedDigHW
-import forsyde.io.java.typed.viewers.GenericProcessingModule
+import idesyde.identification.models.platform.SchedulableNetworkedDigHW
 import org.apache.commons.math3.fraction.BigFraction
-import forsyde.io.java.typed.viewers.LinguaFrancaReaction
 import org.jgrapht.graph.SimpleGraph
 import org.jgrapht.graph.DefaultEdge
 import org.jgrapht.alg.connectivity.GabowStrongConnectivityInspector

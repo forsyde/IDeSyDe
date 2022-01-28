@@ -1,29 +1,24 @@
-package idesyde.identification.models
+package idesyde.identification.models.platform
 
 import forsyde.io.java.core.Vertex
-import forsyde.io.java.typed.viewers.{
-  GenericDigitalInterconnect,
-  GenericProcessingModule,
-  RoundRobinScheduler,
-  TimeTriggeredScheduler
-}
+import forsyde.io.java.typed.viewers.platform.GenericProcessingModule
+import forsyde.io.java.typed.viewers.platform.runtime.{FixedPriorityScheduler, RoundRobinScheduler, TimeTriggeredScheduler}
 import idesyde.identification.DecisionModel
-import forsyde.io.java.typed.viewers.FixedPriorityScheduler
-import scala.annotation.tailrec
-import org.jgrapht.graph.SimpleGraph
-import org.jgrapht.graph.DefaultEdge
-import org.jgrapht.alg.connectivity.GabowStrongConnectivityInspector
-
-import collection.JavaConverters.*
-import java.util.stream.Collectors
 import org.jgrapht.alg.connectivity.ConnectivityInspector
+import org.jgrapht.graph.{DefaultEdge, SimpleGraph}
+
+import java.util.stream.Collectors
+
+import scala.jdk.OptionConverters.*
+import scala.jdk.CollectionConverters.*
+
 
 final case class SchedulableNetworkedDigHW(
     val hardware: NetworkedDigitalHardware,
     val fixedPriorityPEs: Set[GenericProcessingModule],
     val timeTriggeredPEs: Set[GenericProcessingModule],
     val roundRobinPEs: Set[GenericProcessingModule],
-    // val bandWidthFromCEtoPE: Map[GenericDigitalInterconnect, GenericProcessingModule],
+    // val bandWidthFromCEtoPE: Map[GenericCommunicationModule, GenericProcessingModule],
     val schedulersFromPEs: Map[
       GenericProcessingModule,
       FixedPriorityScheduler | TimeTriggeredScheduler | RoundRobinScheduler
@@ -33,6 +28,7 @@ final case class SchedulableNetworkedDigHW(
   val coveredVertexes: Iterable[Vertex] = hardware.coveredVertexes ++
     schedulersFromPEs.values.map(_.getViewedVertex).toSet
 
+    /*
   lazy val fixedPriorityTopologySymmetryRelation
       : Set[(GenericProcessingModule, GenericProcessingModule)] =
     for (
@@ -89,27 +85,32 @@ final case class SchedulableNetworkedDigHW(
           hardware.paths.getOrElse((pp, mm), Seq()).map(c => hardware.bandWidthBitPerSec(c, pp)).sum
       }) == 1
     ) yield (p, pp)
+    */
 
   lazy val topologySymmetryRelationGraph: SimpleGraph[GenericProcessingModule, DefaultEdge] =
     val graph = SimpleGraph[GenericProcessingModule, DefaultEdge](classOf[DefaultEdge])
     hardware.processingElems.foreach(p => graph.addVertex(p))
-    for (
-      p  <- hardware.processingElems;
-      pp <- hardware.processingElems - p;
+    for 
+      p  <- hardware.processingElems
+      pp <- hardware.processingElems - p
       // TODO: this check should be a bit more robust... is it always master to slave?
       // can it be in any direction? After this design decision, it becomes better.
       // Currently we assume master to slace
       // TODO: the fact that the bandwith must get with a default value is not safe,
       // this should be removed later
-      if hardware.storageElems.forall(m =>
+      /*
+      if hardware.storageElems.forall(m => {
         hardware.storageElems.exists(mm => {
-          hardware.paths.contains((p, m)) &&
-          hardware.paths.contains((pp, mm)) &&
-          hardware.paths((p, m)).map(c => 1.0 / hardware.bandWidthBitPerSec((c, p))).sum ==
-            hardware.paths((pp, mm)).map(c => 1.0 / hardware.bandWidthBitPerSec((c, pp))).sum
+          hardware.minTraversalTimePerBit(m)(p).flatMap(p2m => {
+            hardware.minTraversalTimePerBit(mm)(pp).map(pp2mm => {
+              p2m.equals(pp2mm)
+            })
+          }).orElse(false)
         })
-      )
-    ) graph.addEdge(p, pp)
+      })
+      */
+    do
+      graph.addEdge(p, pp)
     graph
 
   lazy val topologicallySymmetricGroups: Set[Set[GenericProcessingModule]] =

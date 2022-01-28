@@ -1,11 +1,7 @@
 package idesyde.identification.models.reactor
 
 import idesyde.identification.DecisionModel
-import idesyde.identification.models.reactor.ReactorMinusApplication
-import idesyde.identification.models.reactor.ReactionChannel
 import org.jgrapht.graph.SimpleDirectedGraph
-import forsyde.io.java.typed.viewers.LinguaFrancaReactor
-import forsyde.io.java.typed.viewers.LinguaFrancaReaction
 import org.jgrapht.alg.shortestpath.AllDirectedPaths
 
 import collection.JavaConverters.*
@@ -13,6 +9,7 @@ import org.jgrapht.traverse.ClosestFirstIterator
 import org.jgrapht.traverse.DepthFirstIterator
 import org.jgrapht.graph.AsSubgraph
 import org.jgrapht.GraphPath
+
 import java.util.stream.Collectors
 import scala.collection.mutable.Buffer
 import scala.collection.mutable.Map as MutableMap
@@ -29,12 +26,14 @@ import org.jgrapht.graph.AsWeightedGraph
 import org.jgrapht.alg.interfaces.ShortestPathAlgorithm
 import org.jgrapht.util.VertexToIntegerMapping
 import org.jgrapht.graph.DefaultEdge
-import forsyde.io.java.typed.viewers.LinguaFrancaSignal
+import forsyde.io.java.typed.viewers.moc.linguafranca.{LinguaFrancaReaction, LinguaFrancaReactor}
 import org.jgrapht.sux4j.SuccinctDirectedGraph
 import org.jgrapht.alg.util.Pair
+
 import scala.collection.mutable
 import org.jgrapht.opt.graph.sparse.SparseIntDirectedGraph
 import org.jgrapht.opt.graph.sparse.IncomingEdgesSupport
+
 import java.util.concurrent.ExecutorService
 import java.util.concurrent.ThreadPoolExecutor
 import org.jgrapht.alg.shortestpath.IntVertexDijkstraShortestPath

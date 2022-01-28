@@ -19,7 +19,7 @@ lazy val cli = (project in file("cli")).dependsOn(common).enablePlugins(NativeIm
   .settings(
     Compile / mainClass := Some("idesyde.IDeSyDeStandalone")
   )
-// resolvers += Resolver.mavenLocal
+resolvers += Resolver.mavenLocal
 
 /* libraryDependencies ++= Seq(
   "io.github.forsyde" % "forsyde-io-java-core" % "0.4.1",

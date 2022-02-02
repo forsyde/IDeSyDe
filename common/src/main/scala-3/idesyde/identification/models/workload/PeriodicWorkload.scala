@@ -16,12 +16,34 @@ import idesyde.identification.DecisionModel
  * @tparam TaskT The type representing each task.
  * @tparam TimeT The type that represents a time tag.
  */
-trait PeriodicWorkload[TaskT, TimeT]() extends DecisionModel:
+trait PeriodicWorkload[TaskT, TimeT]()(using Numeric[TimeT]) extends DecisionModel:
 
   def periodicTasks: Array[TaskT]
   def tasksNumInstances(t: TaskT): Int
   def instancesReleases(t: TaskT)(int: Int): TimeT
   def instancesDeadlines(t: TaskT)(int: Int): TimeT
   def instancePreceeds(src :TaskT)(dst: TaskT)(srcI: Int)(dstI: Int): Boolean
+
+  def maximalInterference(src: TaskT)(dst: TaskT)(using num: Numeric[TimeT]): Int = 
+    (0 until tasksNumInstances(dst)).map(dstIdx => {
+      (0 until tasksNumInstances(src))
+      // .filterNot(srcIdx => 
+      //   instancePreceeds(src)(dst)(srcIdx)(dstIdx)
+      // )
+      .count(srcIdx => {
+        // check intersection by comparing the endpoints
+        (
+          num.compare(instancesReleases(src)(srcIdx), instancesReleases(dst)(dstIdx)) <= 0 &&
+          num.compare(instancesReleases(dst)(dstIdx), instancesDeadlines(src)(srcIdx)) <= 0
+        )
+        ||
+        (
+          num.compare(instancesReleases(dst)(dstIdx), instancesReleases(src)(srcIdx)) <= 0 &&
+          num.compare(instancesReleases(src)(srcIdx), instancesDeadlines(dst)(dstIdx)) <= 0
+        )
+      })
+    }).max
+
+    
 
 end PeriodicWorkload

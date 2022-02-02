@@ -15,9 +15,10 @@ import scala.jdk.CollectionConverters.*
 
 final case class SchedulableNetworkedDigHW(
     val hardware: NetworkedDigitalHardware,
-    val fixedPriorityPEs: Set[GenericProcessingModule],
-    val timeTriggeredPEs: Set[GenericProcessingModule],
-    val roundRobinPEs: Set[GenericProcessingModule],
+    val fixedPriorityPEs: Array[GenericProcessingModule],
+    val timeTriggeredPEs: Array[GenericProcessingModule],
+    val roundRobinPEs: Array[GenericProcessingModule],
+    val staticCyclicPEs: Array[GenericProcessingModule],
     // val bandWidthFromCEtoPE: Map[GenericCommunicationModule, GenericProcessingModule],
     val schedulersFromPEs: Map[
       GenericProcessingModule,

@@ -58,11 +58,12 @@ final case class SchedulableNetDigHWIdentRule() extends IdentificationRule {
           model,
           hardwareDecisionModel.processingElems,
           fixedPrioSchedulers
-        ),
+        ).toArray,
         timeTriggeredPEs =
-          computeTimeTriggeredPEs(model, hardwareDecisionModel.processingElems, timeTrigSchedulers),
+          computeTimeTriggeredPEs(model, hardwareDecisionModel.processingElems, timeTrigSchedulers).toArray,
         roundRobinPEs =
-          computeRoundRobinPEs(model, hardwareDecisionModel.processingElems, roundRobinSchedulers)
+          computeRoundRobinPEs(model, hardwareDecisionModel.processingElems, roundRobinSchedulers).toArray,
+        staticCyclicPEs = Array.empty
       )
       scribe.debug(
         "found a conforming Schedulable Networked HW Model with: " +

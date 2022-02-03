@@ -12,7 +12,6 @@ import scala.collection.mutable.HashSet
 import idesyde.identification.rules.{
   NetworkedDigitalHWIdentRule,
   ReactorMinusIdentificationRule,
-  ReactorMinusToJobsRule,
   SDFAppIdentificationRule
 }
 import org.jgrapht.graph.SimpleDirectedGraph

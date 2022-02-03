@@ -46,8 +46,8 @@ final case class ReactorMinusAppDSEIdentRule() extends IdentificationRule:
   end identify
 
   def computeWCETFunction(model: ForSyDeSystemGraph,
-      reactions: Set[LinguaFrancaReaction],
-      procElems: Set[GenericProcessingModule]
+      reactions: Array[LinguaFrancaReaction],
+      procElems: Array[GenericProcessingModule]
   ): Map[(LinguaFrancaReaction, GenericProcessingModule), BigFraction] =
     val iter = for (
       r  <- reactions;
@@ -69,8 +69,8 @@ final case class ReactorMinusAppDSEIdentRule() extends IdentificationRule:
     iter.toMap
 
   def computeUtilityFunction(model: ForSyDeSystemGraph,
-      reactions: Set[LinguaFrancaReaction],
-      procElems: Set[GenericProcessingModule],
+      reactions: Array[LinguaFrancaReaction],
+      procElems: Array[GenericProcessingModule],
       hyperPeriod: BigFraction
   ): Map[(LinguaFrancaReaction, GenericProcessingModule), BigFraction] =
     val wcetFunction = computeWCETFunction(model, reactions, procElems)

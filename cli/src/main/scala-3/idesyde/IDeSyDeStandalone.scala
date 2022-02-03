@@ -17,7 +17,7 @@ object IDeSyDeStandalone {
       case Some(runConfig) =>
         runConfig.run()
       case _ =>
-        println("problem encountered while parsing!!")
+        
     }
 
 

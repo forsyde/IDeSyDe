@@ -11,6 +11,7 @@ import java.util.stream.Collectors
 
 import scala.jdk.OptionConverters.*
 import scala.jdk.CollectionConverters.*
+import forsyde.io.java.typed.viewers.platform.runtime.AbstractScheduler
 
 
 final case class SchedulableNetworkedDigHW(
@@ -22,7 +23,7 @@ final case class SchedulableNetworkedDigHW(
     // val bandWidthFromCEtoPE: Map[GenericCommunicationModule, GenericProcessingModule],
     val schedulersFromPEs: Map[
       GenericProcessingModule,
-      FixedPriorityScheduler | TimeTriggeredScheduler | RoundRobinScheduler
+      AbstractScheduler
     ]
 ) extends DecisionModel {
 
@@ -93,7 +94,8 @@ final case class SchedulableNetworkedDigHW(
     hardware.processingElems.foreach(p => graph.addVertex(p))
     for 
       p  <- hardware.processingElems
-      pp <- hardware.processingElems - p
+      pp <- hardware.processingElems
+      if p != pp
       // TODO: this check should be a bit more robust... is it always master to slave?
       // can it be in any direction? After this design decision, it becomes better.
       // Currently we assume master to slace

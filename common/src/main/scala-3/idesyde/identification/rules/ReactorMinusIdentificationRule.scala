@@ -28,23 +28,23 @@ final case class ReactorMinusIdentificationRule(executor: ThreadPoolExecutor) ex
       val elements = vertexes
         .filter(LinguaFrancaElem.conforms(_))
         .map(LinguaFrancaElem.safeCast(_).get)
-        .toSet
+        .toArray
       val reactors = elements
         .filter(LinguaFrancaReactor.conforms(_))
         .map(LinguaFrancaReactor.safeCast(_).get)
-        .toSet
+        .toArray
       val reactions = elements
         .filter(LinguaFrancaReaction.conforms(_))
         .map(LinguaFrancaReaction.safeCast(_).get)
-        .toSet
+        .toArray
       val channels = elements
         .filter(LinguaFrancaSignal.conforms(_))
         .map(LinguaFrancaSignal.safeCast(_).get)
-        .toSet
+        .toArray
       val timers = elements
         .filter(LinguaFrancaTimer.conforms(_))
         .map(LinguaFrancaTimer.safeCast(_).get)
-        .toSet
+        .toArray
       val decisionModel = ReactorMinusApplication(
         pureReactions = ReactorMinusIdentificationRule.filterOnlyPure(model, timers, reactions),
         periodicReactions =
@@ -78,34 +78,34 @@ final case class ReactorMinusIdentificationRule(executor: ThreadPoolExecutor) ex
 
   def noReactionIsLoose(
       model: ForSyDeSystemGraph,
-      reactors: Set[LinguaFrancaReactor],
-      reactions: Set[LinguaFrancaReaction]
+      reactors: Array[LinguaFrancaReactor],
+      reactions: Array[LinguaFrancaReaction]
   ): Boolean = reactions.forall(r => {
     reactors.exists(a => a.getReactionsPort(model).contains(r))
   })
 
-  def computeSizesFunction(
-      model: ForSyDeSystemGraph,
-      reactors: Set[LinguaFrancaReactor],
-      channels: Set[LinguaFrancaSignal],
-      reactions: Set[LinguaFrancaReaction]
-  ): Map[LinguaFrancaReactor | LinguaFrancaSignal | LinguaFrancaReaction, Long] = {
-    val elemSet: Set[LinguaFrancaReactor | LinguaFrancaSignal | LinguaFrancaReaction] =
-      (reactors ++ channels ++ reactions)
-    elemSet
-      .map(e =>
-        e -> (e match {
-          case s: LinguaFrancaSignal   => s.getSizeInBits
-          case a: LinguaFrancaReactor  => a.getStateSizesInBits.asScala.map(_.toLong).sum
-          case r: LinguaFrancaReaction => r.getSizeInBits
-        }).asInstanceOf[Long]
-      )
-      .toMap
-  }
+  // def computeSizesFunction(
+  //     model: ForSyDeSystemGraph,
+  //     reactors: Array[LinguaFrancaReactor],
+  //     channels: Array[LinguaFrancaSignal],
+  //     reactions: Array[LinguaFrancaReaction]
+  // ): Map[LinguaFrancaReactor | LinguaFrancaSignal | LinguaFrancaReaction, Long] = {
+  //   val elemSet: Array[LinguaFrancaReactor | LinguaFrancaSignal | LinguaFrancaReaction] =
+  //     (reactors ++ channels ++ reactions)
+  //   elemSet
+  //     .map(e =>
+  //       e -> (e match {
+  //         case s: LinguaFrancaSignal   => s.getSizeInBits
+  //         case a: LinguaFrancaReactor  => a.getStateSizesInBits.asScala.map(_.toLong).sum
+  //         case r: LinguaFrancaReaction => r.getSizeInBits
+  //       }).asInstanceOf[Long]
+  //     )
+  //     .toMap
+  // }
 
   def computeReactionIndex(
       model: ForSyDeSystemGraph,
-      reactors: Set[LinguaFrancaReactor]
+      reactors: Array[LinguaFrancaReactor]
   ): Map[LinguaFrancaReaction, Int] =
     reactors
       .flatMap(a => {
@@ -114,8 +114,8 @@ final case class ReactorMinusIdentificationRule(executor: ThreadPoolExecutor) ex
 
   def computePeriodFunction(
       model: ForSyDeSystemGraph,
-      timers: Set[LinguaFrancaTimer],
-      reactions: Set[LinguaFrancaReaction]
+      timers: Array[LinguaFrancaTimer],
+      reactions: Array[LinguaFrancaReaction]
   ): Map[LinguaFrancaReaction, BigFraction] =
     timers
       .flatMap(t =>
@@ -151,9 +151,9 @@ final case class ReactorMinusIdentificationRule(executor: ThreadPoolExecutor) ex
     */
   def channelsAsReactionConnections(
       model: ForSyDeSystemGraph,
-      reactors: Set[LinguaFrancaReactor],
-      reactions: Set[LinguaFrancaReaction],
-      channels: Set[LinguaFrancaSignal]
+      reactors: Array[LinguaFrancaReactor],
+      reactions: Array[LinguaFrancaReaction],
+      channels: Array[LinguaFrancaSignal]
   ): Map[(LinguaFrancaReaction, LinguaFrancaReaction), LinguaFrancaSignal] =
     channels
       .flatMap(c =>
@@ -173,8 +173,8 @@ final case class ReactorMinusIdentificationRule(executor: ThreadPoolExecutor) ex
 
   def deriveContainmentFunction(
       model: ForSyDeSystemGraph,
-      reactors: Set[LinguaFrancaReactor],
-      reactions: Set[LinguaFrancaReaction]
+      reactors: Array[LinguaFrancaReactor],
+      reactions: Array[LinguaFrancaReaction]
   ): Map[LinguaFrancaReaction, LinguaFrancaReactor] =
     reactions
       .map(r =>
@@ -185,8 +185,8 @@ final case class ReactorMinusIdentificationRule(executor: ThreadPoolExecutor) ex
 
   def onlyNonHierarchicalReactors(
       model: ForSyDeSystemGraph,
-      reactors: Set[LinguaFrancaReactor]
-  ): Set[LinguaFrancaReactor] =
+      reactors: Array[LinguaFrancaReactor]
+  ): Array[LinguaFrancaReactor] =
     reactors.filter(a => a.getChildrenReactorsPort(model).isEmpty
     // ||  (a.getReactionsPort(model)
     //     .isEmpty && a.getStateNames.isEmpty && a.getStateSizesInBits.isEmpty)
@@ -201,23 +201,23 @@ object ReactorMinusIdentificationRule:
     val elements = vertexes
       .filter(LinguaFrancaElem.conforms(_))
       .map(LinguaFrancaElem.safeCast(_).get)
-      .toSet
+      .toArray
     val reactors = elements
       .filter(LinguaFrancaReactor.conforms(_))
       .map(LinguaFrancaReactor.safeCast(_).get)
-      .toSet
+      .toArray
     val reactions = elements
       .filter(LinguaFrancaReaction.conforms(_))
       .map(LinguaFrancaReaction.safeCast(_).get)
-      .toSet
+      .toArray
     val channels = elements
       .filter(LinguaFrancaSignal.conforms(_))
       .map(LinguaFrancaSignal.safeCast(_).get)
-      .toSet
+      .toArray
     val timers = elements
       .filter(LinguaFrancaTimer.conforms(_))
       .map(LinguaFrancaTimer.safeCast(_).get)
-      .toSet
+      .toArray
     hasOnlyAcceptableTraits(model, elements) &&
     isTriviallyHierarchical(model, reactors) &&
     // noReactionIsLoose(model)
@@ -225,7 +225,7 @@ object ReactorMinusIdentificationRule:
     allReactionsPeriodicable(model, timers, reactions)
   }
 
-  def hasOnlyAcceptableTraits(model: ForSyDeSystemGraph, elements: Set[LinguaFrancaElem]): Boolean =
+  def hasOnlyAcceptableTraits(model: ForSyDeSystemGraph, elements: Array[LinguaFrancaElem]): Boolean =
     elements.forall(v =>
       LinguaFrancaReactor.conforms(v) ||
         LinguaFrancaTimer.conforms(v) ||
@@ -235,9 +235,9 @@ object ReactorMinusIdentificationRule:
 
   def filterOnlyPeriodic(
       model: ForSyDeSystemGraph,
-      timers: Set[LinguaFrancaTimer],
-      reactions: Set[LinguaFrancaReaction]
-  ): Set[LinguaFrancaReaction] =
+      timers: Array[LinguaFrancaTimer],
+      reactions: Array[LinguaFrancaReaction]
+  ): Array[LinguaFrancaReaction] =
     reactions.filter(r =>
       timers.count(t => model.hasConnection(t, r)) == 1 && !reactions
         .exists(r2 => model.hasConnection(r2, r))
@@ -245,9 +245,9 @@ object ReactorMinusIdentificationRule:
 
   def filterOnlyPure(
       model: ForSyDeSystemGraph,
-      timers: Set[LinguaFrancaTimer],
-      reactions: Set[LinguaFrancaReaction]
-  ): Set[LinguaFrancaReaction] =
+      timers: Array[LinguaFrancaTimer],
+      reactions: Array[LinguaFrancaReaction]
+  ): Array[LinguaFrancaReaction] =
     reactions.filter(r => (timers.count(t => model.hasConnection(t, r)) == 0))
 
   /** Checks if all reactions are either periodic or pure.
@@ -259,8 +259,8 @@ object ReactorMinusIdentificationRule:
     */
   def onlyPeriodicOrPure(
       model: ForSyDeSystemGraph,
-      timers: Set[LinguaFrancaTimer],
-      reactions: Set[LinguaFrancaReaction]
+      timers: Array[LinguaFrancaTimer],
+      reactions: Array[LinguaFrancaReaction]
   ): Boolean =
     filterOnlyPeriodic(model, timers, reactions)
       .intersect(filterOnlyPure(model, timers, reactions))
@@ -271,8 +271,8 @@ object ReactorMinusIdentificationRule:
     */
   def allReactionsPeriodicable(
       model: ForSyDeSystemGraph,
-      timers: Set[LinguaFrancaTimer],
-      reactions: Set[LinguaFrancaReaction]
+      timers: Array[LinguaFrancaTimer],
+      reactions: Array[LinguaFrancaReaction]
   ): Boolean =
     val allPaths = AllDirectedPaths(model)
     reactions.forall(r =>
@@ -283,7 +283,7 @@ object ReactorMinusIdentificationRule:
       )
     )
 
-  def isTriviallyHierarchical(model: ForSyDeSystemGraph, reactors: Set[LinguaFrancaReactor]): Boolean =
+  def isTriviallyHierarchical(model: ForSyDeSystemGraph, reactors: Array[LinguaFrancaReactor]): Boolean =
     reactors.forall(a =>
       a.getChildrenReactorsPort(model).isEmpty ||
         (a.getReactionsPort(model)

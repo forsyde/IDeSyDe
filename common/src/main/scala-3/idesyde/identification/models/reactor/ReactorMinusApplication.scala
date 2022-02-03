@@ -19,6 +19,7 @@ import java.util.concurrent.ThreadPoolExecutor
 import forsyde.io.java.typed.viewers.moc.linguafranca.LinguaFrancaSignal
 import forsyde.io.java.typed.viewers.moc.linguafranca.LinguaFrancaReactor
 import forsyde.io.java.typed.viewers.moc.linguafranca.LinguaFrancaReaction
+import forsyde.io.java.typed.viewers.moc.linguafranca.LinguaFrancaElem
 
 
 // sealed class ReactionsPartialOrder(
@@ -61,9 +62,9 @@ import forsyde.io.java.typed.viewers.moc.linguafranca.LinguaFrancaReaction
   *   mapping of edges between reactions and the channels that their information.
   */
 final case class ReactorMinusApplication(
-    val pureReactions: Set[LinguaFrancaReaction],
-    val periodicReactions: Set[LinguaFrancaReaction],
-    val reactors: Set[LinguaFrancaReactor],
+    val pureReactions: Array[LinguaFrancaReaction],
+    val periodicReactions: Array[LinguaFrancaReaction],
+    val reactors: Array[LinguaFrancaReactor],
     val channels: Map[(LinguaFrancaReaction, LinguaFrancaReaction), LinguaFrancaSignal],
     val containmentFunction: Map[LinguaFrancaReaction, LinguaFrancaReactor],
     val reactionIndex: Map[LinguaFrancaReaction, Int],
@@ -97,7 +98,7 @@ final case class ReactorMinusApplication(
   }
   given Ordering[LinguaFrancaReaction] = reactionsPriorityOrdering
 
-  val reactions: Set[LinguaFrancaReaction] = vertexSet.asScala.toSet
+  val reactions: Array[LinguaFrancaReaction] = vertexSet.asScala.toArray
 
   lazy val reactionsOrdered = reactions.toList.sorted
 
@@ -116,19 +117,25 @@ final case class ReactorMinusApplication(
     for ((_, c) <- channels) yield c.getViewedVertex
   }
 
-  val sizeFunction: Map[LinguaFrancaReactor | LinguaFrancaSignal | LinguaFrancaReaction, Long] = {
-    val elemSet: Set[LinguaFrancaReactor | LinguaFrancaSignal | LinguaFrancaReaction] =
-      (reactors ++ channels.values ++ reactions)
-    elemSet
-      .map(e =>
-        e -> (e match {
-          case s: LinguaFrancaSignal   => s.getSizeInBits
-          case a: LinguaFrancaReactor  => a.getStateSizesInBits.asScala.map(_.toLong).sum
-          case r: LinguaFrancaReaction => r.getSizeInBits
-        }).asInstanceOf[Long]
-      )
-      .toMap
-  }
+  def sizeFunction(elem: LinguaFrancaElem): Long = elem match
+    case a: LinguaFrancaReactor => a.getStateSizesInBits.asScala.map(_.toLong).sum
+    case r: LinguaFrancaReaction => r.getSizeInBits
+    case s: LinguaFrancaSignal => s.getSizeInBits
+    case _ => 0L
+
+  // val sizeFunction: Map[LinguaFrancaReactor | LinguaFrancaSignal | LinguaFrancaReaction, Long] = {
+  //   val elemSet: Array[LinguaFrancaReactor | LinguaFrancaSignal | LinguaFrancaReaction] =
+  //     (reactors ++ channels.values ++ reactions)
+  //   elemSet
+  //     .map(e =>
+  //       e -> (e match {
+  //         case s: LinguaFrancaSignal   => s.getSizeInBits
+  //         case a: LinguaFrancaReactor  => a.getStateSizesInBits.asScala.map(_.toLong).sum
+  //         case r: LinguaFrancaReaction => r.getSizeInBits
+  //       }).asInstanceOf[Long]
+  //     )
+  //     .toMap
+  // }
 
   lazy val reactionsOnlyExtendedConnectionsGraph =
     val g = SimpleDirectedGraph[LinguaFrancaReaction, DefaultEdge](classOf[DefaultEdge])
@@ -175,18 +182,21 @@ final case class ReactorMinusApplication(
       })
       .toSet
 
-  override def dominates(o: DecisionModel) =
-    super.dominates(o) && (o match {
-      case o: ReactorMinusApplication => dominatesReactorMinus(o)
-      case _                          => true
-    })
+  // override def dominates(o: DecisionModel) =
+  //   super.dominates(o) && (o match {
+  //     case o: ReactorMinusApplication => dominatesReactorMinus(o)
+  //     case _                          => true
+  //   })
 
-  def dominatesReactorMinus(o: ReactorMinusApplication): Boolean = {
-    // has more information about sizes
-    o.sizeFunction.keySet.subsetOf(sizeFunction.keySet) && (
-      sizeFunction.count((k, v) => v > 0) > o.sizeFunction.count((k, v) => v > 0)
-    )
-  }
+  // def dominatesReactorMinus(o: ReactorMinusApplication): Boolean = {
+  //   // has more information about sizes
+  //   reactors.forall(r => {
+  //     o.reactors.find(rr => r == rr).map(rr => sizeFunction(r) > 0 && sizeFunction(rr) <= 0).getOrElse(false)
+  //   })
+  //   o.sizeFunction.keySet.subsetOf(sizeFunction.keySet) && (
+  //     sizeFunction.count((k, v) => v > 0) > o.sizeFunction.count((k, v) => v > 0)
+  //   )
+  // }
 
   /** Get all trivial source and destination of trigger chains.
     * @return
@@ -239,7 +249,7 @@ final case class ReactorMinusApplication(
     */
   lazy val maximalInterferencePoints
       : Map[(LinguaFrancaReaction, LinguaFrancaReaction), Seq[BigFraction]] =
-    (for (r <- reactions; rr <- reactions - r; if reactionsPriorityOrdering.compare(r, rr) >= 0)
+    (for (r <- reactions; rr <- reactions; if r != rr; if reactionsPriorityOrdering.compare(r, rr) >= 0)
       yield
         val (j, jSeq) = jobGraph
           .reactionToJobs(r)

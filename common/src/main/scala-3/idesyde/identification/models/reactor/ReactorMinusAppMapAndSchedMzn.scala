@@ -45,13 +45,17 @@ final case class ReactorMinusAppMapAndSchedMzn(val sourceModel: ReactorMinusAppM
   
   // TODO: It seems like some solvers cant handle longs.. so we do this hack for now.
   var memoryMultipler: Long =
-    (sourceModel.reactorMinus.sizeFunction.values ++
+    (sourceModel.reactorMinus.reactors.map(sourceModel.reactorMinus.sizeFunction(_)) ++ 
+     sourceModel.reactorMinus.channels.values.map(sourceModel.reactorMinus.sizeFunction(_)) ++ 
+     sourceModel.reactorMinus.reactions.map(sourceModel.reactorMinus.sizeFunction(_)) ++
       sourceModel.platform.hardware.storageElems
       .map(_.getSpaceInBits.asInstanceOf[Long]))
       .filter(_ > 0L)
       .reduce((l1, l2) => ArithmeticUtils.gcd(l1, l2))
   while (
-    (sourceModel.reactorMinus.sizeFunction.values ++
+    (sourceModel.reactorMinus.reactors.map(sourceModel.reactorMinus.sizeFunction(_)) ++ 
+     sourceModel.reactorMinus.channels.values.map(sourceModel.reactorMinus.sizeFunction(_)) ++ 
+     sourceModel.reactorMinus.reactions.map(sourceModel.reactorMinus.sizeFunction(_)) ++
       sourceModel.platform.hardware.storageElems.map(
         _.getSpaceInBits.toLong
       ) ++ sourceModel.platform.hardware.minTraversalTimePerBitMatrix.values
@@ -308,7 +312,7 @@ final case class ReactorMinusAppMapAndSchedMzn(val sourceModel: ReactorMinusAppM
       "platformPaths" -> MiniZincData(
         platformOrdered.map(src => {
           platformOrdered.map(dst => {
-            val path = sourceModel.platform.hardware.paths.getOrElse((src, dst), Seq.empty)
+            val path = sourceModel.platform.hardware.inclusiveDirectPaths(src)(dst)
             platformOrdered.map(p => if (path.contains(p)) path.indexOf(p) + 1 else 0)
           })
         })

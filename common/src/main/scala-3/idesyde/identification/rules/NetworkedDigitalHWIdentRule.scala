@@ -27,15 +27,12 @@ final case class NetworkedDigitalHWIdentRule()
       val processingElements = platformVertexes
         .filter(e => GenericProcessingModule.conforms(e))
         .map(e => GenericProcessingModule.safeCast(e).get())
-        .toSet
       val memoryElements = platformVertexes
         .filter(e => GenericMemoryModule.conforms(e))
         .map(e => GenericMemoryModule.safeCast(e).get())
-        .toSet
       val communicationElements = platformVertexes
         .filter(e => GenericCommunicationModule.conforms(e))
         .map(e => GenericCommunicationModule.safeCast(e).get())
-        .toSet
       val platformElements = processingElements ++ communicationElements ++ memoryElements
       val links =
         for (e <- platformElements; ee <- platformElements; if model.hasConnection(e, ee))
@@ -44,10 +41,10 @@ final case class NetworkedDigitalHWIdentRule()
         true,
         Option(
           NetworkedDigitalHardware(
-            processingElems = processingElements,
-            communicationElems = communicationElements,
-            storageElems = memoryElements,
-            links = links
+            processingElems = processingElements.toArray,
+            communicationElems = communicationElements.toArray,
+            storageElems = memoryElements.toArray,
+            links = links.toArray
           )
         )
       )

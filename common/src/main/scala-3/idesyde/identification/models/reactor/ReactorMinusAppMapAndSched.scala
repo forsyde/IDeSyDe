@@ -46,7 +46,8 @@ final case class ReactorMinusAppMapAndSched(
     platform.hardware.processingElems.foreach(p => graph.addVertex(p))
     for (
       p  <- platform.hardware.processingElems;
-      pp <- platform.hardware.processingElems - p;
+      pp <- platform.hardware.processingElems;
+      if p != pp;
       // the subset of the WCET function for each process must be identical
       if reactorMinus.reactions.forall(r =>
         // either both cannot execute the reaction or they must have identical WCET

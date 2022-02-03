@@ -9,6 +9,7 @@ import forsyde.io.java.typed.viewers.execution.ExtendedPrecedenceConstraint
 import scala.jdk.OptionConverters.*
 import scala.jdk.CollectionConverters.*
 import forsyde.io.java.typed.viewers.execution.PrecedenceConstraint
+import forsyde.io.java.typed.viewers.execution.Channel
 
 /** Simplest periodic task set concerned in the literature. The periods, offsets and relative
   * deadlines are all fixed at a task level. The only additional complexity are precedence are
@@ -26,10 +27,13 @@ import forsyde.io.java.typed.viewers.execution.PrecedenceConstraint
   */
 case class SimplePeriodicWorkload(
     val periodicTasks: Array[PeriodicTask],
+    val channels: Array[Channel],
     val periods: Array[BigFraction],
     val offsets: Array[BigFraction],
     val relativeDeadlines: Array[BigFraction],
-    val extendedPrecedencesVertexes: Array[Array[Option[PrecedenceConstraint]]]
+    val extendedPrecedencesVertexes: Array[Array[Option[PrecedenceConstraint]]],
+    val taskSizes: Array[Long],
+    val channelSizes: Array[Long]
 )(using Numeric[BigFraction])
     extends PeriodicWorkload[PeriodicTask, BigFraction]():
 
@@ -102,6 +106,9 @@ case class SimplePeriodicWorkload(
       })
       .getOrElse(false)
 
+  def taskSize(t: PeriodicTask) = taskSizes(periodicTasks.indexOf(t))
+
+  def channelSize(c: Channel)   = channelSizes(channels.indexOf(c))
   override val uniqueIdentifier = "SimplePeriodicWorkload"
 
 end SimplePeriodicWorkload

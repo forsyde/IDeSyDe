@@ -9,12 +9,11 @@ import org.apache.commons.math3.fraction.BigFraction
 final case class PeriodicTaskToSchedHW(
     val taskModel: SimplePeriodicWorkload,
     val schedHwModel: SchedulableNetworkedDigHW,
-    val worstCaseExecution: Array[Array[Option[BigFraction]]]
+    val worstCaseExecution: Array[Array[Option[BigFraction]]],
+    val mapped: Array[Int]
 ) extends DecisionModel:
 
   val coveredVertexes: Iterable[Vertex] = taskModel.coveredVertexes ++ schedHwModel.coveredVertexes
-  val uniqueIdentifier: String = "PeriodicTaskToSchedHW"
-
-
+  val uniqueIdentifier: String          = "PeriodicTaskToSchedHW"
 
 end PeriodicTaskToSchedHW

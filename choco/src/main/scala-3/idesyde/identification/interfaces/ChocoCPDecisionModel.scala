@@ -10,6 +10,8 @@ trait ChocoCPDecisionModel extends DecisionModel:
 
     def chocoModel: Model
 
-    def rebuildFromChocoOutput(output: Model, originalModel: ForSyDeSystemGraph): ForSyDeSystemGraph
+    def modelObjectives: Array[IntVar] = Array.empty
+
+    def rebuildFromChocoOutput(output: Model): ForSyDeSystemGraph
 
 end ChocoCPDecisionModel

@@ -123,7 +123,11 @@ case class SimplePeriodicWorkload(
       }
     }).sum
 
+  lazy val taskSizes = periodicTasks.map(taskSize(_))
+
   def channelSize(c: Channel)   = c.getElemSizeInBits.toLong
+
+  lazy val channelSizes = channels.map(channelSize(_))
   override val uniqueIdentifier = "SimplePeriodicWorkload"
 
 end SimplePeriodicWorkload

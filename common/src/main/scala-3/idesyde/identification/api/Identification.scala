@@ -22,8 +22,13 @@ import idesyde.identification.rules.platform.SchedulableNetDigHWIdentRule
 import collection.JavaConverters.*
 import java.util.concurrent.Executors
 import java.util.concurrent.ThreadPoolExecutor
+import idesyde.identification.rules.workload.PeriodicTaskIdentificationRule
+import org.apache.commons.math3.fraction.BigFraction
+import idesyde.utils.BigFractionIsNumeric
 
 object Identification {
+
+  given Numeric[BigFraction] = BigFractionIsNumeric()
 
   val standardRules: Set[IdentificationRule] =
     Set[IdentificationRule](
@@ -35,7 +40,8 @@ object Identification {
       NetworkedDigitalHWIdentRule(),
       SchedulableNetDigHWIdentRule(),
       ReactorMinusAppDSEIdentRule(),
-      ReactorMinusAppDSEMznIdentRule()
+      ReactorMinusAppDSEMznIdentRule(),
+      PeriodicTaskIdentificationRule()
     )
 
   def identifyDecisionModels(

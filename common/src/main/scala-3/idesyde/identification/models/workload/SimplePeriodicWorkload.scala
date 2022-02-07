@@ -10,6 +10,10 @@ import scala.jdk.OptionConverters.*
 import scala.jdk.CollectionConverters.*
 import forsyde.io.java.typed.viewers.execution.PrecedenceConstraint
 import forsyde.io.java.typed.viewers.execution.Channel
+import forsyde.io.java.typed.viewers.impl.Executable
+import forsyde.io.java.typed.viewers.impl.InstrumentedExecutable
+import forsyde.io.java.typed.viewers.execution.Stimulus
+import forsyde.io.java.typed.viewers.execution.PeriodicStimulus
 
 /** Simplest periodic task set concerned in the literature. The periods, offsets and relative
   * deadlines are all fixed at a task level. The only additional complexity are precedence are
@@ -23,26 +27,30 @@ import forsyde.io.java.typed.viewers.execution.Channel
   *   @param periods
   * @param offsets
   *   @param relativeDeadlines
-  * @param extendedPrecedencesVertexes
+  * @param precendences
   */
 case class SimplePeriodicWorkload(
     val periodicTasks: Array[PeriodicTask],
+    val periodicStimulus: Array[PeriodicStimulus],
+    val executables: Array[Array[Executable]],
     val channels: Array[Channel],
-    val periods: Array[BigFraction],
-    val offsets: Array[BigFraction],
-    val relativeDeadlines: Array[BigFraction],
-    val extendedPrecedencesVertexes: Array[Array[Option[PrecedenceConstraint]]],
-    val taskSizes: Array[Long],
-    val channelSizes: Array[Long]
+    val precendences: Array[Array[Option[PrecedenceConstraint]]]
 )(using Numeric[BigFraction])
     extends PeriodicWorkload[PeriodicTask, BigFraction]():
 
   override val coveredVertexes: Iterable[Vertex] =
     periodicTasks.map(_.getViewedVertex()) ++
-      extendedPrecedencesVertexes
-        .flatMap(inner => inner)
+    periodicStimulus.map(_.getViewedVertex) ++
+    executables.flatten.map(_.getViewedVertex) ++
+    channels.map(_.getViewedVertex) ++
+    precendences.flatten
         .filter(i => i.isDefined)
         .map(_.get.getViewedVertex)
+
+  val periods = periodicStimulus.map(s => BigFraction(s.getPeriodNumerator, s.getPeriodDenominator))
+  val offsets = periodicStimulus.map(s => BigFraction(s.getOffsetNumerator, s.getOffsetDenominator))
+  val relativeDeadlines = periodicTasks.zipWithIndex.map((t, i) =>
+    periods(i).multiply(i).add(offsets(i)))
 
   val hyperPeriod: BigFraction = periods.reduce((frac1, frac2) =>
     // the LCM of a nunch of BigFractions n1/d1, n2/d2... is lcm(n1, n2,...)/gcd(d1, d2,...). You can check.
@@ -91,7 +99,7 @@ case class SimplePeriodicWorkload(
   ): Boolean =
     val srcIdx      = periodicTasks.indexOf(srcTask)
     val dstIdx      = periodicTasks.indexOf(dstTask)
-    val constraints = extendedPrecedencesVertexes(srcIdx)(dstIdx)
+    val constraints = precendences(srcIdx)(dstIdx)
     constraints
       .map(m => {
         ExtendedPrecedenceConstraint
@@ -106,9 +114,16 @@ case class SimplePeriodicWorkload(
       })
       .getOrElse(false)
 
-  def taskSize(t: PeriodicTask) = taskSizes(periodicTasks.indexOf(t))
+  def taskSize(t: PeriodicTask) = 
+    val tIdx = periodicTasks.indexOf(t)
+    executables(tIdx).map(e => {
+      e match {
+        case eIns: InstrumentedExecutable => eIns.getSizeInBits.toLong
+        case _ => 0L
+      }
+    }).sum
 
-  def channelSize(c: Channel)   = channelSizes(channels.indexOf(c))
+  def channelSize(c: Channel)   = c.getElemSizeInBits.toLong
   override val uniqueIdentifier = "SimplePeriodicWorkload"
 
 end SimplePeriodicWorkload

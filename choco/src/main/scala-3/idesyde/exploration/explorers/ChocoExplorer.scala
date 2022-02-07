@@ -1,11 +1,11 @@
 package idesyde.exploration.explorers
 
-import idesyde.exploration.Explorer
 import idesyde.identification.DecisionModel
 import idesyde.identification.interfaces.ChocoCPDecisionModel
 import java.time.Duration
 import forsyde.io.java.core.ForSyDeSystemGraph
 import scala.concurrent.ExecutionContext
+import idesyde.exploration.interfaces.Explorer
 
 class ChocoExplorer() extends Explorer:
 

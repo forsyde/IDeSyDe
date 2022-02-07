@@ -9,19 +9,17 @@ import java.util.stream.Collectors
 import forsyde.io.java.core.Trait
 
 import scala.collection.mutable.HashSet
-import idesyde.identification.rules.{
-  NetworkedDigitalHWIdentRule,
-  ReactorMinusIdentificationRule,
-  SDFAppIdentificationRule
-}
 import org.jgrapht.graph.SimpleDirectedGraph
 import org.jgrapht.graph.DefaultEdge
 import org.jgrapht.alg.connectivity.GabowStrongConnectivityInspector
+import idesyde.identification.rules.sdf.SDFAppIdentificationRule
+import idesyde.identification.rules.reactor.ReactorMinusIdentificationRule
+import idesyde.identification.rules.mixed.ReactorMinusAppDSEIdentRule
+import idesyde.identification.rules.mixed.ReactorMinusAppDSEMznIdentRule
+import idesyde.identification.rules.platform.NetworkedDigitalHWIdentRule
+import idesyde.identification.rules.platform.SchedulableNetDigHWIdentRule
 
 import collection.JavaConverters.*
-import idesyde.identification.rules.SchedulableNetDigHWIdentRule
-import idesyde.identification.rules.ReactorMinusAppDSEIdentRule
-import idesyde.identification.rules.ReactorMinusAppDSEMznIdentRule
 import java.util.concurrent.Executors
 import java.util.concurrent.ThreadPoolExecutor
 

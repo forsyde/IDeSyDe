@@ -19,7 +19,7 @@ lazy val cli = (project in file("cli"))
     Compile / mainClass := Some("idesyde.IDeSyDeStandalone")
   )
 
-//resolvers += Resolver.mavenLocal
+ThisBuild / resolvers += Resolver.mavenLocal
 
 /* libraryDependencies ++= Seq(
   "io.github.forsyde" % "forsyde-io-java-core" % "0.4.1",

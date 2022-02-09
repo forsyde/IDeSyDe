@@ -1,7 +1,6 @@
 ThisBuild / organization := "io.github.forsyde"
-ThisBuild / version      := "0.2.3"
+ThisBuild / version := "0.2.3"
 ThisBuild / scalaVersion := "3.1.1"
-
 
 lazy val root = project
   .in(file("."))
@@ -19,7 +18,7 @@ lazy val cli = (project in file("cli"))
     Compile / mainClass := Some("idesyde.IDeSyDeStandalone")
   )
 
-ThisBuild / resolvers += Resolver.mavenLocal
+//ThisBuild / resolvers += Resolver.mavenLocal
 
 /* libraryDependencies ++= Seq(
   "io.github.forsyde" % "forsyde-io-java-core" % "0.4.1",

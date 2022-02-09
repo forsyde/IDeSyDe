@@ -11,15 +11,14 @@ import org.jgrapht.alg.connectivity.GabowStrongConnectivityInspector
 import java.util.stream.Collectors
 
 import collection.JavaConverters.*
-import idesyde.exploration.OrToolsCPExplorer
+import idesyde.exploration.explorers.OrToolsCPExplorer
 import idesyde.exploration.explorers.ChuffedMiniZincExplorer
 
 object Exploration:
 
   val defaultExplorers: Set[Explorer] = Set(
     GecodeMiniZincExplorer(),
-    ChuffedMiniZincExplorer(),
-    OrToolsCPExplorer()
+    ChuffedMiniZincExplorer()
   )
 
   def chooseExplorersAndModels(

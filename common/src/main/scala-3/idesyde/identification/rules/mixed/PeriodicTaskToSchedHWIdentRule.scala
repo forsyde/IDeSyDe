@@ -84,8 +84,10 @@ class PeriodicTaskToSchedHWIdentRule extends IdentificationRule {
       })
     })
     // finish with construction
-    if (instrumentedExecutables.length == workloadModel.periodicTasks.length &&
-    instrumentedPEsRange.length == platformModel.hardware.processingElems.length) then
+    if (
+      instrumentedExecutables.length == workloadModel.periodicTasks.length &&
+      instrumentedPEsRange.length == platformModel.hardware.processingElems.length
+    ) then
       Option(
         PeriodicTaskToSchedHW(workloadModel, platformModel, wcets, wctts, Array.emptyIntArray)
       )

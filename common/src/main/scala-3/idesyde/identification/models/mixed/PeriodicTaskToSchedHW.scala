@@ -10,6 +10,7 @@ final case class PeriodicTaskToSchedHW(
     val taskModel: SimplePeriodicWorkload,
     val schedHwModel: SchedulableNetworkedDigHW,
     val worstCaseExecution: Array[Array[Option[BigFraction]]],
+    val worstCaseLinkTraversal: Array[Array[BigFraction]],
     val mapped: Array[Int]
 ) extends DecisionModel:
 

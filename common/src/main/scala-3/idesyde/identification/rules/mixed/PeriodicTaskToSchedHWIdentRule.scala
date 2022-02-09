@@ -11,6 +11,7 @@ import org.apache.commons.math3.fraction.BigFraction
 import scala.jdk.OptionConverters.*
 import scala.jdk.CollectionConverters.*
 import idesyde.identification.models.mixed.PeriodicTaskToSchedHW
+import forsyde.io.java.typed.viewers.platform.InstrumentedCommunicationModule
 
 class PeriodicTaskToSchedHWIdentRule extends IdentificationRule {
 
@@ -46,6 +47,10 @@ class PeriodicTaskToSchedHWIdentRule extends IdentificationRule {
     val instrumentedPEsRange = platformModel.hardware.processingElems
       .filter(pe => InstrumentedProcessingModule.conforms(pe))
       .map(pe => InstrumentedProcessingModule.enforce(pe))
+    // all communication elems are instrumented
+    val instrumentedCEsRange = platformModel.hardware.communicationElems
+      .filter(ce => InstrumentedCommunicationModule.conforms(ce))
+      .map(ce => InstrumentedCommunicationModule.enforce(ce))
     // compute the matrix (lazily)
     lazy val wcets = instrumentedExecutables.zipWithIndex.map((runnables, i) => {
       instrumentedPEsRange.zipWithIndex.map((pe, j) => {
@@ -72,11 +77,17 @@ class PeriodicTaskToSchedHWIdentRule extends IdentificationRule {
         })
       })
     })
+    // compute wctts (lazily)
+    lazy val wctts = workloadModel.channels.zipWithIndex.map((channel, i) => {
+      instrumentedCEsRange.zipWithIndex.map((ce, j) => {
+        BigFraction.ZERO
+      })
+    })
     // finish with construction
     if (instrumentedExecutables.length == workloadModel.periodicTasks.length &&
     instrumentedPEsRange.length == platformModel.hardware.processingElems.length) then
       Option(
-        PeriodicTaskToSchedHW(workloadModel, platformModel, wcets, Array.emptyIntArray)
+        PeriodicTaskToSchedHW(workloadModel, platformModel, wcets, wctts, Array.emptyIntArray)
       )
     else Option.empty
 

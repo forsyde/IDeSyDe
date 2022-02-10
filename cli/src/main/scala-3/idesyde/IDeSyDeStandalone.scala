@@ -4,8 +4,8 @@ import picocli.CommandLine
 import idesyde.cli.IDeSyDeCLIParser
 import idesyde.cli.IDeSyDeRunConfig
 import scribe.Level
-import idesyde.identification.api.Identification
-import idesyde.exploration.api.Exploration
+import idesyde.identification.api.IdentificationHandler
+import idesyde.exploration.api.ExplorationHandler
 import forsyde.io.java.core.ForSyDeSystemGraph
 import scala.concurrent.ExecutionContext
 

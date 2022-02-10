@@ -44,7 +44,7 @@ final case class PeriodicTaskToSchedHWChoco(
       sourceDecisionModel
         .wcets(i)
         .zipWithIndex
-        .filter((p, i) => p.isDefined)
+        .filter((p, i) => p.compareTo(BigFraction.MINUS_ONE) > 0)
         .map((p, i) => i) // keep the processors where WCEt is defined
     )
   )
@@ -70,8 +70,8 @@ final case class PeriodicTaskToSchedHWChoco(
         // minimum WCET possible
         sourceDecisionModel
           .wcets(i)
+          .filter(p => p.compareTo(BigFraction.MINUS_ONE) > 0)
           .min
-          .getOrElse(BigFraction.ZERO)
           .multiply(multiplier)
           .getNumeratorAsInt,
         sourceDecisionModel.taskModel.relativeDeadlines(i).multiply(multiplier).getNumeratorAsInt,
@@ -83,8 +83,8 @@ final case class PeriodicTaskToSchedHWChoco(
       "exe_wc" + t.getViewedVertex.getIdentifier,
       sourceDecisionModel
         .wcets(i)
+        .filter(p => p.compareTo(BigFraction.MINUS_ONE) > 0)
         .min
-        .getOrElse(BigFraction.ZERO)
         .multiply(multiplier)
         .getNumeratorAsInt,
       sourceDecisionModel.taskModel.relativeDeadlines(i).multiply(multiplier).getNumeratorAsInt,

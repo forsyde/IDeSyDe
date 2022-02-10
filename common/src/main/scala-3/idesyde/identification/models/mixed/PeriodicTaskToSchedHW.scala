@@ -22,7 +22,7 @@ final case class PeriodicTaskToSchedHW(
 
   val coveredVertexes: Iterable[Vertex] = taskModel.coveredVertexes ++ schedHwModel.coveredVertexes
 
-  lazy val wcets = {
+  lazy val wcets: Array[Array[BigFraction]] = {
     // alll executables of task are instrumented
     val instrumentedExecutables = taskModel.periodicTasks.zipWithIndex
       .filter((task, i) => taskModel.executables(i).forall(InstrumentedExecutable.conforms(_)))
@@ -34,32 +34,27 @@ final case class PeriodicTaskToSchedHW(
     // compute the matrix (lazily)
     instrumentedExecutables.zipWithIndex.map((runnables, i) => {
       instrumentedPEsRange.zipWithIndex.map((pe, j) => {
-        runnables.foldRight(Option(BigFraction.ZERO))((runnable, sumOpt) => {
+        runnables.foldRight(BigFraction.ZERO)((runnable, sum) => {
           // find the minimum matching between the runnable and the processing element
-          val bestMatch = pe.getModalInstructionsPerCycle.values.stream
+          pe.getModalInstructionsPerCycle.values.stream
             .flatMap(ipcGroup => {
               runnable.getOperationRequirements.values.stream
                 .filter(opGroup => ipcGroup.keySet.equals(opGroup.keySet))
                 .map(opGroup => {
-                  BigFraction(
                     ipcGroup.entrySet.stream
-                      .mapToDouble(ipcEntry => opGroup.get(ipcEntry.getKey) / ipcEntry.getValue)
-                      .mapToLong(_.ceil.toLong)
-                      .sum,
-                    pe.getOperatingFrequencyInHertz
-                  )
+                      .map(ipcEntry => BigFraction(opGroup.get(ipcEntry.getKey)).divide(BigFraction(ipcEntry.getValue)))
+                      .reduce(BigFraction.ZERO, (f1, f2) => f1.add(f2))
+                      .divide(pe.getOperatingFrequencyInHertz)
                 })
             })
             .min((f1, f2) => f1.compareTo(f2))
-            .toScala
-          // fold for the minimum
-          sumOpt.flatMap(summed => bestMatch.map(runnableWcet => summed.add(runnableWcet)))
+            .orElse(BigFraction.MINUS_ONE)
         })
       })
     })
   }
 
-  lazy val wctts = {
+  lazy val wctts: Array[Array[BigFraction]] = {
     // all communication elems are instrumented
     val instrumentedCEsRange = schedHwModel.hardware.communicationElems
       .filter(ce => InstrumentedCommunicationModule.conforms(ce))

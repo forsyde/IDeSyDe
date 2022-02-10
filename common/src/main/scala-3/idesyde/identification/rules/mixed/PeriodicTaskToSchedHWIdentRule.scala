@@ -27,6 +27,7 @@ class PeriodicTaskToSchedHWIdentRule extends IdentificationRule {
       d match {
         case dWorkloadModel: SimplePeriodicWorkload    => workloadModel = Option(dWorkloadModel)
         case dPlatformModel: SchedulableNetworkedDigHW => platformModel = Option(dPlatformModel)
+        case _                                         =>
       }
     })
     lazy val res = workloadModel.flatMap(workloadModelIn =>
@@ -34,7 +35,9 @@ class PeriodicTaskToSchedHWIdentRule extends IdentificationRule {
         identifyWithDependencies(model, workloadModelIn, platformModelIn)
       )
     )
-    (workloadModel.isDefined && platformModel.isDefined, res)
+    if (workloadModel.isDefined && platformModel.isDefined)
+      (true, res)
+    else (false, Option.empty)
 
   def identifyWithDependencies(
       model: ForSyDeSystemGraph,
@@ -42,7 +45,7 @@ class PeriodicTaskToSchedHWIdentRule extends IdentificationRule {
       platformModel: SchedulableNetworkedDigHW
   ): Option[DecisionModel] =
     // alll executables of task are instrumented
-    val instrumentedExecutables = workloadModel.periodicTasks.zipWithIndex
+    val instrumentedExecutables = workloadModel.tasks.zipWithIndex
       .filter((task, i) => workloadModel.executables(i).forall(InstrumentedExecutable.conforms(_)))
       .map((task, i) => workloadModel.executables(i).map(InstrumentedExecutable.enforce(_)))
     // all processing elems are instrumented
@@ -77,7 +80,7 @@ class PeriodicTaskToSchedHWIdentRule extends IdentificationRule {
       })
     })
     // query all existing mappings
-    val taskMappings = workloadModel.periodicTasks.map(task => {
+    val taskMappings = workloadModel.tasks.map(task => {
       MemoryMapped
         .safeCast(task)
         .flatMap(memory => {
@@ -107,9 +110,10 @@ class PeriodicTaskToSchedHWIdentRule extends IdentificationRule {
         .orElse(-1)
     })
     // now find if any of task are already scheduled (mapped to a processor)
-    val taskSchedulings = workloadModel.periodicTasks.map(task => {
-      Scheduled.safeCast(task)
-      .flatMap(scheduled => {
+    val taskSchedulings = workloadModel.tasks.map(task => {
+      Scheduled
+        .safeCast(task)
+        .flatMap(scheduled => {
           scheduled
             .getSchedulerPort(model)
             .stream
@@ -121,8 +125,13 @@ class PeriodicTaskToSchedHWIdentRule extends IdentificationRule {
         .orElse(-1)
     })
     // finish with construction
+    scribe.debug(
+      s"${instrumentedExecutables.length == workloadModel.tasks.length} and " +
+        s"${instrumentedPEsRange.length == platformModel.hardware.processingElems.length}" +
+        s"${isMappable} and ${isExecutable}"
+    )
     if (
-      instrumentedExecutables.length == workloadModel.periodicTasks.length &&
+      instrumentedExecutables.length == workloadModel.tasks.length &&
       instrumentedPEsRange.length == platformModel.hardware.processingElems.length &&
       isMappable && isExecutable
     ) then
@@ -132,7 +141,7 @@ class PeriodicTaskToSchedHWIdentRule extends IdentificationRule {
           platformModel,
           mappedTasks = taskMappings,
           scheduledTasks = taskSchedulings,
-          mappedChannels = channelMappings,
+          mappedChannels = channelMappings
         )
       )
     else Option.empty

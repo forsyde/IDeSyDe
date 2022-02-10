@@ -1,4 +1,4 @@
-package idesyde.identification.choco
+package idesyde.identification.models.choco
 
 import idesyde.identification.interfaces.ChocoCPDecisionModel
 
@@ -12,7 +12,6 @@ import idesyde.identification.models.workload.PeriodicWorkload
 
 import scala.jdk.OptionConverters.*
 import scala.jdk.CollectionConverters.*
-
 
 final case class PeriodicTaskToSchedHWChoco(
     val sourceDecisionModel: PeriodicTaskToSchedHW
@@ -34,11 +33,11 @@ final case class PeriodicTaskToSchedHWChoco(
   var memoryMultipler = 1L
   while (allMemorySizeNumbers().min % 10 == 0)
     memoryMultipler *= 10L
-  
+
   // build the model so that it can be acessed later
   val model = Model()
   // the true decision variables
-  val taskExecution = sourceDecisionModel.taskModel.periodicTasks.zipWithIndex.map((t, i) =>
+  val taskExecution = sourceDecisionModel.taskModel.tasks.zipWithIndex.map((t, i) =>
     model.intVar(
       "exe_" + t.getViewedVertex.getIdentifier,
       sourceDecisionModel
@@ -48,7 +47,7 @@ final case class PeriodicTaskToSchedHWChoco(
         .map((p, i) => i) // keep the processors where WCEt is defined
     )
   )
-  val taskMapping = sourceDecisionModel.taskModel.periodicTasks.zipWithIndex.map((t, i) =>
+  val taskMapping = sourceDecisionModel.taskModel.tasks.zipWithIndex.map((t, i) =>
     model.intVar(
       "map_" + t.getViewedVertex.getIdentifier,
       0,
@@ -64,7 +63,7 @@ final case class PeriodicTaskToSchedHWChoco(
   )
   // auxiliary variables
   val responseTimes =
-    sourceDecisionModel.taskModel.periodicTasks.zipWithIndex.map((t, i) =>
+    sourceDecisionModel.taskModel.tasks.zipWithIndex.map((t, i) =>
       model.intVar(
         "rt_" + t.getViewedVertex.getIdentifier,
         // minimum WCET possible
@@ -78,7 +77,7 @@ final case class PeriodicTaskToSchedHWChoco(
         true // keeping only bounds for the response time is enough and better
       )
     )
-  val wcExecution = sourceDecisionModel.taskModel.periodicTasks.zipWithIndex.map((t, i) =>
+  val wcExecution = sourceDecisionModel.taskModel.tasks.zipWithIndex.map((t, i) =>
     model.intVar(
       "exe_wc" + t.getViewedVertex.getIdentifier,
       sourceDecisionModel
@@ -91,7 +90,7 @@ final case class PeriodicTaskToSchedHWChoco(
       true
     )
   )
-  val wcFetch = sourceDecisionModel.taskModel.periodicTasks.zipWithIndex.map((t, i) =>
+  val wcFetch = sourceDecisionModel.taskModel.tasks.zipWithIndex.map((t, i) =>
     model.intVar(
       "fetch_wc" + t.getViewedVertex.getIdentifier,
       0,
@@ -99,7 +98,7 @@ final case class PeriodicTaskToSchedHWChoco(
       true
     )
   )
-  val wcInput = sourceDecisionModel.taskModel.periodicTasks.zipWithIndex.map((t, i) =>
+  val wcInput = sourceDecisionModel.taskModel.tasks.zipWithIndex.map((t, i) =>
     model.intVar(
       "input_wc" + t.getViewedVertex.getIdentifier,
       0,
@@ -107,7 +106,7 @@ final case class PeriodicTaskToSchedHWChoco(
       true
     )
   )
-  val wcOutput = sourceDecisionModel.taskModel.periodicTasks.zipWithIndex.map((t, i) =>
+  val wcOutput = sourceDecisionModel.taskModel.tasks.zipWithIndex.map((t, i) =>
     model.intVar(
       "output_wc" + t.getViewedVertex.getIdentifier,
       0,
@@ -115,10 +114,10 @@ final case class PeriodicTaskToSchedHWChoco(
       true
     )
   )
-  val wcet = sourceDecisionModel.taskModel.periodicTasks.zipWithIndex.map((t, i) =>
+  val wcet = sourceDecisionModel.taskModel.tasks.zipWithIndex.map((t, i) =>
     wcExecution(i).add(wcFetch(i)).add(wcInput(i)).add(wcOutput(i)).intVar
   )
-  
+
   def chocoModel: Model = model
 
   def rebuildFromChocoOutput(output: Model): ForSyDeSystemGraph =
@@ -129,14 +128,14 @@ final case class PeriodicTaskToSchedHWChoco(
       .map((t, i) =>
         sourceDecisionModel.taskModel
           .relativeDeadlines(i)
-          .multiply(sourceDecisionModel.taskModel.tasksNumInstancesArray(i))
+          .multiply(sourceDecisionModel.taskModel.tasksNumInstances(i))
           .add(sourceDecisionModel.taskModel.offsets(i))
       )
 
-  def allMemorySizeNumbers() = 
+  def allMemorySizeNumbers() =
     (sourceDecisionModel.schedHwModel.hardware.storageElems.map(_.getSpaceInBits.toLong) ++
-    sourceDecisionModel.taskModel.channelSizes ++
-    sourceDecisionModel.taskModel.taskSizes)
+      sourceDecisionModel.taskModel.channelSizes ++
+      sourceDecisionModel.taskModel.taskSizes)
 
   val uniqueIdentifier = "PeriodicTaskToSchedHWChoco"
 

@@ -27,7 +27,7 @@ import org.apache.commons.math3.fraction.BigFraction
 import idesyde.utils.BigFractionIsNumeric
 
 class IdentificationHandler(
-  var registeredModules: Set[IdentificationModule] = Set(CommonIdentificationModule())
+    var registeredModules: Set[IdentificationModule] = Set(CommonIdentificationModule())
 ) {
 
   def registerIdentificationRule(identModule: IdentificationModule): IdentificationHandler =
@@ -43,7 +43,7 @@ class IdentificationHandler(
     var iters                          = 0
     val dominanceGraph = SimpleDirectedGraph[DecisionModel, DefaultEdge](classOf[DefaultEdge])
     scribe.info(
-      s"Performing identification with ${activeRules.size} rules for $maxIters iterations."
+      s"Performing identification with ${activeRules.size} rules up to $maxIters iterations."
     )
     while (activeRules.size > 0 && iters < maxIters) {
       val ruleResults = activeRules.map(r => (r, r.identify(model, identified)))

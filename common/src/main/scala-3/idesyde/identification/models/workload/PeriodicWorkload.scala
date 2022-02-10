@@ -19,16 +19,18 @@ import forsyde.io.java.typed.viewers.execution.Channel
   */
 trait PeriodicWorkload[TaskT, TimeT]()(using Numeric[TimeT]) extends DecisionModel:
 
-  def periodicTasks: Array[TaskT]
+  def tasks: Array[TaskT]
   def channels: Array[Channel]
-  def tasksNumInstances(t: TaskT): Int
+  def tasksNumInstances: Array[Int]
   def instancesReleases(t: TaskT)(int: Int): TimeT
   def instancesDeadlines(t: TaskT)(int: Int): TimeT
   def instancePreceeds(src: TaskT)(dst: TaskT)(srcI: Int)(dstI: Int): Boolean
-  def taskSize(src: TaskT): Long
-  def channelSize(c: Channel): Long
+  def taskSizes: Array[Long]
+  def channelSizes: Array[Long]
 
-  def maximalInterference(src: TaskT)(dst: TaskT)(using num: Numeric[TimeT]): Int =
+  def maximalInterference(srcTask: TaskT)(dstTask: TaskT)(using num: Numeric[TimeT]): Int =
+    val src = tasks.indexOf(srcTask)
+    val dst = tasks.indexOf(dstTask)
     (0 until tasksNumInstances(dst))
       .map(dstIdx => {
         (0 until tasksNumInstances(src))
@@ -38,13 +40,25 @@ trait PeriodicWorkload[TaskT, TimeT]()(using Numeric[TimeT]) extends DecisionMod
           .count(srcIdx => {
             // check intersection by comparing the endpoints
             (
-              num.compare(instancesReleases(src)(srcIdx), instancesReleases(dst)(dstIdx)) <= 0 &&
-              num.compare(instancesReleases(dst)(dstIdx), instancesDeadlines(src)(srcIdx)) <= 0
+              num.compare(
+                instancesReleases(srcTask)(srcIdx),
+                instancesReleases(dstTask)(dstIdx)
+              ) <= 0 &&
+              num.compare(
+                instancesReleases(dstTask)(dstIdx),
+                instancesDeadlines(srcTask)(srcIdx)
+              ) <= 0
             )
             ||
             (
-              num.compare(instancesReleases(dst)(dstIdx), instancesReleases(src)(srcIdx)) <= 0 &&
-              num.compare(instancesReleases(src)(srcIdx), instancesDeadlines(dst)(dstIdx)) <= 0
+              num.compare(
+                instancesReleases(dstTask)(dstIdx),
+                instancesReleases(srcTask)(srcIdx)
+              ) <= 0 &&
+              num.compare(
+                instancesReleases(srcTask)(srcIdx),
+                instancesDeadlines(dstTask)(dstIdx)
+              ) <= 0
             )
           })
       })

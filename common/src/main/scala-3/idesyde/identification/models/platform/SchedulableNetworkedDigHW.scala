@@ -26,7 +26,7 @@ final case class SchedulableNetworkedDigHW(
 ) extends DecisionModel {
 
   val coveredVertexes: Iterable[Vertex] = hardware.coveredVertexes ++
-    schedulersFromPEs.values.map(_.getViewedVertex).toSet
+    schedulers.map(_.getViewedVertex)
 
   val isFixedPriority = schedulers.map(FixedPriorityScheduler.conforms(_))
   val isTimeTriggered = schedulers.map(TimeTriggeredScheduler.conforms(_))

@@ -12,22 +12,24 @@ import java.util.concurrent.Executors
 import java.util.concurrent.ThreadPoolExecutor
 import org.apache.commons.math3.fraction.BigFraction
 import idesyde.utils.BigFractionIsNumeric
+import idesyde.identification.rules.mixed.PeriodicTaskToSchedHWIdentRule
 
 class CommonIdentificationModule extends IdentificationModule {
 
-    given Numeric[BigFraction] = BigFractionIsNumeric()
+  given Numeric[BigFraction] = BigFractionIsNumeric()
 
-    def identificationRules = Set[IdentificationRule](
-      SDFAppIdentificationRule(),
-      ReactorMinusIdentificationRule(
-        Executors.newFixedThreadPool(1).asInstanceOf[ThreadPoolExecutor]
-      ),
-      // ReactorMinusToJobsRule(),
-      NetworkedDigitalHWIdentRule(),
-      SchedulableNetDigHWIdentRule(),
-      ReactorMinusAppDSEIdentRule(),
-      ReactorMinusAppDSEMznIdentRule(),
-      PeriodicTaskIdentificationRule()
-    )
-  
+  def identificationRules = Set[IdentificationRule](
+    SDFAppIdentificationRule(),
+    ReactorMinusIdentificationRule(
+      Executors.newFixedThreadPool(1).asInstanceOf[ThreadPoolExecutor]
+    ),
+    // ReactorMinusToJobsRule(),
+    NetworkedDigitalHWIdentRule(),
+    SchedulableNetDigHWIdentRule(),
+    ReactorMinusAppDSEIdentRule(),
+    ReactorMinusAppDSEMznIdentRule(),
+    PeriodicTaskIdentificationRule(),
+    PeriodicTaskToSchedHWIdentRule()
+  )
+
 }

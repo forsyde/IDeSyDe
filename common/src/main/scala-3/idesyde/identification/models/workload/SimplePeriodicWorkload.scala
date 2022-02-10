@@ -4,11 +4,9 @@ import forsyde.io.java.core.Vertex
 import forsyde.io.java.typed.viewers.execution.PeriodicTask
 import org.apache.commons.math3.fraction.BigFraction
 import org.apache.commons.math3.util.{ArithmeticUtils, MathUtils}
-import forsyde.io.java.typed.viewers.execution.ExtendedPrecedenceConstraint
 
 import scala.jdk.OptionConverters.*
 import scala.jdk.CollectionConverters.*
-import forsyde.io.java.typed.viewers.execution.PrecedenceConstraint
 import forsyde.io.java.typed.viewers.execution.Channel
 import forsyde.io.java.typed.viewers.impl.Executable
 import forsyde.io.java.typed.viewers.impl.InstrumentedExecutable
@@ -27,6 +25,7 @@ import org.jgrapht.traverse.BreadthFirstIterator
 import forsyde.io.java.typed.viewers.execution.DownsampleReactiveStimulus
 import forsyde.io.java.typed.viewers.execution.ConstrainedTask
 import forsyde.io.java.typed.viewers.execution.UpsampleReactiveStimulus
+import idesyde.identification.DecisionModel
 
 /** Simplest periodic task set concerned in the literature. The periods, offsets and relative
   * deadlines are all fixed at a task level. The only additional complexity are precedence are
@@ -51,7 +50,8 @@ case class SimplePeriodicWorkload(
     val channels: Array[Channel],
     val reactiveStimulusSrc: Array[Int],
     val reactiveStimulusDst: Array[Int]
-)(using Numeric[BigFraction]):
+)(using Numeric[BigFraction])
+    extends DecisionModel:
   //extends PeriodicWorkload[Task, BigFraction]():
 
   override val coveredVertexes: Iterable[Vertex] =
@@ -90,8 +90,8 @@ case class SimplePeriodicWorkload(
 
   // do the computation by traversing the graph
   val (periods, offsets) = {
-    var periodsMut = tasks.map(_ => BigFraction(Double.PositiveInfinity))
-    var offsetsMut = tasks.map(_ => BigFraction(Double.PositiveInfinity))
+    var periodsMut = tasks.map(_ => hyperPeriod)
+    var offsetsMut = tasks.map(_ => hyperPeriod)
     val iter = BreadthFirstIterator(
       reactiveGraph,
       periodicTasks.map(tasks.indexOf(_).asInstanceOf[Integer]).toList.asJava
@@ -111,15 +111,36 @@ case class SimplePeriodicWorkload(
           if (iter.getParent(idxTask) != null) {
             val idxParent = iter.getParent(idxTask)
             // change the candidate period depending on the type of stimulus
-            val candidatePeriod = DownsampleReactiveStimulus.safeCast(stimulus)
-              .map(downsample => periodsMut(idxParent).multiply(downsample.getRepetitivePredecessorSkips))
-              .or(() => UpsampleReactiveStimulus.safeCast(stimulus).map(upsample => periodsMut(idxParent).divide(upsample.getRepetitivePredecessorHolds)))
+            val candidatePeriod = DownsampleReactiveStimulus
+              .safeCast(stimulus)
+              .map(downsample =>
+                periodsMut(idxParent).multiply(downsample.getRepetitivePredecessorSkips)
+              )
+              .or(() =>
+                UpsampleReactiveStimulus
+                  .safeCast(stimulus)
+                  .map(upsample =>
+                    periodsMut(idxParent).divide(upsample.getRepetitivePredecessorHolds)
+                  )
+              )
               .orElse(periodsMut(idxParent))
             // same for offset
-            // val candidateOffset = DownsampleReactiveStimulus.safeCast(stimulus)
-            //   .map(downsample => offsetsMut(idxParent).add(periodsMut(idxParent).add(downsample.getInitialPredecessorSkips)))
-            //   .or(UpsampleReactiveStimulus.safeCast(stimulus).map(upsample => offsetsMut(idxParent).add(periodsMut(idxParent).add(upsample.getInitialPredecessorSkips)))
-            //   .orElse(offsetsMut(idxParent))
+            val candidateOffset = DownsampleReactiveStimulus
+              .safeCast(stimulus)
+              .map(downsample =>
+                offsetsMut(idxParent).add(
+                  periodsMut(idxParent).multiply(downsample.getInitialPredecessorSkips)
+                )
+              )
+              .or(() =>
+                UpsampleReactiveStimulus
+                  .safeCast(stimulus)
+                  .map(upsample =>
+                    offsetsMut(idxParent)
+                      .add(periodsMut(idxParent).divide(upsample.getInitialPredecessorHolds))
+                  )
+              )
+              .orElse(offsetsMut(idxParent))
             if (candidatePeriod.compareTo(periodsMut(idxTask)) > 0) then
               periodsMut(idxTask) = candidatePeriod
             if (offsetsMut(idxParent).compareTo(offsetsMut(idxTask)) < 0) then
@@ -148,7 +169,7 @@ case class SimplePeriodicWorkload(
     if (largestOffset.equals(BigFraction.ZERO)) then hyperPeriod.multiply(2).add(largestOffset)
     else hyperPeriod
 
-  val tasksNumInstancesArray: Array[Int] =
+  val tasksNumInstances: Array[Int] =
     periodicTasks.zipWithIndex.map((task, i) => eventHorizon.divide(periods(i)).getNumeratorAsInt)
 
   /*

@@ -16,6 +16,7 @@ import forsyde.io.java.typed.viewers.platform.GenericProcessingModule
 import forsyde.io.java.typed.viewers.platform.PlatformElem
 import forsyde.io.java.typed.viewers.platform.runtime.AbstractScheduler
 import forsyde.io.java.typed.viewers.decision.Allocated
+import org.checkerframework.checker.nullness.Opt
 
 final case class SchedulableNetDigHWIdentRule() extends IdentificationRule {
 
@@ -26,49 +27,59 @@ final case class SchedulableNetDigHWIdentRule() extends IdentificationRule {
     val hardwareDecisionModelOpt = identified
       .find(_.isInstanceOf[NetworkedDigitalHardware])
       .map(_.asInstanceOf[NetworkedDigitalHardware])
-    if (
-      hardwareDecisionModelOpt.isDefined && SchedulableNetDigHWIdentRule.canIdentify(
-        model,
-        identified
-      )
-    ) {
-      val hardwareDecisionModel = hardwareDecisionModelOpt.get
-      val schedulers = model.vertexSet.stream
+    hardwareDecisionModelOpt
+      .map(identifyWithDependencies(model, _))
+      .getOrElse((false, Option.empty))
+  end identify
+
+  def identifyWithDependencies(
+      model: ForSyDeSystemGraph,
+      hardware: NetworkedDigitalHardware
+  ): (Boolean, Option[SchedulableNetworkedDigHW]) =
+    val schedulers = model.vertexSet.stream
       .filter(AbstractScheduler.conforms(_))
       .map(AbstractScheduler.enforce(_))
       .collect(Collectors.toList)
       .asScala
       .toArray
-      val schedulerAllocations: Array[Int] = schedulers.map(scheduler => {
-        Allocated.safeCast(scheduler).flatMap(allocated => {
-          allocated.getAllocationHostPort(model).stream.flatMap(host => {
-            GenericProcessingModule.safeCast(host).stream.mapToInt(peHost => {
-              hardwareDecisionModel.processingElems.indexOf(peHost)
-            }).boxed
-          }).findAny
-        }).orElse(-1)
-      })
-      val decisionModel = SchedulableNetworkedDigHW(
-        hardware = hardwareDecisionModel,
-        schedulers = schedulers,
-        schedulerAllocation = schedulerAllocations
-      )
+    val schedulerAllocations: Array[Int] = schedulers.map(scheduler => {
+      Allocated
+        .safeCast(scheduler)
+        .flatMap(allocated => {
+          allocated
+            .getAllocationHostPort(model)
+            .stream
+            .flatMap(host => {
+              GenericProcessingModule
+                .safeCast(host)
+                .stream
+                .mapToInt(peHost => {
+                  hardware.processingElems.indexOf(peHost)
+                })
+                .boxed
+            })
+            .findAny
+        })
+        .orElse(-1)
+    })
+    if (schedulerAllocations.contains(-1))
+      scribe.debug("Some schedulers are not allocated. Skipping.")
+      (true, Option.empty)
+    else
       scribe.debug(
         "found a conforming Schedulable Networked HW Model with: " +
           s"${schedulers.size} schedulers"
       )
       (
         true,
-        Option(decisionModel)
+        Option(
+          SchedulableNetworkedDigHW(
+            hardware = hardware,
+            schedulers = schedulers,
+            schedulerAllocation = schedulerAllocations
+          )
+        )
       )
-      // scribe.debug("Not conforming Schedulable Networked HW Model: not all PEs have schedulers.")
-      // (true, Option.empty)
-    } else if (NetworkedDigitalHWIdentRule.canIdentify(model, identified)) {
-      (false, Option.empty)
-    } else {
-      (true, Option.empty)
-    }
-  end identify
 
   def computeSchedulersFromPEs(
       model: ForSyDeSystemGraph,

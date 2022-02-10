@@ -1,6 +1,13 @@
 package idesyde.identification.models.platform
 
-import forsyde.io.java.typed.viewers.platform.{DigitalModule, GenericCommunicationModule, GenericMemoryModule, GenericProcessingModule, InstrumentedCommunicationModule, RoundRobinCommunicationModule}
+import forsyde.io.java.typed.viewers.platform.{
+  DigitalModule,
+  GenericCommunicationModule,
+  GenericMemoryModule,
+  GenericProcessingModule,
+  InstrumentedCommunicationModule,
+  RoundRobinCommunicationModule
+}
 import idesyde.identification.DecisionModel
 import org.apache.commons.math3.fraction.BigFraction
 import org.jgrapht.alg.shortestpath.FloydWarshallShortestPaths
@@ -17,15 +24,13 @@ final case class NetworkedDigitalHardware(
     val communicationElems: Array[GenericCommunicationModule],
     val storageElems: Array[GenericMemoryModule],
     val links: Array[(DigitalModule, DigitalModule)]
-) extends SimpleGraph[DigitalModule, DefaultEdge](classOf[DefaultEdge])
+)(using Numeric[BigFraction])
+    extends SimpleGraph[DigitalModule, DefaultEdge](classOf[DefaultEdge])
     with DecisionModel {
 
-  given Numeric[BigFraction] = BigFractionIsNumeric()
-
-  for (pe <- processingElems) addVertex(pe)
-  for (ce <- communicationElems) addVertex(ce)
-  for (me <- storageElems) addVertex(me)
-  // TODO: error here at creation
+  for (pe         <- processingElems) addVertex(pe)
+  for (ce         <- communicationElems) addVertex(ce)
+  for (me         <- storageElems) addVertex(me)
   for ((src, dst) <- links) addEdge(src, dst)
 
   val coveredVertexes = {
@@ -58,72 +63,84 @@ final case class NetworkedDigitalHardware(
 
   def bandWidthBitPerSec(ce: GenericCommunicationModule)(module: DigitalModule): Option[Long] =
     if (containsEdge(module, ce) || containsEdge(ce, module))
-      val fraction: BigFraction = RoundRobinCommunicationModule.safeCast(ce).map(rrce => {
-        BigFraction(
-          rrce.getAllocatedWeights.getOrDefault(module.getViewedVertex.getIdentifier, 1),
-          rrce.getTotalWeights)
-        }).orElse(BigFraction.ONE)
-      InstrumentedCommunicationModule.safeCast(ce).map(insce =>
-        fraction
-          .multiply(insce.getFlitSizeInBits.toInt * insce.getMaxConcurrentFlits.toInt * insce.getOperatingFrequencyInHertz.toInt)
-          .divide(insce.getMaxCyclesPerFlit.toInt)
-          .floatValue.ceil
-          .toLong
-      ).toScala
-    else
-      Option(0)
+      val fraction: BigFraction = RoundRobinCommunicationModule
+        .safeCast(ce)
+        .map(rrce => {
+          BigFraction(
+            rrce.getAllocatedWeights.getOrDefault(module.getViewedVertex.getIdentifier, 1),
+            rrce.getTotalWeights
+          )
+        })
+        .orElse(BigFraction.ONE)
+      InstrumentedCommunicationModule
+        .safeCast(ce)
+        .map(insce =>
+          fraction
+            .multiply(
+              insce.getFlitSizeInBits.toInt * insce.getMaxConcurrentFlits.toInt * insce.getOperatingFrequencyInHertz.toInt
+            )
+            .divide(insce.getMaxCyclesPerFlit.toInt)
+            .floatValue
+            .ceil
+            .toLong
+        )
+        .toScala
+    else Option(0)
 
-  lazy val bandWidthBitPerSecMatrix: Map[(GenericCommunicationModule, DigitalModule), Long] = Map.empty
+  lazy val bandWidthBitPerSecMatrix: Map[(GenericCommunicationModule, DigitalModule), Long] =
+    Map.empty
 
   private val pathsAlgorithm = DijkstraManyToManyShortestPaths(this)
 
   def inclusiveDirectPaths(src: DigitalModule)(dst: DigitalModule): Seq[DigitalModule] =
-    val path  = pathsAlgorithm.getPath(src, dst);
+    val path = pathsAlgorithm.getPath(src, dst);
     if (path != null) path.getVertexList.asScala.toSeq else Seq.empty;
 
-  def inclusiveDirectCommPaths(src: DigitalModule)(dst: DigitalModule): Seq[GenericCommunicationModule] =
+  def inclusiveDirectCommPaths(src: DigitalModule)(
+      dst: DigitalModule
+  ): Seq[GenericCommunicationModule] =
     // due to the way the graph is constructed, the path
     // between different elements must be between comms.
     val droppedPath = inclusiveDirectPaths(src)(dst).drop(1).dropRight(1)
     if (droppedPath.forall(GenericCommunicationModule.conforms(_))) then
       droppedPath.map(GenericCommunicationModule.enforce(_))
-    else
-      Seq.empty
+    else Seq.empty
 
-  def minTraversalTimePerBit(src: DigitalModule)(dst: DigitalModule)(using Numeric[BigFraction]): Option[BigFraction] =
+  def minTraversalTimePerBit(src: DigitalModule)(dst: DigitalModule)(using
+      Numeric[BigFraction]
+  ): Option[BigFraction] =
     val commPath = inclusiveDirectCommPaths(src)(dst)
     // for the first element
     val headBW = bandWidthBitPerSec(commPath.head)(src)
     // get it 2 by 2 and sum of present, or just return empty
-    lazy val slidenSum = inclusiveDirectCommPaths(src)(dst).sliding(2).map(slide =>
-      slide match
-        case Seq(ce, cenext, _*) => 
-          // in case both specify, get the minimum of them
-          bandWidthBitPerSec(cenext)(ce).orElse(bandWidthBitPerSec(ce)(cenext))
-        case _ => Option(0L)
-    )
-    if (slidenSum.forall(_.isDefined)) then
-      Option(slidenSum.map(_.get).map(BigFraction(1L, _)).sum)
-      //Option(BigFraction(1, headBW.get).add(pathSum).add(BigFraction(1, tailBW.get)))
+    lazy val slidenSum = inclusiveDirectCommPaths(src)(dst)
+      .sliding(2)
+      .map(slide =>
+        slide match
+          case Seq(ce, cenext, _*) =>
+            // in case both specify, get the minimum of them
+            bandWidthBitPerSec(cenext)(ce).orElse(bandWidthBitPerSec(ce)(cenext))
+          case _ => Option(0L)
+      )
+    if (slidenSum.forall(_.isDefined)) then Option(slidenSum.map(_.get).map(BigFraction(1L, _)).sum)
+    //Option(BigFraction(1, headBW.get).add(pathSum).add(BigFraction(1, tailBW.get)))
     else Option.empty
-    // for the last element
-    //lazy val tailBW = bandWidthBitPerSec(commPath.last)(dst)
-    // check if all links are OK
-    // if (headBW.isDefined && slidenSum.forall(_.isDefined) && tailBW.isDefined) then
-    //   val pathSum = slidenSum.map(_.get).map(BigFraction(1L, _)).sum
-    //   Option(BigFraction(1, headBW.get).add(pathSum).add(BigFraction(1, tailBW.get)))
-    // else Option.empty
+  // for the last element
+  //lazy val tailBW = bandWidthBitPerSec(commPath.last)(dst)
+  // check if all links are OK
+  // if (headBW.isDefined && slidenSum.forall(_.isDefined) && tailBW.isDefined) then
+  //   val pathSum = slidenSum.map(_.get).map(BigFraction(1L, _)).sum
+  //   Option(BigFraction(1, headBW.get).add(pathSum).add(BigFraction(1, tailBW.get)))
+  // else Option.empty
 
   lazy val minTraversalTimePerBitMatrix: Map[(DigitalModule, DigitalModule), BigFraction] =
     (for
-      e <- platformElements
+      e  <- platformElements
       ee <- platformElements
       if e != ee
       t = minTraversalTimePerBit(e)(ee)
       if t.isDefined
-    yield
-      (e, ee) -> t.get)
-    .toMap
+    yield (e, ee) -> t.get).toMap
 
   // lazy val paths: Map[(DigitalModule, DigitalModule), Seq[GenericCommunicationModule]] =
   //   val pathAlgorithm = DijkstraManyToManyShortestPaths(this)
@@ -140,7 +157,5 @@ final case class NetworkedDigitalHardware(
   //   ) yield (e, ee) -> vPath.map(GenericCommunicationModule.safeCast(_).get())).toMap
 
   override val uniqueIdentifier = "NetworkedDigitalHardware"
-
-  
 
 }

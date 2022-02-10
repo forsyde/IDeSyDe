@@ -13,6 +13,7 @@ import scala.jdk.CollectionConverters.*
 import forsyde.io.java.typed.viewers.execution.Stimulus
 import idesyde.identification.models.workload.SimplePeriodicWorkload
 import org.apache.commons.math3.fraction.BigFraction
+import forsyde.io.java.typed.viewers.execution.ReactiveStimulus
 
 final class PeriodicTaskIdentificationRule(using Numeric[BigFraction]) extends IdentificationRule:
 
@@ -22,13 +23,13 @@ final class PeriodicTaskIdentificationRule(using Numeric[BigFraction]) extends I
   ): (Boolean, Option[DecisionModel]) =
     var periodicTasks: Array[PeriodicTask] = Array.empty
     var channels: Array[Channel]           = Array.empty
-    var precedencesArray: Array[PrecedenceConstraint] = Array.empty
+    var reactiveStimulus: Array[ReactiveStimulus] = Array.empty
     model.vertexSet.stream.forEach(v => {
       if (PeriodicTask.conforms(v)) periodicTasks = periodicTasks.appended(PeriodicTask.enforce(v))
       else if (Channel.conforms(v)) channels = channels.appended(Channel.enforce(v))
       //else if (Executable.conforms(v)) executablesArray = executablesArray.appended(Executable.enforce(v))
-      else if (PrecedenceConstraint.conforms(v))
-        precedencesArray = precedencesArray.appended(PrecedenceConstraint.enforce(v))
+      else if (ReactiveStimulus.conforms(v))
+        reactiveStimulus = reactiveStimulus.appended(ReactiveStimulus.enforce(v))
     })
     // build the task-to-executable relationship
     val executables = periodicTasks.map(_.getCallSequencePort(model).asScala.toArray)
@@ -37,7 +38,7 @@ final class PeriodicTaskIdentificationRule(using Numeric[BigFraction]) extends I
     // build the precedence matrix
     lazy val precedences = periodicTasks.map(src =>
       periodicTasks.map(dst =>
-        precedencesArray.find(prec =>
+        reactiveStimulus.find(prec =>
           prec.getPredecessorPort(model).contains(src) &&
             prec.getSucessorPort(model).contains(dst)
         )

@@ -4,7 +4,8 @@ import idesyde.identification.IdentificationRule
 import forsyde.io.java.core.ForSyDeSystemGraph
 import idesyde.identification.DecisionModel
 
-import collection.JavaConverters.*
+import scala.jdk.OptionConverters.*
+import scala.jdk.CollectionConverters.*
 import idesyde.identification.models.platform.{NetworkedDigitalHardware, SchedulableNetworkedDigHW}
 
 import java.util.stream.Collectors
@@ -14,6 +15,7 @@ import forsyde.io.java.typed.viewers.platform.runtime.RoundRobinScheduler
 import forsyde.io.java.typed.viewers.platform.GenericProcessingModule
 import forsyde.io.java.typed.viewers.platform.PlatformElem
 import forsyde.io.java.typed.viewers.platform.runtime.AbstractScheduler
+import forsyde.io.java.typed.viewers.decision.Allocated
 
 final case class SchedulableNetDigHWIdentRule() extends IdentificationRule {
 
@@ -31,46 +33,29 @@ final case class SchedulableNetDigHWIdentRule() extends IdentificationRule {
       )
     ) {
       val hardwareDecisionModel = hardwareDecisionModelOpt.get
-      val fixedPrioSchedulers = model.vertexSet.stream
-        .filter(FixedPriorityScheduler.conforms(_))
-        .map(FixedPriorityScheduler.safeCast(_).get())
-        .collect(Collectors.toSet)
-        .asScala
-        .toSet
-      val timeTrigSchedulers = model.vertexSet.asScala
-        .filter(TimeTriggeredScheduler.conforms(_))
-        .map(TimeTriggeredScheduler.safeCast(_).get())
-        .toSet
-      val roundRobinSchedulers = model.vertexSet.asScala
-        .filter(RoundRobinScheduler.conforms(_))
-        .map(RoundRobinScheduler.safeCast(_).get())
-        .toSet
-      val schedulersFromPEs = computeSchedulersFromPEs(
-        model,
-        hardwareDecisionModel.processingElems,
-        fixedPrioSchedulers.toArray,
-        timeTrigSchedulers.toArray,
-        roundRobinSchedulers.toArray
-      )
+      val schedulers = model.vertexSet.stream
+      .filter(AbstractScheduler.conforms(_))
+      .map(AbstractScheduler.enforce(_))
+      .collect(Collectors.toList)
+      .asScala
+      .toArray
+      val schedulerAllocations: Array[Int] = schedulers.map(scheduler => {
+        Allocated.safeCast(scheduler).flatMap(allocated => {
+          allocated.getAllocationHostPort(model).stream.flatMap(host => {
+            GenericProcessingModule.safeCast(host).stream.mapToInt(peHost => {
+              hardwareDecisionModel.processingElems.indexOf(peHost)
+            }).boxed
+          }).findAny
+        }).orElse(-1)
+      })
       val decisionModel = SchedulableNetworkedDigHW(
         hardware = hardwareDecisionModel,
-        schedulersFromPEs = schedulersFromPEs,
-        fixedPriorityPEs = computeFixedPriorityPEs(
-          model,
-          hardwareDecisionModel.processingElems,
-          fixedPrioSchedulers.toArray
-        ).toArray,
-        timeTriggeredPEs =
-          computeTimeTriggeredPEs(model, hardwareDecisionModel.processingElems, timeTrigSchedulers.toArray).toArray,
-        roundRobinPEs =
-          computeRoundRobinPEs(model, hardwareDecisionModel.processingElems, roundRobinSchedulers.toArray).toArray,
-        staticCyclicPEs = Array.empty
+        schedulers = schedulers,
+        schedulerAllocation = schedulerAllocations
       )
       scribe.debug(
         "found a conforming Schedulable Networked HW Model with: " +
-          s"${fixedPrioSchedulers.size} FP schedulers, " +
-          s"${timeTrigSchedulers.size} TT schedulers, " +
-          s"${roundRobinSchedulers.size} RR schedulers"
+          s"${schedulers.size} schedulers"
       )
       (
         true,

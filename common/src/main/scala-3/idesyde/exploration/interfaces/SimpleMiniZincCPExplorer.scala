@@ -1,7 +1,7 @@
 package idesyde.exploration.interfaces
 
 import idesyde.identification.interfaces.MiniZincDecisionModel
-import idesyde.exploration.Explorer
+import idesyde.exploration.interfaces.Explorer
 import forsyde.io.java.core.ForSyDeSystemGraph
 import scala.concurrent.ExecutionContext
 import scala.concurrent.Future

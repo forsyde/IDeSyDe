@@ -12,6 +12,8 @@ import scala.jdk.OptionConverters.*
 import scala.jdk.CollectionConverters.*
 import idesyde.identification.models.mixed.PeriodicTaskToSchedHW
 import forsyde.io.java.typed.viewers.platform.InstrumentedCommunicationModule
+import forsyde.io.java.typed.viewers.decision.MemoryMapped
+import forsyde.io.java.typed.viewers.decision.Scheduled
 
 class PeriodicTaskToSchedHWIdentRule extends IdentificationRule {
 
@@ -51,45 +53,87 @@ class PeriodicTaskToSchedHWIdentRule extends IdentificationRule {
     val instrumentedCEsRange = platformModel.hardware.communicationElems
       .filter(ce => InstrumentedCommunicationModule.conforms(ce))
       .map(ce => InstrumentedCommunicationModule.enforce(ce))
-    // compute the matrix (lazily)
-    lazy val wcets = instrumentedExecutables.zipWithIndex.map((runnables, i) => {
-      instrumentedPEsRange.zipWithIndex.map((pe, j) => {
-        runnables.foldRight(Option(BigFraction.ZERO))((runnable, sumOpt) => {
-          // find the minimum matching
-          val bestMatch = pe.getModalInstructionsPerCycle.values.stream
-            .flatMap(ipcGroup => {
+    // for all tasks, there exists at least one PE where all runnables are executable
+    lazy val isExecutable = instrumentedExecutables.zipWithIndex.forall((runnables, i) => {
+      instrumentedPEsRange.zipWithIndex.exists((pe, j) => {
+        runnables.forall(runnable => {
+          // find if there's any matching
+          pe.getModalInstructionsPerCycle.values.stream
+            .anyMatch(ipc => {
               runnable.getOperationRequirements.values.stream
-                .filter(opGroup => ipcGroup.keySet.equals(opGroup.keySet))
-                .map(opGroup => {
-                  BigFraction(
-                    ipcGroup.entrySet.stream
-                      .mapToDouble(ipcEntry => opGroup.get(ipcEntry.getKey) / ipcEntry.getValue)
-                      .mapToLong(_.ceil.toLong)
-                      .sum,
-                    pe.getOperatingFrequencyInHertz
-                  )
-                })
+                .anyMatch(opGroup => ipc.keySet.equals(opGroup.keySet))
             })
-            .min((f1, f2) => f1.compareTo(f2))
-            .toScala
-          // fold for the minimum
-          sumOpt.flatMap(summed => bestMatch.map(runnableWcet => summed.add(runnableWcet)))
         })
       })
     })
-    // compute wctts (lazily)
-    lazy val wctts = workloadModel.channels.zipWithIndex.map((channel, i) => {
-      instrumentedCEsRange.zipWithIndex.map((ce, j) => {
-        BigFraction.ZERO
+    // All mappables (tasks, channels) have at least one element to be mapped at
+    lazy val isMappable = workloadModel.taskSizes.zipWithIndex.forall((taskSize, i) => {
+      platformModel.hardware.storageElems.zipWithIndex.exists((me, j) => {
+        taskSize <= me.getSpaceInBits
       })
+    }) && workloadModel.channelSizes.zipWithIndex.forall((channelSize, i) => {
+      platformModel.hardware.storageElems.zipWithIndex.exists((me, j) => {
+        channelSize <= me.getSpaceInBits
+      })
+    })
+    // query all existing mappings
+    val taskMappings = workloadModel.periodicTasks.map(task => {
+      MemoryMapped
+        .safeCast(task)
+        .flatMap(memory => {
+          memory
+            .getMappingHostPort(model)
+            .stream
+            .mapToInt(platformModel.hardware.storageElems.indexOf(_))
+            .filter(_ > -1)
+            .findAny
+            .toJavaGeneric
+        })
+        .orElse(-1)
+    })
+    // now for channels
+    val channelMappings = workloadModel.channels.map(channel => {
+      MemoryMapped
+        .safeCast(channel)
+        .flatMap(memory => {
+          memory
+            .getMappingHostPort(model)
+            .stream
+            .mapToInt(platformModel.hardware.storageElems.indexOf(_))
+            .filter(_ > -1)
+            .findAny
+            .toJavaGeneric
+        })
+        .orElse(-1)
+    })
+    // now find if any of task are already scheduled (mapped to a processor)
+    val taskSchedulings = workloadModel.periodicTasks.map(task => {
+      Scheduled.safeCast(task)
+      .flatMap(scheduled => {
+          scheduled
+            .getSchedulerPort(model)
+            .stream
+            .mapToInt(platformModel.schedulers.indexOf(_))
+            .filter(_ > -1)
+            .findAny
+            .toJavaGeneric
+        })
+        .orElse(-1)
     })
     // finish with construction
     if (
       instrumentedExecutables.length == workloadModel.periodicTasks.length &&
-      instrumentedPEsRange.length == platformModel.hardware.processingElems.length
+      instrumentedPEsRange.length == platformModel.hardware.processingElems.length &&
+      isMappable && isExecutable
     ) then
       Option(
-        PeriodicTaskToSchedHW(workloadModel, platformModel, wcets, wctts, Array.emptyIntArray)
+        PeriodicTaskToSchedHW(
+          workloadModel,
+          platformModel,
+          mappedTasks = taskMappings,
+          scheduledTasks = taskSchedulings,
+          mappedChannels = channelMappings,
+        )
       )
     else Option.empty
 

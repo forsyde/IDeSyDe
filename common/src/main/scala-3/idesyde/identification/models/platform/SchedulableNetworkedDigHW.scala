@@ -2,7 +2,11 @@ package idesyde.identification.models.platform
 
 import forsyde.io.java.core.Vertex
 import forsyde.io.java.typed.viewers.platform.GenericProcessingModule
-import forsyde.io.java.typed.viewers.platform.runtime.{FixedPriorityScheduler, RoundRobinScheduler, TimeTriggeredScheduler}
+import forsyde.io.java.typed.viewers.platform.runtime.{
+  FixedPriorityScheduler,
+  RoundRobinScheduler,
+  TimeTriggeredScheduler
+}
 import idesyde.identification.DecisionModel
 import org.jgrapht.alg.connectivity.ConnectivityInspector
 import org.jgrapht.graph.{DefaultEdge, SimpleGraph}
@@ -12,25 +16,54 @@ import java.util.stream.Collectors
 import scala.jdk.OptionConverters.*
 import scala.jdk.CollectionConverters.*
 import forsyde.io.java.typed.viewers.platform.runtime.AbstractScheduler
-
+import forsyde.io.java.typed.viewers.platform.runtime.StaticCyclicScheduler
 
 final case class SchedulableNetworkedDigHW(
     val hardware: NetworkedDigitalHardware,
-    val fixedPriorityPEs: Array[GenericProcessingModule],
-    val timeTriggeredPEs: Array[GenericProcessingModule],
-    val roundRobinPEs: Array[GenericProcessingModule],
-    val staticCyclicPEs: Array[GenericProcessingModule],
+    val schedulers: Array[AbstractScheduler],
+    val schedulerAllocation: Array[Int]
     // val bandWidthFromCEtoPE: Map[GenericCommunicationModule, GenericProcessingModule],
-    val schedulersFromPEs: Map[
-      GenericProcessingModule,
-      AbstractScheduler
-    ]
 ) extends DecisionModel {
 
   val coveredVertexes: Iterable[Vertex] = hardware.coveredVertexes ++
     schedulersFromPEs.values.map(_.getViewedVertex).toSet
 
-    /*
+  val isFixedPriority = schedulers.map(FixedPriorityScheduler.conforms(_))
+  val isTimeTriggered = schedulers.map(TimeTriggeredScheduler.conforms(_))
+  val isRoundRobin    = schedulers.map(RoundRobinScheduler.conforms(_))
+  val isStaticCycle   = schedulers.map(StaticCyclicScheduler.conforms(_))
+
+  val fixedPrioritySchedulers =
+    schedulers.filter(FixedPriorityScheduler.conforms(_)).map(FixedPriorityScheduler.enforce(_))
+  val timeTriggeredSchedulers =
+    schedulers.filter(TimeTriggeredScheduler.conforms(_)).map(TimeTriggeredScheduler.enforce(_))
+  val roundRobinSchedulers =
+    schedulers.filter(RoundRobinScheduler.conforms(_)).map(RoundRobinScheduler.enforce(_))
+  val staticCycleSchedulers =
+    schedulers.filter(StaticCyclicScheduler.conforms(_)).map(StaticCyclicScheduler.enforce(_))
+
+  val fixedPriorityPEs: Array[GenericProcessingModule] = hardware.processingElems.zipWithIndex
+    .filter((pe, i) => schedulerAllocation.contains(i) && isFixedPriority(i))
+    .map(_._1)
+  val timeTriggeredPEs: Array[GenericProcessingModule] = hardware.processingElems.zipWithIndex
+    .filter((pe, i) => schedulerAllocation.contains(i) && isTimeTriggered(i))
+    .map(_._1)
+  val roundRobinPEs: Array[GenericProcessingModule] = hardware.processingElems.zipWithIndex
+    .filter((pe, i) => schedulerAllocation.contains(i) && isRoundRobin(i))
+    .map(_._1)
+  val staticCyclicPEs: Array[GenericProcessingModule] = hardware.processingElems.zipWithIndex
+    .filter((pe, i) => schedulerAllocation.contains(i) && isStaticCycle(i))
+    .map(_._1)
+
+  lazy val schedulersFromPEs: Map[
+    GenericProcessingModule,
+    AbstractScheduler
+  ] = (for (
+    (pe, i)    <- hardware.processingElems.zipWithIndex;
+    (sched, j) <- schedulers.zipWithIndex;
+    if schedulerAllocation(j) == i
+  ) yield pe -> sched).toMap
+  /*
   lazy val fixedPriorityTopologySymmetryRelation
       : Set[(GenericProcessingModule, GenericProcessingModule)] =
     for (
@@ -87,21 +120,21 @@ final case class SchedulableNetworkedDigHW(
           hardware.paths.getOrElse((pp, mm), Seq()).map(c => hardware.bandWidthBitPerSec(c, pp)).sum
       }) == 1
     ) yield (p, pp)
-    */
+   */
 
   lazy val topologySymmetryRelationGraph: SimpleGraph[GenericProcessingModule, DefaultEdge] =
     val graph = SimpleGraph[GenericProcessingModule, DefaultEdge](classOf[DefaultEdge])
     hardware.processingElems.foreach(p => graph.addVertex(p))
-    for 
+    for
       p  <- hardware.processingElems
       pp <- hardware.processingElems
       if p != pp
-      // TODO: this check should be a bit more robust... is it always master to slave?
-      // can it be in any direction? After this design decision, it becomes better.
-      // Currently we assume master to slace
-      // TODO: the fact that the bandwith must get with a default value is not safe,
-      // this should be removed later
-      /*
+    // TODO: this check should be a bit more robust... is it always master to slave?
+    // can it be in any direction? After this design decision, it becomes better.
+    // Currently we assume master to slace
+    // TODO: the fact that the bandwith must get with a default value is not safe,
+    // this should be removed later
+    /*
       if hardware.storageElems.forall(m => {
         hardware.storageElems.exists(mm => {
           hardware.minTraversalTimePerBit(m)(p).flatMap(p2m => {
@@ -111,9 +144,8 @@ final case class SchedulableNetworkedDigHW(
           }).orElse(false)
         })
       })
-      */
-    do
-      graph.addEdge(p, pp)
+     */
+    do graph.addEdge(p, pp)
     graph
 
   lazy val topologicallySymmetricGroups: Set[Set[GenericProcessingModule]] =

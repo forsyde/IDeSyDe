@@ -11,6 +11,7 @@ import forsyde.io.java.typed.viewers.impl.InstrumentedExecutable
 import scala.jdk.OptionConverters.*
 import scala.jdk.CollectionConverters.*
 import forsyde.io.java.typed.viewers.platform.InstrumentedCommunicationModule
+import forsyde.io.java.typed.viewers.execution.Task
 
 final case class PeriodicTaskToSchedHW(
     val taskModel: SimplePeriodicWorkload,
@@ -41,10 +42,13 @@ final case class PeriodicTaskToSchedHW(
               runnable.getOperationRequirements.values.stream
                 .filter(opGroup => ipcGroup.keySet.equals(opGroup.keySet))
                 .map(opGroup => {
-                    ipcGroup.entrySet.stream
-                      .map(ipcEntry => BigFraction(opGroup.get(ipcEntry.getKey)).divide(BigFraction(ipcEntry.getValue)))
-                      .reduce(BigFraction.ZERO, (f1, f2) => f1.add(f2))
-                      .divide(pe.getOperatingFrequencyInHertz)
+                  ipcGroup.entrySet.stream
+                    .map(ipcEntry =>
+                      BigFraction(opGroup.get(ipcEntry.getKey))
+                        .divide(BigFraction(ipcEntry.getValue))
+                    )
+                    .reduce(BigFraction.ZERO, (f1, f2) => f1.add(f2))
+                    .divide(pe.getOperatingFrequencyInHertz)
                 })
             })
             .min((f1, f2) => f1.compareTo(f2))

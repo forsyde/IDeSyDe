@@ -18,6 +18,10 @@ import forsyde.io.java.core.EdgeTrait
 import forsyde.io.java.typed.viewers.visualization.GreyBox
 import forsyde.io.java.typed.viewers.decision.MemoryMapped
 import forsyde.io.java.typed.viewers.platform.runtime.FixedPriorityScheduler
+import forsyde.io.java.typed.viewers.execution.Task
+import idesyde.identification.models.workload.DependentDeadlineMonotonicOrdering
+
+import math.Ordering.Implicits.infixOrderingOps
 
 final case class PeriodicTaskToSchedHWChoco(
     val sourceDecisionModel: PeriodicTaskToSchedHW
@@ -25,11 +29,13 @@ final case class PeriodicTaskToSchedHWChoco(
 
   val coveredVertexes = sourceDecisionModel.coveredVertexes
 
+  given Ordering[Task] = DependentDeadlineMonotonicOrdering(sourceDecisionModel.taskModel)
+
   // section for time multiplier calculation
-  var multiplierForNoDenominator = 
+  var multiplierForNoDenominator =
     (sourceDecisionModel.taskModel.periods ++ sourceDecisionModel.wcets.flatten)
-    .map(_.getDenominatorAsLong)
-    .reduce((d1, d2) => ArithmeticUtils.lcm(d1, d2))
+      .map(_.getDenominatorAsLong)
+      .reduce((d1, d2) => ArithmeticUtils.lcm(d1, d2))
   // while there are significant zeros that can be taken away
   // var tenthDivision = 1L
   // while (sourceDecisionModel.taskModel.periods.map(_.getNumeratorAsLong).min * multiplier % tenthDivision == 0)
@@ -88,6 +94,29 @@ final case class PeriodicTaskToSchedHWChoco(
           .doubleValue
           .floor
           .toInt,
+        true // keeping only bounds for the response time is enough and better
+      )
+    )
+  val blockingTimes =
+    sourceDecisionModel.taskModel.tasks.zipWithIndex.map((t, i) =>
+      model.intVar(
+        "bt_" + t.getViewedVertex.getIdentifier,
+        // minimum WCET possible
+        0,
+        sourceDecisionModel.taskModel
+          .relativeDeadlines(i)
+          .multiply(multiplier)
+          .doubleValue
+          .floor
+          .toInt -
+          sourceDecisionModel
+            .wcets(i)
+            .filter(p => p.compareTo(BigFraction.MINUS_ONE) > 0)
+            .min
+            .multiply(multiplier)
+            .doubleValue
+            .ceil
+            .toInt,
         true // keeping only bounds for the response time is enough and better
       )
     )
@@ -179,12 +208,16 @@ final case class PeriodicTaskToSchedHWChoco(
   sourceDecisionModel.taskModel.reactiveStimulus.zipWithIndex.foreach((s, i) => {
     val src = sourceDecisionModel.taskModel.reactiveStimulusSrc(i)
     val dst = sourceDecisionModel.taskModel.reactiveStimulusDst(i)
-    responseTimes(dst).ge(responseTimes(src).add(wcet(src))).post
+    blockingTimes(dst).ge(responseTimes(src).add(wcet(src))).post
+    responseTimes(i).ge(blockingTimes(i)).post
   })
-  sourceDecisionModel.schedHwModel.schedulers.zipWithIndex
-    .filter((_, i) => sourceDecisionModel.schedHwModel.isFixedPriority(i))
-    .map((s, i) => (FixedPriorityScheduler.enforce(s), i))
-    .foreach((s, i) => {})
+  // for each FP scheduler
+  // rt >= bt + sum of all higher prio tasks in the same CPU
+  sourceDecisionModel.taskModel.tasks.zipWithIndex.foreach((task, i) => {
+    sourceDecisionModel.schedHwModel.schedulers.zipWithIndex
+      .filter((s, j) => sourceDecisionModel.schedHwModel.isFixedPriority(j))
+      .foreach((s, j) => {})
+  })
   // Dealing with objectives
   val nUsedPEs = model.intVar(
     "nUsedPEs",
@@ -192,7 +225,7 @@ final case class PeriodicTaskToSchedHWChoco(
     sourceDecisionModel.schedHwModel.hardware.processingElems.length - 1
   )
   // count different ones
-  model.atMostNValues(taskExecution, nUsedPEs, false).post
+  model.atMostNValues(taskExecution, nUsedPEs, true).post
   // this flips the direction of the variables since the objective must be MAX
   val nFreePEs = model
     .intVar(sourceDecisionModel.schedHwModel.hardware.processingElems.length)

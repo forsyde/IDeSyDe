@@ -128,26 +128,6 @@ case class SimplePeriodicWorkload(
             })
             .min((f1, f2) => f1.compareTo(f2))
             .get
-        // if (iter.getParent(idxTask) != null) {
-        //   val idxParent = iter.getParent(idxTask)
-        //   // change the candidate period depending on the type of stimulus
-        //   val candidatePeriod = DownsampleReactiveStimulus
-        //     .safeCast(stimulus)
-        //     .map(downsample =>
-        //       periodsMut(idxParent).multiply(downsample.getRepetitivePredecessorSkips)
-        //     )
-        //     .or(() =>
-        //       UpsampleReactiveStimulus
-        //         .safeCast(stimulus)
-        //         .map(upsample =>
-        //           periodsMut(idxParent).divide(upsample.getRepetitivePredecessorHolds)
-        //         )
-        //     )
-        //     .orElse(periodsMut(idxParent))
-        //   // always save the smaller
-        //   if (candidatePeriod.compareTo(periodsMut(idxTask)) <= 0) then
-        //     periodsMut(idxTask) = candidatePeriod
-        // }
       }
     }
     periodsMut
@@ -246,12 +226,14 @@ case class SimplePeriodicWorkload(
         .stream
         .map(reactiveGraph.getEdgeSource(_))
         .flatMap(inTaskIdx => {
-          precedences(inTaskIdx)(idxTask).map((m, n) => {
-            periods(inTaskIdx)
-              .multiply(m)
-              .add(noPrecedenceOffsets(inTaskIdx))
-              .subtract(periods(idxTask).multiply(n).add(noPrecedenceOffsets(idxTask)))
-          }).asJavaSeqStream
+          precedences(inTaskIdx)(idxTask)
+            .map((m, n) => {
+              periods(inTaskIdx)
+                .multiply(m)
+                .add(noPrecedenceOffsets(inTaskIdx))
+                .subtract(periods(idxTask).multiply(n).add(noPrecedenceOffsets(idxTask)))
+            })
+            .asJavaSeqStream
         })
         .filter(f => f.compareTo(noPrecedenceOffsets(idxTask)) > 0)
         .max((f1, f2) => f1.compareTo(f2))
@@ -270,7 +252,8 @@ case class SimplePeriodicWorkload(
           BigFraction(conTask.getRelativeDeadlineNumerator, conTask.getRelativeDeadlineDenominator)
         )
         .orElse(periods(i))
-        .add(noPrecedenceOffsets(i)).subtract(offsets(i))
+        .add(noPrecedenceOffsets(i))
+        .subtract(offsets(i))
     )
 
   val largestOffset: BigFraction = offsets.max
@@ -282,68 +265,22 @@ case class SimplePeriodicWorkload(
   val tasksNumInstances: Array[Int] =
     tasks.zipWithIndex.map((task, i) => eventHorizon.divide(periods(i)).getNumeratorAsInt)
 
-  /*
-  def tasksNumInstances(task: Task): Int = tasksNumInstancesArray(
-    tasks.indexOf(task)
-  )
-
-  def instancesReleases(task: Task)(instance: Int): BigFraction =
-    val idx = tasks.indexOf(task)
-    if (instance >= tasksNumInstancesArray(idx))
-      periods(idx).multiply(tasksNumInstancesArray(idx)).add(offsets(idx))
-    else if (instance < 0)
-      offsets(idx)
-    else
-      periods(idx).multiply(instance).add(offsets(idx))
-
-  def instancesDeadlines(task: Task)(instance: Int): BigFraction =
-    val idx = tasks.indexOf(task)
-    if (instance >= tasksNumInstancesArray(idx))
-      periods(idx)
-        .multiply(tasksNumInstancesArray(idx))
-        .add(offsets(idx))
-        .add(relativeDeadlines(idx))
-    else if (instance < 0)
-      offsets(idx).add(relativeDeadlines(idx))
-    else
-      periods(idx).multiply(instance).add(offsets(idx)).add(relativeDeadlines(idx))
-
-  def instancePreceeds(srcTask: Task)(dstTask: Task)(srcInstance: Int)(
-      dstInstance: Int
-  ): Boolean =
-    val srcIdx      = tasks.indexOf(srcTask)
-    val dstIdx      = tasks.indexOf(dstTask)
-    val constraints = precendences(srcIdx)(dstIdx)
-    constraints
-      .map(m => {
-        ExtendedPrecedenceConstraint
-          .safeCast(m)
-          .map(extendedPred =>
-            extendedPred.getPredecessorInstance.asScala
-              .map(_.toInt)
-              .zip(extendedPred.getSucessorInstance.asScala.map(_.toInt))
-              .contains((srcInstance, dstInstance))
-          )
-          .orElse(true) // true because it is precedence already
-      })
-      .getOrElse(false)
-
-  def taskSize(t: PeriodicTask) =
-    val tIdx = tasks.indexOf(t)
-    executables(tIdx).map(e => {
-      e match {
-        case eIns: InstrumentedExecutable => eIns.getSizeInBits.toLong
-        case _ => 0L
-      }
-    }).sum
-   */
-
   lazy val taskSizes = tasks.zipWithIndex.map((task, i) => {
     executables(i)
       .filter(e => InstrumentedExecutable.conforms(e))
       .map(e => InstrumentedExecutable.enforce(e).getSizeInBits.toLong)
       .sum
   })
+
+  lazy val schedulingPoints: Array[BigFraction] =
+    tasks.zipWithIndex
+      .flatMap((task, i) => {
+        (0 until tasksNumInstances(i)).map(j => {
+          offsets(i).add(periods(i).multiply(j))
+        })
+      })
+      .sorted
+      .distinct
 
   def channelSize(c: Channel) = c.getElemSizeInBits.toLong
 

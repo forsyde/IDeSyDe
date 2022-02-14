@@ -24,7 +24,7 @@ final case class PeriodicTaskToSchedHW(
 
   lazy val wcets: Array[Array[BigFraction]] = {
     // alll executables of task are instrumented
-    val instrumentedExecutables = taskModel.periodicTasks.zipWithIndex
+    val instrumentedExecutables = taskModel.tasks.zipWithIndex
       .filter((task, i) => taskModel.executables(i).forall(InstrumentedExecutable.conforms(_)))
       .map((task, i) => taskModel.executables(i).map(InstrumentedExecutable.enforce(_)))
     // all processing elems are instrumented

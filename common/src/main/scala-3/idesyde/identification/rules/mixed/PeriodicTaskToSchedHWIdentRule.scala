@@ -125,11 +125,6 @@ class PeriodicTaskToSchedHWIdentRule extends IdentificationRule {
         .orElse(-1)
     })
     // finish with construction
-    scribe.debug(
-      s"${instrumentedExecutables.length == workloadModel.tasks.length} and " +
-        s"${instrumentedPEsRange.length == platformModel.hardware.processingElems.length}" +
-        s"${isMappable} and ${isExecutable}"
-    )
     if (
       instrumentedExecutables.length == workloadModel.tasks.length &&
       instrumentedPEsRange.length == platformModel.hardware.processingElems.length &&

@@ -14,6 +14,7 @@ import idesyde.identification.models.workload.SimplePeriodicWorkload
 import org.apache.commons.math3.fraction.BigFraction
 import forsyde.io.java.typed.viewers.execution.ReactiveStimulus
 import forsyde.io.java.typed.viewers.execution.ReactiveTask
+import forsyde.io.java.typed.viewers.execution.Task
 
 final class PeriodicTaskIdentificationRule(using Numeric[BigFraction]) extends IdentificationRule:
 
@@ -37,11 +38,12 @@ final class PeriodicTaskIdentificationRule(using Numeric[BigFraction]) extends I
     val stimulusOpt      = periodicTasks.map(_.getPeriodicStimulusPort(model))
     val reactiveStimulus = reactiveTasks.flatMap(_.getReactiveStimulusPort(model).asScala).toArray
     // build the precedence arrays
+    // it is a bit verbose due to how the comparison is done. THrough IDs it is sure-fire.
     val (precedencesSrc, precedencesDst) = reactiveStimulus
       .map(s => {
         (
-          s.getPredecessorPort(model).map(tasks.indexOf(_)).orElse(-1),
-          s.getSucessorPort(model).map(tasks.indexOf(_)).orElse(-1)
+          tasks.indexWhere(t => s.getPredecessorPort(model).map(_.getIdentifier == t.getIdentifier).orElse(false)),
+          tasks.indexWhere(t => s.getSucessorPort(model).map(_.getIdentifier == t.getIdentifier).orElse(false))
         )
       })
       .unzip

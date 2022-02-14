@@ -11,6 +11,7 @@ import forsyde.io.java.core.ForSyDeSystemGraph
 import scala.concurrent.ExecutionContext
 import idesyde.exploration.ChocoExplorationModule
 import idesyde.identification.api.IdentificationHandler
+import idesyde.identification.api.ChocoIdentificationModule
 
 case class IDeSyDeRunConfig(
     inputModelsPaths: Buffer[Path] = Buffer.empty,
@@ -23,6 +24,7 @@ case class IDeSyDeRunConfig(
     .registerModule(ChocoExplorationModule())
 
   val identificationHandler = IdentificationHandler()
+    .registerIdentificationRule(ChocoIdentificationModule())
 
   def run(): Unit =
     setLoggingLevel(Level.get(verbosityLevel).getOrElse(Level.Info))

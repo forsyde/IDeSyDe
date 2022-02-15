@@ -54,10 +54,7 @@ class ChocoExplorer() extends Explorer:
       val paretoMaximizer = ParetoMaximizer(chocoCpModel.modelObjectives)
       solver.plugMonitor(paretoMaximizer)
       solver.addStopCriterion(SolutionCounter(model, 100L))
-      //   solver.streamSolutions().map(solution => {
-      //     scribe.debug(s"finding one solution")
-      //     chocoCpModel.rebuildFromChocoOutput(solution)
-      //   }).toScala(LazyList)
+      if (!chocoCpModel.searchStrategies.isEmpty) then solver.setSearch(chocoCpModel.searchStrategies:_*)
       LazyList
         .continually(solver.solve)
         .takeWhile(feasible => feasible || !solver.isStopCriterionMet)

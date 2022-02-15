@@ -28,6 +28,10 @@ import org.chocosolver.solver.search.strategy.selectors.variables.FirstFail
 import org.chocosolver.solver.search.strategy.selectors.values.IntDomainMin
 import org.chocosolver.solver.search.strategy.assignments.DecisionOperator
 import org.chocosolver.solver.search.strategy.assignments.DecisionOperatorFactory
+import idesyde.exploration.explorers.SimpleListSchedulingDecisionStrategy
+import org.chocosolver.solver.search.strategy.strategy.AbstractStrategy
+import org.chocosolver.solver.variables.Variable
+import org.chocosolver.solver.variables.IntVar
 
 final case class PeriodicTaskToSchedHWChoco(
     val sourceDecisionModel: PeriodicTaskToSchedHW
@@ -307,18 +311,31 @@ final case class PeriodicTaskToSchedHWChoco(
         .decompose
     )
 
-  val searchStrategies = Array(
+  override val strategies = Array(
+    SimpleListSchedulingDecisionStrategy(
+      (0 until sourceDecisionModel.schedHwModel.schedulers.length).toArray,
+      taskExecution,
+      responseTimes
+    ),
     Search.intVarSearch(
       FirstFail(model),
       IntDomainMin(),
       DecisionOperatorFactory.makeIntEq,
-      responseTimes:_*
+      (responseTimes ++ wcFetch.flatten ++
+        wcInput.flatten ++ wcOutput.flatten ++
+        wcet.flatten ++ taskMapping ++ channelMapping :+ nFreePEs): _*
     )
   )
 
   def rebuildFromChocoOutput(output: Solution): ForSyDeSystemGraph = {
     val rebuilt = ForSyDeSystemGraph()
-    sourceDecisionModel.taskModel.tasks.foreach(t => rebuilt.addVertex(t.getViewedVertex))
+    sourceDecisionModel.taskModel.tasks.zipWithIndex.foreach((t, i) => {
+      rebuilt.addVertex(t.getViewedVertex)
+      val analysed         = AnalysedTask.enforce(t)
+      val responseTimeFrac = BigFraction(responseTimes(i).getValue, multiplier).reduce
+      analysed.setWorstCaseResponseTimeNumeratorInSecs(responseTimeFrac.getNumeratorAsLong)
+      analysed.setWorstCaseResponseTimeDenominatorInSecs(responseTimeFrac.getDenominatorAsLong)
+    })
     sourceDecisionModel.taskModel.channels.foreach(t => rebuilt.addVertex(t.getViewedVertex))
     sourceDecisionModel.schedHwModel.schedulers.foreach(s => rebuilt.addVertex(s.getViewedVertex))
     sourceDecisionModel.schedHwModel.hardware.storageElems.foreach(m =>
@@ -339,10 +356,6 @@ final case class PeriodicTaskToSchedHWChoco(
       val memory = sourceDecisionModel.schedHwModel.hardware.storageElems(j)
       MemoryMapped.enforce(task)
       rebuilt.connect(task, memory, "mappingHost", EdgeTrait.DECISION_ABSTRACTMAPPING)
-      val analysed         = AnalysedTask.enforce(task)
-      val responseTimeFrac = BigFraction(responseTimes(i).getValue, multiplier).reduce
-      analysed.setWorstCaseResponseTimeNumeratorInSecs(responseTimeFrac.getDenominatorAsLong)
-      analysed.setWorstCaseResponseTimeDenominatorInSecs(responseTimeFrac.getDenominatorAsLong)
       // GreyBox.enforce(memory)
       // rebuilt.connect(memory, task, "contained", EdgeTrait.VISUALIZATION_VISUALCONTAINMENT)
     })

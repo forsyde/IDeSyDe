@@ -50,18 +50,20 @@ class ChocoExplorer() extends Explorer:
     case chocoCpModel: ChocoCPDecisionModel =>
       val model           = chocoCpModel.chocoModel
       val solver          = model.getSolver
-      val solution        = Solution(model)
       val paretoMaximizer = ParetoMaximizer(chocoCpModel.modelObjectives)
       solver.plugMonitor(paretoMaximizer)
+      solver.setLearningSignedClauses
+      solver.setNoGoodRecordingFromRestarts
+      solver.setRestartOnSolutions
       solver.addStopCriterion(SolutionCounter(model, 100L))
-      if (!chocoCpModel.searchStrategies.isEmpty) then solver.setSearch(chocoCpModel.searchStrategies:_*)
+      if (!chocoCpModel.strategies.isEmpty) then solver.setSearch(chocoCpModel.strategies: _*)
       LazyList
         .continually(solver.solve)
         .takeWhile(feasible => feasible || !solver.isStopCriterionMet)
         .filter(feasible => feasible)
         .flatMap(feasible => paretoMaximizer.getParetoFront.asScala)
         .map(feasible => {
-          chocoCpModel.rebuildFromChocoOutput(solution.record)
+          chocoCpModel.rebuildFromChocoOutput(Solution(model).record)
         })
     case _ => LazyList.empty
 

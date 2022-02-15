@@ -10,12 +10,12 @@ import org.chocosolver.solver.search.strategy.strategy.AbstractStrategy
 
 trait ChocoCPDecisionModel extends DecisionModel:
 
-    def chocoModel: Model
+  def chocoModel: Model
 
-    def modelObjectives: Array[IntVar] = Array.empty
+  def modelObjectives: Array[IntVar] = Array.empty
 
-    def searchStrategies[V <: Variable]: Array[AbstractStrategy[V]] = Array.empty[AbstractStrategy[V]]
+  def strategies: Array[AbstractStrategy[? <: Variable]] = Array.empty
 
-    def rebuildFromChocoOutput(output: Solution): ForSyDeSystemGraph
+  def rebuildFromChocoOutput(output: Solution): ForSyDeSystemGraph
 
 end ChocoCPDecisionModel

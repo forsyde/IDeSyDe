@@ -213,6 +213,13 @@ final case class PeriodicTaskToSchedHWChoco(
   })
   // for each FP scheduler
   // rt >= bt + sum of all higher prio tasks in the same CPU
+  val interferences = sourceDecisionModel.taskModel.tasks.zipWithIndex.foreach((task, i) => {
+    model.intVar(
+      s"inter_${i}",
+      0,
+      sourceDecisionModel.taskModel.relativeDeadlines(i).multiply(multiplier).doubleValue.ceil.toInt
+    )
+  })
   sourceDecisionModel.taskModel.tasks.zipWithIndex.foreach((task, i) => {
     sourceDecisionModel.schedHwModel.schedulers.zipWithIndex
       .filter((s, j) => sourceDecisionModel.schedHwModel.isFixedPriority(j))

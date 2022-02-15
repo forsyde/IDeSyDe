@@ -236,7 +236,10 @@ final case class PeriodicTaskToSchedHWChoco(
     val src = sourceDecisionModel.taskModel.reactiveStimulusSrc(i)
     val dst = sourceDecisionModel.taskModel.reactiveStimulusDst(i)
     sourceDecisionModel.schedHwModel.schedulers.zipWithIndex.map((s, j) => {
-      blockingTimes(dst).ge(responseTimes(src).add(wcet(src)(j))).post
+      model.ifThen(
+        taskExecution(dst).ne(taskExecution(src)).decompose,
+        blockingTimes(dst).ge(responseTimes(src).add(wcet(src)(j))).decompose
+      )
       responseTimes(i).ge(blockingTimes(i).add(wcet(i)(j))).post
     })
   })
@@ -288,7 +291,7 @@ final case class PeriodicTaskToSchedHWChoco(
     model.ifThen(
       taskExecution(taskIdx).eq(schedulerIdx).decompose,
       responseTimes(taskIdx)
-        .eq(
+        .ge(
           wcet(taskIdx)(schedulerIdx)
             .add(blockingTimes(taskIdx))
             .add(
@@ -321,7 +324,7 @@ final case class PeriodicTaskToSchedHWChoco(
       FirstFail(model),
       IntDomainMin(),
       DecisionOperatorFactory.makeIntEq,
-      (responseTimes ++ wcFetch.flatten ++
+      (responseTimes ++ wcFetch.flatten ++ blockingTimes ++
         wcInput.flatten ++ wcOutput.flatten ++
         wcet.flatten ++ taskMapping ++ channelMapping :+ nFreePEs): _*
     )
@@ -333,8 +336,12 @@ final case class PeriodicTaskToSchedHWChoco(
       rebuilt.addVertex(t.getViewedVertex)
       val analysed         = AnalysedTask.enforce(t)
       val responseTimeFrac = BigFraction(responseTimes(i).getValue, multiplier).reduce
+      val blockingTimeFrac = BigFraction(blockingTimes(i).getValue, multiplier).reduce
       analysed.setWorstCaseResponseTimeNumeratorInSecs(responseTimeFrac.getNumeratorAsLong)
       analysed.setWorstCaseResponseTimeDenominatorInSecs(responseTimeFrac.getDenominatorAsLong)
+      analysed.setWorstCaseBlockingTimeNumeratorInSecs(blockingTimeFrac.getNumeratorAsLong)
+      analysed.setWorstCaseBlockingTimeDenominatorInSecs(blockingTimeFrac.getDenominatorAsLong)
+
     })
     sourceDecisionModel.taskModel.channels.foreach(t => rebuilt.addVertex(t.getViewedVertex))
     sourceDecisionModel.schedHwModel.schedulers.foreach(s => rebuilt.addVertex(s.getViewedVertex))

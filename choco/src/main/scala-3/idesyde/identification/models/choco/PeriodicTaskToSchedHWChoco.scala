@@ -32,6 +32,7 @@ import idesyde.exploration.explorers.SimpleListSchedulingDecisionStrategy
 import org.chocosolver.solver.search.strategy.strategy.AbstractStrategy
 import org.chocosolver.solver.variables.Variable
 import org.chocosolver.solver.variables.IntVar
+import forsyde.io.java.typed.viewers.decision.results.AnalysedGenericProcessingModule
 
 final case class PeriodicTaskToSchedHWChoco(
     val sourceDecisionModel: PeriodicTaskToSchedHW
@@ -67,6 +68,8 @@ final case class PeriodicTaskToSchedHWChoco(
         .wcets(i)
         .zipWithIndex
         .filter((p, j) => p.compareTo(BigFraction.MINUS_ONE) > 0)
+        // keep only the cores which have proven schedulability tests in the execution
+        .filter((p, j) => sourceDecisionModel.schedHwModel.isStaticCycle(j))
         .map((p, j) => j) // keep the processors where WCEt is defined
     )
   )
@@ -337,7 +340,6 @@ final case class PeriodicTaskToSchedHWChoco(
       val analysed         = AnalysedTask.enforce(t)
       val responseTimeFrac = BigFraction(responseTimes(i).getValue, multiplier).reduce
       val blockingTimeFrac = BigFraction(blockingTimes(i).getValue, multiplier).reduce
-      scribe.debug(s"RT for task ${t.getIdentifier}: ${responseTimeFrac.doubleValue}")
       analysed.setWorstCaseResponseTimeNumeratorInSecs(responseTimeFrac.getNumeratorAsLong)
       analysed.setWorstCaseResponseTimeDenominatorInSecs(responseTimeFrac.getDenominatorAsLong)
       analysed.setWorstCaseBlockingTimeNumeratorInSecs(blockingTimeFrac.getNumeratorAsLong)
@@ -348,6 +350,16 @@ final case class PeriodicTaskToSchedHWChoco(
     sourceDecisionModel.schedHwModel.schedulers.foreach(s => rebuilt.addVertex(s.getViewedVertex))
     sourceDecisionModel.schedHwModel.hardware.storageElems.foreach(m =>
       rebuilt.addVertex(m.getViewedVertex)
+    )
+    sourceDecisionModel.schedHwModel.hardware.processingElems.zipWithIndex.foreach((m, j) =>
+      rebuilt.addVertex(m.getViewedVertex)
+      val module = AnalysedGenericProcessingModule.enforce(m)
+      module.setUtilization(
+        wcet.zipWithIndex
+          .filter((ws, i) => taskExecution(i).getValue == j)
+          .map((ws, i) => BigFraction(ws(j).getValue, multiplier).divide(sourceDecisionModel.taskModel.periods(i)).doubleValue)
+          .sum
+      )
     )
     taskExecution.zipWithIndex.foreach((exe, i) => {
       val j         = output.getIntVal(exe)

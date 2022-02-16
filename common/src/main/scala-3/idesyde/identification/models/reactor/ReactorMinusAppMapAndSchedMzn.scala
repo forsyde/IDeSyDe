@@ -58,7 +58,7 @@ final case class ReactorMinusAppMapAndSchedMzn(val sourceModel: ReactorMinusAppM
      sourceModel.reactorMinus.reactions.map(sourceModel.reactorMinus.sizeFunction(_)) ++
       sourceModel.platform.hardware.storageElems.map(
         _.getSpaceInBits.toLong
-      ) ++ sourceModel.platform.hardware.minTraversalTimePerBitMatrix.values
+      ) ++ sourceModel.platform.hardware.minTraversalTimePerBit.flatten
       .map(_.multiply(multiplier).divide(memoryMultipler).floatValue.ceil.toLong)
       ).max > Integer.MAX_VALUE.toLong
   ) {

@@ -304,7 +304,7 @@ final case class PeriodicTaskToSchedHWChoco(
                   wcet.zipWithIndex
                     .filter((ws, k) => k != taskIdx)
                     .filterNot((ws, k) =>
-                        // leave tasks k which i occasionally block
+                      // leave tasks k which i occasionally block
                       sourceDecisionModel.taskModel.interTaskAlwaysBlocks(taskIdx)(k)
                     )
                     .map((ws, k) => {
@@ -315,6 +315,46 @@ final case class PeriodicTaskToSchedHWChoco(
             )
         )
         .decompose
+    )
+
+  def postFixedPrioriPreemtpiveConstraint(taskIdx: Int, schedulerIdx: Int): Unit =
+    model.ifThen(
+      taskExecution(taskIdx).eq(schedulerIdx).decompose,
+      model.or(
+        sourceDecisionModel.taskModel.schedulingPoints.map(t => {
+          responseTimes(taskIdx)
+            .ge(
+              wcet(taskIdx)(schedulerIdx)
+                .add(blockingTimes(taskIdx))
+                .add(
+                  model
+                    .sum(
+                      s"sc_interference${taskIdx}_${schedulerIdx}",
+                      wcet.zipWithIndex
+                        .filter((ws, k) => k != taskIdx)
+                        .filterNot((ws, k) =>
+                          // leave tasks k which i occasionally block
+                          sourceDecisionModel.taskModel
+                            .tasks(taskIdx) < sourceDecisionModel.taskModel.tasks(k)
+                        )
+                        .map((ws, k) => {
+                          ws(schedulerIdx)
+                            .mul(
+                              t.divide(
+                                sourceDecisionModel.taskModel.periods(k).multiply(multiplier)
+                              ).doubleValue
+                                .ceil
+                                .toInt
+                            )
+                            .intVar
+                        })
+                        .toArray: _*
+                    )
+                )
+            )
+            .decompose
+        }): _*
+      )
     )
 
   override val strategies = Array(
@@ -357,7 +397,11 @@ final case class PeriodicTaskToSchedHWChoco(
       module.setUtilization(
         wcet.zipWithIndex
           .filter((ws, i) => taskExecution(i).getValue == j)
-          .map((ws, i) => BigFraction(ws(j).getValue, multiplier).divide(sourceDecisionModel.taskModel.periods(i)).doubleValue)
+          .map((ws, i) =>
+            BigFraction(ws(j).getValue, multiplier)
+              .divide(sourceDecisionModel.taskModel.periods(i))
+              .doubleValue
+          )
           .sum
       )
     )

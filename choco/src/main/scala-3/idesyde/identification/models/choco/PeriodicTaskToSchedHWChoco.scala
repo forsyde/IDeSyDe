@@ -300,9 +300,9 @@ final case class PeriodicTaskToSchedHWChoco(
                   s"sc_interference${taskIdx}_${schedulerIdx}",
                   wcet.zipWithIndex
                     .filter((ws, k) => k != taskIdx)
-                    .filter((ws, k) =>
-                      sourceDecisionModel.taskModel.tasks(taskIdx) > sourceDecisionModel.taskModel
-                        .tasks(k)
+                    .filterNot((ws, k) =>
+                        // leave tasks k which i occasionally block
+                      sourceDecisionModel.taskModel.interTaskAlwaysBlocks(taskIdx)(k)
                     )
                     .map((ws, k) => {
                       ws(schedulerIdx)
@@ -337,6 +337,7 @@ final case class PeriodicTaskToSchedHWChoco(
       val analysed         = AnalysedTask.enforce(t)
       val responseTimeFrac = BigFraction(responseTimes(i).getValue, multiplier).reduce
       val blockingTimeFrac = BigFraction(blockingTimes(i).getValue, multiplier).reduce
+      scribe.debug(s"RT for task ${t.getIdentifier}: ${responseTimeFrac.doubleValue}")
       analysed.setWorstCaseResponseTimeNumeratorInSecs(responseTimeFrac.getNumeratorAsLong)
       analysed.setWorstCaseResponseTimeDenominatorInSecs(responseTimeFrac.getDenominatorAsLong)
       analysed.setWorstCaseBlockingTimeNumeratorInSecs(blockingTimeFrac.getNumeratorAsLong)

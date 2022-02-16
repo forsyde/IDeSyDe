@@ -29,6 +29,10 @@ import forsyde.io.java.typed.viewers.execution.UpsampleReactiveStimulus
 import idesyde.identification.DecisionModel
 import org.jgrapht.traverse.TopologicalOrderIterator
 import com.google.common.math.IntMath
+import scala.collection.mutable.Queue
+import org.jgrapht.graph.AsSubgraph
+import java.util.stream.Collectors
+import org.jgrapht.alg.shortestpath.DijkstraManyToManyShortestPaths
 
 /** Simplest periodic task set concerned in the literature. The periods, offsets and relative
   * deadlines are all fixed at a task level. The only additional complexity are precedence are
@@ -180,6 +184,9 @@ case class SimplePeriodicWorkload(
   // scribe.debug(periods.mkString("", ",", ""))
   // scribe.debug(noPrecedenceOffsets.mkString)
 
+  val tasksNumInstancesInHyperPeriod: Array[Int] =
+    tasks.zipWithIndex.map((task, i) => hyperPeriod.divide(periods(i)).getNumeratorAsInt)
+
   val precedences: Array[Array[Array[(Int, Int)]]] =
     tasks.zipWithIndex.map((src, i) => {
       tasks.zipWithIndex.map((dst, j) => {
@@ -193,7 +200,7 @@ case class SimplePeriodicWorkload(
               .safeCast(stimulus)
               .map(downsample => {
                 for (
-                  n <- 0 until (hyperPeriod.divide(periods(j)).intValue);
+                  n <- 0 until tasksNumInstancesInHyperPeriod(i);
                   m = n * downsample.getRepetitivePredecessorSkips + downsample.getInitialPredecessorSkips
                 ) yield (m.toInt, n)
               })
@@ -202,7 +209,7 @@ case class SimplePeriodicWorkload(
                   .safeCast(stimulus)
                   .map(upsample => {
                     for (
-                      m <- 0 until (hyperPeriod.divide(periods(j)).intValue);
+                      m <- 0 until tasksNumInstancesInHyperPeriod(j);
                       n = m * upsample.getRepetitivePredecessorHolds + upsample.getInitialPredecessorHolds
                     ) yield (m, n.toInt)
                   })
@@ -282,9 +289,37 @@ case class SimplePeriodicWorkload(
       .sorted
       .distinct
 
-  def channelSize(c: Channel) = c.getElemSizeInBits.toLong
+  lazy val channelSizes         = channels.map(_.getElemSizeInBits.toLong)
 
-  lazy val channelSizes         = channels.map(channelSize(_))
+  lazy val alwaysBlocksGraph = {
+    val g = AsSubgraph(reactiveGraph)
+    val occasionalEdges = g.edgeSet.stream.filter(e => {
+      val i = g.getEdgeSource(e)
+      val j = g.getEdgeTarget(e)
+      // there is at least one instance without a follow-up
+      !(0 until tasksNumInstancesInHyperPeriod(i)).forall(m => {
+        (0 until tasksNumInstancesInHyperPeriod(j)).exists(n => {
+          precedences(i)(j).contains((m, n))
+        })
+      })
+    }).collect(Collectors.toSet)
+    g.removeAllEdges(occasionalEdges)
+    g
+  }
+
+  lazy val (interTaskCanBlock, interTaskAlwaysBlocks) = {
+    var canBlockMatrix = Array.fill(tasks.length)(Array.fill(tasks.length)(false))
+    var alwaysBlockMatrix = Array.fill(tasks.length)(Array.fill(tasks.length)(false))
+    val canBlockPaths = DijkstraManyToManyShortestPaths(reactiveGraph)
+    val alwaysBlocksPaths = DijkstraManyToManyShortestPaths(alwaysBlocksGraph)
+    tasks.zipWithIndex.foreach((ti, i) => {
+      tasks.zipWithIndex.foreach((tj, j) => {
+        if (canBlockPaths.getPath(i, j) != null) then canBlockMatrix(i)(j) = true
+        if (alwaysBlocksPaths.getPath(i, j) != null) then alwaysBlockMatrix(i)(j) = true
+      })
+    })
+    (canBlockMatrix, alwaysBlockMatrix)
+  }
   override val uniqueIdentifier = "SimplePeriodicWorkload"
 
 end SimplePeriodicWorkload

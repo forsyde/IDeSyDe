@@ -29,6 +29,7 @@ import org.chocosolver.solver.search.strategy.selectors.values.IntDomainMin
 import org.chocosolver.solver.search.strategy.assignments.DecisionOperator
 import org.chocosolver.solver.search.strategy.assignments.DecisionOperatorFactory
 import idesyde.exploration.explorers.SimpleListSchedulingDecisionStrategy
+import idesyde.exploration.explorers.DependentWorkloadFPPropagator
 import org.chocosolver.solver.search.strategy.strategy.AbstractStrategy
 import org.chocosolver.solver.variables.Variable
 import org.chocosolver.solver.variables.IntVar
@@ -251,7 +252,9 @@ final case class PeriodicTaskToSchedHWChoco(
   sourceDecisionModel.taskModel.tasks.zipWithIndex.foreach((task, i) => {
     sourceDecisionModel.schedHwModel.schedulers.zipWithIndex
       .filter((s, j) => sourceDecisionModel.schedHwModel.isFixedPriority(j))
-      .foreach((s, j) => {})
+      .foreach((s, j) => {
+        //DependentWorkloadFPPropagator(j, )
+      })
   })
   // for each SC scheduler
   sourceDecisionModel.taskModel.tasks.zipWithIndex.foreach((task, i) => {

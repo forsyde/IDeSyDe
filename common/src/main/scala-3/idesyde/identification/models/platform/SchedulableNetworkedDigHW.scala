@@ -28,19 +28,28 @@ final case class SchedulableNetworkedDigHW(
   val coveredVertexes: Iterable[Vertex] = hardware.coveredVertexes ++
     schedulers.map(_.getViewedVertex)
 
-  val isFixedPriority = schedulers.map(FixedPriorityScheduler.conforms(_))
-  val isTimeTriggered = schedulers.map(TimeTriggeredScheduler.conforms(_))
-  val isRoundRobin    = schedulers.map(RoundRobinScheduler.conforms(_))
-  val isStaticCycle   = schedulers.map(StaticCyclicScheduler.conforms(_))
+  val allocatedSchedulers =
+    schedulers.zipWithIndex.filter((s, i) => schedulerAllocation(i) > -1).map(_._1)
+
+  val isFixedPriority = allocatedSchedulers.map(FixedPriorityScheduler.conforms(_))
+  val isTimeTriggered = allocatedSchedulers.map(TimeTriggeredScheduler.conforms(_))
+  val isRoundRobin    = allocatedSchedulers.map(RoundRobinScheduler.conforms(_))
+  val isStaticCycle   = allocatedSchedulers.map(StaticCyclicScheduler.conforms(_))
 
   val fixedPrioritySchedulers =
-    schedulers.filter(FixedPriorityScheduler.conforms(_)).map(FixedPriorityScheduler.enforce(_))
+    allocatedSchedulers
+      .filter(FixedPriorityScheduler.conforms(_))
+      .map(FixedPriorityScheduler.enforce(_))
   val timeTriggeredSchedulers =
-    schedulers.filter(TimeTriggeredScheduler.conforms(_)).map(TimeTriggeredScheduler.enforce(_))
+    allocatedSchedulers
+      .filter(TimeTriggeredScheduler.conforms(_))
+      .map(TimeTriggeredScheduler.enforce(_))
   val roundRobinSchedulers =
-    schedulers.filter(RoundRobinScheduler.conforms(_)).map(RoundRobinScheduler.enforce(_))
+    allocatedSchedulers.filter(RoundRobinScheduler.conforms(_)).map(RoundRobinScheduler.enforce(_))
   val staticCycleSchedulers =
-    schedulers.filter(StaticCyclicScheduler.conforms(_)).map(StaticCyclicScheduler.enforce(_))
+    allocatedSchedulers
+      .filter(StaticCyclicScheduler.conforms(_))
+      .map(StaticCyclicScheduler.enforce(_))
 
   val fixedPriorityPEs: Array[GenericProcessingModule] = hardware.processingElems.zipWithIndex
     .filter((pe, i) => schedulerAllocation.contains(i) && isFixedPriority(i))
@@ -60,7 +69,7 @@ final case class SchedulableNetworkedDigHW(
     AbstractScheduler
   ] = (for (
     (pe, i)    <- hardware.processingElems.zipWithIndex;
-    (sched, j) <- schedulers.zipWithIndex;
+    (sched, j) <- allocatedSchedulers.zipWithIndex;
     if schedulerAllocation(j) == i
   ) yield pe -> sched).toMap
   /*

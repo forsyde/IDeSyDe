@@ -36,12 +36,14 @@ import org.chocosolver.solver.variables.IntVar
 import forsyde.io.java.typed.viewers.decision.results.AnalysedGenericProcessingModule
 import org.chocosolver.solver.constraints.Constraint
 import org.apache.commons.math3.util.FastMath
+import idesyde.utils.BigFractionIsNumeric
 
 final case class PeriodicTaskToSchedHWChoco(
     val sourceDecisionModel: PeriodicTaskToSchedHW
 ) extends ChocoCPDecisionModel:
 
-  given Ordering[Task] = DependentDeadlineMonotonicOrdering(sourceDecisionModel.taskModel)
+  given Ordering[Task]       = DependentDeadlineMonotonicOrdering(sourceDecisionModel.taskModel)
+  given Numeric[BigFraction] = BigFractionIsNumeric()
 
   val coveredVertexes = sourceDecisionModel.coveredVertexes
 
@@ -142,7 +144,7 @@ final case class PeriodicTaskToSchedHWChoco(
       )
     )
   val wcExecution = sourceDecisionModel.taskModel.tasks.zipWithIndex.map((t, i) =>
-    sourceDecisionModel.schedHwModel.schedulers.zipWithIndex.map((s, j) =>
+    sourceDecisionModel.schedHwModel.allocatedSchedulers.zipWithIndex.map((s, j) =>
       model.intVar(
         s"exe_wc_${t.getIdentifier}_${s.getIdentifier}",
         Array(
@@ -158,7 +160,7 @@ final case class PeriodicTaskToSchedHWChoco(
     )
   )
   val wcFetch = sourceDecisionModel.taskModel.tasks.zipWithIndex.map((t, i) =>
-    sourceDecisionModel.schedHwModel.schedulers.zipWithIndex.map((s, j) =>
+    sourceDecisionModel.schedHwModel.allocatedSchedulers.zipWithIndex.map((s, j) =>
       model.intVar(
         "fetch_wc" + t.getViewedVertex.getIdentifier + s.getIdentifier,
         0,
@@ -173,7 +175,7 @@ final case class PeriodicTaskToSchedHWChoco(
     )
   )
   val wcInput = sourceDecisionModel.taskModel.tasks.zipWithIndex.map((t, i) =>
-    sourceDecisionModel.schedHwModel.schedulers.zipWithIndex.map((s, j) =>
+    sourceDecisionModel.schedHwModel.allocatedSchedulers.zipWithIndex.map((s, j) =>
       model.intVar(
         "input_wc" + t.getViewedVertex.getIdentifier + s.getIdentifier,
         0,
@@ -188,7 +190,7 @@ final case class PeriodicTaskToSchedHWChoco(
     )
   )
   val wcOutput = sourceDecisionModel.taskModel.tasks.zipWithIndex.map((t, i) =>
-    sourceDecisionModel.schedHwModel.schedulers.zipWithIndex.map((s, j) =>
+    sourceDecisionModel.schedHwModel.allocatedSchedulers.zipWithIndex.map((s, j) =>
       model.intVar(
         "output_wc" + t.getViewedVertex.getIdentifier + s.getIdentifier,
         0,
@@ -203,8 +205,42 @@ final case class PeriodicTaskToSchedHWChoco(
     )
   )
   val wcet = sourceDecisionModel.taskModel.tasks.zipWithIndex.map((t, i) =>
-    sourceDecisionModel.schedHwModel.schedulers.zipWithIndex.map((s, j) =>
+    sourceDecisionModel.schedHwModel.allocatedSchedulers.zipWithIndex.map((s, j) =>
       wcExecution(i)(j).add(wcFetch(i)(j)).add(wcInput(i)(j)).add(wcOutput(i)(j)).intVar
+    )
+  )
+  val channelFetchTime = sourceDecisionModel.taskModel.channels.zipWithIndex.map((c, i) =>
+    sourceDecisionModel.schedHwModel.allocatedSchedulers.zipWithIndex.map((pj, j) =>
+      val t = sourceDecisionModel.schedHwModel.hardware.maxTraversalTimePerBit(j).max
+      model.intVar(
+        s"tt${i}_${j}",
+        0,
+        if (t.compareTo(BigFraction.MINUS_ONE) > 0) then
+          t.multiply(multiplier)
+            .multiply(c.getElemSizeInBits * c.getMaxElems)
+            .doubleValue
+            .ceil
+            .toInt
+        else 0,
+        true
+      )
+    )
+  )
+  val channelWriteTime = sourceDecisionModel.taskModel.channels.zipWithIndex.map((c, i) =>
+    sourceDecisionModel.schedHwModel.allocatedSchedulers.zipWithIndex.map((pj, j) =>
+      val t = sourceDecisionModel.schedHwModel.hardware.maxTraversalTimePerBit(j).max
+      model.intVar(
+        s"tt${i}_${j}",
+        0,
+        if (t.compareTo(BigFraction.MINUS_ONE) > 0) then
+          t.multiply(multiplier)
+            .multiply(c.getElemSizeInBits * c.getMaxElems)
+            .doubleValue
+            .ceil
+            .toInt
+        else 0,
+        true
+      )
     )
   )
   // memory aux variables
@@ -233,7 +269,7 @@ final case class PeriodicTaskToSchedHWChoco(
   sourceDecisionModel.taskModel.reactiveStimulus.zipWithIndex.foreach((s, i) => {
     val src = sourceDecisionModel.taskModel.reactiveStimulusSrc(i)
     val dst = sourceDecisionModel.taskModel.reactiveStimulusDst(i)
-    sourceDecisionModel.schedHwModel.schedulers.zipWithIndex.map((s, j) => {
+    sourceDecisionModel.schedHwModel.allocatedSchedulers.zipWithIndex.map((s, j) => {
       model.ifThen(
         taskExecution(dst).ne(taskExecution(src)).decompose,
         blockingTimes(dst).ge(responseTimes(src).add(wcet(src)(j))).decompose
@@ -244,7 +280,7 @@ final case class PeriodicTaskToSchedHWChoco(
   // for each FP scheduler
   // rt >= bt + sum of all higher prio tasks in the same CPU
   sourceDecisionModel.taskModel.tasks.zipWithIndex.foreach((task, i) => {
-    sourceDecisionModel.schedHwModel.schedulers.zipWithIndex
+    sourceDecisionModel.schedHwModel.allocatedSchedulers.zipWithIndex
       .filter((s, j) => sourceDecisionModel.schedHwModel.isFixedPriority(j))
       .foreach((s, j) => {
         //DependentWorkloadFPPropagator(j, )
@@ -253,7 +289,7 @@ final case class PeriodicTaskToSchedHWChoco(
   })
   // for each SC scheduler
   sourceDecisionModel.taskModel.tasks.zipWithIndex.foreach((task, i) => {
-    sourceDecisionModel.schedHwModel.schedulers.zipWithIndex
+    sourceDecisionModel.schedHwModel.allocatedSchedulers.zipWithIndex
       .filter((s, j) => sourceDecisionModel.schedHwModel.isStaticCycle(j))
       .foreach((s, j) => {
         postStaticCyclicExecutiveConstraint(i, j)
@@ -262,7 +298,7 @@ final case class PeriodicTaskToSchedHWChoco(
   })
   // for the execution times
   sourceDecisionModel.taskModel.tasks.zipWithIndex.foreach((t, i) =>
-    sourceDecisionModel.schedHwModel.schedulers.zipWithIndex.foreach((s, j) =>
+    sourceDecisionModel.schedHwModel.allocatedSchedulers.zipWithIndex.foreach((s, j) =>
       model.ifThenElse(
         taskExecution(i).eq(j).decompose,
         wcExecution(i)(j)
@@ -275,11 +311,11 @@ final case class PeriodicTaskToSchedHWChoco(
   // for the Fetch times
   sourceDecisionModel.taskModel.tasks.zipWithIndex.foreach((t, i) =>
     sourceDecisionModel.schedHwModel.hardware.storageElems.zipWithIndex.foreach((mj, j) => {
-      sourceDecisionModel.schedHwModel.schedulers.zipWithIndex.map((sk, k) =>
+      sourceDecisionModel.schedHwModel.allocatedSchedulers.zipWithIndex.map((sk, k) =>
         val tt = sourceDecisionModel.schedHwModel.hardware
-                  .maxTraversalTimePerBit(j)(k)
-                  .divide(multiplier)
-                  .multiply(memoryMultipler)
+          .maxTraversalTimePerBit(j)(k)
+          .divide(multiplier)
+          .multiply(memoryMultipler)
         model.ifThenElse(
           taskExecution(i).eq(k).and(taskMapping(i).eq(j)).decompose,
           wcFetch(i)(k)
@@ -293,24 +329,91 @@ final case class PeriodicTaskToSchedHWChoco(
     })
   )
   // for the Data times
+  /// channels
   sourceDecisionModel.taskModel.tasks.zipWithIndex.foreach((t, i) =>
     sourceDecisionModel.schedHwModel.hardware.storageElems.zipWithIndex.foreach((mj, j) => {
-      sourceDecisionModel.schedHwModel.schedulers.zipWithIndex.map((sk, k) =>
-        val tt = sourceDecisionModel.schedHwModel.hardware
-                  .maxTraversalTimePerBit(j)(k)
-                  .divide(multiplier)
-                  .multiply(memoryMultipler)
-        model.ifThenElse(
-          taskExecution(i).eq(k).and(taskMapping(i).eq(j)).decompose,
-          wcFetch(i)(k)
-            .ge(
-              tt.multiply(sourceDecisionModel.taskModel.taskSizes(i)).doubleValue.ceil.toInt
-            )
-            .decompose,
-          wcFetch(i)(j).eq(0).decompose
-        )
+      sourceDecisionModel.schedHwModel.allocatedSchedulers.zipWithIndex.foreach((sk, k) =>
+        sourceDecisionModel.taskModel.channels.zipWithIndex.foreach((c, ci) => {
+          val tt = sourceDecisionModel.schedHwModel.hardware
+            .maxTraversalTimePerBit(j)(k)
+            .divide(multiplier)
+            .multiply(memoryMultipler)
+            .multiply(c.getElemSizeInBits * c.getMaxElems)
+          model.ifThenElse(
+            taskExecution(i).eq(k).and(channelMapping(i).eq(j)).decompose,
+            channelFetchTime(ci)(k)
+              .ge(
+                tt.doubleValue.ceil.toInt
+              )
+              .decompose,
+            channelFetchTime(ci)(k).eq(0).decompose
+          )
+        })
       )
     })
+  )
+  sourceDecisionModel.taskModel.tasks.zipWithIndex.foreach((t, i) =>
+    sourceDecisionModel.schedHwModel.allocatedSchedulers.zipWithIndex.foreach((sk, k) =>
+      model.ifThenElse(
+        taskExecution(i).eq(k).decompose,
+        wcInput(i)(k)
+          .ge(
+            model.sum(
+              s"input_task${i}",
+              sourceDecisionModel.taskModel.channels.zipWithIndex
+                .filter((c, j) => sourceDecisionModel.taskModel.taskChannelRead(i).contains(j))
+                .map((c, j) => {
+                  channelFetchTime(j)(k)
+                }): _*
+            )
+          )
+          .decompose,
+        wcInput(i)(k).eq(0).decompose
+      )
+    )
+  )
+  // for the Write back times
+  sourceDecisionModel.taskModel.tasks.zipWithIndex.foreach((t, i) =>
+    sourceDecisionModel.schedHwModel.hardware.storageElems.zipWithIndex.foreach((mj, j) => {
+      sourceDecisionModel.schedHwModel.allocatedSchedulers.zipWithIndex.foreach((sk, k) =>
+        sourceDecisionModel.taskModel.channels.zipWithIndex.foreach((c, ci) => {
+          val tt = sourceDecisionModel.schedHwModel.hardware
+            .maxTraversalTimePerBit(k)(j)
+            .divide(multiplier)
+            .multiply(memoryMultipler)
+            .multiply(c.getElemSizeInBits * c.getMaxElems)
+          model.ifThenElse(
+            taskExecution(i).eq(k).and(channelMapping(i).eq(j)).decompose,
+            channelWriteTime(ci)(k)
+              .ge(
+                tt.doubleValue.ceil.toInt
+              )
+              .decompose,
+            channelWriteTime(ci)(k).eq(0).decompose
+          )
+        })
+      )
+    })
+  )
+  sourceDecisionModel.taskModel.tasks.zipWithIndex.foreach((t, i) =>
+    sourceDecisionModel.schedHwModel.allocatedSchedulers.zipWithIndex.foreach((sk, k) =>
+      model.ifThenElse(
+        taskExecution(i).eq(k).decompose,
+        wcOutput(i)(k)
+          .ge(
+            model.sum(
+              s"output_task${i}",
+              sourceDecisionModel.taskModel.channels.zipWithIndex
+                .filter((c, j) => sourceDecisionModel.taskModel.taskChannelWrite(i).contains(j))
+                .map((c, j) => {
+                  channelWriteTime(j)(k)
+                }): _*
+            )
+          )
+          .decompose,
+        wcOutput(i)(k).eq(0).decompose
+      )
+    )
   )
 
   // Dealing with objectives
@@ -414,7 +517,7 @@ final case class PeriodicTaskToSchedHWChoco(
 
   override val strategies = Array(
     SimpleListSchedulingDecisionStrategy(
-      (0 until sourceDecisionModel.schedHwModel.schedulers.length).toArray,
+      (0 until sourceDecisionModel.schedHwModel.allocatedSchedulers.length).toArray,
       taskExecution,
       responseTimes
     ),
@@ -423,8 +526,9 @@ final case class PeriodicTaskToSchedHWChoco(
       IntDomainMin(),
       DecisionOperatorFactory.makeIntEq,
       (responseTimes ++ wcFetch.flatten ++ blockingTimes ++
-        wcInput.flatten ++ wcOutput.flatten ++
-        wcet.flatten ++ taskMapping ++ channelMapping :+ nFreePEs): _*
+        wcInput.flatten ++ wcOutput.flatten ++ channelFetchTime.flatten ++
+        wcet.flatten ++ taskMapping ++ channelMapping ++ channelWriteTime.flatten
+        :+ nFreePEs): _*
     )
   )
 
@@ -444,7 +548,9 @@ final case class PeriodicTaskToSchedHWChoco(
 
     })
     sourceDecisionModel.taskModel.channels.foreach(t => rebuilt.addVertex(t.getViewedVertex))
-    sourceDecisionModel.schedHwModel.schedulers.foreach(s => rebuilt.addVertex(s.getViewedVertex))
+    sourceDecisionModel.schedHwModel.allocatedSchedulers.foreach(s =>
+      rebuilt.addVertex(s.getViewedVertex)
+    )
     sourceDecisionModel.schedHwModel.hardware.storageElems.foreach(m =>
       rebuilt.addVertex(m.getViewedVertex)
     )
@@ -465,7 +571,7 @@ final case class PeriodicTaskToSchedHWChoco(
     taskExecution.zipWithIndex.foreach((exe, i) => {
       val j         = output.getIntVal(exe)
       val task      = sourceDecisionModel.taskModel.tasks(i)
-      val scheduler = sourceDecisionModel.schedHwModel.schedulers(j)
+      val scheduler = sourceDecisionModel.schedHwModel.allocatedSchedulers(j)
       Scheduled.enforce(task)
       rebuilt.connect(task, scheduler, "scheduler", EdgeTrait.DECISION_ABSTRACTSCHEDULING)
       GreyBox.enforce(scheduler)

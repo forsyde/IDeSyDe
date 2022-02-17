@@ -10,8 +10,10 @@ final case class DependentDeadlineMonotonicOrdering(val taskModel: SimplePeriodi
     val t1i = taskModel.tasks.indexOf(t1)
     val t2i = taskModel.tasks.indexOf(t2)
     if (t1i > -1 && t2i > -1) {
-      if (taskModel.precedences(t1i)(t2i).isEmpty) {
+      //scribe.debug(s"compare ${t1.getIdentifier} ti ${t2.getIdentifier}: ${taskModel.interTaskCanBlock(t1i)(t2i)}")
+      if (!taskModel.interTaskCanBlock(t1i)(t2i)) {
         // smallest wins
+        //scribe.debug(s"smallest ${-taskModel.periods(t1i).compareTo(taskModel.periods(t2i))}")
         -taskModel.periods(t1i).compareTo(taskModel.periods(t2i))
       }
       // comes before, so higher prio

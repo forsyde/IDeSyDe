@@ -56,7 +56,9 @@ case class SimplePeriodicWorkload(
     val executables: Array[Array[Executable]],
     val channels: Array[Channel],
     val reactiveStimulusSrc: Array[Int],
-    val reactiveStimulusDst: Array[Int]
+    val reactiveStimulusDst: Array[Int],
+    val taskChannelRead: Array[Array[Int]],
+    val taskChannelWrite: Array[Array[Int]]
 )(using Numeric[BigFraction])
     extends DecisionModel:
   //extends PeriodicWorkload[Task, BigFraction]():
@@ -314,12 +316,37 @@ case class SimplePeriodicWorkload(
     val alwaysBlocksPaths = DijkstraManyToManyShortestPaths(alwaysBlocksGraph)
     tasks.zipWithIndex.foreach((ti, i) => {
       tasks.zipWithIndex.foreach((tj, j) => {
-        if (canBlockPaths.getPath(i, j) != null) then canBlockMatrix(i)(j) = true
-        if (alwaysBlocksPaths.getPath(i, j) != null) then alwaysBlockMatrix(i)(j) = true
+        if (i != j && canBlockPaths.getPath(i, j) != null) then canBlockMatrix(i)(j) = true
+        if (i != j && alwaysBlocksPaths.getPath(i, j) != null) then alwaysBlockMatrix(i)(j) = true
       })
     })
+    // scribe.debug(canBlockMatrix.map(_.mkString("[", ",", "]")).mkString("[", ",", "]"))
+    // scribe.debug(alwaysBlockMatrix.map(_.mkString("[", ",", "]")).mkString("[", ",", "]"))
     (canBlockMatrix, alwaysBlockMatrix)
   }
+
+  lazy val priorities = {
+    var prioritiesMut = tasks.map(_ => tasks.length)
+    val iter = TopologicalOrderIterator(
+      reactiveGraph
+    )
+    while (iter.hasNext) {
+      val idxTask = iter.next
+      val curTask = tasks(idxTask)
+      prioritiesMut(idxTask) = reactiveGraph
+        .incomingEdgesOf(idxTask)
+        .stream
+        .map(reactiveGraph.getEdgeSource(_))
+        .mapToInt(inTaskIdx => {
+          prioritiesMut(inTaskIdx) - 1
+        })
+        .min
+        .orElse(prioritiesMut(idxTask))
+    }
+    scribe.debug(prioritiesMut.mkString("[", ",", "]"))
+    prioritiesMut
+  }
+
   override val uniqueIdentifier = "SimplePeriodicWorkload"
 
 end SimplePeriodicWorkload

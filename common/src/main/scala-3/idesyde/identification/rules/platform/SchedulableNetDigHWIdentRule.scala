@@ -62,8 +62,8 @@ final case class SchedulableNetDigHWIdentRule() extends IdentificationRule {
         })
         .orElse(-1)
     })
-    if (schedulerAllocations.contains(-1))
-      scribe.debug("Some schedulers are not allocated. Skipping.")
+    if (!hardware.processingElems.zipWithIndex.forall((pi, i) => schedulerAllocations.contains(i)))
+      scribe.debug("Some processing elements are not allocated. Skipping.")
       (true, Option.empty)
     else
       scribe.debug(

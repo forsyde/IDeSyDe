@@ -42,11 +42,27 @@ final class PeriodicTaskIdentificationRule(using Numeric[BigFraction]) extends I
     val (precedencesSrc, precedencesDst) = reactiveStimulus
       .map(s => {
         (
-          tasks.indexWhere(t => s.getPredecessorPort(model).map(_.getIdentifier == t.getIdentifier).orElse(false)),
-          tasks.indexWhere(t => s.getSucessorPort(model).map(_.getIdentifier == t.getIdentifier).orElse(false))
+          tasks.indexWhere(t =>
+            s.getPredecessorPort(model).map(_.getIdentifier == t.getIdentifier).orElse(false)
+          ),
+          tasks.indexWhere(t =>
+            s.getSucessorPort(model).map(_.getIdentifier == t.getIdentifier).orElse(false)
+          )
         )
       })
       .unzip
+    // build the read and write arrays
+    val (taskChannelRead, taskChannelWrite) = tasks
+      .map(t => {
+        (
+          channels.zipWithIndex.filter((c, j) => {
+            model.hasConnection(c, t)
+          }).map((c, j) => j),
+          channels.zipWithIndex.filter((c, j) => {
+            model.hasConnection(t, c)
+          }).map((c, j) => j)
+        )
+      }).unzip
     if (stimulusOpt.exists(_.isEmpty))
       scribe.debug("Some tasks have no periodic stimulus. Skipping.")
       (true, Option.empty)
@@ -60,7 +76,9 @@ final class PeriodicTaskIdentificationRule(using Numeric[BigFraction]) extends I
         executables = executables,
         channels = channels,
         reactiveStimulusSrc = precedencesSrc,
-        reactiveStimulusDst = precedencesDst
+        reactiveStimulusDst = precedencesDst,
+        taskChannelRead = taskChannelRead, 
+        taskChannelWrite = taskChannelWrite
       )
       scribe.debug(
         s"Simple periodic task model found with ${periodicTasks.length} periodic tasks, " +

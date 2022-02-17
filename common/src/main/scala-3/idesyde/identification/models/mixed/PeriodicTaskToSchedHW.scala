@@ -76,6 +76,15 @@ final case class PeriodicTaskToSchedHW(
 
   lazy val conservativeWcct: Array[Array[Array[BigFraction]]] = {
     val endPoints = schedHwModel.hardware.processingElems ++ schedHwModel.hardware.storageElems
+    taskModel.channels.zipWithIndex.map((c, k) => {
+      schedHwModel.hardware.platformElements.zipWithIndex.map((pi, i) => {
+        schedHwModel.hardware.platformElements.zipWithIndex.map((pj, j) => {
+          val t = schedHwModel.hardware.maxTraversalTimePerBit(i)(j)
+          if (t.compareTo(BigFraction.MINUS_ONE) > 0) then t.multiply(c.getElemSizeInBits)
+          else t
+        })
+      })
+    })
     Array.empty
   }
   val uniqueIdentifier: String = "PeriodicTaskToSchedHW"

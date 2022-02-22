@@ -267,15 +267,18 @@ final case class PeriodicTaskToSchedHWChoco(
     .post
   // timing constraints
   sourceDecisionModel.taskModel.reactiveStimulus.zipWithIndex.foreach((s, i) => {
-    val src = sourceDecisionModel.taskModel.reactiveStimulusSrc(i)
-    val dst = sourceDecisionModel.taskModel.reactiveStimulusDst(i)
-    sourceDecisionModel.schedHwModel.allocatedSchedulers.zipWithIndex.map((s, j) => {
-      model.ifThen(
-        taskExecution(dst).ne(taskExecution(src)).decompose,
-        blockingTimes(dst).ge(responseTimes(src).add(wcet(src)(j))).decompose
-      )
-      responseTimes(i).ge(blockingTimes(i).add(wcet(i)(j))).post
-    })
+    sourceDecisionModel.taskModel
+      .reactiveStimulusSrcs(i)
+      .foreach(src => {
+        val dst = sourceDecisionModel.taskModel.reactiveStimulusDst(i)
+        sourceDecisionModel.schedHwModel.allocatedSchedulers.zipWithIndex.foreach((s, j) => {
+          model.ifThen(
+            taskExecution(dst).ne(taskExecution(src)).decompose,
+            blockingTimes(dst).ge(responseTimes(src).add(wcet(src)(j))).decompose
+          )
+          responseTimes(i).ge(blockingTimes(i).add(wcet(i)(j))).post
+        })
+      })
   })
   // for each FP scheduler
   // rt >= bt + sum of all higher prio tasks in the same CPU

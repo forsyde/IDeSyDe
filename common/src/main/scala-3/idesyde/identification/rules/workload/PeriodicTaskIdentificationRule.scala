@@ -15,6 +15,8 @@ import org.apache.commons.math3.fraction.BigFraction
 import forsyde.io.java.typed.viewers.execution.ReactiveStimulus
 import forsyde.io.java.typed.viewers.execution.ReactiveTask
 import forsyde.io.java.typed.viewers.execution.Task
+import forsyde.io.java.typed.viewers.execution.SimpleReactiveStimulus
+import forsyde.io.java.typed.viewers.execution.ReactiveANDStimulus
 
 final class PeriodicTaskIdentificationRule(using Numeric[BigFraction]) extends IdentificationRule:
 
@@ -25,32 +27,37 @@ final class PeriodicTaskIdentificationRule(using Numeric[BigFraction]) extends I
     var periodicTasks: Array[PeriodicTask] = Array.empty
     var reactiveTasks: Array[ReactiveTask] = Array.empty
     var channels: Array[Channel]           = Array.empty
+    var reactiveStimulus: Array[ReactiveStimulus] = Array.empty
     model.vertexSet.stream.forEach(v => {
-      PeriodicTask.safeCast(v).ifPresent(task => periodicTasks = periodicTasks.appended(task))
-      ReactiveTask.safeCast(v).ifPresent(task => reactiveTasks = reactiveTasks.appended(task))
-      Channel.safeCast(v).ifPresent(channel => channels = channels.appended(channel))
+      PeriodicTask.safeCast(v).ifPresent(task => periodicTasks :+= task)
+      ReactiveTask.safeCast(v).ifPresent(task => reactiveTasks :+= task)
+      Channel.safeCast(v).ifPresent(channel => channels :+= channel)
+      ReactiveStimulus.safeCast(v).ifPresent(stim => reactiveStimulus :+= stim)
     })
     // convenience
     val tasks = periodicTasks ++ reactiveTasks
     // build the task-to-executable relationship
     val executables = tasks.map(_.getCallSequencePort(model).asScala.toArray)
     // build the task-to-stimulus relation ship
-    val stimulusOpt      = periodicTasks.map(_.getPeriodicStimulusPort(model))
-    val reactiveStimulus = reactiveTasks.flatMap(_.getReactiveStimulusPort(model).asScala).toArray
+    var predecessors: Array[Array[Int]] = Array.empty
+    var successors: Array[Int] = Array.emptyIntArray
     // build the precedence arrays
     // it is a bit verbose due to how the comparison is done. THrough IDs it is sure-fire.
-    val (precedencesSrc, precedencesDst) = reactiveStimulus
-      .map(s => {
-        (
-          tasks.indexWhere(t =>
-            s.getPredecessorPort(model).map(_.getIdentifier == t.getIdentifier).orElse(false)
-          ),
-          tasks.indexWhere(t =>
-            s.getSucessorPort(model).map(_.getIdentifier == t.getIdentifier).orElse(false)
-          )
-        )
+    reactiveStimulus.foreach(stimulus => {
+      successors :+= tasks.indexWhere(t => 
+        stimulus.getSuccessorPort(model).map(_.getIdentifier == t.getIdentifier).orElse(false)
+      )
+      SimpleReactiveStimulus.safeCast(stimulus).ifPresent(simple => {
+        predecessors :+= Array(tasks.indexWhere(t => 
+          simple.getPredecessorPort(model).map(_.getIdentifier == t.getIdentifier).orElse(false)
+        ))
       })
-      .unzip
+      ReactiveANDStimulus.safeCast(stimulus).ifPresent(andStimulus => {
+        predecessors :+= andStimulus.getPredecessorsPort(model).stream.mapToInt(predecessor => {
+          tasks.indexWhere(t => predecessor.getIdentifier == t.getIdentifier)
+        }).toArray
+      })
+    })
     // build the read and write arrays
     val (taskChannelRead, taskChannelWrite) = tasks
       .map(t => {
@@ -63,20 +70,19 @@ final class PeriodicTaskIdentificationRule(using Numeric[BigFraction]) extends I
           }).map((c, j) => j)
         )
       }).unzip
-    if (stimulusOpt.exists(_.isEmpty))
-      scribe.debug("Some tasks have no periodic stimulus. Skipping.")
+    if (periodicTasks.exists(_.getPeriodicStimulusPort(model).isEmpty))
+      scribe.debug("Some periodic tasks have no periodic stimulus. Skipping.")
       (true, Option.empty)
     else
-      val stimulus = stimulusOpt.map(_.get)
       val decisionModel = SimplePeriodicWorkload(
         periodicTasks = periodicTasks,
         reactiveTasks = reactiveTasks,
-        periodicStimulus = stimulus,
+        periodicStimulus = periodicTasks.map(_.getPeriodicStimulusPort(model).get),
         reactiveStimulus = reactiveStimulus,
         executables = executables,
         channels = channels,
-        reactiveStimulusSrc = precedencesSrc,
-        reactiveStimulusDst = precedencesDst,
+        reactiveStimulusSrcs = predecessors,
+        reactiveStimulusDst = successors,
         taskChannelRead = taskChannelRead, 
         taskChannelWrite = taskChannelWrite
       )

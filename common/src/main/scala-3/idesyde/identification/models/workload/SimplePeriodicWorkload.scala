@@ -55,7 +55,7 @@ case class SimplePeriodicWorkload(
     val reactiveStimulus: Array[ReactiveStimulus],
     val executables: Array[Array[Executable]],
     val channels: Array[Channel],
-    val reactiveStimulusSrc: Array[Int],
+    val reactiveStimulusSrcs: Array[Array[Int]],
     val reactiveStimulusDst: Array[Int],
     val taskChannelRead: Array[Array[Int]],
     val taskChannelWrite: Array[Array[Int]]
@@ -85,10 +85,11 @@ case class SimplePeriodicWorkload(
   // build the graph of reactions to enable periodic reductions
   val reactiveGraph = SparseIntDirectedGraph(
     tasks.length,
-    reactiveStimulus.zipWithIndex
-      .map((r, i) =>
+    reactiveStimulusSrcs.zipWithIndex
+      .flatMap((r, i) => r.map(s => (s, i)))
+      .map((s, i) =>
         Pair(
-          reactiveStimulusSrc(i).asInstanceOf[Integer],
+          s.asInstanceOf[Integer],
           reactiveStimulusDst(i).asInstanceOf[Integer]
         )
       )
@@ -96,7 +97,7 @@ case class SimplePeriodicWorkload(
       .asJava,
     IncomingEdgesSupport.LAZY_INCOMING_EDGES
   )
-
+  
   // do the computation by traversing the graph
   val periods = {
     var periodsMut = tasks.map(_ => hyperPeriod)
@@ -194,7 +195,7 @@ case class SimplePeriodicWorkload(
       tasks.zipWithIndex.map((dst, j) => {
         reactiveStimulus.zipWithIndex
           .filter((stimulus, k) => {
-            reactiveStimulusSrc(k) == i &&
+            reactiveStimulusSrcs(k).contains(j) &&
             reactiveStimulusDst(k) == j
           })
           .flatMap((stimulus, _) => {
@@ -291,28 +292,30 @@ case class SimplePeriodicWorkload(
       .sorted
       .distinct
 
-  lazy val channelSizes         = channels.map(_.getElemSizeInBits.toLong)
+  lazy val channelSizes = channels.map(_.getElemSizeInBits.toLong)
 
   lazy val alwaysBlocksGraph = {
     val g = AsSubgraph(reactiveGraph)
-    val occasionalEdges = g.edgeSet.stream.filter(e => {
-      val i = g.getEdgeSource(e)
-      val j = g.getEdgeTarget(e)
-      // there is at least one instance without a follow-up
-      !(0 until tasksNumInstancesInHyperPeriod(i)).forall(m => {
-        (0 until tasksNumInstancesInHyperPeriod(j)).exists(n => {
-          precedences(i)(j).contains((m, n))
+    val occasionalEdges = g.edgeSet.stream
+      .filter(e => {
+        val i = g.getEdgeSource(e)
+        val j = g.getEdgeTarget(e)
+        // there is at least one instance without a follow-up
+        !(0 until tasksNumInstancesInHyperPeriod(i)).forall(m => {
+          (0 until tasksNumInstancesInHyperPeriod(j)).exists(n => {
+            precedences(i)(j).contains((m, n))
+          })
         })
       })
-    }).collect(Collectors.toSet)
+      .collect(Collectors.toSet)
     g.removeAllEdges(occasionalEdges)
     g
   }
 
   lazy val (interTaskCanBlock, interTaskAlwaysBlocks) = {
-    var canBlockMatrix = Array.fill(tasks.length)(Array.fill(tasks.length)(false))
+    var canBlockMatrix    = Array.fill(tasks.length)(Array.fill(tasks.length)(false))
     var alwaysBlockMatrix = Array.fill(tasks.length)(Array.fill(tasks.length)(false))
-    val canBlockPaths = DijkstraManyToManyShortestPaths(reactiveGraph)
+    val canBlockPaths     = DijkstraManyToManyShortestPaths(reactiveGraph)
     val alwaysBlocksPaths = DijkstraManyToManyShortestPaths(alwaysBlocksGraph)
     tasks.zipWithIndex.foreach((ti, i) => {
       tasks.zipWithIndex.foreach((tj, j) => {

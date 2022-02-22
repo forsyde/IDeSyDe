@@ -76,6 +76,7 @@ final case class NetworkedDigitalHardware(
                   insce.getFlitSizeInBits.toInt * insce.getMaxConcurrentFlits.toInt * insce.getOperatingFrequencyInHertz.toInt
                 )
                 .divide(insce.getMaxCyclesPerFlit.toInt)
+                .reciprocal
                 .doubleValue
             )
         }).orElse(0.0)
@@ -198,10 +199,12 @@ final case class NetworkedDigitalHardware(
 
   lazy val minTraversalTimePerBit: Array[Array[BigFraction]] =
     val paths = DijkstraManyToManyShortestPaths(commTopology)
+    val maxWeight =
+      commTopology.edgeSet.stream.mapToDouble(e => commTopology.getEdgeWeight(e)).max.orElse(0.0)
     platformElements.zipWithIndex.map((src, i) => {
       platformElements.zipWithIndex.map((dst, j) => {
         if (i != j && paths.getPath(i, j) != null) {
-          BigFraction(paths.getPathWeight(i, j))
+          BigFraction(maxWeight).subtract(BigFraction(paths.getPathWeight(i, j)))
         } else 
           BigFraction.MINUS_ONE        
       })

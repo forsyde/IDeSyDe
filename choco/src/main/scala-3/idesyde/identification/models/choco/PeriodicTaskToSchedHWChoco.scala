@@ -542,8 +542,8 @@ final case class PeriodicTaskToSchedHWChoco(
       val analysed         = AnalysedTask.enforce(t)
       val responseTimeFrac = BigFraction(responseTimes(i).getValue, multiplier).reduce
       val blockingTimeFrac = BigFraction(blockingTimes(i).getValue, multiplier).reduce
-      // scribe.debug(s"task ${t.getIdentifier} RT: ${responseTimeFrac.doubleValue}")
-      // scribe.debug(s"task ${t.getIdentifier} BT: ${blockingTimeFrac.doubleValue}")
+      scribe.debug(s"task ${t.getIdentifier} RT: ${responseTimeFrac.doubleValue}")
+      scribe.debug(s"task ${t.getIdentifier} BT: ${blockingTimeFrac.doubleValue}")
       analysed.setWorstCaseResponseTimeNumeratorInSecs(responseTimeFrac.getNumeratorAsLong)
       analysed.setWorstCaseResponseTimeDenominatorInSecs(responseTimeFrac.getDenominatorAsLong)
       analysed.setWorstCaseBlockingTimeNumeratorInSecs(blockingTimeFrac.getNumeratorAsLong)

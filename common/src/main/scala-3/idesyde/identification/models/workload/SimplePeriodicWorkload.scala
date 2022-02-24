@@ -33,6 +33,7 @@ import scala.collection.mutable.Queue
 import org.jgrapht.graph.AsSubgraph
 import java.util.stream.Collectors
 import org.jgrapht.alg.shortestpath.DijkstraManyToManyShortestPaths
+import forsyde.io.java.typed.viewers.execution.SimpleReactiveStimulus
 
 /** Simplest periodic task set concerned in the literature. The periods, offsets and relative
   * deadlines are all fixed at a task level. The only additional complexity are precedence are
@@ -175,7 +176,7 @@ case class SimplePeriodicWorkload(
                         .add(periods(inTaskIdx).divide(upsample.getInitialPredecessorHolds))
                     )
                 )
-                .orElse(offsetsMut(inTaskIdx))
+                .orElse(BigFraction.ZERO)
             })
             .min((f1, f2) => f1.compareTo(f2))
             .get
@@ -184,7 +185,9 @@ case class SimplePeriodicWorkload(
     offsetsMut
   }
 
-  // scribe.debug(periods.mkString("", ",", ""))
+  // scribe.debug(reactiveStimulusSrcs.map(_.mkString("[", ",", "]")).mkString("[", ",", "]"))
+  // scribe.debug(reactiveStimulusDst.mkString("[", ",", "]"))
+  // scribe.debug(periods.mkString("[", ",", "]"))
   // scribe.debug(noPrecedenceOffsets.mkString)
 
   val tasksNumInstancesInHyperPeriod: Array[Int] =
@@ -195,7 +198,7 @@ case class SimplePeriodicWorkload(
       tasks.zipWithIndex.map((dst, j) => {
         reactiveStimulus.zipWithIndex
           .filter((stimulus, k) => {
-            reactiveStimulusSrcs(k).contains(j) &&
+            reactiveStimulusSrcs(k).contains(i) &&
             reactiveStimulusDst(k) == j
           })
           .flatMap((stimulus, _) => {
@@ -217,11 +220,23 @@ case class SimplePeriodicWorkload(
                     ) yield (m, n.toInt)
                   })
               })
-              .orElse(IndexedSeq.empty)
+              .orElseGet(() => 
+                for (
+                    m <- 0 until tasksNumInstancesInHyperPeriod(j)
+                ) yield (m, m)
+              )
               .toArray
           })
       })
     })
+
+  // scribe.debug(
+  //   precedences.map(row =>
+  //     row.map(preds => 
+  //         preds.map(_.toString).mkString("", ",", "") + s": ${preds.length}"
+  //       ).mkString("[", ",", "]")
+  //     ).mkString("[", "\n", "]")
+  //   )
 
   val offsets = {
     var offsetsMut = tasks.map(_ => hyperPeriod)
@@ -261,6 +276,7 @@ case class SimplePeriodicWorkload(
         .map(conTask =>
           BigFraction(conTask.getRelativeDeadlineNumerator, conTask.getRelativeDeadlineDenominator)
         )
+        .map(per => if (per.compareTo(periods(i)) < 0) then per else periods(i))
         .orElse(periods(i))
         .add(noPrecedenceOffsets(i))
         .subtract(offsets(i))

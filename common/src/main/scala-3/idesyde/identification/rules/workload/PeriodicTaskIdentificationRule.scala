@@ -16,7 +16,7 @@ import forsyde.io.java.typed.viewers.execution.ReactiveStimulus
 import forsyde.io.java.typed.viewers.execution.ReactiveTask
 import forsyde.io.java.typed.viewers.execution.Task
 import forsyde.io.java.typed.viewers.execution.SimpleReactiveStimulus
-import forsyde.io.java.typed.viewers.execution.ReactiveANDStimulus
+import forsyde.io.java.typed.viewers.execution.MultiANDReactiveStimulus
 
 final class PeriodicTaskIdentificationRule(using Numeric[BigFraction]) extends IdentificationRule:
 
@@ -29,8 +29,10 @@ final class PeriodicTaskIdentificationRule(using Numeric[BigFraction]) extends I
     var channels: Array[Channel]           = Array.empty
     var reactiveStimulus: Array[ReactiveStimulus] = Array.empty
     model.vertexSet.stream.forEach(v => {
-      PeriodicTask.safeCast(v).ifPresent(task => periodicTasks :+= task)
-      ReactiveTask.safeCast(v).ifPresent(task => reactiveTasks :+= task)
+      // try to classify first as periodic and then later as reactive
+      PeriodicTask.safeCast(v).ifPresentOrElse(task => periodicTasks :+= task, () => {
+        ReactiveTask.safeCast(v).ifPresent(task => reactiveTasks :+= task)
+      })
       Channel.safeCast(v).ifPresent(channel => channels :+= channel)
       ReactiveStimulus.safeCast(v).ifPresent(stim => reactiveStimulus :+= stim)
     })
@@ -52,7 +54,7 @@ final class PeriodicTaskIdentificationRule(using Numeric[BigFraction]) extends I
           simple.getPredecessorPort(model).map(_.getIdentifier == t.getIdentifier).orElse(false)
         ))
       })
-      ReactiveANDStimulus.safeCast(stimulus).ifPresent(andStimulus => {
+      MultiANDReactiveStimulus.safeCast(stimulus).ifPresent(andStimulus => {
         predecessors :+= andStimulus.getPredecessorsPort(model).stream.mapToInt(predecessor => {
           tasks.indexWhere(t => predecessor.getIdentifier == t.getIdentifier)
         }).toArray

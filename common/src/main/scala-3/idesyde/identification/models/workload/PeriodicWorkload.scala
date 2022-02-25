@@ -2,7 +2,7 @@ package idesyde.identification.models.workload
 
 import forsyde.io.java.core.Vertex
 import idesyde.identification.DecisionModel
-import forsyde.io.java.typed.viewers.execution.Channel
+import forsyde.io.java.typed.viewers.impl.DataBlock
 
 /** Interface that describes a periodic workload model, also commonly known in the real time
   * academic community as "periodic task model". This one in particular closely follows the
@@ -20,7 +20,7 @@ import forsyde.io.java.typed.viewers.execution.Channel
 trait PeriodicWorkload[TaskT, TimeT]()(using Numeric[TimeT]) extends DecisionModel:
 
   def tasks: Array[TaskT]
-  def channels: Array[Channel]
+  def channels: Array[DataBlock]
   def tasksNumInstances: Array[Int]
   def instancesReleases(t: TaskT)(int: Int): TimeT
   def instancesDeadlines(t: TaskT)(int: Int): TimeT

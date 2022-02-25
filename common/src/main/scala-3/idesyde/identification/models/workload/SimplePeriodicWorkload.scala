@@ -34,6 +34,7 @@ import org.jgrapht.graph.AsSubgraph
 import java.util.stream.Collectors
 import org.jgrapht.alg.shortestpath.DijkstraManyToManyShortestPaths
 import forsyde.io.java.typed.viewers.execution.SimpleReactiveStimulus
+import forsyde.io.java.typed.viewers.impl.DataBlock
 
 /** Simplest periodic task set concerned in the literature. The periods, offsets and relative
   * deadlines are all fixed at a task level. The only additional complexity are precedence are
@@ -55,11 +56,11 @@ case class SimplePeriodicWorkload(
     val periodicStimulus: Array[PeriodicStimulus],
     val reactiveStimulus: Array[ReactiveStimulus],
     val executables: Array[Array[Executable]],
-    val channels: Array[Channel],
+    val dataBlocks: Array[DataBlock],
     val reactiveStimulusSrcs: Array[Array[Int]],
     val reactiveStimulusDst: Array[Int],
-    val taskChannelRead: Array[Array[Int]],
-    val taskChannelWrite: Array[Array[Int]]
+    val taskChannelReads: Array[Array[Int]],
+    val taskChannelWrites: Array[Array[Int]]
 )(using Numeric[BigFraction])
     extends DecisionModel:
   //extends PeriodicWorkload[Task, BigFraction]():
@@ -68,7 +69,7 @@ case class SimplePeriodicWorkload(
     periodicTasks.map(_.getViewedVertex()) ++
       periodicStimulus.map(_.getViewedVertex) ++
       executables.flatten.map(_.getViewedVertex) ++
-      channels.map(_.getViewedVertex) ++
+      dataBlocks.map(_.getViewedVertex) ++
       reactiveStimulus.map(_.getViewedVertex)
 
   val tasks = periodicTasks ++ reactiveTasks
@@ -308,7 +309,7 @@ case class SimplePeriodicWorkload(
       .sorted
       .distinct
 
-  lazy val channelSizes = channels.map(_.getElemSizeInBits.toLong)
+  lazy val channelSizes = dataBlocks.map(_.getMaxSize.toLong)
 
   lazy val alwaysBlocksGraph = {
     val g = AsSubgraph(reactiveGraph)

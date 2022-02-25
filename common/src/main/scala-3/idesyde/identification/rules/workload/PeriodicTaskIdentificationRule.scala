@@ -17,6 +17,8 @@ import forsyde.io.java.typed.viewers.execution.ReactiveTask
 import forsyde.io.java.typed.viewers.execution.Task
 import forsyde.io.java.typed.viewers.execution.SimpleReactiveStimulus
 import forsyde.io.java.typed.viewers.execution.MultiANDReactiveStimulus
+import forsyde.io.java.typed.viewers.impl.DataBlock
+import forsyde.io.java.typed.viewers.impl.CommunicatingExecutable
 
 final class PeriodicTaskIdentificationRule(using Numeric[BigFraction]) extends IdentificationRule:
 
@@ -26,14 +28,14 @@ final class PeriodicTaskIdentificationRule(using Numeric[BigFraction]) extends I
   ): (Boolean, Option[DecisionModel]) =
     var periodicTasks: Array[PeriodicTask] = Array.empty
     var reactiveTasks: Array[ReactiveTask] = Array.empty
-    var channels: Array[Channel]           = Array.empty
+    var dataBlocks: Array[DataBlock]           = Array.empty
     var reactiveStimulus: Array[ReactiveStimulus] = Array.empty
     model.vertexSet.stream.forEach(v => {
       // try to classify first as periodic and then later as reactive
       PeriodicTask.safeCast(v).ifPresentOrElse(task => periodicTasks :+= task, () => {
         ReactiveTask.safeCast(v).ifPresent(task => reactiveTasks :+= task)
       })
-      Channel.safeCast(v).ifPresent(channel => channels :+= channel)
+      DataBlock.safeCast(v).ifPresent(channel => dataBlocks :+= channel)
       ReactiveStimulus.safeCast(v).ifPresent(stim => reactiveStimulus :+= stim)
     })
     // convenience
@@ -61,17 +63,30 @@ final class PeriodicTaskIdentificationRule(using Numeric[BigFraction]) extends I
       })
     })
     // build the read and write arrays
-    val (taskChannelRead, taskChannelWrite) = tasks
+    val taskChannelReads = executables.zipWithIndex
+      .map((es, i) => {
+        val t = tasks(i)
+        dataBlocks.zipWithIndex.map((c, j) => {
+          if (model.hasConnection(c, t)) then
+              CommunicatingExecutable.safeCast(t).map(commTask => {
+            commTask.getPortDataReadSize.getOrDefault(c.getIdentifier, 1)
+          }).orElse(1)
+          else
+            0
+        })
+      })
+    val taskChannelWrites = tasks
       .map(t => {
-        (
-          channels.zipWithIndex.filter((c, j) => {
-            model.hasConnection(c, t)
-          }).map((c, j) => j),
-          channels.zipWithIndex.filter((c, j) => {
-            model.hasConnection(t, c)
-          }).map((c, j) => j)
-        )
-      }).unzip
+        dataBlocks.zipWithIndex.map((c, j) => {
+          if (model.hasConnection(t, c)) then
+              CommunicatingExecutable.safeCast(t).map(commTask => {
+            commTask.getPortDataWrittenSize.getOrDefault(c.getIdentifier, 1)
+          }).orElse(1)
+          else
+            0
+          //
+        })
+      })
     if (periodicTasks.exists(_.getPeriodicStimulusPort(model).isEmpty))
       scribe.debug("Some periodic tasks have no periodic stimulus. Skipping.")
       (true, Option.empty)
@@ -82,15 +97,15 @@ final class PeriodicTaskIdentificationRule(using Numeric[BigFraction]) extends I
         periodicStimulus = periodicTasks.map(_.getPeriodicStimulusPort(model).get),
         reactiveStimulus = reactiveStimulus,
         executables = executables,
-        channels = channels,
+        dataBlocks = dataBlocks,
         reactiveStimulusSrcs = predecessors,
         reactiveStimulusDst = successors,
-        taskChannelRead = taskChannelRead, 
-        taskChannelWrite = taskChannelWrite
+        taskChannelReads = taskChannelReads, 
+        taskChannelWrites = taskChannelWrites
       )
       scribe.debug(
         s"Simple periodic task model found with ${periodicTasks.length} periodic tasks, " +
-          s"${reactiveTasks.length} reactive tasks and ${channels.length} channels"
+          s"${reactiveTasks.length} reactive tasks and ${dataBlocks.length} dataBlocks"
       )
       (true, Option(decisionModel))
 

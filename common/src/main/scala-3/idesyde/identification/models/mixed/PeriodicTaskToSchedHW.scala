@@ -40,7 +40,7 @@ final case class PeriodicTaskToSchedHW(
           pe.getModalInstructionsPerCycle.values.stream
             .flatMap(ipcGroup => {
               runnable.getOperationRequirements.values.stream
-                .filter(opGroup => ipcGroup.keySet.equals(opGroup.keySet))
+                .filter(opGroup => ipcGroup.keySet.containsAll(opGroup.keySet))
                 .map(opGroup => {
                   ipcGroup.entrySet.stream
                     .map(ipcEntry =>
@@ -63,7 +63,7 @@ final case class PeriodicTaskToSchedHW(
     val instrumentedCEsRange = schedHwModel.hardware.communicationElems
       .filter(ce => InstrumentedCommunicationModule.conforms(ce))
       .map(ce => InstrumentedCommunicationModule.enforce(ce))
-    taskModel.channels.zipWithIndex.map((channel, i) => {
+    taskModel.dataBlocks.zipWithIndex.map((channel, i) => {
       instrumentedCEsRange.zipWithIndex.map((ce, j) => {
         // get the WCTT in seconds
         BigFraction(
@@ -76,7 +76,7 @@ final case class PeriodicTaskToSchedHW(
 
   lazy val conservativeWcct: Array[Array[Array[BigFraction]]] = {
     val endPoints = schedHwModel.hardware.processingElems ++ schedHwModel.hardware.storageElems
-    taskModel.channels.zipWithIndex.map((c, k) => {
+    taskModel.dataBlocks.zipWithIndex.map((c, k) => {
       schedHwModel.hardware.platformElements.zipWithIndex.map((pi, i) => {
         schedHwModel.hardware.platformElements.zipWithIndex.map((pj, j) => {
           val t = schedHwModel.hardware.maxTraversalTimePerBit(i)(j)

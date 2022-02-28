@@ -4,7 +4,6 @@ import idesyde.identification.IdentificationRule
 import forsyde.io.java.core.ForSyDeSystemGraph
 import idesyde.identification.DecisionModel
 import forsyde.io.java.typed.viewers.execution.PeriodicTask
-import forsyde.io.java.typed.viewers.execution.Channel
 import forsyde.io.java.typed.viewers.impl.Executable
 
 import scala.jdk.OptionConverters.*
@@ -19,6 +18,7 @@ import forsyde.io.java.typed.viewers.execution.SimpleReactiveStimulus
 import forsyde.io.java.typed.viewers.execution.MultiANDReactiveStimulus
 import forsyde.io.java.typed.viewers.impl.DataBlock
 import forsyde.io.java.typed.viewers.impl.CommunicatingExecutable
+import forsyde.io.java.typed.viewers.impl.TokenizableDataBlock
 
 final class PeriodicTaskIdentificationRule(using Numeric[BigFraction]) extends IdentificationRule:
 
@@ -69,23 +69,22 @@ final class PeriodicTaskIdentificationRule(using Numeric[BigFraction]) extends I
         dataBlocks.zipWithIndex.map((c, j) => {
           if (model.hasConnection(c, t)) then
               CommunicatingExecutable.safeCast(t).map(commTask => {
-            commTask.getPortDataReadSize.getOrDefault(c.getIdentifier, 1)
-          }).orElse(1)
+            (c, commTask.getPortDataReadSize.getOrDefault(c.getIdentifier, 1).toInt)
+          }).orElse((c, 1))
           else
-            0
-        })
+            (c, 0)
+        }).map((c, elems) => TokenizableDataBlock.safeCast(c).map(block => block.getTokenSize * elems).orElse(c.getMaxSize).toLong)
       })
     val taskChannelWrites = tasks
       .map(t => {
         dataBlocks.zipWithIndex.map((c, j) => {
           if (model.hasConnection(t, c)) then
               CommunicatingExecutable.safeCast(t).map(commTask => {
-            commTask.getPortDataWrittenSize.getOrDefault(c.getIdentifier, 1)
-          }).orElse(1)
+            (c, commTask.getPortDataWrittenSize.getOrDefault(c.getIdentifier, 1).toInt)
+          }).orElse((c, 1))
           else
-            0
-          //
-        })
+            (c, 0)
+        }).map((c, elems) => TokenizableDataBlock.safeCast(c).map(block => block.getTokenSize * elems).orElse(c.getMaxSize).toLong)
       })
     if (periodicTasks.exists(_.getPeriodicStimulusPort(model).isEmpty))
       scribe.debug("Some periodic tasks have no periodic stimulus. Skipping.")

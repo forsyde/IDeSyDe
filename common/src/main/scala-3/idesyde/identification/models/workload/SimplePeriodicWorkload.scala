@@ -8,7 +8,6 @@ import org.apache.commons.math3.util.{ArithmeticUtils, MathUtils}
 import scala.jdk.OptionConverters.*
 import scala.jdk.CollectionConverters.*
 import scala.jdk.StreamConverters.*
-import forsyde.io.java.typed.viewers.execution.Channel
 import forsyde.io.java.typed.viewers.impl.Executable
 import forsyde.io.java.typed.viewers.impl.InstrumentedExecutable
 import forsyde.io.java.typed.viewers.execution.Stimulus
@@ -35,6 +34,7 @@ import java.util.stream.Collectors
 import org.jgrapht.alg.shortestpath.DijkstraManyToManyShortestPaths
 import forsyde.io.java.typed.viewers.execution.SimpleReactiveStimulus
 import forsyde.io.java.typed.viewers.impl.DataBlock
+import java.{util => ju}
 
 /** Simplest periodic task set concerned in the literature. The periods, offsets and relative
   * deadlines are all fixed at a task level. The only additional complexity are precedence are
@@ -59,8 +59,8 @@ case class SimplePeriodicWorkload(
     val dataBlocks: Array[DataBlock],
     val reactiveStimulusSrcs: Array[Array[Int]],
     val reactiveStimulusDst: Array[Int],
-    val taskChannelReads: Array[Array[Int]],
-    val taskChannelWrites: Array[Array[Int]]
+    val taskChannelReads: Array[Array[Long]],
+    val taskChannelWrites: Array[Array[Long]]
 )(using Numeric[BigFraction])
     extends DecisionModel:
   //extends PeriodicWorkload[Task, BigFraction]():
@@ -85,20 +85,29 @@ case class SimplePeriodicWorkload(
     )
 
   // build the graph of reactions to enable periodic reductions
-  val reactiveGraph = SparseIntDirectedGraph(
-    tasks.length,
-    reactiveStimulusSrcs.zipWithIndex
-      .flatMap((r, i) => r.map(s => (s, i)))
-      .map((s, i) =>
-        Pair(
-          s.asInstanceOf[Integer],
-          reactiveStimulusDst(i).asInstanceOf[Integer]
+  // scribe.debug(reactiveStimulusSrcs.map(_.mkString("[", ",", "]")).mkString("[", ",", "]"))
+  // scribe.debug(reactiveStimulusDst.mkString("[", ",", "]"))
+  val reactiveGraph = 
+    if (!reactiveStimulusSrcs.isEmpty && !reactiveStimulusDst.isEmpty) then
+    SparseIntDirectedGraph(
+      tasks.length,
+      reactiveStimulusSrcs.zipWithIndex
+        .flatMap((r, i) => r.map(s => (s, i)))
+        .map((s, i) =>
+          Pair(
+            s.asInstanceOf[Integer],
+            reactiveStimulusDst(i).asInstanceOf[Integer]
+          )
         )
+        .toList
+        .asJava,
+      IncomingEdgesSupport.LAZY_INCOMING_EDGES
+    )
+    else
+      SparseIntDirectedGraph(
+        tasks.length,
+        ju.List.of()
       )
-      .toList
-      .asJava,
-    IncomingEdgesSupport.LAZY_INCOMING_EDGES
-  )
   
   // do the computation by traversing the graph
   val periods = {
@@ -188,11 +197,12 @@ case class SimplePeriodicWorkload(
 
   // scribe.debug(reactiveStimulusSrcs.map(_.mkString("[", ",", "]")).mkString("[", ",", "]"))
   // scribe.debug(reactiveStimulusDst.mkString("[", ",", "]"))
-  // scribe.debug(periods.mkString("[", ",", "]"))
-  // scribe.debug(noPrecedenceOffsets.mkString)
+  scribe.debug(periods.mkString("[", ",", "]"))
+  scribe.debug(noPrecedenceOffsets.mkString("[", ",", "]"))
 
   val tasksNumInstancesInHyperPeriod: Array[Int] =
     tasks.zipWithIndex.map((task, i) => hyperPeriod.divide(periods(i)).getNumeratorAsInt)
+  scribe.debug(tasksNumInstancesInHyperPeriod.mkString("[", ",", "]"))
 
   val precedences: Array[Array[Array[(Int, Int)]]] =
     tasks.zipWithIndex.map((src, i) => {
@@ -231,13 +241,13 @@ case class SimplePeriodicWorkload(
       })
     })
 
-  // scribe.debug(
-  //   precedences.map(row =>
-  //     row.map(preds => 
-  //         preds.map(_.toString).mkString("", ",", "") + s": ${preds.length}"
-  //       ).mkString("[", ",", "]")
-  //     ).mkString("[", "\n", "]")
-  //   )
+  scribe.debug(
+    precedences.map(row =>
+      row.map(preds => 
+          preds.map(_.toString).mkString("", ",", "") + s": ${preds.length}"
+        ).mkString("[", ",", "]")
+      ).mkString("[", "\n", "]")
+    )
 
   val offsets = {
     var offsetsMut = tasks.map(_ => hyperPeriod)
@@ -307,7 +317,10 @@ case class SimplePeriodicWorkload(
         })
       })
       .sorted
+      .filterNot(t => t.equals(hyperPeriod))
       .distinct
+  scribe.debug(schedulingPoints.mkString("[", ",", "]"))
+
 
   lazy val channelSizes = dataBlocks.map(_.getMaxSize.toLong)
 

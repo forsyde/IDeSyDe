@@ -42,10 +42,10 @@ final case class PeriodicTaskToSchedHW(
               runnable.getOperationRequirements.values.stream
                 .filter(opGroup => ipcGroup.keySet.containsAll(opGroup.keySet))
                 .map(opGroup => {
-                  ipcGroup.entrySet.stream
-                    .map(ipcEntry =>
-                      BigFraction(opGroup.get(ipcEntry.getKey))
-                        .divide(BigFraction(ipcEntry.getValue))
+                  opGroup.entrySet.stream
+                    .map(opEntry =>
+                      BigFraction(opEntry.getValue)
+                        .divide(BigFraction(ipcGroup.get(opEntry.getKey)))
                     )
                     .reduce(BigFraction.ZERO, (f1, f2) => f1.add(f2))
                     .divide(pe.getOperatingFrequencyInHertz)
@@ -67,7 +67,7 @@ final case class PeriodicTaskToSchedHW(
       instrumentedCEsRange.zipWithIndex.map((ce, j) => {
         // get the WCTT in seconds
         BigFraction(
-          channel.getElemSizeInBits * channel.getMaxElems * ce.getMaxCyclesPerFlit,
+          channel.getMaxSize * ce.getMaxCyclesPerFlit,
           ce.getFlitSizeInBits * ce.getMaxConcurrentFlits * ce.getOperatingFrequencyInHertz
         )
       })
@@ -80,7 +80,7 @@ final case class PeriodicTaskToSchedHW(
       schedHwModel.hardware.platformElements.zipWithIndex.map((pi, i) => {
         schedHwModel.hardware.platformElements.zipWithIndex.map((pj, j) => {
           val t = schedHwModel.hardware.maxTraversalTimePerBit(i)(j)
-          if (t.compareTo(BigFraction.MINUS_ONE) > 0) then t.multiply(c.getElemSizeInBits)
+          if (t.compareTo(BigFraction.MINUS_ONE) > 0) then t.multiply(c.getMaxSize)
           else t
         })
       })

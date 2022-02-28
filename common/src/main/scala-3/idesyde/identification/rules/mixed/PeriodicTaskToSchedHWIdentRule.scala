@@ -64,7 +64,7 @@ class PeriodicTaskToSchedHWIdentRule extends IdentificationRule {
           pe.getModalInstructionsPerCycle.values.stream
             .anyMatch(ipc => {
               runnable.getOperationRequirements.values.stream
-                .anyMatch(opGroup => ipc.keySet.equals(opGroup.keySet))
+                .anyMatch(opGroup => ipc.keySet.containsAll(opGroup.keySet))
             })
         })
       })
@@ -95,7 +95,7 @@ class PeriodicTaskToSchedHWIdentRule extends IdentificationRule {
         .orElse(-1)
     })
     // now for channels
-    val channelMappings = workloadModel.channels.map(channel => {
+    val channelMappings = workloadModel.dataBlocks.map(channel => {
       MemoryMapped
         .safeCast(channel)
         .flatMap(memory => {
@@ -125,6 +125,9 @@ class PeriodicTaskToSchedHWIdentRule extends IdentificationRule {
         .orElse(-1)
     })
     // finish with construction
+    // scribe.debug(s"1 ${instrumentedExecutables.length == workloadModel.tasks.length} &&" +
+    //   s"2 ${instrumentedPEsRange.length == platformModel.hardware.processingElems.length} &&" +
+    //   s"${isMappable} && ${isExecutable}")
     if (
       instrumentedExecutables.length == workloadModel.tasks.length &&
       instrumentedPEsRange.length == platformModel.hardware.processingElems.length &&

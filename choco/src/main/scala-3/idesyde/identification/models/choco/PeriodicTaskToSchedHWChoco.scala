@@ -475,6 +475,16 @@ final case class PeriodicTaskToSchedHWChoco(
       )
     )
   )
+  
+  // symmetries
+  // sourceDecisionModel.schedHwModel.topologicallySymmetricGroups.map(symGroup => {
+  //   symGroup.map(sourceDecisionModel.schedHwModel.hardware.processingElems.indexOf(_)).map(idx => {
+  //     // model.count(s"count_exec_${idx}", )
+  //   })
+  // })
+  // sourceDecisionModel.schedHwModel.schedulers.zipWithIndex.foreach((p, i) => {
+    
+  // })
 
   // Dealing with objectives
   val nUsedPEs = model.intVar(

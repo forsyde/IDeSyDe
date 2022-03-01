@@ -1,20 +1,15 @@
 package idesyde.identification.models.workload
 
-import forsyde.io.java.core.Vertex
-import forsyde.io.java.typed.viewers.execution.PeriodicTask
-import org.apache.commons.math3.fraction.BigFraction
-import org.apache.commons.math3.util.{ArithmeticUtils, MathUtils}
-
+import math.Numeric.Implicits.infixNumericOps
+import math.Integral.Implicits.infixIntegralOps
 import scala.jdk.OptionConverters.*
 import scala.jdk.CollectionConverters.*
 import scala.jdk.StreamConverters.*
-import forsyde.io.java.typed.viewers.impl.Executable
-import forsyde.io.java.typed.viewers.impl.InstrumentedExecutable
-import forsyde.io.java.typed.viewers.execution.Stimulus
-import forsyde.io.java.typed.viewers.execution.PeriodicStimulus
-import forsyde.io.java.typed.viewers.execution.ReactiveTask
-import forsyde.io.java.typed.viewers.execution.ReactiveStimulus
-import forsyde.io.java.typed.viewers.execution.Task
+import scala.collection.mutable.Queue
+import java.util.stream.Collectors
+
+import org.apache.commons.math3.fraction.BigFraction
+import org.apache.commons.math3.util.{ArithmeticUtils, MathUtils}
 import org.jgrapht.graph.builder.GraphBuilder
 import org.jgrapht.graph.SimpleDirectedGraph
 import org.jgrapht.graph.DefaultEdge
@@ -23,14 +18,24 @@ import org.jgrapht.alg.util.Pair
 import org.jgrapht.opt.graph.sparse.IncomingEdgesSupport
 import org.jgrapht.traverse.BreadthFirstIterator
 import forsyde.io.java.typed.viewers.execution.DownsampleReactiveStimulus
+import org.jgrapht.traverse.TopologicalOrderIterator
+import com.google.common.math.IntMath
+
+import forsyde.io.java.core.Vertex
+import forsyde.io.java.typed.viewers.execution.PeriodicTask
+
+import forsyde.io.java.typed.viewers.impl.Executable
+import forsyde.io.java.typed.viewers.impl.InstrumentedExecutable
+import forsyde.io.java.typed.viewers.execution.Stimulus
+import forsyde.io.java.typed.viewers.execution.PeriodicStimulus
+import forsyde.io.java.typed.viewers.execution.ReactiveTask
+import forsyde.io.java.typed.viewers.execution.ReactiveStimulus
+import forsyde.io.java.typed.viewers.execution.Task
 import forsyde.io.java.typed.viewers.execution.ConstrainedTask
 import forsyde.io.java.typed.viewers.execution.UpsampleReactiveStimulus
 import idesyde.identification.DecisionModel
-import org.jgrapht.traverse.TopologicalOrderIterator
-import com.google.common.math.IntMath
-import scala.collection.mutable.Queue
+
 import org.jgrapht.graph.AsSubgraph
-import java.util.stream.Collectors
 import org.jgrapht.alg.shortestpath.DijkstraManyToManyShortestPaths
 import forsyde.io.java.typed.viewers.execution.SimpleReactiveStimulus
 import forsyde.io.java.typed.viewers.impl.DataBlock
@@ -87,28 +92,28 @@ case class SimplePeriodicWorkload(
   // build the graph of reactions to enable periodic reductions
   // scribe.debug(reactiveStimulusSrcs.map(_.mkString("[", ",", "]")).mkString("[", ",", "]"))
   // scribe.debug(reactiveStimulusDst.mkString("[", ",", "]"))
-  val reactiveGraph = 
+  val reactiveGraph =
     if (!reactiveStimulusSrcs.isEmpty && !reactiveStimulusDst.isEmpty) then
-    SparseIntDirectedGraph(
-      tasks.length,
-      reactiveStimulusSrcs.zipWithIndex
-        .flatMap((r, i) => r.map(s => (s, i)))
-        .map((s, i) =>
-          Pair(
-            s.asInstanceOf[Integer],
-            reactiveStimulusDst(i).asInstanceOf[Integer]
+      SparseIntDirectedGraph(
+        tasks.length,
+        reactiveStimulusSrcs.zipWithIndex
+          .flatMap((r, i) => r.map(s => (s, i)))
+          .map((s, i) =>
+            Pair(
+              s.asInstanceOf[Integer],
+              reactiveStimulusDst(i).asInstanceOf[Integer]
+            )
           )
-        )
-        .toList
-        .asJava,
-      IncomingEdgesSupport.LAZY_INCOMING_EDGES
-    )
+          .toList
+          .asJava,
+        IncomingEdgesSupport.LAZY_INCOMING_EDGES
+      )
     else
       SparseIntDirectedGraph(
         tasks.length,
         ju.List.of()
       )
-  
+
   // do the computation by traversing the graph
   val periods = {
     var periodsMut = tasks.map(_ => hyperPeriod)
@@ -197,60 +202,59 @@ case class SimplePeriodicWorkload(
 
   // scribe.debug(reactiveStimulusSrcs.map(_.mkString("[", ",", "]")).mkString("[", ",", "]"))
   // scribe.debug(reactiveStimulusDst.mkString("[", ",", "]"))
-  scribe.debug(periods.mkString("[", ",", "]"))
-  scribe.debug(noPrecedenceOffsets.mkString("[", ",", "]"))
+//  scribe.debug(periods.mkString("[", ",", "]"))
+//  scribe.debug(noPrecedenceOffsets.mkString("[", ",", "]"))
 
   val tasksNumInstancesInHyperPeriod: Array[Int] =
     tasks.zipWithIndex.map((task, i) => hyperPeriod.divide(periods(i)).getNumeratorAsInt)
-  scribe.debug(tasksNumInstancesInHyperPeriod.mkString("[", ",", "]"))
+  //scribe.debug(tasksNumInstancesInHyperPeriod.mkString("[", ",", "]"))
 
-  val precedences: Array[Array[Array[(Int, Int)]]] =
-    tasks.zipWithIndex.map((src, i) => {
-      tasks.zipWithIndex.map((dst, j) => {
-        reactiveStimulus.zipWithIndex
-          .filter((stimulus, k) => {
-            reactiveStimulusSrcs(k).contains(i) &&
-            reactiveStimulusDst(k) == j
-          })
-          .flatMap((stimulus, _) => {
-            DownsampleReactiveStimulus
-              .safeCast(stimulus)
-              .map(downsample => {
-                for (
-                  n <- 0 until tasksNumInstancesInHyperPeriod(i);
-                  m = n * downsample.getRepetitivePredecessorSkips + downsample.getInitialPredecessorSkips
-                ) yield (m.toInt, n)
-              })
-              .or(() => {
-                UpsampleReactiveStimulus
-                  .safeCast(stimulus)
-                  .map(upsample => {
-                    for (
-                      m <- 0 until tasksNumInstancesInHyperPeriod(j);
-                      n = m * upsample.getRepetitivePredecessorHolds + upsample.getInitialPredecessorHolds
-                    ) yield (m, n.toInt)
-                  })
-              })
-              .orElseGet(() => 
-                for (
-                    m <- 0 until tasksNumInstancesInHyperPeriod(j)
-                ) yield (m, m)
-              )
-              .toArray
-          })
-      })
-    })
+  // val maximalOffsetDislocations: Array[Array[BigFraction]] =
+  //   tasks.zipWithIndex.map((src, i) => {
+  //     tasks.zipWithIndex.map((dst, j) => {
+  //       reactiveStimulus.zipWithIndex
+  //         .filter((stimulus, k) => {
+  //           reactiveStimulusSrcs(k).contains(i) &&
+  //           reactiveStimulusDst(k) == j
+  //         })
+  //         .map((stimulus, _) => {
+  //           DownsampleReactiveStimulus
+  //             .safeCast(stimulus)
+  //             .map(downsample => {
+  //               for (
+  //                 n <- 0 until tasksNumInstancesInHyperPeriod(i);
+  //                 m = n * downsample.getRepetitivePredecessorSkips + downsample.getInitialPredecessorSkips
+  //               ) yield (m.toInt, n)
+  //             })
+  //             .or(() => {
+  //               UpsampleReactiveStimulus
+  //                 .safeCast(stimulus)
+  //                 .map(upsample => {
+  //                   for (
+  //                     m <- 0 until tasksNumInstancesInHyperPeriod(j);
+  //                     n = m * upsample.getRepetitivePredecessorHolds + upsample.getInitialPredecessorHolds
+  //                   ) yield (m, n.toInt)
+  //                 })
+  //             })
+  //             .orElseGet(() =>
+  //               for (
+  //                   m <- 0 until tasksNumInstancesInHyperPeriod(j)
+  //               ) yield (m, m)
+  //             )
+  //         })
+  //     })
+  //   })
 
-  scribe.debug(
-    precedences.map(row =>
-      row.map(preds => 
-          preds.map(_.toString).mkString("", ",", "") + s": ${preds.length}"
-        ).mkString("[", ",", "]")
-      ).mkString("[", "\n", "]")
-    )
+  // scribe.debug(
+  //   precedences.map(row =>
+  //     row.map(preds =>
+  //         preds.map(_.toString).mkString("", ",", "") + s": ${preds.length}"
+  //       ).mkString("[", ",", "]")
+  //     ).mkString("[", "\n", "]")
+  //   )
 
   val offsets = {
-    var offsetsMut = tasks.map(_ => hyperPeriod)
+    var offsetsMut = noPrecedenceOffsets.clone
     val iter = TopologicalOrderIterator(
       reactiveGraph
     )
@@ -261,22 +265,62 @@ case class SimplePeriodicWorkload(
         .incomingEdgesOf(idxTask)
         .stream
         .map(reactiveGraph.getEdgeSource(_))
-        .flatMap(inTaskIdx => {
-          precedences(inTaskIdx)(idxTask)
-            .map((m, n) => {
-              periods(inTaskIdx)
-                .multiply(m)
-                .add(noPrecedenceOffsets(inTaskIdx))
-                .subtract(periods(idxTask).multiply(n).add(noPrecedenceOffsets(idxTask)))
+        .map(inTaskIdx => {
+          //scribe.debug(s"checking tasks ${inTaskIdx} to ${idxTask}")
+          reactiveStimulus.zipWithIndex
+            .filter((stimulus, k) => {
+              reactiveStimulusSrcs(k).contains(inTaskIdx) &&
+              reactiveStimulusDst(k) == idxTask
             })
-            .asJavaSeqStream
+            .map((stimulus, _) => {
+              DownsampleReactiveStimulus
+                .safeCast(stimulus)
+                .map(downsample => {
+                  val offsetDelta = offsetsMut(idxTask) - offsetsMut(inTaskIdx)
+                  val periodDelta = periods(idxTask) - periods(inTaskIdx).multiply(
+                    downsample.getRepetitivePredecessorSkips
+                  )
+                  maximumOffsetDislocation(tasksNumInstancesInHyperPeriod(inTaskIdx))(
+                    offsetDelta,
+                    periodDelta
+                  )
+                })
+                .or(() => {
+                  UpsampleReactiveStimulus
+                    .safeCast(stimulus)
+                    .map(upsample => {
+                      val offsetDelta = offsetsMut(idxTask) - offsetsMut(inTaskIdx)
+                      val periodDelta = periods(idxTask)
+                        .multiply(upsample.getRepetitivePredecessorHolds) - periods(inTaskIdx)
+                      maximumOffsetDislocation(tasksNumInstancesInHyperPeriod(idxTask))(
+                        offsetDelta,
+                        periodDelta
+                      )
+                    })
+                })
+                .orElseGet(() =>
+                  val offsetDelta = offsetsMut(idxTask) - offsetsMut(inTaskIdx)
+                  val periodDelta = periods(idxTask) - periods(inTaskIdx)
+                  maximumOffsetDislocation(tasksNumInstancesInHyperPeriod(idxTask))(
+                    offsetDelta,
+                    periodDelta
+                  )
+                )
+            }).max((f1, f2) => 
+              f1.compareTo(f2)
+            )
         })
-        .filter(f => f.compareTo(noPrecedenceOffsets(idxTask)) > 0)
+        .filter(f => 
+          f.compareTo(noPrecedenceOffsets(idxTask)) >= 0
+        )
         .max((f1, f2) => f1.compareTo(f2))
         .orElse(noPrecedenceOffsets(idxTask))
     }
     offsetsMut
   }
+
+  // scribe.debug(offsets.mkString("[", ",", "]"))
+  // scribe.debug(periods.mkString("[", ",", "]"))
 
   //val periods = periodicStimulus.map(s => BigFraction(s.getPeriodNumerator, s.getPeriodDenominator))
   //val offsets = periodicStimulus.map(s => BigFraction(s.getOffsetNumerator, s.getOffsetDenominator))
@@ -296,11 +340,12 @@ case class SimplePeriodicWorkload(
   val largestOffset: BigFraction = offsets.max
 
   val eventHorizon: BigFraction =
-    if (largestOffset.equals(BigFraction.ZERO)) then hyperPeriod.multiply(2).add(largestOffset)
+    if (!largestOffset.equals(BigFraction.ZERO)) then hyperPeriod.multiply(2).add(largestOffset)
     else hyperPeriod
 
   val tasksNumInstances: Array[Int] =
     tasks.zipWithIndex.map((task, i) => eventHorizon.divide(periods(i)).getNumeratorAsInt)
+  //scribe.debug(tasksNumInstances.mkString("[", ",", "]"))
 
   lazy val taskSizes = tasks.zipWithIndex.map((task, i) => {
     executables(i)
@@ -308,20 +353,7 @@ case class SimplePeriodicWorkload(
       .map(e => InstrumentedExecutable.enforce(e).getSizeInBits.toLong)
       .sum
   })
-
-  lazy val schedulingPoints: Array[BigFraction] =
-    tasks.zipWithIndex
-      .flatMap((task, i) => {
-        (0 until tasksNumInstances(i)).map(j => {
-          offsets(i).add(periods(i).multiply(j))
-        })
-      })
-      .sorted
-      .filterNot(t => t.equals(hyperPeriod))
-      .distinct
-  scribe.debug(schedulingPoints.mkString("[", ",", "]"))
-
-
+  
   lazy val channelSizes = dataBlocks.map(_.getMaxSize.toLong)
 
   lazy val alwaysBlocksGraph = {
@@ -331,11 +363,15 @@ case class SimplePeriodicWorkload(
         val i = g.getEdgeSource(e)
         val j = g.getEdgeTarget(e)
         // there is at least one instance without a follow-up
-        !(0 until tasksNumInstancesInHyperPeriod(i)).forall(m => {
-          (0 until tasksNumInstancesInHyperPeriod(j)).exists(n => {
-            precedences(i)(j).contains((m, n))
+        reactiveStimulus.zipWithIndex
+          .filter((stimulus, k) => {
+            reactiveStimulusSrcs(k).contains(i) &&
+            reactiveStimulusDst(k) == j
           })
-        })
+          .exists((stimulus, _) => {
+            DownsampleReactiveStimulus.conforms(stimulus)
+            || UpsampleReactiveStimulus.conforms(stimulus)
+          })
       })
       .collect(Collectors.toSet)
     g.removeAllEdges(occasionalEdges)
@@ -376,8 +412,25 @@ case class SimplePeriodicWorkload(
         .min
         .orElse(prioritiesMut(idxTask))
     }
-    scribe.debug(prioritiesMut.mkString("[", ",", "]"))
+    // scribe.debug(prioritiesMut.mkString("[", ",", "]"))
     prioritiesMut
+  }
+
+  def maximumOffsetDislocation(
+      maxInstances: Long
+  )(deltaOffset: BigFraction, deltaPeriod: BigFraction): BigFraction = {
+    if (deltaPeriod.compareTo(BigFraction.ZERO) > 0) then
+      deltaOffset.add(deltaPeriod.multiply(maxInstances))
+    else if (
+      deltaPeriod.compareTo(BigFraction.ZERO) <= 0 && deltaOffset.compareTo(BigFraction.ZERO) >= 0
+    ) then
+      deltaOffset
+    else {
+      val instance = deltaOffset.divide(deltaPeriod).negate.doubleValue.floor.toLong + 1
+      deltaOffset.add(
+        deltaPeriod.multiply(if (instance <= maxInstances) then instance else maxInstances)
+      )
+    }
   }
 
   override val uniqueIdentifier = "SimplePeriodicWorkload"

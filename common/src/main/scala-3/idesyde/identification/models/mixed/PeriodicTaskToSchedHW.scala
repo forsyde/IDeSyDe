@@ -1,17 +1,20 @@
 package idesyde.identification.models.mixed
+ 
+import math.Ordering.Implicits.infixOrderingOps
+import scala.jdk.OptionConverters.*
+import scala.jdk.CollectionConverters.*
+
+import org.apache.commons.math3.fraction.BigFraction
 
 import idesyde.identification.DecisionModel
 import idesyde.identification.models.workload.SimplePeriodicWorkload
 import idesyde.identification.models.platform.SchedulableNetworkedDigHW
 import forsyde.io.java.core.Vertex
-import org.apache.commons.math3.fraction.BigFraction
 import forsyde.io.java.typed.viewers.platform.InstrumentedProcessingModule
 import forsyde.io.java.typed.viewers.impl.InstrumentedExecutable
-
-import scala.jdk.OptionConverters.*
-import scala.jdk.CollectionConverters.*
 import forsyde.io.java.typed.viewers.platform.InstrumentedCommunicationModule
 import forsyde.io.java.typed.viewers.execution.Task
+import idesyde.identification.models.workload.DependentDeadlineMonotonicOrdering
 
 final case class PeriodicTaskToSchedHW(
     val taskModel: SimplePeriodicWorkload,
@@ -87,6 +90,28 @@ final case class PeriodicTaskToSchedHW(
     })
     Array.empty
   }
+  
+  def exactRMSchedulingPoints(using Ordering[Task]): Array[Array[BigFraction]] =
+    taskModel.tasks.zipWithIndex
+      .map((task, i) => {
+        taskModel.tasks.filter(hpTask => hpTask > task).zipWithIndex.flatMap((hpTask, j) => {
+          (0 until taskModel.tasksNumInstances(j)).map(k => {
+            taskModel.offsets(j).add(taskModel.periods(j).multiply(k))
+          }).filterNot(t => t.equals(taskModel.hyperPeriod))
+        })
+      })
+
+  def sufficientRMSchedulingPoints(using Ordering[Task]): Array[Array[BigFraction]] =
+    taskModel.tasks.zipWithIndex
+      .map((task, i) => {
+        taskModel.tasks.filter(hpTask => hpTask > task).zipWithIndex.map((hpTask, j) => {
+          taskModel.periods(j).multiply(taskModel.periods(i).divide(taskModel.periods(j)).doubleValue.floor.toLong)
+        })
+      })
+
+  
+  //scribe.debug(sufficientRMSchedulingPoints(using DependentDeadlineMonotonicOrdering(taskModel)).mkString("[", ",", "]"))
+
   val uniqueIdentifier: String = "PeriodicTaskToSchedHW"
 
 end PeriodicTaskToSchedHW

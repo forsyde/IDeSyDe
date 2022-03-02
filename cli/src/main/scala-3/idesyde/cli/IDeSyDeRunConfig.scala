@@ -52,21 +52,26 @@ case class IDeSyDeRunConfig(
         // identified.foreach(m => m match {
         //   case mzn: MiniZincDecisionModel => scribe.debug(s"mzn model: ${mzn.mznInputs.toString}")
         // })
-        var numSols = 0
-        chosen
-          .flatMap((explorer, decisionModel) =>
-            explorer.explore(decisionModel)(using executionContext)
+        //var numSols = 0
+        val numSols = chosen.headOption
+          .map((explorer, decisionModel) =>
+            explorer
+              .explore(decisionModel)(using executionContext)
+              .foldLeft(0)((res, result) => {
+                scribe.debug(s"writing solution at ${outputModelPath.toString}")
+                if (outputModelPath.toFile.isFile) then
+                  modelHandler.writeModel(model.merge(result), outputModelPath)
+                else if (outputModelPath.toFile.isDirectory) then
+                  modelHandler.writeModel(model.merge(result), outputModelPath.relativize(Paths.get(s"solution_${res.toString}")))
+                res + 1
+              })
           )
-          .foreach(result => {
-            scribe.debug(s"writing solution at ${outputModelPath.toString}")
-            modelHandler.writeModel(model.merge(result), outputModelPath)
-            numSols += 1
-          })
+          .getOrElse(0)
         if (numSols > 0)
           scribe.info(s"Finished exploration with ${numSols} solution(s)")
         else
           scribe.info(s"Finished exploration with no solution")
-      scribe.info("Finished successfully")
+      //scribe.info("Finished successfully")
     }
 
   def setLoggingLevel(loggingLevel: Level) =

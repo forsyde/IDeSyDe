@@ -39,7 +39,7 @@ import idesyde.exploration.explorers.SimpleWorkloadBalancingDecisionStrategy
 
 final case class PeriodicTaskToSchedHWChoco(
     val sourceDecisionModel: PeriodicTaskToSchedHW
-) extends ChocoCPDecisionModel with idesyde.identification.models.choco.FixedPriorityConstraintsMixin:
+) extends ChocoCPDecisionModel with FixedPriorityConstraintsMixin:
 
   given Ordering[Task]       = DependentDeadlineMonotonicOrdering(sourceDecisionModel.taskModel)
   given Numeric[BigFraction] = BigFractionIsNumeric()
@@ -47,9 +47,9 @@ final case class PeriodicTaskToSchedHWChoco(
   val coveredVertexes = sourceDecisionModel.coveredVertexes
 
   // section for time multiplier calculation
-  val durations  = (sourceDecisionModel.taskModel.periods ++ sourceDecisionModel.wcets.flatten)
+  val timeValues  = (sourceDecisionModel.taskModel.periods ++ sourceDecisionModel.wcets.flatten)
   var multiplier = 1L
-  while (durations
+  while (timeValues
         .map(_.multiply(multiplier))
         .exists(d => d.doubleValue < 1) && multiplier < Int.MaxValue) {
     multiplier *= 10
@@ -58,7 +58,7 @@ final case class PeriodicTaskToSchedHWChoco(
 
   // do the same for memory numbers
   var memoryMultipler = 1L
-  while (allMemorySizeNumbers().forall(_ >= Int.MaxValue.toLong)) {
+  while (allMemorySizeNumbers().forall(_ / memoryMultipler  >= 100) && memoryMultipler < Int.MaxValue) {
     memoryMultipler *= 10L
   }
   // scribe.debug(memoryMultipler.toString)
@@ -67,6 +67,8 @@ final case class PeriodicTaskToSchedHWChoco(
   // create the variables that each Mixin requires
   val periods = sourceDecisionModel.taskModel.periods.map(_.multiply(multiplier))
   val priorities = sourceDecisionModel.taskModel.priorities
+  val deadlines = sourceDecisionModel.taskModel.relativeDeadlines.map(_.multiply(multiplier))
+  val wcets = sourceDecisionModel.wcets.map(a => a.map(_.multiply(multiplier)))
 
 
 
@@ -142,9 +144,7 @@ final case class PeriodicTaskToSchedHWChoco(
           .doubleValue
           .ceil
           .toInt,
-        sourceDecisionModel.taskModel
-          .relativeDeadlines(i)
-          .multiply(multiplier)
+        deadlines(i)
           .doubleValue
           .floor
           .toInt,
@@ -161,9 +161,7 @@ final case class PeriodicTaskToSchedHWChoco(
         "bt_" + t.getViewedVertex.getIdentifier,
         // minimum WCET possible
         0,
-        sourceDecisionModel.taskModel
-          .relativeDeadlines(i)
-          .multiply(multiplier)
+        deadlines(i)
           .doubleValue
           .floor
           .toInt,
@@ -197,9 +195,7 @@ final case class PeriodicTaskToSchedHWChoco(
       model.intVar(
         "fetch_wc" + t.getViewedVertex.getIdentifier + s.getIdentifier,
         0,
-        sourceDecisionModel.taskModel
-          .relativeDeadlines(i)
-          .multiply(multiplier)
+       deadlines(i)
           .doubleValue
           .floor
           .toInt,
@@ -212,9 +208,7 @@ final case class PeriodicTaskToSchedHWChoco(
       model.intVar(
         "input_wc" + t.getViewedVertex.getIdentifier + s.getIdentifier,
         0,
-        sourceDecisionModel.taskModel
-          .relativeDeadlines(i)
-          .multiply(multiplier)
+        deadlines(i)
           .doubleValue
           .floor
           .toInt,
@@ -227,9 +221,7 @@ final case class PeriodicTaskToSchedHWChoco(
       model.intVar(
         "output_wc" + t.getViewedVertex.getIdentifier + s.getIdentifier,
         0,
-        sourceDecisionModel.taskModel
-          .relativeDeadlines(i)
-          .multiply(multiplier)
+        deadlines(i)
           .doubleValue
           .floor
           .toInt,
@@ -237,7 +229,7 @@ final case class PeriodicTaskToSchedHWChoco(
       )
     )
   )
-  val wcet = sourceDecisionModel.taskModel.tasks.zipWithIndex.map((t, i) =>
+  val durations = sourceDecisionModel.taskModel.tasks.zipWithIndex.map((t, i) =>
     sourceDecisionModel.schedHwModel.allocatedSchedulers.zipWithIndex.map((s, j) =>
       wcExecution(i)(j).add(wcFetch(i)(j)).add(wcInput(i)(j)).add(wcOutput(i)(j)).intVar
     )
@@ -301,15 +293,15 @@ final case class PeriodicTaskToSchedHWChoco(
     .post
   // timing constraints
   // basic utilization
-  sourceDecisionModel.schedHwModel.allocatedSchedulers.zipWithIndex.foreach((pe, j) => {
-    val utilizations = sourceDecisionModel.taskModel.tasks.zipWithIndex.map((task, i) => wcet(i)(j).div(periods(i).doubleValue.floor.toInt).mul(100).intVar)
-    model.sum(s"cpu_load_${pe.getIdentifier}", utilizations:_*).le(100)
-  })
+  // sourceDecisionModel.schedHwModel.allocatedSchedulers.zipWithIndex.foreach((pe, j) => {
+  //   val utilizations = sourceDecisionModel.taskModel.tasks.zipWithIndex.map((task, i) => durations(i)(j).div(periods(i).doubleValue.floor.toInt).mul(100).intVar)
+  //   model.sum(s"cpu_load_${pe.getIdentifier}", utilizations:_*).le(100)
+  // })
   // dependent-emerging blocking
   sourceDecisionModel.taskModel.reactiveStimulus.zipWithIndex.foreach((s, i) => {
     sourceDecisionModel.schedHwModel.allocatedSchedulers.zipWithIndex
       .foreach((pe, j) => {
-        responseTimes(i).ge(blockingTimes(i).add(wcet(i)(j))).post
+        responseTimes(i).ge(blockingTimes(i).add(durations(i)(j))).post
       })
   })
   sourceDecisionModel.taskModel.reactiveStimulus.zipWithIndex.foreach((s, i) => {
@@ -323,36 +315,6 @@ final case class PeriodicTaskToSchedHWChoco(
               blockingTimes(dst).ge(responseTimes(src)).decompose
             )
           })
-  })
-  // for each FP scheduler
-  // rt >= bt + sum of all higher prio tasks in the same CPU
-  sourceDecisionModel.schedHwModel.allocatedSchedulers.zipWithIndex
-    .filter((s, j) => sourceDecisionModel.schedHwModel.isFixedPriority(j))
-    .foreach((s, j) => {
-      //DependentWorkloadFPPropagator(j, )
-      postFixedPrioriPreemtpiveConstraint(j)
-    })
-  // sourceDecisionModel.schedHwModel.allocatedSchedulers.zipWithIndex
-  //     .filter((s, j) => sourceDecisionModel.schedHwModel.isFixedPriority(j))
-  //     .foreach((s, j) => {
-  //       model.post{new Constraint("WorkloadFP", new idesyde.exploration.explorers.DependentWorkloadFPPropagator(
-  //         j,
-  //         sourceDecisionModel.taskModel.priorities,
-  //         sourceDecisionModel.taskModel.periods,
-  //         taskExecutions,
-  //         blockingTimes,
-  //         responseTimes,
-  //         wcets.zipWithIndex.map((ws, i) => ws(j))
-  //       ))}
-  //     })
-  // for each SC scheduler
-  sourceDecisionModel.taskModel.tasks.zipWithIndex.foreach((task, i) => {
-    sourceDecisionModel.schedHwModel.allocatedSchedulers.zipWithIndex
-      .filter((s, j) => sourceDecisionModel.schedHwModel.isStaticCycle(j))
-      .foreach((s, j) => {
-        postStaticCyclicExecutiveConstraint(i, j)
-        //val cons = Constraint(s"FPConstrats${j}", DependentWorkloadFPPropagator())
-      })
   })
   // for the execution times
   sourceDecisionModel.taskModel.tasks.zipWithIndex.foreach((t, i) =>
@@ -399,7 +361,7 @@ final case class PeriodicTaskToSchedHWChoco(
             .multiply(memoryMultipler)
             .multiply(transferred)
           model.ifThenElse(
-            taskExecution(i).eq(k).and(dataBlockMapping(i).eq(j)).decompose,
+            taskExecution(i).eq(k).and(dataBlockMapping(ci).eq(j)).decompose,
             channelFetchTime(ci)(k)
               .ge(
                 tt.doubleValue.ceil.toInt * transferred
@@ -443,7 +405,7 @@ final case class PeriodicTaskToSchedHWChoco(
             .multiply(memoryMultipler)
             .multiply(transferred)
           model.ifThenElse(
-            taskExecution(i).eq(k).and(dataBlockMapping(i).eq(j)).decompose,
+            taskExecution(i).eq(k).and(dataBlockMapping(ci).eq(j)).decompose,
             channelWriteTime(ci)(k)
               .ge(
                 tt.doubleValue.ceil.toInt * transferred
@@ -475,6 +437,22 @@ final case class PeriodicTaskToSchedHWChoco(
       )
     )
   )
+    // for each FP scheduler
+  // rt >= bt + sum of all higher prio tasks in the same CPU
+  sourceDecisionModel.schedHwModel.allocatedSchedulers.zipWithIndex
+    .filter((s, j) => sourceDecisionModel.schedHwModel.isFixedPriority(j))
+    .foreach((s, j) => {
+      postFixedPrioriPreemtpiveConstraint(j)
+    })
+  // for each SC scheduler
+  sourceDecisionModel.taskModel.tasks.zipWithIndex.foreach((task, i) => {
+    sourceDecisionModel.schedHwModel.allocatedSchedulers.zipWithIndex
+      .filter((s, j) => sourceDecisionModel.schedHwModel.isStaticCycle(j))
+      .foreach((s, j) => {
+        postStaticCyclicExecutiveConstraint(i, j)
+        //val cons = Constraint(s"FPConstrats${j}", DependentWorkloadFPPropagator())
+      })
+  })
   
   // symmetries
   // sourceDecisionModel.schedHwModel.topologicallySymmetricGroups.map(symGroup => {
@@ -510,7 +488,7 @@ final case class PeriodicTaskToSchedHWChoco(
 
   /** This method sets up the Worst case schedulability test for a task.
     *
-    * The mathetical 'representation' is responseTime(i) >= blockingTime(i) + wcet(i) + sum(wcet of
+    * The mathetical 'representation' is responseTime(i) >= blockingTime(i) + durations(i) + sum(durations of
     * all higher prios in same scheduler)
     *
     * @param taskIdx
@@ -523,13 +501,13 @@ final case class PeriodicTaskToSchedHWChoco(
       taskExecution(taskIdx).eq(schedulerIdx).decompose,
       responseTimes(taskIdx)
         .ge(
-          wcet(taskIdx)(schedulerIdx)
+          durations(taskIdx)(schedulerIdx)
             .add(blockingTimes(taskIdx))
             .add(
               model
                 .sum(
                   s"sc_interference${taskIdx}_${schedulerIdx}",
-                  wcet.zipWithIndex
+                  durations.zipWithIndex
                     .filter((ws, k) => k != taskIdx)
                     .filterNot((ws, k) =>
                       // leave tasks k which i occasionally block
@@ -548,9 +526,9 @@ final case class PeriodicTaskToSchedHWChoco(
   override val strategies = Array(
     SimpleWorkloadBalancingDecisionStrategy(
       (0 until sourceDecisionModel.schedHwModel.allocatedSchedulers.length).toArray,
-      periods.map(_.doubleValue.ceil.toInt),
+      periods,
       taskExecution,
-      wcet
+      durations
     ),
     Search.intVarSearch(
       FirstFail(model),
@@ -558,7 +536,7 @@ final case class PeriodicTaskToSchedHWChoco(
       DecisionOperatorFactory.makeIntEq,
       (responseTimes ++ wcFetch.flatten ++ blockingTimes ++
         wcInput.flatten ++ wcOutput.flatten ++ channelFetchTime.flatten ++
-        wcet.flatten ++ taskMapping ++ dataBlockMapping ++ channelWriteTime.flatten
+        durations.flatten ++ taskMapping ++ dataBlockMapping ++ channelWriteTime.flatten
         :+ nFreePEs): _*
     )
   )
@@ -570,8 +548,8 @@ final case class PeriodicTaskToSchedHWChoco(
       val analysed         = AnalysedTask.enforce(t)
       val responseTimeFrac = BigFraction(responseTimes(i).getValue, multiplier).reduce
       val blockingTimeFrac = BigFraction(blockingTimes(i).getValue, multiplier).reduce
-      scribe.debug(s"task ${t.getIdentifier} RT: (raw ${responseTimes(i).getValue}) ${responseTimeFrac.doubleValue}")
-      scribe.debug(s"task ${t.getIdentifier} BT: (raw ${blockingTimes(i).getValue}) ${blockingTimeFrac.doubleValue}")
+      // scribe.debug(s"task ${t.getIdentifier} RT: (raw ${responseTimes(i).getValue}) ${responseTimeFrac.doubleValue}")
+      // scribe.debug(s"task ${t.getIdentifier} BT: (raw ${blockingTimes(i).getValue}) ${blockingTimeFrac.doubleValue}")
       analysed.setWorstCaseResponseTimeNumeratorInSecs(responseTimeFrac.getNumeratorAsLong)
       analysed.setWorstCaseResponseTimeDenominatorInSecs(responseTimeFrac.getDenominatorAsLong)
       analysed.setWorstCaseBlockingTimeNumeratorInSecs(blockingTimeFrac.getNumeratorAsLong)
@@ -589,10 +567,10 @@ final case class PeriodicTaskToSchedHWChoco(
       rebuilt.addVertex(m.getViewedVertex)
       val module = AnalysedGenericProcessingModule.enforce(m)
       module.setUtilization(
-        wcet.zipWithIndex
+        durations.zipWithIndex
           .filter((ws, i) => taskExecution(i).getValue == j)
           .map((ws, i) =>
-            scribe.debug(s"task n ${i} Wcet: (raw ${wcet(i)(j)})")
+            //scribe.debug(s"task n ${i} Wcet: (raw ${durations(i)(j)})")
             BigFraction(ws(j).getValue, multiplier)
               .divide(sourceDecisionModel.taskModel.periods(i))
               .doubleValue

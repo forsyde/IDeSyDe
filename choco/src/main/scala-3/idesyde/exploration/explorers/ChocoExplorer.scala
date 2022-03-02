@@ -55,7 +55,7 @@ class ChocoExplorer() extends Explorer:
       solver.setLearningSignedClauses
       solver.setNoGoodRecordingFromRestarts
       solver.setRestartOnSolutions
-      solver.addStopCriterion(SolutionCounter(model, 20L))
+      solver.addStopCriterion(SolutionCounter(model, 5L))
       if (!chocoCpModel.strategies.isEmpty) then solver.setSearch(chocoCpModel.strategies: _*)
       LazyList
         .continually(solver.solve)

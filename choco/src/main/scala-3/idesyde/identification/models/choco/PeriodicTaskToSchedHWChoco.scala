@@ -39,7 +39,9 @@ import idesyde.exploration.explorers.SimpleWorkloadBalancingDecisionStrategy
 
 final case class PeriodicTaskToSchedHWChoco(
     val sourceDecisionModel: PeriodicTaskToSchedHW
-) extends ChocoCPDecisionModel with FixedPriorityConstraintsMixin:
+) extends ChocoCPDecisionModel
+    with FixedPriorityConstraintsMixin
+    with BaselineTimingConstraintsMixin:
 
   given Ordering[Task]       = DependentDeadlineMonotonicOrdering(sourceDecisionModel.taskModel)
   given Numeric[BigFraction] = BigFractionIsNumeric()
@@ -47,30 +49,33 @@ final case class PeriodicTaskToSchedHWChoco(
   val coveredVertexes = sourceDecisionModel.coveredVertexes
 
   // section for time multiplier calculation
-  val timeValues  = (sourceDecisionModel.taskModel.periods ++ sourceDecisionModel.wcets.flatten)
+  val timeValues = (sourceDecisionModel.taskModel.periods ++ sourceDecisionModel.wcets.flatten)
   var multiplier = 1L
-  while (timeValues
-        .map(_.multiply(multiplier))
-        .exists(d => d.doubleValue < 1) && multiplier < Int.MaxValue) {
+  while (
+    timeValues
+      .map(_.multiply(multiplier))
+      .exists(d => d.doubleValue < 1) && multiplier < Int.MaxValue
+  ) {
     multiplier *= 10
   }
   //scribe.debug(multiplier.toString)
 
   // do the same for memory numbers
   var memoryMultipler = 1L
-  while (allMemorySizeNumbers().forall(_ / memoryMultipler  >= 100) && memoryMultipler < Int.MaxValue) {
+  while (
+    allMemorySizeNumbers().forall(_ / memoryMultipler >= 100) && memoryMultipler < Int.MaxValue
+  ) {
     memoryMultipler *= 10L
   }
   // scribe.debug(memoryMultipler.toString)
   // scribe.debug(allMemorySizeNumbers().mkString("[", ",", "]"))
 
   // create the variables that each Mixin requires
-  val periods = sourceDecisionModel.taskModel.periods.map(_.multiply(multiplier))
-  val priorities = sourceDecisionModel.taskModel.priorities
-  val deadlines = sourceDecisionModel.taskModel.relativeDeadlines.map(_.multiply(multiplier))
-  val wcets = sourceDecisionModel.wcets.map(a => a.map(_.multiply(multiplier)))
-
-
+  val periods         = sourceDecisionModel.taskModel.periods.map(_.multiply(multiplier))
+  val priorities      = sourceDecisionModel.taskModel.priorities
+  val deadlines       = sourceDecisionModel.taskModel.relativeDeadlines.map(_.multiply(multiplier))
+  val wcets           = sourceDecisionModel.wcets.map(a => a.map(_.multiply(multiplier)))
+  val maxUtilizations = sourceDecisionModel.maxUtilization
 
   // build the model so that it can be acessed later
   val model = Model()
@@ -144,10 +149,7 @@ final case class PeriodicTaskToSchedHWChoco(
           .doubleValue
           .ceil
           .toInt,
-        deadlines(i)
-          .doubleValue
-          .floor
-          .toInt,
+        deadlines(i).doubleValue.floor.toInt,
         true // keeping only bounds for the response time is enough and better
       )
     )
@@ -161,10 +163,7 @@ final case class PeriodicTaskToSchedHWChoco(
         "bt_" + t.getViewedVertex.getIdentifier,
         // minimum WCET possible
         0,
-        deadlines(i)
-          .doubleValue
-          .floor
-          .toInt,
+        deadlines(i).doubleValue.floor.toInt,
         true // keeping only bounds for the response time is enough and better
       )
     )
@@ -195,10 +194,7 @@ final case class PeriodicTaskToSchedHWChoco(
       model.intVar(
         "fetch_wc" + t.getViewedVertex.getIdentifier + s.getIdentifier,
         0,
-       deadlines(i)
-          .doubleValue
-          .floor
-          .toInt,
+        deadlines(i).doubleValue.floor.toInt,
         true
       )
     )
@@ -208,10 +204,7 @@ final case class PeriodicTaskToSchedHWChoco(
       model.intVar(
         "input_wc" + t.getViewedVertex.getIdentifier + s.getIdentifier,
         0,
-        deadlines(i)
-          .doubleValue
-          .floor
-          .toInt,
+        deadlines(i).doubleValue.floor.toInt,
         true
       )
     )
@@ -221,10 +214,7 @@ final case class PeriodicTaskToSchedHWChoco(
       model.intVar(
         "output_wc" + t.getViewedVertex.getIdentifier + s.getIdentifier,
         0,
-        deadlines(i)
-          .doubleValue
-          .floor
-          .toInt,
+        deadlines(i).doubleValue.floor.toInt,
         true
       )
     )
@@ -293,28 +283,36 @@ final case class PeriodicTaskToSchedHWChoco(
     .post
   // timing constraints
   // basic utilization
+  postMinimalResponseTimesByBlocking()
+  postMaximumUtilizations()
   // sourceDecisionModel.schedHwModel.allocatedSchedulers.zipWithIndex.foreach((pe, j) => {
-  //   val utilizations = sourceDecisionModel.taskModel.tasks.zipWithIndex.map((task, i) => durations(i)(j).div(periods(i).doubleValue.floor.toInt).mul(100).intVar)
-  //   model.sum(s"cpu_load_${pe.getIdentifier}", utilizations:_*).le(100)
+  //   val maxUtilization = sourceDecisionModel.maxUtilization(j)
+  //   val utilization = model.sum(
+  //     s"cpu_${pe.getIdentifier}_load",
+  //     sourceDecisionModel.taskModel.tasks.zipWithIndex.map((task, i) =>
+  //       durations(i)(j).mul(100).div(periods(i).doubleValue.floor.toInt + 1).intVar
+  //     ): _*
+  //   )
+  //   model.arithm(utilization, "<=", maxUtilization.multiply(100).doubleValue.ceil.toInt).post
   // })
   // dependent-emerging blocking
-  sourceDecisionModel.taskModel.reactiveStimulus.zipWithIndex.foreach((s, i) => {
-    sourceDecisionModel.schedHwModel.allocatedSchedulers.zipWithIndex
-      .foreach((pe, j) => {
-        responseTimes(i).ge(blockingTimes(i).add(durations(i)(j))).post
-      })
-  })
+  // sourceDecisionModel.taskModel.reactiveStimulus.zipWithIndex.foreach((s, i) => {
+  //   sourceDecisionModel.schedHwModel.allocatedSchedulers.zipWithIndex
+  //     .foreach((pe, j) => {
+  //       responseTimes(i).ge(blockingTimes(i).add(durations(i)(j))).post
+  //     })
+  // })
   sourceDecisionModel.taskModel.reactiveStimulus.zipWithIndex.foreach((s, i) => {
     sourceDecisionModel.taskModel
-          .reactiveStimulusSrcs(i)
-          .foreach(src => {
-            val dst = sourceDecisionModel.taskModel.reactiveStimulusDst(i)
-            //scribe.debug(s"dst ${dst} and src ${src}")
-            model.ifThen(
-              taskExecution(dst).ne(taskExecution(src)).decompose,
-              blockingTimes(dst).ge(responseTimes(src)).decompose
-            )
-          })
+      .reactiveStimulusSrcs(i)
+      .foreach(src => {
+        val dst = sourceDecisionModel.taskModel.reactiveStimulusDst(i)
+        //scribe.debug(s"dst ${dst} and src ${src}")
+        model.ifThen(
+          taskExecution(dst).ne(taskExecution(src)).decompose,
+          blockingTimes(dst).ge(responseTimes(src)).decompose
+        )
+      })
   })
   // for the execution times
   sourceDecisionModel.taskModel.tasks.zipWithIndex.foreach((t, i) =>
@@ -437,7 +435,7 @@ final case class PeriodicTaskToSchedHWChoco(
       )
     )
   )
-    // for each FP scheduler
+  // for each FP scheduler
   // rt >= bt + sum of all higher prio tasks in the same CPU
   sourceDecisionModel.schedHwModel.allocatedSchedulers.zipWithIndex
     .filter((s, j) => sourceDecisionModel.schedHwModel.isFixedPriority(j))
@@ -453,7 +451,7 @@ final case class PeriodicTaskToSchedHWChoco(
         //val cons = Constraint(s"FPConstrats${j}", DependentWorkloadFPPropagator())
       })
   })
-  
+
   // symmetries
   // sourceDecisionModel.schedHwModel.topologicallySymmetricGroups.map(symGroup => {
   //   symGroup.map(sourceDecisionModel.schedHwModel.hardware.processingElems.indexOf(_)).map(idx => {
@@ -461,7 +459,7 @@ final case class PeriodicTaskToSchedHWChoco(
   //   })
   // })
   // sourceDecisionModel.schedHwModel.schedulers.zipWithIndex.foreach((p, i) => {
-    
+
   // })
 
   // Dealing with objectives
@@ -488,8 +486,8 @@ final case class PeriodicTaskToSchedHWChoco(
 
   /** This method sets up the Worst case schedulability test for a task.
     *
-    * The mathetical 'representation' is responseTime(i) >= blockingTime(i) + durations(i) + sum(durations of
-    * all higher prios in same scheduler)
+    * The mathetical 'representation' is responseTime(i) >= blockingTime(i) + durations(i) +
+    * sum(durations of all higher prios in same scheduler)
     *
     * @param taskIdx
     *   the task to be posted (takes into account all others)
@@ -528,6 +526,7 @@ final case class PeriodicTaskToSchedHWChoco(
       (0 until sourceDecisionModel.schedHwModel.allocatedSchedulers.length).toArray,
       periods,
       taskExecution,
+      utilizations,
       durations
     ),
     Search.intVarSearch(
@@ -537,6 +536,7 @@ final case class PeriodicTaskToSchedHWChoco(
       (responseTimes ++ wcFetch.flatten ++ blockingTimes ++
         wcInput.flatten ++ wcOutput.flatten ++ channelFetchTime.flatten ++
         durations.flatten ++ taskMapping ++ dataBlockMapping ++ channelWriteTime.flatten
+        ++ utilizations
         :+ nFreePEs): _*
     )
   )
@@ -571,8 +571,8 @@ final case class PeriodicTaskToSchedHWChoco(
           .filter((ws, i) => taskExecution(i).getValue == j)
           .map((ws, i) =>
             //scribe.debug(s"task n ${i} Wcet: (raw ${durations(i)(j)})")
-            BigFraction(ws(j).getValue, multiplier)
-              .divide(sourceDecisionModel.taskModel.periods(i))
+            BigFraction(ws(j).getValue)
+              .divide(periods(i))
               .doubleValue
           )
           .sum

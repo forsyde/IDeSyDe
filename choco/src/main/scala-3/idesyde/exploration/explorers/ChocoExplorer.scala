@@ -55,7 +55,7 @@ class ChocoExplorer() extends Explorer:
       solver.setLearningSignedClauses
       solver.setNoGoodRecordingFromRestarts
       solver.setRestartOnSolutions
-      solver.addStopCriterion(SolutionCounter(model, 5L))
+      solver.addStopCriterion(SolutionCounter(model, 100L))
       if (!chocoCpModel.strategies.isEmpty) then solver.setSearch(chocoCpModel.strategies: _*)
       LazyList
         .continually(solver.solve)
@@ -63,7 +63,7 @@ class ChocoExplorer() extends Explorer:
         .filter(feasible => feasible)
         .flatMap(feasible => paretoMaximizer.getParetoFront.asScala)
         .map(paretoSolutions => {
-          chocoCpModel.rebuildFromChocoOutput(Solution(model).record)
+          chocoCpModel.rebuildFromChocoOutput(paretoSolutions)
         })
     case _ => LazyList.empty
 

@@ -1,5 +1,5 @@
 package idesyde.identification.models.mixed
- 
+
 import math.Ordering.Implicits.infixOrderingOps
 import scala.jdk.OptionConverters.*
 import scala.jdk.CollectionConverters.*
@@ -15,6 +15,7 @@ import forsyde.io.java.typed.viewers.impl.InstrumentedExecutable
 import forsyde.io.java.typed.viewers.platform.InstrumentedCommunicationModule
 import forsyde.io.java.typed.viewers.execution.Task
 import idesyde.identification.models.workload.DependentDeadlineMonotonicOrdering
+import forsyde.io.java.typed.viewers.nonfunctional.UtilizationBoundedProcessingElem
 
 final case class PeriodicTaskToSchedHW(
     val taskModel: SimplePeriodicWorkload,
@@ -90,26 +91,44 @@ final case class PeriodicTaskToSchedHW(
     })
     Array.empty
   }
-  
+
+  lazy val maxUtilization: Array[BigFraction] = schedHwModel.hardware.processingElems.map(pe =>
+    UtilizationBoundedProcessingElem
+      .safeCast(pe)
+      .map(boundedPe =>
+        BigFraction(boundedPe.getMaxUtilizationNumerator, boundedPe.getMaxUtilizationDenominator)
+      )
+      .orElse(BigFraction.ONE)
+  )
+
   def exactRMSchedulingPoints(using Ordering[Task]): Array[Array[BigFraction]] =
     taskModel.tasks.zipWithIndex
       .map((task, i) => {
-        taskModel.tasks.filter(hpTask => hpTask > task).zipWithIndex.flatMap((hpTask, j) => {
-          (0 until taskModel.tasksNumInstances(j)).map(k => {
-            taskModel.offsets(j).add(taskModel.periods(j).multiply(k))
-          }).filterNot(t => t.equals(taskModel.hyperPeriod))
-        })
+        taskModel.tasks
+          .filter(hpTask => hpTask > task)
+          .zipWithIndex
+          .flatMap((hpTask, j) => {
+            (0 until taskModel.tasksNumInstances(j))
+              .map(k => {
+                taskModel.offsets(j).add(taskModel.periods(j).multiply(k))
+              })
+              .filterNot(t => t.equals(taskModel.hyperPeriod))
+          })
       })
 
   def sufficientRMSchedulingPoints(using Ordering[Task]): Array[Array[BigFraction]] =
     taskModel.tasks.zipWithIndex
       .map((task, i) => {
-        taskModel.tasks.filter(hpTask => hpTask > task).zipWithIndex.map((hpTask, j) => {
-          taskModel.periods(j).multiply(taskModel.periods(i).divide(taskModel.periods(j)).doubleValue.floor.toLong)
-        })
+        taskModel.tasks
+          .filter(hpTask => hpTask > task)
+          .zipWithIndex
+          .map((hpTask, j) => {
+            taskModel
+              .periods(j)
+              .multiply(taskModel.periods(i).divide(taskModel.periods(j)).doubleValue.floor.toLong)
+          })
       })
 
-  
   //scribe.debug(sufficientRMSchedulingPoints(using DependentDeadlineMonotonicOrdering(taskModel)).mkString("[", ",", "]"))
 
   val uniqueIdentifier: String = "PeriodicTaskToSchedHW"

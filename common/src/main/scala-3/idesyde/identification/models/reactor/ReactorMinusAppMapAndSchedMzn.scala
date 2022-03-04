@@ -8,16 +8,22 @@ import scala.concurrent.Future
 import scala.concurrent.ExecutionContext
 import org.apache.commons.math3.util.ArithmeticUtils
 import idesyde.identification.DecisionModel
-import forsyde.io.java.typed.viewers.GenericProcessingModule
-import forsyde.io.java.typed.viewers.GenericDigitalInterconnect
-import forsyde.io.java.typed.viewers.GenericDigitalStorage
 import org.apache.commons.math3.fraction.BigFraction
-import forsyde.io.java.typed.viewers.RoundRobinScheduler
-import forsyde.io.java.typed.viewers.GenericMemoryModule
-import forsyde.io.java.typed.viewers.LinguaFrancaReaction
+import forsyde.io.java.typed.viewers.platform.GenericProcessingModule
+import idesyde.utils.BigFractionIsNumeric
+
+
+import scala.jdk.OptionConverters.*
+import scala.jdk.CollectionConverters.*
+import forsyde.io.java.typed.viewers.platform.GenericCommunicationModule
+import forsyde.io.java.typed.viewers.platform.GenericMemoryModule
+import forsyde.io.java.typed.viewers.moc.linguafranca.LinguaFrancaReaction
+import forsyde.io.java.typed.viewers.platform.runtime.RoundRobinScheduler
 
 final case class ReactorMinusAppMapAndSchedMzn(val sourceModel: ReactorMinusAppMapAndSched)
     extends MiniZincDecisionModel:
+
+  given Numeric[BigFraction] = BigFractionIsNumeric()
 
   val coveredVertexes = sourceModel.coveredVertexes
 
@@ -39,17 +45,22 @@ final case class ReactorMinusAppMapAndSchedMzn(val sourceModel: ReactorMinusAppM
   
   // TODO: It seems like some solvers cant handle longs.. so we do this hack for now.
   var memoryMultipler: Long =
-    (sourceModel.reactorMinus.sizeFunction.values ++
-      sourceModel.platform.hardware.storageElems.map(_.getMaxMemoryInBits.asInstanceOf[Long]))
+    (sourceModel.reactorMinus.reactors.map(sourceModel.reactorMinus.sizeFunction(_)) ++ 
+     sourceModel.reactorMinus.channels.values.map(sourceModel.reactorMinus.sizeFunction(_)) ++ 
+     sourceModel.reactorMinus.reactions.map(sourceModel.reactorMinus.sizeFunction(_)) ++
+      sourceModel.platform.hardware.storageElems
+      .map(_.getSpaceInBits.asInstanceOf[Long]))
       .filter(_ > 0L)
       .reduce((l1, l2) => ArithmeticUtils.gcd(l1, l2))
   while (
-    (sourceModel.reactorMinus.sizeFunction.values ++
+    (sourceModel.reactorMinus.reactors.map(sourceModel.reactorMinus.sizeFunction(_)) ++ 
+     sourceModel.reactorMinus.channels.values.map(sourceModel.reactorMinus.sizeFunction(_)) ++ 
+     sourceModel.reactorMinus.reactions.map(sourceModel.reactorMinus.sizeFunction(_)) ++
       sourceModel.platform.hardware.storageElems.map(
-        _.getMaxMemoryInBits.asInstanceOf[Long]
-      ) ++ 
-      sourceModel.platform.hardware.bandWidthBitPerSec.values.map(_ * multiplier)
-      ).max / memoryMultipler > Integer.MAX_VALUE.toLong
+        _.getSpaceInBits.toLong
+      ) ++ sourceModel.platform.hardware.minTraversalTimePerBit.flatten
+      .map(_.multiply(multiplier).divide(memoryMultipler).floatValue.ceil.toLong)
+      ).max > Integer.MAX_VALUE.toLong
   ) {
     memoryMultipler *= 10L
   }
@@ -125,10 +136,10 @@ final case class ReactorMinusAppMapAndSchedMzn(val sourceModel: ReactorMinusAppM
       })),
       "isCommunicationElem" -> MiniZincData(platformOrdered.map(p => {
         p match
-          case pp: GenericDigitalInterconnect =>
+          case pp: GenericCommunicationModule =>
             sourceModel.platform.hardware.communicationElems.contains(pp)
           case _ => false
-        // p.isInstanceOf[GenericDigitalInterconnect] && sourceModel.platform.hardware.communicationElems.contains(p.asInstanceOf[GenericDigitalInterconnect]))
+        // p.isInstanceOf[GenericCommunicationModule] && sourceModel.platform.hardware.communicationElems.contains(p.asInstanceOf[GenericCommunicationModule]))
       })),
       "isMemoryElem" -> MiniZincData(platformOrdered.map(p => {
         p match
@@ -301,7 +312,7 @@ final case class ReactorMinusAppMapAndSchedMzn(val sourceModel: ReactorMinusAppM
       "platformPaths" -> MiniZincData(
         platformOrdered.map(src => {
           platformOrdered.map(dst => {
-            val path = sourceModel.platform.hardware.paths.getOrElse((src, dst), Seq.empty)
+            val path = sourceModel.platform.hardware.inclusiveDirectPaths(src)(dst)
             platformOrdered.map(p => if (path.contains(p)) path.indexOf(p) + 1 else 0)
           })
         })
@@ -312,10 +323,10 @@ final case class ReactorMinusAppMapAndSchedMzn(val sourceModel: ReactorMinusAppM
             platformOrdered
               .map(pe => {
                 com match
-                  case c: GenericDigitalInterconnect =>
+                  case c: GenericCommunicationModule =>
                     pe match
                       case p: GenericProcessingModule =>
-                        sourceModel.platform.hardware.bandWidthBitPerSec
+                        sourceModel.platform.hardware.bandWidthBitPerSecMatrix
                           .getOrElse((c, p), 0.toLong) * multiplier / memoryMultipler
                       case _ => 0
                   case _ => 0
@@ -327,7 +338,7 @@ final case class ReactorMinusAppMapAndSchedMzn(val sourceModel: ReactorMinusAppM
           .map(p => {
             p match
               case m: GenericMemoryModule =>
-                m.getMaxMemoryInBits / memoryMultipler
+                m.getSpaceInBits / memoryMultipler
               case _ => 0
           })
       ),

@@ -1,11 +1,7 @@
 package idesyde.identification.models.reactor
 
 import idesyde.identification.DecisionModel
-import idesyde.identification.models.reactor.ReactorMinusApplication
-import idesyde.identification.models.reactor.ReactionChannel
 import org.jgrapht.graph.SimpleDirectedGraph
-import forsyde.io.java.typed.viewers.LinguaFrancaReactor
-import forsyde.io.java.typed.viewers.LinguaFrancaReaction
 import org.jgrapht.alg.shortestpath.AllDirectedPaths
 
 import collection.JavaConverters.*
@@ -13,6 +9,7 @@ import org.jgrapht.traverse.ClosestFirstIterator
 import org.jgrapht.traverse.DepthFirstIterator
 import org.jgrapht.graph.AsSubgraph
 import org.jgrapht.GraphPath
+
 import java.util.stream.Collectors
 import scala.collection.mutable.Buffer
 import scala.collection.mutable.Map as MutableMap
@@ -29,12 +26,14 @@ import org.jgrapht.graph.AsWeightedGraph
 import org.jgrapht.alg.interfaces.ShortestPathAlgorithm
 import org.jgrapht.util.VertexToIntegerMapping
 import org.jgrapht.graph.DefaultEdge
-import forsyde.io.java.typed.viewers.LinguaFrancaSignal
+import forsyde.io.java.typed.viewers.moc.linguafranca.{LinguaFrancaReaction, LinguaFrancaReactor}
 import org.jgrapht.sux4j.SuccinctDirectedGraph
 import org.jgrapht.alg.util.Pair
+
 import scala.collection.mutable
 import org.jgrapht.opt.graph.sparse.SparseIntDirectedGraph
 import org.jgrapht.opt.graph.sparse.IncomingEdgesSupport
+
 import java.util.concurrent.ExecutorService
 import java.util.concurrent.ThreadPoolExecutor
 import org.jgrapht.alg.shortestpath.IntVertexDijkstraShortestPath
@@ -62,13 +61,13 @@ final case class ReactorMinusAppJobGraph(
   }
   given Ordering[ReactionJob] = jobPrecedenceOrdering
 
-  val periodicJobs: Set[ReactionJob] = for (
+  val periodicJobs: Array[ReactionJob] = for (
     r <- reactorMinus.periodicReactions;
     period = reactorMinus.periodFunction.getOrElse(r, reactorMinus.hyperPeriod);
     i <- 0 until reactorMinus.hyperPeriod.divide(period).getNumerator.intValue
   ) yield ReactionJob(r, period.multiply(i), period.multiply(i + 1))
 
-  val pureJobs: Set[ReactionJob] = {
+  val pureJobs: Array[ReactionJob] = {
     // first, get all pure jobs from the periodic ones, even with activation overlap
     val periodicReactionToJobs = periodicJobs.groupBy(_.srcReaction)
     var overlappedPureJobs     = mutable.Set[ReactionJob]()
@@ -119,10 +118,10 @@ final case class ReactorMinusAppJobGraph(
             )
         nonOverlap.appended(jsSorted.last)
       })
-      .toSet
+      .toArray
   }
 
-  val jobs: Set[ReactionJob] = pureJobs.union(periodicJobs)
+  val jobs: Array[ReactionJob] = pureJobs ++ periodicJobs
 
   for (j <- periodicJobs)
     if j.trigger.equals(j.deadline) then
@@ -130,32 +129,51 @@ final case class ReactorMinusAppJobGraph(
 
   lazy val jobsOrdered = jobs.toArray.sorted
 
-  val reactionToJobs: Map[LinguaFrancaReaction, Set[ReactionJob]] =
+  val reactionToJobs: Map[LinguaFrancaReaction, Array[ReactionJob]] =
     jobs.groupBy(j => j.srcReaction)
 
-  val reactorToJobs: Map[LinguaFrancaReactor, Set[ReactionJob]] =
+  val reactorToJobs: Map[LinguaFrancaReactor, Array[ReactionJob]] =
     jobs.groupBy(j => reactorMinus.containmentFunction(j.srcReaction))
   // reactorMinus.reactors
   // .map(a => a -> a.getReactionsPort(model).asScala.toSeq.flatMap(reactionsToJobs(_)))
   // .toMap
 
-  val pureChannels: Set[ReactionChannel] =
-    (for (
-      ((r, rr) -> c) <- reactorMinus.channels;
-      if reactorMinus.pureReactions.contains(rr);
-      j  <- reactionToJobs(r);
-      jj <- reactionToJobs(rr);
-      // if the triggering time is the same
-      if j != jj && j.trigger
-        .add(
-          BigFraction.ONE
-            .multiply(c.getPropagationDelayInSecsNumerator)
-            .divide(c.getPropagationDelayInSecsDenominator)
-        )
-        .equals(jj.trigger)
-    ) yield ReactionChannel(j, jj, c)).toSet
+  val pureChannels: Array[ReactionChannel] =
+    reactorMinus.channels.toSet.filter(e => e match {
+      case (r, rr) -> c => reactorMinus.pureReactions.contains(rr)
+      case _ => false
+    }).flatMap(e => e match {
+      case (r, rr) -> c =>
+        reactionToJobs(r).flatMap(j => {
+          reactionToJobs(rr).filter(jj => {
+            j != jj && 
+              j.trigger
+              .add(
+                BigFraction.ONE
+                  .multiply(c.getPropagationDelayInSecsNumerator)
+                  .divide(c.getPropagationDelayInSecsDenominator)
+              )
+              .equals(jj.trigger)
+          }).map(jj => ReactionChannel(j, jj, c))
+        })
+      case _ => Seq()
+    }).toArray
+    // (for (
+    //   ((r, rr) -> c) <- reactorMinus.channels;
+    //   if reactorMinus.pureReactions.contains(rr);
+    //   j  <- reactionToJobs(r);
+    //   jj <- reactionToJobs(rr);
+    //   // if the triggering time is the same
+    //   if j != jj && j.trigger
+    //     .add(
+    //       BigFraction.ONE
+    //         .multiply(c.getPropagationDelayInSecsNumerator)
+    //         .divide(c.getPropagationDelayInSecsDenominator)
+    //     )
+    //     .equals(jj.trigger)
+    // ) yield ReactionChannel(j, jj, c)).toArray
 
-  val priorityChannels: Set[ReactionChannel] =
+  val priorityChannels: Array[ReactionChannel] =
     for (
       a <- reactorMinus.reactors;
       (t, jset) <- reactorToJobs(a).groupBy(
@@ -173,7 +191,7 @@ final case class ReactorMinusAppJobGraph(
   //   s"${c.dst.srcReaction.getIdentifier}:${c.dst.trigger.toString}"
   //   ).toString)
 
-  val timelyChannels: Set[ReactionChannel] =
+  val timelyChannels: Array[ReactionChannel] =
     for (
       a <- reactorMinus.reactors;
       js :: jjs :: _ <- reactorToJobs(
@@ -190,9 +208,9 @@ final case class ReactorMinusAppJobGraph(
   //   s"${c.dst.srcReaction.getIdentifier}:${c.dst.trigger.toString}"
   //   ).toString)
 
-  val stateChannels: Set[ReactionChannel] = priorityChannels ++ timelyChannels
+  val stateChannels: Array[ReactionChannel] = priorityChannels ++ timelyChannels
 
-  val outerStateChannels: Set[ReactionChannel] =
+  val outerStateChannels: Array[ReactionChannel] =
     for (
       a <- reactorMinus.reactors;
       jset = reactorToJobs(a) // jobs.filter(j => reactorMinus.containmentFunction(j._1) == a).toSeq
@@ -211,9 +229,9 @@ final case class ReactorMinusAppJobGraph(
       //   )
     ) yield ReactionChannel(jjs.last, js.head, a)
 
-  val inChannels: Set[ReactionChannel] = pureChannels ++ stateChannels
+  val inChannels: Array[ReactionChannel] = pureChannels ++ stateChannels
 
-  val channels: Set[ReactionChannel] = inChannels ++ outerStateChannels
+  val channels: Array[ReactionChannel] = inChannels ++ outerStateChannels
 
   lazy val channelsOrdered = channels.toArray
 

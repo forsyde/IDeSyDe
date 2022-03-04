@@ -1,7 +1,8 @@
 package idesyde.identification.models.reactor
 
-import forsyde.io.java.typed.viewers.LinguaFrancaSignal
-import forsyde.io.java.typed.viewers.LinguaFrancaReactor
+import forsyde.io.java.typed.viewers.moc.linguafranca.LinguaFrancaSignal
+import forsyde.io.java.typed.viewers.moc.linguafranca.LinguaFrancaReactor
+
 
 enum ReactionChannel(val src: ReactionJob, val dst: ReactionJob):
   case CommReactionChannel(

@@ -1,6 +1,5 @@
 package idesyde.identification.models.reactor
 
-import forsyde.io.java.typed.viewers.{LinguaFrancaReaction, LinguaFrancaReactor, LinguaFrancaSignal}
 import idesyde.identification.DecisionModel
 import org.apache.commons.math3.fraction.BigFraction
 import org.apache.commons.math3.util.ArithmeticUtils
@@ -16,6 +15,12 @@ import org.jgrapht.alg.shortestpath.DijkstraManyToManyShortestPaths
 import java.util.stream.Collectors
 import org.jgrapht.traverse.BreadthFirstIterator
 import java.util.concurrent.ThreadPoolExecutor
+
+import forsyde.io.java.typed.viewers.moc.linguafranca.LinguaFrancaSignal
+import forsyde.io.java.typed.viewers.moc.linguafranca.LinguaFrancaReactor
+import forsyde.io.java.typed.viewers.moc.linguafranca.LinguaFrancaReaction
+import forsyde.io.java.typed.viewers.moc.linguafranca.LinguaFrancaElem
+
 
 // sealed class ReactionsPartialOrder(
 //     val containmentFunction: Map[LinguaFrancaReaction, LinguaFrancaReactor],
@@ -33,28 +38,33 @@ import java.util.concurrent.ThreadPoolExecutor
 //     else Option.empty
 // }
 
-/**
- * This is a subset of the Reactor MoC in order to unambiguously calculate a finite event time-horizon,
- * the hyperPeriod,
- * and subsequently, analyze and schedule over this time-horizon.
- * This subset is refereed as Reactor-, and it is a restriction of
- * the constructs allowed in Reactor. 
- * 
- * Specifically, we assume that reactor hierarchies are considered flattened,
- * either before analysis or by design. Then, reactions are either pure or periodic.
- * 
- * @param reactors the containers for the reactions.
- * @param periodicReactions triggered by only one timer.
- * @param pureReactions triggered by any number of reactions or input ports.
- * @param containmentFunction relates every reaction to its containing reactor.
- * @param reactionIndex the index in which a reaction appears in its reactor. Used for priority analysis.
- * @param periodFunction gives the period for every periodic reaction in the model.
- * @param channels mapping of edges between reactions and the channels that their information.
- */
+/** This is a subset of the Reactor MoC in order to unambiguously calculate a finite event
+  * time-horizon, the hyperPeriod, and subsequently, analyze and schedule over this time-horizon.
+  * This subset is refereed as Reactor-, and it is a restriction of the constructs allowed in
+  * Reactor.
+  *
+  * Specifically, we assume that reactor hierarchies are considered flattened, either before
+  * analysis or by design. Then, reactions are either pure or periodic.
+  *
+  * @param reactors
+  *   the containers for the reactions.
+  * @param periodicReactions
+  *   triggered by only one timer.
+  * @param pureReactions
+  *   triggered by any number of reactions or input ports.
+  * @param containmentFunction
+  *   relates every reaction to its containing reactor.
+  * @param reactionIndex
+  *   the index in which a reaction appears in its reactor. Used for priority analysis.
+  * @param periodFunction
+  *   gives the period for every periodic reaction in the model.
+  * @param channels
+  *   mapping of edges between reactions and the channels that their information.
+  */
 final case class ReactorMinusApplication(
-    val pureReactions: Set[LinguaFrancaReaction],
-    val periodicReactions: Set[LinguaFrancaReaction],
-    val reactors: Set[LinguaFrancaReactor],
+    val pureReactions: Array[LinguaFrancaReaction],
+    val periodicReactions: Array[LinguaFrancaReaction],
+    val reactors: Array[LinguaFrancaReactor],
     val channels: Map[(LinguaFrancaReaction, LinguaFrancaReaction), LinguaFrancaSignal],
     val containmentFunction: Map[LinguaFrancaReaction, LinguaFrancaReactor],
     val reactionIndex: Map[LinguaFrancaReaction, Int],
@@ -68,7 +78,6 @@ final case class ReactorMinusApplication(
   for (r               <- periodicReactions) addVertex(r)
   for (((r1, r2) -> c) <- channels) addEdge(r1, r2, c)
 
-
   /** This ordering orders the reactions in the model according to reactor containment and if x > y,
     * then x has _higher_ priority than y, and should always have execution precedence/priority.
     */
@@ -80,13 +89,16 @@ final case class ReactorMinusApplication(
       else if reactionsPropagates.contains((x, y)) then 1
       else if reactionsPropagates.contains((y, x)) then -1
       // TODO: fix this approximation to a strict total order
-      else periodFunction.getOrElse(y, BigFraction.ZERO).compareTo(periodFunction.getOrElse(x, BigFraction.ZERO))
+      else
+        periodFunction
+          .getOrElse(y, BigFraction.ZERO)
+          .compareTo(periodFunction.getOrElse(x, BigFraction.ZERO))
     // it is reversed because the smaller period takes precedence
     // periodFunction(y).compareTo(periodFunction(x))
   }
   given Ordering[LinguaFrancaReaction] = reactionsPriorityOrdering
 
-  val reactions: Set[LinguaFrancaReaction] = vertexSet.asScala.toSet
+  val reactions: Array[LinguaFrancaReaction] = vertexSet.asScala.toArray
 
   lazy val reactionsOrdered = reactions.toList.sorted
 
@@ -105,19 +117,25 @@ final case class ReactorMinusApplication(
     for ((_, c) <- channels) yield c.getViewedVertex
   }
 
-  val sizeFunction: Map[LinguaFrancaReactor | LinguaFrancaSignal | LinguaFrancaReaction, Long] = {
-    val elemSet: Set[LinguaFrancaReactor | LinguaFrancaSignal | LinguaFrancaReaction] =
-      (reactors ++ channels.values ++ reactions)
-    elemSet
-      .map(e =>
-        e -> (e match {
-          case s: LinguaFrancaSignal   => s.getSizeInBits
-          case a: LinguaFrancaReactor  => a.getStateSizesInBits.asScala.map(_.toLong).sum
-          case r: LinguaFrancaReaction => r.getSizeInBits
-        }).asInstanceOf[Long]
-      )
-      .toMap
-  }
+  def sizeFunction(elem: LinguaFrancaElem): Long = elem match
+    case a: LinguaFrancaReactor => a.getStateSizesInBits.asScala.map(_.toLong).sum
+    case r: LinguaFrancaReaction => r.getSizeInBits
+    case s: LinguaFrancaSignal => s.getSizeInBits
+    case _ => 0L
+
+  // val sizeFunction: Map[LinguaFrancaReactor | LinguaFrancaSignal | LinguaFrancaReaction, Long] = {
+  //   val elemSet: Array[LinguaFrancaReactor | LinguaFrancaSignal | LinguaFrancaReaction] =
+  //     (reactors ++ channels.values ++ reactions)
+  //   elemSet
+  //     .map(e =>
+  //       e -> (e match {
+  //         case s: LinguaFrancaSignal   => s.getSizeInBits
+  //         case a: LinguaFrancaReactor  => a.getStateSizesInBits.asScala.map(_.toLong).sum
+  //         case r: LinguaFrancaReaction => r.getSizeInBits
+  //       }).asInstanceOf[Long]
+  //     )
+  //     .toMap
+  // }
 
   lazy val reactionsOnlyExtendedConnectionsGraph =
     val g = SimpleDirectedGraph[LinguaFrancaReaction, DefaultEdge](classOf[DefaultEdge])
@@ -153,7 +171,7 @@ final case class ReactorMinusApplication(
           .map(dst => (src, dst))
       })
       .toSet
-  
+
   lazy val reactionsExtendedReachability: Set[(LinguaFrancaReaction, LinguaFrancaReaction)] =
     reactionsOnlyExtendedConnectionsGraph.vertexSet.asScala
       .filter(v => !reactionsOnlyExtendedConnectionsGraph.outgoingEdgesOf(v).isEmpty)
@@ -164,19 +182,21 @@ final case class ReactorMinusApplication(
       })
       .toSet
 
+  // override def dominates(o: DecisionModel) =
+  //   super.dominates(o) && (o match {
+  //     case o: ReactorMinusApplication => dominatesReactorMinus(o)
+  //     case _                          => true
+  //   })
 
-  override def dominates(o: DecisionModel) =
-    super.dominates(o) && (o match {
-      case o: ReactorMinusApplication => dominatesReactorMinus(o)
-      case _                          => true
-    })
-
-  def dominatesReactorMinus(o: ReactorMinusApplication): Boolean = {
-    // has more information about sizes
-    o.sizeFunction.keySet.subsetOf(sizeFunction.keySet) && (
-      sizeFunction.count((k, v) => v > 0) > o.sizeFunction.count((k, v) => v > 0)
-    )
-  }
+  // def dominatesReactorMinus(o: ReactorMinusApplication): Boolean = {
+  //   // has more information about sizes
+  //   reactors.forall(r => {
+  //     o.reactors.find(rr => r == rr).map(rr => sizeFunction(r) > 0 && sizeFunction(rr) <= 0).getOrElse(false)
+  //   })
+  //   o.sizeFunction.keySet.subsetOf(sizeFunction.keySet) && (
+  //     sizeFunction.count((k, v) => v > 0) > o.sizeFunction.count((k, v) => v > 0)
+  //   )
+  // }
 
   /** Get all trivial source and destination of trigger chains.
     * @return
@@ -219,8 +239,8 @@ final case class ReactorMinusApplication(
   lazy val unambigousEndToEndFixedLatencies
       : Map[(LinguaFrancaReaction, LinguaFrancaReaction), BigFraction] =
     jobGraph.jobLevelFixedLatencies
-    .groupBy((srcdst, w) => (srcdst._1.srcReaction, srcdst._2.srcReaction))
-    .map((srcdst, w) => srcdst -> w.values.max)
+      .groupBy((srcdst, w) => (srcdst._1.srcReaction, srcdst._2.srcReaction))
+      .map((srcdst, w) => srcdst -> w.values.max)
 
   /** The left-to-right maximal interference analysis results
     * @return
@@ -229,15 +249,22 @@ final case class ReactorMinusApplication(
     */
   lazy val maximalInterferencePoints
       : Map[(LinguaFrancaReaction, LinguaFrancaReaction), Seq[BigFraction]] =
-    (for (r <- reactions; rr <- reactions - r; if reactionsPriorityOrdering.compare(r, rr) >= 0) yield
-      val (j, jSeq) = jobGraph.reactionToJobs(r).map(j =>
-        j -> jobGraph.reactionToJobs(rr).filter(jj => j.interferes(jj)).map(jj => jj.trigger).toList
-      ).maxBy((j, jjStartSeq) => 
-        jjStartSeq.map(jjTrigger => j.deadline.subtract(jjTrigger).doubleValue).sum
-      )
-      (r, rr) -> jSeq.map(jjTrigger => jjTrigger.subtract(j.trigger))
+    (for (r <- reactions; rr <- reactions; if r != rr; if reactionsPriorityOrdering.compare(r, rr) >= 0)
+      yield
+        val (j, jSeq) = jobGraph
+          .reactionToJobs(r)
+          .map(j =>
+            j -> jobGraph
+              .reactionToJobs(rr)
+              .filter(jj => j.interferes(jj))
+              .map(jj => jj.trigger)
+              .toList
+          )
+          .maxBy((j, jjStartSeq) =>
+            jjStartSeq.map(jjTrigger => j.deadline.subtract(jjTrigger).doubleValue).sum
+          )
+        (r, rr) -> jSeq.map(jjTrigger => jjTrigger.subtract(j.trigger))
     ).toMap
-        
 
   override val uniqueIdentifier = "ReactorMinusApplication"
 

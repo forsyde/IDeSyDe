@@ -1,11 +1,11 @@
 package idesyde.identification.models.reactor
 
+import forsyde.io.java.typed.viewers.moc.linguafranca.LinguaFrancaReaction
+import forsyde.io.java.typed.viewers.platform.GenericProcessingModule
 import idesyde.identification.models.reactor.ReactionJob
 import idesyde.identification.DecisionModel
-import idesyde.identification.models.SchedulableNetworkedDigHW
-import forsyde.io.java.typed.viewers.GenericProcessingModule
+import idesyde.identification.models.platform.SchedulableNetworkedDigHW
 import org.apache.commons.math3.fraction.BigFraction
-import forsyde.io.java.typed.viewers.LinguaFrancaReaction
 import org.jgrapht.graph.SimpleGraph
 import org.jgrapht.graph.DefaultEdge
 import org.jgrapht.alg.connectivity.GabowStrongConnectivityInspector
@@ -46,12 +46,13 @@ final case class ReactorMinusAppMapAndSched(
     platform.hardware.processingElems.foreach(p => graph.addVertex(p))
     for (
       p  <- platform.hardware.processingElems;
-      pp <- platform.hardware.processingElems - p;
+      pp <- platform.hardware.processingElems;
+      if p != pp;
       // the subset of the WCET function for each process must be identical
-      if reactorMinus.reactions.forall(r => 
+      if reactorMinus.reactions.forall(r =>
         // either both cannot execute the reaction or they must have identical WCET
         (!wcetFunction.contains((r, p)) && !wcetFunction.contains((r, pp))) ||
-        wcetFunction.contains((r, p)) == wcetFunction.contains((r, pp))
+          wcetFunction.contains((r, p)) == wcetFunction.contains((r, pp))
       )
     ) graph.addEdge(p, pp)
     graph
@@ -68,7 +69,7 @@ final case class ReactorMinusAppMapAndSched(
     executionSymmetricRelationGraph.edgeSet.stream.forEach(e =>
       val src = executionSymmetricRelationGraph.getEdgeSource(e)
       val dst = executionSymmetricRelationGraph.getEdgeTarget(e)
-      if (!platform.topologySymmetryRelationGraph.containsEdge(src, dst)) 
+      if (!platform.topologySymmetryRelationGraph.containsEdge(src, dst))
         intersectGraph.removeEdge(e)
     )
     ConnectivityInspector(intersectGraph).connectedSets.stream
@@ -77,16 +78,16 @@ final case class ReactorMinusAppMapAndSched(
       .asScala
       .toSet
 
-  /**
-   * The min number of processing cores is ideally the rank of the 'boolean'
-   * matrix formed by th WCET function.
-   * 
-   * @return the min number of processing cores
-   */
+  /** The min number of processing cores is ideally the rank of the 'boolean' matrix formed by th
+    * WCET function.
+    *
+    * @return
+    *   the min number of processing cores
+    */
   lazy val minProcessingCores: Int =
-    platform.hardware.processingElems.map(p =>
-      reactorMinus.reactions.filter(r => wcetFunction.contains((r, p)))
-      ).size
+    platform.hardware.processingElems
+      .map(p => reactorMinus.reactions.filter(r => wcetFunction.contains((r, p))))
+      .size
 
   override val uniqueIdentifier = "ReactorMinusAppMapAndSched"
 

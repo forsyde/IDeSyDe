@@ -1,25 +1,24 @@
 ThisBuild / organization := "io.github.forsyde"
-ThisBuild / version      := "0.2.3"
-ThisBuild / scalaVersion := "3.1.0"
-
+ThisBuild / version := "0.2.4"
+ThisBuild / scalaVersion := "3.1.1"
 
 lazy val root = project
   .in(file("."))
-/*   .settings(
-    name := "IDeSyDe",
-    description := "",
-    version := "0.2.3",
-    scalaVersion := "3.1.0"
-  ) */
-  .aggregate(common, cli)
+  .aggregate(common, cli, choco)
 
 lazy val common = (project in file("common"))
 
-lazy val cli = (project in file("cli")).dependsOn(common).enablePlugins(NativeImagePlugin)
+lazy val choco = (project in file("choco")).dependsOn(common)
+
+lazy val cli = (project in file("cli"))
+  .dependsOn(common)
+  .dependsOn(choco)
+  .enablePlugins(ScalaNativePlugin)
   .settings(
     Compile / mainClass := Some("idesyde.IDeSyDeStandalone")
   )
-// resolvers += Resolver.mavenLocal
+
+ThisBuild / resolvers += Resolver.mavenLocal
 
 /* libraryDependencies ++= Seq(
   "io.github.forsyde" % "forsyde-io-java-core" % "0.4.1",

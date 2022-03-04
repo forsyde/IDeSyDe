@@ -20,6 +20,7 @@ class IDeSyDeCLIParser extends scopt.OptionParser[IDeSyDeRunConfig]("idesyde"):
         .action((f, x) => x.copy(inputModelsPaths = x.inputModelsPaths.appended(f.toPath)))
 
     opt[File]('o', "out")
+        .text("If the output is an existing directory, write all solutions to the directory. Otherwise, the lastest solution is output.")
         .valueName("<outputModel>")
         .action((f, x) => x.copy(outputModelPath = f.toPath))
 

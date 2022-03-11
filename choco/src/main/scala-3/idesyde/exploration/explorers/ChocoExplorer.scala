@@ -61,7 +61,10 @@ class ChocoExplorer() extends Explorer:
         .continually(solver.solve)
         .takeWhile(feasible => feasible)
         .filter(feasible => feasible)
-        .flatMap(feasible => paretoMaximizer.getParetoFront.asScala)
+        .flatMap(feasible => {
+          //scribe.debug(s"pareto size: ${paretoMaximizer.getParetoFront.size}")
+          paretoMaximizer.getParetoFront.asScala
+        })
         .map(paretoSolutions => {
           chocoCpModel.rebuildFromChocoOutput(paretoSolutions)
         })

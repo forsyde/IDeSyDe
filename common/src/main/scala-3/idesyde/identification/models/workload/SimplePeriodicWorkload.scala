@@ -40,6 +40,7 @@ import org.jgrapht.alg.shortestpath.DijkstraManyToManyShortestPaths
 import forsyde.io.java.typed.viewers.execution.SimpleReactiveStimulus
 import forsyde.io.java.typed.viewers.impl.DataBlock
 import java.{util => ju}
+import org.jgrapht.Graph
 
 /** Simplest periodic task set concerned in the literature. The periods, offsets and relative
   * deadlines are all fixed at a task level. The only additional complexity are precedence are
@@ -92,7 +93,7 @@ case class SimplePeriodicWorkload(
   // build the graph of reactions to enable periodic reductions
   // scribe.debug(reactiveStimulusSrcs.map(_.mkString("[", ",", "]")).mkString("[", ",", "]"))
   // scribe.debug(reactiveStimulusDst.mkString("[", ",", "]"))
-  val reactiveGraph =
+  val reactiveGraph: Graph[Integer, Integer] =
     if (!reactiveStimulusSrcs.isEmpty && !reactiveStimulusDst.isEmpty) then
       SparseIntDirectedGraph(
         tasks.length,
@@ -109,10 +110,13 @@ case class SimplePeriodicWorkload(
         IncomingEdgesSupport.LAZY_INCOMING_EDGES
       )
     else
-      SparseIntDirectedGraph(
-        tasks.length,
-        ju.List.of()
-      )
+      SimpleDirectedGraph.createBuilder[Integer, Integer](() => 0.asInstanceOf[Integer])
+        .addVertices((0 until tasks.length).map(_.asInstanceOf[Integer]).toArray:_*)
+        .build
+      // SparseIntDirectedGraph(
+      //   tasks.length,
+      //   ju.List.of()
+      // )
 
   // do the computation by traversing the graph
   val periods = {

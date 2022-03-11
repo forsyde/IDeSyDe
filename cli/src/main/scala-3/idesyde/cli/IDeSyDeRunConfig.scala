@@ -58,10 +58,12 @@ case class IDeSyDeRunConfig(
             explorer
               .explore(decisionModel)(using executionContext)
               .foldLeft(0)((res, result) => {
-                scribe.debug(s"writing solution at ${outputModelPath.toString}")
-                if (outputModelPath.toFile.isFile) then
+                if (!outputModelPath.toFile.exists || outputModelPath.toFile.isFile) then
+                  scribe.debug(s"writing solution at ${outputModelPath.toString}")
                   modelHandler.writeModel(model.merge(result), outputModelPath)
                 else if (outputModelPath.toFile.isDirectory) then
+                  val outPath = outputModelPath.relativize(Paths.get(s"solution_${res.toString}"))
+                  scribe.debug(s"writing solution at ${outPath.toString}")
                   modelHandler.writeModel(model.merge(result), outputModelPath.relativize(Paths.get(s"solution_${res.toString}")))
                 res + 1
               })

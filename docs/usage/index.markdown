@@ -1,10 +1,15 @@
 ---
 layout: default
-title: Installation
-nav_order: 2
+title: Usage
+nav_order: 1
+permalink: /usage/
+has_children: true
 ---
 
-# Pre-requisites
+## Installing IDeSyDe
+
+Currently the only "installation" method is to download and use the IDeSyDe `jar` directly.
+Which should be reasonably easy once you have a JVM distribution intalled in your machine.
 
 ## Java
 
@@ -20,7 +25,7 @@ IDeSyDe uses MiniZinc as one backend for solving problems that it identifies.
 Following the instructions at the [MiniZinc page](https://www.minizinc.org/)
 and making the `minizinc` binary callable is enough for IDeSyDe to use it.
 
-# Installing compiled IDeSyDe
+<!-- # Installing compiled IDeSyDe
 
 Being a JVM first application, IDeSyDe is distributed as a standalone
 [jars](https://docs.oracle.com/javase/tutorial/deployment/jar/basicsindex.html).
@@ -45,4 +50,4 @@ The third line makes the wrapper executable.
 
 ## Windows quick install
 
-Coming soon.
+Coming soon. -->

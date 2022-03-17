@@ -9,15 +9,14 @@ and also to situate you about the tool (and its methods).
 
 # Quick facts
 
-## What is IDeSyDe?
 
-A *generic* tool [for the Design Space Exploration activity]({{ site.project.forsyde }}#our-vision)
+IDeSyDe is a *generic* tool [for the Design Space Exploration activity]({{ site.project.forsyde }}#our-vision)
 within a Model-Based System design flow such as [ForSyDe]({{ site.projects.forsyde }}).
 
 The key element in IDeSyDe is the underlying concept of **Design Space Idenfitication**.
 
 IDeSyDe is in fact an implementation of it, and it powers all guarantees and decoupling
-seen in the tool itself. Want to know more? Try [Concepts]({{ site.baseurl }}/concepts)!
+seen in the tool itself.  Try [Concepts]({{ site.baseurl }}/concepts)!
 
 ## What is IDeSyDe not?
 
@@ -27,7 +26,7 @@ such as [Gecode](https://www.gecode.org/) or [chuffled](https://github.com/chuff
 nor a general meta-heuristic optimization framework
 such as [Opt4j](https://sdarg.github.io/opt4j/) or [JMetal](https://jmetal.github.io/jMetal/).
 
-It uses all these applications and libraries to explore the design space of models that make
+It uses all these applications and libraries to explore t that make
 better sense to a system designer, such as [AMALTHEA](https://www.eclipse.org/app4mc/) or 
 [ForSyDe IO]({{ site.projects.forsydeio }}). 
 

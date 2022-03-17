@@ -71,7 +71,7 @@ final case class PeriodicTaskToSchedHW(
       instrumentedCEsRange.zipWithIndex.map((ce, j) => {
         // get the WCTT in seconds
         BigFraction(
-          channel.getMaxSize * ce.getMaxCyclesPerFlit,
+          channel.getMaxSizeInBits * ce.getMaxCyclesPerFlit,
           ce.getFlitSizeInBits * ce.getMaxConcurrentFlits * ce.getOperatingFrequencyInHertz
         )
       })
@@ -84,7 +84,7 @@ final case class PeriodicTaskToSchedHW(
       schedHwModel.hardware.platformElements.zipWithIndex.map((pi, i) => {
         schedHwModel.hardware.platformElements.zipWithIndex.map((pj, j) => {
           val t = schedHwModel.hardware.maxTraversalTimePerBit(i)(j)
-          if (t.compareTo(BigFraction.MINUS_ONE) > 0) then t.multiply(c.getMaxSize)
+          if (t.compareTo(BigFraction.MINUS_ONE) > 0) then t.multiply(c.getMaxSizeInBits)
           else t
         })
       })

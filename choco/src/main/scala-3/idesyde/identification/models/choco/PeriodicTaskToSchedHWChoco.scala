@@ -232,7 +232,7 @@ final case class PeriodicTaskToSchedHWChoco(
         0,
         if (t.compareTo(BigFraction.MINUS_ONE) > 0) then
           t.multiply(multiplier)
-            .multiply(c.getMaxSize)
+            .multiply(c.getMaxSizeInBits)
             .doubleValue
             .ceil
             .toInt
@@ -249,7 +249,7 @@ final case class PeriodicTaskToSchedHWChoco(
         0,
         if (t.compareTo(BigFraction.MINUS_ONE) > 0) then
           t.multiply(multiplier)
-            .multiply(c.getMaxSize)
+            .multiply(c.getMaxSizeInBits)
             .doubleValue
             .ceil
             .toInt

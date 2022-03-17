@@ -1,7 +1,9 @@
 ---
 layout: default
-title: Usage
-nav_order: 3
+title: Guidelines
+nav_order: 2
+permalink: /usage/guidelines
+parent: Usage
 ---
 
 # Guidelines
@@ -30,24 +32,10 @@ If you answered _no_ to 1, it means IDeSyDe cannot even know your system model, 
 
 Eventually a better description of the models identified and supported by IDeSyDe will also contain one page in their own respect.
 
-> The following sections are out of date! IDeSyDe has migrated to a JVM project. Majorly scala. Proper installation instructions
+<!-- > The following sections are out of date! IDeSyDe has migrated to a JVM project. Majorly scala. Proper installation instructions
 > are to come. For now you can downloaded the latest jars from the github webpage.
 
 # Installation
-
-As a majorly Python-based project, there's no failsafe way to distribute the tool to you, the designer,
-as many of IDeSyDe's dependencies (as expected in performant tooling) are in fact C libraries with python wrappers. 
-They are all listed here so that hopefully one of them work out in your set-up.
-
-## Pre requisites
-
-Whichever way you use to get IDeSyDe installed, you also need to have [MiniZinc](https://www.minizinc.org/)
-installed in your system so that IDeSyDe can call it!
-There's a catch, however: The latest version might contain a bug that prevents some models in IDeSyDe
-for running properly, therefore, the tested and recommended version is
-[Minizinc 2.4.3](https://github.com/MiniZinc/MiniZincIDE/releases/tag/2.4.3).
-
-If you don't want to try the standlone executables, you also need to have Python 3.7+ installed in your system.
 
 ## Getting it from PyPI
 
@@ -81,4 +69,4 @@ the executable loads all the libraries and dependencies.
 
 As before just issue a help command for it to test if all is well and alive:
 
-    ./idesyde -h
+    ./idesyde -h -->

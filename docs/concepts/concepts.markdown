@@ -1,7 +1,9 @@
 ---
 layout: default
-title: Concepts
+title: Design Space Identification
+permalink: /concept/dsi
 nav_order: 2
+parent: Concepts
 ---
 
 # Design Space Identification (DSI)

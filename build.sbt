@@ -1,5 +1,5 @@
 ThisBuild / organization := "io.github.forsyde"
-ThisBuild / version := "0.2.4"
+ThisBuild / version := "0.2.5"
 ThisBuild / scalaVersion := "3.1.1"
 
 lazy val root = project
@@ -18,7 +18,7 @@ lazy val cli = (project in file("cli"))
     Compile / mainClass := Some("idesyde.IDeSyDeStandalone")
   )
 
-//ThisBuild / resolvers += Resolver.mavenLocal
+ThisBuild / resolvers += Resolver.mavenLocal
 
 
 // TODO: figure out what is

@@ -23,6 +23,7 @@ import org.jgrapht.opt.graph.sparse.SparseIntUndirectedGraph
 import org.jgrapht.alg.util.Pair
 import org.jgrapht.opt.graph.sparse.SparseIntUndirectedWeightedGraph
 import org.jgrapht.graph.AsWeightedGraph
+import org.jgrapht.graph.SimpleDirectedGraph
 
 final case class NetworkedDigitalHardware(
     val processingElems: Array[GenericProcessingModule],
@@ -35,19 +36,24 @@ final case class NetworkedDigitalHardware(
   val platformElements: Array[DigitalModule] =
     processingElems ++ communicationElems ++ storageElems
 
-  val topology = SparseIntUndirectedGraph(
-    platformElements.length,
-    links.length,
-    () =>
-      links
-        .map(l =>
-          Pair(
-            platformElements.indexOf(l._1).asInstanceOf[Integer],
-            platformElements.indexOf(l._2).asInstanceOf[Integer]
+  val topology = if(links.length > 0)
+    SparseIntUndirectedGraph(
+      platformElements.length,
+      links.length,
+      () =>
+        links
+          .map(l =>
+            Pair(
+              platformElements.indexOf(l._1).asInstanceOf[Integer],
+              platformElements.indexOf(l._2).asInstanceOf[Integer]
+            )
           )
-        )
-        .asJavaSeqStream
-  )
+          .asJavaSeqStream
+    )
+    else
+      SimpleDirectedGraph.createBuilder[Integer, Integer](() => 0.asInstanceOf[Integer])
+        .addVertices((0 until platformElements.length).map(_.asInstanceOf[Integer]).toArray:_*)
+        .build
 
   lazy val commTopology =
     AsWeightedGraph(

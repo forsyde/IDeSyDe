@@ -39,9 +39,9 @@ final class PeriodicTaskIdentificationRule(using Numeric[BigFraction]) extends I
       ReactiveStimulus.safeCast(v).ifPresent(stim => reactiveStimulus :+= stim)
     })
     // convenience
-    val tasks = periodicTasks ++ reactiveTasks
+    lazy val tasks = periodicTasks ++ reactiveTasks
     // build the task-to-executable relationship
-    val executables = tasks.map(_.getCallSequencePort(model).asScala.toArray)
+    lazy val executables = tasks.map(_.getCallSequencePort(model).asScala.toArray)
     // build the task-to-stimulus relation ship
     var predecessors: Array[Array[Int]] = Array.empty
     var successors: Array[Int] = Array.emptyIntArray
@@ -63,7 +63,7 @@ final class PeriodicTaskIdentificationRule(using Numeric[BigFraction]) extends I
       })
     })
     // build the read and write arrays
-    val taskChannelReads = executables.zipWithIndex
+    lazy val taskChannelReads = executables.zipWithIndex
       .map((es, i) => {
         val t = tasks(i)
         dataBlocks.zipWithIndex.map((c, j) => {
@@ -73,9 +73,9 @@ final class PeriodicTaskIdentificationRule(using Numeric[BigFraction]) extends I
           }).orElse((c, 1))
           else
             (c, 0)
-        }).map((c, elems) => TokenizableDataBlock.safeCast(c).map(block => block.getTokenSize * elems).orElse(c.getMaxSize).toLong)
+        }).map((c, elems) => TokenizableDataBlock.safeCast(c).map(block => block.getTokenSizeInBits * elems).orElse(c.getMaxSizeInBits).toLong)
       })
-    val taskChannelWrites = tasks
+    lazy val taskChannelWrites = tasks
       .map(t => {
         dataBlocks.zipWithIndex.map((c, j) => {
           if (model.hasConnection(t, c)) then
@@ -84,9 +84,12 @@ final class PeriodicTaskIdentificationRule(using Numeric[BigFraction]) extends I
           }).orElse((c, 1))
           else
             (c, 0)
-        }).map((c, elems) => TokenizableDataBlock.safeCast(c).map(block => block.getTokenSize * elems).orElse(c.getMaxSize).toLong)
+        }).map((c, elems) => TokenizableDataBlock.safeCast(c).map(block => block.getTokenSizeInBits * elems).orElse(c.getMaxSizeInBits).toLong)
       })
-    if (periodicTasks.exists(_.getPeriodicStimulusPort(model).isEmpty))
+    if (periodicTasks.isEmpty)
+      scribe.debug("No periodic workload model found.")
+      (true, Option.empty)
+    else if (periodicTasks.exists(_.getPeriodicStimulusPort(model).isEmpty))
       scribe.debug("Some periodic tasks have no periodic stimulus. Skipping.")
       (true, Option.empty)
     else

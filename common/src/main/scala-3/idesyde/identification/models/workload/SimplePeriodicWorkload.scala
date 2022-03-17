@@ -358,7 +358,7 @@ case class SimplePeriodicWorkload(
       .sum
   })
   
-  lazy val channelSizes = dataBlocks.map(_.getMaxSize.toLong)
+  lazy val channelSizes = dataBlocks.map(_.getMaxSizeInBits.toLong)
 
   lazy val alwaysBlocksGraph = {
     val g = AsSubgraph(reactiveGraph)

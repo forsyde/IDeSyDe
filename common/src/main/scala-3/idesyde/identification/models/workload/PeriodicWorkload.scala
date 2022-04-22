@@ -2,7 +2,6 @@ package idesyde.identification.models.workload
 
 import forsyde.io.java.core.Vertex
 import idesyde.identification.DecisionModel
-import forsyde.io.java.typed.viewers.impl.DataBlock
 
 /** Interface that describes a periodic workload model, also commonly known in the real time
   * academic community as "periodic task model". This one in particular closely follows the
@@ -17,10 +16,10 @@ import forsyde.io.java.typed.viewers.impl.DataBlock
   * @tparam TimeT
   *   The type that represents a time tag.
   */
-trait PeriodicWorkload[TaskT, TimeT]()(using Numeric[TimeT]) extends DecisionModel:
+trait PeriodicWorkload[TaskT, MQueueT, TimeT]()(using Numeric[TimeT]) extends DecisionModel:
 
-  def tasks: Array[TaskT]
-  def channels: Array[DataBlock]
+  def periodicTasks: Array[TaskT]
+  def messageQueues: Array[MQueueT]
   def tasksNumInstances: Array[Int]
   def instancesReleases(t: TaskT)(int: Int): TimeT
   def instancesDeadlines(t: TaskT)(int: Int): TimeT
@@ -29,8 +28,8 @@ trait PeriodicWorkload[TaskT, TimeT]()(using Numeric[TimeT]) extends DecisionMod
   def channelSizes: Array[Long]
 
   def maximalInterference(srcTask: TaskT)(dstTask: TaskT)(using num: Numeric[TimeT]): Int =
-    val src = tasks.indexOf(srcTask)
-    val dst = tasks.indexOf(dstTask)
+    val src = periodicTasks.indexOf(srcTask)
+    val dst = periodicTasks.indexOf(dstTask)
     (0 until tasksNumInstances(dst))
       .map(dstIdx => {
         (0 until tasksNumInstances(src))

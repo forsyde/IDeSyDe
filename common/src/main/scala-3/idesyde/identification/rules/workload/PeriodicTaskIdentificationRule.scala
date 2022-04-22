@@ -1,6 +1,7 @@
 package idesyde.identification.rules.workload
 
 import idesyde.identification.IdentificationRule
+import idesyde.identification.ForSyDeIdentificationRule
 import forsyde.io.java.core.ForSyDeSystemGraph
 import idesyde.identification.DecisionModel
 import forsyde.io.java.typed.viewers.execution.PeriodicTask
@@ -20,21 +21,27 @@ import forsyde.io.java.typed.viewers.impl.DataBlock
 import forsyde.io.java.typed.viewers.impl.CommunicatingExecutable
 import forsyde.io.java.typed.viewers.impl.TokenizableDataBlock
 
-final class PeriodicTaskIdentificationRule(using Numeric[BigFraction]) extends IdentificationRule:
+final class PeriodicTaskIdentificationRule(using Numeric[BigFraction])
+    extends ForSyDeIdentificationRule[SimplePeriodicWorkload]:
 
   def identify(
       model: ForSyDeSystemGraph,
       identified: Set[DecisionModel]
   ): (Boolean, Option[DecisionModel]) =
-    var periodicTasks: Array[PeriodicTask] = Array.empty
-    var reactiveTasks: Array[ReactiveTask] = Array.empty
-    var dataBlocks: Array[DataBlock]           = Array.empty
+    var periodicTasks: Array[PeriodicTask]        = Array.empty
+    var reactiveTasks: Array[ReactiveTask]        = Array.empty
+    var dataBlocks: Array[DataBlock]              = Array.empty
     var reactiveStimulus: Array[ReactiveStimulus] = Array.empty
     model.vertexSet.stream.forEach(v => {
       // try to classify first as periodic and then later as reactive
-      PeriodicTask.safeCast(v).ifPresentOrElse(task => periodicTasks :+= task, () => {
-        ReactiveTask.safeCast(v).ifPresent(task => reactiveTasks :+= task)
-      })
+      PeriodicTask
+        .safeCast(v)
+        .ifPresentOrElse(
+          task => periodicTasks :+= task,
+          () => {
+            ReactiveTask.safeCast(v).ifPresent(task => reactiveTasks :+= task)
+          }
+        )
       DataBlock.safeCast(v).ifPresent(channel => dataBlocks :+= channel)
       ReactiveStimulus.safeCast(v).ifPresent(stim => reactiveStimulus :+= stim)
     })
@@ -44,47 +51,77 @@ final class PeriodicTaskIdentificationRule(using Numeric[BigFraction]) extends I
     lazy val executables = tasks.map(_.getCallSequencePort(model).asScala.toArray)
     // build the task-to-stimulus relation ship
     var predecessors: Array[Array[Int]] = Array.empty
-    var successors: Array[Int] = Array.emptyIntArray
+    var successors: Array[Int]          = Array.emptyIntArray
     // build the precedence arrays
     // it is a bit verbose due to how the comparison is done. THrough IDs it is sure-fire.
     reactiveStimulus.foreach(stimulus => {
-      successors :+= tasks.indexWhere(t => 
+      successors :+= tasks.indexWhere(t =>
         stimulus.getSuccessorPort(model).map(_.getIdentifier == t.getIdentifier).orElse(false)
       )
-      SimpleReactiveStimulus.safeCast(stimulus).ifPresent(simple => {
-        predecessors :+= Array(tasks.indexWhere(t => 
-          simple.getPredecessorPort(model).map(_.getIdentifier == t.getIdentifier).orElse(false)
-        ))
-      })
-      MultiANDReactiveStimulus.safeCast(stimulus).ifPresent(andStimulus => {
-        predecessors :+= andStimulus.getPredecessorsPort(model).stream.mapToInt(predecessor => {
-          tasks.indexWhere(t => predecessor.getIdentifier == t.getIdentifier)
-        }).toArray
-      })
+      SimpleReactiveStimulus
+        .safeCast(stimulus)
+        .ifPresent(simple => {
+          predecessors :+= Array(
+            tasks.indexWhere(t =>
+              simple.getPredecessorPort(model).map(_.getIdentifier == t.getIdentifier).orElse(false)
+            )
+          )
+        })
+      MultiANDReactiveStimulus
+        .safeCast(stimulus)
+        .ifPresent(andStimulus => {
+          predecessors :+= andStimulus
+            .getPredecessorsPort(model)
+            .stream
+            .mapToInt(predecessor => {
+              tasks.indexWhere(t => predecessor.getIdentifier == t.getIdentifier)
+            })
+            .toArray
+        })
     })
     // build the read and write arrays
     lazy val taskChannelReads = executables.zipWithIndex
       .map((es, i) => {
         val t = tasks(i)
-        dataBlocks.zipWithIndex.map((c, j) => {
-          if (model.hasConnection(c, t)) then
-              CommunicatingExecutable.safeCast(t).map(commTask => {
-            (c, commTask.getPortDataReadSize.getOrDefault(c.getIdentifier, 1).toInt)
-          }).orElse((c, 1))
-          else
-            (c, 0)
-        }).map((c, elems) => TokenizableDataBlock.safeCast(c).map(block => block.getTokenSizeInBits * elems).orElse(c.getMaxSizeInBits).toLong)
+        dataBlocks.zipWithIndex
+          .map((c, j) => {
+            if (model.hasConnection(c, t)) then
+              CommunicatingExecutable
+                .safeCast(t)
+                .map(commTask => {
+                  (c, commTask.getPortDataReadSize.getOrDefault(c.getIdentifier, 1).toInt)
+                })
+                .orElse((c, 1))
+            else (c, 0)
+          })
+          .map((c, elems) =>
+            TokenizableDataBlock
+              .safeCast(c)
+              .map(block => block.getTokenSizeInBits * elems)
+              .orElse(c.getMaxSizeInBits)
+              .toLong
+          )
       })
     lazy val taskChannelWrites = tasks
       .map(t => {
-        dataBlocks.zipWithIndex.map((c, j) => {
-          if (model.hasConnection(t, c)) then
-              CommunicatingExecutable.safeCast(t).map(commTask => {
-            (c, commTask.getPortDataWrittenSize.getOrDefault(c.getIdentifier, 1).toInt)
-          }).orElse((c, 1))
-          else
-            (c, 0)
-        }).map((c, elems) => TokenizableDataBlock.safeCast(c).map(block => block.getTokenSizeInBits * elems).orElse(c.getMaxSizeInBits).toLong)
+        dataBlocks.zipWithIndex
+          .map((c, j) => {
+            if (model.hasConnection(t, c)) then
+              CommunicatingExecutable
+                .safeCast(t)
+                .map(commTask => {
+                  (c, commTask.getPortDataWrittenSize.getOrDefault(c.getIdentifier, 1).toInt)
+                })
+                .orElse((c, 1))
+            else (c, 0)
+          })
+          .map((c, elems) =>
+            TokenizableDataBlock
+              .safeCast(c)
+              .map(block => block.getTokenSizeInBits * elems)
+              .orElse(c.getMaxSizeInBits)
+              .toLong
+          )
       })
     if (periodicTasks.isEmpty)
       scribe.debug("No periodic workload model found.")
@@ -102,7 +139,7 @@ final class PeriodicTaskIdentificationRule(using Numeric[BigFraction]) extends I
         dataBlocks = dataBlocks,
         reactiveStimulusSrcs = predecessors,
         reactiveStimulusDst = successors,
-        taskChannelReads = taskChannelReads, 
+        taskChannelReads = taskChannelReads,
         taskChannelWrites = taskChannelWrites
       )
       scribe.debug(

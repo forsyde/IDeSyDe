@@ -1,6 +1,6 @@
 package idesyde.identification.rules.mixed
 
-import idesyde.identification.IdentificationRule
+import idesyde.identification.ForSyDeIdentificationRule
 import forsyde.io.java.core.ForSyDeSystemGraph
 import idesyde.identification.DecisionModel
 import idesyde.identification.models.workload.SimplePeriodicWorkload
@@ -15,7 +15,7 @@ import forsyde.io.java.typed.viewers.platform.InstrumentedCommunicationModule
 import forsyde.io.java.typed.viewers.decision.MemoryMapped
 import forsyde.io.java.typed.viewers.decision.Scheduled
 
-class PeriodicTaskToSchedHWIdentRule extends IdentificationRule {
+class PeriodicTaskToSchedHWIdentRule extends ForSyDeIdentificationRule[PeriodicTaskToSchedHW] {
 
   def identify(
       model: ForSyDeSystemGraph,

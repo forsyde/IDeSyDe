@@ -68,7 +68,8 @@ case class SimplePeriodicWorkload(
     val taskChannelReads: Array[Array[Long]],
     val taskChannelWrites: Array[Array[Long]]
 )(using Numeric[BigFraction])
-    extends DecisionModel:
+    extends DecisionModel,
+      idesyde.identification.models.workload.PeriodicWorkload[PeriodicTask, DataBlock]:
   //extends PeriodicWorkload[Task, BigFraction]():
 
   override val coveredVertexes: Iterable[Vertex] =
@@ -110,13 +111,14 @@ case class SimplePeriodicWorkload(
         IncomingEdgesSupport.LAZY_INCOMING_EDGES
       )
     else
-      SimpleDirectedGraph.createBuilder[Integer, Integer](() => 0.asInstanceOf[Integer])
-        .addVertices((0 until tasks.length).map(_.asInstanceOf[Integer]).toArray:_*)
+      SimpleDirectedGraph
+        .createBuilder[Integer, Integer](() => 0.asInstanceOf[Integer])
+        .addVertices((0 until tasks.length).map(_.asInstanceOf[Integer]).toArray: _*)
         .build
-      // SparseIntDirectedGraph(
-      //   tasks.length,
-      //   ju.List.of()
-      // )
+  // SparseIntDirectedGraph(
+  //   tasks.length,
+  //   ju.List.of()
+  // )
 
   // do the computation by traversing the graph
   val periods = {
@@ -310,13 +312,10 @@ case class SimplePeriodicWorkload(
                     periodDelta
                   )
                 )
-            }).max((f1, f2) => 
-              f1.compareTo(f2)
-            )
+            })
+            .max((f1, f2) => f1.compareTo(f2))
         })
-        .filter(f => 
-          f.compareTo(noPrecedenceOffsets(idxTask)) >= 0
-        )
+        .filter(f => f.compareTo(noPrecedenceOffsets(idxTask)) >= 0)
         .max((f1, f2) => f1.compareTo(f2))
         .orElse(noPrecedenceOffsets(idxTask))
     }
@@ -357,7 +356,7 @@ case class SimplePeriodicWorkload(
       .map(e => InstrumentedExecutable.enforce(e).getSizeInBits.toLong)
       .sum
   })
-  
+
   lazy val channelSizes = dataBlocks.map(_.getMaxSizeInBits.toLong)
 
   lazy val alwaysBlocksGraph = {
@@ -427,8 +426,7 @@ case class SimplePeriodicWorkload(
       deltaOffset.add(deltaPeriod.multiply(maxInstances))
     else if (
       deltaPeriod.compareTo(BigFraction.ZERO) <= 0 && deltaOffset.compareTo(BigFraction.ZERO) >= 0
-    ) then
-      deltaOffset
+    ) then deltaOffset
     else {
       val instance = deltaOffset.divide(deltaPeriod).negate.doubleValue.floor.toLong + 1
       deltaOffset.add(

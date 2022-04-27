@@ -14,9 +14,7 @@ import org.apache.commons.math3.linear.SingularValueDecomposition
 
 final case class SDFApplication(
     val actors: Array[SDFComb],
-    val delays: Array[SDFDelay],
     val channels: Array[SDFChannel],
-    val channelsLumping: Array[Array[SDFElem]],
     val topology: Array[Array[Int]],
     val preCalculatedRepetitionVector: Array[Int] = Array.emptyIntArray
 ) extends DecisionModel {
@@ -32,20 +30,19 @@ final case class SDFApplication(
   // def dominatesSdf(other: SDFApplication) = repetitionVector.size >= other.repetitionVector.size
   val coveredVertexes =
     actors.map(_.getViewedVertex) ++
-      delays.map(_.getViewedVertex) ++
       channels.map(_.getViewedVertex)
 
-  lazy val initialTokens: Array[Int] =
-    channelsLumping.map(lump =>
-      lump
-        .map(o => {
-          o match {
-            case delay: SDFDelay => delay.getDelayedTokens.toInt
-            case _               => 0
-          }
-        })
-        .max
-    )
+  lazy val initialTokens: Array[Int] = 
+    // channelsLumping.map(lump =>
+    //   lump
+    //     .map(o => {
+    //       o match {
+    //         case delay: SDFDelay => delay.getDelayedTokens.toInt
+    //         case _               => 0
+    //       }
+    //     })
+    //     .max
+    // )
 
   lazy val repetitionVector: Array[Int] =
     if (preCalculatedRepetitionVector.length > 0) preCalculatedRepetitionVector

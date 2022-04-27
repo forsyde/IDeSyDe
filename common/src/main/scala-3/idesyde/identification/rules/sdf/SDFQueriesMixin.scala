@@ -17,6 +17,7 @@ import org.apache.commons.math3.util.ArithmeticUtils
 
 trait SDFQueriesMixin {
 
+  /*
   def sdfIsWellFormed(
       model: ForSyDeSystemGraph,
       actors: Array[SDFComb],
@@ -103,5 +104,6 @@ trait SDFQueriesMixin {
       )
       Option(repetitionFractions.map(_.multiply(factor).getNumerator).toArray)
     else Option.empty[Array[Int]]
+   */
 
 }

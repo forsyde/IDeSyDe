@@ -57,7 +57,7 @@ import org.jgrapht.Graph
   * @param precendences
   */
 case class SimplePeriodicWorkload(
-    val periodicTasks: Array[PeriodicTask],
+    val periodicTasks: Array[Task],
     val reactiveTasks: Array[ReactiveTask],
     val periodicStimulus: Array[PeriodicStimulus],
     val reactiveStimulus: Array[ReactiveStimulus],
@@ -69,7 +69,7 @@ case class SimplePeriodicWorkload(
     val taskChannelWrites: Array[Array[Long]]
 )(using Numeric[BigFraction])
     extends DecisionModel,
-      idesyde.identification.models.workload.PeriodicWorkload[PeriodicTask, DataBlock]:
+      idesyde.identification.models.workload.PeriodicWorkload[Task, DataBlock]:
   //extends PeriodicWorkload[Task, BigFraction]():
 
   override val coveredVertexes: Iterable[Vertex] =

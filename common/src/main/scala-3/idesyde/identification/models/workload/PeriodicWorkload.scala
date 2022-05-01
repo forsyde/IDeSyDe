@@ -2,6 +2,12 @@ package idesyde.identification.models.workload
 
 import forsyde.io.java.core.Vertex
 import idesyde.identification.DecisionModel
+import org.jgrapht.opt.graph.sparse.SparseIntDirectedGraph
+
+import math.Fractional.Implicits.infixFractionalOps
+
+
+
 
 /** Interface that describes a periodic workload model, also commonly known in the real time
   * academic community as "periodic task model". This one in particular closely follows the
@@ -16,16 +22,34 @@ import idesyde.identification.DecisionModel
   * @tparam TimeT
   *   The type that represents a time tag.
   */
-trait PeriodicWorkload[TaskT, MQueueT, TimeT]()(using Numeric[TimeT]) extends DecisionModel:
+trait PeriodicWorkload[TaskT, MQueueT, TimeT]()(using fracT: Fractional[TimeT]) extends DecisionModel:
 
   def periodicTasks: Array[TaskT]
-  def messageQueues: Array[MQueueT]
-  def tasksNumInstances: Array[Int]
-  def instancesReleases(t: TaskT)(int: Int): TimeT
-  def instancesDeadlines(t: TaskT)(int: Int): TimeT
-  def instancePreceeds(src: TaskT)(dst: TaskT)(srcI: Int)(dstI: Int): Boolean
+  def offsets: Array[TimeT]
+  def periods: Array[TimeT]
+  def relativeDeadlines: Array[TimeT]
   def taskSizes: Array[Long]
-  def channelSizes: Array[Long]
+  def instancePreceeds(src: TaskT)(dst: TaskT)(srcI: Int)(dstI: Int): Boolean
+  def messageQueues: Array[MQueueT]
+  def messageQueuesSizes: Array[Long]
+
+  /**
+    * The elements in the graph are assumed to be task_1, ..., task_n, mq_1, ..., mq_m
+    */
+  def communicationGraph: SparseIntDirectedGraph
+
+  /**
+    * a function that returns the LCM upper bound of two time values
+    */
+  def computeLCM(t1: TimeT, t2: TimeT): TimeT
+
+  // the following implementations is not efficient. But generic.
+  // finding a way that is both eficient and generic is a TODO
+  def instancesReleases(tidx: Int)(int: Int): TimeT = (1 until int).map(_ => periods(tidx)).sum + offsets(tidx)// *(fracT.one * int) 
+  def instancesDeadlines(tidx: Int)(int: Int): TimeT = (1 until int).map(_ => relativeDeadlines(tidx)).sum + offsets(tidx) //*(fracT.one * int) 
+
+  lazy val hyperPeriod: TimeT = periods.reduce((t1, t2) => computeLCM(t1, t2))
+  lazy val tasksNumInstances: Array[Int] = (0 until periodicTasks.length).map(i => hyperPeriod / periods(i)).map(_.toInt).toArray
 
   def maximalInterference(srcTask: TaskT)(dstTask: TaskT)(using num: Numeric[TimeT]): Int =
     val src = periodicTasks.indexOf(srcTask)
@@ -40,23 +64,23 @@ trait PeriodicWorkload[TaskT, MQueueT, TimeT]()(using Numeric[TimeT]) extends De
             // check intersection by comparing the endpoints
             (
               num.compare(
-                instancesReleases(srcTask)(srcIdx),
-                instancesReleases(dstTask)(dstIdx)
+                instancesReleases(src)(srcIdx),
+                instancesReleases(dst)(dstIdx)
               ) <= 0 &&
               num.compare(
-                instancesReleases(dstTask)(dstIdx),
-                instancesDeadlines(srcTask)(srcIdx)
+                instancesReleases(dst)(dstIdx),
+                instancesDeadlines(src)(srcIdx)
               ) <= 0
             )
             ||
             (
               num.compare(
-                instancesReleases(dstTask)(dstIdx),
-                instancesReleases(srcTask)(srcIdx)
+                instancesReleases(dst)(dstIdx),
+                instancesReleases(src)(srcIdx)
               ) <= 0 &&
               num.compare(
-                instancesReleases(srcTask)(srcIdx),
-                instancesDeadlines(dstTask)(dstIdx)
+                instancesReleases(src)(srcIdx),
+                instancesDeadlines(dst)(dstIdx)
               ) <= 0
             )
           })

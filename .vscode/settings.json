@@ -2,5 +2,6 @@
     "python.formatting.provider": "yapf",
     "files.watcherExclude": {
         "**/target": true
-    }
+    },
+    "cmake.configureOnOpen": false
 }

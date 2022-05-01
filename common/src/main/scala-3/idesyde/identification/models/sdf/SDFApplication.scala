@@ -32,7 +32,7 @@ final case class SDFApplication(
     actors.map(_.getViewedVertex) ++
       channels.map(_.getViewedVertex)
 
-  lazy val initialTokens: Array[Int] = 
+  lazy val initialTokens: Array[Int] = ???
     // channelsLumping.map(lump =>
     //   lump
     //     .map(o => {

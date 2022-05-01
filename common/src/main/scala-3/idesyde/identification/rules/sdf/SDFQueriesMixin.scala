@@ -1,7 +1,7 @@
 package idesyde.identification.rules.sdf
 
 import forsyde.io.java.core.ForSyDeSystemGraph
-import forsyde.io.java.typed.viewers.moc.sdf.SDFComb
+import forsyde.io.java.typed.viewers.moc.sdf.SDFActor
 import forsyde.io.java.typed.viewers.moc.sdf.SDFChannel
 import forsyde.io.java.typed.viewers.moc.sdf.SDFDelay
 import forsyde.io.java.typed.viewers.moc.sdf.SDFElem
@@ -20,7 +20,7 @@ trait SDFQueriesMixin {
   /*
   def sdfIsWellFormed(
       model: ForSyDeSystemGraph,
-      actors: Array[SDFComb],
+      actors: Array[SDFActor],
       channels: Array[SDFChannel],
       delays: Array[SDFDelay]
   ): Boolean =
@@ -31,7 +31,7 @@ trait SDFQueriesMixin {
         .stream
         .map(model.getEdgeSource(_))
         .filter(SDFElem.conforms(_))
-        .filter(v => SDFComb.conforms(v) || SDFDelay.conforms(v))
+        .filter(v => SDFActor.conforms(v) || SDFDelay.conforms(v))
         .count <= 1
       &&
       model
@@ -39,13 +39,13 @@ trait SDFQueriesMixin {
         .stream
         .map(model.getEdgeTarget(_))
         .filter(SDFElem.conforms(_))
-        .filter(v => SDFComb.conforms(v) || SDFDelay.conforms(v))
+        .filter(v => SDFActor.conforms(v) || SDFDelay.conforms(v))
         .count <= 1
     })
 
   def getSDFTopology(
       model: ForSyDeSystemGraph,
-      actors: Array[SDFComb],
+      actors: Array[SDFActor],
       channels: Array[SDFChannel],
       delays: Array[SDFDelay]
   ): (Array[Array[Int]], Array[Array[SDFElem]]) =

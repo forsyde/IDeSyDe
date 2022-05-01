@@ -12,38 +12,31 @@ import scala.jdk.CollectionConverters.*
 import forsyde.io.java.typed.viewers.execution.Stimulus
 import idesyde.identification.models.workload.SimplePeriodicWorkload
 import org.apache.commons.math3.fraction.BigFraction
-import forsyde.io.java.typed.viewers.execution.ReactiveStimulus
+import forsyde.io.java.typed.viewers.execution.PeriodicStimulus
 import forsyde.io.java.typed.viewers.execution.ReactiveTask
 import forsyde.io.java.typed.viewers.execution.Task
-import forsyde.io.java.typed.viewers.execution.SimpleReactiveStimulus
-import forsyde.io.java.typed.viewers.execution.MultiANDReactiveStimulus
+import forsyde.io.java.typed.viewers.execution.PeriodicStimulus
 import forsyde.io.java.typed.viewers.impl.DataBlock
 import forsyde.io.java.typed.viewers.impl.CommunicatingExecutable
 import forsyde.io.java.typed.viewers.impl.TokenizableDataBlock
 
-final class PeriodicTaskIdentificationRule(using Numeric[BigFraction])
+final class PeriodicWorkloadIdentificationRule(using Numeric[BigFraction])
     extends ForSyDeIdentificationRule[SimplePeriodicWorkload]:
 
   def identify(
       model: ForSyDeSystemGraph,
       identified: Set[DecisionModel]
   ): (Boolean, Option[DecisionModel]) =
-    var periodicTasks: Array[PeriodicTask]        = Array.empty
-    var reactiveTasks: Array[ReactiveTask]        = Array.empty
+    var periodicTasks: Array[Task]                = Array.empty
     var dataBlocks: Array[DataBlock]              = Array.empty
-    var reactiveStimulus: Array[ReactiveStimulus] = Array.empty
+    var periodicStimulus: Array[PeriodicStimulus] = Array.empty
     model.vertexSet.stream.forEach(v => {
       // try to classify first as periodic and then later as reactive
-      PeriodicTask
+      Task
         .safeCast(v)
-        .ifPresentOrElse(
-          task => periodicTasks :+= task,
-          () => {
-            ReactiveTask.safeCast(v).ifPresent(task => reactiveTasks :+= task)
-          }
-        )
+        .ifPresent(task => periodicTasks :+= task)
       DataBlock.safeCast(v).ifPresent(channel => dataBlocks :+= channel)
-      ReactiveStimulus.safeCast(v).ifPresent(stim => reactiveStimulus :+= stim)
+      PeriodicStimulus.safeCast(v).ifPresent(stim => periodicStimulus :+= stim)
     })
     // convenience
     lazy val tasks = periodicTasks ++ reactiveTasks
@@ -54,11 +47,11 @@ final class PeriodicTaskIdentificationRule(using Numeric[BigFraction])
     var successors: Array[Int]          = Array.emptyIntArray
     // build the precedence arrays
     // it is a bit verbose due to how the comparison is done. THrough IDs it is sure-fire.
-    reactiveStimulus.foreach(stimulus => {
+    PeriodicStimulus.foreach(stimulus => {
       successors :+= tasks.indexWhere(t =>
         stimulus.getSuccessorPort(model).map(_.getIdentifier == t.getIdentifier).orElse(false)
       )
-      SimpleReactiveStimulus
+      SimplePeriodicStimulus
         .safeCast(stimulus)
         .ifPresent(simple => {
           predecessors :+= Array(
@@ -67,7 +60,7 @@ final class PeriodicTaskIdentificationRule(using Numeric[BigFraction])
             )
           )
         })
-      MultiANDReactiveStimulus
+      MultiANDPeriodicStimulus
         .safeCast(stimulus)
         .ifPresent(andStimulus => {
           predecessors :+= andStimulus
@@ -134,11 +127,11 @@ final class PeriodicTaskIdentificationRule(using Numeric[BigFraction])
         periodicTasks = periodicTasks,
         reactiveTasks = reactiveTasks,
         periodicStimulus = periodicTasks.map(_.getPeriodicStimulusPort(model).get),
-        reactiveStimulus = reactiveStimulus,
+        PeriodicStimulus = PeriodicStimulus,
         executables = executables,
         dataBlocks = dataBlocks,
-        reactiveStimulusSrcs = predecessors,
-        reactiveStimulusDst = successors,
+        PeriodicStimulusSrcs = predecessors,
+        PeriodicStimulusDst = successors,
         taskChannelReads = taskChannelReads,
         taskChannelWrites = taskChannelWrites
       )

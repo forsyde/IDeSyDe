@@ -67,9 +67,9 @@ case class SimplePeriodicWorkload(
     val reactiveStimulusDst: Array[Int],
     val taskChannelReads: Array[Array[Long]],
     val taskChannelWrites: Array[Array[Long]]
-)(using Numeric[BigFraction])
+)(using Integral[BigFraction])
     extends DecisionModel,
-      idesyde.identification.models.workload.PeriodicWorkload[Task, DataBlock]:
+      idesyde.identification.models.workload.PeriodicWorkload[Task, DataBlock, BigFraction]:
   //extends PeriodicWorkload[Task, BigFraction]():
 
   override val coveredVertexes: Iterable[Vertex] =

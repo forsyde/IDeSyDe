@@ -1,7 +1,7 @@
 package idesyde.identification.rules.platform
 
 import forsyde.io.java.core.ForSyDeSystemGraph
-import idesyde.identification.{DecisionModel, IdentificationRule}
+import idesyde.identification.{DecisionModel, IdentificationRule, ForSyDeIdentificationRule}
 import org.jgrapht.alg.shortestpath.{AllDirectedPaths, FloydWarshallShortestPaths}
 
 import collection.JavaConverters.*
@@ -14,7 +14,7 @@ import forsyde.io.java.typed.viewers.platform.GenericCommunicationModule
 import org.apache.commons.math3.fraction.BigFraction
 
 final case class NetworkedDigitalHWIdentRule()(using Numeric[BigFraction])
-    extends IdentificationRule {
+    extends ForSyDeIdentificationRule[NetworkedDigitalHardware] {
 
   override def identify(
       model: ForSyDeSystemGraph,

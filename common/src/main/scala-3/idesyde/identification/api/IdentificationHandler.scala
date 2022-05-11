@@ -46,7 +46,7 @@ class IdentificationHandler(
       s"Performing identification with ${activeRules.size} rules up to $maxIters iterations."
     )
     while (activeRules.size > 0 && iters < maxIters) {
-      val ruleResults = activeRules.map(r => (r, r.identify(model, identified)))
+      val ruleResults = activeRules.map(r => (r, r.identifyUntyped(model, identified)))
       val newIdentified =
         ruleResults.filter((r, res) => !res._2.isEmpty).map((r, res) => res._2.get).toSet
       // scribe.debug("building dominance graph")

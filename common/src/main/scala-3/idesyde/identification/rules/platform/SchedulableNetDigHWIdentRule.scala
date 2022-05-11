@@ -1,6 +1,7 @@
 package idesyde.identification.rules.platform
 
 import idesyde.identification.IdentificationRule
+import idesyde.identification.ForSyDeIdentificationRule
 import forsyde.io.java.core.ForSyDeSystemGraph
 import idesyde.identification.DecisionModel
 
@@ -18,7 +19,7 @@ import forsyde.io.java.typed.viewers.platform.runtime.AbstractScheduler
 import forsyde.io.java.typed.viewers.decision.Allocated
 import org.checkerframework.checker.nullness.Opt
 
-final case class SchedulableNetDigHWIdentRule() extends IdentificationRule {
+final case class SchedulableNetDigHWIdentRule() extends ForSyDeIdentificationRule[SchedulableNetworkedDigHW] {
 
   override def identify(
       model: ForSyDeSystemGraph,

@@ -2,6 +2,7 @@ package idesyde.identification.models.workload
 
 import idesyde.identification.DecisionModel
 import org.jgrapht.Graph
+import org.jgrapht.graph.DefaultEdge
 
 /** This class represent the trait that all apriodic-style workloads can satisfy. A workload is
   * aperiodic if at least one job of the workload is always ready to run.
@@ -12,5 +13,5 @@ import org.jgrapht.Graph
 trait AperiodicWorkload[TaskT, MQueueT] extends DecisionModel {
   def tasks: Array[TaskT]
   def messageQueues: Array[MQueueT]
-  def controlFlowGraph: Graph[(TaskT, Int), Int]
+  def controlFlowGraph: Graph[(TaskT, Int), DefaultEdge]
 }

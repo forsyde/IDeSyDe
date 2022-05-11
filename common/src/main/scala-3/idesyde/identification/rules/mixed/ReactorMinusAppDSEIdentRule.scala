@@ -1,6 +1,7 @@
 package idesyde.identification.rules.mixed
 
 import idesyde.identification.IdentificationRule
+import idesyde.identification.ForSyDeIdentificationRule
 import idesyde.identification.rules.reactor.ReactorMinusIdentificationRule
 import idesyde.identification.rules.platform.SchedulableNetDigHWIdentRule
 import idesyde.identification.models.reactor.ReactorMinusAppMapAndSched
@@ -17,7 +18,7 @@ import forsyde.io.java.typed.viewers.platform.GenericProcessingModule
 import forsyde.io.java.typed.viewers.platform.InstrumentedProcessingModule
 import forsyde.io.java.typed.viewers.impl.InstrumentedExecutable
 
-final case class ReactorMinusAppDSEIdentRule() extends IdentificationRule:
+final case class ReactorMinusAppDSEIdentRule() extends ForSyDeIdentificationRule[ReactorMinusAppMapAndSched]:
 
   override def identify(
       model: ForSyDeSystemGraph,

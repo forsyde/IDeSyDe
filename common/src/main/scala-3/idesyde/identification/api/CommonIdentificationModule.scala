@@ -1,6 +1,7 @@
 package idesyde.identification.api
 
 import idesyde.identification.IdentificationRule
+import idesyde.identification.ForSyDeIdentificationRule
 import idesyde.identification.rules.sdf.SDFAppIdentificationRule
 import idesyde.identification.rules.reactor.ReactorMinusIdentificationRule
 import idesyde.identification.rules.platform.NetworkedDigitalHWIdentRule
@@ -18,7 +19,7 @@ class CommonIdentificationModule extends IdentificationModule {
 
   given Numeric[BigFraction] = BigFractionIsNumeric()
 
-  def identificationRules = Set[IdentificationRule](
+  def identificationRules = Set[ForSyDeIdentificationRule[?]](
     SDFAppIdentificationRule(),
     ReactorMinusIdentificationRule(
       Executors.newFixedThreadPool(1).asInstanceOf[ThreadPoolExecutor]

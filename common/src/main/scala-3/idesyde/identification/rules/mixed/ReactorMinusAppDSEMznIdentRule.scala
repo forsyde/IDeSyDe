@@ -1,13 +1,14 @@
 package idesyde.identification.rules.mixed
 
 import idesyde.identification.IdentificationRule
+import idesyde.identification.ForSyDeIdentificationRule
 import idesyde.identification.models.reactor.ReactorMinusAppMapAndSchedMzn
 import idesyde.identification.DecisionModel
 import forsyde.io.java.core.ForSyDeSystemGraph
 import idesyde.identification.models.reactor.ReactorMinusAppMapAndSched
 
 final case class ReactorMinusAppDSEMznIdentRule()
-    extends IdentificationRule:
+    extends ForSyDeIdentificationRule[ReactorMinusAppMapAndSchedMzn]:
 
   def identify(
       model: ForSyDeSystemGraph,

@@ -1,6 +1,7 @@
 package idesyde.identification.rules.reactor
 
 import idesyde.identification.IdentificationRule
+import idesyde.identification.ForSyDeIdentificationRule
 import forsyde.io.java.core.ForSyDeSystemGraph
 import idesyde.identification.DecisionModel
 import forsyde.io.java.core.VertexTrait
@@ -27,7 +28,7 @@ import scala.annotation.meta.companionObject
 import java.util.concurrent.ThreadPoolExecutor
 
 final case class ReactorMinusIdentificationRule(executor: ThreadPoolExecutor)
-    extends IdentificationRule {
+    extends ForSyDeIdentificationRule[ReactorMinusApplication] {
 
   def identify(model: ForSyDeSystemGraph, identified: Set[DecisionModel]) = {
     val elements = model.vertexSet.asScala
@@ -133,8 +134,8 @@ final case class ReactorMinusIdentificationRule(executor: ThreadPoolExecutor)
       )
       .map((r, t) =>
         r -> BigFraction(
-          t.getPeriodNumeratorPerSec,
-          t.getPeriodDenominatorPerSec
+          t.getPeriodNumeratorInSec,
+          t.getPeriodDenominatorInSec
         )
       )
       .toMap

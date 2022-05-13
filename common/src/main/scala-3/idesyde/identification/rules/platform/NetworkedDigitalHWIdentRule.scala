@@ -1,7 +1,7 @@
 package idesyde.identification.rules.platform
 
 import forsyde.io.java.core.ForSyDeSystemGraph
-import idesyde.identification.{DecisionModel, IdentificationRule, ForSyDeIdentificationRule}
+import idesyde.identification.{ForSyDeDecisionModel, IdentificationRule, ForSyDeIdentificationRule}
 import org.jgrapht.alg.shortestpath.{AllDirectedPaths, FloydWarshallShortestPaths}
 
 import collection.JavaConverters.*
@@ -18,8 +18,8 @@ final case class NetworkedDigitalHWIdentRule()(using Numeric[BigFraction])
 
   override def identify(
       model: ForSyDeSystemGraph,
-      identified: Set[DecisionModel]
-  ): (Boolean, Option[DecisionModel]) = {
+      identified: Set[ForSyDeDecisionModel]
+  ): (Boolean, Option[ForSyDeDecisionModel]) = {
     var processingElements    = Array.empty[GenericProcessingModule]
     var memoryElements        = Array.empty[GenericMemoryModule]
     var communicationElements = Array.empty[GenericCommunicationModule]
@@ -126,7 +126,7 @@ object NetworkedDigitalHWIdentRule:
     )
   }
 
-  def canIdentify(model: ForSyDeSystemGraph, identified: Set[DecisionModel]): Boolean =
+  def canIdentify(model: ForSyDeSystemGraph, identified: Set[ForSyDeDecisionModel]): Boolean =
     val platformVertexes = model
       .vertexSet()
       .asScala

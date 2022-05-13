@@ -3,7 +3,7 @@ package idesyde.identification.models.reactor
 import forsyde.io.java.typed.viewers.moc.linguafranca.LinguaFrancaReaction
 import forsyde.io.java.typed.viewers.platform.GenericProcessingModule
 import idesyde.identification.models.reactor.ReactionJob
-import idesyde.identification.DecisionModel
+import idesyde.identification.ForSyDeDecisionModel
 import idesyde.identification.models.platform.SchedulableNetworkedDigHW
 import org.apache.commons.math3.fraction.BigFraction
 import org.jgrapht.graph.SimpleGraph
@@ -20,7 +20,7 @@ final case class ReactorMinusAppMapAndSched(
     val platform: SchedulableNetworkedDigHW,
     val wcetFunction: Map[(LinguaFrancaReaction, GenericProcessingModule), BigFraction],
     val utilityFunction: Map[(LinguaFrancaReaction, GenericProcessingModule), BigFraction]
-) extends DecisionModel() {
+) extends ForSyDeDecisionModel() {
 
   // for (r <- reactorMinus.reactions; p <- platform.hardware.processingElems)
   //   println(s"${r.getIdentifier}, ${p.getIdentifier}, ${wcetFunction.getOrElse((r, p), BigFraction.ZERO).toString}")

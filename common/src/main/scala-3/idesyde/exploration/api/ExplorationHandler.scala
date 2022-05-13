@@ -1,6 +1,6 @@
 package idesyde.exploration.api
 
-import idesyde.identification.DecisionModel
+import idesyde.identification.ForSyDeDecisionModel
 import scala.concurrent.Future
 import idesyde.exploration.api.ExplorationCriteria
 import idesyde.exploration.explorers.GecodeMiniZincExplorer
@@ -22,11 +22,11 @@ final class ExplorationHandler(
     this
 
   def chooseExplorersAndModels(
-      decisionModels: Set[DecisionModel],
+      ForSyDeDecisionModels: Set[ForSyDeDecisionModel],
       explorationCriteria: Set[ExplorationCriteria] = Set(ExplorationCriteria.TimeUntilOptimality)
-  ): Set[(Explorer, DecisionModel)] =
+  ): Set[(Explorer, ForSyDeDecisionModel)] =
     val explorers        = explorationModules.flatMap(_.explorers) //.map(_.asInstanceOf[Explorer])
-    val explorableModels = decisionModels.filter(m => explorers.exists(e => e.canExplore(m)))
+    val explorableModels = ForSyDeDecisionModels.filter(m => explorers.exists(e => e.canExplore(m)))
     scribe.debug(s"total of ${explorableModels.size} exp. models to find combos.")
     // for each of the explorable models build up a dominance graph of the available explorers
     // based on the criteria supplied
@@ -57,7 +57,7 @@ final class ExplorationHandler(
     val modelToExplorers = modelToExplorerSet.flatMap((m, es) => es.map(_ -> m))
     modelToExplorers
 
-// def exploreDecisionModel(decisionModel: DecisionModel, extraExplorers: Set[Explorer[? <: DecisionModel]] = Set()): Future[DecisionModel] = {
+// def exploreForSyDeDecisionModel(ForSyDeDecisionModel: ForSyDeDecisionModel, extraExplorers: Set[Explorer[? <: ForSyDeDecisionModel]] = Set()): Future[ForSyDeDecisionModel] = {
 //     val explorers = defaultExplorers ++ extraExplorers
 
 // }

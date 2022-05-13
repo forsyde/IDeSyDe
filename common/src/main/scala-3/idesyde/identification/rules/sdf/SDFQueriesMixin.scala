@@ -3,7 +3,6 @@ package idesyde.identification.rules.sdf
 import forsyde.io.java.core.ForSyDeSystemGraph
 import forsyde.io.java.typed.viewers.moc.sdf.SDFActor
 import forsyde.io.java.typed.viewers.moc.sdf.SDFChannel
-import forsyde.io.java.typed.viewers.moc.sdf.SDFDelay
 import forsyde.io.java.typed.viewers.moc.sdf.SDFElem
 import org.apache.commons.math3.linear.RealMatrix
 import org.apache.commons.math3.linear.FieldMatrix

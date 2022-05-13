@@ -3,7 +3,7 @@ package idesyde.identification.rules.reactor
 import idesyde.identification.IdentificationRule
 import idesyde.identification.ForSyDeIdentificationRule
 import forsyde.io.java.core.ForSyDeSystemGraph
-import idesyde.identification.DecisionModel
+import idesyde.identification.ForSyDeDecisionModel
 import forsyde.io.java.core.VertexTrait
 
 import java.util.stream.Collectors
@@ -30,7 +30,7 @@ import java.util.concurrent.ThreadPoolExecutor
 final case class ReactorMinusIdentificationRule(executor: ThreadPoolExecutor)
     extends ForSyDeIdentificationRule[ReactorMinusApplication] {
 
-  def identify(model: ForSyDeSystemGraph, identified: Set[DecisionModel]) = {
+  def identify(model: ForSyDeSystemGraph, identified: Set[ForSyDeDecisionModel]) = {
     val elements = model.vertexSet.asScala
       .filter(LinguaFrancaElem.conforms(_))
       .map(LinguaFrancaElem.safeCast(_).get)
@@ -53,7 +53,7 @@ final case class ReactorMinusIdentificationRule(executor: ThreadPoolExecutor)
         .filter(LinguaFrancaTimer.conforms(_))
         .map(LinguaFrancaTimer.safeCast(_).get)
         .toArray
-      val decisionModel = ReactorMinusApplication(
+      val ForSyDeDecisionModel = ReactorMinusApplication(
         pureReactions = ReactorMinusIdentificationRule.filterOnlyPure(model, timers, reactions),
         periodicReactions =
           ReactorMinusIdentificationRule.filterOnlyPeriodic(model, timers, reactions),
@@ -67,16 +67,16 @@ final case class ReactorMinusIdentificationRule(executor: ThreadPoolExecutor)
       )
       scribe.debug(
         "Conforming Reactor- model found with:" +
-          s"${decisionModel.pureReactions.size} pure reaction(s), " +
-          s"${decisionModel.periodicReactions.size} periodic reaction(s), " +
-          s"${decisionModel.reactors.size} reactor(s), " +
-          s"${decisionModel.channels.size} channel(s)," +
-          s"${decisionModel.unambigousEndToEndReactions.size} trivial chain(s) and " +
-          s"hyperperiod of ${decisionModel.hyperPeriod}"
+          s"${ForSyDeDecisionModel.pureReactions.size} pure reaction(s), " +
+          s"${ForSyDeDecisionModel.periodicReactions.size} periodic reaction(s), " +
+          s"${ForSyDeDecisionModel.reactors.size} reactor(s), " +
+          s"${ForSyDeDecisionModel.channels.size} channel(s)," +
+          s"${ForSyDeDecisionModel.unambigousEndToEndReactions.size} trivial chain(s) and " +
+          s"hyperperiod of ${ForSyDeDecisionModel.hyperPeriod}"
       )
       (
         true,
-        Option(decisionModel)
+        Option(ForSyDeDecisionModel)
       )
     } else {
       scribe.debug("No conforming Reactor- model found.")
@@ -205,7 +205,7 @@ final case class ReactorMinusIdentificationRule(executor: ThreadPoolExecutor)
 
 object ReactorMinusIdentificationRule:
 
-  def canIdentify(model: ForSyDeSystemGraph, identified: Set[DecisionModel]): Boolean = {
+  def canIdentify(model: ForSyDeSystemGraph, identified: Set[ForSyDeDecisionModel]): Boolean = {
     val vertexes = model.vertexSet.asScala
     val elements = vertexes
       .filter(LinguaFrancaElem.conforms(_))

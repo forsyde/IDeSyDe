@@ -1,6 +1,6 @@
 package idesyde.identification.models.choco
 
-import idesyde.identification.interfaces.ChocoCPDecisionModel
+import idesyde.identification.interfaces.ChocoCPForSyDeDecisionModel
 import org.chocosolver.solver.variables.IntVar
 import org.apache.commons.math3.fraction.BigFraction
 import org.chocosolver.solver.constraints.Propagator
@@ -10,7 +10,7 @@ import org.chocosolver.util.ESat
 import org.chocosolver.solver.constraints.PropagatorPriority
 import org.chocosolver.solver.constraints.Constraint
 
-trait FixedPriorityConstraintsMixin extends ChocoCPDecisionModel {
+trait FixedPriorityConstraintsMixin extends ChocoCPForSyDeDecisionModel {
 
   val priorities: Array[Int]
   val periods: Array[BigFraction]

@@ -1,6 +1,6 @@
 package idesyde.identification.models.reactor
 
-import idesyde.identification.DecisionModel
+import idesyde.identification.ForSyDeDecisionModel
 import org.jgrapht.graph.SimpleDirectedGraph
 import org.jgrapht.alg.shortestpath.AllDirectedPaths
 

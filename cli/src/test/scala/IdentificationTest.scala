@@ -4,6 +4,6 @@ class IdentificationTest {
   
     def testeasy() = {
         val model = ForSyDeModelHandler().loadModel("FlightInformationFunctionReactor.forxml")
-        val dm = IdentificationHandler().identifyDecisionModels(model)
+        val dm = IdentificationHandler().identifyForSyDeDecisionModels(model)
     }
 }

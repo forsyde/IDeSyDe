@@ -1,7 +1,6 @@
 package idesyde.identification.models.workload
 
 import forsyde.io.java.typed.viewers.execution.Task
-import forsyde.io.java.typed.viewers.execution.PeriodicTask
 
 final case class DependentDeadlineMonotonicOrdering(val taskModel: SimplePeriodicWorkload)
     extends Ordering[Task] {
@@ -11,7 +10,7 @@ final case class DependentDeadlineMonotonicOrdering(val taskModel: SimplePeriodi
     val t2i = taskModel.tasks.indexOf(t2)
     if (t1i > -1 && t2i > -1) {
       //scribe.debug(s"compare ${t1.getIdentifier} ti ${t2.getIdentifier}: ${taskModel.interTaskCanBlock(t1i)(t2i)}")
-      if (!taskModel.interTaskCanBlock(t1i)(t2i)) {
+      if (false ) { //!taskModel.interTaskCanBlock(t1i)(t2i)) {
         // smallest wins
         //scribe.debug(s"smallest ${-taskModel.periods(t1i).compareTo(taskModel.periods(t2i))}")
         -taskModel.periods(t1i).compareTo(taskModel.periods(t2i))

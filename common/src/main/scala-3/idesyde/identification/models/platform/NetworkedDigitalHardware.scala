@@ -8,7 +8,7 @@ import forsyde.io.java.typed.viewers.platform.{
   InstrumentedCommunicationModule,
   RoundRobinCommunicationModule
 }
-import idesyde.identification.DecisionModel
+import idesyde.identification.ForSyDeDecisionModel
 import org.apache.commons.math3.fraction.BigFraction
 import org.jgrapht.alg.shortestpath.FloydWarshallShortestPaths
 import org.jgrapht.graph.{DefaultEdge, SimpleGraph}
@@ -31,7 +31,7 @@ final case class NetworkedDigitalHardware(
     val storageElems: Array[GenericMemoryModule],
     val links: Array[(DigitalModule, DigitalModule)]
 )(using Numeric[BigFraction])
-    extends DecisionModel {
+    extends ForSyDeDecisionModel {
 
   val platformElements: Array[DigitalModule] =
     processingElems ++ communicationElems ++ storageElems

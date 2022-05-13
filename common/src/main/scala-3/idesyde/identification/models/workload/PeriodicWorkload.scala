@@ -1,11 +1,14 @@
 package idesyde.identification.models.workload
 
 import forsyde.io.java.core.Vertex
-import idesyde.identification.DecisionModel
+import idesyde.identification.ForSyDeDecisionModel
 import org.jgrapht.opt.graph.sparse.SparseIntDirectedGraph
 
 import math.Fractional.Implicits.infixFractionalOps
 import org.jgrapht.Graph
+import org.jgrapht.graph.DefaultEdge
+import forsyde.io.java.typed.viewers.execution.Upsample
+import forsyde.io.java.typed.viewers.execution.Downsample
 
 /** Interface that describes a periodic workload model, also commonly known in the real time
   * academic community as "periodic task model". This one in particular closely follows the
@@ -21,29 +24,36 @@ import org.jgrapht.Graph
   *   The type that represents a time tag.
   */
 trait PeriodicWorkload[TaskT, MQueueT, TimeT]()(using fracT: Fractional[TimeT])
-    extends DecisionModel:
+    extends ForSyDeDecisionModel:
 
   def periodicTasks: Array[TaskT]
   def offsets: Array[TimeT]
   def periods: Array[TimeT]
   def relativeDeadlines: Array[TimeT]
   def taskSizes: Array[Long]
-  def instancePreceeds(src: TaskT)(dst: TaskT)(srcI: Int)(dstI: Int): Boolean
+  // def instancePreceeds(src: TaskT)(dst: TaskT)(srcI: Int)(dstI: Int): Boolean
   def messageQueues: Array[MQueueT]
   def messageQueuesSizes: Array[Long]
-  def taskWriteMessageSize: Array[Array[Long]]
-  def taskReadMessageSize: Array[Array[Long]]
 
-  /** The elements in the graph are assumed to be task_1, ..., task_n, mq_1, ..., mq_m
-    */
-  def communicationGraph: Graph[TaskT, MQueueT]
+  /** The edges of the instance control flow graph detail if a instance T_i,k
+   * shoud be preceeded of an instance T_j,l.def 
+   * 
+   * In other words, it is a precedence graph at the instance (sometimes called jobs)
+   * level.
+   */
+  def instanceControlFlowGraph: Graph[(TaskT, Int), DefaultEdge]
+
+  /** The edges of the communication graph should have numbers describing how much
+   * data is transferred from tasks to message queues.
+   */
+  def communicationGraph: Graph[TaskT | MQueueT, DefaultEdge]
 
   /** a function that returns the LCM upper bound of two time values
     */
   def computeLCM(t1: TimeT, t2: TimeT): TimeT
 
   // the following implementations is not efficient. But generic.
-  // finding a way that is both eficient and generic is a TODO
+  // TODO: finding a way that is both eficient and generic
   def instancesReleases(tidx: Int)(int: Int): TimeT =
     (1 until int).map(_ => periods(tidx)).sum + offsets(tidx) // *(fracT.one * int)
   def instancesDeadlines(tidx: Int)(int: Int): TimeT =

@@ -7,7 +7,7 @@ import forsyde.io.java.typed.viewers.platform.runtime.{
   RoundRobinScheduler,
   TimeTriggeredScheduler
 }
-import idesyde.identification.DecisionModel
+import idesyde.identification.ForSyDeDecisionModel
 import org.jgrapht.alg.connectivity.ConnectivityInspector
 import org.jgrapht.graph.{DefaultEdge, SimpleGraph}
 
@@ -23,7 +23,7 @@ final case class SchedulableNetworkedDigHW(
     val schedulers: Array[AbstractScheduler],
     val schedulerAllocation: Array[Int]
     // val bandWidthFromCEtoPE: Map[GenericCommunicationModule, GenericProcessingModule],
-) extends DecisionModel {
+) extends ForSyDeDecisionModel {
 
   val coveredVertexes: Iterable[Vertex] = hardware.coveredVertexes ++
     schedulers.map(_.getViewedVertex)

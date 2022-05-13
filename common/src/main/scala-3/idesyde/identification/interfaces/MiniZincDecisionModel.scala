@@ -1,9 +1,9 @@
 package idesyde.identification.interfaces
 
-import idesyde.identification.DecisionModel
+import idesyde.identification.ForSyDeDecisionModel
 import forsyde.io.java.core.ForSyDeSystemGraph
 
-trait MiniZincDecisionModel extends DecisionModel:
+trait MiniZincForSyDeDecisionModel extends ForSyDeDecisionModel:
 
     def mznModel: String
 

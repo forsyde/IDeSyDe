@@ -1,6 +1,6 @@
 package idesyde.exploration.interfaces
 
-import idesyde.identification.DecisionModel
+import idesyde.identification.ForSyDeDecisionModel
 import forsyde.io.java.core.ForSyDeSystemGraph
 import scala.concurrent.Future
 import scala.concurrent.ExecutionContext
@@ -9,21 +9,21 @@ import idesyde.exploration.api.ExplorationCriteria
 
 trait Explorer {
 
-  def explore(decisionModel: DecisionModel)(using ExecutionContext): LazyList[ForSyDeSystemGraph]
+  def explore(ForSyDeDecisionModel: ForSyDeDecisionModel)(using ExecutionContext): LazyList[ForSyDeSystemGraph]
 
-  def canExplore(decisionModel: DecisionModel): Boolean
+  def canExplore(ForSyDeDecisionModel: ForSyDeDecisionModel): Boolean
 
-  def estimateTimeUntilFeasibility(decisionModel: DecisionModel): Duration
+  def estimateTimeUntilFeasibility(ForSyDeDecisionModel: ForSyDeDecisionModel): Duration
 
-  def estimateTimeUntilOptimality(decisionModel: DecisionModel): Duration
+  def estimateTimeUntilOptimality(ForSyDeDecisionModel: ForSyDeDecisionModel): Duration
 
-  def estimateMemoryUntilFeasibility(decisionModel: DecisionModel): Long
+  def estimateMemoryUntilFeasibility(ForSyDeDecisionModel: ForSyDeDecisionModel): Long
 
-  def estimateMemoryUntilOptimality(decisionModel: DecisionModel): Long
+  def estimateMemoryUntilOptimality(ForSyDeDecisionModel: ForSyDeDecisionModel): Long
 
   def dominates(
       o: Explorer,
-      m: DecisionModel,
+      m: ForSyDeDecisionModel,
       criteria: Set[ExplorationCriteria] = Set()
   ): Boolean =
     val c =

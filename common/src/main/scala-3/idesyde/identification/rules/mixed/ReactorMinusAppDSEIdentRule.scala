@@ -6,7 +6,7 @@ import idesyde.identification.rules.reactor.ReactorMinusIdentificationRule
 import idesyde.identification.rules.platform.SchedulableNetDigHWIdentRule
 import idesyde.identification.models.reactor.ReactorMinusAppMapAndSched
 import forsyde.io.java.core.ForSyDeSystemGraph
-import idesyde.identification.DecisionModel
+import idesyde.identification.ForSyDeDecisionModel
 import idesyde.identification.models.reactor.ReactionJob
 import org.apache.commons.math3.fraction.BigFraction
 
@@ -22,8 +22,8 @@ final case class ReactorMinusAppDSEIdentRule() extends ForSyDeIdentificationRule
 
   override def identify(
       model: ForSyDeSystemGraph,
-      identified: Set[DecisionModel]
-  ): (Boolean, Option[DecisionModel]) =
+      identified: Set[ForSyDeDecisionModel]
+  ): (Boolean, Option[ForSyDeDecisionModel]) =
     val reactorMinusOpt =
       identified
         .find(_.isInstanceOf[ReactorMinusApplication])
@@ -34,14 +34,14 @@ final case class ReactorMinusAppDSEIdentRule() extends ForSyDeIdentificationRule
     if (reactorMinusOpt.isDefined && schedulablePlatformOpt.isDefined) {
       val reactorMinus                   = reactorMinusOpt.get
       val schedulablePlatform            = schedulablePlatformOpt.get
-      val decisionModel = ReactorMinusAppMapAndSched(
+      val ForSyDeDecisionModel = ReactorMinusAppMapAndSched(
         reactorMinus = reactorMinus,
         platform = schedulablePlatform,
         wcetFunction = computeWCETFunction(model, reactorMinus.reactions, schedulablePlatform.hardware.processingElems),
         utilityFunction = computeUtilityFunction(model, reactorMinus.reactions, schedulablePlatform.hardware.processingElems, reactorMinus.hyperPeriod)
       )
       scribe.debug(s"Identified conformin Reactor- DSE problem")
-      (true, Option(decisionModel))
+      (true, Option(ForSyDeDecisionModel))
     } else if (ReactorMinusAppDSEIdentRule.canIdentify(model, identified))
       (false, Option.empty)
     else
@@ -91,7 +91,7 @@ end ReactorMinusAppDSEIdentRule
 
 object ReactorMinusAppDSEIdentRule:
 
-  def canIdentify(model: ForSyDeSystemGraph, identified: Set[DecisionModel]) =
+  def canIdentify(model: ForSyDeSystemGraph, identified: Set[ForSyDeDecisionModel]) =
     ReactorMinusIdentificationRule.canIdentify(model, identified) &&
       SchedulableNetDigHWIdentRule.canIdentify(model, identified)
 

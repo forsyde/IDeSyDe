@@ -44,19 +44,19 @@ case class IDeSyDeRunConfig(
           merged
         )
 
-      val identified = identificationHandler.identifyDecisionModels(model)
+      val identified = identificationHandler.identifyForSyDeDecisionModels(model)
       scribe.info(s"Identification finished with ${identified.size} decision model(s).")
       if (identified.size > 0)
         val chosen = explorationHandler.chooseExplorersAndModels(identified)
         scribe.info(s"Total of ${chosen.size} combo of decision model(s) and explorer(s) chosen.")
         // identified.foreach(m => m match {
-        //   case mzn: MiniZincDecisionModel => scribe.debug(s"mzn model: ${mzn.mznInputs.toString}")
+        //   case mzn: MiniZincForSyDeDecisionModel => scribe.debug(s"mzn model: ${mzn.mznInputs.toString}")
         // })
         //var numSols = 0
         val numSols = chosen.headOption
-          .map((explorer, decisionModel) =>
+          .map((explorer, ForSyDeDecisionModel) =>
             explorer
-              .explore(decisionModel)(using executionContext)
+              .explore(ForSyDeDecisionModel)(using executionContext)
               .foldLeft(0)((res, result) => {
                 if (!outputModelPath.toFile.exists || outputModelPath.toFile.isFile) then
                   scribe.debug(s"writing solution at ${outputModelPath.toString}")

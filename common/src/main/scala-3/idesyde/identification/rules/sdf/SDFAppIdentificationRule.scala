@@ -2,13 +2,12 @@ package idesyde.identification.rules.sdf
 
 import idesyde.identification.ForSyDeIdentificationRule
 import forsyde.io.java.core.ForSyDeSystemGraph
-import idesyde.identification.DecisionModel
+import idesyde.identification.ForSyDeDecisionModel
 import forsyde.io.java.core.VertexTrait
 import idesyde.identification.models.sdf.SDFApplication
 
 import java.util.stream.Collectors
 import forsyde.io.java.typed.viewers.moc.sdf.SDFActor
-import forsyde.io.java.typed.viewers.moc.sdf.SDFDelay
 import forsyde.io.java.typed.viewers.moc.sdf.SDFChannel
 import forsyde.io.java.typed.viewers.moc.sdf.SDFElem
 import org.antlr.v4.parse.BlockSetTransformer.topdown_return
@@ -19,8 +18,8 @@ final case class SDFAppIdentificationRule()
 
   def identify(
       model: ForSyDeSystemGraph,
-      identified: Set[DecisionModel]
-  ): (Boolean, Option[DecisionModel]) = {
+      identified: Set[ForSyDeDecisionModel]
+  ): (Boolean, Option[ForSyDeDecisionModel]) = {
     var sdfActors   = Array.empty[SDFActor]
     var sdfChannels = Array.empty[SDFChannel]
     model.vertexSet.stream

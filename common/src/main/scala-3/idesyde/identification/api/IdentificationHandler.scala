@@ -3,6 +3,7 @@ package idesyde.identification.api
 import forsyde.io.java.core.ForSyDeSystemGraph
 import idesyde.identification.IdentificationRule
 import idesyde.identification.DecisionModel
+import idesyde.identification.ForSyDeDecisionModel
 import forsyde.io.java.core.VertexTrait
 
 import java.util.stream.Collectors
@@ -22,7 +23,6 @@ import idesyde.identification.rules.platform.SchedulableNetDigHWIdentRule
 import collection.JavaConverters.*
 import java.util.concurrent.Executors
 import java.util.concurrent.ThreadPoolExecutor
-import idesyde.identification.rules.workload.PeriodicTaskIdentificationRule
 import org.apache.commons.math3.fraction.BigFraction
 import idesyde.utils.BigFractionIsNumeric
 
@@ -35,17 +35,17 @@ class IdentificationHandler(
     this
 
   def identifyDecisionModels(
-      model: ForSyDeSystemGraph
-  ): Set[DecisionModel] =
+      model: Any
+  ): Set[DecisionModel] = {
     var identified: Set[DecisionModel] = Set()
-    var activeRules                    = registeredModules.flatMap(_.identificationRules)
-    val maxIters                       = activeRules.size * countTraits(model)
+    var activeRules                    = registeredModules.flatMap(m => m.identificationRules)
     var iters                          = 0
     val dominanceGraph = SimpleDirectedGraph[DecisionModel, DefaultEdge](classOf[DefaultEdge])
+    var prevIdentified = -1
     scribe.info(
-      s"Performing identification with ${activeRules.size} rules up to $maxIters iterations."
+      s"Performing identification with ${activeRules.size} rules."
     )
-    while (activeRules.size > 0 && iters < maxIters) {
+    while (activeRules.size > 0 && prevIdentified >= dominanceGraph.vertexSet.size) {
       val ruleResults = activeRules.map(r => (r, r.identifyUntyped(model, identified)))
       val newIdentified =
         ruleResults.filter((r, res) => !res._2.isEmpty).map((r, res) => res._2.get).toSet
@@ -72,7 +72,7 @@ class IdentificationHandler(
     scribe.info(s"droppped ${identified.size - dominant.size} dominated decision model(s).")
     scribe.debug(s"domitant: ${dominant.map(m => m.uniqueIdentifier)}")
     dominant
-  end identifyDecisionModels
+  }
 
   protected def countTraits(model: ForSyDeSystemGraph): Integer =
     model.vertexSet.stream.flatMap(_.getTraits.stream).distinct.count.toInt

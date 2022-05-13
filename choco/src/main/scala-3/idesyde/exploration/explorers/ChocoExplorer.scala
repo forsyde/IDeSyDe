@@ -1,7 +1,7 @@
 package idesyde.exploration.explorers
 
-import idesyde.identification.DecisionModel
-import idesyde.identification.interfaces.ChocoCPDecisionModel
+import idesyde.identification.ForSyDeDecisionModel
+import idesyde.identification.interfaces.ChocoCPForSyDeDecisionModel
 import java.time.Duration
 import forsyde.io.java.core.ForSyDeSystemGraph
 import scala.concurrent.ExecutionContext
@@ -16,38 +16,38 @@ import org.chocosolver.solver.Solution
 
 class ChocoExplorer() extends Explorer:
 
-  def canExplore(decisionModel: DecisionModel): Boolean = decisionModel match
-    case chocoModel: ChocoCPDecisionModel => true
+  def canExplore(ForSyDeDecisionModel: ForSyDeDecisionModel): Boolean = ForSyDeDecisionModel match
+    case chocoModel: ChocoCPForSyDeDecisionModel => true
     case _                                => false
 
-  def estimateMemoryUntilFeasibility(decisionModel: DecisionModel): Long = decisionModel match
-    case chocoModel: ChocoCPDecisionModel =>
+  def estimateMemoryUntilFeasibility(ForSyDeDecisionModel: ForSyDeDecisionModel): Long = ForSyDeDecisionModel match
+    case chocoModel: ChocoCPForSyDeDecisionModel =>
       chocoModel.chocoModel.getVars.size * 10
     case _ => Long.MaxValue
 
-  def estimateMemoryUntilOptimality(decisionModel: DecisionModel): Long = decisionModel match
-    case chocoModel: ChocoCPDecisionModel =>
+  def estimateMemoryUntilOptimality(ForSyDeDecisionModel: ForSyDeDecisionModel): Long = ForSyDeDecisionModel match
+    case chocoModel: ChocoCPForSyDeDecisionModel =>
       chocoModel.chocoModel.getVars.size * 1000
     case _ => Long.MaxValue
 
   def estimateTimeUntilFeasibility(
-      decisionModel: DecisionModel
-  ): java.time.Duration = decisionModel match
-    case chocoModel: ChocoCPDecisionModel =>
+      ForSyDeDecisionModel: ForSyDeDecisionModel
+  ): java.time.Duration = ForSyDeDecisionModel match
+    case chocoModel: ChocoCPForSyDeDecisionModel =>
       Duration.ofMinutes(chocoModel.chocoModel.getVars.size)
     case _ => Duration.ofMinutes(Int.MaxValue)
 
   def estimateTimeUntilOptimality(
-      decisionModel: DecisionModel
-  ): java.time.Duration = decisionModel match
-    case chocoModel: ChocoCPDecisionModel =>
+      ForSyDeDecisionModel: ForSyDeDecisionModel
+  ): java.time.Duration = ForSyDeDecisionModel match
+    case chocoModel: ChocoCPForSyDeDecisionModel =>
       Duration.ofHours(chocoModel.chocoModel.getVars.size)
     case _ => Duration.ofMinutes(Int.MaxValue)
 
-  def explore(decisionModel: DecisionModel)(using
+  def explore(ForSyDeDecisionModel: ForSyDeDecisionModel)(using
       ExecutionContext
-  ): LazyList[ForSyDeSystemGraph] = decisionModel match
-    case chocoCpModel: ChocoCPDecisionModel =>
+  ): LazyList[ForSyDeSystemGraph] = ForSyDeDecisionModel match
+    case chocoCpModel: ChocoCPForSyDeDecisionModel =>
       val model           = chocoCpModel.chocoModel
       val solver          = model.getSolver
       val paretoMaximizer = ParetoMaximizer(chocoCpModel.modelObjectives)

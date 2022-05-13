@@ -6,7 +6,7 @@ import scala.jdk.CollectionConverters.*
 
 import org.apache.commons.math3.fraction.BigFraction
 
-import idesyde.identification.DecisionModel
+import idesyde.identification.ForSyDeDecisionModel
 import idesyde.identification.models.workload.SimplePeriodicWorkload
 import idesyde.identification.models.platform.SchedulableNetworkedDigHW
 import forsyde.io.java.core.Vertex
@@ -23,7 +23,7 @@ final case class PeriodicTaskToSchedHW(
     val mappedTasks: Array[Int] = Array.emptyIntArray,
     val scheduledTasks: Array[Int] = Array.emptyIntArray,
     val mappedChannels: Array[Int] = Array.emptyIntArray
-) extends DecisionModel:
+) extends ForSyDeDecisionModel:
 
   val coveredVertexes: Iterable[Vertex] = taskModel.coveredVertexes ++ schedHwModel.coveredVertexes
 

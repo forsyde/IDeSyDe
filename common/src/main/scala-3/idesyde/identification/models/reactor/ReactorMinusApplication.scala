@@ -1,6 +1,6 @@
 package idesyde.identification.models.reactor
 
-import idesyde.identification.DecisionModel
+import idesyde.identification.ForSyDeDecisionModel
 import org.apache.commons.math3.fraction.BigFraction
 import org.apache.commons.math3.util.ArithmeticUtils
 import org.jgrapht.graph.SimpleDirectedGraph
@@ -72,7 +72,7 @@ final case class ReactorMinusApplication(
     executor: ThreadPoolExecutor
     // val sizeFunction: Map[LinguaFrancaReaction | LinguaFrancaReactor | LinguaFrancaSignal, Long]
 ) extends SimpleDirectedGraph[LinguaFrancaReaction, LinguaFrancaSignal](classOf[LinguaFrancaSignal])
-    with DecisionModel:
+    with ForSyDeDecisionModel:
 
   for (r               <- pureReactions) addVertex(r)
   for (r               <- periodicReactions) addVertex(r)
@@ -182,7 +182,7 @@ final case class ReactorMinusApplication(
       })
       .toSet
 
-  // override def dominates(o: DecisionModel) =
+  // override def dominates(o: ForSyDeDecisionModel) =
   //   super.dominates(o) && (o match {
   //     case o: ReactorMinusApplication => dominatesReactorMinus(o)
   //     case _                          => true

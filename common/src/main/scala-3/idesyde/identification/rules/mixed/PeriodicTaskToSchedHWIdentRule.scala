@@ -2,7 +2,7 @@ package idesyde.identification.rules.mixed
 
 import idesyde.identification.ForSyDeIdentificationRule
 import forsyde.io.java.core.ForSyDeSystemGraph
-import idesyde.identification.DecisionModel
+import idesyde.identification.ForSyDeDecisionModel
 import idesyde.identification.models.workload.SimplePeriodicWorkload
 import idesyde.identification.models.platform.SchedulableNetworkedDigHW
 import forsyde.io.java.typed.viewers.impl.InstrumentedExecutable
@@ -19,8 +19,8 @@ class PeriodicTaskToSchedHWIdentRule extends ForSyDeIdentificationRule[PeriodicT
 
   def identify(
       model: ForSyDeSystemGraph,
-      identified: Set[DecisionModel]
-  ): (Boolean, Option[DecisionModel]) =
+      identified: Set[ForSyDeDecisionModel]
+  ): (Boolean, Option[ForSyDeDecisionModel]) =
     var workloadModel = Option.empty[SimplePeriodicWorkload]
     var platformModel = Option.empty[SchedulableNetworkedDigHW]
     identified.foreach(d => {
@@ -43,7 +43,7 @@ class PeriodicTaskToSchedHWIdentRule extends ForSyDeIdentificationRule[PeriodicT
       model: ForSyDeSystemGraph,
       workloadModel: SimplePeriodicWorkload,
       platformModel: SchedulableNetworkedDigHW
-  ): Option[DecisionModel] =
+  ): Option[ForSyDeDecisionModel] =
     // alll executables of task are instrumented
     val instrumentedExecutables = workloadModel.tasks.zipWithIndex
       .filter((task, i) => workloadModel.executables(i).forall(InstrumentedExecutable.conforms(_)))

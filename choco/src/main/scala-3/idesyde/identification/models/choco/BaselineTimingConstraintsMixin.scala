@@ -1,10 +1,10 @@
 package idesyde.identification.models.choco
 
-import idesyde.identification.interfaces.ChocoCPDecisionModel
+import idesyde.identification.interfaces.ChocoCPForSyDeDecisionModel
 import org.chocosolver.solver.variables.IntVar
 import org.apache.commons.math3.fraction.BigFraction
 
-trait BaselineTimingConstraintsMixin extends ChocoCPDecisionModel {
+trait BaselineTimingConstraintsMixin extends ChocoCPForSyDeDecisionModel {
 
   val priorities: Array[Int]
   val periods: Array[BigFraction]

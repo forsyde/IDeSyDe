@@ -1,25 +1,25 @@
 package idesyde.identification.models.sdf
 
 import forsyde.io.java.core.Vertex
-import idesyde.identification.DecisionModel
+import idesyde.identification.ForSyDeDecisionModel
 import forsyde.io.java.typed.viewers.moc.sdf.SDFActor
 import forsyde.io.java.typed.viewers.moc.sdf.SDFChannel
-import forsyde.io.java.typed.viewers.moc.sdf.SDFDelay
 import forsyde.io.java.typed.viewers.moc.sdf.SDFElem
 import org.apache.commons.math3.linear.Array2DRowFieldMatrix
 import org.apache.commons.math3.fraction.FractionField
 import org.apache.commons.math3.fraction.Fraction
 import org.apache.commons.math3.linear.Array2DRowRealMatrix
 import org.apache.commons.math3.linear.SingularValueDecomposition
+import forsyde.io.java.core.ForSyDeSystemGraph
 
 final case class SDFApplication(
     val actors: Array[SDFActor],
     val channels: Array[SDFChannel],
     val topology: Array[Array[Int]],
     val preCalculatedRepetitionVector: Array[Int] = Array.emptyIntArray
-) extends DecisionModel {
+) extends ForSyDeDecisionModel {
 
-  // override def dominates(o: DecisionModel) = {
+  // override def dominates(o: ForSyDeDecisionModel) = {
   //   val extra: Boolean = o match {
   //     case o: SDFApplication => dominatesSdf(o)
   //     case _                 => true

@@ -1,13 +1,13 @@
 package idesyde.identification.models.reactor
 
-import idesyde.identification.interfaces.MiniZincDecisionModel
+import idesyde.identification.interfaces.MiniZincForSyDeDecisionModel
 import scala.io.Source
 import forsyde.io.java.core.ForSyDeSystemGraph
 import idesyde.identification.interfaces.MiniZincData
 import scala.concurrent.Future
 import scala.concurrent.ExecutionContext
 import org.apache.commons.math3.util.ArithmeticUtils
-import idesyde.identification.DecisionModel
+import idesyde.identification.ForSyDeDecisionModel
 import org.apache.commons.math3.fraction.BigFraction
 import forsyde.io.java.typed.viewers.platform.GenericProcessingModule
 import idesyde.utils.BigFractionIsNumeric
@@ -21,7 +21,7 @@ import forsyde.io.java.typed.viewers.moc.linguafranca.LinguaFrancaReaction
 import forsyde.io.java.typed.viewers.platform.runtime.RoundRobinScheduler
 
 final case class ReactorMinusAppMapAndSchedMzn(val sourceModel: ReactorMinusAppMapAndSched)
-    extends MiniZincDecisionModel:
+    extends MiniZincForSyDeDecisionModel:
 
   given Numeric[BigFraction] = BigFractionIsNumeric()
 
@@ -376,7 +376,7 @@ final case class ReactorMinusAppMapAndSchedMzn(val sourceModel: ReactorMinusAppM
   ): ForSyDeSystemGraph =
     ForSyDeSystemGraph()
 
-  override def dominates(other: DecisionModel): Boolean =
+  override def dominates(other: ForSyDeDecisionModel): Boolean =
     super.dominates(other) && (other match {
       case mzn: ReactorMinusAppMapAndSched => sourceModel == mzn
       case _                               => true

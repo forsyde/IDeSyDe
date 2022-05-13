@@ -1,23 +1,15 @@
 package idesyde.identification
 
-import forsyde.io.java.core.Edge
-import forsyde.io.java.core.Vertex
-
-
 trait DecisionModel {
 
-  val coveredVertexes: Iterable[Vertex]
+  type VertexT
 
-  val uniqueIdentifier: String
+  def coveredVertexes: Iterable[VertexT]
 
-  def dominates(other: DecisionModel): Boolean =
-    other
-      .coveredVertexesAsSet
-      .subsetOf(coveredVertexesAsSet)
+  def uniqueIdentifier: String
 
-  override lazy val hashCode: Int =
-    coveredVertexes.map(v => v.hashCode).sum + uniqueIdentifier.hashCode
+  def dominates(other: DecisionModel): Boolean
 
-  lazy val coveredVertexesAsSet: Set[Vertex] = coveredVertexes.toSet
+  override lazy val hashCode: Int = uniqueIdentifier.hashCode
 
 }

@@ -1,13 +1,13 @@
 package idesyde.exploration.interfaces
 
-import idesyde.identification.interfaces.MiniZincDecisionModel
+import idesyde.identification.interfaces.MiniZincForSyDeDecisionModel
 import idesyde.exploration.interfaces.Explorer
 import forsyde.io.java.core.ForSyDeSystemGraph
 import scala.concurrent.ExecutionContext
 import scala.concurrent.Future
 
 import scala.sys.process._
-import idesyde.identification.DecisionModel
+import idesyde.identification.ForSyDeDecisionModel
 import java.nio.file.Paths
 import java.nio.file.Files
 import java.nio.file.StandardOpenOption
@@ -21,15 +21,15 @@ import scala.collection.mutable
 
 trait SimpleMiniZincCPExplorer extends Explorer:
 
-  def canExplore(decisionModel: DecisionModel): Boolean =
-    decisionModel match
+  def canExplore(ForSyDeDecisionModel: ForSyDeDecisionModel): Boolean =
+    ForSyDeDecisionModel match
       // Just discard the minizinc output
-      case m: MiniZincDecisionModel => 
+      case m: MiniZincForSyDeDecisionModel => 
         "minizinc".!(ProcessLogger(out => ())) == 1
       case _                        => false
 
   def explorationSolve(
-      decisionModel: DecisionModel,
+      ForSyDeDecisionModel: ForSyDeDecisionModel,
       minizincSolverName: String = "gecode",
       tempModelFileName: String = "idesyde-minizinc-model.mzn",
       tempDataFileName: String = "idesyde-minizinc-data.json",
@@ -37,8 +37,8 @@ trait SimpleMiniZincCPExplorer extends Explorer:
       extraInstruction: String = "",
       callExtraFlags: List[String] = List.empty
   )(using ExecutionContext): LazyList[Map[String, MiniZincData]] =
-    decisionModel match
-      case m: MiniZincDecisionModel =>
+    ForSyDeDecisionModel match
+      case m: MiniZincForSyDeDecisionModel =>
         // val modelFile = Files.createTempFile("idesyde-minizinc-model", ".mzn")
         // val dataFile = Files.createTempFile("idesyde-minizinc-data", ".json")
         val modelPath = Paths.get(tempModelFileName)

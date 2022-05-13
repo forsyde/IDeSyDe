@@ -1,6 +1,6 @@
 package idesyde.exploration.explorers
 
-import idesyde.identification.interfaces.MiniZincDecisionModel
+import idesyde.identification.interfaces.MiniZincForSyDeDecisionModel
 
 import scala.sys.process._
 import idesyde.identification.models.reactor.ReactorMinusAppMapAndSchedMzn
@@ -10,7 +10,7 @@ import scala.concurrent.ExecutionContext
 import scala.concurrent.Future
 import forsyde.io.java.core.ForSyDeSystemGraph
 import java.nio.file.Files
-import idesyde.identification.DecisionModel
+import idesyde.identification.ForSyDeDecisionModel
 import java.nio.file.Paths
 import java.nio.file.StandardOpenOption
 import idesyde.identification.interfaces.MiniZincData
@@ -18,44 +18,44 @@ import forsyde.io.java.core.EdgeTrait
 
 final case class GecodeMiniZincExplorer() extends SimpleMiniZincCPExplorer with ReactorMinusDSEMznMerger:
 
-  override def canExplore(decisionModel: DecisionModel): Boolean =
-    super.canExplore(decisionModel) &&
+  override def canExplore(ForSyDeDecisionModel: ForSyDeDecisionModel): Boolean =
+    super.canExplore(ForSyDeDecisionModel) &&
       "minizinc --solvers".!!.contains("org.gecode.gecode")
 
-  def estimateTimeUntilFeasibility(decisionModel: DecisionModel): Duration =
-    decisionModel match
+  def estimateTimeUntilFeasibility(ForSyDeDecisionModel: ForSyDeDecisionModel): Duration =
+    ForSyDeDecisionModel match
       case m: ReactorMinusAppMapAndSchedMzn =>
-        val nonMznDecisionModel = m.sourceModel
+        val nonMznForSyDeDecisionModel = m.sourceModel
         Duration.ofSeconds(
-          nonMznDecisionModel.reactorMinus.jobGraph.jobs.size * nonMznDecisionModel.reactorMinus.jobGraph.channels.size
+          nonMznForSyDeDecisionModel.reactorMinus.jobGraph.jobs.size * nonMznForSyDeDecisionModel.reactorMinus.jobGraph.channels.size
         )
       case _ => Duration.ZERO
 
-  def estimateTimeUntilOptimality(decisionModel: DecisionModel): Duration =
-    decisionModel match
+  def estimateTimeUntilOptimality(ForSyDeDecisionModel: ForSyDeDecisionModel): Duration =
+    ForSyDeDecisionModel match
       case m: ReactorMinusAppMapAndSchedMzn =>
-        val nonMznDecisionModel = m.sourceModel
+        val nonMznForSyDeDecisionModel = m.sourceModel
         Duration.ofHours(
-          nonMznDecisionModel.reactorMinus.jobGraph.jobs.size * nonMznDecisionModel.reactorMinus.jobGraph.channels.size * nonMznDecisionModel.platform.coveredVertexes.size 
+          nonMznForSyDeDecisionModel.reactorMinus.jobGraph.jobs.size * nonMznForSyDeDecisionModel.reactorMinus.jobGraph.channels.size * nonMznForSyDeDecisionModel.platform.coveredVertexes.size 
         )
       case _ => Duration.ZERO
 
-  def estimateMemoryUntilFeasibility(decisionModel: DecisionModel): Long =
-    decisionModel match
+  def estimateMemoryUntilFeasibility(ForSyDeDecisionModel: ForSyDeDecisionModel): Long =
+    ForSyDeDecisionModel match
       case m: ReactorMinusAppMapAndSchedMzn =>
-        val nonMznDecisionModel = m.sourceModel
-        128 * nonMznDecisionModel.reactorMinus.jobGraph.jobs.size * nonMznDecisionModel.reactorMinus.jobGraph.channels.size
+        val nonMznForSyDeDecisionModel = m.sourceModel
+        128 * nonMznForSyDeDecisionModel.reactorMinus.jobGraph.jobs.size * nonMznForSyDeDecisionModel.reactorMinus.jobGraph.channels.size
       case _ => 0
 
-  def estimateMemoryUntilOptimality(decisionModel: DecisionModel): Long =
-    decisionModel match
+  def estimateMemoryUntilOptimality(ForSyDeDecisionModel: ForSyDeDecisionModel): Long =
+    ForSyDeDecisionModel match
       case m: ReactorMinusAppMapAndSchedMzn =>
-        val nonMznDecisionModel = m
-        50 * estimateMemoryUntilFeasibility(decisionModel)
+        val nonMznForSyDeDecisionModel = m
+        50 * estimateMemoryUntilFeasibility(ForSyDeDecisionModel)
       case _ => 0
 
-  def explore(decisionModel: DecisionModel)(using ExecutionContext) =
-    decisionModel match
+  def explore(ForSyDeDecisionModel: ForSyDeDecisionModel)(using ExecutionContext) =
+    ForSyDeDecisionModel match
       case m: ReactorMinusAppMapAndSchedMzn =>
         val results = explorationSolve(m, "gecode", 
         extraHeader = GecodeMiniZincExplorer.extraHeaderReactorMinusAppMapAndSchedMzn,

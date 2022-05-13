@@ -1,8 +1,8 @@
 package idesyde.identification.models
 
-import idesyde.identification.DecisionModel
+import idesyde.identification.ForSyDeDecisionModel
 
-trait JobSchedulingDecisionModel[J, C, R] extends DecisionModel {
+trait JobSchedulingForSyDeDecisionModel[J, C, R] extends ForSyDeDecisionModel {
 
   def jobs(): Set[J]
 

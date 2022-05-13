@@ -17,194 +17,170 @@ import org.jgrapht.opt.graph.sparse.SparseIntDirectedGraph
 import org.jgrapht.alg.util.Pair
 import org.jgrapht.opt.graph.sparse.IncomingEdgesSupport
 import org.jgrapht.traverse.BreadthFirstIterator
-import forsyde.io.java.typed.viewers.execution.DownsampleReactiveStimulus
 import org.jgrapht.traverse.TopologicalOrderIterator
 import com.google.common.math.IntMath
 
 import forsyde.io.java.core.Vertex
-import forsyde.io.java.typed.viewers.execution.PeriodicTask
 
 import forsyde.io.java.typed.viewers.impl.Executable
 import forsyde.io.java.typed.viewers.impl.InstrumentedExecutable
-import forsyde.io.java.typed.viewers.execution.Stimulus
 import forsyde.io.java.typed.viewers.execution.PeriodicStimulus
-import forsyde.io.java.typed.viewers.execution.ReactiveTask
-import forsyde.io.java.typed.viewers.execution.ReactiveStimulus
 import forsyde.io.java.typed.viewers.execution.Task
 import forsyde.io.java.typed.viewers.execution.ConstrainedTask
-import forsyde.io.java.typed.viewers.execution.UpsampleReactiveStimulus
-import idesyde.identification.DecisionModel
+import idesyde.identification.ForSyDeDecisionModel
 
 import org.jgrapht.graph.AsSubgraph
 import org.jgrapht.alg.shortestpath.DijkstraManyToManyShortestPaths
-import forsyde.io.java.typed.viewers.execution.SimpleReactiveStimulus
 import forsyde.io.java.typed.viewers.impl.DataBlock
 import java.{util => ju}
 import org.jgrapht.Graph
 
-/** Simplest periodic task set concerned in the literature. The periods, offsets and relative
-  * deadlines are all fixed at a task level. The only additional complexity are precedence are
-  * possible precedence constraints between instances of each task.
+/** Simplest periodic task set concerned in the literature. The task graph is generated
+  * from the execution namespace in ForSyDe IO, which defines triggering mechanisms 
+  * and how they propagate.
   *
   * The event horizon for analysis takes into consideration offsets and comes from Baruah,S.,L.
   * Rosier,andR. Howell:1990b, `Algorithms and Complexity Concerning thePreemptive Schedulingof
   * PeriodicReal-Time Tasks on One Processor'
+  * 
+  * Assumptions that must be guaranteed:
+  * 1. The periodic stimulus reaches any tasks in the model.
   *
-  * @param periodicTasks
-  *   @param periods
-  * @param offsets
-  *   @param relativeDeadlines
-  * @param precendences
   */
 case class SimplePeriodicWorkload(
-    val periodicTasks: Array[Task],
-    val reactiveTasks: Array[ReactiveTask],
+    val tasks: Array[Task],
     val periodicStimulus: Array[PeriodicStimulus],
-    val reactiveStimulus: Array[ReactiveStimulus],
-    val executables: Array[Array[Executable]],
     val dataBlocks: Array[DataBlock],
-    val reactiveStimulusSrcs: Array[Array[Int]],
-    val reactiveStimulusDst: Array[Int],
-    val taskChannelReads: Array[Array[Long]],
-    val taskChannelWrites: Array[Array[Long]]
-)(using Integral[BigFraction])
-    extends DecisionModel,
-      idesyde.identification.models.workload.PeriodicWorkload[Task, DataBlock, BigFraction]:
+    val executables: Array[Array[Executable]]
+)(using Fractional[BigFraction])
+    extends ForSyDeDecisionModel,
+      PeriodicWorkload[Task, DataBlock, BigFraction]:
   //extends PeriodicWorkload[Task, BigFraction]():
 
   override val coveredVertexes: Iterable[Vertex] =
-    periodicTasks.map(_.getViewedVertex()) ++
+    tasks.map(_.getViewedVertex()) ++
       periodicStimulus.map(_.getViewedVertex) ++
-      executables.flatten.map(_.getViewedVertex) ++
-      dataBlocks.map(_.getViewedVertex) ++
-      reactiveStimulus.map(_.getViewedVertex)
+      dataBlocks.map(_.getViewedVertex)
 
-  val tasks = periodicTasks ++ reactiveTasks
-
-  val hyperPeriod: BigFraction = periodicStimulus
-    .map(s => BigFraction(s.getPeriodNumerator, s.getPeriodDenominator))
-    .reduce((frac1, frac2) =>
-      // the LCM of a nunch of BigFractions n1/d1, n2/d2... is lcm(n1, n2,...)/gcd(d1, d2,...). You can check.
-      BigFraction(
+  def computeLCM(frac1: BigFraction, frac2: BigFraction) =  BigFraction(
         ArithmeticUtils.lcm(frac1.getNumerator.longValue, frac2.getNumerator.longValue),
         ArithmeticUtils.gcd(frac1.getDenominator.longValue, frac2.getDenominator.longValue)
       )
-    )
 
   // build the graph of reactions to enable periodic reductions
   // scribe.debug(reactiveStimulusSrcs.map(_.mkString("[", ",", "]")).mkString("[", ",", "]"))
   // scribe.debug(reactiveStimulusDst.mkString("[", ",", "]"))
-  val reactiveGraph: Graph[Integer, Integer] =
-    if (!reactiveStimulusSrcs.isEmpty && !reactiveStimulusDst.isEmpty) then
-      SparseIntDirectedGraph(
-        tasks.length,
-        reactiveStimulusSrcs.zipWithIndex
-          .flatMap((r, i) => r.map(s => (s, i)))
-          .map((s, i) =>
-            Pair(
-              s.asInstanceOf[Integer],
-              reactiveStimulusDst(i).asInstanceOf[Integer]
-            )
-          )
-          .toList
-          .asJava,
-        IncomingEdgesSupport.LAZY_INCOMING_EDGES
-      )
-    else
-      SimpleDirectedGraph
-        .createBuilder[Integer, Integer](() => 0.asInstanceOf[Integer])
-        .addVertices((0 until tasks.length).map(_.asInstanceOf[Integer]).toArray: _*)
-        .build
+  // val reactiveGraph: Graph[Integer, Integer] =
+  //   if (!reactiveStimulusSrcs.isEmpty && !reactiveStimulusDst.isEmpty) then
+  //     SparseIntDirectedGraph(
+  //       tasks.length,
+  //       reactiveStimulusSrcs.zipWithIndex
+  //         .flatMap((r, i) => r.map(s => (s, i)))
+  //         .map((s, i) =>
+  //           Pair(
+  //             s.asInstanceOf[Integer],
+  //             reactiveStimulusDst(i).asInstanceOf[Integer]
+  //           )
+  //         )
+  //         .toList
+  //         .asJava,
+  //       IncomingEdgesSupport.LAZY_INCOMING_EDGES
+  //     )
+  //   else
+  //     SimpleDirectedGraph
+  //       .createBuilder[Integer, Integer](() => 0.asInstanceOf[Integer])
+  //       .addVertices((0 until tasks.length).map(_.asInstanceOf[Integer]).toArray: _*)
+  //       .build
   // SparseIntDirectedGraph(
   //   tasks.length,
   //   ju.List.of()
   // )
 
   // do the computation by traversing the graph
-  val periods = {
-    var periodsMut = tasks.map(_ => hyperPeriod)
-    val iter = TopologicalOrderIterator(
-      reactiveGraph
-    )
-    while (iter.hasNext) {
-      val idxTask = iter.next
-      val curTask = tasks(idxTask)
-      curTask match {
-        case perTask: PeriodicTask =>
-          val stimulus = periodicStimulus(periodicTasks.indexOf(perTask))
-          periodsMut(idxTask) =
-            BigFraction(stimulus.getPeriodNumerator, stimulus.getPeriodDenominator)
-        case reactiveTask: ReactiveTask =>
-          val stimulus = reactiveStimulus(reactiveStimulusDst.indexOf(idxTask))
-          periodsMut(idxTask) = reactiveGraph
-            .incomingEdgesOf(idxTask)
-            .stream
-            .map(reactiveGraph.getEdgeSource(_))
-            .map(inTaskIdx => {
-              DownsampleReactiveStimulus
-                .safeCast(stimulus)
-                .map(downsample =>
-                  periodsMut(inTaskIdx).multiply(downsample.getRepetitivePredecessorSkips)
-                )
-                .or(() =>
-                  UpsampleReactiveStimulus
-                    .safeCast(stimulus)
-                    .map(upsample =>
-                      periodsMut(inTaskIdx).divide(upsample.getRepetitivePredecessorHolds)
-                    )
-                )
-                .orElse(periodsMut(inTaskIdx))
-            })
-            .min((f1, f2) => f1.compareTo(f2))
-            .get
-      }
-    }
-    periodsMut
-  }
+  // val periods = {
+  //   var periodsMut = tasks.map(_ => hyperPeriod)
+  //   val iter = TopologicalOrderIterator(
+  //     reactiveGraph
+  //   )
+  //   while (iter.hasNext) {
+  //     val idxTask = iter.next
+  //     val curTask = tasks(idxTask)
+  //     curTask match {
+  //       case perTask: PeriodicTask =>
+  //         val stimulus = periodicStimulus(periodicTasks.indexOf(perTask))
+  //         periodsMut(idxTask) =
+  //           BigFraction(stimulus.getPeriodNumerator, stimulus.getPeriodDenominator)
+  //       case reactiveTask: ReactiveTask =>
+  //         val stimulus = reactiveStimulus(reactiveStimulusDst.indexOf(idxTask))
+  //         periodsMut(idxTask) = reactiveGraph
+  //           .incomingEdgesOf(idxTask)
+  //           .stream
+  //           .map(reactiveGraph.getEdgeSource(_))
+  //           .map(inTaskIdx => {
+  //             DownsampleReactiveStimulus
+  //               .safeCast(stimulus)
+  //               .map(downsample =>
+  //                 periodsMut(inTaskIdx).multiply(downsample.getRepetitivePredecessorSkips)
+  //               )
+  //               .or(() =>
+  //                 UpsampleReactiveStimulus
+  //                   .safeCast(stimulus)
+  //                   .map(upsample =>
+  //                     periodsMut(inTaskIdx).divide(upsample.getRepetitivePredecessorHolds)
+  //                   )
+  //               )
+  //               .orElse(periodsMut(inTaskIdx))
+  //           })
+  //           .min((f1, f2) => f1.compareTo(f2))
+  //           .get
+  //     }
+  //   }
+  //   periodsMut
+  // }
 
-  val noPrecedenceOffsets = {
-    var offsetsMut = tasks.map(_ => hyperPeriod)
-    val iter = TopologicalOrderIterator(
-      reactiveGraph
-    )
-    while (iter.hasNext) {
-      val idxTask = iter.next
-      val curTask = tasks(idxTask)
-      curTask match {
-        case perTask: PeriodicTask =>
-          val stimulus = periodicStimulus(periodicTasks.indexOf(perTask))
-          offsetsMut(idxTask) =
-            BigFraction(stimulus.getOffsetNumerator, stimulus.getOffsetDenominator)
-        case reactiveTask: ReactiveTask =>
-          val stimulus = reactiveStimulus(reactiveStimulusDst.indexOf(idxTask))
-          offsetsMut(idxTask) = reactiveGraph
-            .incomingEdgesOf(idxTask)
-            .stream
-            .map(reactiveGraph.getEdgeSource(_))
-            .map(inTaskIdx => {
-              DownsampleReactiveStimulus
-                .safeCast(stimulus)
-                .map(downsample =>
-                  offsetsMut(inTaskIdx).add(
-                    periods(inTaskIdx).multiply(downsample.getInitialPredecessorSkips)
-                  )
-                )
-                .or(() =>
-                  UpsampleReactiveStimulus
-                    .safeCast(stimulus)
-                    .map(upsample =>
-                      offsetsMut(inTaskIdx)
-                        .add(periods(inTaskIdx).divide(upsample.getInitialPredecessorHolds))
-                    )
-                )
-                .orElse(BigFraction.ZERO)
-            })
-            .min((f1, f2) => f1.compareTo(f2))
-            .get
-      }
-    }
-    offsetsMut
-  }
+  // val noPrecedenceOffsets = {
+  //   var offsetsMut = tasks.map(_ => hyperPeriod)
+  //   val iter = TopologicalOrderIterator(
+  //     reactiveGraph
+  //   )
+  //   while (iter.hasNext) {
+  //     val idxTask = iter.next
+  //     val curTask = tasks(idxTask)
+  //     curTask match {
+  //       case perTask: PeriodicTask =>
+  //         val stimulus = periodicStimulus(periodicTasks.indexOf(perTask))
+  //         offsetsMut(idxTask) =
+  //           BigFraction(stimulus.getOffsetNumerator, stimulus.getOffsetDenominator)
+  //       case reactiveTask: ReactiveTask =>
+  //         val stimulus = reactiveStimulus(reactiveStimulusDst.indexOf(idxTask))
+  //         offsetsMut(idxTask) = reactiveGraph
+  //           .incomingEdgesOf(idxTask)
+  //           .stream
+  //           .map(reactiveGraph.getEdgeSource(_))
+  //           .map(inTaskIdx => {
+  //             DownsampleReactiveStimulus
+  //               .safeCast(stimulus)
+  //               .map(downsample =>
+  //                 offsetsMut(inTaskIdx).add(
+  //                   periods(inTaskIdx).multiply(downsample.getInitialPredecessorSkips)
+  //                 )
+  //               )
+  //               .or(() =>
+  //                 UpsampleReactiveStimulus
+  //                   .safeCast(stimulus)
+  //                   .map(upsample =>
+  //                     offsetsMut(inTaskIdx)
+  //                       .add(periods(inTaskIdx).divide(upsample.getInitialPredecessorHolds))
+  //                   )
+  //               )
+  //               .orElse(BigFraction.ZERO)
+  //           })
+  //           .min((f1, f2) => f1.compareTo(f2))
+  //           .get
+  //     }
+  //   }
+  //   offsetsMut
+  // }
 
   // scribe.debug(reactiveStimulusSrcs.map(_.mkString("[", ",", "]")).mkString("[", ",", "]"))
   // scribe.debug(reactiveStimulusDst.mkString("[", ",", "]"))
@@ -259,86 +235,86 @@ case class SimplePeriodicWorkload(
   //     ).mkString("[", "\n", "]")
   //   )
 
-  val offsets = {
-    var offsetsMut = noPrecedenceOffsets.clone
-    val iter = TopologicalOrderIterator(
-      reactiveGraph
-    )
-    while (iter.hasNext) {
-      val idxTask = iter.next
-      val curTask = tasks(idxTask)
-      offsetsMut(idxTask) = reactiveGraph
-        .incomingEdgesOf(idxTask)
-        .stream
-        .map(reactiveGraph.getEdgeSource(_))
-        .map(inTaskIdx => {
-          //scribe.debug(s"checking tasks ${inTaskIdx} to ${idxTask}")
-          reactiveStimulus.zipWithIndex
-            .filter((stimulus, k) => {
-              reactiveStimulusSrcs(k).contains(inTaskIdx) &&
-              reactiveStimulusDst(k) == idxTask
-            })
-            .map((stimulus, _) => {
-              DownsampleReactiveStimulus
-                .safeCast(stimulus)
-                .map(downsample => {
-                  val offsetDelta = offsetsMut(idxTask) - offsetsMut(inTaskIdx)
-                  val periodDelta = periods(idxTask) - periods(inTaskIdx).multiply(
-                    downsample.getRepetitivePredecessorSkips
-                  )
-                  maximumOffsetDislocation(tasksNumInstancesInHyperPeriod(inTaskIdx))(
-                    offsetDelta,
-                    periodDelta
-                  )
-                })
-                .or(() => {
-                  UpsampleReactiveStimulus
-                    .safeCast(stimulus)
-                    .map(upsample => {
-                      val offsetDelta = offsetsMut(idxTask) - offsetsMut(inTaskIdx)
-                      val periodDelta = periods(idxTask)
-                        .multiply(upsample.getRepetitivePredecessorHolds) - periods(inTaskIdx)
-                      maximumOffsetDislocation(tasksNumInstancesInHyperPeriod(idxTask))(
-                        offsetDelta,
-                        periodDelta
-                      )
-                    })
-                })
-                .orElseGet(() =>
-                  val offsetDelta = offsetsMut(idxTask) - offsetsMut(inTaskIdx)
-                  val periodDelta = periods(idxTask) - periods(inTaskIdx)
-                  maximumOffsetDislocation(tasksNumInstancesInHyperPeriod(idxTask))(
-                    offsetDelta,
-                    periodDelta
-                  )
-                )
-            })
-            .max((f1, f2) => f1.compareTo(f2))
-        })
-        .filter(f => f.compareTo(noPrecedenceOffsets(idxTask)) >= 0)
-        .max((f1, f2) => f1.compareTo(f2))
-        .orElse(noPrecedenceOffsets(idxTask))
-    }
-    offsetsMut
-  }
+  // val offsets = {
+  //   var offsetsMut = noPrecedenceOffsets.clone
+  //   val iter = TopologicalOrderIterator(
+  //     reactiveGraph
+  //   )
+  //   while (iter.hasNext) {
+  //     val idxTask = iter.next
+  //     val curTask = tasks(idxTask)
+  //     offsetsMut(idxTask) = reactiveGraph
+  //       .incomingEdgesOf(idxTask)
+  //       .stream
+  //       .map(reactiveGraph.getEdgeSource(_))
+  //       .map(inTaskIdx => {
+  //         //scribe.debug(s"checking tasks ${inTaskIdx} to ${idxTask}")
+  //         reactiveStimulus.zipWithIndex
+  //           .filter((stimulus, k) => {
+  //             reactiveStimulusSrcs(k).contains(inTaskIdx) &&
+  //             reactiveStimulusDst(k) == idxTask
+  //           })
+  //           .map((stimulus, _) => {
+  //             DownsampleReactiveStimulus
+  //               .safeCast(stimulus)
+  //               .map(downsample => {
+  //                 val offsetDelta = offsetsMut(idxTask) - offsetsMut(inTaskIdx)
+  //                 val periodDelta = periods(idxTask) - periods(inTaskIdx).multiply(
+  //                   downsample.getRepetitivePredecessorSkips
+  //                 )
+  //                 maximumOffsetDislocation(tasksNumInstancesInHyperPeriod(inTaskIdx))(
+  //                   offsetDelta,
+  //                   periodDelta
+  //                 )
+  //               })
+  //               .or(() => {
+  //                 UpsampleReactiveStimulus
+  //                   .safeCast(stimulus)
+  //                   .map(upsample => {
+  //                     val offsetDelta = offsetsMut(idxTask) - offsetsMut(inTaskIdx)
+  //                     val periodDelta = periods(idxTask)
+  //                       .multiply(upsample.getRepetitivePredecessorHolds) - periods(inTaskIdx)
+  //                     maximumOffsetDislocation(tasksNumInstancesInHyperPeriod(idxTask))(
+  //                       offsetDelta,
+  //                       periodDelta
+  //                     )
+  //                   })
+  //               })
+  //               .orElseGet(() =>
+  //                 val offsetDelta = offsetsMut(idxTask) - offsetsMut(inTaskIdx)
+  //                 val periodDelta = periods(idxTask) - periods(inTaskIdx)
+  //                 maximumOffsetDislocation(tasksNumInstancesInHyperPeriod(idxTask))(
+  //                   offsetDelta,
+  //                   periodDelta
+  //                 )
+  //               )
+  //           })
+  //           .max((f1, f2) => f1.compareTo(f2))
+  //       })
+  //       .filter(f => f.compareTo(noPrecedenceOffsets(idxTask)) >= 0)
+  //       .max((f1, f2) => f1.compareTo(f2))
+  //       .orElse(noPrecedenceOffsets(idxTask))
+  //   }
+  //   offsetsMut
+  // }
 
   // scribe.debug(offsets.mkString("[", ",", "]"))
   // scribe.debug(periods.mkString("[", ",", "]"))
 
   //val periods = periodicStimulus.map(s => BigFraction(s.getPeriodNumerator, s.getPeriodDenominator))
   //val offsets = periodicStimulus.map(s => BigFraction(s.getOffsetNumerator, s.getOffsetDenominator))
-  val relativeDeadlines =
-    tasks.zipWithIndex.map((task, i) =>
-      ConstrainedTask
-        .safeCast(task)
-        .map(conTask =>
-          BigFraction(conTask.getRelativeDeadlineNumerator, conTask.getRelativeDeadlineDenominator)
-        )
-        .map(per => if (per.compareTo(periods(i)) < 0) then per else periods(i))
-        .orElse(periods(i))
-        .add(noPrecedenceOffsets(i))
-        .subtract(offsets(i))
-    )
+  // val relativeDeadlines =
+  //   tasks.zipWithIndex.map((task, i) =>
+  //     ConstrainedTask
+  //       .safeCast(task)
+  //       .map(conTask =>
+  //         BigFraction(conTask.getRelativeDeadlineNumerator, conTask.getRelativeDeadlineDenominator)
+  //       )
+  //       .map(per => if (per.compareTo(periods(i)) < 0) then per else periods(i))
+  //       .orElse(periods(i))
+  //       .add(noPrecedenceOffsets(i))
+  //       .subtract(offsets(i))
+  //   )
 
   val largestOffset: BigFraction = offsets.max
 
@@ -359,65 +335,65 @@ case class SimplePeriodicWorkload(
 
   lazy val channelSizes = dataBlocks.map(_.getMaxSizeInBits.toLong)
 
-  lazy val alwaysBlocksGraph = {
-    val g = AsSubgraph(reactiveGraph)
-    val occasionalEdges = g.edgeSet.stream
-      .filter(e => {
-        val i = g.getEdgeSource(e)
-        val j = g.getEdgeTarget(e)
-        // there is at least one instance without a follow-up
-        reactiveStimulus.zipWithIndex
-          .filter((stimulus, k) => {
-            reactiveStimulusSrcs(k).contains(i) &&
-            reactiveStimulusDst(k) == j
-          })
-          .exists((stimulus, _) => {
-            DownsampleReactiveStimulus.conforms(stimulus)
-            || UpsampleReactiveStimulus.conforms(stimulus)
-          })
-      })
-      .collect(Collectors.toSet)
-    g.removeAllEdges(occasionalEdges)
-    g
-  }
+  // lazy val alwaysBlocksGraph = {
+  //   val g = AsSubgraph(reactiveGraph)
+  //   val occasionalEdges = g.edgeSet.stream
+  //     .filter(e => {
+  //       val i = g.getEdgeSource(e)
+  //       val j = g.getEdgeTarget(e)
+  //       // there is at least one instance without a follow-up
+  //       reactiveStimulus.zipWithIndex
+  //         .filter((stimulus, k) => {
+  //           reactiveStimulusSrcs(k).contains(i) &&
+  //           reactiveStimulusDst(k) == j
+  //         })
+  //         .exists((stimulus, _) => {
+  //           DownsampleReactiveStimulus.conforms(stimulus)
+  //           || UpsampleReactiveStimulus.conforms(stimulus)
+  //         })
+  //     })
+  //     .collect(Collectors.toSet)
+  //   g.removeAllEdges(occasionalEdges)
+  //   g
+  // }
 
-  lazy val (interTaskCanBlock, interTaskAlwaysBlocks) = {
-    var canBlockMatrix    = Array.fill(tasks.length)(Array.fill(tasks.length)(false))
-    var alwaysBlockMatrix = Array.fill(tasks.length)(Array.fill(tasks.length)(false))
-    val canBlockPaths     = DijkstraManyToManyShortestPaths(reactiveGraph)
-    val alwaysBlocksPaths = DijkstraManyToManyShortestPaths(alwaysBlocksGraph)
-    tasks.zipWithIndex.foreach((ti, i) => {
-      tasks.zipWithIndex.foreach((tj, j) => {
-        if (i != j && canBlockPaths.getPath(i, j) != null) then canBlockMatrix(i)(j) = true
-        if (i != j && alwaysBlocksPaths.getPath(i, j) != null) then alwaysBlockMatrix(i)(j) = true
-      })
-    })
-    // scribe.debug(canBlockMatrix.map(_.mkString("[", ",", "]")).mkString("[", ",", "]"))
-    // scribe.debug(alwaysBlockMatrix.map(_.mkString("[", ",", "]")).mkString("[", ",", "]"))
-    (canBlockMatrix, alwaysBlockMatrix)
-  }
+  // lazy val (interTaskCanBlock, interTaskAlwaysBlocks) = {
+  //   var canBlockMatrix    = Array.fill(tasks.length)(Array.fill(tasks.length)(false))
+  //   var alwaysBlockMatrix = Array.fill(tasks.length)(Array.fill(tasks.length)(false))
+  //   val canBlockPaths     = DijkstraManyToManyShortestPaths(reactiveGraph)
+  //   val alwaysBlocksPaths = DijkstraManyToManyShortestPaths(alwaysBlocksGraph)
+  //   tasks.zipWithIndex.foreach((ti, i) => {
+  //     tasks.zipWithIndex.foreach((tj, j) => {
+  //       if (i != j && canBlockPaths.getPath(i, j) != null) then canBlockMatrix(i)(j) = true
+  //       if (i != j && alwaysBlocksPaths.getPath(i, j) != null) then alwaysBlockMatrix(i)(j) = true
+  //     })
+  //   })
+  //   // scribe.debug(canBlockMatrix.map(_.mkString("[", ",", "]")).mkString("[", ",", "]"))
+  //   // scribe.debug(alwaysBlockMatrix.map(_.mkString("[", ",", "]")).mkString("[", ",", "]"))
+  //   (canBlockMatrix, alwaysBlockMatrix)
+  // }
 
-  lazy val priorities = {
-    var prioritiesMut = tasks.map(_ => tasks.length)
-    val iter = TopologicalOrderIterator(
-      reactiveGraph
-    )
-    while (iter.hasNext) {
-      val idxTask = iter.next
-      val curTask = tasks(idxTask)
-      prioritiesMut(idxTask) = reactiveGraph
-        .incomingEdgesOf(idxTask)
-        .stream
-        .map(reactiveGraph.getEdgeSource(_))
-        .mapToInt(inTaskIdx => {
-          prioritiesMut(inTaskIdx) - 1
-        })
-        .min
-        .orElse(prioritiesMut(idxTask))
-    }
-    // scribe.debug(prioritiesMut.mkString("[", ",", "]"))
-    prioritiesMut
-  }
+  // lazy val priorities = {
+  //   var prioritiesMut = tasks.map(_ => tasks.length)
+  //   val iter = TopologicalOrderIterator(
+  //     reactiveGraph
+  //   )
+  //   while (iter.hasNext) {
+  //     val idxTask = iter.next
+  //     val curTask = tasks(idxTask)
+  //     prioritiesMut(idxTask) = reactiveGraph
+  //       .incomingEdgesOf(idxTask)
+  //       .stream
+  //       .map(reactiveGraph.getEdgeSource(_))
+  //       .mapToInt(inTaskIdx => {
+  //         prioritiesMut(inTaskIdx) - 1
+  //       })
+  //       .min
+  //       .orElse(prioritiesMut(idxTask))
+  //   }
+  //   // scribe.debug(prioritiesMut.mkString("[", ",", "]"))
+  //   prioritiesMut
+  // }
 
   def maximumOffsetDislocation(
       maxInstances: Long

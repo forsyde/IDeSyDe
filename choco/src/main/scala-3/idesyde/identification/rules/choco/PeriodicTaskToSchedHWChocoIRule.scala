@@ -10,7 +10,7 @@ class PeriodicTaskToSchedHWChocoIRule extends IdentificationRule {
 
   def identify(
       model: ForSyDeSystemGraph,
-      identified: Set[ForSyDeDecisionModel]
+      identified: Set[DecisionModel]
   ): (Boolean, Option[ForSyDeDecisionModel]) = {
     identified
       .find(model =>

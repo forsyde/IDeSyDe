@@ -34,6 +34,9 @@ import org.jgrapht.alg.shortestpath.DijkstraManyToManyShortestPaths
 import forsyde.io.java.typed.viewers.impl.DataBlock
 import java.{util => ju}
 import org.jgrapht.Graph
+import forsyde.io.java.typed.viewers.execution.Downsample
+import forsyde.io.java.typed.viewers.execution.Upsample
+import scala.collection.mutable
 
 /** Simplest periodic task set concerned in the literature. The task graph is generated
   * from the execution namespace in ForSyDe IO, which defines triggering mechanisms 
@@ -51,7 +54,8 @@ case class SimplePeriodicWorkload(
     val tasks: Array[Task],
     val periodicStimulus: Array[PeriodicStimulus],
     val dataBlocks: Array[DataBlock],
-    val executables: Array[Array[Executable]]
+    val executables: Array[Array[Executable]],
+    val stimulusGraph: Graph[Task | PeriodicStimulus | Upsample | Downsample, DefaultEdge]
 )(using Fractional[BigFraction])
     extends ForSyDeDecisionModel,
       PeriodicWorkload[Task, DataBlock, BigFraction]:
@@ -59,6 +63,7 @@ case class SimplePeriodicWorkload(
 
   override val coveredVertexes: Iterable[Vertex] =
     tasks.map(_.getViewedVertex()) ++
+      executables.flatten.map(_.getViewedVertex) ++
       periodicStimulus.map(_.getViewedVertex) ++
       dataBlocks.map(_.getViewedVertex)
 
@@ -95,18 +100,40 @@ case class SimplePeriodicWorkload(
   //   tasks.length,
   //   ju.List.of()
   // )
-
-  // do the computation by traversing the graph
-  // val periods = {
-  //   var periodsMut = tasks.map(_ => hyperPeriod)
-  //   val iter = TopologicalOrderIterator(
-  //     reactiveGraph
+  // val periods = tasks.map(t => 
+  //   stimulusGraph.incomingEdgesOf(t).stream.map(e => stimulusGraph.getEdgeSource(e))
+  //   .(src => src match {
+  //     case per: PeriodicStimulus =>
+  //       BigFraction(per.getPeriodNumerator, per.getPeriodDenominator)
+  //     case _ => BigFraction.MINUS_ONE
+  //   })
   //   )
-  //   while (iter.hasNext) {
-  //     val idxTask = iter.next
-  //     val curTask = tasks(idxTask)
-  //     curTask match {
-  //       case perTask: PeriodicTask =>
+
+  // compute the affine relations
+  // lazy val affineRelationsGraph = {
+  //   val g = SimpleDirectedGraph.createBuilder[Task, (Int, Int, Int, Int)](() => (1, 0, 1, 0))
+  //   stimulusGraph.edgeSet.forEach(e => {
+  //     val src = stimulusGraph.getEdgeSource(e)
+  //     val dst = stimulusGraph.getEdgeTarget(e)
+  //     src match {
+  //       case t: Task =>
+  //         dst match {
+  //           case tt: Task =>
+  //             g.addEdge(t, tt, (1, 0, 1, 0))
+  //           case _ =>
+  //         }
+  //       case _ =>
+  //     }
+  //   })
+  //   val stimulusIter = TopologicalOrderIterator(
+  //     stimulusGraph
+  //   )
+  //   while (stimulusIter.hasNext) {
+  //     val next = stimulusIter.next
+  //     next match {
+  //       case perStim: PeriodicStimulus =>
+  //         stimulusGraphPeriods(next) = BigFraction(perStim.getPeriodNumerator, perStim.getPeriodDenominator)
+  //       case task: Task =>
   //         val stimulus = periodicStimulus(periodicTasks.indexOf(perTask))
   //         periodsMut(idxTask) =
   //           BigFraction(stimulus.getPeriodNumerator, stimulus.getPeriodDenominator)
@@ -135,7 +162,45 @@ case class SimplePeriodicWorkload(
   //           .get
   //     }
   //   }
-  //   periodsMut
+  // }
+  // var stimulusGraphPeriods = mutable.Map.empty[Task | PeriodicStimulus | Upsample | Downsample, BigFraction]
+  // var instanceAffineRelationsMut = Array.fill(tasks.size)(Array.fill(tasks.size)(Array.empty[(Int, Int, Int, Int)]))
+  // val stimulusIter = TopologicalOrderIterator(
+  //   stimulusGraph
+  // )
+  // while (stimulusIter.hasNext) {
+  //   val next = stimulusIter.next
+  //   next match {
+  //     case perStim: PeriodicStimulus =>
+  //       stimulusGraphPeriods(next) = BigFraction(perStim.getPeriodNumerator, perStim.getPeriodDenominator)
+  //     case task: Task =>
+  //       val stimulus = periodicStimulus(periodicTasks.indexOf(perTask))
+  //       periodsMut(idxTask) =
+  //         BigFraction(stimulus.getPeriodNumerator, stimulus.getPeriodDenominator)
+  //     case reactiveTask: ReactiveTask =>
+  //       val stimulus = reactiveStimulus(reactiveStimulusDst.indexOf(idxTask))
+  //       periodsMut(idxTask) = reactiveGraph
+  //         .incomingEdgesOf(idxTask)
+  //         .stream
+  //         .map(reactiveGraph.getEdgeSource(_))
+  //         .map(inTaskIdx => {
+  //           DownsampleReactiveStimulus
+  //             .safeCast(stimulus)
+  //             .map(downsample =>
+  //               periodsMut(inTaskIdx).multiply(downsample.getRepetitivePredecessorSkips)
+  //             )
+  //             .or(() =>
+  //               UpsampleReactiveStimulus
+  //                 .safeCast(stimulus)
+  //                 .map(upsample =>
+  //                   periodsMut(inTaskIdx).divide(upsample.getRepetitivePredecessorHolds)
+  //                 )
+  //             )
+  //             .orElse(periodsMut(inTaskIdx))
+  //         })
+  //         .min((f1, f2) => f1.compareTo(f2))
+  //         .get
+  //   }
   // }
 
   // val noPrecedenceOffsets = {

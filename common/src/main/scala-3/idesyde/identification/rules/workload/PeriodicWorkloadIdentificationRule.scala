@@ -3,6 +3,7 @@ package idesyde.identification.rules.workload
 import idesyde.identification.IdentificationRule
 import idesyde.identification.ForSyDeIdentificationRule
 import forsyde.io.java.core.ForSyDeSystemGraph
+import idesyde.identification.DecisionModel
 import idesyde.identification.ForSyDeDecisionModel
 import forsyde.io.java.typed.viewers.impl.Executable
 
@@ -22,7 +23,7 @@ final class PeriodicWorkloadIdentificationRule(using Numeric[BigFraction])
 
   def identify(
       model: ForSyDeSystemGraph,
-      identified: Set[ForSyDeDecisionModel]
+      identified: Set[DecisionModel]
   ): (Boolean, Option[SimplePeriodicWorkload]) =
     (true, Option.empty)
     // var periodicTasks: Array[Task]                = Array.empty

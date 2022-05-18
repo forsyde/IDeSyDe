@@ -19,7 +19,8 @@ import forsyde.io.java.typed.viewers.platform.GenericProcessingModule
 import forsyde.io.java.typed.viewers.platform.InstrumentedProcessingModule
 import forsyde.io.java.typed.viewers.impl.InstrumentedExecutable
 
-final case class ReactorMinusAppDSEIdentRule() extends ForSyDeIdentificationRule[ReactorMinusAppMapAndSched]:
+final case class ReactorMinusAppDSEIdentRule()
+    extends ForSyDeIdentificationRule[ReactorMinusAppMapAndSched]:
 
   override def identify(
       model: ForSyDeSystemGraph,
@@ -33,13 +34,22 @@ final case class ReactorMinusAppDSEIdentRule() extends ForSyDeIdentificationRule
       .find(_.isInstanceOf[SchedulableNetworkedDigHW])
       .map(_.asInstanceOf[SchedulableNetworkedDigHW])
     if (reactorMinusOpt.isDefined && schedulablePlatformOpt.isDefined) {
-      val reactorMinus                   = reactorMinusOpt.get
-      val schedulablePlatform            = schedulablePlatformOpt.get
+      val reactorMinus        = reactorMinusOpt.get
+      val schedulablePlatform = schedulablePlatformOpt.get
       val ForSyDeDecisionModel = ReactorMinusAppMapAndSched(
         reactorMinus = reactorMinus,
         platform = schedulablePlatform,
-        wcetFunction = computeWCETFunction(model, reactorMinus.reactions, schedulablePlatform.hardware.processingElems),
-        utilityFunction = computeUtilityFunction(model, reactorMinus.reactions, schedulablePlatform.hardware.processingElems, reactorMinus.hyperPeriod)
+        wcetFunction = computeWCETFunction(
+          model,
+          reactorMinus.reactions,
+          schedulablePlatform.hardware.processingElems
+        ),
+        utilityFunction = computeUtilityFunction(
+          model,
+          reactorMinus.reactions,
+          schedulablePlatform.hardware.processingElems,
+          reactorMinus.hyperPeriod
+        )
       )
       scribe.debug(s"Identified conformin Reactor- DSE problem")
       (true, Option(ForSyDeDecisionModel))
@@ -49,7 +59,8 @@ final case class ReactorMinusAppDSEIdentRule() extends ForSyDeIdentificationRule
       (true, Option.empty)
   end identify
 
-  def computeWCETFunction(model: ForSyDeSystemGraph,
+  def computeWCETFunction(
+      model: ForSyDeSystemGraph,
       reactions: Array[LinguaFrancaReaction],
       procElems: Array[GenericProcessingModule]
   ): Map[(LinguaFrancaReaction, GenericProcessingModule), BigFraction] =
@@ -60,10 +71,11 @@ final case class ReactorMinusAppDSEIdentRule() extends ForSyDeIdentificationRule
         .safeCast(pe)
         .map(pe => pe.getModalInstructionsPerCycle.asScala.toMap)
         .orElse(Map.empty);
-      (requirementName, requirementSet) <- r.getImplementationPort(model)
-          .flatMap(InstrumentedExecutable.safeCast(_))
-          .map(f => f.getOperationRequirements.asScala.toMap)
-          .orElse(Map.empty);
+      (requirementName, requirementSet) <- r
+        .getImplementationPort(model)
+        .flatMap(InstrumentedExecutable.safeCast(_))
+        .map(f => f.getOperationRequirements.asScala.toMap)
+        .orElse(Map.empty);
       if provisionSet.keySet.equals(requirementSet.keySet)
     )
       yield (r, pe) -> BigFraction(
@@ -72,7 +84,8 @@ final case class ReactorMinusAppDSEIdentRule() extends ForSyDeIdentificationRule
       )
     iter.toMap
 
-  def computeUtilityFunction(model: ForSyDeSystemGraph,
+  def computeUtilityFunction(
+      model: ForSyDeSystemGraph,
       reactions: Array[LinguaFrancaReaction],
       procElems: Array[GenericProcessingModule],
       hyperPeriod: BigFraction

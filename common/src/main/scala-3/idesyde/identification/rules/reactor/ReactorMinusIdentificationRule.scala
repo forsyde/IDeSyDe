@@ -3,6 +3,7 @@ package idesyde.identification.rules.reactor
 import idesyde.identification.IdentificationRule
 import idesyde.identification.ForSyDeIdentificationRule
 import forsyde.io.java.core.ForSyDeSystemGraph
+import idesyde.identification.DecisionModel
 import idesyde.identification.ForSyDeDecisionModel
 import forsyde.io.java.core.VertexTrait
 
@@ -30,7 +31,7 @@ import java.util.concurrent.ThreadPoolExecutor
 final case class ReactorMinusIdentificationRule(executor: ThreadPoolExecutor)
     extends ForSyDeIdentificationRule[ReactorMinusApplication] {
 
-  def identify(model: ForSyDeSystemGraph, identified: Set[ForSyDeDecisionModel]) = {
+  def identify(model: ForSyDeSystemGraph, identified: Set[DecisionModel]) = {
     val elements = model.vertexSet.asScala
       .filter(LinguaFrancaElem.conforms(_))
       .map(LinguaFrancaElem.safeCast(_).get)
@@ -205,7 +206,7 @@ final case class ReactorMinusIdentificationRule(executor: ThreadPoolExecutor)
 
 object ReactorMinusIdentificationRule:
 
-  def canIdentify(model: ForSyDeSystemGraph, identified: Set[ForSyDeDecisionModel]): Boolean = {
+  def canIdentify(model: ForSyDeSystemGraph, identified: Set[DecisionModel]): Boolean = {
     val vertexes = model.vertexSet.asScala
     val elements = vertexes
       .filter(LinguaFrancaElem.conforms(_))

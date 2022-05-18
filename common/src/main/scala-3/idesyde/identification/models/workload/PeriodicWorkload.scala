@@ -41,7 +41,7 @@ trait PeriodicWorkload[TaskT, MQueueT, TimeT]()(using fracT: Fractional[TimeT])
    * In other words, it is a precedence graph at the instance (sometimes called jobs)
    * level.
    */
-  def instanceControlFlowGraph: Graph[(TaskT, Int), DefaultEdge]
+  def affineRelationsGraph: Graph[TaskT, Seq[(Int, Int, Int, Int)]]
 
   /** The edges of the communication graph should have numbers describing how much
    * data is transferred from tasks to message queues.

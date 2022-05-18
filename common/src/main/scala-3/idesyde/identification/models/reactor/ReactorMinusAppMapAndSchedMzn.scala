@@ -7,6 +7,7 @@ import idesyde.identification.interfaces.MiniZincData
 import scala.concurrent.Future
 import scala.concurrent.ExecutionContext
 import org.apache.commons.math3.util.ArithmeticUtils
+import idesyde.identification.DecisionModel
 import idesyde.identification.ForSyDeDecisionModel
 import org.apache.commons.math3.fraction.BigFraction
 import forsyde.io.java.typed.viewers.platform.GenericProcessingModule
@@ -376,7 +377,7 @@ final case class ReactorMinusAppMapAndSchedMzn(val sourceModel: ReactorMinusAppM
   ): ForSyDeSystemGraph =
     ForSyDeSystemGraph()
 
-  override def dominates(other: ForSyDeDecisionModel): Boolean =
+  override def dominates(other: DecisionModel): Boolean =
     super.dominates(other) && (other match {
       case mzn: ReactorMinusAppMapAndSched => sourceModel == mzn
       case _                               => true

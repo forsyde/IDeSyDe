@@ -6,6 +6,7 @@ import idesyde.identification.rules.reactor.ReactorMinusIdentificationRule
 import idesyde.identification.rules.platform.SchedulableNetDigHWIdentRule
 import idesyde.identification.models.reactor.ReactorMinusAppMapAndSched
 import forsyde.io.java.core.ForSyDeSystemGraph
+import idesyde.identification.DecisionModel
 import idesyde.identification.ForSyDeDecisionModel
 import idesyde.identification.models.reactor.ReactionJob
 import org.apache.commons.math3.fraction.BigFraction
@@ -22,8 +23,8 @@ final case class ReactorMinusAppDSEIdentRule() extends ForSyDeIdentificationRule
 
   override def identify(
       model: ForSyDeSystemGraph,
-      identified: Set[ForSyDeDecisionModel]
-  ): (Boolean, Option[ForSyDeDecisionModel]) =
+      identified: Set[DecisionModel]
+  ): (Boolean, Option[ReactorMinusAppMapAndSched]) =
     val reactorMinusOpt =
       identified
         .find(_.isInstanceOf[ReactorMinusApplication])
@@ -91,7 +92,7 @@ end ReactorMinusAppDSEIdentRule
 
 object ReactorMinusAppDSEIdentRule:
 
-  def canIdentify(model: ForSyDeSystemGraph, identified: Set[ForSyDeDecisionModel]) =
+  def canIdentify(model: ForSyDeSystemGraph, identified: Set[DecisionModel]) =
     ReactorMinusIdentificationRule.canIdentify(model, identified) &&
       SchedulableNetDigHWIdentRule.canIdentify(model, identified)
 

@@ -2,13 +2,13 @@ package idesyde.identification
 
 import forsyde.io.java.core.ForSyDeSystemGraph
 import java.util.concurrent.ThreadPoolExecutor
-import idesyde.identification.ForSyDeDecisionModel
+import idesyde.identification.DecisionModel
 
-trait IdentificationRule[M <: DecisionModel] {
+trait IdentificationRule[+M <: DecisionModel] {
 
   type G
 
-  def identifyUntyped(model: Any,  identified: Set[? <: DecisionModel]): (Boolean, Option[M]) =
+  def identifyUntyped(model: Any,  identified: Set[DecisionModel]): (Boolean, Option[M]) =
     model match {
       case m: G => identify(m, identified)
       case _ => (true, Option.empty)
@@ -16,7 +16,7 @@ trait IdentificationRule[M <: DecisionModel] {
 
   def identify(
       model: G,
-      identified: Set[? <: DecisionModel]
+      identified: Set[DecisionModel]
   ): (Boolean, Option[M])
 
 }

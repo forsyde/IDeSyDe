@@ -3,6 +3,7 @@ package idesyde.identification.rules.platform
 import idesyde.identification.IdentificationRule
 import idesyde.identification.ForSyDeIdentificationRule
 import forsyde.io.java.core.ForSyDeSystemGraph
+import idesyde.identification.DecisionModel
 import idesyde.identification.ForSyDeDecisionModel
 
 import scala.jdk.OptionConverters.*
@@ -23,8 +24,8 @@ final case class SchedulableNetDigHWIdentRule() extends ForSyDeIdentificationRul
 
   override def identify(
       model: ForSyDeSystemGraph,
-      identified: Set[ForSyDeDecisionModel]
-  ): (Boolean, Option[ForSyDeDecisionModel]) =
+      identified: Set[DecisionModel]
+  ): (Boolean, Option[SchedulableNetworkedDigHW]) =
     val hardwareForSyDeDecisionModelOpt = identified
       .find(_.isInstanceOf[NetworkedDigitalHardware])
       .map(_.asInstanceOf[NetworkedDigitalHardware])
@@ -139,7 +140,7 @@ final case class SchedulableNetDigHWIdentRule() extends ForSyDeIdentificationRul
 
 object SchedulableNetDigHWIdentRule:
 
-  def canIdentify(model: ForSyDeSystemGraph, identified: Set[ForSyDeDecisionModel]): Boolean =
+  def canIdentify(model: ForSyDeSystemGraph, identified: Set[DecisionModel]): Boolean =
     val platformVertexes = model.vertexSet.stream
       .filter(PlatformElem.conforms(_))
       .collect(Collectors.toSet)

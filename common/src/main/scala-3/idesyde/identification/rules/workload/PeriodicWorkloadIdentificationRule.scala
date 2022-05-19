@@ -9,7 +9,7 @@ import forsyde.io.java.typed.viewers.impl.Executable
 
 import scala.jdk.OptionConverters.*
 import scala.jdk.CollectionConverters.*
-import idesyde.identification.models.workload.SimplePeriodicWorkload
+import idesyde.identification.models.workload.ForSyDePeriodicWorkload
 import org.apache.commons.math3.fraction.BigFraction
 import forsyde.io.java.typed.viewers.execution.PeriodicStimulus
 import forsyde.io.java.typed.viewers.execution.Task
@@ -19,12 +19,12 @@ import forsyde.io.java.typed.viewers.impl.CommunicatingExecutable
 import forsyde.io.java.typed.viewers.impl.TokenizableDataBlock
 
 final class PeriodicWorkloadIdentificationRule(using Numeric[BigFraction])
-    extends ForSyDeIdentificationRule[SimplePeriodicWorkload] {
+    extends ForSyDeIdentificationRule[ForSyDePeriodicWorkload] {
 
   def identify(
       model: ForSyDeSystemGraph,
       identified: Set[DecisionModel]
-  ): (Boolean, Option[SimplePeriodicWorkload]) =
+  ): (Boolean, Option[ForSyDePeriodicWorkload]) =
     (true, Option.empty)
     // var periodicTasks: Array[Task]                = Array.empty
     // var dataBlocks: Array[DataBlock]              = Array.empty
@@ -123,7 +123,7 @@ final class PeriodicWorkloadIdentificationRule(using Numeric[BigFraction])
     //   scribe.debug("Some periodic tasks have no periodic stimulus. Skipping.")
     //   (true, Option.empty)
     // else
-    //   val simplePeriodicWorkload = SimplePeriodicWorkload(
+    //   val ForSyDePeriodicWorkload = ForSyDePeriodicWorkload(
     //     periodicTasks = periodicTasks,
     //     reactiveTasks = reactiveTasks,
     //     periodicStimulus = periodicTasks.map(_.getPeriodicStimulusPort(model).get),
@@ -139,6 +139,6 @@ final class PeriodicWorkloadIdentificationRule(using Numeric[BigFraction])
     //     s"Simple periodic task model found with ${periodicTasks.length} periodic tasks, " +
     //       s"${reactiveTasks.length} reactive tasks and ${dataBlocks.length} dataBlocks"
     //   )
-    //   (true, Option(simplePeriodicWorkload))
+    //   (true, Option(ForSyDePeriodicWorkload))
 
 }

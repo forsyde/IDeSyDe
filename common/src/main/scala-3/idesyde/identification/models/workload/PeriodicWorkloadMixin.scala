@@ -23,17 +23,21 @@ import forsyde.io.java.typed.viewers.execution.Downsample
   * @tparam TimeT
   *   The type that represents a time tag.
   */
-trait PeriodicWorkload[TaskT, MQueueT, TimeT]()(using fracT: Fractional[TimeT])
-    extends ForSyDeDecisionModel:
+trait PeriodicWorkloadMixin[TimeT](using fracT: Fractional[TimeT]):
 
-  def periodicTasks: Array[TaskT]
+  def numTasks: Int
+  // def periodicTasks: Array[TaskT]
   def offsets: Array[TimeT]
   def periods: Array[TimeT]
   def relativeDeadlines: Array[TimeT]
   def taskSizes: Array[Long]
   // def instancePreceeds(src: TaskT)(dst: TaskT)(srcI: Int)(dstI: Int): Boolean
-  def messageQueues: Array[MQueueT]
+  def numMessageQeues: Int
+  // def messageQueues: Array[MQueueT]
   def messageQueuesSizes: Array[Long]
+
+  val periodicTasks = 0 until numTasks
+  val messageQueues = numTasks until (numTasks + numMessageQeues)
 
   /** The edges of the instance control flow graph detail if a instance T_i,k
    * shoud be preceeded of an instance T_j,l.def 
@@ -41,12 +45,12 @@ trait PeriodicWorkload[TaskT, MQueueT, TimeT]()(using fracT: Fractional[TimeT])
    * In other words, it is a precedence graph at the instance (sometimes called jobs)
    * level.
    */
-  def affineRelationsGraph: Graph[TaskT, Seq[(Int, Int, Int, Int)]]
+  def affineRelationsGraph: Graph[Int, (Int, Int, Int, Int)]
 
   /** The edges of the communication graph should have numbers describing how much
    * data is transferred from tasks to message queues.
    */
-  def communicationGraph: Graph[TaskT | MQueueT, DefaultEdge]
+  def communicationGraph: Graph[Int, DefaultEdge]
 
   /** a function that returns the LCM upper bound of two time values
     */
@@ -63,9 +67,9 @@ trait PeriodicWorkload[TaskT, MQueueT, TimeT]()(using fracT: Fractional[TimeT])
   lazy val tasksNumInstances: Array[Int] =
     (0 until periodicTasks.length).map(i => hyperPeriod / periods(i)).map(_.toInt).toArray
 
-  def maximalInterference(srcTask: TaskT)(dstTask: TaskT)(using num: Numeric[TimeT]): Int =
-    val src = periodicTasks.indexOf(srcTask)
-    val dst = periodicTasks.indexOf(dstTask)
+  def maximalInterference(src: Int)(dst: Int)(using num: Numeric[TimeT]): Int =
+    // val src = periodicTasks.indexOf(srcTask)
+    // val dst = periodicTasks.indexOf(dstTask)
     (0 until tasksNumInstances(dst))
       .map(dstIdx => {
         (0 until tasksNumInstances(src))
@@ -99,4 +103,4 @@ trait PeriodicWorkload[TaskT, MQueueT, TimeT]()(using fracT: Fractional[TimeT])
       })
       .max
 
-end PeriodicWorkload
+end PeriodicWorkloadMixin

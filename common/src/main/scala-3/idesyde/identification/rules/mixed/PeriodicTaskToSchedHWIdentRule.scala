@@ -4,7 +4,7 @@ import idesyde.identification.ForSyDeIdentificationRule
 import forsyde.io.java.core.ForSyDeSystemGraph
 import idesyde.identification.DecisionModel
 import idesyde.identification.ForSyDeDecisionModel
-import idesyde.identification.models.workload.SimplePeriodicWorkload
+import idesyde.identification.models.workload.ForSyDePeriodicWorkload
 import idesyde.identification.models.platform.SchedulableNetworkedDigHW
 import forsyde.io.java.typed.viewers.impl.InstrumentedExecutable
 import forsyde.io.java.typed.viewers.platform.InstrumentedProcessingModule
@@ -22,11 +22,11 @@ class PeriodicTaskToSchedHWIdentRule extends ForSyDeIdentificationRule[PeriodicT
       model: ForSyDeSystemGraph,
       identified: Set[DecisionModel]
   ): (Boolean, Option[PeriodicTaskToSchedHW]) =
-    var workloadModel = Option.empty[SimplePeriodicWorkload]
+    var workloadModel = Option.empty[ForSyDePeriodicWorkload]
     var platformModel = Option.empty[SchedulableNetworkedDigHW]
     identified.foreach(d => {
       d match {
-        case dWorkloadModel: SimplePeriodicWorkload    => workloadModel = Option(dWorkloadModel)
+        case dWorkloadModel: ForSyDePeriodicWorkload    => workloadModel = Option(dWorkloadModel)
         case dPlatformModel: SchedulableNetworkedDigHW => platformModel = Option(dPlatformModel)
         case _                                         =>
       }
@@ -42,7 +42,7 @@ class PeriodicTaskToSchedHWIdentRule extends ForSyDeIdentificationRule[PeriodicT
 
   def identifyWithDependencies(
       model: ForSyDeSystemGraph,
-      workloadModel: SimplePeriodicWorkload,
+      workloadModel: ForSyDePeriodicWorkload,
       platformModel: SchedulableNetworkedDigHW
   ): Option[PeriodicTaskToSchedHW] =
     // alll executables of task are instrumented

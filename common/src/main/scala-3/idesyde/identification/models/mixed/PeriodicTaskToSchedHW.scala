@@ -7,7 +7,7 @@ import scala.jdk.CollectionConverters.*
 import org.apache.commons.math3.fraction.BigFraction
 
 import idesyde.identification.ForSyDeDecisionModel
-import idesyde.identification.models.workload.SimplePeriodicWorkload
+import idesyde.identification.models.workload.ForSyDePeriodicWorkload
 import idesyde.identification.models.platform.SchedulableNetworkedDigHW
 import forsyde.io.java.core.Vertex
 import forsyde.io.java.typed.viewers.platform.InstrumentedProcessingModule
@@ -18,7 +18,7 @@ import idesyde.identification.models.workload.DependentDeadlineMonotonicOrdering
 import forsyde.io.java.typed.viewers.nonfunctional.UtilizationBoundedProcessingElem
 
 final case class PeriodicTaskToSchedHW(
-    val taskModel: SimplePeriodicWorkload,
+    val taskModel: ForSyDePeriodicWorkload,
     val schedHwModel: SchedulableNetworkedDigHW,
     val mappedTasks: Array[Int] = Array.emptyIntArray,
     val scheduledTasks: Array[Int] = Array.emptyIntArray,

@@ -340,7 +340,7 @@ case class ForSyDePeriodicWorkload(
       })
     })
     affineRelationsGraphBuilder.buildAsUnmodifiable
-  }
+  })
 
   // val noPrecedenceOffsets = {
   //   var offsetsMut = tasks.map(_ => hyperPeriod)

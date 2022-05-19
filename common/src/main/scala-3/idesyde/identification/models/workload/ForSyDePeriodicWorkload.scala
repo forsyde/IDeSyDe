@@ -39,6 +39,7 @@ import forsyde.io.java.typed.viewers.execution.Upsample
 import scala.collection.mutable
 import forsyde.io.java.typed.viewers.execution.Stimulatable
 import scala.collection.mutable.Buffer
+import idesyde.utils.MultipliableFractional
 
 /** Simplest periodic task set concerned in the literature. The task graph is generated from the
   * execution namespace in ForSyDe IO, which defines triggering mechanisms and how they propagate.
@@ -56,9 +57,9 @@ case class ForSyDePeriodicWorkload(
     val dataBlocks: Array[DataBlock],
     val executables: Array[Array[Executable]],
     val stimulusGraph: Graph[Task | PeriodicStimulus | Upsample | Downsample, DefaultEdge]
-)(using Fractional[BigFraction])
-    extends ForSyDeDecisionModel,
-      PeriodicWorkloadMixin[BigFraction]:
+)(using MultipliableFractional[BigFraction])
+    extends ForSyDeDecisionModel
+    with PeriodicWorkloadMixin[BigFraction]:
   //extends PeriodicWorkload[Task, BigFraction]():
 
   override val coveredVertexes: Iterable[Vertex] =
@@ -216,175 +217,129 @@ case class ForSyDePeriodicWorkload(
         })
     }
   }
+  // put the created tasks in the Mixin methods
+  val periods           = createdPerTasks.map(_._2).toArray
+  val offsets           = createdPerTasks.map(_._3).toArray
+  val relativeDeadlines = createdPerTasks.map(_._4).toArray
+  val numTasks          = createdPerTasks.length
 
   // now we create the precedence constraints via affine relations
   val affineStimulusGraphBuilder =
     SimpleDirectedGraph.createBuilder[Task, (Int, Int, Int, Int)](() => (1, 0, 1, 0))
   val affineStimulusGraph = affineStimulusGraphBuilder.buildAsUnmodifiable
 
-  val numTasks = createdPerTasks.length
-
-   // create affine relations from incoming
-        // stimulusGraph
-        //   .incomingEdgesOf(next)
-        //   .stream
-        //   .map(e => stimulusGraph.getEdgeSource(e))
-        //   .forEach(src => {
-        //     src match {
-        //       case srcTask: Task =>
-        //         affineStimulusGraphBuilder.addEdge(srcTask, task, (1, 0, 1, 0))
-        //       case _ =>
-        //     }
-        //   })
-
-           // create affine relations from incoming and outgoing
-        // stimulusGraph
-        //   .incomingEdgesOf(next)
-        //   .stream
-        //   .map(e => stimulusGraph.getEdgeSource(e))
-        //   .forEach(src =>
-        //     stimulusGraph
-        //       .outgoingEdgesOf(next)
-        //       .stream
-        //       .map(e => stimulusGraph.getEdgeTarget(e))
-        //       .forEach(dst =>
-        //         src match {
-        //           case srcTask: Task =>
-        //             dst match {
-        //               case dstTask: Task =>
-        //                 affineStimulusGraphBuilder.addEdge(
-        //                   srcTask,
-        //                   dstTask,
-        //                   (
-        //                     upsample.getRepetitivePredecessorHolds.toInt,
-        //                     upsample.getInitialPredecessorHolds.toInt,
-        //                     1,
-        //                     0
-        //                   )
-        //                 )
-        //               case _ =>
-        //             }
-        //           case _ =>
-        //         }
-        //       )
-        //   )
-
-           // create affine relations from incoming and outgoing
-        // stimulusGraph
-        //   .incomingEdgesOf(next)
-        //   .stream
-        //   .map(e => stimulusGraph.getEdgeSource(e))
-        //   .forEach(src =>
-        //     stimulusGraph
-        //       .outgoingEdgesOf(next)
-        //       .stream
-        //       .map(e => stimulusGraph.getEdgeTarget(e))
-        //       .forEach(dst =>
-        //         src match {
-        //           case srcTask: Task =>
-        //             dst match {
-        //               case dstTask: Task =>
-        //                 affineStimulusGraphBuilder.addEdge(
-        //                   srcTask,
-        //                   dstTask,
-        //                   (
-        //                     1,
-        //                     0,
-        //                     downsample.getRepetitivePredecessorSkips.toInt,
-        //                     downsample.getInitialPredecessorSkips.toInt
-        //                   )
-        //                 )
-        //               case _ =>
-        //             }
-        //           case _ =>
-        //         }
-        //       )
-        //   )
-
   val affineRelationsGraph = {
     val affineRelationsGraphBuilder =
-    SimpleDirectedGraph.createBuilder[Int, (Int, Int, Int, Int)](() => (1, 0, 1, 0))
+      SimpleDirectedGraph.createBuilder[Int, (Int, Int, Int, Int)](() => (1, 0, 1, 0))
     // first consider task-to-task connections
-    stimulusGraph.vertexSet.stream.flatMap(v => Task.safeCast(v).stream).forEach(dstTask => {
-      stimulusGraph.incomingEdgesOf(dstTask).stream.flatMap(e => Task.safeCast(stimulusGraph.getEdgeSource(e)).stream).forEach(srcTask => {
-        if (dstTask.getHasORSemantics)
-          for (
-            (dst, i) <- createdPerTasks.zipWithIndex.filter((d, i) => d._1 == dstTask);
-            (src, j) <- createdPerTasks.zipWithIndex.filter((s, j) => s._1 == srcTask);
-            if dst._2 == src._2 && dst._3 == src._3
-          ) affineRelationsGraphBuilder.addEdge(i, j, (1, 0, 1, 0))
-        else
-          for (
-            (dst, i) <- createdPerTasks.zipWithIndex.filter((d, i) => d._1 == dstTask);
-            (src, j) <- createdPerTasks.zipWithIndex.filter((s, j) => s._1 == srcTask);
-            pRatio = dst._2.divide(src._2).toDouble.ceil.toInt
-          ) affineRelationsGraphBuilder.addEdge(i, j, (pRatio, 0, 1, 0))
+    stimulusGraph.vertexSet.stream
+      .flatMap(v => Task.safeCast(v).stream)
+      .forEach(dstTask => {
+        stimulusGraph
+          .incomingEdgesOf(dstTask)
+          .stream
+          .flatMap(e => Task.safeCast(stimulusGraph.getEdgeSource(e)).stream)
+          .forEach(srcTask => {
+            if (dstTask.getHasORSemantics)
+              for (
+                (dst, i) <- createdPerTasks.zipWithIndex.filter((d, i) => d._1 == dstTask);
+                (src, j) <- createdPerTasks.zipWithIndex.filter((s, j) => s._1 == srcTask);
+                if dst._2 == src._2 && dst._3 == src._3
+              ) affineRelationsGraphBuilder.addEdge(i, j, (1, 0, 1, 0))
+            else
+              for (
+                (dst, i) <- createdPerTasks.zipWithIndex.filter((d, i) => d._1 == dstTask);
+                (src, j) <- createdPerTasks.zipWithIndex.filter((s, j) => s._1 == srcTask);
+                pRatio = dst._2.divide(src._2).toDouble.ceil.toInt
+              ) affineRelationsGraphBuilder.addEdge(i, j, (pRatio, 0, 1, 0))
+          })
       })
-    })
     // now consider upsampling connections
-   stimulusGraph.vertexSet.stream.flatMap(v => Upsample.safeCast(v).stream).forEach(upsample => {
-     stimulusGraph.incomingEdgesOf(upsample).stream.flatMap(e => Task.safeCast(stimulusGraph.getEdgeSource(e)).stream).forEach(srcTask => {
-      stimulusGraph.outgoingEdgesOf(upsample).stream.flatMap(e => Task.safeCast(stimulusGraph.getEdgeTarget(e)).stream).forEach(dstTask => {
-        if (dstTask.getHasORSemantics)
-          for (
-            (dst, i) <- createdPerTasks.zipWithIndex.filter((d, i) => d._1 == dstTask);
-            (src, j) <- createdPerTasks.zipWithIndex.filter((s, j) => s._1 == srcTask);
-            if dst._2.multiply(upsample.getRepetitivePredecessorHolds) == src._2 && dst._3.multiply(upsample.getRepetitivePredecessorHolds) == src._3
-          ) affineRelationsGraphBuilder.addEdge(i, j, (1, 0, 1, 0))
-        else
-          for (
-            (dst, i) <- createdPerTasks.zipWithIndex.filter((d, i) => d._1 == dstTask);
-            (src, j) <- createdPerTasks.zipWithIndex.filter((s, j) => s._1 == srcTask);
-            pRatio = dst._2.divide(src._2).toDouble.ceil.toInt
-          ) affineRelationsGraphBuilder.addEdge(i, j, (pRatio, 0, 1, 0))
+    stimulusGraph.vertexSet.stream
+      .flatMap(v => Upsample.safeCast(v).stream)
+      .forEach(upsample => {
+        stimulusGraph
+          .incomingEdgesOf(upsample)
+          .stream
+          .flatMap(e => Task.safeCast(stimulusGraph.getEdgeSource(e)).stream)
+          .forEach(srcTask => {
+            stimulusGraph
+              .outgoingEdgesOf(upsample)
+              .stream
+              .flatMap(e => Task.safeCast(stimulusGraph.getEdgeTarget(e)).stream)
+              .forEach(dstTask => {
+                if (dstTask.getHasORSemantics)
+                  for (
+                    (dst, i) <- createdPerTasks.zipWithIndex.filter((d, i) => d._1 == dstTask);
+                    (src, j) <- createdPerTasks.zipWithIndex.filter((s, j) => s._1 == srcTask);
+                    if dst._2.multiply(upsample.getRepetitivePredecessorHolds) == src._2 &&
+                      dst._3
+                        .subtract(dst._2.multiply(upsample.getInitialPredecessorHolds)) == src._3
+                  )
+                    affineRelationsGraphBuilder.addEdge(
+                      i,
+                      j,
+                      (
+                        upsample.getRepetitivePredecessorHolds.toInt,
+                        upsample.getInitialPredecessorHolds.toInt,
+                        1,
+                        0
+                      )
+                    )
+                else
+                  for (
+                    (dst, i) <- createdPerTasks.zipWithIndex.filter((d, i) => d._1 == dstTask);
+                    (src, j) <- createdPerTasks.zipWithIndex.filter((s, j) => s._1 == srcTask);
+                    pRatio = dst._2.divide(src._2).toDouble.ceil.toInt;
+                    offset = dst._3.subtract(src._3).divide(src._2).toDouble.toInt
+                  ) affineRelationsGraphBuilder.addEdge(i, j, (pRatio, offset, 1, 0))
+              })
+          })
       })
-    })
+    // now finally consider downsample connections
+    stimulusGraph.vertexSet.stream
+      .flatMap(v => Downsample.safeCast(v).stream)
+      .forEach(downsample => {
+        stimulusGraph
+          .incomingEdgesOf(downsample)
+          .stream
+          .flatMap(e => Task.safeCast(stimulusGraph.getEdgeSource(e)).stream)
+          .forEach(srcTask => {
+            stimulusGraph
+              .outgoingEdgesOf(downsample)
+              .stream
+              .flatMap(e => Task.safeCast(stimulusGraph.getEdgeTarget(e)).stream)
+              .forEach(dstTask => {
+                if (dstTask.getHasORSemantics)
+                  for (
+                    (dst, i) <- createdPerTasks.zipWithIndex.filter((d, i) => d._1 == dstTask);
+                    (src, j) <- createdPerTasks.zipWithIndex.filter((s, j) => s._1 == srcTask);
+                    if dst._2.divide(downsample.getRepetitivePredecessorSkips) == src._2 &&
+                      dst._3
+                        .add(dst._2.divide(downsample.getInitialPredecessorSkips)) == src._3
+                  )
+                    affineRelationsGraphBuilder.addEdge(
+                      i,
+                      j,
+                      (
+                        1,
+                        0,
+                        downsample.getRepetitivePredecessorSkips.toInt,
+                        downsample.getInitialPredecessorSkips.toInt
+                      )
+                    )
+                else
+                  for (
+                    (dst, i) <- createdPerTasks.zipWithIndex.filter((d, i) => d._1 == dstTask);
+                    (src, j) <- createdPerTasks.zipWithIndex.filter((s, j) => s._1 == srcTask);
+                    pRatio = src._2.divide(dst._2).toDouble.ceil.toInt;
+                    offset = dst._3.subtract(src._3).divide(dst._2).toDouble.toInt
+                  ) affineRelationsGraphBuilder.addEdge(i, j, (1, 0, pRatio, offset))
+              })
+          })
+      })
     affineRelationsGraphBuilder.buildAsUnmodifiable
-  })
-
-  // val noPrecedenceOffsets = {
-  //   var offsetsMut = tasks.map(_ => hyperPeriod)
-  //   val iter = TopologicalOrderIterator(
-  //     reactiveGraph
-  //   )
-  //   while (iter.hasNext) {
-  //     val idxTask = iter.next
-  //     val curTask = tasks(idxTask)
-  //     curTask match {
-  //       case perTask: PeriodicTask =>
-  //         val stimulus = periodicStimulus(periodicTasks.indexOf(perTask))
-  //         offsetsMut(idxTask) =
-  //           BigFraction(stimulus.getOffsetNumerator, stimulus.getOffsetDenominator)
-  //       case reactiveTask: ReactiveTask =>
-  //         val stimulus = reactiveStimulus(reactiveStimulusDst.indexOf(idxTask))
-  //         offsetsMut(idxTask) = reactiveGraph
-  //           .incomingEdgesOf(idxTask)
-  //           .stream
-  //           .map(reactiveGraph.getEdgeSource(_))
-  //           .map(inTaskIdx => {
-  //             DownsampleReactiveStimulus
-  //               .safeCast(stimulus)
-  //               .map(downsample =>
-  //                 offsetsMut(inTaskIdx).add(
-  //                   periods(inTaskIdx).multiply(downsample.getInitialPredecessorSkips)
-  //                 )
-  //               )
-  //               .or(() =>
-  //                 UpsampleReactiveStimulus
-  //                   .safeCast(stimulus)
-  //                   .map(upsample =>
-  //                     offsetsMut(inTaskIdx)
-  //                       .add(periods(inTaskIdx).divide(upsample.getInitialPredecessorHolds))
-  //                   )
-  //               )
-  //               .orElse(BigFraction.ZERO)
-  //           })
-  //           .min((f1, f2) => f1.compareTo(f2))
-  //           .get
-  //     }
-  //   }
-  //   offsetsMut
-  // }
+  }
 
   // scribe.debug(reactiveStimulusSrcs.map(_.mkString("[", ",", "]")).mkString("[", ",", "]"))
   // scribe.debug(reactiveStimulusDst.mkString("[", ",", "]"))
@@ -394,42 +349,6 @@ case class ForSyDePeriodicWorkload(
   val tasksNumInstancesInHyperPeriod: Array[Int] =
     tasks.zipWithIndex.map((task, i) => hyperPeriod.divide(periods(i)).getNumeratorAsInt)
   //scribe.debug(tasksNumInstancesInHyperPeriod.mkString("[", ",", "]"))
-
-  // val maximalOffsetDislocations: Array[Array[BigFraction]] =
-  //   tasks.zipWithIndex.map((src, i) => {
-  //     tasks.zipWithIndex.map((dst, j) => {
-  //       reactiveStimulus.zipWithIndex
-  //         .filter((stimulus, k) => {
-  //           reactiveStimulusSrcs(k).contains(i) &&
-  //           reactiveStimulusDst(k) == j
-  //         })
-  //         .map((stimulus, _) => {
-  //           DownsampleReactiveStimulus
-  //             .safeCast(stimulus)
-  //             .map(downsample => {
-  //               for (
-  //                 n <- 0 until tasksNumInstancesInHyperPeriod(i);
-  //                 m = n * downsample.getRepetitivePredecessorSkips + downsample.getInitialPredecessorSkips
-  //               ) yield (m.toInt, n)
-  //             })
-  //             .or(() => {
-  //               UpsampleReactiveStimulus
-  //                 .safeCast(stimulus)
-  //                 .map(upsample => {
-  //                   for (
-  //                     m <- 0 until tasksNumInstancesInHyperPeriod(j);
-  //                     n = m * upsample.getRepetitivePredecessorHolds + upsample.getInitialPredecessorHolds
-  //                   ) yield (m, n.toInt)
-  //                 })
-  //             })
-  //             .orElseGet(() =>
-  //               for (
-  //                   m <- 0 until tasksNumInstancesInHyperPeriod(j)
-  //               ) yield (m, m)
-  //             )
-  //         })
-  //     })
-  //   })
 
   // scribe.debug(
   //   precedences.map(row =>
@@ -598,22 +517,6 @@ case class ForSyDePeriodicWorkload(
   //   // scribe.debug(prioritiesMut.mkString("[", ",", "]"))
   //   prioritiesMut
   // }
-
-  def maximumOffsetDislocation(
-      maxInstances: Long
-  )(deltaOffset: BigFraction, deltaPeriod: BigFraction): BigFraction = {
-    if (deltaPeriod.compareTo(BigFraction.ZERO) > 0) then
-      deltaOffset.add(deltaPeriod.multiply(maxInstances))
-    else if (
-      deltaPeriod.compareTo(BigFraction.ZERO) <= 0 && deltaOffset.compareTo(BigFraction.ZERO) >= 0
-    ) then deltaOffset
-    else {
-      val instance = deltaOffset.divide(deltaPeriod).negate.doubleValue.floor.toLong + 1
-      deltaOffset.add(
-        deltaPeriod.multiply(if (instance <= maxInstances) then instance else maxInstances)
-      )
-    }
-  }
 
   override val uniqueIdentifier = "SimplePeriodicWorkload"
 

@@ -5,13 +5,14 @@ import idesyde.identification.ForSyDeDecisionModel
 import idesyde.utils.MultipliableFractional
 import org.jgrapht.opt.graph.sparse.SparseIntDirectedGraph
 
-import idesyde.utils.MultipliableFractionalImplicits.infixMultipliableFractionalOps
+import idesyde.utils.MultipliableFractional.infixMultipliableFractionalOps
 import math.Ordering.Implicits.infixOrderingOps
 import org.jgrapht.Graph
 import org.jgrapht.graph.DefaultEdge
 import forsyde.io.java.typed.viewers.execution.Upsample
 import forsyde.io.java.typed.viewers.execution.Downsample
 import org.jgrapht.traverse.TopologicalOrderIterator
+import java.util.Comparator
 
 /** Interface that describes a periodic workload model, also commonly known in the real time
   * academic community as "periodic task model". This one in particular closely follows the
@@ -174,6 +175,8 @@ trait PeriodicWorkloadMixin[TimeT](using fracT: MultipliableFractional[TimeT]):
               Math.max(tasksNumInstances(idxTask) / nj, tasksNumInstances(inTaskIdx) / ni)
             offsetsMut(idxTask) - offsetDelta - periodDelta * maxIncrementCoef
         })
+        .max(Comparator.comparingDouble(f => fracT.toDouble(f)))
+        .orElse(offsetsMut(idxTask))
     }
     offsetsMut
   }

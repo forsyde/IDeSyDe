@@ -7,19 +7,19 @@ trait MultipliableFractional[T] extends Fractional[T] {
   def times(a: T, b: Int): T
   def times(a: T, b: Long): T
 
-  class MultipliableFractionalOps(a: T) {
-    def *(b: Int): T  = times(a, b)
-    def *(b: Long): T = times(a, b)
-    def +(b: T)       = plus(a, b)
-    def -(b: t)       = minus(a, b)
-  }
-
 }
 
-object MultipliableFractionalImplicits {
-  implicit def infixMultipliableFractionalOps[X](a: X)(using
-      MultipliableFractional[X]
-  ): MultipliableFractional[X]#MultipliableFractionalOps =
-    new MultipliableFractional[X]#MultipliableFractionalOps(a)
+object MultipliableFractional {
 
+  class MultipliableFractionalOps[T](a: T)(using frac: MultipliableFractional[T]) {
+    def *(b: Int): T  = frac.times(a, b)
+    def *(b: Long): T = frac.times(a, b)
+    def +(b: T)       = frac.plus(a, b)
+    def -(b: T)       = frac.minus(a, b)
+  }
+
+  implicit def infixMultipliableFractionalOps[T](a: T)(using
+      MultipliableFractional[T]
+  ): MultipliableFractionalOps[T] =
+    new MultipliableFractionalOps(a)
 }

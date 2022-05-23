@@ -13,6 +13,8 @@ import forsyde.io.java.typed.viewers.execution.Upsample
 import forsyde.io.java.typed.viewers.execution.Downsample
 import org.jgrapht.traverse.TopologicalOrderIterator
 import java.util.Comparator
+import org.jgrapht.graph.builder.GraphBuilder
+import scala.reflect.ClassTag
 
 /** Interface that describes a periodic workload model, also commonly known in the real time
   * academic community as "periodic task model". This one in particular closely follows the
@@ -27,7 +29,7 @@ import java.util.Comparator
   * @tparam TimeT
   *   The type that represents a time tag.
   */
-trait PeriodicWorkloadMixin[TimeT](using fracT: MultipliableFractional[TimeT]):
+trait PeriodicWorkloadMixin[TimeT : ClassTag](using fracT: MultipliableFractional[TimeT]):
 
   def numTasks: Int
   // def periodicTasks: Array[TaskT]
@@ -53,7 +55,7 @@ trait PeriodicWorkloadMixin[TimeT](using fracT: MultipliableFractional[TimeT]):
   /** The edges of the communication graph should have numbers describing how much data is
     * transferred from tasks to message queues.
     */
-  def communicationGraph: Graph[Int, DefaultEdge]
+  def communicationGraph: Graph[Int, Long]
 
   /** a function that returns the LCM upper bound of two time values
     */
@@ -180,5 +182,83 @@ trait PeriodicWorkloadMixin[TimeT](using fracT: MultipliableFractional[TimeT]):
     }
     offsetsMut
   }
+
+  lazy val relativeDeadlinesWithDependencies =
+    relativeDeadlines.zipWithIndex.map((d, i) => d + offsets(i) - offsetsWithDependencies(i))
+
+  lazy val (interTaskOccasionalBlock, interTaskAlwaysBlocks) = {
+    var canBlockMatrix    = Array.fill(numTasks)(Array.fill(numTasks)(false))
+    var alwaysBlockMatrix = Array.fill(numTasks)(Array.fill(numTasks)(false))
+    val topoIter          = TopologicalOrderIterator(affineRelationsGraph)
+    while (topoIter.hasNext) {
+      val next = topoIter.next
+      affineRelationsGraph
+        .incomingEdgesOf(next)
+        .forEach(e => {
+          // first look one behind to see immediate predecessors
+          val src = affineRelationsGraph.getEdgeSource(e)
+          canBlockMatrix(src)(next) = true
+          if (e == (1, 0, 1, 0)) alwaysBlockMatrix(src)(next) = true
+          // now look to see all tasks that might send an
+          // stimulus to this current next tasl
+          for (i <- 0 until numTasks) {
+            if (canBlockMatrix(i)(src)) canBlockMatrix(src)(next) = true
+            if (alwaysBlockMatrix(i)(src)) alwaysBlockMatrix(src)(next) = true
+          }
+        })
+    }
+    // scribe.debug(canBlockMatrix.map(_.mkString("[", ",", "]")).mkString("[", ",", "]"))
+    // scribe.debug(alwaysBlockMatrix.map(_.mkString("[", ",", "]")).mkString("[", ",", "]"))
+    (canBlockMatrix, alwaysBlockMatrix)
+  }
+
+  lazy val largestOffset: TimeT = offsetsWithDependencies.max
+
+  lazy val eventHorizon: TimeT =
+    if (largestOffset != fracT.zero) then largestOffset + (hyperPeriod * 2) 
+    else hyperPeriod
+
+  lazy val prioritiesForDependencies = {
+    var prioritiesMut = Array.fill(numTasks)(numTasks)
+    val iter = TopologicalOrderIterator(
+      affineRelationsGraph
+    )
+    while (iter.hasNext) {
+      val next = iter.next
+      prioritiesMut(next) = affineRelationsGraph
+        .incomingEdgesOf(next)
+        .stream
+        .map(affineRelationsGraph.getEdgeSource(_))
+        .mapToInt(src => {
+          prioritiesMut(src) - 1
+        })
+        .min
+        .orElse(prioritiesMut(next))
+    }
+    // scribe.debug(prioritiesMut.mkString("[", ",", "]"))
+    prioritiesMut
+  }
+
+// lazy val alwaysBlocksGraph = {
+//   val g = AsSubgraph(reactiveGraph)
+//   val occasionalEdges = g.edgeSet.stream
+//     .filter(e => {
+//       val i = g.getEdgeSource(e)
+//       val j = g.getEdgeTarget(e)
+//       // there is at least one instance without a follow-up
+//       reactiveStimulus.zipWithIndex
+//         .filter((stimulus, k) => {
+//           reactiveStimulusSrcs(k).contains(i) &&
+//           reactiveStimulusDst(k) == j
+//         })
+//         .exists((stimulus, _) => {
+//           DownsampleReactiveStimulus.conforms(stimulus)
+//           || UpsampleReactiveStimulus.conforms(stimulus)
+//         })
+//     })
+//     .collect(Collectors.toSet)
+//   g.removeAllEdges(occasionalEdges)
+//   g
+// }
 
 end PeriodicWorkloadMixin

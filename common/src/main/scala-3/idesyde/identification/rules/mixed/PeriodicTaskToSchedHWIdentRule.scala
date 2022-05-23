@@ -26,7 +26,7 @@ class PeriodicTaskToSchedHWIdentRule extends ForSyDeIdentificationRule[PeriodicT
     var platformModel = Option.empty[SchedulableNetworkedDigHW]
     identified.foreach(d => {
       d match {
-        case dWorkloadModel: ForSyDePeriodicWorkload    => workloadModel = Option(dWorkloadModel)
+        case dWorkloadModel: ForSyDePeriodicWorkload   => workloadModel = Option(dWorkloadModel)
         case dPlatformModel: SchedulableNetworkedDigHW => platformModel = Option(dPlatformModel)
         case _                                         =>
       }
@@ -75,7 +75,7 @@ class PeriodicTaskToSchedHWIdentRule extends ForSyDeIdentificationRule[PeriodicT
       platformModel.hardware.storageElems.zipWithIndex.exists((me, j) => {
         taskSize <= me.getSpaceInBits
       })
-    }) && workloadModel.channelSizes.zipWithIndex.forall((channelSize, i) => {
+    }) && workloadModel.messageQueuesSizes.zipWithIndex.forall((channelSize, i) => {
       platformModel.hardware.storageElems.zipWithIndex.exists((me, j) => {
         channelSize <= me.getSpaceInBits
       })

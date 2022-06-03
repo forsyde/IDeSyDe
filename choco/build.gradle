@@ -1,0 +1,6 @@
+dependencies {
+    implementation project(":common")
+    implementation "io.github.forsyde:forsyde-io-java-core:0.5.9"
+    implementation 'com.outr:scribe_3:3.8.3'
+    implementation  "com.lihaoyi:upickle_3:1.4.0"
+}

@@ -7,8 +7,8 @@ import forsyde.io.java.core.ForSyDeSystemGraph
 import org.chocosolver.solver.Model
 import org.apache.commons.math3.util.ArithmeticUtils
 import org.apache.commons.math3.fraction.BigFraction
-import forsyde.io.java.typed.viewers.execution.PeriodicTask
-import idesyde.identification.models.workload.PeriodicWorkload
+import forsyde.io.java.typed.viewers.execution.Task
+import idesyde.identification.models.workload.ForSyDePeriodicWorkload
 
 import scala.jdk.OptionConverters.*
 import scala.jdk.CollectionConverters.*
@@ -36,15 +36,19 @@ import org.chocosolver.solver.constraints.Constraint
 import org.apache.commons.math3.util.FastMath
 import idesyde.utils.BigFractionIsNumeric
 import idesyde.exploration.explorers.SimpleWorkloadBalancingDecisionStrategy
+import idesyde.utils.BigFractionIsMultipliableFractional
+import idesyde.utils.MultipliableFractional
 
 final case class PeriodicTaskToSchedHWChoco(
     val sourceForSyDeDecisionModel: PeriodicTaskToSchedHW
 ) extends ChocoCPForSyDeDecisionModel
     with FixedPriorityConstraintsMixin
-    with BaselineTimingConstraintsMixin:
+    with BaselineTimingConstraintsMixin
+    with ExtendedPrecedenceConstraintsMixin
+    with ActiveReadExecWriteDurationMixin {
 
-  given Ordering[Task]       = DependentDeadlineMonotonicOrdering(sourceForSyDeDecisionModel.taskModel)
-  given Numeric[BigFraction] = BigFractionIsNumeric()
+  given MultipliableFractional[BigFraction] = BigFractionIsMultipliableFractional()
+  //given Ordering[Task]       = DependentDeadlineMonotonicOrdering(sourceForSyDeDecisionModel.taskModel)
 
   val coveredVertexes = sourceForSyDeDecisionModel.coveredVertexes
 
@@ -72,7 +76,7 @@ final case class PeriodicTaskToSchedHWChoco(
 
   // create the variables that each Mixin requires
   val periods         = sourceForSyDeDecisionModel.taskModel.periods.map(_.multiply(multiplier))
-  val priorities      = sourceForSyDeDecisionModel.taskModel.priorities
+  val priorities      = sourceForSyDeDecisionModel.taskModel.prioritiesForDependencies
   val deadlines       = sourceForSyDeDecisionModel.taskModel.relativeDeadlines.map(_.multiply(multiplier))
   val wcets           = sourceForSyDeDecisionModel.wcets.map(a => a.map(_.multiply(multiplier)))
   val maxUtilizations = sourceForSyDeDecisionModel.maxUtilization
@@ -117,7 +121,7 @@ final case class PeriodicTaskToSchedHWChoco(
     model.intVar(
       "map_" + c.getViewedVertex.getIdentifier,
       sourceForSyDeDecisionModel.schedHwModel.hardware.storageElems.zipWithIndex
-        .filter((m, j) => sourceForSyDeDecisionModel.taskModel.channelSizes(i) <= m.getSpaceInBits)
+        .filter((m, j) => sourceForSyDeDecisionModel.taskModel.messageQueuesSizes(i) <= m.getSpaceInBits)
         .map((m, j) => j)
     )
   )
@@ -274,7 +278,7 @@ final case class PeriodicTaskToSchedHWChoco(
       taskMapping ++ dataBlockMapping,
       sourceForSyDeDecisionModel.taskModel.taskSizes
         .map(_ / memoryMultipler + 1)
-        .map(_.toInt) ++ sourceForSyDeDecisionModel.taskModel.channelSizes
+        .map(_.toInt) ++ sourceForSyDeDecisionModel.taskModel.messageQueuesSizes
         .map(_ / memoryMultipler + 1)
         .map(_.toInt),
       memoryUsage,
@@ -282,159 +286,23 @@ final case class PeriodicTaskToSchedHWChoco(
     )
     .post
   // timing constraints
+  postInterProcessorBlocking()
+
   // basic utilization
   postMinimalResponseTimesByBlocking()
   postMaximumUtilizations()
-  // sourceForSyDeDecisionModel.schedHwModel.allocatedSchedulers.zipWithIndex.foreach((pe, j) => {
-  //   val maxUtilization = sourceForSyDeDecisionModel.maxUtilization(j)
-  //   val utilization = model.sum(
-  //     s"cpu_${pe.getIdentifier}_load",
-  //     sourceForSyDeDecisionModel.taskModel.tasks.zipWithIndex.map((task, i) =>
-  //       durations(i)(j).mul(100).div(periods(i).doubleValue.floor.toInt + 1).intVar
-  //     ): _*
-  //   )
-  //   model.arithm(utilization, "<=", maxUtilization.multiply(100).doubleValue.ceil.toInt).post
-  // })
-  // dependent-emerging blocking
   // sourceForSyDeDecisionModel.taskModel.reactiveStimulus.zipWithIndex.foreach((s, i) => {
-  //   sourceForSyDeDecisionModel.schedHwModel.allocatedSchedulers.zipWithIndex
-  //     .foreach((pe, j) => {
-  //       responseTimes(i).ge(blockingTimes(i).add(durations(i)(j))).post
+  //   sourceForSyDeDecisionModel.taskModel
+  //     .reactiveStimulusSrcs(i)
+  //     .foreach(src => {
+  //       val dst = sourceForSyDeDecisionModel.taskModel.reactiveStimulusDst(i)
+  //       //scribe.debug(s"dst ${dst} and src ${src}")
+  //       model.ifThen(
+  //         taskExecution(dst).ne(taskExecution(src)).decompose,
+  //         blockingTimes(dst).ge(responseTimes(src)).decompose
+  //       )
   //     })
   // })
-  sourceForSyDeDecisionModel.taskModel.reactiveStimulus.zipWithIndex.foreach((s, i) => {
-    sourceForSyDeDecisionModel.taskModel
-      .reactiveStimulusSrcs(i)
-      .foreach(src => {
-        val dst = sourceForSyDeDecisionModel.taskModel.reactiveStimulusDst(i)
-        //scribe.debug(s"dst ${dst} and src ${src}")
-        model.ifThen(
-          taskExecution(dst).ne(taskExecution(src)).decompose,
-          blockingTimes(dst).ge(responseTimes(src)).decompose
-        )
-      })
-  })
-  // for the execution times
-  sourceForSyDeDecisionModel.taskModel.tasks.zipWithIndex.foreach((t, i) =>
-    sourceForSyDeDecisionModel.schedHwModel.allocatedSchedulers.zipWithIndex.foreach((s, j) =>
-      model.ifThenElse(
-        taskExecution(i).eq(j).decompose,
-        wcExecution(i)(j)
-          .eq(sourceForSyDeDecisionModel.wcets(i)(j).multiply(multiplier).doubleValue.floor.toInt + 1)
-          .decompose,
-        wcExecution(i)(j).eq(0).decompose
-      )
-    )
-  )
-  // for the Fetch times
-  sourceForSyDeDecisionModel.taskModel.tasks.zipWithIndex.foreach((t, i) =>
-    sourceForSyDeDecisionModel.schedHwModel.hardware.storageElems.zipWithIndex.foreach((mj, j) => {
-      sourceForSyDeDecisionModel.schedHwModel.allocatedSchedulers.zipWithIndex.map((sk, k) =>
-        val tt = sourceForSyDeDecisionModel.schedHwModel.hardware
-          .maxTraversalTimePerBit(j)(k)
-          .divide(multiplier)
-          .multiply(memoryMultipler)
-        model.ifThenElse(
-          taskExecution(i).eq(k).and(taskMapping(i).eq(j)).decompose,
-          wcFetch(i)(k)
-            .ge(
-              tt.multiply(sourceForSyDeDecisionModel.taskModel.taskSizes(i)).doubleValue.ceil.toInt
-            )
-            .decompose,
-          wcFetch(i)(j).eq(0).decompose
-        )
-      )
-    })
-  )
-  // for the Data times
-  /// channels
-  sourceForSyDeDecisionModel.taskModel.tasks.zipWithIndex.foreach((t, i) =>
-    sourceForSyDeDecisionModel.schedHwModel.hardware.storageElems.zipWithIndex.foreach((mj, j) => {
-      sourceForSyDeDecisionModel.schedHwModel.allocatedSchedulers.zipWithIndex.foreach((sk, k) =>
-        sourceForSyDeDecisionModel.taskModel.dataBlocks.zipWithIndex.foreach((c, ci) => {
-          val transferred = sourceForSyDeDecisionModel.taskModel.taskChannelReads(i)(ci).toInt
-          val tt = sourceForSyDeDecisionModel.schedHwModel.hardware
-            .maxTraversalTimePerBit(j)(k)
-            .divide(multiplier)
-            .multiply(memoryMultipler)
-            .multiply(transferred)
-          model.ifThenElse(
-            taskExecution(i).eq(k).and(dataBlockMapping(ci).eq(j)).decompose,
-            channelFetchTime(ci)(k)
-              .ge(
-                tt.doubleValue.ceil.toInt * transferred
-              )
-              .decompose,
-            channelFetchTime(ci)(k).eq(0).decompose
-          )
-        })
-      )
-    })
-  )
-  sourceForSyDeDecisionModel.taskModel.tasks.zipWithIndex.foreach((t, i) =>
-    sourceForSyDeDecisionModel.schedHwModel.allocatedSchedulers.zipWithIndex.foreach((sk, k) =>
-      model.ifThenElse(
-        taskExecution(i).eq(k).decompose,
-        wcInput(i)(k)
-          .ge(
-            model.sum(
-              s"input_task${i}",
-              sourceForSyDeDecisionModel.taskModel.dataBlocks.zipWithIndex
-                .filter((c, j) => sourceForSyDeDecisionModel.taskModel.taskChannelReads(i).contains(j))
-                .map((c, j) => {
-                  channelFetchTime(j)(k)
-                }): _*
-            )
-          )
-          .decompose,
-        wcInput(i)(k).eq(0).decompose
-      )
-    )
-  )
-  // for the Write back times
-  sourceForSyDeDecisionModel.taskModel.tasks.zipWithIndex.foreach((t, i) =>
-    sourceForSyDeDecisionModel.schedHwModel.hardware.storageElems.zipWithIndex.foreach((mj, j) => {
-      sourceForSyDeDecisionModel.schedHwModel.allocatedSchedulers.zipWithIndex.foreach((sk, k) =>
-        sourceForSyDeDecisionModel.taskModel.dataBlocks.zipWithIndex.foreach((c, ci) => {
-          val transferred = sourceForSyDeDecisionModel.taskModel.taskChannelWrites(i)(ci).toInt
-          val tt = sourceForSyDeDecisionModel.schedHwModel.hardware
-            .maxTraversalTimePerBit(k)(j)
-            .divide(multiplier)
-            .multiply(memoryMultipler)
-            .multiply(transferred)
-          model.ifThenElse(
-            taskExecution(i).eq(k).and(dataBlockMapping(ci).eq(j)).decompose,
-            channelWriteTime(ci)(k)
-              .ge(
-                tt.doubleValue.ceil.toInt * transferred
-              )
-              .decompose,
-            channelWriteTime(ci)(k).eq(0).decompose
-          )
-        })
-      )
-    })
-  )
-  sourceForSyDeDecisionModel.taskModel.tasks.zipWithIndex.foreach((t, i) =>
-    sourceForSyDeDecisionModel.schedHwModel.allocatedSchedulers.zipWithIndex.foreach((sk, k) =>
-      model.ifThenElse(
-        taskExecution(i).eq(k).decompose,
-        wcOutput(i)(k)
-          .ge(
-            model.sum(
-              s"output_task${i}",
-              sourceForSyDeDecisionModel.taskModel.dataBlocks.zipWithIndex
-                .filter((c, j) => sourceForSyDeDecisionModel.taskModel.taskChannelWrites(i).contains(j))
-                .map((c, j) => {
-                  channelWriteTime(j)(k)
-                }): _*
-            )
-          )
-          .decompose,
-        wcOutput(i)(k).eq(0).decompose
-      )
-    )
-  )
   // for each FP scheduler
   // rt >= bt + sum of all higher prio tasks in the same CPU
   sourceForSyDeDecisionModel.schedHwModel.allocatedSchedulers.zipWithIndex
@@ -481,8 +349,8 @@ final case class PeriodicTaskToSchedHWChoco(
   override def modelObjectives = Array(nFreePEs)
 
   // create the methods that each mixing requires
-  def sufficientRMSchedulingPoints(taskIdx: Int): Array[BigFraction] =
-    sourceForSyDeDecisionModel.sufficientRMSchedulingPoints(taskIdx)
+  // def sufficientRMSchedulingPoints(taskIdx: Int): Array[BigFraction] =
+  //   sourceForSyDeDecisionModel.sufficientRMSchedulingPoints(taskIdx)
 
   /** This method sets up the Worst case schedulability test for a task.
     *
@@ -610,9 +478,9 @@ final case class PeriodicTaskToSchedHWChoco(
 
   def allMemorySizeNumbers() =
     (sourceForSyDeDecisionModel.schedHwModel.hardware.storageElems.map(_.getSpaceInBits.toLong) ++
-      sourceForSyDeDecisionModel.taskModel.channelSizes ++
+      sourceForSyDeDecisionModel.taskModel.messageQueuesSizes ++
       sourceForSyDeDecisionModel.taskModel.taskSizes).filter(_ > 0L)
 
   val uniqueIdentifier = "PeriodicTaskToSchedHWChoco"
 
-end PeriodicTaskToSchedHWChoco
+}

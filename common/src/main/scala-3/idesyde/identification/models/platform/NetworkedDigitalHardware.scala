@@ -55,14 +55,20 @@ final case class NetworkedDigitalHardware(
         .addVertices((0 until platformElements.length).map(_.asInstanceOf[Integer]).toArray:_*)
         .build
 
+  /**
+   * This graph is a weighted undirected graph where the weights are the bit/s a message
+   * can experience when hopping from one element to another.
+   */
   lazy val commTopology =
     AsWeightedGraph(
       topology,
       // this function calculates the minimum bandwidth per sec
       (e) => {
+        // either the source or dst of the edge is a comm element
         val ceOpt = GenericCommunicationModule
           .safeCast(links(e)._1)
           .or(() => GenericCommunicationModule.safeCast(links(e)._2))
+        // it might be a round robing as well. If it is, we get the weights
         ceOpt.flatMap(ce => {
           val other = if (links(e)._1 == ce) then links(e)._2 else links(e)._1
           val fraction: BigFraction = RoundRobinCommunicationModule
@@ -74,6 +80,7 @@ final case class NetworkedDigitalHardware(
               )
             })
             .orElse(BigFraction.ONE)
+          // we use this fraction ot calculate the BW in bits/s for this element
           InstrumentedCommunicationModule
             .safeCast(ce)
             .map(insce =>

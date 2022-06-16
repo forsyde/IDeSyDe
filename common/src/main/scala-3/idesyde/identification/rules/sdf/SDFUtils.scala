@@ -9,17 +9,22 @@ import math.Integral.Implicits.infixIntegralOps
 import org.apache.commons.math3.linear.SingularValueDecomposition
 import org.apache.commons.math3.util.ArithmeticUtils
 import org.apache.commons.math3.linear.ArrayFieldVector
+import org.apache.commons.math3.linear.RealMatrix
 
 object SDFUtils {
 
   def getRepetitionVector(
-      topology: Seq[Seq[Int]],
-      initialTokens: Seq[Int]
-  )(using Integral[BigFraction]): Seq[Int] = {
+      topologyMatrix: Array[Array[Int]],
+      initialTokens: Array[Int]
+  )(using Integral[BigFraction]): Array[Int] =
     // convert the common Scala matrix in to a field for commons math
-    val topologyMatrix =
-      MatrixUtils
-        .createRealMatrix(topology.map(_.map(_.doubleValue).toArray).toArray)
+    getRepetitionVector(MatrixUtils
+        .createRealMatrix(topologyMatrix.map(_.map(_.doubleValue).toArray).toArray), initialTokens)
+
+  def getRepetitionVector(
+      topologyMatrix: RealMatrix,
+      initialTokens: Array[Int]
+  )(using Integral[BigFraction]): Array[Int] = {
     val svd = SingularValueDecomposition(topologyMatrix)
     // make an identity for the kernel algorithm
     // val identity = MatrixUtils.createFieldIdentityMatrix(
@@ -67,27 +72,27 @@ object SDFUtils {
         .map(_.getDenominatorAsLong)
         .reduce((i1, i2) => ArithmeticUtils.lcm(i1, i2))
       nullVec.map(_.multiply(lcm).divide(gcd).getDenominatorAsInt)
-    } else Seq()
+    } else Array.emptyIntArray
   }
 
   def getPASS(
-      topology: Seq[Seq[Int]]
-  )(using Integral[BigFraction]): Seq[Int] = getPASS(topology, Array.fill(topology(0).length)(0))
+      topology: Array[Array[Int]]
+  )(using Integral[BigFraction]): Array[Int] = getPASS(topology, Array.fill(topology(0).length)(0))
 
   def getPASS(
-      topology: Seq[Seq[Int]],
-      initialTokens: Seq[Int]
-  )(using Integral[BigFraction]): Seq[Int] = getPASS(
+      topology: Array[Array[Int]],
+      initialTokens: Array[Int]
+  )(using Integral[BigFraction]): Array[Int] = getPASS(
     topology,
     initialTokens,
     getRepetitionVector(topology, initialTokens)
   )
 
   def getPASS(
-      topology: Seq[Seq[Int]],
-      initialTokens: Seq[Int],
-      repetitionVector: Seq[Int]
-  )(using Integral[BigFraction]): Seq[Int] = {
+      topology: Array[Array[Int]],
+      initialTokens: Array[Int],
+      repetitionVector: Array[Int]
+  )(using Integral[BigFraction]): Array[Int] = {
     // val sdfModule = py.module("idesyde.sdf")
     val numActors = topology(0).length
     var buffer = MatrixUtils.createRealVector(

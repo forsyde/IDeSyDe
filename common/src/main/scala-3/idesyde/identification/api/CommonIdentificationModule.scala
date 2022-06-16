@@ -15,10 +15,12 @@ import java.util.concurrent.ThreadPoolExecutor
 import org.apache.commons.math3.fraction.BigFraction
 import idesyde.utils.BigFractionIsNumeric
 import idesyde.identification.rules.mixed.PeriodicTaskToSchedHWIdentRule
+import idesyde.utils.BigFractionIsIntegral
 
 class CommonIdentificationModule extends IdentificationModule {
 
   given Numeric[BigFraction] = BigFractionIsNumeric()
+  given Integral[BigFraction] = BigFractionIsIntegral()
 
   val identificationRules: Set[IdentificationRule[? <: DecisionModel]] = Set(
     SDFAppIdentificationRule(),

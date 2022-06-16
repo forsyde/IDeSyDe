@@ -174,9 +174,9 @@ final case class ReactorMinusIdentificationRule(executor: ThreadPoolExecutor)
           srcReaction <- srcReactor.getReactionsPort(model).asScala;
           dstReaction <- dstReactor.getReactionsPort(model).asScala;
           if model
-            .hasConnection(srcReaction, srcReactor, srcEdge.sourcePort.get, srcEdge.sourcePort.get);
+            .hasConnection(srcReaction, srcReactor, srcEdge.getSourcePort.get, srcEdge.getSourcePort.get);
           if model
-            .hasConnection(dstReactor, dstReaction, dstEdge.targetPort.get, dstEdge.targetPort.get)
+            .hasConnection(dstReactor, dstReaction, dstEdge.getTargetPort.get, dstEdge.getTargetPort.get)
         ) yield (srcReaction, dstReaction) -> c
       )
       .toMap

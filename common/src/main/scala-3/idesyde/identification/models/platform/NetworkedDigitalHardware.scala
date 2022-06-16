@@ -24,6 +24,10 @@ import org.jgrapht.alg.util.Pair
 import org.jgrapht.opt.graph.sparse.SparseIntUndirectedWeightedGraph
 import org.jgrapht.graph.AsWeightedGraph
 import org.jgrapht.graph.SimpleDirectedGraph
+import org.jgrapht.alg.shortestpath.AllDirectedPaths
+import org.jgrapht.opt.graph.sparse.SparseIntDirectedGraph
+import org.jgrapht.graph.AsUndirectedGraph
+import org.jgrapht.opt.graph.sparse.IncomingEdgesSupport
 
 final case class NetworkedDigitalHardware(
     val processingElems: Array[GenericProcessingModule],
@@ -33,27 +37,67 @@ final case class NetworkedDigitalHardware(
 )(using Numeric[BigFraction])
     extends ForSyDeDecisionModel {
 
+  val coveredVertexes = {
+    for (p <- processingElems) yield p.getViewedVertex
+    for (c <- communicationElems) yield c.getViewedVertex
+    for (s <- storageElems) yield s.getViewedVertex
+  }
+
   val platformElements: Array[DigitalModule] =
     processingElems ++ communicationElems ++ storageElems
 
-  val topology = if(links.length > 0)
-    SparseIntUndirectedGraph(
+  val topologyDirected = if(links.length > 0)
+    SparseIntDirectedGraph(
       platformElements.length,
-      links.length,
-      () =>
-        links
+      (links
           .map(l =>
             Pair(
               platformElements.indexOf(l._1).asInstanceOf[Integer],
               platformElements.indexOf(l._2).asInstanceOf[Integer]
             )
-          )
-          .asJavaSeqStream
+          ) ++ links
+          .map(l =>
+            Pair(
+              platformElements.indexOf(l._2).asInstanceOf[Integer],
+              platformElements.indexOf(l._1).asInstanceOf[Integer]
+            )
+          )).toList.asJava,
+      IncomingEdgesSupport.FULL_INCOMING_EDGES
     )
     else
-      SimpleDirectedGraph.createBuilder[Integer, Integer](() => 0.asInstanceOf[Integer])
+      SimpleGraph.createBuilder[Integer, Integer](() => 0.asInstanceOf[Integer])
         .addVertices((0 until platformElements.length).map(_.asInstanceOf[Integer]).toArray:_*)
         .build
+
+  val topology = AsUndirectedGraph(topologyDirected)
+
+  private lazy val routesProc2MemoryAlgorithm = AllDirectedPaths(topology)
+
+  lazy val routesProc2Memory =
+    processingElems.zipWithIndex.map((pe, src) => 
+      storageElems.zipWithIndex.map((me, dst) => 
+        val platSrc = src;
+        val platDst = processingElems.length + communicationElems.length + dst;
+        val paths = routesProc2MemoryAlgorithm.getAllPaths(platSrc, platDst, true, communicationElems.length)
+        paths.asScala
+        .map(path => path.getVertexList.subList(1, path.getLength - 1).asScala.toArray.map(_.toInt))
+        // this use the integer encoding to guarantee that all paths are made of communication elements
+        .filter(path => path.forall(v => processingElems.length < v && v <= processingElems.length + communicationElems.length))
+        .toArray
+        )
+      )
+
+  lazy val communicationModuleBandWidthBitPerSec = communicationElems.zipWithIndex.map((ce, i) => 
+    InstrumentedCommunicationModule
+            .safeCast(ce)
+            .map(insce =>
+              BigFraction.ONE
+                .multiply(
+                  insce.getFlitSizeInBits.toInt * insce.getMaxConcurrentFlits.toInt * insce.getOperatingFrequencyInHertz.toInt
+                )
+                .divide(insce.getMaxCyclesPerFlit.toInt)
+            ).orElse(BigFraction.ZERO)  
+  )
 
   /**
    * This graph is a weighted undirected graph where the weights are the bit/s a message
@@ -113,12 +157,6 @@ final case class NetworkedDigitalHardware(
   // for (ce         <- communicationElems) addVertex(ce)
   // for (me         <- storageElems) addVertex(me)
   // for ((src, dst) <- links) addEdge(src, dst)
-
-  val coveredVertexes = {
-    for (p <- processingElems) yield p.getViewedVertex
-    for (c <- communicationElems) yield c.getViewedVertex
-    for (s <- storageElems) yield s.getViewedVertex
-  }
 
   val processingElemsOrdered = processingElems.toList
 

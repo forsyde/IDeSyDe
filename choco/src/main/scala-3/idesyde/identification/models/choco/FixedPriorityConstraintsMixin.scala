@@ -19,14 +19,14 @@ trait FixedPriorityConstraintsMixin extends ChocoModelMixin {
   val taskExecution: Array[IntVar]
   val responseTimes: Array[IntVar]
   val blockingTimes: Array[IntVar]
-  val durations: Array[Array[IntVar]]
+  val durations: Array[IntVar]
 
-  def sufficientRMSchedulingPoints(taskIdx: Int): Array[BigFraction]
+  def sufficientRMSchedulingPoints(taskIdx: Int): Array[BigFraction] = Array.empty
 
   def postFixedPrioriPreemtpiveConstraint(schedulerIdx: Int): Unit =
-    taskExecution.zipWithIndex.foreach((taskVar, i) => {
+    // taskExecution.zipWithIndex.foreach((taskVar, i) => {
       //postFixedPrioriPreemtpiveConstraintByTask(i, schedulerIdx)
-    })
+    // })
     chocoModel.post(
       new Constraint(
         s"scheduler_${schedulerIdx}_iter_prop",
@@ -44,13 +44,14 @@ trait FixedPriorityConstraintsMixin extends ChocoModelMixin {
       )
     )
 
+  // TODO: check if this is still correct after durations become vector instead of matrix
   private def postFixedPrioriPreemtpiveConstraintByTask(taskIdx: Int, schedulerIdx: Int): Unit =
     if (sufficientRMSchedulingPoints(taskIdx).isEmpty) then
       chocoModel.ifThen(
         taskExecution(taskIdx).eq(schedulerIdx).decompose,
         responseTimes(taskIdx)
           .ge(
-            durations(taskIdx)(schedulerIdx)
+            durations(taskIdx)
               .add(blockingTimes(taskIdx))
           )
           .decompose
@@ -62,7 +63,7 @@ trait FixedPriorityConstraintsMixin extends ChocoModelMixin {
           sufficientRMSchedulingPoints(taskIdx).map(t => {
             responseTimes(taskIdx)
               .ge(
-                durations(taskIdx)(schedulerIdx)
+                durations(taskIdx)
                   .add(blockingTimes(taskIdx))
                   .add(
                     chocoModel
@@ -74,9 +75,8 @@ trait FixedPriorityConstraintsMixin extends ChocoModelMixin {
                             // leave tasks k which i occasionally block
                             priorities(k) >= priorities(taskIdx)
                           )
-                          .map((ws, k) => {
-                            ws(schedulerIdx)
-                              .mul({
+                          .map((w, k) => {
+                            w.mul({
                                 // we use floor + 1 intead of ceil due to the fact
                                 // that ceil(s) is not a strict GT but a GE implementation
                                 t.divide(
@@ -106,9 +106,9 @@ trait FixedPriorityConstraintsMixin extends ChocoModelMixin {
       val taskExecution: Array[IntVar],
       val responseTimes: Array[IntVar],
       val blockingTimes: Array[IntVar],
-      val durations: Array[Array[IntVar]]
+      val durations: Array[IntVar]
   ) extends Propagator[IntVar](
-        taskExecution ++ responseTimes ++ blockingTimes ++ durations.flatten,
+        taskExecution ++ responseTimes ++ blockingTimes ++ durations,
         PropagatorPriority.BINARY,
         false
       ) {
@@ -131,7 +131,7 @@ trait FixedPriorityConstraintsMixin extends ChocoModelMixin {
         .filter((pi, i) => pi.isInstantiatedTo(schedulerIdx))
         .foreach((pi, i) => {
           val dur = Math.max(
-            durations(i)(schedulerIdx).getLB(),
+            durations(i).getLB(),
             wcets(i)(schedulerIdx).doubleValue.floor.toInt + 1
           )
           var rtL     = -1
@@ -144,7 +144,7 @@ trait FixedPriorityConstraintsMixin extends ChocoModelMixin {
                 .filter((pj, j) => pj.isInstantiatedTo(schedulerIdx))
                 .map((_, j) =>
                   Math.max(
-                    durations(j)(schedulerIdx).getLB(),
+                    durations(j).getLB(),
                     wcets(j)(schedulerIdx).doubleValue.floor.toInt + 1
                   )
                     * (periods(j).reciprocal.multiply(rtL).doubleValue.floor.toInt + 1)

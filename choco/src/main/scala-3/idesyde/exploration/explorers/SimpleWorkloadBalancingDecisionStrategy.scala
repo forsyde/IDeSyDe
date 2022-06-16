@@ -13,7 +13,7 @@ class SimpleWorkloadBalancingDecisionStrategy(
     val periods: Array[BigFraction],
     val taskExecutions: Array[IntVar],
     val utilizations: Array[IntVar],
-    val durations: Array[Array[IntVar]]
+    val durations: Array[IntVar]
 )(using Numeric[BigFraction]) extends AbstractStrategy[IntVar]((taskExecutions): _*) {
 
   val pool = PoolManager[IntDecision]()
@@ -33,7 +33,7 @@ class SimpleWorkloadBalancingDecisionStrategy(
       .zipWithIndex
       .filterNot(_._1.isInstantiated)
       .flatMap((t, i) => 
-        schedulers.map(j => (t, i, j, periods(i).reciprocal.multiply(100 * durations(i)(j).getLB).add(utilizations(j).getLB).intValue))
+        schedulers.map(j => (t, i, j, periods(i).reciprocal.multiply(100 * durations(i).getLB).add(utilizations(j).getLB).intValue))
       )
       .filter((t, i, j, w) => t.contains(j))
       .minByOption((t, i, j, w) => if (w == 0) then 100 else w)

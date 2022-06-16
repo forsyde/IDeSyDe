@@ -9,7 +9,7 @@ trait BaselineTimingConstraintsMixin extends ChocoModelMixin {
   val priorities: Array[Int]
   val periods: Array[BigFraction]
   val maxUtilizations: Array[BigFraction]
-  val durations: Array[Array[IntVar]]
+  val durations: Array[IntVar]
   val taskExecution: Array[IntVar]
   val blockingTimes: Array[IntVar]
   val responseTimes: Array[IntVar]
@@ -32,8 +32,8 @@ trait BaselineTimingConstraintsMixin extends ChocoModelMixin {
     responseTimes.zipWithIndex.foreach((r, i) => {
       r.ge(blockingTimes(i)).post
     })
-    durations.zipWithIndex.foreach((ws, i) => {
-      ws.zipWithIndex.foreach((w, j) => {
+    durations.zipWithIndex.foreach((w, i) => {
+      (0 until maxUtilizations.length).map(j => {
         chocoModel.ifThen(
           taskExecution(i).eq(j).decompose,
           responseTimes(i).ge(blockingTimes(i).add(w)).decompose
@@ -48,8 +48,8 @@ trait BaselineTimingConstraintsMixin extends ChocoModelMixin {
       .zipWithIndex
       .foreach((maxU, j) => {
         chocoModel.scalar(
-          durations.zipWithIndex.map((ws, i) => ws(j)),
-          durations.zipWithIndex.map((ws, i) => BigFraction(100).divide(periods(i)).doubleValue.toInt),
+          durations,
+          durations.zipWithIndex.map((_, i) => BigFraction(100).divide(periods(i)).doubleValue.toInt),
           "<=",
           utilizations(j)
         ).post

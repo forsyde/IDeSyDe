@@ -1,6 +1,5 @@
 package idesyde.identification
 
-import forsyde.io.java.core.ForSyDeSystemGraph
 import java.util.concurrent.ThreadPoolExecutor
 import idesyde.identification.DecisionModel
 

@@ -45,7 +45,8 @@ final case class PeriodicTaskToSchedHWChoco(
     with FixedPriorityConstraintsMixin
     with BaselineTimingConstraintsMixin
     with ExtendedPrecedenceConstraintsMixin
-    with Active4StageDurationMixin {
+    with Active4StageDurationMixin
+    with BaselineMemoryConstraints {
 
   given MultipliableFractional[BigFraction] = BigFractionIsMultipliableFractional()
   //given Ordering[Task]       = DependentDeadlineMonotonicOrdering(sourceForSyDeDecisionModel.taskModel)
@@ -54,15 +55,15 @@ final case class PeriodicTaskToSchedHWChoco(
 
   // section for time multiplier calculation
   val timeValues = (sourceForSyDeDecisionModel.taskModel.periods ++ sourceForSyDeDecisionModel.wcets.flatten)
-  var multiplier = 1L
+  var timeMultiplier = 1L
   while (
     timeValues
-      .map(_.multiply(multiplier))
-      .exists(d => d.doubleValue < 1) && multiplier < Int.MaxValue
+      .map(_.multiply(timeMultiplier))
+      .exists(d => d.doubleValue < 1) && timeMultiplier < Int.MaxValue
   ) {
-    multiplier *= 10
+    timeMultiplier *= 10
   }
-  //scribe.debug(multiplier.toString)
+  //scribe.debug(timeMultiplier.toString)
 
   // do the same for memory numbers
   var memoryMultipler = 1L
@@ -75,10 +76,10 @@ final case class PeriodicTaskToSchedHWChoco(
   // scribe.debug(allMemorySizeNumbers().mkString("[", ",", "]"))
 
   // create the variables that each Mixin requires
-  val periods         = sourceForSyDeDecisionModel.taskModel.periods.map(_.multiply(multiplier))
+  val periods         = sourceForSyDeDecisionModel.taskModel.periods.map(_.multiply(timeMultiplier))
   val priorities      = sourceForSyDeDecisionModel.taskModel.prioritiesForDependencies
-  val deadlines       = sourceForSyDeDecisionModel.taskModel.relativeDeadlines.map(_.multiply(multiplier))
-  val wcets           = sourceForSyDeDecisionModel.wcets.map(a => a.map(_.multiply(multiplier)))
+  val deadlines       = sourceForSyDeDecisionModel.taskModel.relativeDeadlines.map(_.multiply(timeMultiplier))
+  val wcets           = sourceForSyDeDecisionModel.wcets.map(a => a.map(_.multiply(timeMultiplier)))
   val maxUtilizations = sourceForSyDeDecisionModel.maxUtilization
 
   // build the model so that it can be acessed later
@@ -125,15 +126,23 @@ final case class PeriodicTaskToSchedHWChoco(
         .map((m, j) => j)
     )
   )
+  val taskCommMapping = sourceForSyDeDecisionModel.taskModel.tasks.zipWithIndex.map((t, i) =>
+    sourceForSyDeDecisionModel.schedHwModel.hardware.communicationElems.zipWithIndex.map((ce, j) =>
+      model.boolVar(
+      "map_" + t.getViewedVertex.getIdentifier + "_comm_" + ce.getIdentifier)
+    )
+  )
   val dataBlockCommMapping = sourceForSyDeDecisionModel.taskModel.dataBlocks.zipWithIndex.map((c, i) =>
     sourceForSyDeDecisionModel.schedHwModel.hardware.communicationElems.zipWithIndex.map((ce, j) =>
       model.boolVar(
       "map_" + c.getViewedVertex.getIdentifier + "_comm_" + ce.getIdentifier)
     )
   )
-  def messageMapping = dataBlockCommMapping
+  def taskCommunicationMapping = taskCommMapping
+  def dataCommunicationMapping = dataBlockCommMapping
+  // def taskReadsMessage = sourceForSyDeDecisionModel.taskModel.tasks.
   // --- durations ----
-  def executionTime: Array[Array[Int]] = sourceForSyDeDecisionModel.wcets.map(_.map(f => f.multiply(multiplier).getNumeratorAsInt))
+  def executionTime: Array[Array[Int]] = sourceForSyDeDecisionModel.wcets.map(_.map(f => f.multiply(timeMultiplier).getNumeratorAsInt))
   // !-- durations ----
   // auxiliary variables
   val responseTimes =
@@ -142,13 +151,13 @@ final case class PeriodicTaskToSchedHWChoco(
       //     .wcets(i)
       //     .filter(p => p.compareTo(BigFraction.MINUS_ONE) > 0)
       //     .min
-      //     .multiply(multiplier)
+      //     .multiply(timeMultiplier)
       //     .doubleValue
       //     .ceil
       //     .toInt.toString)
       // scribe.debug(sourceForSyDeDecisionModel.taskModel
       //     .relativeDeadlines(i)
-      //     .multiply(multiplier)
+      //     .multiply(timeMultiplier)
       //     .doubleValue
       //     .floor
       //     .toInt.toString)
@@ -159,7 +168,7 @@ final case class PeriodicTaskToSchedHWChoco(
           .wcets(i)
           .filter(p => p.compareTo(BigFraction.MINUS_ONE) > 0)
           .min
-          .multiply(multiplier)
+          .multiply(timeMultiplier)
           .doubleValue
           .ceil
           .toInt,
@@ -170,8 +179,8 @@ final case class PeriodicTaskToSchedHWChoco(
   val blockingTimes =
     sourceForSyDeDecisionModel.taskModel.tasks.zipWithIndex.map((t, i) =>
       // scribe.debug(
-      //   s"B: ${sourceForSyDeDecisionModel.taskModel.relativeDeadlines(i).multiply(multiplier).doubleValue.floor.toInt} - " +
-      //   s"W: ${sourceForSyDeDecisionModel.wcets(i).filter(p => p.compareTo(BigFraction.MINUS_ONE) > 0).min.multiply(multiplier).doubleValue.ceil.toInt}"
+      //   s"B: ${sourceForSyDeDecisionModel.taskModel.relativeDeadlines(i).multiply(timeMultiplier).doubleValue.floor.toInt} - " +
+      //   s"W: ${sourceForSyDeDecisionModel.wcets(i).filter(p => p.compareTo(BigFraction.MINUS_ONE) > 0).min.multiply(timeMultiplier).doubleValue.ceil.toInt}"
       // )
       model.intVar(
         "bt_" + t.getViewedVertex.getIdentifier,
@@ -194,7 +203,7 @@ final case class PeriodicTaskToSchedHWChoco(
             sourceForSyDeDecisionModel
               .wcets(i)
               .max
-              .multiply(multiplier)
+              .multiply(timeMultiplier)
               .doubleValue
               .ceil
               .toInt
@@ -229,13 +238,21 @@ final case class PeriodicTaskToSchedHWChoco(
   val durations: Array[IntVar] = sourceForSyDeDecisionModel.taskModel.tasks.zipWithIndex.map((t, i) =>
       durationsExec(i).add(durationsFetch(i)).add(durationsRead(i)).add(durationsWrite(i)).intVar
     )
-
-  def messageTravelTime = sourceForSyDeDecisionModel.taskModel.dataBlocks.map(d =>
+  def taskTravelTime = sourceForSyDeDecisionModel.taskModel.taskSizes.map(d =>
     sourceForSyDeDecisionModel.schedHwModel.hardware.communicationModuleBandWidthBitPerSec.map(b =>
         // TODO: check if this is truly conservative (pessimistic) or not
-        b.multiply(multiplier).divide(memoryMultipler).multiply(d.getMaxSizeInBits).intValue
+        b.multiply(timeMultiplier).divide(memoryMultipler).multiply(d).intValue
       )
     )
+  def dataTravelTime = sourceForSyDeDecisionModel.taskModel.dataBlocks.map(d =>
+    sourceForSyDeDecisionModel.schedHwModel.hardware.communicationModuleBandWidthBitPerSec.map(b =>
+        // TODO: check if this is truly conservative (pessimistic) or not
+        b.multiply(timeMultiplier).divide(memoryMultipler).multiply(d.getMaxSizeInBits).intValue
+      )
+    )
+  
+  def taskReadsData = sourceForSyDeDecisionModel.taskModel.taskReadsMessageQueue
+  def taskWritesData = sourceForSyDeDecisionModel.taskModel.taskWritesMessageQueue
   // val channelFetchTime = sourceForSyDeDecisionModel.taskModel.dataBlocks.zipWithIndex.map((c, i) =>
   //   sourceForSyDeDecisionModel.schedHwModel.allocatedSchedulers.zipWithIndex.map((pj, j) =>
   //     val t = sourceForSyDeDecisionModel.schedHwModel.hardware.maxTraversalTimePerBit(j).max
@@ -243,7 +260,7 @@ final case class PeriodicTaskToSchedHWChoco(
   //       s"tt${i}_${j}",
   //       0,
   //       if (t.compareTo(BigFraction.MINUS_ONE) > 0) then
-  //         t.multiply(multiplier)
+  //         t.multiply(timeMultiplier)
   //           .multiply(c.getMaxSizeInBits)
   //           .doubleValue
   //           .ceil
@@ -260,7 +277,7 @@ final case class PeriodicTaskToSchedHWChoco(
   //       s"tt${i}_${j}",
   //       0,
   //       if (t.compareTo(BigFraction.MINUS_ONE) > 0) then
-  //         t.multiply(multiplier)
+  //         t.multiply(timeMultiplier)
   //           .multiply(c.getMaxSizeInBits)
   //           .doubleValue
   //           .ceil
@@ -280,27 +297,21 @@ final case class PeriodicTaskToSchedHWChoco(
       (mem.getSpaceInBits / memoryMultipler).toInt + 1
     )
   )
+  def dataMapping = dataBlockMapping
+  def taskSize = sourceForSyDeDecisionModel.taskModel.taskSizes
+        .map(_ / memoryMultipler + 1)
+        .map(_.toInt)
+  def dataSize = sourceForSyDeDecisionModel.taskModel.messageQueuesSizes
+        .map(_ / memoryMultipler + 1)
+        .map(_.toInt)
   // memory constraints
-  model
-    .binPacking(
-      taskMapping ++ dataBlockMapping,
-      sourceForSyDeDecisionModel.taskModel.taskSizes
-        .map(_ / memoryMultipler + 1)
-        .map(_.toInt) ++ sourceForSyDeDecisionModel.taskModel.messageQueuesSizes
-        .map(_ / memoryMultipler + 1)
-        .map(_.toInt),
-      memoryUsage,
-      0 // 0 offset for no minizinc
-    )
-
-    .post
+  postTaskAndDataMemoryConstraints()
   // Members declared in idesyde.identification.models.choco.ExtendedPrecedenceConstraintsMixin
   def canBeFollowedBy = sourceForSyDeDecisionModel.taskModel.interTaskOccasionalBlock
 
   // for other computation
-  def allowedProc2MemoryMessagePaths = sourceForSyDeDecisionModel.schedHwModel.hardware.routesProc2Memory
-
-  // --- stubs
+  def allowedProc2MemoryDataPaths = sourceForSyDeDecisionModel.schedHwModel.hardware.routesProc2Memory
+  postActive4StageDurationsConstraints()
 
   // timing constraints
   postInterProcessorBlocking()
@@ -428,8 +439,8 @@ final case class PeriodicTaskToSchedHWChoco(
     sourceForSyDeDecisionModel.taskModel.tasks.zipWithIndex.foreach((t, i) => {
       rebuilt.addVertex(t.getViewedVertex)
       val analysed         = AnalysedTask.enforce(t)
-      val responseTimeFrac = BigFraction(responseTimes(i).getValue, multiplier).reduce
-      val blockingTimeFrac = BigFraction(blockingTimes(i).getValue, multiplier).reduce
+      val responseTimeFrac = BigFraction(responseTimes(i).getValue, timeMultiplier).reduce
+      val blockingTimeFrac = BigFraction(blockingTimes(i).getValue, timeMultiplier).reduce
       // scribe.debug(s"task ${t.getIdentifier} RT: (raw ${responseTimes(i).getValue}) ${responseTimeFrac.doubleValue}")
       // scribe.debug(s"task ${t.getIdentifier} BT: (raw ${blockingTimes(i).getValue}) ${blockingTimeFrac.doubleValue}")
       analysed.setWorstCaseResponseTimeNumeratorInSecs(responseTimeFrac.getNumeratorAsLong)

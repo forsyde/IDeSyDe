@@ -1,16 +1,13 @@
 package idesyde.exploration.api
 
-import idesyde.identification.ForSyDeDecisionModel
 import scala.concurrent.Future
 import idesyde.exploration.api.ExplorationCriteria
-import idesyde.exploration.explorers.GecodeMiniZincExplorer
 import org.jgrapht.graph.SimpleDirectedGraph
 import org.jgrapht.graph.DefaultEdge
 import org.jgrapht.alg.connectivity.GabowStrongConnectivityInspector
 import java.util.stream.Collectors
 
 import collection.JavaConverters.*
-import idesyde.exploration.explorers.ChuffedMiniZincExplorer
 import idesyde.exploration.interfaces.Explorer
 import idesyde.identification.DecisionModel
 

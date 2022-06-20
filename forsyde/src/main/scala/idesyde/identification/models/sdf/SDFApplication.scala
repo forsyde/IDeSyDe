@@ -36,6 +36,13 @@ final case class SDFApplication(
 
   val initialTokens: Array[Int] = channels.map(_.getNumOfInitialTokens)
 
+  def isSelfConcurrent(actor: Int): Boolean = {
+    val a = actors(actor)
+    channels.exists(c =>
+      topology.containsEdge(a, c) && topology.containsEdge(c, a)
+      )
+  }
+
   lazy val dataflowGraphs = {
     val g = DefaultDirectedGraph.createBuilder[Int, Int](() => 0)
     actors.zipWithIndex.foreach((a, i) => {

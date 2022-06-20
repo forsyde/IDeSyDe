@@ -1,7 +1,5 @@
 package idesyde.identification.models.workload
 
-import forsyde.io.java.core.Vertex
-import idesyde.identification.ForSyDeDecisionModel
 import idesyde.utils.MultipliableFractional
 import org.jgrapht.opt.graph.sparse.SparseIntDirectedGraph
 
@@ -9,8 +7,6 @@ import idesyde.utils.MultipliableFractional.infixMultipliableFractionalOps
 import math.Ordering.Implicits.infixOrderingOps
 import org.jgrapht.Graph
 import org.jgrapht.graph.DefaultEdge
-import forsyde.io.java.typed.viewers.execution.Upsample
-import forsyde.io.java.typed.viewers.execution.Downsample
 import org.jgrapht.traverse.TopologicalOrderIterator
 import java.util.Comparator
 import org.jgrapht.graph.builder.GraphBuilder
@@ -239,26 +235,14 @@ trait PeriodicWorkloadMixin[TimeT : ClassTag](using fracT: MultipliableFractiona
     prioritiesMut
   }
 
-// lazy val alwaysBlocksGraph = {
-//   val g = AsSubgraph(reactiveGraph)
-//   val occasionalEdges = g.edgeSet.stream
-//     .filter(e => {
-//       val i = g.getEdgeSource(e)
-//       val j = g.getEdgeTarget(e)
-//       // there is at least one instance without a follow-up
-//       reactiveStimulus.zipWithIndex
-//         .filter((stimulus, k) => {
-//           reactiveStimulusSrcs(k).contains(i) &&
-//           reactiveStimulusDst(k) == j
-//         })
-//         .exists((stimulus, _) => {
-//           DownsampleReactiveStimulus.conforms(stimulus)
-//           || UpsampleReactiveStimulus.conforms(stimulus)
-//         })
-//     })
-//     .collect(Collectors.toSet)
-//   g.removeAllEdges(occasionalEdges)
-//   g
-// }
+  lazy val taskReadsMessageQueue = (0 until numTasks).map(t =>
+    (numTasks until numMessageQeues + numTasks).map(m =>
+      communicationGraph.containsEdge(m, t)
+    ).toArray).toArray
+
+  lazy val taskWritesMessageQueue = (0 until numTasks).map(t =>
+    (numTasks until numMessageQeues + numTasks).map(m =>
+      communicationGraph.containsEdge(t, m)
+    ).toArray).toArray
 
 end PeriodicWorkloadMixin

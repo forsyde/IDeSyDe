@@ -4,15 +4,26 @@ ThisBuild / scalaVersion := "3.1.1"
 
 lazy val root = project
   .in(file("."))
-  .aggregate(common, cli, choco)
+  .aggregate(common, cli, choco, forsyde, minizinc)
 
 lazy val common = (project in file("common"))
 
-lazy val choco = (project in file("choco")).dependsOn(common)
+lazy val choco = (project in file("choco"))
+  .dependsOn(common)
+  .dependsOn(forsyde)
+
+lazy val forsyde = (project in file("forsyde"))
+  .dependsOn(common)
+
+lazy val minizinc = (project in file("minizinc"))
+  .dependsOn(common)
+  .dependsOn(forsyde)
 
 lazy val cli = (project in file("cli"))
   .dependsOn(common)
   .dependsOn(choco)
+  .dependsOn(forsyde)
+  .dependsOn(minizinc)
   .enablePlugins(ScalaNativePlugin)
   .settings(
     Compile / mainClass := Some("idesyde.IDeSyDeStandalone")

@@ -14,6 +14,8 @@ import idesyde.identification.api.IdentificationHandler
 import idesyde.identification.api.ChocoIdentificationModule
 import idesyde.identification.ForSyDeDecisionModel
 import idesyde.exploration.interfaces.ForSyDeIOExplorer
+import idesyde.identification.api.ForSyDeIdentificationModule
+import idesyde.identification.api.MinizincIdentificationModule
 
 case class IDeSyDeRunConfig(
     inputModelsPaths: Buffer[Path] = Buffer.empty,
@@ -27,6 +29,8 @@ case class IDeSyDeRunConfig(
 
   val identificationHandler = IdentificationHandler()
     .registerIdentificationRule(ChocoIdentificationModule())
+    .registerIdentificationRule(ForSyDeIdentificationModule())
+    .registerIdentificationRule(MinizincIdentificationModule())
 
   def run(): Unit =
     setLoggingLevel(Level.get(verbosityLevel).getOrElse(Level.Info))

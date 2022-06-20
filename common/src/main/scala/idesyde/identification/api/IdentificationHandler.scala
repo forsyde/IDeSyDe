@@ -1,24 +1,14 @@
 package idesyde.identification.api
 
-import forsyde.io.java.core.ForSyDeSystemGraph
 import idesyde.identification.IdentificationRule
 import idesyde.identification.DecisionModel
-import idesyde.identification.ForSyDeDecisionModel
-import forsyde.io.java.core.VertexTrait
 
 import java.util.stream.Collectors
-import forsyde.io.java.core.Trait
 
 import scala.collection.mutable.HashSet
 import org.jgrapht.graph.SimpleDirectedGraph
 import org.jgrapht.graph.DefaultEdge
 import org.jgrapht.alg.connectivity.GabowStrongConnectivityInspector
-import idesyde.identification.rules.sdf.SDFAppIdentificationRule
-import idesyde.identification.rules.reactor.ReactorMinusIdentificationRule
-import idesyde.identification.rules.mixed.ReactorMinusAppDSEIdentRule
-import idesyde.identification.rules.mixed.ReactorMinusAppDSEMznIdentRule
-import idesyde.identification.rules.platform.NetworkedDigitalHWIdentRule
-import idesyde.identification.rules.platform.SchedulableNetDigHWIdentRule
 
 import collection.JavaConverters.*
 import java.util.concurrent.Executors
@@ -73,8 +63,5 @@ class IdentificationHandler(
     scribe.debug(s"domitant: ${dominant.map(m => m.uniqueIdentifier)}")
     dominant
   }
-
-  protected def countTraits(model: ForSyDeSystemGraph): Integer =
-    model.vertexSet.stream.flatMap(_.getTraits.stream).distinct.count.toInt
 
 }

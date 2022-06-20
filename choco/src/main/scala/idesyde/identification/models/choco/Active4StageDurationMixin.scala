@@ -7,12 +7,17 @@ import org.chocosolver.solver.variables.BoolVar
 trait Active4StageDurationMixin extends ChocoModelMixin {
 
   def executionTime: Array[Array[Int]]
-  def messageTravelTime: Array[Array[Int]]
-  def allowedProc2MemoryMessagePaths: Array[Array[Array[Array[Int]]]]
+  def taskTravelTime: Array[Array[Int]]
+  def dataTravelTime: Array[Array[Int]]
+  def allowedProc2MemoryDataPaths: Array[Array[Array[Array[Int]]]]
+  def taskReadsData: Array[Array[Boolean]]
+  def taskWritesData: Array[Array[Boolean]]
 
   def taskExecution: Array[IntVar]
   def taskMapping: Array[IntVar]
-  def messageMapping: Array[Array[BoolVar]]
+  def dataMapping: Array[IntVar]
+  def taskCommunicationMapping: Array[Array[BoolVar]]
+  def dataCommunicationMapping: Array[Array[BoolVar]]
 
   def durationsFetch: Array[IntVar]
   def durationsRead: Array[IntVar]
@@ -21,8 +26,15 @@ trait Active4StageDurationMixin extends ChocoModelMixin {
   def durations: Array[IntVar]
 
   def postActive4StageDurationsConstraints(): Unit = {
-    val processors    = 0 until executionTime.head.length
-    val communicators = 0 until messageTravelTime.head.length
+    // deduced parameters
+    val processors    = 0 until allowedProc2MemoryDataPaths.length
+    val memories      = 0 until allowedProc2MemoryDataPaths.head.length
+    val communicators = 0 until dataCommunicationMapping.head.length
+    // auxiliary local variables
+    val commLoad = communicators
+      .map(c => chocoModel.intVar("load_" + c, 0, dataTravelTime.map(t => t(c)).sum))
+      .toArray
+    // posting constraints proper
     processors.map(processorIndex =>
       // sum of all durationss
       durations.zipWithIndex.foreach((dur, i) =>
@@ -47,7 +59,65 @@ trait Active4StageDurationMixin extends ChocoModelMixin {
         )
       )
     )
-    // for the Fetch times
+    // at least one path needs to be satisfied for isntruction fetching
+    taskExecution.zipWithIndex.foreach((taskExec, t) =>
+      taskMapping.zipWithIndex.foreach((taskMap, m) =>
+          processors.foreach(p =>
+            memories.foreach(mem =>
+              val paths = allowedProc2MemoryDataPaths(p)(mem)
+              chocoModel.ifThen(taskExec.eq(p).and(taskMap.eq(mem)).decompose, 
+                // at least one of the paths must be taken  
+                chocoModel.or(paths.map(path => chocoModel.and(taskCommunicationMapping(t):_*)):_*)
+              )
+            )
+          )
+      )
+    )
+    // the same for data fetching or writting
+    // they are symemtric in terms of constraints because the platform is assumed
+    // in this mixin to have bidirectional links
+    taskExecution.zipWithIndex.foreach((taskExec, t) =>
+      dataMapping.zipWithIndex.foreach((dataMap, m) =>
+        if (taskReadsData(t)(m) || taskWritesData(t)(m)) {
+          processors.foreach(p =>
+            memories.foreach(mem =>
+              val paths = allowedProc2MemoryDataPaths(p)(mem)
+              chocoModel.ifThen(taskExec.eq(p).and(dataMap.eq(mem)).decompose, 
+                // at least one of the paths must be taken  
+                chocoModel.or(paths.map(path => chocoModel.and(dataCommunicationMapping(m):_*)):_*)
+              )
+            )
+          )
+        }
+      )
+    )
+    // the load of each communicatior
+    communicators.foreach(c =>
+      chocoModel.scalar(
+        taskCommunicationMapping.map(m => m(c).intVar) ++ dataCommunicationMapping.map(m => m(c).intVar),
+        taskTravelTime.map(t => t(c)) ++ dataTravelTime.map(t => t(c)),
+        "<=",
+        commLoad(c)
+      ).post
+    )
+    // simplistic and pessimistic time estimation for fetching
+    durationsFetch.zipWithIndex.foreach((d, t) =>
+      chocoModel.sum(taskCommunicationMapping(t).zipWithIndex.map((x, ce) => x.mul(commLoad(ce)).intVar), "<=", d).post
+    )
+    durationsRead.zipWithIndex.foreach((d, t) =>
+      chocoModel.sum(taskCommunicationMapping(t).zipWithIndex.map((x, ce) => x.mul(commLoad(ce)).intVar), "<=", d).post
+    )
+    durationsWrite.zipWithIndex.foreach((d, t) =>
+      chocoModel.sum(taskCommunicationMapping(t).zipWithIndex.map((x, ce) => x.mul(commLoad(ce)).intVar), "<=", d).post
+    ) 
+    
+  }
+
+}
+
+
+// very old stuff
+// for the Fetch times
     // sourceForSyDeDecisionModel.taskModel.tasks.zipWithIndex.foreach((t, i) =>
     //     sourceForSyDeDecisionModel.schedHwModel.hardware.storageElems.zipWithIndex.foreach((mj, j) => {
     //     sourceForSyDeDecisionModel.schedHwModel.allocatedSchedulers.zipWithIndex.map((sk, k) =>
@@ -156,6 +226,3 @@ trait Active4StageDurationMixin extends ChocoModelMixin {
     //     )
     //     )
     // )
-  }
-
-}

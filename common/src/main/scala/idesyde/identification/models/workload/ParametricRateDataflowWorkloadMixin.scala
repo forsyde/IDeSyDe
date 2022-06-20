@@ -29,6 +29,12 @@ trait ParametricRateDataflowWorkloadMixin(using Integral[BigFraction]) {
   def numChannels: Int
   def initialTokens: Array[Int]
 
+  /** An actor is self-concurrent if two or more instance can be executed at the same time
+    *
+    * As a rule of thumb, actors with "state" are not self-concurrent.
+    */
+  def isSelfConcurrent(actor: Int): Boolean
+
   /** The edges of the communication graph should have numbers describing how much data is
     * transferred from actors to channels.
     *

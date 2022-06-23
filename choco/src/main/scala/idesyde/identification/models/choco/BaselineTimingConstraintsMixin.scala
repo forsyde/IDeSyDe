@@ -3,16 +3,17 @@ package idesyde.identification.models.choco
 import idesyde.identification.interfaces.ChocoModelMixin
 import org.chocosolver.solver.variables.IntVar
 import org.apache.commons.math3.fraction.BigFraction
+import org.chocosolver.solver.variables.BoolVar
 
 trait BaselineTimingConstraintsMixin extends ChocoModelMixin {
 
-  val priorities: Array[Int]
-  val periods: Array[BigFraction]
-  val maxUtilizations: Array[BigFraction]
-  val durations: Array[IntVar]
-  val taskExecution: Array[IntVar]
-  val blockingTimes: Array[IntVar]
-  val responseTimes: Array[IntVar]
+  def priorities: Array[Int]
+  def periods: Array[BigFraction]
+  def maxUtilizations: Array[BigFraction]
+  def durations: Array[Array[IntVar]]
+  def taskExecution: Array[Array[BoolVar]]
+  def blockingTimes: Array[IntVar]
+  def responseTimes: Array[IntVar]
 
   lazy val utilizations = maxUtilizations
       .map(_.multiply(100).doubleValue.ceil.toInt)
@@ -35,8 +36,8 @@ trait BaselineTimingConstraintsMixin extends ChocoModelMixin {
     durations.zipWithIndex.foreach((w, i) => {
       (0 until maxUtilizations.length).map(j => {
         chocoModel.ifThen(
-          taskExecution(i).eq(j).decompose,
-          responseTimes(i).ge(blockingTimes(i).add(w)).decompose
+          taskExecution(i)(j),
+          responseTimes(i).ge(blockingTimes(i).add(w(j))).decompose
         )
       })
     })
@@ -48,7 +49,7 @@ trait BaselineTimingConstraintsMixin extends ChocoModelMixin {
       .zipWithIndex
       .foreach((maxU, j) => {
         chocoModel.scalar(
-          durations,
+          durations.map(d => d(j)),
           durations.zipWithIndex.map((_, i) => BigFraction(100).divide(periods(i)).doubleValue.toInt),
           "<=",
           utilizations(j)

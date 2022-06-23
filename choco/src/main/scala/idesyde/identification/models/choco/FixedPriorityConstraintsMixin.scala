@@ -9,6 +9,7 @@ import org.chocosolver.solver.variables.Variable
 import org.chocosolver.util.ESat
 import org.chocosolver.solver.constraints.PropagatorPriority
 import org.chocosolver.solver.constraints.Constraint
+import org.chocosolver.solver.variables.BoolVar
 
 trait FixedPriorityConstraintsMixin extends ChocoModelMixin {
 
@@ -16,10 +17,10 @@ trait FixedPriorityConstraintsMixin extends ChocoModelMixin {
   val periods: Array[BigFraction]
   val deadlines: Array[BigFraction]
   val wcets: Array[Array[BigFraction]]
-  val taskExecution: Array[IntVar]
+  val taskExecution: Array[Array[BoolVar]]
   val responseTimes: Array[IntVar]
   val blockingTimes: Array[IntVar]
-  val durations: Array[IntVar]
+  val durations: Array[Array[IntVar]]
 
   def sufficientRMSchedulingPoints(taskIdx: Int): Array[BigFraction] = Array.empty
 
@@ -48,22 +49,22 @@ trait FixedPriorityConstraintsMixin extends ChocoModelMixin {
   private def postFixedPrioriPreemtpiveConstraintByTask(taskIdx: Int, schedulerIdx: Int): Unit =
     if (sufficientRMSchedulingPoints(taskIdx).isEmpty) then
       chocoModel.ifThen(
-        taskExecution(taskIdx).eq(schedulerIdx).decompose,
+        taskExecution(taskIdx)(schedulerIdx),
         responseTimes(taskIdx)
           .ge(
-            durations(taskIdx)
+            durations(taskIdx)(schedulerIdx)
               .add(blockingTimes(taskIdx))
           )
           .decompose
       )
     else {
       chocoModel.ifThen(
-        taskExecution(taskIdx).eq(schedulerIdx).decompose,
+        taskExecution(taskIdx)(schedulerIdx),
         chocoModel.or(
           sufficientRMSchedulingPoints(taskIdx).map(t => {
             responseTimes(taskIdx)
               .ge(
-                durations(taskIdx)
+                durations(taskIdx)(schedulerIdx)
                   .add(blockingTimes(taskIdx))
                   .add(
                     chocoModel
@@ -76,7 +77,7 @@ trait FixedPriorityConstraintsMixin extends ChocoModelMixin {
                             priorities(k) >= priorities(taskIdx)
                           )
                           .map((w, k) => {
-                            w.mul({
+                            w(schedulerIdx).mul({
                                 // we use floor + 1 intead of ceil due to the fact
                                 // that ceil(s) is not a strict GT but a GE implementation
                                 t.divide(
@@ -103,12 +104,12 @@ trait FixedPriorityConstraintsMixin extends ChocoModelMixin {
       val periods: Array[BigFraction],
       val deadlines: Array[BigFraction],
       val wcets: Array[Array[BigFraction]],
-      val taskExecution: Array[IntVar],
+      val taskExecution: Array[Array[BoolVar]],
       val responseTimes: Array[IntVar],
       val blockingTimes: Array[IntVar],
-      val durations: Array[IntVar]
+      val durations: Array[Array[IntVar]]
   ) extends Propagator[IntVar](
-        taskExecution ++ responseTimes ++ blockingTimes ++ durations,
+        taskExecution.flatten ++ responseTimes ++ blockingTimes ++ durations.flatten,
         PropagatorPriority.BINARY,
         false
       ) {
@@ -128,10 +129,10 @@ trait FixedPriorityConstraintsMixin extends ChocoModelMixin {
 
     def propagate(x$0: Int): Unit =
       taskExecution.zipWithIndex
-        .filter((pi, i) => pi.isInstantiatedTo(schedulerIdx))
+        .filter((pi, i) => pi(schedulerIdx).isInstantiatedTo(1))
         .foreach((pi, i) => {
           val dur = Math.max(
-            durations(i).getLB(),
+            durations(i)(schedulerIdx).getLB(),
             wcets(i)(schedulerIdx).doubleValue.floor.toInt + 1
           )
           var rtL     = -1
@@ -141,10 +142,10 @@ trait FixedPriorityConstraintsMixin extends ChocoModelMixin {
             rtLNext = blockingTimes(i).getLB() + dur +
               taskExecution.zipWithIndex
                 .filter((_, j) => i != j && priorities(j) >= priorities(i))
-                .filter((pj, j) => pj.isInstantiatedTo(schedulerIdx))
+                .filter((pj, j) => pj(schedulerIdx).isInstantiatedTo(1))
                 .map((_, j) =>
                   Math.max(
-                    durations(j).getLB(),
+                    durations(j)(schedulerIdx).getLB(),
                     wcets(j)(schedulerIdx).doubleValue.floor.toInt + 1
                   )
                     * (periods(j).reciprocal.multiply(rtL).doubleValue.floor.toInt + 1)

@@ -13,17 +13,17 @@ trait Active4StageDurationMixin extends ChocoModelMixin {
   def taskReadsData: Array[Array[Boolean]]
   def taskWritesData: Array[Array[Boolean]]
 
-  def taskExecution: Array[IntVar]
+  def taskExecution: Array[Array[BoolVar]]
   def taskMapping: Array[IntVar]
   def dataMapping: Array[IntVar]
   def taskCommunicationMapping: Array[Array[BoolVar]]
   def dataCommunicationMapping: Array[Array[BoolVar]]
 
-  def durationsFetch: Array[IntVar]
-  def durationsRead: Array[IntVar]
-  def durationsExec: Array[IntVar]
-  def durationsWrite: Array[IntVar]
-  def durations: Array[IntVar]
+  def durationsFetch: Array[Array[IntVar]]
+  def durationsRead: Array[Array[IntVar]]
+  def durationsExec: Array[Array[IntVar]]
+  def durationsWrite: Array[Array[IntVar]]
+  def durations: Array[Array[IntVar]]
 
   def postActive4StageDurationsConstraints(): Unit = {
     // deduced parameters
@@ -38,24 +38,24 @@ trait Active4StageDurationMixin extends ChocoModelMixin {
     processors.map(processorIndex =>
       // sum of all durationss
       durations.zipWithIndex.foreach((dur, i) =>
-        dur
-          .eq(durationsFetch(i).add(durationsRead(i)).add(durationsExec(i)).add(durationsWrite(i)))
+        dur(processorIndex)
+          .eq(durationsFetch(i)(processorIndex).add(durationsRead(i)(processorIndex)).add(durationsExec(i)(processorIndex)).add(durationsWrite(i)(processorIndex)))
           .post
       )
       // for the execution times
       durationsExec.zipWithIndex.foreach((exe, i) =>
         chocoModel.ifThenElse(
-          taskExecution(i).eq(processorIndex).decompose,
-          exe.eq(executionTime(i)(processorIndex)).decompose,
-          exe.eq(0).decompose
+          taskExecution(i)(processorIndex),
+          exe(processorIndex).eq(executionTime(i)(processorIndex)).decompose,
+          exe(processorIndex).eq(0).decompose
         )
       )
       // for the total times
       durations.zipWithIndex.foreach((dur, i) =>
         chocoModel.ifThenElse(
-          taskExecution(i).eq(processorIndex).decompose,
-          dur.eq(executionTime(i)(processorIndex)).decompose,
-          dur.eq(0).decompose
+          taskExecution(i)(processorIndex),
+          dur(processorIndex).eq(executionTime(i)(processorIndex)).decompose,
+          dur(processorIndex).eq(0).decompose
         )
       )
     )
@@ -65,7 +65,7 @@ trait Active4StageDurationMixin extends ChocoModelMixin {
           processors.foreach(p =>
             memories.foreach(mem =>
               val paths = allowedProc2MemoryDataPaths(p)(mem)
-              chocoModel.ifThen(taskExec.eq(p).and(taskMap.eq(mem)).decompose, 
+              chocoModel.ifThen(taskExec(p).and(taskMap.eq(mem)).decompose, 
                 // at least one of the paths must be taken  
                 chocoModel.or(paths.map(path => chocoModel.and(taskCommunicationMapping(t):_*)):_*)
               )
@@ -82,7 +82,7 @@ trait Active4StageDurationMixin extends ChocoModelMixin {
           processors.foreach(p =>
             memories.foreach(mem =>
               val paths = allowedProc2MemoryDataPaths(p)(mem)
-              chocoModel.ifThen(taskExec.eq(p).and(dataMap.eq(mem)).decompose, 
+              chocoModel.ifThen(taskExec(p).and(dataMap.eq(mem)).decompose, 
                 // at least one of the paths must be taken  
                 chocoModel.or(paths.map(path => chocoModel.and(dataCommunicationMapping(m):_*)):_*)
               )

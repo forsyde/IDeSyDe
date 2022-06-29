@@ -18,8 +18,8 @@ import idesyde.utils.BigFractionIsMultipliableFractional
 import idesyde.utils.MultipliableFractional
 
 class ForSyDeIdentificationModule extends IdentificationModule {
-    
-  given Integral[BigFraction] = BigFractionIsIntegral()
+
+  given Integral[BigFraction]               = BigFractionIsIntegral()
   given MultipliableFractional[BigFraction] = BigFractionIsMultipliableFractional()
 
   val identificationRules: Set[IdentificationRule[? <: DecisionModel]] = Set(
@@ -33,5 +33,5 @@ class ForSyDeIdentificationModule extends IdentificationModule {
     PeriodicTaskToSchedHWIdentRule(),
     ReactorMinusIdentificationRule(Executors.newFixedThreadPool(1).asInstanceOf[ThreadPoolExecutor])
   )
-  
+
 }

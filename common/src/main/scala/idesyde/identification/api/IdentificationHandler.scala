@@ -35,14 +35,16 @@ class IdentificationHandler(
     scribe.info(
       s"Performing identification with ${activeRules.size} rules."
     )
-    while (activeRules.size > 0 && prevIdentified >= dominanceGraph.vertexSet.size) {
+    while (activeRules.size > 0 && prevIdentified < identified.size) {
+      prevIdentified = identified.size
       val ruleResults = activeRules.map(r => (r, r.identify(model, identified)))
       val newIdentified =
-        ruleResults.filter((r, res) => !res._2.isEmpty).map((r, res) => res._2.get).toSet
-      // scribe.debug("building dominance graph")
+        ruleResults.flatMap((r, res) => res._2).toSet
       for (m <- newIdentified) dominanceGraph.addVertex(m)
-      for (m <- newIdentified; mm <- identified; if m.dominates(mm, model)) dominanceGraph.addEdge(m, mm)
-      for (m <- identified; mm <- newIdentified; if m.dominates(mm, model)) dominanceGraph.addEdge(m, mm)
+      for (m <- newIdentified; mm <- identified; if m.dominates(mm, model))
+        dominanceGraph.addEdge(m, mm)
+      for (m <- identified; mm <- newIdentified; if m.dominates(mm, model))
+        dominanceGraph.addEdge(m, mm)
       identified = identified ++ newIdentified
       // identified =
       //   identified.filter(m => !identified.exists(other => other != m && other.dominates(m)))

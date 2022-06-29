@@ -79,6 +79,7 @@ final class PeriodicWorkloadIdentificationRule(using MultipliableFractional[BigF
     )
     // nothing can be done if there are no tasks
     // so we terminate early to avoid undefined analysis results
+    scribe.debug(s"Num of tasks found in model: ${tasks.size}")
     if (tasks.isEmpty)
       (true, Option.empty)
     // now take a look which of the relevant vertexes are connected
@@ -106,8 +107,9 @@ final class PeriodicWorkloadIdentificationRule(using MultipliableFractional[BigF
                   )
                   .sum
                 taskCommunicationGraph.addEdge(datablock, task, dataRead)
-
+              case _ =>
             }
+          case _ =>
         }
         src match {
           case task: CommunicatingTask =>
@@ -126,8 +128,9 @@ final class PeriodicWorkloadIdentificationRule(using MultipliableFractional[BigF
                   )
                   .sum
                 taskCommunicationGraph.addEdge(task, datablock, dataRead)
-
+              case _ =>
             }
+          case _ =>
         }
       )
     )
@@ -136,10 +139,11 @@ final class PeriodicWorkloadIdentificationRule(using MultipliableFractional[BigF
     val allTasksAreStimulated = tasks.forall(task =>
       periodicStimulus.exists(stim => connectivityInspector.pathExists(stim, task))
     )
-    if (!tasks.isEmpty && allTasksAreStimulated)
+    scribe.debug(s"Are all tasks reachable by a periodic stimulus? ${allTasksAreStimulated}")
+    if (allTasksAreStimulated) then
       (
         true,
-        Option(
+        Some(
           ForSyDePeriodicWorkload(
             tasks,
             periodicStimulus,
@@ -154,113 +158,111 @@ final class PeriodicWorkloadIdentificationRule(using MultipliableFractional[BigF
             taskCommunicationGraph
           )
         )
-      )
-    else
-      (false, Option.empty)
+    )
+    else (true, Option.empty)
 
-    // // convenience
-    // lazy val tasks = periodicTasks
-    // // build the task-to-executable relationship
-    // lazy val executables = tasks.map(_.getInitSequencePort(model).asScala.toArray)
-    //  ++ tasks.map(_.getLoopSequencePort(model).asScala.toArray)
-    // // build the task-to-stimulus relation ship
-    // var predecessors: Array[Array[Int]] = Array.empty
-    // var successors: Array[Int]          = Array.emptyIntArray
-    // // build the precedence arrays
-    // // it is a bit verbose due to how the comparison is done. THrough IDs it is sure-fire.
-    // periodicStimulus.foreach(stimulus => {
-    //   successors :+= tasks.indexWhere(t =>
-    //     stimulus.getSuccessorPort(model).map(_.getIdentifier == t.getIdentifier).orElse(false)
-    //   )
-    //   SimplePeriodicStimulus
-    //     .safeCast(stimulus)
-    //     .ifPresent(simple => {
-    //       predecessors :+= Array(
-    //         tasks.indexWhere(t =>
-    //           simple.getPredecessorPort(model).map(_.getIdentifier == t.getIdentifier).orElse(false)
-    //         )
-    //       )
-    //     })
-    //   MultiANDPeriodicStimulus
-    //     .safeCast(stimulus)
-    //     .ifPresent(andStimulus => {
-    //       predecessors :+= andStimulus
-    //         .getPredecessorsPort(model)
-    //         .stream
-    //         .mapToInt(predecessor => {
-    //           tasks.indexWhere(t => predecessor.getIdentifier == t.getIdentifier)
-    //         })
-    //         .toArray
-    //     })
-    // })
-    // // build the read and write arrays
-    // lazy val taskChannelReads = executables.zipWithIndex
-    //   .map((es, i) => {
-    //     val t = tasks(i)
-    //     dataBlocks.zipWithIndex
-    //       .map((c, j) => {
-    //         if (model.hasConnection(c, t)) then
-    //           CommunicatingExecutable
-    //             .safeCast(t)
-    //             .map(commTask => {
-    //               (c, commTask.getPortDataReadSize.getOrDefault(c.getIdentifier, 1).toInt)
-    //             })
-    //             .orElse((c, 1))
-    //         else (c, 0)
-    //       })
-    //       .map((c, elems) =>
-    //         TokenizableDataBlock
-    //           .safeCast(c)
-    //           .map(block => block.getTokenSizeInBits * elems)
-    //           .orElse(c.getMaxSizeInBits)
-    //           .toLong
-    //       )
-    //   })
-    // lazy val taskChannelWrites = tasks
-    //   .map(t => {
-    //     dataBlocks.zipWithIndex
-    //       .map((c, j) => {
-    //         if (model.hasConnection(t, c)) then
-    //           CommunicatingExecutable
-    //             .safeCast(t)
-    //             .map(commTask => {
-    //               (c, commTask.getPortDataWrittenSize.getOrDefault(c.getIdentifier, 1).toInt)
-    //             })
-    //             .orElse((c, 1))
-    //         else (c, 0)
-    //       })
-    //       .map((c, elems) =>
-    //         TokenizableDataBlock
-    //           .safeCast(c)
-    //           .map(block => block.getTokenSizeInBits * elems)
-    //           .orElse(c.getMaxSizeInBits)
-    //           .toLong
-    //       )
-    //   })
-    // if (periodicTasks.isEmpty)
-    //   scribe.debug("No periodic workload model found.")
-    //   (true, Option.empty)
-    // else if (periodicTasks.exists(_.getPeriodicStimulusPort(model).isEmpty))
-    //   scribe.debug("Some periodic tasks have no periodic stimulus. Skipping.")
-    //   (true, Option.empty)
-    // else
-    //   val ForSyDePeriodicWorkload = ForSyDePeriodicWorkload(
-    //     periodicTasks = periodicTasks,
-    //     reactiveTasks = reactiveTasks,
-    //     periodicStimulus = periodicTasks.map(_.getPeriodicStimulusPort(model).get),
-    //     PeriodicStimulus = PeriodicStimulus,
-    //     executables = executables,
-    //     dataBlocks = dataBlocks,
-    //     PeriodicStimulusSrcs = predecessors,
-    //     PeriodicStimulusDst = successors,
-    //     taskChannelReads = taskChannelReads,
-    //     taskChannelWrites = taskChannelWrites
-    //   )
-    //   scribe.debug(
-    //     s"Simple periodic task model found with ${periodicTasks.length} periodic tasks, " +
-    //       s"${reactiveTasks.length} reactive tasks and ${dataBlocks.length} dataBlocks"
-    //   )
-    //   (true, Option(ForSyDePeriodicWorkload))
-    (true, Option.empty)
+  // // convenience
+  // lazy val tasks = periodicTasks
+  // // build the task-to-executable relationship
+  // lazy val executables = tasks.map(_.getInitSequencePort(model).asScala.toArray)
+  //  ++ tasks.map(_.getLoopSequencePort(model).asScala.toArray)
+  // // build the task-to-stimulus relation ship
+  // var predecessors: Array[Array[Int]] = Array.empty
+  // var successors: Array[Int]          = Array.emptyIntArray
+  // // build the precedence arrays
+  // // it is a bit verbose due to how the comparison is done. THrough IDs it is sure-fire.
+  // periodicStimulus.foreach(stimulus => {
+  //   successors :+= tasks.indexWhere(t =>
+  //     stimulus.getSuccessorPort(model).map(_.getIdentifier == t.getIdentifier).orElse(false)
+  //   )
+  //   SimplePeriodicStimulus
+  //     .safeCast(stimulus)
+  //     .ifPresent(simple => {
+  //       predecessors :+= Array(
+  //         tasks.indexWhere(t =>
+  //           simple.getPredecessorPort(model).map(_.getIdentifier == t.getIdentifier).orElse(false)
+  //         )
+  //       )
+  //     })
+  //   MultiANDPeriodicStimulus
+  //     .safeCast(stimulus)
+  //     .ifPresent(andStimulus => {
+  //       predecessors :+= andStimulus
+  //         .getPredecessorsPort(model)
+  //         .stream
+  //         .mapToInt(predecessor => {
+  //           tasks.indexWhere(t => predecessor.getIdentifier == t.getIdentifier)
+  //         })
+  //         .toArray
+  //     })
+  // })
+  // // build the read and write arrays
+  // lazy val taskChannelReads = executables.zipWithIndex
+  //   .map((es, i) => {
+  //     val t = tasks(i)
+  //     dataBlocks.zipWithIndex
+  //       .map((c, j) => {
+  //         if (model.hasConnection(c, t)) then
+  //           CommunicatingExecutable
+  //             .safeCast(t)
+  //             .map(commTask => {
+  //               (c, commTask.getPortDataReadSize.getOrDefault(c.getIdentifier, 1).toInt)
+  //             })
+  //             .orElse((c, 1))
+  //         else (c, 0)
+  //       })
+  //       .map((c, elems) =>
+  //         TokenizableDataBlock
+  //           .safeCast(c)
+  //           .map(block => block.getTokenSizeInBits * elems)
+  //           .orElse(c.getMaxSizeInBits)
+  //           .toLong
+  //       )
+  //   })
+  // lazy val taskChannelWrites = tasks
+  //   .map(t => {
+  //     dataBlocks.zipWithIndex
+  //       .map((c, j) => {
+  //         if (model.hasConnection(t, c)) then
+  //           CommunicatingExecutable
+  //             .safeCast(t)
+  //             .map(commTask => {
+  //               (c, commTask.getPortDataWrittenSize.getOrDefault(c.getIdentifier, 1).toInt)
+  //             })
+  //             .orElse((c, 1))
+  //         else (c, 0)
+  //       })
+  //       .map((c, elems) =>
+  //         TokenizableDataBlock
+  //           .safeCast(c)
+  //           .map(block => block.getTokenSizeInBits * elems)
+  //           .orElse(c.getMaxSizeInBits)
+  //           .toLong
+  //       )
+  //   })
+  // if (periodicTasks.isEmpty)
+  //   scribe.debug("No periodic workload model found.")
+  //   (true, Option.empty)
+  // else if (periodicTasks.exists(_.getPeriodicStimulusPort(model).isEmpty))
+  //   scribe.debug("Some periodic tasks have no periodic stimulus. Skipping.")
+  //   (true, Option.empty)
+  // else
+  //   val ForSyDePeriodicWorkload = ForSyDePeriodicWorkload(
+  //     periodicTasks = periodicTasks,
+  //     reactiveTasks = reactiveTasks,
+  //     periodicStimulus = periodicTasks.map(_.getPeriodicStimulusPort(model).get),
+  //     PeriodicStimulus = PeriodicStimulus,
+  //     executables = executables,
+  //     dataBlocks = dataBlocks,
+  //     PeriodicStimulusSrcs = predecessors,
+  //     PeriodicStimulusDst = successors,
+  //     taskChannelReads = taskChannelReads,
+  //     taskChannelWrites = taskChannelWrites
+  //   )
+  //   scribe.debug(
+  //     s"Simple periodic task model found with ${periodicTasks.length} periodic tasks, " +
+  //       s"${reactiveTasks.length} reactive tasks and ${dataBlocks.length} dataBlocks"
+  //   )
+  //   (true, Option(ForSyDePeriodicWorkload))
 
 }

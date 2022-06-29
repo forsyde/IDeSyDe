@@ -75,8 +75,8 @@ final case class SDFAppIdentificationRule()(using Integral[BigFraction])
         )
       )
     } else {
-      scribe.debug("No actors or channels do not connect actors")
-      (false, Option.empty)
+      scribe.debug("No actors, or channels do not connect actors")
+      (true, Option.empty)
     }
   }
 }

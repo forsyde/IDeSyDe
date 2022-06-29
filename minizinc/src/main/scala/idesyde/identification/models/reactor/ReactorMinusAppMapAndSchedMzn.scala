@@ -377,8 +377,8 @@ final case class ReactorMinusAppMapAndSchedMzn(val sourceModel: ReactorMinusAppM
   ): ForSyDeSystemGraph =
     ForSyDeSystemGraph()
 
-  override def dominates(other: DecisionModel): Boolean =
-    super.dominates(other) && (other match {
+  override def dominates[DesignModel](other: DecisionModel, designModel: DesignModel): Boolean =
+    super.dominates(other, designModel) && (other match {
       case mzn: ReactorMinusAppMapAndSched => sourceModel == mzn
       case _                               => true
     })

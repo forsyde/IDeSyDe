@@ -24,10 +24,18 @@ lazy val cli = (project in file("cli"))
   .dependsOn(choco)
   .dependsOn(forsyde)
   .dependsOn(minizinc)
-  .enablePlugins(ScalaNativePlugin)
+  // .enablePlugins(ScalaNativePlugin)
   .settings(
     Compile / mainClass := Some("idesyde.IDeSyDeStandalone")
   )
+
+lazy val tests = (project in file("tests"))
+  .dependsOn(common)
+  .dependsOn(choco)
+  .dependsOn(forsyde)
+  .dependsOn(minizinc)
+  .dependsOn(cli)
+
 
 ThisBuild / resolvers += Resolver.mavenLocal
 

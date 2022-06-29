@@ -32,13 +32,14 @@ import idesyde.identification.ForSyDeIdentificationRule
 import forsyde.io.java.core.ForSyDeSystemGraph
 import org.jgrapht.graph.AsSubgraph
 import idesyde.identification.DecisionModel
+import idesyde.utils.MultipliableFractional
 
 final case class NetworkedDigitalHardware(
     val processingElems: Array[GenericProcessingModule],
     val communicationElems: Array[GenericCommunicationModule],
     val storageElems: Array[GenericMemoryModule],
     val links: Array[(DigitalModule, DigitalModule)]
-)(using Numeric[BigFraction])
+)(using MultipliableFractional[BigFraction])
     extends ForSyDeDecisionModel {
 
   val coveredVertexes = {

@@ -22,7 +22,7 @@ import forsyde.io.java.typed.viewers.impl.InstrumentedExecutable
 final case class ReactorMinusAppDSEIdentRule()
     extends ForSyDeIdentificationRule[ReactorMinusAppMapAndSched]:
 
-  override def identify(
+  override def identifyFromForSyDe(
       model: ForSyDeSystemGraph,
       identified: Set[DecisionModel]
   ): (Boolean, Option[ReactorMinusAppMapAndSched]) =
@@ -57,7 +57,7 @@ final case class ReactorMinusAppDSEIdentRule()
       (false, Option.empty)
     else
       (true, Option.empty)
-  end identify
+  end identifyFromForSyDe
 
   def computeWCETFunction(
       model: ForSyDeSystemGraph,

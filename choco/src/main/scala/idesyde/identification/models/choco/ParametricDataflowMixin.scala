@@ -57,7 +57,7 @@ trait ParametricDataflowMixin extends ChocoModelMixin {
             val stateIter = DepthFirstIterator(stateSpace, 0)
             while (stateIter.hasNext) {
                 val state = stateIter.next
-                val task = stateSpace.getEdge(stateIter.getParent(state), state)
+                // val task = stateSpace.getEdge(stateIter.getParent(state), state)
                 // val bestOption = optimisticTimelinePerState(state).zipWithIndex.minBy((t, pe) => t)
             }
         }

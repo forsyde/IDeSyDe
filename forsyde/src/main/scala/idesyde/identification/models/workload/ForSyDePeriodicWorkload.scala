@@ -40,6 +40,7 @@ import forsyde.io.java.typed.viewers.execution.Stimulatable
 import scala.collection.mutable.Buffer
 import idesyde.utils.MultipliableFractional
 import com.ibm.icu.impl.locale.LocaleDistance.Data
+import forsyde.io.java.typed.viewers.execution.CommunicatingTask
 
 /** Simplest periodic task set concerned in the literature. The task graph is generated from the
   * execution namespace in ForSyDe IO, which defines triggering mechanisms and how they propagate.
@@ -57,7 +58,7 @@ case class ForSyDePeriodicWorkload(
     val dataBlocks: Array[DataBlock],
     val executables: Array[Array[Executable]],
     val stimulusGraph: Graph[Task | PeriodicStimulus | Upsample | Downsample, DefaultEdge],
-    val taskCommunicationGraph: Graph[Task | DataBlock, Long]
+    val taskCommunicationGraph: Graph[CommunicatingTask | DataBlock, Long]
 )(using MultipliableFractional[BigFraction])
     extends ForSyDeDecisionModel
     with PeriodicWorkloadMixin[BigFraction]:
@@ -110,6 +111,16 @@ case class ForSyDePeriodicWorkload(
   //     case _ => BigFraction.MINUS_ONE
   //   })
   //   )
+
+  def taskComputationNeeds: Array[Map[String, Map[String, Long]]] =
+    executables.map(execs => 
+      execs.flatMap(e => InstrumentedExecutable.safeCast(e).toScala)
+      .map(ie => ie.getOperationRequirements)
+      .reduce((m1, m2) => 
+        m2.forEach((k, v) -> m1.merge(k, v, (v1, v2) -> ))
+        m1
+        ))
+
 
   // compute the affine relations
   var createdPerTasks = Buffer[(Task, BigFraction, BigFraction, BigFraction)]()

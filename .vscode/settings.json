@@ -3,5 +3,13 @@
     "files.watcherExclude": {
         "**/target": true
     },
-    "cmake.configureOnOpen": false
+    "cmake.configureOnOpen": false,
+    "cSpell.words": [
+        "amalthea",
+        "choco",
+        "forsyde",
+        "idesyde",
+        "jgrapht",
+        "minizinc"
+    ]
 }

@@ -24,8 +24,8 @@ class IdentificationHandler(
     registeredModules += identModule
     this
 
-  def identifyDecisionModels(
-      model: Any
+  def identifyDecisionModels[DesignModel](
+      model: DesignModel
   ): Set[DecisionModel] = {
     var identified: Set[DecisionModel] = Set()
     var activeRules                    = registeredModules.flatMap(m => m.identificationRules)
@@ -36,13 +36,13 @@ class IdentificationHandler(
       s"Performing identification with ${activeRules.size} rules."
     )
     while (activeRules.size > 0 && prevIdentified >= dominanceGraph.vertexSet.size) {
-      val ruleResults = activeRules.map(r => (r, r.identifyUntyped(model, identified)))
+      val ruleResults = activeRules.map(r => (r, r.identify(model, identified)))
       val newIdentified =
         ruleResults.filter((r, res) => !res._2.isEmpty).map((r, res) => res._2.get).toSet
       // scribe.debug("building dominance graph")
       for (m <- newIdentified) dominanceGraph.addVertex(m)
-      for (m <- newIdentified; mm <- identified; if m.dominates(mm)) dominanceGraph.addEdge(m, mm)
-      for (m <- identified; mm <- newIdentified; if m.dominates(mm)) dominanceGraph.addEdge(m, mm)
+      for (m <- newIdentified; mm <- identified; if m.dominates(mm, model)) dominanceGraph.addEdge(m, mm)
+      for (m <- identified; mm <- newIdentified; if m.dominates(mm, model)) dominanceGraph.addEdge(m, mm)
       identified = identified ++ newIdentified
       // identified =
       //   identified.filter(m => !identified.exists(other => other != m && other.dominates(m)))

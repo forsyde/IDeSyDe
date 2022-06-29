@@ -22,7 +22,7 @@ import forsyde.io.java.typed.viewers.decision.Allocated
 final case class SchedulableNetDigHWIdentRule()
     extends ForSyDeIdentificationRule[SchedulableNetworkedDigHW] {
 
-  override def identify(
+  override def identifyFromForSyDe(
       model: ForSyDeSystemGraph,
       identified: Set[DecisionModel]
   ): (Boolean, Option[SchedulableNetworkedDigHW]) =
@@ -32,7 +32,7 @@ final case class SchedulableNetDigHWIdentRule()
     hardwareForSyDeDecisionModelOpt
       .map(identifyWithDependencies(model, _))
       .getOrElse((false, Option.empty))
-  end identify
+  end identifyFromForSyDe
 
   def identifyWithDependencies(
       model: ForSyDeSystemGraph,
@@ -49,7 +49,7 @@ final case class SchedulableNetDigHWIdentRule()
         .safeCast(scheduler)
         .flatMap(allocated => {
           allocated
-            .getAllocationHostPort(model)
+            .getAllocationHostsPort(model)
             .stream
             .flatMap(host => {
               GenericProcessingModule

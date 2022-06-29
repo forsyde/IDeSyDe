@@ -5,9 +5,9 @@ import forsyde.io.java.core.Vertex
 
 trait ForSyDeDecisionModel extends DecisionModel {
 
-    type VertexT = Vertex
+    def coveredVertexes: scala.collection.Iterable[Vertex]
 
-    def dominates(other: DecisionModel): Boolean =
+    def dominates[DesignModel](other: DecisionModel, designModel: DesignModel): Boolean =
         other match {
             case o: ForSyDeDecisionModel => 
                 o.coveredVertexes.toSet.subsetOf(coveredVertexes.toSet)

@@ -11,12 +11,13 @@ import forsyde.io.java.typed.viewers.platform.DigitalModule
 import forsyde.io.java.typed.viewers.platform.GenericProcessingModule
 import forsyde.io.java.typed.viewers.platform.GenericMemoryModule
 import forsyde.io.java.typed.viewers.platform.GenericCommunicationModule
+import idesyde.utils.MultipliableFractional
 import org.apache.commons.math3.fraction.BigFraction
 
-final case class NetworkedDigitalHWIdentRule()(using Numeric[BigFraction])
+final case class NetworkedDigitalHWIdentRule()(using MultipliableFractional[BigFraction])
     extends ForSyDeIdentificationRule[NetworkedDigitalHardware] {
 
-  override def identify(
+  override def identifyFromForSyDe(
       model: ForSyDeSystemGraph,
       identified: Set[DecisionModel]
   ): (Boolean, Option[NetworkedDigitalHardware]) = {

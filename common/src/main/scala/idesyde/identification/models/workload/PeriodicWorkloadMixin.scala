@@ -33,6 +33,8 @@ trait PeriodicWorkloadMixin[TimeT : ClassTag](using fracT: MultipliableFractiona
   def periods: Array[TimeT]
   def relativeDeadlines: Array[TimeT]
   def taskSizes: Array[Long]
+  /** this represent the implementation-to-computation needs each task has */
+  def taskComputationNeeds: Array[Map[String, Map[String, Long]]]
   // def instancePreceeds(src: TaskT)(dst: TaskT)(srcI: Int)(dstI: Int): Boolean
   def numMessageQeues: Int
   // def messageQueues: Array[MQueueT]

@@ -18,9 +18,9 @@ import idesyde.identification.api.ForSyDeIdentificationModule
 import idesyde.identification.api.MinizincIdentificationModule
 
 case class IDeSyDeRunConfig(
-    inputModelsPaths: Buffer[Path] = Buffer.empty,
-    outputModelPath: Path = Paths.get("idesyde-result.forsyde.xml"),
-    verbosityLevel: String = "INFO",
+    var inputModelsPaths: Buffer[Path] = Buffer.empty,
+    var outputModelPath: Path = Paths.get("idesyde-result.forsyde.xml"),
+    var verbosityLevel: String = "INFO",
     executionContext: ExecutionContext
 ):
 

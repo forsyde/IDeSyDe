@@ -86,7 +86,7 @@ class PeriodicTaskToSchedHWIdentRule extends ForSyDeIdentificationRule[PeriodicT
         .safeCast(task)
         .flatMap(memory => {
           memory
-            .getMappingHostPort(model)
+            .getMappingHostsPort(model)
             .stream
             .mapToInt(platformModel.hardware.storageElems.indexOf(_))
             .filter(_ > -1)
@@ -101,7 +101,7 @@ class PeriodicTaskToSchedHWIdentRule extends ForSyDeIdentificationRule[PeriodicT
         .safeCast(channel)
         .flatMap(memory => {
           memory
-            .getMappingHostPort(model)
+            .getMappingHostsPort(model)
             .stream
             .mapToInt(platformModel.hardware.storageElems.indexOf(_))
             .filter(_ > -1)
@@ -116,7 +116,7 @@ class PeriodicTaskToSchedHWIdentRule extends ForSyDeIdentificationRule[PeriodicT
         .safeCast(task)
         .flatMap(scheduled => {
           scheduled
-            .getSchedulerPort(model)
+            .getSchedulersPort(model)
             .stream
             .mapToInt(platformModel.schedulers.indexOf(_))
             .filter(_ > -1)

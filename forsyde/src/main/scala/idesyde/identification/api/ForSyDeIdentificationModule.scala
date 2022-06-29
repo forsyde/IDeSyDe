@@ -14,11 +14,13 @@ import idesyde.identification.rules.workload.PeriodicWorkloadIdentificationRule
 import idesyde.identification.rules.mixed.PeriodicTaskToSchedHWIdentRule
 import idesyde.identification.rules.reactor.ReactorMinusIdentificationRule
 import java.util.concurrent.Executors
+import idesyde.utils.BigFractionIsMultipliableFractional
+import idesyde.utils.MultipliableFractional
 
 class ForSyDeIdentificationModule extends IdentificationModule {
     
-  given Numeric[BigFraction] = BigFractionIsNumeric()
   given Integral[BigFraction] = BigFractionIsIntegral()
+  given MultipliableFractional[BigFraction] = BigFractionIsMultipliableFractional()
 
   val identificationRules: Set[IdentificationRule[? <: DecisionModel]] = Set(
     SDFAppIdentificationRule(),

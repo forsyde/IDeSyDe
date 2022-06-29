@@ -1,5 +1,5 @@
 ThisBuild / organization := "io.github.forsyde"
-ThisBuild / version := "0.2.5"
+ThisBuild / version := "0.2.6"
 ThisBuild / scalaVersion := "3.1.1"
 
 lazy val root = project
@@ -36,9 +36,7 @@ lazy val tests = (project in file("tests"))
   .dependsOn(minizinc)
   .dependsOn(cli)
 
-
 ThisBuild / resolvers += Resolver.mavenLocal
-
 
 // TODO: figure out what is
 ThisBuild / assembly / assemblyMergeStrategy := {

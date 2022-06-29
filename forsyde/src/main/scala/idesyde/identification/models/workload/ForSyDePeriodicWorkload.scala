@@ -113,14 +113,27 @@ case class ForSyDePeriodicWorkload(
   //   )
 
   def taskComputationNeeds: Array[Map[String, Map[String, Long]]] =
-    executables.map(execs => 
-      execs.flatMap(e => InstrumentedExecutable.safeCast(e).toScala)
-      .map(ie => ie.getOperationRequirements)
-      .reduce((m1, m2) => 
-        m2.forEach((k, v) -> m1.merge(k, v, (v1, v2) -> ))
-        m1
-        ))
-
+    executables.map(execs =>
+      execs
+        .flatMap(e => InstrumentedExecutable.safeCast(e).toScala)
+        .map(ie => ie.getOperationRequirements)
+        .reduce((m1, m2) =>
+          m2.forEach((group, groupMap) =>
+            m1.merge(
+              group,
+              groupMap,
+              (childMap1, childMap2) => {
+                childMap2.forEach((k, v) => childMap1.merge(k, v, (v1, v2) => v1 + v2))
+                childMap1
+              }
+            )
+          )
+          m1
+        )
+        .asScala
+        .toMap
+        .map((k, v) => k -> v.asScala.map((kk, vv) => kk -> vv.toLong).toMap)
+    )
 
   // compute the affine relations
   var createdPerTasks = Buffer[(Task, BigFraction, BigFraction, BigFraction)]()

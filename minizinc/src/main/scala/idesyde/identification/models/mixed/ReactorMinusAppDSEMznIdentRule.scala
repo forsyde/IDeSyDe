@@ -11,7 +11,7 @@ import idesyde.identification.models.reactor.ReactorMinusAppMapAndSched
 final case class ReactorMinusAppDSEMznIdentRule()
     extends ForSyDeIdentificationRule[ReactorMinusAppMapAndSchedMzn]:
 
-  def identify(
+  def identifyFromForSyDe(
       model: ForSyDeSystemGraph,
       identified: Set[DecisionModel]
   ): (Boolean, Option[ReactorMinusAppMapAndSchedMzn]) =

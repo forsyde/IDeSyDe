@@ -31,7 +31,7 @@ import java.util.concurrent.ThreadPoolExecutor
 final case class ReactorMinusIdentificationRule(executor: ThreadPoolExecutor)
     extends ForSyDeIdentificationRule[ReactorMinusApplication] {
 
-  def identify(model: ForSyDeSystemGraph, identified: Set[DecisionModel]) = {
+  def identifyFromForSyDe(model: ForSyDeSystemGraph, identified: Set[DecisionModel]) = {
     val elements = model.vertexSet.asScala
       .filter(LinguaFrancaElem.conforms(_))
       .map(LinguaFrancaElem.safeCast(_).get)
@@ -174,9 +174,19 @@ final case class ReactorMinusIdentificationRule(executor: ThreadPoolExecutor)
           srcReaction <- srcReactor.getReactionsPort(model).asScala;
           dstReaction <- dstReactor.getReactionsPort(model).asScala;
           if model
-            .hasConnection(srcReaction, srcReactor, srcEdge.getSourcePort.get, srcEdge.getSourcePort.get);
+            .hasConnection(
+              srcReaction,
+              srcReactor,
+              srcEdge.getSourcePort.get,
+              srcEdge.getSourcePort.get
+            );
           if model
-            .hasConnection(dstReactor, dstReaction, dstEdge.getTargetPort.get, dstEdge.getTargetPort.get)
+            .hasConnection(
+              dstReactor,
+              dstReaction,
+              dstEdge.getTargetPort.get,
+              dstEdge.getTargetPort.get
+            )
         ) yield (srcReaction, dstReaction) -> c
       )
       .toMap

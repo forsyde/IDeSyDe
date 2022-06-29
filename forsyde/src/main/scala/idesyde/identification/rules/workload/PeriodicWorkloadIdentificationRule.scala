@@ -31,7 +31,7 @@ import idesyde.utils.MultipliableFractional
 final class PeriodicWorkloadIdentificationRule(using MultipliableFractional[BigFraction])
     extends ForSyDeIdentificationRule[ForSyDePeriodicWorkload] {
 
-  def identify(
+  def identifyFromForSyDe(
       model: ForSyDeSystemGraph,
       identified: Set[DecisionModel]
   ): (Boolean, Option[ForSyDePeriodicWorkload]) =

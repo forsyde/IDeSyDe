@@ -18,7 +18,7 @@ import forsyde.io.java.typed.viewers.decision.Scheduled
 
 class PeriodicTaskToSchedHWIdentRule extends ForSyDeIdentificationRule[PeriodicTaskToSchedHW] {
 
-  def identify(
+  def identifyFromForSyDe(
       model: ForSyDeSystemGraph,
       identified: Set[DecisionModel]
   ): (Boolean, Option[PeriodicTaskToSchedHW]) =

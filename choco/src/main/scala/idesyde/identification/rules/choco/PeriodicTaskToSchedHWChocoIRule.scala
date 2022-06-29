@@ -7,9 +7,10 @@ import forsyde.io.java.core.ForSyDeSystemGraph
 import idesyde.identification.models.choco.PeriodicTaskToSchedHWChoco
 import idesyde.identification.DecisionModel
 
-class PeriodicTaskToSchedHWChocoIRule extends ForSyDeIdentificationRule[PeriodicTaskToSchedHWChoco] {
+class PeriodicTaskToSchedHWChocoIRule
+    extends ForSyDeIdentificationRule[PeriodicTaskToSchedHWChoco] {
 
-  def identify(
+  def identifyFromForSyDe(
       model: ForSyDeSystemGraph,
       identified: Set[DecisionModel]
   ): (Boolean, Option[PeriodicTaskToSchedHWChoco]) = {

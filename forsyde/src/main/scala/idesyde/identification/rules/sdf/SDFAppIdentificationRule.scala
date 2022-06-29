@@ -23,7 +23,7 @@ final case class SDFAppIdentificationRule()(using Integral[BigFraction])
     extends ForSyDeIdentificationRule[SDFApplication]
     with SDFQueriesMixin {
 
-  def identify(
+  def identifyFromForSyDe(
       model: ForSyDeSystemGraph,
       identified: Set[DecisionModel]
   ): (Boolean, Option[SDFApplication]) = {
@@ -41,22 +41,28 @@ final case class SDFAppIdentificationRule()(using Integral[BigFraction])
         c.getConsumerPort(model).map(a => sdfActors.contains(a)).orElse(false)
           && c.getProducerPort(model).map(a => sdfActors.contains(a)).orElse(false)
       )
-    
+
     lazy val topology = {
       val g = SimpleDirectedGraph.createBuilder[SDFActor | SDFChannel, Int](() => 0)
       sdfActors.foreach(g.addVertex(_))
       sdfChannels.foreach(c => {
         g.addVertex(c)
-        c.getProducerPort(model).ifPresent(src => {
-          model.getAllEdges(src.getViewedVertex, c.getViewedVertex).forEach(e => {
-            g.addEdge(src, c, e.getSourcePort.map(sp => src.getProduction.get(sp)).orElse(0))
+        c.getProducerPort(model)
+          .ifPresent(src => {
+            model
+              .getAllEdges(src.getViewedVertex, c.getViewedVertex)
+              .forEach(e => {
+                g.addEdge(src, c, e.getSourcePort.map(sp => src.getProduction.get(sp)).orElse(0))
+              })
           })
-        })
-        c.getConsumerPort(model).ifPresent(dst => {
-          model.getAllEdges(c.getViewedVertex, dst.getViewedVertex).forEach(e => {
-            g.addEdge(dst, c, e.getTargetPort.map(tp => dst.getConsumption.get(tp)).orElse(0))
+        c.getConsumerPort(model)
+          .ifPresent(dst => {
+            model
+              .getAllEdges(c.getViewedVertex, dst.getViewedVertex)
+              .forEach(e => {
+                g.addEdge(dst, c, e.getTargetPort.map(tp => dst.getConsumption.get(tp)).orElse(0))
+              })
           })
-        })
       })
       g.buildAsUnmodifiable
     }

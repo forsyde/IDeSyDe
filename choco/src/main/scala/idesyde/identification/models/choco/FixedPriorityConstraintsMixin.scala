@@ -13,14 +13,14 @@ import org.chocosolver.solver.variables.BoolVar
 
 trait FixedPriorityConstraintsMixin extends ChocoModelMixin {
 
-  val priorities: Array[Int]
-  val periods: Array[BigFraction]
-  val deadlines: Array[BigFraction]
-  val wcets: Array[Array[BigFraction]]
-  val taskExecution: Array[Array[BoolVar]]
-  val responseTimes: Array[IntVar]
-  val blockingTimes: Array[IntVar]
-  val durations: Array[Array[IntVar]]
+  def priorities: Array[Int]
+  def periods: Array[BigFraction]
+  def deadlines: Array[BigFraction]
+  def wcets: Array[Array[BigFraction]]
+  def taskExecution: Array[Array[BoolVar]]
+  def responseTimes: Array[IntVar]
+  def blockingTimes: Array[IntVar]
+  def durations: Array[Array[IntVar]]
 
   def sufficientRMSchedulingPoints(taskIdx: Int): Array[BigFraction] = Array.empty
 
@@ -129,7 +129,7 @@ trait FixedPriorityConstraintsMixin extends ChocoModelMixin {
 
     def propagate(x$0: Int): Unit =
       taskExecution.zipWithIndex
-        .filter((pi, i) => pi(schedulerIdx).isInstantiatedTo(1))
+        .filter((pi, i) => pi(schedulerIdx).contains(1))
         .foreach((pi, i) => {
           val dur = Math.max(
             durations(i)(schedulerIdx).getLB(),
@@ -156,5 +156,7 @@ trait FixedPriorityConstraintsMixin extends ChocoModelMixin {
           if (responseTimes(i).getLB() < rtL) responseTimes(i).updateLowerBound(rtL, this)
           //if (rtU < responseTimes(i).getUB()) responseTimes(i).updateUpperBound(rtU, this)
         })
+
+      
   }
 }

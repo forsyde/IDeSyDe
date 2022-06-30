@@ -16,7 +16,7 @@ import idesyde.identification.ForSyDeDecisionModel
 import forsyde.io.java.core.ForSyDeSystemGraph
 import scala.concurrent.ExecutionContext
 
-class PanoramaUseCaseWithoutSolutionSuite extends AnyFunSuite {
+class PanoramaUseCaseWithSolutionSuite extends AnyFunSuite {
 
   given ExecutionContext = ExecutionContext.global
 
@@ -37,16 +37,21 @@ class PanoramaUseCaseWithoutSolutionSuite extends AnyFunSuite {
   val forSyDeModelHandler = ForSyDeModelHandler().registerDriver(ForSyDeAmaltheaDriver())
 
   val flightInfo = forSyDeModelHandler.loadModel(
-    Paths.get("tests/models/panorama/flight-information-system.amxmi")
+    Paths.get("tests/models/panorama/flight-information-system-easier.amxmi")
   )
   val radar = forSyDeModelHandler.loadModel(
-    Paths.get("tests/models/panorama/radar-system.amxmi")
+    Paths.get("tests/models/panorama/radar-system-easier.amxmi")
   )
   val bounds =
     forSyDeModelHandler.loadModel(Paths.get("tests/models/panorama/utilizationBounds.forsyde.xmi"))
   val model           = flightInfo.merge(radar).merge(bounds)
   lazy val identified = identificationHandler.identifyDecisionModels(model)
   lazy val chosen     = explorationHandler.chooseExplorersAndModels(identified)
+
+  test("PANORAMA case study - can write back model before solution") {
+    forSyDeModelHandler.writeModel(model, "tests/models/panorama/input_to_dse.fiodl")
+    forSyDeModelHandler.writeModel(model, "tests/models/panorama/input_to_dse.amxmi")
+  }
 
   test("PANORAMA case study without any solutions - At least 1 decision model") {
     assert(identified.size > 0)
@@ -56,11 +61,11 @@ class PanoramaUseCaseWithoutSolutionSuite extends AnyFunSuite {
     assert(chosen.size > 0)
   }
 
-  test("PANORAMA case study without any solutions - no solution found") {
+  test("PANORAMA case study without any solutions - at least 1 solution found") {
     val solutions = chosen
-      .flatMap((explorer, decisionModel) => explorer.explore[ForSyDeSystemGraph](decisionModel))
-      .take(1)
-    assert(solutions.size == 0)
+      .flatMap((explorer, decisionModel) => explorer.explore[ForSyDeSystemGraph](decisionModel).map(sol =>
+        forSyDeModelHandler.writeModel(model.merge(sol), "tests/model/panorama/output_of_dse.fiodl")))
+    assert(solutions.size > 0)
   }
 
 }

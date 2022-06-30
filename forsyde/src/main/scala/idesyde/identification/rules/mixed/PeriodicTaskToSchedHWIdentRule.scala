@@ -15,8 +15,10 @@ import idesyde.identification.models.mixed.PeriodicTaskToSchedHW
 import forsyde.io.java.typed.viewers.platform.InstrumentedCommunicationModule
 import forsyde.io.java.typed.viewers.decision.MemoryMapped
 import forsyde.io.java.typed.viewers.decision.Scheduled
+import idesyde.utils.MultipliableFractional
 
-class PeriodicTaskToSchedHWIdentRule extends ForSyDeIdentificationRule[PeriodicTaskToSchedHW] {
+final case class PeriodicTaskToSchedHWIdentRule()
+(using MultipliableFractional[BigFraction]) extends ForSyDeIdentificationRule[PeriodicTaskToSchedHW] {
 
   def identifyFromForSyDe(
       model: ForSyDeSystemGraph,

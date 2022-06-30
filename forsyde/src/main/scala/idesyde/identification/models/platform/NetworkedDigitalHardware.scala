@@ -78,7 +78,7 @@ final case class NetworkedDigitalHardware(
 
   val topology = AsUndirectedGraph(topologyDirected)
 
-  private lazy val routesProc2MemoryAlgorithm = AllDirectedPaths(topology)
+  private lazy val routesProc2MemoryAlgorithm = AllDirectedPaths(topologyDirected)
 
   lazy val routesProc2Memory =
     processingElems.zipWithIndex.map((pe, src) =>

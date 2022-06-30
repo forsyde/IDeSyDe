@@ -31,8 +31,9 @@ trait Active4StageDurationMixin extends ChocoModelMixin {
     val memories      = 0 until allowedProc2MemoryDataPaths.head.length
     val communicators = 0 until dataCommunicationMapping.head.length
     // auxiliary local variables
+    scribe.debug(communicators.map(c => dataTravelTime.map(t => t(c)).sum).mkString(", "))
     val commLoad = communicators
-      .map(c => chocoModel.intVar("load_" + c, 0, dataTravelTime.map(t => t(c)).sum))
+      .map(c => chocoModel.intVar("load_" + c, 0, dataTravelTime.map(t => t(c)).sum, true))
       .toArray
     // posting constraints proper
     processors.map(processorIndex =>

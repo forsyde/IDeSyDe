@@ -2,6 +2,7 @@ package idesyde.identification.models.mixed
 
 import math.Ordering.Implicits.infixOrderingOps
 import scala.jdk.OptionConverters.*
+import scala.jdk.StreamConverters.*
 import scala.jdk.CollectionConverters.*
 
 import org.apache.commons.math3.fraction.BigFraction
@@ -16,6 +17,7 @@ import forsyde.io.java.typed.viewers.platform.InstrumentedCommunicationModule
 import forsyde.io.java.typed.viewers.execution.Task
 import idesyde.identification.models.workload.DependentDeadlineMonotonicOrdering
 import forsyde.io.java.typed.viewers.nonfunctional.UtilizationBoundedProcessingElem
+import idesyde.utils.MultipliableFractional
 
 final case class PeriodicTaskToSchedHW(
     val taskModel: ForSyDePeriodicWorkload,
@@ -23,41 +25,48 @@ final case class PeriodicTaskToSchedHW(
     val mappedTasks: Array[Int] = Array.emptyIntArray,
     val scheduledTasks: Array[Int] = Array.emptyIntArray,
     val mappedChannels: Array[Int] = Array.emptyIntArray
-) extends ForSyDeDecisionModel:
+)(using MultipliableFractional[BigFraction]) extends ForSyDeDecisionModel:
 
   val coveredVertexes: Iterable[Vertex] = taskModel.coveredVertexes ++ schedHwModel.coveredVertexes
 
   lazy val wcets: Array[Array[BigFraction]] = {
     // alll executables of task are instrumented
-    val instrumentedExecutables = taskModel.tasks.zipWithIndex
-      .filter((task, i) => taskModel.executables(i).forall(InstrumentedExecutable.conforms(_)))
-      .map((task, i) => taskModel.executables(i).map(InstrumentedExecutable.enforce(_)))
-    // all processing elems are instrumented
-    val instrumentedPEsRange = schedHwModel.hardware.processingElems
-      .filter(pe => InstrumentedProcessingModule.conforms(pe))
-      .map(pe => InstrumentedProcessingModule.enforce(pe))
+    // scribe.debug(taskModel.executables.mkString("[", ",", "]"))
     // compute the matrix (lazily)
-    instrumentedExecutables.zipWithIndex.map((runnables, i) => {
-      instrumentedPEsRange.zipWithIndex.map((pe, j) => {
-        runnables.foldRight(BigFraction.ZERO)((runnable, sum) => {
-          // find the minimum matching between the runnable and the processing element
-          pe.getModalInstructionsPerCycle.values.stream
-            .flatMap(ipcGroup => {
-              runnable.getOperationRequirements.values.stream
-                .filter(opGroup => ipcGroup.keySet.containsAll(opGroup.keySet))
-                .map(opGroup => {
-                  opGroup.entrySet.stream
-                    .map(opEntry =>
-                      BigFraction(opEntry.getValue)
-                        .divide(BigFraction(ipcGroup.get(opEntry.getKey)))
-                    )
-                    .reduce(BigFraction.ZERO, (f1, f2) => f1.add(f2))
-                    .divide(pe.getOperatingFrequencyInHertz)
-                })
-            })
-            .min((f1, f2) => f1.compareTo(f2))
-            .orElse(BigFraction.MINUS_ONE)
-        })
+    // scribe.debug(taskModel.taskComputationNeeds.mkString(", "))
+    taskModel.taskComputationNeeds.map(needs => {
+      // scribe.debug(needs.mkString(","))
+      schedHwModel.hardware.processingElems.map(pe => {
+        InstrumentedProcessingModule
+          .safeCast(pe)
+          .map(peInst => {
+            // scribe.debug(peInst.getModalInstructionsPerCycle.asScala.mkString(", "))
+            peInst.getModalInstructionsPerCycle.values.stream
+              .flatMap(ipcGroup => {
+                needs.values
+                  // due to how it is implemented in java, the contains all check if the parameter
+                  // is a subset of the callee, and not vice-versa
+                  .map(opGroup => {
+                    opGroup})
+                  .filter(opGroup => opGroup.keySet.forall(opName => ipcGroup.containsKey(opName)))
+                  .map(opGroup => {
+                    opGroup
+                      .map((opKey, opValue) =>
+                        BigFraction(opValue)
+                          .divide(BigFraction(ipcGroup.get(opKey)))
+                      )
+                      .sum
+                      // .reduce((f1, f2) => f1.add(f2))
+                      .divide(pe.getOperatingFrequencyInHertz)
+                  })
+                  .asJavaSeqStream
+              })
+              .filter(f => f.compareTo(BigFraction.MINUS_ONE) > 0)
+              .min((f1, f2) => f1.compareTo(f2))
+              .orElse(BigFraction.MINUS_ONE)
+          })
+          .orElse(BigFraction.ZERO)
+
       })
     })
   }

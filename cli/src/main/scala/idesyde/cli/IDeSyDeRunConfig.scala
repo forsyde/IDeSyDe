@@ -66,7 +66,7 @@ case class IDeSyDeRunConfig(
           .map((e, m) => (e.asInstanceOf[ForSyDeIOExplorer], m.asInstanceOf[ForSyDeDecisionModel]))
           .map((explorer, decisionModel) =>
             explorer
-              .explore(decisionModel)(using executionContext)
+              .explore[ForSyDeSystemGraph](decisionModel)(using executionContext)
               .foldLeft(0)((res, result) => {
                 if (!outputModelPath.toFile.exists || outputModelPath.toFile.isFile) then
                   scribe.debug(s"writing solution at ${outputModelPath.toString}")

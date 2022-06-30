@@ -28,7 +28,7 @@ import org.jgrapht.alg.connectivity.ConnectivityInspector
 import forsyde.io.java.typed.viewers.execution.LoopingTask
 import idesyde.utils.MultipliableFractional
 
-final class PeriodicWorkloadIdentificationRule(using MultipliableFractional[BigFraction])
+final class PeriodicWorkloadIdentificationRule()(using MultipliableFractional[BigFraction])
     extends ForSyDeIdentificationRule[ForSyDePeriodicWorkload] {
 
   def identifyFromForSyDe(

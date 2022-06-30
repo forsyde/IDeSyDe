@@ -21,13 +21,8 @@ final case class GecodeMiniZincExplorer()
     extends SimpleMiniZincCPExplorer
     with ReactorMinusDSEMznMerger:
 
-  override def canExplore(decisionModel: DecisionModel): Boolean =
-    decisionModel match {
-      case m: ForSyDeDecisionModel =>
-        "minizinc --solvers".!!.contains("org.gecode.gecode")
-      case _ =>
-        false
-    }
+  override def canExploreForSyDe(decisionModel: ForSyDeDecisionModel): Boolean =
+    "minizinc --solvers".!!.contains("org.gecode.gecode")
 
   def estimateTimeUntilFeasibility(decisionModel: DecisionModel): Duration =
     decisionModel match
@@ -61,7 +56,7 @@ final case class GecodeMiniZincExplorer()
         50 * estimateMemoryUntilFeasibility(decisionModel)
       case _ => 0
 
-  def explore(decisionModel: DecisionModel)(using ExecutionContext) =
+  def exploreForSyDe(decisionModel: ForSyDeDecisionModel)(using ExecutionContext) =
     decisionModel match
       case m: ReactorMinusAppMapAndSchedMzn =>
         val results = explorationSolve(

@@ -20,12 +20,8 @@ final case class ChuffedMiniZincExplorer()
     extends SimpleMiniZincCPExplorer
     with ReactorMinusDSEMznMerger:
 
-  override def canExplore(decisionModel: DecisionModel): Boolean =
-    decisionModel match {
-      case m: ForSyDeDecisionModel =>
-        "minizinc --solvers".!!.contains("org.chuffed.chuffed")
-      case _ => false
-    }
+  override def canExploreForSyDe(decisionModel: ForSyDeDecisionModel): Boolean =
+    "minizinc --solvers".!!.contains("org.chuffed.chuffed")
 
   def estimateTimeUntilFeasibility(decisionModel: DecisionModel): Duration =
     decisionModel match
@@ -59,7 +55,7 @@ final case class ChuffedMiniZincExplorer()
         50 * estimateMemoryUntilFeasibility(decisionModel)
       case _ => 0
 
-  def explore(decisionModel: DecisionModel)(using ExecutionContext) =
+  def exploreForSyDe(decisionModel: ForSyDeDecisionModel)(using ExecutionContext) =
     decisionModel match
       case m: ReactorMinusAppMapAndSchedMzn =>
         explorationSolve(

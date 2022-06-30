@@ -75,49 +75,14 @@ case class ForSyDePeriodicWorkload(
     ArithmeticUtils.gcd(frac1.getDenominator.longValue, frac2.getDenominator.longValue)
   )
 
-  // build the graph of reactions to enable periodic reductions
-  // scribe.debug(reactiveStimulusSrcs.map(_.mkString("[", ",", "]")).mkString("[", ",", "]"))
-  // scribe.debug(reactiveStimulusDst.mkString("[", ",", "]"))
-  // val reactiveGraph: Graph[Integer, Integer] =
-  //   if (!reactiveStimulusSrcs.isEmpty && !reactiveStimulusDst.isEmpty) then
-  //     SparseIntDirectedGraph(
-  //       tasks.length,
-  //       reactiveStimulusSrcs.zipWithIndex
-  //         .flatMap((r, i) => r.map(s => (s, i)))
-  //         .map((s, i) =>
-  //           Pair(
-  //             s.asInstanceOf[Integer],
-  //             reactiveStimulusDst(i).asInstanceOf[Integer]
-  //           )
-  //         )
-  //         .toList
-  //         .asJava,
-  //       IncomingEdgesSupport.LAZY_INCOMING_EDGES
-  //     )
-  //   else
-  //     SimpleDirectedGraph
-  //       .createBuilder[Integer, Integer](() => 0.asInstanceOf[Integer])
-  //       .addVertices((0 until tasks.length).map(_.asInstanceOf[Integer]).toArray: _*)
-  //       .build
-  // SparseIntDirectedGraph(
-  //   tasks.length,
-  //   ju.List.of()
-  // )
-  // val periods = tasks.map(t =>
-  //   stimulusGraph.incomingEdgesOf(t).stream.map(e => stimulusGraph.getEdgeSource(e))
-  //   .(src => src match {
-  //     case per: PeriodicStimulus =>
-  //       BigFraction(per.getPeriodNumerator, per.getPeriodDenominator)
-  //     case _ => BigFraction.MINUS_ONE
-  //   })
-  //   )
-
   def taskComputationNeeds: Array[Map[String, Map[String, Long]]] =
     executables.map(execs =>
       execs
         .flatMap(e => InstrumentedExecutable.safeCast(e).toScala)
-        .map(ie => ie.getOperationRequirements)
-        .reduce((m1, m2) =>
+        .map(ie => 
+          ie.getOperationRequirements
+        )
+        .foldLeft(ju.HashMap[String, ju.Map[String, java.lang.Long]]())((m1, m2) =>
           m2.forEach((group, groupMap) =>
             m1.merge(
               group,
@@ -155,7 +120,7 @@ case class ForSyDePeriodicWorkload(
       .safeCast(next)
       .filter(s => !s.getHasORSemantics)
       .map(s => {
-        Array(incomingEvents.maxBy(e => e._1))
+        Array(incomingEvents.maxBy((p, o, d) => p))
       })
       .orElse(incomingEvents)
     // change the stimulus in the vertex depending on traits it has
@@ -194,7 +159,7 @@ case class ForSyDePeriodicWorkload(
           (
             e._1.divide(upsample.getRepetitivePredecessorHolds),
             e._2.add(e._1.divide(upsample.getInitialPredecessorHolds)),
-            e._3
+            e._3.divide(upsample.getRepetitivePredecessorHolds)
           )
         })
       case downsample: Downsample =>
@@ -202,11 +167,13 @@ case class ForSyDePeriodicWorkload(
           (
             e._1.multiply(downsample.getRepetitivePredecessorSkips),
             e._2.add(e._1.multiply(downsample.getInitialPredecessorSkips)),
-            e._3
+            e._3.multiply(downsample.getRepetitivePredecessorSkips)
           )
         })
     }
+    // scribe.debug(next.getIdentifier + ": " + stimulusGraphTuples(next).mkString(", "))
   }
+  // scribe.debug(createdPerTasks.map((t, p, o, d) => (t.getIdentifier, p, o, d)).mkString(", "))
   // put the created tasks in the Mixin methods
   val periods           = createdPerTasks.map(_._2).toArray
   val offsets           = createdPerTasks.map(_._3).toArray
@@ -365,13 +332,27 @@ case class ForSyDePeriodicWorkload(
     taskCommunicationGraph.edgeSet.forEach(l => {
       val src = taskCommunicationGraph.getEdgeSource(l)
       val dst = taskCommunicationGraph.getEdgeTarget(l)
-      (src, dst) match {
-        case (task, data): (Task, DataBlock) =>
-          g.addEdge(tasks.indexOf(task), tasks.length + dataBlocks.indexOf(data), l)
-        case (data, task): (DataBlock, Task) =>
-          g.addEdge(tasks.length + dataBlocks.indexOf(data), tasks.indexOf(task), l)
-        case _ =>
+      src match {
+        case task: CommunicatingTask =>
+          dst match {
+            case data: DataBlock =>
+              g.addEdge(tasks.indexOf(task), tasks.length + dataBlocks.indexOf(data), l)
+            case _ =>
+          }
+        case data: DataBlock =>
+          dst match {
+            case task: CommunicatingTask =>
+              g.addEdge(tasks.length + dataBlocks.indexOf(data), tasks.indexOf(task), l)
+            case _ =>
+          }
       }
+      // (src, dst) match {
+      //   case (task, data): (Task, DataBlock) =>
+      //     g.addEdge(tasks.indexOf(task), tasks.length + dataBlocks.indexOf(data), l)
+      //   case (data, task): (DataBlock, Task) =>
+      //     g.addEdge(tasks.length + dataBlocks.indexOf(data), tasks.indexOf(task), l)
+      //   case _ =>
+      // }
     })
     g.buildAsUnmodifiable
   }

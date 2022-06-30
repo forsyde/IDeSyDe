@@ -18,7 +18,8 @@ import idesyde.identification.DecisionModel
 
 class ChocoExplorer() extends ForSyDeIOExplorer:
 
-  def canExplore(forSyDeDecisionModel: DecisionModel): Boolean = forSyDeDecisionModel match
+  def canExploreForSyDe(decisionModel: ForSyDeDecisionModel): Boolean = 
+    decisionModel match
     case chocoForSyDeDecisionModel: ChocoCPForSyDeDecisionModel => true
     case _                                                      => false
 
@@ -48,7 +49,7 @@ class ChocoExplorer() extends ForSyDeIOExplorer:
       Duration.ofHours(chocoForSyDeDecisionModel.chocoModel.getVars.size)
     case _ => Duration.ofMinutes(Int.MaxValue)
 
-  def explore(forSyDeDecisionModel: DecisionModel)(using
+  def exploreForSyDe(forSyDeDecisionModel: ForSyDeDecisionModel)(using
       ExecutionContext
   ): LazyList[ForSyDeSystemGraph] = forSyDeDecisionModel match
     case chocoCpModel: ChocoCPForSyDeDecisionModel =>
@@ -59,14 +60,14 @@ class ChocoExplorer() extends ForSyDeIOExplorer:
       solver.setLearningSignedClauses
       solver.setNoGoodRecordingFromRestarts
       solver.setRestartOnSolutions
-      solver.addStopCriterion(SolutionCounter(model, 100L))
+      solver.addStopCriterion(SolutionCounter(model, 20L))
       if (!chocoCpModel.strategies.isEmpty) then solver.setSearch(chocoCpModel.strategies: _*)
       LazyList
         .continually(solver.solve)
         .takeWhile(feasible => feasible)
         .filter(feasible => feasible)
         .flatMap(feasible => {
-          //scribe.debug(s"pareto size: ${paretoMaximizer.getParetoFront.size}")
+          // scribe.debug(s"pareto size: ${paretoMaximizer.getParetoFront.size}")
           paretoMaximizer.getParetoFront.asScala
         })
         .map(paretoSolutions => {

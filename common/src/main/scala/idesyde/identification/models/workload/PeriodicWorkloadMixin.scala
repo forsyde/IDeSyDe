@@ -59,12 +59,6 @@ trait PeriodicWorkloadMixin[TimeT : ClassTag](using fracT: MultipliableFractiona
     */
   def computeLCM(t1: TimeT, t2: TimeT): TimeT
 
-  // the following implementations is not efficient. But generic.
-  // TODO: finding a way that is both eficient and generic
-  // def instancesReleases(tidx: Int)(int: Int): TimeT =
-  //   (1 until int).map(_ => periods(tidx)).sum + offsets(tidx) // *(fracT.one * int)
-  // def instancesDeadlines(tidx: Int)(int: Int): TimeT =
-  //   (1 until int).map(_ => relativeDeadlines(tidx)).sum + offsets(tidx) //*(fracT.one * int)
   lazy val hyperPeriod: TimeT = periods.reduce((t1, t2) => computeLCM(t1, t2))
   lazy val tasksNumInstances: Array[Int] =
     (0 until periodicTasks.length)
@@ -72,88 +66,6 @@ trait PeriodicWorkloadMixin[TimeT : ClassTag](using fracT: MultipliableFractiona
       .map(fracT.toInt(_))
       .toArray
 
-  // def maximalInterference(src: Int)(dst: Int)(using num: Numeric[TimeT]): Int =
-  //   // val src = periodicTasks.indexOf(srcTask)
-  //   // val dst = periodicTasks.indexOf(dstTask)
-  //   (0 until tasksNumInstances(dst))
-  //     .map(dstIdx => {
-  //       (0 until tasksNumInstances(src))
-  //         // .filterNot(srcIdx =>
-  //         //   instancePreceeds(src)(dst)(srcIdx)(dstIdx)
-  //         // )
-  //         .count(srcIdx => {
-  //           // check intersection by comparing the endpoints
-  //           (
-  //             num.compare(
-  //               instancesReleases(src)(srcIdx),
-  //               instancesReleases(dst)(dstIdx)
-  //             ) <= 0 &&
-  //             num.compare(
-  //               instancesReleases(dst)(dstIdx),
-  //               instancesDeadlines(src)(srcIdx)
-  //             ) <= 0
-  //           )
-  //           ||
-  //           (
-  //             num.compare(
-  //               instancesReleases(dst)(dstIdx),
-  //               instancesReleases(src)(srcIdx)
-  //             ) <= 0 &&
-  //             num.compare(
-  //               instancesReleases(src)(srcIdx),
-  //               instancesDeadlines(dst)(dstIdx)
-  //             ) <= 0
-  //           )
-  //         })
-  //     })
-  //     .max
-
-// def maximumOffsetDislocation(
-//     maxInstances: Int
-// )(deltaOffset: TimeT, deltaPeriod: TimeT): TimeT = {
-//   // TODO: make this more efficient
-//   if (deltaPeriod > fracT.zero) then
-//     deltaOffset + (0 until maxInstances).map(_ => deltaPeriod).sum
-//   else if (deltaPeriod <= fracT.zero && deltaOffset >= fracT.zero) then deltaOffset
-//   else {
-//     val instance = (deltaOffset / (-deltaPeriod.toDouble.floor.toLong)) + 1
-//     deltaOffset.add(
-//       deltaPeriod.multiply(if (instance <= maxInstances) then instance else maxInstances)
-//     )
-//   }
-// }
-
-// lazy val maximalOffsetDislocations: Array[Array[TimeT]] =
-//   tasks.zipWithIndex.map((src, i) => {
-//     tasks.zipWithIndex.map((dst, j) => {
-//       reactiveStimulus.zipWithIndex
-//         .filter((stimulus, k) => {
-//           reactiveStimulusSrcs(k).contains(i) &&
-//           reactiveStimulusDst(k) == j
-//         })
-//         .map((stimulus, _) => {
-//           DownsampleReactiveStimulus
-//             .safeCast(stimulus)
-//             .map(downsample => {
-//               for (
-//                 n <- 0 until tasksNumInstancesInHyperPeriod(i);
-//                 m = n * downsample.getRepetitivePredecessorSkips + downsample.getInitialPredecessorSkips
-//               ) yield (m.toInt, n)
-//             })
-//             .or(() => {
-//               UpsampleReactiveStimulus
-//                 .safeCast(stimulus)
-//                 .map(upsample => {
-//                   for (
-//                     m <- 0 until tasksNumInstancesInHyperPeriod(j);
-//                     n = m * upsample.getRepetitivePredecessorHolds + upsample.getInitialPredecessorHolds
-//                   ) yield (m, n.toInt)
-//                 })
-//             })
-//             .orElseGet(() => for (m <- 0 until tasksNumInstancesInHyperPeriod(j)) yield (m, m))
-//         })
-//     })
-//   })
   lazy val offsetsWithDependencies = {
     var offsetsMut = offsets.clone
     val iter       = TopologicalOrderIterator(affineRelationsGraph)

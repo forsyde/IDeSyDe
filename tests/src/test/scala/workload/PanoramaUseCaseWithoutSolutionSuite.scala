@@ -58,7 +58,9 @@ class PanoramaUseCaseWithoutSolutionSuite extends AnyFunSuite {
 
   test("PANORAMA case study without any solutions - no solution found") {
     val solutions = chosen
-      .flatMap((explorer, decisionModel) => explorer.explore[ForSyDeSystemGraph](decisionModel))
+      .flatMap((explorer, decisionModel) => explorer.explore[ForSyDeSystemGraph](decisionModel).map(sol =>
+        forSyDeModelHandler.writeModel(model.merge(sol), "tests/models/panorama/wrong_output_of_dse.fiodl")
+        sol))
       .take(1)
     assert(solutions.size == 0)
   }

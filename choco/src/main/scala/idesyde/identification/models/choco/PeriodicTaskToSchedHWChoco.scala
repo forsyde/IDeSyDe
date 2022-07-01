@@ -39,6 +39,7 @@ import idesyde.exploration.explorers.SimpleWorkloadBalancingDecisionStrategy
 import idesyde.utils.BigFractionIsMultipliableFractional
 import idesyde.utils.MultipliableFractional
 import org.chocosolver.solver.variables.BoolVar
+import forsyde.io.java.typed.viewers.visualization.Visualizable
 
 final case class PeriodicTaskToSchedHWChoco(
     val sourceForSyDeDecisionModel: PeriodicTaskToSchedHW
@@ -153,6 +154,9 @@ final case class PeriodicTaskToSchedHWChoco(
     )
   def taskCommunicationMapping = taskCommMapping
   def dataCommunicationMapping = dataBlockCommMapping
+  
+  // tasks and data must be mapped to at least one location
+  taskExecution.foreach(ts => model.or(ts:_*))
   // def taskReadsMessage = sourceForSyDeDecisionModel.taskModel.tasks.
   // --- durations ----
   // scribe.debug(sourceForSyDeDecisionModel.wcets.map(_.map(f => f.multiply(timeMultiplier).getNumeratorAsInt.toString).mkString("[", ",", "]")).mkString("[", ",", "]"))
@@ -310,18 +314,7 @@ final case class PeriodicTaskToSchedHWChoco(
   // basic utilization
   postMinimalResponseTimesByBlocking()
   postMaximumUtilizations()
-  // sourceForSyDeDecisionModel.taskModel.reactiveStimulus.zipWithIndex.foreach((s, i) => {
-  //   sourceForSyDeDecisionModel.taskModel
-  //     .reactiveStimulusSrcs(i)
-  //     .foreach(src => {
-  //       val dst = sourceForSyDeDecisionModel.taskModel.reactiveStimulusDst(i)
-  //       //scribe.debug(s"dst ${dst} and src ${src}")
-  //       model.ifThen(
-  //         taskExecution(dst).ne(taskExecution(src)).decompose,
-  //         blockingTimes(dst).ge(responseTimes(src)).decompose
-  //       )
-  //     })
-  // })
+
   // for each FP scheduler
   // rt >= bt + sum of all higher prio tasks in the same CPU
   sourceForSyDeDecisionModel.schedHwModel.allocatedSchedulers.zipWithIndex
@@ -360,16 +353,18 @@ final case class PeriodicTaskToSchedHWChoco(
     sourceForSyDeDecisionModel.schedHwModel.hardware.processingElems.length - 1
   )
   // count different ones
-  model.sum(peIsUsed, "=", nUsedPEs).post
+  // model.sum(peIsUsed, "=", nUsedPEs).post
   // this flips the direction of the variables since the objective must be MAX
-  val nFreePEs = model
-    .intVar(sourceForSyDeDecisionModel.schedHwModel.hardware.processingElems.length)
-    .sub(nUsedPEs)
-    .intVar
+  // val nFreePEs = model
+    // .intVar(sourceForSyDeDecisionModel.schedHwModel.hardware.processingElems.length)
+    // .sub(nUsedPEs)
+    // .intVar
 
   def chocoModel: Model = model
-
-  override def modelObjectives = Array(nFreePEs)
+  // the objectives so far are just the minimization of used PEs
+  // the inMinusView is necessary to transform a minimization into
+  // a maximization
+  override def modelObjectives = Array(model.intMinusView(nUsedPEs))
 
   // create the methods that each mixing requires
   // def sufficientRMSchedulingPoints(taskIdx: Int): Array[BigFraction] =
@@ -422,10 +417,9 @@ final case class PeriodicTaskToSchedHWChoco(
       FirstFail(model),
       IntDomainMin(),
       DecisionOperatorFactory.makeIntEq,
-      (responseTimes ++ durationsExec.flatten ++ blockingTimes ++
+      (taskMapping ++ dataBlockMapping ++ responseTimes ++ durationsExec.flatten ++ blockingTimes ++
         durationsRead.flatten ++ durationsWrite.flatten ++ durationsFetch.flatten ++
-        durations.flatten ++ taskMapping ++ dataBlockMapping ++
-        utilizations :+ nFreePEs): _*
+        durations.flatten ++ utilizations :+ nUsedPEs): _*
     )
   )
 
@@ -474,18 +468,16 @@ final case class PeriodicTaskToSchedHWChoco(
           // val j         = output.getIntVal(exe)
           val task      = sourceForSyDeDecisionModel.taskModel.tasks(i)
           val scheduler = sourceForSyDeDecisionModel.schedHwModel.allocatedSchedulers(j)
-          Scheduled.enforce(task)
-          rebuilt.connect(task, scheduler, "schedulers", EdgeTrait.DECISION_ABSTRACTSCHEDULING)
-          GreyBox.enforce(scheduler)
-          rebuilt.connect(scheduler, task, "contained", EdgeTrait.VISUALIZATION_VISUALCONTAINMENT)
+          Scheduled.enforce(task).insertSchedulersPort(rebuilt, scheduler)
+          GreyBox.enforce(scheduler).insertContainedPort(rebuilt, Visualizable.enforce(task))
       )
     })
     taskMapping.zipWithIndex.foreach((mapping, i) => {
       val j      = output.getIntVal(mapping)
       val task   = sourceForSyDeDecisionModel.taskModel.tasks(i)
       val memory = sourceForSyDeDecisionModel.schedHwModel.hardware.storageElems(j)
-      MemoryMapped.enforce(task)
-      rebuilt.connect(task, memory, "mappingHost", EdgeTrait.DECISION_ABSTRACTMAPPING)
+      MemoryMapped.enforce(task).insertMappingHostsPort(rebuilt, memory)
+      // rebuilt.connect(task, memory, "mappingHost", EdgeTrait.DECISION_ABSTRACTMAPPING)
       // GreyBox.enforce(memory)
       // rebuilt.connect(memory, task, "contained", EdgeTrait.VISUALIZATION_VISUALCONTAINMENT)
     })
@@ -493,10 +485,10 @@ final case class PeriodicTaskToSchedHWChoco(
       val j       = output.getIntVal(mapping)
       val channel = sourceForSyDeDecisionModel.taskModel.dataBlocks(i)
       val memory  = sourceForSyDeDecisionModel.schedHwModel.hardware.storageElems(j)
-      MemoryMapped.enforce(channel)
-      rebuilt.connect(channel, memory, "mappingHost", EdgeTrait.DECISION_ABSTRACTMAPPING)
-      GreyBox.enforce(memory)
-      rebuilt.connect(memory, channel, "contained", EdgeTrait.VISUALIZATION_VISUALCONTAINMENT)
+      MemoryMapped.enforce(channel).insertMappingHostsPort(rebuilt, memory)
+      // rebuilt.connect(channel, memory, "mappingHost", EdgeTrait.DECISION_ABSTRACTMAPPING)
+      GreyBox.enforce(memory).insertContainedPort(rebuilt, Visualizable.enforce(channel))
+      // rebuilt.connect(memory, channel, "contained", EdgeTrait.VISUALIZATION_VISUALCONTAINMENT)
     })
     rebuilt
   }

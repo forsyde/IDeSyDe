@@ -64,7 +64,10 @@ class ChocoExplorer() extends ForSyDeIOExplorer:
       if (!chocoCpModel.strategies.isEmpty) then solver.setSearch(chocoCpModel.strategies: _*)
       LazyList
         .continually(solver.solve)
-        .takeWhile(feasible => feasible)
+        .takeWhile(feasible => 
+          // scribe.debug(s"a solution has been found with feasibility: ${feasible}")
+          feasible
+          )
         .filter(feasible => feasible)
         .flatMap(feasible => {
           // scribe.debug(s"pareto size: ${paretoMaximizer.getParetoFront.size}")

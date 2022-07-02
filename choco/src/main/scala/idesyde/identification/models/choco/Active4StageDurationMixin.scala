@@ -3,6 +3,7 @@ package idesyde.identification.models.choco
 import idesyde.identification.interfaces.ChocoModelMixin
 import org.chocosolver.solver.variables.IntVar
 import org.chocosolver.solver.variables.BoolVar
+import org.chocosolver.solver.constraints.`extension`.Tuples
 
 trait Active4StageDurationMixin extends ChocoModelMixin {
 
@@ -31,7 +32,7 @@ trait Active4StageDurationMixin extends ChocoModelMixin {
     val memories      = 0 until allowedProc2MemoryDataPaths.head.length
     val communicators = 0 until dataCommunicationMapping.head.length
     // auxiliary local variables
-    scribe.debug(communicators.map(c => dataTravelTime.map(t => t(c)).sum).mkString(", "))
+    // scribe.debug(communicators.map(c => dataTravelTime.map(t => t(c)).sum).mkString(", "))
     val commLoad = communicators
       .map(c => chocoModel.intVar("load_" + c, 0, dataTravelTime.map(t => t(c)).sum, true))
       .toArray
@@ -65,10 +66,13 @@ trait Active4StageDurationMixin extends ChocoModelMixin {
       taskMapping.zipWithIndex.foreach((taskMap, m) =>
           processors.foreach(p =>
             memories.foreach(mem =>
-              val paths = allowedProc2MemoryDataPaths(p)(mem)
+              val pathMatrix = allowedProc2MemoryDataPaths(p)(mem).map(path =>
+                communicators.map(c => if (path.contains(c)) then 1 else -1).toArray)
+              val pathTuples = Tuples(pathMatrix, true)
+              pathTuples.setUniversalValue(-1)
               chocoModel.ifThen(taskExec(p).and(taskMap.eq(mem)).decompose, 
                 // at least one of the paths must be taken  
-                chocoModel.or(paths.map(path => chocoModel.and(taskCommunicationMapping(t):_*)):_*)
+                chocoModel.table(taskCommunicationMapping(m).map(_.asInstanceOf[IntVar]), pathTuples)
               )
             )
           )
@@ -82,10 +86,13 @@ trait Active4StageDurationMixin extends ChocoModelMixin {
         if (taskReadsData(t)(m) || taskWritesData(t)(m)) {
           processors.foreach(p =>
             memories.foreach(mem =>
-              val paths = allowedProc2MemoryDataPaths(p)(mem)
+              val pathMatrix = allowedProc2MemoryDataPaths(p)(mem).map(path =>
+                communicators.map(c => if (path.contains(c)) then 1 else -1).toArray)
+              val pathTuples = Tuples(pathMatrix, true)
+              pathTuples.setUniversalValue(-1)
               chocoModel.ifThen(taskExec(p).and(dataMap.eq(mem)).decompose, 
                 // at least one of the paths must be taken  
-                chocoModel.or(paths.map(path => chocoModel.and(dataCommunicationMapping(m):_*)):_*)
+                chocoModel.table(dataCommunicationMapping(m).map(_.asInstanceOf[IntVar]), pathTuples)
               )
             )
           )

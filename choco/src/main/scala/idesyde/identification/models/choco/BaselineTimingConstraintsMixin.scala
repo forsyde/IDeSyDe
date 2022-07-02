@@ -14,6 +14,8 @@ trait BaselineTimingConstraintsMixin extends ChocoModelMixin {
   def taskExecution: Array[Array[BoolVar]]
   def blockingTimes: Array[IntVar]
   def responseTimes: Array[IntVar]
+  
+  val processors = 0 until maxUtilizations.size
 
   lazy val utilizations = maxUtilizations
       .map(_.multiply(100).doubleValue.ceil.toInt)
@@ -56,7 +58,10 @@ trait BaselineTimingConstraintsMixin extends ChocoModelMixin {
         ).post
         //chocoModel.arithm(utilizationSum, "<=", maxU).post
       })
-
+  }
+  
+  def postTaskMapToAtLeastOne(): Unit = {
+    taskExecution.zipWithIndex.foreach((ts, i) => chocoModel.or(ts:_*).post)
   }
 
 //   class UtilizationPropagator() extends Propagator[IntVar](

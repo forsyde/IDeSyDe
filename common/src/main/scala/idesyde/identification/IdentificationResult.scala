@@ -15,6 +15,14 @@ final case class IdentificationResult[M <: DecisionModel](
     private val _identified: M = null
 ) {
 
+  def this(fixed: Boolean, identified: Option[M]) = {
+    this(fixed, identified.get)
+  }
+
+  def this(identTuple: (Boolean, Option[M])) = {
+    this(identTuple._1, identTuple._2.get)
+  }
+
   def identified: Option[M] = if (_identified != null) Some(_identified) else Option.empty
 
   def getIdentified(): Optional[M] =
@@ -29,4 +37,5 @@ final case class IdentificationResult[M <: DecisionModel](
 object IdentificationResult {
   def unapply[M <: DecisionModel](identificationResult: IdentificationResult[M]) =
     (identificationResult.isFixed(), identificationResult.identified)
+
 }

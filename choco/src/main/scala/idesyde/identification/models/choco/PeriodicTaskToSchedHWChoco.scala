@@ -83,7 +83,7 @@ final case class PeriodicTaskToSchedHWChoco(
   def priorities = sourceForSyDeDecisionModel.taskModel.prioritiesForDependencies
   val scaledDeadlines =
     sourceForSyDeDecisionModel.taskModel.relativeDeadlines.map(_.multiply(timeMultiplier))
-  def deadlines = scaledDeadlines
+  def deadlines       = scaledDeadlines
   val wcets           = sourceForSyDeDecisionModel.wcets.map(a => a.map(_.multiply(timeMultiplier)))
   def maxUtilizations = sourceForSyDeDecisionModel.maxUtilization
 
@@ -154,9 +154,9 @@ final case class PeriodicTaskToSchedHWChoco(
     )
   def taskCommunicationMapping = taskCommMapping
   def dataCommunicationMapping = dataBlockCommMapping
-  
+
   // tasks and data must be mapped to at least one location
-  taskExecution.foreach(ts => model.or(ts:_*))
+  taskExecution.foreach(ts => model.or(ts: _*))
   // def taskReadsMessage = sourceForSyDeDecisionModel.taskModel.tasks.
   // --- durations ----
   // scribe.debug(sourceForSyDeDecisionModel.wcets.map(_.map(f => f.multiply(timeMultiplier).getNumeratorAsInt.toString).mkString("[", ",", "]")).mkString("[", ",", "]"))
@@ -274,7 +274,13 @@ final case class PeriodicTaskToSchedHWChoco(
   val dataTravelTime = sourceForSyDeDecisionModel.taskModel.dataBlocks.map(d =>
     sourceForSyDeDecisionModel.schedHwModel.hardware.communicationModuleBandWidthBitPerSec.map(b =>
       // TODO: check if this is truly conservative (pessimistic) or not
-      b.multiply(timeMultiplier).divide(memoryMultipler).divide(d.getMaxSizeInBits).reciprocal.doubleValue.floor.toInt + 1
+      b.multiply(timeMultiplier)
+        .divide(memoryMultipler)
+        .divide(d.getMaxSizeInBits)
+        .reciprocal
+        .doubleValue
+        .floor
+        .toInt + 1
     )
   )
 
@@ -356,9 +362,9 @@ final case class PeriodicTaskToSchedHWChoco(
   // model.sum(peIsUsed, "=", nUsedPEs).post
   // this flips the direction of the variables since the objective must be MAX
   // val nFreePEs = model
-    // .intVar(sourceForSyDeDecisionModel.schedHwModel.hardware.processingElems.length)
-    // .sub(nUsedPEs)
-    // .intVar
+  // .intVar(sourceForSyDeDecisionModel.schedHwModel.hardware.processingElems.length)
+  // .sub(nUsedPEs)
+  // .intVar
 
   def chocoModel: Model = model
   // the objectives so far are just the minimization of used PEs

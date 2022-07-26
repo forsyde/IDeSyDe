@@ -1,6 +1,7 @@
 package idesyde.identification
 
 import java.util.Optional
+import scala.jdk.OptionConverters._
 
 /** This class exist to ensure compatibility with Java, as the tuples can become awkward in other
   * languages other than scala. It changes nothing in the concepts of the identification process,
@@ -12,23 +13,18 @@ import java.util.Optional
   */
 final case class IdentificationResult[M <: DecisionModel](
     private val _fixed: Boolean = false,
-    private val _identified: M = null
+    private val _identified: Option[M] = Option.empty
 ) {
 
-  def this(fixed: Boolean, identified: Option[M]) = {
-    this(fixed, identified.get)
-  }
-
   def this(identTuple: (Boolean, Option[M])) = {
-    this(identTuple._1, identTuple._2.get)
+    this(identTuple._1, identTuple._2)
   }
 
-  def identified: Option[M] = if (_identified != null) Some(_identified) else Option.empty
+  def identified: Option[M] = _identified
 
-  def getIdentified(): Optional[M] =
-    if (_identified != null) Optional.of(_identified) else Optional.empty
+  def getIdentified(): Optional[M] = _identified.toJava
 
-  def hasIdentified(): Boolean = _identified != null
+  def hasIdentified(): Boolean = _identified.isDefined
 
   def isFixed(): Boolean = _fixed
 

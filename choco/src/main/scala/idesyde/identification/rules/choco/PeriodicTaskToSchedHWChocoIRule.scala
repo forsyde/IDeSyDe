@@ -6,6 +6,7 @@ import idesyde.identification.models.mixed.PeriodicTaskToSchedHW
 import forsyde.io.java.core.ForSyDeSystemGraph
 import idesyde.identification.models.choco.PeriodicTaskToSchedHWChoco
 import idesyde.identification.DecisionModel
+import idesyde.identification.IdentificationResult
 
 class PeriodicTaskToSchedHWChocoIRule
     extends ForSyDeIdentificationRule[PeriodicTaskToSchedHWChoco] {
@@ -13,7 +14,7 @@ class PeriodicTaskToSchedHWChocoIRule
   def identifyFromForSyDe(
       model: ForSyDeSystemGraph,
       identified: Set[DecisionModel]
-  ): (Boolean, Option[PeriodicTaskToSchedHWChoco]) = {
+  ) = {
     identified
       .find(model =>
         model match {
@@ -21,8 +22,8 @@ class PeriodicTaskToSchedHWChocoIRule
           case _                          => false
         }
       )
-      .map(m => (true, Option(PeriodicTaskToSchedHWChoco(m.asInstanceOf[PeriodicTaskToSchedHW]))))
-      .getOrElse((false, Option.empty))
+      .map(m => new IdentificationResult(true, Option(PeriodicTaskToSchedHWChoco(m.asInstanceOf[PeriodicTaskToSchedHW]))))
+      .getOrElse(new IdentificationResult(false, Option.empty))
   }
 
 }

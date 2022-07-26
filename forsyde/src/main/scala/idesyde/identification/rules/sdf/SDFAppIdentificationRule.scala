@@ -18,6 +18,7 @@ import org.jgrapht.graph.DefaultDirectedGraph
 import forsyde.io.java.core.Vertex
 import org.jgrapht.graph.WeightedPseudograph
 import org.apache.commons.math3.fraction.BigFraction
+import idesyde.identification.IdentificationResult
 
 final case class SDFAppIdentificationRule()(using Integral[BigFraction])
     extends ForSyDeIdentificationRule[SDFApplication]
@@ -26,7 +27,7 @@ final case class SDFAppIdentificationRule()(using Integral[BigFraction])
   def identifyFromForSyDe(
       model: ForSyDeSystemGraph,
       identified: Set[DecisionModel]
-  ): (Boolean, Option[SDFApplication]) = {
+  ) = {
     var sdfActors   = Array.empty[SDFActor]
     var sdfChannels = Array.empty[SDFChannel]
     model.vertexSet.stream
@@ -68,7 +69,7 @@ final case class SDFAppIdentificationRule()(using Integral[BigFraction])
     }
 
     if (sdfActors.size > 0 && channelsConnectActors) {
-      (
+      new IdentificationResult(
         true,
         Option(
           SDFApplication(sdfActors, sdfChannels, topology)
@@ -76,7 +77,7 @@ final case class SDFAppIdentificationRule()(using Integral[BigFraction])
       )
     } else {
       scribe.debug("No actors, or channels do not connect actors")
-      (true, Option.empty)
+      new IdentificationResult(true, Option.empty)
     }
   }
 }

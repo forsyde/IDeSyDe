@@ -18,6 +18,7 @@ import forsyde.io.java.typed.viewers.moc.linguafranca.LinguaFrancaReaction
 import forsyde.io.java.typed.viewers.platform.GenericProcessingModule
 import forsyde.io.java.typed.viewers.platform.InstrumentedProcessingModule
 import forsyde.io.java.typed.viewers.impl.InstrumentedExecutable
+import idesyde.identification.IdentificationResult
 
 final case class ReactorMinusAppDSEIdentRule()
     extends ForSyDeIdentificationRule[ReactorMinusAppMapAndSched]:
@@ -25,7 +26,7 @@ final case class ReactorMinusAppDSEIdentRule()
   override def identifyFromForSyDe(
       model: ForSyDeSystemGraph,
       identified: Set[DecisionModel]
-  ): (Boolean, Option[ReactorMinusAppMapAndSched]) =
+  ) =
     val reactorMinusOpt =
       identified
         .find(_.isInstanceOf[ReactorMinusApplication])
@@ -52,11 +53,11 @@ final case class ReactorMinusAppDSEIdentRule()
         )
       )
       scribe.debug(s"Identified conformin Reactor- DSE problem")
-      (true, Option(ForSyDeDecisionModel))
+      new IdentificationResult(true, Option(ForSyDeDecisionModel))
     } else if (ReactorMinusAppDSEIdentRule.canIdentify(model, identified))
-      (false, Option.empty)
+      new IdentificationResult(false, Option.empty)
     else
-      (true, Option.empty)
+      new IdentificationResult(true, Option.empty)
   end identifyFromForSyDe
 
   def computeWCETFunction(

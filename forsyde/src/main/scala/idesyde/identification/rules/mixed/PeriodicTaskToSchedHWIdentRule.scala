@@ -16,6 +16,7 @@ import forsyde.io.java.typed.viewers.platform.InstrumentedCommunicationModule
 import forsyde.io.java.typed.viewers.decision.MemoryMapped
 import forsyde.io.java.typed.viewers.decision.Scheduled
 import idesyde.utils.MultipliableFractional
+import idesyde.identification.IdentificationResult
 
 final case class PeriodicTaskToSchedHWIdentRule()
 (using MultipliableFractional[BigFraction]) extends ForSyDeIdentificationRule[PeriodicTaskToSchedHW] {
@@ -23,7 +24,7 @@ final case class PeriodicTaskToSchedHWIdentRule()
   def identifyFromForSyDe(
       model: ForSyDeSystemGraph,
       identified: Set[DecisionModel]
-  ): (Boolean, Option[PeriodicTaskToSchedHW]) =
+  ) =
     var workloadModel = Option.empty[ForSyDePeriodicWorkload]
     var platformModel = Option.empty[SchedulableNetworkedDigHW]
     identified.foreach(d => {
@@ -39,8 +40,8 @@ final case class PeriodicTaskToSchedHWIdentRule()
       )
     )
     if (workloadModel.isDefined && platformModel.isDefined)
-      (true, res)
-    else (false, Option.empty)
+      new IdentificationResult(true, res)
+    else new IdentificationResult(false, Option.empty)
 
   def identifyWithDependencies(
       model: ForSyDeSystemGraph,

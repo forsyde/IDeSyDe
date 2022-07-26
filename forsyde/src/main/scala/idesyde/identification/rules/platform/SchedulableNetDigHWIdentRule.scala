@@ -18,6 +18,7 @@ import forsyde.io.java.typed.viewers.platform.GenericProcessingModule
 import forsyde.io.java.typed.viewers.platform.PlatformElem
 import forsyde.io.java.typed.viewers.platform.runtime.AbstractScheduler
 import forsyde.io.java.typed.viewers.decision.Allocated
+import idesyde.identification.IdentificationResult
 
 final case class SchedulableNetDigHWIdentRule()
     extends ForSyDeIdentificationRule[SchedulableNetworkedDigHW] {
@@ -25,13 +26,14 @@ final case class SchedulableNetDigHWIdentRule()
   override def identifyFromForSyDe(
       model: ForSyDeSystemGraph,
       identified: Set[DecisionModel]
-  ): (Boolean, Option[SchedulableNetworkedDigHW]) =
+  ) =
     val hardwareForSyDeDecisionModelOpt = identified
       .find(_.isInstanceOf[NetworkedDigitalHardware])
       .map(_.asInstanceOf[NetworkedDigitalHardware])
     hardwareForSyDeDecisionModelOpt
       .map(identifyWithDependencies(model, _))
-      .getOrElse((false, Option.empty))
+      .map(t => new IdentificationResult(t))
+      .getOrElse(new IdentificationResult(false, Option.empty))
   end identifyFromForSyDe
 
   def identifyWithDependencies(

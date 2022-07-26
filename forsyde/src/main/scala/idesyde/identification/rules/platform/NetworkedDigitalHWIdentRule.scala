@@ -13,6 +13,7 @@ import forsyde.io.java.typed.viewers.platform.GenericMemoryModule
 import forsyde.io.java.typed.viewers.platform.GenericCommunicationModule
 import idesyde.utils.MultipliableFractional
 import org.apache.commons.math3.fraction.BigFraction
+import idesyde.identification.IdentificationResult
 
 final case class NetworkedDigitalHWIdentRule()(using MultipliableFractional[BigFraction])
     extends ForSyDeIdentificationRule[NetworkedDigitalHardware] {
@@ -20,7 +21,7 @@ final case class NetworkedDigitalHWIdentRule()(using MultipliableFractional[BigF
   override def identifyFromForSyDe(
       model: ForSyDeSystemGraph,
       identified: Set[DecisionModel]
-  ): (Boolean, Option[NetworkedDigitalHardware]) = {
+  ) = {
     var processingElements    = Array.empty[GenericProcessingModule]
     var memoryElements        = Array.empty[GenericMemoryModule]
     var communicationElements = Array.empty[GenericCommunicationModule]
@@ -78,7 +79,7 @@ final case class NetworkedDigitalHWIdentRule()(using MultipliableFractional[BigF
       val links =
         for (e <- platformElements; ee <- platformElements; if model.hasConnection(e, ee))
           yield (e, ee)
-      (
+      new IdentificationResult(
         true,
         Option(
           NetworkedDigitalHardware(
@@ -89,7 +90,7 @@ final case class NetworkedDigitalHWIdentRule()(using MultipliableFractional[BigF
           )
         )
       )
-    } else (true, Option.empty)
+    } else new IdentificationResult(true, Option.empty)
   }
 
 }

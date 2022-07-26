@@ -7,6 +7,7 @@ import idesyde.identification.DecisionModel
 import idesyde.identification.ForSyDeDecisionModel
 import forsyde.io.java.core.ForSyDeSystemGraph
 import idesyde.identification.models.reactor.ReactorMinusAppMapAndSched
+import idesyde.identification.IdentificationResult
 
 final case class ReactorMinusAppDSEMznIdentRule()
     extends ForSyDeIdentificationRule[ReactorMinusAppMapAndSchedMzn]:
@@ -14,17 +15,17 @@ final case class ReactorMinusAppDSEMznIdentRule()
   def identifyFromForSyDe(
       model: ForSyDeSystemGraph,
       identified: Set[DecisionModel]
-  ): (Boolean, Option[ReactorMinusAppMapAndSchedMzn]) =
+  ) =
     val dseModelOpt = identified
       .find(_.isInstanceOf[ReactorMinusAppMapAndSched])
       .map(_.asInstanceOf[ReactorMinusAppMapAndSched])
     if (dseModelOpt.isDefined)
       val ForSyDeDecisionModel = ReactorMinusAppMapAndSchedMzn(sourceModel = dseModelOpt.get)
-      (true, Option(ForSyDeDecisionModel))
+      new IdentificationResult(true, Option(ForSyDeDecisionModel))
     else if (ReactorMinusJobsDSEMznIdentRule.canIdentify(model, identified))
-      (false, Option.empty)
+      new IdentificationResult(false, Option.empty)
     else
-      (true, Option.empty)
+      new IdentificationResult(true, Option.empty)
 
 end ReactorMinusAppDSEMznIdentRule
 

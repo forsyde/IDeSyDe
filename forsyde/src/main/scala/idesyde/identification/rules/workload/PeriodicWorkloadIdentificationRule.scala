@@ -27,6 +27,7 @@ import forsyde.io.java.typed.viewers.execution.CommunicatingTask
 import org.jgrapht.alg.connectivity.ConnectivityInspector
 import forsyde.io.java.typed.viewers.execution.LoopingTask
 import idesyde.utils.MultipliableFractional
+import idesyde.identification.IdentificationResult
 
 final class PeriodicWorkloadIdentificationRule()(using MultipliableFractional[BigFraction])
     extends ForSyDeIdentificationRule[ForSyDePeriodicWorkload] {
@@ -34,7 +35,7 @@ final class PeriodicWorkloadIdentificationRule()(using MultipliableFractional[Bi
   def identifyFromForSyDe(
       model: ForSyDeSystemGraph,
       identified: Set[DecisionModel]
-  ): (Boolean, Option[ForSyDePeriodicWorkload]) =
+  ) =
     var tasks: Array[Task]                        = Array.empty
     var dataBlocks: Array[DataBlock]              = Array.empty
     var periodicStimulus: Array[PeriodicStimulus] = Array.empty
@@ -141,7 +142,7 @@ final class PeriodicWorkloadIdentificationRule()(using MultipliableFractional[Bi
     )
     scribe.debug(s"Are all tasks reachable by a periodic stimulus? ${allTasksAreStimulated}")
     if (allTasksAreStimulated) then
-      (
+      new IdentificationResult(
         true,
         Some(
           ForSyDePeriodicWorkload(
@@ -159,7 +160,7 @@ final class PeriodicWorkloadIdentificationRule()(using MultipliableFractional[Bi
           )
         )
     )
-    else (true, Option.empty)
+    else new IdentificationResult(true, Option.empty)
 
   // // convenience
   // lazy val tasks = periodicTasks

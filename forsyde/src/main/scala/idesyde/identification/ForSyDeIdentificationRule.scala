@@ -12,7 +12,7 @@ trait ForSyDeIdentificationRule[M <: ForSyDeDecisionModel] extends Identificatio
   ): IdentificationResult[M] =
     model match {
       case fio: ForSyDeSystemGraph =>
-        new IdentificationResult(identifyFromForSyDe(fio, identified))
+        identifyFromForSyDe(fio, identified)
       case _ =>
         new IdentificationResult(false, Option.empty)
     }
@@ -20,5 +20,5 @@ trait ForSyDeIdentificationRule[M <: ForSyDeDecisionModel] extends Identificatio
   def identifyFromForSyDe(
       model: ForSyDeSystemGraph,
       identified: Set[DecisionModel]
-  ): (Boolean, Option[M])
+  ): IdentificationResult[M]
 }

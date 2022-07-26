@@ -27,6 +27,7 @@ import idesyde.identification.models.reactor.ReactorMinusApplication
 
 import scala.annotation.meta.companionObject
 import java.util.concurrent.ThreadPoolExecutor
+import idesyde.identification.IdentificationResult
 
 final case class ReactorMinusIdentificationRule(executor: ThreadPoolExecutor)
     extends ForSyDeIdentificationRule[ReactorMinusApplication] {
@@ -75,13 +76,13 @@ final case class ReactorMinusIdentificationRule(executor: ThreadPoolExecutor)
           s"${ForSyDeDecisionModel.unambigousEndToEndReactions.size} trivial chain(s) and " +
           s"hyperperiod of ${ForSyDeDecisionModel.hyperPeriod}"
       )
-      (
+      new IdentificationResult(
         true,
         Option(ForSyDeDecisionModel)
       )
     } else {
       scribe.debug("No conforming Reactor- model found.")
-      (true, Option.empty)
+      new IdentificationResult(true, Option.empty)
     }
   }
 

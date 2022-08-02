@@ -1,5 +1,7 @@
 package idesyde.identification.rules.sdf
 
+import scala.jdk.CollectionConverters.*
+
 import idesyde.identification.ForSyDeIdentificationRule
 import forsyde.io.java.core.ForSyDeSystemGraph
 import idesyde.identification.DecisionModel
@@ -72,7 +74,7 @@ final case class SDFAppIdentificationRule()(using Integral[BigFraction])
       new IdentificationResult(
         true,
         Option(
-          SDFApplication(sdfActors, sdfChannels, topology)
+          SDFApplication(sdfActors, sdfChannels, topology, sdfActors.map(_.getCombFunctionsPort(model).asScala.toArray))
         )
       )
     } else {

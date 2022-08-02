@@ -5,6 +5,6 @@ import idesyde.identification.DecisionModel
 
 class CommonIdentificationModule extends IdentificationModule {
 
-  val identificationRules: Set[IdentificationRule[? <: DecisionModel]] = Set()
+  val identificationRules = Set()
 
 }

@@ -1,5 +1,6 @@
 package idesyde.identification.models.workload
 
+import scala.jdk.StreamConverters.*
 import org.jgrapht.Graph
 import org.jgrapht.graph.DefaultEdge
 import idesyde.utils.SDFUtils
@@ -25,18 +26,19 @@ import org.jgrapht.opt.graph.sparse.IncomingEdgesSupport
   * doi: 10.1145/2999539.
   */
 trait ParametricRateDataflowWorkloadMixin(using Integral[BigFraction]) {
-  def numActors: Int
-  def numChannels: Int
+  def actorsSet: Array[Int]
+  def channelsSet: Array[Int]
   def initialTokens: Array[Int]
 
   /** An actor is self-concurrent if two or more instance can be executed at the same time
     *
-    * As a rule of thumb, actors with "state" are not self-concurrent.
+    * As a rule of thumb, actor with "state" are not self-concurrent.
     */
   def isSelfConcurrent(actor: Int): Boolean
 
   /** The edges of the communication graph should have numbers describing how much data is
-    * transferred from actors to channels.
+    * transferred from actors to channels. That is, both actors _and_ channels indexes are
+    * part of the graph, for each configuration.
     *
     * The array of graphs represent each possible dataflow graph when the parameters are
     * instantiated.
@@ -48,10 +50,10 @@ trait ParametricRateDataflowWorkloadMixin(using Integral[BigFraction]) {
     */
   def configurations: Graph[Int, DefaultEdge]
 
-  lazy val balanceMatrices = dataflowGraphs.map(g => {
-    val m = Array.fill(numChannels)(Array.fill(numActors)(0))
-    (numActors until (numActors + numChannels)).foreach(c => {
-      (0 until numActors).foreach(a => {
+  def balanceMatrices = dataflowGraphs.map(g => {
+    val m = Array.fill(channelsSet.size)(Array.fill(actorsSet.size)(0))
+    channelsSet.foreach(c => {
+      actorsSet.foreach(a => {
         m(c)(a) = g.getAllEdges(a, c).stream.mapToInt(i => i).sum - g
           .getAllEdges(c, a)
           .stream
@@ -62,18 +64,24 @@ trait ParametricRateDataflowWorkloadMixin(using Integral[BigFraction]) {
     m
   })
 
-  lazy val repetitionVectors =
+  def repetitionVectors =
     balanceMatrices.map(m => SDFUtils.getRepetitionVector(m, initialTokens))
 
-  lazy val isConsistent = repetitionVectors.forall(r => r.size == numActors)
+  def isConsistent = repetitionVectors.forall(r => r.size == actorsSet.size)
 
-  lazy val liveSchedules = balanceMatrices.zipWithIndex.map((m, i) =>
+  def liveSchedules = balanceMatrices.zipWithIndex.map((m, i) =>
     SDFUtils.getPASS(m, initialTokens, repetitionVectors(i))
   )
 
-  lazy val isLive = liveSchedules.forall(l => l.size == numActors)
+  def isLive = liveSchedules.forall(l => l.size == actorsSet.size)
 
-  lazy val stateSpace: Graph[Int, Int] = {
+  def pessimisticTokensPerChannel = channelsSet.map(c => {
+    dataflowGraphs.zipWithIndex.flatMap((g, confIdx) => {
+      g.incomingEdgesOf(c).stream().mapToInt(a => repetitionVectors(confIdx)(a) * balanceMatrices(confIdx)(c)(a) + initialTokens(c)).toScala(List)
+    }).max
+  })
+
+  def stateSpace: Graph[Int, Int] = {
     // first, convert the arrays into a mathematical form
     val matrices = balanceMatrices.map(m => {
       val newM = DenseMatrix.zeros[Int](m.size, m(0).size)
@@ -92,9 +100,9 @@ trait ParametricRateDataflowWorkloadMixin(using Integral[BigFraction]) {
     while (!q.isEmpty) {
       val (conf, state) = q.dequeue
       val m             = matrices(conf)
-      val newStates = (0 until numActors)
+      val newStates = actorsSet
         .map(a => {
-          val v = DenseVector.zeros[Int](numActors)
+          val v = DenseVector.zeros[Int](actorsSet.size)
           v(a) = 1
           (a, v)
         })
@@ -115,14 +123,5 @@ trait ParametricRateDataflowWorkloadMixin(using Integral[BigFraction]) {
       })
     }
     g
-    // SparseIntDirectedGraph(
-    //   explored.size,
-    //   transitions.size,
-    //   () =>
-    //     transitions
-    //       .map(e => Pair.of(e._1.asInstanceOf[Integer], e._2.asInstanceOf[Integer]))
-    //       .asJavaSeqStream,
-    //   IncomingEdgesSupport.LAZY_INCOMING_EDGES
-    // ).asInstanceOf[Graph[Int, Int]] // the casting is required due to the Int vs Integer problem between java and scala
   }
 }

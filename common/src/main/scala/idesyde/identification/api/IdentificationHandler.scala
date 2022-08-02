@@ -37,9 +37,9 @@ class IdentificationHandler(
     )
     while (activeRules.size > 0 && prevIdentified < identified.size) {
       prevIdentified = identified.size
-      val ruleResults = activeRules.map(r => (r, r.identify(model, identified)))
+      val ruleResults = activeRules.map(irule => (irule, irule(model, identified)))
       val newIdentified =
-        ruleResults.flatMap((r, res) => res.identified).toSet
+        ruleResults.flatMap((irule, res) => res.identified).toSet
       for (m <- newIdentified) dominanceGraph.addVertex(m)
       for (m <- newIdentified; mm <- identified; if m.dominates(mm, model))
         dominanceGraph.addEdge(m, mm)
@@ -48,7 +48,7 @@ class IdentificationHandler(
       identified = identified ++ newIdentified
       // identified =
       //   identified.filter(m => !identified.exists(other => other != m && other.dominates(m)))
-      activeRules = ruleResults.filter((r, res) => !res.isFixed()).map((r, _) => r)
+      activeRules = ruleResults.filter((irule, res) => !res.isFixed()).map((irule, _) => irule)
       scribe.debug(
         s"identification step $iters: ${identified.size} identified and ${activeRules.size} rules"
       )

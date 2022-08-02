@@ -16,13 +16,18 @@ import idesyde.identification.rules.reactor.ReactorMinusIdentificationRule
 import java.util.concurrent.Executors
 import idesyde.utils.BigFractionIsMultipliableFractional
 import idesyde.utils.MultipliableFractional
+import idesyde.identification.rules.platform.TiledDigitalHardwareIRule.apply
+import idesyde.identification.models.platform.SchedulableTiledDigitalHardware
+import idesyde.identification.rules.platform.TiledDigitalHardwareIRule
+import idesyde.identification.models.mixed.SDFToSchedTiledHW
 
 class ForSyDeIdentificationModule extends IdentificationModule {
 
   given Integral[BigFraction]               = BigFractionIsIntegral()
   given MultipliableFractional[BigFraction] = BigFractionIsMultipliableFractional()
+  given Conversion[Double, BigFraction]     = (f) => new BigFraction(f)
 
-  val identificationRules: Set[IdentificationRule[? <: DecisionModel]] = Set(
+  val identificationRules = Set(
     SDFAppIdentificationRule(),
     // ReactorMinusToJobsRule(),
     NetworkedDigitalHWIdentRule(),
@@ -31,7 +36,12 @@ class ForSyDeIdentificationModule extends IdentificationModule {
     // ReactorMinusAppDSEMznIdentRule(),
     PeriodicWorkloadIdentificationRule(),
     PeriodicTaskToSchedHWIdentRule(),
-    ReactorMinusIdentificationRule(Executors.newFixedThreadPool(1).asInstanceOf[ThreadPoolExecutor])
+    ReactorMinusIdentificationRule(
+      Executors.newFixedThreadPool(1).asInstanceOf[ThreadPoolExecutor]
+    ),
+    TiledDigitalHardwareIRule(),
+    SchedulableTiledDigitalHardware.identFromAny,
+    SDFToSchedTiledHW.identFromAny
   )
 
 }

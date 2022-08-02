@@ -18,23 +18,32 @@ trait TiledMultiCorePlatformMixin[MemT, TimeT](using fTimeT: Fractional[TimeT])(
     conversion: Conversion[Double, TimeT]
 )(using ClassTag[TimeT]) {
 
-  def processorSet: Array[Int]
+  def tileSet: Array[Int]
   def routerSet: Array[Int]
 
   def architectureGraph: Graph[Int, DefaultEdge]
 
+  /** although generic, this function is required to
+   * return the correct timing _only_ between adjacent routers, and not
+   * between any 2 routers. Non adjancent routers can return any value. 
+   * The correct general timing is later computed by the Mixin. */
   def architectureGraphMinimumHopTime(src: Int, dst: Int): TimeT
+
+  /** although generic, this function is required to
+   * return the correct timing _only_ between adjacent routers, and not
+   * between any 2 routers. Non adjancent routers can return any value. 
+   * The correct general timing is later computed by the Mixin. */
   def architectureGraphMaximumHopTime(src: Int, dst: Int): TimeT
 
   def maxMemoryPerTile: Array[MemT]
   def minTraversalTimePerBitPerRouter: Array[TimeT]
   def maxTraversalTimePerBitPerRouter: Array[TimeT]
 
-  def maxTimePerInstructionPerTile: Array[Map[String, TimeT]]
+  def maxTimePerInstructionPerTilePerMode: Array[Map[String, Map[String, TimeT]]]
 
-  def numProcessors = processorSet.size
+  def numProcessors = tileSet.size
   def numRouters    = routerSet.size
-  def platformSet   = processorSet ++ routerSet
+  def platformSet   = tileSet ++ routerSet
 
   private def directedAndConnectedMinTimeGraph: Graph[Int, DefaultEdge] = {
     val gBuilder = SimpleDirectedWeightedGraph.createBuilder[Int, DefaultEdge](() => DefaultEdge())
@@ -51,7 +60,7 @@ trait TiledMultiCorePlatformMixin[MemT, TimeT](using fTimeT: Fractional[TimeT])(
               dst
             ).toDouble
           )
-        } else if (processorSet.contains(dst)) {
+        } else if (tileSet.contains(dst)) {
           gBuilder.addEdge(src, dst, architectureGraphMinimumHopTime(src, dst).toDouble)
         }
         if (routerSet.contains(src)) {
@@ -62,7 +71,7 @@ trait TiledMultiCorePlatformMixin[MemT, TimeT](using fTimeT: Fractional[TimeT])(
               src
             ).toDouble
           )
-        } else if (processorSet.contains(src)) {
+        } else if (tileSet.contains(src)) {
           gBuilder.addEdge(dst, src, architectureGraphMinimumHopTime(dst, src).toDouble)
         }
       })
@@ -84,7 +93,7 @@ trait TiledMultiCorePlatformMixin[MemT, TimeT](using fTimeT: Fractional[TimeT])(
               dst
             ).toDouble
           )
-        } else if (processorSet.contains(dst)) {
+        } else if (tileSet.contains(dst)) {
           gBuilder.addEdge(src, dst, architectureGraphMaximumHopTime(src, dst).toDouble)
         }
         if (routerSet.contains(src)) {
@@ -95,7 +104,7 @@ trait TiledMultiCorePlatformMixin[MemT, TimeT](using fTimeT: Fractional[TimeT])(
               src
             ).toDouble
           )
-        } else if (processorSet.contains(src)) {
+        } else if (tileSet.contains(src)) {
           gBuilder.addEdge(dst, src, architectureGraphMaximumHopTime(dst, src).toDouble)
         }
       })

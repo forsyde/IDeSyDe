@@ -20,6 +20,10 @@ final case class IdentificationResult[M <: DecisionModel](
     this(identTuple._1, identTuple._2)
   }
 
+  def this(fixed: Boolean, idenfitied: M) = {
+    this(fixed, Option(idenfitied))
+  }
+
   def identified: Option[M] = _identified
 
   def getIdentified(): Optional[M] = _identified.toJava
@@ -33,5 +37,17 @@ final case class IdentificationResult[M <: DecisionModel](
 object IdentificationResult {
   def unapply[M <: DecisionModel](identificationResult: IdentificationResult[M]) =
     (identificationResult.isFixed(), identificationResult.identified)
+
+  def apply[M <: DecisionModel](fixed: Boolean, idenfitied: M) = new IdentificationResult(fixed, idenfitied)
+
+  def apply[M <: DecisionModel](identTuple: (Boolean, Option[M])) = new IdentificationResult(identTuple._1, identTuple._2)
+
+  def fixedEmpty[M <: DecisionModel]() = new IdentificationResult(true, Option.empty[M])
+
+  def unfixedEmpty[M <: DecisionModel]() = new IdentificationResult(false, Option.empty[M])
+
+  def fixed[M <: DecisionModel](identified: M) = new IdentificationResult(true, identified)
+
+  def unfixed[M <: DecisionModel](identified: M) = new IdentificationResult(true, identified)
 
 }

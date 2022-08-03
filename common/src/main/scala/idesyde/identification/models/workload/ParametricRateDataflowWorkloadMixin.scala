@@ -20,6 +20,9 @@ import org.jgrapht.alg.connectivity.ConnectivityInspector
 import org.jgrapht.graph.AsSubgraph
 import java.util.stream.Collectors
 import org.jgrapht.graph.AsUndirectedGraph
+import org.jgrapht.traverse.BreadthFirstIterator
+import java.util.function.BiFunction
+import org.apache.commons.math3.util.ArithmeticUtils
 
 /** This traits captures the ParametricRateDataflow base MoC from [1]. Then, we hope to be able to
   * use the same code for analysis across different dataflow MoCs, specially the simpler ones like
@@ -41,8 +44,8 @@ trait ParametricRateDataflowWorkloadMixin(using Integral[BigFraction]) {
   def isSelfConcurrent(actor: Int): Boolean
 
   /** The edges of the communication graph should have numbers describing how much data is
-    * transferred from actors to channels. That is, both actors _and_ channels indexes are
-    * part of the graph, for each configuration.
+    * transferred from actors to channels. That is, both actors _and_ channels indexes are part of
+    * the graph, for each configuration.
     *
     * The array of graphs represent each possible dataflow graph when the parameters are
     * instantiated.
@@ -54,23 +57,21 @@ trait ParametricRateDataflowWorkloadMixin(using Integral[BigFraction]) {
     */
   def configurations: Graph[Int, DefaultEdge]
 
-  /** This parameter counts the number of disjoint actor sets in the application model.def 
-   * That is, how many 'subapplications' are contained in this application. for 
-   * for each configuration.
-   * 
-   * This is important to correctly calculate repetition vectors in analytical methods.
-   */
+  /** This parameter counts the number of disjoint actor sets in the application model.def That is,
+    * how many 'subapplications' are contained in this application. for for each configuration.
+    *
+    * This is important to correctly calculate repetition vectors in analytical methods.
+    */
   def numDisjointComponents: Array[Int] = dataflowGraphs.map(g => {
     ConnectivityInspector(AsUndirectedGraph(g)).connectedSets().size()
   })
-    
 
   def balanceMatrices = dataflowGraphs.map(g => {
     val m = Array.fill(channelsSet.size)(Array.fill(actorsSet.size)(0))
     channelsSet.zipWithIndex.foreach((c, ci) => {
       actorsSet.zipWithIndex.foreach((a, ai) => {
         if (g.containsEdge(a, c)) then
-          m(ci)(ai) += g.getAllEdges(a, c).stream.mapToInt(e => g.getEdgeWeight(e).toInt).sum 
+          m(ci)(ai) += g.getAllEdges(a, c).stream.mapToInt(e => g.getEdgeWeight(e).toInt).sum
         else if (g.containsEdge(c, a))
           m(ci)(ai) -= g.getAllEdges(c, a).stream.mapToInt(e => g.getEdgeWeight(e).toInt).sum
         else
@@ -81,8 +82,44 @@ trait ParametricRateDataflowWorkloadMixin(using Integral[BigFraction]) {
     m
   })
 
-  def repetitionVectors =
-    balanceMatrices.zipWithIndex.map((m, ind) => SDFUtils.getRepetitionVector(m, initialTokens, numDisjointComponents(ind)))
+  def repetitionVectors: Array[Array[Int]] = dataflowGraphs.map(g => {
+    val bfs   = BreadthFirstIterator(g)
+    var rates = (actorsSet ++ channelsSet).map(i => i -> BigFraction.MINUS_ONE).toMap
+    while (bfs.hasNext()) {
+      val v      = bfs.next()
+      val vRate  = rates(v)
+      val parent = Option(bfs.getParent(v))
+      val possibleRate = parent
+        .map(parv => {
+          // from an actor to a channel
+          if (channelsSet.contains(v))
+            rates(parv)
+              .multiply(
+                g.getAllEdges(parv, v).stream().mapToInt(e => g.getEdgeWeight(e).toInt).sum()
+              )
+          else // from a channel to an actor
+            rates(parv)
+              .divide(
+                g.getAllEdges(parv, v).stream().mapToInt(e => g.getEdgeWeight(e).toInt).sum()
+              )
+        })
+        // if there is no parent, return 1
+        .getOrElse(BigFraction.ONE)
+      if (vRate.equals(BigFraction.MINUS_ONE)) {
+        rates += v -> possibleRate
+      } else if (!vRate.divide(possibleRate).equals(BigFraction.ONE)) { //otherwise the rates should balance out
+        // termine early if this is not the case, because they are inconsistent
+        return Array()
+      }
+    }
+    // now we put the rates in a more mangeable format
+    val gcd =
+      rates.map((v, r) => r.getNumeratorAsLong).reduce((i1, i2) => ArithmeticUtils.gcd(i1, i2))
+    val lcm = rates
+      .map((v, r) => r.getDenominatorAsLong)
+      .reduce((i1, i2) => ArithmeticUtils.lcm(i1, i2))
+    actorsSet.map(a => rates(a).multiply(lcm).divide(gcd).getNumeratorAsInt()).toArray
+  })
 
   def isConsistent = repetitionVectors.forall(r => r.size == actorsSet.size)
 
@@ -93,9 +130,17 @@ trait ParametricRateDataflowWorkloadMixin(using Integral[BigFraction]) {
   def isLive = liveSchedules.forall(l => l.size == actorsSet.size)
 
   def pessimisticTokensPerChannel = channelsSet.map(c => {
-    dataflowGraphs.zipWithIndex.flatMap((g, confIdx) => {
-      g.incomingEdgesOf(c).stream().map(e => g.getEdgeSource(e)).mapToInt(a => repetitionVectors(confIdx)(a) * balanceMatrices(confIdx)(c)(a) + initialTokens(c)).toScala(List)
-    }).max
+    dataflowGraphs.zipWithIndex
+      .flatMap((g, confIdx) => {
+        g.incomingEdgesOf(c)
+          .stream()
+          .map(e => g.getEdgeSource(e))
+          .mapToInt(a =>
+            repetitionVectors(confIdx)(a) * balanceMatrices(confIdx)(c)(a) + initialTokens(c)
+          )
+          .toScala(List)
+      })
+      .max
   })
 
   def stateSpace: Graph[Int, Int] = {

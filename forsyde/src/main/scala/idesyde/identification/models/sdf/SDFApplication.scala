@@ -26,11 +26,15 @@ import idesyde.identification.models.workload.InstrumentedWorkloadMixin
 import forsyde.io.java.typed.viewers.impl.InstrumentedExecutable
 import scala.collection.mutable
 import forsyde.io.java.typed.viewers.impl.TokenizableDataBlock
+import org.jgrapht.alg.connectivity.ConnectivityInspector
+import org.jgrapht.graph.AsSubgraph
+import java.util.stream.Collectors
+import org.jgrapht.graph.SimpleDirectedWeightedGraph
 
 final case class SDFApplication(
     val actors: Array[SDFActor],
     val channels: Array[SDFChannel],
-    val topology: Graph[SDFActor | SDFChannel, Int],
+    val topology: Graph[SDFActor | SDFChannel, DefaultEdge],
     actorFuncs: Array[Array[Executable]] = Array.empty
 )(using Integral[BigFraction])
     extends ForSyDeDecisionModel
@@ -45,8 +49,8 @@ final case class SDFApplication(
     actors.map(_.getViewedVertex) ++
       channels.map(_.getViewedVertex)
 
-  def actorsSet: Array[Int]   = (0 until actors.size).toArray
-  def channelsSet: Array[Int] = (actors.size until (actors.size + channels.size)).toArray
+  val actorsSet: Array[Int]   = (0 until actors.size).toArray
+  val channelsSet: Array[Int] = (actors.size until (actors.size + channels.size)).toArray
 
   val initialTokens: Array[Int] = channels.map(_.getNumOfInitialTokens)
 
@@ -56,15 +60,19 @@ final case class SDFApplication(
   }
 
   lazy val dataflowGraphs = {
-    val g = DefaultDirectedGraph.createBuilder[Int, Int](() => 0)
+    val g = SimpleDirectedWeightedGraph.createBuilder[Int, DefaultEdge](() => DefaultEdge())
     actors.zipWithIndex.foreach((a, i) => {
       channels.zipWithIndex.foreach((c, prej) => {
         val j = channelsSet(prej)
-        topology.getAllEdges(a, c).forEach(p => g.addEdge(i, j, p))
-        topology.getAllEdges(c, a).forEach(p => g.addEdge(j, i, p))
+        topology.getAllEdges(a, c).forEach(p => 
+          g.addEdge(i, j, topology.getEdgeWeight(p).toInt)
+          )
+        topology.getAllEdges(c, a).forEach(p => 
+          g.addEdge(j, i, topology.getEdgeWeight(p).toInt)
+          )
       })
     })
-    Array(g.buildAsUnmodifiable)
+    Array(g.buildAsUnmodifiable())
   }
 
   val configurations = {
@@ -74,7 +82,7 @@ final case class SDFApplication(
   }
 
   def processComputationalNeeds: Array[Map[String, Map[String, Long]]] =
-    actorFunctions.map(actorFuncs => {
+    actorFunctions.zipWithIndex.map((actorFuncs, i) => {
       // we do it mutable for simplicity...
       // the performance hit should not be a concern now, for super big instances, this can be reviewed
       var mutMap = mutable.Map[String, mutable.Map[String, Long]]()
@@ -98,6 +106,27 @@ final case class SDFApplication(
               })
           })
       })
+      // check also the actor, just in case, this might be best
+      // in case the functions don't exist, but the actors is instrumented
+      // anyway
+      InstrumentedExecutable
+        .safeCast(actors(i))
+        .ifPresent(ia => {
+          // now they have to be aggregated
+          ia
+            .getOperationRequirements()
+            .entrySet()
+            .forEach(e => {
+              val innerMap = e.getValue().asScala.map((k, v) => k -> v.asInstanceOf[Long])
+              // first the intersection parts
+              mutMap(e.getKey()) = mutMap
+                .getOrElse(e.getKey(), innerMap)
+                .map((k, v) => k -> (v + innerMap.getOrElse(k, 0L)))
+              // now the parts only the other map has
+              (innerMap.keySet -- mutMap(e.getKey()).keySet)
+                .map(k => mutMap(e.getKey())(k) = innerMap(k))
+            })
+        })
       mutMap.map((k, v) => k -> v.toMap).toMap
     })
 

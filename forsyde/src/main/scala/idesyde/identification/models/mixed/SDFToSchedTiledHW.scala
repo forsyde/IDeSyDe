@@ -108,13 +108,13 @@ object SDFToSchedTiledHW {
         })
         sdfApplications
           .flatMap(sdfApps =>
-            platformModel.map(plat => identForSyDeSystemGraphWithDeps(m, sdfApps, plat))
+            platformModel.map(plat => identFromForSyDeSystemGraphWithDeps(m, sdfApps, plat))
           )
           .getOrElse(IdentificationResult.unfixedEmpty())
       case _ => IdentificationResult.fixedEmpty()
     }
 
-  def identForSyDeSystemGraphWithDeps(
+  def identFromForSyDeSystemGraphWithDeps(
       model: ForSyDeSystemGraph,
       sdfApplications: SDFApplication,
       platform: SchedulableTiledDigitalHardware

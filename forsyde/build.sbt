@@ -1,4 +1,4 @@
-libraryDependencies += "io.github.forsyde"  % "forsyde-io-java-core" % "0.5.11"
+libraryDependencies += "io.github.forsyde"  % "forsyde-io-java-core" % "0.5.12"
 libraryDependencies += "org.apache.commons" % "commons-math3"        % "3.6.1"
 libraryDependencies += "org.jgrapht"        % "jgrapht-core"         % "1.5.1"
 libraryDependencies += "org.jgrapht"        % "jgrapht-opt"          % "1.5.1"

@@ -1,5 +1,6 @@
 package idesyde.identification.models.workload
 
+import scala.jdk.CollectionConverters.*
 import scala.jdk.StreamConverters.*
 import org.jgrapht.Graph
 import org.jgrapht.graph.DefaultEdge
@@ -14,8 +15,11 @@ import breeze.linalg._
 import breeze.numerics._
 import org.jgrapht.opt.graph.sparse.SparseIntDirectedGraph
 import org.jgrapht.alg.util.Pair
-import scala.jdk.StreamConverters._
 import org.jgrapht.opt.graph.sparse.IncomingEdgesSupport
+import org.jgrapht.alg.connectivity.ConnectivityInspector
+import org.jgrapht.graph.AsSubgraph
+import java.util.stream.Collectors
+import org.jgrapht.graph.AsUndirectedGraph
 
 /** This traits captures the ParametricRateDataflow base MoC from [1]. Then, we hope to be able to
   * use the same code for analysis across different dataflow MoCs, specially the simpler ones like
@@ -43,29 +47,42 @@ trait ParametricRateDataflowWorkloadMixin(using Integral[BigFraction]) {
     * The array of graphs represent each possible dataflow graph when the parameters are
     * instantiated.
     */
-  def dataflowGraphs: Array[Graph[Int, Int]]
+  def dataflowGraphs: Array[Graph[Int, DefaultEdge]]
 
   /** This graph defines how the dataflowGraphs can be changed between each other, assuming that the
     * paramters can change _only_ after an actor firing.
     */
   def configurations: Graph[Int, DefaultEdge]
 
+  /** This parameter counts the number of disjoint actor sets in the application model.def 
+   * That is, how many 'subapplications' are contained in this application. for 
+   * for each configuration.
+   * 
+   * This is important to correctly calculate repetition vectors in analytical methods.
+   */
+  def numDisjointComponents: Array[Int] = dataflowGraphs.map(g => {
+    ConnectivityInspector(AsUndirectedGraph(g)).connectedSets().size()
+  })
+    
+
   def balanceMatrices = dataflowGraphs.map(g => {
     val m = Array.fill(channelsSet.size)(Array.fill(actorsSet.size)(0))
-    channelsSet.foreach(c => {
-      actorsSet.foreach(a => {
-        m(c)(a) = g.getAllEdges(a, c).stream.mapToInt(i => i).sum - g
-          .getAllEdges(c, a)
-          .stream
-          .mapToInt(i => i)
-          .sum
+    channelsSet.zipWithIndex.foreach((c, ci) => {
+      actorsSet.zipWithIndex.foreach((a, ai) => {
+        if (g.containsEdge(a, c)) then
+          m(ci)(ai) += g.getAllEdges(a, c).stream.mapToInt(e => g.getEdgeWeight(e).toInt).sum 
+        else if (g.containsEdge(c, a))
+          m(ci)(ai) -= g.getAllEdges(c, a).stream.mapToInt(e => g.getEdgeWeight(e).toInt).sum
+        else
+          m(ci)(ai) = 0
       })
     })
+    // scribe.debug(m.map(_.mkString("[", ",", "]")).mkString("[", ",", "]"))
     m
   })
 
   def repetitionVectors =
-    balanceMatrices.map(m => SDFUtils.getRepetitionVector(m, initialTokens))
+    balanceMatrices.zipWithIndex.map((m, ind) => SDFUtils.getRepetitionVector(m, initialTokens, numDisjointComponents(ind)))
 
   def isConsistent = repetitionVectors.forall(r => r.size == actorsSet.size)
 
@@ -77,7 +94,7 @@ trait ParametricRateDataflowWorkloadMixin(using Integral[BigFraction]) {
 
   def pessimisticTokensPerChannel = channelsSet.map(c => {
     dataflowGraphs.zipWithIndex.flatMap((g, confIdx) => {
-      g.incomingEdgesOf(c).stream().mapToInt(a => repetitionVectors(confIdx)(a) * balanceMatrices(confIdx)(c)(a) + initialTokens(c)).toScala(List)
+      g.incomingEdgesOf(c).stream().map(e => g.getEdgeSource(e)).mapToInt(a => repetitionVectors(confIdx)(a) * balanceMatrices(confIdx)(c)(a) + initialTokens(c)).toScala(List)
     }).max
   })
 

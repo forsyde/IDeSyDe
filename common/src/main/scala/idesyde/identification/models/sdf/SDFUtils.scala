@@ -15,17 +15,20 @@ object SDFUtils {
 
   def getRepetitionVector(
       topologyMatrix: Array[Array[Int]],
-      initialTokens: Array[Int]
+      initialTokens: Array[Int],
+      independentApplications: Int = 1
   )(using Integral[BigFraction]): Array[Int] =
     // convert the common Scala matrix in to a field for commons math
     getRepetitionVector(MatrixUtils
-        .createRealMatrix(topologyMatrix.map(_.map(_.doubleValue).toArray).toArray), initialTokens)
+        .createRealMatrix(topologyMatrix.map(_.map(_.doubleValue).toArray).toArray), initialTokens, independentApplications)
 
   def getRepetitionVector(
       topologyMatrix: RealMatrix,
-      initialTokens: Array[Int]
+      initialTokens: Array[Int],
+      independentApplications: Int
   )(using Integral[BigFraction]): Array[Int] = {
     val svd = SingularValueDecomposition(topologyMatrix)
+    // scribe.debug(topologyMatrix.toString())
     // make an identity for the kernel algorithm
     // val identity = MatrixUtils.createFieldIdentityMatrix(
     //   BigFractionField.getInstance,
@@ -62,16 +65,30 @@ object SDFUtils {
     //     }
     //   })
     // }
-    // check if rank is rows - 1.
+    // check if rank is rows - independentApplications.
     val svdZeroIdx = svd.getSingularValues.zipWithIndex.filter((v, _) => v.abs <= 1e-10)
-    if (svdZeroIdx.length == 1) {
+    // scribe.debug(svdZeroIdx.mkString(", "))
+    // scribe.debug(independentApplications.toString())
+    if (svdZeroIdx.length == independentApplications) {
       // rank is correct
-      val nullVec = svd.getVT.getRow(svdZeroIdx(0)._2).map(BigFraction(_))
-      val gcd = nullVec.map(_.getNumeratorAsLong).reduce((i1, i2) => ArithmeticUtils.gcd(i1, i2))
-      val lcm = nullVec
-        .map(_.getDenominatorAsLong)
-        .reduce((i1, i2) => ArithmeticUtils.lcm(i1, i2))
-      nullVec.map(_.multiply(lcm).divide(gcd).getDenominatorAsInt)
+      // scribe.debug("VT " + svd.getVT().toString())
+      // scribe.debug("U " + svd.getU().toString())
+      val nullVec = svd.getVT().getRow(svdZeroIdx(0)._2) //.map(BigFraction(_))
+      // scribe.debug(svd.getVT().getRow(svdZeroIdx(0)._2).mkString(", "))
+      // scribe.debug(nullVec.mkString(", "))
+      var roundFactor = 1
+      while(nullVec.map(_ * roundFactor).exists(v => (v - v.round.toDouble).abs >= 1e-6)) {
+        roundFactor += 1
+      }
+      val roundedNullVec = nullVec.map(_ * roundFactor).map(_.round.toInt)
+      var gcd = roundedNullVec.reduce((i1, i2) => ArithmeticUtils.gcd(i1, i2))
+      var integerNullVec = roundedNullVec.map(_ / gcd)
+      // val gcd = nullVec.map(_.getNumeratorAsLong).reduce((i1, i2) => ArithmeticUtils.gcd(i1, i2))
+      // val lcm = nullVec
+      //   .map(_.getDenominatorAsLong)
+      //   .reduce((i1, i2) => ArithmeticUtils.lcm(i1, i2))
+      // nullVec.map(_.multiply(lcm).divide(gcd).getNumeratorAsInt())
+      integerNullVec
     } else Array.emptyIntArray
   }
 

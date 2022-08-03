@@ -82,7 +82,7 @@ final class PeriodicWorkloadIdentificationRule()(using MultipliableFractional[Bi
     // so we terminate early to avoid undefined analysis results
     scribe.debug(s"Num of tasks found in model: ${tasks.size}")
     if (tasks.isEmpty)
-      (true, Option.empty)
+      return IdentificationResult(true, Option.empty)
     // now take a look which of the relevant vertexes are connected
     taskStimulusGraph.vertexSet.forEach(src =>
       taskStimulusGraph.vertexSet.forEach(dst =>

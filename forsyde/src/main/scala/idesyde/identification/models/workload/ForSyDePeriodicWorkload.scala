@@ -357,6 +357,6 @@ case class ForSyDePeriodicWorkload(
     g.buildAsUnmodifiable
   }
 
-  override val uniqueIdentifier = "SimplePeriodicWorkload"
+  override val uniqueIdentifier = "ForSyDePeriodicWorkload"
 
 end ForSyDePeriodicWorkload

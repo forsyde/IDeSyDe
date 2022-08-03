@@ -66,11 +66,11 @@ object SchedulableTiledDigitalHardware {
     model match {
       case m: ForSyDeSystemGraph =>
         val tiledDigitalHardware = identified.find(_.isInstanceOf[TiledDigitalHardware]).map(_.asInstanceOf[TiledDigitalHardware])
-        tiledDigitalHardware.map(t => fromForSyDeSystemGraphWithDeps(m, t)).getOrElse(IdentificationResult.unfixedEmpty())
+        tiledDigitalHardware.map(t => indetFromForSyDeSystemGraphWithDeps(m, t)).getOrElse(IdentificationResult.unfixedEmpty())
       case _ => IdentificationResult.fixedEmpty()
     }
 
-  def fromForSyDeSystemGraphWithDeps(
+  def indetFromForSyDeSystemGraphWithDeps(
     model: ForSyDeSystemGraph,
     tiledDigitalHardware: TiledDigitalHardware
   ): IdentificationResult[SchedulableTiledDigitalHardware] = {

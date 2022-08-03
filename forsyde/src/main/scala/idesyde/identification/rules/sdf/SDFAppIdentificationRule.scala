@@ -21,6 +21,8 @@ import forsyde.io.java.core.Vertex
 import org.jgrapht.graph.WeightedPseudograph
 import org.apache.commons.math3.fraction.BigFraction
 import idesyde.identification.IdentificationResult
+import org.jgrapht.graph.DefaultEdge
+import org.jgrapht.graph.SimpleDirectedWeightedGraph
 
 final case class SDFAppIdentificationRule()(using Integral[BigFraction])
     extends ForSyDeIdentificationRule[SDFApplication]
@@ -39,35 +41,39 @@ final case class SDFAppIdentificationRule()(using Integral[BigFraction])
         //else if (SDFDelay.conforms(v)) sdfDelays = sdfDelays.appended(SDFDelay.enforce(v))
         else if (SDFChannel.conforms(v)) sdfChannels = sdfChannels.appended(SDFChannel.enforce(v))
       })
-    lazy val channelsConnectActors =
+    val channelsConnectActors =
       sdfChannels.forall(c =>
         c.getConsumerPort(model).map(a => sdfActors.contains(a)).orElse(false)
           && c.getProducerPort(model).map(a => sdfActors.contains(a)).orElse(false)
       )
 
     lazy val topology = {
-      val g = SimpleDirectedGraph.createBuilder[SDFActor | SDFChannel, Int](() => 0)
+      val g = SimpleDirectedWeightedGraph.createBuilder[SDFActor | SDFChannel, DefaultEdge](() => DefaultEdge())
       sdfActors.foreach(g.addVertex(_))
       sdfChannels.foreach(c => {
         g.addVertex(c)
         c.getProducerPort(model)
           .ifPresent(src => {
-            model
+            val rate = model
               .getAllEdges(src.getViewedVertex, c.getViewedVertex)
-              .forEach(e => {
-                g.addEdge(src, c, e.getSourcePort.map(sp => src.getProduction.get(sp)).orElse(0))
-              })
+              .stream.mapToInt(e => {
+                e.getSourcePort.map(sp => src.getProduction.get(sp)).orElse(0)
+              }).sum().toInt
+            // scribe.debug(s"adding ${src.getIdentifier()} -> ${c.getIdentifier()} : ${rate}")
+            g.addEdge(src, c, rate.toDouble)
           })
         c.getConsumerPort(model)
           .ifPresent(dst => {
-            model
+            val rate = model
               .getAllEdges(c.getViewedVertex, dst.getViewedVertex)
-              .forEach(e => {
-                g.addEdge(dst, c, e.getTargetPort.map(tp => dst.getConsumption.get(tp)).orElse(0))
-              })
+              .stream.mapToInt(e => {
+                e.getTargetPort.map(tp => dst.getConsumption.get(tp)).orElse(0)
+              }).sum().toInt
+            // scribe.debug(s"adding ${c.getIdentifier()} -> ${dst.getIdentifier()} : ${rate}")
+            g.addEdge(c, dst, rate.toDouble)
           })
       })
-      g.buildAsUnmodifiable
+      g.buildAsUnmodifiable()
     }
 
     if (sdfActors.size > 0 && channelsConnectActors) {

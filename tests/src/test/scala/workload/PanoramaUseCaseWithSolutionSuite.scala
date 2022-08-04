@@ -23,6 +23,8 @@ class PanoramaUseCaseWithSolutionSuite extends AnyFunSuite with LoggingMixin {
 
   given ExecutionContext = ExecutionContext.global
 
+  setNormal()
+
   val explorationHandler = ExplorationHandler()
     .registerModule(ChocoExplorationModule())
 

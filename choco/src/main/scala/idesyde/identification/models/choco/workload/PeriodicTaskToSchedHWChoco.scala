@@ -360,11 +360,11 @@ final case class PeriodicTaskToSchedHWChoco(
     )
   val nUsedPEs = model.intVar(
     "nUsedPEs",
-    0,
-    sourceForSyDeDecisionModel.schedHwModel.hardware.processingElems.length - 1
+    1,
+    sourceForSyDeDecisionModel.schedHwModel.hardware.processingElems.length
   )
   // count different ones
-  // model.sum(peIsUsed, "=", nUsedPEs).post
+  model.sum(peIsUsed, "=", nUsedPEs).post
   // this flips the direction of the variables since the objective must be MAX
   // val nFreePEs = model
   // .intVar(sourceForSyDeDecisionModel.schedHwModel.hardware.processingElems.length)

@@ -3,3 +3,4 @@ libraryDependencies += "org.scalatest" %% "scalatest-funsuite" % "3.2.12" % "tes
 libraryDependencies += "io.github.forsyde"  % "forsyde-io-java-core" % "0.5.12"
 libraryDependencies += "io.github.forsyde"  % "forsyde-io-java-amalthea" % "0.5.12"
 libraryDependencies += "io.github.forsyde"  % "forsyde-io-java-sdf3" % "0.5.12"
+libraryDependencies += "io.github.forsyde"  % "forsyde-io-java-graphviz" % "0.5.12"

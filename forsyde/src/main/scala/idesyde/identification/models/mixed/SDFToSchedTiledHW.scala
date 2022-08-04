@@ -17,6 +17,8 @@ import scala.collection.mutable
 import forsyde.io.java.typed.viewers.impl.InstrumentedExecutable
 import forsyde.io.java.typed.viewers.platform.InstrumentedCommunicationModule
 import idesyde.identification.DecisionModel
+import forsyde.io.java.typed.viewers.visualization.GreyBox
+import forsyde.io.java.typed.viewers.visualization.Visualizable
 
 final case class SDFToSchedTiledHW(
     val sdfApplications: SDFApplication,
@@ -45,39 +47,40 @@ final case class SDFToSchedTiledHW(
     platform.tiledDigitalHardware.processorsProvisions
 
   def addMappingsAndRebuild(
-      mappings: Array[Array[Boolean]],
-      schedulings: Array[Array[Boolean]]
+      channelMappings: Array[Array[Boolean]],
+      actorSchedulings: Array[Array[Boolean]]
   ): ForSyDeSystemGraph = {
     val rebuilt = ForSyDeSystemGraph()
     coveredVertexes.foreach(v => rebuilt.addVertex(v))
     val finalMappings = existingMappings.zipWithIndex.map((row, i) =>
-      row.zipWithIndex.map((m, j) => mappings(i)(j) || m)
+      row.zipWithIndex.map((m, j) => channelMappings(i)(j) || m)
     )
     val finalSchedulings = existingSchedulings.zipWithIndex.map((row, i) =>
-      row.zipWithIndex.map((m, j) => schedulings(i)(j) || m)
+      row.zipWithIndex.map((m, j) => actorSchedulings(i)(j) || m)
     )
     val allME = platform.tiledDigitalHardware.memories
     val allCE = platform.tiledDigitalHardware.allCommElems
     finalMappings.zipWithIndex.foreach((row, i) => {
-      row.zipWithIndex.foreach((m, j) => {
+      row.zipWithIndex.filter((m, j) => m).foreach((m, j) => {
         val sdfChannel = sdfApplications.channels(i)
         val allocated  = Allocated.enforce(sdfChannel)
-        if (j > platform.tiledDigitalHardware.tileSet.size) {
-          allocated.insertAllocationHostsPort(rebuilt, allCE(j))
-        } else {
+        allocated.insertAllocationHostsPort(rebuilt, allCE(j))
+        if (j < platform.tiledDigitalHardware.tileSet.size) {
           allocated.insertAllocationHostsPort(rebuilt, allME(j))
           val mapped = MemoryMapped.enforce(sdfChannel)
           mapped.insertMappingHostsPort(rebuilt, allME(j))
+          GreyBox.enforce(allME(j)).insertContainedPort(rebuilt, Visualizable.enforce(sdfChannel))
         }
       })
     })
     finalSchedulings.zipWithIndex.foreach((row, i) => {
-      row.zipWithIndex.foreach((m, j) => {
+      row.zipWithIndex.filter((m, j) => m).foreach((m, j) => {
         val sdfActor  = sdfApplications.actors(i)
         val scheduled = Scheduled.enforce(sdfActor)
         val mapped    = MemoryMapped.enforce(sdfActor)
         scheduled.insertSchedulersPort(rebuilt, platform.schedulers(j))
         mapped.insertMappingHostsPort(rebuilt, allME(j))
+        GreyBox.enforce(platform.schedulers(j)).insertContainedPort(rebuilt, Visualizable.enforce(sdfActor))
       })
     })
     rebuilt
@@ -139,21 +142,27 @@ object SDFToSchedTiledHW {
         channelSize <= me.getSpaceInBits
       })
     })
-    // query all existing mappings
-    lazy val actorMappings = sdfApplications.actors.map(task => {
-      platform.tiledDigitalHardware.memories.map(mem => {
-        MemoryMapped
-          .safeCast(task)
-          .map(_.getMappingHostsPort(model).contains(mem))
-          .orElse(false)
-      })
-    })
+    // query all existing channelMappings
+    // lazy val actorMappings = sdfApplications.actors.map(task => {
+    //   platform.tiledDigitalHardware.memories.map(mem => {
+    //     MemoryMapped
+    //       .safeCast(task)
+    //       .map(_.getMappingHostsPort(model).contains(mem))
+    //       .orElse(false)
+    //   })
+    // })
     // now for channels
     lazy val channelMappings = sdfApplications.channels.map(channel => {
       platform.tiledDigitalHardware.memories.map(mem => {
         MemoryMapped
           .safeCast(channel)
           .map(_.getMappingHostsPort(model).contains(mem))
+          .orElse(false)
+      }) ++
+      platform.tiledDigitalHardware.routers.map(router => {
+        Allocated
+          .safeCast(channel)
+          .map(_.getAllocationHostsPort(model).contains(router))
           .orElse(false)
       })
     })
@@ -172,7 +181,7 @@ object SDFToSchedTiledHW {
         SDFToSchedTiledHW(
           sdfApplications = sdfApplications,
           platform = platform,
-          existingMappings = actorMappings ++ channelMappings,
+          existingMappings = channelMappings,
           existingSchedulings = actorSchedulings
         )
       )

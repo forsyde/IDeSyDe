@@ -12,13 +12,15 @@ import idesyde.identification.IdentificationResult
 import idesyde.identification.models.choco.ManyProcessManyMessageMemoryConstraintsMixin
 import org.chocosolver.solver.variables.BoolVar
 import org.chocosolver.solver.variables.IntVar
+import org.chocosolver.solver.search.strategy.strategy.AbstractStrategy
+import org.chocosolver.solver.variables.Variable
 
 final case class ChocoSDFToSChedTileHW(
     val dse: SDFToSchedTiledHW
 ) extends ChocoCPForSyDeDecisionModel
     with ManyProcessManyMessageMemoryConstraintsMixin {
 
-  def chocoModel: Model = Model()
+  val chocoModel: Model = Model()
 
   // section for time multiplier calculation
   val timeValues =
@@ -42,29 +44,35 @@ final case class ChocoSDFToSChedTileHW(
     memoryDivider *= 10L
   }
 
-  def dataSize: Array[Int] =
+  val dataSize: Array[Int] =
     dse.sdfApplications.messagesMaxSizes.map(l => (l / memoryDivider).toInt)
 
-  def processSize: Array[Int] =
+  val processSize: Array[Int] =
     dse.sdfApplications.processSizes.map(l => (l / memoryDivider).toInt)
 
   //-----------------------------------------------------
   // Decision variables
-  def messagesMemoryMapping: Array[Array[BoolVar]] = dse.sdfApplications.channels.map(c =>
-    dse.platform.tiledDigitalHardware.tileSet.map(tile =>
-      chocoModel.boolVar(s"${c.getIdentifier()}_${tile}_m")
+  val messagesMemoryMapping: Array[Array[BoolVar]] = dse.sdfApplications.channels.map(c =>
+    dse.platform.tiledDigitalHardware.memories.map(mem =>
+      chocoModel.boolVar(s"${c.getIdentifier()}_${mem.getIdentifier()}_m")
     )
   )
 
-  def processesMemoryMapping: Array[Array[BoolVar]] = dse.sdfApplications.actors.map(a =>
-    dse.platform.tiledDigitalHardware.tileSet.map(tile =>
-      chocoModel.boolVar(s"${a.getIdentifier()}_${tile}_m")
+  val messagesCommAllocation: Array[Array[BoolVar]] = dse.sdfApplications.channels.map(c =>
+    dse.platform.tiledDigitalHardware.routers.map(router =>
+      chocoModel.boolVar(s"${c.getIdentifier()}_${router.getIdentifier()}_m")
+    )
+  )
+
+  val processesMemoryMapping: Array[Array[BoolVar]] = dse.sdfApplications.actors.map(a =>
+    dse.platform.tiledDigitalHardware.memories.map(mem =>
+      chocoModel.boolVar(s"${a.getIdentifier()}_${mem.getIdentifier()}_m")
     )
   )
 
   //---------
 
-  def memoryUsage: Array[IntVar] = dse.platform.tiledDigitalHardware.memories
+  val memoryUsage: Array[IntVar] = dse.platform.tiledDigitalHardware.memories
     .map(m => (m, (m.getSpaceInBits() / memoryDivider).toInt))
     .map((m, s) => chocoModel.intVar(s"${m.getIdentifier()}_u", 0, s, true))
 
@@ -88,9 +96,34 @@ final case class ChocoSDFToSChedTileHW(
 
   //---------
 
+  //-----------------------------------------------------
+  // Objectives
+
+  val peIsUsed =
+    dse.platform.tiledDigitalHardware.processors.zipWithIndex.map((pe, j) =>
+      chocoModel.sum(processesMemoryMapping.map(t => t(j)), ">=", 1).reify
+    )
+  val nUsedPEs = chocoModel.intVar(
+    "nUsedPEs",
+    1,
+    dse.platform.tiledDigitalHardware.processors.length
+  )
+
+  // make sure the variable counts the number of used
+  chocoModel.sum(peIsUsed, "=", nUsedPEs).post
+
+  override def modelObjectives: Array[IntVar] = Array(chocoModel.intMinusView(nUsedPEs))
+  //---------
+
+  override def strategies: Array[AbstractStrategy[? <: Variable]] = Array(
+  )
+
   def rebuildFromChocoOutput(output: Solution): ForSyDeSystemGraph = {
-    val mappings = messagesMemoryMapping.map(vs => vs.map(v => if (output.getIntVal(v) > 0) then true else false))
-    val schedulings = processesMemoryMapping.map(vs => vs.map(v => if (output.getIntVal(v) > 0) then true else false))
+    val mappings = dse.sdfApplications.channels.zipWithIndex
+      .map((c, i) => messagesMemoryMapping(i) ++ messagesCommAllocation(i))
+      .map(vs => vs.map(v => if (v.getValue() > 0) then true else false))
+    val schedulings =
+      processesMemoryMapping.map(vs => vs.map(v => if (v.getValue() > 0) then true else false))
     dse.addMappingsAndRebuild(mappings, schedulings)
   }
 

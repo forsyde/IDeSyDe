@@ -16,15 +16,12 @@ import idesyde.identification.ForSyDeDecisionModel
 import forsyde.io.java.core.ForSyDeSystemGraph
 import scala.concurrent.ExecutionContext
 
-class PanoramaUseCaseWithSolutionSuite extends AnyFunSuite {
+import mixins.LoggingMixin
+
+
+class PanoramaUseCaseWithSolutionSuite extends AnyFunSuite with LoggingMixin {
 
   given ExecutionContext = ExecutionContext.global
-
-  // scribe.Logger.root
-  //   .clearHandlers()
-  //   .clearModifiers()
-  //   .withHandler(minimumLevel = Some(Level.Debug))
-  //   .replace()
 
   val explorationHandler = ExplorationHandler()
     .registerModule(ChocoExplorationModule())

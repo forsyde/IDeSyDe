@@ -20,6 +20,10 @@ import org.jgrapht.alg.connectivity.ConnectivityInspector
 import org.jgrapht.graph.AsSubgraph
 import java.util.stream.Collectors
 import org.jgrapht.graph.AsUndirectedGraph
+import org.jgrapht.traverse.DepthFirstIterator
+import scala.collection.mutable
+import org.jgrapht.graph.SimpleDirectedGraph
+import org.apache.commons.math3.util.ArithmeticUtils
 
 /** This traits captures the ParametricRateDataflow base MoC from [1]. Then, we hope to be able to
   * use the same code for analysis across different dataflow MoCs, specially the simpler ones like
@@ -41,8 +45,8 @@ trait ParametricRateDataflowWorkloadMixin(using Integral[BigFraction]) {
   def isSelfConcurrent(actor: Int): Boolean
 
   /** The edges of the communication graph should have numbers describing how much data is
-    * transferred from actors to channels. That is, both actors _and_ channels indexes are
-    * part of the graph, for each configuration.
+    * transferred from actors to channels. That is, both actors _and_ channels indexes are part of
+    * the graph, for each configuration.
     *
     * The array of graphs represent each possible dataflow graph when the parameters are
     * instantiated.
@@ -54,23 +58,21 @@ trait ParametricRateDataflowWorkloadMixin(using Integral[BigFraction]) {
     */
   def configurations: Graph[Int, DefaultEdge]
 
-  /** This parameter counts the number of disjoint actor sets in the application model.def 
-   * That is, how many 'subapplications' are contained in this application. for 
-   * for each configuration.
-   * 
-   * This is important to correctly calculate repetition vectors in analytical methods.
-   */
+  /** This parameter counts the number of disjoint actor sets in the application model.def That is,
+    * how many 'subapplications' are contained in this application. for for each configuration.
+    *
+    * This is important to correctly calculate repetition vectors in analytical methods.
+    */
   def numDisjointComponents: Array[Int] = dataflowGraphs.map(g => {
     ConnectivityInspector(AsUndirectedGraph(g)).connectedSets().size()
   })
-    
 
   def balanceMatrices = dataflowGraphs.map(g => {
     val m = Array.fill(channelsSet.size)(Array.fill(actorsSet.size)(0))
     channelsSet.zipWithIndex.foreach((c, ci) => {
       actorsSet.zipWithIndex.foreach((a, ai) => {
         if (g.containsEdge(a, c)) then
-          m(ci)(ai) += g.getAllEdges(a, c).stream.mapToInt(e => g.getEdgeWeight(e).toInt).sum 
+          m(ci)(ai) += g.getAllEdges(a, c).stream.mapToInt(e => g.getEdgeWeight(e).toInt).sum
         else if (g.containsEdge(c, a))
           m(ci)(ai) -= g.getAllEdges(c, a).stream.mapToInt(e => g.getEdgeWeight(e).toInt).sum
         else
@@ -81,8 +83,89 @@ trait ParametricRateDataflowWorkloadMixin(using Integral[BigFraction]) {
     m
   })
 
-  def repetitionVectors =
-    balanceMatrices.zipWithIndex.map((m, ind) => SDFUtils.getRepetitionVector(m, initialTokens, numDisjointComponents(ind)))
+  def repetitionVectors: Array[Array[Int]] = dataflowGraphs.map(g => {
+    // first we build a compressed g with only the actors
+    // with the fractional flows in a matrix
+    val gRates         = Array.fill(actorsSet.size)(Array.fill(actorsSet.size)(BigFraction.ZERO))
+    val gActorsBuilder = SimpleDirectedGraph.createBuilder[Int, DefaultEdge](() => DefaultEdge())
+    // and put the rates between them in a matrix
+    channelsSet.foreach(c => {
+      // we do a for, but there should only be one producer and one consumer per actor
+      g.incomingEdgesOf(c)
+        .forEach(producerEdge => {
+          val producer = g.getEdgeSource(producerEdge)
+          g.outgoingEdgesOf(c)
+            .forEach(consumerEdge => {
+              val consumer = g.getEdgeTarget(consumerEdge)
+              // val rate = BigFraction(g.getEdgeWeight(producerEdge).toInt, g.getEdgeWeight(consumerEdge).toInt)
+              val rate = gRates(producer)(consumer)
+              gActorsBuilder.addEdge(producer, consumer)
+              // the if-else is required to subtract the +1 denominator that comes with a zero fraction
+              gRates(producer)(consumer) = if (rate.equals(BigFraction.ZERO)) then BigFraction(
+                rate.getNumeratorAsInt() + g.getEdgeWeight(producerEdge).toInt,
+                rate.getDenominatorAsInt() - 1 + g.getEdgeWeight(consumerEdge).toInt
+              ) else BigFraction(
+                rate.getNumeratorAsInt() + g.getEdgeWeight(producerEdge).toInt,
+                rate.getDenominatorAsInt() + g.getEdgeWeight(consumerEdge).toInt
+              )
+            })
+        })
+    })
+    val gActors = gActorsBuilder.buildAsUnmodifiable()
+    // we iterate on the undirected version as to 'come back'
+    // to vertex in feed-forward paths
+    val dfs        = DepthFirstIterator(AsUndirectedGraph(gActors))
+    val rates      = actorsSet.map(_ => BigFraction.MINUS_ONE)
+    var consistent = true
+    while (dfs.hasNext() && consistent) {
+      val nextActor = dfs.next()
+      val next      = actorsSet.indexOf(nextActor)
+      // if there is no rate on this vertex already, it must be a root, so we populate it
+      if (rates(next).equals(BigFraction.MINUS_ONE)) {
+        rates(next) = BigFraction.ONE
+      }
+      // populate neighbors based on 'next' which have no rate yet
+      gActors
+        .outgoingEdgesOf(nextActor)
+        .forEach(e => {
+          val other      = actorsSet.indexOf(gActors.getEdgeTarget(e))
+          // if no rate exists in the other actor yet, we create it...
+          if (rates(other).equals(BigFraction.MINUS_ONE)) {
+            // it depenends if the other is a consumer...
+            rates(other) = rates(next).multiply(gRates(next)(other))
+          }
+          // ...otherwise we check if the graph is consistent
+          else {
+            consistent = rates(other) == rates(next).divide(gRates(next)(other))
+          }
+        })
+      gActors
+        .incomingEdgesOf(nextActor)
+        .forEach(e => {
+          val otherActor = gActors.getEdgeSource(e)
+          val other      = actorsSet.indexOf(otherActor)
+          // if no rate exists in the other actor yet, we create it...
+          if (rates(other).equals(BigFraction.MINUS_ONE)) {
+            // it depenends if the other is a consumer...
+            rates(other) = rates(next).divide(gRates(other)(next))
+          }
+          // ...otherwise we check if the graph is consistent
+          else {
+            consistent = rates(next) == rates(other).divide(gRates(other)(next))
+          }
+        })
+    }
+    // finish early in case of non consistency
+    if (!consistent)
+      return Array()
+    // otherwise simplify the repVec
+    val gcd = rates.map(_.getNumeratorAsLong).reduce((i1, i2) => ArithmeticUtils.gcd(i1, i2))
+    val lcm = rates
+      .map(_.getDenominatorAsLong)
+      .reduce((i1, i2) => ArithmeticUtils.lcm(i1, i2))
+    rates.map(_.multiply(lcm).divide(gcd).getNumeratorAsInt())
+  })
+  // balanceMatrices.zipWithIndex.map((m, ind) => SDFUtils.getRepetitionVector(m, initialTokens, numDisjointComponents(ind)))
 
   def isConsistent = repetitionVectors.forall(r => r.size == actorsSet.size)
 
@@ -92,10 +175,19 @@ trait ParametricRateDataflowWorkloadMixin(using Integral[BigFraction]) {
 
   def isLive = liveSchedules.forall(l => l.size == actorsSet.size)
 
-  def pessimisticTokensPerChannel = channelsSet.map(c => {
-    dataflowGraphs.zipWithIndex.flatMap((g, confIdx) => {
-      g.incomingEdgesOf(c).stream().map(e => g.getEdgeSource(e)).mapToInt(a => repetitionVectors(confIdx)(a) * balanceMatrices(confIdx)(c)(a) + initialTokens(c)).toScala(List)
-    }).max
+  def pessimisticTokensPerChannel = channelsSet.zipWithIndex.map((c, cIdx) => {
+    dataflowGraphs.zipWithIndex
+      .flatMap((g, confIdx) => {
+        g.incomingEdgesOf(c)
+          .stream()
+          .map(e => g.getEdgeSource(e))
+          .mapToInt(a =>
+            val aIdx = actorsSet.indexOf(a)
+            repetitionVectors(confIdx)(aIdx) * balanceMatrices(confIdx)(cIdx)(aIdx) + initialTokens(cIdx)
+          )
+          .toScala(List)
+      })
+      .max
   })
 
   def stateSpace: Graph[Int, Int] = {

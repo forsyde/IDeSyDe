@@ -122,7 +122,7 @@ object SDFToSchedTiledHW {
       Fractional[BigFraction]
   )(using Conversion[Double, BigFraction]): IdentificationResult[SDFToSchedTiledHW] = {
     // for all tasks, there exists at least one PE where all runnables are executable
-    lazy val isExecutable = sdfApplications.processComputationalNeeds.forall(aMap => {
+    val isExecutable = sdfApplications.processComputationalNeeds.forall(aMap => {
       platform.tiledDigitalHardware.processorsProvisions.exists(pMap => {
         aMap.exists((_, opGroup) =>
           pMap.exists((_, ipcGroup) => opGroup.keySet.subsetOf(ipcGroup.keySet))
@@ -130,7 +130,7 @@ object SDFToSchedTiledHW {
       })
     })
     // All mappables (tasks, channels) have at least one element to be mapped at
-    lazy val isMappable = sdfApplications.processSizes.zipWithIndex.forall((taskSize, i) => {
+    val isMappable = sdfApplications.processSizes.zipWithIndex.forall((taskSize, i) => {
       platform.tiledDigitalHardware.memories.zipWithIndex.exists((me, j) => {
         taskSize <= me.getSpaceInBits
       })
@@ -140,7 +140,7 @@ object SDFToSchedTiledHW {
       })
     })
     // query all existing mappings
-    val actorMappings = sdfApplications.actors.map(task => {
+    lazy val actorMappings = sdfApplications.actors.map(task => {
       platform.tiledDigitalHardware.memories.map(mem => {
         MemoryMapped
           .safeCast(task)
@@ -149,7 +149,7 @@ object SDFToSchedTiledHW {
       })
     })
     // now for channels
-    val channelMappings = sdfApplications.channels.map(channel => {
+    lazy val channelMappings = sdfApplications.channels.map(channel => {
       platform.tiledDigitalHardware.memories.map(mem => {
         MemoryMapped
           .safeCast(channel)
@@ -158,7 +158,7 @@ object SDFToSchedTiledHW {
       })
     })
     // now find if any of task are already scheduled (mapped to a processor)
-    val actorSchedulings = sdfApplications.actors.map(task => {
+    lazy val actorSchedulings = sdfApplications.actors.map(task => {
       platform.schedulers.map(mem => {
         Scheduled
           .safeCast(task)
@@ -167,9 +167,6 @@ object SDFToSchedTiledHW {
       })
     })
     // finish with construction
-    // scribe.debug(s"1 ${instrumentedExecutables.length == workloadModel.tasks.length} &&" +
-    //   s"2 ${instrumentedPEsRange.length == platformModel.hardware.processingElems.length} &&" +
-    //   s"${isMappable} && ${isExecutable}")
     if (isMappable && isExecutable) then
       IdentificationResult.fixed(
         SDFToSchedTiledHW(

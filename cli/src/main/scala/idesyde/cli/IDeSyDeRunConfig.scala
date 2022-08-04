@@ -16,6 +16,8 @@ import idesyde.identification.ForSyDeDecisionModel
 import idesyde.exploration.interfaces.ForSyDeIOExplorer
 import idesyde.identification.api.ForSyDeIdentificationModule
 import idesyde.identification.api.MinizincIdentificationModule
+import scribe.format.FormatterInterpolator
+
 
 case class IDeSyDeRunConfig(
     var inputModelsPaths: Buffer[Path] = Buffer.empty,
@@ -90,11 +92,18 @@ case class IDeSyDeRunConfig(
     }
 
   def setLoggingLevel(loggingLevel: Level) =
-    scribe.Logger.root
-      .clearHandlers()
-      .clearModifiers()
-      .withHandler(minimumLevel = Some(loggingLevel))
-      .replace()
+    if (loggingLevel == Level.Debug)
+      scribe.Logger.root
+        .clearHandlers()
+        .clearModifiers()
+        .withHandler(minimumLevel = Some(loggingLevel), formatter = formatter"${scribe.format.dateFull} [${scribe.format.levelColoredPaddedRight}] ${scribe.format.italic(scribe.format.classNameSimple)} - ${scribe.format.message}")
+        .replace()
+    else 
+      scribe.Logger.root
+        .clearHandlers()
+        .clearModifiers()
+        .withHandler(minimumLevel = Some(loggingLevel), formatter = formatter"${scribe.format.dateFull} [${scribe.format.levelColoredPaddedRight}] ${scribe.format.message}")
+        .replace()
     scribe.info(s"logging levels set to ${loggingLevel.name}.")
 
 end IDeSyDeRunConfig

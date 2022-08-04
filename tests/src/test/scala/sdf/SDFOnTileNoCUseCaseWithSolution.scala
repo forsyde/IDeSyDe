@@ -20,11 +20,14 @@ import forsyde.io.java.core.EdgeTrait
 import forsyde.io.java.typed.viewers.visualization.Visualizable
 import forsyde.io.java.typed.viewers.platform.AbstractStructure
 import forsyde.io.java.typed.viewers.visualization.GreyBox
-import scribe.Level
-import scribe.format.FormatterInterpolator
-import scribe.format.FormatBlock
 import idesyde.identification.models.platform.TiledDigitalHardware
 import idesyde.identification.models.sdf.SDFApplication
+import forsyde.io.java.typed.viewers.platform.runtime.StaticCyclicScheduler
+import forsyde.io.java.typed.viewers.decision.Allocated
+import idesyde.identification.models.platform.SchedulableTiledDigitalHardware
+import idesyde.identification.models.mixed.SDFToSchedTiledHW
+
+import mixins.LoggingMixin
 
 
 /**
@@ -35,15 +38,9 @@ import idesyde.identification.models.sdf.SDFApplication
  * Which are mostly (all?) present in the DeSyDe source code repository https://github.com/forsyde/DeSyDe,
  * in its examples folder.
  */
-class SDFOnTileNoCUseCaseWithSolution extends AnyFunSuite {
+class SDFOnTileNoCUseCaseWithSolution extends AnyFunSuite with LoggingMixin {
   
   given ExecutionContext = ExecutionContext.global
-
-  scribe.Logger.root
-    .clearHandlers()
-    .clearModifiers()
-    .withHandler(minimumLevel = Some(Level.Debug), formatter = formatter"${scribe.format.dateFull} [${scribe.format.levelColoredPaddedRight}] ${scribe.format.italic(scribe.format.classNameSimple)} - ${scribe.format.message}")
-    .replace()
 
   val explorationHandler = ExplorationHandler()
     .registerModule(ChocoExplorationModule())
@@ -67,6 +64,7 @@ class SDFOnTileNoCUseCaseWithSolution extends AnyFunSuite {
         val proc = InstrumentedProcessingModule.enforce(Visualizable.enforce(m.newVertex("micro_blaze_" + i)))
         val mem = GenericMemoryModule.enforce(Visualizable.enforce(m.newVertex("micro_blaze_mem" + i)))
         val ni = InstrumentedCommunicationModule.enforce(Visualizable.enforce(m.newVertex("micro_blaze_ni" + i)))
+        val scheduler = StaticCyclicScheduler.enforce(m.newVertex("micro_blaze_os" + i))
         proc.setOperatingFrequencyInHertz(50000000L)
         mem.setOperatingFrequencyInHertz(50000000L)
         mem.setSpaceInBits(1048576L * 8L)
@@ -100,11 +98,14 @@ class SDFOnTileNoCUseCaseWithSolution extends AnyFunSuite {
         m.connect(mem, proc, "instructionsAndData", "defaultMemory", EdgeTrait.PLATFORM_PHYSICALCONNECTION, EdgeTrait.VISUALIZATION_VISUALCONNECTION)
         m.connect(mem, ni, "networkInterface", "tileMemory", EdgeTrait.PLATFORM_PHYSICALCONNECTION, EdgeTrait.VISUALIZATION_VISUALCONNECTION)
         m.connect(ni, mem, "tileMemory", "networkInterface", EdgeTrait.PLATFORM_PHYSICALCONNECTION, EdgeTrait.VISUALIZATION_VISUALCONNECTION)
+        GreyBox.enforce(proc).insertContainedPort(m, Visualizable.enforce(scheduler))
+        Allocated.enforce(scheduler).insertAllocationHostsPort(m, proc)
     }
     // and now the Arm tile
     val armProc = InstrumentedProcessingModule.enforce(Visualizable.enforce(m.newVertex("arm_cpu")))
     val armMem = GenericMemoryModule.enforce(Visualizable.enforce(m.newVertex("arm_mem")))
     val armNi = InstrumentedCommunicationModule.enforce(Visualizable.enforce(m.newVertex("arm_ni")))
+    val armScheduler = StaticCyclicScheduler.enforce(m.newVertex("arm_os"))
     armProc.setOperatingFrequencyInHertz(666667000L)
     armMem.setOperatingFrequencyInHertz(666667000L)
     armMem.setSpaceInBits(4294967296L * 8L)
@@ -132,7 +133,8 @@ class SDFOnTileNoCUseCaseWithSolution extends AnyFunSuite {
     m.connect(armMem, armProc, "instructionsAndData", "defaultMemory", EdgeTrait.PLATFORM_PHYSICALCONNECTION, EdgeTrait.VISUALIZATION_VISUALCONNECTION)
     m.connect(armMem, armNi, "networkInterface", "tileMemory", EdgeTrait.PLATFORM_PHYSICALCONNECTION, EdgeTrait.VISUALIZATION_VISUALCONNECTION)
     m.connect(armNi, armMem, "tileMemory", "networkInterface", EdgeTrait.PLATFORM_PHYSICALCONNECTION, EdgeTrait.VISUALIZATION_VISUALCONNECTION)
-
+    GreyBox.enforce(armProc).insertContainedPort(m, Visualizable.enforce(armScheduler))
+    Allocated.enforce(armScheduler).insertAllocationHostsPort(m, armProc)
     // and now we connect the NIs in the mesh
     for (
         i <- 0 until 4; row = i % 2; col = (i - row) / 2
@@ -181,6 +183,7 @@ class SDFOnTileNoCUseCaseWithSolution extends AnyFunSuite {
         val proc = InstrumentedProcessingModule.enforce(Visualizable.enforce(m.newVertex("tile_cpu_" + i)))
         val mem = GenericMemoryModule.enforce(Visualizable.enforce(m.newVertex("tile_mem" + i)))
         val ni = InstrumentedCommunicationModule.enforce(Visualizable.enforce(m.newVertex("tile_ni" + i)))
+        val scheduler = StaticCyclicScheduler.enforce(m.newVertex("tile_os" + i))
         proc.setOperatingFrequencyInHertz(50000000L)
         mem.setOperatingFrequencyInHertz(50000000L)
         mem.setSpaceInBits(16000 * 8L)
@@ -206,6 +209,8 @@ class SDFOnTileNoCUseCaseWithSolution extends AnyFunSuite {
         tileVisu.insertContainedPort(m, Visualizable.enforce(mem))
         tile.insertSubmodulesPort(m, ni)
         tileVisu.insertContainedPort(m, Visualizable.enforce(ni))
+        GreyBox.enforce(proc).insertContainedPort(m, Visualizable.enforce(scheduler))
+        Allocated.enforce(scheduler).insertAllocationHostsPort(m, proc)
         // connect them
         niMesh(row)(col) = ni
         m.connect(proc, ni, "networkInterface", "tileProcessor", EdgeTrait.PLATFORM_PHYSICALCONNECTION, EdgeTrait.VISUALIZATION_VISUALCONNECTION)
@@ -214,6 +219,7 @@ class SDFOnTileNoCUseCaseWithSolution extends AnyFunSuite {
         m.connect(mem, proc, "instructionsAndData", "defaultMemory", EdgeTrait.PLATFORM_PHYSICALCONNECTION, EdgeTrait.VISUALIZATION_VISUALCONNECTION)
         m.connect(mem, ni, "networkInterface", "tileMemory", EdgeTrait.PLATFORM_PHYSICALCONNECTION, EdgeTrait.VISUALIZATION_VISUALCONNECTION)
         m.connect(ni, mem, "tileMemory", "networkInterface", EdgeTrait.PLATFORM_PHYSICALCONNECTION, EdgeTrait.VISUALIZATION_VISUALCONNECTION)
+        
     }
 
     // and now we connect the NIs in the mesh
@@ -258,6 +264,10 @@ class SDFOnTileNoCUseCaseWithSolution extends AnyFunSuite {
   val rastaSDF3 = forSyDeModelHandler.loadModel("tests/models/sdf3/c_rasta.hsdf.xml")
   val jpegEnc1SDF3 = forSyDeModelHandler.loadModel("tests/models/sdf3/d_jpegEnc1.hsdf.xml")
   val g10_3_cyclicSDF3 = forSyDeModelHandler.loadModel("tests/models/sdf3/g10_3_cycl.sdf.xml")
+  val allSDFApps = sobelSDF3.merge(susanSDF3).merge(rastaSDF3).merge(jpegEnc1SDF3).merge(g10_3_cyclicSDF3)
+
+  val appsAndSmall = allSDFApps.merge(small2x2PlatformModel)
+  val appsAndLarge = allSDFApps.merge(large5x6PlatformModel)
 
   test("Created platform models in memory successfully and can write them out") {
     forSyDeModelHandler.writeModel(small2x2PlatformModel, "small_platform.fiodl")
@@ -267,13 +277,13 @@ class SDFOnTileNoCUseCaseWithSolution extends AnyFunSuite {
   test("Correct decision model identification of the Small platform") {
     lazy val identified = identificationHandler.identifyDecisionModels(small2x2PlatformModel)
     assert(identified.size > 0)
-    assert(identified.find(m => m.isInstanceOf[TiledDigitalHardware]).isDefined)
+    assert(identified.find(m => m.isInstanceOf[SchedulableTiledDigitalHardware]).isDefined)
   }
 
   test("Correct decision model identification of the Large platform") {
     lazy val identified = identificationHandler.identifyDecisionModels(large5x6PlatformModel)
     assert(identified.size > 0)
-    assert(identified.find(m => m.isInstanceOf[TiledDigitalHardware]).isDefined)
+    assert(identified.find(m => m.isInstanceOf[SchedulableTiledDigitalHardware]).isDefined)
   }
 
   test("Correct decision model identification of Sobel") {
@@ -289,7 +299,6 @@ class SDFOnTileNoCUseCaseWithSolution extends AnyFunSuite {
     assert(identified.size > 0)
     assert(identified.find(m => m.isInstanceOf[SDFApplication]).isDefined)
     val susanDM = identified.find(m => m.isInstanceOf[SDFApplication]).map(m => m.asInstanceOf[SDFApplication]).get
-    println(susanDM.repetitionVectors.head.mkString(", "))
     assert(susanDM.repetitionVectors.head.sameElements(Array(1, 1, 1, 1, 1)))
   }
 
@@ -297,18 +306,40 @@ class SDFOnTileNoCUseCaseWithSolution extends AnyFunSuite {
     lazy val identified = identificationHandler.identifyDecisionModels(rastaSDF3)
     assert(identified.size > 0)
     assert(identified.find(m => m.isInstanceOf[SDFApplication]).isDefined)
+    val rastaDM = identified.find(m => m.isInstanceOf[SDFApplication]).map(m => m.asInstanceOf[SDFApplication]).get
+    assert(rastaDM.repetitionVectors.head.sameElements(Array(1, 1, 1, 1, 1, 1, 1)))
   }
 
   test("Correct decision model identification of JPEG") {
     lazy val identified = identificationHandler.identifyDecisionModels(jpegEnc1SDF3)
     assert(identified.size > 0)
     assert(identified.find(m => m.isInstanceOf[SDFApplication]).isDefined)
+    val jpegDM = identified.find(m => m.isInstanceOf[SDFApplication]).map(m => m.asInstanceOf[SDFApplication]).get
+    assert(jpegDM.repetitionVectors.head.sameElements(Array.fill(jpegDM.actors.size)(1)))
   }
 
   test("Correct decision model identification of Synthetic") {
     lazy val identified = identificationHandler.identifyDecisionModels(g10_3_cyclicSDF3)
     assert(identified.size > 0)
     assert(identified.find(m => m.isInstanceOf[SDFApplication]).isDefined)
+    val syntheticDM = identified.find(m => m.isInstanceOf[SDFApplication]).map(m => m.asInstanceOf[SDFApplication]).get
+    assert(syntheticDM.repetitionVectors.head.sameElements(Array.fill(syntheticDM.actors.size)(1)))
   }
+
+  test("Correct decision model identification of all Applications together") {
+    lazy val identified = identificationHandler.identifyDecisionModels(allSDFApps)
+    assert(identified.size > 0)
+    assert(identified.find(m => m.isInstanceOf[SDFApplication]).isDefined)
+    val allSDFAppsDM = identified.find(m => m.isInstanceOf[SDFApplication]).map(m => m.asInstanceOf[SDFApplication]).get
+    assert(allSDFAppsDM.repetitionVectors.head.sameElements(Array.fill(allSDFAppsDM.actors.size)(1)))
+  }
+
+  test("Correct DSE identification of applications and small platform") {
+    setDebug()
+    lazy val identified = identificationHandler.identifyDecisionModels(appsAndSmall)
+    assert(identified.size > 0)
+    assert(identified.find(m => m.isInstanceOf[SDFToSchedTiledHW]).isDefined)
+  }
+
 
 }

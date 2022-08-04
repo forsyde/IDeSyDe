@@ -52,13 +52,13 @@ final case class ChocoSDFToSChedTileHW(
   // Decision variables
   def messagesMemoryMapping: Array[Array[BoolVar]] = dse.sdfApplications.channels.map(c =>
     dse.platform.tiledDigitalHardware.tileSet.map(tile =>
-      chocoModel.boolVar(s"${c.getIdentifier()}_m")
+      chocoModel.boolVar(s"${c.getIdentifier()}_${tile}_m")
     )
   )
 
   def processesMemoryMapping: Array[Array[BoolVar]] = dse.sdfApplications.actors.map(a =>
     dse.platform.tiledDigitalHardware.tileSet.map(tile =>
-      chocoModel.boolVar(s"${a.getIdentifier()}_m")
+      chocoModel.boolVar(s"${a.getIdentifier()}_${tile}_m")
     )
   )
 
@@ -74,16 +74,14 @@ final case class ChocoSDFToSChedTileHW(
   // - The channels can only be mapped in one tile, to avoid extra care on ordering and timing
   // - of the data
   // - therefore, every channel has to be mapped to exactly one tile
-  dse.platform.tiledDigitalHardware.tileSet.map(tile => {
-    val cMap = messagesMemoryMapping.map(c => c(tile))
-    chocoModel.sum(cMap, "=", 1).post()
-  })
+  dse.sdfApplications.channels.zipWithIndex.foreach((c, i) =>
+    chocoModel.sum(messagesMemoryMapping(i), "=", 1).post()
+  )
 
   // - every actor has to be mapped to at least one tile
-  dse.platform.tiledDigitalHardware.tileSet.map(tile => {
-    val pMap = processesMemoryMapping.map(p => p(tile))
-    chocoModel.sum(pMap, "=>", 1).post()
-  })
+  dse.sdfApplications.actors.zipWithIndex.foreach((a, i) =>
+    chocoModel.sum(processesMemoryMapping(i), ">=", 1).post()
+  )
 
   // - mixed constraints
   postManyProcessManyMessageMemoryConstraints()

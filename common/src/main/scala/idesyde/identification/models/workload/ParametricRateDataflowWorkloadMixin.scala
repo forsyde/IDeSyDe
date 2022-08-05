@@ -20,8 +20,9 @@ import org.jgrapht.alg.connectivity.ConnectivityInspector
 import org.jgrapht.graph.AsSubgraph
 import java.util.stream.Collectors
 import org.jgrapht.graph.AsUndirectedGraph
-import org.jgrapht.traverse.BreadthFirstIterator
-import java.util.function.BiFunction
+import org.jgrapht.traverse.DepthFirstIterator
+import scala.collection.mutable
+import org.jgrapht.graph.SimpleDirectedGraph
 import org.apache.commons.math3.util.ArithmeticUtils
 
 /** This traits captures the ParametricRateDataflow base MoC from [1]. Then, we hope to be able to
@@ -83,43 +84,92 @@ trait ParametricRateDataflowWorkloadMixin(using Integral[BigFraction]) {
   })
 
   def repetitionVectors: Array[Array[Int]] = dataflowGraphs.map(g => {
-    val bfs   = BreadthFirstIterator(g)
-    var rates = (actorsSet ++ channelsSet).map(i => i -> BigFraction.MINUS_ONE).toMap
-    while (bfs.hasNext()) {
-      val v      = bfs.next()
-      val vRate  = rates(v)
-      val parent = Option(bfs.getParent(v))
-      val possibleRate = parent
-        .map(parv => {
-          // from an actor to a channel
-          if (channelsSet.contains(v))
-            rates(parv)
-              .multiply(
-                g.getAllEdges(parv, v).stream().mapToInt(e => g.getEdgeWeight(e).toInt).sum()
-              )
-          else // from a channel to an actor
-            rates(parv)
-              .divide(
-                g.getAllEdges(parv, v).stream().mapToInt(e => g.getEdgeWeight(e).toInt).sum()
-              )
+    // first we build a compressed g with only the actors
+    // with the fractional flows in a matrix
+    val gRates         = Array.fill(actorsSet.size)(Array.fill(actorsSet.size)(BigFraction.ZERO))
+    val gActorsBuilder = SimpleDirectedGraph.createBuilder[Int, DefaultEdge](() => DefaultEdge())
+    // and put the rates between them in a matrix
+    channelsSet.foreach(c => {
+      // we do a for, but there should only be one producer and one consumer per actor
+      g.incomingEdgesOf(c)
+        .forEach(producerEdge => {
+          val producer = g.getEdgeSource(producerEdge)
+          g.outgoingEdgesOf(c)
+            .forEach(consumerEdge => {
+              val consumer = g.getEdgeTarget(consumerEdge)
+              // val rate = BigFraction(g.getEdgeWeight(producerEdge).toInt, g.getEdgeWeight(consumerEdge).toInt)
+              val rate = gRates(producer)(consumer)
+              gActorsBuilder.addEdge(producer, consumer)
+              // the if-else is required to subtract the +1 denominator that comes with a zero fraction
+              gRates(producer)(consumer) =
+                if (rate.equals(BigFraction.ZERO)) then
+                  BigFraction(
+                    rate.getNumeratorAsInt() + g.getEdgeWeight(producerEdge).toInt,
+                    rate.getDenominatorAsInt() - 1 + g.getEdgeWeight(consumerEdge).toInt
+                  )
+                else
+                  BigFraction(
+                    rate.getNumeratorAsInt() + g.getEdgeWeight(producerEdge).toInt,
+                    rate.getDenominatorAsInt() + g.getEdgeWeight(consumerEdge).toInt
+                  )
+            })
         })
-        // if there is no parent, return 1
-        .getOrElse(BigFraction.ONE)
-      if (vRate.equals(BigFraction.MINUS_ONE)) {
-        rates += v -> possibleRate
-      } else if (!vRate.divide(possibleRate).equals(BigFraction.ONE)) { //otherwise the rates should balance out
-        // termine early if this is not the case, because they are inconsistent
-        return Array()
+    })
+    val gActors = gActorsBuilder.buildAsUnmodifiable()
+    // we iterate on the undirected version as to 'come back'
+    // to vertex in feed-forward paths
+    val dfs        = DepthFirstIterator(AsUndirectedGraph(gActors))
+    val rates      = actorsSet.map(_ => BigFraction.MINUS_ONE)
+    var consistent = true
+    while (dfs.hasNext() && consistent) {
+      val nextActor = dfs.next()
+      val next      = actorsSet.indexOf(nextActor)
+      // if there is no rate on this vertex already, it must be a root, so we populate it
+      if (rates(next).equals(BigFraction.MINUS_ONE)) {
+        rates(next) = BigFraction.ONE
       }
+      // populate neighbors based on 'next' which have no rate yet
+      gActors
+        .outgoingEdgesOf(nextActor)
+        .forEach(e => {
+          val other = actorsSet.indexOf(gActors.getEdgeTarget(e))
+          // if no rate exists in the other actor yet, we create it...
+          if (rates(other).equals(BigFraction.MINUS_ONE)) {
+            // it depenends if the other is a consumer...
+            rates(other) = rates(next).multiply(gRates(next)(other))
+          }
+          // ...otherwise we check if the graph is consistent
+          else {
+            consistent = rates(other) == rates(next).divide(gRates(next)(other))
+          }
+        })
+      gActors
+        .incomingEdgesOf(nextActor)
+        .forEach(e => {
+          val otherActor = gActors.getEdgeSource(e)
+          val other      = actorsSet.indexOf(otherActor)
+          // if no rate exists in the other actor yet, we create it...
+          if (rates(other).equals(BigFraction.MINUS_ONE)) {
+            // it depenends if the other is a consumer...
+            rates(other) = rates(next).divide(gRates(other)(next))
+          }
+          // ...otherwise we check if the graph is consistent
+          else {
+            consistent = rates(next) == rates(other).divide(gRates(other)(next))
+          }
+        })
     }
-    // now we put the rates in a more mangeable format
-    val gcd =
-      rates.map((v, r) => r.getNumeratorAsLong).reduce((i1, i2) => ArithmeticUtils.gcd(i1, i2))
+    // finish early in case of non consistency
+    if (!consistent)
+      return Array()
+    // otherwise simplify the repVec
+    val gcd = rates.map(_.getNumeratorAsLong).reduce((i1, i2) => ArithmeticUtils.gcd(i1, i2))
     val lcm = rates
-      .map((v, r) => r.getDenominatorAsLong)
+      .map(_.getDenominatorAsLong)
       .reduce((i1, i2) => ArithmeticUtils.lcm(i1, i2))
-    actorsSet.map(a => rates(a).multiply(lcm).divide(gcd).getNumeratorAsInt()).toArray
+    rates.map(_.multiply(lcm).divide(gcd).getNumeratorAsInt())
   })
+  // balanceMatrices.zipWithIndex.map((m, ind) => SDFUtils.getRepetitionVector(m, initialTokens, numDisjointComponents(ind)))
 
   def isConsistent = repetitionVectors.forall(r => r.size == actorsSet.size)
 
@@ -129,14 +179,17 @@ trait ParametricRateDataflowWorkloadMixin(using Integral[BigFraction]) {
 
   def isLive = liveSchedules.forall(l => l.size == actorsSet.size)
 
-  def pessimisticTokensPerChannel = channelsSet.map(c => {
+  def pessimisticTokensPerChannel = channelsSet.zipWithIndex.map((c, cIdx) => {
     dataflowGraphs.zipWithIndex
       .flatMap((g, confIdx) => {
         g.incomingEdgesOf(c)
           .stream()
           .map(e => g.getEdgeSource(e))
           .mapToInt(a =>
-            repetitionVectors(confIdx)(a) * balanceMatrices(confIdx)(c)(a) + initialTokens(c)
+            val aIdx = actorsSet.indexOf(a)
+            repetitionVectors(confIdx)(aIdx) * balanceMatrices(confIdx)(cIdx)(aIdx) + initialTokens(
+              cIdx
+            )
           )
           .toScala(List)
       })

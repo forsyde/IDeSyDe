@@ -20,30 +20,32 @@ import forsyde.io.java.core.EdgeTrait
 import forsyde.io.java.typed.viewers.visualization.Visualizable
 import forsyde.io.java.typed.viewers.platform.AbstractStructure
 import forsyde.io.java.typed.viewers.visualization.GreyBox
-import scribe.Level
-import scribe.format.FormatterInterpolator
-import scribe.format.FormatBlock
 import idesyde.identification.models.platform.TiledDigitalHardware
 import idesyde.identification.models.sdf.SDFApplication
+import forsyde.io.java.typed.viewers.platform.runtime.StaticCyclicScheduler
+import forsyde.io.java.typed.viewers.decision.Allocated
+import idesyde.identification.models.platform.SchedulableTiledDigitalHardware
+import idesyde.identification.models.mixed.SDFToSchedTiledHW
 
+import mixins.LoggingMixin
+import idesyde.identification.models.choco.sdf.ChocoSDFToSChedTileHW
+import forsyde.io.java.graphviz.ForSyDeGraphVizDriver
+import forsyde.io.kgraph.drivers.ForSyDeKGTDriver
 
-/**
- * This test suite uses as much as possible the experiments from the paper
- * 
- * K. Rosvall, T. Mohammadat, G. Ungureanu, J. Öberg, and I. Sander, “Exploring Power and Throughput for Dataflow Applications on Predictable NoC Multiprocessors,” Aug. 2018, pp. 719–726. doi: 10.1109/DSD.2018.00011.
- *
- * Which are mostly (all?) present in the DeSyDe source code repository https://github.com/forsyde/DeSyDe,
- * in its examples folder.
- */
-class SDFOnTileNoCUseCaseWithSolution extends AnyFunSuite {
-  
+/** This test suite uses as much as possible the experiments from the paper
+  *
+  * K. Rosvall, T. Mohammadat, G. Ungureanu, J. Öberg, and I. Sander, “Exploring Power and
+  * Throughput for Dataflow Applications on Predictable NoC Multiprocessors,” Aug. 2018, pp.
+  * 719–726. doi: 10.1109/DSD.2018.00011.
+  *
+  * Which are mostly (all?) present in the DeSyDe source code repository
+  * https://github.com/forsyde/DeSyDe, in its examples folder.
+  */
+class SDFOnTileNoCUseCaseWithSolution extends AnyFunSuite with LoggingMixin {
+
   given ExecutionContext = ExecutionContext.global
 
-  scribe.Logger.root
-    .clearHandlers()
-    .clearModifiers()
-    .withHandler(minimumLevel = Some(Level.Debug), formatter = formatter"${scribe.format.dateFull} [${scribe.format.levelColoredPaddedRight}] ${scribe.format.italic(scribe.format.classNameSimple)} - ${scribe.format.message}")
-    .replace()
+  setNormal()
 
   val explorationHandler = ExplorationHandler()
     .registerModule(ChocoExplorationModule())
@@ -53,58 +55,113 @@ class SDFOnTileNoCUseCaseWithSolution extends AnyFunSuite {
     .registerIdentificationRule(ForSyDeIdentificationModule())
     .registerIdentificationRule(MinizincIdentificationModule())
 
-  val forSyDeModelHandler = ForSyDeModelHandler().registerDriver(ForSyDeSDF3Driver())
+  val forSyDeModelHandler = ForSyDeModelHandler()
+    .registerDriver(ForSyDeSDF3Driver())
+    .registerDriver(ForSyDeKGTDriver())
+    .registerDriver(ForSyDeGraphVizDriver())
 
   // the platform is done here in memory since the format used by the DeSyDe tool is non-standard,
   // even for the SDF3 group.
   val small2x2PlatformModel = {
-    val m = ForSyDeSystemGraph()
+    val m      = ForSyDeSystemGraph()
     var niMesh = Array.fill(2)(Array.fill[InstrumentedCommunicationModule](2)(null))
     // put the microblaze elements
     for (i <- 0 until 3; row = i % 2; col = (i - row) / 2) {
-        val tile = AbstractStructure.enforce(m.newVertex("tile_" + i))
-        val tileVisu = GreyBox.enforce(tile)
-        val proc = InstrumentedProcessingModule.enforce(Visualizable.enforce(m.newVertex("micro_blaze_" + i)))
-        val mem = GenericMemoryModule.enforce(Visualizable.enforce(m.newVertex("micro_blaze_mem" + i)))
-        val ni = InstrumentedCommunicationModule.enforce(Visualizable.enforce(m.newVertex("micro_blaze_ni" + i)))
-        proc.setOperatingFrequencyInHertz(50000000L)
-        mem.setOperatingFrequencyInHertz(50000000L)
-        mem.setSpaceInBits(1048576L * 8L)
-        ni.setOperatingFrequencyInHertz(50000000L)
-        ni.setFlitSizeInBits(128L)
-        ni.setMaxConcurrentFlits(1)
-        ni.setMaxCyclesPerFlit(4)
-        ni.setInitialLatency(0L)
-        proc.setModalInstructionsPerCycle(Map(
-            "eco" -> Map(
-                "all" -> (1.0 / 65.0).asInstanceOf[java.lang.Double]
-            ).asJava,
-            "default" -> Map(
-                "all" -> (1.0 / 13.0).asInstanceOf[java.lang.Double]
-            ).asJava
-        ).asJava)
-        // connect them
-        tile.insertSubmodulesPort(m, proc)
-        tileVisu.insertContainedPort(m, Visualizable.enforce(proc))
-        tile.insertSubmodulesPort(m, mem)
-        tileVisu.insertContainedPort(m, Visualizable.enforce(mem))
-        tile.insertSubmodulesPort(m, ni)
-        tileVisu.insertContainedPort(m, Visualizable.enforce(ni))
-        proc.getViewedVertex().addPorts("networkInterface", "defaultMemory")
-        mem.getViewedVertex().addPorts("networkInterface", "instructionsAndData")
-        ni.getViewedVertex().addPorts("tileMemory", "tileProcessor")
-        niMesh(row)(col) = ni
-        m.connect(proc, ni, "networkInterface", "tileProcessor", EdgeTrait.PLATFORM_PHYSICALCONNECTION, EdgeTrait.VISUALIZATION_VISUALCONNECTION)
-        m.connect(ni, proc, "tileProcessor", "networkInterface", EdgeTrait.PLATFORM_PHYSICALCONNECTION, EdgeTrait.VISUALIZATION_VISUALCONNECTION)
-        m.connect(proc, mem, "defaultMemory", "instructionsAndData", EdgeTrait.PLATFORM_PHYSICALCONNECTION, EdgeTrait.VISUALIZATION_VISUALCONNECTION)
-        m.connect(mem, proc, "instructionsAndData", "defaultMemory", EdgeTrait.PLATFORM_PHYSICALCONNECTION, EdgeTrait.VISUALIZATION_VISUALCONNECTION)
-        m.connect(mem, ni, "networkInterface", "tileMemory", EdgeTrait.PLATFORM_PHYSICALCONNECTION, EdgeTrait.VISUALIZATION_VISUALCONNECTION)
-        m.connect(ni, mem, "tileMemory", "networkInterface", EdgeTrait.PLATFORM_PHYSICALCONNECTION, EdgeTrait.VISUALIZATION_VISUALCONNECTION)
+      val tile     = AbstractStructure.enforce(m.newVertex("tile_" + i))
+      val tileVisu = GreyBox.enforce(tile)
+      val proc =
+        InstrumentedProcessingModule.enforce(Visualizable.enforce(m.newVertex("micro_blaze_" + i)))
+      val mem =
+        GenericMemoryModule.enforce(Visualizable.enforce(m.newVertex("micro_blaze_mem" + i)))
+      val ni = InstrumentedCommunicationModule.enforce(
+        Visualizable.enforce(m.newVertex("micro_blaze_ni" + i))
+      )
+      val scheduler = StaticCyclicScheduler.enforce(m.newVertex("micro_blaze_os" + i))
+      proc.setOperatingFrequencyInHertz(50000000L)
+      mem.setOperatingFrequencyInHertz(50000000L)
+      mem.setSpaceInBits(1048576L * 8L)
+      ni.setOperatingFrequencyInHertz(50000000L)
+      ni.setFlitSizeInBits(128L)
+      ni.setMaxConcurrentFlits(1)
+      ni.setMaxCyclesPerFlit(4)
+      ni.setInitialLatency(0L)
+      proc.setModalInstructionsPerCycle(
+        Map(
+          "eco" -> Map(
+            "all" -> (1.0 / 65.0).asInstanceOf[java.lang.Double]
+          ).asJava,
+          "default" -> Map(
+            "all" -> (1.0 / 13.0).asInstanceOf[java.lang.Double]
+          ).asJava
+        ).asJava
+      )
+      // connect them
+      tile.insertSubmodulesPort(m, proc)
+      tileVisu.insertContainedPort(m, Visualizable.enforce(proc))
+      tile.insertSubmodulesPort(m, mem)
+      tileVisu.insertContainedPort(m, Visualizable.enforce(mem))
+      tile.insertSubmodulesPort(m, ni)
+      tileVisu.insertContainedPort(m, Visualizable.enforce(ni))
+      proc.getViewedVertex().addPorts("networkInterface", "defaultMemory")
+      mem.getViewedVertex().addPorts("networkInterface", "instructionsAndData")
+      ni.getViewedVertex().addPorts("tileMemory", "tileProcessor")
+      niMesh(row)(col) = ni
+      m.connect(
+        proc,
+        ni,
+        "networkInterface",
+        "tileProcessor",
+        EdgeTrait.PLATFORM_PHYSICALCONNECTION,
+        EdgeTrait.VISUALIZATION_VISUALCONNECTION
+      )
+      m.connect(
+        ni,
+        proc,
+        "tileProcessor",
+        "networkInterface",
+        EdgeTrait.PLATFORM_PHYSICALCONNECTION,
+        EdgeTrait.VISUALIZATION_VISUALCONNECTION
+      )
+      m.connect(
+        proc,
+        mem,
+        "defaultMemory",
+        "instructionsAndData",
+        EdgeTrait.PLATFORM_PHYSICALCONNECTION,
+        EdgeTrait.VISUALIZATION_VISUALCONNECTION
+      )
+      m.connect(
+        mem,
+        proc,
+        "instructionsAndData",
+        "defaultMemory",
+        EdgeTrait.PLATFORM_PHYSICALCONNECTION,
+        EdgeTrait.VISUALIZATION_VISUALCONNECTION
+      )
+      m.connect(
+        mem,
+        ni,
+        "networkInterface",
+        "tileMemory",
+        EdgeTrait.PLATFORM_PHYSICALCONNECTION,
+        EdgeTrait.VISUALIZATION_VISUALCONNECTION
+      )
+      m.connect(
+        ni,
+        mem,
+        "tileMemory",
+        "networkInterface",
+        EdgeTrait.PLATFORM_PHYSICALCONNECTION,
+        EdgeTrait.VISUALIZATION_VISUALCONNECTION
+      )
+      GreyBox.enforce(proc).insertContainedPort(m, Visualizable.enforce(scheduler))
+      Allocated.enforce(scheduler).insertAllocationHostsPort(m, proc)
     }
     // and now the Arm tile
     val armProc = InstrumentedProcessingModule.enforce(Visualizable.enforce(m.newVertex("arm_cpu")))
-    val armMem = GenericMemoryModule.enforce(Visualizable.enforce(m.newVertex("arm_mem")))
+    val armMem  = GenericMemoryModule.enforce(Visualizable.enforce(m.newVertex("arm_mem")))
     val armNi = InstrumentedCommunicationModule.enforce(Visualizable.enforce(m.newVertex("arm_ni")))
+    val armScheduler = StaticCyclicScheduler.enforce(m.newVertex("arm_os"))
     armProc.setOperatingFrequencyInHertz(666667000L)
     armMem.setOperatingFrequencyInHertz(666667000L)
     armMem.setSpaceInBits(4294967296L * 8L)
@@ -113,58 +170,157 @@ class SDFOnTileNoCUseCaseWithSolution extends AnyFunSuite {
     armNi.setMaxConcurrentFlits(1)
     armNi.setMaxCyclesPerFlit(4)
     armNi.setInitialLatency(0L)
-    armProc.setModalInstructionsPerCycle(Map(
+    armProc.setModalInstructionsPerCycle(
+      Map(
         "eco" -> Map(
-            "all" -> (1.0 / 10.0).asInstanceOf[java.lang.Double]
+          "all" -> (1.0 / 10.0).asInstanceOf[java.lang.Double]
         ).asJava,
         "default" -> Map(
-            "all" -> (1.0).asInstanceOf[java.lang.Double]
+          "all" -> (1.0).asInstanceOf[java.lang.Double]
         ).asJava
-    ).asJava)
+      ).asJava
+    )
     // connect them
     armProc.getViewedVertex().addPorts("networkInterface", "defaultMemory")
     armMem.getViewedVertex().addPorts("networkInterface", "instructionsAndData")
     armNi.getViewedVertex().addPorts("tileMemory", "tileProcessor")
     niMesh(1)(1) = armNi
-    m.connect(armProc, armNi, "networkInterface", "tileProcessor", EdgeTrait.PLATFORM_PHYSICALCONNECTION, EdgeTrait.VISUALIZATION_VISUALCONNECTION)
-    m.connect(armNi, armProc, "tileProcessor", "networkInterface", EdgeTrait.PLATFORM_PHYSICALCONNECTION, EdgeTrait.VISUALIZATION_VISUALCONNECTION)
-    m.connect(armProc, armMem, "defaultMemory", "instructionsAndData", EdgeTrait.PLATFORM_PHYSICALCONNECTION, EdgeTrait.VISUALIZATION_VISUALCONNECTION)
-    m.connect(armMem, armProc, "instructionsAndData", "defaultMemory", EdgeTrait.PLATFORM_PHYSICALCONNECTION, EdgeTrait.VISUALIZATION_VISUALCONNECTION)
-    m.connect(armMem, armNi, "networkInterface", "tileMemory", EdgeTrait.PLATFORM_PHYSICALCONNECTION, EdgeTrait.VISUALIZATION_VISUALCONNECTION)
-    m.connect(armNi, armMem, "tileMemory", "networkInterface", EdgeTrait.PLATFORM_PHYSICALCONNECTION, EdgeTrait.VISUALIZATION_VISUALCONNECTION)
-
+    m.connect(
+      armProc,
+      armNi,
+      "networkInterface",
+      "tileProcessor",
+      EdgeTrait.PLATFORM_PHYSICALCONNECTION,
+      EdgeTrait.VISUALIZATION_VISUALCONNECTION
+    )
+    m.connect(
+      armNi,
+      armProc,
+      "tileProcessor",
+      "networkInterface",
+      EdgeTrait.PLATFORM_PHYSICALCONNECTION,
+      EdgeTrait.VISUALIZATION_VISUALCONNECTION
+    )
+    m.connect(
+      armProc,
+      armMem,
+      "defaultMemory",
+      "instructionsAndData",
+      EdgeTrait.PLATFORM_PHYSICALCONNECTION,
+      EdgeTrait.VISUALIZATION_VISUALCONNECTION
+    )
+    m.connect(
+      armMem,
+      armProc,
+      "instructionsAndData",
+      "defaultMemory",
+      EdgeTrait.PLATFORM_PHYSICALCONNECTION,
+      EdgeTrait.VISUALIZATION_VISUALCONNECTION
+    )
+    m.connect(
+      armMem,
+      armNi,
+      "networkInterface",
+      "tileMemory",
+      EdgeTrait.PLATFORM_PHYSICALCONNECTION,
+      EdgeTrait.VISUALIZATION_VISUALCONNECTION
+    )
+    m.connect(
+      armNi,
+      armMem,
+      "tileMemory",
+      "networkInterface",
+      EdgeTrait.PLATFORM_PHYSICALCONNECTION,
+      EdgeTrait.VISUALIZATION_VISUALCONNECTION
+    )
+    GreyBox.enforce(armProc).insertContainedPort(m, Visualizable.enforce(armScheduler))
+    Allocated.enforce(armScheduler).insertAllocationHostsPort(m, armProc)
     // and now we connect the NIs in the mesh
-    for (
-        i <- 0 until 4; row = i % 2; col = (i - row) / 2
-    ) {
-        if (row > 0) {
-            val r = row - 1;
-            niMesh(row)(col).getViewedVertex().addPorts(s"to_${r}_${col}", s"from_${r}_${col}")
-            niMesh(r)(col).getViewedVertex().addPorts(s"to_${row}_${col}", s"from_${row}_${col}")
-            m.connect(niMesh(row)(col), niMesh(r)(col), s"to_${r}_${col}", s"from_${row}_${col}", EdgeTrait.PLATFORM_PHYSICALCONNECTION, EdgeTrait.VISUALIZATION_VISUALCONNECTION)
-            m.connect(niMesh(r)(col), niMesh(row)(col), s"to_${row}_${col}", s"from_${r}_${col}", EdgeTrait.PLATFORM_PHYSICALCONNECTION, EdgeTrait.VISUALIZATION_VISUALCONNECTION)
-        }
-        if (row < 1) {
-            val r = row + 1;
-            niMesh(row)(col).getViewedVertex().addPorts(s"to_${r}_${col}", s"from_${r}_${col}")
-            niMesh(r)(col).getViewedVertex().addPorts(s"to_${row}_${col}", s"from_${row}_${col}")
-            m.connect(niMesh(row)(col), niMesh(r)(col), s"to_${r}_${col}", s"from_${row}_${col}", EdgeTrait.PLATFORM_PHYSICALCONNECTION, EdgeTrait.VISUALIZATION_VISUALCONNECTION)
-            m.connect(niMesh(r)(col), niMesh(row)(col), s"to_${row}_${col}", s"from_${r}_${col}", EdgeTrait.PLATFORM_PHYSICALCONNECTION, EdgeTrait.VISUALIZATION_VISUALCONNECTION)
-        }
-        if (col > 0) {
-            val c = col - 1;
-            niMesh(row)(col).getViewedVertex().addPorts(s"to_${row}_${c}", s"from_${row}_${c}")
-            niMesh(row)(c).getViewedVertex().addPorts(s"to_${row}_${col}", s"from_${row}_${col}")
-            m.connect(niMesh(row)(col), niMesh(row)(c), s"to_${row}_${c}", s"from_${row}_${col}", EdgeTrait.PLATFORM_PHYSICALCONNECTION, EdgeTrait.VISUALIZATION_VISUALCONNECTION)
-            m.connect(niMesh(row)(c), niMesh(row)(col), s"to_${row}_${col}", s"from_${c}_${col}", EdgeTrait.PLATFORM_PHYSICALCONNECTION, EdgeTrait.VISUALIZATION_VISUALCONNECTION)
-        }
-        if (col < 1) {
-            val c = col + 1;
-            niMesh(row)(col).getViewedVertex().addPorts(s"to_${row}_${c}", s"from_${row}_${c}")
-            niMesh(row)(c).getViewedVertex().addPorts(s"to_${row}_${col}", s"from_${row}_${col}")
-            m.connect(niMesh(row)(col), niMesh(row)(c), s"to_${row}_${c}", s"from_${row}_${col}", EdgeTrait.PLATFORM_PHYSICALCONNECTION, EdgeTrait.VISUALIZATION_VISUALCONNECTION)
-            m.connect(niMesh(row)(c), niMesh(row)(col), s"to_${row}_${col}", s"from_${c}_${col}", EdgeTrait.PLATFORM_PHYSICALCONNECTION, EdgeTrait.VISUALIZATION_VISUALCONNECTION)
-        }
+    for (i <- 0 until 4; row = i % 2; col = (i - row) / 2) {
+      if (row > 0) {
+        val r = row - 1;
+        niMesh(row)(col).getViewedVertex().addPorts(s"to_${r}_${col}", s"from_${r}_${col}")
+        niMesh(r)(col).getViewedVertex().addPorts(s"to_${row}_${col}", s"from_${row}_${col}")
+        m.connect(
+          niMesh(row)(col),
+          niMesh(r)(col),
+          s"to_${r}_${col}",
+          s"from_${row}_${col}",
+          EdgeTrait.PLATFORM_PHYSICALCONNECTION,
+          EdgeTrait.VISUALIZATION_VISUALCONNECTION
+        )
+        m.connect(
+          niMesh(r)(col),
+          niMesh(row)(col),
+          s"to_${row}_${col}",
+          s"from_${r}_${col}",
+          EdgeTrait.PLATFORM_PHYSICALCONNECTION,
+          EdgeTrait.VISUALIZATION_VISUALCONNECTION
+        )
+      }
+      if (row < 1) {
+        val r = row + 1;
+        niMesh(row)(col).getViewedVertex().addPorts(s"to_${r}_${col}", s"from_${r}_${col}")
+        niMesh(r)(col).getViewedVertex().addPorts(s"to_${row}_${col}", s"from_${row}_${col}")
+        m.connect(
+          niMesh(row)(col),
+          niMesh(r)(col),
+          s"to_${r}_${col}",
+          s"from_${row}_${col}",
+          EdgeTrait.PLATFORM_PHYSICALCONNECTION,
+          EdgeTrait.VISUALIZATION_VISUALCONNECTION
+        )
+        m.connect(
+          niMesh(r)(col),
+          niMesh(row)(col),
+          s"to_${row}_${col}",
+          s"from_${r}_${col}",
+          EdgeTrait.PLATFORM_PHYSICALCONNECTION,
+          EdgeTrait.VISUALIZATION_VISUALCONNECTION
+        )
+      }
+      if (col > 0) {
+        val c = col - 1;
+        niMesh(row)(col).getViewedVertex().addPorts(s"to_${row}_${c}", s"from_${row}_${c}")
+        niMesh(row)(c).getViewedVertex().addPorts(s"to_${row}_${col}", s"from_${row}_${col}")
+        m.connect(
+          niMesh(row)(col),
+          niMesh(row)(c),
+          s"to_${row}_${c}",
+          s"from_${row}_${col}",
+          EdgeTrait.PLATFORM_PHYSICALCONNECTION,
+          EdgeTrait.VISUALIZATION_VISUALCONNECTION
+        )
+        m.connect(
+          niMesh(row)(c),
+          niMesh(row)(col),
+          s"to_${row}_${col}",
+          s"from_${c}_${col}",
+          EdgeTrait.PLATFORM_PHYSICALCONNECTION,
+          EdgeTrait.VISUALIZATION_VISUALCONNECTION
+        )
+      }
+      if (col < 1) {
+        val c = col + 1;
+        niMesh(row)(col).getViewedVertex().addPorts(s"to_${row}_${c}", s"from_${row}_${c}")
+        niMesh(row)(c).getViewedVertex().addPorts(s"to_${row}_${col}", s"from_${row}_${col}")
+        m.connect(
+          niMesh(row)(col),
+          niMesh(row)(c),
+          s"to_${row}_${c}",
+          s"from_${row}_${col}",
+          EdgeTrait.PLATFORM_PHYSICALCONNECTION,
+          EdgeTrait.VISUALIZATION_VISUALCONNECTION
+        )
+        m.connect(
+          niMesh(row)(c),
+          niMesh(row)(col),
+          s"to_${row}_${col}",
+          s"from_${c}_${col}",
+          EdgeTrait.PLATFORM_PHYSICALCONNECTION,
+          EdgeTrait.VISUALIZATION_VISUALCONNECTION
+        )
+      }
     }
 
     m
@@ -172,92 +328,201 @@ class SDFOnTileNoCUseCaseWithSolution extends AnyFunSuite {
 
   // and now we construct the bigger in memory for the same reason
   val large5x6PlatformModel = {
-    val m = ForSyDeSystemGraph()
+    val m      = ForSyDeSystemGraph()
     var niMesh = Array.fill(5)(Array.fill[InstrumentedCommunicationModule](6)(null))
     // put the proc elements
     for (i <- 0 until 30; row = i % 5; col = (i - row) / 5) {
-        val tile = AbstractStructure.enforce(m.newVertex("tile_" + i))
-        val tileVisu = GreyBox.enforce(tile)
-        val proc = InstrumentedProcessingModule.enforce(Visualizable.enforce(m.newVertex("tile_cpu_" + i)))
-        val mem = GenericMemoryModule.enforce(Visualizable.enforce(m.newVertex("tile_mem" + i)))
-        val ni = InstrumentedCommunicationModule.enforce(Visualizable.enforce(m.newVertex("tile_ni" + i)))
-        proc.setOperatingFrequencyInHertz(50000000L)
-        mem.setOperatingFrequencyInHertz(50000000L)
-        mem.setSpaceInBits(16000 * 8L)
-        ni.setOperatingFrequencyInHertz(50000000L)
-        ni.setFlitSizeInBits(128L)
-        ni.setMaxConcurrentFlits(1)
-        ni.setMaxCyclesPerFlit(6)
-        ni.setInitialLatency(0L)
-        proc.setModalInstructionsPerCycle(Map(
-            "eco" -> Map(
-                "all" -> (1.0 / 1.2).asInstanceOf[java.lang.Double]
-            ).asJava,
-            "default" -> Map(
-                "all" -> (1.0).asInstanceOf[java.lang.Double]
-            ).asJava
-        ).asJava)
-        proc.getViewedVertex().addPorts("networkInterface", "defaultMemory")
-        mem.getViewedVertex().addPorts("networkInterface", "instructionsAndData")
-        ni.getViewedVertex().addPorts("tileMemory", "tileProcessor")
-        tile.insertSubmodulesPort(m, proc)
-        tileVisu.insertContainedPort(m, Visualizable.enforce(proc))
-        tile.insertSubmodulesPort(m, mem)
-        tileVisu.insertContainedPort(m, Visualizable.enforce(mem))
-        tile.insertSubmodulesPort(m, ni)
-        tileVisu.insertContainedPort(m, Visualizable.enforce(ni))
-        // connect them
-        niMesh(row)(col) = ni
-        m.connect(proc, ni, "networkInterface", "tileProcessor", EdgeTrait.PLATFORM_PHYSICALCONNECTION, EdgeTrait.VISUALIZATION_VISUALCONNECTION)
-        m.connect(ni, proc, "tileProcessor", "networkInterface", EdgeTrait.PLATFORM_PHYSICALCONNECTION, EdgeTrait.VISUALIZATION_VISUALCONNECTION)
-        m.connect(proc, mem, "defaultMemory", "instructionsAndData", EdgeTrait.PLATFORM_PHYSICALCONNECTION, EdgeTrait.VISUALIZATION_VISUALCONNECTION)
-        m.connect(mem, proc, "instructionsAndData", "defaultMemory", EdgeTrait.PLATFORM_PHYSICALCONNECTION, EdgeTrait.VISUALIZATION_VISUALCONNECTION)
-        m.connect(mem, ni, "networkInterface", "tileMemory", EdgeTrait.PLATFORM_PHYSICALCONNECTION, EdgeTrait.VISUALIZATION_VISUALCONNECTION)
-        m.connect(ni, mem, "tileMemory", "networkInterface", EdgeTrait.PLATFORM_PHYSICALCONNECTION, EdgeTrait.VISUALIZATION_VISUALCONNECTION)
+      val tile     = AbstractStructure.enforce(m.newVertex("tile_" + i))
+      val tileVisu = GreyBox.enforce(tile)
+      val proc =
+        InstrumentedProcessingModule.enforce(Visualizable.enforce(m.newVertex("tile_cpu_" + i)))
+      val mem = GenericMemoryModule.enforce(Visualizable.enforce(m.newVertex("tile_mem" + i)))
+      val ni =
+        InstrumentedCommunicationModule.enforce(Visualizable.enforce(m.newVertex("tile_ni" + i)))
+      val scheduler = StaticCyclicScheduler.enforce(m.newVertex("tile_os" + i))
+      proc.setOperatingFrequencyInHertz(50000000L)
+      mem.setOperatingFrequencyInHertz(50000000L)
+      mem.setSpaceInBits(16000 * 8L)
+      ni.setOperatingFrequencyInHertz(50000000L)
+      ni.setFlitSizeInBits(128L)
+      ni.setMaxConcurrentFlits(1)
+      ni.setMaxCyclesPerFlit(6)
+      ni.setInitialLatency(0L)
+      proc.setModalInstructionsPerCycle(
+        Map(
+          "eco" -> Map(
+            "all" -> (1.0 / 1.2).asInstanceOf[java.lang.Double]
+          ).asJava,
+          "default" -> Map(
+            "all" -> (1.0).asInstanceOf[java.lang.Double]
+          ).asJava
+        ).asJava
+      )
+      proc.getViewedVertex().addPorts("networkInterface", "defaultMemory")
+      mem.getViewedVertex().addPorts("networkInterface", "instructionsAndData")
+      ni.getViewedVertex().addPorts("tileMemory", "tileProcessor")
+      tile.insertSubmodulesPort(m, proc)
+      tileVisu.insertContainedPort(m, Visualizable.enforce(proc))
+      tile.insertSubmodulesPort(m, mem)
+      tileVisu.insertContainedPort(m, Visualizable.enforce(mem))
+      tile.insertSubmodulesPort(m, ni)
+      tileVisu.insertContainedPort(m, Visualizable.enforce(ni))
+      GreyBox.enforce(proc).insertContainedPort(m, Visualizable.enforce(scheduler))
+      Allocated.enforce(scheduler).insertAllocationHostsPort(m, proc)
+      // connect them
+      niMesh(row)(col) = ni
+      m.connect(
+        proc,
+        ni,
+        "networkInterface",
+        "tileProcessor",
+        EdgeTrait.PLATFORM_PHYSICALCONNECTION,
+        EdgeTrait.VISUALIZATION_VISUALCONNECTION
+      )
+      m.connect(
+        ni,
+        proc,
+        "tileProcessor",
+        "networkInterface",
+        EdgeTrait.PLATFORM_PHYSICALCONNECTION,
+        EdgeTrait.VISUALIZATION_VISUALCONNECTION
+      )
+      m.connect(
+        proc,
+        mem,
+        "defaultMemory",
+        "instructionsAndData",
+        EdgeTrait.PLATFORM_PHYSICALCONNECTION,
+        EdgeTrait.VISUALIZATION_VISUALCONNECTION
+      )
+      m.connect(
+        mem,
+        proc,
+        "instructionsAndData",
+        "defaultMemory",
+        EdgeTrait.PLATFORM_PHYSICALCONNECTION,
+        EdgeTrait.VISUALIZATION_VISUALCONNECTION
+      )
+      m.connect(
+        mem,
+        ni,
+        "networkInterface",
+        "tileMemory",
+        EdgeTrait.PLATFORM_PHYSICALCONNECTION,
+        EdgeTrait.VISUALIZATION_VISUALCONNECTION
+      )
+      m.connect(
+        ni,
+        mem,
+        "tileMemory",
+        "networkInterface",
+        EdgeTrait.PLATFORM_PHYSICALCONNECTION,
+        EdgeTrait.VISUALIZATION_VISUALCONNECTION
+      )
+
     }
 
     // and now we connect the NIs in the mesh
-    for (
-        i <- 0 until 30; row = i % 5; col = (i - row) / 5
-    ) {
-        if (row > 0) {
-            val r = row - 1;
-            niMesh(row)(col).getViewedVertex().addPorts(s"to_${r}_${col}", s"from_${r}_${col}")
-            niMesh(r)(col).getViewedVertex().addPorts(s"to_${row}_${col}", s"from_${row}_${col}")
-            m.connect(niMesh(row)(col), niMesh(r)(col), s"to_${r}_${col}", s"from_${row}_${col}", EdgeTrait.PLATFORM_PHYSICALCONNECTION, EdgeTrait.VISUALIZATION_VISUALCONNECTION)
-            m.connect(niMesh(r)(col), niMesh(row)(col), s"to_${row}_${col}", s"from_${r}_${col}", EdgeTrait.PLATFORM_PHYSICALCONNECTION, EdgeTrait.VISUALIZATION_VISUALCONNECTION)
-        }
-        if (row < 4) {
-            val r = row + 1;
-            niMesh(row)(col).getViewedVertex().addPorts(s"to_${r}_${col}", s"from_${r}_${col}")
-            niMesh(r)(col).getViewedVertex().addPorts(s"to_${row}_${col}", s"from_${row}_${col}")
-            m.connect(niMesh(row)(col), niMesh(r)(col), s"to_${r}_${col}", s"from_${row}_${col}", EdgeTrait.PLATFORM_PHYSICALCONNECTION, EdgeTrait.VISUALIZATION_VISUALCONNECTION)
-            m.connect(niMesh(r)(col), niMesh(row)(col), s"to_${row}_${col}", s"from_${r}_${col}", EdgeTrait.PLATFORM_PHYSICALCONNECTION, EdgeTrait.VISUALIZATION_VISUALCONNECTION)
-        }
-        if (col > 0) {
-            val c = col - 1;
-            niMesh(row)(col).getViewedVertex().addPorts(s"to_${row}_${c}", s"from_${row}_${c}")
-            niMesh(row)(c).getViewedVertex().addPorts(s"to_${row}_${col}", s"from_${row}_${col}")
-            m.connect(niMesh(row)(col), niMesh(row)(c), s"to_${row}_${c}", s"from_${row}_${col}", EdgeTrait.PLATFORM_PHYSICALCONNECTION, EdgeTrait.VISUALIZATION_VISUALCONNECTION)
-            m.connect(niMesh(row)(c), niMesh(row)(col), s"to_${row}_${col}", s"from_${c}_${col}", EdgeTrait.PLATFORM_PHYSICALCONNECTION, EdgeTrait.VISUALIZATION_VISUALCONNECTION)
-        }
-        if (col < 5) {
-            val c = col + 1;
-            niMesh(row)(col).getViewedVertex().addPorts(s"to_${row}_${c}", s"from_${row}_${c}")
-            niMesh(row)(c).getViewedVertex().addPorts(s"to_${row}_${col}", s"from_${row}_${col}")
-            m.connect(niMesh(row)(col), niMesh(row)(c), s"to_${row}_${c}", s"from_${row}_${col}", EdgeTrait.PLATFORM_PHYSICALCONNECTION, EdgeTrait.VISUALIZATION_VISUALCONNECTION)
-            m.connect(niMesh(row)(c), niMesh(row)(col), s"to_${row}_${col}", s"from_${c}_${col}", EdgeTrait.PLATFORM_PHYSICALCONNECTION, EdgeTrait.VISUALIZATION_VISUALCONNECTION)
-        }
+    for (i <- 0 until 30; row = i % 5; col = (i - row) / 5) {
+      if (row > 0) {
+        val r = row - 1;
+        niMesh(row)(col).getViewedVertex().addPorts(s"to_${r}_${col}", s"from_${r}_${col}")
+        niMesh(r)(col).getViewedVertex().addPorts(s"to_${row}_${col}", s"from_${row}_${col}")
+        m.connect(
+          niMesh(row)(col),
+          niMesh(r)(col),
+          s"to_${r}_${col}",
+          s"from_${row}_${col}",
+          EdgeTrait.PLATFORM_PHYSICALCONNECTION,
+          EdgeTrait.VISUALIZATION_VISUALCONNECTION
+        )
+        m.connect(
+          niMesh(r)(col),
+          niMesh(row)(col),
+          s"to_${row}_${col}",
+          s"from_${r}_${col}",
+          EdgeTrait.PLATFORM_PHYSICALCONNECTION,
+          EdgeTrait.VISUALIZATION_VISUALCONNECTION
+        )
+      }
+      if (row < 4) {
+        val r = row + 1;
+        niMesh(row)(col).getViewedVertex().addPorts(s"to_${r}_${col}", s"from_${r}_${col}")
+        niMesh(r)(col).getViewedVertex().addPorts(s"to_${row}_${col}", s"from_${row}_${col}")
+        m.connect(
+          niMesh(row)(col),
+          niMesh(r)(col),
+          s"to_${r}_${col}",
+          s"from_${row}_${col}",
+          EdgeTrait.PLATFORM_PHYSICALCONNECTION,
+          EdgeTrait.VISUALIZATION_VISUALCONNECTION
+        )
+        m.connect(
+          niMesh(r)(col),
+          niMesh(row)(col),
+          s"to_${row}_${col}",
+          s"from_${r}_${col}",
+          EdgeTrait.PLATFORM_PHYSICALCONNECTION,
+          EdgeTrait.VISUALIZATION_VISUALCONNECTION
+        )
+      }
+      if (col > 0) {
+        val c = col - 1;
+        niMesh(row)(col).getViewedVertex().addPorts(s"to_${row}_${c}", s"from_${row}_${c}")
+        niMesh(row)(c).getViewedVertex().addPorts(s"to_${row}_${col}", s"from_${row}_${col}")
+        m.connect(
+          niMesh(row)(col),
+          niMesh(row)(c),
+          s"to_${row}_${c}",
+          s"from_${row}_${col}",
+          EdgeTrait.PLATFORM_PHYSICALCONNECTION,
+          EdgeTrait.VISUALIZATION_VISUALCONNECTION
+        )
+        m.connect(
+          niMesh(row)(c),
+          niMesh(row)(col),
+          s"to_${row}_${col}",
+          s"from_${c}_${col}",
+          EdgeTrait.PLATFORM_PHYSICALCONNECTION,
+          EdgeTrait.VISUALIZATION_VISUALCONNECTION
+        )
+      }
+      if (col < 5) {
+        val c = col + 1;
+        niMesh(row)(col).getViewedVertex().addPorts(s"to_${row}_${c}", s"from_${row}_${c}")
+        niMesh(row)(c).getViewedVertex().addPorts(s"to_${row}_${col}", s"from_${row}_${col}")
+        m.connect(
+          niMesh(row)(col),
+          niMesh(row)(c),
+          s"to_${row}_${c}",
+          s"from_${row}_${col}",
+          EdgeTrait.PLATFORM_PHYSICALCONNECTION,
+          EdgeTrait.VISUALIZATION_VISUALCONNECTION
+        )
+        m.connect(
+          niMesh(row)(c),
+          niMesh(row)(col),
+          s"to_${row}_${col}",
+          s"from_${c}_${col}",
+          EdgeTrait.PLATFORM_PHYSICALCONNECTION,
+          EdgeTrait.VISUALIZATION_VISUALCONNECTION
+        )
+      }
     }
 
     m
   }
 
-  val sobelSDF3 = forSyDeModelHandler.loadModel("tests/models/sdf3/a_sobel.hsdf.xml")
-  val susanSDF3 = forSyDeModelHandler.loadModel("tests/models/sdf3/b_susan.hsdf.xml")
-  val rastaSDF3 = forSyDeModelHandler.loadModel("tests/models/sdf3/c_rasta.hsdf.xml")
-  val jpegEnc1SDF3 = forSyDeModelHandler.loadModel("tests/models/sdf3/d_jpegEnc1.hsdf.xml")
+  val sobelSDF3        = forSyDeModelHandler.loadModel("tests/models/sdf3/a_sobel.hsdf.xml")
+  val susanSDF3        = forSyDeModelHandler.loadModel("tests/models/sdf3/b_susan.hsdf.xml")
+  val rastaSDF3        = forSyDeModelHandler.loadModel("tests/models/sdf3/c_rasta.hsdf.xml")
+  val jpegEnc1SDF3     = forSyDeModelHandler.loadModel("tests/models/sdf3/d_jpegEnc1.hsdf.xml")
   val g10_3_cyclicSDF3 = forSyDeModelHandler.loadModel("tests/models/sdf3/g10_3_cycl.sdf.xml")
+  val allSDFApps =
+    sobelSDF3.merge(susanSDF3).merge(rastaSDF3).merge(jpegEnc1SDF3).merge(g10_3_cyclicSDF3)
+
+  val appsAndSmall = allSDFApps.merge(small2x2PlatformModel)
+  val appsAndLarge = allSDFApps.merge(large5x6PlatformModel)
 
   test("Created platform models in memory successfully and can write them out") {
     forSyDeModelHandler.writeModel(small2x2PlatformModel, "small_platform.fiodl")
@@ -265,50 +530,132 @@ class SDFOnTileNoCUseCaseWithSolution extends AnyFunSuite {
   }
 
   test("Correct decision model identification of the Small platform") {
-    lazy val identified = identificationHandler.identifyDecisionModels(small2x2PlatformModel)
+    val identified = identificationHandler.identifyDecisionModels(small2x2PlatformModel)
     assert(identified.size > 0)
-    assert(identified.find(m => m.isInstanceOf[TiledDigitalHardware]).isDefined)
+    assert(identified.find(m => m.isInstanceOf[SchedulableTiledDigitalHardware]).isDefined)
   }
 
   test("Correct decision model identification of the Large platform") {
-    lazy val identified = identificationHandler.identifyDecisionModels(large5x6PlatformModel)
+    val identified = identificationHandler.identifyDecisionModels(large5x6PlatformModel)
     assert(identified.size > 0)
-    assert(identified.find(m => m.isInstanceOf[TiledDigitalHardware]).isDefined)
+    assert(identified.find(m => m.isInstanceOf[SchedulableTiledDigitalHardware]).isDefined)
   }
 
   test("Correct decision model identification of Sobel") {
-    lazy val identified = identificationHandler.identifyDecisionModels(sobelSDF3)
+    val identified = identificationHandler.identifyDecisionModels(sobelSDF3)
     assert(identified.size > 0)
     assert(identified.find(m => m.isInstanceOf[SDFApplication]).isDefined)
-    val sobelDM = identified.find(m => m.isInstanceOf[SDFApplication]).map(m => m.asInstanceOf[SDFApplication]).get
+    val sobelDM = identified
+      .find(m => m.isInstanceOf[SDFApplication])
+      .map(m => m.asInstanceOf[SDFApplication])
+      .get
     assert(sobelDM.repetitionVectors.head.sameElements(Array(1, 1, 1, 1)))
   }
 
+  test("Correct identification and DSE of Sobel to Small") {
+    val inputSystem = sobelSDF3.merge(small2x2PlatformModel)
+    val identified = identificationHandler.identifyDecisionModels(inputSystem)
+    val chosen = explorationHandler.chooseExplorersAndModels(identified)
+    assert(chosen.size > 0)
+    assert(chosen.find((_, m) => m.isInstanceOf[ChocoSDFToSChedTileHW]).isDefined)
+    val solutions = chosen
+      .flatMap((explorer, decisionModel) =>
+        explorer
+          .explore[ForSyDeSystemGraph](decisionModel)
+          .map(sol =>
+            forSyDeModelHandler
+              .writeModel(inputSystem.merge(sol), "tests/models/sdf3/sobel_and_small_result.fiodl")
+            forSyDeModelHandler.writeModel(
+              inputSystem.merge(sol),
+              "tests/models/sdf3/sobel_and_small_result_visual.kgt"
+            )
+            sol
+          )
+      )
+      .take(1)
+    assert(solutions.size >= 1)
+  }
+
   test("Correct decision model identification of SUSAN") {
-    lazy val identified = identificationHandler.identifyDecisionModels(susanSDF3)
+    val identified = identificationHandler.identifyDecisionModels(susanSDF3)
     assert(identified.size > 0)
     assert(identified.find(m => m.isInstanceOf[SDFApplication]).isDefined)
-    val susanDM = identified.find(m => m.isInstanceOf[SDFApplication]).map(m => m.asInstanceOf[SDFApplication]).get
-    println(susanDM.repetitionVectors.head.mkString(", "))
+    val susanDM = identified
+      .find(m => m.isInstanceOf[SDFApplication])
+      .map(m => m.asInstanceOf[SDFApplication])
+      .get
     assert(susanDM.repetitionVectors.head.sameElements(Array(1, 1, 1, 1, 1)))
   }
 
   test("Correct decision model identification of RASTA") {
-    lazy val identified = identificationHandler.identifyDecisionModels(rastaSDF3)
+    val identified = identificationHandler.identifyDecisionModels(rastaSDF3)
     assert(identified.size > 0)
     assert(identified.find(m => m.isInstanceOf[SDFApplication]).isDefined)
+    val rastaDM = identified
+      .find(m => m.isInstanceOf[SDFApplication])
+      .map(m => m.asInstanceOf[SDFApplication])
+      .get
+    assert(rastaDM.repetitionVectors.head.sameElements(Array(1, 1, 1, 1, 1, 1, 1)))
   }
 
   test("Correct decision model identification of JPEG") {
-    lazy val identified = identificationHandler.identifyDecisionModels(jpegEnc1SDF3)
+    val identified = identificationHandler.identifyDecisionModels(jpegEnc1SDF3)
     assert(identified.size > 0)
     assert(identified.find(m => m.isInstanceOf[SDFApplication]).isDefined)
+    val jpegDM = identified
+      .find(m => m.isInstanceOf[SDFApplication])
+      .map(m => m.asInstanceOf[SDFApplication])
+      .get
+    assert(jpegDM.repetitionVectors.head.sameElements(Array.fill(jpegDM.actors.size)(1)))
   }
 
   test("Correct decision model identification of Synthetic") {
-    lazy val identified = identificationHandler.identifyDecisionModels(g10_3_cyclicSDF3)
+    val identified = identificationHandler.identifyDecisionModels(g10_3_cyclicSDF3)
     assert(identified.size > 0)
     assert(identified.find(m => m.isInstanceOf[SDFApplication]).isDefined)
+    val syntheticDM = identified
+      .find(m => m.isInstanceOf[SDFApplication])
+      .map(m => m.asInstanceOf[SDFApplication])
+      .get
+    assert(syntheticDM.repetitionVectors.head.sameElements(Array.fill(syntheticDM.actors.size)(1)))
+  }
+
+  test("Correct decision model identification of all Applications together") {
+    val identified = identificationHandler.identifyDecisionModels(allSDFApps)
+    assert(identified.size > 0)
+    assert(identified.find(m => m.isInstanceOf[SDFApplication]).isDefined)
+    val allSDFAppsDM = identified
+      .find(m => m.isInstanceOf[SDFApplication])
+      .map(m => m.asInstanceOf[SDFApplication])
+      .get
+    assert(
+      allSDFAppsDM.repetitionVectors.head.sameElements(Array.fill(allSDFAppsDM.actors.size)(1))
+    )
+  }
+
+  test("Correct identification and DSE of all and small platform") {
+    val identified = identificationHandler.identifyDecisionModels(appsAndSmall)
+    assert(identified.size > 0)
+    assert(identified.find(m => m.isInstanceOf[SDFToSchedTiledHW]).isDefined)
+    val chosen = explorationHandler.chooseExplorersAndModels(identified)
+    assert(chosen.size > 0)
+    assert(chosen.find((_, m) => m.isInstanceOf[ChocoSDFToSChedTileHW]).isDefined)
+    val solutions = chosen
+      .flatMap((explorer, decisionModel) =>
+        explorer
+          .explore[ForSyDeSystemGraph](decisionModel)
+          .map(sol =>
+            forSyDeModelHandler
+              .writeModel(appsAndSmall.merge(sol), "tests/models/sdf3/all_and_small_result.fiodl")
+            forSyDeModelHandler.writeModel(
+              appsAndSmall.merge(sol),
+              "tests/models/sdf3/all_and_small_result_visual.kgt"
+            )
+            sol
+          )
+      )
+      .take(1)
+    assert(solutions.size >= 1)
   }
 
 }

@@ -55,8 +55,9 @@ class ChocoExplorer() extends ForSyDeIOExplorer:
     case chocoCpModel: ChocoCPForSyDeDecisionModel =>
       val model           = chocoCpModel.chocoModel
       val solver          = model.getSolver
-      val paretoMaximizer = ParetoMaximizer(chocoCpModel.modelObjectives)
-      solver.plugMonitor(paretoMaximizer)
+      val isOptimization = chocoCpModel.modelObjectives.size > 0
+      lazy val paretoMaximizer = ParetoMaximizer(chocoCpModel.modelObjectives)
+      if (isOptimization) solver.plugMonitor(paretoMaximizer)
       solver.setLearningSignedClauses
       solver.setNoGoodRecordingFromRestarts
       solver.setRestartOnSolutions
@@ -71,7 +72,8 @@ class ChocoExplorer() extends ForSyDeIOExplorer:
         .filter(feasible => feasible)
         .flatMap(feasible => {
           // scribe.debug(s"pareto size: ${paretoMaximizer.getParetoFront.size}")
-          paretoMaximizer.getParetoFront.asScala
+          if (isOptimization) paretoMaximizer.getParetoFront.asScala.map(_.record())
+          else Seq(solver.defaultSolution().record())
         })
         .map(paretoSolutions => {
           chocoCpModel.rebuildFromChocoOutput(paretoSolutions)

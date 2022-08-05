@@ -1,0 +1,19 @@
+syntax = "proto3";
+
+message IdentificationRequest {
+    string design_model_url = 1;
+    repeated string decision_model_ids = 2;
+    repeated string decision_models_url = 3;
+}
+
+message IdentificationResult {
+    bool fixed = 4;
+    string decision_model_ids = 5;
+    string decision_model_url = 6;
+}
+
+service IdentificationService {
+    rpc CanIdentify(string decision_model_url) returns (bool);
+    rpc Identify(IdentificationRequest) returns (stream IdentificationResult);
+    rpc Shutdown() returns ();
+}

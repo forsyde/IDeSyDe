@@ -242,54 +242,46 @@ trait ParametricRateDataflowWorkloadMixin(using Integral[BigFraction]) {
     g
   }
 
-  /** returns the cluster of actor firings that have zero time execution time and can fire in parallel,
-   * until all the firings are exhausted in accordance to the [[repetitionVectors]]
-   */
-  def maximalParallelClustering: Array[Array[Array[Int]]] = dataflowGraphs.zipWithIndex.map((g, gi) => {
-    val actors = 0 until actorsSet.size
-    val channels = 0 until channelsSet.size
-    var buffer = Buffer(DenseVector(initialTokens))
-    val topologyMatrix = DenseMatrix(balanceMatrices(gi):_*)
-    val pathComputation = DijkstraManyToManyShortestPaths(g)
-    val dependencyMatrix = (src: Int, dst: Int) => pathComputation.getPath(src, dst) != null
-    var firings  = DenseVector(repetitionVectors(gi))
-    var executions: Buffer[DenseVector[Int]] = Buffer(DenseVector.zeros(actorsSet.size))
-    var currentCluster = 0
-    while (firings.exists(_ > 0)) {
-      val maxFires = actors.zipWithIndex
-        // keep only actors that were not fired yet in this iteration, while they kan fire overall
-        .filter((a, i) => firings(i) > 0 && executions(currentCluster)(i) == 0)
-        // keep only actors that do not depend on any actors already firing
-        .filter((a, i) => 
-          actors.zipWithIndex
-            .filter((src, srci) => a != src && dependencyMatrix(src, a))
-            .forall((src, srci) => executions(currentCluster)(srci) == 0)
-        )
-        .flatMap((a, i) => {
-          (firings(i) to 1 by -1).map(q => {
-            executions(currentCluster)(i) = q
-            val result = (i, q, (topologyMatrix * executions(currentCluster)) + buffer(currentCluster))
-            executions(currentCluster)(i) = 0
-            result
+  /** returns the cluster of actor firings that have zero time execution time and can fire in
+    * parallel, until all the firings are exhausted in accordance to the [[repetitionVectors]]
+    */
+  def maximalParallelClustering: Array[Array[Array[Int]]] =
+    dataflowGraphs.zipWithIndex.map((g, gi) => {
+      val actors                               = 0 until actorsSet.size
+      val channels                             = 0 until channelsSet.size
+      var buffer                               = Buffer(DenseVector(initialTokens))
+      val topologyMatrix                       = DenseMatrix(balanceMatrices(gi): _*)
+      var firings                              = DenseVector(repetitionVectors(gi))
+      var executions: Buffer[DenseVector[Int]] = Buffer(DenseVector.zeros(actorsSet.size))
+      var currentCluster                       = 0
+      var moreToFire                           = firings.exists(_ > 0)
+      while (moreToFire) {
+        actors.zipWithIndex
+          .flatMap((a, i) => {
+            (firings(i) to 1 by -1).map(q => {
+              executions(currentCluster)(i) = q
+              val result =
+                (i, q, (topologyMatrix * executions(currentCluster)) + buffer(currentCluster))
+              executions(currentCluster)(i) = 0
+              result
+            })
           })
-        })
-        // keep only the options that do not underflow the buffer
-        .filter((ai, q, b) => all(b >:= 0))
-        .maxByOption((ai, q, b) => q)
-      if (maxFires.isDefined) {
-        maxFires.foreach((ai, q, b) => {
-          // accept the change if there is any possible
-          // scribe.debug((ai, q, currentCluster, b.toString).toString()) // it is +1 because the initial conditions are at 0
-          executions(currentCluster)(ai) = q
-          firings(ai) -= q
-        })
-      } else {
-        // go to next cluster in case it is not possible
-        buffer :+= topologyMatrix * executions(currentCluster) + buffer(currentCluster)
-        executions :+= DenseVector.zeros(actorsSet.size)
-        currentCluster += 1
+          // keep only the options that do not underflow the buffer
+          .filter((ai, q, b) => all(b >:= 0))
+          .count((ai, q, b) => {
+            // accept the change if there is any possible
+            // scribe.debug((ai, q, currentCluster, b.toString).toString()) // it is +1 because the initial conditions are at 0
+            executions(currentCluster)(ai) = q
+            firings(ai) -= q
+            true
+          })
+        moreToFire = firings.exists(_ > 0)
+        if (moreToFire) { //double check for now just so the last empty entry is not added
+          buffer :+= topologyMatrix * executions(currentCluster) + buffer(currentCluster)
+          executions :+= DenseVector.zeros(actorsSet.size)
+          currentCluster += 1
+        }
       }
-    }
-    executions.map(_.data).toArray
-  })
+      executions.map(_.data).toArray
+    })
 }

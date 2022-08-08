@@ -551,13 +551,12 @@ class SDFOnTileNoCUseCaseWithSolution extends AnyFunSuite with LoggingMixin {
       .get
     assert(sobelDM.repetitionVectors.head.sameElements(Array(1, 1, 1, 1)))
     assert(sobelDM.sdfMaxParallelClusters.size == 3)
-    println(sobelDM.sdfMaxParallelClusters.map(_.mkString("[", ", ", "]")).mkString("[", ", ", "]"))
   }
 
   test("Correct identification and DSE of Sobel to Small") {
     val inputSystem = sobelSDF3.merge(small2x2PlatformModel)
-    val identified = identificationHandler.identifyDecisionModels(inputSystem)
-    val chosen = explorationHandler.chooseExplorersAndModels(identified)
+    val identified  = identificationHandler.identifyDecisionModels(inputSystem)
+    val chosen      = explorationHandler.chooseExplorersAndModels(identified)
     assert(chosen.size > 0)
     assert(chosen.find((_, m) => m.isInstanceOf[ChocoSDFToSChedTileHW]).isDefined)
     val solutions = chosen

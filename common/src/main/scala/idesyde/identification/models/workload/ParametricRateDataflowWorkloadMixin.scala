@@ -258,7 +258,8 @@ trait ParametricRateDataflowWorkloadMixin(using Integral[BigFraction]) {
       while (moreToFire) {
         actors.zipWithIndex
           .flatMap((a, i) => {
-            (firings(i) to 1 by -1).map(q => {
+            val qs = if (isSelfConcurrent(a)) then (1 to 1) else (firings(i) to 1 by -1)
+            qs.map(q => {
               executions(currentCluster)(i) = q
               val result =
                 (i, q, (topologyMatrix * executions(currentCluster)) + buffer(currentCluster))

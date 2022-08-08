@@ -11,7 +11,6 @@ import idesyde.identification.api.ChocoIdentificationModule
 import idesyde.identification.api.ForSyDeIdentificationModule
 import idesyde.identification.api.MinizincIdentificationModule
 import idesyde.exploration.ChocoExplorationModule
-import forsyde.io.java.drivers.ForSyDeSDF3Driver
 import forsyde.io.java.core.ForSyDeSystemGraph
 import forsyde.io.java.typed.viewers.platform.InstrumentedProcessingModule
 import forsyde.io.java.typed.viewers.platform.GenericMemoryModule
@@ -29,8 +28,9 @@ import idesyde.identification.models.mixed.SDFToSchedTiledHW
 
 import mixins.LoggingMixin
 import idesyde.identification.models.choco.sdf.ChocoSDFToSChedTileHW
-import forsyde.io.java.graphviz.ForSyDeGraphVizDriver
-import forsyde.io.kgraph.drivers.ForSyDeKGTDriver
+import forsyde.io.java.graphviz.drivers.ForSyDeGraphVizDriver
+import forsyde.io.java.kgt.drivers.ForSyDeKGTDriver
+import forsyde.io.java.sdf3.drivers.ForSyDeSDF3Driver
 
 /** This test suite uses as much as possible the experiments from the paper
   *
@@ -550,6 +550,8 @@ class SDFOnTileNoCUseCaseWithSolution extends AnyFunSuite with LoggingMixin {
       .map(m => m.asInstanceOf[SDFApplication])
       .get
     assert(sobelDM.repetitionVectors.head.sameElements(Array(1, 1, 1, 1)))
+    assert(sobelDM.sdfMaxParallelClusters.size == 3)
+    println(sobelDM.sdfMaxParallelClusters.map(_.mkString("[", ", ", "]")).mkString("[", ", ", "]"))
   }
 
   test("Correct identification and DSE of Sobel to Small") {

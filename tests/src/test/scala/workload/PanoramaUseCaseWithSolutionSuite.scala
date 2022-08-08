@@ -8,7 +8,7 @@ import idesyde.identification.api.ChocoIdentificationModule
 import idesyde.identification.api.ForSyDeIdentificationModule
 import idesyde.identification.api.MinizincIdentificationModule
 import forsyde.io.java.drivers.ForSyDeModelHandler
-import forsyde.io.java.drivers.ForSyDeAmaltheaDriver
+import forsyde.io.java.amalthea.drivers.ForSyDeAmaltheaDriver
 import java.nio.file.Paths
 import scribe.Level
 import idesyde.exploration.interfaces.ForSyDeIOExplorer

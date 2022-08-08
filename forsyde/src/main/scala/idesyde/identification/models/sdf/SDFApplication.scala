@@ -54,6 +54,12 @@ final case class SDFApplication(
 
   val initialTokens: Array[Int] = channels.map(_.getNumOfInitialTokens)
 
+  /** this is a simple shortcut for the repetition vectors as SDFs have only one configuration */
+  def sdfRepetitionVectors: Array[Int] = repetitionVectors(0)
+
+  /** this is a simple shortcut for the max parallel clusters as SDFs have only one configuration */
+  def sdfMaxParallelClusters: Array[Array[Int]] = maximalParallelClustering(0)
+
   def isSelfConcurrent(actor: Int): Boolean = {
     val a = actors(actor)
     channels.exists(c => topology.containsEdge(a, c) && topology.containsEdge(c, a))

@@ -90,6 +90,13 @@ final case class ChocoSDFToSChedTileHW(
   dse.sdfApplications.actors.zipWithIndex.foreach((a, i) =>
     chocoModel.sum(processesMemoryMapping(i), ">=", 1).post()
   )
+  // - The number of parallel mappings should not exceed the repetition
+  // vector when this can happen.
+  // But is this necessary?
+  // dse.sdfApplications.actors.zipWithIndex.foreach((a, i) =>
+  //   if (dse.sdfApplications.sdfRepetitionVectors(i) <= dse.platform.schedulers.size)
+  //     chocoModel.sum(processesMemoryMapping(i), "<=", dse.sdfApplications.sdfRepetitionVectors(i)).post()
+  // )
 
   // - mixed constraints
   postManyProcessManyMessageMemoryConstraints()

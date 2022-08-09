@@ -9,18 +9,31 @@ trait LoggingMixin {
   def setWarning() = scribe.Logger.root
     .clearHandlers()
     .clearModifiers()
-    .withHandler(minimumLevel = Some(Level.Warn), formatter = formatter"${scribe.format.dateFull} [${scribe.format.levelColoredPaddedRight}] ${scribe.format.message}")
+    .withHandler(
+      minimumLevel = Some(Level.Warn),
+      formatter =
+        formatter"${scribe.format.dateFull} [${scribe.format.levelColoredPaddedRight}] ${scribe.format.messages}"
+    )
     .replace()
-  
+
   def setNormal() = scribe.Logger.root
     .clearHandlers()
     .clearModifiers()
-    .withHandler(minimumLevel = Some(Level.Info), formatter = formatter"${scribe.format.dateFull} [${scribe.format.levelColoredPaddedRight}] ${scribe.format.message}")
+    .withHandler(
+      minimumLevel = Some(Level.Info),
+      formatter =
+        formatter"${scribe.format.dateFull} [${scribe.format.levelColoredPaddedRight}] ${scribe.format.messages}"
+    )
     .replace()
 
   def setDebug() = scribe.Logger.root
     .clearHandlers()
     .clearModifiers()
-    .withHandler(minimumLevel = Some(Level.Debug), formatter = formatter"${scribe.format.dateFull} [${scribe.format.levelColoredPaddedRight}] ${scribe.format.italic(scribe.format.classNameSimple)} - ${scribe.format.message}")
+    .withHandler(
+      minimumLevel = Some(Level.Debug),
+      formatter =
+        formatter"${scribe.format.dateFull} [${scribe.format.levelColoredPaddedRight}] ${scribe.format
+          .italic(scribe.format.classNameSimple)} - ${scribe.format.messages}"
+    )
     .replace()
 }

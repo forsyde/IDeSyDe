@@ -1,23 +1,22 @@
 package workload
 
 import org.scalatest.funsuite.AnyFunSuite
-import idesyde.exploration.api.ExplorationHandler
-import idesyde.identification.api.IdentificationHandler
+import idesyde.exploration.ExplorationHandler
+import idesyde.identification.IdentificationHandler
 import idesyde.exploration.ChocoExplorationModule
-import idesyde.identification.api.ChocoIdentificationModule
-import idesyde.identification.api.ForSyDeIdentificationModule
-import idesyde.identification.api.MinizincIdentificationModule
+import idesyde.identification.choco.ChocoIdentificationModule
+import idesyde.identification.forsyde.api.ForSyDeIdentificationModule
+import idesyde.identification.minizinc.api.MinizincIdentificationModule
 import forsyde.io.java.drivers.ForSyDeModelHandler
 import forsyde.io.java.amalthea.drivers.ForSyDeAmaltheaDriver
 import java.nio.file.Paths
 import scribe.Level
-import idesyde.exploration.interfaces.ForSyDeIOExplorer
-import idesyde.identification.ForSyDeDecisionModel
+import idesyde.exploration.forsyde.interfaces.ForSyDeIOExplorer
+import idesyde.identification.forsyde.ForSyDeDecisionModel
 import forsyde.io.java.core.ForSyDeSystemGraph
 import scala.concurrent.ExecutionContext
 
 import mixins.LoggingMixin
-
 
 class PanoramaUseCaseWithoutSolutionSuite extends AnyFunSuite with LoggingMixin {
 
@@ -57,9 +56,15 @@ class PanoramaUseCaseWithoutSolutionSuite extends AnyFunSuite with LoggingMixin 
 
   test("PANORAMA case study without any solutions - no solution found") {
     val solutions = chosen
-      .flatMap((explorer, decisionModel) => explorer.explore[ForSyDeSystemGraph](decisionModel).map(sol =>
-        forSyDeModelHandler.writeModel(model.merge(sol), "tests/models/panorama/wrong_output_of_dse.fiodl")
-        sol))
+      .flatMap((explorer, decisionModel) =>
+        explorer
+          .explore[ForSyDeSystemGraph](decisionModel)
+          .map(sol =>
+            forSyDeModelHandler
+              .writeModel(model.merge(sol), "tests/models/panorama/wrong_output_of_dse.fiodl")
+            sol
+          )
+      )
       .take(1)
     assert(solutions.size == 0)
   }

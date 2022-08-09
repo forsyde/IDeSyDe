@@ -64,21 +64,27 @@ class IdentificationHandler(
     }
     // build reachability matrix
     val identifiedArray = identified.toArray
-    def reachability = identified.map(m => identified.map(mm => m.dominates(mm, model)))
-    def reachibilityClosure = CoreUtils.reachibilityClosure(reachability.map(row => row.toArray).toArray)
+    def reachability = identifiedArray.map(m => identifiedArray.map(mm => m.dominates(mm, model)))
+    def reachibilityClosure =
+      CoreUtils.reachibilityClosure(reachability.map(row => row.toArray).toArray)
     // val dominanceCondensation = GabowStrongConnectivityInspector(dominanceGraph).getCondensation()
     // keep only the SCC which are leaves
     val dominanceComponents = CoreUtils.computeSSCFromReachibility(reachibilityClosure)
-    val dominant = dominanceComponents.filter(component => {
-      // keep dominant components in which no other components dominate any decision model
-      // therein
-      dominanceComponents.filter(_ != component).forall(other => {
-        // decision models in component
-        def componentModels = component.map(identifiedArray(_))
-        def otherModels = other.map(identifiedArray(_))
-        !componentModels.exists(m => otherModels.exists(mm => mm.dominates(m, model)))
+    val dominant = dominanceComponents
+      .filter(component => {
+        // keep dominant components in which no other components dominate any decision model
+        // therein
+        dominanceComponents
+          .filter(_ != component)
+          .forall(other => {
+            // decision models in component
+            def componentModels = component.map(identifiedArray(_))
+            def otherModels     = other.map(identifiedArray(_))
+            !componentModels.exists(m => otherModels.exists(mm => mm.dominates(m, model)))
+          })
       })
-    }).flatMap(component => component.map(idx => identifiedArray(idx))).toSet
+      .flatMap(component => component.map(idx => identifiedArray(idx)))
+      .toSet
     infoLogger(s"dropped ${identified.size - dominant.size} dominated decision model(s).")
     debugLogger(s"dominant: ${dominant.map(m => m.uniqueIdentifier)}")
     dominant

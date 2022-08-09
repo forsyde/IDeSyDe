@@ -3,13 +3,13 @@ package sdf
 import scala.jdk.CollectionConverters.*
 
 import org.scalatest.funsuite.AnyFunSuite
-import idesyde.exploration.api.ExplorationHandler
-import idesyde.identification.api.IdentificationHandler
+import idesyde.exploration.ExplorationHandler
+import idesyde.identification.IdentificationHandler
 import forsyde.io.java.drivers.ForSyDeModelHandler
 import scala.concurrent.ExecutionContext
-import idesyde.identification.api.ChocoIdentificationModule
-import idesyde.identification.api.ForSyDeIdentificationModule
-import idesyde.identification.api.MinizincIdentificationModule
+import idesyde.identification.choco.ChocoIdentificationModule
+import idesyde.identification.forsyde.api.ForSyDeIdentificationModule
+import idesyde.identification.minizinc.api.MinizincIdentificationModule
 import idesyde.exploration.ChocoExplorationModule
 import forsyde.io.java.core.ForSyDeSystemGraph
 import forsyde.io.java.typed.viewers.platform.InstrumentedProcessingModule
@@ -19,12 +19,12 @@ import forsyde.io.java.core.EdgeTrait
 import forsyde.io.java.typed.viewers.visualization.Visualizable
 import forsyde.io.java.typed.viewers.platform.AbstractStructure
 import forsyde.io.java.typed.viewers.visualization.GreyBox
-import idesyde.identification.models.platform.TiledDigitalHardware
-import idesyde.identification.models.sdf.SDFApplication
+import idesyde.identification.forsyde.models.platform.TiledDigitalHardware
+import idesyde.identification.forsyde.models.sdf.SDFApplication
 import forsyde.io.java.typed.viewers.platform.runtime.StaticCyclicScheduler
 import forsyde.io.java.typed.viewers.decision.Allocated
-import idesyde.identification.models.platform.SchedulableTiledDigitalHardware
-import idesyde.identification.models.mixed.SDFToSchedTiledHW
+import idesyde.identification.forsyde.models.platform.SchedulableTiledDigitalHardware
+import idesyde.identification.forsyde.models.mixed.SDFToSchedTiledHW
 
 import mixins.LoggingMixin
 import idesyde.identification.models.choco.sdf.ChocoSDFToSChedTileHW

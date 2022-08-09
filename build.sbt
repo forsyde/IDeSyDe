@@ -1,5 +1,5 @@
 ThisBuild / organization := "io.github.forsyde"
-ThisBuild / version := "0.2.6"
+ThisBuild / version := "0.3.0"
 ThisBuild / scalaVersion := "3.1.1"
 
 lazy val root = project

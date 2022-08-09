@@ -1,18 +1,14 @@
-package idesyde.identification.models.reactor
+package idesyde.identification.minizinc.models.reactor
 
-import idesyde.identification.interfaces.MiniZincForSyDeDecisionModel
+import idesyde.identification.minizinc.interfaces.MiniZincForSyDeDecisionModel
 import scala.io.Source
 import forsyde.io.java.core.ForSyDeSystemGraph
-import idesyde.identification.interfaces.MiniZincData
+import idesyde.identification.minizinc.interfaces.MiniZincData
 import scala.concurrent.Future
 import scala.concurrent.ExecutionContext
-import org.apache.commons.math3.util.ArithmeticUtils
 import idesyde.identification.DecisionModel
-import idesyde.identification.ForSyDeDecisionModel
-import org.apache.commons.math3.fraction.Rational
+import idesyde.identification.forsyde.ForSyDeDecisionModel
 import forsyde.io.java.typed.viewers.platform.GenericProcessingModule
-import idesyde.utils.RationalIsNumeric
-
 
 import scala.jdk.OptionConverters.*
 import scala.jdk.CollectionConverters.*
@@ -20,64 +16,71 @@ import forsyde.io.java.typed.viewers.platform.GenericCommunicationModule
 import forsyde.io.java.typed.viewers.platform.GenericMemoryModule
 import forsyde.io.java.typed.viewers.moc.linguafranca.LinguaFrancaReaction
 import forsyde.io.java.typed.viewers.platform.runtime.RoundRobinScheduler
+import spire.algebra.*
+import spire.math.*
+import idesyde.identification.forsyde.models.reactor.ReactorMinusAppMapAndSched
 
 final case class ReactorMinusAppMapAndSchedMzn(val sourceModel: ReactorMinusAppMapAndSched)
     extends MiniZincForSyDeDecisionModel:
-
-  given Numeric[Rational] = RationalIsNumeric()
 
   val coveredVertexes = sourceModel.coveredVertexes
 
   var multiplier =
     sourceModel.reactorMinus.jobGraph.jobs
       .flatMap(j => Seq(j.trigger, j.deadline))
-      .map(_.getDenominatorAsLong)
-      .reduce((d1, d2) => ArithmeticUtils.lcm(d1, d2))
-  
+      .map(_.denominator)
+      .reduce((d1, d2) => spire.math.lcm(d1, d2))
+
   while (
     sourceModel.wcetFunction.values
-      .filter(v => v.getNumeratorAsLong > 0L)
-      .map(_.multiply(multiplier))
-      // .exists(v => v.getNumeratorAsLong / 1e3 < v.getDenominatorAsLong)
+      .filter(v => v.numerator > 0L)
+      .map(_ * multiplier)
+      // .exists(v => v.getNumeratorAsLong / 1e3 < v.denominator)
       .exists(v => v.doubleValue < 1.0)
   ) {
     multiplier = multiplier * 10
   }
-  
+
   // TODO: It seems like some solvers cant handle longs.. so we do this hack for now.
   var memoryMultipler: Long =
-    (sourceModel.reactorMinus.reactors.map(sourceModel.reactorMinus.sizeFunction(_)) ++ 
-     sourceModel.reactorMinus.channels.values.map(sourceModel.reactorMinus.sizeFunction(_)) ++ 
-     sourceModel.reactorMinus.reactions.map(sourceModel.reactorMinus.sizeFunction(_)) ++
+    (sourceModel.reactorMinus.reactors.map(sourceModel.reactorMinus.sizeFunction(_)) ++
+      sourceModel.reactorMinus.channels.values.map(sourceModel.reactorMinus.sizeFunction(_)) ++
+      sourceModel.reactorMinus.reactions.map(sourceModel.reactorMinus.sizeFunction(_)) ++
       sourceModel.platform.hardware.storageElems
-      .map(_.getSpaceInBits.asInstanceOf[Long]))
+        .map(_.getSpaceInBits.asInstanceOf[Long]))
       .filter(_ > 0L)
-      .reduce((l1, l2) => ArithmeticUtils.gcd(l1, l2))
+      .reduce((l1, l2) => spire.math.gcd(l1, l2))
   while (
-    (sourceModel.reactorMinus.reactors.map(sourceModel.reactorMinus.sizeFunction(_)) ++ 
-     sourceModel.reactorMinus.channels.values.map(sourceModel.reactorMinus.sizeFunction(_)) ++ 
-     sourceModel.reactorMinus.reactions.map(sourceModel.reactorMinus.sizeFunction(_)) ++
+    (sourceModel.reactorMinus.reactors.map(sourceModel.reactorMinus.sizeFunction(_)) ++
+      sourceModel.reactorMinus.channels.values.map(sourceModel.reactorMinus.sizeFunction(_)) ++
+      sourceModel.reactorMinus.reactions.map(sourceModel.reactorMinus.sizeFunction(_)) ++
       sourceModel.platform.hardware.storageElems.map(
         _.getSpaceInBits.toLong
-      ) ++ sourceModel.platform.hardware.minTraversalTimePerBit.flatten
-      .map(_.multiply(multiplier).divide(memoryMultipler).floatValue.ceil.toLong)
-      ).max > Integer.MAX_VALUE.toLong
+      )
+      ++ sourceModel.platform.hardware.minTraversalTimePerBit.flatten
+        .map(t => t * multiplier / memoryMultipler)
+        .map(_.ceil.toLong)).max > Integer.MAX_VALUE.toLong
   ) {
     memoryMultipler *= 10L
   }
-  
-  val hyperPeriod                = sourceModel.reactorMinus.hyperPeriod
-  val reactionToJobs             = sourceModel.reactorMinus.jobGraph.jobs.groupBy(_.srcReaction)
-  val reactorsOrdered            = sourceModel.reactorMinus.reactors.toSeq
-  val reactionsOrdered           = sourceModel.reactorMinus.reactions.toSeq
-  val channelsOrdered            = sourceModel.reactorMinus.channels.toSeq
-  lazy val jobsOrdered           = sourceModel.reactorMinus.jobGraph.jobs.toSeq
-  lazy val jobChannelsOrdered    = sourceModel.reactorMinus.jobGraph.inChannels.toSeq
-  val platformOrdered            = sourceModel.platform.hardware.platformElements.toSeq.sortBy(p =>
+
+  val hyperPeriod             = sourceModel.reactorMinus.hyperPeriod
+  val reactionToJobs          = sourceModel.reactorMinus.jobGraph.jobs.groupBy(_.srcReaction)
+  val reactorsOrdered         = sourceModel.reactorMinus.reactors.toSeq
+  val reactionsOrdered        = sourceModel.reactorMinus.reactions.toSeq
+  val channelsOrdered         = sourceModel.reactorMinus.channels.toSeq
+  lazy val jobsOrdered        = sourceModel.reactorMinus.jobGraph.jobs.toSeq
+  lazy val jobChannelsOrdered = sourceModel.reactorMinus.jobGraph.inChannels.toSeq
+  val platformOrdered = sourceModel.platform.hardware.platformElements.toSeq.sortBy(p =>
     p match {
-      case pe: GenericProcessingModule => 
-        reactionsOrdered.map(r => sourceModel.wcetFunction.getOrElse((r, pe), Rational.zero).multiply(multiplier).getNumeratorAsLong)
-        .sum / reactionsOrdered.size.toLong
+      case pe: GenericProcessingModule =>
+        reactionsOrdered
+          .map(r =>
+            (sourceModel.wcetFunction
+              .getOrElse((r, pe), Rational.zero)
+              * multiplier).numerator.toLong
+          )
+          .sum / reactionsOrdered.size.toLong
       case _ => 0L
     }
   )
@@ -94,7 +97,7 @@ final case class ReactorMinusAppMapAndSchedMzn(val sourceModel: ReactorMinusAppM
 
   val mznInputs =
     Map(
-      "hyperPeriod" -> MiniZincData(hyperPeriod.multiply(multiplier).getNumeratorAsLong),
+      "hyperPeriod" -> MiniZincData((hyperPeriod * multiplier).numerator.toLong),
       "nReactors"   -> MiniZincData(reactorsOrdered.length),
       "nReactions"  -> MiniZincData(reactionsOrdered.length),
       "nChannels"   -> MiniZincData(channelsOrdered.length),
@@ -103,7 +106,7 @@ final case class ReactorMinusAppMapAndSchedMzn(val sourceModel: ReactorMinusAppM
       "nPlatformElems"           -> MiniZincData(platformOrdered.length),
       "nReactionChains"          -> MiniZincData(reactionChainsOrdered.length),
       "maxReactionInterferences" -> MiniZincData(maxReactionInterferences),
-      "minProcessingCores" -> MiniZincData(sourceModel.minProcessingCores),
+      "minProcessingCores"       -> MiniZincData(sourceModel.minProcessingCores),
       "isFixedPriorityElem" -> MiniZincData(platformOrdered.map(p => {
         p match
           case pp: GenericProcessingModule =>
@@ -181,14 +184,14 @@ final case class ReactorMinusAppMapAndSchedMzn(val sourceModel: ReactorMinusAppM
       "reactionLatestRelease" -> MiniZincData(
         reactionsOrdered
           .map(r => {
-            reactionToJobs(r).map(j => j.trigger.multiply(multiplier).getNumeratorAsLong).max
+            reactionToJobs(r).map(j => (j.trigger * multiplier).numerator).max
           })
       ),
       "reactionRelativeDeadline" -> MiniZincData(
         reactionsOrdered
           .map(r => {
             reactionToJobs(r)
-              .map(j => j.deadline.subtract(j.trigger).multiply(multiplier).getNumeratorAsLong)
+              .map(j => ((j.deadline - (j.trigger)) * (multiplier)).numerator)
               .min
           })
       ),
@@ -204,11 +207,9 @@ final case class ReactorMinusAppMapAndSchedMzn(val sourceModel: ReactorMinusAppM
               reactionToJobs(r)
                 .flatMap(j => {
                   reactionToJobs(rr)
-                    .filter(jj => 
-                      sourceModel.reactorMinus.jobGraph.containsEdge(j, jj)
-                    )
+                    .filter(jj => sourceModel.reactorMinus.jobGraph.containsEdge(j, jj))
                     .map(jj => {
-                      jj.trigger.subtract(j.trigger).multiply(multiplier).getNumeratorAsLong
+                      ((jj.trigger - (j.trigger)) * (multiplier)).numerator
                     })
                 })
                 .min
@@ -222,11 +223,9 @@ final case class ReactorMinusAppMapAndSchedMzn(val sourceModel: ReactorMinusAppM
             .map(p => {
               p match
                 case pe: GenericProcessingModule =>
-                  sourceModel.wcetFunction
+                  (sourceModel.wcetFunction
                     .getOrElse((r, pe), Rational.zero)
-                    .multiply(multiplier)
-                    .doubleValue
-                    .ceil
+                    * (multiplier)).ceil.toDouble
                 case _ => 0
             })
         })
@@ -237,12 +236,9 @@ final case class ReactorMinusAppMapAndSchedMzn(val sourceModel: ReactorMinusAppM
             .map(p => {
               p match
                 case pe: GenericProcessingModule =>
-                  sourceModel.wcetFunction
+                  (sourceModel.wcetFunction
                     .getOrElse((r, pe), Rational.zero)
-                    .divide(hyperPeriod)
-                    .percentageValue
-                    .ceil
-                    .toLong
+                    / (hyperPeriod)).ceil.toLong
                 case _ => 0
             })
         })
@@ -288,10 +284,10 @@ final case class ReactorMinusAppMapAndSchedMzn(val sourceModel: ReactorMinusAppM
               .getOrElse((r, rr), Seq.empty)
               .sorted
             seq
-              .map(_.multiply(multiplier).getNumeratorAsLong)
+              .map(t => (t * (multiplier)).numerator)
               .padTo(
                 maxReactionInterferences,
-                seq.maxOption.map(_.multiply(multiplier).getNumeratorAsLong).getOrElse(0L)
+                seq.maxOption.map(t => (t * multiplier).numerator).getOrElse(0L)
               )
           })
         )
@@ -351,12 +347,9 @@ final case class ReactorMinusAppMapAndSchedMzn(val sourceModel: ReactorMinusAppM
       ),
       "reactionChainFixedLatency" -> MiniZincData(
         reactionChainsOrdered.map((srcdst, _) =>
-          fixedLatenciesOrdered
+          (fixedLatenciesOrdered
             .getOrElse(srcdst, Rational.zero)
-            .multiply(multiplier)
-            .doubleValue
-            .ceil
-            .toLong
+            * (multiplier)).ceil.toLong
         )
       ),
       "objPercentage" -> MiniZincData(0),

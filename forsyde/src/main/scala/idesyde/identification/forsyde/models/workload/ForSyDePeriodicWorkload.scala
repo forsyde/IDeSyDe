@@ -44,6 +44,7 @@ import spire.implicits.*
 import idesyde.identification.models.workload.PeriodicWorkloadMixin
 import idesyde.implicits.forsyde.given_Conversion_Int_Rational
 import idesyde.implicits.forsyde.given_Fractional_Rational
+import idesyde.implicits.forsyde.given_Ordering_Rational
 
 /** Simplest periodic task set concerned in the literature. The task graph is generated from the
   * execution namespace in ForSyDe IO, which defines triggering mechanisms and how they propagate.

@@ -4,15 +4,6 @@ import forsyde.io.java.core.ForSyDeSystemGraph
 import forsyde.io.java.typed.viewers.moc.sdf.SDFActor
 import forsyde.io.java.typed.viewers.moc.sdf.SDFChannel
 import forsyde.io.java.typed.viewers.moc.sdf.SDFElem
-import org.apache.commons.math3.linear.RealMatrix
-import org.apache.commons.math3.linear.FieldMatrix
-import org.apache.commons.math3.fraction.Fraction
-import org.apache.commons.math3.linear.AbstractFieldMatrix
-import org.apache.commons.math3.fraction.FractionField
-import org.apache.commons.math3.linear.Array2DRowFieldMatrix
-import org.apache.commons.math3.linear.Array2DRowRealMatrix
-import org.apache.commons.math3.linear.SingularValueDecomposition
-import org.apache.commons.math3.util.ArithmeticUtils
 
 trait SDFQueriesMixin {
 

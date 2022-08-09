@@ -4,8 +4,7 @@ import scala.jdk.CollectionConverters.*
 import scala.jdk.StreamConverters.*
 import org.jgrapht.Graph
 import org.jgrapht.graph.DefaultEdge
-import idesyde.utils.SDFUtils
-import spire.math._      
+import spire.math.*      
 import spire.implicits.IntAlgebra
 import org.jgrapht.graph.DefaultDirectedGraph
 import scala.collection.mutable.Queue

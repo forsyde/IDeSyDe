@@ -4,12 +4,12 @@ import org.chocosolver.solver.Model
 import idesyde.identification.interfaces.ChocoModelMixin
 import org.chocosolver.solver.variables.BoolVar
 import org.chocosolver.solver.variables.IntVar
-import org.apache.commons.math3.fraction.BigFraction
+import org.apache.commons.math3.fraction.Rational
 
 trait WorkloadConstraintsCommsMixin extends ChocoModelMixin {
 
   val channelSizes: Array[Long]
-  val bandwidths: Array[BigFraction]
+  val bandwidths: Array[Rational]
   val hardwarePaths: Array[Array[Array[Array[Int]]]]
 
   val transmissionStart: Array[IntVar]

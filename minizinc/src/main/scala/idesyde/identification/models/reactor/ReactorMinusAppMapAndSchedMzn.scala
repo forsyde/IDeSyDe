@@ -9,9 +9,9 @@ import scala.concurrent.ExecutionContext
 import org.apache.commons.math3.util.ArithmeticUtils
 import idesyde.identification.DecisionModel
 import idesyde.identification.ForSyDeDecisionModel
-import org.apache.commons.math3.fraction.BigFraction
+import org.apache.commons.math3.fraction.Rational
 import forsyde.io.java.typed.viewers.platform.GenericProcessingModule
-import idesyde.utils.BigFractionIsNumeric
+import idesyde.utils.RationalIsNumeric
 
 
 import scala.jdk.OptionConverters.*
@@ -24,7 +24,7 @@ import forsyde.io.java.typed.viewers.platform.runtime.RoundRobinScheduler
 final case class ReactorMinusAppMapAndSchedMzn(val sourceModel: ReactorMinusAppMapAndSched)
     extends MiniZincForSyDeDecisionModel:
 
-  given Numeric[BigFraction] = BigFractionIsNumeric()
+  given Numeric[Rational] = RationalIsNumeric()
 
   val coveredVertexes = sourceModel.coveredVertexes
 
@@ -76,7 +76,7 @@ final case class ReactorMinusAppMapAndSchedMzn(val sourceModel: ReactorMinusAppM
   val platformOrdered            = sourceModel.platform.hardware.platformElements.toSeq.sortBy(p =>
     p match {
       case pe: GenericProcessingModule => 
-        reactionsOrdered.map(r => sourceModel.wcetFunction.getOrElse((r, pe), BigFraction.ZERO).multiply(multiplier).getNumeratorAsLong)
+        reactionsOrdered.map(r => sourceModel.wcetFunction.getOrElse((r, pe), Rational.zero).multiply(multiplier).getNumeratorAsLong)
         .sum / reactionsOrdered.size.toLong
       case _ => 0L
     }
@@ -223,7 +223,7 @@ final case class ReactorMinusAppMapAndSchedMzn(val sourceModel: ReactorMinusAppM
               p match
                 case pe: GenericProcessingModule =>
                   sourceModel.wcetFunction
-                    .getOrElse((r, pe), BigFraction.ZERO)
+                    .getOrElse((r, pe), Rational.zero)
                     .multiply(multiplier)
                     .doubleValue
                     .ceil
@@ -238,7 +238,7 @@ final case class ReactorMinusAppMapAndSchedMzn(val sourceModel: ReactorMinusAppM
               p match
                 case pe: GenericProcessingModule =>
                   sourceModel.wcetFunction
-                    .getOrElse((r, pe), BigFraction.ZERO)
+                    .getOrElse((r, pe), Rational.zero)
                     .divide(hyperPeriod)
                     .percentageValue
                     .ceil
@@ -352,7 +352,7 @@ final case class ReactorMinusAppMapAndSchedMzn(val sourceModel: ReactorMinusAppM
       "reactionChainFixedLatency" -> MiniZincData(
         reactionChainsOrdered.map((srcdst, _) =>
           fixedLatenciesOrdered
-            .getOrElse(srcdst, BigFraction.ZERO)
+            .getOrElse(srcdst, Rational.zero)
             .multiply(multiplier)
             .doubleValue
             .ceil

@@ -6,17 +6,17 @@ import org.chocosolver.util.PoolManager
 import org.chocosolver.solver.search.strategy.decision.IntDecision
 import org.chocosolver.solver.search.strategy.decision.Decision
 import org.chocosolver.solver.search.strategy.assignments.DecisionOperatorFactory
-import org.apache.commons.math3.fraction.BigFraction
+import org.apache.commons.math3.fraction.Rational
 import org.chocosolver.solver.variables.BoolVar
 import org.chocosolver.util.ESat
 
 class SimpleWorkloadBalancingDecisionStrategy(
     val schedulers: Array[Int],
-    val periods: Array[BigFraction],
+    val periods: Array[Rational],
     val taskExecutions: Array[Array[BoolVar]],
     val utilizations: Array[IntVar],
     val durations: Array[Array[IntVar]]
-)(using Numeric[BigFraction])
+)(using Numeric[Rational])
     extends AbstractStrategy[IntVar]((taskExecutions.flatten): _*) {
 
   val pool = PoolManager[IntDecision]()
@@ -27,7 +27,7 @@ class SimpleWorkloadBalancingDecisionStrategy(
     //   durations.zipWithIndex
     //     .map((ws, i) => {
     //       if (taskExecutions(i).isInstantiatedTo(j)) periods(i).reciprocal.multiply(ws(j).getLB)
-    //       else BigFraction.ZERO
+    //       else Rational.zero
     //     })
     //     .sum
     // })

@@ -5,14 +5,14 @@ import scala.jdk.StreamConverters.*
 import org.jgrapht.Graph
 import org.jgrapht.graph.DefaultEdge
 import idesyde.utils.SDFUtils
-import org.apache.commons.math3.fraction.BigFraction
+import spire.math._      
+import spire.implicits.IntAlgebra
 import org.jgrapht.graph.DefaultDirectedGraph
 import scala.collection.mutable.Queue
-import org.apache.commons.math3.linear.MatrixUtils
 import breeze.linalg.DenseMatrix
 import breeze.linalg.DenseVector
-import breeze.linalg._
-import breeze.numerics._
+import breeze.linalg.*
+import breeze.numerics.*
 import org.jgrapht.opt.graph.sparse.SparseIntDirectedGraph
 import org.jgrapht.alg.util.Pair
 import org.jgrapht.opt.graph.sparse.IncomingEdgesSupport
@@ -23,7 +23,6 @@ import org.jgrapht.graph.AsUndirectedGraph
 import org.jgrapht.traverse.DepthFirstIterator
 import scala.collection.mutable
 import org.jgrapht.graph.SimpleDirectedGraph
-import org.apache.commons.math3.util.ArithmeticUtils
 import scala.collection.mutable.Buffer
 import org.jgrapht.alg.shortestpath.DijkstraManyToManyShortestPaths
 
@@ -35,7 +34,7 @@ import org.jgrapht.alg.shortestpath.DijkstraManyToManyShortestPaths
   * computation,” ACM Transactions on Design Automation of Electronic Systems, vol. 22, no. 2, 2017,
   * doi: 10.1145/2999539.
   */
-trait ParametricRateDataflowWorkloadMixin(using Integral[BigFraction]) {
+trait ParametricRateDataflowWorkloadMixin {
   def actorsSet: Array[Int]
   def channelsSet: Array[Int]
   def initialTokens: Array[Int]
@@ -86,9 +85,10 @@ trait ParametricRateDataflowWorkloadMixin(using Integral[BigFraction]) {
   })
 
   def repetitionVectors: Array[Array[Int]] = dataflowGraphs.map(g => {
+    def minus_one = Rational.zero - Rational.one
     // first we build a compressed g with only the actors
     // with the fractional flows in a matrix
-    val gRates         = Array.fill(actorsSet.size)(Array.fill(actorsSet.size)(BigFraction.ZERO))
+    val gRates         = Array.fill(actorsSet.size)(Array.fill(actorsSet.size)(Rational.zero))
     val gActorsBuilder = SimpleDirectedGraph.createBuilder[Int, DefaultEdge](() => DefaultEdge())
     // and put the rates between them in a matrix
     channelsSet.foreach(c => {
@@ -99,20 +99,20 @@ trait ParametricRateDataflowWorkloadMixin(using Integral[BigFraction]) {
           g.outgoingEdgesOf(c)
             .forEach(consumerEdge => {
               val consumer = g.getEdgeTarget(consumerEdge)
-              // val rate = BigFraction(g.getEdgeWeight(producerEdge).toInt, g.getEdgeWeight(consumerEdge).toInt)
+              // val rate = Rational(g.getEdgeWeight(producerEdge).toInt, g.getEdgeWeight(consumerEdge).toInt)
               val rate = gRates(producer)(consumer)
               gActorsBuilder.addEdge(producer, consumer)
               // the if-else is required to subtract the +1 denominator that comes with a zero fraction
               gRates(producer)(consumer) =
-                if (rate.equals(BigFraction.ZERO)) then
-                  BigFraction(
-                    rate.getNumeratorAsInt() + g.getEdgeWeight(producerEdge).toInt,
-                    rate.getDenominatorAsInt() - 1 + g.getEdgeWeight(consumerEdge).toInt
+                if (rate.equals(Rational.zero)) then
+                  Rational(
+                    rate.numerator.toInt + g.getEdgeWeight(producerEdge).toInt,
+                    rate.denominator.toInt - 1 + g.getEdgeWeight(consumerEdge).toInt
                   )
                 else
-                  BigFraction(
-                    rate.getNumeratorAsInt() + g.getEdgeWeight(producerEdge).toInt,
-                    rate.getDenominatorAsInt() + g.getEdgeWeight(consumerEdge).toInt
+                  Rational(
+                    rate.numerator.toInt + g.getEdgeWeight(producerEdge).toInt,
+                    rate.denominator.toInt + g.getEdgeWeight(consumerEdge).toInt
                   )
             })
         })
@@ -121,14 +121,14 @@ trait ParametricRateDataflowWorkloadMixin(using Integral[BigFraction]) {
     // we iterate on the undirected version as to 'come back'
     // to vertex in feed-forward paths
     val dfs        = DepthFirstIterator(AsUndirectedGraph(gActors))
-    val rates      = actorsSet.map(_ => BigFraction.MINUS_ONE)
+    val rates      = actorsSet.map(_ => minus_one)
     var consistent = true
     while (dfs.hasNext() && consistent) {
       val nextActor = dfs.next()
       val next      = actorsSet.indexOf(nextActor)
       // if there is no rate on this vertex already, it must be a root, so we populate it
-      if (rates(next).equals(BigFraction.MINUS_ONE)) {
-        rates(next) = BigFraction.ONE
+      if (rates(next).equals(minus_one)) {
+        rates(next) = Rational.one
       }
       // populate neighbors based on 'next' which have no rate yet
       gActors
@@ -136,13 +136,13 @@ trait ParametricRateDataflowWorkloadMixin(using Integral[BigFraction]) {
         .forEach(e => {
           val other = actorsSet.indexOf(gActors.getEdgeTarget(e))
           // if no rate exists in the other actor yet, we create it...
-          if (rates(other).equals(BigFraction.MINUS_ONE)) {
+          if (rates(other).equals(minus_one)) {
             // it depenends if the other is a consumer...
-            rates(other) = rates(next).multiply(gRates(next)(other))
+            rates(other) = rates(next) * (gRates(next)(other))
           }
           // ...otherwise we check if the graph is consistent
           else {
-            consistent = rates(other) == rates(next).divide(gRates(next)(other))
+            consistent = rates(other) == rates(next) / (gRates(next)(other))
           }
         })
       gActors
@@ -151,13 +151,13 @@ trait ParametricRateDataflowWorkloadMixin(using Integral[BigFraction]) {
           val otherActor = gActors.getEdgeSource(e)
           val other      = actorsSet.indexOf(otherActor)
           // if no rate exists in the other actor yet, we create it...
-          if (rates(other).equals(BigFraction.MINUS_ONE)) {
+          if (rates(other).equals(minus_one)) {
             // it depenends if the other is a consumer...
-            rates(other) = rates(next).divide(gRates(other)(next))
+            rates(other) = rates(next) / (gRates(other)(next))
           }
           // ...otherwise we check if the graph is consistent
           else {
-            consistent = rates(next) == rates(other).divide(gRates(other)(next))
+            consistent = rates(next) == rates(other) / (gRates(other)(next))
           }
         })
     }
@@ -165,30 +165,26 @@ trait ParametricRateDataflowWorkloadMixin(using Integral[BigFraction]) {
     if (!consistent)
       return Array()
     // otherwise simplify the repVec
-    val gcd = rates.map(_.getNumeratorAsLong).reduce((i1, i2) => ArithmeticUtils.gcd(i1, i2))
-    val lcm = rates
-      .map(_.getDenominatorAsLong)
-      .reduce((i1, i2) => ArithmeticUtils.lcm(i1, i2))
-    rates.map(_.multiply(lcm).divide(gcd).getNumeratorAsInt())
+    val gcdV = rates.map(_.numerator.toInt).reduce((i1, i2) => spire.math.gcd(i1, i2))
+    val lcmV = rates
+      .map(_.denominator.toInt)
+      .reduce((i1, i2) => spire.math.lcm(i1, i2))
+    rates.map(_ * lcmV / gcdV).map(_.numerator.toInt)
   })
   // balanceMatrices.zipWithIndex.map((m, ind) => SDFUtils.getRepetitionVector(m, initialTokens, numDisjointComponents(ind)))
 
   def isConsistent = repetitionVectors.forall(r => r.size == actorsSet.size)
 
-  def liveSchedules = balanceMatrices.zipWithIndex.map((m, i) =>
-    SDFUtils.getPASS(m, initialTokens, repetitionVectors(i))
-  )
+  def isLive = maximalParallelClustering.zipWithIndex.map((cluster, i) => !cluster.isEmpty)
 
-  def isLive = liveSchedules.forall(l => l.size == actorsSet.size)
-
-  def pessimisticTokensPerChannel = channelsSet.zipWithIndex.map((c, cIdx) => {
+  def pessimisticTokensPerChannel: Array[Int] = channelsSet.zipWithIndex.map((c, cIdx) => {
     dataflowGraphs.zipWithIndex
       .flatMap((g, confIdx) => {
         g.incomingEdgesOf(c)
           .stream()
           .map(e => g.getEdgeSource(e))
           .mapToInt(a =>
-            val aIdx = actorsSet.indexOf(a)
+            def aIdx = actorsSet.indexOf(a)
             repetitionVectors(confIdx)(aIdx) * balanceMatrices(confIdx)(cIdx)(aIdx) + initialTokens(
               cIdx
             )
@@ -244,6 +240,9 @@ trait ParametricRateDataflowWorkloadMixin(using Integral[BigFraction]) {
 
   /** returns the cluster of actor firings that have zero time execution time and can fire in
     * parallel, until all the firings are exhausted in accordance to the [[repetitionVectors]]
+    * 
+    * This is also used to check the liveness of each configuration. If a configuration is not live,
+    * then its clusters are empty, since at the very least one should exist.
     */
   def maximalParallelClustering: Array[Array[Array[Int]]] =
     dataflowGraphs.zipWithIndex.map((g, gi) => {
@@ -256,7 +255,7 @@ trait ParametricRateDataflowWorkloadMixin(using Integral[BigFraction]) {
       var currentCluster                       = 0
       var moreToFire                           = firings.exists(_ > 0)
       while (moreToFire) {
-        actors.zipWithIndex
+        val fired = actors.zipWithIndex
           .flatMap((a, i) => {
             (firings(i) to 1 by -1).map(q => {
               executions(currentCluster)(i) = q
@@ -276,7 +275,9 @@ trait ParametricRateDataflowWorkloadMixin(using Integral[BigFraction]) {
             true
           })
         moreToFire = firings.exists(_ > 0)
-        if (moreToFire) { //double check for now just so the last empty entry is not added
+        if (moreToFire && fired == 0) { // more should be fired by cannot. Thus deadlock.
+          return Array()
+        } else if (moreToFire) { //double check for now just so the last empty entry is not added
           buffer :+= topologyMatrix * executions(currentCluster) + buffer(currentCluster)
           executions :+= DenseVector.zeros(actorsSet.size)
           currentCluster += 1

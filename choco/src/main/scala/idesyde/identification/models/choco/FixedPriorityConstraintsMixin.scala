@@ -2,7 +2,7 @@ package idesyde.identification.models.choco
 
 import idesyde.identification.interfaces.ChocoModelMixin
 import org.chocosolver.solver.variables.IntVar
-import org.apache.commons.math3.fraction.BigFraction
+import org.apache.commons.math3.fraction.Rational
 import org.chocosolver.solver.constraints.Propagator
 import scala.annotation.targetName
 import org.chocosolver.solver.variables.Variable
@@ -14,15 +14,15 @@ import org.chocosolver.solver.variables.BoolVar
 trait FixedPriorityConstraintsMixin extends ChocoModelMixin {
 
   def priorities: Array[Int]
-  def periods: Array[BigFraction]
-  def deadlines: Array[BigFraction]
-  def wcets: Array[Array[BigFraction]]
+  def periods: Array[Rational]
+  def deadlines: Array[Rational]
+  def wcets: Array[Array[Rational]]
   def taskExecution: Array[Array[BoolVar]]
   def responseTimes: Array[IntVar]
   def blockingTimes: Array[IntVar]
   def durations: Array[Array[IntVar]]
 
-  def sufficientRMSchedulingPoints(taskIdx: Int): Array[BigFraction] = Array.empty
+  def sufficientRMSchedulingPoints(taskIdx: Int): Array[Rational] = Array.empty
 
   def postFixedPrioriPreemtpiveConstraint(schedulerIdx: Int): Unit =
     // taskExecution.zipWithIndex.foreach((taskVar, i) => {
@@ -101,9 +101,9 @@ trait FixedPriorityConstraintsMixin extends ChocoModelMixin {
   class FPSpecificPropagator(
       val schedulerIdx: Int,
       val priorities: Array[Int],
-      val periods: Array[BigFraction],
-      val deadlines: Array[BigFraction],
-      val wcets: Array[Array[BigFraction]],
+      val periods: Array[Rational],
+      val deadlines: Array[Rational],
+      val wcets: Array[Array[Rational]],
       val taskExecution: Array[Array[BoolVar]],
       val responseTimes: Array[IntVar],
       val blockingTimes: Array[IntVar],

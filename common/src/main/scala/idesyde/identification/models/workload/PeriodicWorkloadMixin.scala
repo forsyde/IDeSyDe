@@ -3,7 +3,7 @@ package idesyde.identification.models.workload
 import idesyde.utils.MultipliableFractional
 import org.jgrapht.opt.graph.sparse.SparseIntDirectedGraph
 
-import idesyde.utils.MultipliableFractional.infixMultipliableFractionalOps
+import math.Fractional.Implicits.infixFractionalOps
 import math.Ordering.Implicits.infixOrderingOps
 import org.jgrapht.Graph
 import org.jgrapht.graph.DefaultEdge
@@ -25,7 +25,7 @@ import scala.reflect.ClassTag
   * @tparam TimeT
   *   The type that represents a time tag.
   */
-trait PeriodicWorkloadMixin[TimeT : ClassTag](using fracT: MultipliableFractional[TimeT]):
+trait PeriodicWorkloadMixin[TimeT](using fracT: Fractional[TimeT])(using Conversion[Int, TimeT])(using ClassTag[TimeT]):
 
   def numTasks: Int
   // def periodicTasks: Array[TaskT]

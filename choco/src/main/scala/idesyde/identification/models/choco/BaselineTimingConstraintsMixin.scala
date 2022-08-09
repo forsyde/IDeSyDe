@@ -2,14 +2,14 @@ package idesyde.identification.models.choco
 
 import idesyde.identification.interfaces.ChocoModelMixin
 import org.chocosolver.solver.variables.IntVar
-import org.apache.commons.math3.fraction.BigFraction
+import org.apache.commons.math3.fraction.Rational
 import org.chocosolver.solver.variables.BoolVar
 
 trait BaselineTimingConstraintsMixin extends ChocoModelMixin {
 
   def priorities: Array[Int]
-  def periods: Array[BigFraction]
-  def maxUtilizations: Array[BigFraction]
+  def periods: Array[Rational]
+  def maxUtilizations: Array[Rational]
   def durations: Array[Array[IntVar]]
   def taskExecution: Array[Array[BoolVar]]
   def blockingTimes: Array[IntVar]
@@ -52,7 +52,7 @@ trait BaselineTimingConstraintsMixin extends ChocoModelMixin {
       .foreach((maxU, j) => {
         chocoModel.scalar(
           durations.map(d => d(j)),
-          durations.zipWithIndex.map((_, i) => BigFraction(100).divide(periods(i)).doubleValue.toInt),
+          durations.zipWithIndex.map((_, i) => Rational(100).divide(periods(i)).doubleValue.toInt),
           "<=",
           utilizations(j)
         ).post

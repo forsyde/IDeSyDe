@@ -6,7 +6,7 @@ import idesyde.identification.models.mixed.PeriodicTaskToSchedHW
 import forsyde.io.java.core.ForSyDeSystemGraph
 import org.chocosolver.solver.Model
 import org.apache.commons.math3.util.ArithmeticUtils
-import org.apache.commons.math3.fraction.BigFraction
+import org.apache.commons.math3.fraction.Rational
 import forsyde.io.java.typed.viewers.execution.Task
 import idesyde.identification.models.workload.ForSyDePeriodicWorkload
 
@@ -34,9 +34,9 @@ import org.chocosolver.solver.variables.IntVar
 import forsyde.io.java.typed.viewers.decision.results.AnalysedGenericProcessingModule
 import org.chocosolver.solver.constraints.Constraint
 import org.apache.commons.math3.util.FastMath
-import idesyde.utils.BigFractionIsNumeric
+import idesyde.utils.RationalIsNumeric
 import idesyde.exploration.explorers.SimpleWorkloadBalancingDecisionStrategy
-import idesyde.utils.BigFractionIsMultipliableFractional
+import idesyde.utils.RationalIsMultipliableFractional
 import idesyde.utils.MultipliableFractional
 import org.chocosolver.solver.variables.BoolVar
 import forsyde.io.java.typed.viewers.visualization.Visualizable
@@ -55,7 +55,7 @@ final case class PeriodicTaskToSchedHWChoco(
     with Active4StageDurationMixin
     with BaselineMemoryConstraints {
 
-  given MultipliableFractional[BigFraction] = BigFractionIsMultipliableFractional()
+  given MultipliableFractional[Rational] = RationalIsMultipliableFractional()
   //given Ordering[Task]       = DependentDeadlineMonotonicOrdering(sourceForSyDeDecisionModel.taskModel)
 
   val coveredVertexes = sourceForSyDeDecisionModel.coveredVertexes
@@ -97,7 +97,7 @@ final case class PeriodicTaskToSchedHWChoco(
   // the true decision variables
   val taskExecution = sourceForSyDeDecisionModel.taskModel.tasks.zipWithIndex.map((t, i) =>
     sourceForSyDeDecisionModel.schedHwModel.hardware.processingElems.zipWithIndex.map((p, j) =>
-      if (sourceForSyDeDecisionModel.wcets(i)(j).compareTo(BigFraction.ZERO) > 0) {
+      if (sourceForSyDeDecisionModel.wcets(i)(j).compareTo(Rational.zero) > 0) {
         model.boolVar("exe_" + t.getIdentifier)
       } else {
         model.boolVar("exe_" + t.getIdentifier, false)
@@ -107,7 +107,7 @@ final case class PeriodicTaskToSchedHWChoco(
     // sourceForSyDeDecisionModel
     //   .wcets(i)(p)
     //   .zipWithIndex
-    //   .filter((p, j) => p.compareTo(BigFraction.MINUS_ONE) > 0)
+    //   .filter((p, j) => p.compareTo(Rational.MINUS_ONE) > 0)
     //   // keep only the cores which have proven schedulability tests in the execution
     //   .filter((p, j) =>
     //     sourceForSyDeDecisionModel.schedHwModel.isStaticCycle(j) || sourceForSyDeDecisionModel.schedHwModel
@@ -119,7 +119,7 @@ final case class PeriodicTaskToSchedHWChoco(
   // scribe.debug((sourceForSyDeDecisionModel
   //     .wcets(i)
   //     .zipWithIndex
-  //     .filter((p, j) => p.compareTo(BigFraction.MINUS_ONE) > 0)
+  //     .filter((p, j) => p.compareTo(Rational.MINUS_ONE) > 0)
   //     // keep only the cores which have proven schedulability tests in the execution
   //     .filter((p, j) =>
   //       sourceForSyDeDecisionModel.schedHwModel.isStaticCycle(j) || sourceForSyDeDecisionModel.schedHwModel
@@ -173,7 +173,7 @@ final case class PeriodicTaskToSchedHWChoco(
   val responseTimes =
     sourceForSyDeDecisionModel.taskModel.tasks.zipWithIndex.map((t, i) =>
       // scribe.debug(t.getIdentifier + ": " + wcets(i)
-      //     .filter(p => p.compareTo(BigFraction.MINUS_ONE) > 0)
+      //     .filter(p => p.compareTo(Rational.MINUS_ONE) > 0)
       //     .min
       //     .doubleValue
       //     .ceil
@@ -186,7 +186,7 @@ final case class PeriodicTaskToSchedHWChoco(
         "rt_" + t.getViewedVertex.getIdentifier,
         // minimum WCET possible
         wcets(i)
-          .filter(p => p.compareTo(BigFraction.MINUS_ONE) > 0)
+          .filter(p => p.compareTo(Rational.MINUS_ONE) > 0)
           .min
           .doubleValue
           .ceil
@@ -199,7 +199,7 @@ final case class PeriodicTaskToSchedHWChoco(
     sourceForSyDeDecisionModel.taskModel.tasks.zipWithIndex.map((t, i) =>
       // scribe.debug(
       //   s"B: ${sourceForSyDeDecisionModel.taskModel.relativescaledDeadlines(i).doubleValue.floor.toInt} - " +
-      //   s"W: ${sourceForSyDeDecisionModel.wcets(i).filter(p => p.compareTo(BigFraction.MINUS_ONE) > 0).min.multiply(timeMultiplier).doubleValue.ceil.toInt}"
+      //   s"W: ${sourceForSyDeDecisionModel.wcets(i).filter(p => p.compareTo(Rational.MINUS_ONE) > 0).min.multiply(timeMultiplier).doubleValue.ceil.toInt}"
       // )
       model.intVar(
         "bt_" + t.getViewedVertex.getIdentifier,
@@ -216,7 +216,7 @@ final case class PeriodicTaskToSchedHWChoco(
         if (
           sourceForSyDeDecisionModel
             .wcets(i)(j)
-            .compareTo(BigFraction.MINUS_ONE) > 0
+            .compareTo(Rational.MINUS_ONE) > 0
         ) then
           Array(
             0,
@@ -378,7 +378,7 @@ final case class PeriodicTaskToSchedHWChoco(
   override def modelObjectives = Array(model.intMinusView(nUsedPEs))
 
   // create the methods that each mixing requires
-  // def sufficientRMSchedulingPoints(taskIdx: Int): Array[BigFraction] =
+  // def sufficientRMSchedulingPoints(taskIdx: Int): Array[Rational] =
   //   sourceForSyDeDecisionModel.sufficientRMSchedulingPoints(taskIdx)
 
   /** This method sets up the Worst case schedulability test for a task.
@@ -439,8 +439,8 @@ final case class PeriodicTaskToSchedHWChoco(
     sourceForSyDeDecisionModel.taskModel.tasks.zipWithIndex.foreach((t, i) => {
       rebuilt.addVertex(t.getViewedVertex)
       val analysed         = AnalysedTask.enforce(t)
-      val responseTimeFrac = BigFraction(responseTimes(i).getValue, timeMultiplier).reduce
-      val blockingTimeFrac = BigFraction(blockingTimes(i).getValue, timeMultiplier).reduce
+      val responseTimeFrac = Rational(responseTimes(i).getValue, timeMultiplier).reduce
+      val blockingTimeFrac = Rational(blockingTimes(i).getValue, timeMultiplier).reduce
       // scribe.debug(s"task ${t.getIdentifier} RT: (raw ${responseTimes(i).getValue}) ${responseTimeFrac.doubleValue}")
       // scribe.debug(s"task ${t.getIdentifier} BT: (raw ${blockingTimes(i).getValue}) ${blockingTimeFrac.doubleValue}")
       analysed.setWorstCaseResponseTimeNumeratorInSecs(responseTimeFrac.getNumeratorAsLong)
@@ -466,7 +466,7 @@ final case class PeriodicTaskToSchedHWChoco(
           .filter((ws, i) => taskExecution(i)(j).isInstantiatedTo(1))
           .map((w, i) =>
             //scribe.debug(s"task n ${i} Wcet: (raw ${durations(i)(j)})")
-            BigFraction(w(j).getValue)
+            Rational(w(j).getValue)
               .divide(periods(i))
               .doubleValue
           )

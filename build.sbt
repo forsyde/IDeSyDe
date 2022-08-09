@@ -6,20 +6,27 @@ lazy val root = project
   .in(file("."))
   .aggregate(common, cli, choco, forsyde, minizinc)
 
+lazy val core = (project in file("core"))
+
 lazy val common = (project in file("common"))
+  .dependsOn(core)
 
 lazy val choco = (project in file("choco"))
+  .dependsOn(core)
   .dependsOn(common)
   .dependsOn(forsyde)
 
 lazy val forsyde = (project in file("forsyde"))
+  .dependsOn(core)
   .dependsOn(common)
 
 lazy val minizinc = (project in file("minizinc"))
+  .dependsOn(core)
   .dependsOn(common)
   .dependsOn(forsyde)
 
 lazy val cli = (project in file("cli"))
+  .dependsOn(core)
   .dependsOn(common)
   .dependsOn(choco)
   .dependsOn(forsyde)

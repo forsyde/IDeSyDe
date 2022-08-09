@@ -1,4 +1,4 @@
-import idesyde.identification.api.IdentificationHandler
+import idesyde.identification.forsyde.api.IdentificationHandler
 import forsyde.io.java.drivers.ForSyDeModelHandler
 class IdentificationTest {
   

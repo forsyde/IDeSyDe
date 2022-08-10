@@ -39,7 +39,9 @@ object IdentificationResult {
   def unapply[M <: DecisionModel](identificationResult: IdentificationResult[M]) =
     (identificationResult.isFixed(), identificationResult.identified)
 
-  def apply[M <: DecisionModel](fixed: Boolean, idenfitied: M) = new IdentificationResult(fixed, idenfitied)
+  def apply[M <: DecisionModel](fixed: Boolean, identified: M) = new IdentificationResult(fixed, identified)
+
+  def apply[M <: DecisionModel](fixed: Boolean, identified: Option[M]) = new IdentificationResult(fixed, identified)
 
   def apply[M <: DecisionModel](identTuple: (Boolean, Option[M])) = new IdentificationResult(identTuple._1, identTuple._2)
 

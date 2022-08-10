@@ -1,6 +1,6 @@
-package idesyde.identification.models.choco
+package idesyde.identification.choco.models
 
-import idesyde.identification.interfaces.ChocoModelMixin
+import idesyde.identification.choco.interfaces.ChocoModelMixin
 import org.chocosolver.solver.variables.IntVar
 import org.jgrapht.graph.DefaultEdge
 import org.jgrapht.Graph

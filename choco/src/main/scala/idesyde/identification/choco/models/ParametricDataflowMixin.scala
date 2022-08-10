@@ -1,6 +1,6 @@
 import org.chocosolver.solver.variables.IntVar
 import org.jgrapht.Graph
-import idesyde.identification.interfaces.ChocoModelMixin
+import idesyde.identification.choco.interfaces.ChocoModelMixin
 import org.chocosolver.solver.variables.BoolVar
 import org.chocosolver.solver.constraints.Propagator
 import org.chocosolver.util.ESat

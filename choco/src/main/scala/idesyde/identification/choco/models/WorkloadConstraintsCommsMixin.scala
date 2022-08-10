@@ -1,7 +1,7 @@
-package idesyde.identification.models.choco
+package idesyde.identification.choco.models
 
 import org.chocosolver.solver.Model
-import idesyde.identification.interfaces.ChocoModelMixin
+import idesyde.identification.choco.interfaces.ChocoModelMixin
 import org.chocosolver.solver.variables.BoolVar
 import org.chocosolver.solver.variables.IntVar
 import spire.math.*

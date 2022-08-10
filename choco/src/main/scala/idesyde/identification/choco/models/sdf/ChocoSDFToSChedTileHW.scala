@@ -1,13 +1,13 @@
-package idesyde.identification.models.choco.sdf
+package idesyde.identification.choco.models.sdf
 
-import idesyde.identification.interfaces.ChocoCPForSyDeDecisionModel
+import idesyde.identification.choco.interfaces.ChocoCPForSyDeDecisionModel
 import org.chocosolver.solver.Model
 import forsyde.io.java.core.Vertex
 import org.chocosolver.solver.Solution
 import forsyde.io.java.core.ForSyDeSystemGraph
 import idesyde.identification.DecisionModel
 import idesyde.identification.IdentificationResult
-import idesyde.identification.models.choco.ManyProcessManyMessageMemoryConstraintsMixin
+import idesyde.identification.choco.models.ManyProcessManyMessageMemoryConstraintsMixin
 import org.chocosolver.solver.variables.BoolVar
 import org.chocosolver.solver.variables.IntVar
 import org.chocosolver.solver.search.strategy.strategy.AbstractStrategy

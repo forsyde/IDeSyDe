@@ -1,4 +1,4 @@
-package idesyde.identification.interfaces
+package idesyde.identification.choco.interfaces
 
 import org.chocosolver.solver.Model
 import org.chocosolver.solver.variables.IntVar

@@ -1,7 +1,7 @@
 package idesyde.exploration.explorers
 
 import idesyde.identification.forsyde.ForSyDeDecisionModel
-import idesyde.identification.interfaces.ChocoCPForSyDeDecisionModel
+import idesyde.identification.choco.interfaces.ChocoCPForSyDeDecisionModel
 import java.time.Duration
 import forsyde.io.java.core.ForSyDeSystemGraph
 import scala.concurrent.ExecutionContext

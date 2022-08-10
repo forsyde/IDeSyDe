@@ -1,6 +1,6 @@
-package idesyde.identification.models.choco.workload
+package idesyde.identification.choco.models.workload
 
-import idesyde.identification.interfaces.ChocoCPForSyDeDecisionModel
+import idesyde.identification.choco.interfaces.ChocoCPForSyDeDecisionModel
 
 import forsyde.io.java.core.ForSyDeSystemGraph
 import org.chocosolver.solver.Model
@@ -32,11 +32,11 @@ import org.apache.commons.math3.util.FastMath
 import idesyde.exploration.explorers.SimpleWorkloadBalancingDecisionStrategy
 import org.chocosolver.solver.variables.BoolVar
 import forsyde.io.java.typed.viewers.visualization.Visualizable
-import idesyde.identification.models.choco.FixedPriorityConstraintsMixin
-import idesyde.identification.models.choco.BaselineTimingConstraintsMixin
-import idesyde.identification.models.choco.ExtendedPrecedenceConstraintsMixin
-import idesyde.identification.models.choco.Active4StageDurationMixin
-import idesyde.identification.models.choco.BaselineMemoryConstraints
+import idesyde.identification.choco.models.FixedPriorityConstraintsMixin
+import idesyde.identification.choco.models.BaselineTimingConstraintsMixin
+import idesyde.identification.choco.models.ExtendedPrecedenceConstraintsMixin
+import idesyde.identification.choco.models.Active4StageDurationMixin
+import idesyde.identification.choco.models.BaselineMemoryConstraints
 import idesyde.identification.forsyde.models.mixed.PeriodicTaskToSchedHW
 import spire.math._
 

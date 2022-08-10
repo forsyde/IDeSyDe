@@ -2,7 +2,7 @@ package idesyde.identification.choco.rules
 
 import idesyde.identification.forsyde.ForSyDeIdentificationRule
 import forsyde.io.java.core.ForSyDeSystemGraph
-import idesyde.identification.models.choco.workload.PeriodicTaskToSchedHWChoco
+import idesyde.identification.choco.models.workload.PeriodicTaskToSchedHWChoco
 import idesyde.identification.DecisionModel
 import idesyde.identification.IdentificationResult
 import idesyde.identification.forsyde.models.mixed.PeriodicTaskToSchedHW
@@ -22,12 +22,9 @@ class PeriodicTaskToSchedHWChocoIRule
         }
       )
       .map(m =>
-        new IdentificationResult(
-          true,
-          Option(PeriodicTaskToSchedHWChoco(m.asInstanceOf[PeriodicTaskToSchedHW]))
-        )
+        IdentificationResult.fixed(PeriodicTaskToSchedHWChoco(m.asInstanceOf[PeriodicTaskToSchedHW]))
       )
-      .getOrElse(new IdentificationResult(false, Option.empty))
+      .getOrElse(IdentificationResult.unfixedEmpty())
   }
 
 }

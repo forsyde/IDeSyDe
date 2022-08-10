@@ -1,4 +1,4 @@
-package idesyde.identification.interfaces
+package idesyde.identification.choco.interfaces
 
 import forsyde.io.java.core.ForSyDeSystemGraph
 import org.chocosolver.solver.Model

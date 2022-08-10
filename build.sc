@@ -46,7 +46,7 @@ object minizinc extends SbtModule {
   )
 }
 
-object choco extends SbtModule with MavenModule {
+object choco extends SbtModule {
   def scalaVersion = globalScalaVersion
   def moduleDeps   = Seq(common, core, forsyde)
   def repositories = super.repositories ++ Seq(MavenRepository("file:///C:/Users/RodolfoJordao/.m2/repository"))

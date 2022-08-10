@@ -1,6 +1,5 @@
 package idesyde
 
-import picocli.CommandLine
 import idesyde.cli.IDeSyDeCLIParser
 import idesyde.cli.IDeSyDeRunConfig
 import scribe.Level

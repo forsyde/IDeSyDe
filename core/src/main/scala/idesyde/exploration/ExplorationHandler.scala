@@ -33,17 +33,17 @@ final class ExplorationHandler(
         val possibleExplorers = explorers.filter(_.canExplore(m)).toArray
         val dominanceMatrix = possibleExplorers.map(e => possibleExplorers.map(ee => e.dominates(ee, m, explorationCriteria)))
         // keep only the SCC which are leaves
-        val dominanceComponents = CoreUtils.computeSSCFromReachibility(dominanceMatrix)
-        val dominant = dominanceComponents.filter(component => {
-          // keep dominant components in which no other components dominate any decision model
-          // therein
-          dominanceComponents.filter(_ != component).forall(other => {
-            // decision models in component
-            def componentModels = component.map(possibleExplorers(_))
-            def otherModels = other.map(possibleExplorers(_))
-            !componentModels.exists(e => otherModels.exists(ee => ee.dominates(e, m, explorationCriteria)))
-          })
-        }).flatMap(component => component.map(idx => possibleExplorers(idx))).toSet
+        val dominant = CoreUtils.computeDominantFromReachability(dominanceMatrix).map(idx => possibleExplorers(idx))
+        // val dominant = dominanceComponents.filter(component => {
+        //   // keep dominant components in which no other components dominate any decision model
+        //   // therein
+        //   dominanceComponents.filter(_ != component).forall(other => {
+        //     // decision models in component
+        //     def componentModels = component.map(possibleExplorers(_))
+        //     def otherModels = other.map(possibleExplorers(_))
+        //     !componentModels.exists(e => otherModels.exists(ee => ee.dominates(e, m, explorationCriteria)))
+        //   })
+        // }).flatMap(component => component.map(idx => possibleExplorers(idx))).toSet
         // therefore, for this decision model, these explorers are the dominant alternative
         m -> dominant
       end for

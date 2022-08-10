@@ -24,10 +24,16 @@ class PanoramaUseCaseWithoutSolutionSuite extends AnyFunSuite with LoggingMixin 
 
   setNormal()
 
-  val explorationHandler = ExplorationHandler()
+  val explorationHandler = ExplorationHandler(
+    infoLogger = (s: String) => scribe.info(s),
+    debugLogger = (s: String) => scribe.debug(s)
+  )
     .registerModule(ChocoExplorationModule())
 
-  val identificationHandler = IdentificationHandler()
+  val identificationHandler = IdentificationHandler(
+    infoLogger = (s: String) => scribe.info(s),
+    debugLogger = (s: String) => scribe.debug(s)
+  )
     .registerIdentificationRule(ChocoIdentificationModule())
     .registerIdentificationRule(ForSyDeIdentificationModule())
     .registerIdentificationRule(MinizincIdentificationModule())

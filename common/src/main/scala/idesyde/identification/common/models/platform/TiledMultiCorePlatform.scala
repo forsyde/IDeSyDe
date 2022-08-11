@@ -9,6 +9,7 @@ import org.jgrapht.graph.SimpleDirectedWeightedGraph
 import org.jgrapht.alg.shortestpath.DijkstraManyToManyShortestPaths
 import scala.reflect.ClassTag
 import org.jgrapht.graph.AsWeightedGraph
+import scala.jdk.CollectionConverters._
 
 /** This mixin contains methods and logic that can aid platform models that are behave like tiled
   * multi core platforms. This can include for example NoC multicore architectures commonly used
@@ -143,6 +144,19 @@ trait TiledMultiCorePlatformMixin[MemT, TimeT](using fTimeT: Fractional[TimeT])(
           fTimeT.zero - fTimeT.one
       })
     })
+  }
+
+  def routerPaths: Array[Array[Array[Int]]] = {
+    val pathAlg = DijkstraManyToManyShortestPaths(architectureGraph)
+    val paths = pathAlg.getManyToManyPaths(tileSet.toSet.asJava, tileSet.toSet.asJava)
+    tileSet.map(src => tileSet.map(dst => {
+      if (src != dst)
+        Option(paths.getPath(src, dst)).map(p => 
+          // println(src +" -> " + dst + ": " + p.getVertexList().asScala.tail.drop(1).toArray.mkString(", "))
+          p.getVertexList().asScala.drop(1).dropRight(1).toArray).getOrElse(Array.emptyIntArray)
+      else
+        Array.emptyIntArray
+    }))
   }
 
 }

@@ -22,9 +22,11 @@ import spire.implicits.*
 import idesyde.identification.models.mixed.WCETComputationMixin
 import idesyde.identification.IdentificationResult
 import idesyde.identification.DecisionModel
+import forsyde.io.java.typed.viewers.platform.runtime.StaticCyclicScheduler
+import scala.collection.mutable.Buffer
 
 given scala.math.Fractional[Rational] = spire.compat.fractional[Rational]
-given Conversion[Double, Rational] = (d: Double) => Rational(d)
+given Conversion[Double, Rational]    = (d: Double) => Rational(d)
 
 final case class SDFToSchedTiledHW(
     val sdfApplications: SDFApplication,
@@ -53,7 +55,8 @@ final case class SDFToSchedTiledHW(
 
   def addMappingsAndRebuild(
       channelMappings: Array[Array[Boolean]],
-      actorSchedulings: Array[Array[Boolean]]
+      actorSchedulings: Array[Array[Boolean]],
+      actorStaticSlots: Array[Array[Array[Int]]]
   ): ForSyDeSystemGraph = {
     val rebuilt = ForSyDeSystemGraph()
     coveredVertexes.foreach(v => rebuilt.addVertex(v))
@@ -66,28 +69,58 @@ final case class SDFToSchedTiledHW(
     val allME = platform.tiledDigitalHardware.memories
     val allCE = platform.tiledDigitalHardware.allCommElems
     finalMappings.zipWithIndex.foreach((row, i) => {
-      row.zipWithIndex.filter((m, j) => m).foreach((m, j) => {
-        val sdfChannel = sdfApplications.channels(i)
-        val allocated  = Allocated.enforce(sdfChannel)
-        allocated.insertAllocationHostsPort(rebuilt, allCE(j))
-        if (j < platform.tiledDigitalHardware.tileSet.size) {
-          allocated.insertAllocationHostsPort(rebuilt, allME(j))
-          val mapped = MemoryMapped.enforce(sdfChannel)
-          mapped.insertMappingHostsPort(rebuilt, allME(j))
-          GreyBox.enforce(allME(j)).insertContainedPort(rebuilt, Visualizable.enforce(sdfChannel))
-        }
-      })
+      row.zipWithIndex
+        .filter((m, j) => m)
+        .foreach((m, j) => {
+          val sdfChannel = sdfApplications.channels(i)
+          val allocated  = Allocated.enforce(sdfChannel)
+          allocated.insertAllocationHostsPort(rebuilt, allCE(j))
+          if (j < platform.tiledDigitalHardware.tileSet.size) {
+            allocated.insertAllocationHostsPort(rebuilt, allME(j))
+            val mapped = MemoryMapped.enforce(sdfChannel)
+            mapped.insertMappingHostsPort(rebuilt, allME(j))
+            GreyBox.enforce(allME(j)).insertContainedPort(rebuilt, Visualizable.enforce(sdfChannel))
+          }
+        })
     })
     finalSchedulings.zipWithIndex.foreach((row, i) => {
-      row.zipWithIndex.filter((m, j) => m).foreach((m, j) => {
-        val sdfActor  = sdfApplications.actors(i)
-        val scheduled = Scheduled.enforce(sdfActor)
-        val mapped    = MemoryMapped.enforce(sdfActor)
-        scheduled.insertSchedulersPort(rebuilt, platform.schedulers(j))
-        mapped.insertMappingHostsPort(rebuilt, allME(j))
-        GreyBox.enforce(platform.schedulers(j)).insertContainedPort(rebuilt, Visualizable.enforce(sdfActor))
+      row.zipWithIndex
+        .filter((m, j) => m)
+        .foreach((m, j) => {
+          val sdfActor  = sdfApplications.actors(i)
+          val scheduled = Scheduled.enforce(sdfActor)
+          val mapped    = MemoryMapped.enforce(sdfActor)
+          scheduled.insertSchedulersPort(rebuilt, platform.schedulers(j))
+          mapped.insertMappingHostsPort(rebuilt, allME(j))
+          GreyBox
+            .enforce(platform.schedulers(j))
+            .insertContainedPort(rebuilt, Visualizable.enforce(sdfActor))
+        })
+    })
+    // println(actorStaticSlots.map(_.map(_.mkString("[", ", ", "]")).mkString("[", ", ", "]")).mkString("[", "\n", "]"))
+    val entries = platform.schedulers.map(s => Buffer[String]())
+    actorStaticSlots.zipWithIndex.foreach((tile, i) => {
+      tile.zipWithIndex.foreach((slots, j) => {
+        val actor     = sdfApplications.actors(i)
+        val scheduler = platform.schedulers(j)
+        slots.foreach(q => {
+          if (q > 0) {
+            StaticCyclicScheduler
+              .safeCast(scheduler)
+              .ifPresent(s => {
+                for (k <- 0 until q) {
+                  entries(j) :+= actor.getIdentifier()
+                }
+              })
+          }
+        })
       })
     })
+    for (
+      (s, i) <- platform.schedulers.zipWithIndex
+    ) {
+      StaticCyclicScheduler.safeCast(s).ifPresent(scs => scs.setEntries(entries(i).asJava))
+    }
     rebuilt
   }
 
@@ -164,12 +197,12 @@ object SDFToSchedTiledHW {
           .map(_.getMappingHostsPort(model).contains(mem))
           .orElse(false)
       }) ++
-      platform.tiledDigitalHardware.routers.map(router => {
-        Allocated
-          .safeCast(channel)
-          .map(_.getAllocationHostsPort(model).contains(router))
-          .orElse(false)
-      })
+        platform.tiledDigitalHardware.routers.map(router => {
+          Allocated
+            .safeCast(channel)
+            .map(_.getAllocationHostsPort(model).contains(router))
+            .orElse(false)
+        })
     })
     // now find if any of task are already scheduled (mapped to a processor)
     lazy val actorSchedulings = sdfApplications.actors.map(task => {

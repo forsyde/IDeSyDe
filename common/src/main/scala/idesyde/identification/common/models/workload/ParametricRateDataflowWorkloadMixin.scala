@@ -67,7 +67,7 @@ trait ParametricRateDataflowWorkloadMixin {
     ConnectivityInspector(AsUndirectedGraph(g)).connectedSets().size()
   })
 
-  def balanceMatrices = dataflowGraphs.map(g => {
+  def computeBalanceMatrices = dataflowGraphs.map(g => {
     val m = Array.fill(channelsSet.size)(Array.fill(actorsSet.size)(0))
     channelsSet.zipWithIndex.foreach((c, ci) => {
       actorsSet.zipWithIndex.foreach((a, ai) => {
@@ -82,8 +82,9 @@ trait ParametricRateDataflowWorkloadMixin {
     // scribe.debug(m.map(_.mkString("[", ",", "]")).mkString("[", ",", "]"))
     m
   })
+  lazy val balanceMatrices = computeBalanceMatrices
 
-  def repetitionVectors: Array[Array[Int]] = dataflowGraphs.map(g => {
+  def computeRepetitionVectors: Array[Array[Int]] = dataflowGraphs.map(g => {
     def minus_one = Rational.zero - Rational.one
     // first we build a compressed g with only the actors
     // with the fractional flows in a matrix
@@ -170,28 +171,31 @@ trait ParametricRateDataflowWorkloadMixin {
       .reduce((i1, i2) => spire.math.lcm(i1, i2))
     rates.map(_ * lcmV / gcdV).map(_.numerator.toInt)
   })
-  // balanceMatrices.zipWithIndex.map((m, ind) => SDFUtils.getRepetitionVector(m, initialTokens, numDisjointComponents(ind)))
+  lazy val repetitionVectors = computeRepetitionVectors
+  // computeBalanceMatrices.zipWithIndex.map((m, ind) => SDFUtils.getRepetitionVector(m, initialTokens, numDisjointComponents(ind)))
 
   def isConsistent = repetitionVectors.forall(r => r.size == actorsSet.size)
 
   def isLive = maximalParallelClustering.zipWithIndex.map((cluster, i) => !cluster.isEmpty)
 
-  def pessimisticTokensPerChannel: Array[Int] = channelsSet.zipWithIndex.map((c, cIdx) => {
-    dataflowGraphs.zipWithIndex
-      .flatMap((g, confIdx) => {
-        g.incomingEdgesOf(c)
-          .stream()
-          .map(e => g.getEdgeSource(e))
-          .mapToInt(a =>
-            def aIdx = actorsSet.indexOf(a)
-            repetitionVectors(confIdx)(aIdx) * balanceMatrices(confIdx)(cIdx)(aIdx) + initialTokens(
-              cIdx
+  def pessimisticTokensPerChannel: Array[Int] = {
+    channelsSet.zipWithIndex.map((c, cIdx) => {
+      dataflowGraphs.zipWithIndex
+        .flatMap((g, confIdx) => {
+          g.incomingEdgesOf(c)
+            .stream()
+            .map(e => g.getEdgeSource(e))
+            .mapToInt(a =>
+              def aIdx = actorsSet.indexOf(a)
+              repetitionVectors(confIdx)(aIdx) * balanceMatrices(confIdx)(cIdx)(aIdx) + initialTokens(
+                cIdx
+              )
             )
-          )
-          .toScala(List)
-      })
-      .max
-  })
+            .toScala(List)
+        })
+        .max
+    })
+  }
 
   def stateSpace: Graph[Int, Int] = {
     // first, convert the arrays into a mathematical form
@@ -238,7 +242,7 @@ trait ParametricRateDataflowWorkloadMixin {
   }
 
   /** returns the cluster of actor firings that have zero time execution time and can fire in
-    * parallel, until all the firings are exhausted in accordance to the [[repetitionVectors]]
+    * parallel, until all the firings are exhausted in accordance to the [[computeRepetitionVectors]]
     *
     * This is also used to check the liveness of each configuration. If a configuration is not live,
     * then its clusters are empty, since at the very least one should exist.

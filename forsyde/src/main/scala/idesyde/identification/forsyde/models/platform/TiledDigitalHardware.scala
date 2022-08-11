@@ -31,32 +31,39 @@ final case class TiledDigitalHardware(
     with TiledMultiCorePlatformMixin[Long, Rational]
     with InstrumentedPlatformMixin {
 
-  def coveredVertexes: Iterable[Vertex] = processors.map(_.getViewedVertex()) ++ memories.map(
+  val coveredVertexes: Iterable[Vertex] = processors.map(_.getViewedVertex()) ++ memories.map(
     _.getViewedVertex()
   ) ++ networkInterfaces.map(_.getViewedVertex()) ++ routers.map(_.getViewedVertex())
 
-  def allCommElems: Array[GenericCommunicationModule] = networkInterfaces ++ routers
-
-  def architectureGraph: Graph[Int, DefaultEdge] = {
+  val allCommElems: Array[GenericCommunicationModule] = networkInterfaces ++ routers
+  val architectureGraph: Graph[Int, DefaultEdge] = {
     val gBuilder = SimpleDirectedGraph.createBuilder[Int, DefaultEdge](() => DefaultEdge())
     // add the integer encoded connections between cores and NIs
-    tileSet.foreach(tileIdx => gBuilder.addEdge(tileIdx, tileSet.size + tileIdx))
+    processors.zipWithIndex.foreach((p, tileIdx) => {
+      gBuilder.addEdge(tileIdx, processors.size + tileIdx)
+      gBuilder.addEdge(processors.size + tileIdx, tileIdx)
+    })
     // now connect the actual NIs
     val allCE = allCommElems
     interconnectTopology
       .edgeSet()
       .forEach(e => {
-        val srcNI = tileSet.size + allCE.indexOf(interconnectTopology.getEdgeSource(e))
-        val dstNI = tileSet.size + allCE.indexOf(interconnectTopology.getEdgeTarget(e))
+        val srcNI = processors.size + allCE.indexOf(interconnectTopology.getEdgeSource(e))
+        val dstNI = processors.size + allCE.indexOf(interconnectTopology.getEdgeTarget(e))
         gBuilder.addEdge(srcNI, dstNI)
       })
     gBuilder.buildAsUnmodifiable()
   }
+  
+  val tileSet: Array[Int] = (0 until processors.size).toArray
+
+  val routerSet: Array[Int] = (processors.size until processors.size + networkInterfaces.size + routers.size).toArray
+
   def architectureGraphMaximumHopTime(src: Int, dst: Int): Rational = Rational.zero
 
   def architectureGraphMinimumHopTime(src: Int, dst: Int): Rational = Rational.zero
-  def maxMemoryPerTile: Array[Long] = memories.map(mem => mem.getSpaceInBits())
-  def maxTimePerInstructionPerTilePerMode: Array[Map[String, Map[String, Rational]]] =
+  val maxMemoryPerTile: Array[Long] = memories.map(mem => mem.getSpaceInBits())
+  val maxTimePerInstructionPerTilePerMode: Array[Map[String, Map[String, Rational]]] =
     processors.map(pe => {
       InstrumentedProcessingModule
         .safeCast(pe)
@@ -72,7 +79,7 @@ final case class TiledDigitalHardware(
         .orElse(Map.empty[String, Map[String, Rational]])
     })
 
-  def maxTraversalTimePerBitPerRouter: Array[Rational] = networkInterfaces.map(ni => {
+  val maxTraversalTimePerBitPerRouter: Array[Rational] = networkInterfaces.map(ni => {
     InstrumentedCommunicationModule
       .safeCast(ni)
       .map(insce =>
@@ -86,7 +93,7 @@ final case class TiledDigitalHardware(
       .orElse(Rational.zero)
   })
 
-  def minTraversalTimePerBitPerRouter: Array[Rational] = networkInterfaces.map(ni => {
+  val minTraversalTimePerBitPerRouter: Array[Rational] = networkInterfaces.map(ni => {
     InstrumentedCommunicationModule
       .safeCast(ni)
       .map(insce =>
@@ -99,13 +106,10 @@ final case class TiledDigitalHardware(
       )
       .orElse(Rational.zero)
   })
-  def tileSet: Array[Int] = (0 until processors.size).toArray
-  def routerSet: Array[Int] =
-    (processors.size until (processors.size + networkInterfaces.size + routers.size)).toArray
+  
+  val processorsFrequency: Array[Long] = processors.map(_.getOperatingFrequencyInHertz())
 
-  def processorsFrequency: Array[Long] = processors.map(_.getOperatingFrequencyInHertz())
-
-  def processorsProvisions: Array[Map[String, Map[String, Double]]] = processors.map(pe => {
+  val processorsProvisions: Array[Map[String, Map[String, Double]]] = processors.map(pe => {
     // we do it mutable for simplicity...
     // the performance hit should not be a concern now, for super big instances, this can be reviewed
     var mutMap = mutable.Map[String, Map[String, Double]]()
@@ -116,6 +120,21 @@ final case class TiledDigitalHardware(
     })
     mutMap.toMap
   })
+
+  val commElemsVirtualChannels: Array[Int] = allCommElems.map(r => {
+    InstrumentedCommunicationModule.safeCast(r).map(ir => ir.getMaxConcurrentFlits().toInt).orElse(1)
+  })
+  def commElemsVirtualChannelsById(ceId: Int) = commElemsVirtualChannels(routerSet.indexOf(ceId))
+
+  val bandWidthPerCEPerVirtualChannel: Array[Rational] = allCommElems.map(r => {
+    InstrumentedCommunicationModule.safeCast(r).map(ir =>
+        Rational(ir.getFlitSizeInBits.toInt * ir.getOperatingFrequencyInHertz.toLong, ir.getMaxCyclesPerFlit.toInt)
+          .reciprocal
+      )
+      .orElse(Rational.one)
+  })
+
+  def bandWidthPerCEPerVirtualChannelById(ceId: Int) = bandWidthPerCEPerVirtualChannel(routerSet.indexOf(ceId))
 
   def uniqueIdentifier: String = "TiledDigitalHardware"
 }

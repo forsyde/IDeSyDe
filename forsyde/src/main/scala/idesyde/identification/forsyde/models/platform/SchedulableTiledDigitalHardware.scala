@@ -20,41 +20,43 @@ final case class SchedulableTiledDigitalHardware(
     val schedulers: Array[AbstractScheduler]
 ) extends ForSyDeDecisionModel {
 
-  def coveredVertexes: Iterable[Vertex] = schedulers.map(_.getViewedVertex())
+  val coveredVertexes: Iterable[Vertex] = schedulers.map(_.getViewedVertex())
     ++ tiledDigitalHardware.coveredVertexes
 
-  def isFixedPriority = schedulers.map(FixedPriorityScheduler.conforms(_))
-  def isTimeTriggered = schedulers.map(TimeTriggeredScheduler.conforms(_))
-  def isRoundRobin    = schedulers.map(RoundRobinScheduler.conforms(_))
-  def isStaticCycle   = schedulers.map(StaticCyclicScheduler.conforms(_))
+  val isFixedPriority = schedulers.map(FixedPriorityScheduler.conforms(_).booleanValue())
+  val isTimeTriggered = schedulers.map(TimeTriggeredScheduler.conforms(_).booleanValue())
+  val isRoundRobin    = schedulers.map(RoundRobinScheduler.conforms(_).booleanValue())
+  val isStaticCycle   = schedulers.map(StaticCyclicScheduler.conforms(_).booleanValue())
 
-  def fixedPrioritySchedulers =
+  val fixedPrioritySchedulers =
     schedulers.zipWithIndex
       .filter((s, i) => isFixedPriority(i))
       .map((s, i) => FixedPriorityScheduler.enforce(s))
-  def timeTriggeredSchedulers =
+  val timeTriggeredSchedulers =
     schedulers.zipWithIndex
       .filter((s, i) => isTimeTriggered(i))
       .map((s, i) => TimeTriggeredScheduler.enforce(s))
-  def roundRobinSchedulers =
+  val roundRobinSchedulers =
     schedulers.zipWithIndex
       .filter((s, i) => isRoundRobin(i))
       .map((s, i) => RoundRobinScheduler.enforce(s))
-  def staticCycleSchedulers =
+  val staticCycleSchedulers =
     schedulers.zipWithIndex
       .filter((s, i) => isStaticCycle(i))
       .map((s, i) => StaticCyclicScheduler.enforce(s))
 
-  def fixedPriorityTiles: Array[Int] = tiledDigitalHardware.tileSet
+  val fixedPriorityTiles: Array[Int] = tiledDigitalHardware.tileSet
     .filter(i => isFixedPriority(i))
-  def timeTriggeredTiles: Array[Int] = tiledDigitalHardware.tileSet
+  val timeTriggeredTiles: Array[Int] = tiledDigitalHardware.tileSet
     .filter(i => isTimeTriggered(i))
-  def roundRobinTiles: Array[Int] = tiledDigitalHardware.tileSet
+  val roundRobinTiles: Array[Int] = tiledDigitalHardware.tileSet
     .filter(i => isRoundRobin(i))
-  def staticCyclicTiles: Array[Int] = tiledDigitalHardware.tileSet
+  val staticCyclicTiles: Array[Int] = tiledDigitalHardware.tileSet
     .filter(i => isStaticCycle(i))
 
-  def uniqueIdentifier: String = "SchedulableTiledDigitalHardware"
+  val schedulerSet = (0 until schedulers.size).toArray
+
+  val uniqueIdentifier: String = "SchedulableTiledDigitalHardware"
 }
 
 object SchedulableTiledDigitalHardware {

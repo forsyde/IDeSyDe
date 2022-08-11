@@ -13,38 +13,60 @@ trait TileAsyncInterconnectCommsMixin extends ChocoModelMixin {
 
   def numProcElems: Int
   def numCommElems: Int
-  def numDataSent: Int
-  def dataTravelDuration(dataIdx: Int)(ceIdx: Int): Int
+  def numMessages: Int
+  def messageTravelTimePerVirtualChannelById(messageIdx: Int)(ceId: Int): Int
+  def numVirtualChannels(ceIdx: Int): Int
   def commElemsPath(srcIdx: Int)(dstIdx: Int): Array[Int]
+  def commElemsMustShareChannel(ceIdx: Int)(otherCeIdx: Int): Boolean
   
-  def messageCommunication(dataIdx: Int)(srcIdx: Int)(dstIdx: Int): BoolVar
-  def commStart(dataIdx: Int)(ceIdx: Int): IntVar
-  def commEnd(dataIdx: Int)(ceIdx: Int): IntVar
-  def commElemLoad(ceIdx: Int): IntVar
+  def virtualChannelForMessage(messageIdx: Int)(ceIdx: Int): IntVar
+  def messageIsCommunicated(messageIdx: Int)(srcIdx: Int)(dstIdx: Int): BoolVar
+  def messageTravelDuration(messageIdx: Int)(srcIdx: Int)(dstIdx: Int): IntVar
 
-  def virtualOptionalDurations(dataIdx: Int)(ceIdx: Int): IntVar = {
-    val timeVar = chocoModel.intVar(s"virtual_dur_${dataIdx}_${ceIdx}", Array(0, dataTravelDuration(dataIdx)(ceIdx)))
+  def postTileAsyncInterconnectComms(): Unit = {
+    // first, make sure that data from different sources do not collide in any comm. elem
     for (
-        src <- 0 until numProcElems - 1;
-        dst <- src + 1 until numProcElems;
-        path = commElemsPath(src)(dst)
-        if !path.isEmpty && path.contains(ceIdx)
+      mi <- 0 until numMessages;
+      mj <- mi until numMessages; // it might seems strange that we consider the same message, but it is required for proper allocation
+      ce <- 0 until numCommElems;
+      srci <- 0 until numProcElems;
+      dsti <- 0 until numProcElems;
+      srcj <- 0 until numProcElems;
+      dstj <- 0 until numProcElems
+      if srci != srcj && commElemsPath(srci)(dsti).contains(ce) && commElemsPath(srcj)(dstj).contains(ce)
     ) {
-        chocoModel.ifThenElse(
-            messageCommunication(dataIdx)(src)(dst), 
-            timeVar.eq(dataTravelDuration(dataIdx)(ceIdx)).decompose(),
-            timeVar.eq(0).decompose()
-        )
+      chocoModel.ifThen(messageIsCommunicated(mi)(srci)(dsti).and(messageIsCommunicated(mj)(srcj)(dstj)).decompose(),
+        virtualChannelForMessage(mi)(ce).ne(virtualChannelForMessage(mj)(ce)).decompose()
+      )
     }
-    timeVar
-  }
-  
-  def virtualCommTasks = (0 until numDataSent)
-    .map(mi =>
-      (0 until numCommElems).map(ci => Task(commStart(mi)(ci), virtualOptionalDurations(mi)(ci), commEnd(mi)(ci))).toArray
-    )
-    .toArray
 
-  def postTileAsyncInterconnectComms(): Unit = {}
+    // now we make sure that adjacent comm elems that must have the same channel for the same
+    // message, indeed do.
+    for (
+      ci <- 0 until numCommElems;
+      cj <- ci + 1 until numCommElems;
+      if commElemsMustShareChannel(ci)(cj);
+      m <- 0 until numMessages;
+      src <- 0 until numProcElems;
+      dst <- 0 until numProcElems;
+      if commElemsPath(src)(dst).contains(ci) && commElemsPath(src)(dst).contains(cj)
+    ) {
+      chocoModel.ifThen(messageIsCommunicated(m)(src)(dst),
+        virtualChannelForMessage(m)(ci).eq(virtualChannelForMessage(m)(cj)).decompose()
+      )
+    }
+
+    // and finally, we calculate the travel time, for each message, between each src and dst
+    for (
+      m <- 0 until numMessages;
+      src <- 0 until numProcElems;
+      dst <- 0 until numProcElems;
+      if src != dst
+    ) {
+      chocoModel.ifThen(messageIsCommunicated(m)(src)(dst),
+        messageTravelDuration(m)(src)(dst).eq(commElemsPath(src)(dst).map(ce => messageTravelTimePerVirtualChannelById(m)(ce)).sum).decompose()
+      )
+    }
+  }
 
 }

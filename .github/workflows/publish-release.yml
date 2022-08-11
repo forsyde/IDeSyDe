@@ -21,12 +21,12 @@ jobs:
       # if: ${{ matrix.os != 'windows-latest' }}
       run: |
         cd ${{ github.workspace }}
-        sbt assembly
+        millw cli.assembly
     - name: Upload binaries to release
       uses: svenstaro/upload-release-action@v2
       with:
         repo_token: ${{ secrets.GITHUB_TOKEN }}
-        file: ${{ github.workspace }}/cli/target/scala-3.1.0/cli-assembly-${{ steps.get_version.outputs.version }}-all.jar
+        file: ${{ github.workspace }}/cli/out/assembly.dest/out.jar
         asset_name: idesyde-${{ steps.get_version.outputs.version }}-standalone.jar
         tag: "${{ github.ref }}"
         overwrite: true

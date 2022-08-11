@@ -5,19 +5,17 @@ import java.nio.file.Paths
 import scala.collection.mutable.Buffer
 import scribe.Level
 import forsyde.io.java.drivers.ForSyDeModelHandler
-import idesyde.identification.api.IdentificationHandler
-import idesyde.exploration.api.ExplorationHandler
+import idesyde.identification.IdentificationHandler
+import idesyde.exploration.ExplorationHandler
 import forsyde.io.java.core.ForSyDeSystemGraph
 import scala.concurrent.ExecutionContext
 import idesyde.exploration.ChocoExplorationModule
-import idesyde.identification.api.IdentificationHandler
-import idesyde.identification.api.ChocoIdentificationModule
-import idesyde.identification.ForSyDeDecisionModel
-import idesyde.exploration.interfaces.ForSyDeIOExplorer
-import idesyde.identification.api.ForSyDeIdentificationModule
-import idesyde.identification.api.MinizincIdentificationModule
+import idesyde.identification.choco.ChocoIdentificationModule
+import idesyde.identification.forsyde.ForSyDeDecisionModel
+import idesyde.exploration.forsyde.interfaces.ForSyDeIOExplorer
+import idesyde.identification.forsyde.api.ForSyDeIdentificationModule
+import idesyde.identification.minizinc.api.MinizincIdentificationModule
 import scribe.format.FormatterInterpolator
-
 
 case class IDeSyDeRunConfig(
     var inputModelsPaths: Buffer[Path] = Buffer.empty,
@@ -26,10 +24,16 @@ case class IDeSyDeRunConfig(
     executionContext: ExecutionContext
 ):
 
-  val explorationHandler = ExplorationHandler()
+  val explorationHandler = ExplorationHandler(
+    infoLogger = (s: String) => scribe.info(s),
+    debugLogger = (s: String) => scribe.debug(s)
+  )
     .registerModule(ChocoExplorationModule())
 
-  val identificationHandler = IdentificationHandler()
+  val identificationHandler = IdentificationHandler(
+    infoLogger = (s: String) => scribe.info(s),
+    debugLogger = (s: String) => scribe.debug(s)
+  )
     .registerIdentificationRule(ChocoIdentificationModule())
     .registerIdentificationRule(ForSyDeIdentificationModule())
     .registerIdentificationRule(MinizincIdentificationModule())
@@ -96,13 +100,22 @@ case class IDeSyDeRunConfig(
       scribe.Logger.root
         .clearHandlers()
         .clearModifiers()
-        .withHandler(minimumLevel = Some(loggingLevel), formatter = formatter"${scribe.format.dateFull} [${scribe.format.levelColoredPaddedRight}] ${scribe.format.italic(scribe.format.classNameSimple)} - ${scribe.format.message}")
+        .withHandler(
+          minimumLevel = Some(loggingLevel),
+          formatter =
+            formatter"${scribe.format.dateFull} [${scribe.format.levelColoredPaddedRight}] ${scribe.format
+              .italic(scribe.format.classNameSimple)} - ${scribe.format.messages}"
+        )
         .replace()
-    else 
+    else
       scribe.Logger.root
         .clearHandlers()
         .clearModifiers()
-        .withHandler(minimumLevel = Some(loggingLevel), formatter = formatter"${scribe.format.dateFull} [${scribe.format.levelColoredPaddedRight}] ${scribe.format.message}")
+        .withHandler(
+          minimumLevel = Some(loggingLevel),
+          formatter =
+            formatter"${scribe.format.dateFull} [${scribe.format.levelColoredPaddedRight}] ${scribe.format.messages}"
+        )
         .replace()
     scribe.info(s"logging levels set to ${loggingLevel.name}.")
 

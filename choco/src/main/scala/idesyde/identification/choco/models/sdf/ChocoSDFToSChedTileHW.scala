@@ -20,7 +20,8 @@ import idesyde.implicits.forsyde.given_Fractional_Rational
 
 final case class ChocoSDFToSChedTileHW(
     val dse: SDFToSchedTiledHW
-)(using Fractional[Rational]) extends ChocoCPForSyDeDecisionModel
+)(using Fractional[Rational])
+    extends ChocoCPForSyDeDecisionModel
     with ManyProcessManyMessageMemoryConstraintsMixin
     with TileAsyncInterconnectCommsMixin
     with SDFTimingAnalysisSASMixin {
@@ -76,11 +77,13 @@ final case class ChocoSDFToSChedTileHW(
 
   def actors: Array[Int] = dse.sdfApplications.actorsSet
 
-  def maxRepetitionsPerActors(actorId: Int): Int = dse.sdfApplications.sdfRepetitionVectors(actors.indexOf(actorId))
+  def maxRepetitionsPerActors(actorId: Int): Int =
+    dse.sdfApplications.sdfRepetitionVectors(actors.indexOf(actorId))
 
   def schedulers: Array[Int] = dse.platform.schedulerSet
 
-  def isStaticCyclic(schedulerId: Int): Boolean = dse.platform.isStaticCycle(schedulers.indexOf(schedulerId))
+  def isStaticCyclic(schedulerId: Int): Boolean =
+    dse.platform.isStaticCycle(schedulers.indexOf(schedulerId))
 
   //-----------------------------------------------------
   // Decision variables
@@ -113,9 +116,12 @@ final case class ChocoSDFToSChedTileHW(
         chocoModel.intVar(
           s"send_${c.getIdentifier()}_${src}_${dst}",
           0,
-          commElemsPath(src)(dst).map(ce => 
-            // println(ce)
-            messageTravelTimePerVirtualChannelById(i)(ce)).sum,
+          commElemsPath(src)(dst)
+            .map(ce =>
+              // println(ce)
+              messageTravelTimePerVirtualChannelById(i)(ce)
+            )
+            .sum,
           true
         )
       })
@@ -132,12 +138,17 @@ final case class ChocoSDFToSChedTileHW(
     })
   })
 
-  val numActorsScheduledSlotsInStaticCyclicVars: Array[Array[Array[IntVar]]] = dse.sdfApplications.actors.zipWithIndex.map((a, i) => {
-    dse.platform.schedulers.zipWithIndex.map((s, j) => {
-      (0 until actors.size).map(aa => chocoModel.intVar(s"sched_${a}_${s}_${aa}", 0, maxRepetitionsPerActors(actors.indexOf(i)), true)).toArray
+  val numActorsScheduledSlotsInStaticCyclicVars: Array[Array[Array[IntVar]]] =
+    dse.sdfApplications.actors.zipWithIndex.map((a, i) => {
+      dse.platform.schedulers.zipWithIndex.map((s, j) => {
+        (0 until actors.size)
+          .map(aa =>
+            chocoModel
+              .intVar(s"sched_${a}_${s}_${aa}", 0, maxRepetitionsPerActors(actors.indexOf(i)), true)
+          )
+          .toArray
+      })
     })
-  })
-
 
   //---------
 
@@ -154,19 +165,26 @@ final case class ChocoSDFToSChedTileHW(
   def virtualChannelForMessage(messageIdx: Int)(ceIdx: Int): IntVar =
     messageVirtualChannelAllocation(messageIdx)(ceIdx)
 
-  def numActorsScheduledSlotsInStaticCyclic(a: Int)(p: Int)(slot: Int) = numActorsScheduledSlotsInStaticCyclicVars(a)(p)(slot)
+  def numActorsScheduledSlotsInStaticCyclic(a: Int)(p: Int)(slot: Int) =
+    numActorsScheduledSlotsInStaticCyclicVars(a)(p)(slot)
 
   // in a tile-based architecture, a process being mapped to a memory tile implies it is scheduled there too!
-  def actorMapping(actorId: Int)(schedulerId: Int): BoolVar = processesMemoryMapping(actors.indexOf(actorId))(schedulers.indexOf(schedulerId))
+  def actorMapping(actorId: Int)(schedulerId: Int): BoolVar =
+    processesMemoryMapping(actors.indexOf(actorId))(schedulers.indexOf(schedulerId))
 
   //-----------------------------------------------------
   // AUXILIARY VARIABLES
 
-  val upperStartTimeBound = actors.map(a => schedulers.map(s => maxRepetitionsPerActors(a) * dse.wcets(a)(s)).sum).max * timeMultiplier
+  val upperStartTimeBound = actors
+    .map(a => schedulers.map(s => maxRepetitionsPerActors(a) * dse.wcets(a)(s)).sum)
+    .max * timeMultiplier
   val startTimeOfActorFiringsVars = actors.map(a => {
-    (0 until maxRepetitionsPerActors(a)).map(q => chocoModel.intVar(s"time_fire_${a}", 0, upperStartTimeBound.ceil.toInt, true))
+    (0 until maxRepetitionsPerActors(a)).map(q =>
+      chocoModel.intVar(s"time_fire_${a}", 0, upperStartTimeBound.ceil.toInt, true)
+    )
   })
-  def startTimeOfActorFirings(actorId: Int)(firing: Int): IntVar = startTimeOfActorFiringsVars(actorId)(firing)
+  def startTimeOfActorFirings(actorId: Int)(firing: Int): IntVar =
+    startTimeOfActorFiringsVars(actorId)(firing)
 
   //---------
 
@@ -206,7 +224,7 @@ final case class ChocoSDFToSChedTileHW(
   //-----------------------------------------------------
   // SCHEDULING AND TIMING
 
-  postOnlySASOnStaticCyclicSchedulers()
+  postOnlySAS()
   //---------
 
   //-----------------------------------------------------
@@ -244,15 +262,17 @@ final case class ChocoSDFToSChedTileHW(
     // println(dse.platform.tiledDigitalHardware.routerPaths.map(_.map(_.mkString("[", ", ", "]")).mkString("[", ", ", "]")).mkString("[", "\n", "]"))
     // println(channelToRouters.map(_.mkString("[", ", ", "]")).mkString("[", "\n", "]"))
     val channelToTiles = dse.sdfApplications.channels.zipWithIndex.map((c, i) => {
-        dse.platform.tiledDigitalHardware.tileSet.map(j =>
-            messagesMemoryMapping(i)(j).getValue() > 0
-        )
+      dse.platform.tiledDigitalHardware.tileSet.map(j => messagesMemoryMapping(i)(j).getValue() > 0)
     })
     val mappings = dse.sdfApplications.channels.zipWithIndex
       .map((c, i) => channelToTiles(i) ++ channelToRouters(i))
     val schedulings =
       processesMemoryMapping.map(vs => vs.map(v => if (v.getValue() > 0) then true else false))
-    dse.addMappingsAndRebuild(mappings, schedulings, numActorsScheduledSlotsInStaticCyclicVars.map(_.map(_.map(_.getValue()))))
+    dse.addMappingsAndRebuild(
+      mappings,
+      schedulings,
+      numActorsScheduledSlotsInStaticCyclicVars.map(_.map(_.map(_.getValue())))
+    )
   }
 
   def uniqueIdentifier: String = "ChocoSDFToSChedTileHW"

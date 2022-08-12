@@ -3,6 +3,10 @@ package idesyde.identification.choco.models.sdf
 import idesyde.identification.choco.interfaces.ChocoModelMixin
 import org.chocosolver.solver.variables.IntVar
 import org.chocosolver.solver.variables.BoolVar
+import org.chocosolver.solver.constraints.Propagator
+import org.chocosolver.solver.constraints.PropagatorPriority
+import org.chocosolver.util.ESat
+import scala.collection.mutable.HashMap
 
 trait SDFTimingAnalysisSASMixin extends ChocoModelMixin {
 
@@ -25,7 +29,7 @@ trait SDFTimingAnalysisSASMixin extends ChocoModelMixin {
   def slots(i: Int)(j: Int) =
     (0 until actors.size).map(numActorsScheduledSlotsInStaticCyclic(i)(j)(_)).toArray
 
-  def postOnlySASOnStaticCyclicSchedulers(): Unit = {
+  def postOnlySAS(): Unit = {
     actors.zipWithIndex.foreach((a, i) => {
       chocoModel.sum(slotsInAll(i).flatten, "=", maxRepetitionsPerActors(a)).post()
       schedulers.zipWithIndex
@@ -45,6 +49,82 @@ trait SDFTimingAnalysisSASMixin extends ChocoModelMixin {
           chocoModel.sum(slots(i)(j), "<=", maxRepetitionsPerActors(a)).post()
         })
     })
+  }
+
+  class SASTimingAndTokensPropagator(
+      val maxFiringsPerActor: Array[Int],
+      val balanceMatrix: Array[Array[Int]],
+      val initialTokens: Array[Int],
+      val actorDuration: Array[Array[Int]],
+      val firingsInSlots: Array[Array[Array[IntVar]]],
+      val initialLatencies: Array[IntVar],
+      val slotMaxDurations: Array[IntVar],
+      val slotPeriods: Array[IntVar],
+      val globalThroughput: IntVar
+  ) extends Propagator[IntVar](
+        firingsInSlots.flatten.flatten ++ initialLatencies ++ slotMaxDurations ++ slotPeriods :+ globalThroughput,
+        PropagatorPriority.BINARY,
+        false
+      ) {
+
+    val actors     = 0 until maxFiringsPerActor.size
+    val schedulers = 0 until slotPeriods.size
+    val slots      = 0 until firingsInSlots.head.head.size
+
+    // these two are created here so that they are note recreated every time
+    // wasting time with memory allocations etc
+    val possibleFirings = maxFiringsPerActor.clone()
+    val tokens          = initialTokens.clone()
+    var start           = firingsInSlots.map(r => r.map(_ => initialLatencies.map(_.getUB()).min))
+    var duration        = firingsInSlots.map(r => r.map(_ => 0))
+    var finish          = firingsInSlots.map(r => r.map(_ => initialLatencies.map(_.getUB()).min))
+    val stateTime       = HashMap(0 -> initialTokens.clone())
+    def propagate(evtmask: Int): Unit = {
+      // make sure that the slots
+      val latestSlot = schedulers
+        .map(p => slots.indexWhere(q => actors.exists(a => firingsInSlots(a)(p)(q).getLB() > 0)))
+        .max
+      // then nullify all previous slots
+      for (
+        q <- slots.filter(_ < latestSlot);
+        p <- schedulers
+      ) {
+        if (!actors.exists(a => firingsInSlots(a)(p)(q).getLB() > 0))
+          actors.foreach(a => firingsInSlots(a)(p)(q).updateUpperBound(0, this))
+      }
+      // first, we try to eliminate firings that are impossible
+      for (
+        q <- slots;
+        p <- schedulers
+      ) {}
+    }
+
+    def isEntailed(): ESat = {
+      val allFired = firingsInSlots.zipWithIndex.forall((vs, a) =>
+        vs.flatten.filter(v => v.isInstantiated()).map(v => v.getValue()).sum >= maxFiringsPerActor(
+          a
+        )
+      )
+      if (allFired) ESat.TRUE else ESat.UNDEFINED
+    }
+
+    def computeStateTime(): Unit = {
+      stateTime.clear()
+      stateTime += 0 -> initialTokens
+      // we can do a simple for loop since we assume
+      // that the schedules are SAS
+      for (
+        q <- slots;
+        p <- schedulers;
+        a <- actors;
+        if firingsInSlots(a)(p)(q).isInstantiated();
+        firings = firingsInSlots(a)(p)(q).getValue()
+      ) {
+        stateTime.foreach((t, b) => {
+          // if ()
+        })
+      }
+    }
   }
 
 }

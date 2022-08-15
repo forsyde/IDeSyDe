@@ -18,6 +18,7 @@ import idesyde.identification.choco.models.TileAsyncInterconnectCommsMixin
 import spire.math.Rational
 import idesyde.implicits.forsyde.given_Fractional_Rational
 
+
 final case class ChocoSDFToSChedTileHW(
     val dse: SDFToSchedTiledHW
 )(using Fractional[Rational])
@@ -152,6 +153,22 @@ final case class ChocoSDFToSChedTileHW(
 
   //---------
 
+  
+  //-----------------------------------------------------
+  // Objectives
+
+  val globalInvThroughput = chocoModel.intVar("globalInvThroughput", 0, actorDuration.flatten.sum, true)
+
+  val peIsUsed =
+    dse.platform.tiledDigitalHardware.processors.zipWithIndex.map((pe, j) =>
+      chocoModel.sum(processesMemoryMapping.map(t => t(j)), ">=", 1).reify
+    )
+  val nUsedPEs = chocoModel.intVar(
+    "nUsedPEs",
+    1,
+    dse.platform.tiledDigitalHardware.processors.length
+  )
+
   val memoryUsage: Array[IntVar] = dse.platform.tiledDigitalHardware.memories
     .map(m => (m, (m.getSpaceInBits() / memoryDivider).toInt))
     .map((m, s) => chocoModel.intVar(s"${m.getIdentifier()}_u", 0, s, true))
@@ -221,24 +238,23 @@ final case class ChocoSDFToSChedTileHW(
   // postTileAsyncInterconnectComms()
   //---------
 
+  def actorDuration: Array[Array[Int]] = dse.wcets.map(as => as.map(w => w * timeMultiplier).map(_.ceil.toInt))
+  def balanceMatrix: Array[Array[Int]] = dse.sdfApplications.balanceMatrices(0)
+  def channelsTravelTime: Array[Array[Array[org.chocosolver.solver.variables.IntVar]]] = messageTravelTimes
+  def firingsInSlots: Array[Array[Array[org.chocosolver.solver.variables.IntVar]]] = numActorsScheduledSlotsInStaticCyclicVars
+  def initialLatencies: Array[org.chocosolver.solver.variables.IntVar] = dse.platform.schedulers.map(_ => chocoModel.intVar("lat", 1))
+  def initialTokens: Array[Int] = dse.sdfApplications.initialTokens
+  def slotMaxDuration(schedulerId: Int): org.chocosolver.solver.variables.IntVar = chocoModel.intVar("slot_dur", 1)
+  def slotMaxDurations: Array[org.chocosolver.solver.variables.IntVar] = dse.platform.schedulers.map(_ => chocoModel.intVar("dur", 1))
+  def slotPeriods: Array[org.chocosolver.solver.variables.IntVar] = dse.platform.schedulers.map(_ => chocoModel.intVar("per", 1))
+  def startLatency(schedulerId: Int): org.chocosolver.solver.variables.IntVar = chocoModel.intVar("lat", 1)
+
   //-----------------------------------------------------
   // SCHEDULING AND TIMING
 
-  postOnlySAS()
+  postSDFTimingAnalysisSAS()
   //---------
 
-  //-----------------------------------------------------
-  // Objectives
-
-  val peIsUsed =
-    dse.platform.tiledDigitalHardware.processors.zipWithIndex.map((pe, j) =>
-      chocoModel.sum(processesMemoryMapping.map(t => t(j)), ">=", 1).reify
-    )
-  val nUsedPEs = chocoModel.intVar(
-    "nUsedPEs",
-    1,
-    dse.platform.tiledDigitalHardware.processors.length
-  )
 
   // make sure the variable counts the number of used
   chocoModel.sum(peIsUsed, "=", nUsedPEs).post

@@ -27,10 +27,12 @@ import idesyde.identification.forsyde.models.platform.SchedulableTiledDigitalHar
 import idesyde.identification.forsyde.models.mixed.SDFToSchedTiledHW
 
 import mixins.LoggingMixin
-import idesyde.identification.models.choco.sdf.ChocoSDFToSChedTileHW
+import idesyde.identification.choco.models.sdf.ChocoSDFToSChedTileHW
 import forsyde.io.java.graphviz.drivers.ForSyDeGraphVizDriver
 import forsyde.io.java.kgt.drivers.ForSyDeKGTDriver
 import forsyde.io.java.sdf3.drivers.ForSyDeSDF3Driver
+import java.nio.file.Files
+import java.nio.file.Paths
 
 /** This test suite uses as much as possible the experiments from the paper
   *
@@ -46,6 +48,8 @@ class SDFOnTileNoCUseCaseWithSolution extends AnyFunSuite with LoggingMixin {
   given ExecutionContext = ExecutionContext.global
 
   setNormal()
+
+  Files.createDirectories(Paths.get("tests/models/sdf3/results"))
 
   val explorationHandler = ExplorationHandler(
     infoLogger = (s: String) => scribe.info(s),
@@ -82,15 +86,23 @@ class SDFOnTileNoCUseCaseWithSolution extends AnyFunSuite with LoggingMixin {
       val ni = InstrumentedCommunicationModule.enforce(
         Visualizable.enforce(m.newVertex("micro_blaze_ni" + i))
       )
+      val router = InstrumentedCommunicationModule.enforce(
+        Visualizable.enforce(m.newVertex("router" + i))
+      )
       val scheduler = StaticCyclicScheduler.enforce(m.newVertex("micro_blaze_os" + i))
       proc.setOperatingFrequencyInHertz(50000000L)
       mem.setOperatingFrequencyInHertz(50000000L)
       mem.setSpaceInBits(1048576L * 8L)
       ni.setOperatingFrequencyInHertz(50000000L)
       ni.setFlitSizeInBits(128L)
-      ni.setMaxConcurrentFlits(1)
+      ni.setMaxConcurrentFlits(4)
       ni.setMaxCyclesPerFlit(4)
       ni.setInitialLatency(0L)
+      router.setOperatingFrequencyInHertz(50000000L)
+      router.setFlitSizeInBits(128L)
+      router.setMaxConcurrentFlits(4)
+      router.setMaxCyclesPerFlit(4)
+      router.setInitialLatency(0L)
       proc.setModalInstructionsPerCycle(
         Map(
           "eco" -> Map(
@@ -110,8 +122,9 @@ class SDFOnTileNoCUseCaseWithSolution extends AnyFunSuite with LoggingMixin {
       tileVisu.insertContainedPort(m, Visualizable.enforce(ni))
       proc.getViewedVertex().addPorts("networkInterface", "defaultMemory")
       mem.getViewedVertex().addPorts("networkInterface", "instructionsAndData")
-      ni.getViewedVertex().addPorts("tileMemory", "tileProcessor")
-      niMesh(row)(col) = ni
+      ni.getViewedVertex().addPorts("tileMemory", "tileProcessor", "router")
+      router.getViewedVertex().addPorts("tileNI")
+      niMesh(row)(col) = router
       m.connect(
         proc,
         ni,
@@ -157,6 +170,22 @@ class SDFOnTileNoCUseCaseWithSolution extends AnyFunSuite with LoggingMixin {
         mem,
         "tileMemory",
         "networkInterface",
+        EdgeTrait.PLATFORM_PHYSICALCONNECTION,
+        EdgeTrait.VISUALIZATION_VISUALCONNECTION
+      )
+      m.connect(
+        router,
+        ni,
+        "tileNI",
+        "router",
+        EdgeTrait.PLATFORM_PHYSICALCONNECTION,
+        EdgeTrait.VISUALIZATION_VISUALCONNECTION
+      )
+      m.connect(
+        ni,
+        router,
+        "router",
+        "tileNI",
         EdgeTrait.PLATFORM_PHYSICALCONNECTION,
         EdgeTrait.VISUALIZATION_VISUALCONNECTION
       )
@@ -164,18 +193,25 @@ class SDFOnTileNoCUseCaseWithSolution extends AnyFunSuite with LoggingMixin {
       Allocated.enforce(scheduler).insertAllocationHostsPort(m, proc)
     }
     // and now the Arm tile
+    val armTile     = AbstractStructure.enforce(m.newVertex("arm_tile"))
     val armProc = InstrumentedProcessingModule.enforce(Visualizable.enforce(m.newVertex("arm_cpu")))
     val armMem  = GenericMemoryModule.enforce(Visualizable.enforce(m.newVertex("arm_mem")))
     val armNi = InstrumentedCommunicationModule.enforce(Visualizable.enforce(m.newVertex("arm_ni")))
     val armScheduler = StaticCyclicScheduler.enforce(m.newVertex("arm_os"))
+    val armRouter = InstrumentedCommunicationModule.enforce(Visualizable.enforce(m.newVertex("arm_router")))
     armProc.setOperatingFrequencyInHertz(666667000L)
     armMem.setOperatingFrequencyInHertz(666667000L)
     armMem.setSpaceInBits(4294967296L * 8L)
     armNi.setOperatingFrequencyInHertz(666667000L)
     armNi.setFlitSizeInBits(128L)
-    armNi.setMaxConcurrentFlits(1)
+    armNi.setMaxConcurrentFlits(4)
     armNi.setMaxCyclesPerFlit(4)
     armNi.setInitialLatency(0L)
+    armRouter.setOperatingFrequencyInHertz(666667000L)
+    armRouter.setFlitSizeInBits(128L)
+    armRouter.setMaxConcurrentFlits(4)
+    armRouter.setMaxCyclesPerFlit(4)
+    armRouter.setInitialLatency(0L)
     armProc.setModalInstructionsPerCycle(
       Map(
         "eco" -> Map(
@@ -187,10 +223,18 @@ class SDFOnTileNoCUseCaseWithSolution extends AnyFunSuite with LoggingMixin {
       ).asJava
     )
     // connect them
+    val armTileVisu = GreyBox.enforce(armTile)
+    armTile.insertSubmodulesPort(m, armProc)
+    armTileVisu.insertContainedPort(m, Visualizable.enforce(armProc))
+    armTile.insertSubmodulesPort(m, armMem)
+    armTileVisu.insertContainedPort(m, Visualizable.enforce(armMem))
+    armTile.insertSubmodulesPort(m, armNi)
+    armTileVisu.insertContainedPort(m, Visualizable.enforce(armNi))
     armProc.getViewedVertex().addPorts("networkInterface", "defaultMemory")
     armMem.getViewedVertex().addPorts("networkInterface", "instructionsAndData")
-    armNi.getViewedVertex().addPorts("tileMemory", "tileProcessor")
-    niMesh(1)(1) = armNi
+    armNi.getViewedVertex().addPorts("tileMemory", "tileProcessor", "router")
+    armRouter.getViewedVertex().addPorts("tileNI")
+    niMesh(1)(1) = armRouter
     m.connect(
       armProc,
       armNi,
@@ -236,6 +280,22 @@ class SDFOnTileNoCUseCaseWithSolution extends AnyFunSuite with LoggingMixin {
       armMem,
       "tileMemory",
       "networkInterface",
+      EdgeTrait.PLATFORM_PHYSICALCONNECTION,
+      EdgeTrait.VISUALIZATION_VISUALCONNECTION
+    )
+    m.connect(
+      armRouter,
+      armNi,
+      "tileNI",
+      "router",
+      EdgeTrait.PLATFORM_PHYSICALCONNECTION,
+      EdgeTrait.VISUALIZATION_VISUALCONNECTION
+    )
+    m.connect(
+      armNi,
+      armRouter,
+      "router",
+      "tileNI",
       EdgeTrait.PLATFORM_PHYSICALCONNECTION,
       EdgeTrait.VISUALIZATION_VISUALCONNECTION
     )
@@ -351,7 +411,7 @@ class SDFOnTileNoCUseCaseWithSolution extends AnyFunSuite with LoggingMixin {
       mem.setSpaceInBits(16000 * 8L)
       ni.setOperatingFrequencyInHertz(50000000L)
       ni.setFlitSizeInBits(128L)
-      ni.setMaxConcurrentFlits(1)
+      ni.setMaxConcurrentFlits(4)
       ni.setMaxCyclesPerFlit(6)
       ni.setInitialLatency(0L)
       proc.setModalInstructionsPerCycle(
@@ -531,8 +591,10 @@ class SDFOnTileNoCUseCaseWithSolution extends AnyFunSuite with LoggingMixin {
   val appsAndLarge = allSDFApps.merge(large5x6PlatformModel)
 
   test("Created platform models in memory successfully and can write them out") {
-    forSyDeModelHandler.writeModel(small2x2PlatformModel, "small_platform.fiodl")
-    forSyDeModelHandler.writeModel(large5x6PlatformModel, "large_platform.fiodl")
+    forSyDeModelHandler.writeModel(small2x2PlatformModel, "tests/models/small_platform.fiodl")
+    forSyDeModelHandler.writeModel(large5x6PlatformModel, "tests/models/large_platform.fiodl")
+    forSyDeModelHandler.writeModel(small2x2PlatformModel, "tests/models/small_platform_visual.kgt")
+    forSyDeModelHandler.writeModel(large5x6PlatformModel, "tests/models/large_platform_visual.kgt")
   }
 
   test("Correct decision model identification of the Small platform") {
@@ -571,10 +633,10 @@ class SDFOnTileNoCUseCaseWithSolution extends AnyFunSuite with LoggingMixin {
           .explore[ForSyDeSystemGraph](decisionModel)
           .map(sol =>
             forSyDeModelHandler
-              .writeModel(inputSystem.merge(sol), "tests/models/sdf3/sobel_and_small_result.fiodl")
+              .writeModel(inputSystem.merge(sol), "tests/models/sdf3/results/sobel_and_small_result.fiodl")
             forSyDeModelHandler.writeModel(
               inputSystem.merge(sol),
-              "tests/models/sdf3/sobel_and_small_result_visual.kgt"
+              "tests/models/sdf3/results/sobel_and_small_result_visual.kgt"
             )
             sol
           )
@@ -653,10 +715,10 @@ class SDFOnTileNoCUseCaseWithSolution extends AnyFunSuite with LoggingMixin {
           .explore[ForSyDeSystemGraph](decisionModel)
           .map(sol =>
             forSyDeModelHandler
-              .writeModel(appsAndSmall.merge(sol), "tests/models/sdf3/all_and_small_result.fiodl")
+              .writeModel(appsAndSmall.merge(sol), "tests/models/sdf3/results/all_and_small_result.fiodl")
             forSyDeModelHandler.writeModel(
               appsAndSmall.merge(sol),
-              "tests/models/sdf3/all_and_small_result_visual.kgt"
+              "tests/models/sdf3/results/all_and_small_result_visual.kgt"
             )
             sol
           )

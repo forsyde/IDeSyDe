@@ -193,12 +193,13 @@ class SDFOnTileNoCUseCaseWithSolution extends AnyFunSuite with LoggingMixin {
       Allocated.enforce(scheduler).insertAllocationHostsPort(m, proc)
     }
     // and now the Arm tile
-    val armTile     = AbstractStructure.enforce(m.newVertex("arm_tile"))
+    val armTile = AbstractStructure.enforce(m.newVertex("arm_tile"))
     val armProc = InstrumentedProcessingModule.enforce(Visualizable.enforce(m.newVertex("arm_cpu")))
     val armMem  = GenericMemoryModule.enforce(Visualizable.enforce(m.newVertex("arm_mem")))
     val armNi = InstrumentedCommunicationModule.enforce(Visualizable.enforce(m.newVertex("arm_ni")))
     val armScheduler = StaticCyclicScheduler.enforce(m.newVertex("arm_os"))
-    val armRouter = InstrumentedCommunicationModule.enforce(Visualizable.enforce(m.newVertex("arm_router")))
+    val armRouter =
+      InstrumentedCommunicationModule.enforce(Visualizable.enforce(m.newVertex("arm_router")))
     armProc.setOperatingFrequencyInHertz(666667000L)
     armMem.setOperatingFrequencyInHertz(666667000L)
     armMem.setSpaceInBits(4294967296L * 8L)
@@ -633,7 +634,10 @@ class SDFOnTileNoCUseCaseWithSolution extends AnyFunSuite with LoggingMixin {
           .explore[ForSyDeSystemGraph](decisionModel)
           .map(sol =>
             forSyDeModelHandler
-              .writeModel(inputSystem.merge(sol), "tests/models/sdf3/results/sobel_and_small_result.fiodl")
+              .writeModel(
+                inputSystem.merge(sol),
+                "tests/models/sdf3/results/sobel_and_small_result.fiodl"
+              )
             forSyDeModelHandler.writeModel(
               inputSystem.merge(sol),
               "tests/models/sdf3/results/sobel_and_small_result_visual.kgt"
@@ -715,7 +719,10 @@ class SDFOnTileNoCUseCaseWithSolution extends AnyFunSuite with LoggingMixin {
           .explore[ForSyDeSystemGraph](decisionModel)
           .map(sol =>
             forSyDeModelHandler
-              .writeModel(appsAndSmall.merge(sol), "tests/models/sdf3/results/all_and_small_result.fiodl")
+              .writeModel(
+                appsAndSmall.merge(sol),
+                "tests/models/sdf3/results/all_and_small_result.fiodl"
+              )
             forSyDeModelHandler.writeModel(
               appsAndSmall.merge(sol),
               "tests/models/sdf3/results/all_and_small_result_visual.kgt"

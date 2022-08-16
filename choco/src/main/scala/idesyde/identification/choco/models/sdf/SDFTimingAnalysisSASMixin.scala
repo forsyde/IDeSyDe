@@ -31,35 +31,46 @@ trait SDFTimingAnalysisSASMixin extends ChocoModelMixin {
   def startLatency(schedulerId: Int): IntVar
   def numActorsScheduledSlotsInStaticCyclic(actorId: Int)(tileId: Int)(slotId: Int): IntVar
 
-  def slotsInAll(i: Int) =
-    (0 until actors.size)
-      .map(q =>
-        (0 until schedulers.size).map(s => numActorsScheduledSlotsInStaticCyclic(i)(s)(q)).toArray
+  def allSlotsForActor(a: Int) =
+    (0 until firingsInSlots.head.head.size)
+      .map(slot =>
+        (0 until schedulers.size).map(s => numActorsScheduledSlotsInStaticCyclic(a)(s)(slot)).toArray
       )
       .toArray
-  def slots(i: Int)(j: Int) =
-    (0 until actors.size).map(numActorsScheduledSlotsInStaticCyclic(i)(j)(_)).toArray
+  
+  
+  def slots(ai: Int)(sj: Int) =
+    (0 until firingsInSlots.head.head.size).map(numActorsScheduledSlotsInStaticCyclic(ai)(sj)(_)).toArray
+  
+  def allInSlot(s: Int)(slot: Int) =
+    (0 until actors.size).map(numActorsScheduledSlotsInStaticCyclic(_)(s)(slot)).toArray
 
   def postOnlySAS(): Unit = {
-    actors.zipWithIndex.foreach((a, i) => {
-      chocoModel.sum(slotsInAll(i).flatten, "=", maxRepetitionsPerActors(a)).post()
+    actors.zipWithIndex.foreach((a, ai) => {
+      // set total number of firings
+      chocoModel.sum(allSlotsForActor(ai).flatten, "=", maxRepetitionsPerActors(a)).post()
       schedulers.zipWithIndex
-        .foreach((s, j) => {
-          if (actors.size > 1) {
-            chocoModel
-              .min(s"0_in_${i}_${j}", (0 until actors.size).map(slots(i)(j)(_)): _*)
-              .eq(0)
-              .post()
-          }
+        .foreach((s, sj) => {
+          // if (actors.size > 1) {
+          //   chocoModel
+          //     .min(s"0_in_${ai}_${sj}", (0 until actors.size).map(slots(ai)(sj)(_)): _*)
+          //     .eq(0)
+          //     .post()
+          // }
           chocoModel.ifThenElse(
-            actorMapping(i)(j),
-            chocoModel.sum(slots(i)(j), ">=", 1),
-            chocoModel.sum(slots(i)(j), "=", 0)
+            actorMapping(ai)(sj),
+            chocoModel.sum(slots(ai)(sj), ">=", 1),
+            chocoModel.sum(slots(ai)(sj), "=", 0)
           )
-          chocoModel.atMostNValues(slots(i)(j), chocoModel.intVar(2), true).post()
-          chocoModel.sum(slots(i)(j), "<=", maxRepetitionsPerActors(a)).post()
+          chocoModel.sum(slots(ai)(sj), "<=", maxRepetitionsPerActors(a)).post()
         })
     })
+    for (
+      (s, sj) <- schedulers.zipWithIndex;
+      slot <- 0 until firingsInSlots.head.head.size
+    ) {
+      chocoModel.atMostNValues(allInSlot(sj)(slot), chocoModel.intVar(2), true).post()
+    }
   }
 
   def postSDFTimingAnalysisSAS(): Unit = {
@@ -96,7 +107,7 @@ trait SDFTimingAnalysisSASMixin extends ChocoModelMixin {
       val globalInvThroughput: IntVar
   ) extends Propagator[IntVar](
         firingsInSlots.flatten.flatten ++ initialLatencies ++ slotMaxDurations ++ slotPeriods :+ globalInvThroughput,
-        PropagatorPriority.BINARY,
+        PropagatorPriority.TERNARY,
         false
       ) {
 
@@ -109,28 +120,42 @@ trait SDFTimingAnalysisSASMixin extends ChocoModelMixin {
 
     // these two are created here so that they are note recreated every time
     // wasting time with memory allocations etc
+    val tokens = slots.map(_ => DenseVector.zeros[Int](channels.size)).toArray
+    // val tokensAfter =
+    //     slots.map(_ => DenseVector.zeros[Int](channels.size)).toArray
+    val startTimes  = schedulers.map(_ => slots.map(_ => 0).toArray).toArray
+    val finishTimes = schedulers.map(_ => slots.map(_ => 0).toArray).toArray
     val mat     = DenseMatrix(balanceMatrix: _*)
     val prodMat = mat.map(f => if (f >= 0) then f else 0)
+    val consMat = mat.map(f => if (f <= 0) then f else 0)
 
-    def propagate(evtmask: Int): Unit = {
-      val tokens =
-        DenseVector(initialTokens) +: slots.map(_ => DenseVector.zeros[Int](channels.size)).toArray
-      // val tokensAfter =
-      //   slots.map(_ => DenseVector(initialTokens)).toArray
-      val startTimes  = schedulers.map(_ => slots.map(_ => 0).toArray).toArray
-      val finishTimes = schedulers.map(_ => slots.map(_ => 0).toArray).toArray
-      // work based first on the slots and update the timing whenever possible
-      for (
-        i <- slots
-        // p <- schedulers
-      ) {
-        val firingVector = DenseVector(
+    def singleActorFire(a: Int)(q: Int): DenseVector[Int] = {
+      val v = DenseVector.zeros[Int](actors.size)
+      v(a) = q
+      v
+    }
+
+    def slotIsTaken(p: Int)(slot: Int): Boolean = actors.exists(a => firingsInSlots(a)(p)(slot).getLB() > 0)
+
+    def firingVector(slot: Int): DenseVector[Int] = DenseVector(
           actors
-            .map(a => schedulers.map(p => firingsInSlots(a)(p)(i).getLB()).find(_ > 0).getOrElse(0))
+            .map(a => schedulers.map(p => firingsInSlots(a)(p)(slot).getLB()).find(_ > 0).getOrElse(0))
             .toArray
         )
-        println(s"at ${i} : ${firingVector}")
-        tokens(i + 1) = mat * firingVector + tokens(i)
+    
+    def computeTokensAndTime() : Unit = {
+      // for the very first initial conditions
+      tokens(0) = mat * firingVector(0) + DenseVector(initialTokens)
+      for (p <- schedulers) {
+        finishTimes(p)(0) = actors.map(a => firingVector(0)(a) * actorDuration(a)(p)).sum + startTimes(p)(0)
+      }
+      // work based first on the slots and update the timing whenever possible
+      for (
+        i <- slots.drop(1)
+        // p <- schedulers
+      ) {
+        // println(s"at ${i} : ${firingVector(i)}")
+        tokens(i) = mat * firingVector(i) + tokens(i - 1)
         for (p <- schedulers) {
           startTimes(p)(i) =
             if (i > 0) then
@@ -145,12 +170,26 @@ trait SDFTimingAnalysisSASMixin extends ChocoModelMixin {
                 )
                 .max
             else 0
-          for (a <- actors) {
-            finishTimes(p)(i) = firingVector(a) * actorDuration(a)(p) + startTimes(p)(i)
-            // firingVector(a) = 0
-          }
+          finishTimes(p)(i) = actors.map(a => firingVector(i)(a) * actorDuration(a)(p)).sum + startTimes(p)(i)
         }
+      }
+    }
 
+    def propagate(evtmask: Int): Unit = {
+      println("propagate")
+      computeTokensAndTime()
+      println(
+      schedulers.map(s => {
+        slots.map(slot => {
+          actors.map(a => firingsInSlots(a)(s)(slot).getLB() + "|" + firingsInSlots(a)(s)(slot).getUB()).mkString("(", ", ", ")")
+        }).mkString("[", ", ", "]")
+      }).mkString("[\n ", "\n ", "\n]")
+      )      
+      // work based first on the slots and update the timing whenever possible
+      for (
+        i <- slots
+        // p <- schedulers
+      ) {
         // there is a mapping
         // if (mappedA.isDefined) {
         // val a = mappedA.get
@@ -163,18 +202,28 @@ trait SDFTimingAnalysisSASMixin extends ChocoModelMixin {
 
         // } else
         for (p <- schedulers) {
-          if (i == 0 || min(firingVector) > 0) { // there is still no mapping and the slots can be reduced
+          if (i == 0) { // there is still no mapping and the slots can be reduced
             for (
               a <- actors;
               q <- firingsInSlots(a)(p)(i).getUB() to 1 by -1
             ) {
               // firingVector(a) = q
-              val possibleTokens =
-                mat * firingVector + schedulers
-                  .map(pp => tokens(i))
-                  .reduce((v1, v2) => v1 + v2)
-              if (min(possibleTokens) < 0) {
-                println("taking out " + (a, p, i, q) + " because " + possibleTokens.toString)
+              val afterCons = consMat * singleActorFire(a)(q) + DenseVector(initialTokens)
+              if (min(afterCons) < 0) {
+                println("taking out " + (a, p, i, q) + " because " + afterCons.toString)
+                firingsInSlots(a)(p)(i).updateUpperBound(q - 1, this)
+              }
+              // firingVector(a) = 0
+            }
+          } else if(slotIsTaken(p)(i - 1)) { // there is still no mapping and the slots can be reduced
+            for (
+              a <- actors;
+              q <- firingsInSlots(a)(p)(i).getUB() to 1 by -1
+            ) {
+              // firingVector(a) = q
+              val afterCons = consMat * singleActorFire(a)(q) + tokens(i - 1)
+              if (min(afterCons) < 0) {
+                println("taking out " + (a, p, i, q) + " because " + afterCons.toString)
                 firingsInSlots(a)(p)(i).updateUpperBound(q - 1, this)
               }
               // firingVector(a) = 0
@@ -191,31 +240,28 @@ trait SDFTimingAnalysisSASMixin extends ChocoModelMixin {
           .max,
         this
       )
-
+      
     }
 
     def isEntailed(): ESat = {
-      val tokens =
-        DenseVector(initialTokens) +: slots.map(_ => DenseVector.zeros[Int](channels.size)).toArray
+      println("checking entailment")
+      computeTokensAndTime()
       // work based first on the slots and update the timing whenever possible
       for (
-        i <- slots
+        i <- slots.drop(1)
         // p <- schedulers
       ) {
-        val firingVector = DenseVector(
-          actors
-            .map(a => schedulers.map(p => firingsInSlots(a)(p)(i).getLB()).find(_ > 0).getOrElse(0))
-            .toArray
-        )
-        tokens(i + 1) = mat * firingVector + tokens(i)
-        if (min(firingVector) < 0) then return ESat.FALSE
+        // actors.exists(a => firingVector(i).)
+        if (min(consMat * firingVector(i) + tokens(i-1)) < 0) then return ESat.FALSE
       }
       val allFired = firingsInSlots.zipWithIndex.forall((vs, a) =>
         vs.flatten.filter(v => v.isInstantiated()).map(v => v.getValue()).sum >= maxFiringsPerActor(
           a
         )
       )
-      if (allFired) ESat.TRUE else ESat.UNDEFINED
+      if (allFired) then 
+        if (tokens.last == DenseVector(initialTokens)) then ESat.TRUE else ESat.FALSE
+      else  ESat.UNDEFINED
     }
 
     // def computeStateTime(): Unit = {

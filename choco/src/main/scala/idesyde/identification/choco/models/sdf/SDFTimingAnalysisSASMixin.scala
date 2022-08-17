@@ -215,7 +215,7 @@ trait SDFTimingAnalysisSASMixin extends ChocoModelMixin {
       val latestSlot = slots.findLast(i => any(firingVector(i))).getOrElse(0)
       // val nextIsGuaranteed = 
       // println(s"latest slot ${latestSlot}")
-      for (i <- slots.take(latestSlot - 1)) {
+      for (i <- slots.take(latestSlot)) {
         for (
           p <- schedulers;
           a <- actors;
@@ -226,14 +226,14 @@ trait SDFTimingAnalysisSASMixin extends ChocoModelMixin {
       }
       // first, we check if the model is still sane
       for (
-        i <- slots.take(latestSlot)
+        i <- slots.take(latestSlot + 1)
         // p <- schedulers
       ) {
         // make sure that the tokens are not negative.
         for (
           p <- schedulers;
           a <- actors;
-          if !firingsInSlots(a)(p)(i).isInstantiated();
+          if firingsInSlots(a)(p)(i).isInstantiated();
           q = firingsInSlots(a)(p)(i).getLB()
           if min(consMat * singleActorFire(a)(q) + tokensBefore(i)) < 0 // there is a negative fire
         ) {

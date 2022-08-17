@@ -17,6 +17,7 @@ import forsyde.io.java.core.ForSyDeSystemGraph
 import scala.concurrent.ExecutionContext
 
 import mixins.LoggingMixin
+import forsyde.io.java.kgt.drivers.ForSyDeKGTDriver
 
 class PanoramaUseCaseWithSolutionSuite extends AnyFunSuite with LoggingMixin {
 

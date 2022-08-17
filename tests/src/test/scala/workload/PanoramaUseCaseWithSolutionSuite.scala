@@ -38,7 +38,7 @@ class PanoramaUseCaseWithSolutionSuite extends AnyFunSuite with LoggingMixin {
     .registerIdentificationRule(ForSyDeIdentificationModule())
     .registerIdentificationRule(MinizincIdentificationModule())
 
-  val forSyDeModelHandler = ForSyDeModelHandler().registerDriver(ForSyDeAmaltheaDriver())
+  val forSyDeModelHandler = ForSyDeModelHandler().registerDriver(ForSyDeAmaltheaDriver()).registerDriver(ForSyDeKGTDriver())
 
   val flightInfo = forSyDeModelHandler.loadModel(
     Paths.get("tests/models/panorama/flight-information-system-easier.amxmi")
@@ -55,6 +55,7 @@ class PanoramaUseCaseWithSolutionSuite extends AnyFunSuite with LoggingMixin {
   test("PANORAMA case study - can write back model before solution") {
     forSyDeModelHandler.writeModel(model, "tests/models/panorama/input_to_dse.fiodl")
     forSyDeModelHandler.writeModel(model, "tests/models/panorama/input_to_dse.amxmi")
+    forSyDeModelHandler.writeModel(model, "tests/models/panorama/input_to_dse_visual.kgt")
   }
 
   test("PANORAMA case study without any solutions - At least 1 decision model") {
@@ -73,6 +74,8 @@ class PanoramaUseCaseWithSolutionSuite extends AnyFunSuite with LoggingMixin {
           .map(sol =>
             forSyDeModelHandler
               .writeModel(model.merge(sol), "tests/models/panorama/output_of_dse.fiodl")
+            forSyDeModelHandler
+              .writeModel(model.merge(sol), "tests/models/panorama/output_of_dse_visual.kgt")
             sol
           )
       )

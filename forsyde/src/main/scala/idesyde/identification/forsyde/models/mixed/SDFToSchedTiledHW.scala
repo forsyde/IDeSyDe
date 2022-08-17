@@ -24,6 +24,7 @@ import idesyde.identification.IdentificationResult
 import idesyde.identification.DecisionModel
 import forsyde.io.java.typed.viewers.platform.runtime.StaticCyclicScheduler
 import scala.collection.mutable.Buffer
+import forsyde.io.java.typed.viewers.decision.sdf.PASSedSDFActor
 
 given scala.math.Fractional[Rational] = spire.compat.fractional[Rational]
 given Conversion[Double, Rational]    = (d: Double) => Rational(d)
@@ -100,20 +101,24 @@ final case class SDFToSchedTiledHW(
     // println(actorStaticSlots.map(_.map(_.mkString("[", ", ", "]")).mkString("[", ", ", "]")).mkString("[", "\n", "]"))
     val entries = platform.schedulers.map(s => Buffer[String]())
     actorStaticSlots.zipWithIndex.foreach((tile, i) => {
+      // val passedList = Buffer[Integer]()
       tile.zipWithIndex.foreach((slots, j) => {
         val actor     = sdfApplications.actors(i)
         val scheduler = platform.schedulers(j)
-        slots.foreach(q => {
+        slots.zipWithIndex.foreach((q, l) => {
           if (q > 0) {
             StaticCyclicScheduler
               .safeCast(scheduler)
               .ifPresent(s => {
                 for (k <- 0 until q) {
+                  // passedList += l
                   entries(j) :+= actor.getIdentifier()
                 }
               })
           }
         })
+        // val passed = PASSedSDFActor.enforce(actor)
+        // passed.setFiringSlots(passedList.asJava)
       })
     })
     for (

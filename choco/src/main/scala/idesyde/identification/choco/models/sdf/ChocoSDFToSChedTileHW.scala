@@ -17,6 +17,10 @@ import idesyde.identification.forsyde.ForSyDeIdentificationRule
 import idesyde.identification.choco.models.TileAsyncInterconnectCommsMixin
 import spire.math.Rational
 import idesyde.implicits.forsyde.given_Fractional_Rational
+import org.chocosolver.solver.search.strategy.Search
+import org.chocosolver.solver.search.strategy.selectors.variables.Largest
+import org.chocosolver.solver.search.strategy.selectors.values.IntDomainMedian
+import org.chocosolver.solver.search.strategy.selectors.values.IntDomainMax
 
 final case class ChocoSDFToSChedTileHW(
     val dse: SDFToSchedTiledHW
@@ -144,7 +148,7 @@ final case class ChocoSDFToSChedTileHW(
         (0 until actors.size)
           .map(aa =>
             chocoModel
-              .intVar(s"sched_${a}_${s}_${aa}", 0, maxRepetitionsPerActors(actors.indexOf(i)), true)
+              .intVar(s"sched_${a.getIdentifier()}_${s.getIdentifier()}_${aa}", 0, maxRepetitionsPerActors(actors.indexOf(i)), true)
           )
           .toArray
       })
@@ -259,6 +263,7 @@ final case class ChocoSDFToSChedTileHW(
   //-----------------------------------------------------
   // SCHEDULING AND TIMING
 
+  // postOnlySAS()
   postSDFTimingAnalysisSAS()
   //---------
 
@@ -270,6 +275,14 @@ final case class ChocoSDFToSChedTileHW(
   //---------
 
   override def strategies: Array[AbstractStrategy[? <: Variable]] = Array(
+    Search.intVarSearch(
+      Largest(),
+      IntDomainMax(),
+      firingsInSlots.flatten.flatten:_*
+    ),
+    Search.defaultSearch(chocoModel)
+    // Search.minDomLBSearch(globalInvThroughput),
+    // Search.minDomLBSearch(nUsedPEs)
   )
 
   def rebuildFromChocoOutput(output: Solution): ForSyDeSystemGraph = {

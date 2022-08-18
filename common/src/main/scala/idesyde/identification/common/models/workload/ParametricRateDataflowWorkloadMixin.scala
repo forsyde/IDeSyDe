@@ -180,20 +180,15 @@ trait ParametricRateDataflowWorkloadMixin {
 
   def pessimisticTokensPerChannel: Array[Int] = {
     channelsSet.zipWithIndex.map((c, cIdx) => {
+      var pessimisticMax = 1
       dataflowGraphs.zipWithIndex
-        .flatMap((g, confIdx) => {
-          g.incomingEdgesOf(c)
-            .stream()
-            .map(e => g.getEdgeSource(e))
-            .mapToInt(a =>
-              def aIdx = actorsSet.indexOf(a)
-              repetitionVectors(confIdx)(aIdx) * balanceMatrices(confIdx)(cIdx)(aIdx) + initialTokens(
-                cIdx
-              )
-            )
-            .toScala(List)
+        .foreach((g, confIdx) => {
+          g.incomingEdgesOf(c).forEach(e => {
+            val aIdx = actorsSet.indexOf(g.getEdgeSource(e))
+            pessimisticMax = Math.max(repetitionVectors(confIdx)(aIdx) * balanceMatrices(confIdx)(cIdx)(aIdx) + initialTokens(cIdx), pessimisticMax)
+          })
         })
-        .max
+      pessimisticMax
     })
   }
 

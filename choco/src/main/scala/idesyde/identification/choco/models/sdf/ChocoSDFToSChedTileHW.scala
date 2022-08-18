@@ -60,7 +60,7 @@ final case class ChocoSDFToSChedTileHW(
   val processSize: Array[Int] =
     dse.sdfApplications.processSizes.map(l => (l / memoryDivider).toInt)
 
-  val commElemsPaths = dse.platform.tiledDigitalHardware.routerPaths
+  val commElemsPaths = dse.platform.tiledDigitalHardware.computeRouterPaths
   def commElemsPath(srcIdx: Int)(dstIdx: Int): Array[Int] = commElemsPaths(srcIdx)(dstIdx)
 
   // TODO: figure out a way to make this not true, later
@@ -106,7 +106,7 @@ final case class ChocoSDFToSChedTileHW(
   val messageAllocation = dse.sdfApplications.channels.map(c => {
     dse.platform.tiledDigitalHardware.tileSet.map(src => {
       dse.platform.tiledDigitalHardware.tileSet.map(dst => {
-        if (!dse.platform.tiledDigitalHardware.routerPaths(src)(dst).isEmpty)
+        if (!dse.platform.tiledDigitalHardware.computeRouterPaths(src)(dst).isEmpty)
           chocoModel.boolVar(s"send_${c.getIdentifier()}_${src}_${dst}")
         else
           chocoModel.boolVar(s"send_${c.getIdentifier()}_${src}_${dst}", false)
@@ -148,7 +148,12 @@ final case class ChocoSDFToSChedTileHW(
         (0 until actors.size)
           .map(aa =>
             chocoModel
-              .intVar(s"sched_${a.getIdentifier()}_${s.getIdentifier()}_${aa}", 0, maxRepetitionsPerActors(actors.indexOf(i)), true)
+              .intVar(
+                s"sched_${a.getIdentifier()}_${s.getIdentifier()}_${aa}",
+                0,
+                maxRepetitionsPerActors(actors.indexOf(i)),
+                true
+              )
           )
           .toArray
       })
@@ -160,7 +165,16 @@ final case class ChocoSDFToSChedTileHW(
   // Objectives
 
   val globalInvThroughput =
-    chocoModel.intVar("globalInvThroughput", 0, actorDuration.flatten.sum, true)
+    chocoModel.intVar(
+      "globalInvThroughput",
+      schedulers
+        .map(p => actors.map(a => actorDuration(a)(p) * maxRepetitionsPerActors(a)).max)
+        .max,
+      schedulers
+        .map(p => actors.map(a => actorDuration(a)(p) * maxRepetitionsPerActors(a)).sum)
+        .max,
+      true
+    )
 
   val peIsUsed =
     dse.platform.tiledDigitalHardware.processors.zipWithIndex.map((pe, j) =>
@@ -263,6 +277,19 @@ final case class ChocoSDFToSChedTileHW(
   //-----------------------------------------------------
   // SCHEDULING AND TIMING
 
+  // and sdf can be executed in a PE only if its mapped into this PE
+  actors.foreach(a => {
+    schedulers.foreach(p => {
+      chocoModel.ifThen(
+        processesMemoryMapping(a)(p).eq(1).decompose(),
+        chocoModel.sum(s"firings_${a}_${p}>0", firingsInSlots(a)(p): _*).gt(0).decompose()
+      )
+      chocoModel.ifThen(
+        processesMemoryMapping(a)(p).eq(0).decompose(),
+        chocoModel.sum(s"firings_${a}_${p}=0", firingsInSlots(a)(p): _*).eq(0).decompose()
+      )
+    })
+  })
   // postOnlySAS()
   postSDFTimingAnalysisSAS()
   //---------
@@ -275,10 +302,20 @@ final case class ChocoSDFToSChedTileHW(
   //---------
 
   override def strategies: Array[AbstractStrategy[? <: Variable]] = Array(
-    Search.intVarSearch(
-      Largest(),
-      IntDomainMax(),
-      firingsInSlots.flatten.flatten:_*
+    // Search.intVarSearch(
+    //   Largest(),
+    //   IntDomainMax(),
+    //   firingsInSlots.flatten.flatten:_*
+    // ),
+    // Search.bestBound(
+    SimpleMultiCoreSDFListScheduling(
+      actors.zipWithIndex.map((a, i) => maxRepetitionsPerActors(i)),
+      balanceMatrix,
+      initialTokens,
+      actorDuration,
+      channelsTravelTime,
+      firingsInSlots
+      // )
     ),
     Search.defaultSearch(chocoModel)
     // Search.minDomLBSearch(globalInvThroughput),
@@ -304,6 +341,20 @@ final case class ChocoSDFToSChedTileHW(
       .map((c, i) => channelToTiles(i) ++ channelToRouters(i))
     val schedulings =
       processesMemoryMapping.map(vs => vs.map(v => if (v.getValue() > 0) then true else false))
+    println(
+      schedulers
+        .map(s => {
+          (0 until actors.size)
+            .map(slot => {
+              actors.zipWithIndex
+                .find((a, ai) => firingsInSlots(ai)(s)(slot).getLB() > 0)
+                .map((a, ai) => a.toString())
+                .getOrElse("_")
+            })
+            .mkString("[", ", ", "]")
+        })
+        .mkString("[\n ", "\n ", "\n]")
+    )
     dse.addMappingsAndRebuild(
       mappings,
       schedulings,

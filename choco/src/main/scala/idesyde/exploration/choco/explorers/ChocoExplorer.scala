@@ -61,7 +61,7 @@ class ChocoExplorer() extends ForSyDeIOExplorer:
       solver.setLearningSignedClauses
       solver.setNoGoodRecordingFromRestarts
       solver.setRestartOnSolutions
-      solver.addStopCriterion(SolutionCounter(model, 20L))
+      solver.addStopCriterion(SolutionCounter(model, 100L))
       if (!chocoCpModel.strategies.isEmpty) then solver.setSearch(chocoCpModel.strategies: _*)
       LazyList
         .continually(solver.solve)

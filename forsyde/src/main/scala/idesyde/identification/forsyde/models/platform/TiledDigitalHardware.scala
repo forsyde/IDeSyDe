@@ -136,5 +136,8 @@ final case class TiledDigitalHardware(
 
   def bandWidthPerCEPerVirtualChannelById(ceId: Int) = bandWidthPerCEPerVirtualChannel(routerSet.indexOf(ceId))
 
+  // save router paths so that it does not recompute them everytime
+  val routerPaths = computeRouterPaths
+
   def uniqueIdentifier: String = "TiledDigitalHardware"
 }

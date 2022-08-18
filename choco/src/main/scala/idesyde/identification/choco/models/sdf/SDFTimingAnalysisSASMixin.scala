@@ -73,6 +73,12 @@ trait SDFTimingAnalysisSASMixin extends ChocoModelMixin {
       (s, sj) <- schedulers.zipWithIndex;
       slot    <- 0 until firingsInSlots.head.head.size
     ) {
+      for (a <- actors) {
+        chocoModel.ifThen(
+          firingsInSlots(a)(sj)(slot).gt(0).decompose(),
+          chocoModel.and(actors.filter(_ != a).map(firingsInSlots(_)(sj)(slot).eq(0).decompose()):_*)
+        )
+      }
       chocoModel.atMostNValues(allInSlot(sj)(slot), chocoModel.intVar(2), true).post()
     }
     // val firingsSlotSums = (0 until firingsInSlots.head.head.size).map(slot => chocoModel.sum(s"sum_${slot}", actors.flatMap(a => schedulers.map(p => firingsInSlots(a)(p)(slot))):_*)).toArray
@@ -119,84 +125,41 @@ trait SDFTimingAnalysisSASMixin extends ChocoModelMixin {
         firingsInSlots.flatten.flatten ++ initialLatencies ++ slotMaxDurations ++ slotPeriods :+ globalInvThroughput,
         PropagatorPriority.TERNARY,
         false
-      ) {
+      ) with SDFChocoRecomputeMethodsMixin {
 
     val channels   = 0 until initialTokens.size
     val actors     = 0 until maxFiringsPerActor.size
     val schedulers = 0 until slotPeriods.size
     val slots      = 0 until firingsInSlots.head.head.size
 
-    def actorArrayOfSlot(p: Int)(i: Int) = firingsInSlots.map(as => as(p)(i))
-
     // these two are created here so that they are note recreated every time
     // wasting time with memory allocations etc
-    val tokens0           = DenseVector(initialTokens)
-    val tokensBefore         = DenseVector(initialTokens) +: slots.drop(1).map(_ => DenseVector.zeros[Int](channels.size)).toArray
+    val tokens0 = DenseVector(initialTokens)
+    val tokensBefore = DenseVector(initialTokens) +: slots
+      .drop(1)
+      .map(_ => DenseVector.zeros[Int](channels.size))
+      .toArray
     // def tokens(slot: Int) = if (slot < 0) then tokens0 else tokensBefore(slot)
     val tokensAfter =
-        slots.map(_ => DenseVector.zeros[Int](channels.size)).toArray
+      slots.map(_ => DenseVector.zeros[Int](channels.size)).toArray
     val startTimes  = schedulers.map(_ => slots.map(_ => 0).toArray).toArray
     val finishTimes = schedulers.map(_ => slots.map(_ => 0).toArray).toArray
     val mat         = DenseMatrix(balanceMatrix: _*)
     val prodMat     = mat.map(f => if (f >= 0) then f else 0)
     val consMat     = mat.map(f => if (f <= 0) then f else 0)
 
-    def singleActorFire(a: Int)(q: Int): DenseVector[Int] = {
-      val v = DenseVector.zeros[Int](actors.size)
-      v(a) = q
-      v
-    }
-
-    def slotIsTaken(p: Int)(slot: Int): Boolean =
-      actors.exists(a => firingsInSlots(a)(p)(slot).getLB() > 0)
-
-    def slotHasFiring(slot: Int): Boolean =
-      actors.exists(a => schedulers.exists(p => firingsInSlots(a)(p)(slot).getLB() > 0))
-
-    def firingVector(slot: Int): DenseVector[Int] = DenseVector(
+    val firingVector: Array[DenseVector[Int]] = slots.map(slot => DenseVector(
       actors
         .map(a => schedulers.map(p => firingsInSlots(a)(p)(slot).getLB()).find(_ > 0).getOrElse(0))
         .toArray
-    )
+    )).toArray
 
-    def computeTokensAndTime(): Unit = {
-      // for the very first initial conditions
-      tokensAfter(0) = mat * firingVector(0) + tokens0
-      for (p <- schedulers) {
-        finishTimes(p)(0) =
-          actors.map(a => firingVector(0)(a) * actorDuration(a)(p)).sum + startTimes(p)(0)
-      }
-      // work based first on the slots and update the timing whenever possible
-      for (
-        i <- slots.drop(1)
-        // p <- schedulers
-      ) {
-        // println(s"at ${i} : ${firingVector(i)}")
-        tokensBefore(i) = tokensAfter(i - 1)
-        tokensAfter(i) = mat * firingVector(i) + tokensBefore(i)
-        for (p <- schedulers) {
-          startTimes(p)(i) =
-            if (i > 0) then
-              schedulers
-                .filter(_ != p)
-                .map(pp => (pp, tokensBefore(i) - tokensAfter(i - 1)))
-                .map((pp, b) =>
-                  // this is the actual essential equation
-                  finishTimes(pp)(i - 1) + channels
-                    .map(c => b(c) * channelsTravelTime(c)(pp)(p).getUB())
-                    .sum
-                )
-                .max
-            else 0
-          finishTimes(p)(i) =
-            actors.map(a => firingVector(i)(a) * actorDuration(a)(p)).sum + startTimes(p)(i)
-        }
-      }
-    }
+    val singleActorFire = actors.map(a => (0 to maxFiringsPerActor(a)).map(q => mkSingleActorFire(a)(q)).toArray).toArray
 
     def propagate(evtmask: Int): Unit = {
       // println("propagate")
-      computeTokensAndTime()
+      recomputeTokensAndTime()
+      recomputeFiringVectors()
       // println(
       //   schedulers
       //     .map(s => {
@@ -213,17 +176,9 @@ trait SDFTimingAnalysisSASMixin extends ChocoModelMixin {
       //     .mkString("[\n ", "\n ", "\n]")
       // )
       val latestSlot = slots.findLast(i => any(firingVector(i))).getOrElse(0)
-      // val nextIsGuaranteed = 
+      // val nextIsGuaranteed =
       // println(s"latest slot ${latestSlot}")
-      for (i <- slots.take(latestSlot)) {
-        for (
-          p <- schedulers;
-          a <- actors;
-          if !firingsInSlots(a)(p)(i).isInstantiated()
-        ) {
-          firingsInSlots(a)(p)(i).updateUpperBound(0, this) //
-        }
-      }
+      val latestFirings = firingVector(latestSlot)
       // first, we check if the model is still sane
       for (
         i <- slots.take(latestSlot + 1)
@@ -234,39 +189,66 @@ trait SDFTimingAnalysisSASMixin extends ChocoModelMixin {
           p <- schedulers;
           a <- actors;
           if firingsInSlots(a)(p)(i).isInstantiated();
-          q = firingsInSlots(a)(p)(i).getLB()
+          q = firingsInSlots(a)(p)(i).getValue()
           if min(consMat * singleActorFire(a)(q) + tokensBefore(i)) < 0 // there is a negative fire
         ) {
           // println("invalidated!")
-          val c = ContradictionException().set(
-            this,
-            firingsInSlots(a)(p)(i),
-            s"negative fire detected with ${a}, ${p}, ${i}"
-          )
-          throw c
-          // firingsInSlots(a)(p)(i).updateUpperBound(0, this) //
+          fails()
+          // throw ContradictionException().set(
+          //   this,
+          //   firingsInSlots(a)(p)(i),
+          //   s"negative fire detected with ${a}, ${p}, ${i}"
+          // )
         }
       }
       // erase any empty slot in the previous slots
-      for (p <- schedulers) {
+      for (i <- slots.take(latestSlot)) {
         for (
-          a <- actors;
-          q <- firingsInSlots(a)(p)(latestSlot).getUB() to 1 by -1
+          p <- schedulers;
+          a <- actors
+          if !firingsInSlots(a)(p)(i).isInstantiated()
         ) {
-          // firingVector(a) = q
-          val afterCons = consMat * singleActorFire(a)(q) + tokensBefore(latestSlot)
-          if (min(afterCons) < 0) {
-            // println("taking out " + (a, p, latestSlot, q) + " because " + afterCons.toString)
-            firingsInSlots(a)(p)(latestSlot).updateUpperBound(q - 1, this)
-          }
+          firingsInSlots(a)(p)(i).updateUpperBound(0, this) //
         }
       }
+      // make sure that the latest slot only has admissible firings
+      for (
+        p <- schedulers;
+        a <- actors;
+        q <- firingsInSlots(a)(p)(latestSlot).getUB() to 1 by -1;
+        fireVec = singleActorFire(a)(q);
+        if !slotIsTaken(p)(latestSlot);
+        if min(consMat * (fireVec + latestFirings) + tokensBefore(latestSlot)) < 0
+      ) {
+        firingsInSlots(a)(p)(latestSlot).updateUpperBound(q - 1, this) //
+      }
+      
+      // println("----------------------------------------------------")
+      // println(
+      //   schedulers
+      //     .map(s => {
+      //       slots
+      //         .map(slot => {
+      //           actors
+      //             .map(a =>
+      //               firingsInSlots(a)(s)(slot).getLB() + "|" + firingsInSlots(a)(s)(slot).getUB()
+      //             )
+      //             .mkString("(", ", ", ")")
+      //         })
+      //         .mkString("[", ", ", "]")
+      //     })
+      //     .mkString("[\n ", "\n ", "\n]")
+      // )
 
       // now try to bound the timing,
       globalInvThroughput.updateLowerBound(
         schedulers
           .map(p => {
-            finishTimes(p).max - startTimes(p).zipWithIndex.filter((t, i) => slotIsTaken(p)(i)).map((t, i) => t).minOption.getOrElse(0)
+            finishTimes(p).max - startTimes(p).zipWithIndex
+              .filter((t, i) => slotIsTaken(p)(i))
+              .map((t, i) => t)
+              .minOption
+              .getOrElse(0)
           })
           .max,
         this
@@ -276,7 +258,8 @@ trait SDFTimingAnalysisSASMixin extends ChocoModelMixin {
 
     def isEntailed(): ESat = {
       // println("checking entailment")
-      computeTokensAndTime()
+      recomputeTokensAndTime()
+      recomputeFiringVectors()
       // work based first on the slots and update the timing whenever possible
       for (
         i <- slots.drop(1)

@@ -10,6 +10,14 @@ import org.jgrapht.alg.shortestpath.DijkstraManyToManyShortestPaths
 import scala.reflect.ClassTag
 import org.jgrapht.graph.AsWeightedGraph
 import scala.jdk.CollectionConverters._
+import org.jgrapht.alg.shortestpath.FloydWarshallShortestPaths
+import org.jgrapht.opt.graph.sparse.SparseIntDirectedGraph
+import org.jgrapht.alg.util.Pair
+import java.util.stream.Collectors
+import scala.collection.mutable.Buffer
+import java.util.concurrent.Executors
+import org.jgrapht.alg.shortestpath.CHManyToManyShortestPaths
+import java.util.concurrent.ThreadPoolExecutor
 
 /** This mixin contains methods and logic that can aid platform models that are behave like tiled
   * multi core platforms. This can include for example NoC multicore architectures commonly used
@@ -146,17 +154,30 @@ trait TiledMultiCorePlatformMixin[MemT, TimeT](using fTimeT: Fractional[TimeT])(
     })
   }
 
-  def routerPaths: Array[Array[Array[Int]]] = {
-    val pathAlg = DijkstraManyToManyShortestPaths(architectureGraph)
-    val paths = pathAlg.getManyToManyPaths(tileSet.toSet.asJava, tileSet.toSet.asJava)
-    tileSet.map(src => tileSet.map(dst => {
-      if (src != dst)
-        Option(paths.getPath(src, dst)).map(p => 
-          // println(src +" -> " + dst + ": " + p.getVertexList().asScala.tail.drop(1).toArray.mkString(", "))
-          p.getVertexList().asScala.drop(1).dropRight(1).toArray).getOrElse(Array.emptyIntArray)
-      else
-        Array.emptyIntArray
+  def computeRouterPaths: Array[Array[Array[Int]]] = {
+    // val executor = Executors.newFixedThreadPool(Math.max(Runtime.getRuntime().availableProcessors() - 10, 1)).asInstanceOf[ThreadPoolExecutor]
+    val results = tileSet.map(src => tileSet.map(dst => Buffer.empty[Int]))
+    val sparseGraph = SparseIntDirectedGraph(
+      architectureGraph.vertexSet().size(), 
+      architectureGraph.edgeSet().stream().map(e => Pair.of(
+        platformSet.indexOf(architectureGraph.getEdgeSource(e)).asInstanceOf[Integer],
+        platformSet.indexOf(architectureGraph.getEdgeTarget(e)).asInstanceOf[Integer]
+      )).collect(Collectors.toList()))
+    val tileSetIdxs = tileSet.map(tile => platformSet.indexOf(tile).asInstanceOf[Integer]).toSet
+    val pathAlg = DijkstraManyToManyShortestPaths(sparseGraph)
+    val paths = pathAlg.getManyToManyPaths(tileSetIdxs.asJava, tileSetIdxs.asJava)
+    tileSetIdxs.foreach(src => tileSetIdxs.foreach(dst => {
+      if (src != dst && paths.getPath(src, dst) != null) {
+        val p = paths.getPath(src, dst)
+        p.getVertexList().subList(1, p.getLength() - 1).forEach(vIdx => {
+          results(src)(dst) += platformSet(vIdx)
+        })
+        // Option(paths.getPath(src, dst)).map(p => 
+        //   // println(src +" -> " + dst + ": " + p.getVertexList().asScala.tail.drop(1).toArray.mkString(", "))
+        //   p.getVertexList().asScala.map(vIdx => platformSet(vIdx)).drop(1).dropRight(1).toArray).getOrElse(Array.emptyIntArray)
+      } // else  Array.emptyIntArray
     }))
+    results.map(_.map(_.toArray))
   }
 
 }

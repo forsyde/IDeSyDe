@@ -164,8 +164,8 @@ trait TiledMultiCorePlatformMixin[MemT, TimeT](using fTimeT: Fractional[TimeT])(
         platformSet.indexOf(architectureGraph.getEdgeTarget(e)).asInstanceOf[Integer]
       )).collect(Collectors.toList()))
     val tileSetIdxs = tileSet.map(tile => platformSet.indexOf(tile).asInstanceOf[Integer]).toSet
-    val pathAlg = DijkstraManyToManyShortestPaths(sparseGraph)
-    val paths = pathAlg.getManyToManyPaths(tileSetIdxs.asJava, tileSetIdxs.asJava)
+    val paths = FloydWarshallShortestPaths(sparseGraph)
+    // val paths = pathAlg.getManyToManyPaths(tileSetIdxs.asJava, tileSetIdxs.asJava)
     tileSetIdxs.foreach(src => tileSetIdxs.foreach(dst => {
       if (src != dst && paths.getPath(src, dst) != null) {
         val p = paths.getPath(src, dst)

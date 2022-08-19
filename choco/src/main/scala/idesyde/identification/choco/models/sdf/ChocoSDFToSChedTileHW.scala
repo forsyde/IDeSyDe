@@ -60,6 +60,11 @@ final case class ChocoSDFToSChedTileHW(
   val processSize: Array[Int] =
     dse.sdfApplications.processSizes.map(l => (l / memoryDivider).toInt)
 
+  val actorDuration: Array[Array[Int]] =
+    dse.wcets.map(as => as.map(w => w * timeMultiplier).map(_.ceil.toInt))
+  val balanceMatrix: Array[Array[Int]] = dse.sdfApplications.balanceMatrices(0)
+  val initialTokens: Array[Int]        = dse.sdfApplications.initialTokens
+
   val commElemsPaths = dse.platform.tiledDigitalHardware.computeRouterPaths
   def commElemsPath(srcIdx: Int)(dstIdx: Int): Array[Int] = commElemsPaths(srcIdx)(dstIdx)
 
@@ -255,21 +260,17 @@ final case class ChocoSDFToSChedTileHW(
   // postTileAsyncInterconnectComms()
   //---------
 
-  def actorDuration: Array[Array[Int]] =
-    dse.wcets.map(as => as.map(w => w * timeMultiplier).map(_.ceil.toInt))
-  def balanceMatrix: Array[Array[Int]] = dse.sdfApplications.balanceMatrices(0)
-  def channelsTravelTime: Array[Array[Array[org.chocosolver.solver.variables.IntVar]]] =
+  val channelsTravelTime: Array[Array[Array[org.chocosolver.solver.variables.IntVar]]] =
     messageTravelTimes
-  def firingsInSlots: Array[Array[Array[org.chocosolver.solver.variables.IntVar]]] =
+  val firingsInSlots: Array[Array[Array[org.chocosolver.solver.variables.IntVar]]] =
     numActorsScheduledSlotsInStaticCyclicVars
-  def initialLatencies: Array[org.chocosolver.solver.variables.IntVar] =
+  val initialLatencies: Array[org.chocosolver.solver.variables.IntVar] =
     dse.platform.schedulers.map(_ => chocoModel.intVar("lat", 1))
-  def initialTokens: Array[Int] = dse.sdfApplications.initialTokens
   def slotMaxDuration(schedulerId: Int): org.chocosolver.solver.variables.IntVar =
     chocoModel.intVar("slot_dur", 1)
-  def slotMaxDurations: Array[org.chocosolver.solver.variables.IntVar] =
+  val slotMaxDurations: Array[org.chocosolver.solver.variables.IntVar] =
     dse.platform.schedulers.map(_ => chocoModel.intVar("dur", 1))
-  def slotPeriods: Array[org.chocosolver.solver.variables.IntVar] =
+  val slotPeriods: Array[org.chocosolver.solver.variables.IntVar] =
     dse.platform.schedulers.map(_ => chocoModel.intVar("per", 1))
   def startLatency(schedulerId: Int): org.chocosolver.solver.variables.IntVar =
     chocoModel.intVar("lat", 1)
@@ -280,11 +281,11 @@ final case class ChocoSDFToSChedTileHW(
   // and sdf can be executed in a PE only if its mapped into this PE
   actors.foreach(a => {
     schedulers.foreach(p => {
-      chocoModel.ifThen(
+      chocoModel.ifOnlyIf(
         processesMemoryMapping(a)(p).eq(1).decompose(),
         chocoModel.sum(s"firings_${a}_${p}>0", firingsInSlots(a)(p): _*).gt(0).decompose()
       )
-      chocoModel.ifThen(
+      chocoModel.ifOnlyIf(
         processesMemoryMapping(a)(p).eq(0).decompose(),
         chocoModel.sum(s"firings_${a}_${p}=0", firingsInSlots(a)(p): _*).eq(0).decompose()
       )
@@ -314,12 +315,14 @@ final case class ChocoSDFToSChedTileHW(
       initialTokens,
       actorDuration,
       channelsTravelTime,
-      firingsInSlots
+      firingsInSlots,
+      nUsedPEs
       // )
     ),
-    Search.defaultSearch(chocoModel)
-    // Search.minDomLBSearch(globalInvThroughput),
-    // Search.minDomLBSearch(nUsedPEs)
+    Search.bestBound(Search.minDomLBSearch(nUsedPEs)),
+    Search.bestBound(Search.minDomLBSearch(globalInvThroughput))
+    // Search.intVarSearch()
+    // Search.defaultSearch(chocoModel)
   )
 
   def rebuildFromChocoOutput(output: Solution): ForSyDeSystemGraph = {
@@ -348,7 +351,7 @@ final case class ChocoSDFToSChedTileHW(
             .map(slot => {
               actors.zipWithIndex
                 .find((a, ai) => firingsInSlots(ai)(s)(slot).getLB() > 0)
-                .map((a, ai) => a.toString())
+                .map((a, ai) => dse.sdfApplications.actors(a).getIdentifier() + ": " + firingsInSlots(ai)(s)(slot).getLB())
                 .getOrElse("_")
             })
             .mkString("[", ", ", "]")

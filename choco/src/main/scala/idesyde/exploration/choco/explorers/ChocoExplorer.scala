@@ -57,11 +57,13 @@ class ChocoExplorer() extends ForSyDeIOExplorer:
       val solver               = model.getSolver
       val isOptimization       = chocoCpModel.modelObjectives.size > 0
       lazy val paretoMaximizer = ParetoMaximizer(chocoCpModel.modelObjectives)
+      var lastParetoFrontSize = 0
+      var paretoRuns = 0
       if (isOptimization) solver.plugMonitor(paretoMaximizer)
       solver.setLearningSignedClauses
       solver.setNoGoodRecordingFromRestarts
       solver.setRestartOnSolutions
-      solver.addStopCriterion(SolutionCounter(model, 100L))
+      solver.addStopCriterion(SolutionCounter(model, 10L))
       if (!chocoCpModel.strategies.isEmpty) then solver.setSearch(chocoCpModel.strategies: _*)
       LazyList
         .continually(solver.solve)
@@ -69,10 +71,19 @@ class ChocoExplorer() extends ForSyDeIOExplorer:
           // scribe.debug(s"a solution has been found with feasibility: ${feasible}")
           feasible
         )
+        .takeWhile(feasible => if (isOptimization) paretoRuns < 3 else true)
         .filter(feasible => feasible)
         .flatMap(feasible => {
           // scribe.debug(s"pareto size: ${paretoMaximizer.getParetoFront.size}")
-          if (isOptimization) paretoMaximizer.getParetoFront.asScala.map(_.record())
+          if (isOptimization) {
+            if (lastParetoFrontSize != paretoMaximizer.getParetoFront().size()) {
+              lastParetoFrontSize = paretoMaximizer.getParetoFront().size()
+              paretoRuns = 0
+            } else {
+              paretoRuns += 1
+            }
+            paretoMaximizer.getParetoFront.asScala.map(_.record())
+          }
           else Seq(solver.defaultSolution().record())
         })
         .map(paretoSolutions => {

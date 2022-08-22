@@ -47,7 +47,7 @@ class SDFOnTileNoCUseCaseWithSolution extends AnyFunSuite with LoggingMixin {
 
   given ExecutionContext = ExecutionContext.global
 
-  setDebug()
+  setNormal()
 
   Files.createDirectories(Paths.get("tests/models/sdf3/results"))
 

@@ -16,30 +16,16 @@ class SimpleMultiCoreSDFListScheduling(
     val channelsTravelTime: Array[Array[Array[IntVar]]],
     val firingsInSlots: Array[Array[Array[IntVar]]],
     val numShedulers: IntVar
-) extends AbstractStrategy[IntVar]((firingsInSlots.flatten.flatten): _*) with SDFChocoRecomputeMethodsMixin {
+) extends AbstractStrategy[IntVar]((numShedulers +: firingsInSlots.flatten.flatten): _*) with SDFChocoRecomputeMethodsMixin {
 
   val channels   = 0 until initialTokens.size
   val actors     = 0 until maxFiringsPerActor.size
   val schedulers = 0 until firingsInSlots.head.size
   val slots      = 0 until firingsInSlots.head.head.size
 
-  // these two are created here so that they are note recreated every time
-  // wasting time with memory allocations etc
-  val tokens0 = SparseVector(initialTokens)
-  val tokensBefore = SparseVector(initialTokens) +: slots
-    .drop(1)
-    .map(_ => SparseVector.zeros[Int](channels.size))
-    .toArray
-  // def tokens(slot: Int) = if (slot < 0) then tokens0 else tokensBefore(slot)
-  val tokensAfter =
-    slots.map(_ => SparseVector.zeros[Int](channels.size)).toArray
-  val startTimes  = schedulers.map(_ => slots.map(_ => 0).toArray).toArray
-  val finishTimes = schedulers.map(_ => slots.map(_ => 0).toArray).toArray
   val mat         = CSCMatrix(balanceMatrix: _*)
-  val prodMat     = mat.map(f => if (f >= 0) then f else 0)
-  val consMat     = mat.map(f => if (f <= 0) then f else 0)
 
-  val firingVector: Array[SparseVector[Int]] = slots.map(slot => SparseVector.zeros[Int](actors.size)).toArray
+  // val firingVector: Array[SparseVector[Int]] = slots.map(slot => SparseVector.zeros[Int](actors.size)).toArray
 
   val singleActorFire = actors.map(a => (0 to maxFiringsPerActor(a)).map(q => mkSingleActorFire(a)(q)).toArray).toArray
 
@@ -68,7 +54,7 @@ class SimpleMultiCoreSDFListScheduling(
     for (slot <- slots; if bestSlot < 0) {
       // accumulate the firings vectors
       accumFirings += firingVector(slot)
-      for (p <- schedulers.take(numShedulers.getUB()); if !slotAtSchedulerIsTaken(p)(slot)) {
+      for (p <- schedulers; if !slotAtSchedulerIsTaken(p)(slot)) {
         for (a <- actors; q <- firingsInSlots(a)(p)(slot).getUB to 1 by -1; if q + accumFirings(a) <= maxFiringsPerActor(a)) {
           tokenVec = consMat * singleActorFire(a)(q) + tokensBefore(slot)
           if (min(tokenVec) >= 0 && q > bestQ) {

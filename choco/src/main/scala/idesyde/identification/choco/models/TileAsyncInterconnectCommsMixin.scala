@@ -26,14 +26,15 @@ trait TileAsyncInterconnectCommsMixin extends ChocoModelMixin {
   def postTileAsyncInterconnectComms(): Unit = {
     // first, make sure that data from different sources do not collide in any comm. elem
     for (
+      srci <- 0 until numProcElems;
+      srcj <- 0 until numProcElems;
+      if srci != srcj;
       mi <- 0 until numMessages;
       mj <- mi until numMessages; // it might seems strange that we consider the same message, but it is required for proper allocation
       ce <- 0 until numCommElems;
-      srci <- 0 until numProcElems;
       dsti <- 0 until numProcElems;
-      srcj <- 0 until numProcElems;
-      dstj <- 0 until numProcElems
-      if srci != srcj && commElemsPath(srci)(dsti).contains(ce) && commElemsPath(srcj)(dstj).contains(ce)
+      dstj <- 0 until numProcElems;
+      if commElemsPath(srci)(dsti).contains(ce) && commElemsPath(srcj)(dstj).contains(ce)
     ) {
       chocoModel.ifThen(messageIsCommunicated(mi)(srci)(dsti).and(messageIsCommunicated(mj)(srcj)(dstj)).decompose(),
         virtualChannelForMessage(mi)(ce).ne(virtualChannelForMessage(mj)(ce)).decompose()

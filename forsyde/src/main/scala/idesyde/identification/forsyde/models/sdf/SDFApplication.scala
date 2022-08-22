@@ -81,7 +81,7 @@ final case class SDFApplication(
     g.buildAsUnmodifiable
   }
 
-  def processComputationalNeeds: Array[Map[String, Map[String, Long]]] =
+  val processComputationalNeeds: Array[Map[String, Map[String, Long]]] =
     actorFunctions.zipWithIndex.map((actorFuncs, i) => {
       // we do it mutable for simplicity...
       // the performance hit should not be a concern now, for super big instances, this can be reviewed
@@ -130,7 +130,7 @@ final case class SDFApplication(
       mutMap.map((k, v) => k -> v.toMap).toMap
     })
 
-  def processSizes: Array[Long] = actors.zipWithIndex.map((a, i) =>
+  val processSizes: Array[Long] = actors.zipWithIndex.map((a, i) =>
     InstrumentedExecutable.safeCast(a).map(_.getSizeInBits().asInstanceOf[Long]).orElse(0L) +
       actorFunctions
         .flatMap(fs =>
@@ -141,7 +141,7 @@ final case class SDFApplication(
         .sum
   )
 
-  def messagesMaxSizes: Array[Long] = channels.zipWithIndex.map((c, i) =>
+  val messagesMaxSizes: Array[Long] = channels.zipWithIndex.map((c, i) =>
     pessimisticTokensPerChannel(i) * TokenizableDataBlock
       .safeCast(c)
       .map(d => d.getTokenSizeInBits())

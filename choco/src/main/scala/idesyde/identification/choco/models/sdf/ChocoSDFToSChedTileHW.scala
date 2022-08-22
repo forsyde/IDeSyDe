@@ -259,7 +259,7 @@ final case class ChocoSDFToSChedTileHW(
   //-----------------------------------------------------
   // COMMUNICATION
 
-  // postTileAsyncInterconnectComms()
+  postTileAsyncInterconnectComms()
   //---------
 
   val channelsTravelTime: Array[Array[Array[org.chocosolver.solver.variables.IntVar]]] =
@@ -311,7 +311,7 @@ final case class ChocoSDFToSChedTileHW(
     //   firingsInSlots.flatten.flatten:_*
     // ),
     // Search.bestBound(
-    Search.minDomLBSearch(nUsedPEs),
+    // Search.minDomLBSearch(nUsedPEs),
     SimpleMultiCoreSDFListScheduling(
       actors.zipWithIndex.map((a, i) => maxRepetitionsPerActors(i)),
       balanceMatrix,
@@ -346,20 +346,37 @@ final case class ChocoSDFToSChedTileHW(
       .map((c, i) => channelToTiles(i) ++ channelToRouters(i))
     val schedulings =
       processesMemoryMapping.map(vs => vs.map(v => if (v.getValue() > 0) then true else false))
-    // println(
-    //   schedulers
-    //     .map(s => {
-    //       (0 until actors.size)
-    //         .map(slot => {
-    //           actors.zipWithIndex
-    //             .find((a, ai) => firingsInSlots(ai)(s)(slot).getLB() > 0)
-    //             .map((a, ai) => dse.sdfApplications.actors(a).getIdentifier() + ": " + firingsInSlots(ai)(s)(slot).getLB())
-    //             .getOrElse("_")
-    //         })
-    //         .mkString("[", ", ", "]")
-    //     })
-    //     .mkString("[\n ", "\n ", "\n]")
-    // )
+    println(
+      schedulers
+        .map(s => {
+          (0 until actors.size)
+            .map(slot => {
+              actors.zipWithIndex
+                .find((a, ai) => firingsInSlots(ai)(s)(slot).getLB() > 0)
+                .map((a, ai) =>
+                  dse.sdfApplications.actors(a).getIdentifier() + ": " + firingsInSlots(ai)(s)(slot)
+                    .getLB()
+                )
+                .getOrElse("_")
+            })
+            .mkString("[", ", ", "]")
+        })
+        .mkString("[\n ", "\n ", "\n]")
+    )
+    println(
+      schedulers
+        .map(src => {
+          schedulers
+            .map(dst => {
+              dse.sdfApplications.channels.zipWithIndex
+                .filter((c, ci) => messageAllocation(ci)(src)(dst).getLB() > 0)
+                .map((c, ci) => c.getIdentifier())
+                .mkString("(", ", ", ")")
+            })
+            .mkString("[", ", ", "]")
+        })
+        .mkString("[\n ", "\n ", "\n]")
+    )
     dse.addMappingsAndRebuild(
       mappings,
       schedulings,

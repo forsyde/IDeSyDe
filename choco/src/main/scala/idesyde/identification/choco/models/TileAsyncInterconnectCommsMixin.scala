@@ -26,41 +26,58 @@ trait TileAsyncInterconnectCommsMixin extends ChocoModelMixin {
   def postTileAsyncInterconnectComms(): Unit = {
     // first, make sure that data from different sources do not collide in any comm. elem
     for (
-      srci <- procElems;
-      srcj <- procElems;
-      if srci != srcj;
-      (mi, mii) <- messages.zipWithIndex.dropRight(1);
-      mj <- messages.drop(mii + 1); // it might seems strange that we consider the same message, but it is required for proper allocation
-      // if mi != mj;
-      dsti <- procElems;
-      dstj <- procElems;
-      ce   <- commElemsPath(srci)(dsti)
-      if commElemsPath(srcj)(dstj).contains(ce)
+      ce <- commElems
     ) {
-      // println(s"$mi and $mj crash in $srci, $dsti ; $srcj, $dstj at $ce")
-      chocoModel.ifThen(
-        messageIsCommunicated(mi)(srci)(dsti)
-          .and(messageIsCommunicated(mj)(srcj)(dstj))
-          .decompose(),
-        virtualChannelForMessage(mi)(ce).ne(virtualChannelForMessage(mj)(ce)).decompose()
-      )
+      // chocoModel.allDifferentExcept0(messages.map(m => virtualChannelForMessage(m)(ce))).post()
     }
+    for (
+      src <- procElems;
+      dst <- procElems;
+      if src != dst;
+      c <- messages;
+      ce <- commElemsPath(src)(dst)
+    ) {
+      chocoModel.ifThen(messageIsCommunicated(c)(src)(dst), chocoModel.arithm(virtualChannelForMessage(c)(ce), ">", 0))
+    }
+    // for (
+    //   srci <- procElems;
+    //   srcj <- procElems;
+    //   if srci != srcj;
+    //   dsti <- procElems;
+    //   dstj <- procElems;
+    //   ce   <- commElemsPath(srci)(dsti);
+    //   if commElemsPath(srcj)(dstj).contains(ce)
+    // ) {
+    //   // println(s"$srci -> $dsti and $srcj -> $dstj crash at $ce")
+    //   for (
+    //     (mi, mii) <- messages.zipWithIndex.dropRight(1);
+    //     mj <- messages.drop(
+    //       mii + 1
+    //     ) // it might seems strange that we consider the same message, but it is required for proper allocation
+    //   ) {
+    //     // println(s"posting for $mi and $mj")
+    //     chocoModel.ifThen(
+    //       chocoModel.and(messageIsCommunicated(mi)(srci)(dsti), 
+    //         messageIsCommunicated(mj)(srcj)(dstj)),
+    //       chocoModel.notAllEqual(virtualChannelForMessage(mi)(ce), virtualChannelForMessage(mj)(ce))
+    //     )
+    //   }
+    // }
 
     // now we make sure that adjacent comm elems that must have the same channel for the same
     // message, indeed do.
     for (
-      ci <- commElems;
-      cj <- commElems;
-      if ci != cj && commElemsMustShareChannel(ci)(cj);
-      m   <- messages;
-      src <- procElems;
-      dst <- procElems;
-      if commElemsPath(src)(dst).contains(ci) && commElemsPath(src)(dst).contains(cj)
+      ce <- commElems
     ) {
-      chocoModel.ifThen(
-        messageIsCommunicated(m)(src)(dst),
-        virtualChannelForMessage(m)(ci).eq(virtualChannelForMessage(m)(cj)).decompose()
-      )
+      val areEquals = commElems.filter(otherCe => ce != otherCe && commElemsMustShareChannel(ce)(otherCe))
+      for (m <- messages) {
+        chocoModel.allEqual((ce +: areEquals).map(comms => virtualChannelForMessage(m)(comms)):_*).post()
+      }
+      // chocoModel.allEqual()
+      // chocoModel.ifThen(
+      //   messageIsCommunicated(m)(src)(dst),
+        
+      // )
     }
 
     // and finally, we calculate the travel time, for each message, between each src and dst

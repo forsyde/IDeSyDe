@@ -144,7 +144,7 @@ final case class ChocoSDFToSChedTileHW(
     dse.platform.tiledDigitalHardware.commElemsVirtualChannels.zipWithIndex.map((vcs, j) => {
       chocoModel.intVar(
         s"vc_${c.getIdentifier()}_${j}",
-        1,
+        0,
         vcs
       )
     })
@@ -377,12 +377,12 @@ final case class ChocoSDFToSChedTileHW(
         .map(src => {
           schedulers
             .map(dst => {
-              dse.sdfApplications.channels.zipWithIndex
+              messages.zipWithIndex
                 .filter((c, ci) => messageAllocation(ci)(src)(dst).getLB() > 0)
                 .map((c, ci) =>
-                  c.getIdentifier() + ": " + commElemsPaths(src)(dst).zipWithIndex
+                  c + ": " + commElemsPaths(src)(dst).zipWithIndex
                     .map((ce, cei) =>
-                      ce + "/" + messageVirtualChannelAllocation(ci)(cei).getValue()
+                      ce + "/" + virtualChannelForMessage(c)(ce).getValue()
                     )
                     .mkString("-")
                 )

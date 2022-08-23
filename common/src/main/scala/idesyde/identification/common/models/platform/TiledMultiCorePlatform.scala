@@ -20,8 +20,8 @@ import org.jgrapht.alg.shortestpath.CHManyToManyShortestPaths
 import java.util.concurrent.ThreadPoolExecutor
 
 /** This mixin contains methods and logic that can aid platform models that are behave like tiled
-  * multi core platforms. This can include for example NoC multicore architectures commonly used
-  * for dataflow mapping and scheduling problems.
+  * multi core platforms. This can include for example NoC multicore architectures commonly used for
+  * dataflow mapping and scheduling problems.
   */
 trait TiledMultiCorePlatformMixin[MemT, TimeT](using fTimeT: Fractional[TimeT])(using
     conversion: Conversion[Double, TimeT]
@@ -32,16 +32,16 @@ trait TiledMultiCorePlatformMixin[MemT, TimeT](using fTimeT: Fractional[TimeT])(
 
   def architectureGraph: Graph[Int, DefaultEdge]
 
-  /** although generic, this function is required to
-   * return the correct timing _only_ between adjacent routers, and not
-   * between any 2 routers. Non adjancent routers can return any value. 
-   * The correct general timing is later computed by the Mixin. */
+  /** although generic, this function is required to return the correct timing _only_ between
+    * adjacent routers, and not between any 2 routers. Non adjancent routers can return any value.
+    * The correct general timing is later computed by the Mixin.
+    */
   def architectureGraphMinimumHopTime(src: Int, dst: Int): TimeT
 
-  /** although generic, this function is required to
-   * return the correct timing _only_ between adjacent routers, and not
-   * between any 2 routers. Non adjancent routers can return any value. 
-   * The correct general timing is later computed by the Mixin. */
+  /** although generic, this function is required to return the correct timing _only_ between
+    * adjacent routers, and not between any 2 routers. Non adjancent routers can return any value.
+    * The correct general timing is later computed by the Mixin.
+    */
   def architectureGraphMaximumHopTime(src: Int, dst: Int): TimeT
 
   def maxMemoryPerTile: Array[MemT]
@@ -158,25 +158,36 @@ trait TiledMultiCorePlatformMixin[MemT, TimeT](using fTimeT: Fractional[TimeT])(
     // val executor = Executors.newFixedThreadPool(Math.max(Runtime.getRuntime().availableProcessors() - 10, 1)).asInstanceOf[ThreadPoolExecutor]
     val results = tileSet.map(src => tileSet.map(dst => Buffer.empty[Int]))
     val sparseGraph = SparseIntDirectedGraph(
-      architectureGraph.vertexSet().size(), 
-      architectureGraph.edgeSet().stream().map(e => Pair.of(
-        platformSet.indexOf(architectureGraph.getEdgeSource(e)).asInstanceOf[Integer],
-        platformSet.indexOf(architectureGraph.getEdgeTarget(e)).asInstanceOf[Integer]
-      )).collect(Collectors.toList()))
+      architectureGraph.vertexSet().size(),
+      architectureGraph
+        .edgeSet()
+        .stream()
+        .map(e =>
+          Pair.of(
+            platformSet.indexOf(architectureGraph.getEdgeSource(e)).asInstanceOf[Integer],
+            platformSet.indexOf(architectureGraph.getEdgeTarget(e)).asInstanceOf[Integer]
+          )
+        )
+        .collect(Collectors.toList())
+    )
     val tileSetIdxs = tileSet.map(tile => platformSet.indexOf(tile).asInstanceOf[Integer]).toSet
-    val paths = FloydWarshallShortestPaths(sparseGraph)
+    val paths       = FloydWarshallShortestPaths(sparseGraph)
     // val paths = pathAlg.getManyToManyPaths(tileSetIdxs.asJava, tileSetIdxs.asJava)
-    tileSetIdxs.foreach(src => tileSetIdxs.foreach(dst => {
-      if (src != dst && paths.getPath(src, dst) != null) {
-        val p = paths.getPath(src, dst)
-        p.getVertexList().subList(1, p.getLength() - 1).forEach(vIdx => {
-          results(src)(dst) += platformSet(vIdx)
-        })
-        // Option(paths.getPath(src, dst)).map(p => 
-        //   // println(src +" -> " + dst + ": " + p.getVertexList().asScala.tail.drop(1).toArray.mkString(", "))
-        //   p.getVertexList().asScala.map(vIdx => platformSet(vIdx)).drop(1).dropRight(1).toArray).getOrElse(Array.emptyIntArray)
-      } // else  Array.emptyIntArray
-    }))
+    tileSetIdxs.foreach(src =>
+      tileSetIdxs.foreach(dst => {
+        if (src != dst && paths.getPath(src, dst) != null) {
+          val p = paths.getPath(src, dst)
+          p.getVertexList()
+            .subList(1, p.getLength())
+            .forEach(vIdx => {
+              results(src)(dst) += platformSet(vIdx)
+            })
+          // Option(paths.getPath(src, dst)).map(p =>
+          //   // println(src +" -> " + dst + ": " + p.getVertexList().asScala.tail.drop(1).toArray.mkString(", "))
+          //   p.getVertexList().asScala.map(vIdx => platformSet(vIdx)).drop(1).dropRight(1).toArray).getOrElse(Array.emptyIntArray)
+        } // else  Array.emptyIntArray
+      })
+    )
     results.map(_.map(_.toArray))
   }
 

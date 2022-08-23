@@ -320,18 +320,23 @@ trait SDFTimingAnalysisSASMixin extends ChocoModelMixin {
     }
 
     def isEntailed(): ESat = {
-      var allFired = true
+      var allFired        = true
+      var allCommunicated = true
       // println("checking entailment")
       // println(
       //   schedulers
       //     .map(s => {
-      //       slots
+      //       (0 until actors.size)
       //         .map(slot => {
-      //           actors
-      //             .map(a =>
-      //               firingsInSlots(a)(s)(slot).getLB() + "|" + firingsInSlots(a)(s)(slot).getUB()
+      //           actors.zipWithIndex
+      //             .find((a, ai) => firingsInSlots(ai)(s)(slot).getLB() > 0)
+      //             .map((a, ai) =>
+      //               a + ": " + firingsInSlots(ai)(s)(
+      //                 slot
+      //               )
+      //                 .getLB()
       //             )
-      //             .mkString("(", ", ", ")")
+      //             .getOrElse("_")
       //         })
       //         .mkString("[", ", ", "]")
       //     })
@@ -339,6 +344,32 @@ trait SDFTimingAnalysisSASMixin extends ChocoModelMixin {
       // )
       recomputeTokensAndTime()
       recomputeFiringVectors()
+      if (latestClosedSlot > 0) {
+        for (i <- slots.drop(1).take(latestClosedSlot)) {
+          // println(i)
+          for (
+            dst <- schedulers; src <- schedulers;
+            if src != dst && slotAtSchedulerIsTaken(dst)(i) && slotAtSchedulerIsTaken(src)(i - 1)
+          ) {
+            val diffAtSrc = diffTokenVec(i)(src)(src)
+            val diffAtDst = diffTokenVec(i)(dst)(dst)
+            // println(s"src vec from ${src} to ${src} at ${i}: ${diffAtSrc.toString()}")
+            // println(s"dst vec from ${dst} to ${dst} at ${i}: ${diffAtDst.toString()}")
+            for (c <- channels) {
+              // should have communicated
+              allCommunicated = channelsCommunicate(c)(src)(dst).isInstantiated() && allCommunicated
+              if (
+                diffAtDst(c) < 0 && diffAtSrc(c) >= -diffAtDst(c) && channelsCommunicate(c)(src)(
+                  dst
+                ).getLB() < 1
+              ) {
+                // println(s" failing due to no comm of ${c} from ${src} to ${dst} at ${i}")
+                return ESat.FALSE
+              }
+            }
+          }
+        }
+      }
       // work based first on the slots and update the timing whenever possible
       for (
         i <- slots
@@ -359,15 +390,16 @@ trait SDFTimingAnalysisSASMixin extends ChocoModelMixin {
         }
       }
       // println("all is fired " + allFired)
-      if (allFired) then
+      // println("all is comm " + allCommunicated)
+      if (allFired && allCommunicated) then
         if (tokensAfter.last == tokens0) {
           // println("passed final tokens for entailment")
-          ESat.TRUE
+          return ESat.TRUE
         } else {
           // println("wrong final tokens for entailment")
-          ESat.FALSE
+          return ESat.FALSE
         }
-      else ESat.UNDEFINED
+      else return ESat.UNDEFINED
     }
 
     // def computeStateTime(): Unit = {

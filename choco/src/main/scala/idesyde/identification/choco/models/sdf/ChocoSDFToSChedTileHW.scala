@@ -66,23 +66,26 @@ final case class ChocoSDFToSChedTileHW(
   val initialTokens: Array[Int]        = dse.sdfApplications.initialTokens
 
   val commElemsPaths = dse.platform.tiledDigitalHardware.computeRouterPaths
-  def commElemsPath(srcIdx: Int)(dstIdx: Int): Array[Int] = commElemsPaths(srcIdx)(dstIdx)
+  def commElemsPath(srcId: Int)(dstId: Int): Array[Int] =
+    commElemsPaths(procElems.indexOf(srcId))(procElems.indexOf(dstId))
 
   // TODO: figure out a way to make this not true, later
-  def commElemsMustShareChannel(ceIdx: Int)(otherCeIdx: Int): Boolean = true
+  def commElemsMustShareChannel(ceId: Int)(otherCeId: Int): Boolean = true
 
-  def numVirtualChannels(ceIdx: Int): Int =
-    dse.platform.tiledDigitalHardware.commElemsVirtualChannels(ceIdx)
+  def numVirtualChannels(ceId: Int): Int =
+    dse.platform.tiledDigitalHardware.commElemsVirtualChannels(commElems.indexOf(ceId))
 
-  def messageTravelTimePerVirtualChannelById(messageIdx: Int)(ceId: Int): Int =
-    (dse.sdfApplications.messagesMaxSizes(messageIdx) / dse.platform.tiledDigitalHardware
+  def messageTravelTimePerVirtualChannelById(messageId: Int)(ceId: Int): Int =
+    (dse.sdfApplications.messagesMaxSizes(
+      messages.indexOf(messageId)
+    ) / dse.platform.tiledDigitalHardware
       .bandWidthPerCEPerVirtualChannelById(ceId) / timeMultiplier).ceil.toInt
 
-  def numCommElems = dse.platform.tiledDigitalHardware.routerSet.size
+  def commElems = dse.platform.tiledDigitalHardware.routerSet
 
-  def numMessages = dse.sdfApplications.channelsSet.size
+  def messages = dse.sdfApplications.channelsSet
 
-  def numProcElems = dse.platform.tiledDigitalHardware.tileSet.size
+  def procElems = dse.platform.tiledDigitalHardware.tileSet
 
   def actors: Array[Int] = dse.sdfApplications.actorsSet
 
@@ -119,16 +122,16 @@ final case class ChocoSDFToSChedTileHW(
     })
   })
 
-  val messageTravelTimes = dse.sdfApplications.channels.zipWithIndex.map((c, i) => {
+  val messageTravelTimes = dse.sdfApplications.channelsSet.zipWithIndex.map((c, i) => {
     dse.platform.tiledDigitalHardware.tileSet.map(src => {
       dse.platform.tiledDigitalHardware.tileSet.map(dst => {
         chocoModel.intVar(
-          s"send_${c.getIdentifier()}_${src}_${dst}",
+          s"time_${c}_${src}_${dst}",
           0,
           commElemsPath(src)(dst)
             .map(ce =>
               // println(ce)
-              messageTravelTimePerVirtualChannelById(i)(ce)
+              messageTravelTimePerVirtualChannelById(c)(ce)
             )
             .sum,
           true
@@ -173,7 +176,7 @@ final case class ChocoSDFToSChedTileHW(
     chocoModel.intVar(
       "globalInvThroughput",
       schedulers
-        .map(p => actors.map(a => actorDuration(a)(p) * maxRepetitionsPerActors(a)).max)
+        .map(p => actors.map(a => actorDuration(a)(p)).max)
         .max,
       schedulers
         .map(p => actors.map(a => actorDuration(a)(p) * maxRepetitionsPerActors(a)).sum)
@@ -195,14 +198,18 @@ final case class ChocoSDFToSChedTileHW(
     .map(m => (m, (m.getSpaceInBits() / memoryDivider).toInt))
     .map((m, s) => chocoModel.intVar(s"${m.getIdentifier()}_u", 0, s, true))
 
-  def messageIsCommunicated(messageIdx: Int)(srcIdx: Int)(dstIdx: Int): BoolVar =
-    messageAllocation(messageIdx)(srcIdx)(dstIdx)
+  def messageIsCommunicated(messageId: Int)(srcId: Int)(dstId: Int): BoolVar =
+    messageAllocation(messages.indexOf(messageId))(procElems.indexOf(srcId))(
+      procElems.indexOf(dstId)
+    )
 
-  def messageTravelDuration(messageIdx: Int)(srcIdx: Int)(dstIdx: Int): IntVar =
-    messageTravelTimes(messageIdx)(srcIdx)(dstIdx)
+  def messageTravelDuration(messageId: Int)(srcId: Int)(dstId: Int): IntVar =
+    messageTravelTimes(messages.indexOf(messageId))(procElems.indexOf(srcId))(
+      procElems.indexOf(dstId)
+    )
 
-  def virtualChannelForMessage(messageIdx: Int)(ceIdx: Int): IntVar =
-    messageVirtualChannelAllocation(messageIdx)(ceIdx)
+  def virtualChannelForMessage(messageId: Int)(ceId: Int): IntVar =
+    messageVirtualChannelAllocation(messages.indexOf(messageId))(commElems.indexOf(ceId))
 
   def numActorsScheduledSlotsInStaticCyclic(a: Int)(p: Int)(slot: Int) =
     numActorsScheduledSlotsInStaticCyclicVars(a)(p)(slot)
@@ -311,7 +318,6 @@ final case class ChocoSDFToSChedTileHW(
     //   firingsInSlots.flatten.flatten:_*
     // ),
     // Search.bestBound(
-    // Search.minDomLBSearch(nUsedPEs),
     SimpleMultiCoreSDFListScheduling(
       actors.zipWithIndex.map((a, i) => maxRepetitionsPerActors(i)),
       balanceMatrix,
@@ -322,7 +328,10 @@ final case class ChocoSDFToSChedTileHW(
       nUsedPEs
       // )
     ),
-    Search.bestBound(Search.minDomLBSearch(globalInvThroughput))
+    Search.minDomLBSearch(channelsCommunicate.flatten.flatten: _*),
+    Search.minDomLBSearch(messageVirtualChannelAllocation.flatten: _*),
+    Search.minDomLBSearch(nUsedPEs),
+    Search.minDomLBSearch(globalInvThroughput)
     // Search.intVarSearch()
     // Search.defaultSearch(chocoModel)
   )
@@ -370,7 +379,13 @@ final case class ChocoSDFToSChedTileHW(
             .map(dst => {
               dse.sdfApplications.channels.zipWithIndex
                 .filter((c, ci) => messageAllocation(ci)(src)(dst).getLB() > 0)
-                .map((c, ci) => c.getIdentifier())
+                .map((c, ci) =>
+                  c.getIdentifier() + ": " + commElemsPaths(src)(dst).zipWithIndex
+                    .map((ce, cei) =>
+                      ce + "/" + messageVirtualChannelAllocation(ci)(cei).getValue()
+                    )
+                    .mkString("-")
+                )
                 .mkString("(", ", ", ")")
             })
             .mkString("[", ", ", "]")

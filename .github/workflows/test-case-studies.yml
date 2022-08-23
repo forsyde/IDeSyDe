@@ -26,9 +26,9 @@ jobs:
       if: ${{ matrix.os != 'windows-latest' }}
       run: |
         cd ${{ github.workspace }}
-        millw tests.test
+        ./millw tests.test
     - name: Tests with sbt (All)
       if: ${{ matrix.os == 'windows-latest' }}
       run: |
         cd ${{ github.workspace }}
-        millw.bat tests.test
+        .\millw.bat tests.test

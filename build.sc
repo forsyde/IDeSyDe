@@ -7,6 +7,11 @@ val globalScalaVersion       = "3.1.3"
 val globalScalaNativeVersion = "0.4.5"
 val globalForSyDeIOVersion   = "0.5.12"
 
+val localRepos = Seq(
+    MavenRepository("file:///C:/Users/RodolfoJordao/.m2/repository"),
+    MavenRepository("file:///C:/Users/jorro/.m2/repository")
+  )
+
 object core extends SbtModule {
   def scalaVersion = globalScalaVersion
 }
@@ -49,12 +54,9 @@ object minizinc extends SbtModule {
 object choco extends SbtModule {
   def scalaVersion = globalScalaVersion
   def moduleDeps   = Seq(common, core, forsyde)
-  def repositories = super.repositories ++ Seq(
-    MavenRepository("file:///C:/Users/RodolfoJordao/.m2/repository"),
-    MavenRepository("file:///C:/Users/jorro/.m2/repository")
-  )
+  def repositories = super.repositories ++ localRepos
   def ivyDeps = Agg(
-    ivy"org.choco-solver:choco-solver:4.10.9-SNAPSHOT",
+    ivy"org.choco-solver:choco-solver:4.10.9",
     ivy"org.jgrapht:jgrapht-core:1.5.1",
     ivy"org.jgrapht:jgrapht-opt:1.5.1",
     ivy"com.outr::scribe:3.5.5"
@@ -75,10 +77,7 @@ object cli extends SbtModule {
   def scalaNativeVersion = globalScalaNativeVersion
   def moduleDeps         = Seq(common, core, forsyde, minizinc, choco)
   def repositories =
-    super.repositories ++ Seq(
-      MavenRepository("file:///C:/Users/RodolfoJordao/.m2/repository"),
-      MavenRepository("file:///C:/Users/jorro/.m2/repository")
-    )
+    super.repositories ++ localRepos
   def ivyDeps = Agg(
     ivy"com.github.scopt::scopt:4.0.1",
     ivy"com.outr::scribe:3.10.2"
@@ -94,10 +93,7 @@ object tests extends SbtModule {
   def scalaVersion = globalScalaVersion
   def moduleDeps   = Seq(common, core, forsyde, minizinc, choco)
   def repositories =
-    super.repositories ++ Seq(
-      MavenRepository("file:///C:/Users/RodolfoJordao/.m2/repository"),
-      MavenRepository("file:///C:/Users/jorro/.m2/repository")
-    )
+    super.repositories ++ localRepos
   def ivyDeps = Agg(
     ivy"org.scalatest::scalatest:3.2.12",
     ivy"org.scalatest::scalatest-funsuite:3.2.12",

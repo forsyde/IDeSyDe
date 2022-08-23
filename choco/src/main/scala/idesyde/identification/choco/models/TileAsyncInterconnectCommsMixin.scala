@@ -29,15 +29,15 @@ trait TileAsyncInterconnectCommsMixin extends ChocoModelMixin {
       srci <- procElems;
       srcj <- procElems;
       if srci != srcj;
-      mi <- messages;
-      mj <- messages; // it might seems strange that we consider the same message, but it is required for proper allocation
-      if mi != mj;
+      (mi, mii) <- messages.zipWithIndex.dropRight(1);
+      mj <- messages.drop(mii + 1); // it might seems strange that we consider the same message, but it is required for proper allocation
+      // if mi != mj;
       dsti <- procElems;
       dstj <- procElems;
       ce   <- commElemsPath(srci)(dsti)
       if commElemsPath(srcj)(dstj).contains(ce)
     ) {
-      println(s"$mi and $mj crash in $srci, $dsti ; $srcj, $dstj at $ce")
+      // println(s"$mi and $mj crash in $srci, $dsti ; $srcj, $dstj at $ce")
       chocoModel.ifThen(
         messageIsCommunicated(mi)(srci)(dsti)
           .and(messageIsCommunicated(mj)(srcj)(dstj))

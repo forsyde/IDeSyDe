@@ -18,7 +18,7 @@ trait ExtendedPrecedenceConstraintsMixin extends ChocoModelMixin {
       arr.zipWithIndex
         .filter((possible, _) => possible)
         .foreach((_, dst) =>
-          (0 until taskExecution.head.length).map(processorsIdx =>
+          (0 until taskExecution.head.length).foreach(processorsIdx =>
             chocoModel.ifThen(
               // if the mappings differ in at least one processor
               taskExecution(dst)(processorsIdx)

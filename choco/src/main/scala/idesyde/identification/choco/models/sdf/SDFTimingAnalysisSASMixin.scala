@@ -29,13 +29,17 @@ trait SDFTimingAnalysisSASMixin extends ChocoModelMixin {
   def globalInvThroughput: IntVar
 
   def maxRepetitionsPerActors(actorId: Int): Int
+  def isSelfConcurrent(actorId: Int): Boolean
 
   def actorMapping(actorId: Int)(schedulerId: Int): BoolVar
   def startLatency(schedulerId: Int): IntVar
   def numActorsScheduledSlotsInStaticCyclic(actorId: Int)(tileId: Int)(slotId: Int): IntVar
 
+  private def maxSlots = firingsInSlots.head.head.size
+  private def slotRange = 0 until maxSlots
+
   def allSlotsForActor(a: Int) =
-    (0 until firingsInSlots.head.head.size)
+    (0 until maxSlots)
       .map(slot =>
         (0 until schedulers.size)
           .map(s => numActorsScheduledSlotsInStaticCyclic(a)(s)(slot))
@@ -44,7 +48,7 @@ trait SDFTimingAnalysisSASMixin extends ChocoModelMixin {
       .toArray
 
   def slots(ai: Int)(sj: Int) =
-    (0 until firingsInSlots.head.head.size)
+    (0 until maxSlots)
       .map(numActorsScheduledSlotsInStaticCyclic(ai)(sj)(_))
       .toArray
 
@@ -53,6 +57,12 @@ trait SDFTimingAnalysisSASMixin extends ChocoModelMixin {
 
   def postOnlySAS(): Unit = {
     actors.zipWithIndex.foreach((a, ai) => {
+      // disable self concurreny if necessary
+      if (!isSelfConcurrent(a)) {
+        for (slot <- slotRange) {
+          chocoModel.sum(schedulers.map(p => firingsInSlots(a)(p)(slot)), "<=", 1).post()
+        }
+      }
       // set total number of firings
       chocoModel.sum(allSlotsForActor(ai).flatten, "=", maxRepetitionsPerActors(a)).post()
       schedulers.zipWithIndex

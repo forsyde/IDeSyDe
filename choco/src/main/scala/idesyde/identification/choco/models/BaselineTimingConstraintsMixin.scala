@@ -65,7 +65,7 @@ trait BaselineTimingConstraintsMixin extends ChocoModelMixin {
   }
 
   def postTaskMapToAtLeastOne(): Unit = {
-    taskExecution.zipWithIndex.foreach((ts, i) => chocoModel.or(ts: _*).post)
+    taskExecution.zipWithIndex.foreach((ts, i) => chocoModel.sum(ts, ">", 0).post)
   }
 
 //   class UtilizationPropagator() extends Propagator[IntVar](

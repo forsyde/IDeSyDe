@@ -92,6 +92,8 @@ final case class ChocoSDFToSChedTileHW(
   def maxRepetitionsPerActors(actorId: Int): Int =
     dse.sdfApplications.sdfRepetitionVectors(actors.indexOf(actorId))
 
+  def isSelfConcurrent(actorId: Int) = dse.sdfApplications.isSelfConcurrent(actors.indexOf(actorId))
+
   def schedulers: Array[Int] = dse.platform.schedulerSet
 
   def isStaticCyclic(schedulerId: Int): Boolean =
@@ -152,7 +154,7 @@ final case class ChocoSDFToSChedTileHW(
 
   val numActorsScheduledSlotsInStaticCyclicVars: Array[Array[Array[IntVar]]] =
     dse.sdfApplications.actors.zipWithIndex.map((a, i) => {
-      dse.platform.schedulers.zipWithIndex.map((s, j) => {
+      dse.platform.executionSchedulers.zipWithIndex.map((s, j) => {
         (0 until actors.size)
           .map(aa =>
             chocoModel
@@ -274,13 +276,13 @@ final case class ChocoSDFToSChedTileHW(
   val firingsInSlots: Array[Array[Array[org.chocosolver.solver.variables.IntVar]]] =
     numActorsScheduledSlotsInStaticCyclicVars
   val initialLatencies: Array[org.chocosolver.solver.variables.IntVar] =
-    dse.platform.schedulers.map(_ => chocoModel.intVar("lat", 1))
+    dse.platform.executionSchedulers.map(_ => chocoModel.intVar("lat", 1))
   def slotMaxDuration(schedulerId: Int): org.chocosolver.solver.variables.IntVar =
     chocoModel.intVar("slot_dur", 1)
   val slotMaxDurations: Array[org.chocosolver.solver.variables.IntVar] =
-    dse.platform.schedulers.map(_ => chocoModel.intVar("dur", 1))
+    dse.platform.executionSchedulers.map(_ => chocoModel.intVar("dur", 1))
   val slotPeriods: Array[org.chocosolver.solver.variables.IntVar] =
-    dse.platform.schedulers.map(_ => chocoModel.intVar("per", 1))
+    dse.platform.executionSchedulers.map(_ => chocoModel.intVar("per", 1))
   def startLatency(schedulerId: Int): org.chocosolver.solver.variables.IntVar =
     chocoModel.intVar("lat", 1)
 
@@ -395,7 +397,8 @@ final case class ChocoSDFToSChedTileHW(
     dse.addMappingsAndRebuild(
       mappings,
       schedulings,
-      numActorsScheduledSlotsInStaticCyclicVars.map(_.map(_.map(_.getValue())))
+      numActorsScheduledSlotsInStaticCyclicVars.map(_.map(_.map(_.getValue()))),
+      messageVirtualChannelAllocation.map(_.map(_.getValue()))
     )
   }
 

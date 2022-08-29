@@ -14,34 +14,37 @@ import forsyde.io.java.typed.viewers.decision.Allocated
 import forsyde.io.java.typed.viewers.platform.GenericProcessingModule
 import idesyde.identification.DecisionModel
 import idesyde.identification.IdentificationResult
+import forsyde.io.java.typed.viewers.platform.GenericCommunicationModule
 
 final case class SchedulableTiledDigitalHardware(
     val tiledDigitalHardware: TiledDigitalHardware,
-    val schedulers: Array[AbstractScheduler]
+    val executionSchedulers: Array[AbstractScheduler],
+    val communicationSchedulers: Array[AbstractScheduler]
 ) extends ForSyDeDecisionModel {
 
-  val coveredVertexes: Iterable[Vertex] = schedulers.map(_.getViewedVertex())
-    ++ tiledDigitalHardware.coveredVertexes
+  val coveredVertexes: Iterable[Vertex] =
+    executionSchedulers.map(_.getViewedVertex()) ++ communicationSchedulers.map(_.getViewedVertex())
+      ++ tiledDigitalHardware.coveredVertexes
 
-  val isFixedPriority = schedulers.map(FixedPriorityScheduler.conforms(_).booleanValue())
-  val isTimeTriggered = schedulers.map(TimeTriggeredScheduler.conforms(_).booleanValue())
-  val isRoundRobin    = schedulers.map(RoundRobinScheduler.conforms(_).booleanValue())
-  val isStaticCycle   = schedulers.map(StaticCyclicScheduler.conforms(_).booleanValue())
+  val isFixedPriority = executionSchedulers.map(FixedPriorityScheduler.conforms(_).booleanValue())
+  val isTimeTriggered = executionSchedulers.map(TimeTriggeredScheduler.conforms(_).booleanValue())
+  val isRoundRobin    = executionSchedulers.map(RoundRobinScheduler.conforms(_).booleanValue())
+  val isStaticCycle   = executionSchedulers.map(StaticCyclicScheduler.conforms(_).booleanValue())
 
   val fixedPrioritySchedulers =
-    schedulers.zipWithIndex
+    executionSchedulers.zipWithIndex
       .filter((s, i) => isFixedPriority(i))
       .map((s, i) => FixedPriorityScheduler.enforce(s))
   val timeTriggeredSchedulers =
-    schedulers.zipWithIndex
+    executionSchedulers.zipWithIndex
       .filter((s, i) => isTimeTriggered(i))
       .map((s, i) => TimeTriggeredScheduler.enforce(s))
   val roundRobinSchedulers =
-    schedulers.zipWithIndex
+    executionSchedulers.zipWithIndex
       .filter((s, i) => isRoundRobin(i))
       .map((s, i) => RoundRobinScheduler.enforce(s))
   val staticCycleSchedulers =
-    schedulers.zipWithIndex
+    executionSchedulers.zipWithIndex
       .filter((s, i) => isStaticCycle(i))
       .map((s, i) => StaticCyclicScheduler.enforce(s))
 
@@ -54,7 +57,7 @@ final case class SchedulableTiledDigitalHardware(
   val staticCyclicTiles: Array[Int] = tiledDigitalHardware.tileSet
     .filter(i => isStaticCycle(i))
 
-  val schedulerSet = (0 until schedulers.size).toArray
+  val schedulerSet = (0 until executionSchedulers.size).toArray
 
   val uniqueIdentifier: String = "SchedulableTiledDigitalHardware"
 }
@@ -62,19 +65,23 @@ final case class SchedulableTiledDigitalHardware(
 object SchedulableTiledDigitalHardware {
 
   def identFromAny(
-    model: Any,
-    identified: Set[DecisionModel]
-  ): IdentificationResult[SchedulableTiledDigitalHardware] = 
+      model: Any,
+      identified: Set[DecisionModel]
+  ): IdentificationResult[SchedulableTiledDigitalHardware] =
     model match {
       case m: ForSyDeSystemGraph =>
-        val tiledDigitalHardware = identified.find(_.isInstanceOf[TiledDigitalHardware]).map(_.asInstanceOf[TiledDigitalHardware])
-        tiledDigitalHardware.map(t => indetFromForSyDeSystemGraphWithDeps(m, t)).getOrElse(IdentificationResult.unfixedEmpty())
+        val tiledDigitalHardware = identified
+          .find(_.isInstanceOf[TiledDigitalHardware])
+          .map(_.asInstanceOf[TiledDigitalHardware])
+        tiledDigitalHardware
+          .map(t => indetFromForSyDeSystemGraphWithDeps(m, t))
+          .getOrElse(IdentificationResult.unfixedEmpty())
       case _ => IdentificationResult.fixedEmpty()
     }
 
   def indetFromForSyDeSystemGraphWithDeps(
-    model: ForSyDeSystemGraph,
-    tiledDigitalHardware: TiledDigitalHardware
+      model: ForSyDeSystemGraph,
+      tiledDigitalHardware: TiledDigitalHardware
   ): IdentificationResult[SchedulableTiledDigitalHardware] = {
     val schedulers = model.vertexSet.stream
       .filter(AbstractScheduler.conforms(_))
@@ -82,8 +89,28 @@ object SchedulableTiledDigitalHardware {
       .collect(Collectors.toList())
       .asScala
       .toArray
+    val peSchedulers = schedulers.filter(s =>
+      Allocated
+        .safeCast(s)
+        .map(sa =>
+          sa.getAllocationHostsPort(model)
+            .stream()
+            .allMatch(host => GenericProcessingModule.conforms(host))
+        )
+        .orElse(false)
+    )
+    val ceSchedulers = schedulers.filter(s =>
+      Allocated
+        .safeCast(s)
+        .map(sa =>
+          sa.getAllocationHostsPort(model)
+            .stream()
+            .allMatch(host => GenericCommunicationModule.conforms(host))
+        )
+        .orElse(false)
+    )
     // check if all schedulers are allocated to each tile
-    val schedulerAllocations: Array[Int] = schedulers.map(scheduler => {
+    val schedulerAllocations: Array[Int] = peSchedulers.map(scheduler => {
       Allocated
         .safeCast(scheduler)
         .flatMap(allocated => {
@@ -103,21 +130,42 @@ object SchedulableTiledDigitalHardware {
         })
         .orElse(-1)
     })
-    if (!tiledDigitalHardware.tileSet.forall(i => schedulerAllocations.contains(i)))
+    // do the same for communication
+    val schedulerCeAllocations: Array[Int] = ceSchedulers.map(scheduler => {
+      Allocated
+        .safeCast(scheduler)
+        .flatMap(allocated => {
+          allocated
+            .getAllocationHostsPort(model)
+            .stream
+            .flatMap(host => {
+              GenericCommunicationModule
+                .safeCast(host)
+                .stream
+                .mapToInt(ceHost => {
+                  tiledDigitalHardware.allCommElems.indexOf(ceHost)
+                })
+                .boxed
+            })
+            .findAny
+        })
+        .orElse(-1)
+    })
+    if (!tiledDigitalHardware.tileSet.forall(i => schedulerAllocations.contains(i)) && !tiledDigitalHardware.routerSet.forall(i => schedulerCeAllocations.contains(i)))
       scribe.debug("Some processing elements are not allocated. Skipping.")
       IdentificationResult.fixedEmpty()
     else
       scribe.debug(
         "found a conforming Schedulable Networked HW Model with: " +
-          s"${schedulers.size} schedulers"
+          s"${peSchedulers.size} PE schedulers and ${ceSchedulers.size} CE schedulers"
       )
       IdentificationResult.fixed(
         SchedulableTiledDigitalHardware(
           tiledDigitalHardware = tiledDigitalHardware,
-          schedulers = schedulers
+          executionSchedulers = peSchedulers,
+          communicationSchedulers = ceSchedulers
         )
       )
   }
 
 }
-

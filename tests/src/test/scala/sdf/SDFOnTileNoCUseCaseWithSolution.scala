@@ -90,6 +90,8 @@ class SDFOnTileNoCUseCaseWithSolution extends AnyFunSuite with LoggingMixin {
         Visualizable.enforce(m.newVertex("router" + i))
       )
       val scheduler = StaticCyclicScheduler.enforce(m.newVertex("micro_blaze_os" + i))
+      val niSchedule = StaticCyclicScheduler.enforce(m.newVertex("micro_blaze_ni_slots" + i))
+      val routerSchedule = StaticCyclicScheduler.enforce(m.newVertex("micro_blaze_router_slots" + i))
       proc.setOperatingFrequencyInHertz(50000000L)
       mem.setOperatingFrequencyInHertz(50000000L)
       mem.setSpaceInBits(1048576L * 8L)
@@ -191,6 +193,8 @@ class SDFOnTileNoCUseCaseWithSolution extends AnyFunSuite with LoggingMixin {
       )
       GreyBox.enforce(proc).insertContainedPort(m, Visualizable.enforce(scheduler))
       Allocated.enforce(scheduler).insertAllocationHostsPort(m, proc)
+      Allocated.enforce(niSchedule).insertAllocationHostsPort(m, ni)
+      Allocated.enforce(routerSchedule).insertAllocationHostsPort(m, router)
     }
     // and now the Arm tile
     val armTile = AbstractStructure.enforce(m.newVertex("arm_tile"))
@@ -200,6 +204,8 @@ class SDFOnTileNoCUseCaseWithSolution extends AnyFunSuite with LoggingMixin {
     val armScheduler = StaticCyclicScheduler.enforce(m.newVertex("arm_os"))
     val armRouter =
       InstrumentedCommunicationModule.enforce(Visualizable.enforce(m.newVertex("arm_router")))
+    val armNiScheduler = StaticCyclicScheduler.enforce(m.newVertex("arm_ni_slots"))
+    val armRouterScheduler = StaticCyclicScheduler.enforce(m.newVertex("arm_router_slots"))
     armProc.setOperatingFrequencyInHertz(666667000L)
     armMem.setOperatingFrequencyInHertz(666667000L)
     armMem.setSpaceInBits(4294967296L * 8L)
@@ -302,6 +308,8 @@ class SDFOnTileNoCUseCaseWithSolution extends AnyFunSuite with LoggingMixin {
     )
     GreyBox.enforce(armProc).insertContainedPort(m, Visualizable.enforce(armScheduler))
     Allocated.enforce(armScheduler).insertAllocationHostsPort(m, armProc)
+    Allocated.enforce(armNiScheduler).insertAllocationHostsPort(m, armNi)
+    Allocated.enforce(armRouterScheduler).insertAllocationHostsPort(m, armRouter)
     // and now we connect the NIs in the mesh
     for (i <- 0 until 4; row = i % 2; col = (i - row) / 2) {
       if (row > 0) {
@@ -406,7 +414,11 @@ class SDFOnTileNoCUseCaseWithSolution extends AnyFunSuite with LoggingMixin {
       val mem = GenericMemoryModule.enforce(Visualizable.enforce(m.newVertex("tile_mem" + i)))
       val ni =
         InstrumentedCommunicationModule.enforce(Visualizable.enforce(m.newVertex("tile_ni" + i)))
+      val router = 
+        InstrumentedCommunicationModule.enforce(Visualizable.enforce(m.newVertex("tile_router" + i)))
       val scheduler = StaticCyclicScheduler.enforce(m.newVertex("tile_os" + i))
+      val niScheduler = StaticCyclicScheduler.enforce(m.newVertex("tile_ni_slots" + i))
+      val routerScheduler = StaticCyclicScheduler.enforce(m.newVertex("tile_router_slots" + i))
       proc.setOperatingFrequencyInHertz(50000000L)
       mem.setOperatingFrequencyInHertz(50000000L)
       mem.setSpaceInBits(16000 * 8L)
@@ -415,6 +427,11 @@ class SDFOnTileNoCUseCaseWithSolution extends AnyFunSuite with LoggingMixin {
       ni.setMaxConcurrentFlits(4)
       ni.setMaxCyclesPerFlit(6)
       ni.setInitialLatency(0L)
+      router.setOperatingFrequencyInHertz(50000000L)
+      router.setFlitSizeInBits(128L)
+      router.setMaxConcurrentFlits(4)
+      router.setMaxCyclesPerFlit(6)
+      router.setInitialLatency(0L)
       proc.setModalInstructionsPerCycle(
         Map(
           "eco" -> Map(
@@ -427,7 +444,8 @@ class SDFOnTileNoCUseCaseWithSolution extends AnyFunSuite with LoggingMixin {
       )
       proc.getViewedVertex().addPorts("networkInterface", "defaultMemory")
       mem.getViewedVertex().addPorts("networkInterface", "instructionsAndData")
-      ni.getViewedVertex().addPorts("tileMemory", "tileProcessor")
+      ni.getViewedVertex().addPorts("tileMemory", "tileProcessor", "router")
+      router.getViewedVertex().addPorts("ni")
       tile.insertSubmodulesPort(m, proc)
       tileVisu.insertContainedPort(m, Visualizable.enforce(proc))
       tile.insertSubmodulesPort(m, mem)
@@ -436,8 +454,10 @@ class SDFOnTileNoCUseCaseWithSolution extends AnyFunSuite with LoggingMixin {
       tileVisu.insertContainedPort(m, Visualizable.enforce(ni))
       GreyBox.enforce(proc).insertContainedPort(m, Visualizable.enforce(scheduler))
       Allocated.enforce(scheduler).insertAllocationHostsPort(m, proc)
+      Allocated.enforce(niScheduler).insertAllocationHostsPort(m, ni)
+      Allocated.enforce(routerScheduler).insertAllocationHostsPort(m, router)
       // connect them
-      niMesh(row)(col) = ni
+      niMesh(row)(col) = router
       m.connect(
         proc,
         ni,
@@ -483,6 +503,22 @@ class SDFOnTileNoCUseCaseWithSolution extends AnyFunSuite with LoggingMixin {
         mem,
         "tileMemory",
         "networkInterface",
+        EdgeTrait.PLATFORM_PHYSICALCONNECTION,
+        EdgeTrait.VISUALIZATION_VISUALCONNECTION
+      )
+      m.connect(
+        router,
+        ni,
+        "ni",
+        "router",
+        EdgeTrait.PLATFORM_PHYSICALCONNECTION,
+        EdgeTrait.VISUALIZATION_VISUALCONNECTION
+      )
+      m.connect(
+        ni,
+        router,
+        "router",
+        "ni",
         EdgeTrait.PLATFORM_PHYSICALCONNECTION,
         EdgeTrait.VISUALIZATION_VISUALCONNECTION
       )

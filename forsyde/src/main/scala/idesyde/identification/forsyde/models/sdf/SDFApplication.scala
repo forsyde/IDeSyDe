@@ -54,9 +54,9 @@ final case class SDFApplication(
   /** this is a simple shortcut for the max parallel clusters as SDFs have only one configuration */
   def sdfMaxParallelClusters: Array[Array[Int]] = maximalParallelClustering(0)
 
-  def isSelfConcurrent(actor: Int): Boolean = {
-    def a = actors(actor)
-    channels.exists(c => topology.containsEdge(a, c) && topology.containsEdge(c, a))
+  def isSelfConcurrent(actorIdx: Int): Boolean = {
+    val a = actors(actorIdx)
+    !channels.exists(c => topology.containsEdge(a, c) && topology.containsEdge(c, a))
   }
 
   lazy val dataflowGraphs = {

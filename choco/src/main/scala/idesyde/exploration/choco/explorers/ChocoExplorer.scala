@@ -15,6 +15,8 @@ import org.chocosolver.solver.search.limits.SolutionCounter
 import org.chocosolver.solver.Solution
 import idesyde.identification.DecisionModel
 import idesyde.exploration.forsyde.interfaces.ForSyDeIOExplorer
+import scala.collection.mutable.Buffer
+import org.chocosolver.solver.constraints.Constraint
 
 class ChocoExplorer() extends ForSyDeIOExplorer:
 
@@ -57,9 +59,12 @@ class ChocoExplorer() extends ForSyDeIOExplorer:
       val solver               = model.getSolver
       val isOptimization       = chocoCpModel.modelObjectives.size > 0
       lazy val paretoMaximizer = ParetoMaximizer(chocoCpModel.modelObjectives)
-      var lastParetoFrontSize = 0
+      var lastParetoFront = Buffer[Solution]()
       var paretoRuns = 0
-      if (isOptimization) solver.plugMonitor(paretoMaximizer)
+      if (isOptimization) {
+        solver.plugMonitor(paretoMaximizer)
+        // model.post(new Constraint("paretoOptConstraint", paretoMaximizer))
+      }
       solver.setLearningSignedClauses
       solver.setNoGoodRecordingFromRestarts
       solver.setRestartOnSolutions
@@ -69,20 +74,24 @@ class ChocoExplorer() extends ForSyDeIOExplorer:
         .continually(solver.solve)
         .takeWhile(feasible =>
           // scribe.debug(s"a solution has been found with feasibility: ${feasible}")
-          feasible
+          if (isOptimization) 
+            feasible &&  paretoRuns < 3 
+          else 
+            feasible
         )
-        .takeWhile(feasible => if (isOptimization) paretoRuns < 3 else true)
+        // .takeWhile(feasible => )
         .filter(feasible => feasible)
         .flatMap(feasible => {
           // scribe.debug(s"pareto size: ${paretoMaximizer.getParetoFront.size}")
           if (isOptimization) {
-            if (lastParetoFrontSize != paretoMaximizer.getParetoFront().size()) {
-              lastParetoFrontSize = paretoMaximizer.getParetoFront().size()
+            val curFront = paretoMaximizer.getParetoFront().asScala
+            if (lastParetoFront != curFront) {
+              lastParetoFront = curFront
               paretoRuns = 0
             } else {
               paretoRuns += 1
             }
-            paretoMaximizer.getParetoFront.asScala.map(_.record())
+            curFront.map(_.record())
           }
           else Seq(solver.defaultSolution().record())
         })

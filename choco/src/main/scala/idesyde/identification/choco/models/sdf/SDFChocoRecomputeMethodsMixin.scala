@@ -55,14 +55,34 @@ trait SDFChocoRecomputeMethodsMixin {
     v
   }
 
-  def slotAtSchedulerIsTaken(p: Int)(slot: Int): Boolean =
-    actors.exists(a => firingsInSlots(a)(p)(slot).getLB() > 0)
+  def slotAtSchedulerIsTaken(p: Int)(slot: Int): Boolean = {
+    for (a <- actors) {
+      if (firingsInSlots(a)(p)(slot).getLB() > 0)
+         return true
+    }
+    return false
+  }
+    // actors.exists(a => )
 
-  def slotIsClosed(slot: Int): Boolean =
-    schedulers.forall(p => actors.forall(a => firingsInSlots(a)(p)(slot).isInstantiated()))
+  def slotIsClosed(slot: Int): Boolean = {
+    for (p <- schedulers; a <- actors) {
+      if (!firingsInSlots(a)(p)(slot).isInstantiated()) {
+        return false
+      }
+    }
+    return true
+  }
+    // schedulers.forall(p => actors.forall(a => ))
 
-  def slotHasFiring(slot: Int): Boolean =
-    actors.exists(a => schedulers.exists(p => firingsInSlots(a)(p)(slot).getLB() > 0))
+  def slotHasFiring(slot: Int): Boolean = {
+    for (p <- schedulers; a <- actors) {
+      if (firingsInSlots(a)(p)(slot).getLB() > 0) {
+        return true
+      }
+    }
+    return false
+  }
+    // actors.exists(a => schedulers.exists(p => firingsInSlots(a)(p)(slot).getLB() > 0))
 
   protected lazy val firingVector: Array[SparseVector[Int]] =
     slots.map(slot => SparseVector.zeros[Int](actors.size)).toArray

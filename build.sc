@@ -5,7 +5,7 @@ import coursier.maven.MavenRepository
 
 val globalScalaVersion       = "3.1.3"
 val globalScalaNativeVersion = "0.4.5"
-val globalForSyDeIOVersion   = "0.5.12"
+val globalForSyDeIOVersion   = "0.5.13"
 
 val localRepos = Seq(
     MavenRepository("file:///C:/Users/RodolfoJordao/.m2/repository"),
@@ -30,6 +30,7 @@ object common extends SbtModule {
 object forsyde extends SbtModule {
   def scalaVersion = globalScalaVersion
   def moduleDeps   = Seq(common, core)
+  def repositories = super.repositories ++ localRepos
   def ivyDeps = Agg(
     ivy"io.github.forsyde:forsyde-io-java-core:${globalForSyDeIOVersion}",
     ivy"org.jgrapht:jgrapht-core:1.5.1",
@@ -41,6 +42,7 @@ object forsyde extends SbtModule {
 object minizinc extends SbtModule {
   def scalaVersion = globalScalaVersion
   def moduleDeps   = Seq(common, core, forsyde)
+  def repositories = super.repositories ++ localRepos
   def ivyDeps = Agg(
     ivy"org.apache.commons:commons-math3:3.6.1",
     ivy"com.outr::scribe:3.5.5",

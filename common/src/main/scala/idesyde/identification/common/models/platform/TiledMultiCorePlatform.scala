@@ -181,7 +181,7 @@ trait TiledMultiCorePlatformMixin[MemT, TimeT](using fTimeT: Fractional[TimeT])(
         if (src != dst && paths.getPath(src, dst) != null) {
           val path = paths.getPath(src, dst).getVertexList()
           wfor(1, _ < path.size() - 1, _ + 1) { vIdx =>
-            results(src)(dst) += platformSet(vIdx)
+            results(src)(dst) += platformSet(path.get(vIdx))
           }
         }
       }

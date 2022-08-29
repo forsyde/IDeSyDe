@@ -204,7 +204,7 @@ trait TileAsyncInterconnectCommsMixin extends ChocoModelMixin {
                   // val mid = (messageVirtualChannels(miIdx)(ce).getUB() + messageVirtualChannels(mjIdx)(ce).getLB()) / 2
                   // model.allDifferent(messageVirtualChannels(miIdx)(ce), messageVirtualChannels(mjIdx)(ce)).post()
                   // println(s"${mi} and $mj are [${messageVirtualChannels(miIdx)(ce).getLB()},${messageVirtualChannels(miIdx)(ce).getUB()}] [${messageVirtualChannels(mjIdx)(ce).getLB()}, ${messageVirtualChannels(mjIdx)(ce).getUB()}]")
-                  messageVirtualChannels(miIdx)(ce).updateUpperBound(messageVirtualChannels(miIdx)(ce).getLB(), this)
+                  messageVirtualChannels(miIdx)(ce).instantiateTo(messageVirtualChannels(miIdx)(ce).getLB(), this)
                   messageVirtualChannels(mjIdx)(ce).updateLowerBound(messageVirtualChannels(miIdx)(ce).getLB() + 1, this)
                 }
               }

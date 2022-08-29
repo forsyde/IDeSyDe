@@ -15,7 +15,7 @@ import org.jgrapht.graph.SimpleDirectedGraph
 import org.jgrapht.graph.DefaultEdge
 import org.jgrapht.alg.color.LargestDegreeFirstColoring
 import org.chocosolver.solver.constraints.Constraint
-import idesyde.utils.choco.wfor
+import idesyde.utils.CoreUtils.wfor
 import org.jgrapht.graph.SimpleGraph
 
 trait TileAsyncInterconnectCommsMixin extends ChocoModelMixin {
@@ -212,43 +212,6 @@ trait TileAsyncInterconnectCommsMixin extends ChocoModelMixin {
           }
         }
       }
-      // coloredVertices.forEach((m, color) => {
-      //   val mIdx = messages.indexOf(m)
-      //   coloredVertices.
-      // })
-      // wfor(0, _ < coloredVertices.size(), _ + 1) { colorClassIdx =>
-      //   val iterator = coloredVertices.get(colorClassIdx)
-      //   while(iterator.hasNext()) {
-      //     val ki = messages.indexOf(iterator.next())
-      //     println(s"doing something for ${ki} at ${colorClassIdx}")
-      //     wfor(0, _ < commElems.size, _ + 1) { ce =>
-      //       // last colorClass - should be open
-      //       if (colorClassIdx == coloredVertices.size() -1) {
-      //         println(s"LB ${ki} in ${ce} to ${coloredVertices.size() - 1}")
-      //         messageVirtualChannels(ki)(ce).updateLowerBound(coloredVertices.size() - 1, this)
-      //       } else {
-      //         println(s"ASS ${ki} in ${ce} to ${colorClassIdx}")
-      //         println(messageVirtualChannels(ki)(ce).instantiateTo(colorClassIdx + 1, this))
-      //       }
-      //       // if (messageVirtualChannels(ki)(ce).getLB() <= v) {
-      //       //   messageVirtualChannels(ki)(ce).updateLowerBound(v + 1, this)
-      //       // }
-      //     }
-      //   }
-      // }
-      // coloring
-      //   .getColorClasses()
-      //   .forEach(colorSet => colorSet.forEach(k => {
-      //     val ki = messages.indexOf(k)
-      //     wfor(0, _ < commElems.size, _ + 1) { ce =>
-      //       if (messageVirtualChannels(ki)(ce).getLB() <= v) {
-      //         messageVirtualChannels(ki)(ce).updateLowerBound(v + 1, this)
-      //       }
-      //     }
-      //   }))
-          // println(k + " -> " + v)
-          
-        // })
     }
 
     def isEntailed(): ESat = {

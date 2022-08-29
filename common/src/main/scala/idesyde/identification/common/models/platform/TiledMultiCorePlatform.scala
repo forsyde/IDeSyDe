@@ -18,6 +18,7 @@ import scala.collection.mutable.Buffer
 import java.util.concurrent.Executors
 import org.jgrapht.alg.shortestpath.CHManyToManyShortestPaths
 import java.util.concurrent.ThreadPoolExecutor
+import idesyde.utils.CoreUtils.wfor
 
 /** This mixin contains methods and logic that can aid platform models that are behave like tiled
   * multi core platforms. This can include for example NoC multicore architectures commonly used for
@@ -173,21 +174,33 @@ trait TiledMultiCorePlatformMixin[MemT, TimeT](using fTimeT: Fractional[TimeT])(
     val tileSetIdxs = tileSet.map(tile => platformSet.indexOf(tile).asInstanceOf[Integer]).toSet
     val paths       = FloydWarshallShortestPaths(sparseGraph)
     // val paths = pathAlg.getManyToManyPaths(tileSetIdxs.asJava, tileSetIdxs.asJava)
-    tileSetIdxs.foreach(src =>
-      tileSetIdxs.foreach(dst => {
+    wfor(0, _ < tileSet.size, _ + 1) { srcIdx =>
+      val src = platformSet.indexOf(srcIdx)
+      wfor(0, _ < tileSet.size, _ + 1) { dstIdx =>
+        val dst = platformSet.indexOf(dstIdx)
         if (src != dst && paths.getPath(src, dst) != null) {
-          val p = paths.getPath(src, dst)
-          p.getVertexList()
-            .subList(1, p.getLength())
-            .forEach(vIdx => {
-              results(src)(dst) += platformSet(vIdx)
-            })
-          // Option(paths.getPath(src, dst)).map(p =>
-          //   // println(src +" -> " + dst + ": " + p.getVertexList().asScala.tail.drop(1).toArray.mkString(", "))
-          //   p.getVertexList().asScala.map(vIdx => platformSet(vIdx)).drop(1).dropRight(1).toArray).getOrElse(Array.emptyIntArray)
-        } // else  Array.emptyIntArray
-      })
-    )
+          val path = paths.getPath(src, dst).getVertexList()
+          wfor(1, _ < path.size() - 1, _ + 1) { vIdx =>
+            results(src)(dst) += platformSet(vIdx)
+          }
+        }
+      }
+    }
+    // tileSetIdxs.foreach(src =>
+    //   tileSetIdxs.foreach(dst => {
+    //     if (src != dst && paths.getPath(src, dst) != null) {
+    //       val p = paths.getPath(src, dst)
+    //       p.getVertexList()
+    //         .subList(1, p.getLength())
+    //         .forEach(vIdx => {
+    //           results(src)(dst) += platformSet(vIdx)
+    //         })
+    //       // Option(paths.getPath(src, dst)).map(p =>
+    //       //   // println(src +" -> " + dst + ": " + p.getVertexList().asScala.tail.drop(1).toArray.mkString(", "))
+    //       //   p.getVertexList().asScala.map(vIdx => platformSet(vIdx)).drop(1).dropRight(1).toArray).getOrElse(Array.emptyIntArray)
+    //     } // else  Array.emptyIntArray
+    //   })
+    // )
     results.map(_.map(_.toArray))
   }
 

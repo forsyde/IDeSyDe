@@ -58,5 +58,29 @@ object CoreUtils {
         }
         components.zipWithIndex.filter((c, i) => dominance(i)).flatMap((c, i) => c).toSet
     }
+
+    /**
+      * This is a 'for'-like lace which uses inlined while-laces
+      * in order to have the utmost performance. This is to be used
+      * in places where performance is far mor important than readability,
+      * and not as a simple exchange for scala's native iteration methods
+      * on collections, etc.
+      * 
+      * credits to https://august.nagro.us/scala-for-loop.html
+      *
+      * @param start the starting value
+      * @param condition the condition for continued iteration
+      * @param advance the code that gives a new iterated value
+      * @param loopBody the body that is executed every iteration
+      */
+    inline def wfor[A](
+        inline start: A,
+        inline condition: A => Boolean,
+        inline advance: A => A
+    )(inline loopBody: A => Any): Unit =
+      var a = start
+      while condition(a) do
+        loopBody(a)
+        a = advance(a)
   
 }

@@ -80,7 +80,7 @@ final case class SDFToSchedTiledHW(
           val sdfChannel = sdfApplications.channels(i)
           // allocated.insertAllocationHostsPort(rebuilt, allCE(j))
           if (j < platform.tiledDigitalHardware.tileSet.size) {
-            val allocated  = Allocated.enforce(sdfChannel)
+            val allocated = Allocated.enforce(sdfChannel)
             allocated.insertAllocationHostsPort(rebuilt, allME(j))
             val mapped = MemoryMapped.enforce(sdfChannel)
             mapped.insertMappingHostsPort(rebuilt, allME(j))
@@ -116,7 +116,7 @@ final case class SDFToSchedTiledHW(
             //   .ifPresent(s => {
             //     for (k <- 0 until q) {
             //       // passedList += l
-                  
+
             //     }
             //   })
             entries(j) :+= actor.getIdentifier()
@@ -134,27 +134,23 @@ final case class SDFToSchedTiledHW(
     channelVirtualChannels.zipWithIndex.foreach((channels, c) => {
       channels.zipWithIndex.foreach((vc, ceIdx) => {
         val ceScheduler = platform.communicationSchedulers(ceIdx)
-        val ce = allCE(ceIdx)
-        val channel = sdfApplications.channels(c)
+        val ce          = allCE(ceIdx)
+        val channel     = sdfApplications.channels(c)
         if (vc > 0) {
           Scheduled.enforce(channel).insertSchedulersPort(rebuilt, ceScheduler)
           // AllocatedSharedSlotSCS
           //     .enforce(ceScheduler)
           //     .ifPresent(s => {
-                
+
           //     })
           vcEntries(ceIdx)(vc - 1) :+= channel.getIdentifier()
         }
       })
     })
-    for (
-      (s, i) <- platform.executionSchedulers.zipWithIndex
-    ) {
+    for ((s, i) <- platform.executionSchedulers.zipWithIndex) {
       AllocatedSingleSlotSCS.enforce(s).setEntries(entries(i).asJava)
     }
-    for (
-      (s, i) <- platform.communicationSchedulers.zipWithIndex
-    ) {
+    for ((s, i) <- platform.communicationSchedulers.zipWithIndex) {
       AllocatedSharedSlotSCS.enforce(s).setEntries(vcEntries(i).map(_.asJava).asJava)
     }
     rebuilt

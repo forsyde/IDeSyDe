@@ -15,17 +15,18 @@ trait SingleProcessSingleMessageMemoryConstraintsMixin extends ChocoModelMixin {
   def memories = 0 until memoryUsage.size
 
   def postManyProcessManyMessageMemoryConstraints(): Unit = {
-    memories.foreach(mem => {
-      // val pMaps = processesMemoryMapping.map(p => p(mem).asIntVar())
-      // val cMaps = messagesMemoryMapping.map(c => c(mem).asIntVar())
-      chocoModel
-        .scalar(
-          processesMemoryMapping ++ messagesMemoryMapping,
-          processSize ++ dataSize,
-          "<=",
-          memoryUsage(mem)
-        )
-        .post()
-    })
+    chocoModel
+      .binPacking(
+        processesMemoryMapping ++ messagesMemoryMapping,
+        processSize ++ dataSize,
+        memoryUsage,
+        0
+      )
+      .post()
+    // memories.foreach(mem => {
+    //   // val pMaps = processesMemoryMapping.map(p => p(mem).asIntVar())
+    //   // val cMaps = messagesMemoryMapping.map(c => c(mem).asIntVar())
+
+    // })
   }
 }

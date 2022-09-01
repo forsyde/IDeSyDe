@@ -5,12 +5,12 @@ import coursier.maven.MavenRepository
 
 val globalScalaVersion       = "3.1.3"
 val globalScalaNativeVersion = "0.4.5"
-val globalForSyDeIOVersion   = "0.5.14"
+val globalForSyDeIOVersion   = "0.5.15"
 
-val localRepos = Seq(
-  MavenRepository("file:///C:/Users/RodolfoJordao/.m2/repository"),
-  MavenRepository("file:///C:/Users/jorro/.m2/repository")
-)
+val localRepos = Seq() // ++ Seq(
+//   MavenRepository("file:///C:/Users/RodolfoJordao/.m2/repository"),
+//   MavenRepository("file:///C:/Users/jorro/.m2/repository")
+// )
 
 object core extends SbtModule {
   def scalaVersion = globalScalaVersion

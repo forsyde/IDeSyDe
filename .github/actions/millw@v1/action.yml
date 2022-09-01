@@ -13,11 +13,13 @@ runs:
   steps:
     - name: Run millw command ${{ inputs.command }}
       if: ${{ runner.os != 'Windows' }}
+      shell: bash
       run: |
         cd ${{ github.workspace }}
         sh millw tests.test
     - name: Run millw command ${{ inputs.command }}
       if: ${{ runner.os == 'Windows' }}
+      shell: pwsh
       run: |
         cd ${{ github.workspace }}
         .\millw.bat tests.test

@@ -63,7 +63,8 @@ case class ForSyDePeriodicWorkload(
     val executables: Array[Array[Executable]],
     val stimulusGraph: Graph[Task | PeriodicStimulus | Upsample | Downsample, DefaultEdge],
     val taskCommunicationGraph: Graph[CommunicatingTask | DataBlock, Long]
-)(using Ordering[Rational]) extends ForSyDeDecisionModel
+)(using Ordering[Rational])
+    extends ForSyDeDecisionModel
     with PeriodicWorkloadMixin[Rational]:
 
   // given Conversion[java.lang.Long, Rational] = (l: java.lang.Long) => Rational(l.longValue())
@@ -83,9 +84,7 @@ case class ForSyDePeriodicWorkload(
     executables.map(execs =>
       execs
         .flatMap(e => InstrumentedExecutable.safeCast(e).toScala)
-        .map(ie => 
-          ie.getOperationRequirements
-        )
+        .map(ie => ie.getOperationRequirements)
         .foldLeft(ju.HashMap[String, ju.Map[String, java.lang.Long]]())((m1, m2) =>
           m2.forEach((group, groupMap) =>
             m1.merge(
@@ -194,12 +193,12 @@ case class ForSyDePeriodicWorkload(
       SimpleDirectedGraph.createBuilder[Int, (Int, Int, Int, Int)](() => (1, 0, 1, 0))
     // first consider task-to-task connections
     stimulusGraph.vertexSet.stream
-      .flatMap(v => Task.safeCast(v).stream)
+      .flatMap(v => Task.safeCast(v).stream())
       .forEach(dstTask => {
         stimulusGraph
           .incomingEdgesOf(dstTask)
           .stream
-          .flatMap(e => Task.safeCast(stimulusGraph.getEdgeSource(e)).stream)
+          .flatMap(e => Task.safeCast(stimulusGraph.getEdgeSource(e)).stream())
           .forEach(srcTask => {
             if (dstTask.getHasORSemantics)
               for (
@@ -217,17 +216,17 @@ case class ForSyDePeriodicWorkload(
       })
     // now consider upsampling connections
     stimulusGraph.vertexSet.stream
-      .flatMap(v => Upsample.safeCast(v).stream)
+      .flatMap(v => Upsample.safeCast(v).stream())
       .forEach(upsample => {
         stimulusGraph
           .incomingEdgesOf(upsample)
           .stream
-          .flatMap(e => Task.safeCast(stimulusGraph.getEdgeSource(e)).stream)
+          .flatMap(e => Task.safeCast(stimulusGraph.getEdgeSource(e)).stream())
           .forEach(srcTask => {
             stimulusGraph
               .outgoingEdgesOf(upsample)
               .stream
-              .flatMap(e => Task.safeCast(stimulusGraph.getEdgeTarget(e)).stream)
+              .flatMap(e => Task.safeCast(stimulusGraph.getEdgeTarget(e)).stream())
               .forEach(dstTask => {
                 if (dstTask.getHasORSemantics)
                   for (
@@ -258,17 +257,17 @@ case class ForSyDePeriodicWorkload(
       })
     // now finally consider downsample connections
     stimulusGraph.vertexSet.stream
-      .flatMap(v => Downsample.safeCast(v).stream)
+      .flatMap(v => Downsample.safeCast(v).stream())
       .forEach(downsample => {
         stimulusGraph
           .incomingEdgesOf(downsample)
           .stream
-          .flatMap(e => Task.safeCast(stimulusGraph.getEdgeSource(e)).stream)
+          .flatMap(e => Task.safeCast(stimulusGraph.getEdgeSource(e)).stream())
           .forEach(srcTask => {
             stimulusGraph
               .outgoingEdgesOf(downsample)
               .stream
-              .flatMap(e => Task.safeCast(stimulusGraph.getEdgeTarget(e)).stream)
+              .flatMap(e => Task.safeCast(stimulusGraph.getEdgeTarget(e)).stream())
               .forEach(dstTask => {
                 if (dstTask.getHasORSemantics)
                   for (

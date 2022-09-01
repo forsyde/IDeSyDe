@@ -16,10 +16,10 @@ runs:
       shell: bash
       run: |
         cd ${{ github.workspace }}
-        sh millw tests.test
+        sh millw ${{ inputs.command }}
     - name: Run millw command ${{ inputs.command }}
       if: ${{ runner.os == 'Windows' }}
       shell: pwsh
       run: |
         cd ${{ github.workspace }}
-        .\millw.bat tests.test
+        .\millw.bat ${{ inputs.command }}

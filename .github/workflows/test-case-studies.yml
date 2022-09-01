@@ -21,15 +21,6 @@ jobs:
       uses: olafurpg/setup-scala@v11
       with:
         java-version: ${{ matrix.java }}
-        # server-id: io.github.forsyde # Value of the distributionManagement/repository/id field of the pom.xml
-        # settings-path: ${{ github.workspace }} # location for the settings.xml file
-    - name: Tests with sbt (All)
-      if: ${{ matrix.os != 'windows-latest' }}
-      run: |
-        cd ${{ github.workspace }}
-        sh millw tests.test
-    - name: Tests with sbt (All)
-      if: ${{ matrix.os == 'windows-latest' }}
-      run: |
-        cd ${{ github.workspace }}
-        .\millw.bat tests.test
+    - uses: actions/millw@v1
+      with:
+        command: tests.test

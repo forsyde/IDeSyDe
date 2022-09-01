@@ -26,16 +26,15 @@ trait Active4StageDurationMixin extends ChocoModelMixin {
   def durationsWrite: Array[Array[IntVar]]
   def durations: Array[Array[IntVar]]
 
-  // deduced parameters
-  lazy val processors    = 0 until allowedProc2MemoryDataPaths.length
-  lazy val memories      = 0 until allowedProc2MemoryDataPaths.head.length
-  lazy val communicators = 0 until dataCommunicationMapping.head.length
-  // auxiliary local variables
-  lazy val commLoad = communicators
-    .map(c => chocoModel.intVar("load_" + c, 0, dataTravelTime.map(t => t(c)).sum, true))
-    .toArray
-
   def postActive4StageDurationsConstraints(): Unit = {
+    // deduced parameters
+    lazy val processors    = 0 until allowedProc2MemoryDataPaths.length
+    lazy val memories      = 0 until allowedProc2MemoryDataPaths.head.length
+    lazy val communicators = 0 until dataCommunicationMapping.head.length
+    // auxiliary local variables
+    lazy val commLoad = communicators
+      .map(c => chocoModel.intVar("load_" + c, 0, dataTravelTime.map(t => t(c)).sum, true))
+      .toArray
     // scribe.debug(communicators.map(c => dataTravelTime.map(t => t(c)).sum).mkString(", "))
     // posting constraints proper
     processors.map(processorIndex =>

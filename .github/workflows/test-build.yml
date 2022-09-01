@@ -16,22 +16,26 @@ jobs:
     runs-on: ${{ matrix.os }}
     steps:
     - uses: actions/checkout@v2
+    - uses: actions/millw@v1
+      with:
+        java-version: ${{ matrix.java }}
+        command: cli.assembly
     - name: Set up JDK ${{ matrix.java }}
       uses: olafurpg/setup-scala@v11
       with:
         java-version: ${{ matrix.java }}
         # server-id: io.github.forsyde # Value of the distributionManagement/repository/id field of the pom.xml
         # settings-path: ${{ github.workspace }} # location for the settings.xml file
-    - name: Build with mill (Unix)
-      if: ${{ matrix.os != 'windows-latest' }}
-      run: |
-        cd ${{ github.workspace }}
-        ./millw cli.assembly
-    - name: Build with mill (Windows)
-      if: ${{ matrix.os == 'windows-latest' }}
-      run: |
-        cd ${{ github.workspace }}
-        .\millw.bat cli.assembly
+    # - name: Build with mill (Unix)
+    #   if: ${{ matrix.os != 'windows-latest' }}
+    #   run: |
+    #     cd ${{ github.workspace }}
+    #     ./millw cli.assembly
+    # - name: Build with mill (Windows)
+    #   if: ${{ matrix.os == 'windows-latest' }}
+    #   run: |
+    #     cd ${{ github.workspace }}
+    #     .\millw.bat cli.assembly
     # - name: Build with Gradle (Windows)
     #   if: ${{ matrix.os == 'windows-latest' }}
     #   run: |

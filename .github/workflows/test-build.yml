@@ -22,6 +22,7 @@ jobs:
           - "amazon-corretto@1.17.0-0.35.1"
           - "amazon-corretto@1.11.0-11.9.1"
           - "graalvm-ce-java11@21.1.0"
+      fail-fast: false
     runs-on: ${{ matrix.os }}
     steps:
     - uses: actions/checkout@v2

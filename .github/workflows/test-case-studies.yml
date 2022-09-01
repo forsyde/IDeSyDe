@@ -12,7 +12,16 @@ jobs:
     strategy:
       matrix:
         os: [ubuntu-latest, macos-latest, windows-latest]
-        java: ["openjdk@1.11.0", "openjdk@1.15.0", "openjdk@1.17.0", "graalvm@"]
+        java:
+          - "openjdk@1.11.0"
+          - "openjdk@1.15.0"
+          - "openjdk@1.17.0"
+          - "zulu@1.11.0"
+          - "zulu@1.15.0"
+          - "zulu@1.17.0"
+          - "amazon-corretto@1.17.0-0.35.1"
+          - "amazon-corretto@1.11.0-11.9.1"
+          - "graalvm-ce-java11@21.1.0"
     runs-on: ${{ matrix.os }}
     steps:
     - uses: actions/checkout@v2

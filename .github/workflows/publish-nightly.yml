@@ -13,10 +13,10 @@ jobs:
         automatic_release_tag: "nightly"
         prerelease: true
         title: "Nightly development Build"
-    - name: Set up JDK ${{ matrix.java }}
+    - name: Set up JDK
       uses: olafurpg/setup-scala@v11
       with:
-        java-version: ${{ matrix.java }}
+        java-version: "graalvm-ce-java11@21.1.0"
     - uses: ./.github/actions/millw@v1
       with:
         command: cli.assembly

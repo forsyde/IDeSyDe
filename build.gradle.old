@@ -1,0 +1,82 @@
+buildscript {
+    repositories {
+        mavenCentral()
+    }
+    dependencies {
+        classpath 'ch.epfl.scala:gradle-bloop_2.12:1.5.0'
+    }
+}
+
+plugins {
+    id 'signing'
+    id 'java'
+    id 'idea'
+    id 'eclipse'
+}
+
+group = 'io.github.forsyde'
+archivesBaseName = project.name
+version = '0.2.6'
+
+tasks.register('getVersion') {
+    doFirst {
+        println version
+    }
+}
+
+compileJava {
+    sourceCompatibility = JavaVersion.VERSION_11
+}
+
+compileTestJava {
+    sourceCompatibility = JavaVersion.VERSION_11
+}
+
+allprojects {
+    apply plugin: 'bloop'
+}
+
+subprojects {
+
+    apply plugin: 'maven-publish'
+    apply plugin: 'signing'
+    apply plugin: 'java'
+    apply plugin: 'scala'
+    apply plugin: 'idea'
+    apply plugin: 'eclipse'
+
+    group = 'io.github.forsyde'
+    archivesBaseName = rootProject.name + '-' + project.name
+    version = rootProject.version
+
+    repositories {
+        // Use 'jcenter' for resolving your dependencies.
+        // You can declare any Maven/Ivy/file repository here.
+        mavenCentral()
+    }
+
+    dependencies {
+        // implementation "org.scala-lang:scala3-library_3:3.1.2"
+//        testImplementation "org.scalatest:scalatest_3:3.1.2"
+    }
+
+    java {
+        withSourcesJar()
+        withJavadocJar()
+    }
+
+    artifacts {
+        archives javadocJar, sourcesJar
+    }
+
+    sourceSets {
+        main {
+            scala {
+                srcDirs += 'src/main/scala-3'
+            }
+        }
+    }
+
+
+}
+

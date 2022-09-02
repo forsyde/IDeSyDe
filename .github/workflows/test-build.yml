@@ -12,21 +12,40 @@ jobs:
     strategy:
       matrix:
         os: [ubuntu-latest, macos-latest, windows-latest]
-        java: ["openjdk@1.11.0", "openjdk@1.15.0", "graalvm@"]
+        java:
+          - "openjdk@1.11.0"
+          - "openjdk@1.15.0"
+          - "openjdk@1.17.0"
+          - "zulu@1.11.0"
+          - "zulu@1.15.0"
+          - "zulu@1.17.0"
+          # - "amazon-corretto@1.17.0-0.35.1"
+          - "amazon-corretto@1.11.0-11.9.1"
+          - "graalvm-ce-java11@21.1.0"
+      fail-fast: false
     runs-on: ${{ matrix.os }}
     steps:
     - uses: actions/checkout@v2
+    - uses: ./.github/actions/millw@v1
+      with:
+        java-version: ${{ matrix.java }}
+        command: cli.assembly
     - name: Set up JDK ${{ matrix.java }}
       uses: olafurpg/setup-scala@v11
       with:
         java-version: ${{ matrix.java }}
         # server-id: io.github.forsyde # Value of the distributionManagement/repository/id field of the pom.xml
         # settings-path: ${{ github.workspace }} # location for the settings.xml file
-    - name: Build with sbt (All)
-      # if: ${{ matrix.os != 'windows-latest' }}
-      run: |
-        cd ${{ github.workspace }}
-        sbt assembly
+    # - name: Build with mill (Unix)
+    #   if: ${{ matrix.os != 'windows-latest' }}
+    #   run: |
+    #     cd ${{ github.workspace }}
+    #     ./millw cli.assembly
+    # - name: Build with mill (Windows)
+    #   if: ${{ matrix.os == 'windows-latest' }}
+    #   run: |
+    #     cd ${{ github.workspace }}
+    #     .\millw.bat cli.assembly
     # - name: Build with Gradle (Windows)
     #   if: ${{ matrix.os == 'windows-latest' }}
     #   run: |

@@ -1,0 +1,25 @@
+name: 'Do a Millw acction'
+description: 'Wrapper around common mill usage'
+inputs:
+  run-dir:
+    description: "Where to find millw"
+    required: false
+    default: "${{ github.workspace }}"
+  command:
+    description: "the command to issue to mill"
+    required: true
+runs:
+  using: "composite"
+  steps:
+    - name: Run millw command ${{ inputs.command }}
+      if: ${{ runner.os != 'Windows' }}
+      shell: bash
+      run: |
+        cd ${{ github.workspace }}
+        sh millw ${{ inputs.command }}
+    - name: Run millw command ${{ inputs.command }}
+      if: ${{ runner.os == 'Windows' }}
+      shell: pwsh
+      run: |
+        cd ${{ github.workspace }}
+        .\millw.bat ${{ inputs.command }}

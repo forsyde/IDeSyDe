@@ -1,0 +1,108 @@
+<?xml version="1.0"?>
+<sdf3 xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" version="1.0" type="sdf" xsi:noNamespaceSchemaLocation="http://www.es.ele.tue.nl/sdf3/xsd/sdf3-sdf.xsd">
+  <applicationGraph name="b_susan">
+    <sdf name="b_susan" type="SUSAN">
+      <actor name="getImage" type="GI">
+        <port name="p0_0" type="out" rate="1"/>
+      </actor>
+      <actor name="usan" type="USAN">
+        <port name="p0_0" type="in" rate="1"/>
+        <port name="p0_1" type="out" rate="1"/>
+        <port name="p0_2" type="out" rate="1"/>
+      </actor>
+      <actor name="direction" type="DIR">
+        <port name="p0_0" type="in" rate="1"/>
+        <port name="p0_1" type="in" rate="1"/>
+        <port name="p0_2" type="out" rate="1"/>
+        <port name="p0_3" type="out" rate="1"/>
+        <port name="p0_4" type="out" rate="1"/>
+      </actor>
+      <actor name="thin" type="THIN">
+        <port name="p0_0" type="in" rate="1"/>
+        <port name="p0_1" type="in" rate="1"/>
+        <port name="p0_2" type="in" rate="1"/>
+        <port name="p0_3" type="out" rate="1"/>
+        <port name="p0_4" type="out" rate="1"/>
+      </actor>
+      <actor name="putImage" type="PI">
+        <port name="p0_0" type="in" rate="1"/>
+        <port name="p0_1" type="in" rate="1"/>
+      </actor>
+      <channel name="chSu0_0" srcActor="getImage" srcPort="p0_0" dstActor="usan" dstPort="p0_0"/>
+      <channel name="chSu0_1" srcActor="usan" srcPort="p0_1" dstActor="direction" dstPort="p0_0"/>
+      <channel name="chSu0_2" srcActor="usan" srcPort="p0_2" dstActor="direction" dstPort="p0_1"/>
+      <channel name="chSu0_3" srcActor="direction" srcPort="p0_2" dstActor="thin" dstPort="p0_0"/>
+      <channel name="chSu0_4" srcActor="direction" srcPort="p0_3" dstActor="thin" dstPort="p0_1"/>
+      <channel name="chSu0_5" srcActor="direction" srcPort="p0_4" dstActor="thin" dstPort="p0_2"/>
+      <channel name="chSu0_6" srcActor="thin" srcPort="p0_3" dstActor="putImage" dstPort="p0_0"/>
+      <channel name="chSu0_7" srcActor="thin" srcPort="p0_4" dstActor="putImage" dstPort="p0_1"/>
+    </sdf>
+    <sdfProperties>
+      <actorProperties actor="getImage">
+        <processor type="proc" default="true">
+          <executionTime time="20"/>
+          <memory>
+            <stateSize max="2"/>
+          </memory>
+        </processor>
+      </actorProperties>
+      <actorProperties actor="usan">
+        <processor type="proc" default="true">
+          <executionTime time="1177"/>
+          <memory>
+            <stateSize max="4"/>
+          </memory>
+        </processor>
+      </actorProperties>
+      <actorProperties actor="direction">
+        <processor type="proc" default="true">
+          <executionTime time="833"/>
+          <memory>
+            <stateSize max="4"/>
+          </memory>
+        </processor>
+      </actorProperties>
+      <actorProperties actor="thin">
+        <processor type="proc" default="true">
+          <executionTime time="32"/>
+          <memory>
+            <stateSize max="5"/>
+          </memory>
+        </processor>
+      </actorProperties>
+      <actorProperties actor="putImage">
+        <processor type="proc" default="true">
+          <executionTime time="15"/>
+          <memory>
+            <stateSize max="5"/>
+          </memory>
+        </processor>
+      </actorProperties>
+      <channelProperties channel="chSu0_0">
+        <tokenSize sz="128"/>
+      </channelProperties>
+      <channelProperties channel="chSu0_1">
+        <tokenSize sz="128"/>
+      </channelProperties>
+      <channelProperties channel="chSu0_2">
+        <tokenSize sz="128"/>
+      </channelProperties>
+      <channelProperties channel="chSu0_3">
+        <tokenSize sz="128"/>
+      </channelProperties>
+      <channelProperties channel="chSu0_4">
+        <tokenSize sz="128"/>
+      </channelProperties>
+      <channelProperties channel="chSu0_5">
+        <tokenSize sz="128"/>
+      </channelProperties>
+      <channelProperties channel="chSu0_6">
+        <tokenSize sz="128"/>
+      </channelProperties>
+      <channelProperties channel="chSu0_7">
+        <tokenSize sz="128"/>
+      </channelProperties>
+      <graphProperties/>
+    </sdfProperties>
+  </applicationGraph>
+</sdf3>

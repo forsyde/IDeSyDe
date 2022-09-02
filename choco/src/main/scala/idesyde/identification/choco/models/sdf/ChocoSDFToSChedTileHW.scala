@@ -21,12 +21,14 @@ import org.chocosolver.solver.search.strategy.Search
 import org.chocosolver.solver.search.strategy.selectors.variables.Largest
 import org.chocosolver.solver.search.strategy.selectors.values.IntDomainMedian
 import org.chocosolver.solver.search.strategy.selectors.values.IntDomainMax
+import idesyde.identification.choco.models.SingleProcessSingleMessageMemoryConstraintsMixin
+import org.chocosolver.solver.search.strategy.strategy.FindAndProve
 
 final case class ChocoSDFToSChedTileHW(
     val dse: SDFToSchedTiledHW
 )(using Fractional[Rational])
     extends ChocoCPForSyDeDecisionModel
-    with ManyProcessManyMessageMemoryConstraintsMixin
+    with SingleProcessSingleMessageMemoryConstraintsMixin
     with TileAsyncInterconnectCommsMixin
     with SDFTimingAnalysisSASMixin {
 
@@ -101,16 +103,12 @@ final case class ChocoSDFToSChedTileHW(
 
   //-----------------------------------------------------
   // Decision variables
-  val messagesMemoryMapping: Array[Array[BoolVar]] = dse.sdfApplications.channels.map(c =>
-    dse.platform.tiledDigitalHardware.memories.map(mem =>
-      chocoModel.boolVar(s"${c.getIdentifier()}_${mem.getIdentifier()}_m")
-    )
+  val messagesMemoryMapping: Array[IntVar] = dse.sdfApplications.channels.map(c =>
+    chocoModel.intVar(s"${c.getIdentifier()}_m", dse.platform.tiledDigitalHardware.tileSet)
   )
 
-  val processesMemoryMapping: Array[Array[BoolVar]] = dse.sdfApplications.actors.map(a =>
-    dse.platform.tiledDigitalHardware.memories.map(mem =>
-      chocoModel.boolVar(s"${a.getIdentifier()}_${mem.getIdentifier()}_m")
-    )
+  val processesMemoryMapping: Array[IntVar] = dse.sdfApplications.actors.map(a =>
+    chocoModel.intVar(s"${a.getIdentifier()}_m", dse.platform.tiledDigitalHardware.tileSet)
   )
 
   val messageAllocation = dse.sdfApplications.channels.map(c => {
@@ -186,15 +184,19 @@ final case class ChocoSDFToSChedTileHW(
       true
     )
 
-  val peIsUsed =
-    dse.platform.tiledDigitalHardware.processors.zipWithIndex.map((pe, j) =>
-      chocoModel.sum(processesMemoryMapping.map(t => t(j)), ">=", 1).reify
-    )
+  // remember that this is tiled based, so a memory being mapped entails the processor
+  // is used
+  // val peIsUsed =
+  //   dse.platform.tiledDigitalHardware.tileSet.map(pe =>
+  //     chocoModel.atLeastNValues(s"${pe}_used", pe, processesMemoryMapping:_*)
+  //     // chocoModel.sum(processesMemoryMapping.map(t => t(j)), ">=", 1).reify
+  //   )
   val nUsedPEs = chocoModel.intVar(
     "nUsedPEs",
     1,
     dse.platform.tiledDigitalHardware.processors.length
   )
+  chocoModel.atMostNValues(processesMemoryMapping, nUsedPEs, true).post()
 
   val memoryUsage: Array[IntVar] = dse.platform.tiledDigitalHardware.memories
     .map(m => (m, (m.getSpaceInBits() / memoryDivider).toInt))
@@ -217,8 +219,8 @@ final case class ChocoSDFToSChedTileHW(
     numActorsScheduledSlotsInStaticCyclicVars(a)(p)(slot)
 
   // in a tile-based architecture, a process being mapped to a memory tile implies it is scheduled there too!
-  def actorMapping(actorId: Int)(schedulerId: Int): BoolVar =
-    processesMemoryMapping(actors.indexOf(actorId))(schedulers.indexOf(schedulerId))
+  // def actorMapping(actorId: Int): IntVar =
+  //   processesMemoryMapping(actors.indexOf(actorId))
 
   //-----------------------------------------------------
   // AUXILIARY VARIABLES
@@ -244,14 +246,14 @@ final case class ChocoSDFToSChedTileHW(
   // - The channels can only be mapped in one tile, to avoid extra care on ordering and timing
   // - of the data
   // - therefore, every channel has to be mapped to exactly one tile
-  dse.sdfApplications.channels.zipWithIndex.foreach((c, i) =>
-    chocoModel.sum(messagesMemoryMapping(i), "=", 1).post()
-  )
+  // dse.sdfApplications.channels.zipWithIndex.foreach((c, i) =>
+  //   chocoModel.sum(messagesMemoryMapping(i), "=", 1).post()
+  // )
 
   // - every actor has to be mapped to at least one tile
-  dse.sdfApplications.actors.zipWithIndex.foreach((a, i) =>
-    chocoModel.sum(processesMemoryMapping(i), ">=", 1).post()
-  )
+  // dse.sdfApplications.actors.zipWithIndex.foreach((a, i) =>
+  //   chocoModel.sum(processesMemoryMapping(i), ">=", 1).post()
+  // )
   // - The number of parallel mappings should not exceed the repetition
   // vector when this can happen.
   // But is this necessary?
@@ -261,12 +263,36 @@ final case class ChocoSDFToSChedTileHW(
   // )
 
   // - mixed constraints
-  postManyProcessManyMessageMemoryConstraints()
+  postSingleProcessSingleMessageMemoryConstraints()
 
   //---------
 
   //-----------------------------------------------------
   // COMMUNICATION
+
+  processesMemoryMapping.zipWithIndex.foreach((srca, srci) => {
+    processesMemoryMapping.zipWithIndex.foreach((dsta, dsti) => {
+      if (srca != dsta) {
+        messages.zipWithIndex.foreach((c, ci) => {
+          if (balanceMatrix(ci)(srci) > 0 && balanceMatrix(ci)(dsti) < 0) {
+            schedulers.zipWithIndex.foreach((_, sendi) => {
+              schedulers.zipWithIndex.foreach((_, recvi) => {
+                if (sendi != recvi) {
+                  chocoModel.ifThen(srca.eq(sendi).and(dsta.eq(recvi)).decompose(),
+                    messageAllocation(ci)(sendi)(recvi).eq(1).decompose()
+                  )
+                }
+              })
+            })
+          }
+        })
+      }
+    })
+  })
+
+  for (srca <- actors; dsta <- actors; if srca != dsta; c <- messages) {
+    // chocoModel.ifThen(processesMemoryMapping(srca))    
+  }
 
   postTileAsyncInterconnectComms()
   //---------
@@ -293,11 +319,11 @@ final case class ChocoSDFToSChedTileHW(
   actors.foreach(a => {
     schedulers.foreach(p => {
       chocoModel.ifOnlyIf(
-        processesMemoryMapping(a)(p).eq(1).decompose(),
+        processesMemoryMapping(a).eq(p).decompose(),
         chocoModel.sum(s"firings_${a}_${p}>0", firingsInSlots(a)(p): _*).gt(0).decompose()
       )
-      chocoModel.ifOnlyIf(
-        processesMemoryMapping(a)(p).eq(0).decompose(),
+      chocoModel.ifThen(
+        processesMemoryMapping(a).ne(p).decompose(),
         chocoModel.sum(s"firings_${a}_${p}=0", firingsInSlots(a)(p): _*).eq(0).decompose()
       )
     })
@@ -307,35 +333,37 @@ final case class ChocoSDFToSChedTileHW(
   //---------
 
   // make sure the variable counts the number of used
-  chocoModel.sum(peIsUsed, "=", nUsedPEs).post
+  // chocoModel.sum(peIsUsed, "=", nUsedPEs).post
 
   override def modelObjectives: Array[IntVar] =
     Array(chocoModel.intMinusView(nUsedPEs), chocoModel.intMinusView(globalInvThroughput))
   //---------
 
   override def strategies: Array[AbstractStrategy[? <: Variable]] = Array(
+    // Search.bestBound(
+    
+    // Search.minDomLBSearch(globalInvThroughput),
     // Search.intVarSearch(
     //   Largest(),
     //   IntDomainMax(),
     //   firingsInSlots.flatten.flatten:_*
     // ),
-    // Search.bestBound(
+    // FindAndProve((nUsedPEs +: firingsInSlots.flatten.flatten),
     SimpleMultiCoreSDFListScheduling(
       actors.zipWithIndex.map((a, i) => maxRepetitionsPerActors(i)),
       balanceMatrix,
       initialTokens,
       actorDuration,
       channelsTravelTime,
-      firingsInSlots,
-      nUsedPEs
-      // )
+      firingsInSlots
     ),
+    Search.minDomLBSearch(nUsedPEs),
+    // ),
+    Search.minDomLBSearch(globalInvThroughput),
     Search.minDomLBSearch(channelsCommunicate.flatten.flatten: _*),
     Search.minDomLBSearch(messageVirtualChannelAllocation.flatten: _*),
-    Search.minDomLBSearch(nUsedPEs),
-    Search.minDomLBSearch(globalInvThroughput)
     // Search.intVarSearch()
-    // Search.defaultSearch(chocoModel)
+    Search.defaultSearch(chocoModel)
   )
 
   def rebuildFromChocoOutput(output: Solution): ForSyDeSystemGraph = {
@@ -351,12 +379,12 @@ final case class ChocoSDFToSChedTileHW(
     // println(dse.platform.tiledDigitalHardware.routerPaths.map(_.map(_.mkString("[", ", ", "]")).mkString("[", ", ", "]")).mkString("[", "\n", "]"))
     // println(channelToRouters.map(_.mkString("[", ", ", "]")).mkString("[", "\n", "]"))
     val channelToTiles = dse.sdfApplications.channels.zipWithIndex.map((c, i) => {
-      dse.platform.tiledDigitalHardware.tileSet.map(j => messagesMemoryMapping(i)(j).getValue() > 0)
+      dse.platform.tiledDigitalHardware.tileSet.map(j => messagesMemoryMapping(i).getValue() == j)
     })
     val mappings = dse.sdfApplications.channels.zipWithIndex
       .map((c, i) => channelToTiles(i) ++ channelToRouters(i))
     val schedulings =
-      processesMemoryMapping.map(vs => vs.map(v => if (v.getValue() > 0) then true else false))
+      processesMemoryMapping.map(vs => dse.platform.tiledDigitalHardware.tileSet.map(j => vs.getValue() == j))
     // println(
     //   schedulers
     //     .map(s => {

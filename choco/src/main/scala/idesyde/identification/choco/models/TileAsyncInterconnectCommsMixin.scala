@@ -49,6 +49,8 @@ trait TileAsyncInterconnectCommsMixin extends ChocoModelMixin {
         chocoModel.arithm(virtualChannelForMessage(c)(ce), ">", 0)
       )
     }
+    // if two communicating actors are in different tiles,
+    // they must communicate
     // for (
     //   srci <- procElems;
     //   srcj <- procElems;

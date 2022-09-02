@@ -11,8 +11,12 @@ import breeze.linalg._
 import org.chocosolver.solver.constraints.Constraint
 import org.chocosolver.solver.exception.ContradictionException
 import org.chocosolver.solver.constraints.`extension`.Tuples
+import idesyde.identification.choco.models.SingleProcessSingleMessageMemoryConstraintsMixin
+import idesyde.identification.choco.models.TileAsyncInterconnectCommsMixin
+import idesyde.utils.CoreUtils.wfor
 
 trait SDFTimingAnalysisSASMixin extends ChocoModelMixin {
+  this: SingleProcessSingleMessageMemoryConstraintsMixin  =>
 
   def actors: Array[Int]
   def schedulers: Array[Int]
@@ -31,7 +35,7 @@ trait SDFTimingAnalysisSASMixin extends ChocoModelMixin {
   def maxRepetitionsPerActors(actorId: Int): Int
   def isSelfConcurrent(actorId: Int): Boolean
 
-  def actorMapping(actorId: Int)(schedulerId: Int): BoolVar
+  def actorMapping(actorId: Int) = processesMemoryMapping(actors.indexOf(actorId))
   def startLatency(schedulerId: Int): IntVar
   def numActorsScheduledSlotsInStaticCyclic(actorId: Int)(tileId: Int)(slotId: Int): IntVar
 
@@ -58,13 +62,13 @@ trait SDFTimingAnalysisSASMixin extends ChocoModelMixin {
   def postOnlySAS(): Unit = {
     actors.zipWithIndex.foreach((a, ai) => {
       // disable self concurreny if necessary
-      if (!isSelfConcurrent(a)) {
-        for (slot <- slotRange) {
-          chocoModel.sum(schedulers.map(p => firingsInSlots(a)(p)(slot)), "<=", 1).post()
-        }
-      }
+      // if (!isSelfConcurrent(a)) {
+      //   for (slot <- slotRange) {
+      //     chocoModel.sum(schedulers.map(p => firingsInSlots(a)(p)(slot)), "<=", 1).post()
+      //   }
+      // }
       // set total number of firings
-      chocoModel.sum(allSlotsForActor(ai).flatten, "=", maxRepetitionsPerActors(a)).post()
+      chocoModel.sum(firingsInSlots(ai).flatten, "=", maxRepetitionsPerActors(a)).post()
       schedulers.zipWithIndex
         .foreach((s, sj) => {
           // if (actors.size > 1) {
@@ -74,7 +78,7 @@ trait SDFTimingAnalysisSASMixin extends ChocoModelMixin {
           //     .post()
           // }
           chocoModel.ifThenElse(
-            actorMapping(ai)(sj),
+            actorMapping(ai).eq(sj).decompose(),
             chocoModel.sum(slots(ai)(sj), ">=", 1),
             chocoModel.sum(slots(ai)(sj), "=", 0)
           )
@@ -152,10 +156,10 @@ trait SDFTimingAnalysisSASMixin extends ChocoModelMixin {
       )
       with SDFChocoRecomputeMethodsMixin {
 
-    val channels   = 0 until initialTokens.size
-    val actors     = 0 until maxFiringsPerActor.size
-    val schedulers = 0 until slotPeriods.size
-    val slots      = 0 until firingsInSlots.head.head.size
+    val channels   = (0 until initialTokens.size).toArray
+    val actors     = (0 until maxFiringsPerActor.size).toArray
+    val schedulers = (0 until slotPeriods.size).toArray
+    val slots      = (0 until firingsInSlots.head.head.size).toArray
 
     val mat = CSCMatrix(balanceMatrix: _*)
 
@@ -176,21 +180,7 @@ trait SDFTimingAnalysisSASMixin extends ChocoModelMixin {
       recomputeTokensAndTime()
       // latestClosedSlot = 0
       latestClosedSlot = -1
-      // println(
-      //   schedulers
-      //     .map(s => {
-      //       slots
-      //         .map(slot => {
-      //           actors
-      //             .map(a =>
-      //               firingsInSlots(a)(s)(slot).getLB() + "|" + firingsInSlots(a)(s)(slot).getUB()
-      //             )
-      //             .mkString("(", ", ", ")")
-      //         })
-      //         .mkString("[", ", ", "]")
-      //     })
-      //     .mkString("[\n ", "\n ", "\n]")
-      // )
+      // slotsPrettyPrint()
       for (s <- slots) {
         // instantiedCount = 0
         if (slotIsClosed(s)) {
@@ -212,21 +202,7 @@ trait SDFTimingAnalysisSASMixin extends ChocoModelMixin {
             firingVector(s + 1)
           ) > 0
         ) {
-          // println(
-          //   schedulers
-          //     .map(s => {
-          //       slots
-          //         .map(slot => {
-          //           actors
-          //             .map(a =>
-          //               firingsInSlots(a)(s)(slot).getLB() + "|" + firingsInSlots(a)(s)(slot).getUB()
-          //             )
-          //             .mkString("(", ", ", ")")
-          //         })
-          //         .mkString("[", ", ", "]")
-          //     })
-          //     .mkString("[\n ", "\n ", "\n]")
-          //   )
+          // slotsPrettyPrint()
           // tailZeros += 1
           // println(s"zero ${s}")
           fails()
@@ -272,43 +248,54 @@ trait SDFTimingAnalysisSASMixin extends ChocoModelMixin {
       }
 
       // println("----------------------------------------------------")
-      // println(
-      //   schedulers
-      //     .map(s => {
-      //       slots
-      //         .map(slot => {
-      //           actors
-      //             .map(a =>
-      //               firingsInSlots(a)(s)(slot).getLB() + "|" + firingsInSlots(a)(s)(slot).getUB()
-      //             )
-      //             .mkString("(", ", ", ")")
-      //         })
-      //         .mkString("[", ", ", "]")
-      //     })
-      //     .mkString("[\n ", "\n ", "\n]")
-      // )
+      // slotsPrettyPrint()
       // also propagate if any channel sendings are necessary
-      if (latestClosedSlot > 0) {
-        for (i <- slots.drop(1).take(latestClosedSlot)) {
+      // this assumes that an actor is mapped to one and only one processor
+      // if (latestClosedSlot > 0) {
+      //   for (i <- slots.drop(1).take(latestClosedSlot)) {
           // println(i)
-          for (
-            dst <- schedulers; src <- schedulers;
-            if src != dst && slotAtSchedulerIsTaken(dst)(i) && slotAtSchedulerIsTaken(src)(i - 1)
-          ) {
-            val diffAtSrc = diffTokenVec(i)(src)(src)
-            val diffAtDst = diffTokenVec(i)(dst)(dst)
-            // println(s"src vec from ${src} to ${src} at ${i}: ${diffAtSrc.toString()}")
-            // println(s"dst vec from ${dst} to ${dst} at ${i}: ${diffAtDst.toString()}")
-            for (c <- channels) {
-              // sendVec = prodMat * firingVectorPerCore(i)(src) - consMat * firingVectorPerCore(i - 1)(dst) + tokensAfter(i - 1)
-              if (diffAtDst(c) < 0 && diffAtSrc(c) >= -diffAtDst(c)) {
-                // println(s"communicate ${c} from ${src} to ${dst} at ${i}")
-                channelsCommunicate(c)(src)(dst).updateLowerBound(1, this)
-              }
-            }
-          }
-        }
-      }
+          // wfor(0, _ < schedulers.size, _ + 1) { srci =>
+          //   wfor(0, _ < schedulers.size, _ + 1) { dsti =>
+          //     if (srci != dsti) {
+          //       wfor(0, _ < actors.size, _ + 1) {prodi => 
+          //         val src = schedulers(srci)
+          //         val prod = actors(prodi)
+          //         if (actorMapping(prod).isInstantiatedTo(src)) {
+          //           wfor(0, _ < actors.size, _ + 1) {consi => 
+          //             val dst = schedulers(dsti)
+          //             val cons = actors(consi)
+          //             if (actorMapping(cons).isInstantiatedTo(dst)) {
+          //               wfor(0, _ < channels.size, _ + 1) { chi =>
+          //                 val c = channels(chi)
+          //                 if ()
+          //                 channelsCommunicate(c)(src)(dst).updateLowerBound(1, this)
+          //               }
+          //             }
+          //           }
+          //         wfor(0, _ < actors.size, _ + 1) {consi => 
+          //         }
+          //       }
+          //     }
+          //   }
+          // }
+          // for (
+          //   dst <- schedulers; src <- schedulers;
+          //   if src != dst && slotAtSchedulerIsTaken(dst)(i) && slotAtSchedulerIsTaken(src)(i - 1)
+          // ) {
+          //   val diffAtSrc = diffTokenVec(i)(src)(src)
+          //   val diffAtDst = diffTokenVec(i)(dst)(dst)
+          //   // println(s"src vec from ${src} to ${src} at ${i}: ${diffAtSrc.toString()}")
+          //   // println(s"dst vec from ${dst} to ${dst} at ${i}: ${diffAtDst.toString()}")
+          //   for (c <- channels) {
+          //     // sendVec = prodMat * firingVectorPerCore(i)(src) - consMat * firingVectorPerCore(i - 1)(dst) + tokensAfter(i - 1)
+          //     if (diffAtDst(c) < 0 && diffAtSrc(c) >= -diffAtDst(c)) {
+          //       // println(s"communicate ${c} from ${src} to ${dst} at ${i}")
+          //       channelsCommunicate(c)(src)(dst).updateLowerBound(1, this)
+          //     }
+          //   }
+          // }
+      //   }
+      // }
 
       // now try to bound the timing,
       var maxInvTh      = 0
@@ -333,25 +320,7 @@ trait SDFTimingAnalysisSASMixin extends ChocoModelMixin {
       var allFired        = true
       var allCommunicated = true
       // println("checking entailment")
-      // println(
-      //   schedulers
-      //     .map(s => {
-      //       (0 until actors.size)
-      //         .map(slot => {
-      //           actors.zipWithIndex
-      //             .find((a, ai) => firingsInSlots(ai)(s)(slot).getLB() > 0)
-      //             .map((a, ai) =>
-      //               a + ": " + firingsInSlots(ai)(s)(
-      //                 slot
-      //               )
-      //                 .getLB()
-      //             )
-      //             .getOrElse("_")
-      //         })
-      //         .mkString("[", ", ", "]")
-      //     })
-      //     .mkString("[\n ", "\n ", "\n]")
-      // )
+      // slotsPrettyPrint()
       recomputeTokensAndTime()
       recomputeFiringVectors()
       if (latestClosedSlot > 0) {
@@ -430,5 +399,10 @@ trait SDFTimingAnalysisSASMixin extends ChocoModelMixin {
     //   }
     // }
   }
+
+  class SASChannelCommunicationPropagator(
+    val actorMappings: Array[IntVar], 
+    val channelsCommunicate: Array[Array[Array[BoolVar]]]
+  )
 
 }

@@ -18,10 +18,10 @@ trait SDFChocoRecomputeMethodsMixin {
   // def slotPeriods: Array[IntVar]
   // def globalInvThroughput: IntVar
 
-  def channels: Range
-  def actors: Range
-  def schedulers: Range
-  def slots: Range
+  def channels: Array[Int]
+  def actors: Array[Int]
+  def schedulers: Array[Int]
+  def slots: Array[Int]
 
   // these two are created here so that they are note recreated every time
   // wasting time with memory allocations etc
@@ -58,11 +58,11 @@ trait SDFChocoRecomputeMethodsMixin {
   def slotAtSchedulerIsTaken(p: Int)(slot: Int): Boolean = {
     for (a <- actors) {
       if (firingsInSlots(a)(p)(slot).getLB() > 0)
-         return true
+        return true
     }
     return false
   }
-    // actors.exists(a => )
+  // actors.exists(a => )
 
   def slotIsClosed(slot: Int): Boolean = {
     for (p <- schedulers; a <- actors) {
@@ -72,7 +72,7 @@ trait SDFChocoRecomputeMethodsMixin {
     }
     return true
   }
-    // schedulers.forall(p => actors.forall(a => ))
+  // schedulers.forall(p => actors.forall(a => ))
 
   def slotHasFiring(slot: Int): Boolean = {
     for (p <- schedulers; a <- actors) {
@@ -82,7 +82,7 @@ trait SDFChocoRecomputeMethodsMixin {
     }
     return false
   }
-    // actors.exists(a => schedulers.exists(p => firingsInSlots(a)(p)(slot).getLB() > 0))
+  // actors.exists(a => schedulers.exists(p => firingsInSlots(a)(p)(slot).getLB() > 0))
 
   protected lazy val firingVector: Array[SparseVector[Int]] =
     slots.map(slot => SparseVector.zeros[Int](actors.size)).toArray
@@ -135,7 +135,9 @@ trait SDFChocoRecomputeMethodsMixin {
     for (p <- schedulers) {
       startTimes(p)(0) = 0
       finishTimes(p)(0) = startTimes(p)(0)
-      for (a <- actors) finishTimes(p)(0) += firingVector(0)(a) * actorDuration(a)(p)
+      for (a <- actors) {
+        finishTimes(p)(0) += firingVector(0)(a) * actorDuration(a)(p)
+      }
     }
     // work based first on the slots and update the timing whenever possible
     for (
@@ -166,4 +168,23 @@ trait SDFChocoRecomputeMethodsMixin {
       }
     }
   }
+
+  def slotsPrettyPrint(): Unit = {
+    println(
+      schedulers
+        .map(s => {
+          slots
+            .map(slot => {
+              actors
+                .map(a =>
+                  firingsInSlots(a)(s)(slot).getLB() + "|" + firingsInSlots(a)(s)(slot).getUB()
+                )
+                .mkString("(", ", ", ")")
+            })
+            .mkString("[", ", ", "]")
+        })
+        .mkString("[\n ", "\n ", "\n]")
+    )
+  }
+
 }

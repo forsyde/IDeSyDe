@@ -7,6 +7,7 @@ import org.chocosolver.util.PoolManager
 import org.chocosolver.solver.search.strategy.decision.Decision
 import breeze.linalg._
 import org.chocosolver.solver.search.strategy.assignments.DecisionOperatorFactory
+import scala.util.Random
 
 class SimpleMultiCoreSDFListScheduling(
     val maxFiringsPerActor: Array[Int],
@@ -14,14 +15,13 @@ class SimpleMultiCoreSDFListScheduling(
     val initialTokens: Array[Int],
     val actorDuration: Array[Array[Int]],
     val channelsTravelTime: Array[Array[Array[IntVar]]],
-    val firingsInSlots: Array[Array[Array[IntVar]]],
-    val numShedulers: IntVar
-) extends AbstractStrategy[IntVar]((numShedulers +: firingsInSlots.flatten.flatten): _*) with SDFChocoRecomputeMethodsMixin {
+    val firingsInSlots: Array[Array[Array[IntVar]]]
+) extends AbstractStrategy[IntVar]((firingsInSlots.flatten.flatten): _*) with SDFChocoRecomputeMethodsMixin {
 
-  val channels   = 0 until initialTokens.size
-  val actors     = 0 until maxFiringsPerActor.size
-  val schedulers = 0 until firingsInSlots.head.size
-  val slots      = 0 until firingsInSlots.head.head.size
+  val channels   = (0 until initialTokens.size).toArray
+  val actors     = (0 until maxFiringsPerActor.size).toArray
+  val schedulers = (0 until firingsInSlots.head.size).toArray
+  val slots      = (0 until firingsInSlots.head.head.size).toArray
 
   val mat         = CSCMatrix(balanceMatrix: _*)
 
@@ -37,13 +37,13 @@ class SimpleMultiCoreSDFListScheduling(
   var bestSlot = -1
   var tokenVec = SparseVector(initialTokens)
   var accumFirings = SparseVector.zeros[Int](actors.size)
-  var count = 0;
 
   def getDecision(): Decision[IntVar] = {
+    // val schedulersShuffled = Random.shuffle(schedulers)
     var d = pool.getE()
     if (d == null) d = IntDecision(pool)
     // count += 1
-    // println("deciding at " + count)
+    // println("deciding")
     bestA = -1
     bestP = -1
     bestQ = -1
@@ -66,23 +66,9 @@ class SimpleMultiCoreSDFListScheduling(
         }
       }
     }
-    // println(
-    //     schedulers
-    //       .map(s => {
-    //         slots
-    //           .map(slot => {
-    //             actors
-    //               .map(a =>
-    //                 firingsInSlots(a)(s)(slot).getLB() + "|" + firingsInSlots(a)(s)(slot).getUB()
-    //               )
-    //               .mkString("(", ", ", ")")
-    //           })
-    //           .mkString("[", ", ", "]")
-    //       })
-    //       .mkString("[\n ", "\n ", "\n]")
-    //   )
+    // slotsPrettyPrint()
     if (bestSlot > -1 && bestQ > 0) then {
-      // println("adding new firing slot at " + (bestA, bestP, bestSlot))
+      // println("adding new firing:  " + (bestA, bestP, bestSlot, bestQ))
       d.set(firingsInSlots(bestA)(bestP)(bestSlot), bestQ, DecisionOperatorFactory.makeIntEq())
       d
     } else {

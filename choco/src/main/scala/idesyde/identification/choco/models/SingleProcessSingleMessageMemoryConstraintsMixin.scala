@@ -12,15 +12,15 @@ trait SingleProcessSingleMessageMemoryConstraintsMixin extends ChocoModelMixin {
   def messagesMemoryMapping: Array[IntVar]
   def memoryUsage: Array[IntVar]
 
-  def memories = 0 until memoryUsage.size
+  // def memories = 0 until memoryUsage.size
 
-  def postManyProcessManyMessageMemoryConstraints(): Unit = {
+  def postSingleProcessSingleMessageMemoryConstraints(): Unit = {
     chocoModel
       .binPacking(
         processesMemoryMapping ++ messagesMemoryMapping,
         processSize ++ dataSize,
         memoryUsage,
-        0
+        memoryUsage.head.getLB()
       )
       .post()
     // memories.foreach(mem => {

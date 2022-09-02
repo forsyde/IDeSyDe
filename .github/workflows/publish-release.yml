@@ -11,10 +11,11 @@ jobs:
     - uses: actions/checkout@v2
     - id: get_version
       uses: battila7/get-version-action@v2
-    - name: Set up JDK ${{ matrix.java }}
+    - name: Set up JDK 
       uses: olafurpg/setup-scala@v11
       with:
-        java-version: ${{ matrix.java }}
+        java-version: "graalvm-ce-java11@21.1.0"
+
     - uses: ./.github/actions/millw@v1
       with:
         command: cli.assembly

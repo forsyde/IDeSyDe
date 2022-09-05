@@ -385,43 +385,43 @@ final case class ChocoSDFToSChedTileHW(
       .map((c, i) => channelToTiles(i) ++ channelToRouters(i))
     val schedulings =
       processesMemoryMapping.map(vs => dse.platform.tiledDigitalHardware.tileSet.map(j => vs.getValue() == j))
-    println(
-      schedulers
-        .map(s => {
-          (0 until actors.size)
-            .map(slot => {
-              actors.zipWithIndex
-                .find((a, ai) => firingsInSlots(ai)(s)(slot).getLB() > 0)
-                .map((a, ai) =>
-                  dse.sdfApplications.actors(a).getIdentifier() + ": " + firingsInSlots(ai)(s)(slot)
-                    .getLB()
-                )
-                .getOrElse("_")
-            })
-            .mkString("[", ", ", "]")
-        })
-        .mkString("[\n ", "\n ", "\n]")
-    )
-    println(
-      schedulers
-        .map(src => {
-          schedulers
-            .map(dst => {
-              messages.zipWithIndex
-                .filter((c, ci) => messageAllocation(ci)(src)(dst).getLB() > 0)
-                .map((c, ci) =>
-                  c + ": " + commElemsPaths(src)(dst).zipWithIndex
-                    .map((ce, cei) =>
-                      ce + "/" + virtualChannelForMessage(c)(ce).getValue()
-                    )
-                    .mkString("-")
-                )
-                .mkString("(", ", ", ")")
-            })
-            .mkString("[", ", ", "]")
-        })
-        .mkString("[\n ", "\n ", "\n]")
-    )
+    // println(
+    //   schedulers
+    //     .map(s => {
+    //       (0 until actors.size)
+    //         .map(slot => {
+    //           actors.zipWithIndex
+    //             .find((a, ai) => firingsInSlots(ai)(s)(slot).getLB() > 0)
+    //             .map((a, ai) =>
+    //               dse.sdfApplications.actors(a).getIdentifier() + ": " + firingsInSlots(ai)(s)(slot)
+    //                 .getLB()
+    //             )
+    //             .getOrElse("_")
+    //         })
+    //         .mkString("[", ", ", "]")
+    //     })
+    //     .mkString("[\n ", "\n ", "\n]")
+    // )
+    // println(
+    //   schedulers
+    //     .map(src => {
+    //       schedulers
+    //         .map(dst => {
+    //           messages.zipWithIndex
+    //             .filter((c, ci) => messageAllocation(ci)(src)(dst).getLB() > 0)
+    //             .map((c, ci) =>
+    //               c + ": " + commElemsPaths(src)(dst).zipWithIndex
+    //                 .map((ce, cei) =>
+    //                   ce + "/" + virtualChannelForMessage(c)(ce).getValue()
+    //                 )
+    //                 .mkString("-")
+    //             )
+    //             .mkString("(", ", ", ")")
+    //         })
+    //         .mkString("[", ", ", "]")
+    //     })
+    //     .mkString("[\n ", "\n ", "\n]")
+    // )
     dse.addMappingsAndRebuild(
       mappings,
       schedulings,

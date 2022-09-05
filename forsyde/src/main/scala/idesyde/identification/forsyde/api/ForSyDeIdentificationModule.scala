@@ -16,6 +16,7 @@ import idesyde.identification.forsyde.models.mixed.SDFToSchedTiledHW
 import idesyde.identification.IdentificationModule
 import idesyde.implicits.forsyde.given_Fractional_Rational
 import idesyde.implicits.forsyde.given_Conversion_Double_Rational
+import idesyde.identification.forsyde.models.mixed.SDFToExplicitSchedHW
 
 class ForSyDeIdentificationModule extends IdentificationModule {
 
@@ -33,7 +34,8 @@ class ForSyDeIdentificationModule extends IdentificationModule {
     ),
     TiledDigitalHardwareIRule(),
     SchedulableTiledDigitalHardware.identFromAny,
-    SDFToSchedTiledHW.identFromAny
+    SDFToSchedTiledHW.identFromAny,
+    SDFToExplicitSchedHW
   )
 
 }

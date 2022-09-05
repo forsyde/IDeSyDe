@@ -25,3 +25,18 @@ trait ForSyDeIdentificationRule[M <: ForSyDeDecisionModel] extends Identificatio
       identified: scala.collection.Iterable[DecisionModel]
   ): IdentificationResult[M]
 }
+
+object ForSyDeIdentificationRule {
+
+  def identifyWrapper[DesignModel, M <: DecisionModel](
+      model: DesignModel,
+      identified: scala.collection.Iterable[DecisionModel],
+      irule: (ForSyDeSystemGraph, scala.collection.Iterable[DecisionModel]) => IdentificationResult[M]
+  ): IdentificationResult[M] =
+    model match {
+      case fio: ForSyDeSystemGraph =>
+        irule(fio, identified)
+      case _ =>
+        new IdentificationResult(false, Option.empty)
+    }
+}

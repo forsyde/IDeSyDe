@@ -401,6 +401,144 @@ class SDFOnTileNoCUseCaseWithSolution extends AnyFunSuite with LoggingMixin {
     m
   }
 
+  /**
+    * This platform model simply abstracts all communication as a bus, conceptually equivalent to the papers
+    * 
+    * [1] K. Rosvall and I. Sander, “Flexible and Tradeoff-Aware Constraint-Based Design Space Exploration for Streaming Applications on Heterogeneous Platforms,” 
+    *  ACM Trans. Des. Autom. Electron. Syst., vol. 23, no. 2, p. 21:1-21:26, Nov. 2017, doi: 10.1145/3133210.
+    * [2] K. Rosvall and I. Sander, “A constraint-based design space exploration framework for real-time applications on MPSoCs,” 
+    *  in 2014 Design, Automation Test in Europe Conference Exhibition (DATE), Mar. 2014, pp. 1–6. doi: 10.7873/DATE.2014.339.
+    */
+  val busLike8nodePlatformModel = {
+    val m      = ForSyDeSystemGraph()
+    var niMesh = Array.fill[InstrumentedCommunicationModule](8)(null)
+    // put the microblaze elements
+    for (i <- 0 until 8) {
+      val tile     = AbstractStructure.enforce(m.newVertex("tile_" + i))
+      val tileVisu = GreyBox.enforce(tile)
+      val proc =
+        InstrumentedProcessingModule.enforce(Visualizable.enforce(m.newVertex("micro_blaze_" + i)))
+      val mem =
+        GenericMemoryModule.enforce(Visualizable.enforce(m.newVertex("micro_blaze_mem" + i)))
+      val ni = InstrumentedCommunicationModule.enforce(
+        Visualizable.enforce(m.newVertex("micro_blaze_ni" + i))
+      )
+      val scheduler = StaticCyclicScheduler.enforce(m.newVertex("micro_blaze_os" + i))
+      val niSchedule = StaticCyclicScheduler.enforce(m.newVertex("micro_blaze_ni_slots" + i))
+      proc.setOperatingFrequencyInHertz(50000000L)
+      mem.setOperatingFrequencyInHertz(50000000L)
+      mem.setSpaceInBits(1048576L * 8L)
+      ni.setOperatingFrequencyInHertz(50000000L)
+      ni.setFlitSizeInBits(128L)
+      ni.setMaxConcurrentFlits(4)
+      ni.setMaxCyclesPerFlit(4)
+      ni.setInitialLatency(0L)
+      proc.setModalInstructionsPerCycle(
+        Map(
+          "eco" -> Map(
+            "all" -> (1.0 / 65.0).asInstanceOf[java.lang.Double]
+          ).asJava,
+          "default" -> Map(
+            "all" -> (1.0 / 13.0).asInstanceOf[java.lang.Double]
+          ).asJava
+        ).asJava
+      )
+      // connect them
+      tile.insertSubmodulesPort(m, proc)
+      tileVisu.insertContainedPort(m, Visualizable.enforce(proc))
+      tile.insertSubmodulesPort(m, mem)
+      tileVisu.insertContainedPort(m, Visualizable.enforce(mem))
+      tile.insertSubmodulesPort(m, ni)
+      tileVisu.insertContainedPort(m, Visualizable.enforce(ni))
+      proc.getViewedVertex().addPorts("networkInterface", "defaultMemory")
+      mem.getViewedVertex().addPorts("networkInterface", "instructionsAndData")
+      ni.getViewedVertex().addPorts("tileMemory", "tileProcessor", "bus")
+      niMesh(i) = ni
+      m.connect(
+        proc,
+        ni,
+        "networkInterface",
+        "tileProcessor",
+        EdgeTrait.PLATFORM_PHYSICALCONNECTION,
+        EdgeTrait.VISUALIZATION_VISUALCONNECTION
+      )
+      m.connect(
+        ni,
+        proc,
+        "tileProcessor",
+        "networkInterface",
+        EdgeTrait.PLATFORM_PHYSICALCONNECTION,
+        EdgeTrait.VISUALIZATION_VISUALCONNECTION
+      )
+      m.connect(
+        proc,
+        mem,
+        "defaultMemory",
+        "instructionsAndData",
+        EdgeTrait.PLATFORM_PHYSICALCONNECTION,
+        EdgeTrait.VISUALIZATION_VISUALCONNECTION
+      )
+      m.connect(
+        mem,
+        proc,
+        "instructionsAndData",
+        "defaultMemory",
+        EdgeTrait.PLATFORM_PHYSICALCONNECTION,
+        EdgeTrait.VISUALIZATION_VISUALCONNECTION
+      )
+      m.connect(
+        mem,
+        ni,
+        "networkInterface",
+        "tileMemory",
+        EdgeTrait.PLATFORM_PHYSICALCONNECTION,
+        EdgeTrait.VISUALIZATION_VISUALCONNECTION
+      )
+      m.connect(
+        ni,
+        mem,
+        "tileMemory",
+        "networkInterface",
+        EdgeTrait.PLATFORM_PHYSICALCONNECTION,
+        EdgeTrait.VISUALIZATION_VISUALCONNECTION
+      )
+      GreyBox.enforce(proc).insertContainedPort(m, Visualizable.enforce(scheduler))
+      Allocated.enforce(scheduler).insertAllocationHostsPort(m, proc)
+      Allocated.enforce(niSchedule).insertAllocationHostsPort(m, ni)
+    }
+    // and now the bus
+    val bus = InstrumentedCommunicationModule.enforce(m.newVertex("TDMBus"))
+    val busSched = StaticCyclicScheduler.enforce(m.newVertex("busSched"))
+    bus.setOperatingFrequencyInHertz(666667000L)
+    bus.setFlitSizeInBits(128L)
+    bus.setMaxConcurrentFlits(8)
+    bus.setMaxCyclesPerFlit(8)
+    bus.setInitialLatency(0L)
+    Allocated.enforce(busSched).insertAllocationHostsPort(m, bus)
+    Visualizable.enforce(bus)
+    // and now we connect the NIs in the mesh
+    for (i <- 0 until 8) {
+      bus.getViewedVertex().addPort("ni_" + i)
+      m.connect(
+        niMesh(i),
+        bus,
+        "bus",
+        "ni_" + i,
+        EdgeTrait.PLATFORM_PHYSICALCONNECTION,
+        EdgeTrait.VISUALIZATION_VISUALCONNECTION
+      )
+      m.connect(
+        bus,
+        niMesh(i),
+        "ni_" + i,
+        "bus",
+        EdgeTrait.PLATFORM_PHYSICALCONNECTION,
+        EdgeTrait.VISUALIZATION_VISUALCONNECTION
+      )
+    }
+    m
+  }
+
   // and now we construct the bigger in memory for the same reason
   val large5x6PlatformModel = {
     val m      = ForSyDeSystemGraph()
@@ -624,18 +762,27 @@ class SDFOnTileNoCUseCaseWithSolution extends AnyFunSuite with LoggingMixin {
   val allSDFApps =
     sobelSDF3.merge(susanSDF3).merge(rastaSDF3).merge(jpegEnc1SDF3).merge(g10_3_cyclicSDF3)
 
+  val appsAndBusSmall = allSDFApps.merge(busLike8nodePlatformModel)
   val appsAndSmall = allSDFApps.merge(small2x2PlatformModel)
   val appsAndLarge = allSDFApps.merge(large5x6PlatformModel)
 
   test("Created platform models in memory successfully and can write them out") {
     forSyDeModelHandler.writeModel(small2x2PlatformModel, "tests/models/small_platform.fiodl")
+    forSyDeModelHandler.writeModel(busLike8nodePlatformModel, "tests/models/bus_small_platform.fiodl")
     forSyDeModelHandler.writeModel(large5x6PlatformModel, "tests/models/large_platform.fiodl")
     forSyDeModelHandler.writeModel(small2x2PlatformModel, "tests/models/small_platform_visual.kgt")
+    forSyDeModelHandler.writeModel(busLike8nodePlatformModel, "tests/models/bus_small_platform_visual.kgt")
     forSyDeModelHandler.writeModel(large5x6PlatformModel, "tests/models/large_platform_visual.kgt")
   }
 
   test("Correct decision model identification of the Small platform") {
     val identified = identificationHandler.identifyDecisionModels(small2x2PlatformModel)
+    assert(identified.size > 0)
+    assert(identified.find(m => m.isInstanceOf[SchedulableTiledDigitalHardware]).isDefined)
+  }
+
+  test("Correct decision model identification of the Small Bus platform") {
+    val identified = identificationHandler.identifyDecisionModels(busLike8nodePlatformModel)
     assert(identified.size > 0)
     assert(identified.find(m => m.isInstanceOf[SchedulableTiledDigitalHardware]).isDefined)
   }
@@ -677,6 +824,33 @@ class SDFOnTileNoCUseCaseWithSolution extends AnyFunSuite with LoggingMixin {
             forSyDeModelHandler.writeModel(
               inputSystem.merge(sol),
               "tests/models/sdf3/results/sobel_and_small_result_visual.kgt"
+            )
+            sol
+          )
+      )
+      .take(1)
+    assert(solutions.size >= 1)
+  }
+
+  test("Correct identification and DSE of Sobel to bus Small") {
+    val inputSystem = sobelSDF3.merge(busLike8nodePlatformModel)
+    val identified  = identificationHandler.identifyDecisionModels(inputSystem)
+    val chosen      = explorationHandler.chooseExplorersAndModels(identified)
+    assert(chosen.size > 0)
+    assert(chosen.find((_, m) => m.isInstanceOf[ChocoSDFToSChedTileHW]).isDefined)
+    val solutions = chosen
+      .flatMap((explorer, decisionModel) =>
+        explorer
+          .explore[ForSyDeSystemGraph](decisionModel)
+          .map(sol =>
+            forSyDeModelHandler
+              .writeModel(
+                inputSystem.merge(sol),
+                "tests/models/sdf3/results/sobel_and_bus_small_result.fiodl"
+              )
+            forSyDeModelHandler.writeModel(
+              inputSystem.merge(sol),
+              "tests/models/sdf3/results/sobel_and_bus_small_result_visual.kgt"
             )
             sol
           )
@@ -789,6 +963,34 @@ class SDFOnTileNoCUseCaseWithSolution extends AnyFunSuite with LoggingMixin {
             forSyDeModelHandler.writeModel(
               appsAndSmall.merge(sol),
               "tests/models/sdf3/results/all_and_small_result_visual.kgt"
+            )
+            sol
+          )
+      )
+      .take(1)
+    assert(solutions.size >= 1)
+  }
+
+  test("Correct identification and DSE of all and small bus platform") {
+    val identified = identificationHandler.identifyDecisionModels(appsAndBusSmall)
+    assert(identified.size > 0)
+    assert(identified.find(m => m.isInstanceOf[SDFToSchedTiledHW]).isDefined)
+    val chosen = explorationHandler.chooseExplorersAndModels(identified)
+    assert(chosen.size > 0)
+    assert(chosen.find((_, m) => m.isInstanceOf[ChocoSDFToSChedTileHW]).isDefined)
+    val solutions = chosen
+      .flatMap((explorer, decisionModel) =>
+        explorer
+          .explore[ForSyDeSystemGraph](decisionModel)
+          .map(sol =>
+            forSyDeModelHandler
+              .writeModel(
+                appsAndSmall.merge(sol),
+                "tests/models/sdf3/results/all_and_bus_small_result.fiodl"
+              )
+            forSyDeModelHandler.writeModel(
+              appsAndSmall.merge(sol),
+              "tests/models/sdf3/results/all_and_bus_small_result_visual.kgt"
             )
             sol
           )

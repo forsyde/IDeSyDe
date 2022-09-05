@@ -1,18 +1,19 @@
 ---
 layout: default
 title: Quick start
-nav_order: 1
+nav_order: 2
 permalink: /usage/quickstart
 parent: Usage
 ---
 
 # Quick start
 
-As a majorly JVM-based project, the easiest way to start is to jave a Java virtual machine dsitribution installed
-in your computer. There are many options, and IDeSyDe is [CI-tested]({{ site.sources.idesyde }}/actions/workflows/test-build.yml)
-against graalvm and openjdk. Amazon Correto should work fine too.
+This quick start continues from the [installation instructions]({{ site.baseurl }}/usage/install), 
+and assumes you have `idesyde.jar` available in your computer.
 
-Then, you download the `jar` file and make it available to be called from your terminal; IDeSyDe is a CLI tool. You have succeed if
+<!-- Then, you download the `jar` file and make it available to be called from your terminal;  -->
+
+IDeSyDe is a CLI tool. You have succeed if
 you can execute the following:
 
     > java -jar idesyde.jar         
@@ -32,37 +33,23 @@ you can execute the following:
       -o, --out <outputModel>  If the output is an existing directory, write all solutions to the directory. Otherwise, the lastest solution is output.
       -v, --verbosity <verbosityLevel>
 
-The jar can be downloaded from the [IDeSyDe's releases page]({{ site.sources.idesyde }}/releases). 
-Note that the name might note be exactly `idesyde`, but `idesyde-x.x.x-cli.jar`.
-
-## Optional dependencies
-
-IDeSyDe might use [MiniZinc](https://www.minizinc.org/) as the explorer for some of the design space exploration
-scenarions that can be identified. Make sure that minzinc is usable from your terminal so that IDeSyDe is also
-able to reach it. For UNIX like systems, this translate to having `minizinc` in your PATH so that, calling `minizinc`,
-yields:
-
-    > minizinc   
-    minizinc: MiniZinc driver.
-    Usage: minizinc  [<options>] [-I <include path>] <model>.mzn [<data>.dzn ...] or just <flat>.fzn
-    More info with "minizinc --help"
 
 ## Performing DSE
 
-IDeSyDe currently consumes ForSyDe IO XMI files as its input. The conventional extension is `forsyde.xmi`!
+IDeSyDe currently consumes ForSyDe IO description files as its input. The conventional extension is `fiodl`.
 Please note that this support comes directly from [ForSyDe IO]({{ site.projects.forsydeio }}), and this
-requires the extension to be either `forsyde.xmi` or `forxmi` to work.
+requires the extension to be either `.fiodl` to work.
 
-If the input models you have are not ForSyDe IO XMI files, 
-then you might be able to use [ConverSyDe]({{site.projects.forsydeio}}/usage/conversyde) to convert them as such.
+If the input models you have are not ForSyDe IO files, 
+then you might be able to use [ConverSyDe]({{site.projects.forsydeio}}/usage/conversyde) to convert them.
 
-Once you have the input files `model1.forsyde.xmi`, `model2.forsyde.xmi`, etc. Then you just execute the idesyde
+Once you have the input files `model1.fiodl`, `model2.fiodl`, etc. Then you just execute the idesyde
 `jar` with them as inputs:
 
     > java -jar idesyde.jar \
-        -o latest_solved_model.forsyde.xmi \
-        model1.forsyde.xmi \
-        model2.forsyde.xmi ...
+        -o latest_solved_model.fiodl \
+        model1.fiodl \
+        model2.fiodl ...
 
 you should see an output like this:
 
@@ -77,7 +64,7 @@ you should see an output like this:
 
 
 Althought it make take some time to finish (up to 100 solutions are currently set as the limit), you can follow in your computer that
-the file `latest_solved_model.forsyde.xmi` set as output already existed longer before IDeSyDe finished execution. That's because
+the file `latest_solved_model.fiodl` set as output already existed longer before IDeSyDe finished execution. That's because
 intermediate (feasible) solutions are also output by the tools as it tries to optimize it further.
 
 ## Difference between no DSE and no feasible results
@@ -92,7 +79,7 @@ programmed in IDeSyDe.
 
 Here's an example of when there's no possible DSE **combo** identified:
 
-    > java -jar idesyde.jar -o solved.forsyde.xmi input_model.forsyde.xmi 
+    > java -jar idesyde.jar -o solved.fiodl input_model.fiodl 
     2022.03.17 14:45:33:242 [main      ] [INFO ] idesyde.cli.IDeSyDeRunConfig.setLoggingLevel:85 - logging levels set to INFO.
     2022.03.17 14:45:33:323 [main      ] [INFO ] idesyde.cli.IDeSyDeRunConfig.run:39 - Reading and merging input models.
     2022.03.17 14:45:33:595 [main      ] [INFO ] idesyde.identification.api.IdentificationHandler.identifyDecisionModels:47 - Performing identification with 9 rules up to 162 iterations.
@@ -103,7 +90,7 @@ Here's an example of when there's no possible DSE **combo** identified:
 
 And here's an example where there's a DSE **combo** to be solved but not feasible solution exists:
 
-    > java -jar idesyde.jar -o solved.forsyde.xmi input_system.forsyde.xmi
+    > java -jar idesyde.jar -o solved.fiodl input_system.fiodl
     2022.03.17 14:49:24:516 [main      ] [INFO ] idesyde.cli.IDeSyDeRunConfig.setLoggingLevel:85 - logging levels set to INFO.
     2022.03.17 14:49:24:619 [main      ] [INFO ] idesyde.cli.IDeSyDeRunConfig.run:39 - Reading and merging input models.
     2022.03.17 14:49:25:315 [main      ] [INFO ] idesyde.identification.api.IdentificationHandler.identifyDecisionModels:47 - Performing identification with 9 rules up to 243 iterations.

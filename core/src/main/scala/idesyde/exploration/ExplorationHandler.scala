@@ -33,7 +33,7 @@ final class ExplorationHandler(
         val possibleExplorers = explorers.filter(_.canExplore(m)).toArray
         val dominanceMatrix = possibleExplorers.map(e => possibleExplorers.map(ee => e.dominates(ee, m, explorationCriteria)))
         // keep only the SCC which are leaves
-        val dominant = CoreUtils.computeDominantFromReachability(dominanceMatrix).map(idx => possibleExplorers(idx))
+        val dominant = CoreUtils.computeDominantFromReachability(CoreUtils.reachibilityClosure(dominanceMatrix)).map(idx => possibleExplorers(idx))
         // val dominant = dominanceComponents.filter(component => {
         //   // keep dominant components in which no other components dominate any decision model
         //   // therein

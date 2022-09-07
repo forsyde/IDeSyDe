@@ -34,29 +34,34 @@ object CoreUtils {
     }
 
     def computeDominantFromReachability(reachability: Array[Array[Boolean]]): Set[Int] = {
-        var components = (0 until reachability.size).map(Set(_)).toArray
-        for (i <- 0 until reachability.size - 1;
-             j <- i + 1 until reachability.size;
-             iSetIdx = components.indexWhere(c => c.contains(i));
-             jSetIdx = components.indexWhere(c => c.contains(j))
-             // if there exists any dominance path forward and back
-             if reachability(i)(j) && reachability(j)(i)
-        ) {
-            components(iSetIdx) = components(iSetIdx) ++ components(jSetIdx)
-            components = components.take(jSetIdx) ++ components.drop(jSetIdx + 1)
+        var masks = Array.fill(reachability.size)(0)
+        var i = 0
+        var j = 0
+        while (i < masks.size - 1) {
+            j = i + 1
+            while ( j < masks.size) {
+                if (reachability(i)(j) && reachability(j)(i)) {
+                    masks(j) = masks(i)
+                } else if (reachability(i)(j) && !reachability(j)(i)) {
+                    masks(j) = masks(i) + 1
+                }
+                j += 1
+            }
+            i += 1
         }
         // now keep only the dominant ones
-        val dominance = components.map(_ => true)
-        for (
-            i <- 0 until components.size - 1;
-            j <- i + 1 until components.size
-        ) {
-            def ijDominance = components(i).exists(ci => components(j).exists(cj => reachability(ci)(cj)))
-            def jiDominance = components(j).exists(cj => components(i).exists(ci => reachability(cj)(ci)))
-            if (ijDominance) dominance(j) = false
-            else if (jiDominance) dominance(i) = false
-        }
-        components.zipWithIndex.filter((c, i) => dominance(i)).flatMap((c, i) => c).toSet
+        val dominantMask = masks.min
+        // for (
+        //     i <- 0 until components.size - 1;
+        //     j <- i + 1 until components.size
+        // ) {
+        //     def ijDominance = components(i).exists(ci => components(j).exists(cj => reachability(ci)(cj)))
+        //     def jiDominance = components(j).exists(cj => components(i).exists(ci => reachability(cj)(ci)))
+        //     if (ijDominance) dominance(j) = false
+        //     else if (jiDominance) dominance(i) = false
+        // }
+        masks.zipWithIndex.filter((c, i) => c <= dominantMask).map((c, i) => i).toSet
+        // components.zipWithIndex.filter((c, i) => dominance(i)).flatMap((c, i) => c).toSet
     }
 
     /**

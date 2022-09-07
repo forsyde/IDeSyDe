@@ -63,7 +63,7 @@ class ChocoExplorer() extends ForSyDeIOExplorer:
       var paretoRuns = 0
       if (isOptimization) {
         solver.plugMonitor(paretoMaximizer)
-        model.post(new Constraint("paretoOptConstraint", paretoMaximizer))
+        // model.post(new Constraint("paretoOptConstraint", paretoMaximizer))
       }
       solver.setLearningSignedClauses
       solver.setNoGoodRecordingFromRestarts

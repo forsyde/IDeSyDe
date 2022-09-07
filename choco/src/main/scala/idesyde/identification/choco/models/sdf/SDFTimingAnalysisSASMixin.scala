@@ -117,10 +117,7 @@ trait SDFTimingAnalysisSASMixin extends ChocoModelMixin {
 
   def postSDFTimingAnalysisSAS(): Unit = {
     postOnlySAS()
-    chocoModel.post(
-      new Constraint(
-        "global_sas_sdf_prop",
-        SASTimingAndTokensPropagator(
+    val propagator = SASTimingAndTokensPropagator(
           actors.zipWithIndex.map((a, i) => maxRepetitionsPerActors(i)),
           balanceMatrix,
           initialTokens,
@@ -133,6 +130,10 @@ trait SDFTimingAnalysisSASMixin extends ChocoModelMixin {
           slotPeriods,
           globalInvThroughput
         )
+    chocoModel.post(
+      new Constraint(
+        "global_sas_sdf_prop",
+        propagator
       )
     )
   }
@@ -177,21 +178,24 @@ trait SDFTimingAnalysisSASMixin extends ChocoModelMixin {
       var nextSlot = -1
       // var sendVecSaved = SparseVector.zeros[Int](channels.size)
       // println("propagate")
+      recomputeFiringVectors()
       recomputeTokensAndTime()
       // latestClosedSlot = 0
-      latestClosedSlot = -1
+      latestClosedSlot = recomputeLastClosedSlot()
+      // if there is an open hole in the schedule. We avoid that.
+      if (latestClosedSlot < -1) fails()
       // slotsPrettyPrint()
-      for (s <- slots) {
-        // instantiedCount = 0
-        if (slotIsClosed(s)) {
-          if (latestClosedSlot >= 0 && latestClosedSlot < s - 1) {
-            // println("skipped slot")
-            fails() // there is an open hole in the schedule. We avoid that.
-          } else if (latestClosedSlot >= s - 1) {
-            latestClosedSlot = s
-          }
-        }
-      }
+      // for (s <- slots) {
+      //   // instantiedCount = 0
+      //   if (slotIsClosed(s)) {
+      //     if (latestClosedSlot >= 0 && latestClosedSlot < s - 1) {
+      //       println("skipped slot")
+      //       fails() // there is an open hole in the schedule. We avoid that.
+      //     } else if (latestClosedSlot >= s - 1) {
+      //       latestClosedSlot = s
+      //     }
+      //   }
+      // }
       // println(s"latestClosedSlot ${latestClosedSlot}")
       // now, we also avoid instantiations that are farther than the decision slot
       // tailZeros = 0
@@ -202,9 +206,9 @@ trait SDFTimingAnalysisSASMixin extends ChocoModelMixin {
             firingVector(s + 1)
           ) > 0
         ) {
-          // slotsPrettyPrint()
           // tailZeros += 1
           // println(s"zero ${s}")
+          // schedulePrettyPrint()
           fails()
           // throw ContradictionException().set(this, firingsInSlots(a)(p)(s), s"${a}_${p}_${s} invalidated order")
         }
@@ -216,23 +220,23 @@ trait SDFTimingAnalysisSASMixin extends ChocoModelMixin {
       // }
       // }
       // first, we check if the model is still sane
-      for (
-        s <- slots.take(latestClosedSlot + 1)
-        // p <- schedulers
-      ) {
+      wfor(0, it => it <= latestClosedSlot && it < slots.size, _ + 1) { s =>
         // make sure that the tokens are not negative.
-        for (
-          p <- schedulers;
-          a <- actors;
-          if firingsInSlots(a)(p)(s).isInstantiated();
-          q = firingsInSlots(a)(p)(s).getValue()
-          if min(consMat * singleActorFire(a)(q) + tokensBefore(s)) < 0 // there is a negative fire
-        ) {
-          // println("invalidated by token!")
+        if (min(consMat * firingVector(s) + tokensBefore(s)) < 0) {
+          println("invalidated by token!")
           fails()
         }
+        // for (
+        //   p <- schedulers;
+        //   a <- actors;
+        //   if firingsInSlots(a)(p)(s).isInstantiated() && firingsInSlots(a)(p)(s).getLB() > 0;
+        //   q = firingsInSlots(a)(p)(s).getValue()
+        //   if min(consMat * singleActorFire(a)(q) + tokensBefore(s)) < 0 // there is a negative fire
+        // ) {
+        //   println("invalidated by token!")
+        //   fails()
+        // }
       }
-
       // if (latestClosedSlot > -1) println(tokensBefore(latestClosedSlot).toString)
       // make sure that the latest slot only has admissible firings
       if (latestClosedSlot < slots.size - 1) {
@@ -298,21 +302,8 @@ trait SDFTimingAnalysisSASMixin extends ChocoModelMixin {
       // }
 
       // now try to bound the timing,
-      var maxInvTh      = 0
-      var latestFinish  = 0
-      var earliestStart = 0
-      for (p <- schedulers) {
-        latestFinish = finishTimes(p)(slots.size - 1)
-        earliestStart = 0
-        for (i <- slots) {
-          // this criteria makes it stop updating in the first found
-          if (earliestStart == 0 && slotAtSchedulerIsTaken(p)(i)) {
-            earliestStart = startTimes(p)(i)
-          }
-        }
-        maxInvTh = latestFinish - earliestStart
-      }
-      globalInvThroughput.updateLowerBound(maxInvTh, this)
+      recomputeInvThroughput()
+      globalInvThroughput.updateLowerBound(computeGlobalInvThroughput(), this)
 
     }
 

@@ -5,6 +5,7 @@ import breeze.linalg.DenseVector
 import breeze.linalg.DenseMatrix
 import breeze.linalg.SparseVector
 import breeze.linalg.CSCMatrix
+import idesyde.utils.CoreUtils.wfor
 
 trait SDFChocoRecomputeMethodsMixin {
   def maxFiringsPerActor: Array[Int]
@@ -48,6 +49,7 @@ trait SDFChocoRecomputeMethodsMixin {
   def mat: CSCMatrix[Int]
   protected lazy val prodMat: CSCMatrix[Int] = mat.map(f => if (f >= 0) then f else 0)
   protected lazy val consMat: CSCMatrix[Int] = mat.map(f => if (f <= 0) then f else 0)
+  protected lazy val invThroughputPerSchedulers = Array.fill(schedulers.size)(0)
 
   def mkSingleActorFire(a: Int)(q: Int): SparseVector[Int] = {
     val v = SparseVector.zeros[Int](actors.size)
@@ -57,7 +59,7 @@ trait SDFChocoRecomputeMethodsMixin {
 
   def slotAtSchedulerIsTaken(p: Int)(slot: Int): Boolean = {
     for (a <- actors) {
-      if (firingsInSlots(a)(p)(slot).getLB() > 0)
+      if (firingsInSlots(a)(p)(slot).isInstantiated() && firingsInSlots(a)(p)(slot).getLB() > 0)
         return true
     }
     return false
@@ -65,9 +67,11 @@ trait SDFChocoRecomputeMethodsMixin {
   // actors.exists(a => )
 
   def slotIsClosed(slot: Int): Boolean = {
-    for (p <- schedulers; a <- actors) {
-      if (!firingsInSlots(a)(p)(slot).isInstantiated()) {
-        return false
+    wfor(0, _ < schedulers.size, _ + 1) { p =>
+      wfor(0, _ < actors.size, _ + 1)  { a =>
+        if (!firingsInSlots(a)(p)(slot).isInstantiated()) {
+          return false
+        }
       }
     }
     return true
@@ -75,9 +79,11 @@ trait SDFChocoRecomputeMethodsMixin {
   // schedulers.forall(p => actors.forall(a => ))
 
   def slotHasFiring(slot: Int): Boolean = {
-    for (p <- schedulers; a <- actors) {
-      if (firingsInSlots(a)(p)(slot).getLB() > 0) {
-        return true
+    wfor(0, _ < schedulers.size, _ + 1) { p =>
+      wfor(0, _ < actors.size, _ + 1)  { a =>
+        if (firingsInSlots(a)(p)(slot).getLB() > 0) {
+          return true
+        }
       }
     }
     return false
@@ -112,6 +118,25 @@ trait SDFChocoRecomputeMethodsMixin {
   //   }
   // }
 
+  /**
+    * @return the last closed slot in the schedule. An int of -1 means
+    * the very first slot is still open; and an int < -1 means there is a hole in the schedule and thus it is wrong.
+    */
+  def recomputeLastClosedSlot(): Int = {
+    var latestClosedSlot = -1
+    wfor(0, _ < slots.size, _ + 1) { s =>
+      // instantiedCount = 0
+      if (slotIsClosed(s)) {
+        if (latestClosedSlot >= 0 && latestClosedSlot < s - 1) {
+          return -2
+        } else if (latestClosedSlot >= s - 1) {
+          latestClosedSlot = s
+        }
+      }
+    }
+    latestClosedSlot
+  }
+
   def recomputeFiringVectors(): Unit = {
     for (
       slot <- slots;
@@ -128,25 +153,26 @@ trait SDFChocoRecomputeMethodsMixin {
     }
   }
 
+  /**
+    * Must be called after [[recomputeFiringVectors]]! behaviour is undefined otherwise.
+    */
   def recomputeTokensAndTime(): Unit = {
-    recomputeFiringVectors()
+    // recomputeFiringVectors()
     // for the very first initial conditions
     tokensAfter(0) = mat * firingVector(0) + tokensBefore(0)
     for (p <- schedulers) {
       startTimes(p)(0) = 0
       finishTimes(p)(0) = startTimes(p)(0)
       for (a <- actors) {
-        finishTimes(p)(0) += firingVector(0)(a) * actorDuration(a)(p)
+        finishTimes(p)(0) += firingVectorPerCore(0)(p)(a) * actorDuration(a)(p)
       }
     }
     // work based first on the slots and update the timing whenever possible
-    for (
-      i <- slots.drop(1)
-      // p <- schedulers
-    ) {
+    wfor(1, _ < slots.size, _ + 1) { i =>
       // println(s"at ${i} : ${firingVector(i)}")
       tokensBefore(i) = tokensAfter(i - 1)
       tokensAfter(i) = mat * firingVector(i) + tokensBefore(i)
+      // now for timing
       for (p <- schedulers) {
         maxStartTime = finishTimes(p)(i - 1)
         for (
@@ -157,16 +183,43 @@ trait SDFChocoRecomputeMethodsMixin {
           val diffAtP  = diffTokenVec(i)(p)(p)
           val diffAtPP = diffTokenVec(i)(pp)(pp)
           for (c <- channels; if diffAtP(c) < 0 && diffAtPP(c) >= -diffAtP(c)) {
+            // println(s"commRecvTime from $p to $pp by $c is ${-channelsTravelTime(c)(pp)(p).getLB() * diffAtP(c)}")
             commRecvTime =
-              Math.max(commRecvTime, -channelsTravelTime(c)(pp)(p).getUB() * diffAtP(c))
+              Math.max(commRecvTime, -channelsTravelTime(c)(pp)(p).getLB() * diffAtP(c))
           }
           maxStartTime = Math.max(maxStartTime, finishTimes(pp)(i - 1) + commRecvTime)
         }
         startTimes(p)(i) = maxStartTime
         finishTimes(p)(i) = maxStartTime
-        for (a <- actors) finishTimes(p)(i) += firingVector(i)(a) * actorDuration(a)(p)
+        for (a <- actors) finishTimes(p)(i) += firingVectorPerCore(i)(p)(a) * actorDuration(a)(p)
       }
     }
+  }
+
+  /**
+    * Must be called after [[recomputeTokensAndTime]]! Behaviour is undefined otherwise.
+    */
+  def recomputeInvThroughput(): Unit = {
+    wfor(0, _ < schedulers.size, _ + 1) { p =>
+      val latestFinish = finishTimes(p).last
+      var earliestStart = 0
+      var searching = true
+      wfor(0, searching && _ < slots.size, _ + 1) {i =>
+        if (slotAtSchedulerIsTaken(p)(i)) {
+          earliestStart = startTimes(p)(i)
+          searching = false
+        }
+      }
+      invThroughputPerSchedulers(p) = latestFinish - earliestStart
+    }
+  }
+
+  def computeGlobalInvThroughput(): Int = {
+    var maxTh = 0
+    wfor(0, _ < schedulers.size, _ + 1) { p =>
+      if (invThroughputPerSchedulers(p) > maxTh) then maxTh = invThroughputPerSchedulers(p)
+    }
+    maxTh
   }
 
   def slotsPrettyPrint(): Unit = {
@@ -180,6 +233,40 @@ trait SDFChocoRecomputeMethodsMixin {
                   firingsInSlots(a)(s)(slot).getLB() + "|" + firingsInSlots(a)(s)(slot).getUB()
                 )
                 .mkString("(", ", ", ")")
+            })
+            .mkString("[", ", ", "]")
+        })
+        .mkString("[\n ", "\n ", "\n]")
+    )
+  }
+
+  def schedulePrettyPrint(): Unit = {
+    println(
+      schedulers
+        .map(s => {
+          (0 until actors.size)
+            .map(slot => {
+              actors.zipWithIndex
+                .find((a, ai) => firingsInSlots(ai)(s)(slot).isInstantiated() && firingsInSlots(ai)(s)(slot).getLB() > 0)
+                .map((a, ai) =>
+                  slot + "/" + a + ": " + firingsInSlots(ai)(s)(slot)
+                    .getLB()
+                )
+                .getOrElse("_")
+            })
+            .mkString("[", ", ", "]")
+        })
+        .mkString("[\n ", "\n ", "\n]")
+    )
+  }
+
+  def timingPrettyPrint(): Unit = {
+    println(
+      schedulers
+        .map(s => {
+          (0 until actors.size)
+            .map(slot => {
+              startTimes(s)(slot) + " - " + finishTimes(s)(slot)
             })
             .mkString("[", ", ", "]")
         })

@@ -21,16 +21,14 @@ import org.chocosolver.solver.search.strategy.Search
 import org.chocosolver.solver.search.strategy.selectors.variables.Largest
 import org.chocosolver.solver.search.strategy.selectors.values.IntDomainMedian
 import org.chocosolver.solver.search.strategy.selectors.values.IntDomainMax
-import idesyde.identification.choco.models.SingleProcessSingleMessageMemoryConstraintsMixin
+import idesyde.identification.choco.models.SingleProcessSingleMessageMemoryConstraintsModule
 import org.chocosolver.solver.search.strategy.strategy.FindAndProve
 
 final case class ChocoSDFToSChedTileHWSlowest(
     val dse: SDFToSchedTiledHW
 )(using Fractional[Rational])
     extends ChocoCPForSyDeDecisionModel
-    with SingleProcessSingleMessageMemoryConstraintsMixin
-    with TileAsyncInterconnectCommsMixin
-    with SDFTimingAnalysisSASMixin {
+    with TileAsyncInterconnectCommsMixin {
 
   val chocoModel: Model = Model()
 
@@ -45,43 +43,6 @@ final case class ChocoSDFToSChedTileHWSlowest(
   ) {
     timeMultiplier *= 10
   }
-  // scribe.debug(timeMultiplier.toString)
-
-  // ---- SDFTimingAnalysisSASMixin
-  val sdfAndSchedulers = dse
-
-  val invThroughputs: Array[IntVar] = schedulers
-    .map(p =>
-      chocoModel.intVar(
-        s"invTh($p)",
-        0,
-        actors.zipWithIndex.map((a, ai) => actorDuration(ai)(p) * maxRepetitionsPerActors(ai)).sum,
-        true
-      )
-    )
-  val slotFinishTime: Array[Array[IntVar]] = schedulers
-    .map(p =>
-      actors.map(s => chocoModel.intVar(s"finishTime($p, $s)", 0, invThroughputs(p).getUB(), true))
-    )
-  val slotStartTime: Array[Array[IntVar]] = schedulers
-    .map(p =>
-      actors.map(s => chocoModel.intVar(s"startTime($p, $s)", 0, invThroughputs(p).getUB(), true))
-    )
-  val globalInvThroughput =
-    chocoModel.intVar(
-      "globalInvThroughput",
-      schedulers
-        .map(p => actors.map(a => actorDuration(a)(p)).max)
-        .max,
-      schedulers
-        .map(p =>
-          actors.zipWithIndex.map((a, ai) => actorDuration(ai)(p) * maxRepetitionsPerActors(ai)).sum
-        )
-        .max,
-      true
-    )
-
-  override val timeFactor = timeMultiplier
 
   // do the same for memory numbers
   val memoryValues = dse.platform.tiledDigitalHardware.memories.map(_.getSpaceInBits().toLong) ++
@@ -91,12 +52,19 @@ final case class ChocoSDFToSChedTileHWSlowest(
   while (memoryValues.forall(_ / memoryDivider >= 100) && memoryDivider < Int.MaxValue) {
     memoryDivider *= 10L
   }
+  // scribe.debug(timeMultiplier.toString)
 
-  val dataSize: Array[Int] =
-    dse.sdfApplications.messagesMaxSizes.map(l => (l / memoryDivider).toInt)
+  // ---- SDFTimingAnalysisSASMixin
+  val sdfAndSchedulers = dse
 
-  val processSize: Array[Int] =
-    dse.sdfApplications.processSizes.map(l => (l / memoryDivider).toInt)
+  val memoryLimitModule = SingleProcessSingleMessageMemoryConstraintsModule(
+    chocoModel,
+    dse.sdfApplications.processSizes.map(_ / memoryDivider).map(_.toInt),
+    dse.sdfApplications.messagesMaxSizes.map(l => (l / memoryDivider).toInt),
+    dse.platform.tiledDigitalHardware.maxMemoryPerTile.map(_ / memoryDivider).map(_.toInt)
+  )
+
+  override val timeFactor = timeMultiplier
 
   val commElemsPaths = dse.platform.tiledDigitalHardware.computeRouterPaths
   def commElemsPath(srcId: Int)(dstId: Int): Array[Int] =
@@ -124,13 +92,6 @@ final case class ChocoSDFToSChedTileHWSlowest(
 
   //-----------------------------------------------------
   // Decision variables
-  val messagesMemoryMapping: Array[IntVar] = dse.sdfApplications.channels.map(c =>
-    chocoModel.intVar(s"${c.getIdentifier()}_m", dse.platform.tiledDigitalHardware.tileSet)
-  )
-
-  val processesMemoryMapping: Array[IntVar] = dse.sdfApplications.actors.map(a =>
-    chocoModel.intVar(s"${a.getIdentifier()}_m", dse.platform.tiledDigitalHardware.tileSet)
-  )
 
   val messageAllocation = dse.sdfApplications.channels.map(c => {
     dse.platform.tiledDigitalHardware.tileSet.map(src => {
@@ -177,23 +138,6 @@ final case class ChocoSDFToSChedTileHWSlowest(
     })
   })
 
-  val numActorsScheduledSlotsInStaticCyclicVars: Array[Array[Array[IntVar]]] =
-    dse.sdfApplications.actors.zipWithIndex.map((a, i) => {
-      dse.platform.executionSchedulers.zipWithIndex.map((s, j) => {
-        (0 until actors.size)
-          .map(aa =>
-            chocoModel
-              .intVar(
-                s"sched_${a.getIdentifier()}_${s.getIdentifier()}_${aa}",
-                0,
-                maxRepetitionsPerActors(i),
-                true
-              )
-          )
-          .toArray
-      })
-    })
-
   //---------
 
   //-----------------------------------------------------
@@ -212,10 +156,6 @@ final case class ChocoSDFToSChedTileHWSlowest(
     dse.platform.tiledDigitalHardware.processors.length
   )
   chocoModel.atMostNValues(processesMemoryMapping, nUsedPEs, true).post()
-
-  val memoryUsage: Array[IntVar] = dse.platform.tiledDigitalHardware.memories
-    .map(m => (m, (m.getSpaceInBits() / memoryDivider).toInt))
-    .map((m, s) => chocoModel.intVar(s"${m.getIdentifier()}_u", 0, s, true))
 
   def messageIsCommunicated(messageId: Int)(srcId: Int)(dstId: Int): BoolVar =
     messageAllocation(messages.indexOf(messageId))(procElems.indexOf(srcId))(
@@ -278,7 +218,7 @@ final case class ChocoSDFToSChedTileHWSlowest(
   // )
 
   // - mixed constraints
-  postSingleProcessSingleMessageMemoryConstraints()
+  memoryLimitModule.postSingleProcessSingleMessageMemoryConstraints()
 
   //---------
 

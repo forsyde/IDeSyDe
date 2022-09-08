@@ -6,7 +6,13 @@ import breeze.linalg._
 import breeze.math.Field
 import breeze.linalg.support.CanZipMapValues
 
-object SDFChocoRecomputeMethods {
+class SDFChocoRecomputeMethods(
+    val firingsInSlots: Array[Array[Array[IntVar]]]
+) {
+
+  private val numActors     = firingsInSlots.size
+  private val numSchedulers = firingsInSlots.head.size
+  private val numSlots      = firingsInSlots.head.head.size
   // def maxFiringsPerActor: Array[Int]
   // def balanceMatrix: Array[Array[Int]]
   // def initialTokens: Array[Int]
@@ -40,15 +46,13 @@ object SDFChocoRecomputeMethods {
   // protected lazy val consMat: CSCMatrix[Int] = mat.map(f => if (f <= 0) then f else 0)
   // protected lazy val invThroughputPerSchedulers = Array.fill(schedulers.size)(0)
 
-  def mkSingleActorFire(numActors: Int)(a: Int)(q: Int): DenseVector[Int] = {
+  def mkSingleActorFire(a: Int)(q: Int): DenseVector[Int] = {
     val v = DenseVector.zeros[Int](numActors)
     v(a) = q
     v
   }
 
-  def slotAtSchedulerIsTaken(
-      firingsInSlots: Array[Array[Array[IntVar]]]
-  )(p: Int)(slot: Int): Boolean = {
+  def slotAtSchedulerIsTaken(p: Int)(slot: Int): Boolean = {
     val numActors = firingsInSlots.size
     wfor(0, _ < numActors, _ + 1) { a =>
       if (firingsInSlots(a)(p)(slot).isInstantiated() && firingsInSlots(a)(p)(slot).getLB() > 0)
@@ -58,7 +62,7 @@ object SDFChocoRecomputeMethods {
   }
   // actors.exists(a => )
 
-  def slotIsClosed(firingsInSlots: Array[Array[Array[IntVar]]])(slot: Int): Boolean = {
+  def slotIsClosed(slot: Int): Boolean = {
     val numActors     = firingsInSlots.size
     val numSchedulers = firingsInSlots.head.size
     wfor(0, _ < numSchedulers, _ + 1) { p =>
@@ -72,7 +76,7 @@ object SDFChocoRecomputeMethods {
   }
   // schedulers.forall(p => actors.forall(a => ))
 
-  def slotHasFiring(firingsInSlots: Array[Array[Array[IntVar]]])(slot: Int): Boolean = {
+  def slotHasFiring(slot: Int): Boolean = {
     val numActors     = firingsInSlots.size
     val numSchedulers = firingsInSlots.head.size
     wfor(0, _ < numSchedulers, _ + 1) { p =>
@@ -86,7 +90,9 @@ object SDFChocoRecomputeMethods {
   }
   // actors.exists(a => schedulers.exists(p => firingsInSlots(a)(p)(slot).getLB() > 0))
 
-  def diffTokenVec(consMat: DenseMatrix[Int])(prodMat: DenseMatrix[Int])(srcFiring: DenseVector[Int])(dstFiring: DenseVector[Int]): DenseVector[Int] = 
+  def diffTokenVec(consMat: DenseMatrix[Int])(prodMat: DenseMatrix[Int])(
+      srcFiring: DenseVector[Int]
+  )(dstFiring: DenseVector[Int]): DenseVector[Int] =
     consMat * dstFiring + prodMat * srcFiring
 
   // protected var sendVecSaved = SparseVector.zeros[Int](0)
@@ -103,14 +109,14 @@ object SDFChocoRecomputeMethods {
     *   the last closed slot in the schedule so that all slots before it are decided. An int of -1
     *   means the very first slot is still open.
     */
-  def recomputeLowerestDecidedSlot(firingsInSlots: Array[Array[Array[IntVar]]]): Int = {
+  def recomputeLowerestDecidedSlot(): Int = {
     val numActors        = firingsInSlots.size
     val numSchedulers    = firingsInSlots.head.size
     val numSlots         = firingsInSlots.head.head.size
     var latestClosedSlot = -1
     wfor(0, _ < numSlots, _ + 1) { s =>
       // instantiedCount = 0
-      if (slotIsClosed(firingsInSlots)(s) && latestClosedSlot == s - 1) {
+      if (slotIsClosed(s) && latestClosedSlot == s - 1) {
         latestClosedSlot = s
       }
     }
@@ -118,8 +124,9 @@ object SDFChocoRecomputeMethods {
   }
 
   def recomputeFiringVectors[V <: Vector[Int]](
-      firingsInSlots: Array[Array[Array[IntVar]]]
-  )(firingVector: Array[V], firingVectorPerCore: Array[Array[V]]): Unit = {
+      firingVector: Array[V],
+      firingVectorPerCore: Array[Array[V]]
+  ): Unit = {
     val numActors     = firingsInSlots.size
     val numSchedulers = firingsInSlots.head.size
     val numSlots      = firingsInSlots.head.head.size
@@ -208,7 +215,7 @@ object SDFChocoRecomputeMethods {
   //   maxTh
   // }
 
-  def slotsPrettyPrint(firingsInSlots: Array[Array[Array[IntVar]]]): Unit = {
+  def slotsPrettyPrint(): Unit = {
     val actors     = 0 until firingsInSlots.size
     val schedulers = 0 until firingsInSlots.head.size
     val slots      = 0 until firingsInSlots.head.head.size
@@ -229,7 +236,7 @@ object SDFChocoRecomputeMethods {
     )
   }
 
-  def schedulePrettyPrint(firingsInSlots: Array[Array[Array[IntVar]]]): Unit = {
+  def schedulePrettyPrint(): Unit = {
     val actors     = 0 until firingsInSlots.size
     val schedulers = 0 until firingsInSlots.head.size
     println(

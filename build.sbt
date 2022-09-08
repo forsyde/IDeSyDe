@@ -4,9 +4,8 @@ ThisBuild / scalaVersion := "3.1.3"
 ThisBuild / maintainer := "jordao@kth.se"
 
 lazy val forsydeIoVersion = "0.5.15"
-lazy val jgraphtVersion = "1.5.1"
-lazy val scribeVersion = "3.10.2"
-
+lazy val jgraphtVersion   = "1.5.1"
+lazy val scribeVersion    = "3.10.2"
 
 lazy val root = project
   .in(file("."))
@@ -18,10 +17,10 @@ lazy val common = (project in file("common"))
   .dependsOn(core)
   .settings(
     libraryDependencies ++= Seq(
-      "org.jgrapht"        % "jgrapht-core"         % jgraphtVersion,
-      "org.jgrapht"        % "jgrapht-opt"          % jgraphtVersion,
-      "org.scalanlp"      %% "breeze"               % "2.0.1-RC1",
-      "com.outr" %% "scribe" % scribeVersion
+      "org.jgrapht"   % "jgrapht-core" % jgraphtVersion,
+      "org.jgrapht"   % "jgrapht-opt"  % jgraphtVersion,
+      "org.scalanlp" %% "breeze"       % "2.0.1-RC1",
+      "com.outr"     %% "scribe"       % scribeVersion
     )
   )
 
@@ -30,10 +29,10 @@ lazy val forsyde = (project in file("forsyde"))
   .dependsOn(common)
   .settings(
     libraryDependencies ++= Seq(
-      "io.github.forsyde"  % "forsyde-io-java-core" % forsydeIoVersion,
-      "org.jgrapht"        % "jgrapht-core"         % jgraphtVersion,
-      "org.jgrapht"        % "jgrapht-opt"          % jgraphtVersion,
-      "org.typelevel" %% "spire" % "0.18.0"
+      "io.github.forsyde" % "forsyde-io-java-core" % forsydeIoVersion,
+      "org.jgrapht"       % "jgrapht-core"         % jgraphtVersion,
+      "org.jgrapht"       % "jgrapht-opt"          % jgraphtVersion,
+      "org.typelevel"    %% "spire"                % "0.18.0"
     )
   )
 
@@ -43,13 +42,13 @@ lazy val minizinc = (project in file("minizinc"))
   .dependsOn(forsyde)
   .settings(
     libraryDependencies ++= Seq(
-      "org.apache.commons" % "commons-math3"        % "3.6.1",
-      "com.outr"          %% "scribe"               % scribeVersion,
-      "com.lihaoyi"       %% "upickle"              % "1.4.0",
-      "org.jgrapht"        % "jgrapht-core"         % jgraphtVersion,
-      "org.jgrapht"        % "jgrapht-opt"          % jgraphtVersion,
-      "org.scalanlp"      %% "breeze"               % "2.0.1-RC1",
-      "com.lihaoyi"       %% "upickle"              % "1.4.0"
+      "org.apache.commons" % "commons-math3" % "3.6.1",
+      "com.outr"          %% "scribe"        % scribeVersion,
+      "com.lihaoyi"       %% "upickle"       % "1.4.0",
+      "org.jgrapht"        % "jgrapht-core"  % jgraphtVersion,
+      "org.jgrapht"        % "jgrapht-opt"   % jgraphtVersion,
+      "org.scalanlp"      %% "breeze"        % "2.0.1-RC1",
+      "com.lihaoyi"       %% "upickle"       % "1.4.0"
     )
   )
 
@@ -63,10 +62,10 @@ lazy val choco = (project in file("choco"))
       "org.choco-solver" % "choco-solver"    % "4.10.9",
       "org.jgrapht"      % "jgrapht-core"    % jgraphtVersion,
       "org.jgrapht"      % "jgrapht-opt"     % jgraphtVersion,
-      "com.outr"        %% "scribe"          % scribeVersion,
+      "com.outr"        %% "scribe"          % scribeVersion
     )
   )
-  
+
 lazy val cli = (project in file("cli"))
   .dependsOn(core)
   .dependsOn(common)
@@ -78,11 +77,12 @@ lazy val cli = (project in file("cli"))
   .settings(
     Compile / mainClass := Some("idesyde.IDeSyDeStandalone"),
     libraryDependencies ++= Seq(
-      "info.picocli"      % "picocli"         % "4.2.0",
-      "info.picocli"      % "picocli-codegen" % "4.2.0" % "provided",
-      "com.github.scopt" %% "scopt"           % "4.0.1",
-      "com.outr"         %% "scribe"          % scribeVersion
-    )
+      // "info.picocli"      % "picocli"         % "4.2.0",
+      // "info.picocli"      % "picocli-codegen" % "4.2.0" % "provided",
+      "com.github.scopt" %% "scopt"  % "4.0.1",
+      "com.outr"         %% "scribe" % scribeVersion
+    ),
+    Test / parallelExecution := false
   )
 
 lazy val tests = (project in file("tests"))

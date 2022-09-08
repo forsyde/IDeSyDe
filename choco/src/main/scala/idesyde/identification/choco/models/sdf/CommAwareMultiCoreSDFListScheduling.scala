@@ -22,22 +22,36 @@ class CommAwareMultiCoreSDFListScheduling(
 ) extends AbstractStrategy[IntVar]((firingsInSlots.flatten.flatten): _*)
     with IMonitorSolution {
 
-  var channels   = (0 until initialTokens.size).toArray
-  var actors     = (0 until maxFiringsPerActor.size).toArray
-  var schedulers = (0 until firingsInSlots.head.size).toArray
-  val slots      = (0 until firingsInSlots.head.head.size).toArray
+  private val recomputeMethods = SDFChocoRecomputeMethods(firingsInSlots)
+
+  private val numActors     = firingsInSlots.size
+  private val numSchedulers = firingsInSlots.head.size
+  private val numSlots      = firingsInSlots.head.head.size
+  private val numChannels   = channelsTravelTime.size
+  var channels              = (0 until initialTokens.size).toArray
+  var actors                = (0 until maxFiringsPerActor.size).toArray
+  var schedulers            = (0 until firingsInSlots.head.size).toArray
+  val slots                 = (0 until firingsInSlots.head.head.size).toArray
+
+  private val mat     = DenseMatrix(balanceMatrix: _*)
+  private val consMat = mat.map(v => if (v < 0) then v else 0)
+  private val prodMat = mat.map(v => if (v > 0) then v else 0)
 
   // val firingVector: Array[SparseVector[Int]] = slots.map(slot => SparseVector.zeros[Int](actors.size)).toArray
 
   var parallelism = 0
 
   val singleActorFire =
-    actors.map(a => (0 to maxFiringsPerActor(a)).map(q => mkSingleActorFire(a)(q)).toArray).toArray
+    actors
+      .map(a =>
+        (0 to maxFiringsPerActor(a)).map(q => recomputeMethods.mkSingleActorFire(a)(q)).toArray
+      )
+      .toArray
 
   val pool = PoolManager[IntDecision]()
 
-  var tokenVec     = SparseVector(initialTokens)
-  var accumFirings = SparseVector.zeros[Int](actors.size)
+  var tokenVec     = DenseVector(initialTokens)
+  var accumFirings = DenseVector.zeros[Int](actors.size)
 
   val follows = CSCMatrix(
     actors.map(src =>
@@ -65,7 +79,7 @@ class CommAwareMultiCoreSDFListScheduling(
     var score              = 0
     var currentParallelism = 0
     // var bestSlot = -1
-    val lastSlot = recomputeLowerestDecidedSlot()
+    val lastSlot = recomputeMethods.recomputeLowerestDecidedSlot()
     // quick guard for errors and end of schedule
     if (lastSlot >= slots.size - 1) return null
     val earliestOpen = lastSlot + 1
@@ -74,14 +88,14 @@ class CommAwareMultiCoreSDFListScheduling(
     // count += 1
     // println(s"deciding at $earliestOpen")
     // slotsPrettyPrint()
-    recomputeFiringVectors()
-    recomputeTokens()
+    // recomputeFiringVectors()
+    // recomputeTokens()
     // recomputeInvThroughput()
     // for (a <- actors) accumFirings(a) = 0
     // for (slot <- slots; if bestSlot < 0) {
     // accumulate the firings vectors
     // accumFirings += firingVector(lastSlot)
-    wfor(earliestOpen, it => it < slots.size && it <= bestSlot, _ + 1) { s =>
+    wfor(earliestOpen, it => it < numSlots && it <= bestSlot, _ + 1) { s =>
       wfor(0, _ < schedulers.size, _ + 1) { p =>
         wfor(0, _ < actors.size, _ + 1) { a =>
           if (firingsInSlots(a)(p)(s).getUB() > 0 && !firingsInSlots(a)(p)(s).isInstantiated()) {
@@ -120,7 +134,7 @@ class CommAwareMultiCoreSDFListScheduling(
                   bestSlot = s
                   bestScore = score
                 }
-              } 
+              }
               if (score < bestScorePenalized) {
                 bestAPenalized = a
                 bestPPenalized = p

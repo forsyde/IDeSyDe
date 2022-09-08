@@ -26,9 +26,10 @@ jobs:
     steps:
     - uses: actions/checkout@v2
     - name: Set up JDK ${{ matrix.java }}
-      uses: olafurpg/setup-scala@v11
+      uses: olafurpg/setup-scala@v10
       with:
         java-version: ${{ matrix.java }}
-    - uses: ./.github/actions/millw@v1
-      with:
-        command: tests.test
+    - name: Run tests with sbt
+      run: |
+        cd ${{ github.workspace }}
+        sbt tests/test

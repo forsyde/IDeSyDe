@@ -166,10 +166,9 @@ trait TileAsyncInterconnectCommsMixin extends ChocoModelMixin {
                   if (srci != srcj) {
                     wfor(0, _ < procElems.size, _ + 1) { dstj =>
                       if (srcj != dstj && messageIsCommunicated(mj)(srcj)(dstj).getLB() > 0) {
-                        wfor(0, _ < commElems.size, _ + 1) { ce =>
+                        wfor(0, _ < commElemsPath(srci)(dsti).size, _ + 1) { ce =>
                           if (
-                            commElemsPath(srci)(dsti).contains(ce) && commElemsPath(srcj)(dstj)
-                              .contains(ce)
+                            commElemsPath(srcj)(dstj).contains(commElemsPath(srci)(dsti)(ce))
                           ) {
                             if (!interferenceGraph.containsVertex(messages(mi))) then interferenceGraph.addVertex(messages(mi))
                             if (!interferenceGraph.containsVertex(messages(mj))) then interferenceGraph.addVertex(messages(mj))

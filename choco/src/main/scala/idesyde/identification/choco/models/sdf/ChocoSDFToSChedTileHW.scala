@@ -42,29 +42,12 @@ final case class ChocoSDFToSChedTileHW(
       slower.initialTokens,
       slower.actorDuration,
       slower.channelsTravelTime,
-      slower.firingsInSlots
+      slower.firingsInSlots,
+      slower.invThroughputs
     )
   chocoModel.getSolver().plugMonitor(listScheduling)
 
-  override def strategies: Array[AbstractStrategy[? <: Variable]] = Array(
-    // Search.bestBound(
-    
-    // Search.minDomLBSearch(globalInvThroughput),
-    // Search.intVarSearch(
-    //   Largest(),
-    //   IntDomainMax(),
-    //   firingsInSlots.flatten.flatten:_*
-    // ),
-    // FindAndProve((nUsedPEs +: firingsInSlots.flatten.flatten),
-    listScheduling,
-    Search.minDomLBSearch(slower.nUsedPEs),
-    // ),
-    Search.minDomLBSearch(slower.globalInvThroughput),
-    Search.minDomLBSearch(slower.channelsCommunicate.flatten.flatten: _*),
-    Search.minDomLBSearch(slower.messageVirtualChannelAllocation.flatten: _*),
-    // Search.intVarSearch()
-    Search.defaultSearch(chocoModel)
-  )
+  override def strategies: Array[AbstractStrategy[? <: Variable]] = listScheduling +: slower.strategies.drop(1)
 
   //---------
 

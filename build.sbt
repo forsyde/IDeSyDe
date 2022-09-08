@@ -1,6 +1,7 @@
 ThisBuild / organization := "io.github.forsyde"
 ThisBuild / version := "0.3.1"
 ThisBuild / scalaVersion := "3.1.3"
+ThisBuild / maintainer := "jordao@kth.se"
 
 lazy val forsydeIoVersion = "0.5.15"
 lazy val jgraphtVersion = "1.5.1"
@@ -73,7 +74,7 @@ lazy val cli = (project in file("cli"))
   .dependsOn(forsyde)
   .dependsOn(minizinc)
   // .enablePlugins(ScalaNativePlugin)
-  .enablePlugins(JDKPackagerPlugin)
+  .enablePlugins(UniversalPlugin, JlinkPlugin, JavaAppPackaging, GraalVMNativeImagePlugin)
   .settings(
     Compile / mainClass := Some("idesyde.IDeSyDeStandalone"),
     libraryDependencies ++= Seq(

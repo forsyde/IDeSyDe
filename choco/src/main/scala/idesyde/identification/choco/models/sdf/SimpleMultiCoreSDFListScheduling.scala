@@ -18,7 +18,7 @@ class SimpleMultiCoreSDFListScheduling(
     val actorDuration: Array[Array[Int]],
     val channelsTravelTime: Array[Array[Array[IntVar]]],
     val firingsInSlots: Array[Array[Array[IntVar]]]
-) extends AbstractStrategy[IntVar]((firingsInSlots.flatten.flatten): _*) with SDFChocoRecomputeMethodsMixin with IMonitorSolution {
+) extends AbstractStrategy[IntVar]((firingsInSlots.flatten.flatten): _*)  with IMonitorSolution {
 
   var communicationLimiter = 0
   var channels   = (0 until initialTokens.size).toArray
@@ -30,7 +30,7 @@ class SimpleMultiCoreSDFListScheduling(
 
   // val firingVector: Array[SparseVector[Int]] = slots.map(slot => SparseVector.zeros[Int](actors.size)).toArray
 
-  val singleActorFire = actors.map(a => (0 to maxFiringsPerActor(a)).map(q => mkSingleActorFire(a)(q)).toArray).toArray
+  val singleActorFire = actors.map(a => (0 to maxFiringsPerActor(a)).map(q => SDFChocoRecomputeMethods.mkSingleActorFire(a)(q)).toArray).toArray
 
   val pool = PoolManager[IntDecision]()
 
@@ -43,7 +43,7 @@ class SimpleMultiCoreSDFListScheduling(
     var bestP = -1
     var bestQ = -1
     var bestSlot = -1
-    val lastSlot = recomputeLastClosedSlot()
+    val lastSlot = SDFChocoRecomputeMethods.recomputeLowerestDecidedSlot()
     // quick guard for errors and end of schedule
     if (lastSlot < -1 || lastSlot >= slots.size - 1) return null
     val earliestOpen = lastSlot + 1
@@ -51,8 +51,8 @@ class SimpleMultiCoreSDFListScheduling(
     if (d == null) d = IntDecision(pool)
     // count += 1
     // println(s"deciding at $earliestOpen")
-    recomputeFiringVectors()
-    recomputeTokensAndTime()
+    SDFChocoRecomputeMethods.recomputeFiringVectors(firingsInSlots)(firingVector, firingVectorPerCore)
+    SDFChocoRecomputeMethods.recomputeTokens(mat)(firingVector, firingVectorPerCore)(tokensBefore, tokensAfter)
     // for (a <- actors) accumFirings(a) = 0
     // for (slot <- slots; if bestSlot < 0) {
       // accumulate the firings vectors

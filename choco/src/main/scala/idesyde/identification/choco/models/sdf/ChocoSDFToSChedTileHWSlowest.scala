@@ -47,6 +47,42 @@ final case class ChocoSDFToSChedTileHWSlowest(
   }
   // scribe.debug(timeMultiplier.toString)
 
+  // ---- SDFTimingAnalysisSASMixin
+  val sdfAndSchedulers = dse
+
+  val invThroughputs: Array[IntVar] = schedulers
+    .map(p =>
+      chocoModel.intVar(
+        s"invTh($p)",
+        0,
+        actors.zipWithIndex.map((a, ai) => actorDuration(ai)(p) * maxRepetitionsPerActors(ai)).sum,
+        true
+      )
+    )
+  val slotFinishTime: Array[Array[IntVar]] = schedulers
+    .map(p =>
+      actors.map(s => chocoModel.intVar(s"finishTime($p, $s)", 0, invThroughputs(p).getUB(), true))
+    )
+  val slotStartTime: Array[Array[IntVar]] = schedulers
+    .map(p =>
+      actors.map(s => chocoModel.intVar(s"startTime($p, $s)", 0, invThroughputs(p).getUB(), true))
+    )
+  val globalInvThroughput =
+    chocoModel.intVar(
+      "globalInvThroughput",
+      schedulers
+        .map(p => actors.map(a => actorDuration(a)(p)).max)
+        .max,
+      schedulers
+        .map(p =>
+          actors.zipWithIndex.map((a, ai) => actorDuration(ai)(p) * maxRepetitionsPerActors(ai)).sum
+        )
+        .max,
+      true
+    )
+
+  override val timeFactor = timeMultiplier
+
   // do the same for memory numbers
   val memoryValues = dse.platform.tiledDigitalHardware.memories.map(_.getSpaceInBits().toLong) ++
     dse.sdfApplications.messagesMaxSizes ++
@@ -62,11 +98,6 @@ final case class ChocoSDFToSChedTileHWSlowest(
   val processSize: Array[Int] =
     dse.sdfApplications.processSizes.map(l => (l / memoryDivider).toInt)
 
-  val actorDuration: Array[Array[Int]] =
-    dse.wcets.map(as => as.map(w => w * timeMultiplier).map(_.ceil.toInt))
-  val balanceMatrix: Array[Array[Int]] = dse.sdfApplications.balanceMatrices(0)
-  val initialTokens: Array[Int]        = dse.sdfApplications.initialTokens
-
   val commElemsPaths = dse.platform.tiledDigitalHardware.computeRouterPaths
   def commElemsPath(srcId: Int)(dstId: Int): Array[Int] =
     commElemsPaths(procElems.indexOf(srcId))(procElems.indexOf(dstId))
@@ -78,8 +109,8 @@ final case class ChocoSDFToSChedTileHWSlowest(
     dse.platform.tiledDigitalHardware.commElemsVirtualChannels(commElems.indexOf(ceId))
 
   def messageTravelTimePerVirtualChannelById(messageId: Int)(ceId: Int): Int =
-    dataSize(messages.indexOf(messageId)) / (
-      dse.platform.tiledDigitalHardware.bandWidthPerCEPerVirtualChannelById(ceId) 
+    dataSize(messages.indexOf(messageId)) / (dse.platform.tiledDigitalHardware
+      .bandWidthPerCEPerVirtualChannelById(ceId)
       * timeMultiplier * memoryDivider).ceil.toInt
 
   def commElems = dse.platform.tiledDigitalHardware.routerSet
@@ -87,15 +118,6 @@ final case class ChocoSDFToSChedTileHWSlowest(
   def messages = dse.sdfApplications.channelsSet
 
   def procElems = dse.platform.tiledDigitalHardware.tileSet
-
-  def actors: Array[Int] = dse.sdfApplications.actorsSet
-
-  def maxRepetitionsPerActors(actorId: Int): Int =
-    dse.sdfApplications.sdfRepetitionVectors(actors.indexOf(actorId))
-
-  def isSelfConcurrent(actorId: Int) = dse.sdfApplications.isSelfConcurrent(actors.indexOf(actorId))
-
-  def schedulers: Array[Int] = dse.platform.schedulerSet
 
   def isStaticCyclic(schedulerId: Int): Boolean =
     dse.platform.isStaticCycle(schedulers.indexOf(schedulerId))
@@ -131,7 +153,8 @@ final case class ChocoSDFToSChedTileHWSlowest(
               // println(ce)
               messageTravelTimePerVirtualChannelById(c)(ce)
             )
-            .minOption.getOrElse(0),
+            .minOption
+            .getOrElse(0),
           commElemsPath(src)(dst)
             .map(ce =>
               // println(ce)
@@ -163,7 +186,7 @@ final case class ChocoSDFToSChedTileHWSlowest(
               .intVar(
                 s"sched_${a.getIdentifier()}_${s.getIdentifier()}_${aa}",
                 0,
-                maxRepetitionsPerActors(actors.indexOf(i)),
+                maxRepetitionsPerActors(i),
                 true
               )
           )
@@ -175,18 +198,6 @@ final case class ChocoSDFToSChedTileHWSlowest(
 
   //-----------------------------------------------------
   // Objectives
-
-  val globalInvThroughput =
-    chocoModel.intVar(
-      "globalInvThroughput",
-      schedulers
-        .map(p => actors.map(a => actorDuration(a)(p)).max)
-        .max,
-      schedulers
-        .map(p => actors.map(a => actorDuration(a)(p) * maxRepetitionsPerActors(a)).sum)
-        .max,
-      true
-    )
 
   // remember that this is tiled based, so a memory being mapped entails the processor
   // is used
@@ -282,7 +293,8 @@ final case class ChocoSDFToSChedTileHWSlowest(
             schedulers.zipWithIndex.foreach((_, sendi) => {
               schedulers.zipWithIndex.foreach((_, recvi) => {
                 if (sendi != recvi) {
-                  chocoModel.ifThen(srca.eq(sendi).and(dsta.eq(recvi)).decompose(),
+                  chocoModel.ifThen(
+                    srca.eq(sendi).and(dsta.eq(recvi)).decompose(),
                     messageAllocation(ci)(sendi)(recvi).eq(1).decompose()
                   )
                 }
@@ -295,7 +307,7 @@ final case class ChocoSDFToSChedTileHWSlowest(
   })
 
   for (srca <- actors; dsta <- actors; if srca != dsta; c <- messages) {
-    // chocoModel.ifThen(processesMemoryMapping(srca))    
+    // chocoModel.ifThen(processesMemoryMapping(srca))
   }
 
   postTileAsyncInterconnectComms()
@@ -347,17 +359,17 @@ final case class ChocoSDFToSChedTileHWSlowest(
   // BRANCHING AND SEARCH
 
   val listScheduling = SimpleMultiCoreSDFListScheduling(
-      actors.zipWithIndex.map((a, i) => maxRepetitionsPerActors(i)),
-      balanceMatrix,
-      initialTokens,
-      actorDuration,
-      channelsTravelTime,
-      firingsInSlots
-    )
+    actors.zipWithIndex.map((a, i) => maxRepetitionsPerActors(i)),
+    balanceMatrix,
+    initialTokens,
+    actorDuration,
+    channelsTravelTime,
+    firingsInSlots
+  )
 
   override def strategies: Array[AbstractStrategy[? <: Variable]] = Array(
     // Search.bestBound(
-    
+
     // Search.minDomLBSearch(globalInvThroughput),
     // Search.intVarSearch(
     //   Largest(),
@@ -369,8 +381,11 @@ final case class ChocoSDFToSChedTileHWSlowest(
     Search.minDomLBSearch(nUsedPEs),
     // ),
     Search.minDomLBSearch(globalInvThroughput),
+    // Search.minDomLBSearch(invThroughputs:_*),
     Search.minDomLBSearch(channelsCommunicate.flatten.flatten: _*),
     Search.minDomLBSearch(messageVirtualChannelAllocation.flatten: _*),
+    Search.minDomLBSearch(slotStartTime.flatten: _*),
+    Search.minDomLBSearch(slotFinishTime.flatten: _*),
     // Search.intVarSearch()
     Search.defaultSearch(chocoModel)
   )
@@ -382,7 +397,9 @@ final case class ChocoSDFToSChedTileHWSlowest(
       dse.platform.tiledDigitalHardware.routerSet.map(j => {
         dse.platform.tiledDigitalHardware.tileSet.exists(src =>
           dse.platform.tiledDigitalHardware.tileSet.exists(dst =>
-            commElemsPath(src)(dst).contains(j) && messageAllocation(i)(src)(dst).getValue() > 0
+            commElemsPath(src)(dst).contains(j) && output.getIntVal(
+              messageAllocation(i)(src)(dst)
+            ) > 0
           )
         )
       })
@@ -390,12 +407,16 @@ final case class ChocoSDFToSChedTileHWSlowest(
     // println(dse.platform.tiledDigitalHardware.routerPaths.map(_.map(_.mkString("[", ", ", "]")).mkString("[", ", ", "]")).mkString("[", "\n", "]"))
     // println(channelToRouters.map(_.mkString("[", ", ", "]")).mkString("[", "\n", "]"))
     val channelToTiles = dse.sdfApplications.channels.zipWithIndex.map((c, i) => {
-      dse.platform.tiledDigitalHardware.tileSet.map(j => messagesMemoryMapping(i).getValue() == j)
+      dse.platform.tiledDigitalHardware.tileSet.map(j =>
+        output.getIntVal(messagesMemoryMapping(i)) == j
+      )
     })
     val mappings = dse.sdfApplications.channels.zipWithIndex
       .map((c, i) => channelToTiles(i) ++ channelToRouters(i))
     val schedulings =
-      processesMemoryMapping.map(vs => dse.platform.tiledDigitalHardware.tileSet.map(j => vs.getValue() == j))
+      processesMemoryMapping.map(vs =>
+        dse.platform.tiledDigitalHardware.tileSet.map(j => output.getIntVal(vs) == j)
+      )
     println(
       schedulers
         .map(s => {
@@ -404,8 +425,8 @@ final case class ChocoSDFToSChedTileHWSlowest(
               actors.zipWithIndex
                 .find((a, ai) => firingsInSlots(ai)(s)(slot).getLB() > 0)
                 .map((a, ai) =>
-                  dse.sdfApplications.actors(a).getIdentifier() + ": " + firingsInSlots(ai)(s)(slot)
-                    .getLB()
+                  dse.sdfApplications.actors(a).getIdentifier() + ": " + output
+                    .getIntVal(firingsInSlots(ai)(s)(slot))
                 )
                 .getOrElse("_")
             })
@@ -422,9 +443,7 @@ final case class ChocoSDFToSChedTileHWSlowest(
                 .filter((c, ci) => messageAllocation(ci)(src)(dst).getLB() > 0)
                 .map((c, ci) =>
                   c + ": " + commElemsPaths(src)(dst).zipWithIndex
-                    .map((ce, cei) =>
-                      ce + "/" + virtualChannelForMessage(c)(ce).getValue()
-                    )
+                    .map((ce, cei) => ce + "/" + output.getIntVal(virtualChannelForMessage(c)(ce)))
                     .mkString("-")
                 )
                 .mkString("(", ", ", ")")
@@ -436,8 +455,8 @@ final case class ChocoSDFToSChedTileHWSlowest(
     dse.addMappingsAndRebuild(
       mappings,
       schedulings,
-      numActorsScheduledSlotsInStaticCyclicVars.map(_.map(_.map(_.getValue()))),
-      messageVirtualChannelAllocation.map(_.map(_.getValue()))
+      numActorsScheduledSlotsInStaticCyclicVars.map(_.map(_.map(output.getIntVal(_)))),
+      messageVirtualChannelAllocation.map(_.map(output.getIntVal(_)))
     )
   }
 
@@ -447,7 +466,8 @@ final case class ChocoSDFToSChedTileHWSlowest(
 
 }
 
-object ChocoSDFToSChedTileHWSlowest extends ForSyDeIdentificationRule[ChocoSDFToSChedTileHWSlowest] {
+object ChocoSDFToSChedTileHWSlowest
+    extends ForSyDeIdentificationRule[ChocoSDFToSChedTileHWSlowest] {
   def identifyFromForSyDe(
       model: ForSyDeSystemGraph,
       identified: scala.collection.Iterable[DecisionModel]

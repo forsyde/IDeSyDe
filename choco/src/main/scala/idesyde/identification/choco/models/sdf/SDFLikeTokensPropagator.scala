@@ -13,10 +13,10 @@ class SDFLikeTokensPropagator(
     val balanceMatrix: Array[Array[Int]],
     val initialTokens: Array[Int],
     val firingsInSlots: Array[Array[Array[IntVar]]],
-    val tokensBefore: Array[Array[IntVar]],
-    val tokensAfter: Array[Array[IntVar]]
+    val tokens: Array[Array[IntVar]]
+    // val tokensAfter: Array[Array[IntVar]]
 ) extends Propagator[IntVar](
-      firingsInSlots.flatten.flatten ++ tokensBefore.flatten ++ tokensAfter.flatten,
+      firingsInSlots.flatten.flatten ++ tokens.flatten,
       PropagatorPriority.VERY_SLOW,
       false
     ) {
@@ -26,7 +26,7 @@ class SDFLikeTokensPropagator(
   private val numSchedulers = firingsInSlots.head.size
   private val numActors     = firingsInSlots.size
   private val numSlots      = firingsInSlots.head.head.size
-  private val numChannels   = tokensBefore.size
+  private val numChannels   = tokens.size
 
   private val channels   = (0 until numChannels).toArray
   private val actors     = (0 until numActors).toArray
@@ -47,35 +47,47 @@ class SDFLikeTokensPropagator(
   // val firingVector: Array[SparseVector[Int]] =
   //   slots.map(slot => SparseVector.zeros[Int](actors.size)).toArray
 
-  val singleActorFire = actors
+  private val singleActorFire = actors
     .map(a =>
       (0 to maxFiringsPerActor(a))
         .map(q => recomputeMethods.mkSingleActorFire(a)(q))
         .toArray
     )
     .toArray
-  val horizonMaxFires = actors.map(a => schedulers.map(p => 0))
-
-  var latestClosedSlot = 0
-  var tailZeros        = 0
+  // val horizonMaxFires = actors.map(a => schedulers.map(p => 0))
 
   def propagate(evtmask: Int): Unit = {
-    var nextSlot = -1
     // var sendVecSaved = SparseVector.zeros[Int](channels.size)
-    println("propagate")
+    // println("propagate")
     recomputeMethods.recomputeFiringVectors(
       firingVector,
       firingVectorPerCore
     )
-    recomputeMethods.slotsPrettyPrint()
+    // recomputeMethods.slotsPrettyPrint()
     // recomputeMethods.recomputeTokens(mat)(firingVector, firingVectorPerCore)(
     //   tokensBefore,
     //   tokensAfter
     // )
     // latestClosedSlot = 0
-    latestClosedSlot = recomputeMethods.recomputeLowerestDecidedSlot()
-    println("latestClosedSlot " + latestClosedSlot)
-    if (latestClosedSlot < slots.size - 1) {
+    val latestClosedSlot = recomputeMethods.recomputeLowerestDecidedSlot()
+    // println("latestClosedSlot " + latestClosedSlot)
+    wfor(1, it => it < numSlots - 1 && it <= latestClosedSlot, _ + 1) { s =>
+      if (
+        recomputeMethods.slotIsClosed(s) && max(
+          firingVector(s - 1)
+        ) > 0 && max(firingVector(s)) == 0 && max(
+          firingVector(s + 1)
+        ) > 0
+      ) {
+        // tailZeros += 1
+        println(s"zero ${s}")
+        // schedulePrettyPrint()
+        fails()
+        // throw ContradictionException().set(this, firingsInSlots(a)(p)(s), s"${a}_${p}_${s} invalidated order")
+      }
+    }
+    val nextSlot = latestClosedSlot + 1
+    wfor(nextSlot, _ < numSlots - 1, _ + 1) { s =>
       // if there is an open hole in the schedule. We avoid that.
       // if (latestClosedSlot < -1) fails()
       // slotsPrettyPrint()
@@ -93,56 +105,46 @@ class SDFLikeTokensPropagator(
       // now, we also avoid instantiations that are farther than the decision slot
       // tailZeros = 0
       // if (latestClosedSlot > -1) {
-      wfor(1, it => it < numSlots - 1 && it <= latestClosedSlot, _ + 1) { s =>
-        if (
-          recomputeMethods.slotIsClosed(s) && max(
-            firingVector(s - 1)
-          ) > 0 && max(firingVector(s)) == 0 && max(
-            firingVector(s + 1)
-          ) > 0
-        ) {
-          // tailZeros += 1
-          println(s"zero ${s}")
-          // schedulePrettyPrint()
-          fails()
-          // throw ContradictionException().set(this, firingsInSlots(a)(p)(s), s"${a}_${p}_${s} invalidated order")
-        }
-      }
       // slotsPrettyPrint()
-      nextSlot = latestClosedSlot + 1
+
+      // println("last closed tokens " + tokensBefore.map(b => b(nextSlot)).mkString(", "))
       // go through the actors in the scheduling horizon and find which actors can be fired
       wfor(0, _ < numSchedulers, _ + 1) { p =>
         wfor(0, _ < numActors, _ + 1) { a =>
           // find the maximum firing possible
-          horizonMaxFires(a)(p) = 0
+          var maxFire = 0
           wfor(
-            firingsInSlots(a)(p)(nextSlot).getUB(),
-            _ > 0 && horizonMaxFires(a)(p) == 0,
+            firingsInSlots(a)(p)(s).getUB(),
+            _ > 0 && maxFire == 0,
             _ - 1
           ) { q =>
-            val tokensChange = mat * (firingVector(nextSlot) + singleActorFire(a)(q))
+            val tokensChange = consMat * (firingVector(s) + singleActorFire(a)(q))
             var allPositive  = true
             wfor(0, _ < numChannels && allPositive, _ + 1) { c =>
-              allPositive =
-                allPositive && (tokensChange(c) + tokensBefore(c)(nextSlot).getUB() >= 0)
+              if (s > 0) then {
+                allPositive = allPositive && tokensChange(c) + tokens(c)(s - 1).getUB() >= 0
+              } else {
+                allPositive = allPositive && tokensChange(c) + initialTokens(c) >= 0
+              }
             }
             if (allPositive) {
-              horizonMaxFires(a)(p) = q
+              maxFire = q
             }
           }
+          firingsInSlots(a)(p)(s).updateUpperBound(maxFire, this)
         }
       }
-      println("horizonMaxFires " + horizonMaxFires.map(_.mkString("[", ", ", "]")).mkString("\n"))
-      // now we find the maximum lookAhead
-      var maxlookAhead = 0
-      val maxFires = DenseVector(horizonMaxFires.map(as => as.max))
-      wfor(0, _ < numSchedulers, _ + 1) { p =>
-        var lookAhead = 0
-        wfor(0, _ < numActors, _ + 1) { a =>
-          if (horizonMaxFires(a)(p) > 0) then lookAhead += 1
-        }
-        if (lookAhead > maxlookAhead) then maxlookAhead = lookAhead
-      }
+      // println("horizonMaxFires " + horizonMaxFires.map(_.mkString("[", ", ", "]")).mkString("\n"))
+      // // now we find the maximum lookAhead
+      // var maxlookAhead = 0
+      // val maxFires     = DenseVector(horizonMaxFires.map(as => as.max))
+      // wfor(0, _ < numSchedulers, _ + 1) { p =>
+      //   var lookAhead = 0
+      //   wfor(0, _ < numActors, _ + 1) { a =>
+      //     if (horizonMaxFires(a)(p) > 0) then lookAhead += 1
+      //   }
+      //   if (lookAhead > maxlookAhead) then maxlookAhead = lookAhead
+      // }
       // first, we check if the model is still sane -- the tokens now are all positive by construction
       // val minTokensChange = mat * firingVector(nextSlot)
       // val maxTokensChange = mat * maxFires
@@ -167,33 +169,45 @@ class SDFLikeTokensPropagator(
       // println("maxlookAhead " + maxlookAhead)
       // and finally we limit we limit all firings to the scheduling horizon _and_
       // to the lookAhead, in order to enable serial execution as well as parallel
-      wfor(0, _ < numSchedulers, _ + 1) { p =>
-        wfor(0, _ < numActors, _ + 1) { a =>
-          firingsInSlots(a)(p)(nextSlot).updateUpperBound(horizonMaxFires(a)(p), this)
-          // wfor(nextSlot, it => it <= nextSlot + maxlookAhead && it < numSlots, _ + 1) {s =>
+      // wfor(0, _ < numSchedulers, _ + 1) { p =>
+      //   wfor(0, _ < numActors, _ + 1) { a =>
+      //     firingsInSlots(a)(p)(nextSlot).updateUpperBound(horizonMaxFires(a)(p), this)
+      //     // wfor(nextSlot, it => it <= nextSlot + maxlookAhead && it < numSlots, _ + 1) {s =>
 
-          // }
-          // after the lookAhead, there should be no firings
-          wfor(nextSlot + maxlookAhead, _ < numSlots, _ + 1) { s =>
-            if (horizonMaxFires(a)(p) > 0) {
-              firingsInSlots(a)(p)(s).updateUpperBound(0, this)
-            }
-          }
-        }
-      }
-      println("After propagation")
-      recomputeMethods.slotsPrettyPrint()
+      //     // }
+      //     // after the lookAhead, there should be no firings
+      //     wfor(nextSlot + maxlookAhead, _ < numSlots, _ + 1) { s =>
+      //       if (horizonMaxFires(a)(p) > 0) {
+      //         firingsInSlots(a)(p)(s).updateUpperBound(0, this)
+      //       }
+      //     }
+      //   }
+      // }
+
     }
+    // println("After propagation")
+    // println(
+    //   slots
+    //     .map(slot => {
+    //       channels.zipWithIndex
+    //         .map((c, ci) => {
+    //           tokens(ci)(slot).toString
+    //         })
+    //         .mkString("[", ", ", "]")
+    //     })
+    //     .mkString("[\n ", "\n ", "\n]")
+    // )
+    // recomputeMethods.slotsPrettyPrint()
 
   }
 
   def isEntailed(): ESat = {
     // println("checking entailment")
     // slotsPrettyPrint()
-    recomputeMethods.recomputeFiringVectors(
-      firingVector,
-      firingVectorPerCore
-    )
+    // recomputeMethods.recomputeFiringVectors(
+    //   firingVector,
+    //   firingVectorPerCore
+    // )
     // recomputeMethods.recomputeTokens(mat)(firingVector, firingVectorPerCore)(
     //   tokensBefore,
     //   tokensAfter
@@ -225,18 +239,15 @@ class SDFLikeTokensPropagator(
     //   }
     // }
     // work based first on the slots and update the timing whenever possible
-    wfor(0, it => it < slots.size, _ + 1) { s =>
-      val tokensChange = mat * firingVector(s)
-      wfor(0, _ < numChannels, _ + 1) { c =>
-        if (tokensChange(c) + tokensBefore(c)(s).getLB() < 0) {
-          println("invalidated by token underflow at entailment!")
-          return ESat.FALSE
-        } else if (tokensChange(c) + tokensBefore(c)(s).getLB() != tokensAfter(c)(s).getLB()) {
-          println("invalidated by token semantic at entailment!")
-          return ESat.FALSE
-        }
-      }
-    }
+    // wfor(0, it => it < slots.size, _ + 1) { s =>
+    //   val tokensChange = consMat * firingVector(s)
+    //   wfor(0, _ < numChannels, _ + 1) { c =>
+    //     if (tokensChange(c) + tokens(c)(s).getLB() < 0) {
+    //       println("invalidated by token underflow at entailment!")
+    //       return ESat.FALSE
+    //     }
+    //   }
+    // }
     var allFired = true
     wfor(0, it => it < numActors && allFired, _ + 1) { a =>
       wfor(0, it => it < numSchedulers && allFired, _ + 1) { p =>
@@ -265,19 +276,24 @@ class SDFLikeTokensPropagator(
     // }
     // println("all is fired " + allFired)
     // println("all is comm " + allCommunicated)
-    if (allFired) then {
-      var lastEqualFirst = true
-      wfor(0, _ < numChannels && lastEqualFirst, _ + 1) { c =>
-        lastEqualFirst = lastEqualFirst && tokensAfter(c).last == tokensBefore(c).head
-      }
-      if (lastEqualFirst) {
-        // println("passed final tokens for entailment")
-        return ESat.TRUE
-      } else {
-        // println("wrong final tokens for entailment")
-        return ESat.FALSE
-      }
-    } else return ESat.UNDEFINED
+    if (allFired) {
+      ESat.TRUE
+    } else {
+      ESat.UNDEFINED
+    }
+    //   if (allFired) then {
+    //     var lastEqualFirst = true
+    //     wfor(0, _ < numChannels && lastEqualFirst, _ + 1) { c =>
+    //       lastEqualFirst = lastEqualFirst && tokens(c).last.getLB() == tokens(c).head.getLB()
+    //     }
+    //     if (lastEqualFirst) {
+    //       // println("passed final tokens for entailment")
+    //       return ESat.TRUE
+    //     } else {
+    //       // println("wrong final tokens for entailment")
+    //       return ESat.FALSE
+    //     }
+    //   } else return ESat.UNDEFINED
   }
 
   // def computeStateTime(): Unit = {

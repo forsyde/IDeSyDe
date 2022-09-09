@@ -24,47 +24,53 @@ import org.chocosolver.solver.search.strategy.strategy.FindAndProve
 import org.chocosolver.solver.constraints.Constraint
 
 final case class ChocoSDFToSChedTileHW(
-    val slower:  ChocoSDFToSChedTileHWSlowest
+    val slower: ChocoSDFToSChedTileHWSlowest
 )(using Fractional[Rational])
     extends ChocoCPForSyDeDecisionModel {
 
   val chocoModel: Model = slower.chocoModel
 
-  override def modelObjectives: Array[IntVar] = slower.modelObjectives
+  override val modelObjectives: Array[IntVar] = slower.modelObjectives
 
   //-----------------------------------------------------
   // BRANCHING AND SEARCH
 
   val listScheduling = CommAwareMultiCoreSDFListScheduling(
-      slower.dse.sdfApplications.actors.zipWithIndex.map((a, i) => slower.dse.sdfApplications.sdfRepetitionVectors(i)),
-      slower.dse.sdfApplications.sdfBalanceMatrix,
-      slower.dse.sdfApplications.initialTokens,
-      slower.dse.wcets.map(ws => ws.map(w => w * slower.timeMultiplier).map(_.ceil.intValue)),
-      slower.tileAnalysisModule.messageTravelDuration,
-      slower.sdfAnalysisModule.firingsInSlots,
-      slower.sdfAnalysisModule.invThroughputs
-    )
-  chocoModel.getSolver().plugMonitor(listScheduling)
-  val tokensPropagator = SDFLikeTokensPropagator(
-    slower.dse.sdfApplications.actors.zipWithIndex.map((a, i) => slower.dse.sdfApplications.sdfRepetitionVectors(i)),
+    slower.dse.sdfApplications.actors.zipWithIndex.map((a, i) =>
+      slower.dse.sdfApplications.sdfRepetitionVectors(i)
+    ),
     slower.dse.sdfApplications.sdfBalanceMatrix,
     slower.dse.sdfApplications.initialTokens,
+    slower.dse.wcets.map(ws => ws.map(w => w * slower.timeMultiplier).map(_.ceil.intValue)),
+    slower.tileAnalysisModule.messageTravelDuration,
     slower.sdfAnalysisModule.firingsInSlots,
-    slower.sdfAnalysisModule.tokensBefore,
-    slower.sdfAnalysisModule.tokensAfter
+    slower.sdfAnalysisModule.invThroughputs
   )
-  chocoModel.post(
-    new Constraint(
-      "global_sas_sdf_prop",
-      tokensPropagator
-    )
-  )
+  chocoModel.getSolver().plugMonitor(listScheduling)
+  // val tokensPropagator = SDFLikeTokensPropagator(
+  //   slower.dse.sdfApplications.actors.zipWithIndex.map((a, i) =>
+  //     slower.dse.sdfApplications.sdfRepetitionVectors(i)
+  //   ),
+  //   slower.dse.sdfApplications.sdfBalanceMatrix,
+  //   slower.dse.sdfApplications.initialTokens,
+  //   slower.sdfAnalysisModule.firingsInSlots,
+  //   slower.sdfAnalysisModule.tokens
+  //   // slower.sdfAnalysisModule.tokensAfter
+  // )
+  // chocoModel.post(
+  //   new Constraint(
+  //     "global_sas_sdf_prop",
+  //     tokensPropagator
+  //   )
+  // )
 
-  override def strategies: Array[AbstractStrategy[? <: Variable]] = slower.strategies :+ listScheduling
+  override val strategies: Array[AbstractStrategy[? <: Variable]] =
+    listScheduling +: slower.strategies
 
   //---------
 
-  def rebuildFromChocoOutput(output: Solution): ForSyDeSystemGraph = slower.rebuildFromChocoOutput(output)
+  def rebuildFromChocoOutput(output: Solution): ForSyDeSystemGraph =
+    slower.rebuildFromChocoOutput(output)
 
   def uniqueIdentifier: String = "ChocoSDFToSChedTileHW"
 

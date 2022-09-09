@@ -1,7 +1,6 @@
 ThisBuild / organization := "io.github.forsyde"
 ThisBuild / version := "0.3.1"
 ThisBuild / scalaVersion := "3.1.3"
-ThisBuild / maintainer := "jordao@kth.se"
 
 lazy val forsydeIoVersion = "0.5.15"
 lazy val jgraphtVersion   = "1.5.1"
@@ -82,7 +81,8 @@ lazy val cli = (project in file("cli"))
       "com.github.scopt" %% "scopt"  % "4.0.1",
       "com.outr"         %% "scribe" % scribeVersion
     ),
-    Test / parallelExecution := false
+    Test / parallelExecution := false,
+    maintainer := "jordao@kth.se"
   )
 
 lazy val tests = (project in file("tests"))

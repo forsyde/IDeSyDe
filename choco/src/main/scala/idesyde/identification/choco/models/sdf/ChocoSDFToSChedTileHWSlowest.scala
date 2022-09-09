@@ -66,13 +66,15 @@ final case class ChocoSDFToSChedTileHWSlowest(
     dse.platform.tiledDigitalHardware.routerSet,
     dse.sdfApplications.channelsSet,
     dse.sdfApplications.messagesMaxSizes.map(mSize =>
-      dse.platform.tiledDigitalHardware.bandWidthPerCEPerVirtualChannel.map(bw => 
+      dse.platform.tiledDigitalHardware.bandWidthPerCEPerVirtualChannel.map(bw =>
         (mSize / bw / timeMultiplier / memoryDivider).ceil.toInt
       )
     ),
     dse.platform.tiledDigitalHardware.commElemsVirtualChannels,
     dse.platform.tiledDigitalHardware.computeRouterPaths,
-    dse.platform.tiledDigitalHardware.routerSet.map(_ => dse.platform.tiledDigitalHardware.routerSet.map(_ => true))
+    dse.platform.tiledDigitalHardware.routerSet.map(_ =>
+      dse.platform.tiledDigitalHardware.routerSet.map(_ => true)
+    )
   )
 
   val sdfAnalysisModule = SDFSASAnalysisModule(
@@ -92,7 +94,6 @@ final case class ChocoSDFToSChedTileHWSlowest(
   // Decision variables
 
   //---------
-
 
   // in a tile-based architecture, a process being mapped to a memory tile implies it is scheduled there too!
 
@@ -161,19 +162,25 @@ final case class ChocoSDFToSChedTileHWSlowest(
   // SCHEDULING AND TIMING
 
   // and sdf can be executed in a PE only if its mapped into this PE
-  dse.sdfApplications.actorsSet.zipWithIndex.foreach((_, a) => {
-    dse.platform.schedulerSet.zipWithIndex.foreach((_, p) => {
-      chocoModel.ifOnlyIf(
-        memoryMappingModule.processesMemoryMapping(a).eq(p).decompose(),
-        chocoModel.sum(s"firings_${a}_${p}>0", sdfAnalysisModule.firingsInSlots(a)(p): _*).gt(0).decompose()
-      )
-      chocoModel.ifThen(
-        memoryMappingModule.processesMemoryMapping(a).ne(p).decompose(),
-        chocoModel.sum(s"firings_${a}_${p}=0", sdfAnalysisModule.firingsInSlots(a)(p): _*).eq(0).decompose()
-      )
-    })
-  })
-  
+  // dse.sdfApplications.actorsSet.zipWithIndex.foreach((_, a) => {
+  //   dse.platform.schedulerSet.zipWithIndex.foreach((_, p) => {
+  //     chocoModel.ifOnlyIf(
+  //       memoryMappingModule.processesMemoryMapping(a).eq(p).decompose(),
+  //       chocoModel
+  //         .sum(s"firings_${a}_${p}>0", sdfAnalysisModule.firingsInSlots(a)(p): _*)
+  //         .gt(0)
+  //         .decompose()
+  //     )
+  //     chocoModel.ifThen(
+  //       memoryMappingModule.processesMemoryMapping(a).ne(p).decompose(),
+  //       chocoModel
+  //         .sum(s"firings_${a}_${p}=0", sdfAnalysisModule.firingsInSlots(a)(p): _*)
+  //         .eq(0)
+  //         .decompose()
+  //     )
+  //   })
+  // })
+
   sdfAnalysisModule.postSDFTimingAnalysisSAS()
   //---------
 
@@ -190,8 +197,11 @@ final case class ChocoSDFToSChedTileHWSlowest(
   // make sure the variable counts the number of used
   chocoModel.atMostNValues(memoryMappingModule.processesMemoryMapping, nUsedPEs, true).post()
 
-  override def modelObjectives: Array[IntVar] =
-    Array(chocoModel.intMinusView(nUsedPEs), chocoModel.intMinusView(sdfAnalysisModule.globalInvThroughput))
+  override val modelObjectives: Array[IntVar] =
+    Array(
+      chocoModel.intMinusView(nUsedPEs),
+      chocoModel.intMinusView(sdfAnalysisModule.globalInvThroughput)
+    )
   //---------
 
   //-----------------------------------------------------
@@ -206,7 +216,7 @@ final case class ChocoSDFToSChedTileHWSlowest(
   //   sdfAnalysisModule.firingsInSlots
   // )
 
-  override def strategies: Array[AbstractStrategy[? <: Variable]] = Array(
+  override val strategies: Array[AbstractStrategy[? <: Variable]] = Array(
     // Search.bestBound(
 
     // Search.minDomLBSearch(globalInvThroughput),
@@ -280,10 +290,15 @@ final case class ChocoSDFToSChedTileHWSlowest(
           dse.platform.schedulerSet.zipWithIndex
             .map((_, dst) => {
               dse.sdfApplications.channels.zipWithIndex
-                .filter((c, ci) => tileAnalysisModule.messageIsCommunicated(ci)(src)(dst).getLB() > 0)
+                .filter((c, ci) =>
+                  tileAnalysisModule.messageIsCommunicated(ci)(src)(dst).getLB() > 0
+                )
                 .map((c, ci) =>
                   c.getIdentifier() + ": " + paths(src)(dst).zipWithIndex
-                    .map((ce, cei) => ce + "/" + output.getIntVal(tileAnalysisModule.virtualChannelForMessage(ci)(cei)))
+                    .map((ce, cei) =>
+                      ce + "/" + output
+                        .getIntVal(tileAnalysisModule.virtualChannelForMessage(ci)(cei))
+                    )
                     .mkString("-")
                 )
                 .mkString("(", ", ", ")")

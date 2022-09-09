@@ -11,15 +11,14 @@ import breeze.linalg._
 import org.chocosolver.solver.constraints.Constraint
 import org.chocosolver.solver.exception.ContradictionException
 import org.chocosolver.solver.constraints.`extension`.Tuples
-import idesyde.identification.choco.models.SingleProcessSingleMessageMemoryConstraintsMixin
-import idesyde.identification.choco.models.TileAsyncInterconnectCommsMixin
 import idesyde.utils.CoreUtils.wfor
 import idesyde.identification.forsyde.models.mixed.SDFToSchedTiledHW
 import org.chocosolver.solver.Model
 
-class SDFTimingAnalysisSASModule(
+class SDFSASAnalysisModule(
     val chocoModel: Model,
     val sdfAndSchedulers: SDFToSchedTiledHW,
+    val maxSlots: Int,
     val actorMapping: Array[IntVar],
     val channelsCommunicate: Array[Array[Array[BoolVar]]],
     val channelsTravelTime: Array[Array[Array[IntVar]]],
@@ -30,6 +29,7 @@ class SDFTimingAnalysisSASModule(
 ) extends ChocoModelMixin {
 
   private val actors: Array[Int]     = sdfAndSchedulers.sdfApplications.actorsSet
+  private val channels: Array[Int] = sdfAndSchedulers.sdfApplications.channelsSet
   private val schedulers: Array[Int] = sdfAndSchedulers.platform.schedulerSet
   private val balanceMatrix: Array[Array[Int]] =
     sdfAndSchedulers.sdfApplications.balanceMatrices.head
@@ -40,11 +40,8 @@ class SDFTimingAnalysisSASModule(
   private val maxRepetitionsPerActors     = sdfAndSchedulers.sdfApplications.sdfRepetitionVectors
   private def isSelfConcurrent(aIdx: Int) = sdfAndSchedulers.sdfApplications.isSelfConcurrent(aIdx)
 
-  private val maxSlots  = firingsInSlots.head.head.size
   private val slotRange = 0 until maxSlots
-  private val maximumTokensProduced = actors.zipWithIndex
-    .map((a, ai) => balanceMatrix.map(cs => cs(ai) * maxRepetitionsPerActors(a)).max)
-    .max
+  private val maximumTokensPerChannel = sdfAndSchedulers.sdfApplications.pessimisticTokensPerChannel
 
   val invThroughputs: Array[IntVar] = schedulers
     .map(p =>
@@ -92,10 +89,38 @@ class SDFTimingAnalysisSASModule(
           .toArray
       })
     })
+  val tokensBefore: Array[Array[IntVar]] = 
+    channels.zipWithIndex.map((c, i) => {
+        slotRange
+          .map(s =>
+            chocoModel
+              .intVar(
+                s"tokensBefore($c,$s)",
+                0,
+                maximumTokensPerChannel(i),
+                true
+              )
+          )
+          .toArray
+      })
+  val tokensAfter: Array[Array[IntVar]] = 
+    channels.zipWithIndex.map((c, i) => {
+        slotRange
+          .map(s =>
+            chocoModel
+              .intVar(
+                s"tokensBefore($c,$s)",
+                0,
+                maximumTokensPerChannel(i),
+                true
+              )
+          )
+          .toArray
+      })
 
-  def slots(ai: Int)(sj: Int) =
+  def slots(ai: Int)(pj: Int) =
     (0 until maxSlots)
-      .map(firingsInSlots(ai)(sj)(_))
+      .map(firingsInSlots(ai)(pj)(_))
       .toArray
 
   def postOnlySAS(): Unit = {
@@ -107,9 +132,9 @@ class SDFTimingAnalysisSASModule(
       //   }
       // }
       // set total number of firings
-      chocoModel.sum(firingsInSlots(ai).flatten, "=", maxRepetitionsPerActors(a)).post()
+      chocoModel.sum(firingsInSlots(ai).flatten, "=", maxRepetitionsPerActors(ai)).post()
       schedulers.zipWithIndex
-        .foreach((s, sj) => {
+        .foreach((p, pj) => {
           // if (actors.size > 1) {
           //   chocoModel
           //     .min(s"0_in_${ai}_${sj}", (0 until actors.size).map(slots(ai)(sj)(_)): _*)
@@ -117,11 +142,11 @@ class SDFTimingAnalysisSASModule(
           //     .post()
           // }
           chocoModel.ifThenElse(
-            actorMapping(ai).eq(sj).decompose(),
-            chocoModel.sum(slots(ai)(sj), ">=", 1),
-            chocoModel.sum(slots(ai)(sj), "=", 0)
+            actorMapping(ai).eq(pj).decompose(),
+            chocoModel.sum(slots(ai)(pj), ">=", 1),
+            chocoModel.sum(slots(ai)(pj), "=", 0)
           )
-          chocoModel.sum(slots(ai)(sj), "<=", maxRepetitionsPerActors(a)).post()
+          chocoModel.sum(slots(ai)(pj), "<=", maxRepetitionsPerActors(ai)).post()
         })
     })
     for (
@@ -130,7 +155,7 @@ class SDFTimingAnalysisSASModule(
     ) {
       val onlyOneActor = Tuples(true)
       onlyOneActor.add(Array.fill(actors.size)(0))
-      for ((a, ai) <- actors.zipWithIndex; q <- 1 to maxRepetitionsPerActors(a)) {
+      for ((a, ai) <- actors.zipWithIndex; q <- 1 to maxRepetitionsPerActors(ai)) {
         val vec = (Array.fill(ai)(0) :+ q) ++ Array.fill(actors.size - ai - 1)(0)
         // println(vec.mkString(", "))
         onlyOneActor.add(vec)
@@ -154,39 +179,65 @@ class SDFTimingAnalysisSASModule(
     // }
   }
 
+  def postSDFConsistencyConstraints(): Unit = {
+    val consMatrix = balanceMatrix.map(m => m.map(v => if (v < 0) then v else 0))
+    val prodMatrix = balanceMatrix.map(m => m.map(v => if (v > 0) then v else 0))
+    for ((_, ci) <- channels.zipWithIndex) {
+      tokensBefore(ci)(0).eq(initialTokens(ci))
+    }
+    // in the same slot
+    for (s <- slotRange; (_, ci) <- channels.zipWithIndex) {
+      val consumed = chocoModel.intVar(s"consumed($s, $ci)", 0, maximumTokensPerChannel(ci), true)
+      val produced = chocoModel.intVar(s"produced($s, $ci)", 0, maximumTokensPerChannel(ci), true)
+      val allFirings = actors.zipWithIndex.map((_, a) => schedulers.zipWithIndex.map((_, p) => firingsInSlots(a)(p)(s))).flatten
+      val allConFactors = actors.zipWithIndex.map((_, a) => schedulers.zipWithIndex.map((_, p) => consMatrix(ci)(a))).flatten
+      val allProdFactors = actors.zipWithIndex.map((_, a) => schedulers.zipWithIndex.map((_, p) => prodMatrix(ci)(a))).flatten
+      chocoModel.scalar(allFirings, allConFactors, "=", consumed).post()
+      chocoModel.scalar(allFirings, allProdFactors, "=", produced).post()
+      tokensAfter(ci)(s).eq(tokensBefore(ci)(s).add(consumed)).decompose().post()
+      if (s > 0) {
+        tokensBefore(ci)(s).eq(tokensAfter(ci)(s - 1).add(produced)).decompose().post()
+        
+      }
+      // tokensAfter(s)(c).eq(chocoModel.sum(s"fireSum($s, $c)", actors.zipWithIndex.map()))
+    }
+    // now maintain the tokens from one slot to another
+  }
+
   def postSDFTimingAnalysisSAS(): Unit = {
-    val maximumTokensProducedVal = maximumTokensProduced
-    val consMat                  = balanceMatrix.map(bs => bs.map(b => if (b < 0) then -b else 0))
+    val maximumTokensProducedVal = maximumTokensPerChannel.max
+    val consMat                  = balanceMatrix.map(bs => bs.map(b => if (b < 0) then b else 0))
     val prodMat                  = balanceMatrix.map(bs => bs.map(b => if (b > 0) then b else 0))
     postOnlySAS()
+    postSDFConsistencyConstraints()
     // timings
-    // for (s <- slotRange; p <- schedulers) {
-    //   val actorFirings = actors.map(a => firingsInSlots(a)(p)(s))
-    //   val duration = chocoModel.intVar(s"slotDur($p,$s)", 0, slotFinishTime.head.last.getUB(), true)
-    //   chocoModel.scalar(actorFirings, actors.map(a => actorDuration(a)(p)), "=", duration).post()
-    //   slotFinishTime(p)(s).eq(duration.add(slotStartTime(p)(s))).decompose().post()
-    //   if (s > 0) {
-    //     slotStartTime(p)(s).ge(slotFinishTime(p)(s - 1))
-    //     // now take care of communications
-    //     for (pOther <- schedulers; if pOther != p; c <- 0 until balanceMatrix.size) {
-    //       val previousActorFirings = actors.map(a => firingsInSlots(a)(pOther)(s - 1))
-    //       val consumed = chocoModel.intVar(s"cons($p, $s)", 0, maximumTokensProducedVal, true)
-    //       val produced =
-    //         chocoModel.intVar(s"prod($pOther, ${s - 1})", 0, maximumTokensProducedVal, true)
-    //       val diffVar = chocoModel.intVar(s"diff($pOther,$p,$s)", 0, maximumTokensProducedVal, true)
-    //       chocoModel.scalar(previousActorFirings, prodMat(c), "=", produced).post()
-    //       chocoModel.scalar(actorFirings, consMat(c), "=", consumed).post()
-    //       diffVar.eq(consumed.sub(produced)).decompose().post()
-    //       // val diffSum = chocoModel.sum(s"diff($pOther,$p,$s)", firingsInSlots()
-    //       chocoModel.ifThen(
-    //         channelsCommunicate(c)(pOther)(p).and(diffVar.gt(0)).decompose(),
-    //         slotStartTime(p)(s)
-    //           .ge(slotFinishTime(p)(s - 1).add(channelsTravelTime(c)(pOther)(p).mul(diffVar)))
-    //           .decompose()
-    //       )
-    //     }
-    //   }
-    // }
+    for (s <- slotRange; p <- schedulers) {
+      val actorFirings = actors.map(a => firingsInSlots(a)(p)(s))
+      val duration = chocoModel.intVar(s"slotDur($p,$s)", 0, slotFinishTime.head.last.getUB(), true)
+      chocoModel.scalar(actorFirings, actors.map(a => actorDuration(a)(p)), "=", duration).post()
+      slotFinishTime(p)(s).eq(duration.add(slotStartTime(p)(s))).decompose().post()
+      if (s > 0) {
+        slotStartTime(p)(s).ge(slotFinishTime(p)(s - 1))
+        // now take care of communications
+        // for (c <- 0 until balanceMatrix.size; if consMat(c)()) {
+        //   val previousActorFirings = actors.map(a => firingsInSlots(a)(pOther)(s - 1))
+        //   val consumed = chocoModel.intVar(s"cons($p, $s)", 0, maximumTokensProducedVal, true)
+        //   val produced =
+        //     chocoModel.intVar(s"prod($pOther, ${s - 1})", 0, maximumTokensProducedVal, true)
+        //   val diffVar = chocoModel.intVar(s"diff($pOther,$p,$s)", 0, maximumTokensProducedVal, true)
+        //   chocoModel.scalar(previousActorFirings, prodMat(c), "=", produced).post()
+        //   chocoModel.scalar(actorFirings, consMat(c), "=", consumed).post()
+        //   diffVar.eq(consumed.sub(produced)).decompose().post()
+        //   // val diffSum = chocoModel.sum(s"diff($pOther,$p,$s)", firingsInSlots()
+        //   chocoModel.ifThen(
+        //     channelsCommunicate(c)(pOther)(p).and(diffVar.gt(0)).decompose(),
+        //     slotStartTime(p)(s)
+        //       .ge(slotFinishTime(p)(s - 1).add(channelsTravelTime(c)(pOther)(p).mul(diffVar)))
+        //       .decompose()
+        //   )
+        // }
+      }
+    }
     // println("done!!!!")
     // throughput
     val thPropagator = SDFLikeThroughputPropagator(
@@ -203,36 +254,23 @@ class SDFTimingAnalysisSASModule(
       )
     )
     // time
-    val timePropagator = SDFLikeTimingPropagator(
-      actorDuration,
-      balanceMatrix,
-      initialTokens,
-      firingsInSlots,
-      channelsTravelTime,
-      channelsCommunicate,
-      slotStartTime,
-      slotFinishTime
-    )
-    chocoModel.post(
-      new Constraint(
-        "global_time_sdf_prop",
-        timePropagator
-      )
-    )
+    // val timePropagator = SDFLikeTimingPropagator(
+    //   actorDuration,
+    //   balanceMatrix,
+    //   initialTokens,
+    //   firingsInSlots,
+    //   channelsTravelTime,
+    //   channelsCommunicate,
+    //   slotStartTime,
+    //   slotFinishTime
+    // )
+    // chocoModel.post(
+    //   new Constraint(
+    //     "global_time_sdf_prop",
+    //     timePropagator
+    //   )
+    // )
     // tokens
-    val propagator = SDFLikeTokensPropagator(
-      actors.zipWithIndex.map((a, i) => maxRepetitionsPerActors(i)),
-      balanceMatrix,
-      initialTokens,
-      channelsCommunicate,
-      firingsInSlots
-    )
-    chocoModel.post(
-      new Constraint(
-        "global_sas_sdf_prop",
-        propagator
-      )
-    )
   }
 
 }

@@ -14,15 +14,14 @@ import org.chocosolver.solver.search.strategy.strategy.AbstractStrategy
 import org.chocosolver.solver.variables.Variable
 import idesyde.identification.forsyde.models.mixed.SDFToSchedTiledHW
 import idesyde.identification.forsyde.ForSyDeIdentificationRule
-import idesyde.identification.choco.models.TileAsyncInterconnectCommsMixin
 import spire.math.Rational
 import idesyde.implicits.forsyde.given_Fractional_Rational
 import org.chocosolver.solver.search.strategy.Search
 import org.chocosolver.solver.search.strategy.selectors.variables.Largest
 import org.chocosolver.solver.search.strategy.selectors.values.IntDomainMedian
 import org.chocosolver.solver.search.strategy.selectors.values.IntDomainMax
-import idesyde.identification.choco.models.SingleProcessSingleMessageMemoryConstraintsMixin
 import org.chocosolver.solver.search.strategy.strategy.FindAndProve
+import org.chocosolver.solver.constraints.Constraint
 
 final case class ChocoSDFToSChedTileHW(
     val slower:  ChocoSDFToSChedTileHWSlowest
@@ -37,17 +36,31 @@ final case class ChocoSDFToSChedTileHW(
   // BRANCHING AND SEARCH
 
   val listScheduling = CommAwareMultiCoreSDFListScheduling(
-      slower.actors.zipWithIndex.map((a, i) => slower.maxRepetitionsPerActors(i)),
-      slower.balanceMatrix,
-      slower.initialTokens,
-      slower.actorDuration,
-      slower.channelsTravelTime,
-      slower.firingsInSlots,
-      slower.invThroughputs
+      slower.dse.sdfApplications.actors.zipWithIndex.map((a, i) => slower.dse.sdfApplications.sdfRepetitionVectors(i)),
+      slower.dse.sdfApplications.sdfBalanceMatrix,
+      slower.dse.sdfApplications.initialTokens,
+      slower.dse.wcets.map(ws => ws.map(w => w * slower.timeMultiplier).map(_.ceil.intValue)),
+      slower.tileAnalysisModule.messageTravelDuration,
+      slower.sdfAnalysisModule.firingsInSlots,
+      slower.sdfAnalysisModule.invThroughputs
     )
   chocoModel.getSolver().plugMonitor(listScheduling)
+  val tokensPropagator = SDFLikeTokensPropagator(
+    slower.dse.sdfApplications.actors.zipWithIndex.map((a, i) => slower.dse.sdfApplications.sdfRepetitionVectors(i)),
+    slower.dse.sdfApplications.sdfBalanceMatrix,
+    slower.dse.sdfApplications.initialTokens,
+    slower.sdfAnalysisModule.firingsInSlots,
+    slower.sdfAnalysisModule.tokensBefore,
+    slower.sdfAnalysisModule.tokensAfter
+  )
+  chocoModel.post(
+    new Constraint(
+      "global_sas_sdf_prop",
+      tokensPropagator
+    )
+  )
 
-  override def strategies: Array[AbstractStrategy[? <: Variable]] = listScheduling +: slower.strategies.drop(1)
+  override def strategies: Array[AbstractStrategy[? <: Variable]] = slower.strategies :+ listScheduling
 
   //---------
 

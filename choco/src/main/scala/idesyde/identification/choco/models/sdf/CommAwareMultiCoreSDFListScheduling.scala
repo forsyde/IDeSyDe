@@ -80,13 +80,14 @@ class CommAwareMultiCoreSDFListScheduling(
     var currentParallelism = 0
     // var bestSlot = -1
     val lastSlot = recomputeMethods.recomputeLowerestDecidedSlot()
+    println(s"deciding with last slot $lastSlot")
     // quick guard for errors and end of schedule
     if (lastSlot >= slots.size - 1) return null
     val earliestOpen = lastSlot + 1
     var d            = pool.getE()
     if (d == null) d = IntDecision(pool)
     // count += 1
-    // println(s"deciding at $earliestOpen")
+    println(s"deciding at $earliestOpen")
     // slotsPrettyPrint()
     // recomputeFiringVectors()
     // recomputeTokens()
@@ -151,10 +152,10 @@ class CommAwareMultiCoreSDFListScheduling(
     // slotsPrettyPrint()
     // timingPrettyPrint()
     // println(invThroughputPerSchedulers.mkString(", "))
-    // println("best:  " + (bestA, bestP, bestSlot, bestQ, bestScore))
-    // println(
-    //   "bestPenalized:  " + (bestAPenalized, bestPPenalized, bestSlotPenalized, bestQPenalized, bestScorePenalized)
-    // )
+    println("best:  " + (bestA, bestP, bestSlot, bestQ, bestScore))
+    println(
+      "bestPenalized:  " + (bestAPenalized, bestPPenalized, bestSlotPenalized, bestQPenalized, bestScorePenalized)
+    )
     if (bestQ > 0) then {
       // println("adding it!")
       d.set(firingsInSlots(bestA)(bestP)(bestSlot), bestQ, DecisionOperatorFactory.makeIntEq())

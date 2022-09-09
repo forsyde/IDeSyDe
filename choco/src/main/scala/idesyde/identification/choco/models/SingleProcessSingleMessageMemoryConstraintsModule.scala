@@ -6,16 +6,16 @@ import org.chocosolver.solver.Model
 
 class SingleProcessSingleMessageMemoryConstraintsModule(
     val chocoModel: Model,
-    val processSize: Array[Int],
-    val dataSize: Array[Int],
+    val processSizes: Array[Int],
+    val dataSizes: Array[Int],
     val memorySizes: Array[Int]
 ) extends ChocoModelMixin {
 
-  private val processes = (0 until processSize.size).toArray
-  private val messages  = (0 until dataSize.size).toArray
+  private val processes = (0 until processSizes.size).toArray
+  private val messages  = (0 until dataSizes.size).toArray
   private val memorySet = (0 until memorySizes.size).toArray
 
-  private val messagesMemoryMapping: Array[IntVar] = messages
+  val messagesMemoryMapping: Array[IntVar] = messages
     .map(c => chocoModel.intVar(s"mapMessage($c)", memorySet))
     .toArray
 
@@ -23,7 +23,7 @@ class SingleProcessSingleMessageMemoryConstraintsModule(
     .map(a => chocoModel.intVar(s"mapProcess($a)", memorySet))
     .toArray
 
-  val memoryUsage: Array[IntVar] = memorySet.zipWithIndex
+  val memoryUsage: Array[IntVar] = memorySizes.zipWithIndex
     .map((m, s) => chocoModel.intVar(s"memUsage($s)", 0, m, true))
 
   // def memories = 0 until memoryUsage.size
@@ -32,9 +32,9 @@ class SingleProcessSingleMessageMemoryConstraintsModule(
     chocoModel
       .binPacking(
         processesMemoryMapping ++ messagesMemoryMapping,
-        processSize ++ dataSize,
+        processSizes ++ dataSizes,
         memoryUsage,
-        memoryUsage.head.getLB()
+        0
       )
       .post()
     // memories.foreach(mem => {

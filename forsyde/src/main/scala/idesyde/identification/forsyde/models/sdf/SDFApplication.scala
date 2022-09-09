@@ -48,6 +48,9 @@ final case class SDFApplication(
 
   val initialTokens: Array[Int] = channels.map(_.getNumOfInitialTokens)
 
+  /** this is a simple shortcut for the balance matrix (originally called topology matrix) as SDFs have only one configuration */
+  def sdfBalanceMatrix: Array[Array[Int]] = balanceMatrices.head
+
   /** this is a simple shortcut for the repetition vectors as SDFs have only one configuration */
   def sdfRepetitionVectors: Array[Int] = repetitionVectors(0)
 

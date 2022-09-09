@@ -1001,32 +1001,32 @@ class SDFOnTileNoCUseCaseWithSolution extends AnyFunSuite with LoggingMixin {
     assert(solutions.size >= 1)
   }
 
-  test("Correct identification and DSE of all and large platform") {
-    val identified = identificationHandler.identifyDecisionModels(appsAndLarge)
-    assert(identified.size > 0)
-    assert(identified.find(m => m.isInstanceOf[SDFToSchedTiledHW]).isDefined)
-    val chosen = explorationHandler.chooseExplorersAndModels(identified)
-    assert(chosen.size > 0)
-    assert(chosen.find((_, m) => m.isInstanceOf[ChocoSDFToSChedTileHW]).isDefined)
-    val solutions = chosen
-      .flatMap((explorer, decisionModel) =>
-        explorer
-          .explore[ForSyDeSystemGraph](decisionModel)
-          .map(sol =>
-            forSyDeModelHandler
-              .writeModel(
-                appsAndLarge.merge(sol),
-                "tests/models/sdf3/results/all_and_large_result.fiodl"
-              )
-            forSyDeModelHandler.writeModel(
-              appsAndLarge.merge(sol),
-              "tests/models/sdf3/results/all_and_large_result_visual.kgt"
-            )
-            sol
-          ).take(solutionsTaken)
-      )
-      .take(solutionsTaken)
-    assert(solutions.size >= 1)
-  }
+  // test("Correct identification and DSE of all and large platform") {
+  //   val identified = identificationHandler.identifyDecisionModels(appsAndLarge)
+  //   assert(identified.size > 0)
+  //   assert(identified.find(m => m.isInstanceOf[SDFToSchedTiledHW]).isDefined)
+  //   val chosen = explorationHandler.chooseExplorersAndModels(identified)
+  //   assert(chosen.size > 0)
+  //   assert(chosen.find((_, m) => m.isInstanceOf[ChocoSDFToSChedTileHW]).isDefined)
+  //   val solutions = chosen
+  //     .flatMap((explorer, decisionModel) =>
+  //       explorer
+  //         .explore[ForSyDeSystemGraph](decisionModel)
+  //         .map(sol =>
+  //           forSyDeModelHandler
+  //             .writeModel(
+  //               appsAndLarge.merge(sol),
+  //               "tests/models/sdf3/results/all_and_large_result.fiodl"
+  //             )
+  //           forSyDeModelHandler.writeModel(
+  //             appsAndLarge.merge(sol),
+  //             "tests/models/sdf3/results/all_and_large_result_visual.kgt"
+  //           )
+  //           sol
+  //         ).take(solutionsTaken)
+  //     )
+  //     .take(solutionsTaken)
+  //   assert(solutions.size >= 1)
+  // }
 
 }

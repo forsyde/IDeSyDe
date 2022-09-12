@@ -47,16 +47,23 @@ final case class ChocoSDFToSChedTileHW(
     slower.sdfAnalysisModule.invThroughputs
   )
   chocoModel.getSolver().plugMonitor(listScheduling)
-  
+
   // breaking symmetries for speed
-  private val firingVectors = (0 until slower.sdfAnalysisModule.maxSlots).map(s =>
-    chocoModel.sum(s"allOnSlot($s)", slower.sdfAnalysisModule.firingsInSlots.flatMap(pAndSVec => pAndSVec.map(sVec => sVec(s))):_*)
-  ).toArray
+  private val firingVectors = (0 until slower.sdfAnalysisModule.maxSlots)
+    .map(s =>
+      chocoModel.sum(
+        s"allOnSlot($s)",
+        slower.sdfAnalysisModule.firingsInSlots.flatMap(pAndSVec =>
+          pAndSVec.map(sVec => sVec(s))
+        ): _*
+      )
+    )
+    .toArray
   for (s <- 0 until (slower.sdfAnalysisModule.maxSlots - 1)) {
-    chocoModel.ifThenElse(
-      firingVectors(s).gt(0).decompose(),
-      firingVectors(s + 1).ge(0).decompose(),
+    chocoModel.ifThen(
+      firingVectors(s).eq(0).decompose(),
       firingVectors(s + 1).eq(0).decompose()
+      // firingVectors(s + 1).eq(0).decompose()
     )
   }
 

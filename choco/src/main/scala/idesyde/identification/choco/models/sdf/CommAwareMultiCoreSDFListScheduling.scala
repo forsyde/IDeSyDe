@@ -96,7 +96,7 @@ class CommAwareMultiCoreSDFListScheduling(
     // for (slot <- slots; if bestSlot < 0) {
     // accumulate the firings vectors
     // accumFirings += firingVector(lastSlot)
-    wfor(earliestOpen, it => it < numSlots && it <= bestSlot, _ + 1) { s =>
+    wfor(0, it => it < earliestOpen + 1 && it <= bestSlot, _ + 1) { s =>
       wfor(0, _ < schedulers.size, _ + 1) { p =>
         wfor(0, _ < actors.size, _ + 1) { a =>
           if (firingsInSlots(a)(p)(s).getUB() > 0 && !firingsInSlots(a)(p)(s).isInstantiated()) {
@@ -149,14 +149,14 @@ class CommAwareMultiCoreSDFListScheduling(
       }
     }
     // }
-    // slotsPrettyPrint()
+    // recomputeMethods.schedulePrettyPrint()
     // timingPrettyPrint()
     // println(invThroughputPerSchedulers.mkString(", "))
     // println("best:  " + (bestA, bestP, bestSlot, bestQ, bestScore))
     // println(
     //   "bestPenalized:  " + (bestAPenalized, bestPPenalized, bestSlotPenalized, bestQPenalized, bestScorePenalized)
     // )
-    if (bestQ > 0) then {
+    if (bestQ > 0) {
       // println("adding it!")
       d.set(firingsInSlots(bestA)(bestP)(bestSlot), bestQ, DecisionOperatorFactory.makeIntEq())
       d

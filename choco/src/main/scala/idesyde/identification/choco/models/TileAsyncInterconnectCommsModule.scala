@@ -21,18 +21,18 @@ import idesyde.identification.choco.models.platform.ContentionFreeTiledCommunica
 import org.chocosolver.solver.Model
 
 class TileAsyncInterconnectCommsModule(
-  val chocoModel: Model,
-  val procElems: Array[Int],
-  val commElems: Array[Int],
-  val messages: Array[Int],
-  val messageTravelTimePerVirtualChannel: Array[Array[Int]],
-  val numVirtualChannels: Array[Int],
-  val commElemsPaths: Array[Array[Array[Int]]],
-  val commElemsMustShareChannel: Array[Array[Boolean]]
+    val chocoModel: Model,
+    val procElems: Array[Int],
+    val commElems: Array[Int],
+    val messages: Array[Int],
+    val messageTravelTimePerVirtualChannel: Array[Array[Int]],
+    val numVirtualChannels: Array[Int],
+    val commElemsPaths: Array[Array[Array[Int]]],
+    val commElemsMustShareChannel: Array[Array[Boolean]]
 ) extends ChocoModelMixin {
 
   private val numProcElems = procElems.size
-  private val numMessages = messages.size
+  private val numMessages  = messages.size
 
   val virtualChannelForMessage: Array[Array[IntVar]] = messages.zipWithIndex.map((c, i) => {
     commElems.zipWithIndex.map((ce, j) => {
@@ -61,27 +61,22 @@ class TileAsyncInterconnectCommsModule(
         chocoModel.intVar(
           s"commTime(${c},${i},${j})",
           commElemsPaths(i)(j)
-            .map(ce =>
-              messageTravelTimePerVirtualChannel(ci)(commElems.indexOf(ce))
-            )
+            .map(ce => messageTravelTimePerVirtualChannel(ci)(commElems.indexOf(ce)))
             .minOption
             .getOrElse(0),
           commElemsPaths(i)(j)
-            .map(ce =>
-              messageTravelTimePerVirtualChannel(ci)(commElems.indexOf(ce))
-            )
+            .map(ce => messageTravelTimePerVirtualChannel(ci)(commElems.indexOf(ce)))
             .sum,
           true
         )
       })
     })
   })
-  
 
   def postTileAsyncInterconnectComms(): Unit = {
     // first, make sure that data from different sources do not collide in any comm. elem
     // for (ce <- commElems) {
-      // chocoModel.allDifferentExcept0(messages.map(m => virtualChannelForMessage(m)(ce))).post()
+    // chocoModel.allDifferentExcept0(messages.map(m => virtualChannelForMessage(m)(ce))).post()
     // }
     for (
       src <- 0 until numProcElems;
@@ -126,10 +121,16 @@ class TileAsyncInterconnectCommsModule(
     // message, indeed do.
     for ((ce, i) <- commElems.zipWithIndex) {
       val areEquals =
-        commElems.zipWithIndex.filter((otherCe, j) => ce != otherCe && commElemsMustShareChannel(i)(j))
+        commElems.zipWithIndex.filter((otherCe, j) =>
+          ce != otherCe && commElemsMustShareChannel(i)(j)
+        )
       for ((m, k) <- messages.zipWithIndex) {
         chocoModel
-          .allEqual(((ce, i) +: areEquals).map((c, j) => virtualChannelForMessage(k)(commElems.indexOf(c))): _*)
+          .allEqual(
+            ((ce, i) +: areEquals).map((c, j) =>
+              virtualChannelForMessage(k)(commElems.indexOf(c))
+            ): _*
+          )
           .post()
       }
       // chocoModel.allEqual()
@@ -150,7 +151,11 @@ class TileAsyncInterconnectCommsModule(
       chocoModel.ifThen(
         messageIsCommunicated(m)(src)(dst),
         messageTravelDuration(m)(src)(dst)
-          .eq(commElemsPaths(src)(dst).map(ce => messageTravelTimePerVirtualChannel(m)(commElems.indexOf(ce))).sum)
+          .eq(
+            commElemsPaths(src)(dst)
+              .map(ce => messageTravelTimePerVirtualChannel(m)(commElems.indexOf(ce)))
+              .sum
+          )
           .decompose()
       )
     }

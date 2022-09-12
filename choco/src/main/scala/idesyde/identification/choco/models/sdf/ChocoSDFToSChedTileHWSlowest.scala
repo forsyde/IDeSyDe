@@ -57,7 +57,11 @@ final case class ChocoSDFToSChedTileHWSlowest(
     chocoModel,
     dse.sdfApplications.processSizes.map(_ / memoryDivider).map(_.toInt),
     dse.sdfApplications.messagesMaxSizes.map(l => (l / memoryDivider).toInt),
-    dse.platform.tiledDigitalHardware.maxMemoryPerTile.map(_ / memoryDivider).map(_.toInt)
+    dse.platform.tiledDigitalHardware.maxMemoryPerTile
+      .map(_ / memoryDivider)
+      .map(l =>
+        if (l > Int.MaxValue) then (Int.MaxValue - 1) else l.toInt
+      ) // the - 1 is required so that choco solver does not segfault
   )
 
   val tileAnalysisModule = TileAsyncInterconnectCommsModule(
@@ -132,14 +136,13 @@ final case class ChocoSDFToSChedTileHWSlowest(
     memoryMappingModule.messagesMemoryMapping.zipWithIndex.foreach((cMap, c) => {
       if (dse.sdfApplications.sdfBalanceMatrix(c)(a) < 0) {
         chocoModel.arithm(aMap, "=", cMap).post()
-      }
-      if (dse.sdfApplications.sdfBalanceMatrix(c)(a) > 0) {
+      } else if (dse.sdfApplications.sdfBalanceMatrix(c)(a) > 0) {
         // build the table that make this constraint
         dse.platform.schedulerSet.zipWithIndex.foreach((_, sendi) => {
           dse.platform.schedulerSet.zipWithIndex.foreach((_, recvi) => {
             if (sendi != recvi) {
               chocoModel.ifThen(
-                cMap.eq(sendi).and(aMap.eq(recvi)).decompose(),
+                cMap.eq(recvi).and(aMap.eq(sendi)).decompose(),
                 tileAnalysisModule.messageIsCommunicated(c)(sendi)(recvi).eq(1).decompose()
               )
             }
@@ -221,15 +224,14 @@ final case class ChocoSDFToSChedTileHWSlowest(
     // ),
     // FindAndProve((nUsedPEs +: firingsInSlots.flatten.flatten),
     // listScheduling,
-    // Search.minDomLBSearch(nUsedPEs),
-    // // ),
-    Search.minDomLBSearch(sdfAnalysisModule.globalInvThroughput),
-    // Search.minDomLBSearch(invThroughputs:_*),
+    Search.bestBound(Search.minDomLBSearch(sdfAnalysisModule.globalInvThroughput)),
+    Search.minDomLBSearch(sdfAnalysisModule.invThroughputs: _*),
     Search.minDomLBSearch(tileAnalysisModule.messageIsCommunicated.flatten.flatten: _*),
     Search.minDomLBSearch(tileAnalysisModule.virtualChannelForMessage.flatten: _*),
     Search.minDomLBSearch(sdfAnalysisModule.slotStartTime.flatten: _*),
-    Search.minDomLBSearch(sdfAnalysisModule.slotFinishTime.flatten: _*),
-    Search.defaultSearch(chocoModel)
+    Search.minDomLBSearch(sdfAnalysisModule.slotFinishTime.flatten: _*)
+    // Search.minDomLBSearch(nUsedPEs),
+    // Search.defaultSearch(chocoModel)
   )
 
   //---------
@@ -260,46 +262,46 @@ final case class ChocoSDFToSChedTileHWSlowest(
       memoryMappingModule.processesMemoryMapping.map(vs =>
         dse.platform.tiledDigitalHardware.tileSet.map(j => output.getIntVal(vs) == j)
       )
-    println(
-      dse.platform.schedulerSet.zipWithIndex
-        .map((_, s) => {
-          (0 until dse.sdfApplications.actors.size)
-            .map(slot => {
-              dse.sdfApplications.actors.zipWithIndex
-                .find((a, ai) => sdfAnalysisModule.firingsInSlots(ai)(s)(slot).getLB() > 0)
-                .map((a, ai) =>
-                  a.getIdentifier() + ": " + output
-                    .getIntVal(sdfAnalysisModule.firingsInSlots(ai)(s)(slot))
-                )
-                .getOrElse("_")
-            })
-            .mkString("[", ", ", "]")
-        })
-        .mkString("[\n ", "\n ", "\n]")
-    )
-    println(
-      dse.platform.schedulerSet.zipWithIndex
-        .map((_, src) => {
-          dse.platform.schedulerSet.zipWithIndex
-            .map((_, dst) => {
-              dse.sdfApplications.channels.zipWithIndex
-                .filter((c, ci) =>
-                  tileAnalysisModule.messageIsCommunicated(ci)(src)(dst).getLB() > 0
-                )
-                .map((c, ci) =>
-                  c.getIdentifier() + ": " + paths(src)(dst).zipWithIndex
-                    .map((ce, cei) =>
-                      ce + "/" + output
-                        .getIntVal(tileAnalysisModule.virtualChannelForMessage(ci)(cei))
-                    )
-                    .mkString("-")
-                )
-                .mkString("(", ", ", ")")
-            })
-            .mkString("[", ", ", "]")
-        })
-        .mkString("[\n ", "\n ", "\n]")
-    )
+    // println(
+    //   dse.platform.schedulerSet.zipWithIndex
+    //     .map((_, s) => {
+    //       (0 until dse.sdfApplications.actors.size)
+    //         .map(slot => {
+    //           dse.sdfApplications.actors.zipWithIndex
+    //             .find((a, ai) => sdfAnalysisModule.firingsInSlots(ai)(s)(slot).getLB() > 0)
+    //             .map((a, ai) =>
+    //               a.getIdentifier() + ": " + output
+    //                 .getIntVal(sdfAnalysisModule.firingsInSlots(ai)(s)(slot))
+    //             )
+    //             .getOrElse("_")
+    //         })
+    //         .mkString("[", ", ", "]")
+    //     })
+    //     .mkString("[\n ", "\n ", "\n]")
+    // )
+    // println(
+    //   dse.platform.schedulerSet.zipWithIndex
+    //     .map((_, src) => {
+    //       dse.platform.schedulerSet.zipWithIndex
+    //         .map((_, dst) => {
+    //           dse.sdfApplications.channels.zipWithIndex
+    //             .filter((c, ci) =>
+    //               tileAnalysisModule.messageIsCommunicated(ci)(src)(dst).getLB() > 0
+    //             )
+    //             .map((c, ci) =>
+    //               c.getIdentifier() + ": " + paths(src)(dst).zipWithIndex
+    //                 .map((ce, cei) =>
+    //                   ce + "/" + output
+    //                     .getIntVal(tileAnalysisModule.virtualChannelForMessage(ci)(cei))
+    //                 )
+    //                 .mkString("-")
+    //             )
+    //             .mkString("(", ", ", ")")
+    //         })
+    //         .mkString("[", ", ", "]")
+    //     })
+    //     .mkString("[\n ", "\n ", "\n]")
+    // )
     dse.addMappingsAndRebuild(
       mappings,
       schedulings,

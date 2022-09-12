@@ -55,16 +55,16 @@ class ChocoExplorer() extends ForSyDeIOExplorer:
       ExecutionContext
   ): LazyList[ForSyDeSystemGraph] = forSyDeDecisionModel match
     case chocoCpModel: ChocoCPForSyDeDecisionModel =>
-      val model                = chocoCpModel.chocoModel
-      val solver               = model.getSolver
-      val isOptimization       = chocoCpModel.modelObjectives.size > 0
-      lazy val paretoMaximizer = ParetoMaximizer(chocoCpModel.modelObjectives)
+      val model                 = chocoCpModel.chocoModel
+      val solver                = model.getSolver
+      val isOptimization        = chocoCpModel.modelObjectives.size > 0
+      lazy val paretoMaximizer  = ParetoMaximizer(chocoCpModel.modelObjectives)
       var lastParetoFrontValues = chocoCpModel.modelObjectives.map(_.getLB())
-      var lastParetoFrontSize = 0
-      var paretoFrontChanged = true
+      var lastParetoFrontSize   = 0
+      var paretoFrontChanged    = true
       if (isOptimization) {
         solver.plugMonitor(paretoMaximizer)
-        model.post(new Constraint("paretoOptConstraint", paretoMaximizer))
+        // model.post(new Constraint("paretoOptConstraint", paretoMaximizer))
       }
       solver.setLearningSignedClauses
       solver.setNoGoodRecordingFromRestarts
@@ -75,9 +75,9 @@ class ChocoExplorer() extends ForSyDeIOExplorer:
         .continually(solver.solve)
         .takeWhile(feasible =>
           // scribe.debug(s"a solution has been found with feasibility: ${feasible}")
-          if (isOptimization) 
+          if (isOptimization)
             feasible && paretoFrontChanged
-          else 
+          else
             feasible
         )
         // .takeWhile(feasible => )
@@ -90,19 +90,20 @@ class ChocoExplorer() extends ForSyDeIOExplorer:
               lastParetoFrontSize = paretoMaximizer.getParetoFront().size()
               paretoFrontChanged = true
             } else {
-              paretoMaximizer.getParetoFront().forEach(s => {
-                val dominator = chocoCpModel.modelObjectives.zipWithIndex.forall((o, i) => {
-                  lastParetoFrontValues(i) < s.getIntVal(o)
+              paretoMaximizer
+                .getParetoFront()
+                .forEach(s => {
+                  val dominator = chocoCpModel.modelObjectives.zipWithIndex.forall((o, i) => {
+                    lastParetoFrontValues(i) < s.getIntVal(o)
+                  })
+                  if (dominator) {
+                    lastParetoFrontValues = chocoCpModel.modelObjectives.map(o => s.getIntVal(o))
+                    paretoFrontChanged = true
+                  }
                 })
-                if (dominator) {
-                  lastParetoFrontValues = chocoCpModel.modelObjectives.map(o => s.getIntVal(o))
-                  paretoFrontChanged = true
-                }
-              })
             }
             paretoMaximizer.getParetoFront().asScala
-          }
-          else Seq(solver.defaultSolution().record())
+          } else Seq(solver.defaultSolution().record())
         })
         .map(paretoSolutions => {
           chocoCpModel.rebuildFromChocoOutput(paretoSolutions)

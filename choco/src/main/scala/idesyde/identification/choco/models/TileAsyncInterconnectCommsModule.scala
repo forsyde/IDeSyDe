@@ -47,10 +47,10 @@ class TileAsyncInterconnectCommsModule(
   val messageIsCommunicated: Array[Array[Array[BoolVar]]] = messages.map(c => {
     procElems.zipWithIndex.map((src, i) => {
       procElems.zipWithIndex.map((dst, j) => {
-        if (!commElemsPaths(src)(dst).isEmpty)
-          chocoModel.boolVar(s"send($c,${src},${dst})")
+        if (!commElemsPaths(i)(j).isEmpty)
+          chocoModel.boolVar(s"send($c,${i},${j})")
         else
-          chocoModel.boolVar(s"send($c,${src},${dst})", false)
+          chocoModel.boolVar(s"send($c,${i},${j})", false)
       })
     })
   })
@@ -59,7 +59,7 @@ class TileAsyncInterconnectCommsModule(
     procElems.zipWithIndex.map((src, i) => {
       procElems.zipWithIndex.map((dst, j) => {
         chocoModel.intVar(
-          s"commTime(${c},${src},${dst})",
+          s"commTime(${c},${i},${j})",
           commElemsPaths(i)(j)
             .map(ce =>
               messageTravelTimePerVirtualChannel(ci)(commElems.indexOf(ce))

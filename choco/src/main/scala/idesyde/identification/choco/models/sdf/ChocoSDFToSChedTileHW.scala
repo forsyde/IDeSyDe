@@ -47,22 +47,18 @@ final case class ChocoSDFToSChedTileHW(
     slower.sdfAnalysisModule.invThroughputs
   )
   chocoModel.getSolver().plugMonitor(listScheduling)
-  // val tokensPropagator = SDFLikeTokensPropagator(
-  //   slower.dse.sdfApplications.actors.zipWithIndex.map((a, i) =>
-  //     slower.dse.sdfApplications.sdfRepetitionVectors(i)
-  //   ),
-  //   slower.dse.sdfApplications.sdfBalanceMatrix,
-  //   slower.dse.sdfApplications.initialTokens,
-  //   slower.sdfAnalysisModule.firingsInSlots,
-  //   slower.sdfAnalysisModule.tokens
-  //   // slower.sdfAnalysisModule.tokensAfter
-  // )
-  // chocoModel.post(
-  //   new Constraint(
-  //     "global_sas_sdf_prop",
-  //     tokensPropagator
-  //   )
-  // )
+  
+  // breaking symmetries for speed
+  private val firingVectors = (0 until slower.sdfAnalysisModule.maxSlots).map(s =>
+    chocoModel.sum(s"allOnSlot($s)", slower.sdfAnalysisModule.firingsInSlots.flatMap(pAndSVec => pAndSVec.map(sVec => sVec(s))):_*)
+  ).toArray
+  for (s <- 0 until (slower.sdfAnalysisModule.maxSlots - 1)) {
+    chocoModel.ifThenElse(
+      firingVectors(s).gt(0).decompose(),
+      firingVectors(s + 1).ge(0).decompose(),
+      firingVectors(s + 1).eq(0).decompose()
+    )
+  }
 
   override val strategies: Array[AbstractStrategy[? <: Variable]] =
     listScheduling +: slower.strategies

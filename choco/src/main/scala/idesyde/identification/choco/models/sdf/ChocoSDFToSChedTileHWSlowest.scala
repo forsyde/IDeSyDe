@@ -81,12 +81,6 @@ final case class ChocoSDFToSChedTileHWSlowest(
     chocoModel,
     dse,
     dse.sdfApplications.actors.size,
-    memoryMappingModule.processesMemoryMapping,
-    tileAnalysisModule.messageIsCommunicated,
-    tileAnalysisModule.messageTravelDuration,
-    dse.platform.schedulerSet.map(_ => chocoModel.intVar(0)),
-    dse.platform.schedulerSet.map(_ => chocoModel.intVar(1)),
-    dse.platform.schedulerSet.map(_ => chocoModel.intVar(1)),
     timeMultiplier
   )
 
@@ -162,24 +156,24 @@ final case class ChocoSDFToSChedTileHWSlowest(
   // SCHEDULING AND TIMING
 
   // and sdf can be executed in a PE only if its mapped into this PE
-  // dse.sdfApplications.actorsSet.zipWithIndex.foreach((_, a) => {
-  //   dse.platform.schedulerSet.zipWithIndex.foreach((_, p) => {
-  //     chocoModel.ifOnlyIf(
-  //       memoryMappingModule.processesMemoryMapping(a).eq(p).decompose(),
-  //       chocoModel
-  //         .sum(s"firings_${a}_${p}>0", sdfAnalysisModule.firingsInSlots(a)(p): _*)
-  //         .gt(0)
-  //         .decompose()
-  //     )
-  //     chocoModel.ifThen(
-  //       memoryMappingModule.processesMemoryMapping(a).ne(p).decompose(),
-  //       chocoModel
-  //         .sum(s"firings_${a}_${p}=0", sdfAnalysisModule.firingsInSlots(a)(p): _*)
-  //         .eq(0)
-  //         .decompose()
-  //     )
-  //   })
-  // })
+  dse.sdfApplications.actorsSet.zipWithIndex.foreach((_, a) => {
+    dse.platform.schedulerSet.zipWithIndex.foreach((_, p) => {
+      chocoModel.ifOnlyIf(
+        memoryMappingModule.processesMemoryMapping(a).eq(p).decompose(),
+        chocoModel
+          .sum(s"firings_${a}_${p}>0", sdfAnalysisModule.firingsInSlots(a)(p): _*)
+          .gt(0)
+          .decompose()
+      )
+      chocoModel.ifThen(
+        memoryMappingModule.processesMemoryMapping(a).ne(p).decompose(),
+        chocoModel
+          .sum(s"firings_${a}_${p}=0", sdfAnalysisModule.firingsInSlots(a)(p): _*)
+          .eq(0)
+          .decompose()
+      )
+    })
+  })
 
   sdfAnalysisModule.postSDFTimingAnalysisSAS()
   //---------
@@ -229,13 +223,12 @@ final case class ChocoSDFToSChedTileHWSlowest(
     // listScheduling,
     // Search.minDomLBSearch(nUsedPEs),
     // // ),
-    // Search.minDomLBSearch(sdfAnalysisModule.globalInvThroughput),
-    // // Search.minDomLBSearch(invThroughputs:_*),
-    // Search.minDomLBSearch(tileAnalysisModule.messageIsCommunicated.flatten.flatten: _*),
-    // Search.minDomLBSearch(tileAnalysisModule.virtualChannelForMessage.flatten: _*),
-    // Search.minDomLBSearch(sdfAnalysisModule.slotStartTime.flatten: _*),
-    // Search.minDomLBSearch(sdfAnalysisModule.slotFinishTime.flatten: _*),
-    // Search.intVarSearch()
+    Search.minDomLBSearch(sdfAnalysisModule.globalInvThroughput),
+    // Search.minDomLBSearch(invThroughputs:_*),
+    Search.minDomLBSearch(tileAnalysisModule.messageIsCommunicated.flatten.flatten: _*),
+    Search.minDomLBSearch(tileAnalysisModule.virtualChannelForMessage.flatten: _*),
+    Search.minDomLBSearch(sdfAnalysisModule.slotStartTime.flatten: _*),
+    Search.minDomLBSearch(sdfAnalysisModule.slotFinishTime.flatten: _*),
     Search.defaultSearch(chocoModel)
   )
 

@@ -19,12 +19,6 @@ class SDFSASAnalysisModule(
     val chocoModel: Model,
     val sdfAndSchedulers: SDFToSchedTiledHW,
     val maxSlots: Int,
-    val actorMapping: Array[IntVar],
-    val channelsCommunicate: Array[Array[Array[BoolVar]]],
-    val channelsTravelTime: Array[Array[Array[IntVar]]],
-    val initialLatencies: Array[IntVar],
-    val slotMaxDurations: Array[IntVar],
-    val slotPeriods: Array[IntVar],
     val timeFactor: Long = 1L
 ) extends ChocoModelMixin {
 

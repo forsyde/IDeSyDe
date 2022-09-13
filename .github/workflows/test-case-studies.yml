@@ -32,4 +32,4 @@ jobs:
     - name: Run tests with sbt
       run: |
         cd ${{ github.workspace }}
-        sbt tests/test
+        sbt --mem 4096 tests/test

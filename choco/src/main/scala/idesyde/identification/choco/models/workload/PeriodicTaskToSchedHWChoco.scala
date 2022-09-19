@@ -415,9 +415,9 @@ final case class PeriodicTaskToSchedHWChoco(
       DecisionOperatorFactory.makeIntEq,
       (taskMapping ++ dataBlockMapping ++ responseTimes ++ durationsExec.flatten ++ blockingTimes ++
         durationsRead.flatten ++ durationsWrite.flatten ++ durationsFetch.flatten ++
-        durations.flatten ++ utilizations :+ nUsedPEs): _*
-    ),
-    Search.defaultSearch(chocoModel)
+        durations.flatten ++ utilizations ++ taskCommunicationMapping.flatten :+ nUsedPEs): _*
+    )
+    // Search.defaultSearch(chocoModel)
   )
 
   def rebuildFromChocoOutput(output: Solution): ForSyDeSystemGraph = {

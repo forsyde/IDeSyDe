@@ -825,9 +825,11 @@ class SDFOnTileNoCUseCaseWithSolution extends AnyFunSuite with LoggingMixin {
     assert(chosen.size > 0)
     assert(chosen.find((_, m) => m.isInstanceOf[ChocoSDFToSChedTileHW]).isDefined)
     val solutions = chosen
+      .take(1)
       .flatMap((explorer, decisionModel) =>
         explorer
           .explore[ForSyDeSystemGraph](decisionModel)
+          .take(solutionsTaken)
           .map(sol =>
             forSyDeModelHandler
               .writeModel(
@@ -840,9 +842,7 @@ class SDFOnTileNoCUseCaseWithSolution extends AnyFunSuite with LoggingMixin {
             )
             sol
           )
-          .take(solutionsTaken)
       )
-      .take(solutionsTaken)
     assert(solutions.size >= 1)
   }
 
@@ -853,9 +853,11 @@ class SDFOnTileNoCUseCaseWithSolution extends AnyFunSuite with LoggingMixin {
     assert(chosen.size > 0)
     assert(chosen.find((_, m) => m.isInstanceOf[ChocoSDFToSChedTileHW]).isDefined)
     val solutions = chosen
+      .take(1)
       .flatMap((explorer, decisionModel) =>
         explorer
           .explore[ForSyDeSystemGraph](decisionModel)
+          .take(solutionsTaken)
           .map(sol =>
             forSyDeModelHandler
               .writeModel(
@@ -868,9 +870,7 @@ class SDFOnTileNoCUseCaseWithSolution extends AnyFunSuite with LoggingMixin {
             )
             sol
           )
-          .take(solutionsTaken)
       )
-      .take(solutionsTaken)
     assert(solutions.size >= 1)
   }
 
@@ -881,9 +881,11 @@ class SDFOnTileNoCUseCaseWithSolution extends AnyFunSuite with LoggingMixin {
     assert(chosen.size > 0)
     assert(chosen.find((_, m) => m.isInstanceOf[ChocoSDFToSChedTileHW]).isDefined)
     val solutions = chosen
+      .take(1)
       .flatMap((explorer, decisionModel) =>
         explorer
           .explore[ForSyDeSystemGraph](decisionModel)
+          .take(solutionsTaken)
           .map(sol =>
             forSyDeModelHandler
               .writeModel(
@@ -897,7 +899,6 @@ class SDFOnTileNoCUseCaseWithSolution extends AnyFunSuite with LoggingMixin {
             sol
           )
       )
-      .take(solutionsTaken)
     assert(solutions.size >= 1)
   }
 
@@ -966,9 +967,11 @@ class SDFOnTileNoCUseCaseWithSolution extends AnyFunSuite with LoggingMixin {
     assert(chosen.size > 0)
     assert(chosen.find((_, m) => m.isInstanceOf[ChocoSDFToSChedTileHW]).isDefined)
     val solutions = chosen
+      .take(1)
       .flatMap((explorer, decisionModel) =>
         explorer
           .explore[ForSyDeSystemGraph](decisionModel)
+          .take(solutionsTaken)
           .map(sol =>
             forSyDeModelHandler
               .writeModel(
@@ -983,7 +986,6 @@ class SDFOnTileNoCUseCaseWithSolution extends AnyFunSuite with LoggingMixin {
           )
           .take(solutionsTaken)
       )
-      .take(solutionsTaken)
     assert(solutions.size >= 1)
   }
 
@@ -995,9 +997,11 @@ class SDFOnTileNoCUseCaseWithSolution extends AnyFunSuite with LoggingMixin {
     assert(chosen.size > 0)
     assert(chosen.find((_, m) => m.isInstanceOf[ChocoSDFToSChedTileHW]).isDefined)
     val solutions = chosen
+      .take(1)
       .flatMap((explorer, decisionModel) =>
         explorer
           .explore[ForSyDeSystemGraph](decisionModel)
+          .take(solutionsTaken)
           .map(sol =>
             forSyDeModelHandler
               .writeModel(
@@ -1012,7 +1016,6 @@ class SDFOnTileNoCUseCaseWithSolution extends AnyFunSuite with LoggingMixin {
           )
           .take(solutionsTaken)
       )
-      .take(solutionsTaken)
     assert(solutions.size >= 1)
   }
 
@@ -1024,9 +1027,11 @@ class SDFOnTileNoCUseCaseWithSolution extends AnyFunSuite with LoggingMixin {
     assert(chosen.size > 0)
     assert(chosen.find((_, m) => m.isInstanceOf[ChocoSDFToSChedTileHW]).isDefined)
     val solutions = chosen
+      .take(1)
       .flatMap((explorer, decisionModel) =>
         explorer
           .explore[ForSyDeSystemGraph](decisionModel)
+          .take(solutionsTaken)
           .map(sol =>
             forSyDeModelHandler
               .writeModel(
@@ -1041,7 +1046,6 @@ class SDFOnTileNoCUseCaseWithSolution extends AnyFunSuite with LoggingMixin {
           )
           .take(solutionsTaken)
       )
-      .take(solutionsTaken)
     assert(solutions.size >= 1)
   }
 

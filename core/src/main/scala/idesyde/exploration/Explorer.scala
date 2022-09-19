@@ -47,6 +47,8 @@ trait Explorer {
 
   def estimateMemoryUntilOptimality(decisionModel: DecisionModel): Long
 
+  // def estimateCriteria[V: PartiallyOrdered](decisionModel: DecisionModel, criteria: ExplorationCriteria): V
+
   def dominates(
       o: Explorer,
       m: DecisionModel,

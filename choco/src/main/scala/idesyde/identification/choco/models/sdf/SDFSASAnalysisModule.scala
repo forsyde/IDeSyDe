@@ -219,6 +219,8 @@ class SDFSASAnalysisModule(
         //       .decompose()
         //   )
         // }
+      } else {
+        slotStartTime(p)(s).eq(0).decompose().post()
       }
     }
     // println("done!!!!")

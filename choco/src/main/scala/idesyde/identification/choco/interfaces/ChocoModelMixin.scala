@@ -17,7 +17,7 @@ trait ChocoModelMixin {
    * Like,
    *  val maxObjVar = chocoModel.intMinusView(minObjVar)
    */
-  def modelObjectives: Array[IntVar] = Array.empty
+  def modelMinimizationObjectives: Array[IntVar] = Array.empty
 
   def strategies: Array[AbstractStrategy[? <: Variable]] = Array.empty
 

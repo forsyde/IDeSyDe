@@ -265,46 +265,46 @@ final case class ChocoSDFToSChedTileHWSlowest(
       memoryMappingModule.processesMemoryMapping.map(vs =>
         dse.platform.tiledDigitalHardware.tileSet.map(j => output.getIntVal(vs) == j)
       )
-    // println(
-    //   dse.platform.schedulerSet.zipWithIndex
-    //     .map((_, s) => {
-    //       (0 until dse.sdfApplications.actors.size)
-    //         .map(slot => {
-    //           dse.sdfApplications.actors.zipWithIndex
-    //             .find((a, ai) => sdfAnalysisModule.firingsInSlots(ai)(s)(slot).getLB() > 0)
-    //             .map((a, ai) =>
-    //               a.getIdentifier() + ": " + output
-    //                 .getIntVal(sdfAnalysisModule.firingsInSlots(ai)(s)(slot))
-    //             )
-    //             .getOrElse("_")
-    //         })
-    //         .mkString("[", ", ", "]")
-    //     })
-    //     .mkString("[\n ", "\n ", "\n]")
-    // )
-    // println(
-    //   dse.platform.schedulerSet.zipWithIndex
-    //     .map((_, src) => {
-    //       dse.platform.schedulerSet.zipWithIndex
-    //         .map((_, dst) => {
-    //           dse.sdfApplications.channels.zipWithIndex
-    //             .filter((c, ci) =>
-    //               tileAnalysisModule.messageIsCommunicated(ci)(src)(dst).getLB() > 0
-    //             )
-    //             .map((c, ci) =>
-    //               c.getIdentifier() + ": " + paths(src)(dst).zipWithIndex
-    //                 .map((ce, cei) =>
-    //                   ce + "/" + output
-    //                     .getIntVal(tileAnalysisModule.virtualChannelForMessage(ci)(cei))
-    //                 )
-    //                 .mkString("-")
-    //             )
-    //             .mkString("(", ", ", ")")
-    //         })
-    //         .mkString("[", ", ", "]")
-    //     })
-    //     .mkString("[\n ", "\n ", "\n]")
-    // )
+    println(
+      dse.platform.schedulerSet.zipWithIndex
+        .map((_, s) => {
+          (0 until dse.sdfApplications.actors.size)
+            .map(slot => {
+              dse.sdfApplications.actors.zipWithIndex
+                .find((a, ai) => sdfAnalysisModule.firingsInSlots(ai)(s)(slot).getLB() > 0)
+                .map((a, ai) =>
+                  a.getIdentifier() + ": " + output
+                    .getIntVal(sdfAnalysisModule.firingsInSlots(ai)(s)(slot))
+                )
+                .getOrElse("_")
+            })
+            .mkString("[", ", ", "]")
+        })
+        .mkString("[\n ", "\n ", "\n]")
+    )
+    println(
+      dse.platform.schedulerSet.zipWithIndex
+        .map((_, src) => {
+          dse.platform.schedulerSet.zipWithIndex
+            .map((_, dst) => {
+              dse.sdfApplications.channels.zipWithIndex
+                .filter((c, ci) =>
+                  tileAnalysisModule.messageIsCommunicated(ci)(src)(dst).getLB() > 0
+                )
+                .map((c, ci) =>
+                  c.getIdentifier() + ": " + paths(src)(dst).zipWithIndex
+                    .map((ce, cei) =>
+                      ce + "/" + output
+                        .getIntVal(tileAnalysisModule.virtualChannelForMessage(ci)(cei))
+                    )
+                    .mkString("-")
+                )
+                .mkString("(", ", ", ")")
+            })
+            .mkString("[", ", ", "]")
+        })
+        .mkString("[\n ", "\n ", "\n]")
+    )
     dse.addMappingsAndRebuild(
       mappings,
       schedulings,

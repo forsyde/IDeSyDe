@@ -26,7 +26,7 @@ class SDFLikeThroughputPropagator(
   def propagate(evtmask: Int): Unit = {
     var maxTh = 0
     wfor(0, _ < numSchedulers, _ + 1) { p =>
-      val latestFinish  = finishTimes(p).last.getUB()
+      val latestFinish  = finishTimes(p).last.getLB()
       var earliestStart = 0
       var searching     = true
       wfor(0, searching && _ < numSlots, _ + 1) { s =>
@@ -37,6 +37,7 @@ class SDFLikeThroughputPropagator(
           }
         }
       }
+      // println(s"$p: $earliestStart -> $latestFinish")
       invThroughputs(p).updateLowerBound(latestFinish - earliestStart, this)
       if (invThroughputs(p).getLB() > maxTh) then maxTh = invThroughputs(p).getLB()
     }

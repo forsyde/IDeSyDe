@@ -57,7 +57,7 @@ final case class ChocoSDFToSChedTileHWSlowest(
     chocoModel,
     dse.sdfApplications.processSizes.map(_ / memoryDivider).map(_.toInt),
     dse.sdfApplications.messagesMaxSizes.map(l => (l / memoryDivider).toInt),
-    dse.platform.tiledDigitalHardware.maxMemoryPerTile.map(_ / memoryDivider).map(_.toInt)
+    dse.platform.tiledDigitalHardware.maxMemoryPerTile.map(_ / memoryDivider).map(l => if (l > Int.MaxValue) then Int.MaxValue - 1 else l).map(_.toInt)
   )
 
   val tileAnalysisModule = TileAsyncInterconnectCommsModule(
@@ -186,15 +186,16 @@ final case class ChocoSDFToSChedTileHWSlowest(
   val nUsedPEs = chocoModel.intVar(
     "nUsedPEs",
     1,
-    dse.platform.tiledDigitalHardware.processors.length
+    dse.platform.tiledDigitalHardware.processors.length,
+    true
   )
   // make sure the variable counts the number of used
   chocoModel.atMostNValues(memoryMappingModule.processesMemoryMapping, nUsedPEs, true).post()
 
-  override val modelObjectives: Array[IntVar] =
+  override val modelMinimizationObjectives: Array[IntVar] =
     Array(
-      chocoModel.intMinusView(nUsedPEs),
-      chocoModel.intMinusView(sdfAnalysisModule.globalInvThroughput)
+      nUsedPEs,
+      sdfAnalysisModule.globalInvThroughput
     )
   //---------
 
@@ -223,6 +224,7 @@ final case class ChocoSDFToSChedTileHWSlowest(
     // listScheduling,
     // Search.minDomLBSearch(nUsedPEs),
     // // ),
+    Search.minDomLBSearch(nUsedPEs),
     Search.minDomLBSearch(sdfAnalysisModule.globalInvThroughput),
     // Search.minDomLBSearch(invThroughputs:_*),
     Search.minDomLBSearch(tileAnalysisModule.messageIsCommunicated.flatten.flatten: _*),

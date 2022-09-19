@@ -360,7 +360,7 @@ final case class PeriodicTaskToSchedHWChoco(
   // the objectives so far are just the minimization of used PEs
   // the inMinusView is necessary to transform a minimization into
   // a maximization
-  override def modelObjectives = Array(model.intMinusView(nUsedPEs))
+  override def modelMinimizationObjectives = Array(nUsedPEs)
 
   // create the methods that each mixing requires
   // def sufficientRMSchedulingPoints(taskIdx: Int): Array[Rational] =
@@ -416,7 +416,8 @@ final case class PeriodicTaskToSchedHWChoco(
       (taskMapping ++ dataBlockMapping ++ responseTimes ++ durationsExec.flatten ++ blockingTimes ++
         durationsRead.flatten ++ durationsWrite.flatten ++ durationsFetch.flatten ++
         durations.flatten ++ utilizations :+ nUsedPEs): _*
-    )
+    ),
+    Search.defaultSearch(chocoModel)
   )
 
   def rebuildFromChocoOutput(output: Solution): ForSyDeSystemGraph = {

@@ -30,21 +30,18 @@ final case class ChocoSDFToSChedTileHW(
 
   val chocoModel: Model = slower.chocoModel
 
-  override val modelObjectives: Array[IntVar] = slower.modelObjectives
+  override val modelMinimizationObjectives: Array[IntVar] = slower.modelMinimizationObjectives
 
   //-----------------------------------------------------
   // BRANCHING AND SEARCH
 
   val listScheduling = CommAwareMultiCoreSDFListScheduling(
-    slower.dse.sdfApplications.actors.zipWithIndex.map((a, i) =>
-      slower.dse.sdfApplications.sdfRepetitionVectors(i)
-    ),
-    slower.dse.sdfApplications.sdfBalanceMatrix,
-    slower.dse.sdfApplications.initialTokens,
+    slower.dse.sdfApplications,
     slower.dse.wcets.map(ws => ws.map(w => w * slower.timeMultiplier).map(_.ceil.intValue)),
     slower.tileAnalysisModule.messageTravelDuration,
     slower.sdfAnalysisModule.firingsInSlots,
-    slower.sdfAnalysisModule.invThroughputs
+    slower.sdfAnalysisModule.invThroughputs,
+    slower.sdfAnalysisModule.globalInvThroughput
   )
   chocoModel.getSolver().plugMonitor(listScheduling)
   

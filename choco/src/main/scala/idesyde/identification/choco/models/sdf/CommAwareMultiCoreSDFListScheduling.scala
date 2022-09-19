@@ -78,13 +78,29 @@ class CommAwareMultiCoreSDFListScheduling(
     */
   def canBuildSelfLoop(actor: Int)(scheduler: Int)(slot: Int): Boolean = {
     wfor(0, _ < numActors, _ + 1) { a =>
+      // check whether a is a predecessor of actor in the same slot and scheduler
       if (a != actor && followsClosure(a)(actor)) {
-        // start at scheduler to check if the predecessor 'a' is already part of the feed-forward path
-        wfor(0, _ < slot, _ + 1) { s =>
-          wfor(scheduler, _ < numSchedulers, _ + 1) { p =>
-            if (p != scheduler) {
-              if (firingsInSlots(a)(p)(s).isInstantiated() && firingsInSlots(a)(p)(s).getLB() > 0) {
-                return true
+        wfor(0, _ < slot, _ + 1) { slotA =>
+          if (
+            firingsInSlots(a)(scheduler)(slotA)
+              .isInstantiated() && firingsInSlots(a)(scheduler)(slotA).getLB() > 0
+          ) {
+            wfor(0, _ < numActors, _ + 1) { aAway =>
+              // find another remote actor which might have already fired
+              if (aAway != a && followsClosure(aAway)(actor) && followsClosure(a)(aAway)) {
+                // start at scheduler to check if the predecessor 'a' is already part of the feed-forward path
+                wfor(0, _ < numSchedulers, _ + 1) { p =>
+                  if (p != scheduler) {
+                    wfor(0, _ < slot, _ + 1) { s =>
+                      if (
+                        firingsInSlots(aAway)(p)(s)
+                          .isInstantiated() && firingsInSlots(aAway)(p)(s).getLB() > 0
+                      ) {
+                        return true
+                      }
+                    }
+                  }
+                }
               }
             }
           }
@@ -112,12 +128,12 @@ class CommAwareMultiCoreSDFListScheduling(
     var score              = 0
     var currentParallelism = 0
     // var bestSlot = -1
-    val lastSlot = recomputeMethods.recomputeLowerestDecidedSlot()
+    // val lastSlot = recomputeMethods.recomputeLowerestDecidedSlot()
     // println(s"deciding with last slot $lastSlot")
     // quick guard for errors and end of schedule
-    if (lastSlot >= slots.size - 1) return null
-    val earliestOpen = lastSlot + 1
-    var d            = pool.getE()
+    // if (lastSlot >= slots.size - 1) return null
+    // val earliestOpen = lastSlot + 1
+    var d = pool.getE()
     if (d == null) d = IntDecision(pool)
     // count += 1
     // println(s"deciding at $earliestOpen")
@@ -129,7 +145,7 @@ class CommAwareMultiCoreSDFListScheduling(
     // for (slot <- slots; if bestSlot < 0) {
     // accumulate the firings vectors
     // accumFirings += firingVector(lastSlot)
-    wfor(0, it => it < earliestOpen + 1 && it <= bestSlot, _ + 1) { s =>
+    wfor(0, it => it < numSlots, _ + 1) { s =>
       wfor(0, _ < schedulers.size, _ + 1) { p =>
         wfor(0, _ < actors.size, _ + 1) { a =>
           if (firingsInSlots(a)(p)(s).getUB() > 0 && !firingsInSlots(a)(p)(s).isInstantiated()) {
@@ -160,14 +176,14 @@ class CommAwareMultiCoreSDFListScheduling(
               // currentComRank = if (currentComRank <= communicationLimiter) then 0 else currentComRank - communicationLimiter
               // chains of lexographic greedy objectives
               score = (invThroughputs(p).getLB() + actorDuration(a)(p) * q)
-              if (score < bestScore) {
-                if (!canBuildSelfLoop(a)(p)(s)) {
-                  bestA = a
-                  bestP = p
-                  bestQ = q
-                  bestSlot = s
-                  bestScore = score
-                }
+              if (score < bestScore && !canBuildSelfLoop(a)(p)(s)) {
+                bestA = a
+                bestP = p
+                bestQ = q
+                bestSlot = s
+                bestScore = score
+              }
+              if (score < bestScorePenalized) {
                 bestAPenalized = a
                 bestPPenalized = p
                 bestQPenalized = q

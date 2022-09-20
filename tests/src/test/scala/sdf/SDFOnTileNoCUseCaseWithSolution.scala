@@ -435,8 +435,8 @@ class SDFOnTileNoCUseCaseWithSolution extends AnyFunSuite with LoggingMixin {
       mem.setSpaceInBits(1048576L * 8L)
       ni.setOperatingFrequencyInHertz(50000000L)
       ni.setFlitSizeInBits(128L)
-      ni.setMaxConcurrentFlits(4)
-      ni.setMaxCyclesPerFlit(4)
+      ni.setMaxConcurrentFlits(8)
+      ni.setMaxCyclesPerFlit(8)
       ni.setInitialLatency(0L)
       proc.setModalInstructionsPerCycle(
         Map(
@@ -1019,34 +1019,34 @@ class SDFOnTileNoCUseCaseWithSolution extends AnyFunSuite with LoggingMixin {
     assert(solutions.size >= 1)
   }
 
-  test("Correct identification and DSE of all and large platform") {
-    val identified = identificationHandler.identifyDecisionModels(appsAndLarge)
-    assert(identified.size > 0)
-    assert(identified.find(m => m.isInstanceOf[SDFToSchedTiledHW]).isDefined)
-    val chosen = explorationHandler.chooseExplorersAndModels(identified)
-    assert(chosen.size > 0)
-    assert(chosen.find((_, m) => m.isInstanceOf[ChocoSDFToSChedTileHW]).isDefined)
-    val solutions = chosen
-      .take(1)
-      .flatMap((explorer, decisionModel) =>
-        explorer
-          .explore[ForSyDeSystemGraph](decisionModel)
-          .take(solutionsTaken)
-          .map(sol =>
-            forSyDeModelHandler
-              .writeModel(
-                appsAndLarge.merge(sol),
-                "tests/models/sdf3/results/all_and_large_result.fiodl"
-              )
-            forSyDeModelHandler.writeModel(
-              appsAndLarge.merge(sol),
-              "tests/models/sdf3/results/all_and_large_result_visual.kgt"
-            )
-            sol
-          )
-          .take(solutionsTaken)
-      )
-    assert(solutions.size >= 1)
-  }
+  // test("Correct identification and DSE of all and large platform") {
+  //   val identified = identificationHandler.identifyDecisionModels(appsAndLarge)
+  //   assert(identified.size > 0)
+  //   assert(identified.find(m => m.isInstanceOf[SDFToSchedTiledHW]).isDefined)
+  //   val chosen = explorationHandler.chooseExplorersAndModels(identified)
+  //   assert(chosen.size > 0)
+  //   assert(chosen.find((_, m) => m.isInstanceOf[ChocoSDFToSChedTileHW]).isDefined)
+  //   val solutions = chosen
+  //     .take(1)
+  //     .flatMap((explorer, decisionModel) =>
+  //       explorer
+  //         .explore[ForSyDeSystemGraph](decisionModel)
+  //         .take(solutionsTaken)
+  //         .map(sol =>
+  //           forSyDeModelHandler
+  //             .writeModel(
+  //               appsAndLarge.merge(sol),
+  //               "tests/models/sdf3/results/all_and_large_result.fiodl"
+  //             )
+  //           forSyDeModelHandler.writeModel(
+  //             appsAndLarge.merge(sol),
+  //             "tests/models/sdf3/results/all_and_large_result_visual.kgt"
+  //           )
+  //           sol
+  //         )
+  //         .take(solutionsTaken)
+  //     )
+  //   assert(solutions.size >= 1)
+  // }
 
 }

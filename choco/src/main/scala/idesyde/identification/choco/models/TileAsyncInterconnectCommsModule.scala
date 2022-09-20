@@ -28,10 +28,12 @@ class TileAsyncInterconnectCommsModule(
     val messageTravelTimePerVirtualChannel: Array[Array[Int]],
     val numVirtualChannels: Array[Int],
     val commElemsPaths: Array[Array[Array[Int]]],
-    val commElemsMustShareChannel: Array[Array[Boolean]]
+    val commElemsMustShareChannel: Array[Array[Boolean]],
+    val messagesMapping: Array[IntVar]
 ) extends ChocoModelMixin {
 
   private val numProcElems = procElems.size
+  private val numCommElems = commElems.size
   private val numMessages  = messages.size
 
   val virtualChannelForMessage: Array[Array[IntVar]] = messages.zipWithIndex.map((c, i) => {
@@ -72,6 +74,18 @@ class TileAsyncInterconnectCommsModule(
       })
     })
   })
+
+  private val messagesClashAtComm: Array[Array[Array[BoolVar]]] =  messages.map(mi =>
+    messages.map(mj =>
+      commElems.map(c =>
+        if (mi != mj) {
+          chocoModel.boolVar(s"messageClash($mi,$mj,$c)")
+        } else {
+          chocoModel.boolVar(s"messageClash($mi,$mj,$c)", false)
+        }
+      )  
+    )  
+  )
 
   def postTileAsyncInterconnectComms(): Unit = {
     // first, make sure that data from different sources do not collide in any comm. elem
@@ -133,11 +147,6 @@ class TileAsyncInterconnectCommsModule(
           )
           .post()
       }
-      // chocoModel.allEqual()
-      // chocoModel.ifThen(
-      //   messageIsCommunicated(m)(src)(dst),
-
-      // )
     }
 
     // and finally, we calculate the travel time, for each message, between each src and dst
@@ -160,21 +169,84 @@ class TileAsyncInterconnectCommsModule(
       )
     }
 
-    chocoModel.post(
-      new Constraint(
-        "tile_async_vc",
-        ContentionFreeTiledCommunicationPropagator(
-          procElems,
-          commElems,
-          messages,
-          procElems.zipWithIndex.map((src, srci) => procElems.zipWithIndex.map((dst, dsti) => commElemsPaths(srci)(dsti))),
-          messages.zipWithIndex.map((m, mi) => commElems.zipWithIndex.map((ce, cei) => virtualChannelForMessage(mi)(cei))),
-          messages.zipWithIndex.map((m, mi) =>
-            procElems.zipWithIndex.map((src, srci) => procElems.zipWithIndex.map((dst, dsti) => messageIsCommunicated(mi)(srci)(dsti)))
-          )
-        )
+    //   chocoModel.post(
+    //     new Constraint(
+    //       "tile_async_vc",
+    //       ContentionFreeTiledCommunicationPropagator(
+    //         procElems,
+    //         commElems,
+    //         messages,
+    //         procElems.zipWithIndex.map((src, srci) => procElems.zipWithIndex.map((dst, dsti) => commElemsPaths(srci)(dsti))),
+    //         messages.zipWithIndex.map((m, mi) => commElems.zipWithIndex.map((ce, cei) => virtualChannelForMessage(mi)(cei))),
+    //         messages.zipWithIndex.map((m, mi) =>
+    //           procElems.zipWithIndex.map((src, srci) => procElems.zipWithIndex.map((dst, dsti) => messageIsCommunicated(mi)(srci)(dsti)))
+    //         )
+    //       )
+    //     )
+    //   )
+
+    // now make sure no two messages can collide in the network
+    for (
+      mi <- 0 until numMessages - 1;
+      mj <- mi + 1 until numMessages;
+      // if mi != mj;
+      c <- 0 until numCommElems
+    ) {
+      // trivial connection between variables
+      chocoModel.ifThen(
+        messagesClashAtComm(mi)(mj)(c),
+        chocoModel.arithm(virtualChannelForMessage(mi)(c), "!=", virtualChannelForMessage(mj)(c))
       )
-    )
+      // now the logics 
+      val incomingMessagei = messageIsCommunicated(mi).zipWithIndex.flatMap((srcVec, src) => 
+        srcVec.zipWithIndex.filter((v, dst) => src != dst && commElemsPaths(src)(dst).contains(commElems(c)))
+        .map((v, _) => v)
+      )
+      val incomingMessagej = messageIsCommunicated(mj).zipWithIndex.flatMap((srcVec, src) => 
+        srcVec.zipWithIndex.filter((v, dst) => src != dst && commElemsPaths(src)(dst).contains(commElems(c)))
+        .map((v, _) => v)
+      )
+      val sumIncomingMessagei = chocoModel.or(incomingMessagei:_*)
+      val sumIncomingMessagej = chocoModel.or(incomingMessagej:_*)
+      val clashing = chocoModel.and(chocoModel.arithm(messagesMapping(mi), "!=", messagesMapping(mj)), sumIncomingMessagei, sumIncomingMessagej)
+      chocoModel.ifOnlyIf(chocoModel.arithm(messagesClashAtComm(mi)(mj)(c), "=", 1), clashing)
+    }
+    // wfor(0, _ < messages.size - 1, _ + 1) { mi =>
+    //   wfor(0, _ < procElems.size, _ + 1) { srci =>
+    //     wfor(0, _ < procElems.size, _ + 1) { dsti =>
+    //       if (srci != dsti) {
+    //         // this extra line is not fully part of the reference, but it is here for performance reasons,
+    //         // i.e. to avoid duplication of looping
+    //         wfor(mi + 1, _ < messages.size, _ + 1) { mj =>
+    //           wfor(0, _ < procElems.size, _ + 1) { srcj =>
+    //             wfor(0, _ < procElems.size, _ + 1) { dstj =>
+    //               if (srci != srcj) {
+    //                 wfor(0, _ < commElemsPaths(srci)(dsti).size, _ + 1) { ceIdx =>
+    //                   if (commElemsPaths(srcj)(dstj).contains(commElemsPaths(srci)(dsti)(ceIdx))) {
+    //                     // there can be a conflict
+    //                     chocoModel.ifThen(
+    //                       messageIsCommunicated(mi)(srci)(dsti)
+    //                         .and(messageIsCommunicated(mj)(srcj)(dstj))
+    //                         .decompose(),
+    //                       virtualChannelForMessage(mi)(ceIdx)
+    //                         .ne(virtualChannelForMessage(mj)(ceIdx))
+    //                         .decompose()
+    //                     )
+    //                     // if (!interferenceGraphPerComm(ceIdx).containsVertex(messages(mi))) then
+    //                     //   interferenceGraphPerComm(ceIdx).addVertex(messages(mi))
+    //                     // if (!interferenceGraphPerComm(ceIdx).containsVertex(messages(mj))) then
+    //                     //   interferenceGraphPerComm(ceIdx).addVertex(messages(mj))
+    //                     // interferenceGraphPerComm(ceIdx).addEdge(messages(mi), messages(mj))
+    //                   }
+    //                 }
+    //               }
+    //             }
+    //           }
+    //         }
+    //       }
+    //     }
+    //   }
+    // }
   }
 
 }

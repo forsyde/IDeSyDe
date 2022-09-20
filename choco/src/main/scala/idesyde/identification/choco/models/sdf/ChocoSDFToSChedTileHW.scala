@@ -22,6 +22,15 @@ import org.chocosolver.solver.search.strategy.selectors.values.IntDomainMedian
 import org.chocosolver.solver.search.strategy.selectors.values.IntDomainMax
 import org.chocosolver.solver.search.strategy.strategy.FindAndProve
 import org.chocosolver.solver.constraints.Constraint
+import org.chocosolver.solver.search.loop.monitors.IMonitorContradiction
+import org.chocosolver.solver.exception.ContradictionException
+
+// object ConMonitorObj extends IMonitorContradiction {
+
+//   def onContradiction(cex: ContradictionException): Unit = {
+//     println(cex.toString())
+//   }
+// }
 
 final case class ChocoSDFToSChedTileHW(
     val slower: ChocoSDFToSChedTileHWSlowest
@@ -44,6 +53,7 @@ final case class ChocoSDFToSChedTileHW(
     slower.sdfAnalysisModule.globalInvThroughput
   )
   chocoModel.getSolver().plugMonitor(listScheduling)
+  // chocoModel.getSolver().plugMonitor(ConMonitorObj)
 
   // breaking symmetries for speed
   private val firingVectors = (0 until slower.sdfAnalysisModule.maxSlots)

@@ -110,6 +110,21 @@ class CommAwareMultiCoreSDFListScheduling(
     return false
   }
 
+  private def availableActors(slot: Int): Int = {
+    var num = 0
+    var aIsAvailable = false
+    wfor(0, _ < numActors, _ + 1) { a =>
+      aIsAvailable = false
+      wfor(0, _ < numSchedulers && !aIsAvailable, _ + 1) { p =>
+        aIsAvailable = firingsInSlots(a)(p)(slot).getUB() > 0
+      }
+      if (aIsAvailable) {
+        num += 1
+      }
+    }
+    num
+  }
+
   def getDecision(): Decision[IntVar] = {
     // val schedulersShuffled = Random.shuffle(schedulers)
     // normal
@@ -128,15 +143,16 @@ class CommAwareMultiCoreSDFListScheduling(
     var score              = 0
     var currentParallelism = 0
     // var bestSlot = -1
-    // val lastSlot = recomputeMethods.recomputeLowerestDecidedSlot()
+    val lastSlot = recomputeMethods.recomputeLowerestDecidedSlot()
     // println(s"deciding with last slot $lastSlot")
     // quick guard for errors and end of schedule
-    // if (lastSlot >= slots.size - 1) return null
-    // val earliestOpen = lastSlot + 1
+    if (lastSlot >= slots.size - 1) return null
+    val earliestOpen = lastSlot + 1
+    val horizon = availableActors(earliestOpen)
     var d = pool.getE()
     if (d == null) d = IntDecision(pool)
     // count += 1
-    // println(s"deciding at $earliestOpen")
+    // println(s"deciding at $earliestOpen with $horizon")
     // slotsPrettyPrint()
     // recomputeFiringVectors()
     // recomputeTokens()
@@ -145,38 +161,16 @@ class CommAwareMultiCoreSDFListScheduling(
     // for (slot <- slots; if bestSlot < 0) {
     // accumulate the firings vectors
     // accumFirings += firingVector(lastSlot)
-    wfor(0, it => it < numSlots, _ + 1) { s =>
+    wfor(earliestOpen, it => it < numSlots && it <= earliestOpen + horizon, _ + 1) { s =>
       wfor(0, _ < schedulers.size, _ + 1) { p =>
         wfor(0, _ < actors.size, _ + 1) { a =>
           if (firingsInSlots(a)(p)(s).getUB() > 0 && !firingsInSlots(a)(p)(s).isInstantiated()) {
-            // compute ComRank
-            // currentParallelism = 0
-            // if (s > 0) {
-            //   wfor(0, _ < actors.size, _ + 1) { aOther =>
-            //     if (a != aOther) {
-            //       wfor(0, _ < schedulers.size, _ + 1) { pOther =>
-            //         if (p != pOther) {
-            //           wfor(0, _ < s, _ + 1) { sBefore =>
-            //             if (
-            //               followsMatrix(aOther, a) && firingsInSlots(aOther)(
-            //                 pOther
-            //               )(sBefore).getLB() > 0
-            //             ) {
-            //               currentParallelism += 1
-            //             }
-            //           }
-            //         }
-            //       }
-            //     }
-
-            //   }
-            // }
             // compute the best slot otherwise
             wfor(firingsInSlots(a)(p)(s).getUB(), it => it > 0 && it >= bestQ, _ - 1) { q =>
               // currentComRank = if (currentComRank <= communicationLimiter) then 0 else currentComRank - communicationLimiter
               // chains of lexographic greedy objectives
               score = (invThroughputs(p).getLB() + actorDuration(a)(p) * q)
-              if (score < bestScore && !canBuildSelfLoop(a)(p)(s)) {
+              if (s < bestSlot || (s == bestSlot && score < bestScore) && !canBuildSelfLoop(a)(p)(s)) {
                 bestA = a
                 bestP = p
                 bestQ = q
@@ -197,7 +191,7 @@ class CommAwareMultiCoreSDFListScheduling(
     }
     // }
     // slotsPrettyPrint()
-    // recomputeMethods.slotsPrettyPrint()
+    // recomputeMethods.schedulePrettyPrint()
     // println(invThroughputs.map(_.getLB()).mkString(", "))
     // println("best:  " + (bestA, bestP, bestSlot, bestQ, bestScore))
     // println(

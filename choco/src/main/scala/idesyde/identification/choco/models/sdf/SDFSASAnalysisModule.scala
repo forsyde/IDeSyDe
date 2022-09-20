@@ -176,7 +176,9 @@ class SDFSASAnalysisModule(
       chocoModel.scalar(allFirings, allConFactors, "=", consumed).post()
       chocoModel.scalar(allFirings, allFactors, "=", result).post()
       if (s > 0) {
-        tokens(ci)(s).eq(tokens(ci)(s - 1).add(result)).decompose().post()
+        chocoModel.arithm(tokens(ci)(s), "=", tokens(ci)(s - 1), "+", result).post()
+        // tokens(ci)(s).eq(tokens(ci)(s - 1).add(result)).decompose().post()
+        // chocoModel.arithm(0, "<", tokens(ci)(s - 1), "+", consumed).post()
         tokens(ci)(s - 1).add(consumed).ge(0).decompose().post()
       } else {
         tokens(ci)(s).eq(result.add(initialTokens(ci))).decompose().post()
@@ -191,7 +193,7 @@ class SDFSASAnalysisModule(
     val maximumTokensProducedVal = maximumTokensPerChannel.max
     val consMat                  = balanceMatrix.map(bs => bs.map(b => if (b < 0) then b else 0))
     val prodMat                  = balanceMatrix.map(bs => bs.map(b => if (b > 0) then b else 0))
-    postOnlySAS()
+    postOnlySAS() 
     postSDFConsistencyConstraints()
     // timings
     for (s <- slotRange; p <- schedulers) {

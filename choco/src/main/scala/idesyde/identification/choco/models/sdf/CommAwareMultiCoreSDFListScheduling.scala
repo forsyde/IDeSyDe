@@ -162,6 +162,18 @@ class CommAwareMultiCoreSDFListScheduling(
     // accumulate the firings vectors
     // accumFirings += firingVector(lastSlot)
     wfor(earliestOpen, it => it < numSlots && it <= earliestOpen + horizon, _ + 1) { s =>
+      // first check if slot s-1 has any firings,
+      var previousHasFires = false
+      if (s > 0) {
+        wfor(0, _ < schedulers.size && !previousHasFires, _ + 1) { p =>
+          wfor(0, _ < actors.size && !previousHasFires, _ + 1) { a =>
+            previousHasFires = previousHasFires || (firingsInSlots(a)(p)(s - 1).isInstantiated() && firingsInSlots(a)(p)(s - 1).getLB() > 0)
+          }
+        }
+      } else {
+        previousHasFires = true
+      }
+      // now get the best firing based on that
       wfor(0, _ < schedulers.size, _ + 1) { p =>
         wfor(0, _ < actors.size, _ + 1) { a =>
           if (firingsInSlots(a)(p)(s).getUB() > 0 && !firingsInSlots(a)(p)(s).isInstantiated()) {
@@ -169,15 +181,18 @@ class CommAwareMultiCoreSDFListScheduling(
             wfor(firingsInSlots(a)(p)(s).getUB(), it => it > 0 && it >= bestQ, _ - 1) { q =>
               // currentComRank = if (currentComRank <= communicationLimiter) then 0 else currentComRank - communicationLimiter
               // chains of lexographic greedy objectives
-              score = (invThroughputs(p).getLB() + actorDuration(a)(p) * q)
-              if (s < bestSlot || (s == bestSlot && score < bestScore) && !canBuildSelfLoop(a)(p)(s)) {
-                bestA = a
-                bestP = p
-                bestQ = q
-                bestSlot = s
-                bestScore = score
+              score = invThroughputs(p).getLB() + actorDuration(a)(p) * q
+              val globalScore = Math.max(score, globalInvThroughput.getLB())
+              if (previousHasFires && !canBuildSelfLoop(a)(p)(s)) {
+                if (globalScore < bestScore || (globalScore == bestScore && invThroughputs(p).getLB() > 0)) { // this ensures we load the same cpu first
+                  bestA = a
+                  bestP = p
+                  bestQ = q
+                  bestSlot = s
+                  bestScore = score
+                }
               }
-              if (score < bestScorePenalized) {
+              if (globalScore < bestScorePenalized) {
                 bestAPenalized = a
                 bestPPenalized = p
                 bestQPenalized = q

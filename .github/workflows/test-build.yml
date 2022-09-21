@@ -40,11 +40,11 @@ jobs:
       run: |
         cd ${{ github.workspace }}
         sbt assembly
-    - name: Build packages  with sbt
+    - name: Build packages with sbt
       if: ${{ contains(matrix.java, '15') || contains(matrix.java, '17') }}
       run: |
         cd ${{ github.workspace }}
-        sbt cli/jdkPackager:packageBin
+        sbt cli/stage
     # - name: Build with mill (Windows)
     #   if: ${{ matrix.os == 'windows-latest' }}
     #   run: |

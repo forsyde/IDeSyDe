@@ -49,7 +49,7 @@ class SDFOnTileNoCUseCaseWithSolution extends AnyFunSuite with LoggingMixin {
 
   setNormal()
 
-  val solutionsTaken = 1
+  val solutionsTaken = 10
 
   Files.createDirectories(Paths.get("tests/models/sdf3/results"))
 
@@ -944,6 +944,34 @@ class SDFOnTileNoCUseCaseWithSolution extends AnyFunSuite with LoggingMixin {
       .map(m => m.asInstanceOf[SDFApplication])
       .get
     assert(syntheticDM.repetitionVectors.head.sameElements(Array.fill(syntheticDM.actors.size)(1)))
+  }
+
+  test("Correct identification and DSE of Synthetic to bus Small") {
+    val inputSystem = g10_3_cyclicSDF3.merge(busLike8nodePlatformModel)
+    val identified  = identificationHandler.identifyDecisionModels(inputSystem)
+    val chosen      = explorationHandler.chooseExplorersAndModels(identified)
+    assert(chosen.size > 0)
+    assert(chosen.find((_, m) => m.isInstanceOf[ChocoSDFToSChedTileHW]).isDefined)
+    val solutions = chosen
+      .take(1)
+      .flatMap((explorer, decisionModel) =>
+        explorer
+          .explore[ForSyDeSystemGraph](decisionModel)
+          .take(solutionsTaken)
+          .map(sol =>
+            forSyDeModelHandler
+              .writeModel(
+                inputSystem.merge(sol),
+                "tests/models/sdf3/results/synthetic_and_bus_small_result.fiodl"
+              )
+            forSyDeModelHandler.writeModel(
+              inputSystem.merge(sol),
+              "tests/models/sdf3/results/synthetic_and_bus_small_result_visual.kgt"
+            )
+            sol
+          )
+      )
+    assert(solutions.size >= 1)
   }
 
   test("Correct decision model identification of all Applications together") {

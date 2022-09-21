@@ -58,8 +58,8 @@ class SDFSASAnalysisModule(
     chocoModel.intVar(
       "globalInvThroughput",
       schedulers
-        .map(p => actors.map(a => actorDuration(a)(p)).max)
-        .max,
+        .map(p => actors.map(a => actorDuration(a)(p)).min)
+        .min,
       schedulers
         .map(p =>
           actors.zipWithIndex.map((a, ai) => actorDuration(ai)(p) * maxRepetitionsPerActors(ai)).sum

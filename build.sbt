@@ -1,5 +1,5 @@
 ThisBuild / organization := "io.github.forsyde"
-ThisBuild / version := "0.3.1"
+ThisBuild / version := "0.3.2"
 ThisBuild / scalaVersion := "3.1.3"
 
 lazy val forsydeIoVersion = "0.5.15"
@@ -72,17 +72,28 @@ lazy val cli = (project in file("cli"))
   .dependsOn(forsyde)
   .dependsOn(minizinc)
   // .enablePlugins(ScalaNativePlugin)
-  .enablePlugins(UniversalPlugin, JlinkPlugin, JavaAppPackaging, GraalVMNativeImagePlugin)
+  .enablePlugins(UniversalPlugin, JavaAppPackaging, JlinkPlugin)
   .settings(
     Compile / mainClass := Some("idesyde.IDeSyDeStandalone"),
     libraryDependencies ++= Seq(
-      // "info.picocli"      % "picocli"         % "4.2.0",
-      // "info.picocli"      % "picocli-codegen" % "4.2.0" % "provided",
       "com.github.scopt" %% "scopt"  % "4.0.1",
       "com.outr"         %% "scribe" % scribeVersion
     ),
-    Test / parallelExecution := false,
-    maintainer := "jordao@kth.se"
+    maintainer := "jordao@kth.se",
+    // taken from https://www.scala-sbt.org/sbt-native-packager/archetypes/jlink_plugin.html
+    jlinkModulePath := {
+      // Get the full classpath with all the resolved dependencies.
+      fullClasspath.in(jlinkBuildImage).value
+        .filter { item =>
+          item.get(moduleID.key).exists { modId =>
+            modId.name == "jheaps" 
+          } ||
+          item.get(moduleID.key).exists { modId =>
+            modId.name == "commons-text"
+          }
+        }
+        .map(_.data)
+    }
   )
 
 lazy val tests = (project in file("tests"))
@@ -100,7 +111,8 @@ lazy val tests = (project in file("tests"))
       "io.github.forsyde" % "forsyde-io-java-amalthea" % forsydeIoVersion,
       "io.github.forsyde" % "forsyde-io-java-sdf3"     % forsydeIoVersion,
       "io.github.forsyde" % "forsyde-io-java-graphviz" % forsydeIoVersion
-    )
+    ),
+    Test / parallelExecution := false
   )
 
 // ThisBuild / resolvers += Resolver.mavenLocal

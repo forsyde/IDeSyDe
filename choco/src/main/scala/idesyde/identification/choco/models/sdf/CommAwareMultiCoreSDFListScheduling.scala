@@ -37,6 +37,7 @@ class CommAwareMultiCoreSDFListScheduling(
   private val mat     = DenseMatrix(sdfApplications.sdfBalanceMatrix: _*)
   private val consMat = mat.map(v => if (v < 0) then v else 0)
   private val prodMat = mat.map(v => if (v > 0) then v else 0)
+  // private val schedulerWhiteListing = Array.fill(numSchedulers)(true)
 
   // val firingVector: Array[SparseVector[Int]] = slots.map(slot => SparseVector.zeros[Int](actors.size)).toArray
 
@@ -151,28 +152,19 @@ class CommAwareMultiCoreSDFListScheduling(
     val horizon = availableActors(earliestOpen)
     var d = pool.getE()
     if (d == null) d = IntDecision(pool)
-    // count += 1
     // println(s"deciding at $earliestOpen with $horizon")
-    // slotsPrettyPrint()
-    // recomputeFiringVectors()
-    // recomputeTokens()
-    // recomputeInvThroughput()
-    // for (a <- actors) accumFirings(a) = 0
-    // for (slot <- slots; if bestSlot < 0) {
-    // accumulate the firings vectors
-    // accumFirings += firingVector(lastSlot)
     wfor(earliestOpen, it => it < numSlots && it <= earliestOpen + horizon, _ + 1) { s =>
       // first check if slot s-1 has any firings,
-      var previousHasFires = false
-      if (s > 0) {
-        wfor(0, _ < schedulers.size && !previousHasFires, _ + 1) { p =>
-          wfor(0, _ < actors.size && !previousHasFires, _ + 1) { a =>
-            previousHasFires = previousHasFires || (firingsInSlots(a)(p)(s - 1).isInstantiated() && firingsInSlots(a)(p)(s - 1).getLB() > 0)
-          }
-        }
-      } else {
-        previousHasFires = true
-      }
+      // var previousHasFires = false
+      // if (s > 0) {
+      //   wfor(0, _ < schedulers.size && !previousHasFires, _ + 1) { p =>
+      //     wfor(0, _ < actors.size && !previousHasFires, _ + 1) { a =>
+      //       previousHasFires = previousHasFires || (firingsInSlots(a)(p)(s - 1).isInstantiated() && firingsInSlots(a)(p)(s - 1).getLB() > 0)
+      //     }
+      //   }
+      // } else {
+      //   previousHasFires = true
+      // }
       // now get the best firing based on that
       wfor(0, _ < schedulers.size, _ + 1) { p =>
         wfor(0, _ < actors.size, _ + 1) { a =>
@@ -183,13 +175,13 @@ class CommAwareMultiCoreSDFListScheduling(
               // chains of lexographic greedy objectives
               score = invThroughputs(p).getLB() + actorDuration(a)(p) * q
               val globalScore = Math.max(score, globalInvThroughput.getLB())
-              if (previousHasFires && !canBuildSelfLoop(a)(p)(s)) {
-                if (globalScore < bestScore || (globalScore == bestScore && invThroughputs(p).getLB() > 0)) { // this ensures we load the same cpu first
+              if (!canBuildSelfLoop(a)(p)(s)) {
+                if (s < bestSlot || (s == bestSlot && globalScore < bestScore)) { // this ensures we load the same cpu first
                   bestA = a
                   bestP = p
                   bestQ = q
                   bestSlot = s
-                  bestScore = score
+                  bestScore = globalScore
                 }
               }
               if (globalScore < bestScorePenalized) {
@@ -197,7 +189,7 @@ class CommAwareMultiCoreSDFListScheduling(
                 bestPPenalized = p
                 bestQPenalized = q
                 bestSlotPenalized = s
-                bestScorePenalized = score
+                bestScorePenalized = globalScore
               }
             }
           }
@@ -205,9 +197,9 @@ class CommAwareMultiCoreSDFListScheduling(
       }
     }
     // }
-    // slotsPrettyPrint()
+    // recomputeMethods.slotsPrettyPrint()
     // recomputeMethods.schedulePrettyPrint()
-    // println(invThroughputs.map(_.getLB()).mkString(", "))
+    // println(invThroughputs.map(_.getLB()).mkString(", ") + " ;; " + globalInvThroughput.getLB())
     // println("best:  " + (bestA, bestP, bestSlot, bestQ, bestScore))
     // println(
     //   "bestPenalized:  " + (bestAPenalized, bestPPenalized, bestSlotPenalized, bestQPenalized, bestScorePenalized)
@@ -230,9 +222,21 @@ class CommAwareMultiCoreSDFListScheduling(
   }
 
   def onSolution(): Unit = {
-    schedulers = Random.shuffle(schedulers).toArray
-    actors = Random.shuffle(actors).toArray
-    channels = Random.shuffle(channels).toArray
+    // schedulers = Random.shuffle(schedulers).toArray
+    // val model = globalInvThroughput.getModel()
+    // val (_, maxSched) = invThroughputs.zipWithIndex.maxBy((v, _) => v.getLB())
+    // println("blacklist: " + maxSched)
+    // model.arithm(invThroughputs(maxSched), "<", invThroughputs(maxSched).getLB()).post()
+    // model.or(
+    //   ,
+    //   model.arithm(globalInvThroughput, "<", globalInvThroughput.getLB())
+    // ).post()
+    
+    // invThroughputs.zipWithIndex.filter((v, i) => v.getLB() == 0).foreach((v, i) => schedulerWhiteListing(i) = false)
+    // if (schedulerWhiteListing.count(p => p) > 1) {
+    // }
+    // actors = Random.shuffle(actors).toArray
+    // channels = Random.shuffle(channels).toArray
     // parallelism = Math.min(parallelism + 1, actors.size * schedulers.size)
   }
 

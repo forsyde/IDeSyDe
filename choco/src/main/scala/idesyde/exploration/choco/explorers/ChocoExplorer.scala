@@ -22,6 +22,8 @@ import org.chocosolver.solver.search.strategy.Search
 import org.chocosolver.solver.search.strategy.strategy.AbstractStrategy
 import org.chocosolver.solver.variables.Variable
 import idesyde.identification.choco.models.sdf.ChocoSDFToSChedTileHW
+import org.chocosolver.solver.search.loop.monitors.IMonitorSolution
+import idesyde.exploration.choco.explorers.ParetoMinimizationBrancher
 
 class ChocoExplorer() extends ForSyDeIOExplorer:
 
@@ -85,20 +87,21 @@ class ChocoExplorer() extends ForSyDeIOExplorer:
     case chocoCpModel: ChocoCPForSyDeDecisionModel =>
       val solver         = chocoCpModel.chocoModel.getSolver
       val isOptimization = chocoCpModel.modelMinimizationObjectives.size > 0
-      lazy val paretoMaximizer = ParetoMaximizer(
-        chocoCpModel.modelMinimizationObjectives.map(o => chocoCpModel.chocoModel.intMinusView(o))
-      )
+      // lazy val paretoMaximizer = ParetoMaximizer(
+      //   chocoCpModel.modelMinimizationObjectives.map(o => chocoCpModel.chocoModel.intMinusView(o))
+      // )
       // var lastParetoFrontValues = chocoCpModel.modelMinimizationObjectives.map(_.getUB())
       // var lastParetoFrontSize = 0
       if (isOptimization) {
-        solver.plugMonitor(paretoMaximizer)
         if (chocoCpModel.modelMinimizationObjectives.size == 1) {
           chocoCpModel.chocoModel.setObjective(
-            true,
-            chocoCpModel.chocoModel.intMinusView(chocoCpModel.modelMinimizationObjectives.head)
+            false,
+            chocoCpModel.modelMinimizationObjectives.head
           )
+        } else if (chocoCpModel.modelMinimizationObjectives.size > 0) {
+          solver.plugMonitor(ParetoMinimizationBrancher(chocoCpModel.chocoModel, chocoCpModel.modelMinimizationObjectives))
         }
-        chocoCpModel.chocoModel.post(new Constraint("paretoOptConstraint", paretoMaximizer))
+        // chocoCpModel.chocoModel.post(new Constraint("paretoOptConstraint", paretoMaximizer))
         // val objFunc = getLinearizedObj(chocoCpModel)
         // chocoCpModel.chocoModel.setObjective(false, objFunc)
         // strategies +:= Search.bestBound(Search.minDomLBSearch(objFunc))
@@ -107,49 +110,49 @@ class ChocoExplorer() extends ForSyDeIOExplorer:
       if (!chocoCpModel.strategies.isEmpty) {
         solver.setSearch(chocoCpModel.strategies: _*)
       }
-      solver.setLearningSignedClauses
+      // solver.setLearningSignedClauses
       solver.setNoGoodRecordingFromRestarts
       solver.setRestartOnSolutions
       LazyList
         .continually(solver.solve())
-        .scanLeft(
-          (true, 0, chocoCpModel.modelMinimizationObjectives.map(_.getUB()))
-        )((accum, feasible) => {
-          var (paretoFrontChanged, lastParetoFrontSize, lastParetoFrontValues) = accum
-          if (isOptimization) {
-            paretoFrontChanged = false
-            if (lastParetoFrontSize != paretoMaximizer.getParetoFront().size()) {
-              lastParetoFrontSize = paretoMaximizer.getParetoFront().size()
-              paretoFrontChanged = true
-            } else {
-              paretoMaximizer
-                .getParetoFront()
-                .forEach(s => {
-                  val isDominator =
-                    chocoCpModel.modelMinimizationObjectives.zipWithIndex.forall((o, i) => {
-                      s.getIntVal(o) < lastParetoFrontValues(i)
-                    })
-                  if (isDominator) {
-                    lastParetoFrontValues =
-                      chocoCpModel.modelMinimizationObjectives.map(o => s.getIntVal(o))
-                    paretoFrontChanged = true
-                  }
-                })
-            }
-          }
-          // println("the values " + (feasible && paretoFrontChanged, lastParetoFrontSize, lastParetoFrontValues.mkString(", ")))
-          (feasible && paretoFrontChanged, lastParetoFrontSize, lastParetoFrontValues)
-        })
-        .takeWhile((shouldContinue, _, _) => shouldContinue)
+        // .scanLeft(
+        //   (true, 0, chocoCpModel.modelMinimizationObjectives.map(_.getUB()))
+        // )((accum, feasible) => {
+        //   var (paretoFrontChanged, lastParetoFrontSize, lastParetoFrontValues) = accum
+        //   if (isOptimization) {
+        //     paretoFrontChanged = false
+        //     if (lastParetoFrontSize != paretoMaximizer.getParetoFront().size()) {
+        //       lastParetoFrontSize = paretoMaximizer.getParetoFront().size()
+        //       paretoFrontChanged = true
+        //     } else {
+        //       paretoMaximizer
+        //         .getParetoFront()
+        //         .forEach(s => {
+        //           val isDominator =
+        //             chocoCpModel.modelMinimizationObjectives.zipWithIndex.forall((o, i) => {
+        //               s.getIntVal(o) < lastParetoFrontValues(i)
+        //             })
+        //           if (isDominator) {
+        //             lastParetoFrontValues =
+        //               chocoCpModel.modelMinimizationObjectives.map(o => s.getIntVal(o))
+        //             paretoFrontChanged = true
+        //           }
+        //         })
+        //     }
+        //   }
+        //   // println("the values " + (feasible && paretoFrontChanged, lastParetoFrontSize, lastParetoFrontValues.mkString(", ")))
+        //   (feasible && paretoFrontChanged, lastParetoFrontSize, lastParetoFrontValues)
+        // })
+        // .takeWhile((shouldContinue, _, _) => shouldContinue)
         // .takeWhile(feasible => )
         // .filter(feasible => feasible)
-        .flatMap(_ => {
+        .map(_ => {
           // println(s"pareto size: ${paretoMaximizer.getParetoFront.size}")
-          if (isOptimization) {
-            paretoMaximizer.getParetoFront().asScala
-          } else Seq(solver.defaultSolution().record())
+          // if (isOptimization) {
+          //   paretoMaximizer.getParetoFront().asScala
+          // } else Seq(solver.defaultSolution().record())
           // Solution(chocoCpModel.chocoModel, chocoCpModel.chocoModel.getVars():_*).record()
-          // solver.defaultSolution().record()
+          solver.defaultSolution().record()
         })
         .map(paretoSolution => {
           // println("obj " + chocoCpModel.modelMinimizationObjectives.map(o => paretoSolution.getIntVal(o)).mkString(", "))
@@ -158,3 +161,11 @@ class ChocoExplorer() extends ForSyDeIOExplorer:
     case _ => LazyList.empty
 
 end ChocoExplorer
+
+object ChocoExplorer {
+  object ParetoBrancher extends IMonitorSolution {
+    def onSolution(): Unit = {
+
+    }
+  }
+}

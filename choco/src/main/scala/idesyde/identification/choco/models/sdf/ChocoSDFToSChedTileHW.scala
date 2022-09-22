@@ -52,7 +52,7 @@ final case class ChocoSDFToSChedTileHW(
     slower.sdfAnalysisModule.invThroughputs,
     slower.sdfAnalysisModule.globalInvThroughput
   )
-  chocoModel.getSolver().plugMonitor(listScheduling)
+  // chocoModel.getSolver().plugMonitor(listScheduling)
   // chocoModel.getSolver().plugMonitor(ConMonitorObj)
 
   // breaking symmetries for speed

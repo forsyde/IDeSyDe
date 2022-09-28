@@ -217,27 +217,9 @@ final case class ChocoSDFToSChedTileHWSlowest(
   // )
 
   override val strategies: Array[AbstractStrategy[? <: Variable]] = Array(
-    // Search.bestBound(
-
-    // Search.minDomLBSearch(globalInvThroughput),
-    // Search.intVarSearch(
-    //   Largest(),
-    //   IntDomainMax(),
-    //   firingsInSlots.flatten.flatten:_*
-    // ),
-    // FindAndProve((nUsedPEs +: firingsInSlots.flatten.flatten),
-    // listScheduling,
-    // Search.minDomLBSearch(nUsedPEs),
-    // // ),
     Search.minDomLBSearch(nUsedPEs),
     Search.minDomLBSearch(sdfAnalysisModule.globalInvThroughput),
-    // Search.minDomLBSearch(invThroughputs:_*),
-    Search.minDomLBSearch(tileAnalysisModule.messageIsCommunicated.flatten.flatten: _*),
-    Search.minDomLBSearch(tileAnalysisModule.virtualChannelForMessage.flatten: _*),
-    Search.minDomLBSearch(sdfAnalysisModule.slotStartTime.flatten: _*),
-    Search.minDomLBSearch(sdfAnalysisModule.slotFinishTime.flatten: _*)
-    // Search.minDomLBSearch(nUsedPEs),
-    // Search.defaultSearch(chocoModel)
+    Search.defaultSearch(chocoModel)
   )
 
   //---------

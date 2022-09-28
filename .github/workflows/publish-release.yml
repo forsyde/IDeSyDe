@@ -15,15 +15,20 @@ jobs:
       uses: olafurpg/setup-scala@v11
       with:
         java-version: "graalvm-ce-java11@21.1.0"
-
-    - uses: ./.github/actions/millw@v1
-      with:
-        command: cli.assembly
+    - name: Get scala version
+      id: get_scala_version
+      run: |
+        cd ${{ github.workspace }}
+        echo "::set-output name=scalaVersion::$(sbt --error 'print cli/scalaVersion')"
+    - name: Build assembly with sbt
+      run: |
+        cd ${{ github.workspace }}
+        sbt assembly
     - name: Upload binaries to release
       uses: svenstaro/upload-release-action@v2
       with:
         repo_token: ${{ secrets.GITHUB_TOKEN }}
-        file: ${{ github.workspace }}/cli/out/assembly.dest/out.jar
+        file: ${{ github.workspace }}/cli/target/scala-${{ steps.get_scala_version.outputs.scalaVersion }}/cli-assembly-${{ steps.get_version.outputs.version }}.jar
         asset_name: idesyde-${{ steps.get_version.outputs.version }}-standalone.jar
         tag: "${{ github.ref }}"
         overwrite: true

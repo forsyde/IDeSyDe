@@ -44,10 +44,10 @@ final case class ChocoSDFToSChedTileHW(
   //-----------------------------------------------------
   // BRANCHING AND SEARCH
 
-  val listScheduling = CommAwareMultiCoreSDFListScheduling(
+  val listScheduling = CompactingMultiCoreSDFListScheduling(
     slower.dse.sdfApplications,
     slower.dse.wcets.map(ws => ws.map(w => w * slower.timeMultiplier).map(_.ceil.intValue)),
-    slower.tileAnalysisModule.messageTravelDuration,
+    slower.dse.platform.tiledDigitalHardware.minTraversalTimePerBit.map(arr => arr.map(v => (v * slower.timeMultiplier).ceil.toInt)),
     slower.sdfAnalysisModule.firingsInSlots,
     slower.sdfAnalysisModule.invThroughputs,
     slower.sdfAnalysisModule.globalInvThroughput

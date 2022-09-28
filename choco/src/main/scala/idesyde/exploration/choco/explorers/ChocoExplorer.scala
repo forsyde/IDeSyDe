@@ -6,7 +6,6 @@ import java.time.Duration
 import forsyde.io.java.core.ForSyDeSystemGraph
 import scala.concurrent.ExecutionContext
 import idesyde.exploration.Explorer
-import org.chocosolver.solver.objective.ParetoMaximizer
 
 import scala.jdk.OptionConverters.*
 import scala.jdk.CollectionConverters.*
@@ -87,6 +86,7 @@ class ChocoExplorer() extends ForSyDeIOExplorer:
     case chocoCpModel: ChocoCPForSyDeDecisionModel =>
       val solver         = chocoCpModel.chocoModel.getSolver
       val isOptimization = chocoCpModel.modelMinimizationObjectives.size > 0
+      val paretoMinimizer = ParetoMinimizationBrancher(chocoCpModel.modelMinimizationObjectives)
       // lazy val paretoMaximizer = ParetoMaximizer(
       //   chocoCpModel.modelMinimizationObjectives.map(o => chocoCpModel.chocoModel.intMinusView(o))
       // )
@@ -98,10 +98,9 @@ class ChocoExplorer() extends ForSyDeIOExplorer:
             false,
             chocoCpModel.modelMinimizationObjectives.head
           )
-        } else if (chocoCpModel.modelMinimizationObjectives.size > 0) {
-          solver.plugMonitor(ParetoMinimizationBrancher(chocoCpModel.chocoModel, chocoCpModel.modelMinimizationObjectives))
         }
-        // chocoCpModel.chocoModel.post(new Constraint("paretoOptConstraint", paretoMaximizer))
+        solver.plugMonitor(paretoMinimizer)
+        chocoCpModel.chocoModel.post(new Constraint("paretoOptConstraint", paretoMinimizer))
         // val objFunc = getLinearizedObj(chocoCpModel)
         // chocoCpModel.chocoModel.setObjective(false, objFunc)
         // strategies +:= Search.bestBound(Search.minDomLBSearch(objFunc))
@@ -110,7 +109,7 @@ class ChocoExplorer() extends ForSyDeIOExplorer:
       if (!chocoCpModel.strategies.isEmpty) {
         solver.setSearch(chocoCpModel.strategies: _*)
       }
-      // solver.setLearningSignedClauses
+      solver.setLearningSignedClauses
       solver.setNoGoodRecordingFromRestarts
       solver.setRestartOnSolutions
       LazyList
@@ -144,15 +143,10 @@ class ChocoExplorer() extends ForSyDeIOExplorer:
         //   (feasible && paretoFrontChanged, lastParetoFrontSize, lastParetoFrontValues)
         // })
         // .takeWhile((shouldContinue, _, _) => shouldContinue)
-        // .takeWhile(feasible => )
+        .takeWhile(feasible => feasible)
         // .filter(feasible => feasible)
         .map(_ => {
-          // println(s"pareto size: ${paretoMaximizer.getParetoFront.size}")
-          // if (isOptimization) {
-          //   paretoMaximizer.getParetoFront().asScala
-          // } else Seq(solver.defaultSolution().record())
-          // Solution(chocoCpModel.chocoModel, chocoCpModel.chocoModel.getVars():_*).record()
-          solver.defaultSolution().record()
+          solver.defaultSolution()
         })
         .map(paretoSolution => {
           // println("obj " + chocoCpModel.modelMinimizationObjectives.map(o => paretoSolution.getIntVal(o)).mkString(", "))

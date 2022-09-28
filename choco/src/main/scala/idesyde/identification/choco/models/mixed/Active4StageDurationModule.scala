@@ -1,71 +1,107 @@
-package idesyde.identification.choco.models
+package idesyde.identification.choco.models.mixed
 
 import idesyde.identification.choco.interfaces.ChocoModelMixin
 import org.chocosolver.solver.variables.IntVar
 import org.chocosolver.solver.variables.BoolVar
 import org.chocosolver.solver.constraints.`extension`.Tuples
+import org.chocosolver.solver.Model
 
-trait Active4StageDurationMixin extends ChocoModelMixin {
+class Active4StageDurationModule(
+  val chocoModel: Model,
+  val executionTimes: Array[Array[Int]],
+  val taskTravelTime: Array[Array[Int]],
+  val dataTravelTime: Array[Array[Int]],
+  val allowedProc2MemoryDataPaths: Array[Array[Array[Array[Int]]]],
+  val taskReadsData: Array[Array[Boolean]],
+  val taskWritesData: Array[Array[Boolean]],
 
-  def executionTime: Array[Array[Int]]
-  def taskTravelTime: Array[Array[Int]]
-  def dataTravelTime: Array[Array[Int]]
-  def allowedProc2MemoryDataPaths: Array[Array[Array[Array[Int]]]]
-  def taskReadsData: Array[Array[Boolean]]
-  def taskWritesData: Array[Array[Boolean]]
+  val taskExecution: Array[IntVar],
+  val taskMapping: Array[IntVar],
+  val dataMapping: Array[IntVar],
+  val taskCommunicationMapping: Array[Array[BoolVar]],
+  val dataCommunicationMapping: Array[Array[BoolVar]],
+) extends ChocoModelMixin {
 
-  def taskExecution: Array[Array[BoolVar]]
-  def taskMapping: Array[IntVar]
-  def dataMapping: Array[IntVar]
-  def taskCommunicationMapping: Array[Array[BoolVar]]
-  def dataCommunicationMapping: Array[Array[BoolVar]]
+  private val tasks = (0 until executionTimes.size).toArray
+  private val processors    = (0 until allowedProc2MemoryDataPaths.length).toArray
+  private val memories      = (0 until allowedProc2MemoryDataPaths.head.length).toArray
+  private val communicators = (0 until dataCommunicationMapping.head.length).toArray
 
-  def durationsFetch: Array[Array[IntVar]]
-  def durationsRead: Array[Array[IntVar]]
-  def durationsExec: Array[Array[IntVar]]
-  def durationsWrite: Array[Array[IntVar]]
-  def durations: Array[Array[IntVar]]
+  val durationsExec = executionTimes.zipWithIndex.map((w, i) =>
+    w.zipWithIndex.map((p, j) =>
+      chocoModel.intVar(
+        s"exe_wc($i, $j)",
+        if (p > 0) then
+          Array(
+            0,
+            p
+          )
+        else Array(0)
+      )
+    )
+  )
+  val durationsFetch = executionTimes.zipWithIndex.map((w, i) =>
+    w.zipWithIndex.map((p, j) =>
+      chocoModel.intVar(
+        s"fetch_wc($i, $j)",
+        0,
+        taskTravelTime(i).sum,
+        true
+      )
+    )
+  )
+  val durationsRead = executionTimes.zipWithIndex.map((w, i) =>
+    w.zipWithIndex.map((p, j) =>
+      chocoModel.intVar(
+        s"input_wc($i, $j)",
+        0,
+        dataTravelTime(i).sum,
+        true
+      )
+    )
+  )
+  val durationsWrite = executionTimes.zipWithIndex.map((w, i) =>
+    w.zipWithIndex.map((p, j) =>
+      chocoModel.intVar(
+        s"output_wc($i, $j)",
+        0,
+        dataTravelTime(i).sum,
+        true
+      )
+    )
+  )
+  val durations = executionTimes.zipWithIndex.map((w, i) =>
+    w.zipWithIndex.map((p, j) =>
+      chocoModel.intVar(s"duration($i, $j)", 0, 
+        durationsExec(i)(j).getUB() + 
+        durationsFetch(i)(j).getUB() +
+        durationsRead(i)(j).getUB() +
+        durationsWrite(i)(j).getUB(),
+        true  
+      )
+    )
+  )
+
+  private val commLoad = communicators
+    .map(c => chocoModel.intVar(s"load($c)", 0, dataTravelTime.map(t => t(c)).sum, true))
+    .toArray
 
   def postActive4StageDurationsConstraints(): Unit = {
     // deduced parameters
-    lazy val processors    = 0 until allowedProc2MemoryDataPaths.length
-    lazy val memories      = 0 until allowedProc2MemoryDataPaths.head.length
-    lazy val communicators = 0 until dataCommunicationMapping.head.length
     // auxiliary local variables
-    lazy val commLoad = communicators
-      .map(c => chocoModel.intVar("load_" + c, 0, dataTravelTime.map(t => t(c)).sum, true))
-      .toArray
     // scribe.debug(communicators.map(c => dataTravelTime.map(t => t(c)).sum).mkString(", "))
-    // posting constraints proper
-    processors.map(processorIndex =>
-      // sum of all durationss
-      durations.zipWithIndex.foreach((dur, i) =>
-        dur(processorIndex)
-          .eq(
-            durationsFetch(i)(processorIndex)
-              .add(durationsRead(i)(processorIndex))
-              .add(durationsExec(i)(processorIndex))
-              .add(durationsWrite(i)(processorIndex))
-          )
-          .post
-      )
+    // basic equality for durations
+    for (i <- tasks; j <- processors) {
+      // sum of all durations
+      chocoModel.sum(Array(durationsFetch(i)(j), durationsFetch(i)(j), durationsRead(i)(j), durationsWrite(i)(j)), "=", durations(i)(j)).post()
       // for the execution times
-      durationsExec.zipWithIndex.foreach((exe, i) =>
-        chocoModel.ifThenElse(
-          taskExecution(i)(processorIndex),
-          exe(processorIndex).eq(executionTime(i)(processorIndex)).decompose,
-          exe(processorIndex).eq(0).decompose
-        )
+      chocoModel.ifThenElse(
+        chocoModel.arithm(taskExecution(i), "=", j),
+        chocoModel.arithm(durationsExec(i)(j), "=", executionTimes(i)(j)),
+        chocoModel.arithm(durationsExec(i)(j), "=", 0)
       )
-      // for the total times
-      durations.zipWithIndex.foreach((dur, i) =>
-        chocoModel.ifThenElse(
-          taskExecution(i)(processorIndex),
-          dur(processorIndex).eq(executionTime(i)(processorIndex)).decompose,
-          dur(processorIndex).eq(0).decompose
-        )
-      )
-    )
+    }
+    // now for the communications
     // at least one path needs to be satisfied for isntruction fetching
     taskExecution.zipWithIndex.foreach((taskExec, t) =>
       taskMapping.zipWithIndex.foreach((taskMap, m) =>
@@ -77,7 +113,7 @@ trait Active4StageDurationMixin extends ChocoModelMixin {
             val pathTuples = Tuples(pathMatrix, true)
             pathTuples.setUniversalValue(-1)
             chocoModel.ifThen(
-              taskExec(p).and(taskMap.eq(mem)).decompose,
+              taskExec.eq(p).and(taskMap.eq(mem)).decompose,
               // at least one of the paths must be taken
               chocoModel.table(taskCommunicationMapping(m).map(_.asInstanceOf[IntVar]), pathTuples)
             )
@@ -87,7 +123,7 @@ trait Active4StageDurationMixin extends ChocoModelMixin {
     )
     // the same for data fetching or writting
     // they are symemtric in terms of constraints because the platform is assumed
-    // in this mixin to have bidirectional links
+    // in this module to have bidirectional links
     taskExecution.zipWithIndex.foreach((taskExec, t) =>
       dataMapping.zipWithIndex.foreach((dataMap, m) =>
         if (taskReadsData(t)(m) || taskWritesData(t)(m)) {
@@ -99,7 +135,7 @@ trait Active4StageDurationMixin extends ChocoModelMixin {
               val pathTuples = Tuples(pathMatrix, true)
               pathTuples.setUniversalValue(-1)
               chocoModel.ifThen(
-                taskExec(p).and(dataMap.eq(mem)).decompose,
+                taskExec.eq(p).and(dataMap.eq(mem)).decompose,
                 // at least one of the paths must be taken
                 chocoModel.table(
                   dataCommunicationMapping(m).map(_.asInstanceOf[IntVar]),

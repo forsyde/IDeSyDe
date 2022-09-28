@@ -32,335 +32,253 @@ import org.apache.commons.math3.util.FastMath
 import idesyde.exploration.explorers.SimpleWorkloadBalancingDecisionStrategy
 import org.chocosolver.solver.variables.BoolVar
 import forsyde.io.java.typed.viewers.visualization.Visualizable
-import idesyde.identification.choco.models.FixedPriorityConstraintsMixin
-import idesyde.identification.choco.models.BaselineTimingConstraintsMixin
-import idesyde.identification.choco.models.ExtendedPrecedenceConstraintsMixin
-import idesyde.identification.choco.models.Active4StageDurationMixin
-import idesyde.identification.choco.models.BaselineMemoryConstraints
 import idesyde.identification.forsyde.models.mixed.PeriodicTaskToSchedHW
 import spire.math._
+import spire.compat.fractional
+import org.chocosolver.solver.search.loop.monitors.IMonitorContradiction
+import org.chocosolver.solver.exception.ContradictionException
+import idesyde.identification.choco.models.SingleProcessSingleMessageMemoryConstraintsModule
+import idesyde.identification.choco.models.BaselineTimingConstraintsModule
+import idesyde.identification.choco.models.workload.ExtendedPrecedenceConstraintsModule
+import idesyde.identification.choco.models.workload.FixedPriorityConstraintsModule
+import idesyde.identification.choco.models.mixed.Active4StageDurationModule
+import idesyde.utils.CoreUtils
+
+// object ConMonitorObj extends IMonitorContradiction {
+
+//   def onContradiction(cex: ContradictionException): Unit = {
+//     println(cex.toString())
+//   }
+// }
 
 final case class PeriodicTaskToSchedHWChoco(
-    val sourceForSyDeDecisionModel: PeriodicTaskToSchedHW
-) extends ChocoCPForSyDeDecisionModel
-    with FixedPriorityConstraintsMixin
-    with BaselineTimingConstraintsMixin
-    with ExtendedPrecedenceConstraintsMixin
-    with Active4StageDurationMixin
-    with BaselineMemoryConstraints {
-  //given Ordering[Task]       = DependentDeadlineMonotonicOrdering(sourceForSyDeDecisionModel.taskModel)
+    val dse: PeriodicTaskToSchedHW
+) extends ChocoCPForSyDeDecisionModel {
 
-  val coveredVertexes = sourceForSyDeDecisionModel.coveredVertexes
+  val coveredVertexes = dse.coveredVertexes
+
+  val chocoModel = Model()
+
+  // chocoModel.getSolver().plugMonitor(ConMonitorObj)
 
   // section for time multiplier calculation
   val timeValues =
-    (sourceForSyDeDecisionModel.taskModel.periods ++ sourceForSyDeDecisionModel.wcets.flatten ++ sourceForSyDeDecisionModel.taskModel.relativeDeadlines)
+    (dse.taskModel.periods ++ dse.wcets.flatten ++ dse.taskModel.relativeDeadlines)
   var timeMultiplier = 1L
   while (
     timeValues
       .map(_ * (timeMultiplier))
-      .exists(d => d.doubleValue < 1) && timeMultiplier < Int.MaxValue / 4
+      .exists(d => d.numerator <= d.denominator)
+    &&
+    timeValues
+      .maxBy(t =>
+        t * (timeMultiplier)
+      ) < Int.MaxValue / 40 - 1 // the four is due to how the sum is done for wcet
   ) {
     timeMultiplier *= 10
   }
   // scribe.debug(timeMultiplier.toString)
 
   // do the same for memory numbers
-  var memoryMultipler = 1L
-  while (
-    allMemorySizeNumbers().forall(_ / memoryMultipler >= 100) && memoryMultipler < Int.MaxValue
-  ) {
-    memoryMultipler *= 10L
+  val memoryValues = dse.schedHwModel.hardware.storageElems.map(_.getSpaceInBits())
+  var memoryDivider = 1L
+  while (memoryValues.forall(CoreUtils.ceil(_, memoryDivider) >= Int.MaxValue / 100000) && memoryDivider < Int.MaxValue) {
+    memoryDivider *= 10L
   }
   // scribe.debug(memoryMultipler.toString)
   // scribe.debug(allMemorySizeNumbers().mkString("[", ",", "]"))
 
-  // create the variables that each Mixin requires
-  val periods    = sourceForSyDeDecisionModel.taskModel.periods.map(_ * (timeMultiplier))
-  def priorities = sourceForSyDeDecisionModel.taskModel.prioritiesForDependencies
-  val scaledDeadlines =
-    sourceForSyDeDecisionModel.taskModel.relativeDeadlines.map(_ * (timeMultiplier))
-  def deadlines       = scaledDeadlines
-  val wcets           = sourceForSyDeDecisionModel.wcets.map(a => a.map(_ * (timeMultiplier)))
-  def maxUtilizations = sourceForSyDeDecisionModel.maxUtilization
+  // create the variables that each module requires
+  val periods    = dse.taskModel.periods.map(_ * (timeMultiplier))
+  val priorities = dse.taskModel.prioritiesForDependencies
+  val deadlines             = dse.taskModel.relativeDeadlines.map(_ * (timeMultiplier))
+  val wcets                 = dse.wcets.map(_.map(f => (f * (timeMultiplier))))
+  val executionTimes: Array[Array[Int]] = wcets.map(_.map(f => f.ceil.toInt))
+  val maxUtilizations       = dse.maxUtilization
+  val taskSizes = dse.taskModel.taskSizes.map(CoreUtils.ceil(_, memoryDivider)).map(_.toInt)
+  val messageSizes = dse.taskModel.messageQueuesSizes.map(CoreUtils.ceil(_, memoryDivider)).map(_.toInt)
+  val storageSizes = dse.schedHwModel.hardware.storageElems.map(m => CoreUtils.ceil(m.getSpaceInBits(), memoryDivider)).map(_.toInt)
+  val canBeFollowedBy = dse.taskModel.interTaskOccasionalBlock
+  val taskTravelTime = dse.taskModel.taskSizes.map(d =>
+    dse.schedHwModel.hardware.communicationModuleBandWidthBitPerSec.map(b =>
+      // TODO: check if this is truly conservative (pessimistic) or not
+      (d / b / timeMultiplier / memoryDivider).ceil.toInt
+    )
+  )
+  val dataTravelTime = dse.taskModel.dataBlocks.map(d =>
+    dse.schedHwModel.hardware.communicationModuleBandWidthBitPerSec.map(b =>
+      // TODO: check if this is truly conservative (pessimistic) or not
+      (d.getMaxSizeInBits.toLong / b / (timeMultiplier)
+        / (memoryDivider)).ceil.toInt
+    )
+  )
+  val taskReadsData  = dse.taskModel.taskReadsMessageQueue
+  val taskWritesData = dse.taskModel.taskWritesMessageQueue
+  val allowedProc2MemoryDataPaths =
+    dse.schedHwModel.hardware.routesProc2Memory
 
   // build the model so that it can be acessed later
-  val model = Model()
-  // the true decision variables
-  val taskExecution = sourceForSyDeDecisionModel.taskModel.tasks.zipWithIndex.map((t, i) =>
-    sourceForSyDeDecisionModel.schedHwModel.hardware.processingElems.zipWithIndex.map((p, j) =>
-      if (sourceForSyDeDecisionModel.wcets(i)(j).compareTo(Rational.zero) > 0) {
-        model.boolVar("exe_" + t.getIdentifier)
-      } else {
-        model.boolVar("exe_" + t.getIdentifier, false)
-      }
-    //  model.boolVar(
-    // "exe_" + t.getViewedVertex.getIdentifier,
-    // sourceForSyDeDecisionModel
-    //   .wcets(i)(p)
-    //   .zipWithIndex
-    //   .filter((p, j) => p.compareTo(Rational.zero - Rational.one) > 0)
-    //   // keep only the cores which have proven schedulability tests in the execution
-    //   .filter((p, j) =>
-    //     sourceForSyDeDecisionModel.schedHwModel.isStaticCycle(j) || sourceForSyDeDecisionModel.schedHwModel
-    //       .isFixedPriority(j)
-    //   )
-    //   .map((p, j) => j) // keep the processors where WCEt is defined
-    )
-  )
-  // scribe.debug((sourceForSyDeDecisionModel
-  //     .wcets(i)
-  //     .zipWithIndex
-  //     .filter((p, j) => p.compareTo(Rational.zero - Rational.one) > 0)
-  //     // keep only the cores which have proven schedulability tests in the execution
-  //     .filter((p, j) =>
-  //       sourceForSyDeDecisionModel.schedHwModel.isStaticCycle(j) || sourceForSyDeDecisionModel.schedHwModel
-  //         .isFixedPriority(j)
-  //     )
-  //     .map((p, j) => j)).mkString("[", ",", "]"))
-  // )
-  val taskMapping = sourceForSyDeDecisionModel.taskModel.tasks.zipWithIndex.map((t, i) =>
-    model.intVar(
-      "map_" + t.getViewedVertex.getIdentifier,
-      sourceForSyDeDecisionModel.schedHwModel.hardware.storageElems.zipWithIndex
-        .filter((m, j) => sourceForSyDeDecisionModel.taskModel.taskSizes(i) <= m.getSpaceInBits)
+  // memory module
+  val taskMapping = dse.taskModel.tasks.zipWithIndex.map((t, i) =>
+    chocoModel.intVar(
+      "task_map_" + t.getViewedVertex.getIdentifier,
+      dse.schedHwModel.hardware.storageElems.zipWithIndex
+        .filter((m, j) => dse.taskModel.taskSizes(i) <= m.getSpaceInBits)
         .map((m, j) => j)
     )
   )
-  val dataBlockMapping = sourceForSyDeDecisionModel.taskModel.dataBlocks.zipWithIndex.map((c, i) =>
-    model.intVar(
-      "map_" + c.getViewedVertex.getIdentifier,
-      sourceForSyDeDecisionModel.schedHwModel.hardware.storageElems.zipWithIndex
-        .filter((m, j) =>
-          sourceForSyDeDecisionModel.taskModel.messageQueuesSizes(i) <= m.getSpaceInBits
-        )
+  val dataBlockMapping = dse.taskModel.dataBlocks.zipWithIndex.map((c, i) =>
+    chocoModel.intVar(
+      "data_map_" + c.getViewedVertex.getIdentifier,
+      dse.schedHwModel.hardware.storageElems.zipWithIndex
+        .filter((m, j) => dse.taskModel.messageQueuesSizes(i) <= m.getSpaceInBits)
         .map((m, j) => j)
     )
   )
-  val taskCommMapping = sourceForSyDeDecisionModel.taskModel.tasks.zipWithIndex.map((t, i) =>
-    sourceForSyDeDecisionModel.schedHwModel.hardware.communicationElems.zipWithIndex.map((ce, j) =>
-      model.boolVar("map_" + t.getViewedVertex.getIdentifier + "_comm_" + ce.getIdentifier)
-    )
+  val memoryMappingModule = SingleProcessSingleMessageMemoryConstraintsModule(
+    chocoModel,
+    taskSizes,
+    messageSizes,
+    storageSizes
   )
-  val dataBlockCommMapping =
-    sourceForSyDeDecisionModel.taskModel.dataBlocks.zipWithIndex.map((c, i) =>
-      sourceForSyDeDecisionModel.schedHwModel.hardware.communicationElems.zipWithIndex.map(
-        (ce, j) =>
-          model.boolVar("map_" + c.getViewedVertex.getIdentifier + "_comm_" + ce.getIdentifier)
-      )
-    )
-  def taskCommunicationMapping = taskCommMapping
-  def dataCommunicationMapping = dataBlockCommMapping
 
-  // tasks and data must be mapped to at least one location
-  taskExecution.foreach(ts => model.or(ts: _*))
-  // def taskReadsMessage = sourceForSyDeDecisionModel.taskModel.tasks.
-  // --- durations ----
-  // scribe.debug(sourceForSyDeDecisionModel.wcets.map(_.map(f => f.multiply(timeMultiplier).getNumeratorAsInt.toString).mkString("[", ",", "]")).mkString("[", ",", "]"))
-  // scribe.debug(sourceForSyDeDecisionModel.wcets.map(_.map(f => f.toString).mkString("[", ",", "]")).mkString("[", ",", "]"))
-  def executionTime: Array[Array[Int]] =
-    sourceForSyDeDecisionModel.wcets.map(_.map(f => (f * (timeMultiplier)).numerator.toInt))
-  // !-- durations ----
-  // auxiliary variables
-  val responseTimes =
-    sourceForSyDeDecisionModel.taskModel.tasks.zipWithIndex.map((t, i) =>
-      // scribe.debug(t.getIdentifier + ": " + wcets(i)
-      //     .filter(p => p.compareTo(Rational.zero - Rational.one) > 0)
-      //     .min
-      //     .doubleValue
-      //     .ceil
-      //     .toInt.toString + " dead line " +
-      // scaledDeadlines(i)
-      //     .doubleValue
-      //     .floor
-      //     .toInt.toString)
-      model.intVar(
+  // timing
+  val taskExecution = dse.taskModel.tasks.zipWithIndex.map((t, i) =>
+    chocoModel.intVar(
+      "task_map_" + t.getViewedVertex.getIdentifier,
+      dse.schedHwModel.hardware.storageElems.zipWithIndex
+        .filter((m, j) => dse.wcets(i)(j) >= 0)
+        .map((m, j) => j)
+    )
+  )
+    val responseTimes =
+    dse.taskModel.tasks.zipWithIndex.map((t, i) =>
+      chocoModel.intVar(
         "rt_" + t.getViewedVertex.getIdentifier,
         // minimum WCET possible
         wcets(i)
-          .filter(p => p.compareTo(Rational.zero - Rational.one) > 0)
+          .filter(p => p > -1)
           .min
-          .doubleValue
           .ceil
           .toInt,
-        scaledDeadlines(i).doubleValue.floor.toInt,
+        deadlines(i).floor.toInt,
         true // keeping only bounds for the response time is enough and better
       )
     )
   val blockingTimes =
-    sourceForSyDeDecisionModel.taskModel.tasks.zipWithIndex.map((t, i) =>
-      // scribe.debug(
-      //   s"B: ${sourceForSyDeDecisionModel.taskModel.relativescaledDeadlines(i).doubleValue.floor.toInt} - " +
-      //   s"W: ${sourceForSyDeDecisionModel.wcets(i).filter(p => p.compareTo(Rational.zero - Rational.one) > 0).min.multiply(timeMultiplier).doubleValue.ceil.toInt}"
-      // )
-      model.intVar(
+    dse.taskModel.tasks.zipWithIndex.map((t, i) =>
+      chocoModel.intVar(
         "bt_" + t.getViewedVertex.getIdentifier,
         // minimum WCET possible
         0,
-        scaledDeadlines(i).doubleValue.floor.toInt,
+        deadlines(i).floor.toInt,
         true // keeping only bounds for the response time is enough and better
       )
     )
-  val durationsExec = sourceForSyDeDecisionModel.taskModel.tasks.zipWithIndex.map((t, i) =>
-    sourceForSyDeDecisionModel.schedHwModel.hardware.processingElems.zipWithIndex.map((p, j) =>
-      model.intVar(
-        s"exe_wc_${t.getIdentifier}",
-        if (
-          sourceForSyDeDecisionModel
-            .wcets(i)(j)
-            .compareTo(Rational.zero - Rational.one) > 0
-        ) then
-          Array(
-            0,
-            (sourceForSyDeDecisionModel
-              .wcets(i)(j)
-              * (timeMultiplier)).ceil.toInt
-          )
-        else Array(0)
-      )
-    )
-  )
-  val durationsFetch = sourceForSyDeDecisionModel.taskModel.tasks.zipWithIndex.map((t, i) =>
-    sourceForSyDeDecisionModel.schedHwModel.hardware.processingElems.zipWithIndex.map((p, j) =>
-      model.intVar(
-        "fetch_wc" + t.getViewedVertex.getIdentifier,
-        0,
-        scaledDeadlines(i).doubleValue.floor.toInt,
-        true
-      )
-    )
-  )
-  val durationsRead = sourceForSyDeDecisionModel.taskModel.tasks.zipWithIndex.map((t, i) =>
-    sourceForSyDeDecisionModel.schedHwModel.hardware.processingElems.zipWithIndex.map((p, j) =>
-      model.intVar(
-        "input_wc" + t.getViewedVertex.getIdentifier,
-        0,
-        scaledDeadlines(i).doubleValue.floor.toInt,
-        true
-      )
-    )
-  )
-  val durationsWrite = sourceForSyDeDecisionModel.taskModel.tasks.zipWithIndex.map((t, i) =>
-    sourceForSyDeDecisionModel.schedHwModel.hardware.processingElems.zipWithIndex.map((p, j) =>
-      model.intVar(
-        "output_wc" + t.getViewedVertex.getIdentifier,
-        0,
-        scaledDeadlines(i).doubleValue.floor.toInt,
-        true
-      )
-    )
-  )
-  val durations = sourceForSyDeDecisionModel.taskModel.tasks.zipWithIndex.map((t, i) =>
-    sourceForSyDeDecisionModel.schedHwModel.hardware.processingElems.zipWithIndex.map((p, j) =>
-      durationsExec(i)(j)
-        .add(durationsFetch(i)(j))
-        .add(durationsRead(i)(j))
-        .add(durationsWrite(i)(j))
-        .intVar
-    )
-  )
-  val taskTravelTime = sourceForSyDeDecisionModel.taskModel.taskSizes.map(d =>
-    sourceForSyDeDecisionModel.schedHwModel.hardware.communicationModuleBandWidthBitPerSec.map(b =>
-      // TODO: check if this is truly conservative (pessimistic) or not
-      (b * (timeMultiplier) / (memoryMultipler) * (d)).intValue
-    )
-  )
-  val dataTravelTime = sourceForSyDeDecisionModel.taskModel.dataBlocks.map(d =>
-    sourceForSyDeDecisionModel.schedHwModel.hardware.communicationModuleBandWidthBitPerSec.map(b =>
-      // TODO: check if this is truly conservative (pessimistic) or not
-      (b * (timeMultiplier)
-        / (memoryMultipler)
-        / (d.getMaxSizeInBits.toLong)).reciprocal.floor.toInt + 1
-    )
+
+  val extendedPrecedenceConstraintsModule = ExtendedPrecedenceConstraintsModule(
+    chocoModel,
+    taskExecution,
+    responseTimes,
+    blockingTimes,
+    canBeFollowedBy
   )
 
-  def taskReadsData  = sourceForSyDeDecisionModel.taskModel.taskReadsMessageQueue
-  def taskWritesData = sourceForSyDeDecisionModel.taskModel.taskWritesMessageQueue
-
-  // memory aux variables
-  // the +1 is for ceil
-  val memoryUsage = sourceForSyDeDecisionModel.schedHwModel.hardware.storageElems.map(mem =>
-    //scribe.debug((mem.getSpaceInBits / memoryMultipler).toInt.toString)
-    model.intVar(
-      "load_" + mem.getViewedVertex.identifier,
-      0,
-      (mem.getSpaceInBits / memoryMultipler).toInt + 1
+  val taskCommMapping = dse.taskModel.tasks.zipWithIndex.map((t, i) =>
+    dse.schedHwModel.hardware.communicationElems.zipWithIndex.map((ce, j) =>
+      chocoModel.boolVar(
+        "tcom_map_" + t.getViewedVertex.getIdentifier + "_comm_" + ce.getIdentifier
+      )
     )
   )
-  def dataMapping = dataBlockMapping
-  val taskSize = sourceForSyDeDecisionModel.taskModel.taskSizes
-    .map(_ / memoryMultipler + 1)
-    .map(_.toInt)
-  val dataSize = sourceForSyDeDecisionModel.taskModel.messageQueuesSizes
-    .map(_ / memoryMultipler + 1)
-    .map(_.toInt)
-  // memory constraints
-  postTaskAndDataMemoryConstraints()
-  // Members declared in idesyde.identification.models.choco.ExtendedPrecedenceConstraintsMixin
-  def canBeFollowedBy = sourceForSyDeDecisionModel.taskModel.interTaskOccasionalBlock
+  val dataBlockCommMapping =
+    dse.taskModel.dataBlocks.zipWithIndex.map((c, i) =>
+      dse.schedHwModel.hardware.communicationElems.zipWithIndex.map((ce, j) =>
+        chocoModel.boolVar(
+          "dcom_map_" + c.getViewedVertex.getIdentifier + "_comm_" + ce.getIdentifier
+        )
+      )
+    )
 
-  // for other computation
-  def allowedProc2MemoryDataPaths =
-    sourceForSyDeDecisionModel.schedHwModel.hardware.routesProc2Memory
-  postActive4StageDurationsConstraints()
+  val active4StageDurationModule = Active4StageDurationModule(
+    chocoModel,
+    executionTimes,
+    taskTravelTime,
+    dataTravelTime,
+    allowedProc2MemoryDataPaths,
+    taskReadsData,
+    taskWritesData,
+    taskExecution,
+    memoryMappingModule.processesMemoryMapping,
+    memoryMappingModule.messagesMemoryMapping,
+    taskCommMapping,
+    dataBlockCommMapping
+  )
+  
+  val baselineTimingConstraintsModule = BaselineTimingConstraintsModule(
+    chocoModel,
+    priorities,
+    periods,
+    maxUtilizations,
+    active4StageDurationModule.durations,
+    taskExecution,
+    blockingTimes,
+    responseTimes
+  )
+
+  val fixedPriorityConstraintsModule = FixedPriorityConstraintsModule(
+    chocoModel,
+    priorities,
+    periods,
+    deadlines,
+    wcets,
+    taskExecution,
+    responseTimes,
+    blockingTimes,
+    active4StageDurationModule.durations
+  )
+
+  memoryMappingModule.postSingleProcessSingleMessageMemoryConstraints()
+
+  active4StageDurationModule.postActive4StageDurationsConstraints()
 
   // timing constraints
-  postInterProcessorBlocking()
+  extendedPrecedenceConstraintsModule.postInterProcessorBlocking()
 
   // basic utilization
-  postMinimalResponseTimesByBlocking()
-  postMaximumUtilizations()
+  baselineTimingConstraintsModule.postMinimalResponseTimesByBlocking()
+  baselineTimingConstraintsModule.postMaximumUtilizations()
 
   // for each FP scheduler
   // rt >= bt + sum of all higher prio tasks in the same CPU
-  sourceForSyDeDecisionModel.schedHwModel.allocatedSchedulers.zipWithIndex
-    .filter((s, j) => sourceForSyDeDecisionModel.schedHwModel.isFixedPriority(j))
+  dse.schedHwModel.allocatedSchedulers.zipWithIndex
+    .filter((s, j) => dse.schedHwModel.isFixedPriority(j))
     .foreach((s, j) => {
-      postFixedPrioriPreemtpiveConstraint(j)
+      fixedPriorityConstraintsModule.postFixedPrioriPreemtpiveConstraint(j)
     })
   // for each SC scheduler
-  sourceForSyDeDecisionModel.taskModel.tasks.zipWithIndex.foreach((task, i) => {
-    sourceForSyDeDecisionModel.schedHwModel.allocatedSchedulers.zipWithIndex
-      .filter((s, j) => sourceForSyDeDecisionModel.schedHwModel.isStaticCycle(j))
+  dse.taskModel.tasks.zipWithIndex.foreach((task, i) => {
+    dse.schedHwModel.allocatedSchedulers.zipWithIndex
+      .filter((s, j) => dse.schedHwModel.isStaticCycle(j))
       .foreach((s, j) => {
-        postStaticCyclicExecutiveConstraint(i, j)
+        postStaticCyclicExecutiveConstraint(active4StageDurationModule)(i, j)
         //val cons = Constraint(s"FPConstrats${j}", DependentWorkloadFPPropagator())
       })
   })
 
-  // symmetries
-  // sourceForSyDeDecisionModel.schedHwModel.topologicallySymmetricGroups.map(symGroup => {
-  //   symGroup.map(sourceForSyDeDecisionModel.schedHwModel.hardware.processingElems.indexOf(_)).map(idx => {
-  //     // model.count(s"count_exec_${idx}", )
-  //   })
-  // })
-  // sourceForSyDeDecisionModel.schedHwModel.schedulers.zipWithIndex.foreach((p, i) => {
-
-  // })
-
   // Dealing with objectives
-  val peIsUsed =
-    sourceForSyDeDecisionModel.schedHwModel.hardware.processingElems.zipWithIndex.map((pe, j) =>
-      model.or(taskExecution.map(t => t(j)): _*).reify
-    )
-  val nUsedPEs = model.intVar(
+  val nUsedPEs = chocoModel.intVar(
     "nUsedPEs",
     1,
-    sourceForSyDeDecisionModel.schedHwModel.hardware.processingElems.length
+    dse.schedHwModel.hardware.processingElems.length
   )
   // count different ones
-  model.sum(peIsUsed, "=", nUsedPEs).post
-  // this flips the direction of the variables since the objective must be MAX
-  // val nFreePEs = model
-  // .intVar(sourceForSyDeDecisionModel.schedHwModel.hardware.processingElems.length)
-  // .sub(nUsedPEs)
-  // .intVar
+  chocoModel.atMostNValues(taskExecution, nUsedPEs, true).post()
 
-  def chocoModel: Model = model
   // the objectives so far are just the minimization of used PEs
   // the inMinusView is necessary to transform a minimization into
   // a maximization
-  override def modelMinimizationObjectives = Array(nUsedPEs)
+  override val modelMinimizationObjectives = Array(nUsedPEs)
 
   // create the methods that each mixing requires
   // def sufficientRMSchedulingPoints(taskIdx: Int): Array[Rational] =
@@ -376,22 +294,22 @@ final case class PeriodicTaskToSchedHWChoco(
     * @param schedulerIdx
     *   the scheduler to be posted
     */
-  def postStaticCyclicExecutiveConstraint(taskIdx: Int, schedulerIdx: Int): Unit =
-    model.ifThen(
-      taskExecution(taskIdx)(schedulerIdx),
+  def postStaticCyclicExecutiveConstraint(active4StageDurationModule: Active4StageDurationModule)(taskIdx: Int, schedulerIdx: Int): Unit =
+    chocoModel.ifThen(
+      taskExecution(taskIdx).eq(schedulerIdx).decompose(),
       responseTimes(taskIdx)
         .ge(
-          durations(taskIdx)(schedulerIdx)
+          active4StageDurationModule.durations(taskIdx)(schedulerIdx)
             .add(blockingTimes(taskIdx))
             .add(
-              model
+              chocoModel
                 .sum(
                   s"sc_interference${taskIdx}_${schedulerIdx}",
-                  durations.zipWithIndex
+                  active4StageDurationModule.durations.zipWithIndex
                     .filter((ws, k) => k != taskIdx)
                     .filterNot((ws, k) =>
                       // leave tasks k which i occasionally block
-                      sourceForSyDeDecisionModel.taskModel.interTaskAlwaysBlocks(taskIdx)(k)
+                      dse.taskModel.interTaskAlwaysBlocks(taskIdx)(k)
                     )
                     .map((w, k) => w(schedulerIdx))
                     .toArray: _*
@@ -403,29 +321,34 @@ final case class PeriodicTaskToSchedHWChoco(
 
   override val strategies = Array(
     SimpleWorkloadBalancingDecisionStrategy(
-      (0 until sourceForSyDeDecisionModel.schedHwModel.allocatedSchedulers.length).toArray,
+      (0 until dse.schedHwModel.allocatedSchedulers.length).toArray,
       periods,
       taskExecution,
-      utilizations,
-      durations
+      baselineTimingConstraintsModule.utilizations,
+      active4StageDurationModule.durations,
+      executionTimes
     ),
-    Search.intVarSearch(
-      FirstFail(model),
-      IntDomainMin(),
-      DecisionOperatorFactory.makeIntEq,
-      (taskMapping ++ dataBlockMapping ++ responseTimes ++ durationsExec.flatten ++ blockingTimes ++
-        durationsRead.flatten ++ durationsWrite.flatten ++ durationsFetch.flatten ++
-        durations.flatten ++ utilizations ++ taskCommunicationMapping.flatten ++ dataBlockCommMapping.flatten :+ nUsedPEs): _*
-    )
+    Search.inputOrderUBSearch(nUsedPEs),
+    Search.activityBasedSearch(taskMapping: _*),
+    Search.activityBasedSearch(dataBlockMapping: _*),
+    Search.inputOrderLBSearch(responseTimes: _*),
+    Search.inputOrderLBSearch(blockingTimes: _*)
+    // Search.intVarSearch(
+    //   FirstFail(chocoModel),
+    //   IntDomainMin(),
+    //   DecisionOperatorFactory.makeIntEq,
+    //   (durationsRead.flatten ++ durationsWrite.flatten ++ durationsFetch.flatten ++
+    //     durations.flatten ++ utilizations ++ taskCommunicationMapping.flatten ++ dataBlockCommMapping.flatten): _*
+    // )
   )
 
   def rebuildFromChocoOutput(output: Solution): ForSyDeSystemGraph = {
     val rebuilt = ForSyDeSystemGraph()
-    sourceForSyDeDecisionModel.taskModel.tasks.zipWithIndex.foreach((t, i) => {
+    dse.taskModel.tasks.zipWithIndex.foreach((t, i) => {
       rebuilt.addVertex(t.getViewedVertex)
       val analysed         = AnalysedTask.enforce(t)
-      val responseTimeFrac = Rational(responseTimes(i).getValue, timeMultiplier)
-      val blockingTimeFrac = Rational(blockingTimes(i).getValue, timeMultiplier)
+      val responseTimeFrac = Rational(responseTimes(i).getValue(), timeMultiplier)
+      val blockingTimeFrac = Rational(blockingTimes(i).getValue(), timeMultiplier)
       // scribe.debug(s"task ${t.getIdentifier} RT: (raw ${responseTimes(i).getValue}) ${responseTimeFrac.doubleValue}")
       // scribe.debug(s"task ${t.getIdentifier} BT: (raw ${blockingTimes(i).getValue}) ${blockingTimeFrac.doubleValue}")
       analysed.setWorstCaseResponseTimeNumeratorInSecs(responseTimeFrac.numerator.toLong)
@@ -434,21 +357,15 @@ final case class PeriodicTaskToSchedHWChoco(
       analysed.setWorstCaseBlockingTimeDenominatorInSecs(blockingTimeFrac.denominator.toLong)
 
     })
-    sourceForSyDeDecisionModel.taskModel.dataBlocks.foreach(t =>
-      rebuilt.addVertex(t.getViewedVertex)
-    )
-    sourceForSyDeDecisionModel.schedHwModel.allocatedSchedulers.foreach(s =>
-      rebuilt.addVertex(s.getViewedVertex)
-    )
-    sourceForSyDeDecisionModel.schedHwModel.hardware.storageElems.foreach(m =>
-      rebuilt.addVertex(m.getViewedVertex)
-    )
-    sourceForSyDeDecisionModel.schedHwModel.hardware.processingElems.zipWithIndex.foreach((m, j) =>
+    dse.taskModel.dataBlocks.foreach(t => rebuilt.addVertex(t.getViewedVertex))
+    dse.schedHwModel.allocatedSchedulers.foreach(s => rebuilt.addVertex(s.getViewedVertex))
+    dse.schedHwModel.hardware.storageElems.foreach(m => rebuilt.addVertex(m.getViewedVertex))
+    dse.schedHwModel.hardware.processingElems.zipWithIndex.foreach((m, j) =>
       rebuilt.addVertex(m.getViewedVertex)
       val module = AnalysedGenericProcessingModule.enforce(m)
       module.setUtilization(
-        durations.zipWithIndex
-          .filter((ws, i) => taskExecution(i)(j).isInstantiatedTo(1))
+        active4StageDurationModule.durations.zipWithIndex
+          .filter((ws, i) => taskExecution(i).isInstantiatedTo(j))
           .map((w, i) =>
             //scribe.debug(s"task n ${i} Wcet: (raw ${durations(i)(j)})")
             (Rational(w(j).getValue)
@@ -458,28 +375,27 @@ final case class PeriodicTaskToSchedHWChoco(
       )
     )
     taskExecution.zipWithIndex.foreach((exe, i) => {
-      sourceForSyDeDecisionModel.schedHwModel.allocatedSchedulers.zipWithIndex.foreach(
-        (scheduler, j) =>
-          // val j         = output.getIntVal(exe)
-          val task      = sourceForSyDeDecisionModel.taskModel.tasks(i)
-          val scheduler = sourceForSyDeDecisionModel.schedHwModel.allocatedSchedulers(j)
-          Scheduled.enforce(task).insertSchedulersPort(rebuilt, scheduler)
-          GreyBox.enforce(scheduler).insertContainedPort(rebuilt, Visualizable.enforce(task))
+      dse.schedHwModel.allocatedSchedulers.zipWithIndex.foreach((scheduler, j) =>
+        // val j         = output.getIntVal(exe)
+        val task      = dse.taskModel.tasks(i)
+        val scheduler = dse.schedHwModel.allocatedSchedulers(j)
+        Scheduled.enforce(task).insertSchedulersPort(rebuilt, scheduler)
+        GreyBox.enforce(scheduler).insertContainedPort(rebuilt, Visualizable.enforce(task))
       )
     })
     taskMapping.zipWithIndex.foreach((mapping, i) => {
-      val j      = output.getIntVal(mapping)
-      val task   = sourceForSyDeDecisionModel.taskModel.tasks(i)
-      val memory = sourceForSyDeDecisionModel.schedHwModel.hardware.storageElems(j)
+      val j      = mapping.getValue() // output.getIntVal(mapping)
+      val task   = dse.taskModel.tasks(i)
+      val memory = dse.schedHwModel.hardware.storageElems(j)
       MemoryMapped.enforce(task).insertMappingHostsPort(rebuilt, memory)
       // rebuilt.connect(task, memory, "mappingHost", EdgeTrait.DECISION_ABSTRACTMAPPING)
       // GreyBox.enforce(memory)
       // rebuilt.connect(memory, task, "contained", EdgeTrait.VISUALIZATION_VISUALCONTAINMENT)
     })
     dataBlockMapping.zipWithIndex.foreach((mapping, i) => {
-      val j       = output.getIntVal(mapping)
-      val channel = sourceForSyDeDecisionModel.taskModel.dataBlocks(i)
-      val memory  = sourceForSyDeDecisionModel.schedHwModel.hardware.storageElems(j)
+      val j       = mapping.getValue() // output.getIntVal(mapping)
+      val channel = dse.taskModel.dataBlocks(i)
+      val memory  = dse.schedHwModel.hardware.storageElems(j)
       MemoryMapped.enforce(channel).insertMappingHostsPort(rebuilt, memory)
       // rebuilt.connect(channel, memory, "mappingHost", EdgeTrait.DECISION_ABSTRACTMAPPING)
       GreyBox.enforce(memory).insertContainedPort(rebuilt, Visualizable.enforce(channel))
@@ -489,9 +405,9 @@ final case class PeriodicTaskToSchedHWChoco(
   }
 
   def allMemorySizeNumbers() =
-    (sourceForSyDeDecisionModel.schedHwModel.hardware.storageElems.map(_.getSpaceInBits.toLong) ++
-      sourceForSyDeDecisionModel.taskModel.messageQueuesSizes ++
-      sourceForSyDeDecisionModel.taskModel.taskSizes).filter(_ > 0L)
+    (dse.schedHwModel.hardware.storageElems.map(_.getSpaceInBits.toLong) ++
+      dse.taskModel.messageQueuesSizes ++
+      dse.taskModel.taskSizes).filter(_ > 0L)
 
   val uniqueIdentifier = "PeriodicTaskToSchedHWChoco"
 

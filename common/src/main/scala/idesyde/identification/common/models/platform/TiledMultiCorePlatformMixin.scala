@@ -62,27 +62,29 @@ trait TiledMultiCorePlatformMixin[MemT, TimeT](using fTimeT: Fractional[TimeT])(
       .forEach(e => {
         val src = architectureGraph.getEdgeSource(e)
         val dst = architectureGraph.getEdgeTarget(e)
+        val srcIdx = routerSet.indexOf(src) 
+        val dstIdx = routerSet.indexOf(dst) 
         if (routerSet.contains(dst)) {
           gBuilder.addEdge(
             src,
             dst,
-            architectureGraphMinimumHopTime(src, dst).toDouble + minTraversalTimePerBitPerRouter(
-              dst
+            architectureGraphMinimumHopTime(srcIdx, dstIdx).toDouble + minTraversalTimePerBitPerRouter(
+              dstIdx
             ).toDouble
           )
         } else if (tileSet.contains(dst)) {
-          gBuilder.addEdge(src, dst, architectureGraphMinimumHopTime(src, dst).toDouble)
+          gBuilder.addEdge(src, dst, architectureGraphMinimumHopTime(srcIdx, dstIdx).toDouble)
         }
         if (routerSet.contains(src)) {
           gBuilder.addEdge(
             dst,
             src,
-            architectureGraphMinimumHopTime(dst, src).toDouble + minTraversalTimePerBitPerRouter(
-              src
+            architectureGraphMinimumHopTime(dstIdx, srcIdx).toDouble + minTraversalTimePerBitPerRouter(
+              srcIdx
             ).toDouble
           )
         } else if (tileSet.contains(src)) {
-          gBuilder.addEdge(dst, src, architectureGraphMinimumHopTime(dst, src).toDouble)
+          gBuilder.addEdge(dst, src, architectureGraphMinimumHopTime(dstIdx, srcIdx).toDouble)
         }
       })
     gBuilder.buildAsUnmodifiable()
@@ -95,38 +97,42 @@ trait TiledMultiCorePlatformMixin[MemT, TimeT](using fTimeT: Fractional[TimeT])(
       .forEach(e => {
         val src = architectureGraph.getEdgeSource(e)
         val dst = architectureGraph.getEdgeTarget(e)
+        val srcIdx = routerSet.indexOf(src) 
+        val dstIdx = routerSet.indexOf(dst) 
         if (routerSet.contains(dst)) {
           gBuilder.addEdge(
             src,
             dst,
-            architectureGraphMaximumHopTime(src, dst).toDouble + maxTraversalTimePerBitPerRouter(
-              dst
+            architectureGraphMaximumHopTime(srcIdx, dstIdx).toDouble + maxTraversalTimePerBitPerRouter(
+              dstIdx
             ).toDouble
           )
         } else if (tileSet.contains(dst)) {
-          gBuilder.addEdge(src, dst, architectureGraphMaximumHopTime(src, dst).toDouble)
+          gBuilder.addEdge(src, dst, architectureGraphMaximumHopTime(srcIdx, dstIdx).toDouble)
         }
         if (routerSet.contains(src)) {
           gBuilder.addEdge(
             dst,
             src,
-            architectureGraphMaximumHopTime(dst, src).toDouble + maxTraversalTimePerBitPerRouter(
-              src
+            architectureGraphMaximumHopTime(dstIdx, srcIdx).toDouble + maxTraversalTimePerBitPerRouter(
+              srcIdx
             ).toDouble
           )
         } else if (tileSet.contains(src)) {
-          gBuilder.addEdge(dst, src, architectureGraphMaximumHopTime(dst, src).toDouble)
+          gBuilder.addEdge(dst, src, architectureGraphMaximumHopTime(dstIdx, srcIdx).toDouble)
         }
       })
     gBuilder.buildAsUnmodifiable()
   }
 
   def minTraversalTimePerBit: Array[Array[TimeT]] = {
-    val paths = DijkstraManyToManyShortestPaths(directedAndConnectedMinTimeGraph)
+    val paths = FloydWarshallShortestPaths(directedAndConnectedMinTimeGraph)
     platformSet.zipWithIndex.map((src, i) => {
       platformSet.zipWithIndex.map((dst, j) => {
-        if (i != j && paths.getPath(i, j) != null) {
-          conversion(paths.getPathWeight(i, j))
+        if (i == j) {
+          fTimeT.zero
+        } else if (paths.getPath(src, dst) != null) {
+          conversion(paths.getPathWeight(src, dst))
         } else
           fTimeT.zero - fTimeT.one
       })
@@ -144,11 +150,13 @@ trait TiledMultiCorePlatformMixin[MemT, TimeT](using fTimeT: Fractional[TimeT])(
       true,
       false
     )
-    val paths = DijkstraManyToManyShortestPaths(reversedGraph)
+    val paths = FloydWarshallShortestPaths(reversedGraph)
     platformSet.zipWithIndex.map((src, i) => {
       platformSet.zipWithIndex.map((dst, j) => {
-        if (i != j && paths.getPath(i, j) != null) {
-          conversion(maxWeight - paths.getPathWeight(i, j))
+        if (i == j) {
+          fTimeT.zero
+        } else if (paths.getPath(src, dst) != null) {
+          conversion(maxWeight - paths.getPathWeight(src, dst))
         } else
           fTimeT.zero - fTimeT.one
       })

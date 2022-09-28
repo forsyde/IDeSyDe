@@ -13,11 +13,12 @@ import spire.math.*
 class SimpleWorkloadBalancingDecisionStrategy(
     val schedulers: Array[Int],
     val periods: Array[Rational],
-    val taskExecutions: Array[Array[BoolVar]],
+    val taskExecutions: Array[IntVar],
     val utilizations: Array[IntVar],
-    val durations: Array[Array[IntVar]]
+    val durations: Array[Array[IntVar]],
+    val wcets: Array[Array[Int]]
 )(using Numeric[Rational])
-    extends AbstractStrategy[IntVar]((taskExecutions.flatten): _*) {
+    extends AbstractStrategy[IntVar](taskExecutions: _*) {
 
   val pool = PoolManager[IntDecision]()
 
@@ -40,25 +41,26 @@ class SimpleWorkloadBalancingDecisionStrategy(
       .flatMap((t, i) =>
         schedulers.map(j =>
           (
-            t(j),
+            t,
             i,
             j,
-            // the count is multiplied by 100 so that it has priority over U
-            t.count(_.isInstantiatedTo(1)),
-            utilizations(j).getLB,
-            (periods(i).reciprocal
-              * (100 * durations(i)(j).getLB)).intValue
+            utilizations(j).getLB() + Math.max(durations(i)(j).getLB(), wcets(i)(j)) / periods(
+              i
+            ) + utilizations.zipWithIndex
+              .filter((_, jj) => jj != j)
+              .map((ujj, _) => ujj.getLB())
+              .sum
           )
         )
       )
       // filter tasks that cannot be mapped into j and are still not mapped
-      .filter((t, i, j, n, u, w) => !t.isInstantiated && t.contains(1))
-      // order lexographically by min numTasks (n), then max utilization (u) and min util. increment (w)
-      .minByOption((t, i, j, n, u, w) => (n, 100 - u, w))
-      .map((t, i, j, n, u, w) => {
-        // scribe.debug(s"choosing ${i} -> ${j} due to ${w}")
+      .filter((t, i, j, u) => !t.isInstantiated() && t.contains(j))
+      // order lexographically by max utilization (u), min numTasks (n), min util. increment (w)
+      .minByOption((t, i, j, u) => u)
+      .map((t, i, j, u) => {
+        // println(s"choosing ${i} -> ${j} due to ($n, $u)")
         // scribe.debug(s"range for ${i}: ${taskExecutions(i).getLB} : ${taskExecutions(i).getUB}")
-        d.set(t, 1, DecisionOperatorFactory.makeIntEq)
+        d.set(t, j, DecisionOperatorFactory.makeIntEq)
         d
       })
       .getOrElse(null)

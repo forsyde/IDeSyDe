@@ -63,8 +63,8 @@ trait ParametricRateDataflowWorkloadMixin {
     *
     * This is important to correctly calculate repetition vectors in analytical methods.
     */
-  def numDisjointComponents: Array[Int] = dataflowGraphs.map(g => {
-    ConnectivityInspector(AsUndirectedGraph(g)).connectedSets().size()
+  def disjointComponents: Array[Array[Array[Int]]] = dataflowGraphs.map(g => {
+    ConnectivityInspector(AsUndirectedGraph(g)).connectedSets().asScala.map(s => s.asScala.toArray).toArray
   })
 
   def computeBalanceMatrices = dataflowGraphs.map(g => {

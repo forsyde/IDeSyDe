@@ -14,10 +14,14 @@ import org.chocosolver.solver.constraints.`extension`.Tuples
 import idesyde.utils.CoreUtils.wfor
 import idesyde.identification.forsyde.models.mixed.SDFToSchedTiledHW
 import org.chocosolver.solver.Model
+import idesyde.identification.choco.models.SingleProcessSingleMessageMemoryConstraintsModule
+import idesyde.identification.choco.models.TileAsyncInterconnectCommsModule
 
 class SDFSASAnalysisModule(
     val chocoModel: Model,
     val sdfAndSchedulers: SDFToSchedTiledHW,
+    val memoryMappingModule: SingleProcessSingleMessageMemoryConstraintsModule,
+    val tileAsyncModule: TileAsyncInterconnectCommsModule,
     val maxSlots: Int,
     val timeFactor: Long = 1L
 ) extends ChocoModelMixin {
@@ -34,7 +38,7 @@ class SDFSASAnalysisModule(
   private val maxRepetitionsPerActors     = sdfAndSchedulers.sdfApplications.sdfRepetitionVectors
   private def isSelfConcurrent(aIdx: Int) = sdfAndSchedulers.sdfApplications.isSelfConcurrent(aIdx)
 
-  private val slotRange               = 0 until maxSlots
+  private val slotRange               = (0 until maxSlots).toArray
   private val maximumTokensPerChannel = sdfAndSchedulers.sdfApplications.pessimisticTokensPerChannel
 
   val invThroughputs: Array[IntVar] = schedulers
@@ -46,13 +50,17 @@ class SDFSASAnalysisModule(
         true
       )
     )
+  private val slotThroughput: Array[Array[IntVar]] = schedulers
+    .map(p =>
+      slotRange.map(s => chocoModel.intVar(s"slotThroughput($p, $s)", 0, invThroughputs(p).getUB(), true))
+    )
   val slotFinishTime: Array[Array[IntVar]] = schedulers
     .map(p =>
-      actors.map(s => chocoModel.intVar(s"finishTime($p, $s)", 0, invThroughputs(p).getUB(), true))
+      slotRange.map(s => chocoModel.intVar(s"finishTime($p, $s)", 0, invThroughputs(p).getUB(), true))
     )
   val slotStartTime: Array[Array[IntVar]] = schedulers
     .map(p =>
-      actors.map(s => chocoModel.intVar(s"startTime($p, $s)", 0, invThroughputs(p).getUB(), true))
+      slotRange.map(s => chocoModel.intVar(s"startTime($p, $s)", 0, invThroughputs(p).getUB(), true))
     )
   val globalInvThroughput =
     chocoModel.intVar(
@@ -83,28 +91,7 @@ class SDFSASAnalysisModule(
           .toArray
       })
     })
-  // val tokensBefore: Array[Array[IntVar]] =
-  //   channels.zipWithIndex.map((c, i) => {
-  //     slotRange
-  //       .map(s =>
-  //         if (s > 0) {
-  //           chocoModel
-  //             .intVar(
-  //               s"tokensBefore($c,$s)",
-  //               0,
-  //               maximumTokensPerChannel(i),
-  //               true
-  //             )
-  //         } else {
-  //           chocoModel
-  //             .intVar(
-  //               s"tokensBefore($c,$s)",
-  //               initialTokens(i)
-  //             )
-  //         }
-  //       )
-  //       .toArray
-  //   })
+
   val tokens: Array[Array[IntVar]] =
     channels.zipWithIndex.map((c, i) => {
       slotRange
@@ -200,46 +187,50 @@ class SDFSASAnalysisModule(
       val actorFirings = actors.map(a => firingsInSlots(a)(p)(s))
       val duration = chocoModel.intVar(s"slotDur($p,$s)", 0, slotFinishTime.head.last.getUB(), true)
       chocoModel.scalar(actorFirings, actors.map(a => actorDuration(a)(p)), "=", duration).post()
-      slotFinishTime(p)(s).eq(duration.add(slotStartTime(p)(s))).decompose().post()
+      chocoModel.arithm(slotFinishTime(p)(s), "=", duration, "+", slotStartTime(p)(s)).post()
+      // slotFinishTime(p)(s).eq(duration.add(slotStartTime(p)(s))).decompose().post()
       if (s > 0) {
-        slotStartTime(p)(s).ge(slotFinishTime(p)(s - 1)).decompose().post()
+        chocoModel.arithm(slotStartTime(p)(s), ">=", slotFinishTime(p)(s - 1)).post()
+        // and now local throughput
+        chocoModel.arithm(slotThroughput(p)(s), ">=", duration, "+", slotThroughput(p)(s - 1)).post()
+        chocoModel.arithm(slotThroughput(p)(s), ">=", slotFinishTime(p)(s), "-", slotStartTime(p)(s)).post()
         // now take care of communications
-        // for (c <- 0 until balanceMatrix.size; if consMat(c)()) {
-        //   val previousActorFirings = actors.map(a => firingsInSlots(a)(pOther)(s - 1))
-        //   val consumed = chocoModel.intVar(s"cons($p, $s)", 0, maximumTokensProducedVal, true)
-        //   val produced =
-        //     chocoModel.intVar(s"prod($pOther, ${s - 1})", 0, maximumTokensProducedVal, true)
-        //   val diffVar = chocoModel.intVar(s"diff($pOther,$p,$s)", 0, maximumTokensProducedVal, true)
-        //   chocoModel.scalar(previousActorFirings, prodMat(c), "=", produced).post()
-        //   chocoModel.scalar(actorFirings, consMat(c), "=", consumed).post()
-        //   diffVar.eq(consumed.sub(produced)).decompose().post()
-        //   // val diffSum = chocoModel.sum(s"diff($pOther,$p,$s)", firingsInSlots()
-        //   chocoModel.ifThen(
-        //     channelsCommunicate(c)(pOther)(p).and(diffVar.gt(0)).decompose(),
-        //     slotStartTime(p)(s)
-        //       .ge(slotFinishTime(p)(s - 1).add(channelsTravelTime(c)(pOther)(p).mul(diffVar)))
-        //       .decompose()
-        //   )
-        // }
+        for (a <- actors) {
+          val fetchTimes = actors.filter(_ != a).flatMap(aOther =>
+            channels.zipWithIndex.filter((_, c) => balanceMatrix(c)(aOther) > 0 && balanceMatrix(c)(a) < 0).flatMap((_, c) =>
+              schedulers.filter(pOther => pOther != p).map(pOther =>
+                tileAsyncModule.messageTravelDuration(c)(pOther)(p).mul(firingsInSlots(aOther)(pOther)(s - 1)).intVar()
+              )  
+            )  
+          )
+          val serialFetchTimes = chocoModel.sum(s"serialFetchTime($s, $p)", fetchTimes:_*)
+          chocoModel.ifThen(
+            chocoModel.arithm(firingsInSlots(a)(p)(s), ">", 0),
+            chocoModel.arithm(slotStartTime(p)(s), ">=", slotFinishTime(p)(s - 1), "+", serialFetchTimes)
+          )
+        }
       } else {
-        slotStartTime(p)(s).eq(0).decompose().post()
+        chocoModel.arithm(slotStartTime(p)(0), "=", 0).post()
+        chocoModel.arithm(slotThroughput(p)(0), "=", duration).post()
       }
     }
-    // println("done!!!!")
     // throughput
-    val thPropagator = SDFLikeThroughputPropagator(
-      firingsInSlots,
-      slotStartTime,
-      slotFinishTime,
-      invThroughputs,
-      globalInvThroughput
-    )
-    chocoModel.post(
-      new Constraint(
-        "global_th_sdf_prop",
-        thPropagator
-      )
-    )
+    chocoModel.max(globalInvThroughput, slotThroughput.flatten).post()
+    
+
+    // val thPropagator = SDFLikeThroughputPropagator(
+    //   firingsInSlots,
+    //   slotStartTime,
+    //   slotFinishTime,
+    //   invThroughputs,
+    //   globalInvThroughput
+    // )
+    // chocoModel.post(
+    //   new Constraint(
+    //     "global_th_sdf_prop",
+    //     thPropagator
+    //   )
+    // )
     // time
     // val timePropagator = SDFLikeTimingPropagator(
     //   actorDuration,

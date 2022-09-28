@@ -33,12 +33,15 @@ final case class ChocoSDFToSChedTileHWSlowest(
 
   // section for time multiplier calculation
   val timeValues =
-    (dse.wcets.flatten)
+    (dse.wcets.flatten ++ dse.platform.tiledDigitalHardware.maxTraversalTimePerBitPerRouter)
   var timeMultiplier = 1L
   while (
     timeValues
       .map(t => t * (timeMultiplier))
-      .exists(d => d.doubleValue < 1) && timeMultiplier < Int.MaxValue / 4
+      .exists(d => d.numerator <= d.denominator) // ensure that the numbers magnitudes still stay sane
+      &&
+      timeValues
+      .map(t => t * (timeMultiplier)).sum < Int.MaxValue / 10 - 1
   ) {
     timeMultiplier *= 10
   }
@@ -84,6 +87,8 @@ final case class ChocoSDFToSChedTileHWSlowest(
   val sdfAnalysisModule = SDFSASAnalysisModule(
     chocoModel,
     dse,
+    memoryMappingModule,
+    tileAnalysisModule,
     dse.sdfApplications.actors.size,
     timeMultiplier
   )
@@ -240,14 +245,8 @@ final case class ChocoSDFToSChedTileHWSlowest(
   def rebuildFromChocoOutput(output: Solution): ForSyDeSystemGraph = {
     val paths = tileAnalysisModule.commElemsPaths
     val channelToRouters = dse.sdfApplications.channels.zipWithIndex.map((c, i) => {
-      dse.platform.tiledDigitalHardware.routerSet.map(j => {
-        dse.platform.tiledDigitalHardware.tileSet.zipWithIndex.exists((_, src) =>
-          dse.platform.tiledDigitalHardware.tileSet.zipWithIndex.exists((_, dst) =>
-            paths(src)(dst).contains(j) && output.getIntVal(
-              tileAnalysisModule.messageIsCommunicated(i)(src)(dst)
-            ) > 0
-          )
-        )
+      dse.platform.tiledDigitalHardware.routerSet.zipWithIndex.map((ce, j) => {
+        output.getIntVal(tileAnalysisModule.virtualChannelForMessage(i)(j)) > 0
       })
     })
     // println(dse.platform.tiledDigitalHardware.routerPaths.map(_.map(_.mkString("[", ", ", "]")).mkString("[", ", ", "]")).mkString("[", "\n", "]"))

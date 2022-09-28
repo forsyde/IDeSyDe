@@ -88,4 +88,16 @@ object CoreUtils {
         loopBody(a)
         a = advance(a)
   
+    /**
+      * A simple function to get the ceil of two longs since the standard library
+      * only provides a reliable function for floor ([[Math.floorDiv]]).
+      *
+      * @param numerand
+      * @param dividend
+      * @return the ceil of the numerand and the dividend
+      */
+    def ceil(numerand: Long, dividend: Long): Long = {
+        if (numerand % dividend > 0) then (numerand / dividend) + 1
+        else numerand / dividend
+    }
 }

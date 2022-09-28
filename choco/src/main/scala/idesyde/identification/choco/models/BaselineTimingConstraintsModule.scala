@@ -4,33 +4,28 @@ import idesyde.identification.choco.interfaces.ChocoModelMixin
 import org.chocosolver.solver.variables.IntVar
 import org.chocosolver.solver.variables.BoolVar
 import spire.math.*
+import org.chocosolver.solver.Model
 
-trait BaselineTimingConstraintsMixin extends ChocoModelMixin {
+class BaselineTimingConstraintsModule(
+  val chocoModel: Model,
+  val priorities: Array[Int],
+  val periods: Array[Rational],
+  val maxUtilizations: Array[Rational],
+  val durations: Array[Array[IntVar]],
+  val taskExecution: Array[IntVar],
+  val blockingTimes: Array[IntVar],
+  val responseTimes: Array[IntVar]
+) extends ChocoModelMixin {
 
-  def priorities: Array[Int]
-  def periods: Array[Rational]
-  def maxUtilizations: Array[Rational]
-  def durations: Array[Array[IntVar]]
-  def taskExecution: Array[Array[BoolVar]]
-  def blockingTimes: Array[IntVar]
-  def responseTimes: Array[IntVar]
+  private val processors = 0 until maxUtilizations.size
 
-  val processors = 0 until maxUtilizations.size
-
-  lazy val utilizations = maxUtilizations
+  val utilizations = maxUtilizations
     .map(_ * (100))
     .map(_.ceil.toInt)
     .zipWithIndex
     .map((maxU, j) => {
-      chocoModel.intVar(s"pe_${j}_utilization", 0, maxU)
+      chocoModel.intVar(s"pe_${j}_utilization", 0, maxU, true)
     })
-
-//   lazy val peUtilizations = maxUtilizations
-//       .map(_.multiply(100).doubleValue.ceil.toInt)
-//       .zipWithIndex
-//       .map((maxU, j) => {
-//           chocoModel.intVar(s"pe_${j}_utilization", 0, maxU)
-//       })
 
   def postMinimalResponseTimesByBlocking(): Unit = {
     responseTimes.zipWithIndex.foreach((r, i) => {
@@ -39,7 +34,7 @@ trait BaselineTimingConstraintsMixin extends ChocoModelMixin {
     durations.zipWithIndex.foreach((w, i) => {
       (0 until maxUtilizations.length).map(j => {
         chocoModel.ifThen(
-          taskExecution(i)(j),
+          taskExecution(i).eq(j).decompose(),
           responseTimes(i).ge(blockingTimes(i).add(w(j))).decompose
         )
       })
@@ -55,7 +50,7 @@ trait BaselineTimingConstraintsMixin extends ChocoModelMixin {
           .scalar(
             durations.map(d => d(j)),
             durations.zipWithIndex
-              .map((_, i) => (Rational(100) / (periods(i))).toInt),
+              .map((_, i) => (100 / (periods(i))).toInt),
             "<=",
             utilizations(j)
           )
@@ -64,9 +59,9 @@ trait BaselineTimingConstraintsMixin extends ChocoModelMixin {
       })
   }
 
-  def postTaskMapToAtLeastOne(): Unit = {
-    taskExecution.zipWithIndex.foreach((ts, i) => chocoModel.sum(ts, ">", 0).post)
-  }
+  // def postTaskMapToAtLeastOne(): Unit = {
+  //   taskExecution.zipWithIndex.foreach((ts, i) => chocoModel.sum(ts, ">", 0).post)
+  // }
 
 //   class UtilizationPropagator() extends Propagator[IntVar](
 //         taskExecution ++  ++ durations.flatten,

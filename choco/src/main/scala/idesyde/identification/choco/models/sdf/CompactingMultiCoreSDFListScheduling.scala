@@ -13,9 +13,10 @@ import idesyde.utils.CoreUtils.wfor
 import idesyde.utils.CoreUtils
 import idesyde.identification.forsyde.models.sdf.SDFApplication
 
-class CommAwareMultiCoreSDFListScheduling(
+class CompactingMultiCoreSDFListScheduling(
     val sdfApplications: SDFApplication,
     val actorDuration: Array[Array[Int]],
+    val tileDistances: Array[Array[Int]],
     val firingsInSlots: Array[Array[Array[IntVar]]],
     val invThroughputs: Array[IntVar],
     val globalInvThroughput: IntVar
@@ -35,11 +36,6 @@ class CommAwareMultiCoreSDFListScheduling(
   private val mat     = DenseMatrix(sdfApplications.sdfBalanceMatrix: _*)
   private val consMat = mat.map(v => if (v < 0) then v else 0)
   private val prodMat = mat.map(v => if (v > 0) then v else 0)
-  // private val schedulerWhiteListing = Array.fill(numSchedulers)(true)
-
-  // val firingVector: Array[SparseVector[Int]] = slots.map(slot => SparseVector.zeros[Int](actors.size)).toArray
-
-  // var parallelism = 0
 
   val pool = PoolManager[IntDecision]()
 
@@ -64,38 +60,36 @@ class CommAwareMultiCoreSDFListScheduling(
     * @param slot
     *   @return whether firing the actor at this scheduler and slot can produce a self-contention
     */
-  def canBuildSelfLoop(actor: Int)(scheduler: Int)(slot: Int): Boolean = {
+  def calculateDistanceScore(actor: Int)(scheduler: Int)(slot: Int): Int = {
+    var score = 0
+    val disjointComponentActor = sdfApplications.sdfDisjointComponents.indexWhere(comp => comp.contains(actor))
+    // first calculate the distance from current slot to dependent ones
     wfor(0, _ < numActors, _ + 1) { a =>
-      // check whether a is a predecessor of actor in the same slot and scheduler
-      if (a != actor && followsClosure(a)(actor)) {
-        wfor(0, _ < slot, _ + 1) { slotA =>
-          if (
-            firingsInSlots(a)(scheduler)(slotA)
-              .isInstantiated() && firingsInSlots(a)(scheduler)(slotA).getLB() > 0
-          ) {
-            wfor(0, _ < numActors, _ + 1) { aAway =>
-              // find another remote actor which might have already fired
-              if (aAway != a && followsClosure(aAway)(actor) && followsClosure(a)(aAway)) {
-                // start at scheduler to check if the predecessor 'a' is already part of the feed-forward path
-                wfor(0, _ < numSchedulers, _ + 1) { p =>
-                  if (p != scheduler) {
-                    wfor(slotA, _ < slot, _ + 1) { s =>
-                      if (
-                        firingsInSlots(aAway)(p)(s)
-                          .isInstantiated() && firingsInSlots(aAway)(p)(s).getLB() > 0
-                      ) {
-                        return true
-                      }
-                    }
-                  }
-                }
-              }
+      val disjointComponentA = sdfApplications.sdfDisjointComponents.indexWhere(comp => comp.contains(a))
+      // check whether a is a predecessor of actor in previous slots
+      if (a != actor && disjointComponentA == disjointComponentActor) {
+        wfor(0, _ <= slot, _ + 1) { slotA =>
+          wfor(0, _ < numSchedulers, _ + 1) { p =>
+            if (
+              firingsInSlots(a)(p)(slotA).isInstantiated() && firingsInSlots(a)(p)(slotA).getLB() > 0
+            ) {
+              score += tileDistances(p)(scheduler)
             }
           }
         }
       }
+      // now check for higher distances in the same slot
+      else if (a != actor && disjointComponentA != disjointComponentActor) {
+        wfor(0, _ < numSchedulers, _ + 1) { p =>
+          if (
+            p != scheduler && firingsInSlots(a)(p)(slot).isInstantiated() && firingsInSlots(a)(p)(slot).getLB() > 0
+          ) {
+            score -= tileDistances(p)(scheduler)
+          }
+        }
+      }
     }
-    return false
+    score
   }
 
   private def availableActors(slot: Int): Int = {
@@ -116,6 +110,13 @@ class CommAwareMultiCoreSDFListScheduling(
   def getDecision(): Decision[IntVar] = {
     // val schedulersShuffled = Random.shuffle(schedulers)
     // normal
+    var bestACompact     = -1
+    var bestPCompact     = -1
+    var bestQCompact     = -1
+    var bestSlotCompact  = slots.size
+    var bestScoreCompact = Int.MaxValue
+    var bestCompactMetric = Int.MaxValue
+    // normal not-compact
     var bestA     = -1
     var bestP     = -1
     var bestQ     = -1
@@ -141,18 +142,6 @@ class CommAwareMultiCoreSDFListScheduling(
     if (d == null) d = IntDecision(pool)
     // println(s"deciding at $earliestOpen with $horizon")
     wfor(earliestOpen, it => it < numSlots && it <= earliestOpen + horizon, _ + 1) { s =>
-      // first check if slot s-1 has any firings,
-      // var previousHasFires = false
-      // if (s > 0) {
-      //   wfor(0, _ < schedulers.size && !previousHasFires, _ + 1) { p =>
-      //     wfor(0, _ < actors.size && !previousHasFires, _ + 1) { a =>
-      //       previousHasFires = previousHasFires || (firingsInSlots(a)(p)(s - 1).isInstantiated() && firingsInSlots(a)(p)(s - 1).getLB() > 0)
-      //     }
-      //   }
-      // } else {
-      //   previousHasFires = true
-      // }
-      // now get the best firing based on that
       wfor(0, _ < schedulers.size, _ + 1) { p =>
         wfor(0, _ < actors.size, _ + 1) { a =>
           if (firingsInSlots(a)(p)(s).getUB() > 0 && !firingsInSlots(a)(p)(s).isInstantiated()) {
@@ -162,14 +151,24 @@ class CommAwareMultiCoreSDFListScheduling(
               // chains of lexographic greedy objectives
               score = invThroughputs(p).getLB() + actorDuration(a)(p) * q
               val globalScore = Math.max(score, globalInvThroughput.getLB())
-              if (!canBuildSelfLoop(a)(p)(s)) {
-                if (s < bestSlot || (s == bestSlot && globalScore < bestScore)) { // this ensures we load the same cpu first
-                  bestA = a
-                  bestP = p
-                  bestQ = q
-                  bestSlot = s
-                  bestScore = globalScore
-                }
+              val antiCompactness = calculateDistanceScore(a)(p)(s)
+              if (s < bestSlot || 
+                (s == bestSlot && antiCompactness < bestCompactMetric) ||
+                (s == bestSlot && antiCompactness == bestCompactMetric && globalScore < bestScoreCompact)
+              ) { // this ensures we load the same cpu first
+                bestACompact = a
+                bestPCompact = p
+                bestQCompact = q
+                bestSlotCompact = s
+                bestScoreCompact = globalScore
+                bestCompactMetric = antiCompactness
+              }
+              if (s < bestSlot || (s == bestSlot && globalScore < bestScore)) { // this ensures we load the same cpu first
+                bestA = a
+                bestP = p
+                bestQ = q
+                bestSlot = s
+                bestScore = globalScore
               }
               if (globalScore < bestScorePenalized) {
                 bestAPenalized = a
@@ -187,11 +186,16 @@ class CommAwareMultiCoreSDFListScheduling(
     // recomputeMethods.slotsPrettyPrint()
     // recomputeMethods.schedulePrettyPrint()
     // println(invThroughputs.map(_.getLB()).mkString(", ") + " ;; " + globalInvThroughput.getLB())
+    // println("bestCompact:  " + (bestACompact, bestPCompact, bestSlotCompact, bestQCompact, bestScoreCompact, bestCompactMetric))
     // println("best:  " + (bestA, bestP, bestSlot, bestQ, bestScore))
     // println(
     //   "bestPenalized:  " + (bestAPenalized, bestPPenalized, bestSlotPenalized, bestQPenalized, bestScorePenalized)
     // )
-    if (bestQ > 0) {
+    if (bestQCompact > 0) {
+      // println("adding it!")
+      d.set(firingsInSlots(bestACompact)(bestPCompact)(bestSlotCompact), bestQCompact, DecisionOperatorFactory.makeIntEq())
+      d
+    } else if (bestQ > 0) {
       // println("adding it!")
       d.set(firingsInSlots(bestA)(bestP)(bestSlot), bestQ, DecisionOperatorFactory.makeIntEq())
       d
@@ -202,7 +206,6 @@ class CommAwareMultiCoreSDFListScheduling(
         DecisionOperatorFactory.makeIntEq()
       )
       d
-      // println("returning null")
     } else {
       null
     }

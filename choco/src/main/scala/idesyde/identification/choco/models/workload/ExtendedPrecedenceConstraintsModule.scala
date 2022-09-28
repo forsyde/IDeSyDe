@@ -1,28 +1,32 @@
-package idesyde.identification.choco.models
+package idesyde.identification.choco.models.workload
 
 import idesyde.identification.choco.interfaces.ChocoModelMixin
 import org.chocosolver.solver.variables.IntVar
 import org.jgrapht.graph.DefaultEdge
 import org.jgrapht.Graph
 import org.chocosolver.solver.variables.BoolVar
+import org.chocosolver.solver.Model
 
-trait ExtendedPrecedenceConstraintsMixin extends ChocoModelMixin {
+class ExtendedPrecedenceConstraintsModule(
+  val chocoModel: Model,
+  val taskExecution: Array[IntVar],
+  val responseTimes: Array[IntVar],
+  val blockingTimes: Array[IntVar],
+  val canBeFollowedBy: Array[Array[Boolean]]
+) extends ChocoModelMixin {
 
-  def taskExecution: Array[Array[BoolVar]]
-  def responseTimes: Array[IntVar]
-  def blockingTimes: Array[IntVar]
-  def canBeFollowedBy: Array[Array[Boolean]]
+  private val processors = (0 until taskExecution.map(v => v.getUB()).max).toArray
 
   def postInterProcessorBlocking(): Unit = {
     canBeFollowedBy.zipWithIndex.foreach((arr, src) =>
       arr.zipWithIndex
         .filter((possible, _) => possible)
         .foreach((_, dst) =>
-          (0 until taskExecution.head.length).foreach(processorsIdx =>
+          processors.foreach(processorsIdx =>
             chocoModel.ifThen(
               // if the mappings differ in at least one processor
-              taskExecution(dst)(processorsIdx)
-                .and(taskExecution(src)(processorsIdx).not)
+              taskExecution(dst).eq(processorsIdx)
+                .and(taskExecution(src).ne(processorsIdx))
                 .decompose,
               blockingTimes(dst).ge(responseTimes(src)).decompose
             )

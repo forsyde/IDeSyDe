@@ -103,6 +103,10 @@ class TileAsyncInterconnectCommsModule(
         messageIsCommunicated(c)(src)(dst),
         chocoModel.arithm(virtualChannelForMessage(c)(commElems.indexOf(ce)), ">", 0)
       )
+      // chocoModel.ifThen(
+      //   chocoModel.arithm(messageIsCommunicated(c)(src)(dst), "=", 0),
+      //   chocoModel.arithm(virtualChannelForMessage(c)(commElems.indexOf(ce)), "=", 0)
+      // )
     }
     // if two communicating actors are in different tiles,
     // they must communicate

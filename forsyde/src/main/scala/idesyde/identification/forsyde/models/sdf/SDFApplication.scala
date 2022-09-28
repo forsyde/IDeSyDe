@@ -151,6 +151,8 @@ final case class SDFApplication(
       .orElse(0L)
   )
 
+  val sdfDisjointComponents = disjointComponents.head
+
   override val uniqueIdentifier = "SDFApplication"
 
 }

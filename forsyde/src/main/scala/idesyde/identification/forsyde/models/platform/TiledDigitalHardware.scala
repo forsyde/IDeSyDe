@@ -79,7 +79,7 @@ final case class TiledDigitalHardware(
         .orElse(Map.empty[String, Map[String, Rational]])
     })
 
-  val maxTraversalTimePerBitPerRouter: Array[Rational] = networkInterfaces.map(ni => {
+  val maxTraversalTimePerBitPerRouter: Array[Rational] = (networkInterfaces ++ routers).map(ni => {
     InstrumentedCommunicationModule
       .safeCast(ni)
       .map(insce =>
@@ -93,7 +93,7 @@ final case class TiledDigitalHardware(
       .orElse(Rational.zero)
   })
 
-  val minTraversalTimePerBitPerRouter: Array[Rational] = networkInterfaces.map(ni => {
+  val minTraversalTimePerBitPerRouter: Array[Rational] = (networkInterfaces ++ routers).map(ni => {
     InstrumentedCommunicationModule
       .safeCast(ni)
       .map(insce =>

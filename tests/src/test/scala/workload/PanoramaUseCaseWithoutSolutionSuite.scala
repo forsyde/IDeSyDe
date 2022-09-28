@@ -69,9 +69,8 @@ class PanoramaUseCaseWithoutSolutionSuite extends AnyFunSuite with LoggingMixin 
             forSyDeModelHandler
               .writeModel(model.merge(sol), "tests/models/panorama/wrong_output_of_dse.fiodl")
             sol
-          )
+          ).take(1)
       )
-      .take(1)
     assert(solutions.size == 0)
   }
 

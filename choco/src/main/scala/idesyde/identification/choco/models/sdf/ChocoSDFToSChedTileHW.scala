@@ -78,15 +78,15 @@ final case class ChocoSDFToSChedTileHW(
 
   override val strategies: Array[AbstractStrategy[? <: Variable]] = Array(
     listScheduling,
-    Search.minDomLBSearch(slower.nUsedPEs),
-    Search.minDomLBSearch(slower.sdfAnalysisModule.globalInvThroughput),
     Search.minDomLBSearch(slower.sdfAnalysisModule.invThroughputs:_*),
     Search.minDomLBSearch(slower.sdfAnalysisModule.slotStartTime.flatten:_*),
     Search.minDomLBSearch(slower.sdfAnalysisModule.slotFinishTime.flatten:_*),
     Search.minDomLBSearch(slower.tileAnalysisModule.virtualChannelForMessage.flatten:_*),
     Search.minDomLBSearch(slower.tileAnalysisModule.messageIsCommunicated.flatten.flatten:_*),
-    Search.minDomLBSearch(slower.tileAnalysisModule.messageTravelDuration.flatten.flatten:_*)
-  ) ++ slower.strategies
+    Search.minDomLBSearch(slower.tileAnalysisModule.messageTravelDuration.flatten.flatten:_*),
+    Search.minDomLBSearch(slower.nUsedPEs),
+    Search.minDomLBSearch(slower.sdfAnalysisModule.globalInvThroughput)
+  )
 
   //---------
 

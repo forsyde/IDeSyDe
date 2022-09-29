@@ -72,27 +72,21 @@ lazy val cli = (project in file("cli"))
   .dependsOn(forsyde)
   .dependsOn(minizinc)
   // .enablePlugins(ScalaNativePlugin)
-  .enablePlugins(UniversalPlugin, JavaAppPackaging)
+  .enablePlugins(UniversalPlugin, JavaAppPackaging//), JlinkPlugin)
   .settings(
     Compile / mainClass := Some("idesyde.IDeSyDeStandalone"),
     libraryDependencies ++= Seq(
       "com.github.scopt" %% "scopt"  % "4.0.1",
       "com.outr"         %% "scribe" % scribeVersion
     ),
-    maintainer := "jordao@kth.se",
-    // taken from https://www.scala-sbt.org/sbt-native-packager/archetypes/jlink_plugin.html
+    maintainer := "jordao@kth.se"
+    // taken and adapted from https://www.scala-sbt.org/sbt-native-packager/archetypes/jlink_plugin.html
     // jlinkModulePath := {
-    //   // Get the full classpath with all the resolved dependencies.
-    //   jlinkBuildImage / fullClasspath
-    //     .filter { item =>
-    //       item.get(moduleID.key).exists { modId =>
-    //         modId.name == "jheaps" 
-    //       } ||
-    //       item.get(moduleID.key).exists { modId =>
-    //         modId.name == "commons-text"
-    //       }
-    //     }
-    //     .map(_.data)
+    //   val paths = (jlinkBuildImage / fullClasspath).value
+    //   paths.filter(f => {
+    //     f.get(moduleID.key).exists(mID => mID.name.contains("jheaps")) ||
+    //     f.get(moduleID.key).exists(mID => mID.name.contains("commons-text"))
+    //   }).map(_.data)
     // }
   )
 

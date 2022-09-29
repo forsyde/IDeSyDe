@@ -72,7 +72,7 @@ lazy val cli = (project in file("cli"))
   .dependsOn(forsyde)
   .dependsOn(minizinc)
   // .enablePlugins(ScalaNativePlugin)
-  .enablePlugins(UniversalPlugin, JavaAppPackaging, JlinkPlugin)
+  .enablePlugins(UniversalPlugin, JavaAppPackaging)
   .settings(
     Compile / mainClass := Some("idesyde.IDeSyDeStandalone"),
     libraryDependencies ++= Seq(
@@ -81,19 +81,19 @@ lazy val cli = (project in file("cli"))
     ),
     maintainer := "jordao@kth.se",
     // taken from https://www.scala-sbt.org/sbt-native-packager/archetypes/jlink_plugin.html
-    jlinkModulePath := {
-      // Get the full classpath with all the resolved dependencies.
-      fullClasspath.in(jlinkBuildImage).value
-        .filter { item =>
-          item.get(moduleID.key).exists { modId =>
-            modId.name == "jheaps" 
-          } ||
-          item.get(moduleID.key).exists { modId =>
-            modId.name == "commons-text"
-          }
-        }
-        .map(_.data)
-    }
+    // jlinkModulePath := {
+    //   // Get the full classpath with all the resolved dependencies.
+    //   jlinkBuildImage / fullClasspath
+    //     .filter { item =>
+    //       item.get(moduleID.key).exists { modId =>
+    //         modId.name == "jheaps" 
+    //       } ||
+    //       item.get(moduleID.key).exists { modId =>
+    //         modId.name == "commons-text"
+    //       }
+    //     }
+    //     .map(_.data)
+    // }
   )
 
 lazy val tests = (project in file("tests"))

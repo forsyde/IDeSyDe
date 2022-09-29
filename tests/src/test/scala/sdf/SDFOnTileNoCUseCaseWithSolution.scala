@@ -1022,7 +1022,7 @@ class SDFOnTileNoCUseCaseWithSolution extends AnyFunSuite with LoggingMixin {
     assert(solutions.size >= 1)
   }
 
-  test("Correct identification and DSE of all and small bus platform") {
+  test("Correct identification and DSE of all and small bus platform", ResourceHungry) {
     val identified = identificationHandler.identifyDecisionModels(appsAndBusSmall)
     assert(identified.size > 0)
     assert(identified.find(m => m.isInstanceOf[SDFToSchedTiledHW]).isDefined)

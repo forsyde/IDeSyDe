@@ -72,7 +72,7 @@ lazy val cli = (project in file("cli"))
   .dependsOn(forsyde)
   .dependsOn(minizinc)
   // .enablePlugins(ScalaNativePlugin)
-  .enablePlugins(UniversalPlugin, JavaAppPackaging//), JlinkPlugin)
+  .enablePlugins(UniversalPlugin, JavaAppPackaging)//, JlinkPlugin)
   .settings(
     Compile / mainClass := Some("idesyde.IDeSyDeStandalone"),
     libraryDependencies ++= Seq(

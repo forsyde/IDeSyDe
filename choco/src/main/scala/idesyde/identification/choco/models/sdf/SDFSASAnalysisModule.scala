@@ -24,7 +24,7 @@ class SDFSASAnalysisModule(
     val tileAsyncModule: TileAsyncInterconnectCommsModule,
     val maxSlots: Int,
     val timeFactor: Long = 1L
-) extends ChocoModelMixin {
+) extends ChocoModelMixin() {
 
   private val actors: Array[Int]     = sdfAndSchedulers.sdfApplications.actorsSet
   private val channels: Array[Int]   = sdfAndSchedulers.sdfApplications.channelsSet

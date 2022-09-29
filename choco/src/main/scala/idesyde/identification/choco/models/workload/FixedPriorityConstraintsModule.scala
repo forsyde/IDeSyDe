@@ -23,7 +23,7 @@ class FixedPriorityConstraintsModule(
   val responseTimes: Array[IntVar],
   val blockingTimes: Array[IntVar],
   val durations: Array[Array[IntVar]]
-) extends ChocoModelMixin {
+) extends ChocoModelMixin() {
 
 
   def sufficientRMSchedulingPoints(taskIdx: Int): Array[Rational] = Array.empty

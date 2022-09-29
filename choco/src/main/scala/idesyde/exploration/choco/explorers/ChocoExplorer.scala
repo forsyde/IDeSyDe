@@ -109,9 +109,13 @@ class ChocoExplorer() extends ForSyDeIOExplorer:
       if (!chocoCpModel.strategies.isEmpty) {
         solver.setSearch(chocoCpModel.strategies: _*)
       }
-      solver.setLearningSignedClauses
-      solver.setNoGoodRecordingFromRestarts
-      solver.setRestartOnSolutions
+      if (chocoCpModel.shouldLearnSignedClauses) {
+        solver.setLearningSignedClauses
+      } 
+      if (chocoCpModel.shouldRestartOnSolution) {
+        solver.setNoGoodRecordingFromRestarts
+        solver.setRestartOnSolutions
+      }
       LazyList
         .continually(solver.solve())
         // .scanLeft(

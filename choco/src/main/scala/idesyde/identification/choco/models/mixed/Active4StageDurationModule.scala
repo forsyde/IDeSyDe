@@ -20,7 +20,7 @@ class Active4StageDurationModule(
   val dataMapping: Array[IntVar],
   val taskCommunicationMapping: Array[Array[BoolVar]],
   val dataCommunicationMapping: Array[Array[BoolVar]],
-) extends ChocoModelMixin {
+) extends ChocoModelMixin() {
 
   private val tasks = (0 until executionTimes.size).toArray
   private val processors    = (0 until allowedProc2MemoryDataPaths.length).toArray

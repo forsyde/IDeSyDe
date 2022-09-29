@@ -23,11 +23,13 @@ import org.chocosolver.solver.search.strategy.selectors.values.IntDomainMedian
 import org.chocosolver.solver.search.strategy.selectors.values.IntDomainMax
 import idesyde.identification.choco.models.SingleProcessSingleMessageMemoryConstraintsModule
 import org.chocosolver.solver.search.strategy.strategy.FindAndProve
+import idesyde.identification.choco.interfaces.ChocoModelMixin
 
 final case class ChocoSDFToSChedTileHWSlowest(
     val dse: SDFToSchedTiledHW
 )(using Fractional[Rational])
-    extends ChocoCPForSyDeDecisionModel {
+    extends ChocoCPForSyDeDecisionModel
+    with ChocoModelMixin(shouldLearnSignedClauses = false) {
 
   val chocoModel: Model = Model()
 
@@ -217,8 +219,6 @@ final case class ChocoSDFToSChedTileHWSlowest(
   // )
 
   override val strategies: Array[AbstractStrategy[? <: Variable]] = Array(
-    Search.minDomLBSearch(nUsedPEs),
-    Search.minDomLBSearch(sdfAnalysisModule.globalInvThroughput),
     Search.defaultSearch(chocoModel)
   )
 

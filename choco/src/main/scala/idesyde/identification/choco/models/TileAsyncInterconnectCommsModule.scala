@@ -30,7 +30,7 @@ class TileAsyncInterconnectCommsModule(
     val commElemsPaths: Array[Array[Array[Int]]],
     val commElemsMustShareChannel: Array[Array[Boolean]],
     val messagesMapping: Array[IntVar]
-) extends ChocoModelMixin {
+) extends ChocoModelMixin() {
 
   private val numProcElems = procElems.size
   private val numCommElems = commElems.size

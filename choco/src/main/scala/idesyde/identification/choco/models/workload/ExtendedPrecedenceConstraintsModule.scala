@@ -13,7 +13,7 @@ class ExtendedPrecedenceConstraintsModule(
   val responseTimes: Array[IntVar],
   val blockingTimes: Array[IntVar],
   val canBeFollowedBy: Array[Array[Boolean]]
-) extends ChocoModelMixin {
+) extends ChocoModelMixin() {
 
   private val processors = (0 until taskExecution.map(v => v.getUB()).max).toArray
 

@@ -9,7 +9,7 @@ class SingleProcessSingleMessageMemoryConstraintsModule(
     val processSizes: Array[Int],
     val dataSizes: Array[Int],
     val memorySizes: Array[Int]
-) extends ChocoModelMixin {
+) extends ChocoModelMixin() {
 
   private val processes = (0 until processSizes.size).toArray
   private val messages  = (0 until dataSizes.size).toArray

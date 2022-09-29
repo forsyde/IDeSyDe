@@ -15,7 +15,7 @@ class BaselineTimingConstraintsModule(
   val taskExecution: Array[IntVar],
   val blockingTimes: Array[IntVar],
   val responseTimes: Array[IntVar]
-) extends ChocoModelMixin {
+) extends ChocoModelMixin() {
 
   private val processors = 0 until maxUtilizations.size
 

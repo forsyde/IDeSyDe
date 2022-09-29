@@ -43,6 +43,7 @@ import idesyde.identification.choco.models.workload.ExtendedPrecedenceConstraint
 import idesyde.identification.choco.models.workload.FixedPriorityConstraintsModule
 import idesyde.identification.choco.models.mixed.Active4StageDurationModule
 import idesyde.utils.CoreUtils
+import idesyde.identification.choco.interfaces.ChocoModelMixin
 
 // object ConMonitorObj extends IMonitorContradiction {
 
@@ -53,7 +54,8 @@ import idesyde.utils.CoreUtils
 
 final case class PeriodicTaskToSchedHWChoco(
     val dse: PeriodicTaskToSchedHW
-) extends ChocoCPForSyDeDecisionModel {
+) extends ChocoCPForSyDeDecisionModel
+  with ChocoModelMixin() {
 
   val coveredVertexes = dse.coveredVertexes
 

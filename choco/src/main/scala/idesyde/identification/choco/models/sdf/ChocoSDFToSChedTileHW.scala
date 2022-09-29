@@ -24,6 +24,7 @@ import org.chocosolver.solver.search.strategy.strategy.FindAndProve
 import org.chocosolver.solver.constraints.Constraint
 import org.chocosolver.solver.search.loop.monitors.IMonitorContradiction
 import org.chocosolver.solver.exception.ContradictionException
+import idesyde.identification.choco.interfaces.ChocoModelMixin
 
 // object ConMonitorObj extends IMonitorContradiction {
 
@@ -35,7 +36,8 @@ import org.chocosolver.solver.exception.ContradictionException
 final case class ChocoSDFToSChedTileHW(
     val slower: ChocoSDFToSChedTileHWSlowest
 )(using Fractional[Rational])
-    extends ChocoCPForSyDeDecisionModel {
+    extends ChocoCPForSyDeDecisionModel
+    with ChocoModelMixin(shouldLearnSignedClauses = false) {
 
   val chocoModel: Model = slower.chocoModel
 
@@ -74,8 +76,17 @@ final case class ChocoSDFToSChedTileHW(
     )
   }
 
-  override val strategies: Array[AbstractStrategy[? <: Variable]] =
-    listScheduling +: slower.strategies
+  override val strategies: Array[AbstractStrategy[? <: Variable]] = Array(
+    listScheduling,
+    Search.minDomLBSearch(slower.nUsedPEs),
+    Search.minDomLBSearch(slower.sdfAnalysisModule.globalInvThroughput),
+    Search.minDomLBSearch(slower.sdfAnalysisModule.invThroughputs:_*),
+    Search.minDomLBSearch(slower.sdfAnalysisModule.slotStartTime.flatten:_*),
+    Search.minDomLBSearch(slower.sdfAnalysisModule.slotFinishTime.flatten:_*),
+    Search.minDomLBSearch(slower.tileAnalysisModule.virtualChannelForMessage.flatten:_*),
+    Search.minDomLBSearch(slower.tileAnalysisModule.messageIsCommunicated.flatten.flatten:_*),
+    Search.minDomLBSearch(slower.tileAnalysisModule.messageTravelDuration.flatten.flatten:_*)
+  ) ++ slower.strategies
 
   //---------
 

@@ -33,6 +33,11 @@ import forsyde.io.java.kgt.drivers.ForSyDeKGTDriver
 import forsyde.io.java.sdf3.drivers.ForSyDeSDF3Driver
 import java.nio.file.Files
 import java.nio.file.Paths
+import org.scalatest.Tag
+import org.scalatest.Ignore
+
+object ResourceHungry extends Tag("idesyde.tests.ResourceHungry")
+
 
 /** This test suite uses as much as possible the experiments from the paper
   *
@@ -874,7 +879,7 @@ class SDFOnTileNoCUseCaseWithSolution extends AnyFunSuite with LoggingMixin {
     assert(solutions.size >= 1)
   }
 
-  test("Correct identification and DSE of Sobel to Large") {
+  test("Correct identification and DSE of Sobel to Large", ResourceHungry) {
     val inputSystem = sobelSDF3.merge(large5x6PlatformModel)
     val identified  = identificationHandler.identifyDecisionModels(inputSystem)
     val chosen      = explorationHandler.chooseExplorersAndModels(identified)
@@ -1047,7 +1052,7 @@ class SDFOnTileNoCUseCaseWithSolution extends AnyFunSuite with LoggingMixin {
     assert(solutions.size >= 1)
   }
 
-  test("Correct identification and DSE of all and large platform") {
+  test("Correct identification and DSE of all and large platform", ResourceHungry) {
     val identified = identificationHandler.identifyDecisionModels(appsAndLarge)
     assert(identified.size > 0)
     assert(identified.find(m => m.isInstanceOf[SDFToSchedTiledHW]).isDefined)

@@ -32,4 +32,4 @@ jobs:
     - name: Run tests with sbt
       run: |
         cd ${{ github.workspace }}
-        echo "tests/testOnly -- -l idesyde.tests.ResourceHungry; exit" | sbt
+        sbt "tests/testOnly -- -l idesyde.tests.ResourceHungry" 

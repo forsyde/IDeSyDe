@@ -11,9 +11,9 @@ lazy val root = project
   .in(file("."))
   .aggregate(common, cli, choco, forsyde, minizinc)
 
-lazy val core = (project in file("core"))
+lazy val core = (project in file("scala-core"))
 
-lazy val common = (project in file("common"))
+lazy val common = (project in file("scala-common"))
   .dependsOn(core)
   .settings(
     libraryDependencies ++= Seq(
@@ -24,7 +24,7 @@ lazy val common = (project in file("common"))
     )
   )
 
-lazy val forsyde = (project in file("forsyde"))
+lazy val forsyde = (project in file("scala-forsyde"))
   .dependsOn(core)
   .dependsOn(common)
   .settings(
@@ -36,7 +36,7 @@ lazy val forsyde = (project in file("forsyde"))
     )
   )
 
-lazy val minizinc = (project in file("minizinc"))
+lazy val minizinc = (project in file("scala-minizinc"))
   .dependsOn(core)
   .dependsOn(common)
   .dependsOn(forsyde)
@@ -50,7 +50,7 @@ lazy val minizinc = (project in file("minizinc"))
     )
   )
 
-lazy val choco = (project in file("choco"))
+lazy val choco = (project in file("scala-choco"))
   .dependsOn(core)
   .dependsOn(common)
   .dependsOn(forsyde)
@@ -64,7 +64,7 @@ lazy val choco = (project in file("choco"))
     )
   )
 
-lazy val cli = (project in file("cli"))
+lazy val cli = (project in file("scala-cli"))
   .dependsOn(core)
   .dependsOn(common)
   .dependsOn(choco)
@@ -89,7 +89,7 @@ lazy val cli = (project in file("cli"))
     // }
   )
 
-lazy val tests = (project in file("tests"))
+lazy val tests = (project in file("scala-tests"))
   .dependsOn(core)
   .dependsOn(common)
   .dependsOn(choco)

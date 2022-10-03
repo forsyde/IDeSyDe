@@ -9,20 +9,24 @@ import idesyde.identification.forsyde.rules.workload.PeriodicWorkloadIdentificat
 import idesyde.identification.forsyde.rules.mixed.PeriodicTaskToSchedHWIdentRule
 import idesyde.identification.forsyde.rules.reactor.ReactorMinusIdentificationRule
 import java.util.concurrent.Executors
-import idesyde.identification.forsyde.rules.platform.TiledDigitalHardwareIRule.apply
 import idesyde.identification.forsyde.models.platform.SchedulableTiledDigitalHardware
 import idesyde.identification.forsyde.rules.platform.TiledDigitalHardwareIRule
 import idesyde.identification.forsyde.models.mixed.SDFToSchedTiledHW
 import idesyde.identification.IdentificationModule
-import idesyde.implicits.forsyde.given_Fractional_Rational
-import idesyde.implicits.forsyde.given_Conversion_Double_Rational
 import idesyde.identification.forsyde.models.mixed.SDFToExplicitSchedHW
+import spire.math.Rational
+import spire.compat._
+import spire.algebra._
+import spire.math._
 
 class ForSyDeIdentificationModule extends IdentificationModule {
 
+  given Conversion[Double, Rational] = (d) => Rational(d)
+  given Conversion[Int, Rational] = (i) => Rational(i)
+  // given scala.math.Fractional[Rational] = fractional[Rational]
+
   val identificationRules = Set(
     SDFAppIdentificationRule(),
-    // ReactorMinusToJobsRule(),
     NetworkedDigitalHWIdentRule(),
     SchedulableNetDigHWIdentRule(),
     // ReactorMinusAppDSEIdentRule(),

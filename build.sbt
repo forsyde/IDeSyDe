@@ -5,6 +5,7 @@ ThisBuild / scalaVersion := "3.1.3"
 lazy val forsydeIoVersion = "0.5.16"
 lazy val jgraphtVersion   = "1.5.1"
 lazy val scribeVersion    = "3.10.2"
+lazy val breezeVersion = "2.1.0"
 
 lazy val root = project
   .in(file("."))
@@ -18,7 +19,7 @@ lazy val common = (project in file("common"))
     libraryDependencies ++= Seq(
       "org.jgrapht"   % "jgrapht-core" % jgraphtVersion,
       "org.jgrapht"   % "jgrapht-opt"  % jgraphtVersion,
-      "org.scalanlp" %% "breeze"       % "2.0.1-RC1",
+      "org.scalanlp" %% "breeze"       % breezeVersion,
       "com.outr"     %% "scribe"       % scribeVersion
     )
   )
@@ -41,13 +42,11 @@ lazy val minizinc = (project in file("minizinc"))
   .dependsOn(forsyde)
   .settings(
     libraryDependencies ++= Seq(
-      "org.apache.commons" % "commons-math3" % "3.6.1",
       "com.outr"          %% "scribe"        % scribeVersion,
-      "com.lihaoyi"       %% "upickle"       % "1.4.0",
+    "com.lihaoyi"       %% "upickle"       % "1.4.0",
       "org.jgrapht"        % "jgrapht-core"  % jgraphtVersion,
       "org.jgrapht"        % "jgrapht-opt"   % jgraphtVersion,
-      "org.scalanlp"      %% "breeze"        % "2.0.1-RC1",
-      "com.lihaoyi"       %% "upickle"       % "1.4.0"
+      "org.scalanlp"      %% "breeze"        % breezeVersion
     )
   )
 
@@ -114,7 +113,7 @@ lazy val tests = (project in file("tests"))
 // TODO: figure out what is
 ThisBuild / assembly / assemblyMergeStrategy := {
   case PathList("META-INF", xs @ _*) => MergeStrategy.discard
-  case x                             => MergeStrategy.first
+  case x                             => MergeStrategy.first 
 }
 
 // /Compile / resourceDirectory := baseDirectory.value / "resources"

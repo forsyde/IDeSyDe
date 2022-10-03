@@ -15,7 +15,6 @@ import org.chocosolver.solver.variables.Variable
 import idesyde.identification.forsyde.models.mixed.SDFToSchedTiledHW
 import idesyde.identification.forsyde.ForSyDeIdentificationRule
 import spire.math.Rational
-import idesyde.implicits.forsyde.given_Fractional_Rational
 import org.chocosolver.solver.search.strategy.Search
 import org.chocosolver.solver.search.strategy.selectors.variables.Largest
 import org.chocosolver.solver.search.strategy.selectors.values.IntDomainMedian
@@ -99,11 +98,16 @@ final case class ChocoSDFToSChedTileHW(
 
 }
 
-object ChocoSDFToSChedTileHW extends ForSyDeIdentificationRule[ChocoSDFToSChedTileHW] {
+object ChocoSDFToSChedTileHW {
+
+  def identifyFromAny(
+    model: Any,
+    identified: scala.collection.Iterable[DecisionModel]
+  )(using scala.math.Fractional[Rational]): IdentificationResult[ChocoSDFToSChedTileHW] = ForSyDeIdentificationRule.identifyWrapper(model, identified, identifyFromForSyDe)
   def identifyFromForSyDe(
       model: ForSyDeSystemGraph,
       identified: scala.collection.Iterable[DecisionModel]
-  ): IdentificationResult[ChocoSDFToSChedTileHW] = {
+  )(using scala.math.Fractional[Rational]): IdentificationResult[ChocoSDFToSChedTileHW] = {
     identified
       .find(m => m.isInstanceOf[ChocoSDFToSChedTileHWSlowest])
       .map(m => m.asInstanceOf[ChocoSDFToSChedTileHWSlowest])
@@ -114,7 +118,7 @@ object ChocoSDFToSChedTileHW extends ForSyDeIdentificationRule[ChocoSDFToSChedTi
   def identFromForSyDeWithDeps(
       model: ForSyDeSystemGraph,
       slower: ChocoSDFToSChedTileHWSlowest
-  ): IdentificationResult[ChocoSDFToSChedTileHW] = {
+  )(using scala.math.Fractional[Rational]): IdentificationResult[ChocoSDFToSChedTileHW] = {
     IdentificationResult.fixed(ChocoSDFToSChedTileHW(slower))
   }
 

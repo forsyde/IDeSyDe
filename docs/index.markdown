@@ -1,7 +1,7 @@
 ---
 layout: default
 title: Index
-nav_order: 1
+isHome: true
 ---
 
 Welcome to IDeSyDe's documentation page! Here you can find some quick links to help you navigate the documentation

@@ -28,8 +28,8 @@ trait ForSyDeIdentificationRule[M <: ForSyDeDecisionModel] extends Identificatio
 
 object ForSyDeIdentificationRule {
 
-  def identifyWrapper[DesignModel, M <: DecisionModel](
-      model: DesignModel,
+  def identifyWrapper[M <: DecisionModel](
+      model: Any,
       identified: scala.collection.Iterable[DecisionModel],
       irule: (ForSyDeSystemGraph, scala.collection.Iterable[DecisionModel]) => IdentificationResult[M]
   ): IdentificationResult[M] =

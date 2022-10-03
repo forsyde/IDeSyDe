@@ -1,0 +1,3894 @@
+knode forsyde {
+   klabel "ForSyDe Model"
+   knode vtile_0 {
+      klabel "tile_0"
+      knode vtile_cpu_0 {
+         klabel "tile_cpu_0"
+         kport networkInterface {
+            klabel "networkInterface"
+         }
+         kport defaultMemory {
+            klabel "defaultMemory"
+         }
+         knode vtile_os0 {
+            klabel "tile_os0"
+         }
+         kedge ( :networkInterface -> vtile_ni0:tileProcessor)
+         kedge ( :defaultMemory -> vtile_mem0:instructionsAndData)
+         // translation from long to short hierarchy
+         kedge ( :networkInterface -> vtile_ni0:tileProcessor)
+         // translation from long to short hierarchy
+         kedge ( :defaultMemory -> vtile_mem0:instructionsAndData)
+      }
+      knode vtile_mem0 {
+         klabel "tile_mem0"
+         kport networkInterface {
+            klabel "networkInterface"
+         }
+         kport instructionsAndData {
+            klabel "instructionsAndData"
+         }
+         kedge ( :instructionsAndData -> vtile_cpu_0:defaultMemory)
+         kedge ( :networkInterface -> vtile_ni0:tileMemory)
+         // translation from long to short hierarchy
+         kedge ( :networkInterface -> vtile_ni0:tileMemory)
+         // translation from long to short hierarchy
+         kedge ( :instructionsAndData -> vtile_cpu_0:defaultMemory)
+      }
+      knode vtile_ni0 {
+         klabel "tile_ni0"
+         kport to_1_0 {
+            klabel "to_1_0"
+         }
+         kport to_0_1 {
+            klabel "to_0_1"
+         }
+         kport tileProcessor {
+            klabel "tileProcessor"
+         }
+         kport from_1_0 {
+            klabel "from_1_0"
+         }
+         kport from_0_1 {
+            klabel "from_0_1"
+         }
+         kport tileMemory {
+            klabel "tileMemory"
+         }
+         kedge ( :tileProcessor -> vtile_cpu_0:networkInterface)
+         kedge ( :tileMemory -> vtile_mem0:networkInterface)
+         kedge ( :to_1_0 -> vtile_ni1:from_0_0)
+         kedge ( :to_0_1 -> vtile_ni5:from_0_0)
+         // translation from long to short hierarchy
+         kedge ( :tileProcessor -> vtile_cpu_0:networkInterface)
+         // translation from long to short hierarchy
+         kedge ( :to_0_1 -> vtile_0:to_0_1)
+         // translation from long to short hierarchy
+         kedge ( :tileMemory -> vtile_mem0:networkInterface)
+         // translation from long to short hierarchy
+         kedge ( :to_1_0 -> vtile_0:to_1_0)
+      }
+      // port created by long-to-short translation
+      kport from_1_0 {
+         klabel "from_1_0_transformed"
+      }
+      // translation from long to short hierarchy
+      kedge ( :from_1_0 -> vtile_ni0:from_1_0)
+      // port created by long-to-short translation
+      kport to_0_1 {
+         klabel "to_0_1_transformed"
+      }
+      // translation from long to short hierarchy
+      kedge ( :to_0_1 -> vtile_5:from_0_0)
+      // translation from long to short hierarchy
+      kedge ( :from_1_0 -> vtile_ni0:from_1_0)
+      // port created by long-to-short translation
+      kport to_1_0 {
+         klabel "to_1_0_transformed"
+      }
+      // translation from long to short hierarchy
+      kedge ( :to_1_0 -> vtile_1:from_0_0)
+      // port created by long-to-short translation
+      kport from_0_1 {
+         klabel "from_0_1_transformed"
+      }
+      // translation from long to short hierarchy
+      kedge ( :from_0_1 -> vtile_ni0:from_0_1)
+   }
+   knode vtile_1 {
+      klabel "tile_1"
+      knode vtile_cpu_1 {
+         klabel "tile_cpu_1"
+         kport networkInterface {
+            klabel "networkInterface"
+         }
+         kport defaultMemory {
+            klabel "defaultMemory"
+         }
+         knode vtile_os1 {
+            klabel "tile_os1"
+         }
+         kedge ( :networkInterface -> vtile_ni1:tileProcessor)
+         kedge ( :defaultMemory -> vtile_mem1:instructionsAndData)
+         // translation from long to short hierarchy
+         kedge ( :defaultMemory -> vtile_mem1:instructionsAndData)
+         // translation from long to short hierarchy
+         kedge ( :networkInterface -> vtile_ni1:tileProcessor)
+      }
+      knode vtile_mem1 {
+         klabel "tile_mem1"
+         kport networkInterface {
+            klabel "networkInterface"
+         }
+         kport instructionsAndData {
+            klabel "instructionsAndData"
+         }
+         kedge ( :instructionsAndData -> vtile_cpu_1:defaultMemory)
+         kedge ( :networkInterface -> vtile_ni1:tileMemory)
+         // translation from long to short hierarchy
+         kedge ( :networkInterface -> vtile_ni1:tileMemory)
+         // translation from long to short hierarchy
+         kedge ( :instructionsAndData -> vtile_cpu_1:defaultMemory)
+      }
+      knode vtile_ni1 {
+         klabel "tile_ni1"
+         kport to_2_0 {
+            klabel "to_2_0"
+         }
+         kport to_1_1 {
+            klabel "to_1_1"
+         }
+         kport tileProcessor {
+            klabel "tileProcessor"
+         }
+         kport to_0_0 {
+            klabel "to_0_0"
+         }
+         kport from_0_0 {
+            klabel "from_0_0"
+         }
+         kport from_2_0 {
+            klabel "from_2_0"
+         }
+         kport from_1_1 {
+            klabel "from_1_1"
+         }
+         kport tileMemory {
+            klabel "tileMemory"
+         }
+         kedge ( :tileProcessor -> vtile_cpu_1:networkInterface)
+         kedge ( :tileMemory -> vtile_mem1:networkInterface)
+         kedge ( :to_0_0 -> vtile_ni0:from_1_0)
+         kedge ( :to_2_0 -> vtile_ni2:from_1_0)
+         kedge ( :to_1_1 -> vtile_ni6:from_1_0)
+         kedge ( :to_1_1 -> vtile_ni6:from_0_1)
+         // translation from long to short hierarchy
+         kedge ( :to_1_1 -> vtile_1:to_1_1)
+         // translation from long to short hierarchy
+         kedge ( :to_2_0 -> vtile_1:to_2_0)
+         // translation from long to short hierarchy
+         kedge ( :to_1_1 -> vtile_1:to_1_1)
+         // translation from long to short hierarchy
+         kedge ( :to_0_0 -> vtile_1:to_0_0)
+         // translation from long to short hierarchy
+         kedge ( :tileProcessor -> vtile_cpu_1:networkInterface)
+         // translation from long to short hierarchy
+         kedge ( :tileMemory -> vtile_mem1:networkInterface)
+      }
+      // port created by long-to-short translation
+      kport to_1_1 {
+         klabel "to_1_1_transformed"
+      }
+      // translation from long to short hierarchy
+      kedge ( :to_1_1 -> vtile_6:from_1_0)
+      // port created by long-to-short translation
+      kport from_2_0 {
+         klabel "from_2_0_transformed"
+      }
+      // translation from long to short hierarchy
+      kedge ( :from_2_0 -> vtile_ni1:from_2_0)
+      // port created by long-to-short translation
+      kport from_1_1 {
+         klabel "from_1_1_transformed"
+      }
+      // translation from long to short hierarchy
+      kedge ( :from_1_1 -> vtile_ni1:from_1_1)
+      // port created by long-to-short translation
+      kport to_2_0 {
+         klabel "to_2_0_transformed"
+      }
+      // translation from long to short hierarchy
+      kedge ( :to_2_0 -> vtile_2:from_1_0)
+      // translation from long to short hierarchy
+      kedge ( :to_1_1 -> vtile_6:from_0_1)
+      // port created by long-to-short translation
+      kport to_0_0 {
+         klabel "to_0_0_transformed"
+      }
+      // translation from long to short hierarchy
+      kedge ( :to_0_0 -> vtile_0:from_1_0)
+      // port created by long-to-short translation
+      kport from_0_0 {
+         klabel "from_0_0_transformed"
+      }
+      // translation from long to short hierarchy
+      kedge ( :from_0_0 -> vtile_ni1:from_0_0)
+      // port created by long-to-short translation
+      kport tile_ni1 {
+         klabel "tile_ni1_transformed"
+      }
+      // translation from long to short hierarchy
+      kedge ( :tile_ni1 -> vtile_ni1)
+   }
+   knode vtile_20 {
+      klabel "tile_20"
+      knode vtile_cpu_20 {
+         klabel "tile_cpu_20"
+         kport networkInterface {
+            klabel "networkInterface"
+         }
+         kport defaultMemory {
+            klabel "defaultMemory"
+         }
+         knode vtile_os20 {
+            klabel "tile_os20"
+         }
+         kedge ( :networkInterface -> vtile_ni20:tileProcessor)
+         kedge ( :defaultMemory -> vtile_mem20:instructionsAndData)
+         // translation from long to short hierarchy
+         kedge ( :networkInterface -> vtile_ni20:tileProcessor)
+         // translation from long to short hierarchy
+         kedge ( :defaultMemory -> vtile_mem20:instructionsAndData)
+      }
+      knode vtile_mem20 {
+         klabel "tile_mem20"
+         kport networkInterface {
+            klabel "networkInterface"
+         }
+         kport instructionsAndData {
+            klabel "instructionsAndData"
+         }
+         kedge ( :instructionsAndData -> vtile_cpu_20:defaultMemory)
+         kedge ( :networkInterface -> vtile_ni20:tileMemory)
+         // translation from long to short hierarchy
+         kedge ( :networkInterface -> vtile_ni20:tileMemory)
+         // translation from long to short hierarchy
+         kedge ( :instructionsAndData -> vtile_cpu_20:defaultMemory)
+      }
+      knode vtile_ni20 {
+         klabel "tile_ni20"
+         kport from_1_4 {
+            klabel "from_1_4"
+         }
+         kport from_0_5 {
+            klabel "from_0_5"
+         }
+         kport tileProcessor {
+            klabel "tileProcessor"
+         }
+         kport to_1_4 {
+            klabel "to_1_4"
+         }
+         kport to_0_5 {
+            klabel "to_0_5"
+         }
+         kport to_0_3 {
+            klabel "to_0_3"
+         }
+         kport tileMemory {
+            klabel "tileMemory"
+         }
+         kport from_0_3 {
+            klabel "from_0_3"
+         }
+         kedge ( :tileProcessor -> vtile_cpu_20:networkInterface)
+         kedge ( :tileMemory -> vtile_mem20:networkInterface)
+         kedge ( :to_0_3 -> vtile_ni15)
+         kedge ( :to_1_4 -> vtile_ni21:from_0_4)
+         kedge ( :to_0_3 -> vtile_ni15:from_0_4)
+         kedge ( :to_0_5 -> vtile_ni25:from_0_4)
+         // translation from long to short hierarchy
+         kedge ( :to_0_3 -> vtile_20:to_0_3)
+         // translation from long to short hierarchy
+         kedge ( :to_1_4 -> vtile_20:to_1_4)
+         // translation from long to short hierarchy
+         kedge ( :tileProcessor -> vtile_cpu_20:networkInterface)
+         // translation from long to short hierarchy
+         kedge ( :to_0_5 -> vtile_20:to_0_5)
+         // translation from long to short hierarchy
+         kedge ( :to_0_3 -> vtile_20:to_0_3)
+         // translation from long to short hierarchy
+         kedge ( :tileMemory -> vtile_mem20:networkInterface)
+      }
+      // port created by long-to-short translation
+      kport from_0_5 {
+         klabel "from_0_5_transformed"
+      }
+      // translation from long to short hierarchy
+      kedge ( :from_0_5 -> vtile_ni20:from_0_5)
+      // port created by long-to-short translation
+      kport to_0_3 {
+         klabel "to_0_3_transformed"
+      }
+      // translation from long to short hierarchy
+      kedge ( :to_0_3 -> vtile_15:from_0_4)
+      // port created by long-to-short translation
+      kport to_1_4 {
+         klabel "to_1_4_transformed"
+      }
+      // translation from long to short hierarchy
+      kedge ( :to_1_4 -> vtile_21:from_0_4)
+      // port created by long-to-short translation
+      kport to_0_5 {
+         klabel "to_0_5_transformed"
+      }
+      // translation from long to short hierarchy
+      kedge ( :to_0_5 -> vtile_25:from_0_4)
+      // translation from long to short hierarchy
+      kedge ( :to_0_3 -> vtile_15)
+      // port created by long-to-short translation
+      kport from_1_4 {
+         klabel "from_1_4_transformed"
+      }
+      // translation from long to short hierarchy
+      kedge ( :from_1_4 -> vtile_ni20:from_1_4)
+      // port created by long-to-short translation
+      kport tile_ni20 {
+         klabel "tile_ni20_transformed"
+      }
+      // translation from long to short hierarchy
+      kedge ( :tile_ni20 -> vtile_ni20)
+      // port created by long-to-short translation
+      kport from_0_3 {
+         klabel "from_0_3_transformed"
+      }
+      // translation from long to short hierarchy
+      kedge ( :from_0_3 -> vtile_ni20:from_0_3)
+   }
+   knode vtile_21 {
+      klabel "tile_21"
+      knode vtile_cpu_21 {
+         klabel "tile_cpu_21"
+         kport networkInterface {
+            klabel "networkInterface"
+         }
+         kport defaultMemory {
+            klabel "defaultMemory"
+         }
+         knode vtile_os21 {
+            klabel "tile_os21"
+         }
+         kedge ( :networkInterface -> vtile_ni21:tileProcessor)
+         kedge ( :defaultMemory -> vtile_mem21:instructionsAndData)
+         // translation from long to short hierarchy
+         kedge ( :networkInterface -> vtile_ni21:tileProcessor)
+         // translation from long to short hierarchy
+         kedge ( :defaultMemory -> vtile_mem21:instructionsAndData)
+      }
+      knode vtile_mem21 {
+         klabel "tile_mem21"
+         kport networkInterface {
+            klabel "networkInterface"
+         }
+         kport instructionsAndData {
+            klabel "instructionsAndData"
+         }
+         kedge ( :instructionsAndData -> vtile_cpu_21:defaultMemory)
+         kedge ( :networkInterface -> vtile_ni21:tileMemory)
+         // translation from long to short hierarchy
+         kedge ( :instructionsAndData -> vtile_cpu_21:defaultMemory)
+         // translation from long to short hierarchy
+         kedge ( :networkInterface -> vtile_ni21:tileMemory)
+      }
+      knode vtile_ni21 {
+         klabel "tile_ni21"
+         kport from_1_3 {
+            klabel "from_1_3"
+         }
+         kport from_0_4 {
+            klabel "from_0_4"
+         }
+         kport tileProcessor {
+            klabel "tileProcessor"
+         }
+         kport from_2_4 {
+            klabel "from_2_4"
+         }
+         kport from_1_5 {
+            klabel "from_1_5"
+         }
+         kport to_2_4 {
+            klabel "to_2_4"
+         }
+         kport to_1_5 {
+            klabel "to_1_5"
+         }
+         kport tileMemory {
+            klabel "tileMemory"
+         }
+         kport to_1_3 {
+            klabel "to_1_3"
+         }
+         kport to_0_4 {
+            klabel "to_0_4"
+         }
+         kedge ( :tileProcessor -> vtile_cpu_21:networkInterface)
+         kedge ( :tileMemory -> vtile_mem21:networkInterface)
+         kedge ( :to_1_3 -> vtile_ni16)
+         kedge ( :to_0_4 -> vtile_ni20:from_1_4)
+         kedge ( :to_2_4 -> vtile_ni22:from_1_4)
+         kedge ( :to_1_3 -> vtile_ni16:from_1_4)
+         kedge ( :to_1_5 -> vtile_ni26:from_1_4)
+         // translation from long to short hierarchy
+         kedge ( :tileProcessor -> vtile_cpu_21:networkInterface)
+         // translation from long to short hierarchy
+         kedge ( :tileMemory -> vtile_mem21:networkInterface)
+         // translation from long to short hierarchy
+         kedge ( :to_1_3 -> vtile_21:to_1_3)
+         // translation from long to short hierarchy
+         kedge ( :to_2_4 -> vtile_21:to_2_4)
+         // translation from long to short hierarchy
+         kedge ( :to_1_5 -> vtile_21:to_1_5)
+         // translation from long to short hierarchy
+         kedge ( :to_0_4 -> vtile_21:to_0_4)
+         // translation from long to short hierarchy
+         kedge ( :to_1_3 -> vtile_21:to_1_3)
+      }
+      // port created by long-to-short translation
+      kport from_1_3 {
+         klabel "from_1_3_transformed"
+      }
+      // translation from long to short hierarchy
+      kedge ( :from_1_3 -> vtile_ni21:from_1_3)
+      // port created by long-to-short translation
+      kport from_2_4 {
+         klabel "from_2_4_transformed"
+      }
+      // translation from long to short hierarchy
+      kedge ( :from_2_4 -> vtile_ni21:from_2_4)
+      // port created by long-to-short translation
+      kport tile_ni21 {
+         klabel "tile_ni21_transformed"
+      }
+      // translation from long to short hierarchy
+      kedge ( :tile_ni21 -> vtile_ni21)
+      // port created by long-to-short translation
+      kport from_1_5 {
+         klabel "from_1_5_transformed"
+      }
+      // translation from long to short hierarchy
+      kedge ( :from_1_5 -> vtile_ni21:from_1_5)
+      // port created by long-to-short translation
+      kport from_0_4 {
+         klabel "from_0_4_transformed"
+      }
+      // translation from long to short hierarchy
+      kedge ( :from_0_4 -> vtile_ni21:from_0_4)
+      // port created by long-to-short translation
+      kport to_1_3 {
+         klabel "to_1_3_transformed"
+      }
+      // translation from long to short hierarchy
+      kedge ( :to_1_3 -> vtile_16:from_1_4)
+      // port created by long-to-short translation
+      kport to_2_4 {
+         klabel "to_2_4_transformed"
+      }
+      // translation from long to short hierarchy
+      kedge ( :to_2_4 -> vtile_22:from_1_4)
+      // port created by long-to-short translation
+      kport to_1_5 {
+         klabel "to_1_5_transformed"
+      }
+      // translation from long to short hierarchy
+      kedge ( :to_1_5 -> vtile_26:from_1_4)
+      // port created by long-to-short translation
+      kport to_0_4 {
+         klabel "to_0_4_transformed"
+      }
+      // translation from long to short hierarchy
+      kedge ( :to_0_4 -> vtile_20:from_1_4)
+      // translation from long to short hierarchy
+      kedge ( :to_1_3 -> vtile_16)
+   }
+   knode vtile_22 {
+      klabel "tile_22"
+      knode vtile_cpu_22 {
+         klabel "tile_cpu_22"
+         kport networkInterface {
+            klabel "networkInterface"
+         }
+         kport defaultMemory {
+            klabel "defaultMemory"
+         }
+         knode vtile_os22 {
+            klabel "tile_os22"
+         }
+         kedge ( :networkInterface -> vtile_ni22:tileProcessor)
+         kedge ( :defaultMemory -> vtile_mem22:instructionsAndData)
+         // translation from long to short hierarchy
+         kedge ( :defaultMemory -> vtile_mem22:instructionsAndData)
+         // translation from long to short hierarchy
+         kedge ( :networkInterface -> vtile_ni22:tileProcessor)
+      }
+      knode vtile_mem22 {
+         klabel "tile_mem22"
+         kport networkInterface {
+            klabel "networkInterface"
+         }
+         kport instructionsAndData {
+            klabel "instructionsAndData"
+         }
+         kedge ( :instructionsAndData -> vtile_cpu_22:defaultMemory)
+         kedge ( :networkInterface -> vtile_ni22:tileMemory)
+         // translation from long to short hierarchy
+         kedge ( :instructionsAndData -> vtile_cpu_22:defaultMemory)
+         // translation from long to short hierarchy
+         kedge ( :networkInterface -> vtile_ni22:tileMemory)
+      }
+      knode vtile_ni22 {
+         klabel "tile_ni22"
+         kport from_2_3 {
+            klabel "from_2_3"
+         }
+         kport from_1_4 {
+            klabel "from_1_4"
+         }
+         kport tileProcessor {
+            klabel "tileProcessor"
+         }
+         kport from_3_4 {
+            klabel "from_3_4"
+         }
+         kport from_2_5 {
+            klabel "from_2_5"
+         }
+         kport to_2_3 {
+            klabel "to_2_3"
+         }
+         kport to_1_4 {
+            klabel "to_1_4"
+         }
+         kport tileMemory {
+            klabel "tileMemory"
+         }
+         kport to_3_4 {
+            klabel "to_3_4"
+         }
+         kport to_2_5 {
+            klabel "to_2_5"
+         }
+         kedge ( :tileProcessor -> vtile_cpu_22:networkInterface)
+         kedge ( :tileMemory -> vtile_mem22:networkInterface)
+         kedge ( :to_2_3 -> vtile_ni17)
+         kedge ( :to_1_4 -> vtile_ni21:from_2_4)
+         kedge ( :to_3_4 -> vtile_ni23:from_2_4)
+         kedge ( :to_2_3 -> vtile_ni17:from_2_4)
+         kedge ( :to_2_5 -> vtile_ni27:from_2_4)
+         // translation from long to short hierarchy
+         kedge ( :tileMemory -> vtile_mem22:networkInterface)
+         // translation from long to short hierarchy
+         kedge ( :to_2_5 -> vtile_22:to_2_5)
+         // translation from long to short hierarchy
+         kedge ( :to_1_4 -> vtile_22:to_1_4)
+         // translation from long to short hierarchy
+         kedge ( :to_2_3 -> vtile_22:to_2_3)
+         // translation from long to short hierarchy
+         kedge ( :to_3_4 -> vtile_22:to_3_4)
+         // translation from long to short hierarchy
+         kedge ( :to_2_3 -> vtile_22:to_2_3)
+         // translation from long to short hierarchy
+         kedge ( :tileProcessor -> vtile_cpu_22:networkInterface)
+      }
+      // port created by long-to-short translation
+      kport from_3_4 {
+         klabel "from_3_4_transformed"
+      }
+      // translation from long to short hierarchy
+      kedge ( :from_3_4 -> vtile_ni22:from_3_4)
+      // port created by long-to-short translation
+      kport to_2_5 {
+         klabel "to_2_5_transformed"
+      }
+      // translation from long to short hierarchy
+      kedge ( :to_2_5 -> vtile_27:from_2_4)
+      // port created by long-to-short translation
+      kport to_1_4 {
+         klabel "to_1_4_transformed"
+      }
+      // translation from long to short hierarchy
+      kedge ( :to_1_4 -> vtile_21:from_2_4)
+      // port created by long-to-short translation
+      kport to_2_3 {
+         klabel "to_2_3_transformed"
+      }
+      // translation from long to short hierarchy
+      kedge ( :to_2_3 -> vtile_17)
+      // port created by long-to-short translation
+      kport to_3_4 {
+         klabel "to_3_4_transformed"
+      }
+      // translation from long to short hierarchy
+      kedge ( :to_3_4 -> vtile_23:from_2_4)
+      // translation from long to short hierarchy
+      kedge ( :from_3_4 -> vtile_ni22:from_3_4)
+      // port created by long-to-short translation
+      kport from_2_5 {
+         klabel "from_2_5_transformed"
+      }
+      // translation from long to short hierarchy
+      kedge ( :from_2_5 -> vtile_ni22:from_2_5)
+      // port created by long-to-short translation
+      kport tile_ni22 {
+         klabel "tile_ni22_transformed"
+      }
+      // translation from long to short hierarchy
+      kedge ( :tile_ni22 -> vtile_ni22)
+      // port created by long-to-short translation
+      kport from_1_4 {
+         klabel "from_1_4_transformed"
+      }
+      // translation from long to short hierarchy
+      kedge ( :from_1_4 -> vtile_ni22:from_1_4)
+      // translation from long to short hierarchy
+      kedge ( :to_2_3 -> vtile_17:from_2_4)
+      // port created by long-to-short translation
+      kport from_2_3 {
+         klabel "from_2_3_transformed"
+      }
+      // translation from long to short hierarchy
+      kedge ( :from_2_3 -> vtile_ni22:from_2_3)
+   }
+   knode vtile_23 {
+      klabel "tile_23"
+      knode vtile_cpu_23 {
+         klabel "tile_cpu_23"
+         kport networkInterface {
+            klabel "networkInterface"
+         }
+         kport defaultMemory {
+            klabel "defaultMemory"
+         }
+         knode vtile_os23 {
+            klabel "tile_os23"
+         }
+         kedge ( :networkInterface -> vtile_ni23:tileProcessor)
+         kedge ( :defaultMemory -> vtile_mem23:instructionsAndData)
+         // translation from long to short hierarchy
+         kedge ( :defaultMemory -> vtile_mem23:instructionsAndData)
+         // translation from long to short hierarchy
+         kedge ( :networkInterface -> vtile_ni23:tileProcessor)
+      }
+      knode vtile_mem23 {
+         klabel "tile_mem23"
+         kport networkInterface {
+            klabel "networkInterface"
+         }
+         kport instructionsAndData {
+            klabel "instructionsAndData"
+         }
+         kedge ( :instructionsAndData -> vtile_cpu_23:defaultMemory)
+         kedge ( :networkInterface -> vtile_ni23:tileMemory)
+         // translation from long to short hierarchy
+         kedge ( :networkInterface -> vtile_ni23:tileMemory)
+         // translation from long to short hierarchy
+         kedge ( :instructionsAndData -> vtile_cpu_23:defaultMemory)
+      }
+      knode vtile_ni23 {
+         klabel "tile_ni23"
+         kport from_4_4 {
+            klabel "from_4_4"
+         }
+         kport from_3_5 {
+            klabel "from_3_5"
+         }
+         kport tileProcessor {
+            klabel "tileProcessor"
+         }
+         kport from_3_3 {
+            klabel "from_3_3"
+         }
+         kport from_2_4 {
+            klabel "from_2_4"
+         }
+         kport to_3_3 {
+            klabel "to_3_3"
+         }
+         kport to_2_4 {
+            klabel "to_2_4"
+         }
+         kport tileMemory {
+            klabel "tileMemory"
+         }
+         kport to_4_4 {
+            klabel "to_4_4"
+         }
+         kport to_3_5 {
+            klabel "to_3_5"
+         }
+         kedge ( :tileProcessor -> vtile_cpu_23:networkInterface)
+         kedge ( :tileMemory -> vtile_mem23:networkInterface)
+         kedge ( :to_3_3 -> vtile_ni18:from_4_3)
+         kedge ( :to_2_4 -> vtile_ni22:from_3_4)
+         kedge ( :to_4_4 -> vtile_ni24:from_3_4)
+         kedge ( :to_3_3 -> vtile_ni18:from_3_4)
+         kedge ( :to_3_5 -> vtile_ni28:from_3_4)
+         kedge ( :to_3_5 -> vtile_ni28:from_4_5)
+         // translation from long to short hierarchy
+         kedge ( :to_3_5 -> vtile_23:to_3_5)
+         // translation from long to short hierarchy
+         kedge ( :to_2_4 -> vtile_23:to_2_4)
+         // translation from long to short hierarchy
+         kedge ( :to_4_4 -> vtile_23:to_4_4)
+         // translation from long to short hierarchy
+         kedge ( :to_3_3 -> vtile_23:to_3_3)
+         // translation from long to short hierarchy
+         kedge ( :to_3_3 -> vtile_23:to_3_3)
+         // translation from long to short hierarchy
+         kedge ( :tileProcessor -> vtile_cpu_23:networkInterface)
+         // translation from long to short hierarchy
+         kedge ( :to_3_5 -> vtile_23:to_3_5)
+         // translation from long to short hierarchy
+         kedge ( :tileMemory -> vtile_mem23:networkInterface)
+      }
+      // port created by long-to-short translation
+      kport to_3_5 {
+         klabel "to_3_5_transformed"
+      }
+      // translation from long to short hierarchy
+      kedge ( :to_3_5 -> vtile_28:from_3_4)
+      // port created by long-to-short translation
+      kport to_2_4 {
+         klabel "to_2_4_transformed"
+      }
+      // translation from long to short hierarchy
+      kedge ( :to_2_4 -> vtile_22:from_3_4)
+      // port created by long-to-short translation
+      kport tile_ni23 {
+         klabel "tile_ni23_transformed"
+      }
+      // translation from long to short hierarchy
+      kedge ( :tile_ni23 -> vtile_ni23)
+      // port created by long-to-short translation
+      kport to_4_4 {
+         klabel "to_4_4_transformed"
+      }
+      // translation from long to short hierarchy
+      kedge ( :to_4_4 -> vtile_24:from_3_4)
+      // port created by long-to-short translation
+      kport to_3_3 {
+         klabel "to_3_3_transformed"
+      }
+      // translation from long to short hierarchy
+      kedge ( :to_3_3 -> vtile_18:from_4_3)
+      // port created by long-to-short translation
+      kport from_3_5 {
+         klabel "from_3_5_transformed"
+      }
+      // translation from long to short hierarchy
+      kedge ( :from_3_5 -> vtile_ni23:from_3_5)
+      // port created by long-to-short translation
+      kport from_2_4 {
+         klabel "from_2_4_transformed"
+      }
+      // translation from long to short hierarchy
+      kedge ( :from_2_4 -> vtile_ni23:from_2_4)
+      // translation from long to short hierarchy
+      kedge ( :to_3_3 -> vtile_18:from_3_4)
+      // translation from long to short hierarchy
+      kedge ( :to_3_5 -> vtile_28:from_4_5)
+      // port created by long-to-short translation
+      kport from_3_3 {
+         klabel "from_3_3_transformed"
+      }
+      // translation from long to short hierarchy
+      kedge ( :from_3_3 -> vtile_ni23:from_3_3)
+      // port created by long-to-short translation
+      kport from_4_4 {
+         klabel "from_4_4_transformed"
+      }
+      // translation from long to short hierarchy
+      kedge ( :from_4_4 -> vtile_ni23:from_4_4)
+   }
+   knode vtile_24 {
+      klabel "tile_24"
+      knode vtile_cpu_24 {
+         klabel "tile_cpu_24"
+         kport networkInterface {
+            klabel "networkInterface"
+         }
+         kport defaultMemory {
+            klabel "defaultMemory"
+         }
+         knode vtile_os24 {
+            klabel "tile_os24"
+         }
+         kedge ( :networkInterface -> vtile_ni24:tileProcessor)
+         kedge ( :defaultMemory -> vtile_mem24:instructionsAndData)
+         // translation from long to short hierarchy
+         kedge ( :networkInterface -> vtile_ni24:tileProcessor)
+         // translation from long to short hierarchy
+         kedge ( :defaultMemory -> vtile_mem24:instructionsAndData)
+      }
+      knode vtile_mem24 {
+         klabel "tile_mem24"
+         kport networkInterface {
+            klabel "networkInterface"
+         }
+         kport instructionsAndData {
+            klabel "instructionsAndData"
+         }
+         kedge ( :instructionsAndData -> vtile_cpu_24:defaultMemory)
+         kedge ( :networkInterface -> vtile_ni24:tileMemory)
+         // translation from long to short hierarchy
+         kedge ( :networkInterface -> vtile_ni24:tileMemory)
+         // translation from long to short hierarchy
+         kedge ( :instructionsAndData -> vtile_cpu_24:defaultMemory)
+      }
+      knode vtile_ni24 {
+         klabel "tile_ni24"
+         kport from_4_5 {
+            klabel "from_4_5"
+         }
+         kport tileProcessor {
+            klabel "tileProcessor"
+         }
+         kport from_4_3 {
+            klabel "from_4_3"
+         }
+         kport from_3_4 {
+            klabel "from_3_4"
+         }
+         kport tileMemory {
+            klabel "tileMemory"
+         }
+         kport to_4_5 {
+            klabel "to_4_5"
+         }
+         kport to_4_3 {
+            klabel "to_4_3"
+         }
+         kport to_3_4 {
+            klabel "to_3_4"
+         }
+         kedge ( :tileProcessor -> vtile_cpu_24:networkInterface)
+         kedge ( :tileMemory -> vtile_mem24:networkInterface)
+         kedge ( :to_4_3 -> vtile_ni19)
+         kedge ( :to_3_4 -> vtile_ni23:from_4_4)
+         kedge ( :to_4_3 -> vtile_ni19:from_4_4)
+         kedge ( :to_4_5 -> vtile_ni29:from_4_4)
+         // translation from long to short hierarchy
+         kedge ( :to_4_3 -> vtile_24:to_4_3)
+         // translation from long to short hierarchy
+         kedge ( :to_4_3 -> vtile_24:to_4_3)
+         // translation from long to short hierarchy
+         kedge ( :tileProcessor -> vtile_cpu_24:networkInterface)
+         // translation from long to short hierarchy
+         kedge ( :tileMemory -> vtile_mem24:networkInterface)
+         // translation from long to short hierarchy
+         kedge ( :to_4_5 -> vtile_24:to_4_5)
+         // translation from long to short hierarchy
+         kedge ( :to_3_4 -> vtile_24:to_3_4)
+      }
+      // port created by long-to-short translation
+      kport to_4_3 {
+         klabel "to_4_3_transformed"
+      }
+      // translation from long to short hierarchy
+      kedge ( :to_4_3 -> vtile_19)
+      // port created by long-to-short translation
+      kport from_4_5 {
+         klabel "from_4_5_transformed"
+      }
+      // translation from long to short hierarchy
+      kedge ( :from_4_5 -> vtile_ni24:from_4_5)
+      // port created by long-to-short translation
+      kport from_3_4 {
+         klabel "from_3_4_transformed"
+      }
+      // translation from long to short hierarchy
+      kedge ( :from_3_4 -> vtile_ni24:from_3_4)
+      // translation from long to short hierarchy
+      kedge ( :to_4_3 -> vtile_19:from_4_4)
+      // port created by long-to-short translation
+      kport tile_ni24 {
+         klabel "tile_ni24_transformed"
+      }
+      // translation from long to short hierarchy
+      kedge ( :tile_ni24 -> vtile_ni24)
+      // port created by long-to-short translation
+      kport from_4_3 {
+         klabel "from_4_3_transformed"
+      }
+      // translation from long to short hierarchy
+      kedge ( :from_4_3 -> vtile_ni24:from_4_3)
+      // translation from long to short hierarchy
+      kedge ( :from_3_4 -> vtile_ni24:from_3_4)
+      // port created by long-to-short translation
+      kport to_4_5 {
+         klabel "to_4_5_transformed"
+      }
+      // translation from long to short hierarchy
+      kedge ( :to_4_5 -> vtile_29:from_4_4)
+      // port created by long-to-short translation
+      kport to_3_4 {
+         klabel "to_3_4_transformed"
+      }
+      // translation from long to short hierarchy
+      kedge ( :to_3_4 -> vtile_23:from_4_4)
+   }
+   knode vtile_25 {
+      klabel "tile_25"
+      knode vtile_cpu_25 {
+         klabel "tile_cpu_25"
+         kport networkInterface {
+            klabel "networkInterface"
+         }
+         kport defaultMemory {
+            klabel "defaultMemory"
+         }
+         knode vtile_os25 {
+            klabel "tile_os25"
+         }
+         kedge ( :networkInterface -> vtile_ni25:tileProcessor)
+         kedge ( :defaultMemory -> vtile_mem25:instructionsAndData)
+         // translation from long to short hierarchy
+         kedge ( :networkInterface -> vtile_ni25:tileProcessor)
+         // translation from long to short hierarchy
+         kedge ( :defaultMemory -> vtile_mem25:instructionsAndData)
+      }
+      knode vtile_mem25 {
+         klabel "tile_mem25"
+         kport networkInterface {
+            klabel "networkInterface"
+         }
+         kport instructionsAndData {
+            klabel "instructionsAndData"
+         }
+         kedge ( :instructionsAndData -> vtile_cpu_25:defaultMemory)
+         kedge ( :networkInterface -> vtile_ni25:tileMemory)
+         // translation from long to short hierarchy
+         kedge ( :instructionsAndData -> vtile_cpu_25:defaultMemory)
+         // translation from long to short hierarchy
+         kedge ( :networkInterface -> vtile_ni25:tileMemory)
+      }
+      knode vtile_ni25 {
+         klabel "tile_ni25"
+         kport from_0_4 {
+            klabel "from_0_4"
+         }
+         kport tileProcessor {
+            klabel "tileProcessor"
+         }
+         kport from_1_5 {
+            klabel "from_1_5"
+         }
+         kport to_1_5 {
+            klabel "to_1_5"
+         }
+         kport tileMemory {
+            klabel "tileMemory"
+         }
+         kport to_0_4 {
+            klabel "to_0_4"
+         }
+         kedge ( :tileProcessor -> vtile_cpu_25:networkInterface)
+         kedge ( :tileMemory -> vtile_mem25:networkInterface)
+         kedge ( :to_0_4 -> vtile_ni20)
+         kedge ( :to_1_5 -> vtile_ni26:from_0_5)
+         kedge ( :to_0_4 -> vtile_ni20:from_0_5)
+         // translation from long to short hierarchy
+         kedge ( :tileProcessor -> vtile_cpu_25:networkInterface)
+         // translation from long to short hierarchy
+         kedge ( :to_0_4 -> vtile_25:to_0_4)
+         // translation from long to short hierarchy
+         kedge ( :to_1_5 -> vtile_25:to_1_5)
+         // translation from long to short hierarchy
+         kedge ( :tileMemory -> vtile_mem25:networkInterface)
+         // translation from long to short hierarchy
+         kedge ( :to_0_4 -> vtile_25:to_0_4)
+      }
+      // port created by long-to-short translation
+      kport to_0_4 {
+         klabel "to_0_4_transformed"
+      }
+      // translation from long to short hierarchy
+      kedge ( :to_0_4 -> vtile_20:from_0_5)
+      // port created by long-to-short translation
+      kport to_1_5 {
+         klabel "to_1_5_transformed"
+      }
+      // translation from long to short hierarchy
+      kedge ( :to_1_5 -> vtile_26:from_0_5)
+      // port created by long-to-short translation
+      kport from_1_5 {
+         klabel "from_1_5_transformed"
+      }
+      // translation from long to short hierarchy
+      kedge ( :from_1_5 -> vtile_ni25:from_1_5)
+      // port created by long-to-short translation
+      kport from_0_4 {
+         klabel "from_0_4_transformed"
+      }
+      // translation from long to short hierarchy
+      kedge ( :from_0_4 -> vtile_ni25:from_0_4)
+      // translation from long to short hierarchy
+      kedge ( :to_0_4 -> vtile_20)
+   }
+   knode vtile_26 {
+      klabel "tile_26"
+      knode vtile_cpu_26 {
+         klabel "tile_cpu_26"
+         kport networkInterface {
+            klabel "networkInterface"
+         }
+         kport defaultMemory {
+            klabel "defaultMemory"
+         }
+         knode vtile_os26 {
+            klabel "tile_os26"
+         }
+         kedge ( :networkInterface -> vtile_ni26:tileProcessor)
+         kedge ( :defaultMemory -> vtile_mem26:instructionsAndData)
+         // translation from long to short hierarchy
+         kedge ( :defaultMemory -> vtile_mem26:instructionsAndData)
+         // translation from long to short hierarchy
+         kedge ( :networkInterface -> vtile_ni26:tileProcessor)
+      }
+      knode vtile_mem26 {
+         klabel "tile_mem26"
+         kport networkInterface {
+            klabel "networkInterface"
+         }
+         kport instructionsAndData {
+            klabel "instructionsAndData"
+         }
+         kedge ( :instructionsAndData -> vtile_cpu_26:defaultMemory)
+         kedge ( :networkInterface -> vtile_ni26:tileMemory)
+         // translation from long to short hierarchy
+         kedge ( :instructionsAndData -> vtile_cpu_26:defaultMemory)
+         // translation from long to short hierarchy
+         kedge ( :networkInterface -> vtile_ni26:tileMemory)
+      }
+      knode vtile_ni26 {
+         klabel "tile_ni26"
+         kport from_1_4 {
+            klabel "from_1_4"
+         }
+         kport from_0_5 {
+            klabel "from_0_5"
+         }
+         kport tileProcessor {
+            klabel "tileProcessor"
+         }
+         kport from_2_5 {
+            klabel "from_2_5"
+         }
+         kport to_1_4 {
+            klabel "to_1_4"
+         }
+         kport to_0_5 {
+            klabel "to_0_5"
+         }
+         kport tileMemory {
+            klabel "tileMemory"
+         }
+         kport to_2_5 {
+            klabel "to_2_5"
+         }
+         kedge ( :tileProcessor -> vtile_cpu_26:networkInterface)
+         kedge ( :tileMemory -> vtile_mem26:networkInterface)
+         kedge ( :to_1_4 -> vtile_ni21)
+         kedge ( :to_0_5 -> vtile_ni25:from_1_5)
+         kedge ( :to_2_5 -> vtile_ni27:from_1_5)
+         kedge ( :to_1_4 -> vtile_ni21:from_1_5)
+         // translation from long to short hierarchy
+         kedge ( :tileMemory -> vtile_mem26:networkInterface)
+         // translation from long to short hierarchy
+         kedge ( :to_1_4 -> vtile_26:to_1_4)
+         // translation from long to short hierarchy
+         kedge ( :to_1_4 -> vtile_26:to_1_4)
+         // translation from long to short hierarchy
+         kedge ( :to_2_5 -> vtile_26:to_2_5)
+         // translation from long to short hierarchy
+         kedge ( :to_0_5 -> vtile_26:to_0_5)
+         // translation from long to short hierarchy
+         kedge ( :tileProcessor -> vtile_cpu_26:networkInterface)
+      }
+      // port created by long-to-short translation
+      kport from_0_5 {
+         klabel "from_0_5_transformed"
+      }
+      // translation from long to short hierarchy
+      kedge ( :from_0_5 -> vtile_ni26:from_0_5)
+      // port created by long-to-short translation
+      kport to_1_4 {
+         klabel "to_1_4_transformed"
+      }
+      // translation from long to short hierarchy
+      kedge ( :to_1_4 -> vtile_21)
+      // port created by long-to-short translation
+      kport from_2_5 {
+         klabel "from_2_5_transformed"
+      }
+      // translation from long to short hierarchy
+      kedge ( :from_2_5 -> vtile_ni26:from_2_5)
+      // translation from long to short hierarchy
+      kedge ( :to_1_4 -> vtile_21:from_1_5)
+      // port created by long-to-short translation
+      kport to_2_5 {
+         klabel "to_2_5_transformed"
+      }
+      // translation from long to short hierarchy
+      kedge ( :to_2_5 -> vtile_27:from_1_5)
+      // port created by long-to-short translation
+      kport to_0_5 {
+         klabel "to_0_5_transformed"
+      }
+      // translation from long to short hierarchy
+      kedge ( :to_0_5 -> vtile_25:from_1_5)
+      // port created by long-to-short translation
+      kport from_1_4 {
+         klabel "from_1_4_transformed"
+      }
+      // translation from long to short hierarchy
+      kedge ( :from_1_4 -> vtile_ni26:from_1_4)
+   }
+   knode vtile_27 {
+      klabel "tile_27"
+      knode vtile_cpu_27 {
+         klabel "tile_cpu_27"
+         kport networkInterface {
+            klabel "networkInterface"
+         }
+         kport defaultMemory {
+            klabel "defaultMemory"
+         }
+         knode vtile_os27 {
+            klabel "tile_os27"
+         }
+         kedge ( :networkInterface -> vtile_ni27:tileProcessor)
+         kedge ( :defaultMemory -> vtile_mem27:instructionsAndData)
+         // translation from long to short hierarchy
+         kedge ( :defaultMemory -> vtile_mem27:instructionsAndData)
+         // translation from long to short hierarchy
+         kedge ( :networkInterface -> vtile_ni27:tileProcessor)
+      }
+      knode vtile_mem27 {
+         klabel "tile_mem27"
+         kport networkInterface {
+            klabel "networkInterface"
+         }
+         kport instructionsAndData {
+            klabel "instructionsAndData"
+         }
+         kedge ( :instructionsAndData -> vtile_cpu_27:defaultMemory)
+         kedge ( :networkInterface -> vtile_ni27:tileMemory)
+         // translation from long to short hierarchy
+         kedge ( :networkInterface -> vtile_ni27:tileMemory)
+         // translation from long to short hierarchy
+         kedge ( :instructionsAndData -> vtile_cpu_27:defaultMemory)
+      }
+      knode vtile_ni27 {
+         klabel "tile_ni27"
+         kport from_3_5 {
+            klabel "from_3_5"
+         }
+         kport tileProcessor {
+            klabel "tileProcessor"
+         }
+         kport from_2_4 {
+            klabel "from_2_4"
+         }
+         kport from_1_5 {
+            klabel "from_1_5"
+         }
+         kport to_2_4 {
+            klabel "to_2_4"
+         }
+         kport to_1_5 {
+            klabel "to_1_5"
+         }
+         kport tileMemory {
+            klabel "tileMemory"
+         }
+         kport to_3_5 {
+            klabel "to_3_5"
+         }
+         kedge ( :tileProcessor -> vtile_cpu_27:networkInterface)
+         kedge ( :tileMemory -> vtile_mem27:networkInterface)
+         kedge ( :to_2_4 -> vtile_ni22)
+         kedge ( :to_1_5 -> vtile_ni26:from_2_5)
+         kedge ( :to_3_5 -> vtile_ni28:from_2_5)
+         kedge ( :to_2_4 -> vtile_ni22:from_2_5)
+         // translation from long to short hierarchy
+         kedge ( :to_1_5 -> vtile_27:to_1_5)
+         // translation from long to short hierarchy
+         kedge ( :to_2_4 -> vtile_27:to_2_4)
+         // translation from long to short hierarchy
+         kedge ( :to_3_5 -> vtile_27:to_3_5)
+         // translation from long to short hierarchy
+         kedge ( :to_2_4 -> vtile_27:to_2_4)
+         // translation from long to short hierarchy
+         kedge ( :tileProcessor -> vtile_cpu_27:networkInterface)
+         // translation from long to short hierarchy
+         kedge ( :tileMemory -> vtile_mem27:networkInterface)
+      }
+      // port created by long-to-short translation
+      kport from_3_5 {
+         klabel "from_3_5_transformed"
+      }
+      // translation from long to short hierarchy
+      kedge ( :from_3_5 -> vtile_ni27:from_3_5)
+      // port created by long-to-short translation
+      kport from_2_4 {
+         klabel "from_2_4_transformed"
+      }
+      // translation from long to short hierarchy
+      kedge ( :from_2_4 -> vtile_ni27:from_2_4)
+      // port created by long-to-short translation
+      kport to_1_5 {
+         klabel "to_1_5_transformed"
+      }
+      // translation from long to short hierarchy
+      kedge ( :to_1_5 -> vtile_26:from_2_5)
+      // port created by long-to-short translation
+      kport from_1_5 {
+         klabel "from_1_5_transformed"
+      }
+      // translation from long to short hierarchy
+      kedge ( :from_1_5 -> vtile_ni27:from_1_5)
+      // port created by long-to-short translation
+      kport to_2_4 {
+         klabel "to_2_4_transformed"
+      }
+      // translation from long to short hierarchy
+      kedge ( :to_2_4 -> vtile_22:from_2_5)
+      // port created by long-to-short translation
+      kport to_3_5 {
+         klabel "to_3_5_transformed"
+      }
+      // translation from long to short hierarchy
+      kedge ( :to_3_5 -> vtile_28:from_2_5)
+      // translation from long to short hierarchy
+      kedge ( :to_2_4 -> vtile_22)
+   }
+   knode vtile_28 {
+      klabel "tile_28"
+      knode vtile_cpu_28 {
+         klabel "tile_cpu_28"
+         kport networkInterface {
+            klabel "networkInterface"
+         }
+         kport defaultMemory {
+            klabel "defaultMemory"
+         }
+         knode vtile_os28 {
+            klabel "tile_os28"
+         }
+         kedge ( :networkInterface -> vtile_ni28:tileProcessor)
+         kedge ( :defaultMemory -> vtile_mem28:instructionsAndData)
+         // translation from long to short hierarchy
+         kedge ( :networkInterface -> vtile_ni28:tileProcessor)
+         // translation from long to short hierarchy
+         kedge ( :defaultMemory -> vtile_mem28:instructionsAndData)
+      }
+      knode vtile_mem28 {
+         klabel "tile_mem28"
+         kport networkInterface {
+            klabel "networkInterface"
+         }
+         kport instructionsAndData {
+            klabel "instructionsAndData"
+         }
+         kedge ( :instructionsAndData -> vtile_cpu_28:defaultMemory)
+         kedge ( :networkInterface -> vtile_ni28:tileMemory)
+         // translation from long to short hierarchy
+         kedge ( :networkInterface -> vtile_ni28:tileMemory)
+         // translation from long to short hierarchy
+         kedge ( :instructionsAndData -> vtile_cpu_28:defaultMemory)
+      }
+      knode vtile_ni28 {
+         klabel "tile_ni28"
+         kport from_4_5 {
+            klabel "from_4_5"
+         }
+         kport tileProcessor {
+            klabel "tileProcessor"
+         }
+         kport from_3_4 {
+            klabel "from_3_4"
+         }
+         kport from_2_5 {
+            klabel "from_2_5"
+         }
+         kport tileMemory {
+            klabel "tileMemory"
+         }
+         kport to_4_5 {
+            klabel "to_4_5"
+         }
+         kport to_3_4 {
+            klabel "to_3_4"
+         }
+         kport to_2_5 {
+            klabel "to_2_5"
+         }
+         kedge ( :tileProcessor -> vtile_cpu_28:networkInterface)
+         kedge ( :tileMemory -> vtile_mem28:networkInterface)
+         kedge ( :to_3_4 -> vtile_ni23)
+         kedge ( :to_2_5 -> vtile_ni27:from_3_5)
+         kedge ( :to_4_5 -> vtile_ni29:from_3_5)
+         kedge ( :to_3_4 -> vtile_ni23:from_3_5)
+         // translation from long to short hierarchy
+         kedge ( :to_3_4 -> vtile_28:to_3_4)
+         // translation from long to short hierarchy
+         kedge ( :to_2_5 -> vtile_28:to_2_5)
+         // translation from long to short hierarchy
+         kedge ( :to_3_4 -> vtile_28:to_3_4)
+         // translation from long to short hierarchy
+         kedge ( :to_4_5 -> vtile_28:to_4_5)
+         // translation from long to short hierarchy
+         kedge ( :tileProcessor -> vtile_cpu_28:networkInterface)
+         // translation from long to short hierarchy
+         kedge ( :tileMemory -> vtile_mem28:networkInterface)
+      }
+      // port created by long-to-short translation
+      kport from_4_5 {
+         klabel "from_4_5_transformed"
+      }
+      // translation from long to short hierarchy
+      kedge ( :from_4_5 -> vtile_ni28:from_4_5)
+      // port created by long-to-short translation
+      kport from_3_4 {
+         klabel "from_3_4_transformed"
+      }
+      // translation from long to short hierarchy
+      kedge ( :from_3_4 -> vtile_ni28:from_3_4)
+      // port created by long-to-short translation
+      kport to_3_4 {
+         klabel "to_3_4_transformed"
+      }
+      // translation from long to short hierarchy
+      kedge ( :to_3_4 -> vtile_23)
+      // port created by long-to-short translation
+      kport to_2_5 {
+         klabel "to_2_5_transformed"
+      }
+      // translation from long to short hierarchy
+      kedge ( :to_2_5 -> vtile_27:from_3_5)
+      // translation from long to short hierarchy
+      kedge ( :to_3_4 -> vtile_23:from_3_5)
+      // port created by long-to-short translation
+      kport to_4_5 {
+         klabel "to_4_5_transformed"
+      }
+      // translation from long to short hierarchy
+      kedge ( :to_4_5 -> vtile_29:from_3_5)
+      // port created by long-to-short translation
+      kport from_2_5 {
+         klabel "from_2_5_transformed"
+      }
+      // translation from long to short hierarchy
+      kedge ( :from_2_5 -> vtile_ni28:from_2_5)
+      // translation from long to short hierarchy
+      kedge ( :from_4_5 -> vtile_ni28:from_4_5)
+   }
+   knode vtile_29 {
+      klabel "tile_29"
+      knode vtile_cpu_29 {
+         klabel "tile_cpu_29"
+         kport networkInterface {
+            klabel "networkInterface"
+         }
+         kport defaultMemory {
+            klabel "defaultMemory"
+         }
+         knode vtile_os29 {
+            klabel "tile_os29"
+         }
+         kedge ( :networkInterface -> vtile_ni29:tileProcessor)
+         kedge ( :defaultMemory -> vtile_mem29:instructionsAndData)
+         // translation from long to short hierarchy
+         kedge ( :networkInterface -> vtile_ni29:tileProcessor)
+         // translation from long to short hierarchy
+         kedge ( :defaultMemory -> vtile_mem29:instructionsAndData)
+      }
+      knode vtile_mem29 {
+         klabel "tile_mem29"
+         kport networkInterface {
+            klabel "networkInterface"
+         }
+         kport instructionsAndData {
+            klabel "instructionsAndData"
+         }
+         kedge ( :instructionsAndData -> vtile_cpu_29:defaultMemory)
+         kedge ( :networkInterface -> vtile_ni29:tileMemory)
+         // translation from long to short hierarchy
+         kedge ( :networkInterface -> vtile_ni29:tileMemory)
+         // translation from long to short hierarchy
+         kedge ( :instructionsAndData -> vtile_cpu_29:defaultMemory)
+      }
+      knode vtile_ni29 {
+         klabel "tile_ni29"
+         kport from_4_4 {
+            klabel "from_4_4"
+         }
+         kport from_3_5 {
+            klabel "from_3_5"
+         }
+         kport tileProcessor {
+            klabel "tileProcessor"
+         }
+         kport tileMemory {
+            klabel "tileMemory"
+         }
+         kport to_4_4 {
+            klabel "to_4_4"
+         }
+         kport to_3_5 {
+            klabel "to_3_5"
+         }
+         kedge ( :tileProcessor -> vtile_cpu_29:networkInterface)
+         kedge ( :tileMemory -> vtile_mem29:networkInterface)
+         kedge ( :to_4_4 -> vtile_ni24)
+         kedge ( :to_3_5 -> vtile_ni28:from_4_5)
+         kedge ( :to_4_4 -> vtile_ni24:from_4_5)
+         // translation from long to short hierarchy
+         kedge ( :to_3_5 -> vtile_29:to_3_5)
+         // translation from long to short hierarchy
+         kedge ( :tileProcessor -> vtile_cpu_29:networkInterface)
+         // translation from long to short hierarchy
+         kedge ( :to_4_4 -> vtile_29:to_4_4)
+         // translation from long to short hierarchy
+         kedge ( :to_4_4 -> vtile_29:to_4_4)
+         // translation from long to short hierarchy
+         kedge ( :tileMemory -> vtile_mem29:networkInterface)
+      }
+      // port created by long-to-short translation
+      kport to_3_5 {
+         klabel "to_3_5_transformed"
+      }
+      // translation from long to short hierarchy
+      kedge ( :to_3_5 -> vtile_28:from_4_5)
+      // port created by long-to-short translation
+      kport to_4_4 {
+         klabel "to_4_4_transformed"
+      }
+      // translation from long to short hierarchy
+      kedge ( :to_4_4 -> vtile_24:from_4_5)
+      // translation from long to short hierarchy
+      kedge ( :to_4_4 -> vtile_24)
+      // port created by long-to-short translation
+      kport from_3_5 {
+         klabel "from_3_5_transformed"
+      }
+      // translation from long to short hierarchy
+      kedge ( :from_3_5 -> vtile_ni29:from_3_5)
+      // port created by long-to-short translation
+      kport from_4_4 {
+         klabel "from_4_4_transformed"
+      }
+      // translation from long to short hierarchy
+      kedge ( :from_4_4 -> vtile_ni29:from_4_4)
+   }
+   knode vtile_10 {
+      klabel "tile_10"
+      knode vtile_cpu_10 {
+         klabel "tile_cpu_10"
+         kport networkInterface {
+            klabel "networkInterface"
+         }
+         kport defaultMemory {
+            klabel "defaultMemory"
+         }
+         knode vtile_os10 {
+            klabel "tile_os10"
+         }
+         kedge ( :networkInterface -> vtile_ni10:tileProcessor)
+         kedge ( :defaultMemory -> vtile_mem10:instructionsAndData)
+         // translation from long to short hierarchy
+         kedge ( :defaultMemory -> vtile_mem10:instructionsAndData)
+         // translation from long to short hierarchy
+         kedge ( :networkInterface -> vtile_ni10:tileProcessor)
+      }
+      knode vtile_mem10 {
+         klabel "tile_mem10"
+         kport networkInterface {
+            klabel "networkInterface"
+         }
+         kport instructionsAndData {
+            klabel "instructionsAndData"
+         }
+         kedge ( :instructionsAndData -> vtile_cpu_10:defaultMemory)
+         kedge ( :networkInterface -> vtile_ni10:tileMemory)
+         // translation from long to short hierarchy
+         kedge ( :instructionsAndData -> vtile_cpu_10:defaultMemory)
+         // translation from long to short hierarchy
+         kedge ( :networkInterface -> vtile_ni10:tileMemory)
+      }
+      knode vtile_ni10 {
+         klabel "tile_ni10"
+         kport to_0_1 {
+            klabel "to_0_1"
+         }
+         kport tileProcessor {
+            klabel "tileProcessor"
+         }
+         kport from_0_1 {
+            klabel "from_0_1"
+         }
+         kport to_1_2 {
+            klabel "to_1_2"
+         }
+         kport to_0_3 {
+            klabel "to_0_3"
+         }
+         kport tileMemory {
+            klabel "tileMemory"
+         }
+         kport from_1_2 {
+            klabel "from_1_2"
+         }
+         kport from_0_3 {
+            klabel "from_0_3"
+         }
+         kedge ( :tileProcessor -> vtile_cpu_10:networkInterface)
+         kedge ( :tileMemory -> vtile_mem10:networkInterface)
+         kedge ( :to_0_1 -> vtile_ni5)
+         kedge ( :to_1_2 -> vtile_ni11:from_0_2)
+         kedge ( :to_0_1 -> vtile_ni5:from_0_2)
+         kedge ( :to_0_3 -> vtile_ni15:from_0_2)
+         // translation from long to short hierarchy
+         kedge ( :tileMemory -> vtile_mem10:networkInterface)
+         // translation from long to short hierarchy
+         kedge ( :to_0_1 -> vtile_10:to_0_1)
+         // translation from long to short hierarchy
+         kedge ( :to_0_1 -> vtile_10:to_0_1)
+         // translation from long to short hierarchy
+         kedge ( :tileProcessor -> vtile_cpu_10:networkInterface)
+         // translation from long to short hierarchy
+         kedge ( :to_1_2 -> vtile_10:to_1_2)
+         // translation from long to short hierarchy
+         kedge ( :to_0_3 -> vtile_10:to_0_3)
+      }
+      // port created by long-to-short translation
+      kport from_0_1 {
+         klabel "from_0_1_transformed"
+      }
+      // translation from long to short hierarchy
+      kedge ( :from_0_1 -> vtile_ni10:from_0_1)
+      // port created by long-to-short translation
+      kport from_1_2 {
+         klabel "from_1_2_transformed"
+      }
+      // translation from long to short hierarchy
+      kedge ( :from_1_2 -> vtile_ni10:from_1_2)
+      // port created by long-to-short translation
+      kport tile_ni10 {
+         klabel "tile_ni10_transformed"
+      }
+      // translation from long to short hierarchy
+      kedge ( :tile_ni10 -> vtile_ni10)
+      // port created by long-to-short translation
+      kport to_0_1 {
+         klabel "to_0_1_transformed"
+      }
+      // translation from long to short hierarchy
+      kedge ( :to_0_1 -> vtile_5)
+      // translation from long to short hierarchy
+      kedge ( :to_0_1 -> vtile_5:from_0_2)
+      // port created by long-to-short translation
+      kport from_0_3 {
+         klabel "from_0_3_transformed"
+      }
+      // translation from long to short hierarchy
+      kedge ( :from_0_3 -> vtile_ni10:from_0_3)
+      // translation from long to short hierarchy
+      kedge ( :from_1_2 -> vtile_ni10:from_1_2)
+      // port created by long-to-short translation
+      kport to_1_2 {
+         klabel "to_1_2_transformed"
+      }
+      // translation from long to short hierarchy
+      kedge ( :to_1_2 -> vtile_11:from_0_2)
+      // port created by long-to-short translation
+      kport to_0_3 {
+         klabel "to_0_3_transformed"
+      }
+      // translation from long to short hierarchy
+      kedge ( :to_0_3 -> vtile_15:from_0_2)
+   }
+   knode vtile_11 {
+      klabel "tile_11"
+      knode vtile_cpu_11 {
+         klabel "tile_cpu_11"
+         kport networkInterface {
+            klabel "networkInterface"
+         }
+         kport defaultMemory {
+            klabel "defaultMemory"
+         }
+         knode vtile_os11 {
+            klabel "tile_os11"
+         }
+         kedge ( :networkInterface -> vtile_ni11:tileProcessor)
+         kedge ( :defaultMemory -> vtile_mem11:instructionsAndData)
+         // translation from long to short hierarchy
+         kedge ( :defaultMemory -> vtile_mem11:instructionsAndData)
+         // translation from long to short hierarchy
+         kedge ( :networkInterface -> vtile_ni11:tileProcessor)
+      }
+      knode vtile_mem11 {
+         klabel "tile_mem11"
+         kport networkInterface {
+            klabel "networkInterface"
+         }
+         kport instructionsAndData {
+            klabel "instructionsAndData"
+         }
+         kedge ( :instructionsAndData -> vtile_cpu_11:defaultMemory)
+         kedge ( :networkInterface -> vtile_ni11:tileMemory)
+         // translation from long to short hierarchy
+         kedge ( :networkInterface -> vtile_ni11:tileMemory)
+         // translation from long to short hierarchy
+         kedge ( :instructionsAndData -> vtile_cpu_11:defaultMemory)
+      }
+      knode vtile_ni11 {
+         klabel "tile_ni11"
+         kport from_2_2 {
+            klabel "from_2_2"
+         }
+         kport from_1_3 {
+            klabel "from_1_3"
+         }
+         kport to_1_1 {
+            klabel "to_1_1"
+         }
+         kport to_0_2 {
+            klabel "to_0_2"
+         }
+         kport tileProcessor {
+            klabel "tileProcessor"
+         }
+         kport from_1_1 {
+            klabel "from_1_1"
+         }
+         kport from_0_2 {
+            klabel "from_0_2"
+         }
+         kport tileMemory {
+            klabel "tileMemory"
+         }
+         kport to_2_2 {
+            klabel "to_2_2"
+         }
+         kport to_1_3 {
+            klabel "to_1_3"
+         }
+         kedge ( :tileProcessor -> vtile_cpu_11:networkInterface)
+         kedge ( :tileMemory -> vtile_mem11:networkInterface)
+         kedge ( :to_1_1 -> vtile_ni6:from_2_1)
+         kedge ( :to_0_2 -> vtile_ni10:from_1_2)
+         kedge ( :to_2_2 -> vtile_ni12:from_1_2)
+         kedge ( :to_1_1 -> vtile_ni6:from_1_2)
+         kedge ( :to_1_3 -> vtile_ni16:from_1_2)
+         kedge ( :to_1_3 -> vtile_ni16:from_2_3)
+         // translation from long to short hierarchy
+         kedge ( :tileMemory -> vtile_mem11:networkInterface)
+         // translation from long to short hierarchy
+         kedge ( :to_0_2 -> vtile_11:to_0_2)
+         // translation from long to short hierarchy
+         kedge ( :to_1_3 -> vtile_11:to_1_3)
+         // translation from long to short hierarchy
+         kedge ( :to_1_3 -> vtile_11:to_1_3)
+         // translation from long to short hierarchy
+         kedge ( :tileProcessor -> vtile_cpu_11:networkInterface)
+         // translation from long to short hierarchy
+         kedge ( :to_1_1 -> vtile_11:to_1_1)
+         // translation from long to short hierarchy
+         kedge ( :to_2_2 -> vtile_11:to_2_2)
+         // translation from long to short hierarchy
+         kedge ( :to_1_1 -> vtile_11:to_1_1)
+      }
+      // port created by long-to-short translation
+      kport to_0_2 {
+         klabel "to_0_2_transformed"
+      }
+      // translation from long to short hierarchy
+      kedge ( :to_0_2 -> vtile_10:from_1_2)
+      // port created by long-to-short translation
+      kport to_1_3 {
+         klabel "to_1_3_transformed"
+      }
+      // translation from long to short hierarchy
+      kedge ( :to_1_3 -> vtile_16:from_1_2)
+      // port created by long-to-short translation
+      kport from_2_2 {
+         klabel "from_2_2_transformed"
+      }
+      // translation from long to short hierarchy
+      kedge ( :from_2_2 -> vtile_ni11:from_2_2)
+      // port created by long-to-short translation
+      kport tile_ni11 {
+         klabel "tile_ni11_transformed"
+      }
+      // translation from long to short hierarchy
+      kedge ( :tile_ni11 -> vtile_ni11)
+      // translation from long to short hierarchy
+      kedge ( :to_1_3 -> vtile_16:from_2_3)
+      // port created by long-to-short translation
+      kport from_1_1 {
+         klabel "from_1_1_transformed"
+      }
+      // translation from long to short hierarchy
+      kedge ( :from_1_1 -> vtile_ni11:from_1_1)
+      // port created by long-to-short translation
+      kport to_1_1 {
+         klabel "to_1_1_transformed"
+      }
+      // translation from long to short hierarchy
+      kedge ( :to_1_1 -> vtile_6:from_1_2)
+      // port created by long-to-short translation
+      kport from_1_3 {
+         klabel "from_1_3_transformed"
+      }
+      // translation from long to short hierarchy
+      kedge ( :from_1_3 -> vtile_ni11:from_1_3)
+      // port created by long-to-short translation
+      kport from_0_2 {
+         klabel "from_0_2_transformed"
+      }
+      // translation from long to short hierarchy
+      kedge ( :from_0_2 -> vtile_ni11:from_0_2)
+      // port created by long-to-short translation
+      kport to_2_2 {
+         klabel "to_2_2_transformed"
+      }
+      // translation from long to short hierarchy
+      kedge ( :to_2_2 -> vtile_12:from_1_2)
+      // translation from long to short hierarchy
+      kedge ( :to_1_1 -> vtile_6:from_2_1)
+   }
+   knode vtile_12 {
+      klabel "tile_12"
+      knode vtile_cpu_12 {
+         klabel "tile_cpu_12"
+         kport networkInterface {
+            klabel "networkInterface"
+         }
+         kport defaultMemory {
+            klabel "defaultMemory"
+         }
+         knode vtile_os12 {
+            klabel "tile_os12"
+         }
+         kedge ( :networkInterface -> vtile_ni12:tileProcessor)
+         kedge ( :defaultMemory -> vtile_mem12:instructionsAndData)
+         // translation from long to short hierarchy
+         kedge ( :defaultMemory -> vtile_mem12:instructionsAndData)
+         // translation from long to short hierarchy
+         kedge ( :networkInterface -> vtile_ni12:tileProcessor)
+      }
+      knode vtile_mem12 {
+         klabel "tile_mem12"
+         kport networkInterface {
+            klabel "networkInterface"
+         }
+         kport instructionsAndData {
+            klabel "instructionsAndData"
+         }
+         kedge ( :instructionsAndData -> vtile_cpu_12:defaultMemory)
+         kedge ( :networkInterface -> vtile_ni12:tileMemory)
+         // translation from long to short hierarchy
+         kedge ( :networkInterface -> vtile_ni12:tileMemory)
+         // translation from long to short hierarchy
+         kedge ( :instructionsAndData -> vtile_cpu_12:defaultMemory)
+      }
+      knode vtile_ni12 {
+         klabel "tile_ni12"
+         kport from_3_2 {
+            klabel "from_3_2"
+         }
+         kport from_2_3 {
+            klabel "from_2_3"
+         }
+         kport tileProcessor {
+            klabel "tileProcessor"
+         }
+         kport to_3_2 {
+            klabel "to_3_2"
+         }
+         kport to_2_3 {
+            klabel "to_2_3"
+         }
+         kport to_2_1 {
+            klabel "to_2_1"
+         }
+         kport to_1_2 {
+            klabel "to_1_2"
+         }
+         kport tileMemory {
+            klabel "tileMemory"
+         }
+         kport from_2_1 {
+            klabel "from_2_1"
+         }
+         kport from_1_2 {
+            klabel "from_1_2"
+         }
+         kedge ( :tileProcessor -> vtile_cpu_12:networkInterface)
+         kedge ( :tileMemory -> vtile_mem12:networkInterface)
+         kedge ( :to_2_1 -> vtile_ni7)
+         kedge ( :to_1_2 -> vtile_ni11:from_2_2)
+         kedge ( :to_3_2 -> vtile_ni13:from_2_2)
+         kedge ( :to_2_1 -> vtile_ni7:from_2_2)
+         kedge ( :to_2_3 -> vtile_ni17:from_2_2)
+         // translation from long to short hierarchy
+         kedge ( :to_3_2 -> vtile_12:to_3_2)
+         // translation from long to short hierarchy
+         kedge ( :to_1_2 -> vtile_12:to_1_2)
+         // translation from long to short hierarchy
+         kedge ( :to_2_3 -> vtile_12:to_2_3)
+         // translation from long to short hierarchy
+         kedge ( :tileProcessor -> vtile_cpu_12:networkInterface)
+         // translation from long to short hierarchy
+         kedge ( :to_2_1 -> vtile_12:to_2_1)
+         // translation from long to short hierarchy
+         kedge ( :tileMemory -> vtile_mem12:networkInterface)
+         // translation from long to short hierarchy
+         kedge ( :to_2_1 -> vtile_12:to_2_1)
+      }
+      // port created by long-to-short translation
+      kport to_3_2 {
+         klabel "to_3_2_transformed"
+      }
+      // translation from long to short hierarchy
+      kedge ( :to_3_2 -> vtile_13:from_2_2)
+      // port created by long-to-short translation
+      kport to_1_2 {
+         klabel "to_1_2_transformed"
+      }
+      // translation from long to short hierarchy
+      kedge ( :to_1_2 -> vtile_11:from_2_2)
+      // port created by long-to-short translation
+      kport to_2_3 {
+         klabel "to_2_3_transformed"
+      }
+      // translation from long to short hierarchy
+      kedge ( :to_2_3 -> vtile_17:from_2_2)
+      // port created by long-to-short translation
+      kport from_2_1 {
+         klabel "from_2_1_transformed"
+      }
+      // translation from long to short hierarchy
+      kedge ( :from_2_1 -> vtile_ni12:from_2_1)
+      // port created by long-to-short translation
+      kport from_1_2 {
+         klabel "from_1_2_transformed"
+      }
+      // translation from long to short hierarchy
+      kedge ( :from_1_2 -> vtile_ni12:from_1_2)
+      // port created by long-to-short translation
+      kport to_2_1 {
+         klabel "to_2_1_transformed"
+      }
+      // translation from long to short hierarchy
+      kedge ( :to_2_1 -> vtile_7)
+      // port created by long-to-short translation
+      kport from_3_2 {
+         klabel "from_3_2_transformed"
+      }
+      // translation from long to short hierarchy
+      kedge ( :from_3_2 -> vtile_ni12:from_3_2)
+      // port created by long-to-short translation
+      kport from_2_3 {
+         klabel "from_2_3_transformed"
+      }
+      // translation from long to short hierarchy
+      kedge ( :from_2_3 -> vtile_ni12:from_2_3)
+      // translation from long to short hierarchy
+      kedge ( :from_1_2 -> vtile_ni12:from_1_2)
+      // translation from long to short hierarchy
+      kedge ( :to_2_1 -> vtile_7:from_2_2)
+      // translation from long to short hierarchy
+      kedge ( :from_3_2 -> vtile_ni12:from_3_2)
+   }
+   knode vtile_13 {
+      klabel "tile_13"
+      knode vtile_cpu_13 {
+         klabel "tile_cpu_13"
+         kport networkInterface {
+            klabel "networkInterface"
+         }
+         kport defaultMemory {
+            klabel "defaultMemory"
+         }
+         knode vtile_os13 {
+            klabel "tile_os13"
+         }
+         kedge ( :networkInterface -> vtile_ni13:tileProcessor)
+         kedge ( :defaultMemory -> vtile_mem13:instructionsAndData)
+         // translation from long to short hierarchy
+         kedge ( :networkInterface -> vtile_ni13:tileProcessor)
+         // translation from long to short hierarchy
+         kedge ( :defaultMemory -> vtile_mem13:instructionsAndData)
+      }
+      knode vtile_mem13 {
+         klabel "tile_mem13"
+         kport networkInterface {
+            klabel "networkInterface"
+         }
+         kport instructionsAndData {
+            klabel "instructionsAndData"
+         }
+         kedge ( :instructionsAndData -> vtile_cpu_13:defaultMemory)
+         kedge ( :networkInterface -> vtile_ni13:tileMemory)
+         // translation from long to short hierarchy
+         kedge ( :instructionsAndData -> vtile_cpu_13:defaultMemory)
+         // translation from long to short hierarchy
+         kedge ( :networkInterface -> vtile_ni13:tileMemory)
+      }
+      knode vtile_ni13 {
+         klabel "tile_ni13"
+         kport from_3_1 {
+            klabel "from_3_1"
+         }
+         kport from_2_2 {
+            klabel "from_2_2"
+         }
+         kport tileProcessor {
+            klabel "tileProcessor"
+         }
+         kport from_4_2 {
+            klabel "from_4_2"
+         }
+         kport from_3_3 {
+            klabel "from_3_3"
+         }
+         kport to_4_2 {
+            klabel "to_4_2"
+         }
+         kport to_3_3 {
+            klabel "to_3_3"
+         }
+         kport tileMemory {
+            klabel "tileMemory"
+         }
+         kport to_3_1 {
+            klabel "to_3_1"
+         }
+         kport to_2_2 {
+            klabel "to_2_2"
+         }
+         kedge ( :tileProcessor -> vtile_cpu_13:networkInterface)
+         kedge ( :tileMemory -> vtile_mem13:networkInterface)
+         kedge ( :to_3_1 -> vtile_ni8:from_2_1)
+         kedge ( :to_2_2 -> vtile_ni12:from_3_2)
+         kedge ( :to_4_2 -> vtile_ni14:from_3_2)
+         kedge ( :to_3_1 -> vtile_ni8:from_3_2)
+         kedge ( :to_3_3 -> vtile_ni18:from_3_2)
+         kedge ( :to_3_3 -> vtile_ni18:from_2_3)
+         // translation from long to short hierarchy
+         kedge ( :tileProcessor -> vtile_cpu_13:networkInterface)
+         // translation from long to short hierarchy
+         kedge ( :to_3_3 -> vtile_13:to_3_3)
+         // translation from long to short hierarchy
+         kedge ( :tileMemory -> vtile_mem13:networkInterface)
+         // translation from long to short hierarchy
+         kedge ( :to_3_1 -> vtile_13:to_3_1)
+         // translation from long to short hierarchy
+         kedge ( :to_2_2 -> vtile_13:to_2_2)
+         // translation from long to short hierarchy
+         kedge ( :to_3_3 -> vtile_13:to_3_3)
+         // translation from long to short hierarchy
+         kedge ( :to_4_2 -> vtile_13:to_4_2)
+         // translation from long to short hierarchy
+         kedge ( :to_3_1 -> vtile_13:to_3_1)
+      }
+      // port created by long-to-short translation
+      kport from_2_2 {
+         klabel "from_2_2_transformed"
+      }
+      // translation from long to short hierarchy
+      kedge ( :from_2_2 -> vtile_ni13:from_2_2)
+      // port created by long-to-short translation
+      kport to_3_3 {
+         klabel "to_3_3_transformed"
+      }
+      // translation from long to short hierarchy
+      kedge ( :to_3_3 -> vtile_18:from_2_3)
+      // port created by long-to-short translation
+      kport from_3_1 {
+         klabel "from_3_1_transformed"
+      }
+      // translation from long to short hierarchy
+      kedge ( :from_3_1 -> vtile_ni13:from_3_1)
+      // port created by long-to-short translation
+      kport from_4_2 {
+         klabel "from_4_2_transformed"
+      }
+      // translation from long to short hierarchy
+      kedge ( :from_4_2 -> vtile_ni13:from_4_2)
+      // port created by long-to-short translation
+      kport to_3_1 {
+         klabel "to_3_1_transformed"
+      }
+      // translation from long to short hierarchy
+      kedge ( :to_3_1 -> vtile_8:from_2_1)
+      // port created by long-to-short translation
+      kport to_2_2 {
+         klabel "to_2_2_transformed"
+      }
+      // translation from long to short hierarchy
+      kedge ( :to_2_2 -> vtile_12:from_3_2)
+      // translation from long to short hierarchy
+      kedge ( :to_3_3 -> vtile_18:from_3_2)
+      // port created by long-to-short translation
+      kport to_4_2 {
+         klabel "to_4_2_transformed"
+      }
+      // translation from long to short hierarchy
+      kedge ( :to_4_2 -> vtile_14:from_3_2)
+      // translation from long to short hierarchy
+      kedge ( :to_3_1 -> vtile_8:from_3_2)
+      // port created by long-to-short translation
+      kport tile_ni13 {
+         klabel "tile_ni13_transformed"
+      }
+      // translation from long to short hierarchy
+      kedge ( :tile_ni13 -> vtile_ni13)
+      // port created by long-to-short translation
+      kport from_3_3 {
+         klabel "from_3_3_transformed"
+      }
+      // translation from long to short hierarchy
+      kedge ( :from_3_3 -> vtile_ni13:from_3_3)
+   }
+   knode vtile_14 {
+      klabel "tile_14"
+      knode vtile_cpu_14 {
+         klabel "tile_cpu_14"
+         kport networkInterface {
+            klabel "networkInterface"
+         }
+         kport defaultMemory {
+            klabel "defaultMemory"
+         }
+         knode vtile_os14 {
+            klabel "tile_os14"
+         }
+         kedge ( :networkInterface -> vtile_ni14:tileProcessor)
+         kedge ( :defaultMemory -> vtile_mem14:instructionsAndData)
+         // translation from long to short hierarchy
+         kedge ( :defaultMemory -> vtile_mem14:instructionsAndData)
+         // translation from long to short hierarchy
+         kedge ( :networkInterface -> vtile_ni14:tileProcessor)
+      }
+      knode vtile_mem14 {
+         klabel "tile_mem14"
+         kport networkInterface {
+            klabel "networkInterface"
+         }
+         kport instructionsAndData {
+            klabel "instructionsAndData"
+         }
+         kedge ( :instructionsAndData -> vtile_cpu_14:defaultMemory)
+         kedge ( :networkInterface -> vtile_ni14:tileMemory)
+         // translation from long to short hierarchy
+         kedge ( :instructionsAndData -> vtile_cpu_14:defaultMemory)
+         // translation from long to short hierarchy
+         kedge ( :networkInterface -> vtile_ni14:tileMemory)
+      }
+      knode vtile_ni14 {
+         klabel "tile_ni14"
+         kport from_4_1 {
+            klabel "from_4_1"
+         }
+         kport from_3_2 {
+            klabel "from_3_2"
+         }
+         kport tileProcessor {
+            klabel "tileProcessor"
+         }
+         kport from_4_3 {
+            klabel "from_4_3"
+         }
+         kport to_4_1 {
+            klabel "to_4_1"
+         }
+         kport to_3_2 {
+            klabel "to_3_2"
+         }
+         kport tileMemory {
+            klabel "tileMemory"
+         }
+         kport to_4_3 {
+            klabel "to_4_3"
+         }
+         kedge ( :tileProcessor -> vtile_cpu_14:networkInterface)
+         kedge ( :tileMemory -> vtile_mem14:networkInterface)
+         kedge ( :to_4_1 -> vtile_ni9)
+         kedge ( :to_3_2 -> vtile_ni13:from_4_2)
+         kedge ( :to_4_1 -> vtile_ni9:from_4_2)
+         kedge ( :to_4_3 -> vtile_ni19:from_4_2)
+         // translation from long to short hierarchy
+         kedge ( :to_4_1 -> vtile_14:to_4_1)
+         // translation from long to short hierarchy
+         kedge ( :tileMemory -> vtile_mem14:networkInterface)
+         // translation from long to short hierarchy
+         kedge ( :to_4_3 -> vtile_14:to_4_3)
+         // translation from long to short hierarchy
+         kedge ( :to_3_2 -> vtile_14:to_3_2)
+         // translation from long to short hierarchy
+         kedge ( :tileProcessor -> vtile_cpu_14:networkInterface)
+         // translation from long to short hierarchy
+         kedge ( :to_4_1 -> vtile_14:to_4_1)
+      }
+      // port created by long-to-short translation
+      kport to_4_1 {
+         klabel "to_4_1_transformed"
+      }
+      // translation from long to short hierarchy
+      kedge ( :to_4_1 -> vtile_9:from_4_2)
+      // port created by long-to-short translation
+      kport from_3_2 {
+         klabel "from_3_2_transformed"
+      }
+      // translation from long to short hierarchy
+      kedge ( :from_3_2 -> vtile_ni14:from_3_2)
+      // port created by long-to-short translation
+      kport to_4_3 {
+         klabel "to_4_3_transformed"
+      }
+      // translation from long to short hierarchy
+      kedge ( :to_4_3 -> vtile_19:from_4_2)
+      // port created by long-to-short translation
+      kport to_3_2 {
+         klabel "to_3_2_transformed"
+      }
+      // translation from long to short hierarchy
+      kedge ( :to_3_2 -> vtile_13:from_4_2)
+      // port created by long-to-short translation
+      kport from_4_1 {
+         klabel "from_4_1_transformed"
+      }
+      // translation from long to short hierarchy
+      kedge ( :from_4_1 -> vtile_ni14:from_4_1)
+      // port created by long-to-short translation
+      kport from_4_3 {
+         klabel "from_4_3_transformed"
+      }
+      // translation from long to short hierarchy
+      kedge ( :from_4_3 -> vtile_ni14:from_4_3)
+      // translation from long to short hierarchy
+      kedge ( :from_3_2 -> vtile_ni14:from_3_2)
+      // translation from long to short hierarchy
+      kedge ( :to_4_1 -> vtile_9)
+   }
+   knode vtile_15 {
+      klabel "tile_15"
+      knode vtile_cpu_15 {
+         klabel "tile_cpu_15"
+         kport networkInterface {
+            klabel "networkInterface"
+         }
+         kport defaultMemory {
+            klabel "defaultMemory"
+         }
+         knode vtile_os15 {
+            klabel "tile_os15"
+         }
+         kedge ( :networkInterface -> vtile_ni15:tileProcessor)
+         kedge ( :defaultMemory -> vtile_mem15:instructionsAndData)
+         // translation from long to short hierarchy
+         kedge ( :defaultMemory -> vtile_mem15:instructionsAndData)
+         // translation from long to short hierarchy
+         kedge ( :networkInterface -> vtile_ni15:tileProcessor)
+      }
+      knode vtile_mem15 {
+         klabel "tile_mem15"
+         kport networkInterface {
+            klabel "networkInterface"
+         }
+         kport instructionsAndData {
+            klabel "instructionsAndData"
+         }
+         kedge ( :instructionsAndData -> vtile_cpu_15:defaultMemory)
+         kedge ( :networkInterface -> vtile_ni15:tileMemory)
+         // translation from long to short hierarchy
+         kedge ( :instructionsAndData -> vtile_cpu_15:defaultMemory)
+         // translation from long to short hierarchy
+         kedge ( :networkInterface -> vtile_ni15:tileMemory)
+      }
+      knode vtile_ni15 {
+         klabel "tile_ni15"
+         kport from_1_3 {
+            klabel "from_1_3"
+         }
+         kport from_0_4 {
+            klabel "from_0_4"
+         }
+         kport to_0_2 {
+            klabel "to_0_2"
+         }
+         kport tileProcessor {
+            klabel "tileProcessor"
+         }
+         kport from_0_2 {
+            klabel "from_0_2"
+         }
+         kport tileMemory {
+            klabel "tileMemory"
+         }
+         kport to_1_3 {
+            klabel "to_1_3"
+         }
+         kport to_0_4 {
+            klabel "to_0_4"
+         }
+         kedge ( :tileProcessor -> vtile_cpu_15:networkInterface)
+         kedge ( :tileMemory -> vtile_mem15:networkInterface)
+         kedge ( :to_0_2 -> vtile_ni10)
+         kedge ( :to_1_3 -> vtile_ni16:from_0_3)
+         kedge ( :to_0_2 -> vtile_ni10:from_0_3)
+         kedge ( :to_0_4 -> vtile_ni20:from_0_3)
+         // translation from long to short hierarchy
+         kedge ( :tileMemory -> vtile_mem15:networkInterface)
+         // translation from long to short hierarchy
+         kedge ( :to_0_2 -> vtile_15:to_0_2)
+         // translation from long to short hierarchy
+         kedge ( :tileProcessor -> vtile_cpu_15:networkInterface)
+         // translation from long to short hierarchy
+         kedge ( :to_1_3 -> vtile_15:to_1_3)
+         // translation from long to short hierarchy
+         kedge ( :to_0_2 -> vtile_15:to_0_2)
+         // translation from long to short hierarchy
+         kedge ( :to_0_4 -> vtile_15:to_0_4)
+      }
+      // port created by long-to-short translation
+      kport to_0_2 {
+         klabel "to_0_2_transformed"
+      }
+      // translation from long to short hierarchy
+      kedge ( :to_0_2 -> vtile_10)
+      // port created by long-to-short translation
+      kport from_0_4 {
+         klabel "from_0_4_transformed"
+      }
+      // translation from long to short hierarchy
+      kedge ( :from_0_4 -> vtile_ni15:from_0_4)
+      // port created by long-to-short translation
+      kport tile_ni15 {
+         klabel "tile_ni15_transformed"
+      }
+      // translation from long to short hierarchy
+      kedge ( :tile_ni15 -> vtile_ni15)
+      // port created by long-to-short translation
+      kport to_1_3 {
+         klabel "to_1_3_transformed"
+      }
+      // translation from long to short hierarchy
+      kedge ( :to_1_3 -> vtile_16:from_0_3)
+      // translation from long to short hierarchy
+      kedge ( :to_0_2 -> vtile_10:from_0_3)
+      // port created by long-to-short translation
+      kport to_0_4 {
+         klabel "to_0_4_transformed"
+      }
+      // translation from long to short hierarchy
+      kedge ( :to_0_4 -> vtile_20:from_0_3)
+      // port created by long-to-short translation
+      kport from_1_3 {
+         klabel "from_1_3_transformed"
+      }
+      // translation from long to short hierarchy
+      kedge ( :from_1_3 -> vtile_ni15:from_1_3)
+      // port created by long-to-short translation
+      kport from_0_2 {
+         klabel "from_0_2_transformed"
+      }
+      // translation from long to short hierarchy
+      kedge ( :from_0_2 -> vtile_ni15:from_0_2)
+   }
+   knode vtile_16 {
+      klabel "tile_16"
+      knode vtile_cpu_16 {
+         klabel "tile_cpu_16"
+         kport networkInterface {
+            klabel "networkInterface"
+         }
+         kport defaultMemory {
+            klabel "defaultMemory"
+         }
+         knode vtile_os16 {
+            klabel "tile_os16"
+         }
+         kedge ( :networkInterface -> vtile_ni16:tileProcessor)
+         kedge ( :defaultMemory -> vtile_mem16:instructionsAndData)
+         // translation from long to short hierarchy
+         kedge ( :defaultMemory -> vtile_mem16:instructionsAndData)
+         // translation from long to short hierarchy
+         kedge ( :networkInterface -> vtile_ni16:tileProcessor)
+      }
+      knode vtile_mem16 {
+         klabel "tile_mem16"
+         kport networkInterface {
+            klabel "networkInterface"
+         }
+         kport instructionsAndData {
+            klabel "instructionsAndData"
+         }
+         kedge ( :instructionsAndData -> vtile_cpu_16:defaultMemory)
+         kedge ( :networkInterface -> vtile_ni16:tileMemory)
+         // translation from long to short hierarchy
+         kedge ( :networkInterface -> vtile_ni16:tileMemory)
+         // translation from long to short hierarchy
+         kedge ( :instructionsAndData -> vtile_cpu_16:defaultMemory)
+      }
+      knode vtile_ni16 {
+         klabel "tile_ni16"
+         kport from_2_3 {
+            klabel "from_2_3"
+         }
+         kport from_1_4 {
+            klabel "from_1_4"
+         }
+         kport tileProcessor {
+            klabel "tileProcessor"
+         }
+         kport to_2_3 {
+            klabel "to_2_3"
+         }
+         kport to_1_4 {
+            klabel "to_1_4"
+         }
+         kport to_1_2 {
+            klabel "to_1_2"
+         }
+         kport to_0_3 {
+            klabel "to_0_3"
+         }
+         kport tileMemory {
+            klabel "tileMemory"
+         }
+         kport from_1_2 {
+            klabel "from_1_2"
+         }
+         kport from_0_3 {
+            klabel "from_0_3"
+         }
+         kedge ( :tileProcessor -> vtile_cpu_16:networkInterface)
+         kedge ( :tileMemory -> vtile_mem16:networkInterface)
+         kedge ( :to_1_2 -> vtile_ni11)
+         kedge ( :to_0_3 -> vtile_ni15:from_1_3)
+         kedge ( :to_2_3 -> vtile_ni17:from_1_3)
+         kedge ( :to_1_2 -> vtile_ni11:from_1_3)
+         kedge ( :to_1_4 -> vtile_ni21:from_1_3)
+         // translation from long to short hierarchy
+         kedge ( :to_1_4 -> vtile_16:to_1_4)
+         // translation from long to short hierarchy
+         kedge ( :to_1_2 -> vtile_16:to_1_2)
+         // translation from long to short hierarchy
+         kedge ( :tileProcessor -> vtile_cpu_16:networkInterface)
+         // translation from long to short hierarchy
+         kedge ( :tileMemory -> vtile_mem16:networkInterface)
+         // translation from long to short hierarchy
+         kedge ( :to_2_3 -> vtile_16:to_2_3)
+         // translation from long to short hierarchy
+         kedge ( :to_1_2 -> vtile_16:to_1_2)
+         // translation from long to short hierarchy
+         kedge ( :to_0_3 -> vtile_16:to_0_3)
+      }
+      // port created by long-to-short translation
+      kport from_2_3 {
+         klabel "from_2_3_transformed"
+      }
+      // translation from long to short hierarchy
+      kedge ( :from_2_3 -> vtile_ni16:from_2_3)
+      // port created by long-to-short translation
+      kport to_1_4 {
+         klabel "to_1_4_transformed"
+      }
+      // translation from long to short hierarchy
+      kedge ( :to_1_4 -> vtile_21:from_1_3)
+      // port created by long-to-short translation
+      kport from_1_2 {
+         klabel "from_1_2_transformed"
+      }
+      // translation from long to short hierarchy
+      kedge ( :from_1_2 -> vtile_ni16:from_1_2)
+      // port created by long-to-short translation
+      kport to_1_2 {
+         klabel "to_1_2_transformed"
+      }
+      // translation from long to short hierarchy
+      kedge ( :to_1_2 -> vtile_11)
+      // translation from long to short hierarchy
+      kedge ( :from_2_3 -> vtile_ni16:from_2_3)
+      // port created by long-to-short translation
+      kport from_1_4 {
+         klabel "from_1_4_transformed"
+      }
+      // translation from long to short hierarchy
+      kedge ( :from_1_4 -> vtile_ni16:from_1_4)
+      // port created by long-to-short translation
+      kport from_0_3 {
+         klabel "from_0_3_transformed"
+      }
+      // translation from long to short hierarchy
+      kedge ( :from_0_3 -> vtile_ni16:from_0_3)
+      // port created by long-to-short translation
+      kport tile_ni16 {
+         klabel "tile_ni16_transformed"
+      }
+      // translation from long to short hierarchy
+      kedge ( :tile_ni16 -> vtile_ni16)
+      // port created by long-to-short translation
+      kport to_2_3 {
+         klabel "to_2_3_transformed"
+      }
+      // translation from long to short hierarchy
+      kedge ( :to_2_3 -> vtile_17:from_1_3)
+      // translation from long to short hierarchy
+      kedge ( :to_1_2 -> vtile_11:from_1_3)
+      // port created by long-to-short translation
+      kport to_0_3 {
+         klabel "to_0_3_transformed"
+      }
+      // translation from long to short hierarchy
+      kedge ( :to_0_3 -> vtile_15:from_1_3)
+   }
+   knode vtile_17 {
+      klabel "tile_17"
+      knode vtile_cpu_17 {
+         klabel "tile_cpu_17"
+         kport networkInterface {
+            klabel "networkInterface"
+         }
+         kport defaultMemory {
+            klabel "defaultMemory"
+         }
+         knode vtile_os17 {
+            klabel "tile_os17"
+         }
+         kedge ( :networkInterface -> vtile_ni17:tileProcessor)
+         kedge ( :defaultMemory -> vtile_mem17:instructionsAndData)
+         // translation from long to short hierarchy
+         kedge ( :networkInterface -> vtile_ni17:tileProcessor)
+         // translation from long to short hierarchy
+         kedge ( :defaultMemory -> vtile_mem17:instructionsAndData)
+      }
+      knode vtile_mem17 {
+         klabel "tile_mem17"
+         kport networkInterface {
+            klabel "networkInterface"
+         }
+         kport instructionsAndData {
+            klabel "instructionsAndData"
+         }
+         kedge ( :instructionsAndData -> vtile_cpu_17:defaultMemory)
+         kedge ( :networkInterface -> vtile_ni17:tileMemory)
+         // translation from long to short hierarchy
+         kedge ( :networkInterface -> vtile_ni17:tileMemory)
+         // translation from long to short hierarchy
+         kedge ( :instructionsAndData -> vtile_cpu_17:defaultMemory)
+      }
+      knode vtile_ni17 {
+         klabel "tile_ni17"
+         kport from_2_2 {
+            klabel "from_2_2"
+         }
+         kport from_1_3 {
+            klabel "from_1_3"
+         }
+         kport tileProcessor {
+            klabel "tileProcessor"
+         }
+         kport from_3_3 {
+            klabel "from_3_3"
+         }
+         kport from_2_4 {
+            klabel "from_2_4"
+         }
+         kport to_3_3 {
+            klabel "to_3_3"
+         }
+         kport to_2_4 {
+            klabel "to_2_4"
+         }
+         kport tileMemory {
+            klabel "tileMemory"
+         }
+         kport to_2_2 {
+            klabel "to_2_2"
+         }
+         kport to_1_3 {
+            klabel "to_1_3"
+         }
+         kedge ( :tileProcessor -> vtile_cpu_17:networkInterface)
+         kedge ( :tileMemory -> vtile_mem17:networkInterface)
+         kedge ( :to_2_2 -> vtile_ni12:from_3_2)
+         kedge ( :to_1_3 -> vtile_ni16:from_2_3)
+         kedge ( :to_3_3 -> vtile_ni18:from_2_3)
+         kedge ( :to_2_2 -> vtile_ni12:from_2_3)
+         kedge ( :to_2_4 -> vtile_ni22:from_2_3)
+         kedge ( :to_2_4 -> vtile_ni22:from_3_4)
+         // translation from long to short hierarchy
+         kedge ( :to_1_3 -> vtile_17:to_1_3)
+         // translation from long to short hierarchy
+         kedge ( :tileProcessor -> vtile_cpu_17:networkInterface)
+         // translation from long to short hierarchy
+         kedge ( :to_2_4 -> vtile_17:to_2_4)
+         // translation from long to short hierarchy
+         kedge ( :tileMemory -> vtile_mem17:networkInterface)
+         // translation from long to short hierarchy
+         kedge ( :to_2_4 -> vtile_17:to_2_4)
+         // translation from long to short hierarchy
+         kedge ( :to_3_3 -> vtile_17:to_3_3)
+         // translation from long to short hierarchy
+         kedge ( :to_2_2 -> vtile_17:to_2_2)
+         // translation from long to short hierarchy
+         kedge ( :to_2_2 -> vtile_17:to_2_2)
+      }
+      // port created by long-to-short translation
+      kport to_1_3 {
+         klabel "to_1_3_transformed"
+      }
+      // translation from long to short hierarchy
+      kedge ( :to_1_3 -> vtile_16:from_2_3)
+      // port created by long-to-short translation
+      kport from_2_2 {
+         klabel "from_2_2_transformed"
+      }
+      // translation from long to short hierarchy
+      kedge ( :from_2_2 -> vtile_ni17:from_2_2)
+      // port created by long-to-short translation
+      kport tile_ni17 {
+         klabel "tile_ni17_transformed"
+      }
+      // translation from long to short hierarchy
+      kedge ( :tile_ni17 -> vtile_ni17)
+      // port created by long-to-short translation
+      kport to_2_4 {
+         klabel "to_2_4_transformed"
+      }
+      // translation from long to short hierarchy
+      kedge ( :to_2_4 -> vtile_22:from_3_4)
+      // port created by long-to-short translation
+      kport from_2_4 {
+         klabel "from_2_4_transformed"
+      }
+      // translation from long to short hierarchy
+      kedge ( :from_2_4 -> vtile_ni17:from_2_4)
+      // port created by long-to-short translation
+      kport from_1_3 {
+         klabel "from_1_3_transformed"
+      }
+      // translation from long to short hierarchy
+      kedge ( :from_1_3 -> vtile_ni17:from_1_3)
+      // port created by long-to-short translation
+      kport from_3_3 {
+         klabel "from_3_3_transformed"
+      }
+      // translation from long to short hierarchy
+      kedge ( :from_3_3 -> vtile_ni17:from_3_3)
+      // translation from long to short hierarchy
+      kedge ( :to_2_4 -> vtile_22:from_2_3)
+      // port created by long-to-short translation
+      kport to_3_3 {
+         klabel "to_3_3_transformed"
+      }
+      // translation from long to short hierarchy
+      kedge ( :to_3_3 -> vtile_18:from_2_3)
+      // port created by long-to-short translation
+      kport to_2_2 {
+         klabel "to_2_2_transformed"
+      }
+      // translation from long to short hierarchy
+      kedge ( :to_2_2 -> vtile_12:from_2_3)
+      // translation from long to short hierarchy
+      kedge ( :to_2_2 -> vtile_12:from_3_2)
+   }
+   knode vtile_18 {
+      klabel "tile_18"
+      knode vtile_cpu_18 {
+         klabel "tile_cpu_18"
+         kport networkInterface {
+            klabel "networkInterface"
+         }
+         kport defaultMemory {
+            klabel "defaultMemory"
+         }
+         knode vtile_os18 {
+            klabel "tile_os18"
+         }
+         kedge ( :networkInterface -> vtile_ni18:tileProcessor)
+         kedge ( :defaultMemory -> vtile_mem18:instructionsAndData)
+         // translation from long to short hierarchy
+         kedge ( :defaultMemory -> vtile_mem18:instructionsAndData)
+         // translation from long to short hierarchy
+         kedge ( :networkInterface -> vtile_ni18:tileProcessor)
+      }
+      knode vtile_mem18 {
+         klabel "tile_mem18"
+         kport networkInterface {
+            klabel "networkInterface"
+         }
+         kport instructionsAndData {
+            klabel "instructionsAndData"
+         }
+         kedge ( :instructionsAndData -> vtile_cpu_18:defaultMemory)
+         kedge ( :networkInterface -> vtile_ni18:tileMemory)
+         // translation from long to short hierarchy
+         kedge ( :instructionsAndData -> vtile_cpu_18:defaultMemory)
+         // translation from long to short hierarchy
+         kedge ( :networkInterface -> vtile_ni18:tileMemory)
+      }
+      knode vtile_ni18 {
+         klabel "tile_ni18"
+         kport from_3_2 {
+            klabel "from_3_2"
+         }
+         kport from_2_3 {
+            klabel "from_2_3"
+         }
+         kport tileProcessor {
+            klabel "tileProcessor"
+         }
+         kport from_4_3 {
+            klabel "from_4_3"
+         }
+         kport from_3_4 {
+            klabel "from_3_4"
+         }
+         kport to_3_2 {
+            klabel "to_3_2"
+         }
+         kport to_2_3 {
+            klabel "to_2_3"
+         }
+         kport tileMemory {
+            klabel "tileMemory"
+         }
+         kport to_4_3 {
+            klabel "to_4_3"
+         }
+         kport to_3_4 {
+            klabel "to_3_4"
+         }
+         kedge ( :tileProcessor -> vtile_cpu_18:networkInterface)
+         kedge ( :tileMemory -> vtile_mem18:networkInterface)
+         kedge ( :to_3_2 -> vtile_ni13)
+         kedge ( :to_2_3 -> vtile_ni17:from_3_3)
+         kedge ( :to_4_3 -> vtile_ni19:from_3_3)
+         kedge ( :to_3_2 -> vtile_ni13:from_3_3)
+         kedge ( :to_3_4 -> vtile_ni23:from_3_3)
+         // translation from long to short hierarchy
+         kedge ( :tileMemory -> vtile_mem18:networkInterface)
+         // translation from long to short hierarchy
+         kedge ( :to_3_4 -> vtile_18:to_3_4)
+         // translation from long to short hierarchy
+         kedge ( :tileProcessor -> vtile_cpu_18:networkInterface)
+         // translation from long to short hierarchy
+         kedge ( :to_2_3 -> vtile_18:to_2_3)
+         // translation from long to short hierarchy
+         kedge ( :to_3_2 -> vtile_18:to_3_2)
+         // translation from long to short hierarchy
+         kedge ( :to_4_3 -> vtile_18:to_4_3)
+         // translation from long to short hierarchy
+         kedge ( :to_3_2 -> vtile_18:to_3_2)
+      }
+      // port created by long-to-short translation
+      kport from_2_3 {
+         klabel "from_2_3_transformed"
+      }
+      // translation from long to short hierarchy
+      kedge ( :from_2_3 -> vtile_ni18:from_2_3)
+      // port created by long-to-short translation
+      kport from_4_3 {
+         klabel "from_4_3_transformed"
+      }
+      // translation from long to short hierarchy
+      kedge ( :from_4_3 -> vtile_ni18:from_4_3)
+      // port created by long-to-short translation
+      kport from_3_4 {
+         klabel "from_3_4_transformed"
+      }
+      // translation from long to short hierarchy
+      kedge ( :from_3_4 -> vtile_ni18:from_3_4)
+      // port created by long-to-short translation
+      kport to_3_4 {
+         klabel "to_3_4_transformed"
+      }
+      // translation from long to short hierarchy
+      kedge ( :to_3_4 -> vtile_23:from_3_3)
+      // translation from long to short hierarchy
+      kedge ( :from_4_3 -> vtile_ni18:from_4_3)
+      // port created by long-to-short translation
+      kport from_3_2 {
+         klabel "from_3_2_transformed"
+      }
+      // translation from long to short hierarchy
+      kedge ( :from_3_2 -> vtile_ni18:from_3_2)
+      // port created by long-to-short translation
+      kport to_2_3 {
+         klabel "to_2_3_transformed"
+      }
+      // translation from long to short hierarchy
+      kedge ( :to_2_3 -> vtile_17:from_3_3)
+      // translation from long to short hierarchy
+      kedge ( :from_2_3 -> vtile_ni18:from_2_3)
+      // port created by long-to-short translation
+      kport to_3_2 {
+         klabel "to_3_2_transformed"
+      }
+      // translation from long to short hierarchy
+      kedge ( :to_3_2 -> vtile_13)
+      // port created by long-to-short translation
+      kport to_4_3 {
+         klabel "to_4_3_transformed"
+      }
+      // translation from long to short hierarchy
+      kedge ( :to_4_3 -> vtile_19:from_3_3)
+      // translation from long to short hierarchy
+      kedge ( :to_3_2 -> vtile_13:from_3_3)
+   }
+   knode vtile_19 {
+      klabel "tile_19"
+      knode vtile_cpu_19 {
+         klabel "tile_cpu_19"
+         kport networkInterface {
+            klabel "networkInterface"
+         }
+         kport defaultMemory {
+            klabel "defaultMemory"
+         }
+         knode vtile_os19 {
+            klabel "tile_os19"
+         }
+         kedge ( :networkInterface -> vtile_ni19:tileProcessor)
+         kedge ( :defaultMemory -> vtile_mem19:instructionsAndData)
+         // translation from long to short hierarchy
+         kedge ( :defaultMemory -> vtile_mem19:instructionsAndData)
+         // translation from long to short hierarchy
+         kedge ( :networkInterface -> vtile_ni19:tileProcessor)
+      }
+      knode vtile_mem19 {
+         klabel "tile_mem19"
+         kport networkInterface {
+            klabel "networkInterface"
+         }
+         kport instructionsAndData {
+            klabel "instructionsAndData"
+         }
+         kedge ( :instructionsAndData -> vtile_cpu_19:defaultMemory)
+         kedge ( :networkInterface -> vtile_ni19:tileMemory)
+         // translation from long to short hierarchy
+         kedge ( :networkInterface -> vtile_ni19:tileMemory)
+         // translation from long to short hierarchy
+         kedge ( :instructionsAndData -> vtile_cpu_19:defaultMemory)
+      }
+      knode vtile_ni19 {
+         klabel "tile_ni19"
+         kport from_4_4 {
+            klabel "from_4_4"
+         }
+         kport tileProcessor {
+            klabel "tileProcessor"
+         }
+         kport from_4_2 {
+            klabel "from_4_2"
+         }
+         kport from_3_3 {
+            klabel "from_3_3"
+         }
+         kport to_4_2 {
+            klabel "to_4_2"
+         }
+         kport to_3_3 {
+            klabel "to_3_3"
+         }
+         kport tileMemory {
+            klabel "tileMemory"
+         }
+         kport to_4_4 {
+            klabel "to_4_4"
+         }
+         kedge ( :tileProcessor -> vtile_cpu_19:networkInterface)
+         kedge ( :tileMemory -> vtile_mem19:networkInterface)
+         kedge ( :to_4_2 -> vtile_ni14:from_3_2)
+         kedge ( :to_3_3 -> vtile_ni18:from_4_3)
+         kedge ( :to_4_2 -> vtile_ni14:from_4_3)
+         kedge ( :to_4_4 -> vtile_ni24:from_4_3)
+         kedge ( :to_4_4 -> vtile_ni24:from_3_4)
+         // translation from long to short hierarchy
+         kedge ( :tileMemory -> vtile_mem19:networkInterface)
+         // translation from long to short hierarchy
+         kedge ( :to_4_2 -> vtile_19:to_4_2)
+         // translation from long to short hierarchy
+         kedge ( :tileProcessor -> vtile_cpu_19:networkInterface)
+         // translation from long to short hierarchy
+         kedge ( :to_4_4 -> vtile_19:to_4_4)
+         // translation from long to short hierarchy
+         kedge ( :to_4_4 -> vtile_19:to_4_4)
+         // translation from long to short hierarchy
+         kedge ( :to_3_3 -> vtile_19:to_3_3)
+         // translation from long to short hierarchy
+         kedge ( :to_4_2 -> vtile_19:to_4_2)
+      }
+      // port created by long-to-short translation
+      kport tile_ni19 {
+         klabel "tile_ni19_transformed"
+      }
+      // translation from long to short hierarchy
+      kedge ( :tile_ni19 -> vtile_ni19)
+      // port created by long-to-short translation
+      kport from_4_4 {
+         klabel "from_4_4_transformed"
+      }
+      // translation from long to short hierarchy
+      kedge ( :from_4_4 -> vtile_ni19:from_4_4)
+      // port created by long-to-short translation
+      kport to_4_2 {
+         klabel "to_4_2_transformed"
+      }
+      // translation from long to short hierarchy
+      kedge ( :to_4_2 -> vtile_14:from_3_2)
+      // port created by long-to-short translation
+      kport to_4_4 {
+         klabel "to_4_4_transformed"
+      }
+      // translation from long to short hierarchy
+      kedge ( :to_4_4 -> vtile_24:from_4_3)
+      // port created by long-to-short translation
+      kport from_4_2 {
+         klabel "from_4_2_transformed"
+      }
+      // translation from long to short hierarchy
+      kedge ( :from_4_2 -> vtile_ni19:from_4_2)
+      // translation from long to short hierarchy
+      kedge ( :to_4_4 -> vtile_24:from_3_4)
+      // port created by long-to-short translation
+      kport to_3_3 {
+         klabel "to_3_3_transformed"
+      }
+      // translation from long to short hierarchy
+      kedge ( :to_3_3 -> vtile_18:from_4_3)
+      // translation from long to short hierarchy
+      kedge ( :to_4_2 -> vtile_14:from_4_3)
+      // port created by long-to-short translation
+      kport from_3_3 {
+         klabel "from_3_3_transformed"
+      }
+      // translation from long to short hierarchy
+      kedge ( :from_3_3 -> vtile_ni19:from_3_3)
+   }
+   knode vtile_6 {
+      klabel "tile_6"
+      knode vtile_cpu_6 {
+         klabel "tile_cpu_6"
+         kport networkInterface {
+            klabel "networkInterface"
+         }
+         kport defaultMemory {
+            klabel "defaultMemory"
+         }
+         knode vtile_os6 {
+            klabel "tile_os6"
+         }
+         kedge ( :networkInterface -> vtile_ni6:tileProcessor)
+         kedge ( :defaultMemory -> vtile_mem6:instructionsAndData)
+         // translation from long to short hierarchy
+         kedge ( :defaultMemory -> vtile_mem6:instructionsAndData)
+         // translation from long to short hierarchy
+         kedge ( :networkInterface -> vtile_ni6:tileProcessor)
+      }
+      knode vtile_mem6 {
+         klabel "tile_mem6"
+         kport networkInterface {
+            klabel "networkInterface"
+         }
+         kport instructionsAndData {
+            klabel "instructionsAndData"
+         }
+         kedge ( :instructionsAndData -> vtile_cpu_6:defaultMemory)
+         kedge ( :networkInterface -> vtile_ni6:tileMemory)
+         // translation from long to short hierarchy
+         kedge ( :networkInterface -> vtile_ni6:tileMemory)
+         // translation from long to short hierarchy
+         kedge ( :instructionsAndData -> vtile_cpu_6:defaultMemory)
+      }
+      knode vtile_ni6 {
+         klabel "tile_ni6"
+         kport to_1_0 {
+            klabel "to_1_0"
+         }
+         kport to_0_1 {
+            klabel "to_0_1"
+         }
+         kport tileProcessor {
+            klabel "tileProcessor"
+         }
+         kport from_1_0 {
+            klabel "from_1_0"
+         }
+         kport from_0_1 {
+            klabel "from_0_1"
+         }
+         kport to_2_1 {
+            klabel "to_2_1"
+         }
+         kport to_1_2 {
+            klabel "to_1_2"
+         }
+         kport tileMemory {
+            klabel "tileMemory"
+         }
+         kport from_2_1 {
+            klabel "from_2_1"
+         }
+         kport from_1_2 {
+            klabel "from_1_2"
+         }
+         kedge ( :tileProcessor -> vtile_cpu_6:networkInterface)
+         kedge ( :tileMemory -> vtile_mem6:networkInterface)
+         kedge ( :to_1_0 -> vtile_ni1)
+         kedge ( :to_0_1 -> vtile_ni5:from_1_1)
+         kedge ( :to_2_1 -> vtile_ni7:from_1_1)
+         kedge ( :to_1_0 -> vtile_ni1:from_1_1)
+         kedge ( :to_1_2 -> vtile_ni11:from_1_1)
+         // translation from long to short hierarchy
+         kedge ( :to_2_1 -> vtile_6:to_2_1)
+         // translation from long to short hierarchy
+         kedge ( :to_1_0 -> vtile_6:to_1_0)
+         // translation from long to short hierarchy
+         kedge ( :to_0_1 -> vtile_6:to_0_1)
+         // translation from long to short hierarchy
+         kedge ( :to_1_2 -> vtile_6:to_1_2)
+         // translation from long to short hierarchy
+         kedge ( :tileProcessor -> vtile_cpu_6:networkInterface)
+         // translation from long to short hierarchy
+         kedge ( :tileMemory -> vtile_mem6:networkInterface)
+         // translation from long to short hierarchy
+         kedge ( :to_1_0 -> vtile_6:to_1_0)
+      }
+      // port created by long-to-short translation
+      kport from_2_1 {
+         klabel "from_2_1_transformed"
+      }
+      // translation from long to short hierarchy
+      kedge ( :from_2_1 -> vtile_ni6:from_2_1)
+      // port created by long-to-short translation
+      kport from_1_0 {
+         klabel "from_1_0_transformed"
+      }
+      // translation from long to short hierarchy
+      kedge ( :from_1_0 -> vtile_ni6:from_1_0)
+      // port created by long-to-short translation
+      kport to_2_1 {
+         klabel "to_2_1_transformed"
+      }
+      // translation from long to short hierarchy
+      kedge ( :to_2_1 -> vtile_7:from_1_1)
+      // port created by long-to-short translation
+      kport to_1_0 {
+         klabel "to_1_0_transformed"
+      }
+      // translation from long to short hierarchy
+      kedge ( :to_1_0 -> vtile_1:from_1_1)
+      // port created by long-to-short translation
+      kport to_0_1 {
+         klabel "to_0_1_transformed"
+      }
+      // translation from long to short hierarchy
+      kedge ( :to_0_1 -> vtile_5:from_1_1)
+      // port created by long-to-short translation
+      kport from_0_1 {
+         klabel "from_0_1_transformed"
+      }
+      // translation from long to short hierarchy
+      kedge ( :from_0_1 -> vtile_ni6:from_0_1)
+      // port created by long-to-short translation
+      kport to_1_2 {
+         klabel "to_1_2_transformed"
+      }
+      // translation from long to short hierarchy
+      kedge ( :to_1_2 -> vtile_11:from_1_1)
+      // port created by long-to-short translation
+      kport from_1_2 {
+         klabel "from_1_2_transformed"
+      }
+      // translation from long to short hierarchy
+      kedge ( :from_1_2 -> vtile_ni6:from_1_2)
+      // translation from long to short hierarchy
+      kedge ( :from_0_1 -> vtile_ni6:from_0_1)
+      // translation from long to short hierarchy
+      kedge ( :from_2_1 -> vtile_ni6:from_2_1)
+      // translation from long to short hierarchy
+      kedge ( :to_1_0 -> vtile_1)
+   }
+   knode vtile_7 {
+      klabel "tile_7"
+      knode vtile_cpu_7 {
+         klabel "tile_cpu_7"
+         kport networkInterface {
+            klabel "networkInterface"
+         }
+         kport defaultMemory {
+            klabel "defaultMemory"
+         }
+         knode vtile_os7 {
+            klabel "tile_os7"
+         }
+         kedge ( :networkInterface -> vtile_ni7:tileProcessor)
+         kedge ( :defaultMemory -> vtile_mem7:instructionsAndData)
+         // translation from long to short hierarchy
+         kedge ( :networkInterface -> vtile_ni7:tileProcessor)
+         // translation from long to short hierarchy
+         kedge ( :defaultMemory -> vtile_mem7:instructionsAndData)
+      }
+      knode vtile_mem7 {
+         klabel "tile_mem7"
+         kport networkInterface {
+            klabel "networkInterface"
+         }
+         kport instructionsAndData {
+            klabel "instructionsAndData"
+         }
+         kedge ( :instructionsAndData -> vtile_cpu_7:defaultMemory)
+         kedge ( :networkInterface -> vtile_ni7:tileMemory)
+         // translation from long to short hierarchy
+         kedge ( :instructionsAndData -> vtile_cpu_7:defaultMemory)
+         // translation from long to short hierarchy
+         kedge ( :networkInterface -> vtile_ni7:tileMemory)
+      }
+      knode vtile_ni7 {
+         klabel "tile_ni7"
+         kport from_3_1 {
+            klabel "from_3_1"
+         }
+         kport from_2_2 {
+            klabel "from_2_2"
+         }
+         kport to_2_0 {
+            klabel "to_2_0"
+         }
+         kport to_1_1 {
+            klabel "to_1_1"
+         }
+         kport tileProcessor {
+            klabel "tileProcessor"
+         }
+         kport from_2_0 {
+            klabel "from_2_0"
+         }
+         kport from_1_1 {
+            klabel "from_1_1"
+         }
+         kport tileMemory {
+            klabel "tileMemory"
+         }
+         kport to_3_1 {
+            klabel "to_3_1"
+         }
+         kport to_2_2 {
+            klabel "to_2_2"
+         }
+         kedge ( :tileProcessor -> vtile_cpu_7:networkInterface)
+         kedge ( :tileMemory -> vtile_mem7:networkInterface)
+         kedge ( :to_2_0 -> vtile_ni2:from_1_0)
+         kedge ( :to_1_1 -> vtile_ni6:from_2_1)
+         kedge ( :to_3_1 -> vtile_ni8:from_2_1)
+         kedge ( :to_2_0 -> vtile_ni2:from_2_1)
+         kedge ( :to_2_2 -> vtile_ni12:from_2_1)
+         kedge ( :to_2_2 -> vtile_ni12:from_1_2)
+         // translation from long to short hierarchy
+         kedge ( :to_1_1 -> vtile_7:to_1_1)
+         // translation from long to short hierarchy
+         kedge ( :tileMemory -> vtile_mem7:networkInterface)
+         // translation from long to short hierarchy
+         kedge ( :to_2_2 -> vtile_7:to_2_2)
+         // translation from long to short hierarchy
+         kedge ( :to_3_1 -> vtile_7:to_3_1)
+         // translation from long to short hierarchy
+         kedge ( :to_2_0 -> vtile_7:to_2_0)
+         // translation from long to short hierarchy
+         kedge ( :to_2_2 -> vtile_7:to_2_2)
+         // translation from long to short hierarchy
+         kedge ( :to_2_0 -> vtile_7:to_2_0)
+         // translation from long to short hierarchy
+         kedge ( :tileProcessor -> vtile_cpu_7:networkInterface)
+      }
+      // port created by long-to-short translation
+      kport to_1_1 {
+         klabel "to_1_1_transformed"
+      }
+      // translation from long to short hierarchy
+      kedge ( :to_1_1 -> vtile_6:from_2_1)
+      // port created by long-to-short translation
+      kport from_2_0 {
+         klabel "from_2_0_transformed"
+      }
+      // translation from long to short hierarchy
+      kedge ( :from_2_0 -> vtile_ni7:from_2_0)
+      // port created by long-to-short translation
+      kport from_1_1 {
+         klabel "from_1_1_transformed"
+      }
+      // translation from long to short hierarchy
+      kedge ( :from_1_1 -> vtile_ni7:from_1_1)
+      // port created by long-to-short translation
+      kport to_2_2 {
+         klabel "to_2_2_transformed"
+      }
+      // translation from long to short hierarchy
+      kedge ( :to_2_2 -> vtile_12:from_2_1)
+      // port created by long-to-short translation
+      kport from_3_1 {
+         klabel "from_3_1_transformed"
+      }
+      // translation from long to short hierarchy
+      kedge ( :from_3_1 -> vtile_ni7:from_3_1)
+      // port created by long-to-short translation
+      kport to_3_1 {
+         klabel "to_3_1_transformed"
+      }
+      // translation from long to short hierarchy
+      kedge ( :to_3_1 -> vtile_8:from_2_1)
+      // port created by long-to-short translation
+      kport to_2_0 {
+         klabel "to_2_0_transformed"
+      }
+      // translation from long to short hierarchy
+      kedge ( :to_2_0 -> vtile_2:from_2_1)
+      // translation from long to short hierarchy
+      kedge ( :to_2_2 -> vtile_12:from_1_2)
+      // translation from long to short hierarchy
+      kedge ( :to_2_0 -> vtile_2:from_1_0)
+      // port created by long-to-short translation
+      kport tile_ni7 {
+         klabel "tile_ni7_transformed"
+      }
+      // translation from long to short hierarchy
+      kedge ( :tile_ni7 -> vtile_ni7)
+      // port created by long-to-short translation
+      kport from_2_2 {
+         klabel "from_2_2_transformed"
+      }
+      // translation from long to short hierarchy
+      kedge ( :from_2_2 -> vtile_ni7:from_2_2)
+   }
+   knode vtile_8 {
+      klabel "tile_8"
+      knode vtile_cpu_8 {
+         klabel "tile_cpu_8"
+         kport networkInterface {
+            klabel "networkInterface"
+         }
+         kport defaultMemory {
+            klabel "defaultMemory"
+         }
+         knode vtile_os8 {
+            klabel "tile_os8"
+         }
+         kedge ( :networkInterface -> vtile_ni8:tileProcessor)
+         kedge ( :defaultMemory -> vtile_mem8:instructionsAndData)
+         // translation from long to short hierarchy
+         kedge ( :networkInterface -> vtile_ni8:tileProcessor)
+         // translation from long to short hierarchy
+         kedge ( :defaultMemory -> vtile_mem8:instructionsAndData)
+      }
+      knode vtile_mem8 {
+         klabel "tile_mem8"
+         kport networkInterface {
+            klabel "networkInterface"
+         }
+         kport instructionsAndData {
+            klabel "instructionsAndData"
+         }
+         kedge ( :instructionsAndData -> vtile_cpu_8:defaultMemory)
+         kedge ( :networkInterface -> vtile_ni8:tileMemory)
+         // translation from long to short hierarchy
+         kedge ( :instructionsAndData -> vtile_cpu_8:defaultMemory)
+         // translation from long to short hierarchy
+         kedge ( :networkInterface -> vtile_ni8:tileMemory)
+      }
+      knode vtile_ni8 {
+         klabel "tile_ni8"
+         kport from_4_1 {
+            klabel "from_4_1"
+         }
+         kport from_3_2 {
+            klabel "from_3_2"
+         }
+         kport tileProcessor {
+            klabel "tileProcessor"
+         }
+         kport to_4_1 {
+            klabel "to_4_1"
+         }
+         kport to_3_2 {
+            klabel "to_3_2"
+         }
+         kport to_3_0 {
+            klabel "to_3_0"
+         }
+         kport to_2_1 {
+            klabel "to_2_1"
+         }
+         kport tileMemory {
+            klabel "tileMemory"
+         }
+         kport from_3_0 {
+            klabel "from_3_0"
+         }
+         kport from_2_1 {
+            klabel "from_2_1"
+         }
+         kedge ( :tileProcessor -> vtile_cpu_8:networkInterface)
+         kedge ( :tileMemory -> vtile_mem8:networkInterface)
+         kedge ( :to_3_0 -> vtile_ni3)
+         kedge ( :to_2_1 -> vtile_ni7:from_3_1)
+         kedge ( :to_4_1 -> vtile_ni9:from_3_1)
+         kedge ( :to_3_0 -> vtile_ni3:from_3_1)
+         kedge ( :to_3_2 -> vtile_ni13:from_3_1)
+         // translation from long to short hierarchy
+         kedge ( :tileProcessor -> vtile_cpu_8:networkInterface)
+         // translation from long to short hierarchy
+         kedge ( :to_3_0 -> vtile_8:to_3_0)
+         // translation from long to short hierarchy
+         kedge ( :tileMemory -> vtile_mem8:networkInterface)
+         // translation from long to short hierarchy
+         kedge ( :to_2_1 -> vtile_8:to_2_1)
+         // translation from long to short hierarchy
+         kedge ( :to_4_1 -> vtile_8:to_4_1)
+         // translation from long to short hierarchy
+         kedge ( :to_3_0 -> vtile_8:to_3_0)
+         // translation from long to short hierarchy
+         kedge ( :to_3_2 -> vtile_8:to_3_2)
+      }
+      // port created by long-to-short translation
+      kport to_3_0 {
+         klabel "to_3_0_transformed"
+      }
+      // translation from long to short hierarchy
+      kedge ( :to_3_0 -> vtile_3)
+      // port created by long-to-short translation
+      kport to_2_1 {
+         klabel "to_2_1_transformed"
+      }
+      // translation from long to short hierarchy
+      kedge ( :to_2_1 -> vtile_7:from_3_1)
+      // port created by long-to-short translation
+      kport from_2_1 {
+         klabel "from_2_1_transformed"
+      }
+      // translation from long to short hierarchy
+      kedge ( :from_2_1 -> vtile_ni8:from_2_1)
+      // port created by long-to-short translation
+      kport to_4_1 {
+         klabel "to_4_1_transformed"
+      }
+      // translation from long to short hierarchy
+      kedge ( :to_4_1 -> vtile_9:from_3_1)
+      // translation from long to short hierarchy
+      kedge ( :to_3_0 -> vtile_3:from_3_1)
+      // port created by long-to-short translation
+      kport to_3_2 {
+         klabel "to_3_2_transformed"
+      }
+      // translation from long to short hierarchy
+      kedge ( :to_3_2 -> vtile_13:from_3_1)
+      // port created by long-to-short translation
+      kport from_4_1 {
+         klabel "from_4_1_transformed"
+      }
+      // translation from long to short hierarchy
+      kedge ( :from_4_1 -> vtile_ni8:from_4_1)
+      // translation from long to short hierarchy
+      kedge ( :from_2_1 -> vtile_ni8:from_2_1)
+      // port created by long-to-short translation
+      kport from_3_0 {
+         klabel "from_3_0_transformed"
+      }
+      // translation from long to short hierarchy
+      kedge ( :from_3_0 -> vtile_ni8:from_3_0)
+      // port created by long-to-short translation
+      kport from_3_2 {
+         klabel "from_3_2_transformed"
+      }
+      // translation from long to short hierarchy
+      kedge ( :from_3_2 -> vtile_ni8:from_3_2)
+   }
+   knode vtile_9 {
+      klabel "tile_9"
+      knode vtile_cpu_9 {
+         klabel "tile_cpu_9"
+         kport networkInterface {
+            klabel "networkInterface"
+         }
+         kport defaultMemory {
+            klabel "defaultMemory"
+         }
+         knode vtile_os9 {
+            klabel "tile_os9"
+         }
+         kedge ( :networkInterface -> vtile_ni9:tileProcessor)
+         kedge ( :defaultMemory -> vtile_mem9:instructionsAndData)
+         // translation from long to short hierarchy
+         kedge ( :defaultMemory -> vtile_mem9:instructionsAndData)
+         // translation from long to short hierarchy
+         kedge ( :networkInterface -> vtile_ni9:tileProcessor)
+      }
+      knode vtile_mem9 {
+         klabel "tile_mem9"
+         kport networkInterface {
+            klabel "networkInterface"
+         }
+         kport instructionsAndData {
+            klabel "instructionsAndData"
+         }
+         kedge ( :instructionsAndData -> vtile_cpu_9:defaultMemory)
+         kedge ( :networkInterface -> vtile_ni9:tileMemory)
+         // translation from long to short hierarchy
+         kedge ( :instructionsAndData -> vtile_cpu_9:defaultMemory)
+         // translation from long to short hierarchy
+         kedge ( :networkInterface -> vtile_ni9:tileMemory)
+      }
+      knode vtile_ni9 {
+         klabel "tile_ni9"
+         kport from_4_0 {
+            klabel "from_4_0"
+         }
+         kport from_3_1 {
+            klabel "from_3_1"
+         }
+         kport tileProcessor {
+            klabel "tileProcessor"
+         }
+         kport from_4_2 {
+            klabel "from_4_2"
+         }
+         kport to_4_2 {
+            klabel "to_4_2"
+         }
+         kport tileMemory {
+            klabel "tileMemory"
+         }
+         kport to_4_0 {
+            klabel "to_4_0"
+         }
+         kport to_3_1 {
+            klabel "to_3_1"
+         }
+         kedge ( :tileProcessor -> vtile_cpu_9:networkInterface)
+         kedge ( :tileMemory -> vtile_mem9:networkInterface)
+         kedge ( :to_4_0 -> vtile_ni4)
+         kedge ( :to_3_1 -> vtile_ni8:from_4_1)
+         kedge ( :to_4_0 -> vtile_ni4:from_4_1)
+         kedge ( :to_4_2 -> vtile_ni14:from_4_1)
+         // translation from long to short hierarchy
+         kedge ( :to_4_0 -> vtile_9:to_4_0)
+         // translation from long to short hierarchy
+         kedge ( :to_4_0 -> vtile_9:to_4_0)
+         // translation from long to short hierarchy
+         kedge ( :tileProcessor -> vtile_cpu_9:networkInterface)
+         // translation from long to short hierarchy
+         kedge ( :tileMemory -> vtile_mem9:networkInterface)
+         // translation from long to short hierarchy
+         kedge ( :to_4_2 -> vtile_9:to_4_2)
+         // translation from long to short hierarchy
+         kedge ( :to_3_1 -> vtile_9:to_3_1)
+      }
+      // port created by long-to-short translation
+      kport from_4_2 {
+         klabel "from_4_2_transformed"
+      }
+      // translation from long to short hierarchy
+      kedge ( :from_4_2 -> vtile_ni9:from_4_2)
+      // port created by long-to-short translation
+      kport to_4_0 {
+         klabel "to_4_0_transformed"
+      }
+      // translation from long to short hierarchy
+      kedge ( :to_4_0 -> vtile_4)
+      // translation from long to short hierarchy
+      kedge ( :to_4_0 -> vtile_4:from_4_1)
+      // port created by long-to-short translation
+      kport from_3_1 {
+         klabel "from_3_1_transformed"
+      }
+      // translation from long to short hierarchy
+      kedge ( :from_3_1 -> vtile_ni9:from_3_1)
+      // port created by long-to-short translation
+      kport from_4_0 {
+         klabel "from_4_0_transformed"
+      }
+      // translation from long to short hierarchy
+      kedge ( :from_4_0 -> vtile_ni9:from_4_0)
+      // port created by long-to-short translation
+      kport to_4_2 {
+         klabel "to_4_2_transformed"
+      }
+      // translation from long to short hierarchy
+      kedge ( :to_4_2 -> vtile_14:from_4_1)
+      // port created by long-to-short translation
+      kport to_3_1 {
+         klabel "to_3_1_transformed"
+      }
+      // translation from long to short hierarchy
+      kedge ( :to_3_1 -> vtile_8:from_4_1)
+      // port created by long-to-short translation
+      kport tile_ni9 {
+         klabel "tile_ni9_transformed"
+      }
+      // translation from long to short hierarchy
+      kedge ( :tile_ni9 -> vtile_ni9)
+   }
+   knode vtile_2 {
+      klabel "tile_2"
+      knode vtile_cpu_2 {
+         klabel "tile_cpu_2"
+         kport networkInterface {
+            klabel "networkInterface"
+         }
+         kport defaultMemory {
+            klabel "defaultMemory"
+         }
+         knode vtile_os2 {
+            klabel "tile_os2"
+         }
+         kedge ( :networkInterface -> vtile_ni2:tileProcessor)
+         kedge ( :defaultMemory -> vtile_mem2:instructionsAndData)
+         // translation from long to short hierarchy
+         kedge ( :defaultMemory -> vtile_mem2:instructionsAndData)
+         // translation from long to short hierarchy
+         kedge ( :networkInterface -> vtile_ni2:tileProcessor)
+      }
+      knode vtile_mem2 {
+         klabel "tile_mem2"
+         kport networkInterface {
+            klabel "networkInterface"
+         }
+         kport instructionsAndData {
+            klabel "instructionsAndData"
+         }
+         kedge ( :instructionsAndData -> vtile_cpu_2:defaultMemory)
+         kedge ( :networkInterface -> vtile_ni2:tileMemory)
+         // translation from long to short hierarchy
+         kedge ( :networkInterface -> vtile_ni2:tileMemory)
+         // translation from long to short hierarchy
+         kedge ( :instructionsAndData -> vtile_cpu_2:defaultMemory)
+      }
+      knode vtile_ni2 {
+         klabel "tile_ni2"
+         kport to_1_0 {
+            klabel "to_1_0"
+         }
+         kport tileProcessor {
+            klabel "tileProcessor"
+         }
+         kport from_1_0 {
+            klabel "from_1_0"
+         }
+         kport to_3_0 {
+            klabel "to_3_0"
+         }
+         kport to_2_1 {
+            klabel "to_2_1"
+         }
+         kport tileMemory {
+            klabel "tileMemory"
+         }
+         kport from_3_0 {
+            klabel "from_3_0"
+         }
+         kport from_2_1 {
+            klabel "from_2_1"
+         }
+         kedge ( :tileProcessor -> vtile_cpu_2:networkInterface)
+         kedge ( :tileMemory -> vtile_mem2:networkInterface)
+         kedge ( :to_1_0 -> vtile_ni1:from_2_0)
+         kedge ( :to_3_0 -> vtile_ni3:from_2_0)
+         kedge ( :to_2_1 -> vtile_ni7:from_2_0)
+         // translation from long to short hierarchy
+         kedge ( :to_1_0 -> vtile_2:to_1_0)
+         // translation from long to short hierarchy
+         kedge ( :tileMemory -> vtile_mem2:networkInterface)
+         // translation from long to short hierarchy
+         kedge ( :to_2_1 -> vtile_2:to_2_1)
+         // translation from long to short hierarchy
+         kedge ( :to_3_0 -> vtile_2:to_3_0)
+         // translation from long to short hierarchy
+         kedge ( :tileProcessor -> vtile_cpu_2:networkInterface)
+      }
+      // port created by long-to-short translation
+      kport to_1_0 {
+         klabel "to_1_0_transformed"
+      }
+      // translation from long to short hierarchy
+      kedge ( :to_1_0 -> vtile_1:from_2_0)
+      // port created by long-to-short translation
+      kport to_2_1 {
+         klabel "to_2_1_transformed"
+      }
+      // translation from long to short hierarchy
+      kedge ( :to_2_1 -> vtile_7:from_2_0)
+      // port created by long-to-short translation
+      kport from_3_0 {
+         klabel "from_3_0_transformed"
+      }
+      // translation from long to short hierarchy
+      kedge ( :from_3_0 -> vtile_ni2:from_3_0)
+      // port created by long-to-short translation
+      kport from_1_0 {
+         klabel "from_1_0_transformed"
+      }
+      // translation from long to short hierarchy
+      kedge ( :from_1_0 -> vtile_ni2:from_1_0)
+      // port created by long-to-short translation
+      kport from_2_1 {
+         klabel "from_2_1_transformed"
+      }
+      // translation from long to short hierarchy
+      kedge ( :from_2_1 -> vtile_ni2:from_2_1)
+      // port created by long-to-short translation
+      kport to_3_0 {
+         klabel "to_3_0_transformed"
+      }
+      // translation from long to short hierarchy
+      kedge ( :to_3_0 -> vtile_3:from_2_0)
+      // translation from long to short hierarchy
+      kedge ( :from_1_0 -> vtile_ni2:from_1_0)
+   }
+   knode vtile_3 {
+      klabel "tile_3"
+      knode vtile_cpu_3 {
+         klabel "tile_cpu_3"
+         kport networkInterface {
+            klabel "networkInterface"
+         }
+         kport defaultMemory {
+            klabel "defaultMemory"
+         }
+         knode vtile_os3 {
+            klabel "tile_os3"
+         }
+         kedge ( :networkInterface -> vtile_ni3:tileProcessor)
+         kedge ( :defaultMemory -> vtile_mem3:instructionsAndData)
+         // translation from long to short hierarchy
+         kedge ( :networkInterface -> vtile_ni3:tileProcessor)
+         // translation from long to short hierarchy
+         kedge ( :defaultMemory -> vtile_mem3:instructionsAndData)
+      }
+      knode vtile_mem3 {
+         klabel "tile_mem3"
+         kport networkInterface {
+            klabel "networkInterface"
+         }
+         kport instructionsAndData {
+            klabel "instructionsAndData"
+         }
+         kedge ( :instructionsAndData -> vtile_cpu_3:defaultMemory)
+         kedge ( :networkInterface -> vtile_ni3:tileMemory)
+         // translation from long to short hierarchy
+         kedge ( :networkInterface -> vtile_ni3:tileMemory)
+         // translation from long to short hierarchy
+         kedge ( :instructionsAndData -> vtile_cpu_3:defaultMemory)
+      }
+      knode vtile_ni3 {
+         klabel "tile_ni3"
+         kport from_4_0 {
+            klabel "from_4_0"
+         }
+         kport from_3_1 {
+            klabel "from_3_1"
+         }
+         kport to_2_0 {
+            klabel "to_2_0"
+         }
+         kport tileProcessor {
+            klabel "tileProcessor"
+         }
+         kport from_2_0 {
+            klabel "from_2_0"
+         }
+         kport tileMemory {
+            klabel "tileMemory"
+         }
+         kport to_4_0 {
+            klabel "to_4_0"
+         }
+         kport to_3_1 {
+            klabel "to_3_1"
+         }
+         kedge ( :tileProcessor -> vtile_cpu_3:networkInterface)
+         kedge ( :tileMemory -> vtile_mem3:networkInterface)
+         kedge ( :to_2_0 -> vtile_ni2:from_3_0)
+         kedge ( :to_4_0 -> vtile_ni4:from_3_0)
+         kedge ( :to_3_1 -> vtile_ni8:from_3_0)
+         // translation from long to short hierarchy
+         kedge ( :to_2_0 -> vtile_3:to_2_0)
+         // translation from long to short hierarchy
+         kedge ( :tileMemory -> vtile_mem3:networkInterface)
+         // translation from long to short hierarchy
+         kedge ( :to_4_0 -> vtile_3:to_4_0)
+         // translation from long to short hierarchy
+         kedge ( :to_3_1 -> vtile_3:to_3_1)
+         // translation from long to short hierarchy
+         kedge ( :tileProcessor -> vtile_cpu_3:networkInterface)
+      }
+      // port created by long-to-short translation
+      kport tile_ni3 {
+         klabel "tile_ni3_transformed"
+      }
+      // translation from long to short hierarchy
+      kedge ( :tile_ni3 -> vtile_ni3)
+      // port created by long-to-short translation
+      kport to_2_0 {
+         klabel "to_2_0_transformed"
+      }
+      // translation from long to short hierarchy
+      kedge ( :to_2_0 -> vtile_2:from_3_0)
+      // port created by long-to-short translation
+      kport to_4_0 {
+         klabel "to_4_0_transformed"
+      }
+      // translation from long to short hierarchy
+      kedge ( :to_4_0 -> vtile_4:from_3_0)
+      // port created by long-to-short translation
+      kport from_2_0 {
+         klabel "from_2_0_transformed"
+      }
+      // translation from long to short hierarchy
+      kedge ( :from_2_0 -> vtile_ni3:from_2_0)
+      // port created by long-to-short translation
+      kport from_3_1 {
+         klabel "from_3_1_transformed"
+      }
+      // translation from long to short hierarchy
+      kedge ( :from_3_1 -> vtile_ni3:from_3_1)
+      // port created by long-to-short translation
+      kport from_4_0 {
+         klabel "from_4_0_transformed"
+      }
+      // translation from long to short hierarchy
+      kedge ( :from_4_0 -> vtile_ni3:from_4_0)
+      // port created by long-to-short translation
+      kport to_3_1 {
+         klabel "to_3_1_transformed"
+      }
+      // translation from long to short hierarchy
+      kedge ( :to_3_1 -> vtile_8:from_3_0)
+   }
+   knode vtile_4 {
+      klabel "tile_4"
+      knode vtile_cpu_4 {
+         klabel "tile_cpu_4"
+         kport networkInterface {
+            klabel "networkInterface"
+         }
+         kport defaultMemory {
+            klabel "defaultMemory"
+         }
+         knode vtile_os4 {
+            klabel "tile_os4"
+         }
+         kedge ( :networkInterface -> vtile_ni4:tileProcessor)
+         kedge ( :defaultMemory -> vtile_mem4:instructionsAndData)
+         // translation from long to short hierarchy
+         kedge ( :networkInterface -> vtile_ni4:tileProcessor)
+         // translation from long to short hierarchy
+         kedge ( :defaultMemory -> vtile_mem4:instructionsAndData)
+      }
+      knode vtile_mem4 {
+         klabel "tile_mem4"
+         kport networkInterface {
+            klabel "networkInterface"
+         }
+         kport instructionsAndData {
+            klabel "instructionsAndData"
+         }
+         kedge ( :instructionsAndData -> vtile_cpu_4:defaultMemory)
+         kedge ( :networkInterface -> vtile_ni4:tileMemory)
+         // translation from long to short hierarchy
+         kedge ( :networkInterface -> vtile_ni4:tileMemory)
+         // translation from long to short hierarchy
+         kedge ( :instructionsAndData -> vtile_cpu_4:defaultMemory)
+      }
+      knode vtile_ni4 {
+         klabel "tile_ni4"
+         kport from_4_1 {
+            klabel "from_4_1"
+         }
+         kport tileProcessor {
+            klabel "tileProcessor"
+         }
+         kport to_4_1 {
+            klabel "to_4_1"
+         }
+         kport to_3_0 {
+            klabel "to_3_0"
+         }
+         kport tileMemory {
+            klabel "tileMemory"
+         }
+         kport from_3_0 {
+            klabel "from_3_0"
+         }
+         kedge ( :tileProcessor -> vtile_cpu_4:networkInterface)
+         kedge ( :tileMemory -> vtile_mem4:networkInterface)
+         kedge ( :to_3_0 -> vtile_ni3:from_4_0)
+         kedge ( :to_4_1 -> vtile_ni9:from_4_0)
+         // translation from long to short hierarchy
+         kedge ( :tileProcessor -> vtile_cpu_4:networkInterface)
+         // translation from long to short hierarchy
+         kedge ( :to_4_1 -> vtile_4:to_4_1)
+         // translation from long to short hierarchy
+         kedge ( :tileMemory -> vtile_mem4:networkInterface)
+         // translation from long to short hierarchy
+         kedge ( :to_3_0 -> vtile_4:to_3_0)
+      }
+      // port created by long-to-short translation
+      kport tile_ni4 {
+         klabel "tile_ni4_transformed"
+      }
+      // translation from long to short hierarchy
+      kedge ( :tile_ni4 -> vtile_ni4)
+      // port created by long-to-short translation
+      kport from_4_1 {
+         klabel "from_4_1_transformed"
+      }
+      // translation from long to short hierarchy
+      kedge ( :from_4_1 -> vtile_ni4:from_4_1)
+      // port created by long-to-short translation
+      kport from_3_0 {
+         klabel "from_3_0_transformed"
+      }
+      // translation from long to short hierarchy
+      kedge ( :from_3_0 -> vtile_ni4:from_3_0)
+      // port created by long-to-short translation
+      kport to_4_1 {
+         klabel "to_4_1_transformed"
+      }
+      // translation from long to short hierarchy
+      kedge ( :to_4_1 -> vtile_9:from_4_0)
+      // port created by long-to-short translation
+      kport to_3_0 {
+         klabel "to_3_0_transformed"
+      }
+      // translation from long to short hierarchy
+      kedge ( :to_3_0 -> vtile_3:from_4_0)
+   }
+   knode vtile_5 {
+      klabel "tile_5"
+      knode vtile_cpu_5 {
+         klabel "tile_cpu_5"
+         kport networkInterface {
+            klabel "networkInterface"
+         }
+         kport defaultMemory {
+            klabel "defaultMemory"
+         }
+         knode vtile_os5 {
+            klabel "tile_os5"
+         }
+         kedge ( :networkInterface -> vtile_ni5:tileProcessor)
+         kedge ( :defaultMemory -> vtile_mem5:instructionsAndData)
+         // translation from long to short hierarchy
+         kedge ( :defaultMemory -> vtile_mem5:instructionsAndData)
+         // translation from long to short hierarchy
+         kedge ( :networkInterface -> vtile_ni5:tileProcessor)
+      }
+      knode vtile_mem5 {
+         klabel "tile_mem5"
+         kport networkInterface {
+            klabel "networkInterface"
+         }
+         kport instructionsAndData {
+            klabel "instructionsAndData"
+         }
+         kedge ( :instructionsAndData -> vtile_cpu_5:defaultMemory)
+         kedge ( :networkInterface -> vtile_ni5:tileMemory)
+         // translation from long to short hierarchy
+         kedge ( :networkInterface -> vtile_ni5:tileMemory)
+         // translation from long to short hierarchy
+         kedge ( :instructionsAndData -> vtile_cpu_5:defaultMemory)
+      }
+      knode vtile_ni5 {
+         klabel "tile_ni5"
+         kport to_1_1 {
+            klabel "to_1_1"
+         }
+         kport to_0_2 {
+            klabel "to_0_2"
+         }
+         kport tileProcessor {
+            klabel "tileProcessor"
+         }
+         kport to_0_0 {
+            klabel "to_0_0"
+         }
+         kport from_0_0 {
+            klabel "from_0_0"
+         }
+         kport from_1_1 {
+            klabel "from_1_1"
+         }
+         kport from_0_2 {
+            klabel "from_0_2"
+         }
+         kport tileMemory {
+            klabel "tileMemory"
+         }
+         kedge ( :tileProcessor -> vtile_cpu_5:networkInterface)
+         kedge ( :tileMemory -> vtile_mem5:networkInterface)
+         kedge ( :to_0_0 -> vtile_ni0:from_1_0)
+         kedge ( :to_1_1 -> vtile_ni6:from_0_1)
+         kedge ( :to_0_0 -> vtile_ni0:from_0_1)
+         kedge ( :to_0_2 -> vtile_ni10:from_0_1)
+         kedge ( :to_0_2 -> vtile_ni10:from_1_2)
+         // translation from long to short hierarchy
+         kedge ( :to_0_2 -> vtile_5:to_0_2)
+         // translation from long to short hierarchy
+         kedge ( :to_0_0 -> vtile_5:to_0_0)
+         // translation from long to short hierarchy
+         kedge ( :tileProcessor -> vtile_cpu_5:networkInterface)
+         // translation from long to short hierarchy
+         kedge ( :to_0_0 -> vtile_5:to_0_0)
+         // translation from long to short hierarchy
+         kedge ( :to_1_1 -> vtile_5:to_1_1)
+         // translation from long to short hierarchy
+         kedge ( :to_0_2 -> vtile_5:to_0_2)
+         // translation from long to short hierarchy
+         kedge ( :tileMemory -> vtile_mem5:networkInterface)
+      }
+      // port created by long-to-short translation
+      kport to_0_2 {
+         klabel "to_0_2_transformed"
+      }
+      // translation from long to short hierarchy
+      kedge ( :to_0_2 -> vtile_10:from_0_1)
+      // port created by long-to-short translation
+      kport to_0_0 {
+         klabel "to_0_0_transformed"
+      }
+      // translation from long to short hierarchy
+      kedge ( :to_0_0 -> vtile_0:from_1_0)
+      // port created by long-to-short translation
+      kport tile_ni5 {
+         klabel "tile_ni5_transformed"
+      }
+      // translation from long to short hierarchy
+      kedge ( :tile_ni5 -> vtile_ni5)
+      // port created by long-to-short translation
+      kport from_1_1 {
+         klabel "from_1_1_transformed"
+      }
+      // translation from long to short hierarchy
+      kedge ( :from_1_1 -> vtile_ni5:from_1_1)
+      // port created by long-to-short translation
+      kport from_0_0 {
+         klabel "from_0_0_transformed"
+      }
+      // translation from long to short hierarchy
+      kedge ( :from_0_0 -> vtile_ni5:from_0_0)
+      // port created by long-to-short translation
+      kport from_0_2 {
+         klabel "from_0_2_transformed"
+      }
+      // translation from long to short hierarchy
+      kedge ( :from_0_2 -> vtile_ni5:from_0_2)
+      // translation from long to short hierarchy
+      kedge ( :to_0_0 -> vtile_0:from_0_1)
+      // port created by long-to-short translation
+      kport to_1_1 {
+         klabel "to_1_1_transformed"
+      }
+      // translation from long to short hierarchy
+      kedge ( :to_1_1 -> vtile_6:from_0_1)
+      // translation from long to short hierarchy
+      kedge ( :to_0_2 -> vtile_10:from_1_2)
+   }
+}

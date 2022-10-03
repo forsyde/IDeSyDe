@@ -30,7 +30,7 @@ import idesyde.identification.DecisionModel
 import idesyde.identification.IdentificationResult
 
 
-final class PeriodicWorkloadIdentificationRule()
+final case class PeriodicWorkloadIdentificationRule()(using scala.math.Fractional[Rational])(using Conversion[Int, Rational])
     extends ForSyDeIdentificationRule[ForSyDePeriodicWorkload] {
 
   def identifyFromForSyDe(

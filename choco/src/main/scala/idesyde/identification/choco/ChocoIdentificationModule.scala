@@ -6,12 +6,16 @@ import idesyde.identification.choco.models.sdf.ChocoSDFToSChedTileHW
 import idesyde.identification.choco.models.sdf.ChocoSDFToSChedTileHWSlowest
 import idesyde.identification.IdentificationModule
 import idesyde.identification.choco.rules.PeriodicTaskToSchedHWChocoIRule
+import spire.math.Rational
 
 class ChocoIdentificationModule() extends IdentificationModule {
 
-  def identificationRules: Set[IdentificationRule[? <: DecisionModel]] = Set(
+  given Conversion[Double, Rational] = (d) => Rational(d)
+  given Fractional[Rational] = spire.compat.fractional[Rational]
+
+  val identificationRules = Set(
     PeriodicTaskToSchedHWChocoIRule(),
-    ChocoSDFToSChedTileHW,
-    ChocoSDFToSChedTileHWSlowest
+    ChocoSDFToSChedTileHW.identifyFromAny,
+    ChocoSDFToSChedTileHWSlowest.identifyFromAny
   )
 }

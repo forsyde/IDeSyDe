@@ -56,7 +56,7 @@ class SDFOnTileNoCUseCaseWithSolution extends AnyFunSuite with LoggingMixin {
 
   val solutionsTaken = 1
 
-  Files.createDirectories(Paths.get("tests/models/sdf3/results"))
+  Files.createDirectories(Paths.get("scala-tests/models/sdf3/results"))
 
   val explorationHandler = ExplorationHandler(
     infoLogger = (s: String) => scribe.info(s),
@@ -766,11 +766,11 @@ class SDFOnTileNoCUseCaseWithSolution extends AnyFunSuite with LoggingMixin {
     m
   }
 
-  val sobelSDF3        = forSyDeModelHandler.loadModel("tests/models/sdf3/a_sobel.hsdf.xml")
-  val susanSDF3        = forSyDeModelHandler.loadModel("tests/models/sdf3/b_susan.hsdf.xml")
-  val rastaSDF3        = forSyDeModelHandler.loadModel("tests/models/sdf3/c_rasta.hsdf.xml")
-  val jpegEnc1SDF3     = forSyDeModelHandler.loadModel("tests/models/sdf3/d_jpegEnc1.hsdf.xml")
-  val g10_3_cyclicSDF3 = forSyDeModelHandler.loadModel("tests/models/sdf3/g10_3_cycl.sdf.xml")
+  val sobelSDF3        = forSyDeModelHandler.loadModel("scala-tests/models/sdf3/a_sobel.hsdf.xml")
+  val susanSDF3        = forSyDeModelHandler.loadModel("scala-tests/models/sdf3/b_susan.hsdf.xml")
+  val rastaSDF3        = forSyDeModelHandler.loadModel("scala-tests/models/sdf3/c_rasta.hsdf.xml")
+  val jpegEnc1SDF3     = forSyDeModelHandler.loadModel("scala-tests/models/sdf3/d_jpegEnc1.hsdf.xml")
+  val g10_3_cyclicSDF3 = forSyDeModelHandler.loadModel("scala-tests/models/sdf3/g10_3_cycl.sdf.xml")
   val allSDFApps =
     sobelSDF3.merge(susanSDF3).merge(rastaSDF3).merge(jpegEnc1SDF3).merge(g10_3_cyclicSDF3)
 
@@ -779,18 +779,18 @@ class SDFOnTileNoCUseCaseWithSolution extends AnyFunSuite with LoggingMixin {
   val appsAndLarge    = allSDFApps.merge(large5x6PlatformModel)
 
   test("Created platform models in memory successfully and can write them out") {
-    forSyDeModelHandler.writeModel(small2x2PlatformModel, "tests/models/small_platform.fiodl")
+    forSyDeModelHandler.writeModel(small2x2PlatformModel, "scala-tests/models/small_platform.fiodl")
     forSyDeModelHandler.writeModel(
       busLike8nodePlatformModel,
-      "tests/models/bus_small_platform.fiodl"
+      "scala-tests/models/bus_small_platform.fiodl"
     )
-    forSyDeModelHandler.writeModel(large5x6PlatformModel, "tests/models/large_platform.fiodl")
-    forSyDeModelHandler.writeModel(small2x2PlatformModel, "tests/models/small_platform_visual.kgt")
+    forSyDeModelHandler.writeModel(large5x6PlatformModel, "scala-tests/models/large_platform.fiodl")
+    forSyDeModelHandler.writeModel(small2x2PlatformModel, "scala-tests/models/small_platform_visual.kgt")
     forSyDeModelHandler.writeModel(
       busLike8nodePlatformModel,
-      "tests/models/bus_small_platform_visual.kgt"
+      "scala-tests/models/bus_small_platform_visual.kgt"
     )
-    forSyDeModelHandler.writeModel(large5x6PlatformModel, "tests/models/large_platform_visual.kgt")
+    forSyDeModelHandler.writeModel(large5x6PlatformModel, "scala-tests/models/large_platform_visual.kgt")
   }
 
   test("Correct decision model identification of the Small platform") {
@@ -839,11 +839,11 @@ class SDFOnTileNoCUseCaseWithSolution extends AnyFunSuite with LoggingMixin {
             forSyDeModelHandler
               .writeModel(
                 inputSystem.merge(sol),
-                "tests/models/sdf3/results/sobel_and_small_result.fiodl"
+                "scala-tests/models/sdf3/results/sobel_and_small_result.fiodl"
               )
             forSyDeModelHandler.writeModel(
               inputSystem.merge(sol),
-              "tests/models/sdf3/results/sobel_and_small_result_visual.kgt"
+              "scala-tests/models/sdf3/results/sobel_and_small_result_visual.kgt"
             )
             sol
           )
@@ -867,11 +867,11 @@ class SDFOnTileNoCUseCaseWithSolution extends AnyFunSuite with LoggingMixin {
             forSyDeModelHandler
               .writeModel(
                 inputSystem.merge(sol),
-                "tests/models/sdf3/results/sobel_and_bus_small_result.fiodl"
+                "scala-tests/models/sdf3/results/sobel_and_bus_small_result.fiodl"
               )
             forSyDeModelHandler.writeModel(
               inputSystem.merge(sol),
-              "tests/models/sdf3/results/sobel_and_bus_small_result_visual.kgt"
+              "scala-tests/models/sdf3/results/sobel_and_bus_small_result_visual.kgt"
             )
             sol
           )
@@ -895,11 +895,11 @@ class SDFOnTileNoCUseCaseWithSolution extends AnyFunSuite with LoggingMixin {
             forSyDeModelHandler
               .writeModel(
                 inputSystem.merge(sol),
-                "tests/models/sdf3/results/sobel_and_large_result.fiodl"
+                "scala-tests/models/sdf3/results/sobel_and_large_result.fiodl"
               )
             forSyDeModelHandler.writeModel(
               inputSystem.merge(sol),
-              "tests/models/sdf3/results/sobel_and_large_result_visual.kgt"
+              "scala-tests/models/sdf3/results/sobel_and_large_result_visual.kgt"
             )
             sol
           )
@@ -967,11 +967,11 @@ class SDFOnTileNoCUseCaseWithSolution extends AnyFunSuite with LoggingMixin {
             forSyDeModelHandler
               .writeModel(
                 inputSystem.merge(sol),
-                "tests/models/sdf3/results/synthetic_and_bus_small_result.fiodl"
+                "scala-tests/models/sdf3/results/synthetic_and_bus_small_result.fiodl"
               )
             forSyDeModelHandler.writeModel(
               inputSystem.merge(sol),
-              "tests/models/sdf3/results/synthetic_and_bus_small_result_visual.kgt"
+              "scala-tests/models/sdf3/results/synthetic_and_bus_small_result_visual.kgt"
             )
             sol
           )
@@ -1009,11 +1009,11 @@ class SDFOnTileNoCUseCaseWithSolution extends AnyFunSuite with LoggingMixin {
             forSyDeModelHandler
               .writeModel(
                 appsAndSmall.merge(sol),
-                "tests/models/sdf3/results/all_and_small_result.fiodl"
+                "scala-tests/models/sdf3/results/all_and_small_result.fiodl"
               )
             forSyDeModelHandler.writeModel(
               appsAndSmall.merge(sol),
-              "tests/models/sdf3/results/all_and_small_result_visual.kgt"
+              "scala-tests/models/sdf3/results/all_and_small_result_visual.kgt"
             )
             sol
           )
@@ -1039,11 +1039,11 @@ class SDFOnTileNoCUseCaseWithSolution extends AnyFunSuite with LoggingMixin {
             forSyDeModelHandler
               .writeModel(
                 appsAndBusSmall.merge(sol),
-                "tests/models/sdf3/results/all_and_bus_small_result.fiodl"
+                "scala-tests/models/sdf3/results/all_and_bus_small_result.fiodl"
               )
             forSyDeModelHandler.writeModel(
               appsAndBusSmall.merge(sol),
-              "tests/models/sdf3/results/all_and_bus_small_result_visual.kgt"
+              "scala-tests/models/sdf3/results/all_and_bus_small_result_visual.kgt"
             )
             sol
           )
@@ -1069,11 +1069,11 @@ class SDFOnTileNoCUseCaseWithSolution extends AnyFunSuite with LoggingMixin {
             forSyDeModelHandler
               .writeModel(
                 appsAndLarge.merge(sol),
-                "tests/models/sdf3/results/all_and_large_result.fiodl"
+                "scala-tests/models/sdf3/results/all_and_large_result.fiodl"
               )
             forSyDeModelHandler.writeModel(
               appsAndLarge.merge(sol),
-              "tests/models/sdf3/results/all_and_large_result_visual.kgt"
+              "scala-tests/models/sdf3/results/all_and_large_result_visual.kgt"
             )
             sol
           )

@@ -17,9 +17,8 @@ import forsyde.io.java.core.ForSyDeSystemGraph
 import scala.concurrent.ExecutionContext
 
 import mixins.LoggingMixin
-import forsyde.io.java.kgt.drivers.ForSyDeKGTDriver
 
-class PanoramaUseCaseWithSolutionSuite extends AnyFunSuite with LoggingMixin {
+class PanoramaUseCaseWithoutSolutionSuite extends AnyFunSuite with LoggingMixin {
 
   given ExecutionContext = ExecutionContext.global
 
@@ -39,48 +38,40 @@ class PanoramaUseCaseWithSolutionSuite extends AnyFunSuite with LoggingMixin {
     .registerIdentificationRule(ForSyDeIdentificationModule())
     .registerIdentificationRule(MinizincIdentificationModule())
 
-  val forSyDeModelHandler = ForSyDeModelHandler().registerDriver(ForSyDeAmaltheaDriver()).registerDriver(ForSyDeKGTDriver())
+  val forSyDeModelHandler = ForSyDeModelHandler().registerDriver(ForSyDeAmaltheaDriver())
 
   val flightInfo = forSyDeModelHandler.loadModel(
-    Paths.get("tests/models/panorama/flight-information-system-easier.amxmi")
+    Paths.get("scala-tests/models/panorama/flight-information-system.amxmi")
   )
   val radar = forSyDeModelHandler.loadModel(
-    Paths.get("tests/models/panorama/radar-system-easier.amxmi")
+    Paths.get("scala-tests/models/panorama/radar-system.amxmi")
   )
   val bounds =
-    forSyDeModelHandler.loadModel(Paths.get("tests/models/panorama/utilizationBounds.forsyde.xmi"))
+    forSyDeModelHandler.loadModel(Paths.get("scala-tests/models/panorama/utilizationBounds.forsyde.xmi"))
   val model           = flightInfo.merge(radar).merge(bounds)
   lazy val identified = identificationHandler.identifyDecisionModels(model)
   lazy val chosen     = explorationHandler.chooseExplorersAndModels(identified)
 
-  test("PANORAMA case study - can write back model before solution") {
-    forSyDeModelHandler.writeModel(model, "tests/models/panorama/input_to_dse.fiodl")
-    forSyDeModelHandler.writeModel(model, "tests/models/panorama/input_to_dse.amxmi")
-    forSyDeModelHandler.writeModel(model, "tests/models/panorama/input_to_dse_visual.kgt")
-  }
-
-  test("PANORAMA case study with any solutions - At least 1 decision model") {
+  test("PANORAMA case study without any solutions - At least 1 decision model") {
     assert(identified.size > 0)
   }
 
-  test("PANORAMA case study with any solutions - At least 1 combo") {
+  test("PANORAMA case study without any solutions - At least 1 combo") {
     assert(chosen.size > 0)
   }
 
-  test("PANORAMA case study with any solutions - at least 1 solution found") {
+  test("PANORAMA case study without any solutions - no solution found") {
     val solutions = chosen
       .flatMap((explorer, decisionModel) =>
         explorer
           .explore[ForSyDeSystemGraph](decisionModel)
           .map(sol =>
             forSyDeModelHandler
-              .writeModel(model.merge(sol), "tests/models/panorama/output_of_dse.fiodl")
-            forSyDeModelHandler
-              .writeModel(model.merge(sol), "tests/models/panorama/output_of_dse_visual.kgt")
+              .writeModel(model.merge(sol), "scala-tests/models/panorama/wrong_output_of_dse.fiodl")
             sol
           ).take(1)
-      ).take(1)
-    assert(solutions.size > 0)
+      )
+    assert(solutions.size == 0)
   }
 
 }

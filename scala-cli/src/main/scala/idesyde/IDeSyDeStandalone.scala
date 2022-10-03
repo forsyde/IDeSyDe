@@ -1,7 +1,7 @@
 package idesyde
 
 import idesyde.cli.IDeSyDeCLIParser
-import idesyde.cli.IDeSyDeRunConfig
+import idesyde.cli.allowedDecisionModels
 import scribe.Level
 import idesyde.identification.IdentificationHandler
 import idesyde.exploration.ExplorationHandler
@@ -14,7 +14,7 @@ object IDeSyDeStandalone {
     // System.exit(CommandLine(IDeSyDeCLI()).execute(args *))
     IDeSyDeCLIParser().parse(
       args,
-      IDeSyDeRunConfig(executionContext = ExecutionContext.global)
+      allowedDecisionModels(executionContext = ExecutionContext.global)
     ) match {
       case Some(runConfig) =>
         runConfig.run()

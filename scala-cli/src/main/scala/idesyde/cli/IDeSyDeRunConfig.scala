@@ -16,10 +16,12 @@ import idesyde.exploration.forsyde.interfaces.ForSyDeIOExplorer
 import idesyde.identification.forsyde.api.ForSyDeIdentificationModule
 import idesyde.identification.minizinc.api.MinizincIdentificationModule
 import scribe.format.FormatterInterpolator
+import idesyde.identification.DecisionModel
 
-case class IDeSyDeRunConfig(
+case class allowedDecisionModels(
     var inputModelsPaths: Buffer[Path] = Buffer.empty,
     var outputModelPath: Path = Paths.get("idesyde-result.forsyde.xml"),
+    var allowedDecisionModels: Buffer[String] = Buffer(),
     var verbosityLevel: String = "INFO",
     executionContext: ExecutionContext
 ):
@@ -60,12 +62,16 @@ case class IDeSyDeRunConfig(
       scribe.info(s"Identification finished with ${identified.size} decision model(s).")
       if (identified.size > 0)
         val chosen = explorationHandler.chooseExplorersAndModels(identified)
-        scribe.info(s"Total of ${chosen.size} combo of decision model(s) and explorer(s) chosen.")
+        val chosenFiltered =
+          if (allowedDecisionModels.size > 0) then
+            chosen.filter((exp, dm) => allowedDecisionModels.contains(dm.uniqueIdentifier))
+          else chosen
+        scribe.info(s"Total of ${chosenFiltered.size} combo of decision model(s) and explorer(s) chosen.")
         // identified.foreach(m => m match {
         //   case mzn: MiniZincForSyDeDecisionModel => scribe.debug(s"mzn model: ${mzn.mznInputs.toString}")
         // })
         //var numSols = 0
-        val numSols = chosen.headOption
+        val numSols = chosenFiltered.headOption
           .filter((e, decisionModel) =>
             e.isInstanceOf[ForSyDeIOExplorer] && decisionModel.isInstanceOf[ForSyDeDecisionModel]
           )
@@ -119,4 +125,4 @@ case class IDeSyDeRunConfig(
         .replace()
     scribe.info(s"logging levels set to ${loggingLevel.name}.")
 
-end IDeSyDeRunConfig
+end allowedDecisionModels

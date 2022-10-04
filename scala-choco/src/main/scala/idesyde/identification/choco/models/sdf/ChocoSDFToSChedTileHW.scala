@@ -104,6 +104,7 @@ object ChocoSDFToSChedTileHW {
     model: Any,
     identified: scala.collection.Iterable[DecisionModel]
   )(using scala.math.Fractional[Rational]): IdentificationResult[ChocoSDFToSChedTileHW] = ForSyDeIdentificationRule.identifyWrapper(model, identified, identifyFromForSyDe)
+  
   def identifyFromForSyDe(
       model: ForSyDeSystemGraph,
       identified: scala.collection.Iterable[DecisionModel]

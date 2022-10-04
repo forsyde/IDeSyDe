@@ -18,13 +18,13 @@ import idesyde.identification.minizinc.api.MinizincIdentificationModule
 import scribe.format.FormatterInterpolator
 import idesyde.identification.DecisionModel
 
-case class allowedDecisionModels(
+case class IDeSyDeRunConfig(
     var inputModelsPaths: Buffer[Path] = Buffer.empty,
     var outputModelPath: Path = Paths.get("idesyde-result.forsyde.xml"),
     var allowedDecisionModels: Buffer[String] = Buffer(),
     var verbosityLevel: String = "INFO",
     executionContext: ExecutionContext
-):
+) {
 
   val explorationHandler = ExplorationHandler(
     infoLogger = (s: String) => scribe.info(s),
@@ -44,15 +44,17 @@ case class allowedDecisionModels(
     setLoggingLevel(Level.get(verbosityLevel).getOrElse(Level.Info))
     val modelHandler = ForSyDeModelHandler()
     val validInputs =
-      inputModelsPaths.filter(f => modelHandler.canLoadModel(f))
-    if (validInputs.isEmpty) {
-      println(
+      inputModelsPaths.map(f => (f, modelHandler.canLoadModel(f)))
+    if (validInputs.forall((p, b) => !b)) {
+      scribe.error(
         "At least one valid model is necessary"
       )
+    } else if (validInputs.exists((p, b) => !b)) {
+      scribe.error("These inputs are invalid (unknown format): " + validInputs.filter((p, b) => b).map((p, b) => p.getFileName()).mkString(", "))
     } else {
       scribe.info("Reading and merging input models.")
       val model = validInputs
-        .map(i => modelHandler.loadModel(i))
+        .map((p, _) => modelHandler.loadModel(p))
         .foldLeft(ForSyDeSystemGraph())((merged, m) =>
           merged.mergeInPlace(m)
           merged
@@ -78,7 +80,7 @@ case class allowedDecisionModels(
           .map((e, m) => (e.asInstanceOf[ForSyDeIOExplorer], m.asInstanceOf[ForSyDeDecisionModel]))
           .map((explorer, decisionModel) =>
             explorer
-              .explore[ForSyDeSystemGraph](decisionModel)(using executionContext)
+              .explore(decisionModel)(using executionContext)
               .foldLeft(0)((res, result) => {
                 if (!outputModelPath.toFile.exists || outputModelPath.toFile.isFile) then
                   scribe.debug(s"writing solution at ${outputModelPath.toString}")
@@ -125,4 +127,4 @@ case class allowedDecisionModels(
         .replace()
     scribe.info(s"logging levels set to ${loggingLevel.name}.")
 
-end allowedDecisionModels
+}

@@ -33,7 +33,9 @@ import idesyde.identification.DecisionModel
  */
 trait Explorer {
 
-  def explore[DesignModel](decisionModel: DecisionModel)(using
+  type DesignModel
+
+  def explore(decisionModel: DecisionModel)(using
       ExecutionContext
   ): LazyList[DesignModel]
 

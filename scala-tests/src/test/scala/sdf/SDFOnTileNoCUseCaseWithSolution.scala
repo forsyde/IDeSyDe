@@ -52,7 +52,7 @@ class SDFOnTileNoCUseCaseWithSolution extends AnyFunSuite with LoggingMixin {
 
   given ExecutionContext = ExecutionContext.global
 
-  setNormal()
+  setDebug()
 
   val solutionsTaken = 1
 
@@ -833,7 +833,8 @@ class SDFOnTileNoCUseCaseWithSolution extends AnyFunSuite with LoggingMixin {
       .take(1)
       .flatMap((explorer, decisionModel) =>
         explorer
-          .explore[ForSyDeSystemGraph](decisionModel)
+          .explore(decisionModel)
+          .flatMap(designModel => designModel match {case f: ForSyDeSystemGraph => Some(f); case _ => Option.empty})
           .take(solutionsTaken)
           .map(sol =>
             forSyDeModelHandler
@@ -861,7 +862,8 @@ class SDFOnTileNoCUseCaseWithSolution extends AnyFunSuite with LoggingMixin {
       .take(1)
       .flatMap((explorer, decisionModel) =>
         explorer
-          .explore[ForSyDeSystemGraph](decisionModel)
+          .explore(decisionModel)
+          .flatMap(designModel => designModel match {case f: ForSyDeSystemGraph => Some(f); case _ => Option.empty})
           .take(solutionsTaken)
           .map(sol =>
             forSyDeModelHandler
@@ -889,7 +891,8 @@ class SDFOnTileNoCUseCaseWithSolution extends AnyFunSuite with LoggingMixin {
       .take(1)
       .flatMap((explorer, decisionModel) =>
         explorer
-          .explore[ForSyDeSystemGraph](decisionModel)
+          .explore(decisionModel)
+          .flatMap(designModel => designModel match {case f: ForSyDeSystemGraph => Some(f); case _ => Option.empty})
           .take(solutionsTaken)
           .map(sol =>
             forSyDeModelHandler
@@ -961,7 +964,8 @@ class SDFOnTileNoCUseCaseWithSolution extends AnyFunSuite with LoggingMixin {
       .take(1)
       .flatMap((explorer, decisionModel) =>
         explorer
-          .explore[ForSyDeSystemGraph](decisionModel)
+          .explore(decisionModel)
+          .flatMap(designModel => designModel match {case f: ForSyDeSystemGraph => Some(f); case _ => Option.empty})
           .take(solutionsTaken)
           .map(sol =>
             forSyDeModelHandler
@@ -1003,7 +1007,8 @@ class SDFOnTileNoCUseCaseWithSolution extends AnyFunSuite with LoggingMixin {
       .take(1)
       .flatMap((explorer, decisionModel) =>
         explorer
-          .explore[ForSyDeSystemGraph](decisionModel)
+          .explore(decisionModel)
+          .flatMap(designModel => designModel match {case f: ForSyDeSystemGraph => Some(f); case _ => Option.empty})
           .take(solutionsTaken)
           .map(sol =>
             forSyDeModelHandler
@@ -1033,7 +1038,8 @@ class SDFOnTileNoCUseCaseWithSolution extends AnyFunSuite with LoggingMixin {
       .take(1)
       .flatMap((explorer, decisionModel) =>
         explorer
-          .explore[ForSyDeSystemGraph](decisionModel)
+          .explore(decisionModel)
+          .flatMap(designModel => designModel match {case f: ForSyDeSystemGraph => Some(f); case _ => Option.empty})
           .take(solutionsTaken)
           .map(sol =>
             forSyDeModelHandler
@@ -1063,7 +1069,8 @@ class SDFOnTileNoCUseCaseWithSolution extends AnyFunSuite with LoggingMixin {
       .take(1)
       .flatMap((explorer, decisionModel) =>
         explorer
-          .explore[ForSyDeSystemGraph](decisionModel)
+          .explore(decisionModel)
+          .flatMap(designModel => designModel match {case f: ForSyDeSystemGraph => Some(f); case _ => Option.empty})
           .take(solutionsTaken)
           .map(sol =>
             forSyDeModelHandler

@@ -64,7 +64,8 @@ class PanoramaUseCaseWithoutSolutionSuite extends AnyFunSuite with LoggingMixin 
     val solutions = chosen
       .flatMap((explorer, decisionModel) =>
         explorer
-          .explore[ForSyDeSystemGraph](decisionModel)
+          .explore(decisionModel)
+          .flatMap(designModel => designModel match {case f: ForSyDeSystemGraph => Some(f); case _ => Option.empty})
           .map(sol =>
             forSyDeModelHandler
               .writeModel(model.merge(sol), "scala-tests/models/panorama/wrong_output_of_dse.fiodl")

@@ -3,7 +3,7 @@ package idesyde.cli
 import java.io.File
 import java.nio.file.Paths
 
-class IDeSyDeCLIParser extends scopt.OptionParser[allowedDecisionModels]("idesyde"):
+class IDeSyDeCLIParser extends scopt.OptionParser[IDeSyDeRunConfig]("idesyde"):
     head(
         """
           ___  ___        ___        ___

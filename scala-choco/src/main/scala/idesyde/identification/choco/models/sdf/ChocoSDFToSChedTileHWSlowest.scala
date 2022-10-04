@@ -109,25 +109,6 @@ final case class ChocoSDFToSChedTileHWSlowest(
   //-----------------------------------------------------
   // MAPPING
 
-  // - The channels can only be mapped in one tile, to avoid extra care on ordering and timing
-  // - of the data
-  // - therefore, every channel has to be mapped to exactly one tile
-  // dse.sdfApplications.channels.zipWithIndex.foreach((c, i) =>
-  //   chocoModel.sum(messagesMemoryMapping(i), "=", 1).post()
-  // )
-
-  // - every actor has to be mapped to at least one tile
-  // dse.sdfApplications.actors.zipWithIndex.foreach((a, i) =>
-  //   chocoModel.sum(processesMemoryMapping(i), ">=", 1).post()
-  // )
-  // - The number of parallel mappings should not exceed the repetition
-  // vector when this can happen.
-  // But is this necessary?
-  // dse.sdfApplications.actors.zipWithIndex.foreach((a, i) =>
-  //   if (dse.sdfApplications.sdfRepetitionVectors(i) <= dse.platform.schedulers.size)
-  //     chocoModel.sum(processesMemoryMapping(i), "<=", dse.sdfApplications.sdfRepetitionVectors(i)).post()
-  // )
-
   // - mixed constraints
   memoryMappingModule.postSingleProcessSingleMessageMemoryConstraints()
 
@@ -217,9 +198,7 @@ final case class ChocoSDFToSChedTileHWSlowest(
   //   sdfAnalysisModule.firingsInSlots
   // )
 
-  override val strategies: Array[AbstractStrategy[? <: Variable]] = Array(
-    Search.defaultSearch(chocoModel)
-  )
+  override val strategies: Array[AbstractStrategy[? <: Variable]] = chocoModel.getVars().filter(v => v.isInstanceOf[IntVar]).map(v => Search.minDomLBSearch(v.asInstanceOf[IntVar]))
 
   //---------
 

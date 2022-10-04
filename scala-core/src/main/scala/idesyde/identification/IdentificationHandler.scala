@@ -53,14 +53,14 @@ class IdentificationHandler(
     val identifiedArray = identified.toArray
     def reachability = identifiedArray.map(m => identifiedArray.map(mm => m.dominates(mm, model)))
     // get its closure to get all dominants
-    def reachibilityClosure =
-      CoreUtils.reachibilityClosure(reachability)
+    // def reachibilityClosure =
+    //   CoreUtils.reachibilityClosure(reachability)
     // debugLogger(reachibilityClosure.map(_.mkString("[", ", ", "]")).mkString("[", ", ", "]"))
     // val dominanceCondensation = GabowStrongConnectivityInspector(dominanceGraph).getCondensation()
     // keep only the SCC which are leaves
     // debugLogger(dominanceComponents.map(_.mkString("[", ", ", "]")).mkString("[", ", ", "]"))
     // get the dominant decision models (this leaves out circular dominances)
-    val dominant = CoreUtils.computeDominantFromReachability(reachibilityClosure).map(idx => identifiedArray(idx))
+    val dominant = CoreUtils.computeDominant(reachability).map(idx => identifiedArray(idx)).toSet
     // val dominant = dominanceComponents
     //   .filter(component => {
     //     // keep dominant components in which no other components dominate any decision model

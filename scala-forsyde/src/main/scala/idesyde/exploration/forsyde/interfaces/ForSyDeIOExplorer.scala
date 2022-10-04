@@ -5,10 +5,14 @@ import idesyde.exploration.Explorer
 import idesyde.identification.DecisionModel
 import scala.concurrent.ExecutionContext
 import idesyde.identification.forsyde.ForSyDeDecisionModel
+import scala.quoted.Type
+import scala.quoted.Quotes
 
 trait ForSyDeIOExplorer extends Explorer {
 
-  def explore[DesignModel](decisionModel: DecisionModel)(using ExecutionContext): LazyList[DesignModel] = 
+  type DesignModel = ForSyDeSystemGraph
+  
+  def explore(decisionModel: DecisionModel)(using ExecutionContext): LazyList[DesignModel] = 
     decisionModel match {
       case fioDecisionModel: ForSyDeDecisionModel => exploreForSyDe(fioDecisionModel)
             .flatMap(systemGraph => systemGraph match {

@@ -39,7 +39,8 @@ class PanoramaUseCaseWithSolutionSuite extends AnyFunSuite with LoggingMixin {
     .registerIdentificationRule(ForSyDeIdentificationModule())
     .registerIdentificationRule(MinizincIdentificationModule())
 
-  val forSyDeModelHandler = ForSyDeModelHandler().registerDriver(ForSyDeAmaltheaDriver()).registerDriver(ForSyDeKGTDriver())
+  val forSyDeModelHandler =
+    ForSyDeModelHandler().registerDriver(ForSyDeAmaltheaDriver()).registerDriver(ForSyDeKGTDriver())
 
   val flightInfo = forSyDeModelHandler.loadModel(
     Paths.get("scala-tests/models/panorama/flight-information-system-easier.amxmi")
@@ -48,7 +49,9 @@ class PanoramaUseCaseWithSolutionSuite extends AnyFunSuite with LoggingMixin {
     Paths.get("scala-tests/models/panorama/radar-system-easier.amxmi")
   )
   val bounds =
-    forSyDeModelHandler.loadModel(Paths.get("scala-tests/models/panorama/utilizationBounds.forsyde.xmi"))
+    forSyDeModelHandler.loadModel(
+      Paths.get("scala-tests/models/panorama/utilizationBounds.forsyde.xmi")
+    )
   val model           = flightInfo.merge(radar).merge(bounds)
   lazy val identified = identificationHandler.identifyDecisionModels(model)
   lazy val chosen     = explorationHandler.chooseExplorersAndModels(identified)
@@ -72,15 +75,19 @@ class PanoramaUseCaseWithSolutionSuite extends AnyFunSuite with LoggingMixin {
       .flatMap((explorer, decisionModel) =>
         explorer
           .explore(decisionModel)
-          .flatMap(designModel => designModel match {case f: ForSyDeSystemGraph => Some(f); case _ => Option.empty})
+          .flatMap(designModel =>
+            designModel match { case f: ForSyDeSystemGraph => Some(f); case _ => Option.empty }
+          )
           .map(sol =>
             forSyDeModelHandler
               .writeModel(model.merge(sol), "scala-tests/models/panorama/output_of_dse.fiodl")
             forSyDeModelHandler
               .writeModel(model.merge(sol), "scala-tests/models/panorama/output_of_dse_visual.kgt")
             sol
-          ).take(1)
-      ).take(1)
+          )
+          .take(1)
+      )
+      .take(1)
     assert(solutions.size > 0)
   }
 

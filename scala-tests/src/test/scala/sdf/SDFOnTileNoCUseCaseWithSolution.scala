@@ -38,7 +38,6 @@ import org.scalatest.Ignore
 
 object ResourceHungry extends Tag("idesyde.tests.ResourceHungry")
 
-
 /** This test suite uses as much as possible the experiments from the paper
   *
   * K. Rosvall, T. Mohammadat, G. Ungureanu, J. Öberg, and I. Sander, “Exploring Power and
@@ -52,7 +51,7 @@ class SDFOnTileNoCUseCaseWithSolution extends AnyFunSuite with LoggingMixin {
 
   given ExecutionContext = ExecutionContext.global
 
-  setDebug()
+  setNormal()
 
   val solutionsTaken = 1
 
@@ -766,10 +765,10 @@ class SDFOnTileNoCUseCaseWithSolution extends AnyFunSuite with LoggingMixin {
     m
   }
 
-  val sobelSDF3        = forSyDeModelHandler.loadModel("scala-tests/models/sdf3/a_sobel.hsdf.xml")
-  val susanSDF3        = forSyDeModelHandler.loadModel("scala-tests/models/sdf3/b_susan.hsdf.xml")
-  val rastaSDF3        = forSyDeModelHandler.loadModel("scala-tests/models/sdf3/c_rasta.hsdf.xml")
-  val jpegEnc1SDF3     = forSyDeModelHandler.loadModel("scala-tests/models/sdf3/d_jpegEnc1.hsdf.xml")
+  val sobelSDF3    = forSyDeModelHandler.loadModel("scala-tests/models/sdf3/a_sobel.hsdf.xml")
+  val susanSDF3    = forSyDeModelHandler.loadModel("scala-tests/models/sdf3/b_susan.hsdf.xml")
+  val rastaSDF3    = forSyDeModelHandler.loadModel("scala-tests/models/sdf3/c_rasta.hsdf.xml")
+  val jpegEnc1SDF3 = forSyDeModelHandler.loadModel("scala-tests/models/sdf3/d_jpegEnc1.hsdf.xml")
   val g10_3_cyclicSDF3 = forSyDeModelHandler.loadModel("scala-tests/models/sdf3/g10_3_cycl.sdf.xml")
   val allSDFApps =
     sobelSDF3.merge(susanSDF3).merge(rastaSDF3).merge(jpegEnc1SDF3).merge(g10_3_cyclicSDF3)
@@ -785,12 +784,18 @@ class SDFOnTileNoCUseCaseWithSolution extends AnyFunSuite with LoggingMixin {
       "scala-tests/models/bus_small_platform.fiodl"
     )
     forSyDeModelHandler.writeModel(large5x6PlatformModel, "scala-tests/models/large_platform.fiodl")
-    forSyDeModelHandler.writeModel(small2x2PlatformModel, "scala-tests/models/small_platform_visual.kgt")
+    forSyDeModelHandler.writeModel(
+      small2x2PlatformModel,
+      "scala-tests/models/small_platform_visual.kgt"
+    )
     forSyDeModelHandler.writeModel(
       busLike8nodePlatformModel,
       "scala-tests/models/bus_small_platform_visual.kgt"
     )
-    forSyDeModelHandler.writeModel(large5x6PlatformModel, "scala-tests/models/large_platform_visual.kgt")
+    forSyDeModelHandler.writeModel(
+      large5x6PlatformModel,
+      "scala-tests/models/large_platform_visual.kgt"
+    )
   }
 
   test("Correct decision model identification of the Small platform") {
@@ -834,7 +839,9 @@ class SDFOnTileNoCUseCaseWithSolution extends AnyFunSuite with LoggingMixin {
       .flatMap((explorer, decisionModel) =>
         explorer
           .explore(decisionModel)
-          .flatMap(designModel => designModel match {case f: ForSyDeSystemGraph => Some(f); case _ => Option.empty})
+          .flatMap(designModel =>
+            designModel match { case f: ForSyDeSystemGraph => Some(f); case _ => Option.empty }
+          )
           .take(solutionsTaken)
           .map(sol =>
             forSyDeModelHandler
@@ -863,7 +870,9 @@ class SDFOnTileNoCUseCaseWithSolution extends AnyFunSuite with LoggingMixin {
       .flatMap((explorer, decisionModel) =>
         explorer
           .explore(decisionModel)
-          .flatMap(designModel => designModel match {case f: ForSyDeSystemGraph => Some(f); case _ => Option.empty})
+          .flatMap(designModel =>
+            designModel match { case f: ForSyDeSystemGraph => Some(f); case _ => Option.empty }
+          )
           .take(solutionsTaken)
           .map(sol =>
             forSyDeModelHandler
@@ -892,7 +901,9 @@ class SDFOnTileNoCUseCaseWithSolution extends AnyFunSuite with LoggingMixin {
       .flatMap((explorer, decisionModel) =>
         explorer
           .explore(decisionModel)
-          .flatMap(designModel => designModel match {case f: ForSyDeSystemGraph => Some(f); case _ => Option.empty})
+          .flatMap(designModel =>
+            designModel match { case f: ForSyDeSystemGraph => Some(f); case _ => Option.empty }
+          )
           .take(solutionsTaken)
           .map(sol =>
             forSyDeModelHandler
@@ -965,7 +976,9 @@ class SDFOnTileNoCUseCaseWithSolution extends AnyFunSuite with LoggingMixin {
       .flatMap((explorer, decisionModel) =>
         explorer
           .explore(decisionModel)
-          .flatMap(designModel => designModel match {case f: ForSyDeSystemGraph => Some(f); case _ => Option.empty})
+          .flatMap(designModel =>
+            designModel match { case f: ForSyDeSystemGraph => Some(f); case _ => Option.empty }
+          )
           .take(solutionsTaken)
           .map(sol =>
             forSyDeModelHandler
@@ -1008,7 +1021,9 @@ class SDFOnTileNoCUseCaseWithSolution extends AnyFunSuite with LoggingMixin {
       .flatMap((explorer, decisionModel) =>
         explorer
           .explore(decisionModel)
-          .flatMap(designModel => designModel match {case f: ForSyDeSystemGraph => Some(f); case _ => Option.empty})
+          .flatMap(designModel =>
+            designModel match { case f: ForSyDeSystemGraph => Some(f); case _ => Option.empty }
+          )
           .take(solutionsTaken)
           .map(sol =>
             forSyDeModelHandler
@@ -1039,7 +1054,9 @@ class SDFOnTileNoCUseCaseWithSolution extends AnyFunSuite with LoggingMixin {
       .flatMap((explorer, decisionModel) =>
         explorer
           .explore(decisionModel)
-          .flatMap(designModel => designModel match {case f: ForSyDeSystemGraph => Some(f); case _ => Option.empty})
+          .flatMap(designModel =>
+            designModel match { case f: ForSyDeSystemGraph => Some(f); case _ => Option.empty }
+          )
           .take(solutionsTaken)
           .map(sol =>
             forSyDeModelHandler
@@ -1070,7 +1087,9 @@ class SDFOnTileNoCUseCaseWithSolution extends AnyFunSuite with LoggingMixin {
       .flatMap((explorer, decisionModel) =>
         explorer
           .explore(decisionModel)
-          .flatMap(designModel => designModel match {case f: ForSyDeSystemGraph => Some(f); case _ => Option.empty})
+          .flatMap(designModel =>
+            designModel match { case f: ForSyDeSystemGraph => Some(f); case _ => Option.empty }
+          )
           .take(solutionsTaken)
           .map(sol =>
             forSyDeModelHandler

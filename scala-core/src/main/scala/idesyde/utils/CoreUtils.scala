@@ -2,44 +2,67 @@ package idesyde.utils
 
 import scala.collection.mutable
 import scala.collection.mutable.Buffer
+import scala.collection.mutable.Queue
 
 object CoreUtils {
 
   def computeDominant(reachability: Array[Array[Boolean]]): Array[Int] = {
-    val explored    = Array.fill(reachability.size)(false)
-    val ranks    = Array.fill(reachability.size)(0)
+    val explored = Array.fill(reachability.size)(false)
+    val lowlevel = Array.fill(reachability.size)(0)
+    val dominant = Array.fill(reachability.size)(true)
     for (
-      v <- 0 until reachability.size;
-      if !explored(v)
+      possibleDominant <- 0 until reachability.size;
+      if !explored(possibleDominant)
     ) {
       strongConnect(
         reachability,
-        v,
+        possibleDominant,
         explored,
-        ranks
+        lowlevel,
+        List.empty
       )
     }
-    (0 until reachability.size).filter(ranks(_) == ranks.min).toArray
+    for (
+      fst <- 0 until reachability.size;
+      snd <- 0 until reachability.size;
+      if fst != snd && lowlevel(fst) != lowlevel(snd) && reachability(fst)(snd) && dominant(snd)
+    ) {
+      lowlevel.zipWithIndex
+        .filter((l, i) => l == lowlevel(snd))
+        .map((l, i) => i)
+        .foreach(i => {
+          dominant(i) = false
+        })
+    }
+    (0 until reachability.size).filter(dominant(_)).toArray
   }
 
-  
   protected def strongConnect(
       reachability: Array[Array[Boolean]],
       vertex: Int,
       explored: Array[Boolean],
-      ranks: Array[Int]
-    //   stacked: Array[Int]
+      lowlevel: Array[Int],
+      traversed: List[Int]
   ): Unit = {
     explored(vertex) = true
+    lowlevel(vertex) = vertex
     for (
       sucessor <- 0 until reachability.size;
       if reachability(vertex)(sucessor)
     ) {
-        if (!explored(sucessor)) {
-            ranks(sucessor) = ranks(vertex) + 1
-            strongConnect(reachability, sucessor, explored, ranks)
-        }
-        ranks(vertex) = Math.min(ranks(vertex), ranks(sucessor))
+      // a new vertex never found before is here
+      if (!explored(sucessor)) {
+        strongConnect(
+          reachability,
+          sucessor,
+          explored,
+          lowlevel,
+          traversed :+ vertex
+        )
+        lowlevel(vertex) = Math.min(lowlevel(vertex), lowlevel(sucessor))
+      } else if (traversed.contains(sucessor)) { // we hit a strong component that is part of this dominant Vertex
+        lowlevel(vertex) = Math.min(lowlevel(vertex), sucessor)
+      }
     }
   }
 

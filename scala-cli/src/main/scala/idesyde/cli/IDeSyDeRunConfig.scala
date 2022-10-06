@@ -85,12 +85,12 @@ case class IDeSyDeRunConfig(
                 if (!outputModelPath.toFile.exists || outputModelPath.toFile.isFile) then
                   scribe.debug(s"writing solution at ${outputModelPath.toString}")
                   modelHandler.writeModel(model.merge(result), outputModelPath)
-                else if (outputModelPath.toFile.isDirectory) then
-                  val outPath = outputModelPath.relativize(Paths.get(s"solution_${res.toString}"))
+                else if (outputModelPath.toFile.exists && outputModelPath.toFile.isDirectory) then
+                  val outPath = outputModelPath.resolve(Paths.get(s"solution_${res.toString}"))
                   scribe.debug(s"writing solution at ${outPath.toString}")
                   modelHandler.writeModel(
                     model.merge(result),
-                    outputModelPath.relativize(Paths.get(s"solution_${res.toString}"))
+                    outputModelPath.resolve(Paths.get(s"solution_${res.toString}"))
                   )
                 res + 1
               })

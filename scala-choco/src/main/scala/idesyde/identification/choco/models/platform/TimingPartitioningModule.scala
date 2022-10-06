@@ -9,5 +9,4 @@ class TimingPartitioningModule(
     val dataSizes: Array[Int],
     val memorySizes: Array[Int]
 ) extends ChocoModelMixin() {
-  
 }

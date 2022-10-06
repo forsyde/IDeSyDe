@@ -5,6 +5,7 @@ import org.chocosolver.solver.constraints.Propagator
 import org.chocosolver.solver.variables.IntVar
 import org.chocosolver.solver.variables.BoolVar
 import org.chocosolver.solver.constraints.PropagatorPriority
+import idesyde.utils.CoreUtils.wfor
 
 class FixedPriorityPreemptivePropagator[T](
     val schedulerIdx: Int,
@@ -19,9 +20,11 @@ class FixedPriorityPreemptivePropagator[T](
 )(using Conversion[T, Int])
     extends Propagator[IntVar](
       taskExecution ++ responseTimes ++ blockingTimes ++ durations.flatten,
-      PropagatorPriority.VERY_SLOW,
+      PropagatorPriority.BINARY,
       false
     ) {
+
+  private val numTasks = taskExecution.size
 
   def isEntailed(): org.chocosolver.util.ESat = {
     if (
@@ -46,28 +49,45 @@ class FixedPriorityPreemptivePropagator[T](
     wcets(taskIdx)(schedulerIdx)
   )
 
-  def propagate(x$0: Int): Unit =
-    taskExecution.zipWithIndex
-      .filter((pi, i) => pi.contains(schedulerIdx))
-      .foreach((pi, i) => {
-        var rtL     = -1
-        var rtLNext = blockingTimes(i).getLB() + dur(i)
-        while (rtL != rtLNext && rtL < responseTimes(i).getUB()) {
-          rtL = rtLNext
-          rtLNext = blockingTimes(i).getLB() + dur(i) +
-            taskExecution.zipWithIndex
-              .filter((_, j) => i != j && priorities(j) >= priorities(i))
-              .filter((pj, j) => pj.isInstantiatedTo(schedulerIdx))
-              .map((_, j) => dur(j) * ceil(rtL, periods(j)))
-              .sum
+  def propagate(x$0: Int): Unit = {
+    wfor(0, _ < numTasks, _ + 1) { i =>
+      if (taskExecution(i).contains(schedulerIdx)) {
+        var rtNext = blockingTimes(i).getLB() + dur(i)
+        wfor(0, _ < numTasks, _ + 1) { j =>
+          if (i != j && priorities(j) >= priorities(i) && taskExecution(j).isInstantiatedTo(schedulerIdx)) {
+            rtNext += dur(j) * ceil(responseTimes(i).getLB() + responseTimes(j).getLB() - dur(j), periods(j))
+          }
         }
-        // println(s"RT of ${i} in ${schedulerIdx} prop: ${rtL} | ${deadlines(i)}")
-        if (pi.isInstantiatedTo(schedulerIdx)) {
-          responseTimes(schedulerIdx).updateLowerBound(rtL, this)
-        } else if (rtL > deadlines(i)) {
-          pi.removeValue(schedulerIdx, this)
+        if (taskExecution(i).isInstantiatedTo(schedulerIdx)) {
+          responseTimes(i).updateLowerBound(rtNext, this)
+        } else if (rtNext > deadlines(i)) {
+          taskExecution(i).removeValue(schedulerIdx, this)
         }
-        //if (rtU < responseTimes(i).getUB()) responseTimes(i).updateUpperBound(rtU, this)
-      })
+      }
+    }
+  }
+    // taskExecution.zipWithIndex
+    //   .filter((pi, i) => pi.contains(schedulerIdx))
+    //   .foreach((pi, i) => {
+    //     var rtL     = -1
+    //     var rtLNext = blockingTimes(i).getLB() + dur(i)
+    //     while (rtL != rtLNext && rtL < responseTimes(i).getUB()) {
+    //       rtL = rtLNext
+    //       rtLNext = blockingTimes(i).getLB() + dur(i) +
+    //         taskExecution.zipWithIndex
+    //           .filter((_, j) => i != j && priorities(j) >= priorities(i))
+    //           .filter((pj, j) => pj.isInstantiatedTo(schedulerIdx))
+    //           .map((_, j) => dur(j) * ceil(rtL, periods(j)))
+    //           .sum
+    //     }
+    //     // println(s"RT of ${i} in ${schedulerIdx} prop: ${rtL} | ${deadlines(i)}")
+    //     if (pi.isInstantiatedTo(schedulerIdx)) {
+    //       responseTimes(schedulerIdx).updateLowerBound(rtL, this)
+    //     } else if (rtL > deadlines(i)) {
+    //       pi.removeValue(schedulerIdx, this)
+    //     }
+    //     //if (rtU < responseTimes(i).getUB()) responseTimes(i).updateUpperBound(rtU, this)
+    //   })
 
 }
+ 

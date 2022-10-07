@@ -2,6 +2,10 @@ package idesyde.cli
 
 import java.io.File
 import java.nio.file.Paths
+import scribe.format.FormatterInterpolator
+import scribe.Level
+import idesyde.IDeSyDeStandalone
+
 
 class IDeSyDeCLIParser extends scopt.OptionParser[IDeSyDeRunConfig]("idesyde"):
     head(
@@ -31,8 +35,14 @@ class IDeSyDeCLIParser extends scopt.OptionParser[IDeSyDeRunConfig]("idesyde"):
 
     opt[String]('v', "verbosity")
         .valueName("<verbosityLevel>")
-        .action((v, x) => x.copy(verbosityLevel = v))
+        .action((v, x) => {
+            IDeSyDeStandalone.setLoggingLevel(Level.get(v).getOrElse(Level.Info))
+            x
+        })
 
+    opt[Int]("solutions-limit")
+        .valueName("<solutionsLimits>")
+        .action((v, x) => x.copy(solutionLimiter = v))
 
 
 end IDeSyDeCLIParser

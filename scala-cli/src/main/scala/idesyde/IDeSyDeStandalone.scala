@@ -19,7 +19,6 @@ object IDeSyDeStandalone {
       IDeSyDeRunConfig(executionContext = ExecutionContext.global)
     ) match {
       case Some(runConfig) =>
-        setLoggingLevel(Level.get(runConfig.verbosityLevel).getOrElse(Level.Info))
         runConfig.copy(
           debugLogger = (s) => scribe.debug(s),
           infoLogger = (s) => scribe.info(s),

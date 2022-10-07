@@ -20,7 +20,6 @@ case class IDeSyDeRunConfig(
     var inputModelsPaths: Buffer[Path] = Buffer.empty,
     var outputModelPath: Path = Paths.get("idesyde-result.forsyde.xml"),
     var allowedDecisionModels: Buffer[String] = Buffer(),
-    var verbosityLevel: String = "INFO",
     var solutionLimiter: Int = 0,
     val debugLogger: (String) => Unit = (s) => {},
     val infoLogger: (String) => Unit = (s) => {},

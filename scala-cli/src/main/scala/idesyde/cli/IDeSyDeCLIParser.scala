@@ -39,10 +39,12 @@ class IDeSyDeCLIParser extends scopt.OptionParser[IDeSyDeRunConfig]("idesyde"):
             IDeSyDeStandalone.setLoggingLevel(Level.get(v).getOrElse(Level.Info))
             x
         })
+        .text("Sets the logging level. The options are, in increasing verbosity order: ERROR, WARN, INFO, DEBUG. Default: INFO.")
 
     opt[Int]("solutions-limit")
         .valueName("<solutionsLimits>")
         .action((v, x) => x.copy(solutionLimiter = v))
+        .text("Sets the maximum number of outputted feasible solutions, when (pareto) optimality cannot be proved before the given limit. All solutions until optimality are returned if nothing is given.")
 
 
 end IDeSyDeCLIParser

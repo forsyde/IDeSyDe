@@ -76,7 +76,8 @@ lazy val cli = (project in file("scala-cli"))
     Compile / mainClass := Some("idesyde.IDeSyDeStandalone"),
     libraryDependencies ++= Seq(
       "com.github.scopt" %% "scopt"  % "4.0.1",
-      "com.outr"         %% "scribe" % scribeVersion
+      "com.outr"         %% "scribe" % scribeVersion,
+      "com.outr" %% "scribe-file" % scribeVersion
     ),
     maintainer := "jordao@kth.se"
     // taken and adapted from https://www.scala-sbt.org/sbt-native-packager/archetypes/jlink_plugin.html

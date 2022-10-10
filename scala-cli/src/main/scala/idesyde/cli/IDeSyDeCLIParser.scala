@@ -27,6 +27,14 @@ class IDeSyDeCLIParser extends scopt.OptionParser[IDeSyDeRunConfig]("idesyde"):
         .text("If the output is an existing directory, write all solutions to the directory. Otherwise, the lastest solution is written to the destination.")
         .valueName("<outputModel>")
         .action((f, x) => x.copy(outputModelPath = f.toPath))
+
+    opt[File]("log")
+        .text("Writes the output to this path aside from the STDOUT.")
+        .valueName("<logFile>")
+        .action((f, x) => {
+            IDeSyDeStandalone.additionalLogFiles.append(f)
+            x
+        })
     
     opt[String]("decision-model")
         .text("Filters the allowed decision models to be chosen after identification. All identified are chosen if none is specified.")
@@ -36,7 +44,7 @@ class IDeSyDeCLIParser extends scopt.OptionParser[IDeSyDeRunConfig]("idesyde"):
     opt[String]('v', "verbosity")
         .valueName("<verbosityLevel>")
         .action((v, x) => {
-            IDeSyDeStandalone.setLoggingLevel(Level.get(v).getOrElse(Level.Info))
+            IDeSyDeStandalone.loggingLevel = Level.get(v).getOrElse(Level.Info)
             x
         })
         .text("Sets the logging level. The options are, in increasing verbosity order: ERROR, WARN, INFO, DEBUG. Default: INFO.")

@@ -9,8 +9,17 @@ import forsyde.io.java.core.ForSyDeSystemGraph
 import scala.concurrent.ExecutionContext
 import scribe.format.FormatterInterpolator
 import scribe.Level
+import scribe.file._
+import java.nio.file.Files
+import java.nio.file.Paths
+import java.nio.file.StandardOpenOption
+import java.io.File
+import scala.collection.mutable.Buffer
 
 object IDeSyDeStandalone {
+
+  val additionalLogFiles = Buffer[File]()
+  var loggingLevel = Level.Info
 
   def main(args: Array[String]): Unit =
     // System.exit(CommandLine(IDeSyDeCLI()).execute(args *))
@@ -19,38 +28,56 @@ object IDeSyDeStandalone {
       IDeSyDeRunConfig(executionContext = ExecutionContext.global)
     ) match {
       case Some(runConfig) =>
-        runConfig.copy(
-          debugLogger = (s) => scribe.debug(s),
-          infoLogger = (s) => scribe.info(s),
-          warnLogger = (s) => scribe.warn(s),
-          errorLogger = (s) => scribe.error(s)
-        ).run()
+        setLoggingLevel(loggingLevel, additionalLogFiles.toArray)
+        runConfig
+          .copy(
+            debugLogger = (s) => scribe.debug(s),
+            infoLogger = (s) => scribe.info(s),
+            warnLogger = (s) => scribe.warn(s),
+            errorLogger = (s) => scribe.error(s)
+          )
+          .run()
       case _ =>
 
     }
 
-  def setLoggingLevel(loggingLevel: Level) =
-    if (loggingLevel == Level.Debug)
-      scribe.Logger.root
-        .clearHandlers()
-        .clearModifiers()
+  def setLoggingLevel(loggingLevel: Level, additionalFiles: Array[File] = Array.empty) = {
+    var builder = scribe.Logger.root
+      .clearHandlers()
+      .clearModifiers()
+    if (loggingLevel == Level.Debug) {
+      builder = builder
         .withHandler(
           minimumLevel = Some(loggingLevel),
           formatter =
             formatter"${scribe.format.dateFull} [${scribe.format.levelColoredPaddedRight}] ${scribe.format
               .italic(scribe.format.classNameSimple)} - ${scribe.format.messages}"
         )
-        .replace()
-    else
-      scribe.Logger.root
-        .clearHandlers()
-        .clearModifiers()
-        .withHandler(
+      for (outlet <- additionalFiles) {
+        builder = builder.withHandler(
           minimumLevel = Some(loggingLevel),
           formatter =
-            formatter"${scribe.format.dateFull} [${scribe.format.levelColoredPaddedRight}] ${scribe.format.messages}"
+            formatter"${scribe.format.dateFull} [${scribe.format.levelColoredPaddedRight}] ${scribe.format
+              .italic(scribe.format.classNameSimple)} - ${scribe.format.messages}",
+          writer = FileWriter(outlet)
         )
-        .replace()
+      }
+    } else {
+      builder = builder
+        .withHandler(
+          minimumLevel = Some(loggingLevel),
+          formatter = formatter"${scribe.format.dateFull} [${scribe.format.levelColoredPaddedRight}] ${scribe.format.messages}"
+        )
+      for (outlet <- additionalFiles) {
+        builder = builder.withHandler(
+          minimumLevel = Some(loggingLevel),
+          formatter = formatter"${scribe.format.dateFull} [${scribe.format.levelColoredPaddedRight}] ${scribe.format.messages}",
+          writer = FileWriter(outlet)
+        )
+      }
+    }
+    builder.replace()
     scribe.info(s"logging levels set to ${loggingLevel.name}.")
+  }
 
 }

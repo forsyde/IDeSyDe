@@ -186,23 +186,24 @@ class SDFSASAnalysisModule(
     for (s <- slotRange; p <- schedulers) {
       val actorFirings = actors.map(a => firingsInSlots(a)(p)(s))
       val duration = chocoModel.intVar(s"slotDur($p,$s)", 0, slotFinishTime.head.last.getUB(), true)
+      val busyTime = chocoModel.intVar(s"busyTime($p,$s)", 0, slotFinishTime.head.last.getUB(), true)
       chocoModel.scalar(actorFirings, actors.map(a => actorDuration(a)(p)), "=", duration).post()
       chocoModel.arithm(slotFinishTime(p)(s), "=", duration, "+", slotStartTime(p)(s)).post()
+      chocoModel.arithm(busyTime, ">=", duration).post()
       // slotFinishTime(p)(s).eq(duration.add(slotStartTime(p)(s))).decompose().post()
       if (s > 0) {
         chocoModel.arithm(slotStartTime(p)(s), ">=", slotFinishTime(p)(s - 1)).post()
         // and now local throughput
-        chocoModel.arithm(slotThroughput(p)(s), ">=", duration, "+", slotThroughput(p)(s - 1)).post()
-        chocoModel.arithm(slotThroughput(p)(s), ">=", slotFinishTime(p)(s), "-", slotStartTime(p)(s)).post()
+        chocoModel.arithm(busyTime, ">=", slotFinishTime(p)(s), "-", slotFinishTime(p)(s - 1)).post()
+        chocoModel.arithm(slotThroughput(p)(s), ">=", busyTime, "+", slotThroughput(p)(s - 1)).post()
+        // chocoModel.arithm(slotThroughput(p)(s), ">=", slotFinishTime(p)(s), "-", slotStartTime(p)(s)).post()
         // now take care of communications
         for (a <- actors) {
-          val fetchTimes = actors.filter(_ != a).flatMap(aOther =>
-            channels.zipWithIndex.filter((_, c) => balanceMatrix(c)(aOther) > 0 && balanceMatrix(c)(a) < 0).flatMap((_, c) =>
+          val fetchTimes = channels.zipWithIndex.filter((_, c) => balanceMatrix(c)(a) < 0).flatMap((_, c) =>
               schedulers.filter(pOther => pOther != p).map(pOther =>
-                tileAsyncModule.messageTravelDuration(c)(pOther)(p).mul(firingsInSlots(aOther)(pOther)(s - 1)).intVar()
+                tileAsyncModule.messageTravelDuration(c)(pOther)(p).mul(firingsInSlots(a)(pOther)(s)).intVar()
               )  
             )  
-          )
           val serialFetchTimes = chocoModel.sum(s"serialFetchTime($s, $p)", fetchTimes:_*)
           chocoModel.ifThen(
             chocoModel.arithm(firingsInSlots(a)(p)(s), ">", 0),

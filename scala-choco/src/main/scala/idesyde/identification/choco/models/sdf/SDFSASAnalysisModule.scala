@@ -249,16 +249,18 @@ class SDFSASAnalysisModule(
           chocoModel.arithm(slotStartTime(p)(0), "=", 0).post()
           // chocoModel.arithm(slotThroughput(p)(0), "=", duration(p)(s)).post()
         }
-        chocoModel.ifThen(
-          chocoModel.sum(actorFirings, ">", 0),
-          chocoModel.arithm(
-            invThroughputs(p),
-            ">=",
-            slotFinishTime(p)(slotRange.max),
-            "-",
-            slotStartTime(p)(s)
+        for (sNext <- slotRange.drop(s)) {
+          chocoModel.ifThen(
+            chocoModel.and(chocoModel.arithm(duration(p)(s), ">", 0), chocoModel.arithm(duration(p)(sNext), ">", 0)),
+            chocoModel.arithm(
+              invThroughputs(p),
+              ">=",
+              slotFinishTime(p)(sNext),
+              "-",
+              slotStartTime(p)(s)
+            )
           )
-        )
+        }
       }
     }
     // throughput

@@ -23,7 +23,7 @@ class ParetoMinimizationBrancher(val objectives: Array[IntVar])
   override def propagate(evtmask: Int): Unit = {
     // iterate though the current pareto front
     wfor(0, _ < paretoFront.size, _ + 1) { soli =>
-      var count = numObjs
+      var count        = numObjs
       var lastUnderIdx = -1
       var lastUnderVal = -1
       wfor(0, _ < numObjs, _ + 1) { j =>
@@ -61,9 +61,11 @@ class ParetoMinimizationBrancher(val objectives: Array[IntVar])
       paretoObjFront.zipWithIndex
         .forall((s, i) => s.zipWithIndex.forall((o, j) => objectives(j).getValue() < o))
     ) {
+      println("New frontier")
       paretoFront.clear()
       paretoObjFront.clear()
     }
+    println("Same frontier")
     paretoFront += model.getSolver().defaultSolution().record()
     paretoObjFront += solObjs
   }

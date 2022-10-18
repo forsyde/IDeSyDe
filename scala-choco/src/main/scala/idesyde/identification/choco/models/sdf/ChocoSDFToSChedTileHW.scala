@@ -25,12 +25,12 @@ import org.chocosolver.solver.search.loop.monitors.IMonitorContradiction
 import org.chocosolver.solver.exception.ContradictionException
 import idesyde.identification.choco.interfaces.ChocoModelMixin
 
-// object ConMonitorObj extends IMonitorContradiction {
+object ConMonitorObj extends IMonitorContradiction {
 
-//   def onContradiction(cex: ContradictionException): Unit = {
-//     println(cex.toString())
-//   }
-// }
+  def onContradiction(cex: ContradictionException): Unit = {
+    println(cex.toString())
+  }
+}
 
 final case class ChocoSDFToSChedTileHW(
     val slower: ChocoSDFToSChedTileHWSlowest
@@ -48,13 +48,15 @@ final case class ChocoSDFToSChedTileHW(
   val listScheduling = CompactingMultiCoreSDFListScheduling(
     slower.dse.sdfApplications,
     slower.dse.wcets.map(ws => ws.map(w => w * slower.timeMultiplier).map(_.ceil.intValue)),
-    slower.dse.platform.tiledDigitalHardware.minTraversalTimePerBit.map(arr => arr.map(v => (v * slower.timeMultiplier).ceil.toInt)),
+    slower.dse.platform.tiledDigitalHardware.minTraversalTimePerBit.map(arr =>
+      arr.map(v => (v * slower.timeMultiplier).ceil.toInt)
+    ),
     slower.sdfAnalysisModule.firingsInSlots,
     slower.sdfAnalysisModule.invThroughputs,
     slower.sdfAnalysisModule.globalInvThroughput
   )
   // chocoModel.getSolver().plugMonitor(listScheduling)
-  // chocoModel.getSolver().plugMonitor(ConMonitorObj)
+  chocoModel.getSolver().plugMonitor(ConMonitorObj)
 
   // breaking symmetries for speed
   private val firingVectors = (0 until slower.sdfAnalysisModule.maxSlots)
@@ -77,12 +79,12 @@ final case class ChocoSDFToSChedTileHW(
 
   override val strategies: Array[AbstractStrategy[? <: Variable]] = Array(
     listScheduling,
-    Search.minDomLBSearch(slower.sdfAnalysisModule.invThroughputs:_*),
-    Search.minDomLBSearch(slower.sdfAnalysisModule.slotStartTime.flatten:_*),
-    Search.minDomLBSearch(slower.sdfAnalysisModule.slotFinishTime.flatten:_*),
-    Search.minDomLBSearch(slower.tileAnalysisModule.virtualChannelForMessage.flatten:_*),
-    Search.minDomLBSearch(slower.tileAnalysisModule.messageIsCommunicated.flatten.flatten:_*),
-    Search.minDomLBSearch(slower.tileAnalysisModule.messageTravelDuration.flatten.flatten:_*),
+    Search.minDomLBSearch(slower.sdfAnalysisModule.invThroughputs: _*),
+    Search.minDomLBSearch(slower.sdfAnalysisModule.slotStartTime.flatten: _*),
+    Search.minDomLBSearch(slower.sdfAnalysisModule.slotFinishTime.flatten: _*),
+    Search.minDomLBSearch(slower.tileAnalysisModule.virtualChannelForMessage.flatten: _*),
+    Search.minDomLBSearch(slower.tileAnalysisModule.messageIsCommunicated.flatten.flatten: _*),
+    Search.minDomLBSearch(slower.tileAnalysisModule.messageTravelDuration.flatten.flatten: _*),
     Search.minDomLBSearch(slower.nUsedPEs),
     Search.minDomLBSearch(slower.sdfAnalysisModule.globalInvThroughput)
   )
@@ -101,10 +103,11 @@ final case class ChocoSDFToSChedTileHW(
 object ChocoSDFToSChedTileHW {
 
   def identifyFromAny(
-    model: Any,
-    identified: scala.collection.Iterable[DecisionModel]
-  )(using scala.math.Fractional[Rational]): IdentificationResult[ChocoSDFToSChedTileHW] = ForSyDeIdentificationRule.identifyWrapper(model, identified, identifyFromForSyDe)
-  
+      model: Any,
+      identified: scala.collection.Iterable[DecisionModel]
+  )(using scala.math.Fractional[Rational]): IdentificationResult[ChocoSDFToSChedTileHW] =
+    ForSyDeIdentificationRule.identifyWrapper(model, identified, identifyFromForSyDe)
+
   def identifyFromForSyDe(
       model: ForSyDeSystemGraph,
       identified: scala.collection.Iterable[DecisionModel]

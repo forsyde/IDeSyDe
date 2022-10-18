@@ -197,6 +197,15 @@ class SDFSASAnalysisModule(
     // timings
     for (p <- schedulers) {
       chocoModel.sum(slotRange.map(s => duration(p)(s)), "<=", invThroughputs(p)).post()
+      chocoModel
+        .arithm(
+          invThroughputs(p),
+          "<=",
+          slotFinishTime(p)(slotRange.max),
+          "-",
+          slotStartTime(p)(slotRange.min)
+        )
+        .post()
       for (s <- slotRange) {
         val actorFirings = actors.map(a => firingsInSlots(a)(p)(s))
         //val duration = duration(p)(s)// chocoModel.intVar(s"slotDur($p,$s)", 0, slotFinishTime.head.last.getUB(), true)
@@ -206,7 +215,7 @@ class SDFSASAnalysisModule(
           .scalar(actorFirings, actors.map(a => actorDuration(a)(p)), "=", duration(p)(s))
           .post()
         chocoModel
-          .arithm(slotFinishTime(p)(s), "=", duration(p)(s), "+", slotStartTime(p)(s))
+          .arithm(slotFinishTime(p)(s), ">=", duration(p)(s), "+", slotStartTime(p)(s))
           .post()
         // chocoModel.arithm(busyTime, ">=", duration(p)(s)).post()
         // slotFinishTime(p)(s).eq(duration.add(slotStartTime(p)(s))).decompose().post()
@@ -221,21 +230,26 @@ class SDFSASAnalysisModule(
           //   .post()
           // chocoModel.arithm(slotThroughput(p)(s), ">=", slotFinishTime(p)(s), "-", slotStartTime(p)(s)).post()
           // now take care of communications
-          for (a <- actors; pOther <- schedulers; if p != pOther) {
-            val fetchTimes = channels.zipWithIndex
-              .filter((_, c) => balanceMatrix(c)(a) < 0)
+          for (
+            a <- actors;
+            incomingChannels = channels.zipWithIndex.filter((_, c) => balanceMatrix(c)(a) < 0);
+            if incomingChannels.size > 0;
+            pOther <- schedulers;
+            if p != pOther
+          ) {
+            val fetchTimes = incomingChannels
               .map((_, c) =>
                 tileAsyncModule
                   .messageTravelDuration(c)(pOther)(p)
-                  .mul(firingsInSlots(a)(pOther)(s))
+                  // .mul(tileAsyncModule.messageIsCommunicated(c)(pOther)(p))
+                  .mul(-balanceMatrix(c)(a))
+                  .mul(firingsInSlots(a)(p)(s))
                   .intVar()
-              // schedulers.filter(pOther => pOther != p).map(pOther =>
-              // )
               )
             val serialFetchTimes =
-              chocoModel.sum(s"serialFetchTime($s, $p, $pOther)", fetchTimes: _*)
+              chocoModel.sum(s"serialFetchTime($p, $pOther, $s)", fetchTimes: _*)
             chocoModel.ifThen(
-              chocoModel.arithm(firingsInSlots(a)(p)(s), ">", 0),
+              chocoModel.arithm(serialFetchTimes, ">", 0),
               chocoModel.arithm(
                 slotStartTime(p)(s),
                 ">=",
@@ -244,14 +258,29 @@ class SDFSASAnalysisModule(
                 serialFetchTimes
               )
             )
+            // schedulers.filter(pOther => pOther != p).map(pOther =>
+            // )
           }
         } else {
           chocoModel.arithm(slotStartTime(p)(0), "=", 0).post()
           // chocoModel.arithm(slotThroughput(p)(0), "=", duration(p)(s)).post()
         }
+        chocoModel.ifThen(
+          chocoModel.arithm(duration(p)(s), ">", 0),
+          chocoModel.arithm(
+            invThroughputs(p),
+            ">=",
+            slotFinishTime(p)(slotRange.max),
+            "-",
+            slotStartTime(p)(s)
+          )
+        )
         for (sNext <- slotRange.drop(s)) {
           chocoModel.ifThen(
-            chocoModel.and(chocoModel.arithm(duration(p)(s), ">", 0), chocoModel.arithm(duration(p)(sNext), ">", 0)),
+            chocoModel.and(
+              chocoModel.arithm(duration(p)(s), ">", 0),
+              chocoModel.arithm(duration(p)(sNext), ">", 0)
+            ),
             chocoModel.arithm(
               invThroughputs(p),
               ">=",

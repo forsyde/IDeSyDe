@@ -18,7 +18,7 @@ import idesyde.identification.DecisionModel
 
 case class IDeSyDeRunConfig(
     var inputModelsPaths: Buffer[Path] = Buffer.empty,
-    var outputModelPath: Path = Paths.get("idesyde-result.forsyde.xml"),
+    var outputModelPath: Path = Paths.get("idesyde-out.fiodl"),
     var allowedDecisionModels: Buffer[String] = Buffer(),
     var solutionLimiter: Int = 0,
     val debugLogger: (String) => Unit = (s) => {},

@@ -61,11 +61,11 @@ class ParetoMinimizationBrancher(val objectives: Array[IntVar])
       paretoObjFront.zipWithIndex
         .forall((s, i) => s.zipWithIndex.forall((o, j) => objectives(j).getValue() < o))
     ) {
-      println("New frontier")
+      // println("New frontier")
       paretoFront.clear()
       paretoObjFront.clear()
     }
-    println("Same frontier")
+    // println("Same frontier")
     paretoFront += model.getSolver().defaultSolution().record()
     paretoObjFront += solObjs
   }

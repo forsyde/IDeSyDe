@@ -25,12 +25,12 @@ import org.chocosolver.solver.search.loop.monitors.IMonitorContradiction
 import org.chocosolver.solver.exception.ContradictionException
 import idesyde.identification.choco.interfaces.ChocoModelMixin
 
-object ConMonitorObj extends IMonitorContradiction {
+// object ConMonitorObj extends IMonitorContradiction {
 
-  def onContradiction(cex: ContradictionException): Unit = {
-    println(cex.toString())
-  }
-}
+//   def onContradiction(cex: ContradictionException): Unit = {
+//     println(cex.toString())
+//   }
+// }
 
 final case class ChocoSDFToSChedTileHW(
     val slower: ChocoSDFToSChedTileHWSlowest
@@ -56,7 +56,7 @@ final case class ChocoSDFToSChedTileHW(
     slower.sdfAnalysisModule.globalInvThroughput
   )
   // chocoModel.getSolver().plugMonitor(listScheduling)
-  chocoModel.getSolver().plugMonitor(ConMonitorObj)
+  // chocoModel.getSolver().plugMonitor(ConMonitorObj)
 
   // breaking symmetries for speed
   private val firingVectors = (0 until slower.sdfAnalysisModule.maxSlots)

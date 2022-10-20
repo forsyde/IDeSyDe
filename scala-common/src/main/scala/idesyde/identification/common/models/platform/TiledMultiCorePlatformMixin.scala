@@ -156,7 +156,7 @@ trait TiledMultiCorePlatformMixin[MemT, TimeT](using fTimeT: Fractional[TimeT])(
         if (i == j) {
           fTimeT.zero
         } else if (paths.getPath(src, dst) != null) {
-          conversion(maxWeight - paths.getPathWeight(src, dst))
+          conversion((maxWeight * paths.getPath(src, dst).getLength().toDouble) - paths.getPathWeight(src, dst))
         } else
           fTimeT.zero - fTimeT.one
       })

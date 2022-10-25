@@ -6,14 +6,6 @@ import idesyde.identification.DecisionModel
 
 trait ForSyDeDecisionModel extends DecisionModel {
 
-    def coveredVertexes: scala.collection.Iterable[Vertex]
+  type VertexT = Vertex
 
-    def dominates[DesignModel](other: DecisionModel, designModel: DesignModel): Boolean =
-        other match {
-            case o: ForSyDeDecisionModel => 
-                o.coveredVertexes.toSet.subsetOf(coveredVertexes.toSet)
-            case _ => false
-        }
-        
-  
 }

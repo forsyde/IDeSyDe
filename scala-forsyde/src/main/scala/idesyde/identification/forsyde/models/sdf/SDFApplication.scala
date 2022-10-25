@@ -48,7 +48,9 @@ final case class SDFApplication(
 
   val initialTokens: Array[Int] = channels.map(_.getNumOfInitialTokens)
 
-  /** this is a simple shortcut for the balance matrix (originally called topology matrix) as SDFs have only one configuration */
+  /** this is a simple shortcut for the balance matrix (originally called topology matrix) as SDFs
+    * have only one configuration
+    */
   def sdfBalanceMatrix: Array[Array[Int]] = balanceMatrices.head
 
   /** this is a simple shortcut for the repetition vectors as SDFs have only one configuration */
@@ -67,12 +69,8 @@ final case class SDFApplication(
     actors.zipWithIndex.foreach((a, i) => {
       channels.zipWithIndex.foreach((c, prej) => {
         val j = channelsSet(prej)
-        topology.getAllEdges(a, c).forEach(p => 
-          g.addEdge(i, j, topology.getEdgeWeight(p).toInt)
-          )
-        topology.getAllEdges(c, a).forEach(p => 
-          g.addEdge(j, i, topology.getEdgeWeight(p).toInt)
-          )
+        topology.getAllEdges(a, c).forEach(p => g.addEdge(i, j, topology.getEdgeWeight(p).toInt))
+        topology.getAllEdges(c, a).forEach(p => g.addEdge(j, i, topology.getEdgeWeight(p).toInt))
       })
     })
     Array(g.buildAsUnmodifiable())

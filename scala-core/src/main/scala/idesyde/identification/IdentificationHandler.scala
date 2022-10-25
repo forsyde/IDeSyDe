@@ -51,7 +51,7 @@ class IdentificationHandler(
     }
     // build reachability matrix
     val identifiedArray = identified.toArray
-    val reachability = identifiedArray.map(m => identifiedArray.map(mm => m.dominates(mm, model)))
+    val reachability    = identifiedArray.map(m => identifiedArray.map(mm => m.dominates(mm)))
     // get its closure to get all dominants
     // def reachibilityClosure =
     //   CoreUtils.reachibilityClosure(reachability)

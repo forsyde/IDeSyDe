@@ -23,7 +23,7 @@ class IdentificationHandler(
     registeredModules += identModule
     this
 
-  def identifyDecisionModels[DesignModel](
+  def identifyDecisionModels(
       model: DesignModel
   ): Set[DecisionModel] = {
     var identified: Set[DecisionModel] = Set()

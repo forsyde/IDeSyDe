@@ -22,7 +22,7 @@ import spire.math._
 class ForSyDeIdentificationModule extends IdentificationModule {
 
   given Conversion[Double, Rational] = (d) => Rational(d)
-  given Conversion[Int, Rational] = (i) => Rational(i)
+  given Conversion[Int, Rational]    = (i) => Rational(i)
   // given scala.math.Fractional[Rational] = fractional[Rational]
 
   val identificationRules = Set(
@@ -33,9 +33,9 @@ class ForSyDeIdentificationModule extends IdentificationModule {
     // ReactorMinusAppDSEMznIdentRule(),
     PeriodicWorkloadIdentificationRule(),
     PeriodicTaskToSchedHWIdentRule(),
-    ReactorMinusIdentificationRule(
-      Executors.newFixedThreadPool(1).asInstanceOf[ThreadPoolExecutor]
-    ),
+    // ReactorMinusIdentificationRule(
+    //   Executors.newFixedThreadPool(1).asInstanceOf[ThreadPoolExecutor]
+    // ),
     TiledDigitalHardwareIRule(),
     SchedulableTiledDigitalHardware.identFromAny,
     SDFToSchedTiledHW.identFromAny,

@@ -8,4 +8,6 @@ class CommonIdentificationModule extends IdentificationModule {
 
   val identificationRules = Set()
 
+  val explorationMergers = Set()
+
 }

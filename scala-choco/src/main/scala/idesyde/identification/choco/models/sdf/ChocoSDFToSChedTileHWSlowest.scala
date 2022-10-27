@@ -266,7 +266,12 @@ final case class ChocoSDFToSChedTileHWSlowest(
       mappings,
       schedulings,
       sdfAnalysisModule.firingsInSlots.map(_.map(_.map(output.getIntVal(_)))),
-      tileAnalysisModule.virtualChannelForMessage.map(_.map(output.getIntVal(_)))
+      tileAnalysisModule.virtualChannelForMessage.map(_.map(output.getIntVal(_))),
+      dse.sdfApplications.actors.zipWithIndex.map((a, i) => 
+        Rational(timeMultiplier, sdfAnalysisModule.invThroughputs(
+          memoryMappingModule.processesMemoryMapping(i).getValue()
+        ).getValue())
+      )
     )
   }
 

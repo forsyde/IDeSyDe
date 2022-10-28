@@ -139,11 +139,8 @@ final case class NetworkedDigitalHardware(
               .safeCast(ce)
               .map(insce =>
                 ((fraction
-                   * 
-                    insce.getFlitSizeInBits.toInt * insce.getMaxConcurrentFlits.toInt * insce.getOperatingFrequencyInHertz.toInt
-                  ) / insce.getMaxCyclesPerFlit.toInt)
-                  .reciprocal
-                  .doubleValue
+                  *
+                    insce.getFlitSizeInBits.toInt * insce.getMaxConcurrentFlits.toInt * insce.getOperatingFrequencyInHertz.toInt) / insce.getMaxCyclesPerFlit.toInt).reciprocal.doubleValue
               )
           })
           .orElse(0.0)

@@ -1,10 +1,7 @@
 package idesyde.identification.forsyde.rules.platform
 
 import forsyde.io.java.core.ForSyDeSystemGraph
-import idesyde.identification.forsyde.{
-  ForSyDeDecisionModel,
-  ForSyDeIdentificationRule
-}
+import idesyde.identification.forsyde.{ForSyDeDecisionModel, ForSyDeIdentificationRule}
 import org.jgrapht.alg.shortestpath.{AllDirectedPaths, FloydWarshallShortestPaths}
 
 import collection.JavaConverters.*
@@ -22,8 +19,9 @@ import spire.math.Rational
 import idesyde.identification.DecisionModel
 import idesyde.identification.IdentificationResult
 
-final case class TiledDigitalHardwareIRule()(using Fractional[Rational])(using Conversion[Double, Rational])
-    extends ForSyDeIdentificationRule[TiledDigitalHardware] {
+final case class TiledDigitalHardwareIRule()(using Fractional[Rational])(using
+    Conversion[Double, Rational]
+) extends ForSyDeIdentificationRule[TiledDigitalHardware] {
 
   def identifyFromForSyDe(
       model: ForSyDeSystemGraph,

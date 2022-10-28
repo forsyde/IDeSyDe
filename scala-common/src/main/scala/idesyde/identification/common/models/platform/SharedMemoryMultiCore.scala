@@ -25,7 +25,7 @@ import idesyde.identification.common.StandardDecisionModel
 import org.jgrapht.graph.SimpleDirectedWeightedGraph
 import org.jgrapht.Graph
 
-final case class NetworkedDigitalHardware(
+final case class SharedMemoryMultiCore(
     val processingElems: Array[String],
     val communicationElems: Array[String],
     val storageElems: Array[String],
@@ -148,10 +148,10 @@ final case class NetworkedDigitalHardware(
     })
   }
 
-  override val uniqueIdentifier = "NetworkedDigitalHardware"
+  override val uniqueIdentifier = "SharedMemoryMultiCore"
 
 }
 
-object NetworkedDigitalHardware:
+object SharedMemoryMultiCore:
 
-end NetworkedDigitalHardware
+end SharedMemoryMultiCore

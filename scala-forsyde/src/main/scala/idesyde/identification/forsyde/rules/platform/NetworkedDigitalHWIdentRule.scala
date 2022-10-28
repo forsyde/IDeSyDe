@@ -130,7 +130,10 @@ object NetworkedDigitalHWIdentRule:
     )
   }
 
-  def canIdentify(model: ForSyDeSystemGraph, identified: scala.collection.Iterable[DecisionModel]): Boolean =
+  def canIdentify(
+      model: ForSyDeSystemGraph,
+      identified: scala.collection.Iterable[DecisionModel]
+  ): Boolean =
     val platformVertexes = model
       .vertexSet()
       .asScala

@@ -6,7 +6,10 @@ import idesyde.identification.forsyde.ForSyDeDecisionModel
 
 import scala.jdk.OptionConverters.*
 import scala.jdk.CollectionConverters.*
-import idesyde.identification.forsyde.models.platform.{NetworkedDigitalHardware, SchedulableNetworkedDigHW}
+import idesyde.identification.forsyde.models.platform.{
+  NetworkedDigitalHardware,
+  SchedulableNetworkedDigHW
+}
 
 import java.util.stream.Collectors
 import forsyde.io.java.typed.viewers.platform.runtime.FixedPriorityScheduler
@@ -141,7 +144,10 @@ final case class SchedulableNetDigHWIdentRule()
 
 object SchedulableNetDigHWIdentRule:
 
-  def canIdentify(model: ForSyDeSystemGraph, identified: scala.collection.Iterable[DecisionModel]): Boolean =
+  def canIdentify(
+      model: ForSyDeSystemGraph,
+      identified: scala.collection.Iterable[DecisionModel]
+  ): Boolean =
     val platformVertexes = model.vertexSet.stream
       .filter(PlatformElem.conforms(_))
       .collect(Collectors.toSet)

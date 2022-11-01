@@ -2,10 +2,11 @@ ThisBuild / organization := "io.github.forsyde"
 ThisBuild / version := "0.3.4"
 ThisBuild / scalaVersion := "3.1.3"
 
-lazy val forsydeIoVersion = "0.5.16"
-lazy val jgraphtVersion   = "1.5.1"
-lazy val scribeVersion    = "3.10.2"
-lazy val breezeVersion = "2.1.0"
+lazy val forsydeIoVersion  = "0.5.16"
+lazy val jgraphtVersion    = "1.5.1"
+lazy val scribeVersion     = "3.10.2"
+lazy val breezeVersion     = "2.1.0"
+lazy val scalaGraphVersion = "1.13.2"
 
 lazy val root = project
   .in(file("."))
@@ -17,10 +18,11 @@ lazy val common = (project in file("scala-common"))
   .dependsOn(core)
   .settings(
     libraryDependencies ++= Seq(
-      "org.jgrapht"   % "jgrapht-core" % jgraphtVersion,
-      "org.jgrapht"   % "jgrapht-opt"  % jgraphtVersion,
-      "org.scalanlp" %% "breeze"       % breezeVersion,
-      "com.outr"     %% "scribe"       % scribeVersion
+      ("org.scala-graph" %% "graph-core"   % scalaGraphVersion).cross(CrossVersion.for3Use2_13),
+      "org.jgrapht"       % "jgrapht-core" % jgraphtVersion,
+      "org.jgrapht"       % "jgrapht-opt"  % jgraphtVersion,
+      "org.scalanlp"     %% "breeze"       % breezeVersion,
+      "com.outr"         %% "scribe"       % scribeVersion
     )
   )
 
@@ -42,11 +44,11 @@ lazy val minizinc = (project in file("scala-minizinc"))
   .dependsOn(forsyde)
   .settings(
     libraryDependencies ++= Seq(
-      "com.outr"          %% "scribe"        % scribeVersion,
-    "com.lihaoyi"       %% "upickle"       % "1.4.0",
-      "org.jgrapht"        % "jgrapht-core"  % jgraphtVersion,
-      "org.jgrapht"        % "jgrapht-opt"   % jgraphtVersion,
-      "org.scalanlp"      %% "breeze"        % breezeVersion
+      "com.outr"     %% "scribe"       % scribeVersion,
+      "com.lihaoyi"  %% "upickle"      % "1.4.0",
+      "org.jgrapht"   % "jgrapht-core" % jgraphtVersion,
+      "org.jgrapht"   % "jgrapht-opt"  % jgraphtVersion,
+      "org.scalanlp" %% "breeze"       % breezeVersion
     )
   )
 
@@ -71,13 +73,13 @@ lazy val cli = (project in file("scala-cli"))
   .dependsOn(forsyde)
   .dependsOn(minizinc)
   // .enablePlugins(ScalaNativePlugin)
-  .enablePlugins(UniversalPlugin, JavaAppPackaging)//, JlinkPlugin)
+  .enablePlugins(UniversalPlugin, JavaAppPackaging) //, JlinkPlugin)
   .settings(
     Compile / mainClass := Some("idesyde.IDeSyDeStandalone"),
     libraryDependencies ++= Seq(
-      "com.github.scopt" %% "scopt"  % "4.0.1",
-      "com.outr"         %% "scribe" % scribeVersion,
-      "com.outr" %% "scribe-file" % scribeVersion
+      "com.github.scopt" %% "scopt"       % "4.0.1",
+      "com.outr"         %% "scribe"      % scribeVersion,
+      "com.outr"         %% "scribe-file" % scribeVersion
     ),
     maintainer := "jordao@kth.se"
     // taken and adapted from https://www.scala-sbt.org/sbt-native-packager/archetypes/jlink_plugin.html
@@ -114,7 +116,7 @@ lazy val tests = (project in file("scala-tests"))
 // TODO: figure out what is
 ThisBuild / assembly / assemblyMergeStrategy := {
   case PathList("META-INF", xs @ _*) => MergeStrategy.discard
-  case x                             => MergeStrategy.first 
+  case x                             => MergeStrategy.first
 }
 
 // /Compile / resourceDirectory := baseDirectory.value / "resources"

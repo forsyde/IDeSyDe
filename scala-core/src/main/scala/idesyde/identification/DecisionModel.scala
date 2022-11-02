@@ -6,13 +6,8 @@ import idesyde.utils.CoreUtils
   * defined in [1].
   *
   * A decision model holds information on how to build a design space that is explorable. In other
-  * words, an object that implements this trait is assumed to provide decision variables and/or
-  * analysis for a certain design model.
-  *
-  * In order to make this class 100% sensible from a Java and OOP perspective, the dominance method
-  * takes the base model as an input, instead of it being a type inside the trait. This does not
-  * change much from the conceptual perspective, as the extensions of this trait can simply
-  * implemented a coverage-based dominance criterium, as originally proposed in [1].
+  * words, an object that implements this trait is assumed to provide parameters, and/or decision
+  * variables, and/or analysis techniques for a certain design model.
   *
   * [1] R. Jordão, I. Sander and M. Becker, "Formulation of Design Space Exploration Problems by
   * Composable Design Space Identification," 2021 Design, Automation & Test in Europe Conference &

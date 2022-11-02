@@ -1,7 +1,7 @@
 package idesyde.identification.models.platform
 
-trait InstrumentedPlatformMixin {
-  
-    def processorsProvisions: Array[Map[String, Map[String, Double]]]
-    def processorsFrequency: Array[Long]
+trait InstrumentedPlatformMixin[RealT](using spire.math.Fractional[RealT]) {
+
+  def processorsProvisions: Array[Map[String, Map[String, RealT]]]
+  def processorsFrequency: Array[Long]
 }

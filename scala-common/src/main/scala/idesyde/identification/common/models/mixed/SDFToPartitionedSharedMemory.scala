@@ -17,7 +17,7 @@ final case class SDFToPartitionedSharedMemory(
 
   def coveredVertexes = sdfApplications.coveredVertexes ++ platform.coveredVertexes
 
-  def processorsFrequency: Array[Long] = platform.hardware.processingElemsFrequency
+  def processorsFrequency: Array[Long] = platform.hardware.processorsFrequency
   def processorsProvisions: Array[Map[String, Map[String, spire.math.Rational]]] =
     platform.hardware.processorsProvisions
 

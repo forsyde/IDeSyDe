@@ -18,12 +18,13 @@ import idesyde.identification.models.platform.InstrumentedPlatformMixin
 
 final case class SharedMemoryMultiCore(
     val processingElems: Array[String],
-    val communicationElems: Array[String],
     val storageElems: Array[String],
+    val communicationElems: Array[String],
     val topologySrcs: Array[String],
     val topologyDsts: Array[String],
-    val processingElemsFrequency: Array[Long],
+    val processorsFrequency: Array[Long],
     val processorsProvisions: Array[Map[String, Map[String, Rational]]],
+    val storageSizes: Array[Long],
     val communicationElementsMaxChannels: Array[Int],
     val communicationElementsBitPerSecPerChannel: Array[Rational],
     val preComputedPaths: Array[Array[Iterable[String]]]
@@ -57,8 +58,6 @@ final case class SharedMemoryMultiCore(
         }
       )
     )
-
-  val processorsFrequency = processingElemsFrequency
 
   val maxTraversalTimePerBit: Array[Array[Rational]] = {
     // val paths = FloydWarshallShortestPaths(directedAndConnectedMinTimeGraph)

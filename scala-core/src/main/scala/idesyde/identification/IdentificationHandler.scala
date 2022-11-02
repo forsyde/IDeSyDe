@@ -23,9 +23,10 @@ class IdentificationHandler(
     this
 
   def identifyDecisionModels(
-      models: Set[DesignModel]
+      models: Set[DesignModel],
+      previouslyIdentified: Set[DecisionModel] = Set()
   ): Set[DecisionModel] = {
-    var identified: Set[DecisionModel] = Set()
+    var identified: Set[DecisionModel] = previouslyIdentified
     var activeRules                    = registeredModules.flatMap(m => m.identificationRules)
     var iters                          = 0
     // val dominanceGraph = SimpleDirectedGraph[DecisionModel, DefaultEdge](classOf[DefaultEdge])

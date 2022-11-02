@@ -19,7 +19,7 @@ import forsyde.io.java.typed.viewers.platform.runtime.AbstractScheduler
 import forsyde.io.java.typed.viewers.platform.runtime.StaticCyclicScheduler
 
 final case class SchedulableNetworkedDigHW(
-    val hardware: SharedMemoryMultiCore,
+    val hardware: NetworkedDigitalHardware,
     val schedulers: Array[AbstractScheduler],
     val schedulerAllocation: Array[Int]
     // val bandWidthFromCEtoPE: Map[GenericCommunicationModule, GenericProcessingModule],

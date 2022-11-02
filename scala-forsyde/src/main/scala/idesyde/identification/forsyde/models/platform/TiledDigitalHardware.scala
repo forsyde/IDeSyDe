@@ -30,7 +30,7 @@ final case class TiledDigitalHardware(
 )(using Fractional[Rational])(using conversion: Conversion[Double, Rational])
     extends ForSyDeDecisionModel
     with TiledMultiCorePlatformMixin[Long, Rational]
-    with InstrumentedPlatformMixin {
+    with InstrumentedPlatformMixin[Rational] {
 
   val coveredVertexes: Iterable[Vertex] = processors.map(_.getViewedVertex()) ++ memories.map(
     _.getViewedVertex()

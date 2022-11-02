@@ -1,8 +1,5 @@
 package idesyde.identification
 
-import idesyde.identification.IdentificationRule
-import idesyde.identification.DecisionModel
-
 import java.util.stream.Collectors
 
 import scala.collection.mutable.HashSet
@@ -18,9 +15,10 @@ class IdentificationHandler(
     var registeredModules: Set[IdentificationModule] = Set()
 )(using logger: Logger) {
 
-  def registerIdentificationRule(identModule: IdentificationModule): IdentificationHandler =
+  def registerIdentificationRule(identModule: IdentificationModule): IdentificationHandler = {
     registeredModules += identModule
     this
+  }
 
   def identifyDecisionModels(
       models: Set[DesignModel],
@@ -29,55 +27,42 @@ class IdentificationHandler(
     var identified: Set[DecisionModel] = previouslyIdentified
     var activeRules                    = registeredModules.flatMap(m => m.identificationRules)
     var iters                          = 0
-    // val dominanceGraph = SimpleDirectedGraph[DecisionModel, DefaultEdge](classOf[DefaultEdge])
-    var prevIdentified = -1
-    // val reachability: Buffer[Buffer[Boolean]] = Buffer.empty
+    val maxIters                       = models.map(_.elements.size).sum
+    var prevIdentified                 = -1
     logger.info(
-      s"Performing identification with ${activeRules.size} rules."
+      s"Performing identification with ${activeRules.size} rules on ${models.size} design models."
     )
-    while (activeRules.size > 0 && prevIdentified < identified.size) {
+    var allCovered = false
+    while (activeRules.size > 0 && iters <= maxIters && !allCovered) {
       prevIdentified = identified.size
       val ruleResults = activeRules.map(irule => (irule, irule(models, identified)))
-      def newIdentified =
-        ruleResults.flatMap((irule, res) => res.identified).toSet
+      val reIdentified = ruleResults
+        .flatMap((irule, res) => res)
+        .filter(m => identified.exists(prev => prev.coveredElements == m.coveredElements))
+      val newIdentified =
+        ruleResults.flatMap((irule, res) => res).filter(res => !reIdentified.contains(res))
       // add to the current identified
       identified = identified ++ newIdentified
       // keep only non fixed rules
-      activeRules = ruleResults.filter((irule, res) => !res.isFixed()).map((irule, _) => irule)
+      activeRules = ruleResults
+        .filter((irule, res) => res.map(r => !reIdentified.contains(r)).getOrElse(true))
+        .map((irule, _) => irule)
       logger.debug(
         s"identification step $iters: ${identified.size} identified and ${activeRules.size} rules"
+      )
+      allCovered = models.forall(m =>
+        identified.exists(mm => m.elements.forall(v => mm.coveredElements.exists(vv => v == vv)))
       )
       iters += 1
     }
     // build reachability matrix
+    logger.debug(s"identified: ${identified.map(m => m.uniqueIdentifier)}")
     val identifiedArray = identified.toArray
     val reachability    = identifiedArray.map(m => identifiedArray.map(mm => m.dominates(mm)))
-    // get its closure to get all dominants
-    // def reachibilityClosure =
-    //   CoreUtils.reachibilityClosure(reachability)
-    // logger.debug(reachibilityClosure.map(_.mkString("[", ", ", "]")).mkString("[", ", ", "]"))
-    // val dominanceCondensation = GabowStrongConnectivityInspector(dominanceGraph).getCondensation()
-    // keep only the SCC which are leaves
-    // logger.debug(dominanceComponents.map(_.mkString("[", ", ", "]")).mkString("[", ", ", "]"))
-    // get the dominant decision models (this leaves out circular dominances)
+    // get the dominant decision models (including circular dominances)
     val dominant = CoreUtils.computeDominant(reachability).map(idx => identifiedArray(idx)).toSet
-    // val dominant = dominanceComponents
-    //   .filter(component => {
-    //     // keep dominant components in which no other components dominate any decision model
-    //     // therein
-    //     dominanceComponents
-    //       .filter(_ != component)
-    //       .forall(other => {
-    //         // decision models in component
-    //         def componentModels = component.map(identifiedArray(_))
-    //         def otherModels     = other.map(identifiedArray(_))
-    //         !componentModels.exists(m => otherModels.exists(mm => mm.dominates(m, model)))
-    //       })
-    //   })
-    //   .flatMap(component => component.map(idx => identifiedArray(idx)))
-    //   .toSet
-    logger.info(s"dropped ${identified.size - dominant.size} dominated decision model(s).")
     logger.debug(s"dominant: ${dominant.map(m => m.uniqueIdentifier)}")
+    logger.info(s"found ${dominant.size} dominant decision model(s).")
     dominant
   }
 

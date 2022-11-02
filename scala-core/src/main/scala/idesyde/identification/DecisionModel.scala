@@ -16,13 +16,16 @@ import idesyde.utils.CoreUtils
 trait DecisionModel {
 
   type VertexT
+  type EdgeT
 
   def uniqueIdentifier: String
 
-  def coveredVertexes: scala.collection.Iterable[VertexT]
+  def coveredElements: Iterable[VertexT]
+  def coveredElementRelations: Iterable[EdgeT]
 
   def dominates[D <: DecisionModel](other: D): Boolean = {
-    coveredVertexes.exists(vId => other.coveredVertexes.forall(oId => vId != oId))
+    coveredElements.exists(vId => other.coveredElements.forall(oId => vId != oId)) &&
+    coveredElementRelations.exists(eId => other.coveredElementRelations.forall(oId => eId != oId))
   }
 
   override lazy val hashCode: Int = uniqueIdentifier.hashCode

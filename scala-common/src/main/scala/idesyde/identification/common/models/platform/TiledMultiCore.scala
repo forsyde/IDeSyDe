@@ -22,10 +22,13 @@ final case class TiledMultiCore(
 ) extends StandardDecisionModel
     with InstrumentedPlatformMixin[Rational] {
 
-  def coveredVertexes = processors ++ memories ++ networkInterfaces
+  val coveredElements         = processors ++ memories ++ networkInterfaces ++ routers
+  val coveredElementRelations = interconnectTopologySrcs.zip(interconnectTopologyDsts)
+
+  val communicationElems = networkInterfaces ++ routers
 
   val platformElements: Array[String] =
-    processors ++ memories ++ networkInterfaces ++ routers
+    processors ++ memories ++ communicationElems
 
   val topology = Graph(
     interconnectTopologySrcs.zip(interconnectTopologyDsts).map((src, dst) => src ~> dst): _*
@@ -47,10 +50,70 @@ final case class TiledMultiCore(
             )
             .shortestPathTo(topology.get(me), e => 1)
             .map(path => path.nodes.map(_.value.toString()))
+            .map(_.drop(1).dropRight(1))
             .getOrElse(Seq.empty)
         }
       )
     )
+
+  val maxTraversalTimePerBit: Array[Array[Rational]] = {
+    // val paths = FloydWarshallShortestPaths(directedAndConnectedMinTimeGraph)
+    platformElements.zipWithIndex.map((src, i) => {
+      platformElements.zipWithIndex.map((dst, j) => {
+        computedPaths(i)(j)
+          .map(ce => {
+            val dstIdx = communicationElems.indexOf(ce)
+            (communicationElementsBitPerSecPerChannel(dstIdx) * communicationElementsMaxChannels(
+              dstIdx
+            ))
+          })
+          .reduce(_ + _)
+      })
+    })
+  }
+
+  val minTraversalTimePerBit: Array[Array[Rational]] = {
+    platformElements.zipWithIndex.map((src, i) => {
+      platformElements.zipWithIndex.map((dst, j) => {
+        computedPaths(i)(j)
+          .map(ce => {
+            val dstIdx = communicationElems.indexOf(ce)
+            communicationElementsBitPerSecPerChannel(dstIdx)
+          })
+          .reduce(_ + _)
+      })
+    })
+  }
+
+  val symmetricTileGroups: Set[Set[String]] = {
+    val wccts = maxTraversalTimePerBit
+    val outgoingWCCThistograms =
+      wccts.map(dsts => dsts.groupBy(t => t).map((k, v) => k -> v.length))
+    val incomingWCCThistograms =
+      platformElements.zipWithIndex.map((dst, i) =>
+        platformElements.zipWithIndex
+          .map((src, j) => wccts(j)(i))
+          .groupBy(t => t)
+          .map((k, v) => k -> v.length)
+      )
+    var groups      = Set[Set[String]]()
+    var toBeMatched = Set(processors: _*)
+    while (!toBeMatched.isEmpty) {
+      val t = toBeMatched.head
+      val otherSymmetric = toBeMatched.tail
+        .filter(tt => {
+          val tIdx  = platformElements.indexOf(t)
+          val ttIdx = platformElements.indexOf(tt)
+          processorsProvisions(tIdx) == processorsProvisions(ttIdx) &&
+          outgoingWCCThistograms(tIdx) == outgoingWCCThistograms(ttIdx) &&
+          incomingWCCThistograms(tIdx) == incomingWCCThistograms(ttIdx)
+        })
+      toBeMatched -= t
+      toBeMatched --= otherSymmetric
+      groups += (otherSymmetric + t)
+    }
+    groups.toSet
+  }
 
   def uniqueIdentifier: String = "TiledMultiCore"
 }

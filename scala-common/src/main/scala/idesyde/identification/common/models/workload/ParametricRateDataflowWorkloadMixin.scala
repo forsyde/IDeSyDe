@@ -2,28 +2,19 @@ package idesyde.identification.models.workload
 
 import scala.jdk.CollectionConverters.*
 import scala.jdk.StreamConverters.*
-import org.jgrapht.Graph
-import org.jgrapht.graph.DefaultEdge
 import spire.math._
 import spire.algebra._
-import org.jgrapht.graph.DefaultDirectedGraph
 import scala.collection.mutable.Queue
 import breeze.linalg.DenseMatrix
 import breeze.linalg.DenseVector
 import breeze.linalg.*
 import breeze.numerics.*
-import org.jgrapht.opt.graph.sparse.SparseIntDirectedGraph
-import org.jgrapht.alg.util.Pair
-import org.jgrapht.opt.graph.sparse.IncomingEdgesSupport
-import org.jgrapht.alg.connectivity.ConnectivityInspector
-import org.jgrapht.graph.AsSubgraph
 import java.util.stream.Collectors
-import org.jgrapht.graph.AsUndirectedGraph
-import org.jgrapht.traverse.DepthFirstIterator
 import scala.collection.mutable
-import org.jgrapht.graph.SimpleDirectedGraph
 import scala.collection.mutable.Buffer
-import org.jgrapht.alg.shortestpath.DijkstraManyToManyShortestPaths
+import scalax.collection.Graph
+import scalax.collection.edge.WDiEdge
+import scalax.collection.GraphEdge.DiEdgeLike
 
 /** This traits captures the ParametricRateDataflow base MoC from [1]. Then, we hope to be able to
   * use the same code for analysis across different dataflow MoCs, specially the simpler ones like
@@ -34,15 +25,15 @@ import org.jgrapht.alg.shortestpath.DijkstraManyToManyShortestPaths
   * doi: 10.1145/2999539.
   */
 trait ParametricRateDataflowWorkloadMixin {
-  def actorsSet: Array[Int]
-  def channelsSet: Array[Int]
+  def actors: Array[String]
+  def channels: Array[String]
   def initialTokens: Array[Int]
 
   /** An actor is self-concurrent if two or more instance can be executed at the same time
     *
     * As a rule of thumb, actor with "state" are not self-concurrent.
     */
-  def isSelfConcurrent(actor: Int): Boolean
+  def isSelfConcurrent(actor: String): Boolean
 
   /** The edges of the communication graph should have numbers describing how much data is
     * transferred from actors to channels. That is, both actors _and_ channels indexes are part of
@@ -51,47 +42,46 @@ trait ParametricRateDataflowWorkloadMixin {
     * The array of graphs represent each possible dataflow graph when the parameters are
     * instantiated.
     */
-  def dataflowGraphs: Array[Graph[Int, DefaultEdge]]
+  def dataflowGraphs: Array[Graph[String, ? <: DiEdgeLike]]
 
   /** This graph defines how the dataflowGraphs can be changed between each other, assuming that the
     * paramters can change _only_ after an actor firing.
     */
-  def configurations: Graph[Int, DefaultEdge]
+  def configurations: Graph[String, ? <: DiEdgeLike]
 
   /** This parameter counts the number of disjoint actor sets in the application model.def That is,
     * how many 'subapplications' are contained in this application. for for each configuration.
     *
     * This is important to correctly calculate repetition vectors in analytical methods.
     */
-  def disjointComponents: Array[Array[Array[Int]]] = dataflowGraphs.map(g => {
-    ConnectivityInspector(AsUndirectedGraph(g)).connectedSets().asScala.map(s => s.asScala.toArray).toArray
+  def disjointComponents: Array[Iterable[Iterable[String]]] = dataflowGraphs.map(g => {
+    g.componentTraverser().map(comp => comp.nodes.map(_.toOuter.toString()))
   })
 
   def computeBalanceMatrices = dataflowGraphs.map(g => {
-    val m = Array.fill(channelsSet.size)(Array.fill(actorsSet.size)(0))
-    channelsSet.zipWithIndex.foreach((c, ci) => {
-      actorsSet.zipWithIndex.foreach((a, ai) => {
-        if (g.containsEdge(a, c)) then
-          m(ci)(ai) += g.getAllEdges(a, c).stream.mapToInt(e => g.getEdgeWeight(e).toInt).sum
-        else if (g.containsEdge(c, a))
-          m(ci)(ai) -= g.getAllEdges(c, a).stream.mapToInt(e => g.getEdgeWeight(e).toInt).sum
-        else
-          m(ci)(ai) = 0
-      })
-    })
-    // scribe.debug(m.map(_.mkString("[", ",", "]")).mkString("[", ",", "]"))
+    val m = Array.fill(channels.size)(Array.fill(actors.size)(0))
+    for (e <- g.edges) {
+      val src = e.source.toOuter.toString()
+      val dst = e.target.toOuter.toString()
+      if (actors.contains(src) && channels.contains(dst)) {
+        m(channels.indexOf(dst))(actors.indexOf(src)) =
+          m(channels.indexOf(dst))(actors.indexOf(src)) + e.weight.toInt
+      } else if (actors.contains(dst) && channels.contains(src)) {
+        m(channels.indexOf(src))(actors.indexOf(dst)) =
+          m(channels.indexOf(src))(actors.indexOf(dst)) - e.weight.toInt
+      }
+    }
     m
   })
-  lazy val balanceMatrices = computeBalanceMatrices
 
   def computeRepetitionVectors: Array[Array[Int]] = dataflowGraphs.map(g => {
     def minus_one = Rational.zero - Rational.one
     // first we build a compressed g with only the actors
     // with the fractional flows in a matrix
-    val gRates         = Array.fill(actorsSet.size)(Array.fill(actorsSet.size)(Rational.zero))
+    val gRates         = Array.fill(actors.size)(Array.fill(actors.size)(Rational.zero))
     val gActorsBuilder = SimpleDirectedGraph.createBuilder[Int, DefaultEdge](() => DefaultEdge())
     // and put the rates between them in a matrix
-    channelsSet.foreach(c => {
+    channels.foreach(c => {
       // we do a for, but there should only be one producer and one consumer per actor
       g.incomingEdgesOf(c)
         .forEach(producerEdge => {
@@ -121,11 +111,11 @@ trait ParametricRateDataflowWorkloadMixin {
     // we iterate on the undirected version as to 'come back'
     // to vertex in feed-forward paths
     val dfs        = DepthFirstIterator(AsUndirectedGraph(gActors))
-    val rates      = actorsSet.map(_ => minus_one)
+    val rates      = actors.map(_ => minus_one)
     var consistent = true
     while (dfs.hasNext() && consistent) {
       val nextActor = dfs.next()
-      val next      = actorsSet.indexOf(nextActor)
+      val next      = actors.indexOf(nextActor)
       // if there is no rate on this vertex already, it must be a root, so we populate it
       if (rates(next).equals(minus_one)) {
         rates(next) = Rational.one
@@ -134,7 +124,7 @@ trait ParametricRateDataflowWorkloadMixin {
       gActors
         .outgoingEdgesOf(nextActor)
         .forEach(e => {
-          val other = actorsSet.indexOf(gActors.getEdgeTarget(e))
+          val other = actors.indexOf(gActors.getEdgeTarget(e))
           // if no rate exists in the other actor yet, we create it...
           if (rates(other).equals(minus_one)) {
             // it depenends if the other is a consumer...
@@ -149,7 +139,7 @@ trait ParametricRateDataflowWorkloadMixin {
         .incomingEdgesOf(nextActor)
         .forEach(e => {
           val otherActor = gActors.getEdgeSource(e)
-          val other      = actorsSet.indexOf(otherActor)
+          val other      = actors.indexOf(otherActor)
           // if no rate exists in the other actor yet, we create it...
           if (rates(other).equals(minus_one)) {
             // it depenends if the other is a consumer...
@@ -171,22 +161,27 @@ trait ParametricRateDataflowWorkloadMixin {
       .reduce((i1, i2) => spire.math.lcm(i1, i2))
     rates.map(_ * lcmV / gcdV).map(_.numerator.toInt)
   })
-  lazy val repetitionVectors = computeRepetitionVectors
   // computeBalanceMatrices.zipWithIndex.map((m, ind) => SDFUtils.getRepetitionVector(m, initialTokens, numDisjointComponents(ind)))
 
-  def isConsistent = repetitionVectors.forall(r => r.size == actorsSet.size)
+  def isConsistent = repetitionVectors.forall(r => r.size == actors.size)
 
   def isLive = maximalParallelClustering.zipWithIndex.map((cluster, i) => !cluster.isEmpty)
 
   def pessimisticTokensPerChannel: Array[Int] = {
-    channelsSet.zipWithIndex.map((c, cIdx) => {
+    channels.zipWithIndex.map((c, cIdx) => {
       var pessimisticMax = 1
       dataflowGraphs.zipWithIndex
         .foreach((g, confIdx) => {
-          g.incomingEdgesOf(c).forEach(e => {
-            val aIdx = actorsSet.indexOf(g.getEdgeSource(e))
-            pessimisticMax = Math.max(repetitionVectors(confIdx)(aIdx) * balanceMatrices(confIdx)(cIdx)(aIdx) + initialTokens(cIdx), pessimisticMax)
-          })
+          g.incomingEdgesOf(c)
+            .forEach(e => {
+              val aIdx = actors.indexOf(g.getEdgeSource(e))
+              pessimisticMax = Math.max(
+                repetitionVectors(confIdx)(aIdx) * balanceMatrices(confIdx)(cIdx)(
+                  aIdx
+                ) + initialTokens(cIdx),
+                pessimisticMax
+              )
+            })
         })
       pessimisticMax
     })
@@ -211,9 +206,9 @@ trait ParametricRateDataflowWorkloadMixin {
     while (!q.isEmpty) {
       val (conf, state) = q.dequeue
       val m             = matrices(conf)
-      val newStates = actorsSet
+      val newStates = actors
         .map(a => {
-          val v = DenseVector.zeros[Int](actorsSet.size)
+          val v = DenseVector.zeros[Int](actors.size)
           v(a) = 1
           (a, v)
         })
@@ -237,19 +232,20 @@ trait ParametricRateDataflowWorkloadMixin {
   }
 
   /** returns the cluster of actor firings that have zero time execution time and can fire in
-    * parallel, until all the firings are exhausted in accordance to the [[computeRepetitionVectors]]
+    * parallel, until all the firings are exhausted in accordance to the
+    * [[computeRepetitionVectors]]
     *
     * This is also used to check the liveness of each configuration. If a configuration is not live,
     * then its clusters are empty, since at the very least one should exist.
     */
   def maximalParallelClustering: Array[Array[Array[Int]]] =
     dataflowGraphs.zipWithIndex.map((g, gi) => {
-      val actors                               = 0 until actorsSet.size
-      val channels                             = 0 until channelsSet.size
+      val actors                               = 0 until actors.size
+      val channels                             = 0 until channels.size
       var buffer                               = Buffer(DenseVector(initialTokens))
-      val topologyMatrix                       = DenseMatrix(balanceMatrices(gi): _*)
-      var firings                              = DenseVector(repetitionVectors(gi))
-      var executions: Buffer[DenseVector[Int]] = Buffer(DenseVector.zeros(actorsSet.size))
+      val topologyMatrix                       = DenseMatrix(computeBalanceMatrices(gi): _*)
+      var firings                              = DenseVector(computeRepetitionVectors(gi))
+      var executions: Buffer[DenseVector[Int]] = Buffer(DenseVector.zeros(actors.size))
       var currentCluster                       = 0
       var moreToFire                           = firings.exists(_ > 0)
       while (moreToFire) {
@@ -278,7 +274,7 @@ trait ParametricRateDataflowWorkloadMixin {
           return Array()
         } else if (moreToFire) { //double check for now just so the last empty entry is not added
           buffer :+= topologyMatrix * executions(currentCluster) + buffer(currentCluster)
-          executions :+= DenseVector.zeros(actorsSet.size)
+          executions :+= DenseVector.zeros(actors.size)
           currentCluster += 1
         }
       }

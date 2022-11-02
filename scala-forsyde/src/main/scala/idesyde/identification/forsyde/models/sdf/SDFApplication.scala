@@ -26,6 +26,7 @@ import java.util.stream.Collectors
 import org.jgrapht.graph.SimpleDirectedWeightedGraph
 import spire.math.*
 
+@deprecated
 final case class SDFApplication(
     val actors: Array[SDFActor],
     val channels: Array[SDFChannel],
@@ -39,7 +40,7 @@ final case class SDFApplication(
     if (actorFuncs.isEmpty) then Array.fill(actors.size)(Array.empty[Executable]) else actorFuncs
 
   // def dominatesSdf(other: SDFApplication) = repetitionVector.size >= other.repetitionVector.size
-  val coveredVertexes =
+  val coveredElements =
     actors.map(_.getViewedVertex) ++
       channels.map(_.getViewedVertex)
 

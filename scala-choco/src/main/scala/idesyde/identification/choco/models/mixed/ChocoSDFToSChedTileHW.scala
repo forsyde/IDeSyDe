@@ -1,4 +1,4 @@
-package idesyde.identification.choco.models.sdf
+package idesyde.identification.choco.models.mixed
 
 import idesyde.identification.choco.interfaces.ChocoCPForSyDeDecisionModel
 import org.chocosolver.solver.Model

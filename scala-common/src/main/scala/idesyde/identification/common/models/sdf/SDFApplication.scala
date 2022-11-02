@@ -1,27 +1,24 @@
-package idesyde.identification.forsyde.models.sdf
+package idesyde.identification.common.models.sdf
 
 import scala.jdk.CollectionConverters.*
 
-import org.jgrapht.Graph
-import org.jgrapht.graph.WeightedPseudograph
-import org.jgrapht.graph.AsWeightedGraph
 import idesyde.utils.SDFUtils
 import idesyde.identification.models.workload.ParametricRateDataflowWorkloadMixin
-import org.jgrapht.graph.DefaultDirectedGraph
-import org.jgrapht.graph.DefaultEdge
 import idesyde.identification.models.workload.InstrumentedWorkloadMixin
 import scala.collection.mutable
-import org.jgrapht.alg.connectivity.ConnectivityInspector
-import org.jgrapht.graph.AsSubgraph
 import java.util.stream.Collectors
-import org.jgrapht.graph.SimpleDirectedWeightedGraph
 import spire.math.*
 import idesyde.identification.common.StandardDecisionModel
+import scalax.collection.Graph
+import scalax.collection.GraphPredef._
+import scalax.collection.edge.Implicits._
 
 final case class SDFApplication(
     val actors: Array[String],
     val channels: Array[String],
-    val topology: Graph[String, DefaultEdge],
+    val topologySrcs: Array[String],
+    val topologyDsts: Array[String],
+    val topologyEdgeValue: Array[Long],
     val actorSizes: Array[Long],
     val actorComputationalNeeds: Array[Map[String, Map[String, Long]]],
     val channelNumInitialTokens: Array[Int],
@@ -32,46 +29,37 @@ final case class SDFApplication(
     with InstrumentedWorkloadMixin {
 
   // def dominatesSdf(other: SDFApplication) = repetitionVector.size >= other.repetitionVector.size
-  val coveredVertexes = actors ++ channels
+  val coveredElements         = actors ++ channels
+  val coveredElementRelations = topologySrcs.zip(topologyDsts)
 
-  val actorsSet: Array[Int]   = (0 until actors.size).toArray
-  val channelsSet: Array[Int] = (actors.size until (actors.size + channels.size)).toArray
+  val topology = Graph(
+    topologySrcs
+      .zip(topologyDsts)
+      .zipWithIndex
+      .map((srcdst, i) => srcdst._1 ~> srcdst._2 % topologyEdgeValue(i)): _*
+  )
 
   val initialTokens: Array[Int] = channelNumInitialTokens
 
   /** this is a simple shortcut for the balance matrix (originally called topology matrix) as SDFs
     * have only one configuration
     */
-  def sdfBalanceMatrix: Array[Array[Int]] = balanceMatrices.head
+  val sdfBalanceMatrix: Array[Array[Int]] = computeBalanceMatrices(0)
 
   /** this is a simple shortcut for the repetition vectors as SDFs have only one configuration */
-  def sdfRepetitionVectors: Array[Int] = repetitionVectors(0)
+  val sdfRepetitionVectors: Array[Int] = computeRepetitionVectors(0)
 
   /** this is a simple shortcut for the max parallel clusters as SDFs have only one configuration */
-  def sdfMaxParallelClusters: Array[Array[Int]] = maximalParallelClustering(0)
+  val sdfMaxParallelClusters: Array[Array[Int]] = maximalParallelClustering(0)
 
-  def isSelfConcurrent(actorIdx: Int): Boolean = {
-    val a = actors(actorIdx)
-    !channels.exists(c => topology.containsEdge(a, c) && topology.containsEdge(c, a))
-  }
+  def isSelfConcurrent(actor: String): Boolean = channels.exists(c =>
+    topology.get(c).diSuccessors.exists(dst => dst.toOuter == actor) &&
+      topology.get(c).diPredecessors.exists(src => src.toOuter == actor)
+  )
 
-  lazy val dataflowGraphs = {
-    val g = SimpleDirectedWeightedGraph.createBuilder[Int, DefaultEdge](() => DefaultEdge())
-    actors.zipWithIndex.foreach((a, i) => {
-      channels.zipWithIndex.foreach((c, prej) => {
-        val j = channelsSet(prej)
-        topology.getAllEdges(a, c).forEach(p => g.addEdge(i, j, topology.getEdgeWeight(p).toInt))
-        topology.getAllEdges(c, a).forEach(p => g.addEdge(j, i, topology.getEdgeWeight(p).toInt))
-      })
-    })
-    Array(g.buildAsUnmodifiable())
-  }
+  val dataflowGraphs = Array(topology)
 
-  val configurations = {
-    val g = DefaultDirectedGraph.createBuilder[Int, DefaultEdge](() => DefaultEdge())
-    g.addEdge(0, 0)
-    g.buildAsUnmodifiable
-  }
+  val configurations = Graph("root" ~> "root")
 
   val processComputationalNeeds = actorComputationalNeeds
   //   actorFunctions.zipWithIndex.map((actorFuncs, i) => {

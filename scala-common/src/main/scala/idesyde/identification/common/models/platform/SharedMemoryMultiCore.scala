@@ -1,4 +1,4 @@
-package idesyde.identification.forsyde.models.platform
+package idesyde.identification.common.models.platform
 
 import org.jgrapht.alg.shortestpath.FloydWarshallShortestPaths
 import org.jgrapht.graph.{DefaultEdge, SimpleGraph}
@@ -31,7 +31,8 @@ final case class SharedMemoryMultiCore(
 ) extends StandardDecisionModel
     with InstrumentedPlatformMixin[Rational] {
 
-  val coveredVertexes = processingElems ++ communicationElems ++ storageElems
+  val coveredElements         = processingElems ++ communicationElems ++ storageElems
+  val coveredElementRelations = topologySrcs.zip(topologyDsts)
 
   val platformElements: Array[String] =
     processingElems ++ communicationElems ++ storageElems
@@ -54,6 +55,7 @@ final case class SharedMemoryMultiCore(
             )
             .shortestPathTo(topology.get(me), e => 1)
             .map(path => path.nodes.map(_.value.toString()))
+            .map(_.drop(1).dropRight(1))
             .getOrElse(Seq.empty)
         }
       )
@@ -63,25 +65,14 @@ final case class SharedMemoryMultiCore(
     // val paths = FloydWarshallShortestPaths(directedAndConnectedMinTimeGraph)
     platformElements.zipWithIndex.map((src, i) => {
       platformElements.zipWithIndex.map((dst, j) => {
-        val path = topology
-          .get(src)
-          .shortestPathTo(
-            topology.get(dst),
-            e => {
-              val dstIdx = communicationElems.indexOf(e.target.toOuter.toString())
-              (communicationElementsBitPerSecPerChannel(dstIdx) * communicationElementsMaxChannels(
-                dstIdx
-              )).toDouble
-            }
-          )
-        if (i == j) {
-          Rational.zero
-        } else {
-          path match {
-            case Some(p) => p.weight
-            case _       => Rational(-1)
-          }
-        }
+        computedPaths(i)(j)
+          .map(ce => {
+            val dstIdx = communicationElems.indexOf(ce)
+            (communicationElementsBitPerSecPerChannel(dstIdx) * communicationElementsMaxChannels(
+              dstIdx
+            ))
+          })
+          .reduce(_ + _)
       })
     })
   }
@@ -89,23 +80,12 @@ final case class SharedMemoryMultiCore(
   val minTraversalTimePerBit: Array[Array[Rational]] = {
     platformElements.zipWithIndex.map((src, i) => {
       platformElements.zipWithIndex.map((dst, j) => {
-        val path = topology
-          .get(src)
-          .shortestPathTo(
-            topology.get(dst),
-            e => {
-              val dstIdx = communicationElems.indexOf(e.target.toOuter.toString())
-              (communicationElementsBitPerSecPerChannel(dstIdx)).toDouble
-            }
-          )
-        if (i == j) {
-          Rational.zero
-        } else {
-          path match {
-            case Some(p) => p.weight
-            case _       => Rational(-1)
-          }
-        }
+        computedPaths(i)(j)
+          .map(ce => {
+            val dstIdx = communicationElems.indexOf(ce)
+            (communicationElementsBitPerSecPerChannel(dstIdx))
+          })
+          .reduce(_ + _)
       })
     })
   }

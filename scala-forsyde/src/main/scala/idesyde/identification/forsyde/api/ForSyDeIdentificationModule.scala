@@ -26,20 +26,20 @@ class ForSyDeIdentificationModule extends IdentificationModule {
   // given scala.math.Fractional[Rational] = fractional[Rational]
 
   val identificationRules = Set(
-    SDFAppIdentificationRule(),
-    NetworkedDigitalHWIdentRule(),
-    SchedulableNetDigHWIdentRule(),
-    // ReactorMinusAppDSEIdentRule(),
-    // ReactorMinusAppDSEMznIdentRule(),
-    PeriodicWorkloadIdentificationRule(),
-    PeriodicTaskToSchedHWIdentRule(),
-    // ReactorMinusIdentificationRule(
-    //   Executors.newFixedThreadPool(1).asInstanceOf[ThreadPoolExecutor]
-    // ),
-    TiledDigitalHardwareIRule(),
-    SchedulableTiledDigitalHardware.identFromAny,
-    SDFToSchedTiledHW.identFromAny,
-    SDFToExplicitSchedHW
+    // SDFAppIdentificationRule(),
+    // NetworkedDigitalHWIdentRule(),
+    // SchedulableNetDigHWIdentRule(),
+    // // ReactorMinusAppDSEIdentRule(),
+    // // ReactorMinusAppDSEMznIdentRule(),
+    // PeriodicWorkloadIdentificationRule(),
+    // PeriodicTaskToSchedHWIdentRule(),
+    // // ReactorMinusIdentificationRule(
+    // //   Executors.newFixedThreadPool(1).asInstanceOf[ThreadPoolExecutor]
+    // // ),
+    // TiledDigitalHardwareIRule(),
+    // SchedulableTiledDigitalHardware.identFromAny,
+    // SDFToSchedTiledHW.identFromAny,
+    // SDFToExplicitSchedHW
   )
 
 }

@@ -1,4 +1,4 @@
-package idesyde.identification.choco.models.sdf
+package idesyde.identification.choco.models.mixed
 
 import idesyde.identification.choco.interfaces.ChocoCPForSyDeDecisionModel
 import org.chocosolver.solver.Model
@@ -39,10 +39,13 @@ final case class ChocoSDFToSChedTileHWSlowest(
   while (
     timeValues
       .map(t => t * (timeMultiplier))
-      .exists(d => d.numerator <= d.denominator) // ensure that the numbers magnitudes still stay sane
-      &&
-      timeValues
-      .map(t => t * (timeMultiplier)).sum < Int.MaxValue / 10 - 1
+      .exists(d =>
+        d.numerator <= d.denominator
+      ) // ensure that the numbers magnitudes still stay sane
+    &&
+    timeValues
+      .map(t => t * (timeMultiplier))
+      .sum < Int.MaxValue / 10 - 1
   ) {
     timeMultiplier *= 10
   }
@@ -80,7 +83,11 @@ final case class ChocoSDFToSChedTileHWSlowest(
     dse.platform.tiledDigitalHardware.commElemsVirtualChannels,
     dse.platform.tiledDigitalHardware.computeRouterPaths,
     dse.platform.tiledDigitalHardware.routerSet.zipWithIndex.map((_, src) =>
-      dse.platform.tiledDigitalHardware.routerSet.zipWithIndex.map((_, dst) => dse.platform.tiledDigitalHardware.commElemsVirtualChannels(src) == dse.platform.tiledDigitalHardware.commElemsVirtualChannels(dst))
+      dse.platform.tiledDigitalHardware.routerSet.zipWithIndex.map((_, dst) =>
+        dse.platform.tiledDigitalHardware.commElemsVirtualChannels(
+          src
+        ) == dse.platform.tiledDigitalHardware.commElemsVirtualChannels(dst)
+      )
     ),
     memoryMappingModule.messagesMemoryMapping
   )
@@ -198,7 +205,10 @@ final case class ChocoSDFToSChedTileHWSlowest(
   //   sdfAnalysisModule.firingsInSlots
   // )
 
-  override val strategies: Array[AbstractStrategy[? <: Variable]] = chocoModel.getVars().filter(v => v.isInstanceOf[IntVar]).map(v => Search.minDomLBSearch(v.asInstanceOf[IntVar]))
+  override val strategies: Array[AbstractStrategy[? <: Variable]] = chocoModel
+    .getVars()
+    .filter(v => v.isInstanceOf[IntVar])
+    .map(v => Search.minDomLBSearch(v.asInstanceOf[IntVar]))
 
   //---------
 
@@ -267,10 +277,15 @@ final case class ChocoSDFToSChedTileHWSlowest(
       schedulings,
       sdfAnalysisModule.firingsInSlots.map(_.map(_.map(output.getIntVal(_)))),
       tileAnalysisModule.virtualChannelForMessage.map(_.map(output.getIntVal(_))),
-      dse.sdfApplications.actors.zipWithIndex.map((a, i) => 
-        Rational(timeMultiplier, sdfAnalysisModule.invThroughputs(
-          memoryMappingModule.processesMemoryMapping(i).getValue()
-        ).getValue())
+      dse.sdfApplications.actors.zipWithIndex.map((a, i) =>
+        Rational(
+          timeMultiplier,
+          sdfAnalysisModule
+            .invThroughputs(
+              memoryMappingModule.processesMemoryMapping(i).getValue()
+            )
+            .getValue()
+        )
       )
     )
   }
@@ -284,9 +299,10 @@ final case class ChocoSDFToSChedTileHWSlowest(
 object ChocoSDFToSChedTileHWSlowest {
 
   def identifyFromAny(
-    model: Any,
-    identified: scala.collection.Iterable[DecisionModel]
-  )(using scala.math.Fractional[Rational]): IdentificationResult[ChocoSDFToSChedTileHWSlowest] = ForSyDeIdentificationRule.identifyWrapper(model, identified, identifyFromForSyDe)
+      model: Any,
+      identified: scala.collection.Iterable[DecisionModel]
+  )(using scala.math.Fractional[Rational]): IdentificationResult[ChocoSDFToSChedTileHWSlowest] =
+    ForSyDeIdentificationRule.identifyWrapper(model, identified, identifyFromForSyDe)
   def identifyFromForSyDe(
       model: ForSyDeSystemGraph,
       identified: scala.collection.Iterable[DecisionModel]

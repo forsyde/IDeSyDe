@@ -17,4 +17,5 @@ import idesyde.identification.DecisionModel
 trait StandardDecisionModel extends DecisionModel {
 
   type VertexT = String
+  type EdgeT   = (String, String)
 }

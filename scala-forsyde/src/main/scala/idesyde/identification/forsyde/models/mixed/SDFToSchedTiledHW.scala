@@ -44,7 +44,7 @@ final case class SDFToSchedTiledHW(
 ) extends ForSyDeDecisionModel
     with WCETComputationMixin[Rational] {
 
-  def coveredVertexes: Iterable[Vertex] = sdfApplications.coveredVertexes ++
+  def coveredElements: Iterable[Vertex] = sdfApplications.coveredVertexes ++
     platform.coveredVertexes
 
   def processComputationalNeeds: Array[Map[String, Map[String, Long]]] =
@@ -158,7 +158,7 @@ final case class SDFToSchedTiledHW(
     }
     for ((a, i) <- sdfApplications.actors.zipWithIndex) {
       val actorTh = actorThoughputsInSecs(i)
-      val aExtra = AnalyzedActor.enforce(a)
+      val aExtra  = AnalyzedActor.enforce(a)
       aExtra.setThroughputInSecsNumerator(actorTh.numeratorAsLong)
       aExtra.setThroughputInSecsDenominator(actorTh.denominatorAsLong)
     }

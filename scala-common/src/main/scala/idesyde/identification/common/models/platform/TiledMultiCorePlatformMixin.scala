@@ -56,19 +56,22 @@ trait TiledMultiCorePlatformMixin[MemT, TimeT](using fTimeT: Fractional[TimeT])(
   def platformSet   = tileSet ++ routerSet
 
   private def directedAndConnectedMinTimeGraph: Graph[Int, DefaultEdge] = {
-    val gBuilder = SimpleDirectedWeightedGraph.createBuilder[Int, DefaultEdge](() => DefaultEdge())
+    val gBuilder = SimpleDirectedWeightedGraph.createBuilder[Int, DefaultEdge](classOf[DefaultEdge])
     architectureGraph
       .edgeSet()
       .forEach(e => {
-        val src = architectureGraph.getEdgeSource(e)
-        val dst = architectureGraph.getEdgeTarget(e)
-        val srcIdx = routerSet.indexOf(src) 
-        val dstIdx = routerSet.indexOf(dst) 
+        val src    = architectureGraph.getEdgeSource(e)
+        val dst    = architectureGraph.getEdgeTarget(e)
+        val srcIdx = routerSet.indexOf(src)
+        val dstIdx = routerSet.indexOf(dst)
         if (routerSet.contains(dst)) {
           gBuilder.addEdge(
             src,
             dst,
-            architectureGraphMinimumHopTime(srcIdx, dstIdx).toDouble + minTraversalTimePerBitPerRouter(
+            architectureGraphMinimumHopTime(
+              srcIdx,
+              dstIdx
+            ).toDouble + minTraversalTimePerBitPerRouter(
               dstIdx
             ).toDouble
           )
@@ -79,7 +82,10 @@ trait TiledMultiCorePlatformMixin[MemT, TimeT](using fTimeT: Fractional[TimeT])(
           gBuilder.addEdge(
             dst,
             src,
-            architectureGraphMinimumHopTime(dstIdx, srcIdx).toDouble + minTraversalTimePerBitPerRouter(
+            architectureGraphMinimumHopTime(
+              dstIdx,
+              srcIdx
+            ).toDouble + minTraversalTimePerBitPerRouter(
               srcIdx
             ).toDouble
           )
@@ -91,19 +97,22 @@ trait TiledMultiCorePlatformMixin[MemT, TimeT](using fTimeT: Fractional[TimeT])(
   }
 
   private def directedAndConnectedMaxTimeGraph: Graph[Int, DefaultEdge] = {
-    val gBuilder = SimpleDirectedWeightedGraph.createBuilder[Int, DefaultEdge](() => DefaultEdge())
+    val gBuilder = SimpleDirectedWeightedGraph.createBuilder[Int, DefaultEdge](classOf[DefaultEdge])
     architectureGraph
       .edgeSet()
       .forEach(e => {
-        val src = architectureGraph.getEdgeSource(e)
-        val dst = architectureGraph.getEdgeTarget(e)
-        val srcIdx = routerSet.indexOf(src) 
-        val dstIdx = routerSet.indexOf(dst) 
+        val src    = architectureGraph.getEdgeSource(e)
+        val dst    = architectureGraph.getEdgeTarget(e)
+        val srcIdx = routerSet.indexOf(src)
+        val dstIdx = routerSet.indexOf(dst)
         if (routerSet.contains(dst)) {
           gBuilder.addEdge(
             src,
             dst,
-            architectureGraphMaximumHopTime(srcIdx, dstIdx).toDouble + maxTraversalTimePerBitPerRouter(
+            architectureGraphMaximumHopTime(
+              srcIdx,
+              dstIdx
+            ).toDouble + maxTraversalTimePerBitPerRouter(
               dstIdx
             ).toDouble
           )
@@ -114,7 +123,10 @@ trait TiledMultiCorePlatformMixin[MemT, TimeT](using fTimeT: Fractional[TimeT])(
           gBuilder.addEdge(
             dst,
             src,
-            architectureGraphMaximumHopTime(dstIdx, srcIdx).toDouble + maxTraversalTimePerBitPerRouter(
+            architectureGraphMaximumHopTime(
+              dstIdx,
+              srcIdx
+            ).toDouble + maxTraversalTimePerBitPerRouter(
               srcIdx
             ).toDouble
           )
@@ -140,13 +152,14 @@ trait TiledMultiCorePlatformMixin[MemT, TimeT](using fTimeT: Fractional[TimeT])(
   }
 
   def maxTraversalTimePerBit: Array[Array[TimeT]] = {
-    val maxWeight = directedAndConnectedMaxTimeGraph.edgeSet.stream
-      .mapToDouble(e => directedAndConnectedMaxTimeGraph.getEdgeWeight(e))
+    val maxGraph = directedAndConnectedMaxTimeGraph
+    val maxWeight = maxGraph.edgeSet.stream
+      .mapToDouble(e => maxGraph.getEdgeWeight(e))
       .max
       .orElse(0.0)
     val reversedGraph = AsWeightedGraph(
-      directedAndConnectedMaxTimeGraph,
-      (e) => maxWeight - directedAndConnectedMaxTimeGraph.getEdgeWeight(e),
+      maxGraph,
+      (e) => maxWeight - maxGraph.getEdgeWeight(e),
       true,
       false
     )
@@ -156,7 +169,12 @@ trait TiledMultiCorePlatformMixin[MemT, TimeT](using fTimeT: Fractional[TimeT])(
         if (i == j) {
           fTimeT.zero
         } else if (paths.getPath(src, dst) != null) {
-          conversion((maxWeight * paths.getPath(src, dst).getLength().toDouble) - paths.getPathWeight(src, dst))
+          conversion(
+            (maxWeight * paths.getPath(src, dst).getLength().toDouble) - paths.getPathWeight(
+              src,
+              dst
+            )
+          )
         } else
           fTimeT.zero - fTimeT.one
       })

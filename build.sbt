@@ -2,7 +2,7 @@ ThisBuild / organization := "io.github.forsyde"
 ThisBuild / version := "0.3.4"
 ThisBuild / scalaVersion := "3.1.3"
 
-lazy val forsydeIoVersion  = "0.5.16"
+lazy val forsydeIoVersion  = "0.5.17"
 lazy val jgraphtVersion    = "1.5.1"
 lazy val scribeVersion     = "3.10.2"
 lazy val breezeVersion     = "2.1.0"
@@ -110,8 +110,6 @@ lazy val tests = (project in file("scala-tests"))
     ),
     Test / parallelExecution := false
   )
-
-// ThisBuild / resolvers += Resolver.mavenLocal
 
 // TODO: figure out what is
 ThisBuild / assembly / assemblyMergeStrategy := {

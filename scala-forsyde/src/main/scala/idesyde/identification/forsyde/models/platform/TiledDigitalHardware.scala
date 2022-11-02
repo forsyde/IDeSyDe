@@ -19,6 +19,7 @@ import spire.math.Rational
 import spire.implicits.*
 import idesyde.identification.models.platform.InstrumentedPlatformMixin
 import idesyde.identification.models.platform.TiledMultiCorePlatformMixin
+import scala.collection.mutable.Queue
 
 final case class TiledDigitalHardware(
     val processors: Array[GenericProcessingModule],
@@ -54,10 +55,11 @@ final case class TiledDigitalHardware(
       })
     gBuilder.buildAsUnmodifiable()
   }
-  
+
   val tileSet: Array[Int] = (0 until processors.size).toArray
 
-  val routerSet: Array[Int] = (processors.size until processors.size + networkInterfaces.size + routers.size).toArray
+  val routerSet: Array[Int] =
+    (processors.size until processors.size + networkInterfaces.size + routers.size).toArray
 
   def architectureGraphMaximumHopTime(src: Int, dst: Int): Rational = Rational.zero
 
@@ -87,8 +89,7 @@ final case class TiledDigitalHardware(
           * insce.getFlitSizeInBits.toInt
           // .multiply(insce.getMaxConcurrentFlits.toInt)
           * insce.getOperatingFrequencyInHertz.toInt
-           / insce.getMaxCyclesPerFlit.toInt)
-          .reciprocal
+          / insce.getMaxCyclesPerFlit.toInt).reciprocal
       )
       .orElse(Rational.zero)
   })
@@ -101,43 +102,84 @@ final case class TiledDigitalHardware(
           * insce.getFlitSizeInBits.toInt
           * insce.getMaxConcurrentFlits.toInt
           * insce.getOperatingFrequencyInHertz.toInt
-          / insce.getMaxCyclesPerFlit.toInt)
-          .reciprocal
+          / insce.getMaxCyclesPerFlit.toInt).reciprocal
       )
       .orElse(Rational.zero)
   })
-  
+
   val processorsFrequency: Array[Long] = processors.map(_.getOperatingFrequencyInHertz())
 
   val processorsProvisions: Array[Map[String, Map[String, Double]]] = processors.map(pe => {
     // we do it mutable for simplicity...
     // the performance hit should not be a concern now, for super big instances, this can be reviewed
     var mutMap = mutable.Map[String, Map[String, Double]]()
-    InstrumentedProcessingModule.safeCast(pe).map(ipe => {
-        ipe.getModalInstructionsPerCycle().entrySet().forEach(e => {
-            mutMap(e.getKey()) = e.getValue().asScala.map((k, v) => k -> v.asInstanceOf[Double]).toMap
-        })
-    })
+    InstrumentedProcessingModule
+      .safeCast(pe)
+      .map(ipe => {
+        ipe
+          .getModalInstructionsPerCycle()
+          .entrySet()
+          .forEach(e => {
+            mutMap(e.getKey()) =
+              e.getValue().asScala.map((k, v) => k -> v.asInstanceOf[Double]).toMap
+          })
+      })
     mutMap.toMap
   })
 
   val commElemsVirtualChannels: Array[Int] = allCommElems.map(r => {
-    InstrumentedCommunicationModule.safeCast(r).map(ir => ir.getMaxConcurrentFlits().toInt).orElse(1)
+    InstrumentedCommunicationModule
+      .safeCast(r)
+      .map(ir => ir.getMaxConcurrentFlits().toInt)
+      .orElse(1)
   })
   def commElemsVirtualChannelsById(ceId: Int) = commElemsVirtualChannels(routerSet.indexOf(ceId))
 
   val bandWidthPerCEPerVirtualChannel: Array[Rational] = allCommElems.map(r => {
-    InstrumentedCommunicationModule.safeCast(r).map(ir =>
-        Rational(ir.getFlitSizeInBits.toInt * ir.getOperatingFrequencyInHertz.toLong, ir.getMaxCyclesPerFlit.toInt)
-          .reciprocal
+    InstrumentedCommunicationModule
+      .safeCast(r)
+      .map(ir =>
+        Rational(
+          ir.getFlitSizeInBits.toInt * ir.getOperatingFrequencyInHertz.toLong,
+          ir.getMaxCyclesPerFlit.toInt
+        ).reciprocal
       )
       .orElse(Rational.one)
   })
 
-  def bandWidthPerCEPerVirtualChannelById(ceId: Int) = bandWidthPerCEPerVirtualChannel(routerSet.indexOf(ceId))
+  def bandWidthPerCEPerVirtualChannelById(ceId: Int) = bandWidthPerCEPerVirtualChannel(
+    routerSet.indexOf(ceId)
+  )
 
   // save router paths so that it does not recompute them everytime
   val routerPaths = computeRouterPaths
+
+  def symmetricTileGroups: Set[Set[Int]] = {
+    val wccts = maxTraversalTimePerBit
+    val outgoingWCCThistograms =
+      wccts.map(dsts => dsts.groupBy(t => t).map((k, v) => k -> v.length))
+    val incomingWCCThistograms =
+      tileSet.map(dst =>
+        tileSet.map(src => wccts(src)(dst)).groupBy(t => t).map((k, v) => k -> v.length)
+      )
+    var groups      = mutable.Set[Set[Int]]()
+    var toBeMatched = tileSet.toSet
+    while (!toBeMatched.isEmpty) {
+      val t = toBeMatched.head
+      val otherSymmetric = toBeMatched.tail
+        .filter(tt => {
+          val tIdx  = tileSet.indexOf(t)
+          val ttIdx = tileSet.indexOf(tt)
+          processorsProvisions(tIdx) == processorsProvisions(ttIdx) &&
+          outgoingWCCThistograms(tIdx) == outgoingWCCThistograms(ttIdx) &&
+          incomingWCCThistograms(tIdx) == incomingWCCThistograms(ttIdx)
+        })
+      toBeMatched -= t
+      toBeMatched --= otherSymmetric
+      groups += (otherSymmetric + t)
+    }
+    groups.toSet
+  }
 
   def uniqueIdentifier: String = "TiledDigitalHardware"
 }

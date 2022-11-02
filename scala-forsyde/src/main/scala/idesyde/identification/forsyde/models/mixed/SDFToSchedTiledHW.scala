@@ -28,6 +28,8 @@ import forsyde.io.java.typed.viewers.decision.sdf.PASSedSDFActor
 import forsyde.io.java.typed.viewers.platform.RoundRobinCommunicationModule
 import forsyde.io.java.typed.viewers.decision.platform.runtime.AllocatedSharedSlotSCS
 import forsyde.io.java.typed.viewers.decision.platform.runtime.AllocatedSingleSlotSCS
+import forsyde.io.java.typed.viewers.decision.results.AnalysedTask
+import forsyde.io.java.typed.viewers.decision.results.AnalyzedActor
 
 given scala.math.Fractional[Rational] = spire.compat.fractional[Rational]
 given Conversion[Double, Rational]    = (d: Double) => Rational(d)
@@ -61,7 +63,8 @@ final case class SDFToSchedTiledHW(
       channelMappings: Array[Array[Boolean]],
       actorSchedulings: Array[Array[Boolean]],
       actorStaticSlots: Array[Array[Array[Int]]],
-      channelVirtualChannels: Array[Array[Int]]
+      channelVirtualChannels: Array[Array[Int]],
+      actorThoughputsInSecs: Array[Rational]
   ): ForSyDeSystemGraph = {
     val rebuilt = ForSyDeSystemGraph()
     coveredVertexes.foreach(v => rebuilt.addVertex(v))
@@ -152,6 +155,12 @@ final case class SDFToSchedTiledHW(
     }
     for ((s, i) <- platform.communicationSchedulers.zipWithIndex) {
       AllocatedSharedSlotSCS.enforce(s).setEntries(vcEntries(i).map(_.asJava).asJava)
+    }
+    for ((a, i) <- sdfApplications.actors.zipWithIndex) {
+      val actorTh = actorThoughputsInSecs(i)
+      val aExtra = AnalyzedActor.enforce(a)
+      aExtra.setThroughputInSecsNumerator(actorTh.numeratorAsLong)
+      aExtra.setThroughputInSecsDenominator(actorTh.denominatorAsLong)
     }
     rebuilt
   }

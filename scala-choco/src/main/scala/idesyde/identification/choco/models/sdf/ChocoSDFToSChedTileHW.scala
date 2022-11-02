@@ -77,6 +77,23 @@ final case class ChocoSDFToSChedTileHW(
     )
   }
 
+  // breaking platform symmetries
+  val countsForPE = slower.dse.platform.tiledDigitalHardware.tileSet.map(i =>
+    chocoModel.count(
+      s"countOfMapping($i)",
+      i,
+      slower.memoryMappingModule.processesMemoryMapping: _*
+    )
+  )
+  for (symGroup <- slower.dse.platform.tiledDigitalHardware.symmetricTileGroups) {
+    chocoModel
+      .decreasing(
+        countsForPE.zipWithIndex.filter((v, i) => symGroup.contains(i)).map((v, i) => v),
+        0
+      )
+      .post()
+  }
+
   override val strategies: Array[AbstractStrategy[? <: Variable]] = Array(
     listScheduling,
     Search.minDomLBSearch(slower.sdfAnalysisModule.invThroughputs: _*),

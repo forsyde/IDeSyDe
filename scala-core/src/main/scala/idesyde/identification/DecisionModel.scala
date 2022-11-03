@@ -15,18 +15,22 @@ import idesyde.utils.CoreUtils
   */
 trait DecisionModel {
 
-  type VertexT
-  type EdgeT
+  type ElementT
+  type ElementRelationT
 
   def uniqueIdentifier: String
 
-  def coveredElements: Iterable[VertexT]
-  def coveredElementRelations: Iterable[EdgeT]
+  def coveredElements: Set[ElementT]
+  def coveredElementRelations: Set[ElementRelationT]
 
   def dominates[D <: DecisionModel](other: D): Boolean = {
-    coveredElements.exists(vId => other.coveredElements.forall(oId => vId != oId)) &&
-    coveredElementRelations.exists(eId => other.coveredElementRelations.forall(oId => eId != oId))
+    other.coveredElementIDs.subsetOf(coveredElementIDs) &&
+    other.coveredElementRelationIDs.subsetOf(coveredElementRelationIDs)
   }
+
+  def coveredElementIDs: Set[String] = coveredElements.map(_.toString())
+
+  def coveredElementRelationIDs: Set[String] = coveredElementRelations.map(_.toString())
 
   override lazy val hashCode: Int = uniqueIdentifier.hashCode
 

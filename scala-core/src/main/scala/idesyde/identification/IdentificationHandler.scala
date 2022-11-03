@@ -50,9 +50,8 @@ class IdentificationHandler(
       logger.debug(
         s"identification step $iters: ${identified.size} identified and ${activeRules.size} rules"
       )
-      allCovered = models.forall(m =>
-        identified.exists(mm => m.elements.forall(v => mm.coveredElements.exists(vv => v == vv)))
-      )
+      allCovered =
+        models.forall(m => identified.exists(mm => m.elementIDs.subsetOf(mm.coveredElementIDs)))
       iters += 1
     }
     // build reachability matrix

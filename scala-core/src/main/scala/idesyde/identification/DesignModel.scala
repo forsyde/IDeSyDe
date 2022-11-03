@@ -16,14 +16,18 @@ package idesyde.identification
   */
 trait DesignModel {
 
-  type VertexT
-  type EdgeT
+  type ElementT
+  type ElementRelationT
 
   def merge(other: DesignModel): Option[DesignModel]
 
-  def elements: Iterable[VertexT]
+  def elements: Set[ElementT]
 
-  def elementRelations: Iterable[EdgeT]
+  def elementRelations: Set[ElementRelationT]
+
+  def elementIDs: Set[String] = elements.map(_.toString())
+
+  def elementRelationIDs: Set[String] = elementRelations.map(_.toString())
 
   def +(other: DesignModel) = merge(other)
 }

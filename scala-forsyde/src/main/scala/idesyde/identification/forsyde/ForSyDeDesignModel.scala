@@ -9,8 +9,8 @@ import forsyde.io.java.core.EdgeInfo
 
 final case class ForSyDeDesignModel(val systemGraph: ForSyDeSystemGraph) extends DesignModel {
 
-  type VertexT = Vertex
-  type EdgeT   = EdgeInfo
+  type ElementT         = Vertex
+  type ElementRelationT = EdgeInfo
 
   def merge(other: DesignModel): Option[DesignModel] = {
     other match {

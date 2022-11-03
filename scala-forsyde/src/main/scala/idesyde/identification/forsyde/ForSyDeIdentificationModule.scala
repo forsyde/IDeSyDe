@@ -1,4 +1,4 @@
-package idesyde.identification.forsyde.api
+package idesyde.identification.forsyde
 
 import java.util.concurrent.ThreadPoolExecutor
 
@@ -14,18 +14,23 @@ import idesyde.identification.forsyde.rules.platform.TiledDigitalHardwareIRule
 import idesyde.identification.forsyde.models.mixed.SDFToSchedTiledHW
 import idesyde.identification.IdentificationModule
 import idesyde.identification.forsyde.models.mixed.SDFToExplicitSchedHW
+import idesyde.identification.forsyde.rules.sdf.SDFRules
 import spire.math.Rational
 import spire.compat._
 import spire.algebra._
 import spire.math._
+import idesyde.utils.Logger
+import idesyde.identification.forsyde.rules.PlatformRules
 
-class ForSyDeIdentificationModule extends IdentificationModule {
+class ForSyDeIdentificationModule(using Logger) extends IdentificationModule {
 
   given Conversion[Double, Rational] = (d) => Rational(d)
   given Conversion[Int, Rational]    = (i) => Rational(i)
   // given scala.math.Fractional[Rational] = fractional[Rational]
 
   val identificationRules = Set(
+    SDFRules.identSDFApplication,
+    PlatformRules.identTiledMultiCore
     // SDFAppIdentificationRule(),
     // NetworkedDigitalHWIdentRule(),
     // SchedulableNetDigHWIdentRule(),

@@ -41,8 +41,8 @@ final case class SDFApplication(
 
   // def dominatesSdf(other: SDFApplication) = repetitionVector.size >= other.repetitionVector.size
   val coveredElements =
-    actors.map(_.getViewedVertex) ++
-      channels.map(_.getViewedVertex)
+    (actors.map(_.getViewedVertex) ++
+      channels.map(_.getViewedVertex)).toSet
 
   val actorsSet: Array[Int]   = (0 until actors.size).toArray
   val channelsSet: Array[Int] = (actors.size until (actors.size + channels.size)).toArray
@@ -52,36 +52,35 @@ final case class SDFApplication(
   /** this is a simple shortcut for the balance matrix (originally called topology matrix) as SDFs
     * have only one configuration
     */
-  def sdfBalanceMatrix: Array[Array[Int]] = balanceMatrices.head
+  val sdfBalanceMatrix: Array[Array[Int]] = computeBalanceMatrices(0)
 
   /** this is a simple shortcut for the repetition vectors as SDFs have only one configuration */
-  def sdfRepetitionVectors: Array[Int] = repetitionVectors(0)
+  val sdfRepetitionVectors: Array[Int] = computeRepetitionVectors(0)
 
   /** this is a simple shortcut for the max parallel clusters as SDFs have only one configuration */
-  def sdfMaxParallelClusters: Array[Array[Int]] = maximalParallelClustering(0)
+  // val sdfMaxParallelClusters: Array[Array[Int]] = maximalParallelClustering(0)
 
   def isSelfConcurrent(actorIdx: Int): Boolean = {
     val a = actors(actorIdx)
     !channels.exists(c => topology.containsEdge(a, c) && topology.containsEdge(c, a))
   }
 
-  lazy val dataflowGraphs = {
-    val g = SimpleDirectedWeightedGraph.createBuilder[Int, DefaultEdge](() => DefaultEdge())
-    actors.zipWithIndex.foreach((a, i) => {
-      channels.zipWithIndex.foreach((c, prej) => {
-        val j = channelsSet(prej)
-        topology.getAllEdges(a, c).forEach(p => g.addEdge(i, j, topology.getEdgeWeight(p).toInt))
-        topology.getAllEdges(c, a).forEach(p => g.addEdge(j, i, topology.getEdgeWeight(p).toInt))
-      })
-    })
-    Array(g.buildAsUnmodifiable())
+  val dataflowGraphs = {
+    Array(
+      topology
+        .edgeSet()
+        .stream()
+        .map(e => {
+          val src = topology.getEdgeSource(e)
+          val dst = topology.getEdgeTarget(e)
+          (src.getIdentifier(), dst.getIdentifier(), topology.getEdgeWeight(e).toInt)
+        })
+        .collect(Collectors.toList())
+        .asScala
+    )
   }
 
-  val configurations = {
-    val g = DefaultDirectedGraph.createBuilder[Int, DefaultEdge](() => DefaultEdge())
-    g.addEdge(0, 0)
-    g.buildAsUnmodifiable
-  }
+  val configurations = Array((0, 0, "root"))
 
   val processComputationalNeeds: Array[Map[String, Map[String, Long]]] =
     actorFunctions.zipWithIndex.map((actorFuncs, i) => {

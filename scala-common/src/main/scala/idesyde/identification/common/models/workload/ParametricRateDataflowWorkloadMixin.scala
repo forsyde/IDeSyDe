@@ -27,7 +27,7 @@ import scalax.collection.GraphTraversal.Parameters
 trait ParametricRateDataflowWorkloadMixin {
   def actors: Array[String]
   def channels: Array[String]
-  def initialTokens: Array[Int]
+  def channelNumInitialTokens: Array[Int]
 
   /** An actor is self-concurrent if two or more instance can be executed at the same time
     *
@@ -42,12 +42,12 @@ trait ParametricRateDataflowWorkloadMixin {
     * The array of graphs represent each possible dataflow graph when the parameters are
     * instantiated.
     */
-  def dataflowGraphs: Array[Array[(String, String, Int)]]
+  def dataflowGraphs: Array[Iterable[(String, String, Int)]]
 
   /** This graph defines how the dataflowGraphs can be changed between each other, assuming that the
     * paramters can change _only_ after an actor firing.
     */
-  def configurations: Array[(String, String)]
+  def configurations: Iterable[(Int, Int, String)]
 
   /** This parameter counts the number of disjoint actor sets in the application model.def That is,
     * how many 'subapplications' are contained in this application. for for each configuration.

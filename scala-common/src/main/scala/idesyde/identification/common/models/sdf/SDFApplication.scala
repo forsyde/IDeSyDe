@@ -23,7 +23,7 @@ final case class SDFApplication(
     val actorComputationalNeeds: Array[Map[String, Map[String, Long]]],
     val channelNumInitialTokens: Array[Int],
     val channelTokenSizes: Array[Long],
-    val actorThrouhgputs: Array[Option[Double]]
+    val actorThrouhgputs: Array[Double]
 ) extends StandardDecisionModel
     with ParametricRateDataflowWorkloadMixin
     with InstrumentedWorkloadMixin {
@@ -38,8 +38,6 @@ final case class SDFApplication(
       .zipWithIndex
       .map((srcdst, i) => srcdst._1 ~> srcdst._2 % topologyEdgeValue(i)): _*
   )
-
-  val initialTokens: Array[Int] = channelNumInitialTokens
 
   /** this is a simple shortcut for the balance matrix (originally called topology matrix) as SDFs
     * have only one configuration
@@ -64,7 +62,7 @@ final case class SDFApplication(
       .map((srcdst, i) => (srcdst._1, srcdst._2, topologyEdgeValue(i)))
   )
 
-  val configurations = Array(("root", "root"))
+  val configurations = Array((0, 0, "root"))
 
   val processComputationalNeeds = actorComputationalNeeds
   //   actorFunctions.zipWithIndex.map((actorFuncs, i) => {

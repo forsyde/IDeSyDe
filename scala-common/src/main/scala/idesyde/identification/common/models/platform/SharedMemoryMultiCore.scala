@@ -31,8 +31,8 @@ final case class SharedMemoryMultiCore(
 ) extends StandardDecisionModel
     with InstrumentedPlatformMixin[Rational] {
 
-  val coveredElements         = processingElems ++ communicationElems ++ storageElems
-  val coveredElementRelations = topologySrcs.zip(topologyDsts)
+  val coveredElements         = (processingElems ++ communicationElems ++ storageElems).toSet
+  val coveredElementRelations = topologySrcs.zip(topologyDsts).toSet
 
   val platformElements: Array[String] =
     processingElems ++ communicationElems ++ storageElems

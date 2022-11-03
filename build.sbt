@@ -6,7 +6,7 @@ lazy val forsydeIoVersion  = "0.5.17"
 lazy val jgraphtVersion    = "1.5.1"
 lazy val scribeVersion     = "3.10.2"
 lazy val breezeVersion     = "2.1.0"
-lazy val scalaGraphVersion = "1.13.2"
+lazy val scalaGraphVersion = "1.13.5"
 
 lazy val root = project
   .in(file("."))

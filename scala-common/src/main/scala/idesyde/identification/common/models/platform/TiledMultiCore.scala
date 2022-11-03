@@ -22,8 +22,8 @@ final case class TiledMultiCore(
 ) extends StandardDecisionModel
     with InstrumentedPlatformMixin[Rational] {
 
-  val coveredElements         = processors ++ memories ++ networkInterfaces ++ routers
-  val coveredElementRelations = interconnectTopologySrcs.zip(interconnectTopologyDsts)
+  val coveredElements         = (processors ++ memories ++ networkInterfaces ++ routers).toSet
+  val coveredElementRelations = interconnectTopologySrcs.zip(interconnectTopologyDsts).toSet
 
   val communicationElems = networkInterfaces ++ routers
 

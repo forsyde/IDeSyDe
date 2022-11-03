@@ -10,8 +10,8 @@ final case class PartitionedCoresWithRuntimes(
     val isCyclicExecutive: Array[Boolean]
 ) extends StandardDecisionModel {
 
-  val coveredElements          = processors ++ schedulers
-  val coveredElementRelations  = processors.zip(schedulers)
+  val coveredElements          = (processors ++ schedulers).toSet
+  val coveredElementRelations  = processors.zip(schedulers).toSet
   val uniqueIdentifier: String = "PartitionedCoresWithRuntimes"
 
 }

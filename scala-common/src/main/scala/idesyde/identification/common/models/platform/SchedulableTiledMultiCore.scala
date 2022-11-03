@@ -7,7 +7,7 @@ final case class SchedulableTiledMultiCore(
     val runtimes: PartitionedCoresWithRuntimes
 ) extends StandardDecisionModel {
 
-  val coveredElements: Iterable[VertexT] = hardware.coveredElements ++ runtimes.coveredElements
+  val coveredElements         = hardware.coveredElements ++ runtimes.coveredElements
   val coveredElementRelations = hardware.coveredElementRelations ++ runtimes.coveredElementRelations
 
   val uniqueIdentifier: String = "SchedulableTiledMultiCore"

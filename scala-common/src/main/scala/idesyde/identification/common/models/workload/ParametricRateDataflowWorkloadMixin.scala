@@ -10,10 +10,11 @@ import scala.collection.mutable
 import scala.collection.mutable.Buffer
 import scalax.collection.Graph
 import scalax.collection.GraphPredef._
-import scalax.collection.edge.WDiEdge
 import scalax.collection.edge.Implicits._
 import scalax.collection.GraphEdge.DiEdgeLike
-import scalax.collection.GraphEdge.DiEdge
+import scalax.collection.edge.WDiEdge
+import scalax.collection.GraphTraversal.Parameters.apply
+import scalax.collection.GraphTraversal.Parameters
 
 /** This traits captures the ParametricRateDataflow base MoC from [1]. Then, we hope to be able to
   * use the same code for analysis across different dataflow MoCs, specially the simpler ones like
@@ -41,12 +42,12 @@ trait ParametricRateDataflowWorkloadMixin {
     * The array of graphs represent each possible dataflow graph when the parameters are
     * instantiated.
     */
-  def dataflowGraphs: Array[Graph[String, ? <: WDiEdge]]
+  def dataflowGraphs: Array[Array[(String, String, Int)]]
 
   /** This graph defines how the dataflowGraphs can be changed between each other, assuming that the
     * paramters can change _only_ after an actor firing.
     */
-  def configurations: Graph[String, ? <: WDiEdge]
+  def configurations: Array[(String, String)]
 
   /** This parameter counts the number of disjoint actor sets in the application model.def That is,
     * how many 'subapplications' are contained in this application. for for each configuration.
@@ -54,119 +55,86 @@ trait ParametricRateDataflowWorkloadMixin {
     * This is important to correctly calculate repetition vectors in analytical methods.
     */
   def disjointComponents: Array[Iterable[Iterable[String]]] = dataflowGraphs.map(g => {
-    g.componentTraverser().map(comp => comp.nodes.map(_.toOuter.toString()))
+    val gGraphed = Graph(g.map((src, dst, w) => src ~> dst).toArray: _*)
+    gGraphed.componentTraverser().map(comp => comp.nodes.map(_.value))
   })
 
-  def computeBalanceMatrices = dataflowGraphs.map(g => {
+  def computeBalanceMatrices = dataflowGraphs.map(df => {
     val m = Array.fill(channels.size)(Array.fill(actors.size)(0))
-    for (e <- g.edges) {
-      val src = e.source.toOuter.toString()
-      val dst = e.target.toOuter.toString()
+    for ((src, dst, rate) <- df) {
       if (actors.contains(src) && channels.contains(dst)) {
         m(channels.indexOf(dst))(actors.indexOf(src)) =
-          m(channels.indexOf(dst))(actors.indexOf(src)) + e.weight.toInt
+          m(channels.indexOf(dst))(actors.indexOf(src)) + rate
       } else if (actors.contains(dst) && channels.contains(src)) {
         m(channels.indexOf(src))(actors.indexOf(dst)) =
-          m(channels.indexOf(src))(actors.indexOf(dst)) - e.weight.toInt
+          m(channels.indexOf(src))(actors.indexOf(dst)) - rate
       }
     }
     m
   })
 
-  def computeRepetitionVectors: Array[Array[Int]] = dataflowGraphs.zipWithIndex.map((g, gi) => {
+  def computeRepetitionVectors: Array[Array[Int]] = dataflowGraphs.zipWithIndex.map((df, dfi) => {
     def minus_one = Rational(-1)
+    val g         = Graph(df.map((src, dst, w) => src ~> dst).toArray: _*)
     // first we build a compressed g with only the actors
     // with the fractional flows in a matrix
-    // val gRates = Array.fill(actors.size)(Array.fill(actors.size)(Rational.zero))
-    // val gActorsBuilder = SimpleDirectedGraph.createBuilder[Int, DefaultEdge](() => DefaultEdge())
-    // and put the rates between them in a matrix
-    // channels.foreach(c => {
-    //   // we do a for, but there should only be one producer and one consumer per actor
-    //   g.incomingEdgesOf(c)
-    //     .forEach(producerEdge => {
-    //       val producer = g.getEdgeSource(producerEdge)
-    //       g.outgoingEdgesOf(c)
-    //         .forEach(consumerEdge => {
-    //           val consumer = g.getEdgeTarget(consumerEdge)
-    //           // val rate = Rational(g.getEdgeWeight(producerEdge).toInt, g.getEdgeWeight(consumerEdge).toInt)
-    //           val rate = gRates(producer)(consumer)
-    //           gActorsBuilder.addEdge(producer, consumer)
-    //           // the if-else is required to subtract the +1 denominator that comes with a zero fraction
-    //           gRates(producer)(consumer) =
-    //             if (rate.equals(Rational.zero)) then
-    //               Rational(
-    //                 rate.numerator.toInt + g.getEdgeWeight(producerEdge).toInt,
-    //                 rate.denominator.toInt - 1 + g.getEdgeWeight(consumerEdge).toInt
-    //               )
-    //             else
-    //               Rational(
-    //                 rate.numerator.toInt + g.getEdgeWeight(producerEdge).toInt,
-    //                 rate.denominator.toInt + g.getEdgeWeight(consumerEdge).toInt
-    //               )
-    //         })
-    //     })
-    // })
-    // val gActors = gActorsBuilder.buildAsUnmodifiable()
     var gEdges = Buffer[(String, String)]()
     var gRates = Array.fill(actors.size)(Array.fill(actors.size)(Rational.zero))
     for (
-      c <- channels;
-      cNode = g.get(c);
-      src <- cNode.diPredecessors;
-      dst <- cNode.diSuccessors;
-      srcIdx = actors.indexOf(src.value.toString());
-      dstIdx = actors.indexOf(dst.value.toString());
+      (src, c, prod)  <- df;
+      (cc, dst, cons) <- df;
+      if channels.contains(c) && c == cc && actors.contains(src) && actors.contains(dst);
+      srcIdx = actors.indexOf(src);
+      dstIdx = actors.indexOf(dst);
       rate = Rational(
-        (cNode <~ src).map(_.weight).sum.toLong,
-        (cNode ~> src).map(_.weight).sum.toLong
+        prod,
+        cons
       )
     ) {
-      gEdges += (src.value.toString() -> dst.value.toString())
+      gEdges += (src -> dst)
       gRates(srcIdx)(dstIdx) = rate
     }
-    val gActors = Graph(gEdges.map((src, dst) => src ~> dst).toArray: _*)
+    val gActors = Graph(gEdges.map((src, dst) => src ~ dst).toArray: _*)
     // we iterate on the undirected version as to 'come back'
     // to vertex in feed-forward paths
-    val dfs        = DepthFirstIterator(AsUndirectedGraph(gActors))
     val rates      = actors.map(_ => minus_one)
     var consistent = true
-    while (dfs.hasNext() && consistent) {
-      val nextActor = dfs.next()
-      val next      = actors.indexOf(nextActor)
+    for (
+      root <- gActors.nodes.filter(n => n.inDegree == 0);
+      if consistent;
+      traverser = gActors.outerNodeTraverser(root).withParameters(Parameters.Dfs());
+      v <- traverser;
+      vIdx = actors.indexOf(v)
+    ) {
       // if there is no rate on this vertex already, it must be a root, so we populate it
-      if (rates(next).equals(minus_one)) {
-        rates(next) = Rational.one
+      if (rates(vIdx) == minus_one) {
+        rates(vIdx) = 1
       }
       // populate neighbors based on 'next' which have no rate yet
-      gActors
-        .outgoingEdgesOf(nextActor)
-        .forEach(e => {
-          val other = actors.indexOf(gActors.getEdgeTarget(e))
-          // if no rate exists in the other actor yet, we create it...
-          if (rates(other).equals(minus_one)) {
-            // it depenends if the other is a consumer...
-            rates(other) = rates(next) * (gRates(next)(other))
-          }
-          // ...otherwise we check if the graph is consistent
-          else {
-            consistent = rates(other) == rates(next) / (gRates(next)(other))
-          }
-        })
-      gActors
-        .incomingEdgesOf(nextActor)
-        .forEach(e => {
-          val otherActor = gActors.getEdgeSource(e)
-          val other      = actors.indexOf(otherActor)
-          // if no rate exists in the other actor yet, we create it...
-          if (rates(other).equals(minus_one)) {
-            // it depenends if the other is a consumer...
-            rates(other) = rates(next) / (gRates(other)(next))
-          }
-          // ...otherwise we check if the graph is consistent
-          else {
-            consistent = rates(next) == rates(other) / (gRates(other)(next))
-          }
-        })
+      for (neigh <- g.get(v).outNeighbors) {
+        val neighIdx = actors.indexOf(neigh.value)
+        // if no rate exists in the other actor yet, we create it...
+        if (rates(neighIdx) == minus_one) {
+          // it depenends if the other is a consumer...
+          rates(neighIdx) = rates(vIdx) * (gRates(vIdx)(neighIdx))
+        }
+        // ...otherwise we check if the graph is consistent
+        else {
+          consistent = consistent && rates(neighIdx) == rates(vIdx) / (gRates(vIdx)(neighIdx))
+        }
+      }
+      for (neigh <- g.get(v).inNeighbors) {
+        val neighIdx = actors.indexOf(neigh.value)
+        // if no rate exists in the other actor yet, we create it...
+        if (rates(neighIdx) == minus_one) {
+          // it depenends if the other is a consumer...
+          rates(neighIdx) = rates(vIdx) / (gRates(neighIdx)(vIdx))
+        }
+        // ...otherwise we check if the graph is consistent
+        else {
+          consistent = consistent && rates(vIdx) == rates(neighIdx) / (gRates(neighIdx)(vIdx))
+        }
+      }
     }
     // finish early in case of non consistency
     if (!consistent)
@@ -177,6 +145,7 @@ trait ParametricRateDataflowWorkloadMixin {
       .map(_.denominator.toLong)
       .reduce((i1, i2) => spire.math.lcm(i1, i2))
     rates.map(_ * lcmV / gcdV).map(_.numerator.toInt)
+
   })
   // computeBalanceMatrices.zipWithIndex.map((m, ind) => SDFUtils.getRepetitionVector(m, initialTokens, numDisjointComponents(ind)))
 
@@ -184,25 +153,19 @@ trait ParametricRateDataflowWorkloadMixin {
 
   // def isLive = maximalParallelClustering.zipWithIndex.map((cluster, i) => !cluster.isEmpty)
 
-  // def pessimisticTokensPerChannel: Array[Int] = {
-  //   channels.zipWithIndex.map((c, cIdx) => {
-  //     var pessimisticMax = 1
-  //     dataflowGraphs.zipWithIndex
-  //       .foreach((g, confIdx) => {
-  //         g.incomingEdgesOf(c)
-  //           .forEach(e => {
-  //             val aIdx = actors.indexOf(g.getEdgeSource(e))
-  //             pessimisticMax = Math.max(
-  //               repetitionVectors(confIdx)(aIdx) * balanceMatrices(confIdx)(cIdx)(
-  //                 aIdx
-  //               ) + initialTokens(cIdx),
-  //               pessimisticMax
-  //             )
-  //           })
-  //       })
-  //     pessimisticMax
-  //   })
-  // }
+  def pessimisticTokensPerChannel: Array[Int] = {
+    channels.zipWithIndex
+      .map((c, cIdx) => {
+        computeBalanceMatrices.zipWithIndex
+          .map((m, mi) => {
+            m(cIdx).zipWithIndex
+              .filter((col, a) => col > 0)
+              .map((col, a) => computeRepetitionVectors(mi)(a) * col)
+              .sum
+          })
+          .max
+      })
+  }
 
   // def stateSpace: Graph[Int, Int] = {
   //   // first, convert the arrays into a mathematical form

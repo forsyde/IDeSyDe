@@ -18,7 +18,7 @@ final case class SDFApplication(
     val channels: Array[String],
     val topologySrcs: Array[String],
     val topologyDsts: Array[String],
-    val topologyEdgeValue: Array[Long],
+    val topologyEdgeValue: Array[Int],
     val actorSizes: Array[Long],
     val actorComputationalNeeds: Array[Map[String, Map[String, Long]]],
     val channelNumInitialTokens: Array[Int],
@@ -29,8 +29,8 @@ final case class SDFApplication(
     with InstrumentedWorkloadMixin {
 
   // def dominatesSdf(other: SDFApplication) = repetitionVector.size >= other.repetitionVector.size
-  val coveredElements         = actors ++ channels
-  val coveredElementRelations = topologySrcs.zip(topologyDsts)
+  val coveredElements         = (actors ++ channels).toSet
+  val coveredElementRelations = topologySrcs.zip(topologyDsts).toSet
 
   val topology = Graph(
     topologySrcs
@@ -50,16 +50,21 @@ final case class SDFApplication(
   val sdfRepetitionVectors: Array[Int] = computeRepetitionVectors(0)
 
   /** this is a simple shortcut for the max parallel clusters as SDFs have only one configuration */
-  val sdfMaxParallelClusters: Array[Array[Int]] = maximalParallelClustering(0)
+  // val sdfMaxParallelClusters: Array[Array[Int]] = maximalParallelClustering(0)
 
   def isSelfConcurrent(actor: String): Boolean = channels.exists(c =>
     topology.get(c).diSuccessors.exists(dst => dst.toOuter == actor) &&
       topology.get(c).diPredecessors.exists(src => src.toOuter == actor)
   )
 
-  val dataflowGraphs = Array(topology)
+  val dataflowGraphs = Array(
+    topologySrcs
+      .zip(topologyDsts)
+      .zipWithIndex
+      .map((srcdst, i) => (srcdst._1, srcdst._2, topologyEdgeValue(i)))
+  )
 
-  val configurations = Graph("root" ~> "root")
+  val configurations = Array(("root", "root"))
 
   val processComputationalNeeds = actorComputationalNeeds
   //   actorFunctions.zipWithIndex.map((actorFuncs, i) => {

@@ -21,13 +21,13 @@ trait DesignModel {
 
   def merge(other: DesignModel): Option[DesignModel]
 
-  def elements: Set[ElementT]
+  def elements: scala.collection.Set[ElementT]
 
-  def elementRelations: Set[ElementRelationT]
+  def elementRelations: scala.collection.Set[ElementRelationT]
 
-  def elementIDs: Set[String] = elements.map(_.toString())
+  def elementIDs: scala.collection.Set[String] = elements.map(_.toString())
 
-  def elementRelationIDs: Set[String] = elementRelations.map(_.toString())
+  def elementRelationIDs: scala.collection.Set[String] = elementRelations.map(_.toString())
 
   def +(other: DesignModel) = merge(other)
 }

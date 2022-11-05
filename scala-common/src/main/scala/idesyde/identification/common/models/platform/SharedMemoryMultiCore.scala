@@ -14,7 +14,7 @@ import idesyde.identification.common.StandardDecisionModel
 import scalax.collection.Graph
 import scalax.collection.GraphPredef._
 import scalax.collection.GraphEdge._
-import idesyde.identification.models.platform.InstrumentedPlatformMixin
+import idesyde.identification.common.models.platform.InstrumentedPlatformMixin
 
 final case class SharedMemoryMultiCore(
     val processingElems: Array[String],

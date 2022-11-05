@@ -20,7 +20,7 @@ final case class ForSyDeDesignModel(val systemGraph: ForSyDeSystemGraph) extends
     }
   }
 
-  val elements: Iterable[Vertex] = systemGraph.vertexSet().asScala
+  val elements = systemGraph.vertexSet().asScala
 
-  val elementRelations: Iterable[EdgeInfo] = systemGraph.edgeSet().asScala
+  val elementRelations = systemGraph.edgeSet().asScala
 }

@@ -1,4 +1,4 @@
-package idesyde.identification.models.platform
+package idesyde.identification.common.models.platform
 
 trait InstrumentedPlatformMixin[RealT](using spire.math.Fractional[RealT]) {
 

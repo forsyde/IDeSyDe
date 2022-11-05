@@ -9,7 +9,7 @@ import forsyde.io.java.typed.viewers.impl.Executable
 import scala.jdk.OptionConverters.*
 import scala.jdk.CollectionConverters.*
 
-import spire.math._      
+import spire.math._
 import idesyde.identification.forsyde.models.workload.ForSyDePeriodicWorkload
 import forsyde.io.java.typed.viewers.execution.PeriodicStimulus
 import forsyde.io.java.typed.viewers.execution.Task
@@ -29,9 +29,9 @@ import forsyde.io.java.typed.viewers.execution.LoopingTask
 import idesyde.identification.DecisionModel
 import idesyde.identification.IdentificationResult
 
-
-final case class PeriodicWorkloadIdentificationRule()(using scala.math.Fractional[Rational])(using Conversion[Int, Rational])
-    extends ForSyDeIdentificationRule[ForSyDePeriodicWorkload] {
+final case class PeriodicWorkloadIdentificationRule()(using scala.math.Fractional[Rational])(using
+    Conversion[Int, Rational]
+) {
 
   def identifyFromForSyDe(
       model: ForSyDeSystemGraph,
@@ -160,8 +160,7 @@ final case class PeriodicWorkloadIdentificationRule()(using scala.math.Fractiona
             taskCommunicationGraph
           )
         )
-    )
+      )
     else new IdentificationResult(true, Option.empty)
 
-  
 }

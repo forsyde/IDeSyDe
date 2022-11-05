@@ -1,4 +1,4 @@
-package idesyde.identification.forsyde.rules
+package idesyde.identification.forsyde.rules.platform
 
 import scala.jdk.CollectionConverters._
 
@@ -16,8 +16,72 @@ import forsyde.io.java.typed.viewers.platform.InstrumentedCommunicationModule
 import forsyde.io.java.typed.viewers.platform.InstrumentedProcessingModule
 import scala.collection.mutable
 import spire.math.Rational
+import idesyde.identification.common.models.platform.PartitionedCoresWithRuntimes
+import forsyde.io.java.typed.viewers.platform.runtime.AbstractScheduler
+import forsyde.io.java.core.ForSyDeSystemGraph
+import breeze.linalg.all
+import forsyde.io.java.typed.viewers.platform.runtime.FixedPriorityScheduler
+import forsyde.io.java.typed.viewers.platform.runtime.StaticCyclicScheduler
 
 object PlatformRules {
+
+  def identPartitionedCoresWithRuntimes(
+      models: Set[DesignModel],
+      identified: Set[DecisionModel]
+  )(using logger: Logger): Option[PartitionedCoresWithRuntimes] = {
+    val modelOpt = models
+      .filter(_.isInstanceOf[ForSyDeDesignModel])
+      .map(_.asInstanceOf[ForSyDeDesignModel])
+      .map(_.systemGraph)
+      .reduceOption(_.merge(_))
+    if (modelOpt.isEmpty) {
+      return Option.empty
+    }
+    val model: ForSyDeSystemGraph = modelOpt.get
+    var processingElements        = Buffer[GenericProcessingModule]()
+    var runtimeElements           = Buffer[AbstractScheduler]()
+    model.vertexSet.stream
+      .forEach(v => {
+        GenericProcessingModule
+          .safeCast(v)
+          .ifPresent(p => processingElements :+= p)
+        AbstractScheduler
+          .safeCast(v)
+          .ifPresent(p => runtimeElements :+= p)
+      })
+    if (
+      processingElements.length <= 0 &&
+      processingElements.size >= runtimeElements.size
+    ) {
+      return Option.empty
+    }
+    val allocated = processingElements.map(pe => {
+      runtimeElements.find(s => {
+        model.hasConnection(s, pe) || model.hasConnection(pe, s)
+      })
+    })
+    if (allocated.exists(_.isEmpty)) {
+      return Option.empty
+    }
+    Option(
+      PartitionedCoresWithRuntimes(
+        processingElements.map(_.getIdentifier()).toArray,
+        allocated.map(_.get.getIdentifier()).toArray,
+        allocated
+          .map(_.get)
+          .map(v => !FixedPriorityScheduler.conforms(v) && !StaticCyclicScheduler.conforms(v))
+          .toArray,
+        allocated
+          .map(_.get)
+          .map(v => FixedPriorityScheduler.conforms(v) && !StaticCyclicScheduler.conforms(v))
+          .toArray,
+        allocated
+          .map(_.get)
+          .map(v => !FixedPriorityScheduler.conforms(v) && StaticCyclicScheduler.conforms(v))
+          .toArray
+      )
+    )
+  }
 
   def identTiledMultiCore(
       models: Set[DesignModel],

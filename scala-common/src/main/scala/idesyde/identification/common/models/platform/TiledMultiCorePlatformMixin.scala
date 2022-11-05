@@ -1,4 +1,4 @@
-package idesyde.identification.models.platform
+package idesyde.identification.common.models.platform
 
 import math.Ordering.Implicits.infixOrderingOps
 import math.Fractional.Implicits.infixFractionalOps

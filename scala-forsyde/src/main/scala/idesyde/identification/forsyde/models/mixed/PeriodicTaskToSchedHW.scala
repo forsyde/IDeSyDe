@@ -28,9 +28,9 @@ final case class PeriodicTaskToSchedHW(
 ) extends ForSyDeDecisionModel:
 
   given Conversion[java.lang.Long, Rational] = (l: java.lang.Long) => Rational(l.longValue())
-  given Conversion[Integer, Rational] = (i: Integer) => Rational(i.intValue())
+  given Conversion[Integer, Rational]        = (i: Integer) => Rational(i.intValue())
 
-  val coveredVertexes: Iterable[Vertex] = taskModel.coveredVertexes ++ schedHwModel.coveredVertexes
+  val coveredElements: Iterable[Vertex] = taskModel.coveredElements ++ schedHwModel.coveredElements
 
   private def minus_one = Rational.zero - Rational.one
 
@@ -52,15 +52,14 @@ final case class PeriodicTaskToSchedHW(
                   // due to how it is implemented in java, the contains all check if the parameter
                   // is a subset of the callee, and not vice-versa
                   .map(opGroup => {
-                    opGroup})
+                    opGroup
+                  })
                   .filter(opGroup => opGroup.keySet.forall(opName => ipcGroup.containsKey(opName)))
                   .map(opGroup => {
                     opGroup
-                      .map((opKey, opValue) =>
-                        Rational(opValue) / Rational(ipcGroup.get(opKey))
-                      )
+                      .map((opKey, opValue) => Rational(opValue) / Rational(ipcGroup.get(opKey)))
                       .sum
-                      // .reduce((f1, f2) => f1.add(f2))
+                    // .reduce((f1, f2) => f1.add(f2))
                       / pe.getOperatingFrequencyInHertz
                   })
                   .asJavaSeqStream
@@ -83,8 +82,8 @@ final case class PeriodicTaskToSchedHW(
     taskModel.dataBlocks.zipWithIndex.map((channel, i) => {
       instrumentedCEsRange.zipWithIndex.map((ce, j) => {
         // get the WCTT in seconds
-        (channel.getMaxSizeInBits * ce.getMaxCyclesPerFlit) / 
-        (ce.getFlitSizeInBits * ce.getMaxConcurrentFlits * ce.getOperatingFrequencyInHertz)
+        (channel.getMaxSizeInBits * ce.getMaxCyclesPerFlit) /
+          (ce.getFlitSizeInBits * ce.getMaxConcurrentFlits * ce.getOperatingFrequencyInHertz)
       })
     })
   }
@@ -112,20 +111,20 @@ final case class PeriodicTaskToSchedHW(
       .orElse(Rational.one)
   )
 
-  def exactRMSchedulingPoints(using Ordering[Task]): Array[Array[Rational]] =
-    taskModel.tasks.zipWithIndex
-      .map((task, i) => {
-        taskModel.tasks
-          .filter(hpTask => hpTask > task)
-          .zipWithIndex
-          .flatMap((hpTask, j) => {
-            (0 until taskModel.tasksNumInstances(j))
-              .map(k => {
-                taskModel.offsets(j) + (taskModel.periods(j) * k)
-              })
-              .filterNot(t => t.equals(taskModel.hyperPeriod))
-          })
-      })
+  // def exactRMSchedulingPoints(using Ordering[Task]): Array[Array[Rational]] =
+  //   taskModel.tasks.zipWithIndex
+  //     .map((task, i) => {
+  //       taskModel.tasks
+  //         .filter(hpTask => hpTask > task)
+  //         .zipWithIndex
+  //         .flatMap((hpTask, j) => {
+  //           (0 until taskModel.tasksNumInstances(j))
+  //             .map(k => {
+  //               taskModel.offsets(j) + (taskModel.periods(j) * k)
+  //             })
+  //             .filterNot(t => t.equals(taskModel.hyperPeriod))
+  //         })
+  //     })
 
   def sufficientRMSchedulingPoints(using Ordering[Task]): Array[Array[Rational]] =
     taskModel.tasks.zipWithIndex
@@ -136,7 +135,7 @@ final case class PeriodicTaskToSchedHW(
           .map((hpTask, j) => {
             taskModel
               .periods(j)
-               * (taskModel.periods(i) / taskModel.periods(j)).doubleValue.floor.toLong
+              * (taskModel.periods(i) / taskModel.periods(j)).doubleValue.floor.toLong
           })
       })
 

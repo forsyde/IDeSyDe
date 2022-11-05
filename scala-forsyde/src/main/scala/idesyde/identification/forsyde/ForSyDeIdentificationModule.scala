@@ -20,7 +20,9 @@ import spire.compat._
 import spire.algebra._
 import spire.math._
 import idesyde.utils.Logger
-import idesyde.identification.forsyde.rules.PlatformRules
+import idesyde.identification.forsyde.rules.platform.PlatformRules
+import idesyde.identification.DecisionModel
+import idesyde.identification.DesignModel
 
 class ForSyDeIdentificationModule(using Logger) extends IdentificationModule {
 
@@ -30,7 +32,8 @@ class ForSyDeIdentificationModule(using Logger) extends IdentificationModule {
 
   val identificationRules = Set(
     SDFRules.identSDFApplication,
-    PlatformRules.identTiledMultiCore
+    PlatformRules.identTiledMultiCore,
+    PlatformRules.identPartitionedCoresWithRuntimes
     // SDFAppIdentificationRule(),
     // NetworkedDigitalHWIdentRule(),
     // SchedulableNetDigHWIdentRule(),
@@ -46,5 +49,7 @@ class ForSyDeIdentificationModule(using Logger) extends IdentificationModule {
     // SDFToSchedTiledHW.identFromAny,
     // SDFToExplicitSchedHW
   )
+
+  val integrationRules = Set()
 
 }

@@ -41,7 +41,6 @@ import com.ibm.icu.impl.locale.LocaleDistance.Data
 import forsyde.io.java.typed.viewers.execution.CommunicatingTask
 import spire.math.*
 import spire.implicits.*
-import idesyde.identification.models.workload.PeriodicWorkloadMixin
 
 /** Simplest periodic task set concerned in the literature. The task graph is generated from the
   * execution namespace in ForSyDe IO, which defines triggering mechanisms and how they propagate.
@@ -61,8 +60,7 @@ case class ForSyDePeriodicWorkload(
     val stimulusGraph: Graph[Task | PeriodicStimulus | Upsample | Downsample, DefaultEdge],
     val taskCommunicationGraph: Graph[CommunicatingTask | DataBlock, Long]
 )(using scala.math.Fractional[Rational])(using Conversion[Int, Rational])
-    extends ForSyDeDecisionModel
-    with PeriodicWorkloadMixin[Rational]:
+    extends ForSyDeDecisionModel:
 
   // given Conversion[java.lang.Long, Rational] = (l: java.lang.Long) => Rational(l.longValue())
 

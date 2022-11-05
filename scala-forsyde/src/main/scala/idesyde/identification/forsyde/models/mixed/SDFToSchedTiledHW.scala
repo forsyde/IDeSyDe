@@ -44,19 +44,19 @@ final case class SDFToSchedTiledHW(
 ) extends ForSyDeDecisionModel
     with WCETComputationMixin[Rational] {
 
-  def coveredElements: Iterable[Vertex] = sdfApplications.coveredVertexes ++
-    platform.coveredVertexes
+  val coveredElements = sdfApplications.coveredElements ++
+    platform.coveredElements
 
-  def processComputationalNeeds: Array[Map[String, Map[String, Long]]] =
+  val processComputationalNeeds: Array[Map[String, Map[String, Long]]] =
     sdfApplications.processComputationalNeeds
 
-  def processSizes: Array[Long] = sdfApplications.processSizes
+  val processSizes: Array[Long] = sdfApplications.processSizes
 
-  def messagesMaxSizes: Array[Long] = sdfApplications.messagesMaxSizes
+  val messagesMaxSizes: Array[Long] = sdfApplications.messagesMaxSizes
 
-  def processorsFrequency: Array[Long] = platform.tiledDigitalHardware.processorsFrequency
+  val processorsFrequency: Array[Long] = platform.tiledDigitalHardware.processorsFrequency
 
-  def processorsProvisions: Array[Map[String, Map[String, Double]]] =
+  val processorsProvisions: Array[Map[String, Map[String, Double]]] =
     platform.tiledDigitalHardware.processorsProvisions
 
   def addMappingsAndRebuild(
@@ -67,7 +67,7 @@ final case class SDFToSchedTiledHW(
       actorThoughputsInSecs: Array[Rational]
   ): ForSyDeSystemGraph = {
     val rebuilt = ForSyDeSystemGraph()
-    coveredVertexes.foreach(v => rebuilt.addVertex(v))
+    coveredElements.foreach(v => rebuilt.addVertex(v))
     val finalMappings = existingMappings.zipWithIndex.map((row, i) =>
       row.zipWithIndex.map((m, j) => channelMappings(i)(j) || m)
     )

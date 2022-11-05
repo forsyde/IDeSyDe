@@ -1,4 +1,4 @@
-package idesyde.identification.models.workload
+package idesyde.identification.common.models.workload
 
 import scala.jdk.CollectionConverters.*
 import scala.jdk.StreamConverters.*

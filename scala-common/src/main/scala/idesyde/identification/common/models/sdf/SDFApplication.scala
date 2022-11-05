@@ -3,8 +3,8 @@ package idesyde.identification.common.models.sdf
 import scala.jdk.CollectionConverters.*
 
 import idesyde.utils.SDFUtils
-import idesyde.identification.models.workload.ParametricRateDataflowWorkloadMixin
-import idesyde.identification.models.workload.InstrumentedWorkloadMixin
+import idesyde.identification.common.models.workload.ParametricRateDataflowWorkloadMixin
+import idesyde.identification.common.models.workload.InstrumentedWorkloadMixin
 import scala.collection.mutable
 import java.util.stream.Collectors
 import spire.math.*

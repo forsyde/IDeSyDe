@@ -12,7 +12,8 @@ class CommonIdentificationModule extends IdentificationModule {
     PlatformRules.identSchedulableTiledMultiCore,
     PlatformRules.identPartitionedSharedMemoryMultiCore,
     MixedRules.identSDFToPartitionedSharedMemory,
-    MixedRules.identSDFToTiledMultiCore
+    MixedRules.identSDFToTiledMultiCore,
+    MixedRules.identPeriodicWorkloadToPartitionedSharedMultiCore
   )
 
   val integrationRules = Set()

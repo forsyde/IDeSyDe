@@ -17,8 +17,8 @@ import forsyde.io.java.typed.viewers.platform.InstrumentedProcessingModule
 import scala.collection.mutable
 import spire.math.Rational
 import spire.implicits.*
-import idesyde.identification.models.platform.InstrumentedPlatformMixin
-import idesyde.identification.models.platform.TiledMultiCorePlatformMixin
+import idesyde.identification.common.models.platform.InstrumentedPlatformMixin
+import idesyde.identification.common.models.platform.TiledMultiCorePlatformMixin
 import scala.collection.mutable.Queue
 
 final case class TiledDigitalHardware(

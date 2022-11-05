@@ -7,6 +7,8 @@ import idesyde.identification.common.models.platform.SchedulableTiledMultiCore
 import idesyde.identification.common.models.platform.PartitionedSharedMemoryMultiCore
 import idesyde.identification.common.models.sdf.SDFApplication
 import idesyde.identification.common.models.mixed.SDFToPartitionedSharedMemory
+import idesyde.identification.common.models.mixed.PeriodicWorkloadToPartitionedSharedMultiCore
+import idesyde.identification.common.models.workload.PeriodicDependentWorkload
 
 object MixedRules {
 
@@ -53,6 +55,31 @@ object MixedRules {
           processMappings = Array.empty,
           memoryMappings = Array.empty,
           messageSlotAllocations = Array.empty
+        )
+      )
+    )
+  }
+
+  def identPeriodicWorkloadToPartitionedSharedMultiCore(
+      models: Set[DesignModel],
+      identified: Set[DecisionModel]
+  ): Option[PeriodicWorkloadToPartitionedSharedMultiCore] = {
+    val app = identified
+      .find(_.isInstanceOf[PeriodicDependentWorkload])
+      .map(_.asInstanceOf[PeriodicDependentWorkload])
+    val plat = identified
+      .find(_.isInstanceOf[PartitionedSharedMemoryMultiCore])
+      .map(_.asInstanceOf[PartitionedSharedMemoryMultiCore])
+    // if ((runtimes.isDefined && plat.isEmpty) || (runtimes.isEmpty && plat.isDefined))
+    app.flatMap(a =>
+      plat.map(p =>
+        PeriodicWorkloadToPartitionedSharedMultiCore(
+          workload = a,
+          platform = p,
+          processMappings = Array.empty[String],
+          processSchedulings = Array.empty[String],
+          channelMappings = Array.empty[String],
+          channelSlotAllocations = Array.empty[Map[String, Array[Boolean]]]
         )
       )
     )

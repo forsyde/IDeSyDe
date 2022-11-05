@@ -1,8 +1,8 @@
 package idesyde.identification.models.mixed
 
 import scala.reflect.ClassTag
-import idesyde.identification.models.platform.InstrumentedPlatformMixin
-import idesyde.identification.models.workload.InstrumentedWorkloadMixin
+import idesyde.identification.common.models.platform.InstrumentedPlatformMixin
+import idesyde.identification.common.models.workload.InstrumentedWorkloadMixin
 import spire._
 import spire.math._
 import spire.implicits._

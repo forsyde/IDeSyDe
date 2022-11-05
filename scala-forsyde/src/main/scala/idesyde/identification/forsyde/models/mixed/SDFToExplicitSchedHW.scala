@@ -19,47 +19,51 @@ final case class SDFToExplicitSchedHW(
 ) extends ForSyDeDecisionModel {
 
   // Members declared in idesyde.identification.forsyde.ForSyDeDecisionModel
-  def coveredVertexes: Iterable[Vertex] = sdfApplications.coveredVertexes ++ platform.coveredVertexes
+  val coveredElements = sdfApplications.coveredElements ++ platform.coveredElements
 
   def uniqueIdentifier: String = "SDFToExplicitSchedHW"
 }
 
 object SDFToExplicitSchedHW extends ForSyDeIdentificationRule[SDFToExplicitSchedHW] {
 
-    def identifyFromForSyDe(
+  def identifyFromForSyDe(
       model: ForSyDeSystemGraph,
       identified: scala.collection.Iterable[DecisionModel]
-    ): IdentificationResult[SDFToExplicitSchedHW] = {
-        var sdf = Option.empty[SDFApplication]
-        var plat = Option.empty[SchedulableNetworkedDigHW]
-        identified.foreach(m => {
-            m match {
-                case s: SDFApplication => sdf = Some(s)
-                case p: SchedulableNetworkedDigHW => plat = Some(p)
-                case _ =>
-            }
-        })
-        sdf.flatMap(s => {
-            plat.map(p => {
-                val schedulings = s.actors.map(a => {
-                    p.schedulers.map(sched => {
-                        model.hasConnection(a, sched, EdgeTrait.DECISION_ABSTRACTSCHEDULING)
-                    })
-                })
-                val appMappings = s.actors.map(a => {
-                    p.hardware.storageElems.map(m => {
-                        model.hasConnection(a, m, EdgeTrait.DECISION_ABSTRACTMAPPING) ||
-                        model.hasConnection(a, m, EdgeTrait.DECISION_ABSTRACTALLOCATION)
-                    })
-                })
-                val messageMappings = s.channels.map(a => {
-                    p.hardware.storageElems.map(m => {
-                        model.hasConnection(a, m, EdgeTrait.DECISION_ABSTRACTMAPPING) ||
-                        model.hasConnection(a, m, EdgeTrait.DECISION_ABSTRACTALLOCATION)
-                    })
-                })
-                IdentificationResult.fixed(SDFToExplicitSchedHW(s, p, schedulings, appMappings, messageMappings))
+  ): IdentificationResult[SDFToExplicitSchedHW] = {
+    var sdf  = Option.empty[SDFApplication]
+    var plat = Option.empty[SchedulableNetworkedDigHW]
+    identified.foreach(m => {
+      m match {
+        case s: SDFApplication            => sdf = Some(s)
+        case p: SchedulableNetworkedDigHW => plat = Some(p)
+        case _                            =>
+      }
+    })
+    sdf
+      .flatMap(s => {
+        plat.map(p => {
+          val schedulings = s.actors.map(a => {
+            p.schedulers.map(sched => {
+              model.hasConnection(a, sched, EdgeTrait.DECISION_ABSTRACTSCHEDULING)
             })
-        }).getOrElse(IdentificationResult.unfixedEmpty())
-    }
+          })
+          val appMappings = s.actors.map(a => {
+            p.hardware.storageElems.map(m => {
+              model.hasConnection(a, m, EdgeTrait.DECISION_ABSTRACTMAPPING) ||
+              model.hasConnection(a, m, EdgeTrait.DECISION_ABSTRACTALLOCATION)
+            })
+          })
+          val messageMappings = s.channels.map(a => {
+            p.hardware.storageElems.map(m => {
+              model.hasConnection(a, m, EdgeTrait.DECISION_ABSTRACTMAPPING) ||
+              model.hasConnection(a, m, EdgeTrait.DECISION_ABSTRACTALLOCATION)
+            })
+          })
+          IdentificationResult.fixed(
+            SDFToExplicitSchedHW(s, p, schedulings, appMappings, messageMappings)
+          )
+        })
+      })
+      .getOrElse(IdentificationResult.unfixedEmpty())
+  }
 }

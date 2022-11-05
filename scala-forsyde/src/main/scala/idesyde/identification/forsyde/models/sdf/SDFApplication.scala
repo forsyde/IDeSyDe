@@ -12,11 +12,11 @@ import org.jgrapht.Graph
 import org.jgrapht.graph.WeightedPseudograph
 import org.jgrapht.graph.AsWeightedGraph
 import idesyde.utils.SDFUtils
-import idesyde.identification.models.workload.ParametricRateDataflowWorkloadMixin
+import idesyde.identification.common.models.workload.ParametricRateDataflowWorkloadMixin
 import org.jgrapht.graph.DefaultDirectedGraph
 import org.jgrapht.graph.DefaultEdge
 import forsyde.io.java.typed.viewers.impl.Executable
-import idesyde.identification.models.workload.InstrumentedWorkloadMixin
+import idesyde.identification.common.models.workload.InstrumentedWorkloadMixin
 import forsyde.io.java.typed.viewers.impl.InstrumentedExecutable
 import scala.collection.mutable
 import forsyde.io.java.typed.viewers.impl.TokenizableDataBlock

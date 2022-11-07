@@ -40,11 +40,13 @@ final case class NetworkedDigitalHardware(
     val links: Array[(DigitalModule, DigitalModule)]
 ) extends ForSyDeDecisionModel {
 
-  val coveredVertexes = {
+  val coveredElements = ({
     for (p <- processingElems) yield p.getViewedVertex
     for (c <- communicationElems) yield c.getViewedVertex
     for (s <- storageElems) yield s.getViewedVertex
-  }
+  }).toSet
+
+  val coveredElementRelations = Set()
 
   val platformElements: Array[DigitalModule] =
     processingElems ++ communicationElems ++ storageElems

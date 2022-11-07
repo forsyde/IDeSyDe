@@ -21,7 +21,9 @@ import idesyde.identification.IdentificationResult
 
 final case class TiledDigitalHardwareIRule()(using Fractional[Rational])(using
     Conversion[Double, Rational]
-) extends ForSyDeIdentificationRule[TiledDigitalHardware] {
+)
+// extends ForSyDeIdentificationRule[TiledDigitalHardware]
+{
 
   def identifyFromForSyDe(
       model: ForSyDeSystemGraph,

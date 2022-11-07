@@ -36,7 +36,7 @@ final case class PeriodicWorkloadIdentificationRule()(using scala.math.Fractiona
   def identifyFromForSyDe(
       model: ForSyDeSystemGraph,
       identified: scala.collection.Iterable[DecisionModel]
-  ) =
+  ): IdentificationResult[ForSyDePeriodicWorkload] =
     var tasks: Array[Task]                        = Array.empty
     var dataBlocks: Array[DataBlock]              = Array.empty
     var periodicStimulus: Array[PeriodicStimulus] = Array.empty

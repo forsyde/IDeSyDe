@@ -30,7 +30,10 @@ final case class PeriodicTaskToSchedHW(
   given Conversion[java.lang.Long, Rational] = (l: java.lang.Long) => Rational(l.longValue())
   given Conversion[Integer, Rational]        = (i: Integer) => Rational(i.intValue())
 
-  val coveredElements: Iterable[Vertex] = taskModel.coveredElements ++ schedHwModel.coveredElements
+  val coveredElements = taskModel.coveredElements ++ schedHwModel.coveredElements
+
+  val coveredElementRelations =
+    taskModel.coveredElementRelations ++ schedHwModel.coveredElementRelations
 
   private def minus_one = Rational.zero - Rational.one
 

@@ -21,10 +21,13 @@ final case class SDFToExplicitSchedHW(
   // Members declared in idesyde.identification.forsyde.ForSyDeDecisionModel
   val coveredElements = sdfApplications.coveredElements ++ platform.coveredElements
 
+  val coveredElementRelations =
+    sdfApplications.coveredElementRelations ++ platform.coveredElementRelations
+
   def uniqueIdentifier: String = "SDFToExplicitSchedHW"
 }
 
-object SDFToExplicitSchedHW extends ForSyDeIdentificationRule[SDFToExplicitSchedHW] {
+object SDFToExplicitSchedHW {
 
   def identifyFromForSyDe(
       model: ForSyDeSystemGraph,

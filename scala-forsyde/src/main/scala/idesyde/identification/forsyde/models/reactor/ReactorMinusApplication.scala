@@ -75,7 +75,12 @@ final case class ReactorMinusApplication(
     // val sizeFunction: Map[LinguaFrancaReaction | LinguaFrancaReactor | LinguaFrancaSignal, Long]
 ) extends SimpleDirectedGraph[LinguaFrancaReaction, LinguaFrancaSignal](classOf[LinguaFrancaSignal])
     with ForSyDeDecisionModel:
-      
+
+  val coveredElements = (pureReactions ++ periodicReactions ++ reactors ++ channels.values)
+    .map(_.getViewedVertex())
+    .toSet
+
+  val coveredElementRelations = Set()
 
   for (r               <- pureReactions) addVertex(r)
   for (r               <- periodicReactions) addVertex(r)
@@ -121,10 +126,10 @@ final case class ReactorMinusApplication(
   }
 
   def sizeFunction(elem: LinguaFrancaElem): Long = elem match
-    case a: LinguaFrancaReactor => a.getStateSizesInBits.asScala.map(_.toLong).sum
+    case a: LinguaFrancaReactor  => a.getStateSizesInBits.asScala.map(_.toLong).sum
     case r: LinguaFrancaReaction => r.getSizeInBits
-    case s: LinguaFrancaSignal => s.getSizeInBits
-    case _ => 0L
+    case s: LinguaFrancaSignal   => s.getSizeInBits
+    case _                       => 0L
 
   // val sizeFunction: Map[LinguaFrancaReactor | LinguaFrancaSignal | LinguaFrancaReaction, Long] = {
   //   val elemSet: Array[LinguaFrancaReactor | LinguaFrancaSignal | LinguaFrancaReaction] =
@@ -252,7 +257,9 @@ final case class ReactorMinusApplication(
     */
   lazy val maximalInterferencePoints
       : Map[(LinguaFrancaReaction, LinguaFrancaReaction), Seq[Rational]] =
-    (for (r <- reactions; rr <- reactions; if r != rr; if reactionsPriorityOrdering.compare(r, rr) >= 0)
+    (for (
+      r <- reactions; rr <- reactions; if r != rr; if reactionsPriorityOrdering.compare(r, rr) >= 0
+    )
       yield
         val (j, jSeq) = jobGraph
           .reactionToJobs(r)
@@ -263,9 +270,7 @@ final case class ReactorMinusApplication(
               .map(jj => jj.trigger)
               .toList
           )
-          .maxBy((j, jjStartSeq) =>
-            jjStartSeq.map(jjTrigger => j.deadline - jjTrigger).sum
-          )
+          .maxBy((j, jjStartSeq) => jjStartSeq.map(jjTrigger => j.deadline - jjTrigger).sum)
         (r, rr) -> jSeq.map(jjTrigger => jjTrigger - j.trigger)
     ).toMap
 

@@ -42,21 +42,25 @@ final case class SDFToSchedTiledHW(
     /** A matrix of mapping from each SDF channel to each HW tile _and_ router */
     val existingMappings: Array[Array[Boolean]]
 ) extends ForSyDeDecisionModel
-    with WCETComputationMixin[Rational] {
+    // with WCETComputationMixin[Rational]
+    {
 
   val coveredElements = sdfApplications.coveredElements ++
     platform.coveredElements
+
+  val coveredElementRelations = sdfApplications.coveredElementRelations ++
+    platform.coveredElementRelations
 
   val processComputationalNeeds: Array[Map[String, Map[String, Long]]] =
     sdfApplications.processComputationalNeeds
 
   val processSizes: Array[Long] = sdfApplications.processSizes
 
-  val messagesMaxSizes: Array[Long] = sdfApplications.messagesMaxSizes
+  // val messagesMaxSizes: Array[Long] = sdfApplications.messagesMaxSizes
 
   val processorsFrequency: Array[Long] = platform.tiledDigitalHardware.processorsFrequency
 
-  val processorsProvisions: Array[Map[String, Map[String, Double]]] =
+  val processorsProvisions: Array[Map[String, Map[String, Rational]]] =
     platform.tiledDigitalHardware.processorsProvisions
 
   def addMappingsAndRebuild(
@@ -216,11 +220,12 @@ object SDFToSchedTiledHW {
       platform.tiledDigitalHardware.memories.zipWithIndex.exists((me, j) => {
         taskSize <= me.getSpaceInBits
       })
-    }) && sdfApplications.messagesMaxSizes.zipWithIndex.forall((channelSize, i) => {
-      platform.tiledDigitalHardware.memories.zipWithIndex.exists((me, j) => {
-        channelSize <= me.getSpaceInBits
-      })
     })
+    // && sdfApplications.messagesMaxSizes.zipWithIndex.forall((channelSize, i) => {
+    //   platform.tiledDigitalHardware.memories.zipWithIndex.exists((me, j) => {
+    //     channelSize <= me.getSpaceInBits
+    //   })
+    // })
     // query all existing channelMappings
     // lazy val actorMappings = sdfApplications.actors.map(task => {
     //   platform.tiledDigitalHardware.memories.map(mem => {

@@ -23,7 +23,8 @@ import idesyde.identification.IdentificationResult
 import idesyde.identification.DecisionModel
 
 final case class SchedulableNetDigHWIdentRule()
-    extends ForSyDeIdentificationRule[SchedulableNetworkedDigHW] {
+// extends ForSyDeIdentificationRule[SchedulableNetworkedDigHW]
+{
 
   def identifyFromForSyDe(
       model: ForSyDeSystemGraph,

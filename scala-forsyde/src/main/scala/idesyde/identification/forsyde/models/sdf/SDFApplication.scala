@@ -33,8 +33,9 @@ final case class SDFApplication(
     val topology: Graph[SDFActor | SDFChannel, DefaultEdge],
     actorFuncs: Array[Array[Executable]] = Array.empty
 ) extends ForSyDeDecisionModel
-    with ParametricRateDataflowWorkloadMixin
-    with InstrumentedWorkloadMixin {
+    // with ParametricRateDataflowWorkloadMixin
+    // with InstrumentedWorkloadMixin
+    {
 
   val actorFunctions =
     if (actorFuncs.isEmpty) then Array.fill(actors.size)(Array.empty[Executable]) else actorFuncs
@@ -44,6 +45,8 @@ final case class SDFApplication(
     (actors.map(_.getViewedVertex) ++
       channels.map(_.getViewedVertex)).toSet
 
+  val coveredElementRelations = Set()
+
   val actorsSet: Array[Int]   = (0 until actors.size).toArray
   val channelsSet: Array[Int] = (actors.size until (actors.size + channels.size)).toArray
 
@@ -52,10 +55,10 @@ final case class SDFApplication(
   /** this is a simple shortcut for the balance matrix (originally called topology matrix) as SDFs
     * have only one configuration
     */
-  val sdfBalanceMatrix: Array[Array[Int]] = computeBalanceMatrices(0)
+  // val sdfBalanceMatrix: Array[Array[Int]] = computeBalanceMatrices(0)
 
   /** this is a simple shortcut for the repetition vectors as SDFs have only one configuration */
-  val sdfRepetitionVectors: Array[Int] = computeRepetitionVectors(0)
+  // val sdfRepetitionVectors: Array[Int] = computeRepetitionVectors(0)
 
   /** this is a simple shortcut for the max parallel clusters as SDFs have only one configuration */
   // val sdfMaxParallelClusters: Array[Array[Int]] = maximalParallelClustering(0)
@@ -142,14 +145,14 @@ final case class SDFApplication(
         .sum
   )
 
-  val messagesMaxSizes: Array[Long] = channels.zipWithIndex.map((c, i) =>
-    pessimisticTokensPerChannel(i) * TokenizableDataBlock
-      .safeCast(c)
-      .map(d => d.getTokenSizeInBits())
-      .orElse(0L)
-  )
+  // val messagesMaxSizes: Array[Long] = channels.zipWithIndex.map((c, i) =>
+  //   pessimisticTokensPerChannel(i) * TokenizableDataBlock
+  //     .safeCast(c)
+  //     .map(d => d.getTokenSizeInBits())
+  //     .orElse(0L)
+  // )
 
-  val sdfDisjointComponents = disjointComponents.head
+  // val sdfDisjointComponents = disjointComponents.head
 
   override val uniqueIdentifier = "SDFApplication"
 

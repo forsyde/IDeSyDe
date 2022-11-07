@@ -25,8 +25,9 @@ import idesyde.identification.DecisionModel
 import idesyde.identification.IdentificationResult
 
 final case class SDFAppIdentificationRule()
-    extends ForSyDeIdentificationRule[SDFApplication]
-    with SDFQueriesMixin {
+// extends ForSyDeIdentificationRule[SDFApplication]
+// with SDFQueriesMixin
+{
 
   def identifyFromForSyDe(
       model: ForSyDeSystemGraph,
@@ -48,7 +49,9 @@ final case class SDFAppIdentificationRule()
       )
 
     lazy val topology = {
-      val g = SimpleDirectedWeightedGraph.createBuilder[SDFActor | SDFChannel, DefaultEdge](() => DefaultEdge())
+      val g = SimpleDirectedWeightedGraph.createBuilder[SDFActor | SDFChannel, DefaultEdge](() =>
+        DefaultEdge()
+      )
       sdfActors.foreach(g.addVertex(_))
       sdfChannels.foreach(c => {
         g.addVertex(c)
@@ -56,9 +59,12 @@ final case class SDFAppIdentificationRule()
           .ifPresent(src => {
             val rate = model
               .getAllEdges(src.getViewedVertex, c.getViewedVertex)
-              .stream.mapToInt(e => {
+              .stream
+              .mapToInt(e => {
                 e.getSourcePort.map(sp => src.getProduction.get(sp)).orElse(0)
-              }).sum().toInt
+              })
+              .sum()
+              .toInt
             // scribe.debug(s"adding ${src.getIdentifier()} -> ${c.getIdentifier()} : ${rate}")
             g.addEdge(src, c, rate.toDouble)
           })
@@ -66,9 +72,12 @@ final case class SDFAppIdentificationRule()
           .ifPresent(dst => {
             val rate = model
               .getAllEdges(c.getViewedVertex, dst.getViewedVertex)
-              .stream.mapToInt(e => {
+              .stream
+              .mapToInt(e => {
                 e.getTargetPort.map(tp => dst.getConsumption.get(tp)).orElse(0)
-              }).sum().toInt
+              })
+              .sum()
+              .toInt
             // scribe.debug(s"adding ${c.getIdentifier()} -> ${dst.getIdentifier()} : ${rate}")
             g.addEdge(c, dst, rate.toDouble)
           })
@@ -80,7 +89,12 @@ final case class SDFAppIdentificationRule()
       new IdentificationResult(
         true,
         Option(
-          SDFApplication(sdfActors, sdfChannels, topology, sdfActors.map(_.getCombFunctionsPort(model).asScala.toArray))
+          SDFApplication(
+            sdfActors,
+            sdfChannels,
+            topology,
+            sdfActors.map(_.getCombFunctionsPort(model).asScala.toArray)
+          )
         )
       )
     } else {

@@ -2,7 +2,7 @@ ThisBuild / organization := "io.github.forsyde"
 ThisBuild / version := "0.3.4"
 ThisBuild / scalaVersion := "3.1.3"
 
-lazy val forsydeIoVersion  = "0.5.17"
+lazy val forsydeIoVersion  = "0.6.0"
 lazy val jgraphtVersion    = "1.5.1"
 lazy val scribeVersion     = "3.10.2"
 lazy val breezeVersion     = "2.1.0"

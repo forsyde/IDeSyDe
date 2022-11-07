@@ -19,8 +19,8 @@ import spire.math.Rational
 import idesyde.identification.DecisionModel
 import idesyde.identification.IdentificationResult
 
-final case class ReactorMinusAppDSEIdentRule()
-    extends ForSyDeIdentificationRule[ReactorMinusAppMapAndSched]:
+final case class ReactorMinusAppDSEIdentRule():
+  // extends ForSyDeIdentificationRule[ReactorMinusAppMapAndSched]:
 
   def identifyFromForSyDe(
       model: ForSyDeSystemGraph,

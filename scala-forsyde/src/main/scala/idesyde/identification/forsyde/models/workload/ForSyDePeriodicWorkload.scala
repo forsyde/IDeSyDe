@@ -64,11 +64,13 @@ case class ForSyDePeriodicWorkload(
 
   // given Conversion[java.lang.Long, Rational] = (l: java.lang.Long) => Rational(l.longValue())
 
-  override val coveredVertexes: Iterable[Vertex] =
-    tasks.map(_.getViewedVertex()) ++
+  val coveredElements =
+    (tasks.map(_.getViewedVertex()) ++
       executables.flatten.map(_.getViewedVertex) ++
       periodicStimulus.map(_.getViewedVertex) ++
-      dataBlocks.map(_.getViewedVertex)
+      dataBlocks.map(_.getViewedVertex)).toSet
+
+  val coveredElementRelations = Set()
 
   def computeLCM(frac1: Rational, frac2: Rational) = Rational(
     spire.math.lcm(frac1.numerator, frac2.numerator),

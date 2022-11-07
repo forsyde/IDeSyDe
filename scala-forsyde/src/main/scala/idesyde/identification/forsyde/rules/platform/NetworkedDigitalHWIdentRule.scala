@@ -18,7 +18,8 @@ import idesyde.identification.DecisionModel
 import idesyde.identification.IdentificationResult
 
 final case class NetworkedDigitalHWIdentRule()
-    extends ForSyDeIdentificationRule[NetworkedDigitalHardware] {
+// extends ForSyDeIdentificationRule[NetworkedDigitalHardware]
+{
 
   def identifyFromForSyDe(
       model: ForSyDeSystemGraph,

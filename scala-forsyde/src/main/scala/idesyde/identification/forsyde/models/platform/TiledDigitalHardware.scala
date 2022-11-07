@@ -32,9 +32,11 @@ final case class TiledDigitalHardware(
     with TiledMultiCorePlatformMixin[Long, Rational]
     with InstrumentedPlatformMixin[Rational] {
 
-  val coveredVertexes: Iterable[Vertex] = processors.map(_.getViewedVertex()) ++ memories.map(
+  val coveredElements = (processors.map(_.getViewedVertex()) ++ memories.map(
     _.getViewedVertex()
-  ) ++ networkInterfaces.map(_.getViewedVertex()) ++ routers.map(_.getViewedVertex())
+  ) ++ networkInterfaces.map(_.getViewedVertex()) ++ routers.map(_.getViewedVertex())).toSet
+
+  val coveredElementRelations = Set()
 
   val allCommElems: Array[GenericCommunicationModule] = networkInterfaces ++ routers
   val architectureGraph: Graph[Int, DefaultEdge] = {
@@ -109,10 +111,10 @@ final case class TiledDigitalHardware(
 
   val processorsFrequency: Array[Long] = processors.map(_.getOperatingFrequencyInHertz())
 
-  val processorsProvisions: Array[Map[String, Map[String, Double]]] = processors.map(pe => {
+  val processorsProvisions: Array[Map[String, Map[String, Rational]]] = processors.map(pe => {
     // we do it mutable for simplicity...
     // the performance hit should not be a concern now, for super big instances, this can be reviewed
-    var mutMap = mutable.Map[String, Map[String, Double]]()
+    var mutMap = mutable.Map[String, Map[String, Rational]]()
     InstrumentedProcessingModule
       .safeCast(pe)
       .map(ipe => {
@@ -120,8 +122,7 @@ final case class TiledDigitalHardware(
           .getModalInstructionsPerCycle()
           .entrySet()
           .forEach(e => {
-            mutMap(e.getKey()) =
-              e.getValue().asScala.map((k, v) => k -> v.asInstanceOf[Double]).toMap
+            mutMap(e.getKey()) = e.getValue().asScala.map((k, v) => k -> Rational(v)).toMap
           })
       })
     mutMap.toMap

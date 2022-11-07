@@ -25,8 +25,10 @@ final case class SchedulableNetworkedDigHW(
     // val bandWidthFromCEtoPE: Map[GenericCommunicationModule, GenericProcessingModule],
 ) extends ForSyDeDecisionModel {
 
-  val coveredVertexes: Iterable[Vertex] = hardware.coveredVertexes ++
+  val coveredElements = hardware.coveredElements ++
     schedulers.map(_.getViewedVertex)
+
+  val coveredElementRelations = Set()
 
   val allocatedSchedulers =
     schedulers.zipWithIndex.filter((s, i) => schedulerAllocation(i) > -1).map(_._1)

@@ -53,10 +53,10 @@ final case class PeriodicDependentWorkload(
     (0 until affineControlGraphSrcs.size).toArray.map(i => {
       (affineControlGraphSrcs(i) ~+#> affineControlGraphDsts(i))(
         (
-          affineControlGraphSrcSkips(i),
           affineControlGraphSrcRepeats(i),
-          affineControlGraphDstSkips(i),
-          affineControlGraphDstRepeats(i)
+          affineControlGraphSrcSkips(i),
+          affineControlGraphDstRepeats(i),
+          affineControlGraphDstSkips(i)
         )
       )
     }): _*
@@ -94,7 +94,7 @@ final case class PeriodicDependentWorkload(
           pred
             .connectionsWith(node)
             .map(e => {
-              val (ni: Int, nj: Int, oi: Int, oj: Int) = e.label
+              val (ni: Int, oi: Int, nj: Int, oj: Int) = e.label
               val offsetDelta = offsetsMut(nodeIdx) - offsetsMut(predIdx) +
                 (periods(nodeIdx) * oj - periods(predIdx) * oi)
               val periodDelta = periods(nodeIdx) * nj - periods(predIdx) * ni

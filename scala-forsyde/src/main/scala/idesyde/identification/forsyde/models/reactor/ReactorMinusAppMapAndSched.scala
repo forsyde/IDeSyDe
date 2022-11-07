@@ -25,7 +25,9 @@ final case class ReactorMinusAppMapAndSched(
   // for (r <- reactorMinus.reactions; p <- platform.hardware.processingElems)
   //   println(s"${r.getIdentifier}, ${p.getIdentifier}, ${wcetFunction.getOrElse((r, p), Rational.zero).toString}")
 
-  val coveredVertexes = reactorMinus.coveredVertexes ++ platform.coveredVertexes
+  val coveredElements = reactorMinus.coveredElements ++ platform.coveredElements
+
+  val coveredElementRelations = Set()
 
   lazy val jobWcetFunction: Map[(ReactionJob, GenericProcessingModule), Rational] =
     reactorMinus.jobGraph.jobs

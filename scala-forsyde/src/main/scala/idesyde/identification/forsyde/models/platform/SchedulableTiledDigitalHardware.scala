@@ -22,9 +22,13 @@ final case class SchedulableTiledDigitalHardware(
     val communicationSchedulers: Array[AbstractScheduler]
 ) extends ForSyDeDecisionModel {
 
-  val coveredVertexes: Iterable[Vertex] =
-    executionSchedulers.map(_.getViewedVertex()) ++ communicationSchedulers.map(_.getViewedVertex())
-      ++ tiledDigitalHardware.coveredVertexes
+  val coveredElements =
+    (executionSchedulers.map(_.getViewedVertex()) ++ communicationSchedulers.map(
+      _.getViewedVertex()
+    )
+      ++ tiledDigitalHardware.coveredElements).toSet
+
+  val coveredElementRelations = Set()
 
   val isFixedPriority = executionSchedulers.map(FixedPriorityScheduler.conforms(_).booleanValue())
   val isTimeTriggered = executionSchedulers.map(TimeTriggeredScheduler.conforms(_).booleanValue())
@@ -151,7 +155,11 @@ object SchedulableTiledDigitalHardware {
         })
         .orElse(-1)
     })
-    if (!tiledDigitalHardware.tileSet.forall(i => schedulerAllocations.contains(i)) && !tiledDigitalHardware.routerSet.forall(i => schedulerCeAllocations.contains(i)))
+    if (
+      !tiledDigitalHardware.tileSet.forall(i =>
+        schedulerAllocations.contains(i)
+      ) && !tiledDigitalHardware.routerSet.forall(i => schedulerCeAllocations.contains(i))
+    )
       scribe.debug("Some processing elements are not allocated. Skipping.")
       IdentificationResult.fixedEmpty()
     else

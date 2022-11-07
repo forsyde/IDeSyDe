@@ -19,7 +19,8 @@ import idesyde.identification.DecisionModel
 import idesyde.identification.IdentificationResult
 
 final case class PeriodicTaskToSchedHWIdentRule()
- extends ForSyDeIdentificationRule[PeriodicTaskToSchedHW] {
+//  extends ForSyDeIdentificationRule[PeriodicTaskToSchedHW]
+{
 
   def identifyFromForSyDe(
       model: ForSyDeSystemGraph,

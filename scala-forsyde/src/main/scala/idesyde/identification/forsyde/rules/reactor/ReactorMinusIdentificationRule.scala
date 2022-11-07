@@ -27,9 +27,13 @@ import idesyde.identification.IdentificationResult
 import idesyde.identification.DecisionModel
 
 final case class ReactorMinusIdentificationRule(executor: ThreadPoolExecutor)
-    extends ForSyDeIdentificationRule[ReactorMinusApplication] {
+// extends ForSyDeIdentificationRule[ReactorMinusApplication]
+{
 
-  def identifyFromForSyDe(model: ForSyDeSystemGraph, identified: scala.collection.Iterable[DecisionModel]) = {
+  def identifyFromForSyDe(
+      model: ForSyDeSystemGraph,
+      identified: scala.collection.Iterable[DecisionModel]
+  ) = {
     val elements = model.vertexSet.asScala
       .filter(LinguaFrancaElem.conforms(_))
       .map(LinguaFrancaElem.safeCast(_).get)
@@ -214,7 +218,10 @@ final case class ReactorMinusIdentificationRule(executor: ThreadPoolExecutor)
 
 object ReactorMinusIdentificationRule:
 
-  def canIdentify(model: ForSyDeSystemGraph, identified: scala.collection.Iterable[DecisionModel]): Boolean = {
+  def canIdentify(
+      model: ForSyDeSystemGraph,
+      identified: scala.collection.Iterable[DecisionModel]
+  ): Boolean = {
     val vertexes = model.vertexSet.asScala
     val elements = vertexes
       .filter(LinguaFrancaElem.conforms(_))

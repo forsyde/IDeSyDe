@@ -17,7 +17,7 @@ import idesyde.identification.common.StandardDecisionModel
   * but also adds a communication dimension so that further analysis and synthesis steps can treat
   * the execution and communication properly.
   */
-final case class PeriodicDependentWorkload(
+final case class CommunicatingExtendedDependenciesPeriodicWorkload(
     val processes: Array[String],
     val offsets: Array[Rational],
     val periods: Array[Rational],
@@ -26,23 +26,29 @@ final case class PeriodicDependentWorkload(
     val processComputationalNeeds: Array[Map[String, Map[String, Long]]],
     val channels: Array[String],
     val channelSizes: Array[Long],
-    val communicationGraphSrcs: Array[String],
-    val communicationGraphDsts: Array[String],
-    val communicationGraphDataMoved: Array[Long],
-    val affineControlGraphSrcs: Array[String],
-    val affineControlGraphDsts: Array[String],
+    val processReadsFromChannel: Array[Array[Long]],
+    val processWritesToChannel: Array[Array[Long]],
+    val affineControlGraphSrcs: Array[Int],
+    val affineControlGraphDsts: Array[Int],
     val affineControlGraphSrcSkips: Array[Array[Int]],
     val affineControlGraphSrcRepeats: Array[Array[Int]],
     val affineControlGraphDstSkips: Array[Array[Int]],
-    val affineControlGraphDstRepeats: Array[Array[Int]]
+    val affineControlGraphDstRepeats: Array[Array[Int]],
+    /** this extra element exist to support wild design models being reduced to this decision model
+      */
+    val additionalCoveredElements: Set[String] = Set(),
+    /** this extra element exist to support wild design models being reduced to this decision model
+      */
+    val additionalCoveredElementRelations: Set[(String, String)] = Set()
 ) extends StandardDecisionModel
     with InstrumentedWorkloadMixin {
 
-  val coveredElements = (processes ++ channels).toSet
+  val coveredElements = (processes ++ channels ++ additionalCoveredElements).toSet
 
-  val coveredElementRelations = (communicationGraphSrcs.zip(
-    communicationGraphDsts
-  ) ++ affineControlGraphSrcs.zip(affineControlGraphDsts)).toSet
+  val coveredElementRelations = affineControlGraphSrcs
+    .zip(affineControlGraphDsts)
+    .map((s, t) => (processes(s), processes(t)))
+    .toSet ++ additionalCoveredElementRelations
 
   /** The edges of the instance control flow graph detail if a instance T_i,k shoud be preceeded of
     * an instance T_j,l.
@@ -63,15 +69,23 @@ final case class PeriodicDependentWorkload(
   )
 
   /** The edges of the communication graph should have numbers describing how much data is
-    * transferred from tasks to message queues.
+    * transferred from tasks to message queues. The numbering is done so that,
+    *
+    * task_0, task_1, ..., task_n, channel_1, ..., channel_m
     */
-  val communicationGraph = Graph(
-    communicationGraphSrcs.zipWithIndex.map((src, i) =>
-      (src ~+> communicationGraphDsts(i))(
-        communicationGraphDataMoved(i)
-      )
-    ): _*
-  )
+  val communicationGraph = {
+    val p2c = processes.zipWithIndex.flatMap((p, i) =>
+      channels.zipWithIndex
+        .filter((c, j) => processWritesToChannel(i)(j) > 0L)
+        .map((c, j) => i ~> (j + processes.size))
+    )
+    val c2p = processes.zipWithIndex.flatMap((p, i) =>
+      channels.zipWithIndex
+        .filter((c, j) => processReadsFromChannel(i)(j) > 0L)
+        .map((c, j) => (j + processes.size) ~> i)
+    )
+    Graph((p2c ++ c2p): _*)
+  }
 
   val hyperPeriod: Rational = periods.reduce((t1, t2) => t1.lcm(t2))
 
@@ -86,11 +100,11 @@ final case class PeriodicDependentWorkload(
     for (
       sorted <- affineRelationsGraph.topologicalSort();
       node   <- sorted;
-      nodeIdx = processes.indexOf(node.value)
+      nodeIdx = node.value
     ) {
       offsetsMut(nodeIdx) = node.diPredecessors
         .flatMap(pred => {
-          val predIdx = processes.indexOf(pred.value)
+          val predIdx = pred.value
           pred
             .connectionsWith(node)
             .map(e => {
@@ -124,8 +138,8 @@ final case class PeriodicDependentWorkload(
       node   <- sorted;
       pred   <- node.diPredecessors;
       edge   <- pred.connectionsWith(node);
-      nodeIdx = processes.indexOf(node.value);
-      predIdx = processes.indexOf(pred.value)
+      nodeIdx = node.value;
+      predIdx = pred.value
     ) {
       // first look one behind to see immediate predecessors
       canBlockMatrix(predIdx)(nodeIdx) = true
@@ -153,8 +167,8 @@ final case class PeriodicDependentWorkload(
       sorted <- affineRelationsGraph.topologicalSort();
       node   <- sorted;
       pred   <- node.diPredecessors;
-      nodeIdx = processes.indexOf(node.value);
-      predIdx = processes.indexOf(pred.value)
+      nodeIdx = node.value;
+      predIdx = pred.value
       if prioritiesMut(nodeIdx) <= prioritiesMut(predIdx)
     ) {
       prioritiesMut(nodeIdx) = prioritiesMut(predIdx) - 1

@@ -8,7 +8,7 @@ import idesyde.identification.common.models.platform.PartitionedSharedMemoryMult
 import idesyde.identification.common.models.sdf.SDFApplication
 import idesyde.identification.common.models.mixed.SDFToPartitionedSharedMemory
 import idesyde.identification.common.models.mixed.PeriodicWorkloadToPartitionedSharedMultiCore
-import idesyde.identification.common.models.workload.PeriodicDependentWorkload
+import idesyde.identification.common.models.workload.CommunicatingExtendedDependenciesPeriodicWorkload
 
 object MixedRules {
 
@@ -65,8 +65,8 @@ object MixedRules {
       identified: Set[DecisionModel]
   ): Option[PeriodicWorkloadToPartitionedSharedMultiCore] = {
     val app = identified
-      .find(_.isInstanceOf[PeriodicDependentWorkload])
-      .map(_.asInstanceOf[PeriodicDependentWorkload])
+      .find(_.isInstanceOf[CommunicatingExtendedDependenciesPeriodicWorkload])
+      .map(_.asInstanceOf[CommunicatingExtendedDependenciesPeriodicWorkload])
     val plat = identified
       .find(_.isInstanceOf[PartitionedSharedMemoryMultiCore])
       .map(_.asInstanceOf[PartitionedSharedMemoryMultiCore])

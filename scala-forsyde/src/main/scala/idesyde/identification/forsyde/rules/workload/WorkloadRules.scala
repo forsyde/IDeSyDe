@@ -6,7 +6,7 @@ import scala.jdk.CollectionConverters._
 import idesyde.identification.DesignModel
 import idesyde.identification.DecisionModel
 import idesyde.utils.Logger
-import idesyde.identification.common.models.workload.PeriodicDependentWorkload
+import idesyde.identification.common.models.workload.CommunicatingExtendedDepencyPeriodicWorkload
 import idesyde.identification.forsyde.ForSyDeIdentificationUtils
 import forsyde.io.java.typed.viewers.execution.Task
 import forsyde.io.java.typed.viewers.impl.DataBlock
@@ -20,13 +20,14 @@ import org.jgrapht.alg.connectivity.ConnectivityInspector
 import spire.math._
 import scala.collection.mutable
 import org.jgrapht.traverse.TopologicalOrderIterator
+import forsyde.io.java.typed.viewers.execution.Stimulatable
 
 object WorkloadRules {
 
   def identPeriodicDependentWorkload(
       models: Set[DesignModel],
       identified: Set[DecisionModel]
-  )(using logger: Logger): Option[PeriodicDependentWorkload] = {
+  )(using logger: Logger): Option[CommunicatingExtendedDepencyPeriodicWorkload] = {
     ForSyDeIdentificationUtils.toForSyDe(models) { model =>
       var tasks                   = Buffer[Task]()
       var dataBlocks              = Buffer[DataBlock]()
@@ -124,22 +125,33 @@ object WorkloadRules {
       logger.debug(s"Are all tasks reachable by a periodic stimulus? ${allTasksAreStimulated}")
       if (!allTasksAreStimulated) return Option.empty
       // now building all the periodic workload elements ditto
-      var createdTasks            = mutable.Map[String, Set[(Rational, Rational, Rational)]]()
-      var affineControlGraphEdges = Buffer[(String, String, Set[(Int, Int, Int, Int)])]()
-      val stimulusIter            = TopologicalOrderIterator(stimulusGraph)
+      var propagatedEvents = mutable.Map[String, Set[(Rational, Rational, Rational)]]()
+      val processes        = Buffer[(String, Rational, Rational, Rational)]()
+      val stimulusIter     = TopologicalOrderIterator(stimulusGraph)
       while (stimulusIter.hasNext) {
         val next = stimulusIter.next
         // gather all incomin stimulus
         val incomingEvents = stimulusGraph
           .incomingEdgesOf(next)
           .stream
-          .map(e => createdTasks(stimulusGraph.getEdgeSource(e).getIdentifier()))
+          .map(e => propagatedEvents(stimulusGraph.getEdgeSource(e).getIdentifier()))
           .reduce((s1, s2) => s1 | s2)
           .orElse(Set())
+        val events = Stimulatable
+          .safeCast(next)
+          .filter(stimulatable => stimulatable.getHasORSemantics())
+          .map(stimulatable => {
+            val maxP = incomingEvents.map((p, o, d) => p).max
+            val minO = incomingEvents.map((p, o, d) => o).min
+            val minD = incomingEvents.map((p, o, d) => d).min
+            Set((maxP, minO, minD))
+          })
+          .orElse(incomingEvents)
+        // decide what to do next based on the vertex type and its event merge semantics
         PeriodicStimulus
           .safeCast(next)
           .ifPresent(periodicStimulus => {
-            createdTasks(next.getIdentifier()) = Set(
+            propagatedEvents(next.getIdentifier()) = Set(
               (
                 Rational(
                   periodicStimulus.getPeriodNumerator,
@@ -156,129 +168,106 @@ object WorkloadRules {
               )
             )
           })
-        // // decide what to do next based on the vertex type and its event merge semantics
-        // stimulusGraphTuples(next) = Stimulatable
-        //   .safeCast(next)
-        //   .filter(s => !s.getHasORSemantics)
-        //   .map(s => {
-        //     Array(incomingEvents.maxBy((p, o, d) => p))
-        //   })
-        //   .orElse(incomingEvents)
-        // // change the stimulus in the vertex depending on traits it has
-        // next match {
-        //   case perStim: PeriodicStimulus =>
-        //     stimulusGraphTuples(next) = Array(
-        //       (
-        //         Rational(perStim.getPeriodNumerator, perStim.getPeriodDenominator), // period
-        //         Rational(perStim.getOffsetNumerator, perStim.getOffsetDenominator), // offset
-        //         Rational(perStim.getPeriodNumerator, perStim.getPeriodDenominator)  // rel. deadline
-        //       )
-        //     )
-        //   case task: Task =>
-        //     val stimulus = stimulusGraphTuples(next)
-        //     // do not forget to check if the periodic task has some sort
-        //     // of tighter deadline
-        //     createdPerTasks = createdPerTasks.appendAll(
-        //       stimulus.map(s =>
-        //         ConstrainedTask
-        //           .safeCast(task)
-        //           .map(t =>
-        //             val deadline =
-        //               Rational(t.getRelativeDeadlineNumerator, t.getRelativeDeadlineDenominator)
-        //             (
-        //               task,
-        //               s._1,
-        //               s._2,
-        //               if (deadline.compareTo(s._3) >= 0) then s._3 else deadline
-        //             )
-        //           )
-        //           .orElse((task, s._1, s._2, s._3))
-        //       )
-        //     )
-        //   case upsample: Upsample =>
-        //     stimulusGraphTuples(next) = stimulusGraphTuples(next).map(e => {
-        //       (
-        //         e._1 / Rational(upsample.getRepetitivePredecessorHolds),
-        //         e._2 + (e._1 / Rational(upsample.getInitialPredecessorHolds)),
-        //         e._3 / Rational(upsample.getRepetitivePredecessorHolds)
-        //       )
-        //     })
-        //   case downsample: Downsample =>
-        //     stimulusGraphTuples(next) = stimulusGraphTuples(next).map(e => {
-        //       (
-        //         e._1 * (Rational(downsample.getRepetitivePredecessorSkips)),
-        //         e._2 + (e._1 * (Rational(downsample.getInitialPredecessorSkips))),
-        //         e._3 * (Rational(downsample.getRepetitivePredecessorSkips))
-        //       )
-        //     })
-        // }
+        Task
+          .safeCast(next)
+          .ifPresent(task => {
+            propagatedEvents(next.getIdentifier()) = events
+            processes ++= events.map((p, o, d) => (next.getIdentifier(), p, o, d))
+          })
+        Upsample
+          .safeCast(next)
+          .ifPresent(upsample => {
+            propagatedEvents(next.getIdentifier()) = events.map(e => {
+              (
+                e._1 / Rational(upsample.getRepetitivePredecessorHolds),
+                e._2 + (e._1 / Rational(upsample.getInitialPredecessorHolds)),
+                e._3 / Rational(upsample.getRepetitivePredecessorHolds)
+              )
+            })
+          })
+        Downsample
+          .safeCast(next)
+          .ifPresent(downsample => {
+            propagatedEvents(next.getIdentifier()) = events.map(e => {
+              (
+                e._1 * (Rational(downsample.getRepetitivePredecessorSkips)),
+                e._2 + (e._1 * (Rational(downsample.getInitialPredecessorSkips))),
+                e._3 * (Rational(downsample.getRepetitivePredecessorSkips))
+              )
+            })
+          })
       }
-      // val affineRelationsGraphBuilder =
-      //   SimpleDirectedGraph.createBuilder[Int, (Int, Int, Int, Int)](() => (1, 0, 1, 0))
-      // // first consider task-to-task connections
-      // stimulusGraph.vertexSet.stream
-      //   .flatMap(v => Task.safeCast(v).stream())
-      //   .forEach(dstTask => {
-      //     stimulusGraph
-      //       .incomingEdgesOf(dstTask)
-      //       .stream
-      //       .flatMap(e => Task.safeCast(stimulusGraph.getEdgeSource(e)).stream())
-      //       .forEach(srcTask => {
-      //         if (dstTask.getHasORSemantics)
-      //           for (
-      //             (dst, i) <- createdPerTasks.zipWithIndex.filter((d, i) => d._1 == dstTask);
-      //             (src, j) <- createdPerTasks.zipWithIndex.filter((s, j) => s._1 == srcTask);
-      //             if dst._2 == src._2 && dst._3 == src._3
-      //           ) affineRelationsGraphBuilder.addEdge(i, j, (1, 0, 1, 0))
-      //         else
-      //           for (
-      //             (dst, i) <- createdPerTasks.zipWithIndex.filter((d, i) => d._1 == dstTask);
-      //             (src, j) <- createdPerTasks.zipWithIndex.filter((s, j) => s._1 == srcTask);
-      //             pRatio = (dst._2 / src._2).toDouble.ceil.toInt
-      //           ) affineRelationsGraphBuilder.addEdge(i, j, (pRatio, 0, 1, 0))
-      //       })
-      //   })
-      // // now consider upsampling connections
-      // stimulusGraph.vertexSet.stream
-      //   .flatMap(v => Upsample.safeCast(v).stream())
-      //   .forEach(upsample => {
-      //     stimulusGraph
-      //       .incomingEdgesOf(upsample)
-      //       .stream
-      //       .flatMap(e => Task.safeCast(stimulusGraph.getEdgeSource(e)).stream())
-      //       .forEach(srcTask => {
-      //         stimulusGraph
-      //           .outgoingEdgesOf(upsample)
-      //           .stream
-      //           .flatMap(e => Task.safeCast(stimulusGraph.getEdgeTarget(e)).stream())
-      //           .forEach(dstTask => {
-      //             if (dstTask.getHasORSemantics)
-      //               for (
-      //                 (dst, i) <- createdPerTasks.zipWithIndex.filter((d, i) => d._1 == dstTask);
-      //                 (src, j) <- createdPerTasks.zipWithIndex.filter((s, j) => s._1 == srcTask);
-      //                 if dst._2 * Rational(upsample.getRepetitivePredecessorHolds) == src._2 &&
-      //                   dst._3 - (dst._2 * Rational(upsample.getInitialPredecessorHolds)) == src._3
-      //               )
-      //                 affineRelationsGraphBuilder.addEdge(
-      //                   i,
-      //                   j,
-      //                   (
-      //                     upsample.getRepetitivePredecessorHolds.toInt,
-      //                     upsample.getInitialPredecessorHolds.toInt,
-      //                     1,
-      //                     0
-      //                   )
-      //                 )
-      //             else
-      //               for (
-      //                 (dst, i) <- createdPerTasks.zipWithIndex.filter((d, i) => d._1 == dstTask);
-      //                 (src, j) <- createdPerTasks.zipWithIndex.filter((s, j) => s._1 == srcTask);
-      //                 pRatio = (dst._2 / src._2).toDouble.ceil.toInt;
-      //                 offset = ((dst._3 - src._3) / src._2).toDouble.toInt
-      //               ) affineRelationsGraphBuilder.addEdge(i, j, (pRatio, offset, 1, 0))
-      //           })
-      //       })
-      //   })
+      // first consider task-to-task connections
+      var affineControlGraphEdges = Buffer[(String, String, Int, Int, Int, Int)]()
+      for (srcTask <- tasks) {
+        model
+          .outgoingEdgesOf(srcTask.getViewedVertex())
+          .stream()
+          .map(edge => model.getEdgeTarget(edge))
+          .flatMap(dst => Task.safeCast(dst).stream())
+          .forEach(dstTask => {
+            if (dstTask.getHasORSemantics()) {
+              for (
+                srcEvent <- propagatedEvents(srcTask.getIdentifier());
+                dstEvent <- propagatedEvents(dstTask.getIdentifier())
+                if srcEvent == dstEvent
+              ) {
+                affineControlGraphEdges :+= (srcTask.getIdentifier(), dstTask
+                  .getIdentifier(), 1, 0, 1, 0)
+              }
+            } else {
+              for (
+                srcEvent <- propagatedEvents(srcTask.getIdentifier());
+                dstEvent <- propagatedEvents(dstTask.getIdentifier())
+              ) {
+                affineControlGraphEdges :+= (srcTask.getIdentifier(), dstTask
+                  .getIdentifier(), (dstEvent._1 / srcEvent._1).ceil.toInt, 0, 1, 0)
+              }
+            }
+          })
+      }
+      // now consider upsampling connections
+      for (upsample <- upsamples) {
+        model
+          .outgoingEdgesOf(upsample.getViewedVertex())
+          .stream()
+          .map(edge => model.getEdgeTarget(edge))
+          .flatMap(dst => Task.safeCast(dst).stream())
+          .forEach(dstTask => {
+            model
+              .incomingEdgesOf(upsample.getViewedVertex())
+              .stream()
+              .map(edge => model.getEdgeSource(edge))
+              .flatMap(src => Task.safeCast(src).stream())
+              .forEach(srcTask => {
+                if (dstTask.getHasORSemantics) {
+                  for (
+                    srcEvent <- propagatedEvents(srcTask.getIdentifier());
+                    dstEvent <- propagatedEvents(dstTask.getIdentifier());
+                    if dstEvent._1 * Rational(
+                      upsample.getRepetitivePredecessorHolds
+                    ) == srcEvent._1 &&
+                      dstEvent._2 - (dstEvent._1 * Rational(
+                        upsample.getInitialPredecessorHolds
+                      )) == srcEvent._2
+                  ) {
+                    affineControlGraphEdges :+= (srcTask.getIdentifier(), dstTask
+                      .getIdentifier(), upsample.getRepetitivePredecessorHolds.toInt, upsample.getInitialPredecessorHolds.toInt, 1, 0)
+                  }
+                } else {
+                  for (
+                    srcEvent <- propagatedEvents(srcTask.getIdentifier());
+                    dstEvent <- propagatedEvents(dstTask.getIdentifier());
+                    pRatio = (dstEvent._1 / srcEvent._1);
+                    offset = ((dstEvent._2 - srcEvent._2) / srcEvent._1)
+                  ) {
+                    affineControlGraphEdges :+= (srcTask.getIdentifier(), dstTask
+                      .getIdentifier(), pRatio.ceil.toInt, offset.ceil.toInt, 1, 0)
+                  }
+                }
+              })
+          })
+      }
       // // now finally consider downsample connections
       // stimulusGraph.vertexSet.stream
       //   .flatMap(v => Downsample.safeCast(v).stream())

@@ -16,6 +16,11 @@ import idesyde.identification.common.StandardDecisionModel
   *
   * but also adds a communication dimension so that further analysis and synthesis steps can treat
   * the execution and communication properly.
+  *
+  * @param additionalCoveredElements
+  *   this extra field exist to support wild design models being reduced to this decision model
+  * @param additionalCoveredElementRelations
+  *   this extra field exist to support wild design models being reduced to this decision model
   */
 final case class CommunicatingExtendedDependenciesPeriodicWorkload(
     val processes: Array[String],
@@ -34,11 +39,7 @@ final case class CommunicatingExtendedDependenciesPeriodicWorkload(
     val affineControlGraphSrcRepeats: Array[Array[Int]],
     val affineControlGraphDstSkips: Array[Array[Int]],
     val affineControlGraphDstRepeats: Array[Array[Int]],
-    /** this extra element exist to support wild design models being reduced to this decision model
-      */
     val additionalCoveredElements: Set[String] = Set(),
-    /** this extra element exist to support wild design models being reduced to this decision model
-      */
     val additionalCoveredElementRelations: Set[(String, String)] = Set()
 ) extends StandardDecisionModel
     with InstrumentedWorkloadMixin {

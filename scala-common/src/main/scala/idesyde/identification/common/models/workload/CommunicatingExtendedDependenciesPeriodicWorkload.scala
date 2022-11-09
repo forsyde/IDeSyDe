@@ -35,10 +35,10 @@ final case class CommunicatingExtendedDependenciesPeriodicWorkload(
     val processWritesToChannel: Array[Array[Long]],
     val affineControlGraphSrcs: Array[Int],
     val affineControlGraphDsts: Array[Int],
-    val affineControlGraphSrcSkips: Array[Array[Int]],
-    val affineControlGraphSrcRepeats: Array[Array[Int]],
-    val affineControlGraphDstSkips: Array[Array[Int]],
-    val affineControlGraphDstRepeats: Array[Array[Int]],
+    val affineControlGraphSrcSkips: Array[Int],
+    val affineControlGraphSrcRepeats: Array[Int],
+    val affineControlGraphDstSkips: Array[Int],
+    val affineControlGraphDstRepeats: Array[Int],
     val additionalCoveredElements: Set[String] = Set(),
     val additionalCoveredElementRelations: Set[(String, String)] = Set()
 ) extends StandardDecisionModel

@@ -1,11 +1,11 @@
 package idesyde.identification.common.models.mixed
 
-import idesyde.identification.common.models.workload.PeriodicDependentWorkload
+import idesyde.identification.common.models.workload.CommunicatingExtendedDependenciesPeriodicWorkload
 import idesyde.identification.common.models.platform.PartitionedSharedMemoryMultiCore
 import idesyde.identification.common.StandardDecisionModel
 
 final case class PeriodicWorkloadToPartitionedSharedMultiCore(
-    val workload: PeriodicDependentWorkload,
+    val workload: CommunicatingExtendedDependenciesPeriodicWorkload,
     val platform: PartitionedSharedMemoryMultiCore,
     val processMappings: Array[String],
     val processSchedulings: Array[String],

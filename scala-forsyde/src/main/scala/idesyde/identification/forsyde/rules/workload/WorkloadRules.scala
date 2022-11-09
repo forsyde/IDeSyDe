@@ -6,7 +6,7 @@ import scala.jdk.CollectionConverters._
 import idesyde.identification.DesignModel
 import idesyde.identification.DecisionModel
 import idesyde.utils.Logger
-import idesyde.identification.common.models.workload.CommunicatingExtendedDepencyPeriodicWorkload
+import idesyde.identification.common.models.workload.CommunicatingExtendedDependenciesPeriodicWorkload
 import idesyde.identification.forsyde.ForSyDeIdentificationUtils
 import forsyde.io.java.typed.viewers.execution.Task
 import forsyde.io.java.typed.viewers.impl.DataBlock
@@ -21,13 +21,16 @@ import spire.math._
 import scala.collection.mutable
 import org.jgrapht.traverse.TopologicalOrderIterator
 import forsyde.io.java.typed.viewers.execution.Stimulatable
+import forsyde.io.java.typed.viewers.impl.InstrumentedExecutable
+import forsyde.io.java.core.ForSyDeSystemGraph
+import forsyde.io.java.typed.viewers.execution.LoopingTask
 
 object WorkloadRules {
 
   def identPeriodicDependentWorkload(
       models: Set[DesignModel],
       identified: Set[DecisionModel]
-  )(using logger: Logger): Option[CommunicatingExtendedDepencyPeriodicWorkload] = {
+  )(using logger: Logger): Option[CommunicatingExtendedDependenciesPeriodicWorkload] = {
     ForSyDeIdentificationUtils.toForSyDe(models) { model =>
       var tasks                   = Buffer[Task]()
       var dataBlocks              = Buffer[DataBlock]()
@@ -198,7 +201,7 @@ object WorkloadRules {
           })
       }
       // first consider task-to-task connections
-      var affineControlGraphEdges = Buffer[(String, String, Int, Int, Int, Int)]()
+      var affineControlGraphEdges = Buffer[(Int, Int, Int, Int, Int, Int)]()
       for (srcTask <- tasks) {
         model
           .outgoingEdgesOf(srcTask.getViewedVertex())
@@ -208,20 +211,22 @@ object WorkloadRules {
           .forEach(dstTask => {
             if (dstTask.getHasORSemantics()) {
               for (
-                srcEvent <- propagatedEvents(srcTask.getIdentifier());
-                dstEvent <- propagatedEvents(dstTask.getIdentifier())
-                if srcEvent == dstEvent
+                (srcEvent, i) <- processes.zipWithIndex
+                  .filter((p, i) => p._1 == srcTask.getIdentifier());
+                (dstEvent, j) <- processes.zipWithIndex
+                  .filter((p, j) => p._1 == dstTask.getIdentifier())
+                if srcEvent._2 == dstEvent._2
               ) {
-                affineControlGraphEdges :+= (srcTask.getIdentifier(), dstTask
-                  .getIdentifier(), 1, 0, 1, 0)
+                affineControlGraphEdges :+= (i, j, 1, 0, 1, 0)
               }
             } else {
               for (
-                srcEvent <- propagatedEvents(srcTask.getIdentifier());
-                dstEvent <- propagatedEvents(dstTask.getIdentifier())
+                (srcEvent, i) <- processes.zipWithIndex
+                  .filter((p, i) => p._1 == srcTask.getIdentifier());
+                (dstEvent, j) <- processes.zipWithIndex
+                  .filter((p, j) => p._1 == dstTask.getIdentifier())
               ) {
-                affineControlGraphEdges :+= (srcTask.getIdentifier(), dstTask
-                  .getIdentifier(), (dstEvent._1 / srcEvent._1).ceil.toInt, 0, 1, 0)
+                affineControlGraphEdges :+= (i, j, (dstEvent._2 / srcEvent._2).ceil.toInt, 0, 1, 0)
               }
             }
           })
@@ -242,77 +247,183 @@ object WorkloadRules {
               .forEach(srcTask => {
                 if (dstTask.getHasORSemantics) {
                   for (
-                    srcEvent <- propagatedEvents(srcTask.getIdentifier());
-                    dstEvent <- propagatedEvents(dstTask.getIdentifier());
-                    if dstEvent._1 * Rational(
+                    (srcEvent, i) <- processes.zipWithIndex
+                      .filter((p, i) => p._1 == srcTask.getIdentifier());
+                    (dstEvent, j) <- processes.zipWithIndex
+                      .filter((p, j) => p._1 == dstTask.getIdentifier())
+                    if dstEvent._2 * Rational(
                       upsample.getRepetitivePredecessorHolds
-                    ) == srcEvent._1 &&
-                      dstEvent._2 - (dstEvent._1 * Rational(
+                    ) == srcEvent._2 &&
+                      dstEvent._3 - (dstEvent._2 * Rational(
                         upsample.getInitialPredecessorHolds
-                      )) == srcEvent._2
+                      )) == srcEvent._3
                   ) {
-                    affineControlGraphEdges :+= (srcTask.getIdentifier(), dstTask
-                      .getIdentifier(), upsample.getRepetitivePredecessorHolds.toInt, upsample.getInitialPredecessorHolds.toInt, 1, 0)
+                    affineControlGraphEdges :+= (i, j, upsample.getRepetitivePredecessorHolds.toInt, upsample.getInitialPredecessorHolds.toInt, 1, 0)
                   }
                 } else {
                   for (
-                    srcEvent <- propagatedEvents(srcTask.getIdentifier());
-                    dstEvent <- propagatedEvents(dstTask.getIdentifier());
-                    pRatio = (dstEvent._1 / srcEvent._1);
-                    offset = ((dstEvent._2 - srcEvent._2) / srcEvent._1)
+                    (srcEvent, i) <- processes.zipWithIndex
+                      .filter((p, i) => p._1 == srcTask.getIdentifier());
+                    (dstEvent, j) <- processes.zipWithIndex
+                      .filter((p, j) => p._1 == dstTask.getIdentifier());
+                    pRatio = (dstEvent._2 / srcEvent._2);
+                    offset = ((dstEvent._3 - srcEvent._3) / srcEvent._2)
                   ) {
-                    affineControlGraphEdges :+= (srcTask.getIdentifier(), dstTask
-                      .getIdentifier(), pRatio.ceil.toInt, offset.ceil.toInt, 1, 0)
+                    affineControlGraphEdges :+= (i, j, pRatio.ceil.toInt, offset.ceil.toInt, 1, 0)
                   }
                 }
               })
           })
       }
-      // // now finally consider downsample connections
-      // stimulusGraph.vertexSet.stream
-      //   .flatMap(v => Downsample.safeCast(v).stream())
-      //   .forEach(downsample => {
-      //     stimulusGraph
-      //       .incomingEdgesOf(downsample)
-      //       .stream
-      //       .flatMap(e => Task.safeCast(stimulusGraph.getEdgeSource(e)).stream())
-      //       .forEach(srcTask => {
-      //         stimulusGraph
-      //           .outgoingEdgesOf(downsample)
-      //           .stream
-      //           .flatMap(e => Task.safeCast(stimulusGraph.getEdgeTarget(e)).stream())
-      //           .forEach(dstTask => {
-      //             if (dstTask.getHasORSemantics)
-      //               for (
-      //                 (dst, i) <- createdPerTasks.zipWithIndex.filter((d, i) => d._1 == dstTask);
-      //                 (src, j) <- createdPerTasks.zipWithIndex.filter((s, j) => s._1 == srcTask);
-      //                 if dst._2 / Rational(downsample.getRepetitivePredecessorSkips) == src._2 &&
-      //                   dst._3 + (dst._2 / Rational(
-      //                     downsample.getInitialPredecessorSkips
-      //                   )) == src._3
-      //               )
-      //                 affineRelationsGraphBuilder.addEdge(
-      //                   i,
-      //                   j,
-      //                   (
-      //                     1,
-      //                     0,
-      //                     downsample.getRepetitivePredecessorSkips.toInt,
-      //                     downsample.getInitialPredecessorSkips.toInt
-      //                   )
-      //                 )
-      //             else
-      //               for (
-      //                 (dst, i) <- createdPerTasks.zipWithIndex.filter((d, i) => d._1 == dstTask);
-      //                 (src, j) <- createdPerTasks.zipWithIndex.filter((s, j) => s._1 == srcTask);
-      //                 pRatio = (src._2 / dst._2).toDouble.ceil.toInt;
-      //                 offset = ((dst._3 - src._3) / dst._2).toDouble.toInt
-      //               ) affineRelationsGraphBuilder.addEdge(i, j, (1, 0, pRatio, offset))
-      //           })
-      //       })
-      //   })
-      // affineRelationsGraphBuilder.buildAsUnmodifiable
-      Option.empty
+      // now finally consider downsample connections
+      for (downsample <- downsamples) {
+        model
+          .outgoingEdgesOf(downsample.getViewedVertex())
+          .stream()
+          .map(edge => model.getEdgeTarget(edge))
+          .flatMap(dst => Task.safeCast(dst).stream())
+          .forEach(dstTask => {
+            model
+              .incomingEdgesOf(downsample.getViewedVertex())
+              .stream()
+              .map(edge => model.getEdgeSource(edge))
+              .flatMap(src => Task.safeCast(src).stream())
+              .forEach(srcTask => {
+                if (dstTask.getHasORSemantics) {
+                  for (
+                    (srcEvent, i) <- processes.zipWithIndex
+                      .filter((p, i) => p._1 == srcTask.getIdentifier());
+                    (dstEvent, j) <- processes.zipWithIndex
+                      .filter((p, j) => p._1 == dstTask.getIdentifier())
+                    if dstEvent._2 / Rational(
+                      downsample.getRepetitivePredecessorSkips
+                    ) == srcEvent._2 &&
+                      dstEvent._3 + (dstEvent._2 / Rational(
+                        downsample.getInitialPredecessorSkips
+                      )) == srcEvent._3
+                  )
+                    affineControlGraphEdges :+= (
+                      i,
+                      j,
+                      1,
+                      0,
+                      downsample.getRepetitivePredecessorSkips.toInt,
+                      downsample.getInitialPredecessorSkips.toInt
+                    )
+                } else {
+                  for (
+                    (srcEvent, i) <- processes.zipWithIndex
+                      .filter((p, i) => p._1 == srcTask.getIdentifier());
+                    (dstEvent, j) <- processes.zipWithIndex
+                      .filter((p, j) => p._1 == dstTask.getIdentifier());
+                    pRatio = (srcEvent._2 / dstEvent._2).toDouble.ceil.toInt;
+                    offset = ((dstEvent._3 - srcEvent._3) / dstEvent._2).toDouble.toInt
+                  ) affineControlGraphEdges :+= (i, j, 1, 0, pRatio, offset)
+                }
+              })
+          })
+      }
+      val additionalCovered =
+        (tasks ++ dataBlocks ++ upsamples ++ downsamples ++ periodicStimulus).toSet
+      val additionalRelations = additionalCovered.flatMap(src =>
+        additionalCovered
+          .filter(dst => model.hasConnection(src, dst))
+          .map(dst => (src.getIdentifier(), dst.getIdentifier()))
+      )
+      Option(
+        CommunicatingExtendedDependenciesPeriodicWorkload(
+          processes.map((n, p, o, d) => n).toArray,
+          processes.map((n, p, o, d) => p).toArray,
+          processes.map((n, p, o, d) => o).toArray,
+          processes.map((n, p, o, d) => d).toArray,
+          processes
+            .map((n, _, _, _) => tasks.find(_.getIdentifier() == n).get)
+            .map(InstrumentedExecutable.safeCast(_).map(_.getSizeInBits()).orElse(0L).toLong)
+            .toArray,
+          processes
+            .map((n, _, _, _) =>
+              tasks
+                .find(_.getIdentifier() == n)
+                .map(t => taskComputationNeeds(t, model))
+                .get
+            )
+            .toArray,
+          dataBlocks.map(_.getIdentifier()).toArray,
+          dataBlocks.map(_.getMaxSizeInBits().toLong).toArray,
+          processes
+            .map((n, _, _, _) =>
+              dataBlocks
+                .map(db =>
+                  communicationGraphEdges
+                    .find((src, dst, _) => dst == n && src == db.getIdentifier())
+                    .map((_, _, d) => d.toLong)
+                    .getOrElse(0L)
+                )
+                .toArray
+            )
+            .toArray,
+          processes
+            .map((n, _, _, _) =>
+              dataBlocks
+                .map(db =>
+                  communicationGraphEdges
+                    .find((src, dst, _) => src == n && dst == db.getIdentifier())
+                    .map((_, _, d) => d.toLong)
+                    .getOrElse(0L)
+                )
+                .toArray
+            )
+            .toArray,
+          affineControlGraphEdges.map(_._1).toArray,
+          affineControlGraphEdges.map(_._2).toArray,
+          affineControlGraphEdges.map(_._3).toArray,
+          affineControlGraphEdges.map(_._4).toArray,
+          affineControlGraphEdges.map(_._5).toArray,
+          affineControlGraphEdges.map(_._6).toArray,
+          additionalCovered.map(_.getIdentifier()).toSet,
+          additionalRelations
+        )
+      )
     }
+  }
+
+  private def taskComputationNeeds(
+      task: Task,
+      model: ForSyDeSystemGraph
+  ): Map[String, Map[String, Long]] = {
+    var maps = mutable.Map[String, mutable.Map[String, Long]]()
+    LoopingTask
+      .safeCast(task)
+      .ifPresent(lt => {
+        java.util.stream.Stream
+          .concat(lt.getInitSequencePort(model).stream(), lt.getLoopSequencePort(model).stream())
+          .forEach(exec => {
+            InstrumentedExecutable
+              .safeCast(exec)
+              .ifPresent(iexec => {
+                iexec
+                  .getOperationRequirements()
+                  .forEach((opName, opReqs) => {
+                    if (!maps.contains(opName)) maps(opName) = mutable.Map[String, Long]()
+                    opReqs.forEach((opKey, opVal) => {
+                      maps(opName)(opKey) += opVal
+                    })
+                  })
+              })
+          })
+      })
+    InstrumentedExecutable
+      .safeCast(task)
+      .ifPresent(itask => {
+        itask
+          .getOperationRequirements()
+          .forEach((opName, opReqs) => {
+            if (!maps.contains(opName)) maps(opName) = mutable.Map[String, Long]()
+            opReqs.forEach((opKey, opVal) => {
+              maps(opName)(opKey) += opVal
+            })
+          })
+      })
+    maps.map((k, v) => k -> v.toMap).toMap
   }
 }

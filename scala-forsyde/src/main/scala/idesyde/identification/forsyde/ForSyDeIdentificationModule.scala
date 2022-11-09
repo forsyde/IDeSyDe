@@ -23,6 +23,7 @@ import idesyde.utils.Logger
 import idesyde.identification.forsyde.rules.platform.PlatformRules
 import idesyde.identification.DecisionModel
 import idesyde.identification.DesignModel
+import idesyde.identification.forsyde.rules.workload.WorkloadRules
 
 class ForSyDeIdentificationModule(using Logger) extends IdentificationModule {
 
@@ -33,7 +34,8 @@ class ForSyDeIdentificationModule(using Logger) extends IdentificationModule {
   val identificationRules = Set(
     SDFRules.identSDFApplication,
     PlatformRules.identTiledMultiCore,
-    PlatformRules.identPartitionedCoresWithRuntimes
+    PlatformRules.identPartitionedCoresWithRuntimes,
+    WorkloadRules.identPeriodicDependentWorkload
     // SDFAppIdentificationRule(),
     // NetworkedDigitalHWIdentRule(),
     // SchedulableNetDigHWIdentRule(),

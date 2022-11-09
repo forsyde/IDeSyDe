@@ -83,6 +83,20 @@ final case class SDFApplication(
     )
   }
 
+  val balanceMatrices = dataflowGraphs.map(df => {
+    channels.map(c => {
+      actors.map(a => {
+        df.find((s, d, r) => c.getIdentifier() == s && a.getIdentifier() == d)
+          .map((s, d, r) => -r)
+          .orElse(
+            df.find((s, d, r) => c.getIdentifier() == d && a.getIdentifier() == s)
+              .map((s, d, r) => r)
+          )
+          .getOrElse(0)
+      })
+    })
+  })
+
   val configurations = Array((0, 0, "root"))
 
   val processComputationalNeeds: Array[Map[String, Map[String, Long]]] =
@@ -153,6 +167,20 @@ final case class SDFApplication(
   // )
 
   // val sdfDisjointComponents = disjointComponents.head
+
+  val decreasingActorConsumptionOrder = actorsSet
+    .sortBy(a => {
+      balanceMatrices(0).zipWithIndex
+        .filter((vec, c) => vec(a) < 0)
+        .map((vec, c) =>
+          -TokenizableDataBlock
+            .safeCast(channels(c))
+            .map(d => d.getTokenSizeInBits())
+            .orElse(0L) * vec(a)
+        )
+        .sum
+    })
+    .reverse
 
   override val uniqueIdentifier = "SDFApplication"
 

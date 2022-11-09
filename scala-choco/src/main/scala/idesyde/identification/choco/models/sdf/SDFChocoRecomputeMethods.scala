@@ -5,9 +5,10 @@ import idesyde.utils.CoreUtils.wfor
 import breeze.linalg._
 import breeze.math.Field
 import breeze.linalg.support.CanZipMapValues
+import org.chocosolver.solver.variables.BoolVar
 
 class SDFChocoRecomputeMethods(
-    val firingsInSlots: Array[Array[Array[IntVar]]]
+    val firingsInSlots: Array[Array[Array[BoolVar]]]
 ) {
 
   private val numActors     = firingsInSlots.size

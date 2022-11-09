@@ -54,5 +54,10 @@ class IDeSyDeCLIParser extends scopt.OptionParser[IDeSyDeRunConfig]("idesyde"):
         .action((v, x) => x.copy(solutionLimiter = v))
         .text("Sets the maximum number of outputted feasible solutions, when (pareto) optimality cannot be proved before the given limit. All solutions until optimality are returned if nothing is given.")
 
+    opt[Long]("exploration-timeout")
+        .valueName("<explorationTimeOut>")
+        .action((v, x) => x.copy(explorationTimeOutInSecs =  v))
+        .text("Sets the maximum number of times the exploration can last. If the number is non-positive, there is not timeout. Default is 0.")
+
 
 end IDeSyDeCLIParser

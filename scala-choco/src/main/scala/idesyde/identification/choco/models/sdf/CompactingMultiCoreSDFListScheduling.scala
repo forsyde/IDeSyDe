@@ -12,12 +12,13 @@ import org.chocosolver.solver.search.loop.monitors.IMonitorSolution
 import idesyde.utils.CoreUtils.wfor
 import idesyde.utils.CoreUtils
 import idesyde.identification.forsyde.models.sdf.SDFApplication
+import org.chocosolver.solver.variables.BoolVar
 
 class CompactingMultiCoreSDFListScheduling(
     val sdfApplications: SDFApplication,
     val actorDuration: Array[Array[Int]],
     val tileDistances: Array[Array[Int]],
-    val firingsInSlots: Array[Array[Array[IntVar]]],
+    val firingsInSlots: Array[Array[Array[BoolVar]]],
     val invThroughputs: Array[IntVar],
     val globalInvThroughput: IntVar
 ) extends AbstractStrategy[IntVar]((firingsInSlots.flatten.flatten): _*)
@@ -29,7 +30,7 @@ class CompactingMultiCoreSDFListScheduling(
   private val numSchedulers = firingsInSlots.head.size
   private val numSlots      = firingsInSlots.head.head.size
   var channels              = (0 until sdfApplications.initialTokens.size).toArray
-  var actors                = (0 until sdfApplications.sdfRepetitionVectors.size).toArray
+  var actors                = sdfApplications.decreasingActorConsumptionOrder
   var schedulers            = (0 until firingsInSlots.head.size).toArray
   val slots                 = (0 until firingsInSlots.head.head.size).toArray
 
@@ -146,37 +147,35 @@ class CompactingMultiCoreSDFListScheduling(
         wfor(0, _ < actors.size, _ + 1) { a =>
           if (firingsInSlots(a)(p)(s).getUB() > 0 && !firingsInSlots(a)(p)(s).isInstantiated()) {
             // compute the best slot otherwise
-            wfor(firingsInSlots(a)(p)(s).getUB(), it => it > 0 && it >= bestQ, _ - 1) { q =>
-              // currentComRank = if (currentComRank <= communicationLimiter) then 0 else currentComRank - communicationLimiter
-              // chains of lexographic greedy objectives
-              score = invThroughputs(p).getLB() + actorDuration(a)(p) * q
-              val globalScore = Math.max(score, globalInvThroughput.getLB())
-              val antiCompactness = calculateDistanceScore(a)(p)(s)
-              if (s < bestSlot || 
-                (s == bestSlot && antiCompactness < bestCompactMetric) ||
-                (s == bestSlot && antiCompactness == bestCompactMetric && globalScore < bestScoreCompact)
-              ) { // this ensures we load the same cpu first
-                bestACompact = a
-                bestPCompact = p
-                bestQCompact = q
-                bestSlotCompact = s
-                bestScoreCompact = globalScore
-                bestCompactMetric = antiCompactness
-              }
-              if (s < bestSlot || (s == bestSlot && globalScore < bestScore)) { // this ensures we load the same cpu first
-                bestA = a
-                bestP = p
-                bestQ = q
-                bestSlot = s
-                bestScore = globalScore
-              }
-              if (globalScore < bestScorePenalized) {
-                bestAPenalized = a
-                bestPPenalized = p
-                bestQPenalized = q
-                bestSlotPenalized = s
-                bestScorePenalized = globalScore
-              }
+            // currentComRank = if (currentComRank <= communicationLimiter) then 0 else currentComRank - communicationLimiter
+            // chains of lexographic greedy objectives
+            score = invThroughputs(p).getLB() + actorDuration(a)(p) 
+            val globalScore = Math.max(score, globalInvThroughput.getLB())
+            val antiCompactness = calculateDistanceScore(a)(p)(s)
+            if (s < bestSlot || 
+              (s == bestSlot && antiCompactness < bestCompactMetric) ||
+              (s == bestSlot && antiCompactness == bestCompactMetric && globalScore < bestScoreCompact)
+            ) { // this ensures we load the same cpu first
+              bestACompact = a
+              bestPCompact = p
+              bestQCompact = 1
+              bestSlotCompact = s
+              bestScoreCompact = globalScore
+              bestCompactMetric = antiCompactness
+            }
+            if (s < bestSlot || (s == bestSlot && globalScore < bestScore)) { // this ensures we load the same cpu first
+              bestA = a
+              bestP = p
+              bestQ = 1
+              bestSlot = s
+              bestScore = globalScore
+            }
+            if (globalScore < bestScorePenalized) {
+              bestAPenalized = a
+              bestPPenalized = p
+              bestQPenalized = 1
+              bestSlotPenalized = s
+              bestScorePenalized = globalScore
             }
           }
         }

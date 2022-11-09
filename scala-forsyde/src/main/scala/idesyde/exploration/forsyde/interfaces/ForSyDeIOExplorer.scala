@@ -10,7 +10,9 @@ import scala.quoted.Quotes
 
 trait ForSyDeIOExplorer extends Explorer {
 
-  def explore(decisionModel: DecisionModel)(using ExecutionContext): LazyList[DecisionModel] =
+  def explore(decisionModel: DecisionModel, explorationTimeOutInSecs: Long = 0L)(using
+      ExecutionContext
+  ): LazyList[DecisionModel] =
     decisionModel match {
       case fioDecisionModel: ForSyDeDecisionModel =>
         exploreForSyDe(fioDecisionModel)
@@ -32,7 +34,7 @@ trait ForSyDeIOExplorer extends Explorer {
       case _                                      => false
     }
 
-  def exploreForSyDe(decisionModel: ForSyDeDecisionModel)(using
+  def exploreForSyDe(decisionModel: ForSyDeDecisionModel, explorationTimeOutInSecs: Long = 0L)(using
       ExecutionContext
   ): LazyList[ForSyDeDecisionModel]
 

@@ -92,12 +92,11 @@ final case class ChocoSDFToSChedTileHWSlowest(
     memoryMappingModule.messagesMemoryMapping
   )
 
-  val sdfAnalysisModule = SDFSASAnalysisModule(
+  val sdfAnalysisModule = SDFSchedulingAnalysisModule(
     chocoModel,
     dse,
     memoryMappingModule,
     tileAnalysisModule,
-    dse.sdfApplications.actors.size,
     timeMultiplier
   )
 

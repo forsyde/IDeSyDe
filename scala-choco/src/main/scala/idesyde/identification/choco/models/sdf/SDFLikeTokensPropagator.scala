@@ -12,7 +12,7 @@ class SDFLikeTokensPropagator(
     val maxFiringsPerActor: Array[Int],
     val balanceMatrix: Array[Array[Int]],
     val initialTokens: Array[Int],
-    val firingsInSlots: Array[Array[Array[IntVar]]],
+    val firingsInSlots: Array[Array[Array[BoolVar]]],
     val tokens: Array[Array[IntVar]]
     // val tokensAfter: Array[Array[IntVar]]
 ) extends Propagator[IntVar](

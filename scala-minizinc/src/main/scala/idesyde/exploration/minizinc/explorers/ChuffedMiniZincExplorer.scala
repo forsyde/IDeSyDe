@@ -55,7 +55,7 @@ final case class ChuffedMiniZincExplorer()
         50 * estimateMemoryUntilFeasibility(decisionModel)
       case _ => 0
 
-  def exploreForSyDe(decisionModel: ForSyDeDecisionModel)(using ExecutionContext) =
+  def exploreForSyDe(decisionModel: ForSyDeDecisionModel, explorationTimeOutInSecs: Long = 0L)(using ExecutionContext) =
     decisionModel match
       case m: ReactorMinusAppMapAndSchedMzn =>
         explorationSolve(

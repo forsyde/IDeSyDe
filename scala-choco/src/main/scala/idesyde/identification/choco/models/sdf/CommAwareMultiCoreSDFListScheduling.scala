@@ -12,11 +12,12 @@ import org.chocosolver.solver.search.loop.monitors.IMonitorSolution
 import idesyde.utils.CoreUtils.wfor
 import idesyde.utils.CoreUtils
 import idesyde.identification.forsyde.models.sdf.SDFApplication
+import org.chocosolver.solver.variables.BoolVar
 
 class CommAwareMultiCoreSDFListScheduling(
     val sdfApplications: SDFApplication,
     val actorDuration: Array[Array[Int]],
-    val firingsInSlots: Array[Array[Array[IntVar]]],
+    val firingsInSlots: Array[Array[Array[BoolVar]]],
     val invThroughputs: Array[IntVar],
     val globalInvThroughput: IntVar
 ) extends AbstractStrategy[IntVar]((firingsInSlots.flatten.flatten): _*)

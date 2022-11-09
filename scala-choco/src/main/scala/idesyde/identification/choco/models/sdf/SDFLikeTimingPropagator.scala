@@ -12,7 +12,7 @@ class SDFLikeTimingPropagator(
     val actorDuration: Array[Array[Int]],
     val balanceMatrix: Array[Array[Int]],
     val initialTokens: Array[Int],
-    val firingsInSlots: Array[Array[Array[IntVar]]],
+    val firingsInSlots: Array[Array[Array[BoolVar]]],
     val channelsTravelTime: Array[Array[Array[IntVar]]],
     val channelsCommunicate: Array[Array[Array[BoolVar]]],
     val startTimes: Array[Array[IntVar]],

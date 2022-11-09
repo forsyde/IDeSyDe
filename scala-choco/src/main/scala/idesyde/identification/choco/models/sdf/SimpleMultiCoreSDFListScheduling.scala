@@ -10,6 +10,7 @@ import org.chocosolver.solver.search.strategy.assignments.DecisionOperatorFactor
 import scala.util.Random
 import org.chocosolver.solver.search.loop.monitors.IMonitorSolution
 import idesyde.utils.CoreUtils.wfor
+import org.chocosolver.solver.variables.BoolVar
 
 class SimpleMultiCoreSDFListScheduling(
     val maxFiringsPerActor: Array[Int],
@@ -17,7 +18,7 @@ class SimpleMultiCoreSDFListScheduling(
     val initialTokens: Array[Int],
     val actorDuration: Array[Array[Int]],
     val channelsTravelTime: Array[Array[Array[IntVar]]],
-    val firingsInSlots: Array[Array[Array[IntVar]]]
+    val firingsInSlots: Array[Array[Array[BoolVar]]]
 ) extends AbstractStrategy[IntVar]((firingsInSlots.flatten.flatten): _*)
     with IMonitorSolution {
 

@@ -36,7 +36,7 @@ final case class ChocoSDFToSChedTileHW(
     val slower: ChocoSDFToSChedTileHWSlowest
 )(using Fractional[Rational])
     extends ChocoCPForSyDeDecisionModel
-    with ChocoModelMixin(shouldLearnSignedClauses = false) {
+    with ChocoModelMixin(shouldLearnSignedClauses = true) {
 
   val chocoModel: Model = slower.chocoModel
 
@@ -59,17 +59,21 @@ final case class ChocoSDFToSChedTileHW(
   // chocoModel.getSolver().plugMonitor(ConMonitorObj)
 
   // breaking symmetries for speed
-  private val firingVectors = (0 until slower.sdfAnalysisModule.maxSlots)
-    .map(s =>
-      chocoModel.sum(
-        s"allOnSlot($s)",
-        slower.sdfAnalysisModule.firingsInSlots.flatMap(pAndSVec =>
-          pAndSVec.map(sVec => sVec(s))
-        ): _*
+  private val firingVectors =
+    (0 until slower.sdfAnalysisModule.sdfAndSchedulers.sdfApplications.sdfRepetitionVectors.sum)
+      .map(s =>
+        chocoModel.sum(
+          s"allOnSlot($s)",
+          slower.sdfAnalysisModule.firingsInSlots.flatMap(pAndSVec =>
+            pAndSVec.map(sVec => sVec(s))
+          ): _*
+        )
       )
-    )
-    .toArray
-  for (s <- 0 until (slower.sdfAnalysisModule.maxSlots - 1)) {
+      .toArray
+  for (
+    s <-
+      0 until (slower.sdfAnalysisModule.sdfAndSchedulers.sdfApplications.sdfRepetitionVectors.sum - 1)
+  ) {
     chocoModel.ifThen(
       firingVectors(s).eq(0).decompose(),
       firingVectors(s + 1).eq(0).decompose()
@@ -78,13 +82,26 @@ final case class ChocoSDFToSChedTileHW(
   }
 
   // breaking platform symmetries
-  // slower.dse.platform.tiledDigitalHardware.symmetricTileGroups.maxByOption(group => group.size).foreach(group => {
-  //   val lowestNumbered = group.min
-  //   for (other <- group.filter(_ != lowestNumbered)) {
-  //     chocoModel.arithm(slower.sdfAnalysisModule.invThroughputs(lowestNumbered), ">=", slower.sdfAnalysisModule.invThroughputs(other)).post()
-  //   }
-  // })
-
+  // slower.dse.platform.tiledDigitalHardware.symmetricTileGroups
+  //   .maxByOption(_.size)
+  //   .foreach(group => {
+  //   //   for (
+  //   //     a     <- slower.dse.sdfApplications.actorsSet;
+  //   //     s     <- slower.sdfAnalysisModule.slotRange;
+  //   //     p     <- group;
+  //   //     other <- group - p
+  //   //   ) {
+  //   //     chocoModel.ifThen(
+  //   //       chocoModel.arithm(slower.sdfAnalysisModule.firingsInSlots(a)(p)(s), "=", 0),
+  //   //       chocoModel.arithm(slower.sdfAnalysisModule.firingsInSlots(a)(other)(s), "=", 0)
+  //   //     )
+  //   //   }
+  //     // chocoModel.increasing(group.map(tile => slower.sdfAnalysisModule.slotFinishTime(tile).last).toArray, 0).post()
+  //     val lowestNumbered = group.min
+  //     for (other <- group.filter(_ != lowestNumbered)) {
+  //       chocoModel.arithm(slower.sdfAnalysisModule.invThroughputs(lowestNumbered), "<=", slower.sdfAnalysisModule.invThroughputs(other)).post()
+  //     }
+  //   })
 
   override val strategies: Array[AbstractStrategy[? <: Variable]] = Array(
     listScheduling,
@@ -94,7 +111,7 @@ final case class ChocoSDFToSChedTileHW(
     Search.minDomLBSearch(slower.tileAnalysisModule.virtualChannelForMessage.flatten: _*),
     Search.minDomLBSearch(slower.tileAnalysisModule.messageIsCommunicated.flatten.flatten: _*),
     Search.minDomLBSearch(slower.tileAnalysisModule.messageTravelDuration.flatten.flatten: _*)
-  ) ++ slower.strategies
+  ) //++ slower.strategies
 
   //---------
 

@@ -18,12 +18,11 @@ import idesyde.identification.choco.models.SingleProcessSingleMessageMemoryConst
 import idesyde.identification.choco.models.TileAsyncInterconnectCommsModule
 import scala.collection.mutable.Buffer
 
-class SDFSASAnalysisModule(
+class SDFSchedulingAnalysisModule(
     val chocoModel: Model,
     val sdfAndSchedulers: SDFToSchedTiledHW,
     val memoryMappingModule: SingleProcessSingleMessageMemoryConstraintsModule,
     val tileAsyncModule: TileAsyncInterconnectCommsModule,
-    val maxSlots: Int,
     val timeFactor: Long = 1L
 ) extends ChocoModelMixin() {
 
@@ -39,7 +38,7 @@ class SDFSASAnalysisModule(
   private val maxRepetitionsPerActors     = sdfAndSchedulers.sdfApplications.sdfRepetitionVectors
   private def isSelfConcurrent(aIdx: Int) = sdfAndSchedulers.sdfApplications.isSelfConcurrent(aIdx)
 
-  private val slotRange               = (0 until maxSlots).toArray
+  val slotRange               = (0 until sdfAndSchedulers.sdfApplications.sdfRepetitionVectors.sum).toArray
   private val maximumTokensPerChannel = sdfAndSchedulers.sdfApplications.pessimisticTokensPerChannel
 
   val invThroughputs: Array[IntVar] = schedulers
@@ -82,17 +81,14 @@ class SDFSASAnalysisModule(
         .max,
       true
     )
-  val firingsInSlots: Array[Array[Array[IntVar]]] =
+  val firingsInSlots: Array[Array[Array[BoolVar]]] =
     actors.zipWithIndex.map((a, i) => {
       schedulers.zipWithIndex.map((p, j) => {
         slotRange
           .map(s =>
             chocoModel
-              .intVar(
-                s"fired($a,$p,$s)",
-                0,
-                maxRepetitionsPerActors(i),
-                true
+              .boolVar(
+                s"fired($a,$p,$s)"
               )
           )
           .toArray
@@ -116,10 +112,11 @@ class SDFSASAnalysisModule(
 
   val duration = schedulers.map(p =>
     slotRange.map(s =>
-      chocoModel.intVar(s"slotDur($p,$s)", 0, slotFinishTime.head.last.getUB(), true)
+      chocoModel.intVar(s"slotDur($p,$s)", 0, slotFinishTime(p)(s).getUB(), true)
     )
   )
 
+  @deprecated
   def postOnlySAS(): Unit = {
     actors.zipWithIndex.foreach((a, ai) => {
       // disable self concurreny if necessary
@@ -133,7 +130,7 @@ class SDFSASAnalysisModule(
     })
     for (
       (s, sj) <- schedulers.zipWithIndex;
-      slot    <- 0 until maxSlots
+      slot    <- slotRange
     ) {
       val onlyOneActor = Tuples(true)
       onlyOneActor.add(Array.fill(actors.size)(0))
@@ -141,9 +138,9 @@ class SDFSASAnalysisModule(
         val vec = (Array.fill(ai)(0) :+ q) ++ Array.fill(actors.size - ai - 1)(0)
         onlyOneActor.add(vec)
       }
-      chocoModel
-        .table(actors.map(a => firingsInSlots(a)(sj)(slot)).toArray, onlyOneActor, "CT+")
-        .post()
+      // chocoModel
+      //   .table(actors.map(a => firingsInSlots(a)(sj)(slot)).toArray, onlyOneActor, "CT+")
+      //   .post()
     }
   }
 
@@ -166,7 +163,7 @@ class SDFSASAnalysisModule(
       )
       val allFirings = actors.zipWithIndex
         .map((_, a) => schedulers.zipWithIndex.map((_, p) => firingsInSlots(a)(p)(s)))
-        .flatten
+        .flatten.map(_.asInstanceOf[IntVar])
       val allConFactors = actors.zipWithIndex
         .map((_, a) => schedulers.zipWithIndex.map((_, p) => consMatrix(ci)(a)))
         .flatten
@@ -209,7 +206,7 @@ class SDFSASAnalysisModule(
         .post()
       var possibleInvThs = Buffer[IntVar]()
       for (s <- slotRange) {
-        val actorFirings = actors.map(a => firingsInSlots(a)(p)(s))
+        val actorFirings = actors.map(a => firingsInSlots(a)(p)(s)).map(_.asInstanceOf[IntVar])
         //val duration = duration(p)(s)// chocoModel.intVar(s"slotDur($p,$s)", 0, slotFinishTime.head.last.getUB(), true)
         // val busyTime =
         //   chocoModel.intVar(s"busyTime($p,$s)", 0, slotFinishTime.head.last.getUB(), true)

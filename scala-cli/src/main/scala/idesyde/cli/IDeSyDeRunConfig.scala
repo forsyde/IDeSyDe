@@ -21,6 +21,7 @@ case class IDeSyDeRunConfig(
     var outputModelPath: Path = Paths.get("idesyde-out.fiodl"),
     var allowedDecisionModels: Buffer[String] = Buffer(),
     var solutionLimiter: Int = 0,
+    val explorationTimeOutInSecs: Long = 0L,
     val debugLogger: (String) => Unit = (s) => {},
     val infoLogger: (String) => Unit = (s) => {},
     val warnLogger: (String) => Unit = (s) => {},

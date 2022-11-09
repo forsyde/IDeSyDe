@@ -35,7 +35,7 @@ trait Explorer {
 
   type DesignModel
 
-  def explore(decisionModel: DecisionModel)(using
+  def explore(decisionModel: DecisionModel, explorationTimeOutInSecs: Long = 0L)(using
       ExecutionContext
   ): LazyList[DesignModel]
 

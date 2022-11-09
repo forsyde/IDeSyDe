@@ -62,7 +62,7 @@ final case class SDFApplication(
     !channels.exists(c => topology.containsEdge(a, c) && topology.containsEdge(c, a))
   }
 
-  lazy val dataflowGraphs = {
+  val dataflowGraphs = {
     val g = SimpleDirectedWeightedGraph.createBuilder[Int, DefaultEdge](() => DefaultEdge())
     actors.zipWithIndex.foreach((a, i) => {
       channels.zipWithIndex.foreach((c, prej) => {
@@ -152,6 +152,15 @@ final case class SDFApplication(
   )
 
   val sdfDisjointComponents = disjointComponents.head
+
+
+  val decreasingActorConsumptionOrder = actorsSet.sortBy(a => {
+    sdfBalanceMatrix.zipWithIndex.filter((vec, c) => vec(a) < 0).map((vec, c) => - TokenizableDataBlock
+      .safeCast(channels(c))
+      .map(d => d.getTokenSizeInBits())
+      .orElse(0L) * vec(a)).sum
+  }).reverse
+
 
   override val uniqueIdentifier = "SDFApplication"
 

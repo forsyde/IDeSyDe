@@ -80,7 +80,7 @@ class ChocoExplorer() extends ForSyDeIOExplorer:
     scalarizedObj
   }
 
-  def exploreForSyDe(forSyDeDecisionModel: ForSyDeDecisionModel)(using
+  def exploreForSyDe(forSyDeDecisionModel: ForSyDeDecisionModel, explorationTimeOutInSecs: Long = 0L)(using
       ExecutionContext
   ): LazyList[ForSyDeSystemGraph] = forSyDeDecisionModel match
     case chocoCpModel: ChocoCPForSyDeDecisionModel =>
@@ -115,6 +115,9 @@ class ChocoExplorer() extends ForSyDeIOExplorer:
       if (chocoCpModel.shouldRestartOnSolution) {
         solver.setNoGoodRecordingFromRestarts
         solver.setRestartOnSolutions
+      }
+      if (explorationTimeOutInSecs > 0L) {
+        solver.limitTime(explorationTimeOutInSecs * 1000L)
       }
       LazyList
         .continually(solver.solve())

@@ -20,7 +20,7 @@ import org.chocosolver.solver.variables.IntVar
 import org.chocosolver.solver.search.strategy.Search
 import org.chocosolver.solver.search.strategy.strategy.AbstractStrategy
 import org.chocosolver.solver.variables.Variable
-import idesyde.identification.choco.models.sdf.ChocoSDFToSChedTileHW
+import idesyde.identification.choco.models.mixed.ChocoSDFToSChedTileHW
 import org.chocosolver.solver.search.loop.monitors.IMonitorSolution
 import idesyde.exploration.choco.explorers.ParetoMinimizationBrancher
 
@@ -80,12 +80,15 @@ class ChocoExplorer() extends ForSyDeIOExplorer:
     scalarizedObj
   }
 
-  def exploreForSyDe(forSyDeDecisionModel: ForSyDeDecisionModel, explorationTimeOutInSecs: Long = 0L)(using
+  def exploreForSyDe(
+      forSyDeDecisionModel: ForSyDeDecisionModel,
+      explorationTimeOutInSecs: Long = 0L
+  )(using
       ExecutionContext
-  ): LazyList[ForSyDeSystemGraph] = forSyDeDecisionModel match
+  ): LazyList[DecisionModel] = forSyDeDecisionModel match
     case chocoCpModel: ChocoCPForSyDeDecisionModel =>
-      val solver         = chocoCpModel.chocoModel.getSolver
-      val isOptimization = chocoCpModel.modelMinimizationObjectives.size > 0
+      val solver          = chocoCpModel.chocoModel.getSolver
+      val isOptimization  = chocoCpModel.modelMinimizationObjectives.size > 0
       val paretoMinimizer = ParetoMinimizationBrancher(chocoCpModel.modelMinimizationObjectives)
       // lazy val paretoMaximizer = ParetoMaximizer(
       //   chocoCpModel.modelMinimizationObjectives.map(o => chocoCpModel.chocoModel.intMinusView(o))
@@ -111,7 +114,7 @@ class ChocoExplorer() extends ForSyDeIOExplorer:
       }
       if (chocoCpModel.shouldLearnSignedClauses) {
         solver.setLearningSignedClauses
-      } 
+      }
       if (chocoCpModel.shouldRestartOnSolution) {
         solver.setNoGoodRecordingFromRestarts
         solver.setRestartOnSolutions
@@ -165,8 +168,6 @@ end ChocoExplorer
 
 object ChocoExplorer {
   object ParetoBrancher extends IMonitorSolution {
-    def onSolution(): Unit = {
-
-    }
+    def onSolution(): Unit = {}
   }
 }

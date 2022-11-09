@@ -9,6 +9,7 @@ import idesyde.identification.common.models.sdf.SDFApplication
 import idesyde.identification.common.models.mixed.SDFToPartitionedSharedMemory
 import idesyde.identification.common.models.mixed.PeriodicWorkloadToPartitionedSharedMultiCore
 import idesyde.identification.common.models.workload.CommunicatingExtendedDependenciesPeriodicWorkload
+import spire.math.Rational
 
 object MixedRules {
 
@@ -76,10 +77,11 @@ object MixedRules {
         PeriodicWorkloadToPartitionedSharedMultiCore(
           workload = a,
           platform = p,
-          processMappings = Array.empty[String],
-          processSchedulings = Array.empty[String],
-          channelMappings = Array.empty[String],
-          channelSlotAllocations = Array.empty[Map[String, Array[Boolean]]]
+          processMappings = Map(),
+          processSchedulings = Map(),
+          channelMappings = Map(),
+          channelSlotAllocations = Map(),
+          maxUtilizations = Map()
         )
       )
     )

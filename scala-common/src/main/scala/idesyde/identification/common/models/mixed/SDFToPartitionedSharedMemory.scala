@@ -13,7 +13,7 @@ final case class SDFToPartitionedSharedMemory(
     val memoryMappings: Array[String],
     val messageSlotAllocations: Array[Map[String, Array[Boolean]]]
 ) extends StandardDecisionModel
-    with WCETComputationMixin[Rational] {
+    with WCETComputationMixin(sdfApplications, platform.hardware) {
 
   val coveredElements = sdfApplications.coveredElements ++ platform.coveredElements
   val coveredElementRelations =
@@ -26,14 +26,7 @@ final case class SDFToPartitionedSharedMemory(
           .map(ce => sdfApplications.channels(i) -> ce)
       )
 
-  val processorsFrequency: Array[Long] = platform.hardware.processorsFrequency
-  val processorsProvisions: Array[Map[String, Map[String, spire.math.Rational]]] =
-    platform.hardware.processorsProvisions
-
-  val messagesMaxSizes: Array[Long] = sdfApplications.messagesMaxSizes
-  val processComputationalNeeds: Array[Map[String, Map[String, Long]]] =
-    sdfApplications.actorComputationalNeeds
-  val processSizes: Array[Long] = sdfApplications.processSizes
+  val wcets = computeWcets
 
   val uniqueIdentifier: String = "SDFToPartitionedSharedMemory"
 

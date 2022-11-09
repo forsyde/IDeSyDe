@@ -7,18 +7,19 @@ import spire._
 import spire.math._
 import spire.implicits._
 
-trait WCETComputationMixin[RealT](using fracT: spire.math.Fractional[RealT])(using ClassTag[RealT])
-    extends InstrumentedWorkloadMixin
-    with InstrumentedPlatformMixin[RealT] {
+trait WCETComputationMixin[RealT](
+    val instruWorkload: InstrumentedWorkloadMixin,
+    val intruPlatform: InstrumentedPlatformMixin[RealT]
+)(using fracT: spire.math.Fractional[RealT])(using ClassTag[RealT]) {
 
-  def wcets: Array[Array[RealT]] = {
+  def computeWcets: Array[Array[RealT]] = {
     // alll executables of task are instrumented
     // scribe.debug(taskModel.executables.mkString("[", ",", "]"))
     // compute the matrix (lazily)
     // scribe.debug(taskModel.taskComputationNeeds.mkString(", "))
-    processComputationalNeeds.map(needs => {
+    instruWorkload.processComputationalNeeds.map(needs => {
       // scribe.debug(needs.mkString(","))
-      processorsProvisions.zipWithIndex.map((provisions, j) => {
+      intruPlatform.processorsProvisions.zipWithIndex.map((provisions, j) => {
         // now take the maximum combination
         needs
           .flatMap((opGroup, opNeeds) => {
@@ -30,7 +31,7 @@ trait WCETComputationMixin[RealT](using fracT: spire.math.Fractional[RealT])(usi
                 fracT.sum(
                   opNeeds
                     .map((k, v) => fracT.fromLong(v) / ipc(k))
-                ) / fracT.fromLong(processorsFrequency(j))
+                ) / fracT.fromLong(intruPlatform.processorsFrequency(j))
               })
           })
           .maxByOption(_.toDouble)

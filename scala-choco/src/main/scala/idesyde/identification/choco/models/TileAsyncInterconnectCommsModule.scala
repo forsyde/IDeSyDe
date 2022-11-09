@@ -75,7 +75,7 @@ class TileAsyncInterconnectCommsModule(
     })
   })
 
-  private val messagesClashAtComm: Array[Array[Array[BoolVar]]] =  messages.map(mi =>
+  val messagesClashAtComm: Array[Array[Array[BoolVar]]] =  messages.map(mi =>
     messages.map(mj =>
       commElems.map(c =>
         if (mi != mj) {

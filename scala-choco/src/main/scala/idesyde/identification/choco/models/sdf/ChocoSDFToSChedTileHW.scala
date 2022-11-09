@@ -78,21 +78,13 @@ final case class ChocoSDFToSChedTileHW(
   }
 
   // breaking platform symmetries
-  val countsForPE = slower.dse.platform.tiledDigitalHardware.tileSet.map(i =>
-    chocoModel.count(
-      s"countOfMapping($i)",
-      i,
-      slower.memoryMappingModule.processesMemoryMapping: _*
-    )
-  )
-  for (symGroup <- slower.dse.platform.tiledDigitalHardware.symmetricTileGroups) {
-    chocoModel
-      .decreasing(
-        countsForPE.zipWithIndex.filter((v, i) => symGroup.contains(i)).map((v, i) => v),
-        0
-      )
-      .post()
-  }
+  // slower.dse.platform.tiledDigitalHardware.symmetricTileGroups.maxByOption(group => group.size).foreach(group => {
+  //   val lowestNumbered = group.min
+  //   for (other <- group.filter(_ != lowestNumbered)) {
+  //     chocoModel.arithm(slower.sdfAnalysisModule.invThroughputs(lowestNumbered), ">=", slower.sdfAnalysisModule.invThroughputs(other)).post()
+  //   }
+  // })
+
 
   override val strategies: Array[AbstractStrategy[? <: Variable]] = Array(
     listScheduling,
@@ -101,10 +93,8 @@ final case class ChocoSDFToSChedTileHW(
     Search.minDomLBSearch(slower.sdfAnalysisModule.slotFinishTime.flatten: _*),
     Search.minDomLBSearch(slower.tileAnalysisModule.virtualChannelForMessage.flatten: _*),
     Search.minDomLBSearch(slower.tileAnalysisModule.messageIsCommunicated.flatten.flatten: _*),
-    Search.minDomLBSearch(slower.tileAnalysisModule.messageTravelDuration.flatten.flatten: _*),
-    Search.minDomLBSearch(slower.nUsedPEs),
-    Search.minDomLBSearch(slower.sdfAnalysisModule.globalInvThroughput)
-  )
+    Search.minDomLBSearch(slower.tileAnalysisModule.messageTravelDuration.flatten.flatten: _*)
+  ) ++ slower.strategies
 
   //---------
 

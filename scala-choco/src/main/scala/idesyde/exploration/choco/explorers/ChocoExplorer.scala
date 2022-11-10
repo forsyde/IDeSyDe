@@ -117,6 +117,7 @@ class ChocoExplorer() extends ForSyDeIOExplorer:
         solver.setRestartOnSolutions
       }
       if (explorationTimeOutInSecs > 0L) {
+        scribe.debug(s"setting total exploration timeout to ${explorationTimeOutInSecs} seconds")
         solver.limitTime(explorationTimeOutInSecs * 1000L)
       }
       LazyList

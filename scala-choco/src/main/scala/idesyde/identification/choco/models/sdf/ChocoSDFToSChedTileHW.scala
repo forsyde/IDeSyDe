@@ -36,7 +36,7 @@ final case class ChocoSDFToSChedTileHW(
     val slower: ChocoSDFToSChedTileHWSlowest
 )(using Fractional[Rational])
     extends ChocoCPForSyDeDecisionModel
-    with ChocoModelMixin(shouldLearnSignedClauses = true) {
+    with ChocoModelMixin(shouldLearnSignedClauses = false) {
 
   val chocoModel: Model = slower.chocoModel
 
@@ -82,25 +82,31 @@ final case class ChocoSDFToSChedTileHW(
   }
 
   // breaking platform symmetries
+  // val mappingsPerPe = slower.dse.platform.schedulerSet.map(p => chocoModel.count(s"mappedToPe($p)", p, slower.memoryMappingModule.processesMemoryMapping:_*))
   // slower.dse.platform.tiledDigitalHardware.symmetricTileGroups
   //   .maxByOption(_.size)
   //   .foreach(group => {
-  //   //   for (
-  //   //     a     <- slower.dse.sdfApplications.actorsSet;
-  //   //     s     <- slower.sdfAnalysisModule.slotRange;
-  //   //     p     <- group;
-  //   //     other <- group - p
-  //   //   ) {
-  //   //     chocoModel.ifThen(
-  //   //       chocoModel.arithm(slower.sdfAnalysisModule.firingsInSlots(a)(p)(s), "=", 0),
-  //   //       chocoModel.arithm(slower.sdfAnalysisModule.firingsInSlots(a)(other)(s), "=", 0)
-  //   //     )
-  //   //   }
-  //     // chocoModel.increasing(group.map(tile => slower.sdfAnalysisModule.slotFinishTime(tile).last).toArray, 0).post()
-  //     val lowestNumbered = group.min
-  //     for (other <- group.filter(_ != lowestNumbered)) {
-  //       chocoModel.arithm(slower.sdfAnalysisModule.invThroughputs(lowestNumbered), "<=", slower.sdfAnalysisModule.invThroughputs(other)).post()
+  //     for (
+  //       a     <- slower.dse.sdfApplications.actorsSet;
+  //       s     <- slower.sdfAnalysisModule.slotRange;
+  //       p     <- group;
+  //       other <- group - p;
+  //       others = (group - p - other)
+  //       if others.size > 2
+  //     ) {
+  //       chocoModel.ifThen(
+  //         chocoModel.and(
+  //           chocoModel.arithm(slower.sdfAnalysisModule.firingsInSlots(a)(p)(s), "=", 0),
+  //           chocoModel.arithm(slower.sdfAnalysisModule.firingsInSlots(a)(other)(s), "=", 0)
+  //         ),
+  //         chocoModel.sum(others.map(slower.sdfAnalysisModule.firingsInSlots(a)(_)(s)).toArray, "=", 0)
+  //       )
   //     }
+  //     // chocoModel.decreasing(group.toArray.sorted.map(tile => mappingsPerPe(tile)), 0).post()
+  //     // val lowestNumbered = group.min
+  //     // for (other <- group.filter(_ != lowestNumbered)) {
+  //     //   chocoModel.arithm(mappingsPerPe(lowestNumbered), ">=", mappingsPerPe(other)).post()
+  //     // }
   //   })
 
   override val strategies: Array[AbstractStrategy[? <: Variable]] = Array(

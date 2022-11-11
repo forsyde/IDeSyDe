@@ -28,6 +28,7 @@ class SDFSchedulingAnalysisModule(
 
   private val actors: Array[Int]     = sdfAndSchedulers.sdfApplications.actorsSet
   private val channels: Array[Int]   = sdfAndSchedulers.sdfApplications.channelsSet
+  private val messages: Array[Int] = sdfAndSchedulers.sdfApplications.sdfMessages.zipWithIndex.map((_, i) => i)
   private val schedulers: Array[Int] = sdfAndSchedulers.platform.schedulerSet
   private val balanceMatrix: Array[Array[Int]] =
     sdfAndSchedulers.sdfApplications.balanceMatrices.head
@@ -38,7 +39,7 @@ class SDFSchedulingAnalysisModule(
   private val maxRepetitionsPerActors     = sdfAndSchedulers.sdfApplications.sdfRepetitionVectors
   private def isSelfConcurrent(aIdx: Int) = sdfAndSchedulers.sdfApplications.isSelfConcurrent(aIdx)
 
-  val slotRange               = (0 until sdfAndSchedulers.sdfApplications.sdfRepetitionVectors.sum).toArray
+  val slotRange               = (0 until maxRepetitionsPerActors.sum).toArray
   private val maximumTokensPerChannel = sdfAndSchedulers.sdfApplications.pessimisticTokensPerChannel
 
   val invThroughputs: Array[IntVar] = schedulers
@@ -190,7 +191,7 @@ class SDFSchedulingAnalysisModule(
     val maximumTokensProducedVal = maximumTokensPerChannel.max
     val consMat                  = balanceMatrix.map(bs => bs.map(b => if (b < 0) then b else 0))
     val prodMat                  = balanceMatrix.map(bs => bs.map(b => if (b > 0) then b else 0))
-    postOnlySAS()
+    // postOnlySAS()
     postSDFConsistencyConstraints()
     // timings
     for (p <- schedulers) {
@@ -232,7 +233,7 @@ class SDFSchedulingAnalysisModule(
           // now take care of communications
           for (
             a <- actors;
-            (_, c) <- channels.zipWithIndex;
+            c <- messages;
             if balanceMatrix(c)(a) < 0;
             pOther <- schedulers;
             if p != pOther
@@ -240,8 +241,8 @@ class SDFSchedulingAnalysisModule(
             val possibleStartTime = chocoModel.intVar(s"possibleStartTime($a, $p, $s)", 0, slotFinishTime(p)(slotRange.max).getUB(), true)
             chocoModel.arithm(possibleStartTime, ">=", slotFinishTime(p)(s - 1)).post()
             chocoModel.ifThenElse(
-              chocoModel.and(chocoModel.arithm(firingsInSlots(a)(p)(s), ">", 0), chocoModel.arithm(tileAsyncModule.messageIsCommunicated(c)(pOther)(p), "=", 1)),
-              chocoModel.arithm(possibleStartTime, "=", slotFinishTime(pOther)(s - 1).add(tileAsyncModule.messageTravelDuration(c)(pOther)(p).mul(-balanceMatrix(c)(a)).mul(firingsInSlots(a)(p)(s))).intVar()),
+              chocoModel.and(chocoModel.arithm(firingsInSlots(a)(p)(s), ">", 0), chocoModel.arithm(tileAsyncModule.messageIsCommunicated(c)(pOther)(p), ">", 0)),
+              chocoModel.arithm(possibleStartTime, "=", slotFinishTime(pOther)(s - 1), "+", tileAsyncModule.messageTravelDuration(c)(pOther)(p)),
               chocoModel.arithm(possibleStartTime, "=", slotFinishTime(p)(s - 1))
             )
             possibleStartTimes += possibleStartTime
@@ -278,7 +279,7 @@ class SDFSchedulingAnalysisModule(
           chocoModel.arithm(
             slotStartTime(p)(s),
             "=",
-            chocoModel.min(s"minPossibleStartTime($p, $s)", possibleStartTimes.toArray:_*)
+            chocoModel.max(s"minPossibleStartTime($p, $s)", possibleStartTimes.toArray)
           ).post()
         } else {
           chocoModel.arithm(slotStartTime(p)(0), "=", 0).post()

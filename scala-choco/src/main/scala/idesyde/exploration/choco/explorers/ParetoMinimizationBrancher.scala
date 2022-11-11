@@ -24,8 +24,8 @@ class ParetoMinimizationBrancher(val objectives: Array[IntVar])
     // iterate though the current pareto front
     wfor(0, _ < paretoFront.size, _ + 1) { soli =>
       var count        = numObjs
-      var lastUnderIdx = -1
-      var lastUnderVal = -1
+      var lastUnderIdx = 0
+      var lastUnderVal = objectives(0).getLB()
       wfor(0, _ < numObjs, _ + 1) { j =>
         if (paretoObjFront(soli)(j) <= objectives(j).getLB()) {
           count -= 1
@@ -34,11 +34,9 @@ class ParetoMinimizationBrancher(val objectives: Array[IntVar])
           lastUnderVal = paretoObjFront(soli)(j)
         }
       }
-      if (count == 1) {
+      if (count <= 1) {
         objectives(lastUnderIdx).updateUpperBound(lastUnderVal - 1, this)
-      } else if (count == 0) {
-        fails()
-      }
+      } 
     }
   }
 

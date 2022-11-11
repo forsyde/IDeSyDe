@@ -48,15 +48,6 @@ final case class SDFApplication(
 
   val initialTokens: Array[Int] = channels.map(_.getNumOfInitialTokens)
 
-  /** this is a simple shortcut for the balance matrix (originally called topology matrix) as SDFs have only one configuration */
-  def sdfBalanceMatrix: Array[Array[Int]] = balanceMatrices.head
-
-  /** this is a simple shortcut for the repetition vectors as SDFs have only one configuration */
-  def sdfRepetitionVectors: Array[Int] = repetitionVectors(0)
-
-  /** this is a simple shortcut for the max parallel clusters as SDFs have only one configuration */
-  def sdfMaxParallelClusters: Array[Array[Int]] = maximalParallelClustering(0)
-
   def isSelfConcurrent(actorIdx: Int): Boolean = {
     val a = actors(actorIdx)
     !channels.exists(c => topology.containsEdge(a, c) && topology.containsEdge(c, a))
@@ -78,11 +69,21 @@ final case class SDFApplication(
     Array(g.buildAsUnmodifiable())
   }
 
+
   val configurations = {
     val g = DefaultDirectedGraph.createBuilder[Int, DefaultEdge](() => DefaultEdge())
     g.addEdge(0, 0)
     g.buildAsUnmodifiable
   }
+
+  /** this is a simple shortcut for the balance matrix (originally called topology matrix) as SDFs have only one configuration */
+  val sdfBalanceMatrix: Array[Array[Int]] = computeBalanceMatrices(0)
+
+  /** this is a simple shortcut for the repetition vectors as SDFs have only one configuration */
+  val sdfRepetitionVectors: Array[Int] = computeRepetitionVectors(0)
+
+  /** this is a simple shortcut for the max parallel clusters as SDFs have only one configuration */
+  val sdfMaxParallelClusters: Array[Array[Int]] = maximalParallelClustering(0)
 
   val processComputationalNeeds: Array[Map[String, Map[String, Long]]] =
     actorFunctions.zipWithIndex.map((actorFuncs, i) => {
@@ -144,6 +145,8 @@ final case class SDFApplication(
         .sum
   )
 
+  
+
   val messagesMaxSizes: Array[Long] = channels.zipWithIndex.map((c, i) =>
     pessimisticTokensPerChannel(i) * TokenizableDataBlock
       .safeCast(c)
@@ -161,6 +164,26 @@ final case class SDFApplication(
       .orElse(0L) * vec(a)).sum
   }).reverse
 
+
+  val messagesFromChannels = dataflowGraphs.map(df => {
+    actorsSet.flatMap(src => {
+      actorsSet.map(dst => {
+        (src, dst, 
+        channelsSet.filter(c => df.containsEdge(src, c) && df.containsEdge(c, dst))
+        )
+      })
+    })
+    .filter((s, d, cs) => cs.size > 0)
+    .map((s, d, cs) => 
+      (s, d, cs, cs.map(c => {
+      sdfBalanceMatrix(c - actors.size)(s) * TokenizableDataBlock
+        .safeCast(channels(c - actors.size))
+        .map(d => d.getTokenSizeInBits().toLong)
+        .orElse(0L)
+    }).sum))
+  })
+
+  val sdfMessages = messagesFromChannels(0)
 
   override val uniqueIdentifier = "SDFApplication"
 

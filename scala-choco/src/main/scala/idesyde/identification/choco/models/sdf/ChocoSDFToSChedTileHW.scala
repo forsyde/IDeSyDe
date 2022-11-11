@@ -25,12 +25,12 @@ import org.chocosolver.solver.search.loop.monitors.IMonitorContradiction
 import org.chocosolver.solver.exception.ContradictionException
 import idesyde.identification.choco.interfaces.ChocoModelMixin
 
-// object ConMonitorObj extends IMonitorContradiction {
+object ConMonitorObj extends IMonitorContradiction {
 
-//   def onContradiction(cex: ContradictionException): Unit = {
-//     println(cex.toString())
-//   }
-// }
+  def onContradiction(cex: ContradictionException): Unit = {
+    println(cex.toString())
+  }
+}
 
 final case class ChocoSDFToSChedTileHW(
     val slower: ChocoSDFToSChedTileHWSlowest
@@ -56,7 +56,7 @@ final case class ChocoSDFToSChedTileHW(
     slower.sdfAnalysisModule.globalInvThroughput
   )
   // chocoModel.getSolver().plugMonitor(listScheduling)
-  // chocoModel.getSolver().plugMonitor(ConMonitorObj)
+  chocoModel.getSolver().plugMonitor(ConMonitorObj)
 
   // breaking symmetries for speed
   private val firingVectors =
@@ -114,7 +114,7 @@ final case class ChocoSDFToSChedTileHW(
     Search.minDomLBSearch(slower.sdfAnalysisModule.invThroughputs: _*),
     Search.minDomLBSearch(slower.sdfAnalysisModule.slotStartTime.flatten: _*),
     Search.minDomLBSearch(slower.sdfAnalysisModule.slotFinishTime.flatten: _*),
-    Search.minDomLBSearch(slower.tileAnalysisModule.virtualChannelForMessage.flatten: _*),
+    Search.minDomLBSearch(slower.tileAnalysisModule.numVirtualChannelsForProcElem.flatten: _*),
     Search.minDomLBSearch(slower.tileAnalysisModule.messageIsCommunicated.flatten.flatten: _*),
     Search.minDomLBSearch(slower.tileAnalysisModule.messageTravelDuration.flatten.flatten: _*)
   ) //++ slower.strategies

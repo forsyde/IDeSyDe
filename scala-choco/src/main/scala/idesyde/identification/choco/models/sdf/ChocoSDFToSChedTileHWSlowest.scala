@@ -40,7 +40,7 @@ final case class ChocoSDFToSChedTileHWSlowest(
     timeValues
       .map(t => t * (timeMultiplier))
       .exists(d =>
-        d.numerator <= d.denominator
+        d.numerator <= d.denominator / 10L
       ) // ensure that the numbers magnitudes still stay sane
     &&
     timeValues
@@ -81,7 +81,7 @@ final case class ChocoSDFToSChedTileHWSlowest(
       )
     ),
     dse.platform.tiledDigitalHardware.commElemsVirtualChannels,
-    dse.platform.tiledDigitalHardware.computeRouterPaths,
+    dse.platform.tiledDigitalHardware.computeRouterPaths
     // dse.platform.tiledDigitalHardware.routerSet.zipWithIndex.map((_, src) =>
     //   dse.platform.tiledDigitalHardware.routerSet.zipWithIndex.map((_, dst) =>
     //     dse.platform.tiledDigitalHardware.commElemsVirtualChannels(
@@ -89,7 +89,7 @@ final case class ChocoSDFToSChedTileHWSlowest(
     //     ) == dse.platform.tiledDigitalHardware.commElemsVirtualChannels(dst)
     //   )
     // ),
-    memoryMappingModule.messagesMemoryMapping
+    // memoryMappingModule.messagesMemoryMapping
   )
 
   val sdfAnalysisModule = SDFSchedulingAnalysisModule(
@@ -127,16 +127,20 @@ final case class ChocoSDFToSChedTileHWSlowest(
   // it would be synthetizeable later. Otherwise the model becomes irrealistic
   memoryMappingModule.processesMemoryMapping.zipWithIndex.foreach((aMap, a) => {
     memoryMappingModule.messagesMemoryMapping.zipWithIndex.foreach((cMap, c) => {
-      if (dse.sdfApplications.sdfBalanceMatrix(c)(a) < 0) {
+      val (s, t, cs, _) = dse.sdfApplications.sdfMessages(c)
+      if (a == t) {
         chocoModel.arithm(aMap, "=", cMap).post()
-      } else if (dse.sdfApplications.sdfBalanceMatrix(c)(a) > 0) {
+      } else if (a == s) {
         // build the table that make this constraint
         dse.platform.schedulerSet.zipWithIndex.foreach((_, sendi) => {
           dse.platform.schedulerSet.zipWithIndex.foreach((_, desti) => {
             if (sendi != desti) {
               chocoModel.ifThen(
-                aMap.eq(sendi).and(cMap.eq(desti)).decompose(),
-                tileAnalysisModule.messageIsCommunicated(c)(sendi)(desti).eq(1).decompose()
+                chocoModel.and(
+                  chocoModel.arithm(aMap, "=", sendi),
+                  chocoModel.arithm(cMap, "=", desti)
+                ),
+                chocoModel.arithm(tileAnalysisModule.messageIsCommunicated(c)(sendi)(desti), "=", 1)
               )
             }
           })
@@ -154,9 +158,9 @@ final case class ChocoSDFToSChedTileHWSlowest(
   // and sdf can be executed in a PE only if its mapped into this PE
   dse.sdfApplications.actorsSet.zipWithIndex.foreach((_, a) => {
     dse.platform.schedulerSet.zipWithIndex.foreach((_, p) => {
-      chocoModel.ifOnlyIf(
-        chocoModel.arithm(memoryMappingModule.processesMemoryMapping(a), "=", p),
-        chocoModel.sum(sdfAnalysisModule.firingsInSlots(a)(p), ">", 0)
+      chocoModel.ifThen(
+        chocoModel.sum(sdfAnalysisModule.firingsInSlots(a)(p), ">", 0),
+        chocoModel.arithm(memoryMappingModule.processesMemoryMapping(a), "=", p)
       )
       // chocoModel.ifThen(
       //   memoryMappingModule.processesMemoryMapping(a).ne(p).decompose(),
@@ -183,7 +187,9 @@ final case class ChocoSDFToSChedTileHWSlowest(
     true
   )
   // make sure the variable counts the number of used
-  chocoModel.atMostNValues(memoryMappingModule.processesMemoryMapping, nUsedPEs, true).post()
+  // chocoModel.atMostNValues(memoryMappingModule.processesMemoryMapping, nUsedPEs, true).post()
+  // chocoModel.atLeastNValues(memoryMappingModule.processesMemoryMapping, nUsedPEs, true).post()
+  chocoModel.nValues(memoryMappingModule.processesMemoryMapping, nUsedPEs).post()
 
   override val modelMinimizationObjectives: Array[IntVar] =
     Array(

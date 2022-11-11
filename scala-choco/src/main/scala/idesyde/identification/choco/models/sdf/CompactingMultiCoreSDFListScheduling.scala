@@ -63,16 +63,19 @@ class CompactingMultiCoreSDFListScheduling(
     */
   def calculateDistanceScore(actor: Int)(scheduler: Int)(slot: Int): Int = {
     var score = 0
-    val disjointComponentActor = sdfApplications.sdfDisjointComponents.indexWhere(comp => comp.contains(actor))
+    val disjointComponentActor =
+      sdfApplications.sdfDisjointComponents.indexWhere(comp => comp.contains(actor))
     // first calculate the distance from current slot to dependent ones
     wfor(0, _ < numActors, _ + 1) { a =>
-      val disjointComponentA = sdfApplications.sdfDisjointComponents.indexWhere(comp => comp.contains(a))
+      val disjointComponentA =
+        sdfApplications.sdfDisjointComponents.indexWhere(comp => comp.contains(a))
       // check whether a is a predecessor of actor in previous slots
       if (a != actor && disjointComponentA == disjointComponentActor) {
         wfor(0, _ <= slot, _ + 1) { slotA =>
           wfor(0, _ < numSchedulers, _ + 1) { p =>
             if (
-              firingsInSlots(a)(p)(slotA).isInstantiated() && firingsInSlots(a)(p)(slotA).getLB() > 0
+              firingsInSlots(a)(p)(slotA)
+                .isInstantiated() && firingsInSlots(a)(p)(slotA).getLB() > 0
             ) {
               score += tileDistances(p)(scheduler)
             }
@@ -83,7 +86,8 @@ class CompactingMultiCoreSDFListScheduling(
       else if (a != actor && disjointComponentA != disjointComponentActor) {
         wfor(0, _ < numSchedulers, _ + 1) { p =>
           if (
-            p != scheduler && firingsInSlots(a)(p)(slot).isInstantiated() && firingsInSlots(a)(p)(slot).getLB() > 0
+            p != scheduler && firingsInSlots(a)(p)(slot)
+              .isInstantiated() && firingsInSlots(a)(p)(slot).getLB() > 0
           ) {
             score -= tileDistances(p)(scheduler)
           }
@@ -94,7 +98,7 @@ class CompactingMultiCoreSDFListScheduling(
   }
 
   private def availableActors(slot: Int): Int = {
-    var num = 0
+    var num          = 0
     var aIsAvailable = false
     wfor(0, _ < numActors, _ + 1) { a =>
       aIsAvailable = false
@@ -111,11 +115,11 @@ class CompactingMultiCoreSDFListScheduling(
   def getDecision(): Decision[IntVar] = {
     // val schedulersShuffled = Random.shuffle(schedulers)
     // normal
-    var bestACompact     = -1
-    var bestPCompact     = -1
-    var bestQCompact     = -1
-    var bestSlotCompact  = slots.size
-    var bestScoreCompact = Int.MaxValue
+    var bestACompact      = -1
+    var bestPCompact      = -1
+    var bestQCompact      = -1
+    var bestSlotCompact   = slots.size
+    var bestScoreCompact  = Int.MaxValue
     var bestCompactMetric = Int.MaxValue
     // normal not-compact
     var bestA     = -1
@@ -138,8 +142,8 @@ class CompactingMultiCoreSDFListScheduling(
     // quick guard for errors and end of schedule
     if (lastSlot >= slots.size - 1) return null
     val earliestOpen = lastSlot + 1
-    val horizon = availableActors(earliestOpen)
-    var d = pool.getE()
+    val horizon      = availableActors(earliestOpen)
+    var d            = pool.getE()
     if (d == null) d = IntDecision(pool)
     // println(s"deciding at $earliestOpen with $horizon")
     wfor(earliestOpen, it => it < numSlots && it <= earliestOpen + horizon, _ + 1) { s =>
@@ -149,10 +153,11 @@ class CompactingMultiCoreSDFListScheduling(
             // compute the best slot otherwise
             // currentComRank = if (currentComRank <= communicationLimiter) then 0 else currentComRank - communicationLimiter
             // chains of lexographic greedy objectives
-            score = invThroughputs(p).getLB() + actorDuration(a)(p) 
-            val globalScore = Math.max(score, globalInvThroughput.getLB())
+            score = invThroughputs(p).getLB() + actorDuration(a)(p)
+            val globalScore     = Math.max(score, globalInvThroughput.getLB())
             val antiCompactness = calculateDistanceScore(a)(p)(s)
-            if (s < bestSlot || 
+            if (
+              s < bestSlot ||
               (s == bestSlot && antiCompactness < bestCompactMetric) ||
               (s == bestSlot && antiCompactness == bestCompactMetric && globalScore < bestScoreCompact)
             ) { // this ensures we load the same cpu first
@@ -185,14 +190,20 @@ class CompactingMultiCoreSDFListScheduling(
     // recomputeMethods.slotsPrettyPrint()
     // recomputeMethods.schedulePrettyPrint()
     // println(invThroughputs.map(_.getLB()).mkString(", ") + " ;; " + globalInvThroughput.getLB())
-    // println("bestCompact:  " + (bestACompact, bestPCompact, bestSlotCompact, bestQCompact, bestScoreCompact, bestCompactMetric))
+    // println(
+    //   "bestCompact:  " + (bestACompact, bestPCompact, bestSlotCompact, bestQCompact, bestScoreCompact, bestCompactMetric)
+    // )
     // println("best:  " + (bestA, bestP, bestSlot, bestQ, bestScore))
     // println(
     //   "bestPenalized:  " + (bestAPenalized, bestPPenalized, bestSlotPenalized, bestQPenalized, bestScorePenalized)
     // )
     if (bestQCompact > 0) {
       // println("adding it!")
-      d.set(firingsInSlots(bestACompact)(bestPCompact)(bestSlotCompact), bestQCompact, DecisionOperatorFactory.makeIntEq())
+      d.set(
+        firingsInSlots(bestACompact)(bestPCompact)(bestSlotCompact),
+        bestQCompact,
+        DecisionOperatorFactory.makeIntEq()
+      )
       d
     } else if (bestQ > 0) {
       // println("adding it!")
@@ -220,7 +231,7 @@ class CompactingMultiCoreSDFListScheduling(
     //   ,
     //   model.arithm(globalInvThroughput, "<", globalInvThroughput.getLB())
     // ).post()
-    
+
     // invThroughputs.zipWithIndex.filter((v, i) => v.getLB() == 0).foreach((v, i) => schedulerWhiteListing(i) = false)
     // if (schedulerWhiteListing.count(p => p) > 1) {
     // }

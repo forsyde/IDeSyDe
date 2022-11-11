@@ -21,6 +21,7 @@ class ParetoMinimizationBrancher(val objectives: Array[IntVar])
   val paretoObjFront = Buffer[Array[Int]]()
 
   override def propagate(evtmask: Int): Unit = {
+    // println(objectives.map(_.toString()).mkString(", "))
     // iterate though the current pareto front
     wfor(0, _ < paretoFront.size, _ + 1) { soli =>
       var count        = numObjs
@@ -34,13 +35,16 @@ class ParetoMinimizationBrancher(val objectives: Array[IntVar])
           lastUnderVal = paretoObjFront(soli)(j)
         }
       }
+      // println(s"$soli : $count -> $lastUnderIdx, $lastUnderVal")
       if (count <= 1) {
         objectives(lastUnderIdx).updateUpperBound(lastUnderVal - 1, this)
-      } 
+      }
     }
   }
 
   override def isEntailed(): ESat = {
+    // println("check entailment")
+    // println(objectives.map(_.getValue()).mkString(", "))
     if (
       paretoObjFront.isEmpty || paretoObjFront.zipWithIndex
         .forall((s, i) => s.zipWithIndex.exists((o, j) => objectives(j).getUB() < o))
@@ -66,5 +70,7 @@ class ParetoMinimizationBrancher(val objectives: Array[IntVar])
     // println("Same frontier")
     paretoFront += model.getSolver().defaultSolution().record()
     paretoObjFront += solObjs
+    // println(paretoObjFront.map(_.mkString(", ")).mkString("\n"))
+    // println(paretoFront.map(_.mkString(", ")).mkString("\n"))
   }
 }

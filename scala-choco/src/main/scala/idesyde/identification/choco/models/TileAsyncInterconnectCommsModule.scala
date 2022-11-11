@@ -27,9 +27,8 @@ class TileAsyncInterconnectCommsModule(
     val messages: Array[Int],
     val messageTravelTimePerVirtualChannel: Array[Array[Int]],
     val numVirtualChannels: Array[Int],
-    val commElemsPaths: Array[Array[Array[Int]]],
+    val commElemsPaths: Array[Array[Array[Int]]]
     // val commElemsMustShareChannel: Array[Array[Boolean]],
-    val messagesMapping: Array[IntVar]
 ) extends ChocoModelMixin() {
 
   private val numProcElems = procElems.size
@@ -41,7 +40,8 @@ class TileAsyncInterconnectCommsModule(
       chocoModel.intVar(
         s"vc($pe,$ce)",
         0,
-        numVirtualChannels(j)
+        numVirtualChannels(j),
+        true
       )
     })
   })
@@ -114,7 +114,7 @@ class TileAsyncInterconnectCommsModule(
         chocoModel.arithm(
           travelTimePerCE(c)(commElems.indexOf(ce)),
           "=",
-          chocoModel.intVar(numVirtualChannels(commElems.indexOf(ce))),
+          chocoModel.intVar(messageTravelTimePerVirtualChannel(c)(commElems.indexOf(ce))),
           "/",
           numVirtualChannelsForProcElem(src)(commElems.indexOf(ce))
         ),

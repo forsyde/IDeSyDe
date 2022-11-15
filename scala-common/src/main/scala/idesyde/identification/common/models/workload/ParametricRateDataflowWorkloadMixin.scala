@@ -64,7 +64,11 @@ trait ParametricRateDataflowWorkloadMixin {
     * This is important to correctly calculate repetition vectors in analytical methods.
     */
   def disjointComponents: Array[Array[Array[Int]]] = dataflowGraphs.map(g => {
-    ConnectivityInspector(AsUndirectedGraph(g)).connectedSets().asScala.map(s => s.asScala.toArray).toArray
+    ConnectivityInspector(AsUndirectedGraph(g))
+      .connectedSets()
+      .asScala
+      .map(s => s.asScala.toArray)
+      .toArray
   })
 
   def computeBalanceMatrices = dataflowGraphs.map(g => {
@@ -171,22 +175,29 @@ trait ParametricRateDataflowWorkloadMixin {
       .reduce((i1, i2) => spire.math.lcm(i1, i2))
     rates.map(_ * lcmV / gcdV).map(_.numerator.toInt)
   })
-  lazy val repetitionVectors = computeRepetitionVectors
+  // lazy val repetitionVectors = computeRepetitionVectors
   // computeBalanceMatrices.zipWithIndex.map((m, ind) => SDFUtils.getRepetitionVector(m, initialTokens, numDisjointComponents(ind)))
 
-  def isConsistent = repetitionVectors.forall(r => r.size == actorsSet.size)
+  def isConsistent = computeRepetitionVectors.forall(r => r.size == actorsSet.size)
 
   def isLive = maximalParallelClustering.zipWithIndex.map((cluster, i) => !cluster.isEmpty)
 
   def pessimisticTokensPerChannel: Array[Int] = {
+    val repetitionVectors = computeRepetitionVectors
     channelsSet.zipWithIndex.map((c, cIdx) => {
       var pessimisticMax = 1
       dataflowGraphs.zipWithIndex
         .foreach((g, confIdx) => {
-          g.incomingEdgesOf(c).forEach(e => {
-            val aIdx = actorsSet.indexOf(g.getEdgeSource(e))
-            pessimisticMax = Math.max(repetitionVectors(confIdx)(aIdx) * balanceMatrices(confIdx)(cIdx)(aIdx) + initialTokens(cIdx), pessimisticMax)
-          })
+          g.incomingEdgesOf(c)
+            .forEach(e => {
+              val aIdx = actorsSet.indexOf(g.getEdgeSource(e))
+              pessimisticMax = Math.max(
+                repetitionVectors(confIdx)(aIdx) * balanceMatrices(confIdx)(cIdx)(
+                  aIdx
+                ) + initialTokens(cIdx),
+                pessimisticMax
+              )
+            })
         })
       pessimisticMax
     })
@@ -237,12 +248,14 @@ trait ParametricRateDataflowWorkloadMixin {
   }
 
   /** returns the cluster of actor firings that have zero time execution time and can fire in
-    * parallel, until all the firings are exhausted in accordance to the [[computeRepetitionVectors]]
+    * parallel, until all the firings are exhausted in accordance to the
+    * [[computeRepetitionVectors]]
     *
     * This is also used to check the liveness of each configuration. If a configuration is not live,
     * then its clusters are empty, since at the very least one should exist.
     */
-  def maximalParallelClustering: Array[Array[Array[Int]]] =
+  def maximalParallelClustering: Array[Array[Array[Int]]] = {
+    val repetitionVectors = computeRepetitionVectors
     dataflowGraphs.zipWithIndex.map((g, gi) => {
       val actors                               = 0 until actorsSet.size
       val channels                             = 0 until channelsSet.size
@@ -284,4 +297,5 @@ trait ParametricRateDataflowWorkloadMixin {
       }
       executions.map(_.data).toArray
     })
+  }
 }

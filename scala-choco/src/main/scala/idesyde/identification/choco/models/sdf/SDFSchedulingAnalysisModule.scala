@@ -250,7 +250,7 @@ class SDFSchedulingAnalysisModule(
             chocoModel.ifThen(
               chocoModel.and(
                 chocoModel.arithm(firingsInSlots(a)(p)(s), ">", 0),
-                chocoModel.arithm(tileAsyncModule.messageIsCommunicated(c)(pOther)(p), ">", 0)
+                chocoModel.arithm(tileAsyncModule.procElemSendsDataToAnother(pOther)(p), ">", 0)
               ),
               chocoModel.arithm(
                 slotStartTime(p)(s),

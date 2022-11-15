@@ -40,12 +40,12 @@ final case class ChocoSDFToSChedTileHWSlowest(
     timeValues
       .map(t => t * (timeMultiplier))
       .exists(d =>
-        d.numerator <= d.denominator / 10L
+        d.numerator <= d.denominator / 100L
       ) // ensure that the numbers magnitudes still stay sane
     &&
     timeValues
       .map(t => t * (timeMultiplier))
-      .sum < Int.MaxValue / 20 - 1
+      .sum < Int.MaxValue / 100 - 1
   ) {
     timeMultiplier *= 10
   }
@@ -140,7 +140,7 @@ final case class ChocoSDFToSChedTileHWSlowest(
                   chocoModel.arithm(aMap, "=", sendi),
                   chocoModel.arithm(cMap, "=", desti)
                 ),
-                chocoModel.arithm(tileAnalysisModule.messageIsCommunicated(c)(sendi)(desti), "=", 1)
+                chocoModel.arithm(tileAnalysisModule.procElemSendsDataToAnother(sendi)(desti), "=", 1)
               )
             }
           })
@@ -195,6 +195,7 @@ final case class ChocoSDFToSChedTileHWSlowest(
     Array(
       nUsedPEs,
       sdfAnalysisModule.globalInvThroughput
+      // chocoModel.max("maximumBuffer", sdfAnalysisModule.slotRange.map(s => chocoModel.sum(s"tokensAt($s)", sdfAnalysisModule.tokens.map(bc => bc(s)):_*)))
     )
   //---------
 

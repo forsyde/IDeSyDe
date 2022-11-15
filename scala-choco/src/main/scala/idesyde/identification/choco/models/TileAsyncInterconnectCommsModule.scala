@@ -46,16 +46,15 @@ class TileAsyncInterconnectCommsModule(
     })
   })
 
-  val messageIsCommunicated: Array[Array[Array[BoolVar]]] = messages.map(c => {
+  val procElemSendsDataToAnother: Array[Array[BoolVar]] = 
     procElems.zipWithIndex.map((src, i) => {
       procElems.zipWithIndex.map((dst, j) => {
         if (!commElemsPaths(i)(j).isEmpty)
-          chocoModel.boolVar(s"send($c,${i},${j})")
+          chocoModel.boolVar(s"sendsData(${i},${j})")
         else
-          chocoModel.boolVar(s"send($c,${i},${j})", false)
+          chocoModel.boolVar(s"sendsData(${i},${j})", false)
       })
     })
-  })
 
   val messageTravelDuration: Array[Array[Array[IntVar]]] = messages.zipWithIndex.map((c, ci) => {
     procElems.zipWithIndex.map((src, i) => {
@@ -72,11 +71,11 @@ class TileAsyncInterconnectCommsModule(
     })
   })
 
-  private val travelTimePerCE: Array[Array[IntVar]] = messages.zipWithIndex.map((c, ci) => {
-    commElems.zipWithIndex.map((ce, j) => {
-      chocoModel.intVar(s"traveltime($ci, $j)", 0, messageTravelTimePerVirtualChannel(ci)(j), true)
-    })
-  })
+  // private val travelTimePerCE: Array[Array[IntVar]] = messages.zipWithIndex.map((c, ci) => {
+  //   commElems.zipWithIndex.map((ce, j) => {
+  //     chocoModel.intVar(s"traveltime($ci, $j)", 0, messageTravelTimePerVirtualChannel(ci)(j), true)
+  //   })
+  // })
 
   // val messagesClashAtComm: Array[Array[Array[BoolVar]]] =  messages.map(mi =>
   //   messages.map(mj =>
@@ -102,29 +101,53 @@ class TileAsyncInterconnectCommsModule(
       src <- 0 until numProcElems;
       dst <- 0 until numProcElems;
       if src != dst;
-      c  <- 0 until numMessages;
+      // c  <- 0 until numMessages;
       ce <- commElemsPaths(src)(dst)
     ) {
       chocoModel.ifThen(
-        messageIsCommunicated(c)(src)(dst),
+        procElemSendsDataToAnother(src)(dst),
         chocoModel.arithm(numVirtualChannelsForProcElem(src)(commElems.indexOf(ce)), ">", 0)
       )
-      chocoModel.ifThenElse(
-        messageIsCommunicated(c)(src)(dst),
-        chocoModel.arithm(
-          travelTimePerCE(c)(commElems.indexOf(ce)),
-          "=",
-          chocoModel.intVar(messageTravelTimePerVirtualChannel(c)(commElems.indexOf(ce))),
-          "/",
-          numVirtualChannelsForProcElem(src)(commElems.indexOf(ce))
-        ),
-        chocoModel.arithm(travelTimePerCE(c)(commElems.indexOf(ce)), "=", 0)
-      )
+    }
+    for (
+      src <- 0 until numProcElems;
+      dst <- 0 until numProcElems;
+      if src != dst;
+      c <- 0 until numMessages
+    ) {
+      val singleChannelSum = commElemsPaths(src)(dst)
+          .map(ce => messageTravelTimePerVirtualChannel(c)(commElems.indexOf(ce))).sum
+      val minVCInPath = chocoModel.min(s"minVCInPath($src, $dst)", commElemsPaths(src)(dst)
+          .map(ce => numVirtualChannelsForProcElem(src)(commElems.indexOf(ce))):_*)
+      chocoModel.arithm(
+        messageTravelDuration(c)(src)(dst),
+        ">=",
+        chocoModel.intVar(singleChannelSum),
+        "/",
+        minVCInPath
+      ).post()
+    }
+      // for (
+      //   c <- 0 until numMessages
+      // ) {
+      //   chocoModel.ifThenElse(
+      //     procElemSendsDataToAnother(src)(dst),
+      //     chocoModel.arithm(
+      //       travelTimePerCE(c)(commElems.indexOf(ce)),
+      //       "=",
+      //       chocoModel.intVar(messageTravelTimePerVirtualChannel(c)(commElems.indexOf(ce))),
+      //       "/",
+      //       numVirtualChannelsForProcElem(src)(commElems.indexOf(ce))
+      //     ),
+      //     chocoModel.arithm(travelTimePerCE(c)(commElems.indexOf(ce)), "=", 0)
+      //   )
+      // }
+    // }
+
       // chocoModel.ifThen(
       //   chocoModel.arithm(messageIsCommunicated(c)(src)(dst), "=", 0),
       //   chocoModel.arithm(virtualChannelForMessage(c)(commElems.indexOf(ce)), "=", 0)
       // )
-    }
     // if two communicating actors are in different tiles,
     // they must communicate
     // for (
@@ -171,22 +194,22 @@ class TileAsyncInterconnectCommsModule(
     // }
 
     // and finally, we calculate the travel time, for each message, between each src and dst
-    for (
-      m   <- 0 until numMessages;
-      src <- 0 until numProcElems;
-      dst <- 0 until numProcElems;
-      if src != dst && !commElemsPaths(src)(dst).isEmpty
-    ) {
-      chocoModel.ifThen(
-        messageIsCommunicated(m)(src)(dst),
-        chocoModel.sum(
-          commElemsPaths(src)(dst)
-            .map(ce => travelTimePerCE(m)(commElems.indexOf(ce))),
-          "=",
-          messageTravelDuration(m)(src)(dst)
-        )
-      )
-    }
+    // for (
+    //   m   <- 0 until numMessages;
+    //   src <- 0 until numProcElems;
+    //   dst <- 0 until numProcElems;
+    //   if src != dst && !commElemsPaths(src)(dst).isEmpty
+    // ) {
+    //   chocoModel.sum(
+    //     commElemsPaths(src)(dst)
+    //       .map(ce => travelTimePerCE(m)(commElems.indexOf(ce))),
+    //     "=",
+    //     messageTravelDuration(m)(src)(dst)
+    //   ).post()
+    //   // chocoModel.ifThen(
+    //   //   procElemSendsDataToAnother(src)(dst),
+    //   // )
+    // }
 
     //   chocoModel.post(
     //     new Constraint(

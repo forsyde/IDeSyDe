@@ -82,32 +82,56 @@ final case class ChocoSDFToSChedTileHW(
   }
 
   // breaking platform symmetries
-  // val mappingsPerPe = slower.dse.platform.schedulerSet.map(p => chocoModel.count(s"mappedToPe($p)", p, slower.memoryMappingModule.processesMemoryMapping:_*))
-  // slower.dse.platform.tiledDigitalHardware.symmetricTileGroups
-  //   .maxByOption(_.size)
-  //   .foreach(group => {
-  //     for (
-  //       a     <- slower.dse.sdfApplications.actorsSet;
-  //       s     <- slower.sdfAnalysisModule.slotRange;
-  //       p     <- group;
-  //       other <- group - p;
-  //       others = (group - p - other)
-  //       if others.size > 2
-  //     ) {
-  //       chocoModel.ifThen(
-  //         chocoModel.and(
-  //           chocoModel.arithm(slower.sdfAnalysisModule.firingsInSlots(a)(p)(s), "=", 0),
-  //           chocoModel.arithm(slower.sdfAnalysisModule.firingsInSlots(a)(other)(s), "=", 0)
-  //         ),
-  //         chocoModel.sum(others.map(slower.sdfAnalysisModule.firingsInSlots(a)(_)(s)).toArray, "=", 0)
-  //       )
-  //     }
-  //     // chocoModel.decreasing(group.toArray.sorted.map(tile => mappingsPerPe(tile)), 0).post()
-  //     // val lowestNumbered = group.min
-  //     // for (other <- group.filter(_ != lowestNumbered)) {
-  //     //   chocoModel.arithm(mappingsPerPe(lowestNumbered), ">=", mappingsPerPe(other)).post()
-  //     // }
-  //   })
+  val mappingsPerPe = slower.dse.platform.schedulerSet.map(p => chocoModel.count(s"mappedToPe($p)", p, slower.memoryMappingModule.processesMemoryMapping:_*))
+  slower.dse.platform.tiledDigitalHardware.symmetricTileGroups
+    .maxByOption(_.size)
+    .foreach(group => {
+      val pSorted = group.toArray.sorted
+      for (p <- pSorted.drop(1)) {
+        chocoModel.arithm(mappingsPerPe(pSorted(0)), ">=", mappingsPerPe(p)).post()
+      }
+      
+      // chocoModel.count("countForFirstSymemtricProc", pSorted(0), slower.memoryMappingModule.processesMemoryMapping:_*).ge(1).post()
+      // for (
+      //   (aSorted, i) <- slower.dse.sdfApplications.decreasingActorConsumptionOrder.zipWithIndex;
+      //   (p,j) <- pSorted.zipWithIndex
+      // ) {
+      //   val higherPForbidden = pSorted.drop(j + 1).flatMap(pp => slower.dse.sdfApplications.decreasingActorConsumptionOrder.)
+      //   chocoModel.ifThen(
+      //     slower.sdfAnalysisModule.firingsInSlots(aSorted)(p)(0),
+      //     chocoModel.and(
+      //       chocoModel.sum(slower.dse.sdfApplications.decreasingActorConsumptionOrder.take(i).map(slower.sdfAnalysisModule.firingsInSlots(_)()))
+      //     )
+      //   )
+      // }
+      // for (
+      //   (p, i)     <- pSorted.zipWithIndex;
+      //   (pp, j) <- pSorted.zipWithIndex
+      // ) {
+      //   if (i < j) {
+      //     for (
+      //       (aMap, k) <- slower.memoryMappingModule.processesMemoryMapping.zipWithIndex.sortBy((a, i) => slower.dse.sdfApplications.decreasingActorConsumptionOrder(i));
+      //       (aaMap, l) <- slower.memoryMappingModule.processesMemoryMapping.zipWithIndex.sortBy((a, i) => slower.dse.sdfApplications.decreasingActorConsumptionOrder(i))
+      //     ) {
+
+      //     }
+      //   } else if (i > j) {
+
+      //   }
+      //   chocoModel.ifThen(
+      //     chocoModel.and(
+      //       chocoModel.arithm(slower.sdfAnalysisModule.firingsInSlots(a)(p)(s), "=", 0),
+      //       chocoModel.arithm(slower.sdfAnalysisModule.firingsInSlots(a)(other)(s), "=", 0)
+      //     ),
+      //     chocoModel.sum(others.map(slower.sdfAnalysisModule.firingsInSlots(a)(_)(s)).toArray, "=", 0)
+      //   )
+      // }
+      // chocoModel.decreasing(group.toArray.sorted.map(tile => mappingsPerPe(tile)), 0).post()
+      // val lowestNumbered = group.min
+      // for (other <- group.filter(_ != lowestNumbered)) {
+      //   chocoModel.arithm(mappingsPerPe(lowestNumbered), ">=", mappingsPerPe(other)).post()
+      // }
+    })
 
   override val strategies: Array[AbstractStrategy[? <: Variable]] = Array(
     listScheduling,
@@ -116,7 +140,7 @@ final case class ChocoSDFToSChedTileHW(
     Search.minDomLBSearch(slower.sdfAnalysisModule.slotStartTime.flatten: _*),
     Search.minDomLBSearch(slower.sdfAnalysisModule.slotFinishTime.flatten: _*),
     Search.minDomLBSearch(slower.tileAnalysisModule.numVirtualChannelsForProcElem.flatten: _*),
-    Search.minDomLBSearch(slower.tileAnalysisModule.messageIsCommunicated.flatten.flatten: _*),
+    Search.minDomLBSearch(slower.tileAnalysisModule.procElemSendsDataToAnother.flatten: _*),
     Search.minDomLBSearch(slower.tileAnalysisModule.messageTravelDuration.flatten.flatten: _*)
   ) //++ slower.strategies
 

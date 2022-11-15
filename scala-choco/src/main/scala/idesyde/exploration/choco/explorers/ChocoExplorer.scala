@@ -154,6 +154,7 @@ class ChocoExplorer() extends ForSyDeIOExplorer:
         .takeWhile(feasible => feasible)
         // .filter(feasible => feasible)
         .map(_ => {
+          // scribe.debug(s"Current heap memory used: ${Runtime.getRuntime().totalMemory() - Runtime.getRuntime().freeMemory()} bytes")
           solver.defaultSolution()
         })
         .map(paretoSolution => {

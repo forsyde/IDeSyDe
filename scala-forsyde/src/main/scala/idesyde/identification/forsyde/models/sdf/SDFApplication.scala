@@ -25,6 +25,7 @@ import org.jgrapht.graph.AsSubgraph
 import java.util.stream.Collectors
 import org.jgrapht.graph.SimpleDirectedWeightedGraph
 import spire.math.*
+import scala.collection.mutable.Buffer
 
 final case class SDFApplication(
     val actors: Array[SDFActor],
@@ -58,17 +59,12 @@ final case class SDFApplication(
     actors.zipWithIndex.foreach((a, i) => {
       channels.zipWithIndex.foreach((c, prej) => {
         val j = channelsSet(prej)
-        topology.getAllEdges(a, c).forEach(p => 
-          g.addEdge(i, j, topology.getEdgeWeight(p).toInt)
-          )
-        topology.getAllEdges(c, a).forEach(p => 
-          g.addEdge(j, i, topology.getEdgeWeight(p).toInt)
-          )
+        topology.getAllEdges(a, c).forEach(p => g.addEdge(i, j, topology.getEdgeWeight(p).toInt))
+        topology.getAllEdges(c, a).forEach(p => g.addEdge(j, i, topology.getEdgeWeight(p).toInt))
       })
     })
     Array(g.buildAsUnmodifiable())
   }
-
 
   val configurations = {
     val g = DefaultDirectedGraph.createBuilder[Int, DefaultEdge](() => DefaultEdge())
@@ -76,7 +72,9 @@ final case class SDFApplication(
     g.buildAsUnmodifiable
   }
 
-  /** this is a simple shortcut for the balance matrix (originally called topology matrix) as SDFs have only one configuration */
+  /** this is a simple shortcut for the balance matrix (originally called topology matrix) as SDFs
+    * have only one configuration
+    */
   val sdfBalanceMatrix: Array[Array[Int]] = computeBalanceMatrices(0)
 
   /** this is a simple shortcut for the repetition vectors as SDFs have only one configuration */
@@ -145,8 +143,6 @@ final case class SDFApplication(
         .sum
   )
 
-  
-
   val messagesMaxSizes: Array[Long] = channels.zipWithIndex.map((c, i) =>
     pessimisticTokensPerChannel(i) * TokenizableDataBlock
       .safeCast(c)
@@ -156,34 +152,64 @@ final case class SDFApplication(
 
   val sdfDisjointComponents = disjointComponents.head
 
-
-  val decreasingActorConsumptionOrder = actorsSet.sortBy(a => {
-    sdfBalanceMatrix.zipWithIndex.filter((vec, c) => vec(a) < 0).map((vec, c) => - TokenizableDataBlock
-      .safeCast(channels(c))
-      .map(d => d.getTokenSizeInBits())
-      .orElse(0L) * vec(a)).sum
-  }).reverse
-
+  val decreasingActorConsumptionOrder = actorsSet
+    .sortBy(a => {
+      sdfBalanceMatrix.zipWithIndex
+        .filter((vec, c) => vec(a) < 0)
+        .map((vec, c) =>
+          -TokenizableDataBlock
+            .safeCast(channels(c))
+            .map(d => d.getTokenSizeInBits())
+            .orElse(0L) * vec(a)
+        )
+        .sum
+    })
+    .reverse
 
   val messagesFromChannels = dataflowGraphs.map(df => {
-    actorsSet.flatMap(src => {
-      actorsSet.map(dst => {
-        (src, dst, 
-        channelsSet.filter(c => df.containsEdge(src, c) && df.containsEdge(c, dst))
-        )
+    actorsSet
+      .flatMap(src => {
+        actorsSet.map(dst => {
+          (src, dst, channelsSet.filter(c => df.containsEdge(src, c) && df.containsEdge(c, dst)))
+        })
       })
-    })
-    .filter((s, d, cs) => cs.size > 0)
-    .map((s, d, cs) => 
-      (s, d, cs, cs.map(c => {
-      sdfBalanceMatrix(c - actors.size)(s) * TokenizableDataBlock
-        .safeCast(channels(c - actors.size))
-        .map(d => d.getTokenSizeInBits().toLong)
-        .orElse(0L)
-    }).sum))
+      .filter((s, d, cs) => cs.size > 0)
+      .map((s, d, cs) =>
+        (
+          s,
+          d,
+          cs,
+          cs.map(c => {
+            sdfBalanceMatrix(c - actors.size)(s) * TokenizableDataBlock
+              .safeCast(channels(c - actors.size))
+              .map(d => d.getTokenSizeInBits().toLong)
+              .orElse(0L)
+          }).sum
+        )
+      )
   })
 
   val sdfMessages = messagesFromChannels(0)
+
+  /** This graph serves the same purpose as the common HSDF transformation, but simply stores
+    * precedences between firings instead of data movement.
+    */
+  lazy val firingsPrecedenceGraph = {
+    // val firings = sdfRepetitionVectors.zipWithIndex.map((a, q) => (1 to q).map(qa => (a, qa)))
+    val firings = sdfRepetitionVectors.zipWithIndex.flatMap((a, q) => (1 to q).map(qa => (a, qa)))
+    var edges   = Buffer[((Int, Int), (Int, Int))]()
+    for ((vec, c) <- sdfBalanceMatrix.zipWithIndex) {
+      val src = vec.indexWhere(_ > 0)
+      val dst = vec.indexWhere(_ < 0)
+      for (
+        qDst <- 1 to sdfRepetitionVectors(dst);
+        qSrc = Rational(-vec(dst) * qDst, vec(src)) - initialTokens(c);
+        if qSrc > 0
+      ) {
+        edges +:= ((src, qSrc.toInt), (dst, qDst))
+      }
+    }
+  }
 
   override val uniqueIdentifier = "SDFApplication"
 

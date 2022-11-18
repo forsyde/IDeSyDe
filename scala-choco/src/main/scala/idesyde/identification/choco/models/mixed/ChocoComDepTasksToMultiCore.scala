@@ -93,44 +93,44 @@ final case class ChocoComDepTasksToMultiCore(
     dse.platform.hardware.processingElems.map(p => dse.maxUtilizations.getOrElse(p, Rational(1)))
   val taskSizes = dse.workload.processSizes.map(CoreUtils.ceil(_, memoryDivider)).map(_.toInt)
   val messageSizes =
-    dse.taskModel.messageQueuesSizes.map(CoreUtils.ceil(_, memoryDivider)).map(_.toInt)
-  val storageSizes = dse.schedHwModel.hardware.storageElems
+    dse.workload.messageQueuesSizes.map(CoreUtils.ceil(_, memoryDivider)).map(_.toInt)
+  val storageSizes = dse.platform.hardware.storageElems
     .map(m => CoreUtils.ceil(m.getSpaceInBits(), memoryDivider))
     .map(_.toInt)
-  val canBeFollowedBy = dse.taskModel.interTaskOccasionalBlock
-  val taskTravelTime = dse.taskModel.taskSizes.map(d =>
-    dse.schedHwModel.hardware.communicationModuleBandWidthBitPerSec.map(b =>
+  val canBeFollowedBy = dse.workload.interTaskOccasionalBlock
+  val taskTravelTime = dse.workload.taskSizes.map(d =>
+    dse.platform.hardware.communicationModuleBandWidthBitPerSec.map(b =>
       // TODO: check if this is truly conservative (pessimistic) or not
       (d / b / timeMultiplier / memoryDivider).ceil.toInt
     )
   )
-  val dataTravelTime = dse.taskModel.dataBlocks.map(d =>
+  val dataTravelTime = dse.workload.dataBlocks.map(d =>
     dse.schedHwModel.hardware.communicationModuleBandWidthBitPerSec.map(b =>
       // TODO: check if this is truly conservative (pessimistic) or not
       (d.getMaxSizeInBits.toLong / b / (timeMultiplier)
         / (memoryDivider)).ceil.toInt
     )
   )
-  val taskReadsData  = dse.taskModel.taskReadsMessageQueue
-  val taskWritesData = dse.taskModel.taskWritesMessageQueue
+  val taskReadsData  = dse.workload.taskReadsMessageQueue
+  val taskWritesData = dse.workload.taskWritesMessageQueue
   val allowedProc2MemoryDataPaths =
     dse.schedHwModel.hardware.routesProc2Memory
 
   // build the model so that it can be acessed later
   // memory module
-  val taskMapping = dse.taskModel.tasks.zipWithIndex.map((t, i) =>
+  val taskMapping = dse.workload.tasks.zipWithIndex.map((t, i) =>
     chocoModel.intVar(
       "task_map_" + t.getViewedVertex.getIdentifier,
       dse.schedHwModel.hardware.storageElems.zipWithIndex
-        .filter((m, j) => dse.taskModel.taskSizes(i) <= m.getSpaceInBits)
+        .filter((m, j) => dse.workload.taskSizes(i) <= m.getSpaceInBits)
         .map((m, j) => j)
     )
   )
-  val dataBlockMapping = dse.taskModel.dataBlocks.zipWithIndex.map((c, i) =>
+  val dataBlockMapping = dse.workload.dataBlocks.zipWithIndex.map((c, i) =>
     chocoModel.intVar(
       "data_map_" + c.getViewedVertex.getIdentifier,
       dse.schedHwModel.hardware.storageElems.zipWithIndex
-        .filter((m, j) => dse.taskModel.messageQueuesSizes(i) <= m.getSpaceInBits)
+        .filter((m, j) => dse.workload.messageQueuesSizes(i) <= m.getSpaceInBits)
         .map((m, j) => j)
     )
   )
@@ -142,7 +142,7 @@ final case class ChocoComDepTasksToMultiCore(
   )
 
   // timing
-  val taskExecution = dse.taskModel.tasks.zipWithIndex.map((t, i) =>
+  val taskExecution = dse.workload.tasks.zipWithIndex.map((t, i) =>
     chocoModel.intVar(
       "task_map_" + t.getViewedVertex.getIdentifier,
       dse.schedHwModel.hardware.storageElems.zipWithIndex
@@ -151,7 +151,7 @@ final case class ChocoComDepTasksToMultiCore(
     )
   )
   val responseTimes =
-    dse.taskModel.tasks.zipWithIndex.map((t, i) =>
+    dse.workload.tasks.zipWithIndex.map((t, i) =>
       chocoModel.intVar(
         "rt_" + t.getViewedVertex.getIdentifier,
         // minimum WCET possible
@@ -165,7 +165,7 @@ final case class ChocoComDepTasksToMultiCore(
       )
     )
   val blockingTimes =
-    dse.taskModel.tasks.zipWithIndex.map((t, i) =>
+    dse.workload.tasks.zipWithIndex.map((t, i) =>
       chocoModel.intVar(
         "bt_" + t.getViewedVertex.getIdentifier,
         // minimum WCET possible
@@ -183,7 +183,7 @@ final case class ChocoComDepTasksToMultiCore(
     canBeFollowedBy
   )
 
-  val taskCommMapping = dse.taskModel.tasks.zipWithIndex.map((t, i) =>
+  val taskCommMapping = dse.workload.tasks.zipWithIndex.map((t, i) =>
     dse.schedHwModel.hardware.communicationElems.zipWithIndex.map((ce, j) =>
       chocoModel.boolVar(
         "tcom_map_" + t.getViewedVertex.getIdentifier + "_comm_" + ce.getIdentifier
@@ -191,7 +191,7 @@ final case class ChocoComDepTasksToMultiCore(
     )
   )
   val dataBlockCommMapping =
-    dse.taskModel.dataBlocks.zipWithIndex.map((c, i) =>
+    dse.workload.dataBlocks.zipWithIndex.map((c, i) =>
       dse.schedHwModel.hardware.communicationElems.zipWithIndex.map((ce, j) =>
         chocoModel.boolVar(
           "dcom_map_" + c.getViewedVertex.getIdentifier + "_comm_" + ce.getIdentifier
@@ -256,7 +256,7 @@ final case class ChocoComDepTasksToMultiCore(
       fixedPriorityConstraintsModule.postFixedPrioriPreemtpiveConstraint(j)
     })
   // for each SC scheduler
-  dse.taskModel.tasks.zipWithIndex.foreach((task, i) => {
+  dse.workload.tasks.zipWithIndex.foreach((task, i) => {
     dse.schedHwModel.allocatedSchedulers.zipWithIndex
       .filter((s, j) => dse.schedHwModel.isStaticCycle(j))
       .foreach((s, j) => {
@@ -311,7 +311,7 @@ final case class ChocoComDepTasksToMultiCore(
                     .filter((ws, k) => k != taskIdx)
                     .filterNot((ws, k) =>
                       // leave tasks k which i occasionally block
-                      dse.taskModel.interTaskAlwaysBlocks(taskIdx)(k)
+                      dse.workload.interTaskAlwaysBlocks(taskIdx)(k)
                     )
                     .map((w, k) => w(schedulerIdx))
                     .toArray: _*
@@ -346,7 +346,7 @@ final case class ChocoComDepTasksToMultiCore(
 
   def rebuildFromChocoOutput(output: Solution): ForSyDeSystemGraph = {
     val rebuilt = ForSyDeSystemGraph()
-    dse.taskModel.tasks.zipWithIndex.foreach((t, i) => {
+    dse.workload.tasks.zipWithIndex.foreach((t, i) => {
       rebuilt.addVertex(t.getViewedVertex)
       val analysed         = AnalysedTask.enforce(t)
       val responseTimeFrac = Rational(responseTimes(i).getValue(), timeMultiplier)
@@ -359,7 +359,7 @@ final case class ChocoComDepTasksToMultiCore(
       analysed.setWorstCaseBlockingTimeDenominatorInSecs(blockingTimeFrac.denominator.toLong)
 
     })
-    dse.taskModel.dataBlocks.foreach(t => rebuilt.addVertex(t.getViewedVertex))
+    dse.workload.dataBlocks.foreach(t => rebuilt.addVertex(t.getViewedVertex))
     dse.schedHwModel.allocatedSchedulers.foreach(s => rebuilt.addVertex(s.getViewedVertex))
     dse.schedHwModel.hardware.storageElems.foreach(m => rebuilt.addVertex(m.getViewedVertex))
     dse.schedHwModel.hardware.processingElems.zipWithIndex.foreach((m, j) =>
@@ -379,7 +379,7 @@ final case class ChocoComDepTasksToMultiCore(
     taskExecution.zipWithIndex.foreach((exe, i) => {
       dse.schedHwModel.allocatedSchedulers.zipWithIndex.foreach((scheduler, j) =>
         // val j         = output.getIntVal(exe)
-        val task      = dse.taskModel.tasks(i)
+        val task      = dse.workload.tasks(i)
         val scheduler = dse.schedHwModel.allocatedSchedulers(j)
         Scheduled.enforce(task).insertSchedulersPort(rebuilt, scheduler)
         GreyBox.enforce(scheduler).insertContainedPort(rebuilt, Visualizable.enforce(task))
@@ -387,7 +387,7 @@ final case class ChocoComDepTasksToMultiCore(
     })
     taskMapping.zipWithIndex.foreach((mapping, i) => {
       val j      = mapping.getValue() // output.getIntVal(mapping)
-      val task   = dse.taskModel.tasks(i)
+      val task   = dse.workload.tasks(i)
       val memory = dse.schedHwModel.hardware.storageElems(j)
       MemoryMapped.enforce(task).insertMappingHostsPort(rebuilt, memory)
       // rebuilt.connect(task, memory, "mappingHost", EdgeTrait.DECISION_ABSTRACTMAPPING)
@@ -396,7 +396,7 @@ final case class ChocoComDepTasksToMultiCore(
     })
     dataBlockMapping.zipWithIndex.foreach((mapping, i) => {
       val j       = mapping.getValue() // output.getIntVal(mapping)
-      val channel = dse.taskModel.dataBlocks(i)
+      val channel = dse.workload.dataBlocks(i)
       val memory  = dse.schedHwModel.hardware.storageElems(j)
       MemoryMapped.enforce(channel).insertMappingHostsPort(rebuilt, memory)
       // rebuilt.connect(channel, memory, "mappingHost", EdgeTrait.DECISION_ABSTRACTMAPPING)
@@ -408,8 +408,8 @@ final case class ChocoComDepTasksToMultiCore(
 
   def allMemorySizeNumbers() =
     (dse.schedHwModel.hardware.storageElems.map(_.getSpaceInBits.toLong) ++
-      dse.taskModel.messageQueuesSizes ++
-      dse.taskModel.taskSizes).filter(_ > 0L)
+      dse.workload.messageQueuesSizes ++
+      dse.workload.taskSizes).filter(_ > 0L)
 
   val uniqueIdentifier = "PeriodicTaskToSchedHWChoco"
 

@@ -27,6 +27,9 @@ import org.jgrapht.graph.SimpleDirectedWeightedGraph
 import spire.math.*
 import scala.collection.mutable.Buffer
 
+import scalax.collection.GraphPredef._
+import scalax.collection.edge.Implicits._
+
 final case class SDFApplication(
     val actors: Array[SDFActor],
     val channels: Array[SDFChannel],
@@ -209,6 +212,11 @@ final case class SDFApplication(
         edges +:= ((src, qSrc.toInt), (dst, qDst))
       }
     }
+    for (a <- 0 until actorsSet.length; q <- 1 to sdfRepetitionVectors(a) - 1) {
+      edges +:= ((a, q), (a, q + 1))
+    }
+    val param = edges.map((s, t) => (s ~> t)).toArray
+    scalax.collection.Graph(param: _*)
   }
 
   override val uniqueIdentifier = "SDFApplication"

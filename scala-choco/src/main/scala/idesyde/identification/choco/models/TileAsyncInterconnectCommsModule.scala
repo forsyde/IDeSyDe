@@ -46,7 +46,7 @@ class TileAsyncInterconnectCommsModule(
     })
   })
 
-  val procElemSendsDataToAnother: Array[Array[BoolVar]] = 
+  val procElemSendsDataToAnother: Array[Array[BoolVar]] =
     procElems.zipWithIndex.map((src, i) => {
       procElems.zipWithIndex.map((dst, j) => {
         if (!commElemsPaths(i)(j).isEmpty)
@@ -116,38 +116,50 @@ class TileAsyncInterconnectCommsModule(
       c <- 0 until numMessages
     ) {
       val singleChannelSum = commElemsPaths(src)(dst)
-          .map(ce => messageTravelTimePerVirtualChannel(c)(commElems.indexOf(ce))).sum
-      val minVCInPath = chocoModel.min(s"minVCInPath($src, $dst)", commElemsPaths(src)(dst)
-          .map(ce => numVirtualChannelsForProcElem(src)(commElems.indexOf(ce))):_*)
-      chocoModel.arithm(
-        messageTravelDuration(c)(src)(dst),
-        ">=",
-        chocoModel.intVar(singleChannelSum),
-        "/",
-        minVCInPath
-      ).post()
+        .map(ce => messageTravelTimePerVirtualChannel(c)(commElems.indexOf(ce)))
+        .sum
+      val minVCInPath = chocoModel.min(
+        s"minVCInPath($src, $dst)",
+        commElemsPaths(src)(dst)
+          .map(ce => numVirtualChannelsForProcElem(src)(commElems.indexOf(ce))): _*
+      )
+      chocoModel.ifThenElse(
+        procElemSendsDataToAnother(src)(dst),
+        chocoModel.arithm(
+          messageTravelDuration(c)(src)(dst),
+          ">=",
+          chocoModel.intVar(singleChannelSum),
+          "/",
+          minVCInPath
+        ),
+        chocoModel.arithm(
+          messageTravelDuration(c)(src)(dst),
+          "=",
+          0
+        )
+      )
     }
-      // for (
-      //   c <- 0 until numMessages
-      // ) {
-      //   chocoModel.ifThenElse(
-      //     procElemSendsDataToAnother(src)(dst),
-      //     chocoModel.arithm(
-      //       travelTimePerCE(c)(commElems.indexOf(ce)),
-      //       "=",
-      //       chocoModel.intVar(messageTravelTimePerVirtualChannel(c)(commElems.indexOf(ce))),
-      //       "/",
-      //       numVirtualChannelsForProcElem(src)(commElems.indexOf(ce))
-      //     ),
-      //     chocoModel.arithm(travelTimePerCE(c)(commElems.indexOf(ce)), "=", 0)
-      //   )
-      // }
+    // for (
+    //   c <- 0 until numMessages
+    // ) {
+    //   chocoModel.ifThenElse(
+    //     procElemSendsDataToAnother(src)(dst),
+    //     chocoModel.arithm(
+    //       travelTimePerCE(c)(commElems.indexOf(ce)),
+    //       "=",
+    //       chocoModel.intVar(messageTravelTimePerVirtualChannel(c)(commElems.indexOf(ce))),
+    //       "/",
+    //       numVirtualChannelsForProcElem(src)(commElems.indexOf(ce))
+    //     ),
+    //     chocoModel.arithm(travelTimePerCE(c)(commElems.indexOf(ce)), "=", 0)
+    //   )
+    // }
     // }
 
-      // chocoModel.ifThen(
-      //   chocoModel.arithm(messageIsCommunicated(c)(src)(dst), "=", 0),
-      //   chocoModel.arithm(virtualChannelForMessage(c)(commElems.indexOf(ce)), "=", 0)
-      // )
+    // chocoModel.ifThen(
+    //   chocoModel.arithm(messageIsCommunicated(c)(src)(dst), "=", 0),
+    //   chocoModel.arithm(virtualChannelForMessage(c)(commElems.indexOf(ce)), "=", 0)
+    // )
     // if two communicating actors are in different tiles,
     // they must communicate
     // for (

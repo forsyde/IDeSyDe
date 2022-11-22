@@ -28,7 +28,6 @@ import spire.math.*
 import scala.collection.mutable.Buffer
 
 import scalax.collection.GraphPredef._
-import scalax.collection.edge.Implicits._
 
 final case class SDFApplication(
     val actors: Array[SDFActor],
@@ -84,7 +83,7 @@ final case class SDFApplication(
   val sdfRepetitionVectors: Array[Int] = computeRepetitionVectors(0)
 
   /** this is a simple shortcut for the max parallel clusters as SDFs have only one configuration */
-  val sdfMaxParallelClusters: Array[Array[Int]] = maximalParallelClustering(0)
+  lazy val sdfMaxParallelClusters: Array[Array[Int]] = maximalParallelClustering(0)
 
   val processComputationalNeeds: Array[Map[String, Map[String, Long]]] =
     actorFunctions.zipWithIndex.map((actorFuncs, i) => {
@@ -169,27 +168,44 @@ final case class SDFApplication(
     })
     .reverse
 
-  val messagesFromChannels = dataflowGraphs.map(df => {
-    actorsSet
-      .flatMap(src => {
-        actorsSet.map(dst => {
-          (src, dst, channelsSet.filter(c => df.containsEdge(src, c) && df.containsEdge(c, dst)))
+  val messagesFromChannels = dataflowGraphs.zipWithIndex.map((df, dfi) => {
+    var lumpedChannels = mutable.Map[(Int, Int), (Array[Int], Long, Int, Int, Int)]()
+    for ((c, ci) <- channelsSet.zipWithIndex) {
+      val thisInitialTokens = initialTokens(ci)
+      df.incomingEdgesOf(c)
+        .forEach(eSrc => {
+          val src = df.getEdgeSource(eSrc)
+          val sent = sdfBalanceMatrix(c - actors.size)(src) * TokenizableDataBlock
+            .safeCast(channels(c - actors.size))
+            .map(d => d.getTokenSizeInBits().toLong)
+            .orElse(0L)
+          val produced = sdfBalanceMatrix(c - actors.size)(src)
+          df.outgoingEdgesOf(c)
+            .forEach(eDst => {
+              val dst      = df.getEdgeTarget(eDst)
+              val consumed = -sdfBalanceMatrix(c - actors.size)(dst)
+              if (lumpedChannels.contains((src, dst))) {
+                val (cs, d, p, q, tok) = lumpedChannels((src, dst))
+                lumpedChannels((src, dst)) = (
+                  cs :+ c,
+                  d + sent,
+                  p + produced,
+                  q + consumed,
+                  tok + thisInitialTokens
+                )
+              } else {
+                lumpedChannels((src, dst)) = (
+                  Array(c),
+                  sent,
+                  produced,
+                  consumed,
+                  thisInitialTokens
+                )
+              }
+            })
         })
-      })
-      .filter((s, d, cs) => cs.size > 0)
-      .map((s, d, cs) =>
-        (
-          s,
-          d,
-          cs,
-          cs.map(c => {
-            sdfBalanceMatrix(c - actors.size)(s) * TokenizableDataBlock
-              .safeCast(channels(c - actors.size))
-              .map(d => d.getTokenSizeInBits().toLong)
-              .orElse(0L)
-          }).sum
-        )
-      )
+    }
+    lumpedChannels.map((k, v) => (k._1, k._2, v._1, v._2, v._3, v._4, v._5)).toArray
   })
 
   val sdfMessages = messagesFromChannels(0)
@@ -201,15 +217,15 @@ final case class SDFApplication(
     // val firings = sdfRepetitionVectors.zipWithIndex.map((a, q) => (1 to q).map(qa => (a, qa)))
     val firings = sdfRepetitionVectors.zipWithIndex.flatMap((a, q) => (1 to q).map(qa => (a, qa)))
     var edges   = Buffer[((Int, Int), (Int, Int))]()
-    for ((vec, c) <- sdfBalanceMatrix.zipWithIndex) {
-      val src = vec.indexWhere(_ > 0)
-      val dst = vec.indexWhere(_ < 0)
+    for ((src, dst, _, _, produced, consumed, tokens) <- sdfMessages) {
+      // val src = vec.indexWhere(_ > 0)
+      // val dst = vec.indexWhere(_ < 0)
       for (
         qDst <- 1 to sdfRepetitionVectors(dst);
-        qSrc = Rational(-vec(dst) * qDst, vec(src)) - initialTokens(c);
+        qSrc = Rational(consumed * qDst, produced) - tokens;
         if qSrc > 0
       ) {
-        edges +:= ((src, qSrc.toInt), (dst, qDst))
+        edges +:= ((src, qSrc.ceil.toInt), (dst, qDst))
       }
     }
     for (a <- 0 until actorsSet.length; q <- 1 to sdfRepetitionVectors(a) - 1) {
@@ -218,6 +234,30 @@ final case class SDFApplication(
     val param = edges.map((s, t) => (s ~> t)).toArray
     scalax.collection.Graph(param: _*)
   }
+
+  lazy val topologicalAndHeavyJobOrdering = firingsPrecedenceGraph
+    .topologicalSort()
+    .fold(
+      cycleNode => {
+        println("CYCLE NODES DETECTED")
+        firingsPrecedenceGraph.nodes.map(_.value).toArray
+      },
+      topo =>
+        topo
+          .withLayerOrdering(
+            firingsPrecedenceGraph.NodeOrdering((v1, v2) =>
+              decreasingActorConsumptionOrder
+                .indexOf(
+                  v2.value._1
+                ) - decreasingActorConsumptionOrder.indexOf(v1.value._1)
+            )
+          )
+          .map(_.value)
+          .toArray
+    )
+
+  lazy val topologicalAndHeavyActorOrdering =
+    actorsSet.sortBy(a => topologicalAndHeavyJobOrdering.indexWhere((aa, _) => a == aa))
 
   override val uniqueIdentifier = "SDFApplication"
 

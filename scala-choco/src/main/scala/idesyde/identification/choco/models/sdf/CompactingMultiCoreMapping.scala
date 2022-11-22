@@ -65,8 +65,6 @@ class CompactingMultiCoreMapping[DistT](
   def getDecision(): Decision[IntVar] = {
     // val schedulersShuffled = Random.shuffle(schedulers)
     // normal
-    var d = pool.getE()
-    if (d == null) d = IntDecision(pool)
     var bestPCompact     = -1
     var bestSCompact     = -1
     var bestScoreCompact = distT.fromInt(Int.MaxValue)
@@ -74,7 +72,7 @@ class CompactingMultiCoreMapping[DistT](
       if (!processesMappings(p).isInstantiated()) {
         wfor(0, _ < numSchedulers, _ + 1) { s =>
           val score = calculateDistanceScore(p)(s)
-          if (score < bestScoreCompact) {
+          if (processesMappings(p).contains(s) && score < bestScoreCompact) {
             bestPCompact = p
             bestSCompact = s
             bestScoreCompact = score
@@ -82,10 +80,13 @@ class CompactingMultiCoreMapping[DistT](
         }
       }
     }
+    // println(s"${bestPCompact} - ${bestSCompact} : ${bestScoreCompact}")
     if (bestPCompact > -1) {
+      var d = pool.getE()
+      if (d == null) d = IntDecision(pool)
       d.set(
         processesMappings(bestPCompact),
-        bestPCompact,
+        bestSCompact,
         DecisionOperatorFactory.makeIntEq()
       )
       d

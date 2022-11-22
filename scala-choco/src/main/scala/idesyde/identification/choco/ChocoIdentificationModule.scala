@@ -16,8 +16,8 @@ class ChocoIdentificationModule() extends IdentificationModule {
 
   val identificationRules = Set(
     PeriodicTaskToSchedHWChocoIRule(),
-    ChocoSDFToSChedTileHW.identifyFromAny,
-    ChocoSDFToSChedTileHWSlowest.identifyFromAny,
+    // ChocoSDFToSChedTileHW.identifyFromAny,
+    // ChocoSDFToSChedTileHWSlowest.identifyFromAny,
     ChocoSDFToSChedTileHW2.identifyFromAny
   )
 }

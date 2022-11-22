@@ -47,43 +47,65 @@ class SDFSchedulingAnalysisModule2(
   val slotRange                       = (0 until maxRepetitionsPerActors.sum).toArray
   private val maximumTokensPerChannel = sdfAndSchedulers.sdfApplications.pessimisticTokensPerChannel
 
+  private val maxSingleCoreInterval = schedulers.zipWithIndex
+    .map((_, p) => {
+      actors.zipWithIndex
+        .map((a, ai) => actorDuration(ai)(p) * maxRepetitionsPerActors(ai))
+        .sum
+    })
+    .max
+
   val invThroughputs: Array[IntVar] = schedulers
     .map(p =>
       chocoModel.intVar(
         s"invTh($p)",
         0,
-        actors.zipWithIndex
-          .map((a, ai) => actorDuration(ai)(p) * maxRepetitionsPerActors(ai))
-          .sum + tileAsyncModule.messageTravelDuration
-          .flatMap(cVec => cVec.map(pOtherVec => pOtherVec(p).getUB()))
-          .sum,
+        maxSingleCoreInterval,
         true
       )
     )
-  // private val slotThroughput: Array[Array[IntVar]] = schedulers
-  //   .map(p =>
-  //     slotRange.map(s =>
-  //       chocoModel.intVar(s"slotThroughput($p, $s)", 0, invThroughputs(p).getUB(), true)
-  //     )
+
+  // val jobsInvThroughputs: Array[IntVar] = jobsAndActors.map((a, q) =>
+  //   chocoModel.intVar(
+  //     s"jobInvThroughput($a, $q)",
+  //     actorDuration(actors.indexOf(a)).filter(_ >= 0).minOption.getOrElse(0),
+  //     maxSingleCoreInterval,
+  //     true
   //   )
+  // )
+
   val jobStartTime: Array[IntVar] =
     jobsAndActors
       .map((a, q) =>
         chocoModel.intVar(
-          s"finishTime($a, $q)",
+          s"jobStartTime($a, $q)",
           0,
-          invThroughputs.map(_.getUB()).max,
+          maxSingleCoreInterval,
           true
         )
       )
-      .toArray
+
+  // val jobTimeMatrix: Array[Array[IntVar]] =
+  //   jobsAndActors
+  //     .map((a, q) =>
+  //       jobsAndActors
+  //         .map((aa, qq) =>
+  //           chocoModel.intVar(
+  //             s"jobTimeMatrix($a, $q, $aa, $qq)",
+  //             0,
+  //             maxSingleCoreInterval,
+  //             true
+  //           )
+  //         )
+  //     )
+
   val jobOrdering: Array[IntVar] = jobsAndActors
     .map((a, q) =>
       chocoModel.intVar(
-        s"ordering($a, $q)",
+        s"jobOrdering($a, $q)",
         1,
         jobsAndActors.size,
-        true
+        false
       )
     )
     .toArray
@@ -93,17 +115,31 @@ class SDFSchedulingAnalysisModule2(
       schedulers
         .map(p => actors.map(a => actorDuration(a)(p)).min)
         .min,
-      schedulers
-        .map(p => invThroughputs(p).getUB())
-        .max,
+      maxSingleCoreInterval,
       true
     )
 
   val duration = actors.zipWithIndex.map((a, i) =>
-    chocoModel.intVar(s"dur($a)", actorDuration(i).min, actorDuration(i).max, true)
+    chocoModel.intVar(
+      s"dur($a)",
+      actorDuration(i).filter(_ >= 0).minOption.getOrElse(0),
+      actorDuration(i).max,
+      true
+    )
   )
 
   def postSDFTimingAnalysis(): Unit = {
+    val zeroes = chocoModel.min("zeroes", jobStartTime: _*)
+    // val zeroesMatrix = chocoModel.min("zeroesMatrix", jobTimeMatrix.flatten: _*)
+    chocoModel.arithm(zeroes, "=", 0).post()
+    // chocoModel.arithm(zeroesMatrix, "=", 0).post()
+    for ((a, i) <- actors.zipWithIndex; (p, j) <- schedulers.zipWithIndex) {
+      chocoModel.ifThen(
+        chocoModel.arithm(memoryMappingModule.processesMemoryMapping(i), "=", p),
+        chocoModel.arithm(duration(i), "=", actorDuration(i)(j))
+      )
+    }
+    // --- different ordering within tiles section
     val jobOrderingsToActorsIdx =
       jobOrdering.zipWithIndex.map((x, i) => x -> actors.indexOf(jobsAndActors(i)._1)).toMap
     for (p <- schedulers) {
@@ -117,25 +153,26 @@ class SDFSchedulingAnalysisModule2(
           false
         )
         .post()
-      // for (
-      //   (v, i) <- jobsAndActors.zipWithIndex;
-      //   (a, q) = v;
-      //   (vv, j) <- jobsAndActors.zipWithIndex;
-      //   (aa, qq) = vv
-      //   if i != j
-      // ) {
-      //   val aIdx  = sdfAndSchedulers.sdfApplications.actorsSet.indexOf(a)
-      //   val aaIdx = sdfAndSchedulers.sdfApplications.actorsSet.indexOf(aa)
-      //   chocoModel.ifThen(
-      //     chocoModel.arithm(
-      //       memoryMappingModule.processesMemoryMapping(aIdx),
-      //       "=",
-      //       memoryMappingModule.processesMemoryMapping(aaIdx)
-      //     ),
-      //     chocoModel.arithm(jobOrdering(i), "!=", jobOrdering(j))
-      //   )
-      // }
+      for (
+        (v, i) <- jobsAndActors.zipWithIndex;
+        (a, q) = v;
+        (vv, j) <- jobsAndActors.zipWithIndex;
+        (aa, qq) = vv
+        if i != j
+      ) {
+        val aIdx  = sdfAndSchedulers.sdfApplications.actorsSet.indexOf(a)
+        val aaIdx = sdfAndSchedulers.sdfApplications.actorsSet.indexOf(aa)
+        chocoModel.ifThen(
+          chocoModel.arithm(
+            memoryMappingModule.processesMemoryMapping(aIdx),
+            "=",
+            memoryMappingModule.processesMemoryMapping(aaIdx)
+          ),
+          chocoModel.arithm(jobOrdering(i), "!=", jobOrdering(j))
+        )
+      }
     }
+    // timing section
     for (
       (v, i) <- jobsAndActors.zipWithIndex;
       (a, q) = v;
@@ -143,31 +180,93 @@ class SDFSchedulingAnalysisModule2(
       (aa, qq) = eOut._2.value;
       j        = jobsAndActors.indexOf(eOut._2.value)
     ) {
+      chocoModel.arithm(jobOrdering(i), "<", jobOrdering(j)).post()
       if (a != aa) {
+        chocoModel
+          .arithm(jobStartTime(j), ">=", jobStartTime(i), "+", duration(actors.indexOf(a)))
+          .post()
+        // jobStartTime(j).ge(jobStartTime(i).add(duration(a))).post()
         val messageTimesIdx =
-          sdfAndSchedulers.sdfApplications.sdfMessages.indexWhere((src, dst, _, _) =>
+          sdfAndSchedulers.sdfApplications.sdfMessages.indexWhere((src, dst, _, _, _, _, _) =>
             src == a && dst == aa
           )
-        val messageTimesSum = chocoModel.sum(
-          s"sumOfMessages($a, $aa)",
-          tileAsyncModule.messageTravelDuration(messageTimesIdx).flatten: _*
-        )
-        jobStartTime(j).ge(jobStartTime(i).add(duration(a)).add(messageTimesSum)).post()
-      } else if (a == aa && q < qq && isSelfConcurrent(a)) {
-        jobStartTime(j).ge(jobStartTime(i).add(duration(a))).post()
-      } else if (a == aa && q < qq && !isSelfConcurrent(a)) {
-        jobStartTime(j).ge(jobStartTime(i)).post()
+        // val maxMessageDuration = chocoModel.max(
+        //   s"maxMessageDuration($messageTimesIdx)",
+        //   tileAsyncModule.messageTravelDuration(messageTimesIdx).flatten
+        // )
+        // chocoModel
+        //   .scalar(
+        //     Array(
+        //       maxMessageDuration,
+        //       jobStartTime(i),
+        //       duration(actors.indexOf(a))
+        //     ),
+        //     Array(1, 1, 1),
+        //     "=",
+        //     jobTimeMatrix(i)(j)
+        //   )
+        //   .post()
+        for (tileSrc <- schedulers; tileDst <- schedulers; if tileSrc != tileDst) {
+          chocoModel.ifThen(
+            chocoModel.and(
+              chocoModel.arithm(
+                memoryMappingModule.processesMemoryMapping(actors.indexOf(a)),
+                "=",
+                tileSrc
+              ),
+              chocoModel.arithm(
+                memoryMappingModule.processesMemoryMapping(actors.indexOf(aa)),
+                "=",
+                tileDst
+              )
+            ),
+            chocoModel.scalar(
+              Array(
+                tileAsyncModule.messageTravelDuration(messageTimesIdx)(tileSrc)(tileDst),
+                jobStartTime(i),
+                duration(actors.indexOf(a))
+              ),
+              Array(1, 1, 1),
+              "<=",
+              jobStartTime(j)
+            )
+          )
+        }
+      } else if (a == aa && q < qq && !isSelfConcurrent(actors.indexOf(a))) {
+        chocoModel
+          .arithm(jobStartTime(j), ">=", jobStartTime(i), "+", duration(actors.indexOf(a)))
+          .post()
+        // chocoModel
+        //   .arithm(jobTimeMatrix(i)(j), "=", jobStartTime(i), "+", duration(actors.indexOf(a)))
+        //   .post()
+      } else if (a == aa && q < qq && isSelfConcurrent(actors.indexOf(a))) {
+        chocoModel.arithm(jobStartTime(j), ">=", jobStartTime(i)).post()
+        // chocoModel
+        //   .arithm(jobTimeMatrix(i)(j), "=", jobStartTime(i))
+        //   .post()
       }
     }
     for (
       (v, i)  <- jobsAndActors.zipWithIndex;
       (vv, j) <- jobsAndActors.zipWithIndex;
       src = sdfAndSchedulers.sdfApplications.firingsPrecedenceGraph.get(v);
-      dst = sdfAndSchedulers.sdfApplications.firingsPrecedenceGraph.get(vv)
-      if src.pathTo(dst).isEmpty && dst.pathTo(src).isEmpty;
-      a  = actors.indexOf(v._1);
-      aa = actors.indexOf(vv._1)
+      dst = sdfAndSchedulers.sdfApplications.firingsPrecedenceGraph.get(vv);
+      a   = actors.indexOf(v._1);
+      aa  = actors.indexOf(vv._1);
+      if i != j
     ) {
+      chocoModel.ifOnlyIf(
+        chocoModel.arithm(
+          jobOrdering(j),
+          ">=",
+          jobOrdering(i)
+        ),
+        chocoModel.arithm(
+          jobStartTime(j),
+          ">=",
+          jobStartTime(i)
+        )
+      )
       chocoModel.ifThen(
         chocoModel.and(
           chocoModel.arithm(
@@ -176,54 +275,74 @@ class SDFSchedulingAnalysisModule2(
             memoryMappingModule.processesMemoryMapping(aa)
           ),
           chocoModel.arithm(
-            jobOrdering(i),
-            "<",
-            jobOrdering(j)
+            jobOrdering(j),
+            ">=",
+            jobOrdering(i)
           )
         ),
-        jobStartTime(j).ge(jobStartTime(i).add(duration(a))).decompose()
+        chocoModel.arithm(
+          jobStartTime(j),
+          ">=",
+          jobStartTime(i),
+          "+",
+          duration(a)
+        )
       )
+      // if (src.pathTo(dst).isEmpty && dst.pathTo(src).isEmpty) {
+      //   chocoModel.ifThenElse(
+      //     chocoModel.arithm(
+      //       jobOrdering(j),
+      //       ">",
+      //       jobOrdering(i)
+      //     ),
+      //     chocoModel.arithm(
+      //       jobTimeMatrix(i)(j),
+      //       "=",
+      //       jobStartTime(i),
+      //       "+",
+      //       duration(a)
+      //     ),
+      //     chocoModel.arithm(
+      //       jobTimeMatrix(i)(j),
+      //       "=",
+      //       0
+      //     )
+      //   )
+      // }
     }
-    for (
-      p       <- schedulers;
-      (v, i)  <- jobsAndActors.zipWithIndex;
-      (vv, j) <- jobsAndActors.zipWithIndex;
-      a  = actors.indexOf(v._1);
-      aa = actors.indexOf(vv._1)
-    ) {
-      chocoModel.ifThen(
-        chocoModel.and(
-          chocoModel.arithm(
-            memoryMappingModule.processesMemoryMapping(actors.indexOf(a)),
-            "=",
-            p
+    // ensure all first jobs start ASAP
+    // for ((v, i) <- jobsAndActors.zipWithIndex) {
+    //   chocoModel.arithm(jobTimeMatrix(i)(i), "=", 0).post()
+    //   chocoModel.max(jobStartTime(i), jobTimeMatrix.map(v => v(i))).post()
+    // }
+    chocoModel.post(
+      new Constraint(
+        "OrderedJobUpperBoundPropagator",
+        OrderedJobUpperBoundPropagator(
+          jobsAndActors.map((a, _) =>
+            memoryMappingModule.processesMemoryMapping(actors.indexOf(a))
           ),
-          chocoModel.arithm(
-            memoryMappingModule.processesMemoryMapping(actors.indexOf(aa)),
-            "=",
-            p
-          )
-        ),
-        invThroughputs(p).ge(jobStartTime(j).add(duration(aa)).sub(jobStartTime(i))).decompose()
+          jobOrdering,
+          jobStartTime,
+          jobsAndActors.map((a, _) => duration(actors.indexOf(a)))
+        )
       )
-      chocoModel.ifThen(
-        chocoModel.and(
-          chocoModel.arithm(
-            memoryMappingModule.processesMemoryMapping(actors.indexOf(a)),
-            "=",
-            p
-          ),
-          chocoModel.arithm(
-            memoryMappingModule.processesMemoryMapping(actors.indexOf(aa)),
-            "=",
-            p
-          )
-        ),
-        invThroughputs(p).ge(jobStartTime(i).add(duration(a)).sub(jobStartTime(j))).decompose()
-      )
-    }
+    )
     // throughput
     chocoModel.max(globalInvThroughput, invThroughputs).post()
+    chocoModel.post(
+      new Constraint(
+        "MultiCoreJobThroughputPropagator",
+        MultiCoreJobThroughputPropagator(
+          jobsAndActors.map((a, _) =>
+            memoryMappingModule.processesMemoryMapping(actors.indexOf(a))
+          ),
+          jobStartTime,
+          jobsAndActors.map((a, _) => duration(actors.indexOf(a))),
+          invThroughputs
+        )
+      )
+    )
 
   }
 

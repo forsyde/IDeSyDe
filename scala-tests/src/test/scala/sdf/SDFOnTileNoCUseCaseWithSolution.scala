@@ -833,7 +833,6 @@ class SDFOnTileNoCUseCaseWithSolution extends AnyFunSuite with LoggingMixin {
     val identified  = identificationHandler.identifyDecisionModels(inputSystem)
     val chosen      = explorationHandler.chooseExplorersAndModels(identified)
     assert(chosen.size > 0)
-    assert(chosen.find((_, m) => m.isInstanceOf[ChocoSDFToSChedTileHW]).isDefined)
     val solutions = chosen
       .take(1)
       .flatMap((explorer, decisionModel) =>
@@ -864,7 +863,6 @@ class SDFOnTileNoCUseCaseWithSolution extends AnyFunSuite with LoggingMixin {
     val identified  = identificationHandler.identifyDecisionModels(inputSystem)
     val chosen      = explorationHandler.chooseExplorersAndModels(identified)
     assert(chosen.size > 0)
-    assert(chosen.find((_, m) => m.isInstanceOf[ChocoSDFToSChedTileHW]).isDefined)
     val solutions = chosen
       .take(1)
       .flatMap((explorer, decisionModel) =>
@@ -895,7 +893,6 @@ class SDFOnTileNoCUseCaseWithSolution extends AnyFunSuite with LoggingMixin {
     val identified  = identificationHandler.identifyDecisionModels(inputSystem)
     val chosen      = explorationHandler.chooseExplorersAndModels(identified)
     assert(chosen.size > 0)
-    assert(chosen.find((_, m) => m.isInstanceOf[ChocoSDFToSChedTileHW]).isDefined)
     val solutions = chosen
       .take(1)
       .flatMap((explorer, decisionModel) =>
@@ -970,7 +967,6 @@ class SDFOnTileNoCUseCaseWithSolution extends AnyFunSuite with LoggingMixin {
     val identified  = identificationHandler.identifyDecisionModels(inputSystem)
     val chosen      = explorationHandler.chooseExplorersAndModels(identified)
     assert(chosen.size > 0)
-    assert(chosen.find((_, m) => m.isInstanceOf[ChocoSDFToSChedTileHW]).isDefined)
     val solutions = chosen
       .take(1)
       .flatMap((explorer, decisionModel) =>
@@ -1015,7 +1011,6 @@ class SDFOnTileNoCUseCaseWithSolution extends AnyFunSuite with LoggingMixin {
     assert(identified.find(m => m.isInstanceOf[SDFToSchedTiledHW]).isDefined)
     val chosen = explorationHandler.chooseExplorersAndModels(identified)
     assert(chosen.size > 0)
-    assert(chosen.find((_, m) => m.isInstanceOf[ChocoSDFToSChedTileHW]).isDefined)
     val solutions = chosen
       .take(1)
       .flatMap((explorer, decisionModel) =>
@@ -1048,7 +1043,6 @@ class SDFOnTileNoCUseCaseWithSolution extends AnyFunSuite with LoggingMixin {
     assert(identified.find(m => m.isInstanceOf[SDFToSchedTiledHW]).isDefined)
     val chosen = explorationHandler.chooseExplorersAndModels(identified)
     assert(chosen.size > 0)
-    assert(chosen.find((_, m) => m.isInstanceOf[ChocoSDFToSChedTileHW]).isDefined)
     val solutions = chosen
       .take(1)
       .flatMap((explorer, decisionModel) =>
@@ -1081,7 +1075,6 @@ class SDFOnTileNoCUseCaseWithSolution extends AnyFunSuite with LoggingMixin {
     assert(identified.find(m => m.isInstanceOf[SDFToSchedTiledHW]).isDefined)
     val chosen = explorationHandler.chooseExplorersAndModels(identified)
     assert(chosen.size > 0)
-    assert(chosen.find((_, m) => m.isInstanceOf[ChocoSDFToSChedTileHW]).isDefined)
     val solutions = chosen
       .take(1)
       .flatMap((explorer, decisionModel) =>

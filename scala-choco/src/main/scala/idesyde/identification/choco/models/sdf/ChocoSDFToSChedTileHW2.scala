@@ -30,6 +30,16 @@ class ConMonitorObj2(val model: ChocoSDFToSChedTileHW2) extends IMonitorContradi
 
   def onContradiction(cex: ContradictionException): Unit = {
     println(cex.toString())
+    println(
+      model.tileAnalysisModule.procElemSendsDataToAnother
+        .map(_.mkString(", "))
+        .mkString("\n")
+    )
+    println(
+      model.tileAnalysisModule.numVirtualChannelsForProcElem
+        .map(_.filter(_.getValue() > 0).mkString(", "))
+        .mkString("\n")
+    )
     println(model.memoryMappingModule.processesMemoryMapping.mkString(", "))
     println(model.sdfAnalysisModule.jobOrdering.mkString(", "))
     println(model.sdfAnalysisModule.jobStartTime.mkString(", "))
@@ -40,11 +50,11 @@ final case class ChocoSDFToSChedTileHW2(
     val dse: SDFToSchedTiledHW
 )(using Fractional[Rational])
     extends ChocoCPForSyDeDecisionModel
-    with ChocoModelMixin(shouldLearnSignedClauses = false) {
+    with ChocoModelMixin(shouldLearnSignedClauses = true) {
 
   val chocoModel: Model = Model()
 
-  // chocoModel.getSolver().plugMonitor(ConMonitorObj2(this))
+  chocoModel.getSolver().plugMonitor(ConMonitorObj2(this))
 
   // section for time multiplier calculation
   val timeValues =
@@ -133,8 +143,8 @@ final case class ChocoSDFToSChedTileHW2(
                 ),
                 chocoModel.arithm(
                   tileAnalysisModule.procElemSendsDataToAnother(sendi)(desti),
-                  "=",
-                  1
+                  ">",
+                  0
                 )
               )
             }

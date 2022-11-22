@@ -126,10 +126,10 @@ class TileAsyncInterconnectCommsModule(
       chocoModel.ifThenElse(
         procElemSendsDataToAnother(src)(dst),
         chocoModel.arithm(
-          messageTravelDuration(c)(src)(dst),
-          ">=",
           chocoModel.intVar(singleChannelSum),
-          "/",
+          ">=",
+          messageTravelDuration(c)(src)(dst),
+          "*",
           minVCInPath
         ),
         chocoModel.arithm(

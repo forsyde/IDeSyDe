@@ -54,7 +54,7 @@ final case class ChocoSDFToSChedTileHW2(
 
   val chocoModel: Model = Model()
 
-  chocoModel.getSolver().plugMonitor(ConMonitorObj2(this))
+  // chocoModel.getSolver().plugMonitor(ConMonitorObj2(this))
 
   // section for time multiplier calculation
   val timeValues =
@@ -190,25 +190,27 @@ final case class ChocoSDFToSChedTileHW2(
   //-----------------------------------------------------
   // BRANCHING AND SEARCH
 
-  // val listScheduling = SimpleMultiCoreSDFListScheduling(
-  //   dse.sdfApplications.actorsSet.zipWithIndex.map((a, i) => dse.sdfApplications.sdfRepetitionVectors(i)),
-  //   dse.sdfApplications.sdfBalanceMatrix,
-  //   dse.sdfApplications.initialTokens,
-  //   dse.wcets.map(ws => ws.map(w => w * timeMultiplier).map(_.ceil.intValue)),
-  //   tileAnalysisModule.messageTravelDuration,
-  //   sdfAnalysisModule.firingsInSlots
-  // )
-
-  // println(sdfAnalysisModule.jobsAndActors.mkString(", "))
-  // println(dse.sdfApplications.topologicalAndHeavyJobOrdering.mkString(", "))
-  // println(
-  //   dse.sdfApplications.topologicalAndHeavyJobOrdering
-  //     .map(
-  //       sdfAnalysisModule.jobsAndActors.indexOf(_)
-  //     )
-  //     .mkString(", ")
-  // )
-  // println(dse.sdfApplications.firingsPrecedenceGraph.toString())
+  // breaking platform symmetries
+  val indexOfPe = dse.platform.schedulerSet.map(p =>
+    chocoModel.intVar(s"indexOfPe($p)", 0, Math.max(sdfAnalysisModule.jobsAndActors.size + 1, dse.platform.schedulerSet.size), true)
+  )
+  for (
+    (p, j) <- dse.platform.schedulerSet.zipWithIndex;
+    a <- dse.sdfApplications.topologicalAndHeavyActorOrdering;
+    i = dse.sdfApplications.actorsSet.indexOf(a)
+  ) {
+    chocoModel.ifThenElse(
+      chocoModel.arithm(memoryMappingModule.processesMemoryMapping(a), "=", p),
+      chocoModel.arithm(indexOfPe(j), "<=", i),
+      chocoModel.arithm(indexOfPe(j), "!=", i)
+    )
+  }
+  dse.platform.tiledDigitalHardware.symmetricTileGroups
+    .maxByOption(_.size)
+    .foreach(group => {
+      val pSorted = group.toArray.sorted
+      chocoModel.increasing(pSorted.map(idx => indexOfPe(idx)), 1).post()
+    })
   override val strategies: Array[AbstractStrategy[? <: Variable]] = Array(
     // chooseLowestMappedTime(
     //   dse.sdfApplications.topologicalAndHeavyJobOrdering.map((a, _) =>
@@ -239,7 +241,12 @@ final case class ChocoSDFToSChedTileHW2(
       dse.sdfApplications.topologicalAndHeavyActorOrdering.map(a =>
         memoryMappingModule.processesMemoryMapping(dse.sdfApplications.actorsSet.indexOf(a))
       )
+      // dse.sdfApplications.topologicalAndHeavyJobOrdering.map((a, _) =>
+      //   sdfAnalysisModule.duration(dse.sdfApplications.actorsSet.indexOf(a))
+      // )
+      // sdfAnalysisModule.invThroughputs
     ),
+    Search.minDomLBSearch(indexOfPe:_*),
     Search.minDomLBSearch(tileAnalysisModule.numVirtualChannelsForProcElem.flatten: _*),
     Search.minDomLBSearch(tileAnalysisModule.messageTravelDuration.flatten.flatten: _*),
     // these next two lines makre sure the choice for start times and throughput are made just like the ordering and mapping
@@ -375,17 +382,17 @@ final case class ChocoSDFToSChedTileHW2(
       schedulings,
       dse.sdfApplications.actorsSet.zipWithIndex.map((a, i) => {
         dse.platform.schedulerSet.zipWithIndex.map((s, j) => {
-          sdfAnalysisModule.slotRange.map(t => {
+          (1 to sdfAnalysisModule.jobsAndActors.size).map(t => {
             if (
               sdfAnalysisModule.jobsAndActors.zipWithIndex.exists((job, k) => {
                 a == job._1 && memoryMappingModule
                   .processesMemoryMapping(i)
-                  .isInstantiatedTo(j) && sdfAnalysisModule.jobOrdering(k).isInstantiatedTo(s)
+                  .isInstantiatedTo(s) && sdfAnalysisModule.jobOrdering(k).isInstantiatedTo(t)
               })
             )
               1
             else 0
-          })
+          }).toArray
         })
       }),
       // TODO: fix this slot allocaiton strategy for later. It is Okay, but lacks some direct synthetizable details, like which exact VC the channel goes

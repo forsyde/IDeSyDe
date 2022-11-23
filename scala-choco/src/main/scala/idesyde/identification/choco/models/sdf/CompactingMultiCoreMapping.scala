@@ -21,6 +21,8 @@ class CompactingMultiCoreMapping[DistT](
     val processorsDistances: Array[Array[DistT]],
     val processesComponents: Array[Int],
     val processesMappings: Array[IntVar]
+    // val durations: Array[IntVar]
+    // val invThroughputs: Array[IntVar],
 )(using distT: spire.math.Integral[DistT])
     extends AbstractStrategy[IntVar](processesMappings: _*) {
 
@@ -68,14 +70,19 @@ class CompactingMultiCoreMapping[DistT](
     var bestPCompact     = -1
     var bestSCompact     = -1
     var bestScoreCompact = distT.fromInt(Int.MaxValue)
-    wfor(0, _ < numProcesses, _ + 1) { p =>
-      if (!processesMappings(p).isInstantiated()) {
-        wfor(0, _ < numSchedulers, _ + 1) { s =>
-          val score = calculateDistanceScore(p)(s)
-          if (processesMappings(p).contains(s) && score < bestScoreCompact) {
-            bestPCompact = p
-            bestSCompact = s
-            bestScoreCompact = score
+    // var bestDuration = Int.MaxValue
+    wfor(0, _ < numProcesses, _ + 1) { job =>
+      if (!processesMappings(job).isInstantiated()) {
+        wfor(processesMappings(job).getLB(), _ <= processesMappings(job).getUB(), _ + 1) { s =>
+          if (processesMappings(job).contains(s)) {
+            val score = calculateDistanceScore(job)(s)
+            // val invTh = invThroughputs(s).getLB() + durations(job).getUB()
+            if (bestPCompact == -1 || score < bestScoreCompact) { // || (score == bestScoreCompact && durations(job).getUB() < bestDuration)) {
+              bestPCompact = job
+              bestSCompact = s
+              bestScoreCompact = score
+              // bestDuration = durations(job).getUB()
+            }
           }
         }
       }

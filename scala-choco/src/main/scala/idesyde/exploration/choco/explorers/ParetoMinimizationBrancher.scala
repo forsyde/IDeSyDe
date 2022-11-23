@@ -9,6 +9,7 @@ import org.chocosolver.solver.constraints.Propagator
 import org.chocosolver.util.ESat
 import org.chocosolver.solver.constraints.PropagatorPriority
 import idesyde.utils.CoreUtils.wfor
+import java.time.LocalDateTime
 
 class ParetoMinimizationBrancher(val objectives: Array[IntVar])
     extends Propagator[IntVar](objectives, PropagatorPriority.BINARY, false)
@@ -19,6 +20,7 @@ class ParetoMinimizationBrancher(val objectives: Array[IntVar])
   // val dominantObjValues   = objectives.map(_.getUB())
   val paretoFront    = Buffer[Solution]()
   val paretoObjFront = Buffer[Array[Int]]()
+  var lastSolutionTime = LocalDateTime.now()
 
   override def propagate(evtmask: Int): Unit = {
     // println(objectives.map(_.toString()).mkString(", "))
@@ -58,19 +60,24 @@ class ParetoMinimizationBrancher(val objectives: Array[IntVar])
 
   def onSolution(): Unit = {
     val solObjs = objectives.map(_.getValue())
+    val makedForErasure = Array.fill(paretoFront.size)(false)
     // check if it is a fully dominant solution
-    if (
-      paretoObjFront.zipWithIndex
-        .forall((s, i) => s.zipWithIndex.forall((o, j) => objectives(j).getValue() < o))
-    ) {
-      // println("New frontier")
-      paretoFront.clear()
-      paretoObjFront.clear()
+    for ((approxParetoSol, i) <- paretoObjFront.zipWithIndex) {
+      if (approxParetoSol.zipWithIndex.forall((o, j) => solObjs(j) < o)) {
+        makedForErasure(i) = true
+      }
+    }
+    // remove, from last to first so that the indexes of the firsts are not changed
+    // during iteration
+    for ((erase, i) <- makedForErasure.zipWithIndex.reverse; if erase) {
+      paretoFront.remove(i)
+      paretoObjFront.remove(i)
     }
     // println("Same frontier")
     paretoFront += model.getSolver().defaultSolution().record()
     paretoObjFront += solObjs
     // println(paretoObjFront.map(_.mkString(", ")).mkString("\n"))
     // println(paretoFront.map(_.mkString(", ")).mkString("\n"))
+    lastSolutionTime = LocalDateTime.now()
   }
 }

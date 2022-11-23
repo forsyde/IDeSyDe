@@ -104,6 +104,7 @@ lazy val tests = (project in file("scala-tests"))
   .dependsOn(cli)
   .settings(
     libraryDependencies ++= Seq(
+      ("org.scala-graph" %% "graph-core"   % scalaGraphVersion).cross(CrossVersion.for3Use2_13),
       "org.scalatest"    %% "scalatest"                % "3.2.12" % "test",
       "org.scalatest"    %% "scalatest-funsuite"       % "3.2.12" % "test",
       "io.github.forsyde" % "forsyde-io-java-core"     % forsydeIoVersion,

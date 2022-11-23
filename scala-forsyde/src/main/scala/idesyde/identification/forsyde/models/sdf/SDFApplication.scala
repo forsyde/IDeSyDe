@@ -222,10 +222,10 @@ final case class SDFApplication(
       // val dst = vec.indexWhere(_ < 0)
       for (
         qDst <- 1 to sdfRepetitionVectors(dst);
-        qSrc = Rational(consumed * qDst, produced) - tokens;
+        qSrc = Rational(consumed * qDst - tokens, produced).ceil;
         if qSrc > 0
       ) {
-        edges +:= ((src, qSrc.ceil.toInt), (dst, qDst))
+        edges +:= ((src, qSrc.toInt), (dst, qDst))
       }
     }
     for (a <- 0 until actorsSet.length; q <- 1 to sdfRepetitionVectors(a) - 1) {

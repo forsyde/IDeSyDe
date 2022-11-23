@@ -78,7 +78,7 @@ case class IDeSyDeRunConfig(
           .map((e, m) => (e.asInstanceOf[ForSyDeIOExplorer], m.asInstanceOf[ForSyDeDecisionModel]))
           .map((explorer, decisionModel) =>
             explorer
-              .explore(decisionModel)(using executionContext)
+              .explore(decisionModel, explorationTimeOutInSecs)(using executionContext)
               .scanLeft(0)((res, result) => {
                 if (!outputModelPath.toFile.exists || outputModelPath.toFile.isFile) then
                   debugLogger(s"writing solution at ${outputModelPath.toString}")

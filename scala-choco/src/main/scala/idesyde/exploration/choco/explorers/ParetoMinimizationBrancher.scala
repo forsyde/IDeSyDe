@@ -9,6 +9,7 @@ import org.chocosolver.solver.constraints.Propagator
 import org.chocosolver.util.ESat
 import org.chocosolver.solver.constraints.PropagatorPriority
 import idesyde.utils.CoreUtils.wfor
+import java.time.LocalDateTime
 
 class ParetoMinimizationBrancher(val objectives: Array[IntVar])
     extends Propagator[IntVar](objectives, PropagatorPriority.BINARY, false)
@@ -19,13 +20,15 @@ class ParetoMinimizationBrancher(val objectives: Array[IntVar])
   // val dominantObjValues   = objectives.map(_.getUB())
   val paretoFront    = Buffer[Solution]()
   val paretoObjFront = Buffer[Array[Int]]()
+  var lastSolutionTime = LocalDateTime.now()
 
   override def propagate(evtmask: Int): Unit = {
+    // println(objectives.map(_.toString()).mkString(", "))
     // iterate though the current pareto front
     wfor(0, _ < paretoFront.size, _ + 1) { soli =>
       var count        = numObjs
-      var lastUnderIdx = -1
-      var lastUnderVal = -1
+      var lastUnderIdx = 0
+      var lastUnderVal = objectives(0).getLB()
       wfor(0, _ < numObjs, _ + 1) { j =>
         if (paretoObjFront(soli)(j) <= objectives(j).getLB()) {
           count -= 1
@@ -34,15 +37,16 @@ class ParetoMinimizationBrancher(val objectives: Array[IntVar])
           lastUnderVal = paretoObjFront(soli)(j)
         }
       }
-      if (count == 1) {
+      // println(s"$soli : $count -> $lastUnderIdx, $lastUnderVal")
+      if (count <= 1) {
         objectives(lastUnderIdx).updateUpperBound(lastUnderVal - 1, this)
-      } else if (count == 0) {
-        fails()
       }
     }
   }
 
   override def isEntailed(): ESat = {
+    // println("check entailment")
+    // println(objectives.map(_.getValue()).mkString(", "))
     if (
       paretoObjFront.isEmpty || paretoObjFront.zipWithIndex
         .forall((s, i) => s.zipWithIndex.exists((o, j) => objectives(j).getUB() < o))
@@ -56,17 +60,24 @@ class ParetoMinimizationBrancher(val objectives: Array[IntVar])
 
   def onSolution(): Unit = {
     val solObjs = objectives.map(_.getValue())
+    val makedForErasure = Array.fill(paretoFront.size)(false)
     // check if it is a fully dominant solution
-    if (
-      paretoObjFront.zipWithIndex
-        .forall((s, i) => s.zipWithIndex.forall((o, j) => objectives(j).getValue() < o))
-    ) {
-      // println("New frontier")
-      paretoFront.clear()
-      paretoObjFront.clear()
+    for ((approxParetoSol, i) <- paretoObjFront.zipWithIndex) {
+      if (approxParetoSol.zipWithIndex.forall((o, j) => solObjs(j) < o)) {
+        makedForErasure(i) = true
+      }
+    }
+    // remove, from last to first so that the indexes of the firsts are not changed
+    // during iteration
+    for ((erase, i) <- makedForErasure.zipWithIndex.reverse; if erase) {
+      paretoFront.remove(i)
+      paretoObjFront.remove(i)
     }
     // println("Same frontier")
     paretoFront += model.getSolver().defaultSolution().record()
     paretoObjFront += solObjs
+    // println(paretoObjFront.map(_.mkString(", ")).mkString("\n"))
+    // println(paretoFront.map(_.mkString(", ")).mkString("\n"))
+    lastSolutionTime = LocalDateTime.now()
   }
 }

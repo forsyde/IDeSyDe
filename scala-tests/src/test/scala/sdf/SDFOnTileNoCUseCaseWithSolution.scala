@@ -824,7 +824,7 @@ class SDFOnTileNoCUseCaseWithSolution extends AnyFunSuite with LoggingMixin {
       .find(m => m.isInstanceOf[SDFApplication])
       .map(m => m.asInstanceOf[SDFApplication])
       .get
-    assert(sobelDM.repetitionVectors.head.sameElements(Array(1, 1, 1, 1)))
+    assert(sobelDM.sdfRepetitionVectors.sameElements(Array(1, 1, 1, 1)))
     assert(sobelDM.sdfMaxParallelClusters.size == 3)
   }
 
@@ -833,7 +833,6 @@ class SDFOnTileNoCUseCaseWithSolution extends AnyFunSuite with LoggingMixin {
     val identified  = identificationHandler.identifyDecisionModels(inputSystem)
     val chosen      = explorationHandler.chooseExplorersAndModels(identified)
     assert(chosen.size > 0)
-    assert(chosen.find((_, m) => m.isInstanceOf[ChocoSDFToSChedTileHW]).isDefined)
     val solutions = chosen
       .take(1)
       .flatMap((explorer, decisionModel) =>
@@ -864,7 +863,6 @@ class SDFOnTileNoCUseCaseWithSolution extends AnyFunSuite with LoggingMixin {
     val identified  = identificationHandler.identifyDecisionModels(inputSystem)
     val chosen      = explorationHandler.chooseExplorersAndModels(identified)
     assert(chosen.size > 0)
-    assert(chosen.find((_, m) => m.isInstanceOf[ChocoSDFToSChedTileHW]).isDefined)
     val solutions = chosen
       .take(1)
       .flatMap((explorer, decisionModel) =>
@@ -895,7 +893,6 @@ class SDFOnTileNoCUseCaseWithSolution extends AnyFunSuite with LoggingMixin {
     val identified  = identificationHandler.identifyDecisionModels(inputSystem)
     val chosen      = explorationHandler.chooseExplorersAndModels(identified)
     assert(chosen.size > 0)
-    assert(chosen.find((_, m) => m.isInstanceOf[ChocoSDFToSChedTileHW]).isDefined)
     val solutions = chosen
       .take(1)
       .flatMap((explorer, decisionModel) =>
@@ -929,7 +926,7 @@ class SDFOnTileNoCUseCaseWithSolution extends AnyFunSuite with LoggingMixin {
       .find(m => m.isInstanceOf[SDFApplication])
       .map(m => m.asInstanceOf[SDFApplication])
       .get
-    assert(susanDM.repetitionVectors.head.sameElements(Array(1, 1, 1, 1, 1)))
+    assert(susanDM.sdfRepetitionVectors.sameElements(Array(1, 1, 1, 1, 1)))
   }
 
   test("Correct decision model identification of RASTA") {
@@ -940,7 +937,7 @@ class SDFOnTileNoCUseCaseWithSolution extends AnyFunSuite with LoggingMixin {
       .find(m => m.isInstanceOf[SDFApplication])
       .map(m => m.asInstanceOf[SDFApplication])
       .get
-    assert(rastaDM.repetitionVectors.head.sameElements(Array(1, 1, 1, 1, 1, 1, 1)))
+    assert(rastaDM.sdfRepetitionVectors.sameElements(Array(1, 1, 1, 1, 1, 1, 1)))
   }
 
   test("Correct decision model identification of JPEG") {
@@ -951,7 +948,7 @@ class SDFOnTileNoCUseCaseWithSolution extends AnyFunSuite with LoggingMixin {
       .find(m => m.isInstanceOf[SDFApplication])
       .map(m => m.asInstanceOf[SDFApplication])
       .get
-    assert(jpegDM.repetitionVectors.head.sameElements(Array.fill(jpegDM.actors.size)(1)))
+    assert(jpegDM.sdfRepetitionVectors.sameElements(Array.fill(jpegDM.actors.size)(1)))
   }
 
   test("Correct decision model identification of Synthetic") {
@@ -962,7 +959,7 @@ class SDFOnTileNoCUseCaseWithSolution extends AnyFunSuite with LoggingMixin {
       .find(m => m.isInstanceOf[SDFApplication])
       .map(m => m.asInstanceOf[SDFApplication])
       .get
-    assert(syntheticDM.repetitionVectors.head.sameElements(Array.fill(syntheticDM.actors.size)(1)))
+    assert(syntheticDM.sdfRepetitionVectors.sameElements(Array.fill(syntheticDM.actors.size)(1)))
   }
 
   test("Correct identification and DSE of Synthetic to bus Small") {
@@ -970,7 +967,6 @@ class SDFOnTileNoCUseCaseWithSolution extends AnyFunSuite with LoggingMixin {
     val identified  = identificationHandler.identifyDecisionModels(inputSystem)
     val chosen      = explorationHandler.chooseExplorersAndModels(identified)
     assert(chosen.size > 0)
-    assert(chosen.find((_, m) => m.isInstanceOf[ChocoSDFToSChedTileHW]).isDefined)
     val solutions = chosen
       .take(1)
       .flatMap((explorer, decisionModel) =>
@@ -1005,7 +1001,7 @@ class SDFOnTileNoCUseCaseWithSolution extends AnyFunSuite with LoggingMixin {
       .map(m => m.asInstanceOf[SDFApplication])
       .get
     assert(
-      allSDFAppsDM.repetitionVectors.head.sameElements(Array.fill(allSDFAppsDM.actors.size)(1))
+      allSDFAppsDM.sdfRepetitionVectors.sameElements(Array.fill(allSDFAppsDM.actors.size)(1))
     )
   }
 
@@ -1015,7 +1011,6 @@ class SDFOnTileNoCUseCaseWithSolution extends AnyFunSuite with LoggingMixin {
     assert(identified.find(m => m.isInstanceOf[SDFToSchedTiledHW]).isDefined)
     val chosen = explorationHandler.chooseExplorersAndModels(identified)
     assert(chosen.size > 0)
-    assert(chosen.find((_, m) => m.isInstanceOf[ChocoSDFToSChedTileHW]).isDefined)
     val solutions = chosen
       .take(1)
       .flatMap((explorer, decisionModel) =>
@@ -1048,7 +1043,6 @@ class SDFOnTileNoCUseCaseWithSolution extends AnyFunSuite with LoggingMixin {
     assert(identified.find(m => m.isInstanceOf[SDFToSchedTiledHW]).isDefined)
     val chosen = explorationHandler.chooseExplorersAndModels(identified)
     assert(chosen.size > 0)
-    assert(chosen.find((_, m) => m.isInstanceOf[ChocoSDFToSChedTileHW]).isDefined)
     val solutions = chosen
       .take(1)
       .flatMap((explorer, decisionModel) =>
@@ -1081,7 +1075,6 @@ class SDFOnTileNoCUseCaseWithSolution extends AnyFunSuite with LoggingMixin {
     assert(identified.find(m => m.isInstanceOf[SDFToSchedTiledHW]).isDefined)
     val chosen = explorationHandler.chooseExplorersAndModels(identified)
     assert(chosen.size > 0)
-    assert(chosen.find((_, m) => m.isInstanceOf[ChocoSDFToSChedTileHW]).isDefined)
     val solutions = chosen
       .take(1)
       .flatMap((explorer, decisionModel) =>

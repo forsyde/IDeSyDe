@@ -120,6 +120,7 @@ class ChocoExplorer() extends ForSyDeIOExplorer:
         solver.setRestartOnSolutions
       }
       if (explorationTimeOutInSecs > 0L) {
+        scribe.debug(s"setting total exploration timeout to ${explorationTimeOutInSecs} seconds")
         solver.limitTime(explorationTimeOutInSecs * 1000L)
       }
       LazyList
@@ -156,6 +157,7 @@ class ChocoExplorer() extends ForSyDeIOExplorer:
         .takeWhile(feasible => feasible)
         // .filter(feasible => feasible)
         .map(_ => {
+          // scribe.debug(s"Current heap memory used: ${Runtime.getRuntime().totalMemory() - Runtime.getRuntime().freeMemory()} bytes")
           solver.defaultSolution()
         })
         .map(paretoSolution => {

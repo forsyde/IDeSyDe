@@ -86,6 +86,7 @@ final case class SDFAppIdentificationRule()
     }
 
     if (sdfActors.size > 0 && channelsConnectActors) {
+      scribe.debug(s"found a SDFApplication with ${sdfActors.size} actors and ${sdfChannels.size} channels")
       new IdentificationResult(
         true,
         Option(

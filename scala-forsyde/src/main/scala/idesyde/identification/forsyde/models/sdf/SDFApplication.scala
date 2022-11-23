@@ -25,6 +25,9 @@ import org.jgrapht.graph.AsSubgraph
 import java.util.stream.Collectors
 import org.jgrapht.graph.SimpleDirectedWeightedGraph
 import spire.math.*
+import scala.collection.mutable.Buffer
+
+import scalax.collection.GraphPredef._
 
 @deprecated
 final case class SDFApplication(
@@ -51,17 +54,6 @@ final case class SDFApplication(
   val channelsSet: Array[Int] = (actors.size until (actors.size + channels.size)).toArray
 
   val initialTokens: Array[Int] = channels.map(_.getNumOfInitialTokens)
-
-  /** this is a simple shortcut for the balance matrix (originally called topology matrix) as SDFs
-    * have only one configuration
-    */
-  // val sdfBalanceMatrix: Array[Array[Int]] = computeBalanceMatrices(0)
-
-  /** this is a simple shortcut for the repetition vectors as SDFs have only one configuration */
-  // val sdfRepetitionVectors: Array[Int] = computeRepetitionVectors(0)
-
-  /** this is a simple shortcut for the max parallel clusters as SDFs have only one configuration */
-  // val sdfMaxParallelClusters: Array[Array[Int]] = maximalParallelClustering(0)
 
   def isSelfConcurrent(actorIdx: Int): Boolean = {
     val a = actors(actorIdx)
@@ -98,6 +90,17 @@ final case class SDFApplication(
   })
 
   val configurations = Array((0, 0, "root"))
+
+  /** this is a simple shortcut for the balance matrix (originally called topology matrix) as SDFs
+    * have only one configuration
+    */
+  val sdfBalanceMatrix: Array[Array[Int]] = computeBalanceMatrices(0)
+
+  /** this is a simple shortcut for the repetition vectors as SDFs have only one configuration */
+  val sdfRepetitionVectors: Array[Int] = computeRepetitionVectors(0)
+
+  /** this is a simple shortcut for the max parallel clusters as SDFs have only one configuration */
+  lazy val sdfMaxParallelClusters: Array[Array[Int]] = maximalParallelClustering(0)
 
   val processComputationalNeeds: Array[Map[String, Map[String, Long]]] =
     actorFunctions.zipWithIndex.map((actorFuncs, i) => {
@@ -159,18 +162,18 @@ final case class SDFApplication(
         .sum
   )
 
-  // val messagesMaxSizes: Array[Long] = channels.zipWithIndex.map((c, i) =>
-  //   pessimisticTokensPerChannel(i) * TokenizableDataBlock
-  //     .safeCast(c)
-  //     .map(d => d.getTokenSizeInBits())
-  //     .orElse(0L)
-  // )
+  val messagesMaxSizes: Array[Long] = channels.zipWithIndex.map((c, i) =>
+    pessimisticTokensPerChannel(i) * TokenizableDataBlock
+      .safeCast(c)
+      .map(d => d.getTokenSizeInBits())
+      .orElse(0L)
+  )
 
-  // val sdfDisjointComponents = disjointComponents.head
+  val sdfDisjointComponents = disjointComponents.head
 
   val decreasingActorConsumptionOrder = actorsSet
     .sortBy(a => {
-      balanceMatrices(0).zipWithIndex
+      sdfBalanceMatrix.zipWithIndex
         .filter((vec, c) => vec(a) < 0)
         .map((vec, c) =>
           -TokenizableDataBlock
@@ -182,6 +185,97 @@ final case class SDFApplication(
     })
     .reverse
 
-  override val uniqueIdentifier = "SDFApplication"
+  val messagesFromChannels = dataflowGraphs.zipWithIndex.map((df, dfi) => {
+    var lumpedChannels = mutable.Map[(Int, Int), (Array[Int], Long, Int, Int, Int)]()
+    for ((c, ci) <- channelsSet.zipWithIndex) {
+      val thisInitialTokens = initialTokens(ci)
+      df.incomingEdgesOf(c)
+        .forEach(eSrc => {
+          val src = df.getEdgeSource(eSrc)
+          val sent = sdfBalanceMatrix(c - actors.size)(src) * TokenizableDataBlock
+            .safeCast(channels(c - actors.size))
+            .map(d => d.getTokenSizeInBits().toLong)
+            .orElse(0L)
+          val produced = sdfBalanceMatrix(c - actors.size)(src)
+          df.outgoingEdgesOf(c)
+            .forEach(eDst => {
+              val dst      = df.getEdgeTarget(eDst)
+              val consumed = -sdfBalanceMatrix(c - actors.size)(dst)
+              if (lumpedChannels.contains((src, dst))) {
+                val (cs, d, p, q, tok) = lumpedChannels((src, dst))
+                lumpedChannels((src, dst)) = (
+                  cs :+ c,
+                  d + sent,
+                  p + produced,
+                  q + consumed,
+                  tok + thisInitialTokens
+                )
+              } else {
+                lumpedChannels((src, dst)) = (
+                  Array(c),
+                  sent,
+                  produced,
+                  consumed,
+                  thisInitialTokens
+                )
+              }
+            })
+        })
+    }
+    lumpedChannels.map((k, v) => (k._1, k._2, v._1, v._2, v._3, v._4, v._5)).toArray
+  })
+
+  val sdfMessages = messagesFromChannels(0)
+
+  /** This graph serves the same purpose as the common HSDF transformation, but simply stores
+    * precedences between firings instead of data movement.
+    */
+  lazy val firingsPrecedenceGraph = {
+    // val firings = sdfRepetitionVectors.zipWithIndex.map((a, q) => (1 to q).map(qa => (a, qa)))
+    val firings = sdfRepetitionVectors.zipWithIndex.flatMap((a, q) => (1 to q).map(qa => (a, qa)))
+    var edges   = Buffer[((Int, Int), (Int, Int))]()
+    for ((src, dst, _, _, produced, consumed, tokens) <- sdfMessages) {
+      // val src = vec.indexWhere(_ > 0)
+      // val dst = vec.indexWhere(_ < 0)
+      for (
+        qDst <- 1 to sdfRepetitionVectors(dst);
+        qSrc = Rational(consumed * qDst - tokens, produced).ceil;
+        if qSrc > 0
+      ) {
+        edges +:= ((src, qSrc.toInt), (dst, qDst))
+      }
+    }
+    for (a <- 0 until actorsSet.length; q <- 1 to sdfRepetitionVectors(a) - 1) {
+      edges +:= ((a, q), (a, q + 1))
+    }
+    val param = edges.map((s, t) => (s ~> t)).toArray
+    scalax.collection.Graph(param: _*)
+  }
+
+  lazy val topologicalAndHeavyJobOrdering = firingsPrecedenceGraph
+    .topologicalSort()
+    .fold(
+      cycleNode => {
+        println("CYCLE NODES DETECTED")
+        firingsPrecedenceGraph.nodes.map(_.value).toArray
+      },
+      topo =>
+        topo
+          .withLayerOrdering(
+            firingsPrecedenceGraph.NodeOrdering((v1, v2) =>
+              decreasingActorConsumptionOrder
+                .indexOf(
+                  v2.value._1
+                ) - decreasingActorConsumptionOrder.indexOf(v1.value._1)
+            )
+          )
+          .map(_.value)
+          .toArray
+    )
+
+  lazy val topologicalAndHeavyActorOrdering =
+    actorsSet.sortBy(a => topologicalAndHeavyJobOrdering.indexWhere((aa, _) => a == aa))
+
+  val uniqueIdentifier = "SDFApplication"
 
 }

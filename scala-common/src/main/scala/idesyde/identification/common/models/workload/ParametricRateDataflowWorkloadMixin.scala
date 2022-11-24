@@ -110,8 +110,8 @@ trait ParametricRateDataflowWorkloadMixin {
               gRates(producer)(consumer) =
                 if (rate.equals(Rational.zero)) then
                   Rational(
-                    rate.numerator.toInt + g.getEdgeWeight(producerEdge).toInt,
-                    rate.denominator.toInt - 1 + g.getEdgeWeight(consumerEdge).toInt
+                    g.getEdgeWeight(producerEdge).toInt,
+                    g.getEdgeWeight(consumerEdge).toInt
                   )
                 else
                   Rational(
@@ -161,7 +161,7 @@ trait ParametricRateDataflowWorkloadMixin {
           }
           // ...otherwise we check if the graph is consistent
           else {
-            consistent = rates(next) == rates(other) / (gRates(other)(next))
+            consistent = rates(next) == rates(other) * (gRates(other)(next))
           }
         })
     }

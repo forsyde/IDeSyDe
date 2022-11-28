@@ -218,15 +218,31 @@ final case class SDFApplication(
     val firings = sdfRepetitionVectors.zipWithIndex.flatMap((a, q) => (1 to q).map(qa => (a, qa)))
     var edges   = Buffer[((Int, Int), (Int, Int))]()
     for ((src, dst, _, _, produced, consumed, tokens) <- sdfMessages) {
+      // println((produced, consumed, tokens))
       // val src = vec.indexWhere(_ > 0)
       // val dst = vec.indexWhere(_ < 0)
-      for (
-        qDst <- 1 to sdfRepetitionVectors(dst);
-        qSrc = Rational(consumed * qDst - tokens, produced).ceil;
-        if qSrc > 0
-      ) {
-        edges +:= ((src, qSrc.toInt), (dst, qDst))
+      var qSrc = 0
+      var qDst = 0
+      while (qSrc <= sdfRepetitionVectors(src) && qDst <= sdfRepetitionVectors(dst)) {
+        if (produced * qSrc + tokens - consumed * (qDst + 1) < 0) {
+          qSrc += 1
+        } else {
+          qDst += 1
+          if (qSrc > 0) {
+            edges +:= ((src, qSrc), (dst, qDst))
+          }
+        }
       }
+      // the last jobs always communicate
+      // edges +:= ((src, qSrc), (dst, qDst))
+      // for (
+      //   qDst <- 1 to sdfRepetitionVectors(dst);
+      //   qSrcFrac = Rational(consumed * qDst - tokens, produced);
+      //   qSrc <- qSrcFrac.floor.toInt to qSrcFrac.ceil.toInt
+      //   if qSrc > 0
+      // ) {
+      //   edges +:= ((src, qSrc.toInt), (dst, qDst))
+      // }
     }
     for (a <- 0 until actorsSet.length; q <- 1 to sdfRepetitionVectors(a) - 1) {
       edges +:= ((a, q), (a, q + 1))

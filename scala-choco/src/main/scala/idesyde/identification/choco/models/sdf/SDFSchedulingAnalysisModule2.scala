@@ -176,9 +176,9 @@ class SDFSchedulingAnalysisModule2(
     for (
       (v, i) <- jobsAndActors.zipWithIndex;
       (a, q) = v;
-      eOut <- sdfAndSchedulers.sdfApplications.firingsPrecedenceGraph.get(v).outgoing;
-      (aa, qq) = eOut._2.value;
-      j        = jobsAndActors.indexOf(eOut._2.value)
+      dst <- sdfAndSchedulers.sdfApplications.firingsPrecedenceGraph.get(v).diSuccessors;
+      (aa, qq) = dst.value;
+      j        = jobsAndActors.indexOf(dst.value)
     ) {
       chocoModel.arithm(jobOrdering(i), "<", jobOrdering(j)).post()
       if (a != aa) {
@@ -245,6 +245,21 @@ class SDFSchedulingAnalysisModule2(
         //   .arithm(jobTimeMatrix(i)(j), "=", jobStartTime(i))
         //   .post()
       }
+      // this search space reduction is only valid because the number of tokens allocated are always
+      // conservative
+      for (
+        dstdst <- dst.diSuccessors;
+        (aaa, qqq) = dstdst.value;
+        k        = jobsAndActors.indexOf(dstdst.value)
+      ) {
+        chocoModel.not(
+          chocoModel.and(
+            chocoModel.arithm(memoryMappingModule.processesMemoryMapping(actors.indexOf(a)), "=", memoryMappingModule.processesMemoryMapping(actors.indexOf(aaa))),
+            chocoModel.arithm(memoryMappingModule.processesMemoryMapping(actors.indexOf(a)), "!=", memoryMappingModule.processesMemoryMapping(actors.indexOf(aa))),
+            chocoModel.arithm(memoryMappingModule.processesMemoryMapping(actors.indexOf(aa)), "!=", memoryMappingModule.processesMemoryMapping(actors.indexOf(aaa)))
+          )
+        ).post()
+      }
     }
     for (
       (v, i)  <- jobsAndActors.zipWithIndex;
@@ -255,18 +270,18 @@ class SDFSchedulingAnalysisModule2(
       aa  = actors.indexOf(vv._1);
       if i != j
     ) {
-      chocoModel.ifOnlyIf(
-        chocoModel.arithm(
-          jobOrdering(j),
-          ">=",
-          jobOrdering(i)
-        ),
-        chocoModel.arithm(
-          jobStartTime(j),
-          ">=",
-          jobStartTime(i)
-        )
-      )
+      // chocoModel.ifOnlyIf(
+      //   chocoModel.arithm(
+      //     jobOrdering(j),
+      //     ">",
+      //     jobOrdering(i)
+      //   ),
+      //   chocoModel.arithm(
+      //     jobStartTime(j),
+      //     ">",
+      //     jobStartTime(i)
+      //   )
+      // )
       chocoModel.ifThen(
         chocoModel.and(
           chocoModel.arithm(
@@ -276,7 +291,7 @@ class SDFSchedulingAnalysisModule2(
           ),
           chocoModel.arithm(
             jobOrdering(j),
-            ">=",
+            ">",
             jobOrdering(i)
           )
         ),

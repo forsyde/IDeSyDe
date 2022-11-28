@@ -14,7 +14,7 @@ class OrderedJobUpperBoundPropagator(
     val durations: Array[IntVar]
 ) extends Propagator[IntVar](
       mapping ++ startTimes ++ durations,
-      PropagatorPriority.CUBIC,
+      PropagatorPriority.QUADRATIC,
       false
     ) {
 
@@ -22,12 +22,17 @@ class OrderedJobUpperBoundPropagator(
 
   def propagate(evtmask: Int): Unit = wfor(0, _ < numJobs, _ + 1) { i =>
     if (mapping(i).isInstantiated()) {
-      var maxStart = 0
+      var maxStart = startTimes(i).getLB()
       wfor(0, _ < numJobs, _ + 1) { j =>
         if (i != j && mapping(j).contains(mapping(i).getValue())) {
           val jMaxTime = startTimes(j).getUB() + durations(j).getUB()
           if (ordering(j).getLB() <= ordering(i).getUB() && maxStart < jMaxTime) {
             maxStart = jMaxTime
+          }
+        }
+        if (i != j && mapping(j).isInstantiatedTo(mapping(i).getValue())) {
+          if (ordering(j).getUB() < ordering(i).getLB()) {
+            startTimes(i).updateLowerBound(startTimes(j).getLB() + durations(j).getLB(), this)
           }
         }
       }

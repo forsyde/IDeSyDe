@@ -30,16 +30,16 @@ class ConMonitorObj2(val model: ChocoSDFToSChedTileHW2) extends IMonitorContradi
 
   def onContradiction(cex: ContradictionException): Unit = {
     println(cex.toString())
-    println(
-      model.tileAnalysisModule.procElemSendsDataToAnother
-        .map(_.mkString(", "))
-        .mkString("\n")
-    )
-    println(
-      model.tileAnalysisModule.numVirtualChannelsForProcElem
-        .map(_.filter(_.getValue() > 0).mkString(", "))
-        .mkString("\n")
-    )
+    // println(
+    //   model.tileAnalysisModule.procElemSendsDataToAnother
+    //     .map(_.mkString(", "))
+    //     .mkString("\n")
+    // )
+    // println(
+    //   model.tileAnalysisModule.numVirtualChannelsForProcElem
+    //     .map(_.filter(_.getValue() > 0).mkString(", "))
+    //     .mkString("\n")
+    // )
     println(model.memoryMappingModule.processesMemoryMapping.mkString(", "))
     println(model.sdfAnalysisModule.jobOrdering.mkString(", "))
     println(model.sdfAnalysisModule.jobStartTime.mkString(", "))
@@ -54,7 +54,7 @@ final case class ChocoSDFToSChedTileHW2(
 
   val chocoModel: Model = Model()
 
-  // chocoModel.getSolver().plugMonitor(ConMonitorObj2(this))
+  chocoModel.getSolver().plugMonitor(ConMonitorObj2(this))
 
   // section for time multiplier calculation
   val timeValues =
@@ -211,6 +211,16 @@ final case class ChocoSDFToSChedTileHW2(
       val pSorted = group.toArray.sorted
       chocoModel.increasing(pSorted.map(idx => indexOfPe(idx)), 1).post()
     })
+  // breaking schedule holes
+  val countPerOrder = (1 to dse.sdfApplications.topologicalAndHeavyJobOrdering.size).map(o => chocoModel.count(s"countForOrder($o)", o, sdfAnalysisModule.jobOrdering:_*)).toArray
+  chocoModel.sum(countPerOrder, "=", dse.sdfApplications.topologicalAndHeavyJobOrdering.size).post()
+  for (order <- 1 until dse.sdfApplications.topologicalAndHeavyJobOrdering.size - 1) {
+    chocoModel.ifOnlyIf(
+      chocoModel.arithm(countPerOrder(order), "=", 0),
+      chocoModel.arithm(countPerOrder(order + 1), "=", 0),
+    )
+  }
+  println(dse.sdfApplications.firingsPrecedenceGraph.toSortedString())
   override val strategies: Array[AbstractStrategy[? <: Variable]] = Array(
     // chooseLowestMappedTime(
     //   dse.sdfApplications.topologicalAndHeavyJobOrdering.map((a, _) =>

@@ -208,6 +208,12 @@ final case class SDFApplication(
     lumpedChannels.map((k, v) => (k._1, k._2, v._1, v._2, v._3, v._4, v._5)).toArray
   })
 
+  /** This abstracts the many sdf channels in the sdf multigraph into the form commonly presented in
+    * papers and texts: with just a channel between every two actors.
+    *
+    * Every tuple in this is given by: (src actors index, dst actors index, lumped SDF channels,
+    * size of message, produced, consumed, initial tokens)
+    */
   val sdfMessages = messagesFromChannels(0)
 
   /** This graph serves the same purpose as the common HSDF transformation, but simply stores
@@ -215,8 +221,7 @@ final case class SDFApplication(
     */
   lazy val firingsPrecedenceGraph = {
     // val firings = sdfRepetitionVectors.zipWithIndex.map((a, q) => (1 to q).map(qa => (a, qa)))
-    val firings = sdfRepetitionVectors.zipWithIndex.flatMap((a, q) => (1 to q).map(qa => (a, qa)))
-    var edges   = Buffer[((Int, Int), (Int, Int))]()
+    var edges = Buffer[((Int, Int), (Int, Int))]()
     for ((src, dst, _, _, produced, consumed, tokens) <- sdfMessages) {
       // println((produced, consumed, tokens))
       // val src = vec.indexWhere(_ > 0)
@@ -244,11 +249,50 @@ final case class SDFApplication(
       //   edges +:= ((src, qSrc.toInt), (dst, qDst))
       // }
     }
-    for (a <- 0 until actorsSet.length; q <- 1 to sdfRepetitionVectors(a) - 1) {
+    for (a <- actorsSet; q <- 1 to sdfRepetitionVectors(actorsSet.indexOf(a)) - 1) {
       edges +:= ((a, q), (a, q + 1))
     }
     val param = edges.map((s, t) => (s ~> t)).toArray
     scalax.collection.Graph(param: _*)
+  }
+
+  /** Same as [[firingsPrecedenceGraph]], but with one more firings per actors of the next periodic
+    * phase
+    */
+  lazy val firingsPrecedenceWithExtraStepGraph = {
+    var edges = Buffer[((Int, Int), (Int, Int))]()
+    for ((src, dst, _, _, produced, consumed, tokens) <- sdfMessages) {
+      // println((produced, consumed, tokens))
+      // val src = vec.indexWhere(_ > 0)
+      // val dst = vec.indexWhere(_ < 0)
+      var qSrc = sdfRepetitionVectors(src)
+      var qDst = sdfRepetitionVectors(dst)
+      while (qSrc <= sdfRepetitionVectors(src) + 1 && qDst <= sdfRepetitionVectors(dst) + 1) {
+        if (produced * qSrc + tokens - consumed * (qDst + 1) < 0) {
+          qSrc += 1
+        } else {
+          qDst += 1
+          if (qSrc > 0) {
+            edges +:= ((src, qSrc), (dst, qDst))
+          }
+        }
+      }
+      // the last jobs always communicate
+      // edges +:= ((src, qSrc), (dst, qDst))
+      // for (
+      //   qDst <- 1 to sdfRepetitionVectors(dst);
+      //   qSrcFrac = Rational(consumed * qDst - tokens, produced);
+      //   qSrc <- qSrcFrac.floor.toInt to qSrcFrac.ceil.toInt
+      //   if qSrc > 0
+      // ) {
+      //   edges +:= ((src, qSrc.toInt), (dst, qDst))
+      // }
+    }
+    for (a <- actorsSet; i = actorsSet.indexOf(a)) {
+      edges +:= ((a, sdfRepetitionVectors(i)), (a, sdfRepetitionVectors(i) + 1))
+    }
+    val param = edges.map((s, t) => (s ~> t)).toArray
+    firingsPrecedenceGraph ++ param
   }
 
   lazy val topologicalAndHeavyJobOrdering = firingsPrecedenceGraph
@@ -264,8 +308,29 @@ final case class SDFApplication(
             firingsPrecedenceGraph.NodeOrdering((v1, v2) =>
               decreasingActorConsumptionOrder
                 .indexOf(
-                  v2.value._1
-                ) - decreasingActorConsumptionOrder.indexOf(v1.value._1)
+                  v1.value._1
+                ) - decreasingActorConsumptionOrder.indexOf(v2.value._1)
+            )
+          )
+          .map(_.value)
+          .toArray
+    )
+
+  lazy val topologicalAndHeavyJobOrderingWithExtra = firingsPrecedenceWithExtraStepGraph
+    .topologicalSort()
+    .fold(
+      cycleNode => {
+        println("CYCLE NODES DETECTED")
+        firingsPrecedenceGraph.nodes.map(_.value).toArray
+      },
+      topo =>
+        topo
+          .withLayerOrdering(
+            firingsPrecedenceWithExtraStepGraph.NodeOrdering((v1, v2) =>
+              decreasingActorConsumptionOrder
+                .indexOf(
+                  v1.value._1
+                ) - decreasingActorConsumptionOrder.indexOf(v2.value._1)
             )
           )
           .map(_.value)
@@ -274,6 +339,9 @@ final case class SDFApplication(
 
   lazy val topologicalAndHeavyActorOrdering =
     actorsSet.sortBy(a => topologicalAndHeavyJobOrdering.indexWhere((aa, _) => a == aa))
+
+  lazy val topologicalAndHeavyActorOrderingWithExtra =
+    actorsSet.sortBy(a => topologicalAndHeavyJobOrderingWithExtra.indexWhere((aa, _) => a == aa))
 
   override val uniqueIdentifier = "SDFApplication"
 

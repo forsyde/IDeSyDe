@@ -30,11 +30,11 @@ class ConMonitorObj2(val model: ChocoSDFToSChedTileHW2) extends IMonitorContradi
 
   def onContradiction(cex: ContradictionException): Unit = {
     println(cex.toString())
-    // println(
-    //   model.tileAnalysisModule.procElemSendsDataToAnother
-    //     .map(_.mkString(", "))
-    //     .mkString("\n")
-    // )
+    println(
+      model.tileAnalysisModule.procElemSendsDataToAnother
+        .map(_.mkString(", "))
+        .mkString("\n")
+    )
     // println(
     //   model.tileAnalysisModule.numVirtualChannelsForProcElem
     //     .map(_.filter(_.getValue() > 0).mkString(", "))
@@ -43,6 +43,13 @@ class ConMonitorObj2(val model: ChocoSDFToSChedTileHW2) extends IMonitorContradi
     println(model.memoryMappingModule.processesMemoryMapping.mkString(", "))
     println(model.sdfAnalysisModule.jobOrdering.mkString(", "))
     println(model.sdfAnalysisModule.jobStartTime.mkString(", "))
+    println(model.sdfAnalysisModule.invThroughputs.mkString(", "))
+    // println(model.sdfAnalysisModule.mappedPerProcessingElement.mkString(", "))
+    println(
+      model.tileAnalysisModule.messageTravelDuration
+        .map(_.map(_.mkString(",")).mkString("; "))
+        .mkString("\n")
+    )
   }
 }
 
@@ -54,7 +61,7 @@ final case class ChocoSDFToSChedTileHW2(
 
   val chocoModel: Model = Model()
 
-  chocoModel.getSolver().plugMonitor(ConMonitorObj2(this))
+  // chocoModel.getSolver().plugMonitor(ConMonitorObj2(this))
 
   // section for time multiplier calculation
   val timeValues =
@@ -131,28 +138,51 @@ final case class ChocoSDFToSChedTileHW2(
       val (s, t, cs, _, _, _, _) = dse.sdfApplications.sdfMessages(c)
       if (a == t) {
         chocoModel.arithm(aMap, "=", cMap).post()
-      } else if (a == s) {
-        // build the table that make this constraint
-        dse.platform.schedulerSet.zipWithIndex.foreach((_, sendi) => {
-          dse.platform.schedulerSet.zipWithIndex.foreach((_, desti) => {
-            if (sendi != desti) {
-              chocoModel.ifThen(
-                chocoModel.and(
-                  chocoModel.arithm(aMap, "=", sendi),
-                  chocoModel.arithm(cMap, "=", desti)
-                ),
-                chocoModel.arithm(
-                  tileAnalysisModule.procElemSendsDataToAnother(sendi)(desti),
-                  ">",
-                  0
-                )
-              )
-            }
-          })
-        })
       }
     })
   })
+  // build the table that make this constraint
+  for (
+    (_, sendi) <- dse.platform.schedulerSet.zipWithIndex;
+    (_, desti) <- dse.platform.schedulerSet.zipWithIndex;
+    if sendi != desti
+  ) {
+    val anyMapped = dse.sdfApplications.sdfMessages
+      .map((s, t, cs, _, _, _, _) =>
+        chocoModel.and(
+          memoryMappingModule
+            .processesMemoryMapping(s)
+            .eq(sendi)
+            .decompose(),
+          memoryMappingModule
+            .processesMemoryMapping(t)
+            .eq(desti)
+            .decompose()
+        )
+      )
+    chocoModel.ifThenElse(
+      chocoModel.or(anyMapped: _*),
+      tileAnalysisModule.procElemSendsDataToAnother(sendi)(desti).eq(1).decompose(),
+      tileAnalysisModule.procElemSendsDataToAnother(sendi)(desti).eq(0).decompose()
+    )
+  }
+  // dse.platform.schedulerSet.zipWithIndex.foreach((_, sendi) => {
+  //   dse.platform.schedulerSet.zipWithIndex.foreach((_, desti) => {
+  //     if (sendi != desti) {
+  //       chocoModel.ifThen(
+  //         chocoModel.and(
+  //           chocoModel.arithm(aMap, "=", sendi),
+  //           chocoModel.arithm(cMap, "=", desti)
+  //         ),
+  //         chocoModel.arithm(
+  //           tileAnalysisModule.procElemSendsDataToAnother(sendi)(desti),
+  //           ">",
+  //           0
+  //         )
+  //       )
+  //     }
+  //   })
+  // })
 
   tileAnalysisModule.postTileAsyncInterconnectComms()
   //---------
@@ -192,11 +222,16 @@ final case class ChocoSDFToSChedTileHW2(
 
   // breaking platform symmetries
   val indexOfPe = dse.platform.schedulerSet.map(p =>
-    chocoModel.intVar(s"indexOfPe($p)", 0, Math.max(sdfAnalysisModule.jobsAndActors.size + 1, dse.platform.schedulerSet.size), true)
+    chocoModel.intVar(
+      s"indexOfPe($p)",
+      0,
+      Math.max(sdfAnalysisModule.jobsAndActors.size + 1, dse.platform.schedulerSet.size),
+      true
+    )
   )
   for (
     (p, j) <- dse.platform.schedulerSet.zipWithIndex;
-    a <- dse.sdfApplications.topologicalAndHeavyActorOrdering;
+    a      <- dse.sdfApplications.topologicalAndHeavyActorOrdering;
     i = dse.sdfApplications.actorsSet.indexOf(a)
   ) {
     chocoModel.ifThenElse(
@@ -212,15 +247,27 @@ final case class ChocoSDFToSChedTileHW2(
       chocoModel.increasing(pSorted.map(idx => indexOfPe(idx)), 1).post()
     })
   // breaking schedule holes
-  val countPerOrder = (1 to dse.sdfApplications.topologicalAndHeavyJobOrdering.size).map(o => chocoModel.count(s"countForOrder($o)", o, sdfAnalysisModule.jobOrdering:_*)).toArray
-  chocoModel.sum(countPerOrder, "=", dse.sdfApplications.topologicalAndHeavyJobOrdering.size).post()
+  val countPerOrder = (1 to dse.sdfApplications.topologicalAndHeavyJobOrdering.size)
+    .map(o => chocoModel.count(s"countForOrder($o)", o, sdfAnalysisModule.jobOrdering: _*))
+    .toArray
+  chocoModel
+    .sum(countPerOrder, "=", dse.sdfApplications.topologicalAndHeavyJobOrdering.size)
+    .post()
   for (order <- 1 until dse.sdfApplications.topologicalAndHeavyJobOrdering.size - 1) {
     chocoModel.ifOnlyIf(
       chocoModel.arithm(countPerOrder(order), "=", 0),
-      chocoModel.arithm(countPerOrder(order + 1), "=", 0),
+      chocoModel.arithm(countPerOrder(order + 1), "=", 0)
     )
+    // if (order > 1) {
+    //   chocoModel
+    //     .or(
+    //       chocoModel.arithm(countPerOrder(order - 1), "<=", countPerOrder(order)),
+    //       chocoModel.arithm(countPerOrder(order), ">=", countPerOrder(order + 1))
+    //     )
+    //     .post()
+    // }
   }
-  println(dse.sdfApplications.firingsPrecedenceGraph.toSortedString())
+  // println(dse.sdfApplications.firingsPrecedenceGraph.toSortedString())
   override val strategies: Array[AbstractStrategy[? <: Variable]] = Array(
     // chooseLowestMappedTime(
     //   dse.sdfApplications.topologicalAndHeavyJobOrdering.map((a, _) =>
@@ -256,7 +303,7 @@ final case class ChocoSDFToSChedTileHW2(
       // )
       // sdfAnalysisModule.invThroughputs
     ),
-    Search.minDomLBSearch(indexOfPe:_*),
+    Search.minDomLBSearch(indexOfPe: _*),
     Search.minDomLBSearch(tileAnalysisModule.numVirtualChannelsForProcElem.flatten: _*),
     Search.minDomLBSearch(tileAnalysisModule.messageTravelDuration.flatten.flatten: _*),
     // these next two lines makre sure the choice for start times and throughput are made just like the ordering and mapping
@@ -392,17 +439,20 @@ final case class ChocoSDFToSChedTileHW2(
       schedulings,
       dse.sdfApplications.actorsSet.zipWithIndex.map((a, i) => {
         dse.platform.schedulerSet.zipWithIndex.map((s, j) => {
-          (1 to sdfAnalysisModule.jobsAndActors.size).map(t => {
-            if (
-              sdfAnalysisModule.jobsAndActors.zipWithIndex.exists((job, k) => {
-                a == job._1 && memoryMappingModule
+          (1 to dse.sdfApplications.sdfRepetitionVectors(i))
+            .map(t => {
+              val jobIndex =
+                sdfAnalysisModule.jobsAndActors.indexWhere((aa, k) => aa == a && k == t)
+              if (
+                memoryMappingModule
                   .processesMemoryMapping(i)
-                  .isInstantiatedTo(s) && sdfAnalysisModule.jobOrdering(k).isInstantiatedTo(t)
-              })
-            )
-              1
-            else 0
-          }).toArray
+                  .isInstantiatedTo(s) && sdfAnalysisModule
+                  .jobOrdering(jobIndex)
+                  .isInstantiatedTo(t)
+              ) then 1
+              else 0
+            })
+            .toArray
         })
       }),
       // TODO: fix this slot allocaiton strategy for later. It is Okay, but lacks some direct synthetizable details, like which exact VC the channel goes

@@ -216,6 +216,12 @@ final case class SDFApplication(
     */
   val sdfMessages = messagesFromChannels(0)
 
+  lazy val sdfGraph = {
+    val edges = sdfMessages.map(t => (t._1, t._2))
+    val param = edges.map((s, t) => (s ~> t))
+    scalax.collection.Graph(param: _*)
+  }
+
   /** This graph serves the same purpose as the common HSDF transformation, but simply stores
     * precedences between firings instead of data movement.
     */

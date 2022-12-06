@@ -336,6 +336,14 @@ final case class ChocoSDFToSChedTileHW2(
     //     sdfAnalysisModule.jobStartTime(sdfAnalysisModule.jobsAndActors.indexOf(j))
     //   )
     // ),
+    // chooseOrderingIfMapped(
+    //   dse.sdfApplications.topologicalAndHeavyJobOrdering.map((a, _) =>
+    //     memoryMappingModule.processesMemoryMapping(dse.sdfApplications.actorsSet.indexOf(a))
+    //   ),
+    //   dse.sdfApplications.topologicalAndHeavyJobOrdering.map(j =>
+    //     sdfAnalysisModule.jobOrdering(sdfAnalysisModule.jobsAndActors.indexOf(j))
+    //   )
+    // ),
     CompactingMultiCoreMapping[Int](
       dse.platform.tiledDigitalHardware.minTraversalTimePerBit.map(arr =>
         arr.map(v => (v * timeMultiplier).ceil.toInt)
@@ -351,19 +359,12 @@ final case class ChocoSDFToSChedTileHW2(
       // )
       // sdfAnalysisModule.invThroughputs
     ),
-    chooseOrderingIfMapped(
-      dse.sdfApplications.topologicalAndHeavyJobOrdering.map((a, _) =>
-        memoryMappingModule.processesMemoryMapping(dse.sdfApplications.actorsSet.indexOf(a))
-      ),
+    // Search.minDomLBSearch(sdfAnalysisModule.jobOrdering: _*),
+    Search.inputOrderLBSearch(
       dse.sdfApplications.topologicalAndHeavyJobOrdering.map(j =>
         sdfAnalysisModule.jobOrdering(sdfAnalysisModule.jobsAndActors.indexOf(j))
-      )
+      ): _*
     ),
-    // Search.inputOrderLBSearch(
-    //   dse.sdfApplications.topologicalAndHeavyJobOrdering.map(j =>
-    //     sdfAnalysisModule.jobNext(sdfAnalysisModule.jobsAndActors.indexOf(j))
-    //   ): _*
-    // ),
     // Search.minDomLBSearch(indexOfPe: _*),
     Search.minDomLBSearch(tileAnalysisModule.numVirtualChannelsForProcElem.flatten: _*),
     Search.minDomLBSearch(tileAnalysisModule.messageTravelDuration.flatten.flatten: _*),

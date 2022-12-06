@@ -192,8 +192,9 @@ class SDFSchedulingAnalysisModule2(
           ),
           chocoModel.arithm(jobOrdering(i), "<", jobOrdering(j))
         )
+        chocoModel.arithm(jobStartTime(i), "<=", jobStartTime(j)).post()
       }
-      chocoModel.ifThenElse(
+      chocoModel.ifOnlyIf(
         chocoModel.and(
           chocoModel.arithm(
             memoryMappingModule
@@ -204,8 +205,7 @@ class SDFSchedulingAnalysisModule2(
           ),
           chocoModel.arithm(jobOrdering(i), "=", jobOrdering(j), "-", 1)
         ),
-        chocoModel.arithm(jobPrev(j), "=", i + 1),
-        chocoModel.arithm(jobPrev(j), "!=", i + 1)
+        chocoModel.arithm(jobPrev(j), "=", i + 1)
       )
     }
     // -----/

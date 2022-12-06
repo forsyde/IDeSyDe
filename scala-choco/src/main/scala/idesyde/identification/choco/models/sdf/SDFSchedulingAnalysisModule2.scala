@@ -274,15 +274,7 @@ class SDFSchedulingAnalysisModule2(
                   fromJToI
                 ),
               chocoModel
-                .scalar(
-                  Array(
-                    jobStartTime(j),
-                    duration(actors.indexOf(aa))
-                  ),
-                  Array(1, 1, 1),
-                  "=",
-                  fromJToI
-                )
+                .arithm(fromJToI, "=", duration(actors.indexOf(aa)), "+", jobStartTime(j))
             )
           } else if (a == aa && !isSelfConcurrent(a)) {
             chocoModel

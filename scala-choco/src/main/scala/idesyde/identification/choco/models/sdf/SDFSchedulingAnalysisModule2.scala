@@ -273,7 +273,16 @@ class SDFSchedulingAnalysisModule2(
                   "=",
                   fromJToI
                 ),
-              chocoModel.arithm(fromJToI, "=", 0)
+              chocoModel
+                .scalar(
+                  Array(
+                    jobStartTime(j),
+                    duration(actors.indexOf(aa))
+                  ),
+                  Array(1, 1, 1),
+                  "=",
+                  fromJToI
+                )
             )
           } else if (a == aa && !isSelfConcurrent(a)) {
             chocoModel
@@ -320,6 +329,20 @@ class SDFSchedulingAnalysisModule2(
           .post()
       }
       for ((aa, j) <- actors.zipWithIndex; if a != aa) {
+        if (
+          sdfAndSchedulers.sdfApplications.sdfGraph
+            .get(a)
+            .pathTo(sdfAndSchedulers.sdfApplications.sdfGraph.get(aa))
+            .isDefined
+        ) {
+          chocoModel
+            .arithm(
+              invThroughputs(i),
+              "=",
+              invThroughputs(j)
+            )
+            .post()
+        }
         chocoModel.ifThen(
           chocoModel.arithm(
             memoryMappingModule.processesMemoryMapping(i),

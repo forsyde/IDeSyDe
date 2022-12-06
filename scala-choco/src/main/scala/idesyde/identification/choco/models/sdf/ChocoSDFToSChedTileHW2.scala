@@ -254,7 +254,9 @@ final case class ChocoSDFToSChedTileHW2(
     .maxByOption(_.size)
     .foreach(group => {
       val pSorted = group.toArray.sorted
-      chocoModel.decreasing(pSorted.map(idx => sdfAnalysisModule.mappedPerProcessingElement(idx)), 0).post()
+      chocoModel
+        .decreasing(pSorted.map(idx => sdfAnalysisModule.mappedPerProcessingElement(idx)), 0)
+        .post()
     })
   // enforcing a certain order whenever possible
   val dataFlows = dse.platform.schedulerSet.map(i =>
@@ -469,8 +471,11 @@ final case class ChocoSDFToSChedTileHW2(
       // TODO: fix this slot allocaiton strategy for later. It is Okay, but lacks some direct synthetizable details, like which exact VC the channel goes
       dse.sdfApplications.channelsSet.zipWithIndex.map((c, ci) => {
         // we have to look from the source perpective, since the sending processor is the one that allocates
-        val (s, _, _, _, _, _, _) = dse.sdfApplications.sdfMessages.find((s, d, cs, l, _, _, _) => cs.contains(c)).get
-        val p = output.getIntVal(memoryMappingModule.processesMemoryMapping(dse.sdfApplications.actorsSet.indexOf(s)))
+        val (s, _, _, _, _, _, _) =
+          dse.sdfApplications.sdfMessages.find((s, d, cs, l, _, _, _) => cs.contains(c)).get
+        val p = output.getIntVal(
+          memoryMappingModule.processesMemoryMapping(dse.sdfApplications.actorsSet.indexOf(s))
+        )
         dse.platform.tiledDigitalHardware.allCommElems.zipWithIndex.map((ce, j) => {
           output.getIntVal(tileAnalysisModule.numVirtualChannelsForProcElem(p)(j))
         })

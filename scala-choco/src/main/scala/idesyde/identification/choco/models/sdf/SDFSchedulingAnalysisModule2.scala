@@ -139,7 +139,7 @@ class SDFSchedulingAnalysisModule2(
     chocoModel.count(
       s"mappedPerProcessingElement($p)",
       p,
-      jobsAndActors.map((a, _) => memoryMappingModule.processesMemoryMapping(actors.indexOf(a))):_*
+      jobsAndActors.map((a, _) => memoryMappingModule.processesMemoryMapping(actors.indexOf(a))): _*
     )
   )
 
@@ -254,20 +254,31 @@ class SDFSchedulingAnalysisModule2(
             true
           )
           if (a != aa) {
-            chocoModel
-              .scalar(
-                Array(
-                  maxMessageTime,
-                  jobStartTime(j),
-                  duration(actors.indexOf(aa))
+            chocoModel.ifThenElse(
+              chocoModel.arithm(
+                memoryMappingModule
+                  .processesMemoryMapping(actors.indexOf(a)),
+                "!=",
+                memoryMappingModule
+                  .processesMemoryMapping(actors.indexOf(aa))
+              ),
+              chocoModel
+                .scalar(
+                  Array(
+                    maxMessageTime,
+                    jobStartTime(j),
+                    duration(actors.indexOf(aa))
+                  ),
+                  Array(1, 1, 1),
+                  "=",
+                  fromJToI
                 ),
-                Array(1, 1, 1),
-                "=",
-                fromJToI
-              )
-              .post()
+              chocoModel.arithm(fromJToI, "=", fromPrevToI)
+            )
           } else if (a == aa && !isSelfConcurrent(a)) {
-            chocoModel.arithm(fromJToI, "=", duration(actors.indexOf(aa)), "+", jobStartTime(j)).post()
+            chocoModel
+              .arithm(fromJToI, "=", duration(actors.indexOf(aa)), "+", jobStartTime(j))
+              .post()
           } else if (a == aa && isSelfConcurrent(a)) {
             chocoModel.arithm(fromJToI, "=", jobStartTime(j)).post()
           }

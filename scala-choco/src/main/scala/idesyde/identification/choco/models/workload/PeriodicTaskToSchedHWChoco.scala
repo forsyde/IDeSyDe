@@ -54,9 +54,9 @@ import idesyde.identification.choco.interfaces.ChocoModelMixin
 final case class PeriodicTaskToSchedHWChoco(
     val dse: PeriodicTaskToSchedHW
 ) extends ChocoCPForSyDeDecisionModel
-  with ChocoModelMixin() {
+    with ChocoModelMixin() {
 
-  val coveredVertexes = dse.coveredVertexes
+  val coveredElements = dse.coveredElements
 
   val chocoModel = Model()
 
@@ -81,24 +81,31 @@ final case class PeriodicTaskToSchedHWChoco(
   // scribe.debug(timeMultiplier.toString)
 
   // do the same for memory numbers
-  val memoryValues = dse.schedHwModel.hardware.storageElems.map(_.getSpaceInBits())
+  val memoryValues  = dse.schedHwModel.hardware.storageElems.map(_.getSpaceInBits())
   var memoryDivider = 1L
-  while (memoryValues.forall(CoreUtils.ceil(_, memoryDivider) >= Int.MaxValue / 100000) && memoryDivider < Int.MaxValue) {
+  while (
+    memoryValues.forall(
+      CoreUtils.ceil(_, memoryDivider) >= Int.MaxValue / 100000
+    ) && memoryDivider < Int.MaxValue
+  ) {
     memoryDivider *= 10L
   }
   // scribe.debug(memoryMultipler.toString)
   // scribe.debug(allMemorySizeNumbers().mkString("[", ",", "]"))
 
   // create the variables that each module requires
-  val periods    = dse.taskModel.periods.map(_ * (timeMultiplier))
-  val priorities = dse.taskModel.prioritiesForDependencies
-  val deadlines             = dse.taskModel.relativeDeadlines.map(_ * (timeMultiplier))
-  val wcets                 = dse.wcets.map(_.map(f => (f * (timeMultiplier))))
+  val periods                           = dse.taskModel.periods.map(_ * (timeMultiplier))
+  val priorities                        = dse.taskModel.prioritiesForDependencies
+  val deadlines                         = dse.taskModel.relativeDeadlines.map(_ * (timeMultiplier))
+  val wcets                             = dse.wcets.map(_.map(f => (f * (timeMultiplier))))
   val executionTimes: Array[Array[Int]] = wcets.map(_.map(f => f.ceil.toInt))
-  val maxUtilizations       = dse.maxUtilization
+  val maxUtilizations                   = dse.maxUtilization
   val taskSizes = dse.taskModel.taskSizes.map(CoreUtils.ceil(_, memoryDivider)).map(_.toInt)
-  val messageSizes = dse.taskModel.messageQueuesSizes.map(CoreUtils.ceil(_, memoryDivider)).map(_.toInt)
-  val storageSizes = dse.schedHwModel.hardware.storageElems.map(m => CoreUtils.ceil(m.getSpaceInBits(), memoryDivider)).map(_.toInt)
+  val messageSizes =
+    dse.taskModel.messageQueuesSizes.map(CoreUtils.ceil(_, memoryDivider)).map(_.toInt)
+  val storageSizes = dse.schedHwModel.hardware.storageElems
+    .map(m => CoreUtils.ceil(m.getSpaceInBits(), memoryDivider))
+    .map(_.toInt)
   val canBeFollowedBy = dse.taskModel.interTaskOccasionalBlock
   val taskTravelTime = dse.taskModel.taskSizes.map(d =>
     dse.schedHwModel.hardware.communicationModuleBandWidthBitPerSec.map(b =>
@@ -152,7 +159,7 @@ final case class PeriodicTaskToSchedHWChoco(
         .map((m, j) => j)
     )
   )
-    val responseTimes =
+  val responseTimes =
     dse.taskModel.tasks.zipWithIndex.map((t, i) =>
       chocoModel.intVar(
         "rt_" + t.getViewedVertex.getIdentifier,
@@ -215,7 +222,7 @@ final case class PeriodicTaskToSchedHWChoco(
     taskCommMapping,
     dataBlockCommMapping
   )
-  
+
   val baselineTimingConstraintsModule = BaselineTimingConstraintsModule(
     chocoModel,
     priorities,
@@ -295,12 +302,15 @@ final case class PeriodicTaskToSchedHWChoco(
     * @param schedulerIdx
     *   the scheduler to be posted
     */
-  def postStaticCyclicExecutiveConstraint(active4StageDurationModule: Active4StageDurationModule)(taskIdx: Int, schedulerIdx: Int): Unit =
+  def postStaticCyclicExecutiveConstraint(
+      active4StageDurationModule: Active4StageDurationModule
+  )(taskIdx: Int, schedulerIdx: Int): Unit =
     chocoModel.ifThen(
       taskExecution(taskIdx).eq(schedulerIdx).decompose(),
       responseTimes(taskIdx)
         .ge(
-          active4StageDurationModule.durations(taskIdx)(schedulerIdx)
+          active4StageDurationModule
+            .durations(taskIdx)(schedulerIdx)
             .add(blockingTimes(taskIdx))
             .add(
               chocoModel

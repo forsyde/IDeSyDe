@@ -155,17 +155,14 @@ trait ParametricRateDataflowWorkloadMixin {
 
   def pessimisticTokensPerChannel: Array[Int] = {
     val repetitionVectors = computeRepetitionVectors
-    channelsSet.zipWithIndex.map((c, cIdx) => {
+    channels.zipWithIndex.map((c, cIdx) => {
       var pessimisticMax = 1
       dataflowGraphs.zipWithIndex
         .foreach((g, confIdx) => {
-          g.incomingEdgesOf(c)
-            .forEach(e => {
-              val aIdx = actorsSet.indexOf(g.getEdgeSource(e))
+          g.filter((s, t, r) => s == c)
+            .foreach((s, t, r) => {
               pessimisticMax = Math.max(
-                repetitionVectors(confIdx)(aIdx) * balanceMatrices(confIdx)(cIdx)(
-                  aIdx
-                ) + initialTokens(cIdx),
+                -repetitionVectors(confIdx)(actors.indexOf(t)) * r + channelNumInitialTokens(cIdx),
                 pessimisticMax
               )
             })
@@ -174,47 +171,47 @@ trait ParametricRateDataflowWorkloadMixin {
     })
   }
 
-  def stateSpace: Graph[Int, Int] = {
-    // first, convert the arrays into a mathematical form
-    val matrices = balanceMatrices.map(m => {
-      val newM = DenseMatrix.zeros[Int](m.size, m(0).size)
-      m.zipWithIndex.foreach((row, i) =>
-        row.zipWithIndex.foreach((col, j) => {
-          newM(i, j) = col
-        })
-      )
-      newM
-    })
-    val g        = DefaultDirectedGraph[Int, Int](() => 0, () => 0, false)
-    var explored = Array(DenseVector(initialTokens))
-    // q is a queue of configuration and state
-    var q = Queue((0, DenseVector(initialTokens)))
-    //g.addVertex(initialTokens)
-    while (!q.isEmpty) {
-      val (conf, state) = q.dequeue
-      val m             = matrices(conf)
-      val newStates = actorsSet
-        .map(a => {
-          val v = DenseVector.zeros[Int](actorsSet.size)
-          v(a) = 1
-          (a, v)
-        })
-        .map((a, v) => (a, state + (m * v)))
-        // all states must be non negative
-        .filter((_, s) => s.forall(b => b >= 0))
-        .filter((_, s) => !explored.contains(s))
-      // we add the states to the space
-      newStates.foreach((a, s) => {
-        explored :+= s
-        g.addEdge(explored.indexOf(state), explored.size - 1, a)
-        // and product them with the possible next configurations
-        configurations
-          .outgoingEdgesOf(conf)
-          .stream
-          .map(e => configurations.getEdgeTarget(e))
-          .forEach(newConf => q.enqueue((newConf, s)))
-      })
-  }
+  // def stateSpace: Graph[Int, Int] = {
+  //   // first, convert the arrays into a mathematical form
+  //   val matrices = balanceMatrices.map(m => {
+  //     val newM = DenseMatrix.zeros[Int](m.size, m(0).size)
+  //     m.zipWithIndex.foreach((row, i) =>
+  //       row.zipWithIndex.foreach((col, j) => {
+  //         newM(i, j) = col
+  //       })
+  //     )
+  //     newM
+  //   })
+  //   val g        = DefaultDirectedGraph[Int, Int](() => 0, () => 0, false)
+  //   var explored = Array(DenseVector(initialTokens))
+  //   // q is a queue of configuration and state
+  //   var q = Queue((0, DenseVector(initialTokens)))
+  //   //g.addVertex(initialTokens)
+  //   while (!q.isEmpty) {
+  //     val (conf, state) = q.dequeue
+  //     val m             = matrices(conf)
+  //     val newStates = actorsSet
+  //       .map(a => {
+  //         val v = DenseVector.zeros[Int](actorsSet.size)
+  //         v(a) = 1
+  //         (a, v)
+  //       })
+  //       .map((a, v) => (a, state + (m * v)))
+  //       // all states must be non negative
+  //       .filter((_, s) => s.forall(b => b >= 0))
+  //       .filter((_, s) => !explored.contains(s))
+  //     // we add the states to the space
+  //     newStates.foreach((a, s) => {
+  //       explored :+= s
+  //       g.addEdge(explored.indexOf(state), explored.size - 1, a)
+  //       // and product them with the possible next configurations
+  //       configurations
+  //         .outgoingEdgesOf(conf)
+  //         .stream
+  //         .map(e => configurations.getEdgeTarget(e))
+  //         .forEach(newConf => q.enqueue((newConf, s)))
+  //     })
+  // }
 
   // def stateSpace: Graph[Int, Int] = {
   //   // first, convert the arrays into a mathematical form

@@ -36,7 +36,7 @@ final case class SDFApplication(
     val topology: Graph[SDFActor | SDFChannel, DefaultEdge],
     actorFuncs: Array[Array[Executable]] = Array.empty
 ) extends ForSyDeDecisionModel
-    // with ParametricRateDataflowWorkloadMixin
+    with ParametricRateDataflowWorkloadMixin
     // with InstrumentedWorkloadMixin
     {
 
@@ -100,7 +100,7 @@ final case class SDFApplication(
   val sdfRepetitionVectors: Array[Int] = computeRepetitionVectors(0)
 
   /** this is a simple shortcut for the max parallel clusters as SDFs have only one configuration */
-  lazy val sdfMaxParallelClusters: Array[Array[Int]] = maximalParallelClustering(0)
+  // lazy val sdfMaxParallelClusters: Array[Array[Int]] = maximalParallelClustering(0)
 
   val processComputationalNeeds: Array[Map[String, Map[String, Long]]] =
     actorFunctions.zipWithIndex.map((actorFuncs, i) => {

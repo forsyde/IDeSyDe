@@ -132,7 +132,7 @@ class TileAsyncInterconnectCommsModule(
           messageTravelDuration(c)(src)(dst),
           "*",
           minVCInPath,
-          "<=",
+          "=",
           singleChannelSum
         ),
         chocoModel.arithm(

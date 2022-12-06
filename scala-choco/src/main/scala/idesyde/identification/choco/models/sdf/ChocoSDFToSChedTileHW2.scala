@@ -285,44 +285,44 @@ final case class ChocoSDFToSChedTileHW2(
     )
   }
   // also enforce a waterfall pattern for the mappings
-  for (
-    (dst, j) <- dse.sdfApplications.topologicalAndHeavyActorOrdering.zipWithIndex;
-    dstIdx = dse.sdfApplications.actorsSet.indexOf(dst)
-  ) {
-    val predecessors = dse.sdfApplications.topologicalAndHeavyActorOrdering
-      .take(j)
-      .filter(src =>
-        dse.sdfApplications.sdfGraph
-          .get(src)
-          .pathTo(dse.sdfApplications.sdfGraph.get(dst))
-          .isDefined
-      )
-    if (predecessors.size > 0) {
-      val lastPredecessorsIdx = dse.sdfApplications.actorsSet.indexOf(predecessors.last)
-      val differentThanAll = predecessors
-        .map(src => dse.sdfApplications.actorsSet.indexOf(src))
-        .map(srcIdx =>
-          chocoModel.arithm(
-            memoryMappingModule.processesMemoryMapping(dstIdx),
-            "!=",
-            memoryMappingModule.processesMemoryMapping(srcIdx)
-          )
-        )
-      // equal to the last one OR different than all previous ones
-      chocoModel
-        .or(
-          chocoModel.arithm(
-            memoryMappingModule.processesMemoryMapping(dstIdx),
-            "=",
-            memoryMappingModule.processesMemoryMapping(lastPredecessorsIdx)
-          ),
-          chocoModel.and(
-            differentThanAll: _*
-          )
-        )
-        .post()
-    }
-  }
+  // for (
+  //   (dst, j) <- dse.sdfApplications.topologicalAndHeavyActorOrdering.zipWithIndex;
+  //   dstIdx = dse.sdfApplications.actorsSet.indexOf(dst)
+  // ) {
+  //   val predecessors = dse.sdfApplications.topologicalAndHeavyActorOrdering
+  //     .take(j)
+  //     .filter(src =>
+  //       dse.sdfApplications.sdfGraph
+  //         .get(src)
+  //         .pathTo(dse.sdfApplications.sdfGraph.get(dst))
+  //         .isDefined
+  //     )
+  //   if (predecessors.size > 0) {
+  //     val lastPredecessorsIdx = dse.sdfApplications.actorsSet.indexOf(predecessors.last)
+  //     val differentThanAll = predecessors
+  //       .map(src => dse.sdfApplications.actorsSet.indexOf(src))
+  //       .map(srcIdx =>
+  //         chocoModel.arithm(
+  //           memoryMappingModule.processesMemoryMapping(dstIdx),
+  //           "!=",
+  //           memoryMappingModule.processesMemoryMapping(srcIdx)
+  //         )
+  //       )
+  //     // equal to the last one OR different than all previous ones
+  //     chocoModel
+  //       .or(
+  //         chocoModel.arithm(
+  //           memoryMappingModule.processesMemoryMapping(dstIdx),
+  //           "=",
+  //           memoryMappingModule.processesMemoryMapping(lastPredecessorsIdx)
+  //         ),
+  //         chocoModel.and(
+  //           differentThanAll: _*
+  //         )
+  //       )
+  //       .post()
+  //   }
+  // }
   // println(dse.sdfApplications.firingsPrecedenceGraph.toSortedString())
   override val strategies: Array[AbstractStrategy[? <: Variable]] = Array(
     // chooseLowestMappedTime(

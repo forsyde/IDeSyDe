@@ -192,9 +192,11 @@ class SDFSchedulingAnalysisModule2(
     // -- must make a path
     for (
       (v, i) <- jobsAndActors.zipWithIndex;
-      src = sdfAndSchedulers.sdfApplications.firingsPrecedenceGraph.get(v);
+      src    = sdfAndSchedulers.sdfApplications.firingsPrecedenceGraph.get(v);
+      (a, q) = src.value;
       (vv, j) <- jobsAndActors.zipWithIndex;
-      dst = sdfAndSchedulers.sdfApplications.firingsPrecedenceGraph.get(vv);
+      dst      = sdfAndSchedulers.sdfApplications.firingsPrecedenceGraph.get(vv);
+      (aa, qq) = dst.value;
       if i != j
     ) {
       // if j should succeed i eventually, and if they are mapped in the same core, force the reachability.
@@ -202,14 +204,44 @@ class SDFSchedulingAnalysisModule2(
         chocoModel.ifThen(
           chocoModel.arithm(
             memoryMappingModule
-              .processesMemoryMapping(actors.indexOf(vv._1)),
+              .processesMemoryMapping(actors.indexOf(a)),
             "=",
             memoryMappingModule
-              .processesMemoryMapping(actors.indexOf(v._1))
+              .processesMemoryMapping(actors.indexOf(aa))
           ),
           chocoModel.arithm(jobOrdering(i), "<", jobOrdering(j))
         )
-        chocoModel.arithm(jobStartTime(i), "<=", jobStartTime(j)).post()
+        if (a != aa) {
+          chocoModel.ifThenElse(
+            chocoModel.arithm(
+              memoryMappingModule
+                .processesMemoryMapping(actors.indexOf(a)),
+              "!=",
+              memoryMappingModule
+                .processesMemoryMapping(actors.indexOf(aa))
+            ),
+            chocoModel
+              .scalar(
+                Array(
+                  transmissionDelay(actors.indexOf(a))(actors.indexOf(aa)),
+                  jobStartTime(i),
+                  duration(actors.indexOf(a))
+                ),
+                Array(1, 1, 1),
+                "<=",
+                jobStartTime(j)
+              ),
+            chocoModel
+              .arithm(jobStartTime(i), "+", duration(actors.indexOf(a)), "<=", jobStartTime(j))
+          )
+          //   .post()
+        } else if (a == aa && !isSelfConcurrent(a)) {
+          chocoModel
+            .arithm(jobStartTime(i), "+", duration(actors.indexOf(a)), "<=", jobStartTime(j))
+            .post()
+        } else if (a == aa && isSelfConcurrent(a)) {
+          chocoModel.arithm(jobStartTime(i), "<=", jobStartTime(j)).post()
+        }
       }
       chocoModel.ifOnlyIf(
         chocoModel.and(
@@ -244,13 +276,13 @@ class SDFSchedulingAnalysisModule2(
         jobPrev(i),
         0
       )
-      val fromPrevToI = prevTime.add(prevDuration).intVar()
-      // chocoModel.intVar(s"fromPrevToI($a, $q)", 0, prevTime.getUB() + prevDuration.getUB(), true)
+      val fromPrevToI =
+        chocoModel.intVar(s"fromPrevToI($a, $q)", 0, prevTime.getUB() + prevDuration.getUB(), true)
       // chocoModel.ifThenElse(
       //   chocoModel.arithm(jobOrdering(i), "=", 1),
       //   chocoModel.arithm(fromPrevToI, "=", 0),
       //   )
-      // chocoModel.arithm(fromPrevToI, "=", prevTime, "+", prevDuration).post()
+      chocoModel.arithm(fromPrevToI, "=", prevTime, "+", prevDuration).post()
       val predecessorsTimes = sdfAndSchedulers.sdfApplications.firingsPrecedenceGraph
         .get(v)
         .diPredecessors
@@ -298,6 +330,31 @@ class SDFSchedulingAnalysisModule2(
         })
         .toArray
       chocoModel.max(jobStartTime(i), predecessorsTimes :+ fromPrevToI).post()
+      for (
+        (vv, j) <- jobsAndActors.zipWithIndex;
+        (aa, qq) = vv
+        if i != j
+      ) {
+        chocoModel.ifThen(
+          chocoModel.and(
+            chocoModel.arithm(
+              memoryMappingModule
+                .processesMemoryMapping(actors.indexOf(a)),
+              "=",
+              memoryMappingModule
+                .processesMemoryMapping(actors.indexOf(aa))
+            ),
+            chocoModel.arithm(jobOrdering(i), "<", jobOrdering(j))
+          ),
+          chocoModel.arithm(
+            jobStartTime(i),
+            "+",
+            duration(actors.indexOf(a)),
+            "<=",
+            jobStartTime(j)
+          )
+        )
+      }
     }
     // -----/
     for (
@@ -432,15 +489,6 @@ class SDFSchedulingAnalysisModule2(
     //   )
     // )
     // throughput
-    for ((a, i) <- actors.zipWithIndex) {
-      val firstJob = jobsAndActors.indexWhere((aa, q) => a == aa && q == 1)
-      val nextCycleJob =
-        jobsAndActors.indexWhere((aa, q) => a == aa && q == maxRepetitionsPerActors(a))
-      chocoModel
-        .arithm(jobStartTime(nextCycleJob), "-", jobStartTime(firstJob), "<=", invThroughputs(i))
-        .post()
-
-    }
     chocoModel.max(globalInvThroughput, invThroughputs).post()
     // chocoModel.post(
     //   new Constraint(

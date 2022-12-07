@@ -31,6 +31,7 @@ class ConMonitorObj2(val model: ChocoSDFToSChedTileHW2) extends IMonitorContradi
 
   def onContradiction(cex: ContradictionException): Unit = {
     println(cex.toString())
+    println(model.chocoModel.getSolver().getDecisionPath().toString())
     // println(
     //   model.tileAnalysisModule.procElemSendsDataToAnother
     //     .map(_.mkString(", "))
@@ -47,10 +48,12 @@ class ConMonitorObj2(val model: ChocoSDFToSChedTileHW2) extends IMonitorContradi
     //     .mkString("\n")
     // )
     println(model.memoryMappingModule.processesMemoryMapping.mkString(", "))
+    // println(model.sdfAnalysisModule.mappedPerProcessingElement.mkString(", "))
     println(model.sdfAnalysisModule.jobOrdering.mkString(", "))
-    println(model.sdfAnalysisModule.jobPrev.mkString(", "))
+    // println(model.sdfAnalysisModule.jobPrev.mkString(", "))
     println(model.sdfAnalysisModule.jobStartTime.mkString(", "))
     println(model.sdfAnalysisModule.invThroughputs.mkString(", "))
+    println("-------------------------------------------------------------------")
     // println(
     //   model.tileAnalysisModule.messageTravelDuration
     //     .map(_.map(_.mkString(",")).mkString("; "))
@@ -67,7 +70,7 @@ final case class ChocoSDFToSChedTileHW2(
 
   val chocoModel: Model = Model()
 
-  // chocoModel.getSolver().plugMonitor(ConMonitorObj2(this))
+  chocoModel.getSolver().plugMonitor(ConMonitorObj2(this))
 
   // section for time multiplier calculation
   val timeValues =
@@ -337,6 +340,7 @@ final case class ChocoSDFToSChedTileHW2(
       )
     ),
     Search.minDomLBSearch(tileAnalysisModule.numVirtualChannelsForProcElem.flatten: _*),
+    // Search.minDomLBSearch(sdfAnalysisModule.jobOrdering: _*),
     Search.inputOrderLBSearch(
       dse.sdfApplications.topologicalAndHeavyJobOrdering.map(j =>
         sdfAnalysisModule.jobOrdering(sdfAnalysisModule.jobsAndActors.indexOf(j))

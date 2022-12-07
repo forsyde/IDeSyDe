@@ -325,25 +325,6 @@ final case class ChocoSDFToSChedTileHW2(
   // }
   // println(dse.sdfApplications.firingsPrecedenceGraph.toSortedString())
   override val strategies: Array[AbstractStrategy[? <: Variable]] = Array(
-    // chooseLowestMappedTime(
-    //   dse.sdfApplications.topologicalAndHeavyJobOrdering.map((a, _) =>
-    //     memoryMappingModule.processesMemoryMapping(dse.sdfApplications.actorsSet.indexOf(a))
-    //   ),
-    //   dse.sdfApplications.topologicalAndHeavyJobOrdering.map(j =>
-    //     sdfAnalysisModule.jobOrdering(sdfAnalysisModule.jobsAndActors.indexOf(j))
-    //   ),
-    //   dse.sdfApplications.topologicalAndHeavyJobOrdering.map(j =>
-    //     sdfAnalysisModule.jobStartTime(sdfAnalysisModule.jobsAndActors.indexOf(j))
-    //   )
-    // ),
-    // chooseOrderingIfMapped(
-    //   dse.sdfApplications.topologicalAndHeavyJobOrdering.map((a, _) =>
-    //     memoryMappingModule.processesMemoryMapping(dse.sdfApplications.actorsSet.indexOf(a))
-    //   ),
-    //   dse.sdfApplications.topologicalAndHeavyJobOrdering.map(j =>
-    //     sdfAnalysisModule.jobOrdering(sdfAnalysisModule.jobsAndActors.indexOf(j))
-    //   )
-    // ),
     CompactingMultiCoreMapping[Int](
       dse.platform.tiledDigitalHardware.minTraversalTimePerBit.map(arr =>
         arr.map(v => (v * timeMultiplier).ceil.toInt)
@@ -354,34 +335,23 @@ final case class ChocoSDFToSChedTileHW2(
       dse.sdfApplications.topologicalAndHeavyActorOrdering.map(a =>
         memoryMappingModule.processesMemoryMapping(dse.sdfApplications.actorsSet.indexOf(a))
       )
-      // dse.sdfApplications.topologicalAndHeavyJobOrdering.map((a, _) =>
-      //   sdfAnalysisModule.duration(dse.sdfApplications.actorsSet.indexOf(a))
-      // )
-      // sdfAnalysisModule.invThroughputs
     ),
-    // Search.minDomLBSearch(sdfAnalysisModule.jobOrdering: _*),
+    Search.minDomLBSearch(tileAnalysisModule.numVirtualChannelsForProcElem.flatten: _*),
     Search.inputOrderLBSearch(
       dse.sdfApplications.topologicalAndHeavyJobOrdering.map(j =>
         sdfAnalysisModule.jobOrdering(sdfAnalysisModule.jobsAndActors.indexOf(j))
       ): _*
     ),
+    Search.minDomLBSearch(sdfAnalysisModule.invThroughputs: _*)
     // Search.minDomLBSearch(indexOfPe: _*),
-    Search.minDomLBSearch(tileAnalysisModule.numVirtualChannelsForProcElem.flatten: _*),
-    Search.minDomLBSearch(tileAnalysisModule.messageTravelDuration.flatten.flatten: _*),
     // these next two lines makre sure the choice for start times and throughput are made just like the ordering and mapping
     // Search.inputOrderLBSearch(
     //   dse.sdfApplications.topologicalAndHeavyJobOrdering.map(j =>
     //     sdfAnalysisModule.jobStartTime(sdfAnalysisModule.jobsAndActors.indexOf(j))
     //   ): _*
     // ),
-    Search.minDomLBSearch(sdfAnalysisModule.invThroughputs: _*),
-    // Search.inputOrderLBSearch(
-    //   dse.sdfApplications.topologicalAndHeavyJobOrdering.map(j =>
-    //     sdfAnalysisModule.jobsInvThroughputs(sdfAnalysisModule.jobsAndActors.indexOf(j))
-    //   ): _*
-    // ),
-    Search.minDomLBSearch(nUsedPEs),
-    Search.minDomLBSearch(sdfAnalysisModule.globalInvThroughput)
+    // Search.minDomLBSearch(nUsedPEs),
+    // Search.minDomLBSearch(sdfAnalysisModule.globalInvThroughput)
   )
 
   def chooseOrderingIfMapped(

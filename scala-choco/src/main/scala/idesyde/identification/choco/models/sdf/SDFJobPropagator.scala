@@ -10,11 +10,12 @@ import org.chocosolver.solver.variables.Task
 
 class SDFJobPropagator(
     val jobs: Array[Task],
+    val jobOrdering: (Int) => IntVar,
     val mapping: (Int) => IntVar,
     val transmissionDuration: (Int) => (Int) => IntVar,
     val succeeds: (Int) => (Int) => Boolean
 ) extends Propagator[IntVar](
-      jobs.map(_.getStart()),
+      jobs.map(_.getStart()) ++ jobs.zipWithIndex.map((_, i) => jobOrdering(i)) ++ jobs.zipWithIndex.map((_, i) => mapping(i)),
       PropagatorPriority.QUADRATIC,
       false
     ) {
@@ -22,23 +23,24 @@ class SDFJobPropagator(
   private val numJobs = jobs.size
 
   def propagate(evtmask: Int): Unit = wfor(0, _ < numJobs, _ + 1) { i =>
-    // var ub = 0
-    var trivial = true
+    var lb = jobs(i).getStart().getLB()
+    var ub = jobs(i).getEnd().getUB()
     wfor(0, _ < numJobs, _ + 1) { j =>
-      val coMappable = mapping(i).stream().anyMatch(mapping(j).contains(_))
-      if (i != j && coMappable) {
-        // can never clash
-        trivial = trivial && jobs(i).getEnd().getLB() <= jobs(j).getStart().getLB()
+      if (i != j && mapping(i).isInstantiated() && mapping(j).isInstantiated() && mapping(i).getValue() == mapping(j).getValue()) {
+        if (jobOrdering(j).getUB() + 1 <= jobOrdering(i).getLB()) {
+          lb = Math.max(lb, jobs(j).getEnd().getLB())
+        }
+        if (jobOrdering(i).getUB() + 1 <= jobOrdering(j).getLB()) {
+          ub = Math.min(ub, jobs(j).getStart().getLB())
+        }
+        // else if (succeeds(j)(i)) {
+        //   lb = Math.max(jobs(j).getEnd().getLB() + transmissionDuration(j)(i).getLB(), lb)
+        //   ub = Math.max(jobs(j).getEnd().getUB() + transmissionDuration(j)(i).getUB(), ub)
+        // }
       }
-    // else if (succeeds(i)(j)) {
-    //   ub = Math.max(jobs(j).getEnd().getLB() + transmissionDuration(j)(i).getLB(), ub)
-    // }
     }
-    if (trivial) {
-      jobs(i).getStart().updateUpperBound(jobs(i).getStart().getLB(), this)
-    }
-  // println(i + " -> " + ub)
-  // jobs(i).getStart().updateUpperBound(ub, this)
+    jobs(i).getStart().updateLowerBound(lb, this)
+    jobs(i).getEnd().updateUpperBound(ub, this)
   }
 
   def isEntailed(): ESat =

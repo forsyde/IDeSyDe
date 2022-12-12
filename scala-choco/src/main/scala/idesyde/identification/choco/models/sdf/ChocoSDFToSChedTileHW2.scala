@@ -47,8 +47,10 @@ class ConMonitorObj2(val model: ChocoSDFToSChedTileHW2) extends IMonitorContradi
     //     .mkString("\n")
     // )
     println(model.memoryMappingModule.processesMemoryMapping.mkString(", "))
+    println(model.sdfAnalysisModule.jobOrder.mkString(", "))
     println(model.sdfAnalysisModule.jobStartTime.mkString(", "))
     println(model.sdfAnalysisModule.invThroughputs.mkString(", "))
+    println(model.sdfAnalysisModule.numMappedElements)
     println(model.maxLatency.toString())
     // println(
     //   model.tileAnalysisModule.messageTravelDuration
@@ -66,7 +68,7 @@ final case class ChocoSDFToSChedTileHW2(
 
   val chocoModel: Model = Model()
 
-  chocoModel.getSolver().plugMonitor(ConMonitorObj2(this))
+  // chocoModel.getSolver().plugMonitor(ConMonitorObj2(this))
 
   // section for time multiplier calculation
   val timeValues =
@@ -240,9 +242,9 @@ final case class ChocoSDFToSChedTileHW2(
   override val modelMinimizationObjectives: Array[IntVar] =
     Array(
       nUsedPEs,
-      sdfAnalysisModule.globalInvThroughput,
-      // bufferSum,
-      maxLatency
+      sdfAnalysisModule.globalInvThroughput
+      // bufferSum
+      // maxLatency
       // chocoModel.max("maximumBuffer", sdfAnalysisModule.slotRange.map(s => chocoModel.sum(s"tokensAt($s)", sdfAnalysisModule.tokens.map(bc => bc(s)):_*)))
     )
   //---------
@@ -264,7 +266,7 @@ final case class ChocoSDFToSChedTileHW2(
     chocoModel.intVar(
       s"indexOfPe($p)",
       0,
-      Math.max(dse.sdfApplications.actors.size, dse.platform.schedulerSet.size),
+      Math.max(dse.sdfApplications.actors.size, dse.platform.schedulerSet.size + 1),
       false
     )
   )
@@ -361,13 +363,20 @@ final case class ChocoSDFToSChedTileHW2(
         memoryMappingModule.processesMemoryMapping(dse.sdfApplications.actorsSet.indexOf(a))
       )
     ),
+    Search.minDomLBSearch(nUsedPEs),
     Search.minDomLBSearch(tileAnalysisModule.numVirtualChannelsForProcElem.flatten: _*),
+    Search.inputOrderLBSearch(
+      dse.sdfApplications.topologicalAndHeavyJobOrdering.map(j =>
+        sdfAnalysisModule.jobOrder(sdfAnalysisModule.jobsAndActors.indexOf(j))
+      ): _*
+    ),
     Search.inputOrderLBSearch(
       dse.sdfApplications.topologicalAndHeavyJobOrdering.map(j =>
         sdfAnalysisModule.jobTasks(sdfAnalysisModule.jobsAndActors.indexOf(j)).getStart()
       ): _*
     ),
-    Search.minDomLBSearch(sdfAnalysisModule.invThroughputs: _*)
+    Search.minDomLBSearch(sdfAnalysisModule.invThroughputs: _*),
+    Search.minDomLBSearch(maxLatency)
     // Search.minDomLBSearch(sdfAnalysisModule.maxBufferTokens: _*),
     // Search.minDomLBSearch(indexOfPe: _*),
     // these next two lines makre sure the choice for start times and throughput are made just like the ordering and mapping

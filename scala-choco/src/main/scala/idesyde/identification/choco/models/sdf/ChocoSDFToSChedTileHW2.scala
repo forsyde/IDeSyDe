@@ -78,12 +78,12 @@ final case class ChocoSDFToSChedTileHW2(
     timeValues
       .map(t => t * (timeMultiplier))
       .exists(d =>
-        d.numerator <= d.denominator / 100L
+        d.numerator <= d.denominator / 1000L
       ) // ensure that the numbers magnitudes still stay sane
     &&
     timeValues
       .map(t => t * (timeMultiplier))
-      .sum < Int.MaxValue / 100 - 1
+      .sum < Int.MaxValue / 1000 - 1
   ) {
     timeMultiplier *= 10
   }
@@ -101,7 +101,11 @@ final case class ChocoSDFToSChedTileHW2(
   val memoryMappingModule = SingleProcessSingleMessageMemoryConstraintsModule(
     chocoModel,
     dse.sdfApplications.processSizes.map(_ / memoryDivider).map(_.toInt),
-    dse.sdfApplications.sdfMessages.map((_, _, _, mSize, _, _, _) => (mSize / memoryDivider).toInt),
+    dse.sdfApplications.sdfMessages.map((src, _, _, mSize, p, c, tok) =>
+      ((dse.sdfApplications.sdfRepetitionVectors(
+        dse.sdfApplications.actorsSet.indexOf(src)
+      ) * p + tok) * mSize / memoryDivider).toInt
+    ),
     dse.platform.tiledDigitalHardware.maxMemoryPerTile
       .map(_ / memoryDivider)
       .map(l => if (l > Int.MaxValue) then Int.MaxValue - 1 else l)
@@ -370,13 +374,13 @@ final case class ChocoSDFToSChedTileHW2(
         sdfAnalysisModule.jobOrder(sdfAnalysisModule.jobsAndActors.indexOf(j))
       ): _*
     ),
-    Search.inputOrderLBSearch(
-      dse.sdfApplications.topologicalAndHeavyJobOrdering.map(j =>
-        sdfAnalysisModule.jobTasks(sdfAnalysisModule.jobsAndActors.indexOf(j)).getStart()
-      ): _*
-    ),
-    Search.minDomLBSearch(sdfAnalysisModule.invThroughputs: _*),
-    Search.minDomLBSearch(maxLatency)
+    // Search.inputOrderLBSearch(
+    //   dse.sdfApplications.topologicalAndHeavyJobOrdering.map(j =>
+    //     sdfAnalysisModule.jobTasks(sdfAnalysisModule.jobsAndActors.indexOf(j)).getStart()
+    //   ): _*
+    // ),
+    Search.minDomLBSearch(sdfAnalysisModule.invThroughputs: _*)
+    // Search.minDomLBSearch(maxLatency)
     // Search.minDomLBSearch(sdfAnalysisModule.maxBufferTokens: _*),
     // Search.minDomLBSearch(indexOfPe: _*),
     // these next two lines makre sure the choice for start times and throughput are made just like the ordering and mapping

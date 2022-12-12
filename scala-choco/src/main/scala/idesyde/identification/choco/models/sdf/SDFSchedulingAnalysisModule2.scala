@@ -142,13 +142,18 @@ class SDFSchedulingAnalysisModule2(
   //   )
   // )
 
-  val mappedJobsPerElement = schedulers.map(p => 
-    chocoModel.count(s"mappedJobsPerElement($p)", p, jobsAndActors.map((a, _) => memoryMappingModule.processesMemoryMapping(actors.indexOf(a))):_*)
-  ) 
+  val mappedJobsPerElement = schedulers.map(p =>
+    chocoModel.count(
+      s"mappedJobsPerElement($p)",
+      p,
+      jobsAndActors.map((a, _) => memoryMappingModule.processesMemoryMapping(actors.indexOf(a))): _*
+    )
+  )
 
   val numMappedElements = chocoModel.intVar("numMappedElements", 1, schedulers.size, true)
 
-  def jobMapping(jobi: Int) = memoryMappingModule.processesMemoryMapping(actors.indexOf(jobsAndActors(jobi)._1))
+  def jobMapping(jobi: Int) =
+    memoryMappingModule.processesMemoryMapping(actors.indexOf(jobsAndActors(jobi)._1))
 
   def postSDFTimingAnalysis(): Unit = {
     chocoModel.nValues(memoryMappingModule.processesMemoryMapping, numMappedElements).post()
@@ -176,7 +181,13 @@ class SDFSchedulingAnalysisModule2(
       )
       .post()
     for ((p, j) <- schedulers.zipWithIndex) {
-      chocoModel.allDifferentUnderCondition(jobOrder, (x) => jobMapping(jobOrder.indexOf(x)).isInstantiatedTo(p), false).post()
+      chocoModel
+        .allDifferentUnderCondition(
+          jobOrder,
+          (x) => jobMapping(jobOrder.indexOf(x)).isInstantiatedTo(p),
+          false
+        )
+        .post()
       chocoModel
         .cumulative(
           jobTasks,
@@ -194,13 +205,23 @@ class SDFSchedulingAnalysisModule2(
       dst    = sdfAndSchedulers.sdfApplications.firingsPrecedenceGraph.get(v);
       (a, q) = dst.value
     ) {
-      val maxPrev = chocoModel.intVar(s"maxPrev($a, $q)", jobTasks(i).getStart().getLB(), jobTasks(i).getStart().getUB(), true)
+      val maxPrev = chocoModel.intVar(
+        s"maxPrev($a, $q)",
+        jobTasks(i).getStart().getLB(),
+        jobTasks(i).getStart().getUB(),
+        true
+      )
       val maxDeps = sdfAndSchedulers.sdfApplications.firingsPrecedenceGraph
-              .get(v)
-              .diPredecessors
-              .map(_.value)
-              .map((aa, qq) => jobTasks(jobsAndActors.indexOf((aa, qq))).getEnd().add(transmissionDelay(actors.indexOf(aa))(actors.indexOf(a))).intVar())
-              .toArray
+        .get(v)
+        .diPredecessors
+        .map(_.value)
+        .map((aa, qq) =>
+          jobTasks(jobsAndActors.indexOf((aa, qq)))
+            .getEnd()
+            .add(transmissionDelay(actors.indexOf(aa))(actors.indexOf(a)))
+            .intVar()
+        )
+        .toArray
       chocoModel.ifThen(
         chocoModel.arithm(jobOrder(i), "=", 0),
         chocoModel.arithm(maxPrev, "=", 0)

@@ -14,8 +14,8 @@ import scalax.collection.GraphPredef._
 import scalax.collection.edge.Implicits._
 
 final case class SDFApplication(
-    val actors: Array[String],
-    val channels: Array[String],
+    val actorsIdentifiers: Array[String],
+    val channelsIdentifiers: Array[String],
     val topologySrcs: Array[String],
     val topologyDsts: Array[String],
     val topologyEdgeValue: Array[Int],
@@ -29,7 +29,7 @@ final case class SDFApplication(
     with InstrumentedWorkloadMixin {
 
   // def dominatesSdf(other: SDFApplication) = repetitionVector.size >= other.repetitionVector.size
-  val coveredElements         = (actors ++ channels).toSet
+  val coveredElements         = (actorsIdentifiers ++ channelsIdentifiers).toSet
   val coveredElementRelations = topologySrcs.zip(topologyDsts).toSet
 
   val topology = Graph(
@@ -50,7 +50,7 @@ final case class SDFApplication(
   /** this is a simple shortcut for the max parallel clusters as SDFs have only one configuration */
   // val sdfMaxParallelClusters: Array[Array[Int]] = maximalParallelClustering(0)
 
-  def isSelfConcurrent(actor: String): Boolean = channels.exists(c =>
+  def isSelfConcurrent(actor: String): Boolean = channelsIdentifiers.exists(c =>
     topology.get(c).diSuccessors.exists(dst => dst.toOuter == actor) &&
       topology.get(c).diPredecessors.exists(src => src.toOuter == actor)
   )
@@ -125,7 +125,9 @@ final case class SDFApplication(
   // )
 
   val messagesMaxSizes: Array[Long] =
-    channels.zipWithIndex.map((c, i) => pessimisticTokensPerChannel(i) * channelTokenSizes(i))
+    channelsIdentifiers.zipWithIndex.map((c, i) =>
+      pessimisticTokensPerChannel(i) * channelTokenSizes(i)
+    )
 
   val sdfDisjointComponents = disjointComponents.head
 

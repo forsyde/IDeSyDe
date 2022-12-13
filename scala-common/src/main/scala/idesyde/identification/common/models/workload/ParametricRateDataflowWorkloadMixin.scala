@@ -25,8 +25,8 @@ import scalax.collection.GraphTraversal.Parameters
   * doi: 10.1145/2999539.
   */
 trait ParametricRateDataflowWorkloadMixin {
-  def actors: Array[String]
-  def channels: Array[String]
+  def actorsIdentifiers: Array[String]
+  def channelsIdentifiers: Array[String]
   def channelNumInitialTokens: Array[Int]
 
   /** An actor is self-concurrent if two or more instance can be executed at the same time
@@ -60,14 +60,14 @@ trait ParametricRateDataflowWorkloadMixin {
   })
 
   def computeBalanceMatrices = dataflowGraphs.map(df => {
-    val m = Array.fill(channels.size)(Array.fill(actors.size)(0))
+    val m = Array.fill(channelsIdentifiers.size)(Array.fill(actorsIdentifiers.size)(0))
     for ((src, dst, rate) <- df) {
-      if (actors.contains(src) && channels.contains(dst)) {
-        m(channels.indexOf(dst))(actors.indexOf(src)) =
-          m(channels.indexOf(dst))(actors.indexOf(src)) + rate
-      } else if (actors.contains(dst) && channels.contains(src)) {
-        m(channels.indexOf(src))(actors.indexOf(dst)) =
-          m(channels.indexOf(src))(actors.indexOf(dst)) - rate
+      if (actorsIdentifiers.contains(src) && channelsIdentifiers.contains(dst)) {
+        m(channelsIdentifiers.indexOf(dst))(actorsIdentifiers.indexOf(src)) =
+          m(channelsIdentifiers.indexOf(dst))(actorsIdentifiers.indexOf(src)) + rate
+      } else if (actorsIdentifiers.contains(dst) && channelsIdentifiers.contains(src)) {
+        m(channelsIdentifiers.indexOf(src))(actorsIdentifiers.indexOf(dst)) =
+          m(channelsIdentifiers.indexOf(src))(actorsIdentifiers.indexOf(dst)) - rate
       }
     }
     m
@@ -79,13 +79,16 @@ trait ParametricRateDataflowWorkloadMixin {
     // first we build a compressed g with only the actors
     // with the fractional flows in a matrix
     var gEdges = Buffer[(String, String)]()
-    var gRates = Array.fill(actors.size)(Array.fill(actors.size)(Rational.zero))
+    var gRates =
+      Array.fill(actorsIdentifiers.size)(Array.fill(actorsIdentifiers.size)(Rational.zero))
     for (
       (src, c, prod)  <- df;
       (cc, dst, cons) <- df;
-      if channels.contains(c) && c == cc && actors.contains(src) && actors.contains(dst);
-      srcIdx = actors.indexOf(src);
-      dstIdx = actors.indexOf(dst);
+      if channelsIdentifiers.contains(c) && c == cc && actorsIdentifiers
+        .contains(src) && actorsIdentifiers
+        .contains(dst);
+      srcIdx = actorsIdentifiers.indexOf(src);
+      dstIdx = actorsIdentifiers.indexOf(dst);
       rate = Rational(
         prod,
         cons
@@ -97,14 +100,14 @@ trait ParametricRateDataflowWorkloadMixin {
     val gActors = Graph(gEdges.map((src, dst) => src ~ dst).toArray: _*)
     // we iterate on the undirected version as to 'come back'
     // to vertex in feed-forward paths
-    val rates      = actors.map(_ => minus_one)
+    val rates      = actorsIdentifiers.map(_ => minus_one)
     var consistent = true
     for (
       root <- gActors.nodes.filter(n => n.inDegree == 0);
       if consistent;
       traverser = gActors.outerNodeTraverser(root).withParameters(Parameters.Dfs());
       v <- traverser;
-      vIdx = actors.indexOf(v)
+      vIdx = actorsIdentifiers.indexOf(v)
     ) {
       // if there is no rate on this vertex already, it must be a root, so we populate it
       if (rates(vIdx) == minus_one) {
@@ -112,7 +115,7 @@ trait ParametricRateDataflowWorkloadMixin {
       }
       // populate neighbors based on 'next' which have no rate yet
       for (neigh <- g.get(v).outNeighbors) {
-        val neighIdx = actors.indexOf(neigh.value)
+        val neighIdx = actorsIdentifiers.indexOf(neigh.value)
         // if no rate exists in the other actor yet, we create it...
         if (rates(neighIdx) == minus_one) {
           // it depenends if the other is a consumer...
@@ -124,7 +127,7 @@ trait ParametricRateDataflowWorkloadMixin {
         }
       }
       for (neigh <- g.get(v).inNeighbors) {
-        val neighIdx = actors.indexOf(neigh.value)
+        val neighIdx = actorsIdentifiers.indexOf(neigh.value)
         // if no rate exists in the other actor yet, we create it...
         if (rates(neighIdx) == minus_one) {
           // it depenends if the other is a consumer...
@@ -155,14 +158,16 @@ trait ParametricRateDataflowWorkloadMixin {
 
   def pessimisticTokensPerChannel: Array[Int] = {
     val repetitionVectors = computeRepetitionVectors
-    channels.zipWithIndex.map((c, cIdx) => {
+    channelsIdentifiers.zipWithIndex.map((c, cIdx) => {
       var pessimisticMax = 1
       dataflowGraphs.zipWithIndex
         .foreach((g, confIdx) => {
           g.filter((s, t, r) => s == c)
             .foreach((s, t, r) => {
               pessimisticMax = Math.max(
-                -repetitionVectors(confIdx)(actors.indexOf(t)) * r + channelNumInitialTokens(cIdx),
+                -repetitionVectors(confIdx)(
+                  actorsIdentifiers.indexOf(t)
+                ) * r + channelNumInitialTokens(cIdx),
                 pessimisticMax
               )
             })

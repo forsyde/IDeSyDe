@@ -18,12 +18,12 @@ final case class SDFToPartitionedSharedMemory(
   val coveredElements = sdfApplications.coveredElements ++ platform.coveredElements
   val coveredElementRelations =
     sdfApplications.coveredElementRelations ++ platform.coveredElementRelations ++
-      sdfApplications.actors.zip(processMappings) ++
-      sdfApplications.channels.zip(memoryMappings) ++
+      sdfApplications.actorsIdentifiers.zip(processMappings) ++
+      sdfApplications.channelsIdentifiers.zip(memoryMappings) ++
       messageSlotAllocations.zipWithIndex.flatMap((slots, i) =>
         platform.hardware.communicationElems
           .filter(ce => slots.contains(ce) && slots(ce).exists(b => b))
-          .map(ce => sdfApplications.channels(i) -> ce)
+          .map(ce => sdfApplications.channelsIdentifiers(i) -> ce)
       )
 
   val wcets = computeWcets

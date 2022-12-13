@@ -19,6 +19,8 @@ import java.util.concurrent.Executors
 import org.jgrapht.alg.shortestpath.CHManyToManyShortestPaths
 import java.util.concurrent.ThreadPoolExecutor
 import idesyde.utils.CoreUtils.wfor
+import spire.math._
+import spire.implicits._
 
 /** This mixin contains methods and logic that can aid platform models that are behave like tiled
   * multi core platforms. This can include for example NoC multicore architectures commonly used for

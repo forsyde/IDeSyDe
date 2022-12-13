@@ -15,8 +15,8 @@ import forsyde.io.java.typed.viewers.platform.InstrumentedCommunicationModule
 import forsyde.io.java.typed.viewers.platform.RoundRobinCommunicationModule
 import forsyde.io.java.typed.viewers.platform.InstrumentedProcessingModule
 import scala.collection.mutable
-import spire.math.Rational
-import spire.implicits.*
+import spire.math._
+import spire.implicits._
 import idesyde.identification.common.models.platform.InstrumentedPlatformMixin
 import idesyde.identification.common.models.platform.TiledMultiCorePlatformMixin
 import scala.collection.mutable.Queue

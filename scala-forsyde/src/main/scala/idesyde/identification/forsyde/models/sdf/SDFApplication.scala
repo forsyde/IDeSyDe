@@ -51,12 +51,19 @@ final case class SDFApplication(
   val coveredElementRelations = Set()
 
   val actorsSet: Array[Int]   = (0 until actors.size).toArray
+  val actorsIdentifiers       = actors.map(_.getIdentifier())
   val channelsSet: Array[Int] = (actors.size until (actors.size + channels.size)).toArray
+  val channelsIdentifiers     = channels.map(_.getIdentifier())
 
-  val initialTokens: Array[Int] = channels.map(_.getNumOfInitialTokens)
+  val channelNumInitialTokens: Array[Int] = channels.map(_.getNumOfInitialTokens)
 
   def isSelfConcurrent(actorIdx: Int): Boolean = {
     val a = actors(actorIdx)
+    !channels.exists(c => topology.containsEdge(a, c) && topology.containsEdge(c, a))
+  }
+
+  def isSelfConcurrent(actor: String): Boolean = {
+    val a = actors(actorsIdentifiers.indexOf(actor))
     !channels.exists(c => topology.containsEdge(a, c) && topology.containsEdge(c, a))
   }
 
@@ -186,41 +193,38 @@ final case class SDFApplication(
     .reverse
 
   val messagesFromChannels = dataflowGraphs.zipWithIndex.map((df, dfi) => {
-    var lumpedChannels = mutable.Map[(Int, Int), (Array[Int], Long, Int, Int, Int)]()
-    for ((c, ci) <- channelsSet.zipWithIndex) {
-      val thisInitialTokens = initialTokens(ci)
-      df.incomingEdgesOf(c)
-        .forEach(eSrc => {
-          val src = df.getEdgeSource(eSrc)
-          val sent = sdfBalanceMatrix(c - actors.size)(src) * TokenizableDataBlock
-            .safeCast(channels(c - actors.size))
-            .map(d => d.getTokenSizeInBits().toLong)
-            .orElse(0L)
-          val produced = sdfBalanceMatrix(c - actors.size)(src)
-          df.outgoingEdgesOf(c)
-            .forEach(eDst => {
-              val dst      = df.getEdgeTarget(eDst)
-              val consumed = -sdfBalanceMatrix(c - actors.size)(dst)
-              if (lumpedChannels.contains((src, dst))) {
-                val (cs, d, p, q, tok) = lumpedChannels((src, dst))
-                lumpedChannels((src, dst)) = (
-                  cs :+ c,
-                  d + sent,
-                  p + produced,
-                  q + consumed,
-                  tok + thisInitialTokens
-                )
-              } else {
-                lumpedChannels((src, dst)) = (
-                  Array(c),
-                  sent,
-                  produced,
-                  consumed,
-                  thisInitialTokens
-                )
-              }
-            })
-        })
+    var lumpedChannels = mutable
+      .Map[(String, String), (Array[String], Long, Int, Int, Int)]()
+      .withDefaultValue(
+        (
+          Array(),
+          0L,
+          0,
+          0,
+          0
+        )
+      )
+    for ((c, ci) <- channelsIdentifiers.zipWithIndex) {
+      val thisInitialTokens = channelNumInitialTokens(ci)
+      for (
+        (src, _, produced) <- df.filter((s, d, _) => d == c);
+        (_, dst, consumed) <- df.filter((s, d, _) => s == c)
+      ) {
+        val srcIdx  = actorsIdentifiers.indexOf(src)
+        val dstIdex = actorsIdentifiers.indexOf(dst)
+        val sent = produced * TokenizableDataBlock
+          .safeCast(channels(ci))
+          .map(d => d.getTokenSizeInBits().toLong)
+          .orElse(0L)
+        val (cs, d, p, q, tok) = lumpedChannels((src, dst))
+        lumpedChannels((src, dst)) = (
+          cs :+ c,
+          d + sent,
+          p + produced,
+          q + consumed,
+          tok + thisInitialTokens
+        )
+      }
     }
     lumpedChannels.map((k, v) => (k._1, k._2, v._1, v._2, v._3, v._4, v._5)).toArray
   })
@@ -245,7 +249,9 @@ final case class SDFApplication(
   lazy val firingsPrecedenceGraph = {
     // val firings = sdfRepetitionVectors.zipWithIndex.map((a, q) => (1 to q).map(qa => (a, qa)))
     var edges = Buffer[((Int, Int), (Int, Int))]()
-    for ((src, dst, _, _, produced, consumed, tokens) <- sdfMessages) {
+    for ((s, d, _, _, produced, consumed, tokens) <- sdfMessages) {
+      val src = actorsIdentifiers.indexOf(s)
+      val dst = actorsIdentifiers.indexOf(d)
       // println((produced, consumed, tokens))
       // val src = vec.indexWhere(_ > 0)
       // val dst = vec.indexWhere(_ < 0)
@@ -284,7 +290,9 @@ final case class SDFApplication(
     */
   lazy val firingsPrecedenceWithExtraStepGraph = {
     var edges = Buffer[((Int, Int), (Int, Int))]()
-    for ((src, dst, _, _, produced, consumed, tokens) <- sdfMessages) {
+    for ((s, d, _, _, produced, consumed, tokens) <- sdfMessages) {
+      val src = actorsIdentifiers.indexOf(s)
+      val dst = actorsIdentifiers.indexOf(d)
       // println((produced, consumed, tokens))
       // val src = vec.indexWhere(_ > 0)
       // val dst = vec.indexWhere(_ < 0)

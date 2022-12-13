@@ -288,7 +288,7 @@ final case class ChocoSDFToSChedTileHWSlowest(
     dse.addMappingsAndRebuild(
       mappings,
       schedulings,
-      sdfAnalysisModule.firingsInSlots.map(_.map(_.map(output.getIntVal(_)))),
+      Array.empty,
       // TODO: fix this slot allocaiton strategy for later. It is Okay, but lacks some direct synthetizable details, like which exact VC the channel goes
       dse.sdfApplications.channelsSet.zipWithIndex.map((c, ci) => {
         val i = dse.sdfApplications.sdfMessages.indexWhere((s, d, cs, l, _, _, _) => cs.contains(c))

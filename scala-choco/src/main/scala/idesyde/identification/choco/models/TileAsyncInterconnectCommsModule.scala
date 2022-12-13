@@ -59,14 +59,17 @@ class TileAsyncInterconnectCommsModule(
   val messageTravelDuration: Array[Array[Array[IntVar]]] = messages.zipWithIndex.map((c, ci) => {
     procElems.zipWithIndex.map((src, i) => {
       procElems.zipWithIndex.map((dst, j) => {
-        chocoModel.intVar(
-          s"commTime(${c},${i},${j})",
-          0,
-          commElemsPaths(i)(j)
-            .map(ce => messageTravelTimePerVirtualChannel(ci)(commElems.indexOf(ce)))
-            .sum,
-          true
-        )
+        if (i != j) {
+          chocoModel.intVar(
+            s"commTime(${c},${i},${j})",
+            0,
+            commElemsPaths(i)(j)
+              .map(ce => messageTravelTimePerVirtualChannel(ci)(commElems.indexOf(ce)))
+              .sum,
+            true
+          )
+        } else
+          chocoModel.intVar(0)
       })
     })
   })
@@ -126,11 +129,11 @@ class TileAsyncInterconnectCommsModule(
       chocoModel.ifThenElse(
         procElemSendsDataToAnother(src)(dst),
         chocoModel.arithm(
-          chocoModel.intVar(singleChannelSum),
-          ">=",
           messageTravelDuration(c)(src)(dst),
           "*",
-          minVCInPath
+          minVCInPath,
+          "=",
+          singleChannelSum
         ),
         chocoModel.arithm(
           messageTravelDuration(c)(src)(dst),

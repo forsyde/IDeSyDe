@@ -66,7 +66,7 @@ final case class SDFToSchedTiledHW(
   def addMappingsAndRebuild(
       channelMappings: Array[Array[Boolean]],
       actorSchedulings: Array[Array[Boolean]],
-      actorStaticSlots: Array[Array[Array[Int]]],
+      actorStaticSlots: Array[Array[Int]],
       channelVirtualChannels: Array[Array[Int]],
       actorThoughputsInSecs: Array[Rational]
   ): ForSyDeSystemGraph = {
@@ -109,30 +109,6 @@ final case class SDFToSchedTiledHW(
             .insertContainedPort(rebuilt, Visualizable.enforce(sdfActor))
         })
     })
-    // println(actorStaticSlots.map(_.map(_.mkString("[", ", ", "]")).mkString("[", ", ", "]")).mkString("[", "\n", "]"))
-    val entries = platform.executionSchedulers.map(s => Buffer[String]())
-    actorStaticSlots.zipWithIndex.foreach((tile, i) => {
-      // val passedList = Buffer[Integer]()
-      tile.zipWithIndex.foreach((slots, j) => {
-        val actor     = sdfApplications.actors(i)
-        val scheduler = platform.executionSchedulers(j)
-        slots.zipWithIndex.foreach((q, l) => {
-          if (q > 0) {
-            // AllocatedSingleSlotSCS
-            //   .safeCast(scheduler)
-            //   .ifPresent(s => {
-            //     for (k <- 0 until q) {
-            //       // passedList += l
-
-            //     }
-            //   })
-            entries(j) :+= actor.getIdentifier()
-          }
-        })
-        // val passed = PASSedSDFActor.enforce(actor)
-        // passed.setFiringSlots(passedList.asJava)
-      })
-    })
     val vcEntries = platform.communicationSchedulers.zipWithIndex.map((s, ceIdx) => {
       Buffer.fill(
         platform.tiledDigitalHardware.commElemsVirtualChannels(ceIdx)
@@ -145,17 +121,12 @@ final case class SDFToSchedTiledHW(
         val channel     = sdfApplications.channels(c)
         if (vc > 0) {
           Scheduled.enforce(channel).insertSchedulersPort(rebuilt, ceScheduler)
-          // AllocatedSharedSlotSCS
-          //     .enforce(ceScheduler)
-          //     .ifPresent(s => {
-
-          //     })
           vcEntries(ceIdx)(vc - 1) :+= channel.getIdentifier()
         }
       })
     })
     for ((s, i) <- platform.executionSchedulers.zipWithIndex) {
-      AllocatedSingleSlotSCS.enforce(s).setEntries(entries(i).asJava)
+      AllocatedSingleSlotSCS.enforce(s).setEntries(actorStaticSlots(i).map(sdfApplications.actors(_).getIdentifier()).toList.asJava)
     }
     for ((s, i) <- platform.communicationSchedulers.zipWithIndex) {
       AllocatedSharedSlotSCS.enforce(s).setEntries(vcEntries(i).map(_.asJava).asJava)

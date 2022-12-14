@@ -7,14 +7,14 @@ import spire.math.*
 import org.chocosolver.solver.Model
 
 class BaselineTimingConstraintsModule(
-  val chocoModel: Model,
-  val priorities: Array[Int],
-  val periods: Array[Rational],
-  val maxUtilizations: Array[Rational],
-  val durations: Array[Array[IntVar]],
-  val taskExecution: Array[IntVar],
-  val blockingTimes: Array[IntVar],
-  val responseTimes: Array[IntVar]
+    val chocoModel: Model,
+    val priorities: Array[Int],
+    val periods: Array[Rational],
+    val maxUtilizations: Array[Rational],
+    val durations: Array[IntVar],
+    val taskExecution: Array[IntVar],
+    val blockingTimes: Array[IntVar],
+    val responseTimes: Array[IntVar]
 ) extends ChocoModelMixin() {
 
   private val processors = 0 until maxUtilizations.size
@@ -35,20 +35,25 @@ class BaselineTimingConstraintsModule(
       (0 until maxUtilizations.length).map(j => {
         chocoModel.ifThen(
           taskExecution(i).eq(j).decompose(),
-          responseTimes(i).ge(blockingTimes(i).add(w(j))).decompose
+          responseTimes(i).ge(blockingTimes(i).add(w)).decompose
         )
       })
     })
   }
 
   def postMaximumUtilizations(): Unit = {
+    for (
+      (u, i) <- maxUtilizations
+    ) {
+      
+    }
     maxUtilizations
       .map(u => (u * (100)).ceil.toInt)
       .zipWithIndex
       .foreach((maxU, j) => {
         chocoModel
           .scalar(
-            durations.map(d => d(j)),
+            durations.map(d => d.),
             durations.zipWithIndex
               .map((_, i) => (100 / (periods(i))).toInt),
             "<=",

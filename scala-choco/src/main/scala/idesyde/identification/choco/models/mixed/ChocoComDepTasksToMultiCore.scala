@@ -84,35 +84,12 @@ final case class ChocoComDepTasksToMultiCore(
   // scribe.debug(allMemorySizeNumbers().mkString("[", ",", "]"))
 
   // create the variables that each module requires
-  val periods                           = dse.workload.periods.map(_ * (timeMultiplier))
-  val priorities                        = dse.workload.prioritiesForDependencies
-  val deadlines                         = dse.workload.relativeDeadlines.map(_ * (timeMultiplier))
-  val wcets                             = dse.wcets.map(_.map(f => (f * (timeMultiplier))))
-  val executionTimes: Array[Array[Int]] = wcets.map(_.map(f => f.ceil.toInt))
+  val periods    = dse.workload.periods.map(_ * (timeMultiplier))
+  val priorities = dse.workload.prioritiesForDependencies
+  val deadlines  = dse.workload.relativeDeadlines.map(_ * (timeMultiplier))
+  val wcets      = dse.wcets.map(_.map(f => (f * (timeMultiplier))))
   val maxUtilizations =
     dse.platform.hardware.processingElems.map(p => dse.maxUtilizations.getOrElse(p, Rational(1)))
-  val taskSizes = dse.workload.processSizes.map(CoreUtils.ceil(_, memoryDivider)).map(_.toInt)
-  val messageSizes =
-    dse.workload.messagesMaxSizes.map(CoreUtils.ceil(_, memoryDivider)).map(_.toInt)
-  val storageSizes =
-    dse.platform.hardware.storageSizes.map(CoreUtils.ceil(_, memoryDivider)).map(_.toInt)
-  val canBeFollowedBy = dse.workload.interTaskOccasionalBlock
-  val taskTravelTime = dse.workload.processSizes.map(d =>
-    dse.platform.hardware.communicationElementsBitPerSecPerChannel.map(b =>
-      // TODO: check if this is truly conservative (pessimistic) or not
-      (d / b / timeMultiplier / memoryDivider).ceil.toInt
-    )
-  )
-  val dataTravelTime = dse.workload.messagesMaxSizes.map(d =>
-    dse.platform.hardware.communicationElementsBitPerSecPerChannel.map(b =>
-      // TODO: check if this is truly conservative (pessimistic) or not
-      (d / b / (timeMultiplier) / (memoryDivider)).ceil.toInt
-    )
-  )
-  val taskReadsData  = dse.workload.processReadsFromChannel
-  val taskWritesData = dse.workload.processWritesToChannel
-  val allowedProc2MemoryDataPaths =
-    dse.platform.hardware.computedPaths
 
   // build the model so that it can be acessed later
   // memory module
@@ -134,24 +111,26 @@ final case class ChocoComDepTasksToMultiCore(
   )
   val memoryMappingModule = SingleProcessSingleMessageMemoryConstraintsModule(
     chocoModel,
-    taskSizes.map(_ / memoryDivider).map(_.toInt),
-    messageSizes.map(_ / memoryDivider).map(_.toInt),
-    storageSizes.map(_ / memoryDivider).map(_.toInt)
+    dse.workload.processSizes.map(CoreUtils.ceil(_, memoryDivider)).map(_.toInt),
+    dse.workload.messagesMaxSizes.map(CoreUtils.ceil(_, memoryDivider)).map(_.toInt),
+    dse.platform.hardware.storageSizes
+      .map(CoreUtils.ceil(_, memoryDivider))
+      .map(_.toInt)
   )
 
   // timing
-  val taskExecution = dse.workload.tasks.zipWithIndex.map((t, i) =>
+  val taskExecution = dse.workload.processes.zipWithIndex.map((t, i) =>
     chocoModel.intVar(
-      "task_map_" + t.getViewedVertex.getIdentifier,
-      dse.schedHwModel.hardware.storageElems.zipWithIndex
+      s"task_map($t)",
+      dse.platform.hardware.processingElems.zipWithIndex
         .filter((m, j) => dse.wcets(i)(j) >= 0)
         .map((m, j) => j)
     )
   )
   val responseTimes =
-    dse.workload.tasks.zipWithIndex.map((t, i) =>
+    dse.workload.processes.zipWithIndex.map((t, i) =>
       chocoModel.intVar(
-        "rt_" + t.getViewedVertex.getIdentifier,
+        s"rt($t)",
         // minimum WCET possible
         wcets(i)
           .filter(p => p > -1)
@@ -163,9 +142,9 @@ final case class ChocoComDepTasksToMultiCore(
       )
     )
   val blockingTimes =
-    dse.workload.tasks.zipWithIndex.map((t, i) =>
+    dse.workload.processes.zipWithIndex.map((t, i) =>
       chocoModel.intVar(
-        "bt_" + t.getViewedVertex.getIdentifier,
+        s"bt($t)",
         // minimum WCET possible
         0,
         deadlines(i).floor.toInt,
@@ -178,38 +157,43 @@ final case class ChocoComDepTasksToMultiCore(
     taskExecution,
     responseTimes,
     blockingTimes,
-    canBeFollowedBy
+    dse.workload.interTaskOccasionalBlock
   )
 
-  val taskCommMapping = dse.workload.tasks.zipWithIndex.map((t, i) =>
-    dse.schedHwModel.hardware.communicationElems.zipWithIndex.map((ce, j) =>
+  val taskCommMapping = dse.workload.processes.zipWithIndex.map((t, i) =>
+    dse.platform.hardware.communicationElems.zipWithIndex.map((ce, j) =>
       chocoModel.boolVar(
-        "tcom_map_" + t.getViewedVertex.getIdentifier + "_comm_" + ce.getIdentifier
+        s"tcom_map($t, $ce)"
       )
     )
   )
   val dataBlockCommMapping =
-    dse.workload.dataBlocks.zipWithIndex.map((c, i) =>
-      dse.schedHwModel.hardware.communicationElems.zipWithIndex.map((ce, j) =>
+    dse.workload.channels.zipWithIndex.map((c, i) =>
+      dse.platform.hardware.communicationElems.zipWithIndex.map((ce, j) =>
         chocoModel.boolVar(
-          "dcom_map_" + c.getViewedVertex.getIdentifier + "_comm_" + ce.getIdentifier
+          s"dcom_map($c, $ce)"
         )
       )
     )
 
+  val processingElemsVirtualChannelInCommElem = dse.platform.hardware.processingElems.map(p =>
+    dse.platform.hardware.communicationElems.zipWithIndex.map((c, i) =>
+      chocoModel.intVar(
+        s"vc($p, $c)",
+        0,
+        dse.platform.hardware.communicationElementsMaxChannels(i),
+        true
+      )
+    )
+  )
+
   val active4StageDurationModule = Active4StageDurationModule(
     chocoModel,
-    executionTimes,
-    taskTravelTime,
-    dataTravelTime,
-    allowedProc2MemoryDataPaths,
-    taskReadsData,
-    taskWritesData,
+    dse,
     taskExecution,
     memoryMappingModule.processesMemoryMapping,
     memoryMappingModule.messagesMemoryMapping,
-    taskCommMapping,
-    dataBlockCommMapping
+    processingElemsVirtualChannelInCommElem
   )
 
   val baselineTimingConstraintsModule = BaselineTimingConstraintsModule(
@@ -248,15 +232,15 @@ final case class ChocoComDepTasksToMultiCore(
 
   // for each FP scheduler
   // rt >= bt + sum of all higher prio tasks in the same CPU
-  dse.schedHwModel.allocatedSchedulers.zipWithIndex
-    .filter((s, j) => dse.schedHwModel.isFixedPriority(j))
+  dse.platform.runtimes.schedulers.zipWithIndex
+    .filter((s, j) => dse.platform.runtimes.isFixedPriority(j))
     .foreach((s, j) => {
       fixedPriorityConstraintsModule.postFixedPrioriPreemtpiveConstraint(j)
     })
   // for each SC scheduler
-  dse.workload.tasks.zipWithIndex.foreach((task, i) => {
-    dse.schedHwModel.allocatedSchedulers.zipWithIndex
-      .filter((s, j) => dse.schedHwModel.isStaticCycle(j))
+  dse.workload.processes.zipWithIndex.foreach((task, i) => {
+    dse.platform.runtimes.schedulers.zipWithIndex
+      .filter((s, j) => dse.platform.runtimes.isCyclicExecutive(j))
       .foreach((s, j) => {
         postStaticCyclicExecutiveConstraint(active4StageDurationModule)(i, j)
         //val cons = Constraint(s"FPConstrats${j}", DependentWorkloadFPPropagator())
@@ -267,7 +251,7 @@ final case class ChocoComDepTasksToMultiCore(
   val nUsedPEs = chocoModel.intVar(
     "nUsedPEs",
     1,
-    dse.schedHwModel.hardware.processingElems.length
+    dse.platform.hardware.processingElems.length
   )
   // count different ones
   chocoModel.atMostNValues(taskExecution, nUsedPEs, true).post()
@@ -321,7 +305,7 @@ final case class ChocoComDepTasksToMultiCore(
 
   override val strategies = Array(
     SimpleWorkloadBalancingDecisionStrategy(
-      (0 until dse.schedHwModel.allocatedSchedulers.length).toArray,
+      (0 until dse.platform.runtimes.schedulers.length).toArray,
       periods,
       taskExecution,
       baselineTimingConstraintsModule.utilizations,

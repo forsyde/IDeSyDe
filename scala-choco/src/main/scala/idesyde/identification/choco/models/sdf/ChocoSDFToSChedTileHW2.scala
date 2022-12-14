@@ -365,7 +365,8 @@ final case class ChocoSDFToSChedTileHW2(
       ),
       dse.sdfApplications.topologicalAndHeavyActorOrdering.map(a =>
         memoryMappingModule.processesMemoryMapping(dse.sdfApplications.actorsSet.indexOf(a))
-      )
+      ),
+      (i: Int) => (j: Int) => dse.sdfApplications.firingsPrecedenceGraph.get(sdfAnalysisModule.jobsAndActors(i)).pathTo(dse.sdfApplications.firingsPrecedenceGraph.get(sdfAnalysisModule.jobsAndActors(j))).isDefined
     ),
     Search.minDomLBSearch(nUsedPEs),
     Search.minDomLBSearch(tileAnalysisModule.numVirtualChannelsForProcElem.flatten: _*),

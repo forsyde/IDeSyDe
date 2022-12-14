@@ -32,13 +32,17 @@ import idesyde.utils.MultipliableFractional
 import spire.math.Rational
 import spire.implicits.*
 import idesyde.identification.DecisionModel
+import idesyde.identification.common.models.platform.InstrumentedPlatformMixin
+import forsyde.io.java.typed.viewers.platform.InstrumentedProcessingModule
+import scala.collection.mutable
 
 final case class NetworkedDigitalHardware(
     val processingElems: Array[GenericProcessingModule],
     val communicationElems: Array[GenericCommunicationModule],
     val storageElems: Array[GenericMemoryModule],
     val links: Array[(DigitalModule, DigitalModule)]
-) extends ForSyDeDecisionModel {
+) extends ForSyDeDecisionModel
+    with InstrumentedPlatformMixin[Rational] {
 
   val coveredElements = ({
     for (p <- processingElems) yield p.getViewedVertex
@@ -298,6 +302,25 @@ final case class NetworkedDigitalHardware(
       })
     })
   }
+
+  val processorsFrequency = processingElems.map(_.getOperatingFrequencyInHertz().toLong)
+
+  val processorsProvisions = processingElems.map(pe => {
+    // we do it mutable for simplicity...
+    // the performance hit should not be a concern now, for super big instances, this can be reviewed
+    var mutMap = mutable.Map[String, Map[String, Rational]]()
+    InstrumentedProcessingModule
+      .safeCast(pe)
+      .map(ipe => {
+        ipe
+          .getModalInstructionsPerCycle()
+          .entrySet()
+          .forEach(e => {
+            mutMap(e.getKey()) = e.getValue().asScala.map((k, v) => k -> Rational(v)).toMap
+          })
+      })
+    mutMap.toMap
+  })
 
   // lazy val paths: Map[(DigitalModule, DigitalModule), Seq[GenericCommunicationModule]] =
   //   val pathAlgorithm = DijkstraManyToManyShortestPaths(this)

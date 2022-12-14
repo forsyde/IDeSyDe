@@ -9,7 +9,7 @@ import org.chocosolver.solver.search.strategy.strategy.AbstractStrategy
 import idesyde.identification.forsyde.ForSyDeDecisionModel
 import idesyde.identification.DecisionModel
 
-trait ChocoCPForSyDeDecisionModel extends DecisionModel:
+trait ChocoCPForSyDeDecisionModel extends ForSyDeDecisionModel:
 
   def chocoModel: Model
 

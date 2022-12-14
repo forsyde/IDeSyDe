@@ -101,22 +101,23 @@ class SDFSchedulingAnalysisModule2(
     )
   )
 
-  val transmissionDelay = actors.zipWithIndex.map((a, i) =>
-    actors.zipWithIndex
-      .map((aa, j) => {
-        val messageTimesIdx =
-          sdfAndSchedulers.sdfApplications.sdfMessages
-            .indexWhere((src, dst, _, _, _, _, _) => src == a && dst == aa)
-        val maxMessageTime =
-          if (messageTimesIdx > -1) then
-            chocoModel.max(
-              s"maxMessageTime($i, $j)",
-              tileAsyncModule.messageTravelDuration(messageTimesIdx).flatten
-            )
-          else chocoModel.intVar(0)
-        maxMessageTime
-      })
-  )
+  val transmissionDelay =
+    sdfAndSchedulers.sdfApplications.actorsIdentifiers.zipWithIndex.map((a, i) =>
+      sdfAndSchedulers.sdfApplications.actorsIdentifiers.zipWithIndex
+        .map((aa, j) => {
+          val messageTimesIdx =
+            sdfAndSchedulers.sdfApplications.sdfMessages
+              .indexWhere((src, dst, _, _, _, _, _) => src == a && dst == aa)
+          val maxMessageTime =
+            if (messageTimesIdx > -1) then
+              chocoModel.max(
+                s"maxMessageTime($a, $aa)",
+                tileAsyncModule.messageTravelDuration(messageTimesIdx).flatten
+              )
+            else chocoModel.intVar(0)
+          maxMessageTime
+        })
+    )
 
   val jobTasks =
     jobsAndActors.zipWithIndex
@@ -262,7 +263,11 @@ class SDFSchedulingAnalysisModule2(
           if (a != aa) {
             val messageTimesIdx =
               sdfAndSchedulers.sdfApplications.sdfMessages
-                .indexWhere((cSrc, cDst, _, _, _, _, _) => cSrc == aa && cDst == a)
+                .indexWhere((cSrc, cDst, _, _, _, _, _) =>
+                  cSrc == sdfAndSchedulers.sdfApplications.actorsIdentifiers(
+                    aa
+                  ) && cDst == sdfAndSchedulers.sdfApplications.actorsIdentifiers(a)
+                )
             if (messageTimesIdx > -1) {
               for (
                 (p, k) <- schedulers.zipWithIndex; (pp, l) <- schedulers.zipWithIndex; if k != l

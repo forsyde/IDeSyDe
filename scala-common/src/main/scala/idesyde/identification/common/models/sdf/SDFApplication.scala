@@ -12,6 +12,7 @@ import idesyde.identification.common.StandardDecisionModel
 import scalax.collection.Graph
 import scalax.collection.GraphPredef._
 import scalax.collection.edge.Implicits._
+import scala.collection.mutable.Buffer
 
 final case class SDFApplication(
     val actorsIdentifiers: Array[String],
@@ -65,64 +66,8 @@ final case class SDFApplication(
   val configurations = Array((0, 0, "root"))
 
   val processComputationalNeeds = actorComputationalNeeds
-  //   actorFunctions.zipWithIndex.map((actorFuncs, i) => {
-  //     // we do it mutable for simplicity...
-  //     // the performance hit should not be a concern now, for super big instances, this can be reviewed
-  //     var mutMap = mutable.Map[String, mutable.Map[String, Long]]()
-  //     actorFuncs.foreach(func => {
-  //       InstrumentedExecutable
-  //         .safeCast(func)
-  //         .ifPresent(ifunc => {
-  //           // now they have to be aggregated
-  //           ifunc
-  //             .getOperationRequirements()
-  //             .entrySet()
-  //             .forEach(e => {
-  //               val innerMap = e.getValue().asScala.map((k, v) => k -> v.asInstanceOf[Long])
-  //               // first the intersection parts
-  //               mutMap(e.getKey()) = mutMap
-  //                 .getOrElse(e.getKey(), innerMap)
-  //                 .map((k, v) => k -> (v + innerMap.getOrElse(k, 0L)))
-  //               // now the parts only the other map has
-  //               (innerMap.keySet -- mutMap(e.getKey()).keySet)
-  //                 .map(k => mutMap(e.getKey())(k) = innerMap(k))
-  //             })
-  //         })
-  //     })
-  //     // check also the actor, just in case, this might be best
-  //     // in case the functions don't exist, but the actors is instrumented
-  //     // anyway
-  //     InstrumentedExecutable
-  //       .safeCast(actors(i))
-  //       .ifPresent(ia => {
-  //         // now they have to be aggregated
-  //         ia
-  //           .getOperationRequirements()
-  //           .entrySet()
-  //           .forEach(e => {
-  //             val innerMap = e.getValue().asScala.map((k, v) => k -> v.asInstanceOf[Long])
-  //             // first the intersection parts
-  //             mutMap(e.getKey()) = mutMap
-  //               .getOrElse(e.getKey(), innerMap)
-  //               .map((k, v) => k -> (v + innerMap.getOrElse(k, 0L)))
-  //             // now the parts only the other map has
-  //             (innerMap.keySet -- mutMap(e.getKey()).keySet)
-  //               .map(k => mutMap(e.getKey())(k) = innerMap(k))
-  //           })
-  //       })
-  //     mutMap.map((k, v) => k -> v.toMap).toMap
-  //   })
 
   val processSizes = actorSizes
-  //   InstrumentedExecutable.safeCast(a).map(_.getSizeInBits().asInstanceOf[Long]).orElse(0L) +
-  //     actorFunctions
-  //       .flatMap(fs =>
-  //         fs.map(
-  //           InstrumentedExecutable.safeCast(_).map(_.getSizeInBits().asInstanceOf[Long]).orElse(0L)
-  //         )
-  //       )
-  //       .sum
-  // )
 
   val messagesMaxSizes: Array[Long] =
     channelsIdentifiers.zipWithIndex.map((c, i) =>
@@ -130,6 +75,181 @@ final case class SDFApplication(
     )
 
   val sdfDisjointComponents = disjointComponents.head
+
+  val decreasingActorConsumptionOrder = actorsIdentifiers.zipWithIndex
+    .sortBy((a, ai) => {
+      sdfBalanceMatrix.zipWithIndex
+        .filter((vec, c) => vec(ai) < 0)
+        .map((vec, c) => -channelTokenSizes(c) * vec(ai))
+        .sum
+    })
+    .map((a, ai) => a)
+    .reverse
+
+  val messagesFromChannels = dataflowGraphs.zipWithIndex.map((df, dfi) => {
+    var lumpedChannels = mutable
+      .Map[(String, String), (Array[String], Long, Int, Int, Int)]()
+      .withDefaultValue(
+        (
+          Array(),
+          0L,
+          0,
+          0,
+          0
+        )
+      )
+    for ((c, ci) <- channelsIdentifiers.zipWithIndex) {
+      val thisInitialTokens = channelNumInitialTokens(ci)
+      for (
+        (src, _, produced) <- df.filter((s, d, _) => d == c);
+        (_, dst, consumed) <- df.filter((s, d, _) => s == c)
+      ) {
+        val srcIdx             = actorsIdentifiers.indexOf(src)
+        val dstIdex            = actorsIdentifiers.indexOf(dst)
+        val sent               = produced * channelTokenSizes(ci)
+        val (cs, d, p, q, tok) = lumpedChannels((src, dst))
+        lumpedChannels((src, dst)) = (
+          cs :+ c,
+          d + sent,
+          p + produced,
+          q + consumed,
+          tok + thisInitialTokens
+        )
+      }
+    }
+    lumpedChannels.map((k, v) => (k._1, k._2, v._1, v._2, v._3, v._4, v._5)).toArray
+  })
+
+  /** This abstracts the many sdf channels in the sdf multigraph into the form commonly presented in
+    * papers and texts: with just a channel between every two actors.
+    *
+    * Every tuple in this is given by: (src actors index, dst actors index, lumped SDF channels,
+    * size of message, produced, consumed, initial tokens)
+    */
+  val sdfMessages = messagesFromChannels(0)
+
+  /** This graph serves the same purpose as the common HSDF transformation, but simply stores
+    * precedences between firings instead of data movement.
+    */
+  lazy val firingsPrecedenceGraph = {
+    // val firings = sdfRepetitionVectors.zipWithIndex.map((a, q) => (1 to q).map(qa => (a, qa)))
+    var edges = Buffer[((String, Int), (String, Int))]()
+    for ((s, d, _, _, produced, consumed, tokens) <- sdfMessages) {
+      val src = actorsIdentifiers.indexOf(s)
+      val dst = actorsIdentifiers.indexOf(d)
+      // println((produced, consumed, tokens))
+      // val src = vec.indexWhere(_ > 0)
+      // val dst = vec.indexWhere(_ < 0)
+      var qSrc = 0
+      var qDst = 0
+      while (qSrc <= sdfRepetitionVectors(src) && qDst <= sdfRepetitionVectors(dst)) {
+        if (produced * qSrc + tokens - consumed * (qDst + 1) < 0) {
+          qSrc += 1
+        } else {
+          qDst += 1
+          if (qSrc > 0) {
+            edges +:= ((s, qSrc), (d, qDst))
+          }
+        }
+      }
+    }
+    for ((a, ai) <- actorsIdentifiers.zipWithIndex; q <- 1 to sdfRepetitionVectors(ai) - 1) {
+      edges +:= ((a, q), (a, q + 1))
+    }
+    val param = edges.map((s, t) => (s ~> t)).toArray
+    scalax.collection.Graph(param: _*)
+  }
+
+  /** Same as [[firingsPrecedenceGraph]], but with one more firings per actors of the next periodic
+    * phase
+    */
+  lazy val firingsPrecedenceWithExtraStepGraph = {
+    var edges = Buffer[((String, Int), (String, Int))]()
+    for ((s, d, _, _, produced, consumed, tokens) <- sdfMessages) {
+      val src = actorsIdentifiers.indexOf(s)
+      val dst = actorsIdentifiers.indexOf(d)
+      // println((produced, consumed, tokens))
+      // val src = vec.indexWhere(_ > 0)
+      // val dst = vec.indexWhere(_ < 0)
+      var qSrc = sdfRepetitionVectors(src)
+      var qDst = sdfRepetitionVectors(dst)
+      while (qSrc <= sdfRepetitionVectors(src) + 1 && qDst <= sdfRepetitionVectors(dst) + 1) {
+        if (produced * qSrc + tokens - consumed * (qDst + 1) < 0) {
+          qSrc += 1
+        } else {
+          qDst += 1
+          if (qSrc > 0) {
+            edges +:= ((s, qSrc), (d, qDst))
+          }
+        }
+      }
+      // the last jobs always communicate
+      // edges +:= ((src, qSrc), (dst, qDst))
+      // for (
+      //   qDst <- 1 to sdfRepetitionVectors(dst);
+      //   qSrcFrac = Rational(consumed * qDst - tokens, produced);
+      //   qSrc <- qSrcFrac.floor.toInt to qSrcFrac.ceil.toInt
+      //   if qSrc > 0
+      // ) {
+      //   edges +:= ((src, qSrc.toInt), (dst, qDst))
+      // }
+    }
+    for (a <- actorsIdentifiers; i = actorsIdentifiers.indexOf(a)) {
+      edges +:= ((a, sdfRepetitionVectors(i)), (a, sdfRepetitionVectors(i) + 1))
+    }
+    val param = edges.map((s, t) => (s ~> t)).toArray
+    firingsPrecedenceGraph ++ param
+  }
+
+  lazy val topologicalAndHeavyJobOrdering = firingsPrecedenceGraph
+    .topologicalSort()
+    .fold(
+      cycleNode => {
+        println("CYCLE NODES DETECTED")
+        firingsPrecedenceGraph.nodes.map(_.value).toArray
+      },
+      topo =>
+        topo
+          .withLayerOrdering(
+            firingsPrecedenceGraph.NodeOrdering((v1, v2) =>
+              decreasingActorConsumptionOrder
+                .indexOf(
+                  v1.value._1
+                ) - decreasingActorConsumptionOrder.indexOf(v2.value._1)
+            )
+          )
+          .map(_.value)
+          .toArray
+    )
+
+  lazy val topologicalAndHeavyJobOrderingWithExtra = firingsPrecedenceWithExtraStepGraph
+    .topologicalSort()
+    .fold(
+      cycleNode => {
+        println("CYCLE NODES DETECTED")
+        firingsPrecedenceGraph.nodes.map(_.value).toArray
+      },
+      topo =>
+        topo
+          .withLayerOrdering(
+            firingsPrecedenceWithExtraStepGraph.NodeOrdering((v1, v2) =>
+              decreasingActorConsumptionOrder
+                .indexOf(
+                  v1.value._1
+                ) - decreasingActorConsumptionOrder.indexOf(v2.value._1)
+            )
+          )
+          .map(_.value)
+          .toArray
+    )
+
+  lazy val topologicalAndHeavyActorOrdering =
+    actorsIdentifiers.sortBy(a => topologicalAndHeavyJobOrdering.indexWhere((aa, _) => a == aa))
+
+  lazy val topologicalAndHeavyActorOrderingWithExtra =
+    actorsIdentifiers.sortBy(a =>
+      topologicalAndHeavyJobOrderingWithExtra.indexWhere((aa, _) => a == aa)
+    )
 
   override val uniqueIdentifier = "SDFApplication"
 

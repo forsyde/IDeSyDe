@@ -29,7 +29,7 @@ class CompactingMultiCoreSDFListScheduling(
   private val numActors     = firingsInSlots.size
   private val numSchedulers = firingsInSlots.head.size
   private val numSlots      = firingsInSlots.head.head.size
-  var channels              = (0 until sdfApplications.initialTokens.size).toArray
+  var channels              = (0 until sdfApplications.channelNumInitialTokens.size).toArray
   var actors                = sdfApplications.decreasingActorConsumptionOrder
   var schedulers            = (0 until firingsInSlots.head.size).toArray
   val slots                 = (0 until firingsInSlots.head.head.size).toArray
@@ -64,11 +64,15 @@ class CompactingMultiCoreSDFListScheduling(
   def calculateDistanceScore(actor: Int)(scheduler: Int)(slot: Int): Int = {
     var score = 0
     val disjointComponentActor =
-      sdfApplications.sdfDisjointComponents.indexWhere(comp => comp.contains(actor))
+      sdfApplications.sdfDisjointComponents.indexWhere(comp =>
+        comp.exists(_ == sdfApplications.actorsIdentifiers(actor))
+      )
     // first calculate the distance from current slot to dependent ones
     wfor(0, _ < numActors, _ + 1) { a =>
       val disjointComponentA =
-        sdfApplications.sdfDisjointComponents.indexWhere(comp => comp.contains(a))
+        sdfApplications.sdfDisjointComponents.indexWhere(comp =>
+          comp.exists(_ == sdfApplications.actorsIdentifiers(a))
+        )
       // check whether a is a predecessor of actor in previous slots
       if (a != actor && disjointComponentA == disjointComponentActor) {
         wfor(0, _ <= slot, _ + 1) { slotA =>

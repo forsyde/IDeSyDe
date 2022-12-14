@@ -31,8 +31,8 @@ import forsyde.io.java.typed.viewers.decision.platform.runtime.AllocatedSingleSl
 import forsyde.io.java.typed.viewers.decision.results.AnalysedTask
 import forsyde.io.java.typed.viewers.decision.results.AnalyzedActor
 
-given scala.math.Fractional[Rational] = spire.compat.fractional[Rational]
-given Conversion[Double, Rational]    = (d: Double) => Rational(d)
+// given scala.math.Fractional[Rational] = spire.compat.fractional[Rational]
+// given Conversion[Double, Rational] = (d: Double) => Rational(d)
 
 final case class SDFToSchedTiledHW(
     val sdfApplications: SDFApplication,
@@ -42,8 +42,7 @@ final case class SDFToSchedTiledHW(
     /** A matrix of mapping from each SDF channel to each HW tile _and_ router */
     val existingMappings: Array[Array[Boolean]]
 ) extends ForSyDeDecisionModel
-    // with WCETComputationMixin[Rational]
-    {
+    with WCETComputationMixin(sdfApplications, platform.tiledDigitalHardware) {
 
   val coveredElements = sdfApplications.coveredElements ++
     platform.coveredElements
@@ -126,7 +125,11 @@ final case class SDFToSchedTiledHW(
       })
     })
     for ((s, i) <- platform.executionSchedulers.zipWithIndex) {
-      AllocatedSingleSlotSCS.enforce(s).setEntries(actorStaticSlots(i).map(sdfApplications.actors(_).getIdentifier()).toList.asJava)
+      AllocatedSingleSlotSCS
+        .enforce(s)
+        .setEntries(
+          actorStaticSlots(i).map(sdfApplications.actors(_).getIdentifier()).toList.asJava
+        )
     }
     for ((s, i) <- platform.communicationSchedulers.zipWithIndex) {
       AllocatedSharedSlotSCS.enforce(s).setEntries(vcEntries(i).map(_.asJava).asJava)
@@ -139,6 +142,8 @@ final case class SDFToSchedTiledHW(
     }
     rebuilt
   }
+
+  val wcets = computeWcets
 
   def uniqueIdentifier: String = "SDFToSchedTiledHW"
 }

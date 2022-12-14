@@ -17,6 +17,8 @@ import scala.jdk.OptionConverters.*
 import scala.jdk.CollectionConverters.*
 import forsyde.io.java.typed.viewers.platform.runtime.AbstractScheduler
 import forsyde.io.java.typed.viewers.platform.runtime.StaticCyclicScheduler
+import idesyde.identification.common.models.platform.InstrumentedPlatformMixin
+import spire.math.Rational
 
 final case class SchedulableNetworkedDigHW(
     val hardware: NetworkedDigitalHardware,

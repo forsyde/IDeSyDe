@@ -37,8 +37,7 @@ final case class SDFApplication(
     actorFuncs: Array[Array[Executable]] = Array.empty
 ) extends ForSyDeDecisionModel
     with ParametricRateDataflowWorkloadMixin
-    // with InstrumentedWorkloadMixin
-    {
+    with InstrumentedWorkloadMixin {
 
   val actorFunctions =
     if (actorFuncs.isEmpty) then Array.fill(actors.size)(Array.empty[Executable]) else actorFuncs

@@ -54,10 +54,11 @@ trait ParametricRateDataflowWorkloadMixin {
     *
     * This is important to correctly calculate repetition vectors in analytical methods.
     */
-  def disjointComponents: Array[Iterable[Iterable[String]]] = dataflowGraphs.map(g => {
-    val gGraphed = Graph(g.map((src, dst, w) => src ~> dst).toArray: _*)
-    gGraphed.componentTraverser().map(comp => comp.nodes.map(_.value))
-  })
+  def disjointComponents: Array[scala.collection.IndexedSeq[Iterable[String]]] =
+    dataflowGraphs.map(g => {
+      val gGraphed = Graph(g.map((src, dst, w) => src ~> dst).toArray: _*)
+      gGraphed.componentTraverser().map(comp => comp.nodes.map(_.value)).toArray
+    })
 
   def computeBalanceMatrices = dataflowGraphs.map(df => {
     val m = Array.fill(channelsIdentifiers.size)(Array.fill(actorsIdentifiers.size)(0))

@@ -3,6 +3,8 @@ package idesyde.identification.common.models.mixed
 import idesyde.identification.common.StandardDecisionModel
 import idesyde.identification.common.models.platform.SchedulableTiledMultiCore
 import idesyde.identification.common.models.sdf.SDFApplication
+import idesyde.identification.common.models.workload.InstrumentedWorkloadMixin
+import idesyde.identification.models.mixed.WCETComputationMixin
 
 final case class SDFToTiledMultiCore(
     val sdfApplications: SDFApplication,
@@ -10,7 +12,8 @@ final case class SDFToTiledMultiCore(
     val processMappings: Array[String],
     val memoryMappings: Array[String],
     val messageSlotAllocations: Array[Map[String, Array[Boolean]]]
-) extends StandardDecisionModel {
+) extends StandardDecisionModel
+    with WCETComputationMixin(sdfApplications, platform) {
 
   val coveredElements = sdfApplications.coveredElements ++ platform.coveredElements
   val coveredElementRelations =
@@ -31,6 +34,8 @@ final case class SDFToTiledMultiCore(
   val processComputationalNeeds: Array[Map[String, Map[String, Long]]] =
     sdfApplications.actorComputationalNeeds
   val processSizes: Array[Long] = sdfApplications.processSizes
+
+  val wcets = computeWcets
 
   val uniqueIdentifier: String = "SDFToTiledMultiCore"
 }

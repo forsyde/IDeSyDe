@@ -26,6 +26,7 @@ import idesyde.identification.choco.interfaces.ChocoModelMixin
 import org.chocosolver.solver.search.loop.monitors.IMonitorContradiction
 import org.chocosolver.solver.exception.ContradictionException
 import scala.collection.mutable.Buffer
+import forsyde.io.java.core.EdgeInfo
 
 class ConMonitorObj2(val model: ChocoSDFToSChedTileHW2) extends IMonitorContradiction {
 
@@ -103,7 +104,7 @@ final case class ChocoSDFToSChedTileHW2(
     dse.sdfApplications.processSizes.map(_ / memoryDivider).map(_.toInt),
     dse.sdfApplications.sdfMessages.map((src, _, _, mSize, p, c, tok) =>
       ((dse.sdfApplications.sdfRepetitionVectors(
-        dse.sdfApplications.actorsSet.indexOf(src)
+        dse.sdfApplications.actorsIdentifiers.indexOf(src)
       ) * p + tok) * mSize / memoryDivider).toInt
     ),
     dse.platform.tiledDigitalHardware.maxMemoryPerTile
@@ -147,7 +148,7 @@ final case class ChocoSDFToSChedTileHW2(
   memoryMappingModule.processesMemoryMapping.zipWithIndex.foreach((aMap, a) => {
     memoryMappingModule.messagesMemoryMapping.zipWithIndex.foreach((cMap, c) => {
       val (s, t, cs, _, _, _, _) = dse.sdfApplications.sdfMessages(c)
-      if (a == t) {
+      if (dse.sdfApplications.actorsIdentifiers(a) == t) {
         chocoModel.arithm(aMap, "=", cMap).post()
       }
     })
@@ -163,13 +164,13 @@ final case class ChocoSDFToSChedTileHW2(
         chocoModel.and(
           chocoModel.arithm(
             memoryMappingModule
-              .processesMemoryMapping(dse.sdfApplications.actorsSet.indexOf(s)),
+              .processesMemoryMapping(dse.sdfApplications.actorsIdentifiers.indexOf(s)),
             "=",
             p
           ),
           chocoModel.arithm(
             memoryMappingModule
-              .processesMemoryMapping(dse.sdfApplications.actorsSet.indexOf(t)),
+              .processesMemoryMapping(dse.sdfApplications.actorsIdentifiers.indexOf(t)),
             "=",
             pp
           )
@@ -361,7 +362,8 @@ final case class ChocoSDFToSChedTileHW2(
         arr.map(v => (v * timeMultiplier).ceil.toInt)
       ),
       dse.sdfApplications.topologicalAndHeavyActorOrdering.map(a =>
-        dse.sdfApplications.sdfDisjointComponents.indexWhere(_.contains(a))
+        dse.sdfApplications.sdfDisjointComponents
+          .indexWhere(_.exists(_ == dse.sdfApplications.actorsIdentifiers(a)))
       ),
       dse.sdfApplications.topologicalAndHeavyActorOrdering.map(a =>
         memoryMappingModule.processesMemoryMapping(dse.sdfApplications.actorsSet.indexOf(a))
@@ -443,7 +445,7 @@ final case class ChocoSDFToSChedTileHW2(
         .getIntVal(sdfAnalysisModule.globalInvThroughput)}, maxLatency = ${output.getIntVal(maxLatency)}"
     )
     val paths = tileAnalysisModule.commElemsPaths
-    val channelToRouters = dse.sdfApplications.channelsSet.map(c =>
+    val channelToRouters = dse.sdfApplications.channelsIdentifiers.map(c =>
       val i = dse.sdfApplications.sdfMessages.indexWhere((s, d, cs, l, _, _, _) => cs.contains(c))
       dse.platform.tiledDigitalHardware.routerSet.zipWithIndex.map((s, j) =>
         val p = output.getIntVal(memoryMappingModule.messagesMemoryMapping(i))
@@ -453,7 +455,7 @@ final case class ChocoSDFToSChedTileHW2(
     // println(dse.platform.tiledDigitalHardware.routerPaths.map(_.map(_.mkString("[", ", ", "]")).mkString("[", ", ", "]")).mkString("[", "\n", "]"))
     // println(channelToRouters.map(_.mkString("[", ", ", "]")).mkString("[", "\n", "]"))
     // println(tileAnalysisModule.numVirtualChannelsForProcElem.map(_.mkString(", ")).mkString("\n"))
-    val channelToTiles = dse.sdfApplications.channelsSet.map(c =>
+    val channelToTiles = dse.sdfApplications.channelsIdentifiers.map(c =>
       val i = dse.sdfApplications.sdfMessages.indexWhere((s, d, cs, l, _, _, _) => cs.contains(c))
       dse.platform.tiledDigitalHardware.tileSet.zipWithIndex.map((s, j) =>
         output.getIntVal(memoryMappingModule.messagesMemoryMapping(i)) == j
@@ -481,12 +483,14 @@ final case class ChocoSDFToSChedTileHW2(
           .map((job, i) => dse.sdfApplications.actorsSet.indexOf(job._1))
       }),
       // TODO: fix this slot allocaiton strategy for later. It is Okay, but lacks some direct synthetizable details, like which exact VC the channel goes
-      dse.sdfApplications.channelsSet.zipWithIndex.map((c, ci) => {
+      dse.sdfApplications.channelsIdentifiers.zipWithIndex.map((c, ci) => {
         // we have to look from the source perpective, since the sending processor is the one that allocates
         val (s, _, _, _, _, _, _) =
           dse.sdfApplications.sdfMessages.find((s, d, cs, l, _, _, _) => cs.contains(c)).get
         val p = output.getIntVal(
-          memoryMappingModule.processesMemoryMapping(dse.sdfApplications.actorsSet.indexOf(s))
+          memoryMappingModule.processesMemoryMapping(
+            dse.sdfApplications.actorsIdentifiers.indexOf(s)
+          )
         )
         dse.platform.tiledDigitalHardware.allCommElems.zipWithIndex.map((ce, j) => {
           output.getIntVal(tileAnalysisModule.numVirtualChannelsForProcElem(p)(j))
@@ -514,7 +518,9 @@ final case class ChocoSDFToSChedTileHW2(
 
   def uniqueIdentifier: String = "ChocoSDFToSChedTileHW2"
 
-  def coveredVertexes: Iterable[Vertex] = dse.coveredVertexes
+  def coveredElements: Iterable[Vertex] = dse.coveredElements
+
+  def coveredElementRelations: Set[EdgeInfo] = dse.coveredElementRelations
 
 }
 

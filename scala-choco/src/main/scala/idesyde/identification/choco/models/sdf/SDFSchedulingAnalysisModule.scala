@@ -33,7 +33,7 @@ class SDFSchedulingAnalysisModule(
   private val schedulers: Array[Int] = sdfAndSchedulers.platform.schedulerSet
   private val balanceMatrix: Array[Array[Int]] =
     sdfAndSchedulers.sdfApplications.balanceMatrices.head
-  private val initialTokens: Array[Int] = sdfAndSchedulers.sdfApplications.initialTokens
+  private val initialTokens: Array[Int] = sdfAndSchedulers.sdfApplications.channelNumInitialTokens
   private val actorDuration: Array[Array[Int]] =
     sdfAndSchedulers.wcets.map(ws => ws.map(w => w * timeFactor).map(_.ceil.intValue))
 
@@ -235,7 +235,9 @@ class SDFSchedulingAnalysisModule(
           for (
             a <- actors;
             c <- messages;
-            if sdfAndSchedulers.sdfApplications.sdfMessages(c)._2 == a;
+            if sdfAndSchedulers.sdfApplications
+              .sdfMessages(c)
+              ._2 == sdfAndSchedulers.sdfApplications.actorsIdentifiers(a);
             // if balanceMatrix(c)(a) < 0;
             pOther <- schedulers;
             if p != pOther

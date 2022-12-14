@@ -1,7 +1,6 @@
 package idesyde.identification.choco.models
 
 import idesyde.identification.choco.interfaces.ChocoModelMixin
-import idesyde.identification.models.platform.TiledMultiCorePlatformMixin
 import spire.algebra._
 import spire.math._
 import spire.implicits._

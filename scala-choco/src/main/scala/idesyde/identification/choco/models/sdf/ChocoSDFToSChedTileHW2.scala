@@ -288,17 +288,17 @@ final case class ChocoSDFToSChedTileHW2(
     .maxByOption(_.size)
     .foreach(group => {
       val pSorted = group.toArray.sorted
-      chocoModel
-        .lexChainLessEq(
-          pSorted.map(p => Array(minusMappedPerProcessingElement(p), indexOfPe(p))): _*
-        )
-        .post()
+      // chocoModel
+      //   .lexChainLessEq(
+      //     pSorted.map(p => Array(minusMappedPerProcessingElement(p), indexOfPe(p))): _*
+      //   )
+      //   .post()
       // chocoModel
       //   .lexLessEq(pSorted.map(minusMappedPerProcessingElement(_)), pSorted.map(indexOfPe(_)))
       //   .post()
-      // chocoModel
-      //   .increasing(pSorted.map(idx => indexOfPe(idx)), 1)
-      //   .post()
+      chocoModel
+        .increasing(pSorted.map(idx => indexOfPe(idx)), 1)
+        .post()
     })
   // enforcing a certain order whenever possible
   val dataFlows = dse.platform.schedulerSet.map(i =>

@@ -68,9 +68,9 @@ class CompactingMultiCoreMapping[DistT](
   def calculateCrossings(processorIdx: Int)(scheduler: Int): Int = {
     var crossings = 0
     wfor(0, _ < numProcesses, _ + 1) { other =>
-      if (processesIsFollowedBy(other)(processorIdx) && !processesMappings(other).contains(scheduler)) {
+      if (other != processorIdx && processesIsFollowedBy(other)(processorIdx) && !processesMappings(other).contains(scheduler)) {
         wfor(0, _ < numProcesses, _ + 1) {prevOther => 
-          if (processesIsFollowedBy(prevOther)(other) && processesMappings(prevOther).isInstantiatedTo(scheduler)) {
+          if (prevOther != other && processesIsFollowedBy(prevOther)(other) && processesMappings(prevOther).isInstantiatedTo(scheduler)) {
             crossings += 1
           }
         }

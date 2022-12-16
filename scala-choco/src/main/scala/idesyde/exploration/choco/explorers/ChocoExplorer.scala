@@ -46,8 +46,6 @@ class ChocoExplorer() extends ForSyDeIOExplorer:
   def estimateTimeUntilFeasibility(
       forSyDeDecisionModel: DecisionModel
   ): java.time.Duration = forSyDeDecisionModel match
-    case sDFToSchedTiledHW: ChocoSDFToSChedTileHW =>
-      Duration.ofSeconds(sDFToSchedTiledHW.chocoModel.getVars.size)
     case chocoForSyDeDecisionModel: ChocoCPForSyDeDecisionModel =>
       Duration.ofMinutes(chocoForSyDeDecisionModel.chocoModel.getVars.size)
     case _ => Duration.ofMinutes(Int.MaxValue)
@@ -55,8 +53,6 @@ class ChocoExplorer() extends ForSyDeIOExplorer:
   def estimateTimeUntilOptimality(
       forSyDeDecisionModel: DecisionModel
   ): java.time.Duration = forSyDeDecisionModel match
-    case sDFToSchedTiledHW: ChocoSDFToSChedTileHW =>
-      Duration.ofMinutes(sDFToSchedTiledHW.chocoModel.getVars.size)
     case chocoForSyDeDecisionModel: ChocoCPForSyDeDecisionModel =>
       Duration.ofHours(chocoForSyDeDecisionModel.chocoModel.getVars.size)
     case _ => Duration.ofMinutes(Int.MaxValue)

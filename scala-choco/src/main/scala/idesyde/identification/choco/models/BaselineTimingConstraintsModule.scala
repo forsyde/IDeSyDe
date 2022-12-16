@@ -42,26 +42,35 @@ class BaselineTimingConstraintsModule(
   }
 
   def postMaximumUtilizations(): Unit = {
-    for (
-      (u, i) <- maxUtilizations
-    ) {
-      
-    }
-    maxUtilizations
-      .map(u => (u * (100)).ceil.toInt)
-      .zipWithIndex
-      .foreach((maxU, j) => {
-        chocoModel
-          .scalar(
-            durations.map(d => d.),
-            durations.zipWithIndex
-              .map((_, i) => (100 / (periods(i))).toInt),
-            "<=",
-            utilizations(j)
-          )
-          .post
-        //chocoModel.arithm(utilizationSum, "<=", maxU).post
-      })
+    // TODO: find a way to reduce the pessimism here
+    chocoModel
+      .binPacking(
+        taskExecution,
+        durations.map(_.getUB()),
+        utilizations,
+        0
+      )
+      .post()
+    //   for (
+    //     (u, i) <- maxUtilizations
+    //   ) {
+
+    //   }
+    //   maxUtilizations
+    //     .map(u => (u * (100)).ceil.toInt)
+    //     .zipWithIndex
+    //     .foreach((maxU, j) => {
+    //       chocoModel
+    //         .scalar(
+    //           durations.map(d => d.),
+    //           durations.zipWithIndex
+    //             .map((_, i) => (100 / (periods(i))).toInt),
+    //           "<=",
+    //           utilizations(j)
+    //         )
+    //         .post
+    //       //chocoModel.arithm(utilizationSum, "<=", maxU).post
+    //     })
   }
 
   // def postTaskMapToAtLeastOne(): Unit = {

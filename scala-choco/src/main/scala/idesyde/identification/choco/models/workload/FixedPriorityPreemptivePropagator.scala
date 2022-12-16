@@ -16,10 +16,10 @@ class FixedPriorityPreemptivePropagator[T](
     val taskExecution: Array[IntVar],
     val responseTimes: Array[IntVar],
     val blockingTimes: Array[IntVar],
-    val durations: Array[Array[IntVar]]
+    val durations: Array[IntVar]
 )(using Conversion[T, Int])
     extends Propagator[IntVar](
-      taskExecution ++ responseTimes ++ blockingTimes ++ durations.flatten,
+      taskExecution ++ responseTimes ++ blockingTimes ++ durations,
       PropagatorPriority.BINARY,
       false
     ) {
@@ -44,18 +44,22 @@ class FixedPriorityPreemptivePropagator[T](
     else numerand / dividend
   }
 
-  def dur(taskIdx: Int) = Math.max(
-    durations(taskIdx)(schedulerIdx).getLB(),
-    wcets(taskIdx)(schedulerIdx)
-  )
+  def dur(taskIdx: Int) = durations(taskIdx).getLB()
 
   def propagate(x$0: Int): Unit = {
     wfor(0, _ < numTasks, _ + 1) { i =>
       if (taskExecution(i).contains(schedulerIdx)) {
         var rtNext = blockingTimes(i).getLB() + dur(i)
         wfor(0, _ < numTasks, _ + 1) { j =>
-          if (i != j && priorities(j) >= priorities(i) && taskExecution(j).isInstantiatedTo(schedulerIdx)) {
-            rtNext += dur(j) * ceil(responseTimes(i).getLB() + responseTimes(j).getLB() - dur(j), periods(j))
+          if (
+            i != j && priorities(j) >= priorities(i) && taskExecution(j).isInstantiatedTo(
+              schedulerIdx
+            )
+          ) {
+            rtNext += dur(j) * ceil(
+              responseTimes(i).getLB() + responseTimes(j).getLB() - dur(j),
+              periods(j)
+            )
           }
         }
         if (taskExecution(i).isInstantiatedTo(schedulerIdx)) {
@@ -66,28 +70,27 @@ class FixedPriorityPreemptivePropagator[T](
       }
     }
   }
-    // taskExecution.zipWithIndex
-    //   .filter((pi, i) => pi.contains(schedulerIdx))
-    //   .foreach((pi, i) => {
-    //     var rtL     = -1
-    //     var rtLNext = blockingTimes(i).getLB() + dur(i)
-    //     while (rtL != rtLNext && rtL < responseTimes(i).getUB()) {
-    //       rtL = rtLNext
-    //       rtLNext = blockingTimes(i).getLB() + dur(i) +
-    //         taskExecution.zipWithIndex
-    //           .filter((_, j) => i != j && priorities(j) >= priorities(i))
-    //           .filter((pj, j) => pj.isInstantiatedTo(schedulerIdx))
-    //           .map((_, j) => dur(j) * ceil(rtL, periods(j)))
-    //           .sum
-    //     }
-    //     // println(s"RT of ${i} in ${schedulerIdx} prop: ${rtL} | ${deadlines(i)}")
-    //     if (pi.isInstantiatedTo(schedulerIdx)) {
-    //       responseTimes(schedulerIdx).updateLowerBound(rtL, this)
-    //     } else if (rtL > deadlines(i)) {
-    //       pi.removeValue(schedulerIdx, this)
-    //     }
-    //     //if (rtU < responseTimes(i).getUB()) responseTimes(i).updateUpperBound(rtU, this)
-    //   })
+  // taskExecution.zipWithIndex
+  //   .filter((pi, i) => pi.contains(schedulerIdx))
+  //   .foreach((pi, i) => {
+  //     var rtL     = -1
+  //     var rtLNext = blockingTimes(i).getLB() + dur(i)
+  //     while (rtL != rtLNext && rtL < responseTimes(i).getUB()) {
+  //       rtL = rtLNext
+  //       rtLNext = blockingTimes(i).getLB() + dur(i) +
+  //         taskExecution.zipWithIndex
+  //           .filter((_, j) => i != j && priorities(j) >= priorities(i))
+  //           .filter((pj, j) => pj.isInstantiatedTo(schedulerIdx))
+  //           .map((_, j) => dur(j) * ceil(rtL, periods(j)))
+  //           .sum
+  //     }
+  //     // println(s"RT of ${i} in ${schedulerIdx} prop: ${rtL} | ${deadlines(i)}")
+  //     if (pi.isInstantiatedTo(schedulerIdx)) {
+  //       responseTimes(schedulerIdx).updateLowerBound(rtL, this)
+  //     } else if (rtL > deadlines(i)) {
+  //       pi.removeValue(schedulerIdx, this)
+  //     }
+  //     //if (rtU < responseTimes(i).getUB()) responseTimes(i).updateUpperBound(rtU, this)
+  //   })
 
 }
- 

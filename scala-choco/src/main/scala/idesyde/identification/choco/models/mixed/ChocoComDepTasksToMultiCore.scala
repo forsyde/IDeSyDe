@@ -31,6 +31,7 @@ import idesyde.utils.CoreUtils
 import idesyde.identification.choco.interfaces.ChocoModelMixin
 import idesyde.identification.common.models.workload.CommunicatingExtendedDependenciesPeriodicWorkload
 import idesyde.identification.common.models.mixed.PeriodicWorkloadToPartitionedSharedMultiCore
+import idesyde.identification.DecisionModel
 
 // object ConMonitorObj extends IMonitorContradiction {
 
@@ -283,7 +284,7 @@ final case class ChocoComDepTasksToMultiCore(
       responseTimes(taskIdx)
         .ge(
           active4StageDurationModule
-            .durations(taskIdx)(schedulerIdx)
+            .durations(taskIdx)
             .add(blockingTimes(taskIdx))
             .add(
               chocoModel
@@ -295,7 +296,7 @@ final case class ChocoComDepTasksToMultiCore(
                       // leave tasks k which i occasionally block
                       dse.workload.interTaskAlwaysBlocks(taskIdx)(k)
                     )
-                    .map((w, k) => w(schedulerIdx))
+                    .map((w, k) => w)
                     .toArray: _*
                 )
             )
@@ -310,7 +311,7 @@ final case class ChocoComDepTasksToMultiCore(
       taskExecution,
       baselineTimingConstraintsModule.utilizations,
       active4StageDurationModule.durations,
-      executionTimes
+      wcets.map(_.map(_.ceil.toInt))
     ),
     Search.inputOrderUBSearch(nUsedPEs),
     Search.activityBasedSearch(taskMapping: _*),
@@ -326,66 +327,22 @@ final case class ChocoComDepTasksToMultiCore(
     // )
   )
 
-  def rebuildFromChocoOutput(output: Solution): ForSyDeSystemGraph = {
-    val rebuilt = ForSyDeSystemGraph()
-    dse.workload.tasks.zipWithIndex.foreach((t, i) => {
-      rebuilt.addVertex(t.getViewedVertex)
-      val analysed         = AnalysedTask.enforce(t)
-      val responseTimeFrac = Rational(responseTimes(i).getValue(), timeMultiplier)
-      val blockingTimeFrac = Rational(blockingTimes(i).getValue(), timeMultiplier)
-      // scribe.debug(s"task ${t.getIdentifier} RT: (raw ${responseTimes(i).getValue}) ${responseTimeFrac.doubleValue}")
-      // scribe.debug(s"task ${t.getIdentifier} BT: (raw ${blockingTimes(i).getValue}) ${blockingTimeFrac.doubleValue}")
-      analysed.setWorstCaseResponseTimeNumeratorInSecs(responseTimeFrac.numerator.toLong)
-      analysed.setWorstCaseResponseTimeDenominatorInSecs(responseTimeFrac.denominator.toLong)
-      analysed.setWorstCaseBlockingTimeNumeratorInSecs(blockingTimeFrac.numerator.toLong)
-      analysed.setWorstCaseBlockingTimeDenominatorInSecs(blockingTimeFrac.denominator.toLong)
-
-    })
-    dse.workload.dataBlocks.foreach(t => rebuilt.addVertex(t.getViewedVertex))
-    dse.schedHwModel.allocatedSchedulers.foreach(s => rebuilt.addVertex(s.getViewedVertex))
-    dse.schedHwModel.hardware.storageElems.foreach(m => rebuilt.addVertex(m.getViewedVertex))
-    dse.schedHwModel.hardware.processingElems.zipWithIndex.foreach((m, j) =>
-      rebuilt.addVertex(m.getViewedVertex)
-      val module = AnalysedGenericProcessingModule.enforce(m)
-      module.setUtilization(
-        active4StageDurationModule.durations.zipWithIndex
-          .filter((ws, i) => taskExecution(i).isInstantiatedTo(j))
-          .map((w, i) =>
-            //scribe.debug(s"task n ${i} Wcet: (raw ${durations(i)(j)})")
-            (Rational(w(j).getValue)
-              / (periods(i))).toDouble
-          )
-          .sum
-      )
+  def rebuildFromChocoOutput(output: Solution): DecisionModel = {
+    val processMappings = memoryMappingModule.processesMemoryMapping.zipWithIndex.map((v, i) =>
+      dse.workload.processes(i) -> dse.platform.hardware.storageElems(output.getIntVal(v))
     )
-    taskExecution.zipWithIndex.foreach((exe, i) => {
-      dse.schedHwModel.allocatedSchedulers.zipWithIndex.foreach((scheduler, j) =>
-        // val j         = output.getIntVal(exe)
-        val task      = dse.workload.tasks(i)
-        val scheduler = dse.schedHwModel.allocatedSchedulers(j)
-        Scheduled.enforce(task).insertSchedulersPort(rebuilt, scheduler)
-        GreyBox.enforce(scheduler).insertContainedPort(rebuilt, Visualizable.enforce(task))
-      )
-    })
-    taskMapping.zipWithIndex.foreach((mapping, i) => {
-      val j      = mapping.getValue() // output.getIntVal(mapping)
-      val task   = dse.workload.tasks(i)
-      val memory = dse.schedHwModel.hardware.storageElems(j)
-      MemoryMapped.enforce(task).insertMappingHostsPort(rebuilt, memory)
-      // rebuilt.connect(task, memory, "mappingHost", EdgeTrait.DECISION_ABSTRACTMAPPING)
-      // GreyBox.enforce(memory)
-      // rebuilt.connect(memory, task, "contained", EdgeTrait.VISUALIZATION_VISUALCONTAINMENT)
-    })
-    dataBlockMapping.zipWithIndex.foreach((mapping, i) => {
-      val j       = mapping.getValue() // output.getIntVal(mapping)
-      val channel = dse.workload.dataBlocks(i)
-      val memory  = dse.schedHwModel.hardware.storageElems(j)
-      MemoryMapped.enforce(channel).insertMappingHostsPort(rebuilt, memory)
-      // rebuilt.connect(channel, memory, "mappingHost", EdgeTrait.DECISION_ABSTRACTMAPPING)
-      GreyBox.enforce(memory).insertContainedPort(rebuilt, Visualizable.enforce(channel))
-      // rebuilt.connect(memory, channel, "contained", EdgeTrait.VISUALIZATION_VISUALCONTAINMENT)
-    })
-    rebuilt
+    val processSchedulings = taskExecution.zipWithIndex.map((v, i) =>
+      dse.workload.processes(i) -> dse.platform.runtimes.schedulers(output.getIntVal(v))
+    )
+    val channelMappings = memoryMappingModule.messagesMemoryMapping.zipWithIndex.map((v, i) =>
+      dse.workload.processes(i) -> dse.platform.hardware.storageElems(output.getIntVal(v))
+    )
+    // val channelSlotAllocations = ???
+    dse.copy(
+      processMappings = processMappings.toMap,
+      processSchedulings = processSchedulings.toMap,
+      channelMappings = channelMappings.toMap
+    )
   }
 
   def allMemorySizeNumbers() =

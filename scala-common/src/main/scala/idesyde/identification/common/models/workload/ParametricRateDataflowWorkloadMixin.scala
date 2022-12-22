@@ -6,7 +6,6 @@ import org.jgrapht.Graph
 import org.jgrapht.graph.DefaultEdge
 import spire.math._
 import spire.algebra._
-import org.jgrapht.graph.DefaultDirectedGraph
 import scala.collection.mutable.Queue
 import breeze.linalg.DenseMatrix
 import breeze.linalg.DenseVector
@@ -21,7 +20,7 @@ import java.util.stream.Collectors
 import org.jgrapht.graph.AsUndirectedGraph
 import org.jgrapht.traverse.DepthFirstIterator
 import scala.collection.mutable
-import org.jgrapht.graph.SimpleDirectedGraph
+import org.jgrapht.graph.DefaultDirectedGraph
 import scala.collection.mutable.Buffer
 import org.jgrapht.alg.shortestpath.DijkstraManyToManyShortestPaths
 
@@ -93,7 +92,7 @@ trait ParametricRateDataflowWorkloadMixin {
     // first we build a compressed g with only the actors
     // with the fractional flows in a matrix
     val gRates         = Array.fill(actorsSet.size)(Array.fill(actorsSet.size)(Rational.zero))
-    val gActorsBuilder = SimpleDirectedGraph.createBuilder[Int, DefaultEdge](() => DefaultEdge())
+    val gActorsBuilder = DefaultDirectedGraph.createBuilder[Int, DefaultEdge](() => DefaultEdge())
     // and put the rates between them in a matrix
     channelsSet.foreach(c => {
       // we do a for, but there should only be one producer and one consumer per actor

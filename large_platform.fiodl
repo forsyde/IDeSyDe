@@ -1,0 +1,1843 @@
+systemgraph {
+  vertex "tile_0"
+  [platform::AbstractStructure, visualization::GreyBox]
+  (contained, submodules)
+  {}
+  vertex "tile_cpu_0"
+  [platform::InstrumentedProcessingModule, visualization::GreyBox, visualization::Visualizable]
+  (contained, defaultMemory, networkInterface)
+  {
+    "operatingFrequencyInHertz": 50000000_l,
+    "modalInstructionsPerCycle": {
+      "eco": {
+        "all":      0.83333333333_64
+      },
+      "default": {
+        "all":      1.00000000000_64
+      }
+    }
+  }
+  vertex "tile_mem0"
+  [platform::GenericMemoryModule, visualization::Visualizable]
+  (instructionsAndData, networkInterface)
+  {
+    "spaceInBits": 128000_l,
+    "operatingFrequencyInHertz": 50000000_l
+  }
+  vertex "tile_ni0"
+  [platform::InstrumentedCommunicationModule, visualization::Visualizable]
+  (from_0_1, from_1_0, tileMemory, tileProcessor, to_0_1, to_1_0)
+  {
+    "maxCyclesPerFlit": 6_i,
+    "flitSizeInBits": 128_l,
+    "initialLatency": 0_l,
+    "operatingFrequencyInHertz": 50000000_l,
+    "maxConcurrentFlits": 4_i
+  }
+  vertex "tile_os0"
+  [decision::Allocated, platform::runtime::StaticCyclicScheduler, visualization::Visualizable]
+  (allocationHosts)
+  {
+    "entries": [
+
+    ]
+  }
+  vertex "tile_1"
+  [platform::AbstractStructure, visualization::GreyBox]
+  (contained, submodules)
+  {}
+  vertex "tile_cpu_1"
+  [platform::InstrumentedProcessingModule, visualization::GreyBox, visualization::Visualizable]
+  (contained, defaultMemory, networkInterface)
+  {
+    "operatingFrequencyInHertz": 50000000_l,
+    "modalInstructionsPerCycle": {
+      "eco": {
+        "all":      0.83333333333_64
+      },
+      "default": {
+        "all":      1.00000000000_64
+      }
+    }
+  }
+  vertex "tile_mem1"
+  [platform::GenericMemoryModule, visualization::Visualizable]
+  (instructionsAndData, networkInterface)
+  {
+    "spaceInBits": 128000_l,
+    "operatingFrequencyInHertz": 50000000_l
+  }
+  vertex "tile_ni1"
+  [platform::InstrumentedCommunicationModule, visualization::Visualizable]
+  (from_0_0, from_1_1, from_2_0, tileMemory, tileProcessor, to_0_0, to_1_1, to_2_0)
+  {
+    "maxCyclesPerFlit": 6_i,
+    "flitSizeInBits": 128_l,
+    "initialLatency": 0_l,
+    "operatingFrequencyInHertz": 50000000_l,
+    "maxConcurrentFlits": 4_i
+  }
+  vertex "tile_os1"
+  [decision::Allocated, platform::runtime::StaticCyclicScheduler, visualization::Visualizable]
+  (allocationHosts)
+  {
+    "entries": [
+
+    ]
+  }
+  vertex "tile_2"
+  [platform::AbstractStructure, visualization::GreyBox]
+  (contained, submodules)
+  {}
+  vertex "tile_cpu_2"
+  [platform::InstrumentedProcessingModule, visualization::GreyBox, visualization::Visualizable]
+  (contained, defaultMemory, networkInterface)
+  {
+    "operatingFrequencyInHertz": 50000000_l,
+    "modalInstructionsPerCycle": {
+      "eco": {
+        "all":      0.83333333333_64
+      },
+      "default": {
+        "all":      1.00000000000_64
+      }
+    }
+  }
+  vertex "tile_mem2"
+  [platform::GenericMemoryModule, visualization::Visualizable]
+  (instructionsAndData, networkInterface)
+  {
+    "spaceInBits": 128000_l,
+    "operatingFrequencyInHertz": 50000000_l
+  }
+  vertex "tile_ni2"
+  [platform::InstrumentedCommunicationModule, visualization::Visualizable]
+  (from_1_0, from_2_1, from_3_0, tileMemory, tileProcessor, to_1_0, to_2_1, to_3_0)
+  {
+    "maxCyclesPerFlit": 6_i,
+    "flitSizeInBits": 128_l,
+    "initialLatency": 0_l,
+    "operatingFrequencyInHertz": 50000000_l,
+    "maxConcurrentFlits": 4_i
+  }
+  vertex "tile_os2"
+  [decision::Allocated, platform::runtime::StaticCyclicScheduler, visualization::Visualizable]
+  (allocationHosts)
+  {
+    "entries": [
+
+    ]
+  }
+  vertex "tile_3"
+  [platform::AbstractStructure, visualization::GreyBox]
+  (contained, submodules)
+  {}
+  vertex "tile_cpu_3"
+  [platform::InstrumentedProcessingModule, visualization::GreyBox, visualization::Visualizable]
+  (contained, defaultMemory, networkInterface)
+  {
+    "operatingFrequencyInHertz": 50000000_l,
+    "modalInstructionsPerCycle": {
+      "eco": {
+        "all":      0.83333333333_64
+      },
+      "default": {
+        "all":      1.00000000000_64
+      }
+    }
+  }
+  vertex "tile_mem3"
+  [platform::GenericMemoryModule, visualization::Visualizable]
+  (instructionsAndData, networkInterface)
+  {
+    "spaceInBits": 128000_l,
+    "operatingFrequencyInHertz": 50000000_l
+  }
+  vertex "tile_ni3"
+  [platform::InstrumentedCommunicationModule, visualization::Visualizable]
+  (from_2_0, from_3_1, from_4_0, tileMemory, tileProcessor, to_2_0, to_3_1, to_4_0)
+  {
+    "maxCyclesPerFlit": 6_i,
+    "flitSizeInBits": 128_l,
+    "initialLatency": 0_l,
+    "operatingFrequencyInHertz": 50000000_l,
+    "maxConcurrentFlits": 4_i
+  }
+  vertex "tile_os3"
+  [decision::Allocated, platform::runtime::StaticCyclicScheduler, visualization::Visualizable]
+  (allocationHosts)
+  {
+    "entries": [
+
+    ]
+  }
+  vertex "tile_4"
+  [platform::AbstractStructure, visualization::GreyBox]
+  (contained, submodules)
+  {}
+  vertex "tile_cpu_4"
+  [platform::InstrumentedProcessingModule, visualization::GreyBox, visualization::Visualizable]
+  (contained, defaultMemory, networkInterface)
+  {
+    "operatingFrequencyInHertz": 50000000_l,
+    "modalInstructionsPerCycle": {
+      "eco": {
+        "all":      0.83333333333_64
+      },
+      "default": {
+        "all":      1.00000000000_64
+      }
+    }
+  }
+  vertex "tile_mem4"
+  [platform::GenericMemoryModule, visualization::Visualizable]
+  (instructionsAndData, networkInterface)
+  {
+    "spaceInBits": 128000_l,
+    "operatingFrequencyInHertz": 50000000_l
+  }
+  vertex "tile_ni4"
+  [platform::InstrumentedCommunicationModule, visualization::Visualizable]
+  (from_3_0, from_4_1, tileMemory, tileProcessor, to_3_0, to_4_1)
+  {
+    "maxCyclesPerFlit": 6_i,
+    "flitSizeInBits": 128_l,
+    "initialLatency": 0_l,
+    "operatingFrequencyInHertz": 50000000_l,
+    "maxConcurrentFlits": 4_i
+  }
+  vertex "tile_os4"
+  [decision::Allocated, platform::runtime::StaticCyclicScheduler, visualization::Visualizable]
+  (allocationHosts)
+  {
+    "entries": [
+
+    ]
+  }
+  vertex "tile_5"
+  [platform::AbstractStructure, visualization::GreyBox]
+  (contained, submodules)
+  {}
+  vertex "tile_cpu_5"
+  [platform::InstrumentedProcessingModule, visualization::GreyBox, visualization::Visualizable]
+  (contained, defaultMemory, networkInterface)
+  {
+    "operatingFrequencyInHertz": 50000000_l,
+    "modalInstructionsPerCycle": {
+      "eco": {
+        "all":      0.83333333333_64
+      },
+      "default": {
+        "all":      1.00000000000_64
+      }
+    }
+  }
+  vertex "tile_mem5"
+  [platform::GenericMemoryModule, visualization::Visualizable]
+  (instructionsAndData, networkInterface)
+  {
+    "spaceInBits": 128000_l,
+    "operatingFrequencyInHertz": 50000000_l
+  }
+  vertex "tile_ni5"
+  [platform::InstrumentedCommunicationModule, visualization::Visualizable]
+  (from_0_0, from_0_2, from_1_1, tileMemory, tileProcessor, to_0_0, to_0_2, to_1_1)
+  {
+    "maxCyclesPerFlit": 6_i,
+    "flitSizeInBits": 128_l,
+    "initialLatency": 0_l,
+    "operatingFrequencyInHertz": 50000000_l,
+    "maxConcurrentFlits": 4_i
+  }
+  vertex "tile_os5"
+  [decision::Allocated, platform::runtime::StaticCyclicScheduler, visualization::Visualizable]
+  (allocationHosts)
+  {
+    "entries": [
+
+    ]
+  }
+  vertex "tile_6"
+  [platform::AbstractStructure, visualization::GreyBox]
+  (contained, submodules)
+  {}
+  vertex "tile_cpu_6"
+  [platform::InstrumentedProcessingModule, visualization::GreyBox, visualization::Visualizable]
+  (contained, defaultMemory, networkInterface)
+  {
+    "operatingFrequencyInHertz": 50000000_l,
+    "modalInstructionsPerCycle": {
+      "eco": {
+        "all":      0.83333333333_64
+      },
+      "default": {
+        "all":      1.00000000000_64
+      }
+    }
+  }
+  vertex "tile_mem6"
+  [platform::GenericMemoryModule, visualization::Visualizable]
+  (instructionsAndData, networkInterface)
+  {
+    "spaceInBits": 128000_l,
+    "operatingFrequencyInHertz": 50000000_l
+  }
+  vertex "tile_ni6"
+  [platform::InstrumentedCommunicationModule, visualization::Visualizable]
+  (from_0_1, from_1_0, from_1_2, from_2_1, tileMemory, tileProcessor, to_0_1, to_1_0, to_1_2, to_2_1)
+  {
+    "maxCyclesPerFlit": 6_i,
+    "flitSizeInBits": 128_l,
+    "initialLatency": 0_l,
+    "operatingFrequencyInHertz": 50000000_l,
+    "maxConcurrentFlits": 4_i
+  }
+  vertex "tile_os6"
+  [decision::Allocated, platform::runtime::StaticCyclicScheduler, visualization::Visualizable]
+  (allocationHosts)
+  {
+    "entries": [
+
+    ]
+  }
+  vertex "tile_7"
+  [platform::AbstractStructure, visualization::GreyBox]
+  (contained, submodules)
+  {}
+  vertex "tile_cpu_7"
+  [platform::InstrumentedProcessingModule, visualization::GreyBox, visualization::Visualizable]
+  (contained, defaultMemory, networkInterface)
+  {
+    "operatingFrequencyInHertz": 50000000_l,
+    "modalInstructionsPerCycle": {
+      "eco": {
+        "all":      0.83333333333_64
+      },
+      "default": {
+        "all":      1.00000000000_64
+      }
+    }
+  }
+  vertex "tile_mem7"
+  [platform::GenericMemoryModule, visualization::Visualizable]
+  (instructionsAndData, networkInterface)
+  {
+    "spaceInBits": 128000_l,
+    "operatingFrequencyInHertz": 50000000_l
+  }
+  vertex "tile_ni7"
+  [platform::InstrumentedCommunicationModule, visualization::Visualizable]
+  (from_1_1, from_2_0, from_2_2, from_3_1, tileMemory, tileProcessor, to_1_1, to_2_0, to_2_2, to_3_1)
+  {
+    "maxCyclesPerFlit": 6_i,
+    "flitSizeInBits": 128_l,
+    "initialLatency": 0_l,
+    "operatingFrequencyInHertz": 50000000_l,
+    "maxConcurrentFlits": 4_i
+  }
+  vertex "tile_os7"
+  [decision::Allocated, platform::runtime::StaticCyclicScheduler, visualization::Visualizable]
+  (allocationHosts)
+  {
+    "entries": [
+
+    ]
+  }
+  vertex "tile_8"
+  [platform::AbstractStructure, visualization::GreyBox]
+  (contained, submodules)
+  {}
+  vertex "tile_cpu_8"
+  [platform::InstrumentedProcessingModule, visualization::GreyBox, visualization::Visualizable]
+  (contained, defaultMemory, networkInterface)
+  {
+    "operatingFrequencyInHertz": 50000000_l,
+    "modalInstructionsPerCycle": {
+      "eco": {
+        "all":      0.83333333333_64
+      },
+      "default": {
+        "all":      1.00000000000_64
+      }
+    }
+  }
+  vertex "tile_mem8"
+  [platform::GenericMemoryModule, visualization::Visualizable]
+  (instructionsAndData, networkInterface)
+  {
+    "spaceInBits": 128000_l,
+    "operatingFrequencyInHertz": 50000000_l
+  }
+  vertex "tile_ni8"
+  [platform::InstrumentedCommunicationModule, visualization::Visualizable]
+  (from_2_1, from_3_0, from_3_2, from_4_1, tileMemory, tileProcessor, to_2_1, to_3_0, to_3_2, to_4_1)
+  {
+    "maxCyclesPerFlit": 6_i,
+    "flitSizeInBits": 128_l,
+    "initialLatency": 0_l,
+    "operatingFrequencyInHertz": 50000000_l,
+    "maxConcurrentFlits": 4_i
+  }
+  vertex "tile_os8"
+  [decision::Allocated, platform::runtime::StaticCyclicScheduler, visualization::Visualizable]
+  (allocationHosts)
+  {
+    "entries": [
+
+    ]
+  }
+  vertex "tile_9"
+  [platform::AbstractStructure, visualization::GreyBox]
+  (contained, submodules)
+  {}
+  vertex "tile_cpu_9"
+  [platform::InstrumentedProcessingModule, visualization::GreyBox, visualization::Visualizable]
+  (contained, defaultMemory, networkInterface)
+  {
+    "operatingFrequencyInHertz": 50000000_l,
+    "modalInstructionsPerCycle": {
+      "eco": {
+        "all":      0.83333333333_64
+      },
+      "default": {
+        "all":      1.00000000000_64
+      }
+    }
+  }
+  vertex "tile_mem9"
+  [platform::GenericMemoryModule, visualization::Visualizable]
+  (instructionsAndData, networkInterface)
+  {
+    "spaceInBits": 128000_l,
+    "operatingFrequencyInHertz": 50000000_l
+  }
+  vertex "tile_ni9"
+  [platform::InstrumentedCommunicationModule, visualization::Visualizable]
+  (from_3_1, from_4_0, from_4_2, tileMemory, tileProcessor, to_3_1, to_4_0, to_4_2)
+  {
+    "maxCyclesPerFlit": 6_i,
+    "flitSizeInBits": 128_l,
+    "initialLatency": 0_l,
+    "operatingFrequencyInHertz": 50000000_l,
+    "maxConcurrentFlits": 4_i
+  }
+  vertex "tile_os9"
+  [decision::Allocated, platform::runtime::StaticCyclicScheduler, visualization::Visualizable]
+  (allocationHosts)
+  {
+    "entries": [
+
+    ]
+  }
+  vertex "tile_10"
+  [platform::AbstractStructure, visualization::GreyBox]
+  (contained, submodules)
+  {}
+  vertex "tile_cpu_10"
+  [platform::InstrumentedProcessingModule, visualization::GreyBox, visualization::Visualizable]
+  (contained, defaultMemory, networkInterface)
+  {
+    "operatingFrequencyInHertz": 50000000_l,
+    "modalInstructionsPerCycle": {
+      "eco": {
+        "all":      0.83333333333_64
+      },
+      "default": {
+        "all":      1.00000000000_64
+      }
+    }
+  }
+  vertex "tile_mem10"
+  [platform::GenericMemoryModule, visualization::Visualizable]
+  (instructionsAndData, networkInterface)
+  {
+    "spaceInBits": 128000_l,
+    "operatingFrequencyInHertz": 50000000_l
+  }
+  vertex "tile_ni10"
+  [platform::InstrumentedCommunicationModule, visualization::Visualizable]
+  (from_0_1, from_0_3, from_1_2, tileMemory, tileProcessor, to_0_1, to_0_3, to_1_2)
+  {
+    "maxCyclesPerFlit": 6_i,
+    "flitSizeInBits": 128_l,
+    "initialLatency": 0_l,
+    "operatingFrequencyInHertz": 50000000_l,
+    "maxConcurrentFlits": 4_i
+  }
+  vertex "tile_os10"
+  [decision::Allocated, platform::runtime::StaticCyclicScheduler, visualization::Visualizable]
+  (allocationHosts)
+  {
+    "entries": [
+
+    ]
+  }
+  vertex "tile_11"
+  [platform::AbstractStructure, visualization::GreyBox]
+  (contained, submodules)
+  {}
+  vertex "tile_cpu_11"
+  [platform::InstrumentedProcessingModule, visualization::GreyBox, visualization::Visualizable]
+  (contained, defaultMemory, networkInterface)
+  {
+    "operatingFrequencyInHertz": 50000000_l,
+    "modalInstructionsPerCycle": {
+      "eco": {
+        "all":      0.83333333333_64
+      },
+      "default": {
+        "all":      1.00000000000_64
+      }
+    }
+  }
+  vertex "tile_mem11"
+  [platform::GenericMemoryModule, visualization::Visualizable]
+  (instructionsAndData, networkInterface)
+  {
+    "spaceInBits": 128000_l,
+    "operatingFrequencyInHertz": 50000000_l
+  }
+  vertex "tile_ni11"
+  [platform::InstrumentedCommunicationModule, visualization::Visualizable]
+  (from_0_2, from_1_1, from_1_3, from_2_2, tileMemory, tileProcessor, to_0_2, to_1_1, to_1_3, to_2_2)
+  {
+    "maxCyclesPerFlit": 6_i,
+    "flitSizeInBits": 128_l,
+    "initialLatency": 0_l,
+    "operatingFrequencyInHertz": 50000000_l,
+    "maxConcurrentFlits": 4_i
+  }
+  vertex "tile_os11"
+  [decision::Allocated, platform::runtime::StaticCyclicScheduler, visualization::Visualizable]
+  (allocationHosts)
+  {
+    "entries": [
+
+    ]
+  }
+  vertex "tile_12"
+  [platform::AbstractStructure, visualization::GreyBox]
+  (contained, submodules)
+  {}
+  vertex "tile_cpu_12"
+  [platform::InstrumentedProcessingModule, visualization::GreyBox, visualization::Visualizable]
+  (contained, defaultMemory, networkInterface)
+  {
+    "operatingFrequencyInHertz": 50000000_l,
+    "modalInstructionsPerCycle": {
+      "eco": {
+        "all":      0.83333333333_64
+      },
+      "default": {
+        "all":      1.00000000000_64
+      }
+    }
+  }
+  vertex "tile_mem12"
+  [platform::GenericMemoryModule, visualization::Visualizable]
+  (instructionsAndData, networkInterface)
+  {
+    "spaceInBits": 128000_l,
+    "operatingFrequencyInHertz": 50000000_l
+  }
+  vertex "tile_ni12"
+  [platform::InstrumentedCommunicationModule, visualization::Visualizable]
+  (from_1_2, from_2_1, from_2_3, from_3_2, tileMemory, tileProcessor, to_1_2, to_2_1, to_2_3, to_3_2)
+  {
+    "maxCyclesPerFlit": 6_i,
+    "flitSizeInBits": 128_l,
+    "initialLatency": 0_l,
+    "operatingFrequencyInHertz": 50000000_l,
+    "maxConcurrentFlits": 4_i
+  }
+  vertex "tile_os12"
+  [decision::Allocated, platform::runtime::StaticCyclicScheduler, visualization::Visualizable]
+  (allocationHosts)
+  {
+    "entries": [
+
+    ]
+  }
+  vertex "tile_13"
+  [platform::AbstractStructure, visualization::GreyBox]
+  (contained, submodules)
+  {}
+  vertex "tile_cpu_13"
+  [platform::InstrumentedProcessingModule, visualization::GreyBox, visualization::Visualizable]
+  (contained, defaultMemory, networkInterface)
+  {
+    "operatingFrequencyInHertz": 50000000_l,
+    "modalInstructionsPerCycle": {
+      "eco": {
+        "all":      0.83333333333_64
+      },
+      "default": {
+        "all":      1.00000000000_64
+      }
+    }
+  }
+  vertex "tile_mem13"
+  [platform::GenericMemoryModule, visualization::Visualizable]
+  (instructionsAndData, networkInterface)
+  {
+    "spaceInBits": 128000_l,
+    "operatingFrequencyInHertz": 50000000_l
+  }
+  vertex "tile_ni13"
+  [platform::InstrumentedCommunicationModule, visualization::Visualizable]
+  (from_2_2, from_3_1, from_3_3, from_4_2, tileMemory, tileProcessor, to_2_2, to_3_1, to_3_3, to_4_2)
+  {
+    "maxCyclesPerFlit": 6_i,
+    "flitSizeInBits": 128_l,
+    "initialLatency": 0_l,
+    "operatingFrequencyInHertz": 50000000_l,
+    "maxConcurrentFlits": 4_i
+  }
+  vertex "tile_os13"
+  [decision::Allocated, platform::runtime::StaticCyclicScheduler, visualization::Visualizable]
+  (allocationHosts)
+  {
+    "entries": [
+
+    ]
+  }
+  vertex "tile_14"
+  [platform::AbstractStructure, visualization::GreyBox]
+  (contained, submodules)
+  {}
+  vertex "tile_cpu_14"
+  [platform::InstrumentedProcessingModule, visualization::GreyBox, visualization::Visualizable]
+  (contained, defaultMemory, networkInterface)
+  {
+    "operatingFrequencyInHertz": 50000000_l,
+    "modalInstructionsPerCycle": {
+      "eco": {
+        "all":      0.83333333333_64
+      },
+      "default": {
+        "all":      1.00000000000_64
+      }
+    }
+  }
+  vertex "tile_mem14"
+  [platform::GenericMemoryModule, visualization::Visualizable]
+  (instructionsAndData, networkInterface)
+  {
+    "spaceInBits": 128000_l,
+    "operatingFrequencyInHertz": 50000000_l
+  }
+  vertex "tile_ni14"
+  [platform::InstrumentedCommunicationModule, visualization::Visualizable]
+  (from_3_2, from_4_1, from_4_3, tileMemory, tileProcessor, to_3_2, to_4_1, to_4_3)
+  {
+    "maxCyclesPerFlit": 6_i,
+    "flitSizeInBits": 128_l,
+    "initialLatency": 0_l,
+    "operatingFrequencyInHertz": 50000000_l,
+    "maxConcurrentFlits": 4_i
+  }
+  vertex "tile_os14"
+  [decision::Allocated, platform::runtime::StaticCyclicScheduler, visualization::Visualizable]
+  (allocationHosts)
+  {
+    "entries": [
+
+    ]
+  }
+  vertex "tile_15"
+  [platform::AbstractStructure, visualization::GreyBox]
+  (contained, submodules)
+  {}
+  vertex "tile_cpu_15"
+  [platform::InstrumentedProcessingModule, visualization::GreyBox, visualization::Visualizable]
+  (contained, defaultMemory, networkInterface)
+  {
+    "operatingFrequencyInHertz": 50000000_l,
+    "modalInstructionsPerCycle": {
+      "eco": {
+        "all":      0.83333333333_64
+      },
+      "default": {
+        "all":      1.00000000000_64
+      }
+    }
+  }
+  vertex "tile_mem15"
+  [platform::GenericMemoryModule, visualization::Visualizable]
+  (instructionsAndData, networkInterface)
+  {
+    "spaceInBits": 128000_l,
+    "operatingFrequencyInHertz": 50000000_l
+  }
+  vertex "tile_ni15"
+  [platform::InstrumentedCommunicationModule, visualization::Visualizable]
+  (from_0_2, from_0_4, from_1_3, tileMemory, tileProcessor, to_0_2, to_0_4, to_1_3)
+  {
+    "maxCyclesPerFlit": 6_i,
+    "flitSizeInBits": 128_l,
+    "initialLatency": 0_l,
+    "operatingFrequencyInHertz": 50000000_l,
+    "maxConcurrentFlits": 4_i
+  }
+  vertex "tile_os15"
+  [decision::Allocated, platform::runtime::StaticCyclicScheduler, visualization::Visualizable]
+  (allocationHosts)
+  {
+    "entries": [
+
+    ]
+  }
+  vertex "tile_16"
+  [platform::AbstractStructure, visualization::GreyBox]
+  (contained, submodules)
+  {}
+  vertex "tile_cpu_16"
+  [platform::InstrumentedProcessingModule, visualization::GreyBox, visualization::Visualizable]
+  (contained, defaultMemory, networkInterface)
+  {
+    "operatingFrequencyInHertz": 50000000_l,
+    "modalInstructionsPerCycle": {
+      "eco": {
+        "all":      0.83333333333_64
+      },
+      "default": {
+        "all":      1.00000000000_64
+      }
+    }
+  }
+  vertex "tile_mem16"
+  [platform::GenericMemoryModule, visualization::Visualizable]
+  (instructionsAndData, networkInterface)
+  {
+    "spaceInBits": 128000_l,
+    "operatingFrequencyInHertz": 50000000_l
+  }
+  vertex "tile_ni16"
+  [platform::InstrumentedCommunicationModule, visualization::Visualizable]
+  (from_0_3, from_1_2, from_1_4, from_2_3, tileMemory, tileProcessor, to_0_3, to_1_2, to_1_4, to_2_3)
+  {
+    "maxCyclesPerFlit": 6_i,
+    "flitSizeInBits": 128_l,
+    "initialLatency": 0_l,
+    "operatingFrequencyInHertz": 50000000_l,
+    "maxConcurrentFlits": 4_i
+  }
+  vertex "tile_os16"
+  [decision::Allocated, platform::runtime::StaticCyclicScheduler, visualization::Visualizable]
+  (allocationHosts)
+  {
+    "entries": [
+
+    ]
+  }
+  vertex "tile_17"
+  [platform::AbstractStructure, visualization::GreyBox]
+  (contained, submodules)
+  {}
+  vertex "tile_cpu_17"
+  [platform::InstrumentedProcessingModule, visualization::GreyBox, visualization::Visualizable]
+  (contained, defaultMemory, networkInterface)
+  {
+    "operatingFrequencyInHertz": 50000000_l,
+    "modalInstructionsPerCycle": {
+      "eco": {
+        "all":      0.83333333333_64
+      },
+      "default": {
+        "all":      1.00000000000_64
+      }
+    }
+  }
+  vertex "tile_mem17"
+  [platform::GenericMemoryModule, visualization::Visualizable]
+  (instructionsAndData, networkInterface)
+  {
+    "spaceInBits": 128000_l,
+    "operatingFrequencyInHertz": 50000000_l
+  }
+  vertex "tile_ni17"
+  [platform::InstrumentedCommunicationModule, visualization::Visualizable]
+  (from_1_3, from_2_2, from_2_4, from_3_3, tileMemory, tileProcessor, to_1_3, to_2_2, to_2_4, to_3_3)
+  {
+    "maxCyclesPerFlit": 6_i,
+    "flitSizeInBits": 128_l,
+    "initialLatency": 0_l,
+    "operatingFrequencyInHertz": 50000000_l,
+    "maxConcurrentFlits": 4_i
+  }
+  vertex "tile_os17"
+  [decision::Allocated, platform::runtime::StaticCyclicScheduler, visualization::Visualizable]
+  (allocationHosts)
+  {
+    "entries": [
+
+    ]
+  }
+  vertex "tile_18"
+  [platform::AbstractStructure, visualization::GreyBox]
+  (contained, submodules)
+  {}
+  vertex "tile_cpu_18"
+  [platform::InstrumentedProcessingModule, visualization::GreyBox, visualization::Visualizable]
+  (contained, defaultMemory, networkInterface)
+  {
+    "operatingFrequencyInHertz": 50000000_l,
+    "modalInstructionsPerCycle": {
+      "eco": {
+        "all":      0.83333333333_64
+      },
+      "default": {
+        "all":      1.00000000000_64
+      }
+    }
+  }
+  vertex "tile_mem18"
+  [platform::GenericMemoryModule, visualization::Visualizable]
+  (instructionsAndData, networkInterface)
+  {
+    "spaceInBits": 128000_l,
+    "operatingFrequencyInHertz": 50000000_l
+  }
+  vertex "tile_ni18"
+  [platform::InstrumentedCommunicationModule, visualization::Visualizable]
+  (from_2_3, from_3_2, from_3_4, from_4_3, tileMemory, tileProcessor, to_2_3, to_3_2, to_3_4, to_4_3)
+  {
+    "maxCyclesPerFlit": 6_i,
+    "flitSizeInBits": 128_l,
+    "initialLatency": 0_l,
+    "operatingFrequencyInHertz": 50000000_l,
+    "maxConcurrentFlits": 4_i
+  }
+  vertex "tile_os18"
+  [decision::Allocated, platform::runtime::StaticCyclicScheduler, visualization::Visualizable]
+  (allocationHosts)
+  {
+    "entries": [
+
+    ]
+  }
+  vertex "tile_19"
+  [platform::AbstractStructure, visualization::GreyBox]
+  (contained, submodules)
+  {}
+  vertex "tile_cpu_19"
+  [platform::InstrumentedProcessingModule, visualization::GreyBox, visualization::Visualizable]
+  (contained, defaultMemory, networkInterface)
+  {
+    "operatingFrequencyInHertz": 50000000_l,
+    "modalInstructionsPerCycle": {
+      "eco": {
+        "all":      0.83333333333_64
+      },
+      "default": {
+        "all":      1.00000000000_64
+      }
+    }
+  }
+  vertex "tile_mem19"
+  [platform::GenericMemoryModule, visualization::Visualizable]
+  (instructionsAndData, networkInterface)
+  {
+    "spaceInBits": 128000_l,
+    "operatingFrequencyInHertz": 50000000_l
+  }
+  vertex "tile_ni19"
+  [platform::InstrumentedCommunicationModule, visualization::Visualizable]
+  (from_3_3, from_4_2, from_4_4, tileMemory, tileProcessor, to_3_3, to_4_2, to_4_4)
+  {
+    "maxCyclesPerFlit": 6_i,
+    "flitSizeInBits": 128_l,
+    "initialLatency": 0_l,
+    "operatingFrequencyInHertz": 50000000_l,
+    "maxConcurrentFlits": 4_i
+  }
+  vertex "tile_os19"
+  [decision::Allocated, platform::runtime::StaticCyclicScheduler, visualization::Visualizable]
+  (allocationHosts)
+  {
+    "entries": [
+
+    ]
+  }
+  vertex "tile_20"
+  [platform::AbstractStructure, visualization::GreyBox]
+  (contained, submodules)
+  {}
+  vertex "tile_cpu_20"
+  [platform::InstrumentedProcessingModule, visualization::GreyBox, visualization::Visualizable]
+  (contained, defaultMemory, networkInterface)
+  {
+    "operatingFrequencyInHertz": 50000000_l,
+    "modalInstructionsPerCycle": {
+      "eco": {
+        "all":      0.83333333333_64
+      },
+      "default": {
+        "all":      1.00000000000_64
+      }
+    }
+  }
+  vertex "tile_mem20"
+  [platform::GenericMemoryModule, visualization::Visualizable]
+  (instructionsAndData, networkInterface)
+  {
+    "spaceInBits": 128000_l,
+    "operatingFrequencyInHertz": 50000000_l
+  }
+  vertex "tile_ni20"
+  [platform::InstrumentedCommunicationModule, visualization::Visualizable]
+  (from_0_3, from_0_5, from_1_4, tileMemory, tileProcessor, to_0_3, to_0_5, to_1_4)
+  {
+    "maxCyclesPerFlit": 6_i,
+    "flitSizeInBits": 128_l,
+    "initialLatency": 0_l,
+    "operatingFrequencyInHertz": 50000000_l,
+    "maxConcurrentFlits": 4_i
+  }
+  vertex "tile_os20"
+  [decision::Allocated, platform::runtime::StaticCyclicScheduler, visualization::Visualizable]
+  (allocationHosts)
+  {
+    "entries": [
+
+    ]
+  }
+  vertex "tile_21"
+  [platform::AbstractStructure, visualization::GreyBox]
+  (contained, submodules)
+  {}
+  vertex "tile_cpu_21"
+  [platform::InstrumentedProcessingModule, visualization::GreyBox, visualization::Visualizable]
+  (contained, defaultMemory, networkInterface)
+  {
+    "operatingFrequencyInHertz": 50000000_l,
+    "modalInstructionsPerCycle": {
+      "eco": {
+        "all":      0.83333333333_64
+      },
+      "default": {
+        "all":      1.00000000000_64
+      }
+    }
+  }
+  vertex "tile_mem21"
+  [platform::GenericMemoryModule, visualization::Visualizable]
+  (instructionsAndData, networkInterface)
+  {
+    "spaceInBits": 128000_l,
+    "operatingFrequencyInHertz": 50000000_l
+  }
+  vertex "tile_ni21"
+  [platform::InstrumentedCommunicationModule, visualization::Visualizable]
+  (from_0_4, from_1_3, from_1_5, from_2_4, tileMemory, tileProcessor, to_0_4, to_1_3, to_1_5, to_2_4)
+  {
+    "maxCyclesPerFlit": 6_i,
+    "flitSizeInBits": 128_l,
+    "initialLatency": 0_l,
+    "operatingFrequencyInHertz": 50000000_l,
+    "maxConcurrentFlits": 4_i
+  }
+  vertex "tile_os21"
+  [decision::Allocated, platform::runtime::StaticCyclicScheduler, visualization::Visualizable]
+  (allocationHosts)
+  {
+    "entries": [
+
+    ]
+  }
+  vertex "tile_22"
+  [platform::AbstractStructure, visualization::GreyBox]
+  (contained, submodules)
+  {}
+  vertex "tile_cpu_22"
+  [platform::InstrumentedProcessingModule, visualization::GreyBox, visualization::Visualizable]
+  (contained, defaultMemory, networkInterface)
+  {
+    "operatingFrequencyInHertz": 50000000_l,
+    "modalInstructionsPerCycle": {
+      "eco": {
+        "all":      0.83333333333_64
+      },
+      "default": {
+        "all":      1.00000000000_64
+      }
+    }
+  }
+  vertex "tile_mem22"
+  [platform::GenericMemoryModule, visualization::Visualizable]
+  (instructionsAndData, networkInterface)
+  {
+    "spaceInBits": 128000_l,
+    "operatingFrequencyInHertz": 50000000_l
+  }
+  vertex "tile_ni22"
+  [platform::InstrumentedCommunicationModule, visualization::Visualizable]
+  (from_1_4, from_2_3, from_2_5, from_3_4, tileMemory, tileProcessor, to_1_4, to_2_3, to_2_5, to_3_4)
+  {
+    "maxCyclesPerFlit": 6_i,
+    "flitSizeInBits": 128_l,
+    "initialLatency": 0_l,
+    "operatingFrequencyInHertz": 50000000_l,
+    "maxConcurrentFlits": 4_i
+  }
+  vertex "tile_os22"
+  [decision::Allocated, platform::runtime::StaticCyclicScheduler, visualization::Visualizable]
+  (allocationHosts)
+  {
+    "entries": [
+
+    ]
+  }
+  vertex "tile_23"
+  [platform::AbstractStructure, visualization::GreyBox]
+  (contained, submodules)
+  {}
+  vertex "tile_cpu_23"
+  [platform::InstrumentedProcessingModule, visualization::GreyBox, visualization::Visualizable]
+  (contained, defaultMemory, networkInterface)
+  {
+    "operatingFrequencyInHertz": 50000000_l,
+    "modalInstructionsPerCycle": {
+      "eco": {
+        "all":      0.83333333333_64
+      },
+      "default": {
+        "all":      1.00000000000_64
+      }
+    }
+  }
+  vertex "tile_mem23"
+  [platform::GenericMemoryModule, visualization::Visualizable]
+  (instructionsAndData, networkInterface)
+  {
+    "spaceInBits": 128000_l,
+    "operatingFrequencyInHertz": 50000000_l
+  }
+  vertex "tile_ni23"
+  [platform::InstrumentedCommunicationModule, visualization::Visualizable]
+  (from_2_4, from_3_3, from_3_5, from_4_4, tileMemory, tileProcessor, to_2_4, to_3_3, to_3_5, to_4_4)
+  {
+    "maxCyclesPerFlit": 6_i,
+    "flitSizeInBits": 128_l,
+    "initialLatency": 0_l,
+    "operatingFrequencyInHertz": 50000000_l,
+    "maxConcurrentFlits": 4_i
+  }
+  vertex "tile_os23"
+  [decision::Allocated, platform::runtime::StaticCyclicScheduler, visualization::Visualizable]
+  (allocationHosts)
+  {
+    "entries": [
+
+    ]
+  }
+  vertex "tile_24"
+  [platform::AbstractStructure, visualization::GreyBox]
+  (contained, submodules)
+  {}
+  vertex "tile_cpu_24"
+  [platform::InstrumentedProcessingModule, visualization::GreyBox, visualization::Visualizable]
+  (contained, defaultMemory, networkInterface)
+  {
+    "operatingFrequencyInHertz": 50000000_l,
+    "modalInstructionsPerCycle": {
+      "eco": {
+        "all":      0.83333333333_64
+      },
+      "default": {
+        "all":      1.00000000000_64
+      }
+    }
+  }
+  vertex "tile_mem24"
+  [platform::GenericMemoryModule, visualization::Visualizable]
+  (instructionsAndData, networkInterface)
+  {
+    "spaceInBits": 128000_l,
+    "operatingFrequencyInHertz": 50000000_l
+  }
+  vertex "tile_ni24"
+  [platform::InstrumentedCommunicationModule, visualization::Visualizable]
+  (from_3_4, from_4_3, from_4_5, tileMemory, tileProcessor, to_3_4, to_4_3, to_4_5)
+  {
+    "maxCyclesPerFlit": 6_i,
+    "flitSizeInBits": 128_l,
+    "initialLatency": 0_l,
+    "operatingFrequencyInHertz": 50000000_l,
+    "maxConcurrentFlits": 4_i
+  }
+  vertex "tile_os24"
+  [decision::Allocated, platform::runtime::StaticCyclicScheduler, visualization::Visualizable]
+  (allocationHosts)
+  {
+    "entries": [
+
+    ]
+  }
+  vertex "tile_25"
+  [platform::AbstractStructure, visualization::GreyBox]
+  (contained, submodules)
+  {}
+  vertex "tile_cpu_25"
+  [platform::InstrumentedProcessingModule, visualization::GreyBox, visualization::Visualizable]
+  (contained, defaultMemory, networkInterface)
+  {
+    "operatingFrequencyInHertz": 50000000_l,
+    "modalInstructionsPerCycle": {
+      "eco": {
+        "all":      0.83333333333_64
+      },
+      "default": {
+        "all":      1.00000000000_64
+      }
+    }
+  }
+  vertex "tile_mem25"
+  [platform::GenericMemoryModule, visualization::Visualizable]
+  (instructionsAndData, networkInterface)
+  {
+    "spaceInBits": 128000_l,
+    "operatingFrequencyInHertz": 50000000_l
+  }
+  vertex "tile_ni25"
+  [platform::InstrumentedCommunicationModule, visualization::Visualizable]
+  (from_0_4, from_1_5, tileMemory, tileProcessor, to_0_4, to_1_5)
+  {
+    "maxCyclesPerFlit": 6_i,
+    "flitSizeInBits": 128_l,
+    "initialLatency": 0_l,
+    "operatingFrequencyInHertz": 50000000_l,
+    "maxConcurrentFlits": 4_i
+  }
+  vertex "tile_os25"
+  [decision::Allocated, platform::runtime::StaticCyclicScheduler, visualization::Visualizable]
+  (allocationHosts)
+  {
+    "entries": [
+
+    ]
+  }
+  vertex "tile_26"
+  [platform::AbstractStructure, visualization::GreyBox]
+  (contained, submodules)
+  {}
+  vertex "tile_cpu_26"
+  [platform::InstrumentedProcessingModule, visualization::GreyBox, visualization::Visualizable]
+  (contained, defaultMemory, networkInterface)
+  {
+    "operatingFrequencyInHertz": 50000000_l,
+    "modalInstructionsPerCycle": {
+      "eco": {
+        "all":      0.83333333333_64
+      },
+      "default": {
+        "all":      1.00000000000_64
+      }
+    }
+  }
+  vertex "tile_mem26"
+  [platform::GenericMemoryModule, visualization::Visualizable]
+  (instructionsAndData, networkInterface)
+  {
+    "spaceInBits": 128000_l,
+    "operatingFrequencyInHertz": 50000000_l
+  }
+  vertex "tile_ni26"
+  [platform::InstrumentedCommunicationModule, visualization::Visualizable]
+  (from_0_5, from_1_4, from_2_5, tileMemory, tileProcessor, to_0_5, to_1_4, to_2_5)
+  {
+    "maxCyclesPerFlit": 6_i,
+    "flitSizeInBits": 128_l,
+    "initialLatency": 0_l,
+    "operatingFrequencyInHertz": 50000000_l,
+    "maxConcurrentFlits": 4_i
+  }
+  vertex "tile_os26"
+  [decision::Allocated, platform::runtime::StaticCyclicScheduler, visualization::Visualizable]
+  (allocationHosts)
+  {
+    "entries": [
+
+    ]
+  }
+  vertex "tile_27"
+  [platform::AbstractStructure, visualization::GreyBox]
+  (contained, submodules)
+  {}
+  vertex "tile_cpu_27"
+  [platform::InstrumentedProcessingModule, visualization::GreyBox, visualization::Visualizable]
+  (contained, defaultMemory, networkInterface)
+  {
+    "operatingFrequencyInHertz": 50000000_l,
+    "modalInstructionsPerCycle": {
+      "eco": {
+        "all":      0.83333333333_64
+      },
+      "default": {
+        "all":      1.00000000000_64
+      }
+    }
+  }
+  vertex "tile_mem27"
+  [platform::GenericMemoryModule, visualization::Visualizable]
+  (instructionsAndData, networkInterface)
+  {
+    "spaceInBits": 128000_l,
+    "operatingFrequencyInHertz": 50000000_l
+  }
+  vertex "tile_ni27"
+  [platform::InstrumentedCommunicationModule, visualization::Visualizable]
+  (from_1_5, from_2_4, from_3_5, tileMemory, tileProcessor, to_1_5, to_2_4, to_3_5)
+  {
+    "maxCyclesPerFlit": 6_i,
+    "flitSizeInBits": 128_l,
+    "initialLatency": 0_l,
+    "operatingFrequencyInHertz": 50000000_l,
+    "maxConcurrentFlits": 4_i
+  }
+  vertex "tile_os27"
+  [decision::Allocated, platform::runtime::StaticCyclicScheduler, visualization::Visualizable]
+  (allocationHosts)
+  {
+    "entries": [
+
+    ]
+  }
+  vertex "tile_28"
+  [platform::AbstractStructure, visualization::GreyBox]
+  (contained, submodules)
+  {}
+  vertex "tile_cpu_28"
+  [platform::InstrumentedProcessingModule, visualization::GreyBox, visualization::Visualizable]
+  (contained, defaultMemory, networkInterface)
+  {
+    "operatingFrequencyInHertz": 50000000_l,
+    "modalInstructionsPerCycle": {
+      "eco": {
+        "all":      0.83333333333_64
+      },
+      "default": {
+        "all":      1.00000000000_64
+      }
+    }
+  }
+  vertex "tile_mem28"
+  [platform::GenericMemoryModule, visualization::Visualizable]
+  (instructionsAndData, networkInterface)
+  {
+    "spaceInBits": 128000_l,
+    "operatingFrequencyInHertz": 50000000_l
+  }
+  vertex "tile_ni28"
+  [platform::InstrumentedCommunicationModule, visualization::Visualizable]
+  (from_2_5, from_3_4, from_4_5, tileMemory, tileProcessor, to_2_5, to_3_4, to_4_5)
+  {
+    "maxCyclesPerFlit": 6_i,
+    "flitSizeInBits": 128_l,
+    "initialLatency": 0_l,
+    "operatingFrequencyInHertz": 50000000_l,
+    "maxConcurrentFlits": 4_i
+  }
+  vertex "tile_os28"
+  [decision::Allocated, platform::runtime::StaticCyclicScheduler, visualization::Visualizable]
+  (allocationHosts)
+  {
+    "entries": [
+
+    ]
+  }
+  vertex "tile_29"
+  [platform::AbstractStructure, visualization::GreyBox]
+  (contained, submodules)
+  {}
+  vertex "tile_cpu_29"
+  [platform::InstrumentedProcessingModule, visualization::GreyBox, visualization::Visualizable]
+  (contained, defaultMemory, networkInterface)
+  {
+    "operatingFrequencyInHertz": 50000000_l,
+    "modalInstructionsPerCycle": {
+      "eco": {
+        "all":      0.83333333333_64
+      },
+      "default": {
+        "all":      1.00000000000_64
+      }
+    }
+  }
+  vertex "tile_mem29"
+  [platform::GenericMemoryModule, visualization::Visualizable]
+  (instructionsAndData, networkInterface)
+  {
+    "spaceInBits": 128000_l,
+    "operatingFrequencyInHertz": 50000000_l
+  }
+  vertex "tile_ni29"
+  [platform::InstrumentedCommunicationModule, visualization::Visualizable]
+  (from_3_5, from_4_4, tileMemory, tileProcessor, to_3_5, to_4_4)
+  {
+    "maxCyclesPerFlit": 6_i,
+    "flitSizeInBits": 128_l,
+    "initialLatency": 0_l,
+    "operatingFrequencyInHertz": 50000000_l,
+    "maxConcurrentFlits": 4_i
+  }
+  vertex "tile_os29"
+  [decision::Allocated, platform::runtime::StaticCyclicScheduler, visualization::Visualizable]
+  (allocationHosts)
+  {
+    "entries": [
+
+    ]
+  }
+  edge [] from "tile_0" port "submodules" to "tile_cpu_0" 
+  edge [visualization::VisualContainment] from "tile_0" port "contained" to "tile_cpu_0" 
+  edge [] from "tile_0" port "submodules" to "tile_mem0" 
+  edge [visualization::VisualContainment] from "tile_0" port "contained" to "tile_mem0" 
+  edge [] from "tile_0" port "submodules" to "tile_ni0" 
+  edge [visualization::VisualContainment] from "tile_0" port "contained" to "tile_ni0" 
+  edge [visualization::VisualContainment] from "tile_cpu_0" port "contained" to "tile_os0" 
+  edge [decision::AbstractAllocation] from "tile_os0" port "allocationHosts" to "tile_cpu_0" 
+  edge [platform::PhysicalConnection,visualization::VisualConnection] from "tile_cpu_0" port "networkInterface" to "tile_ni0" port "tileProcessor"
+  edge [platform::PhysicalConnection,visualization::VisualConnection] from "tile_ni0" port "tileProcessor" to "tile_cpu_0" port "networkInterface"
+  edge [platform::PhysicalConnection,visualization::VisualConnection] from "tile_cpu_0" port "defaultMemory" to "tile_mem0" port "instructionsAndData"
+  edge [platform::PhysicalConnection,visualization::VisualConnection] from "tile_mem0" port "instructionsAndData" to "tile_cpu_0" port "defaultMemory"
+  edge [platform::PhysicalConnection,visualization::VisualConnection] from "tile_mem0" port "networkInterface" to "tile_ni0" port "tileMemory"
+  edge [platform::PhysicalConnection,visualization::VisualConnection] from "tile_ni0" port "tileMemory" to "tile_mem0" port "networkInterface"
+  edge [] from "tile_1" port "submodules" to "tile_cpu_1" 
+  edge [visualization::VisualContainment] from "tile_1" port "contained" to "tile_cpu_1" 
+  edge [] from "tile_1" port "submodules" to "tile_mem1" 
+  edge [visualization::VisualContainment] from "tile_1" port "contained" to "tile_mem1" 
+  edge [] from "tile_1" port "submodules" to "tile_ni1" 
+  edge [visualization::VisualContainment] from "tile_1" port "contained" to "tile_ni1" 
+  edge [visualization::VisualContainment] from "tile_cpu_1" port "contained" to "tile_os1" 
+  edge [decision::AbstractAllocation] from "tile_os1" port "allocationHosts" to "tile_cpu_1" 
+  edge [platform::PhysicalConnection,visualization::VisualConnection] from "tile_cpu_1" port "networkInterface" to "tile_ni1" port "tileProcessor"
+  edge [platform::PhysicalConnection,visualization::VisualConnection] from "tile_ni1" port "tileProcessor" to "tile_cpu_1" port "networkInterface"
+  edge [platform::PhysicalConnection,visualization::VisualConnection] from "tile_cpu_1" port "defaultMemory" to "tile_mem1" port "instructionsAndData"
+  edge [platform::PhysicalConnection,visualization::VisualConnection] from "tile_mem1" port "instructionsAndData" to "tile_cpu_1" port "defaultMemory"
+  edge [platform::PhysicalConnection,visualization::VisualConnection] from "tile_mem1" port "networkInterface" to "tile_ni1" port "tileMemory"
+  edge [platform::PhysicalConnection,visualization::VisualConnection] from "tile_ni1" port "tileMemory" to "tile_mem1" port "networkInterface"
+  edge [] from "tile_2" port "submodules" to "tile_cpu_2" 
+  edge [visualization::VisualContainment] from "tile_2" port "contained" to "tile_cpu_2" 
+  edge [] from "tile_2" port "submodules" to "tile_mem2" 
+  edge [visualization::VisualContainment] from "tile_2" port "contained" to "tile_mem2" 
+  edge [] from "tile_2" port "submodules" to "tile_ni2" 
+  edge [visualization::VisualContainment] from "tile_2" port "contained" to "tile_ni2" 
+  edge [visualization::VisualContainment] from "tile_cpu_2" port "contained" to "tile_os2" 
+  edge [decision::AbstractAllocation] from "tile_os2" port "allocationHosts" to "tile_cpu_2" 
+  edge [platform::PhysicalConnection,visualization::VisualConnection] from "tile_cpu_2" port "networkInterface" to "tile_ni2" port "tileProcessor"
+  edge [platform::PhysicalConnection,visualization::VisualConnection] from "tile_ni2" port "tileProcessor" to "tile_cpu_2" port "networkInterface"
+  edge [platform::PhysicalConnection,visualization::VisualConnection] from "tile_cpu_2" port "defaultMemory" to "tile_mem2" port "instructionsAndData"
+  edge [platform::PhysicalConnection,visualization::VisualConnection] from "tile_mem2" port "instructionsAndData" to "tile_cpu_2" port "defaultMemory"
+  edge [platform::PhysicalConnection,visualization::VisualConnection] from "tile_mem2" port "networkInterface" to "tile_ni2" port "tileMemory"
+  edge [platform::PhysicalConnection,visualization::VisualConnection] from "tile_ni2" port "tileMemory" to "tile_mem2" port "networkInterface"
+  edge [] from "tile_3" port "submodules" to "tile_cpu_3" 
+  edge [visualization::VisualContainment] from "tile_3" port "contained" to "tile_cpu_3" 
+  edge [] from "tile_3" port "submodules" to "tile_mem3" 
+  edge [visualization::VisualContainment] from "tile_3" port "contained" to "tile_mem3" 
+  edge [] from "tile_3" port "submodules" to "tile_ni3" 
+  edge [visualization::VisualContainment] from "tile_3" port "contained" to "tile_ni3" 
+  edge [visualization::VisualContainment] from "tile_cpu_3" port "contained" to "tile_os3" 
+  edge [decision::AbstractAllocation] from "tile_os3" port "allocationHosts" to "tile_cpu_3" 
+  edge [platform::PhysicalConnection,visualization::VisualConnection] from "tile_cpu_3" port "networkInterface" to "tile_ni3" port "tileProcessor"
+  edge [platform::PhysicalConnection,visualization::VisualConnection] from "tile_ni3" port "tileProcessor" to "tile_cpu_3" port "networkInterface"
+  edge [platform::PhysicalConnection,visualization::VisualConnection] from "tile_cpu_3" port "defaultMemory" to "tile_mem3" port "instructionsAndData"
+  edge [platform::PhysicalConnection,visualization::VisualConnection] from "tile_mem3" port "instructionsAndData" to "tile_cpu_3" port "defaultMemory"
+  edge [platform::PhysicalConnection,visualization::VisualConnection] from "tile_mem3" port "networkInterface" to "tile_ni3" port "tileMemory"
+  edge [platform::PhysicalConnection,visualization::VisualConnection] from "tile_ni3" port "tileMemory" to "tile_mem3" port "networkInterface"
+  edge [] from "tile_4" port "submodules" to "tile_cpu_4" 
+  edge [visualization::VisualContainment] from "tile_4" port "contained" to "tile_cpu_4" 
+  edge [] from "tile_4" port "submodules" to "tile_mem4" 
+  edge [visualization::VisualContainment] from "tile_4" port "contained" to "tile_mem4" 
+  edge [] from "tile_4" port "submodules" to "tile_ni4" 
+  edge [visualization::VisualContainment] from "tile_4" port "contained" to "tile_ni4" 
+  edge [visualization::VisualContainment] from "tile_cpu_4" port "contained" to "tile_os4" 
+  edge [decision::AbstractAllocation] from "tile_os4" port "allocationHosts" to "tile_cpu_4" 
+  edge [platform::PhysicalConnection,visualization::VisualConnection] from "tile_cpu_4" port "networkInterface" to "tile_ni4" port "tileProcessor"
+  edge [platform::PhysicalConnection,visualization::VisualConnection] from "tile_ni4" port "tileProcessor" to "tile_cpu_4" port "networkInterface"
+  edge [platform::PhysicalConnection,visualization::VisualConnection] from "tile_cpu_4" port "defaultMemory" to "tile_mem4" port "instructionsAndData"
+  edge [platform::PhysicalConnection,visualization::VisualConnection] from "tile_mem4" port "instructionsAndData" to "tile_cpu_4" port "defaultMemory"
+  edge [platform::PhysicalConnection,visualization::VisualConnection] from "tile_mem4" port "networkInterface" to "tile_ni4" port "tileMemory"
+  edge [platform::PhysicalConnection,visualization::VisualConnection] from "tile_ni4" port "tileMemory" to "tile_mem4" port "networkInterface"
+  edge [] from "tile_5" port "submodules" to "tile_cpu_5" 
+  edge [visualization::VisualContainment] from "tile_5" port "contained" to "tile_cpu_5" 
+  edge [] from "tile_5" port "submodules" to "tile_mem5" 
+  edge [visualization::VisualContainment] from "tile_5" port "contained" to "tile_mem5" 
+  edge [] from "tile_5" port "submodules" to "tile_ni5" 
+  edge [visualization::VisualContainment] from "tile_5" port "contained" to "tile_ni5" 
+  edge [visualization::VisualContainment] from "tile_cpu_5" port "contained" to "tile_os5" 
+  edge [decision::AbstractAllocation] from "tile_os5" port "allocationHosts" to "tile_cpu_5" 
+  edge [platform::PhysicalConnection,visualization::VisualConnection] from "tile_cpu_5" port "networkInterface" to "tile_ni5" port "tileProcessor"
+  edge [platform::PhysicalConnection,visualization::VisualConnection] from "tile_ni5" port "tileProcessor" to "tile_cpu_5" port "networkInterface"
+  edge [platform::PhysicalConnection,visualization::VisualConnection] from "tile_cpu_5" port "defaultMemory" to "tile_mem5" port "instructionsAndData"
+  edge [platform::PhysicalConnection,visualization::VisualConnection] from "tile_mem5" port "instructionsAndData" to "tile_cpu_5" port "defaultMemory"
+  edge [platform::PhysicalConnection,visualization::VisualConnection] from "tile_mem5" port "networkInterface" to "tile_ni5" port "tileMemory"
+  edge [platform::PhysicalConnection,visualization::VisualConnection] from "tile_ni5" port "tileMemory" to "tile_mem5" port "networkInterface"
+  edge [] from "tile_6" port "submodules" to "tile_cpu_6" 
+  edge [visualization::VisualContainment] from "tile_6" port "contained" to "tile_cpu_6" 
+  edge [] from "tile_6" port "submodules" to "tile_mem6" 
+  edge [visualization::VisualContainment] from "tile_6" port "contained" to "tile_mem6" 
+  edge [] from "tile_6" port "submodules" to "tile_ni6" 
+  edge [visualization::VisualContainment] from "tile_6" port "contained" to "tile_ni6" 
+  edge [visualization::VisualContainment] from "tile_cpu_6" port "contained" to "tile_os6" 
+  edge [decision::AbstractAllocation] from "tile_os6" port "allocationHosts" to "tile_cpu_6" 
+  edge [platform::PhysicalConnection,visualization::VisualConnection] from "tile_cpu_6" port "networkInterface" to "tile_ni6" port "tileProcessor"
+  edge [platform::PhysicalConnection,visualization::VisualConnection] from "tile_ni6" port "tileProcessor" to "tile_cpu_6" port "networkInterface"
+  edge [platform::PhysicalConnection,visualization::VisualConnection] from "tile_cpu_6" port "defaultMemory" to "tile_mem6" port "instructionsAndData"
+  edge [platform::PhysicalConnection,visualization::VisualConnection] from "tile_mem6" port "instructionsAndData" to "tile_cpu_6" port "defaultMemory"
+  edge [platform::PhysicalConnection,visualization::VisualConnection] from "tile_mem6" port "networkInterface" to "tile_ni6" port "tileMemory"
+  edge [platform::PhysicalConnection,visualization::VisualConnection] from "tile_ni6" port "tileMemory" to "tile_mem6" port "networkInterface"
+  edge [] from "tile_7" port "submodules" to "tile_cpu_7" 
+  edge [visualization::VisualContainment] from "tile_7" port "contained" to "tile_cpu_7" 
+  edge [] from "tile_7" port "submodules" to "tile_mem7" 
+  edge [visualization::VisualContainment] from "tile_7" port "contained" to "tile_mem7" 
+  edge [] from "tile_7" port "submodules" to "tile_ni7" 
+  edge [visualization::VisualContainment] from "tile_7" port "contained" to "tile_ni7" 
+  edge [visualization::VisualContainment] from "tile_cpu_7" port "contained" to "tile_os7" 
+  edge [decision::AbstractAllocation] from "tile_os7" port "allocationHosts" to "tile_cpu_7" 
+  edge [platform::PhysicalConnection,visualization::VisualConnection] from "tile_cpu_7" port "networkInterface" to "tile_ni7" port "tileProcessor"
+  edge [platform::PhysicalConnection,visualization::VisualConnection] from "tile_ni7" port "tileProcessor" to "tile_cpu_7" port "networkInterface"
+  edge [platform::PhysicalConnection,visualization::VisualConnection] from "tile_cpu_7" port "defaultMemory" to "tile_mem7" port "instructionsAndData"
+  edge [platform::PhysicalConnection,visualization::VisualConnection] from "tile_mem7" port "instructionsAndData" to "tile_cpu_7" port "defaultMemory"
+  edge [platform::PhysicalConnection,visualization::VisualConnection] from "tile_mem7" port "networkInterface" to "tile_ni7" port "tileMemory"
+  edge [platform::PhysicalConnection,visualization::VisualConnection] from "tile_ni7" port "tileMemory" to "tile_mem7" port "networkInterface"
+  edge [] from "tile_8" port "submodules" to "tile_cpu_8" 
+  edge [visualization::VisualContainment] from "tile_8" port "contained" to "tile_cpu_8" 
+  edge [] from "tile_8" port "submodules" to "tile_mem8" 
+  edge [visualization::VisualContainment] from "tile_8" port "contained" to "tile_mem8" 
+  edge [] from "tile_8" port "submodules" to "tile_ni8" 
+  edge [visualization::VisualContainment] from "tile_8" port "contained" to "tile_ni8" 
+  edge [visualization::VisualContainment] from "tile_cpu_8" port "contained" to "tile_os8" 
+  edge [decision::AbstractAllocation] from "tile_os8" port "allocationHosts" to "tile_cpu_8" 
+  edge [platform::PhysicalConnection,visualization::VisualConnection] from "tile_cpu_8" port "networkInterface" to "tile_ni8" port "tileProcessor"
+  edge [platform::PhysicalConnection,visualization::VisualConnection] from "tile_ni8" port "tileProcessor" to "tile_cpu_8" port "networkInterface"
+  edge [platform::PhysicalConnection,visualization::VisualConnection] from "tile_cpu_8" port "defaultMemory" to "tile_mem8" port "instructionsAndData"
+  edge [platform::PhysicalConnection,visualization::VisualConnection] from "tile_mem8" port "instructionsAndData" to "tile_cpu_8" port "defaultMemory"
+  edge [platform::PhysicalConnection,visualization::VisualConnection] from "tile_mem8" port "networkInterface" to "tile_ni8" port "tileMemory"
+  edge [platform::PhysicalConnection,visualization::VisualConnection] from "tile_ni8" port "tileMemory" to "tile_mem8" port "networkInterface"
+  edge [] from "tile_9" port "submodules" to "tile_cpu_9" 
+  edge [visualization::VisualContainment] from "tile_9" port "contained" to "tile_cpu_9" 
+  edge [] from "tile_9" port "submodules" to "tile_mem9" 
+  edge [visualization::VisualContainment] from "tile_9" port "contained" to "tile_mem9" 
+  edge [] from "tile_9" port "submodules" to "tile_ni9" 
+  edge [visualization::VisualContainment] from "tile_9" port "contained" to "tile_ni9" 
+  edge [visualization::VisualContainment] from "tile_cpu_9" port "contained" to "tile_os9" 
+  edge [decision::AbstractAllocation] from "tile_os9" port "allocationHosts" to "tile_cpu_9" 
+  edge [platform::PhysicalConnection,visualization::VisualConnection] from "tile_cpu_9" port "networkInterface" to "tile_ni9" port "tileProcessor"
+  edge [platform::PhysicalConnection,visualization::VisualConnection] from "tile_ni9" port "tileProcessor" to "tile_cpu_9" port "networkInterface"
+  edge [platform::PhysicalConnection,visualization::VisualConnection] from "tile_cpu_9" port "defaultMemory" to "tile_mem9" port "instructionsAndData"
+  edge [platform::PhysicalConnection,visualization::VisualConnection] from "tile_mem9" port "instructionsAndData" to "tile_cpu_9" port "defaultMemory"
+  edge [platform::PhysicalConnection,visualization::VisualConnection] from "tile_mem9" port "networkInterface" to "tile_ni9" port "tileMemory"
+  edge [platform::PhysicalConnection,visualization::VisualConnection] from "tile_ni9" port "tileMemory" to "tile_mem9" port "networkInterface"
+  edge [] from "tile_10" port "submodules" to "tile_cpu_10" 
+  edge [visualization::VisualContainment] from "tile_10" port "contained" to "tile_cpu_10" 
+  edge [] from "tile_10" port "submodules" to "tile_mem10" 
+  edge [visualization::VisualContainment] from "tile_10" port "contained" to "tile_mem10" 
+  edge [] from "tile_10" port "submodules" to "tile_ni10" 
+  edge [visualization::VisualContainment] from "tile_10" port "contained" to "tile_ni10" 
+  edge [visualization::VisualContainment] from "tile_cpu_10" port "contained" to "tile_os10" 
+  edge [decision::AbstractAllocation] from "tile_os10" port "allocationHosts" to "tile_cpu_10" 
+  edge [platform::PhysicalConnection,visualization::VisualConnection] from "tile_cpu_10" port "networkInterface" to "tile_ni10" port "tileProcessor"
+  edge [platform::PhysicalConnection,visualization::VisualConnection] from "tile_ni10" port "tileProcessor" to "tile_cpu_10" port "networkInterface"
+  edge [platform::PhysicalConnection,visualization::VisualConnection] from "tile_cpu_10" port "defaultMemory" to "tile_mem10" port "instructionsAndData"
+  edge [platform::PhysicalConnection,visualization::VisualConnection] from "tile_mem10" port "instructionsAndData" to "tile_cpu_10" port "defaultMemory"
+  edge [platform::PhysicalConnection,visualization::VisualConnection] from "tile_mem10" port "networkInterface" to "tile_ni10" port "tileMemory"
+  edge [platform::PhysicalConnection,visualization::VisualConnection] from "tile_ni10" port "tileMemory" to "tile_mem10" port "networkInterface"
+  edge [] from "tile_11" port "submodules" to "tile_cpu_11" 
+  edge [visualization::VisualContainment] from "tile_11" port "contained" to "tile_cpu_11" 
+  edge [] from "tile_11" port "submodules" to "tile_mem11" 
+  edge [visualization::VisualContainment] from "tile_11" port "contained" to "tile_mem11" 
+  edge [] from "tile_11" port "submodules" to "tile_ni11" 
+  edge [visualization::VisualContainment] from "tile_11" port "contained" to "tile_ni11" 
+  edge [visualization::VisualContainment] from "tile_cpu_11" port "contained" to "tile_os11" 
+  edge [decision::AbstractAllocation] from "tile_os11" port "allocationHosts" to "tile_cpu_11" 
+  edge [platform::PhysicalConnection,visualization::VisualConnection] from "tile_cpu_11" port "networkInterface" to "tile_ni11" port "tileProcessor"
+  edge [platform::PhysicalConnection,visualization::VisualConnection] from "tile_ni11" port "tileProcessor" to "tile_cpu_11" port "networkInterface"
+  edge [platform::PhysicalConnection,visualization::VisualConnection] from "tile_cpu_11" port "defaultMemory" to "tile_mem11" port "instructionsAndData"
+  edge [platform::PhysicalConnection,visualization::VisualConnection] from "tile_mem11" port "instructionsAndData" to "tile_cpu_11" port "defaultMemory"
+  edge [platform::PhysicalConnection,visualization::VisualConnection] from "tile_mem11" port "networkInterface" to "tile_ni11" port "tileMemory"
+  edge [platform::PhysicalConnection,visualization::VisualConnection] from "tile_ni11" port "tileMemory" to "tile_mem11" port "networkInterface"
+  edge [] from "tile_12" port "submodules" to "tile_cpu_12" 
+  edge [visualization::VisualContainment] from "tile_12" port "contained" to "tile_cpu_12" 
+  edge [] from "tile_12" port "submodules" to "tile_mem12" 
+  edge [visualization::VisualContainment] from "tile_12" port "contained" to "tile_mem12" 
+  edge [] from "tile_12" port "submodules" to "tile_ni12" 
+  edge [visualization::VisualContainment] from "tile_12" port "contained" to "tile_ni12" 
+  edge [visualization::VisualContainment] from "tile_cpu_12" port "contained" to "tile_os12" 
+  edge [decision::AbstractAllocation] from "tile_os12" port "allocationHosts" to "tile_cpu_12" 
+  edge [platform::PhysicalConnection,visualization::VisualConnection] from "tile_cpu_12" port "networkInterface" to "tile_ni12" port "tileProcessor"
+  edge [platform::PhysicalConnection,visualization::VisualConnection] from "tile_ni12" port "tileProcessor" to "tile_cpu_12" port "networkInterface"
+  edge [platform::PhysicalConnection,visualization::VisualConnection] from "tile_cpu_12" port "defaultMemory" to "tile_mem12" port "instructionsAndData"
+  edge [platform::PhysicalConnection,visualization::VisualConnection] from "tile_mem12" port "instructionsAndData" to "tile_cpu_12" port "defaultMemory"
+  edge [platform::PhysicalConnection,visualization::VisualConnection] from "tile_mem12" port "networkInterface" to "tile_ni12" port "tileMemory"
+  edge [platform::PhysicalConnection,visualization::VisualConnection] from "tile_ni12" port "tileMemory" to "tile_mem12" port "networkInterface"
+  edge [] from "tile_13" port "submodules" to "tile_cpu_13" 
+  edge [visualization::VisualContainment] from "tile_13" port "contained" to "tile_cpu_13" 
+  edge [] from "tile_13" port "submodules" to "tile_mem13" 
+  edge [visualization::VisualContainment] from "tile_13" port "contained" to "tile_mem13" 
+  edge [] from "tile_13" port "submodules" to "tile_ni13" 
+  edge [visualization::VisualContainment] from "tile_13" port "contained" to "tile_ni13" 
+  edge [visualization::VisualContainment] from "tile_cpu_13" port "contained" to "tile_os13" 
+  edge [decision::AbstractAllocation] from "tile_os13" port "allocationHosts" to "tile_cpu_13" 
+  edge [platform::PhysicalConnection,visualization::VisualConnection] from "tile_cpu_13" port "networkInterface" to "tile_ni13" port "tileProcessor"
+  edge [platform::PhysicalConnection,visualization::VisualConnection] from "tile_ni13" port "tileProcessor" to "tile_cpu_13" port "networkInterface"
+  edge [platform::PhysicalConnection,visualization::VisualConnection] from "tile_cpu_13" port "defaultMemory" to "tile_mem13" port "instructionsAndData"
+  edge [platform::PhysicalConnection,visualization::VisualConnection] from "tile_mem13" port "instructionsAndData" to "tile_cpu_13" port "defaultMemory"
+  edge [platform::PhysicalConnection,visualization::VisualConnection] from "tile_mem13" port "networkInterface" to "tile_ni13" port "tileMemory"
+  edge [platform::PhysicalConnection,visualization::VisualConnection] from "tile_ni13" port "tileMemory" to "tile_mem13" port "networkInterface"
+  edge [] from "tile_14" port "submodules" to "tile_cpu_14" 
+  edge [visualization::VisualContainment] from "tile_14" port "contained" to "tile_cpu_14" 
+  edge [] from "tile_14" port "submodules" to "tile_mem14" 
+  edge [visualization::VisualContainment] from "tile_14" port "contained" to "tile_mem14" 
+  edge [] from "tile_14" port "submodules" to "tile_ni14" 
+  edge [visualization::VisualContainment] from "tile_14" port "contained" to "tile_ni14" 
+  edge [visualization::VisualContainment] from "tile_cpu_14" port "contained" to "tile_os14" 
+  edge [decision::AbstractAllocation] from "tile_os14" port "allocationHosts" to "tile_cpu_14" 
+  edge [platform::PhysicalConnection,visualization::VisualConnection] from "tile_cpu_14" port "networkInterface" to "tile_ni14" port "tileProcessor"
+  edge [platform::PhysicalConnection,visualization::VisualConnection] from "tile_ni14" port "tileProcessor" to "tile_cpu_14" port "networkInterface"
+  edge [platform::PhysicalConnection,visualization::VisualConnection] from "tile_cpu_14" port "defaultMemory" to "tile_mem14" port "instructionsAndData"
+  edge [platform::PhysicalConnection,visualization::VisualConnection] from "tile_mem14" port "instructionsAndData" to "tile_cpu_14" port "defaultMemory"
+  edge [platform::PhysicalConnection,visualization::VisualConnection] from "tile_mem14" port "networkInterface" to "tile_ni14" port "tileMemory"
+  edge [platform::PhysicalConnection,visualization::VisualConnection] from "tile_ni14" port "tileMemory" to "tile_mem14" port "networkInterface"
+  edge [] from "tile_15" port "submodules" to "tile_cpu_15" 
+  edge [visualization::VisualContainment] from "tile_15" port "contained" to "tile_cpu_15" 
+  edge [] from "tile_15" port "submodules" to "tile_mem15" 
+  edge [visualization::VisualContainment] from "tile_15" port "contained" to "tile_mem15" 
+  edge [] from "tile_15" port "submodules" to "tile_ni15" 
+  edge [visualization::VisualContainment] from "tile_15" port "contained" to "tile_ni15" 
+  edge [visualization::VisualContainment] from "tile_cpu_15" port "contained" to "tile_os15" 
+  edge [decision::AbstractAllocation] from "tile_os15" port "allocationHosts" to "tile_cpu_15" 
+  edge [platform::PhysicalConnection,visualization::VisualConnection] from "tile_cpu_15" port "networkInterface" to "tile_ni15" port "tileProcessor"
+  edge [platform::PhysicalConnection,visualization::VisualConnection] from "tile_ni15" port "tileProcessor" to "tile_cpu_15" port "networkInterface"
+  edge [platform::PhysicalConnection,visualization::VisualConnection] from "tile_cpu_15" port "defaultMemory" to "tile_mem15" port "instructionsAndData"
+  edge [platform::PhysicalConnection,visualization::VisualConnection] from "tile_mem15" port "instructionsAndData" to "tile_cpu_15" port "defaultMemory"
+  edge [platform::PhysicalConnection,visualization::VisualConnection] from "tile_mem15" port "networkInterface" to "tile_ni15" port "tileMemory"
+  edge [platform::PhysicalConnection,visualization::VisualConnection] from "tile_ni15" port "tileMemory" to "tile_mem15" port "networkInterface"
+  edge [] from "tile_16" port "submodules" to "tile_cpu_16" 
+  edge [visualization::VisualContainment] from "tile_16" port "contained" to "tile_cpu_16" 
+  edge [] from "tile_16" port "submodules" to "tile_mem16" 
+  edge [visualization::VisualContainment] from "tile_16" port "contained" to "tile_mem16" 
+  edge [] from "tile_16" port "submodules" to "tile_ni16" 
+  edge [visualization::VisualContainment] from "tile_16" port "contained" to "tile_ni16" 
+  edge [visualization::VisualContainment] from "tile_cpu_16" port "contained" to "tile_os16" 
+  edge [decision::AbstractAllocation] from "tile_os16" port "allocationHosts" to "tile_cpu_16" 
+  edge [platform::PhysicalConnection,visualization::VisualConnection] from "tile_cpu_16" port "networkInterface" to "tile_ni16" port "tileProcessor"
+  edge [platform::PhysicalConnection,visualization::VisualConnection] from "tile_ni16" port "tileProcessor" to "tile_cpu_16" port "networkInterface"
+  edge [platform::PhysicalConnection,visualization::VisualConnection] from "tile_cpu_16" port "defaultMemory" to "tile_mem16" port "instructionsAndData"
+  edge [platform::PhysicalConnection,visualization::VisualConnection] from "tile_mem16" port "instructionsAndData" to "tile_cpu_16" port "defaultMemory"
+  edge [platform::PhysicalConnection,visualization::VisualConnection] from "tile_mem16" port "networkInterface" to "tile_ni16" port "tileMemory"
+  edge [platform::PhysicalConnection,visualization::VisualConnection] from "tile_ni16" port "tileMemory" to "tile_mem16" port "networkInterface"
+  edge [] from "tile_17" port "submodules" to "tile_cpu_17" 
+  edge [visualization::VisualContainment] from "tile_17" port "contained" to "tile_cpu_17" 
+  edge [] from "tile_17" port "submodules" to "tile_mem17" 
+  edge [visualization::VisualContainment] from "tile_17" port "contained" to "tile_mem17" 
+  edge [] from "tile_17" port "submodules" to "tile_ni17" 
+  edge [visualization::VisualContainment] from "tile_17" port "contained" to "tile_ni17" 
+  edge [visualization::VisualContainment] from "tile_cpu_17" port "contained" to "tile_os17" 
+  edge [decision::AbstractAllocation] from "tile_os17" port "allocationHosts" to "tile_cpu_17" 
+  edge [platform::PhysicalConnection,visualization::VisualConnection] from "tile_cpu_17" port "networkInterface" to "tile_ni17" port "tileProcessor"
+  edge [platform::PhysicalConnection,visualization::VisualConnection] from "tile_ni17" port "tileProcessor" to "tile_cpu_17" port "networkInterface"
+  edge [platform::PhysicalConnection,visualization::VisualConnection] from "tile_cpu_17" port "defaultMemory" to "tile_mem17" port "instructionsAndData"
+  edge [platform::PhysicalConnection,visualization::VisualConnection] from "tile_mem17" port "instructionsAndData" to "tile_cpu_17" port "defaultMemory"
+  edge [platform::PhysicalConnection,visualization::VisualConnection] from "tile_mem17" port "networkInterface" to "tile_ni17" port "tileMemory"
+  edge [platform::PhysicalConnection,visualization::VisualConnection] from "tile_ni17" port "tileMemory" to "tile_mem17" port "networkInterface"
+  edge [] from "tile_18" port "submodules" to "tile_cpu_18" 
+  edge [visualization::VisualContainment] from "tile_18" port "contained" to "tile_cpu_18" 
+  edge [] from "tile_18" port "submodules" to "tile_mem18" 
+  edge [visualization::VisualContainment] from "tile_18" port "contained" to "tile_mem18" 
+  edge [] from "tile_18" port "submodules" to "tile_ni18" 
+  edge [visualization::VisualContainment] from "tile_18" port "contained" to "tile_ni18" 
+  edge [visualization::VisualContainment] from "tile_cpu_18" port "contained" to "tile_os18" 
+  edge [decision::AbstractAllocation] from "tile_os18" port "allocationHosts" to "tile_cpu_18" 
+  edge [platform::PhysicalConnection,visualization::VisualConnection] from "tile_cpu_18" port "networkInterface" to "tile_ni18" port "tileProcessor"
+  edge [platform::PhysicalConnection,visualization::VisualConnection] from "tile_ni18" port "tileProcessor" to "tile_cpu_18" port "networkInterface"
+  edge [platform::PhysicalConnection,visualization::VisualConnection] from "tile_cpu_18" port "defaultMemory" to "tile_mem18" port "instructionsAndData"
+  edge [platform::PhysicalConnection,visualization::VisualConnection] from "tile_mem18" port "instructionsAndData" to "tile_cpu_18" port "defaultMemory"
+  edge [platform::PhysicalConnection,visualization::VisualConnection] from "tile_mem18" port "networkInterface" to "tile_ni18" port "tileMemory"
+  edge [platform::PhysicalConnection,visualization::VisualConnection] from "tile_ni18" port "tileMemory" to "tile_mem18" port "networkInterface"
+  edge [] from "tile_19" port "submodules" to "tile_cpu_19" 
+  edge [visualization::VisualContainment] from "tile_19" port "contained" to "tile_cpu_19" 
+  edge [] from "tile_19" port "submodules" to "tile_mem19" 
+  edge [visualization::VisualContainment] from "tile_19" port "contained" to "tile_mem19" 
+  edge [] from "tile_19" port "submodules" to "tile_ni19" 
+  edge [visualization::VisualContainment] from "tile_19" port "contained" to "tile_ni19" 
+  edge [visualization::VisualContainment] from "tile_cpu_19" port "contained" to "tile_os19" 
+  edge [decision::AbstractAllocation] from "tile_os19" port "allocationHosts" to "tile_cpu_19" 
+  edge [platform::PhysicalConnection,visualization::VisualConnection] from "tile_cpu_19" port "networkInterface" to "tile_ni19" port "tileProcessor"
+  edge [platform::PhysicalConnection,visualization::VisualConnection] from "tile_ni19" port "tileProcessor" to "tile_cpu_19" port "networkInterface"
+  edge [platform::PhysicalConnection,visualization::VisualConnection] from "tile_cpu_19" port "defaultMemory" to "tile_mem19" port "instructionsAndData"
+  edge [platform::PhysicalConnection,visualization::VisualConnection] from "tile_mem19" port "instructionsAndData" to "tile_cpu_19" port "defaultMemory"
+  edge [platform::PhysicalConnection,visualization::VisualConnection] from "tile_mem19" port "networkInterface" to "tile_ni19" port "tileMemory"
+  edge [platform::PhysicalConnection,visualization::VisualConnection] from "tile_ni19" port "tileMemory" to "tile_mem19" port "networkInterface"
+  edge [] from "tile_20" port "submodules" to "tile_cpu_20" 
+  edge [visualization::VisualContainment] from "tile_20" port "contained" to "tile_cpu_20" 
+  edge [] from "tile_20" port "submodules" to "tile_mem20" 
+  edge [visualization::VisualContainment] from "tile_20" port "contained" to "tile_mem20" 
+  edge [] from "tile_20" port "submodules" to "tile_ni20" 
+  edge [visualization::VisualContainment] from "tile_20" port "contained" to "tile_ni20" 
+  edge [visualization::VisualContainment] from "tile_cpu_20" port "contained" to "tile_os20" 
+  edge [decision::AbstractAllocation] from "tile_os20" port "allocationHosts" to "tile_cpu_20" 
+  edge [platform::PhysicalConnection,visualization::VisualConnection] from "tile_cpu_20" port "networkInterface" to "tile_ni20" port "tileProcessor"
+  edge [platform::PhysicalConnection,visualization::VisualConnection] from "tile_ni20" port "tileProcessor" to "tile_cpu_20" port "networkInterface"
+  edge [platform::PhysicalConnection,visualization::VisualConnection] from "tile_cpu_20" port "defaultMemory" to "tile_mem20" port "instructionsAndData"
+  edge [platform::PhysicalConnection,visualization::VisualConnection] from "tile_mem20" port "instructionsAndData" to "tile_cpu_20" port "defaultMemory"
+  edge [platform::PhysicalConnection,visualization::VisualConnection] from "tile_mem20" port "networkInterface" to "tile_ni20" port "tileMemory"
+  edge [platform::PhysicalConnection,visualization::VisualConnection] from "tile_ni20" port "tileMemory" to "tile_mem20" port "networkInterface"
+  edge [] from "tile_21" port "submodules" to "tile_cpu_21" 
+  edge [visualization::VisualContainment] from "tile_21" port "contained" to "tile_cpu_21" 
+  edge [] from "tile_21" port "submodules" to "tile_mem21" 
+  edge [visualization::VisualContainment] from "tile_21" port "contained" to "tile_mem21" 
+  edge [] from "tile_21" port "submodules" to "tile_ni21" 
+  edge [visualization::VisualContainment] from "tile_21" port "contained" to "tile_ni21" 
+  edge [visualization::VisualContainment] from "tile_cpu_21" port "contained" to "tile_os21" 
+  edge [decision::AbstractAllocation] from "tile_os21" port "allocationHosts" to "tile_cpu_21" 
+  edge [platform::PhysicalConnection,visualization::VisualConnection] from "tile_cpu_21" port "networkInterface" to "tile_ni21" port "tileProcessor"
+  edge [platform::PhysicalConnection,visualization::VisualConnection] from "tile_ni21" port "tileProcessor" to "tile_cpu_21" port "networkInterface"
+  edge [platform::PhysicalConnection,visualization::VisualConnection] from "tile_cpu_21" port "defaultMemory" to "tile_mem21" port "instructionsAndData"
+  edge [platform::PhysicalConnection,visualization::VisualConnection] from "tile_mem21" port "instructionsAndData" to "tile_cpu_21" port "defaultMemory"
+  edge [platform::PhysicalConnection,visualization::VisualConnection] from "tile_mem21" port "networkInterface" to "tile_ni21" port "tileMemory"
+  edge [platform::PhysicalConnection,visualization::VisualConnection] from "tile_ni21" port "tileMemory" to "tile_mem21" port "networkInterface"
+  edge [] from "tile_22" port "submodules" to "tile_cpu_22" 
+  edge [visualization::VisualContainment] from "tile_22" port "contained" to "tile_cpu_22" 
+  edge [] from "tile_22" port "submodules" to "tile_mem22" 
+  edge [visualization::VisualContainment] from "tile_22" port "contained" to "tile_mem22" 
+  edge [] from "tile_22" port "submodules" to "tile_ni22" 
+  edge [visualization::VisualContainment] from "tile_22" port "contained" to "tile_ni22" 
+  edge [visualization::VisualContainment] from "tile_cpu_22" port "contained" to "tile_os22" 
+  edge [decision::AbstractAllocation] from "tile_os22" port "allocationHosts" to "tile_cpu_22" 
+  edge [platform::PhysicalConnection,visualization::VisualConnection] from "tile_cpu_22" port "networkInterface" to "tile_ni22" port "tileProcessor"
+  edge [platform::PhysicalConnection,visualization::VisualConnection] from "tile_ni22" port "tileProcessor" to "tile_cpu_22" port "networkInterface"
+  edge [platform::PhysicalConnection,visualization::VisualConnection] from "tile_cpu_22" port "defaultMemory" to "tile_mem22" port "instructionsAndData"
+  edge [platform::PhysicalConnection,visualization::VisualConnection] from "tile_mem22" port "instructionsAndData" to "tile_cpu_22" port "defaultMemory"
+  edge [platform::PhysicalConnection,visualization::VisualConnection] from "tile_mem22" port "networkInterface" to "tile_ni22" port "tileMemory"
+  edge [platform::PhysicalConnection,visualization::VisualConnection] from "tile_ni22" port "tileMemory" to "tile_mem22" port "networkInterface"
+  edge [] from "tile_23" port "submodules" to "tile_cpu_23" 
+  edge [visualization::VisualContainment] from "tile_23" port "contained" to "tile_cpu_23" 
+  edge [] from "tile_23" port "submodules" to "tile_mem23" 
+  edge [visualization::VisualContainment] from "tile_23" port "contained" to "tile_mem23" 
+  edge [] from "tile_23" port "submodules" to "tile_ni23" 
+  edge [visualization::VisualContainment] from "tile_23" port "contained" to "tile_ni23" 
+  edge [visualization::VisualContainment] from "tile_cpu_23" port "contained" to "tile_os23" 
+  edge [decision::AbstractAllocation] from "tile_os23" port "allocationHosts" to "tile_cpu_23" 
+  edge [platform::PhysicalConnection,visualization::VisualConnection] from "tile_cpu_23" port "networkInterface" to "tile_ni23" port "tileProcessor"
+  edge [platform::PhysicalConnection,visualization::VisualConnection] from "tile_ni23" port "tileProcessor" to "tile_cpu_23" port "networkInterface"
+  edge [platform::PhysicalConnection,visualization::VisualConnection] from "tile_cpu_23" port "defaultMemory" to "tile_mem23" port "instructionsAndData"
+  edge [platform::PhysicalConnection,visualization::VisualConnection] from "tile_mem23" port "instructionsAndData" to "tile_cpu_23" port "defaultMemory"
+  edge [platform::PhysicalConnection,visualization::VisualConnection] from "tile_mem23" port "networkInterface" to "tile_ni23" port "tileMemory"
+  edge [platform::PhysicalConnection,visualization::VisualConnection] from "tile_ni23" port "tileMemory" to "tile_mem23" port "networkInterface"
+  edge [] from "tile_24" port "submodules" to "tile_cpu_24" 
+  edge [visualization::VisualContainment] from "tile_24" port "contained" to "tile_cpu_24" 
+  edge [] from "tile_24" port "submodules" to "tile_mem24" 
+  edge [visualization::VisualContainment] from "tile_24" port "contained" to "tile_mem24" 
+  edge [] from "tile_24" port "submodules" to "tile_ni24" 
+  edge [visualization::VisualContainment] from "tile_24" port "contained" to "tile_ni24" 
+  edge [visualization::VisualContainment] from "tile_cpu_24" port "contained" to "tile_os24" 
+  edge [decision::AbstractAllocation] from "tile_os24" port "allocationHosts" to "tile_cpu_24" 
+  edge [platform::PhysicalConnection,visualization::VisualConnection] from "tile_cpu_24" port "networkInterface" to "tile_ni24" port "tileProcessor"
+  edge [platform::PhysicalConnection,visualization::VisualConnection] from "tile_ni24" port "tileProcessor" to "tile_cpu_24" port "networkInterface"
+  edge [platform::PhysicalConnection,visualization::VisualConnection] from "tile_cpu_24" port "defaultMemory" to "tile_mem24" port "instructionsAndData"
+  edge [platform::PhysicalConnection,visualization::VisualConnection] from "tile_mem24" port "instructionsAndData" to "tile_cpu_24" port "defaultMemory"
+  edge [platform::PhysicalConnection,visualization::VisualConnection] from "tile_mem24" port "networkInterface" to "tile_ni24" port "tileMemory"
+  edge [platform::PhysicalConnection,visualization::VisualConnection] from "tile_ni24" port "tileMemory" to "tile_mem24" port "networkInterface"
+  edge [] from "tile_25" port "submodules" to "tile_cpu_25" 
+  edge [visualization::VisualContainment] from "tile_25" port "contained" to "tile_cpu_25" 
+  edge [] from "tile_25" port "submodules" to "tile_mem25" 
+  edge [visualization::VisualContainment] from "tile_25" port "contained" to "tile_mem25" 
+  edge [] from "tile_25" port "submodules" to "tile_ni25" 
+  edge [visualization::VisualContainment] from "tile_25" port "contained" to "tile_ni25" 
+  edge [visualization::VisualContainment] from "tile_cpu_25" port "contained" to "tile_os25" 
+  edge [decision::AbstractAllocation] from "tile_os25" port "allocationHosts" to "tile_cpu_25" 
+  edge [platform::PhysicalConnection,visualization::VisualConnection] from "tile_cpu_25" port "networkInterface" to "tile_ni25" port "tileProcessor"
+  edge [platform::PhysicalConnection,visualization::VisualConnection] from "tile_ni25" port "tileProcessor" to "tile_cpu_25" port "networkInterface"
+  edge [platform::PhysicalConnection,visualization::VisualConnection] from "tile_cpu_25" port "defaultMemory" to "tile_mem25" port "instructionsAndData"
+  edge [platform::PhysicalConnection,visualization::VisualConnection] from "tile_mem25" port "instructionsAndData" to "tile_cpu_25" port "defaultMemory"
+  edge [platform::PhysicalConnection,visualization::VisualConnection] from "tile_mem25" port "networkInterface" to "tile_ni25" port "tileMemory"
+  edge [platform::PhysicalConnection,visualization::VisualConnection] from "tile_ni25" port "tileMemory" to "tile_mem25" port "networkInterface"
+  edge [] from "tile_26" port "submodules" to "tile_cpu_26" 
+  edge [visualization::VisualContainment] from "tile_26" port "contained" to "tile_cpu_26" 
+  edge [] from "tile_26" port "submodules" to "tile_mem26" 
+  edge [visualization::VisualContainment] from "tile_26" port "contained" to "tile_mem26" 
+  edge [] from "tile_26" port "submodules" to "tile_ni26" 
+  edge [visualization::VisualContainment] from "tile_26" port "contained" to "tile_ni26" 
+  edge [visualization::VisualContainment] from "tile_cpu_26" port "contained" to "tile_os26" 
+  edge [decision::AbstractAllocation] from "tile_os26" port "allocationHosts" to "tile_cpu_26" 
+  edge [platform::PhysicalConnection,visualization::VisualConnection] from "tile_cpu_26" port "networkInterface" to "tile_ni26" port "tileProcessor"
+  edge [platform::PhysicalConnection,visualization::VisualConnection] from "tile_ni26" port "tileProcessor" to "tile_cpu_26" port "networkInterface"
+  edge [platform::PhysicalConnection,visualization::VisualConnection] from "tile_cpu_26" port "defaultMemory" to "tile_mem26" port "instructionsAndData"
+  edge [platform::PhysicalConnection,visualization::VisualConnection] from "tile_mem26" port "instructionsAndData" to "tile_cpu_26" port "defaultMemory"
+  edge [platform::PhysicalConnection,visualization::VisualConnection] from "tile_mem26" port "networkInterface" to "tile_ni26" port "tileMemory"
+  edge [platform::PhysicalConnection,visualization::VisualConnection] from "tile_ni26" port "tileMemory" to "tile_mem26" port "networkInterface"
+  edge [] from "tile_27" port "submodules" to "tile_cpu_27" 
+  edge [visualization::VisualContainment] from "tile_27" port "contained" to "tile_cpu_27" 
+  edge [] from "tile_27" port "submodules" to "tile_mem27" 
+  edge [visualization::VisualContainment] from "tile_27" port "contained" to "tile_mem27" 
+  edge [] from "tile_27" port "submodules" to "tile_ni27" 
+  edge [visualization::VisualContainment] from "tile_27" port "contained" to "tile_ni27" 
+  edge [visualization::VisualContainment] from "tile_cpu_27" port "contained" to "tile_os27" 
+  edge [decision::AbstractAllocation] from "tile_os27" port "allocationHosts" to "tile_cpu_27" 
+  edge [platform::PhysicalConnection,visualization::VisualConnection] from "tile_cpu_27" port "networkInterface" to "tile_ni27" port "tileProcessor"
+  edge [platform::PhysicalConnection,visualization::VisualConnection] from "tile_ni27" port "tileProcessor" to "tile_cpu_27" port "networkInterface"
+  edge [platform::PhysicalConnection,visualization::VisualConnection] from "tile_cpu_27" port "defaultMemory" to "tile_mem27" port "instructionsAndData"
+  edge [platform::PhysicalConnection,visualization::VisualConnection] from "tile_mem27" port "instructionsAndData" to "tile_cpu_27" port "defaultMemory"
+  edge [platform::PhysicalConnection,visualization::VisualConnection] from "tile_mem27" port "networkInterface" to "tile_ni27" port "tileMemory"
+  edge [platform::PhysicalConnection,visualization::VisualConnection] from "tile_ni27" port "tileMemory" to "tile_mem27" port "networkInterface"
+  edge [] from "tile_28" port "submodules" to "tile_cpu_28" 
+  edge [visualization::VisualContainment] from "tile_28" port "contained" to "tile_cpu_28" 
+  edge [] from "tile_28" port "submodules" to "tile_mem28" 
+  edge [visualization::VisualContainment] from "tile_28" port "contained" to "tile_mem28" 
+  edge [] from "tile_28" port "submodules" to "tile_ni28" 
+  edge [visualization::VisualContainment] from "tile_28" port "contained" to "tile_ni28" 
+  edge [visualization::VisualContainment] from "tile_cpu_28" port "contained" to "tile_os28" 
+  edge [decision::AbstractAllocation] from "tile_os28" port "allocationHosts" to "tile_cpu_28" 
+  edge [platform::PhysicalConnection,visualization::VisualConnection] from "tile_cpu_28" port "networkInterface" to "tile_ni28" port "tileProcessor"
+  edge [platform::PhysicalConnection,visualization::VisualConnection] from "tile_ni28" port "tileProcessor" to "tile_cpu_28" port "networkInterface"
+  edge [platform::PhysicalConnection,visualization::VisualConnection] from "tile_cpu_28" port "defaultMemory" to "tile_mem28" port "instructionsAndData"
+  edge [platform::PhysicalConnection,visualization::VisualConnection] from "tile_mem28" port "instructionsAndData" to "tile_cpu_28" port "defaultMemory"
+  edge [platform::PhysicalConnection,visualization::VisualConnection] from "tile_mem28" port "networkInterface" to "tile_ni28" port "tileMemory"
+  edge [platform::PhysicalConnection,visualization::VisualConnection] from "tile_ni28" port "tileMemory" to "tile_mem28" port "networkInterface"
+  edge [] from "tile_29" port "submodules" to "tile_cpu_29" 
+  edge [visualization::VisualContainment] from "tile_29" port "contained" to "tile_cpu_29" 
+  edge [] from "tile_29" port "submodules" to "tile_mem29" 
+  edge [visualization::VisualContainment] from "tile_29" port "contained" to "tile_mem29" 
+  edge [] from "tile_29" port "submodules" to "tile_ni29" 
+  edge [visualization::VisualContainment] from "tile_29" port "contained" to "tile_ni29" 
+  edge [visualization::VisualContainment] from "tile_cpu_29" port "contained" to "tile_os29" 
+  edge [decision::AbstractAllocation] from "tile_os29" port "allocationHosts" to "tile_cpu_29" 
+  edge [platform::PhysicalConnection,visualization::VisualConnection] from "tile_cpu_29" port "networkInterface" to "tile_ni29" port "tileProcessor"
+  edge [platform::PhysicalConnection,visualization::VisualConnection] from "tile_ni29" port "tileProcessor" to "tile_cpu_29" port "networkInterface"
+  edge [platform::PhysicalConnection,visualization::VisualConnection] from "tile_cpu_29" port "defaultMemory" to "tile_mem29" port "instructionsAndData"
+  edge [platform::PhysicalConnection,visualization::VisualConnection] from "tile_mem29" port "instructionsAndData" to "tile_cpu_29" port "defaultMemory"
+  edge [platform::PhysicalConnection,visualization::VisualConnection] from "tile_mem29" port "networkInterface" to "tile_ni29" port "tileMemory"
+  edge [platform::PhysicalConnection,visualization::VisualConnection] from "tile_ni29" port "tileMemory" to "tile_mem29" port "networkInterface"
+  edge [platform::PhysicalConnection,visualization::VisualConnection] from "tile_ni0" port "to_1_0" to "tile_ni1" port "from_0_0"
+  edge [platform::PhysicalConnection,visualization::VisualConnection] from "tile_ni1" port "to_0_0" to "tile_ni0" port "from_1_0"
+  edge [platform::PhysicalConnection,visualization::VisualConnection] from "tile_ni0" port "to_0_1" to "tile_ni5" port "from_0_0"
+  edge [platform::PhysicalConnection,visualization::VisualConnection] from "tile_ni5" port "to_0_0" to "tile_ni0" port "from_1_0"
+  edge [platform::PhysicalConnection,visualization::VisualConnection] from "tile_ni1" port "to_2_0" to "tile_ni2" port "from_1_0"
+  edge [platform::PhysicalConnection,visualization::VisualConnection] from "tile_ni2" port "to_1_0" to "tile_ni1" port "from_2_0"
+  edge [platform::PhysicalConnection,visualization::VisualConnection] from "tile_ni1" port "to_1_1" to "tile_ni6" port "from_1_0"
+  edge [platform::PhysicalConnection,visualization::VisualConnection] from "tile_ni6" port "to_1_0" to "tile_ni1" 
+  edge [platform::PhysicalConnection,visualization::VisualConnection] from "tile_ni2" port "to_3_0" to "tile_ni3" port "from_2_0"
+  edge [platform::PhysicalConnection,visualization::VisualConnection] from "tile_ni3" port "to_2_0" to "tile_ni2" port "from_3_0"
+  edge [platform::PhysicalConnection,visualization::VisualConnection] from "tile_ni2" port "to_2_1" to "tile_ni7" port "from_2_0"
+  edge [platform::PhysicalConnection,visualization::VisualConnection] from "tile_ni7" port "to_2_0" to "tile_ni2" port "from_1_0"
+  edge [platform::PhysicalConnection,visualization::VisualConnection] from "tile_ni3" port "to_4_0" to "tile_ni4" port "from_3_0"
+  edge [platform::PhysicalConnection,visualization::VisualConnection] from "tile_ni4" port "to_3_0" to "tile_ni3" port "from_4_0"
+  edge [platform::PhysicalConnection,visualization::VisualConnection] from "tile_ni3" port "to_3_1" to "tile_ni8" port "from_3_0"
+  edge [platform::PhysicalConnection,visualization::VisualConnection] from "tile_ni8" port "to_3_0" to "tile_ni3" 
+  edge [platform::PhysicalConnection,visualization::VisualConnection] from "tile_ni4" port "to_4_1" to "tile_ni9" port "from_4_0"
+  edge [platform::PhysicalConnection,visualization::VisualConnection] from "tile_ni9" port "to_4_0" to "tile_ni4" 
+  edge [platform::PhysicalConnection,visualization::VisualConnection] from "tile_ni5" port "to_1_1" to "tile_ni6" port "from_0_1"
+  edge [platform::PhysicalConnection,visualization::VisualConnection] from "tile_ni6" port "to_0_1" to "tile_ni5" port "from_1_1"
+  edge [platform::PhysicalConnection,visualization::VisualConnection] from "tile_ni5" port "to_0_0" to "tile_ni0" port "from_0_1"
+  edge [platform::PhysicalConnection,visualization::VisualConnection] from "tile_ni5" port "to_0_2" to "tile_ni10" port "from_0_1"
+  edge [platform::PhysicalConnection,visualization::VisualConnection] from "tile_ni10" port "to_0_1" to "tile_ni5" 
+  edge [platform::PhysicalConnection,visualization::VisualConnection] from "tile_ni6" port "to_2_1" to "tile_ni7" port "from_1_1"
+  edge [platform::PhysicalConnection,visualization::VisualConnection] from "tile_ni7" port "to_1_1" to "tile_ni6" port "from_2_1"
+  edge [platform::PhysicalConnection,visualization::VisualConnection] from "tile_ni6" port "to_1_0" to "tile_ni1" port "from_1_1"
+  edge [platform::PhysicalConnection,visualization::VisualConnection] from "tile_ni1" port "to_1_1" to "tile_ni6" port "from_0_1"
+  edge [platform::PhysicalConnection,visualization::VisualConnection] from "tile_ni6" port "to_1_2" to "tile_ni11" port "from_1_1"
+  edge [platform::PhysicalConnection,visualization::VisualConnection] from "tile_ni11" port "to_1_1" to "tile_ni6" port "from_2_1"
+  edge [platform::PhysicalConnection,visualization::VisualConnection] from "tile_ni7" port "to_3_1" to "tile_ni8" port "from_2_1"
+  edge [platform::PhysicalConnection,visualization::VisualConnection] from "tile_ni8" port "to_2_1" to "tile_ni7" port "from_3_1"
+  edge [platform::PhysicalConnection,visualization::VisualConnection] from "tile_ni7" port "to_2_0" to "tile_ni2" port "from_2_1"
+  edge [platform::PhysicalConnection,visualization::VisualConnection] from "tile_ni7" port "to_2_2" to "tile_ni12" port "from_2_1"
+  edge [platform::PhysicalConnection,visualization::VisualConnection] from "tile_ni12" port "to_2_1" to "tile_ni7" 
+  edge [platform::PhysicalConnection,visualization::VisualConnection] from "tile_ni8" port "to_4_1" to "tile_ni9" port "from_3_1"
+  edge [platform::PhysicalConnection,visualization::VisualConnection] from "tile_ni9" port "to_3_1" to "tile_ni8" port "from_4_1"
+  edge [platform::PhysicalConnection,visualization::VisualConnection] from "tile_ni8" port "to_3_0" to "tile_ni3" port "from_3_1"
+  edge [platform::PhysicalConnection,visualization::VisualConnection] from "tile_ni8" port "to_3_2" to "tile_ni13" port "from_3_1"
+  edge [platform::PhysicalConnection,visualization::VisualConnection] from "tile_ni13" port "to_3_1" to "tile_ni8" port "from_2_1"
+  edge [platform::PhysicalConnection,visualization::VisualConnection] from "tile_ni9" port "to_4_0" to "tile_ni4" port "from_4_1"
+  edge [platform::PhysicalConnection,visualization::VisualConnection] from "tile_ni9" port "to_4_2" to "tile_ni14" port "from_4_1"
+  edge [platform::PhysicalConnection,visualization::VisualConnection] from "tile_ni14" port "to_4_1" to "tile_ni9" 
+  edge [platform::PhysicalConnection,visualization::VisualConnection] from "tile_ni10" port "to_1_2" to "tile_ni11" port "from_0_2"
+  edge [platform::PhysicalConnection,visualization::VisualConnection] from "tile_ni11" port "to_0_2" to "tile_ni10" port "from_1_2"
+  edge [platform::PhysicalConnection,visualization::VisualConnection] from "tile_ni10" port "to_0_1" to "tile_ni5" port "from_0_2"
+  edge [platform::PhysicalConnection,visualization::VisualConnection] from "tile_ni5" port "to_0_2" to "tile_ni10" port "from_1_2"
+  edge [platform::PhysicalConnection,visualization::VisualConnection] from "tile_ni10" port "to_0_3" to "tile_ni15" port "from_0_2"
+  edge [platform::PhysicalConnection,visualization::VisualConnection] from "tile_ni15" port "to_0_2" to "tile_ni10" 
+  edge [platform::PhysicalConnection,visualization::VisualConnection] from "tile_ni11" port "to_2_2" to "tile_ni12" port "from_1_2"
+  edge [platform::PhysicalConnection,visualization::VisualConnection] from "tile_ni12" port "to_1_2" to "tile_ni11" port "from_2_2"
+  edge [platform::PhysicalConnection,visualization::VisualConnection] from "tile_ni11" port "to_1_1" to "tile_ni6" port "from_1_2"
+  edge [platform::PhysicalConnection,visualization::VisualConnection] from "tile_ni11" port "to_1_3" to "tile_ni16" port "from_1_2"
+  edge [platform::PhysicalConnection,visualization::VisualConnection] from "tile_ni16" port "to_1_2" to "tile_ni11" 
+  edge [platform::PhysicalConnection,visualization::VisualConnection] from "tile_ni12" port "to_3_2" to "tile_ni13" port "from_2_2"
+  edge [platform::PhysicalConnection,visualization::VisualConnection] from "tile_ni13" port "to_2_2" to "tile_ni12" port "from_3_2"
+  edge [platform::PhysicalConnection,visualization::VisualConnection] from "tile_ni12" port "to_2_1" to "tile_ni7" port "from_2_2"
+  edge [platform::PhysicalConnection,visualization::VisualConnection] from "tile_ni7" port "to_2_2" to "tile_ni12" port "from_1_2"
+  edge [platform::PhysicalConnection,visualization::VisualConnection] from "tile_ni12" port "to_2_3" to "tile_ni17" port "from_2_2"
+  edge [platform::PhysicalConnection,visualization::VisualConnection] from "tile_ni17" port "to_2_2" to "tile_ni12" port "from_3_2"
+  edge [platform::PhysicalConnection,visualization::VisualConnection] from "tile_ni13" port "to_4_2" to "tile_ni14" port "from_3_2"
+  edge [platform::PhysicalConnection,visualization::VisualConnection] from "tile_ni14" port "to_3_2" to "tile_ni13" port "from_4_2"
+  edge [platform::PhysicalConnection,visualization::VisualConnection] from "tile_ni13" port "to_3_1" to "tile_ni8" port "from_3_2"
+  edge [platform::PhysicalConnection,visualization::VisualConnection] from "tile_ni13" port "to_3_3" to "tile_ni18" port "from_3_2"
+  edge [platform::PhysicalConnection,visualization::VisualConnection] from "tile_ni18" port "to_3_2" to "tile_ni13" 
+  edge [platform::PhysicalConnection,visualization::VisualConnection] from "tile_ni14" port "to_4_1" to "tile_ni9" port "from_4_2"
+  edge [platform::PhysicalConnection,visualization::VisualConnection] from "tile_ni14" port "to_4_3" to "tile_ni19" port "from_4_2"
+  edge [platform::PhysicalConnection,visualization::VisualConnection] from "tile_ni19" port "to_4_2" to "tile_ni14" port "from_3_2"
+  edge [platform::PhysicalConnection,visualization::VisualConnection] from "tile_ni15" port "to_1_3" to "tile_ni16" port "from_0_3"
+  edge [platform::PhysicalConnection,visualization::VisualConnection] from "tile_ni16" port "to_0_3" to "tile_ni15" port "from_1_3"
+  edge [platform::PhysicalConnection,visualization::VisualConnection] from "tile_ni15" port "to_0_2" to "tile_ni10" port "from_0_3"
+  edge [platform::PhysicalConnection,visualization::VisualConnection] from "tile_ni15" port "to_0_4" to "tile_ni20" port "from_0_3"
+  edge [platform::PhysicalConnection,visualization::VisualConnection] from "tile_ni20" port "to_0_3" to "tile_ni15" 
+  edge [platform::PhysicalConnection,visualization::VisualConnection] from "tile_ni16" port "to_2_3" to "tile_ni17" port "from_1_3"
+  edge [platform::PhysicalConnection,visualization::VisualConnection] from "tile_ni17" port "to_1_3" to "tile_ni16" port "from_2_3"
+  edge [platform::PhysicalConnection,visualization::VisualConnection] from "tile_ni16" port "to_1_2" to "tile_ni11" port "from_1_3"
+  edge [platform::PhysicalConnection,visualization::VisualConnection] from "tile_ni11" port "to_1_3" to "tile_ni16" port "from_2_3"
+  edge [platform::PhysicalConnection,visualization::VisualConnection] from "tile_ni16" port "to_1_4" to "tile_ni21" port "from_1_3"
+  edge [platform::PhysicalConnection,visualization::VisualConnection] from "tile_ni21" port "to_1_3" to "tile_ni16" 
+  edge [platform::PhysicalConnection,visualization::VisualConnection] from "tile_ni17" port "to_3_3" to "tile_ni18" port "from_2_3"
+  edge [platform::PhysicalConnection,visualization::VisualConnection] from "tile_ni18" port "to_2_3" to "tile_ni17" port "from_3_3"
+  edge [platform::PhysicalConnection,visualization::VisualConnection] from "tile_ni17" port "to_2_2" to "tile_ni12" port "from_2_3"
+  edge [platform::PhysicalConnection,visualization::VisualConnection] from "tile_ni17" port "to_2_4" to "tile_ni22" port "from_2_3"
+  edge [platform::PhysicalConnection,visualization::VisualConnection] from "tile_ni22" port "to_2_3" to "tile_ni17" 
+  edge [platform::PhysicalConnection,visualization::VisualConnection] from "tile_ni18" port "to_4_3" to "tile_ni19" port "from_3_3"
+  edge [platform::PhysicalConnection,visualization::VisualConnection] from "tile_ni19" port "to_3_3" to "tile_ni18" port "from_4_3"
+  edge [platform::PhysicalConnection,visualization::VisualConnection] from "tile_ni18" port "to_3_2" to "tile_ni13" port "from_3_3"
+  edge [platform::PhysicalConnection,visualization::VisualConnection] from "tile_ni13" port "to_3_3" to "tile_ni18" port "from_2_3"
+  edge [platform::PhysicalConnection,visualization::VisualConnection] from "tile_ni18" port "to_3_4" to "tile_ni23" port "from_3_3"
+  edge [platform::PhysicalConnection,visualization::VisualConnection] from "tile_ni23" port "to_3_3" to "tile_ni18" port "from_4_3"
+  edge [platform::PhysicalConnection,visualization::VisualConnection] from "tile_ni19" port "to_4_2" to "tile_ni14" port "from_4_3"
+  edge [platform::PhysicalConnection,visualization::VisualConnection] from "tile_ni19" port "to_4_4" to "tile_ni24" port "from_4_3"
+  edge [platform::PhysicalConnection,visualization::VisualConnection] from "tile_ni24" port "to_4_3" to "tile_ni19" 
+  edge [platform::PhysicalConnection,visualization::VisualConnection] from "tile_ni20" port "to_1_4" to "tile_ni21" port "from_0_4"
+  edge [platform::PhysicalConnection,visualization::VisualConnection] from "tile_ni21" port "to_0_4" to "tile_ni20" port "from_1_4"
+  edge [platform::PhysicalConnection,visualization::VisualConnection] from "tile_ni20" port "to_0_3" to "tile_ni15" port "from_0_4"
+  edge [platform::PhysicalConnection,visualization::VisualConnection] from "tile_ni20" port "to_0_5" to "tile_ni25" port "from_0_4"
+  edge [platform::PhysicalConnection,visualization::VisualConnection] from "tile_ni25" port "to_0_4" to "tile_ni20" 
+  edge [platform::PhysicalConnection,visualization::VisualConnection] from "tile_ni21" port "to_2_4" to "tile_ni22" port "from_1_4"
+  edge [platform::PhysicalConnection,visualization::VisualConnection] from "tile_ni22" port "to_1_4" to "tile_ni21" port "from_2_4"
+  edge [platform::PhysicalConnection,visualization::VisualConnection] from "tile_ni21" port "to_1_3" to "tile_ni16" port "from_1_4"
+  edge [platform::PhysicalConnection,visualization::VisualConnection] from "tile_ni21" port "to_1_5" to "tile_ni26" port "from_1_4"
+  edge [platform::PhysicalConnection,visualization::VisualConnection] from "tile_ni26" port "to_1_4" to "tile_ni21" 
+  edge [platform::PhysicalConnection,visualization::VisualConnection] from "tile_ni22" port "to_3_4" to "tile_ni23" port "from_2_4"
+  edge [platform::PhysicalConnection,visualization::VisualConnection] from "tile_ni23" port "to_2_4" to "tile_ni22" port "from_3_4"
+  edge [platform::PhysicalConnection,visualization::VisualConnection] from "tile_ni22" port "to_2_3" to "tile_ni17" port "from_2_4"
+  edge [platform::PhysicalConnection,visualization::VisualConnection] from "tile_ni17" port "to_2_4" to "tile_ni22" port "from_3_4"
+  edge [platform::PhysicalConnection,visualization::VisualConnection] from "tile_ni22" port "to_2_5" to "tile_ni27" port "from_2_4"
+  edge [platform::PhysicalConnection,visualization::VisualConnection] from "tile_ni27" port "to_2_4" to "tile_ni22" 
+  edge [platform::PhysicalConnection,visualization::VisualConnection] from "tile_ni23" port "to_4_4" to "tile_ni24" port "from_3_4"
+  edge [platform::PhysicalConnection,visualization::VisualConnection] from "tile_ni24" port "to_3_4" to "tile_ni23" port "from_4_4"
+  edge [platform::PhysicalConnection,visualization::VisualConnection] from "tile_ni23" port "to_3_3" to "tile_ni18" port "from_3_4"
+  edge [platform::PhysicalConnection,visualization::VisualConnection] from "tile_ni23" port "to_3_5" to "tile_ni28" port "from_3_4"
+  edge [platform::PhysicalConnection,visualization::VisualConnection] from "tile_ni28" port "to_3_4" to "tile_ni23" 
+  edge [platform::PhysicalConnection,visualization::VisualConnection] from "tile_ni24" port "to_4_3" to "tile_ni19" port "from_4_4"
+  edge [platform::PhysicalConnection,visualization::VisualConnection] from "tile_ni19" port "to_4_4" to "tile_ni24" port "from_3_4"
+  edge [platform::PhysicalConnection,visualization::VisualConnection] from "tile_ni24" port "to_4_5" to "tile_ni29" port "from_4_4"
+  edge [platform::PhysicalConnection,visualization::VisualConnection] from "tile_ni29" port "to_4_4" to "tile_ni24" 
+  edge [platform::PhysicalConnection,visualization::VisualConnection] from "tile_ni25" port "to_1_5" to "tile_ni26" port "from_0_5"
+  edge [platform::PhysicalConnection,visualization::VisualConnection] from "tile_ni26" port "to_0_5" to "tile_ni25" port "from_1_5"
+  edge [platform::PhysicalConnection,visualization::VisualConnection] from "tile_ni25" port "to_0_4" to "tile_ni20" port "from_0_5"
+  edge [platform::PhysicalConnection,visualization::VisualConnection] from "tile_ni26" port "to_2_5" to "tile_ni27" port "from_1_5"
+  edge [platform::PhysicalConnection,visualization::VisualConnection] from "tile_ni27" port "to_1_5" to "tile_ni26" port "from_2_5"
+  edge [platform::PhysicalConnection,visualization::VisualConnection] from "tile_ni26" port "to_1_4" to "tile_ni21" port "from_1_5"
+  edge [platform::PhysicalConnection,visualization::VisualConnection] from "tile_ni27" port "to_3_5" to "tile_ni28" port "from_2_5"
+  edge [platform::PhysicalConnection,visualization::VisualConnection] from "tile_ni28" port "to_2_5" to "tile_ni27" port "from_3_5"
+  edge [platform::PhysicalConnection,visualization::VisualConnection] from "tile_ni27" port "to_2_4" to "tile_ni22" port "from_2_5"
+  edge [platform::PhysicalConnection,visualization::VisualConnection] from "tile_ni28" port "to_4_5" to "tile_ni29" port "from_3_5"
+  edge [platform::PhysicalConnection,visualization::VisualConnection] from "tile_ni29" port "to_3_5" to "tile_ni28" port "from_4_5"
+  edge [platform::PhysicalConnection,visualization::VisualConnection] from "tile_ni28" port "to_3_4" to "tile_ni23" port "from_3_5"
+  edge [platform::PhysicalConnection,visualization::VisualConnection] from "tile_ni23" port "to_3_5" to "tile_ni28" port "from_4_5"
+  edge [platform::PhysicalConnection,visualization::VisualConnection] from "tile_ni29" port "to_4_4" to "tile_ni24" port "from_4_5"
+}

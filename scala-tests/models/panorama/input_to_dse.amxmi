@@ -1,0 +1,636 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<am:Amalthea xmi:version="2.0" xmlns:xmi="http://www.omg.org/XMI" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xmlns:am="http://app4mc.eclipse.org/amalthea/2.1.0">
+  <swModel>
+    <tasks xmi:id="AltitudeCalc?type=Task" name="AltitudeCalc" multipleTaskActivationLimit="0">
+      <activityGraph>
+        <items xsi:type="am:WaitEvent" maskType="AND" waitingBehaviour="passive"/>
+        <items xsi:type="am:ClearEvent">
+          <eventMask/>
+        </items>
+        <items xsi:type="am:RunnableCall" runnable="AltitudeCalcRunnable?type=Runnable"/>
+      </activityGraph>
+    </tasks>
+    <tasks xmi:id="FormatSpeedVectorCalc?type=Task" name="FormatSpeedVectorCalc" multipleTaskActivationLimit="0">
+      <activityGraph>
+        <items xsi:type="am:WaitEvent" maskType="AND" waitingBehaviour="passive"/>
+        <items xsi:type="am:ClearEvent">
+          <eventMask/>
+        </items>
+        <items xsi:type="am:RunnableCall" runnable="FormatSpeedVectorCalcRunnable?type=Runnable"/>
+      </activityGraph>
+    </tasks>
+    <tasks xmi:id="SpeedVectorCalc?type=Task" name="SpeedVectorCalc" multipleTaskActivationLimit="0">
+      <activityGraph>
+        <items xsi:type="am:WaitEvent" maskType="AND" waitingBehaviour="passive"/>
+        <items xsi:type="am:ClearEvent">
+          <eventMask/>
+        </items>
+        <items xsi:type="am:RunnableCall" runnable="SpeedVectorCalcRunnable?type=Runnable"/>
+      </activityGraph>
+    </tasks>
+    <tasks xmi:id="HeadingCalc?type=Task" name="HeadingCalc" multipleTaskActivationLimit="0">
+      <activityGraph>
+        <items xsi:type="am:WaitEvent" maskType="AND" waitingBehaviour="passive"/>
+        <items xsi:type="am:ClearEvent">
+          <eventMask/>
+        </items>
+        <items xsi:type="am:RunnableCall" runnable="HeadingCalcRunnable?type=Runnable"/>
+      </activityGraph>
+    </tasks>
+    <tasks xmi:id="FormatLoadFactorCalc?type=Task" name="FormatLoadFactorCalc" multipleTaskActivationLimit="0">
+      <activityGraph>
+        <items xsi:type="am:WaitEvent" maskType="AND" waitingBehaviour="passive"/>
+        <items xsi:type="am:ClearEvent">
+          <eventMask/>
+        </items>
+        <items xsi:type="am:RunnableCall" runnable="FormatLoadFactorCalcRunnable?type=Runnable"/>
+      </activityGraph>
+    </tasks>
+    <tasks xmi:id="LoadFactorCalc?type=Task" name="LoadFactorCalc" multipleTaskActivationLimit="0">
+      <activityGraph>
+        <items xsi:type="am:WaitEvent" maskType="AND" waitingBehaviour="passive"/>
+        <items xsi:type="am:ClearEvent">
+          <eventMask/>
+        </items>
+        <items xsi:type="am:RunnableCall" runnable="LoadFactorCalcRunnable?type=Runnable"/>
+      </activityGraph>
+    </tasks>
+    <tasks xmi:id="AccCalc?type=Task" name="AccCalc" multipleTaskActivationLimit="0">
+      <activityGraph>
+        <items xsi:type="am:WaitEvent" maskType="AND" waitingBehaviour="passive"/>
+        <items xsi:type="am:ClearEvent">
+          <eventMask/>
+        </items>
+        <items xsi:type="am:RunnableCall" runnable="AccCalcRunnable?type=Runnable"/>
+      </activityGraph>
+    </tasks>
+    <tasks xmi:id="SecondSpeedVectorCalc?type=Task" name="SecondSpeedVectorCalc" multipleTaskActivationLimit="0">
+      <activityGraph>
+        <items xsi:type="am:WaitEvent" maskType="AND" waitingBehaviour="passive"/>
+        <items xsi:type="am:ClearEvent">
+          <eventMask/>
+        </items>
+        <items xsi:type="am:RunnableCall" runnable="SecondSpeedVectorCalcRunnable?type=Runnable"/>
+      </activityGraph>
+    </tasks>
+    <tasks xmi:id="SecondAccCalc?type=Task" name="SecondAccCalc" multipleTaskActivationLimit="0">
+      <activityGraph>
+        <items xsi:type="am:WaitEvent" maskType="AND" waitingBehaviour="passive"/>
+        <items xsi:type="am:ClearEvent">
+          <eventMask/>
+        </items>
+        <items xsi:type="am:RunnableCall" runnable="SecondAccCalcRunnable?type=Runnable"/>
+      </activityGraph>
+    </tasks>
+    <tasks xmi:id="SecondAltitudeCalc?type=Task" name="SecondAltitudeCalc" multipleTaskActivationLimit="0">
+      <activityGraph>
+        <items xsi:type="am:WaitEvent" maskType="AND" waitingBehaviour="passive"/>
+        <items xsi:type="am:ClearEvent">
+          <eventMask/>
+        </items>
+        <items xsi:type="am:RunnableCall" runnable="SecondAltitudeCalcRunnable?type=Runnable"/>
+      </activityGraph>
+    </tasks>
+    <tasks xmi:id="DBF?type=Task" name="DBF" multipleTaskActivationLimit="0">
+      <activityGraph>
+        <items xsi:type="am:WaitEvent" maskType="AND" waitingBehaviour="passive"/>
+        <items xsi:type="am:ClearEvent">
+          <eventMask/>
+        </items>
+        <items xsi:type="am:RunnableCall" runnable="DBFFunc?type=Runnable"/>
+      </activityGraph>
+    </tasks>
+    <tasks xmi:id="PC?type=Task" name="PC" multipleTaskActivationLimit="0">
+      <activityGraph>
+        <items xsi:type="am:WaitEvent" maskType="AND" waitingBehaviour="passive"/>
+        <items xsi:type="am:ClearEvent">
+          <eventMask/>
+        </items>
+        <items xsi:type="am:RunnableCall" runnable="PCFunc?type=Runnable"/>
+      </activityGraph>
+    </tasks>
+    <tasks xmi:id="DFB?type=Task" name="DFB" multipleTaskActivationLimit="0">
+      <activityGraph>
+        <items xsi:type="am:WaitEvent" maskType="AND" waitingBehaviour="passive"/>
+        <items xsi:type="am:ClearEvent">
+          <eventMask/>
+        </items>
+        <items xsi:type="am:RunnableCall" runnable="DFBFunc?type=Runnable"/>
+      </activityGraph>
+    </tasks>
+    <tasks xmi:id="CFAR?type=Task" name="CFAR" multipleTaskActivationLimit="0">
+      <activityGraph>
+        <items xsi:type="am:WaitEvent" maskType="AND" waitingBehaviour="passive"/>
+        <items xsi:type="am:ClearEvent">
+          <eventMask/>
+        </items>
+        <items xsi:type="am:RunnableCall" runnable="CFARFunc?type=Runnable"/>
+      </activityGraph>
+    </tasks>
+    <tasks xmi:id="INT?type=Task" name="INT" multipleTaskActivationLimit="0">
+      <activityGraph>
+        <items xsi:type="am:WaitEvent" maskType="AND" waitingBehaviour="passive"/>
+        <items xsi:type="am:ClearEvent">
+          <eventMask/>
+        </items>
+        <items xsi:type="am:RunnableCall" runnable="INTFunc?type=Runnable"/>
+      </activityGraph>
+    </tasks>
+    <tasks xmi:id="DFBDisplaced?type=Task" name="DFBDisplaced" multipleTaskActivationLimit="0">
+      <activityGraph>
+        <items xsi:type="am:WaitEvent" maskType="AND" waitingBehaviour="passive"/>
+        <items xsi:type="am:ClearEvent">
+          <eventMask/>
+        </items>
+        <items xsi:type="am:RunnableCall" runnable="DFBDisplacedFunc?type=Runnable"/>
+      </activityGraph>
+    </tasks>
+    <tasks xmi:id="CFARDisplaced?type=Task" name="CFARDisplaced" multipleTaskActivationLimit="0">
+      <activityGraph>
+        <items xsi:type="am:WaitEvent" maskType="AND" waitingBehaviour="passive"/>
+        <items xsi:type="am:ClearEvent">
+          <eventMask/>
+        </items>
+        <items xsi:type="am:RunnableCall" runnable="CFARDisplacedFunc?type=Runnable"/>
+      </activityGraph>
+    </tasks>
+    <runnables xmi:id="SecondSpeedVectorCalcRunnable?type=Runnable" name="SecondSpeedVectorCalcRunnable" callback="false" service="false">
+      <activityGraph>
+        <items xsi:type="am:LabelAccess" data="SecondINS1SpeedVector?type=Label" access="read"/>
+        <items xsi:type="am:ExecutionNeed">
+          <needs key="FloatOp">
+            <value xsi:type="am:DiscreteValueConstant" value="480000"/>
+          </needs>
+        </items>
+        <items xsi:type="am:LabelAccess" data="SecondSpeed?type=Label" access="write"/>
+      </activityGraph>
+    </runnables>
+    <runnables xmi:id="SecondAccCalcRunnable?type=Runnable" name="SecondAccCalcRunnable" callback="false" service="false">
+      <activityGraph>
+        <items xsi:type="am:LabelAccess" data="SecondINS1LoadFactor?type=Label" access="read"/>
+        <items xsi:type="am:ExecutionNeed">
+          <needs key="FloatOp">
+            <value xsi:type="am:DiscreteValueConstant" value="900000"/>
+          </needs>
+        </items>
+        <items xsi:type="am:LabelAccess" data="SecondAcc?type=Label" access="write"/>
+      </activityGraph>
+    </runnables>
+    <runnables xmi:id="SecondAltitudeCalcRunnable?type=Runnable" name="SecondAltitudeCalcRunnable" callback="false" service="false">
+      <activityGraph>
+        <items xsi:type="am:LabelAccess" data="SecondADC1Altitude?type=Label" access="read"/>
+        <items xsi:type="am:LabelAccess" data="SecondAcc?type=Label" access="read"/>
+        <items xsi:type="am:ExecutionNeed">
+          <needs key="FloatOp">
+            <value xsi:type="am:DiscreteValueConstant" value="600000"/>
+          </needs>
+        </items>
+        <items xsi:type="am:LabelAccess" data="SecondAltitude?type=Label" access="write"/>
+      </activityGraph>
+    </runnables>
+    <runnables xmi:id="AltitudeCalcRunnable?type=Runnable" name="AltitudeCalcRunnable" callback="false" service="false">
+      <activityGraph>
+        <items xsi:type="am:LabelAccess" data="ADC1AltitudeSignal?type=Label" access="read"/>
+        <items xsi:type="am:LabelAccess" data="AccSignal?type=Label" access="read"/>
+        <items xsi:type="am:ExecutionNeed">
+          <needs key="FloatOp">
+            <value xsi:type="am:DiscreteValueConstant" value="600000"/>
+          </needs>
+        </items>
+        <items xsi:type="am:LabelAccess" data="AltitudeSignal?type=Label" access="write"/>
+      </activityGraph>
+    </runnables>
+    <runnables xmi:id="FormatSpeedVectorCalcRunnable?type=Runnable" name="FormatSpeedVectorCalcRunnable" callback="false" service="false">
+      <activityGraph>
+        <items xsi:type="am:LabelAccess" data="INS2SpeedVectorSignal?type=Label" access="read"/>
+        <items xsi:type="am:LabelAccess" data="INS1SpeedVectorSignal?type=Label" access="read"/>
+        <items xsi:type="am:ExecutionNeed">
+          <needs key="FloatOp">
+            <value xsi:type="am:DiscreteValueConstant" value="120000"/>
+          </needs>
+        </items>
+        <items xsi:type="am:LabelAccess" data="InternalSpeedVectorSignal?type=Label" access="write"/>
+      </activityGraph>
+    </runnables>
+    <runnables xmi:id="SpeedVectorCalcRunnable?type=Runnable" name="SpeedVectorCalcRunnable" callback="false" service="false">
+      <activityGraph>
+        <items xsi:type="am:LabelAccess" data="InternalSpeedVectorSignal?type=Label" access="read"/>
+        <items xsi:type="am:ExecutionNeed">
+          <needs key="FloatOp">
+            <value xsi:type="am:DiscreteValueConstant" value="420000"/>
+          </needs>
+        </items>
+        <items xsi:type="am:LabelAccess" data="SpeedSignal?type=Label" access="write"/>
+        <items xsi:type="am:LabelAccess" data="SpeedVectorSignal?type=Label" access="write"/>
+      </activityGraph>
+    </runnables>
+    <runnables xmi:id="HeadingCalcRunnable?type=Runnable" name="HeadingCalcRunnable" callback="false" service="false">
+      <activityGraph>
+        <items xsi:type="am:LabelAccess" data="SpeedVectorSignal?type=Label" access="read"/>
+        <items xsi:type="am:ExecutionNeed">
+          <needs key="FloatOp">
+            <value xsi:type="am:DiscreteValueConstant" value="600000"/>
+          </needs>
+        </items>
+        <items xsi:type="am:LabelAccess" data="HeadingSignal?type=Label" access="write"/>
+      </activityGraph>
+    </runnables>
+    <runnables xmi:id="FormatLoadFactorCalcRunnable?type=Runnable" name="FormatLoadFactorCalcRunnable" callback="false" service="false">
+      <activityGraph>
+        <items xsi:type="am:LabelAccess" data="INS2LoadFactorSignal?type=Label" access="read"/>
+        <items xsi:type="am:LabelAccess" data="INS1LoadFactorSignal?type=Label" access="read"/>
+        <items xsi:type="am:ExecutionNeed">
+          <needs key="FloatOp">
+            <value xsi:type="am:DiscreteValueConstant" value="120000"/>
+          </needs>
+        </items>
+        <items xsi:type="am:LabelAccess" data="InternalLoadFactorSignal?type=Label" access="write"/>
+      </activityGraph>
+    </runnables>
+    <runnables xmi:id="LoadFactorCalcRunnable?type=Runnable" name="LoadFactorCalcRunnable" callback="false" service="false">
+      <activityGraph>
+        <items xsi:type="am:LabelAccess" data="InternalLoadFactorSignal?type=Label" access="read"/>
+        <items xsi:type="am:ExecutionNeed">
+          <needs key="FloatOp">
+            <value xsi:type="am:DiscreteValueConstant" value="1200000"/>
+          </needs>
+        </items>
+        <items xsi:type="am:LabelAccess" data="LoadFactorSignal?type=Label" access="write"/>
+      </activityGraph>
+    </runnables>
+    <runnables xmi:id="AccCalcRunnable?type=Runnable" name="AccCalcRunnable" callback="false" service="false">
+      <activityGraph>
+        <items xsi:type="am:LabelAccess" data="LoadFactorSignal?type=Label" access="read"/>
+        <items xsi:type="am:ExecutionNeed">
+          <needs key="FloatOp">
+            <value xsi:type="am:DiscreteValueConstant" value="900000"/>
+          </needs>
+        </items>
+        <items xsi:type="am:LabelAccess" data="AccSignal?type=Label" access="write"/>
+      </activityGraph>
+    </runnables>
+    <runnables xmi:id="DBFFunc?type=Runnable" name="DBFFunc" callback="false" service="false">
+      <activityGraph>
+        <items xsi:type="am:ChannelReceive" data="EntryToDBF?type=Channel" elements="4096" dataMustBeNew="false" elementIndex="0" lowerBound="0"/>
+        <items xsi:type="am:ExecutionNeed">
+          <needs key="FloatOp">
+            <value xsi:type="am:DiscreteValueConstant" value="6"/>
+          </needs>
+        </items>
+        <items xsi:type="am:ChannelSend" data="DBFToPC?type=Channel" elements="1"/>
+      </activityGraph>
+    </runnables>
+    <runnables xmi:id="PCFunc?type=Runnable" name="PCFunc" callback="false" service="false">
+      <activityGraph>
+        <items xsi:type="am:ChannelReceive" data="DBFToPC?type=Channel" elements="4096" dataMustBeNew="false" elementIndex="0" lowerBound="0"/>
+        <items xsi:type="am:ExecutionNeed">
+          <needs key="FloatOp">
+            <value xsi:type="am:DiscreteValueConstant" value="6"/>
+          </needs>
+        </items>
+        <items xsi:type="am:ChannelSend" data="PCtoDFB?type=Channel" elements="1"/>
+      </activityGraph>
+    </runnables>
+    <runnables xmi:id="DFBFunc?type=Runnable" name="DFBFunc" callback="false" service="false">
+      <activityGraph>
+        <items xsi:type="am:ChannelReceive" data="PCtoDFB?type=Channel" elements="1024" dataMustBeNew="false" elementIndex="0" lowerBound="0"/>
+        <items xsi:type="am:ExecutionNeed">
+          <needs key="FloatOp">
+            <value xsi:type="am:DiscreteValueConstant" value="15099"/>
+          </needs>
+        </items>
+        <items xsi:type="am:ChannelSend" data="DFBToCFAR?type=Channel" elements="1"/>
+      </activityGraph>
+    </runnables>
+    <runnables xmi:id="CFARFunc?type=Runnable" name="CFARFunc" callback="false" service="false">
+      <activityGraph>
+        <items xsi:type="am:ChannelReceive" data="DFBToCFAR?type=Channel" elements="512" dataMustBeNew="false" elementIndex="0" lowerBound="0"/>
+        <items xsi:type="am:ExecutionNeed">
+          <needs key="FloatOp">
+            <value xsi:type="am:DiscreteValueConstant" value="2513"/>
+          </needs>
+        </items>
+        <items xsi:type="am:ChannelSend" data="CFARToINT?type=Channel" elements="1"/>
+      </activityGraph>
+    </runnables>
+    <runnables xmi:id="INTFunc?type=Runnable" name="INTFunc" callback="false" service="false">
+      <activityGraph>
+        <items xsi:type="am:ChannelReceive" data="CFARToINT?type=Channel" elements="1024" dataMustBeNew="false" elementIndex="0" lowerBound="0"/>
+        <items xsi:type="am:ExecutionNeed">
+          <needs key="FloatOp">
+            <value xsi:type="am:DiscreteValueConstant" value="2513"/>
+          </needs>
+        </items>
+        <items xsi:type="am:ChannelSend" data="INTToExit?type=Channel" elements="1"/>
+      </activityGraph>
+    </runnables>
+    <runnables xmi:id="DFBDisplacedFunc?type=Runnable" name="DFBDisplacedFunc" callback="false" service="false">
+      <activityGraph>
+        <items xsi:type="am:ChannelReceive" data="PCtoDFB?type=Channel" elements="1024" dataMustBeNew="false" elementIndex="0" lowerBound="0"/>
+        <items xsi:type="am:ExecutionNeed">
+          <needs key="FloatOp">
+            <value xsi:type="am:DiscreteValueConstant" value="15099"/>
+          </needs>
+        </items>
+        <items xsi:type="am:ChannelSend" data="DFBToCFAR?type=Channel" elements="1"/>
+      </activityGraph>
+    </runnables>
+    <runnables xmi:id="CFARDisplacedFunc?type=Runnable" name="CFARDisplacedFunc" callback="false" service="false">
+      <activityGraph>
+        <items xsi:type="am:ChannelReceive" data="DFBToCFAR?type=Channel" elements="512" dataMustBeNew="false" elementIndex="0" lowerBound="0"/>
+        <items xsi:type="am:ExecutionNeed">
+          <needs key="FloatOp">
+            <value xsi:type="am:DiscreteValueConstant" value="2513"/>
+          </needs>
+        </items>
+        <items xsi:type="am:ChannelSend" data="CFARToINT?type=Channel" elements="1"/>
+      </activityGraph>
+    </runnables>
+    <labels xmi:id="ADC1AltitudeSignal?type=Label" name="ADC1AltitudeSignal" constant="false" bVolatile="false">
+      <size value="1600" unit="bit"/>
+    </labels>
+    <labels xmi:id="INS1SpeedVectorSignal?type=Label" name="INS1SpeedVectorSignal" constant="false" bVolatile="false">
+      <size value="8000" unit="bit"/>
+    </labels>
+    <labels xmi:id="INS2SpeedVectorSignal?type=Label" name="INS2SpeedVectorSignal" constant="false" bVolatile="false">
+      <size value="8000" unit="bit"/>
+    </labels>
+    <labels xmi:id="INS1LoadFactorSignal?type=Label" name="INS1LoadFactorSignal" constant="false" bVolatile="false">
+      <size value="8000" unit="bit"/>
+    </labels>
+    <labels xmi:id="INS2LoadFactorSignal?type=Label" name="INS2LoadFactorSignal" constant="false" bVolatile="false">
+      <size value="8000" unit="bit"/>
+    </labels>
+    <labels xmi:id="InternalSpeedVectorSignal?type=Label" name="InternalSpeedVectorSignal" constant="false" bVolatile="false">
+      <size value="8000" unit="bit"/>
+    </labels>
+    <labels xmi:id="SpeedVectorSignal?type=Label" name="SpeedVectorSignal" constant="false" bVolatile="false">
+      <size value="8000" unit="bit"/>
+    </labels>
+    <labels xmi:id="InternalLoadFactorSignal?type=Label" name="InternalLoadFactorSignal" constant="false" bVolatile="false">
+      <size value="8000" unit="bit"/>
+    </labels>
+    <labels xmi:id="LoadFactorSignal?type=Label" name="LoadFactorSignal" constant="false" bVolatile="false">
+      <size value="8000" unit="bit"/>
+    </labels>
+    <labels xmi:id="AccSignal?type=Label" name="AccSignal" constant="false" bVolatile="false">
+      <size value="4000" unit="bit"/>
+    </labels>
+    <labels xmi:id="AltitudeSignal?type=Label" name="AltitudeSignal" constant="false" bVolatile="false">
+      <size value="1600" unit="bit"/>
+    </labels>
+    <labels xmi:id="SpeedSignal?type=Label" name="SpeedSignal" constant="false" bVolatile="false">
+      <size value="8000" unit="bit"/>
+    </labels>
+    <labels xmi:id="HeadingSignal?type=Label" name="HeadingSignal" constant="false" bVolatile="false">
+      <size value="4000" unit="bit"/>
+    </labels>
+    <labels xmi:id="SecondINS1LoadFactor?type=Label" name="SecondINS1LoadFactor" constant="false" bVolatile="false">
+      <size value="8000" unit="bit"/>
+    </labels>
+    <labels xmi:id="SecondAcc?type=Label" name="SecondAcc" constant="false" bVolatile="false">
+      <size value="4000" unit="bit"/>
+    </labels>
+    <labels xmi:id="SecondADC1Altitude?type=Label" name="SecondADC1Altitude" constant="false" bVolatile="false">
+      <size value="1600" unit="bit"/>
+    </labels>
+    <labels xmi:id="SecondAltitude?type=Label" name="SecondAltitude" constant="false" bVolatile="false">
+      <size value="1600" unit="bit"/>
+    </labels>
+    <labels xmi:id="SecondINS1SpeedVector?type=Label" name="SecondINS1SpeedVector" constant="false" bVolatile="false">
+      <size value="8000" unit="bit"/>
+    </labels>
+    <labels xmi:id="SecondSpeed?type=Label" name="SecondSpeed" constant="false" bVolatile="false">
+      <size value="8000" unit="bit"/>
+    </labels>
+    <channels xmi:id="PCtoDFB?type=Channel" name="PCtoDFB" defaultElements="0" maxElements="1048577">
+      <size value="1024" unit="bit"/>
+    </channels>
+    <channels xmi:id="DBFToPC?type=Channel" name="DBFToPC" defaultElements="0" maxElements="2">
+      <size value="4096" unit="bit"/>
+    </channels>
+    <channels xmi:id="EntryToDBF?type=Channel" name="EntryToDBF" defaultElements="0" maxElements="2">
+      <size value="4096" unit="bit"/>
+    </channels>
+    <channels xmi:id="DFBToCFAR?type=Channel" name="DFBToCFAR" defaultElements="0" maxElements="1048577">
+      <size value="512" unit="bit"/>
+    </channels>
+    <channels xmi:id="CFARToINT?type=Channel" name="CFARToINT" defaultElements="0" maxElements="1048577">
+      <size value="1024" unit="bit"/>
+    </channels>
+    <channels xmi:id="INTToExit?type=Channel" name="INTToExit" defaultElements="0" maxElements="1048577">
+      <size value="1024" unit="bit"/>
+    </channels>
+  </swModel>
+  <hwModel>
+    <definitions xsi:type="am:ProcessingUnitDefinition" xmi:id="Platform_CPM_A53_A53core1Def?type=ProcessingUnitDefinition" name="Platform_CPM_A53_A53core1Def"/>
+    <definitions xsi:type="am:ProcessingUnitDefinition" xmi:id="Platform_CPM_A53_A53core2Def?type=ProcessingUnitDefinition" name="Platform_CPM_A53_A53core2Def"/>
+    <definitions xsi:type="am:ProcessingUnitDefinition" xmi:id="Platform_CPM_A53_A53core3Def?type=ProcessingUnitDefinition" name="Platform_CPM_A53_A53core3Def"/>
+    <definitions xsi:type="am:ProcessingUnitDefinition" xmi:id="Platform_CPM_A53_A53core4Def?type=ProcessingUnitDefinition" name="Platform_CPM_A53_A53core4Def"/>
+    <definitions xsi:type="am:ProcessingUnitDefinition" xmi:id="Platform_CPM_R5_R5core1Def?type=ProcessingUnitDefinition" name="Platform_CPM_R5_R5core1Def"/>
+    <definitions xsi:type="am:ProcessingUnitDefinition" xmi:id="Platform_CPM_R5_R5core2Def?type=ProcessingUnitDefinition" name="Platform_CPM_R5_R5core2Def"/>
+    <definitions xsi:type="am:ConnectionHandlerDefinition" xmi:id="Platform_MainBusDef?type=ConnectionHandlerDefinition" name="Platform_MainBusDef" policy="RoundRobin" maxBurstSize="1" maxConcurrentTransfers="1">
+      <dataRate value="9600000000" unit="bitPerSecond"/>
+    </definitions>
+    <definitions xsi:type="am:MemoryDefinition" xmi:id="Platform_SDRAMDef?type=MemoryDefinition" name="Platform_SDRAMDef">
+      <size value="32000000000" unit="bit"/>
+    </definitions>
+    <definitions xsi:type="am:MemoryDefinition" xmi:id="Platform_OCMDef?type=MemoryDefinition" name="Platform_OCMDef">
+      <size value="16000000" unit="bit"/>
+    </definitions>
+    <definitions xsi:type="am:ConnectionHandlerDefinition" xmi:id="Platform_OCMAXIDef?type=ConnectionHandlerDefinition" name="Platform_OCMAXIDef" policy="RoundRobin" maxBurstSize="1" maxConcurrentTransfers="1">
+      <dataRate value="4800000000" unit="bitPerSecond"/>
+    </definitions>
+    <definitions xsi:type="am:ConnectionHandlerDefinition" xmi:id="Platform_SDRAMBusDef?type=ConnectionHandlerDefinition" name="Platform_SDRAMBusDef" policy="RoundRobin" maxBurstSize="1" maxConcurrentTransfers="1">
+      <dataRate value="4800000000" unit="bitPerSecond"/>
+    </definitions>
+    <structures xmi:id="Platform?type=HwStructure" name="Platform">
+      <structures xmi:id="CPM_A53?type=HwStructure" name="CPM_A53">
+        <modules xsi:type="am:ProcessingUnit" xmi:id="A53core1?type=ProcessingUnit" name="A53core1" frequencyDomain="Platform_CPM_A53_A53core1Freq?type=FrequencyDomain" definition="Platform_CPM_A53_A53core1Def?type=ProcessingUnitDefinition">
+          <ports xmi:id="A53core1/contained?type=HwPort" name="contained" bitWidth="1" priority="0" portType="responder" portInterface="SPI"/>
+          <ports xmi:id="A53core1/core1Port1?type=HwPort" name="core1Port1" bitWidth="1" priority="0" portType="responder" portInterface="SPI"/>
+        </modules>
+        <modules xsi:type="am:ProcessingUnit" xmi:id="A53core2?type=ProcessingUnit" name="A53core2" frequencyDomain="Platform_CPM_A53_A53core2Freq?type=FrequencyDomain" definition="Platform_CPM_A53_A53core2Def?type=ProcessingUnitDefinition">
+          <ports xmi:id="A53core2/core2Port1?type=HwPort" name="core2Port1" bitWidth="1" priority="0" portType="responder" portInterface="SPI"/>
+          <ports xmi:id="A53core2/contained?type=HwPort" name="contained" bitWidth="1" priority="0" portType="responder" portInterface="SPI"/>
+        </modules>
+        <modules xsi:type="am:ProcessingUnit" xmi:id="A53core3?type=ProcessingUnit" name="A53core3" frequencyDomain="Platform_CPM_A53_A53core3Freq?type=FrequencyDomain" definition="Platform_CPM_A53_A53core3Def?type=ProcessingUnitDefinition">
+          <ports xmi:id="A53core3/contained?type=HwPort" name="contained" bitWidth="1" priority="0" portType="responder" portInterface="SPI"/>
+          <ports xmi:id="A53core3/core3Port1?type=HwPort" name="core3Port1" bitWidth="1" priority="0" portType="responder" portInterface="SPI"/>
+        </modules>
+        <modules xsi:type="am:ProcessingUnit" xmi:id="A53core4?type=ProcessingUnit" name="A53core4" frequencyDomain="Platform_CPM_A53_A53core4Freq?type=FrequencyDomain" definition="Platform_CPM_A53_A53core4Def?type=ProcessingUnitDefinition">
+          <ports xmi:id="A53core4/contained?type=HwPort" name="contained" bitWidth="1" priority="0" portType="responder" portInterface="SPI"/>
+          <ports xmi:id="A53core4/core4Port1?type=HwPort" name="core4Port1" bitWidth="1" priority="0" portType="responder" portInterface="SPI"/>
+        </modules>
+      </structures>
+      <structures xmi:id="CPM_R5?type=HwStructure" name="CPM_R5">
+        <modules xsi:type="am:ProcessingUnit" xmi:id="R5core2?type=ProcessingUnit" name="R5core2" frequencyDomain="Platform_CPM_R5_R5core2Freq?type=FrequencyDomain" definition="Platform_CPM_R5_R5core2Def?type=ProcessingUnitDefinition">
+          <ports xmi:id="R5core2/contained?type=HwPort" name="contained" bitWidth="1" priority="0" portType="responder" portInterface="SPI"/>
+          <ports xmi:id="R5core2/core4Port1?type=HwPort" name="core4Port1" bitWidth="1" priority="0" portType="responder" portInterface="SPI"/>
+        </modules>
+        <modules xsi:type="am:ProcessingUnit" xmi:id="R5core1?type=ProcessingUnit" name="R5core1" frequencyDomain="Platform_CPM_R5_R5core1Freq?type=FrequencyDomain" definition="Platform_CPM_R5_R5core1Def?type=ProcessingUnitDefinition">
+          <ports xmi:id="R5core1/contained?type=HwPort" name="contained" bitWidth="1" priority="0" portType="responder" portInterface="SPI"/>
+          <ports xmi:id="R5core1/core3Port1?type=HwPort" name="core3Port1" bitWidth="1" priority="0" portType="responder" portInterface="SPI"/>
+        </modules>
+      </structures>
+      <modules xsi:type="am:ConnectionHandler" xmi:id="OCMAXI?type=ConnectionHandler" name="OCMAXI" frequencyDomain="Platform_OCMAXIFreq?type=FrequencyDomain" definition="Platform_OCMAXIDef?type=ConnectionHandlerDefinition">
+        <ports xmi:id="OCMAXI/contained?type=HwPort" name="contained" bitWidth="1" priority="0" portType="responder" portInterface="SPI"/>
+        <ports xmi:id="OCMAXI/CPM1AXIPort2?type=HwPort" name="CPM1AXIPort2" bitWidth="1" priority="0" portType="responder" portInterface="SPI"/>
+        <ports xmi:id="OCMAXI/CPM1AXIPort3?type=HwPort" name="CPM1AXIPort3" bitWidth="1" priority="0" portType="responder" portInterface="SPI"/>
+        <ports xmi:id="OCMAXI/CPM1AXIPort4?type=HwPort" name="CPM1AXIPort4" bitWidth="1" priority="0" portType="responder" portInterface="SPI"/>
+        <ports xmi:id="OCMAXI/CPM1AXIPort1?type=HwPort" name="CPM1AXIPort1" bitWidth="1" priority="0" portType="responder" portInterface="SPI"/>
+      </modules>
+      <modules xsi:type="am:ConnectionHandler" xmi:id="MainBus?type=ConnectionHandler" name="MainBus" frequencyDomain="Platform_MainBusFreq?type=FrequencyDomain" definition="Platform_MainBusDef?type=ConnectionHandlerDefinition">
+        <ports xmi:id="MainBus/contained?type=HwPort" name="contained" bitWidth="1" priority="0" portType="responder" portInterface="SPI"/>
+        <ports xmi:id="MainBus/MainBusPort1?type=HwPort" name="MainBusPort1" bitWidth="1" priority="0" portType="responder" portInterface="SPI"/>
+        <ports xmi:id="MainBus/MainBusPort3?type=HwPort" name="MainBusPort3" bitWidth="1" priority="0" portType="responder" portInterface="SPI"/>
+        <ports xmi:id="MainBus/MainBusPort2?type=HwPort" name="MainBusPort2" bitWidth="1" priority="0" portType="responder" portInterface="SPI"/>
+      </modules>
+      <modules xsi:type="am:Memory" xmi:id="SDRAM?type=Memory" name="SDRAM" frequencyDomain="Platform_SDRAMFreq?type=FrequencyDomain" definition="Platform_SDRAMDef?type=MemoryDefinition">
+        <ports xmi:id="SDRAM/contained?type=HwPort" name="contained" bitWidth="1" priority="0" portType="responder" portInterface="SPI"/>
+        <ports xmi:id="SDRAM/MainSDRAMPort1?type=HwPort" name="MainSDRAMPort1" bitWidth="1" priority="0" portType="responder" portInterface="SPI"/>
+      </modules>
+      <modules xsi:type="am:Memory" xmi:id="OCM?type=Memory" name="OCM" frequencyDomain="Platform_OCMFreq?type=FrequencyDomain" definition="Platform_OCMDef?type=MemoryDefinition">
+        <ports xmi:id="OCM/OCM1Port1?type=HwPort" name="OCM1Port1" bitWidth="1" priority="0" portType="responder" portInterface="SPI"/>
+      </modules>
+      <modules xsi:type="am:ConnectionHandler" xmi:id="SDRAMBus?type=ConnectionHandler" name="SDRAMBus" frequencyDomain="Platform_SDRAMBusFreq?type=FrequencyDomain" definition="Platform_SDRAMBusDef?type=ConnectionHandlerDefinition">
+        <ports xmi:id="SDRAMBus/contained?type=HwPort" name="contained" bitWidth="1" priority="0" portType="responder" portInterface="SPI"/>
+        <ports xmi:id="SDRAMBus/MainBusPort1?type=HwPort" name="MainBusPort1" bitWidth="1" priority="0" portType="responder" portInterface="SPI"/>
+        <ports xmi:id="SDRAMBus/MainBusPort3?type=HwPort" name="MainBusPort3" bitWidth="1" priority="0" portType="responder" portInterface="SPI"/>
+        <ports xmi:id="SDRAMBus/MainBusPort2?type=HwPort" name="MainBusPort2" bitWidth="1" priority="0" portType="responder" portInterface="SPI"/>
+      </modules>
+      <connections xmi:id="Platform/SDRAMBus_MainBusPort1_to_SDRAMBus_MainSDRAMPort1?type=HwConnection" name="SDRAMBus_MainBusPort1_to_SDRAMBus_MainSDRAMPort1" port1="SDRAMBus/MainBusPort1?type=HwPort" port2="SDRAM/MainSDRAMPort1?type=HwPort"/>
+      <connections xmi:id="Platform/A53core1_core1Port1_to_A53core1_CPM1AXIPort1?type=HwConnection" name="A53core1_core1Port1_to_A53core1_CPM1AXIPort1" port1="A53core1/core1Port1?type=HwPort" port2="OCMAXI/CPM1AXIPort1?type=HwPort"/>
+      <connections xmi:id="Platform/A53core2_core2Port1_to_A53core2_CPM1AXIPort2?type=HwConnection" name="A53core2_core2Port1_to_A53core2_CPM1AXIPort2" port1="A53core2/core2Port1?type=HwPort" port2="OCMAXI/CPM1AXIPort2?type=HwPort"/>
+      <connections xmi:id="Platform/A53core3_core3Port1_to_A53core3_CPM1AXIPort3?type=HwConnection" name="A53core3_core3Port1_to_A53core3_CPM1AXIPort3" port1="A53core3/core3Port1?type=HwPort" port2="OCMAXI/CPM1AXIPort3?type=HwPort"/>
+      <connections xmi:id="Platform/A53core4_core4Port1_to_A53core4_CPM1AXIPort4?type=HwConnection" name="A53core4_core4Port1_to_A53core4_CPM1AXIPort4" port1="A53core4/core4Port1?type=HwPort" port2="OCMAXI/CPM1AXIPort4?type=HwPort"/>
+      <connections xmi:id="Platform/R5core1_core3Port1_to_R5core1_CPM1AXIPort1?type=HwConnection" name="R5core1_core3Port1_to_R5core1_CPM1AXIPort1" port1="R5core1/core3Port1?type=HwPort" port2="OCMAXI/CPM1AXIPort1?type=HwPort"/>
+      <connections xmi:id="Platform/R5core2_core4Port1_to_R5core2_CPM1AXIPort2?type=HwConnection" name="R5core2_core4Port1_to_R5core2_CPM1AXIPort2" port1="R5core2/core4Port1?type=HwPort" port2="OCMAXI/CPM1AXIPort2?type=HwPort"/>
+      <connections xmi:id="Platform/OCMAXI_CPM1AXIPort3_to_OCMAXI_OCM1Port1?type=HwConnection" name="OCMAXI_CPM1AXIPort3_to_OCMAXI_OCM1Port1" port1="OCMAXI/CPM1AXIPort3?type=HwPort" port2="OCM/OCM1Port1?type=HwPort"/>
+      <connections xmi:id="Platform/A53core1_core1Port1_to_A53core1_MainBusPort1?type=HwConnection" name="A53core1_core1Port1_to_A53core1_MainBusPort1" port1="A53core1/core1Port1?type=HwPort" port2="SDRAMBus/MainBusPort1?type=HwPort"/>
+      <connections xmi:id="Platform/A53core2_core2Port1_to_A53core2_MainBusPort1?type=HwConnection" name="A53core2_core2Port1_to_A53core2_MainBusPort1" port1="A53core2/core2Port1?type=HwPort" port2="SDRAMBus/MainBusPort1?type=HwPort"/>
+      <connections xmi:id="Platform/A53core3_core3Port1_to_A53core3_MainBusPort1?type=HwConnection" name="A53core3_core3Port1_to_A53core3_MainBusPort1" port1="A53core3/core3Port1?type=HwPort" port2="SDRAMBus/MainBusPort1?type=HwPort"/>
+      <connections xmi:id="Platform/A53core4_core4Port1_to_A53core4_MainBusPort1?type=HwConnection" name="A53core4_core4Port1_to_A53core4_MainBusPort1" port1="A53core4/core4Port1?type=HwPort" port2="SDRAMBus/MainBusPort1?type=HwPort"/>
+      <connections xmi:id="Platform/R5core1_core3Port1_to_R5core1_MainBusPort1?type=HwConnection" name="R5core1_core3Port1_to_R5core1_MainBusPort1" port1="R5core1/core3Port1?type=HwPort" port2="SDRAMBus/MainBusPort1?type=HwPort"/>
+      <connections xmi:id="Platform/R5core2_core4Port1_to_R5core2_MainBusPort1?type=HwConnection" name="R5core2_core4Port1_to_R5core2_MainBusPort1" port1="R5core2/core4Port1?type=HwPort" port2="SDRAMBus/MainBusPort1?type=HwPort"/>
+      <connections xmi:id="Platform/A53core1_core1Port1_to_A53core1_MainBusPort1?type=HwConnection" name="A53core1_core1Port1_to_A53core1_MainBusPort1" port1="A53core1/core1Port1?type=HwPort" port2="MainBus/MainBusPort1?type=HwPort"/>
+      <connections xmi:id="Platform/A53core2_core2Port1_to_A53core2_MainBusPort1?type=HwConnection" name="A53core2_core2Port1_to_A53core2_MainBusPort1" port1="A53core2/core2Port1?type=HwPort" port2="MainBus/MainBusPort1?type=HwPort"/>
+      <connections xmi:id="Platform/A53core3_core3Port1_to_A53core3_MainBusPort1?type=HwConnection" name="A53core3_core3Port1_to_A53core3_MainBusPort1" port1="A53core3/core3Port1?type=HwPort" port2="MainBus/MainBusPort1?type=HwPort"/>
+      <connections xmi:id="Platform/A53core4_core4Port1_to_A53core4_MainBusPort1?type=HwConnection" name="A53core4_core4Port1_to_A53core4_MainBusPort1" port1="A53core4/core4Port1?type=HwPort" port2="MainBus/MainBusPort1?type=HwPort"/>
+      <connections xmi:id="Platform/R5core1_core3Port1_to_R5core1_MainBusPort1?type=HwConnection" name="R5core1_core3Port1_to_R5core1_MainBusPort1" port1="R5core1/core3Port1?type=HwPort" port2="MainBus/MainBusPort1?type=HwPort"/>
+      <connections xmi:id="Platform/R5core2_core4Port1_to_R5core2_MainBusPort1?type=HwConnection" name="R5core2_core4Port1_to_R5core2_MainBusPort1" port1="R5core2/core4Port1?type=HwPort" port2="MainBus/MainBusPort1?type=HwPort"/>
+      <connections xmi:id="Platform/SDRAMBus_MainBusPort1_to_SDRAMBus_MainBusPort1?type=HwConnection" name="SDRAMBus_MainBusPort1_to_SDRAMBus_MainBusPort1" port1="SDRAMBus/MainBusPort1?type=HwPort" port2="MainBus/MainBusPort1?type=HwPort"/>
+    </structures>
+    <domains xsi:type="am:FrequencyDomain" xmi:id="Platform_CPM_A53_A53core1Freq?type=FrequencyDomain" name="Platform_CPM_A53_A53core1Freq" clockGating="false">
+      <defaultValue value="1.2E9" unit="Hz"/>
+    </domains>
+    <domains xsi:type="am:FrequencyDomain" xmi:id="Platform_CPM_A53_A53core2Freq?type=FrequencyDomain" name="Platform_CPM_A53_A53core2Freq" clockGating="false">
+      <defaultValue value="1.2E9" unit="Hz"/>
+    </domains>
+    <domains xsi:type="am:FrequencyDomain" xmi:id="Platform_CPM_A53_A53core3Freq?type=FrequencyDomain" name="Platform_CPM_A53_A53core3Freq" clockGating="false">
+      <defaultValue value="1.2E9" unit="Hz"/>
+    </domains>
+    <domains xsi:type="am:FrequencyDomain" xmi:id="Platform_CPM_A53_A53core4Freq?type=FrequencyDomain" name="Platform_CPM_A53_A53core4Freq" clockGating="false">
+      <defaultValue value="1.2E9" unit="Hz"/>
+    </domains>
+    <domains xsi:type="am:FrequencyDomain" xmi:id="Platform_CPM_R5_R5core1Freq?type=FrequencyDomain" name="Platform_CPM_R5_R5core1Freq" clockGating="false">
+      <defaultValue value="6.0E8" unit="Hz"/>
+    </domains>
+    <domains xsi:type="am:FrequencyDomain" xmi:id="Platform_CPM_R5_R5core2Freq?type=FrequencyDomain" name="Platform_CPM_R5_R5core2Freq" clockGating="false">
+      <defaultValue value="6.0E8" unit="Hz"/>
+    </domains>
+    <domains xsi:type="am:FrequencyDomain" xmi:id="Platform_MainBusFreq?type=FrequencyDomain" name="Platform_MainBusFreq" clockGating="false">
+      <defaultValue value="1.2E9" unit="Hz"/>
+    </domains>
+    <domains xsi:type="am:FrequencyDomain" xmi:id="Platform_SDRAMFreq?type=FrequencyDomain" name="Platform_SDRAMFreq" clockGating="false">
+      <defaultValue value="6.0E8" unit="Hz"/>
+    </domains>
+    <domains xsi:type="am:FrequencyDomain" xmi:id="Platform_OCMFreq?type=FrequencyDomain" name="Platform_OCMFreq" clockGating="false">
+      <defaultValue value="6.0E8" unit="Hz"/>
+    </domains>
+    <domains xsi:type="am:FrequencyDomain" xmi:id="Platform_OCMAXIFreq?type=FrequencyDomain" name="Platform_OCMAXIFreq" clockGating="false">
+      <defaultValue value="6.0E8" unit="Hz"/>
+    </domains>
+    <domains xsi:type="am:FrequencyDomain" xmi:id="Platform_SDRAMBusFreq?type=FrequencyDomain" name="Platform_SDRAMBusFreq" clockGating="false">
+      <defaultValue value="6.0E8" unit="Hz"/>
+    </domains>
+  </hwModel>
+  <osModel>
+    <operatingSystems name="Platform_MainBusScheduler">
+      <taskSchedulers xmi:id="Platform_MainBusScheduler_RRScheduler?type=TaskScheduler" name="Platform_MainBusScheduler_RRScheduler" definition="PriorityBasedRoundRobin?type=SchedulerDefinition"/>
+    </operatingSystems>
+    <operatingSystems name="Platform_OCMAXIScheduler">
+      <taskSchedulers xmi:id="Platform_OCMAXIScheduler_RRScheduler?type=TaskScheduler" name="Platform_OCMAXIScheduler_RRScheduler" definition="PriorityBasedRoundRobin?type=SchedulerDefinition"/>
+    </operatingSystems>
+    <operatingSystems name="Platform_SDRAMBusScheduler">
+      <taskSchedulers xmi:id="Platform_SDRAMBusScheduler_RRScheduler?type=TaskScheduler" name="Platform_SDRAMBusScheduler_RRScheduler" definition="PriorityBasedRoundRobin?type=SchedulerDefinition"/>
+    </operatingSystems>
+    <operatingSystems name="CPM1_Core1_Runtime_CMP1_Core1_FP_Runtime_Scheduler">
+      <taskSchedulers xmi:id="CPM1_Core1_Runtime_CMP1_Core1_FP_Runtime_Scheduler_FPScheduler?type=TaskScheduler" name="CPM1_Core1_Runtime_CMP1_Core1_FP_Runtime_Scheduler_FPScheduler" definition="FixedPriorityPreemptive?type=SchedulerDefinition"/>
+    </operatingSystems>
+    <operatingSystems name="CPM1_Core2_Runtime_CMP1_Core2_FP_Runtime_Scheduler">
+      <taskSchedulers xmi:id="CPM1_Core2_Runtime_CMP1_Core2_FP_Runtime_Scheduler_FPScheduler?type=TaskScheduler" name="CPM1_Core2_Runtime_CMP1_Core2_FP_Runtime_Scheduler_FPScheduler" definition="FixedPriorityPreemptive?type=SchedulerDefinition"/>
+    </operatingSystems>
+    <operatingSystems name="CPM2_Core3_Runtime_CMP2_Core3_FP_Runtime_Scheduler">
+      <taskSchedulers xmi:id="CPM2_Core3_Runtime_CMP2_Core3_FP_Runtime_Scheduler_FPScheduler?type=TaskScheduler" name="CPM2_Core3_Runtime_CMP2_Core3_FP_Runtime_Scheduler_FPScheduler" definition="FixedPriorityPreemptive?type=SchedulerDefinition"/>
+    </operatingSystems>
+    <operatingSystems name="CPM2_Core4_Runtime_CMP2_Core4_FP_Runtime_Scheduler">
+      <taskSchedulers xmi:id="CPM2_Core4_Runtime_CMP2_Core4_FP_Runtime_Scheduler_FPScheduler?type=TaskScheduler" name="CPM2_Core4_Runtime_CMP2_Core4_FP_Runtime_Scheduler_FPScheduler" definition="FixedPriorityPreemptive?type=SchedulerDefinition"/>
+    </operatingSystems>
+    <operatingSystems name="CPM2_Core5_Runtime_CMP2_Core5_FP_Runtime_Scheduler">
+      <taskSchedulers xmi:id="CPM2_Core5_Runtime_CMP2_Core5_FP_Runtime_Scheduler_FPScheduler?type=TaskScheduler" name="CPM2_Core5_Runtime_CMP2_Core5_FP_Runtime_Scheduler_FPScheduler" definition="FixedPriorityPreemptive?type=SchedulerDefinition"/>
+    </operatingSystems>
+    <operatingSystems name="CPM2_Core6_Runtime_CMP2_Core6_FP_Runtime_Scheduler">
+      <taskSchedulers xmi:id="CPM2_Core6_Runtime_CMP2_Core6_FP_Runtime_Scheduler_FPScheduler?type=TaskScheduler" name="CPM2_Core6_Runtime_CMP2_Core6_FP_Runtime_Scheduler_FPScheduler" definition="FixedPriorityPreemptive?type=SchedulerDefinition"/>
+    </operatingSystems>
+    <schedulerDefinitions xmi:id="PriorityBasedRoundRobin?type=SchedulerDefinition" name="PriorityBasedRoundRobin" description="Round Robin scheduling algorithm assigns equally sized time slices&#xA;to each process that it schedules. The priority describes the order&#xA;in which the processes will be executed. If two processes have the&#xA;same priority, the order of these two is random (non-deterministic).&#xA;&#xA;Algorithm parameters:&#xA; - timeSliceLength [1] Time&#xA;      Length of each time slice.&#xA;&#xA;Process parameters:&#xA; - priority [1] Integer&#xA;      The priority of the process (a higher value means a higher priority).&#xA;&#xA;Options:&#xA; -&#xA;&#xA;Reference:&#xA; - Zouaoui, Sonia &amp; Boussaid, Lotfi &amp; Abdellatif, Mtibaa (2019).&#xA;   &quot;Priority based round robin (PBRR) CPU scheduling algorithm&quot;&#xA;   International Journal of Electrical and Computer Engineering (IJECE),&#xA;   9. 190. 10.11591/ijece.v9i1.pp190-202.&#xA;" requiresParentScheduler="false" passesParametersUpwards="false" hasExactlyOneChild="false"/>
+    <schedulerDefinitions xmi:id="FixedPriorityPreemptive?type=SchedulerDefinition" name="FixedPriorityPreemptive" description="Fixed Priority Preemptive Scheduling (e.g. AUTOSAR),&#xA;same as OSEK but without task groups.&#xA;&#xA;Algorithm parameters:&#xA; -&#xA;&#xA;Process parameters:&#xA; - priority [1] Integer&#xA;      The priority of the process (a higher value means a higher priority).&#xA;&#xA;Options:&#xA; -&#xA;&#xA;Reference:&#xA; - Liu, Chung Laung, and James W. Layland (1973).&#xA;   &quot;Scheduling Algorithms for Multiprogramming in a Hard-Real-Time Environment&quot;&#xA;   Journal of the ACM (JACM) 20.1 (1973): 46-61.&#xA;" requiresParentScheduler="false" passesParametersUpwards="false" hasExactlyOneChild="false"/>
+  </osModel>
+  <stimuliModel>
+    <stimuli xsi:type="am:PeriodicStimulus" xmi:id="60Hz?type=PeriodicStimulus" name="60Hz">
+      <recurrence value="16666" unit="us"/>
+      <offset value="0" unit="s"/>
+    </stimuli>
+    <stimuli xsi:type="am:PeriodicStimulus" xmi:id="30Hz?type=PeriodicStimulus" name="30Hz">
+      <recurrence value="33333" unit="us"/>
+      <offset value="0" unit="s"/>
+    </stimuli>
+    <stimuli xsi:type="am:PeriodicStimulus" xmi:id="SnapshotPeriod?type=PeriodicStimulus" name="SnapshotPeriod">
+      <recurrence value="166" unit="ns"/>
+      <offset value="0" unit="s"/>
+    </stimuli>
+    <stimuli xsi:type="am:PeriodicStimulus" xmi:id="INTIPeriod?type=PeriodicStimulus" name="INTIPeriod">
+      <recurrence value="174" unit="ms"/>
+      <offset value="0" unit="s"/>
+    </stimuli>
+  </stimuliModel>
+  <mappingModel>
+    <schedulerAllocation scheduler="CPM1_Core1_Runtime_CMP1_Core1_FP_Runtime_Scheduler_FPScheduler?type=TaskScheduler" responsibility="A53core1?type=ProcessingUnit" executingPU="A53core1?type=ProcessingUnit"/>
+    <schedulerAllocation scheduler="CPM1_Core2_Runtime_CMP1_Core2_FP_Runtime_Scheduler_FPScheduler?type=TaskScheduler" responsibility="A53core2?type=ProcessingUnit" executingPU="A53core2?type=ProcessingUnit"/>
+    <schedulerAllocation scheduler="CPM2_Core3_Runtime_CMP2_Core3_FP_Runtime_Scheduler_FPScheduler?type=TaskScheduler" responsibility="A53core3?type=ProcessingUnit" executingPU="A53core3?type=ProcessingUnit"/>
+    <schedulerAllocation scheduler="CPM2_Core4_Runtime_CMP2_Core4_FP_Runtime_Scheduler_FPScheduler?type=TaskScheduler" responsibility="A53core4?type=ProcessingUnit" executingPU="A53core4?type=ProcessingUnit"/>
+    <schedulerAllocation scheduler="CPM2_Core5_Runtime_CMP2_Core5_FP_Runtime_Scheduler_FPScheduler?type=TaskScheduler" responsibility="R5core1?type=ProcessingUnit" executingPU="R5core1?type=ProcessingUnit"/>
+    <schedulerAllocation scheduler="CPM2_Core6_Runtime_CMP2_Core6_FP_Runtime_Scheduler_FPScheduler?type=TaskScheduler" responsibility="R5core2?type=ProcessingUnit" executingPU="R5core2?type=ProcessingUnit"/>
+    <schedulerAllocation scheduler="CPM1_Core1_Runtime_CMP1_Core1_FP_Runtime_Scheduler_FPScheduler?type=TaskScheduler" responsibility="A53core1?type=ProcessingUnit" executingPU="A53core1?type=ProcessingUnit"/>
+    <schedulerAllocation scheduler="CPM1_Core2_Runtime_CMP1_Core2_FP_Runtime_Scheduler_FPScheduler?type=TaskScheduler" responsibility="A53core2?type=ProcessingUnit" executingPU="A53core2?type=ProcessingUnit"/>
+    <schedulerAllocation scheduler="CPM2_Core4_Runtime_CMP2_Core4_FP_Runtime_Scheduler_FPScheduler?type=TaskScheduler" responsibility="A53core4?type=ProcessingUnit" executingPU="A53core4?type=ProcessingUnit"/>
+    <schedulerAllocation scheduler="CPM2_Core3_Runtime_CMP2_Core3_FP_Runtime_Scheduler_FPScheduler?type=TaskScheduler" responsibility="A53core3?type=ProcessingUnit" executingPU="A53core3?type=ProcessingUnit"/>
+    <schedulerAllocation scheduler="CPM2_Core5_Runtime_CMP2_Core5_FP_Runtime_Scheduler_FPScheduler?type=TaskScheduler" responsibility="R5core1?type=ProcessingUnit" executingPU="R5core1?type=ProcessingUnit"/>
+    <schedulerAllocation scheduler="CPM2_Core6_Runtime_CMP2_Core6_FP_Runtime_Scheduler_FPScheduler?type=TaskScheduler" responsibility="R5core2?type=ProcessingUnit" executingPU="R5core2?type=ProcessingUnit"/>
+    <memoryMapping abstractElement="INS1LoadFactorSignal?type=Label" memory="SDRAM?type=Memory" memoryPositionAddress="0x0"/>
+    <memoryMapping abstractElement="INS2LoadFactorSignal?type=Label" memory="SDRAM?type=Memory" memoryPositionAddress="0x0"/>
+    <memoryMapping abstractElement="INS1SpeedVectorSignal?type=Label" memory="SDRAM?type=Memory" memoryPositionAddress="0x0"/>
+    <memoryMapping abstractElement="INS2SpeedVectorSignal?type=Label" memory="SDRAM?type=Memory" memoryPositionAddress="0x0"/>
+    <memoryMapping abstractElement="ADC1AltitudeSignal?type=Label" memory="SDRAM?type=Memory" memoryPositionAddress="0x0"/>
+    <memoryMapping abstractElement="HeadingSignal?type=Label" memory="SDRAM?type=Memory" memoryPositionAddress="0x0"/>
+    <memoryMapping abstractElement="AltitudeSignal?type=Label" memory="SDRAM?type=Memory" memoryPositionAddress="0x0"/>
+    <memoryMapping abstractElement="SpeedSignal?type=Label" memory="SDRAM?type=Memory" memoryPositionAddress="0x0"/>
+    <memoryMapping abstractElement="SecondADC1Altitude?type=Label" memory="SDRAM?type=Memory" memoryPositionAddress="0x0"/>
+    <memoryMapping abstractElement="SecondINS1LoadFactor?type=Label" memory="SDRAM?type=Memory" memoryPositionAddress="0x0"/>
+    <memoryMapping abstractElement="SecondINS1SpeedVector?type=Label" memory="SDRAM?type=Memory" memoryPositionAddress="0x0"/>
+    <memoryMapping abstractElement="SecondAcc?type=Label" memory="SDRAM?type=Memory" memoryPositionAddress="0x0"/>
+    <memoryMapping abstractElement="SecondAltitude?type=Label" memory="SDRAM?type=Memory" memoryPositionAddress="0x0"/>
+    <memoryMapping abstractElement="EntryToDBF?type=Channel" memory="SDRAM?type=Memory" memoryPositionAddress="0x0"/>
+    <memoryMapping abstractElement="INTToExit?type=Channel" memory="SDRAM?type=Memory" memoryPositionAddress="0x0"/>
+  </mappingModel>
+</am:Amalthea>

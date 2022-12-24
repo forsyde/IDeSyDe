@@ -11,9 +11,7 @@ import breeze.linalg.DenseMatrix
 import breeze.linalg.DenseVector
 import breeze.linalg.*
 import breeze.numerics.*
-import org.jgrapht.opt.graph.sparse.SparseIntDirectedGraph
 import org.jgrapht.alg.util.Pair
-import org.jgrapht.opt.graph.sparse.IncomingEdgesSupport
 import org.jgrapht.alg.connectivity.ConnectivityInspector
 import org.jgrapht.graph.AsSubgraph
 import java.util.stream.Collectors

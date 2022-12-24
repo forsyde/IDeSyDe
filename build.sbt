@@ -22,7 +22,6 @@ lazy val common = (project in file("scala-common"))
     libraryDependencies ++= Seq(
       ("org.scala-graph" %% "graph-core"   % scalaGraphVersion).cross(CrossVersion.for3Use2_13),
       "org.jgrapht"       % "jgrapht-core" % jgraphtVersion,
-      "org.jgrapht"       % "jgrapht-opt"  % jgraphtVersion,
       "org.scalanlp"     %% "breeze"       % breezeVersion,
       "com.outr"         %% "scribe"       % scribeVersion
     )
@@ -36,7 +35,6 @@ lazy val forsyde = (project in file("scala-forsyde"))
       ("org.scala-graph" %% "graph-core" % scalaGraphVersion).cross(CrossVersion.for3Use2_13),
       "io.github.forsyde" % "forsyde-io-java-core" % forsydeIoVersion,
       "org.jgrapht"       % "jgrapht-core"         % jgraphtVersion,
-      "org.jgrapht"       % "jgrapht-opt"          % jgraphtVersion,
       "org.typelevel"    %% "spire"                % "0.18.0"
     )
   )
@@ -50,7 +48,6 @@ lazy val minizinc = (project in file("scala-minizinc"))
       "com.outr"     %% "scribe"       % scribeVersion,
       "com.lihaoyi"  %% "upickle"      % "1.4.0",
       "org.jgrapht"   % "jgrapht-core" % jgraphtVersion,
-      "org.jgrapht"   % "jgrapht-opt"  % jgraphtVersion,
       "org.scalanlp" %% "breeze"       % breezeVersion
     )
   )
@@ -64,7 +61,6 @@ lazy val choco = (project in file("scala-choco"))
       "com.novocode"     % "junit-interface" % "0.11" % "test",
       "org.choco-solver" % "choco-solver"    % "4.10.9",
       "org.jgrapht"      % "jgrapht-core"    % jgraphtVersion,
-      "org.jgrapht"      % "jgrapht-opt"     % jgraphtVersion,
       "com.outr"        %% "scribe"          % scribeVersion
     )
   )
@@ -76,7 +72,7 @@ lazy val cli = (project in file("scala-cli"))
   .dependsOn(forsyde)
   .dependsOn(minizinc)
   // .enablePlugins(ScalaNativePlugin)
-  .enablePlugins(UniversalPlugin, JavaAppPackaging) //, JlinkPlugin)
+  .enablePlugins(UniversalPlugin, JavaAppPackaging, JlinkPlugin)
   .settings(
     Compile / mainClass := Some("idesyde.IDeSyDeStandalone"),
     libraryDependencies ++= Seq(
@@ -84,15 +80,15 @@ lazy val cli = (project in file("scala-cli"))
       "com.outr"         %% "scribe"      % scribeVersion,
       "com.outr"         %% "scribe-file" % scribeVersion
     ),
-    maintainer := "jordao@kth.se"
+    maintainer := "jordao@kth.se",
     // taken and adapted from https://www.scala-sbt.org/sbt-native-packager/archetypes/jlink_plugin.html
-    // jlinkModulePath := {
-    //   val paths = (jlinkBuildImage / fullClasspath).value
-    //   paths.filter(f => {
-    //     f.get(moduleID.key).exists(mID => mID.name.contains("jheaps")) ||
-    //     f.get(moduleID.key).exists(mID => mID.name.contains("commons-text"))
-    //   }).map(_.data)
-    // }
+    jlinkModulePath := {
+      val paths = (jlinkBuildImage / fullClasspath).value
+      paths.filter(f => {
+        f.get(moduleID.key).exists(mID => mID.name.contains("jheaps")) ||
+        f.get(moduleID.key).exists(mID => mID.name.contains("commons-text"))
+      }).map(_.data)
+    }
   )
 
 lazy val tests = (project in file("scala-tests"))

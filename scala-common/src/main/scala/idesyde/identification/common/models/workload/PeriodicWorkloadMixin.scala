@@ -1,7 +1,6 @@
 package idesyde.identification.models.workload
 
 import idesyde.utils.MultipliableFractional
-import org.jgrapht.opt.graph.sparse.SparseIntDirectedGraph
 
 import math.Fractional.Implicits.infixFractionalOps
 import math.Ordering.Implicits.infixOrderingOps

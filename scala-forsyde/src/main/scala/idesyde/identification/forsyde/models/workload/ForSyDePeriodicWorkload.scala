@@ -11,9 +11,6 @@ import java.util.stream.Collectors
 import org.jgrapht.graph.builder.GraphBuilder
 import org.jgrapht.graph.SimpleDirectedGraph
 import org.jgrapht.graph.DefaultEdge
-import org.jgrapht.opt.graph.sparse.SparseIntDirectedGraph
-import org.jgrapht.alg.util.Pair
-import org.jgrapht.opt.graph.sparse.IncomingEdgesSupport
 import org.jgrapht.traverse.BreadthFirstIterator
 import org.jgrapht.traverse.TopologicalOrderIterator
 

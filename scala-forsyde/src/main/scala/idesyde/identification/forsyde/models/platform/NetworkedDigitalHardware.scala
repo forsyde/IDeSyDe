@@ -16,7 +16,6 @@ import scala.jdk.OptionConverters.*
 import scala.jdk.CollectionConverters.*
 import scala.jdk.StreamConverters.*
 import org.jgrapht.alg.shortestpath.DijkstraManyToManyShortestPaths
-import org.jgrapht.opt.graph.sparse.SparseIntUndirectedGraph
 import org.jgrapht.alg.util.Pair
 import org.jgrapht.opt.graph.sparse.SparseIntUndirectedWeightedGraph
 import org.jgrapht.graph.AsWeightedGraph

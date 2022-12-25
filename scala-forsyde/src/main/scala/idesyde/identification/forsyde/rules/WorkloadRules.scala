@@ -1,4 +1,4 @@
-package idesyde.identification.forsyde.rules.workload
+package idesyde.identification.forsyde.rules
 
 import scala.jdk.StreamConverters._
 import scala.jdk.CollectionConverters._

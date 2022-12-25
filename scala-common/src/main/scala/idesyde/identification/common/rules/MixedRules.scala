@@ -30,7 +30,7 @@ object MixedRules {
           sdfApplications = a,
           platform = p,
           processMappings = Array.empty,
-          memoryMappings = Array.empty,
+          messageMappings = Array.empty,
           messageSlotAllocations = Array.empty
         )
       )

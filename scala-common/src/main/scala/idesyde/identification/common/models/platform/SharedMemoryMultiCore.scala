@@ -1,8 +1,5 @@
 package idesyde.identification.common.models.platform
 
-import org.jgrapht.alg.shortestpath.FloydWarshallShortestPaths
-import org.jgrapht.graph.{DefaultEdge, SimpleGraph}
-
 import scala.jdk.OptionConverters.*
 import scala.jdk.CollectionConverters.*
 import scala.jdk.StreamConverters.*

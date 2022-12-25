@@ -10,7 +10,7 @@ final case class SDFToTiledMultiCore(
     val sdfApplications: SDFApplication,
     val platform: SchedulableTiledMultiCore,
     val processMappings: Array[String],
-    val memoryMappings: Array[String],
+    val messageMappings: Array[String],
     val messageSlotAllocations: Array[Map[String, Array[Boolean]]]
 ) extends StandardDecisionModel
     with WCETComputationMixin(sdfApplications, platform) {
@@ -19,7 +19,7 @@ final case class SDFToTiledMultiCore(
   val coveredElementRelations =
     sdfApplications.coveredElementRelations ++ platform.coveredElementRelations ++
       sdfApplications.actorsIdentifiers.zip(processMappings) ++
-      sdfApplications.channelsIdentifiers.zip(memoryMappings) ++
+      sdfApplications.channelsIdentifiers.zip(messageMappings) ++
       messageSlotAllocations.zipWithIndex.flatMap((slots, i) =>
         platform.hardware.communicationElems
           .filter(ce => slots.contains(ce) && slots(ce).exists(b => b))

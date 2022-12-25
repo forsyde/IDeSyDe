@@ -12,10 +12,6 @@ trait ChocoStandardDecisionModel extends StandardDecisionModel {
 
   def chocoModel: Model
 
-  def shouldRestartOnSolution: Boolean = true
-
-  def shouldLearnSignedClauses: Boolean = true
-
   def rebuildFromChocoOutput(output: Solution): DecisionModel
 
   /** Due to how the choco solver treats multi objective optimization, the objective _have_ to be

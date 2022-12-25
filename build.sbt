@@ -1,5 +1,5 @@
 ThisBuild / organization := "io.github.forsyde"
-ThisBuild / version := "0.3.4"
+ThisBuild / version := "0.3.5"
 ThisBuild / scalaVersion := "3.1.3"
 
 lazy val forsydeIoVersion  = "0.6.0"
@@ -32,7 +32,6 @@ lazy val forsyde = (project in file("scala-forsyde"))
       ("org.scala-graph" %% "graph-core" % scalaGraphVersion).cross(CrossVersion.for3Use2_13),
       "io.github.forsyde" % "forsyde-io-java-core" % forsydeIoVersion,
       "org.jgrapht"       % "jgrapht-core"         % jgraphtVersion,
-      "org.jgrapht"       % "jgrapht-opt"          % jgraphtVersion,
       "org.typelevel"    %% "spire"                % "0.18.0"
     )
   )
@@ -45,8 +44,6 @@ lazy val minizinc = (project in file("scala-minizinc"))
     libraryDependencies ++= Seq(
       "com.outr"     %% "scribe"       % scribeVersion,
       "com.lihaoyi"  %% "upickle"      % "1.4.0",
-      "org.jgrapht"   % "jgrapht-core" % jgraphtVersion,
-      "org.jgrapht"   % "jgrapht-opt"  % jgraphtVersion,
       "org.scalanlp" %% "breeze"       % breezeVersion
     )
   )
@@ -60,7 +57,6 @@ lazy val choco = (project in file("scala-choco"))
       "com.novocode"     % "junit-interface" % "0.11" % "test",
       "org.choco-solver" % "choco-solver"    % "4.10.9",
       "org.jgrapht"      % "jgrapht-core"    % jgraphtVersion,
-      "org.jgrapht"      % "jgrapht-opt"     % jgraphtVersion,
       "com.outr"        %% "scribe"          % scribeVersion
     )
   )

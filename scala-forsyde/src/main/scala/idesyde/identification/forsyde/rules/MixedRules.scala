@@ -10,6 +10,8 @@ import forsyde.io.java.typed.viewers.decision.Scheduled
 import forsyde.io.java.typed.viewers.visualization.GreyBox
 import forsyde.io.java.typed.viewers.visualization.Visualizable
 import forsyde.io.java.typed.viewers.platform.runtime.AbstractScheduler
+import forsyde.io.java.typed.viewers.decision.MemoryMapped
+import forsyde.io.java.typed.viewers.platform.GenericMemoryModule
 
 object MixedRules {
 
@@ -19,7 +21,7 @@ object MixedRules {
   ): Option[? <: DesignModel] = {
     designModel match {
       case ForSyDeDesignModel(forSyDeSystemGraph) => {
-        designModel match {
+        decisionModel match {
           case dse: PeriodicWorkloadToPartitionedSharedMultiCore => {
             val rebuilt = ForSyDeSystemGraph().merge(forSyDeSystemGraph)
             // dse.workload.tasks.zipWithIndex.foreach((t, i) => {
@@ -70,25 +72,23 @@ object MixedRules {
                   GreyBox.enforce(sched).insertContainedPort(rebuilt, Visualizable.enforce(task))
                 })
             }
-            taskMapping.zipWithIndex.foreach((mapping, i) => {
-              val j      = mapping.getValue() // output.getIntVal(mapping)
-              val task   = dse.workload.tasks(i)
-              val memory = dse.schedHwModel.hardware.storageElems(j)
-              MemoryMapped.enforce(task).insertMappingHostsPort(rebuilt, memory)
-              // rebuilt.connect(task, memory, "mappingHost", EdgeTrait.DECISION_ABSTRACTMAPPING)
-              // GreyBox.enforce(memory)
-              // rebuilt.connect(memory, task, "contained", EdgeTrait.VISUALIZATION_VISUALCONTAINMENT)
-            })
-            dataBlockMapping.zipWithIndex.foreach((mapping, i) => {
-              val j       = mapping.getValue() // output.getIntVal(mapping)
-              val channel = dse.workload.dataBlocks(i)
-              val memory  = dse.schedHwModel.hardware.storageElems(j)
-              MemoryMapped.enforce(channel).insertMappingHostsPort(rebuilt, memory)
-              // rebuilt.connect(channel, memory, "mappingHost", EdgeTrait.DECISION_ABSTRACTMAPPING)
-              GreyBox.enforce(memory).insertContainedPort(rebuilt, Visualizable.enforce(channel))
-              // rebuilt.connect(memory, channel, "contained", EdgeTrait.VISUALIZATION_VISUALCONTAINMENT)
-            })
-            Some(rebuilt)
+            for (
+              (taskId, memId) <- dse.processMappings;
+              task  = rebuilt.queryVertex(taskId).get();
+              mem = rebuilt.queryVertex(memId).get()
+            ) {
+              GenericMemoryModule.safeCast(mem)
+                .ifPresent(memory => MemoryMapped.enforce(task).insertMappingHostsPort(rebuilt, memory))
+            }
+            for (
+              (channelId, memId) <- dse.channelMappings;
+              channel  = rebuilt.queryVertex(channelId).get();
+              mem = rebuilt.queryVertex(memId).get()
+            ) {
+              GenericMemoryModule.safeCast(mem)
+                .ifPresent(memory => MemoryMapped.enforce(channel).insertMappingHostsPort(rebuilt, memory))
+            }
+            Some(ForSyDeDesignModel(rebuilt))
           }
           case _ => Option.empty
         }

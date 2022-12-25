@@ -1,6 +1,6 @@
 package idesyde.identification.choco.models.sdf
 
-import idesyde.identification.choco.interfaces.ChocoCPForSyDeDecisionModel
+import idesyde.identification.choco.ChocoStandardDecisionModel
 import org.chocosolver.solver.Model
 import forsyde.io.java.core.Vertex
 import org.chocosolver.solver.Solution
@@ -12,7 +12,6 @@ import org.chocosolver.solver.variables.BoolVar
 import org.chocosolver.solver.variables.IntVar
 import org.chocosolver.solver.search.strategy.strategy.AbstractStrategy
 import org.chocosolver.solver.variables.Variable
-import idesyde.identification.forsyde.models.mixed.SDFToSchedTiledHW
 import idesyde.identification.forsyde.ForSyDeIdentificationRule
 import idesyde.identification.choco.models.TileAsyncInterconnectCommsModule
 import spire.math.Rational
@@ -27,6 +26,7 @@ import org.chocosolver.solver.search.loop.monitors.IMonitorContradiction
 import org.chocosolver.solver.exception.ContradictionException
 import scala.collection.mutable.Buffer
 import forsyde.io.java.core.EdgeInfo
+import idesyde.identification.common.models.mixed.SDFToTiledMultiCore
 
 class ConMonitorObj2(val model: ChocoSDFToSChedTileHW2) extends IMonitorContradiction {
 
@@ -62,9 +62,9 @@ class ConMonitorObj2(val model: ChocoSDFToSChedTileHW2) extends IMonitorContradi
 }
 
 final case class ChocoSDFToSChedTileHW2(
-    val dse: SDFToSchedTiledHW
+    val dse: SDFToTiledMultiCore
 )(using Fractional[Rational])
-    extends ChocoCPForSyDeDecisionModel
+    extends ChocoStandardDecisionModel
     with ChocoModelMixin(shouldLearnSignedClauses = false) {
 
   val chocoModel: Model = Model()
@@ -73,7 +73,7 @@ final case class ChocoSDFToSChedTileHW2(
 
   // section for time multiplier calculation
   val timeValues =
-    (dse.wcets.flatten ++ dse.platform.tiledDigitalHardware.maxTraversalTimePerBitPerRouter)
+    (dse.wcets.flatten ++ dse.platform.hardware.maxTraversalTimePerBit.flatten)
   var timeMultiplier = 1L
   while (
     timeValues
@@ -90,7 +90,7 @@ final case class ChocoSDFToSChedTileHW2(
   }
 
   // do the same for memory numbers
-  val memoryValues = dse.platform.tiledDigitalHardware.memories.map(_.getSpaceInBits().toLong) ++
+  val memoryValues = dse.platform.hardware.tileMemorySizes ++
     dse.sdfApplications.messagesMaxSizes ++
     dse.sdfApplications.processSizes
   var memoryDivider = 1L
@@ -107,7 +107,7 @@ final case class ChocoSDFToSChedTileHW2(
         dse.sdfApplications.actorsIdentifiers.indexOf(src)
       ) * p + tok) * mSize / memoryDivider).toInt
     ),
-    dse.platform.tiledDigitalHardware.maxMemoryPerTile
+    dse.platform.hardware.tileMemorySizes
       .map(_ / memoryDivider)
       .map(l => if (l > Int.MaxValue) then Int.MaxValue - 1 else l)
       .map(_.toInt)
@@ -115,16 +115,16 @@ final case class ChocoSDFToSChedTileHW2(
 
   val tileAnalysisModule = TileAsyncInterconnectCommsModule(
     chocoModel,
-    dse.platform.schedulerSet,
-    dse.platform.tiledDigitalHardware.routerSet,
+    dse.platform.runtimes.schedulers.zipWithIndex.map((_, i) => i),
+    dse.platform.hardware.communicationElems.zipWithIndex.map((_, i) => i),
     dse.sdfApplications.sdfMessages.zipWithIndex.map((m, i) => i),
     dse.sdfApplications.sdfMessages.map((_, _, _, mSize, _, _, _) =>
-      dse.platform.tiledDigitalHardware.bandWidthPerCEPerVirtualChannel.map(bw =>
+      dse.platform.hardware.communicationElementsBitPerSecPerChannel.map(bw =>
         (mSize / bw / timeMultiplier / memoryDivider).ceil.toInt
       )
     ),
-    dse.platform.tiledDigitalHardware.commElemsVirtualChannels,
-    dse.platform.tiledDigitalHardware.computeRouterPaths
+    dse.platform.hardware.communicationElementsMaxChannels,
+    dse.platform.hardware.computedPaths.map(_.map(_.map(e => dse.platform.hardware.communicationElems.indexOf(e)).toArray))
   )
 
   val sdfAnalysisModule = SDFSchedulingAnalysisModule2(
@@ -155,9 +155,9 @@ final case class ChocoSDFToSChedTileHW2(
   })
   // build the table that make this constraint
   for (
-    (p, sendi)  <- dse.platform.schedulerSet.zipWithIndex;
-    (pp, desti) <- dse.platform.schedulerSet.zipWithIndex;
-    if sendi != desti
+    (_, p)  <- dse.platform.runtimes.schedulers.zipWithIndex;
+    (_, pp) <- dse.platform.runtimes.schedulers.zipWithIndex;
+    if p != pp
   ) {
     val anyMapped = dse.sdfApplications.sdfMessages
       .map((s, t, cs, _, _, _, _) =>
@@ -178,7 +178,7 @@ final case class ChocoSDFToSChedTileHW2(
       )
     chocoModel.ifOnlyIf(
       chocoModel.or(anyMapped: _*),
-      chocoModel.arithm(tileAnalysisModule.procElemSendsDataToAnother(sendi)(desti), "=", 1)
+      chocoModel.arithm(tileAnalysisModule.procElemSendsDataToAnother(p)(pp), "=", 1)
       // tileAnalysisModule.procElemSendsDataToAnother(sendi)(desti).eq(0).decompose()
     )
   }
@@ -218,7 +218,7 @@ final case class ChocoSDFToSChedTileHW2(
   //   chocoModel.intVar(
   //   "nUsedPEs",
   //   1,
-  //   dse.platform.tiledDigitalHardware.processors.length,
+  //   dse.platform.hardware.processors.length,
   //   true
   // )
   // make sure the variable counts the number of used
@@ -258,37 +258,37 @@ final case class ChocoSDFToSChedTileHW2(
   // BRANCHING AND SEARCH
 
   // breaking platform symmetries
-  val mappedPerProcessingElement = dse.platform.schedulerSet.zipWithIndex.map((p, i) =>
+  val mappedPerProcessingElement = dse.platform.runtimes.schedulers.zipWithIndex.map((p, i) =>
     chocoModel.count(
       s"mappedPerProcessingElement($p)",
-      p,
+      i,
       memoryMappingModule.processesMemoryMapping: _*
     )
   )
   val minusMappedPerProcessingElement =
     mappedPerProcessingElement.map(v => chocoModel.intMinusView(v))
-  val indexOfPe = dse.platform.schedulerSet.map(p =>
+  val indexOfPe = dse.platform.runtimes.schedulers.map(p =>
     chocoModel.intVar(
       s"indexOfPe($p)",
       0,
-      Math.max(dse.sdfApplications.actors.size, dse.platform.schedulerSet.size + 1),
+      Math.max(dse.sdfApplications.actorsIdentifiers.size, dse.platform.runtimes.schedulers.size + 1),
       false
     )
   )
   for (
-    (p, j) <- dse.platform.schedulerSet.zipWithIndex;
+    (p, j) <- dse.platform.runtimes.schedulers.zipWithIndex;
     (a, i) <- dse.sdfApplications.topologicalAndHeavyActorOrdering.zipWithIndex
   ) {
     chocoModel.ifThenElse(
-      chocoModel.arithm(memoryMappingModule.processesMemoryMapping(a), "=", p),
+      chocoModel.arithm(memoryMappingModule.processesMemoryMapping(dse.sdfApplications.actorsIdentifiers.indexOf(a)), "=", j),
       chocoModel.arithm(indexOfPe(j), "<=", i),
       chocoModel.arithm(indexOfPe(j), "!=", i)
     )
   }
-  dse.platform.tiledDigitalHardware.symmetricTileGroups
+  dse.platform.hardware.symmetricTileGroups
     .maxByOption(_.size)
     .foreach(group => {
-      val pSorted = group.toArray.sorted
+      val pSorted = group.toArray.sorted.map(dse.platform.hardware.platformElements.indexOf(_))
       chocoModel
         .lexChainLessEq(
           pSorted.map(p => Array(minusMappedPerProcessingElement(p), indexOfPe(p))): _*
@@ -302,16 +302,16 @@ final case class ChocoSDFToSChedTileHW2(
       //   .post()
     })
   // enforcing a certain order whenever possible
-  val dataFlows = dse.platform.schedulerSet.map(i =>
-    dse.platform.schedulerSet.map(j => chocoModel.boolVar(s"dataFlows($i, $j)"))
+  val dataFlows = dse.platform.runtimes.schedulers.map(i =>
+    dse.platform.runtimes.schedulers.map(j => chocoModel.boolVar(s"dataFlows($i, $j)"))
   )
   for (
-    (p, i)  <- dse.platform.schedulerSet.zipWithIndex;
-    (pp, j) <- dse.platform.schedulerSet.zipWithIndex
+    (p, i)  <- dse.platform.runtimes.schedulers.zipWithIndex;
+    (pp, j) <- dse.platform.runtimes.schedulers.zipWithIndex
   ) {
     val possiblePaths = tileAnalysisModule.procElemSendsDataToAnother(i)(
       j
-    ) +: dse.platform.schedulerSet.zipWithIndex.map((ppp, k) =>
+    ) +: dse.platform.runtimes.schedulers.zipWithIndex.map((ppp, k) =>
       tileAnalysisModule.procElemSendsDataToAnother(i)(k).and(dataFlows(k)(j)).boolVar()
     )
     chocoModel.ifOnlyIf(
@@ -321,10 +321,10 @@ final case class ChocoSDFToSChedTileHW2(
       )
     )
   }
-  for ((p, i) <- dse.platform.schedulerSet.zipWithIndex) {
+  for ((p, i) <- dse.platform.runtimes.schedulers.zipWithIndex) {
     chocoModel.ifThen(
       chocoModel.arithm(dataFlows(i)(i), "=", 0),
-      sdfAnalysisModule.makeCanonicalOrderingAtScheduleConstraint(p)
+      sdfAnalysisModule.makeCanonicalOrderingAtScheduleConstraint(i)
     )
   }
   // also enforce a waterfall pattern for the mappings
@@ -358,15 +358,15 @@ final case class ChocoSDFToSChedTileHW2(
   // println(dse.sdfApplications.firingsPrecedenceGraph.toSortedString())
   override val strategies: Array[AbstractStrategy[? <: Variable]] = Array(
     CompactingMultiCoreMapping[Int](
-      dse.platform.tiledDigitalHardware.minTraversalTimePerBit.map(arr =>
+      dse.platform.hardware.minTraversalTimePerBit.map(arr =>
         arr.map(v => (v * timeMultiplier).ceil.toInt)
       ),
       dse.sdfApplications.topologicalAndHeavyActorOrdering.map(a =>
         dse.sdfApplications.sdfDisjointComponents
-          .indexWhere(_.exists(_ == dse.sdfApplications.actorsIdentifiers(a)))
+          .indexWhere(_.exists(_ == a))
       ),
       dse.sdfApplications.topologicalAndHeavyActorOrdering.map(a =>
-        memoryMappingModule.processesMemoryMapping(dse.sdfApplications.actorsSet.indexOf(a))
+        memoryMappingModule.processesMemoryMapping(dse.sdfApplications.actorsIdentifiers.indexOf(a))
       )
     ),
     Search.minDomLBSearch(nUsedPEs),
@@ -439,51 +439,15 @@ final case class ChocoSDFToSChedTileHW2(
 
   //---------
 
-  def rebuildFromChocoOutput(output: Solution): ForSyDeSystemGraph = {
+  def rebuildFromChocoOutput(output: Solution): DecisionModel = {
     scribe.debug(
       s"solution: nUsedPEs = ${output.getIntVal(nUsedPEs)}, globalInvThroughput = ${output
         .getIntVal(sdfAnalysisModule.globalInvThroughput)}, maxLatency = ${output.getIntVal(maxLatency)}"
     )
-    val paths = tileAnalysisModule.commElemsPaths
-    val channelToRouters = dse.sdfApplications.channelsIdentifiers.map(c =>
-      val i = dse.sdfApplications.sdfMessages.indexWhere((s, d, cs, l, _, _, _) => cs.contains(c))
-      dse.platform.tiledDigitalHardware.routerSet.zipWithIndex.map((s, j) =>
-        val p = output.getIntVal(memoryMappingModule.messagesMemoryMapping(i))
-        output.getIntVal(tileAnalysisModule.numVirtualChannelsForProcElem(p)(j)) > 0
-      )
-    )
-    // println(dse.platform.tiledDigitalHardware.routerPaths.map(_.map(_.mkString("[", ", ", "]")).mkString("[", ", ", "]")).mkString("[", "\n", "]"))
-    // println(channelToRouters.map(_.mkString("[", ", ", "]")).mkString("[", "\n", "]"))
-    // println(tileAnalysisModule.numVirtualChannelsForProcElem.map(_.mkString(", ")).mkString("\n"))
-    val channelToTiles = dse.sdfApplications.channelsIdentifiers.map(c =>
-      val i = dse.sdfApplications.sdfMessages.indexWhere((s, d, cs, l, _, _, _) => cs.contains(c))
-      dse.platform.tiledDigitalHardware.tileSet.zipWithIndex.map((s, j) =>
-        output.getIntVal(memoryMappingModule.messagesMemoryMapping(i)) == j
-      )
-    )
-    val mappings = dse.sdfApplications.channels.zipWithIndex
-      .map((c, i) => channelToTiles(i) ++ channelToRouters(i))
-    val schedulings =
-      memoryMappingModule.processesMemoryMapping.map(vs =>
-        dse.platform.tiledDigitalHardware.tileSet.map(j => output.getIntVal(vs) == j)
-      )
-    dse.addMappingsAndRebuild(
-      mappings,
-      schedulings,
-      dse.platform.schedulerSet.zipWithIndex.map((s, j) => {
-        sdfAnalysisModule.jobsAndActors.zipWithIndex
-          .filter((job, i) =>
-            output.getIntVal(
-              memoryMappingModule.processesMemoryMapping(
-                dse.sdfApplications.actorsSet.indexOf(job._1)
-              )
-            ) == s
-          )
-          .sortBy((job, i) => output.getIntVal(sdfAnalysisModule.jobStartTime(i)))
-          .map((job, i) => dse.sdfApplications.actorsSet.indexOf(job._1))
-      }),
-      // TODO: fix this slot allocaiton strategy for later. It is Okay, but lacks some direct synthetizable details, like which exact VC the channel goes
-      dse.sdfApplications.channelsIdentifiers.zipWithIndex.map((c, ci) => {
+    dse.copy(
+      processMappings = dse.sdfApplications.actorsIdentifiers.zipWithIndex.map((a, i) => dse.platform.hardware.memories(output.getIntVal(memoryMappingModule.processesMemoryMapping(i)))),
+      messageMappings = dse.sdfApplications.channelsIdentifiers.zipWithIndex.map((c, i) => dse.platform.hardware.memories(output.getIntVal(memoryMappingModule.messagesMemoryMapping(i)))),
+      messageSlotAllocations = dse.sdfApplications.channelsIdentifiers.zipWithIndex.map((c, ci) => {
         // we have to look from the source perpective, since the sending processor is the one that allocates
         val (s, _, _, _, _, _, _) =
           dse.sdfApplications.sdfMessages.find((s, d, cs, l, _, _, _) => cs.contains(c)).get
@@ -492,35 +456,21 @@ final case class ChocoSDFToSChedTileHW2(
             dse.sdfApplications.actorsIdentifiers.indexOf(s)
           )
         )
-        dse.platform.tiledDigitalHardware.allCommElems.zipWithIndex.map((ce, j) => {
-          output.getIntVal(tileAnalysisModule.numVirtualChannelsForProcElem(p)(j))
-        })
-      }),
-      dse.sdfApplications.actors.zipWithIndex.map((a, i) =>
-        val th = output.getIntVal(
-          sdfAnalysisModule.invThroughputs(i)
-        )
-        // val th = sdfAnalysisModule.jobsAndActors.zipWithIndex
-        //   .filter((job, ji) => job._1 == dse.sdfApplications.actorsSet.indexOf(i))
-        //   .map((job, ji) => output.getIntVal(sdfAnalysisModule.jobsInvThroughputs(ji)))
-        //   .max
-        if (th > 0) {
-          Rational(
-            timeMultiplier,
-            th
-          )
-        } else {
-          Rational(-1)
-        }
-      )
+        // TODO: this must be fixed later, it might clash correct slots
+        val iter = for (
+          (ce, j) <- dse.platform.hardware.communicationElems.zipWithIndex;
+          if output.getIntVal(tileAnalysisModule.numVirtualChannelsForProcElem(p)(j)) > 0
+        ) yield ce -> (0 until dse.platform.hardware.communicationElementsMaxChannels(j)).map(slot => (slot + j % dse.platform.hardware.communicationElementsMaxChannels(j)) < output.getIntVal(tileAnalysisModule.numVirtualChannelsForProcElem(p)(j))).toArray
+        iter.toMap
+      })
     )
   }
 
   def uniqueIdentifier: String = "ChocoSDFToSChedTileHW2"
 
-  def coveredElements: Iterable[Vertex] = dse.coveredElements
+  val coveredElements = dse.coveredElements
 
-  def coveredElementRelations: Set[EdgeInfo] = dse.coveredElementRelations
+  val coveredElementRelations = dse.coveredElementRelations
 
 }
 
@@ -531,20 +481,21 @@ object ChocoSDFToSChedTileHW2 {
       identified: scala.collection.Iterable[DecisionModel]
   )(using scala.math.Fractional[Rational]): IdentificationResult[ChocoSDFToSChedTileHW2] =
     ForSyDeIdentificationRule.identifyWrapper(model, identified, identifyFromForSyDe)
+    
   def identifyFromForSyDe(
       model: ForSyDeSystemGraph,
       identified: scala.collection.Iterable[DecisionModel]
   )(using scala.math.Fractional[Rational]): IdentificationResult[ChocoSDFToSChedTileHW2] = {
     identified
-      .find(m => m.isInstanceOf[SDFToSchedTiledHW])
-      .map(m => m.asInstanceOf[SDFToSchedTiledHW])
+      .find(m => m.isInstanceOf[SDFToTiledMultiCore])
+      .map(m => m.asInstanceOf[SDFToTiledMultiCore])
       .map(dse => identFromForSyDeWithDeps(model, dse))
       .getOrElse(IdentificationResult.unfixedEmpty())
   }
 
   def identFromForSyDeWithDeps(
       model: ForSyDeSystemGraph,
-      dse: SDFToSchedTiledHW
+      dse: SDFToTiledMultiCore
   )(using scala.math.Fractional[Rational]): IdentificationResult[ChocoSDFToSChedTileHW2] = {
     IdentificationResult.fixed(ChocoSDFToSChedTileHW2(dse))
   }

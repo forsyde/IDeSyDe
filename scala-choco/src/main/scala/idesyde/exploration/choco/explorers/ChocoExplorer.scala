@@ -20,7 +20,6 @@ import org.chocosolver.solver.variables.IntVar
 import org.chocosolver.solver.search.strategy.Search
 import org.chocosolver.solver.search.strategy.strategy.AbstractStrategy
 import org.chocosolver.solver.variables.Variable
-import idesyde.identification.choco.models.mixed.ChocoSDFToSChedTileHW
 import org.chocosolver.solver.search.loop.monitors.IMonitorSolution
 import idesyde.exploration.choco.explorers.ParetoMinimizationBrancher
 

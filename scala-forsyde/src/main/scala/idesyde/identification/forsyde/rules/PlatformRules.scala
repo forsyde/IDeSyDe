@@ -1,4 +1,4 @@
-package idesyde.identification.forsyde.rules.platform
+package idesyde.identification.forsyde.rules
 
 import scala.jdk.CollectionConverters._
 

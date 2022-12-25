@@ -36,7 +36,7 @@ trait ForSyDeIOExplorer extends Explorer {
 
   def exploreForSyDe(decisionModel: ForSyDeDecisionModel, explorationTimeOutInSecs: Long = 0L)(using
       ExecutionContext
-  ): LazyList[ForSyDeDecisionModel]
+  ): LazyList[DecisionModel]
 
   def canExploreForSyDe(decisionModel: ForSyDeDecisionModel): Boolean
 

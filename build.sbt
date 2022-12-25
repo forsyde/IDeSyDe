@@ -35,6 +35,7 @@ lazy val forsyde = (project in file("scala-forsyde"))
       ("org.scala-graph" %% "graph-core" % scalaGraphVersion).cross(CrossVersion.for3Use2_13),
       "io.github.forsyde" % "forsyde-io-java-core" % forsydeIoVersion,
       "org.jgrapht"       % "jgrapht-core"         % jgraphtVersion,
+      "org.jgrapht"       % "jgrapht-opt"         % jgraphtVersion,
       "org.typelevel"    %% "spire"                % "0.18.0"
     )
   )
@@ -86,7 +87,8 @@ lazy val cli = (project in file("scala-cli"))
       val paths = (jlinkBuildImage / fullClasspath).value
       paths.filter(f => {
         f.get(moduleID.key).exists(mID => mID.name.contains("jheaps")) ||
-        f.get(moduleID.key).exists(mID => mID.name.contains("commons-text"))
+        f.get(moduleID.key).exists(mID => mID.name.contains("commons-text")) ||
+        f.get(moduleID.key).exists(mID => mID.name.contains("fastutil"))
       }).map(_.data)
     }
   )

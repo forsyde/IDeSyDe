@@ -1,4 +1,4 @@
-package idesyde.identification.minizinc.api
+package idesyde.identification.minizinc
 
 import idesyde.identification.DecisionModel
 

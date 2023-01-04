@@ -78,8 +78,6 @@ class ChocoExplorer() extends ForSyDeIOExplorer:
   def exploreForSyDe(
       forSyDeDecisionModel: ForSyDeDecisionModel,
       explorationTimeOutInSecs: Long = 0L
-  )(using
-      ExecutionContext
   ): LazyList[DecisionModel] = forSyDeDecisionModel match
     case chocoCpModel: ChocoCPForSyDeDecisionModel =>
       val solver          = chocoCpModel.chocoModel.getSolver

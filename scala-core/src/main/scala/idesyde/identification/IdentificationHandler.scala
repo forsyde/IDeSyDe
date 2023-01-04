@@ -65,4 +65,12 @@ class IdentificationHandler(
     dominant
   }
 
+  def integrateDecisionModel(
+      model: DesignModel,
+      decisions: DecisionModel
+  ): Set[DesignModel] = for (
+    module     <- registeredModules; integrationRule <- module.integrationRules;
+    integrated <- integrationRule(model, decisions)
+  ) yield integrated
+
 }

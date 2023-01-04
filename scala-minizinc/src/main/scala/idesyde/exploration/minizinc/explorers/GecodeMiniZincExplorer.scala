@@ -39,7 +39,7 @@ final case class GecodeMiniZincExplorer()
     decisionModel match
       case _ => 0
 
-  def exploreForSyDe(decisionModel: ForSyDeDecisionModel, explorationTimeOutInSecs: Long = 0L)(using ExecutionContext) =
+  def exploreForSyDe(decisionModel: ForSyDeDecisionModel, explorationTimeOutInSecs: Long = 0L) =
     decisionModel match
       case _ => LazyList.empty
 

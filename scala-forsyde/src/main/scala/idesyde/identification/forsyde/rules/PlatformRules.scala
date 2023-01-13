@@ -207,7 +207,7 @@ object PlatformRules {
         .outgoingEdgesOf(ce.getViewedVertex())
         .forEach(e => {
           val dst = model.getEdgeTarget(e)
-          GenericCommunicationModule
+          DigitalModule
             .safeCast(dst)
             .ifPresent(dstce => {
               interconnectTopologySrcs += ce.getIdentifier()
@@ -249,11 +249,11 @@ object PlatformRules {
           InstrumentedCommunicationModule
             .safeCast(_)
             .map(ce =>
-              ce.getFlitSizeInBits() * ce.getMaxCyclesPerFlit() / ce.getOperatingFrequencyInHertz()
+              Rational(ce.getFlitSizeInBits() * ce.getMaxCyclesPerFlit(),  ce.getOperatingFrequencyInHertz())
             )
-            .orElse(1)
+            .orElse(Rational.zero)
         ),
-        preComputedPaths = Array.empty
+        preComputedPaths = Map.empty
       )
     )
   }

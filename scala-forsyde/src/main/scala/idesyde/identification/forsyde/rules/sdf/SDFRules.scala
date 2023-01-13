@@ -45,7 +45,7 @@ object SDFRules {
         c.getConsumerPort(model).map(a => sdfActors.contains(a)).orElse(false)
           && c.getProducerPort(model).map(a => sdfActors.contains(a)).orElse(false)
       )
-    if (sdfActors.size == 0 && !channelsConnectActors) {
+    if (sdfActors.size == 0 || !channelsConnectActors) {
       logger.debug("No actors, or channels do not connect actors")
       return Option.empty
     }

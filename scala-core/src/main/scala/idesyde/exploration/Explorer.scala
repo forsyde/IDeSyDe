@@ -32,40 +32,40 @@ trait Explorer {
 
   def explore(decisionModel: DecisionModel, explorationTimeOutInSecs: Long = 0L): LazyList[DecisionModel]
 
+  def availableCriterias(decisionModel: DecisionModel): Set[ExplorationCriteria] = Set()
+
+  def criteriaValue(decisionModel: DecisionModel, criteria: ExplorationCriteria): Double = 0.0
+
   def canExplore(decisionModel: DecisionModel): Boolean
 
-  def estimateTimeUntilFeasibility(decisionModel: DecisionModel): Duration
+  @deprecated("this was substituded by the criteriaValue function")
+  def estimateTimeUntilFeasibility(decisionModel: DecisionModel) = criteriaValue(decisionModel, ExplorationCriteria.TimeUntilFeasibility)
 
-  def estimateTimeUntilOptimality(decisionModel: DecisionModel): Duration
+  @deprecated("this was substituded by the criteriaValue function")
+  def estimateTimeUntilOptimality(decisionModel: DecisionModel) = criteriaValue(decisionModel, ExplorationCriteria.TimeUntilOptimality)
 
-  def estimateMemoryUntilFeasibility(decisionModel: DecisionModel): Long
+  @deprecated("this was substituded by the criteriaValue function")
+  def estimateMemoryUntilFeasibility(decisionModel: DecisionModel) = criteriaValue(decisionModel, ExplorationCriteria.MemoryUntilFeasibility)
 
-  def estimateMemoryUntilOptimality(decisionModel: DecisionModel): Long
+  @deprecated("this was substituded by the criteriaValue function")
+  def estimateMemoryUntilOptimality(decisionModel: DecisionModel) = criteriaValue(decisionModel, ExplorationCriteria.MemoryUntilOptimality)
 
   // def estimateCriteria[V: PartiallyOrdered](decisionModel: DecisionModel, criteria: ExplorationCriteria): V
 
   def dominates(
       o: Explorer,
       m: DecisionModel,
-      criteria: Set[ExplorationCriteria] = Set()
+      desiredCriterias: Set[ExplorationCriteria]
   ): Boolean =
-    val c =
-      (if (criteria.contains(ExplorationCriteria.TimeUntilFeasibility))
-         estimateTimeUntilFeasibility(m).compareTo(o.estimateTimeUntilFeasibility(m)) < 0
-       else
-         true) &&
-        (if (criteria.contains(ExplorationCriteria.TimeUntilOptimality))
-           estimateTimeUntilOptimality(m).compareTo(o.estimateTimeUntilOptimality(m)) < 0
-         else
-           true) &&
-        (if (criteria.contains(ExplorationCriteria.MemoryUntilFeasibility))
-           estimateMemoryUntilFeasibility(m) < o.estimateMemoryUntilFeasibility(m)
-         else
-           true) &&
-        (if (criteria.contains(ExplorationCriteria.MemoryUntilOptimality))
-           estimateMemoryUntilOptimality(m) < o.estimateMemoryUntilOptimality(m)
-         else
-           true)
-    c && canExplore(m) && o.canExplore(m)
+    val otherCriterias = o.availableCriterias(m)
+    val comparisonResult = for (
+      thisC <- availableCriterias(m)
+      if desiredCriterias.contains(thisC)
+    ) yield if (otherCriterias.contains(thisC)) {
+      if (thisC.moreIsBetter) then criteriaValue(m, thisC) > o.criteriaValue(m, thisC) else criteriaValue(m, thisC) < o.criteriaValue(m, thisC)
+    } else {
+      false
+    }
+    !comparisonResult.contains(false) && canExplore(m) && o.canExplore(m)
 
 }

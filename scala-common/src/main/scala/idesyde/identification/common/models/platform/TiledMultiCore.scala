@@ -18,7 +18,7 @@ final case class TiledMultiCore(
     val tileMemorySizes: Array[Long],
     val communicationElementsMaxChannels: Array[Int],
     val communicationElementsBitPerSecPerChannel: Array[Rational],
-    val preComputedPaths: Array[Array[Iterable[String]]]
+    val preComputedPaths: Map[String, Map[String, Iterable[String]]]
 ) extends StandardDecisionModel
     with InstrumentedPlatformMixin[Rational] {
 
@@ -30,25 +30,26 @@ final case class TiledMultiCore(
   val platformElements: Array[String] =
     processors ++ memories ++ communicationElems
 
-  val topology = Graph(
-    interconnectTopologySrcs.zip(interconnectTopologyDsts).map((src, dst) => src ~> dst): _*
+  val topology = Graph.from(
+    platformElements,
+    interconnectTopologySrcs.zip(interconnectTopologyDsts).map((src, dst) => src ~> dst) ++
+      processors.zip(memories).map((src, dst) => src ~> dst) ++ processors.zip(memories).map((src, dst) => dst ~> src) ++
+      processors.zip(networkInterfaces).map((src, dst) => src ~> dst) ++ processors.zip(networkInterfaces).map((src, dst) => dst ~> src)
   )
 
   val computedPaths =
-    platformElements.zipWithIndex.map((pe, src) =>
-      platformElements.zipWithIndex.map((me, dst) =>
-        if (!preComputedPaths(src)(dst).isEmpty) {
+    platformElements.map(src =>
+      platformElements.map(dst =>
+        if (preComputedPaths.contains(src) && preComputedPaths(src).contains(dst) && !preComputedPaths(src)(dst).isEmpty) {
           preComputedPaths(src)(dst)
         } else {
           topology
-            .get(pe)
+            .get(src)
             .withSubgraph(nodes =
               v =>
-                v.toOuter == pe || v.toOuter == me || networkInterfaces.contains(
-                  v.value.toString()
-                ) || routers.contains(v.value.toString())
+                v.value == src || v.value == dst || communicationElems.contains(v.value)
             )
-            .shortestPathTo(topology.get(me), e => 1)
+            .shortestPathTo(topology.get(dst), e => 1)
             .map(path => path.nodes.map(_.value.toString()))
             .map(_.drop(1).dropRight(1))
             .getOrElse(Seq.empty)
@@ -67,7 +68,7 @@ final case class TiledMultiCore(
               dstIdx
             ))
           })
-          .reduce(_ + _)
+          .foldLeft(Rational.zero)(_ + _)
       })
     })
   }
@@ -80,7 +81,7 @@ final case class TiledMultiCore(
             val dstIdx = communicationElems.indexOf(ce)
             communicationElementsBitPerSecPerChannel(dstIdx)
           })
-          .reduce(_ + _)
+          .foldLeft(Rational.zero)(_ + _)
       })
     })
   }

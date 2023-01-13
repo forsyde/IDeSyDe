@@ -1,4 +1,4 @@
-package idesyde.identification.api
+package idesyde.identification.common
 
 import idesyde.identification.IdentificationRule
 import idesyde.identification.IdentificationModule

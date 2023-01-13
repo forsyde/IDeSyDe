@@ -21,22 +21,6 @@ final case class ChuffedMiniZincExplorer()
   override def canExploreForSyDe(decisionModel: ForSyDeDecisionModel): Boolean =
     "minizinc --solvers".!!.contains("org.chuffed.chuffed")
 
-  def estimateTimeUntilFeasibility(decisionModel: DecisionModel): Duration =
-    decisionModel match
-      case _ => Duration.ZERO
-
-  def estimateTimeUntilOptimality(decisionModel: DecisionModel): Duration =
-    decisionModel match
-      case _ => Duration.ZERO
-
-  def estimateMemoryUntilFeasibility(decisionModel: DecisionModel): Long =
-    decisionModel match
-      case _ => 0
-
-  def estimateMemoryUntilOptimality(decisionModel: DecisionModel): Long =
-    decisionModel match
-      case _ => 0
-
   def exploreForSyDe(decisionModel: ForSyDeDecisionModel, explorationTimeOutInSecs: Long = 0L) =
     decisionModel match
       case _ => LazyList.empty

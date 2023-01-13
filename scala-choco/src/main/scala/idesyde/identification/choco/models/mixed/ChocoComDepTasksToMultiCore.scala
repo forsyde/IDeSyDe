@@ -6,7 +6,6 @@ import scala.jdk.OptionConverters.*
 import scala.jdk.CollectionConverters.*
 import org.chocosolver.solver.Solution
 
-import idesyde.identification.choco.ChocoStandardDecisionModel
 import org.chocosolver.solver.search.strategy.Search
 import org.chocosolver.solver.search.strategy.selectors.variables.FirstFail
 import org.chocosolver.solver.search.strategy.selectors.values.IntDomainMin
@@ -32,6 +31,8 @@ import idesyde.identification.choco.interfaces.ChocoModelMixin
 import idesyde.identification.common.models.workload.CommunicatingExtendedDependenciesPeriodicWorkload
 import idesyde.identification.common.models.mixed.PeriodicWorkloadToPartitionedSharedMultiCore
 import idesyde.identification.DecisionModel
+import idesyde.identification.common.StandardDecisionModel
+import idesyde.identification.choco.ChocoDecisionModel
 
 // object ConMonitorObj extends IMonitorContradiction {
 
@@ -42,8 +43,8 @@ import idesyde.identification.DecisionModel
 
 final case class ChocoComDepTasksToMultiCore(
     val dse: PeriodicWorkloadToPartitionedSharedMultiCore
-) extends ChocoStandardDecisionModel
-    with ChocoModelMixin() {
+) extends StandardDecisionModel
+    with ChocoDecisionModel() {
 
   val coveredElements = dse.coveredElements
 

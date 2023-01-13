@@ -33,23 +33,14 @@ final case class SDFApplication(
   val coveredElements         = (actorsIdentifiers ++ channelsIdentifiers).toSet
   val coveredElementRelations = topologySrcs.zip(topologyDsts).toSet
 
-  val topology = Graph(
+
+  val topology = Graph.from(
+    actorsIdentifiers ++ channelsIdentifiers,
     topologySrcs
       .zip(topologyDsts)
       .zipWithIndex
-      .map((srcdst, i) => srcdst._1 ~> srcdst._2 % topologyEdgeValue(i)): _*
+      .map((srcdst, i) => srcdst._1 ~> srcdst._2 % topologyEdgeValue(i))
   )
-
-  /** this is a simple shortcut for the balance matrix (originally called topology matrix) as SDFs
-    * have only one configuration
-    */
-  val sdfBalanceMatrix: Array[Array[Int]] = computeBalanceMatrices(0)
-
-  /** this is a simple shortcut for the repetition vectors as SDFs have only one configuration */
-  val sdfRepetitionVectors: Array[Int] = computeRepetitionVectors(0)
-
-  /** this is a simple shortcut for the max parallel clusters as SDFs have only one configuration */
-  // val sdfMaxParallelClusters: Array[Array[Int]] = maximalParallelClustering(0)
 
   def isSelfConcurrent(actor: String): Boolean = channelsIdentifiers.exists(c =>
     topology.get(c).diSuccessors.exists(dst => dst.toOuter == actor) &&
@@ -73,18 +64,6 @@ final case class SDFApplication(
     channelsIdentifiers.zipWithIndex.map((c, i) =>
       pessimisticTokensPerChannel(i) * channelTokenSizes(i)
     )
-
-  val sdfDisjointComponents = disjointComponents.head
-
-  val decreasingActorConsumptionOrder = actorsIdentifiers.zipWithIndex
-    .sortBy((a, ai) => {
-      sdfBalanceMatrix.zipWithIndex
-        .filter((vec, c) => vec(ai) < 0)
-        .map((vec, c) => -channelTokenSizes(c) * vec(ai))
-        .sum
-    })
-    .map((a, ai) => a)
-    .reverse
 
   val messagesFromChannels = dataflowGraphs.zipWithIndex.map((df, dfi) => {
     var lumpedChannels = mutable
@@ -127,6 +106,16 @@ final case class SDFApplication(
     * size of message, produced, consumed, initial tokens)
     */
   val sdfMessages = messagesFromChannels(0)
+
+  /** this is a simple shortcut for the balance matrix (originally called topology matrix) as SDFs
+    * have only one configuration
+    */
+  val sdfBalanceMatrix: Array[Array[Int]] = computeBalanceMatrices(0)
+
+  /** this is a simple shortcut for the repetition vectors as SDFs have only one configuration */
+  val sdfRepetitionVectors: Array[Int] = computeRepetitionVectors(0)
+
+  val sdfDisjointComponents = disjointComponents.head
 
   /** This graph serves the same purpose as the common HSDF transformation, but simply stores
     * precedences between firings instead of data movement.
@@ -200,6 +189,16 @@ final case class SDFApplication(
     val param = edges.map((s, t) => (s ~> t)).toArray
     firingsPrecedenceGraph ++ param
   }
+
+  lazy val decreasingActorConsumptionOrder = actorsIdentifiers.zipWithIndex
+    .sortBy((a, ai) => {
+      sdfBalanceMatrix.zipWithIndex
+        .filter((vec, c) => vec(ai) < 0)
+        .map((vec, c) => -channelTokenSizes(c) * vec(ai))
+        .sum
+    })
+    .map((a, ai) => a)
+    .reverse
 
   lazy val topologicalAndHeavyJobOrdering = firingsPrecedenceGraph
     .topologicalSort()

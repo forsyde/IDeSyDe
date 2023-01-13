@@ -10,8 +10,6 @@ import idesyde.identification.DesignModel
 
 class ChocoIdentificationModule() extends IdentificationModule {
 
-
-  
   given Conversion[Double, Rational] = (d) => Rational(d)
   given Fractional[Rational]         = spire.compat.fractional[Rational]
   

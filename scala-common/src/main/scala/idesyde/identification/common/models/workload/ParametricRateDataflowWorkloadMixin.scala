@@ -13,8 +13,8 @@ import scalax.collection.GraphPredef._
 import scalax.collection.edge.Implicits._
 import scalax.collection.GraphEdge.DiEdgeLike
 import scalax.collection.edge.WDiEdge
-import scalax.collection.GraphTraversal.Parameters.apply
-import scalax.collection.GraphTraversal.Parameters
+import scala.collection.immutable.LazyList.cons
+import scalax.collection.GraphTraversal.DepthFirst
 
 /** This traits captures the ParametricRateDataflow base MoC from [1]. Then, we hope to be able to
   * use the same code for analysis across different dataflow MoCs, specially the simpler ones like
@@ -56,7 +56,9 @@ trait ParametricRateDataflowWorkloadMixin {
     */
   def disjointComponents: Array[scala.collection.IndexedSeq[Iterable[String]]] =
     dataflowGraphs.map(g => {
-      val gGraphed = Graph(g.map((src, dst, w) => src ~> dst).toArray: _*)
+      val nodes = g.map((s, _, _) => s).toSet.union(g.map((_, t, _) => t).toSet)
+      val edges = g.map((src, dst, w) => src ~> dst)
+      val gGraphed = Graph.from(nodes, edges)
       gGraphed.componentTraverser().map(comp => comp.nodes.map(_.value)).toArray
     })
 
@@ -75,8 +77,9 @@ trait ParametricRateDataflowWorkloadMixin {
   })
 
   def computeRepetitionVectors: Array[Array[Int]] = dataflowGraphs.zipWithIndex.map((df, dfi) => {
-    def minus_one = Rational(-1)
-    val g         = Graph(df.map((src, dst, w) => src ~> dst).toArray: _*)
+    val minus_one = Rational(-1)
+    val nodes = df.map((s, _, _) => s).toSet.union(df.map((_, t, _) => t).toSet)
+    val g         = Graph.from(nodes, df.map((src, dst, w) => src ~> dst))
     // first we build a compressed g with only the actors
     // with the fractional flows in a matrix
     var gEdges = Buffer[(String, String)]()
@@ -98,16 +101,17 @@ trait ParametricRateDataflowWorkloadMixin {
       gEdges += (src -> dst)
       gRates(srcIdx)(dstIdx) = rate
     }
-    val gActors = Graph(gEdges.map((src, dst) => src ~ dst).toArray: _*)
+    val gActors = Graph.from(actorsIdentifiers, gEdges.map((src, dst) => src ~ dst))
+    val gActorsDir = Graph.from(actorsIdentifiers, gEdges.map((src, dst) => src ~> dst))
     // we iterate on the undirected version as to 'come back'
     // to vertex in feed-forward paths
     val rates      = actorsIdentifiers.map(_ => minus_one)
     var consistent = true
     for (
-      root <- gActors.nodes.filter(n => n.inDegree == 0);
+      component <- gActors.componentTraverser();
+      gActorRoot = component.root;
       if consistent;
-      traverser = gActors.outerNodeTraverser(root).withParameters(Parameters.Dfs());
-      v <- traverser;
+      v <- gActors.outerNodeTraverser(gActorRoot).withKind(DepthFirst);
       vIdx = actorsIdentifiers.indexOf(v)
     ) {
       // if there is no rate on this vertex already, it must be a root, so we populate it
@@ -115,7 +119,7 @@ trait ParametricRateDataflowWorkloadMixin {
         rates(vIdx) = 1
       }
       // populate neighbors based on 'next' which have no rate yet
-      for (neigh <- g.get(v).outNeighbors) {
+      for (neigh <- gActorsDir.get(v).outNeighbors) {
         val neighIdx = actorsIdentifiers.indexOf(neigh.value)
         // if no rate exists in the other actor yet, we create it...
         if (rates(neighIdx) == minus_one) {
@@ -127,7 +131,7 @@ trait ParametricRateDataflowWorkloadMixin {
           consistent = consistent && rates(neighIdx) == rates(vIdx) / (gRates(vIdx)(neighIdx))
         }
       }
-      for (neigh <- g.get(v).inNeighbors) {
+      for (neigh <- gActorsDir.get(v).inNeighbors) {
         val neighIdx = actorsIdentifiers.indexOf(neigh.value)
         // if no rate exists in the other actor yet, we create it...
         if (rates(neighIdx) == minus_one) {
@@ -136,7 +140,7 @@ trait ParametricRateDataflowWorkloadMixin {
         }
         // ...otherwise we check if the graph is consistent
         else {
-          consistent = consistent && rates(vIdx) == rates(neighIdx) / (gRates(neighIdx)(vIdx))
+          consistent = consistent && rates(neighIdx) == rates(vIdx) * (gRates(neighIdx)(vIdx))
         }
       }
     }

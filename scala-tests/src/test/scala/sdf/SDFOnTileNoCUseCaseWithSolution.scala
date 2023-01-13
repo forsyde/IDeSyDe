@@ -7,6 +7,7 @@ import idesyde.exploration.ExplorationHandler
 import idesyde.identification.IdentificationHandler
 import forsyde.io.java.drivers.ForSyDeModelHandler
 import scala.concurrent.ExecutionContext
+import idesyde.identification.common.CommonIdentificationModule
 import idesyde.identification.choco.ChocoIdentificationModule
 import idesyde.identification.forsyde.ForSyDeIdentificationModule
 import idesyde.identification.minizinc.MinizincIdentificationModule
@@ -19,7 +20,7 @@ import forsyde.io.java.core.EdgeTrait
 import forsyde.io.java.typed.viewers.visualization.Visualizable
 import forsyde.io.java.typed.viewers.platform.AbstractStructure
 import forsyde.io.java.typed.viewers.visualization.GreyBox
-import idesyde.identification.forsyde.models.sdf.SDFApplication
+import idesyde.identification.common.models.sdf.SDFApplication
 import forsyde.io.java.typed.viewers.platform.runtime.StaticCyclicScheduler
 import forsyde.io.java.typed.viewers.decision.Allocated
 import idesyde.identification.forsyde.ForSyDeDesignModel
@@ -36,6 +37,7 @@ import java.nio.file.Paths
 import org.scalatest.Tag
 import org.scalatest.Ignore
 import idesyde.utils.SimpleStandardIOLogger
+import idesyde.identification.choco.models.sdf.ChocoSDFToSChedTileHW2
 
 object ResourceHungry extends Tag("idesyde.tests.ResourceHungry")
 
@@ -64,9 +66,10 @@ class SDFOnTileNoCUseCaseWithSolution extends AnyFunSuite with LoggingMixin {
   ).registerModule(ChocoExplorationModule())
 
   val identificationHandler = IdentificationHandler(
-  ).registerIdentificationRule(ChocoIdentificationModule())
-    .registerIdentificationRule(ForSyDeIdentificationModule())
-    .registerIdentificationRule(MinizincIdentificationModule())
+  ).registerIdentificationRule(ForSyDeIdentificationModule())
+   .registerIdentificationRule(MinizincIdentificationModule())
+   .registerIdentificationRule(CommonIdentificationModule())
+   .registerIdentificationRule(ChocoIdentificationModule())
 
   val forSyDeModelHandler = ForSyDeModelHandler()
     .registerDriver(ForSyDeSDF3Driver())
@@ -827,6 +830,7 @@ class SDFOnTileNoCUseCaseWithSolution extends AnyFunSuite with LoggingMixin {
   test("Correct identification and DSE of Sobel to Small") {
     val inputSystem = sobelSDF3.merge(small2x2PlatformModel)
     val identified  = identificationHandler.identifyDecisionModels(Set(ForSyDeDesignModel(inputSystem)))
+    assert(identified.exists(_.isInstanceOf[ChocoSDFToSChedTileHW2]))
     val chosen      = explorationHandler.chooseExplorersAndModels(identified)
     assert(chosen.size > 0)
     val solutions = chosen
@@ -944,7 +948,7 @@ class SDFOnTileNoCUseCaseWithSolution extends AnyFunSuite with LoggingMixin {
       .find(m => m.isInstanceOf[SDFApplication])
       .map(m => m.asInstanceOf[SDFApplication])
       .get
-    assert(jpegDM.sdfRepetitionVectors.sameElements(Array.fill(jpegDM.actors.size)(1)))
+    assert(jpegDM.sdfRepetitionVectors.sameElements(Array.fill(jpegDM.actorsIdentifiers.size)(1)))
   }
 
   test("Correct decision model identification of Synthetic") {
@@ -955,7 +959,7 @@ class SDFOnTileNoCUseCaseWithSolution extends AnyFunSuite with LoggingMixin {
       .find(m => m.isInstanceOf[SDFApplication])
       .map(m => m.asInstanceOf[SDFApplication])
       .get
-    assert(syntheticDM.sdfRepetitionVectors.sameElements(Array.fill(syntheticDM.actors.size)(1)))
+    assert(syntheticDM.sdfRepetitionVectors.sameElements(Array.fill(syntheticDM.actorsIdentifiers.size)(1)))
   }
 
   test("Correct identification and DSE of Synthetic to bus Small") {
@@ -997,7 +1001,7 @@ class SDFOnTileNoCUseCaseWithSolution extends AnyFunSuite with LoggingMixin {
       .map(m => m.asInstanceOf[SDFApplication])
       .get
     assert(
-      allSDFAppsDM.sdfRepetitionVectors.sameElements(Array.fill(allSDFAppsDM.actors.size)(1))
+      allSDFAppsDM.sdfRepetitionVectors.sameElements(Array.fill(allSDFAppsDM.actorsIdentifiers.size)(1))
     )
   }
 

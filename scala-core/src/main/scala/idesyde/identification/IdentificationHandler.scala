@@ -1,12 +1,8 @@
 package idesyde.identification
 
-import java.util.stream.Collectors
-
 import scala.collection.mutable.HashSet
 
 import collection.JavaConverters.*
-import java.util.concurrent.Executors
-import java.util.concurrent.ThreadPoolExecutor
 import scala.collection.mutable.Buffer
 import idesyde.utils.CoreUtils
 import idesyde.utils.Logger
@@ -28,17 +24,15 @@ class IdentificationHandler(
     var activeRules                    = registeredModules.flatMap(m => m.identificationRules)
     var iters                          = 0
     val maxIters                       = models.map(_.elements.size).sum
-    var prevIdentified                 = -1
     logger.info(
       s"Performing identification with ${activeRules.size} rules on ${models.size} design models."
     )
     var allCovered = false
     while (activeRules.size > 0 && iters <= maxIters && !allCovered) {
-      prevIdentified = identified.size
       val ruleResults = activeRules.map(irule => (irule, irule(models, identified)))
       val reIdentified = ruleResults
         .flatMap((irule, res) => res)
-        .filter(m => identified.exists(prev => prev.coveredElements == m.coveredElements))
+        .filter(m => identified.exists(prev => prev.uniqueIdentifier == m.uniqueIdentifier && prev.coveredElements == m.coveredElements))
       val newIdentified =
         ruleResults.flatMap((irule, res) => res).filter(res => !reIdentified.contains(res))
       // add to the current identified

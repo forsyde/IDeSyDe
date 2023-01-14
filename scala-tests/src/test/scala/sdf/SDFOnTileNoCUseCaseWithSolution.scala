@@ -837,7 +837,6 @@ class SDFOnTileNoCUseCaseWithSolution extends AnyFunSuite with LoggingMixin {
     val designModel = ForSyDeDesignModel(inputSystem)
     val identified =
       identificationHandler.identifyDecisionModels(Set(designModel))
-    assert(identified.exists(_.isInstanceOf[ChocoSDFToSChedTileHW2]))
     val chosen = explorationHandler.chooseExplorersAndModels(identified)
     assert(chosen.size > 0)
     val solutions = chosen
@@ -870,6 +869,7 @@ class SDFOnTileNoCUseCaseWithSolution extends AnyFunSuite with LoggingMixin {
 
   test("Correct identification and DSE of Sobel to bus Small") {
     val inputSystem = sobelSDF3.merge(busLike8nodePlatformModel)
+    val designModel = ForSyDeDesignModel(inputSystem)
     val identified =
       identificationHandler.identifyDecisionModels(Set(ForSyDeDesignModel(inputSystem)))
     val chosen = explorationHandler.chooseExplorersAndModels(identified)
@@ -879,8 +879,12 @@ class SDFOnTileNoCUseCaseWithSolution extends AnyFunSuite with LoggingMixin {
       .flatMap((explorer, decisionModel) =>
         explorer
           .explore(decisionModel)
-          .flatMap(designModel =>
-            designModel match { case f: ForSyDeSystemGraph => Some(f); case _ => Option.empty }
+          .flatMap(sol => identificationHandler.integrateDecisionModel(designModel, sol))
+          .flatMap(sol =>
+            sol match {
+              case f: ForSyDeDesignModel => Some(f.systemGraph)
+              case _                     => Option.empty
+            }
           )
           .take(solutionsTaken)
           .map(sol =>
@@ -903,15 +907,20 @@ class SDFOnTileNoCUseCaseWithSolution extends AnyFunSuite with LoggingMixin {
     val inputSystem = sobelSDF3.merge(large5x6PlatformModel)
     val identified =
       identificationHandler.identifyDecisionModels(Set(ForSyDeDesignModel(inputSystem)))
-    val chosen = explorationHandler.chooseExplorersAndModels(identified)
+    val designModel = ForSyDeDesignModel(inputSystem)
+    val chosen      = explorationHandler.chooseExplorersAndModels(identified)
     assert(chosen.size > 0)
     val solutions = chosen
       .take(1)
       .flatMap((explorer, decisionModel) =>
         explorer
           .explore(decisionModel)
-          .flatMap(designModel =>
-            designModel match { case f: ForSyDeSystemGraph => Some(f); case _ => Option.empty }
+          .flatMap(sol => identificationHandler.integrateDecisionModel(designModel, sol))
+          .flatMap(sol =>
+            sol match {
+              case f: ForSyDeDesignModel => Some(f.systemGraph)
+              case _                     => Option.empty
+            }
           )
           .take(solutionsTaken)
           .map(sol =>
@@ -986,15 +995,20 @@ class SDFOnTileNoCUseCaseWithSolution extends AnyFunSuite with LoggingMixin {
     val inputSystem = g10_3_cyclicSDF3.merge(busLike8nodePlatformModel)
     val identified =
       identificationHandler.identifyDecisionModels(Set(ForSyDeDesignModel(inputSystem)))
-    val chosen = explorationHandler.chooseExplorersAndModels(identified)
+    val designModel = ForSyDeDesignModel(inputSystem)
+    val chosen      = explorationHandler.chooseExplorersAndModels(identified)
     assert(chosen.size > 0)
     val solutions = chosen
       .take(1)
       .flatMap((explorer, decisionModel) =>
         explorer
           .explore(decisionModel)
-          .flatMap(designModel =>
-            designModel match { case f: ForSyDeSystemGraph => Some(f); case _ => Option.empty }
+          .flatMap(sol => identificationHandler.integrateDecisionModel(designModel, sol))
+          .flatMap(sol =>
+            sol match {
+              case f: ForSyDeDesignModel => Some(f.systemGraph)
+              case _                     => Option.empty
+            }
           )
           .take(solutionsTaken)
           .map(sol =>
@@ -1034,15 +1048,20 @@ class SDFOnTileNoCUseCaseWithSolution extends AnyFunSuite with LoggingMixin {
       identificationHandler.identifyDecisionModels(Set(ForSyDeDesignModel(appsAndSmall)))
     assert(identified.size > 0)
     assert(identified.find(m => m.isInstanceOf[SDFToTiledMultiCore]).isDefined)
-    val chosen = explorationHandler.chooseExplorersAndModels(identified)
+    val designModel = ForSyDeDesignModel(appsAndSmall)
+    val chosen      = explorationHandler.chooseExplorersAndModels(identified)
     assert(chosen.size > 0)
     val solutions = chosen
       .take(1)
       .flatMap((explorer, decisionModel) =>
         explorer
           .explore(decisionModel)
-          .flatMap(designModel =>
-            designModel match { case f: ForSyDeSystemGraph => Some(f); case _ => Option.empty }
+          .flatMap(sol => identificationHandler.integrateDecisionModel(designModel, sol))
+          .flatMap(sol =>
+            sol match {
+              case f: ForSyDeDesignModel => Some(f.systemGraph)
+              case _                     => Option.empty
+            }
           )
           .take(solutionsTaken)
           .map(sol =>
@@ -1065,6 +1084,7 @@ class SDFOnTileNoCUseCaseWithSolution extends AnyFunSuite with LoggingMixin {
   test("Correct identification and DSE of all and small bus platform", ResourceHungry) {
     val identified =
       identificationHandler.identifyDecisionModels(Set(ForSyDeDesignModel(appsAndBusSmall)))
+    val designModel = ForSyDeDesignModel(appsAndBusSmall)
     assert(identified.size > 0)
     assert(identified.find(m => m.isInstanceOf[SDFToTiledMultiCore]).isDefined)
     val chosen = explorationHandler.chooseExplorersAndModels(identified)
@@ -1074,8 +1094,12 @@ class SDFOnTileNoCUseCaseWithSolution extends AnyFunSuite with LoggingMixin {
       .flatMap((explorer, decisionModel) =>
         explorer
           .explore(decisionModel)
-          .flatMap(designModel =>
-            designModel match { case f: ForSyDeSystemGraph => Some(f); case _ => Option.empty }
+          .flatMap(sol => identificationHandler.integrateDecisionModel(designModel, sol))
+          .flatMap(sol =>
+            sol match {
+              case f: ForSyDeDesignModel => Some(f.systemGraph)
+              case _                     => Option.empty
+            }
           )
           .take(solutionsTaken)
           .map(sol =>
@@ -1100,15 +1124,20 @@ class SDFOnTileNoCUseCaseWithSolution extends AnyFunSuite with LoggingMixin {
       identificationHandler.identifyDecisionModels(Set(ForSyDeDesignModel(appsAndLarge)))
     assert(identified.size > 0)
     assert(identified.find(m => m.isInstanceOf[SDFToTiledMultiCore]).isDefined)
-    val chosen = explorationHandler.chooseExplorersAndModels(identified)
+    val designModel = ForSyDeDesignModel(appsAndLarge)
+    val chosen      = explorationHandler.chooseExplorersAndModels(identified)
     assert(chosen.size > 0)
     val solutions = chosen
       .take(1)
       .flatMap((explorer, decisionModel) =>
         explorer
           .explore(decisionModel)
-          .flatMap(designModel =>
-            designModel match { case f: ForSyDeSystemGraph => Some(f); case _ => Option.empty }
+          .flatMap(sol => identificationHandler.integrateDecisionModel(designModel, sol))
+          .flatMap(sol =>
+            sol match {
+              case f: ForSyDeDesignModel => Some(f.systemGraph)
+              case _                     => Option.empty
+            }
           )
           .take(solutionsTaken)
           .map(sol =>

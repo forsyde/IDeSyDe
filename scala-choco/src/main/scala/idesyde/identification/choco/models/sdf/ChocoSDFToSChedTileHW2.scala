@@ -469,7 +469,7 @@ final case class ChocoSDFToSChedTileHW2(
         dse.platform.hardware
           .memories(output.getIntVal(memoryMappingModule.messagesMemoryMapping(messageIdx)))
       }),
-      schedulerSchedules = dse.platform.runtimes.zipWithIndex.map((s, si) => {
+      schedulerSchedules = dse.platform.runtimes.schedulers.zipWithIndex.map((s, si) => {
         // TODO: make here the lists
         Array.empty
       }),

@@ -41,7 +41,8 @@ class ForSyDeIdentificationModule(using Logger) extends IdentificationModule {
   )
 
   val integrationRules = Set(
-    MixedRules.integratePeriodicWorkloadToPartitionedSharedMultiCore
+    MixedRules.integratePeriodicWorkloadToPartitionedSharedMultiCore,
+    MixedRules.integrateSDFToTiledMultiCore
   )
 
 }

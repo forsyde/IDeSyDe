@@ -128,17 +128,20 @@ object MixedRules {
                     .queryVertex(mem)
                     .ifPresent(m => {
                       val v = MemoryMapped.enforce(actor)
-                      v.setMappingHostsPort(newModel, GenericMemoryModule.enforce(m))
+                      v.setMappingHostsPort(
+                        newModel,
+                        java.util.Set.of(GenericMemoryModule.enforce(m))
+                      )
                     })
                   newModel
                     .queryVertex(scheduler)
                     .ifPresent(s => {
                       val v = Scheduled.enforce(actor)
-                      v.setSchedulersPort(newModel, AbstractScheduler.enforce(s))
+                      v.setSchedulersPort(newModel, java.util.Set.of(AbstractScheduler.enforce(s)))
                     })
                 })
             }
-            ForSyDeDesignModel(newModel)
+            Some(ForSyDeDesignModel(newModel))
           }
           case _ => Option.empty
         }

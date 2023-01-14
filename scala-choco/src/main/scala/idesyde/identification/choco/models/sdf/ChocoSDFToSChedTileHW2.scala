@@ -65,7 +65,8 @@ class ConMonitorObj2(val model: ChocoSDFToSChedTileHW2) extends IMonitorContradi
 final case class ChocoSDFToSChedTileHW2(
     val dse: SDFToTiledMultiCore
 )(using Fractional[Rational])
-    extends StandardDecisionModel with ChocoDecisionModel(shouldLearnSignedClauses = false) {
+    extends StandardDecisionModel
+    with ChocoDecisionModel(shouldLearnSignedClauses = false) {
 
   val chocoModel: Model = Model()
 
@@ -124,7 +125,13 @@ final case class ChocoSDFToSChedTileHW2(
       )
     ),
     dse.platform.hardware.communicationElementsMaxChannels,
-    (src: String) => (dst: String) => dse.platform.hardware.computedPaths(dse.platform.hardware.platformElements.indexOf(src))(dse.platform.hardware.platformElements.indexOf(dst)).toArray
+    (src: String) =>
+      (dst: String) =>
+        dse.platform.hardware
+          .computedPaths(dse.platform.hardware.platformElements.indexOf(src))(
+            dse.platform.hardware.platformElements.indexOf(dst)
+          )
+          .toArray
   )
 
   val sdfAnalysisModule = SDFSchedulingAnalysisModule2(
@@ -136,7 +143,7 @@ final case class ChocoSDFToSChedTileHW2(
   )
 
   // - mixed constraints
-  // memoryMappingModule.postSingleProcessSingleMessageMemoryConstraints()
+  memoryMappingModule.postSingleProcessSingleMessageMemoryConstraints()
 
   //---------
 
@@ -200,13 +207,13 @@ final case class ChocoSDFToSChedTileHW2(
   //   })
   // })
 
-  // tileAnalysisModule.postTileAsyncInterconnectComms()
+  tileAnalysisModule.postTileAsyncInterconnectComms()
   //---------
 
   //-----------------------------------------------------
   // SCHEDULING AND TIMING
 
-  // sdfAnalysisModule.postSDFTimingAnalysis()
+  sdfAnalysisModule.postSDFTimingAnalysis()
   //---------
 
   //-----------------------------------------------------
@@ -271,7 +278,8 @@ final case class ChocoSDFToSChedTileHW2(
     chocoModel.intVar(
       s"indexOfPe($p)",
       0,
-      Math.max(dse.sdfApplications.actorsIdentifiers.size, dse.platform.runtimes.schedulers.size + 1),
+      Math
+        .max(dse.sdfApplications.actorsIdentifiers.size, dse.platform.runtimes.schedulers.size + 1),
       false
     )
   )
@@ -280,7 +288,13 @@ final case class ChocoSDFToSChedTileHW2(
     (a, i) <- dse.sdfApplications.topologicalAndHeavyActorOrdering.zipWithIndex
   ) {
     chocoModel.ifThenElse(
-      chocoModel.arithm(memoryMappingModule.processesMemoryMapping(dse.sdfApplications.actorsIdentifiers.indexOf(a)), "=", j),
+      chocoModel.arithm(
+        memoryMappingModule.processesMemoryMapping(
+          dse.sdfApplications.actorsIdentifiers.indexOf(a)
+        ),
+        "=",
+        j
+      ),
       chocoModel.arithm(indexOfPe(j), "<=", i),
       chocoModel.arithm(indexOfPe(j), "!=", i)
     )
@@ -445,10 +459,19 @@ final case class ChocoSDFToSChedTileHW2(
         .getIntVal(sdfAnalysisModule.globalInvThroughput)}, maxLatency = ${output.getIntVal(maxLatency)}"
     )
     dse.copy(
-      processMappings = dse.sdfApplications.actorsIdentifiers.zipWithIndex.map((a, i) => dse.platform.hardware.memories(output.getIntVal(memoryMappingModule.processesMemoryMapping(i)))),
+      processMappings = dse.sdfApplications.actorsIdentifiers.zipWithIndex.map((a, i) =>
+        dse.platform.hardware
+          .memories(output.getIntVal(memoryMappingModule.processesMemoryMapping(i)))
+      ),
       messageMappings = dse.sdfApplications.channelsIdentifiers.zipWithIndex.map((c, i) => {
-        val messageIdx = dse.sdfApplications.sdfMessages.indexWhere((_, _, ms, _, _, _, _) => ms.contains(c))
-        dse.platform.hardware.memories(output.getIntVal(memoryMappingModule.messagesMemoryMapping(messageIdx)))
+        val messageIdx =
+          dse.sdfApplications.sdfMessages.indexWhere((_, _, ms, _, _, _, _) => ms.contains(c))
+        dse.platform.hardware
+          .memories(output.getIntVal(memoryMappingModule.messagesMemoryMapping(messageIdx)))
+      }),
+      schedulerSchedules = dse.platform.runtimes.zipWithIndex.map((s, si) => {
+        // TODO: make here the lists
+        Array.empty
       }),
       messageSlotAllocations = dse.sdfApplications.channelsIdentifiers.zipWithIndex.map((c, ci) => {
         // we have to look from the source perpective, since the sending processor is the one that allocates
@@ -460,10 +483,17 @@ final case class ChocoSDFToSChedTileHW2(
           )
         )
         // TODO: this must be fixed later, it might clash correct slots
-        val iter = for (
-          (ce, j) <- dse.platform.hardware.communicationElems.zipWithIndex;
-          if output.getIntVal(tileAnalysisModule.numVirtualChannelsForProcElem(p)(j)) > 0
-        ) yield ce -> (0 until dse.platform.hardware.communicationElementsMaxChannels(j)).map(slot => (slot + j % dse.platform.hardware.communicationElementsMaxChannels(j)) < output.getIntVal(tileAnalysisModule.numVirtualChannelsForProcElem(p)(j))).toArray
+        val iter =
+          for (
+            (ce, j) <- dse.platform.hardware.communicationElems.zipWithIndex;
+            if output.getIntVal(tileAnalysisModule.numVirtualChannelsForProcElem(p)(j)) > 0
+          )
+            yield ce -> (0 until dse.platform.hardware.communicationElementsMaxChannels(j))
+              .map(slot =>
+                (slot + j % dse.platform.hardware.communicationElementsMaxChannels(j)) < output
+                  .getIntVal(tileAnalysisModule.numVirtualChannelsForProcElem(p)(j))
+              )
+              .toArray
         iter.toMap
       })
     )
@@ -484,7 +514,7 @@ object ChocoSDFToSChedTileHW2 {
       identified: scala.collection.Iterable[DecisionModel]
   )(using scala.math.Fractional[Rational]): IdentificationResult[ChocoSDFToSChedTileHW2] =
     ForSyDeIdentificationRule.identifyWrapper(model, identified, identifyFromForSyDe)
-    
+
   def identifyFromForSyDe(
       model: ForSyDeSystemGraph,
       identified: scala.collection.Iterable[DecisionModel]

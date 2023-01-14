@@ -67,9 +67,9 @@ class SDFOnTileNoCUseCaseWithSolution extends AnyFunSuite with LoggingMixin {
 
   val identificationHandler = IdentificationHandler(
   ).registerIdentificationRule(ForSyDeIdentificationModule())
-   .registerIdentificationRule(MinizincIdentificationModule())
-   .registerIdentificationRule(CommonIdentificationModule())
-   .registerIdentificationRule(ChocoIdentificationModule())
+    .registerIdentificationRule(MinizincIdentificationModule())
+    .registerIdentificationRule(CommonIdentificationModule())
+    .registerIdentificationRule(ChocoIdentificationModule())
 
   val forSyDeModelHandler = ForSyDeModelHandler()
     .registerDriver(ForSyDeSDF3Driver())
@@ -799,25 +799,30 @@ class SDFOnTileNoCUseCaseWithSolution extends AnyFunSuite with LoggingMixin {
   }
 
   test("Correct decision model identification of the Small platform") {
-    val identified = identificationHandler.identifyDecisionModels(Set(ForSyDeDesignModel(small2x2PlatformModel)))
+    val identified =
+      identificationHandler.identifyDecisionModels(Set(ForSyDeDesignModel(small2x2PlatformModel)))
     assert(identified.size > 0)
     assert(identified.find(m => m.isInstanceOf[SchedulableTiledMultiCore]).isDefined)
   }
 
   test("Correct decision model identification of the Small Bus platform") {
-    val identified = identificationHandler.identifyDecisionModels(Set(ForSyDeDesignModel(busLike8nodePlatformModel)))
+    val identified = identificationHandler.identifyDecisionModels(
+      Set(ForSyDeDesignModel(busLike8nodePlatformModel))
+    )
     assert(identified.size > 0)
     assert(identified.find(m => m.isInstanceOf[SchedulableTiledMultiCore]).isDefined)
   }
 
   test("Correct decision model identification of the Large platform") {
-    val identified = identificationHandler.identifyDecisionModels(Set(ForSyDeDesignModel(large5x6PlatformModel)))
+    val identified =
+      identificationHandler.identifyDecisionModels(Set(ForSyDeDesignModel(large5x6PlatformModel)))
     assert(identified.size > 0)
     assert(identified.find(m => m.isInstanceOf[SchedulableTiledMultiCore]).isDefined)
   }
 
   test("Correct decision model identification of Sobel") {
-    val identified = identificationHandler.identifyDecisionModels(Set(ForSyDeDesignModel(sobelSDF3)))
+    val identified =
+      identificationHandler.identifyDecisionModels(Set(ForSyDeDesignModel(sobelSDF3)))
     assert(identified.size > 0)
     assert(identified.find(m => m.isInstanceOf[SDFApplication]).isDefined)
     val sobelDM = identified
@@ -829,19 +834,23 @@ class SDFOnTileNoCUseCaseWithSolution extends AnyFunSuite with LoggingMixin {
 
   test("Correct identification and DSE of Sobel to Small") {
     val inputSystem = sobelSDF3.merge(small2x2PlatformModel)
-    val identified  = identificationHandler.identifyDecisionModels(Set(ForSyDeDesignModel(inputSystem)))
+    val designModel = ForSyDeDesignModel(inputSystem)
+    val identified =
+      identificationHandler.identifyDecisionModels(Set(designModel))
     assert(identified.exists(_.isInstanceOf[ChocoSDFToSChedTileHW2]))
-    val chosen      = explorationHandler.chooseExplorersAndModels(identified)
+    val chosen = explorationHandler.chooseExplorersAndModels(identified)
     assert(chosen.size > 0)
     val solutions = chosen
-      .take(1)
       .flatMap((explorer, decisionModel) =>
         explorer
           .explore(decisionModel)
-          .flatMap(designModel =>
-            designModel match { case f: ForSyDeSystemGraph => Some(f); case _ => Option.empty }
+          .flatMap(sol => identificationHandler.integrateDecisionModel(designModel, sol))
+          .flatMap(sol =>
+            sol match {
+              case f: ForSyDeDesignModel => Some(f.systemGraph)
+              case _                     => Option.empty
+            }
           )
-          .take(solutionsTaken)
           .map(sol =>
             forSyDeModelHandler
               .writeModel(
@@ -854,14 +863,16 @@ class SDFOnTileNoCUseCaseWithSolution extends AnyFunSuite with LoggingMixin {
             )
             sol
           )
+          .take(solutionsTaken)
       )
     assert(solutions.size >= 1)
   }
 
   test("Correct identification and DSE of Sobel to bus Small") {
     val inputSystem = sobelSDF3.merge(busLike8nodePlatformModel)
-    val identified  = identificationHandler.identifyDecisionModels(Set(ForSyDeDesignModel(inputSystem)))
-    val chosen      = explorationHandler.chooseExplorersAndModels(identified)
+    val identified =
+      identificationHandler.identifyDecisionModels(Set(ForSyDeDesignModel(inputSystem)))
+    val chosen = explorationHandler.chooseExplorersAndModels(identified)
     assert(chosen.size > 0)
     val solutions = chosen
       .take(1)
@@ -890,8 +901,9 @@ class SDFOnTileNoCUseCaseWithSolution extends AnyFunSuite with LoggingMixin {
 
   test("Correct identification and DSE of Sobel to Large", ResourceHungry) {
     val inputSystem = sobelSDF3.merge(large5x6PlatformModel)
-    val identified  = identificationHandler.identifyDecisionModels(Set(ForSyDeDesignModel(inputSystem)))
-    val chosen      = explorationHandler.chooseExplorersAndModels(identified)
+    val identified =
+      identificationHandler.identifyDecisionModels(Set(ForSyDeDesignModel(inputSystem)))
+    val chosen = explorationHandler.chooseExplorersAndModels(identified)
     assert(chosen.size > 0)
     val solutions = chosen
       .take(1)
@@ -919,7 +931,8 @@ class SDFOnTileNoCUseCaseWithSolution extends AnyFunSuite with LoggingMixin {
   }
 
   test("Correct decision model identification of SUSAN") {
-    val identified = identificationHandler.identifyDecisionModels(Set(ForSyDeDesignModel(susanSDF3)))
+    val identified =
+      identificationHandler.identifyDecisionModels(Set(ForSyDeDesignModel(susanSDF3)))
     assert(identified.size > 0)
     assert(identified.find(m => m.isInstanceOf[SDFApplication]).isDefined)
     val susanDM = identified
@@ -930,7 +943,8 @@ class SDFOnTileNoCUseCaseWithSolution extends AnyFunSuite with LoggingMixin {
   }
 
   test("Correct decision model identification of RASTA") {
-    val identified = identificationHandler.identifyDecisionModels(Set(ForSyDeDesignModel(rastaSDF3)))
+    val identified =
+      identificationHandler.identifyDecisionModels(Set(ForSyDeDesignModel(rastaSDF3)))
     assert(identified.size > 0)
     assert(identified.find(m => m.isInstanceOf[SDFApplication]).isDefined)
     val rastaDM = identified
@@ -941,7 +955,8 @@ class SDFOnTileNoCUseCaseWithSolution extends AnyFunSuite with LoggingMixin {
   }
 
   test("Correct decision model identification of JPEG") {
-    val identified = identificationHandler.identifyDecisionModels(Set(ForSyDeDesignModel(jpegEnc1SDF3)))
+    val identified =
+      identificationHandler.identifyDecisionModels(Set(ForSyDeDesignModel(jpegEnc1SDF3)))
     assert(identified.size > 0)
     assert(identified.find(m => m.isInstanceOf[SDFApplication]).isDefined)
     val jpegDM = identified
@@ -952,20 +967,26 @@ class SDFOnTileNoCUseCaseWithSolution extends AnyFunSuite with LoggingMixin {
   }
 
   test("Correct decision model identification of Synthetic") {
-    val identified = identificationHandler.identifyDecisionModels(Set(ForSyDeDesignModel(g10_3_cyclicSDF3)))
+    val identified =
+      identificationHandler.identifyDecisionModels(Set(ForSyDeDesignModel(g10_3_cyclicSDF3)))
     assert(identified.size > 0)
     assert(identified.find(m => m.isInstanceOf[SDFApplication]).isDefined)
     val syntheticDM = identified
       .find(m => m.isInstanceOf[SDFApplication])
       .map(m => m.asInstanceOf[SDFApplication])
       .get
-    assert(syntheticDM.sdfRepetitionVectors.sameElements(Array.fill(syntheticDM.actorsIdentifiers.size)(1)))
+    assert(
+      syntheticDM.sdfRepetitionVectors.sameElements(
+        Array.fill(syntheticDM.actorsIdentifiers.size)(1)
+      )
+    )
   }
 
   test("Correct identification and DSE of Synthetic to bus Small") {
     val inputSystem = g10_3_cyclicSDF3.merge(busLike8nodePlatformModel)
-    val identified  = identificationHandler.identifyDecisionModels(Set(ForSyDeDesignModel(inputSystem)))
-    val chosen      = explorationHandler.chooseExplorersAndModels(identified)
+    val identified =
+      identificationHandler.identifyDecisionModels(Set(ForSyDeDesignModel(inputSystem)))
+    val chosen = explorationHandler.chooseExplorersAndModels(identified)
     assert(chosen.size > 0)
     val solutions = chosen
       .take(1)
@@ -993,7 +1014,8 @@ class SDFOnTileNoCUseCaseWithSolution extends AnyFunSuite with LoggingMixin {
   }
 
   test("Correct decision model identification of all Applications together") {
-    val identified = identificationHandler.identifyDecisionModels(Set(ForSyDeDesignModel(allSDFApps)))
+    val identified =
+      identificationHandler.identifyDecisionModels(Set(ForSyDeDesignModel(allSDFApps)))
     assert(identified.size > 0)
     assert(identified.find(m => m.isInstanceOf[SDFApplication]).isDefined)
     val allSDFAppsDM = identified
@@ -1001,12 +1023,15 @@ class SDFOnTileNoCUseCaseWithSolution extends AnyFunSuite with LoggingMixin {
       .map(m => m.asInstanceOf[SDFApplication])
       .get
     assert(
-      allSDFAppsDM.sdfRepetitionVectors.sameElements(Array.fill(allSDFAppsDM.actorsIdentifiers.size)(1))
+      allSDFAppsDM.sdfRepetitionVectors.sameElements(
+        Array.fill(allSDFAppsDM.actorsIdentifiers.size)(1)
+      )
     )
   }
 
   test("Correct identification and DSE of all and small platform") {
-    val identified = identificationHandler.identifyDecisionModels(Set(ForSyDeDesignModel(appsAndSmall)))
+    val identified =
+      identificationHandler.identifyDecisionModels(Set(ForSyDeDesignModel(appsAndSmall)))
     assert(identified.size > 0)
     assert(identified.find(m => m.isInstanceOf[SDFToTiledMultiCore]).isDefined)
     val chosen = explorationHandler.chooseExplorersAndModels(identified)
@@ -1038,7 +1063,8 @@ class SDFOnTileNoCUseCaseWithSolution extends AnyFunSuite with LoggingMixin {
   }
 
   test("Correct identification and DSE of all and small bus platform", ResourceHungry) {
-    val identified = identificationHandler.identifyDecisionModels(Set(ForSyDeDesignModel(appsAndBusSmall)))
+    val identified =
+      identificationHandler.identifyDecisionModels(Set(ForSyDeDesignModel(appsAndBusSmall)))
     assert(identified.size > 0)
     assert(identified.find(m => m.isInstanceOf[SDFToTiledMultiCore]).isDefined)
     val chosen = explorationHandler.chooseExplorersAndModels(identified)
@@ -1070,7 +1096,8 @@ class SDFOnTileNoCUseCaseWithSolution extends AnyFunSuite with LoggingMixin {
   }
 
   test("Correct identification and DSE of all and large platform", ResourceHungry) {
-    val identified = identificationHandler.identifyDecisionModels(Set(ForSyDeDesignModel(appsAndLarge)))
+    val identified =
+      identificationHandler.identifyDecisionModels(Set(ForSyDeDesignModel(appsAndLarge)))
     assert(identified.size > 0)
     assert(identified.find(m => m.isInstanceOf[SDFToTiledMultiCore]).isDefined)
     val chosen = explorationHandler.chooseExplorersAndModels(identified)

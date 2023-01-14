@@ -11,6 +11,7 @@ final case class SDFToTiledMultiCore(
     val platform: SchedulableTiledMultiCore,
     val processMappings: Array[String],
     val messageMappings: Array[String],
+    val schedulerSchedules: Array[Array[String]],
     val messageSlotAllocations: Array[Map[String, Array[Boolean]]]
 ) extends StandardDecisionModel
     with WCETComputationMixin(sdfApplications, platform) {

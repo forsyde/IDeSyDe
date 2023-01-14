@@ -31,6 +31,7 @@ object MixedRules {
           platform = p,
           processMappings = Array.empty,
           messageMappings = Array.empty,
+          schedulerSchedules = Array.empty,
           messageSlotAllocations = Array.empty
         )
       )

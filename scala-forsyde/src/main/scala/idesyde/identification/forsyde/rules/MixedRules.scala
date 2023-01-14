@@ -4,6 +4,7 @@ import idesyde.identification.DesignModel
 import idesyde.identification.DecisionModel
 import idesyde.identification.forsyde.ForSyDeDesignModel
 import idesyde.identification.common.models.mixed.PeriodicWorkloadToPartitionedSharedMultiCore
+import idesyde.identification.common.models.mixed.SDFToTiledMultiCore
 import forsyde.io.java.core.ForSyDeSystemGraph
 import forsyde.io.java.typed.viewers.decision.results.AnalysedGenericProcessingModule
 import forsyde.io.java.typed.viewers.decision.Scheduled
@@ -74,21 +75,70 @@ object MixedRules {
             }
             for (
               (taskId, memId) <- dse.processMappings;
-              task  = rebuilt.queryVertex(taskId).get();
-              mem = rebuilt.queryVertex(memId).get()
+              task = rebuilt.queryVertex(taskId).get();
+              mem  = rebuilt.queryVertex(memId).get()
             ) {
-              GenericMemoryModule.safeCast(mem)
-                .ifPresent(memory => MemoryMapped.enforce(task).insertMappingHostsPort(rebuilt, memory))
+              GenericMemoryModule
+                .safeCast(mem)
+                .ifPresent(memory =>
+                  MemoryMapped.enforce(task).insertMappingHostsPort(rebuilt, memory)
+                )
             }
             for (
               (channelId, memId) <- dse.channelMappings;
-              channel  = rebuilt.queryVertex(channelId).get();
-              mem = rebuilt.queryVertex(memId).get()
+              channel = rebuilt.queryVertex(channelId).get();
+              mem     = rebuilt.queryVertex(memId).get()
             ) {
-              GenericMemoryModule.safeCast(mem)
-                .ifPresent(memory => MemoryMapped.enforce(channel).insertMappingHostsPort(rebuilt, memory))
+              GenericMemoryModule
+                .safeCast(mem)
+                .ifPresent(memory =>
+                  MemoryMapped.enforce(channel).insertMappingHostsPort(rebuilt, memory)
+                )
             }
             Some(ForSyDeDesignModel(rebuilt))
+          }
+          case _ => Option.empty
+        }
+      }
+      case _ => Option.empty
+    }
+  }
+
+  def integrateSDFToTiledMultiCore(
+      designModel: DesignModel,
+      decisionModel: DecisionModel
+  ): Option[? <: DesignModel] = {
+    designModel match {
+      case ForSyDeDesignModel(forSyDeSystemGraph) => {
+        val newModel = ForSyDeSystemGraph().merge(forSyDeSystemGraph)
+        decisionModel match {
+          case dse: SDFToTiledMultiCore => {
+            // first, we take care of the process mappings
+            for (
+              (mem, i) <- dse.processMappings.zipWithIndex;
+              actorId   = dse.sdfApplications.actorsIdentifiers(i);
+              memIdx    = dse.platform.hardware.memories.indexOf(mem);
+              proc      = dse.platform.hardware.processors(memIdx);
+              scheduler = dse.platform.runtimes.schedulers(memIdx)
+            ) {
+              newModel
+                .queryVertex(actorId)
+                .ifPresent(actor => {
+                  newModel
+                    .queryVertex(mem)
+                    .ifPresent(m => {
+                      val v = MemoryMapped.enforce(actor)
+                      v.setMappingHostsPort(newModel, GenericMemoryModule.enforce(m))
+                    })
+                  newModel
+                    .queryVertex(scheduler)
+                    .ifPresent(s => {
+                      val v = Scheduled.enforce(actor)
+                      v.setSchedulersPort(newModel, AbstractScheduler.enforce(s))
+                    })
+                })
+            }
+            ForSyDeDesignModel(newModel)
           }
           case _ => Option.empty
         }

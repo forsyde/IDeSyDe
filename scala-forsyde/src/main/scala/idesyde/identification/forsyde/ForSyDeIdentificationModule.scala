@@ -15,6 +15,7 @@ import idesyde.identification.forsyde.rules.PlatformRules
 import idesyde.identification.forsyde.rules.WorkloadRules
 import idesyde.identification.DecisionModel
 import idesyde.identification.DesignModel
+import idesyde.identification.forsyde.rules.MixedRules
 
 class ForSyDeIdentificationModule(using Logger) extends IdentificationModule {
 
@@ -39,6 +40,8 @@ class ForSyDeIdentificationModule(using Logger) extends IdentificationModule {
     // SDFToExplicitSchedHW
   )
 
-  val integrationRules = Set()
+  val integrationRules = Set(
+    MixedRules.integratePeriodicWorkloadToPartitionedSharedMultiCore
+  )
 
 }

@@ -13,6 +13,11 @@ import forsyde.io.java.typed.viewers.visualization.Visualizable
 import forsyde.io.java.typed.viewers.platform.runtime.AbstractScheduler
 import forsyde.io.java.typed.viewers.decision.MemoryMapped
 import forsyde.io.java.typed.viewers.platform.GenericMemoryModule
+import idesyde.identification.common.models.workload.CommunicatingExtendedDependenciesPeriodicWorkload
+import idesyde.identification.common.models.platform.PartitionedSharedMemoryMultiCore
+import idesyde.identification.forsyde.ForSyDeIdentificationUtils
+import forsyde.io.java.typed.viewers.nonfunctional.UtilizationBoundedProcessingElem
+import spire.math.Rational
 
 object MixedRules {
 
@@ -25,45 +30,11 @@ object MixedRules {
         decisionModel match {
           case dse: PeriodicWorkloadToPartitionedSharedMultiCore => {
             val rebuilt = ForSyDeSystemGraph().merge(forSyDeSystemGraph)
-            // dse.workload.tasks.zipWithIndex.foreach((t, i) => {
-            //   rebuilt.addVertex(t.getViewedVertex)
-            //   val analysed         = AnalysedTask.enforce(t)
-            //   val responseTimeFrac = Rational(responseTimes(i).getValue(), timeMultiplier)
-            //   val blockingTimeFrac = Rational(blockingTimes(i).getValue(), timeMultiplier)
-            //   // scribe.debug(s"task ${t.getIdentifier} RT: (raw ${responseTimes(i).getValue}) ${responseTimeFrac.doubleValue}")
-            //   // scribe.debug(s"task ${t.getIdentifier} BT: (raw ${blockingTimes(i).getValue}) ${blockingTimeFrac.doubleValue}")
-            //   analysed.setWorstCaseResponseTimeNumeratorInSecs(responseTimeFrac.numerator.toLong)
-            //   analysed.setWorstCaseResponseTimeDenominatorInSecs(
-            //     responseTimeFrac.denominator.toLong
-            //   )
-            //   analysed.setWorstCaseBlockingTimeNumeratorInSecs(blockingTimeFrac.numerator.toLong)
-            //   analysed.setWorstCaseBlockingTimeDenominatorInSecs(
-            //     blockingTimeFrac.denominator.toLong
-            //   )
-
-            // })
-            // dse.workload.dataBlocks.foreach(t => rebuilt.addVertex(t.getViewedVertex))
-            // dse.schedHwModel.allocatedSchedulers.foreach(s => rebuilt.addVertex(s.getViewedVertex))
-            // dse.schedHwModel.hardware.storageElems.foreach(m =>
-            //   rebuilt.addVertex(m.getViewedVertex)
-            // )
-            // dse.platform.hardware.processingElems.zipWithIndex.foreach((m, j) =>
-            //   val pe     = rebuilt.queryVertex(m).get()
-            //   val module = AnalysedGenericProcessingModule.enforce(pe)
-            //   module.setUtilization(
-            //     active4StageDurationModule.durations.zipWithIndex
-            //       .filter((ws, i) => taskExecution(i).isInstantiatedTo(j))
-            //       .map((w, i) =>
-            //         //scribe.debug(s"task n ${i} Wcet: (raw ${durations(i)(j)})")
-            //         (Rational(w(j).getValue)
-            //           / (periods(i))).toDouble
-            //       )
-            //       .sum
-            //   )
-            // )
             for (
               (taskId, schedId) <- dse.processSchedulings;
-              task  = rebuilt.queryVertex(taskId).get();
+              // ok for now because it is a 1-to-many situation wit the current Decision Models (2023-01-16)
+              // TODO: fix it to be stable later
+              task  = rebuilt.vertexSet().stream().filter(v => taskId.contains(v.getIdentifier())).findAny().get();
               sched = rebuilt.queryVertex(schedId).get()
             ) {
               AbstractScheduler
@@ -75,7 +46,9 @@ object MixedRules {
             }
             for (
               (taskId, memId) <- dse.processMappings;
-              task = rebuilt.queryVertex(taskId).get();
+              // ok for now because it is a 1-to-many situation wit the current Decision Models (2023-01-16)
+              // TODO: fix it to be stable later
+              task  = rebuilt.vertexSet().stream().filter(v => taskId.contains(v.getIdentifier())).findAny().get();
               mem  = rebuilt.queryVertex(memId).get()
             ) {
               GenericMemoryModule
@@ -86,7 +59,9 @@ object MixedRules {
             }
             for (
               (channelId, memId) <- dse.channelMappings;
-              channel = rebuilt.queryVertex(channelId).get();
+              // ok for now because it is a 1-to-many situation wit the current Decision Models (2023-01-16)
+              // TODO: fix it to be stable later
+              channel = rebuilt.vertexSet().stream().filter(v => channelId.contains(v.getIdentifier())).findAny().get();
               mem     = rebuilt.queryVertex(memId).get()
             ) {
               GenericMemoryModule
@@ -147,6 +122,39 @@ object MixedRules {
         }
       }
       case _ => Option.empty
+    }
+  }
+
+  def identPeriodicWorkloadToPartitionedSharedMultiCoreWithUtilization(
+      models: Set[DesignModel],
+      identified: Set[DecisionModel]
+  ): Option[PeriodicWorkloadToPartitionedSharedMultiCore] = {
+    ForSyDeIdentificationUtils.toForSyDe(models) { model => 
+      val app = identified
+        .find(_.isInstanceOf[CommunicatingExtendedDependenciesPeriodicWorkload])
+        .map(_.asInstanceOf[CommunicatingExtendedDependenciesPeriodicWorkload])
+      val plat = identified
+        .find(_.isInstanceOf[PartitionedSharedMemoryMultiCore])
+        .map(_.asInstanceOf[PartitionedSharedMemoryMultiCore])
+      // if ((runtimes.isDefined && plat.isEmpty) || (runtimes.isEmpty && plat.isDefined))
+      app.flatMap(a =>
+        plat.map(p =>
+          PeriodicWorkloadToPartitionedSharedMultiCore(
+            workload = a,
+            platform = p,
+            processMappings = Array.empty,
+            processSchedulings = Array.empty,
+            channelMappings = Array.empty,
+            channelSlotAllocations = Map(),
+            maxUtilizations = (for (
+              pe <- p.hardware.processingElems; 
+              peVertex = model.queryVertex(pe); 
+              if peVertex.isPresent() && UtilizationBoundedProcessingElem.conforms(peVertex.get());
+              utilVertex = UtilizationBoundedProcessingElem.safeCast(peVertex.get()).get()
+            ) yield pe -> Rational(utilVertex.getMaxUtilizationNumerator(), utilVertex.getMaxUtilizationDenominator())).toMap
+          )
+        )
+      )  
     }
   }
 }

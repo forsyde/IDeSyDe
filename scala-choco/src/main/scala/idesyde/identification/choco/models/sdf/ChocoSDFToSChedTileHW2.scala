@@ -189,23 +189,6 @@ final case class ChocoSDFToSChedTileHW2(
       // tileAnalysisModule.procElemSendsDataToAnother(sendi)(desti).eq(0).decompose()
     )
   }
-  // dse.platform.schedulerSet.zipWithIndex.foreach((_, sendi) => {
-  //   dse.platform.schedulerSet.zipWithIndex.foreach((_, desti) => {
-  //     if (sendi != desti) {
-  //       chocoModel.ifThen(
-  //         chocoModel.and(
-  //           chocoModel.arithm(aMap, "=", sendi),
-  //           chocoModel.arithm(cMap, "=", desti)
-  //         ),
-  //         chocoModel.arithm(
-  //           tileAnalysisModule.procElemSendsDataToAnother(sendi)(desti),
-  //           ">",
-  //           0
-  //         )
-  //       )
-  //     }
-  //   })
-  // })
 
   tileAnalysisModule.postTileAsyncInterconnectComms()
   //---------

@@ -94,7 +94,7 @@ class Active4StageDurationModule(
       chocoModel.intVar(
         s"vcTotal($c)",
         0,
-        tasksAndPlatform.platform.hardware.communicationElementsMaxChannels(i),
+        tasksAndPlatform.platform.hardware.communicationElementsMaxChannels(i) * processors.size,
         true
       )
     )
@@ -124,7 +124,7 @@ class Active4StageDurationModule(
       (mapp, _) <- taskMapping.zipWithIndex;
       (p, i)    <- tasksAndPlatform.platform.hardware.processingElems.zipWithIndex;
       (m, j)    <- tasksAndPlatform.platform.hardware.storageElems.zipWithIndex;
-      ce        <- tasksAndPlatform.platform.hardware.preComputedPaths(i)(j);
+      ce        <- tasksAndPlatform.platform.hardware.computedPaths(p)(m);
       k = tasksAndPlatform.platform.hardware.communicationElems.indexOf(ce)
     ) {
       chocoModel.ifThen(
@@ -142,7 +142,7 @@ class Active4StageDurationModule(
       if taskReadsData(t)(c) > 0 || taskReadsData(t)(c) > 0;
       (p, i) <- tasksAndPlatform.platform.hardware.processingElems.zipWithIndex;
       (m, j) <- tasksAndPlatform.platform.hardware.storageElems.zipWithIndex;
-      ce     <- tasksAndPlatform.platform.hardware.preComputedPaths(i)(j);
+      ce     <- tasksAndPlatform.platform.hardware.computedPaths(p)(m);
       k = tasksAndPlatform.platform.hardware.communicationElems.indexOf(ce)
     ) {
       chocoModel.ifThen(
@@ -157,7 +157,7 @@ class Active4StageDurationModule(
       (mapp, _) <- taskMapping.zipWithIndex;
       (p, i)    <- tasksAndPlatform.platform.hardware.processingElems.zipWithIndex;
       (m, j)    <- tasksAndPlatform.platform.hardware.storageElems.zipWithIndex;
-      path    = tasksAndPlatform.platform.hardware.preComputedPaths(i)(j);
+      path    = tasksAndPlatform.platform.hardware.computedPaths(p)(m);
       pathIdx = path.map(tasksAndPlatform.platform.hardware.communicationElems.indexOf(_)).toArray
     ) {
       chocoModel.ifThen(
@@ -176,7 +176,7 @@ class Active4StageDurationModule(
       (mapp, c) <- dataMapping.zipWithIndex;
       (p, i)    <- tasksAndPlatform.platform.hardware.processingElems.zipWithIndex;
       (m, j)    <- tasksAndPlatform.platform.hardware.storageElems.zipWithIndex;
-      path    = tasksAndPlatform.platform.hardware.preComputedPaths(i)(j);
+      path    = tasksAndPlatform.platform.hardware.computedPaths(p)(m);
       pathIdx = path.map(tasksAndPlatform.platform.hardware.communicationElems.indexOf(_)).toArray
     ) {
       if (taskReadsData(t)(c) > 0) {
@@ -208,7 +208,7 @@ class Active4StageDurationModule(
       chocoModel
         .sum(
           processingElemsVirtualChannelInCommElem.map(vc => vc(i)),
-          "<=",
+          "=",
           totalVCPerCommElem(i)
         )
         .post()

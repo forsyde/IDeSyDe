@@ -4,6 +4,7 @@ import org.scalatest.funsuite.AnyFunSuite
 import idesyde.exploration.ExplorationHandler
 import idesyde.identification.IdentificationHandler
 import idesyde.exploration.ChocoExplorationModule
+import idesyde.identification.common.CommonIdentificationModule
 import idesyde.identification.choco.ChocoIdentificationModule
 import idesyde.identification.forsyde.ForSyDeIdentificationModule
 import idesyde.identification.minizinc.MinizincIdentificationModule
@@ -33,6 +34,7 @@ class PanoramaUseCaseWithoutSolutionSuite extends AnyFunSuite with LoggingMixin 
   ).registerModule(ChocoExplorationModule())
 
   val identificationHandler = IdentificationHandler()
+    .registerIdentificationRule(CommonIdentificationModule())
     .registerIdentificationRule(ChocoIdentificationModule())
     .registerIdentificationRule(ForSyDeIdentificationModule())
     .registerIdentificationRule(MinizincIdentificationModule())
@@ -64,14 +66,16 @@ class PanoramaUseCaseWithoutSolutionSuite extends AnyFunSuite with LoggingMixin 
       .flatMap((explorer, decisionModel) =>
         explorer
           .explore(decisionModel)
+          .take(1)
           .flatMap(decisionModel => identificationHandler.integrateDecisionModel(model, decisionModel))
           .flatMap(designModel => designModel match {case f: ForSyDeDesignModel => Some(f.systemGraph); case _ => Option.empty})
           .map(sol =>
             forSyDeModelHandler
               .writeModel(model.systemGraph, "scala-tests/models/panorama/wrong_output_of_dse.fiodl")
             sol
-          ).take(1)
+          )
       )
+      .take(1)
     assert(solutions.size == 0)
   }
 

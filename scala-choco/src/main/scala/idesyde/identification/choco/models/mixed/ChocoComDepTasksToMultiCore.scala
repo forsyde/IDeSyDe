@@ -162,22 +162,6 @@ final case class ChocoComDepTasksToMultiCore(
     dse.workload.interTaskOccasionalBlock
   )
 
-  val taskCommMapping = dse.workload.processes.zipWithIndex.map((t, i) =>
-    dse.platform.hardware.communicationElems.zipWithIndex.map((ce, j) =>
-      chocoModel.boolVar(
-        s"tcom_map($t, $ce)"
-      )
-    )
-  )
-  val dataBlockCommMapping =
-    dse.workload.channels.zipWithIndex.map((c, i) =>
-      dse.platform.hardware.communicationElems.zipWithIndex.map((ce, j) =>
-        chocoModel.boolVar(
-          s"dcom_map($c, $ce)"
-        )
-      )
-    )
-
   val processingElemsVirtualChannelInCommElem = dse.platform.hardware.processingElems.map(p =>
     dse.platform.hardware.communicationElems.zipWithIndex.map((c, i) =>
       chocoModel.intVar(
@@ -256,7 +240,7 @@ final case class ChocoComDepTasksToMultiCore(
     dse.platform.hardware.processingElems.length
   )
   // count different ones
-  chocoModel.atMostNValues(taskExecution, nUsedPEs, true).post()
+  chocoModel.nValues(taskExecution, nUsedPEs).post()
 
   // the objectives so far are just the minimization of used PEs
   // the inMinusView is necessary to transform a minimization into
@@ -317,8 +301,10 @@ final case class ChocoComDepTasksToMultiCore(
     Search.inputOrderUBSearch(nUsedPEs),
     Search.activityBasedSearch(taskMapping: _*),
     Search.activityBasedSearch(dataBlockMapping: _*),
-    Search.inputOrderLBSearch(responseTimes: _*),
-    Search.inputOrderLBSearch(blockingTimes: _*)
+    Search.minDomLBSearch(responseTimes: _*),
+    Search.minDomLBSearch(blockingTimes: _*),
+    Search.minDomLBSearch(memoryMappingModule.processesMemoryMapping:_*),
+    Search.minDomLBSearch(memoryMappingModule.messagesMemoryMapping:_*)
     // Search.intVarSearch(
     //   FirstFail(chocoModel),
     //   IntDomainMin(),
@@ -336,13 +322,13 @@ final case class ChocoComDepTasksToMultiCore(
       dse.workload.processes(i) -> dse.platform.runtimes.schedulers(output.getIntVal(v))
     )
     val channelMappings = memoryMappingModule.messagesMemoryMapping.zipWithIndex.map((v, i) =>
-      dse.workload.processes(i) -> dse.platform.hardware.storageElems(output.getIntVal(v))
+      dse.workload.channels(i) -> dse.platform.hardware.storageElems(output.getIntVal(v))
     )
     // val channelSlotAllocations = ???
     dse.copy(
-      processMappings = processMappings.toMap,
-      processSchedulings = processSchedulings.toMap,
-      channelMappings = channelMappings.toMap
+      processMappings = processMappings,
+      processSchedulings = processSchedulings,
+      channelMappings = channelMappings
     )
   }
 
@@ -351,6 +337,6 @@ final case class ChocoComDepTasksToMultiCore(
       dse.workload.messagesMaxSizes ++
       dse.workload.processSizes).filter(_ > 0L)
 
-  val uniqueIdentifier = "PeriodicTaskToSchedHWChoco"
+  val uniqueIdentifier = "ChocoComDepTasksToMultiCore"
 
 }

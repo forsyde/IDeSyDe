@@ -6,6 +6,8 @@ import idesyde.utils.Logger
 import idesyde.identification.choco.models.sdf.ChocoSDFToSChedTileHW2
 import spire.math.Rational
 import idesyde.identification.common.models.mixed.SDFToTiledMultiCore
+import idesyde.identification.choco.models.mixed.ChocoComDepTasksToMultiCore
+import idesyde.identification.common.models.mixed.PeriodicWorkloadToPartitionedSharedMultiCore
 
 object ChocoRules {
 
@@ -18,4 +20,12 @@ object ChocoRules {
     .find(m => m.isInstanceOf[SDFToTiledMultiCore])
     .map(m => m.asInstanceOf[SDFToTiledMultiCore])
     .map(dse => ChocoSDFToSChedTileHW2(dse))
+
+  def identChocoComDepTasksToMultiCore(
+      models: Set[DesignModel],
+      identified: Set[DecisionModel]
+  ): Option[ChocoComDepTasksToMultiCore] = identified
+    .find(m => m.isInstanceOf[PeriodicWorkloadToPartitionedSharedMultiCore])
+    .map(m => m.asInstanceOf[PeriodicWorkloadToPartitionedSharedMultiCore])
+    .map(dse => ChocoComDepTasksToMultiCore(dse))
 }

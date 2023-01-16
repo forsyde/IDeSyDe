@@ -4,6 +4,7 @@ import org.scalatest.funsuite.AnyFunSuite
 import idesyde.exploration.ExplorationHandler
 import idesyde.identification.IdentificationHandler
 import idesyde.exploration.ChocoExplorationModule
+import idesyde.identification.common.CommonIdentificationModule
 import idesyde.identification.choco.ChocoIdentificationModule
 import idesyde.identification.forsyde.ForSyDeIdentificationModule
 import idesyde.identification.minizinc.MinizincIdentificationModule
@@ -34,6 +35,7 @@ class PanoramaUseCaseWithSolutionSuite extends AnyFunSuite with LoggingMixin {
     .registerModule(ChocoExplorationModule())
 
   val identificationHandler = IdentificationHandler()
+    .registerIdentificationRule(CommonIdentificationModule())
     .registerIdentificationRule(ChocoIdentificationModule())
     .registerIdentificationRule(ForSyDeIdentificationModule())
     .registerIdentificationRule(MinizincIdentificationModule())
@@ -74,6 +76,7 @@ class PanoramaUseCaseWithSolutionSuite extends AnyFunSuite with LoggingMixin {
       .flatMap((explorer, decisionModel) =>
         explorer
           .explore(decisionModel)
+          .take(1)
           .flatMap(decisionModel => identificationHandler.integrateDecisionModel(model, decisionModel))
           .flatMap(designModel =>
             designModel match { case f: ForSyDeDesignModel => Some(f.systemGraph); case _ => Option.empty }
@@ -85,7 +88,6 @@ class PanoramaUseCaseWithSolutionSuite extends AnyFunSuite with LoggingMixin {
               .writeModel(sol, "scala-tests/models/panorama/output_of_dse_visual.kgt")
             sol
           )
-          .take(1)
       )
       .take(1)
     assert(solutions.size > 0)

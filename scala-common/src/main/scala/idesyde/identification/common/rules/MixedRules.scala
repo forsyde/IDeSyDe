@@ -78,9 +78,9 @@ object MixedRules {
         PeriodicWorkloadToPartitionedSharedMultiCore(
           workload = a,
           platform = p,
-          processMappings = Map(),
-          processSchedulings = Map(),
-          channelMappings = Map(),
+          processMappings = Array.empty,
+          processSchedulings = Array.empty,
+          channelMappings = Array.empty,
           channelSlotAllocations = Map(),
           maxUtilizations = Map()
         )

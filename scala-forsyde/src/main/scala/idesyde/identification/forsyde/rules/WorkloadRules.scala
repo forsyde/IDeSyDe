@@ -201,7 +201,7 @@ object WorkloadRules {
           })
       }
       // first consider task-to-task connections
-      var affineControlGraphEdges = Buffer[(Int, Int, Int, Int, Int, Int)]()
+      var affineControlGraphEdges = Buffer[(String, String, Int, Int, Int, Int)]()
       for (srcTask <- tasks) {
         model
           .outgoingEdgesOf(srcTask.getViewedVertex())
@@ -214,19 +214,23 @@ object WorkloadRules {
                 (srcEvent, i) <- processes.zipWithIndex
                   .filter((p, i) => p._1 == srcTask.getIdentifier());
                 (dstEvent, j) <- processes.zipWithIndex
-                  .filter((p, j) => p._1 == dstTask.getIdentifier())
-                if srcEvent._2 == dstEvent._2
+                  .filter((p, j) => p._1 == dstTask.getIdentifier());
+                if srcEvent._2 == dstEvent._2;
+                srcId = s"${srcEvent._1}_$i";
+                dstId = s"${dstEvent._1}_$j"
               ) {
-                affineControlGraphEdges :+= (i, j, 1, 0, 1, 0)
+                affineControlGraphEdges :+= (srcId, dstId, 1, 0, 1, 0)
               }
             } else {
               for (
                 (srcEvent, i) <- processes.zipWithIndex
                   .filter((p, i) => p._1 == srcTask.getIdentifier());
                 (dstEvent, j) <- processes.zipWithIndex
-                  .filter((p, j) => p._1 == dstTask.getIdentifier())
+                  .filter((p, j) => p._1 == dstTask.getIdentifier());
+                srcId = s"${srcEvent._1}_$i";
+                dstId = s"${dstEvent._1}_$j"
               ) {
-                affineControlGraphEdges :+= (i, j, (dstEvent._2 / srcEvent._2).ceil.toInt, 0, 1, 0)
+                affineControlGraphEdges :+= (srcId, dstId, (dstEvent._2 / srcEvent._2).ceil.toInt, 0, 1, 0)
               }
             }
           })
@@ -256,9 +260,11 @@ object WorkloadRules {
                     ) == srcEvent._2 &&
                       dstEvent._3 - (dstEvent._2 * Rational(
                         upsample.getInitialPredecessorHolds
-                      )) == srcEvent._3
+                      )) == srcEvent._3;
+                    srcId = s"${srcEvent._1}_$i";
+                    dstId = s"${dstEvent._1}_$j"
                   ) {
-                    affineControlGraphEdges :+= (i, j, upsample.getRepetitivePredecessorHolds.toInt, upsample.getInitialPredecessorHolds.toInt, 1, 0)
+                    affineControlGraphEdges :+= (srcId, dstId, upsample.getRepetitivePredecessorHolds.toInt, upsample.getInitialPredecessorHolds.toInt, 1, 0)
                   }
                 } else {
                   for (
@@ -267,9 +273,11 @@ object WorkloadRules {
                     (dstEvent, j) <- processes.zipWithIndex
                       .filter((p, j) => p._1 == dstTask.getIdentifier());
                     pRatio = (dstEvent._2 / srcEvent._2);
-                    offset = ((dstEvent._3 - srcEvent._3) / srcEvent._2)
+                    offset = ((dstEvent._3 - srcEvent._3) / srcEvent._2);
+                    srcId = s"${srcEvent._1}_$i";
+                    dstId = s"${dstEvent._1}_$j"
                   ) {
-                    affineControlGraphEdges :+= (i, j, pRatio.ceil.toInt, offset.ceil.toInt, 1, 0)
+                    affineControlGraphEdges :+= (srcId, dstId, pRatio.ceil.toInt, offset.ceil.toInt, 1, 0)
                   }
                 }
               })
@@ -300,11 +308,13 @@ object WorkloadRules {
                     ) == srcEvent._2 &&
                       dstEvent._3 + (dstEvent._2 / Rational(
                         downsample.getInitialPredecessorSkips
-                      )) == srcEvent._3
+                      )) == srcEvent._3;
+                    srcId = s"${srcEvent._1}_$i";
+                    dstId = s"${dstEvent._1}_$j"
                   )
                     affineControlGraphEdges :+= (
-                      i,
-                      j,
+                      srcId,
+                      dstId,
                       1,
                       0,
                       downsample.getRepetitivePredecessorSkips.toInt,
@@ -317,8 +327,10 @@ object WorkloadRules {
                     (dstEvent, j) <- processes.zipWithIndex
                       .filter((p, j) => p._1 == dstTask.getIdentifier());
                     pRatio = (srcEvent._2 / dstEvent._2).toDouble.ceil.toInt;
-                    offset = ((dstEvent._3 - srcEvent._3) / dstEvent._2).toDouble.toInt
-                  ) affineControlGraphEdges :+= (i, j, 1, 0, pRatio, offset)
+                    offset = ((dstEvent._3 - srcEvent._3) / dstEvent._2).toDouble.toInt;
+                    srcId = s"${srcEvent._1}_$i";
+                    dstId = s"${dstEvent._1}_$j"
+                  ) affineControlGraphEdges :+= (srcId, dstId, 1, 0, pRatio, offset)
                 }
               })
           })
@@ -332,7 +344,7 @@ object WorkloadRules {
       )
       Option(
         CommunicatingExtendedDependenciesPeriodicWorkload(
-          processes.map((n, p, o, d) => n).toArray,
+          processes.zipWithIndex.map((t, i) => s"${t._1}_$i").toArray,
           processes.map((n, p, o, d) => p).toArray,
           processes.map((n, p, o, d) => o).toArray,
           processes.map((n, p, o, d) => d).toArray,
@@ -406,6 +418,7 @@ object WorkloadRules {
                   .forEach((opName, opReqs) => {
                     if (!maps.contains(opName)) maps(opName) = mutable.Map[String, Long]()
                     opReqs.forEach((opKey, opVal) => {
+                      if (!maps(opName).contains(opKey)) maps(opName)(opKey) = 0L
                       maps(opName)(opKey) += opVal
                     })
                   })

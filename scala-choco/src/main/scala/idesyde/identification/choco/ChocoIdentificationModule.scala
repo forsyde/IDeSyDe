@@ -14,7 +14,8 @@ class ChocoIdentificationModule() extends IdentificationModule {
   given Fractional[Rational]         = spire.compat.fractional[Rational]
   
   val identificationRules = Set(
-    ChocoRules.identChocoSDFToSChedTileHW2
+    ChocoRules.identChocoSDFToSChedTileHW2,
+    ChocoRules.identChocoComDepTasksToMultiCore
     )
     
   def integrationRules: Set[(DesignModel, DecisionModel) => Option[? <: DesignModel]] = Set()

@@ -23,21 +23,9 @@ class ForSyDeIdentificationModule(using Logger) extends IdentificationModule {
     SDFRules.identSDFApplication,
     PlatformRules.identTiledMultiCore,
     PlatformRules.identPartitionedCoresWithRuntimes,
-    WorkloadRules.identPeriodicDependentWorkload
-    // SDFAppIdentificationRule(),
-    // NetworkedDigitalHWIdentRule(),
-    // SchedulableNetDigHWIdentRule(),
-    // // ReactorMinusAppDSEIdentRule(),
-    // // ReactorMinusAppDSEMznIdentRule(),
-    // PeriodicWorkloadIdentificationRule(),
-    // PeriodicTaskToSchedHWIdentRule(),
-    // // ReactorMinusIdentificationRule(
-    // //   Executors.newFixedThreadPool(1).asInstanceOf[ThreadPoolExecutor]
-    // // ),
-    // TiledDigitalHardwareIRule(),
-    // SchedulableTiledDigitalHardware.identFromAny,
-    // SDFToSchedTiledHW.identFromAny,
-    // SDFToExplicitSchedHW
+    WorkloadRules.identPeriodicDependentWorkload,
+    PlatformRules.identSharedMemoryMultiCore,
+    MixedRules.identPeriodicWorkloadToPartitionedSharedMultiCoreWithUtilization
   )
 
   val integrationRules = Set(

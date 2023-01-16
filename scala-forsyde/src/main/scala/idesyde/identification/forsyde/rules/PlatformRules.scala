@@ -22,6 +22,10 @@ import forsyde.io.java.core.ForSyDeSystemGraph
 import breeze.linalg.all
 import forsyde.io.java.typed.viewers.platform.runtime.FixedPriorityScheduler
 import forsyde.io.java.typed.viewers.platform.runtime.StaticCyclicScheduler
+import idesyde.identification.common.models.platform.SharedMemoryMultiCore
+import idesyde.identification.forsyde.ForSyDeIdentificationUtils
+import org.jgrapht.graph.AsSubgraph
+import org.jgrapht.alg.connectivity.ConnectivityInspector
 
 object PlatformRules {
 
@@ -119,19 +123,20 @@ object PlatformRules {
     ) {
       return Option.empty
     }
+    val topology = AsSubgraph(model, (processingElements ++ memoryElements ++ communicationElements).map(_.getViewedVertex()).toSet.asJava)
     // check if pes and mes connect only to CE etc
     val processingOnlyValidLinks = processingElements.forall(pe => {
-      model
+      topology
         .outgoingEdgesOf(pe.getViewedVertex)
         .stream
-        .map(model.getEdgeTarget(_))
+        .map(topology.getEdgeTarget(_))
         .filter(DigitalModule.conforms(_))
         .allMatch(v => GenericCommunicationModule.conforms(v) || GenericMemoryModule.conforms(v))
       &&
-      model
+      topology
         .incomingEdgesOf(pe.getViewedVertex)
         .stream
-        .map(model.getEdgeSource(_))
+        .map(topology.getEdgeSource(_))
         .filter(DigitalModule.conforms(_))
         .allMatch(v => GenericCommunicationModule.conforms(v) || GenericMemoryModule.conforms(v))
     })
@@ -140,19 +145,19 @@ object PlatformRules {
     }
     // do the same for MEs
     val memoryOnlyValidLinks = memoryElements.forall(me => {
-      model
+      topology
         .outgoingEdgesOf(me.getViewedVertex)
         .stream
-        .map(model.getEdgeTarget(_))
+        .map(topology.getEdgeTarget(_))
         .filter(DigitalModule.conforms(_))
         .allMatch(v =>
           GenericCommunicationModule.conforms(v) || GenericProcessingModule.conforms(v)
         )
       &&
-      model
+      topology
         .incomingEdgesOf(me.getViewedVertex)
         .stream
-        .map(model.getEdgeSource(_))
+        .map(topology.getEdgeSource(_))
         .filter(DigitalModule.conforms(_))
         .allMatch(v =>
           GenericCommunicationModule.conforms(v) || GenericProcessingModule.conforms(v)
@@ -202,18 +207,9 @@ object PlatformRules {
     // and also the subset of only communication elements
     var interconnectTopologySrcs = Buffer[String]()
     var interconnectTopologyDsts = Buffer[String]()
-    communicationElements.foreach(ce => {
-      model
-        .outgoingEdgesOf(ce.getViewedVertex())
-        .forEach(e => {
-          val dst = model.getEdgeTarget(e)
-          DigitalModule
-            .safeCast(dst)
-            .ifPresent(dstce => {
-              interconnectTopologySrcs += ce.getIdentifier()
-              interconnectTopologyDsts += dstce.getIdentifier()
-            })
-        })
+    topology.edgeSet().forEach(e => {
+      interconnectTopologySrcs += topology.getEdgeSource(e).getIdentifier()
+      interconnectTopologyDsts += topology.getEdgeTarget(e).getIdentifier()
     })
     val processorsProvisions = processingElements.map(pe => {
       // we do it mutable for simplicity...
@@ -249,12 +245,139 @@ object PlatformRules {
           InstrumentedCommunicationModule
             .safeCast(_)
             .map(ce =>
-              Rational(ce.getFlitSizeInBits() * ce.getMaxCyclesPerFlit(),  ce.getOperatingFrequencyInHertz())
+              Rational(ce.getFlitSizeInBits() * ce.getMaxCyclesPerFlit() * ce.getOperatingFrequencyInHertz())
             )
             .orElse(Rational.zero)
         ),
         preComputedPaths = Map.empty
       )
     )
+  }
+
+  def identSharedMemoryMultiCore(
+      models: Set[DesignModel],
+      identified: Set[DecisionModel]
+  )(using logger: Logger): Option[SharedMemoryMultiCore] = {
+    ForSyDeIdentificationUtils.toForSyDe(models) { model =>
+      var processingElements    = Array.empty[GenericProcessingModule]
+      var memoryElements        = Array.empty[GenericMemoryModule]
+      var communicationElements = Array.empty[GenericCommunicationModule]
+      model.vertexSet.stream
+        .filter(v => DigitalModule.conforms(v))
+        .forEach(v => {
+          GenericProcessingModule
+            .safeCast(v)
+            .ifPresent(p => processingElements :+= p)
+          GenericMemoryModule
+            .safeCast(v)
+            .ifPresent(p => memoryElements :+= p)
+          GenericCommunicationModule
+            .safeCast(v)
+            .ifPresent(p => communicationElements :+= p)
+        })
+      if (
+        processingElements.length <= 0
+      ) {
+        return Option.empty
+      }
+      // build the topology graph with just the known elements
+      val topology = AsSubgraph(model, (processingElements ++ memoryElements ++ communicationElements).map(_.getViewedVertex()).toSet.asJava)
+      // check if pes and mes connect only to CE etc
+      val processingOnlyValidLinks = processingElements.forall(pe => {
+        topology
+          .outgoingEdgesOf(pe.getViewedVertex)
+          .stream
+          .map(topology.getEdgeTarget(_))
+          .filter(DigitalModule.conforms(_))
+          .allMatch(v => GenericCommunicationModule.conforms(v) || GenericMemoryModule.conforms(v))
+        &&
+        topology
+          .incomingEdgesOf(pe.getViewedVertex)
+          .stream
+          .map(topology.getEdgeSource(_))
+          .filter(DigitalModule.conforms(_))
+          .allMatch(v => GenericCommunicationModule.conforms(v) || GenericMemoryModule.conforms(v))
+      })
+      if (!processingOnlyValidLinks) {
+        return Option.empty
+      }
+      // do the same for MEs
+      val memoryOnlyValidLinks = memoryElements.forall(me => {
+        topology
+          .outgoingEdgesOf(me.getViewedVertex)
+          .stream
+          .map(topology.getEdgeTarget(_))
+          .filter(DigitalModule.conforms(_))
+          .allMatch(v =>
+            GenericCommunicationModule.conforms(v) || GenericProcessingModule.conforms(v)
+          )
+        &&
+        topology
+          .incomingEdgesOf(me.getViewedVertex)
+          .stream
+          .map(topology.getEdgeSource(_))
+          .filter(DigitalModule.conforms(_))
+          .allMatch(v =>
+            GenericCommunicationModule.conforms(v) || GenericProcessingModule.conforms(v)
+          )
+      })
+      if (!memoryOnlyValidLinks) {
+        return Option.empty
+      }
+      // check if all processors are connected to at least one memory element
+      val connecivityInspector = ConnectivityInspector(topology)
+      val pesConnected = processingElements.forall(pe => 
+        memoryElements.exists(me => connecivityInspector.pathExists(pe.getViewedVertex(), me.getViewedVertex())))
+      if (!pesConnected) return Option.empty
+      // basically this check to see if there are always neighboring
+      // pe, mem and ce
+      // and also the subset of only communication elements
+      var interconnectTopologySrcs = Buffer[String]()
+      var interconnectTopologyDsts = Buffer[String]()
+      topology.edgeSet().forEach(e => {
+        interconnectTopologySrcs += topology.getEdgeSource(e).getIdentifier()
+        interconnectTopologyDsts += topology.getEdgeTarget(e).getIdentifier()
+      })
+      val processorsProvisions = processingElements.map(pe => {
+        // we do it mutable for simplicity...
+        // the performance hit should not be a concern now, for super big instances, this can be reviewed
+        var mutMap = mutable.Map[String, Map[String, Rational]]()
+        InstrumentedProcessingModule
+          .safeCast(pe)
+          .map(ipe => {
+            ipe
+              .getModalInstructionsPerCycle()
+              .entrySet()
+              .forEach(e => {
+                mutMap(e.getKey()) = e.getValue().asScala.map((k, v) => k -> Rational(v)).toMap
+              })
+          })
+        mutMap.toMap
+      })
+      Option(
+        SharedMemoryMultiCore(
+          processingElements.map(_.getIdentifier()),
+          memoryElements.map(_.getIdentifier()),
+          communicationElements.map(_.getIdentifier()),
+          interconnectTopologySrcs.toArray,
+          interconnectTopologyDsts.toArray,
+          processingElements.map(_.getOperatingFrequencyInHertz().toLong),
+          processorsProvisions,
+          memoryElements.map(_.getSpaceInBits()),
+          communicationElements.map(
+            InstrumentedCommunicationModule.safeCast(_).map(_.getMaxConcurrentFlits()).orElse(1)
+          ),
+          communicationElements.map(
+            InstrumentedCommunicationModule
+              .safeCast(_)
+              .map(ce =>
+                Rational(ce.getFlitSizeInBits() * ce.getMaxCyclesPerFlit() * ce.getOperatingFrequencyInHertz())
+              )
+              .orElse(Rational.zero)
+          ),
+          preComputedPaths = Map.empty
+        )
+      )
+    }
   }
 }

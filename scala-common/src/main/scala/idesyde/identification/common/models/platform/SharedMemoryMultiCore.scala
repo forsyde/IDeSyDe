@@ -24,7 +24,7 @@ final case class SharedMemoryMultiCore(
     val storageSizes: Array[Long],
     val communicationElementsMaxChannels: Array[Int],
     val communicationElementsBitPerSecPerChannel: Array[Rational],
-    val preComputedPaths: Array[Array[Iterable[String]]]
+    val preComputedPaths: Map[String, Map[String, Iterable[String]]]
 ) extends StandardDecisionModel
     with InstrumentedPlatformMixin[Rational] {
 
@@ -34,42 +34,41 @@ final case class SharedMemoryMultiCore(
   val platformElements: Array[String] =
     processingElems ++ communicationElems ++ storageElems
 
-  val topology = Graph(topologySrcs.zip(topologyDsts).map((src, dst) => src ~> dst): _*)
+  val topology = Graph.from(platformElements, topologySrcs.zip(topologyDsts).map((src, dst) => src ~> dst))
 
   val computedPaths =
-    platformElements.zipWithIndex.map((pe, src) =>
-      platformElements.zipWithIndex.map((me, dst) =>
-        if (!preComputedPaths(src)(dst).isEmpty) {
-          preComputedPaths(src)(dst)
-        } else {
-          topology
-            .get(pe)
-            .withSubgraph(nodes =
-              v =>
-                v.toOuter == pe || v.toOuter == me || communicationElems.contains(
-                  v.value.toString()
-                )
-            )
-            .shortestPathTo(topology.get(me), e => 1)
-            .map(path => path.nodes.map(_.value.toString()))
-            .map(_.drop(1).dropRight(1))
-            .getOrElse(Seq.empty)
+    platformElements.map(src => src ->
+      platformElements.map(dst => dst -> {
+          if (preComputedPaths.contains(src) && preComputedPaths(src).contains(dst) && !preComputedPaths(src)(dst).isEmpty) {
+            preComputedPaths(src)(dst)
+          } else {
+            topology
+              .get(src)
+              .withSubgraph(nodes =
+                v =>
+                  v.value == src || v.value == dst || communicationElems.contains(v.value)
+              )
+              .shortestPathTo(topology.get(dst), e => 1)
+              .map(path => path.nodes.map(_.value.toString()))
+              .map(_.drop(1).dropRight(1))
+              .getOrElse(Seq.empty)
+          }
         }
-      )
-    )
+      ).toMap
+    ).toMap
 
   val maxTraversalTimePerBit: Array[Array[Rational]] = {
     // val paths = FloydWarshallShortestPaths(directedAndConnectedMinTimeGraph)
     platformElements.zipWithIndex.map((src, i) => {
       platformElements.zipWithIndex.map((dst, j) => {
-        computedPaths(i)(j)
+        computedPaths(src)(dst)
           .map(ce => {
             val dstIdx = communicationElems.indexOf(ce)
             (communicationElementsBitPerSecPerChannel(dstIdx) * communicationElementsMaxChannels(
               dstIdx
             ))
           })
-          .reduce(_ + _)
+          .foldLeft(Rational.zero)(_ + _)
       })
     })
   }
@@ -77,12 +76,12 @@ final case class SharedMemoryMultiCore(
   val minTraversalTimePerBit: Array[Array[Rational]] = {
     platformElements.zipWithIndex.map((src, i) => {
       platformElements.zipWithIndex.map((dst, j) => {
-        computedPaths(i)(j)
+        computedPaths(src)(dst)
           .map(ce => {
             val dstIdx = communicationElems.indexOf(ce)
             (communicationElementsBitPerSecPerChannel(dstIdx))
           })
-          .reduce(_ + _)
+          .foldLeft(Rational.zero)(_ + _)
       })
     })
   }
@@ -90,5 +89,3 @@ final case class SharedMemoryMultiCore(
   override val uniqueIdentifier = "SharedMemoryMultiCore"
 
 }
-
-object SharedMemoryMultiCore {}

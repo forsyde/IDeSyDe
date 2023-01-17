@@ -23,8 +23,7 @@ class SDFSchedulingAnalysisModule2(
     val sdfAndSchedulers: SDFToTiledMultiCore,
     val memoryMappingModule: SingleProcessSingleMessageMemoryConstraintsModule,
     val tileAsyncModule: TileAsyncInterconnectCommsModule,
-    val timeFactor: Long = 1L,
-    val memoryDivider: Long = 1L
+    val timeFactor: Long = 1L
 ) extends ChocoModelMixin() {
 
   private val actors = sdfAndSchedulers.sdfApplications.actorsIdentifiers

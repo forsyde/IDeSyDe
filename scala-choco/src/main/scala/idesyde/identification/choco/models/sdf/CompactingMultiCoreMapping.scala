@@ -19,7 +19,8 @@ import spire.implicits._
 class CompactingMultiCoreMapping[DistT](
     val processorsDistances: Array[Array[DistT]],
     val processesComponents: Array[Int],
-    val processesMappings: Array[IntVar]
+    val processesMappings: Array[IntVar],
+    val processesIsFollowedBy: (Int) => (Int) => Boolean
     // val durations: Array[IntVar]
     // val invThroughputs: Array[IntVar],
 )(using distT: spire.math.Integral[DistT])
@@ -63,18 +64,32 @@ class CompactingMultiCoreMapping[DistT](
     score
   }
 
+  def calculateCrossings(processorIdx: Int)(scheduler: Int): Int = {
+    var crossings = 0
+    wfor(0, _ < numProcesses, _ + 1) { other =>
+      if (other != processorIdx && processesIsFollowedBy(other)(processorIdx) && !processesMappings(other).contains(scheduler)) {
+        wfor(0, _ < numProcesses, _ + 1) {prevOther => 
+          if (prevOther != other && processesIsFollowedBy(prevOther)(other) && processesMappings(prevOther).isInstantiatedTo(scheduler)) {
+            crossings += 1
+          }
+        }
+      } 
+    }
+    crossings 
+  }
+
   def getDecision(): Decision[IntVar] = {
     // val schedulersShuffled = Random.shuffle(schedulers)
     // normal
     var bestPCompact     = -1
     var bestSCompact     = -1
-    var bestScoreCompact = distT.fromInt(Int.MaxValue)
+    var bestScoreCompact = (distT.fromInt(Int.MaxValue), Int.MaxValue)
     // var bestDuration = Int.MaxValue
     wfor(0, _ < numProcesses, _ + 1) { job =>
       if (!processesMappings(job).isInstantiated()) {
         wfor(processesMappings(job).getLB(), _ <= processesMappings(job).getUB(), _ + 1) { s =>
           if (processesMappings(job).contains(s)) {
-            val score = calculateDistanceScore(job)(s)
+            val score = (calculateDistanceScore(job)(s), calculateCrossings(job)(s))
             // val invTh = invThroughputs(s).getLB() + durations(job).getUB()
             if (bestPCompact == -1 || score < bestScoreCompact) { // || (score == bestScoreCompact && durations(job).getUB() < bestDuration)) {
               bestPCompact = job

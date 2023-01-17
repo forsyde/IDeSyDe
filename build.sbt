@@ -68,7 +68,7 @@ lazy val cli = (project in file("scala-cli"))
   .dependsOn(forsyde)
   .dependsOn(minizinc)
   // .enablePlugins(ScalaNativePlugin)
-  .enablePlugins(UniversalPlugin, JavaAppPackaging) //, JlinkPlugin)
+  .enablePlugins(UniversalPlugin, JavaAppPackaging, JlinkPlugin)
   .settings(
     Compile / mainClass := Some("idesyde.IDeSyDeStandalone"),
     libraryDependencies ++= Seq(
@@ -76,15 +76,16 @@ lazy val cli = (project in file("scala-cli"))
       "com.outr"         %% "scribe"      % scribeVersion,
       "com.outr"         %% "scribe-file" % scribeVersion
     ),
-    maintainer := "jordao@kth.se"
+    maintainer := "jordao@kth.se",
     // taken and adapted from https://www.scala-sbt.org/sbt-native-packager/archetypes/jlink_plugin.html
-    // jlinkModulePath := {
-    //   val paths = (jlinkBuildImage / fullClasspath).value
-    //   paths.filter(f => {
-    //     f.get(moduleID.key).exists(mID => mID.name.contains("jheaps")) ||
-    //     f.get(moduleID.key).exists(mID => mID.name.contains("commons-text"))
-    //   }).map(_.data)
-    // }
+    jlinkModulePath := {
+      val paths = (jlinkBuildImage / fullClasspath).value
+      paths.filter(f => {
+        f.get(moduleID.key).exists(mID => mID.name.contains("jheaps")) ||
+        f.get(moduleID.key).exists(mID => mID.name.contains("commons-text")) ||
+        f.get(moduleID.key).exists(mID => mID.name.contains("fastutil"))
+      }).map(_.data)
+    }
   )
 
 lazy val tests = (project in file("scala-tests"))

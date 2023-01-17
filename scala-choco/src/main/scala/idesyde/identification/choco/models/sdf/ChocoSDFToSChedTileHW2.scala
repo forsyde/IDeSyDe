@@ -257,7 +257,7 @@ final case class ChocoSDFToSChedTileHW2(
   )
   val minusMappedPerProcessingElement =
     mappedPerProcessingElement.map(v => chocoModel.intMinusView(v))
-  val indexOfPe = dse.platform.runtimes.schedulers.map(p =>
+  val computedOnlineIndexOfPe = dse.platform.runtimes.schedulers.map(p =>
     chocoModel.intVar(
       s"indexOfPe($p)",
       0,
@@ -278,25 +278,25 @@ final case class ChocoSDFToSChedTileHW2(
         "=",
         j
       ),
-      chocoModel.arithm(indexOfPe(j), "<=", i),
-      chocoModel.arithm(indexOfPe(j), "!=", i)
+      chocoModel.arithm(computedOnlineIndexOfPe(j), "<=", i),
+      chocoModel.arithm(computedOnlineIndexOfPe(j), "!=", i)
     )
   }
   dse.platform.hardware.symmetricTileGroups
     .maxByOption(_.size)
     .foreach(group => {
-      val pSorted = group.toArray.sorted.map(dse.platform.hardware.platformElements.indexOf(_))
-      chocoModel
-        .lexChainLessEq(
-          pSorted.map(p => Array(minusMappedPerProcessingElement(p), indexOfPe(p))): _*
-        )
-        .post()
+      val pSorted = group.map(id => dse.platform.hardware.processors.indexOf(id)).toArray.sorted
+      // chocoModel
+      //   .lexChainLessEq(
+      //     pSorted.map(p => Array(minusMappedPerProcessingElement(p), indexOfPe(p))): _*
+      //   )
+      //   .post()
       // chocoModel
       //   .lexLessEq(pSorted.map(minusMappedPerProcessingElement(_)), pSorted.map(indexOfPe(_)))
       //   .post()
-      // chocoModel
-      //   .increasing(pSorted.map(idx => indexOfPe(idx)), 1)
-      //   .post()
+      chocoModel
+        .increasing(pSorted.map(idx => computedOnlineIndexOfPe(idx)), 1)
+        .post()
     })
   // enforcing a certain order whenever possible
   val dataFlows = dse.platform.runtimes.schedulers.map(i =>
@@ -364,7 +364,8 @@ final case class ChocoSDFToSChedTileHW2(
       ).toArray,
       dse.sdfApplications.topologicalAndHeavyActorOrdering.map(a =>
         memoryMappingModule.processesMemoryMapping(dse.sdfApplications.actorsIdentifiers.indexOf(a))
-      ).toArray
+      ).toArray,
+      (i: Int) => (j: Int) => dse.sdfApplications.firingsPrecedenceGraph.get(sdfAnalysisModule.jobsAndActors(i)).pathTo(dse.sdfApplications.firingsPrecedenceGraph.get(sdfAnalysisModule.jobsAndActors(j))).isDefined
     ),
     Search.minDomLBSearch(nUsedPEs),
     Search.minDomLBSearch(tileAnalysisModule.numVirtualChannelsForProcElem.flatten: _*),

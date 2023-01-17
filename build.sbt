@@ -18,9 +18,9 @@ lazy val common = (project in file("scala-common"))
   .dependsOn(core)
   .settings(
     libraryDependencies ++= Seq(
-      ("org.scala-graph" %% "graph-core"   % scalaGraphVersion).cross(CrossVersion.for3Use2_13),
-      "org.scalanlp"     %% "breeze"       % breezeVersion,
-      "com.outr"         %% "scribe"       % scribeVersion
+      ("org.scala-graph" %% "graph-core" % scalaGraphVersion).cross(CrossVersion.for3Use2_13),
+      "org.scalanlp"     %% "breeze"     % breezeVersion,
+      "com.outr"         %% "scribe"     % scribeVersion
     )
   )
 
@@ -42,9 +42,9 @@ lazy val minizinc = (project in file("scala-minizinc"))
   .dependsOn(forsyde)
   .settings(
     libraryDependencies ++= Seq(
-      "com.outr"     %% "scribe"       % scribeVersion,
-      "com.lihaoyi"  %% "upickle"      % "1.4.0",
-      "org.scalanlp" %% "breeze"       % breezeVersion
+      "com.outr"     %% "scribe"  % scribeVersion,
+      "com.lihaoyi"  %% "upickle" % "1.4.0",
+      "org.scalanlp" %% "breeze"  % breezeVersion
     )
   )
 
@@ -80,11 +80,17 @@ lazy val cli = (project in file("scala-cli"))
     // taken and adapted from https://www.scala-sbt.org/sbt-native-packager/archetypes/jlink_plugin.html
     jlinkModulePath := {
       val paths = (jlinkBuildImage / fullClasspath).value
-      paths.filter(f => {
-        f.get(moduleID.key).exists(mID => mID.name.contains("jheaps")) ||
-        f.get(moduleID.key).exists(mID => mID.name.contains("commons-text")) ||
-        f.get(moduleID.key).exists(mID => mID.name.contains("fastutil"))
-      }).map(_.data)
+      paths
+        .filter(f => {
+          f.get(moduleID.key).exists(mID => mID.name.contains("jheaps")) ||
+          f.get(moduleID.key).exists(mID => mID.name.contains("commons-text")) ||
+          f.get(moduleID.key).exists(mID => mID.name.contains("fastutil")) ||
+          f.get(moduleID.key).exists(mID => mID.name.contains("antlr4")) ||
+          f.get(moduleID.key).exists(mID => mID.name.contains("automaton")) ||
+          f.get(moduleID.key).exists(mID => mID.name.contains("xchart")) ||
+          f.get(moduleID.key).exists(mID => mID.name.contains("trove4j"))
+        })
+        .map(_.data)
     }
   )
 

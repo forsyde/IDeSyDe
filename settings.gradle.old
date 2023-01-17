@@ -1,4 +1,0 @@
-rootProject.name = "IDeSyDe"
-include 'common'
-include 'cli'
-include 'choco'

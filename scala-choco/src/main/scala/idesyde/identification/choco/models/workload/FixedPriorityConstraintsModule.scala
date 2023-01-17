@@ -14,17 +14,16 @@ import idesyde.identification.choco.models.workload.FixedPriorityPreemptivePropa
 import org.chocosolver.solver.Model
 
 class FixedPriorityConstraintsModule(
-  val chocoModel: Model,
-  val priorities: Array[Int],
-  val periods: Array[Rational],
-  val deadlines: Array[Rational],
-  val wcets: Array[Array[Rational]],
-  val taskExecution: Array[IntVar],
-  val responseTimes: Array[IntVar],
-  val blockingTimes: Array[IntVar],
-  val durations: Array[Array[IntVar]]
+    val chocoModel: Model,
+    val priorities: Array[Int],
+    val periods: Array[Rational],
+    val deadlines: Array[Rational],
+    val wcets: Array[Array[Rational]],
+    val taskExecution: Array[IntVar],
+    val responseTimes: Array[IntVar],
+    val blockingTimes: Array[IntVar],
+    val durations: Array[IntVar]
 ) extends ChocoModelMixin() {
-
 
   def sufficientRMSchedulingPoints(taskIdx: Int): Array[Rational] = Array.empty
 
@@ -99,5 +98,4 @@ class FixedPriorityConstraintsModule(
   //     )
   //   }
 
-  
 }

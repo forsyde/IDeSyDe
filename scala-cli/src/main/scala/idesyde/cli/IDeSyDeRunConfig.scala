@@ -12,27 +12,25 @@ import idesyde.exploration.ChocoExplorationModule
 import idesyde.identification.choco.ChocoIdentificationModule
 import idesyde.identification.forsyde.ForSyDeDecisionModel
 import idesyde.exploration.forsyde.interfaces.ForSyDeIOExplorer
-import idesyde.identification.forsyde.api.ForSyDeIdentificationModule
-import idesyde.identification.minizinc.api.MinizincIdentificationModule
+import idesyde.identification.forsyde.ForSyDeIdentificationModule
+import idesyde.identification.forsyde.ForSyDeDesignModel
+import idesyde.identification.minizinc.MinizincIdentificationModule
 import idesyde.identification.DecisionModel
+import idesyde.utils.SimpleStandardIOLogger
+import idesyde.utils.Logger
 
 case class IDeSyDeRunConfig(
     var inputModelsPaths: Buffer[Path] = Buffer.empty,
     var outputModelPath: Path = Paths.get("idesyde-out.fiodl"),
     var allowedDecisionModels: Buffer[String] = Buffer(),
     var solutionLimiter: Int = 0,
-    val explorationTimeOutInSecs: Long = 0L,
-    val debugLogger: (String) => Unit = (s) => {},
-    val infoLogger: (String) => Unit = (s) => {},
-    val warnLogger: (String) => Unit = (s) => {},
-    val errorLogger: (String) => Unit = (s) => {},
-    executionContext: ExecutionContext
-) {
+    val explorationTimeOutInSecs: Long = 0L
+)(using logger: Logger) {
 
-  val explorationHandler = ExplorationHandler(infoLogger = infoLogger, debugLogger = debugLogger)
+  val explorationHandler = ExplorationHandler()
     .registerModule(ChocoExplorationModule())
 
-  val identificationHandler = IdentificationHandler(infoLogger = infoLogger, debugLogger = debugLogger)
+  val identificationHandler = IdentificationHandler()
     .registerIdentificationRule(ChocoIdentificationModule())
     .registerIdentificationRule(ForSyDeIdentificationModule())
     .registerIdentificationRule(MinizincIdentificationModule())
@@ -42,34 +40,34 @@ case class IDeSyDeRunConfig(
     val validInputs =
       inputModelsPaths.map(f => (f, modelHandler.canLoadModel(f)))
     if (validInputs.forall((p, b) => !b)) {
-      errorLogger(
+      logger.error(
         "At least one valid model is necessary"
       )
     } else if (validInputs.exists((p, b) => !b)) {
-      errorLogger("These inputs are invalid (unknown format): " + validInputs.filter((p, b) => b).map((p, b) => p.getFileName()).mkString(", "))
+      logger.error("These inputs are invalid (unknown format): " + validInputs.filter((p, b) => b).map((p, b) => p.getFileName()).mkString(", "))
     } else {
-      infoLogger("Reading and merging input models.")
-      val model = validInputs
+      logger.info("Reading and merging input models.")
+      val model = ForSyDeDesignModel(validInputs
         .map((p, _) => modelHandler.loadModel(p))
         .foldLeft(ForSyDeSystemGraph())((merged, m) =>
           merged.mergeInPlace(m)
           merged
-        )
+        ))
 
-      val identified = identificationHandler.identifyDecisionModels(model)
-      infoLogger(s"Identification finished with ${identified.size} decision model(s).")
+      val identified = identificationHandler.identifyDecisionModels(Set(model))
+      logger.info(s"Identification finished with ${identified.size} decision model(s).")
       if (identified.size > 0)
         val chosen = explorationHandler.chooseExplorersAndModels(identified)
         val chosenFiltered =
           if (allowedDecisionModels.size > 0) then
             chosen.filter((exp, dm) => allowedDecisionModels.contains(dm.uniqueIdentifier))
           else chosen
-        infoLogger(s"Total of ${chosenFiltered.size} combo of decision model(s) and explorer(s) chosen.")
+        logger.info(s"Total of ${chosenFiltered.size} combo of decision model(s) and explorer(s) chosen.")
         // identified.foreach(m => m match {
         //   case mzn: MiniZincForSyDeDecisionModel => scribe.debug(s"mzn model: ${mzn.mznInputs.toString}")
         // })
         if (chosenFiltered.size > 1) {
-          warnLogger(s"Taking a random decision model and explorer combo.")
+          logger.warn(s"Taking a random decision model and explorer combo.")
         }
         val numSols = chosenFiltered.headOption
           .filter((e, decisionModel) =>
@@ -78,16 +76,21 @@ case class IDeSyDeRunConfig(
           .map((e, m) => (e.asInstanceOf[ForSyDeIOExplorer], m.asInstanceOf[ForSyDeDecisionModel]))
           .map((explorer, decisionModel) =>
             explorer
-              .explore(decisionModel, explorationTimeOutInSecs)(using executionContext)
+              .explore(decisionModel, explorationTimeOutInSecs)
+              .flatMap(identificationHandler.integrateDecisionModel(model, _))
+              .flatMap(result => result match {
+                case fdm: ForSyDeDesignModel => Some(fdm.systemGraph)
+                case _ => Option.empty
+              })
               .scanLeft(0)((res, result) => {
                 if (!outputModelPath.toFile.exists || outputModelPath.toFile.isFile) then
-                  debugLogger(s"writing solution at ${outputModelPath.toString}")
-                  modelHandler.writeModel(model.merge(result), outputModelPath)
+                  logger.debug(s"writing solution at ${outputModelPath.toString}")
+                  modelHandler.writeModel(model.systemGraph.merge(result), outputModelPath)
                 else if (outputModelPath.toFile.exists && outputModelPath.toFile.isDirectory) then
                   val outPath = outputModelPath.resolve(Paths.get(s"solution_${res.toString}.fiodl"))
-                  debugLogger(s"writing solution at ${outPath.toString}")
+                  logger.debug(s"writing solution at ${outPath.toString}")
                   modelHandler.writeModel(
-                    model.merge(result),
+                    model.systemGraph.merge(result),
                     outputModelPath.resolve(Paths.get(s"solution_${res.toString}.fiodl"))
                   )
                 res + 1
@@ -95,9 +98,9 @@ case class IDeSyDeRunConfig(
           )
           .getOrElse(0)
         if (numSols > 0)
-          infoLogger(s"Finished exploration with ${numSols} solution(s)")
+          logger.info(s"Finished exploration with ${numSols} solution(s)")
         else
-          infoLogger(s"Finished exploration with no solution")
+          logger.info(s"Finished exploration with no solution")
       //scribe.info("Finished successfully")
     }
 

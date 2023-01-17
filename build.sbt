@@ -1,10 +1,8 @@
 ThisBuild / organization := "io.github.forsyde"
-ThisBuild / version := "0.3.4"
+ThisBuild / version := "0.3.5"
 ThisBuild / scalaVersion := "3.1.3"
 
-// ThisBuild / resolvers += Resolver.mavenLocal
-
-lazy val forsydeIoVersion  = "0.5.17"
+lazy val forsydeIoVersion  = "0.6.3"
 lazy val jgraphtVersion    = "1.5.1"
 lazy val scribeVersion     = "3.10.2"
 lazy val breezeVersion     = "2.1.0"
@@ -21,7 +19,6 @@ lazy val common = (project in file("scala-common"))
   .settings(
     libraryDependencies ++= Seq(
       ("org.scala-graph" %% "graph-core"   % scalaGraphVersion).cross(CrossVersion.for3Use2_13),
-      "org.jgrapht"       % "jgrapht-core" % jgraphtVersion,
       "org.scalanlp"     %% "breeze"       % breezeVersion,
       "com.outr"         %% "scribe"       % scribeVersion
     )
@@ -35,7 +32,6 @@ lazy val forsyde = (project in file("scala-forsyde"))
       ("org.scala-graph" %% "graph-core" % scalaGraphVersion).cross(CrossVersion.for3Use2_13),
       "io.github.forsyde" % "forsyde-io-java-core" % forsydeIoVersion,
       "org.jgrapht"       % "jgrapht-core"         % jgraphtVersion,
-      "org.jgrapht"       % "jgrapht-opt"         % jgraphtVersion,
       "org.typelevel"    %% "spire"                % "0.18.0"
     )
   )
@@ -48,7 +44,6 @@ lazy val minizinc = (project in file("scala-minizinc"))
     libraryDependencies ++= Seq(
       "com.outr"     %% "scribe"       % scribeVersion,
       "com.lihaoyi"  %% "upickle"      % "1.4.0",
-      "org.jgrapht"   % "jgrapht-core" % jgraphtVersion,
       "org.scalanlp" %% "breeze"       % breezeVersion
     )
   )
@@ -102,8 +97,8 @@ lazy val tests = (project in file("scala-tests"))
   .dependsOn(cli)
   .settings(
     libraryDependencies ++= Seq(
-      ("org.scala-graph" %% "graph-core"   % scalaGraphVersion).cross(CrossVersion.for3Use2_13),
-      "org.scalatest"    %% "scalatest"                % "3.2.12" % "test",
+      ("org.scala-graph" %% "graph-core" % scalaGraphVersion).cross(CrossVersion.for3Use2_13),
+      "org.scalatest"    %% "scalatest"  % "3.2.12" % "test",
       "org.scalatest"    %% "scalatest-funsuite"       % "3.2.12" % "test",
       "io.github.forsyde" % "forsyde-io-java-core"     % forsydeIoVersion,
       "io.github.forsyde" % "forsyde-io-java-amalthea" % forsydeIoVersion,

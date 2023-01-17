@@ -1,0 +1,543 @@
+knode vForSyDe_Model {
+   klabel "ForSyDe Model"
+   // for tile_6
+   knode vtile_6 {
+      klabel "tile_6"
+      // for micro_blaze_6
+      knode vmicro_blaze_6 {
+         klabel "micro_blaze_6"
+         kport networkInterface {
+            klabel "networkInterface"
+         }
+         kport defaultMemory {
+            klabel "defaultMemory"
+         }
+         // for micro_blaze_os6
+         knode vmicro_blaze_os6 {
+            klabel "micro_blaze_os6"
+         }
+         // translation from long to short hierarchy - horizontal
+         kedge ( :networkInterface -> vmicro_blaze_ni6:tileProcessor)
+         // translation from long to short hierarchy - horizontal
+         kedge ( :defaultMemory -> vmicro_blaze_mem6:instructionsAndData)
+      }
+      // for micro_blaze_mem6
+      knode vmicro_blaze_mem6 {
+         klabel "micro_blaze_mem6"
+         kport networkInterface {
+            klabel "networkInterface"
+         }
+         kport instructionsAndData {
+            klabel "instructionsAndData"
+         }
+         // translation from long to short hierarchy - horizontal
+         kedge ( :instructionsAndData -> vmicro_blaze_6:defaultMemory)
+         // translation from long to short hierarchy - horizontal
+         kedge ( :networkInterface -> vmicro_blaze_ni6:tileMemory)
+      }
+      // for micro_blaze_ni6
+      knode vmicro_blaze_ni6 {
+         klabel "micro_blaze_ni6"
+         kport bus {
+            klabel "bus"
+         }
+         kport tileProcessor {
+            klabel "tileProcessor"
+         }
+         kport tileMemory {
+            klabel "tileMemory"
+         }
+         // translation from long to short hierarchy - horizontal
+         kedge ( :tileProcessor -> vmicro_blaze_6:networkInterface)
+         // translation from long to short hierarchy - upwards
+         kedge ( :bus -> vtile_6:bus)
+         // translation from long to short hierarchy - horizontal
+         kedge ( :tileMemory -> vmicro_blaze_mem6:networkInterface)
+      }
+      // port created by long-to-short translation - upwards
+      kport bus {
+      }
+      // translation from long to short hierarchy - horizontal
+      kedge ( :bus -> vTDMBus:ni_6)
+      // translation from long to short hierarchy - backwards
+      kedge ( :bus -> vmicro_blaze_ni6:bus)
+   }
+   // for tile_7
+   knode vtile_7 {
+      klabel "tile_7"
+      // for micro_blaze_7
+      knode vmicro_blaze_7 {
+         klabel "micro_blaze_7"
+         kport networkInterface {
+            klabel "networkInterface"
+         }
+         kport defaultMemory {
+            klabel "defaultMemory"
+         }
+         // for micro_blaze_os7
+         knode vmicro_blaze_os7 {
+            klabel "micro_blaze_os7"
+         }
+         // translation from long to short hierarchy - horizontal
+         kedge ( :defaultMemory -> vmicro_blaze_mem7:instructionsAndData)
+         // translation from long to short hierarchy - horizontal
+         kedge ( :networkInterface -> vmicro_blaze_ni7:tileProcessor)
+      }
+      // for micro_blaze_mem7
+      knode vmicro_blaze_mem7 {
+         klabel "micro_blaze_mem7"
+         kport networkInterface {
+            klabel "networkInterface"
+         }
+         kport instructionsAndData {
+            klabel "instructionsAndData"
+         }
+         // translation from long to short hierarchy - horizontal
+         kedge ( :instructionsAndData -> vmicro_blaze_7:defaultMemory)
+         // translation from long to short hierarchy - horizontal
+         kedge ( :networkInterface -> vmicro_blaze_ni7:tileMemory)
+      }
+      // for micro_blaze_ni7
+      knode vmicro_blaze_ni7 {
+         klabel "micro_blaze_ni7"
+         kport bus {
+            klabel "bus"
+         }
+         kport tileProcessor {
+            klabel "tileProcessor"
+         }
+         kport tileMemory {
+            klabel "tileMemory"
+         }
+         // translation from long to short hierarchy - horizontal
+         kedge ( :tileProcessor -> vmicro_blaze_7:networkInterface)
+         // translation from long to short hierarchy - horizontal
+         kedge ( :tileMemory -> vmicro_blaze_mem7:networkInterface)
+         // translation from long to short hierarchy - upwards
+         kedge ( :bus -> vtile_7:bus)
+      }
+      // port created by long-to-short translation - backwards
+      kport bus {
+      }
+      // translation from long to short hierarchy - backwards
+      kedge ( :bus -> vmicro_blaze_ni7:bus)
+      // translation from long to short hierarchy - horizontal
+      kedge ( :bus -> vTDMBus:ni_7)
+   }
+   // for TDMBus
+   knode vTDMBus {
+      klabel "TDMBus"
+      kport ni_7 {
+         klabel "ni_7"
+      }
+      kport ni_6 {
+         klabel "ni_6"
+      }
+      kport ni_5 {
+         klabel "ni_5"
+      }
+      kport ni_4 {
+         klabel "ni_4"
+      }
+      kport ni_3 {
+         klabel "ni_3"
+      }
+      kport ni_2 {
+         klabel "ni_2"
+      }
+      kport ni_1 {
+         klabel "ni_1"
+      }
+      kport ni_0 {
+         klabel "ni_0"
+      }
+      // translation from long to short hierarchy - horizontal
+      kedge ( :ni_5 -> vtile_5:bus)
+      // translation from long to short hierarchy - horizontal
+      kedge ( :ni_1 -> vtile_1:bus)
+      // translation from long to short hierarchy - horizontal
+      kedge ( :ni_4 -> vtile_4:bus)
+      // translation from long to short hierarchy - horizontal
+      kedge ( :ni_0 -> vtile_0:bus)
+      // translation from long to short hierarchy - horizontal
+      kedge ( :ni_3 -> vtile_3:bus)
+      // translation from long to short hierarchy - horizontal
+      kedge ( :ni_7 -> vtile_7:bus)
+      // translation from long to short hierarchy - horizontal
+      kedge ( :ni_2 -> vtile_2:bus)
+      // translation from long to short hierarchy - horizontal
+      kedge ( :ni_6 -> vtile_6:bus)
+   }
+   // for tile_0
+   knode vtile_0 {
+      klabel "tile_0"
+      // for micro_blaze_mem0
+      knode vmicro_blaze_mem0 {
+         klabel "micro_blaze_mem0"
+         kport networkInterface {
+            klabel "networkInterface"
+         }
+         kport instructionsAndData {
+            klabel "instructionsAndData"
+         }
+         // translation from long to short hierarchy - horizontal
+         kedge ( :instructionsAndData -> vmicro_blaze_0:defaultMemory)
+         // translation from long to short hierarchy - horizontal
+         kedge ( :networkInterface -> vmicro_blaze_ni0:tileMemory)
+      }
+      // for micro_blaze_0
+      knode vmicro_blaze_0 {
+         klabel "micro_blaze_0"
+         kport networkInterface {
+            klabel "networkInterface"
+         }
+         kport defaultMemory {
+            klabel "defaultMemory"
+         }
+         // for micro_blaze_os0
+         knode vmicro_blaze_os0 {
+            klabel "micro_blaze_os0"
+         }
+         // translation from long to short hierarchy - horizontal
+         kedge ( :networkInterface -> vmicro_blaze_ni0:tileProcessor)
+         // translation from long to short hierarchy - horizontal
+         kedge ( :defaultMemory -> vmicro_blaze_mem0:instructionsAndData)
+      }
+      // for micro_blaze_ni0
+      knode vmicro_blaze_ni0 {
+         klabel "micro_blaze_ni0"
+         kport bus {
+            klabel "bus"
+         }
+         kport tileProcessor {
+            klabel "tileProcessor"
+         }
+         kport tileMemory {
+            klabel "tileMemory"
+         }
+         // translation from long to short hierarchy - upwards
+         kedge ( :bus -> vtile_0:bus)
+         // translation from long to short hierarchy - horizontal
+         kedge ( :tileProcessor -> vmicro_blaze_0:networkInterface)
+         // translation from long to short hierarchy - horizontal
+         kedge ( :tileMemory -> vmicro_blaze_mem0:networkInterface)
+      }
+      // port created by long-to-short translation - upwards
+      kport bus {
+      }
+      // translation from long to short hierarchy - horizontal
+      kedge ( :bus -> vTDMBus:ni_0)
+      // translation from long to short hierarchy - backwards
+      kedge ( :bus -> vmicro_blaze_ni0:bus)
+   }
+   // for tile_1
+   knode vtile_1 {
+      klabel "tile_1"
+      // for micro_blaze_mem1
+      knode vmicro_blaze_mem1 {
+         klabel "micro_blaze_mem1"
+         kport networkInterface {
+            klabel "networkInterface"
+         }
+         kport instructionsAndData {
+            klabel "instructionsAndData"
+         }
+         // translation from long to short hierarchy - horizontal
+         kedge ( :instructionsAndData -> vmicro_blaze_1:defaultMemory)
+         // translation from long to short hierarchy - horizontal
+         kedge ( :networkInterface -> vmicro_blaze_ni1:tileMemory)
+      }
+      // for micro_blaze_ni1
+      knode vmicro_blaze_ni1 {
+         klabel "micro_blaze_ni1"
+         kport bus {
+            klabel "bus"
+         }
+         kport tileProcessor {
+            klabel "tileProcessor"
+         }
+         kport tileMemory {
+            klabel "tileMemory"
+         }
+         // translation from long to short hierarchy - horizontal
+         kedge ( :tileProcessor -> vmicro_blaze_1:networkInterface)
+         // translation from long to short hierarchy - upwards
+         kedge ( :bus -> vtile_1:bus)
+         // translation from long to short hierarchy - horizontal
+         kedge ( :tileMemory -> vmicro_blaze_mem1:networkInterface)
+      }
+      // for micro_blaze_1
+      knode vmicro_blaze_1 {
+         klabel "micro_blaze_1"
+         kport networkInterface {
+            klabel "networkInterface"
+         }
+         kport defaultMemory {
+            klabel "defaultMemory"
+         }
+         // for micro_blaze_os1
+         knode vmicro_blaze_os1 {
+            klabel "micro_blaze_os1"
+         }
+         // translation from long to short hierarchy - horizontal
+         kedge ( :networkInterface -> vmicro_blaze_ni1:tileProcessor)
+         // translation from long to short hierarchy - horizontal
+         kedge ( :defaultMemory -> vmicro_blaze_mem1:instructionsAndData)
+      }
+      // port created by long-to-short translation - backwards
+      kport bus {
+      }
+      // translation from long to short hierarchy - backwards
+      kedge ( :bus -> vmicro_blaze_ni1:bus)
+      // translation from long to short hierarchy - horizontal
+      kedge ( :bus -> vTDMBus:ni_1)
+   }
+   // for tile_2
+   knode vtile_2 {
+      klabel "tile_2"
+      // for micro_blaze_ni2
+      knode vmicro_blaze_ni2 {
+         klabel "micro_blaze_ni2"
+         kport bus {
+            klabel "bus"
+         }
+         kport tileProcessor {
+            klabel "tileProcessor"
+         }
+         kport tileMemory {
+            klabel "tileMemory"
+         }
+         // translation from long to short hierarchy - horizontal
+         kedge ( :tileProcessor -> vmicro_blaze_2:networkInterface)
+         // translation from long to short hierarchy - upwards
+         kedge ( :bus -> vtile_2:bus)
+         // translation from long to short hierarchy - horizontal
+         kedge ( :tileMemory -> vmicro_blaze_mem2:networkInterface)
+      }
+      // for micro_blaze_2
+      knode vmicro_blaze_2 {
+         klabel "micro_blaze_2"
+         kport networkInterface {
+            klabel "networkInterface"
+         }
+         kport defaultMemory {
+            klabel "defaultMemory"
+         }
+         // for micro_blaze_os2
+         knode vmicro_blaze_os2 {
+            klabel "micro_blaze_os2"
+         }
+         // translation from long to short hierarchy - horizontal
+         kedge ( :networkInterface -> vmicro_blaze_ni2:tileProcessor)
+         // translation from long to short hierarchy - horizontal
+         kedge ( :defaultMemory -> vmicro_blaze_mem2:instructionsAndData)
+      }
+      // for micro_blaze_mem2
+      knode vmicro_blaze_mem2 {
+         klabel "micro_blaze_mem2"
+         kport networkInterface {
+            klabel "networkInterface"
+         }
+         kport instructionsAndData {
+            klabel "instructionsAndData"
+         }
+         // translation from long to short hierarchy - horizontal
+         kedge ( :instructionsAndData -> vmicro_blaze_2:defaultMemory)
+         // translation from long to short hierarchy - horizontal
+         kedge ( :networkInterface -> vmicro_blaze_ni2:tileMemory)
+      }
+      // port created by long-to-short translation - upwards
+      kport bus {
+      }
+      // translation from long to short hierarchy - horizontal
+      kedge ( :bus -> vTDMBus:ni_2)
+      // translation from long to short hierarchy - backwards
+      kedge ( :bus -> vmicro_blaze_ni2:bus)
+   }
+   // for tile_3
+   knode vtile_3 {
+      klabel "tile_3"
+      // for micro_blaze_ni3
+      knode vmicro_blaze_ni3 {
+         klabel "micro_blaze_ni3"
+         kport bus {
+            klabel "bus"
+         }
+         kport tileProcessor {
+            klabel "tileProcessor"
+         }
+         kport tileMemory {
+            klabel "tileMemory"
+         }
+         // translation from long to short hierarchy - horizontal
+         kedge ( :tileProcessor -> vmicro_blaze_3:networkInterface)
+         // translation from long to short hierarchy - upwards
+         kedge ( :bus -> vtile_3:bus)
+         // translation from long to short hierarchy - horizontal
+         kedge ( :tileMemory -> vmicro_blaze_mem3:networkInterface)
+      }
+      // for micro_blaze_3
+      knode vmicro_blaze_3 {
+         klabel "micro_blaze_3"
+         kport networkInterface {
+            klabel "networkInterface"
+         }
+         kport defaultMemory {
+            klabel "defaultMemory"
+         }
+         // for micro_blaze_os3
+         knode vmicro_blaze_os3 {
+            klabel "micro_blaze_os3"
+         }
+         // translation from long to short hierarchy - horizontal
+         kedge ( :networkInterface -> vmicro_blaze_ni3:tileProcessor)
+         // translation from long to short hierarchy - horizontal
+         kedge ( :defaultMemory -> vmicro_blaze_mem3:instructionsAndData)
+      }
+      // for micro_blaze_mem3
+      knode vmicro_blaze_mem3 {
+         klabel "micro_blaze_mem3"
+         kport networkInterface {
+            klabel "networkInterface"
+         }
+         kport instructionsAndData {
+            klabel "instructionsAndData"
+         }
+         // translation from long to short hierarchy - horizontal
+         kedge ( :networkInterface -> vmicro_blaze_ni3:tileMemory)
+         // translation from long to short hierarchy - horizontal
+         kedge ( :instructionsAndData -> vmicro_blaze_3:defaultMemory)
+      }
+      // port created by long-to-short translation - backwards
+      kport bus {
+      }
+      // translation from long to short hierarchy - backwards
+      kedge ( :bus -> vmicro_blaze_ni3:bus)
+      // translation from long to short hierarchy - horizontal
+      kedge ( :bus -> vTDMBus:ni_3)
+   }
+   // for tile_4
+   knode vtile_4 {
+      klabel "tile_4"
+      // for micro_blaze_mem4
+      knode vmicro_blaze_mem4 {
+         klabel "micro_blaze_mem4"
+         kport networkInterface {
+            klabel "networkInterface"
+         }
+         kport instructionsAndData {
+            klabel "instructionsAndData"
+         }
+         // translation from long to short hierarchy - horizontal
+         kedge ( :networkInterface -> vmicro_blaze_ni4:tileMemory)
+         // translation from long to short hierarchy - horizontal
+         kedge ( :instructionsAndData -> vmicro_blaze_4:defaultMemory)
+      }
+      // for micro_blaze_4
+      knode vmicro_blaze_4 {
+         klabel "micro_blaze_4"
+         kport networkInterface {
+            klabel "networkInterface"
+         }
+         kport defaultMemory {
+            klabel "defaultMemory"
+         }
+         // for micro_blaze_os4
+         knode vmicro_blaze_os4 {
+            klabel "micro_blaze_os4"
+         }
+         // translation from long to short hierarchy - horizontal
+         kedge ( :networkInterface -> vmicro_blaze_ni4:tileProcessor)
+         // translation from long to short hierarchy - horizontal
+         kedge ( :defaultMemory -> vmicro_blaze_mem4:instructionsAndData)
+      }
+      // for micro_blaze_ni4
+      knode vmicro_blaze_ni4 {
+         klabel "micro_blaze_ni4"
+         kport bus {
+            klabel "bus"
+         }
+         kport tileProcessor {
+            klabel "tileProcessor"
+         }
+         kport tileMemory {
+            klabel "tileMemory"
+         }
+         // translation from long to short hierarchy - upwards
+         kedge ( :bus -> vtile_4:bus)
+         // translation from long to short hierarchy - horizontal
+         kedge ( :tileProcessor -> vmicro_blaze_4:networkInterface)
+         // translation from long to short hierarchy - horizontal
+         kedge ( :tileMemory -> vmicro_blaze_mem4:networkInterface)
+      }
+      // port created by long-to-short translation - upwards
+      kport bus {
+      }
+      // translation from long to short hierarchy - horizontal
+      kedge ( :bus -> vTDMBus:ni_4)
+      // translation from long to short hierarchy - backwards
+      kedge ( :bus -> vmicro_blaze_ni4:bus)
+   }
+   // for tile_5
+   knode vtile_5 {
+      klabel "tile_5"
+      // for micro_blaze_5
+      knode vmicro_blaze_5 {
+         klabel "micro_blaze_5"
+         kport networkInterface {
+            klabel "networkInterface"
+         }
+         kport defaultMemory {
+            klabel "defaultMemory"
+         }
+         // for micro_blaze_os5
+         knode vmicro_blaze_os5 {
+            klabel "micro_blaze_os5"
+         }
+         // translation from long to short hierarchy - horizontal
+         kedge ( :networkInterface -> vmicro_blaze_ni5:tileProcessor)
+         // translation from long to short hierarchy - horizontal
+         kedge ( :defaultMemory -> vmicro_blaze_mem5:instructionsAndData)
+      }
+      // for micro_blaze_mem5
+      knode vmicro_blaze_mem5 {
+         klabel "micro_blaze_mem5"
+         kport networkInterface {
+            klabel "networkInterface"
+         }
+         kport instructionsAndData {
+            klabel "instructionsAndData"
+         }
+         // translation from long to short hierarchy - horizontal
+         kedge ( :instructionsAndData -> vmicro_blaze_5:defaultMemory)
+         // translation from long to short hierarchy - horizontal
+         kedge ( :networkInterface -> vmicro_blaze_ni5:tileMemory)
+      }
+      // for micro_blaze_ni5
+      knode vmicro_blaze_ni5 {
+         klabel "micro_blaze_ni5"
+         kport bus {
+            klabel "bus"
+         }
+         kport tileProcessor {
+            klabel "tileProcessor"
+         }
+         kport tileMemory {
+            klabel "tileMemory"
+         }
+         // translation from long to short hierarchy - horizontal
+         kedge ( :tileProcessor -> vmicro_blaze_5:networkInterface)
+         // translation from long to short hierarchy - upwards
+         kedge ( :bus -> vtile_5:bus)
+         // translation from long to short hierarchy - horizontal
+         kedge ( :tileMemory -> vmicro_blaze_mem5:networkInterface)
+      }
+      // port created by long-to-short translation - backwards
+      kport bus {
+      }
+      // translation from long to short hierarchy - backwards
+      kedge ( :bus -> vmicro_blaze_ni5:bus)
+      // translation from long to short hierarchy - horizontal
+      kedge ( :bus -> vTDMBus:ni_5)
+   }
+}

@@ -1,7 +1,6 @@
 package idesyde.identification.choco.models
 
 import idesyde.identification.choco.interfaces.ChocoModelMixin
-import idesyde.identification.models.platform.TiledMultiCorePlatformMixin
 import spire.algebra._
 import spire.math._
 import spire.implicits._
@@ -22,12 +21,12 @@ import org.chocosolver.solver.Model
 
 class TileAsyncInterconnectCommsModule(
     val chocoModel: Model,
-    val procElems: Array[Int],
-    val commElems: Array[Int],
+    val procElems: Array[String],
+    val commElems: Array[String],
     val messages: Array[Int],
     val messageTravelTimePerVirtualChannel: Array[Array[Int]],
     val numVirtualChannels: Array[Int],
-    val commElemsPaths: Array[Array[Array[Int]]]
+    val commElemsPaths: (String) => (String) => Array[String]
     // val commElemsMustShareChannel: Array[Array[Boolean]],
 ) extends ChocoModelMixin() {
 
@@ -49,7 +48,7 @@ class TileAsyncInterconnectCommsModule(
   val procElemSendsDataToAnother: Array[Array[BoolVar]] =
     procElems.zipWithIndex.map((src, i) => {
       procElems.zipWithIndex.map((dst, j) => {
-        if (!commElemsPaths(i)(j).isEmpty)
+        if (!commElemsPaths(src)(dst).isEmpty)
           chocoModel.boolVar(s"sendsData(${i},${j})")
         else
           chocoModel.boolVar(s"sendsData(${i},${j})", false)
@@ -61,9 +60,9 @@ class TileAsyncInterconnectCommsModule(
       procElems.zipWithIndex.map((dst, j) => {
         if (i != j) {
           chocoModel.intVar(
-            s"commTime(${c},${i},${j})",
+            s"commTime(${c},${src},${dst})",
             0,
-            commElemsPaths(i)(j)
+            commElemsPaths(src)(dst)
               .map(ce => messageTravelTimePerVirtualChannel(ci)(commElems.indexOf(ce)))
               .sum,
             true
@@ -101,11 +100,11 @@ class TileAsyncInterconnectCommsModule(
     }
     // no make sure that the virtual channels are allocated when required
     for (
-      src <- 0 until numProcElems;
-      dst <- 0 until numProcElems;
+      (p, src) <- procElems.zipWithIndex;
+      (pp, dst) <- procElems.zipWithIndex
       if src != dst;
       // c  <- 0 until numMessages;
-      ce <- commElemsPaths(src)(dst)
+      ce <- commElemsPaths(p)(pp)
     ) {
       chocoModel.ifThen(
         procElemSendsDataToAnother(src)(dst),
@@ -113,17 +112,18 @@ class TileAsyncInterconnectCommsModule(
       )
     }
     for (
-      src <- 0 until numProcElems;
-      dst <- 0 until numProcElems;
+      (p, src) <- procElems.zipWithIndex;
+      (pp, dst) <- procElems.zipWithIndex
       if src != dst;
       c <- 0 until numMessages
     ) {
-      val singleChannelSum = commElemsPaths(src)(dst)
+      val singleChannelSum = commElemsPaths(p)(pp)
         .map(ce => messageTravelTimePerVirtualChannel(c)(commElems.indexOf(ce)))
         .sum
+      if (commElemsPaths(p)(pp).map(ce => numVirtualChannelsForProcElem(src)(commElems.indexOf(ce))).size == 0) then println(s"$p to $pp")
       val minVCInPath = chocoModel.min(
         s"minVCInPath($src, $dst)",
-        commElemsPaths(src)(dst)
+        commElemsPaths(p)(pp)
           .map(ce => numVirtualChannelsForProcElem(src)(commElems.indexOf(ce))): _*
       )
       chocoModel.ifThenElse(

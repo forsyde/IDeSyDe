@@ -11,7 +11,7 @@ import scala.util.Random
 import org.chocosolver.solver.search.loop.monitors.IMonitorSolution
 import idesyde.utils.CoreUtils.wfor
 import idesyde.utils.CoreUtils
-import idesyde.identification.forsyde.models.sdf.SDFApplication
+import idesyde.identification.common.models.sdf.SDFApplication
 import org.chocosolver.solver.variables.BoolVar
 
 class CommAwareMultiCoreSDFListScheduling(
@@ -28,7 +28,7 @@ class CommAwareMultiCoreSDFListScheduling(
   private val numActors     = firingsInSlots.size
   private val numSchedulers = firingsInSlots.head.size
   private val numSlots      = firingsInSlots.head.head.size
-  var channels              = (0 until sdfApplications.initialTokens.size).toArray
+  var channels              = (0 until sdfApplications.channelNumInitialTokens.size).toArray
   var actors                = (0 until sdfApplications.sdfRepetitionVectors.size).toArray
   var schedulers            = (0 until firingsInSlots.head.size).toArray
   val slots                 = (0 until firingsInSlots.head.head.size).toArray
@@ -100,7 +100,7 @@ class CommAwareMultiCoreSDFListScheduling(
   }
 
   private def availableActors(slot: Int): Int = {
-    var num = 0
+    var num          = 0
     var aIsAvailable = false
     wfor(0, _ < numActors, _ + 1) { a =>
       aIsAvailable = false
@@ -137,8 +137,8 @@ class CommAwareMultiCoreSDFListScheduling(
     // quick guard for errors and end of schedule
     if (lastSlot >= slots.size - 1) return null
     val earliestOpen = lastSlot + 1
-    val horizon = availableActors(earliestOpen)
-    var d = pool.getE()
+    val horizon      = availableActors(earliestOpen)
+    var d            = pool.getE()
     if (d == null) d = IntDecision(pool)
     // println(s"deciding at $earliestOpen with $horizon")
     wfor(earliestOpen, it => it < numSlots && it <= earliestOpen + horizon, _ + 1) { s =>
@@ -219,7 +219,7 @@ class CommAwareMultiCoreSDFListScheduling(
     //   ,
     //   model.arithm(globalInvThroughput, "<", globalInvThroughput.getLB())
     // ).post()
-    
+
     // invThroughputs.zipWithIndex.filter((v, i) => v.getLB() == 0).foreach((v, i) => schedulerWhiteListing(i) = false)
     // if (schedulerWhiteListing.count(p => p) > 1) {
     // }

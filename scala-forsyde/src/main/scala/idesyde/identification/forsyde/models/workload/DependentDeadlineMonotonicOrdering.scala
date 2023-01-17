@@ -2,11 +2,9 @@ package idesyde.identification.forsyde.models.workload
 
 import forsyde.io.java.typed.viewers.execution.Task
 
-import idesyde.identification.models.workload.PeriodicWorkloadMixin
 import idesyde.utils.MultipliableFractional
-import idesyde.identification.models.workload.PeriodicWorkloadMixin
 
-final case class DependentDeadlineMonotonicOrdering[TimeT, T <: PeriodicWorkloadMixin[TimeT]](
+final case class DependentDeadlineMonotonicOrdering[TimeT, T](
     val taskModel: T
 )(using fracT: MultipliableFractional[TimeT])
     extends Ordering[Int] {

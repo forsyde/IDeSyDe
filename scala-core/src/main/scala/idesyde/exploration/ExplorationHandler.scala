@@ -8,12 +8,11 @@ import collection.JavaConverters.*
 import idesyde.exploration.Explorer
 import idesyde.identification.DecisionModel
 import idesyde.utils.CoreUtils
+import idesyde.utils.Logger
 
 final class ExplorationHandler(
-    var explorationModules: Set[ExplorationModule] = Set.empty,
-    val infoLogger: (String) => Unit = (s => println(s)),
-    val debugLogger: (String) => Unit = (s => println(s))
-):
+    var explorationModules: Set[ExplorationModule] = Set.empty
+)(using logger: Logger):
 
   def registerModule(explorationModule: ExplorationModule): ExplorationHandler =
     explorationModules += explorationModule
@@ -25,7 +24,7 @@ final class ExplorationHandler(
   ): Set[(Explorer, ? <: DecisionModel)] =
     val explorers        = explorationModules.flatMap(_.explorers) //.map(_.asInstanceOf[Explorer])
     val explorableModels = decisionModels.filter(m => explorers.exists(e => e.canExplore(m)))
-    debugLogger(s"total of ${explorableModels.size} exp. models to find combos.")
+    logger.debug(s"total of ${explorableModels.size} exp. models to find combos.")
     // for each of the explorable models build up a dominance graph of the available explorers
     // based on the criteria supplied
     val modelToExplorerSet =

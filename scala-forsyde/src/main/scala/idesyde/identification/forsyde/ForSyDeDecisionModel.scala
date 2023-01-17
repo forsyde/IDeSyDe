@@ -3,17 +3,11 @@ package idesyde.identification.forsyde
 import forsyde.io.java.core.ForSyDeSystemGraph
 import forsyde.io.java.core.Vertex
 import idesyde.identification.DecisionModel
+import forsyde.io.java.core.EdgeInfo
 
 trait ForSyDeDecisionModel extends DecisionModel {
 
-    def coveredVertexes: scala.collection.Iterable[Vertex]
+  type ElementT         = Vertex
+  type ElementRelationT = EdgeInfo
 
-    def dominates[DesignModel](other: DecisionModel, designModel: DesignModel): Boolean =
-        other match {
-            case o: ForSyDeDecisionModel => 
-                o.coveredVertexes.toSet.subsetOf(coveredVertexes.toSet)
-            case _ => false
-        }
-        
-  
 }

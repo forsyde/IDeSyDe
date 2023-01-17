@@ -91,7 +91,9 @@ lazy val cli = (project in file("scala-cli"))
           f.get(moduleID.key).exists(mID => mID.name.contains("trove4j"))
         })
         .map(_.data)
-    }
+    },
+    // TODO: This MUST be taken out of here eventually
+    jlinkIgnoreMissingDependency := JlinkIgnore.everything
   )
 
 lazy val tests = (project in file("scala-tests"))

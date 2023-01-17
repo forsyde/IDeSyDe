@@ -15,16 +15,16 @@ import scalax.collection.edge.Implicits._
 import scala.collection.mutable.Buffer
 
 final case class SDFApplication(
-    val actorsIdentifiers: Array[String],
-    val channelsIdentifiers: Array[String],
-    val topologySrcs: Array[String],
-    val topologyDsts: Array[String],
-    val topologyEdgeValue: Array[Int],
-    val actorSizes: Array[Long],
-    val actorComputationalNeeds: Array[Map[String, Map[String, Long]]],
-    val channelNumInitialTokens: Array[Int],
-    val channelTokenSizes: Array[Long],
-    val actorThrouhgputs: Array[Double]
+    val actorsIdentifiers: Vector[String],
+    val channelsIdentifiers: Vector[String],
+    val topologySrcs: Vector[String],
+    val topologyDsts: Vector[String],
+    val topologyEdgeValue: Vector[Int],
+    val actorSizes: Vector[Long],
+    val actorComputationalNeeds: Vector[Map[String, Map[String, Long]]],
+    val channelNumInitialTokens: Vector[Int],
+    val channelTokenSizes: Vector[Long],
+    val actorThrouhgputs: Vector[Double]
 ) extends StandardDecisionModel
     with ParametricRateDataflowWorkloadMixin
     with InstrumentedWorkloadMixin {
@@ -47,30 +47,30 @@ final case class SDFApplication(
       topology.get(c).diPredecessors.exists(src => src.toOuter == actor)
   )
 
-  val dataflowGraphs = Array(
+  val dataflowGraphs = Vector(
     topologySrcs
       .zip(topologyDsts)
       .zipWithIndex
       .map((srcdst, i) => (srcdst._1, srcdst._2, topologyEdgeValue(i)))
   )
 
-  val configurations = Array((0, 0, "root"))
+  val configurations = Vector((0, 0, "root"))
 
   val processComputationalNeeds = actorComputationalNeeds
 
   val processSizes = actorSizes
 
-  val messagesMaxSizes: Array[Long] =
+  val messagesMaxSizes: Vector[Long] =
     channelsIdentifiers.zipWithIndex.map((c, i) =>
       pessimisticTokensPerChannel(i) * channelTokenSizes(i)
     )
 
   val messagesFromChannels = dataflowGraphs.zipWithIndex.map((df, dfi) => {
     var lumpedChannels = mutable
-      .Map[(String, String), (Array[String], Long, Int, Int, Int)]()
+      .Map[(String, String), (Vector[String], Long, Int, Int, Int)]()
       .withDefaultValue(
         (
-          Array(),
+          Vector(),
           0L,
           0,
           0,
@@ -96,7 +96,7 @@ final case class SDFApplication(
         )
       }
     }
-    lumpedChannels.map((k, v) => (k._1, k._2, v._1, v._2, v._3, v._4, v._5)).toArray
+    lumpedChannels.map((k, v) => (k._1, k._2, v._1, v._2, v._3, v._4, v._5)).toVector
   })
 
   /** This abstracts the many sdf channels in the sdf multigraph into the form commonly presented in
@@ -110,10 +110,10 @@ final case class SDFApplication(
   /** this is a simple shortcut for the balance matrix (originally called topology matrix) as SDFs
     * have only one configuration
     */
-  val sdfBalanceMatrix: Array[Array[Int]] = computeBalanceMatrices(0)
+  val sdfBalanceMatrix: Vector[Vector[Int]] = computeBalanceMatrices(0)
 
   /** this is a simple shortcut for the repetition vectors as SDFs have only one configuration */
-  val sdfRepetitionVectors: Array[Int] = computeRepetitionVectors(0)
+  val sdfRepetitionVectors: Vector[Int] = computeRepetitionVectors(0)
 
   val sdfDisjointComponents = disjointComponents.head
 
@@ -145,8 +145,9 @@ final case class SDFApplication(
     for ((a, ai) <- actorsIdentifiers.zipWithIndex; q <- 1 to sdfRepetitionVectors(ai) - 1) {
       edges +:= ((a, q), (a, q + 1))
     }
-    val param = edges.map((s, t) => (s ~> t)).toArray
-    scalax.collection.Graph(param: _*)
+    val param = edges.map((s, t) => (s ~> t))
+    val nodes = edges.map((s, t) => s).toSet ++ edges.map((s, t) => t).toSet
+    scalax.collection.Graph.from(nodes, param)
   }
 
   /** Same as [[firingsPrecedenceGraph]], but with one more firings per actors of the next periodic

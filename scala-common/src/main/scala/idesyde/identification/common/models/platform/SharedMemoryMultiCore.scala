@@ -14,16 +14,16 @@ import scalax.collection.GraphEdge._
 import idesyde.identification.common.models.platform.InstrumentedPlatformMixin
 
 final case class SharedMemoryMultiCore(
-    val processingElems: Array[String],
-    val storageElems: Array[String],
-    val communicationElems: Array[String],
-    val topologySrcs: Array[String],
-    val topologyDsts: Array[String],
-    val processorsFrequency: Array[Long],
-    val processorsProvisions: Array[Map[String, Map[String, Rational]]],
-    val storageSizes: Array[Long],
-    val communicationElementsMaxChannels: Array[Int],
-    val communicationElementsBitPerSecPerChannel: Array[Rational],
+    val processingElems: Vector[String],
+    val storageElems: Vector[String],
+    val communicationElems: Vector[String],
+    val topologySrcs: Vector[String],
+    val topologyDsts: Vector[String],
+    val processorsFrequency: Vector[Long],
+    val processorsProvisions: Vector[Map[String, Map[String, Rational]]],
+    val storageSizes: Vector[Long],
+    val communicationElementsMaxChannels: Vector[Int],
+    val communicationElementsBitPerSecPerChannel: Vector[Rational],
     val preComputedPaths: Map[String, Map[String, Iterable[String]]]
 ) extends StandardDecisionModel
     with InstrumentedPlatformMixin[Rational] {
@@ -31,7 +31,7 @@ final case class SharedMemoryMultiCore(
   val coveredElements         = (processingElems ++ communicationElems ++ storageElems).toSet
   val coveredElementRelations = topologySrcs.zip(topologyDsts).toSet
 
-  val platformElements: Array[String] =
+  val platformElements: Vector[String] =
     processingElems ++ communicationElems ++ storageElems
 
   val topology = Graph.from(platformElements, topologySrcs.zip(topologyDsts).map((src, dst) => src ~> dst))
@@ -57,7 +57,7 @@ final case class SharedMemoryMultiCore(
       ).toMap
     ).toMap
 
-  val maxTraversalTimePerBit: Array[Array[Rational]] = {
+  val maxTraversalTimePerBit: Vector[Vector[Rational]] = {
     // val paths = FloydWarshallShortestPaths(directedAndConnectedMinTimeGraph)
     platformElements.zipWithIndex.map((src, i) => {
       platformElements.zipWithIndex.map((dst, j) => {
@@ -73,7 +73,7 @@ final case class SharedMemoryMultiCore(
     })
   }
 
-  val minTraversalTimePerBit: Array[Array[Rational]] = {
+  val minTraversalTimePerBit: Vector[Vector[Rational]] = {
     platformElements.zipWithIndex.map((src, i) => {
       platformElements.zipWithIndex.map((dst, j) => {
         computedPaths(src)(dst)

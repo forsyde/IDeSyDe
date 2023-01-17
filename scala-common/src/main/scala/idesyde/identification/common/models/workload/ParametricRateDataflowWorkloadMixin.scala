@@ -25,9 +25,9 @@ import scalax.collection.GraphTraversal.DepthFirst
   * doi: 10.1145/2999539.
   */
 trait ParametricRateDataflowWorkloadMixin {
-  def actorsIdentifiers: Array[String]
-  def channelsIdentifiers: Array[String]
-  def channelNumInitialTokens: Array[Int]
+  def actorsIdentifiers: Vector[String]
+  def channelsIdentifiers: Vector[String]
+  def channelNumInitialTokens: Vector[Int]
 
   /** An actor is self-concurrent if two or more instance can be executed at the same time
     *
@@ -42,7 +42,7 @@ trait ParametricRateDataflowWorkloadMixin {
     * The array of graphs represent each possible dataflow graph when the parameters are
     * instantiated.
     */
-  def dataflowGraphs: Array[Iterable[(String, String, Int)]]
+  def dataflowGraphs: Vector[Iterable[(String, String, Int)]]
 
   /** This graph defines how the dataflowGraphs can be changed between each other, assuming that the
     * paramters can change _only_ after an actor firing.
@@ -54,7 +54,7 @@ trait ParametricRateDataflowWorkloadMixin {
     *
     * This is important to correctly calculate repetition vectors in analytical methods.
     */
-  def disjointComponents: Array[scala.collection.IndexedSeq[Iterable[String]]] =
+  def disjointComponents: Vector[scala.collection.IndexedSeq[Iterable[String]]] =
     dataflowGraphs.map(g => {
       val nodes = g.map((s, _, _) => s).toSet.union(g.map((_, t, _) => t).toSet)
       val edges = g.map((src, dst, w) => src ~> dst)
@@ -73,10 +73,10 @@ trait ParametricRateDataflowWorkloadMixin {
           m(channelsIdentifiers.indexOf(src))(actorsIdentifiers.indexOf(dst)) - rate
       }
     }
-    m
+    m.map(_.toVector).toVector
   })
 
-  def computeRepetitionVectors: Array[Array[Int]] = dataflowGraphs.zipWithIndex.map((df, dfi) => {
+  def computeRepetitionVectors: Vector[Vector[Int]] = dataflowGraphs.zipWithIndex.map((df, dfi) => {
     val minus_one = Rational(-1)
     val nodes = df.map((s, _, _) => s).toSet.union(df.map((_, t, _) => t).toSet)
     val g         = Graph.from(nodes, df.map((src, dst, w) => src ~> dst))
@@ -105,7 +105,7 @@ trait ParametricRateDataflowWorkloadMixin {
     val gActorsDir = Graph.from(actorsIdentifiers, gEdges.map((src, dst) => src ~> dst))
     // we iterate on the undirected version as to 'come back'
     // to vertex in feed-forward paths
-    val rates      = actorsIdentifiers.map(_ => minus_one)
+    val rates      = actorsIdentifiers.map(_ => minus_one).toArray
     var consistent = true
     for (
       component <- gActors.componentTraverser();
@@ -146,13 +146,13 @@ trait ParametricRateDataflowWorkloadMixin {
     }
     // finish early in case of non consistency
     if (!consistent)
-      return Array()
+      return Vector()
     // otherwise simplify the repVec
     val gcdV = rates.map(_.numerator.toLong).reduce((i1, i2) => spire.math.gcd(i1, i2))
     val lcmV = rates
       .map(_.denominator.toLong)
       .reduce((i1, i2) => spire.math.lcm(i1, i2))
-    rates.map(_ * lcmV / gcdV).map(_.numerator.toInt)
+    rates.map(_ * lcmV / gcdV).map(_.numerator.toInt).toVector
 
   })
   // computeBalanceMatrices.zipWithIndex.map((m, ind) => SDFUtils.getRepetitionVector(m, initialTokens, numDisjointComponents(ind)))
@@ -161,7 +161,7 @@ trait ParametricRateDataflowWorkloadMixin {
 
   // def isLive = maximalParallelClustering.zipWithIndex.map((cluster, i) => !cluster.isEmpty)
 
-  def pessimisticTokensPerChannel: Array[Int] = {
+  def pessimisticTokensPerChannel: Vector[Int] = {
     val repetitionVectors = computeRepetitionVectors
     channelsIdentifiers.zipWithIndex.map((c, cIdx) => {
       var pessimisticMax = 1
@@ -274,7 +274,7 @@ trait ParametricRateDataflowWorkloadMixin {
     * This is also used to check the liveness of each configuration. If a configuration is not live,
     * then its clusters are empty, since at the very least one should exist.
     */
-  // def maximalParallelClustering: Array[Array[Array[Int]]] =
+  // def maximalParallelClustering: Vector[Vector[Vector[Int]]] =
   //   dataflowGraphs.zipWithIndex.map((g, gi) => {
   //     val actors                               = 0 until actors.size
   //     val channels                             = 0 until channels.size

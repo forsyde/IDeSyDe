@@ -32,77 +32,70 @@ object PlatformRules {
   def identPartitionedCoresWithRuntimes(
       models: Set[DesignModel],
       identified: Set[DecisionModel]
-  )(using logger: Logger): Option[PartitionedCoresWithRuntimes] = {
-    val modelOpt = models
-      .filter(_.isInstanceOf[ForSyDeDesignModel])
-      .map(_.asInstanceOf[ForSyDeDesignModel])
-      .map(_.systemGraph)
-      .reduceOption(_.merge(_))
-    if (modelOpt.isEmpty) {
-      return Option.empty
-    }
-    val model: ForSyDeSystemGraph = modelOpt.get
-    var processingElements        = Buffer[GenericProcessingModule]()
-    var runtimeElements           = Buffer[AbstractScheduler]()
-    model.vertexSet.stream
-      .forEach(v => {
-        GenericProcessingModule
-          .safeCast(v)
-          .ifPresent(p => processingElements :+= p)
-        AbstractScheduler
-          .safeCast(v)
-          .ifPresent(p => runtimeElements :+= p)
+  )(using logger: Logger): Set[PartitionedCoresWithRuntimes] = {
+    ForSyDeIdentificationUtils.toForSyDe(models) { model =>
+      var processingElements        = Buffer[GenericProcessingModule]()
+      var runtimeElements           = Buffer[AbstractScheduler]()
+      model.vertexSet.stream
+        .forEach(v => {
+          GenericProcessingModule
+            .safeCast(v)
+            .ifPresent(p => processingElements :+= p)
+          AbstractScheduler
+            .safeCast(v)
+            .ifPresent(p => runtimeElements :+= p)
+        })
+      if (
+        processingElements.length <= 0 &&
+        processingElements.size >= runtimeElements.size
+      ) {
+        return Set.empty
+      }
+      val allocated = processingElements.map(pe => {
+        runtimeElements.find(s => {
+          model.hasConnection(s, pe) || model.hasConnection(pe, s)
+        })
       })
-    if (
-      processingElements.length <= 0 &&
-      processingElements.size >= runtimeElements.size
-    ) {
-      return Option.empty
-    }
-    val allocated = processingElements.map(pe => {
-      runtimeElements.find(s => {
-        model.hasConnection(s, pe) || model.hasConnection(pe, s)
-      })
-    })
-    if (allocated.exists(_.isEmpty)) {
-      return Option.empty
-    }
-    Option(
-      PartitionedCoresWithRuntimes(
-        processingElements.map(_.getIdentifier()).toArray,
-        allocated.map(_.get.getIdentifier()).toArray,
-        allocated
-          .map(_.get)
-          .map(v => !FixedPriorityScheduler.conforms(v) && !StaticCyclicScheduler.conforms(v))
-          .toArray,
-        allocated
-          .map(_.get)
-          .map(v => FixedPriorityScheduler.conforms(v) && !StaticCyclicScheduler.conforms(v))
-          .toArray,
-        allocated
-          .map(_.get)
-          .map(v => !FixedPriorityScheduler.conforms(v) && StaticCyclicScheduler.conforms(v))
-          .toArray
+      if (allocated.exists(_.isEmpty)) {
+        return Set.empty
+      }
+      Set(
+        PartitionedCoresWithRuntimes(
+          processingElements.map(_.getIdentifier()).toVector,
+          allocated.map(_.get.getIdentifier()).toVector,
+          allocated
+            .map(_.get)
+            .map(v => !FixedPriorityScheduler.conforms(v) && !StaticCyclicScheduler.conforms(v))
+            .toVector,
+          allocated
+            .map(_.get)
+            .map(v => FixedPriorityScheduler.conforms(v) && !StaticCyclicScheduler.conforms(v))
+            .toVector,
+          allocated
+            .map(_.get)
+            .map(v => !FixedPriorityScheduler.conforms(v) && StaticCyclicScheduler.conforms(v))
+            .toVector
+        )
       )
-    )
+    }
   }
 
   def identTiledMultiCore(
       models: Set[DesignModel],
       identified: Set[DecisionModel]
-  )(using logger: Logger): Option[TiledMultiCore] = {
+  )(using logger: Logger): Set[TiledMultiCore] = {
     val modelOpt = models
       .filter(_.isInstanceOf[ForSyDeDesignModel])
       .map(_.asInstanceOf[ForSyDeDesignModel])
       .map(_.systemGraph)
       .reduceOption(_.merge(_))
     if (modelOpt.isEmpty) {
-      return Option.empty
+      return Set.empty
     }
     val model                 = modelOpt.get
-    var processingElements    = Array.empty[GenericProcessingModule]
-    var memoryElements        = Array.empty[GenericMemoryModule]
-    var communicationElements = Array.empty[GenericCommunicationModule]
+    var processingElements    = Buffer.empty[GenericProcessingModule]
+    var memoryElements        = Buffer.empty[GenericMemoryModule]
+    var communicationElements = Buffer.empty[GenericCommunicationModule]
     model.vertexSet.stream
       .filter(v => DigitalModule.conforms(v))
       .forEach(v => {
@@ -121,7 +114,7 @@ object PlatformRules {
       processingElements.size > memoryElements.size &&
       processingElements.size > communicationElements.size
     ) {
-      return Option.empty
+      return Set.empty
     }
     val topology = AsSubgraph(model, (processingElements ++ memoryElements ++ communicationElements).map(_.getViewedVertex()).toSet.asJava)
     // check if pes and mes connect only to CE etc
@@ -141,7 +134,7 @@ object PlatformRules {
         .allMatch(v => GenericCommunicationModule.conforms(v) || GenericMemoryModule.conforms(v))
     })
     if (!processingOnlyValidLinks) {
-      return Option.empty
+      return Set.empty
     }
     // do the same for MEs
     val memoryOnlyValidLinks = memoryElements.forall(me => {
@@ -164,7 +157,7 @@ object PlatformRules {
         )
     })
     if (!memoryOnlyValidLinks) {
-      return Option.empty
+      return Set.empty
     }
     // check if the elements can all be distributed in tiles
     // basically this check to see if there are always neighboring
@@ -181,7 +174,7 @@ object PlatformRules {
         .getOrElse(false)
     })
     if (!tilesExist) {
-      return Option.empty
+      return Set.empty
     }
     // now tile elements via sorting of the processing elements
     val tiledMemories = memoryElements.sortBy(mem => {
@@ -227,20 +220,20 @@ object PlatformRules {
         })
       mutMap.toMap
     })
-    Option(
+    Set(
       TiledMultiCore(
-        processingElements.map(_.getIdentifier()),
-        memoryElements.map(_.getIdentifier()),
-        tiledCommElems.map(_.getIdentifier()),
-        routers.map(_.getIdentifier()),
-        interconnectTopologySrcs.toArray,
-        interconnectTopologyDsts.toArray,
-        processorsProvisions,
-        processingElements.map(_.getOperatingFrequencyInHertz().toLong),
-        tiledMemories.map(_.getSpaceInBits()),
+        processingElements.map(_.getIdentifier()).toVector,
+        memoryElements.map(_.getIdentifier()).toVector,
+        tiledCommElems.map(_.getIdentifier()).toVector,
+        routers.map(_.getIdentifier()).toVector,
+        interconnectTopologySrcs.toVector,
+        interconnectTopologyDsts.toVector,
+        processorsProvisions.toVector,
+        processingElements.map(_.getOperatingFrequencyInHertz().toLong).toVector,
+        tiledMemories.map(_.getSpaceInBits().toLong).toVector,
         communicationElements.map(
-          InstrumentedCommunicationModule.safeCast(_).map(_.getMaxConcurrentFlits()).orElse(1)
-        ),
+          InstrumentedCommunicationModule.safeCast(_).map(_.getMaxConcurrentFlits().toInt).orElse(1)
+        ).toVector,
         communicationElements.map(
           InstrumentedCommunicationModule
             .safeCast(_)
@@ -248,7 +241,7 @@ object PlatformRules {
               Rational(ce.getFlitSizeInBits() * ce.getMaxCyclesPerFlit() * ce.getOperatingFrequencyInHertz())
             )
             .orElse(Rational.zero)
-        ),
+        ).toVector,
         preComputedPaths = Map.empty
       )
     )
@@ -257,11 +250,11 @@ object PlatformRules {
   def identSharedMemoryMultiCore(
       models: Set[DesignModel],
       identified: Set[DecisionModel]
-  )(using logger: Logger): Option[SharedMemoryMultiCore] = {
+  )(using logger: Logger): Set[SharedMemoryMultiCore] = {
     ForSyDeIdentificationUtils.toForSyDe(models) { model =>
-      var processingElements    = Array.empty[GenericProcessingModule]
-      var memoryElements        = Array.empty[GenericMemoryModule]
-      var communicationElements = Array.empty[GenericCommunicationModule]
+      var processingElements    = Buffer.empty[GenericProcessingModule]
+      var memoryElements        = Buffer.empty[GenericMemoryModule]
+      var communicationElements = Buffer.empty[GenericCommunicationModule]
       model.vertexSet.stream
         .filter(v => DigitalModule.conforms(v))
         .forEach(v => {
@@ -278,7 +271,7 @@ object PlatformRules {
       if (
         processingElements.length <= 0
       ) {
-        return Option.empty
+        return Set.empty
       }
       // build the topology graph with just the known elements
       val topology = AsSubgraph(model, (processingElements ++ memoryElements ++ communicationElements).map(_.getViewedVertex()).toSet.asJava)
@@ -299,7 +292,7 @@ object PlatformRules {
           .allMatch(v => GenericCommunicationModule.conforms(v) || GenericMemoryModule.conforms(v))
       })
       if (!processingOnlyValidLinks) {
-        return Option.empty
+        return Set.empty
       }
       // do the same for MEs
       val memoryOnlyValidLinks = memoryElements.forall(me => {
@@ -322,13 +315,13 @@ object PlatformRules {
           )
       })
       if (!memoryOnlyValidLinks) {
-        return Option.empty
+        return Set.empty
       }
       // check if all processors are connected to at least one memory element
       val connecivityInspector = ConnectivityInspector(topology)
       val pesConnected = processingElements.forall(pe => 
         memoryElements.exists(me => connecivityInspector.pathExists(pe.getViewedVertex(), me.getViewedVertex())))
-      if (!pesConnected) return Option.empty
+      if (!pesConnected) return Set.empty
       // basically this check to see if there are always neighboring
       // pe, mem and ce
       // and also the subset of only communication elements
@@ -354,19 +347,19 @@ object PlatformRules {
           })
         mutMap.toMap
       })
-      Option(
+      Set(
         SharedMemoryMultiCore(
-          processingElements.map(_.getIdentifier()),
-          memoryElements.map(_.getIdentifier()),
-          communicationElements.map(_.getIdentifier()),
-          interconnectTopologySrcs.toArray,
-          interconnectTopologyDsts.toArray,
-          processingElements.map(_.getOperatingFrequencyInHertz().toLong),
-          processorsProvisions,
-          memoryElements.map(_.getSpaceInBits()),
+          processingElements.map(_.getIdentifier()).toVector,
+          memoryElements.map(_.getIdentifier()).toVector,
+          communicationElements.map(_.getIdentifier()).toVector,
+          interconnectTopologySrcs.toVector,
+          interconnectTopologyDsts.toVector,
+          processingElements.map(_.getOperatingFrequencyInHertz().toLong).toVector,
+          processorsProvisions.toVector,
+          memoryElements.map(_.getSpaceInBits().toLong).toVector,
           communicationElements.map(
-            InstrumentedCommunicationModule.safeCast(_).map(_.getMaxConcurrentFlits()).orElse(1)
-          ),
+            InstrumentedCommunicationModule.safeCast(_).map(_.getMaxConcurrentFlits().toInt).orElse(1)
+          ).toVector,
           communicationElements.map(
             InstrumentedCommunicationModule
               .safeCast(_)
@@ -374,7 +367,7 @@ object PlatformRules {
                 Rational(ce.getFlitSizeInBits() * ce.getMaxCyclesPerFlit() * ce.getOperatingFrequencyInHertz())
               )
               .orElse(Rational.zero)
-          ),
+          ).toVector,
           preComputedPaths = Map.empty
         )
       )

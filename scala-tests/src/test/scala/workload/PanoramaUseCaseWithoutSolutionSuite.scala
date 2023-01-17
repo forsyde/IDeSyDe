@@ -21,6 +21,7 @@ import scala.concurrent.ExecutionContext
 import mixins.LoggingMixin
 import idesyde.utils.Logger
 import idesyde.utils.SimpleStandardIOLogger
+import tags.ResourceHungry
 
 class PanoramaUseCaseWithoutSolutionSuite extends AnyFunSuite with LoggingMixin {
 
@@ -61,7 +62,7 @@ class PanoramaUseCaseWithoutSolutionSuite extends AnyFunSuite with LoggingMixin 
     assert(chosen.size > 0)
   }
 
-  test("PANORAMA case study without any solutions - no solution found") {
+  test("PANORAMA case study without any solutions - no solution found", ResourceHungry) {
     val solutions = chosen
       .flatMap((explorer, decisionModel) =>
         explorer

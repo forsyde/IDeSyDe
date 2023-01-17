@@ -11,7 +11,6 @@ import scala.util.Random
 import org.chocosolver.solver.search.loop.monitors.IMonitorSolution
 import idesyde.utils.CoreUtils.wfor
 import idesyde.utils.CoreUtils
-import idesyde.identification.forsyde.models.sdf.SDFApplication
 import org.chocosolver.solver.variables.BoolVar
 import spire._
 import spire.math._

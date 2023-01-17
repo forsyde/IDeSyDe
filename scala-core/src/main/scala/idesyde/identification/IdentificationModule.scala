@@ -21,7 +21,7 @@ trait IdentificationModule {
     *   The set of identification rules registered in this module
     */
   def identificationRules: Set[
-    Function2[Set[DesignModel], Set[DecisionModel], Option[? <: DecisionModel]]
+    Function2[Set[DesignModel], Set[DecisionModel], Set[? <: DecisionModel]]
   ]
 
   /** Each integration rule takes a design model and (solved/explored) decision model to produce a

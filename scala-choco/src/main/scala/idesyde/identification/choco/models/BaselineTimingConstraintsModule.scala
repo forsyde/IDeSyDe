@@ -21,7 +21,7 @@ class BaselineTimingConstraintsModule(
 
   val utilizations = maxUtilizations
     .map(_ * (100))
-    .map(_.ceil.toInt)
+    .map(_.floor.toInt)
     .zipWithIndex
     .map((maxU, j) => {
       chocoModel.intVar(s"pe_${j}_utilization", 0, maxU, true)
@@ -46,15 +46,11 @@ class BaselineTimingConstraintsModule(
     chocoModel
       .binPacking(
         taskExecution,
-        durations.map(_.getUB()),
+        durations.zipWithIndex.map((d, i) => (d.getUB(), i)).map((d, i) => d / periods(i)).map(_.ceil.toInt),
         utilizations,
         0
       )
       .post()
-    //   for (
-    //     (u, i) <- maxUtilizations
-    //   ) {
-
     //   }
     //   maxUtilizations
     //     .map(u => (u * (100)).ceil.toInt)

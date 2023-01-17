@@ -20,27 +20,27 @@ class Active4StageDurationModule(
 ) extends ChocoModelMixin() {
 
   private val executionTimes =
-    tasksAndPlatform.wcets.map(_.map(_ * timeMultiplier).map(_.ceil.toInt))
+    tasksAndPlatform.wcets.map(_.map(_ * timeMultiplier).map(_.ceil.toInt).toArray).toArray
   private val taskSizes =
-    tasksAndPlatform.workload.processSizes.map(CoreUtils.ceil(_, memoryDivider)).map(_.toInt)
+    tasksAndPlatform.workload.processSizes.map(CoreUtils.ceil(_, memoryDivider)).map(_.toInt).toArray
   private val messageSizes =
-    tasksAndPlatform.workload.messagesMaxSizes.map(CoreUtils.ceil(_, memoryDivider)).map(_.toInt)
+    tasksAndPlatform.workload.messagesMaxSizes.map(CoreUtils.ceil(_, memoryDivider)).map(_.toInt).toArray
   private val storageSizes =
     tasksAndPlatform.platform.hardware.storageSizes
       .map(CoreUtils.ceil(_, memoryDivider))
-      .map(_.toInt)
+      .map(_.toInt).toArray
   private val taskTravelTime = tasksAndPlatform.workload.processSizes.map(d =>
     tasksAndPlatform.platform.hardware.communicationElementsBitPerSecPerChannel.map(b =>
       // TODO: check if this is truly conservative (pessimistic) or not
       (d / b / timeMultiplier / memoryDivider).ceil.toInt
-    )
-  )
+    ).toArray
+  ).toArray
   private val dataTravelTime = tasksAndPlatform.workload.messagesMaxSizes.map(d =>
     tasksAndPlatform.platform.hardware.communicationElementsBitPerSecPerChannel.map(b =>
       // TODO: check if this is truly conservative (pessimistic) or not
       (d / b / (timeMultiplier) / (memoryDivider)).ceil.toInt
-    )
-  )
+    ).toArray
+  ).toArray
   private val taskReadsData  = tasksAndPlatform.workload.processReadsFromChannel
   private val taskWritesData = tasksAndPlatform.workload.processWritesToChannel
 
@@ -52,9 +52,9 @@ class Active4StageDurationModule(
   val durationsExec = tasks.zipWithIndex.map((t, i) =>
     chocoModel.intVar(
       s"exe_wc($t)",
-      executionTimes(i)
+      executionTimes(i).filter(_ > 0)
     )
-  )
+  ).toArray
   val durationsFetch = tasks.zipWithIndex.map((t, i) =>
     chocoModel.intVar(
       s"fetch_wc($i)",
@@ -62,7 +62,7 @@ class Active4StageDurationModule(
       taskTravelTime(i).sum,
       true
     )
-  )
+  ).toArray
   val durationsRead = tasks.zipWithIndex.map((t, i) =>
     chocoModel.intVar(
       s"input_wc($i)",
@@ -70,7 +70,7 @@ class Active4StageDurationModule(
       dataTravelTime(i).sum,
       true
     )
-  )
+  ).toArray
   val durationsWrite = tasks.zipWithIndex.map((t, i) =>
     chocoModel.intVar(
       s"output_wc($i)",
@@ -78,7 +78,7 @@ class Active4StageDurationModule(
       dataTravelTime(i).sum,
       true
     )
-  )
+  ).toArray
   val durations = tasks.zipWithIndex.map((t, i) =>
     chocoModel.sum(
       s"dur($t)",
@@ -87,7 +87,7 @@ class Active4StageDurationModule(
       durationsExec(i),
       durationsWrite(i)
     )
-  )
+  ).toArray
 
   val totalVCPerCommElem = communicators.zipWithIndex
     .map((c, i) =>
@@ -97,7 +97,7 @@ class Active4StageDurationModule(
         tasksAndPlatform.platform.hardware.communicationElementsMaxChannels(i) * processors.size,
         true
       )
-    )
+    ).toArray
 
   def postActive4StageDurationsConstraints(): Unit = {
     // deduced parameters

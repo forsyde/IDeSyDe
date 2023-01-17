@@ -2,7 +2,6 @@ package idesyde.identification.forsyde
 
 import java.util.concurrent.ThreadPoolExecutor
 
-import idesyde.identification.forsyde.rules.sdf.SDFAppIdentificationRule
 import java.util.concurrent.Executors
 import idesyde.identification.IdentificationModule
 import idesyde.identification.forsyde.rules.sdf.SDFRules

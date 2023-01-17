@@ -7,17 +7,17 @@ import scalax.collection.Graph
 import scalax.collection.GraphPredef._
 
 final case class TiledMultiCore(
-    val processors: Array[String],
-    val memories: Array[String],
-    val networkInterfaces: Array[String],
-    val routers: Array[String],
-    val interconnectTopologySrcs: Array[String],
-    val interconnectTopologyDsts: Array[String],
-    val processorsProvisions: Array[Map[String, Map[String, Rational]]],
-    val processorsFrequency: Array[Long],
-    val tileMemorySizes: Array[Long],
-    val communicationElementsMaxChannels: Array[Int],
-    val communicationElementsBitPerSecPerChannel: Array[Rational],
+    val processors: Vector[String],
+    val memories: Vector[String],
+    val networkInterfaces: Vector[String],
+    val routers: Vector[String],
+    val interconnectTopologySrcs: Vector[String],
+    val interconnectTopologyDsts: Vector[String],
+    val processorsProvisions: Vector[Map[String, Map[String, Rational]]],
+    val processorsFrequency: Vector[Long],
+    val tileMemorySizes: Vector[Long],
+    val communicationElementsMaxChannels: Vector[Int],
+    val communicationElementsBitPerSecPerChannel: Vector[Rational],
     val preComputedPaths: Map[String, Map[String, Iterable[String]]]
 ) extends StandardDecisionModel
     with InstrumentedPlatformMixin[Rational] {
@@ -27,7 +27,7 @@ final case class TiledMultiCore(
 
   val communicationElems = networkInterfaces ++ routers
 
-  val platformElements: Array[String] =
+  val platformElements: Vector[String] =
     processors ++ memories ++ communicationElems
 
   val topology = Graph.from(
@@ -57,7 +57,7 @@ final case class TiledMultiCore(
       )
     )
 
-  val maxTraversalTimePerBit: Array[Array[Rational]] = {
+  val maxTraversalTimePerBit: Vector[Vector[Rational]] = {
     // val paths = FloydWarshallShortestPaths(directedAndConnectedMinTimeGraph)
     platformElements.zipWithIndex.map((src, i) => {
       platformElements.zipWithIndex.map((dst, j) => {
@@ -73,7 +73,7 @@ final case class TiledMultiCore(
     })
   }
 
-  val minTraversalTimePerBit: Array[Array[Rational]] = {
+  val minTraversalTimePerBit: Vector[Vector[Rational]] = {
     platformElements.zipWithIndex.map((src, i) => {
       platformElements.zipWithIndex.map((dst, j) => {
         computedPaths(i)(j)

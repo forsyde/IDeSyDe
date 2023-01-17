@@ -28,32 +28,35 @@ class IdentificationHandler(
       s"Performing identification with ${activeRules.size} rules on ${models.size} design models."
     )
     var allCovered = false
-    while (activeRules.size > 0 && iters <= maxIters && !allCovered) {
-      val ruleResults = activeRules.map(irule => (irule, irule(models, identified)))
-      val reIdentified = ruleResults
-        .flatMap((irule, res) => res)
-        .filter(m => identified.exists(prev => prev.uniqueIdentifier == m.uniqueIdentifier && prev.coveredElements == m.coveredElements))
+    var noNewIdentification = false
+    while (activeRules.size > 0 && iters <= maxIters && !allCovered && !noNewIdentification) {
+      val ruleResults = activeRules.flatMap(irule => irule(models, identified))
+      // val reIdentified = ruleResults
+      //   .flatMap((irule, res) => res)
+      //   .filter(m => identified.exists(prev => prev.uniqueIdentifier == m.uniqueIdentifier && prev.coveredElements == m.coveredElements))
       val newIdentified =
-        ruleResults.flatMap((irule, res) => res).filter(res => !reIdentified.contains(res))
+        ruleResults.filter(res => !identified.contains(res))
       // add to the current identified
       identified = identified ++ newIdentified
+      noNewIdentification = newIdentified.isEmpty
       // keep only non fixed rules
-      activeRules = ruleResults
-        .filter((irule, res) => res.map(r => !reIdentified.contains(r)).getOrElse(true))
-        .map((irule, _) => irule)
+      // activeRules = ruleResults
+      //   .filter((irule, res) => res.map(r => !reIdentified.contains(r)).getOrElse(true))
+      //   .map((irule, _) => irule)
       logger.debug(
-        s"identification step $iters: ${identified.size} identified and ${activeRules.size} rules"
+        s"identification step $iters: ${identified.size} identified"
       )
       allCovered =
-        models.forall(m => identified.exists(mm => m.elementIDs.subsetOf(mm.coveredElementIDs)))
+        models.forall(m => m.elementIDs.subsetOf(identified.foldLeft(Set[String]())((s, mm) => s ++ mm.coveredElementIDs)))
       iters += 1
     }
-    // build reachability matrix
     logger.debug(s"identified: ${identified.map(m => m.uniqueIdentifier)}")
     val identifiedArray = identified.toArray
+    // build reachability matrix
     val reachability    = identifiedArray.map(m => identifiedArray.map(mm => m.dominates(mm)))
     // get the dominant decision models (including circular dominances)
-    val dominant = CoreUtils.computeDominant(reachability).map(idx => identifiedArray(idx)).toSet
+    val dominantWithoutFilter = CoreUtils.computeDominant(reachability).map(idx => identifiedArray(idx)).toSet
+    val dominant = dominantWithoutFilter.filter(m => dominantWithoutFilter.filter(_ != m).forall(mm => m.uniqueIdentifier != mm.uniqueIdentifier || (m.uniqueIdentifier == mm.uniqueIdentifier && m.dominates(mm))))
     logger.debug(s"dominant: ${dominant.map(m => m.uniqueIdentifier)}")
     logger.info(s"found ${dominant.size} dominant decision model(s).")
     dominant

@@ -12,8 +12,8 @@ final case class SchedulableTiledMultiCore(
   val coveredElements         = hardware.coveredElements ++ runtimes.coveredElements
   val coveredElementRelations = hardware.coveredElementRelations ++ runtimes.coveredElementRelations
 
-  def processorsFrequency: Array[Long] = hardware.processorsFrequency
-  def processorsProvisions: Array[Map[String, Map[String, spire.math.Rational]]] =
+  def processorsFrequency: Vector[Long] = hardware.processorsFrequency
+  def processorsProvisions: Vector[Map[String, Map[String, spire.math.Rational]]] =
     hardware.processorsProvisions
 
   val uniqueIdentifier: String = "SchedulableTiledMultiCore"

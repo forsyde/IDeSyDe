@@ -12,7 +12,7 @@ trait WCETComputationMixin[RealT](
     val intruPlatform: InstrumentedPlatformMixin[RealT]
 )(using fracT: spire.math.Fractional[RealT])(using ClassTag[RealT]) {
 
-  def computeWcets: Array[Array[RealT]] = {
+  def computeWcets: Vector[Vector[RealT]] = {
     // alll executables of task are instrumented
     // scribe.debug(taskModel.executables.mkString("[", ",", "]"))
     // compute the matrix (lazily)

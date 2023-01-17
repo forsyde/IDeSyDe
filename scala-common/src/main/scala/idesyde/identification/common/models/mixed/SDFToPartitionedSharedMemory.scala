@@ -9,9 +9,9 @@ import spire.math.Rational
 final case class SDFToPartitionedSharedMemory(
     val sdfApplications: SDFApplication,
     val platform: PartitionedSharedMemoryMultiCore,
-    val processMappings: Array[String],
-    val memoryMappings: Array[String],
-    val messageSlotAllocations: Array[Map[String, Array[Boolean]]]
+    val processMappings: Vector[String],
+    val memoryMappings: Vector[String],
+    val messageSlotAllocations: Vector[Map[String, Vector[Boolean]]]
 ) extends StandardDecisionModel
     with WCETComputationMixin(sdfApplications, platform.hardware) {
 

@@ -5,14 +5,13 @@ import org.chocosolver.solver.search.strategy.strategy.AbstractStrategy
 import org.chocosolver.solver.search.strategy.decision.IntDecision
 import org.chocosolver.util.PoolManager
 import org.chocosolver.solver.search.strategy.decision.Decision
-import breeze.linalg._
 import org.chocosolver.solver.search.strategy.assignments.DecisionOperatorFactory
 import scala.util.Random
 import org.chocosolver.solver.search.loop.monitors.IMonitorSolution
 import idesyde.utils.CoreUtils.wfor
 import idesyde.utils.CoreUtils
-import idesyde.identification.forsyde.models.sdf.SDFApplication
 import org.chocosolver.solver.variables.BoolVar
+import idesyde.identification.common.models.sdf.SDFApplication
 
 class CompactingMultiCoreSDFListScheduling(
     val sdfApplications: SDFApplication,
@@ -34,23 +33,19 @@ class CompactingMultiCoreSDFListScheduling(
   var schedulers            = (0 until firingsInSlots.head.size).toArray
   val slots                 = (0 until firingsInSlots.head.head.size).toArray
 
-  private val mat     = DenseMatrix(sdfApplications.sdfBalanceMatrix: _*)
-  private val consMat = mat.map(v => if (v < 0) then v else 0)
-  private val prodMat = mat.map(v => if (v > 0) then v else 0)
+  private val mat     = sdfApplications.sdfBalanceMatrix
+  private val consMat = mat.map(_.map(v => if (v < 0) then v else 0))
+  private val prodMat = mat.map(_.map(v => if (v > 0) then v else 0))
 
   val pool = PoolManager[IntDecision]()
 
-  val follows = actors.map(src =>
-    actors.map(dst => {
-      channels.exists(c => mat(c, src) > 0 && mat(c, dst) < 0)
+  val follows = actors.zipWithIndex.map((_, src) =>
+    actors.zipWithIndex.map((_, dst) => {
+      channels.exists(c => mat(c)(src) > 0 && mat(c)(dst) < 0)
     })
   )
 
-  val followsMatrix = CSCMatrix(
-    follows: _*
-  )
-
-  val followsClosure = CoreUtils.reachibilityClosure(follows)
+  val followsClosure = CoreUtils.reachibilityClosure(follows.map(_.toArray).toArray)
 
   /** This function checks whether the firing schedule can induce a self-contention between actors
     * of the same sub-application, i.e. that are connected. The logic it uses is to use the provided

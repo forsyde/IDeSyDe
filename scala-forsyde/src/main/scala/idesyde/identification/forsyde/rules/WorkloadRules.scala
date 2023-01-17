@@ -30,7 +30,7 @@ object WorkloadRules {
   def identPeriodicDependentWorkload(
       models: Set[DesignModel],
       identified: Set[DecisionModel]
-  )(using logger: Logger): Option[CommunicatingExtendedDependenciesPeriodicWorkload] = {
+  )(using logger: Logger): Set[CommunicatingExtendedDependenciesPeriodicWorkload] = {
     ForSyDeIdentificationUtils.toForSyDe(models) { model =>
       var tasks                   = Buffer[Task]()
       var dataBlocks              = Buffer[DataBlock]()
@@ -63,7 +63,7 @@ object WorkloadRules {
       // so we terminate early to avoid undefined analysis results
       logger.debug(s"Num of tasks found in model: ${tasks.size}")
       if (tasks.isEmpty)
-        return Option.empty
+        return Set.empty
       // now take a look which of the relevant vertexes are connected
       // taskStimulusGraph.vertexSet.forEach(src =>
       //   taskStimulusGraph.vertexSet.forEach(dst =>
@@ -126,7 +126,7 @@ object WorkloadRules {
         )
       )
       logger.debug(s"Are all tasks reachable by a periodic stimulus? ${allTasksAreStimulated}")
-      if (!allTasksAreStimulated) return Option.empty
+      if (!allTasksAreStimulated) return Set.empty
       // now building all the periodic workload elements ditto
       var propagatedEvents = mutable.Map[String, Set[(Rational, Rational, Rational)]]()
       val processes        = Buffer[(String, Rational, Rational, Rational)]()
@@ -342,16 +342,16 @@ object WorkloadRules {
           .filter(dst => model.hasConnection(src, dst))
           .map(dst => (src.getIdentifier(), dst.getIdentifier()))
       )
-      Option(
+      Set(
         CommunicatingExtendedDependenciesPeriodicWorkload(
-          processes.zipWithIndex.map((t, i) => s"${t._1}_$i").toArray,
-          processes.map((n, p, o, d) => p).toArray,
-          processes.map((n, p, o, d) => o).toArray,
-          processes.map((n, p, o, d) => d).toArray,
+          processes.zipWithIndex.map((t, i) => s"${t._1}_$i").toVector,
+          processes.map((n, p, o, d) => p).toVector,
+          processes.map((n, p, o, d) => o).toVector,
+          processes.map((n, p, o, d) => d).toVector,
           processes
             .map((n, _, _, _) => tasks.find(_.getIdentifier() == n).get)
             .map(InstrumentedExecutable.safeCast(_).map(_.getSizeInBits()).orElse(0L).toLong)
-            .toArray,
+            .toVector,
           processes
             .map((n, _, _, _) =>
               tasks
@@ -359,9 +359,9 @@ object WorkloadRules {
                 .map(t => taskComputationNeeds(t, model))
                 .get
             )
-            .toArray,
-          dataBlocks.map(_.getIdentifier()).toArray,
-          dataBlocks.map(_.getMaxSizeInBits().toLong).toArray,
+            .toVector,
+          dataBlocks.map(_.getIdentifier()).toVector,
+          dataBlocks.map(_.getMaxSizeInBits().toLong).toVector,
           processes
             .map((n, _, _, _) =>
               dataBlocks
@@ -371,9 +371,9 @@ object WorkloadRules {
                     .map((_, _, d) => d.toLong)
                     .getOrElse(0L)
                 )
-                .toArray
+                .toVector
             )
-            .toArray,
+            .toVector,
           processes
             .map((n, _, _, _) =>
               dataBlocks
@@ -383,15 +383,15 @@ object WorkloadRules {
                     .map((_, _, d) => d.toLong)
                     .getOrElse(0L)
                 )
-                .toArray
+                .toVector
             )
-            .toArray,
-          affineControlGraphEdges.map(_._1).toArray,
-          affineControlGraphEdges.map(_._2).toArray,
-          affineControlGraphEdges.map(_._3).toArray,
-          affineControlGraphEdges.map(_._4).toArray,
-          affineControlGraphEdges.map(_._5).toArray,
-          affineControlGraphEdges.map(_._6).toArray,
+            .toVector,
+          affineControlGraphEdges.map(_._1).toVector,
+          affineControlGraphEdges.map(_._2).toVector,
+          affineControlGraphEdges.map(_._3).toVector,
+          affineControlGraphEdges.map(_._4).toVector,
+          affineControlGraphEdges.map(_._5).toVector,
+          affineControlGraphEdges.map(_._6).toVector,
           additionalCovered.map(_.getIdentifier()).toSet,
           additionalRelations
         )

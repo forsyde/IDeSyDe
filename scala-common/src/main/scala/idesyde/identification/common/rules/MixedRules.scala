@@ -16,12 +16,12 @@ object MixedRules {
   def identSDFToTiledMultiCore(
       models: Set[DesignModel],
       identified: Set[DecisionModel]
-  ): Option[SDFToTiledMultiCore] = {
+  ): Set[SDFToTiledMultiCore] = {
     val app = identified
-      .find(_.isInstanceOf[SDFApplication])
+      .filter(_.isInstanceOf[SDFApplication])
       .map(_.asInstanceOf[SDFApplication])
     val plat = identified
-      .find(_.isInstanceOf[SchedulableTiledMultiCore])
+      .filter(_.isInstanceOf[SchedulableTiledMultiCore])
       .map(_.asInstanceOf[SchedulableTiledMultiCore])
     // if ((runtimes.isDefined && plat.isEmpty) || (runtimes.isEmpty && plat.isDefined))
     app.flatMap(a =>
@@ -29,10 +29,10 @@ object MixedRules {
         SDFToTiledMultiCore(
           sdfApplications = a,
           platform = p,
-          processMappings = Array.empty,
-          messageMappings = Array.empty,
-          schedulerSchedules = Array.empty,
-          messageSlotAllocations = Array.empty
+          processMappings = Vector.empty,
+          messageMappings = Vector.empty,
+          schedulerSchedules = Vector.empty,
+          messageSlotAllocations = Vector.empty
         )
       )
     )
@@ -41,12 +41,12 @@ object MixedRules {
   def identSDFToPartitionedSharedMemory(
       models: Set[DesignModel],
       identified: Set[DecisionModel]
-  ): Option[SDFToPartitionedSharedMemory] = {
+  ): Set[SDFToPartitionedSharedMemory] = {
     val app = identified
-      .find(_.isInstanceOf[SDFApplication])
+      .filter(_.isInstanceOf[SDFApplication])
       .map(_.asInstanceOf[SDFApplication])
     val plat = identified
-      .find(_.isInstanceOf[PartitionedSharedMemoryMultiCore])
+      .filter(_.isInstanceOf[PartitionedSharedMemoryMultiCore])
       .map(_.asInstanceOf[PartitionedSharedMemoryMultiCore])
     // if ((runtimes.isDefined && plat.isEmpty) || (runtimes.isEmpty && plat.isDefined))
     app.flatMap(a =>
@@ -54,9 +54,9 @@ object MixedRules {
         SDFToPartitionedSharedMemory(
           sdfApplications = a,
           platform = p,
-          processMappings = Array.empty,
-          memoryMappings = Array.empty,
-          messageSlotAllocations = Array.empty
+          processMappings = Vector.empty,
+          memoryMappings = Vector.empty,
+          messageSlotAllocations = Vector.empty
         )
       )
     )
@@ -65,12 +65,12 @@ object MixedRules {
   def identPeriodicWorkloadToPartitionedSharedMultiCore(
       models: Set[DesignModel],
       identified: Set[DecisionModel]
-  ): Option[PeriodicWorkloadToPartitionedSharedMultiCore] = {
+  ): Set[PeriodicWorkloadToPartitionedSharedMultiCore] = {
     val app = identified
-      .find(_.isInstanceOf[CommunicatingExtendedDependenciesPeriodicWorkload])
+      .filter(_.isInstanceOf[CommunicatingExtendedDependenciesPeriodicWorkload])
       .map(_.asInstanceOf[CommunicatingExtendedDependenciesPeriodicWorkload])
     val plat = identified
-      .find(_.isInstanceOf[PartitionedSharedMemoryMultiCore])
+      .filter(_.isInstanceOf[PartitionedSharedMemoryMultiCore])
       .map(_.asInstanceOf[PartitionedSharedMemoryMultiCore])
     // if ((runtimes.isDefined && plat.isEmpty) || (runtimes.isEmpty && plat.isDefined))
     app.flatMap(a =>
@@ -78,9 +78,9 @@ object MixedRules {
         PeriodicWorkloadToPartitionedSharedMultiCore(
           workload = a,
           platform = p,
-          processMappings = Array.empty,
-          processSchedulings = Array.empty,
-          channelMappings = Array.empty,
+          processMappings = Vector.empty,
+          processSchedulings = Vector.empty,
+          channelMappings = Vector.empty,
           channelSlotAllocations = Map(),
           maxUtilizations = Map()
         )

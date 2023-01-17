@@ -38,8 +38,7 @@ import org.scalatest.Tag
 import org.scalatest.Ignore
 import idesyde.utils.SimpleStandardIOLogger
 import idesyde.identification.choco.models.sdf.ChocoSDFToSChedTileHW2
-
-object ResourceHungry extends Tag("idesyde.tests.ResourceHungry")
+import tags.ResourceHungry
 
 /** This test suite uses as much as possible the experiments from the paper
   *

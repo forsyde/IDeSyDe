@@ -5,6 +5,7 @@ import scalax.collection.Graph
 import scalax.collection.GraphPredef._
 import scalax.collection.edge.Implicits._
 import idesyde.identification.common.StandardDecisionModel
+import scala.collection.mutable.Buffer
 
 /** Interface that describes a periodic workload model, also commonly known in the real time
   * academic community as "periodic task model". This one in particular closely follows the
@@ -23,22 +24,22 @@ import idesyde.identification.common.StandardDecisionModel
   *   this extra field exist to support wild design models being reduced to this decision model
   */
 final case class CommunicatingExtendedDependenciesPeriodicWorkload(
-    val processes: Array[String],
-    val periods: Array[Rational],
-    val offsets: Array[Rational],
-    val relativeDeadlines: Array[Rational],
-    val processSizes: Array[Long],
-    val processComputationalNeeds: Array[Map[String, Map[String, Long]]],
-    val channels: Array[String],
-    val channelSizes: Array[Long],
-    val processReadsFromChannel: Array[Array[Long]],
-    val processWritesToChannel: Array[Array[Long]],
-    val affineControlGraphSrcs: Array[String],
-    val affineControlGraphDsts: Array[String],
-    val affineControlGraphSrcRepeats: Array[Int],
-    val affineControlGraphSrcSkips: Array[Int],
-    val affineControlGraphDstRepeats: Array[Int],
-    val affineControlGraphDstSkips: Array[Int],
+    val processes: Vector[String],
+    val periods: Vector[Rational],
+    val offsets: Vector[Rational],
+    val relativeDeadlines: Vector[Rational],
+    val processSizes: Vector[Long],
+    val processComputationalNeeds: Vector[Map[String, Map[String, Long]]],
+    val channels: Vector[String],
+    val channelSizes: Vector[Long],
+    val processReadsFromChannel: Vector[Vector[Long]],
+    val processWritesToChannel: Vector[Vector[Long]],
+    val affineControlGraphSrcs: Vector[String],
+    val affineControlGraphDsts: Vector[String],
+    val affineControlGraphSrcRepeats: Vector[Int],
+    val affineControlGraphSrcSkips: Vector[Int],
+    val affineControlGraphDstRepeats: Vector[Int],
+    val affineControlGraphDstSkips: Vector[Int],
     val additionalCoveredElements: Set[String] = Set(),
     val additionalCoveredElementRelations: Set[(String, String)] = Set()
 ) extends StandardDecisionModel
@@ -90,14 +91,13 @@ final case class CommunicatingExtendedDependenciesPeriodicWorkload(
 
   val hyperPeriod: Rational = periods.reduce((t1, t2) => t1.lcm(t2))
 
-  val tasksNumInstances: Array[Int] =
-    (0 until processes.length)
-      .map(i => hyperPeriod / periods(i))
+  val tasksNumInstances: Vector[Int] =
+    periods
+      .map(p => hyperPeriod / p)
       .map(_.toInt)
-      .toArray
 
   val offsetsWithDependencies = {
-    var offsetsMut = offsets.clone
+    var offsetsMut = offsets.toBuffer
     for (
       sorted <- affineRelationsGraph.topologicalSort();
       node   <- sorted;
@@ -126,7 +126,7 @@ final case class CommunicatingExtendedDependenciesPeriodicWorkload(
         .maxOption
         .getOrElse(offsetsMut(nodeIdx))
     }
-    offsetsMut
+    offsetsMut.toVector
   }
 
   val relativeDeadlinesWithDependencies =

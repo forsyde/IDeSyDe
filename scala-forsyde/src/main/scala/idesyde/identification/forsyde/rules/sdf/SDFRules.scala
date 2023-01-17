@@ -21,24 +21,24 @@ object SDFRules {
   def identSDFApplication(
       models: Set[DesignModel],
       identified: Set[DecisionModel]
-  )(using logger: Logger): Option[SDFApplication] = {
+  )(using logger: Logger): Set[SDFApplication] = {
     val modelOpt = models
       .filter(_.isInstanceOf[ForSyDeDesignModel])
       .map(_.asInstanceOf[ForSyDeDesignModel])
       .map(_.systemGraph)
       .reduceOption(_.merge(_))
     if (modelOpt.isEmpty) {
-      return Option.empty
+      return Set.empty
     }
     val model       = modelOpt.get
-    var sdfActors   = Array.empty[SDFActor]
-    var sdfChannels = Array.empty[SDFChannel]
+    var sdfActors   = Buffer.empty[SDFActor]
+    var sdfChannels = Buffer.empty[SDFChannel]
     model.vertexSet.stream
       .filter(SDFElem.conforms(_))
       .forEach(v => {
-        if (SDFActor.conforms(v)) sdfActors = sdfActors.appended(SDFActor.enforce(v))
-        //else if (SDFDelay.conforms(v)) sdfDelays = sdfDelays.appended(SDFDelay.enforce(v))
-        else if (SDFChannel.conforms(v)) sdfChannels = sdfChannels.appended(SDFChannel.enforce(v))
+        if (SDFActor.conforms(v)) sdfActors += SDFActor.enforce(v)
+        //else if (SDFDelay.conforms(v)) sdfDelays = SDFDelay.enforce(v)
+        else if (SDFChannel.conforms(v)) sdfChannels += SDFChannel.enforce(v)
       })
     val channelsConnectActors =
       sdfChannels.forall(c =>
@@ -47,7 +47,7 @@ object SDFRules {
       )
     if (sdfActors.size == 0 || !channelsConnectActors) {
       logger.debug("No actors, or channels do not connect actors")
-      return Option.empty
+      return Set.empty
     }
     var topologySrcs      = Buffer[String]()
     var topologyDsts      = Buffer[String]()
@@ -95,20 +95,20 @@ object SDFRules {
               .orElse(0L)
           )
           .sum
-    )
-    val processComputationalNeeds = sdfActors.map(fromSDFActorToNeeds(model, _))
-    Some(
+    ).toVector
+    val processComputationalNeeds = sdfActors.map(fromSDFActorToNeeds(model, _)).toVector
+    Set(
       SDFApplication(
-        sdfActors.map(_.getIdentifier()),
-        sdfChannels.map(_.getIdentifier()),
-        topologySrcs.toArray,
-        topologyDsts.toArray,
-        topologyEdgeValue.toArray,
+        sdfActors.map(_.getIdentifier()).toVector,
+        sdfChannels.map(_.getIdentifier()).toVector,
+        topologySrcs.toVector,
+        topologyDsts.toVector,
+        topologyEdgeValue.toVector,
         processSizes,
         processComputationalNeeds,
-        sdfChannels.map(_.getNumOfInitialTokens().toInt),
-        sdfChannels.map(TokenizableDataBlock.safeCast(_).map(_.getTokenSizeInBits()).orElse(0L)),
-        sdfActors.map(a => -1.0)
+        sdfChannels.map(_.getNumOfInitialTokens().toInt).toVector,
+        sdfChannels.map(TokenizableDataBlock.safeCast(_).map(_.getTokenSizeInBits().toLong).orElse(0L)).toVector,
+        sdfActors.map(a => -1.0).toVector
       )
     )
   }

@@ -128,13 +128,13 @@ object MixedRules {
   def identPeriodicWorkloadToPartitionedSharedMultiCoreWithUtilization(
       models: Set[DesignModel],
       identified: Set[DecisionModel]
-  ): Option[PeriodicWorkloadToPartitionedSharedMultiCore] = {
+  ): Set[PeriodicWorkloadToPartitionedSharedMultiCore] = {
     ForSyDeIdentificationUtils.toForSyDe(models) { model => 
       val app = identified
-        .find(_.isInstanceOf[CommunicatingExtendedDependenciesPeriodicWorkload])
+        .filter(_.isInstanceOf[CommunicatingExtendedDependenciesPeriodicWorkload])
         .map(_.asInstanceOf[CommunicatingExtendedDependenciesPeriodicWorkload])
       val plat = identified
-        .find(_.isInstanceOf[PartitionedSharedMemoryMultiCore])
+        .filter(_.isInstanceOf[PartitionedSharedMemoryMultiCore])
         .map(_.asInstanceOf[PartitionedSharedMemoryMultiCore])
       // if ((runtimes.isDefined && plat.isEmpty) || (runtimes.isEmpty && plat.isDefined))
       app.flatMap(a =>
@@ -142,9 +142,9 @@ object MixedRules {
           PeriodicWorkloadToPartitionedSharedMultiCore(
             workload = a,
             platform = p,
-            processMappings = Array.empty,
-            processSchedulings = Array.empty,
-            channelMappings = Array.empty,
+            processMappings = Vector.empty,
+            processSchedulings = Vector.empty,
+            channelMappings = Vector.empty,
             channelSlotAllocations = Map(),
             maxUtilizations = (for (
               pe <- p.hardware.processingElems; 

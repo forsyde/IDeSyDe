@@ -10,10 +10,10 @@ import idesyde.identification.DecisionModel
 final case class PeriodicWorkloadToPartitionedSharedMultiCore(
     val workload: CommunicatingExtendedDependenciesPeriodicWorkload,
     val platform: PartitionedSharedMemoryMultiCore,
-    val processMappings: Array[(String, String)],
-    val processSchedulings: Array[(String, String)],
-    val channelMappings: Array[(String, String)],
-    val channelSlotAllocations: Map[String, Map[String, Array[Boolean]]],
+    val processMappings: Vector[(String, String)],
+    val processSchedulings: Vector[(String, String)],
+    val channelMappings: Vector[(String, String)],
+    val channelSlotAllocations: Map[String, Map[String, Vector[Boolean]]],
     val maxUtilizations: Map[String, Rational]
 ) extends StandardDecisionModel
     with WCETComputationMixin(workload, platform.hardware) {

@@ -7,7 +7,7 @@ import org.chocosolver.solver.constraints.Propagator
 import org.chocosolver.solver.constraints.PropagatorPriority
 import org.chocosolver.util.ESat
 import scala.collection.mutable.HashMap
-import breeze.linalg._
+// import breeze.linalg._
 import org.chocosolver.solver.constraints.Constraint
 import org.chocosolver.solver.exception.ContradictionException
 import org.chocosolver.solver.constraints.`extension`.Tuples
@@ -27,21 +27,19 @@ class SDFSchedulingAnalysisModule2(
     val memoryDivider: Long = 1L
 ) extends ChocoModelMixin() {
 
-  private val actors: Array[String] = sdfAndSchedulers.sdfApplications.actorsIdentifiers
-  val jobsAndActors: Array[(String, Int)] =
+  private val actors = sdfAndSchedulers.sdfApplications.actorsIdentifiers
+  val jobsAndActors =
     sdfAndSchedulers.sdfApplications.firingsPrecedenceGraph.nodes
       .map(v => v.value)
-      .toArray
-  private val messages: Array[Int] =
-    sdfAndSchedulers.sdfApplications.sdfMessages.zipWithIndex.map((_, i) => i)
-  private val schedulers: Array[String] = sdfAndSchedulers.platform.runtimes.schedulers
-  private val actorDuration: Array[Array[Int]] =
+      .toVector
+  private val schedulers = sdfAndSchedulers.platform.runtimes.schedulers
+  private val actorDuration =
     sdfAndSchedulers.wcets.map(ws => ws.map(w => w * timeFactor).map(_.ceil.intValue))
 
   private val maxRepetitionsPerActors     = sdfAndSchedulers.sdfApplications.sdfRepetitionVectors
   private def isSelfConcurrent(a: String) = sdfAndSchedulers.sdfApplications.isSelfConcurrent(a)
 
-  val slotRange                       = (0 until maxRepetitionsPerActors.sum).toArray
+  val slotRange                       = (0 until maxRepetitionsPerActors.sum).toVector
   private val maximumTokensPerChannel = sdfAndSchedulers.sdfApplications.pessimisticTokensPerChannel
 
   private val maxThroughput = schedulers.zipWithIndex
@@ -52,7 +50,7 @@ class SDFSchedulingAnalysisModule2(
     })
     .max + tileAsyncModule.messageTravelDuration.flatten.flatten.map(_.getUB()).sum
 
-  val invThroughputs: Array[IntVar] = actors.zipWithIndex
+  val invThroughputs = actors.zipWithIndex
     .map((a, i) =>
       chocoModel.intVar(
         s"invTh($a)",
@@ -60,9 +58,9 @@ class SDFSchedulingAnalysisModule2(
         maxThroughput,
         true
       )
-    )
+    ).toArray
 
-  val jobStartTime: Array[IntVar] =
+  val jobStartTime =
     jobsAndActors
       .map((a, q) =>
         chocoModel.intVar(
@@ -71,7 +69,7 @@ class SDFSchedulingAnalysisModule2(
           maxThroughput,
           true
         )
-      )
+      ).toArray
 
   val jobOrder =
     jobsAndActors
@@ -82,7 +80,7 @@ class SDFSchedulingAnalysisModule2(
           jobsAndActors.size - 1,
           false
         )
-      )
+      ).toArray
 
   val globalInvThroughput =
     chocoModel.intVar(
@@ -99,7 +97,7 @@ class SDFSchedulingAnalysisModule2(
       actorDuration(i).max,
       false
     )
-  )
+  ).toArray
 
   val transmissionDelay =
     sdfAndSchedulers.sdfApplications.actorsIdentifiers.zipWithIndex.map((a, i) =>
@@ -126,7 +124,7 @@ class SDFSchedulingAnalysisModule2(
           jobStartTime(i),
           duration(actors.indexOf(job._1))
         )
-      )
+      ).toArray
 
   // val jobTasksHeights = schedulers.map(p =>
   //   jobsAndActors.zipWithIndex
@@ -194,7 +192,7 @@ class SDFSchedulingAnalysisModule2(
           jobTasks,
           jobsAndActors.map((a, _) =>
             chocoModel.intEqView(memoryMappingModule.processesMemoryMapping(actors.indexOf(a)), j)
-          ),
+          ).toArray,
           chocoModel.intVar(1)
         )
         .post()
@@ -348,8 +346,8 @@ class SDFSchedulingAnalysisModule2(
         .post()
       // chocoModel
       //   .scalar(
-      //     Array(jobStartTime(nextCycleJob), duration(i), jobStartTime(firstJob)),
-      //     Array(1, 1, -1),
+      //     Vector(jobStartTime(nextCycleJob), duration(i), jobStartTime(firstJob)),
+      //     Vector(1, 1, -1),
       //     "<=",
       //     invThroughputs(i)
       //   )

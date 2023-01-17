@@ -14,11 +14,11 @@ object PlatformRules {
   def identSchedulableTiledMultiCore(
       models: Set[DesignModel],
       identified: Set[DecisionModel]
-  ): Option[SchedulableTiledMultiCore] = {
+  ): Set[SchedulableTiledMultiCore] = {
     val runtimes = identified
-      .find(_.isInstanceOf[PartitionedCoresWithRuntimes])
+      .filter(_.isInstanceOf[PartitionedCoresWithRuntimes])
       .map(_.asInstanceOf[PartitionedCoresWithRuntimes])
-    val plat = identified.find(_.isInstanceOf[TiledMultiCore]).map(_.asInstanceOf[TiledMultiCore])
+    val plat = identified.filter(_.isInstanceOf[TiledMultiCore]).map(_.asInstanceOf[TiledMultiCore])
     // if ((runtimes.isDefined && plat.isEmpty) || (runtimes.isEmpty && plat.isDefined))
     runtimes.flatMap(r => plat.map(p => SchedulableTiledMultiCore(hardware = p, runtimes = r)))
   }
@@ -26,12 +26,12 @@ object PlatformRules {
   def identPartitionedSharedMemoryMultiCore(
       models: Set[DesignModel],
       identified: Set[DecisionModel]
-  ): Option[PartitionedSharedMemoryMultiCore] = {
+  ): Set[PartitionedSharedMemoryMultiCore] = {
     val runtimes = identified
-      .find(_.isInstanceOf[PartitionedCoresWithRuntimes])
+      .filter(_.isInstanceOf[PartitionedCoresWithRuntimes])
       .map(_.asInstanceOf[PartitionedCoresWithRuntimes])
     val plat = identified
-      .find(_.isInstanceOf[SharedMemoryMultiCore])
+      .filter(_.isInstanceOf[SharedMemoryMultiCore])
       .map(_.asInstanceOf[SharedMemoryMultiCore])
     // if ((runtimes.isDefined && plat.isEmpty) || (runtimes.isEmpty && plat.isDefined))
     runtimes.flatMap(r =>

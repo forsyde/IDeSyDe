@@ -34,12 +34,12 @@ import idesyde.identification.DecisionModel
 import idesyde.identification.common.StandardDecisionModel
 import idesyde.identification.choco.ChocoDecisionModel
 
-// object ConMonitorObj extends IMonitorContradiction {
+object ConMonitorObj extends IMonitorContradiction {
 
-//   def onContradiction(cex: ContradictionException): Unit = {
-//     println(cex.toString())
-//   }
-// }
+  def onContradiction(cex: ContradictionException): Unit = {
+    println(cex.toString())
+  }
+}
 
 final case class ChocoComDepTasksToMultiCore(
     val dse: PeriodicWorkloadToPartitionedSharedMultiCore
@@ -50,9 +50,15 @@ final case class ChocoComDepTasksToMultiCore(
 
   val coveredElementRelations = dse.coveredElementRelations
 
+  override def dominates[D <: DecisionModel](other: D): Boolean = other match {
+    case o : ChocoComDepTasksToMultiCore =>
+      dse.dominates(o.dse)
+    case _ => super.dominates(other)
+  }
+
   val chocoModel = Model()
 
-  // chocoModel.getSolver().plugMonitor(ConMonitorObj)
+  chocoModel.getSolver().plugMonitor(ConMonitorObj)
 
   // section for time multiplier calculation
   val timeValues =
@@ -100,7 +106,7 @@ final case class ChocoComDepTasksToMultiCore(
       s"task_map($t)",
       dse.platform.hardware.storageSizes.zipWithIndex
         .filter((m, j) => dse.workload.processSizes(i) <= m)
-        .map((m, j) => j)
+        .map((m, j) => j).toArray
     )
   )
   val dataBlockMapping = dse.workload.channels.zipWithIndex.map((c, i) =>
@@ -108,16 +114,16 @@ final case class ChocoComDepTasksToMultiCore(
       s"data_map($c)",
       dse.platform.hardware.storageSizes.zipWithIndex
         .filter((m, j) => dse.workload.messagesMaxSizes(i) <= m)
-        .map((m, j) => j)
+        .map((m, j) => j).toArray
     )
   )
   val memoryMappingModule = SingleProcessSingleMessageMemoryConstraintsModule(
     chocoModel,
-    dse.workload.processSizes.map(CoreUtils.ceil(_, memoryDivider)).map(_.toInt),
-    dse.workload.messagesMaxSizes.map(CoreUtils.ceil(_, memoryDivider)).map(_.toInt),
+    dse.workload.processSizes.map(CoreUtils.ceil(_, memoryDivider)).map(_.toInt).toArray,
+    dse.workload.messagesMaxSizes.map(CoreUtils.ceil(_, memoryDivider)).map(_.toInt).toArray,
     dse.platform.hardware.storageSizes
       .map(CoreUtils.ceil(_, memoryDivider))
-      .map(_.toInt)
+      .map(_.toInt).toArray
   )
 
   // timing
@@ -126,7 +132,7 @@ final case class ChocoComDepTasksToMultiCore(
       s"task_map($t)",
       dse.platform.hardware.processingElems.zipWithIndex
         .filter((m, j) => dse.wcets(i)(j) >= 0)
-        .map((m, j) => j)
+        .map((m, j) => j).toArray
     )
   )
   val responseTimes =
@@ -156,9 +162,9 @@ final case class ChocoComDepTasksToMultiCore(
 
   val extendedPrecedenceConstraintsModule = ExtendedPrecedenceConstraintsModule(
     chocoModel,
-    taskExecution,
-    responseTimes,
-    blockingTimes,
+    taskExecution.toArray,
+    responseTimes.toArray,
+    blockingTimes.toArray,
     dse.workload.interTaskOccasionalBlock
   )
 
@@ -176,32 +182,34 @@ final case class ChocoComDepTasksToMultiCore(
   val active4StageDurationModule = Active4StageDurationModule(
     chocoModel,
     dse,
-    taskExecution,
+    taskExecution.toArray,
     memoryMappingModule.processesMemoryMapping,
     memoryMappingModule.messagesMemoryMapping,
-    processingElemsVirtualChannelInCommElem
+    processingElemsVirtualChannelInCommElem.map(_.toArray).toArray,
+    timeMultiplier,
+    memoryDivider
   )
 
   val baselineTimingConstraintsModule = BaselineTimingConstraintsModule(
     chocoModel,
     priorities,
-    periods,
-    maxUtilizations,
+    periods.toArray,
+    maxUtilizations.toArray,
     active4StageDurationModule.durations,
-    taskExecution,
-    blockingTimes,
-    responseTimes
+    taskExecution.toArray,
+    blockingTimes.toArray,
+    responseTimes.toArray
   )
 
   val fixedPriorityConstraintsModule = FixedPriorityConstraintsModule(
     chocoModel,
     priorities,
-    periods,
-    deadlines,
-    wcets,
-    taskExecution,
-    responseTimes,
-    blockingTimes,
+    periods.toArray,
+    deadlines.toArray,
+    wcets.map(_.toArray).toArray,
+    taskExecution.toArray,
+    responseTimes.toArray,
+    blockingTimes.toArray,
     active4StageDurationModule.durations
   )
 
@@ -240,7 +248,7 @@ final case class ChocoComDepTasksToMultiCore(
     dse.platform.hardware.processingElems.length
   )
   // count different ones
-  chocoModel.nValues(taskExecution, nUsedPEs).post()
+  chocoModel.nValues(taskExecution.toArray, nUsedPEs).post()
 
   // the objectives so far are just the minimization of used PEs
   // the inMinusView is necessary to transform a minimization into
@@ -292,11 +300,11 @@ final case class ChocoComDepTasksToMultiCore(
   override val strategies = Array(
     SimpleWorkloadBalancingDecisionStrategy(
       (0 until dse.platform.runtimes.schedulers.length).toArray,
-      periods,
-      taskExecution,
+      periods.toArray,
+      taskExecution.toArray,
       baselineTimingConstraintsModule.utilizations,
       active4StageDurationModule.durations,
-      wcets.map(_.map(_.ceil.toInt))
+      wcets.map(_.map(_.ceil.toInt).toArray).toArray
     ),
     Search.inputOrderUBSearch(nUsedPEs),
     Search.activityBasedSearch(taskMapping: _*),
@@ -317,13 +325,13 @@ final case class ChocoComDepTasksToMultiCore(
   def rebuildFromChocoOutput(output: Solution): DecisionModel = {
     val processMappings = memoryMappingModule.processesMemoryMapping.zipWithIndex.map((v, i) =>
       dse.workload.processes(i) -> dse.platform.hardware.storageElems(output.getIntVal(v))
-    )
+    ).toVector
     val processSchedulings = taskExecution.zipWithIndex.map((v, i) =>
       dse.workload.processes(i) -> dse.platform.runtimes.schedulers(output.getIntVal(v))
-    )
+    ).toVector
     val channelMappings = memoryMappingModule.messagesMemoryMapping.zipWithIndex.map((v, i) =>
       dse.workload.channels(i) -> dse.platform.hardware.storageElems(output.getIntVal(v))
-    )
+    ).toVector
     // val channelSlotAllocations = ???
     dse.copy(
       processMappings = processMappings,

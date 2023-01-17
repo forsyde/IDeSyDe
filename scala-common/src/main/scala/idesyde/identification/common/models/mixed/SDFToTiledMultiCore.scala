@@ -9,10 +9,10 @@ import idesyde.identification.models.mixed.WCETComputationMixin
 final case class SDFToTiledMultiCore(
     val sdfApplications: SDFApplication,
     val platform: SchedulableTiledMultiCore,
-    val processMappings: Array[String],
-    val messageMappings: Array[String],
-    val schedulerSchedules: Array[Array[String]],
-    val messageSlotAllocations: Array[Map[String, Array[Boolean]]]
+    val processMappings: Vector[String],
+    val messageMappings: Vector[String],
+    val schedulerSchedules: Vector[Vector[String]],
+    val messageSlotAllocations: Vector[Map[String, Vector[Boolean]]]
 ) extends StandardDecisionModel
     with WCETComputationMixin(sdfApplications, platform) {
 
@@ -27,14 +27,14 @@ final case class SDFToTiledMultiCore(
           .map(ce => sdfApplications.channelsIdentifiers(i) -> ce)
       )
 
-  val processorsFrequency: Array[Long] = platform.hardware.processorsFrequency
-  val processorsProvisions: Array[Map[String, Map[String, spire.math.Rational]]] =
+  val processorsFrequency: Vector[Long] = platform.hardware.processorsFrequency
+  val processorsProvisions: Vector[Map[String, Map[String, spire.math.Rational]]] =
     platform.hardware.processorsProvisions
 
-  val messagesMaxSizes: Array[Long] = sdfApplications.messagesMaxSizes
-  val processComputationalNeeds: Array[Map[String, Map[String, Long]]] =
+  val messagesMaxSizes: Vector[Long] = sdfApplications.messagesMaxSizes
+  val processComputationalNeeds: Vector[Map[String, Map[String, Long]]] =
     sdfApplications.actorComputationalNeeds
-  val processSizes: Array[Long] = sdfApplications.processSizes
+  val processSizes: Vector[Long] = sdfApplications.processSizes
 
   val wcets = computeWcets
 

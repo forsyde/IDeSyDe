@@ -102,29 +102,29 @@ final case class ChocoSDFToSChedTileHW2(
 
   val memoryMappingModule = SingleProcessSingleMessageMemoryConstraintsModule(
     chocoModel,
-    dse.sdfApplications.processSizes.map(_ / memoryDivider).map(_.toInt),
+    dse.sdfApplications.processSizes.map(_ / memoryDivider).map(_.toInt).toArray,
     dse.sdfApplications.sdfMessages.map((src, _, _, mSize, p, c, tok) =>
       ((dse.sdfApplications.sdfRepetitionVectors(
         dse.sdfApplications.actorsIdentifiers.indexOf(src)
       ) * p + tok) * mSize / memoryDivider).toInt
-    ),
+    ).toArray,
     dse.platform.hardware.tileMemorySizes
       .map(_ / memoryDivider)
       .map(l => if (l > Int.MaxValue) then Int.MaxValue - 1 else l)
-      .map(_.toInt)
+      .map(_.toInt).toArray
   )
 
   val tileAnalysisModule = TileAsyncInterconnectCommsModule(
     chocoModel,
-    dse.platform.hardware.processors,
-    dse.platform.hardware.communicationElems,
-    dse.sdfApplications.sdfMessages.zipWithIndex.map((m, i) => i),
+    dse.platform.hardware.processors.toArray,
+    dse.platform.hardware.communicationElems.toArray,
+    dse.sdfApplications.sdfMessages.zipWithIndex.map((m, i) => i).toArray,
     dse.sdfApplications.sdfMessages.map((_, _, _, mSize, _, _, _) =>
       dse.platform.hardware.communicationElementsBitPerSecPerChannel.map(bw =>
         (mSize / bw / timeMultiplier / memoryDivider).ceil.toInt
-      )
-    ),
-    dse.platform.hardware.communicationElementsMaxChannels,
+      ).toArray
+    ).toArray,
+    dse.platform.hardware.communicationElementsMaxChannels.toArray,
     (src: String) =>
       (dst: String) =>
         dse.platform.hardware
@@ -356,15 +356,15 @@ final case class ChocoSDFToSChedTileHW2(
   override val strategies: Array[AbstractStrategy[? <: Variable]] = Array(
     CompactingMultiCoreMapping[Int](
       dse.platform.hardware.minTraversalTimePerBit.map(arr =>
-        arr.map(v => (v * timeMultiplier).ceil.toInt)
-      ),
+        arr.map(v => (v * timeMultiplier).ceil.toInt).toArray
+      ).toArray,
       dse.sdfApplications.topologicalAndHeavyActorOrdering.map(a =>
         dse.sdfApplications.sdfDisjointComponents
           .indexWhere(_.exists(_ == a))
-      ),
+      ).toArray,
       dse.sdfApplications.topologicalAndHeavyActorOrdering.map(a =>
         memoryMappingModule.processesMemoryMapping(dse.sdfApplications.actorsIdentifiers.indexOf(a))
-      )
+      ).toArray
     ),
     Search.minDomLBSearch(nUsedPEs),
     Search.minDomLBSearch(tileAnalysisModule.numVirtualChannelsForProcElem.flatten: _*),
@@ -454,7 +454,7 @@ final case class ChocoSDFToSChedTileHW2(
       }),
       schedulerSchedules = dse.platform.runtimes.schedulers.zipWithIndex.map((s, si) => {
         // TODO: make here the lists
-        Array.empty
+        Vector.empty
       }),
       messageSlotAllocations = dse.sdfApplications.channelsIdentifiers.zipWithIndex.map((c, ci) => {
         // we have to look from the source perpective, since the sending processor is the one that allocates
@@ -476,7 +476,7 @@ final case class ChocoSDFToSChedTileHW2(
                 (slot + j % dse.platform.hardware.communicationElementsMaxChannels(j)) < output
                   .getIntVal(tileAnalysisModule.numVirtualChannelsForProcElem(p)(j))
               )
-              .toArray
+              .toVector
         iter.toMap
       })
     )

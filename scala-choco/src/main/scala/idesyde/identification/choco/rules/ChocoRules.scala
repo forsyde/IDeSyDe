@@ -16,16 +16,16 @@ object ChocoRules {
   def identChocoSDFToSChedTileHW2(
       models: Set[DesignModel],
       identified: Set[DecisionModel]
-  ): Option[ChocoSDFToSChedTileHW2] = identified
-    .find(m => m.isInstanceOf[SDFToTiledMultiCore])
+  ): Set[ChocoSDFToSChedTileHW2] = identified
+    .filter(m => m.isInstanceOf[SDFToTiledMultiCore])
     .map(m => m.asInstanceOf[SDFToTiledMultiCore])
     .map(dse => ChocoSDFToSChedTileHW2(dse))
 
   def identChocoComDepTasksToMultiCore(
       models: Set[DesignModel],
       identified: Set[DecisionModel]
-  ): Option[ChocoComDepTasksToMultiCore] = identified
-    .find(m => m.isInstanceOf[PeriodicWorkloadToPartitionedSharedMultiCore])
+  ): Set[ChocoComDepTasksToMultiCore] = identified
+    .filter(m => m.isInstanceOf[PeriodicWorkloadToPartitionedSharedMultiCore])
     .map(m => m.asInstanceOf[PeriodicWorkloadToPartitionedSharedMultiCore])
     .map(dse => ChocoComDepTasksToMultiCore(dse))
 }

@@ -34,12 +34,12 @@ import idesyde.identification.DecisionModel
 import idesyde.identification.common.StandardDecisionModel
 import idesyde.identification.choco.ChocoDecisionModel
 
-object ConMonitorObj extends IMonitorContradiction {
+// object ConMonitorObj extends IMonitorContradiction {
 
-  def onContradiction(cex: ContradictionException): Unit = {
-    println(cex.toString())
-  }
-}
+//   def onContradiction(cex: ContradictionException): Unit = {
+//     println(cex.toString())
+//   }
+// }
 
 final case class ChocoComDepTasksToMultiCore(
     val dse: PeriodicWorkloadToPartitionedSharedMultiCore
@@ -58,7 +58,7 @@ final case class ChocoComDepTasksToMultiCore(
 
   val chocoModel = Model()
 
-  chocoModel.getSolver().plugMonitor(ConMonitorObj)
+  // chocoModel.getSolver().plugMonitor(ConMonitorObj)
 
   // section for time multiplier calculation
   val timeValues =

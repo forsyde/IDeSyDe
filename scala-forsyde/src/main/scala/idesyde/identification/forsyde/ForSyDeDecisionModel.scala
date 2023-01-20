@@ -10,4 +10,7 @@ trait ForSyDeDecisionModel extends DecisionModel {
   type ElementT         = Vertex
   type ElementRelationT = EdgeInfo
 
+  override def elementID(elem: Vertex): String = elem.identifier
+
+  override def elementRelationID(rel: EdgeInfo): String = rel.toIDString()
 }

@@ -27,10 +27,13 @@ trait DecisionModel {
     other.coveredElementIDs.subsetOf(coveredElementIDs) &&
     other.coveredElementRelationIDs.subsetOf(coveredElementRelationIDs)
   }
+  def elementID(elem: ElementT): String
 
-  def coveredElementIDs: Set[String] = coveredElements.map(_.toString())
+  def elementRelationID(rel: ElementRelationT): String
 
-  def coveredElementRelationIDs: Set[String] = coveredElementRelations.map(_.toString())
+  def coveredElementIDs: Set[String] = coveredElements.map(elementID)
+
+  def coveredElementRelationIDs: Set[String] = coveredElementRelations.map(elementRelationID)
 
   override lazy val hashCode: Int = uniqueIdentifier.hashCode
 

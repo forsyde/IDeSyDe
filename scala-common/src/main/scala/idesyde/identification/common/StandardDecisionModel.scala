@@ -18,4 +18,8 @@ trait StandardDecisionModel extends DecisionModel {
 
   type ElementT         = String
   type ElementRelationT = (String, String)
+
+  def elementID(elem: String): String = elem
+
+  def elementRelationID(rel: (String, String)): String = rel.toString()
 }

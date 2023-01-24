@@ -1,6 +1,6 @@
 ThisBuild / organization := "io.github.forsyde"
 ThisBuild / version := "0.3.5"
-ThisBuild / scalaVersion := "3.1.3"
+ThisBuild / scalaVersion := "3.2.1"
 
 lazy val forsydeIoVersion  = "0.6.3"
 lazy val jgraphtVersion    = "1.5.1"
@@ -77,6 +77,7 @@ lazy val cli = (project in file("scala-cli"))
   .dependsOn(minizinc)
   // .enablePlugins(ScalaNativePlugin)
   .enablePlugins(UniversalPlugin, JavaAppPackaging, JlinkPlugin)
+  .enablePlugins(GraalVMNativeImagePlugin)
   .settings(
     Compile / mainClass := Some("idesyde.IDeSyDeStandalone"),
     libraryDependencies ++= Seq(
@@ -100,6 +101,7 @@ lazy val cli = (project in file("scala-cli"))
         })
         .map(_.data)
     },
+    graalVMNativeImageOptions := Seq("-H:+ReportExceptionStackTraces"),
     // TODO: This MUST be taken out of here eventually
     jlinkIgnoreMissingDependency := JlinkIgnore.everything
   )

@@ -15,6 +15,7 @@ import idesyde.exploration.forsyde.interfaces.ForSyDeIOExplorer
 import idesyde.identification.forsyde.ForSyDeIdentificationModule
 import idesyde.identification.forsyde.ForSyDeDesignModel
 import idesyde.identification.minizinc.MinizincIdentificationModule
+import idesyde.identification.common.CommonIdentificationModule
 import idesyde.identification.DecisionModel
 import idesyde.utils.SimpleStandardIOLogger
 import idesyde.utils.Logger
@@ -31,6 +32,7 @@ case class IDeSyDeRunConfig(
     .registerModule(ChocoExplorationModule())
 
   val identificationHandler = IdentificationHandler()
+    .registerIdentificationRule(CommonIdentificationModule())
     .registerIdentificationRule(ChocoIdentificationModule())
     .registerIdentificationRule(ForSyDeIdentificationModule())
     .registerIdentificationRule(MinizincIdentificationModule())
@@ -69,11 +71,8 @@ case class IDeSyDeRunConfig(
         if (chosenFiltered.size > 1) {
           logger.warn(s"Taking a random decision model and explorer combo.")
         }
-        val numSols = chosenFiltered.headOption
-          .filter((e, decisionModel) =>
-            e.isInstanceOf[ForSyDeIOExplorer] && decisionModel.isInstanceOf[ForSyDeDecisionModel]
-          )
-          .map((e, m) => (e.asInstanceOf[ForSyDeIOExplorer], m.asInstanceOf[ForSyDeDecisionModel]))
+        val numSols = chosenFiltered
+          .headOption
           .map((explorer, decisionModel) =>
             explorer
               .explore(decisionModel, explorationTimeOutInSecs)

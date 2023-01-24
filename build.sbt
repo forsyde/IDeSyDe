@@ -101,7 +101,7 @@ lazy val cli = (project in file("scala-cli"))
         })
         .map(_.data)
     },
-    graalVMNativeImageOptions := Seq("-H:+ReportExceptionStackTraces"),
+    graalVMNativeImageOptions := Seq("--no-fallback", "-H:+ReportExceptionStackTraces"),
     // TODO: This MUST be taken out of here eventually
     jlinkIgnoreMissingDependency := JlinkIgnore.everything
   )

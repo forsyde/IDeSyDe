@@ -1,14 +1,13 @@
 package idesyde.identification.commonj;
 
-import idesyde.identification.common.StandardDecisionModel;
-import scala.Tuple2;
-import scala.collection.immutable.Set;
+import java.util.List;
+import java.util.Set;
 
 /**
  * This is a placeholder class that may eventually become the decision model
  * that brings together information from SDF and Tasks in a certain way.
  */
-public class SDFAndTasksMock implements StandardDecisionModel {
+public class SDFAndTasksMock implements JavaStandardDecisionModel {
 
     @Override
     public String uniqueIdentifier() {
@@ -16,22 +15,12 @@ public class SDFAndTasksMock implements StandardDecisionModel {
     }
 
     @Override
-    public Set<Object> coveredElements() {
+    public java.util.Set<String> getCoveredElements() {
         return null;
     }
 
     @Override
-    public Set<Object> coveredElementRelations() {
-        return null;
-    }
-
-    @Override
-    public String elementID(Object elem) {
-        return null;
-    }
-
-    @Override
-    public String elementRelationID(Object rel) {
+    public Set<List<String>> getCoveredElementRelations() {
         return null;
     }
 }

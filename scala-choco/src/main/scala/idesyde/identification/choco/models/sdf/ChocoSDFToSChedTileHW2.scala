@@ -354,6 +354,7 @@ final case class ChocoSDFToSChedTileHW2(
   // }
   // println(dse.sdfApplications.firingsPrecedenceGraph.toSortedString())
   override val strategies: Array[AbstractStrategy[? <: Variable]] = Array(
+    Search.minDomLBSearch(nUsedPEs),
     CompactingMultiCoreMapping[Int](
       dse.platform.hardware.minTraversalTimePerBit.map(arr =>
         arr.map(v => (v * timeMultiplier).ceil.toInt).toArray
@@ -367,7 +368,6 @@ final case class ChocoSDFToSChedTileHW2(
       ).toArray,
       (i: Int) => (j: Int) => dse.sdfApplications.firingsPrecedenceGraph.get(sdfAnalysisModule.jobsAndActors(i)).pathTo(dse.sdfApplications.firingsPrecedenceGraph.get(sdfAnalysisModule.jobsAndActors(j))).isDefined
     ),
-    Search.minDomLBSearch(nUsedPEs),
     Search.minDomLBSearch(tileAnalysisModule.numVirtualChannelsForProcElem.flatten: _*),
     Search.inputOrderLBSearch(
       dse.sdfApplications.topologicalAndHeavyJobOrdering.map(j =>

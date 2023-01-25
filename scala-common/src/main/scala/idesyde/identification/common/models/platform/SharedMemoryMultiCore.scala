@@ -3,7 +3,6 @@ package idesyde.identification.common.models.platform
 import scala.jdk.OptionConverters.*
 import scala.jdk.CollectionConverters.*
 import scala.jdk.StreamConverters.*
-import idesyde.utils.MultipliableFractional
 import spire.math.Rational
 import spire.implicits.*
 import idesyde.identification.DecisionModel

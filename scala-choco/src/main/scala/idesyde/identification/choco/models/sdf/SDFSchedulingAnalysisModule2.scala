@@ -57,7 +57,8 @@ class SDFSchedulingAnalysisModule2(
         maxThroughput,
         true
       )
-    ).toArray
+    )
+    .toArray
 
   val jobStartTime =
     jobsAndActors
@@ -68,7 +69,8 @@ class SDFSchedulingAnalysisModule2(
           maxThroughput,
           true
         )
-      ).toArray
+      )
+      .toArray
 
   val jobOrder =
     jobsAndActors
@@ -79,7 +81,8 @@ class SDFSchedulingAnalysisModule2(
           jobsAndActors.size - 1,
           false
         )
-      ).toArray
+      )
+      .toArray
 
   val globalInvThroughput =
     chocoModel.intVar(
@@ -89,14 +92,16 @@ class SDFSchedulingAnalysisModule2(
       true
     )
 
-  val duration = actors.zipWithIndex.map((a, i) =>
-    chocoModel.intVar(
-      s"dur($a)",
-      actorDuration(i).filter(_ >= 0).minOption.getOrElse(0),
-      actorDuration(i).max,
-      false
+  val duration = actors.zipWithIndex
+    .map((a, i) =>
+      chocoModel.intVar(
+        s"dur($a)",
+        actorDuration(i).filter(_ >= 0).minOption.getOrElse(0),
+        actorDuration(i).max,
+        false
+      )
     )
-  ).toArray
+    .toArray
 
   val transmissionDelay =
     sdfAndSchedulers.sdfApplications.actorsIdentifiers.zipWithIndex.map((a, i) =>
@@ -123,7 +128,8 @@ class SDFSchedulingAnalysisModule2(
           jobStartTime(i),
           duration(actors.indexOf(job._1))
         )
-      ).toArray
+      )
+      .toArray
 
   // val jobTasksHeights = schedulers.map(p =>
   //   jobsAndActors.zipWithIndex
@@ -148,7 +154,7 @@ class SDFSchedulingAnalysisModule2(
     )
   )
 
-  val numMappedElements = chocoModel.intVar("numMappedElements", 1, schedulers.size, true)
+  val numMappedElements = chocoModel.intVar("numMappedElements", 1, schedulers.size, false)
 
   def jobMapping(jobi: Int) =
     memoryMappingModule.processesMemoryMapping(actors.indexOf(jobsAndActors(jobi)._1))
@@ -189,9 +195,11 @@ class SDFSchedulingAnalysisModule2(
       chocoModel
         .cumulative(
           jobTasks,
-          jobsAndActors.map((a, _) =>
-            chocoModel.intEqView(memoryMappingModule.processesMemoryMapping(actors.indexOf(a)), j)
-          ).toArray,
+          jobsAndActors
+            .map((a, _) =>
+              chocoModel.intEqView(memoryMappingModule.processesMemoryMapping(actors.indexOf(a)), j)
+            )
+            .toArray,
           chocoModel.intVar(1)
         )
         .post()
@@ -260,9 +268,7 @@ class SDFSchedulingAnalysisModule2(
           if (a != aa) {
             val messageTimesIdx =
               sdfAndSchedulers.sdfApplications.sdfMessages
-                .indexWhere((cSrc, cDst, _, _, _, _, _) =>
-                  cSrc == aa && cDst == a
-                )
+                .indexWhere((cSrc, cDst, _, _, _, _, _) => cSrc == aa && cDst == a)
             if (messageTimesIdx > -1) {
               for (
                 (p, k) <- schedulers.zipWithIndex; (pp, l) <- schedulers.zipWithIndex; if k != l

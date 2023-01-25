@@ -38,22 +38,22 @@ class ConMonitorObj2(val model: ChocoSDFToSChedTileHW2) extends IMonitorContradi
     //     .map(_.mkString(", "))
     //     .mkString("\n")
     // )
-    // println(
-    //   model.dataFlows
-    //     .map(_.mkString(", "))
-    //     .mkString("\n")
-    // )
+    println(
+      model.dataFlows
+        .map(_.mkString(", "))
+        .mkString("\n")
+    )
     // println(
     //   model.tileAnalysisModule.numVirtualChannelsForProcElem
     //     .map(_.filter(_.getValue() > 0).mkString(", "))
     //     .mkString("\n")
     // )
     println(model.memoryMappingModule.processesMemoryMapping.mkString(", "))
-    println(model.sdfAnalysisModule.jobOrder.mkString(", "))
-    println(model.sdfAnalysisModule.jobStartTime.mkString(", "))
-    println(model.sdfAnalysisModule.invThroughputs.mkString(", "))
-    println(model.sdfAnalysisModule.numMappedElements)
-    println(model.maxLatency.toString())
+    // println(model.sdfAnalysisModule.jobOrder.mkString(", "))
+    // println(model.sdfAnalysisModule.jobStartTime.mkString(", "))
+    // println(model.sdfAnalysisModule.invThroughputs.mkString(", "))
+    // println(model.sdfAnalysisModule.numMappedElements)
+    // println(model.maxLatency.toString())
     // println(
     //   model.tileAnalysisModule.messageTravelDuration
     //     .map(_.map(_.mkString(",")).mkString("; "))
@@ -103,15 +103,18 @@ final case class ChocoSDFToSChedTileHW2(
   val memoryMappingModule = SingleProcessSingleMessageMemoryConstraintsModule(
     chocoModel,
     dse.sdfApplications.processSizes.map(_ / memoryDivider).map(_.toInt).toArray,
-    dse.sdfApplications.sdfMessages.map((src, _, _, mSize, p, c, tok) =>
-      ((dse.sdfApplications.sdfRepetitionVectors(
-        dse.sdfApplications.actorsIdentifiers.indexOf(src)
-      ) * p + tok) * mSize / memoryDivider).toInt
-    ).toArray,
+    dse.sdfApplications.sdfMessages
+      .map((src, _, _, mSize, p, c, tok) =>
+        ((dse.sdfApplications.sdfRepetitionVectors(
+          dse.sdfApplications.actorsIdentifiers.indexOf(src)
+        ) * p + tok) * mSize / memoryDivider).toInt
+      )
+      .toArray,
     dse.platform.hardware.tileMemorySizes
       .map(_ / memoryDivider)
       .map(l => if (l > Int.MaxValue) then Int.MaxValue - 1 else l)
-      .map(_.toInt).toArray
+      .map(_.toInt)
+      .toArray
   )
 
   val tileAnalysisModule = TileAsyncInterconnectCommsModule(
@@ -119,11 +122,13 @@ final case class ChocoSDFToSChedTileHW2(
     dse.platform.hardware.processors.toArray,
     dse.platform.hardware.communicationElems.toArray,
     dse.sdfApplications.sdfMessages.zipWithIndex.map((m, i) => i).toArray,
-    dse.sdfApplications.sdfMessages.map((_, _, _, mSize, _, _, _) =>
-      dse.platform.hardware.communicationElementsBitPerSecPerChannel.map(bw =>
-        (mSize / bw / timeMultiplier / memoryDivider).ceil.toInt
-      ).toArray
-    ).toArray,
+    dse.sdfApplications.sdfMessages
+      .map((_, _, _, mSize, _, _, _) =>
+        dse.platform.hardware.communicationElementsBitPerSecPerChannel
+          .map(bw => (mSize / bw / timeMultiplier / memoryDivider).ceil.toInt)
+          .toArray
+      )
+      .toArray,
     dse.platform.hardware.communicationElementsMaxChannels.toArray,
     (src: String) =>
       (dst: String) =>
@@ -261,8 +266,7 @@ final case class ChocoSDFToSChedTileHW2(
     chocoModel.intVar(
       s"indexOfPe($p)",
       0,
-      Math
-        .max(dse.sdfApplications.actorsIdentifiers.size, dse.platform.runtimes.schedulers.size + 1),
+      dse.sdfApplications.actorsIdentifiers.size + dse.platform.runtimes.schedulers.size - 1,
       false
     )
   )
@@ -356,24 +360,38 @@ final case class ChocoSDFToSChedTileHW2(
   override val strategies: Array[AbstractStrategy[? <: Variable]] = Array(
     Search.minDomLBSearch(nUsedPEs),
     CompactingMultiCoreMapping[Int](
-      dse.platform.hardware.minTraversalTimePerBit.map(arr =>
-        arr.map(v => (v * timeMultiplier).ceil.toInt).toArray
-      ).toArray,
-      dse.sdfApplications.topologicalAndHeavyActorOrdering.map(a =>
-        dse.sdfApplications.sdfDisjointComponents
-          .indexWhere(_.exists(_ == a))
-      ).toArray,
-      dse.sdfApplications.topologicalAndHeavyActorOrdering.map(a =>
-        memoryMappingModule.processesMemoryMapping(dse.sdfApplications.actorsIdentifiers.indexOf(a))
-      ).toArray,
-      (i: Int) => (j: Int) => dse.sdfApplications.firingsPrecedenceGraph.get(sdfAnalysisModule.jobsAndActors(i)).pathTo(dse.sdfApplications.firingsPrecedenceGraph.get(sdfAnalysisModule.jobsAndActors(j))).isDefined
+      dse.platform.hardware.minTraversalTimePerBit
+        .map(arr => arr.map(v => (v * timeMultiplier).ceil.toInt).toArray)
+        .toArray,
+      dse.sdfApplications.topologicalAndHeavyActorOrdering
+        .map(a =>
+          dse.sdfApplications.sdfDisjointComponents
+            .indexWhere(_.exists(_ == a))
+        )
+        .toArray,
+      dse.sdfApplications.topologicalAndHeavyActorOrdering
+        .map(a =>
+          memoryMappingModule.processesMemoryMapping(
+            dse.sdfApplications.actorsIdentifiers.indexOf(a)
+          )
+        )
+        .toArray,
+      (i: Int) =>
+        (j: Int) =>
+          dse.sdfApplications.firingsPrecedenceGraph
+            .get(sdfAnalysisModule.jobsAndActors(i))
+            .pathTo(
+              dse.sdfApplications.firingsPrecedenceGraph.get(sdfAnalysisModule.jobsAndActors(j))
+            )
+            .isDefined
     ),
     Search.minDomLBSearch(tileAnalysisModule.numVirtualChannelsForProcElem.flatten: _*),
-    Search.inputOrderLBSearch(
-      dse.sdfApplications.topologicalAndHeavyJobOrdering.map(j =>
-        sdfAnalysisModule.jobOrder(sdfAnalysisModule.jobsAndActors.indexOf(j))
-      ): _*
-    ),
+    Search.minDomLBSearch(sdfAnalysisModule.jobOrder: _*),
+    // Search.inputOrderLBSearch(
+    //   dse.sdfApplications.topologicalAndHeavyJobOrdering.map(j =>
+    //     sdfAnalysisModule.jobOrder(sdfAnalysisModule.jobsAndActors.indexOf(j))
+    //   ): _*
+    // ),
     // Search.inputOrderLBSearch(
     //   dse.sdfApplications.topologicalAndHeavyJobOrdering.map(j =>
     //     sdfAnalysisModule.jobTasks(sdfAnalysisModule.jobsAndActors.indexOf(j)).getStart()

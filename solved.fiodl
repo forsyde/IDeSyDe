@@ -1,0 +1,1690 @@
+systemgraph {
+  vertex "60Hz"
+  [execution::PeriodicStimulus, visualization::Visualizable]
+  (activated)
+  {
+    "offsetDenominator": 1_l,
+    "periodDenominator": 1000000_l,
+    "offsetNumerator": 0_l,
+    "periodNumerator": 16666_l
+  }
+  vertex "30Hz"
+  [execution::PeriodicStimulus, visualization::Visualizable]
+  (activated)
+  {
+    "offsetDenominator": 1_l,
+    "periodDenominator": 1000000_l,
+    "offsetNumerator": 0_l,
+    "periodNumerator": 33333_l
+  }
+  vertex "Platform"
+  [platform::AbstractStructure, visualization::GreyBox]
+  (contained, submodules)
+  {}
+  vertex "Platform.CPM_A53"
+  [platform::AbstractStructure, visualization::GreyBox]
+  (contained, submodules)
+  {}
+  vertex "Platform.CPM_A53.A53core1"
+  [decision::results::AnalysedGenericProcessingModule, nonfunctional::UtilizationBoundedProcessingElem, platform::DigitalModule, platform::GenericProcessingModule, platform::InstrumentedProcessingModule, platform::SynthetizableDigitalPorts, visualization::GreyBox, visualization::Visualizable]
+  (contained, core1Port1)
+  {
+    "maxUtilizationDenominator": 100_l,
+    "portWidthInBits": {
+
+    },
+    "portIsInitiator": {
+
+    },
+    "operatingFrequencyInHertz": 1200000000_l,
+    "utilization":      0.00000000000_64,
+    "maxUtilizationNumerator": 50_l,
+    "portProtocolAcronym": {
+
+    },
+    "modalInstructionsPerCycle": {
+      "defaultTicks": {
+        "tick":      1.00000000000_64
+      },
+      "defaultNeeds": {
+        "FloatOp":      0.43000000000_64,
+        "NonFloatOp":      2.32500000000_64
+      }
+    }
+  }
+  vertex "Platform.CPM_A53.A53core2"
+  [decision::results::AnalysedGenericProcessingModule, nonfunctional::UtilizationBoundedProcessingElem, platform::DigitalModule, platform::GenericProcessingModule, platform::InstrumentedProcessingModule, platform::SynthetizableDigitalPorts, visualization::GreyBox, visualization::Visualizable]
+  (contained, core2Port1)
+  {
+    "maxUtilizationDenominator": 100_l,
+    "portWidthInBits": {
+
+    },
+    "portIsInitiator": {
+
+    },
+    "operatingFrequencyInHertz": 1200000000_l,
+    "utilization":      0.00000000000_64,
+    "maxUtilizationNumerator": 50_l,
+    "portProtocolAcronym": {
+
+    },
+    "modalInstructionsPerCycle": {
+      "defaultTicks": {
+        "tick":      1.00000000000_64
+      },
+      "defaultNeeds": {
+        "FloatOp":      0.43000000000_64,
+        "NonFloatOp":      2.32500000000_64
+      }
+    }
+  }
+  vertex "Platform.CPM_A53.A53core3"
+  [decision::results::AnalysedGenericProcessingModule, nonfunctional::UtilizationBoundedProcessingElem, platform::DigitalModule, platform::GenericProcessingModule, platform::InstrumentedProcessingModule, platform::SynthetizableDigitalPorts, visualization::GreyBox, visualization::Visualizable]
+  (contained, core3Port1)
+  {
+    "maxUtilizationDenominator": 100_l,
+    "portWidthInBits": {
+
+    },
+    "portIsInitiator": {
+
+    },
+    "operatingFrequencyInHertz": 1200000000_l,
+    "utilization":      0.00000000000_64,
+    "maxUtilizationNumerator": 50_l,
+    "portProtocolAcronym": {
+
+    },
+    "modalInstructionsPerCycle": {
+      "defaultTicks": {
+        "tick":      1.00000000000_64
+      },
+      "defaultNeeds": {
+        "FloatOp":      0.43000000000_64,
+        "NonFloatOp":      2.32500000000_64
+      }
+    }
+  }
+  vertex "Platform.CPM_A53.A53core4"
+  [decision::results::AnalysedGenericProcessingModule, nonfunctional::UtilizationBoundedProcessingElem, platform::DigitalModule, platform::GenericProcessingModule, platform::InstrumentedProcessingModule, platform::SynthetizableDigitalPorts, visualization::GreyBox, visualization::Visualizable]
+  (contained, core4Port1)
+  {
+    "maxUtilizationDenominator": 100_l,
+    "portWidthInBits": {
+
+    },
+    "portIsInitiator": {
+
+    },
+    "operatingFrequencyInHertz": 1200000000_l,
+    "utilization":      0.00000000000_64,
+    "maxUtilizationNumerator": 50_l,
+    "portProtocolAcronym": {
+
+    },
+    "modalInstructionsPerCycle": {
+      "defaultTicks": {
+        "tick":      1.00000000000_64
+      },
+      "defaultNeeds": {
+        "FloatOp":      0.43000000000_64,
+        "NonFloatOp":      2.32500000000_64
+      }
+    }
+  }
+  vertex "Platform.CPM_R5"
+  [platform::AbstractStructure, visualization::GreyBox]
+  (contained, submodules)
+  {}
+  vertex "Platform.CPM_R5.R5core1"
+  [decision::results::AnalysedGenericProcessingModule, nonfunctional::UtilizationBoundedProcessingElem, platform::DigitalModule, platform::GenericProcessingModule, platform::InstrumentedProcessingModule, platform::SynthetizableDigitalPorts, visualization::GreyBox, visualization::Visualizable]
+  (contained, core3Port1)
+  {
+    "maxUtilizationDenominator": 100_l,
+    "portWidthInBits": {
+
+    },
+    "portIsInitiator": {
+
+    },
+    "operatingFrequencyInHertz": 600000000_l,
+    "utilization":      0.12048192771_64,
+    "maxUtilizationNumerator": 50_l,
+    "portProtocolAcronym": {
+
+    },
+    "modalInstructionsPerCycle": {
+      "defaultTicks": {
+        "tick":      1.00000000000_64
+      },
+      "defaultNeeds": {
+        "FloatOp":      1.00000000000_64,
+        "NonFloatOp":      4.65000000000_64
+      }
+    }
+  }
+  vertex "Platform.CPM_R5.R5core2"
+  [decision::results::AnalysedGenericProcessingModule, nonfunctional::UtilizationBoundedProcessingElem, platform::DigitalModule, platform::GenericProcessingModule, platform::InstrumentedProcessingModule, platform::SynthetizableDigitalPorts, visualization::GreyBox, visualization::Visualizable]
+  (contained, core4Port1)
+  {
+    "maxUtilizationDenominator": 100_l,
+    "portWidthInBits": {
+
+    },
+    "portIsInitiator": {
+
+    },
+    "operatingFrequencyInHertz": 600000000_l,
+    "utilization":      0.12048192771_64,
+    "maxUtilizationNumerator": 50_l,
+    "portProtocolAcronym": {
+
+    },
+    "modalInstructionsPerCycle": {
+      "defaultTicks": {
+        "tick":      1.00000000000_64
+      },
+      "defaultNeeds": {
+        "FloatOp":      1.00000000000_64,
+        "NonFloatOp":      4.65000000000_64
+      }
+    }
+  }
+  vertex "Platform.MainBus"
+  [platform::DigitalModule, platform::InstrumentedCommunicationModule, platform::RoundRobinCommunicationModule, platform::SynthetizableDigitalPorts, visualization::GreyBox, visualization::Visualizable]
+  (MainBusPort1, MainBusPort2, MainBusPort3, contained)
+  {
+    "maxCyclesPerFlit": 1_i,
+    "portWidthInBits": {
+
+    },
+    "portIsInitiator": {
+
+    },
+    "flitSizeInBits": 8_l,
+    "allocatedWeights": {
+      "A53core3": 1_i,
+      "A53core2": 1_i,
+      "A53core4": 1_i,
+      "A53core1": 1_i,
+      "R5core2": 1_i,
+      "R5core1": 1_i,
+      "SDRAMBus": 1_i
+    },
+    "operatingFrequencyInHertz": 1200000000_l,
+    "initialLatency": 0_l,
+    "totalWeights": 7_i,
+    "portProtocolAcronym": {
+
+    },
+    "maxConcurrentFlits": 1_i
+  }
+  vertex "Platform.MainBusScheduler"
+  [platform::runtime::AbstractScheduler, platform::runtime::RoundRobinScheduler, visualization::Visualizable]
+  ()
+  {
+    "maximumTimeSliceInCycles": 0_l,
+    "maximumTimeSlices": 0_i,
+    "minimumTimeSliceInCycles": 0_l
+  }
+  vertex "Platform.SDRAM"
+  [platform::DigitalModule, platform::GenericMemoryModule, platform::SynthetizableDigitalPorts, visualization::GreyBox, visualization::Visualizable]
+  (MainSDRAMPort1, contained)
+  {
+    "spaceInBits": 32000000000_l,
+    "portWidthInBits": {
+
+    },
+    "portIsInitiator": {
+
+    },
+    "operatingFrequencyInHertz": 600000000_l,
+    "portProtocolAcronym": {
+
+    }
+  }
+  vertex "Platform.OCM"
+  [platform::DigitalModule, platform::GenericMemoryModule, platform::SynthetizableDigitalPorts, visualization::Visualizable]
+  (OCM1Port1)
+  {
+    "spaceInBits": 16000000_l,
+    "portWidthInBits": {
+
+    },
+    "portIsInitiator": {
+
+    },
+    "operatingFrequencyInHertz": 600000000_l,
+    "portProtocolAcronym": {
+
+    }
+  }
+  vertex "Platform.OCMAXI"
+  [platform::DigitalModule, platform::InstrumentedCommunicationModule, platform::RoundRobinCommunicationModule, platform::SynthetizableDigitalPorts, visualization::GreyBox, visualization::Visualizable]
+  (CPM1AXIPort1, CPM1AXIPort2, CPM1AXIPort3, CPM1AXIPort4, contained)
+  {
+    "maxCyclesPerFlit": 1_i,
+    "portWidthInBits": {
+
+    },
+    "portIsInitiator": {
+
+    },
+    "flitSizeInBits": 8_l,
+    "allocatedWeights": {
+      "A53core3": 1_i,
+      "A53core2": 1_i,
+      "A53core4": 1_i,
+      "A53core1": 1_i,
+      "R5core2": 1_i,
+      "OCM": 1_i,
+      "R5core1": 1_i
+    },
+    "operatingFrequencyInHertz": 600000000_l,
+    "initialLatency": 0_l,
+    "totalWeights": 7_i,
+    "portProtocolAcronym": {
+
+    },
+    "maxConcurrentFlits": 1_i
+  }
+  vertex "Platform.OCMAXIScheduler"
+  [platform::runtime::AbstractScheduler, platform::runtime::RoundRobinScheduler, visualization::Visualizable]
+  ()
+  {
+    "maximumTimeSliceInCycles": 0_l,
+    "maximumTimeSlices": 0_i,
+    "minimumTimeSliceInCycles": 0_l
+  }
+  vertex "Platform.SDRAMBus"
+  [platform::DigitalModule, platform::InstrumentedCommunicationModule, platform::RoundRobinCommunicationModule, platform::SynthetizableDigitalPorts, visualization::GreyBox, visualization::Visualizable]
+  (MainBusPort1, MainBusPort2, MainBusPort3, contained)
+  {
+    "maxCyclesPerFlit": 1_i,
+    "portWidthInBits": {
+
+    },
+    "portIsInitiator": {
+
+    },
+    "flitSizeInBits": 8_l,
+    "allocatedWeights": {
+      "A53core3": 1_i,
+      "A53core2": 1_i,
+      "A53core4": 1_i,
+      "A53core1": 1_i,
+      "MainBus": 1_i,
+      "R5core2": 1_i,
+      "R5core1": 1_i,
+      "SDRAM": 1_i
+    },
+    "operatingFrequencyInHertz": 600000000_l,
+    "initialLatency": 0_l,
+    "totalWeights": 8_i,
+    "portProtocolAcronym": {
+
+    },
+    "maxConcurrentFlits": 1_i
+  }
+  vertex "Platform.SDRAMBusScheduler"
+  [platform::runtime::AbstractScheduler, platform::runtime::RoundRobinScheduler, visualization::Visualizable]
+  ()
+  {
+    "maximumTimeSliceInCycles": 0_l,
+    "maximumTimeSlices": 0_i,
+    "minimumTimeSliceInCycles": 0_l
+  }
+  vertex "ADC1AltitudeSignal"
+  [decision::Allocated, decision::MemoryMapped, impl::DataBlock, visualization::Visualizable]
+  (allocationHost, allocationHosts, mappingHost, mappingHosts)
+  {
+    "maxSizeInBits": 1600_l
+  }
+  vertex "INS1SpeedVectorSignal"
+  [decision::Allocated, decision::MemoryMapped, impl::DataBlock, visualization::Visualizable]
+  (allocationHost, allocationHosts, mappingHost, mappingHosts)
+  {
+    "maxSizeInBits": 8000_l
+  }
+  vertex "INS2SpeedVectorSignal"
+  [decision::Allocated, decision::MemoryMapped, impl::DataBlock, visualization::Visualizable]
+  (allocationHost, allocationHosts, mappingHost, mappingHosts)
+  {
+    "maxSizeInBits": 8000_l
+  }
+  vertex "INS1LoadFactorSignal"
+  [decision::Allocated, decision::MemoryMapped, impl::DataBlock, visualization::Visualizable]
+  (allocationHost, allocationHosts, mappingHost, mappingHosts)
+  {
+    "maxSizeInBits": 8000_l
+  }
+  vertex "INS2LoadFactorSignal"
+  [decision::Allocated, decision::MemoryMapped, impl::DataBlock, visualization::Visualizable]
+  (allocationHost, allocationHosts, mappingHost, mappingHosts)
+  {
+    "maxSizeInBits": 8000_l
+  }
+  vertex "InternalSpeedVectorSignal"
+  [decision::MemoryMapped, impl::DataBlock, visualization::Visualizable]
+  (allocationHosts, mappingHosts)
+  {
+    "maxSizeInBits": 8000_l
+  }
+  vertex "SpeedVectorSignal"
+  [decision::MemoryMapped, impl::DataBlock, visualization::Visualizable]
+  (allocationHosts, mappingHosts)
+  {
+    "maxSizeInBits": 8000_l
+  }
+  vertex "InternalLoadFactorSignal"
+  [decision::MemoryMapped, impl::DataBlock, visualization::Visualizable]
+  (allocationHosts, mappingHosts)
+  {
+    "maxSizeInBits": 8000_l
+  }
+  vertex "LoadFactorSignal"
+  [decision::MemoryMapped, impl::DataBlock, visualization::Visualizable]
+  (allocationHosts, mappingHosts)
+  {
+    "maxSizeInBits": 8000_l
+  }
+  vertex "AccSignal"
+  [decision::MemoryMapped, impl::DataBlock, visualization::Visualizable]
+  (allocationHosts, mappingHosts)
+  {
+    "maxSizeInBits": 4000_l
+  }
+  vertex "AltitudeSignal"
+  [decision::Allocated, decision::MemoryMapped, impl::DataBlock, visualization::Visualizable]
+  (allocationHost, allocationHosts, mappingHost, mappingHosts)
+  {
+    "maxSizeInBits": 1600_l
+  }
+  vertex "SpeedSignal"
+  [decision::Allocated, decision::MemoryMapped, impl::DataBlock, visualization::Visualizable]
+  (allocationHost, allocationHosts, mappingHost, mappingHosts)
+  {
+    "maxSizeInBits": 8000_l
+  }
+  vertex "HeadingSignal"
+  [decision::Allocated, decision::MemoryMapped, impl::DataBlock, visualization::Visualizable]
+  (allocationHost, allocationHosts, mappingHost, mappingHosts)
+  {
+    "maxSizeInBits": 4000_l
+  }
+  vertex "SecondINS1LoadFactor"
+  [decision::Allocated, decision::MemoryMapped, impl::DataBlock, visualization::Visualizable]
+  (allocationHost, allocationHosts, mappingHost, mappingHosts)
+  {
+    "maxSizeInBits": 8000_l
+  }
+  vertex "SecondAcc"
+  [decision::Allocated, decision::MemoryMapped, impl::DataBlock, visualization::Visualizable]
+  (allocationHost, allocationHosts, mappingHost, mappingHosts)
+  {
+    "maxSizeInBits": 4000_l
+  }
+  vertex "SecondADC1Altitude"
+  [decision::Allocated, decision::MemoryMapped, impl::DataBlock, visualization::Visualizable]
+  (allocationHost, allocationHosts, mappingHost, mappingHosts)
+  {
+    "maxSizeInBits": 1600_l
+  }
+  vertex "SecondAltitude"
+  [decision::Allocated, decision::MemoryMapped, impl::DataBlock, visualization::Visualizable]
+  (allocationHost, allocationHosts, mappingHost, mappingHosts)
+  {
+    "maxSizeInBits": 1600_l
+  }
+  vertex "SecondINS1SpeedVector"
+  [decision::Allocated, decision::MemoryMapped, impl::DataBlock, visualization::Visualizable]
+  (allocationHost, allocationHosts, mappingHost, mappingHosts)
+  {
+    "maxSizeInBits": 8000_l
+  }
+  vertex "SecondSpeed"
+  [decision::MemoryMapped, impl::DataBlock, visualization::Visualizable]
+  (allocationHosts, mappingHosts)
+  {
+    "maxSizeInBits": 8000_l
+  }
+  vertex "SecondSpeedVectorCalcRunnable"
+  [impl::CommunicatingExecutable, impl::Executable, impl::InstrumentedExecutable, visualization::Visualizable]
+  (SecondINS1SpeedVector, SecondSpeed)
+  {
+    "portDataReadSize": {
+      "SecondINS1SpeedVector": 8000_l
+    },
+    "portDataWrittenSize": {
+      "SecondSpeed": 8000_l
+    },
+    "operationRequirements": {
+      "defaultNeeds": {
+        "FloatOp": 480000_l
+      }
+    },
+    "sizeInBits": 32000_l
+  }
+  vertex "SecondAccCalcRunnable"
+  [impl::CommunicatingExecutable, impl::Executable, impl::InstrumentedExecutable, visualization::Visualizable]
+  (SecondAcc, SecondINS1LoadFactor)
+  {
+    "portDataReadSize": {
+      "SecondINS1LoadFactor": 8000_l
+    },
+    "portDataWrittenSize": {
+      "SecondAcc": 4000_l
+    },
+    "operationRequirements": {
+      "defaultNeeds": {
+        "FloatOp": 900000_l
+      }
+    },
+    "sizeInBits": 64000_l
+  }
+  vertex "SecondAltitudeCalcRunnable"
+  [impl::CommunicatingExecutable, impl::Executable, impl::InstrumentedExecutable, visualization::Visualizable]
+  (SecondADC1Altitude, SecondAcc, SecondAltitude)
+  {
+    "portDataReadSize": {
+      "SecondADC1Altitude": 1600_l,
+      "SecondAcc": 4000_l
+    },
+    "portDataWrittenSize": {
+      "SecondAltitude": 1600_l
+    },
+    "operationRequirements": {
+      "defaultNeeds": {
+        "FloatOp": 600000_l
+      }
+    },
+    "sizeInBits": 32000_l
+  }
+  vertex "AltitudeCalcRunnable"
+  [impl::CommunicatingExecutable, impl::Executable, impl::InstrumentedExecutable, visualization::Visualizable]
+  (ADC1AltitudeSignal, AccSignal, AltitudeSignal)
+  {
+    "portDataReadSize": {
+      "ADC1AltitudeSignal": 1600_l,
+      "AccSignal": 4000_l
+    },
+    "portDataWrittenSize": {
+      "AltitudeSignal": 1600_l
+    },
+    "operationRequirements": {
+      "defaultNeeds": {
+        "FloatOp": 600000_l
+      }
+    },
+    "sizeInBits": 48000_l
+  }
+  vertex "FormatSpeedVectorCalcRunnable"
+  [impl::CommunicatingExecutable, impl::Executable, impl::InstrumentedExecutable, visualization::Visualizable]
+  (INS1SpeedVectorSignal, INS2SpeedVectorSignal, InternalSpeedVectorSignal)
+  {
+    "portDataReadSize": {
+      "INS1SpeedVectorSignal": 8000_l,
+      "INS2SpeedVectorSignal": 8000_l
+    },
+    "portDataWrittenSize": {
+      "InternalSpeedVectorSignal": 8000_l
+    },
+    "operationRequirements": {
+      "defaultNeeds": {
+        "FloatOp": 120000_l
+      }
+    },
+    "sizeInBits": 16000_l
+  }
+  vertex "SpeedVectorCalcRunnable"
+  [impl::CommunicatingExecutable, impl::Executable, impl::InstrumentedExecutable, visualization::Visualizable]
+  (InternalSpeedVectorSignal, SpeedSignal, SpeedVectorSignal)
+  {
+    "portDataReadSize": {
+      "InternalSpeedVectorSignal": 8000_l
+    },
+    "portDataWrittenSize": {
+      "SpeedSignal": 8000_l,
+      "SpeedVectorSignal": 8000_l
+    },
+    "operationRequirements": {
+      "defaultNeeds": {
+        "FloatOp": 420000_l
+      }
+    },
+    "sizeInBits": 64000_l
+  }
+  vertex "HeadingCalcRunnable"
+  [impl::CommunicatingExecutable, impl::Executable, impl::InstrumentedExecutable, visualization::Visualizable]
+  (HeadingSignal, SpeedVectorSignal)
+  {
+    "portDataReadSize": {
+      "SpeedVectorSignal": 8000_l
+    },
+    "portDataWrittenSize": {
+      "HeadingSignal": 4000_l
+    },
+    "operationRequirements": {
+      "defaultNeeds": {
+        "FloatOp": 600000_l
+      }
+    },
+    "sizeInBits": 64000_l
+  }
+  vertex "FormatLoadFactorCalcRunnable"
+  [impl::CommunicatingExecutable, impl::Executable, impl::InstrumentedExecutable, visualization::Visualizable]
+  (INS1LoadFactorSignal, INS2LoadFactorSignal, InternalLoadFactorSignal)
+  {
+    "portDataReadSize": {
+      "INS2LoadFactorSignal": 8000_l,
+      "INS1LoadFactorSignal": 8000_l
+    },
+    "portDataWrittenSize": {
+      "InternalLoadFactorSignal": 8000_l
+    },
+    "operationRequirements": {
+      "defaultNeeds": {
+        "FloatOp": 120000_l
+      }
+    },
+    "sizeInBits": 16000_l
+  }
+  vertex "LoadFactorCalcRunnable"
+  [impl::CommunicatingExecutable, impl::Executable, impl::InstrumentedExecutable, visualization::Visualizable]
+  (InternalLoadFactorSignal, LoadFactorSignal)
+  {
+    "portDataReadSize": {
+      "InternalLoadFactorSignal": 8000_l
+    },
+    "portDataWrittenSize": {
+      "LoadFactorSignal": 8000_l
+    },
+    "operationRequirements": {
+      "defaultNeeds": {
+        "FloatOp": 1200000_l
+      }
+    },
+    "sizeInBits": 80000_l
+  }
+  vertex "AccCalcRunnable"
+  [impl::CommunicatingExecutable, impl::Executable, impl::InstrumentedExecutable, visualization::Visualizable]
+  (AccSignal, LoadFactorSignal)
+  {
+    "portDataReadSize": {
+      "LoadFactorSignal": 8000_l
+    },
+    "portDataWrittenSize": {
+      "AccSignal": 4000_l
+    },
+    "operationRequirements": {
+      "defaultNeeds": {
+        "FloatOp": 900000_l
+      }
+    },
+    "sizeInBits": 96000_l
+  }
+  vertex "AltitudeCalc"
+  [decision::MemoryMapped, decision::Scheduled, decision::results::AnalysedTask, execution::CommunicatingTask, execution::LoopingTask, visualization::GreyBox, visualization::Visualizable]
+  (activated, activators, allocationHosts, contained, initSequence, loopSequence, mappingHosts, schedulers)
+  {
+    "worstCaseResponseTimeDenominatorInSecs": 2500000_l,
+    "__loopSequence_ordering__": {
+      "AltitudeCalcRunnable": 0_i
+    },
+    "worstCaseResponseTimeNumeratorInSecs": 2907_l,
+    "portDataReadSize": {
+      "ADC1AltitudeSignal": 1600_l,
+      "AccSignal": 4000_l
+    },
+    "worstCaseBlockingTimeDenominatorInSecs": 1_l,
+    "worstCaseBlockingTimeNumeratorInSecs": 0_l,
+    "hasORSemantics": 0_b,
+    "portDataWrittenSize": {
+      "AltitudeSignal": 1600_l
+    }
+  }
+  vertex "FormatSpeedVectorCalc"
+  [decision::MemoryMapped, decision::Scheduled, decision::results::AnalysedTask, execution::CommunicatingTask, execution::LoopingTask, visualization::GreyBox, visualization::Visualizable]
+  (activated, activators, allocationHosts, contained, initSequence, loopSequence, mappingHosts, schedulers)
+  {
+    "worstCaseResponseTimeDenominatorInSecs": 12500000_l,
+    "__loopSequence_ordering__": {
+      "FormatSpeedVectorCalcRunnable": 0_i
+    },
+    "worstCaseResponseTimeNumeratorInSecs": 2907_l,
+    "portDataReadSize": {
+      "INS1SpeedVectorSignal": 8000_l,
+      "INS2SpeedVectorSignal": 8000_l
+    },
+    "worstCaseBlockingTimeDenominatorInSecs": 1_l,
+    "worstCaseBlockingTimeNumeratorInSecs": 0_l,
+    "hasORSemantics": 0_b,
+    "portDataWrittenSize": {
+      "InternalSpeedVectorSignal": 8000_l
+    }
+  }
+  vertex "SpeedVectorCalc"
+  [decision::MemoryMapped, decision::Scheduled, decision::results::AnalysedTask, execution::CommunicatingTask, execution::LoopingTask, visualization::GreyBox, visualization::Visualizable]
+  (activated, activators, allocationHosts, contained, initSequence, loopSequence, mappingHosts, schedulers)
+  {
+    "worstCaseResponseTimeDenominatorInSecs": 25000000_l,
+    "__loopSequence_ordering__": {
+      "SpeedVectorCalcRunnable": 0_i
+    },
+    "worstCaseResponseTimeNumeratorInSecs": 20349_l,
+    "portDataReadSize": {
+      "InternalSpeedVectorSignal": 8000_l
+    },
+    "worstCaseBlockingTimeDenominatorInSecs": 1_l,
+    "worstCaseBlockingTimeNumeratorInSecs": 0_l,
+    "hasORSemantics": 0_b,
+    "portDataWrittenSize": {
+      "SpeedSignal": 8000_l,
+      "SpeedVectorSignal": 8000_l
+    }
+  }
+  vertex "HeadingCalc"
+  [decision::MemoryMapped, decision::Scheduled, decision::results::AnalysedTask, execution::CommunicatingTask, execution::LoopingTask, visualization::GreyBox, visualization::Visualizable]
+  (activated, activators, allocationHosts, contained, initSequence, loopSequence, mappingHosts, schedulers)
+  {
+    "worstCaseResponseTimeDenominatorInSecs": 2500000_l,
+    "__loopSequence_ordering__": {
+      "HeadingCalcRunnable": 0_i
+    },
+    "worstCaseResponseTimeNumeratorInSecs": 2907_l,
+    "portDataReadSize": {
+      "SpeedVectorSignal": 8000_l
+    },
+    "worstCaseBlockingTimeDenominatorInSecs": 1_l,
+    "worstCaseBlockingTimeNumeratorInSecs": 0_l,
+    "hasORSemantics": 0_b,
+    "portDataWrittenSize": {
+      "HeadingSignal": 4000_l
+    }
+  }
+  vertex "FormatLoadFactorCalc"
+  [decision::MemoryMapped, decision::Scheduled, decision::results::AnalysedTask, execution::CommunicatingTask, execution::LoopingTask, visualization::GreyBox, visualization::Visualizable]
+  (activated, activators, allocationHosts, contained, initSequence, loopSequence, mappingHosts, schedulers)
+  {
+    "worstCaseResponseTimeDenominatorInSecs": 12500000_l,
+    "__loopSequence_ordering__": {
+      "FormatLoadFactorCalcRunnable": 0_i
+    },
+    "worstCaseResponseTimeNumeratorInSecs": 2907_l,
+    "portDataReadSize": {
+      "INS2LoadFactorSignal": 8000_l,
+      "INS1LoadFactorSignal": 8000_l
+    },
+    "worstCaseBlockingTimeDenominatorInSecs": 1_l,
+    "worstCaseBlockingTimeNumeratorInSecs": 0_l,
+    "hasORSemantics": 0_b,
+    "portDataWrittenSize": {
+      "InternalLoadFactorSignal": 8000_l
+    }
+  }
+  vertex "LoadFactorCalc"
+  [decision::MemoryMapped, decision::Scheduled, decision::results::AnalysedTask, execution::CommunicatingTask, execution::LoopingTask, visualization::GreyBox, visualization::Visualizable]
+  (activated, activators, allocationHosts, contained, initSequence, loopSequence, mappingHosts, schedulers)
+  {
+    "worstCaseResponseTimeDenominatorInSecs": 100000000_l,
+    "__loopSequence_ordering__": {
+      "LoadFactorCalcRunnable": 0_i
+    },
+    "worstCaseResponseTimeNumeratorInSecs": 232559_l,
+    "portDataReadSize": {
+      "InternalLoadFactorSignal": 8000_l
+    },
+    "worstCaseBlockingTimeDenominatorInSecs": 1_l,
+    "worstCaseBlockingTimeNumeratorInSecs": 0_l,
+    "hasORSemantics": 0_b,
+    "portDataWrittenSize": {
+      "LoadFactorSignal": 8000_l
+    }
+  }
+  vertex "AccCalc"
+  [decision::MemoryMapped, decision::Scheduled, decision::results::AnalysedTask, execution::CommunicatingTask, execution::LoopingTask, visualization::GreyBox, visualization::Visualizable]
+  (activated, activators, allocationHosts, contained, initSequence, loopSequence, mappingHosts, schedulers)
+  {
+    "worstCaseResponseTimeDenominatorInSecs": 100000000_l,
+    "__loopSequence_ordering__": {
+      "AccCalcRunnable": 0_i
+    },
+    "worstCaseResponseTimeNumeratorInSecs": 174419_l,
+    "portDataReadSize": {
+      "LoadFactorSignal": 8000_l
+    },
+    "worstCaseBlockingTimeDenominatorInSecs": 1_l,
+    "worstCaseBlockingTimeNumeratorInSecs": 0_l,
+    "hasORSemantics": 0_b,
+    "portDataWrittenSize": {
+      "AccSignal": 4000_l
+    }
+  }
+  vertex "SecondSpeedVectorCalc"
+  [decision::MemoryMapped, decision::Scheduled, decision::results::AnalysedTask, execution::CommunicatingTask, execution::LoopingTask, visualization::GreyBox, visualization::Visualizable]
+  (activated, activators, allocationHosts, contained, initSequence, loopSequence, mappingHosts, schedulers)
+  {
+    "worstCaseResponseTimeDenominatorInSecs": 3125000_l,
+    "__loopSequence_ordering__": {
+      "SecondSpeedVectorCalcRunnable": 0_i
+    },
+    "worstCaseResponseTimeNumeratorInSecs": 2907_l,
+    "portDataReadSize": {
+      "SecondINS1SpeedVector": 8000_l
+    },
+    "worstCaseBlockingTimeDenominatorInSecs": 1_l,
+    "worstCaseBlockingTimeNumeratorInSecs": 0_l,
+    "hasORSemantics": 0_b,
+    "portDataWrittenSize": {
+      "SecondSpeed": 8000_l
+    }
+  }
+  vertex "SecondAccCalc"
+  [decision::MemoryMapped, decision::Scheduled, decision::results::AnalysedTask, execution::CommunicatingTask, execution::LoopingTask, visualization::GreyBox, visualization::Visualizable]
+  (activated, activators, allocationHosts, contained, initSequence, loopSequence, mappingHosts, schedulers)
+  {
+    "worstCaseResponseTimeDenominatorInSecs": 100000000_l,
+    "__loopSequence_ordering__": {
+      "SecondAccCalcRunnable": 0_i
+    },
+    "worstCaseResponseTimeNumeratorInSecs": 174419_l,
+    "portDataReadSize": {
+      "SecondINS1LoadFactor": 8000_l
+    },
+    "worstCaseBlockingTimeDenominatorInSecs": 1_l,
+    "worstCaseBlockingTimeNumeratorInSecs": 0_l,
+    "hasORSemantics": 0_b,
+    "portDataWrittenSize": {
+      "SecondAcc": 4000_l
+    }
+  }
+  vertex "SecondAltitudeCalc"
+  [decision::MemoryMapped, decision::Scheduled, decision::results::AnalysedTask, execution::CommunicatingTask, execution::LoopingTask, visualization::GreyBox, visualization::Visualizable]
+  (activated, activators, allocationHosts, contained, initSequence, loopSequence, mappingHosts, schedulers)
+  {
+    "worstCaseResponseTimeDenominatorInSecs": 2500000_l,
+    "__loopSequence_ordering__": {
+      "SecondAltitudeCalcRunnable": 0_i
+    },
+    "worstCaseResponseTimeNumeratorInSecs": 2907_l,
+    "portDataReadSize": {
+      "SecondADC1Altitude": 1600_l,
+      "SecondAcc": 4000_l
+    },
+    "worstCaseBlockingTimeDenominatorInSecs": 1_l,
+    "worstCaseBlockingTimeNumeratorInSecs": 0_l,
+    "hasORSemantics": 0_b,
+    "portDataWrittenSize": {
+      "SecondAltitude": 1600_l
+    }
+  }
+  vertex "CPM1_Core1_Runtime.CMP1_Core1_FP_Runtime_Scheduler"
+  [decision::Allocated, platform::PlatformElem, platform::runtime::AbstractScheduler, platform::runtime::FixedPriorityScheduler, visualization::GreyBox, visualization::Visualizable]
+  (allocationHost, allocationHosts, contained)
+  {
+    "preemptive": 0_b
+  }
+  vertex "CPM1_Core2_Runtime.CMP1_Core2_FP_Runtime_Scheduler"
+  [decision::Allocated, platform::PlatformElem, platform::runtime::AbstractScheduler, platform::runtime::FixedPriorityScheduler, visualization::GreyBox, visualization::Visualizable]
+  (allocationHost, allocationHosts, contained)
+  {
+    "preemptive": 0_b
+  }
+  vertex "CPM2_Core3_Runtime.CMP2_Core3_FP_Runtime_Scheduler"
+  [decision::Allocated, platform::PlatformElem, platform::runtime::AbstractScheduler, platform::runtime::FixedPriorityScheduler, visualization::GreyBox, visualization::Visualizable]
+  (allocationHost, allocationHosts, contained)
+  {
+    "preemptive": 0_b
+  }
+  vertex "CPM2_Core4_Runtime.CMP2_Core4_FP_Runtime_Scheduler"
+  [decision::Allocated, platform::PlatformElem, platform::runtime::AbstractScheduler, platform::runtime::FixedPriorityScheduler, visualization::GreyBox, visualization::Visualizable]
+  (allocationHost, allocationHosts, contained)
+  {
+    "preemptive": 0_b
+  }
+  vertex "CPM2_Core5_Runtime.CMP2_Core5_FP_Runtime_Scheduler"
+  [decision::Allocated, platform::PlatformElem, platform::runtime::AbstractScheduler, platform::runtime::FixedPriorityScheduler, visualization::GreyBox, visualization::Visualizable]
+  (allocationHost, allocationHosts, contained)
+  {
+    "preemptive": 0_b
+  }
+  vertex "CPM2_Core6_Runtime.CMP2_Core6_FP_Runtime_Scheduler"
+  [decision::Allocated, platform::PlatformElem, platform::runtime::AbstractScheduler, platform::runtime::FixedPriorityScheduler, visualization::GreyBox, visualization::Visualizable]
+  (allocationHost, allocationHosts, contained)
+  {
+    "preemptive": 0_b
+  }
+  vertex "SnapshotPeriod"
+  [execution::PeriodicStimulus, visualization::Visualizable]
+  (activated)
+  {
+    "offsetDenominator": 1_l,
+    "periodDenominator": 1000000000_l,
+    "offsetNumerator": 0_l,
+    "periodNumerator": 166_l
+  }
+  vertex "INTIPeriod"
+  [execution::PeriodicStimulus, visualization::Visualizable]
+  (activated)
+  {
+    "offsetDenominator": 1_l,
+    "periodDenominator": 1000_l,
+    "offsetNumerator": 0_l,
+    "periodNumerator": 174_l
+  }
+  vertex "PCtoDFB"
+  [decision::MemoryMapped, impl::TokenizableDataBlock, visualization::Visualizable]
+  (allocationHosts, mappingHosts)
+  {
+    "maxSizeInBits": 1073741824_l,
+    "tokenSizeInBits": 1024_l
+  }
+  vertex "DBFToPC"
+  [decision::MemoryMapped, impl::TokenizableDataBlock, visualization::Visualizable]
+  (allocationHosts, mappingHosts)
+  {
+    "maxSizeInBits": 4096_l,
+    "tokenSizeInBits": 4096_l
+  }
+  vertex "EntryToDBF"
+  [decision::Allocated, decision::MemoryMapped, impl::TokenizableDataBlock, visualization::Visualizable]
+  (allocationHost, allocationHosts, mappingHost, mappingHosts)
+  {
+    "maxSizeInBits": 4096_l,
+    "tokenSizeInBits": 4096_l
+  }
+  vertex "DFBToCFAR"
+  [decision::MemoryMapped, impl::TokenizableDataBlock, visualization::Visualizable]
+  (allocationHosts, mappingHosts)
+  {
+    "maxSizeInBits": 536870912_l,
+    "tokenSizeInBits": 512_l
+  }
+  vertex "CFARToINT"
+  [decision::MemoryMapped, impl::TokenizableDataBlock, visualization::Visualizable]
+  (allocationHosts, mappingHosts)
+  {
+    "maxSizeInBits": 1073741824_l,
+    "tokenSizeInBits": 1024_l
+  }
+  vertex "INTToExit"
+  [decision::Allocated, decision::MemoryMapped, impl::TokenizableDataBlock, visualization::Visualizable]
+  (allocationHost, allocationHosts, mappingHost, mappingHosts)
+  {
+    "maxSizeInBits": 1073741824_l,
+    "tokenSizeInBits": 1024_l
+  }
+  vertex "DBFFunc"
+  [impl::CommunicatingExecutable, impl::Executable, impl::InstrumentedExecutable, visualization::Visualizable]
+  (DBFToPC, EntryToDBF)
+  {
+    "portDataReadSize": {
+      "EntryToDBF": 4096_l
+    },
+    "portDataWrittenSize": {
+      "DBFToPC": 4096_l
+    },
+    "operationRequirements": {
+      "defaultNeeds": {
+        "FloatOp": 6_l
+      }
+    },
+    "sizeInBits": 0_l
+  }
+  vertex "PCFunc"
+  [impl::CommunicatingExecutable, impl::Executable, impl::InstrumentedExecutable, visualization::Visualizable]
+  (DBFToPC, PCtoDFB)
+  {
+    "portDataReadSize": {
+      "DBFToPC": 4096_l
+    },
+    "portDataWrittenSize": {
+      "PCtoDFB": 1024_l
+    },
+    "operationRequirements": {
+      "defaultNeeds": {
+        "FloatOp": 6_l
+      }
+    },
+    "sizeInBits": 0_l
+  }
+  vertex "DFBFunc"
+  [impl::CommunicatingExecutable, impl::Executable, impl::InstrumentedExecutable, visualization::Visualizable]
+  (DFBToCFAR, PCtoDFB)
+  {
+    "portDataReadSize": {
+      "PCtoDFB": 1024_l
+    },
+    "portDataWrittenSize": {
+      "DFBToCFAR": 512_l
+    },
+    "operationRequirements": {
+      "defaultNeeds": {
+        "FloatOp": 15099_l
+      }
+    },
+    "sizeInBits": 0_l
+  }
+  vertex "CFARFunc"
+  [impl::CommunicatingExecutable, impl::Executable, impl::InstrumentedExecutable, visualization::Visualizable]
+  (CFARToINT, DFBToCFAR)
+  {
+    "portDataReadSize": {
+      "DFBToCFAR": 512_l
+    },
+    "portDataWrittenSize": {
+      "CFARToINT": 1024_l
+    },
+    "operationRequirements": {
+      "defaultNeeds": {
+        "FloatOp": 2513_l
+      }
+    },
+    "sizeInBits": 0_l
+  }
+  vertex "INTFunc"
+  [impl::CommunicatingExecutable, impl::Executable, impl::InstrumentedExecutable, visualization::Visualizable]
+  (CFARToINT, INTToExit)
+  {
+    "portDataReadSize": {
+      "CFARToINT": 1024_l
+    },
+    "portDataWrittenSize": {
+      "INTToExit": 1024_l
+    },
+    "operationRequirements": {
+      "defaultNeeds": {
+        "FloatOp": 2513_l
+      }
+    },
+    "sizeInBits": 0_l
+  }
+  vertex "DFBDisplacedFunc"
+  [impl::CommunicatingExecutable, impl::Executable, impl::InstrumentedExecutable, visualization::Visualizable]
+  (DFBToCFAR, PCtoDFB)
+  {
+    "portDataReadSize": {
+      "PCtoDFB": 1024_l
+    },
+    "portDataWrittenSize": {
+      "DFBToCFAR": 512_l
+    },
+    "operationRequirements": {
+      "defaultNeeds": {
+        "FloatOp": 15099_l
+      }
+    },
+    "sizeInBits": 0_l
+  }
+  vertex "CFARDisplacedFunc"
+  [impl::CommunicatingExecutable, impl::Executable, impl::InstrumentedExecutable, visualization::Visualizable]
+  (CFARToINT, DFBToCFAR)
+  {
+    "portDataReadSize": {
+      "DFBToCFAR": 512_l
+    },
+    "portDataWrittenSize": {
+      "CFARToINT": 1024_l
+    },
+    "operationRequirements": {
+      "defaultNeeds": {
+        "FloatOp": 2513_l
+      }
+    },
+    "sizeInBits": 0_l
+  }
+  vertex "DBF"
+  [decision::MemoryMapped, decision::Scheduled, decision::results::AnalysedTask, execution::CommunicatingTask, execution::LoopingTask, visualization::GreyBox, visualization::Visualizable]
+  (activated, activators, allocationHosts, contained, initSequence, loopSequence, mappingHosts, schedulers)
+  {
+    "worstCaseResponseTimeDenominatorInSecs": 25000000_l,
+    "__loopSequence_ordering__": {
+      "DBFFunc": 0_i
+    },
+    "worstCaseResponseTimeNumeratorInSecs": 1_l,
+    "portDataReadSize": {
+      "EntryToDBF": 4096_l
+    },
+    "worstCaseBlockingTimeDenominatorInSecs": 1_l,
+    "worstCaseBlockingTimeNumeratorInSecs": 0_l,
+    "hasORSemantics": 0_b,
+    "portDataWrittenSize": {
+      "DBFToPC": 4096_l
+    }
+  }
+  vertex "PC"
+  [decision::MemoryMapped, decision::Scheduled, decision::results::AnalysedTask, execution::CommunicatingTask, execution::LoopingTask, visualization::GreyBox, visualization::Visualizable]
+  (activated, activators, allocationHosts, contained, initSequence, loopSequence, mappingHosts, schedulers)
+  {
+    "worstCaseResponseTimeDenominatorInSecs": 50000000_l,
+    "__loopSequence_ordering__": {
+      "PCFunc": 0_i
+    },
+    "worstCaseResponseTimeNumeratorInSecs": 1_l,
+    "portDataReadSize": {
+      "DBFToPC": 4096_l
+    },
+    "worstCaseBlockingTimeDenominatorInSecs": 1_l,
+    "worstCaseBlockingTimeNumeratorInSecs": 0_l,
+    "hasORSemantics": 0_b,
+    "portDataWrittenSize": {
+      "PCtoDFB": 1024_l
+    }
+  }
+  vertex "PC_Wait_DBFCompleted"
+  [execution::Downsample]
+  (activated, activators)
+  {
+    "repetitivePredecessorSkips": 0_l,
+    "initialPredecessorSkips": 0_l,
+    "hasORSemantics": 0_b
+  }
+  vertex "DFB"
+  [decision::MemoryMapped, decision::Scheduled, decision::results::AnalysedTask, execution::CommunicatingTask, execution::LoopingTask, visualization::GreyBox, visualization::Visualizable]
+  (activated, activators, allocationHosts, contained, initSequence, loopSequence, mappingHosts, schedulers)
+  {
+    "worstCaseResponseTimeDenominatorInSecs": 100000000_l,
+    "__loopSequence_ordering__": {
+      "DFBFunc": 0_i
+    },
+    "worstCaseResponseTimeNumeratorInSecs": 3859_l,
+    "portDataReadSize": {
+      "PCtoDFB": 1024_l
+    },
+    "worstCaseBlockingTimeDenominatorInSecs": 1_l,
+    "worstCaseBlockingTimeNumeratorInSecs": 0_l,
+    "hasORSemantics": 0_b,
+    "portDataWrittenSize": {
+      "DFBToCFAR": 512_l
+    }
+  }
+  vertex "DFB_Wait_PCCompleted"
+  [execution::Downsample]
+  (activated, activators)
+  {
+    "repetitivePredecessorSkips": 1048576_l,
+    "initialPredecessorSkips": 0_l,
+    "hasORSemantics": 0_b
+  }
+  vertex "CFAR"
+  [decision::MemoryMapped, decision::Scheduled, decision::results::AnalysedTask, execution::CommunicatingTask, execution::LoopingTask, visualization::GreyBox, visualization::Visualizable]
+  (activated, activators, allocationHosts, contained, initSequence, loopSequence, mappingHosts, schedulers)
+  {
+    "worstCaseResponseTimeDenominatorInSecs": 25000000_l,
+    "__loopSequence_ordering__": {
+      "CFARFunc": 0_i
+    },
+    "worstCaseResponseTimeNumeratorInSecs": 139_l,
+    "portDataReadSize": {
+      "DFBToCFAR": 512_l
+    },
+    "worstCaseBlockingTimeDenominatorInSecs": 100000000_l,
+    "worstCaseBlockingTimeNumeratorInSecs": 19_l,
+    "hasORSemantics": 0_b,
+    "portDataWrittenSize": {
+      "CFARToINT": 1024_l
+    }
+  }
+  vertex "CFAR_Wait_DFBompleted"
+  [execution::Downsample]
+  (activated, activators)
+  {
+    "repetitivePredecessorSkips": 0_l,
+    "initialPredecessorSkips": 0_l,
+    "hasORSemantics": 0_b
+  }
+  vertex "INT"
+  [decision::MemoryMapped, decision::Scheduled, decision::results::AnalysedTask, execution::CommunicatingTask, execution::LoopingTask, visualization::GreyBox, visualization::Visualizable]
+  (activated, activators, allocationHosts, contained, initSequence, loopSequence, mappingHosts, schedulers)
+  {
+    "worstCaseResponseTimeDenominatorInSecs": 25000000_l,
+    "__loopSequence_ordering__": {
+      "INTFunc": 0_i
+    },
+    "worstCaseResponseTimeNumeratorInSecs": 139_l,
+    "portDataReadSize": {
+      "CFARToINT": 1024_l
+    },
+    "worstCaseBlockingTimeDenominatorInSecs": 1_l,
+    "worstCaseBlockingTimeNumeratorInSecs": 0_l,
+    "hasORSemantics": 0_b,
+    "portDataWrittenSize": {
+      "INTToExit": 1024_l
+    }
+  }
+  vertex "INT_Wait_CFARCompleted_CFARDisplacedCompleted"
+  [execution::Downsample]
+  (activated, activators)
+  {
+    "repetitivePredecessorSkips": 0_l,
+    "initialPredecessorSkips": 0_l,
+    "hasORSemantics": 0_b
+  }
+  vertex "DFBDisplaced"
+  [decision::MemoryMapped, decision::Scheduled, decision::results::AnalysedTask, execution::CommunicatingTask, execution::LoopingTask, visualization::GreyBox, visualization::Visualizable]
+  (activated, activators, allocationHosts, contained, initSequence, loopSequence, mappingHosts, schedulers)
+  {
+    "worstCaseResponseTimeDenominatorInSecs": 100000000_l,
+    "__loopSequence_ordering__": {
+      "DFBDisplacedFunc": 0_i
+    },
+    "worstCaseResponseTimeNumeratorInSecs": 3329_l,
+    "portDataReadSize": {
+      "PCtoDFB": 1024_l
+    },
+    "worstCaseBlockingTimeDenominatorInSecs": 1_l,
+    "worstCaseBlockingTimeNumeratorInSecs": 0_l,
+    "hasORSemantics": 0_b,
+    "portDataWrittenSize": {
+      "DFBToCFAR": 512_l
+    }
+  }
+  vertex "DFBDisplaced_Wait_PCCompleted"
+  [execution::Downsample]
+  (activated, activators)
+  {
+    "repetitivePredecessorSkips": 1048576_l,
+    "initialPredecessorSkips": 524288_l,
+    "hasORSemantics": 0_b
+  }
+  vertex "CFARDisplaced"
+  [decision::MemoryMapped, decision::Scheduled, decision::results::AnalysedTask, execution::CommunicatingTask, execution::LoopingTask, visualization::GreyBox, visualization::Visualizable]
+  (activated, activators, allocationHosts, contained, initSequence, loopSequence, mappingHosts, schedulers)
+  {
+    "worstCaseResponseTimeDenominatorInSecs": 25000000_l,
+    "__loopSequence_ordering__": {
+      "CFARDisplacedFunc": 0_i
+    },
+    "worstCaseResponseTimeNumeratorInSecs": 139_l,
+    "portDataReadSize": {
+      "DFBToCFAR": 512_l
+    },
+    "worstCaseBlockingTimeDenominatorInSecs": 1_l,
+    "worstCaseBlockingTimeNumeratorInSecs": 0_l,
+    "hasORSemantics": 0_b,
+    "portDataWrittenSize": {
+      "CFARToINT": 1024_l
+    }
+  }
+  vertex "CFARDisplaced_Wait_DFBompleted"
+  [execution::Downsample]
+  (activated, activators)
+  {
+    "repetitivePredecessorSkips": 0_l,
+    "initialPredecessorSkips": 0_l,
+    "hasORSemantics": 0_b
+  }
+  edge [platform::StructuralConnection] from "Platform.CPM_A53" port "submodules" to "Platform.CPM_A53.A53core1"
+  edge [visualization::VisualContainment] from "Platform.CPM_A53" port "contained" to "Platform.CPM_A53.A53core1"
+  edge [platform::StructuralConnection] from "Platform.CPM_A53" port "submodules" to "Platform.CPM_A53.A53core2"
+  edge [visualization::VisualContainment] from "Platform.CPM_A53" port "contained" to "Platform.CPM_A53.A53core2"
+  edge [platform::StructuralConnection] from "Platform.CPM_A53" port "submodules" to "Platform.CPM_A53.A53core3"
+  edge [visualization::VisualContainment] from "Platform.CPM_A53" port "contained" to "Platform.CPM_A53.A53core3"
+  edge [platform::StructuralConnection] from "Platform.CPM_A53" port "submodules" to "Platform.CPM_A53.A53core4"
+  edge [visualization::VisualContainment] from "Platform.CPM_A53" port "contained" to "Platform.CPM_A53.A53core4"
+  edge [platform::StructuralConnection] from "Platform" port "submodules" to "Platform.CPM_A53"
+  edge [visualization::VisualContainment] from "Platform" port "contained" to "Platform.CPM_A53"
+  edge [platform::StructuralConnection] from "Platform.CPM_R5" port "submodules" to "Platform.CPM_R5.R5core1"
+  edge [visualization::VisualContainment] from "Platform.CPM_R5" port "contained" to "Platform.CPM_R5.R5core1"
+  edge [platform::StructuralConnection] from "Platform.CPM_R5" port "submodules" to "Platform.CPM_R5.R5core2"
+  edge [visualization::VisualContainment] from "Platform.CPM_R5" port "contained" to "Platform.CPM_R5.R5core2"
+  edge [platform::StructuralConnection] from "Platform" port "submodules" to "Platform.CPM_R5"
+  edge [visualization::VisualContainment] from "Platform" port "contained" to "Platform.CPM_R5"
+  edge [visualization::VisualContainment] from "Platform.MainBus" port "contained" to "Platform.MainBusScheduler"
+  edge [platform::StructuralConnection] from "Platform" port "submodules" to "Platform.MainBus"
+  edge [visualization::VisualContainment] from "Platform" port "contained" to "Platform.MainBus"
+  edge [platform::StructuralConnection] from "Platform" port "submodules" to "Platform.SDRAM"
+  edge [visualization::VisualContainment] from "Platform" port "contained" to "Platform.SDRAM"
+  edge [platform::StructuralConnection] from "Platform" port "submodules" to "Platform.OCM"
+  edge [visualization::VisualContainment] from "Platform" port "contained" to "Platform.OCM"
+  edge [visualization::VisualContainment] from "Platform.OCMAXI" port "contained" to "Platform.OCMAXIScheduler"
+  edge [platform::StructuralConnection] from "Platform" port "submodules" to "Platform.OCMAXI"
+  edge [visualization::VisualContainment] from "Platform" port "contained" to "Platform.OCMAXI"
+  edge [visualization::VisualContainment] from "Platform.SDRAMBus" port "contained" to "Platform.SDRAMBusScheduler"
+  edge [platform::StructuralConnection] from "Platform" port "submodules" to "Platform.SDRAMBus"
+  edge [visualization::VisualContainment] from "Platform" port "contained" to "Platform.SDRAMBus"
+  edge [platform::PhysicalConnection,visualization::VisualConnection] from "Platform.SDRAMBus" port "MainBusPort1" to "Platform.SDRAM" port "MainSDRAMPort1"
+  edge [platform::PhysicalConnection,visualization::VisualConnection] from "Platform.CPM_A53.A53core1" port "core1Port1" to "Platform.OCMAXI" port "CPM1AXIPort1"
+  edge [platform::PhysicalConnection,visualization::VisualConnection] from "Platform.CPM_A53.A53core2" port "core2Port1" to "Platform.OCMAXI" port "CPM1AXIPort2"
+  edge [platform::PhysicalConnection,visualization::VisualConnection] from "Platform.CPM_A53.A53core3" port "core3Port1" to "Platform.OCMAXI" port "CPM1AXIPort3"
+  edge [platform::PhysicalConnection,visualization::VisualConnection] from "Platform.CPM_A53.A53core4" port "core4Port1" to "Platform.OCMAXI" port "CPM1AXIPort4"
+  edge [platform::PhysicalConnection,visualization::VisualConnection] from "Platform.CPM_R5.R5core1" port "core3Port1" to "Platform.OCMAXI" port "CPM1AXIPort1"
+  edge [platform::PhysicalConnection,visualization::VisualConnection] from "Platform.CPM_R5.R5core2" port "core4Port1" to "Platform.OCMAXI" port "CPM1AXIPort2"
+  edge [platform::PhysicalConnection,visualization::VisualConnection] from "Platform.OCMAXI" port "CPM1AXIPort3" to "Platform.OCM" port "OCM1Port1"
+  edge [platform::PhysicalConnection,visualization::VisualConnection] from "Platform.CPM_A53.A53core1" port "core1Port1" to "Platform.SDRAMBus" port "MainBusPort1"
+  edge [platform::PhysicalConnection,visualization::VisualConnection] from "Platform.CPM_A53.A53core2" port "core2Port1" to "Platform.SDRAMBus" port "MainBusPort1"
+  edge [platform::PhysicalConnection,visualization::VisualConnection] from "Platform.CPM_A53.A53core3" port "core3Port1" to "Platform.SDRAMBus" port "MainBusPort1"
+  edge [platform::PhysicalConnection,visualization::VisualConnection] from "Platform.CPM_A53.A53core4" port "core4Port1" to "Platform.SDRAMBus" port "MainBusPort1"
+  edge [platform::PhysicalConnection,visualization::VisualConnection] from "Platform.CPM_R5.R5core1" port "core3Port1" to "Platform.SDRAMBus" port "MainBusPort1"
+  edge [platform::PhysicalConnection,visualization::VisualConnection] from "Platform.CPM_R5.R5core2" port "core4Port1" to "Platform.SDRAMBus" port "MainBusPort1"
+  edge [platform::PhysicalConnection,visualization::VisualConnection] from "Platform.CPM_A53.A53core1" port "core1Port1" to "Platform.MainBus" port "MainBusPort1"
+  edge [platform::PhysicalConnection,visualization::VisualConnection] from "Platform.CPM_A53.A53core2" port "core2Port1" to "Platform.MainBus" port "MainBusPort1"
+  edge [platform::PhysicalConnection,visualization::VisualConnection] from "Platform.CPM_A53.A53core3" port "core3Port1" to "Platform.MainBus" port "MainBusPort1"
+  edge [platform::PhysicalConnection,visualization::VisualConnection] from "Platform.CPM_A53.A53core4" port "core4Port1" to "Platform.MainBus" port "MainBusPort1"
+  edge [platform::PhysicalConnection,visualization::VisualConnection] from "Platform.CPM_R5.R5core1" port "core3Port1" to "Platform.MainBus" port "MainBusPort1"
+  edge [platform::PhysicalConnection,visualization::VisualConnection] from "Platform.CPM_R5.R5core2" port "core4Port1" to "Platform.MainBus" port "MainBusPort1"
+  edge [platform::PhysicalConnection,visualization::VisualConnection] from "Platform.SDRAMBus" port "MainBusPort1" to "Platform.MainBus" port "MainBusPort1"
+  edge [impl::DataMovement,visualization::VisualConnection] from "SecondINS1SpeedVector" to "SecondSpeedVectorCalcRunnable" port "SecondINS1SpeedVector"
+  edge [impl::DataMovement,visualization::VisualConnection] from "SecondSpeedVectorCalcRunnable" port "SecondSpeed" to "SecondSpeed"
+  edge [impl::DataMovement,visualization::VisualConnection] from "SecondINS1LoadFactor" to "SecondAccCalcRunnable" port "SecondINS1LoadFactor"
+  edge [impl::DataMovement,visualization::VisualConnection] from "SecondAccCalcRunnable" port "SecondAcc" to "SecondAcc"
+  edge [impl::DataMovement,visualization::VisualConnection] from "SecondAcc" to "SecondAltitudeCalcRunnable" port "SecondAcc"
+  edge [impl::DataMovement,visualization::VisualConnection] from "SecondADC1Altitude" to "SecondAltitudeCalcRunnable" port "SecondADC1Altitude"
+  edge [impl::DataMovement,visualization::VisualConnection] from "SecondAltitudeCalcRunnable" port "SecondAltitude" to "SecondAltitude"
+  edge [impl::DataMovement,visualization::VisualConnection] from "AccSignal" to "AltitudeCalcRunnable" port "AccSignal"
+  edge [impl::DataMovement,visualization::VisualConnection] from "ADC1AltitudeSignal" to "AltitudeCalcRunnable" port "ADC1AltitudeSignal"
+  edge [impl::DataMovement,visualization::VisualConnection] from "AltitudeCalcRunnable" port "AltitudeSignal" to "AltitudeSignal"
+  edge [impl::DataMovement,visualization::VisualConnection] from "INS1SpeedVectorSignal" to "FormatSpeedVectorCalcRunnable" port "INS1SpeedVectorSignal"
+  edge [impl::DataMovement,visualization::VisualConnection] from "INS2SpeedVectorSignal" to "FormatSpeedVectorCalcRunnable" port "INS2SpeedVectorSignal"
+  edge [impl::DataMovement,visualization::VisualConnection] from "FormatSpeedVectorCalcRunnable" port "InternalSpeedVectorSignal" to "InternalSpeedVectorSignal"
+  edge [impl::DataMovement,visualization::VisualConnection] from "InternalSpeedVectorSignal" to "SpeedVectorCalcRunnable" port "InternalSpeedVectorSignal"
+  edge [impl::DataMovement,visualization::VisualConnection] from "SpeedVectorCalcRunnable" port "SpeedSignal" to "SpeedSignal"
+  edge [impl::DataMovement,visualization::VisualConnection] from "SpeedVectorCalcRunnable" port "SpeedVectorSignal" to "SpeedVectorSignal"
+  edge [impl::DataMovement,visualization::VisualConnection] from "SpeedVectorSignal" to "HeadingCalcRunnable" port "SpeedVectorSignal"
+  edge [impl::DataMovement,visualization::VisualConnection] from "HeadingCalcRunnable" port "HeadingSignal" to "HeadingSignal"
+  edge [impl::DataMovement,visualization::VisualConnection] from "INS1LoadFactorSignal" to "FormatLoadFactorCalcRunnable" port "INS1LoadFactorSignal"
+  edge [impl::DataMovement,visualization::VisualConnection] from "INS2LoadFactorSignal" to "FormatLoadFactorCalcRunnable" port "INS2LoadFactorSignal"
+  edge [impl::DataMovement,visualization::VisualConnection] from "FormatLoadFactorCalcRunnable" port "InternalLoadFactorSignal" to "InternalLoadFactorSignal"
+  edge [impl::DataMovement,visualization::VisualConnection] from "InternalLoadFactorSignal" to "LoadFactorCalcRunnable" port "InternalLoadFactorSignal"
+  edge [impl::DataMovement,visualization::VisualConnection] from "LoadFactorCalcRunnable" port "LoadFactorSignal" to "LoadFactorSignal"
+  edge [impl::DataMovement,visualization::VisualConnection] from "LoadFactorSignal" to "AccCalcRunnable" port "LoadFactorSignal"
+  edge [impl::DataMovement,visualization::VisualConnection] from "AccCalcRunnable" port "AccSignal" to "AccSignal"
+  edge [execution::ExecutionEdge] from "AltitudeCalc" port "loopSequence" to "AltitudeCalcRunnable"
+  edge [] from "AltitudeCalc" port "contained" to "AltitudeCalcRunnable"
+  edge [execution::EventEdge,visualization::VisualConnection] from "30Hz" port "activated" to "AltitudeCalc" port "activators"
+  edge [execution::ExecutionEdge] from "FormatSpeedVectorCalc" port "loopSequence" to "FormatSpeedVectorCalcRunnable"
+  edge [] from "FormatSpeedVectorCalc" port "contained" to "FormatSpeedVectorCalcRunnable"
+  edge [execution::EventEdge,visualization::VisualConnection] from "60Hz" port "activated" to "FormatSpeedVectorCalc" port "activators"
+  edge [execution::ExecutionEdge] from "SpeedVectorCalc" port "loopSequence" to "SpeedVectorCalcRunnable"
+  edge [] from "SpeedVectorCalc" port "contained" to "SpeedVectorCalcRunnable"
+  edge [execution::EventEdge,visualization::VisualConnection] from "60Hz" port "activated" to "SpeedVectorCalc" port "activators"
+  edge [execution::ExecutionEdge] from "HeadingCalc" port "loopSequence" to "HeadingCalcRunnable"
+  edge [] from "HeadingCalc" port "contained" to "HeadingCalcRunnable"
+  edge [execution::EventEdge,visualization::VisualConnection] from "30Hz" port "activated" to "HeadingCalc" port "activators"
+  edge [execution::ExecutionEdge] from "FormatLoadFactorCalc" port "loopSequence" to "FormatLoadFactorCalcRunnable"
+  edge [] from "FormatLoadFactorCalc" port "contained" to "FormatLoadFactorCalcRunnable"
+  edge [execution::EventEdge,visualization::VisualConnection] from "30Hz" port "activated" to "FormatLoadFactorCalc" port "activators"
+  edge [execution::ExecutionEdge] from "LoadFactorCalc" port "loopSequence" to "LoadFactorCalcRunnable"
+  edge [] from "LoadFactorCalc" port "contained" to "LoadFactorCalcRunnable"
+  edge [execution::EventEdge,visualization::VisualConnection] from "30Hz" port "activated" to "LoadFactorCalc" port "activators"
+  edge [execution::ExecutionEdge] from "AccCalc" port "loopSequence" to "AccCalcRunnable"
+  edge [] from "AccCalc" port "contained" to "AccCalcRunnable"
+  edge [execution::EventEdge,visualization::VisualConnection] from "30Hz" port "activated" to "AccCalc" port "activators"
+  edge [execution::ExecutionEdge] from "SecondSpeedVectorCalc" port "loopSequence" to "SecondSpeedVectorCalcRunnable"
+  edge [] from "SecondSpeedVectorCalc" port "contained" to "SecondSpeedVectorCalcRunnable"
+  edge [execution::EventEdge,visualization::VisualConnection] from "30Hz" port "activated" to "SecondSpeedVectorCalc" port "activators"
+  edge [execution::ExecutionEdge] from "SecondAccCalc" port "loopSequence" to "SecondAccCalcRunnable"
+  edge [] from "SecondAccCalc" port "contained" to "SecondAccCalcRunnable"
+  edge [execution::EventEdge,visualization::VisualConnection] from "30Hz" port "activated" to "SecondAccCalc" port "activators"
+  edge [execution::ExecutionEdge] from "SecondAltitudeCalc" port "loopSequence" to "SecondAltitudeCalcRunnable"
+  edge [] from "SecondAltitudeCalc" port "contained" to "SecondAltitudeCalcRunnable"
+  edge [execution::EventEdge,visualization::VisualConnection] from "30Hz" port "activated" to "SecondAltitudeCalc" port "activators"
+  edge [] from "CPM1_Core1_Runtime.CMP1_Core1_FP_Runtime_Scheduler" port "allocationHosts" to "Platform.CPM_A53.A53core1"
+  edge [visualization::VisualContainment] from "Platform.CPM_A53.A53core1" port "contained" to "CPM1_Core1_Runtime.CMP1_Core1_FP_Runtime_Scheduler"
+  edge [] from "CPM1_Core2_Runtime.CMP1_Core2_FP_Runtime_Scheduler" port "allocationHosts" to "Platform.CPM_A53.A53core2"
+  edge [visualization::VisualContainment] from "Platform.CPM_A53.A53core2" port "contained" to "CPM1_Core2_Runtime.CMP1_Core2_FP_Runtime_Scheduler"
+  edge [] from "CPM2_Core3_Runtime.CMP2_Core3_FP_Runtime_Scheduler" port "allocationHosts" to "Platform.CPM_A53.A53core3"
+  edge [visualization::VisualContainment] from "Platform.CPM_A53.A53core3" port "contained" to "CPM2_Core3_Runtime.CMP2_Core3_FP_Runtime_Scheduler"
+  edge [] from "CPM2_Core4_Runtime.CMP2_Core4_FP_Runtime_Scheduler" port "allocationHosts" to "Platform.CPM_A53.A53core4"
+  edge [visualization::VisualContainment] from "Platform.CPM_A53.A53core4" port "contained" to "CPM2_Core4_Runtime.CMP2_Core4_FP_Runtime_Scheduler"
+  edge [] from "CPM2_Core5_Runtime.CMP2_Core5_FP_Runtime_Scheduler" port "allocationHosts" to "Platform.CPM_R5.R5core1"
+  edge [visualization::VisualContainment] from "Platform.CPM_R5.R5core1" port "contained" to "CPM2_Core5_Runtime.CMP2_Core5_FP_Runtime_Scheduler"
+  edge [] from "CPM2_Core6_Runtime.CMP2_Core6_FP_Runtime_Scheduler" port "allocationHosts" to "Platform.CPM_R5.R5core2"
+  edge [visualization::VisualContainment] from "Platform.CPM_R5.R5core2" port "contained" to "CPM2_Core6_Runtime.CMP2_Core6_FP_Runtime_Scheduler"
+  edge [decision::AbstractAllocation] from "CPM1_Core1_Runtime.CMP1_Core1_FP_Runtime_Scheduler" port "allocationHost" to "Platform.CPM_A53.A53core1"
+  edge [decision::AbstractAllocation] from "CPM1_Core2_Runtime.CMP1_Core2_FP_Runtime_Scheduler" port "allocationHost" to "Platform.CPM_A53.A53core2"
+  edge [decision::AbstractAllocation] from "CPM2_Core4_Runtime.CMP2_Core4_FP_Runtime_Scheduler" port "allocationHost" to "Platform.CPM_A53.A53core4"
+  edge [decision::AbstractAllocation] from "CPM2_Core3_Runtime.CMP2_Core3_FP_Runtime_Scheduler" port "allocationHost" to "Platform.CPM_A53.A53core3"
+  edge [decision::AbstractAllocation] from "CPM2_Core5_Runtime.CMP2_Core5_FP_Runtime_Scheduler" port "allocationHost" to "Platform.CPM_R5.R5core1"
+  edge [decision::AbstractAllocation] from "CPM2_Core6_Runtime.CMP2_Core6_FP_Runtime_Scheduler" port "allocationHost" to "Platform.CPM_R5.R5core2"
+  edge [decision::AbstractMapping] from "INS1LoadFactorSignal" port "mappingHost" to "Platform.SDRAM"
+  edge [decision::AbstractAllocation] from "INS1LoadFactorSignal" port "allocationHost" to "Platform.SDRAM"
+  edge [visualization::VisualContainment] from "Platform.SDRAM" port "contained" to "INS1LoadFactorSignal"
+  edge [decision::AbstractMapping] from "INS2LoadFactorSignal" port "mappingHost" to "Platform.SDRAM"
+  edge [decision::AbstractAllocation] from "INS2LoadFactorSignal" port "allocationHost" to "Platform.SDRAM"
+  edge [visualization::VisualContainment] from "Platform.SDRAM" port "contained" to "INS2LoadFactorSignal"
+  edge [decision::AbstractMapping] from "INS1SpeedVectorSignal" port "mappingHost" to "Platform.SDRAM"
+  edge [decision::AbstractAllocation] from "INS1SpeedVectorSignal" port "allocationHost" to "Platform.SDRAM"
+  edge [visualization::VisualContainment] from "Platform.SDRAM" port "contained" to "INS1SpeedVectorSignal"
+  edge [decision::AbstractMapping] from "INS2SpeedVectorSignal" port "mappingHost" to "Platform.SDRAM"
+  edge [decision::AbstractAllocation] from "INS2SpeedVectorSignal" port "allocationHost" to "Platform.SDRAM"
+  edge [visualization::VisualContainment] from "Platform.SDRAM" port "contained" to "INS2SpeedVectorSignal"
+  edge [decision::AbstractMapping] from "ADC1AltitudeSignal" port "mappingHost" to "Platform.SDRAM"
+  edge [decision::AbstractAllocation] from "ADC1AltitudeSignal" port "allocationHost" to "Platform.SDRAM"
+  edge [visualization::VisualContainment] from "Platform.SDRAM" port "contained" to "ADC1AltitudeSignal"
+  edge [decision::AbstractMapping] from "HeadingSignal" port "mappingHost" to "Platform.SDRAM"
+  edge [decision::AbstractAllocation] from "HeadingSignal" port "allocationHost" to "Platform.SDRAM"
+  edge [visualization::VisualContainment] from "Platform.SDRAM" port "contained" to "HeadingSignal"
+  edge [decision::AbstractMapping] from "AltitudeSignal" port "mappingHost" to "Platform.SDRAM"
+  edge [decision::AbstractAllocation] from "AltitudeSignal" port "allocationHost" to "Platform.SDRAM"
+  edge [visualization::VisualContainment] from "Platform.SDRAM" port "contained" to "AltitudeSignal"
+  edge [decision::AbstractMapping] from "SpeedSignal" port "mappingHost" to "Platform.SDRAM"
+  edge [decision::AbstractAllocation] from "SpeedSignal" port "allocationHost" to "Platform.SDRAM"
+  edge [visualization::VisualContainment] from "Platform.SDRAM" port "contained" to "SpeedSignal"
+  edge [decision::AbstractMapping] from "SecondADC1Altitude" port "mappingHost" to "Platform.SDRAM"
+  edge [decision::AbstractAllocation] from "SecondADC1Altitude" port "allocationHost" to "Platform.SDRAM"
+  edge [visualization::VisualContainment] from "Platform.SDRAM" port "contained" to "SecondADC1Altitude"
+  edge [decision::AbstractMapping] from "SecondINS1LoadFactor" port "mappingHost" to "Platform.SDRAM"
+  edge [decision::AbstractAllocation] from "SecondINS1LoadFactor" port "allocationHost" to "Platform.SDRAM"
+  edge [visualization::VisualContainment] from "Platform.SDRAM" port "contained" to "SecondINS1LoadFactor"
+  edge [decision::AbstractMapping] from "SecondINS1SpeedVector" port "mappingHost" to "Platform.SDRAM"
+  edge [decision::AbstractAllocation] from "SecondINS1SpeedVector" port "allocationHost" to "Platform.SDRAM"
+  edge [visualization::VisualContainment] from "Platform.SDRAM" port "contained" to "SecondINS1SpeedVector"
+  edge [decision::AbstractMapping] from "SecondAcc" port "mappingHost" to "Platform.SDRAM"
+  edge [decision::AbstractAllocation] from "SecondAcc" port "allocationHost" to "Platform.SDRAM"
+  edge [visualization::VisualContainment] from "Platform.SDRAM" port "contained" to "SecondAcc"
+  edge [decision::AbstractMapping] from "SecondAltitude" port "mappingHost" to "Platform.SDRAM"
+  edge [decision::AbstractAllocation] from "SecondAltitude" port "allocationHost" to "Platform.SDRAM"
+  edge [visualization::VisualContainment] from "Platform.SDRAM" port "contained" to "SecondAltitude"
+  edge [impl::DataMovement,visualization::VisualConnection] from "EntryToDBF" to "DBFFunc" port "EntryToDBF"
+  edge [impl::DataMovement,visualization::VisualConnection] from "DBFFunc" port "DBFToPC" to "DBFToPC"
+  edge [impl::DataMovement,visualization::VisualConnection] from "DBFToPC" to "PCFunc" port "DBFToPC"
+  edge [impl::DataMovement,visualization::VisualConnection] from "PCFunc" port "PCtoDFB" to "PCtoDFB"
+  edge [impl::DataMovement,visualization::VisualConnection] from "PCtoDFB" to "DFBFunc" port "PCtoDFB"
+  edge [impl::DataMovement,visualization::VisualConnection] from "DFBFunc" port "DFBToCFAR" to "DFBToCFAR"
+  edge [impl::DataMovement,visualization::VisualConnection] from "DFBToCFAR" to "CFARFunc" port "DFBToCFAR"
+  edge [impl::DataMovement,visualization::VisualConnection] from "CFARFunc" port "CFARToINT" to "CFARToINT"
+  edge [impl::DataMovement,visualization::VisualConnection] from "CFARToINT" to "INTFunc" port "CFARToINT"
+  edge [impl::DataMovement,visualization::VisualConnection] from "INTFunc" port "INTToExit" to "INTToExit"
+  edge [impl::DataMovement,visualization::VisualConnection] from "PCtoDFB" to "DFBDisplacedFunc" port "PCtoDFB"
+  edge [impl::DataMovement,visualization::VisualConnection] from "DFBDisplacedFunc" port "DFBToCFAR" to "DFBToCFAR"
+  edge [impl::DataMovement,visualization::VisualConnection] from "DFBToCFAR" to "CFARDisplacedFunc" port "DFBToCFAR"
+  edge [impl::DataMovement,visualization::VisualConnection] from "CFARDisplacedFunc" port "CFARToINT" to "CFARToINT"
+  edge [execution::ExecutionEdge] from "DBF" port "loopSequence" to "DBFFunc"
+  edge [] from "DBF" port "contained" to "DBFFunc"
+  edge [execution::EventEdge,visualization::VisualConnection] from "SnapshotPeriod" port "activated" to "DBF" port "activators"
+  edge [execution::EventEdge] from "PC_Wait_DBFCompleted" port "activated" to "PC" port "activators"
+  edge [execution::ExecutionEdge] from "PC" port "loopSequence" to "PCFunc"
+  edge [] from "PC" port "contained" to "PCFunc"
+  edge [execution::EventEdge,visualization::VisualConnection] from "SnapshotPeriod" port "activated" to "PC" port "activators"
+  edge [execution::EventEdge] from "DFB_Wait_PCCompleted" port "activated" to "DFB" port "activators"
+  edge [execution::ExecutionEdge] from "DFB" port "loopSequence" to "DFBFunc"
+  edge [] from "DFB" port "contained" to "DFBFunc"
+  edge [execution::EventEdge,visualization::VisualConnection] from "INTIPeriod" port "activated" to "DFB" port "activators"
+  edge [execution::EventEdge] from "CFAR_Wait_DFBompleted" port "activated" to "CFAR" port "activators"
+  edge [execution::ExecutionEdge] from "CFAR" port "loopSequence" to "CFARFunc"
+  edge [] from "CFAR" port "contained" to "CFARFunc"
+  edge [execution::EventEdge,visualization::VisualConnection] from "INTIPeriod" port "activated" to "CFAR" port "activators"
+  edge [execution::EventEdge] from "INT_Wait_CFARCompleted_CFARDisplacedCompleted" port "activated" to "INT" port "activators"
+  edge [execution::ExecutionEdge] from "INT" port "loopSequence" to "INTFunc"
+  edge [] from "INT" port "contained" to "INTFunc"
+  edge [execution::EventEdge,visualization::VisualConnection] from "INTIPeriod" port "activated" to "INT" port "activators"
+  edge [execution::EventEdge] from "DFBDisplaced_Wait_PCCompleted" port "activated" to "DFBDisplaced" port "activators"
+  edge [execution::ExecutionEdge] from "DFBDisplaced" port "loopSequence" to "DFBDisplacedFunc"
+  edge [] from "DFBDisplaced" port "contained" to "DFBDisplacedFunc"
+  edge [execution::EventEdge,visualization::VisualConnection] from "INTIPeriod" port "activated" to "DFBDisplaced" port "activators"
+  edge [execution::EventEdge] from "CFARDisplaced_Wait_DFBompleted" port "activated" to "CFARDisplaced" port "activators"
+  edge [execution::ExecutionEdge] from "CFARDisplaced" port "loopSequence" to "CFARDisplacedFunc"
+  edge [] from "CFARDisplaced" port "contained" to "CFARDisplacedFunc"
+  edge [execution::EventEdge,visualization::VisualConnection] from "INTIPeriod" port "activated" to "CFARDisplaced" port "activators"
+  edge [execution::EventEdge] from "DBF" port "activated" to "PC_Wait_DBFCompleted" port "activators"
+  edge [execution::EventEdge] from "PC" port "activated" to "DFB_Wait_PCCompleted" port "activators"
+  edge [execution::EventEdge] from "PC" port "activated" to "DFBDisplaced_Wait_PCCompleted" port "activators"
+  edge [execution::EventEdge] from "DFB" port "activated" to "CFAR_Wait_DFBompleted" port "activators"
+  edge [execution::EventEdge] from "CFAR" port "activated" to "INT_Wait_CFARCompleted_CFARDisplacedCompleted" port "activators"
+  edge [execution::EventEdge] from "DFBDisplaced" port "activated" to "CFARDisplaced_Wait_DFBompleted" port "activators"
+  edge [execution::EventEdge] from "CFARDisplaced" port "activated" to "INT_Wait_CFARCompleted_CFARDisplacedCompleted" port "activators"
+  edge [decision::AbstractMapping] from "EntryToDBF" port "mappingHost" to "Platform.SDRAM"
+  edge [decision::AbstractAllocation] from "EntryToDBF" port "allocationHost" to "Platform.SDRAM"
+  edge [visualization::VisualContainment] from "Platform.SDRAM" port "contained" to "EntryToDBF"
+  edge [decision::AbstractMapping] from "INTToExit" port "mappingHost" to "Platform.SDRAM"
+  edge [decision::AbstractAllocation] from "INTToExit" port "allocationHost" to "Platform.SDRAM"
+  edge [visualization::VisualContainment] from "Platform.SDRAM" port "contained" to "INTToExit"
+  edge [] from "AltitudeCalc" port "schedulers" to "CPM1_Core1_Runtime.CMP1_Core1_FP_Runtime_Scheduler"
+  edge [] from "CPM1_Core1_Runtime.CMP1_Core1_FP_Runtime_Scheduler" port "contained" to "AltitudeCalc"
+  edge [] from "AltitudeCalc" port "schedulers" to "CPM1_Core2_Runtime.CMP1_Core2_FP_Runtime_Scheduler"
+  edge [] from "CPM1_Core2_Runtime.CMP1_Core2_FP_Runtime_Scheduler" port "contained" to "AltitudeCalc"
+  edge [] from "AltitudeCalc" port "schedulers" to "CPM2_Core3_Runtime.CMP2_Core3_FP_Runtime_Scheduler"
+  edge [] from "CPM2_Core3_Runtime.CMP2_Core3_FP_Runtime_Scheduler" port "contained" to "AltitudeCalc"
+  edge [] from "AltitudeCalc" port "schedulers" to "CPM2_Core4_Runtime.CMP2_Core4_FP_Runtime_Scheduler"
+  edge [] from "CPM2_Core4_Runtime.CMP2_Core4_FP_Runtime_Scheduler" port "contained" to "AltitudeCalc"
+  edge [] from "AltitudeCalc" port "schedulers" to "CPM2_Core5_Runtime.CMP2_Core5_FP_Runtime_Scheduler"
+  edge [] from "CPM2_Core5_Runtime.CMP2_Core5_FP_Runtime_Scheduler" port "contained" to "AltitudeCalc"
+  edge [] from "AltitudeCalc" port "schedulers" to "CPM2_Core6_Runtime.CMP2_Core6_FP_Runtime_Scheduler"
+  edge [] from "CPM2_Core6_Runtime.CMP2_Core6_FP_Runtime_Scheduler" port "contained" to "AltitudeCalc"
+  edge [] from "FormatSpeedVectorCalc" port "schedulers" to "CPM1_Core1_Runtime.CMP1_Core1_FP_Runtime_Scheduler"
+  edge [] from "CPM1_Core1_Runtime.CMP1_Core1_FP_Runtime_Scheduler" port "contained" to "FormatSpeedVectorCalc"
+  edge [] from "FormatSpeedVectorCalc" port "schedulers" to "CPM1_Core2_Runtime.CMP1_Core2_FP_Runtime_Scheduler"
+  edge [] from "CPM1_Core2_Runtime.CMP1_Core2_FP_Runtime_Scheduler" port "contained" to "FormatSpeedVectorCalc"
+  edge [] from "FormatSpeedVectorCalc" port "schedulers" to "CPM2_Core3_Runtime.CMP2_Core3_FP_Runtime_Scheduler"
+  edge [] from "CPM2_Core3_Runtime.CMP2_Core3_FP_Runtime_Scheduler" port "contained" to "FormatSpeedVectorCalc"
+  edge [] from "FormatSpeedVectorCalc" port "schedulers" to "CPM2_Core4_Runtime.CMP2_Core4_FP_Runtime_Scheduler"
+  edge [] from "CPM2_Core4_Runtime.CMP2_Core4_FP_Runtime_Scheduler" port "contained" to "FormatSpeedVectorCalc"
+  edge [] from "FormatSpeedVectorCalc" port "schedulers" to "CPM2_Core5_Runtime.CMP2_Core5_FP_Runtime_Scheduler"
+  edge [] from "CPM2_Core5_Runtime.CMP2_Core5_FP_Runtime_Scheduler" port "contained" to "FormatSpeedVectorCalc"
+  edge [] from "FormatSpeedVectorCalc" port "schedulers" to "CPM2_Core6_Runtime.CMP2_Core6_FP_Runtime_Scheduler"
+  edge [] from "CPM2_Core6_Runtime.CMP2_Core6_FP_Runtime_Scheduler" port "contained" to "FormatSpeedVectorCalc"
+  edge [] from "SpeedVectorCalc" port "schedulers" to "CPM1_Core1_Runtime.CMP1_Core1_FP_Runtime_Scheduler"
+  edge [] from "CPM1_Core1_Runtime.CMP1_Core1_FP_Runtime_Scheduler" port "contained" to "SpeedVectorCalc"
+  edge [] from "SpeedVectorCalc" port "schedulers" to "CPM1_Core2_Runtime.CMP1_Core2_FP_Runtime_Scheduler"
+  edge [] from "CPM1_Core2_Runtime.CMP1_Core2_FP_Runtime_Scheduler" port "contained" to "SpeedVectorCalc"
+  edge [] from "SpeedVectorCalc" port "schedulers" to "CPM2_Core3_Runtime.CMP2_Core3_FP_Runtime_Scheduler"
+  edge [] from "CPM2_Core3_Runtime.CMP2_Core3_FP_Runtime_Scheduler" port "contained" to "SpeedVectorCalc"
+  edge [] from "SpeedVectorCalc" port "schedulers" to "CPM2_Core4_Runtime.CMP2_Core4_FP_Runtime_Scheduler"
+  edge [] from "CPM2_Core4_Runtime.CMP2_Core4_FP_Runtime_Scheduler" port "contained" to "SpeedVectorCalc"
+  edge [] from "SpeedVectorCalc" port "schedulers" to "CPM2_Core5_Runtime.CMP2_Core5_FP_Runtime_Scheduler"
+  edge [] from "CPM2_Core5_Runtime.CMP2_Core5_FP_Runtime_Scheduler" port "contained" to "SpeedVectorCalc"
+  edge [] from "SpeedVectorCalc" port "schedulers" to "CPM2_Core6_Runtime.CMP2_Core6_FP_Runtime_Scheduler"
+  edge [] from "CPM2_Core6_Runtime.CMP2_Core6_FP_Runtime_Scheduler" port "contained" to "SpeedVectorCalc"
+  edge [] from "HeadingCalc" port "schedulers" to "CPM1_Core1_Runtime.CMP1_Core1_FP_Runtime_Scheduler"
+  edge [] from "CPM1_Core1_Runtime.CMP1_Core1_FP_Runtime_Scheduler" port "contained" to "HeadingCalc"
+  edge [] from "HeadingCalc" port "schedulers" to "CPM1_Core2_Runtime.CMP1_Core2_FP_Runtime_Scheduler"
+  edge [] from "CPM1_Core2_Runtime.CMP1_Core2_FP_Runtime_Scheduler" port "contained" to "HeadingCalc"
+  edge [] from "HeadingCalc" port "schedulers" to "CPM2_Core3_Runtime.CMP2_Core3_FP_Runtime_Scheduler"
+  edge [] from "CPM2_Core3_Runtime.CMP2_Core3_FP_Runtime_Scheduler" port "contained" to "HeadingCalc"
+  edge [] from "HeadingCalc" port "schedulers" to "CPM2_Core4_Runtime.CMP2_Core4_FP_Runtime_Scheduler"
+  edge [] from "CPM2_Core4_Runtime.CMP2_Core4_FP_Runtime_Scheduler" port "contained" to "HeadingCalc"
+  edge [] from "HeadingCalc" port "schedulers" to "CPM2_Core5_Runtime.CMP2_Core5_FP_Runtime_Scheduler"
+  edge [] from "CPM2_Core5_Runtime.CMP2_Core5_FP_Runtime_Scheduler" port "contained" to "HeadingCalc"
+  edge [] from "HeadingCalc" port "schedulers" to "CPM2_Core6_Runtime.CMP2_Core6_FP_Runtime_Scheduler"
+  edge [] from "CPM2_Core6_Runtime.CMP2_Core6_FP_Runtime_Scheduler" port "contained" to "HeadingCalc"
+  edge [] from "FormatLoadFactorCalc" port "schedulers" to "CPM1_Core1_Runtime.CMP1_Core1_FP_Runtime_Scheduler"
+  edge [] from "CPM1_Core1_Runtime.CMP1_Core1_FP_Runtime_Scheduler" port "contained" to "FormatLoadFactorCalc"
+  edge [] from "FormatLoadFactorCalc" port "schedulers" to "CPM1_Core2_Runtime.CMP1_Core2_FP_Runtime_Scheduler"
+  edge [] from "CPM1_Core2_Runtime.CMP1_Core2_FP_Runtime_Scheduler" port "contained" to "FormatLoadFactorCalc"
+  edge [] from "FormatLoadFactorCalc" port "schedulers" to "CPM2_Core3_Runtime.CMP2_Core3_FP_Runtime_Scheduler"
+  edge [] from "CPM2_Core3_Runtime.CMP2_Core3_FP_Runtime_Scheduler" port "contained" to "FormatLoadFactorCalc"
+  edge [] from "FormatLoadFactorCalc" port "schedulers" to "CPM2_Core4_Runtime.CMP2_Core4_FP_Runtime_Scheduler"
+  edge [] from "CPM2_Core4_Runtime.CMP2_Core4_FP_Runtime_Scheduler" port "contained" to "FormatLoadFactorCalc"
+  edge [] from "FormatLoadFactorCalc" port "schedulers" to "CPM2_Core5_Runtime.CMP2_Core5_FP_Runtime_Scheduler"
+  edge [] from "CPM2_Core5_Runtime.CMP2_Core5_FP_Runtime_Scheduler" port "contained" to "FormatLoadFactorCalc"
+  edge [] from "FormatLoadFactorCalc" port "schedulers" to "CPM2_Core6_Runtime.CMP2_Core6_FP_Runtime_Scheduler"
+  edge [] from "CPM2_Core6_Runtime.CMP2_Core6_FP_Runtime_Scheduler" port "contained" to "FormatLoadFactorCalc"
+  edge [] from "LoadFactorCalc" port "schedulers" to "CPM1_Core1_Runtime.CMP1_Core1_FP_Runtime_Scheduler"
+  edge [] from "CPM1_Core1_Runtime.CMP1_Core1_FP_Runtime_Scheduler" port "contained" to "LoadFactorCalc"
+  edge [] from "LoadFactorCalc" port "schedulers" to "CPM1_Core2_Runtime.CMP1_Core2_FP_Runtime_Scheduler"
+  edge [] from "CPM1_Core2_Runtime.CMP1_Core2_FP_Runtime_Scheduler" port "contained" to "LoadFactorCalc"
+  edge [] from "LoadFactorCalc" port "schedulers" to "CPM2_Core3_Runtime.CMP2_Core3_FP_Runtime_Scheduler"
+  edge [] from "CPM2_Core3_Runtime.CMP2_Core3_FP_Runtime_Scheduler" port "contained" to "LoadFactorCalc"
+  edge [] from "LoadFactorCalc" port "schedulers" to "CPM2_Core4_Runtime.CMP2_Core4_FP_Runtime_Scheduler"
+  edge [] from "CPM2_Core4_Runtime.CMP2_Core4_FP_Runtime_Scheduler" port "contained" to "LoadFactorCalc"
+  edge [] from "LoadFactorCalc" port "schedulers" to "CPM2_Core5_Runtime.CMP2_Core5_FP_Runtime_Scheduler"
+  edge [] from "CPM2_Core5_Runtime.CMP2_Core5_FP_Runtime_Scheduler" port "contained" to "LoadFactorCalc"
+  edge [] from "LoadFactorCalc" port "schedulers" to "CPM2_Core6_Runtime.CMP2_Core6_FP_Runtime_Scheduler"
+  edge [] from "CPM2_Core6_Runtime.CMP2_Core6_FP_Runtime_Scheduler" port "contained" to "LoadFactorCalc"
+  edge [] from "AccCalc" port "schedulers" to "CPM1_Core1_Runtime.CMP1_Core1_FP_Runtime_Scheduler"
+  edge [] from "CPM1_Core1_Runtime.CMP1_Core1_FP_Runtime_Scheduler" port "contained" to "AccCalc"
+  edge [] from "AccCalc" port "schedulers" to "CPM1_Core2_Runtime.CMP1_Core2_FP_Runtime_Scheduler"
+  edge [] from "CPM1_Core2_Runtime.CMP1_Core2_FP_Runtime_Scheduler" port "contained" to "AccCalc"
+  edge [] from "AccCalc" port "schedulers" to "CPM2_Core3_Runtime.CMP2_Core3_FP_Runtime_Scheduler"
+  edge [] from "CPM2_Core3_Runtime.CMP2_Core3_FP_Runtime_Scheduler" port "contained" to "AccCalc"
+  edge [] from "AccCalc" port "schedulers" to "CPM2_Core4_Runtime.CMP2_Core4_FP_Runtime_Scheduler"
+  edge [] from "CPM2_Core4_Runtime.CMP2_Core4_FP_Runtime_Scheduler" port "contained" to "AccCalc"
+  edge [] from "AccCalc" port "schedulers" to "CPM2_Core5_Runtime.CMP2_Core5_FP_Runtime_Scheduler"
+  edge [] from "CPM2_Core5_Runtime.CMP2_Core5_FP_Runtime_Scheduler" port "contained" to "AccCalc"
+  edge [] from "AccCalc" port "schedulers" to "CPM2_Core6_Runtime.CMP2_Core6_FP_Runtime_Scheduler"
+  edge [] from "CPM2_Core6_Runtime.CMP2_Core6_FP_Runtime_Scheduler" port "contained" to "AccCalc"
+  edge [] from "SecondSpeedVectorCalc" port "schedulers" to "CPM1_Core1_Runtime.CMP1_Core1_FP_Runtime_Scheduler"
+  edge [] from "CPM1_Core1_Runtime.CMP1_Core1_FP_Runtime_Scheduler" port "contained" to "SecondSpeedVectorCalc"
+  edge [] from "SecondSpeedVectorCalc" port "schedulers" to "CPM1_Core2_Runtime.CMP1_Core2_FP_Runtime_Scheduler"
+  edge [] from "CPM1_Core2_Runtime.CMP1_Core2_FP_Runtime_Scheduler" port "contained" to "SecondSpeedVectorCalc"
+  edge [] from "SecondSpeedVectorCalc" port "schedulers" to "CPM2_Core3_Runtime.CMP2_Core3_FP_Runtime_Scheduler"
+  edge [] from "CPM2_Core3_Runtime.CMP2_Core3_FP_Runtime_Scheduler" port "contained" to "SecondSpeedVectorCalc"
+  edge [] from "SecondSpeedVectorCalc" port "schedulers" to "CPM2_Core4_Runtime.CMP2_Core4_FP_Runtime_Scheduler"
+  edge [] from "CPM2_Core4_Runtime.CMP2_Core4_FP_Runtime_Scheduler" port "contained" to "SecondSpeedVectorCalc"
+  edge [] from "SecondSpeedVectorCalc" port "schedulers" to "CPM2_Core5_Runtime.CMP2_Core5_FP_Runtime_Scheduler"
+  edge [] from "CPM2_Core5_Runtime.CMP2_Core5_FP_Runtime_Scheduler" port "contained" to "SecondSpeedVectorCalc"
+  edge [] from "SecondSpeedVectorCalc" port "schedulers" to "CPM2_Core6_Runtime.CMP2_Core6_FP_Runtime_Scheduler"
+  edge [] from "CPM2_Core6_Runtime.CMP2_Core6_FP_Runtime_Scheduler" port "contained" to "SecondSpeedVectorCalc"
+  edge [] from "SecondAccCalc" port "schedulers" to "CPM1_Core1_Runtime.CMP1_Core1_FP_Runtime_Scheduler"
+  edge [] from "CPM1_Core1_Runtime.CMP1_Core1_FP_Runtime_Scheduler" port "contained" to "SecondAccCalc"
+  edge [] from "SecondAccCalc" port "schedulers" to "CPM1_Core2_Runtime.CMP1_Core2_FP_Runtime_Scheduler"
+  edge [] from "CPM1_Core2_Runtime.CMP1_Core2_FP_Runtime_Scheduler" port "contained" to "SecondAccCalc"
+  edge [] from "SecondAccCalc" port "schedulers" to "CPM2_Core3_Runtime.CMP2_Core3_FP_Runtime_Scheduler"
+  edge [] from "CPM2_Core3_Runtime.CMP2_Core3_FP_Runtime_Scheduler" port "contained" to "SecondAccCalc"
+  edge [] from "SecondAccCalc" port "schedulers" to "CPM2_Core4_Runtime.CMP2_Core4_FP_Runtime_Scheduler"
+  edge [] from "CPM2_Core4_Runtime.CMP2_Core4_FP_Runtime_Scheduler" port "contained" to "SecondAccCalc"
+  edge [] from "SecondAccCalc" port "schedulers" to "CPM2_Core5_Runtime.CMP2_Core5_FP_Runtime_Scheduler"
+  edge [] from "CPM2_Core5_Runtime.CMP2_Core5_FP_Runtime_Scheduler" port "contained" to "SecondAccCalc"
+  edge [] from "SecondAccCalc" port "schedulers" to "CPM2_Core6_Runtime.CMP2_Core6_FP_Runtime_Scheduler"
+  edge [] from "CPM2_Core6_Runtime.CMP2_Core6_FP_Runtime_Scheduler" port "contained" to "SecondAccCalc"
+  edge [] from "SecondAltitudeCalc" port "schedulers" to "CPM1_Core1_Runtime.CMP1_Core1_FP_Runtime_Scheduler"
+  edge [] from "CPM1_Core1_Runtime.CMP1_Core1_FP_Runtime_Scheduler" port "contained" to "SecondAltitudeCalc"
+  edge [] from "SecondAltitudeCalc" port "schedulers" to "CPM1_Core2_Runtime.CMP1_Core2_FP_Runtime_Scheduler"
+  edge [] from "CPM1_Core2_Runtime.CMP1_Core2_FP_Runtime_Scheduler" port "contained" to "SecondAltitudeCalc"
+  edge [] from "SecondAltitudeCalc" port "schedulers" to "CPM2_Core3_Runtime.CMP2_Core3_FP_Runtime_Scheduler"
+  edge [] from "CPM2_Core3_Runtime.CMP2_Core3_FP_Runtime_Scheduler" port "contained" to "SecondAltitudeCalc"
+  edge [] from "SecondAltitudeCalc" port "schedulers" to "CPM2_Core4_Runtime.CMP2_Core4_FP_Runtime_Scheduler"
+  edge [] from "CPM2_Core4_Runtime.CMP2_Core4_FP_Runtime_Scheduler" port "contained" to "SecondAltitudeCalc"
+  edge [] from "SecondAltitudeCalc" port "schedulers" to "CPM2_Core5_Runtime.CMP2_Core5_FP_Runtime_Scheduler"
+  edge [] from "CPM2_Core5_Runtime.CMP2_Core5_FP_Runtime_Scheduler" port "contained" to "SecondAltitudeCalc"
+  edge [] from "SecondAltitudeCalc" port "schedulers" to "CPM2_Core6_Runtime.CMP2_Core6_FP_Runtime_Scheduler"
+  edge [] from "CPM2_Core6_Runtime.CMP2_Core6_FP_Runtime_Scheduler" port "contained" to "SecondAltitudeCalc"
+  edge [] from "DBF" port "schedulers" to "CPM1_Core1_Runtime.CMP1_Core1_FP_Runtime_Scheduler"
+  edge [] from "CPM1_Core1_Runtime.CMP1_Core1_FP_Runtime_Scheduler" port "contained" to "DBF"
+  edge [] from "DBF" port "schedulers" to "CPM1_Core2_Runtime.CMP1_Core2_FP_Runtime_Scheduler"
+  edge [] from "CPM1_Core2_Runtime.CMP1_Core2_FP_Runtime_Scheduler" port "contained" to "DBF"
+  edge [] from "DBF" port "schedulers" to "CPM2_Core3_Runtime.CMP2_Core3_FP_Runtime_Scheduler"
+  edge [] from "CPM2_Core3_Runtime.CMP2_Core3_FP_Runtime_Scheduler" port "contained" to "DBF"
+  edge [] from "DBF" port "schedulers" to "CPM2_Core4_Runtime.CMP2_Core4_FP_Runtime_Scheduler"
+  edge [] from "CPM2_Core4_Runtime.CMP2_Core4_FP_Runtime_Scheduler" port "contained" to "DBF"
+  edge [] from "DBF" port "schedulers" to "CPM2_Core5_Runtime.CMP2_Core5_FP_Runtime_Scheduler"
+  edge [] from "CPM2_Core5_Runtime.CMP2_Core5_FP_Runtime_Scheduler" port "contained" to "DBF"
+  edge [] from "DBF" port "schedulers" to "CPM2_Core6_Runtime.CMP2_Core6_FP_Runtime_Scheduler"
+  edge [] from "CPM2_Core6_Runtime.CMP2_Core6_FP_Runtime_Scheduler" port "contained" to "DBF"
+  edge [] from "PC" port "schedulers" to "CPM1_Core1_Runtime.CMP1_Core1_FP_Runtime_Scheduler"
+  edge [] from "CPM1_Core1_Runtime.CMP1_Core1_FP_Runtime_Scheduler" port "contained" to "PC"
+  edge [] from "PC" port "schedulers" to "CPM1_Core2_Runtime.CMP1_Core2_FP_Runtime_Scheduler"
+  edge [] from "CPM1_Core2_Runtime.CMP1_Core2_FP_Runtime_Scheduler" port "contained" to "PC"
+  edge [] from "PC" port "schedulers" to "CPM2_Core3_Runtime.CMP2_Core3_FP_Runtime_Scheduler"
+  edge [] from "CPM2_Core3_Runtime.CMP2_Core3_FP_Runtime_Scheduler" port "contained" to "PC"
+  edge [] from "PC" port "schedulers" to "CPM2_Core4_Runtime.CMP2_Core4_FP_Runtime_Scheduler"
+  edge [] from "CPM2_Core4_Runtime.CMP2_Core4_FP_Runtime_Scheduler" port "contained" to "PC"
+  edge [] from "PC" port "schedulers" to "CPM2_Core5_Runtime.CMP2_Core5_FP_Runtime_Scheduler"
+  edge [] from "CPM2_Core5_Runtime.CMP2_Core5_FP_Runtime_Scheduler" port "contained" to "PC"
+  edge [] from "PC" port "schedulers" to "CPM2_Core6_Runtime.CMP2_Core6_FP_Runtime_Scheduler"
+  edge [] from "CPM2_Core6_Runtime.CMP2_Core6_FP_Runtime_Scheduler" port "contained" to "PC"
+  edge [] from "DFB" port "schedulers" to "CPM1_Core1_Runtime.CMP1_Core1_FP_Runtime_Scheduler"
+  edge [] from "CPM1_Core1_Runtime.CMP1_Core1_FP_Runtime_Scheduler" port "contained" to "DFB"
+  edge [] from "DFB" port "schedulers" to "CPM1_Core2_Runtime.CMP1_Core2_FP_Runtime_Scheduler"
+  edge [] from "CPM1_Core2_Runtime.CMP1_Core2_FP_Runtime_Scheduler" port "contained" to "DFB"
+  edge [] from "DFB" port "schedulers" to "CPM2_Core3_Runtime.CMP2_Core3_FP_Runtime_Scheduler"
+  edge [] from "CPM2_Core3_Runtime.CMP2_Core3_FP_Runtime_Scheduler" port "contained" to "DFB"
+  edge [] from "DFB" port "schedulers" to "CPM2_Core4_Runtime.CMP2_Core4_FP_Runtime_Scheduler"
+  edge [] from "CPM2_Core4_Runtime.CMP2_Core4_FP_Runtime_Scheduler" port "contained" to "DFB"
+  edge [] from "DFB" port "schedulers" to "CPM2_Core5_Runtime.CMP2_Core5_FP_Runtime_Scheduler"
+  edge [] from "CPM2_Core5_Runtime.CMP2_Core5_FP_Runtime_Scheduler" port "contained" to "DFB"
+  edge [] from "DFB" port "schedulers" to "CPM2_Core6_Runtime.CMP2_Core6_FP_Runtime_Scheduler"
+  edge [] from "CPM2_Core6_Runtime.CMP2_Core6_FP_Runtime_Scheduler" port "contained" to "DFB"
+  edge [] from "CFAR" port "schedulers" to "CPM1_Core1_Runtime.CMP1_Core1_FP_Runtime_Scheduler"
+  edge [] from "CPM1_Core1_Runtime.CMP1_Core1_FP_Runtime_Scheduler" port "contained" to "CFAR"
+  edge [] from "CFAR" port "schedulers" to "CPM1_Core2_Runtime.CMP1_Core2_FP_Runtime_Scheduler"
+  edge [] from "CPM1_Core2_Runtime.CMP1_Core2_FP_Runtime_Scheduler" port "contained" to "CFAR"
+  edge [] from "CFAR" port "schedulers" to "CPM2_Core3_Runtime.CMP2_Core3_FP_Runtime_Scheduler"
+  edge [] from "CPM2_Core3_Runtime.CMP2_Core3_FP_Runtime_Scheduler" port "contained" to "CFAR"
+  edge [] from "CFAR" port "schedulers" to "CPM2_Core4_Runtime.CMP2_Core4_FP_Runtime_Scheduler"
+  edge [] from "CPM2_Core4_Runtime.CMP2_Core4_FP_Runtime_Scheduler" port "contained" to "CFAR"
+  edge [] from "CFAR" port "schedulers" to "CPM2_Core5_Runtime.CMP2_Core5_FP_Runtime_Scheduler"
+  edge [] from "CPM2_Core5_Runtime.CMP2_Core5_FP_Runtime_Scheduler" port "contained" to "CFAR"
+  edge [] from "CFAR" port "schedulers" to "CPM2_Core6_Runtime.CMP2_Core6_FP_Runtime_Scheduler"
+  edge [] from "CPM2_Core6_Runtime.CMP2_Core6_FP_Runtime_Scheduler" port "contained" to "CFAR"
+  edge [] from "INT" port "schedulers" to "CPM1_Core1_Runtime.CMP1_Core1_FP_Runtime_Scheduler"
+  edge [] from "CPM1_Core1_Runtime.CMP1_Core1_FP_Runtime_Scheduler" port "contained" to "INT"
+  edge [] from "INT" port "schedulers" to "CPM1_Core2_Runtime.CMP1_Core2_FP_Runtime_Scheduler"
+  edge [] from "CPM1_Core2_Runtime.CMP1_Core2_FP_Runtime_Scheduler" port "contained" to "INT"
+  edge [] from "INT" port "schedulers" to "CPM2_Core3_Runtime.CMP2_Core3_FP_Runtime_Scheduler"
+  edge [] from "CPM2_Core3_Runtime.CMP2_Core3_FP_Runtime_Scheduler" port "contained" to "INT"
+  edge [] from "INT" port "schedulers" to "CPM2_Core4_Runtime.CMP2_Core4_FP_Runtime_Scheduler"
+  edge [] from "CPM2_Core4_Runtime.CMP2_Core4_FP_Runtime_Scheduler" port "contained" to "INT"
+  edge [] from "INT" port "schedulers" to "CPM2_Core5_Runtime.CMP2_Core5_FP_Runtime_Scheduler"
+  edge [] from "CPM2_Core5_Runtime.CMP2_Core5_FP_Runtime_Scheduler" port "contained" to "INT"
+  edge [] from "INT" port "schedulers" to "CPM2_Core6_Runtime.CMP2_Core6_FP_Runtime_Scheduler"
+  edge [] from "CPM2_Core6_Runtime.CMP2_Core6_FP_Runtime_Scheduler" port "contained" to "INT"
+  edge [] from "DFBDisplaced" port "schedulers" to "CPM1_Core1_Runtime.CMP1_Core1_FP_Runtime_Scheduler"
+  edge [] from "CPM1_Core1_Runtime.CMP1_Core1_FP_Runtime_Scheduler" port "contained" to "DFBDisplaced"
+  edge [] from "DFBDisplaced" port "schedulers" to "CPM1_Core2_Runtime.CMP1_Core2_FP_Runtime_Scheduler"
+  edge [] from "CPM1_Core2_Runtime.CMP1_Core2_FP_Runtime_Scheduler" port "contained" to "DFBDisplaced"
+  edge [] from "DFBDisplaced" port "schedulers" to "CPM2_Core3_Runtime.CMP2_Core3_FP_Runtime_Scheduler"
+  edge [] from "CPM2_Core3_Runtime.CMP2_Core3_FP_Runtime_Scheduler" port "contained" to "DFBDisplaced"
+  edge [] from "DFBDisplaced" port "schedulers" to "CPM2_Core4_Runtime.CMP2_Core4_FP_Runtime_Scheduler"
+  edge [] from "CPM2_Core4_Runtime.CMP2_Core4_FP_Runtime_Scheduler" port "contained" to "DFBDisplaced"
+  edge [] from "DFBDisplaced" port "schedulers" to "CPM2_Core5_Runtime.CMP2_Core5_FP_Runtime_Scheduler"
+  edge [] from "CPM2_Core5_Runtime.CMP2_Core5_FP_Runtime_Scheduler" port "contained" to "DFBDisplaced"
+  edge [] from "DFBDisplaced" port "schedulers" to "CPM2_Core6_Runtime.CMP2_Core6_FP_Runtime_Scheduler"
+  edge [] from "CPM2_Core6_Runtime.CMP2_Core6_FP_Runtime_Scheduler" port "contained" to "DFBDisplaced"
+  edge [] from "CFARDisplaced" port "schedulers" to "CPM1_Core1_Runtime.CMP1_Core1_FP_Runtime_Scheduler"
+  edge [] from "CPM1_Core1_Runtime.CMP1_Core1_FP_Runtime_Scheduler" port "contained" to "CFARDisplaced"
+  edge [] from "CFARDisplaced" port "schedulers" to "CPM1_Core2_Runtime.CMP1_Core2_FP_Runtime_Scheduler"
+  edge [] from "CPM1_Core2_Runtime.CMP1_Core2_FP_Runtime_Scheduler" port "contained" to "CFARDisplaced"
+  edge [] from "CFARDisplaced" port "schedulers" to "CPM2_Core3_Runtime.CMP2_Core3_FP_Runtime_Scheduler"
+  edge [] from "CPM2_Core3_Runtime.CMP2_Core3_FP_Runtime_Scheduler" port "contained" to "CFARDisplaced"
+  edge [] from "CFARDisplaced" port "schedulers" to "CPM2_Core4_Runtime.CMP2_Core4_FP_Runtime_Scheduler"
+  edge [] from "CPM2_Core4_Runtime.CMP2_Core4_FP_Runtime_Scheduler" port "contained" to "CFARDisplaced"
+  edge [] from "CFARDisplaced" port "schedulers" to "CPM2_Core5_Runtime.CMP2_Core5_FP_Runtime_Scheduler"
+  edge [] from "CPM2_Core5_Runtime.CMP2_Core5_FP_Runtime_Scheduler" port "contained" to "CFARDisplaced"
+  edge [] from "CFARDisplaced" port "schedulers" to "CPM2_Core6_Runtime.CMP2_Core6_FP_Runtime_Scheduler"
+  edge [] from "CPM2_Core6_Runtime.CMP2_Core6_FP_Runtime_Scheduler" port "contained" to "CFARDisplaced"
+  edge [] from "AltitudeCalc" port "mappingHosts" to "Platform.SDRAM"
+  edge [] from "FormatSpeedVectorCalc" port "mappingHosts" to "Platform.SDRAM"
+  edge [] from "SpeedVectorCalc" port "mappingHosts" to "Platform.SDRAM"
+  edge [] from "HeadingCalc" port "mappingHosts" to "Platform.SDRAM"
+  edge [] from "FormatLoadFactorCalc" port "mappingHosts" to "Platform.SDRAM"
+  edge [] from "LoadFactorCalc" port "mappingHosts" to "Platform.SDRAM"
+  edge [] from "AccCalc" port "mappingHosts" to "Platform.SDRAM"
+  edge [] from "SecondSpeedVectorCalc" port "mappingHosts" to "Platform.SDRAM"
+  edge [] from "SecondAccCalc" port "mappingHosts" to "Platform.SDRAM"
+  edge [] from "SecondAltitudeCalc" port "mappingHosts" to "Platform.SDRAM"
+  edge [] from "DBF" port "mappingHosts" to "Platform.SDRAM"
+  edge [] from "PC" port "mappingHosts" to "Platform.SDRAM"
+  edge [] from "DFB" port "mappingHosts" to "Platform.SDRAM"
+  edge [] from "CFAR" port "mappingHosts" to "Platform.SDRAM"
+  edge [] from "INT" port "mappingHosts" to "Platform.SDRAM"
+  edge [] from "DFBDisplaced" port "mappingHosts" to "Platform.SDRAM"
+  edge [] from "CFARDisplaced" port "mappingHosts" to "Platform.SDRAM"
+  edge [] from "ADC1AltitudeSignal" port "mappingHosts" to "Platform.SDRAM"
+  edge [] from "INS1SpeedVectorSignal" port "mappingHosts" to "Platform.SDRAM"
+  edge [] from "INS2SpeedVectorSignal" port "mappingHosts" to "Platform.SDRAM"
+  edge [] from "INS1LoadFactorSignal" port "mappingHosts" to "Platform.SDRAM"
+  edge [] from "INS2LoadFactorSignal" port "mappingHosts" to "Platform.SDRAM"
+  edge [] from "InternalSpeedVectorSignal" port "mappingHosts" to "Platform.SDRAM"
+  edge [] from "Platform.SDRAM" port "contained" to "InternalSpeedVectorSignal"
+  edge [] from "SpeedVectorSignal" port "mappingHosts" to "Platform.SDRAM"
+  edge [] from "Platform.SDRAM" port "contained" to "SpeedVectorSignal"
+  edge [] from "InternalLoadFactorSignal" port "mappingHosts" to "Platform.SDRAM"
+  edge [] from "Platform.SDRAM" port "contained" to "InternalLoadFactorSignal"
+  edge [] from "LoadFactorSignal" port "mappingHosts" to "Platform.SDRAM"
+  edge [] from "Platform.SDRAM" port "contained" to "LoadFactorSignal"
+  edge [] from "AccSignal" port "mappingHosts" to "Platform.SDRAM"
+  edge [] from "Platform.SDRAM" port "contained" to "AccSignal"
+  edge [] from "AltitudeSignal" port "mappingHosts" to "Platform.SDRAM"
+  edge [] from "SpeedSignal" port "mappingHosts" to "Platform.SDRAM"
+  edge [] from "HeadingSignal" port "mappingHosts" to "Platform.SDRAM"
+  edge [] from "SecondINS1LoadFactor" port "mappingHosts" to "Platform.SDRAM"
+  edge [] from "SecondAcc" port "mappingHosts" to "Platform.SDRAM"
+  edge [] from "SecondADC1Altitude" port "mappingHosts" to "Platform.SDRAM"
+  edge [] from "SecondAltitude" port "mappingHosts" to "Platform.SDRAM"
+  edge [] from "SecondINS1SpeedVector" port "mappingHosts" to "Platform.SDRAM"
+  edge [] from "SecondSpeed" port "mappingHosts" to "Platform.SDRAM"
+  edge [] from "Platform.SDRAM" port "contained" to "SecondSpeed"
+  edge [] from "PCtoDFB" port "mappingHosts" to "Platform.SDRAM"
+  edge [] from "Platform.SDRAM" port "contained" to "PCtoDFB"
+  edge [] from "DBFToPC" port "mappingHosts" to "Platform.SDRAM"
+  edge [] from "Platform.SDRAM" port "contained" to "DBFToPC"
+  edge [] from "EntryToDBF" port "mappingHosts" to "Platform.SDRAM"
+  edge [] from "DFBToCFAR" port "mappingHosts" to "Platform.SDRAM"
+  edge [] from "Platform.SDRAM" port "contained" to "DFBToCFAR"
+  edge [] from "CFARToINT" port "mappingHosts" to "Platform.SDRAM"
+  edge [] from "Platform.SDRAM" port "contained" to "CFARToINT"
+  edge [] from "INTToExit" port "mappingHosts" to "Platform.SDRAM"
+}

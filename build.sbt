@@ -10,9 +10,10 @@ lazy val scalaGraphVersion = "1.13.5"
 
 lazy val root = project
   .in(file("."))
-  .aggregate(common, commonj, cli, choco, forsyde, minizinc)
+  .aggregate(common, commonj,commonj2, cli, choco, forsyde, minizinc)
 
 lazy val core = (project in file("scala-core"))
+
 
 lazy val common = (project in file("scala-common"))
   .dependsOn(core)
@@ -31,7 +32,13 @@ lazy val commonj = (project in file("java-common"))
 
     )
   )
+lazy val commonj2 = (project in file("vhv"))
+  .dependsOn(core, common)
+  .settings(
+    libraryDependencies ++= Seq(
 
+    )
+  )
 lazy val forsyde = (project in file("scala-forsyde"))
   .dependsOn(core)
   .dependsOn(common)

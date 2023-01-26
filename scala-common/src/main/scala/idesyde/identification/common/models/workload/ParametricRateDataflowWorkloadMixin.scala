@@ -162,24 +162,22 @@ trait ParametricRateDataflowWorkloadMixin {
 
   // def isLive = maximalParallelClustering.zipWithIndex.map((cluster, i) => !cluster.isEmpty)
 
-  def pessimisticTokensPerChannel: Vector[Int] = {
-    val repetitionVectors = computeRepetitionVectors
-    channelsIdentifiers.zipWithIndex.map((c, cIdx) => {
-      var pessimisticMax = 1
-      dataflowGraphs.zipWithIndex
-        .foreach((g, confIdx) => {
-          g.filter((s, t, r) => s == c)
-            .foreach((s, t, r) => {
-              pessimisticMax = Math.max(
+  def pessimisticTokensPerChannel(repetitionVectors: Vector[Vector[Int]] = computeRepetitionVectors): Vector[Int] = {
+    if (repetitionVectors.exists(_.isEmpty)) {
+      Vector.fill(channelsIdentifiers.size)(-1)
+    } else {
+      channelsIdentifiers.zipWithIndex.map((c, cIdx) => {
+        dataflowGraphs.zipWithIndex
+          .flatMap((g, confIdx) => {
+            g.filter((s, t, r) => s == c)
+              .map((s, t, r) => {
                 -repetitionVectors(confIdx)(
-                  actorsIdentifiers.indexOf(t)
-                ) * r + channelNumInitialTokens(cIdx),
-                pessimisticMax
-              )
-            })
-        })
-      pessimisticMax
-    })
+                    actorsIdentifiers.indexOf(t)
+                  ) * r + channelNumInitialTokens(cIdx)
+              })
+          }).max
+      })
+    }
   }
 
   // def stateSpace: Graph[Int, Int] = {

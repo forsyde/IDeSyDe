@@ -10,8 +10,9 @@ import idesyde.identification.common.models.mixed.SDFToPartitionedSharedMemory
 import idesyde.identification.common.models.mixed.PeriodicWorkloadToPartitionedSharedMultiCore
 import idesyde.identification.common.models.workload.CommunicatingExtendedDependenciesPeriodicWorkload
 import spire.math.Rational
+import idesyde.utils.Logger
 
-object MixedRules {
+trait MixedRules(using logger: Logger) {
 
   def identSDFToTiledMultiCore(
       models: Set[DesignModel],
@@ -20,6 +21,8 @@ object MixedRules {
     val app = identified
       .filter(_.isInstanceOf[SDFApplication])
       .map(_.asInstanceOf[SDFApplication])
+      .filter(_.isConsistent) // only go forward if the SDF is consistent
+    if (app.isEmpty) logger.debug("SDFApplication is not consistent. Impossible to identify SDFToTiledMultiCore.")
     val plat = identified
       .filter(_.isInstanceOf[SchedulableTiledMultiCore])
       .map(_.asInstanceOf[SchedulableTiledMultiCore])
@@ -45,6 +48,8 @@ object MixedRules {
     val app = identified
       .filter(_.isInstanceOf[SDFApplication])
       .map(_.asInstanceOf[SDFApplication])
+      .filter(_.isConsistent) // only go forward if the SDF is consistent
+    if (app.isEmpty) logger.debug("SDFApplication is not consistent. Impossible to identify SDFToPartitionedSharedMemory.")
     val plat = identified
       .filter(_.isInstanceOf[PartitionedSharedMemoryMultiCore])
       .map(_.asInstanceOf[PartitionedSharedMemoryMultiCore])

@@ -5,15 +5,16 @@ import idesyde.identification.IdentificationModule
 import idesyde.identification.DecisionModel
 import idesyde.identification.common.rules.PlatformRules
 import idesyde.identification.common.rules.MixedRules
+import idesyde.utils.Logger
 
-class CommonIdentificationModule extends IdentificationModule {
+class CommonIdentificationModule(using logger: Logger) extends IdentificationModule with MixedRules with PlatformRules {
 
   val identificationRules = Set(
-    PlatformRules.identSchedulableTiledMultiCore,
-    PlatformRules.identPartitionedSharedMemoryMultiCore,
-    MixedRules.identSDFToPartitionedSharedMemory,
-    MixedRules.identSDFToTiledMultiCore,
-    MixedRules.identPeriodicWorkloadToPartitionedSharedMultiCore
+    identSchedulableTiledMultiCore,
+    identPartitionedSharedMemoryMultiCore,
+    identSDFToPartitionedSharedMemory,
+    identSDFToTiledMultiCore,
+    identPeriodicWorkloadToPartitionedSharedMultiCore
   )
 
   val integrationRules = Set()

@@ -76,8 +76,12 @@ final case class ChocoSDFToSChedTileHW2(
   // section for time multiplier calculation
   // if there is a 1e3 scale difference between execution and communication, we consider only execution for scaling
   // since both are inevitably consdiered during DSE
-  val timeValues = if (dse.wcets.flatten.max > 1000 * dse.platform.hardware.maxTraversalTimePerBit.flatten.max) {
+  private val execMax = dse.wcets.flatten.max
+  private val commMax = dse.platform.hardware.maxTraversalTimePerBit.flatten.max
+  val timeValues = if (execMax > 1000 * commMax) {
     dse.wcets.flatten
+  } else if (commMax > 1000 * execMax) {
+    dse.platform.hardware.maxTraversalTimePerBit.flatten
   } else {
     (dse.wcets.flatten ++ dse.platform.hardware.maxTraversalTimePerBit.flatten)
   }

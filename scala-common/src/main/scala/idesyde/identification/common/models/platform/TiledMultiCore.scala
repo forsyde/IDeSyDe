@@ -64,9 +64,7 @@ final case class TiledMultiCore(
         computedPaths(i)(j)
           .map(ce => {
             val dstIdx = communicationElems.indexOf(ce)
-            (communicationElementsBitPerSecPerChannel(dstIdx) * communicationElementsMaxChannels(
-              dstIdx
-            ))
+            (communicationElementsBitPerSecPerChannel(dstIdx).reciprocal)
           })
           .foldLeft(Rational.zero)(_ + _)
       })
@@ -79,7 +77,9 @@ final case class TiledMultiCore(
         computedPaths(i)(j)
           .map(ce => {
             val dstIdx = communicationElems.indexOf(ce)
-            communicationElementsBitPerSecPerChannel(dstIdx)
+            communicationElementsBitPerSecPerChannel(dstIdx).reciprocal / communicationElementsMaxChannels(
+              dstIdx
+            )
           })
           .foldLeft(Rational.zero)(_ + _)
       })

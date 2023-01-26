@@ -28,6 +28,7 @@ import scala.collection.mutable.Buffer
 import forsyde.io.java.core.EdgeInfo
 import idesyde.identification.common.models.mixed.SDFToTiledMultiCore
 import idesyde.identification.common.StandardDecisionModel
+import org.chocosolver.solver.objective.OptimizationPolicy
 
 class ConMonitorObj2(val model: ChocoSDFToSChedTileHW2) extends IMonitorContradiction {
 
@@ -73,14 +74,19 @@ final case class ChocoSDFToSChedTileHW2(
   // chocoModel.getSolver().plugMonitor(ConMonitorObj2(this))
 
   // section for time multiplier calculation
-  val timeValues =
+  // if there is a 1e3 scale difference between execution and communication, we consider only execution for scaling
+  // since both are inevitably consdiered during DSE
+  val timeValues = if (dse.wcets.flatten.max > 1000 * dse.platform.hardware.maxTraversalTimePerBit.flatten.max) {
+    dse.wcets.flatten
+  } else {
     (dse.wcets.flatten ++ dse.platform.hardware.maxTraversalTimePerBit.flatten)
+  }
   var timeMultiplier = 1L
   while (
     timeValues
       .map(t => t * (timeMultiplier))
       .exists(d =>
-        d.numerator <= d.denominator / 10L
+        d.numerator <= d.denominator
       ) // ensure that the numbers magnitudes still stay sane
     &&
     timeValues
@@ -357,9 +363,8 @@ final case class ChocoSDFToSChedTileHW2(
   //     .post()
   // }
   // println(dse.sdfApplications.firingsPrecedenceGraph.toSortedString())
-  override val strategies: Array[AbstractStrategy[? <: Variable]] = Array(
-    Search.minDomLBSearch(nUsedPEs),
-    CompactingMultiCoreMapping[Int](
+
+  private val compactStrategy = CompactingMultiCoreMapping[Int](
       dse.platform.hardware.minTraversalTimePerBit
         .map(arr => arr.map(v => (v * timeMultiplier).ceil.toInt).toArray)
         .toArray,
@@ -384,30 +389,13 @@ final case class ChocoSDFToSChedTileHW2(
               dse.sdfApplications.firingsPrecedenceGraph.get(sdfAnalysisModule.jobsAndActors(j))
             )
             .isDefined
-    ),
+    )
+  override val strategies: Array[AbstractStrategy[? <: Variable]] = Array(
+    Search.minDomLBSearch(nUsedPEs),
+    compactStrategy,
     Search.minDomLBSearch(tileAnalysisModule.numVirtualChannelsForProcElem.flatten: _*),
     Search.minDomLBSearch(sdfAnalysisModule.jobOrder: _*),
-    // Search.inputOrderLBSearch(
-    //   dse.sdfApplications.topologicalAndHeavyJobOrdering.map(j =>
-    //     sdfAnalysisModule.jobOrder(sdfAnalysisModule.jobsAndActors.indexOf(j))
-    //   ): _*
-    // ),
-    // Search.inputOrderLBSearch(
-    //   dse.sdfApplications.topologicalAndHeavyJobOrdering.map(j =>
-    //     sdfAnalysisModule.jobTasks(sdfAnalysisModule.jobsAndActors.indexOf(j)).getStart()
-    //   ): _*
-    // ),
     Search.minDomLBSearch(sdfAnalysisModule.invThroughputs: _*)
-    // Search.minDomLBSearch(maxLatency)
-    // Search.minDomLBSearch(sdfAnalysisModule.maxBufferTokens: _*),
-    // Search.minDomLBSearch(indexOfPe: _*),
-    // these next two lines makre sure the choice for start times and throughput are made just like the ordering and mapping
-    // Search.inputOrderLBSearch(
-    //   dse.sdfApplications.topologicalAndHeavyJobOrdering.map(j =>
-    //     sdfAnalysisModule.jobStartTime(sdfAnalysisModule.jobsAndActors.indexOf(j))
-    //   ): _*
-    // ),
-    // Search.minDomLBSearch(nUsedPEs),
   )
 
   def chooseOrderingIfMapped(

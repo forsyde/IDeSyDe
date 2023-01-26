@@ -60,11 +60,6 @@ final case class SDFApplication(
 
   val processSizes = actorSizes
 
-  val messagesMaxSizes: Vector[Long] =
-    channelsIdentifiers.zipWithIndex.map((c, i) =>
-      pessimisticTokensPerChannel(i) * channelTokenSizes(i)
-    )
-
   val messagesFromChannels = dataflowGraphs.zipWithIndex.map((df, dfi) => {
     var lumpedChannels = mutable
       .Map[(String, String), (Vector[String], Long, Int, Int, Int)]()
@@ -113,9 +108,19 @@ final case class SDFApplication(
   val sdfBalanceMatrix: Vector[Vector[Int]] = computeBalanceMatrices(0)
 
   /** this is a simple shortcut for the repetition vectors as SDFs have only one configuration */
-  val sdfRepetitionVectors: Vector[Int] = computeRepetitionVectors(0)
+  val repetitionVectors = computeRepetitionVectors
+  val sdfRepetitionVectors: Vector[Int] = repetitionVectors(0)
 
   val sdfDisjointComponents = disjointComponents.head
+
+  val sdfPessimisticTokensPerChannel = pessimisticTokensPerChannel(repetitionVectors)
+
+  val messagesMaxSizes: Vector[Long] =
+    channelsIdentifiers.zipWithIndex.map((c, i) =>
+      sdfPessimisticTokensPerChannel(i) * channelTokenSizes(i)
+    )
+
+  def isConsistent: Boolean = sdfRepetitionVectors.size > 0
 
   /** This graph serves the same purpose as the common HSDF transformation, but simply stores
     * precedences between firings instead of data movement.

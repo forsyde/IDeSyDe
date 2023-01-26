@@ -21,17 +21,17 @@ trait IdentificationModule {
     *   The set of identification rules registered in this module
     */
   def identificationRules: Set[
-    Function2[Set[DesignModel], Set[DecisionModel], Set[? <: DecisionModel]]
+    (Set[DesignModel], Set[DecisionModel]) => Set[? <: DecisionModel]
   ]
 
   /** Each integration rule takes a design model and (solved/explored) decision model to produce a
     * new design model that has the decision model merged into it. The integration rule might return
-    * nothing if the input paraters are unkown.
+    * nothing if the input parameters are unknown.
     *
     * @return
     *   The set of integration rules registered in this module
     */
   def integrationRules: Set[
-    Function2[DesignModel, DecisionModel, Option[? <: DesignModel]]
+    (DesignModel, DecisionModel) => Option[? <: DesignModel]
   ]
 }

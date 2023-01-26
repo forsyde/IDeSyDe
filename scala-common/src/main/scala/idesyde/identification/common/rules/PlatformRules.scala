@@ -9,7 +9,7 @@ import idesyde.identification.common.models.platform.TiledMultiCore
 import idesyde.identification.common.models.platform.SharedMemoryMultiCore
 import idesyde.identification.common.models.platform.PartitionedSharedMemoryMultiCore
 
-object PlatformRules {
+trait PlatformRules {
 
   def identSchedulableTiledMultiCore(
       models: Set[DesignModel],

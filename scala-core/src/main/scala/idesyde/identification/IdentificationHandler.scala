@@ -34,8 +34,7 @@ class IdentificationHandler(
       // val reIdentified = ruleResults
       //   .flatMap((irule, res) => res)
       //   .filter(m => identified.exists(prev => prev.uniqueIdentifier == m.uniqueIdentifier && prev.coveredElements == m.coveredElements))
-      val newIdentified =
-        ruleResults.filter(res => !identified.contains(res))
+      val newIdentified = ruleResults.diff(identified)
       // add to the current identified
       identified = identified ++ newIdentified
       noNewIdentification = newIdentified.isEmpty

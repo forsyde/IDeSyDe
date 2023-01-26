@@ -79,12 +79,12 @@ trait ParametricRateDataflowWorkloadMixin {
   def computeRepetitionVectors: Vector[Vector[Int]] = dataflowGraphs.zipWithIndex.map((df, dfi) => {
     val minus_one = Rational(-1)
     val nodes = df.map((s, _, _) => s).toSet.union(df.map((_, t, _) => t).toSet)
-    val g         = Graph.from(nodes, df.map((src, dst, w) => src ~> dst))
+    // val g         = Graph.from(nodes, df.map((src, dst, w) => src ~> dst))
     // first we build a compressed g with only the actors
     // with the fractional flows in a matrix
     var gEdges = Buffer[(String, String)]()
     var gRates =
-      Array.fill(actorsIdentifiers.size)(Array.fill(actorsIdentifiers.size)(Rational.zero))
+      Buffer.fill(actorsIdentifiers.size)(Buffer.fill(actorsIdentifiers.size)(Rational.zero))
     for (
       (src, c, prod)  <- df;
       (cc, dst, cons) <- df;
@@ -105,7 +105,7 @@ trait ParametricRateDataflowWorkloadMixin {
     val gActorsDir = Graph.from(actorsIdentifiers, gEdges.map((src, dst) => src ~> dst))
     // we iterate on the undirected version as to 'come back'
     // to vertex in feed-forward paths
-    val rates      = actorsIdentifiers.map(_ => minus_one).toArray
+    val rates      = actorsIdentifiers.map(_ => minus_one).toBuffer
     var consistent = true
     for (
       component <- gActors.componentTraverser();
@@ -146,14 +146,15 @@ trait ParametricRateDataflowWorkloadMixin {
     }
     // finish early in case of non consistency
     if (!consistent)
-      return Vector()
-    // otherwise simplify the repVec
-    val gcdV = rates.map(_.numerator.toLong).reduce((i1, i2) => spire.math.gcd(i1, i2))
-    val lcmV = rates
-      .map(_.denominator.toLong)
-      .reduce((i1, i2) => spire.math.lcm(i1, i2))
-    rates.map(_ * lcmV / gcdV).map(_.numerator.toInt).toVector
-
+      Vector()
+    else {
+      // otherwise simplify the repVec
+      val gcdV = rates.map(_.numerator.toLong).reduce((i1, i2) => spire.math.gcd(i1, i2))
+      val lcmV = rates
+        .map(_.denominator.toLong)
+        .reduce((i1, i2) => spire.math.lcm(i1, i2))
+      rates.map(_ * lcmV / gcdV).map(_.numerator.toInt).toVector
+    }
   })
   // computeBalanceMatrices.zipWithIndex.map((m, ind) => SDFUtils.getRepetitionVector(m, initialTokens, numDisjointComponents(ind)))
 

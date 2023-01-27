@@ -395,8 +395,11 @@ final case class ChocoSDFToSChedTileHW2(
             .isDefined
     )
   override val strategies: Array[AbstractStrategy[? <: Variable]] = Array(
-    Search.minDomLBSearch(nUsedPEs),
-    compactStrategy,
+    FindAndProve(
+      nUsedPEs +: memoryMappingModule.processesMemoryMapping,
+      compactStrategy,
+      Search.sequencer(Search.minDomLBSearch(nUsedPEs), compactStrategy).asInstanceOf[AbstractStrategy[IntVar]]
+    ),
     Search.minDomLBSearch(tileAnalysisModule.numVirtualChannelsForProcElem.flatten: _*),
     Search.minDomLBSearch(sdfAnalysisModule.jobOrder: _*),
     Search.minDomLBSearch(sdfAnalysisModule.invThroughputs: _*)

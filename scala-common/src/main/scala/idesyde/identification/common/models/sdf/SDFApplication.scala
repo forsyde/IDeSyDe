@@ -18,12 +18,12 @@ import scala.collection.mutable.Buffer
   *
   * This decision model encodes a synchronous dataflow graphs without its explicit topology matrix,
   * also known as balance matrix in some newer texts. This is achieved by encoding the graph as $(A
-  * \cup C, E)$ where $A$ is the set of actors, [[actorsIdentifiers]], and $C$ is the set of
-  * channels, [[channelsIdentifiers]]. Every edge in $E$ connects an actor to a channel or a channel
-  * to an actor, i.e. $e \in E$ means that $e \in A \times C$ or $e \in C \times A$. These edges are
-  * encoded with [[topologySrcs]], [[topologyDsts]] and [[topologyEdgeValue]] for the amount of
-  * tokens produced or consumed. For example, if $e = (a, c, 2)$, then the edge $e$ is the
-  * production of 2 tokens from the actor $a$ to channel $c$.
+  * \cup C, E)$ where $A$ is the set of actors, `actorsIdentifiers`, and $C$ is the set of channels,
+  * `channelsIdentifiers`. Every edge in $E$ connects an actor to a channel or a channel to an
+  * actor, i.e. $e \in E$ means that $e \in A \times C$ or $e \in C \times A$. These edges are
+  * encoded with `topologySrcs`, `topologyDsts` and `topologyEdgeValue` for the amount of tokens
+  * produced or consumed. For example, if $e = (a, c, 2)$, then the edge $e$ is the production of 2
+  * tokens from the actor $a$ to channel $c$.
   *
   * Other parameters ...
   */

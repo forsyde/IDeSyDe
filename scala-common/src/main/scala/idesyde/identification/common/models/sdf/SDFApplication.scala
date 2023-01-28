@@ -23,9 +23,26 @@ import scala.collection.mutable.Buffer
   * actor, i.e. $e \in E$ means that $e \in A \times C$ or $e \in C \times A$. These edges are
   * encoded with `topologySrcs`, `topologyDsts` and `topologyEdgeValue` for the amount of tokens
   * produced or consumed. For example, if $e = (a, c, 2)$, then the edge $e$ is the production of 2
-  * tokens from the actor $a$ to channel $c$.
+  * tokens from the actor $a$ to channel $c$. The other parameters bring enough instrumentation
+  * information so that the decision model can potentially be mapped into a target platform.
   *
-  * Other parameters ...
+  * @param actorsIdentifiers
+  *   the set of actors
+  * @param channelsIdentifiers
+  *   the set of channels
+  * @param topologySrcs
+  *   the sources for every edge triple in the SDF graph.
+  * @param topologyDsts
+  *   the target for every edge triple in the SDF graph.
+  * @param topologyEdgeValue
+  *   the produced or consumed tokens for each edge triple in the SDF graph.
+  * @param actorSizes
+  *   the size in bits for each actor's instruction(s)
+  * @param actorThrouhgputs
+  *   the fixed throughput expected to be done for each actor, given in executions per second.
+  *
+  * @see
+  *   [[InstrumentedWorkloadMixin]] for descriptions of the computational and memory needs.
   */
 final case class SDFApplication(
     val actorsIdentifiers: Vector[String],
@@ -46,24 +63,17 @@ final case class SDFApplication(
   val coveredElements         = (actorsIdentifiers ++ channelsIdentifiers).toSet
   val coveredElementRelations = topologySrcs.zip(topologyDsts).toSet
 
-  val topology = Graph.from(
-    actorsIdentifiers ++ channelsIdentifiers,
-    topologySrcs
-      .zip(topologyDsts)
-      .zipWithIndex
-      .map((srcdst, i) => srcdst._1 ~> srcdst._2 % topologyEdgeValue(i))
-  )
-
-  def isSelfConcurrent(actor: String): Boolean = channelsIdentifiers.exists(c =>
-    topology.get(c).diSuccessors.exists(dst => dst.toOuter == actor) &&
-      topology.get(c).diPredecessors.exists(src => src.toOuter == actor)
-  )
-
   val dataflowGraphs = Vector(
     topologySrcs
       .zip(topologyDsts)
       .zipWithIndex
       .map((srcdst, i) => (srcdst._1, srcdst._2, topologyEdgeValue(i)))
+  )
+
+  def isSelfConcurrent(actor: String): Boolean = channelsIdentifiers.exists(c =>
+    dataflowGraphs(0).exists((a, cc, _) =>
+      cc == c && dataflowGraphs(0).exists((ccc, a, _) => ccc == c)
+    )
   )
 
   val configurations = Vector((0, 0, "root"))

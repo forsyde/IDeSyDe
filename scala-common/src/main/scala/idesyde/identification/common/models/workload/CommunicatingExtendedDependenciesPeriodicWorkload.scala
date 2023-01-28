@@ -7,16 +7,16 @@ import scalax.collection.edge.Implicits._
 import idesyde.identification.common.StandardDecisionModel
 import scala.collection.mutable.Buffer
 
-/** Interface that describes a periodic workload model, also commonly known in the real time
+/** A decision model for communicating periodically activated processes.
+  *
+  * Interface that describes a periodic workload model, also commonly known in the real time
   * academic community as "periodic task model". This one in particular closely follows the
-  * definitions in:
+  * definitions in [1], but also adds a communication dimension so that further analysis and
+  * synthesis steps can treat the execution and communication properly.
   *
-  * Scheduling Dependent Periodic Tasks Without Synchronization Mechanisms, Julien Forget Frédéric
-  * Boniol, E. G. D. L. C. 2010 16th IEEE Real-Time and Embedded Technology and Applications
-  * Symposium, 2010, 301-310
-  *
-  * but also adds a communication dimension so that further analysis and synthesis steps can treat
-  * the execution and communication properly.
+  * [1](https://ieeexplore.ieee.org/document/5465989) Scheduling Dependent Periodic Tasks Without
+  * Synchronization Mechanisms, Julien Forget Frédéric Boniol, E. G. D. L. C. 2010 16th IEEE
+  * Real-Time and Embedded Technology and Applications Symposium, 2010, 301-310
   *
   * @param additionalCoveredElements
   *   this extra field exist to support wild design models being reduced to this decision model
@@ -82,11 +82,11 @@ final case class CommunicatingExtendedDependenciesPeriodicWorkload(
         .filter((c, j) => processWritesToChannel(i)(j) > 0L)
         .map((c, j) => p ~> c % processWritesToChannel(i)(j))
     ) ++
-    processes.zipWithIndex.flatMap((p, i) =>
-      channels.zipWithIndex
-        .filter((c, j) => processReadsFromChannel(i)(j) > 0L)
-        .map((c, j) => c ~> p % processReadsFromChannel(i)(j))
-    )
+      processes.zipWithIndex.flatMap((p, i) =>
+        channels.zipWithIndex
+          .filter((c, j) => processReadsFromChannel(i)(j) > 0L)
+          .map((c, j) => c ~> p % processReadsFromChannel(i)(j))
+      )
   )
 
   val hyperPeriod: Rational = periods.reduce((t1, t2) => t1.lcm(t2))
@@ -101,12 +101,12 @@ final case class CommunicatingExtendedDependenciesPeriodicWorkload(
     for (
       sorted <- affineRelationsGraph.topologicalSort();
       node   <- sorted;
-      nodeId = node.value;
+      nodeId  = node.value;
       nodeIdx = processes.indexOf(nodeId)
     ) {
       offsetsMut(nodeIdx) = node.diPredecessors
         .flatMap(pred => {
-          val predId = pred.value
+          val predId  = pred.value
           val predIdx = processes.indexOf(predId)
           pred
             .connectionsWith(node)
@@ -141,9 +141,9 @@ final case class CommunicatingExtendedDependenciesPeriodicWorkload(
       node   <- sorted;
       pred   <- node.diPredecessors;
       edge   <- pred.connectionsWith(node);
-      nodeId = node.value;
+      nodeId  = node.value;
       nodeIdx = processes.indexOf(nodeId);
-      predId = pred.value;
+      predId  = pred.value;
       predIdx = processes.indexOf(predId)
     ) {
       // first look one behind to see immediate predecessors
@@ -172,9 +172,9 @@ final case class CommunicatingExtendedDependenciesPeriodicWorkload(
       sorted <- affineRelationsGraph.topologicalSort();
       node   <- sorted;
       pred   <- node.diPredecessors;
-      nodeId = node.value;
+      nodeId  = node.value;
       nodeIdx = processes.indexOf(nodeId);
-      predId = pred.value;
+      predId  = pred.value;
       predIdx = processes.indexOf(predId)
       if prioritiesMut(nodeIdx) <= prioritiesMut(predIdx)
     ) {

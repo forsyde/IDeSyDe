@@ -28,7 +28,6 @@ lazy val commonj = (project in file("java-common"))
   .dependsOn(core, common)
   .settings(
     libraryDependencies ++= Seq(
-
     )
   )
 
@@ -131,5 +130,3 @@ ThisBuild / assembly / assemblyMergeStrategy := {
   case PathList("META-INF", xs @ _*) => MergeStrategy.discard
   case x                             => MergeStrategy.first
 }
-
-// /Compile / resourceDirectory := baseDirectory.value / "resources"

@@ -39,17 +39,17 @@ class ConMonitorObj2(val model: ChocoSDFToSChedTileHW2) extends IMonitorContradi
     //     .map(_.mkString(", "))
     //     .mkString("\n")
     // )
-    println(
-      model.dataFlows
-        .map(_.mkString(", "))
-        .mkString("\n")
-    )
+    // println(
+    //   model.dataFlows
+    //     .map(_.mkString(", "))
+    //     .mkString("\n")
+    // )
     // println(
     //   model.tileAnalysisModule.numVirtualChannelsForProcElem
     //     .map(_.filter(_.getValue() > 0).mkString(", "))
     //     .mkString("\n")
     // )
-    println(model.memoryMappingModule.processesMemoryMapping.mkString(", "))
+    // println(model.memoryMappingModule.processesMemoryMapping.mkString(", "))
     // println(model.sdfAnalysisModule.jobOrder.mkString(", "))
     // println(model.sdfAnalysisModule.jobStartTime.mkString(", "))
     // println(model.sdfAnalysisModule.invThroughputs.mkString(", "))
@@ -313,31 +313,67 @@ final case class ChocoSDFToSChedTileHW2(
         .post()
     })
   // enforcing a certain order whenever possible
-  val dataFlows = dse.platform.runtimes.schedulers.map(i =>
-    dse.platform.runtimes.schedulers.map(j => chocoModel.boolVar(s"dataFlows($i, $j)"))
-  )
+  val firerank = sdfAnalysisModule.jobsAndActors.map((a, qa) => {
+    chocoModel.intVar(s"ranking($a, $qa)", 0, sdfAnalysisModule.jobsAndActors.size, true)
+  })
+  for (((ai, qi), i) <- sdfAnalysisModule.jobsAndActors.zipWithIndex) {
+    chocoModel.max(
+      firerank(i),
+      dse.sdfApplications.firingsPrecedenceGraph
+        .get((ai, qi))
+        .diPredecessors
+        .map(sdfAnalysisModule.jobsAndActors.indexOf(_))
+        .map(sdfAnalysisModule.jobOrder(_))
+        .map(chocoModel.intAffineView(1, _, 1))
+        .toArray :+ sdfAnalysisModule.jobOrder(i)
+    ).post()
+  }
   for (
-    (p, i)  <- dse.platform.runtimes.schedulers.zipWithIndex;
-    (pp, j) <- dse.platform.runtimes.schedulers.zipWithIndex
+    ((ai, qi), i) <- sdfAnalysisModule.jobsAndActors.zipWithIndex;
+    vi = dse.sdfApplications.firingsPrecedenceGraph.get((ai, qi));
+    vj <- vi.diSuccessors;
+    (aj, qj) = vj.value;
+    j = sdfAnalysisModule.jobsAndActors.indexOf((aj, qj))
   ) {
-    val possiblePaths = tileAnalysisModule.procElemSendsDataToAnother(i)(
-      j
-    ) +: dse.platform.runtimes.schedulers.zipWithIndex.map((ppp, k) =>
-      tileAnalysisModule.procElemSendsDataToAnother(i)(k).and(dataFlows(k)(j)).boolVar()
-    )
-    chocoModel.ifOnlyIf(
-      chocoModel.arithm(dataFlows(i)(j), "=", 1),
-      chocoModel.or(
-        possiblePaths: _*
-      )
-    )
-  }
-  for ((p, i) <- dse.platform.runtimes.schedulers.zipWithIndex) {
+    val aiIdx = dse.sdfApplications.actorsIdentifiers.indexOf(ai)
+    val ajIdx = dse.sdfApplications.actorsIdentifiers.indexOf(aj)
     chocoModel.ifThen(
-      chocoModel.arithm(dataFlows(i)(i), "=", 0),
-      sdfAnalysisModule.makeCanonicalOrderingAtScheduleConstraint(i)
+      chocoModel.and(
+        chocoModel.arithm(firerank(i), "<", firerank(j)),
+        chocoModel.arithm(
+          memoryMappingModule.processesMemoryMapping(aiIdx),
+          "=",
+          memoryMappingModule.processesMemoryMapping(ajIdx)
+        )
+      ),
+      chocoModel.arithm(sdfAnalysisModule.jobOrder(i), "<", sdfAnalysisModule.jobOrder(j))
     )
   }
+  // val dataFlows = dse.platform.runtimes.schedulers.map(i =>
+  //   dse.platform.runtimes.schedulers.map(j => chocoModel.boolVar(s"dataFlows($i, $j)"))
+  // )
+  // for (
+  //   (p, i)  <- dse.platform.runtimes.schedulers.zipWithIndex;
+  //   (pp, j) <- dse.platform.runtimes.schedulers.zipWithIndex
+  // ) {
+  //   val possiblePaths = tileAnalysisModule.procElemSendsDataToAnother(i)(
+  //     j
+  //   ) +: dse.platform.runtimes.schedulers.zipWithIndex.map((ppp, k) =>
+  //     tileAnalysisModule.procElemSendsDataToAnother(i)(k).and(dataFlows(k)(j)).boolVar()
+  //   )
+  //   chocoModel.ifOnlyIf(
+  //     chocoModel.arithm(dataFlows(i)(j), "=", 1),
+  //     chocoModel.or(
+  //       possiblePaths: _*
+  //     )
+  //   )
+  // }
+  // for ((p, i) <- dse.platform.runtimes.schedulers.zipWithIndex) {
+  //   chocoModel.ifThen(
+  //     chocoModel.arithm(dataFlows(i)(i), "=", 0),
+  //     sdfAnalysisModule.makeCanonicalOrderingAtScheduleConstraint(i)
+  //   )
+  // }
   // also enforce a waterfall pattern for the mappings
   // for (
   //   (dst, j) <- dse.sdfApplications.topologicalAndHeavyActorOrdering.zipWithIndex.drop(1);
@@ -369,39 +405,45 @@ final case class ChocoSDFToSChedTileHW2(
   // println(dse.sdfApplications.firingsPrecedenceGraph.toSortedString())
 
   private val compactStrategy = CompactingMultiCoreMapping[Int](
-      dse.platform.hardware.minTraversalTimePerBit
-        .map(arr => arr.map(v => (v * timeMultiplier).ceil.toInt).toArray)
-        .toArray,
-      dse.sdfApplications.topologicalAndHeavyActorOrdering
-        .map(a =>
-          dse.sdfApplications.sdfDisjointComponents
-            .indexWhere(_.exists(_ == a))
+    dse.platform.hardware.minTraversalTimePerBit
+      .map(arr => arr.map(v => (v * timeMultiplier).ceil.toInt).toArray)
+      .toArray,
+    dse.sdfApplications.topologicalAndHeavyActorOrdering
+      .map(a =>
+        dse.sdfApplications.sdfDisjointComponents
+          .indexWhere(_.exists(_ == a))
+      )
+      .toArray,
+    dse.sdfApplications.topologicalAndHeavyActorOrdering
+      .map(a =>
+        memoryMappingModule.processesMemoryMapping(
+          dse.sdfApplications.actorsIdentifiers.indexOf(a)
         )
-        .toArray,
-      dse.sdfApplications.topologicalAndHeavyActorOrdering
-        .map(a =>
-          memoryMappingModule.processesMemoryMapping(
-            dse.sdfApplications.actorsIdentifiers.indexOf(a)
+      )
+      .toArray,
+    (i: Int) =>
+      (j: Int) =>
+        dse.sdfApplications.firingsPrecedenceGraph
+          .get(sdfAnalysisModule.jobsAndActors(i))
+          .pathTo(
+            dse.sdfApplications.firingsPrecedenceGraph.get(sdfAnalysisModule.jobsAndActors(j))
           )
-        )
-        .toArray,
-      (i: Int) =>
-        (j: Int) =>
-          dse.sdfApplications.firingsPrecedenceGraph
-            .get(sdfAnalysisModule.jobsAndActors(i))
-            .pathTo(
-              dse.sdfApplications.firingsPrecedenceGraph.get(sdfAnalysisModule.jobsAndActors(j))
-            )
-            .isDefined
-    )
+          .isDefined
+  )
   override val strategies: Array[AbstractStrategy[? <: Variable]] = Array(
     FindAndProve(
       nUsedPEs +: memoryMappingModule.processesMemoryMapping,
       compactStrategy,
-      Search.sequencer(Search.minDomLBSearch(nUsedPEs), compactStrategy).asInstanceOf[AbstractStrategy[IntVar]]
+      Search
+        .sequencer(Search.minDomLBSearch(nUsedPEs), compactStrategy)
+        .asInstanceOf[AbstractStrategy[IntVar]]
     ),
     Search.minDomLBSearch(tileAnalysisModule.numVirtualChannelsForProcElem.flatten: _*),
-    Search.minDomLBSearch(sdfAnalysisModule.jobOrder: _*),
+    Search.inputOrderLBSearch(
+      dse.sdfApplications.topologicalAndHeavyJobOrdering
+        .map(sdfAnalysisModule.jobsAndActors.indexOf)
+        .map(sdfAnalysisModule.jobOrder(_)): _*
+    ),
     Search.minDomLBSearch(sdfAnalysisModule.invThroughputs: _*)
   )
 

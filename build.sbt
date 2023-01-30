@@ -1,5 +1,5 @@
 ThisBuild / organization := "io.github.forsyde"
-ThisBuild / version := "0.3.5"
+ThisBuild / version := "0.4.0"
 ThisBuild / scalaVersion := "3.2.1"
 
 lazy val forsydeIoVersion  = "0.6.3"
@@ -7,6 +7,7 @@ lazy val jgraphtVersion    = "1.5.1"
 lazy val scribeVersion     = "3.10.2"
 lazy val breezeVersion     = "2.1.0"
 lazy val scalaGraphVersion = "1.13.5"
+lazy val chocoVersion = "4.10.10"
 
 lazy val root = project
   .in(file("."))
@@ -76,8 +77,7 @@ lazy val choco = (project in file("scala-choco"))
   .dependsOn(forsyde)
   .settings(
     libraryDependencies ++= Seq(
-      "com.novocode"     % "junit-interface" % "0.11" % "test",
-      "org.choco-solver" % "choco-solver"    % "4.10.9",
+      "org.choco-solver" % "choco-solver"    % chocoVersion,
       "org.jgrapht"      % "jgrapht-core"    % jgraphtVersion,
       "com.outr"        %% "scribe"          % scribeVersion
     )

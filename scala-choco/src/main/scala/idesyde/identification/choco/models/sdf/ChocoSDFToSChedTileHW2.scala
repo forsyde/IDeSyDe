@@ -39,17 +39,17 @@ class ConMonitorObj2(val model: ChocoSDFToSChedTileHW2) extends IMonitorContradi
     //     .map(_.mkString(", "))
     //     .mkString("\n")
     // )
-    println(
-      model.dataFlows
-        .map(_.mkString(", "))
-        .mkString("\n")
-    )
+    // println(
+    //   model.dataFlows
+    //     .map(_.mkString(", "))
+    //     .mkString("\n")
+    // )
     // println(
     //   model.tileAnalysisModule.numVirtualChannelsForProcElem
     //     .map(_.filter(_.getValue() > 0).mkString(", "))
     //     .mkString("\n")
     // )
-    println(model.memoryMappingModule.processesMemoryMapping.mkString(", "))
+    // println(model.memoryMappingModule.processesMemoryMapping.mkString(", "))
     // println(model.sdfAnalysisModule.jobOrder.mkString(", "))
     // println(model.sdfAnalysisModule.jobStartTime.mkString(", "))
     // println(model.sdfAnalysisModule.invThroughputs.mkString(", "))
@@ -313,31 +313,57 @@ final case class ChocoSDFToSChedTileHW2(
         .post()
     })
   // enforcing a certain order whenever possible
-  val dataFlows = dse.platform.runtimes.schedulers.map(i =>
-    dse.platform.runtimes.schedulers.map(j => chocoModel.boolVar(s"dataFlows($i, $j)"))
-  )
   for (
-    (p, i)  <- dse.platform.runtimes.schedulers.zipWithIndex;
-    (pp, j) <- dse.platform.runtimes.schedulers.zipWithIndex
+    ((ai, qi), i) <- sdfAnalysisModule.jobsAndActors.zipWithIndex;
+    vi = dse.sdfApplications.firingsPrecedenceGraph.get((ai, qi));
+    ((ak, qk), k) <- sdfAnalysisModule.jobsAndActors.zipWithIndex;
+    vk = dse.sdfApplications.firingsPrecedenceGraph.get((ak, qk));
+    if i != k && vi.isPredecessorOf(vk);
+    ((aj, qj), j) <- sdfAnalysisModule.jobsAndActors.zipWithIndex;
+    vj = dse.sdfApplications.firingsPrecedenceGraph.get((aj, qj));
+    ((al, ql), l) <- sdfAnalysisModule.jobsAndActors.zipWithIndex;
+    vl = dse.sdfApplications.firingsPrecedenceGraph.get((al, ql));
+    if j != i && j != l && vj.isPredecessorOf(vl)
   ) {
-    val possiblePaths = tileAnalysisModule.procElemSendsDataToAnother(i)(
-      j
-    ) +: dse.platform.runtimes.schedulers.zipWithIndex.map((ppp, k) =>
-      tileAnalysisModule.procElemSendsDataToAnother(i)(k).and(dataFlows(k)(j)).boolVar()
-    )
-    chocoModel.ifOnlyIf(
-      chocoModel.arithm(dataFlows(i)(j), "=", 1),
-      chocoModel.or(
-        possiblePaths: _*
-      )
-    )
-  }
-  for ((p, i) <- dse.platform.runtimes.schedulers.zipWithIndex) {
+    val aiIdx = dse.sdfApplications.actorsIdentifiers.indexOf(ai)
+    val akIdx = dse.sdfApplications.actorsIdentifiers.indexOf(ak)
+    val ajIdx = dse.sdfApplications.actorsIdentifiers.indexOf(aj)
+    val alIdx = dse.sdfApplications.actorsIdentifiers.indexOf(al)
     chocoModel.ifThen(
-      chocoModel.arithm(dataFlows(i)(i), "=", 0),
-      sdfAnalysisModule.makeCanonicalOrderingAtScheduleConstraint(i)
+      chocoModel.and(
+        chocoModel.arithm(memoryMappingModule.processesMemoryMapping(aiIdx), "=", memoryMappingModule.processesMemoryMapping(ajIdx)),
+        chocoModel.arithm(memoryMappingModule.processesMemoryMapping(ajIdx), "!=", memoryMappingModule.processesMemoryMapping(akIdx)),
+        chocoModel.arithm(memoryMappingModule.processesMemoryMapping(akIdx), "=", memoryMappingModule.processesMemoryMapping(alIdx)),
+        chocoModel.arithm(sdfAnalysisModule.jobOrder(aiIdx), "<", sdfAnalysisModule.jobOrder(ajIdx))
+      ),
+      chocoModel.arithm(sdfAnalysisModule.jobOrder(akIdx), "<", sdfAnalysisModule.jobOrder(alIdx))
     )
   }
+  // val dataFlows = dse.platform.runtimes.schedulers.map(i =>
+  //   dse.platform.runtimes.schedulers.map(j => chocoModel.boolVar(s"dataFlows($i, $j)"))
+  // )
+  // for (
+  //   (p, i)  <- dse.platform.runtimes.schedulers.zipWithIndex;
+  //   (pp, j) <- dse.platform.runtimes.schedulers.zipWithIndex
+  // ) {
+  //   val possiblePaths = tileAnalysisModule.procElemSendsDataToAnother(i)(
+  //     j
+  //   ) +: dse.platform.runtimes.schedulers.zipWithIndex.map((ppp, k) =>
+  //     tileAnalysisModule.procElemSendsDataToAnother(i)(k).and(dataFlows(k)(j)).boolVar()
+  //   )
+  //   chocoModel.ifOnlyIf(
+  //     chocoModel.arithm(dataFlows(i)(j), "=", 1),
+  //     chocoModel.or(
+  //       possiblePaths: _*
+  //     )
+  //   )
+  // }
+  // for ((p, i) <- dse.platform.runtimes.schedulers.zipWithIndex) {
+  //   chocoModel.ifThen(
+  //     chocoModel.arithm(dataFlows(i)(i), "=", 0),
+  //     sdfAnalysisModule.makeCanonicalOrderingAtScheduleConstraint(i)
+  //   )
+  // }
   // also enforce a waterfall pattern for the mappings
   // for (
   //   (dst, j) <- dse.sdfApplications.topologicalAndHeavyActorOrdering.zipWithIndex.drop(1);

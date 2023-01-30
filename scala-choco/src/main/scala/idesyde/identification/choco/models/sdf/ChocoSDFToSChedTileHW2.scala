@@ -313,12 +313,12 @@ final case class ChocoSDFToSChedTileHW2(
         .post()
     })
   // enforcing a certain order whenever possible
-  val ranking = sdfAnalysisModule.jobsAndActors.map((a, qa) => {
+  val firerank = sdfAnalysisModule.jobsAndActors.map((a, qa) => {
     chocoModel.intVar(s"ranking($a, $qa)", 0, sdfAnalysisModule.jobsAndActors.size, true)
   })
   for (((ai, qi), i) <- sdfAnalysisModule.jobsAndActors.zipWithIndex) {
     chocoModel.max(
-      ranking(i),
+      firerank(i),
       dse.sdfApplications.firingsPrecedenceGraph
         .get((ai, qi))
         .diPredecessors
@@ -339,7 +339,7 @@ final case class ChocoSDFToSChedTileHW2(
     val ajIdx = dse.sdfApplications.actorsIdentifiers.indexOf(aj)
     chocoModel.ifThen(
       chocoModel.and(
-        chocoModel.arithm(ranking(i), "<", ranking(j)),
+        chocoModel.arithm(firerank(i), "<", firerank(j)),
         chocoModel.arithm(
           memoryMappingModule.processesMemoryMapping(aiIdx),
           "=",

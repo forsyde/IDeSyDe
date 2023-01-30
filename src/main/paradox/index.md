@@ -1,13 +1,18 @@
----
-layout: default
-title: Index
-isHome: true
----
+@@@ index
+
+* [Install](usage/install.md)
+* [Quickstart](usage/quickstart.md)
+* [Guidelines](usage/guidelines.md)
+* [Concepts](concepts/concepts.md)
+* [Status](usage/status.md)
+
+@@@
+
+# IDeSyDe
 
 Welcome to IDeSyDe's documentation page! Here you can find some quick links to help you navigate the documentation
 and also to situate you about the tool (and its methods).
 
-# Quick facts
 
 IDeSyDe is a *generic* tool [for the Design Space Exploration activity]({{ site.project.forsyde }}#our-vision)
 within a [Model-Driven Engineering (MDE)](https://www.sciencedirect.com/topics/computer-science/model-driven-engineering)
@@ -22,7 +27,7 @@ Therefore, to the MDE user, IDeSyDe operates on their *system models*, e.g. [AMA
 [ForSyDe IO]({{ site.projects.forsydeio }}).
 
 <!-- IDeSyDe is in fact an implementation of it, and it powers all guarantees and decoupling
-seen in the tool itself.  Try [Concepts]({{ site.baseurl }}/concepts)! -->
+seen in the tool itself.  Try [Concepts](/concepts)! -->
 
 <!-- ## What is IDeSyDe? -->
 
@@ -35,19 +40,19 @@ It uses all these applications and libraries to enrich models that make
 better sense to a system designer, such as the mentioned [AMALTHEA](https://www.eclipse.org/app4mc/) or 
 [ForSyDe IO]({{ site.projects.forsydeio }}). 
 
-<!-- A quick glance at [Concepts]({{ site.baseurl }}/concepts) can likely clarify this further! -->
+<!-- A quick glance at [Concepts](/concepts) can likely clarify this further! -->
 
 ## How can I use it?
 
-Short answer: [Install]({{ site.baseurl }}/usage/install) IDeSyDe and follow the [Quick start]({{ site.baseurl }}/usage/quickstart) to get an intuitive grasp!
+Short answer: @ref:[Install](usage/install.md) IDeSyDe and follow the @ref:[Quick start](usage/quickstart.md) to get an intuitive grasp!
 
 Long answer:
 IDeSyDe being a proof-of-concept prototype, there were decisions that simplified the implementation in order
 to prove the concepts quickly. The first one being that the tool that is distributed only accepts [ForSyDe IO]({{ site.projects.forsydeio }})
 models (this is not a limtation as [ForSyDe IO]({{ site.projects.forsydeio }}) connects to other MDE frameworks). 
 Second, only a handful of MDE "scenarios" (i.e. design spaces) are implemented and distributed with the tool.
-They can be found in [Supported DSE]({{ site.baseurl }}/usage/support).
-Therefore, direct use of the tool depends on the design spaces distributed with the tool itself. Check [Guidelines]({{ site.baseurl }}/usage/guidelines)
+They can be found in @ref:[Supported DSE](usage/status.md).
+Therefore, direct use of the tool depends on the design spaces distributed with the tool itself. Check @ref:[Guidelines](usage/guidelines.md)
 to see how one would extends IDeSyDe or ForSyDe IO to support a design space different than those that exist.
 
 <!-- 

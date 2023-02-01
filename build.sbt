@@ -7,7 +7,7 @@ lazy val jgraphtVersion    = "1.5.1"
 lazy val scribeVersion     = "3.10.2"
 lazy val breezeVersion     = "2.1.0"
 lazy val scalaGraphVersion = "1.13.5"
-lazy val chocoVersion = "4.10.10"
+lazy val chocoVersion      = "4.10.10"
 
 lazy val root = project
   .in(file("."))
@@ -65,9 +65,8 @@ lazy val minizinc = (project in file("scala-minizinc"))
   .dependsOn(forsyde)
   .settings(
     libraryDependencies ++= Seq(
-      "com.outr"     %% "scribe"  % scribeVersion,
-      "com.lihaoyi"  %% "upickle" % "1.4.0",
-      "org.scalanlp" %% "breeze"  % breezeVersion
+      "com.outr"    %% "scribe"  % scribeVersion,
+      "com.lihaoyi" %% "upickle" % "1.4.0"
     )
   )
 
@@ -77,9 +76,9 @@ lazy val choco = (project in file("scala-choco"))
   .dependsOn(forsyde)
   .settings(
     libraryDependencies ++= Seq(
-      "org.choco-solver" % "choco-solver"    % chocoVersion,
-      "org.jgrapht"      % "jgrapht-core"    % jgraphtVersion,
-      "com.outr"        %% "scribe"          % scribeVersion
+      "org.choco-solver" % "choco-solver" % chocoVersion,
+      "org.jgrapht"      % "jgrapht-core" % jgraphtVersion,
+      "com.outr"        %% "scribe"       % scribeVersion
     )
   )
 

@@ -15,15 +15,16 @@ import idesyde.identification.forsyde.rules.WorkloadRules
 import idesyde.identification.DecisionModel
 import idesyde.identification.DesignModel
 import idesyde.identification.forsyde.rules.MixedRules
+import idesyde.identification.MarkedIdentificationRule.DesignModelOnlyIdentificationRule
 
 class ForSyDeIdentificationModule(using Logger) extends IdentificationModule {
 
   val identificationRules = Set(
-    SDFRules.identSDFApplication,
-    PlatformRules.identTiledMultiCore,
+    DesignModelOnlyIdentificationRule(SDFRules.identSDFApplication),
+    DesignModelOnlyIdentificationRule(PlatformRules.identTiledMultiCore),
     PlatformRules.identPartitionedCoresWithRuntimes,
-    WorkloadRules.identPeriodicDependentWorkload,
-    PlatformRules.identSharedMemoryMultiCore,
+    DesignModelOnlyIdentificationRule(WorkloadRules.identPeriodicDependentWorkload),
+    DesignModelOnlyIdentificationRule(PlatformRules.identSharedMemoryMultiCore),
     MixedRules.identPeriodicWorkloadToPartitionedSharedMultiCoreWithUtilization
   )
 

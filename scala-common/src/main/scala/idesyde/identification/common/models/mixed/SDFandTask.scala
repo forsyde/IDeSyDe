@@ -12,7 +12,10 @@ final case class SDFandTask(
                      totalperiod: Vector[Rational],
                      ) extends StandardDecisionMode with InstrumentedWorkloadMixin{
   val coverElements=sdf.coveredElements ++ task.coveredElements
-  val coveredElementRelations=sdf.coveredElementRelations ++ task.coveredElementRelations
+  val coveredElementRelations=sdf.coveredElementRelations ++ task.coveredElementRelations\
+  val graph 
+  val totalprocessSizes = sdf.actorSizes ++ task.processSizes
+  
   val messagesMaxSizes=sdf.messagesMaxSizes ++ task.messagesMaxSizes
   val uniqueIdentifier: String = "SDFandTask"
 }

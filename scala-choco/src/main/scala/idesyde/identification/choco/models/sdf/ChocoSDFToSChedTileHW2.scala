@@ -79,19 +79,20 @@ final case class ChocoSDFToSChedTileHW2(
   // since both are inevitably consdiered during DSE
   private val execMax = dse.wcets.flatten.max
   private val commMax = dse.platform.hardware.maxTraversalTimePerBit.flatten.max
-  val timeValues = if (execMax > 1000 * commMax) {
-    dse.wcets.flatten
-  } else if (commMax > 1000 * execMax) {
-    dse.platform.hardware.maxTraversalTimePerBit.flatten
-  } else {
-    (dse.wcets.flatten ++ dse.platform.hardware.maxTraversalTimePerBit.flatten)
-  }
+  val timeValues = dse.wcets.flatten ++ dse.platform.hardware.maxTraversalTimePerBit.flatten
+  //   if (execMax > 100 * commMax) {
+  //   dse.wcets.flatten
+  // } else if (commMax > 100 * execMax) {
+  //   dse.platform.hardware.maxTraversalTimePerBit.flatten
+  // } else {
+  //   (dse.wcets.flatten ++ dse.platform.hardware.maxTraversalTimePerBit.flatten)
+  // }
   var timeMultiplier = 1L
   while (
     timeValues
       .map(t => t * (timeMultiplier))
       .exists(d =>
-        Math.log10(d.toDouble) <= 0.0
+        Math.log10(d.toDouble) <= -1.0
       ) // ensure that the numbers magnitudes still stay sane
     &&
     timeValues

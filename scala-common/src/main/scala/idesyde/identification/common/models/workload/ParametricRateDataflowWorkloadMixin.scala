@@ -15,8 +15,6 @@ import scalax.collection.GraphEdge.DiEdgeLike
 import scalax.collection.edge.WDiEdge
 import scala.collection.immutable.LazyList.cons
 import scalax.collection.GraphTraversal.DepthFirst
-import idesyde.utils.common.FieldOfRational
-import breeze.linalg.qr.reduced
 
 /** This traits captures the ParametricRateDataflow base MoC from [1]. Then, we hope to be able to
   * use the same code for analysis across different dataflow MoCs, specially the simpler ones like

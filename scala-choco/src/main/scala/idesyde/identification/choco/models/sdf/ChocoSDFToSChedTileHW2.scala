@@ -91,7 +91,7 @@ final case class ChocoSDFToSChedTileHW2(
     timeValues
       .map(t => t * (timeMultiplier))
       .exists(d =>
-        d.numerator <= d.denominator
+        Math.log10(d.toDouble) <= 0.0
       ) // ensure that the numbers magnitudes still stay sane
     &&
     timeValues

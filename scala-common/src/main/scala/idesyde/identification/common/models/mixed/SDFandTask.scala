@@ -8,14 +8,14 @@ import spire.math.Rational
 final case class SDFandTask(
                      sdf:SDFApplication,
                      task:CommunicatingExtendedDependenciesPeriodicWorkload,
-                     sdfperiod: Vector[Rational],
-                     totalperiod: Vector[Rational],
+                     sdfServerperiod: Vector[Rational],
+                     sdfServerBudget: Vector[Rational],
                      ) extends StandardDecisionMode with InstrumentedWorkloadMixin{
   val coverElements=sdf.coveredElements ++ task.coveredElements
-  val coveredElementRelations=sdf.coveredElementRelations ++ task.coveredElementRelations\
-  val graph 
-  val totalprocessSizes = sdf.actorSizes ++ task.processSizes
-  
+  val coveredElementRelations=sdf.coveredElementRelations ++ task.coveredElementRelations
+  val processComputationalNeeds=sdf.processComputationalNeeds ++ task.processComputationalNeeds
+  val processSizes = sdf.actorSizes ++ task.processSizes
+
   val messagesMaxSizes=sdf.messagesMaxSizes ++ task.messagesMaxSizes
   val uniqueIdentifier: String = "SDFandTask"
 }

@@ -79,7 +79,7 @@ final case class ChocoSDFToSChedTileHW2(
   // since both are inevitably consdiered during DSE
   private val execMax = dse.wcets.flatten.max
   private val commMax = dse.platform.hardware.maxTraversalTimePerBit.flatten.max
-  val timeValues = dse.wcets.flatten ++ dse.platform.hardware.maxTraversalTimePerBit.flatten
+  val timeValues      = dse.wcets.flatten ++ dse.platform.hardware.maxTraversalTimePerBit.flatten
   //   if (execMax > 100 * commMax) {
   //   dse.wcets.flatten
   // } else if (commMax > 100 * execMax) {
@@ -416,10 +416,11 @@ final case class ChocoSDFToSChedTileHW2(
       .toArray,
     (i: Int) =>
       (j: Int) =>
-        dse.sdfApplications.firingsPrecedenceGraph
-          .get(sdfAnalysisModule.jobsAndActors(i))
+        dse.sdfApplications.sdfGraph
+          .get(dse.sdfApplications.topologicalAndHeavyActorOrdering(i))
           .pathTo(
-            dse.sdfApplications.firingsPrecedenceGraph.get(sdfAnalysisModule.jobsAndActors(j))
+            dse.sdfApplications.sdfGraph
+              .get(dse.sdfApplications.topologicalAndHeavyActorOrdering(j))
           )
           .isDefined
   )

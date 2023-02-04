@@ -137,6 +137,11 @@ final case class SDFApplication(
 
   val sdfPessimisticTokensPerChannel = pessimisticTokensPerChannel(repetitionVectors)
 
+  val sdfGraph = Graph.from(
+    actorsIdentifiers,
+    messagesFromChannels.flatMap(m => m.map((s, t, _, _, _, _, _) => s ~> t))
+  )
+
   val messagesMaxSizes: Vector[Long] =
     channelsIdentifiers.zipWithIndex.map((c, i) =>
       sdfPessimisticTokensPerChannel(i) * channelTokenSizes(i)

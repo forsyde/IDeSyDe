@@ -60,6 +60,22 @@ class SDFSchedulingAnalysisModule2(
     )
     .toArray
 
+  val maxPath = jobsAndActors
+      .map((a, q) =>
+        jobsAndActors
+      .map((aa, qq) => 
+        val i = actors.indexOf(a)
+        val j = actors.indexOf(aa)
+        chocoModel.intVar(
+          s"maxPath($a, $q, $aa, $qq)",
+          0,
+          maxThroughput,
+          true
+        )
+      )
+      )
+      .toArray
+
   val jobCycleLength =
     jobsAndActors
       .map((a, q) =>

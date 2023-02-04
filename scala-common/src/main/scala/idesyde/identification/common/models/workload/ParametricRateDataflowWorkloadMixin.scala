@@ -207,7 +207,9 @@ trait ParametricRateDataflowWorkloadMixin {
   }
 
   private def computeReducedForm(m: Buffer[Buffer[Rational]]): Buffer[Buffer[Rational]] = {
-    val mat      = m.map(_.clone()).clone()
+    val mat = m.map(_.clone()).clone()
+    // println("original")
+    // println(mat.mkString("\n"))
     val nrows    = mat.size
     val ncols    = mat.head.size
     var pivotRow = 0
@@ -271,8 +273,10 @@ trait ParametricRateDataflowWorkloadMixin {
       reducedOriginal: Buffer[Buffer[Rational]]
   ): Set[Vector[Rational]] = {
     val reduced = reducedOriginal.map(_.clone()).clone()
-    val nrows   = reduced.size
-    val ncols   = reduced.head.size
+    // println("reduced before")
+    // println(reduced.mkString("\n"))
+    val nrows = reduced.size
+    val ncols = reduced.head.size
     // count all pivots by having 1 and then only 0s to the left
     val matRank   = reduced.count(_.count(_ != 0) > 1)
     val nullRank  = ncols - matRank
@@ -281,7 +285,8 @@ trait ParametricRateDataflowWorkloadMixin {
     // permutation matrix according to pivots
     for (
       (pivotCol, j) <- pivotCols.zipWithIndex;
-      i             <- 0 until nrows
+      if pivotCol != j;
+      i <- 0 until nrows
     ) {
       val saved = reduced(i)(j)
       reduced(i)(j) = reduced(i)(pivotCol)
@@ -289,11 +294,11 @@ trait ParametricRateDataflowWorkloadMixin {
     }
     // now the matrix is in the form [I F; 0 0] so we can use the parts that are mandatory
     // that is, we make the matrix [-F^T I]^T before permutation
+    // println("reduced after")
+    // println(reduced.mkString("\n"))
     val basis = for (col <- matRank until ncols) yield {
       val f = for (row <- 0 until matRank) yield {
-        if (row < pivotCols.size) {
-          -reduced(pivotCols(row))(col)
-        } else if (pivotCols.contains(row)) { // this is basically the inverse of the permutation when it is missing
+        if (pivotCols.contains(row)) { // this is basically the inverse of the permutation when it is missing
           -reduced(pivotCols.indexOf(row))(col)
         } else {
           -reduced(row)(col)

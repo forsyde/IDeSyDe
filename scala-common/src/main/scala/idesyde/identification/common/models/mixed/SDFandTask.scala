@@ -9,14 +9,13 @@ final case class SDFandTask(
                      sdf:SDFApplication,
                      task:CommunicatingExtendedDependenciesPeriodicWorkload,
                      sdfServerperiod: Vector[Rational],
-                     sdfServerBudget: Vector[Rational],
-                     ) extends StandardDecisionModel //
+                     sdfServerBudget: Vector[Rational]) extends StandardDecisionModel 
   with InstrumentedWorkloadMixin{
 
-    val coverElements=sdf.coveredElements ++ task.coveredElements
+    val coveredElements = sdf.coveredElements ++ task.coveredElements
     val coveredElementRelations=sdf.coveredElementRelations ++ task.coveredElementRelations
-  //val processComputationalNeeds=sdf.processComputationalNeeds ++ task.processComputationalNeeds
-//  val processSizes = sdf.actorSizes ++ task.processSizes
+    val processComputationalNeeds=sdf.processComputationalNeeds ++ task.processComputationalNeeds
+    val processSizes = sdf.actorSizes ++ task.processSizes
 
     val messagesMaxSizes=sdf.messagesMaxSizes ++ task.messagesMaxSizes
     val uniqueIdentifier: String = "SDFandTask"

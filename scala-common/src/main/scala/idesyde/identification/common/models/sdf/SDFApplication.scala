@@ -14,6 +14,36 @@ import scalax.collection.GraphPredef._
 import scalax.collection.edge.Implicits._
 import scala.collection.mutable.Buffer
 
+/** Decision model for synchronous dataflow graphs.
+  *
+  * This decision model encodes a synchronous dataflow graphs without its explicit topology matrix,
+  * also known as balance matrix in some newer texts. This is achieved by encoding the graph as $(A
+  * \cup C, E)$ where $A$ is the set of actors, `actorsIdentifiers`, and $C$ is the set of channels,
+  * `channelsIdentifiers`. Every edge in $E$ connects an actor to a channel or a channel to an
+  * actor, i.e. $e \in E$ means that $e \in A \times C$ or $e \in C \times A$. These edges are
+  * encoded with `topologySrcs`, `topologyDsts` and `topologyEdgeValue` for the amount of tokens
+  * produced or consumed. For example, if $e = (a, c, 2)$, then the edge $e$ is the production of 2
+  * tokens from the actor $a$ to channel $c$. The other parameters bring enough instrumentation
+  * information so that the decision model can potentially be mapped into a target platform.
+  *
+  * @param actorsIdentifiers
+  *   the set of actors
+  * @param channelsIdentifiers
+  *   the set of channels
+  * @param topologySrcs
+  *   the sources for every edge triple in the SDF graph.
+  * @param topologyDsts
+  *   the target for every edge triple in the SDF graph.
+  * @param topologyEdgeValue
+  *   the produced or consumed tokens for each edge triple in the SDF graph.
+  * @param actorSizes
+  *   the size in bits for each actor's instruction(s)
+  * @param actorThrouhgputs
+  *   the fixed throughput expected to be done for each actor, given in executions per second.
+  *
+  * @see
+  *   [[InstrumentedWorkloadMixin]] for descriptions of the computational and memory needs.
+  */
 final case class SDFApplication(
     val actorsIdentifiers: Vector[String],
     val channelsIdentifiers: Vector[String],
@@ -33,25 +63,17 @@ final case class SDFApplication(
   val coveredElements         = (actorsIdentifiers ++ channelsIdentifiers).toSet
   val coveredElementRelations = topologySrcs.zip(topologyDsts).toSet
 
-
-  val topology = Graph.from(
-    actorsIdentifiers ++ channelsIdentifiers,
-    topologySrcs
-      .zip(topologyDsts)
-      .zipWithIndex
-      .map((srcdst, i) => srcdst._1 ~> srcdst._2 % topologyEdgeValue(i))
-  )
-
-  def isSelfConcurrent(actor: String): Boolean = channelsIdentifiers.exists(c =>
-    topology.get(c).diSuccessors.exists(dst => dst.toOuter == actor) &&
-      topology.get(c).diPredecessors.exists(src => src.toOuter == actor)
-  )
-
   val dataflowGraphs = Vector(
     topologySrcs
       .zip(topologyDsts)
       .zipWithIndex
       .map((srcdst, i) => (srcdst._1, srcdst._2, topologyEdgeValue(i)))
+  )
+
+  def isSelfConcurrent(actor: String): Boolean = channelsIdentifiers.exists(c =>
+    dataflowGraphs(0).exists((a, cc, _) =>
+      cc == c && dataflowGraphs(0).exists((ccc, a, _) => ccc == c)
+    )
   )
 
   val configurations = Vector((0, 0, "root"))
@@ -108,12 +130,17 @@ final case class SDFApplication(
   val sdfBalanceMatrix: Vector[Vector[Int]] = computeBalanceMatrices(0)
 
   /** this is a simple shortcut for the repetition vectors as SDFs have only one configuration */
-  val repetitionVectors = computeRepetitionVectors
+  val repetitionVectors                 = computeRepetitionVectors
   val sdfRepetitionVectors: Vector[Int] = repetitionVectors(0)
 
   val sdfDisjointComponents = disjointComponents.head
 
   val sdfPessimisticTokensPerChannel = pessimisticTokensPerChannel(repetitionVectors)
+
+  val sdfGraph = Graph.from(
+    actorsIdentifiers,
+    messagesFromChannels.flatMap(m => m.map((s, t, _, _, _, _, _) => s ~> t))
+  )
 
   val messagesMaxSizes: Vector[Long] =
     channelsIdentifiers.zipWithIndex.map((c, i) =>

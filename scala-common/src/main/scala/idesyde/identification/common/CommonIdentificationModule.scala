@@ -14,8 +14,7 @@ class CommonIdentificationModule(using logger: Logger) extends IdentificationMod
     identPartitionedSharedMemoryMultiCore,
     identSDFToPartitionedSharedMemory,
     identSDFToTiledMultiCore,
-    identPeriodicWorkloadToPartitionedSharedMultiCore,
-    identSDFtaskToMultiCore
+    identPeriodicWorkloadToPartitionedSharedMultiCore
   )
 
   val integrationRules = Set()

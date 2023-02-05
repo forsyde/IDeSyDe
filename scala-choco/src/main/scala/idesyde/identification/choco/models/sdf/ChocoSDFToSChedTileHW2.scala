@@ -30,26 +30,27 @@ import idesyde.identification.common.models.mixed.SDFToTiledMultiCore
 import idesyde.identification.common.StandardDecisionModel
 import org.chocosolver.solver.objective.OptimizationPolicy
 
-class ConMonitorObj2(val model: ChocoSDFToSChedTileHW2) extends IMonitorContradiction {
+final class ConMonitorObj2(val model: ChocoSDFToSChedTileHW2) extends IMonitorContradiction {
 
   def onContradiction(cex: ContradictionException): Unit = {
     println(cex.toString())
+    // println(model.chocoModel.getSolver().getDecisionPath().toString())
     // println(
     //   model.tileAnalysisModule.procElemSendsDataToAnother
     //     .map(_.mkString(", "))
     //     .mkString("\n")
     // )
-    println(
-      model.dataFlows
-        .map(_.mkString(", "))
-        .mkString("\n")
-    )
+    // println(
+    //   model.dataFlows
+    //     .map(_.mkString(", "))
+    //     .mkString("\n")
+    // )
     // println(
     //   model.tileAnalysisModule.numVirtualChannelsForProcElem
     //     .map(_.filter(_.getValue() > 0).mkString(", "))
     //     .mkString("\n")
     // )
-    println(model.memoryMappingModule.processesMemoryMapping.mkString(", "))
+    // println(model.memoryMappingModule.processesMemoryMapping.mkString(", "))
     // println(model.sdfAnalysisModule.jobOrder.mkString(", "))
     // println(model.sdfAnalysisModule.jobStartTime.mkString(", "))
     // println(model.sdfAnalysisModule.invThroughputs.mkString(", "))
@@ -67,7 +68,7 @@ final case class ChocoSDFToSChedTileHW2(
     val dse: SDFToTiledMultiCore
 )(using Fractional[Rational])
     extends StandardDecisionModel
-    with ChocoDecisionModel(shouldLearnSignedClauses = false) {
+    with ChocoDecisionModel(shouldLearnSignedClauses = true) {
 
   val chocoModel: Model = Model()
 
@@ -78,19 +79,20 @@ final case class ChocoSDFToSChedTileHW2(
   // since both are inevitably consdiered during DSE
   private val execMax = dse.wcets.flatten.max
   private val commMax = dse.platform.hardware.maxTraversalTimePerBit.flatten.max
-  val timeValues = if (execMax > 1000 * commMax) {
-    dse.wcets.flatten
-  } else if (commMax > 1000 * execMax) {
-    dse.platform.hardware.maxTraversalTimePerBit.flatten
-  } else {
-    (dse.wcets.flatten ++ dse.platform.hardware.maxTraversalTimePerBit.flatten)
-  }
+  val timeValues      = dse.wcets.flatten ++ dse.platform.hardware.maxTraversalTimePerBit.flatten
+  //   if (execMax > 100 * commMax) {
+  //   dse.wcets.flatten
+  // } else if (commMax > 100 * execMax) {
+  //   dse.platform.hardware.maxTraversalTimePerBit.flatten
+  // } else {
+  //   (dse.wcets.flatten ++ dse.platform.hardware.maxTraversalTimePerBit.flatten)
+  // }
   var timeMultiplier = 1L
   while (
     timeValues
       .map(t => t * (timeMultiplier))
       .exists(d =>
-        d.numerator <= d.denominator
+        Math.log10(d.toDouble) <= -1.0
       ) // ensure that the numbers magnitudes still stay sane
     &&
     timeValues
@@ -247,7 +249,7 @@ final case class ChocoSDFToSChedTileHW2(
   //     bufferSum
   //   )
   //   .post()
-  val maxLatency = chocoModel.max("maxLatency", sdfAnalysisModule.jobTasks.map(_.getEnd()))
+  // val maxLatency = chocoModel.max("maxLatency", sdfAnalysisModule.jobTasks.map(_.getEnd()))
 
   override val modelMinimizationObjectives: Array[IntVar] =
     Array(
@@ -263,15 +265,6 @@ final case class ChocoSDFToSChedTileHW2(
   // BRANCHING AND SEARCH
 
   // breaking platform symmetries
-  val mappedPerProcessingElement = dse.platform.runtimes.schedulers.zipWithIndex.map((p, i) =>
-    chocoModel.count(
-      s"mappedPerProcessingElement($p)",
-      i,
-      memoryMappingModule.processesMemoryMapping: _*
-    )
-  )
-  val minusMappedPerProcessingElement =
-    mappedPerProcessingElement.map(v => chocoModel.intMinusView(v))
   val computedOnlineIndexOfPe = dse.platform.runtimes.schedulers.map(p =>
     chocoModel.intVar(
       s"indexOfPe($p)",
@@ -313,6 +306,42 @@ final case class ChocoSDFToSChedTileHW2(
         .post()
     })
   // enforcing a certain order whenever possible
+  // val firerank = sdfAnalysisModule.jobsAndActors.map((a, qa) => {
+  //   chocoModel.intVar(s"ranking($a, $qa)", 0, sdfAnalysisModule.jobsAndActors.size, true)
+  // })
+  // for (((ai, qi), i) <- sdfAnalysisModule.jobsAndActors.zipWithIndex) {
+  //   chocoModel.max(
+  //     firerank(i),
+  //     dse.sdfApplications.firingsPrecedenceGraph
+  //       .get((ai, qi))
+  //       .diPredecessors
+  //       .map(sdfAnalysisModule.jobsAndActors.indexOf(_))
+  //       .map(sdfAnalysisModule.jobOrder(_))
+  //       .map(chocoModel.intAffineView(1, _, 1))
+  //       .toArray :+ sdfAnalysisModule.jobOrder(i)
+  //   ).post()
+  // }
+  // for (
+  //   ((ai, qi), i) <- sdfAnalysisModule.jobsAndActors.zipWithIndex;
+  //   vi = dse.sdfApplications.firingsPrecedenceGraph.get((ai, qi));
+  //   vj <- vi.diSuccessors;
+  //   (aj, qj) = vj.value;
+  //   j = sdfAnalysisModule.jobsAndActors.indexOf((aj, qj))
+  // ) {
+  //   val aiIdx = dse.sdfApplications.actorsIdentifiers.indexOf(ai)
+  //   val ajIdx = dse.sdfApplications.actorsIdentifiers.indexOf(aj)
+  //   chocoModel.ifThen(
+  //     chocoModel.and(
+  //       chocoModel.arithm(firerank(i), "<", firerank(j)),
+  //       chocoModel.arithm(
+  //         memoryMappingModule.processesMemoryMapping(aiIdx),
+  //         "=",
+  //         memoryMappingModule.processesMemoryMapping(ajIdx)
+  //       )
+  //     ),
+  //     chocoModel.arithm(sdfAnalysisModule.jobOrder(i), "<", sdfAnalysisModule.jobOrder(j))
+  //   )
+  // }
   val dataFlows = dse.platform.runtimes.schedulers.map(i =>
     dse.platform.runtimes.schedulers.map(j => chocoModel.boolVar(s"dataFlows($i, $j)"))
   )
@@ -369,39 +398,46 @@ final case class ChocoSDFToSChedTileHW2(
   // println(dse.sdfApplications.firingsPrecedenceGraph.toSortedString())
 
   private val compactStrategy = CompactingMultiCoreMapping[Int](
-      dse.platform.hardware.minTraversalTimePerBit
-        .map(arr => arr.map(v => (v * timeMultiplier).ceil.toInt).toArray)
-        .toArray,
-      dse.sdfApplications.topologicalAndHeavyActorOrdering
-        .map(a =>
-          dse.sdfApplications.sdfDisjointComponents
-            .indexWhere(_.exists(_ == a))
+    dse.platform.hardware.minTraversalTimePerBit
+      .map(arr => arr.map(v => (v * timeMultiplier).ceil.toInt).toArray)
+      .toArray,
+    dse.sdfApplications.topologicalAndHeavyActorOrdering
+      .map(a =>
+        dse.sdfApplications.sdfDisjointComponents
+          .indexWhere(_.exists(_ == a))
+      )
+      .toArray,
+    dse.sdfApplications.topologicalAndHeavyActorOrdering
+      .map(a =>
+        memoryMappingModule.processesMemoryMapping(
+          dse.sdfApplications.actorsIdentifiers.indexOf(a)
         )
-        .toArray,
-      dse.sdfApplications.topologicalAndHeavyActorOrdering
-        .map(a =>
-          memoryMappingModule.processesMemoryMapping(
-            dse.sdfApplications.actorsIdentifiers.indexOf(a)
+      )
+      .toArray,
+    (i: Int) =>
+      (j: Int) =>
+        dse.sdfApplications.sdfGraph
+          .get(dse.sdfApplications.topologicalAndHeavyActorOrdering(i))
+          .pathTo(
+            dse.sdfApplications.sdfGraph
+              .get(dse.sdfApplications.topologicalAndHeavyActorOrdering(j))
           )
-        )
-        .toArray,
-      (i: Int) =>
-        (j: Int) =>
-          dse.sdfApplications.firingsPrecedenceGraph
-            .get(sdfAnalysisModule.jobsAndActors(i))
-            .pathTo(
-              dse.sdfApplications.firingsPrecedenceGraph.get(sdfAnalysisModule.jobsAndActors(j))
-            )
-            .isDefined
-    )
+          .isDefined
+  )
   override val strategies: Array[AbstractStrategy[? <: Variable]] = Array(
     FindAndProve(
       nUsedPEs +: memoryMappingModule.processesMemoryMapping,
       compactStrategy,
-      Search.sequencer(Search.minDomLBSearch(nUsedPEs), compactStrategy).asInstanceOf[AbstractStrategy[IntVar]]
+      Search
+        .sequencer(Search.minDomLBSearch(nUsedPEs), compactStrategy)
+        .asInstanceOf[AbstractStrategy[IntVar]]
     ),
     Search.minDomLBSearch(tileAnalysisModule.numVirtualChannelsForProcElem.flatten: _*),
-    Search.minDomLBSearch(sdfAnalysisModule.jobOrder: _*),
+    Search.inputOrderLBSearch(
+      dse.sdfApplications.topologicalAndHeavyJobOrdering
+        .map(sdfAnalysisModule.jobsAndActors.indexOf)
+        .map(sdfAnalysisModule.jobOrder(_)): _*
+    ),
     Search.minDomLBSearch(sdfAnalysisModule.invThroughputs: _*)
   )
 
@@ -453,7 +489,7 @@ final case class ChocoSDFToSChedTileHW2(
   def rebuildFromChocoOutput(output: Solution): DecisionModel = {
     scribe.debug(
       s"solution: nUsedPEs = ${output.getIntVal(nUsedPEs)}, globalInvThroughput = ${output
-        .getIntVal(sdfAnalysisModule.globalInvThroughput)}, maxLatency = ${output.getIntVal(maxLatency)}"
+        .getIntVal(sdfAnalysisModule.globalInvThroughput)}"
     )
     dse.copy(
       processMappings = dse.sdfApplications.actorsIdentifiers.zipWithIndex.map((a, i) =>

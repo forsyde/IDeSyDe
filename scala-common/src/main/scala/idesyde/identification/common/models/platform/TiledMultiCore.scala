@@ -33,21 +33,27 @@ final case class TiledMultiCore(
   val topology = Graph.from(
     platformElements,
     interconnectTopologySrcs.zip(interconnectTopologyDsts).map((src, dst) => src ~> dst) ++
-      processors.zip(memories).map((src, dst) => src ~> dst) ++ processors.zip(memories).map((src, dst) => dst ~> src) ++
-      processors.zip(networkInterfaces).map((src, dst) => src ~> dst) ++ processors.zip(networkInterfaces).map((src, dst) => dst ~> src)
+      processors.zip(memories).map((src, dst) => src ~> dst) ++ processors
+        .zip(memories)
+        .map((src, dst) => dst ~> src) ++
+      processors.zip(networkInterfaces).map((src, dst) => src ~> dst) ++ processors
+        .zip(networkInterfaces)
+        .map((src, dst) => dst ~> src)
   )
 
   val computedPaths =
     platformElements.map(src =>
       platformElements.map(dst =>
-        if (preComputedPaths.contains(src) && preComputedPaths(src).contains(dst) && !preComputedPaths(src)(dst).isEmpty) {
+        if (
+          preComputedPaths.contains(src) && preComputedPaths(src)
+            .contains(dst) && !preComputedPaths(src)(dst).isEmpty
+        ) {
           preComputedPaths(src)(dst)
         } else {
           topology
             .get(src)
             .withSubgraph(nodes =
-              v =>
-                v.value == src || v.value == dst || communicationElems.contains(v.value)
+              v => v.value == src || v.value == dst || communicationElems.contains(v.value)
             )
             .shortestPathTo(topology.get(dst), e => 1)
             .map(path => path.nodes.map(_.value.toString()))
@@ -77,7 +83,9 @@ final case class TiledMultiCore(
         computedPaths(i)(j)
           .map(ce => {
             val dstIdx = communicationElems.indexOf(ce)
-            communicationElementsBitPerSecPerChannel(dstIdx).reciprocal / communicationElementsMaxChannels(
+            communicationElementsBitPerSecPerChannel(
+              dstIdx
+            ).reciprocal / communicationElementsMaxChannels(
               dstIdx
             )
           })

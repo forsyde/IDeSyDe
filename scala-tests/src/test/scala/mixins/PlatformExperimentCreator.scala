@@ -1,6 +1,6 @@
 package mixins
 
-import scala.jdk.CollectionConverters.*
+import scala.jdk.CollectionConverters._
 
 import forsyde.io.java.core.{EdgeTrait, ForSyDeSystemGraph}
 import forsyde.io.java.typed.viewers.decision.Allocated

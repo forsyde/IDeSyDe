@@ -61,33 +61,32 @@ class SDFSchedulingAnalysisModule2(
     .toArray
 
   val maxPath = jobsAndActors
-      .map((a, q) =>
-        jobsAndActors
-      .map((aa, qq) => 
-        val i = actors.indexOf(a)
-        val j = actors.indexOf(aa)
-        chocoModel.intVar(
-          s"maxPath($a, $q, $aa, $qq)",
-          0,
-          maxThroughput,
-          true
+    .map((a, q) =>
+      jobsAndActors
+        .map((aa, qq) =>
+          chocoModel.intVar(
+            s"maxPath($a, $q, $aa, $qq)",
+            0,
+            maxThroughput,
+            true
+          )
         )
-      )
-      )
-      .toArray
+        .toArray
+    )
+    .toArray
 
-  val jobCycleLength =
-    jobsAndActors
-      .map((a, q) =>
-        val i = actors.indexOf(a)
-        chocoModel.intVar(
-          s"jobCycleLength($a, $q)",
-          0,
-          maxThroughput,
-          true
-        )
-      )
-      .toArray
+  // val jobCycleLength =
+  //   jobsAndActors
+  //     .map((a, q) =>
+  //       val i = actors.indexOf(a)
+  //       chocoModel.intVar(
+  //         s"jobCycleLength($a, $q)",
+  //         0,
+  //         maxThroughput,
+  //         true
+  //       )
+  //     )
+  //     .toArray
 
   val jobOrder =
     jobsAndActors
@@ -223,101 +222,59 @@ class SDFSchedulingAnalysisModule2(
     // -- nexts are only valid when they are mapped in the same PE
     // -- must make a path
     for (
-      (v, i) <- jobsAndActors.zipWithIndex;
-      dst    = sdfAndSchedulers.sdfApplications.firingsPrecedenceGraph.get(v);
-      (a, q) = dst.value
+      (u, i) <- jobsAndActors.zipWithIndex;
+      (v, j) <- jobsAndActors.zipWithIndex;
+      (src, q)  = u;
+      srcIdx    = actors.indexOf(src);
+      (dst, qq) = v
     ) {
-      val maxPrev = chocoModel.intVar(
-        s"maxPrev($a, $q)",
+      val maxNext = chocoModel.intVar(
+        s"maxNext($src, $q, $dst, $qq)",
         0,
-        jobCycleLength(i).getUB(),
+        maxThroughput,
         true
       )
-      val maxDeps = sdfAndSchedulers.sdfApplications.firingsPrecedenceGraph
-        .get(v)
-        .diPredecessors
+      val maxSucc = sdfAndSchedulers.sdfApplications.firingsPrecedenceGraph
+        .get(u)
+        .diSuccessors
         .map(_.value)
-        .map((aa, qq) =>
-          jobCycleLength(jobsAndActors.indexOf((aa, qq)))
-            .add(transmissionDelay(actors.indexOf(aa))(actors.indexOf(a)))
+        .map(w =>
+          val k = jobsAndActors.indexOf(w)
+          maxPath(k)(j)
+            .add(transmissionDelay(actors.indexOf(w._1))(actors.indexOf(dst)))
             .intVar()
         )
         .toArray
-      chocoModel.ifThen(
-        chocoModel.arithm(jobOrder(i), "=", 0),
-        chocoModel.arithm(maxPrev, "=", 0)
-      )
+      for ((_, pi) <- schedulers.zipWithIndex) {
+        chocoModel.ifThen(
+          chocoModel.and(
+            chocoModel.arithm(memoryMappingModule.processesMemoryMapping(srcIdx), "=", pi),
+            chocoModel.arithm(jobOrder(i), "=", mappedJobsPerElement(pi), "-", 1)
+          ),
+          chocoModel.arithm(maxNext, "=", 0)
+        )
+      }
       for (
-        (vv, j) <- jobsAndActors.zipWithIndex;
-        src      = sdfAndSchedulers.sdfApplications.firingsPrecedenceGraph.get(vv);
-        (aa, qq) = src.value;
-        if i != j
+        (w, k) <- jobsAndActors.zipWithIndex;
+        if i != k
       ) {
         chocoModel.ifThen(
           chocoModel.and(
-            chocoModel.arithm(jobMapping(i), "=", jobMapping(j)),
-            chocoModel.arithm(jobOrder(i), "=", jobOrder(j), "+", 1)
+            chocoModel.arithm(jobMapping(i), "=", jobMapping(k)),
+            chocoModel.arithm(jobOrder(k), "=", jobOrder(i), "+", 1)
           ),
-          chocoModel.arithm(maxPrev, "=", jobCycleLength(j))
+          chocoModel.arithm(maxNext, "=", maxPath(k)(j))
         )
-        chocoModel.ifThen(
-          chocoModel.and(
-            chocoModel.arithm(jobMapping(i), "=", jobMapping(j)),
-            chocoModel.arithm(jobOrder(i), ">", jobOrder(j))
-          ),
-          chocoModel.arithm(jobCycleLength(i), ">=", jobCycleLength(j))
-        )
-        // if j should succeed i eventually, and if they are mapped in the same core, force the reachability.
-        // if (src.pathTo(dst).isDefined) {
-        //   chocoModel.ifThen(
-        //     chocoModel.arithm(jobMapping(i), "=", jobMapping(j)),
-        //     chocoModel.arithm(jobOrder(j), "<", jobOrder(i))
-        //   )
-        //   if (a != aa) {
-        //     val messageTimesIdx =
-        //       sdfAndSchedulers.sdfApplications.sdfMessages
-        //         .indexWhere((cSrc, cDst, _, _, _, _, _) => cSrc == aa && cDst == a)
-        //     if (messageTimesIdx > -1) {
-        //       for (
-        //         (p, k) <- schedulers.zipWithIndex; (pp, l) <- schedulers.zipWithIndex; if k != l
-        //       ) {
-        //         chocoModel.ifThen(
-        //           chocoModel.and(
-        //             chocoModel.arithm(
-        //               jobMapping(j),
-        //               "=",
-        //               k
-        //             ),
-        //             chocoModel.arithm(
-        //               jobMapping(i),
-        //               "=",
-        //               l
-        //             )
-        //           ),
-        //           chocoModel
-        //             .arithm(
-        //               jobTasks(j).getEnd(),
-        //               "+",
-        //               tileAsyncModule.messageTravelDuration(messageTimesIdx)(k)(l),
-        //               "<=",
-        //               jobTasks(i).getStart()
-        //             )
-        //         )
-        //       }
-        //     }
-        //     chocoModel.arithm(jobTasks(j).getEnd(), "<=", jobTasks(i).getStart()).post()
-        //     // disjunctions +=  chocoModel.arithm(jobTasks(j).getEnd(), "=", jobTasks(j).getStart())
-        //   } else if (a == aa && !isSelfConcurrent(a)) {
-        //     chocoModel.arithm(jobTasks(j).getEnd(), "<=", jobTasks(i).getStart()).post()
-        //     // disjunctions +=  chocoModel.arithm(jobTasks(j).getEnd(), "=", jobTasks(j).getStart())
-        //   } else if (a == aa && isSelfConcurrent(a)) {
-        //     chocoModel
-        //       .arithm(jobTasks(j).getStart(), "<=", jobTasks(i).getStart())
-        //       .post()
-        //   }
-        // }
       }
-      chocoModel.arithm(jobCycleLength(i), "=", duration(actors.indexOf(a)), "+", chocoModel.max(s"maxCycleLength($i)", maxDeps :+ maxPrev)).post()
+      chocoModel
+        .arithm(
+          maxPath(i)(j),
+          "=",
+          duration(srcIdx),
+          "+",
+          chocoModel.max(s"maxPath($u, $v)", maxSucc :+ maxNext)
+        )
+        .post()
     }
     // -----/
     // buffers
@@ -344,8 +301,23 @@ class SDFSchedulingAnalysisModule2(
     // }
     // -----/
     // throughput
-    for (((a, qi), i) <- jobsAndActors.zipWithIndex; aIdx = actors.indexOf(a)) {
-      chocoModel.arithm(invThroughputs(aIdx), ">=", jobCycleLength(i)).post()
+    for (
+      ((a, qi), i)   <- jobsAndActors.zipWithIndex; aIdx   = actors.indexOf(a);
+      ((dst, qq), j) <- jobsAndActors.zipWithIndex; dstIdx = actors.indexOf(dst);
+      if i != j
+    ) {
+      chocoModel.ifThen(
+        chocoModel.and(
+          chocoModel.arithm(
+            memoryMappingModule.processesMemoryMapping(dstIdx),
+            "=",
+            memoryMappingModule.processesMemoryMapping(aIdx)
+          ),
+          chocoModel.arithm(jobOrder(i), "<", jobOrder(j))
+        ),
+        chocoModel
+          .arithm(invThroughputs(aIdx), ">=", maxPath(i)(j), "+", duration(actors.indexOf(dst)))
+      )
       // for (
       //   predV <- sdfAndSchedulers.sdfApplications.firingsPrecedenceWithExtraStepGraph
       //     .get((a, maxRepetitionsPerActors(i) + 1))
@@ -367,32 +339,32 @@ class SDFSchedulingAnalysisModule2(
       // }
     }
     for ((a, i) <- actors.zipWithIndex; (aa, j) <- actors.zipWithIndex; if a != aa) {
-        // if (
-        //   sdfAndSchedulers.sdfApplications.sdfGraph
-        //     .get(a)
-        //     .pathTo(sdfAndSchedulers.sdfApplications.sdfGraph.get(aa))
-        //     .isDefined
-        // ) {
-        //   chocoModel
-        //     .arithm(
-        //       invThroughputs(i),
-        //       "=",
-        //       invThroughputs(j)
-        //     )
-        //     .post()
-        // }
-        chocoModel.ifThen(
-          chocoModel.arithm(
-            memoryMappingModule.processesMemoryMapping(i),
-            "=",
-            memoryMappingModule.processesMemoryMapping(j)
-          ),
-          chocoModel.arithm(
-            invThroughputs(i),
-            "=",
-            invThroughputs(j)
-          )
+      // if (
+      //   sdfAndSchedulers.sdfApplications.sdfGraph
+      //     .get(a)
+      //     .pathTo(sdfAndSchedulers.sdfApplications.sdfGraph.get(aa))
+      //     .isDefined
+      // ) {
+      //   chocoModel
+      //     .arithm(
+      //       invThroughputs(i),
+      //       "=",
+      //       invThroughputs(j)
+      //     )
+      //     .post()
+      // }
+      chocoModel.ifThen(
+        chocoModel.arithm(
+          memoryMappingModule.processesMemoryMapping(i),
+          "=",
+          memoryMappingModule.processesMemoryMapping(j)
+        ),
+        chocoModel.arithm(
+          invThroughputs(i),
+          "=",
+          invThroughputs(j)
         )
+      )
     }
     // chocoModel.post(
     //   new Constraint(

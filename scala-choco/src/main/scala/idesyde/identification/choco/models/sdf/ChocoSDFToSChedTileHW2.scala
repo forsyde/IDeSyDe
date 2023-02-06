@@ -78,7 +78,7 @@ final case class ChocoSDFToSChedTileHW2(
 
   val chocoModel: Model = Model()
 
-  chocoModel.getSolver().plugMonitor(ConMonitorObj2(this))
+  // chocoModel.getSolver().plugMonitor(ConMonitorObj2(this))
 
   // section for time multiplier calculation
   // if there is a 1e3 scale difference between execution and communication, we consider only execution for scaling

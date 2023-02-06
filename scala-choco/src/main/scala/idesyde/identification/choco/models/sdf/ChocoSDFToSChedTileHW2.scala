@@ -45,13 +45,18 @@ final class ConMonitorObj2(val model: ChocoSDFToSChedTileHW2) extends IMonitorCo
     //     .map(_.mkString(", "))
     //     .mkString("\n")
     // )
+    println(
+      model.sdfAnalysisModule.maxPath
+        .map(_.mkString(", "))
+        .mkString("\n")
+    )
     // println(
     //   model.tileAnalysisModule.numVirtualChannelsForProcElem
     //     .map(_.filter(_.getValue() > 0).mkString(", "))
     //     .mkString("\n")
     // )
-    // println(model.memoryMappingModule.processesMemoryMapping.mkString(", "))
-    // println(model.sdfAnalysisModule.jobOrder.mkString(", "))
+    println(model.memoryMappingModule.processesMemoryMapping.mkString(", "))
+    println(model.sdfAnalysisModule.jobOrder.mkString(", "))
     // println(model.sdfAnalysisModule.jobStartTime.mkString(", "))
     // println(model.sdfAnalysisModule.invThroughputs.mkString(", "))
     // println(model.sdfAnalysisModule.numMappedElements)
@@ -61,6 +66,7 @@ final class ConMonitorObj2(val model: ChocoSDFToSChedTileHW2) extends IMonitorCo
     //     .map(_.map(_.mkString(",")).mkString("; "))
     //     .mkString("\n")
     // )
+    println("-------------")
   }
 }
 
@@ -72,7 +78,7 @@ final case class ChocoSDFToSChedTileHW2(
 
   val chocoModel: Model = Model()
 
-  // chocoModel.getSolver().plugMonitor(ConMonitorObj2(this))
+  chocoModel.getSolver().plugMonitor(ConMonitorObj2(this))
 
   // section for time multiplier calculation
   // if there is a 1e3 scale difference between execution and communication, we consider only execution for scaling
@@ -92,7 +98,7 @@ final case class ChocoSDFToSChedTileHW2(
     timeValues
       .map(t => t * (timeMultiplier))
       .exists(d =>
-        Math.log10(d.toDouble) <= -1.0
+        Math.log10(d.toDouble) <= -2.0
       ) // ensure that the numbers magnitudes still stay sane
     &&
     timeValues
@@ -290,6 +296,7 @@ final case class ChocoSDFToSChedTileHW2(
     )
   }
   dse.platform.hardware.symmetricTileGroups
+    .filter(_.size > 1)
     .maxByOption(_.size)
     .foreach(group => {
       val pSorted = group.map(id => dse.platform.hardware.processors.indexOf(id)).toArray.sorted

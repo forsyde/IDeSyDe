@@ -18,8 +18,8 @@ class ParetoMinimizationBrancher(val objectives: Array[IntVar])
   private val numObjs      = objectives.size
   private val minObjValues = objectives.map(_.getLB())
   // val dominantObjValues   = objectives.map(_.getUB())
-  val paretoFront    = Buffer[Solution]()
-  val paretoObjFront = Buffer[Array[Int]]()
+  val paretoFront      = Buffer[Solution]()
+  val paretoObjFront   = Buffer[Array[Int]]()
   var lastSolutionTime = LocalDateTime.now()
 
   override def propagate(evtmask: Int): Unit = {
@@ -47,19 +47,20 @@ class ParetoMinimizationBrancher(val objectives: Array[IntVar])
   override def isEntailed(): ESat = {
     // println("check entailment")
     // println(objectives.map(_.getValue()).mkString(", "))
+    // println(paretoObjFront.map(_.mkString(", ")).mkString("[,", "\n ", "]"))
     if (
       paretoObjFront.isEmpty || paretoObjFront.zipWithIndex
-        .forall((s, i) => s.zipWithIndex.exists((o, j) => objectives(j).getUB() < o))
+        .forall((s, i) => s.zipWithIndex.exists((o, j) => objectives(j).getUB() <= o))
     ) ESat.TRUE
     else if (
       paretoObjFront.zipWithIndex
-        .exists((s, i) => s.zipWithIndex.forall((o, j) => o <= objectives(j).getLB()))
+        .exists((s, i) => s.zipWithIndex.forall((o, j) => o < objectives(j).getLB()))
     ) ESat.FALSE
     else ESat.UNDEFINED
   }
 
   def onSolution(): Unit = {
-    val solObjs = objectives.map(_.getValue())
+    val solObjs         = objectives.map(_.getValue())
     val makedForErasure = Array.fill(paretoFront.size)(false)
     // check if it is a fully dominant solution
     for ((approxParetoSol, i) <- paretoObjFront.zipWithIndex) {

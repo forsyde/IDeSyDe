@@ -9,7 +9,8 @@ final case class SDFandTask(
                      sdf:SDFApplication,
                      task:CommunicatingExtendedDependenciesPeriodicWorkload,
                      sdfServerperiod: Vector[Rational],
-                     sdfServerBudget: Vector[Rational]) extends StandardDecisionModel 
+                     sdfServerBudget: Vector[Rational])
+  extends StandardDecisionModel
   with InstrumentedWorkloadMixin{
 
     val coveredElements = sdf.coveredElements ++ task.coveredElements

@@ -24,10 +24,10 @@ final case class SDFtaskToMultiCore(
     sdfandtask.coveredElementRelations ++ platform.coveredElementRelations ++
       sdfandtask.sdf.actorsIdentifiers.zip(actorprocessMappings)  ++ processMappings.toSet ++
       channelMappings.toSet ++ sdfandtask.sdf.channelsIdentifiers.zip(actormessageMappings) ++
-      messageSlotAllocations.zipWithIndex.flatMap((slots, i) =>
+      messageSlotAllocations.zipWithIndex.flatMap((i,slots) =>
         platform.hardware.communicationElems
           .filter(ce => slots.contains(ce) && slots(ce).exists(b => b))
-          .map(ce => sdfandtask.sdf.channelsIdentifiers(i) -> ce)
+          .map(ce => (i, ce))
       )
 
 

@@ -10,7 +10,7 @@ import idesyde.identification.MarkedIdentificationRule.SpecificDecisionModelOnly
 import idesyde.identification.MarkedIdentificationRule.DecisionModelOnlyIdentificationRule
 
 class CommonIdentificationModule(using logger: Logger)
-    extends IdentificationModule
+  extends IdentificationModule
     with MixedRules
     with PlatformRules {
 
@@ -25,7 +25,8 @@ class CommonIdentificationModule(using logger: Logger)
     ),
     DecisionModelOnlyIdentificationRule(identSDFToPartitionedSharedMemory),
     DecisionModelOnlyIdentificationRule(identSDFToTiledMultiCore),
-    DecisionModelOnlyIdentificationRule(identPeriodicWorkloadToPartitionedSharedMultiCore)
+    DecisionModelOnlyIdentificationRule(identPeriodicWorkloadToPartitionedSharedMultiCore),
+    DecisionModelOnlyIdentificationRule(identSDFtaskToMultiCore)
   )
 
   val integrationRules = Set()

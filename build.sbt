@@ -1,5 +1,5 @@
 ThisBuild / organization := "io.github.forsyde"
-ThisBuild / version := "0.4.0"
+ThisBuild / version := "0.3.5"
 ThisBuild / scalaVersion := "3.2.1"
 
 lazy val forsydeIoVersion  = "0.6.3"
@@ -7,28 +7,13 @@ lazy val jgraphtVersion    = "1.5.1"
 lazy val scribeVersion     = "3.10.2"
 lazy val breezeVersion     = "2.1.0"
 lazy val scalaGraphVersion = "1.13.5"
-lazy val chocoVersion      = "4.10.10"
 
 lazy val root = project
   .in(file("."))
-  .aggregate(common, commonj, cli, choco, forsyde, minizinc)
-  .enablePlugins(SitePreviewPlugin)
-  .enablePlugins(ParadoxSitePlugin)
-  .settings(
-    ScalaUnidoc / siteSubdirName := "latest/api",
-    addMappingsToSiteDir(ScalaUnidoc / packageDoc / mappings, ScalaUnidoc / siteSubdirName),
-    paradoxProperties ++= Map(
-      "scaladoc.base_url" -> "/latest/api"
-    )
-  )
-  .enablePlugins(ScalaUnidocPlugin)
-  .enablePlugins(SiteScaladocPlugin)
-// .settings(
-//   ScalaUnidoc / siteSubdirName := "latest/api",
-//   addMappingsToSiteDir(ScalaUnidoc / packageDoc / mappings, ScalaUnidoc / siteSubdirName)
-// )
+  .aggregate(common, commonj,commonj2, cli, choco, forsyde, minizinc)
 
 lazy val core = (project in file("scala-core"))
+
 
 lazy val common = (project in file("scala-common"))
   .dependsOn(core)
@@ -44,9 +29,16 @@ lazy val commonj = (project in file("java-common"))
   .dependsOn(core, common)
   .settings(
     libraryDependencies ++= Seq(
+
     )
   )
+lazy val commonj2 = (project in file("vhv"))
+  .dependsOn(core, common)
+  .settings(
+    libraryDependencies ++= Seq(
 
+    )
+  )
 lazy val forsyde = (project in file("scala-forsyde"))
   .dependsOn(core)
   .dependsOn(common)
@@ -65,8 +57,9 @@ lazy val minizinc = (project in file("scala-minizinc"))
   .dependsOn(forsyde)
   .settings(
     libraryDependencies ++= Seq(
-      "com.outr"    %% "scribe"  % scribeVersion,
-      "com.lihaoyi" %% "upickle" % "1.4.0"
+      "com.outr"     %% "scribe"  % scribeVersion,
+      "com.lihaoyi"  %% "upickle" % "1.4.0",
+      "org.scalanlp" %% "breeze"  % breezeVersion
     )
   )
 
@@ -76,9 +69,10 @@ lazy val choco = (project in file("scala-choco"))
   .dependsOn(forsyde)
   .settings(
     libraryDependencies ++= Seq(
-      "org.choco-solver" % "choco-solver" % chocoVersion,
-      "org.jgrapht"      % "jgrapht-core" % jgraphtVersion,
-      "com.outr"        %% "scribe"       % scribeVersion
+      "com.novocode"     % "junit-interface" % "0.11" % "test",
+      "org.choco-solver" % "choco-solver"    % "4.10.9",
+      "org.jgrapht"      % "jgrapht-core"    % jgraphtVersion,
+      "com.outr"        %% "scribe"          % scribeVersion
     )
   )
 
@@ -144,3 +138,5 @@ ThisBuild / assembly / assemblyMergeStrategy := {
   case PathList("META-INF", xs @ _*) => MergeStrategy.discard
   case x                             => MergeStrategy.first
 }
+
+// /Compile / resourceDirectory := baseDirectory.value / "resources"

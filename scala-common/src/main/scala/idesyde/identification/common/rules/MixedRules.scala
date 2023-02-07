@@ -2,12 +2,10 @@ package idesyde.identification.common.rules
 
 import idesyde.identification.DecisionModel
 import idesyde.identification.DesignModel
-import idesyde.identification.common.models.mixed.SDFToTiledMultiCore
+import idesyde.identification.common.models.mixed.{PeriodicWorkloadToPartitionedSharedMultiCore, SDFToPartitionedSharedMemory, SDFToTiledMultiCore, SDFandTask, SDFtaskToMultiCore}
 import idesyde.identification.common.models.platform.SchedulableTiledMultiCore
 import idesyde.identification.common.models.platform.PartitionedSharedMemoryMultiCore
 import idesyde.identification.common.models.sdf.SDFApplication
-import idesyde.identification.common.models.mixed.SDFToPartitionedSharedMemory
-import idesyde.identification.common.models.mixed.PeriodicWorkloadToPartitionedSharedMultiCore
 import idesyde.identification.common.models.workload.CommunicatingExtendedDependenciesPeriodicWorkload
 import spire.math.Rational
 import idesyde.utils.Logger
@@ -92,5 +90,34 @@ trait MixedRules(using logger: Logger) {
       )
     )
   }
+
+  def identSDFtaskToMultiCore(
+       models: Set[DesignModel],
+       identified: Set[DecisionModel]
+  ) : Set[SDFtaskToMultiCore]= {
+    val app = identified
+      .filter(_.isInstanceOf[SDFandTask])
+      .map(_.asInstanceOf[SDFandTask])
+    val plat = identified
+      .filter(_.isInstanceOf[SchedulableTiledMultiCore])
+      .map(_.asInstanceOf[SchedulableTiledMultiCore])
+    // if ((runtimes.isDefined && plat.isEmpty) || (runtimes.isEmpty && plat.isDefined))
+    app.flatMap(a =>
+      plat.map(p =>
+        SDFtaskToMultiCore(
+          sdfandtask=a,
+          platform = p,
+          actorprocessMappings= Vector.empty,
+          processMappings = Vector.empty,
+          actormessageMappings = Vector.empty,
+          channelMappings= Vector.empty,
+          schedulerSchedules= Vector.empty ,
+          messageMappings= Vector.empty ,
+          messageSlotAllocations = Vector.empty
+        )
+      )
+    )
+    }
+
 
 }

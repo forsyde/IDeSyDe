@@ -6,16 +6,15 @@ import idesyde.identification.common.models.sdf.SDFApplication
 import idesyde.identification.models.mixed.WCETComputationMixin
 
 final case class SDFtaskToMultiCore(
-                                             val sdfandtask: SDFandTask,
-                                             val platform: SchedulableTiledMultiCore,
-                                             val actorprocessMappings: Vector[String],
-                                             val processMappings: Vector[(String, String)],
-                                             val actormessageMappings: Vector[String],
-                                             val channelMappings: Vector[(String, String)],
-                                             val schedulerSchedules: Vector[Vector[String]],
-                                             val messageMappings: Vector[(String, String)],
-                                             val messageSlotAllocations: Vector[Map[String, Vector[Boolean]]]
-
+       val sdfandtask: SDFandTask,
+       val platform: SchedulableTiledMultiCore,
+       val actorprocessMappings: Vector[String],
+       val processMappings: Vector[(String, String)],
+       val actormessageMappings: Vector[String],
+       val channelMappings: Vector[(String, String)],
+       val schedulerSchedules: Vector[Vector[String]],
+       val messageMappings: Vector[(String, String)],
+       val messageSlotAllocations: Vector[Map[String, Vector[Boolean]]]
                                    ) extends StandardDecisionModel
   with WCETComputationMixin(sdfandtask, platform) {
 
@@ -37,11 +36,9 @@ final case class SDFtaskToMultiCore(
     platform.hardware.processorsProvisions
 
   val messagesMaxSizes: Vector[Long] = sdfandtask.messagesMaxSizes
-  //  val processComputationalNeeds: Vector[Map[String, Map[String, Long]]] =
-  //   sdfandtask.actorComputationalNeeds
-  // val processSizes: Vector[Long] = sdfandtask.totalprocessSizes
 
- // val wcets = computeWcets
+
+  val wcets = computeWcets
 
   val uniqueIdentifier: String = "SDFtaskToMultiCore"
 }

@@ -15,9 +15,9 @@ final case class SDFandTask(
 
     val coveredElements = sdf.coveredElements ++ task.coveredElements
     val coveredElementRelations=sdf.coveredElementRelations ++ task.coveredElementRelations
-    val processComputationalNeeds=sdf.processComputationalNeeds ++ task.processComputationalNeeds
-    val processSizes = sdf.actorSizes ++ task.processSizes
+    val processComputationalNeeds :Vector[Map[String, Map[String, Long]]] =sdf.processComputationalNeeds ++ task.processComputationalNeeds
+    val processSizes :Vector[Long] = sdf.actorSizes ++ task.processSizes
 
-    val messagesMaxSizes=sdf.messagesMaxSizes ++ task.messagesMaxSizes
+    val messagesMaxSizes :Vector[Long] =sdf.messagesMaxSizes ++ task.messagesMaxSizes
     val uniqueIdentifier: String = "SDFandTask"
 }

@@ -98,12 +98,12 @@ final case class ChocoSDFToSChedTileHW2(
     timeValues
       .map(t => t * (timeMultiplier))
       .exists(d =>
-        Math.log10(d.toDouble) <= -2.0
+        Math.log10(d.toDouble) <= -3.0
       ) // ensure that the numbers magnitudes still stay sane
     &&
     timeValues
       .map(t => t * (timeMultiplier))
-      .sum < Int.MaxValue / 10 - 1
+      .sum < Int.MaxValue / 100 - 1
   ) {
     timeMultiplier *= 10
   }

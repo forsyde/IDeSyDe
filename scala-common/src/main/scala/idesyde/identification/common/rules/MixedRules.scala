@@ -2,7 +2,13 @@ package idesyde.identification.common.rules
 
 import idesyde.identification.DecisionModel
 import idesyde.identification.DesignModel
-import idesyde.identification.common.models.mixed.{PeriodicWorkloadToPartitionedSharedMultiCore, SDFToPartitionedSharedMemory, SDFToTiledMultiCore, SDFandTask, SDFtaskToMultiCore}
+import idesyde.identification.common.models.mixed.{
+  PeriodicWorkloadToPartitionedSharedMultiCore,
+  SDFToPartitionedSharedMemory,
+  SDFToTiledMultiCore,
+  TaskdAndSDFServer,
+  TasksAndSDFServerToMultiCore
+}
 import idesyde.identification.common.models.platform.SchedulableTiledMultiCore
 import idesyde.identification.common.models.platform.PartitionedSharedMemoryMultiCore
 import idesyde.identification.common.models.sdf.SDFApplication
@@ -20,7 +26,8 @@ trait MixedRules(using logger: Logger) {
       .filter(_.isInstanceOf[SDFApplication])
       .map(_.asInstanceOf[SDFApplication])
       .filter(_.isConsistent) // only go forward if the SDF is consistent
-    if (app.isEmpty) logger.debug("SDFApplication is not consistent. Impossible to identify SDFToTiledMultiCore.")
+    if (app.isEmpty)
+      logger.debug("SDFApplication is not consistent. Impossible to identify SDFToTiledMultiCore.")
     val plat = identified
       .filter(_.isInstanceOf[SchedulableTiledMultiCore])
       .map(_.asInstanceOf[SchedulableTiledMultiCore])
@@ -47,7 +54,10 @@ trait MixedRules(using logger: Logger) {
       .filter(_.isInstanceOf[SDFApplication])
       .map(_.asInstanceOf[SDFApplication])
       .filter(_.isConsistent) // only go forward if the SDF is consistent
-    if (app.isEmpty) logger.debug("SDFApplication is not consistent. Impossible to identify SDFToPartitionedSharedMemory.")
+    if (app.isEmpty)
+      logger.debug(
+        "SDFApplication is not consistent. Impossible to identify SDFToPartitionedSharedMemory."
+      )
     val plat = identified
       .filter(_.isInstanceOf[PartitionedSharedMemoryMultiCore])
       .map(_.asInstanceOf[PartitionedSharedMemoryMultiCore])
@@ -92,32 +102,27 @@ trait MixedRules(using logger: Logger) {
   }
 
   def identSDFtaskToMultiCore(
-       models: Set[DesignModel],
-       identified: Set[DecisionModel]
-  ) : Set[SDFtaskToMultiCore]= {
+      models: Set[DesignModel],
+      identified: Set[DecisionModel]
+  ): Set[TasksAndSDFServerToMultiCore] = {
     val app = identified
-      .filter(_.isInstanceOf[SDFandTask])
-      .map(_.asInstanceOf[SDFandTask])
+      .filter(_.isInstanceOf[TaskdAndSDFServer])
+      .map(_.asInstanceOf[TaskdAndSDFServer])
     val plat = identified
-      .filter(_.isInstanceOf[SchedulableTiledMultiCore])
-      .map(_.asInstanceOf[SchedulableTiledMultiCore])
+      .filter(_.isInstanceOf[PartitionedSharedMemoryMultiCore])
+      .map(_.asInstanceOf[PartitionedSharedMemoryMultiCore])
     // if ((runtimes.isDefined && plat.isEmpty) || (runtimes.isEmpty && plat.isDefined))
     app.flatMap(a =>
       plat.map(p =>
-        SDFtaskToMultiCore(
-          sdfandtask=a,
+        TasksAndSDFServerToMultiCore(
+          sdfandtask = a,
           platform = p,
-          actorprocessMappings= Vector.empty,
-          processMappings = Vector.empty,
-          actormessageMappings = Vector.empty,
-          channelMappings= Vector.empty,
-          schedulerSchedules= Vector.empty ,
-          messageMappings= Vector.empty ,
-          messageSlotAllocations = Vector.empty
+          processesMappings = Vector.empty,
+          messagesMappings = Vector.empty,
+          messageSlotAllocations = Map.empty
         )
       )
     )
-    }
-
+  }
 
 }

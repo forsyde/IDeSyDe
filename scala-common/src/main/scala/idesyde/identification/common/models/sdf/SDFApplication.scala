@@ -161,17 +161,13 @@ final case class SDFApplication(
       // println((produced, consumed, tokens))
       // val src = vec.indexWhere(_ > 0)
       // val dst = vec.indexWhere(_ < 0)
-      var qSrc = 0
-      var qDst = 0
-      while (qSrc <= sdfRepetitionVectors(src) && qDst <= sdfRepetitionVectors(dst)) {
-        if (produced * qSrc + tokens - consumed * (qDst + 1) < 0) {
-          qSrc += 1
-        } else {
-          qDst += 1
-          if (qSrc > 0) {
-            edges +:= ((s, qSrc), (d, qDst))
-          }
-        }
+      for (
+        qDst <- 1 to sdfRepetitionVectors(dst);
+        ratio = Rational(qDst * consumed - tokens, produced);
+        qSrc <- ratio.floor.toInt to ratio.ceil.toInt;
+        if qSrc > 0
+      ) {
+        edges +:= ((s, qSrc), (d, qDst))
       }
     }
     for ((a, ai) <- actorsIdentifiers.zipWithIndex; q <- 1 to sdfRepetitionVectors(ai) - 1) {
@@ -193,28 +189,14 @@ final case class SDFApplication(
       // println((produced, consumed, tokens))
       // val src = vec.indexWhere(_ > 0)
       // val dst = vec.indexWhere(_ < 0)
-      var qSrc = sdfRepetitionVectors(src)
-      var qDst = sdfRepetitionVectors(dst)
-      while (qSrc <= sdfRepetitionVectors(src) + 1 && qDst <= sdfRepetitionVectors(dst) + 1) {
-        if (produced * qSrc + tokens - consumed * (qDst + 1) < 0) {
-          qSrc += 1
-        } else {
-          qDst += 1
-          if (qSrc > 0) {
-            edges +:= ((s, qSrc), (d, qDst))
-          }
-        }
+      for (
+        qDst <- sdfRepetitionVectors(dst) to sdfRepetitionVectors(dst) + 1;
+        ratio = Rational(qDst * consumed - tokens, produced);
+        qSrc <- ratio.floor.toInt to ratio.ceil.toInt;
+        if qSrc > 0
+      ) {
+        edges +:= ((s, qSrc), (d, qDst))
       }
-      // the last jobs always communicate
-      // edges +:= ((src, qSrc), (dst, qDst))
-      // for (
-      //   qDst <- 1 to sdfRepetitionVectors(dst);
-      //   qSrcFrac = Rational(consumed * qDst - tokens, produced);
-      //   qSrc <- qSrcFrac.floor.toInt to qSrcFrac.ceil.toInt
-      //   if qSrc > 0
-      // ) {
-      //   edges +:= ((src, qSrc.toInt), (dst, qDst))
-      // }
     }
     for (a <- actorsIdentifiers; i = actorsIdentifiers.indexOf(a)) {
       edges +:= ((a, sdfRepetitionVectors(i)), (a, sdfRepetitionVectors(i) + 1))

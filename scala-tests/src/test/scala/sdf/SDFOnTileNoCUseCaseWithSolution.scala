@@ -1035,10 +1035,8 @@ class SDFOnTileNoCUseCaseWithSolution extends AnyFunSuite with LoggingMixin {
       .find(m => m.isInstanceOf[SDFApplication])
       .map(m => m.asInstanceOf[SDFApplication])
       .get
-    assert(
-      allSDFAppsDM.sdfRepetitionVectors.sameElements(
-        Array.fill(allSDFAppsDM.actorsIdentifiers.size)(1)
-      )
+    assertResult(Vector.fill(allSDFAppsDM.actorsIdentifiers.size)(1))(
+      allSDFAppsDM.sdfRepetitionVectors
     )
   }
 

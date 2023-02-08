@@ -101,7 +101,7 @@ trait MixedRules(using logger: Logger) {
     )
   }
 
-  def identSDFtaskToMultiCore(
+  def identTaksAndSDFServerToMultiCore(
       models: Set[DesignModel],
       identified: Set[DecisionModel]
   ): Set[TasksAndSDFServerToMultiCore] = {

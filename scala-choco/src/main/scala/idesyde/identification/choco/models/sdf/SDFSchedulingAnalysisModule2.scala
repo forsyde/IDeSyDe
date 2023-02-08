@@ -306,7 +306,9 @@ class SDFSchedulingAnalysisModule2(
         .arithm(
           invThroughputs(aIdx),
           ">=",
-          maxPath(i)(j)
+          maxPath(i)(j),
+          "+",
+          transmissionDelay(actors.indexOf(aa))(actors.indexOf(a))
         )
         .post()
       // val lastJob =

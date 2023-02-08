@@ -60,20 +60,23 @@ class SDFSchedulingAnalysisModule2(
     )
     .toArray
 
-  val maxPath = schedulers
-    .map(s =>
-      jobsAndActors
-        .map((aa, qq) =>
-          chocoModel.intVar(
-            s"maxPath($s, $aa, $qq)",
-            0,
-            maxLength,
-            true
-          )
-        )
-        .toArray
-    )
-    .toArray
+  val maxPath =
+    chocoModel.intVarMatrix("maxPath", jobsAndActors.size, jobsAndActors.size, 0, maxLength)
+
+  // schedulers
+  // .map(s =>
+  //   jobsAndActors
+  //     .map((aa, qq) =>
+  //       chocoModel.intVar(
+  //         s"maxPath($s, $aa, $qq)",
+  //         0,
+  //         maxLength,
+  //         true
+  //       )
+  //     )
+  //     .toArray
+  // )
+  // .toArray
 
   // val jobCycleLength =
   //   jobsAndActors
@@ -186,55 +189,68 @@ class SDFSchedulingAnalysisModule2(
     }
     // -- nexts are only valid when they are mapped in the same PE
     // -- must make a path
-    for ((s, p) <- schedulers.zipWithIndex) {
-      for (
-        (u, i) <- jobsAndActors.zipWithIndex;
-        (dst, q) = u;
-        dstIdx   = actors.indexOf(dst)
+    for ((u, i) <- jobsAndActors.zipWithIndex; (v, j) <- jobsAndActors.zipWithIndex) {
+      if (i == j) {
+        chocoModel.arithm(maxPath(i)(j), "=", duration(actors.indexOf(u._1))).post()
+      } else if (
+        sdfAndSchedulers.sdfApplications.firingsPrecedenceGraph
+          .get(u)
+          .isDirectPredecessorOf(sdfAndSchedulers.sdfApplications.firingsPrecedenceGraph.get(v))
       ) {
-        val maxPrev = chocoModel.intVar(
-          s"maxPrev($s, $dst, $q)",
+        chocoModel
+          .sum(
+            Array(
+              duration(actors.indexOf(u._1)),
+              transmissionDelay(actors.indexOf(u._1))(actors.indexOf(v._1)),
+              duration(actors.indexOf(v._1))
+            ),
+            "=",
+            maxPath(i)(j)
+          )
+          .post()
+      } else {
+        val maxSucc = sdfAndSchedulers.sdfApplications.firingsPrecedenceGraph
+          .get(u)
+          .diSuccessors
+          .map(_.value)
+          .map((wa, wq) =>
+            val k = jobsAndActors.indexOf((wa, wq))
+            maxPath(k)(j)
+              .add(transmissionDelay(actors.indexOf(u._1))(actors.indexOf(wa)))
+              .intVar()
+          )
+          .toArray
+        val maxNext = chocoModel.intVar(
+          s"maxNext($u, $v)",
           0,
           maxLength,
           true
         )
-        val maxDep = sdfAndSchedulers.sdfApplications.firingsPrecedenceGraph
-          .get(u)
-          .diPredecessors
-          .map(_.value)
-          .map((prevAct, prevQ) =>
-            val prevIdx = jobsAndActors.indexOf((prevAct, prevQ))
-            maxPath(p)(prevIdx)
-              .add(transmissionDelay(actors.indexOf(prevAct))(actors.indexOf(dst)))
-              .intVar()
-          )
-          .toArray
-        chocoModel.ifThen(
-          chocoModel.and(
-            chocoModel.arithm(memoryMappingModule.processesMemoryMapping(dstIdx), "=", p),
-            chocoModel.arithm(jobOrder(i), "=", 0)
-          ),
-          chocoModel.arithm(maxPrev, "=", 0)
-        )
-        for (
-          (v, j) <- jobsAndActors.zipWithIndex;
-          if i != j
-        ) {
+        for ((w, k) <- jobsAndActors.zipWithIndex; if i != k) {
           chocoModel.ifThen(
             chocoModel.and(
-              chocoModel.arithm(jobMapping(i), "=", jobMapping(j)),
-              chocoModel.arithm(jobOrder(i), "=", jobOrder(j), "+", 1)
+              chocoModel.arithm(jobMapping(k), "=", jobMapping(i)),
+              chocoModel.arithm(jobOrder(k), "=", jobOrder(i), "+", 1)
             ),
-            chocoModel.arithm(maxPrev, "=", maxPath(p)(j))
+            chocoModel.arithm(maxNext, "=", maxPath(k)(j))
+          )
+        }
+        for ((s, p) <- schedulers.zipWithIndex) {
+          chocoModel.ifThen(
+            chocoModel.and(
+              chocoModel.arithm(jobMapping(i), "=", p),
+              chocoModel.arithm(jobOrder(i), "=", mappedJobsPerElement(p), "-", 1)
+            ),
+            chocoModel.arithm(maxNext, "=", 0)
           )
         }
         chocoModel
           .arithm(
-            maxPath(p)(i),
+            maxPath(i)(j),
             "=",
-            duration(dstIdx),
+            duration(actors.indexOf(u._1)),
             "+",
-            chocoModel.max(s"maxPath($s, $dst, $q)", maxDep :+ maxPrev)
+            chocoModel.max(s"maxPath($u, $v)", maxSucc :+ maxNext)
           )
           .post()
       }
@@ -267,14 +283,13 @@ class SDFSchedulingAnalysisModule2(
     // println(sdfAndSchedulers.sdfApplications.firingsPrecedenceGraph)
     // println(sdfAndSchedulers.sdfApplications.firingsPrecedenceWithExtraStepGraph)
     for (
-      (s, p)       <- schedulers.zipWithIndex;
-      ((a, qi), i) <- jobsAndActors.zipWithIndex;
-      aIdx = actors.indexOf(a)
+      ((ai, qi), i) <- jobsAndActors.zipWithIndex;
+      ((aj, qj), j) <- jobsAndActors.zipWithIndex
     ) {
       chocoModel.ifThen(
-        chocoModel.arithm(memoryMappingModule.processesMemoryMapping(aIdx), "=", p),
+        chocoModel.arithm(jobMapping(i), "=", jobMapping(j)),
         chocoModel
-          .arithm(invThroughputs(aIdx), ">=", maxPath(p)(i))
+          .arithm(invThroughputs(actors.indexOf(ai)), ">=", maxPath(i)(j))
       )
     }
     for (
@@ -285,11 +300,13 @@ class SDFSchedulingAnalysisModule2(
       (aa, qq) = predV.value;
       if a != aa && qq == maxRepetitionsPerActors(actors.indexOf(aa))
     ) {
+      val i = jobsAndActors.indexOf((a, 1))
+      val j = jobsAndActors.indexOf((aa, qq))
       chocoModel
         .arithm(
           invThroughputs(aIdx),
           ">=",
-          invThroughputs(actors.indexOf(aa))
+          maxPath(i)(j)
         )
         .post()
       // val lastJob =

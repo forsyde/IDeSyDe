@@ -18,6 +18,34 @@ import idesyde.utils.Logger
 
 trait MixedRules(using logger: Logger) {
 
+  def identTaskdAndSDFServer(
+      models: Set[DesignModel],
+      identified: Set[DecisionModel]
+  ): Set[TaskdAndSDFServer] = {
+    val app1 = identified
+      .filter(_.isInstanceOf[SDFApplication])
+      .map(_.asInstanceOf[SDFApplication])
+      .filter(_.isConsistent)
+    if (app1.isEmpty)
+      logger.debug("SDF wrong.")
+    val app2 = identified
+      .filter(_.isInstanceOf[CommunicatingExtendedDependenciesPeriodicWorkload])
+      .map(_.asInstanceOf[CommunicatingExtendedDependenciesPeriodicWorkload])
+      if (app2.isEmpty)
+      logger.debug("task wrong.")
+    app1.flatMap(a =>
+      app2.map(b=>
+      TaskdAndSDFServer(
+          sdf = a,
+          task = b,
+          sdfServerPeriod = Vector.empty,
+          sdfServerBudget = Vector.empty
+        )
+      )
+    )
+  
+  }
+
   def identSDFToTiledMultiCore(
       models: Set[DesignModel],
       identified: Set[DecisionModel]

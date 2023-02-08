@@ -26,7 +26,8 @@ class CommonIdentificationModule(using logger: Logger)
     DecisionModelOnlyIdentificationRule(identSDFToPartitionedSharedMemory),
     DecisionModelOnlyIdentificationRule(identSDFToTiledMultiCore),
     DecisionModelOnlyIdentificationRule(identPeriodicWorkloadToPartitionedSharedMultiCore),
-    DecisionModelOnlyIdentificationRule(identTaksAndSDFServerToMultiCore)
+    DecisionModelOnlyIdentificationRule(identTaksAndSDFServerToMultiCore),
+    DecisionModelOnlyIdentificationRule(identTaskdAndSDFServer)
   )
 
   val integrationRules = Set()

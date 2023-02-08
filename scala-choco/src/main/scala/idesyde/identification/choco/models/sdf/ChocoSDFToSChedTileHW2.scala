@@ -45,16 +45,16 @@ final class ConMonitorObj2(val model: ChocoSDFToSChedTileHW2) extends IMonitorCo
     //     .map(_.mkString(", "))
     //     .mkString("\n")
     // )
-    println(
-      model.sdfAnalysisModule.maxPath
-        .map(_.mkString(", "))
-        .mkString("\n")
-    )
     // println(
-    //   model.tileAnalysisModule.numVirtualChannelsForProcElem
-    //     .map(_.filter(_.getValue() > 0).mkString(", "))
-    //     .mkString("\n")
-    // )
+      //   model.tileAnalysisModule.numVirtualChannelsForProcElem
+      //     .map(_.filter(_.getValue() > 0).mkString(", "))
+      //     .mkString("\n")
+      // )
+    println(
+        model.sdfAnalysisModule.maxPath
+          .map(_.mkString(", "))
+          .mkString("\n")
+      )
     println(model.memoryMappingModule.processesMemoryMapping.mkString(", "))
     println(model.sdfAnalysisModule.jobOrder.mkString(", "))
     // println(model.sdfAnalysisModule.jobStartTime.mkString(", "))

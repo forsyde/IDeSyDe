@@ -46,19 +46,19 @@ final class ConMonitorObj2(val model: ChocoSDFToSChedTileHW2) extends IMonitorCo
     //     .mkString("\n")
     // )
     // println(
-      //   model.tileAnalysisModule.numVirtualChannelsForProcElem
-      //     .map(_.filter(_.getValue() > 0).mkString(", "))
-      //     .mkString("\n")
-      // )
-    println(
-        model.sdfAnalysisModule.maxPath
-          .map(_.mkString(", "))
-          .mkString("\n")
-      )
+    //   model.tileAnalysisModule.numVirtualChannelsForProcElem
+    //     .map(_.filter(_.getValue() > 0).mkString(", "))
+    //     .mkString("\n")
+    // )
+    // println(
+    //     model.sdfAnalysisModule.maxPath
+    //       .map(_.mkString(", "))
+    //       .mkString("\n")
+    //   )
     println(model.memoryMappingModule.processesMemoryMapping.mkString(", "))
     println(model.sdfAnalysisModule.jobOrder.mkString(", "))
+    println(model.sdfAnalysisModule.invThroughputs.mkString(", "))
     // println(model.sdfAnalysisModule.jobStartTime.mkString(", "))
-    // println(model.sdfAnalysisModule.invThroughputs.mkString(", "))
     // println(model.sdfAnalysisModule.numMappedElements)
     // println(model.maxLatency.toString())
     // println(
@@ -498,6 +498,9 @@ final case class ChocoSDFToSChedTileHW2(
       s"solution: nUsedPEs = ${output.getIntVal(nUsedPEs)}, globalInvThroughput = ${output
         .getIntVal(sdfAnalysisModule.globalInvThroughput)}"
     )
+    // println(memoryMappingModule.processesMemoryMapping.mkString(", "))
+    // println(sdfAnalysisModule.jobOrder.mkString(", "))
+    // println(sdfAnalysisModule.invThroughputs.mkString(", "))
     dse.copy(
       processMappings = dse.sdfApplications.actorsIdentifiers.zipWithIndex.map((a, i) =>
         dse.platform.hardware

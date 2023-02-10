@@ -284,15 +284,23 @@ class SDFSchedulingAnalysisModule2(
     // println(sdfAndSchedulers.sdfApplications.firingsPrecedenceWithExtraStepGraph)
     val thPropagator = StreamingJobsThroughputPropagator(
       jobsAndActors.size,
-      (i) => (j) => sdfAndSchedulers.sdfApplications.firingsPrecedenceGraph
-              .get(jobsAndActors(i))
-              .isDirectPredecessorOf(
-                sdfAndSchedulers.sdfApplications.firingsPrecedenceGraph.get(jobsAndActors(j))
-              ),
+      (i) =>
+        (j) =>
+          sdfAndSchedulers.sdfApplications.firingsPrecedenceGraph
+            .get(jobsAndActors(i))
+            .isDirectPredecessorOf(
+              sdfAndSchedulers.sdfApplications.firingsPrecedenceGraph.get(jobsAndActors(j))
+            ),
       jobOrder,
       (0 until jobsAndActors.size).map(jobMapping(_)).toArray,
       jobsAndActors.map((a, _) => duration(actors.indexOf(a))).toArray,
-      jobsAndActors.map((src, _) => jobsAndActors.map((dst, _) => transmissionDelay(actors.indexOf(src))(actors.indexOf(dst))).toArray).toArray,
+      jobsAndActors
+        .map((src, _) =>
+          jobsAndActors
+            .map((dst, _) => transmissionDelay(actors.indexOf(src))(actors.indexOf(dst)))
+            .toArray
+        )
+        .toArray,
       jobsAndActors.map((a, _) => invThroughputs(actors.indexOf(a))).toArray
     )
     chocoModel.post(new Constraint("StreamingJobsThroughputPropagator", thPropagator))
@@ -343,6 +351,22 @@ class SDFSchedulingAnalysisModule2(
           invThroughputs(j)
         )
       )
+      if (
+        sdfAndSchedulers.sdfApplications.sdfGraph
+          .get(a)
+          .isPredecessorOf(sdfAndSchedulers.sdfApplications.sdfGraph.get(aa))
+        || sdfAndSchedulers.sdfApplications.sdfGraph
+          .get(aa)
+          .isPredecessorOf(sdfAndSchedulers.sdfApplications.sdfGraph.get(a))
+      ) {
+        chocoModel
+          .arithm(
+            invThroughputs(i),
+            "=",
+            invThroughputs(j)
+          )
+          .post()
+      }
     }
     // chocoModel.post(
     //   new Constraint(

@@ -18,6 +18,12 @@ import idesyde.identification.common.models.platform.PartitionedSharedMemoryMult
 import idesyde.identification.forsyde.ForSyDeIdentificationUtils
 import forsyde.io.java.typed.viewers.nonfunctional.UtilizationBoundedProcessingElem
 import spire.math.Rational
+import forsyde.io.java.typed.viewers.platform.runtime.StaticCyclicScheduler
+import scala.jdk.CollectionConverters._
+import forsyde.io.java.core.VertexProperty
+import forsyde.io.java.typed.viewers.decision.platform.runtime.AllocatedSingleSlotSCS
+import forsyde.io.java.typed.viewers.decision.platform.runtime.AllocatedSharedSlotSCS
+import scala.collection.mutable.Buffer
 
 object MixedRules {
 
@@ -34,7 +40,12 @@ object MixedRules {
               (taskId, schedId) <- dse.processSchedulings;
               // ok for now because it is a 1-to-many situation wit the current Decision Models (2023-01-16)
               // TODO: fix it to be stable later
-              task  = rebuilt.vertexSet().stream().filter(v => taskId.contains(v.getIdentifier())).findAny().get();
+              task = rebuilt
+                .vertexSet()
+                .stream()
+                .filter(v => taskId.contains(v.getIdentifier()))
+                .findAny()
+                .get();
               sched = rebuilt.queryVertex(schedId).get()
             ) {
               AbstractScheduler
@@ -48,8 +59,13 @@ object MixedRules {
               (taskId, memId) <- dse.processMappings;
               // ok for now because it is a 1-to-many situation wit the current Decision Models (2023-01-16)
               // TODO: fix it to be stable later
-              task  = rebuilt.vertexSet().stream().filter(v => taskId.contains(v.getIdentifier())).findAny().get();
-              mem  = rebuilt.queryVertex(memId).get()
+              task = rebuilt
+                .vertexSet()
+                .stream()
+                .filter(v => taskId.contains(v.getIdentifier()))
+                .findAny()
+                .get();
+              mem = rebuilt.queryVertex(memId).get()
             ) {
               GenericMemoryModule
                 .safeCast(mem)
@@ -61,8 +77,13 @@ object MixedRules {
               (channelId, memId) <- dse.channelMappings;
               // ok for now because it is a 1-to-many situation wit the current Decision Models (2023-01-16)
               // TODO: fix it to be stable later
-              channel = rebuilt.vertexSet().stream().filter(v => channelId.contains(v.getIdentifier())).findAny().get();
-              mem     = rebuilt.queryVertex(memId).get()
+              channel = rebuilt
+                .vertexSet()
+                .stream()
+                .filter(v => channelId.contains(v.getIdentifier()))
+                .findAny()
+                .get();
+              mem = rebuilt.queryVertex(memId).get()
             ) {
               GenericMemoryModule
                 .safeCast(mem)
@@ -116,6 +137,62 @@ object MixedRules {
                     })
                 })
             }
+            // now, we take care of the memory mappings
+            for (
+              (mem, i) <- dse.messageMappings.zipWithIndex;
+              channelID = dse.sdfApplications.channelsIdentifiers(i);
+              memIdx    = dse.platform.hardware.memories.indexOf(mem)
+            ) {
+              newModel
+                .queryVertex(channelID)
+                .ifPresent(actor => {
+                  newModel
+                    .queryVertex(mem)
+                    .ifPresent(m => {
+                      val v = MemoryMapped.enforce(actor)
+                      v.setMappingHostsPort(
+                        newModel,
+                        java.util.Set.of(GenericMemoryModule.enforce(m))
+                      )
+                    })
+                })
+            }
+            // now, we put the schedule in each scheduler
+            for (
+              (list, si) <- dse.schedulerSchedules.zipWithIndex;
+              proc      = dse.platform.hardware.processors(si);
+              scheduler = dse.platform.runtimes.schedulers(si)
+            ) {
+              newModel
+                .queryVertex(scheduler)
+                .ifPresent(sched => {
+                  val scs = AllocatedSingleSlotSCS.enforce(sched)
+                  scs.setEntries(list.asJava)
+                })
+            }
+            // finally, the channel comm allocations
+            var commAllocs = dse.platform.hardware.communicationElementsMaxChannels.map(maxVc =>
+              Buffer.fill(maxVc)(Buffer.empty[String])
+            )
+            for (
+              (maxVc, ce) <- dse.platform.hardware.communicationElementsMaxChannels.zipWithIndex;
+              (dict, c)   <- dse.messageSlotAllocations.zipWithIndex;
+              vc          <- 0 until maxVc;
+              commElem = dse.platform.hardware.communicationElems(ce);
+              if dict.getOrElse(commElem, Vector.fill(maxVc)(false))(vc);
+              cId = dse.sdfApplications.channelsIdentifiers(c)
+            ) {
+              commAllocs(ce)(vc) += cId
+            }
+            for ((ce, i) <- dse.platform.hardware.communicationElems.zipWithIndex) {
+              newModel
+                .queryVertex(ce)
+                .ifPresent(comm =>
+                  AllocatedSharedSlotSCS
+                    .enforce(comm)
+                    .setEntries(commAllocs(i).map(_.asJava).asJava)
+                )
+            }
             Some(ForSyDeDesignModel(newModel))
           }
           case _ => Option.empty
@@ -129,7 +206,7 @@ object MixedRules {
       models: Set[DesignModel],
       identified: Set[DecisionModel]
   ): Set[PeriodicWorkloadToPartitionedSharedMultiCore] = {
-    ForSyDeIdentificationUtils.toForSyDe(models) { model => 
+    ForSyDeIdentificationUtils.toForSyDe(models) { model =>
       val app = identified
         .filter(_.isInstanceOf[CommunicatingExtendedDependenciesPeriodicWorkload])
         .map(_.asInstanceOf[CommunicatingExtendedDependenciesPeriodicWorkload])
@@ -147,14 +224,18 @@ object MixedRules {
             channelMappings = Vector.empty,
             channelSlotAllocations = Map(),
             maxUtilizations = (for (
-              pe <- p.hardware.processingElems; 
-              peVertex = model.queryVertex(pe); 
+              pe <- p.hardware.processingElems;
+              peVertex = model.queryVertex(pe);
               if peVertex.isPresent() && UtilizationBoundedProcessingElem.conforms(peVertex.get());
               utilVertex = UtilizationBoundedProcessingElem.safeCast(peVertex.get()).get()
-            ) yield pe -> Rational(utilVertex.getMaxUtilizationNumerator(), utilVertex.getMaxUtilizationDenominator())).toMap
+            )
+              yield pe -> Rational(
+                utilVertex.getMaxUtilizationNumerator(),
+                utilVertex.getMaxUtilizationDenominator()
+              )).toMap
           )
         )
-      )  
+      )
     }
   }
 }

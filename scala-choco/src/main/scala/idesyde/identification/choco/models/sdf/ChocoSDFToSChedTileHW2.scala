@@ -513,8 +513,12 @@ final case class ChocoSDFToSChedTileHW2(
           .memories(output.getIntVal(memoryMappingModule.messagesMemoryMapping(messageIdx)))
       }),
       schedulerSchedules = dse.platform.runtimes.schedulers.zipWithIndex.map((s, si) => {
-        // TODO: make here the lists
-        Vector.empty
+        val unordered = for (
+          ((aId, q), i) <- sdfAnalysisModule.jobsAndActors.zipWithIndex;
+          a = dse.sdfApplications.actorsIdentifiers.indexOf(aId);
+          if memoryMappingModule.processesMemoryMapping(a).isInstantiatedTo(si)
+        ) yield (aId, sdfAnalysisModule.jobOrder(i).getValue())
+        unordered.sortBy((a, o) => o).map((a, _) => a)
       }),
       messageSlotAllocations = dse.sdfApplications.channelsIdentifiers.zipWithIndex.map((c, ci) => {
         // we have to look from the source perpective, since the sending processor is the one that allocates

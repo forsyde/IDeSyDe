@@ -496,7 +496,7 @@ final case class ChocoSDFToSChedTileHW2(
   def rebuildFromChocoOutput(output: Solution): DecisionModel = {
     scribe.debug(
       s"solution: nUsedPEs = ${output.getIntVal(nUsedPEs)}, globalInvThroughput = ${output
-        .getIntVal(sdfAnalysisModule.globalInvThroughput)}"
+        .getIntVal(sdfAnalysisModule.globalInvThroughput)} / $timeMultiplier"
     )
     // println(memoryMappingModule.processesMemoryMapping.mkString(", "))
     // println(sdfAnalysisModule.jobOrder.mkString(", "))

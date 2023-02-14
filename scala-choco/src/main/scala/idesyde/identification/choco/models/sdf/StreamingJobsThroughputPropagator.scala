@@ -12,6 +12,7 @@ import scala.annotation.tailrec
 class StreamingJobsThroughputPropagator(
     val nJobs: Int,
     val isSuccessor: (Int) => (Int) => Boolean,
+    val hasDataCycle: (Int) => (Int) => Boolean,
     val jobOrdering: Array[IntVar],
     val jobMapping: Array[IntVar],
     val jobWeight: Array[IntVar],
@@ -36,9 +37,10 @@ class StreamingJobsThroughputPropagator(
     ).stream().anyMatch(oi => jobOrdering(j).contains(oi + 1)))
 
   def mustCycle(i: Int)(j: Int): Boolean =
-    jobMapping(i).isInstantiated() && jobMapping(j).isInstantiated() && jobMapping(i)
+    hasDataCycle(i)(j) ||
+    (jobMapping(i).isInstantiated() && jobMapping(j).isInstantiated() && jobMapping(i)
       .getValue() == jobMapping(j).getValue() && jobOrdering(i)
-      .getUB() < jobOrdering(j).getLB()
+      .getUB() < jobOrdering(j).getLB())
 
   def canCycle(i: Int)(j: Int): Boolean =
     jobMapping(i).stream().anyMatch(jobMapping(j).contains(_)) && jobOrdering(i)
@@ -101,7 +103,7 @@ class StreamingJobsThroughputPropagator(
       // var ub = jobThroughput(i).getLB()
       wfor(0, _ < nJobs, _ + 1) { j =>
         if (i != j && mustCycle(i)(j)) {
-          lb = Math.max(lb, minimumDistanceMatrix(i)(j))
+          lb = Math.max(lb, minimumDistanceMatrix(i)(j) + edgeWeight(j)(i).getLB())
         }
       // if (i != j && canCycle(i)(j)) {
       //   ub = Math.max(ub, maximumDistanceMatrix(i)(j))

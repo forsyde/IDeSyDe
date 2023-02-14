@@ -180,7 +180,8 @@ final case class SDFApplication(
   /** Same as [[firingsPrecedenceGraph]], but with one more firings per actors of the next periodic
     * phase
     */
-  lazy val firingsPrecedenceWithExtraStepGraph = {
+  lazy val firingsPrecedenceGraphWithCycles = {
+    val maxFiringPossible = sdfRepetitionVectors.max + 1
     var edges = Buffer[((String, Int), (String, Int))]()
     for ((s, d, _, _, produced, consumed, tokens) <- sdfMessages) {
       val src = actorsIdentifiers.indexOf(s)
@@ -189,16 +190,18 @@ final case class SDFApplication(
       // val src = vec.indexWhere(_ > 0)
       // val dst = vec.indexWhere(_ < 0)
       for (
-        qDst <- sdfRepetitionVectors(dst) to sdfRepetitionVectors(dst) + 1;
+        qDst <- 1 to maxFiringPossible * sdfRepetitionVectors(dst);
+        qSrc <- 1 to maxFiringPossible * sdfRepetitionVectors(src);
         ratio = Rational(qDst * consumed - tokens, produced);
-        qSrc <- ratio.floor.toInt to ratio.ceil.toInt;
-        if qSrc > 0
+        if qSrc == ratio.ceil.toInt;
+        qSrcMod = (qSrc - 1 % sdfRepetitionVectors(src)) + 1;
+        qDstMod = (qDst - 1 % sdfRepetitionVectors(dst)) + 1
       ) {
-        edges +:= ((s, qSrc), (d, qDst))
+        edges +:= ((s, qSrcMod), (d, qDstMod))
       }
     }
-    for (a <- actorsIdentifiers; i = actorsIdentifiers.indexOf(a)) {
-      edges +:= ((a, sdfRepetitionVectors(i)), (a, sdfRepetitionVectors(i) + 1))
+    for ((a, ai) <- actorsIdentifiers.zipWithIndex; q <- 1 to sdfRepetitionVectors(ai) - 1) {
+      edges +:= ((a, q), (a, q + 1))
     }
     val param = edges.map((s, t) => (s ~> t)).toArray
     firingsPrecedenceGraph ++ param
@@ -235,7 +238,7 @@ final case class SDFApplication(
           .toArray
     )
 
-  lazy val topologicalAndHeavyJobOrderingWithExtra = firingsPrecedenceWithExtraStepGraph
+  lazy val topologicalAndHeavyJobOrderingWithExtra = firingsPrecedenceGraphWithCycles
     .topologicalSort()
     .fold(
       cycleNode => {
@@ -245,7 +248,7 @@ final case class SDFApplication(
       topo =>
         topo
           .withLayerOrdering(
-            firingsPrecedenceWithExtraStepGraph.NodeOrdering((v1, v2) =>
+            firingsPrecedenceGraphWithCycles.NodeOrdering((v1, v2) =>
               decreasingActorConsumptionOrder
                 .indexOf(
                   v1.value._1

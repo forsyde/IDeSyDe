@@ -187,6 +187,20 @@ class SDFSchedulingAnalysisModule2(
         )
         .post()
     }
+    // make sure that actors in the same element follow the precedences
+    for (
+        ((ai, qi), i) <- jobsAndActors.zipWithIndex;
+        (aj, qj) <- sdfAndSchedulers.sdfApplications.firingsPrecedenceGraph.get((ai, qi)).outNeighbors.map(_.value);
+        j = jobsAndActors.indexOf((aj, qj));
+        aix = actors.indexOf(ai); 
+        ajx = actors.indexOf(aj)
+      ) {
+      chocoModel.ifThen(
+        chocoModel.arithm(memoryMappingModule.processesMemoryMapping(aix), "=", memoryMappingModule.processesMemoryMapping(ajx)),
+        chocoModel.arithm(jobOrder(i), "<", jobOrder(j))
+      )
+    }
+
     // -- nexts are only valid when they are mapped in the same PE
     // -- must make a path
     // for ((u, i) <- jobsAndActors.zipWithIndex; (v, j) <- jobsAndActors.zipWithIndex) {
@@ -291,6 +305,17 @@ class SDFSchedulingAnalysisModule2(
             .isDirectPredecessorOf(
               sdfAndSchedulers.sdfApplications.firingsPrecedenceGraph.get(jobsAndActors(j))
             ),
+      (i) => (j) => {
+        val (ai, qi) = jobsAndActors(i)
+        val aix = actors.indexOf(ai)
+        (1 to sdfAndSchedulers.sdfApplications.sdfRepetitionVectors(aix)).exists(cycle => 
+          sdfAndSchedulers.sdfApplications.firingsPrecedenceGraphWithCycles
+              .get((ai, qi + cycle*sdfAndSchedulers.sdfApplications.sdfRepetitionVectors(aix)))
+              .isSuccessorOf(
+                sdfAndSchedulers.sdfApplications.firingsPrecedenceGraphWithCycles.get(jobsAndActors(j))
+              )
+        )
+      },
       jobOrder,
       (0 until jobsAndActors.size).map(jobMapping(_)).toArray,
       jobsAndActors.map((a, _) => duration(actors.indexOf(a))).toArray,

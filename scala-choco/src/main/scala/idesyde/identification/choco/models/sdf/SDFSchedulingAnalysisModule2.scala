@@ -306,15 +306,16 @@ class SDFSchedulingAnalysisModule2(
               sdfAndSchedulers.sdfApplications.firingsPrecedenceGraph.get(jobsAndActors(j))
             ),
       (i) => (j) => {
-        val (ai, qi) = jobsAndActors(i)
-        val aix = actors.indexOf(ai)
-        (1 to sdfAndSchedulers.sdfApplications.sdfRepetitionVectors(aix)).exists(cycle => 
-          sdfAndSchedulers.sdfApplications.firingsPrecedenceGraphWithCycles
-              .get((ai, qi + cycle*sdfAndSchedulers.sdfApplications.sdfRepetitionVectors(aix)))
-              .isSuccessorOf(
-                sdfAndSchedulers.sdfApplications.firingsPrecedenceGraphWithCycles.get(jobsAndActors(j))
-              )
-        )
+        sdfAndSchedulers.sdfApplications.firingsPrecedenceGraph
+            .get(jobsAndActors(i))
+            .isPredecessorOf(
+              sdfAndSchedulers.sdfApplications.firingsPrecedenceGraph.get(jobsAndActors(j))
+            ) && 
+        sdfAndSchedulers.sdfApplications.firingsPrecedenceGraphWithCycles
+            .get(jobsAndActors(j))
+            .isPredecessorOf(
+              sdfAndSchedulers.sdfApplications.firingsPrecedenceGraphWithCycles.get(jobsAndActors(i))
+            ) 
       },
       jobOrder,
       (0 until jobsAndActors.size).map(jobMapping(_)).toArray,

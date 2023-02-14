@@ -182,7 +182,7 @@ final case class SDFApplication(
     */
   lazy val firingsPrecedenceGraphWithCycles = {
     val maxFiringPossible = sdfRepetitionVectors.max + 1
-    var edges = Buffer[((String, Int), (String, Int))]()
+    var edges             = Buffer[((String, Int), (String, Int))]()
     for ((s, d, _, _, produced, consumed, tokens) <- sdfMessages) {
       val src = actorsIdentifiers.indexOf(s)
       val dst = actorsIdentifiers.indexOf(d)
@@ -194,8 +194,8 @@ final case class SDFApplication(
         qSrc <- 1 to maxFiringPossible * sdfRepetitionVectors(src);
         ratio = Rational(qDst * consumed - tokens, produced);
         if qSrc == ratio.ceil.toInt;
-        qSrcMod = (qSrc - 1 % sdfRepetitionVectors(src)) + 1;
-        qDstMod = (qDst - 1 % sdfRepetitionVectors(dst)) + 1
+        qSrcMod = ((qSrc - 1) % sdfRepetitionVectors(src)) + 1;
+        qDstMod = ((qDst - 1) % sdfRepetitionVectors(dst)) + 1
       ) {
         edges +:= ((s, qSrcMod), (d, qDstMod))
       }
@@ -203,8 +203,9 @@ final case class SDFApplication(
     for ((a, ai) <- actorsIdentifiers.zipWithIndex; q <- 1 to sdfRepetitionVectors(ai) - 1) {
       edges +:= ((a, q), (a, q + 1))
     }
-    val param = edges.map((s, t) => (s ~> t)).toArray
-    firingsPrecedenceGraph ++ param
+    val param = edges.map((s, t) => (s ~> t))
+    val nodes = edges.map((s, t) => s).toSet ++ edges.map((s, t) => t).toSet
+    scalax.collection.Graph.from(nodes, param)
   }
 
   lazy val decreasingActorConsumptionOrder = actorsIdentifiers.zipWithIndex

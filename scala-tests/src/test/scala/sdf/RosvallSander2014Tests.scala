@@ -16,6 +16,8 @@ import idesyde.identification.choco.ChocoIdentificationModule
 import idesyde.identification.forsyde.{ForSyDeDesignModel, ForSyDeIdentificationModule}
 import idesyde.identification.minizinc.MinizincIdentificationModule
 import idesyde.exploration.ChocoExplorationModule
+import java.nio.file.Files
+import java.nio.file.Paths
 
 class RosvallSander2014Tests extends AnyFunSuite with LoggingMixin with PlatformExperimentCreator {
 
@@ -44,6 +46,11 @@ class RosvallSander2014Tests extends AnyFunSuite with LoggingMixin with Platform
   val small8NodeBusPlatform = makeTDMASingleBusPlatform(8, 128L)
 
   val rasta_and_jpeg_case = rastaSDF3.merge(jpegEnc1SDF3).merge(small8NodeBusPlatform)
+
+  test("Write to disk the applications combined") {
+    Files.createDirectories(Paths.get("scala-tests/models/forsyde_sdf"))
+    forSyDeModelHandler.writeModel(sobelSDF3.merge(susanSDF3).merge(rastaSDF3).merge(jpegEnc1SDF3).merge(g10_3_cyclicSDF3), "scala-tests/models/forsyde_sdf/combined.fiodl")
+  }
 
   test("Find a solution to the first case of Experiment III") {
     val identified =

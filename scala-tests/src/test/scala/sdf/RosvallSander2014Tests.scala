@@ -49,12 +49,31 @@ class RosvallSander2014Tests extends AnyFunSuite with LoggingMixin with Platform
 
   test("Write to disk the applications combined") {
     Files.createDirectories(Paths.get("scala-tests/models/forsyde_sdf"))
-    forSyDeModelHandler.writeModel(sobelSDF3.merge(susanSDF3).merge(rastaSDF3).merge(jpegEnc1SDF3).merge(g10_3_cyclicSDF3), "scala-tests/models/forsyde_sdf/combined.fiodl")
+    forSyDeModelHandler.writeModel(
+      sobelSDF3.merge(susanSDF3).merge(rastaSDF3).merge(jpegEnc1SDF3).merge(g10_3_cyclicSDF3),
+      "scala-tests/models/forsyde_sdf/combined.fiodl"
+    )
   }
 
   test("Find a solution to the first case of Experiment III") {
     val identified =
       identificationHandler.identifyDecisionModels(Set(ForSyDeDesignModel(rasta_and_jpeg_case)))
+    assert(identified.size > 0)
+    val chosen = explorationHandler.chooseExplorersAndModels(identified)
+    val solList = chosen.headOption
+      .map((e, m) => {
+        e.explore(m)
+      })
+      .getOrElse(LazyList.empty)
+      .take(3)
+    assert(solList.size > 1)
+  }
+
+  test("Find a solution to Sobel") {
+    val identified =
+      identificationHandler.identifyDecisionModels(
+        Set(ForSyDeDesignModel(sobelSDF3.merge(small8NodeBusPlatform)))
+      )
     assert(identified.size > 0)
     val chosen = explorationHandler.chooseExplorersAndModels(identified)
     val solList = chosen.headOption

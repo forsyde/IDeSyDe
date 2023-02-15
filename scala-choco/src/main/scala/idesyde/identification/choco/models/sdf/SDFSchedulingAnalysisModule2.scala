@@ -365,18 +365,6 @@ class SDFSchedulingAnalysisModule2(
     //   // }
     // }
     for ((a, i) <- actors.zipWithIndex; (aa, j) <- actors.zipWithIndex; if a != aa) {
-      chocoModel.ifThen(
-        chocoModel.arithm(
-          memoryMappingModule.processesMemoryMapping(i),
-          "=",
-          memoryMappingModule.processesMemoryMapping(j)
-        ),
-        chocoModel.arithm(
-          invThroughputs(i),
-          "=",
-          invThroughputs(j)
-        )
-      )
       if (
         sdfAndSchedulers.sdfApplications.sdfGraph
           .get(a)
@@ -392,6 +380,19 @@ class SDFSchedulingAnalysisModule2(
             invThroughputs(j)
           )
           .post()
+      } else {
+        chocoModel.ifThen(
+        chocoModel.arithm(
+          memoryMappingModule.processesMemoryMapping(i),
+          "=",
+          memoryMappingModule.processesMemoryMapping(j)
+        ),
+        chocoModel.arithm(
+          invThroughputs(i),
+          "=",
+          invThroughputs(j)
+        )
+      )
       }
     }
     // chocoModel.post(

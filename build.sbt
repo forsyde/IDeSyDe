@@ -38,7 +38,6 @@ lazy val forsyde = (project in file("scala-forsyde"))
     libraryDependencies ++= Seq(
       ("org.scala-graph" %% "graph-core" % scalaGraphVersion).cross(CrossVersion.for3Use2_13),
       "io.github.forsyde" % "forsyde-io-java-core" % forsydeIoVersion,
-      "org.jgrapht"       % "jgrapht-core"         % jgraphtVersion,
       "org.typelevel"    %% "spire"                % "0.18.0"
     )
   )

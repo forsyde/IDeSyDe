@@ -57,7 +57,9 @@ class RosvallSander2014Tests extends AnyFunSuite with LoggingMixin with Platform
 
   test("Find a solution to the first case of Experiment III") {
     val identified =
-      identificationHandler.identifyDecisionModels(Set(ForSyDeDesignModel(rasta_and_jpeg_case)))
+      identificationHandler.identifyDecisionModels(
+        Set(ForSyDeDesignModel(jpegEnc1SDF3.merge(small8NodeBusPlatform)))
+      )
     assert(identified.size > 0)
     val chosen = explorationHandler.chooseExplorersAndModels(identified)
     val solList = chosen.headOption
@@ -65,7 +67,7 @@ class RosvallSander2014Tests extends AnyFunSuite with LoggingMixin with Platform
         e.explore(m)
       })
       .getOrElse(LazyList.empty)
-      .take(3)
+      .take(5)
     assert(solList.size > 1)
   }
 

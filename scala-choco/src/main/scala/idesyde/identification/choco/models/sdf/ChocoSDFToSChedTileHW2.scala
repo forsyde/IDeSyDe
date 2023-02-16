@@ -499,9 +499,10 @@ final case class ChocoSDFToSChedTileHW2(
       s"solution: nUsedPEs = ${output.getIntVal(nUsedPEs)}, globalInvThroughput = ${output
         .getIntVal(sdfAnalysisModule.globalInvThroughput)} / $timeMultiplier"
     )
-    // println(memoryMappingModule.processesMemoryMapping.mkString(", "))
-    // println(sdfAnalysisModule.jobOrder.mkString(", "))
-    // println(sdfAnalysisModule.invThroughputs.mkString(", "))
+    // logger.debug(sdfAnalysisModule.duration.mkString(", "))
+    // logger.debug(memoryMappingModule.processesMemoryMapping.mkString(", "))
+    // logger.debug(sdfAnalysisModule.jobOrder.mkString(", "))
+    // logger.debug(sdfAnalysisModule.invThroughputs.mkString(", "))
     dse.copy(
       processMappings = dse.sdfApplications.actorsIdentifiers.zipWithIndex.map((a, i) =>
         dse.platform.hardware

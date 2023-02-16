@@ -7,15 +7,15 @@ import idesyde.identification.IdentificationModule
 import spire.math.Rational
 import idesyde.identification.choco.rules.ChocoRules
 import idesyde.identification.DesignModel
+import idesyde.utils.Logger
 
-class ChocoIdentificationModule() extends IdentificationModule {
+final class ChocoIdentificationModule(using Logger) extends IdentificationModule with ChocoRules {
 
   given Conversion[Double, Rational] = (d) => Rational(d)
-  given Fractional[Rational]         = spire.compat.fractional[Rational]
   
   val identificationRules = Set(
-    ChocoRules.identChocoSDFToSChedTileHW2,
-    ChocoRules.identChocoComDepTasksToMultiCore
+    identChocoSDFToSChedTileHW2,
+    identChocoComDepTasksToMultiCore
     )
     
   def integrationRules: Set[(DesignModel, DecisionModel) => Option[? <: DesignModel]] = Set()

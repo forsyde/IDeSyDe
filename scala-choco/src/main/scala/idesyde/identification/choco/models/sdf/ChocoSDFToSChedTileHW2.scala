@@ -29,6 +29,7 @@ import forsyde.io.java.core.EdgeInfo
 import idesyde.identification.common.models.mixed.SDFToTiledMultiCore
 import idesyde.identification.common.StandardDecisionModel
 import org.chocosolver.solver.objective.OptimizationPolicy
+import idesyde.utils.Logger
 
 final class ConMonitorObj2(val model: ChocoSDFToSChedTileHW2) extends IMonitorContradiction {
 
@@ -72,7 +73,7 @@ final class ConMonitorObj2(val model: ChocoSDFToSChedTileHW2) extends IMonitorCo
 
 final case class ChocoSDFToSChedTileHW2(
     val dse: SDFToTiledMultiCore
-)(using Fractional[Rational])
+)(using logger: Logger)(using Fractional[Rational])
     extends StandardDecisionModel
     with ChocoDecisionModel(shouldLearnSignedClauses = true) {
 
@@ -494,7 +495,7 @@ final case class ChocoSDFToSChedTileHW2(
   //---------
 
   def rebuildFromChocoOutput(output: Solution): DecisionModel = {
-    scribe.debug(
+    logger.debug(
       s"solution: nUsedPEs = ${output.getIntVal(nUsedPEs)}, globalInvThroughput = ${output
         .getIntVal(sdfAnalysisModule.globalInvThroughput)} / $timeMultiplier"
     )
@@ -551,33 +552,5 @@ final case class ChocoSDFToSChedTileHW2(
   val coveredElements = dse.coveredElements
 
   val coveredElementRelations = dse.coveredElementRelations
-
-}
-
-object ChocoSDFToSChedTileHW2 {
-
-  def identifyFromAny(
-      model: Any,
-      identified: scala.collection.Iterable[DecisionModel]
-  )(using scala.math.Fractional[Rational]): IdentificationResult[ChocoSDFToSChedTileHW2] =
-    ForSyDeIdentificationRule.identifyWrapper(model, identified, identifyFromForSyDe)
-
-  def identifyFromForSyDe(
-      model: ForSyDeSystemGraph,
-      identified: scala.collection.Iterable[DecisionModel]
-  )(using scala.math.Fractional[Rational]): IdentificationResult[ChocoSDFToSChedTileHW2] = {
-    identified
-      .find(m => m.isInstanceOf[SDFToTiledMultiCore])
-      .map(m => m.asInstanceOf[SDFToTiledMultiCore])
-      .map(dse => identFromForSyDeWithDeps(model, dse))
-      .getOrElse(IdentificationResult.unfixedEmpty())
-  }
-
-  def identFromForSyDeWithDeps(
-      model: ForSyDeSystemGraph,
-      dse: SDFToTiledMultiCore
-  )(using scala.math.Fractional[Rational]): IdentificationResult[ChocoSDFToSChedTileHW2] = {
-    IdentificationResult.fixed(ChocoSDFToSChedTileHW2(dse))
-  }
 
 }

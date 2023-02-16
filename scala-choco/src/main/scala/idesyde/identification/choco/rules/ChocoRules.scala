@@ -9,7 +9,7 @@ import idesyde.identification.common.models.mixed.SDFToTiledMultiCore
 import idesyde.identification.choco.models.mixed.ChocoComDepTasksToMultiCore
 import idesyde.identification.common.models.mixed.PeriodicWorkloadToPartitionedSharedMultiCore
 
-object ChocoRules {
+trait ChocoRules(using Logger) {
 
   given Fractional[Rational] = spire.compat.fractional[Rational]
 

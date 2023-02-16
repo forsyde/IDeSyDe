@@ -81,7 +81,7 @@ class RosvallSander2014Tests extends AnyFunSuite with LoggingMixin with Platform
         e.explore(m)
       })
       .getOrElse(LazyList.empty)
-      .take(3)
+      .take(10)
     assert(solList.size > 1)
   }
 

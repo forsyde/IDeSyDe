@@ -70,7 +70,8 @@ class StreamingJobsThroughputPropagator(
   def canLastToFirst(i: Int)(j: Int): Boolean =
     hasDataCycle(i)(j) || (jobMapping(i)
       .stream()
-      .anyMatch(jobMapping(j).contains(_))) && jobOrdering(j).getLB() == 0
+      .anyMatch(jobMapping(j).contains(_))) && jobOrdering(j).getLB() == 0 && jobOrdering(i)
+      .getLB() > 0
 
   def mustSuceed(i: Int)(j: Int): Boolean =
     isSuccessor(i)(j) || hasDataCycle(i)(j) || (jobMapping(i).isInstantiated() && jobMapping(j)
@@ -88,18 +89,18 @@ class StreamingJobsThroughputPropagator(
     jobMapping(i).stream().anyMatch(jobMapping(j).contains(_)) && jobOrdering(i)
       .getLB() < jobOrdering(j).getUB()
 
-  final def countPathLength(nexts: Buffer[Buffer[Int]])(i: Int)(j: Int): Long = {
+  final def countPathLength(prevs: Buffer[Buffer[Int]])(i: Int)(j: Int): Int = {
     var count = 0
-    var k     = i
-    while (k != j) {
+    var k     = j
+    while (k != i) {
       count += 1
-      k = nexts(k)(j)
+      k = prevs(i)(k)
     }
     count
   }
 
   def propagate(evtmask: Int): Unit = {
-    println(getModel().getSolver().getDecisionPath().toString())
+    // println(getModel().getSolver().getDecisionPath().toString())
     wfor(0, _ < nJobs, _ + 1) { src =>
       // println(s"Source is $src")
       wfor(0, _ <= nJobs, _ + 1) { k =>
@@ -156,17 +157,27 @@ class StreamingJobsThroughputPropagator(
       // println(minNext.map(_.mkString(",")).mkString("\n"))
       // println("------")
       // println(maxNext.map(_.mkString(",")).mkString("\n"))
-      println(src)
-      println(minimumDistanceMatrix.map(_.mkString(",")).mkString("\n"))
-      println("-----")
-      println(maximumDistanceMatrix.map(_.mkString(",")).mkString("\n"))
-      println("=====")
+      // println(src)
+      // println(minimumDistanceMatrix.map(_.mkString(",")).mkString("\n"))
+      // println("-----")
+      // println(maximumDistanceMatrix.map(_.mkString(",")).mkString("\n"))
+      // println("=====")
 
       // tail
       var lb = Int.MaxValue
       var ub = Int.MaxValue
-      wfor(0, _ <= nJobs - 1, _ + 1) { k =>
-        val proposal = minimumDistanceMatrix(nJobs)(src) - minimumDistanceMatrix(k)(src)
+      wfor(0, _ < nJobs, _ + 1) { v =>
+        if (hasDataCycle(src)(v)) {
+          val maxLength = countPathLength(minNext)(v)(src)
+          val proposal  = minimumDistanceMatrix(maxLength)(src)
+          if (0 < proposal && proposal < lb) {
+            // println(s"found $lb")
+            lb = proposal
+          }
+        }
+      }
+      wfor(1, _ <= nJobs, _ + 1) { k =>
+        val proposal = minimumDistanceMatrix(k)(src)
         if (0 < proposal && proposal < lb) {
           // println(s"found $lb")
           lb = proposal
@@ -174,7 +185,8 @@ class StreamingJobsThroughputPropagator(
       }
 
       // println(s"$lb for $src")
-      if (lb < Int.MaxValue && jobThroughput(src).getLB() < lb) jobThroughput(src).updateLowerBound(lb, this)
+      if (lb < Int.MaxValue && jobThroughput(src).getLB() < lb)
+        jobThroughput(src).updateLowerBound(lb, this)
     // if (ub < Int.MaxValue) jobThroughput(i).updateUpperBound(ub, this)
     }
 

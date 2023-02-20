@@ -6,6 +6,17 @@ import scala.collection.mutable.Queue
 
 object CoreUtils {
 
+  /** This method is an adaptation of Tarjan's algorithm to compute SCCs. The difference is that
+    * dominance of design models is taken into consideration while effecting the original algorithm,
+    * to speed-up the process.
+    *
+    * It is done with only scala std-libs to try to keep the core dependencies at a minimum.
+    *
+    * @param reachability
+    *   a matrix of dominance between decision models
+    * @return
+    *   the mask of dominant decision models
+    */
   def computeDominant(reachability: Array[Array[Boolean]]): Array[Int] = {
     val explored = Array.fill(reachability.size)(false)
     val lowlevel = Array.fill(reachability.size)(0)

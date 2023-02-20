@@ -10,28 +10,29 @@ import scala.quoted.Quotes
 
 trait ForSyDeIOExplorer extends Explorer {
 
-  type DesignModel = ForSyDeSystemGraph
-  
-  def explore(decisionModel: DecisionModel, explorationTimeOutInSecs: Long = 0L)(using ExecutionContext): LazyList[DesignModel] = 
+  def explore(decisionModel: DecisionModel, explorationTimeOutInSecs: Long = 0L): LazyList[DecisionModel] =
     decisionModel match {
-      case fioDecisionModel: ForSyDeDecisionModel => exploreForSyDe(fioDecisionModel, explorationTimeOutInSecs)
-            .flatMap(systemGraph => systemGraph match {
-              // the fact this is unchecked and correct relies completely on 
+      case fioDecisionModel: ForSyDeDecisionModel =>
+        exploreForSyDe(fioDecisionModel)
+          .flatMap(systemGraph =>
+            systemGraph match {
+              // the fact this is unchecked and correct relies completely on
               // the DesignModel always being a class that can casted! Otherwise,
               // this might give class casting exception
-              case designModel: DesignModel @unchecked => Some(designModel)
-              case _ => Option.empty
-            })
+              case designModel: DecisionModel => Some(designModel)
+              case _                          => Option.empty
+            }
+          )
       case _ => LazyList.empty
     }
 
   def canExplore(decisionModel: DecisionModel): Boolean =
     decisionModel match {
       case fioDecisionModel: ForSyDeDecisionModel => canExploreForSyDe(fioDecisionModel)
-      case _ => false
+      case _                                      => false
     }
 
-  def exploreForSyDe(decisionModel: ForSyDeDecisionModel, explorationTimeOutInSecs: Long = 0L)(using ExecutionContext): LazyList[ForSyDeSystemGraph]
+  def exploreForSyDe(decisionModel: ForSyDeDecisionModel, explorationTimeOutInSecs: Long = 0L): LazyList[DecisionModel]
 
   def canExploreForSyDe(decisionModel: ForSyDeDecisionModel): Boolean
 

@@ -1,7 +1,7 @@
-package idesyde.identification.models.platform
+package idesyde.identification.common.models.platform
 
-trait InstrumentedPlatformMixin {
-  
-    def processorsProvisions: Array[Map[String, Map[String, Double]]]
-    def processorsFrequency: Array[Long]
+trait InstrumentedPlatformMixin[RealT] {
+
+  def processorsProvisions: Vector[Map[String, Map[String, RealT]]]
+  def processorsFrequency: Vector[Long]
 }

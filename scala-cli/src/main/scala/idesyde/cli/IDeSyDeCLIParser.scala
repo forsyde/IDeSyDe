@@ -5,9 +5,10 @@ import java.nio.file.Paths
 import scribe.format.FormatterInterpolator
 import scribe.Level
 import idesyde.IDeSyDeStandalone
+import idesyde.utils.Logger
 
 
-class IDeSyDeCLIParser extends scopt.OptionParser[IDeSyDeRunConfig]("idesyde"):
+class IDeSyDeCLIParser(using logger: Logger) extends scopt.OptionParser[IDeSyDeRunConfig]("idesyde"):
     head(
         """
           ___  ___        ___        ___

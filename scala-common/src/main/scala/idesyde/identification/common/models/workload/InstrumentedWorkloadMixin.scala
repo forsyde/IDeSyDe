@@ -1,10 +1,10 @@
-package idesyde.identification.models.workload
+package idesyde.identification.common.models.workload
 
 trait InstrumentedWorkloadMixin {
 
-    def processComputationalNeeds: Array[Map[String, Map[String, Long]]]
-    def processSizes: Array[Long]
+  def processComputationalNeeds: Vector[Map[String, Map[String, Long]]]
+  def processSizes: Vector[Long]
 
-    def messagesMaxSizes: Array[Long]
+  def messagesMaxSizes: Vector[Long]
 
 }

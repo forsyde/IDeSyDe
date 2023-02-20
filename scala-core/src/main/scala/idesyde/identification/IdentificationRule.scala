@@ -9,14 +9,21 @@ import idesyde.identification.DecisionModel
   * Composable Design Space Identification," 2021 Design, Automation & Test in Europe Conference &
   * Exhibition (DATE), 2021, pp. 1204-1207, doi: 10.23919/DATE51398.2021.9474082.
   */
-trait IdentificationRule[M <: DecisionModel] extends 
-  Function2[Any, scala.collection.Iterable[DecisionModel], IdentificationResult[M]] {
+trait IdentificationRule[M <: DecisionModel]
+    extends Function2[
+      ? <: DesignModel,
+      scala.collection.Iterable[? <: DecisionModel],
+      IdentificationResult[M]
+    ] {
 
-  def identify[DesignModel](
+  def identify(
       model: DesignModel,
       identified: scala.collection.Iterable[DecisionModel]
   ): IdentificationResult[M]
 
-  def apply(model: Any, identified: scala.collection.Iterable[DecisionModel]): IdentificationResult[M] = identify(model, identified)
+  def apply(
+      model: DesignModel,
+      identified: scala.collection.Iterable[DecisionModel]
+  ): IdentificationResult[M] = identify(model, identified)
 
 }

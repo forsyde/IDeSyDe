@@ -5,14 +5,13 @@ import org.chocosolver.solver.search.strategy.strategy.AbstractStrategy
 import org.chocosolver.solver.search.strategy.decision.IntDecision
 import org.chocosolver.util.PoolManager
 import org.chocosolver.solver.search.strategy.decision.Decision
-import breeze.linalg._
 import org.chocosolver.solver.search.strategy.assignments.DecisionOperatorFactory
 import scala.util.Random
 import org.chocosolver.solver.search.loop.monitors.IMonitorSolution
 import idesyde.utils.CoreUtils.wfor
 import idesyde.utils.CoreUtils
-import idesyde.identification.forsyde.models.sdf.SDFApplication
 import org.chocosolver.solver.variables.BoolVar
+import idesyde.identification.common.models.sdf.SDFApplication
 
 class CompactingMultiCoreSDFListScheduling(
     val sdfApplications: SDFApplication,
@@ -29,28 +28,24 @@ class CompactingMultiCoreSDFListScheduling(
   private val numActors     = firingsInSlots.size
   private val numSchedulers = firingsInSlots.head.size
   private val numSlots      = firingsInSlots.head.head.size
-  var channels              = (0 until sdfApplications.initialTokens.size).toArray
+  var channels              = (0 until sdfApplications.channelNumInitialTokens.size).toArray
   var actors                = sdfApplications.decreasingActorConsumptionOrder
   var schedulers            = (0 until firingsInSlots.head.size).toArray
   val slots                 = (0 until firingsInSlots.head.head.size).toArray
 
-  private val mat     = DenseMatrix(sdfApplications.sdfBalanceMatrix: _*)
-  private val consMat = mat.map(v => if (v < 0) then v else 0)
-  private val prodMat = mat.map(v => if (v > 0) then v else 0)
+  private val mat     = sdfApplications.sdfBalanceMatrix
+  private val consMat = mat.map(_.map(v => if (v < 0) then v else 0))
+  private val prodMat = mat.map(_.map(v => if (v > 0) then v else 0))
 
   val pool = PoolManager[IntDecision]()
 
-  val follows = actors.map(src =>
-    actors.map(dst => {
-      channels.exists(c => mat(c, src) > 0 && mat(c, dst) < 0)
+  val follows = actors.zipWithIndex.map((_, src) =>
+    actors.zipWithIndex.map((_, dst) => {
+      channels.exists(c => mat(c)(src) > 0 && mat(c)(dst) < 0)
     })
   )
 
-  val followsMatrix = CSCMatrix(
-    follows: _*
-  )
-
-  val followsClosure = CoreUtils.reachibilityClosure(follows)
+  val followsClosure = CoreUtils.reachibilityClosure(follows.map(_.toArray).toArray)
 
   /** This function checks whether the firing schedule can induce a self-contention between actors
     * of the same sub-application, i.e. that are connected. The logic it uses is to use the provided
@@ -64,11 +59,15 @@ class CompactingMultiCoreSDFListScheduling(
   def calculateDistanceScore(actor: Int)(scheduler: Int)(slot: Int): Int = {
     var score = 0
     val disjointComponentActor =
-      sdfApplications.sdfDisjointComponents.indexWhere(comp => comp.contains(actor))
+      sdfApplications.sdfDisjointComponents.indexWhere(comp =>
+        comp.exists(_ == sdfApplications.actorsIdentifiers(actor))
+      )
     // first calculate the distance from current slot to dependent ones
     wfor(0, _ < numActors, _ + 1) { a =>
       val disjointComponentA =
-        sdfApplications.sdfDisjointComponents.indexWhere(comp => comp.contains(a))
+        sdfApplications.sdfDisjointComponents.indexWhere(comp =>
+          comp.exists(_ == sdfApplications.actorsIdentifiers(a))
+        )
       // check whether a is a predecessor of actor in previous slots
       if (a != actor && disjointComponentA == disjointComponentActor) {
         wfor(0, _ <= slot, _ + 1) { slotA =>

@@ -1,29 +1,41 @@
 package idesyde.identification.models.mixed
 
 import scala.reflect.ClassTag
-import idesyde.identification.models.platform.InstrumentedPlatformMixin
-import idesyde.identification.models.workload.InstrumentedWorkloadMixin
+import idesyde.identification.common.models.platform.InstrumentedPlatformMixin
+import idesyde.identification.common.models.workload.InstrumentedWorkloadMixin
+import spire._
+import spire.math._
+import spire.implicits._
 
-trait WCETComputationMixin[UnitT](using fracT: Fractional[UnitT])(using conv: Conversion[Double, UnitT])(using ClassTag[UnitT]) extends InstrumentedWorkloadMixin with InstrumentedPlatformMixin {
+trait WCETComputationMixin[RealT](
+    val instruWorkload: InstrumentedWorkloadMixin,
+    val intruPlatform: InstrumentedPlatformMixin[RealT]
+)(using fracT: spire.math.Fractional[RealT])(using ClassTag[RealT]) {
 
-    lazy val wcets: Array[Array[UnitT]] = {
+  def computeWcets: Vector[Vector[RealT]] = {
     // alll executables of task are instrumented
     // scribe.debug(taskModel.executables.mkString("[", ",", "]"))
     // compute the matrix (lazily)
     // scribe.debug(taskModel.taskComputationNeeds.mkString(", "))
-    processComputationalNeeds.map(needs => {
+    instruWorkload.processComputationalNeeds.map(needs => {
       // scribe.debug(needs.mkString(","))
-      processorsProvisions.zipWithIndex.map((provisions, j) => {
+      intruPlatform.processorsProvisions.zipWithIndex.map((provisions, j) => {
         // now take the maximum combination
-        needs.flatMap((opGroup, opNeeds) => {
-            provisions.filter((ipcGroup, ipc) => {
+        needs
+          .flatMap((opGroup, opNeeds) => {
+            provisions
+              .filter((ipcGroup, ipc) => {
                 opNeeds.keySet.subsetOf(ipc.keySet)
-            }).map((ipcGroup, ipc) => {
-                opNeeds.map((k, v) => v / ipc(k)).sum / processorsFrequency(j)
-            })
-        }).maxOption
-        .map(d => conv(d))
-        .getOrElse(fracT.minus(fracT.zero, fracT.one))
+              })
+              .map((ipcGroup, ipc) => {
+                fracT.sum(
+                  opNeeds
+                    .map((k, v) => fracT.fromLong(v) / ipc(k))
+                ) / fracT.fromLong(intruPlatform.processorsFrequency(j))
+              })
+          })
+          .maxByOption(_.toDouble)
+          .getOrElse(fracT.minus(fracT.zero, fracT.one))
       })
     })
   }

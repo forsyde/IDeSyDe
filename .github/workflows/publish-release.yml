@@ -19,7 +19,7 @@ jobs:
       id: get_scala_version
       run: |
         cd ${{ github.workspace }}
-        echo "::set-output name=scalaVersion::$(sbt --error 'print cli/scalaVersion')"
+        echo "::set-output name=scalaVersion::$(sbt --error 'print scalaVersion')"
     - name: Build assembly with sbt
       run: |
         cd ${{ github.workspace }}
@@ -28,7 +28,7 @@ jobs:
       uses: svenstaro/upload-release-action@v2
       with:
         repo_token: ${{ secrets.GITHUB_TOKEN }}
-        file: ${{ github.workspace }}/cli/target/scala-${{ steps.get_scala_version.outputs.scalaVersion }}/cli-assembly-${{ steps.get_version.outputs.version }}.jar
+        file: ${{ github.workspace }}/scala-cli/target/scala-${{ steps.get_scala_version.outputs.scalaVersion }}/cli-assembly-${{ steps.get_version.outputs.version }}.jar
         asset_name: idesyde-${{ steps.get_version.outputs.version }}-standalone.jar
         tag: "${{ github.ref }}"
         overwrite: true

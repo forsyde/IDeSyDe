@@ -8,12 +8,11 @@ import collection.JavaConverters.*
 import idesyde.exploration.Explorer
 import idesyde.identification.DecisionModel
 import idesyde.utils.CoreUtils
+import idesyde.utils.Logger
 
 final class ExplorationHandler(
-    var explorationModules: Set[ExplorationModule] = Set.empty,
-    val infoLogger: (String) => Unit = (s => println(s)),
-    val debugLogger: (String) => Unit = (s => println(s))
-):
+    var explorationModules: Set[ExplorationModule] = Set.empty
+)(using logger: Logger):
 
   def registerModule(explorationModule: ExplorationModule): ExplorationHandler =
     explorationModules += explorationModule
@@ -22,18 +21,22 @@ final class ExplorationHandler(
   def chooseExplorersAndModels(
       decisionModels: Set[? <: DecisionModel],
       explorationCriteria: Set[ExplorationCriteria] = Set(ExplorationCriteria.TimeUntilOptimality)
-  ): Set[(Explorer, ? <: DecisionModel)] =
+  ): Set[(Explorer, DecisionModel)] =
     val explorers        = explorationModules.flatMap(_.explorers) //.map(_.asInstanceOf[Explorer])
     val explorableModels = decisionModels.filter(m => explorers.exists(e => e.canExplore(m)))
-    debugLogger(s"total of ${explorableModels.size} exp. models to find combos.")
+    logger.debug(s"total of ${explorableModels.size} exp. models to find combos.")
     // for each of the explorable models build up a dominance graph of the available explorers
     // based on the criteria supplied
     val modelToExplorerSet =
       for (m <- explorableModels) yield
         val possibleExplorers = explorers.filter(_.canExplore(m)).toArray
-        val dominanceMatrix = possibleExplorers.map(e => possibleExplorers.map(ee => e.dominates(ee, m, explorationCriteria)))
+        val dominanceMatrix = possibleExplorers.map(e =>
+          possibleExplorers.map(ee => e.dominates(ee, m, explorationCriteria))
+        )
         // keep only the SCC which are leaves
-        val dominant = CoreUtils.computeDominantFromReachability(CoreUtils.reachibilityClosure(dominanceMatrix)).map(idx => possibleExplorers(idx))
+        val dominant = CoreUtils
+          .computeDominantFromReachability(CoreUtils.reachibilityClosure(dominanceMatrix))
+          .map(idx => possibleExplorers(idx))
         // val dominant = dominanceComponents.filter(component => {
         //   // keep dominant components in which no other components dominate any decision model
         //   // therein

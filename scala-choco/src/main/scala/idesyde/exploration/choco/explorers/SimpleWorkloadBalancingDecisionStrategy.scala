@@ -15,7 +15,7 @@ class SimpleWorkloadBalancingDecisionStrategy(
     val periods: Array[Rational],
     val taskExecutions: Array[IntVar],
     val utilizations: Array[IntVar],
-    val durations: Array[Array[IntVar]],
+    val durations: Array[IntVar],
     val wcets: Array[Array[Int]]
 )(using Numeric[Rational])
     extends AbstractStrategy[IntVar](taskExecutions: _*) {
@@ -44,7 +44,7 @@ class SimpleWorkloadBalancingDecisionStrategy(
             t,
             i,
             j,
-            utilizations(j).getLB() + Math.max(durations(i)(j).getLB(), wcets(i)(j)) / periods(
+            utilizations(j).getLB() + Math.max(durations(i).getLB(), wcets(i)(j)) / periods(
               i
             ) + utilizations.zipWithIndex
               .filter((_, jj) => jj != j)

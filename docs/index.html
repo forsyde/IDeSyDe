@@ -1,0 +1,210 @@
+<!DOCTYPE html>
+<html class="no-js" lang="en">
+
+<head>
+<title>IDeSyDe</title>
+<meta charset="utf-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+<meta name="description" content='root'/>
+<link href="https://fonts.googleapis.com/css?family=Roboto:100normal,100italic,300normal,300italic,400normal,400italic,500normal,500italic,700normal,700italic,900normal,900italicc" rel="stylesheet" type="text/css"/>
+<script type="text/javascript" src="lib/jquery/jquery.min.js"></script>
+<script type="text/javascript" src="js/page.js"></script>
+<script type="text/javascript" src="js/warnOldVersion.js"></script>
+<script type="text/javascript" src="js/groups.js"></script>
+<script type="text/javascript" src="js/snippets.js"></script>
+<link rel="stylesheet" type="text/css" href="lib/foundation/dist/foundation.min.css"/>
+<link rel="stylesheet" type="text/css" href="css/page.css"/>
+
+<!--
+<link rel="shortcut icon" href="images/favicon.ico" />
+-->
+</head>
+
+<body>
+<div class="off-canvas-wrapper">
+<div class="off-canvas-wrapper-inner" data-off-canvas-wrapper>
+
+<div class="off-canvas position-left" id="off-canvas-menu" data-off-canvas>
+<nav class="off-canvas-nav">
+<div class="nav-home">
+<a href="index.html" class="active">
+<span class="home-icon">⌂</span>IDeSyDe
+</a>
+<div class="version-number">
+0.4.0
+</div>
+</div>
+<div class="nav-toc">
+<ul>
+  <li><a href="usage/install.html" class="page">Installing IDeSyDe</a></li>
+  <li><a href="usage/quickstart.html" class="page">Quick start</a></li>
+  <li><a href="usage/guidelines.html" class="page">Guidelines</a></li>
+  <li><a href="concepts/concepts.html" class="page">Design Space Identification (DSI)</a></li>
+  <li><a href="usage/status.html" class="page">Current status</a></li>
+</ul>
+</div>
+
+</nav>
+</div>
+
+<div class="off-canvas-content" data-off-canvas-content>
+
+<header class="site-header expanded row">
+<div class="small-12 column">
+<a href="#" class="off-canvas-toggle hide-for-medium" data-toggle="off-canvas-menu"><svg class="svg-icon svg-icon-menu" version="1.1" id="Menu" xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" x="0px" y="0px" viewBox="0 0 20 20" enable-background="new 0 0 20 20" xml:space="preserve"> <path class="svg-icon-menu-path" fill="#53CDEC" d="M16.4,9H3.6C3.048,9,3,9.447,3,10c0,0.553,0.048,1,0.6,1H16.4c0.552,0,0.6-0.447,0.6-1C17,9.447,16.952,9,16.4,9z M16.4,13
+H3.6C3.048,13,3,13.447,3,14c0,0.553,0.048,1,0.6,1H16.4c0.552,0,0.6-0.447,0.6-1C17,13.447,16.952,13,16.4,13z M3.6,7H16.4
+C16.952,7,17,6.553,17,6c0-0.553-0.048-1-0.6-1H3.6C3.048,5,3,5.447,3,6C3,6.553,3.048,7,3.6,7z"/></svg>
+</a>
+<div class="title"><a href="index.html" class="active">IDeSyDe</a></div>
+
+<!--
+<a href="https://www.example.com" class="logo show-for-medium">logo</a>
+-->
+</div>
+</header>
+
+<div class="expanded row">
+
+<div class="medium-3 large-2 show-for-medium column">
+<nav class="site-nav">
+<div class="nav-home">
+<a href="index.html" class="active">
+<span class="home-icon">⌂</span>IDeSyDe
+</a>
+<div class="version-number">
+0.4.0
+</div>
+</div>
+<div class="nav-toc">
+<ul>
+  <li><a href="usage/install.html" class="page">Installing IDeSyDe</a></li>
+  <li><a href="usage/quickstart.html" class="page">Quick start</a></li>
+  <li><a href="usage/guidelines.html" class="page">Guidelines</a></li>
+  <li><a href="concepts/concepts.html" class="page">Design Space Identification (DSI)</a></li>
+  <li><a href="usage/status.html" class="page">Current status</a></li>
+</ul>
+</div>
+
+</nav>
+</div>
+
+<div class="small-12 medium-9 large-10 column">
+<section class="site-content">
+
+<span id="version-warning"></span>
+
+<div class="page-header row">
+<div class="medium-12 show-for-medium column">
+</div>
+</div>
+
+<div class="page-content row">
+<div class="small-12 large-9 column" id="docs">
+<h1><a href="#idesyde" name="idesyde" class="anchor"><span class="anchor-link"></span></a>IDeSyDe</h1>
+<p>Welcome to IDeSyDe&rsquo;s documentation page! Here you can find some quick links to help you navigate the documentation and also to situate you about the tool (and its methods).</p>
+<p>IDeSyDe is a <em>generic</em> tool [for the Design Space Exploration activity]({{ site.project.forsyde }}#our-vision) within a <a href="https://www.sciencedirect.com/topics/computer-science/model-driven-engineering">Model-Driven Engineering (MDE)</a> Process such as [ForSyDe]({{ site.projects.forsyde }}). In particular, the tool primarily targets <em>embedded systems</em> MDE processes, but is not limited to them.</p>
+<p>The key underlying concept of IDeSyDe is <a href="https://ieeexplore.ieee.org/document/9474082">Design Space Idenfitication</a>. This concept give a foundation for separating mathematical formulations and algorithms commonly involved in synthesis and analysis within MDE processes from the system models it operates on, aside from defining a systematic procedure for extension. Therefore, to the MDE user, IDeSyDe operates on their <em>system models</em>, e.g. <a href="https://www.eclipse.org/app4mc/">AMALTHEA</a> or [ForSyDe IO]({{ site.projects.forsydeio }}).</p>
+<!-- IDeSyDe is in fact an implementation of it, and it powers all guarantees and decoupling
+seen in the tool itself.  Try [Concepts](/concepts)! -->
+<!-- ## What is IDeSyDe? -->
+<p>As such, IDeSyDe is not a mathematical solver such as <a href="https://www.gurobi.com/">Gurobi</a> or <a href="https://www.ibm.com/analytics/cplex-optimizer">CPLEX</a>, it is not a constraint solver such as <a href="https://www.gecode.org/">Gecode</a> or <a href="https://github.com/chuffed/chuffed">chuffled</a>, nor a general meta-heuristic optimization framework such as <a href="https://sdarg.github.io/opt4j/">Opt4j</a> or <a href="https://jmetal.github.io/jMetal/">JMetal</a>. It uses all these applications and libraries to enrich models that make better sense to a system designer, such as the mentioned <a href="https://www.eclipse.org/app4mc/">AMALTHEA</a> or [ForSyDe IO]({{ site.projects.forsydeio }}). </p>
+<!-- A quick glance at [Concepts](/concepts) can likely clarify this further! -->
+<h2><a href="#how-can-i-use-it-" name="how-can-i-use-it-" class="anchor"><span class="anchor-link"></span></a>How can I use it?</h2>
+<p>Short answer: <a href="usage/install.html">Install</a> IDeSyDe and follow the <a href="usage/quickstart.html">Quick start</a> to get an intuitive grasp!</p>
+<p>Long answer: IDeSyDe being a proof-of-concept prototype, there were decisions that simplified the implementation in order to prove the concepts quickly. The first one being that the tool that is distributed only accepts [ForSyDe IO]({{ site.projects.forsydeio }}) models (this is not a limtation as [ForSyDe IO]({{ site.projects.forsydeio }}) connects to other MDE frameworks). Second, only a handful of MDE &ldquo;scenarios&rdquo; (i.e. design spaces) are implemented and distributed with the tool. They can be found in <a href="usage/status.html">Supported DSE</a>. Therefore, direct use of the tool depends on the design spaces distributed with the tool itself. Check <a href="usage/guidelines.html">Guidelines</a> to see how one would extends IDeSyDe or ForSyDe IO to support a design space different than those that exist.</p>
+<!-- 
+## What can IDeSyDe do for me?
+
+As a tool for Design Space Exploration, IDeSyDe can potentially give you design decisions on your models
+such as mappings, schedules, allocations among others. 
+
+These decisions are not random: they respect
+design constraints such as memory, time or energy.
+
+This also means that if you let IDeSyDe run long enough, and have just the right amount of computational resources,
+it can can give back a solution "*Your design is not possible*".
+It is always good to know designs are not possible before they crash! -->
+<div class="nav-next">
+<p><strong>Next:</strong> <a href="usage/install.html">Installing IDeSyDe</a></p>
+</div>
+</div>
+<div class="large-3 show-for-large column" data-sticky-container>
+<nav class="sidebar sticky" data-sticky data-anchor="docs" data-sticky-on="large">
+<div class="page-nav">
+<div class="nav-title">On this page:</div>
+<div class="nav-toc">
+<ul>
+  <li><a href="index.html#idesyde" class="header">IDeSyDe</a>
+  <ul>
+    <li><a href="index.html#how-can-i-use-it-" class="header">How can I use it?</a></li>
+  </ul></li>
+</ul>
+</div>
+</div>
+</nav>
+</div>
+</div>
+
+</section>
+</div>
+
+</div>
+
+<footer class="site-footer">
+
+<section class="site-footer-nav">
+<div class="expanded row">
+<div class="small-12 large-offset-2 large-10 column">
+<div class="row site-footer-content">
+
+<div class="small-12 medium-4 large-3 text-center column">
+<div class="nav-links">
+<ul>
+<!-- <li><a href="https://www.example.com/products/">Products</a> -->
+</ul>
+</div>
+</div>
+
+</div>
+</div>
+</div>
+</section>
+
+<section class="site-footer-base">
+<div class="expanded row">
+<div class="small-12 large-offset-2 large-10 column">
+<div class="row site-footer-content">
+
+<div class="small-12 text-center large-9 column">
+
+<!--
+<div class="copyright">
+<span class="text">&copy; 2023</span>
+<a href="https://www.example.com" class="logo">logo</a>
+</div>
+-->
+</div>
+
+</div>
+</div>
+</div>
+</section>
+</footer>
+
+</div>
+</div>
+</div>
+</body>
+
+<script type="text/javascript" src="lib/foundation/dist/foundation.min.js"></script>
+<script type="text/javascript">jQuery(document).foundation();</script>
+<script type="text/javascript" src="js/magellan.js"></script>
+
+<style type="text/css">@import "lib/prettify/prettify.css";</style>
+<script type="text/javascript" src="lib/prettify/prettify.js"></script>
+<script type="text/javascript" src="lib/prettify/lang-scala.js"></script>
+<script type="text/javascript">jQuery(function(){window.prettyPrint && prettyPrint()});</script>
+<script type="text/javascript">jQuery(function(jq){initOldVersionWarnings(jq, '0.4.0', '')});</script>
+
+
+</html>

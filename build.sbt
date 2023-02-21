@@ -10,6 +10,17 @@ lazy val scalaGraphVersion = "1.13.5"
 
 lazy val root = project
   .in(file("."))
+  .settings(
+    ScalaUnidoc / siteSubdirName := "api",
+    addMappingsToSiteDir(ScalaUnidoc / packageDoc / mappings, ScalaUnidoc / siteSubdirName),
+    paradoxProperties ++= Map(
+      "scaladoc.base_url" -> "/api"
+    )
+  )
+  .enablePlugins(ScalaUnidocPlugin)
+  .enablePlugins(SiteScaladocPlugin)
+  .enablePlugins(SitePreviewPlugin)
+  .enablePlugins(ParadoxSitePlugin)
   .aggregate(common, commonj, cli, choco, forsyde, minizinc)
 
 lazy val core = (project in file("scala-core"))

@@ -1,0 +1,272 @@
+<!DOCTYPE html>
+<html class="no-js" lang="en">
+
+<head>
+<title>Quick start · IDeSyDe</title>
+<meta charset="utf-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+<meta name="description" content='root'/>
+<link href="https://fonts.googleapis.com/css?family=Roboto:100normal,100italic,300normal,300italic,400normal,400italic,500normal,500italic,700normal,700italic,900normal,900italicc" rel="stylesheet" type="text/css"/>
+<script type="text/javascript" src="../lib/jquery/jquery.min.js"></script>
+<script type="text/javascript" src="../js/page.js"></script>
+<script type="text/javascript" src="../js/warnOldVersion.js"></script>
+<script type="text/javascript" src="../js/groups.js"></script>
+<script type="text/javascript" src="../js/snippets.js"></script>
+<link rel="stylesheet" type="text/css" href="../lib/foundation/dist/foundation.min.css"/>
+<link rel="stylesheet" type="text/css" href="../css/page.css"/>
+
+<!--
+<link rel="shortcut icon" href="../images/favicon.ico" />
+-->
+</head>
+
+<body>
+<div class="off-canvas-wrapper">
+<div class="off-canvas-wrapper-inner" data-off-canvas-wrapper>
+
+<div class="off-canvas position-left" id="off-canvas-menu" data-off-canvas>
+<nav class="off-canvas-nav">
+<div class="nav-home">
+<a href="../index.html" >
+<span class="home-icon">⌂</span>IDeSyDe
+</a>
+<div class="version-number">
+0.4.0
+</div>
+</div>
+<div class="nav-toc">
+<ul>
+  <li><a href="../usage/install.html" class="page">Installing IDeSyDe</a></li>
+  <li><a href="../usage/quickstart.html" class="active page">Quick start</a></li>
+  <li><a href="../usage/guidelines.html" class="page">Guidelines</a></li>
+  <li><a href="../concepts/concepts.html" class="page">Design Space Identification (DSI)</a></li>
+  <li><a href="../usage/status.html" class="page">Current status</a></li>
+</ul>
+</div>
+
+</nav>
+</div>
+
+<div class="off-canvas-content" data-off-canvas-content>
+
+<header class="site-header expanded row">
+<div class="small-12 column">
+<a href="#" class="off-canvas-toggle hide-for-medium" data-toggle="off-canvas-menu"><svg class="svg-icon svg-icon-menu" version="1.1" id="Menu" xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" x="0px" y="0px" viewBox="0 0 20 20" enable-background="new 0 0 20 20" xml:space="preserve"> <path class="svg-icon-menu-path" fill="#53CDEC" d="M16.4,9H3.6C3.048,9,3,9.447,3,10c0,0.553,0.048,1,0.6,1H16.4c0.552,0,0.6-0.447,0.6-1C17,9.447,16.952,9,16.4,9z M16.4,13
+H3.6C3.048,13,3,13.447,3,14c0,0.553,0.048,1,0.6,1H16.4c0.552,0,0.6-0.447,0.6-1C17,13.447,16.952,13,16.4,13z M3.6,7H16.4
+C16.952,7,17,6.553,17,6c0-0.553-0.048-1-0.6-1H3.6C3.048,5,3,5.447,3,6C3,6.553,3.048,7,3.6,7z"/></svg>
+</a>
+<div class="title"><a href="../index.html">IDeSyDe</a></div>
+
+<!--
+<a href="https://www.example.com" class="logo show-for-medium">logo</a>
+-->
+</div>
+</header>
+
+<div class="expanded row">
+
+<div class="medium-3 large-2 show-for-medium column">
+<nav class="site-nav">
+<div class="nav-home">
+<a href="../index.html" >
+<span class="home-icon">⌂</span>IDeSyDe
+</a>
+<div class="version-number">
+0.4.0
+</div>
+</div>
+<div class="nav-toc">
+<ul>
+  <li><a href="../usage/install.html" class="page">Installing IDeSyDe</a></li>
+  <li><a href="../usage/quickstart.html" class="active page">Quick start</a></li>
+  <li><a href="../usage/guidelines.html" class="page">Guidelines</a></li>
+  <li><a href="../concepts/concepts.html" class="page">Design Space Identification (DSI)</a></li>
+  <li><a href="../usage/status.html" class="page">Current status</a></li>
+</ul>
+</div>
+
+</nav>
+</div>
+
+<div class="small-12 medium-9 large-10 column">
+<section class="site-content">
+
+<span id="version-warning"></span>
+
+<div class="page-header row">
+<div class="medium-12 show-for-medium column">
+<div class="nav-breadcrumbs">
+<ul>
+  <li><a href="../index.html">IDeSyDe</a></li>
+  <li>Quick start</li>
+</ul>
+</div>
+</div>
+</div>
+
+<div class="page-content row">
+<div class="small-12 large-9 column" id="docs">
+<!-- ---
+layout: default
+title: Quick start
+nav_order: 2
+permalink: /usage/quickstart
+parent: Usage
+--- -->
+<h1><a href="#quick-start" name="quick-start" class="anchor"><span class="anchor-link"></span></a>Quick start</h1>
+<p>This quick start continues from the <a href="/usage/install">installation instructions</a>, and assumes you have <code>idesyde.jar</code> available in your computer.</p>
+<!-- Then, you download the `jar` file and make it available to be called from your terminal;  -->
+<p>IDeSyDe is a CLI tool. You have succeed if you can execute the following:</p>
+<pre><code>&gt; java -jar idesyde.jar         
+Error: Missing argument &lt;inputModel&gt; [&lt;inputModel&gt; ...]
+
+          ___  ___        ___        ___
+         |_ _||   \  ___ / __| _  _ |   \  ___ 
+          | | | |) |/ -_)\__ \| || || |) |/ -_)
+         |___||___/ \___||___/ \_, ||___/ \___|
+                               |__/
+
+        Automated Identification and Exploration of Design Spaces in ForSyDe
+
+Usage: idesyde [options] &lt;inputModel&gt; [&lt;inputModel&gt; ...]
+
+  &lt;inputModel&gt; [&lt;inputModel&gt; ...]
+  -o, --out &lt;outputModel&gt;  If the output is an existing directory, write all solutions to the directory. Otherwise, the lastest solution is output.
+  -v, --verbosity &lt;verbosityLevel&gt;
+</code></pre>
+<h2><a href="#performing-dse" name="performing-dse" class="anchor"><span class="anchor-link"></span></a>Performing DSE</h2>
+<p>IDeSyDe currently consumes ForSyDe IO description files as its input. The conventional extension is <code>fiodl</code>. Please note that this support comes directly from [ForSyDe IO]({{ site.projects.forsydeio }}), and this requires the extension to be either <code>.fiodl</code> to work.</p>
+<p>If the input models you have are not ForSyDe IO files, then you might be able to use <a href="{{site.projects.forsydeio}}/usage/conversyde">ConverSyDe</a> to convert them.</p>
+<p>Once you have the input files <code>model1.fiodl</code>, <code>model2.fiodl</code>, etc. Then you just execute the idesyde <code>jar</code> with them as inputs:</p>
+<pre><code>&gt; java -jar idesyde.jar \
+    -o latest_solved_model.fiodl \
+    model1.fiodl \
+    model2.fiodl ...
+</code></pre>
+<p>you should see an output like this:</p>
+<pre><code>2022.03.17 13:41:59:541 [main      ] [INFO ] idesyde.cli.IDeSyDeRunConfig.setLoggingLevel:85 - logging levels set to INFO.
+2022.03.17 13:41:59:620 [main      ] [INFO ] idesyde.cli.IDeSyDeRunConfig.run:39 - Reading and merging input models.
+2022.03.17 13:42:00:347 [main      ] [INFO ] idesyde.identification.api.IdentificationHandler.identifyDecisionModels:47 - Performing identification with 9 rules up to 243 iterations.
+2022.03.17 13:42:01:114 [main      ] [INFO ] idesyde.identification.api.IdentificationHandler.identifyDecisionModels:72 - droppped 3 dominated decision model(s).
+2022.03.17 13:42:01:115 [main      ] [INFO ] idesyde.cli.IDeSyDeRunConfig.run:48 - Identification finished with 2 decision model(s).
+2022.03.17 13:42:01:121 [main      ] [INFO ] idesyde.cli.IDeSyDeRunConfig.run:51 - Total of 1 combo of decision model(s) and explorer(s) chosen.
+...
+2022.03.17 13:42:12:666 [main      ] [INFO ] idesyde.cli.IDeSyDeRunConfig.run:73 - Finished exploration with 100 solution(s)
+</code></pre>
+<p>Althought it make take some time to finish (up to 100 solutions are currently set as the limit), you can follow in your computer that the file <code>latest_solved_model.fiodl</code> set as output already existed longer before IDeSyDe finished execution. That&rsquo;s because intermediate (feasible) solutions are also output by the tools as it tries to optimize it further.</p>
+<h2><a href="#difference-between-no-dse-and-no-feasible-results" name="difference-between-no-dse-and-no-feasible-results" class="anchor"><span class="anchor-link"></span></a>Difference between no DSE and no feasible results</h2>
+<p>Since IDeSyDe is a generic DSE tool, your system input might be yet part of the scenarios IDeSyDe knows how to solve. That can be distinguished by the output of the tool (in case you have not put a verbosity level too low); If no <strong>combo</strong> of decision model and explorer has been chosen, then IDeSyDe either does not known how to solve your design scenario (given as a ForSyDe IO Model) or lacks the exploration algorithm to do so. Otherwise, if a <strong>combo</strong> is chosen, and the result is no solution, then it means the system design given to IDeSyDe is infeasible. At very least, it is analytically infeasible with the algorithms and equations programmed in IDeSyDe.</p>
+<p>Here&rsquo;s an example of when there&rsquo;s no possible DSE <strong>combo</strong> identified:</p>
+<pre><code>&gt; java -jar idesyde.jar -o solved.fiodl input_model.fiodl 
+2022.03.17 14:45:33:242 [main      ] [INFO ] idesyde.cli.IDeSyDeRunConfig.setLoggingLevel:85 - logging levels set to INFO.
+2022.03.17 14:45:33:323 [main      ] [INFO ] idesyde.cli.IDeSyDeRunConfig.run:39 - Reading and merging input models.
+2022.03.17 14:45:33:595 [main      ] [INFO ] idesyde.identification.api.IdentificationHandler.identifyDecisionModels:47 - Performing identification with 9 rules up to 162 iterations.
+2022.03.17 14:45:33:767 [main      ] [INFO ] idesyde.identification.api.IdentificationHandler.identifyDecisionModels:72 - droppped 0 dominated decision model(s).
+2022.03.17 14:45:33:768 [main      ] [INFO ] idesyde.cli.IDeSyDeRunConfig.run:48 - Identification finished with 1 decision model(s).
+2022.03.17 14:45:33:773 [main      ] [INFO ] idesyde.cli.IDeSyDeRunConfig.run:51 - Total of 0 combo of decision model(s) and explorer(s) chosen.
+2022.03.17 14:45:33:775 [main      ] [INFO ] idesyde.cli.IDeSyDeRunConfig.run:75 - Finished exploration with no solution
+</code></pre>
+<p>And here&rsquo;s an example where there&rsquo;s a DSE <strong>combo</strong> to be solved but not feasible solution exists:</p>
+<pre><code>&gt; java -jar idesyde.jar -o solved.fiodl input_system.fiodl
+2022.03.17 14:49:24:516 [main      ] [INFO ] idesyde.cli.IDeSyDeRunConfig.setLoggingLevel:85 - logging levels set to INFO.
+2022.03.17 14:49:24:619 [main      ] [INFO ] idesyde.cli.IDeSyDeRunConfig.run:39 - Reading and merging input models.
+2022.03.17 14:49:25:315 [main      ] [INFO ] idesyde.identification.api.IdentificationHandler.identifyDecisionModels:47 - Performing identification with 9 rules up to 243 iterations.
+2022.03.17 14:49:26:215 [main      ] [INFO ] idesyde.identification.api.IdentificationHandler.identifyDecisionModels:72 - droppped 3 dominated decision model(s).
+2022.03.17 14:49:26:216 [main      ] [INFO ] idesyde.cli.IDeSyDeRunConfig.run:48 - Identification finished with 2 decision model(s).
+2022.03.17 14:49:26:224 [main      ] [INFO ] idesyde.cli.IDeSyDeRunConfig.run:51 - Total of 1 combo of decision model(s) and explorer(s) chosen.
+2022.03.17 14:49:32:388 [main      ] [INFO ] idesyde.cli.IDeSyDeRunConfig.run:75 - Finished exploration with no solution
+</code></pre>
+<!-- ## Pre requisites
+
+Whichever way you use to get IDeSyDe installed, you also need to have 
+installed in your system so that IDeSyDe can call it!
+There's a catch, however: The latest version might contain a bug that prevents some models in IDeSyDe
+for running properly, therefore, the tested and recommended version is
+[Minizinc 2.4.3](https://github.com/MiniZinc/MiniZincIDE/releases/tag/2.4.3).
+
+If you don't want to try the standlone executables, you also need to have Python 3.7+ installed in your system. -->
+<div class="nav-next">
+<p><strong>Next:</strong> <a href="../usage/guidelines.html">Guidelines</a></p>
+</div>
+</div>
+<div class="large-3 show-for-large column" data-sticky-container>
+<nav class="sidebar sticky" data-sticky data-anchor="docs" data-sticky-on="large">
+<div class="page-nav">
+<div class="nav-title">On this page:</div>
+<div class="nav-toc">
+<ul>
+  <li><a href="../usage/quickstart.html#quick-start" class="header">Quick start</a>
+  <ul>
+    <li><a href="../usage/quickstart.html#performing-dse" class="header">Performing DSE</a></li>
+    <li><a href="../usage/quickstart.html#difference-between-no-dse-and-no-feasible-results" class="header">Difference between no DSE and no feasible results</a></li>
+  </ul></li>
+</ul>
+</div>
+</div>
+</nav>
+</div>
+</div>
+
+</section>
+</div>
+
+</div>
+
+<footer class="site-footer">
+
+<section class="site-footer-nav">
+<div class="expanded row">
+<div class="small-12 large-offset-2 large-10 column">
+<div class="row site-footer-content">
+
+<div class="small-12 medium-4 large-3 text-center column">
+<div class="nav-links">
+<ul>
+<!-- <li><a href="https://www.example.com/products/">Products</a> -->
+</ul>
+</div>
+</div>
+
+</div>
+</div>
+</div>
+</section>
+
+<section class="site-footer-base">
+<div class="expanded row">
+<div class="small-12 large-offset-2 large-10 column">
+<div class="row site-footer-content">
+
+<div class="small-12 text-center large-9 column">
+
+<!--
+<div class="copyright">
+<span class="text">&copy; 2023</span>
+<a href="https://www.example.com" class="logo">logo</a>
+</div>
+-->
+</div>
+
+</div>
+</div>
+</div>
+</section>
+</footer>
+
+</div>
+</div>
+</div>
+</body>
+
+<script type="text/javascript" src="../lib/foundation/dist/foundation.min.js"></script>
+<script type="text/javascript">jQuery(document).foundation();</script>
+<script type="text/javascript" src="../js/magellan.js"></script>
+
+<style type="text/css">@import "../lib/prettify/prettify.css";</style>
+<script type="text/javascript" src="../lib/prettify/prettify.js"></script>
+<script type="text/javascript" src="../lib/prettify/lang-scala.js"></script>
+<script type="text/javascript">jQuery(function(){window.prettyPrint && prettyPrint()});</script>
+<script type="text/javascript">jQuery(function(jq){initOldVersionWarnings(jq, '0.4.0', '')});</script>
+
+
+</html>

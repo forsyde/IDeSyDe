@@ -142,3 +142,5 @@ ThisBuild / assembly / assemblyMergeStrategy := {
 }
 
 // /Compile / resourceDirectory := baseDirectory.value / "resources"
+lazy val publishDocumentation = taskKey[Unit]("Copy the generated documentation to the correct folder")
+publishDocumentation := IO.copyDirectory((root / makeSite).value, new java.io.File("docs"), true, false, false)

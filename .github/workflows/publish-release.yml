@@ -19,7 +19,7 @@ jobs:
       id: get_scala_version
       run: |
         cd ${{ github.workspace }}
-        echo "::set-output name=scalaVersion::$(sbt --error 'print scalaVersion')"
+        echo "::set-output name=scalaVersion::$(sbt --error 'print cli / scalaVersion')"
     - name: Build assembly with sbt
       run: |
         cd ${{ github.workspace }}

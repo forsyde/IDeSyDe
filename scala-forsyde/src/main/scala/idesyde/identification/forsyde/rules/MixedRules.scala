@@ -24,6 +24,7 @@ import forsyde.io.java.core.VertexProperty
 import forsyde.io.java.typed.viewers.decision.platform.runtime.AllocatedSingleSlotSCS
 import forsyde.io.java.typed.viewers.decision.platform.runtime.AllocatedSharedSlotSCS
 import scala.collection.mutable.Buffer
+import forsyde.io.java.typed.viewers.decision.results.AnalyzedActor
 
 object MixedRules {
 
@@ -192,6 +193,18 @@ object MixedRules {
                     .enforce(comm)
                     .setEntries(commAllocs(i).map(_.asJava).asJava)
                 )
+            }
+            // add the throughputs for good measure
+            for (
+              (a, ai) <- dse.sdfApplications.actorsIdentifiers.zipWithIndex;
+              th = dse.sdfApplications.actorThrouhgputs(ai)
+            ) {
+              newModel.queryVertex(a).ifPresent(actor => {
+                val frac = Rational(th)
+                val act = AnalyzedActor.enforce(actor)
+                act.setThroughputInSecsNumerator(frac.numeratorAsLong)
+                act.setThroughputInSecsDenominator(frac.denominatorAsLong)
+              })
             }
             Some(ForSyDeDesignModel(newModel))
           }

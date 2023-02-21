@@ -18,7 +18,7 @@ lazy val root = project
     ScalaUnidoc / siteSubdirName := "api",
     addMappingsToSiteDir(ScalaUnidoc / packageDoc / mappings, ScalaUnidoc / siteSubdirName),
     paradoxProperties ++= Map(
-      "scaladoc.base_url" -> "/api",
+      "scaladoc.base_url" -> "IDeSyDe/api",
       "github.base_url" -> "https://github.com/forsyde/IDeSyDe"
     ),
     paradoxRoots := List("index.html")

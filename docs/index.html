@@ -38,8 +38,6 @@
 <ul>
   <li><a href="usage/install.html" class="page">Installing IDeSyDe</a></li>
   <li><a href="usage/quickstart.html" class="page">Quick start</a></li>
-  <li><a href="usage/guidelines.html" class="page">Guidelines</a></li>
-  <li><a href="concepts/concepts.html" class="page">Design Space Identification (DSI)</a></li>
   <li><a href="usage/status.html" class="page">Current status</a></li>
 </ul>
 </div>
@@ -79,8 +77,6 @@ C16.952,7,17,6.553,17,6c0-0.553-0.048-1-0.6-1H3.6C3.048,5,3,5.447,3,6C3,6.553,3.
 <ul>
   <li><a href="usage/install.html" class="page">Installing IDeSyDe</a></li>
   <li><a href="usage/quickstart.html" class="page">Quick start</a></li>
-  <li><a href="usage/guidelines.html" class="page">Guidelines</a></li>
-  <li><a href="concepts/concepts.html" class="page">Design Space Identification (DSI)</a></li>
   <li><a href="usage/status.html" class="page">Current status</a></li>
 </ul>
 </div>
@@ -111,7 +107,8 @@ seen in the tool itself.  Try [Concepts](/concepts)! -->
 <!-- A quick glance at [Concepts](/concepts) can likely clarify this further! -->
 <h2><a href="#how-can-i-use-it-" name="how-can-i-use-it-" class="anchor"><span class="anchor-link"></span></a>How can I use it?</h2>
 <p>Short answer: <a href="usage/install.html">Install</a> IDeSyDe and follow the <a href="usage/quickstart.html">Quick start</a> to get an intuitive grasp!</p>
-<p>Long answer: IDeSyDe being a proof-of-concept prototype, there were decisions that simplified the implementation in order to prove the concepts quickly. The first one being that the tool that is distributed only accepts <a href="https://forsyde.github.io/">ForSyDe IO</a> models (this is not a limtation as <a href="https://forsyde.github.io/">ForSyDe IO</a> connects to other MDE frameworks). Second, only a handful of MDE &ldquo;scenarios&rdquo; (i.e. design spaces) are implemented and distributed with the tool. They can be found in <a href="usage/status.html">Supported DSE</a>. Therefore, direct use of the tool depends on the design spaces distributed with the tool itself. Check <a href="usage/guidelines.html">Guidelines</a> to see how one would extends IDeSyDe or ForSyDe IO to support a design space different than those that exist.</p>
+<p>Long answer: IDeSyDe being a proof-of-concept prototype, there were decisions that simplified the implementation in order to prove the concepts quickly. The first one being that the tool that is distributed only accepts <a href="https://forsyde.github.io/">ForSyDe IO</a> models (this is not a limtation as <a href="https://forsyde.github.io/">ForSyDe IO</a> connects to other MDE frameworks). Second, only a handful of MDE &ldquo;scenarios&rdquo; (i.e. design spaces) are implemented and distributed with the tool. They can be found in <a href="usage/status.html">Supported DSE</a>. Therefore, direct use of the tool depends on the design spaces distributed with the tool itself. <!-- Check @ref:[Guidelines](usage/guidelines.md)
+to see how one would extends IDeSyDe or ForSyDe IO to support a design space different than those that exist. --></p>
 <!-- 
 ## What can IDeSyDe do for me?
 
@@ -124,6 +121,10 @@ design constraints such as memory, time or energy.
 This also means that if you let IDeSyDe run long enough, and have just the right amount of computational resources,
 it can can give back a solution "*Your design is not possible*".
 It is always good to know designs are not possible before they crash! -->
+<div class="source-github">
+The source code for this page can be found <a href="https://github.com/forsyde/IDeSyDe/tree/master/src/main/paradox/index.md">here</a>.
+</div>
+
 <div class="nav-next">
 <p><strong>Next:</strong> <a href="usage/install.html">Installing IDeSyDe</a></p>
 </div>

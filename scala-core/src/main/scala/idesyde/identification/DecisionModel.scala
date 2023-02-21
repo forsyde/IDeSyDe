@@ -35,6 +35,4 @@ trait DecisionModel {
 
   def coveredElementRelationIDs: Set[String] = coveredElementRelations.map(elementRelationID)
 
-  override lazy val hashCode: Int = uniqueIdentifier.hashCode
-
 }

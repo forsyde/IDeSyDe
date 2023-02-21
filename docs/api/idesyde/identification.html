@@ -65,15 +65,21 @@ node22 -> node21;
 defined in [1].</p>
 </div><div class="cover"><div class="doc"><p>The trait/interface for a design model in the design space identification methodology, as
 defined in [1].</p>
-<p>A design model is the specification .</p>
-<p>In order to make this class 100% sensible from a Java and OOP perspective, the dominance method
-takes the base model as an input, instead of it being a type inside the trait. This does not
-change much from the conceptual perspective, as the extensions of this trait can simply
-implemented a coverage-based dominance criterium, as originally proposed in [1].</p>
+<p>In essence, the <a href="identification/DesignModel.html">DesignModel</a> is the system model, or pragmatically, a wrapper around the
+original system model data types. It can be thought of conceptually as the &quot;database&quot; with all
+the information about the system we need. The only requirement that is imposed on concrete
+<a href="identification/DesignModel.html">DesignModel</a> s is that they have a notion of &quot;identifiers&quot; so that two elements of type
+<a href="identification/DesignModel.html#ElementT-0">ElementT</a> can always be compared for equality and uniqueness. The ID of an element does not
+have to be anything pretty, it could very well be integers, as long as they are <em>unique</em> for
+<em>unique</em> elements.</p>
 <p>[1] R. Jordão, I. Sander and M. Becker, &quot;Formulation of Design Space Exploration Problems by
 Composable Design Space Identification,&quot; 2021 Design, Automation &amp; Test in Europe Conference &amp;
 Exhibition (DATE), 2021, pp. 1204-1207, doi: 10.23919/DATE51398.2021.9474082.</p>
-</div><h2 class="h500">Attributes</h2><dl class="attributes"><dt class="body-small">Graph</dt><dd class="body-medium"><div id="inheritance-diagram" class="diagram-class showGraph"><button type="button" class="label-only-button" onclick="zoomOut()">Reset zoom</button><button type="button" class="label-only-button" onclick="hideGraph()">Hide graph</button><button type="button" class="label-only-button" onclick="showGraph()">Show graph</button><svg id="graph"></svg><script type="text/dot" id="dot"> digraph g {
+</div><h2 class="h500">Attributes</h2><dl class="attributes"><dt class="body-small">See also:</dt><dd class="body-medium"><div><div><p><a href="identification/IdentificationModule.html">idesyde.identification.IdentificationModule</a></p>
+<ul>
+<li>@see <a href="identification/IdentificationHandler.html">idesyde.identification.IdentificationHandler</a></li>
+</ul>
+</div></div></dd><dt class="body-small">Graph</dt><dd class="body-medium"><div id="inheritance-diagram" class="diagram-class showGraph"><button type="button" class="label-only-button" onclick="zoomOut()">Reset zoom</button><button type="button" class="label-only-button" onclick="hideGraph()">Hide graph</button><button type="button" class="label-only-button" onclick="showGraph()">Show graph</button><svg id="graph"></svg><script type="text/dot" id="dot"> digraph g {
  node0 [id=node0, label="<span style=\"color: #FFFFFF;\">trait <a href=\"identification/DesignModel.html\" t=\"n\">DesignModel</a></span>", class="trait vertex"];
 node1 [id=node1, label="<span style=\"color: #FFFFFF;\">class <span data-unresolved-link=\"\" t=\"n\">Object</span></span>", class="class vertex"];
 node2 [id=node2, label="<span style=\"color: #FFFFFF;\">class <span data-unresolved-link=\"\" t=\"n\">Any</span></span>", class="class vertex"];
@@ -101,14 +107,19 @@ node1 -> node3;
 node3 -> node2;
 
 }
-</script></div></dd><dt class="body-small">Supertypes</dt><dd class="body-medium"><div class="mono-small-inline supertypes"><span></span><div>class <span data-unresolved-link="" t="n">Object</span></div><div>trait <span data-unresolved-link="" t="n">Matchable</span></div><div>class <span data-unresolved-link="" t="n">Any</span></div></div></dd></dl></div></div></div></div></div><div class="documentableElement"><button class="icon-button show-content"></button><div class="header monospace"><div class="signature mono-small-inline"><span class="modifiers"></span><span class="kind"><span t="k">trait </span></span><a href="identification/IdentificationModule.html" t="n"class="documentableName ">IdentificationModule</a><span></span></div></div><div class="docs"><span class="modifiers"></span><div><div class="originInfo"></div><div class="memberDocumentation"><div class="documentableBrief doc"><p>The trait/interface for an identification module gice the identification and integration rules
+</script></div></dd><dt class="body-small">Supertypes</dt><dd class="body-medium"><div class="mono-small-inline supertypes"><span></span><div>class <span data-unresolved-link="" t="n">Object</span></div><div>trait <span data-unresolved-link="" t="n">Matchable</span></div><div>class <span data-unresolved-link="" t="n">Any</span></div></div></dd></dl></div></div></div></div></div><div class="documentableElement"><button class="icon-button show-content"></button><div class="header monospace"><div class="signature mono-small-inline"><span class="modifiers"></span><span class="kind"><span t="k">trait </span></span><a href="identification/IdentificationModule.html" t="n"class="documentableName ">IdentificationModule</a><span></span></div></div><div class="docs"><span class="modifiers"></span><div><div class="originInfo"></div><div class="memberDocumentation"><div class="documentableBrief doc"><p>The trait/interface for an identification module defines the identification and integration rules
 required to power the design space identification process [1].</p>
-</div><div class="cover"><div class="doc"><p>The trait/interface for an identification module gice the identification and integration rules
+</div><div class="cover"><div class="doc"><p>The trait/interface for an identification module defines the identification and integration rules
 required to power the design space identification process [1].</p>
+<p><a href="identification/IdentificationModule.html#identificationRules-0">identificationRules</a> are functions that abstracts <a href="identification/DesignModel.html">DesignModel</a>s systematically to <a href="identification/DecisionModel.html">DecisionModel</a>s
+until it becomes a set of &quot;solvable&quot; parameters and functions.</p>
+<p><a href="identification/IdentificationModule.html#integrationRules-0">integrationRules</a> are basically the inverse of <a href="identification/IdentificationModule.html#identificationRules-0">identificationRules</a>: They take solved <span data-unresolved-link="" title="Problem linking DecisionModels: No DRI found for query">DecisionModels</span>
+and &quot;integrate&quot; the solutions in the abstracted domain back to the design domain, in the <a href="identification/DesignModel.html">DesignModel</a>s.</p>
 <p>[1] R. Jordão, I. Sander and M. Becker, &quot;Formulation of Design Space Exploration Problems by
 Composable Design Space Identification,&quot; 2021 Design, Automation &amp; Test in Europe Conference &amp;
 Exhibition (DATE), 2021, pp. 1204-1207, doi: 10.23919/DATE51398.2021.9474082.</p>
-</div><h2 class="h500">Attributes</h2><dl class="attributes"><dt class="body-small">Graph</dt><dd class="body-medium"><div id="inheritance-diagram" class="diagram-class showGraph"><button type="button" class="label-only-button" onclick="zoomOut()">Reset zoom</button><button type="button" class="label-only-button" onclick="hideGraph()">Hide graph</button><button type="button" class="label-only-button" onclick="showGraph()">Show graph</button><svg id="graph"></svg><script type="text/dot" id="dot"> digraph g {
+</div><h2 class="h500">Attributes</h2><dl class="attributes"><dt class="body-small">See also:</dt><dd class="body-medium"><div><div><p><a href="identification/IdentificationHandler.html">idesyde.identification.IdentificationHandler</a></p>
+</div></div></dd><dt class="body-small">Graph</dt><dd class="body-medium"><div id="inheritance-diagram" class="diagram-class showGraph"><button type="button" class="label-only-button" onclick="zoomOut()">Reset zoom</button><button type="button" class="label-only-button" onclick="hideGraph()">Hide graph</button><button type="button" class="label-only-button" onclick="showGraph()">Show graph</button><svg id="graph"></svg><script type="text/dot" id="dot"> digraph g {
  node0 [id=node0, label="<span style=\"color: #FFFFFF;\">trait <a href=\"identification/IdentificationModule.html\" t=\"n\">IdentificationModule</a></span>", class="trait vertex"];
 node1 [id=node1, label="<span style=\"color: #FFFFFF;\">class <span data-unresolved-link=\"\" t=\"n\">Object</span></span>", class="class vertex"];
 node2 [id=node2, label="<span style=\"color: #FFFFFF;\">class <span data-unresolved-link=\"\" t=\"n\">Any</span></span>", class="class vertex"];

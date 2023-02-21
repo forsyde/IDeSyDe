@@ -4,12 +4,20 @@ import idesyde.identification.IdentificationRule
 import idesyde.identification.DecisionModel
 import idesyde.identification.IdentificationResult
 
-/** The trait/interface for an identification module gice the identification and integration rules
+/** The trait/interface for an identification module defines the identification and integration rules
   * required to power the design space identification process [1].
+  * 
+  * [[identificationRules]] are functions that abstracts [[DesignModel]]s systematically to [[DecisionModel]]s 
+  * until it becomes a set of "solvable" parameters and functions.
+  * 
+  * [[integrationRules]] are basically the inverse of [[identificationRules]]: They take solved [[DecisionModels]]
+  * and "integrate" the solutions in the abstracted domain back to the design domain, in the [[DesignModel]]s.
   *
   * [1] R. Jordão, I. Sander and M. Becker, "Formulation of Design Space Exploration Problems by
   * Composable Design Space Identification," 2021 Design, Automation & Test in Europe Conference &
   * Exhibition (DATE), 2021, pp. 1204-1207, doi: 10.23919/DATE51398.2021.9474082.
+  * 
+  * @see [[idesyde.identification.IdentificationHandler]]
   */
 trait IdentificationModule {
 

@@ -38,8 +38,6 @@
 <ul>
   <li><a href="../usage/install.html" class="page">Installing IDeSyDe</a></li>
   <li><a href="../usage/quickstart.html" class="active page">Quick start</a></li>
-  <li><a href="../usage/guidelines.html" class="page">Guidelines</a></li>
-  <li><a href="../concepts/concepts.html" class="page">Design Space Identification (DSI)</a></li>
   <li><a href="../usage/status.html" class="page">Current status</a></li>
 </ul>
 </div>
@@ -79,8 +77,6 @@ C16.952,7,17,6.553,17,6c0-0.553-0.048-1-0.6-1H3.6C3.048,5,3,5.447,3,6C3,6.553,3.
 <ul>
   <li><a href="../usage/install.html" class="page">Installing IDeSyDe</a></li>
   <li><a href="../usage/quickstart.html" class="active page">Quick start</a></li>
-  <li><a href="../usage/guidelines.html" class="page">Guidelines</a></li>
-  <li><a href="../concepts/concepts.html" class="page">Design Space Identification (DSI)</a></li>
   <li><a href="../usage/status.html" class="page">Current status</a></li>
 </ul>
 </div>
@@ -114,7 +110,7 @@ permalink: /usage/quickstart
 parent: Usage
 --- -->
 <h1><a href="#quick-start" name="quick-start" class="anchor"><span class="anchor-link"></span></a>Quick start</h1>
-<p>This quick start continues from the <a href="/usage/install">installation instructions</a>, and assumes you have <code>idesyde.jar</code> available in your computer.</p>
+<p>This quick start continues from the <a href="usage/install">installation instructions</a>, and assumes you have <code>idesyde.jar</code> available in your computer.</p>
 <!-- Then, you download the `jar` file and make it available to be called from your terminal;  -->
 <p>IDeSyDe is a CLI tool. You have succeed if you can execute the following:</p>
 <pre><code>&gt; java -jar idesyde.jar         
@@ -135,8 +131,8 @@ Usage: idesyde [options] &lt;inputModel&gt; [&lt;inputModel&gt; ...]
   -v, --verbosity &lt;verbosityLevel&gt;
 </code></pre>
 <h2><a href="#performing-dse" name="performing-dse" class="anchor"><span class="anchor-link"></span></a>Performing DSE</h2>
-<p>IDeSyDe currently consumes ForSyDe IO description files as its input. The conventional extension is <code>fiodl</code>. Please note that this support comes directly from [ForSyDe IO]({{ site.projects.forsydeio }}), and this requires the extension to be either <code>.fiodl</code> to work.</p>
-<p>If the input models you have are not ForSyDe IO files, then you might be able to use <a href="{{site.projects.forsydeio}}/usage/conversyde">ConverSyDe</a> to convert them.</p>
+<p>IDeSyDe currently consumes ForSyDe IO description files as its input. The conventional extension is <code>fiodl</code>. Please note that this support comes directly from <a href="https://forsyde.github.io/forsyde-io">ForSyDe IO</a>, and this requires the extension to be either <code>.fiodl</code> to work.</p>
+<p>If the input models you have are not ForSyDe IO files, then you might be able to use <a href="https://forsyde.github.io/forsyde-io/usage/conversyde">ConverSyDe</a> to convert them.</p>
 <p>Once you have the input files <code>model1.fiodl</code>, <code>model2.fiodl</code>, etc. Then you just execute the idesyde <code>jar</code> with them as inputs:</p>
 <pre><code>&gt; java -jar idesyde.jar \
     -o latest_solved_model.fiodl \
@@ -185,8 +181,12 @@ for running properly, therefore, the tested and recommended version is
 [Minizinc 2.4.3](https://github.com/MiniZinc/MiniZincIDE/releases/tag/2.4.3).
 
 If you don't want to try the standlone executables, you also need to have Python 3.7+ installed in your system. -->
+<div class="source-github">
+The source code for this page can be found <a href="https://github.com/forsyde/IDeSyDe/tree/master/src/main/paradox/usage/quickstart.md">here</a>.
+</div>
+
 <div class="nav-next">
-<p><strong>Next:</strong> <a href="../usage/guidelines.html">Guidelines</a></p>
+<p><strong>Next:</strong> <a href="../usage/status.html">Current status</a></p>
 </div>
 </div>
 <div class="large-3 show-for-large column" data-sticky-container>

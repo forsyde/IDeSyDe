@@ -10,8 +10,8 @@ parent: Usage
 
 Currently the only supported "installation" method is to download and use the IDeSyDe `jar` directly.
 Which should be reasonably easy once you have a JVM distribution intalled in your machine. 
-The jar can be downloaded from the [IDeSyDe's releases page]({{ site.sources.idesyde }}/releases). 
-Note that the name might note be exactly `idesyde.jar`, but `idesyde-x.x.x-cli.jar`.
+The jar can be downloaded from the [IDeSyDe's releases page](https://github.com/forsyde/IDeSyDe/releases). 
+Note that the name might note be exactly `idesyde.jar`, but `idesyde-x.x.x-cli.jar` or `IDeSyDe-x.x.x.jar`.
 
 ## Mandatory dependencies
 

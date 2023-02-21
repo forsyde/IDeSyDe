@@ -95,6 +95,16 @@ class StreamingJobsThroughputPropagator(
     count
   }
 
+  private final def minCommTimes(i: Int)(j: Int): Int = if (
+    jobMapping(i).isInstantiated() && jobMapping(j)
+      .isInstantiated() && jobMapping(i)
+      .getValue() == jobMapping(j).getValue()
+  ) {
+    0
+  } else {
+    edgeWeight(i)(j).getLB()
+  }
+
   def propagate(evtmask: Int): Unit = {
     // println(getModel().getSolver().getDecisionPath().toString())
     wfor(0, _ < nJobs, _ + 1) { src =>
@@ -113,12 +123,12 @@ class StreamingJobsThroughputPropagator(
           wfor(0, _ < nJobs, _ + 1) { j =>
             if (mustSuceed(i)(j) || mustCycle(i)(j)) { // adjacents
               if (j == src) { // found a cycle
-                minimumDistanceMatrix(i)= jobWeight(i).getLB() + edgeWeight(i)(src).getLB()
+                minimumDistanceMatrix(i) = jobWeight(i).getLB() + minCommTimes(i)(j)
                 var k = i
                 // go backwards until the src
                 while(k != src) {
                   val kprev = previous(k)
-                  minimumDistanceMatrix(kprev)= Math.max(minimumDistanceMatrix(kprev), jobWeight(kprev).getLB() + edgeWeight(kprev)(k).getLB() + minimumDistanceMatrix(k))
+                  minimumDistanceMatrix(kprev)= Math.max(minimumDistanceMatrix(kprev), jobWeight(kprev).getLB() + minCommTimes(kprev)(k) + minimumDistanceMatrix(k))
                   k = kprev
                 }
               } else if (visited(j) && minimumDistanceMatrix(j)> Int.MinValue) { // found a previous cycle
@@ -126,7 +136,7 @@ class StreamingJobsThroughputPropagator(
                 // go backwards until the src
                 while(k != src) {
                   val kprev = previous(k)
-                  minimumDistanceMatrix(kprev) = Math.max(minimumDistanceMatrix(kprev), jobWeight(kprev).getLB() + edgeWeight(kprev)(k).getLB() + minimumDistanceMatrix(k))
+                  minimumDistanceMatrix(kprev) = Math.max(minimumDistanceMatrix(kprev), jobWeight(kprev).getLB() + minCommTimes(kprev)(k) + minimumDistanceMatrix(k))
                   k = kprev
                 }
               } else if (!visited(j)) {

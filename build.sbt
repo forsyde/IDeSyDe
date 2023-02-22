@@ -19,11 +19,11 @@ lazy val root = project
     addMappingsToSiteDir(ScalaUnidoc / packageDoc / mappings, ScalaUnidoc / siteSubdirName),
     paradoxProperties ++= Map(
       "scaladoc.base_url" -> "IDeSyDe/api",
-      "github.base_url" -> "https://github.com/forsyde/IDeSyDe"
+      "github.base_url"   -> "https://github.com/forsyde/IDeSyDe"
     ),
     paradoxRoots := List("index.html")
   )
-  .aggregate(common, commonj, cli, choco, forsyde, minizinc)
+  .aggregate(common, commonj, cli, choco, forsyde, minizinc, matlab)
 
 lazy val core = (project in file("scala-core"))
 
@@ -79,6 +79,10 @@ lazy val choco = (project in file("scala-choco"))
       "com.outr"        %% "scribe"          % scribeVersion
     )
   )
+
+lazy val matlab = (project in file("scala-bridge-matlab"))
+  .dependsOn(core)
+  .dependsOn(common)
 
 lazy val cli = (project in file("scala-cli"))
   .dependsOn(core)
@@ -144,5 +148,12 @@ ThisBuild / assembly / assemblyMergeStrategy := {
 }
 
 // /Compile / resourceDirectory := baseDirectory.value / "resources"
-lazy val publishDocumentation = taskKey[Unit]("Copy the generated documentation to the correct folder")
-publishDocumentation := IO.copyDirectory((root / makeSite).value, new java.io.File("docs"), true, false, false)
+lazy val publishDocumentation =
+  taskKey[Unit]("Copy the generated documentation to the correct folder")
+publishDocumentation := IO.copyDirectory(
+  (root / makeSite).value,
+  new java.io.File("docs"),
+  true,
+  false,
+  false
+)

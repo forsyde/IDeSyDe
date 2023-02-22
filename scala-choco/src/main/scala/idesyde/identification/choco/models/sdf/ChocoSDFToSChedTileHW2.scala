@@ -470,28 +470,6 @@ final case class ChocoSDFToSChedTileHW2(
     (mapping ++ ordering): _*
   )
 
-  def chooseLowestMappedTime(
-      mapping: Array[IntVar],
-      ordering: Array[IntVar],
-      startTime: Array[IntVar]
-  ) = Search.intVarSearch(
-    (x) => {
-      var chosen: IntVar = null
-      for ((v, i) <- mapping.zipWithIndex) {
-        if (chosen == null && v.isInstantiated() && ordering(i).isInstantiated()) {
-          chosen = startTime(i)
-          // println(s"found at $i : ${v.getValue()}")
-        }
-      }
-      chosen
-    },
-    (v) => {
-      // println(s"choosing ${v.getLB()}")
-      v.getLB()
-    },
-    (mapping ++ ordering ++ startTime): _*
-  )
-
   //---------
 
   def rebuildFromChocoOutput(output: Solution): DecisionModel = {

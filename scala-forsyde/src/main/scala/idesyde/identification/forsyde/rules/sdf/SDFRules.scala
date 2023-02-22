@@ -131,14 +131,13 @@ object SDFRules {
               .getOperationRequirements()
               .entrySet()
               .forEach(e => {
-                val innerMap = e.getValue().asScala.map((k, v) => k -> v.asInstanceOf[Long])
-                // first the intersection parts
-                mutMap(e.getKey()) = mutMap
-                  .getOrElse(e.getKey(), innerMap)
-                  .map((k, v) => k -> (v + innerMap.getOrElse(k, 0L)))
-                // now the parts only the other map has
-                (innerMap.keySet -- mutMap(e.getKey()).keySet)
-                  .map(k => mutMap(e.getKey())(k) = innerMap(k))
+                if (mutMap.contains(e.getKey())) {
+                  e.getValue().forEach((innerK, innerV) => {
+                    mutMap(e.getKey())(innerK) = mutMap(e.getKey()).getOrElse(innerK, 0L) + innerV
+                  })
+                } else {
+                  mutMap(e.getKey()) = e.getValue().asScala.map((k, v) => k -> v.asInstanceOf[Long])
+                }
               })
           })
       })
@@ -153,14 +152,13 @@ object SDFRules {
           .getOperationRequirements()
           .entrySet()
           .forEach(e => {
-            val innerMap = e.getValue().asScala.map((k, v) => k -> v.asInstanceOf[Long])
-            // first the intersection parts
-            mutMap(e.getKey()) = mutMap
-              .getOrElse(e.getKey(), innerMap)
-              .map((k, v) => k -> (v + innerMap.getOrElse(k, 0L)))
-            // now the parts only the other map has
-            (innerMap.keySet -- mutMap(e.getKey()).keySet)
-              .map(k => mutMap(e.getKey())(k) = innerMap(k))
+            if (mutMap.contains(e.getKey())) {
+              e.getValue().forEach((innerK, innerV) => {
+                mutMap(e.getKey())(innerK) = mutMap(e.getKey()).getOrElse(innerK, 0L) + innerV
+              })
+            } else {
+              mutMap(e.getKey()) = e.getValue().asScala.map((k, v) => k -> v.asInstanceOf[Long])
+            }
           })
       })
     mutMap.map((k, v) => k -> v.toMap).toMap

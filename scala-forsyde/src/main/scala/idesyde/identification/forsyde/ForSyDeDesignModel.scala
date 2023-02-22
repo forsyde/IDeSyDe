@@ -20,6 +20,10 @@ final case class ForSyDeDesignModel(val systemGraph: ForSyDeSystemGraph) extends
     }
   }
 
+  def elementID(elem: Vertex): String = elem.getIdentifier()
+
+  def elementRelationID(rel: EdgeInfo): String = rel.toIDString()
+
   val elements = systemGraph.vertexSet().asScala
 
   val elementRelations = systemGraph.edgeSet().asScala

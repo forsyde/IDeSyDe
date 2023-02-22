@@ -14,9 +14,11 @@ package idesyde.identification
   * [1] R. Jordão, I. Sander and M. Becker, "Formulation of Design Space Exploration Problems by
   * Composable Design Space Identification," 2021 Design, Automation & Test in Europe Conference &
   * Exhibition (DATE), 2021, pp. 1204-1207, doi: 10.23919/DATE51398.2021.9474082.
-  * 
-  * @see [[idesyde.identification.IdentificationModule]]
-  * @see [[idesyde.identification.IdentificationHandler]]
+  *
+  * @see
+  *   [[idesyde.identification.IdentificationModule]]
+  * @see
+  *   [[idesyde.identification.IdentificationHandler]]
   */
 trait DesignModel {
 
@@ -29,9 +31,13 @@ trait DesignModel {
 
   def elementRelations: scala.collection.Set[ElementRelationT]
 
-  def elementIDs: scala.collection.Set[String] = elements.map(_.toString())
+  def elementID(elem: ElementT): String
 
-  def elementRelationIDs: scala.collection.Set[String] = elementRelations.map(_.toString())
+  def elementRelationID(rel: ElementRelationT): String
+
+  def elementIDs: scala.collection.Set[String] = elements.map(elementID)
+
+  def elementRelationIDs: scala.collection.Set[String] = elementRelations.map(elementRelationID)
 
   def +(other: DesignModel) = merge(other)
 }

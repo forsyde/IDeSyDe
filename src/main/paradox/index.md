@@ -2,7 +2,8 @@
 
 * [Install](usage/install.md)
 * [Quickstart](usage/quickstart.md)
-* [Status](usage/status.md)
+* [Status](status.md)
+* [Extending](extensions/index.md)
 
 @@@
 
@@ -49,7 +50,7 @@ IDeSyDe being a proof-of-concept prototype, there were decisions that simplified
 to prove the concepts quickly. The first one being that the tool that is distributed only accepts [ForSyDe IO](https://forsyde.github.io/)
 models (this is not a limtation as [ForSyDe IO](https://forsyde.github.io/) connects to other MDE frameworks). 
 Second, only a handful of MDE "scenarios" (i.e. design spaces) are implemented and distributed with the tool.
-They can be found in @ref:[Supported DSE](usage/status.md).
+They can be found in @ref:[Supported DSE](status.md).
 Therefore, direct use of the tool depends on the design spaces distributed with the tool itself. 
 <!-- Check @ref:[Guidelines](usage/guidelines.md)
 to see how one would extends IDeSyDe or ForSyDe IO to support a design space different than those that exist. -->

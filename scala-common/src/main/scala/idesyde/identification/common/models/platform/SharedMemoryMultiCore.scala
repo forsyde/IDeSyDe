@@ -27,34 +27,45 @@ final case class SharedMemoryMultiCore(
 ) extends StandardDecisionModel
     with InstrumentedPlatformMixin[Rational] {
 
+  // #covering_documentation_example
   val coveredElements         = (processingElems ++ communicationElems ++ storageElems).toSet
   val coveredElementRelations = topologySrcs.zip(topologyDsts).toSet
+  // #covering_documentation_example
 
   val platformElements: Vector[String] =
     processingElems ++ communicationElems ++ storageElems
 
-  val topology = Graph.from(platformElements, topologySrcs.zip(topologyDsts).map((src, dst) => src ~> dst))
+  val topology =
+    Graph.from(platformElements, topologySrcs.zip(topologyDsts).map((src, dst) => src ~> dst))
 
   val computedPaths =
-    platformElements.map(src => src ->
-      platformElements.map(dst => dst -> {
-          if (preComputedPaths.contains(src) && preComputedPaths(src).contains(dst) && !preComputedPaths(src)(dst).isEmpty) {
-            preComputedPaths(src)(dst)
-          } else {
-            topology
-              .get(src)
-              .withSubgraph(nodes =
-                v =>
-                  v.value == src || v.value == dst || communicationElems.contains(v.value)
-              )
-              .shortestPathTo(topology.get(dst), e => 1)
-              .map(path => path.nodes.map(_.value.toString()))
-              .map(_.drop(1).dropRight(1))
-              .getOrElse(Seq.empty)
-          }
-        }
-      ).toMap
-    ).toMap
+    platformElements
+      .map(src =>
+        src ->
+          platformElements
+            .map(dst =>
+              dst -> {
+                if (
+                  preComputedPaths.contains(src) && preComputedPaths(src)
+                    .contains(dst) && !preComputedPaths(src)(dst).isEmpty
+                ) {
+                  preComputedPaths(src)(dst)
+                } else {
+                  topology
+                    .get(src)
+                    .withSubgraph(nodes =
+                      v => v.value == src || v.value == dst || communicationElems.contains(v.value)
+                    )
+                    .shortestPathTo(topology.get(dst), e => 1)
+                    .map(path => path.nodes.map(_.value.toString()))
+                    .map(_.drop(1).dropRight(1))
+                    .getOrElse(Seq.empty)
+                }
+              }
+            )
+            .toMap
+      )
+      .toMap
 
   val maxTraversalTimePerBit: Vector[Vector[Rational]] = {
     // val paths = FloydWarshallShortestPaths(directedAndConnectedMinTimeGraph)

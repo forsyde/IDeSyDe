@@ -2,15 +2,13 @@ package idesyde.identification.common.models.mixed
 
 import idesyde.identification.common.StandardDecisionModel
 import idesyde.identification.common.models.sdf.SDFApplication
-import idesyde.identification.common.models.workload.{
-  CommunicatingExtendedDependenciesPeriodicWorkload,
-  InstrumentedWorkloadMixin
-}
+import idesyde.identification.common.models.workload.{InstrumentedWorkloadMixin}
+import idesyde.identification.common.models.CommunicatingAndTriggeredReactiveWorkload
 import spire.math.Rational
 
 final case class TaskdAndSDFServer(
     val sdf: SDFApplication,
-    val task: CommunicatingExtendedDependenciesPeriodicWorkload,
+    val task: CommunicatingAndTriggeredReactiveWorkload,
     val sdfServerPeriod: Vector[Rational],
     val sdfServerBudget: Vector[Rational]
 ) extends StandardDecisionModel

@@ -25,13 +25,10 @@ import scala.collection.mutable.Buffer
   */
 trait CommunicatingExtendedDependenciesPeriodicWorkload {
 
-  def processes: Vector[String]
+  def numVirtualTasks: Int
   def periods: Vector[Rational]
   def offsets: Vector[Rational]
   def relativeDeadlines: Vector[Rational]
-  def channels: Vector[String]
-  def channelSizes: Vector[Long]
-  def dataTransferGraph: Set[(String, String, Long)]
   def affineControlGraph: Set[(Int, Int, Int, Int, Int, Int)]
   // def affineControlGraphSrcs: Vector[String]
   // def affineControlGraphDsts: Vector[String]
@@ -51,7 +48,7 @@ trait CommunicatingExtendedDependenciesPeriodicWorkload {
     * In other words, it is a precedence graph at the instance (sometimes called jobs) level.
     */
   def affineRelationsGraph = Graph.from(
-    0 until processes.size,
+    0 until numVirtualTasks,
     affineControlGraph
       .map((src, dst, srcRepeat, srcSkip, dstRepeat, dstSkip) =>
         (src ~+#> dst)(
@@ -70,20 +67,20 @@ trait CommunicatingExtendedDependenciesPeriodicWorkload {
     *
     * task_0, task_1, ..., task_n, channel_1, ..., channel_m
     */
-  def communicationGraph = Graph.from(
-    processes ++ channels,
-    dataTransferGraph.map((src, dst, d) => src ~> dst % d)
-    // processes.zipWithIndex.flatMap((p, i) =>
-    //   channels.zipWithIndex
-    //     .filter((c, j) => processWritesToChannel(i)(j) > 0L)
-    //     .map((c, j) => p ~> c % processWritesToChannel(i)(j))
-    // ) ++
-    //   processes.zipWithIndex.flatMap((p, i) =>
-    //     channels.zipWithIndex
-    //       .filter((c, j) => processReadsFromChannel(i)(j) > 0L)
-    //       .map((c, j) => c ~> p % processReadsFromChannel(i)(j))
-    //   )
-  )
+  // def communicationGraph = Graph.from(
+  //   processes ++ channels,
+  //   dataTransferGraph.map((src, dst, d) => src ~> dst % d)
+  //   // processes.zipWithIndex.flatMap((p, i) =>
+  //   //   channels.zipWithIndex
+  //   //     .filter((c, j) => processWritesToChannel(i)(j) > 0L)
+  //   //     .map((c, j) => p ~> c % processWritesToChannel(i)(j))
+  //   // ) ++
+  //   //   processes.zipWithIndex.flatMap((p, i) =>
+  //   //     channels.zipWithIndex
+  //   //       .filter((c, j) => processReadsFromChannel(i)(j) > 0L)
+  //   //       .map((c, j) => c ~> p % processReadsFromChannel(i)(j))
+  //   //   )
+  // )
 
   def hyperPeriod: Rational = periods.reduce((t1, t2) => t1.lcm(t2))
 
@@ -97,30 +94,31 @@ trait CommunicatingExtendedDependenciesPeriodicWorkload {
     for (
       sorted <- affineRelationsGraph.topologicalSort();
       innerI <- sorted;
-      i      = innerI.value;
-      nodeId = processes(i)
+      i      = innerI.value
     ) {
-      // offsetsMut(i) = innerI.diPredecessors
-      //   .flatMap(pred => {
-      //     val predIdx = pred.value
-      //     val predId  = processes(predIdx)
-      //     pred
-      //       .connectionsWith(node)
-      //       .map(e => {
-      //         val (ni: Int, oi: Int, nj: Int, oj: Int) = e.label
-      //         val offsetDelta = offsetsMut(nodeIdx) - offsetsMut(predIdx) +
-      //           (periods(nodeIdx) * oj - periods(predIdx) * oi)
-      //         val periodDelta = periods(nodeIdx) * nj - periods(predIdx) * ni
-      //         if (periodDelta > Rational.zero) offsetsMut(nodeIdx) - offsetDelta
-      //         else {
-      //           val maxIncrementCoef =
-      //             Math.max(tasksNumInstances(nodeIdx) / nj, tasksNumInstances(predIdx) / ni)
-      //           offsetsMut(nodeIdx) - offsetDelta - periodDelta * maxIncrementCoef
-      //         }
-      //       })
-      //   })
-      //   .maxOption
-      //   .getOrElse(offsetsMut(nodeIdx))
+      offsetsMut(i) = innerI.diPredecessors.flatMap(predecessor => )
+        // innerI.diPredecessors
+        // .flatMap(pred => {
+        //   val predIdx = pred.value
+          
+        //   // pred.
+        //   // pred
+        //   //   .connectionsWith(node)
+        //   //   .map(e => {
+        //   //     val (ni: Int, oi: Int, nj: Int, oj: Int) = e.label
+        //   //     val offsetDelta = offsetsMut(nodeIdx) - offsetsMut(predIdx) +
+        //   //       (periods(nodeIdx) * oj - periods(predIdx) * oi)
+        //   //     val periodDelta = periods(nodeIdx) * nj - periods(predIdx) * ni
+        //   //     if (periodDelta > Rational.zero) offsetsMut(nodeIdx) - offsetDelta
+        //   //     else {
+        //   //       val maxIncrementCoef =
+        //   //         Math.max(tasksNumInstances(nodeIdx) / nj, tasksNumInstances(predIdx) / ni)
+        //   //       offsetsMut(nodeIdx) - offsetDelta - periodDelta * maxIncrementCoef
+        //   //     }
+        //   //   })
+        // })
+        // .maxOption
+        // .getOrElse(offsetsMut(i))
     }
     offsetsMut.toVector
   }
@@ -179,9 +177,5 @@ trait CommunicatingExtendedDependenciesPeriodicWorkload {
     // scribe.debug(prioritiesMut.mkString("[", ",", "]"))
     prioritiesMut
   }
-
-  val messagesMaxSizes = channelSizes
-
-  def uniqueIdentifier: String = "CommunicatingExtendedDependenciesPeriodicWorkload"
 
 }

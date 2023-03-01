@@ -121,6 +121,7 @@ object WorkloadRules {
             .toSet
             .asJava
         )
+      val dataGraph = AsSubgraph(model, (tasks ++ dataBlocks).map(_.getViewedVertex()).toSet.asJava)
       val connectivityInspector = ConnectivityInspector(stimulusGraph)
       val allTasksAreStimulated = tasks.forall(task =>
         periodicStimulus.exists(stim =>
@@ -137,8 +138,10 @@ object WorkloadRules {
               InstrumentedExecutable.safeCast(_).map(_.getSizeInBits().toLong).orElse(0L)
             )
             .toVector,
+          tasks.map(t => taskComputationNeeds(t, model)).toVector,
           dataBlocks.map(_.getIdentifier()).toVector,
           dataBlocks.map(_.getMaxSizeInBits().toLong).toVector,
+          communicationGraphEdges.toSet,
           periodicStimulus.map(_.getIdentifier()).toVector,
           periodicStimulus.map(_.getPeriodNumerator().toLong).toVector,
           periodicStimulus.map(_.getPeriodDenominator().toLong).toVector,
@@ -162,10 +165,10 @@ object WorkloadRules {
             .collect(Collectors.toList())
             .asScala
             .toVector,
-          tasks.filter(_.getHasORSemantics()).map(_.getIdentifier()).toSet + upsamples
+          tasks.filter(_.getHasORSemantics()).map(_.getIdentifier()).toSet ++ upsamples
             .filter(_.getHasORSemantics())
             .map(_.getIdentifier())
-            .toSet + downsamples
+            .toSet ++ downsamples
             .filter(_.getHasORSemantics())
             .map(_.getIdentifier())
             .toSet

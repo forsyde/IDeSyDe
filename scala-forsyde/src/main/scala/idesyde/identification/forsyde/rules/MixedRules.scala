@@ -13,7 +13,7 @@ import forsyde.io.java.typed.viewers.visualization.Visualizable
 import forsyde.io.java.typed.viewers.platform.runtime.AbstractScheduler
 import forsyde.io.java.typed.viewers.decision.MemoryMapped
 import forsyde.io.java.typed.viewers.platform.GenericMemoryModule
-import idesyde.identification.common.models.workload.CommunicatingExtendedDependenciesPeriodicWorkload
+import idesyde.identification.common.models.CommunicatingAndTriggeredReactiveWorkload
 import idesyde.identification.common.models.platform.PartitionedSharedMemoryMultiCore
 import idesyde.identification.forsyde.ForSyDeIdentificationUtils
 import forsyde.io.java.typed.viewers.nonfunctional.UtilizationBoundedProcessingElem
@@ -199,12 +199,14 @@ object MixedRules {
               (a, ai) <- dse.sdfApplications.actorsIdentifiers.zipWithIndex;
               th = dse.sdfApplications.actorThrouhgputs(ai)
             ) {
-              newModel.queryVertex(a).ifPresent(actor => {
-                val frac = Rational(th)
-                val act = AnalyzedActor.enforce(actor)
-                act.setThroughputInSecsNumerator(frac.numeratorAsLong)
-                act.setThroughputInSecsDenominator(frac.denominatorAsLong)
-              })
+              newModel
+                .queryVertex(a)
+                .ifPresent(actor => {
+                  val frac = Rational(th)
+                  val act  = AnalyzedActor.enforce(actor)
+                  act.setThroughputInSecsNumerator(frac.numeratorAsLong)
+                  act.setThroughputInSecsDenominator(frac.denominatorAsLong)
+                })
             }
             Some(ForSyDeDesignModel(newModel))
           }
@@ -221,8 +223,8 @@ object MixedRules {
   ): Set[PeriodicWorkloadToPartitionedSharedMultiCore] = {
     ForSyDeIdentificationUtils.toForSyDe(models) { model =>
       val app = identified
-        .filter(_.isInstanceOf[CommunicatingExtendedDependenciesPeriodicWorkload])
-        .map(_.asInstanceOf[CommunicatingExtendedDependenciesPeriodicWorkload])
+        .filter(_.isInstanceOf[CommunicatingAndTriggeredReactiveWorkload])
+        .map(_.asInstanceOf[CommunicatingAndTriggeredReactiveWorkload])
       val plat = identified
         .filter(_.isInstanceOf[PartitionedSharedMemoryMultiCore])
         .map(_.asInstanceOf[PartitionedSharedMemoryMultiCore])

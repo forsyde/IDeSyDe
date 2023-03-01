@@ -9,10 +9,12 @@ import scalax.collection.GraphPredef._
 import scala.collection.mutable
 
 final case class CommunicatingAndTriggeredReactiveWorkload(
-    val tasks: Vector[String],
-    val taskSizes: Vector[Long],
+    val processes: Vector[String],
+    val processSizes: Vector[Long],
+    val processComputationalNeeds: Vector[Map[String, Map[String, Long]]],
     val dataChannels: Vector[String],
     val dataChannelSizes: Vector[Long],
+    val dataGraph: Set[(String, String, Long)],
     val periodicSources: Vector[String],
     val periodsNumerator: Vector[Long],
     val periodsDenominator: Vector[Long],
@@ -30,16 +32,17 @@ final case class CommunicatingAndTriggeredReactiveWorkload(
     with CommunicatingExtendedDependenciesPeriodicWorkload
     with InstrumentedWorkloadMixin {
 
-  val coveredElements = (tasks ++ upsamples ++ downsamples ++ periodicSources ++ dataChannels).toSet
+  val coveredElements =
+    (processes ++ upsamples ++ downsamples ++ periodicSources ++ dataChannels).toSet
 
   val coveredElementRelations = triggerGraph.toSet
 
   lazy val stimulusGraph = Graph.from(
-    tasks ++ upsamples ++ downsamples ++ periodicSources,
+    processes ++ upsamples ++ downsamples ++ periodicSources,
     triggerGraph.map((s, t) => s ~> t)
   )
 
-  lazy val (processes, periods, offsets, relativeDeadlines) = {
+  lazy val (virtualProcesses, periods, offsets, relativeDeadlines) = {
     var gen              = mutable.Buffer[(String, Rational, Rational, Rational)]()
     var propagatedEvents = mutable.Map[String, Set[(Rational, Rational, Rational)]]()
     for (
@@ -48,8 +51,8 @@ final case class CommunicatingAndTriggeredReactiveWorkload(
       // gather all incomin stimulus
       val incomingEvents = nextInner.diPredecessors
         .flatMap(pred => propagatedEvents.get(pred.value))
-        .reduce((s1, s2) => s1 | s2)
-      val events = if (hasORTriggerSemantics.contains(next)) {
+        .foldLeft(Set[(Rational, Rational, Rational)]())((s1, s2) => s1 | s2)
+      val events = if (periodicSources.contains(next) || hasORTriggerSemantics.contains(next)) {
         incomingEvents
       } else {
         val maxP = incomingEvents.map((p, o, d) => p).max
@@ -76,7 +79,7 @@ final case class CommunicatingAndTriggeredReactiveWorkload(
             ) // rel. deadline
           )
         )
-      } else if (tasks.contains(next)) {
+      } else if (processes.contains(next)) {
         propagatedEvents(next) = events
         gen ++= events.map((p, o, d) => (next, p, o, d))
       } else if (upsamples.contains(next)) {
@@ -111,14 +114,14 @@ final case class CommunicatingAndTriggeredReactiveWorkload(
     // first consider task-to-task connections
     var affineControlGraphEdges = mutable.Buffer[(Int, Int, Int, Int, Int, Int)]()
     for (
-      srcTask <- tasks; dst <- stimulusGraph.get(srcTask).diSuccessors; dstTask = dst.value;
-      if tasks.contains(dstTask)
+      srcTask <- processes; dst <- stimulusGraph.get(srcTask).diSuccessors; dstTask = dst.value;
+      if processes.contains(dstTask)
     ) {
       if (hasORTriggerSemantics.contains(dstTask)) {
         for (
-          (srcEvent, i) <- processes.zipWithIndex
+          (srcEvent, i) <- virtualProcesses.zipWithIndex
             .filter((p, i) => p == srcTask);
-          (dstEvent, j) <- processes.zipWithIndex
+          (dstEvent, j) <- virtualProcesses.zipWithIndex
             .filter((p, j) => p == dstTask);
           if periods(i) == periods(j)
         ) {
@@ -126,9 +129,9 @@ final case class CommunicatingAndTriggeredReactiveWorkload(
         }
       } else {
         for (
-          (srcEvent, i) <- processes.zipWithIndex
+          (srcEvent, i) <- virtualProcesses.zipWithIndex
             .filter((p, i) => p == srcTask);
-          (dstEvent, j) <- processes.zipWithIndex
+          (dstEvent, j) <- virtualProcesses.zipWithIndex
             .filter((p, j) => p == dstTask)
         ) {
           affineControlGraphEdges :+= (i, j, (periods(j) / periods(i)).ceil.toInt, 0, 1, 0)
@@ -141,13 +144,13 @@ final case class CommunicatingAndTriggeredReactiveWorkload(
       src                     <- stimulusGraph.get(upsample).diPredecessors;
       dst                     <- stimulusGraph.get(upsample).diSuccessors;
       srcTask = src.value; dstTask = dst.value;
-      if tasks.contains(srcTask) && tasks.contains(dstTask)
+      if processes.contains(srcTask) && processes.contains(dstTask)
     ) {
       if (hasORTriggerSemantics.contains(dstTask)) {
         for (
-          (srcEvent, i) <- processes.zipWithIndex
+          (srcEvent, i) <- virtualProcesses.zipWithIndex
             .filter((p, i) => p == srcTask);
-          (dstEvent, j) <- processes.zipWithIndex
+          (dstEvent, j) <- virtualProcesses.zipWithIndex
             .filter((p, j) => p == dstTask)
           if periods(j) * Rational(
             upsampleRepetitiveHolds(idxUpsample)
@@ -162,9 +165,9 @@ final case class CommunicatingAndTriggeredReactiveWorkload(
         }
       } else {
         for (
-          (srcEvent, i) <- processes.zipWithIndex
+          (srcEvent, i) <- virtualProcesses.zipWithIndex
             .filter((p, i) => p == srcTask);
-          (dstEvent, j) <- processes.zipWithIndex
+          (dstEvent, j) <- virtualProcesses.zipWithIndex
             .filter((p, j) => p == dstTask);
           pRatio = (periods(j) / periods(i));
           offset = ((offsets(j) - offsets(i)) / periods(i))
@@ -180,13 +183,13 @@ final case class CommunicatingAndTriggeredReactiveWorkload(
       src                         <- stimulusGraph.get(downsample).diPredecessors;
       dst                         <- stimulusGraph.get(downsample).diSuccessors;
       srcTask = src.value; dstTask = dst.value;
-      if tasks.contains(srcTask) && tasks.contains(dstTask)
+      if processes.contains(srcTask) && processes.contains(dstTask)
     ) {
       if (hasORTriggerSemantics.contains(dstTask)) {
         for (
-          (srcEvent, i) <- processes.zipWithIndex
+          (srcEvent, i) <- virtualProcesses.zipWithIndex
             .filter((p, i) => p == srcTask);
-          (dstEvent, j) <- processes.zipWithIndex
+          (dstEvent, j) <- virtualProcesses.zipWithIndex
             .filter((p, j) => p == dstTask)
           if periods(j) / Rational(
             downampleRepetitiveSkips(idxDownsample)
@@ -205,9 +208,9 @@ final case class CommunicatingAndTriggeredReactiveWorkload(
           )
       } else {
         for (
-          (srcEvent, i) <- processes.zipWithIndex
+          (srcEvent, i) <- virtualProcesses.zipWithIndex
             .filter((p, i) => p == srcTask);
-          (dstEvent, j) <- processes.zipWithIndex
+          (dstEvent, j) <- virtualProcesses.zipWithIndex
             .filter((p, j) => p == dstTask);
           pRatio = (periods(i) / periods(j)).ceil.toInt;
           offset = ((offsets(j) - offsets(i)) / periods(j)).toDouble.toInt
@@ -217,4 +220,7 @@ final case class CommunicatingAndTriggeredReactiveWorkload(
     affineControlGraphEdges.toSet
   }
 
+  def messagesMaxSizes = dataChannelSizes
+
+  def uniqueIdentifier = "CommunicatingAndTriggeredReactiveWorkload"
 }

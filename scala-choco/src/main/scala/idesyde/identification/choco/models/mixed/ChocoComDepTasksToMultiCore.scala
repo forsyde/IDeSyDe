@@ -235,7 +235,7 @@ final case class ChocoComDepTasksToMultiCore(
       fixedPriorityConstraintsModule.postFixedPrioriPreemtpiveConstraint(j)
     })
   // for each SC scheduler
-  dse.workload.processes.zipWithIndex.foreach((task, i) => {
+  dse.workload.tasks.zipWithIndex.foreach((task, i) => {
     dse.platform.runtimes.schedulers.zipWithIndex
       .filter((s, j) => dse.platform.runtimes.isCyclicExecutive(j))
       .foreach((s, j) => {
@@ -328,13 +328,11 @@ final case class ChocoComDepTasksToMultiCore(
   def rebuildFromChocoOutput(output: Solution): DecisionModel = {
     val processMappings = memoryMappingModule.processesMemoryMapping.zipWithIndex
       .map((v, i) =>
-        dse.workload.processes(i) -> dse.platform.hardware.storageElems(output.getIntVal(v))
+        dse.workload.tasks(i) -> dse.platform.hardware.storageElems(output.getIntVal(v))
       )
       .toVector
     val processSchedulings = taskExecution.zipWithIndex
-      .map((v, i) =>
-        dse.workload.processes(i) -> dse.platform.runtimes.schedulers(output.getIntVal(v))
-      )
+      .map((v, i) => dse.workload.tasks(i) -> dse.platform.runtimes.schedulers(output.getIntVal(v)))
       .toVector
     val channelMappings = memoryMappingModule.messagesMemoryMapping.zipWithIndex
       .map((v, i) =>

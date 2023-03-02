@@ -9,9 +9,9 @@ import scalax.collection.GraphPredef._
 import scala.collection.mutable
 
 final case class CommunicatingAndTriggeredReactiveWorkload(
-    val processes: Vector[String],
-    val processSizes: Vector[Long],
-    val processComputationalNeeds: Vector[Map[String, Map[String, Long]]],
+    val tasks: Vector[String],
+    val taskSizes: Vector[Long],
+    val taskComputationalNeeds: Vector[Map[String, Map[String, Long]]],
     val dataChannels: Vector[String],
     val dataChannelSizes: Vector[Long],
     val dataGraph: Set[(String, String, Long)],
@@ -33,16 +33,16 @@ final case class CommunicatingAndTriggeredReactiveWorkload(
     with InstrumentedWorkloadMixin {
 
   val coveredElements =
-    (processes ++ upsamples ++ downsamples ++ periodicSources ++ dataChannels).toSet
+    (tasks ++ upsamples ++ downsamples ++ periodicSources ++ dataChannels).toSet
 
   val coveredElementRelations = triggerGraph.toSet
 
   lazy val stimulusGraph = Graph.from(
-    processes ++ upsamples ++ downsamples ++ periodicSources,
+    tasks ++ upsamples ++ downsamples ++ periodicSources,
     triggerGraph.map((s, t) => s ~> t)
   )
 
-  lazy val (virtualProcesses, periods, offsets, relativeDeadlines) = {
+  val (processes, periods, offsets, relativeDeadlines) = {
     var gen              = mutable.Buffer[(String, Rational, Rational, Rational)]()
     var propagatedEvents = mutable.Map[String, Set[(Rational, Rational, Rational)]]()
     for (
@@ -79,7 +79,7 @@ final case class CommunicatingAndTriggeredReactiveWorkload(
             ) // rel. deadline
           )
         )
-      } else if (processes.contains(next)) {
+      } else if (tasks.contains(next)) {
         propagatedEvents(next) = events
         gen ++= events.map((p, o, d) => (next, p, o, d))
       } else if (upsamples.contains(next)) {
@@ -110,18 +110,23 @@ final case class CommunicatingAndTriggeredReactiveWorkload(
     )
   }
 
+  lazy val processComputationalNeeds =
+    processes.map(name => taskComputationalNeeds(tasks.indexOf(name)))
+
+  lazy val processSizes = processes.map(name => taskSizes(tasks.indexOf(name)))
+
   lazy val affineControlGraph = {
     // first consider task-to-task connections
     var affineControlGraphEdges = mutable.Buffer[(Int, Int, Int, Int, Int, Int)]()
     for (
-      srcTask <- processes; dst <- stimulusGraph.get(srcTask).diSuccessors; dstTask = dst.value;
-      if processes.contains(dstTask)
+      srcTask <- tasks; dst <- stimulusGraph.get(srcTask).diSuccessors; dstTask = dst.value;
+      if tasks.contains(dstTask)
     ) {
       if (hasORTriggerSemantics.contains(dstTask)) {
         for (
-          (srcEvent, i) <- virtualProcesses.zipWithIndex
+          (srcEvent, i) <- processes.zipWithIndex
             .filter((p, i) => p == srcTask);
-          (dstEvent, j) <- virtualProcesses.zipWithIndex
+          (dstEvent, j) <- processes.zipWithIndex
             .filter((p, j) => p == dstTask);
           if periods(i) == periods(j)
         ) {
@@ -129,9 +134,9 @@ final case class CommunicatingAndTriggeredReactiveWorkload(
         }
       } else {
         for (
-          (srcEvent, i) <- virtualProcesses.zipWithIndex
+          (srcEvent, i) <- processes.zipWithIndex
             .filter((p, i) => p == srcTask);
-          (dstEvent, j) <- virtualProcesses.zipWithIndex
+          (dstEvent, j) <- processes.zipWithIndex
             .filter((p, j) => p == dstTask)
         ) {
           affineControlGraphEdges :+= (i, j, (periods(j) / periods(i)).ceil.toInt, 0, 1, 0)
@@ -144,13 +149,13 @@ final case class CommunicatingAndTriggeredReactiveWorkload(
       src                     <- stimulusGraph.get(upsample).diPredecessors;
       dst                     <- stimulusGraph.get(upsample).diSuccessors;
       srcTask = src.value; dstTask = dst.value;
-      if processes.contains(srcTask) && processes.contains(dstTask)
+      if tasks.contains(srcTask) && tasks.contains(dstTask)
     ) {
       if (hasORTriggerSemantics.contains(dstTask)) {
         for (
-          (srcEvent, i) <- virtualProcesses.zipWithIndex
+          (srcEvent, i) <- processes.zipWithIndex
             .filter((p, i) => p == srcTask);
-          (dstEvent, j) <- virtualProcesses.zipWithIndex
+          (dstEvent, j) <- processes.zipWithIndex
             .filter((p, j) => p == dstTask)
           if periods(j) * Rational(
             upsampleRepetitiveHolds(idxUpsample)
@@ -165,9 +170,9 @@ final case class CommunicatingAndTriggeredReactiveWorkload(
         }
       } else {
         for (
-          (srcEvent, i) <- virtualProcesses.zipWithIndex
+          (srcEvent, i) <- processes.zipWithIndex
             .filter((p, i) => p == srcTask);
-          (dstEvent, j) <- virtualProcesses.zipWithIndex
+          (dstEvent, j) <- processes.zipWithIndex
             .filter((p, j) => p == dstTask);
           pRatio = (periods(j) / periods(i));
           offset = ((offsets(j) - offsets(i)) / periods(i))
@@ -183,13 +188,13 @@ final case class CommunicatingAndTriggeredReactiveWorkload(
       src                         <- stimulusGraph.get(downsample).diPredecessors;
       dst                         <- stimulusGraph.get(downsample).diSuccessors;
       srcTask = src.value; dstTask = dst.value;
-      if processes.contains(srcTask) && processes.contains(dstTask)
+      if tasks.contains(srcTask) && tasks.contains(dstTask)
     ) {
       if (hasORTriggerSemantics.contains(dstTask)) {
         for (
-          (srcEvent, i) <- virtualProcesses.zipWithIndex
+          (srcEvent, i) <- processes.zipWithIndex
             .filter((p, i) => p == srcTask);
-          (dstEvent, j) <- virtualProcesses.zipWithIndex
+          (dstEvent, j) <- processes.zipWithIndex
             .filter((p, j) => p == dstTask)
           if periods(j) / Rational(
             downampleRepetitiveSkips(idxDownsample)
@@ -208,9 +213,9 @@ final case class CommunicatingAndTriggeredReactiveWorkload(
           )
       } else {
         for (
-          (srcEvent, i) <- virtualProcesses.zipWithIndex
+          (srcEvent, i) <- processes.zipWithIndex
             .filter((p, i) => p == srcTask);
-          (dstEvent, j) <- virtualProcesses.zipWithIndex
+          (dstEvent, j) <- processes.zipWithIndex
             .filter((p, j) => p == dstTask);
           pRatio = (periods(i) / periods(j)).ceil.toInt;
           offset = ((offsets(j) - offsets(i)) / periods(j)).toDouble.toInt

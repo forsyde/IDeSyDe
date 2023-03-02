@@ -128,7 +128,7 @@ class Active4StageDurationModule(
   private def taskReadsData(t: Int)(c: Int): Long =
     tasksAndPlatform.workload.dataGraph
       .find((a, b, _) =>
-        a == tasksAndPlatform.workload.processes(t) && b == tasksAndPlatform.workload
+        a == tasksAndPlatform.workload.tasks(t) && b == tasksAndPlatform.workload
           .dataChannels(c)
       )
       .map((_, _, l) => l)
@@ -136,7 +136,7 @@ class Active4StageDurationModule(
   private def taskWritesData(t: Int)(c: Int): Long =
     tasksAndPlatform.workload.dataGraph
       .find((a, b, _) =>
-        b == tasksAndPlatform.workload.processes(t) && a == tasksAndPlatform.workload
+        b == tasksAndPlatform.workload.tasks(t) && a == tasksAndPlatform.workload
           .dataChannels(c)
       )
       .map((_, _, l) => l)

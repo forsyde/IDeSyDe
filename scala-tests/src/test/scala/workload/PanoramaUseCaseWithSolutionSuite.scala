@@ -53,21 +53,27 @@ class PanoramaUseCaseWithSolutionSuite extends AnyFunSuite with LoggingMixin {
     forSyDeModelHandler.loadModel(
       Paths.get("scala-tests/models/panorama/utilizationBounds.forsyde.xmi")
     )
-  val model           = ForSyDeDesignModel(flightInfo.merge(radar).merge(bounds))
-  lazy val identified = identificationHandler.identifyDecisionModels(Set(model))
-  lazy val chosen     = explorationHandler.chooseExplorersAndModels(identified)
+  val model      = ForSyDeDesignModel(flightInfo.merge(radar).merge(bounds))
+  val identified = identificationHandler.identifyDecisionModels(Set(model))
+  val chosen     = explorationHandler.chooseExplorersAndModels(identified)
 
   test("PANORAMA case study - can write back model before solution") {
-    forSyDeModelHandler.writeModel(model.systemGraph, "scala-tests/models/panorama/input_to_dse.fiodl")
-    forSyDeModelHandler.writeModel(model.systemGraph, "scala-tests/models/panorama/input_to_dse.amxmi")
-    forSyDeModelHandler.writeModel(model.systemGraph, "scala-tests/models/panorama/input_to_dse_visual.kgt")
+    forSyDeModelHandler.writeModel(
+      model.systemGraph,
+      "scala-tests/models/panorama/input_to_dse.fiodl"
+    )
+    forSyDeModelHandler.writeModel(
+      model.systemGraph,
+      "scala-tests/models/panorama/input_to_dse.amxmi"
+    )
+    forSyDeModelHandler.writeModel(
+      model.systemGraph,
+      "scala-tests/models/panorama/input_to_dse_visual.kgt"
+    )
   }
 
-  test("PANORAMA case study with any solutions - At least 1 decision model") {
+  test("PANORAMA case study with any solutions - At least 1 decision model and combo") {
     assert(identified.size > 0)
-  }
-
-  test("PANORAMA case study with any solutions - At least 1 combo") {
     assert(chosen.size > 0)
   }
 
@@ -77,9 +83,13 @@ class PanoramaUseCaseWithSolutionSuite extends AnyFunSuite with LoggingMixin {
         explorer
           .explore(decisionModel)
           .take(1)
-          .flatMap(decisionModel => identificationHandler.integrateDecisionModel(model, decisionModel))
+          .flatMap(decisionModel =>
+            identificationHandler.integrateDecisionModel(model, decisionModel)
+          )
           .flatMap(designModel =>
-            designModel match { case f: ForSyDeDesignModel => Some(f.systemGraph); case _ => Option.empty }
+            designModel match {
+              case f: ForSyDeDesignModel => Some(f.systemGraph); case _ => Option.empty
+            }
           )
           .map(sol =>
             forSyDeModelHandler

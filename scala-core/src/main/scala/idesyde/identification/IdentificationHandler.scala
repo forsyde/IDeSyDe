@@ -71,12 +71,14 @@ class IdentificationHandler(
       iters += 1
     }
     logger.debug(s"identified: ${identified.map(m => m.uniqueIdentifier)}")
-    val identifiedArray = identified.toArray
+    val identifiedArray = identified.toVector
     // build reachability matrix
     val reachability = identifiedArray.map(m => identifiedArray.map(mm => m.dominates(mm)))
     // get the dominant decision models (including circular dominances)
     val dominantWithoutFilter =
-      CoreUtils.computeDominant(reachability).map(idx => identifiedArray(idx)).toSet
+      computeSSCFromReachibility(reachibilityClosure(reachability))
+        .map(idx => identifiedArray(idx))
+        .toSet
     val dominant = dominantWithoutFilter.filter(m =>
       dominantWithoutFilter
         .filter(_ != m)
@@ -97,5 +99,41 @@ class IdentificationHandler(
     module     <- registeredModules; integrationRule <- module.integrationRules;
     integrated <- integrationRule(model, decisions)
   ) yield integrated
+
+  private def reachibilityClosure(matrix: Vector[Vector[Boolean]]): Vector[Vector[Boolean]] = {
+    // necessary step to clone it
+    val closure  = matrix.map(row => row.toBuffer).toBuffer
+    val numElems = matrix.length
+    for (
+      k <- 0 until numElems;
+      i <- 0 until numElems;
+      j <- 0 until numElems;
+      if i != k
+    ) {
+      closure(i)(j) = closure(i)(j) || (closure(i)(k) && closure(k)(j))
+    }
+    closure.map(_.toVector).toVector
+  }
+
+  def computeSSCFromReachibility(reachability: Vector[Vector[Boolean]]): Set[Int] = {
+    var lowMask     = Buffer.fill(reachability.size)(0)
+    val numElements = reachability.size
+    for (
+      k <- 0 until numElements;
+      i <- 0 until numElements - 1;
+      j <- i + 1 until numElements
+      // if there exists any dominance path forward and back
+    ) {
+      if (reachability(i)(j) && !reachability(j)(i)) {
+        lowMask(j) = Math.max(lowMask(j), lowMask(i) + 1)
+      } else if (!reachability(i)(j) && reachability(j)(i)) {
+        lowMask(i) = Math.max(lowMask(i), lowMask(j) + 1)
+      } else if (reachability(i)(j) && reachability(j)(i)) {
+        lowMask(i) = Math.max(lowMask(i), lowMask(j))
+        lowMask(j) = Math.max(lowMask(i), lowMask(j))
+      }
+    }
+    lowMask.zipWithIndex.filter((v, i) => v == 0).map((v, i) => i).toSet
+  }
 
 }

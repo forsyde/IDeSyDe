@@ -1,4 +1,4 @@
-package idesyde.identification.matlab
+package idesyde.matlab.identification
 
 import idesyde.identification.DesignModel
 
@@ -13,15 +13,19 @@ final case class SimulinkReactiveDesignModel(
     val delays: Vector[String],
     val delaysSizes: Vector[Long],
     val sources: Vector[String],
+    val sourcesSizes: Vector[Long],
     val sourcesPeriodsNumerator: Vector[Long],
     val sourcesPeriodsDenominator: Vector[Long],
     val constants: Vector[String],
     val sinks: Vector[String],
+    val sinksSizes: Vector[Long],
     val sinksDeadlinesNumerator: Vector[Long],
     val sinksDeadlinesDenominator: Vector[Long],
     val processesOperations: Vector[Map[String, Map[String, Long]]],
+    val delaysOperations: Vector[Map[String, Map[String, Long]]],
     val linksSrcs: Vector[String],
-    val linksDsts: Vector[String]
+    val linksDsts: Vector[String],
+    val linksDataSizes: Vector[Long]
 ) extends DesignModel {
 
   type ElementT         = String

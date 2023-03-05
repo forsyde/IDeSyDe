@@ -26,7 +26,7 @@ import idesyde.identification.choco.models.BaselineTimingConstraintsModule
 import idesyde.identification.choco.models.workload.ExtendedPrecedenceConstraintsModule
 import idesyde.identification.choco.models.workload.FixedPriorityConstraintsModule
 import idesyde.identification.choco.models.mixed.Active4StageDurationModule
-import idesyde.utils.CoreUtils
+import idesyde.utils.HasUtils
 import idesyde.identification.choco.interfaces.ChocoModelMixin
 import idesyde.identification.common.models.workload.CommunicatingExtendedDependenciesPeriodicWorkload
 import idesyde.identification.common.models.mixed.PeriodicWorkloadToPartitionedSharedMultiCore
@@ -44,7 +44,8 @@ import idesyde.identification.choco.ChocoDecisionModel
 final case class ChocoComDepTasksToMultiCore(
     val dse: PeriodicWorkloadToPartitionedSharedMultiCore
 ) extends StandardDecisionModel
-    with ChocoDecisionModel() {
+    with ChocoDecisionModel()
+    with HasUtils {
 
   val coveredElements = dse.coveredElements
 
@@ -82,7 +83,7 @@ final case class ChocoComDepTasksToMultiCore(
   var memoryDivider = 1L
   while (
     memoryValues.forall(
-      CoreUtils.ceil(_, memoryDivider) >= Int.MaxValue / 100000
+      ceil(_, memoryDivider) >= Int.MaxValue / 100000
     ) && memoryDivider < Int.MaxValue
   ) {
     memoryDivider *= 10L
@@ -120,10 +121,10 @@ final case class ChocoComDepTasksToMultiCore(
   )
   val memoryMappingModule = SingleProcessSingleMessageMemoryConstraintsModule(
     chocoModel,
-    dse.workload.processSizes.map(CoreUtils.ceil(_, memoryDivider)).map(_.toInt).toArray,
-    dse.workload.messagesMaxSizes.map(CoreUtils.ceil(_, memoryDivider)).map(_.toInt).toArray,
+    dse.workload.processSizes.map(ceil(_, memoryDivider)).map(_.toInt).toArray,
+    dse.workload.messagesMaxSizes.map(ceil(_, memoryDivider)).map(_.toInt).toArray,
     dse.platform.hardware.storageSizes
-      .map(CoreUtils.ceil(_, memoryDivider))
+      .map(ceil(_, memoryDivider))
       .map(_.toInt)
       .toArray
   )

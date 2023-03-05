@@ -1,8 +1,6 @@
 package workload
 
 import org.scalatest.funsuite.AnyFunSuite
-import idesyde.exploration.ExplorationHandler
-import idesyde.identification.IdentificationHandler
 import idesyde.exploration.ChocoExplorationModule
 import idesyde.identification.common.CommonIdentificationModule
 import idesyde.identification.choco.ChocoIdentificationModule
@@ -22,23 +20,26 @@ import mixins.LoggingMixin
 import forsyde.io.java.kgt.drivers.ForSyDeKGTDriver
 import idesyde.utils.Logger
 import idesyde.utils.SimpleStandardIOLogger
+import idesyde.identification.CanIdentify
+import idesyde.exploration.CanExplore
+import idesyde.identification.DecisionModel
+import idesyde.exploration.Explorer
+import mixins.HasShortcuts
 
-class PanoramaUseCaseWithSolutionSuite extends AnyFunSuite with LoggingMixin {
+class PanoramaUseCaseWithSolutionSuite extends AnyFunSuite with LoggingMixin with HasShortcuts {
 
   given ExecutionContext = ExecutionContext.global
 
   setNormal()
 
-  given Logger = SimpleStandardIOLogger
+  // val explorationHandler = ExplorationHandler()
+  //   .registerModule(ChocoExplorationModule())
 
-  val explorationHandler = ExplorationHandler()
-    .registerModule(ChocoExplorationModule())
-
-  val identificationHandler = IdentificationHandler()
-    .registerIdentificationRule(CommonIdentificationModule())
-    .registerIdentificationRule(ChocoIdentificationModule())
-    .registerIdentificationRule(ForSyDeIdentificationModule())
-    .registerIdentificationRule(MinizincIdentificationModule())
+  // val identificationHandler = IdentificationHandler()
+  //   .registerIdentificationRule(CommonIdentificationModule())
+  //   .registerIdentificationRule(ChocoIdentificationModule())
+  //   .registerIdentificationRule(ForSyDeIdentificationModule())
+  //   .registerIdentificationRule(MinizincIdentificationModule())
 
   val forSyDeModelHandler =
     ForSyDeModelHandler().registerDriver(ForSyDeAmaltheaDriver()).registerDriver(ForSyDeKGTDriver())
@@ -54,8 +55,8 @@ class PanoramaUseCaseWithSolutionSuite extends AnyFunSuite with LoggingMixin {
       Paths.get("scala-tests/models/panorama/utilizationBounds.forsyde.xmi")
     )
   val model      = ForSyDeDesignModel(flightInfo.merge(radar).merge(bounds))
-  val identified = identificationHandler.identifyDecisionModels(Set(model))
-  val chosen     = explorationHandler.chooseExplorersAndModels(identified)
+  val identified = identify(model)
+  val chosen     = getExplorerAndModel(identified)
 
   test("PANORAMA case study - can write back model before solution") {
     forSyDeModelHandler.writeModel(
@@ -83,9 +84,7 @@ class PanoramaUseCaseWithSolutionSuite extends AnyFunSuite with LoggingMixin {
         explorer
           .explore(decisionModel)
           .take(1)
-          .flatMap(decisionModel =>
-            identificationHandler.integrateDecisionModel(model, decisionModel)
-          )
+          .flatMap(decisionModel => integrate(model, decisionModel))
           .flatMap(designModel =>
             designModel match {
               case f: ForSyDeDesignModel => Some(f.systemGraph); case _ => Option.empty

@@ -4,7 +4,7 @@ import scala.collection.mutable
 import scala.collection.mutable.Buffer
 import scala.collection.mutable.Queue
 
-object CoreUtils {
+trait HasUtils {
 
   /** This method is an adaptation of Tarjan's algorithm to compute SCCs. The difference is that
     * dominance of design models is taken into consideration while effecting the original algorithm,
@@ -77,9 +77,11 @@ object CoreUtils {
     }
   }
 
-  def reachibilityClosure(matrix: Array[Array[Boolean]]): Array[Array[Boolean]] = {
+  def reachibilityClosure[V <: IndexedSeq[Boolean], VV <: IndexedSeq[V]](
+      matrix: VV
+  ): Vector[Vector[Boolean]] = {
     // necessary step to clone it
-    val closure  = matrix.map(row => row.clone()).toArray
+    val closure  = matrix.map(row => row.map(col => col).toBuffer).toBuffer
     def numElems = matrix.length
     for (
       k <- 0 until numElems;
@@ -88,23 +90,30 @@ object CoreUtils {
     ) {
       closure(i)(j) = closure(i)(j) || (closure(i)(k) && closure(k)(j))
     }
-    closure
+    closure.map(_.toVector).toVector
   }
 
-  def computeSSCFromReachibility(reachability: Array[Array[Boolean]]): Array[Set[Int]] = {
-    var components = Array(mutable.Set(0))
-    var connected  = reachability.map(_ => false)
+  def computeSSCFromReachibility[V <: IndexedSeq[Boolean], VV <: IndexedSeq[V]](
+      reachability: VV
+  ): Set[Int] = {
+    var lowMask     = Buffer.fill(reachability.size)(0)
+    val numElements = reachability.size
     for (
-      i <- 0 until reachability.size - 1;
-      j <- i + 1 until reachability.size;
+      k <- 0 until numElements;
+      i <- 0 until numElements - 1;
+      j <- i + 1 until numElements
       // if there exists any dominance path forward and back
-      if reachability(i)(j) && reachability(j)(i) && !connected(j)
     ) {
-      def componentIdx = components.indexWhere(c => c.contains(i))
-      if (componentIdx < 0) then components :+= mutable.Set(j) else components(componentIdx) += j
-      connected(j) = true
+      if (reachability(i)(j) && !reachability(j)(i)) {
+        lowMask(j) = Math.max(lowMask(j), lowMask(i) + 1)
+      } else if (!reachability(i)(j) && reachability(j)(i)) {
+        lowMask(i) = Math.max(lowMask(i), lowMask(j) + 1)
+      } else if (reachability(i)(j) && reachability(j)(i)) {
+        lowMask(i) = Math.max(lowMask(i), lowMask(j))
+        lowMask(j) = Math.max(lowMask(i), lowMask(j))
+      }
     }
-    components.map(_.toSet)
+    lowMask.zipWithIndex.filter((v, i) => v == 0).map((v, i) => i).toSet
   }
 
   def computeDominantFromReachability(reachability: Array[Array[Boolean]]): Set[Int] = {

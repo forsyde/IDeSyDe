@@ -4,26 +4,35 @@ import scala.collection.mutable.HashSet
 
 import collection.JavaConverters.*
 import scala.collection.mutable.Buffer
-import idesyde.utils.CoreUtils
 import idesyde.utils.Logger
 import scala.collection.mutable
 import idesyde.identification.MarkedIdentificationRule.DesignModelOnlyIdentificationRule
+import idesyde.utils.HasUtils
+import scala.annotation.targetName
 
-class IdentificationHandler(
-    var registeredModules: Set[IdentificationModule] = Set()
-)(using logger: Logger) {
+trait CanIdentify(using logger: Logger) extends HasUtils {
 
-  def registerIdentificationRule(identModule: IdentificationModule): IdentificationHandler = {
-    registeredModules += identModule
-    this
-  }
-
+  @targetName("identifyDecisionModelsWithModules")
   def identifyDecisionModels(
       models: Set[DesignModel],
-      previouslyIdentified: Set[DecisionModel] = Set()
+      identificationModules: Set[IdentificationModule],
+      startingDecisionModels: Set[DecisionModel] = Set()
+  ): Set[DecisionModel] = identifyDecisionModels(
+    models,
+    identificationModules.flatMap(_.identificationRules),
+    startingDecisionModels
+  )
+
+  @targetName("identifyDecisionModelsWithRules")
+  def identifyDecisionModels(
+      models: Set[DesignModel],
+      identificationRules: Set[
+        (Set[DesignModel], Set[DecisionModel]) => Set[? <: DecisionModel]
+      ],
+      startingDecisionModels: Set[DecisionModel]
   ): Set[DecisionModel] = {
-    var identified: Set[DecisionModel] = previouslyIdentified
-    var activeRules                    = registeredModules.flatMap(m => m.identificationRules)
+    var identified: Set[DecisionModel] = startingDecisionModels
+    var activeRules                    = identificationRules
     var iters                          = 0
     val maxIters                       = models.map(_.elements.size).sum
     logger.info(
@@ -92,48 +101,60 @@ class IdentificationHandler(
     dominant
   }
 
+  @targetName("integrateDecisionModelWithModules")
   def integrateDecisionModel(
       model: DesignModel,
-      decisions: DecisionModel
+      decisions: DecisionModel,
+      integrationModules: Set[IdentificationModule] = Set()
+  ): Set[DesignModel] =
+    integrateDecisionModel(model, decisions, integrationModules.flatMap(_.integrationRules))
+
+  @targetName("integrateDecisionModelWithRules")
+  def integrateDecisionModel(
+      model: DesignModel,
+      decisions: DecisionModel,
+      integrationRules: Set[
+        (DesignModel, DecisionModel) => Option[? <: DesignModel]
+      ]
   ): Set[DesignModel] = for (
-    module     <- registeredModules; integrationRule <- module.integrationRules;
-    integrated <- integrationRule(model, decisions)
+    integrationRule <- integrationRules;
+    integrated      <- integrationRule(model, decisions)
   ) yield integrated
 
-  private def reachibilityClosure(matrix: Vector[Vector[Boolean]]): Vector[Vector[Boolean]] = {
-    // necessary step to clone it
-    val closure  = matrix.map(row => row.toBuffer).toBuffer
-    val numElems = matrix.length
-    for (
-      k <- 0 until numElems;
-      i <- 0 until numElems;
-      j <- 0 until numElems;
-      if i != k
-    ) {
-      closure(i)(j) = closure(i)(j) || (closure(i)(k) && closure(k)(j))
-    }
-    closure.map(_.toVector).toVector
-  }
+  // private def reachibilityClosure(matrix: Vector[Vector[Boolean]]): Vector[Vector[Boolean]] = {
+  //   // necessary step to clone it
+  //   val closure  = matrix.map(row => row.toBuffer).toBuffer
+  //   val numElems = matrix.length
+  //   for (
+  //     k <- 0 until numElems;
+  //     i <- 0 until numElems;
+  //     j <- 0 until numElems;
+  //     if i != k
+  //   ) {
+  //     closure(i)(j) = closure(i)(j) || (closure(i)(k) && closure(k)(j))
+  //   }
+  //   closure.map(_.toVector).toVector
+  // }
 
-  def computeSSCFromReachibility(reachability: Vector[Vector[Boolean]]): Set[Int] = {
-    var lowMask     = Buffer.fill(reachability.size)(0)
-    val numElements = reachability.size
-    for (
-      k <- 0 until numElements;
-      i <- 0 until numElements - 1;
-      j <- i + 1 until numElements
-      // if there exists any dominance path forward and back
-    ) {
-      if (reachability(i)(j) && !reachability(j)(i)) {
-        lowMask(j) = Math.max(lowMask(j), lowMask(i) + 1)
-      } else if (!reachability(i)(j) && reachability(j)(i)) {
-        lowMask(i) = Math.max(lowMask(i), lowMask(j) + 1)
-      } else if (reachability(i)(j) && reachability(j)(i)) {
-        lowMask(i) = Math.max(lowMask(i), lowMask(j))
-        lowMask(j) = Math.max(lowMask(i), lowMask(j))
-      }
-    }
-    lowMask.zipWithIndex.filter((v, i) => v == 0).map((v, i) => i).toSet
-  }
+  // def computeSSCFromReachibility(reachability: Vector[Vector[Boolean]]): Set[Int] = {
+  //   var lowMask     = Buffer.fill(reachability.size)(0)
+  //   val numElements = reachability.size
+  //   for (
+  //     k <- 0 until numElements;
+  //     i <- 0 until numElements - 1;
+  //     j <- i + 1 until numElements
+  //     // if there exists any dominance path forward and back
+  //   ) {
+  //     if (reachability(i)(j) && !reachability(j)(i)) {
+  //       lowMask(j) = Math.max(lowMask(j), lowMask(i) + 1)
+  //     } else if (!reachability(i)(j) && reachability(j)(i)) {
+  //       lowMask(i) = Math.max(lowMask(i), lowMask(j) + 1)
+  //     } else if (reachability(i)(j) && reachability(j)(i)) {
+  //       lowMask(i) = Math.max(lowMask(i), lowMask(j))
+  //       lowMask(j) = Math.max(lowMask(i), lowMask(j))
+  //     }
+  //   }
+  //   lowMask.zipWithIndex.filter((v, i) => v == 0).map((v, i) => i).toSet
+  // }
 
 }

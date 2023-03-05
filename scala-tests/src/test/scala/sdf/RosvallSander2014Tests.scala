@@ -7,9 +7,8 @@ import forsyde.io.java.kgt.drivers.ForSyDeKGTDriver
 import forsyde.io.java.sdf3.drivers.ForSyDeSDF3Driver
 import idesyde.utils.SimpleStandardIOLogger
 import idesyde.utils.Logger
-import idesyde.exploration.ExplorationHandler
-import idesyde.identification.IdentificationHandler
 import mixins.LoggingMixin
+import mixins.HasShortcuts
 import mixins.PlatformExperimentCreator
 import idesyde.identification.common.CommonIdentificationModule
 import idesyde.identification.choco.ChocoIdentificationModule
@@ -19,18 +18,11 @@ import idesyde.exploration.ChocoExplorationModule
 import java.nio.file.Files
 import java.nio.file.Paths
 
-class RosvallSander2014Tests extends AnyFunSuite with LoggingMixin with PlatformExperimentCreator {
-
-  given Logger = SimpleStandardIOLogger
-
-  val explorationHandler = ExplorationHandler(
-  ).registerModule(ChocoExplorationModule())
-
-  val identificationHandler = IdentificationHandler(
-  ).registerIdentificationRule(ForSyDeIdentificationModule())
-    .registerIdentificationRule(MinizincIdentificationModule())
-    .registerIdentificationRule(CommonIdentificationModule())
-    .registerIdentificationRule(ChocoIdentificationModule())
+class RosvallSander2014Tests
+    extends AnyFunSuite
+    with LoggingMixin
+    with PlatformExperimentCreator
+    with HasShortcuts {
 
   val forSyDeModelHandler = ForSyDeModelHandler()
     .registerDriver(ForSyDeSDF3Driver())
@@ -57,33 +49,33 @@ class RosvallSander2014Tests extends AnyFunSuite with LoggingMixin with Platform
 
   test("Find a solution to the first case of Experiment III") {
     val identified =
-      identificationHandler.identifyDecisionModels(
+      identify(
         Set(ForSyDeDesignModel(rasta_and_jpeg_case))
       )
     assert(identified.size > 0)
-    val chosen = explorationHandler.chooseExplorersAndModels(identified)
+    val chosen = getExplorerAndModel(identified)
     val solList = chosen.headOption
       .map((e, m) => {
         e.explore(m)
       })
       .getOrElse(LazyList.empty)
-      .take(3)
+      .take(2)
     assert(solList.size > 1)
   }
 
   test("Find a solution to Sobel") {
     val identified =
-      identificationHandler.identifyDecisionModels(
+      identify(
         Set(ForSyDeDesignModel(sobelSDF3.merge(small8NodeBusPlatform)))
       )
     assert(identified.size > 0)
-    val chosen = explorationHandler.chooseExplorersAndModels(identified)
+    val chosen = getExplorerAndModel(identified)
     val solList = chosen.headOption
       .map((e, m) => {
         e.explore(m)
       })
       .getOrElse(LazyList.empty)
-      .take(6)
+      .take(2)
     assert(solList.size > 1)
   }
 

@@ -6,7 +6,7 @@ import org.chocosolver.solver.variables.BoolVar
 import org.chocosolver.solver.constraints.`extension`.Tuples
 import org.chocosolver.solver.Model
 import idesyde.identification.common.models.mixed.PeriodicWorkloadToPartitionedSharedMultiCore
-import idesyde.utils.CoreUtils
+import idesyde.utils.HasUtils
 
 class Active4StageDurationModule(
     val chocoModel: Model,
@@ -17,23 +17,24 @@ class Active4StageDurationModule(
     val processingElemsVirtualChannelInCommElem: Array[Array[IntVar]],
     val timeMultiplier: Long = 1L,
     val memoryDivider: Long = 1L
-) extends ChocoModelMixin() {
+) extends ChocoModelMixin()
+    with HasUtils {
 
   private val executionTimes =
     tasksAndPlatform.wcets.map(_.map(_ * timeMultiplier).map(_.ceil.toInt).toArray).toArray
   private val taskSizes =
     tasksAndPlatform.workload.processSizes
-      .map(CoreUtils.ceil(_, memoryDivider))
+      .map(ceil(_, memoryDivider))
       .map(_.toInt)
       .toArray
   private val messageSizes =
     tasksAndPlatform.workload.messagesMaxSizes
-      .map(CoreUtils.ceil(_, memoryDivider))
+      .map(ceil(_, memoryDivider))
       .map(_.toInt)
       .toArray
   private val storageSizes =
     tasksAndPlatform.platform.hardware.storageSizes
-      .map(CoreUtils.ceil(_, memoryDivider))
+      .map(ceil(_, memoryDivider))
       .map(_.toInt)
       .toArray
 

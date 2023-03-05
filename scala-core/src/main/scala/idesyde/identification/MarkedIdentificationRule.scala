@@ -1,6 +1,6 @@
 package idesyde.identification
 
-/** Enuemration to mark additional information in identification rules
+/** Enumeration to mark additional information in identification rules.
   *
   * This enumeration encapsulates an identification rule and signals to the identification loop
   * whether the function depends only in the given decision models or the decision models.

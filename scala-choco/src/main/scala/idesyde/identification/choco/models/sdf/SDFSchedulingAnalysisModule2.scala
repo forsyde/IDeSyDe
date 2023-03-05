@@ -11,7 +11,7 @@ import scala.collection.mutable.HashMap
 import org.chocosolver.solver.constraints.Constraint
 import org.chocosolver.solver.exception.ContradictionException
 import org.chocosolver.solver.constraints.`extension`.Tuples
-import idesyde.utils.CoreUtils.wfor
+import idesyde.utils.HasUtils
 import org.chocosolver.solver.Model
 import idesyde.identification.choco.models.SingleProcessSingleMessageMemoryConstraintsModule
 import idesyde.identification.choco.models.TileAsyncInterconnectCommsModule
@@ -24,7 +24,7 @@ class SDFSchedulingAnalysisModule2(
     val memoryMappingModule: SingleProcessSingleMessageMemoryConstraintsModule,
     val tileAsyncModule: TileAsyncInterconnectCommsModule,
     val timeFactor: Long = 1L
-) extends ChocoModelMixin() {
+) extends ChocoModelMixin() with HasUtils {
 
   private val actors = sdfAndSchedulers.sdfApplications.actorsIdentifiers
   val jobsAndActors =

@@ -9,8 +9,7 @@ import breeze.linalg._
 import org.chocosolver.solver.search.strategy.assignments.DecisionOperatorFactory
 import scala.util.Random
 import org.chocosolver.solver.search.loop.monitors.IMonitorSolution
-import idesyde.utils.CoreUtils.wfor
-import idesyde.utils.CoreUtils
+import idesyde.utils.HasUtils
 import org.chocosolver.solver.variables.BoolVar
 import spire._
 import spire.math._
@@ -24,7 +23,8 @@ class CompactingMultiCoreMapping[DistT](
     // val durations: Array[IntVar]
     // val invThroughputs: Array[IntVar],
 )(using distT: spire.math.Integral[DistT])
-    extends AbstractStrategy[IntVar](processesMappings: _*) {
+    extends AbstractStrategy[IntVar](processesMappings: _*)
+    with HasUtils {
 
   private val numProcesses: Int  = processesMappings.size
   private val numSchedulers: Int = processorsDistances.size
@@ -67,15 +67,23 @@ class CompactingMultiCoreMapping[DistT](
   def calculateCrossings(processorIdx: Int)(scheduler: Int): Int = {
     var crossings = 0
     wfor(0, _ < numProcesses, _ + 1) { other =>
-      if (other != processorIdx && processesIsFollowedBy(other)(processorIdx) && !processesMappings(other).contains(scheduler)) {
-        wfor(0, _ < numProcesses, _ + 1) {prevOther => 
-          if (prevOther != other && processesIsFollowedBy(prevOther)(other) && processesMappings(prevOther).isInstantiatedTo(scheduler)) {
+      if (
+        other != processorIdx && processesIsFollowedBy(other)(processorIdx) && !processesMappings(
+          other
+        ).contains(scheduler)
+      ) {
+        wfor(0, _ < numProcesses, _ + 1) { prevOther =>
+          if (
+            prevOther != other && processesIsFollowedBy(prevOther)(other) && processesMappings(
+              prevOther
+            ).isInstantiatedTo(scheduler)
+          ) {
             crossings += 1
           }
         }
-      } 
+      }
     }
-    crossings 
+    crossings
   }
 
   def getDecision(): Decision[IntVar] = {

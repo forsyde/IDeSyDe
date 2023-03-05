@@ -14,10 +14,10 @@ import org.jgrapht.graph.SimpleDirectedGraph
 import org.jgrapht.graph.DefaultEdge
 import org.jgrapht.alg.color.LargestDegreeFirstColoring
 import org.chocosolver.solver.constraints.Constraint
-import idesyde.utils.CoreUtils.wfor
 import org.jgrapht.graph.SimpleGraph
 import idesyde.identification.choco.models.platform.ContentionFreeTiledCommunicationPropagator
 import org.chocosolver.solver.Model
+import idesyde.utils.HasUtils
 
 class TileAsyncInterconnectCommsModule(
     val chocoModel: Model,
@@ -28,7 +28,8 @@ class TileAsyncInterconnectCommsModule(
     val numVirtualChannels: Array[Int],
     val commElemsPaths: (String) => (String) => Array[String]
     // val commElemsMustShareChannel: Array[Array[Boolean]],
-) extends ChocoModelMixin() {
+) extends ChocoModelMixin()
+    with HasUtils {
 
   private val numProcElems = procElems.size
   private val numCommElems = commElems.size
@@ -100,7 +101,7 @@ class TileAsyncInterconnectCommsModule(
     }
     // no make sure that the virtual channels are allocated when required
     for (
-      (p, src) <- procElems.zipWithIndex;
+      (p, src)  <- procElems.zipWithIndex;
       (pp, dst) <- procElems.zipWithIndex
       if src != dst;
       // c  <- 0 until numMessages;
@@ -112,7 +113,7 @@ class TileAsyncInterconnectCommsModule(
       )
     }
     for (
-      (p, src) <- procElems.zipWithIndex;
+      (p, src)  <- procElems.zipWithIndex;
       (pp, dst) <- procElems.zipWithIndex
       if src != dst;
       c <- 0 until numMessages
@@ -120,7 +121,11 @@ class TileAsyncInterconnectCommsModule(
       val singleChannelSum = commElemsPaths(p)(pp)
         .map(ce => messageTravelTimePerVirtualChannel(c)(commElems.indexOf(ce)))
         .sum
-      if (commElemsPaths(p)(pp).map(ce => numVirtualChannelsForProcElem(src)(commElems.indexOf(ce))).size == 0) then println(s"$p to $pp")
+      if (
+        commElemsPaths(p)(pp)
+          .map(ce => numVirtualChannelsForProcElem(src)(commElems.indexOf(ce)))
+          .size == 0
+      ) then println(s"$p to $pp")
       val minVCInPath = chocoModel.min(
         s"minVCInPath($src, $dst)",
         commElemsPaths(p)(pp)

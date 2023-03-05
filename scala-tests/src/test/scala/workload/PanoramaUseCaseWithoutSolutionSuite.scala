@@ -1,8 +1,6 @@
 package workload
 
 import org.scalatest.funsuite.AnyFunSuite
-import idesyde.exploration.ExplorationHandler
-import idesyde.identification.IdentificationHandler
 import idesyde.exploration.ChocoExplorationModule
 import idesyde.identification.common.CommonIdentificationModule
 import idesyde.identification.choco.ChocoIdentificationModule
@@ -19,26 +17,16 @@ import forsyde.io.java.core.ForSyDeSystemGraph
 import scala.concurrent.ExecutionContext
 
 import mixins.LoggingMixin
+import mixins.HasShortcuts
 import idesyde.utils.Logger
 import idesyde.utils.SimpleStandardIOLogger
 import tags.ResourceHungry
 
-class PanoramaUseCaseWithoutSolutionSuite extends AnyFunSuite with LoggingMixin {
+class PanoramaUseCaseWithoutSolutionSuite extends AnyFunSuite with LoggingMixin with HasShortcuts {
 
   given ExecutionContext = ExecutionContext.global
 
   setNormal()
-
-  given Logger = SimpleStandardIOLogger
-
-  val explorationHandler = ExplorationHandler(
-  ).registerModule(ChocoExplorationModule())
-
-  val identificationHandler = IdentificationHandler()
-    .registerIdentificationRule(CommonIdentificationModule())
-    .registerIdentificationRule(ChocoIdentificationModule())
-    .registerIdentificationRule(ForSyDeIdentificationModule())
-    .registerIdentificationRule(MinizincIdentificationModule())
 
   val forSyDeModelHandler = ForSyDeModelHandler().registerDriver(ForSyDeAmaltheaDriver())
 
@@ -49,10 +37,12 @@ class PanoramaUseCaseWithoutSolutionSuite extends AnyFunSuite with LoggingMixin 
     Paths.get("scala-tests/models/panorama/radar-system.amxmi")
   )
   val bounds =
-    forSyDeModelHandler.loadModel(Paths.get("scala-tests/models/panorama/utilizationBounds.forsyde.xmi"))
+    forSyDeModelHandler.loadModel(
+      Paths.get("scala-tests/models/panorama/utilizationBounds.forsyde.xmi")
+    )
   val model           = ForSyDeDesignModel(flightInfo.merge(radar).merge(bounds))
-  lazy val identified = identificationHandler.identifyDecisionModels(Set(model))
-  lazy val chosen     = explorationHandler.chooseExplorersAndModels(identified)
+  lazy val identified = identify(Set(model))
+  lazy val chosen     = getExplorerAndModel(identified)
 
   test("PANORAMA case study without any solutions - At least 1 decision model") {
     assert(identified.size > 0)
@@ -68,11 +58,18 @@ class PanoramaUseCaseWithoutSolutionSuite extends AnyFunSuite with LoggingMixin 
         explorer
           .explore(decisionModel)
           .take(1)
-          .flatMap(decisionModel => identificationHandler.integrateDecisionModel(model, decisionModel))
-          .flatMap(designModel => designModel match {case f: ForSyDeDesignModel => Some(f.systemGraph); case _ => Option.empty})
+          .flatMap(decisionModel => integrate(model, decisionModel))
+          .flatMap(designModel =>
+            designModel match {
+              case f: ForSyDeDesignModel => Some(f.systemGraph); case _ => Option.empty
+            }
+          )
           .map(sol =>
             forSyDeModelHandler
-              .writeModel(model.systemGraph, "scala-tests/models/panorama/wrong_output_of_dse.fiodl")
+              .writeModel(
+                model.systemGraph,
+                "scala-tests/models/panorama/wrong_output_of_dse.fiodl"
+              )
             sol
           )
       )

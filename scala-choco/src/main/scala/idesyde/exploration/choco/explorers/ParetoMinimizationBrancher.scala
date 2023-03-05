@@ -8,12 +8,13 @@ import scala.collection.mutable.Buffer
 import org.chocosolver.solver.constraints.Propagator
 import org.chocosolver.util.ESat
 import org.chocosolver.solver.constraints.PropagatorPriority
-import idesyde.utils.CoreUtils.wfor
+import idesyde.utils.HasUtils
 import java.time.LocalDateTime
 
 class ParetoMinimizationBrancher(val objectives: Array[IntVar])
     extends Propagator[IntVar](objectives, PropagatorPriority.BINARY, false)
-    with IMonitorSolution {
+    with IMonitorSolution
+    with HasUtils {
 
   private val numObjs      = objectives.size
   private val minObjValues = objectives.map(_.getLB())

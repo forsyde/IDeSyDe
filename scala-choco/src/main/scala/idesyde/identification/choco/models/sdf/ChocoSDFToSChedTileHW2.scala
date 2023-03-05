@@ -12,7 +12,6 @@ import org.chocosolver.solver.variables.BoolVar
 import org.chocosolver.solver.variables.IntVar
 import org.chocosolver.solver.search.strategy.strategy.AbstractStrategy
 import org.chocosolver.solver.variables.Variable
-import idesyde.identification.forsyde.ForSyDeIdentificationRule
 import idesyde.identification.choco.models.TileAsyncInterconnectCommsModule
 import spire.math.Rational
 import org.chocosolver.solver.search.strategy.Search
@@ -482,7 +481,11 @@ final case class ChocoSDFToSChedTileHW2(
     // logger.debug(sdfAnalysisModule.jobOrder.mkString(", "))
     // logger.debug(sdfAnalysisModule.invThroughputs.mkString(", "))
     dse.copy(
-      sdfApplications = dse.sdfApplications.copy(actorThrouhgputs = sdfAnalysisModule.invThroughputs.map(timeMultiplier.toDouble / _.getValue().toDouble).toVector),
+      sdfApplications = dse.sdfApplications.copy(actorThrouhgputs =
+        sdfAnalysisModule.invThroughputs
+          .map(timeMultiplier.toDouble / _.getValue().toDouble)
+          .toVector
+      ),
       processMappings = dse.sdfApplications.actorsIdentifiers.zipWithIndex.map((a, i) =>
         dse.platform.hardware
           .memories(output.getIntVal(memoryMappingModule.processesMemoryMapping(i)))

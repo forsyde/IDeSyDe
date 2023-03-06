@@ -2,11 +2,12 @@ ThisBuild / organization := "io.github.forsyde"
 ThisBuild / version := "0.4.2"
 ThisBuild / scalaVersion := "3.2.1"
 
-lazy val forsydeIoVersion  = "0.6.3"
-lazy val jgraphtVersion    = "1.5.1"
-lazy val scribeVersion     = "3.10.2"
-lazy val breezeVersion     = "2.1.0"
-lazy val scalaGraphVersion = "1.13.5"
+lazy val forsydeIoVersion              = "0.6.3"
+lazy val jgraphtVersion                = "1.5.1"
+lazy val scribeVersion                 = "3.10.2"
+lazy val breezeVersion                 = "2.1.0"
+lazy val scalaGraphVersion             = "1.13.5"
+lazy val scalaParserCombinatorsVersion = "2.2.0"
 
 lazy val root = project
   .in(file("."))
@@ -23,7 +24,7 @@ lazy val root = project
     ),
     paradoxRoots := List("index.html")
   )
-  .aggregate(common, commonj, cli, choco, forsyde, minizinc, matlab)
+  .aggregate(common, commonj, cli, choco, forsyde, minizinc, matlab, devicetree)
 
 lazy val core = (project in file("scala-core"))
 
@@ -84,12 +85,22 @@ lazy val matlab = (project in file("scala-bridge-matlab"))
   .dependsOn(core)
   .dependsOn(common)
 
+lazy val devicetree = (project in file("scala-bridge-device-tree"))
+  .dependsOn(core)
+  .dependsOn(common)
+  .settings(
+    libraryDependencies ++= Seq(
+      "org.scala-lang.modules" %%% "scala-parser-combinators" % scalaParserCombinatorsVersion
+    )
+  )
+
 lazy val cli = (project in file("scala-cli"))
   .dependsOn(core)
   .dependsOn(common)
   .dependsOn(choco)
   .dependsOn(forsyde)
   .dependsOn(minizinc)
+  .dependsOn(devicetree)
   // .enablePlugins(ScalaNativePlugin)
   .enablePlugins(UniversalPlugin, JavaAppPackaging, JlinkPlugin)
   .enablePlugins(GraalVMNativeImagePlugin)
@@ -128,6 +139,7 @@ lazy val tests = (project in file("scala-tests"))
   .dependsOn(forsyde)
   .dependsOn(minizinc)
   .dependsOn(cli)
+  .dependsOn(devicetree)
   .settings(
     libraryDependencies ++= Seq(
       ("org.scala-graph" %% "graph-core" % scalaGraphVersion).cross(CrossVersion.for3Use2_13),

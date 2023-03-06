@@ -31,15 +31,15 @@ case class IDeSyDeRunConfig(
 
   def run(): Unit =
     val modelHandler = ForSyDeModelHandler()
-    val validInputs =
+    val validForSyDeInputs =
       inputModelsPaths.map(f => (f, modelHandler.canLoadModel(f)))
-    if (validInputs.forall((p, b) => !b)) {
+    if (validForSyDeInputs.forall((p, b) => !b)) {
       logger.error(
         "At least one valid model is necessary"
       )
-    } else if (validInputs.exists((p, b) => !b)) {
+    } else if (validForSyDeInputs.exists((p, b) => !b)) {
       logger.error(
-        "These inputs are invalid (unknown format): " + validInputs
+        "These inputs are invalid (unknown format): " + validForSyDeInputs
           .filter((p, b) => b)
           .map((p, b) => p.getFileName())
           .mkString(", ")
@@ -47,7 +47,7 @@ case class IDeSyDeRunConfig(
     } else {
       logger.info("Reading and merging input models.")
       val model = ForSyDeDesignModel(
-        validInputs
+        validForSyDeInputs
           .map((p, _) => modelHandler.loadModel(p))
           .foldLeft(ForSyDeSystemGraph())((merged, m) =>
             merged.mergeInPlace(m)

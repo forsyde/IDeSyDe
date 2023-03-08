@@ -15,14 +15,14 @@ import spire._
 import spire.math._
 import spire.implicits._
 
-class CompactingMultiCoreMapping[DistT](
-    val processorsDistances: Array[Array[DistT]],
+class CompactingMultiCoreMapping[TimeT](
+    val processorsDistances: Array[Array[TimeT]],
+    val processesWeights: Array[Array[TimeT]],
     val processesComponents: Array[Int],
     val processesMappings: Array[IntVar],
     val processesIsFollowedBy: (Int) => (Int) => Boolean
-    // val durations: Array[IntVar]
     // val invThroughputs: Array[IntVar],
-)(using distT: spire.math.Integral[DistT])
+)(using timeT: spire.math.Integral[TimeT])
     extends AbstractStrategy[IntVar](processesMappings: _*)
     with HasUtils {
 
@@ -40,8 +40,8 @@ class CompactingMultiCoreMapping[DistT](
     * @param slot
     *   @return whether firing the actor at this scheduler and slot can produce a self-contention
     */
-  def calculateDistanceScore(processIdx: Int)(scheduler: Int): DistT = {
-    var score = distT.zero
+  def calculateDistanceScore(processIdx: Int)(scheduler: Int): TimeT = {
+    var score = timeT.zero
     // first calculate the distance from current slot to dependent ones
     wfor(0, _ < numProcesses, _ + 1) { p =>
       // check whether a is a predecessor of actor in previous slots
@@ -56,7 +56,7 @@ class CompactingMultiCoreMapping[DistT](
       else if (p != processIdx && processesComponents(p) != processesComponents(processIdx)) {
         wfor(0, _ < numSchedulers, _ + 1) { s =>
           if (s != scheduler && processesMappings(p).isInstantiatedTo(s)) {
-            score = distT.minus(score, processorsDistances(s)(scheduler))
+            score = timeT.minus(score, processorsDistances(s)(scheduler))
           }
         }
       }
@@ -91,13 +91,13 @@ class CompactingMultiCoreMapping[DistT](
     // normal
     var bestPCompact     = -1
     var bestSCompact     = -1
-    var bestScoreCompact = (distT.fromInt(Int.MaxValue), Int.MaxValue)
+    var bestScoreCompact = (timeT.fromInt(Int.MaxValue), Int.MaxValue, timeT.fromInt(Int.MaxValue))
     // var bestDuration = Int.MaxValue
     wfor(0, _ < numProcesses, _ + 1) { job =>
       if (!processesMappings(job).isInstantiated()) {
         wfor(processesMappings(job).getLB(), _ <= processesMappings(job).getUB(), _ + 1) { s =>
           if (processesMappings(job).contains(s)) {
-            val score = (calculateDistanceScore(job)(s), calculateCrossings(job)(s))
+            val score = (calculateDistanceScore(job)(s), calculateCrossings(job)(s), processesWeights(job)(s))
             // val invTh = invThroughputs(s).getLB() + durations(job).getUB()
             if (bestPCompact == -1 || score < bestScoreCompact) { // || (score == bestScoreCompact && durations(job).getUB() < bestDuration)) {
               bestPCompact = job

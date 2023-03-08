@@ -1,6 +1,5 @@
 package idesyde.exploration.explorers
 
-import idesyde.identification.forsyde.ForSyDeDecisionModel
 import idesyde.identification.choco.ChocoDecisionModel
 import java.time.Duration
 import forsyde.io.java.core.ForSyDeSystemGraph
@@ -13,7 +12,6 @@ import scala.jdk.StreamConverters.*
 import org.chocosolver.solver.search.limits.SolutionCounter
 import org.chocosolver.solver.Solution
 import idesyde.identification.DecisionModel
-import idesyde.exploration.forsyde.interfaces.ForSyDeIOExplorer
 import scala.collection.mutable.Buffer
 import org.chocosolver.solver.constraints.Constraint
 import org.chocosolver.solver.variables.IntVar
@@ -28,8 +26,8 @@ class ChocoExplorer() extends Explorer:
 
   def canExplore(decisionModel: DecisionModel): Boolean =
     decisionModel match
-      case c: ChocoDecisionModel                          => true
-      case _                                                      => false
+      case c: ChocoDecisionModel => true
+      case _                     => false
 
   override def availableCriterias(decisionModel: DecisionModel): Set[ExplorationCriteria] =
     decisionModel match {

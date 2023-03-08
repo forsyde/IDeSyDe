@@ -6,8 +6,6 @@ import scala.collection.mutable.Buffer
 import forsyde.io.java.drivers.ForSyDeModelHandler
 import forsyde.io.java.core.ForSyDeSystemGraph
 import scala.concurrent.ExecutionContext
-import idesyde.identification.forsyde.ForSyDeDecisionModel
-import idesyde.exploration.forsyde.interfaces.ForSyDeIOExplorer
 import idesyde.identification.forsyde.ForSyDeDesignModel
 import idesyde.identification.DecisionModel
 import idesyde.utils.SimpleStandardIOLogger

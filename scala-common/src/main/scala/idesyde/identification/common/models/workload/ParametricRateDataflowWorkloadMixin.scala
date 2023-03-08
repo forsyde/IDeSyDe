@@ -280,7 +280,7 @@ trait ParametricRateDataflowWorkloadMixin {
     // count all pivots by having 1 and then only 0s to the left
     val matRank   = reduced.count(_.count(_ != 0) > 1)
     val nullRank  = ncols - matRank
-    val pivotCols = for (row <- 0 until matRank) yield reduced(row).indexOf(1)
+    val pivotCols = for (row <- 0 until matRank) yield reducedOriginal(row).indexOf(1)
     // crop matrix to requirement
     // permutation matrix according to pivots
     for (
@@ -294,20 +294,39 @@ trait ParametricRateDataflowWorkloadMixin {
     }
     // now the matrix is in the form [I F; 0 0] so we can use the parts that are mandatory
     // that is, we make the matrix [-F^T I]^T before permutation
-    // println("reduced after")
-    // println(reduced.mkString("\n"))
     val basis = for (col <- matRank until ncols) yield {
-      val f = for (row <- 0 until matRank) yield {
-        if (pivotCols.contains(row)) { // this is basically the inverse of the permutation when it is missing
-          -reduced(pivotCols.indexOf(row))(col)
-        } else {
+      val thisCol = for (row <- 0 until ncols) yield {
+        if (row < matRank) {
           -reduced(row)(col)
+        } else if (row == col) {
+          Rational(1)
+        } else {
+          Rational(0)
         }
       }
-      val iden = for (row <- matRank until ncols) yield {
-        if (row == col) then Rational(1) else Rational(0)
+      var unpermutatedCol = thisCol.toBuffer
+      for (
+        (pivotCol, j) <- pivotCols.zipWithIndex.reverse;
+        if pivotCol != j
+      ) {
+        val saved = unpermutatedCol(j)
+        unpermutatedCol(j) = unpermutatedCol(pivotCol)
+        unpermutatedCol(pivotCol) = saved
       }
-      f.toVector ++ iden.toVector
+      unpermutatedCol.toVector
+      // val f = for (row <- 0 until ncols) yield {
+      //   if (pivotCols.contains(row)) { // this is basically the inverse of the permutation when it is missing
+      //     if (pivotCols.indexOf(row) > matRank) {} else {
+      //       -reduced(pivotCols.indexOf(row))(col)
+      //     }
+      //   } else {
+      //     -reduced(row)(col)
+      //   }
+      // }
+      // val iden = for (row <- matRank until ncols) yield {
+      //   if (row == col) then Rational(1) else Rational(0)
+      // }
+      // f.toVector ++ iden.toVector
     }
     basis.toSet
   }

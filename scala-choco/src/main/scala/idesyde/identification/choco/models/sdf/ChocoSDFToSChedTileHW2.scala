@@ -408,6 +408,7 @@ final case class ChocoSDFToSChedTileHW2(
     dse.platform.hardware.minTraversalTimePerBit
       .map(arr => arr.map(v => (v * timeMultiplier).ceil.toInt).toArray)
       .toArray,
+    dse.wcets.map(_.map(v => (v * timeMultiplier).ceil.toInt).toArray).toArray,
     dse.sdfApplications.topologicalAndHeavyActorOrdering
       .map(a =>
         dse.sdfApplications.sdfDisjointComponents

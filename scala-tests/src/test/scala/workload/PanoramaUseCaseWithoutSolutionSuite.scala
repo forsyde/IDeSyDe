@@ -10,8 +10,6 @@ import forsyde.io.java.drivers.ForSyDeModelHandler
 import forsyde.io.java.amalthea.drivers.ForSyDeAmaltheaDriver
 import java.nio.file.Paths
 import scribe.Level
-import idesyde.exploration.forsyde.interfaces.ForSyDeIOExplorer
-import idesyde.identification.forsyde.ForSyDeDecisionModel
 import idesyde.identification.forsyde.ForSyDeDesignModel
 import forsyde.io.java.core.ForSyDeSystemGraph
 import scala.concurrent.ExecutionContext

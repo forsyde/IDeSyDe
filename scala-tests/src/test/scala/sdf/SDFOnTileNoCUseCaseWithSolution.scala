@@ -36,7 +36,7 @@ import java.nio.file.Paths
 import org.scalatest.Tag
 import org.scalatest.Ignore
 import idesyde.utils.SimpleStandardIOLogger
-import idesyde.identification.choco.models.sdf.ChocoSDFToSChedTileHW2
+import idesyde.identification.choco.models.mixed.ChocoSDFToSChedTileHW2
 import tags.ResourceHungry
 
 /** This test suite uses as much as possible the experiments from the paper

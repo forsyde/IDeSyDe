@@ -1,4 +1,4 @@
-package idesyde.identification.choco.models.sdf
+package idesyde.identification.choco.models.mixed
 
 import idesyde.identification.choco.ChocoDecisionModel
 import org.chocosolver.solver.Model
@@ -29,6 +29,8 @@ import idesyde.identification.common.models.mixed.SDFToTiledMultiCore
 import idesyde.identification.common.StandardDecisionModel
 import org.chocosolver.solver.objective.OptimizationPolicy
 import idesyde.utils.Logger
+import idesyde.identification.choco.models.sdf.SDFSchedulingAnalysisModule2
+import idesyde.identification.choco.models.sdf.CompactingMultiCoreMapping
 
 final class ConMonitorObj2(val model: ChocoSDFToSChedTileHW2) extends IMonitorContradiction {
 

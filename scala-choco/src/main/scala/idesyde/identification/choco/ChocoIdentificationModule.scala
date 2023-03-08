@@ -1,7 +1,7 @@
 package idesyde.identification.choco
 
 import idesyde.identification.DecisionModel
-import idesyde.identification.choco.models.sdf.ChocoSDFToSChedTileHW2
+import idesyde.identification.choco.models.mixed.ChocoSDFToSChedTileHW2
 import idesyde.identification.IdentificationModule
 import spire.math.Rational
 import idesyde.identification.choco.rules.ChocoRules

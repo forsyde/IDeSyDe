@@ -3,7 +3,7 @@ package idesyde.identification.choco.rules
 import idesyde.identification.DesignModel
 import idesyde.identification.DecisionModel
 import idesyde.utils.Logger
-import idesyde.identification.choco.models.sdf.ChocoSDFToSChedTileHW2
+import idesyde.identification.choco.models.mixed.ChocoSDFToSChedTileHW2
 import spire.math.Rational
 import idesyde.identification.common.models.mixed.SDFToTiledMultiCore
 import idesyde.identification.choco.models.mixed.ChocoComDepTasksToMultiCore

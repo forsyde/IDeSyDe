@@ -19,7 +19,6 @@ import spire.math.Rational
 import idesyde.identification.common.models.platform.PartitionedCoresWithRuntimes
 import forsyde.io.java.typed.viewers.platform.runtime.AbstractScheduler
 import forsyde.io.java.core.ForSyDeSystemGraph
-import breeze.linalg.all
 import forsyde.io.java.typed.viewers.platform.runtime.FixedPriorityScheduler
 import forsyde.io.java.typed.viewers.platform.runtime.StaticCyclicScheduler
 import idesyde.identification.common.models.platform.SharedMemoryMultiCore

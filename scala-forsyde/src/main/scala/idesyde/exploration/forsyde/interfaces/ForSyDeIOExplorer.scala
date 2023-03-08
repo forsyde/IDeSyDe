@@ -12,7 +12,7 @@ trait ForSyDeIOExplorer extends Explorer {
 
   def explore(decisionModel: DecisionModel, explorationTimeOutInSecs: Long = 0L): LazyList[DecisionModel] =
     decisionModel match {
-      case fioDecisionModel: ForSyDeDecisionModel =>
+      case fioDecisionModel: `StandardDecisionModel:` =>
         exploreForSyDe(fioDecisionModel)
           .flatMap(systemGraph =>
             systemGraph match {
@@ -28,12 +28,12 @@ trait ForSyDeIOExplorer extends Explorer {
 
   def canExplore(decisionModel: DecisionModel): Boolean =
     decisionModel match {
-      case fioDecisionModel: ForSyDeDecisionModel => canExploreForSyDe(fioDecisionModel)
+      case fioDecisionModel: `StandardDecisionModel:` => canExploreForSyDe(fioDecisionModel)
       case _                                      => false
     }
 
-  def exploreForSyDe(decisionModel: ForSyDeDecisionModel, explorationTimeOutInSecs: Long = 0L): LazyList[DecisionModel]
+  def exploreForSyDe(decisionModel: `StandardDecisionModel:`, explorationTimeOutInSecs: Long = 0L): LazyList[DecisionModel]
 
-  def canExploreForSyDe(decisionModel: ForSyDeDecisionModel): Boolean
+  def canExploreForSyDe(decisionModel: `StandardDecisionModel:`): Boolean
 
 }

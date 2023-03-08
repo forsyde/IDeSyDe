@@ -1,4 +1,4 @@
-package idesyde.identification.minizinc.interfaces
+package idesyde.identification.minizinc
 
 import scala.annotation.tailrec
 import scala.collection.mutable.Queue

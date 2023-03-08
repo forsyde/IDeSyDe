@@ -1,5 +1,4 @@
 ThisBuild / organization := "io.github.forsyde"
-ThisBuild / version := "0.4.2"
 ThisBuild / scalaVersion := "3.2.1"
 
 lazy val forsydeIoVersion              = "0.6.3"
@@ -8,6 +7,9 @@ lazy val scribeVersion                 = "3.10.2"
 lazy val breezeVersion                 = "2.1.0"
 lazy val scalaGraphVersion             = "1.13.5"
 lazy val scalaParserCombinatorsVersion = "2.2.0"
+lazy val spireVersion = "0.18.0"
+lazy val upickleVersion = "1.4.0"
+lazy val chocoSolverVersion = "4.10.10"
 
 lazy val root = project
   .in(file("."))
@@ -16,6 +18,7 @@ lazy val root = project
   .enablePlugins(SitePreviewPlugin)
   .enablePlugins(ParadoxSitePlugin)
   .settings(
+    organization := "io.forsyde.github",
     ScalaUnidoc / siteSubdirName := "api",
     addMappingsToSiteDir(ScalaUnidoc / packageDoc / mappings, ScalaUnidoc / siteSubdirName),
     paradoxProperties ++= Map(
@@ -26,16 +29,17 @@ lazy val root = project
   )
   .aggregate(common, commonj, cli, choco, forsyde, minizinc, matlab, devicetree)
 
-lazy val core = (project in file("scala-core"))
+lazy val core = (project in file("scala-core")).settings(name := "idesyde-scala-core")
 
 lazy val common = (project in file("scala-common"))
   .dependsOn(core)
   .settings(
+    name := "idesyde-scala-common",
     libraryDependencies ++= Seq(
       ("org.scala-graph" %% "graph-core" % scalaGraphVersion).cross(CrossVersion.for3Use2_13),
-      "org.scalanlp"     %% "breeze"     % breezeVersion,
-      "com.outr"         %% "scribe"     % scribeVersion
-    )
+      "org.typelevel"    %% "spire"                % spireVersion
+    ),
+    licenses := Seq("MIT" -> url("https://opensource.org/license/mit/"), "APL2" -> url("https://www.apache.org/licenses/LICENSE-2.0"))
   )
 
 lazy val commonj = (project in file("java-common"))
@@ -49,23 +53,21 @@ lazy val forsyde = (project in file("scala-forsyde"))
   .dependsOn(core)
   .dependsOn(common)
   .settings(
+    name := "idesyde-scala-forsydeio",
     libraryDependencies ++= Seq(
-      ("org.scala-graph" %% "graph-core" % scalaGraphVersion).cross(CrossVersion.for3Use2_13),
       "io.github.forsyde" % "forsyde-io-java-core" % forsydeIoVersion,
-      "org.typelevel"    %% "spire"                % "0.18.0"
-    )
+    ),
+    licenses := Seq("MIT" -> url("https://opensource.org/license/mit/"), "APL2" -> url("https://www.apache.org/licenses/LICENSE-2.0"), "EPL2" -> url("https://www.eclipse.org/legal/epl-2.0/"))
   )
 
 lazy val minizinc = (project in file("scala-minizinc"))
   .dependsOn(core)
   .dependsOn(common)
-  .dependsOn(forsyde)
   .settings(
     libraryDependencies ++= Seq(
-      "com.outr"     %% "scribe"  % scribeVersion,
-      "com.lihaoyi"  %% "upickle" % "1.4.0",
-      "org.scalanlp" %% "breeze"  % breezeVersion
-    )
+      "com.lihaoyi"  %% "upickle" % upickleVersion
+    ),
+    licenses := Seq("MIT" -> url("https://opensource.org/license/mit/"), "APL2" -> url("https://www.apache.org/licenses/LICENSE-2.0"), "EPL2" -> url("https://www.eclipse.org/legal/epl-2.0/"))
   )
 
 lazy val choco = (project in file("scala-choco"))
@@ -73,12 +75,14 @@ lazy val choco = (project in file("scala-choco"))
   .dependsOn(common)
   .dependsOn(forsyde)
   .settings(
+    name := "idesyde-scala-choco",
     libraryDependencies ++= Seq(
       "com.novocode"     % "junit-interface" % "0.11" % "test",
-      "org.choco-solver" % "choco-solver"    % "4.10.9",
+      "org.choco-solver" % "choco-solver"    % chocoSolverVersion,
       "org.jgrapht"      % "jgrapht-core"    % jgraphtVersion,
       "com.outr"        %% "scribe"          % scribeVersion
-    )
+    ),
+    licenses := Seq("MIT" -> url("https://opensource.org/license/mit/"), "APL2" -> url("https://www.apache.org/licenses/LICENSE-2.0"), "EPL2" -> url("https://www.eclipse.org/legal/epl-2.0/"))
   )
 
 lazy val matlab = (project in file("scala-bridge-matlab"))
@@ -105,6 +109,7 @@ lazy val cli = (project in file("scala-cli"))
   .enablePlugins(UniversalPlugin, JavaAppPackaging, JlinkPlugin)
   .enablePlugins(GraalVMNativeImagePlugin)
   .settings(
+    licenses := Seq("MIT" -> url("https://opensource.org/license/mit/"), "APL2" -> url("https://www.apache.org/licenses/LICENSE-2.0"), "EPL2" -> url("https://www.eclipse.org/legal/epl-2.0/")),
     Compile / mainClass := Some("idesyde.IDeSyDeStandalone"),
     libraryDependencies ++= Seq(
       "com.github.scopt" %% "scopt"       % "4.0.1",

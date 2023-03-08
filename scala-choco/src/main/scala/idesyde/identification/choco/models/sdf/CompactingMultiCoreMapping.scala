@@ -5,7 +5,6 @@ import org.chocosolver.solver.search.strategy.strategy.AbstractStrategy
 import org.chocosolver.solver.search.strategy.decision.IntDecision
 import org.chocosolver.util.PoolManager
 import org.chocosolver.solver.search.strategy.decision.Decision
-import breeze.linalg._
 import org.chocosolver.solver.search.strategy.assignments.DecisionOperatorFactory
 import scala.util.Random
 import org.chocosolver.solver.search.loop.monitors.IMonitorSolution

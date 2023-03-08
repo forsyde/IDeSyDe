@@ -18,11 +18,19 @@ trait CanParseDeviceTree extends RegexParsers {
           else DeviceTreeProperty.StringListProperty(propName, split)
         }
         case "<" ~ value ~ ">" => {
-          val split = value
-            .flatMap(_.split(","))
-            .map(lString => parseLongSpecial(lString))
-          if (split.size == 1) then DeviceTreeProperty.U64Property(propName, split.head)
-          else DeviceTreeProperty.EncodedArray(propName, split)
+          if (value.exists(_.contains("&"))) {
+            DeviceTreeProperty.ReferenceProperty(
+              propName,
+              value.find(_.contains("&")).map(_.drop(1)).get,
+              None
+            )
+          } else {
+            val split = value
+              .flatMap(_.split(","))
+              .map(lString => parseLongSpecial(lString))
+            if (split.size == 1) then DeviceTreeProperty.U64Property(propName, split.head)
+            else DeviceTreeProperty.EncodedArray(propName, split)
+          }
         }
       }
     }
@@ -48,13 +56,26 @@ trait CanParseDeviceTree extends RegexParsers {
           case Some(l ~ ":") => newNode = newNode.copy(label = Some(l))
           case _             =>
         }
-        // special case
-        if (nodename == "cpus") {
-          newNode = newNode.copy(children = newNode.children.map(c => {
-            CPUNode(c.nodeName, c.addr, c.label, c.properties)
-          }))
+        // special cases
+        if (nodename == "cpu") {
+          CPUNode(
+            newNode.nodeName,
+            newNode.addr,
+            newNode.label,
+            newNode.children,
+            newNode.properties
+          )
+        } else if (nodename == "memory") {
+          MemoryNode(
+            newNode.nodeName,
+            newNode.addr,
+            newNode.label,
+            newNode.children,
+            newNode.properties
+          )
+        } else {
+          newNode
         }
-        newNode
       }
     }
   def root: Parser[RootNode] =

@@ -27,11 +27,22 @@ sealed trait DeviceTreeDesignModel {
   def propertiesNames = properties.map(_.name)
 }
 
+final case class MultiRoot(
+    val roots: List[RootNode]
+) extends DeviceTreeDesignModel {
+  def nodeName: String                      = "/"
+  def addr: Option[Int]                     = Option.empty
+  def label                                 = Some("/")
+  def children: List[DeviceTreeDesignModel] = roots
+  def properties: List[DeviceTreeProperty]  = List.empty
+}
+
 final case class RootNode(
     val children: List[DeviceTreeDesignModel],
-    val properties: List[DeviceTreeProperty]
+    val properties: List[DeviceTreeProperty],
+    val prefix: String = ""
 ) extends DeviceTreeDesignModel {
-  def nodeName: String  = "/"
+  def nodeName: String  = prefix + "/"
   def addr: Option[Int] = Option.empty
   def label             = Some("/")
 

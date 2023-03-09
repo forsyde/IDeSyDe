@@ -12,23 +12,29 @@ trait ApplicationRules extends MatlabUtils {
       identified: Set[DecisionModel]
   ): Set[CommunicatingAndTriggeredReactiveWorkload] = toSimulinkReactiveDesignModel(models) {
     model =>
+      val procs   = model.processes.toVector
+      val delays  = model.delays.toVector
+      val links   = model.links.toVector
+      val sources = model.sources.toVector
+      val sinks   = model.sinks.toVector
       Set(
         CommunicatingAndTriggeredReactiveWorkload(
-          model.processes ++ model.delays,
-          model.processesSizes ++ model.delaysSizes,
-          model.processesOperations ++ model.delaysOperations,
-          model.linksSrcs
-            .zip(model.linksDsts)
-            .map((s, t) => s + "--" + t) ++ model.sources ++ model.sinks,
-          model.linksDataSizes ++ model.sourcesSizes ++ model.sinksSizes,
-          model.linksSrcs
-            .zip(model.linksDsts)
-            .zip(model.linksDataSizes)
-            .map((st, l) => (st._1, st._2, l))
+          procs ++ delays,
+          procs.map(model.processesSizes) ++ delays.map(model.delaysSizes),
+          procs.map(model.processesOperations) ++ delays.map(model.delaysOperations),
+          links.map((s, t, sp, tp, _) => s + ":" + sp + "--" + t + ":" + tp) ++ sources ++ sinks,
+          links.map((s, t, sp, tp, d) => d) ++ sources.map(model.sourcesSizes) ++ sinks.map(
+            model.sinksSizes
+          ),
+          links
+            .groupBy((s, t, _, _, _) => (s, t))
+            .map((st, pairs) =>
+              (st._1, st._2, pairs.map(_._5).sum)
+            ) // just summing the data transmissed from s to t in all links
             .toSet,
-          model.sources,
-          model.sourcesPeriodsNumerator,
-          model.sourcesPeriodsDenominator,
+          sources,
+          sources.map(model.sourcesPeriodsNumerator),
+          sources.map(model.sourcesPeriodsDenominator),
           Vector.fill(model.sources.size)(0L),
           Vector.fill(model.sources.size)(1L),
           Vector.empty,
@@ -37,8 +43,12 @@ trait ApplicationRules extends MatlabUtils {
           Vector.empty,
           Vector.empty,
           Vector.empty,
-          model.linksSrcs
-            .zip(model.linksDsts),
+          links
+            .groupBy((s, t, _, _, _) => (s, t))
+            .map((st, _) =>
+              (st._1, st._2)
+            ) // just summing the data transmissed from s to t in all links
+            .toVector,
           Set.empty
         )
       )

@@ -1,6 +1,7 @@
 package idesyde.devicetree.identification
 
 import scala.util.parsing.combinator.RegexParsers
+import scala.collection.mutable.Buffer
 
 trait CanParseDeviceTree extends RegexParsers {
   override def skipWhitespace: Boolean = true
@@ -38,15 +39,16 @@ trait CanParseDeviceTree extends RegexParsers {
   def nodeNameString: Parser[String] = "[A-z][A-z0-9_,+-.]{0,30}".r ^^ { _.toString() }
   def nodeAddrString: Parser[String] = "[A-z0-9_,+-.]{1,31}".r ^^ { _.toString() }
   def labelString: Parser[String]    = "[A-z][A-z0-9_]{0,30}".r ^^ { _.toString() }
-  def node: Parser[DeviceTreeDesignModel] =
+  def node: Parser[DeviceTreeComponent] =
     (labelString ~ ":").? ~ nodeAddrString ~ ("@" ~ nodeAddrString).? ~ "{" ~ (node | property).`*` ~ "}" ^^ {
       case nodeLabel ~ nodename ~ nodeaddr ~ _ ~ inner ~ _ => {
         val children = inner
-          .filter(_.isInstanceOf[DeviceTreeDesignModel])
-          .map(_.asInstanceOf[DeviceTreeDesignModel])
+          .filter(_.isInstanceOf[DeviceTreeComponent])
+          .map(_.asInstanceOf[DeviceTreeComponent])
         val props =
           inner.filter(_.isInstanceOf[DeviceTreeProperty]).map(_.asInstanceOf[DeviceTreeProperty])
-        var newNode = GenericNode(nodename, Option.empty, Option.empty, children, props)
+        var newNode =
+          GenericNode(nodename, Option.empty, Option.empty, children, props, Buffer.empty)
         nodeaddr match {
           case Some("@" ~ nodeaddr) =>
             newNode = newNode.copy(addr = Some(parseLongSpecial(nodeaddr).toInt))
@@ -63,7 +65,8 @@ trait CanParseDeviceTree extends RegexParsers {
             newNode.addr,
             newNode.label,
             newNode.children,
-            newNode.properties
+            newNode.properties,
+            newNode.connected
           )
         } else if (nodename == "memory") {
           MemoryNode(
@@ -71,7 +74,8 @@ trait CanParseDeviceTree extends RegexParsers {
             newNode.addr,
             newNode.label,
             newNode.children,
-            newNode.properties
+            newNode.properties,
+            newNode.connected
           )
         } else {
           newNode
@@ -81,8 +85,8 @@ trait CanParseDeviceTree extends RegexParsers {
   def root: Parser[RootNode] =
     (node | property).`*` ^^ { inner =>
       val children = inner
-        .filter(_.isInstanceOf[DeviceTreeDesignModel])
-        .map(_.asInstanceOf[DeviceTreeDesignModel])
+        .filter(_.isInstanceOf[DeviceTreeComponent])
+        .map(_.asInstanceOf[DeviceTreeComponent])
       val props =
         inner.filter(_.isInstanceOf[DeviceTreeProperty]).map(_.asInstanceOf[DeviceTreeProperty])
       RootNode(children, props)

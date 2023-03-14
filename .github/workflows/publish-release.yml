@@ -42,12 +42,6 @@ jobs:
     - name: Set up JDK 
       uses: olafurpg/setup-scala@v11
       with:
-        java-version: "amazon-corretto@1.11.0-11.9.1"
-    - name: Get scala version
-      id: get_scala_version
-      run: |
-        cd ${{ github.workspace }}
-        echo "::set-output name=scalaVersion::$(sbt --error 'print cli / scalaVersion')"
     - name: Build assembly with sbt
       run: |
         cd ${{ github.workspace }}
@@ -56,7 +50,7 @@ jobs:
       uses: svenstaro/upload-release-action@v2
       with:
         repo_token: ${{ secrets.GITHUB_TOKEN }}
-        file: ${{ github.workspace }}\scala-cli\target\universal\cli-${{ steps.get_version.outputs.version-without-v }}.zip
+        file: ${{ github.workspace }}/scala-cli/target/universal/cli-${{ steps.get_version.outputs.version-without-v }}.zip
         asset_name: idesyde-${{ steps.get_version.outputs.version-without-v }}-windows.zip
         tag: "${{ github.ref }}"
         overwrite: true
@@ -71,11 +65,6 @@ jobs:
       uses: olafurpg/setup-scala@v11
       with:
         java-version: "amazon-corretto@1.11.0-11.9.1"
-    - name: Get scala version
-      id: get_scala_version
-      run: |
-        cd ${{ github.workspace }}
-        echo "::set-output name=scalaVersion::$(sbt --error 'print cli / scalaVersion')"
     - name: Build assembly with sbt
       run: |
         cd ${{ github.workspace }}

@@ -8,7 +8,7 @@ lazy val scribeVersion    = "3.10.2"
 lazy val scalaGraphVersion             = "1.13.5"
 lazy val scalaParserCombinatorsVersion = "2.2.0"
 lazy val spireVersion                  = "0.18.0"
-lazy val upickleVersion                = "1.4.0"
+lazy val upickleVersion                = "3.0.0"
 lazy val chocoSolverVersion            = "4.10.10"
 lazy val osLibVersion                  = "0.9.1"
 

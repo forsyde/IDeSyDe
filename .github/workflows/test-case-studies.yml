@@ -8,7 +8,7 @@ on:
       - "develop"
 
 concurrency:
-  group: ${{ github.ref }}
+  group: Testing known case studies @ ${{ github.ref }}
   cancel-in-progress: true
 
 jobs:

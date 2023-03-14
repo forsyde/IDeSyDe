@@ -28,8 +28,8 @@ jobs:
       uses: svenstaro/upload-release-action@v2
       with:
         repo_token: ${{ secrets.GITHUB_TOKEN }}
-        file: ${{ github.workspace }}/scala-cli/target/scala-${{ steps.get_scala_version.outputs.scalaVersion }}/cli-assembly-${{ steps.get_version.outputs.version }}.jar
-        asset_name: idesyde-${{ steps.get_version.outputs.version }}-standalone.jar
+        file: ${{ github.workspace }}/scala-cli/target/scala-${{ steps.get_scala_version.outputs.scalaVersion }}/cli-assembly-${{ steps.get_version.outputs.version-without-v }}.jar
+        asset_name: idesyde-${{ steps.get_version.outputs.version-without-v }}-standalone.jar
         tag: "${{ github.ref }}"
         overwrite: true
         body: "Executable IDeSyDe standalone jar"
@@ -56,8 +56,8 @@ jobs:
       uses: svenstaro/upload-release-action@v2
       with:
         repo_token: ${{ secrets.GITHUB_TOKEN }}
-        file: ${{ github.workspace }}\scala-cli\target\universal\cli-${{ steps.get_version.outputs.version }}.zip
-        asset_name: idesyde-${{ steps.get_version.outputs.version }}-windows.zip
+        file: ${{ github.workspace }}\scala-cli\target\universal\cli-${{ steps.get_version.outputs.version-without-v }}.zip
+        asset_name: idesyde-${{ steps.get_version.outputs.version-without-v }}-windows.zip
         tag: "${{ github.ref }}"
         overwrite: true
         body: "Executable IDeSyDe standalone EXE"
@@ -84,8 +84,8 @@ jobs:
       uses: svenstaro/upload-release-action@v2
       with:
         repo_token: ${{ secrets.GITHUB_TOKEN }}
-        file: ${{ github.workspace }}/scala-cli/target/universal/cli-${{ steps.get_version.outputs.version }}.zip
-        asset_name: idesyde-${{ steps.get_version.outputs.version }}-linux.zip
+        file: ${{ github.workspace }}/scala-cli/target/universal/cli-${{ steps.get_version.outputs.version-without-v }}.zip
+        asset_name: idesyde-${{ steps.get_version.outputs.version-without-v }}-linux.zip
         tag: "${{ github.ref }}"
         overwrite: true
         body: "Executable IDeSyDe standalone linux ZIP"

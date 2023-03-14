@@ -39,7 +39,6 @@ lazy val common = (project in file("scala-common"))
     libraryDependencies ++= Seq(
       ("org.scala-graph" %% "graph-core" % scalaGraphVersion).cross(CrossVersion.for3Use2_13),
       "org.typelevel"    %% "spire"      % spireVersion
-      "org.typelevel"    %% "spire"      % spireVersion
     ),
     licenses := Seq(
       

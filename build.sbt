@@ -1,6 +1,9 @@
 ThisBuild / organization := "io.github.forsyde"
 ThisBuild / scalaVersion := "3.2.1"
 
+maintainer := "jordao@kth.se"
+organization := "io.forsyde.github"
+
 lazy val forsydeIoVersion = "0.6.3"
 lazy val jgraphtVersion   = "1.5.1"
 lazy val scribeVersion    = "3.10.2"
@@ -8,7 +11,7 @@ lazy val scribeVersion    = "3.10.2"
 lazy val scalaGraphVersion             = "1.13.5"
 lazy val scalaParserCombinatorsVersion = "2.2.0"
 lazy val spireVersion                  = "0.18.0"
-lazy val upickleVersion                = "1.4.0"
+lazy val upickleVersion                = "3.0.0"
 lazy val chocoSolverVersion            = "4.10.10"
 lazy val osLibVersion                  = "0.9.1"
 
@@ -19,8 +22,6 @@ lazy val root = project
   .enablePlugins(SitePreviewPlugin)
   .enablePlugins(ParadoxSitePlugin)
   .settings(
-    maintainer := "jordao@kth.se",
-    organization := "io.forsyde.github",
     ScalaUnidoc / siteSubdirName := "api",
     addMappingsToSiteDir(ScalaUnidoc / packageDoc / mappings, ScalaUnidoc / siteSubdirName),
     paradoxProperties ++= Map(

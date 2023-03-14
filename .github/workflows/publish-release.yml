@@ -32,7 +32,7 @@ jobs:
         asset_name: idesyde-${{ steps.get_version.outputs.version }}-standalone.jar
         tag: "${{ github.ref }}"
         overwrite: true
-        body: "Executable IDeSyDe standaline jar"
+        body: "Executable IDeSyDe standalone jar"
   publish-windows-build:
     runs-on: windows-latest
     steps:
@@ -51,13 +51,41 @@ jobs:
     - name: Build assembly with sbt
       run: |
         cd ${{ github.workspace }}
-        sbt stage
+        sbt "Universal / packageBin"
     - name: Upload binaries to release
       uses: svenstaro/upload-release-action@v2
       with:
         repo_token: ${{ secrets.GITHUB_TOKEN }}
-        file: ${{ github.workspace }}/scala-cli/target/scala-${{ steps.get_scala_version.outputs.scalaVersion }}/cli-assembly-${{ steps.get_version.outputs.version }}.jar
-        asset_name: idesyde-${{ steps.get_version.outputs.version }}-standalone.jar
+        file: ${{ github.workspace }}\scala-cli\target\universal\cli-${{ steps.get_version.outputs.version }}.zip
+        asset_name: idesyde-${{ steps.get_version.outputs.version }}-windows.zip
         tag: "${{ github.ref }}"
         overwrite: true
-        body: "Executable IDeSyDe standaline jar"
+        body: "Executable IDeSyDe standalone EXE"
+  publish-linux-build:
+    runs-on: ubuntu-latest
+    steps:
+    - uses: actions/checkout@v2
+    - id: get_version
+      uses: battila7/get-version-action@v2
+    - name: Set up JDK 
+      uses: olafurpg/setup-scala@v11
+      with:
+        java-version: "amazon-corretto@1.11.0-11.9.1"
+    - name: Get scala version
+      id: get_scala_version
+      run: |
+        cd ${{ github.workspace }}
+        echo "::set-output name=scalaVersion::$(sbt --error 'print cli / scalaVersion')"
+    - name: Build assembly with sbt
+      run: |
+        cd ${{ github.workspace }}
+        sbt "Universal / packageBin"
+    - name: Upload binaries to release
+      uses: svenstaro/upload-release-action@v2
+      with:
+        repo_token: ${{ secrets.GITHUB_TOKEN }}
+        file: ${{ github.workspace }}/scala-cli/target/universal/cli-${{ steps.get_version.outputs.version }}.zip
+        asset_name: idesyde-${{ steps.get_version.outputs.version }}-linux.zip
+        tag: "${{ github.ref }}"
+        overwrite: true
+        body: "Executable IDeSyDe standalone linux ZIP"

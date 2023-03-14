@@ -19,6 +19,7 @@ lazy val root = project
   .enablePlugins(SitePreviewPlugin)
   .enablePlugins(ParadoxSitePlugin)
   .settings(
+    maintainer := "jordao@kth.se",
     organization := "io.forsyde.github",
     ScalaUnidoc / siteSubdirName := "api",
     addMappingsToSiteDir(ScalaUnidoc / packageDoc / mappings, ScalaUnidoc / siteSubdirName),
@@ -136,7 +137,6 @@ lazy val cli = (project in file("scala-cli"))
       // "com.outr"         %% "scribe"      % scribeVersion,
       // "com.outr"         %% "scribe-file" % scribeVersion
     ),
-    maintainer := "jordao@kth.se",
     // taken and adapted from https://www.scala-sbt.org/sbt-native-packager/archetypes/jlink_plugin.html
     jlinkModulePath := {
       val paths = (jlinkBuildImage / fullClasspath).value

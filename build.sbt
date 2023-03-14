@@ -41,11 +41,8 @@ lazy val common = (project in file("scala-common"))
       "org.typelevel"    %% "spire"      % spireVersion
     ),
     licenses := Seq(
-      
-      "MIT"   -> url("https://opensource.org/license/mit/"),
-     
+      "MIT"  -> url("https://opensource.org/license/mit/"),
       "APL2" -> url("https://www.apache.org/licenses/LICENSE-2.0")
-    
     )
   )
 
@@ -63,16 +60,11 @@ lazy val forsyde = (project in file("scala-forsyde"))
     name := "idesyde-scala-forsydeio",
     libraryDependencies ++= Seq(
       "io.github.forsyde" % "forsyde-io-java-core" % forsydeIoVersion
-      "io.github.forsyde" % "forsyde-io-java-core" % forsydeIoVersion
     ),
     licenses := Seq(
-      
-      "MIT"   -> url("https://opensource.org/license/mit/"),
-     
+      "MIT"  -> url("https://opensource.org/license/mit/"),
       "APL2" -> url("https://www.apache.org/licenses/LICENSE-2.0"),
-     
       "EPL2" -> url("https://www.eclipse.org/legal/epl-2.0/")
-    
     )
   )
 
@@ -82,16 +74,11 @@ lazy val minizinc = (project in file("scala-minizinc"))
   .settings(
     libraryDependencies ++= Seq(
       "com.lihaoyi" %% "upickle" % upickleVersion
-      "com.lihaoyi" %% "upickle" % upickleVersion
     ),
     licenses := Seq(
-      
-      "MIT"   -> url("https://opensource.org/license/mit/"),
-     
+      "MIT"  -> url("https://opensource.org/license/mit/"),
       "APL2" -> url("https://www.apache.org/licenses/LICENSE-2.0"),
-     
       "EPL2" -> url("https://www.eclipse.org/legal/epl-2.0/")
-    
     )
   )
 
@@ -105,17 +92,11 @@ lazy val choco = (project in file("scala-choco"))
       "com.novocode"     % "junit-interface" % "0.11" % "test",
       "org.choco-solver" % "choco-solver"    % chocoSolverVersion,
       "org.jgrapht"      % "jgrapht-core"    % jgraphtVersion
-      // "org.jgrapht"      % "jgrapht-core"    % jgraphtVersion,
-      "com.outr" %% "scribe" % scribeVersion
     ),
     licenses := Seq(
-      
-      "MIT"   -> url("https://opensource.org/license/mit/"),
-     
+      "MIT"  -> url("https://opensource.org/license/mit/"),
       "APL2" -> url("https://www.apache.org/licenses/LICENSE-2.0"),
-     
       "EPL2" -> url("https://www.eclipse.org/legal/epl-2.0/")
-    
     )
   )
 
@@ -145,13 +126,9 @@ lazy val cli = (project in file("scala-cli"))
   .enablePlugins(GraalVMNativeImagePlugin)
   .settings(
     licenses := Seq(
-      
-      "MIT"   -> url("https://opensource.org/license/mit/"),
-     
+      "MIT"  -> url("https://opensource.org/license/mit/"),
       "APL2" -> url("https://www.apache.org/licenses/LICENSE-2.0"),
-     
       "EPL2" -> url("https://www.eclipse.org/legal/epl-2.0/")
-    
     ),
     Compile / mainClass := Some("idesyde.IDeSyDeStandalone"),
     libraryDependencies ++= Seq(

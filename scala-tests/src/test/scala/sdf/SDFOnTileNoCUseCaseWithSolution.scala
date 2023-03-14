@@ -59,7 +59,7 @@ class SDFOnTileNoCUseCaseWithSolution extends AnyFunSuite with LoggingMixin with
 
   Files.createDirectories(Paths.get("scala-tests/models/sdf3/results"))
 
-  given Logger = SimpleStandardIOLogger
+  given Logger = SimpleStandardIOLogger("DEBUG")
 
   val forSyDeModelHandler = ForSyDeModelHandler()
     .registerDriver(ForSyDeSDF3Driver())

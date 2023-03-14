@@ -5,8 +5,39 @@ package idesyde.utils
   */
 trait Logger {
 
-  def debug(s: String): Unit = println("[debug] " + s)
-  def info(s: String): Unit  = println("[info ] " + s)
-  def warn(s: String): Unit  = println("[warn ] " + s)
-  def error(s: String): Unit = println("[error] " + s)
+  enum LoggingLevel(val repr: String) {
+    case DEBUG extends LoggingLevel("DEBUG")
+    case INFO extends LoggingLevel("INFO")
+    case WARN extends LoggingLevel("WARN")
+    case ERROR extends LoggingLevel("ERROR")
+  }
+
+  def debug(s: String): Unit = loggingLevel match {
+    case LoggingLevel.DEBUG =>
+      println("[debug] " + s)
+    case _ =>
+  }
+  def info(s: String): Unit = loggingLevel match {
+    case LoggingLevel.DEBUG | LoggingLevel.INFO =>
+      println("[debug] " + s)
+    case _ =>
+  }
+  def warn(s: String): Unit = loggingLevel match {
+    case LoggingLevel.DEBUG | LoggingLevel.INFO | LoggingLevel.WARN =>
+      println("[warn ] " + s)
+    case _ =>
+  }
+  def error(s: String): Unit = loggingLevel match {
+    case LoggingLevel.DEBUG | LoggingLevel.INFO | LoggingLevel.WARN | LoggingLevel.ERROR =>
+      println("[error] " + s)
+  }
+
+  def setLoggingLevel(lvl: LoggingLevel): Logger = setLoggingLevel(lvl.repr)
+
+  def setLoggingLevel(lvl: String): Logger
+
+  def loggingLevel: LoggingLevel = LoggingLevel.valueOf(loggingLevelString)
+
+  def loggingLevelString: String
+
 }

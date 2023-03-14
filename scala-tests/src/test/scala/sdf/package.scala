@@ -3,5 +3,5 @@ import idesyde.utils.SimpleStandardIOLogger
 
 package object sdf {
 
-  given Logger = SimpleStandardIOLogger
+  given Logger = SimpleStandardIOLogger("DEBUG")
 }

@@ -39,10 +39,14 @@ lazy val common = (project in file("scala-common"))
     libraryDependencies ++= Seq(
       ("org.scala-graph" %% "graph-core" % scalaGraphVersion).cross(CrossVersion.for3Use2_13),
       "org.typelevel"    %% "spire"      % spireVersion
+      "org.typelevel"    %% "spire"      % spireVersion
     ),
     licenses := Seq(
-      "MIT"  -> url("https://opensource.org/license/mit/"),
+      
+      "MIT"   -> url("https://opensource.org/license/mit/"),
+     
       "APL2" -> url("https://www.apache.org/licenses/LICENSE-2.0")
+    
     )
   )
 
@@ -60,11 +64,16 @@ lazy val forsyde = (project in file("scala-forsyde"))
     name := "idesyde-scala-forsydeio",
     libraryDependencies ++= Seq(
       "io.github.forsyde" % "forsyde-io-java-core" % forsydeIoVersion
+      "io.github.forsyde" % "forsyde-io-java-core" % forsydeIoVersion
     ),
     licenses := Seq(
-      "MIT"  -> url("https://opensource.org/license/mit/"),
+      
+      "MIT"   -> url("https://opensource.org/license/mit/"),
+     
       "APL2" -> url("https://www.apache.org/licenses/LICENSE-2.0"),
+     
       "EPL2" -> url("https://www.eclipse.org/legal/epl-2.0/")
+    
     )
   )
 
@@ -74,11 +83,16 @@ lazy val minizinc = (project in file("scala-minizinc"))
   .settings(
     libraryDependencies ++= Seq(
       "com.lihaoyi" %% "upickle" % upickleVersion
+      "com.lihaoyi" %% "upickle" % upickleVersion
     ),
     licenses := Seq(
-      "MIT"  -> url("https://opensource.org/license/mit/"),
+      
+      "MIT"   -> url("https://opensource.org/license/mit/"),
+     
       "APL2" -> url("https://www.apache.org/licenses/LICENSE-2.0"),
+     
       "EPL2" -> url("https://www.eclipse.org/legal/epl-2.0/")
+    
     )
   )
 
@@ -91,13 +105,18 @@ lazy val choco = (project in file("scala-choco"))
     libraryDependencies ++= Seq(
       "com.novocode"     % "junit-interface" % "0.11" % "test",
       "org.choco-solver" % "choco-solver"    % chocoSolverVersion,
+      "org.jgrapht"      % "jgrapht-core"    % jgraphtVersion
       // "org.jgrapht"      % "jgrapht-core"    % jgraphtVersion,
       "com.outr" %% "scribe" % scribeVersion
     ),
     licenses := Seq(
-      "MIT"  -> url("https://opensource.org/license/mit/"),
+      
+      "MIT"   -> url("https://opensource.org/license/mit/"),
+     
       "APL2" -> url("https://www.apache.org/licenses/LICENSE-2.0"),
+     
       "EPL2" -> url("https://www.eclipse.org/legal/epl-2.0/")
+    
     )
   )
 
@@ -127,15 +146,19 @@ lazy val cli = (project in file("scala-cli"))
   .enablePlugins(GraalVMNativeImagePlugin)
   .settings(
     licenses := Seq(
-      "MIT"  -> url("https://opensource.org/license/mit/"),
+      
+      "MIT"   -> url("https://opensource.org/license/mit/"),
+     
       "APL2" -> url("https://www.apache.org/licenses/LICENSE-2.0"),
+     
       "EPL2" -> url("https://www.eclipse.org/legal/epl-2.0/")
+    
     ),
     Compile / mainClass := Some("idesyde.IDeSyDeStandalone"),
     libraryDependencies ++= Seq(
-      "com.github.scopt" %% "scopt"       % "4.0.1",
-      "com.outr"         %% "scribe"      % scribeVersion,
-      "com.outr"         %% "scribe-file" % scribeVersion
+      "com.github.scopt" %% "scopt" % "4.0.1"
+      // "com.outr"         %% "scribe"      % scribeVersion,
+      // "com.outr"         %% "scribe-file" % scribeVersion
     ),
     maintainer := "jordao@kth.se",
     // taken and adapted from https://www.scala-sbt.org/sbt-native-packager/archetypes/jlink_plugin.html
@@ -144,8 +167,8 @@ lazy val cli = (project in file("scala-cli"))
       paths
         .filter(f => {
           f.get(moduleID.key).exists(mID => mID.name.contains("jheaps")) ||
-          f.get(moduleID.key).exists(mID => mID.name.contains("commons-text")) ||
-          f.get(moduleID.key).exists(mID => mID.name.contains("fastutil")) ||
+          // f.get(moduleID.key).exists(mID => mID.name.contains("fastutil")) ||
+          // f.get(moduleID.key).exists(mID => mID.name.contains("commons-text")) ||
           f.get(moduleID.key).exists(mID => mID.name.contains("antlr4")) ||
           f.get(moduleID.key).exists(mID => mID.name.contains("automaton")) ||
           f.get(moduleID.key).exists(mID => mID.name.contains("xchart")) ||
@@ -174,7 +197,8 @@ lazy val tests = (project in file("scala-tests"))
       "io.github.forsyde" % "forsyde-io-java-core"     % forsydeIoVersion,
       "io.github.forsyde" % "forsyde-io-java-amalthea" % forsydeIoVersion,
       "io.github.forsyde" % "forsyde-io-java-sdf3"     % forsydeIoVersion,
-      "io.github.forsyde" % "forsyde-io-java-graphviz" % forsydeIoVersion
+      "io.github.forsyde" % "forsyde-io-java-graphviz" % forsydeIoVersion,
+      "com.outr"         %% "scribe"                   % scribeVersion
     ),
     Test / parallelExecution := false
   )

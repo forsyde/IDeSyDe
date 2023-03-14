@@ -21,8 +21,9 @@ import org.chocosolver.solver.variables.Variable
 import org.chocosolver.solver.search.loop.monitors.IMonitorSolution
 import idesyde.exploration.choco.explorers.ParetoMinimizationBrancher
 import idesyde.exploration.ExplorationCriteria
+import idesyde.utils.Logger
 
-class ChocoExplorer() extends Explorer:
+class ChocoExplorer(using logger: Logger) extends Explorer:
 
   def canExplore(decisionModel: DecisionModel): Boolean =
     decisionModel match
@@ -120,7 +121,7 @@ class ChocoExplorer() extends Explorer:
         solver.setRestartOnSolutions
       }
       if (explorationTimeOutInSecs > 0L) {
-        scribe.debug(s"setting total exploration timeout to ${explorationTimeOutInSecs} seconds")
+        logger.debug(s"setting total exploration timeout to ${explorationTimeOutInSecs} seconds")
         solver.limitTime(explorationTimeOutInSecs * 1000L)
       }
       LazyList

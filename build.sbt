@@ -1,15 +1,16 @@
 ThisBuild / organization := "io.github.forsyde"
 ThisBuild / scalaVersion := "3.2.1"
 
-lazy val forsydeIoVersion              = "0.6.3"
-lazy val jgraphtVersion                = "1.5.1"
-lazy val scribeVersion                 = "3.10.2"
-lazy val breezeVersion                 = "2.1.0"
+lazy val forsydeIoVersion = "0.6.3"
+lazy val jgraphtVersion   = "1.5.1"
+lazy val scribeVersion    = "3.10.2"
+// lazy val breezeVersion                 = "2.1.0"
 lazy val scalaGraphVersion             = "1.13.5"
 lazy val scalaParserCombinatorsVersion = "2.2.0"
-lazy val spireVersion = "0.18.0"
-lazy val upickleVersion = "1.4.0"
-lazy val chocoSolverVersion = "4.10.10"
+lazy val spireVersion                  = "0.18.0"
+lazy val upickleVersion                = "1.4.0"
+lazy val chocoSolverVersion            = "4.10.10"
+lazy val osLibVersion                  = "0.9.1"
 
 lazy val root = project
   .in(file("."))
@@ -37,9 +38,12 @@ lazy val common = (project in file("scala-common"))
     name := "idesyde-scala-common",
     libraryDependencies ++= Seq(
       ("org.scala-graph" %% "graph-core" % scalaGraphVersion).cross(CrossVersion.for3Use2_13),
-      "org.typelevel"    %% "spire"                % spireVersion
+      "org.typelevel"    %% "spire"      % spireVersion
     ),
-    licenses := Seq("MIT" -> url("https://opensource.org/license/mit/"), "APL2" -> url("https://www.apache.org/licenses/LICENSE-2.0"))
+    licenses := Seq(
+      "MIT"  -> url("https://opensource.org/license/mit/"),
+      "APL2" -> url("https://www.apache.org/licenses/LICENSE-2.0")
+    )
   )
 
 lazy val commonj = (project in file("java-common"))
@@ -55,9 +59,13 @@ lazy val forsyde = (project in file("scala-forsyde"))
   .settings(
     name := "idesyde-scala-forsydeio",
     libraryDependencies ++= Seq(
-      "io.github.forsyde" % "forsyde-io-java-core" % forsydeIoVersion,
+      "io.github.forsyde" % "forsyde-io-java-core" % forsydeIoVersion
     ),
-    licenses := Seq("MIT" -> url("https://opensource.org/license/mit/"), "APL2" -> url("https://www.apache.org/licenses/LICENSE-2.0"), "EPL2" -> url("https://www.eclipse.org/legal/epl-2.0/"))
+    licenses := Seq(
+      "MIT"  -> url("https://opensource.org/license/mit/"),
+      "APL2" -> url("https://www.apache.org/licenses/LICENSE-2.0"),
+      "EPL2" -> url("https://www.eclipse.org/legal/epl-2.0/")
+    )
   )
 
 lazy val minizinc = (project in file("scala-minizinc"))
@@ -65,9 +73,13 @@ lazy val minizinc = (project in file("scala-minizinc"))
   .dependsOn(common)
   .settings(
     libraryDependencies ++= Seq(
-      "com.lihaoyi"  %% "upickle" % upickleVersion
+      "com.lihaoyi" %% "upickle" % upickleVersion
     ),
-    licenses := Seq("MIT" -> url("https://opensource.org/license/mit/"), "APL2" -> url("https://www.apache.org/licenses/LICENSE-2.0"), "EPL2" -> url("https://www.eclipse.org/legal/epl-2.0/"))
+    licenses := Seq(
+      "MIT"  -> url("https://opensource.org/license/mit/"),
+      "APL2" -> url("https://www.apache.org/licenses/LICENSE-2.0"),
+      "EPL2" -> url("https://www.eclipse.org/legal/epl-2.0/")
+    )
   )
 
 lazy val choco = (project in file("scala-choco"))
@@ -79,10 +91,14 @@ lazy val choco = (project in file("scala-choco"))
     libraryDependencies ++= Seq(
       "com.novocode"     % "junit-interface" % "0.11" % "test",
       "org.choco-solver" % "choco-solver"    % chocoSolverVersion,
-      "org.jgrapht"      % "jgrapht-core"    % jgraphtVersion,
-      "com.outr"        %% "scribe"          % scribeVersion
+      // "org.jgrapht"      % "jgrapht-core"    % jgraphtVersion,
+      "com.outr" %% "scribe" % scribeVersion
     ),
-    licenses := Seq("MIT" -> url("https://opensource.org/license/mit/"), "APL2" -> url("https://www.apache.org/licenses/LICENSE-2.0"), "EPL2" -> url("https://www.eclipse.org/legal/epl-2.0/"))
+    licenses := Seq(
+      "MIT"  -> url("https://opensource.org/license/mit/"),
+      "APL2" -> url("https://www.apache.org/licenses/LICENSE-2.0"),
+      "EPL2" -> url("https://www.eclipse.org/legal/epl-2.0/")
+    )
   )
 
 lazy val matlab = (project in file("scala-bridge-matlab"))
@@ -94,7 +110,8 @@ lazy val devicetree = (project in file("scala-bridge-device-tree"))
   .dependsOn(common)
   .settings(
     libraryDependencies ++= Seq(
-      "org.scala-lang.modules" %%% "scala-parser-combinators" % scalaParserCombinatorsVersion
+      "org.scala-lang.modules" %%% "scala-parser-combinators" % scalaParserCombinatorsVersion,
+      "com.lihaoyi"             %% "os-lib"                   % osLibVersion
     )
   )
 
@@ -109,7 +126,11 @@ lazy val cli = (project in file("scala-cli"))
   .enablePlugins(UniversalPlugin, JavaAppPackaging, JlinkPlugin)
   .enablePlugins(GraalVMNativeImagePlugin)
   .settings(
-    licenses := Seq("MIT" -> url("https://opensource.org/license/mit/"), "APL2" -> url("https://www.apache.org/licenses/LICENSE-2.0"), "EPL2" -> url("https://www.eclipse.org/legal/epl-2.0/")),
+    licenses := Seq(
+      "MIT"  -> url("https://opensource.org/license/mit/"),
+      "APL2" -> url("https://www.apache.org/licenses/LICENSE-2.0"),
+      "EPL2" -> url("https://www.eclipse.org/legal/epl-2.0/")
+    ),
     Compile / mainClass := Some("idesyde.IDeSyDeStandalone"),
     libraryDependencies ++= Seq(
       "com.github.scopt" %% "scopt"       % "4.0.1",

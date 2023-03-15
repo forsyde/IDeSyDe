@@ -43,7 +43,7 @@ children decision models encoding known design scenarios from the scientific and
 Moving on, now the only required to implement the trait @scaladoc[StandardDecisionModel](idesyde.identification.common.StandardDecisionModel)
 is to return a set of strings and set of pairs of strings.
 
-For example, let's take the decision model @scaladoc[SharedMemoryMultiCore](idesyde.identification.common.models.platform.SharedMemoryMultiCore) from `scala-common` , which abstracts a shared-memory multi-core hardware architecture. Albeit there are
+For example, let's take the decision model @scaladoc[SharedMemoryMultiCore](idesyde.identification.common.models.platform.SharedMemoryMultiCore) from `scala-common` , which abstracts a shared-memory multi-core hardware architecture. Although there are
 a handful of parameters that describe many performance characteristics of the architecture, the covered elements are fewer; namely,
 they are the processing elements, the memory elements and the communication elements:
 
@@ -53,8 +53,7 @@ where the elements being aggregated are simply lists of strings.
 
 ## A step-by-step example
 
-Now that we know to use @scaladoc[StandardDecisionModel](idesyde.identification.common.StandardDecisionModel) unless there
-is a very good reason not to, let's do a step-by-step construction of a new decision model. In this tutorial, we shall 
+Now that we know to use @scaladoc[StandardDecisionModel](idesyde.identification.common.StandardDecisionModel), let's do a step-by-step construction of a new decision model. In this tutorial, we shall 
 create the parameters that abstract nicely [Synchronous Dataflow (graphs)](https://ieeexplore.ieee.org/document/1458143) or SDF(Gs), for short.
 
 Since SDFs are essentially labelled directed graphs, we can start with the graph part. Every directed graph must have a set of nodes and

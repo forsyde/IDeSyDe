@@ -31,7 +31,7 @@
 <span class="home-icon">⌂</span>IDeSyDe
 </a>
 <div class="version-number">
-0.4.1
+0.4.1+37-2184eeda
 </div>
 </div>
 <div class="nav-toc">
@@ -76,7 +76,7 @@ C16.952,7,17,6.553,17,6c0-0.553-0.048-1-0.6-1H3.6C3.048,5,3,5.447,3,6C3,6.553,3.
 <span class="home-icon">⌂</span>IDeSyDe
 </a>
 <div class="version-number">
-0.4.1
+0.4.1+37-2184eeda
 </div>
 </div>
 <div class="nav-toc">
@@ -124,12 +124,12 @@ C16.952,7,17,6.553,17,6c0-0.553-0.048-1-0.6-1H3.6C3.048,5,3,5.447,3,6C3,6.553,3.
 <h2><a href="#the-standard-decision-model" name="the-standard-decision-model" class="anchor"><span class="anchor-link"></span></a>The standard decision model</h2>
 <p>Building on top of <a href="IDeSyDe/api/idesyde/identification/common/StandardDecisionModel.html" title="idesyde.identification.common.StandardDecisionModel"><code>StandardDecisionModel</code></a> adds a new dependency to our new extensions: the <code>scala-common</code> module. Some might think that adding dependencies is always risky, but this one particular dependency is <em>highly recomended</em>. The cde in this module  can greatly simplify life with IDeSyDe, since most of the &ldquo;vendor-agnostic&rdquo; stuff is in this module, including the aforementioned <a href="IDeSyDe/api/idesyde/identification/common/StandardDecisionModel.html" title="idesyde.identification.common.StandardDecisionModel"><code>StandardDecisionModel</code></a>, but also other children decision models encoding known design scenarios from the scientific and engineering literature.</p>
 <p>Moving on, now the only required to implement the trait <a href="IDeSyDe/api/idesyde/identification/common/StandardDecisionModel.html" title="idesyde.identification.common.StandardDecisionModel"><code>StandardDecisionModel</code></a> is to return a set of strings and set of pairs of strings.</p>
-<p>For example, let&rsquo;s take the decision model <a href="IDeSyDe/api/idesyde/identification/common/models/platform/SharedMemoryMultiCore.html" title="idesyde.identification.common.models.platform.SharedMemoryMultiCore"><code>SharedMemoryMultiCore</code></a> from <code>scala-common</code> , which abstracts a shared-memory multi-core hardware architecture. Albeit there are a handful of parameters that describe many performance characteristics of the architecture, the covered elements are fewer; namely, they are the processing elements, the memory elements and the communication elements:</p>
+<p>For example, let&rsquo;s take the decision model <a href="IDeSyDe/api/idesyde/identification/common/models/platform/SharedMemoryMultiCore.html" title="idesyde.identification.common.models.platform.SharedMemoryMultiCore"><code>SharedMemoryMultiCore</code></a> from <code>scala-common</code> , which abstracts a shared-memory multi-core hardware architecture. Although there are a handful of parameters that describe many performance characteristics of the architecture, the covered elements are fewer; namely, they are the processing elements, the memory elements and the communication elements:</p>
 <pre class="prettyprint"><button class="snippet-button copy-snippet" title="Copy snippet to clipboard">copy</button><a class="snippet-button go-to-source" href="https://github.com/forsyde/IDeSyDe/tree/master/scala-common/src/main/scala/idesyde/identification/common/models/platform/SharedMemoryMultiCore.scala#L31-L32" target="_blank" title="Go to snippet source">source</a><code class="language-scala">val coveredElements         = (processingElems ++ communicationElems ++ storageElems).toSet
 val coveredElementRelations = topologySrcs.zip(topologyDsts).toSet</code></pre>
 <p>where the elements being aggregated are simply lists of strings. </p>
 <h2><a href="#a-step-by-step-example" name="a-step-by-step-example" class="anchor"><span class="anchor-link"></span></a>A step-by-step example</h2>
-<p>Now that we know to use <a href="IDeSyDe/api/idesyde/identification/common/StandardDecisionModel.html" title="idesyde.identification.common.StandardDecisionModel"><code>StandardDecisionModel</code></a> unless there is a very good reason not to, let&rsquo;s do a step-by-step construction of a new decision model. In this tutorial, we shall create the parameters that abstract nicely <a href="https://ieeexplore.ieee.org/document/1458143">Synchronous Dataflow (graphs)</a> or SDF(Gs), for short.</p>
+<p>Now that we know to use <a href="IDeSyDe/api/idesyde/identification/common/StandardDecisionModel.html" title="idesyde.identification.common.StandardDecisionModel"><code>StandardDecisionModel</code></a>, let&rsquo;s do a step-by-step construction of a new decision model. In this tutorial, we shall create the parameters that abstract nicely <a href="https://ieeexplore.ieee.org/document/1458143">Synchronous Dataflow (graphs)</a> or SDF(Gs), for short.</p>
 <p>Since SDFs are essentially labelled directed graphs, we can start with the graph part. Every directed graph must have a set of nodes and a set of arcs, which are called actors and channels in SDF terminology. Thus, we could start writing the decision model class like:</p>
 <pre><code>final case class SDFApplication(
     val actors: Vector[String],
@@ -262,7 +262,7 @@ The source code for this page can be found <a href="https://github.com/forsyde/I
 <script type="text/javascript" src="../lib/prettify/prettify.js"></script>
 <script type="text/javascript" src="../lib/prettify/lang-scala.js"></script>
 <script type="text/javascript">jQuery(function(){window.prettyPrint && prettyPrint()});</script>
-<script type="text/javascript">jQuery(function(jq){initOldVersionWarnings(jq, '0.4.1', '')});</script>
+<script type="text/javascript">jQuery(function(jq){initOldVersionWarnings(jq, '0.4.1+37-2184eeda', '')});</script>
 
 
 </html>

@@ -1,8 +1,9 @@
-ThisBuild / organization := "io.github.forsyde"
 ThisBuild / scalaVersion := "3.2.1"
-
-maintainer := "jordao@kth.se"
-organization := "io.forsyde.github"
+ThisBuild / versionScheme := Some("early-semver")
+ThisBuild / maintainer := "jordao@kth.se"
+ThisBuild / organization := "io.forsyde.github"
+ThisBuild / publishMavenStyle := true
+ThisBuild / publishTo := Some(Opts.resolver.sonatypeStaging)
 
 lazy val forsydeIoVersion = "0.6.3"
 lazy val jgraphtVersion   = "1.5.1"
@@ -30,7 +31,7 @@ lazy val root = project
     ),
     paradoxRoots := List("index.html")
   )
-  .aggregate(common, commonj, cli, choco, forsyde, minizinc, matlab, devicetree)
+  .aggregate(common, cli, choco, forsyde, minizinc, matlab, devicetree)
 
 lazy val core = (project in file("scala-core")).settings(name := "idesyde-scala-core")
 
@@ -45,13 +46,6 @@ lazy val common = (project in file("scala-common"))
     licenses := Seq(
       "MIT"  -> url("https://opensource.org/license/mit/"),
       "APL2" -> url("https://www.apache.org/licenses/LICENSE-2.0")
-    )
-  )
-
-lazy val commonj = (project in file("java-common"))
-  .dependsOn(core, common)
-  .settings(
-    libraryDependencies ++= Seq(
     )
   )
 
@@ -74,6 +68,7 @@ lazy val minizinc = (project in file("scala-minizinc"))
   .dependsOn(core)
   .dependsOn(common)
   .settings(
+    name := "idesyde-scala-minizinc",
     libraryDependencies ++= Seq(
       "com.lihaoyi" %% "upickle" % upickleVersion
     ),
@@ -105,11 +100,15 @@ lazy val choco = (project in file("scala-choco"))
 lazy val matlab = (project in file("scala-bridge-matlab"))
   .dependsOn(core)
   .dependsOn(common)
+  .settings(
+    name := "idesyde-scala-bridge-matlab",
+  )
 
 lazy val devicetree = (project in file("scala-bridge-device-tree"))
   .dependsOn(core)
   .dependsOn(common)
   .settings(
+    name := "idesyde-scala-bridge-devicetree",
     libraryDependencies ++= Seq(
       "org.scala-lang.modules" %%% "scala-parser-combinators" % scalaParserCombinatorsVersion,
       "com.lihaoyi"             %% "os-lib"                   % osLibVersion
@@ -127,6 +126,7 @@ lazy val cli = (project in file("scala-cli"))
   .enablePlugins(UniversalPlugin, JavaAppPackaging, JlinkPlugin)
   .enablePlugins(GraalVMNativeImagePlugin)
   .settings(
+    publishArtifact := false,
     licenses := Seq(
       "MIT"  -> url("https://opensource.org/license/mit/"),
       "APL2" -> url("https://www.apache.org/licenses/LICENSE-2.0"),
@@ -167,6 +167,7 @@ lazy val tests = (project in file("scala-tests"))
   .dependsOn(cli)
   .dependsOn(devicetree)
   .settings(
+    publishArtifact := false,
     libraryDependencies ++= Seq(
       ("org.scala-graph" %% "graph-core" % scalaGraphVersion).cross(CrossVersion.for3Use2_13),
       "org.scalatest"    %% "scalatest"  % "3.2.12" % "test",

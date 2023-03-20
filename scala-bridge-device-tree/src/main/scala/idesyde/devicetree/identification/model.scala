@@ -107,6 +107,17 @@ final case class CPUNode(
 ) extends DeviceTreeComponent
     with HasDefaultConnect {
 
+  def frequency: Long = properties
+    .flatMap(prop =>
+      prop match {
+        case DeviceTreeProperty.U64Property("clock-frequency", prop) => Some(prop)
+        case DeviceTreeProperty.U32Property("clock-frequency", prop) => Some(prop.toLong)
+        case _                                                       => None
+      }
+    )
+    .headOption
+    .getOrElse(1L)
+
   def operationsProvided: Map[String, Map[String, Rational]] = children
     .flatMap(_ match {
       case GenericNode(nodeName, addr, label, cs, properties, connected) =>

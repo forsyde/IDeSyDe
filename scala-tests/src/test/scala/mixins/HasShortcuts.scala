@@ -12,6 +12,7 @@ import idesyde.exploration.ChocoExplorationModule
 import idesyde.exploration.Explorer
 import idesyde.utils.Logger
 import idesyde.identification.DesignModel
+import idesyde.devicetree.identification.DeviceTreeIdentificationModule
 
 trait HasShortcuts(using Logger) extends CanExplore with CanIdentify {
 
@@ -23,7 +24,8 @@ trait HasShortcuts(using Logger) extends CanExplore with CanIdentify {
       CommonIdentificationModule(),
       ChocoIdentificationModule(),
       ForSyDeIdentificationModule(),
-      MinizincIdentificationModule()
+      MinizincIdentificationModule(),
+      DeviceTreeIdentificationModule()
     )
   )
 

@@ -1,0 +1,35 @@
+namespace dsi.headers;
+
+table LabelledPortRelationArc {
+    src: string;
+    dst: string;
+    src_port: string = "";
+    dst_port: string = "";
+    label: string = "";
+}
+
+table DecisionModelHeader {
+    category: string;
+    origin: [string];
+    covered_elements: [string];
+    covered_relations: [LabelledPortRelationArc];
+    model_body_path: string;
+}
+
+table DesignModelHeader {
+    category: string;
+    model_path: string;
+    elements: [string];
+    relations: [LabelledPortRelationArc];
+}
+
+// these request-response types are mostly for doing remote DSI, which is a focus for later.
+
+table IdentificationRuleRequest {
+    design_models: [DesignModelHeader];
+    decision_models: [DecisionModelHeader] = [];
+}
+
+table IdentificationRuleResponse {
+   decision_models: [DecisionModelHeader] = [];
+}

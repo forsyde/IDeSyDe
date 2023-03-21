@@ -1,4 +1,4 @@
-package idesyde.devicetree.identification
+package idesyde.devicetree
 
 import spire.math.Rational
 import scala.collection.mutable.Buffer
@@ -84,6 +84,42 @@ final case class RootNode(
     case a: MemoryNode => Some(a)
     case _             => None
   })
+
+  def mainBusFrequency: Long = properties
+    .flatMap(_ match {
+      case DeviceTreeProperty.U64Property("bus-frequency", prop) => Some(prop)
+      case DeviceTreeProperty.U32Property("bus-frequency", prop) => Some(prop.toLong)
+      case _                                                     => None
+    })
+    .headOption
+    .getOrElse(1L)
+
+  def mainBusConcurrency: Int = properties
+    .flatMap(_ match {
+      case DeviceTreeProperty.U64Property("bus-concurrency", prop) => Some(prop.toInt)
+      case DeviceTreeProperty.U32Property("bus-concurrency", prop) => Some(prop)
+      case _                                                       => None
+    })
+    .headOption
+    .getOrElse(1)
+
+  def mainBusFlitSize: Long = properties
+    .flatMap(_ match {
+      case DeviceTreeProperty.U64Property("bus-flit", prop) => Some(prop)
+      case DeviceTreeProperty.U32Property("bus-flit", prop) => Some(prop.toLong)
+      case _                                                => None
+    })
+    .headOption
+    .getOrElse(1L)
+
+  def mainBusClockPerFlit: Long = properties
+    .flatMap(_ match {
+      case DeviceTreeProperty.U64Property("bus-clock-per-flit", prop) => Some(prop)
+      case DeviceTreeProperty.U32Property("bus-clock-per-flit", prop) => Some(prop.toLong)
+      case _                                                          => None
+    })
+    .headOption
+    .getOrElse(1L)
 
   def linked: RootNode = {
     for (

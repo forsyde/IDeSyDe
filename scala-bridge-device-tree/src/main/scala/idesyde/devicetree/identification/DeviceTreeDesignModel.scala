@@ -1,6 +1,7 @@
 package idesyde.devicetree.identification
 
 import idesyde.identification.DesignModel
+import idesyde.devicetree.{DeviceTreeLink, DeviceTreeComponent, RootNode}
 
 final case class DeviceTreeDesignModel(
     val roots: List[RootNode]

@@ -2,6 +2,14 @@ package idesyde.devicetree.identification
 
 import scala.util.parsing.combinator.RegexParsers
 import scala.collection.mutable.Buffer
+import idesyde.devicetree.{
+  GenericNode,
+  DeviceTreeComponent,
+  RootNode,
+  MemoryNode,
+  DeviceTreeProperty,
+  CPUNode
+}
 
 trait CanParseDeviceTree extends RegexParsers {
   override def skipWhitespace: Boolean = true

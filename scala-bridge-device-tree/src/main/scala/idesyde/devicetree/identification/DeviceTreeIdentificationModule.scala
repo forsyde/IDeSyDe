@@ -9,7 +9,8 @@ class DeviceTreeIdentificationModule(using Logger) extends IdentificationModule 
 
   override def identificationRules
       : Set[(Set[DesignModel], Set[DecisionModel]) => Set[? <: DecisionModel]] = Set(
-    identSharedMemoryMultiCore
+    identSharedMemoryMultiCore,
+    identPartitionedCoresWithRuntimes
   )
 
   override def integrationRules: Set[(DesignModel, DecisionModel) => Option[? <: DesignModel]] =

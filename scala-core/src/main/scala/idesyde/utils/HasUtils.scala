@@ -3,6 +3,10 @@ package idesyde.utils
 import scala.collection.mutable
 import scala.collection.mutable.Buffer
 import scala.collection.mutable.Queue
+import idesyde.identification.DesignModel
+import scala.quoted.Type
+import idesyde.identification.DecisionModel
+import scala.quoted.Quotes
 
 trait HasUtils {
 
@@ -184,5 +188,30 @@ trait HasUtils {
   def ceil(numerand: Long, dividend: Long): Long = {
     if (numerand % dividend > 0) then (numerand / dividend) + 1
     else numerand / dividend
+  }
+
+  inline def mergedDesignModel[T <: DesignModel, M <: DecisionModel](models: Set[DesignModel])(
+      inline body: (T) => Set[M]
+  ) = {
+    val ms = models.flatMap(_ match {
+      case m: T => Some(m)
+      case _    => None
+    })
+    if (!ms.isEmpty) {
+      val mergedOpt = ms.tail.foldLeft(ms.headOption)((l, m) =>
+        l.flatMap(lm =>
+          lm.merge(m)
+            .flatMap(result =>
+              result match {
+                case d: T => Some(d)
+                case _    => None
+              }
+            )
+        )
+      )
+      mergedOpt.map(m => body(m)).getOrElse(Set())
+    } else {
+      Set()
+    }
   }
 }

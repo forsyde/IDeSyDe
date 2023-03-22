@@ -1,8 +1,10 @@
 package idesyde.devicetree
 
-import spire.math.Rational
 import scala.collection.mutable.Buffer
 import scala.collection.mutable
+
+import spire.math.Rational
+import org.virtuslab.yaml.*
 
 enum DeviceTreeLink {
   def label: String
@@ -217,3 +219,26 @@ final case class GenericNode(
     var connected: Buffer[DeviceTreeLink]
 ) extends DeviceTreeComponent
     with HasDefaultConnect {}
+
+case class OSIsland(
+    val name: String,
+    val host: String,
+    val affinity: List[String],
+    val policy: List[String]
+) derives YamlCodec
+
+case class OSDescription(
+    val oses: Map[String, OSIsland]
+) derives YamlCodec {
+
+  /** Return a new merged OSDescription
+    *
+    * @param o
+    *   other OSDescription to be merged
+    * @return
+    *   the merge result, prioritizing left-most data (`this`)
+    */
+  def mergeLeft(right: OSDescription): OSDescription = OSDescription(
+    oses ++ right.oses.filterNot((k, _) => oses.contains(k))
+  )
+}

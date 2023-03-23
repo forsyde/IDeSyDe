@@ -13,6 +13,7 @@ import idesyde.exploration.Explorer
 import idesyde.utils.Logger
 import idesyde.identification.DesignModel
 import idesyde.devicetree.identification.DeviceTreeIdentificationModule
+import idesyde.matlab.identification.SimulinkMatlabIdentificationModule
 
 trait HasShortcuts(using Logger) extends CanExplore with CanIdentify {
 
@@ -25,7 +26,8 @@ trait HasShortcuts(using Logger) extends CanExplore with CanIdentify {
       ChocoIdentificationModule(),
       ForSyDeIdentificationModule(),
       MinizincIdentificationModule(),
-      DeviceTreeIdentificationModule()
+      DeviceTreeIdentificationModule(),
+      SimulinkMatlabIdentificationModule()
     )
   )
 

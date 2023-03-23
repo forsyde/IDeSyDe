@@ -19,7 +19,7 @@ final case class CommunicatingAndTriggeredReactiveWorkload(
     val periodsNumerator: Vector[Long],
     val periodsDenominator: Vector[Long],
     val offsetsNumerator: Vector[Long],
-    val offsetsDenomiantor: Vector[Long],
+    val offsetsDenominator: Vector[Long],
     val upsamples: Vector[String],
     val upsampleRepetitiveHolds: Vector[Long],
     val upsampleInitialHolds: Vector[Long],
@@ -71,7 +71,7 @@ final case class CommunicatingAndTriggeredReactiveWorkload(
             ), // period
             Rational(
               offsetsNumerator(idxSource),
-              offsetsDenomiantor(idxSource)
+              offsetsDenominator(idxSource)
             ), // offset
             Rational(
               periodsNumerator(idxSource),

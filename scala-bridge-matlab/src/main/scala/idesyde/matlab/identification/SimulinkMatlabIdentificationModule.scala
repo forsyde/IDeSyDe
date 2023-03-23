@@ -5,7 +5,11 @@ import idesyde.identification.DecisionModel
 import idesyde.identification.DesignModel
 
 import idesyde.matlab.identification.ApplicationRules
-object SimulinkMatlabIdentificationModule extends IdentificationModule with ApplicationRules {
+import idesyde.utils.Logger
+
+class SimulinkMatlabIdentificationModule(using Logger)
+    extends IdentificationModule
+    with ApplicationRules {
 
   override def identificationRules
       : Set[(Set[DesignModel], Set[DecisionModel]) => Set[? <: DecisionModel]] = Set(

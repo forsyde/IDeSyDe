@@ -1,6 +1,7 @@
 package idesyde.matlab.identification
 
 import idesyde.identification.DesignModel
+import upickle.default.*
 
 /** A design model for a subset of all possible simulink models.
   *
@@ -14,17 +15,16 @@ final case class SimulinkReactiveDesignModel(
     val delaysSizes: Map[String, Long],
     val sources: Set[String],
     val sourcesSizes: Map[String, Long],
-    val sourcesPeriodsNumerator: Map[String, Long],
-    val sourcesPeriodsDenominator: Map[String, Long],
+    val sourcesPeriods: Map[String, Double],
     val constants: Set[String],
     val sinks: Set[String],
     val sinksSizes: Map[String, Long],
-    val sinksDeadlinesNumerator: Map[String, Long],
-    val sinksDeadlinesDenominator: Map[String, Long],
+    val sinksDeadlines: Map[String, Double],
     val processesOperations: Map[String, Map[String, Map[String, Long]]],
     val delaysOperations: Map[String, Map[String, Map[String, Long]]],
     val links: Set[(String, String, String, String, Long)]
-) extends DesignModel {
+) extends DesignModel
+    derives ReadWriter {
 
   type ElementT         = String
   type ElementRelationT = (String, String, String, String)
@@ -44,13 +44,11 @@ final case class SimulinkReactiveDesignModel(
             odelaysSizes,
             osources,
             osourcesSizes,
-            osourcesPeriodsNumerator,
-            osourcesPeriodsDenominator,
+            osourcesPeriods,
             oconstants,
             osinks,
             osinksSizes,
-            osinksDeadlinesNumerator,
-            osinksDeadlinesDenominator,
+            osinksDeadlines,
             oprocessesOperations,
             odelaysOperations,
             olinks
@@ -63,13 +61,11 @@ final case class SimulinkReactiveDesignModel(
             delaysSizes ++ odelaysSizes,
             sources ++ osources,
             sourcesSizes ++ osourcesSizes,
-            sourcesPeriodsNumerator ++ osourcesPeriodsNumerator,
-            sourcesPeriodsDenominator ++ osourcesPeriodsDenominator,
+            sourcesPeriods ++ osourcesPeriods,
             constants ++ oconstants,
             sinks ++ osinks,
             sinksSizes ++ osinksSizes,
-            sinksDeadlinesNumerator ++ osinksDeadlinesNumerator,
-            sinksDeadlinesDenominator ++ osinksDeadlinesDenominator,
+            sinksDeadlines ++ osinksDeadlines,
             processesOperations ++ oprocessesOperations,
             delaysOperations ++ odelaysOperations,
             links ++ olinks

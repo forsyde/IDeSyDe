@@ -35,12 +35,12 @@ lazy val root = project
   )
   .aggregate(common, cli, choco, forsyde, minizinc, matlab, devicetree)
 
-lazy val javaCore = (project in file("java-core")).settings(
-  name := "idesyde-java-core",
-  libraryDependencies ++= Seq(
-    "com.google.flatbuffers" % "flatbuffers-java" % flatBufferVersion
-  )
-)
+// lazy val javaCore = (project in file("java-core")).settings(
+//   name := "idesyde-java-core",
+//   libraryDependencies ++= Seq(
+//     "com.google.flatbuffers" % "flatbuffers-java" % flatBufferVersion
+//   )
+// )
 
 lazy val core = (project in file("scala-core")).settings(
   name := "idesyde-scala-core",
@@ -61,15 +61,15 @@ lazy val common = (project in file("scala-common"))
     )
   )
 
-lazy val commonJava = (project in file("java-common"))
-  .dependsOn(core)
-  .dependsOn(javaCore)
-  .settings(
-    name := "idesyde-java-common",
-    libraryDependencies ++= Seq(
-      "com.google.flatbuffers" % "flatbuffers-java" % flatBufferVersion
-    )
-  )
+// lazy val commonJava = (project in file("java-common"))
+//   .dependsOn(core)
+//   .dependsOn(javaCore)
+//   .settings(
+//     name := "idesyde-java-common",
+//     libraryDependencies ++= Seq(
+//       "com.google.flatbuffers" % "flatbuffers-java" % flatBufferVersion
+//     )
+//   )
 
 lazy val forsyde = (project in file("scala-forsyde"))
   .dependsOn(core)
@@ -144,6 +144,7 @@ lazy val cli = (project in file("scala-cli"))
   .dependsOn(choco)
   .dependsOn(forsyde)
   .dependsOn(minizinc)
+  .dependsOn(matlab)
   .dependsOn(devicetree)
   // .enablePlugins(ScalaNativePlugin)
   .enablePlugins(UniversalPlugin, JavaAppPackaging, JlinkPlugin)
@@ -157,8 +158,8 @@ lazy val cli = (project in file("scala-cli"))
     ),
     Compile / mainClass := Some("idesyde.IDeSyDeStandalone"),
     libraryDependencies ++= Seq(
-      "com.github.scopt" %% "scopt" % "4.0.1",
-      "com.lihaoyi"             %% "os-lib"                   % osLibVersion,
+      "com.github.scopt" %% "scopt"  % "4.0.1",
+      "com.lihaoyi"      %% "os-lib" % osLibVersion
       // "com.outr"         %% "scribe"      % scribeVersion,
       // "com.outr"         %% "scribe-file" % scribeVersion
     ),
@@ -188,6 +189,7 @@ lazy val tests = (project in file("scala-tests"))
   .dependsOn(choco)
   .dependsOn(forsyde)
   .dependsOn(minizinc)
+  .dependsOn(matlab)
   .dependsOn(cli)
   .dependsOn(devicetree)
   .settings(

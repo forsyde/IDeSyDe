@@ -10,6 +10,7 @@ import idesyde.identification.common.models.platform.SharedMemoryMultiCore
 import idesyde.devicetree.OSDescription
 import idesyde.devicetree.identification.OSDescriptionDesignModel
 import idesyde.identification.common.models.platform.PartitionedCoresWithRuntimes
+import idesyde.identification.common.models.platform.PartitionedSharedMemoryMultiCore
 
 class DeviceTreeParseTests
     extends AnyFunSuite
@@ -58,27 +59,28 @@ class DeviceTreeParseTests
   """.stripMargin
 
   test("Trying to parse the most basic ones") {
-    val root = parseDeviceTree(deviceTreeinlinedCode)
-    root match
+    val root = parseDeviceTree(deviceTreeinlinedCode) match {
       case Success(result, next) =>
-        val model = DeviceTreeDesignModel(List(result))
-        // println(result)
-        // result.cpus.foreach(cpu => println(cpu.operationsProvided))
-        // result.memories.foreach(mem => println(mem.memorySize))
+        val model      = DeviceTreeDesignModel(List(result))
         val identified = identify(model)
         assert(identified.exists(_.isInstanceOf[SharedMemoryMultiCore]))
-      case Failure(msg, next) => println(msg)
-      case Error(msg, next)   => println(msg)
-  }
-
-  test("Trying to parse the most basic ones II") {
-    val parsed = osYamlInlined.as[OSDescription]
-    parsed match {
+        Some(result)
+      case Failure(msg, next) => None
+      case Error(msg, next)   => None
+    }
+    val parsed = osYamlInlined.as[OSDescription] match {
       case Right(value) =>
         val model      = OSDescriptionDesignModel(value)
         val identified = identify(model)
         assert(identified.exists(_.isInstanceOf[PartitionedCoresWithRuntimes]))
-      case Left(value) => print("failed with " + value.toString())
+        Some(value)
+      case Left(value) => None
+    }
+    for (r <- root; os <- parsed) {
+      val identified = identify(Set(DeviceTreeDesignModel(List(r)), OSDescriptionDesignModel(os)))
+      assert(identified.exists(_.isInstanceOf[PartitionedSharedMemoryMultiCore]))
     }
   }
+
+  test("Trying to parse the most basic ones II") {}
 }

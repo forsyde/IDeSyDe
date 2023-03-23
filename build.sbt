@@ -1,4 +1,4 @@
-ThisBuild / scalaVersion := "3.2.1"
+ThisBuild / scalaVersion := "3.2.2"
 ThisBuild / versionScheme := Some("early-semver")
 ThisBuild / maintainer := "jordao@kth.se"
 ThisBuild / organization := "io.forsyde.github"
@@ -16,6 +16,7 @@ lazy val upickleVersion                = "3.0.0"
 lazy val chocoSolverVersion            = "4.10.10"
 lazy val osLibVersion                  = "0.9.1"
 lazy val scalaYamlVersion              = "0.0.6"
+lazy val flatBufferVersion             = "23.3.3"
 
 lazy val root = project
   .in(file("."))
@@ -34,7 +35,17 @@ lazy val root = project
   )
   .aggregate(common, cli, choco, forsyde, minizinc, matlab, devicetree)
 
-lazy val core = (project in file("scala-core")).settings(name := "idesyde-scala-core")
+lazy val javaCore = (project in file("java-core")).settings(
+  name := "idesyde-java-core",
+  libraryDependencies ++= Seq(
+    "com.google.flatbuffers" % "flatbuffers-java" % flatBufferVersion
+  )
+)
+
+lazy val core = (project in file("scala-core")).settings(
+  name := "idesyde-scala-core",
+  libraryDependencies ++= Seq("com.lihaoyi" %% "upickle" % upickleVersion)
+)
 
 lazy val common = (project in file("scala-common"))
   .dependsOn(core)
@@ -47,6 +58,16 @@ lazy val common = (project in file("scala-common"))
     licenses := Seq(
       "MIT"  -> url("https://opensource.org/license/mit/"),
       "APL2" -> url("https://www.apache.org/licenses/LICENSE-2.0")
+    )
+  )
+
+lazy val commonJava = (project in file("java-common"))
+  .dependsOn(core)
+  .dependsOn(javaCore)
+  .settings(
+    name := "idesyde-java-common",
+    libraryDependencies ++= Seq(
+      "com.google.flatbuffers" % "flatbuffers-java" % flatBufferVersion
     )
   )
 
@@ -136,7 +157,8 @@ lazy val cli = (project in file("scala-cli"))
     ),
     Compile / mainClass := Some("idesyde.IDeSyDeStandalone"),
     libraryDependencies ++= Seq(
-      "com.github.scopt" %% "scopt" % "4.0.1"
+      "com.github.scopt" %% "scopt" % "4.0.1",
+      "com.lihaoyi"             %% "os-lib"                   % osLibVersion,
       // "com.outr"         %% "scribe"      % scribeVersion,
       // "com.outr"         %% "scribe-file" % scribeVersion
     ),

@@ -40,7 +40,8 @@ trait MixedRules(using logger: Logger) {
           processMappings = Vector.empty,
           messageMappings = Vector.empty,
           schedulerSchedules = Vector.empty,
-          messageSlotAllocations = Vector.empty
+          messageSlotAllocations = Vector.empty,
+          actorThroughputs = Vector.empty
         )
       )
     )

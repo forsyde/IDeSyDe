@@ -24,7 +24,7 @@ trait ChocoDecisionModel(
   
   def chocoModel: Model
 
-  def rebuildFromChocoOutput(output: Solution): DecisionModel
+  def rebuildFromChocoOutput(output: Solution): Set[DecisionModel]
 
   /** Due to how the choco solver treats multi objective optimization, the objective _have_ to be
     * all maximization goals! Consider using the minus of a variable in case the original objective

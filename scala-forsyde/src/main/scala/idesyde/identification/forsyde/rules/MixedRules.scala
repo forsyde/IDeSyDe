@@ -197,7 +197,7 @@ object MixedRules {
             // add the throughputs for good measure
             for (
               (a, ai) <- dse.sdfApplications.actorsIdentifiers.zipWithIndex;
-              th = dse.sdfApplications.actorThrouhgputs(ai)
+              th = dse.sdfApplications.minimumActorThrouhgputs(ai)
             ) {
               newModel
                 .queryVertex(a)

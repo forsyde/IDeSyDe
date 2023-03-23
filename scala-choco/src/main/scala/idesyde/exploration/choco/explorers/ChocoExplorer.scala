@@ -161,7 +161,7 @@ class ChocoExplorer(using logger: Logger) extends Explorer:
           // scribe.debug(s"Current heap memory used: ${Runtime.getRuntime().totalMemory() - Runtime.getRuntime().freeMemory()} bytes")
           solver.defaultSolution()
         })
-        .map(paretoSolution => {
+        .flatMap(paretoSolution => {
           // println("obj " + chocoCpModel.modelMinimizationObjectives.map(o => paretoSolution.getIntVal(o)).mkString(", "))
           solvable.rebuildFromChocoOutput(paretoSolution)
         })

@@ -44,7 +44,7 @@ import idesyde.identification.choco.ChocoDecisionModel
 final case class ChocoComDepTasksToMultiCore(
     val dse: PeriodicWorkloadToPartitionedSharedMultiCore
 ) extends StandardDecisionModel
-    with ChocoDecisionModel()
+    with ChocoDecisionModel
     with HasUtils {
 
   val coveredElements = dse.coveredElements
@@ -326,7 +326,7 @@ final case class ChocoComDepTasksToMultiCore(
     // )
   )
 
-  def rebuildFromChocoOutput(output: Solution): DecisionModel = {
+  def rebuildFromChocoOutput(output: Solution): Set[DecisionModel] = {
     val processMappings = memoryMappingModule.processesMemoryMapping.zipWithIndex
       .map((v, i) =>
         dse.workload.tasks(i) -> dse.platform.hardware.storageElems(output.getIntVal(v))
@@ -341,11 +341,12 @@ final case class ChocoComDepTasksToMultiCore(
       )
       .toVector
     // val channelSlotAllocations = ???
-    dse.copy(
+    val full = dse.copy(
       processMappings = processMappings,
       processSchedulings = processSchedulings,
       channelMappings = channelMappings
     )
+    Set(full)
   }
 
   def allMemorySizeNumbers() =

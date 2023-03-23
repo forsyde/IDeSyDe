@@ -31,6 +31,10 @@ import org.chocosolver.solver.objective.OptimizationPolicy
 import idesyde.utils.Logger
 import idesyde.identification.choco.models.sdf.SDFSchedulingAnalysisModule2
 import idesyde.identification.choco.models.sdf.CompactingMultiCoreMapping
+import scalax.collection.GraphEdge.DiEdge
+import idesyde.core.ParametricDecisionModel
+import idesyde.core.headers.DecisionModelHeader
+import idesyde.core.headers.LabelledArcWithPorts
 
 final class ConMonitorObj2(val model: ChocoSDFToSChedTileHW2) extends IMonitorContradiction {
 
@@ -474,7 +478,7 @@ final case class ChocoSDFToSChedTileHW2(
 
   //---------
 
-  def rebuildFromChocoOutput(output: Solution): DecisionModel = {
+  def rebuildFromChocoOutput(output: Solution): Set[DecisionModel] = {
     logger.debug(
       s"solution: nUsedPEs = ${output.getIntVal(nUsedPEs)}, globalInvThroughput = ${output
         .getIntVal(sdfAnalysisModule.globalInvThroughput)} / $timeMultiplier"
@@ -483,10 +487,10 @@ final case class ChocoSDFToSChedTileHW2(
     // logger.debug(memoryMappingModule.processesMemoryMapping.mkString(", "))
     // logger.debug(sdfAnalysisModule.jobOrder.mkString(", "))
     // logger.debug(sdfAnalysisModule.invThroughputs.mkString(", "))
-    dse.copy(
-      sdfApplications = dse.sdfApplications.copy(actorThrouhgputs =
-        sdfAnalysisModule.invThroughputs
-          .map(timeMultiplier.toDouble / _.getValue().toDouble)
+    val full = dse.copy(
+      sdfApplications = dse.sdfApplications.copy(minimumActorThrouhgputs =
+        sdfAnalysisModule.invThroughputs.zipWithIndex
+          .map((th, i) => dse.sdfApplications.sdfRepetitionVectors(i) * timeMultiplier.toDouble / th.getValue().toDouble)
           .toVector
       ),
       processMappings = dse.sdfApplications.actorsIdentifiers.zipWithIndex.map((a, i) =>
@@ -529,8 +533,78 @@ final case class ChocoSDFToSChedTileHW2(
               )
               .toVector
         iter.toMap
-      })
+      }),
+      actorThroughputs = recomputeTh(
+        sdfAnalysisModule.jobsAndActors.zipWithIndex
+          .map((j, x) => (dse.sdfApplications.actorsIdentifiers.indexOf(j._1), x))
+          .map((ax, i) => dse.wcets(ax)(memoryMappingModule.processesMemoryMapping(ax).getValue())),
+        sdfAnalysisModule.jobsAndActors.zipWithIndex
+          .map((src, i) => (dse.sdfApplications.actorsIdentifiers.indexOf(src._1), i))
+          .map((srcax, i) =>
+            sdfAnalysisModule.jobsAndActors.zipWithIndex
+              .map((dst, j) => (dse.sdfApplications.actorsIdentifiers.indexOf(dst._1), j))
+              .map((dstax, j) => {
+                val srcM = memoryMappingModule.processesMemoryMapping(srcax).getValue()
+                val dstM = memoryMappingModule.processesMemoryMapping(dstax).getValue()
+                if (srcM != dstM) {
+                  dse.platform.hardware.minTraversalTimePerBit(srcM)(dstM) * dse.platform.hardware
+                    .computedPaths(srcM)(dstM)
+                    .map(ce => dse.platform.hardware.communicationElems.indexOf(ce))
+                    .map(cex =>
+                      tileAnalysisModule.numVirtualChannelsForProcElem(srcM)(cex).getValue()
+                    )
+                    .min
+                } else 0.0
+              })
+          )
+      )
     )
+    // we also return the SDF-only-view results
+    val withHeader = ParametricDecisionModel(
+      DecisionModelHeader(
+        body_paths = Seq(),
+        category = full.uniqueIdentifier,
+        covered_elements = full.coveredElements.toSeq,
+        covered_relations = full.coveredElementRelations.toSeq.map((s, t) =>
+          LabelledArcWithPorts(s, None, None, t, None)
+        )
+      ),
+      full
+    )
+    // return both
+    Set(full, withHeader)
+  }
+
+  private def recomputeTh(
+      jobWeights: Vector[Double],
+      edgeWeigths: Vector[Vector[Double]]
+  ): Vector[Double] = {
+    val newEdges = for (
+      (i, idx) <- sdfAnalysisModule.jobsAndActors.zipWithIndex;
+      (j, jdx) <- sdfAnalysisModule.jobsAndActors.zipWithIndex; if i != j;
+      if sdfAnalysisModule.jobMapping(idx).getValue() == sdfAnalysisModule
+        .jobMapping(jdx)
+        .getValue();
+      if sdfAnalysisModule.jobOrder(idx).getValue() < sdfAnalysisModule
+        .jobOrder(jdx)
+        .getValue() || sdfAnalysisModule.jobOrder(jdx).getValue() == 0
+    ) yield DiEdge(i, j)
+    val impl = dse.sdfApplications.firingsPrecedenceGraphWithCycles ++ newEdges
+    var ths  = Buffer.fill(dse.sdfApplications.actorsIdentifiers.size)(Double.PositiveInfinity)
+    for (comp <- impl.strongComponentTraverser()) {
+      val total = comp.edges
+        .map(e =>
+          sdfAnalysisModule.jobsAndActors.indexOf(e.source) -> sdfAnalysisModule.jobsAndActors
+            .indexOf(e.target)
+        )
+        .map((s, t) => jobWeights(s) + edgeWeigths(s)(t))
+        .sum
+      for (
+        n <- comp.nodes; (a, q) = n.value; adx = dse.sdfApplications.actorsIdentifiers.indexOf(a);
+        if ths(adx) > q / total
+      ) ths(adx) = q / total
+    }
+    ths.toVector
   }
 
   def uniqueIdentifier: String = "ChocoSDFToSChedTileHW2"

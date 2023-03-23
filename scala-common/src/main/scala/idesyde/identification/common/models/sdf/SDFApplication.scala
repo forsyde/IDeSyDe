@@ -2,6 +2,8 @@ package idesyde.identification.common.models.sdf
 
 import scala.jdk.CollectionConverters.*
 
+import upickle.default.*
+
 import idesyde.identification.common.models.workload.ParametricRateDataflowWorkloadMixin
 import idesyde.identification.common.models.workload.InstrumentedWorkloadMixin
 import scala.collection.mutable
@@ -37,7 +39,7 @@ import scala.collection.mutable.Buffer
   *   the produced or consumed tokens for each edge triple in the SDF graph.
   * @param actorSizes
   *   the size in bits for each actor's instruction(s)
-  * @param actorThrouhgputs
+  * @param minimumActorThrouhgputs
   *   the fixed throughput expected to be done for each actor, given in executions per second.
   *
   * @see
@@ -53,10 +55,10 @@ final case class SDFApplication(
     val actorComputationalNeeds: Vector[Map[String, Map[String, Long]]],
     val channelNumInitialTokens: Vector[Int],
     val channelTokenSizes: Vector[Long],
-    val actorThrouhgputs: Vector[Double]
+    val minimumActorThrouhgputs: Vector[Double]
 ) extends StandardDecisionModel
     with ParametricRateDataflowWorkloadMixin
-    with InstrumentedWorkloadMixin {
+    with InstrumentedWorkloadMixin derives ReadWriter {
 
   // def dominatesSdf(other: SDFApplication) = repetitionVector.size >= other.repetitionVector.size
   val coveredElements         = (actorsIdentifiers ++ channelsIdentifiers).toSet

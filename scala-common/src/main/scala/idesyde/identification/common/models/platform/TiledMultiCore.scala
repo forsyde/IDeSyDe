@@ -1,5 +1,7 @@
 package idesyde.identification.common.models.platform
 
+import upickle.default.*
+
 import idesyde.identification.common.StandardDecisionModel
 import spire.math.Rational
 import idesyde.identification.common.models.platform.InstrumentedPlatformMixin
@@ -13,14 +15,14 @@ final case class TiledMultiCore(
     val routers: Vector[String],
     val interconnectTopologySrcs: Vector[String],
     val interconnectTopologyDsts: Vector[String],
-    val processorsProvisions: Vector[Map[String, Map[String, Rational]]],
+    val processorsProvisions: Vector[Map[String, Map[String, Double]]],
     val processorsFrequency: Vector[Long],
     val tileMemorySizes: Vector[Long],
     val communicationElementsMaxChannels: Vector[Int],
-    val communicationElementsBitPerSecPerChannel: Vector[Rational],
+    val communicationElementsBitPerSecPerChannel: Vector[Double],
     val preComputedPaths: Map[String, Map[String, Iterable[String]]]
 ) extends StandardDecisionModel
-    with InstrumentedPlatformMixin[Rational] {
+    with InstrumentedPlatformMixin[Double] derives ReadWriter {
 
   val coveredElements         = (processors ++ memories ++ networkInterfaces ++ routers).toSet
   val coveredElementRelations = interconnectTopologySrcs.zip(interconnectTopologyDsts).toSet
@@ -63,33 +65,33 @@ final case class TiledMultiCore(
       )
     )
 
-  val maxTraversalTimePerBit: Vector[Vector[Rational]] = {
+  val maxTraversalTimePerBit: Vector[Vector[Double]] = {
     // val paths = FloydWarshallShortestPaths(directedAndConnectedMinTimeGraph)
     platformElements.zipWithIndex.map((src, i) => {
       platformElements.zipWithIndex.map((dst, j) => {
         computedPaths(i)(j)
           .map(ce => {
             val dstIdx = communicationElems.indexOf(ce)
-            (communicationElementsBitPerSecPerChannel(dstIdx).reciprocal)
+            1.0 / communicationElementsBitPerSecPerChannel(dstIdx)
           })
-          .foldLeft(Rational.zero)(_ + _)
+          .foldLeft(0.0)(_ + _)
       })
     })
   }
 
-  val minTraversalTimePerBit: Vector[Vector[Rational]] = {
+  val minTraversalTimePerBit: Vector[Vector[Double]] = {
     platformElements.zipWithIndex.map((src, i) => {
       platformElements.zipWithIndex.map((dst, j) => {
         computedPaths(i)(j)
           .map(ce => {
             val dstIdx = communicationElems.indexOf(ce)
-            communicationElementsBitPerSecPerChannel(
+            1.0 / communicationElementsBitPerSecPerChannel(
               dstIdx
-            ).reciprocal / communicationElementsMaxChannels(
+            ) / communicationElementsMaxChannels(
               dstIdx
             )
           })
-          .foldLeft(Rational.zero)(_ + _)
+          .foldLeft(0.0)(_ + _)
       })
     })
   }

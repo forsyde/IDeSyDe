@@ -1,4 +1,4 @@
-namespace common;
+namespace idesyde.common;
 
 struct IntRational {
     numerator: int;
@@ -19,14 +19,26 @@ table ComputationalRequirement {
 }
 
 table ComputationalRequirementEntry {
-    process_name: string;
+    process_name: string (key);
     requirement: ComputationalRequirement;
 }
 
-namespace common.sdf;
+namespace idesyde.common.decision.sdf;
 
-
-table SDFApplication {
+/** Decision model for synchronous dataflow graphs.
+  *
+  * This decision model encodes a synchronous dataflow graphs without its explicit topology matrix,
+  * also known as balance matrix in some newer texts. This is achieved by encoding the graph as $(A
+  * \cup C, E)$ where $A$ is the set of actors, `actorsIdentifiers`, and $C$ is the set of channels,
+  * `channelsIdentifiers`. Every edge in $E$ connects an actor to a channel or a channel to an
+  * actor, i.e. $e \in E$ means that $e \in A \times C$ or $e \in C \times A$. These edges are
+  * encoded with `topologySrcs`, `topologyDsts` and `topologyEdgeValue` for the amount of tokens
+  * produced or consumed. For example, if $e = (a, c, 2)$, then the edge $e$ is the production of 2
+  * tokens from the actor $a$ to channel $c$. The other parameters bring enough instrumentation
+  * information so that the decision model can potentially be mapped into a target platform.
+  *
+  */
+table SDFApplicationBody {
     actors_identifiers: [string];
     channels_identifiers: [string];
     topology_srcs: [string];
@@ -39,7 +51,8 @@ table SDFApplication {
     minimum_actor_throughputs: [AnyRational];
 }
 
-table ImplementedSDFApplication {
-    sdf_application: SDFApplication;
-    minimum_actor_throughputs: [AnyRational];
+table ImplementedSDFApplicationBody {
+    sdf_application: SDFApplicationBody;
+    discretized_actor_throughputs: [AnyRational];
+    real_actor_throughputs: [AnyRational];
 }

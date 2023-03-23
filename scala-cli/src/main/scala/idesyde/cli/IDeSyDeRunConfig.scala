@@ -14,6 +14,9 @@ import idesyde.exploration.CanExplore
 import idesyde.identification.CanIdentify
 import idesyde.exploration.ExplorationModule
 import idesyde.identification.IdentificationModule
+import upickle.default.*
+import idesyde.core.ParametricDecisionModel
+import java.nio.file.Files
 
 case class IDeSyDeRunConfig(
     val identificationModules: Set[IdentificationModule],
@@ -28,6 +31,8 @@ case class IDeSyDeRunConfig(
     with CanIdentify {
 
   def run(): Unit =
+    val exploredPath =  Paths.get("run").resolve("explored")
+    Files.createDirectories(exploredPath)
     val modelHandler = ForSyDeModelHandler()
     val validForSyDeInputs =
       inputModelsPaths.map(f => (f, modelHandler.canLoadModel(f)))
@@ -74,26 +79,38 @@ case class IDeSyDeRunConfig(
           .map((explorer, decisionModel) =>
             explorer
               .explore(decisionModel, explorationTimeOutInSecs)
-              .flatMap(integrateDecisionModel(model, _, identificationModules))
-              .flatMap(result =>
-                result match {
-                  case fdm: ForSyDeDesignModel => Some(fdm.systemGraph)
+              .zipWithIndex
+              .map((decisionModel, num) => {
+                decisionModel match {
+                  case sdm: ParametricDecisionModel[?] =>
+                    val outPath =
+                      exploredPath.resolve(Paths.get(s"${num}_${decisionModel.uniqueIdentifier}_body.json"))
+                    logger.debug(s"writing pre-integration solution at ${outPath.toString}")
+                    Files.writeString(outPath, sdm.bodyAsText)
+                  case _ =>
+                }
+                (decisionModel, num)
+              })
+              .flatMap((m, res) => integrateDecisionModel(model, m, identificationModules).map((_, res)))
+              .flatMap((m, res) =>
+                m match {
+                  case fdm: ForSyDeDesignModel => Some((fdm.systemGraph, res))
                   case _                       => Option.empty
                 }
               )
-              .scanLeft(0)((res, result) => {
+              .map((m, res) => {
                 if (!outputModelPath.toFile.exists || outputModelPath.toFile.isFile) then
                   logger.debug(s"writing solution at ${outputModelPath.toString}")
-                  modelHandler.writeModel(model.systemGraph.merge(result), outputModelPath)
+                  modelHandler.writeModel(model.systemGraph.merge(m), outputModelPath)
                 else if (outputModelPath.toFile.exists && outputModelPath.toFile.isDirectory) then
                   val outPath =
                     outputModelPath.resolve(Paths.get(s"solution_${res.toString}.fiodl"))
                   logger.debug(s"writing solution at ${outPath.toString}")
                   modelHandler.writeModel(
-                    model.systemGraph.merge(result),
+                    model.systemGraph.merge(m),
                     outputModelPath.resolve(Paths.get(s"solution_${res.toString}.fiodl"))
                   )
-                res + 1
+                res
               })
               .takeWhile(res =>
                 (solutionLimiter <= 0) || (solutionLimiter > 0 && res <= solutionLimiter)

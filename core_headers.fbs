@@ -1,4 +1,4 @@
-namespace dsi.headers;
+namespace core.headers;
 
 table LabelledPortRelationArc {
     src: string;

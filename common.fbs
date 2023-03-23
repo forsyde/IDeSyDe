@@ -1,0 +1,45 @@
+namespace common;
+
+struct IntRational {
+    numerator: int;
+    denominator: int;
+}
+
+struct LongRational {
+    numerator: long;
+    denominator: long;
+}
+
+union AnyRational { IntRational, LongRational }
+
+table ComputationalRequirement {
+    target: string;
+    requirement_name: string;
+    requirement_value: long;
+}
+
+table ComputationalRequirementEntry {
+    process_name: string;
+    requirement: ComputationalRequirement;
+}
+
+namespace common.sdf;
+
+
+table SDFApplication {
+    actors_identifiers: [string];
+    channels_identifiers: [string];
+    topology_srcs: [string];
+    topology_dsts: [string];
+    topology_edges: [int];
+    actor_sizes: [long];
+    actor_computational_needs: [ComputationalRequirementEntry];
+    channel_num_initial_tokens: [int];
+    channel_token_sizes: [long];
+    minimum_actor_throughputs: [AnyRational];
+}
+
+table ImplementedSDFApplication {
+    sdf_application: SDFApplication;
+    minimum_actor_throughputs: [AnyRational];
+}

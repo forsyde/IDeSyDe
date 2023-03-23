@@ -15,7 +15,7 @@ trait ApplicationRules extends MatlabUtils {
     model =>
       val procs  = model.processes.toVector
       val delays = model.delays.toVector
-      val links = model.links
+      val linksWithoutConstants = model.links
         .filterNot((s, t, _, _, _) => model.constants.contains(s) || model.constants.contains(t))
         .toVector
       val sources = model.sources.toVector
@@ -31,11 +31,15 @@ trait ApplicationRules extends MatlabUtils {
           procs ++ delays,
           procs.map(model.processesSizes) ++ delays.map(model.delaysSizes),
           procs.map(model.processesOperations) ++ delays.map(model.delaysOperations),
-          links.map((s, t, sp, tp, _) => s + ":" + sp + "--" + t + ":" + tp) ++ sources ++ sinks,
-          links.map((s, t, sp, tp, d) => d) ++ sources.map(model.sourcesSizes) ++ sinks.map(
+          linksWithoutConstants.map((s, t, sp, tp, _) =>
+            s + ":" + sp + "--" + t + ":" + tp
+          ) ++ sources ++ sinks,
+          linksWithoutConstants.map((s, t, sp, tp, d) => d) ++ sources.map(
+            model.sourcesSizes
+          ) ++ sinks.map(
             model.sinksSizes
           ),
-          links
+          linksWithoutConstants
             .groupBy((s, t, _, _, _) => (s, t))
             .map((st, pairs) =>
               (st._1, st._2, pairs.map(_._5).sum)
@@ -52,7 +56,7 @@ trait ApplicationRules extends MatlabUtils {
           Vector.empty,
           Vector.empty,
           Vector.empty,
-          links
+          linksWithoutConstants
             .groupBy((s, t, _, _, _) => (s, t))
             .map((st, _) =>
               (st._1, st._2)

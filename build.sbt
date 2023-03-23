@@ -15,6 +15,7 @@ lazy val spireVersion                  = "0.18.0"
 lazy val upickleVersion                = "3.0.0"
 lazy val chocoSolverVersion            = "4.10.10"
 lazy val osLibVersion                  = "0.9.1"
+lazy val scalaYamlVersion              = "0.0.6"
 
 lazy val root = project
   .in(file("."))
@@ -101,7 +102,7 @@ lazy val matlab = (project in file("scala-bridge-matlab"))
   .dependsOn(core)
   .dependsOn(common)
   .settings(
-    name := "idesyde-scala-bridge-matlab",
+    name := "idesyde-scala-bridge-matlab"
   )
 
 lazy val devicetree = (project in file("scala-bridge-device-tree"))
@@ -111,7 +112,8 @@ lazy val devicetree = (project in file("scala-bridge-device-tree"))
     name := "idesyde-scala-bridge-devicetree",
     libraryDependencies ++= Seq(
       "org.scala-lang.modules" %%% "scala-parser-combinators" % scalaParserCombinatorsVersion,
-      "com.lihaoyi"             %% "os-lib"                   % osLibVersion
+      "com.lihaoyi"             %% "os-lib"                   % osLibVersion,
+      "org.virtuslab"           %% "scala-yaml"               % scalaYamlVersion
     )
   )
 
@@ -176,7 +178,8 @@ lazy val tests = (project in file("scala-tests"))
       "io.github.forsyde" % "forsyde-io-java-amalthea" % forsydeIoVersion,
       "io.github.forsyde" % "forsyde-io-java-sdf3"     % forsydeIoVersion,
       "io.github.forsyde" % "forsyde-io-java-graphviz" % forsydeIoVersion,
-      "com.outr"         %% "scribe"                   % scribeVersion
+      "com.outr"         %% "scribe"                   % scribeVersion,
+      "org.virtuslab"    %% "scala-yaml"               % scalaYamlVersion
     ),
     Test / parallelExecution := false
   )

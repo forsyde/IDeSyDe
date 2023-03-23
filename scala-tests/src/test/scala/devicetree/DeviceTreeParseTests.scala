@@ -1,11 +1,15 @@
 package devicetree
 
 import org.scalatest.funsuite.AnyFunSuite
+import org.virtuslab.yaml.*
 import mixins.LoggingMixin
 import mixins.HasShortcuts
 import idesyde.devicetree.identification.CanParseDeviceTree
 import idesyde.devicetree.identification.DeviceTreeDesignModel
 import idesyde.identification.common.models.platform.SharedMemoryMultiCore
+import idesyde.devicetree.OSDescription
+import idesyde.devicetree.identification.OSDescriptionDesignModel
+import idesyde.identification.common.models.platform.PartitionedCoresWithRuntimes
 
 class DeviceTreeParseTests
     extends AnyFunSuite
@@ -13,7 +17,7 @@ class DeviceTreeParseTests
     with HasShortcuts
     with CanParseDeviceTree {
 
-  val inlinedCode = """
+  val deviceTreeinlinedCode = """
     chassis-type = "embedded"
     compatible = "riscv"
     bus-frequency = <50000000>
@@ -38,10 +42,23 @@ class DeviceTreeParseTests
         device-type = "memory"
         reg = <0x0 0x800000>
     }
-    """
+    """.stripMargin
+
+  val osYamlInlined = """
+    oses:
+      os1:
+        name: FreeRTOS
+        host: /cpus/cpu@0
+        affinity:
+          - /cpus/cpu@0
+        policy: 
+          - FP-P
+          - P-FP-P
+    extra: hi
+  """.stripMargin
 
   test("Trying to parse the most basic ones") {
-    val root = parseDeviceTree(inlinedCode)
+    val root = parseDeviceTree(deviceTreeinlinedCode)
     root match
       case Success(result, next) =>
         val model = DeviceTreeDesignModel(List(result))
@@ -52,5 +69,16 @@ class DeviceTreeParseTests
         assert(identified.exists(_.isInstanceOf[SharedMemoryMultiCore]))
       case Failure(msg, next) => println(msg)
       case Error(msg, next)   => println(msg)
+  }
+
+  test("Trying to parse the most basic ones II") {
+    val parsed = osYamlInlined.as[OSDescription]
+    parsed match {
+      case Right(value) =>
+        val model      = OSDescriptionDesignModel(value)
+        val identified = identify(model)
+        assert(identified.exists(_.isInstanceOf[PartitionedCoresWithRuntimes]))
+      case Left(value) => print("failed with " + value.toString())
+    }
   }
 }

@@ -134,7 +134,7 @@ final case class ChocoComDepTasksToMultiCore(
     chocoModel.intVar(
       s"task_map($t)",
       dse.platform.hardware.processingElems.zipWithIndex
-        .filter((m, j) => dse.wcets(i)(j) >= 0)
+        .filter((m, j) => dse.wcets(i)(j) > -1)
         .map((m, j) => j)
         .toArray
     )

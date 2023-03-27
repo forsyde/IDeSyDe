@@ -1,7 +1,7 @@
 package idesyde.identification
 
-import idesyde.identification.DecisionModel
-import idesyde.identification.IdentificationResult
+import idesyde.core.DecisionModel
+import idesyde.core.DesignModel
 
 /** The trait/interface for an identification module defines the identification and integration
   * rules required to power the design space identification process [1].

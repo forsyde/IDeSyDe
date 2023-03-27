@@ -1,6 +1,7 @@
 package idesyde.identification.common
 
-import idesyde.identification.DecisionModel
+import idesyde.core.DecisionModel
+import idesyde.core.headers.LabelledArcWithPorts
 
 /** The [[StandardDecisionModel]] is a simple decision model in which all elements are simply
   * described by a [[String]].
@@ -24,5 +25,6 @@ trait StandardDecisionModel extends DecisionModel {
 
   def elementID(elem: String): String = elem
 
-  def elementRelationID(rel: (String, String)): String = rel.toString()
+  def elementRelationID(rel: (String, String)): LabelledArcWithPorts =
+    LabelledArcWithPorts(rel._1, None, None, rel._2, None)
 }

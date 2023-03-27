@@ -1,8 +1,9 @@
 package idesyde.devicetree.identification
 
 import idesyde.devicetree.OSDescription
-import idesyde.identification.DecisionModel
-import idesyde.identification.DesignModel
+import idesyde.core.DecisionModel
+import idesyde.core.DesignModel
+import idesyde.core.headers.LabelledArcWithPorts
 
 final case class OSDescriptionDesignModel(
     val description: OSDescription
@@ -12,10 +13,10 @@ final case class OSDescriptionDesignModel(
 
   type ElementRelationT = (String, String)
 
-  lazy val elementRelations: collection.Set[(String, String)] =
+  lazy val elementRelations: Set[(String, String)] =
     description.oses.flatMap((k, v) => v.affinity.map(o => k -> o)).toSet
 
-  lazy val elements: collection.Set[String] =
+  lazy val elements: Set[String] =
     description.oses.keySet ++ description.oses.values.map(_.host).toSet ++ description.oses.values
       .flatMap(_.affinity)
       .toSet
@@ -26,7 +27,8 @@ final case class OSDescriptionDesignModel(
     case _ => None
   }
 
-  override def elementRelationID(rel: ElementRelationT): String = rel.toString()
+  override def elementRelationID(rel: ElementRelationT): LabelledArcWithPorts =
+    LabelledArcWithPorts(rel._1, None, None, rel._2, None)
 
   override def elementID(elem: ElementT): String = elem
 

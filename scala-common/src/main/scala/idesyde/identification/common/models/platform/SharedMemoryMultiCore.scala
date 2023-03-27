@@ -5,7 +5,7 @@ import scala.jdk.CollectionConverters.*
 import scala.jdk.StreamConverters.*
 import spire.math.Rational
 import spire.implicits.*
-import idesyde.identification.DecisionModel
+import idesyde.core.DecisionModel
 import idesyde.identification.common.StandardDecisionModel
 import scalax.collection.Graph
 import scalax.collection.GraphPredef._

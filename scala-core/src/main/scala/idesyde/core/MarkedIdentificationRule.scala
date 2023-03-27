@@ -1,4 +1,4 @@
-package idesyde.identification
+package idesyde.core
 
 /** Enumeration to mark additional information in identification rules.
   *

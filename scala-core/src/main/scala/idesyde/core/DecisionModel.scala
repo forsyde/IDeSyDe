@@ -1,4 +1,8 @@
-package idesyde.identification
+package idesyde.core
+
+import idesyde.core.headers.LabelledArcWithPorts
+import idesyde.core.headers.DecisionModelHeader
+import javax.lang.model.element.Element
 
 /** The trait/interface for a decision model in the design space identification methodology, as
   * defined in [1].
@@ -79,10 +83,7 @@ trait DecisionModel {
     * @return
     *   whether this [[DecisionModel]] dominates other or not.
     */
-  def dominates[D <: DecisionModel](other: D): Boolean = {
-    other.coveredElementIDs.subsetOf(coveredElementIDs) &&
-    other.coveredElementRelationIDs.subsetOf(coveredElementRelationIDs)
-  }
+  def dominates(other: DecisionModel): Boolean = header.dominates(other.header)
 
   /** This function connects the inner type [[ElementT]] of this [[DecisionModel]] with potentially
     * any other [[DecisionModel]]. The idea is that the common ground for comparing identifiers is a
@@ -104,7 +105,7 @@ trait DecisionModel {
     * @return
     *   the string representation of a relation in this [[DecisionModel]]
     */
-  def elementRelationID(rel: ElementRelationT): String
+  def elementRelationID(rel: ElementRelationT): LabelledArcWithPorts
 
   /** This function is a simple shorthand for the stringification of all [[coveredElements]].
     *
@@ -119,6 +120,14 @@ trait DecisionModel {
     * @return
     *   all stringified [[coveredElementRelations]]
     */
-  def coveredElementRelationIDs: Set[String] = coveredElementRelations.map(elementRelationID)
+  def coveredElementRelationIDs: Set[LabelledArcWithPorts] =
+    coveredElementRelations.map(elementRelationID)
+
+  def header: DecisionModelHeader = DecisionModelHeader(
+    uniqueIdentifier,
+    coveredElementIDs,
+    Set(),
+    coveredElementRelationIDs
+  )
 
 }

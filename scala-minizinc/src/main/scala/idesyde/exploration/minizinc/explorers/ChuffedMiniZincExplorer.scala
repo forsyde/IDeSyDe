@@ -9,14 +9,17 @@ import java.nio.file.Files
 import java.nio.file.Paths
 import java.nio.file.StandardOpenOption
 import idesyde.exploration.minizinc.explorers.ChuffedMiniZincExplorer
-import idesyde.identification.DecisionModel
+import idesyde.core.DecisionModel
 import idesyde.identification.common.StandardDecisionModel
 
 final case class ChuffedMiniZincExplorer() extends SimpleMiniZincCPExplorer {
 
   override def canExplore(decisionModel: DecisionModel): Boolean = false
 
-  override def explore(decisionModel: DecisionModel, explorationTimeOutInSecs: Long): LazyList[DecisionModel] = LazyList.empty
+  override def explore(
+      decisionModel: DecisionModel,
+      explorationTimeOutInSecs: Long
+  ): LazyList[DecisionModel] = LazyList.empty
 
 }
 

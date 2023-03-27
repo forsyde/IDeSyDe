@@ -1,7 +1,8 @@
 package idesyde.matlab.identification
 
-import idesyde.identification.DesignModel
+import idesyde.core.DesignModel
 import upickle.default.*
+import idesyde.core.headers.LabelledArcWithPorts
 
 /** A design model for a subset of all possible simulink models.
   *
@@ -29,13 +30,14 @@ final case class SimulinkReactiveDesignModel(
   type ElementT         = String
   type ElementRelationT = (String, String, String, String)
 
-  def elementID(elem: String): String                                  = elem
-  def elementRelationID(rel: (String, String, String, String)): String = rel.toString()
-  val elementRelations: collection.Set[(String, String, String, String)] =
+  def elementID(elem: String): String = elem
+  def elementRelationID(rel: (String, String, String, String)): LabelledArcWithPorts =
+    LabelledArcWithPorts(rel._1, Some(rel._2), None, rel._3, Some(rel._4))
+  val elementRelations: Set[(String, String, String, String)] =
     links.map((s, t, sp, tp, _) => (s, t, sp, tp))
-  val elements: collection.Set[String] =
+  val elements: Set[String] =
     (processes ++ delays ++ sources ++ constants ++ sinks).toSet
-  def merge(other: idesyde.identification.DesignModel): Option[idesyde.identification.DesignModel] =
+  def merge(other: idesyde.core.DesignModel): Option[idesyde.core.DesignModel] =
     other match {
       case SimulinkReactiveDesignModel(
             oprocesses,
@@ -73,5 +75,7 @@ final case class SimulinkReactiveDesignModel(
         )
       case _ => None
     }
+
+  def uniqueIdentifier: String = "SimulinkReactiveDesignModel"
 
 }

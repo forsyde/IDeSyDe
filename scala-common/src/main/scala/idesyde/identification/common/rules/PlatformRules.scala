@@ -1,8 +1,7 @@
 package idesyde.identification.common.rules
 
-import idesyde.identification.DesignModel
-import idesyde.identification.DecisionModel
-import idesyde.identification.IdentificationResult
+import idesyde.core.DesignModel
+import idesyde.core.DecisionModel
 import idesyde.identification.common.models.platform.SchedulableTiledMultiCore
 import idesyde.identification.common.models.platform.PartitionedCoresWithRuntimes
 import idesyde.identification.common.models.platform.TiledMultiCore

@@ -6,7 +6,7 @@ import java.util.stream.Collectors
 
 import collection.JavaConverters.*
 import idesyde.exploration.Explorer
-import idesyde.identification.DecisionModel
+import idesyde.core.DecisionModel
 import idesyde.utils.HasUtils
 import idesyde.utils.Logger
 import scala.annotation.targetName

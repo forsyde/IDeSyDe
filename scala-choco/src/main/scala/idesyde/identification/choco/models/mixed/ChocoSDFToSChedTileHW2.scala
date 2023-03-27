@@ -5,8 +5,7 @@ import org.chocosolver.solver.Model
 import forsyde.io.java.core.Vertex
 import org.chocosolver.solver.Solution
 import forsyde.io.java.core.ForSyDeSystemGraph
-import idesyde.identification.DecisionModel
-import idesyde.identification.IdentificationResult
+import idesyde.core.DecisionModel
 import idesyde.identification.choco.models.ManyProcessManyMessageMemoryConstraintsMixin
 import org.chocosolver.solver.variables.BoolVar
 import org.chocosolver.solver.variables.IntVar
@@ -490,7 +489,10 @@ final case class ChocoSDFToSChedTileHW2(
     val full = dse.copy(
       sdfApplications = dse.sdfApplications.copy(minimumActorThrouhgputs =
         sdfAnalysisModule.invThroughputs.zipWithIndex
-          .map((th, i) => dse.sdfApplications.sdfRepetitionVectors(i) * timeMultiplier.toDouble / th.getValue().toDouble)
+          .map((th, i) =>
+            dse.sdfApplications
+              .sdfRepetitionVectors(i) * timeMultiplier.toDouble / th.getValue().toDouble
+          )
           .toVector
       ),
       processMappings = dse.sdfApplications.actorsIdentifiers.zipWithIndex.map((a, i) =>
@@ -562,12 +564,11 @@ final case class ChocoSDFToSChedTileHW2(
     // we also return the SDF-only-view results
     val withHeader = ParametricDecisionModel(
       DecisionModelHeader(
-        body_paths = Seq(),
+        body_paths = Set(),
         category = full.uniqueIdentifier,
-        covered_elements = full.coveredElements.toSeq,
-        covered_relations = full.coveredElementRelations.toSeq.map((s, t) =>
-          LabelledArcWithPorts(s, None, None, t, None)
-        )
+        covered_elements = full.coveredElements,
+        covered_relations =
+          full.coveredElementRelations.map((s, t) => LabelledArcWithPorts(s, None, None, t, None))
       ),
       full
     )

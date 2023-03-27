@@ -36,6 +36,7 @@ sealed trait DeviceTreeComponent {
   def connected: Iterable[DeviceTreeLink]
   def connect(dst: DeviceTreeLink): Unit
   def properties: Iterable[DeviceTreeProperty]
+  def fullId: String = label.getOrElse(nodeName + label.map("@" + _).getOrElse(""))
 
   def allChildren: Iterable[DeviceTreeComponent] = children ++ children.flatMap(_.allChildren)
   def propertiesNames                            = properties.map(_.name)

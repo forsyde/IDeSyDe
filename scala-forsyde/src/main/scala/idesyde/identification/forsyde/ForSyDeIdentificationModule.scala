@@ -12,10 +12,11 @@ import spire.math._
 import idesyde.utils.Logger
 import idesyde.identification.forsyde.rules.PlatformRules
 import idesyde.identification.forsyde.rules.WorkloadRules
-import idesyde.identification.DecisionModel
-import idesyde.identification.DesignModel
+import idesyde.core.DecisionModel
+import idesyde.core.DesignModel
 import idesyde.identification.forsyde.rules.MixedRules
-import idesyde.identification.MarkedIdentificationRule.DesignModelOnlyIdentificationRule
+import idesyde.core.MarkedIdentificationRule.DesignModelOnlyIdentificationRule
+import idesyde.core.MarkedIdentificationRule
 
 class ForSyDeIdentificationModule(using Logger) extends IdentificationModule {
 

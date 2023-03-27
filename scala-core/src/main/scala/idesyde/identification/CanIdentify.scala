@@ -6,9 +6,11 @@ import collection.JavaConverters.*
 import scala.collection.mutable.Buffer
 import idesyde.utils.Logger
 import scala.collection.mutable
-import idesyde.identification.MarkedIdentificationRule.DesignModelOnlyIdentificationRule
 import idesyde.utils.HasUtils
 import scala.annotation.targetName
+import idesyde.core.MarkedIdentificationRule
+import idesyde.core.DecisionModel
+import idesyde.core.DesignModel
 
 trait CanIdentify(using logger: Logger) extends HasUtils {
 
@@ -43,14 +45,15 @@ trait CanIdentify(using logger: Logger) extends HasUtils {
     // use all the design models first and take them away from the set
     identified ++= activeRules.flatMap(r =>
       r match {
-        case DesignModelOnlyIdentificationRule(iRule) => iRule(models, identified)
-        case _                                        => Set.empty
+        case MarkedIdentificationRule.DesignModelOnlyIdentificationRule(iRule) =>
+          iRule(models, identified)
+        case _ => Set.empty
       }
     )
     activeRules = activeRules.filter(r =>
       r match {
-        case r: DesignModelOnlyIdentificationRule => false
-        case _                                    => true
+        case r: MarkedIdentificationRule.DesignModelOnlyIdentificationRule => false
+        case _                                                             => true
       }
     )
     // now proceed normally

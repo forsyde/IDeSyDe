@@ -2,8 +2,8 @@ package idesyde.identification.forsyde.rules
 
 import scala.jdk.CollectionConverters._
 
-import idesyde.identification.DesignModel
-import idesyde.identification.DecisionModel
+import idesyde.core.DesignModel
+import idesyde.core.DecisionModel
 import idesyde.utils.Logger
 import idesyde.identification.common.models.platform.TiledMultiCore
 import forsyde.io.java.typed.viewers.platform.GenericProcessingModule
@@ -33,8 +33,8 @@ object PlatformRules {
       identified: Set[DecisionModel]
   )(using logger: Logger): Set[PartitionedCoresWithRuntimes] = {
     ForSyDeIdentificationUtils.toForSyDe(models) { model =>
-      var processingElements        = Buffer[GenericProcessingModule]()
-      var runtimeElements           = Buffer[AbstractScheduler]()
+      var processingElements = Buffer[GenericProcessingModule]()
+      var runtimeElements    = Buffer[AbstractScheduler]()
       model.vertexSet.stream
         .forEach(v => {
           GenericProcessingModule
@@ -115,7 +115,13 @@ object PlatformRules {
     ) {
       return Set.empty
     }
-    val topology = AsSubgraph(model, (processingElements ++ memoryElements ++ communicationElements).map(_.getViewedVertex()).toSet.asJava)
+    val topology = AsSubgraph(
+      model,
+      (processingElements ++ memoryElements ++ communicationElements)
+        .map(_.getViewedVertex())
+        .toSet
+        .asJava
+    )
     // check if pes and mes connect only to CE etc
     val processingOnlyValidLinks = processingElements.forall(pe => {
       topology
@@ -199,10 +205,12 @@ object PlatformRules {
     // and also the subset of only communication elements
     var interconnectTopologySrcs = Buffer[String]()
     var interconnectTopologyDsts = Buffer[String]()
-    topology.edgeSet().forEach(e => {
-      interconnectTopologySrcs += topology.getEdgeSource(e).getIdentifier()
-      interconnectTopologyDsts += topology.getEdgeTarget(e).getIdentifier()
-    })
+    topology
+      .edgeSet()
+      .forEach(e => {
+        interconnectTopologySrcs += topology.getEdgeSource(e).getIdentifier()
+        interconnectTopologyDsts += topology.getEdgeTarget(e).getIdentifier()
+      })
     val processorsProvisions = processingElements.map(pe => {
       // we do it mutable for simplicity...
       // the performance hit should not be a concern now, for super big instances, this can be reviewed
@@ -230,18 +238,26 @@ object PlatformRules {
         processorsProvisions.toVector,
         processingElements.map(_.getOperatingFrequencyInHertz().toLong).toVector,
         tiledMemories.map(_.getSpaceInBits().toLong).toVector,
-        communicationElements.map(
-          InstrumentedCommunicationModule.safeCast(_).map(_.getMaxConcurrentFlits().toInt).orElse(1)
-        ).toVector,
-        communicationElements.map(
-          InstrumentedCommunicationModule
-            .safeCast(_)
-            .map(ce =>
-              ce.getFlitSizeInBits() * ce.getMaxCyclesPerFlit() * ce.getOperatingFrequencyInHertz()
-            )
-            .map(_.toDouble)
-            .orElse(0.0)
-        ).toVector,
+        communicationElements
+          .map(
+            InstrumentedCommunicationModule
+              .safeCast(_)
+              .map(_.getMaxConcurrentFlits().toInt)
+              .orElse(1)
+          )
+          .toVector,
+        communicationElements
+          .map(
+            InstrumentedCommunicationModule
+              .safeCast(_)
+              .map(ce =>
+                ce.getFlitSizeInBits() * ce.getMaxCyclesPerFlit() * ce
+                  .getOperatingFrequencyInHertz()
+              )
+              .map(_.toDouble)
+              .orElse(0.0)
+          )
+          .toVector,
         preComputedPaths = Map.empty
       )
     )
@@ -268,13 +284,17 @@ object PlatformRules {
             .safeCast(v)
             .ifPresent(p => communicationElements :+= p)
         })
-      if (
-        processingElements.length <= 0
-      ) {
+      if (processingElements.length <= 0) {
         return Set.empty
       }
       // build the topology graph with just the known elements
-      val topology = AsSubgraph(model, (processingElements ++ memoryElements ++ communicationElements).map(_.getViewedVertex()).toSet.asJava)
+      val topology = AsSubgraph(
+        model,
+        (processingElements ++ memoryElements ++ communicationElements)
+          .map(_.getViewedVertex())
+          .toSet
+          .asJava
+      )
       // check if pes and mes connect only to CE etc
       val processingOnlyValidLinks = processingElements.forall(pe => {
         topology
@@ -319,18 +339,23 @@ object PlatformRules {
       }
       // check if all processors are connected to at least one memory element
       val connecivityInspector = ConnectivityInspector(topology)
-      val pesConnected = processingElements.forall(pe => 
-        memoryElements.exists(me => connecivityInspector.pathExists(pe.getViewedVertex(), me.getViewedVertex())))
+      val pesConnected = processingElements.forall(pe =>
+        memoryElements.exists(me =>
+          connecivityInspector.pathExists(pe.getViewedVertex(), me.getViewedVertex())
+        )
+      )
       if (!pesConnected) return Set.empty
       // basically this check to see if there are always neighboring
       // pe, mem and ce
       // and also the subset of only communication elements
       var interconnectTopologySrcs = Buffer[String]()
       var interconnectTopologyDsts = Buffer[String]()
-      topology.edgeSet().forEach(e => {
-        interconnectTopologySrcs += topology.getEdgeSource(e).getIdentifier()
-        interconnectTopologyDsts += topology.getEdgeTarget(e).getIdentifier()
-      })
+      topology
+        .edgeSet()
+        .forEach(e => {
+          interconnectTopologySrcs += topology.getEdgeSource(e).getIdentifier()
+          interconnectTopologyDsts += topology.getEdgeTarget(e).getIdentifier()
+        })
       val processorsProvisions = processingElements.map(pe => {
         // we do it mutable for simplicity...
         // the performance hit should not be a concern now, for super big instances, this can be reviewed
@@ -357,17 +382,27 @@ object PlatformRules {
           processingElements.map(_.getOperatingFrequencyInHertz().toLong).toVector,
           processorsProvisions.toVector,
           memoryElements.map(_.getSpaceInBits().toLong).toVector,
-          communicationElements.map(
-            InstrumentedCommunicationModule.safeCast(_).map(_.getMaxConcurrentFlits().toInt).orElse(1)
-          ).toVector,
-          communicationElements.map(
-            InstrumentedCommunicationModule
-              .safeCast(_)
-              .map(ce =>
-                Rational(ce.getFlitSizeInBits() * ce.getMaxCyclesPerFlit() * ce.getOperatingFrequencyInHertz())
-              )
-              .orElse(Rational.zero)
-          ).toVector,
+          communicationElements
+            .map(
+              InstrumentedCommunicationModule
+                .safeCast(_)
+                .map(_.getMaxConcurrentFlits().toInt)
+                .orElse(1)
+            )
+            .toVector,
+          communicationElements
+            .map(
+              InstrumentedCommunicationModule
+                .safeCast(_)
+                .map(ce =>
+                  Rational(
+                    ce.getFlitSizeInBits() * ce.getMaxCyclesPerFlit() * ce
+                      .getOperatingFrequencyInHertz()
+                  )
+                )
+                .orElse(Rational.zero)
+            )
+            .toVector,
           preComputedPaths = Map.empty
         )
       )

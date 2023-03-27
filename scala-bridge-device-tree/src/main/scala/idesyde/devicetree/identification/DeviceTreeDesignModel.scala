@@ -1,7 +1,8 @@
 package idesyde.devicetree.identification
 
-import idesyde.identification.DesignModel
+import idesyde.core.DesignModel
 import idesyde.devicetree.{DeviceTreeLink, DeviceTreeComponent, RootNode}
+import idesyde.core.headers.LabelledArcWithPorts
 
 final case class DeviceTreeDesignModel(
     val roots: List[RootNode]
@@ -25,13 +26,15 @@ final case class DeviceTreeDesignModel(
     locallyLinked
   }
 
-  override def elementRelationID(rel: (DeviceTreeComponent, DeviceTreeComponent)): String =
-    rel.toString()
+  override def elementRelationID(
+      rel: (DeviceTreeComponent, DeviceTreeComponent)
+  ): LabelledArcWithPorts =
+    LabelledArcWithPorts(rel._1.fullId, None, None, rel._2.fullId, None)
 
-  lazy val elements: collection.Set[DeviceTreeComponent] =
+  lazy val elements: Set[DeviceTreeComponent] =
     crossLinked.flatMap(_.allChildren).toSet
 
-  lazy val elementRelations: collection.Set[(DeviceTreeComponent, DeviceTreeComponent)] =
+  lazy val elementRelations: Set[(DeviceTreeComponent, DeviceTreeComponent)] =
     elements.flatMap(elem => elem.children.map(child => elem -> child)) ++ elements.flatMap(elem =>
       elem.connected.flatMap(link =>
         link match {
@@ -51,4 +54,6 @@ final case class DeviceTreeDesignModel(
   }
 
   override def elementID(elem: DeviceTreeComponent): String = elem.nodeName
+
+  def uniqueIdentifier: String = "DeviceTreeDesignModel"
 }

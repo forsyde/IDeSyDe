@@ -39,10 +39,19 @@ class SimulinkAndDeviceTree
   }
   lazy val identified = for (r <- dt; os <- oses) yield identify(Set(simulinkTest1, r, os))
 
+  lazy val explored = identified match {
+    case Some(value) => getExplorerAndModel(value).flatMap((e, dm) => e.explore(dm))
+    case None        => Set.empty
+  }
+
   test("finds the DSE problem in the combined example") {
     for (iden <- identified) {
       assert(iden.exists(_.isInstanceOf[ChocoComDepTasksToMultiCore]))
     }
+  }
+
+  test("solved the DSE problem in the combined example") {
+    assert(explored.size > 0)
   }
 
 }

@@ -2,24 +2,27 @@ package idesyde.core
 
 import idesyde.core.headers.DecisionModelHeader
 import upickle.default.*
-import idesyde.identification.DecisionModel
+import idesyde.core.DecisionModel
 import idesyde.core.headers.LabelledArcWithPorts
 
-final case class ParametricDecisionModel[B : ReadWriter](val header: DecisionModelHeader, val body: B) extends DecisionModel {
-    
-    type ElementT = String
+final case class ParametricDecisionModel[B: ReadWriter](
+    override val header: DecisionModelHeader,
+    val body: B
+) extends DecisionModel {
 
-    type ElementRelationT = LabelledArcWithPorts
+  type ElementT = String
 
-    lazy val coveredElements = header.covered_elements.toSet
+  type ElementRelationT = LabelledArcWithPorts
 
-    lazy val coveredElementRelations = header.covered_relations.toSet
+  lazy val coveredElements = header.covered_elements.toSet
 
-    def elementID(elem: String): String = elem
+  lazy val coveredElementRelations = header.covered_relations.toSet
 
-    def elementRelationID(rel: LabelledArcWithPorts): String = rel.toString()
+  def elementID(elem: String): String = elem
 
-    def bodyAsText: String = write(body)
+  def elementRelationID(rel: LabelledArcWithPorts): LabelledArcWithPorts = rel
 
-    def uniqueIdentifier: String = header.category
+  def bodyAsText: String = write(body)
+
+  def uniqueIdentifier: String = header.category
 }

@@ -1,9 +1,9 @@
 package idesyde.identification.minizinc
 
-import idesyde.identification.DecisionModel
+import idesyde.core.DecisionModel
 
 import idesyde.identification.IdentificationModule
-import idesyde.identification.DesignModel
+import idesyde.core.DesignModel
 
 class MinizincIdentificationModule extends IdentificationModule {
 

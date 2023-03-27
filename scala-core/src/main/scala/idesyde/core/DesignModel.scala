@@ -1,4 +1,7 @@
-package idesyde.identification
+package idesyde.core
+
+import idesyde.core.headers.DesignModelHeader
+import idesyde.core.headers.LabelledArcWithPorts
 
 /** The trait/interface for a design model in the design space identification methodology, as
   * defined in [1].
@@ -27,17 +30,26 @@ trait DesignModel {
 
   def merge(other: DesignModel): Option[DesignModel]
 
-  def elements: scala.collection.Set[ElementT]
+  def elements: Set[ElementT]
 
-  def elementRelations: scala.collection.Set[ElementRelationT]
+  def elementRelations: Set[ElementRelationT]
 
   def elementID(elem: ElementT): String
 
-  def elementRelationID(rel: ElementRelationT): String
+  def elementRelationID(rel: ElementRelationT): LabelledArcWithPorts
 
-  def elementIDs: scala.collection.Set[String] = elements.map(elementID)
+  def elementIDs: Set[String] = elements.map(elementID)
 
-  def elementRelationIDs: scala.collection.Set[String] = elementRelations.map(elementRelationID)
+  def elementRelationIDs: Set[LabelledArcWithPorts] = elementRelations.map(elementRelationID)
 
   def +(other: DesignModel) = merge(other)
+
+  def uniqueIdentifier: String
+
+  def header: DesignModelHeader = DesignModelHeader(
+    uniqueIdentifier,
+    elementIDs,
+    Set(),
+    elementRelationIDs
+  )
 }

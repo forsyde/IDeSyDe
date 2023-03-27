@@ -3,9 +3,9 @@ package idesyde.utils
 import scala.collection.mutable
 import scala.collection.mutable.Buffer
 import scala.collection.mutable.Queue
-import idesyde.identification.DesignModel
+import idesyde.core.DesignModel
 import scala.quoted.Type
-import idesyde.identification.DecisionModel
+import idesyde.core.DecisionModel
 import scala.quoted.Quotes
 
 trait HasUtils {

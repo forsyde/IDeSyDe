@@ -1,7 +1,7 @@
 package idesyde.matlab.identification
 
-import idesyde.identification.DesignModel
-import idesyde.identification.DecisionModel
+import idesyde.core.DesignModel
+import idesyde.core.DecisionModel
 import idesyde.identification.common.models.CommunicatingAndTriggeredReactiveWorkload
 import idesyde.matlab.utils.MatlabUtils
 import spire.math.Rational

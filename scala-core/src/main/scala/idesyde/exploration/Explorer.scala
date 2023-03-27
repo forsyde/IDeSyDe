@@ -4,7 +4,7 @@ import scala.concurrent.Future
 import scala.concurrent.ExecutionContext
 import java.time.Duration
 import idesyde.exploration.ExplorationCriteria
-import idesyde.identification.DecisionModel
+import idesyde.core.DecisionModel
 
 /** This trait is the root for all possible explorers within IDeSyDe. A real explorer should
   * implement this trait by dispatching the real exploration from 'explore'.
@@ -30,7 +30,10 @@ trait Explorer {
 
   type DesignModel
 
-  def explore(decisionModel: DecisionModel, explorationTimeOutInSecs: Long = 0L): LazyList[DecisionModel]
+  def explore(
+      decisionModel: DecisionModel,
+      explorationTimeOutInSecs: Long = 0L
+  ): LazyList[DecisionModel]
 
   def availableCriterias(decisionModel: DecisionModel): Set[ExplorationCriteria] = Set()
 
@@ -39,16 +42,20 @@ trait Explorer {
   def canExplore(decisionModel: DecisionModel): Boolean
 
   @deprecated("this was substituded by the criteriaValue function")
-  def estimateTimeUntilFeasibility(decisionModel: DecisionModel) = criteriaValue(decisionModel, ExplorationCriteria.TimeUntilFeasibility)
+  def estimateTimeUntilFeasibility(decisionModel: DecisionModel) =
+    criteriaValue(decisionModel, ExplorationCriteria.TimeUntilFeasibility)
 
   @deprecated("this was substituded by the criteriaValue function")
-  def estimateTimeUntilOptimality(decisionModel: DecisionModel) = criteriaValue(decisionModel, ExplorationCriteria.TimeUntilOptimality)
+  def estimateTimeUntilOptimality(decisionModel: DecisionModel) =
+    criteriaValue(decisionModel, ExplorationCriteria.TimeUntilOptimality)
 
   @deprecated("this was substituded by the criteriaValue function")
-  def estimateMemoryUntilFeasibility(decisionModel: DecisionModel) = criteriaValue(decisionModel, ExplorationCriteria.MemoryUntilFeasibility)
+  def estimateMemoryUntilFeasibility(decisionModel: DecisionModel) =
+    criteriaValue(decisionModel, ExplorationCriteria.MemoryUntilFeasibility)
 
   @deprecated("this was substituded by the criteriaValue function")
-  def estimateMemoryUntilOptimality(decisionModel: DecisionModel) = criteriaValue(decisionModel, ExplorationCriteria.MemoryUntilOptimality)
+  def estimateMemoryUntilOptimality(decisionModel: DecisionModel) =
+    criteriaValue(decisionModel, ExplorationCriteria.MemoryUntilOptimality)
 
   // def estimateCriteria[V: PartiallyOrdered](decisionModel: DecisionModel, criteria: ExplorationCriteria): V
 
@@ -61,11 +68,14 @@ trait Explorer {
     val comparisonResult = for (
       thisC <- availableCriterias(m)
       if desiredCriterias.contains(thisC)
-    ) yield if (otherCriterias.contains(thisC)) {
-      if (thisC.moreIsBetter) then criteriaValue(m, thisC) > o.criteriaValue(m, thisC) else criteriaValue(m, thisC) < o.criteriaValue(m, thisC)
-    } else {
-      false
-    }
+    )
+      yield
+        if (otherCriterias.contains(thisC)) {
+          if (thisC.moreIsBetter) then criteriaValue(m, thisC) > o.criteriaValue(m, thisC)
+          else criteriaValue(m, thisC) < o.criteriaValue(m, thisC)
+        } else {
+          false
+        }
     !comparisonResult.contains(false) && canExplore(m) && o.canExplore(m)
 
 }

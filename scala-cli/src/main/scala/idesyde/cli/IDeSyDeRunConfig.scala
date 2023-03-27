@@ -7,7 +7,7 @@ import forsyde.io.java.drivers.ForSyDeModelHandler
 import forsyde.io.java.core.ForSyDeSystemGraph
 import scala.concurrent.ExecutionContext
 import idesyde.identification.forsyde.ForSyDeDesignModel
-import idesyde.identification.DecisionModel
+import idesyde.core.DecisionModel
 import idesyde.utils.SimpleStandardIOLogger
 import idesyde.utils.Logger
 import idesyde.exploration.CanExplore
@@ -31,7 +31,7 @@ case class IDeSyDeRunConfig(
     with CanIdentify {
 
   def run(): Unit =
-    val exploredPath =  Paths.get("run").resolve("explored")
+    val exploredPath = Paths.get("run").resolve("explored")
     Files.createDirectories(exploredPath)
     val modelHandler = ForSyDeModelHandler()
     val validForSyDeInputs =
@@ -81,17 +81,17 @@ case class IDeSyDeRunConfig(
               .explore(decisionModel, explorationTimeOutInSecs)
               .zipWithIndex
               .map((decisionModel, num) => {
-                decisionModel match {
-                  case sdm: ParametricDecisionModel[?] =>
-                    val outPath =
-                      exploredPath.resolve(Paths.get(s"${num}_${decisionModel.uniqueIdentifier}_body.json"))
-                    logger.debug(s"writing pre-integration solution at ${outPath.toString}")
-                    Files.writeString(outPath, sdm.bodyAsText)
-                  case _ =>
-                }
+                val outPath =
+                  exploredPath.resolve(
+                    Paths.get(s"${num}_${decisionModel.uniqueIdentifier}_body.json")
+                  )
+                logger.debug(s"writing pre-integration solution at ${outPath.toString}")
+                Files.writeString(outPath, decisionModel.header.asText)
                 (decisionModel, num)
               })
-              .flatMap((m, res) => integrateDecisionModel(model, m, identificationModules).map((_, res)))
+              .flatMap((m, res) =>
+                integrateDecisionModel(model, m, identificationModules).map((_, res))
+              )
               .flatMap((m, res) =>
                 m match {
                   case fdm: ForSyDeDesignModel => Some((fdm.systemGraph, res))

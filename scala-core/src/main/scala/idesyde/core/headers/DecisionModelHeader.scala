@@ -14,4 +14,8 @@ case class DecisionModelHeader(
 
   def `=?>`(o: DecisionModelHeader): Boolean = dominates(o)
 
+  def asText: String = write(this)
+
+  def asBinary: Array[Byte] = writeBinary(this)
+
 }

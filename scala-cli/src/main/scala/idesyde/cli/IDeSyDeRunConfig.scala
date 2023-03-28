@@ -1,7 +1,5 @@
 package idesyde.cli
 
-import java.nio.file.Path
-import java.nio.file.Paths
 import scala.collection.mutable.Buffer
 import forsyde.io.java.drivers.ForSyDeModelHandler
 import forsyde.io.java.core.ForSyDeSystemGraph
@@ -19,6 +17,8 @@ import idesyde.core.ParametricDecisionModel
 import java.nio.file.Files
 import java.security.MessageDigest
 import java.util.Base64
+import java.nio.file.Path
+import java.nio.file.Paths
 
 case class IDeSyDeRunConfig(
     val identificationModules: Set[IdentificationModule],
@@ -33,17 +33,21 @@ case class IDeSyDeRunConfig(
     with CanIdentify {
 
   def run(): Unit =
-    val sortedPaths = inputModelsPaths.sortBy(_.toString())
+    val sortedPaths   = inputModelsPaths.sortBy(_.toString())
     val messageDigest = MessageDigest.getInstance("SHA-1")
     messageDigest.reset()
     val digested = messageDigest.digest(sortedPaths.flatMap(_.toString().map(_.toByte)).toArray)
     val stringOfDigested = Base64.getEncoder().encodeToString(digested)
-    val runPath = Paths.get("run").resolve(stringOfDigested)
+    val runPath          = os.pwd / "run" / stringOfDigested
     logger.info(s"Run folder: ${runPath.toString()}")
-    val exploredPath =  runPath.resolve("explored")
-    val identifiedPath = runPath.resolve("identified")
-    Files.createDirectories(exploredPath)
-    Files.createDirectories(identifiedPath)
+    val exploredPath       = runPath / "explored"
+    val exploredPathJson   = exploredPath / "json"
+    val identifiedPath     = runPath / "identified"
+    val identifiedPathJson = identifiedPath / "json"
+    os.makeDir.all(exploredPath)
+    os.makeDir.all(exploredPathJson)
+    os.makeDir.all(identifiedPath)
+    os.makeDir.all(identifiedPathJson)
     val modelHandler = ForSyDeModelHandler()
     val validForSyDeInputs =
       inputModelsPaths.map(f => (f, modelHandler.canLoadModel(f)))
@@ -74,10 +78,16 @@ case class IDeSyDeRunConfig(
       if (identified.size > 0)
         // save the identified models
         for (model <- identified) {
-          Files.writeString(identifiedPath.resolve(Paths.get(s"${model.uniqueIdentifier}_header.json")), model.header.asText)
+          Files.writeString(
+            (identifiedPathJson / s"${model.uniqueIdentifier}_header.json").toNIO,
+            model.header.asText
+          )
           model match {
-            case parametric : ParametricDecisionModel[?] => 
-              Files.writeString(identifiedPath.resolve(Paths.get(s"${model.uniqueIdentifier}_body.json")), parametric.bodyAsText)
+            case parametric: ParametricDecisionModel[?] =>
+              Files.writeString(
+                (identifiedPathJson / s"${model.uniqueIdentifier}_body.json").toNIO,
+                parametric.bodyAsText
+              )
             case _ =>
           }
         }
@@ -102,14 +112,16 @@ case class IDeSyDeRunConfig(
               .explore(decisionModel, explorationTimeOutInSecs)
               .zipWithIndex
               .map((decisionModel, num) => {
-                Files.writeString(exploredPath.resolve(
-                    Paths.get(s"${num}_${decisionModel.uniqueIdentifier}_header.json")
-                  ), decisionModel.header.asText)
+                Files.writeString(
+                  (exploredPathJson / s"${num}_${decisionModel.uniqueIdentifier}_header.json").toNIO,
+                  decisionModel.header.asText
+                )
                 decisionModel match {
-                  case parametric : ParametricDecisionModel[?] => 
-                    Files.writeString(exploredPath.resolve(
-                    Paths.get(s"${num}_${decisionModel.uniqueIdentifier}_body.json")
-                  ), parametric.bodyAsText)
+                  case parametric: ParametricDecisionModel[?] =>
+                    Files.writeString(
+                      (exploredPathJson / s"${num}_${decisionModel.uniqueIdentifier}_body.json").toNIO,
+                      parametric.bodyAsText
+                    )
                   case _ =>
                 }
                 (decisionModel, num)

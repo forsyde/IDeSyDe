@@ -16,7 +16,7 @@ final case class HeaderOnlyDesignModel(override val header: DesignModelHeader) e
         HeaderOnlyDesignModel(
           DesignModelHeader(
             header.category,
-            header.model_paths ++ models,
+            header.model_path ++ models,
             header.elements ++ elems.filterNot(e => header.elements.contains(e)),
             header.relations ++ rels.filterNot(e => header.relations.contains(e))
           )

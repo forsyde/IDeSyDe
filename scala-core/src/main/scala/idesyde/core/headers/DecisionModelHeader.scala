@@ -4,7 +4,7 @@ import upickle.default.*
 
 case class DecisionModelHeader(
     val category: String,
-    val body_paths: Set[String],
+    val body_path: Option[String],
     val covered_elements: Set[String],
     val covered_relations: Set[LabelledArcWithPorts]
 ) derives ReadWriter {

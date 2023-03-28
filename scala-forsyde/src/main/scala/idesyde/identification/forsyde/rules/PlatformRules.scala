@@ -26,7 +26,7 @@ import idesyde.identification.forsyde.ForSyDeIdentificationUtils
 import org.jgrapht.graph.AsSubgraph
 import org.jgrapht.alg.connectivity.ConnectivityInspector
 
-object PlatformRules {
+trait PlatformRules {
 
   def identPartitionedCoresWithRuntimes(
       models: Set[DesignModel],

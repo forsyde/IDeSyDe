@@ -26,7 +26,7 @@ import forsyde.io.java.typed.viewers.decision.platform.runtime.AllocatedSharedSl
 import scala.collection.mutable.Buffer
 import forsyde.io.java.typed.viewers.decision.results.AnalyzedActor
 
-object MixedRules {
+trait MixedRules {
 
   def integratePeriodicWorkloadToPartitionedSharedMultiCore(
       designModel: DesignModel,

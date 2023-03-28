@@ -16,7 +16,7 @@ import scala.collection.mutable
 import forsyde.io.java.typed.viewers.impl.InstrumentedExecutable
 import forsyde.io.java.typed.viewers.impl.TokenizableDataBlock
 
-object SDFRules {
+trait SDFRules {
 
   def identSDFApplication(
       models: Set[DesignModel],

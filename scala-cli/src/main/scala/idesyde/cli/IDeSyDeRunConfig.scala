@@ -46,7 +46,7 @@ case class IDeSyDeRunConfig(
     val runPath          = os.pwd / "run" / stringOfDigested
     logger.info(s"Run folder: ${runPath.toString()}")
     val inputsPath         = runPath / "inputs"
-    val inputsPathFiodl         = inputsPath / "fiodl"
+    val inputsPathFiodl    = inputsPath / "fiodl"
     val inputsPathJson     = inputsPath / "json"
     val exploredPath       = runPath / "explored"
     val exploredPathJson   = exploredPath / "json"
@@ -54,9 +54,9 @@ case class IDeSyDeRunConfig(
     val identifiedPathJson = identifiedPath / "json"
     val explorablePath     = runPath / "explorable"
     val explorablePathJson = explorablePath / "json"
-    val outputsPath     = runPath / "outputs"
-    val outputsPathJson = outputsPath / "json"
-    val outputsPathFiodl = outputsPath / "fiodl"
+    val outputsPath        = runPath / "outputs"
+    val outputsPathJson    = outputsPath / "json"
+    val outputsPathFiodl   = outputsPath / "fiodl"
     os.makeDir.all(inputsPath)
     os.makeDir.all(inputsPathJson)
     os.makeDir.all(exploredPath)
@@ -93,7 +93,7 @@ case class IDeSyDeRunConfig(
           )
       )
       // save the design models
-      val header = model.header.copy(model_paths =
+      val header = model.header.copy(model_path =
         validForSyDeInputs.filter((_, b) => b).map((p, _) => p.toString()).toSet
       )
       os.write.over(inputsPathJson / "header_ForSyDeDesignModel.json", header.asText)
@@ -138,12 +138,17 @@ case class IDeSyDeRunConfig(
                   case fdm @ ForSyDeDesignModel(m) =>
                     val oPath = outputsPathFiodl / s"integrated_0_${res}_ForSyDeDesignModel.fiodl"
                     modelHandler.writeModel(model.systemGraph.merge(m), oPath.toNIO)
-                    val oHeader = fdm.header.copy(model_paths = Set(oPath.toString))
-                    os.write.over(outputsPathJson / s"header_0_${res}_ForSyDeDesignModel.json", oHeader.asText)
+                    val oHeader = fdm.header.copy(model_path = Set(oPath.toString))
+                    os.write.over(
+                      outputsPathJson / s"header_0_${res}_ForSyDeDesignModel.json",
+                      oHeader.asText
+                    )
                     if (!outputModelPath.toFile.exists || outputModelPath.toFile.isFile) then
                       logger.debug(s"writing solution at ${outputModelPath.toString}")
                       modelHandler.writeModel(model.systemGraph.merge(m), outputModelPath)
-                    else if (outputModelPath.toFile.exists && outputModelPath.toFile.isDirectory) then
+                    else if (
+                      outputModelPath.toFile.exists && outputModelPath.toFile.isDirectory
+                    ) then
                       val outPath =
                         outputModelPath.resolve(Paths.get(s"solution_${res.toString}.fiodl"))
                       logger.debug(s"writing solution at ${outPath.toString}")
@@ -151,7 +156,7 @@ case class IDeSyDeRunConfig(
                         model.systemGraph.merge(m),
                         outputModelPath.resolve(Paths.get(s"solution_${res.toString}.fiodl"))
                       )
-                  case _                       => 
+                  case _ =>
                 }
                 (m, res)
               )
@@ -177,7 +182,7 @@ case class IDeSyDeRunConfig(
     m match {
       case complete: CompleteDecisionModel =>
         val bodyPath    = p / s"body_0_${num_prefix}_${complete.uniqueIdentifier}.json"
-        val headerExtra = m.header.copy(body_paths = Set(bodyPath.toString))
+        val headerExtra = m.header.copy(body_path = Some(bodyPath.toString))
         os.write.over(bodyPath, complete.bodyAsText)
         os.write.over(
           p / s"header_0_${num_prefix}_${complete.uniqueIdentifier}.json",

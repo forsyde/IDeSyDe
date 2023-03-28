@@ -6,7 +6,7 @@ ThisBuild / versionScheme := Some("early-semver")
 ThisBuild / publishMavenStyle := true
 ThisBuild / publishTo := Some(Opts.resolver.sonatypeStaging)
 
-lazy val forsydeIoVersion = "0.6.3"
+lazy val forsydeIoVersion = "0.6.4"
 lazy val jgraphtVersion   = "1.5.1"
 lazy val scribeVersion    = "3.10.2"
 // lazy val breezeVersion                 = "2.1.0"
@@ -17,6 +17,7 @@ lazy val upickleVersion                = "3.0.0"
 lazy val chocoSolverVersion            = "4.10.10"
 lazy val osLibVersion                  = "0.9.1"
 lazy val scalaYamlVersion              = "0.0.6"
+lazy val scoptVersion                  = "4.1.0"
 
 lazy val root = project
   .in(file("."))
@@ -45,7 +46,8 @@ lazy val blueprints = (project in file("scala-blueprints"))
   .settings(
     name := "idesyde-scala-blueprints",
     libraryDependencies ++= Seq(
-      "com.lihaoyi"             %% "os-lib"                   % osLibVersion,
+      "com.lihaoyi"      %% "os-lib" % osLibVersion,
+      "com.github.scopt" %% "scopt"  % scoptVersion
     ),
     licenses := Seq(
       "MIT"  -> url("https://opensource.org/license/mit/"),
@@ -70,11 +72,15 @@ lazy val common = (project in file("scala-common"))
 lazy val forsyde = (project in file("scala-forsyde"))
   .dependsOn(core)
   .dependsOn(common)
+  .dependsOn(blueprints)
+  .enablePlugins(UniversalPlugin, JavaAppPackaging, JlinkPlugin)
+  .enablePlugins(GraalVMNativeImagePlugin)
   .settings(
     name := "idesyde-scala-forsydeio",
     libraryDependencies ++= Seq(
       "io.github.forsyde" % "forsyde-io-java-core" % forsydeIoVersion
     ),
+    Compile / mainClass := Some("idesyde.forsyde.StandaloneForSyDeIdentificationModule"),
     licenses := Seq(
       "MIT"  -> url("https://opensource.org/license/mit/"),
       "APL2" -> url("https://www.apache.org/licenses/LICENSE-2.0"),
@@ -154,7 +160,7 @@ lazy val cli = (project in file("scala-cli"))
     ),
     Compile / mainClass := Some("idesyde.IDeSyDeStandalone"),
     libraryDependencies ++= Seq(
-      "com.github.scopt" %% "scopt"  % "4.0.1",
+      "com.github.scopt" %% "scopt"  % scoptVersion,
       "com.lihaoyi"      %% "os-lib" % osLibVersion
       // "com.outr"         %% "scribe"      % scribeVersion,
       // "com.outr"         %% "scribe-file" % scribeVersion

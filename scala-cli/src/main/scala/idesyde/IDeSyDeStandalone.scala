@@ -2,7 +2,6 @@ package idesyde
 
 import idesyde.cli.IDeSyDeCLIParser
 import idesyde.cli.IDeSyDeRunConfig
-import forsyde.io.java.core.ForSyDeSystemGraph
 
 import scala.concurrent.ExecutionContext
 
@@ -24,7 +23,7 @@ object IDeSyDeStandalone {
 
   val additionalLogFiles: mutable.Buffer[File] = Buffer[File]()
   var loggingLevel                             = "INFO"
-  val logger0: Logger                           = SimpleStandardIOLogger(loggingLevel)
+  val logger0: Logger                          = SimpleStandardIOLogger(loggingLevel)
   given Logger                                 = logger0
 
   def main(args: Array[String]): Unit =
@@ -42,8 +41,8 @@ object IDeSyDeStandalone {
       )
     ) match {
       case Some(runConfig) =>
-        val logger = logger0.setLoggingLevel(loggingLevel)
-        given Logger                                 = logger
+        val logger   = logger0.setLoggingLevel(loggingLevel)
+        given Logger = logger
         logger.info(s"logging levels set to ${loggingLevel}.")
         runConfig.run()
       case _ =>

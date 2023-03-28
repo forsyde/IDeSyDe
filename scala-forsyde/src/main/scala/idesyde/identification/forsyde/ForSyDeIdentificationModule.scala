@@ -14,24 +14,28 @@ import idesyde.identification.forsyde.rules.PlatformRules
 import idesyde.identification.forsyde.rules.WorkloadRules
 import idesyde.core.DecisionModel
 import idesyde.core.DesignModel
-import idesyde.identification.forsyde.rules.MixedRules
-import idesyde.core.MarkedIdentificationRule.DesignModelOnlyIdentificationRule
 import idesyde.core.MarkedIdentificationRule
+import idesyde.identification.forsyde.rules.MixedRules
 
-class ForSyDeIdentificationModule(using Logger) extends IdentificationModule {
+class ForSyDeIdentificationModule(using Logger)
+    extends IdentificationModule
+    with MixedRules
+    with SDFRules
+    with PlatformRules
+    with WorkloadRules {
 
   val identificationRules = Set(
-    DesignModelOnlyIdentificationRule(SDFRules.identSDFApplication),
-    DesignModelOnlyIdentificationRule(PlatformRules.identTiledMultiCore),
-    PlatformRules.identPartitionedCoresWithRuntimes,
-    DesignModelOnlyIdentificationRule(WorkloadRules.identPeriodicDependentWorkload),
-    DesignModelOnlyIdentificationRule(PlatformRules.identSharedMemoryMultiCore),
-    MixedRules.identPeriodicWorkloadToPartitionedSharedMultiCoreWithUtilization
+    MarkedIdentificationRule.DesignModelOnlyIdentificationRule(identSDFApplication),
+    MarkedIdentificationRule.DesignModelOnlyIdentificationRule(identTiledMultiCore),
+    identPartitionedCoresWithRuntimes,
+    MarkedIdentificationRule.DesignModelOnlyIdentificationRule(identPeriodicDependentWorkload),
+    MarkedIdentificationRule.DesignModelOnlyIdentificationRule(identSharedMemoryMultiCore),
+    identPeriodicWorkloadToPartitionedSharedMultiCoreWithUtilization
   )
 
   val integrationRules = Set(
-    MixedRules.integratePeriodicWorkloadToPartitionedSharedMultiCore,
-    MixedRules.integrateSDFToTiledMultiCore
+    integratePeriodicWorkloadToPartitionedSharedMultiCore,
+    integrateSDFToTiledMultiCore
   )
 
 }

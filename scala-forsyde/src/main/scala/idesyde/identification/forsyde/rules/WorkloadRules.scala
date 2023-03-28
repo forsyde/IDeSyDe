@@ -27,7 +27,7 @@ import forsyde.io.java.core.ForSyDeSystemGraph
 import forsyde.io.java.typed.viewers.execution.LoopingTask
 import java.util.stream.Collectors
 
-object WorkloadRules {
+trait WorkloadRules {
 
   def identPeriodicDependentWorkload(
       models: Set[DesignModel],

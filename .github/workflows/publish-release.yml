@@ -42,6 +42,7 @@ jobs:
     - name: Set up JDK 
       uses: olafurpg/setup-scala@v11
       with:
+        java-version: "amazon-corretto@1.11.0-11.9.1"
     - name: Build assembly with sbt
       run: |
         cd ${{ github.workspace }}

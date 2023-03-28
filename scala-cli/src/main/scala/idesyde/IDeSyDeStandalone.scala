@@ -24,8 +24,8 @@ object IDeSyDeStandalone {
 
   val additionalLogFiles: mutable.Buffer[File] = Buffer[File]()
   var loggingLevel                             = "INFO"
-  var logger: Logger                           = SimpleStandardIOLogger(loggingLevel)
-  given Logger                                 = logger
+  val logger0: Logger                           = SimpleStandardIOLogger(loggingLevel)
+  given Logger                                 = logger0
 
   def main(args: Array[String]): Unit =
     // System.exit(CommandLine(IDeSyDeCLI()).execute(args *))
@@ -42,7 +42,8 @@ object IDeSyDeStandalone {
       )
     ) match {
       case Some(runConfig) =>
-        logger = logger.setLoggingLevel(loggingLevel)
+        val logger = logger0.setLoggingLevel(loggingLevel)
+        given Logger                                 = logger
         logger.info(s"logging levels set to ${loggingLevel}.")
         runConfig.run()
       case _ =>

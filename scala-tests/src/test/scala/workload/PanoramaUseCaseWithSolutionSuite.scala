@@ -21,7 +21,7 @@ import idesyde.utils.SimpleStandardIOLogger
 import idesyde.identification.CanIdentify
 import idesyde.exploration.CanExplore
 import idesyde.core.DecisionModel
-import idesyde.exploration.Explorer
+import idesyde.core.Explorer
 import mixins.HasShortcuts
 
 class PanoramaUseCaseWithSolutionSuite extends AnyFunSuite with LoggingMixin with HasShortcuts {

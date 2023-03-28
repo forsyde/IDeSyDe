@@ -569,18 +569,18 @@ final case class ChocoSDFToSChedTileHW2(
       )
     )
     // we also return the SDF-only-view results
-    val withHeader = ParametricDecisionModel(
-      DecisionModelHeader(
-        body_paths = Set(),
-        category = full.uniqueIdentifier,
-        covered_elements = full.coveredElements,
-        covered_relations =
-          full.coveredElementRelations.map((s, t) => LabelledArcWithPorts(s, None, None, t, None))
-      ),
-      full
-    )
+    // val withHeader = ParametricDecisionModel(
+    //   DecisionModelHeader(
+    //     body_paths = Set(),
+    //     category = full.uniqueIdentifier,
+    //     covered_elements = full.coveredElements,
+    //     covered_relations =
+    //       full.coveredElementRelations.map((s, t) => LabelledArcWithPorts(s, None, None, t, None))
+    //   ),
+    //   full
+    // )
     // return both
-    Set(full, withHeader)
+    Set(full)
   }
 
   private def recomputeTh(

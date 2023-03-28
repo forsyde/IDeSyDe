@@ -1,10 +1,11 @@
-package idesyde.exploration
+package idesyde.core
 
 import scala.concurrent.Future
 import scala.concurrent.ExecutionContext
 import java.time.Duration
 import idesyde.exploration.ExplorationCriteria
 import idesyde.core.DecisionModel
+import idesyde.core.headers.ExplorerHeader
 
 /** This trait is the root for all possible explorers within IDeSyDe. A real explorer should
   * implement this trait by dispatching the real exploration from 'explore'.
@@ -77,5 +78,9 @@ trait Explorer {
           false
         }
     !comparisonResult.contains(false) && canExplore(m) && o.canExplore(m)
+
+  def uniqueIdentifier: String
+
+  def header: ExplorerHeader = ExplorerHeader(uniqueIdentifier, ":embedded:")
 
 }

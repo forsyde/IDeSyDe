@@ -21,6 +21,8 @@ final case class ChuffedMiniZincExplorer() extends SimpleMiniZincCPExplorer {
       explorationTimeOutInSecs: Long
   ): LazyList[DecisionModel] = LazyList.empty
 
+  def uniqueIdentifier: String = "ChuffedMiniZincExplorer"
+
 }
 
 end ChuffedMiniZincExplorer

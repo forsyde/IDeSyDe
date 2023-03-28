@@ -8,7 +8,7 @@ import idesyde.core.headers.LabelledArcWithPorts
 final case class ParametricDecisionModel[B: ReadWriter](
     override val header: DecisionModelHeader,
     val body: B
-) extends DecisionModel {
+) extends CompleteDecisionModel {
 
   type ElementT = String
 

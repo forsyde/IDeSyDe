@@ -1,6 +1,6 @@
 package idesyde.exploration.minizinc.interfaces
 
-import idesyde.exploration.Explorer
+import idesyde.core.Explorer
 import scala.concurrent.ExecutionContext
 import scala.concurrent.Future
 

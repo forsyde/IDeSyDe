@@ -19,6 +19,10 @@ import java.security.MessageDigest
 import java.util.Base64
 import java.nio.file.Path
 import java.nio.file.Paths
+import idesyde.core.CompleteDecisionModel
+import idesyde.core.ExplorationCombination
+import idesyde.core.headers.DecisionModelHeader
+import idesyde.core.headers.ExplorationCombinationHeader
 
 case class IDeSyDeRunConfig(
     val identificationModules: Set[IdentificationModule],
@@ -44,10 +48,14 @@ case class IDeSyDeRunConfig(
     val exploredPathJson   = exploredPath / "json"
     val identifiedPath     = runPath / "identified"
     val identifiedPathJson = identifiedPath / "json"
+    val explorablePath     = runPath / "explorable"
+    val explorablePathJson = explorablePath / "json"
     os.makeDir.all(exploredPath)
     os.makeDir.all(exploredPathJson)
     os.makeDir.all(identifiedPath)
     os.makeDir.all(identifiedPathJson)
+    os.makeDir.all(explorablePath)
+    os.makeDir.all(explorablePathJson)
     val modelHandler = ForSyDeModelHandler()
     val validForSyDeInputs =
       inputModelsPaths.map(f => (f, modelHandler.canLoadModel(f)))
@@ -77,53 +85,33 @@ case class IDeSyDeRunConfig(
       logger.info(s"Identification finished with ${identified.size} decision model(s).")
       if (identified.size > 0)
         // save the identified models
-        for (model <- identified) {
-          Files.writeString(
-            (identifiedPathJson / s"${model.uniqueIdentifier}_header.json").toNIO,
-            model.header.asText
-          )
-          model match {
-            case parametric: ParametricDecisionModel[?] =>
-              Files.writeString(
-                (identifiedPathJson / s"${model.uniqueIdentifier}_body.json").toNIO,
-                parametric.bodyAsText
-              )
-            case _ =>
-          }
+        for ((dm, i) <- identified.zipWithIndex) {
+          saveDecisionModel(identifiedPathJson, dm, i)
         }
         // now continue with flow
         val chosen = chooseExplorersAndModels(identified, explorationModules)
         val chosenFiltered =
           if (allowedDecisionModels.size > 0) then
-            chosen.filter((exp, dm) => allowedDecisionModels.contains(dm.uniqueIdentifier))
+            chosen.filter(combo =>
+              allowedDecisionModels.contains(combo.decisionModel.uniqueIdentifier)
+            )
           else chosen
         logger.info(
           s"Total of ${chosenFiltered.size} combo of decision model(s) and explorer(s) chosen."
         )
-        // identified.foreach(m => m match {
-        //   case mzn: MiniZincForSyDeDecisionModel => scribe.debug(s"mzn model: ${mzn.mznInputs.toString}")
-        // })
+        for ((combo, i) <- chosen.zipWithIndex) {
+          saveCombo(explorablePathJson, combo, i)
+        }
         if (chosenFiltered.size > 1) {
           logger.warn(s"Taking a random decision model and explorer combo.")
         }
         val numSols = chosenFiltered.headOption
-          .map((explorer, decisionModel) =>
-            explorer
-              .explore(decisionModel, explorationTimeOutInSecs)
+          .map(combo =>
+            combo.explorer
+              .explore(combo.decisionModel, explorationTimeOutInSecs)
               .zipWithIndex
               .map((decisionModel, num) => {
-                Files.writeString(
-                  (exploredPathJson / s"${num}_${decisionModel.uniqueIdentifier}_header.json").toNIO,
-                  decisionModel.header.asText
-                )
-                decisionModel match {
-                  case parametric: ParametricDecisionModel[?] =>
-                    Files.writeString(
-                      (exploredPathJson / s"${num}_${decisionModel.uniqueIdentifier}_body.json").toNIO,
-                      parametric.bodyAsText
-                    )
-                  case _ =>
-                }
+                saveDecisionModel(exploredPathJson, decisionModel, num)
                 (decisionModel, num)
               })
               .flatMap((m, res) =>
@@ -161,5 +149,32 @@ case class IDeSyDeRunConfig(
           logger.info(s"Finished exploration with no solution")
       //scribe.info("Finished successfully")
     }
+
+  protected def saveDecisionModel(p: os.Path, m: DecisionModel, num_prefix: Int = 0): DecisionModelHeader = {
+    m match {
+      case complete: CompleteDecisionModel =>
+        val bodyPath = p / s"${num_prefix}_${complete.uniqueIdentifier}_body.json"
+        val headerExtra = m.header.copy(body_paths = Set(bodyPath.toString))
+        os.write.over(bodyPath, complete.bodyAsText)
+        os.write.over(p / s"${num_prefix}_${complete.uniqueIdentifier}_header.json", headerExtra.asText)
+        headerExtra
+      case _ =>
+        os.write.over(p / s"${num_prefix}_${m.uniqueIdentifier}_header.json", m.header.asText)
+        m.header
+    }
+  }
+
+  protected def saveCombo(p: os.Path, m: ExplorationCombination, num_prefix: Int = 0): ExplorationCombinationHeader = {
+    m.decisionModel match {
+      case complete: CompleteDecisionModel =>
+        val savedDecisionModelHeader = saveDecisionModel(p, complete, num_prefix)
+        val comboExtraHeader = m.header.copy(decision_model_header = savedDecisionModelHeader)
+        os.write.over(p / s"${num_prefix}_${m.explorer.uniqueIdentifier}_${m.decisionModel.uniqueIdentifier}_combination_header.json", comboExtraHeader.asText)
+        comboExtraHeader
+      case _ =>
+        os.write.over(p / s"${num_prefix}_${m.explorer.uniqueIdentifier}_${m.decisionModel.uniqueIdentifier}_combination_header.json", m.header.asText)
+        m.header
+    }
+  }
 
 }

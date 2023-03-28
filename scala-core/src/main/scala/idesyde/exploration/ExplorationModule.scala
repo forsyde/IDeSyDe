@@ -1,6 +1,6 @@
 package idesyde.exploration
 
-import idesyde.exploration.Explorer
+import idesyde.core.Explorer
 
 trait ExplorationModule {
   def explorers: Set[Explorer]

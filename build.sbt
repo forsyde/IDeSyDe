@@ -17,7 +17,6 @@ lazy val upickleVersion                = "3.0.0"
 lazy val chocoSolverVersion            = "4.10.10"
 lazy val osLibVersion                  = "0.9.1"
 lazy val scalaYamlVersion              = "0.0.6"
-lazy val flatBufferVersion             = "23.3.3"
 
 lazy val root = project
   .in(file("."))

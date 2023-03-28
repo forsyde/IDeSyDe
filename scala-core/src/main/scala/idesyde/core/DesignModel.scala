@@ -48,8 +48,8 @@ trait DesignModel {
 
   def header: DesignModelHeader = DesignModelHeader(
     uniqueIdentifier,
-    elementIDs,
     Set(),
+    elementIDs,
     elementRelationIDs
   )
 }

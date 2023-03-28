@@ -9,7 +9,7 @@ import idesyde.identification.choco.ChocoIdentificationModule
 import idesyde.identification.forsyde.ForSyDeIdentificationModule
 import idesyde.identification.minizinc.MinizincIdentificationModule
 import idesyde.exploration.ChocoExplorationModule
-import idesyde.exploration.Explorer
+import idesyde.core.Explorer
 import idesyde.utils.Logger
 import idesyde.core.DesignModel
 import idesyde.devicetree.identification.DeviceTreeIdentificationModule
@@ -32,7 +32,7 @@ trait HasShortcuts(using Logger) extends CanExplore with CanIdentify {
   )
 
   def getExplorerAndModel(identified: Set[DecisionModel]): Set[(Explorer, DecisionModel)] =
-    chooseExplorersAndModels(identified, Set(ChocoExplorationModule()))
+    chooseExplorersAndModels(identified, Set(ChocoExplorationModule())).map(combo => (combo.explorer, combo.decisionModel))
 
   def integrate(model: DesignModel, solution: DecisionModel): Set[DesignModel] =
     integrateDecisionModel(

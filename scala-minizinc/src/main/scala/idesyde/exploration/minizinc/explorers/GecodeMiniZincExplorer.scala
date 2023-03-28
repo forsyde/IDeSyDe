@@ -22,9 +22,7 @@ final case class GecodeMiniZincExplorer() extends SimpleMiniZincCPExplorer {
       explorationTimeOutInSecs: Long
   ): LazyList[DecisionModel] = LazyList.empty
 
-  // def exploreForSyDe(decisionModel: StandardDecisionModel, explorationTimeOutInSecs: Long = 0L) =
-  //   decisionModel match
-  //     case _ => LazyList.empty
+  def uniqueIdentifier: String = "GecodeMiniZincExplorer"
 }
 
 object GecodeMiniZincExplorer:

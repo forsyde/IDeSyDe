@@ -125,8 +125,8 @@ trait DecisionModel {
 
   def header: DecisionModelHeader = DecisionModelHeader(
     uniqueIdentifier,
-    coveredElementIDs,
     Set(),
+    coveredElementIDs,
     coveredElementRelationIDs
   )
 

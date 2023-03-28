@@ -7,6 +7,7 @@ import idesyde.identification.common.models.platform.SchedulableTiledMultiCore
 import idesyde.identification.common.models.sdf.SDFApplication
 import idesyde.identification.common.models.workload.InstrumentedWorkloadMixin
 import idesyde.identification.models.mixed.WCETComputationMixin
+import idesyde.core.CompleteDecisionModel
 
 final case class SDFToTiledMultiCore(
     val sdfApplications: SDFApplication,
@@ -17,6 +18,7 @@ final case class SDFToTiledMultiCore(
     val messageSlotAllocations: Vector[Map[String, Vector[Boolean]]],
     val actorThroughputs: Vector[Double]
 ) extends StandardDecisionModel
+    with CompleteDecisionModel
     with WCETComputationMixin(sdfApplications, platform) derives ReadWriter {
 
   val coveredElements = sdfApplications.coveredElements ++ platform.coveredElements
@@ -40,6 +42,10 @@ final case class SDFToTiledMultiCore(
   val processSizes: Vector[Long] = sdfApplications.processSizes
 
   val wcets = computeWcets
+
+  val bodyAsBinary: Array[Byte] = writeBinary(this)
+
+  val bodyAsText: String = write(this)
 
   val uniqueIdentifier: String = "SDFToTiledMultiCore"
 }

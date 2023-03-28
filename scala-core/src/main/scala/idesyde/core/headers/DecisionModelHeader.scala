@@ -12,8 +12,6 @@ case class DecisionModelHeader(
   def dominates(o: DecisionModelHeader): Boolean = category == o.category &&
     o.covered_elements.subsetOf(covered_elements) && o.covered_relations.subsetOf(covered_relations)
 
-  def `=?>`(o: DecisionModelHeader): Boolean = dominates(o)
-
   def asText: String = write(this)
 
   def asBinary: Array[Byte] = writeBinary(this)

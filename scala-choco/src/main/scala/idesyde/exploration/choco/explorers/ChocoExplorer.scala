@@ -4,7 +4,7 @@ import idesyde.identification.choco.ChocoDecisionModel
 import java.time.Duration
 import forsyde.io.java.core.ForSyDeSystemGraph
 import scala.concurrent.ExecutionContext
-import idesyde.exploration.Explorer
+import idesyde.core.Explorer
 
 import scala.jdk.OptionConverters.*
 import scala.jdk.CollectionConverters.*
@@ -166,5 +166,7 @@ class ChocoExplorer(using logger: Logger) extends Explorer:
           solvable.rebuildFromChocoOutput(paretoSolution)
         })
     case _ => LazyList.empty
+
+  def uniqueIdentifier: String = "ChocoExplorer"
 
 end ChocoExplorer

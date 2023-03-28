@@ -39,6 +39,7 @@ case class IDeSyDeRunConfig(
     val digested = messageDigest.digest(sortedPaths.flatMap(_.toString().map(_.toByte)).toArray)
     val stringOfDigested = Base64.getEncoder().encodeToString(digested)
     val runPath = Paths.get("run").resolve(stringOfDigested)
+    logger.info(s"Run folder: ${runPath.toString()}")
     val exploredPath =  runPath.resolve("explored")
     val identifiedPath = runPath.resolve("identified")
     Files.createDirectories(exploredPath)
@@ -73,11 +74,10 @@ case class IDeSyDeRunConfig(
       if (identified.size > 0)
         // save the identified models
         for (model <- identified) {
+          Files.writeString(identifiedPath.resolve(Paths.get(s"${model.uniqueIdentifier}_header.json")), model.header.asText)
           model match {
-            case decisionModel @ ParametricDecisionModel(header, body) => 
-              val outPath =exploredPath.resolve(Paths.get(s"${decisionModel.uniqueIdentifier}_body.json"))
-              logger.debug(s"writing identified decision model at ${outPath.toString}")
-              Files.writeString(outPath, decisionModel.bodyAsText)
+            case parametric : ParametricDecisionModel[?] => 
+              Files.writeString(identifiedPath.resolve(Paths.get(s"${model.uniqueIdentifier}_body.json")), parametric.bodyAsText)
             case _ =>
           }
         }
@@ -102,12 +102,16 @@ case class IDeSyDeRunConfig(
               .explore(decisionModel, explorationTimeOutInSecs)
               .zipWithIndex
               .map((decisionModel, num) => {
-                val outPath =
-                  exploredPath.resolve(
+                Files.writeString(exploredPath.resolve(
+                    Paths.get(s"${num}_${decisionModel.uniqueIdentifier}_header.json")
+                  ), decisionModel.header.asText)
+                decisionModel match {
+                  case parametric : ParametricDecisionModel[?] => 
+                    Files.writeString(exploredPath.resolve(
                     Paths.get(s"${num}_${decisionModel.uniqueIdentifier}_body.json")
-                  )
-                logger.debug(s"writing pre-integration solution at ${outPath.toString}")
-                Files.writeString(outPath, decisionModel.header.asText)
+                  ), parametric.bodyAsText)
+                  case _ =>
+                }
                 (decisionModel, num)
               })
               .flatMap((m, res) =>

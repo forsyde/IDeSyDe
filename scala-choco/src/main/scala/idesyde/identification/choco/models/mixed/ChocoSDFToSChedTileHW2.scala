@@ -37,6 +37,7 @@ import idesyde.core.headers.LabelledArcWithPorts
 import org.jgrapht.graph.SimpleDirectedGraph
 import org.jgrapht.graph.DefaultEdge
 import org.jgrapht.alg.cycle.JohnsonSimpleCycles
+import org.jgrapht.graph.DefaultDirectedGraph
 
 final class ConMonitorObj2(val model: ChocoSDFToSChedTileHW2) extends IMonitorContradiction {
 
@@ -584,7 +585,6 @@ final case class ChocoSDFToSChedTileHW2(
       jobWeights: Vector[Double],
       edgeWeigths: Vector[Vector[Double]]
   ): Vector[Double] = {
-    val g = SimpleDirectedGraph.createBuilder[(String, Int), DefaultEdge](classOf[DefaultEdge])    
     val newEdges = for (
       (i, idx) <- sdfAnalysisModule.jobsAndActors.zipWithIndex;
       (j, jdx) <- sdfAnalysisModule.jobsAndActors.zipWithIndex; if i != j;
@@ -596,29 +596,35 @@ final case class ChocoSDFToSChedTileHW2(
         .getValue() || (
           sdfAnalysisModule.jobOrder(idx).getValue() == sdfAnalysisModule.mappedJobsPerElement(sdfAnalysisModule.jobMapping(idx).getValue()).getValue() - 1
           && sdfAnalysisModule.jobOrder(jdx).getValue() == 0
-        )
+          )
     ) yield DiEdge(i, j)
     val impl = dse.sdfApplications.firingsPrecedenceGraphWithCycles ++ newEdges
-    for (e <- impl.edges; src = e.source.value; dst = e.target.value) {
+    var ths  = Buffer.fill(dse.sdfApplications.actorsIdentifiers.size)(Double.PositiveInfinity)
+    val g = DefaultDirectedGraph.createBuilder[Int, DefaultEdge](classOf[DefaultEdge])    
+    for (e <- impl.edges; src = sdfAnalysisModule.jobsAndActors.indexOf(e.source.value); dst = sdfAnalysisModule.jobsAndActors.indexOf(e.target.value)) {
       g.addEdge(src, dst)
     }
-    var ths  = Buffer.fill(dse.sdfApplications.actorsIdentifiers.size)(Double.PositiveInfinity)
-    val cycles = JohnsonSimpleCycles(g.buildAsUnmodifiable()).findSimpleCycles()
-    for (comp <- impl.strongComponentTraverser()) {
-      val total = comp.edges
-        .map(e =>
-          sdfAnalysisModule.jobsAndActors.indexOf(e.source) -> sdfAnalysisModule.jobsAndActors
-            .indexOf(e.target)
-        )
-        .map((s, t) => jobWeights(s) + edgeWeigths(s)(t))
-        .sum
-      println(comp.nodes.toString)
-      println(total)
-      for (
-        n <- comp.nodes; (a, _) = n.value; adx = dse.sdfApplications.actorsIdentifiers.indexOf(a);
-        if ths(adx) > total
-      ) ths(adx) = total
-    }
+    println("get cycles")
+    val ig = g.buildAsUnmodifiable()
+    println(ig.toString())
+    val cycles = JohnsonSimpleCycles(ig).findSimpleCycles()
+    println("cycles got")
+    cycles.forEach(cycle => {
+      var total = 0.0
+      for (i <- 0 until cycle.size() - 1) {
+          val s = cycle.get(i)
+          val t = cycle.get(i+1)
+          total += jobWeights(s) + edgeWeigths(s)(t)
+      }
+      val last = cycle.get(cycle.size() - 1)
+      val first = cycle.get(0)
+      total += jobWeights(last) + edgeWeigths(last)(first)
+      cycle.forEach(job => {
+        val (a, _) = sdfAnalysisModule.jobsAndActors(job)
+        val adx = dse.sdfApplications.actorsIdentifiers.indexOf(a)
+        if (ths(adx) > total) ths(adx) = total  
+      })
+    })
     // now equalize throughputs in the same disjoint component
     val minPerDisjoint = dse.sdfApplications.sdfDisjointComponents.map(comp => comp.map(dse.sdfApplications.actorsIdentifiers.indexOf).map(ths).max)
     for ((comp, i) <- dse.sdfApplications.sdfDisjointComponents.zipWithIndex; ax <- comp.map(dse.sdfApplications.actorsIdentifiers.indexOf)) {

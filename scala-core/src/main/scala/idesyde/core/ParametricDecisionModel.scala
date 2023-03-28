@@ -22,11 +22,13 @@ final case class ParametricDecisionModel[B: ReadWriter](
 
   def elementRelationID(rel: LabelledArcWithPorts): LabelledArcWithPorts = rel
 
-    def bodyAsBinary: Array[Byte] = writeBinary(body)
+  def bodyAsText: String = write(body)
 
-    def headerAsText: String = write(header)
+  def bodyAsBinary: Array[Byte] = writeBinary(body)
 
-    def headerAsBinary: Array[Byte] = writeBinary(header)
+  def headerAsText: String = write(header)
 
-    def uniqueIdentifier: String = header.category
+  def headerAsBinary: Array[Byte] = writeBinary(header)
+
+  def uniqueIdentifier: String = header.category
 }

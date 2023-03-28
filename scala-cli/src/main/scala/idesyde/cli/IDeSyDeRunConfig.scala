@@ -17,6 +17,8 @@ import idesyde.identification.IdentificationModule
 import upickle.default.*
 import idesyde.core.ParametricDecisionModel
 import java.nio.file.Files
+import java.security.MessageDigest
+import java.util.Base64
 
 case class IDeSyDeRunConfig(
     val identificationModules: Set[IdentificationModule],
@@ -31,8 +33,16 @@ case class IDeSyDeRunConfig(
     with CanIdentify {
 
   def run(): Unit =
-    val exploredPath =  Paths.get("run").resolve("explored")
+    val sortedPaths = inputModelsPaths.sortBy(_.toString())
+    val messageDigest = MessageDigest.getInstance("SHA-1")
+    messageDigest.reset()
+    val digested = messageDigest.digest(sortedPaths.flatMap(_.toString().map(_.toByte)).toArray)
+    val stringOfDigested = Base64.getEncoder().encodeToString(digested)
+    val runPath = Paths.get("run").resolve(stringOfDigested)
+    val exploredPath =  runPath.resolve("explored")
+    val identifiedPath = runPath.resolve("identified")
     Files.createDirectories(exploredPath)
+    Files.createDirectories(identifiedPath)
     val modelHandler = ForSyDeModelHandler()
     val validForSyDeInputs =
       inputModelsPaths.map(f => (f, modelHandler.canLoadModel(f)))
@@ -61,6 +71,17 @@ case class IDeSyDeRunConfig(
       val identified = identifyDecisionModels(Set(model), identificationModules)
       logger.info(s"Identification finished with ${identified.size} decision model(s).")
       if (identified.size > 0)
+        // save the identified models
+        for (model <- identified) {
+          model match {
+            case decisionModel @ ParametricDecisionModel(header, body) => 
+              val outPath =exploredPath.resolve(Paths.get(s"${decisionModel.uniqueIdentifier}_body.json"))
+              logger.debug(s"writing identified decision model at ${outPath.toString}")
+              Files.writeString(outPath, decisionModel.bodyAsText)
+            case _ =>
+          }
+        }
+        // now continue with flow
         val chosen = chooseExplorersAndModels(identified, explorationModules)
         val chosenFiltered =
           if (allowedDecisionModels.size > 0) then

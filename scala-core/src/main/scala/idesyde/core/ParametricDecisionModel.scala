@@ -21,5 +21,11 @@ final case class ParametricDecisionModel[B : ReadWriter](val header: DecisionMod
 
     def bodyAsText: String = write(body)
 
+    def bodyAsBinary: Array[Byte] = writeBinary(body)
+
+    def headerAsText: String = write(header)
+
+    def headerAsBinary: Array[Byte] = writeBinary(header)
+
     def uniqueIdentifier: String = header.category
 }

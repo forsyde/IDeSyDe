@@ -28,6 +28,7 @@ trait ParametricRateDataflowWorkloadMixin {
   def actorsIdentifiers: scala.collection.immutable.Vector[String]
   def channelsIdentifiers: scala.collection.immutable.Vector[String]
   def channelNumInitialTokens: scala.collection.immutable.Vector[Int]
+  def channelTokenSizes: scala.collection.immutable.Vector[Long]
 
   /** An actor is self-concurrent if two or more instance can be executed at the same time
     *
@@ -49,6 +50,40 @@ trait ParametricRateDataflowWorkloadMixin {
     */
   def configurations: Iterable[(Int, Int, String)]
 
+  def computeMessagesFromChannels = dataflowGraphs.zipWithIndex.map((df, dfi) => {
+    var lumpedChannels = mutable
+      .Map[(String, String), (Vector[String], Long, Int, Int, Int)]()
+      .withDefaultValue(
+        (
+          Vector(),
+          0L,
+          0,
+          0,
+          0
+        )
+      )
+    for ((c, ci) <- channelsIdentifiers.zipWithIndex) {
+      val thisInitialTokens = channelNumInitialTokens(ci)
+      for (
+        (src, _, produced) <- df.filter((s, d, _) => d == c);
+        (_, dst, consumed) <- df.filter((s, d, _) => s == c)
+      ) {
+        val srcIdx             = actorsIdentifiers.indexOf(src)
+        val dstIdex            = actorsIdentifiers.indexOf(dst)
+        val sent               = produced * channelTokenSizes(ci)
+        val (cs, d, p, q, tok) = lumpedChannels((src, dst))
+        lumpedChannels((src, dst)) = (
+          cs :+ c,
+          d + sent,
+          p + produced,
+          q + consumed,
+          tok + thisInitialTokens
+        )
+      }
+    }
+    lumpedChannels.map((k, v) => (k._1, k._2, v._1, v._2, v._3, v._4, v._5)).toVector
+  })
+
   /** This parameter counts the number of disjoint actor sets in the application model.def That is,
     * how many 'subapplications' are contained in this application. for for each configuration.
     *
@@ -56,10 +91,10 @@ trait ParametricRateDataflowWorkloadMixin {
     */
   def disjointComponents
       : scala.collection.immutable.Vector[scala.collection.IndexedSeq[Iterable[String]]] =
-    dataflowGraphs.map(g => {
-      val nodes    = g.map((s, _, _) => s).toSet.union(g.map((_, t, _) => t).toSet)
-      val edges    = g.map((src, dst, w) => src ~> dst)
-      val gGraphed = Graph.from(nodes, edges)
+    dataflowGraphs.zipWithIndex.map((g, gx) => {
+      // val nodes    = g.map((s, _, _) => s).toSet.union(g.map((_, t, _) => t).toSet)
+      val edges    = computeMessagesFromChannels(gx).map((src, dst, _, _, _, _, _) => src ~> dst)
+      val gGraphed = Graph.from(actorsIdentifiers, edges)
       gGraphed.componentTraverser().map(comp => comp.nodes.map(_.value)).toArray
     })
 

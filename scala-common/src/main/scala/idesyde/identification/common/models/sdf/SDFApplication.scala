@@ -83,47 +83,13 @@ final case class SDFApplication(
 
   val processSizes = actorSizes
 
-  val messagesFromChannels = dataflowGraphs.zipWithIndex.map((df, dfi) => {
-    var lumpedChannels = mutable
-      .Map[(String, String), (Vector[String], Long, Int, Int, Int)]()
-      .withDefaultValue(
-        (
-          Vector(),
-          0L,
-          0,
-          0,
-          0
-        )
-      )
-    for ((c, ci) <- channelsIdentifiers.zipWithIndex) {
-      val thisInitialTokens = channelNumInitialTokens(ci)
-      for (
-        (src, _, produced) <- df.filter((s, d, _) => d == c);
-        (_, dst, consumed) <- df.filter((s, d, _) => s == c)
-      ) {
-        val srcIdx             = actorsIdentifiers.indexOf(src)
-        val dstIdex            = actorsIdentifiers.indexOf(dst)
-        val sent               = produced * channelTokenSizes(ci)
-        val (cs, d, p, q, tok) = lumpedChannels((src, dst))
-        lumpedChannels((src, dst)) = (
-          cs :+ c,
-          d + sent,
-          p + produced,
-          q + consumed,
-          tok + thisInitialTokens
-        )
-      }
-    }
-    lumpedChannels.map((k, v) => (k._1, k._2, v._1, v._2, v._3, v._4, v._5)).toVector
-  })
-
   /** This abstracts the many sdf channels in the sdf multigraph into the form commonly presented in
     * papers and texts: with just a channel between every two actors.
     *
     * Every tuple in this is given by: (src actors index, dst actors index, lumped SDF channels,
     * size of message, produced, consumed, initial tokens)
     */
-  val sdfMessages = messagesFromChannels(0)
+  val sdfMessages = computeMessagesFromChannels(0)
 
   /** this is a simple shortcut for the balance matrix (originally called topology matrix) as SDFs
     * have only one configuration
@@ -140,7 +106,7 @@ final case class SDFApplication(
 
   val sdfGraph = Graph.from(
     actorsIdentifiers,
-    messagesFromChannels.flatMap(m => m.map((s, t, _, _, _, _, _) => s ~> t))
+    sdfMessages.map((s, t, _, _, _, _, _) => s ~> t)
   )
 
   val messagesMaxSizes: Vector[Long] =

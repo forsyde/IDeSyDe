@@ -35,6 +35,9 @@ import scalax.collection.GraphEdge.DiEdge
 import idesyde.core.ParametricDecisionModel
 import idesyde.core.headers.DecisionModelHeader
 import idesyde.core.headers.LabelledArcWithPorts
+import org.jgrapht.graph.SimpleDirectedGraph
+import org.jgrapht.graph.DefaultEdge
+import org.jgrapht.alg.cycle.JohnsonSimpleCycles
 
 final class ConMonitorObj2(val model: ChocoSDFToSChedTileHW2) extends IMonitorContradiction {
 
@@ -490,7 +493,7 @@ final case class ChocoSDFToSChedTileHW2(
     val full = dse.copy(
       sdfApplications = dse.sdfApplications.copy(minimumActorThrouhgputs =
         sdfAnalysisModule.invThroughputs.zipWithIndex
-          .map((th, i) => dse.sdfApplications.sdfRepetitionVectors(i) * timeMultiplier.toDouble / th.getValue().toDouble)
+          .map((th, i) => timeMultiplier.toDouble / dse.sdfApplications.sdfRepetitionVectors(i)  / th.getValue().toDouble)
           .toVector
       ),
       processMappings = dse.sdfApplications.actorsIdentifiers.zipWithIndex.map((a, i) =>
@@ -538,16 +541,17 @@ final case class ChocoSDFToSChedTileHW2(
         sdfAnalysisModule.jobsAndActors.zipWithIndex
           .map((j, x) => (dse.sdfApplications.actorsIdentifiers.indexOf(j._1), x))
           .map((ax, i) => dse.wcets(ax)(memoryMappingModule.processesMemoryMapping(ax).getValue())),
-        sdfAnalysisModule.jobsAndActors.zipWithIndex
-          .map((src, i) => (dse.sdfApplications.actorsIdentifiers.indexOf(src._1), i))
-          .map((srcax, i) =>
-            sdfAnalysisModule.jobsAndActors.zipWithIndex
-              .map((dst, j) => (dse.sdfApplications.actorsIdentifiers.indexOf(dst._1), j))
-              .map((dstax, j) => {
+        sdfAnalysisModule.jobsAndActors
+          .map((srca, srcq) => 
+            sdfAnalysisModule.jobsAndActors
+              .map((dsta, dstq) => {
+                val srcax = dse.sdfApplications.actorsIdentifiers.indexOf(srca)
+                val dstax = dse.sdfApplications.actorsIdentifiers.indexOf(dsta)
+                val mSize = dse.sdfApplications.sdfMessages.find((s, t, _, _, _, _, _) => s == srca && t == dsta).map((_, _, _, m, _, _, _) => m).getOrElse(0L)
                 val srcM = memoryMappingModule.processesMemoryMapping(srcax).getValue()
                 val dstM = memoryMappingModule.processesMemoryMapping(dstax).getValue()
                 if (srcM != dstM) {
-                  dse.platform.hardware.minTraversalTimePerBit(srcM)(dstM) * dse.platform.hardware
+                  mSize * dse.platform.hardware.minTraversalTimePerBit(srcM)(dstM) * dse.platform.hardware
                     .computedPaths(srcM)(dstM)
                     .map(ce => dse.platform.hardware.communicationElems.indexOf(ce))
                     .map(cex =>
@@ -579,18 +583,26 @@ final case class ChocoSDFToSChedTileHW2(
       jobWeights: Vector[Double],
       edgeWeigths: Vector[Vector[Double]]
   ): Vector[Double] = {
+    val g = SimpleDirectedGraph.createBuilder[(String, Int), DefaultEdge](classOf[DefaultEdge])    
     val newEdges = for (
       (i, idx) <- sdfAnalysisModule.jobsAndActors.zipWithIndex;
       (j, jdx) <- sdfAnalysisModule.jobsAndActors.zipWithIndex; if i != j;
       if sdfAnalysisModule.jobMapping(idx).getValue() == sdfAnalysisModule
         .jobMapping(jdx)
         .getValue();
-      if sdfAnalysisModule.jobOrder(idx).getValue() < sdfAnalysisModule
+      if sdfAnalysisModule.jobOrder(idx).getValue() + 1 == sdfAnalysisModule
         .jobOrder(jdx)
-        .getValue() || sdfAnalysisModule.jobOrder(jdx).getValue() == 0
+        .getValue() || (
+          sdfAnalysisModule.jobOrder(idx).getValue() == sdfAnalysisModule.mappedJobsPerElement(sdfAnalysisModule.jobMapping(idx).getValue()).getValue() - 1
+          && sdfAnalysisModule.jobOrder(jdx).getValue() == 0
+        )
     ) yield DiEdge(i, j)
     val impl = dse.sdfApplications.firingsPrecedenceGraphWithCycles ++ newEdges
+    for (e <- impl.edges; src = e.source.value; dst = e.target.value) {
+      g.addEdge(src, dst)
+    }
     var ths  = Buffer.fill(dse.sdfApplications.actorsIdentifiers.size)(Double.PositiveInfinity)
+    val cycles = JohnsonSimpleCycles(g.buildAsUnmodifiable()).findSimpleCycles()
     for (comp <- impl.strongComponentTraverser()) {
       val total = comp.edges
         .map(e =>
@@ -599,10 +611,17 @@ final case class ChocoSDFToSChedTileHW2(
         )
         .map((s, t) => jobWeights(s) + edgeWeigths(s)(t))
         .sum
+      println(comp.nodes.toString)
+      println(total)
       for (
-        n <- comp.nodes; (a, q) = n.value; adx = dse.sdfApplications.actorsIdentifiers.indexOf(a);
-        if ths(adx) > q / total
-      ) ths(adx) = q / total
+        n <- comp.nodes; (a, _) = n.value; adx = dse.sdfApplications.actorsIdentifiers.indexOf(a);
+        if ths(adx) > total
+      ) ths(adx) = total
+    }
+    // now equalize throughputs in the same disjoint component
+    val minPerDisjoint = dse.sdfApplications.sdfDisjointComponents.map(comp => comp.map(dse.sdfApplications.actorsIdentifiers.indexOf).map(ths).max)
+    for ((comp, i) <- dse.sdfApplications.sdfDisjointComponents.zipWithIndex; ax <- comp.map(dse.sdfApplications.actorsIdentifiers.indexOf)) {
+      ths(ax) = 1.0 / dse.sdfApplications.sdfRepetitionVectors(ax) / minPerDisjoint(i)
     }
     ths.toVector
   }
@@ -614,3 +633,4 @@ final case class ChocoSDFToSChedTileHW2(
   val coveredElementRelations = dse.coveredElementRelations
 
 }
+ 

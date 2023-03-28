@@ -3,8 +3,8 @@ package idesyde.identification.forsyde.rules.sdf
 import scala.jdk.CollectionConverters._
 
 import idesyde.utils.Logger
-import idesyde.identification.DesignModel
-import idesyde.identification.DecisionModel
+import idesyde.core.DesignModel
+import idesyde.core.DecisionModel
 import idesyde.identification.forsyde.ForSyDeDesignModel
 import idesyde.identification.common.models.sdf.SDFApplication
 import forsyde.io.java.core.ForSyDeSystemGraph
@@ -84,18 +84,20 @@ object SDFRules {
           topologyEdgeValue += rate
         })
     })
-    val processSizes = sdfActors.zipWithIndex.map((a, i) =>
-      InstrumentedExecutable.safeCast(a).map(_.getSizeInBits().asInstanceOf[Long]).orElse(0L) +
-        a.getCombFunctionsPort(model)
-          .stream()
-          .mapToLong(fs =>
-            InstrumentedExecutable
-              .safeCast(fs)
-              .map(_.getSizeInBits().asInstanceOf[Long])
-              .orElse(0L)
-          )
-          .sum
-    ).toVector
+    val processSizes = sdfActors.zipWithIndex
+      .map((a, i) =>
+        InstrumentedExecutable.safeCast(a).map(_.getSizeInBits().asInstanceOf[Long]).orElse(0L) +
+          a.getCombFunctionsPort(model)
+            .stream()
+            .mapToLong(fs =>
+              InstrumentedExecutable
+                .safeCast(fs)
+                .map(_.getSizeInBits().asInstanceOf[Long])
+                .orElse(0L)
+            )
+            .sum
+      )
+      .toVector
     val processComputationalNeeds = sdfActors.map(fromSDFActorToNeeds(model, _)).toVector
     Set(
       SDFApplication(
@@ -107,7 +109,9 @@ object SDFRules {
         processSizes,
         processComputationalNeeds,
         sdfChannels.map(_.getNumOfInitialTokens().toInt).toVector,
-        sdfChannels.map(TokenizableDataBlock.safeCast(_).map(_.getTokenSizeInBits().toLong).orElse(0L)).toVector,
+        sdfChannels
+          .map(TokenizableDataBlock.safeCast(_).map(_.getTokenSizeInBits().toLong).orElse(0L))
+          .toVector,
         sdfActors.map(a => -1.0).toVector
       )
     )
@@ -132,9 +136,10 @@ object SDFRules {
               .entrySet()
               .forEach(e => {
                 if (mutMap.contains(e.getKey())) {
-                  e.getValue().forEach((innerK, innerV) => {
-                    mutMap(e.getKey())(innerK) = mutMap(e.getKey()).getOrElse(innerK, 0L) + innerV
-                  })
+                  e.getValue()
+                    .forEach((innerK, innerV) => {
+                      mutMap(e.getKey())(innerK) = mutMap(e.getKey()).getOrElse(innerK, 0L) + innerV
+                    })
                 } else {
                   mutMap(e.getKey()) = e.getValue().asScala.map((k, v) => k -> v.asInstanceOf[Long])
                 }
@@ -153,9 +158,10 @@ object SDFRules {
           .entrySet()
           .forEach(e => {
             if (mutMap.contains(e.getKey())) {
-              e.getValue().forEach((innerK, innerV) => {
-                mutMap(e.getKey())(innerK) = mutMap(e.getKey()).getOrElse(innerK, 0L) + innerV
-              })
+              e.getValue()
+                .forEach((innerK, innerV) => {
+                  mutMap(e.getKey())(innerK) = mutMap(e.getKey()).getOrElse(innerK, 0L) + innerV
+                })
             } else {
               mutMap(e.getKey()) = e.getValue().asScala.map((k, v) => k -> v.asInstanceOf[Long])
             }

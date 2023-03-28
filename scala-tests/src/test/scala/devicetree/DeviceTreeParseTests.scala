@@ -33,6 +33,8 @@ class DeviceTreeParseTests
           default {
             f64add = <1 6>
             f64mul = <1 1000>
+            f64copy = <1 4>
+            f64comp = <1 4>
           }
         }
       }

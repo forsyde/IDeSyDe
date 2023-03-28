@@ -9,15 +9,18 @@ import java.nio.file.Files
 import java.nio.file.Paths
 import java.nio.file.StandardOpenOption
 import idesyde.identification.minizinc.MiniZincData
-import idesyde.identification.DecisionModel
+import idesyde.core.DecisionModel
 import idesyde.identification.common.StandardDecisionModel
 
 final case class GecodeMiniZincExplorer() extends SimpleMiniZincCPExplorer {
 
   def canExplore(decisionModel: DecisionModel): Boolean = false
-    // "minizinc --solvers".!!.contains("org.gecode.gecode")
+  // "minizinc --solvers".!!.contains("org.gecode.gecode")
 
-  override def explore(decisionModel: DecisionModel, explorationTimeOutInSecs: Long): LazyList[DecisionModel] = LazyList.empty
+  override def explore(
+      decisionModel: DecisionModel,
+      explorationTimeOutInSecs: Long
+  ): LazyList[DecisionModel] = LazyList.empty
 
   // def exploreForSyDe(decisionModel: StandardDecisionModel, explorationTimeOutInSecs: Long = 0L) =
   //   decisionModel match

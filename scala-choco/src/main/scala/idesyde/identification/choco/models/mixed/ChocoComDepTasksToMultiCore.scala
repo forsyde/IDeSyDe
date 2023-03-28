@@ -30,7 +30,7 @@ import idesyde.utils.HasUtils
 import idesyde.identification.choco.interfaces.ChocoModelMixin
 import idesyde.identification.common.models.workload.CommunicatingExtendedDependenciesPeriodicWorkload
 import idesyde.identification.common.models.mixed.PeriodicWorkloadToPartitionedSharedMultiCore
-import idesyde.identification.DecisionModel
+import idesyde.core.DecisionModel
 import idesyde.identification.common.StandardDecisionModel
 import idesyde.identification.choco.ChocoDecisionModel
 
@@ -51,7 +51,7 @@ final case class ChocoComDepTasksToMultiCore(
 
   val coveredElementRelations = dse.coveredElementRelations
 
-  override def dominates[D <: DecisionModel](other: D): Boolean = other match {
+  override def dominates(other: DecisionModel): Boolean = other match {
     case o: ChocoComDepTasksToMultiCore =>
       dse.dominates(o.dse)
     case _ => super.dominates(other)
@@ -134,7 +134,7 @@ final case class ChocoComDepTasksToMultiCore(
     chocoModel.intVar(
       s"task_map($t)",
       dse.platform.hardware.processingElems.zipWithIndex
-        .filter((m, j) => dse.wcets(i)(j) >= 0)
+        .filter((m, j) => dse.wcets(i)(j) > -1)
         .map((m, j) => j)
         .toArray
     )

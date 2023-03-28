@@ -1,7 +1,7 @@
 package idesyde.devicetree.identification
 
-import idesyde.identification.DesignModel
-import idesyde.identification.DecisionModel
+import idesyde.core.DesignModel
+import idesyde.core.DecisionModel
 import idesyde.identification.common.models.platform.SharedMemoryMultiCore
 import idesyde.devicetree.utils.HasDeviceTreeUtils
 import scala.collection.mutable.Buffer

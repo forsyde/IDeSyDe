@@ -1,11 +1,13 @@
 package idesyde.identification.forsyde
 
 import scala.jdk.CollectionConverters.*
+import scala.jdk.OptionConverters.*
 
-import idesyde.identification.DesignModel
+import idesyde.core.DesignModel
 import forsyde.io.java.core.ForSyDeSystemGraph
 import forsyde.io.java.core.Vertex
 import forsyde.io.java.core.EdgeInfo
+import idesyde.core.headers.LabelledArcWithPorts
 
 final case class ForSyDeDesignModel(val systemGraph: ForSyDeSystemGraph) extends DesignModel {
 
@@ -22,9 +24,18 @@ final case class ForSyDeDesignModel(val systemGraph: ForSyDeSystemGraph) extends
 
   def elementID(elem: Vertex): String = elem.getIdentifier()
 
-  def elementRelationID(rel: EdgeInfo): String = rel.toIDString()
+  def elementRelationID(rel: EdgeInfo): LabelledArcWithPorts =
+    LabelledArcWithPorts(
+      rel.sourceId,
+      rel.getSourcePort().toScala,
+      None,
+      rel.getTarget(),
+      rel.getTargetPort().toScala
+    )
 
-  val elements = systemGraph.vertexSet().asScala
+  val elements = systemGraph.vertexSet().asScala.toSet
 
-  val elementRelations = systemGraph.edgeSet().asScala
+  val elementRelations = systemGraph.edgeSet().asScala.toSet
+
+  def uniqueIdentifier: String = "ForSyDeDesignModel"
 }

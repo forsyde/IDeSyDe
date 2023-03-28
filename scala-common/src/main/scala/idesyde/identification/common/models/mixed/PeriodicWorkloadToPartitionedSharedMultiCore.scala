@@ -5,7 +5,7 @@ import idesyde.identification.common.models.platform.PartitionedSharedMemoryMult
 import idesyde.identification.common.StandardDecisionModel
 import spire.math.Rational
 import idesyde.identification.models.mixed.WCETComputationMixin
-import idesyde.identification.DecisionModel
+import idesyde.core.DecisionModel
 
 final case class PeriodicWorkloadToPartitionedSharedMultiCore(
     val workload: CommunicatingAndTriggeredReactiveWorkload,
@@ -38,7 +38,7 @@ final case class PeriodicWorkloadToPartitionedSharedMultiCore(
   /** since the max utilizations are not vertex themselves, we override it to consider the decision
     * model with most information the dominant one.
     */
-  override def dominates[D <: DecisionModel](other: D): Boolean = other match {
+  override def dominates(other: DecisionModel): Boolean = other match {
     case o: PeriodicWorkloadToPartitionedSharedMultiCore =>
       super.dominates(other) && o.maxUtilizations.keySet.subsetOf(maxUtilizations.keySet)
     case _ => super.dominates(other)

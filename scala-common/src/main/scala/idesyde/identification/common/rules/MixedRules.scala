@@ -1,7 +1,7 @@
 package idesyde.identification.common.rules
 
-import idesyde.identification.DecisionModel
-import idesyde.identification.DesignModel
+import idesyde.core.DecisionModel
+import idesyde.core.DesignModel
 import idesyde.identification.common.models.mixed.{
   PeriodicWorkloadToPartitionedSharedMultiCore,
   SDFToPartitionedSharedMemory,

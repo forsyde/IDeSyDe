@@ -11,7 +11,7 @@ import scala.jdk.CollectionConverters.*
 import scala.jdk.StreamConverters.*
 import org.chocosolver.solver.search.limits.SolutionCounter
 import org.chocosolver.solver.Solution
-import idesyde.identification.DecisionModel
+import idesyde.core.DecisionModel
 import scala.collection.mutable.Buffer
 import org.chocosolver.solver.constraints.Constraint
 import org.chocosolver.solver.variables.IntVar

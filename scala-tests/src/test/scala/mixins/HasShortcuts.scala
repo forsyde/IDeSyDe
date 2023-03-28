@@ -3,7 +3,7 @@ package mixins
 import idesyde.identification.CanIdentify
 import idesyde.exploration.CanExplore
 import idesyde.identification.forsyde.ForSyDeDesignModel
-import idesyde.identification.DecisionModel
+import idesyde.core.DecisionModel
 import idesyde.identification.common.CommonIdentificationModule
 import idesyde.identification.choco.ChocoIdentificationModule
 import idesyde.identification.forsyde.ForSyDeIdentificationModule
@@ -11,7 +11,7 @@ import idesyde.identification.minizinc.MinizincIdentificationModule
 import idesyde.exploration.ChocoExplorationModule
 import idesyde.exploration.Explorer
 import idesyde.utils.Logger
-import idesyde.identification.DesignModel
+import idesyde.core.DesignModel
 import idesyde.devicetree.identification.DeviceTreeIdentificationModule
 import idesyde.matlab.identification.SimulinkMatlabIdentificationModule
 

@@ -1,7 +1,7 @@
 package idesyde.matlab.utils
 
-import idesyde.identification.DecisionModel
-import idesyde.identification.DesignModel
+import idesyde.core.DecisionModel
+import idesyde.core.DesignModel
 import idesyde.matlab.identification.SimulinkReactiveDesignModel
 
 trait MatlabUtils {

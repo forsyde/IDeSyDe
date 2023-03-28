@@ -3,8 +3,8 @@ package idesyde.identification.forsyde.rules
 import scala.jdk.StreamConverters._
 import scala.jdk.CollectionConverters._
 
-import idesyde.identification.DesignModel
-import idesyde.identification.DecisionModel
+import idesyde.core.DesignModel
+import idesyde.core.DecisionModel
 import idesyde.utils.Logger
 import idesyde.identification.common.models.workload.CommunicatingExtendedDependenciesPeriodicWorkload
 import idesyde.identification.common.models.CommunicatingAndTriggeredReactiveWorkload

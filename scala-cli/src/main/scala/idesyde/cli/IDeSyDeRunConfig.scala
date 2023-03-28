@@ -23,6 +23,7 @@ import idesyde.core.CompleteDecisionModel
 import idesyde.core.ExplorationCombination
 import idesyde.core.headers.DecisionModelHeader
 import idesyde.core.headers.ExplorationCombinationHeader
+import idesyde.core.headers.DesignModelHeader
 
 case class IDeSyDeRunConfig(
     val identificationModules: Set[IdentificationModule],
@@ -44,18 +45,29 @@ case class IDeSyDeRunConfig(
     val stringOfDigested = Base64.getEncoder().encodeToString(digested)
     val runPath          = os.pwd / "run" / stringOfDigested
     logger.info(s"Run folder: ${runPath.toString()}")
+    val inputsPath         = runPath / "inputs"
+    val inputsPathFiodl         = inputsPath / "fiodl"
+    val inputsPathJson     = inputsPath / "json"
     val exploredPath       = runPath / "explored"
     val exploredPathJson   = exploredPath / "json"
     val identifiedPath     = runPath / "identified"
     val identifiedPathJson = identifiedPath / "json"
     val explorablePath     = runPath / "explorable"
     val explorablePathJson = explorablePath / "json"
+    val outputsPath     = runPath / "outputs"
+    val outputsPathJson = outputsPath / "json"
+    val outputsPathFiodl = outputsPath / "fiodl"
+    os.makeDir.all(inputsPath)
+    os.makeDir.all(inputsPathJson)
     os.makeDir.all(exploredPath)
     os.makeDir.all(exploredPathJson)
     os.makeDir.all(identifiedPath)
     os.makeDir.all(identifiedPathJson)
     os.makeDir.all(explorablePath)
     os.makeDir.all(explorablePathJson)
+    os.makeDir.all(outputsPath)
+    os.makeDir.all(outputsPathJson)
+    os.makeDir.all(outputsPathFiodl)
     val modelHandler = ForSyDeModelHandler()
     val validForSyDeInputs =
       inputModelsPaths.map(f => (f, modelHandler.canLoadModel(f)))
@@ -80,7 +92,11 @@ case class IDeSyDeRunConfig(
             merged
           )
       )
-
+      // save the design models
+      val header = model.header.copy(model_paths =
+        validForSyDeInputs.filter((_, b) => b).map((p, _) => p.toString()).toSet
+      )
+      os.write.over(inputsPathJson / "header_ForSyDeDesignModel.json", header.asText)
       val identified = identifyDecisionModels(Set(model), identificationModules)
       logger.info(s"Identification finished with ${identified.size} decision model(s).")
       if (identified.size > 0)
@@ -117,29 +133,32 @@ case class IDeSyDeRunConfig(
               .flatMap((m, res) =>
                 integrateDecisionModel(model, m, identificationModules).map((_, res))
               )
-              .flatMap((m, res) =>
+              .map((m, res) =>
                 m match {
-                  case fdm: ForSyDeDesignModel => Some((fdm.systemGraph, res))
-                  case _                       => Option.empty
+                  case fdm @ ForSyDeDesignModel(m) =>
+                    val oPath = outputsPathFiodl / s"integrated_0_${res}_ForSyDeDesignModel.fiodl"
+                    modelHandler.writeModel(model.systemGraph.merge(m), oPath.toNIO)
+                    val oHeader = fdm.header.copy(model_paths = Set(oPath.toString))
+                    os.write.over(outputsPathJson / s"header_0_${res}_ForSyDeDesignModel.json", oHeader.asText)
+                    if (!outputModelPath.toFile.exists || outputModelPath.toFile.isFile) then
+                      logger.debug(s"writing solution at ${outputModelPath.toString}")
+                      modelHandler.writeModel(model.systemGraph.merge(m), outputModelPath)
+                    else if (outputModelPath.toFile.exists && outputModelPath.toFile.isDirectory) then
+                      val outPath =
+                        outputModelPath.resolve(Paths.get(s"solution_${res.toString}.fiodl"))
+                      logger.debug(s"writing solution at ${outPath.toString}")
+                      modelHandler.writeModel(
+                        model.systemGraph.merge(m),
+                        outputModelPath.resolve(Paths.get(s"solution_${res.toString}.fiodl"))
+                      )
+                  case _                       => 
                 }
+                (m, res)
               )
-              .map((m, res) => {
-                if (!outputModelPath.toFile.exists || outputModelPath.toFile.isFile) then
-                  logger.debug(s"writing solution at ${outputModelPath.toString}")
-                  modelHandler.writeModel(model.systemGraph.merge(m), outputModelPath)
-                else if (outputModelPath.toFile.exists && outputModelPath.toFile.isDirectory) then
-                  val outPath =
-                    outputModelPath.resolve(Paths.get(s"solution_${res.toString}.fiodl"))
-                  logger.debug(s"writing solution at ${outPath.toString}")
-                  modelHandler.writeModel(
-                    model.systemGraph.merge(m),
-                    outputModelPath.resolve(Paths.get(s"solution_${res.toString}.fiodl"))
-                  )
-                res
-              })
-              .takeWhile(res =>
+              .takeWhile((m, res) =>
                 (solutionLimiter <= 0) || (solutionLimiter > 0 && res <= solutionLimiter)
               )
+              .map((_, n) => n)
               .last
           )
           .getOrElse(0)
@@ -150,29 +169,46 @@ case class IDeSyDeRunConfig(
       //scribe.info("Finished successfully")
     }
 
-  protected def saveDecisionModel(p: os.Path, m: DecisionModel, num_prefix: Int = 0): DecisionModelHeader = {
+  protected def saveDecisionModel(
+      p: os.Path,
+      m: DecisionModel,
+      num_prefix: Int = 0
+  ): DecisionModelHeader = {
     m match {
       case complete: CompleteDecisionModel =>
-        val bodyPath = p / s"${num_prefix}_${complete.uniqueIdentifier}_body.json"
+        val bodyPath    = p / s"body_0_${num_prefix}_${complete.uniqueIdentifier}.json"
         val headerExtra = m.header.copy(body_paths = Set(bodyPath.toString))
         os.write.over(bodyPath, complete.bodyAsText)
-        os.write.over(p / s"${num_prefix}_${complete.uniqueIdentifier}_header.json", headerExtra.asText)
+        os.write.over(
+          p / s"header_0_${num_prefix}_${complete.uniqueIdentifier}.json",
+          headerExtra.asText
+        )
         headerExtra
       case _ =>
-        os.write.over(p / s"${num_prefix}_${m.uniqueIdentifier}_header.json", m.header.asText)
+        os.write.over(p / s"header_0_${num_prefix}_${m.uniqueIdentifier}.json", m.header.asText)
         m.header
     }
   }
 
-  protected def saveCombo(p: os.Path, m: ExplorationCombination, num_prefix: Int = 0): ExplorationCombinationHeader = {
+  protected def saveCombo(
+      p: os.Path,
+      m: ExplorationCombination,
+      num_prefix: Int = 0
+  ): ExplorationCombinationHeader = {
     m.decisionModel match {
       case complete: CompleteDecisionModel =>
         val savedDecisionModelHeader = saveDecisionModel(p, complete, num_prefix)
         val comboExtraHeader = m.header.copy(decision_model_header = savedDecisionModelHeader)
-        os.write.over(p / s"${num_prefix}_${m.explorer.uniqueIdentifier}_${m.decisionModel.uniqueIdentifier}_combination_header.json", comboExtraHeader.asText)
+        os.write.over(
+          p / s"combination_0_${num_prefix}_${m.explorer.uniqueIdentifier}_${m.decisionModel.uniqueIdentifier}.json",
+          comboExtraHeader.asText
+        )
         comboExtraHeader
       case _ =>
-        os.write.over(p / s"${num_prefix}_${m.explorer.uniqueIdentifier}_${m.decisionModel.uniqueIdentifier}_combination_header.json", m.header.asText)
+        os.write.over(
+          p / s"combination_0_${num_prefix}_${m.explorer.uniqueIdentifier}_${m.decisionModel.uniqueIdentifier}.json",
+          m.header.asText
+        )
         m.header
     }
   }

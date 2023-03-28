@@ -28,7 +28,7 @@ final case class ForSyDeDesignModel(val systemGraph: ForSyDeSystemGraph) extends
     LabelledArcWithPorts(
       rel.sourceId,
       rel.getSourcePort().toScala,
-      None,
+      rel.edgeTraits.asScala.map(_.getName()).reduceLeftOption((l, s) => l + "," + s),
       rel.getTarget(),
       rel.getTargetPort().toScala
     )

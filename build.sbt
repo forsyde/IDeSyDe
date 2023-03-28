@@ -40,6 +40,19 @@ lazy val core = (project in file("scala-core")).settings(
   libraryDependencies ++= Seq("com.lihaoyi" %% "upickle" % upickleVersion)
 )
 
+lazy val blueprints = (project in file("scala-blueprints"))
+  .dependsOn(core)
+  .settings(
+    name := "idesyde-scala-blueprints",
+    libraryDependencies ++= Seq(
+      "com.lihaoyi"             %% "os-lib"                   % osLibVersion,
+    ),
+    licenses := Seq(
+      "MIT"  -> url("https://opensource.org/license/mit/"),
+      "APL2" -> url("https://www.apache.org/licenses/LICENSE-2.0")
+    )
+  )
+
 lazy val common = (project in file("scala-common"))
   .dependsOn(core)
   .settings(

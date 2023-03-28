@@ -1,7 +1,8 @@
+maintainer := "jordao@kth.se"
+organization := "io.forsyde.github"
+
 ThisBuild / scalaVersion := "3.2.2"
 ThisBuild / versionScheme := Some("early-semver")
-ThisBuild / maintainer := "jordao@kth.se"
-ThisBuild / organization := "io.forsyde.github"
 ThisBuild / publishMavenStyle := true
 ThisBuild / publishTo := Some(Opts.resolver.sonatypeStaging)
 

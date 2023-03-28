@@ -35,13 +35,6 @@ lazy val root = project
   )
   .aggregate(common, cli, choco, forsyde, minizinc, matlab, devicetree)
 
-// lazy val javaCore = (project in file("java-core")).settings(
-//   name := "idesyde-java-core",
-//   libraryDependencies ++= Seq(
-//     "com.google.flatbuffers" % "flatbuffers-java" % flatBufferVersion
-//   )
-// )
-
 lazy val core = (project in file("scala-core")).settings(
   name := "idesyde-scala-core",
   libraryDependencies ++= Seq("com.lihaoyi" %% "upickle" % upickleVersion)
@@ -60,16 +53,6 @@ lazy val common = (project in file("scala-common"))
       "APL2" -> url("https://www.apache.org/licenses/LICENSE-2.0")
     )
   )
-
-// lazy val commonJava = (project in file("java-common"))
-//   .dependsOn(core)
-//   .dependsOn(javaCore)
-//   .settings(
-//     name := "idesyde-java-common",
-//     libraryDependencies ++= Seq(
-//       "com.google.flatbuffers" % "flatbuffers-java" % flatBufferVersion
-//     )
-//   )
 
 lazy val forsyde = (project in file("scala-forsyde"))
   .dependsOn(core)

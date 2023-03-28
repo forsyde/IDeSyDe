@@ -20,7 +20,7 @@ import idesyde.utils.Logger
 import idesyde.utils.SimpleStandardIOLogger
 import idesyde.identification.CanIdentify
 import idesyde.exploration.CanExplore
-import idesyde.identification.DecisionModel
+import idesyde.core.DecisionModel
 import idesyde.exploration.Explorer
 import mixins.HasShortcuts
 

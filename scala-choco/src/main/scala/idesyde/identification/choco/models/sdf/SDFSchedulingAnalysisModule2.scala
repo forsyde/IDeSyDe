@@ -271,25 +271,8 @@ class SDFSchedulingAnalysisModule2(
     // println(sdfAndSchedulers.sdfApplications.firingsPrecedenceWithExtraStepGraph)
     val thPropagator = StreamingJobsThroughputPropagator(
       jobsAndActors.size,
-      (i) =>
-        (j) =>
-          sdfAndSchedulers.sdfApplications.firingsPrecedenceGraph
-            .get(jobsAndActors(i))
-            .isDirectPredecessorOf(
-              sdfAndSchedulers.sdfApplications.firingsPrecedenceGraph.get(jobsAndActors(j))
-            ),
-      (i) => (j) => {
-        sdfAndSchedulers.sdfApplications.firingsPrecedenceGraph
-            .get(jobsAndActors(i))
-            .isPredecessorOf(
-              sdfAndSchedulers.sdfApplications.firingsPrecedenceGraph.get(jobsAndActors(j))
-            ) && 
-        sdfAndSchedulers.sdfApplications.firingsPrecedenceGraphWithCycles
-            .get(jobsAndActors(j))
-            .isPredecessorOf(
-              sdfAndSchedulers.sdfApplications.firingsPrecedenceGraphWithCycles.get(jobsAndActors(i))
-            ) 
-      },
+      isSuccessor,
+      hasDataCycle,
       jobOrder,
       (0 until jobsAndActors.size).map(jobMapping(_)).toArray,
       jobsAndActors.map((a, _) => duration(actors.indexOf(a))).toArray,
@@ -406,6 +389,23 @@ class SDFSchedulingAnalysisModule2(
     // )
 
   }
+
+  def isSuccessor(i: Int)(j: Int) = sdfAndSchedulers.sdfApplications.firingsPrecedenceGraph
+            .get(jobsAndActors(i))
+            .isDirectPredecessorOf(
+              sdfAndSchedulers.sdfApplications.firingsPrecedenceGraph.get(jobsAndActors(j))
+            )
+
+  def hasDataCycle(i: Int)(j: Int) = sdfAndSchedulers.sdfApplications.firingsPrecedenceGraph
+            .get(jobsAndActors(i))
+            .isPredecessorOf(
+              sdfAndSchedulers.sdfApplications.firingsPrecedenceGraph.get(jobsAndActors(j))
+            ) && 
+        sdfAndSchedulers.sdfApplications.firingsPrecedenceGraphWithCycles
+            .get(jobsAndActors(j))
+            .isPredecessorOf(
+              sdfAndSchedulers.sdfApplications.firingsPrecedenceGraphWithCycles.get(jobsAndActors(i))
+            ) 
 
   def makeCanonicalOrderingAtScheduleConstraint(scheduler: Int): Constraint = {
     // println(sdfAndSchedulers.sdfApplications.topologicalAndHeavyJobOrdering.mkString(", "))

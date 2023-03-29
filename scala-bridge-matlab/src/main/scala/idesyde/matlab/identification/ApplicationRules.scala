@@ -26,6 +26,7 @@ trait ApplicationRules extends MatlabUtils {
         .map(Rational(_))
         .map(r => (r.numeratorAsLong, r.denominatorAsLong))
         .unzip
+      val groupedLinks = linksWithoutConstants.groupBy((s, t, _, _, _) => (s, t))
       Set(
         CommunicatingAndTriggeredReactiveWorkload(
           procs ++ delays,
@@ -39,12 +40,9 @@ trait ApplicationRules extends MatlabUtils {
           ) ++ sinks.map(
             model.sinksSizes
           ),
-          linksWithoutConstants
-            .groupBy((s, t, _, _, _) => (s, t))
-            .map((st, pairs) =>
-              (st._1, st._2, pairs.map(_._5).sum)
-            ) // just summing the data transmissed from s to t in all links
-            .toSet,
+          groupedLinks.keySet.toVector.map((s, t) => s),
+          groupedLinks.keySet.toVector.map((s, t) => t),
+          groupedLinks.keySet.toVector.map(st => groupedLinks(st).map((_, _, _, _, m) => m).sum),
           sources,
           pernums,
           perdens,
@@ -56,12 +54,8 @@ trait ApplicationRules extends MatlabUtils {
           Vector.empty,
           Vector.empty,
           Vector.empty,
-          linksWithoutConstants
-            .groupBy((s, t, _, _, _) => (s, t))
-            .map((st, _) =>
-              (st._1, st._2)
-            ) // just summing the data transmissed from s to t in all links
-            .toVector,
+          groupedLinks.keySet.toVector.map((s, t) => s),
+          groupedLinks.keySet.toVector.map((s, t) => t),
           Set.empty
         )
       )

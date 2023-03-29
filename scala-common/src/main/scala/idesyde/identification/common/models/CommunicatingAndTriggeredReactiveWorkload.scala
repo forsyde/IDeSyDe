@@ -14,7 +14,9 @@ final case class CommunicatingAndTriggeredReactiveWorkload(
     val taskComputationalNeeds: Vector[Map[String, Map[String, Long]]],
     val dataChannels: Vector[String],
     val dataChannelSizes: Vector[Long],
-    val dataGraph: Set[(String, String, Long)],
+    val dataGraphSrc: Vector[String],
+    val dataGraphDst: Vector[String],
+    val dataGraphMessageSize: Vector[Long],
     val periodicSources: Vector[String],
     val periodsNumerator: Vector[Long],
     val periodsDenominator: Vector[Long],
@@ -26,16 +28,21 @@ final case class CommunicatingAndTriggeredReactiveWorkload(
     val downsamples: Vector[String],
     val downampleRepetitiveSkips: Vector[Long],
     val downampleInitialSkips: Vector[Long],
-    val triggerGraph: Vector[(String, String)],
+    val triggerGraphSrc: Vector[String],
+    val triggerGraphDst: Vector[String],
     val hasORTriggerSemantics: Set[String]
 ) extends StandardDecisionModel
     with CommunicatingExtendedDependenciesPeriodicWorkload
     with InstrumentedWorkloadMixin {
 
+  lazy val dataGraph = for ((s, i) <- dataGraphSrc.zipWithIndex) yield (s, dataGraphDst(i), dataGraphMessageSize(i))
+
+  lazy val triggerGraph = triggerGraphSrc.zip(triggerGraphDst)
   val coveredElements =
     (tasks ++ upsamples ++ downsamples ++ periodicSources ++ dataChannels).toSet
 
   val coveredElementRelations = triggerGraph.toSet
+
 
   lazy val stimulusGraph = Graph.from(
     tasks ++ upsamples ++ downsamples ++ periodicSources,

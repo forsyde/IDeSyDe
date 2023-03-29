@@ -64,8 +64,8 @@ trait WorkloadRules {
       // nothing can be done if there are no tasks
       // so we terminate early to avoid undefined analysis results
       logger.debug(s"Num of tasks found in model: ${tasks.size}")
-      if (tasks.isEmpty)
-        return Set.empty
+      // if (tasks.isEmpty)
+      //   return Set.empty
       // now take a look which of the relevant vertexes are connected
       // taskStimulusGraph.vertexSet.forEach(src =>
       //   taskStimulusGraph.vertexSet.forEach(dst =>
@@ -113,7 +113,7 @@ trait WorkloadRules {
           })
       }
       // check if every task has a periodic stimulus
-      val stimulusGraph =
+      lazy val stimulusGraph =
         AsSubgraph(
           model,
           (tasks ++ periodicStimulus ++ upsamples ++ downsamples)
@@ -121,59 +121,53 @@ trait WorkloadRules {
             .toSet
             .asJava
         )
-      val dataGraph = AsSubgraph(model, (tasks ++ dataBlocks).map(_.getViewedVertex()).toSet.asJava)
-      val connectivityInspector = ConnectivityInspector(stimulusGraph)
-      val allTasksAreStimulated = tasks.forall(task =>
+      lazy val dataGraph = AsSubgraph(model, (tasks ++ dataBlocks).map(_.getViewedVertex()).toSet.asJava)
+      lazy val connectivityInspector = ConnectivityInspector(stimulusGraph)
+      lazy val allTasksAreStimulated = tasks.forall(task =>
         periodicStimulus.exists(stim =>
           connectivityInspector.pathExists(stim.getViewedVertex(), task.getViewedVertex())
         )
       )
       logger.debug(s"Are all tasks reachable by a periodic stimulus? ${allTasksAreStimulated}")
-      if (!allTasksAreStimulated) return Set.empty
-      Set(
-        CommunicatingAndTriggeredReactiveWorkload(
-          tasks.map(_.getIdentifier()).toVector,
-          tasks
-            .map(
-              InstrumentedExecutable.safeCast(_).map(_.getSizeInBits().toLong).orElse(0L)
-            )
-            .toVector,
-          tasks.map(t => taskComputationNeeds(t, model)).toVector,
-          dataBlocks.map(_.getIdentifier()).toVector,
-          dataBlocks.map(_.getMaxSizeInBits().toLong).toVector,
-          communicationGraphEdges.toSet,
-          periodicStimulus.map(_.getIdentifier()).toVector,
-          periodicStimulus.map(_.getPeriodNumerator().toLong).toVector,
-          periodicStimulus.map(_.getPeriodDenominator().toLong).toVector,
-          periodicStimulus.map(_.getOffsetNumerator().toLong).toVector,
-          periodicStimulus.map(_.getOffsetDenominator().toLong).toVector,
-          upsamples.map(_.getIdentifier()).toVector,
-          upsamples.map(_.getRepetitivePredecessorHolds().toLong).toVector,
-          upsamples.map(_.getInitialPredecessorHolds().toLong).toVector,
-          downsamples.map(_.getIdentifier()).toVector,
-          downsamples.map(_.getRepetitivePredecessorSkips().toLong).toVector,
-          downsamples.map(_.getInitialPredecessorSkips().toLong).toVector,
-          stimulusGraph
-            .edgeSet()
-            .stream()
-            .map(e =>
-              (
-                stimulusGraph.getEdgeSource(e).getIdentifier(),
-                stimulusGraph.getEdgeTarget(e).getIdentifier()
+      if (tasks.isEmpty || !allTasksAreStimulated) 
+        Set.empty 
+      else
+        Set(
+          CommunicatingAndTriggeredReactiveWorkload(
+            tasks.map(_.getIdentifier()).toVector,
+            tasks
+              .map(
+                InstrumentedExecutable.safeCast(_).map(_.getSizeInBits().toLong).orElse(0L)
               )
-            )
-            .collect(Collectors.toList())
-            .asScala
-            .toVector,
-          tasks.filter(_.getHasORSemantics()).map(_.getIdentifier()).toSet ++ upsamples
-            .filter(_.getHasORSemantics())
-            .map(_.getIdentifier())
-            .toSet ++ downsamples
-            .filter(_.getHasORSemantics())
-            .map(_.getIdentifier())
-            .toSet
+              .toVector,
+            tasks.map(t => taskComputationNeeds(t, model)).toVector,
+            dataBlocks.map(_.getIdentifier()).toVector,
+            dataBlocks.map(_.getMaxSizeInBits().toLong).toVector,
+            communicationGraphEdges.toVector.map((s, t, m) => s),
+            communicationGraphEdges.toVector.map((s, t, m) => t),
+            communicationGraphEdges.toVector.map((s, t, m) => m),
+            periodicStimulus.map(_.getIdentifier()).toVector,
+            periodicStimulus.map(_.getPeriodNumerator().toLong).toVector,
+            periodicStimulus.map(_.getPeriodDenominator().toLong).toVector,
+            periodicStimulus.map(_.getOffsetNumerator().toLong).toVector,
+            periodicStimulus.map(_.getOffsetDenominator().toLong).toVector,
+            upsamples.map(_.getIdentifier()).toVector,
+            upsamples.map(_.getRepetitivePredecessorHolds().toLong).toVector,
+            upsamples.map(_.getInitialPredecessorHolds().toLong).toVector,
+            downsamples.map(_.getIdentifier()).toVector,
+            downsamples.map(_.getRepetitivePredecessorSkips().toLong).toVector,
+            downsamples.map(_.getInitialPredecessorSkips().toLong).toVector,
+            stimulusGraph.edgeSet().stream().map(e => stimulusGraph.getEdgeSource(e).getIdentifier()).collect(Collectors.toList()).asScala.toVector,
+            stimulusGraph.edgeSet().stream().map(e => stimulusGraph.getEdgeTarget(e).getIdentifier()).collect(Collectors.toList()).asScala.toVector,
+            tasks.filter(_.getHasORSemantics()).map(_.getIdentifier()).toSet ++ upsamples
+              .filter(_.getHasORSemantics())
+              .map(_.getIdentifier())
+              .toSet ++ downsamples
+              .filter(_.getHasORSemantics())
+              .map(_.getIdentifier())
+              .toSet
+          )
         )
-      )
     }
   }
 

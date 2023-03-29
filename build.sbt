@@ -34,7 +34,7 @@ lazy val root = project
     ),
     paradoxRoots := List("index.html")
   )
-  .aggregate(common, cli, choco, forsyde, minizinc, matlab, devicetree)
+  .aggregate(common, cli, choco, forsyde, minizinc, matlab, devicetree, blueprints)
 
 lazy val core = (project in file("scala-core")).settings(
   name := "idesyde-scala-core",
@@ -91,6 +91,7 @@ lazy val forsyde = (project in file("scala-forsyde"))
 lazy val minizinc = (project in file("scala-minizinc"))
   .dependsOn(core)
   .dependsOn(common)
+  .dependsOn(blueprints)
   .settings(
     name := "idesyde-scala-minizinc",
     libraryDependencies ++= Seq(
@@ -107,6 +108,7 @@ lazy val choco = (project in file("scala-choco"))
   .dependsOn(core)
   .dependsOn(common)
   .dependsOn(forsyde)
+  .dependsOn(blueprints)
   .settings(
     name := "idesyde-scala-choco",
     libraryDependencies ++= Seq(
@@ -124,6 +126,7 @@ lazy val choco = (project in file("scala-choco"))
 lazy val matlab = (project in file("scala-bridge-matlab"))
   .dependsOn(core)
   .dependsOn(common)
+  .dependsOn(blueprints)
   .settings(
     name := "idesyde-scala-bridge-matlab"
   )
@@ -131,6 +134,7 @@ lazy val matlab = (project in file("scala-bridge-matlab"))
 lazy val devicetree = (project in file("scala-bridge-device-tree"))
   .dependsOn(core)
   .dependsOn(common)
+  .dependsOn(blueprints)
   .settings(
     name := "idesyde-scala-bridge-devicetree",
     libraryDependencies ++= Seq(

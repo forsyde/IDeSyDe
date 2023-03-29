@@ -10,13 +10,11 @@ import idesyde.utils.Logger
 import mixins.LoggingMixin
 import mixins.HasShortcuts
 import mixins.PlatformExperimentCreator
-import idesyde.identification.common.CommonIdentificationModule
-import idesyde.identification.choco.ChocoIdentificationModule
-import idesyde.identification.forsyde.{ForSyDeDesignModel, ForSyDeIdentificationModule}
 import idesyde.identification.minizinc.MinizincIdentificationModule
 import idesyde.exploration.ChocoExplorationModule
 import java.nio.file.Files
 import java.nio.file.Paths
+import idesyde.identification.forsyde.ForSyDeDesignModel
 
 class RosvallSander2014Tests
     extends AnyFunSuite

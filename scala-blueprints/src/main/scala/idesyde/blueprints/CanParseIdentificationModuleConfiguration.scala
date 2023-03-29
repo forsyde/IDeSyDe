@@ -1,8 +1,9 @@
 package idesyde.blueprints
+import idesyde.blueprints.IdentificationModuleConfiguration
 
-trait CanParseModuleConfiguration {
-  def parse(args: Array[String], uniqueIdentifier: String = ""): Option[ModuleConfiguration] = {
-    val builder = scopt.OParser.builder[ModuleConfiguration]
+trait CanParseIdentificationModuleConfiguration {
+  def parse(args: Array[String], uniqueIdentifier: String = ""): Option[IdentificationModuleConfiguration] = {
+    val builder = scopt.OParser.builder[IdentificationModuleConfiguration]
     scopt.OParser.parse(
       scopt.OParser.sequence(
         builder.head("Scala-based Identification module " + uniqueIdentifier),
@@ -16,7 +17,7 @@ trait CanParseModuleConfiguration {
         builder.opt[Int]('x', "iteration").action((x, mc) => mc.copy(iteration = x))
       ),
       args,
-      ModuleConfiguration()
+      IdentificationModuleConfiguration()
     )
   }
 }

@@ -3,7 +3,7 @@ package idesyde.core
 import scala.concurrent.Future
 import scala.concurrent.ExecutionContext
 import java.time.Duration
-import idesyde.exploration.ExplorationCriteria
+import idesyde.core.ExplorationCriteria
 import idesyde.core.DecisionModel
 import idesyde.core.headers.ExplorerHeader
 
@@ -28,8 +28,6 @@ import idesyde.core.headers.ExplorerHeader
   * Exhibition (DATE), 2021, pp. 1204-1207, doi: 10.23919/DATE51398.2021.9474082.
   */
 trait Explorer {
-
-  type DesignModel
 
   def explore(
       decisionModel: DecisionModel,

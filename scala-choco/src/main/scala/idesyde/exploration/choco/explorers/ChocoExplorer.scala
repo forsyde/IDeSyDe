@@ -20,7 +20,7 @@ import org.chocosolver.solver.search.strategy.strategy.AbstractStrategy
 import org.chocosolver.solver.variables.Variable
 import org.chocosolver.solver.search.loop.monitors.IMonitorSolution
 import idesyde.exploration.choco.explorers.ParetoMinimizationBrancher
-import idesyde.exploration.ExplorationCriteria
+import idesyde.core.ExplorationCriteria
 import idesyde.utils.Logger
 
 class ChocoExplorer(using logger: Logger) extends Explorer:

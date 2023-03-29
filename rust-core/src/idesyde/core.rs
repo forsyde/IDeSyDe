@@ -14,8 +14,8 @@ pub struct LabelledArcWithPorts {
 #[derive(Serialize, Deserialize, PartialEq, Eq)]
 pub struct DesignModelHeader {
     category: String,
-    elements: HashSet<String>,
     model_paths: HashSet<String>,
+    elements: HashSet<String>,
     relations: HashSet<LabelledArcWithPorts>,
 }
 
@@ -34,7 +34,7 @@ pub trait DesignModel {
 pub trait DecisionModel {
     fn header(&self) -> DecisionModelHeader;
 
-    fn dominates<O: DecisionModel>(&self, o: &O) -> bool {
+    fn dominates(&self, o: Box<dyn DecisionModel>) -> bool {
         self.header().category == o.header().category
             && self
                 .header()

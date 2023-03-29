@@ -5,9 +5,6 @@ import scala.jdk.CollectionConverters.*
 import org.scalatest.funsuite.AnyFunSuite
 import forsyde.io.java.drivers.ForSyDeModelHandler
 import scala.concurrent.ExecutionContext
-import idesyde.identification.common.CommonIdentificationModule
-import idesyde.identification.choco.ChocoIdentificationModule
-import idesyde.identification.forsyde.ForSyDeIdentificationModule
 import idesyde.identification.minizinc.MinizincIdentificationModule
 import idesyde.exploration.ChocoExplorationModule
 import forsyde.io.java.core.ForSyDeSystemGraph

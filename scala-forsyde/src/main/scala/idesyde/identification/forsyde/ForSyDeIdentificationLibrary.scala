@@ -3,7 +3,7 @@ package idesyde.identification.forsyde
 import java.util.concurrent.ThreadPoolExecutor
 
 import java.util.concurrent.Executors
-import idesyde.identification.IdentificationModule
+import idesyde.core.IdentificationLibrary
 import idesyde.identification.forsyde.rules.sdf.SDFRules
 import spire.math.Rational
 import spire.compat._
@@ -17,8 +17,8 @@ import idesyde.core.DesignModel
 import idesyde.core.MarkedIdentificationRule
 import idesyde.identification.forsyde.rules.MixedRules
 
-class ForSyDeIdentificationModule(using Logger)
-    extends IdentificationModule
+class ForSyDeIdentificationLibrary(using Logger)
+    extends IdentificationLibrary
     with MixedRules
     with SDFRules
     with PlatformRules

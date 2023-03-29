@@ -3,7 +3,7 @@ package idesyde.core
 import idesyde.core.Explorer
 import idesyde.core.headers.ExplorationCombinationHeader
 import idesyde.core.headers.ExplorerHeader
-import idesyde.exploration.ExplorationCriteria
+import idesyde.core.ExplorationCriteria
 
 final case class ExplorationCombination(
     val explorer: Explorer,

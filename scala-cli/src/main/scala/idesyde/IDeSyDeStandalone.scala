@@ -12,9 +12,9 @@ import java.io.File
 import scala.collection.mutable.Buffer
 import idesyde.utils.Logger
 import scala.collection.mutable
-import idesyde.identification.common.CommonIdentificationModule
-import idesyde.identification.choco.ChocoIdentificationModule
-import idesyde.identification.forsyde.ForSyDeIdentificationModule
+import idesyde.identification.common.CommonIdentificationLibrary
+import idesyde.identification.choco.ChocoIdentificationLibrary
+import idesyde.identification.forsyde.ForSyDeIdentificationLibrary
 import idesyde.identification.minizinc.MinizincIdentificationModule
 import idesyde.exploration.ChocoExplorationModule
 import idesyde.utils.SimpleStandardIOLogger
@@ -32,12 +32,12 @@ object IDeSyDeStandalone {
       args,
       IDeSyDeRunConfig(
         Set(
-          CommonIdentificationModule(),
-          ChocoIdentificationModule(),
-          ForSyDeIdentificationModule(),
+          CommonIdentificationLibrary(),
+          ChocoIdentificationLibrary(),
+          ForSyDeIdentificationLibrary(),
           MinizincIdentificationModule()
         ),
-        Set(ChocoExplorationModule())
+        Set(ChocoExplorationModule)
       )
     ) match {
       case Some(runConfig) =>

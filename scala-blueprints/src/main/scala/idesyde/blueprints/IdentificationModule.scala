@@ -10,16 +10,58 @@ import idesyde.core.headers.DesignModelHeader
 import idesyde.core.headers.DecisionModelHeader
 import idesyde.core.MarkedIdentificationRule
 import idesyde.core.CompleteDecisionModel
-import idesyde.identification.IdentificationModule
+import idesyde.core.IdentificationLibrary
 
-trait StandaloneIdentificationModule extends CanParseModuleConfiguration with IdentificationModule {
+/** The trait/interface for an identification module that provides the identification and
+  * integration rules required to power the design space identification process [1].
+  *
+  * This trait extends [[idesyde.core.IdentificationLibrary]] to push further the modularization of
+  * the DSI methodology. In essence, this trait transforms an [[idesyde.core.IdentificationLibrary]]
+  * into an independent callable library, which can be orchestrated externally. This enables modules
+  * in different languages to cooperate seamlessly.
+  *
+  * @see
+  *   [[idesyde.core.IdentificationLibrary]]
+  */
+trait IdentificationModule
+    extends CanParseIdentificationModuleConfiguration
+    with IdentificationLibrary {
 
-  def designModelDecoders: Set[(DesignModelHeader) => Option[DesignModel]]
+  /** decoders used to reconstruct design models from headers.
+    *
+    * Ideally, these functions are able to produce a design model from the headers read during a
+    * call of this module.
+    *
+    * The decoders return [[Set]] instead of [[Option]] because a header might refer to multiple
+    * design model bodies.
+    *
+    * @return
+    *   the registered decoders
+    */
+  def designModelDecoders: Set[(DesignModelHeader) => Set[DesignModel]]
 
+  /** decoders used to reconstruct decision models from headers.
+    *
+    * Ideally, these functions are able to produce a decision model from the headers read during a
+    * call of this module.
+    *
+    * @return
+    *   the registered decoders
+    */
   def decisionModelDecoders: Set[(DecisionModelHeader) => Option[DecisionModel]]
 
+  /** Unique string used to identify this module during orchetration. Ideally it matches the name of
+    * the implementing class (or is the implemeting class name, ditto).
+    */
   def uniqueIdentifier: String
 
+  /** the logger to be used during a module call.
+    *
+    * @return
+    *   the registered logger
+    * @see
+    *   [[idesyde.utils.Logger]]
+    */
   def logger: Logger = SimpleStandardIOLogger("WARN")
 
   inline def standaloneIdentificationModule(

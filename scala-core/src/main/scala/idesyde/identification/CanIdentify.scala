@@ -11,13 +11,14 @@ import scala.annotation.targetName
 import idesyde.core.MarkedIdentificationRule
 import idesyde.core.DecisionModel
 import idesyde.core.DesignModel
+import idesyde.core.IdentificationLibrary
 
 trait CanIdentify(using logger: Logger) extends HasUtils {
 
   @targetName("identifyDecisionModelsWithModules")
   def identifyDecisionModels(
       models: Set[DesignModel],
-      identificationModules: Set[IdentificationModule],
+      identificationModules: Set[IdentificationLibrary],
       startingDecisionModels: Set[DecisionModel] = Set()
   ): Set[DecisionModel] = identifyDecisionModels(
     models,
@@ -108,7 +109,7 @@ trait CanIdentify(using logger: Logger) extends HasUtils {
   def integrateDecisionModel(
       model: DesignModel,
       decisions: DecisionModel,
-      integrationModules: Set[IdentificationModule] = Set()
+      integrationModules: Set[IdentificationLibrary] = Set()
   ): Set[DesignModel] =
     integrateDecisionModel(model, decisions, integrationModules.flatMap(_.integrationRules))
 

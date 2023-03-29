@@ -1,4 +1,4 @@
-package idesyde.exploration
+package idesyde.core
 
 /**
   * This enumeration captures certain spects of a exploration solution to be

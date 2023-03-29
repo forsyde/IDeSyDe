@@ -2,9 +2,6 @@ package workload
 
 import org.scalatest.funsuite.AnyFunSuite
 import idesyde.exploration.ChocoExplorationModule
-import idesyde.identification.common.CommonIdentificationModule
-import idesyde.identification.choco.ChocoIdentificationModule
-import idesyde.identification.forsyde.ForSyDeIdentificationModule
 import idesyde.identification.minizinc.MinizincIdentificationModule
 import forsyde.io.java.drivers.ForSyDeModelHandler
 import forsyde.io.java.amalthea.drivers.ForSyDeAmaltheaDriver

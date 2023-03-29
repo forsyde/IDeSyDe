@@ -10,10 +10,9 @@ import idesyde.utils.SimpleStandardIOLogger
 import idesyde.utils.Logger
 import idesyde.exploration.CanExplore
 import idesyde.identification.CanIdentify
-import idesyde.exploration.ExplorationModule
-import idesyde.identification.IdentificationModule
+import idesyde.core.ExplorationLibrary
+import idesyde.core.IdentificationLibrary
 import upickle.default.*
-import idesyde.core.ParametricDecisionModel
 import java.nio.file.Files
 import java.security.MessageDigest
 import java.util.Base64
@@ -24,9 +23,10 @@ import idesyde.core.ExplorationCombination
 import idesyde.core.headers.DecisionModelHeader
 import idesyde.core.headers.ExplorationCombinationHeader
 import idesyde.core.headers.DesignModelHeader
+import idesyde.blueprints.ExplorationModule
 
 case class IDeSyDeRunConfig(
-    val identificationModules: Set[IdentificationModule],
+    val identificationModules: Set[IdentificationLibrary],
     val explorationModules: Set[ExplorationModule],
     var inputModelsPaths: Buffer[Path] = Buffer.empty,
     var outputModelPath: Path = Paths.get("idesyde-out.fiodl"),
@@ -93,7 +93,7 @@ case class IDeSyDeRunConfig(
           )
       )
       // save the design models
-      val header = model.header.copy(model_path =
+      val header = model.header.copy(model_paths =
         validForSyDeInputs.filter((_, b) => b).map((p, _) => p.toString()).toSet
       )
       os.write.over(inputsPathJson / "header_ForSyDeDesignModel.json", header.asText)
@@ -105,7 +105,7 @@ case class IDeSyDeRunConfig(
           saveDecisionModel(identifiedPathJson, dm, i)
         }
         // now continue with flow
-        val chosen = chooseExplorersAndModels(identified, explorationModules)
+        val chosen = chooseExplorersAndModels(identified, explorationModules.map(_.asInstanceOf[ExplorationLibrary]))
         val chosenFiltered =
           if (allowedDecisionModels.size > 0) then
             chosen.filter(combo =>
@@ -138,7 +138,7 @@ case class IDeSyDeRunConfig(
                   case fdm @ ForSyDeDesignModel(m) =>
                     val oPath = outputsPathFiodl / s"integrated_0_${res}_ForSyDeDesignModel.fiodl"
                     modelHandler.writeModel(model.systemGraph.merge(m), oPath.toNIO)
-                    val oHeader = fdm.header.copy(model_path = Set(oPath.toString))
+                    val oHeader = fdm.header.copy(model_paths = Set(oPath.toString))
                     os.write.over(
                       outputsPathJson / s"header_0_${res}_ForSyDeDesignModel.json",
                       oHeader.asText

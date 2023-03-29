@@ -4,7 +4,7 @@ import upickle.default.*
 
 case class DesignModelHeader(
     val category: String,
-    val model_path: Set[String],
+    val model_paths: Set[String],
     val elements: Set[String],
     val relations: Set[LabelledArcWithPorts]
 ) derives ReadWriter {

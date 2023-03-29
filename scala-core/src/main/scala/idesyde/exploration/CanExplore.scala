@@ -1,7 +1,7 @@
 package idesyde.exploration
 
 import scala.concurrent.Future
-import idesyde.exploration.ExplorationCriteria
+import idesyde.core.ExplorationCriteria
 import java.util.stream.Collectors
 
 import collection.JavaConverters.*
@@ -11,13 +11,14 @@ import idesyde.utils.HasUtils
 import idesyde.utils.Logger
 import scala.annotation.targetName
 import idesyde.core.ExplorationCombination
+import idesyde.core.ExplorationLibrary
 
 trait CanExplore(using logger: Logger) extends HasUtils {
 
   @targetName("chooseExplorersAndModelsWithModules")
   def chooseExplorersAndModels(
       decisionModels: Set[? <: DecisionModel],
-      explorationModules: Set[ExplorationModule],
+      explorationModules: Set[ExplorationLibrary],
       explorationCriteria: Set[ExplorationCriteria] = Set(ExplorationCriteria.TimeUntilOptimality)
   ): Set[ExplorationCombination] = chooseExplorersAndModels(
     decisionModels,

@@ -41,6 +41,7 @@ trait CanParseDeviceTree extends RegexParsers {
             else DeviceTreeProperty.EncodedArray(propName, split)
           }
         }
+        case _1 ~ _2 => DeviceTreeProperty.StringProperty(propName, s"ERROR AT ${propName}: UNKOWN DELIMITER FOR PROPERTY")
       }
     }
 

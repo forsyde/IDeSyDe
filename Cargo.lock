@@ -89,6 +89,7 @@ name = "rust-orchestration"
 version = "0.4.4"
 dependencies = [
  "idesyde-rust-core",
+ "rmp-serde",
 ]
 
 [[package]]

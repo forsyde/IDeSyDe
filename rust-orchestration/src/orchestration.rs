@@ -1,5 +1,6 @@
 use std::collections::HashSet;
 
+use std::io::BufReader;
 use std::io::BufWriter;
 use std::io::Write;
 use std::path::Path;
@@ -38,24 +39,7 @@ impl IdentificationModule for ExternalIdentificationModule {
             Self::JVMJarIdentificationModule(_, _, c) => c,
         };
         let header_path = self.run_path().join("identified").join("msgpack");
-        let known_decision_model_paths = if let Ok(ls) = header_path.read_dir() {
-            ls.flat_map(|dir_entry_r| {
-                if let Ok(dir_entry) = dir_entry_r {
-                    if dir_entry.path().starts_with("header")
-                        && dir_entry
-                            .path()
-                            .extension()
-                            .map_or(false, |ext| ext == "msgpack")
-                    {
-                        return Some(dir_entry.path());
-                    }
-                }
-                None
-            })
-            .collect::<HashSet<PathBuf>>()
-        } else {
-            HashSet::new()
-        };
+        let known_decision_model_paths = load_decision_model_headers_from_binary(&header_path);
         if let Some(sin) = &child.stdin {
             let mut buf = BufWriter::new(sin);
             writeln!(&mut buf, "{}", iteration)
@@ -63,4 +47,30 @@ impl IdentificationModule for ExternalIdentificationModule {
         }
         HashSet::new()
     }
+}
+
+pub fn load_decision_model_headers_from_binary(header_path: &Path) -> HashSet<DecisionModelHeader> {
+    let known_decision_model_paths = if let Ok(ls) = header_path.read_dir() {
+        ls.flat_map(|dir_entry_r| {
+            if let Ok(dir_entry) = dir_entry_r {
+                if dir_entry.path().starts_with("header")
+                    && dir_entry
+                        .path()
+                        .extension()
+                        .map_or(false, |ext| ext == "msgpack")
+                {
+                    return Some(dir_entry.path());
+                }
+            }
+            None
+        })
+        .collect::<HashSet<PathBuf>>()
+    } else {
+        HashSet::new()
+    };
+    known_decision_model_paths
+        .iter()
+        .flat_map(|p| std::fs::read(p))
+        .flat_map(|b| rmp_serde::decode::from_slice(&b).ok())
+        .collect::<HashSet<DecisionModelHeader>>()
 }

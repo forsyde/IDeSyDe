@@ -6,3 +6,4 @@ edition.workspace = true
 
 [dependencies]
 idesyde-rust-core = { path = "../rust-core" }
+rmp-serde = { workspace = true }

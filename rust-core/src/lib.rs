@@ -1,4 +1,4 @@
-use std::{collections::HashSet, path::Path};
+use std::{collections::HashSet, hash::Hash, path::Path};
 
 use serde::{Deserialize, Serialize};
 use std::cmp::Ordering;
@@ -44,6 +44,12 @@ impl PartialOrd<DesignModelHeader> for DesignModelHeader {
 
 impl Eq for DesignModelHeader {}
 
+impl Hash for DesignModelHeader {
+    fn hash<H: std::hash::Hasher>(&self, state: &mut H) {
+        self.category.hash(state);
+    }
+}
+
 #[derive(Serialize, Deserialize)]
 pub struct DecisionModelHeader {
     category: String,
@@ -81,6 +87,11 @@ impl PartialOrd<DecisionModelHeader> for DecisionModelHeader {
 
 impl Eq for DecisionModelHeader {}
 
+impl Hash for DecisionModelHeader {
+    fn hash<H: std::hash::Hasher>(&self, state: &mut H) {
+        self.category.hash(state);
+    }
+}
 pub trait DesignModel {
     fn header(&self) -> DesignModelHeader;
 }

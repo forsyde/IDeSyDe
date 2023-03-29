@@ -22,7 +22,6 @@ object ForSyDeIdentificationModule
 
   given Logger = logger
 
-  val commonIdentificationLibrary = CommonIdentificationLibrary()
   val forSyDeIdentificationLibrary = ForSyDeIdentificationLibrary()
 
   def uniqueIdentifier: String = "ForSyDeIdentificationModule"
@@ -33,9 +32,9 @@ object ForSyDeIdentificationModule
 
   def decisionModelDecoders: Set[DecisionModelHeader => Option[DecisionModel]] = Set()
 
-  val identificationRules = forSyDeIdentificationLibrary.identificationRules ++ commonIdentificationLibrary.identificationRules
+  val identificationRules = forSyDeIdentificationLibrary.identificationRules
 
-  val integrationRules = forSyDeIdentificationLibrary.integrationRules ++ commonIdentificationLibrary.integrationRules
+  val integrationRules = forSyDeIdentificationLibrary.integrationRules
 
   def main(args: Array[String]): Unit = standaloneIdentificationModule(args)
 

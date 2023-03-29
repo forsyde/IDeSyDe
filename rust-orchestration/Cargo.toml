@@ -1,0 +1,8 @@
+[package]
+name = "rust-orchestration"
+author.workspace = true
+version.workspace = true
+edition.workspace = true
+
+[dependencies]
+idesyde-rust-core = { path = "../rust-core" }

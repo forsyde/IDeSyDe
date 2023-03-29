@@ -7,6 +7,7 @@ import spire.math.Rational
 import idesyde.identification.common.models.platform.InstrumentedPlatformMixin
 import scalax.collection.Graph
 import scalax.collection.GraphPredef._
+import idesyde.core.CompleteDecisionModel
 
 final case class TiledMultiCore(
     val processors: Vector[String],
@@ -22,7 +23,7 @@ final case class TiledMultiCore(
     val communicationElementsBitPerSecPerChannel: Vector[Double],
     val preComputedPaths: Map[String, Map[String, Iterable[String]]]
 ) extends StandardDecisionModel
-    with InstrumentedPlatformMixin[Double] derives ReadWriter {
+    with InstrumentedPlatformMixin[Double] with CompleteDecisionModel derives ReadWriter {
 
   val coveredElements         = (processors ++ memories ++ networkInterfaces ++ routers).toSet
   val coveredElementRelations = interconnectTopologySrcs.zip(interconnectTopologyDsts).toSet
@@ -125,6 +126,10 @@ final case class TiledMultiCore(
     }
     groups.toSet
   }
+
+  def bodyAsText: String = write(this)
+
+  def bodyAsBinary: Array[Byte] = writeBinary(this)
 
   def uniqueIdentifier: String = "TiledMultiCore"
 }

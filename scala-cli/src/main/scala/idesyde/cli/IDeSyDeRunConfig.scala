@@ -48,10 +48,12 @@ case class IDeSyDeRunConfig(
     val inputsPath         = runPath / "inputs"
     val inputsPathFiodl    = inputsPath / "fiodl"
     val inputsPathJson     = inputsPath / "json"
+    val inputsPathMsgpack     = inputsPath / "msgpack"
     val exploredPath       = runPath / "explored"
     val exploredPathJson   = exploredPath / "json"
     val identifiedPath     = runPath / "identified"
     val identifiedPathJson = identifiedPath / "json"
+    val identifiedPathMsgpack = identifiedPath / "msgpack"
     val explorablePath     = runPath / "explorable"
     val explorablePathJson = explorablePath / "json"
     val outputsPath        = runPath / "outputs"
@@ -59,10 +61,12 @@ case class IDeSyDeRunConfig(
     val outputsPathFiodl   = outputsPath / "fiodl"
     os.makeDir.all(inputsPath)
     os.makeDir.all(inputsPathJson)
+    os.makeDir.all(inputsPathMsgpack)
     os.makeDir.all(exploredPath)
     os.makeDir.all(exploredPathJson)
     os.makeDir.all(identifiedPath)
     os.makeDir.all(identifiedPathJson)
+    os.makeDir.all(identifiedPathMsgpack)
     os.makeDir.all(explorablePath)
     os.makeDir.all(explorablePathJson)
     os.makeDir.all(outputsPath)
@@ -97,12 +101,14 @@ case class IDeSyDeRunConfig(
         validForSyDeInputs.filter((_, b) => b).map((p, _) => p.toString()).toSet
       )
       os.write.over(inputsPathJson / "header_ForSyDeDesignModel.json", header.asText)
+      os.write.over(inputsPathMsgpack / "header_ForSyDeDesignModel.msgpack", header.asBinary)
       val identified = identifyDecisionModels(Set(model), identificationModules)
       logger.info(s"Identification finished with ${identified.size} decision model(s).")
       if (identified.size > 0)
         // save the identified models
         for ((dm, i) <- identified.zipWithIndex) {
           saveDecisionModel(identifiedPathJson, dm, i)
+          saveDecisionModelBinary(identifiedPathMsgpack, dm, i)
         }
         // now continue with flow
         val chosen = chooseExplorersAndModels(identified, explorationModules.map(_.asInstanceOf[ExplorationLibrary]))
@@ -191,6 +197,27 @@ case class IDeSyDeRunConfig(
         headerExtra
       case _ =>
         os.write.over(p / s"header_0_${num_prefix}_${m.uniqueIdentifier}.json", m.header.asText)
+        m.header
+    }
+  }
+
+  protected def saveDecisionModelBinary(
+      p: os.Path,
+      m: DecisionModel,
+      num_prefix: Int = 0
+  ): DecisionModelHeader = {
+    m match {
+      case complete: CompleteDecisionModel =>
+        val bodyPath    = p / s"body_0_${num_prefix}_${complete.uniqueIdentifier}.msgpack"
+        val headerExtra = m.header.copy(body_path = Some(bodyPath.toString))
+        os.write.over(bodyPath, complete.bodyAsBinary)
+        os.write.over(
+          p / s"header_0_${num_prefix}_${complete.uniqueIdentifier}.msgpack",
+          headerExtra.asBinary
+        )
+        headerExtra
+      case _ =>
+        os.write.over(p / s"header_0_${num_prefix}_${m.uniqueIdentifier}.msgpack", m.header.asBinary)
         m.header
     }
   }

@@ -14,6 +14,7 @@ import scalax.collection.Graph
 import scalax.collection.GraphPredef._
 import scalax.collection.edge.Implicits._
 import scala.collection.mutable.Buffer
+import idesyde.core.CompleteDecisionModel
 
 /** Decision model for synchronous dataflow graphs.
   *
@@ -58,7 +59,7 @@ final case class SDFApplication(
     val minimumActorThrouhgputs: Vector[Double]
 ) extends StandardDecisionModel
     with ParametricRateDataflowWorkloadMixin
-    with InstrumentedWorkloadMixin derives ReadWriter {
+    with InstrumentedWorkloadMixin with CompleteDecisionModel derives ReadWriter {
 
   // def dominatesSdf(other: SDFApplication) = repetitionVector.size >= other.repetitionVector.size
   val coveredElements         = (actorsIdentifiers ++ channelsIdentifiers).toSet
@@ -235,6 +236,10 @@ final case class SDFApplication(
     actorsIdentifiers.sortBy(a =>
       topologicalAndHeavyJobOrderingWithExtra.indexWhere((aa, _) => a == aa)
     )
+
+  def bodyAsText: String = write(this)
+
+  def bodyAsBinary: Array[Byte] = writeBinary(this)
 
   override val uniqueIdentifier = "SDFApplication"
 

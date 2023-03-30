@@ -12,85 +12,58 @@ use std::process::Stdio;
 use idesyde_rust_core::DecisionModelHeader;
 use idesyde_rust_core::IdentificationModule;
 
-enum ExternalIdentificationModule<'a> {
-    ExectuableFileIdentificationModule(&'a str, &'a PathBuf, std::process::Child),
-    PythonScriptIdentificationModule(&'a str, &'a PathBuf, std::process::Child),
-    JVMJarIdentificationModule(&'a str, &'a PathBuf, std::process::Child),
+pub struct ExternalIdentificationModule {
+    run_path_: PathBuf,
+    imodule: std::process::Child,
 }
 
-impl<'a> PartialEq<ExternalIdentificationModule<'a>> for ExternalIdentificationModule<'a> {
-
-    fn eq(&self, other: &ExternalIdentificationModule<'a>) -> bool {
-        match (self, other) {
-            (Self::ExectuableFileIdentificationModule(l0, l1, l2), Self::ExectuableFileIdentificationModule(r0, r1, r2)) => l0 == r0 && l1 == r1,
-            (Self::PythonScriptIdentificationModule(l0, l1, l2), Self::PythonScriptIdentificationModule(r0, r1, r2)) => l0 == r0 && l1 == r1,
-            (Self::JVMJarIdentificationModule(l0, l1, l2), Self::JVMJarIdentificationModule(r0, r1, r2)) => l0 == r0 && l1 == r1,
-            _ => false,
-        }
+impl PartialEq<ExternalIdentificationModule> for ExternalIdentificationModule {
+    fn eq(&self, other: &ExternalIdentificationModule) -> bool {
+        self.run_path() == other.run_path() && self.imodule.id() == other.imodule.id()
     }
 }
 
-impl<'a> Eq for ExternalIdentificationModule<'a> {}
+impl Eq for ExternalIdentificationModule {}
 
-impl<'a> Hash for ExternalIdentificationModule<'a> {
+impl Hash for ExternalIdentificationModule {
     fn hash<H: std::hash::Hasher>(&self, state: &mut H) {
-        match self {
-            Self::ExectuableFileIdentificationModule(l0, l1, l2) => {
-                l0.hash(state);
-                l1.hash(state);
-            },
-            Self::PythonScriptIdentificationModule(l0, l1, l2) => {
-                l0.hash(state);
-                l1.hash(state);
-            },
-            Self::JVMJarIdentificationModule(l0, l1, l2) => {
-                l0.hash(state);
-                l1.hash(state);
-            },
-        }
+        self.run_path().hash(state);
+        self.imodule.id().hash(state);
     }
 }
 
-impl<'a> IdentificationModule for ExternalIdentificationModule<'a> {
-    fn unique_identifier(&self) -> &str {
-        match self {
-            Self::ExectuableFileIdentificationModule(p, _, _) => &p[..],
-            Self::PythonScriptIdentificationModule(p, _, _) => &p[..],
-            Self::JVMJarIdentificationModule(p, _, _) => &p[..],
-        }
+impl IdentificationModule for ExternalIdentificationModule {
+    fn unique_identifier(&self) -> String {
+        self.imodule.id().to_string()
     }
 
     fn run_path(&self) -> &Path {
-        match self {
-            Self::ExectuableFileIdentificationModule(_, p, _) => p,
-            Self::PythonScriptIdentificationModule(_, p, _) => p,
-            Self::JVMJarIdentificationModule(_, p, _) => p,
-        }
+        self.run_path_.as_path()
     }
 
     fn identification_step(&mut self, step_number: u64) -> HashSet<DecisionModelHeader> {
-        let (uid, run_path, child) = match self {
-            Self::ExectuableFileIdentificationModule(i, p, c) => (i, p, c),
-            Self::PythonScriptIdentificationModule(i, p, c) => (i, p, c),
-            Self::JVMJarIdentificationModule(i, p, c) => (i, p, c),
-        };
+        let uid = self.unique_identifier();
+        let run_path = self.run_path();
         let header_path = run_path.join("identified").join("msgpack");
         let known_decision_model_paths = load_decision_model_headers_from_binary(&header_path);
+        let child = &mut self.imodule;
         if let Some(sin) = &child.stdin {
             let mut buf = BufWriter::new(sin);
             writeln!(&mut buf, "{}", step_number)
                 .expect(format!("Error at writing for {}", uid).as_str());
         }
         // let mut new_decision_model_headers= HashSet::<DecisionModelHeader>::new();
-        if let Some(sout) = &mut child.stdout {
-            let lines = BufReader::new(sout).lines();
+        if let Some(stdout) = &mut child.stdout {
+            let lines = BufReader::new(stdout).lines();
             lines
                 .flat_map(|p| p.ok())
                 .flat_map(|p| std::fs::read(p).ok())
                 .flat_map(|b| rmp_serde::from_slice::<DecisionModelHeader>(b.as_slice()))
                 .filter(|d| !known_decision_model_paths.contains(d))
                 .collect::<HashSet<DecisionModelHeader>>()
-        } else { HashSet::new() }
+        } else {
+            HashSet::new()
+        }
     }
 }
 
@@ -120,23 +93,35 @@ pub fn load_decision_model_headers_from_binary(header_path: &Path) -> HashSet<De
         .collect::<HashSet<DecisionModelHeader>>()
 }
 
-pub fn find_external_identification_modules<'a>(modules_path: &'a PathBuf, run_path: &'a PathBuf) -> HashSet<ExternalIdentificationModule<'a>> {
-    if let Ok(readDir) = modules_path.read_dir() {
-        readDir
+pub fn find_external_identification_modules(
+    modules_path: &Path,
+    run_path: &Path,
+) -> HashSet<ExternalIdentificationModule> {
+    if let Ok(read_dir) = modules_path.read_dir() {
+        read_dir
             .flat_map(|e| e.ok())
             .map(|e| e.path())
             .filter(|p| p.is_file())
             .flat_map(|p| {
-                match p.extension().and_then(|s| s.to_str()) {
-                    Some("jar") => {
-                        if let Ok(mut child) = std::process::Command::new("java").arg("-jar").arg(p).arg("--integrate").arg(run_path).stdin(Stdio::piped()).stdout(Stdio::piped()).spawn() {
-                          Some(ExternalIdentificationModule::JVMJarIdentificationModule(p.to_str().expect("Could not get module's UID"), run_path, child))
-                        } else { None }
-                    }
-                    Some("py") => { None }
-                    _ => { None }
+                let prog = p.read_link().unwrap_or(p);
+                println!("{}", prog.to_str().unwrap());
+                if let Ok(child) = std::process::Command::new(prog)
+                    .arg("--integrate")
+                    .arg(run_path)
+                    .stdin(Stdio::piped())
+                    .stdout(Stdio::piped())
+                    .spawn()
+                {
+                    Some(ExternalIdentificationModule {
+                        run_path_: run_path.to_owned(),
+                        imodule: child,
+                    })
+                } else {
+                    None
                 }
             })
-            .collect::<HashSet<ExternalIdentificationModule<'a>>>()
-    } else { HashSet::new() }
+            .collect::<HashSet<ExternalIdentificationModule>>()
+    } else {
+        HashSet::new()
+    }
 }

@@ -73,6 +73,7 @@ trait IdentificationModule
         val designModelsPath          = runPath / "inputs" / "msgpack"
         val decisionModelsPathMsgPack = runPath / "identified" / "msgpack"
         val decisionModelsPathJson    = runPath / "identified" / "json"
+        println(uniqueIdentifier)
         LazyList.continually(io.StdIn.readLong())
         .takeWhile(_ > -1).foreach(i => {
           if (value.shouldIdentify) {
@@ -101,7 +102,7 @@ trait IdentificationModule
               })
             } else identificationRules
             val identified = identificationRules.flatMap(irule => irule(designModels, decisionModels))
-            for ((m, i) <- identified.zipWithIndex; h = m.header) {
+            for ((m, i) <- identified.zipWithIndex; h = m.header; if decisionModelHeaders.contains(m.header)) {
               os.write.over(
                 decisionModelsPathJson / s"header_${i}_${uniqueIdentifier}_${m.uniqueIdentifier}.json",
                 h.asText
@@ -122,6 +123,7 @@ trait IdentificationModule
                   )
                 case _ =>
               }
+              println(decisionModelsPathMsgPack / s"header_${i}_${uniqueIdentifier}_${m.uniqueIdentifier}.msgpack")
             }
           }
         })

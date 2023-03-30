@@ -127,7 +127,7 @@ pub enum MarkedIdentificationRule {
 pub trait IdentificationModule {
     fn unique_identifier(&self) -> &str;
     fn run_path(&self) -> &Path;
-    fn identify(&self, iteration: u64) -> HashSet<DecisionModelHeader>;
+    fn identification_step(&mut self, iteration: u64) -> HashSet<DecisionModelHeader>;
 }
 
 pub trait FullIdentificationModule {

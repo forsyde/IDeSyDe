@@ -1,4 +1,4 @@
-use std::path::Path;
+use std::{path::Path, fs};
 
 use idesyde_rust_core::IdentificationModule;
 
@@ -10,8 +10,12 @@ fn main() {
         Path::new("run"),
     );
     println!("finding");
-    for imodule in imodules {
-        println!("found {} {}", imodule.unique_identifier(), imodule.run_path().to_str().unwrap_or("ERR"));
+    std::fs::create_dir_all(Path::new("run").join("inputs").join("json"));
+    std::fs::create_dir_all(Path::new("run").join("inputs").join("msgpack"));
+    std::fs::create_dir_all(Path::new("run").join("identified").join("json"));
+    std::fs::create_dir_all(Path::new("run").join("identified").join("msgpack"));
+    for mut imodule in imodules {
+        let mut res = imodule.identification_step(0);
     }
     println!("done");
 }

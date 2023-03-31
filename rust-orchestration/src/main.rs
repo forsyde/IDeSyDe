@@ -6,7 +6,7 @@ pub mod orchestration;
 
 fn main() {
     let imodules =
-        orchestration::initiate_identification_modules(Path::new("imodules"), Path::new("run"));
+        orchestration::find_identification_modules(Path::new("imodules"), Path::new("run"));
     println!("finding");
     std::fs::create_dir_all(Path::new("run").join("inputs").join("json"));
     std::fs::create_dir_all(Path::new("run").join("inputs").join("msgpack"));

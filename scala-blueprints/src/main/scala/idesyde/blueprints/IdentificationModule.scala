@@ -130,19 +130,20 @@ trait IdentificationModule
       case Some(value) =>
         val runPath                   = value.runPath
         val decisionModelsPathMsgPack = runPath / "identified" / "msgpack"
-        LazyList
-          .continually(io.StdIn.readLong())
-          .takeWhile(_ > -1)
-          .foreach(i => {
-            if (value.shouldIdentify) {
-              val identified = identificationStep(runPath, i)
-              for (m <- identified) {
-                println(
-                  decisionModelsPathMsgPack / s"header_${i}_${uniqueIdentifier}_${m.uniqueIdentifier}.msgpack"
-                )
-              }
-            }
-          })
+        val identStep = io.StdIn.readLong()
+        if (value.shouldIdentify) {
+          val identified = identificationStep(runPath, identStep)
+          for (m <- identified) {
+            println(
+              decisionModelsPathMsgPack / s"header_${identStep}_${uniqueIdentifier}_${m.uniqueIdentifier}.msgpack"
+            )
+          }
+        }
+        // LazyList
+        //   .continually(io.StdIn.readLong())
+        //   .takeWhile(_ > -1)
+        //   .foreach(i => {
+        //   })
       case None =>
     }
   }

@@ -8,18 +8,19 @@ use std::io::Write;
 use std::path::Path;
 use std::path::PathBuf;
 use std::process::Stdio;
+use std::str::FromStr;
 
 use idesyde_rust_core::DecisionModelHeader;
 use idesyde_rust_core::IdentificationModule;
 
 pub struct ExternalIdentificationModule {
     run_path_: PathBuf,
-    child_process: std::process::Child,
+    call_command: std::process::Command,
 }
 
 impl PartialEq<ExternalIdentificationModule> for ExternalIdentificationModule {
     fn eq(&self, other: &ExternalIdentificationModule) -> bool {
-        self.run_path() == other.run_path() && self.child_process.id() == other.child_process.id()
+        self.run_path() == other.run_path() && self.call_command.get_program() == other.call_command.get_program()
     }
 }
 
@@ -28,21 +29,13 @@ impl Eq for ExternalIdentificationModule {}
 impl Hash for ExternalIdentificationModule {
     fn hash<H: std::hash::Hasher>(&self, state: &mut H) {
         self.run_path().hash(state);
-        self.child_process.id().hash(state);
-    }
-}
-
-impl Drop for ExternalIdentificationModule {
-    fn drop(&mut self) {
-        drop(&mut self.run_path_);
-        self.child_process.wait().expect("Failed to wait for child process to end");
-        drop(&mut self.child_process);
+        self.call_command.get_program().hash(state);
     }
 }
 
 impl IdentificationModule for ExternalIdentificationModule {
     fn unique_identifier(&self) -> String {
-        self.child_process.id().to_string()
+        self.call_command.get_program().to_str().unwrap().to_string()
     }
 
     fn run_path(&self) -> &Path {
@@ -54,24 +47,30 @@ impl IdentificationModule for ExternalIdentificationModule {
         let run_path = self.run_path();
         let header_path = run_path.join("identified").join("msgpack");
         let known_decision_model_paths = load_decision_model_headers_from_binary(&header_path);
-        let child = &mut self.child_process;
-        if let Some(sin) = &child.stdin {
-            let mut buf = BufWriter::new(sin);
-            writeln!(&mut buf, "{}", step_number)
-                .expect(format!("Error at writing for {}", uid).as_str());
-        }
-        // let mut new_decision_model_headers= HashSet::<DecisionModelHeader>::new();
-        if let Some(stdout) = &mut child.stdout {
-            let lines = BufReader::new(stdout).lines();
-            lines
+        if let Ok(child) = &mut self.call_command.stdin(Stdio::piped()).stdout(Stdio::piped()).spawn() {
+            if let Some(sin) = &child.stdin {
+                let mut buf = BufWriter::new(sin);
+                writeln!(&mut buf, "{}", step_number)
+                    .expect(format!("Error at writing for {}", uid).as_str());
+            }
+            child.wait();
+            // let mut new_decision_model_headers= HashSet::<DecisionModelHeader>::new();
+            // child.wait_with_output()
+            //     .and_then(|out| String::from_utf8(out.stdout))
+            //     .and_then(|output| output.lines())
+            //     .and_then(|p| std::fs::read(p))
+            //     .and_then(|b| rmp_serde::from_slice::<DecisionModelHeader>(b.as_slice()))
+            //     .(|d| !known_decision_model_paths.contains(d))
+            if let Some(out) = &mut child.stdout {
+                return BufReader::new(out).lines()
                 .flat_map(|p| p.ok())
                 .flat_map(|p| std::fs::read(p).ok())
                 .flat_map(|b| rmp_serde::from_slice::<DecisionModelHeader>(b.as_slice()))
                 .filter(|d| !known_decision_model_paths.contains(d))
                 .collect::<HashSet<DecisionModelHeader>>()
-        } else {
-            HashSet::new()
+            }
         }
+        HashSet::new()
     }
 }
 
@@ -112,27 +111,14 @@ pub fn find_external_identification_modules(
             .filter(|p| p.is_file())
             .flat_map(|p| {
                 let prog = p.read_link().unwrap_or(p);
-                let child = match prog.extension().and_then(|s| s.to_str()) {
-                    Some("jar") => std::process::Command::new("java").arg("-jar").arg(prog)
-                    .arg(run_path)
-                    .stdin(Stdio::piped())
-                    .stdout(Stdio::piped())
-                    .spawn(),
-                    Some(_) | None => std::process::Command::new(prog)
-                    .arg(run_path)
-                    .stdin(Stdio::piped())
-                    .stdout(Stdio::piped())
-                    .spawn(),
+                let command = match prog.extension().and_then(|s| s.to_str()) {
+                    Some("jar") => std::process::Command::new(format!("java -jar {}", prog.display())),
+                    Some(_) | None => std::process::Command::new(prog),
                 };
-                if let Ok(ichild) = child
-                {
-                    Some(ExternalIdentificationModule {
-                        run_path_: run_path.to_owned(),
-                        child_process: ichild,
-                    })
-                } else {
-                    None
-                }
+                Some(ExternalIdentificationModule {
+                    run_path_: run_path.to_owned(),
+                    call_command: command,
+                })
             })
             .collect::<HashSet<ExternalIdentificationModule>>()
     } else {

@@ -12,8 +12,8 @@ trait CanParseIdentificationModuleConfiguration {
           .action((f, mc) =>
             mc.copy(runPath = if (f.startsWith("/")) then os.root / f else os.pwd / f)
           ),
-        builder.opt[Boolean]("identify").action((b, mc) => mc.copy(shouldIdentify = b)),
-        builder.opt[Boolean]("integrate").action((b, mc) => mc.copy(shouldIntegrate = b))
+        builder.opt[Unit]("--no-identification").action((b, mc) => mc.copy(shouldIdentify = false)),
+        builder.opt[Unit]("--no-integration").action((b, mc) => mc.copy(shouldIntegrate = false))
       ),
       args,
       IdentificationModuleConfiguration()

@@ -11,7 +11,7 @@ fn main() {
     );
     println!("finding");
     for imodule in imodules {
-        println!("found {}", imodule.unique_identifier());
+        println!("found {} {}", imodule.unique_identifier(), imodule.run_path().to_str().unwrap_or("ERR"));
     }
     println!("done");
 }

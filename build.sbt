@@ -59,6 +59,7 @@ lazy val common = (project in file("scala-common"))
   .dependsOn(blueprints)
   // .enablePlugins(ScalaNativePlugin)
   .enablePlugins(UniversalPlugin, JavaAppPackaging, JlinkPlugin)
+  .enablePlugins(JDKPackagerPlugin)
   .enablePlugins(GraalVMNativeImagePlugin)
   .settings(
     name := "idesyde-scala-common",
@@ -82,6 +83,7 @@ lazy val forsyde = (project in file("scala-forsyde"))
   .dependsOn(common)
   .dependsOn(blueprints)
   .enablePlugins(UniversalPlugin, JavaAppPackaging, JlinkPlugin)
+  .enablePlugins(JDKPackagerPlugin)
   .enablePlugins(GraalVMNativeImagePlugin)
   .settings(
     name := "idesyde-scala-forsyde",
@@ -139,6 +141,7 @@ lazy val choco = (project in file("scala-choco"))
   .dependsOn(forsyde)
   .dependsOn(blueprints)
   .enablePlugins(UniversalPlugin, JavaAppPackaging, JlinkPlugin)
+  .enablePlugins(JDKPackagerPlugin)
   .enablePlugins(GraalVMNativeImagePlugin)
   .settings(
     name := "idesyde-scala-choco",
@@ -211,6 +214,7 @@ lazy val cli = (project in file("scala-cli"))
   .dependsOn(devicetree)
   // .enablePlugins(ScalaNativePlugin)
   .enablePlugins(UniversalPlugin, JavaAppPackaging, JlinkPlugin)
+  .enablePlugins(JDKPackagerPlugin)
   .enablePlugins(GraalVMNativeImagePlugin)
   .settings(
     publishArtifact := false,

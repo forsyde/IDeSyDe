@@ -64,69 +64,85 @@ trait IdentificationModule
     */
   def logger: Logger = SimpleStandardIOLogger("WARN")
 
+  inline def identificationStep(
+      runPath: os.Path,
+      stepNumber: Long
+  ): Set[DecisionModel] = {
+    val designModelsPath          = runPath / "inputs" / "msgpack"
+    val decisionModelsPathMsgPack = runPath / "identified" / "msgpack"
+    val decisionModelsPathJson    = runPath / "identified" / "json"
+    val designModelHeaders =
+      os.list(designModelsPath)
+        .filter(_.last.startsWith("header"))
+        .map(f => readBinary[DesignModelHeader](os.read.bytes(f)))
+    val decisionModelHeaders =
+      os.list(decisionModelsPathMsgPack)
+        .filter(_.last.startsWith("header"))
+        .map(f => readBinary[DecisionModelHeader](os.read.bytes(f)))
+    val designModels =
+      designModelDecoders.flatMap(dec => designModelHeaders.flatMap(h => dec(h)))
+    val decisionModels =
+      decisionModelDecoders.flatMap(dec => decisionModelHeaders.flatMap(h => dec(h)))
+    val iterRules = if (stepNumber == 0L) {
+      identificationRules.flatMap(_ match {
+        case r: MarkedIdentificationRule.DecisionModelOnlyIdentificationRule         => None
+        case r: MarkedIdentificationRule.SpecificDecisionModelOnlyIdentificationRule => None
+        case r                                                                       => Some(r)
+      })
+    } else if (stepNumber > 0L) {
+      identificationRules.flatMap(_ match {
+        case r: MarkedIdentificationRule.DesignModelOnlyIdentificationRule => None
+        case r                                                             => Some(r)
+      })
+    } else identificationRules
+    val identified = identificationRules.flatMap(irule => irule(designModels, decisionModels))
+    for (
+      (m, i) <- identified.zipWithIndex; h = m.header; if decisionModelHeaders.contains(m.header)
+    ) yield {
+      os.write.over(
+        decisionModelsPathJson / s"header_${i}_${uniqueIdentifier}_${m.uniqueIdentifier}.json",
+        h.asText
+      )
+      os.write.over(
+        decisionModelsPathMsgPack / s"header_${i}_${uniqueIdentifier}_${m.uniqueIdentifier}.msgpack",
+        h.asBinary
+      )
+      m match {
+        case cm: CompleteDecisionModel =>
+          os.write.over(
+            decisionModelsPathJson / s"body_${i}_${uniqueIdentifier}_${m.uniqueIdentifier}.json",
+            cm.bodyAsText
+          )
+          os.write.over(
+            decisionModelsPathMsgPack / s"body_${i}_${uniqueIdentifier}_${m.uniqueIdentifier}.msgpack",
+            cm.bodyAsBinary
+          )
+        case _ =>
+      }
+      m
+    }
+  }
+
   inline def standaloneIdentificationModule(
       args: Array[String]
   ): Unit = {
     parse(args, uniqueIdentifier) match {
       case Some(value) =>
         val runPath                   = value.runPath
-        val designModelsPath          = runPath / "inputs" / "msgpack"
         val decisionModelsPathMsgPack = runPath / "identified" / "msgpack"
-        val decisionModelsPathJson    = runPath / "identified" / "json"
-        println(uniqueIdentifier)
-        LazyList.continually(io.StdIn.readLong())
-        .takeWhile(_ > -1).foreach(i => {
-          if (value.shouldIdentify) {
-            val designModelHeaders =
-              os.list(designModelsPath)
-                .filter(_.last.startsWith("header"))
-                .map(f => readBinary[DesignModelHeader](os.read.bytes(f)))
-            val decisionModelHeaders =
-              os.list(decisionModelsPathMsgPack)
-                .filter(_.last.startsWith("header"))
-                .map(f => readBinary[DecisionModelHeader](os.read.bytes(f)))
-            val designModels =
-              designModelDecoders.flatMap(dec => designModelHeaders.flatMap(h => dec(h)))
-            val decisionModels =
-              decisionModelDecoders.flatMap(dec => decisionModelHeaders.flatMap(h => dec(h)))
-            val iterRules = if (i == 0L) {
-              identificationRules.flatMap(_ match {
-                case r: MarkedIdentificationRule.DecisionModelOnlyIdentificationRule         => None
-                case r: MarkedIdentificationRule.SpecificDecisionModelOnlyIdentificationRule => None
-                case r => Some(r)
-              })
-            } else if (i > 0L) {
-              identificationRules.flatMap(_ match {
-                case r: MarkedIdentificationRule.DesignModelOnlyIdentificationRule => None
-                case r                                                             => Some(r)
-              })
-            } else identificationRules
-            val identified = identificationRules.flatMap(irule => irule(designModels, decisionModels))
-            for ((m, i) <- identified.zipWithIndex; h = m.header; if decisionModelHeaders.contains(m.header)) {
-              os.write.over(
-                decisionModelsPathJson / s"header_${i}_${uniqueIdentifier}_${m.uniqueIdentifier}.json",
-                h.asText
-              )
-              os.write.over(
-                decisionModelsPathMsgPack / s"header_${i}_${uniqueIdentifier}_${m.uniqueIdentifier}.msgpack",
-                h.asBinary
-              )
-              m match {
-                case cm: CompleteDecisionModel =>
-                  os.write.over(
-                    decisionModelsPathJson / s"body_${i}_${uniqueIdentifier}_${m.uniqueIdentifier}.json",
-                    cm.bodyAsText
-                  )
-                  os.write.over(
-                    decisionModelsPathMsgPack / s"body_${i}_${uniqueIdentifier}_${m.uniqueIdentifier}.msgpack",
-                    cm.bodyAsBinary
-                  )
-                case _ =>
+        LazyList
+          .continually(io.StdIn.readLong())
+          .takeWhile(_ > -1)
+          .foreach(i => {
+            if (value.shouldIdentify) {
+              val identified = identificationStep(runPath, i)
+              for (m <- identified) {
+                println(
+                  decisionModelsPathMsgPack / s"header_${i}_${uniqueIdentifier}_${m.uniqueIdentifier}.msgpack"
+                )
               }
-              println(decisionModelsPathMsgPack / s"header_${i}_${uniqueIdentifier}_${m.uniqueIdentifier}.msgpack")
             }
-          }
-        })
+          })
       case None =>
     }
   }

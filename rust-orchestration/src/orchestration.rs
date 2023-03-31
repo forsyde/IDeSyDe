@@ -14,12 +14,12 @@ use idesyde_rust_core::IdentificationModule;
 
 pub struct ExternalIdentificationModule {
     run_path_: PathBuf,
-    imodule: std::process::Child,
+    child_process: std::process::Child,
 }
 
 impl PartialEq<ExternalIdentificationModule> for ExternalIdentificationModule {
     fn eq(&self, other: &ExternalIdentificationModule) -> bool {
-        self.run_path() == other.run_path() && self.imodule.id() == other.imodule.id()
+        self.run_path() == other.run_path() && self.child_process.id() == other.child_process.id()
     }
 }
 
@@ -28,13 +28,21 @@ impl Eq for ExternalIdentificationModule {}
 impl Hash for ExternalIdentificationModule {
     fn hash<H: std::hash::Hasher>(&self, state: &mut H) {
         self.run_path().hash(state);
-        self.imodule.id().hash(state);
+        self.child_process.id().hash(state);
+    }
+}
+
+impl Drop for ExternalIdentificationModule {
+    fn drop(&mut self) {
+        drop(&mut self.run_path_);
+        self.child_process.wait().expect("Failed to wait for child process to end");
+        drop(&mut self.child_process);
     }
 }
 
 impl IdentificationModule for ExternalIdentificationModule {
     fn unique_identifier(&self) -> String {
-        self.imodule.id().to_string()
+        self.child_process.id().to_string()
     }
 
     fn run_path(&self) -> &Path {
@@ -46,7 +54,7 @@ impl IdentificationModule for ExternalIdentificationModule {
         let run_path = self.run_path();
         let header_path = run_path.join("identified").join("msgpack");
         let known_decision_model_paths = load_decision_model_headers_from_binary(&header_path);
-        let child = &mut self.imodule;
+        let child = &mut self.child_process;
         if let Some(sin) = &child.stdin {
             let mut buf = BufWriter::new(sin);
             writeln!(&mut buf, "{}", step_number)
@@ -104,17 +112,23 @@ pub fn find_external_identification_modules(
             .filter(|p| p.is_file())
             .flat_map(|p| {
                 let prog = p.read_link().unwrap_or(p);
-                println!("{}", prog.to_str().unwrap());
-                if let Ok(child) = std::process::Command::new(prog)
-                    .arg("--integrate")
+                let child = match prog.extension().and_then(|s| s.to_str()) {
+                    Some("jar") => std::process::Command::new("java").arg("-jar").arg(prog)
                     .arg(run_path)
                     .stdin(Stdio::piped())
                     .stdout(Stdio::piped())
-                    .spawn()
+                    .spawn(),
+                    Some(_) | None => std::process::Command::new(prog)
+                    .arg(run_path)
+                    .stdin(Stdio::piped())
+                    .stdout(Stdio::piped())
+                    .spawn(),
+                };
+                if let Ok(ichild) = child
                 {
                     Some(ExternalIdentificationModule {
                         run_path_: run_path.to_owned(),
-                        imodule: child,
+                        child_process: ichild,
                     })
                 } else {
                     None

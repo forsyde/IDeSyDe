@@ -5,5 +5,7 @@ version.workspace = true
 edition.workspace = true
 
 [dependencies]
+clap = { workspace = true }
 idesyde-rust-core = { path = "../rust-core" }
 rmp-serde = { workspace = true }
+sha3 = "0.10.6"

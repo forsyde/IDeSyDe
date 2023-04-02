@@ -27,6 +27,8 @@ trait IdentificationModule
     extends CanParseIdentificationModuleConfiguration
     with IdentificationLibrary {
 
+  def inputsToHeaders: Set[(os.Path) => Option[DesignModelHeader | DesignModel]] = Set()
+
   /** decoders used to reconstruct design models from headers.
     *
     * Ideally, these functions are able to produce a design model from the headers read during a
@@ -95,9 +97,9 @@ trait IdentificationModule
         case r                                                             => Some(r)
       })
     } else identificationRules
-    val identified = identificationRules.flatMap(irule => irule(designModels, decisionModels))
+    val identified = iterRules.flatMap(irule => irule(designModels, decisionModels))
     for (
-      (m, i) <- identified.zipWithIndex; h = m.header; if decisionModelHeaders.contains(m.header)
+      (m, i) <- identified.zipWithIndex; h = m.header; if !decisionModelHeaders.contains(m.header)
     ) yield {
       os.write.over(
         decisionModelsPathJson / s"header_${i}_${uniqueIdentifier}_${m.uniqueIdentifier}.json",
@@ -129,8 +131,35 @@ trait IdentificationModule
     parse(args, uniqueIdentifier) match {
       case Some(value) =>
         val runPath                   = value.runPath
+        val inputsPath                = runPath / "inputs"
+        val inputsPathJson            = runPath / "inputs" / "json"
+        val inputsPathMspack          = runPath / "inputs" / "msgpack"
         val decisionModelsPathMsgPack = runPath / "identified" / "msgpack"
         val identStep                 = value.identificationStep
+        for (f <- os.walk(inputsPath); itoh <- inputsToHeaders) {
+          for (m <- itoh(f)) {
+            m match {
+              case header: DesignModelHeader =>
+                os.write.over(
+                  inputsPathMspack / s"header_${uniqueIdentifier}_${header.category}.msgpack",
+                  header.asBinary
+                )
+                os.write.over(
+                  inputsPathJson / s"header_${uniqueIdentifier}_${header.category}.json",
+                  header.asText
+                )
+              case model: DesignModel =>
+                os.write.over(
+                  inputsPathMspack / s"header_${uniqueIdentifier}_${model.uniqueIdentifier}.msgpack",
+                  model.header.copy(model_paths = Set(f.toString)).asBinary
+                )
+                os.write.over(
+                  inputsPathJson / s"header_${uniqueIdentifier}_${model.uniqueIdentifier}.json",
+                  model.header.copy(model_paths = Set(f.toString)).asText
+                )
+            }
+          }
+        }
         if (value.shouldIdentify) {
           val identified = identificationStep(runPath, identStep)
           for (m <- identified) {

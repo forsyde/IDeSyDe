@@ -56,12 +56,14 @@ impl IdentificationModule for ExternalIdentificationModule {
                 .arg(self.run_path_.as_os_str())
                 .arg(step_number.to_string())
                 .stdout(Stdio::piped())
+                .stderr(Stdio::piped())
                 .output(),
             false => std::process::Command::new(self.command_path_.as_os_str())
                 .arg("--no-integration")
                 .arg(self.run_path_.as_os_str())
                 .arg(step_number.to_string())
                 .stdout(Stdio::piped())
+                .stderr(Stdio::piped())
                 .output(),
         };
         if let Ok(out) = output {

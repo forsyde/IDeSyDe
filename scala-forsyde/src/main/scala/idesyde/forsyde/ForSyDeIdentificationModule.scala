@@ -17,12 +17,13 @@ import forsyde.io.java.drivers.ForSyDeModelHandler
 import idesyde.identification.forsyde.ForSyDeDesignModel
 import java.nio.file.Paths
 
-object ForSyDeIdentificationModule
-    extends IdentificationModule {
+object ForSyDeIdentificationModule extends IdentificationModule {
 
   given Logger = logger
 
   val forSyDeIdentificationLibrary = ForSyDeIdentificationLibrary()
+
+  val modelHandler = ForSyDeModelHandler()
 
   def uniqueIdentifier: String = "ForSyDeIdentificationModule"
 
@@ -36,12 +37,13 @@ object ForSyDeIdentificationModule
 
   val integrationRules = forSyDeIdentificationLibrary.integrationRules
 
+  override val inputsToHeaders = Set(inputToForSyDeHeader)
+
   def main(args: Array[String]): Unit = standaloneIdentificationModule(args)
 
   def decodeForSyDeDesignModelFromHeader(header: DesignModelHeader): Set[DesignModel] = {
-    val modelHandler = ForSyDeModelHandler()
     header match {
-      case DesignModelHeader("ForSyDeDesignModel", model_paths, _, _) => 
+      case DesignModelHeader("ForSyDeDesignModel", model_paths, _, _) =>
         model_paths.flatMap(p => {
           modelHandler.canLoadModel(Paths.get(p)) match {
             case true =>
@@ -49,9 +51,18 @@ object ForSyDeIdentificationModule
             case false =>
               None
           }
-        })    
-      case _ => 
+        })
+      case _ =>
         Set()
+    }
+  }
+
+  def inputToForSyDeHeader(p: os.Path): Option[DesignModelHeader | DesignModel] = {
+    if (modelHandler.canLoadModel(p.toNIO)) {
+      val m = modelHandler.loadModel(p.toNIO)
+      Some(ForSyDeDesignModel(m))
+    } else {
+      None
     }
   }
 }

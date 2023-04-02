@@ -18,8 +18,8 @@ trait CanParseIdentificationModuleConfiguration {
         builder
           .arg[Long]("identification_step")
           .action((f, mc) => mc.copy(identificationStep = f)),
-        builder.opt[Unit]("--no-identification").action((b, mc) => mc.copy(shouldIdentify = false)),
-        builder.opt[Unit]("--no-integration").action((b, mc) => mc.copy(shouldIntegrate = false))
+        builder.opt[Unit]("no-identification").action((b, mc) => mc.copy(shouldIdentify = false)),
+        builder.opt[Unit]("no-integration").action((b, mc) => mc.copy(shouldIntegrate = false))
       ),
       args,
       IdentificationModuleConfiguration()

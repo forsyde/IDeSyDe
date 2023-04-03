@@ -23,13 +23,15 @@ import idesyde.exploration.choco.explorers.ParetoMinimizationBrancher
 import idesyde.core.ExplorationCriteria
 import idesyde.utils.Logger
 import spire.math.Rational
+import idesyde.identification.common.models.mixed.SDFToTiledMultiCore
 
 class ChocoExplorer(using logger: Logger) extends Explorer with CanSolveSDFToTiledMultiCore:
 
   def canExplore(decisionModel: DecisionModel): Boolean =
     decisionModel match
-      case c: ChocoDecisionModel => true
-      case _                     => false
+      case sdf: SDFToTiledMultiCore => true
+      case c: ChocoDecisionModel    => true
+      case _                        => false
 
   override def availableCriterias(decisionModel: DecisionModel): Set[ExplorationCriteria] =
     decisionModel match {
@@ -88,6 +90,21 @@ class ChocoExplorer(using logger: Logger) extends Explorer with CanSolveSDFToTil
       decisionModel: T,
       explorationTimeOutInSecs: Long = 0L
   ): LazyList[T] = decisionModel match
+    case sdf: SDFToTiledMultiCore =>
+      val model  = buildSDFToTiledMultiCore(sdf)
+      val solver = model.getSolver()
+      LazyList
+        .continually(solver.solve())
+        .takeWhile(feasible => feasible)
+        // .filter(feasible => feasible)
+        .map(_ => {
+          // scribe.debug(s"Current heap memory used: ${Runtime.getRuntime().totalMemory() - Runtime.getRuntime().freeMemory()} bytes")
+          solver.defaultSolution()
+        })
+        .flatMap(paretoSolution => {
+          // println("obj " + chocoCpModel.modelMinimizationObjectives.map(o => paretoSolution.getIntVal(o)).mkString(", "))
+          rebuildSDFTiledToMultiCoreFromSolution(sdf, paretoSolution).map(_.asInstanceOf[T])
+        })
     case solvable: ChocoDecisionModel =>
       val solver          = solvable.chocoModel.getSolver
       val isOptimization  = solvable.modelMinimizationObjectives.size > 0

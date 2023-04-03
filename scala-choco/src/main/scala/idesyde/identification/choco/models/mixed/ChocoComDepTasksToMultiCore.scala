@@ -21,7 +21,7 @@ import spire.math._
 import spire.compat.fractional
 import org.chocosolver.solver.search.loop.monitors.IMonitorContradiction
 import org.chocosolver.solver.exception.ContradictionException
-import idesyde.identification.choco.models.HasSingleProcessSingleMessageMemoryConstraints
+import idesyde.choco.HasSingleProcessSingleMessageMemoryConstraints
 import idesyde.identification.choco.models.BaselineTimingConstraintsModule
 import idesyde.identification.choco.models.workload.ExtendedPrecedenceConstraintsModule
 import idesyde.identification.choco.models.workload.FixedPriorityConstraintsModule

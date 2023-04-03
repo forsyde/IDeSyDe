@@ -1,5 +1,7 @@
 package idesyde.choco
 
+import scala.jdk.CollectionConverters._
+
 import idesyde.identification.choco.ChocoDecisionModel
 import org.chocosolver.solver.Model
 import forsyde.io.java.core.Vertex
@@ -36,7 +38,6 @@ import org.jgrapht.alg.cycle.JohnsonSimpleCycles
 import org.jgrapht.graph.DefaultDirectedGraph
 import scala.collection.mutable.Stack
 import idesyde.utils.HasUtils
-import idesyde.identification.choco.models.HasSingleProcessSingleMessageMemoryConstraints
 import idesyde.choco.HasDiscretizationToIntegers
 
 trait CanSolveSDFToTiledMultiCore(using logger: Logger)
@@ -343,15 +344,31 @@ trait CanSolveSDFToTiledMultiCore(using logger: Logger)
 
   //---------
 
-  def rebuildFromChocoOutput(
+  def rebuildSDFTiledToMultiCoreFromSolution(
       m: SDFToTiledMultiCore,
-      processesMemoryMapping: Array[IntVar],
-      messagesMemoryMapping: Array[IntVar],
-      numVirtualChannelsForProcElem: Array[Array[IntVar]],
-      jobOrder: Array[IntVar],
-      invThroughputs: Array[IntVar],
       output: Solution
   ): Set[DecisionModel] = {
+    val intVars = output.retrieveIntVars(false).asScala
+    val processesMemoryMapping: Vector[IntVar] =
+      m.sdfApplications.actorsIdentifiers.map(a =>
+        intVars.find(_.getName() == s"mapProcess($a)").get
+      )
+    val messagesMemoryMapping: Vector[IntVar] =
+      m.sdfApplications.channelsIdentifiers.map(a =>
+        intVars.find(_.getName() == s"mapProcess($a)").get
+      )
+    val numVirtualChannelsForProcElem: Vector[Vector[IntVar]] =
+      m.platform.hardware.processors.map(src =>
+        m.platform.hardware.communicationElems.map(ce =>
+          intVars.find(_.getName() == s"vc($src, $ce)").get
+        )
+      )
+    val jobOrder: Vector[IntVar] = m.sdfApplications.firingsPrecedenceGraph.nodes
+      .map(_.value)
+      .map((a, q) => intVars.find(_.getName() == s"jobOrder($a, $q)").get)
+      .toVector
+    val invThroughputs: Vector[IntVar] =
+      m.sdfApplications.actorsIdentifiers.map(a => intVars.find(_.getName() == s"invTh($a)").get)
     // logger.debug(
     //   s"solution: nUsedPEs = ${output.getIntVal(nUsedPEs)}, globalInvThroughput = ${output
     //     .getIntVal(sdfAnalysisModule.globalInvThroughput)} / $timeMultiplier"
@@ -448,7 +465,7 @@ trait CanSolveSDFToTiledMultiCore(using logger: Logger)
         jobsAndActors
           .map((a, _) => processesMemoryMapping(m.sdfApplications.actorsIdentifiers.indexOf(a)))
           .toArray,
-        jobOrder
+        jobOrder.toArray
       )
     )
     // return both

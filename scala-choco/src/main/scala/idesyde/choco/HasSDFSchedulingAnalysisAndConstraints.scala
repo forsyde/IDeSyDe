@@ -13,7 +13,7 @@ import org.chocosolver.solver.constraints.`extension`.Tuples
 import idesyde.utils.HasUtils
 import org.chocosolver.solver.Model
 import idesyde.choco.HasTileAsyncInterconnectCommunicationConstraints
-import idesyde.identification.choco.models.HasSingleProcessSingleMessageMemoryConstraints
+import idesyde.choco.HasSingleProcessSingleMessageMemoryConstraints
 import idesyde.choco.HasDiscretizationToIntegers
 import scala.collection.mutable.Buffer
 import idesyde.identification.common.models.mixed.SDFToTiledMultiCore

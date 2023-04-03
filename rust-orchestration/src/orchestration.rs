@@ -1,3 +1,4 @@
+use std::cmp::Ordering;
 use std::collections::HashSet;
 
 use std::hash::Hash;
@@ -39,9 +40,6 @@ impl IdentificationModule for ExternalIdentificationModule {
 
     fn identification_step(&self, step_number: i32) -> HashSet<DecisionModelHeader> {
         let mut headers = HashSet::new();
-        let run_path = self.run_path();
-        let header_path = run_path.join("identified").join("msgpack");
-        let known_decision_model_paths = load_decision_model_headers_from_binary(&header_path);
         let is_java = self
             .command_path_
             .extension()
@@ -69,15 +67,14 @@ impl IdentificationModule for ExternalIdentificationModule {
         if let Ok(out) = output {
             if let Ok(s) = String::from_utf8(out.stdout) {
                 for p in s.lines() {
-                    if let Ok(b) = std::fs::read(p) {
-                        if let Ok(header) =
-                            rmp_serde::from_slice::<DecisionModelHeader>(b.as_slice())
-                        {
-                            if !known_decision_model_paths.contains(&header) {
-                                headers.insert(header);
-                            }
-                        }
-                    }
+                    println!("seeing {:?}", p);
+                    let b = std::fs::read(p)
+                        .expect("Failed to read header file from disk during identification");
+                    let header = rmp_serde::from_slice::<DecisionModelHeader>(b.as_slice()).expect(
+                        "Failed to deserialize header file from disk during identification.",
+                    );
+                    println!("got {:?} at {:?}", header, p);
+                    headers.insert(header);
                 }
             }
         }
@@ -89,11 +86,15 @@ pub fn load_decision_model_headers_from_binary(header_path: &Path) -> HashSet<De
     let known_decision_model_paths = if let Ok(ls) = header_path.read_dir() {
         ls.flat_map(|dir_entry_r| {
             if let Ok(dir_entry) = dir_entry_r {
-                if dir_entry.path().starts_with("header")
+                if dir_entry
+                    .path()
+                    .file_name()
+                    .and_then(|f| f.to_str())
+                    .map_or(false, |f| f.starts_with("header"))
                     && dir_entry
                         .path()
                         .extension()
-                        .map_or(false, |ext| ext == "msgpack")
+                        .map_or(false, |ext| ext.eq_ignore_ascii_case("msgpack"))
                 {
                     return Some(dir_entry.path());
                 }
@@ -131,4 +132,43 @@ pub fn find_identification_modules(
         }
     }
     imodules
+}
+
+pub fn identification_procedure(
+    run_path: &Path,
+    imodules: &HashSet<Box<dyn IdentificationModule>>,
+) -> HashSet<DecisionModelHeader> {
+    let header_path = &run_path.join("identified").join("msgpack");
+    std::fs::create_dir_all(run_path.join("identified").join("json")).unwrap();
+    std::fs::create_dir_all(header_path).unwrap();
+    let mut identified_headers = load_decision_model_headers_from_binary(&header_path);
+    let mut step = identified_headers.len() as i32;
+    let mut fix_point = false;
+    while !fix_point {
+        fix_point = true;
+        for imodule in imodules {
+            let potential = imodule.identification_step(step);
+            fix_point = fix_point && potential.is_empty();
+            for m in potential {
+                identified_headers.insert(m);
+            }
+        }
+        step += 1;
+    }
+    identified_headers
+}
+
+pub fn compute_dominant_decision_models(
+    headers: &HashSet<DecisionModelHeader>,
+) -> HashSet<DecisionModelHeader> {
+    headers
+        .iter()
+        .filter(|&h| {
+            headers.iter().all(|o| match h.partial_cmp(o) {
+                Some(Ordering::Greater) | Some(Ordering::Equal) | None => true,
+                _ => false,
+            })
+        })
+        .map(|h| h.to_owned())
+        .collect::<HashSet<DecisionModelHeader>>()
 }

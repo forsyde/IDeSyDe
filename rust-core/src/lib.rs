@@ -1,9 +1,9 @@
-use std::{collections::HashSet, hash::Hash, path::Path};
+use std::{collections::{HashSet, HashMap}, hash::Hash, path::Path};
 
 use serde::{Deserialize, Serialize};
 use std::cmp::Ordering;
 
-#[derive(Serialize, Deserialize, PartialEq, Eq, Hash)]
+#[derive(Serialize, Clone, Deserialize, PartialEq, Eq, Hash, Debug)]
 pub struct LabelledArcWithPorts {
     src: String,
     src_port: Option<String>,
@@ -12,9 +12,9 @@ pub struct LabelledArcWithPorts {
     dst_port: Option<String>,
 }
 
-#[derive(Serialize, Deserialize)]
+#[derive(Serialize, Clone, Deserialize, Debug)]
 pub struct DesignModelHeader {
-    category: String,
+    pub category: String,
     model_paths: HashSet<String>,
     elements: HashSet<String>,
     relations: HashSet<LabelledArcWithPorts>,
@@ -34,7 +34,7 @@ impl PartialOrd<DesignModelHeader> for DesignModelHeader {
             } else if self.elements.is_subset(&o.elements) && self.relations.is_subset(&o.relations)
             {
                 return Some(Ordering::Less);
-            } else if self == o {
+            } else  {
                 return Some(Ordering::Equal);
             }
         }
@@ -47,13 +47,19 @@ impl Eq for DesignModelHeader {}
 impl Hash for DesignModelHeader {
     fn hash<H: std::hash::Hasher>(&self, state: &mut H) {
         self.category.hash(state);
+        for m in &self.elements {
+            m.hash(state);
+        }
+        for e in &self.relations {
+            e.hash(state);
+        }
     }
 }
 
-#[derive(Serialize, Deserialize)]
+#[derive(Serialize, Clone, Deserialize, Debug)]
 pub struct DecisionModelHeader {
-    category: String,
-    body_paths: HashSet<String>,
+    pub category: String,
+    body_path: HashSet<String>,
     covered_elements: HashSet<String>,
     covered_relations: HashSet<LabelledArcWithPorts>,
 }
@@ -68,20 +74,16 @@ impl PartialEq<DecisionModelHeader> for DecisionModelHeader {
 
 impl PartialOrd<DecisionModelHeader> for DecisionModelHeader {
     fn partial_cmp(&self, o: &DecisionModelHeader) -> std::option::Option<std::cmp::Ordering> {
-        if self.category == o.category {
-            if self.covered_elements.is_superset(&o.covered_elements)
-                && self.covered_relations.is_superset(&o.covered_relations)
-            {
-                return Some(Ordering::Greater);
-            } else if self.covered_elements.is_subset(&o.covered_elements)
-                && self.covered_relations.is_subset(&o.covered_relations)
-            {
-                return Some(Ordering::Less);
-            } else if self == o {
-                return Some(Ordering::Equal);
-            }
+        if self.covered_elements == o.covered_elements && self.covered_relations == o.covered_relations {
+            return Some(Ordering::Equal);
+        } else if self.covered_elements.is_superset(&o.covered_elements) && self.covered_relations.is_superset(&o.covered_relations) {
+            return Some(Ordering::Greater);
+        } else if self.covered_elements.is_subset(&o.covered_elements) && self.covered_relations.is_subset(&o.covered_relations)
+        {
+            return Some(Ordering::Less);
+        } else {
+            return None
         }
-        None
     }
 }
 
@@ -90,6 +92,12 @@ impl Eq for DecisionModelHeader {}
 impl Hash for DecisionModelHeader {
     fn hash<H: std::hash::Hasher>(&self, state: &mut H) {
         self.category.hash(state);
+        for m in &self.covered_elements {
+            m.hash(state);
+        }
+        for e in &self.covered_elements {
+            e.hash(state);
+        }
     }
 }
 pub trait DesignModel {
@@ -136,4 +144,81 @@ pub trait FullIdentificationModule {
     fn decode_design_model(&self, m: &DesignModelHeader) -> HashSet<Box<dyn DesignModel>>;
     fn decode_decision_model(&self, m: &DecisionModelHeader) -> Option<Box<dyn DecisionModel>>;
     fn identification_rules(&self) -> HashSet<MarkedIdentificationRule>;
+}
+
+impl PartialEq<dyn IdentificationModule> for dyn IdentificationModule {
+    fn eq(&self, other: &dyn IdentificationModule) -> bool {
+        self.unique_identifier() == other.unique_identifier() && self.run_path() == other.run_path()
+    }
+}
+
+impl Eq for dyn IdentificationModule {}
+
+impl Hash for dyn IdentificationModule {
+    fn hash<H: std::hash::Hasher>(&self, state: &mut H) {
+        self.unique_identifier().hash(state);
+        self.run_path().hash(state);
+    }
+}
+
+pub trait Explorer {
+    fn unique_identifier(&self) -> String;
+    fn criterias(&self) -> HashMap<String, f32>;
+    fn can_explore(&self, m: &dyn DecisionModel) -> bool;
+    fn explore(&self, m: &dyn DecisionModel) -> dyn Iterator<Item = dyn DecisionModel>;
+    fn header(&self) -> ExplorerHeader;
+}
+
+#[derive(Debug, PartialEq, Eq, Hash, Deserialize, Serialize)]
+pub struct ExplorerHeader {
+    identifier: String,
+}
+
+pub trait ExplorationCombination {
+    fn explorer(&self) -> &dyn Explorer;
+    fn decision_model(&self) -> &dyn DecisionModel;
+    fn header(&self) -> ExplorationCombinationheader;
+}
+
+#[derive(Debug, Deserialize, Serialize)]
+pub struct ExplorationCombinationheader {
+    explorer_header: ExplorerHeader,
+    decision_model_header: DecisionModelHeader,
+    criteria: HashMap<String, f32>
+}
+
+impl Hash for ExplorationCombinationheader {
+    fn hash<H: std::hash::Hasher>(&self, state: &mut H) {
+        self.explorer_header.hash(state);
+        self.decision_model_header.hash(state);
+        for k in self.criteria.keys() {
+            k.hash(state);
+        }
+    }
+}
+
+impl PartialEq<ExplorationCombinationheader> for ExplorationCombinationheader {
+    fn eq(&self, other: &ExplorationCombinationheader) -> bool {
+        self.explorer_header == other.explorer_header && self.decision_model_header == other.decision_model_header && self.criteria == other.criteria
+    }
+}
+
+impl Eq for ExplorationCombinationheader {}
+
+impl PartialOrd<ExplorationCombinationheader> for ExplorationCombinationheader {
+
+    fn partial_cmp(&self, other: &ExplorationCombinationheader) -> Option<Ordering> {
+        if self.decision_model_header.category == other.decision_model_header.category {
+            if self.criteria.keys().eq(other.criteria.keys()) {
+                if self.criteria.iter().all(|(k, v)| v > other.criteria.get(k).unwrap_or(v)) {
+                    return Some(Ordering::Greater)
+                } else if self.criteria.iter().all(|(k, v)| v == other.criteria.get(k).unwrap_or(v)) {
+                    return Some(Ordering::Equal)
+                } else if self.criteria.iter().all(|(k, v)| v < other.criteria.get(k).unwrap_or(v)) {
+                    return Some(Ordering::Less)
+                }
+            }
+        }
+        None
+    }
 }

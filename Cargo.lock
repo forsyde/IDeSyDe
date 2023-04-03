@@ -331,6 +331,7 @@ dependencies = [
  "clap",
  "idesyde-rust-core",
  "rmp-serde",
+ "serde_json",
  "sha3",
 ]
 

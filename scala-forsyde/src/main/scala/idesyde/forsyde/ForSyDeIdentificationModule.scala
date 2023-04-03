@@ -37,7 +37,7 @@ object ForSyDeIdentificationModule extends IdentificationModule {
 
   val integrationRules = forSyDeIdentificationLibrary.integrationRules
 
-  override val inputsToHeaders = Set(inputToForSyDeHeader)
+  override val inputsToDesign = Set(inputToForSyDeHeader)
 
   def main(args: Array[String]): Unit = standaloneIdentificationModule(args)
 

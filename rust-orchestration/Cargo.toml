@@ -8,4 +8,5 @@ edition.workspace = true
 clap = { workspace = true }
 idesyde-rust-core = { path = "../rust-core" }
 rmp-serde = { workspace = true }
-sha3 = "0.10.6"
+serde_json.workspace = true
+sha3 = { workspace = true }

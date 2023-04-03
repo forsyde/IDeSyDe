@@ -16,19 +16,25 @@ import idesyde.identification.common.models.platform.PartitionedCoresWithRuntime
 import idesyde.identification.common.models.platform.SchedulableTiledMultiCore
 import idesyde.identification.common.models.mixed.SDFToTiledMultiCore
 
-object CommonIdentificationModule extends IdentificationModule with CanParseIdentificationModuleConfiguration {
+object CommonIdentificationModule
+    extends IdentificationModule
+    with CanParseIdentificationModuleConfiguration {
 
   given Logger = logger
 
   val commonIdentificationLibrary = CommonIdentificationLibrary()
 
   def designModelDecoders: Set[DesignModelHeader => Set[DesignModel]] = Set()
-    
-  def decisionModelDecoders: Set[DecisionModelHeader => Option[DecisionModel]] = Set(decodeDecisionModels)
 
-  def integrationRules: Set[(DesignModel, DecisionModel) => Option[? <: DesignModel]] = commonIdentificationLibrary.integrationRules
+  def decisionModelDecoders: Set[DecisionModelHeader => Option[DecisionModel]] = Set(
+    decodeDecisionModels
+  )
 
-  def identificationRules: Set[(Set[DesignModel], Set[DecisionModel]) => Set[? <: DecisionModel]] = commonIdentificationLibrary.identificationRules
+  def integrationRules: Set[(DesignModel, DecisionModel) => Option[? <: DesignModel]] =
+    commonIdentificationLibrary.integrationRules
+
+  def identificationRules: Set[(Set[DesignModel], Set[DecisionModel]) => Set[? <: DecisionModel]] =
+    commonIdentificationLibrary.identificationRules
 
   def uniqueIdentifier: String = "CommonIdentificationModule"
 
@@ -36,19 +42,18 @@ object CommonIdentificationModule extends IdentificationModule with CanParseIden
 
   def decodeDecisionModels(m: DecisionModelHeader): Option[DecisionModel] = {
     m match {
-      case DecisionModelHeader("SDFApplication", body_path, _, _) => body_path.flatMap(decodeFromPath[SDFApplication])
-      case DecisionModelHeader("TiledMultiCore", body_path, _, _) => body_path.flatMap(decodeFromPath[TiledMultiCore])
-      case DecisionModelHeader("PartitionedCoresWithRuntimes", body_path, _, _) => body_path.flatMap(decodeFromPath[PartitionedCoresWithRuntimes])
-      case DecisionModelHeader("SchedulableTiledMultiCore", body_path, _, _) => body_path.flatMap(decodeFromPath[SchedulableTiledMultiCore])
-      case DecisionModelHeader("SDFToTiledMultiCore", body_path, _, _) => body_path.flatMap(decodeFromPath[SDFToTiledMultiCore])
+      case DecisionModelHeader("SDFApplication", body_path, _, _) =>
+        body_path.flatMap(decodeFromPath[SDFApplication])
+      case DecisionModelHeader("TiledMultiCore", body_path, _, _) =>
+        body_path.flatMap(decodeFromPath[TiledMultiCore])
+      case DecisionModelHeader("PartitionedCoresWithRuntimes", body_path, _, _) =>
+        body_path.flatMap(decodeFromPath[PartitionedCoresWithRuntimes])
+      case DecisionModelHeader("SchedulableTiledMultiCore", body_path, _, _) =>
+        body_path.flatMap(decodeFromPath[SchedulableTiledMultiCore])
+      case DecisionModelHeader("SDFToTiledMultiCore", body_path, _, _) =>
+        body_path.flatMap(decodeFromPath[SDFToTiledMultiCore])
       case _ => None
     }
   }
 
-  def decodeFromPath[T : ReadWriter](p: String): Option[T] = {
-    if (p.endsWith(".msgpack")) Some(readBinary[T](os.read.bytes(os.pwd / p)))
-    else if (p.endsWith(".json")) Some(read[T](os.read(os.pwd / p)))
-    else None
-  }
-  
 }

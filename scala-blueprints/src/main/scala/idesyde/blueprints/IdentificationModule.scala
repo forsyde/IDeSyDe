@@ -11,6 +11,7 @@ import idesyde.core.headers.DecisionModelHeader
 import idesyde.core.MarkedIdentificationRule
 import idesyde.core.CompleteDecisionModel
 import idesyde.core.IdentificationLibrary
+import scala.collection.mutable
 
 /** The trait/interface for an identification module that provides the identification and
   * integration rules required to power the design space identification process [1].
@@ -27,7 +28,7 @@ trait IdentificationModule
     extends CanParseIdentificationModuleConfiguration
     with IdentificationLibrary {
 
-  def inputsToHeaders: Set[(os.Path) => Option[DesignModelHeader | DesignModel]] = Set()
+  def inputsToDesign: Set[(os.Path) => Option[DesignModelHeader | DesignModel]] = Set()
 
   /** decoders used to reconstruct design models from headers.
     *
@@ -68,7 +69,8 @@ trait IdentificationModule
 
   inline def identificationStep(
       runPath: os.Path,
-      stepNumber: Long
+      stepNumber: Long,
+      loadedDesignModels: Set[DesignModel] = Set()
   ): Set[DecisionModel] = {
     val designModelsPath          = runPath / "inputs" / "msgpack"
     val decisionModelsPathMsgPack = runPath / "identified" / "msgpack"
@@ -77,12 +79,15 @@ trait IdentificationModule
       os.list(designModelsPath)
         .filter(_.last.startsWith("header"))
         .map(f => readBinary[DesignModelHeader](os.read.bytes(f)))
+    val loadedDecisionModelHeaders = loadedDesignModels.map(_.header)
     val decisionModelHeaders =
       os.list(decisionModelsPathMsgPack)
         .filter(_.last.startsWith("header"))
         .map(f => readBinary[DecisionModelHeader](os.read.bytes(f)))
     val designModels =
-      designModelDecoders.flatMap(dec => designModelHeaders.flatMap(h => dec(h)))
+      designModelDecoders.flatMap(dec =>
+        designModelHeaders.filter(!loadedDecisionModelHeaders.contains(_)).flatMap(h => dec(h))
+      ) ++ loadedDesignModels
     val decisionModels =
       decisionModelDecoders.flatMap(dec => decisionModelHeaders.flatMap(h => dec(h)))
     val iterRules = if (stepNumber == 0L) {
@@ -101,26 +106,32 @@ trait IdentificationModule
     for (
       (m, i) <- identified.zipWithIndex; h = m.header; if !decisionModelHeaders.contains(m.header)
     ) yield {
-      os.write.over(
-        decisionModelsPathJson / s"header_${i}_${uniqueIdentifier}_${m.uniqueIdentifier}.json",
-        h.asText
-      )
-      os.write.over(
-        decisionModelsPathMsgPack / s"header_${i}_${uniqueIdentifier}_${m.uniqueIdentifier}.msgpack",
-        h.asBinary
-      )
-      m match {
+      val h = m match {
         case cm: CompleteDecisionModel =>
           os.write.over(
-            decisionModelsPathJson / s"body_${i}_${uniqueIdentifier}_${m.uniqueIdentifier}.json",
+            decisionModelsPathJson / s"body_${stepNumber}_${uniqueIdentifier}_${m.uniqueIdentifier}.json",
             cm.bodyAsText
           )
           os.write.over(
-            decisionModelsPathMsgPack / s"body_${i}_${uniqueIdentifier}_${m.uniqueIdentifier}.msgpack",
+            decisionModelsPathMsgPack / s"body_${stepNumber}_${uniqueIdentifier}_${m.uniqueIdentifier}.msgpack",
             cm.bodyAsBinary
           )
+          cm.header.copy(body_path =
+            Some(
+              (decisionModelsPathMsgPack / s"body_${stepNumber}_${uniqueIdentifier}_${m.uniqueIdentifier}.msgpack").toString
+            )
+          )
         case _ =>
+          m.header
       }
+      os.write.over(
+        decisionModelsPathJson / s"header_${stepNumber}_${uniqueIdentifier}_${m.uniqueIdentifier}.json",
+        h.asText
+      )
+      os.write.over(
+        decisionModelsPathMsgPack / s"header_${stepNumber}_${uniqueIdentifier}_${m.uniqueIdentifier}.msgpack",
+        h.asBinary
+      )
       m
     }
   }
@@ -136,7 +147,8 @@ trait IdentificationModule
         val inputsPathMspack          = runPath / "inputs" / "msgpack"
         val decisionModelsPathMsgPack = runPath / "identified" / "msgpack"
         val identStep                 = value.identificationStep
-        for (f <- os.walk(inputsPath); itoh <- inputsToHeaders) {
+        var loadedDesignModels        = mutable.Set[DesignModel]()
+        for (f <- os.walk(inputsPath); itoh <- inputsToDesign) {
           for (m <- itoh(f)) {
             m match {
               case header: DesignModelHeader =>
@@ -149,6 +161,7 @@ trait IdentificationModule
                   header.asText
                 )
               case model: DesignModel =>
+                loadedDesignModels.add(model)
                 os.write.over(
                   inputsPathMspack / s"header_${uniqueIdentifier}_${model.uniqueIdentifier}.msgpack",
                   model.header.copy(model_paths = Set(f.toString)).asBinary
@@ -161,19 +174,20 @@ trait IdentificationModule
           }
         }
         if (value.shouldIdentify) {
-          val identified = identificationStep(runPath, identStep)
+          val identified = identificationStep(runPath, identStep, loadedDesignModels.toSet)
           for (m <- identified) {
             println(
               decisionModelsPathMsgPack / s"header_${identStep}_${uniqueIdentifier}_${m.uniqueIdentifier}.msgpack"
             )
           }
         }
-      // LazyList
-      //   .continually(io.StdIn.readLong())
-      //   .takeWhile(_ > -1)
-      //   .foreach(i => {
-      //   })
       case None =>
     }
+  }
+
+  def decodeFromPath[T: ReadWriter](p: String): Option[T] = {
+    if (p.endsWith(".msgpack")) Some(readBinary[T](os.read.bytes(os.pwd / p)))
+    else if (p.endsWith(".json")) Some(read[T](os.read(os.pwd / p)))
+    else None
   }
 }

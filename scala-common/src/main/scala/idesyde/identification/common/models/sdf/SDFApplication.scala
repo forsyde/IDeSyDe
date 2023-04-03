@@ -59,7 +59,9 @@ final case class SDFApplication(
     val minimumActorThrouhgputs: Vector[Double]
 ) extends StandardDecisionModel
     with ParametricRateDataflowWorkloadMixin
-    with InstrumentedWorkloadMixin with CompleteDecisionModel derives ReadWriter {
+    with InstrumentedWorkloadMixin
+    with CompleteDecisionModel
+    derives ReadWriter {
 
   // def dominatesSdf(other: SDFApplication) = repetitionVector.size >= other.repetitionVector.size
   val coveredElements         = (actorsIdentifiers ++ channelsIdentifiers).toSet
@@ -176,6 +178,8 @@ final case class SDFApplication(
     val nodes = edges.map((s, t) => s).toSet ++ edges.map((s, t) => t).toSet
     scalax.collection.Graph.from(nodes, param)
   }
+
+  lazy val jobsAndActors = firingsPrecedenceGraph.nodes.map(_.value).toVector
 
   lazy val decreasingActorConsumptionOrder = actorsIdentifiers.zipWithIndex
     .sortBy((a, ai) => {

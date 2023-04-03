@@ -40,32 +40,34 @@ import scala.collection.mutable.Stack
 import idesyde.utils.HasUtils
 import idesyde.choco.HasDiscretizationToIntegers
 
-trait CanSolveSDFToTiledMultiCore(using logger: Logger)
-    extends HasUtils
+final class CanSolveSDFToTiledMultiCore(using logger: Logger)
+    extends ChocoExplorable[SDFToTiledMultiCore]
+    with HasUtils
     with HasSingleProcessSingleMessageMemoryConstraints
     with HasDiscretizationToIntegers
     with CanSolveMultiObjective
     with HasTileAsyncInterconnectCommunicationConstraints
     with HasSDFSchedulingAnalysisAndConstraints {
 
-  def buildSDFToTiledMultiCore(m: SDFToTiledMultiCore): Model = {
+  def buildChocoModel(m: SDFToTiledMultiCore): Model = {
     val chocoModel   = Model()
     val execMax      = m.wcets.flatten.max
     val commMax      = m.platform.hardware.maxTraversalTimePerBit.flatten.max
     val timeValues   = m.wcets.flatten ++ m.platform.hardware.maxTraversalTimePerBit.flatten
     val memoryValues = m.platform.hardware.tileMemorySizes
     val (timeMultiplier, memoryDivider) =
-      computeTimeMultiplierAndMemoryDivider[Double, Long](timeValues, memoryValues)
+      computeTimeMultiplierAndMemoryDivider(timeValues, memoryValues)
+    val messagesSizes = m.sdfApplications.sdfMessages
+      .map((src, _, _, mSize, p, c, tok) =>
+        ((m.sdfApplications.sdfRepetitionVectors(
+          m.sdfApplications.actorsIdentifiers.indexOf(src)
+        ) * p + tok) * mSize / memoryDivider).toInt
+      )
+      .toArray
     val (processMappings, messageMappings, _) = postSingleProcessSingleMessageMemoryConstraints(
       chocoModel,
       m.sdfApplications.processSizes.map(_ / memoryDivider).map(_.toInt).toArray,
-      m.sdfApplications.sdfMessages
-        .map((src, _, _, mSize, p, c, tok) =>
-          ((m.sdfApplications.sdfRepetitionVectors(
-            m.sdfApplications.actorsIdentifiers.indexOf(src)
-          ) * p + tok) * mSize / memoryDivider).toInt
-        )
-        .toArray,
+      messagesSizes,
       m.platform.hardware.tileMemorySizes
         .map(_ / memoryDivider)
         .map(l => if (l > Int.MaxValue) then Int.MaxValue - 1 else l)
@@ -78,8 +80,8 @@ trait CanSolveSDFToTiledMultiCore(using logger: Logger)
         m.platform.hardware.processors.toArray,
         m.platform.hardware.communicationElems.toArray,
         m.sdfApplications.sdfMessages.zipWithIndex.map((m, i) => i).toArray,
-        m.sdfApplications.sdfMessages
-          .map((_, _, _, mSize, _, _, _) =>
+        messagesSizes
+          .map(mSize =>
             m.platform.hardware.communicationElementsBitPerSecPerChannel
               .map(bw => (mSize / bw / timeMultiplier / memoryDivider).ceil.toInt)
               .toArray
@@ -110,7 +112,7 @@ trait CanSolveSDFToTiledMultiCore(using logger: Logger)
       messageMappings,
       procElemSendsDataToAnother
     )
-    createAndApplyPropagator(chocoModel, Array(numMappedElements, globalInvThroughput))
+    createAndApplyMOOPropagator(chocoModel, Array(numMappedElements, globalInvThroughput))
     chocoModel
   }
 
@@ -131,27 +133,6 @@ trait CanSolveSDFToTiledMultiCore(using logger: Logger)
         }
       })
     })
-    // val procElemSendsDataToAnother =
-    //   m.platform.hardware.processors.zipWithIndex.map((src, i) => {
-    //     m.platform.hardware.processors.zipWithIndex.map((dst, j) => {
-    //       if (!m.platform.hardware.computedPaths(i)(j).isEmpty)
-    //         chocoModel
-    //           .getVars()
-    //           .find(_.getName() == s"sendsData(${i},${j})")
-    //           .getOrElse(
-    //             chocoModel.boolVar(s"sendsData(${i},${j})")
-    //           )
-    //           .asBoolVar()
-    //       else
-    //         chocoModel
-    //           .getVars()
-    //           .find(_.getName() == s"sendsData(${i},${j})")
-    //           .getOrElse(
-    //             chocoModel.boolVar(s"sendsData(${i},${j})", false)
-    //           )
-    //           .asBoolVar()
-    //     })
-    //   })
     // build the table that make this constraint
     for (
       (_, p)  <- m.platform.runtimes.schedulers.zipWithIndex;
@@ -344,11 +325,8 @@ trait CanSolveSDFToTiledMultiCore(using logger: Logger)
 
   //---------
 
-  def rebuildSDFTiledToMultiCoreFromSolution(
-      m: SDFToTiledMultiCore,
-      output: Solution
-  ): Set[DecisionModel] = {
-    val intVars = output.retrieveIntVars(false).asScala
+  def rebuildDecisionModel(m: SDFToTiledMultiCore, solution: Solution): SDFToTiledMultiCore = {
+    val intVars = solution.retrieveIntVars(false).asScala
     val processesMemoryMapping: Vector[IntVar] =
       m.sdfApplications.actorsIdentifiers.map(a =>
         intVars.find(_.getName() == s"mapProcess($a)").get
@@ -370,7 +348,7 @@ trait CanSolveSDFToTiledMultiCore(using logger: Logger)
     val invThroughputs: Vector[IntVar] =
       m.sdfApplications.actorsIdentifiers.map(a => intVars.find(_.getName() == s"invTh($a)").get)
     // logger.debug(
-    //   s"solution: nUsedPEs = ${output.getIntVal(nUsedPEs)}, globalInvThroughput = ${output
+    //   s"solution: nUsedPEs = ${solution.getIntVal(nUsedPEs)}, globalInvThroughput = ${output
     //     .getIntVal(sdfAnalysisModule.globalInvThroughput)} / $timeMultiplier"
     // )
     // logger.debug(sdfAnalysisModule.duration.mkString(", "))
@@ -396,13 +374,13 @@ trait CanSolveSDFToTiledMultiCore(using logger: Logger)
       ),
       processMappings = m.sdfApplications.actorsIdentifiers.zipWithIndex.map((a, i) =>
         m.platform.hardware
-          .memories(output.getIntVal(processesMemoryMapping(i)))
+          .memories(solution.getIntVal(processesMemoryMapping(i)))
       ),
       messageMappings = m.sdfApplications.channelsIdentifiers.zipWithIndex.map((c, i) => {
         val messageIdx =
           m.sdfApplications.sdfMessages.indexWhere((_, _, ms, _, _, _, _) => ms.contains(c))
         m.platform.hardware
-          .memories(output.getIntVal(messagesMemoryMapping(messageIdx)))
+          .memories(solution.getIntVal(messagesMemoryMapping(messageIdx)))
       }),
       schedulerSchedules = m.platform.runtimes.schedulers.zipWithIndex.map((s, si) => {
         val unordered = for (
@@ -416,7 +394,7 @@ trait CanSolveSDFToTiledMultiCore(using logger: Logger)
         // we have to look from the source perpective, since the sending processor is the one that allocates
         val (s, _, _, _, _, _, _) =
           m.sdfApplications.sdfMessages.find((s, d, cs, l, _, _, _) => cs.contains(c)).get
-        val p = output.getIntVal(
+        val p = solution.getIntVal(
           processesMemoryMapping(
             m.sdfApplications.actorsIdentifiers.indexOf(s)
           )
@@ -425,11 +403,11 @@ trait CanSolveSDFToTiledMultiCore(using logger: Logger)
         val iter =
           for (
             (ce, j) <- m.platform.hardware.communicationElems.zipWithIndex;
-            if output.getIntVal(numVirtualChannelsForProcElem(p)(j)) > 0
+            if solution.getIntVal(numVirtualChannelsForProcElem(p)(j)) > 0
           )
             yield ce -> (0 until m.platform.hardware.communicationElementsMaxChannels(j))
               .map(slot =>
-                (slot + j % m.platform.hardware.communicationElementsMaxChannels(j)) < output
+                (slot + j % m.platform.hardware.communicationElementsMaxChannels(j)) < solution
                   .getIntVal(numVirtualChannelsForProcElem(p)(j))
               )
               .toVector
@@ -469,7 +447,7 @@ trait CanSolveSDFToTiledMultiCore(using logger: Logger)
       )
     )
     // return both
-    Set(full)
+    full
   }
 
   private def recomputeTh(

@@ -24,8 +24,9 @@ import idesyde.core.ExplorationCriteria
 import idesyde.utils.Logger
 import spire.math.Rational
 import idesyde.identification.common.models.mixed.SDFToTiledMultiCore
+import idesyde.choco.ChocoExplorableOps._
 
-class ChocoExplorer(using logger: Logger) extends Explorer with CanSolveSDFToTiledMultiCore:
+class ChocoExplorer(using logger: Logger) extends Explorer:
 
   def canExplore(decisionModel: DecisionModel): Boolean =
     decisionModel match
@@ -86,13 +87,14 @@ class ChocoExplorer(using logger: Logger) extends Explorer with CanSolveSDFToTil
     scalarizedObj
   }
 
-  def explore[T <: DecisionModel](
-      decisionModel: T,
+  def explore(
+      decisionModel: DecisionModel,
       explorationTimeOutInSecs: Long = 0L
-  ): LazyList[T] = decisionModel match
+  ): LazyList[DecisionModel] = decisionModel match
     case sdf: SDFToTiledMultiCore =>
-      val model  = buildSDFToTiledMultiCore(sdf)
-      val solver = model.getSolver()
+      given ChocoExplorable[SDFToTiledMultiCore] = CanSolveSDFToTiledMultiCore()
+      val model                                  = sdf.chocoModel
+      val solver                                 = model.getSolver()
       LazyList
         .continually(solver.solve())
         .takeWhile(feasible => feasible)
@@ -101,9 +103,9 @@ class ChocoExplorer(using logger: Logger) extends Explorer with CanSolveSDFToTil
           // scribe.debug(s"Current heap memory used: ${Runtime.getRuntime().totalMemory() - Runtime.getRuntime().freeMemory()} bytes")
           solver.defaultSolution()
         })
-        .flatMap(paretoSolution => {
+        .map(paretoSolution => {
           // println("obj " + chocoCpModel.modelMinimizationObjectives.map(o => paretoSolution.getIntVal(o)).mkString(", "))
-          rebuildSDFTiledToMultiCoreFromSolution(sdf, paretoSolution).map(_.asInstanceOf[T])
+          sdf.mergeSolution(paretoSolution)
         })
     case solvable: ChocoDecisionModel =>
       val solver          = solvable.chocoModel.getSolver
@@ -181,7 +183,7 @@ class ChocoExplorer(using logger: Logger) extends Explorer with CanSolveSDFToTil
         })
         .flatMap(paretoSolution => {
           // println("obj " + chocoCpModel.modelMinimizationObjectives.map(o => paretoSolution.getIntVal(o)).mkString(", "))
-          solvable.rebuildFromChocoOutput(paretoSolution).map(_.asInstanceOf[T])
+          solvable.rebuildFromChocoOutput(paretoSolution)
         })
     case _ => LazyList.empty
 

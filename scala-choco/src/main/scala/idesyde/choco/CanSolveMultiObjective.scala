@@ -7,7 +7,7 @@ import org.chocosolver.solver.constraints.Constraint
 
 trait CanSolveMultiObjective {
 
-  def createAndApplyPropagator(m: Model, objs: Array[IntVar]): ParetoMinimizationBrancher = {
+  def createAndApplyMOOPropagator(m: Model, objs: Array[IntVar]): ParetoMinimizationBrancher = {
     if (objs.size == 1) {
       m.setObjective(
         false,

@@ -1,4 +1,8 @@
-use std::{collections::{HashSet, HashMap}, hash::Hash, path::Path};
+use std::{
+    collections::{HashMap, HashSet},
+    hash::Hash,
+    path::Path,
+};
 
 use serde::{Deserialize, Serialize};
 use std::cmp::Ordering;
@@ -34,7 +38,7 @@ impl PartialOrd<DesignModelHeader> for DesignModelHeader {
             } else if self.elements.is_subset(&o.elements) && self.relations.is_subset(&o.relations)
             {
                 return Some(Ordering::Less);
-            } else  {
+            } else {
                 return Some(Ordering::Equal);
             }
         }
@@ -74,15 +78,20 @@ impl PartialEq<DecisionModelHeader> for DecisionModelHeader {
 
 impl PartialOrd<DecisionModelHeader> for DecisionModelHeader {
     fn partial_cmp(&self, o: &DecisionModelHeader) -> std::option::Option<std::cmp::Ordering> {
-        if self.covered_elements == o.covered_elements && self.covered_relations == o.covered_relations {
+        if self.covered_elements == o.covered_elements
+            && self.covered_relations == o.covered_relations
+        {
             return Some(Ordering::Equal);
-        } else if self.covered_elements.is_superset(&o.covered_elements) && self.covered_relations.is_superset(&o.covered_relations) {
+        } else if self.covered_elements.is_superset(&o.covered_elements)
+            && self.covered_relations.is_superset(&o.covered_relations)
+        {
             return Some(Ordering::Greater);
-        } else if self.covered_elements.is_subset(&o.covered_elements) && self.covered_relations.is_subset(&o.covered_relations)
+        } else if self.covered_elements.is_subset(&o.covered_elements)
+            && self.covered_relations.is_subset(&o.covered_relations)
         {
             return Some(Ordering::Less);
         } else {
-            return None
+            return None;
         }
     }
 }
@@ -184,7 +193,7 @@ pub trait ExplorationCombination {
 pub struct ExplorationCombinationheader {
     explorer_header: ExplorerHeader,
     decision_model_header: DecisionModelHeader,
-    criteria: HashMap<String, f32>
+    criteria: HashMap<String, f32>,
 }
 
 impl Hash for ExplorationCombinationheader {
@@ -199,23 +208,36 @@ impl Hash for ExplorationCombinationheader {
 
 impl PartialEq<ExplorationCombinationheader> for ExplorationCombinationheader {
     fn eq(&self, other: &ExplorationCombinationheader) -> bool {
-        self.explorer_header == other.explorer_header && self.decision_model_header == other.decision_model_header && self.criteria == other.criteria
+        self.explorer_header == other.explorer_header
+            && self.decision_model_header == other.decision_model_header
+            && self.criteria == other.criteria
     }
 }
 
 impl Eq for ExplorationCombinationheader {}
 
 impl PartialOrd<ExplorationCombinationheader> for ExplorationCombinationheader {
-
     fn partial_cmp(&self, other: &ExplorationCombinationheader) -> Option<Ordering> {
         if self.decision_model_header.category == other.decision_model_header.category {
             if self.criteria.keys().eq(other.criteria.keys()) {
-                if self.criteria.iter().all(|(k, v)| v > other.criteria.get(k).unwrap_or(v)) {
-                    return Some(Ordering::Greater)
-                } else if self.criteria.iter().all(|(k, v)| v == other.criteria.get(k).unwrap_or(v)) {
-                    return Some(Ordering::Equal)
-                } else if self.criteria.iter().all(|(k, v)| v < other.criteria.get(k).unwrap_or(v)) {
-                    return Some(Ordering::Less)
+                if self
+                    .criteria
+                    .iter()
+                    .all(|(k, v)| v > other.criteria.get(k).unwrap_or(v))
+                {
+                    return Some(Ordering::Greater);
+                } else if self
+                    .criteria
+                    .iter()
+                    .all(|(k, v)| v == other.criteria.get(k).unwrap_or(v))
+                {
+                    return Some(Ordering::Equal);
+                } else if self
+                    .criteria
+                    .iter()
+                    .all(|(k, v)| v < other.criteria.get(k).unwrap_or(v))
+                {
+                    return Some(Ordering::Less);
                 }
             }
         }

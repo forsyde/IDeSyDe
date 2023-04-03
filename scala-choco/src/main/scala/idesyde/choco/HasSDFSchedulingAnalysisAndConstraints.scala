@@ -36,11 +36,8 @@ trait HasSDFSchedulingAnalysisAndConstraints
     val (timeFactor, memoryDivider) =
       computeTimeMultiplierAndMemoryDivider(timeValues, memoryValues)
 
-    val actors = m.sdfApplications.actorsIdentifiers
-    val jobsAndActors =
-      m.sdfApplications.firingsPrecedenceGraph.nodes
-        .map(v => v.value)
-        .toVector
+    val actors             = m.sdfApplications.actorsIdentifiers
+    val jobsAndActors      = m.sdfApplications.jobsAndActors
     def jobMapping(i: Int) = processMappings(actors.indexOf(jobsAndActors(i)._1))
 
     val schedulers = m.platform.runtimes.schedulers
@@ -50,7 +47,6 @@ trait HasSDFSchedulingAnalysisAndConstraints
     val maxRepetitionsPerActors     = m.sdfApplications.sdfRepetitionVectors
     def isSelfConcurrent(a: String) = m.sdfApplications.isSelfConcurrent(a)
 
-    val slotRange               = (0 until maxRepetitionsPerActors.sum).toVector
     val maximumTokensPerChannel = m.sdfApplications.pessimisticTokensPerChannel
 
     val maxLength = schedulers.zipWithIndex
@@ -129,48 +125,30 @@ trait HasSDFSchedulingAnalysisAndConstraints
     //   )
     // )
 
-    val (processesMemoryMapping, messagesMemoryMapping, _) =
-      postSingleProcessSingleMessageMemoryConstraints(
-        chocoModel,
-        m.sdfApplications.processSizes.map(_ / memoryDivider).map(_.toInt).toArray,
-        m.sdfApplications.sdfMessages
-          .map((src, _, _, mSize, p, c, tok) =>
-            ((m.sdfApplications.sdfRepetitionVectors(
-              m.sdfApplications.actorsIdentifiers.indexOf(src)
-            ) * p + tok) * mSize / memoryDivider).toInt
-          )
-          .toArray,
-        m.platform.hardware.tileMemorySizes
-          .map(_ / memoryDivider)
-          .map(l => if (l > Int.MaxValue) then Int.MaxValue - 1 else l)
-          .map(_.toInt)
-          .toArray
-      )
-
     val mappedJobsPerElement = schedulers.zipWithIndex.map((p, i) =>
       chocoModel.count(
         s"mappedJobsPerElement($p)",
         i,
-        jobsAndActors.map((a, _) => processesMemoryMapping(actors.indexOf(a))): _*
+        jobsAndActors.map((a, _) => processMappings(actors.indexOf(a))): _*
       )
     )
 
     val numMappedElements = chocoModel.intVar("numMappedElements", 1, schedulers.size, false)
 
-    chocoModel.nValues(processesMemoryMapping, numMappedElements).post()
+    chocoModel.nValues(processMappings, numMappedElements).post()
     chocoModel.count(0, jobOrder, numMappedElements).post()
     // --- general duration constraints
     for ((a, i) <- actors.zipWithIndex; (p, j) <- schedulers.zipWithIndex) {
       if (actorDuration(i)(j) < 0) {
-        chocoModel.arithm(processesMemoryMapping(i), "!=", j).post()
+        chocoModel.arithm(processMappings(i), "!=", j).post()
       } else {
         chocoModel.ifThen(
-          chocoModel.arithm(processesMemoryMapping(i), "=", j),
+          chocoModel.arithm(processMappings(i), "=", j),
           chocoModel.arithm(duration(i), "=", actorDuration(i)(j))
         )
         for ((job, k) <- jobsAndActors.zipWithIndex; if job._1 == a) {
           chocoModel.ifThen(
-            chocoModel.arithm(processesMemoryMapping(i), "=", j),
+            chocoModel.arithm(processMappings(i), "=", j),
             chocoModel.arithm(jobOrder(k), "<", mappedJobsPerElement(j))
           )
         }
@@ -199,9 +177,9 @@ trait HasSDFSchedulingAnalysisAndConstraints
     ) {
       chocoModel.ifThen(
         chocoModel.arithm(
-          processesMemoryMapping(aix),
+          processMappings(aix),
           "=",
-          processesMemoryMapping(ajx)
+          processMappings(ajx)
         ),
         chocoModel.arithm(jobOrder(i), "<", jobOrder(j))
       )
@@ -267,9 +245,9 @@ trait HasSDFSchedulingAnalysisAndConstraints
       } else {
         chocoModel.ifThen(
           chocoModel.arithm(
-            processesMemoryMapping(i),
+            processMappings(i),
             "=",
-            processesMemoryMapping(j)
+            processMappings(j)
           ),
           chocoModel.arithm(
             invThroughputs(i),

@@ -16,8 +16,8 @@ import idesyde.identification.common.CommonIdentificationLibrary
 import idesyde.identification.choco.ChocoIdentificationLibrary
 import idesyde.identification.forsyde.ForSyDeIdentificationLibrary
 import idesyde.identification.minizinc.MinizincIdentificationModule
-import idesyde.exploration.ChocoExplorationModule
 import idesyde.utils.SimpleStandardIOLogger
+import idesyde.choco.ChocoExplorationModule
 
 object IDeSyDeStandalone {
 

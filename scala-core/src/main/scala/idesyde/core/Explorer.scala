@@ -29,10 +29,10 @@ import idesyde.core.headers.ExplorerHeader
   */
 trait Explorer {
 
-  def explore(
-      decisionModel: DecisionModel,
-      explorationTimeOutInSecs: Long = 0L
-  ): LazyList[DecisionModel]
+  def explore[T <: DecisionModel](
+      decisionModel: T,
+      totalExplorationTimeOutInSecs: Long = 0L
+  ): LazyList[T]
 
   def availableCriterias(decisionModel: DecisionModel): Set[ExplorationCriteria] = Set()
 

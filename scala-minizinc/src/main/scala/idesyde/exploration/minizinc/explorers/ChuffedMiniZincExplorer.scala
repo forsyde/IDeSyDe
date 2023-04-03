@@ -16,10 +16,10 @@ final case class ChuffedMiniZincExplorer() extends SimpleMiniZincCPExplorer {
 
   override def canExplore(decisionModel: DecisionModel): Boolean = false
 
-  override def explore(
-      decisionModel: DecisionModel,
+  override def explore[T <: DecisionModel](
+      decisionModel: T,
       explorationTimeOutInSecs: Long
-  ): LazyList[DecisionModel] = LazyList.empty
+  ): LazyList[T] = LazyList.empty
 
   def uniqueIdentifier: String = "ChuffedMiniZincExplorer"
 

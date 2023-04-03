@@ -17,10 +17,10 @@ final case class GecodeMiniZincExplorer() extends SimpleMiniZincCPExplorer {
   def canExplore(decisionModel: DecisionModel): Boolean = false
   // "minizinc --solvers".!!.contains("org.gecode.gecode")
 
-  override def explore(
-      decisionModel: DecisionModel,
+  override def explore[T <: DecisionModel](
+      decisionModel: T,
       explorationTimeOutInSecs: Long
-  ): LazyList[DecisionModel] = LazyList.empty
+  ): LazyList[T] = LazyList.empty
 
   def uniqueIdentifier: String = "GecodeMiniZincExplorer"
 }

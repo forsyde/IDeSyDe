@@ -1,7 +1,6 @@
 package idesyde.identification.choco
 
 import idesyde.core.DecisionModel
-import idesyde.identification.choco.models.mixed.ChocoSDFToSChedTileHW2
 import idesyde.core.IdentificationLibrary
 import spire.math.Rational
 import idesyde.identification.choco.rules.ChocoRules
@@ -13,7 +12,7 @@ final class ChocoIdentificationLibrary(using Logger) extends IdentificationLibra
   given Conversion[Double, Rational] = (d) => Rational(d)
 
   val identificationRules = Set(
-    identChocoSDFToSChedTileHW2,
+    // identChocoSDFToSChedTileHW2,
     identChocoComDepTasksToMultiCore
   )
 

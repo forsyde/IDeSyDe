@@ -1,4 +1,4 @@
-package idesyde.exploration.explorers
+package idesyde.choco
 
 import idesyde.identification.choco.ChocoDecisionModel
 import java.time.Duration
@@ -22,8 +22,9 @@ import org.chocosolver.solver.search.loop.monitors.IMonitorSolution
 import idesyde.exploration.choco.explorers.ParetoMinimizationBrancher
 import idesyde.core.ExplorationCriteria
 import idesyde.utils.Logger
+import spire.math.Rational
 
-class ChocoExplorer(using logger: Logger) extends Explorer:
+class ChocoExplorer(using logger: Logger) extends Explorer with CanSolveSDFToTiledMultiCore:
 
   def canExplore(decisionModel: DecisionModel): Boolean =
     decisionModel match
@@ -83,10 +84,10 @@ class ChocoExplorer(using logger: Logger) extends Explorer:
     scalarizedObj
   }
 
-  def explore(
-      decisionModel: DecisionModel,
+  def explore[T <: DecisionModel](
+      decisionModel: T,
       explorationTimeOutInSecs: Long = 0L
-  ): LazyList[DecisionModel] = decisionModel match
+  ): LazyList[T] = decisionModel match
     case solvable: ChocoDecisionModel =>
       val solver          = solvable.chocoModel.getSolver
       val isOptimization  = solvable.modelMinimizationObjectives.size > 0
@@ -163,7 +164,7 @@ class ChocoExplorer(using logger: Logger) extends Explorer:
         })
         .flatMap(paretoSolution => {
           // println("obj " + chocoCpModel.modelMinimizationObjectives.map(o => paretoSolution.getIntVal(o)).mkString(", "))
-          solvable.rebuildFromChocoOutput(paretoSolution)
+          solvable.rebuildFromChocoOutput(paretoSolution).map(_.asInstanceOf[T])
         })
     case _ => LazyList.empty
 

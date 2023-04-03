@@ -1,16 +1,19 @@
-package idesyde.exploration
+package idesyde.choco
 
 import upickle.default._
 
 import idesyde.blueprints.ExplorationModule
-import idesyde.exploration.explorers.ChocoExplorer
 import idesyde.utils.Logger
 import idesyde.core.DecisionModel
 import idesyde.core.headers.DecisionModelHeader
 import idesyde.utils.SimpleStandardIOLogger
 import idesyde.identification.common.models.mixed.SDFToTiledMultiCore
+import idesyde.choco.ChocoExplorer
+import spire.math.Rational
 
 object ChocoExplorationModule extends ExplorationModule {
+
+  given Fractional[Rational] = spire.compat.fractional[Rational]
 
   val logger = SimpleStandardIOLogger("WARN")
 

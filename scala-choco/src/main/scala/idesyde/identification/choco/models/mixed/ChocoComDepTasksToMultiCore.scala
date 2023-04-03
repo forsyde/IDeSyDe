@@ -21,7 +21,7 @@ import spire.math._
 import spire.compat.fractional
 import org.chocosolver.solver.search.loop.monitors.IMonitorContradiction
 import org.chocosolver.solver.exception.ContradictionException
-import idesyde.identification.choco.models.SingleProcessSingleMessageMemoryConstraintsModule
+import idesyde.identification.choco.models.HasSingleProcessSingleMessageMemoryConstraints
 import idesyde.identification.choco.models.BaselineTimingConstraintsModule
 import idesyde.identification.choco.models.workload.ExtendedPrecedenceConstraintsModule
 import idesyde.identification.choco.models.workload.FixedPriorityConstraintsModule
@@ -45,7 +45,8 @@ final case class ChocoComDepTasksToMultiCore(
     val dse: PeriodicWorkloadToPartitionedSharedMultiCore
 ) extends StandardDecisionModel
     with ChocoDecisionModel
-    with HasUtils {
+    with HasUtils
+    with HasSingleProcessSingleMessageMemoryConstraints {
 
   val coveredElements = dse.coveredElements
 
@@ -119,15 +120,16 @@ final case class ChocoComDepTasksToMultiCore(
         .toArray
     )
   )
-  val memoryMappingModule = SingleProcessSingleMessageMemoryConstraintsModule(
-    chocoModel,
-    dse.workload.processSizes.map(ceil(_, memoryDivider)).map(_.toInt).toArray,
-    dse.workload.messagesMaxSizes.map(ceil(_, memoryDivider)).map(_.toInt).toArray,
-    dse.platform.hardware.storageSizes
-      .map(ceil(_, memoryDivider))
-      .map(_.toInt)
-      .toArray
-  )
+  val (processesMemoryMapping, messagesMemoryMapping, _) =
+    postSingleProcessSingleMessageMemoryConstraints(
+      chocoModel,
+      dse.workload.processSizes.map(ceil(_, memoryDivider)).map(_.toInt).toArray,
+      dse.workload.messagesMaxSizes.map(ceil(_, memoryDivider)).map(_.toInt).toArray,
+      dse.platform.hardware.storageSizes
+        .map(ceil(_, memoryDivider))
+        .map(_.toInt)
+        .toArray
+    )
 
   // timing
   val taskExecution = dse.workload.processes.zipWithIndex.map((t, i) =>
@@ -187,8 +189,8 @@ final case class ChocoComDepTasksToMultiCore(
     chocoModel,
     dse,
     taskExecution.toArray,
-    memoryMappingModule.processesMemoryMapping,
-    memoryMappingModule.messagesMemoryMapping,
+    processesMemoryMapping,
+    messagesMemoryMapping,
     processingElemsVirtualChannelInCommElem.map(_.toArray).toArray,
     timeMultiplier,
     memoryDivider
@@ -216,8 +218,6 @@ final case class ChocoComDepTasksToMultiCore(
     blockingTimes.toArray,
     active4StageDurationModule.durations
   )
-
-  memoryMappingModule.postSingleProcessSingleMessageMemoryConstraints()
 
   active4StageDurationModule.postActive4StageDurationsConstraints()
 
@@ -315,8 +315,8 @@ final case class ChocoComDepTasksToMultiCore(
     Search.activityBasedSearch(dataBlockMapping: _*),
     Search.minDomLBSearch(responseTimes: _*),
     Search.minDomLBSearch(blockingTimes: _*),
-    Search.minDomLBSearch(memoryMappingModule.processesMemoryMapping: _*),
-    Search.minDomLBSearch(memoryMappingModule.messagesMemoryMapping: _*)
+    Search.minDomLBSearch(processesMemoryMapping: _*),
+    Search.minDomLBSearch(messagesMemoryMapping: _*)
     // Search.intVarSearch(
     //   FirstFail(chocoModel),
     //   IntDomainMin(),
@@ -327,7 +327,7 @@ final case class ChocoComDepTasksToMultiCore(
   )
 
   def rebuildFromChocoOutput(output: Solution): Set[DecisionModel] = {
-    val processMappings = memoryMappingModule.processesMemoryMapping.zipWithIndex
+    val processMappings = processesMemoryMapping.zipWithIndex
       .map((v, i) =>
         dse.workload.tasks(i) -> dse.platform.hardware.storageElems(output.getIntVal(v))
       )
@@ -335,7 +335,7 @@ final case class ChocoComDepTasksToMultiCore(
     val processSchedulings = taskExecution.zipWithIndex
       .map((v, i) => dse.workload.tasks(i) -> dse.platform.runtimes.schedulers(output.getIntVal(v)))
       .toVector
-    val channelMappings = memoryMappingModule.messagesMemoryMapping.zipWithIndex
+    val channelMappings = messagesMemoryMapping.zipWithIndex
       .map((v, i) =>
         dse.workload.dataChannels(i) -> dse.platform.hardware.storageElems(output.getIntVal(v))
       )

@@ -6,7 +6,6 @@ import org.scalatest.funsuite.AnyFunSuite
 import forsyde.io.java.drivers.ForSyDeModelHandler
 import scala.concurrent.ExecutionContext
 import idesyde.identification.minizinc.MinizincIdentificationModule
-import idesyde.exploration.ChocoExplorationModule
 import forsyde.io.java.core.ForSyDeSystemGraph
 import forsyde.io.java.typed.viewers.platform.InstrumentedProcessingModule
 import forsyde.io.java.typed.viewers.platform.GenericMemoryModule
@@ -33,7 +32,6 @@ import java.nio.file.Paths
 import org.scalatest.Tag
 import org.scalatest.Ignore
 import idesyde.utils.SimpleStandardIOLogger
-import idesyde.identification.choco.models.mixed.ChocoSDFToSChedTileHW2
 import tags.ResourceHungry
 
 /** This test suite uses as much as possible the experiments from the paper

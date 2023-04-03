@@ -8,12 +8,12 @@ import idesyde.identification.common.CommonIdentificationLibrary
 import idesyde.identification.choco.ChocoIdentificationLibrary
 import idesyde.identification.forsyde.ForSyDeIdentificationLibrary
 import idesyde.identification.minizinc.MinizincIdentificationModule
-import idesyde.exploration.ChocoExplorationModule
 import idesyde.core.Explorer
 import idesyde.utils.Logger
 import idesyde.core.DesignModel
 import idesyde.devicetree.identification.DeviceTreeIdentificationModule
 import idesyde.matlab.identification.SimulinkMatlabIdentificationModule
+import idesyde.choco.ChocoExplorationModule
 
 trait HasShortcuts(using Logger) extends CanExplore with CanIdentify {
 
@@ -32,7 +32,9 @@ trait HasShortcuts(using Logger) extends CanExplore with CanIdentify {
   )
 
   def getExplorerAndModel(identified: Set[DecisionModel]): Set[(Explorer, DecisionModel)] =
-    chooseExplorersAndModels(identified, Set(ChocoExplorationModule)).map(combo => (combo.explorer, combo.decisionModel))
+    chooseExplorersAndModels(identified, Set(ChocoExplorationModule)).map(combo =>
+      (combo.explorer, combo.decisionModel)
+    )
 
   def integrate(model: DesignModel, solution: DecisionModel): Set[DesignModel] =
     integrateDecisionModel(

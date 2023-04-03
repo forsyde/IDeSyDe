@@ -14,20 +14,17 @@ trait HasDiscretizationToIntegers extends HasUtils {
     // if there is a 1e3 scale difference between execution and communication, we consider only execution for scaling
     var timeMultiplier = numT.one
     val t10            = numT.fromInt(10)
+    val maxValT        = numT.fromInt(Int.MaxValue / 100 - 1)
+    var sumT           = numT.zero
+    wfor(0, _ < timeValues.size, _ + 1) { i =>
+      sumT = numT.plus(sumT, timeValues(i))
+    }
     while (
-      timeValues
-        .map(t => numT.times(t, timeMultiplier))
-        .exists(d =>
-          Math.log10(numT.toDouble(d)) <= -3.0
-        ) // ensure that the numbers magnitudes still stay sane
+      // ensure that the numbers magnitudes still stay sane
+      Math.log10(numT.toDouble(numT.times(sumT, timeMultiplier))) <= -3.0
+      && sumT < maxValT
     ) {
-      var sum = numT.zero
-      wfor(0, _ < timeValues.size, _ + 1) { i =>
-        sum = numT.plus(sum, timeValues(i))
-      }
-      if (sum < numT.fromInt(Int.MaxValue / 100 - 1)) {
-        timeMultiplier = numT.times(timeMultiplier, t10)
-      }
+      timeMultiplier = numT.times(timeMultiplier, t10)
     }
 
     // do the same for memory numbers

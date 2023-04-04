@@ -79,7 +79,6 @@ final class CanSolveSDFToTiledMultiCore(using logger: Logger)
         chocoModel,
         m.platform.hardware.processors.toArray,
         m.platform.hardware.communicationElems.toArray,
-        m.sdfApplications.sdfMessages.zipWithIndex.map((m, i) => i).toArray,
         messagesSizes
           .map(mSize =>
             m.platform.hardware.communicationElementsBitPerSecPerChannel
@@ -113,6 +112,29 @@ final class CanSolveSDFToTiledMultiCore(using logger: Logger)
       procElemSendsDataToAnother
     )
     createAndApplyMOOPropagator(chocoModel, Array(numMappedElements, globalInvThroughput))
+    postSymmetryBreakingConstraints(
+      m,
+      chocoModel,
+      processMappings,
+      procElemSendsDataToAnother,
+      jobOrder
+    )
+    createAndApplySearchStrategies(
+      m,
+      chocoModel,
+      numVirtualChannelsForProcElem,
+      processMappings,
+      jobOrder,
+      invThroughputs,
+      numMappedElements
+    )
+    chocoModel.getSolver().setNoGoodRecordingFromRestarts()
+    chocoModel.getSolver().setRestartOnSolutions()
+    // chocoModel
+    //   .getSolver()
+    //   .plugMonitor(new IMonitorContradiction {
+    //     def onContradiction(cex: ContradictionException): Unit = println(cex.toString())
+    //   })
     chocoModel
   }
 
@@ -328,21 +350,20 @@ final class CanSolveSDFToTiledMultiCore(using logger: Logger)
   def rebuildDecisionModel(m: SDFToTiledMultiCore, solution: Solution): SDFToTiledMultiCore = {
     val intVars = solution.retrieveIntVars(false).asScala
     val processesMemoryMapping: Vector[IntVar] =
-      m.sdfApplications.actorsIdentifiers.map(a =>
+      m.sdfApplications.actorsIdentifiers.zipWithIndex.map((_, a) =>
         intVars.find(_.getName() == s"mapProcess($a)").get
       )
     val messagesMemoryMapping: Vector[IntVar] =
-      m.sdfApplications.channelsIdentifiers.map(a =>
-        intVars.find(_.getName() == s"mapProcess($a)").get
+      m.sdfApplications.sdfMessages.zipWithIndex.map((_, c) =>
+        intVars.find(_.getName() == s"mapMessage($c)").get
       )
     val numVirtualChannelsForProcElem: Vector[Vector[IntVar]] =
       m.platform.hardware.processors.map(src =>
         m.platform.hardware.communicationElems.map(ce =>
-          intVars.find(_.getName() == s"vc($src, $ce)").get
+          intVars.find(_.getName() == s"vc($src,$ce)").get
         )
       )
-    val jobOrder: Vector[IntVar] = m.sdfApplications.firingsPrecedenceGraph.nodes
-      .map(_.value)
+    val jobOrder: Vector[IntVar] = m.sdfApplications.jobsAndActors
       .map((a, q) => intVars.find(_.getName() == s"jobOrder($a, $q)").get)
       .toVector
     val invThroughputs: Vector[IntVar] =

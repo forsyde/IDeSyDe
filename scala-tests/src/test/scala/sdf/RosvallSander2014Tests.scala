@@ -46,6 +46,22 @@ class RosvallSander2014Tests
     )
   }
 
+  test("Find a solution to Sobel of Experiment III") {
+    val identified =
+      identify(
+        Set(ForSyDeDesignModel(sobelSDF3.merge(small8NodeBusPlatform)))
+      )
+    assert(identified.size > 0)
+    val chosen = getExplorerAndModel(identified)
+    val solList = chosen.headOption
+      .map((e, m) => {
+        e.explore(m)
+      })
+      .getOrElse(LazyList.empty)
+      .take(2)
+    assert(solList.size > 1)
+  }
+
   test("Find a solution to the first case of Experiment III") {
     val identified =
       identify(

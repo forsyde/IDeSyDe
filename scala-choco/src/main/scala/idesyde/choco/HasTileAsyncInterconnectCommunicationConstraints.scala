@@ -27,14 +27,13 @@ trait HasTileAsyncInterconnectCommunicationConstraints(
       chocoModel: Model,
       procElems: Array[String],
       commElems: Array[String],
-      messages: Array[Int],
       messageTravelTimePerVirtualChannel: Array[Array[Int]],
       numVirtualChannels: Array[Int],
       commElemsPaths: (String) => (String) => Array[String]
   ): (Array[Array[IntVar]], Array[Array[BoolVar]], Array[Array[Array[IntVar]]]) = {
     val numProcElems = procElems.size
     val numCommElems = commElems.size
-    val numMessages  = messages.size
+    val numMessages  = messageTravelTimePerVirtualChannel.size
 
     val numVirtualChannelsForProcElem: Array[Array[IntVar]] =
       procElems.zipWithIndex.map((pe, i) => {
@@ -58,23 +57,24 @@ trait HasTileAsyncInterconnectCommunicationConstraints(
         })
       })
 
-    val messageTravelDuration: Array[Array[Array[IntVar]]] = messages.zipWithIndex.map((c, ci) => {
-      procElems.zipWithIndex.map((src, i) => {
-        procElems.zipWithIndex.map((dst, j) => {
-          if (i != j) {
-            chocoModel.intVar(
-              s"commTime(${c},${src},${dst})",
-              0,
-              commElemsPaths(src)(dst)
-                .map(ce => messageTravelTimePerVirtualChannel(ci)(commElems.indexOf(ce)))
-                .sum,
-              true
-            )
-          } else
-            chocoModel.intVar(0)
+    val messageTravelDuration: Array[Array[Array[IntVar]]] =
+      messageTravelTimePerVirtualChannel.zipWithIndex.map((t, c) => {
+        procElems.zipWithIndex.map((src, i) => {
+          procElems.zipWithIndex.map((dst, j) => {
+            if (i != j) {
+              chocoModel.intVar(
+                s"commTime(${c},${src},${dst})",
+                0,
+                commElemsPaths(src)(dst)
+                  .map(ce => t(commElems.indexOf(ce)))
+                  .sum,
+                true
+              )
+            } else
+              chocoModel.intVar(0)
+          })
         })
       })
-    })
 
     // first, make sure that data from different sources do not collide in any comm. elem
     for (ce <- 0 until numCommElems) {

@@ -95,18 +95,15 @@ class ChocoExplorer(using logger: Logger) extends Explorer:
       given ChocoExplorable[SDFToTiledMultiCore] = CanSolveSDFToTiledMultiCore()
       val model                                  = sdf.chocoModel
       val solver                                 = model.getSolver()
+      if (explorationTimeOutInSecs > 0L) {
+        logger.debug(s"setting total exploration timeout to ${explorationTimeOutInSecs} seconds")
+        solver.limitTime(explorationTimeOutInSecs * 1000L)
+      }
       LazyList
         .continually(solver.solve())
         .takeWhile(feasible => feasible)
-        // .filter(feasible => feasible)
-        .map(_ => {
-          // scribe.debug(s"Current heap memory used: ${Runtime.getRuntime().totalMemory() - Runtime.getRuntime().freeMemory()} bytes")
-          solver.defaultSolution()
-        })
-        .map(paretoSolution => {
-          // println("obj " + chocoCpModel.modelMinimizationObjectives.map(o => paretoSolution.getIntVal(o)).mkString(", "))
-          sdf.mergeSolution(paretoSolution)
-        })
+        .map(_ => solver.defaultSolution())
+        .map(paretoSolution => sdf.mergeSolution(paretoSolution))
     case solvable: ChocoDecisionModel =>
       val solver          = solvable.chocoModel.getSolver
       val isOptimization  = solvable.modelMinimizationObjectives.size > 0

@@ -87,23 +87,31 @@ class ChocoExplorer(using logger: Logger) extends Explorer:
     scalarizedObj
   }
 
+  def exploreChocoExplorable[T <: DecisionModel](
+      m: T,
+      explorationTotalTimeOutInSecs: Long
+  )(using ChocoExplorable[T]): LazyList[T] = {
+    val model  = m.chocoModel
+    val solver = model.getSolver()
+    if (explorationTotalTimeOutInSecs > 0L) {
+      logger.debug(s"setting total exploration timeout to ${explorationTotalTimeOutInSecs} seconds")
+      solver.limitTime(explorationTotalTimeOutInSecs * 1000L)
+    }
+    LazyList
+      .continually(solver.solve())
+      .takeWhile(feasible => feasible)
+      .map(_ => solver.defaultSolution())
+      .map(paretoSolution => m.mergeSolution(paretoSolution))
+  }
+
   def explore(
       decisionModel: DecisionModel,
-      explorationTimeOutInSecs: Long = 0L
+      explorationTotalTimeOutInSecs: Long = 0L
   ): LazyList[DecisionModel] = decisionModel match
     case sdf: SDFToTiledMultiCore =>
-      given ChocoExplorable[SDFToTiledMultiCore] = CanSolveSDFToTiledMultiCore()
-      val model                                  = sdf.chocoModel
-      val solver                                 = model.getSolver()
-      if (explorationTimeOutInSecs > 0L) {
-        logger.debug(s"setting total exploration timeout to ${explorationTimeOutInSecs} seconds")
-        solver.limitTime(explorationTimeOutInSecs * 1000L)
-      }
-      LazyList
-        .continually(solver.solve())
-        .takeWhile(feasible => feasible)
-        .map(_ => solver.defaultSolution())
-        .map(paretoSolution => sdf.mergeSolution(paretoSolution))
+      exploreChocoExplorable(sdf, explorationTotalTimeOutInSecs)(using
+        CanSolveSDFToTiledMultiCore()
+      )
     case solvable: ChocoDecisionModel =>
       val solver          = solvable.chocoModel.getSolver
       val isOptimization  = solvable.modelMinimizationObjectives.size > 0
@@ -137,9 +145,11 @@ class ChocoExplorer(using logger: Logger) extends Explorer:
         solver.setNoGoodRecordingFromRestarts
         solver.setRestartOnSolutions
       }
-      if (explorationTimeOutInSecs > 0L) {
-        logger.debug(s"setting total exploration timeout to ${explorationTimeOutInSecs} seconds")
-        solver.limitTime(explorationTimeOutInSecs * 1000L)
+      if (explorationTotalTimeOutInSecs > 0L) {
+        logger.debug(
+          s"setting total exploration timeout to ${explorationTotalTimeOutInSecs} seconds"
+        )
+        solver.limitTime(explorationTotalTimeOutInSecs * 1000L)
       }
       LazyList
         .continually(solver.solve())

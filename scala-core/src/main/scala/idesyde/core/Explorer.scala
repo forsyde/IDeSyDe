@@ -40,24 +40,6 @@ trait Explorer {
 
   def canExplore(decisionModel: DecisionModel): Boolean
 
-  @deprecated("this was substituded by the criteriaValue function")
-  def estimateTimeUntilFeasibility(decisionModel: DecisionModel) =
-    criteriaValue(decisionModel, ExplorationCriteria.TimeUntilFeasibility)
-
-  @deprecated("this was substituded by the criteriaValue function")
-  def estimateTimeUntilOptimality(decisionModel: DecisionModel) =
-    criteriaValue(decisionModel, ExplorationCriteria.TimeUntilOptimality)
-
-  @deprecated("this was substituded by the criteriaValue function")
-  def estimateMemoryUntilFeasibility(decisionModel: DecisionModel) =
-    criteriaValue(decisionModel, ExplorationCriteria.MemoryUntilFeasibility)
-
-  @deprecated("this was substituded by the criteriaValue function")
-  def estimateMemoryUntilOptimality(decisionModel: DecisionModel) =
-    criteriaValue(decisionModel, ExplorationCriteria.MemoryUntilOptimality)
-
-  // def estimateCriteria[V: PartiallyOrdered](decisionModel: DecisionModel, criteria: ExplorationCriteria): V
-
   def dominates(
       o: Explorer,
       m: DecisionModel,

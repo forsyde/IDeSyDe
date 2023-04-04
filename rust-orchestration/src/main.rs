@@ -7,10 +7,52 @@ use sha3::Digest;
 pub mod orchestration;
 
 #[derive(Parser, Debug)]
-#[command(author, version, about, long_about = None)]
+#[command(
+    name = "idesyde",
+    author = "Rodolfo Jordao",
+    about = "Orchestration and entry point for IDeSyDe."
+)]
 struct Args {
-    /// input files
+    // input files
+    #[arg(help = "The input design models that IDeSyDe will identify and explore.")]
     inputs: Vec<String>,
+
+    #[arg(
+        short,
+        long,
+        help = "Sets set output file or directory.",
+        long_help = "Sets set output file or directory. \n\
+         If the output path is a file, IDeSyDe will write the latest solved/optimized design model in this file. \n\
+         If the output path is a directory, IDeSyDe will write all solved/optimized design model in this directory."
+    )]
+    output_path: Option<String>,
+
+    #[arg(
+        long,
+        default_value = "run",
+        help = "Sets the running path that IDeSyDe uses."
+    )]
+    run_path: Option<String>,
+
+    #[arg(
+        long,
+        help = "Sets the _total exploration_ time-out. \nIf non-positive, there is no time-out.",
+        long_help = "Sets the _total exploration_ time-out. \nIf non-positive, there is no time-out. \nThe identification and integration stages are unnafected."
+    )]
+    x_total_time_out: Option<u64>,
+
+    #[arg(
+        long,
+        help = "For explorer with mandatory discretization, this factor is used for the time discretization resolution.",
+        group = "exploration"
+    )]
+    x_time_resolution: Option<u32>,
+    #[arg(
+        long,
+        help = "For explorer with mandatory discretization, this factor is used for the memory discretization resolution.",
+        group = "exploration"
+    )]
+    x_memory_resolution: Option<u32>,
 }
 
 fn main() {
@@ -25,7 +67,12 @@ fn main() {
             }
         }
         let input_hash = hasher.finalize();
-        let run_path = Path::new("run").join(format!("{:x}", input_hash));
+        let run_path = Path::new(
+            &args
+                .run_path
+                .expect("Failed to get run path durin initialization."),
+        )
+        .join(format!("{:x}", input_hash));
 
         std::fs::create_dir_all(run_path.join("inputs").join("fiodl"))
             .expect("Failed to create input directory during identification.");
@@ -85,5 +132,4 @@ fn main() {
     } else {
         println!("At least one input design model is necessary")
     }
-    println!("done");
 }

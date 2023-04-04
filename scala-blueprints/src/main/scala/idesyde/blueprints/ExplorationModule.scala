@@ -8,6 +8,7 @@ import idesyde.core.DecisionModel
 import idesyde.core.ExplorationLibrary
 import idesyde.utils.Logger
 import idesyde.core.ExplorationCombination
+import idesyde.core.CompleteDecisionModel
 
 /** The trait/interface for an exploration module that provides the explorers rules required to
   * explored identified design spaces [1].
@@ -19,7 +20,10 @@ import idesyde.core.ExplorationCombination
   * @see
   *   [[idesyde.core.ExplorationLibrary]]
   */
-trait ExplorationModule extends ExplorationLibrary with CanParseExplorationModuleConfiguration {
+trait ExplorationModule
+    extends Explorer
+    with ExplorationLibrary
+    with CanParseExplorationModuleConfiguration {
 
   /** decoders used to reconstruct decision models from headers.
     *
@@ -47,6 +51,29 @@ trait ExplorationModule extends ExplorationLibrary with CanParseExplorationModul
     */
   def uniqueIdentifier: String
 
+  def canExplore(decisionModel: DecisionModel): Boolean =
+    explorers.exists(_.canExplore(decisionModel))
+
+  def explore(
+      decisionModel: DecisionModel,
+      totalExplorationTimeOutInSecs: Long
+  ): LazyList[DecisionModel] = {
+    val nonDominated =
+      explorers
+        .filter(_.canExplore(decisionModel))
+        .filterNot(e =>
+          explorers
+            .filter(_ != e)
+            .filter(_.canExplore(decisionModel))
+            .forall(ee => ee.dominates(e, decisionModel, e.availableCriterias(decisionModel)))
+        )
+        .headOption
+    nonDominated match {
+      case Some(e) => e.explore(decisionModel, totalExplorationTimeOutInSecs)
+      case None    => LazyList.empty
+    }
+  }
+
   inline def standaloneExplorationModule(args: Array[String]): Unit = {
     parse(args, uniqueIdentifier) match {
       case Some(value) =>
@@ -54,16 +81,21 @@ trait ExplorationModule extends ExplorationLibrary with CanParseExplorationModul
         val dominantPathMsgPack = runPath / "dominant" / "msgpack"
         val comboMsgPack        = runPath / "combinations" / "msgpack"
         val comboJson           = runPath / "combinations" / "json"
+        val exploredMsgPack     = runPath / "explored" / "msgpack"
+        val exploredJson        = runPath / "explored" / "json"
         os.makeDir.all(comboMsgPack)
         os.makeDir.all(comboJson)
+        os.makeDir.all(exploredMsgPack)
+        os.makeDir.all(exploredJson)
         val decisionModelHeaders =
           os.list(dominantPathMsgPack)
             .filter(_.last.startsWith("header"))
-            .map(f => readBinary[DecisionModelHeader](os.read.bytes(f)))
+            .map(f => f -> readBinary[DecisionModelHeader](os.read.bytes(f)))
+            .toMap
         val combos = explorers.flatMap(explorer => {
           decisionModelDecoders.flatMap(decoder => {
             decisionModelHeaders
-              .flatMap(decoder)
+              .flatMap((p, m) => decoder(m))
               .flatMap(m => {
                 explorer.canExplore(m) match {
                   case true  => Some(ExplorationCombination(explorer, m))
@@ -82,6 +114,41 @@ trait ExplorationModule extends ExplorationLibrary with CanParseExplorationModul
             comboJson / s"combination_header_${c.explorer.uniqueIdentifier}_${c.decisionModel.uniqueIdentifier}_${uniqueIdentifier}.json",
             c.header.asText
           )
+        }
+        // now explore if required
+        for (
+          headerPath <- value.chosenDecisionModel; header <- decisionModelHeaders.get(headerPath);
+          decoder    <- decisionModelDecoders; m          <- decoder(header)
+        ) {
+          // this not part of the for loop to have higher certainty the for loop won t make a Set out of the LazyList
+          explore(m, value.explorationTotalTimeOutInSecs).foreach(solved => {
+            val header = solved match {
+              case comp: CompleteDecisionModel =>
+                os.write(
+                  exploredMsgPack / s"body_${solved.uniqueIdentifier}_${uniqueIdentifier}.msgpack",
+                  comp.bodyAsBinary
+                )
+                os.write(
+                  exploredJson / s"body_${solved.uniqueIdentifier}_${uniqueIdentifier}.json",
+                  comp.bodyAsText
+                )
+                comp.header.copy(body_path =
+                  Some(
+                    (exploredMsgPack / s"body_${solved.uniqueIdentifier}_${uniqueIdentifier}.msgpack").toString
+                  )
+                )
+              case _ =>
+                solved.header
+            }
+            os.write(
+              exploredMsgPack / s"header_${solved.uniqueIdentifier}_${uniqueIdentifier}.msgpack",
+              header.asBinary
+            )
+            os.write(
+              exploredJson / s"header_${solved.uniqueIdentifier}_${uniqueIdentifier}.json",
+              header.asText
+            )
+          })
         }
       case _ =>
     }

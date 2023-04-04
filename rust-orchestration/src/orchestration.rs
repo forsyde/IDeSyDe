@@ -9,25 +9,32 @@ use std::process::Stdio;
 use idesyde_rust_core::DecisionModelHeader;
 use idesyde_rust_core::IdentificationModule;
 
+#[derive(Debug, PartialEq, Eq, Hash)]
 pub struct ExternalIdentificationModule {
     run_path_: PathBuf,
     command_path_: PathBuf,
 }
 
-impl PartialEq<ExternalIdentificationModule> for ExternalIdentificationModule {
-    fn eq(&self, other: &ExternalIdentificationModule) -> bool {
-        self.run_path() == other.run_path() && self.command_path_ == other.command_path_
-    }
+#[derive(Debug, PartialEq, Eq, Hash)]
+pub struct ExternalExplorationModule {
+    run_path_: PathBuf,
+    command_path_: PathBuf,
 }
 
-impl Eq for ExternalIdentificationModule {}
+// impl PartialEq<ExternalIdentificationModule> for ExternalIdentificationModule {
+//     fn eq(&self, other: &ExternalIdentificationModule) -> bool {
+//         self.run_path() == other.run_path() && self.command_path_ == other.command_path_
+//     }
+// }
 
-impl Hash for ExternalIdentificationModule {
-    fn hash<H: std::hash::Hasher>(&self, state: &mut H) {
-        self.run_path_.hash(state);
-        self.command_path_.hash(state);
-    }
-}
+// impl Eq for ExternalIdentificationModule {}
+
+// impl Hash for ExternalIdentificationModule {
+//     fn hash<H: std::hash::Hasher>(&self, state: &mut H) {
+//         self.run_path_.hash(state);
+//         self.command_path_.hash(state);
+//     }
+// }
 
 impl IdentificationModule for ExternalIdentificationModule {
     fn unique_identifier(&self) -> String {

@@ -172,7 +172,7 @@ impl Hash for dyn IdentificationModule {
 
 pub trait Explorer {
     fn unique_identifier(&self) -> String;
-    fn criterias(&self) -> HashMap<String, f32>;
+    fn criterias(&self, m: &dyn DecisionModel) -> HashMap<String, f32>;
     fn can_explore(&self, m: &dyn DecisionModel) -> bool;
     fn explore(&self, m: &dyn DecisionModel) -> dyn Iterator<Item = dyn DecisionModel>;
     fn header(&self) -> ExplorerHeader;

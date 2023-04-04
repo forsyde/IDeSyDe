@@ -14,7 +14,13 @@ trait CanParseExplorationModuleConfiguration {
           .action((f, mc) =>
             mc.copy(runPath = if (f.startsWith("/")) then os.root / f else os.pwd / f)
           ),
-        builder.opt[Unit]("no-exploration").action((f, mc) => mc.copy(shoulExplore = false)),
+        builder
+          .opt[String]('e', "explore")
+          .action((f, mc) =>
+            mc.copy(chosenDecisionModel =
+              Some(if (f.startsWith("/")) then os.root / f else os.pwd / f)
+            )
+          ),
         builder
           .opt[Long]("total-timeout")
           .action((f, mc) => mc.copy(explorationTotalTimeOutInSecs = f))

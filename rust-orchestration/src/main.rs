@@ -127,18 +127,12 @@ fn main() {
 
         let mut iter = 0;
         for m in &dominant {
-            fs::write(
-                dominant_path.join(format!("header_{}_{}.json", iter, m.category)),
-                serde_json::to_string(m)
-                    .expect("Failed to serialize dominant model during identification."),
-            )
-            .expect("Failed to write serialized dominant model during identification.");
-            fs::write(
-                dominant_path.join(format!("header_{}_{}.msgpack", iter, m.category)),
-                rmp_serde::to_vec(m)
-                    .expect("Failed to serialize dominant model during identification."),
-            )
-            .expect("Failed to write serialized dominant model during identification.");
+            idesyde_rust_core::write_model_to_path(
+                m,
+                &dominant_path,
+                iter.to_string().as_str(),
+                "Orchestrator",
+            );
             iter += 1;
         }
 

@@ -1,7 +1,7 @@
 use std::cmp::Ordering;
 use std::collections::HashMap;
-use std::collections::HashSet;
 
+use std::hash::BuildHasher;
 use std::hash::Hash;
 use std::path::Path;
 use std::path::PathBuf;
@@ -33,8 +33,8 @@ impl IdentificationModule for ExternalIdentificationModule {
         self.run_path_.as_path()
     }
 
-    fn identification_step(&self, step_number: i32) -> HashSet<DecisionModelHeader> {
-        let mut headers = HashSet::new();
+    fn identification_step(&self, step_number: i32) -> Vec<DecisionModelHeader> {
+        let mut headers = Vec::new();
         let is_java = self
             .command_path_
             .extension()
@@ -67,7 +67,9 @@ impl IdentificationModule for ExternalIdentificationModule {
                     let header = rmp_serde::from_slice::<DecisionModelHeader>(b.as_slice()).expect(
                         "Failed to deserialize header file from disk during identification.",
                     );
-                    headers.insert(header);
+                    if !headers.contains(&header) {
+                        headers.push(header);
+                    }
                 }
             }
         }
@@ -107,6 +109,7 @@ impl ExplorationModule for ExternalExplorationModule {
                 .arg("-jar")
                 .arg(self.command_path_.as_os_str())
                 .arg("-c")
+                .arg(m.header().body_path.iter().next().unwrap())
                 .arg(self.run_path_.as_os_str())
                 .stdout(Stdio::piped())
                 .stderr(Stdio::piped())
@@ -114,13 +117,19 @@ impl ExplorationModule for ExternalExplorationModule {
             ExternalModuleType::StaticBinary => {
                 std::process::Command::new(self.command_path_.as_os_str())
                     .arg("--no-integration")
+                    .arg("-c")
+                    .arg(m.header().body_path.iter().next().unwrap())
                     .arg(self.run_path_.as_os_str())
                     .stdout(Stdio::piped())
                     .stderr(Stdio::piped())
                     .output()
             }
         };
-        todo!()
+        let o = output
+            .expect("Failed to get combination from exploration module.")
+            .stdout;
+        serde_json::from_slice(o.as_slice())
+            .expect("Failed to deserialize combination from exploration module.")
     }
 
     fn explore(
@@ -131,7 +140,7 @@ impl ExplorationModule for ExternalExplorationModule {
     }
 }
 
-pub fn load_decision_model_headers_from_binary(header_path: &Path) -> HashSet<DecisionModelHeader> {
+pub fn load_decision_model_headers_from_binary(header_path: &Path) -> Vec<DecisionModelHeader> {
     let known_decision_model_paths = if let Ok(ls) = header_path.read_dir() {
         ls.flat_map(|dir_entry_r| {
             if let Ok(dir_entry) = dir_entry_r {
@@ -150,22 +159,22 @@ pub fn load_decision_model_headers_from_binary(header_path: &Path) -> HashSet<De
             }
             None
         })
-        .collect::<HashSet<PathBuf>>()
+        .collect::<Vec<PathBuf>>()
     } else {
-        HashSet::new()
+        Vec::new()
     };
     known_decision_model_paths
         .iter()
         .flat_map(|p| std::fs::read(p))
         .flat_map(|b| rmp_serde::decode::from_slice(&b).ok())
-        .collect::<HashSet<DecisionModelHeader>>()
+        .collect::<Vec<DecisionModelHeader>>()
 }
 
 pub fn find_identification_modules(
     modules_path: &Path,
     run_path: &Path,
-) -> HashSet<ExternalIdentificationModule> {
-    let mut imodules = HashSet::new();
+) -> Vec<ExternalIdentificationModule> {
+    let mut imodules = Vec::new();
     if let Ok(read_dir) = modules_path.read_dir() {
         for e in read_dir {
             if let Ok(de) = e {
@@ -178,13 +187,13 @@ pub fn find_identification_modules(
                         .map(|s| s == "jar")
                         .unwrap_or(false);
                     if is_java {
-                        imodules.insert(ExternalIdentificationModule {
+                        imodules.push(ExternalIdentificationModule {
                             run_path_: run_path.to_path_buf().clone(),
                             command_path_: prog.clone(),
                             module_type: ExternalModuleType::JarFile,
                         });
                     } else {
-                        imodules.insert(ExternalIdentificationModule {
+                        imodules.push(ExternalIdentificationModule {
                             run_path_: run_path.to_path_buf().clone(),
                             command_path_: prog.clone(),
                             module_type: ExternalModuleType::StaticBinary,
@@ -200,8 +209,8 @@ pub fn find_identification_modules(
 pub fn find_exploration_modules(
     modules_path: &Path,
     run_path: &Path,
-) -> HashSet<ExternalExplorationModule> {
-    let mut emodules = HashSet::new();
+) -> Vec<ExternalExplorationModule> {
+    let mut emodules = Vec::new();
     if let Ok(read_dir) = modules_path.read_dir() {
         for e in read_dir {
             if let Ok(de) = e {
@@ -214,13 +223,13 @@ pub fn find_exploration_modules(
                         .map(|s| s == "jar")
                         .unwrap_or(false);
                     if is_java {
-                        emodules.insert(ExternalExplorationModule {
+                        emodules.push(ExternalExplorationModule {
                             run_path_: run_path.to_path_buf().clone(),
                             command_path_: prog.clone(),
                             module_type: ExternalModuleType::JarFile,
                         });
                     } else {
-                        emodules.insert(ExternalExplorationModule {
+                        emodules.push(ExternalExplorationModule {
                             run_path_: run_path.to_path_buf().clone(),
                             command_path_: prog.clone(),
                             module_type: ExternalModuleType::StaticBinary,
@@ -235,8 +244,8 @@ pub fn find_exploration_modules(
 
 pub fn identification_procedure(
     run_path: &Path,
-    imodules: &HashSet<Box<dyn IdentificationModule>>,
-) -> HashSet<DecisionModelHeader> {
+    imodules: &Vec<Box<dyn IdentificationModule>>,
+) -> Vec<DecisionModelHeader> {
     let header_path = &run_path.join("identified");
     std::fs::create_dir_all(header_path)
         .expect("Failed to created 'identified' folder during identification.");
@@ -246,20 +255,14 @@ pub fn identification_procedure(
     while !fix_point {
         fix_point = true;
         for imodule in imodules {
-            let potential = imodule.identification_step(step);
+            let mut potential = imodule.identification_step(step);
+            potential.retain(|m| !identified_headers.contains(m));
             fix_point = fix_point && potential.is_empty();
-            let mut added = 0;
             for m in potential {
-                println!(
-                    "{}, {:?} {:?}",
-                    m.category, m.covered_elements, m.covered_relations
-                );
-                if identified_headers.insert(m) {
-                    println!("inside");
-                    added += 1;
+                if !identified_headers.contains(&m) {
+                    identified_headers.push(m);
                 };
             }
-            fix_point = fix_point && (added == 0);
         }
         step += 1;
     }
@@ -267,8 +270,8 @@ pub fn identification_procedure(
 }
 
 pub fn compute_dominant_decision_models(
-    headers: &HashSet<DecisionModelHeader>,
-) -> HashSet<DecisionModelHeader> {
+    headers: &Vec<DecisionModelHeader>,
+) -> Vec<DecisionModelHeader> {
     headers
         .iter()
         .filter(|&h| {
@@ -278,5 +281,5 @@ pub fn compute_dominant_decision_models(
             })
         })
         .map(|h| h.to_owned())
-        .collect::<HashSet<DecisionModelHeader>>()
+        .collect::<Vec<DecisionModelHeader>>()
 }

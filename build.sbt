@@ -18,6 +18,11 @@ lazy val osLibVersion                  = "0.9.1"
 lazy val scalaYamlVersion              = "0.0.6"
 lazy val scoptVersion                  = "4.1.0"
 
+lazy val imodulesTarget = file("imodules")
+lazy val emodulesTarget = file("emodules")
+
+lazy val publishModules = taskKey[File]("Copy and return modules")
+
 lazy val root = project
   .in(file("."))
   .enablePlugins(ScalaUnidocPlugin)
@@ -68,6 +73,13 @@ lazy val common = (project in file("scala-common"))
       "org.typelevel"   %%% "spire"      % spireVersion
     ),
     Compile / mainClass := Some("idesyde.common.CommonIdentificationModule"),
+    publishModules := {
+      IO.createDirectory(imodulesTarget)
+      val jar    = assembly.value
+      val target = imodulesTarget / (projectInfo.value.nameFormal + ".jar")
+      IO.copyFile(jar, target)
+      target
+    },
     licenses := Seq(
       "MIT"  -> url("https://opensource.org/license/mit/"),
       "APL2" -> url("https://www.apache.org/licenses/LICENSE-2.0")
@@ -91,6 +103,13 @@ lazy val forsyde = (project in file("scala-bridge-forsyde-io"))
       "io.github.forsyde" % "forsyde-io-java-core" % forsydeIoVersion
     ),
     Compile / mainClass := Some("idesyde.forsydeio.ForSyDeIdentificationModule"),
+    publishModules := {
+      IO.createDirectory(imodulesTarget)
+      val jar    = assembly.value
+      val target = imodulesTarget / (projectInfo.value.nameFormal + ".jar")
+      IO.copyFile(jar, target)
+      target
+    },
     licenses := Seq(
       "MIT"  -> url("https://opensource.org/license/mit/"),
       "APL2" -> url("https://www.apache.org/licenses/LICENSE-2.0"),
@@ -156,6 +175,13 @@ lazy val choco = (project in file("scala-choco"))
       "EPL2" -> url("https://www.eclipse.org/legal/epl-2.0/")
     ),
     Compile / mainClass := Some("idesyde.choco.ChocoExplorationModule"),
+    publishModules := {
+      IO.createDirectory(emodulesTarget)
+      val jar    = assembly.value
+      val target = emodulesTarget / (projectInfo.value.nameFormal + ".jar")
+      IO.copyFile(jar, target)
+      target
+    },
     jlinkModulePath := {
       val paths = (jlinkBuildImage / fullClasspath).value
       paths
@@ -291,7 +317,7 @@ ThisBuild / assembly / assemblyMergeStrategy := {
   case x                             => MergeStrategy.first
 }
 
-// /Compile / resourceDirectory := baseDirectory.value / "resources"
+// /Compile / resourceDirectory := root.base / "resources"
 lazy val publishDocumentation =
   taskKey[Unit]("Copy the generated documentation to the correct folder")
 publishDocumentation := IO.copyDirectory(

@@ -1,8 +1,4 @@
-use std::{
-    collections::{HashMap, HashSet},
-    hash::Hash,
-    path::Path,
-};
+use std::{collections::HashMap, hash::Hash, path::Path};
 
 use serde::{Deserialize, Serialize};
 use std::cmp::Ordering;
@@ -59,9 +55,9 @@ impl Hash for LabelledArcWithPorts {
 #[derive(Serialize, Clone, Deserialize, Debug)]
 pub struct DesignModelHeader {
     pub category: String,
-    model_paths: HashSet<String>,
-    pub elements: HashSet<String>,
-    pub relations: HashSet<LabelledArcWithPorts>,
+    pub model_paths: Vec<String>,
+    pub elements: Vec<String>,
+    pub relations: Vec<LabelledArcWithPorts>,
 }
 
 impl PartialEq<DesignModelHeader> for DesignModelHeader {
@@ -72,17 +68,16 @@ impl PartialEq<DesignModelHeader> for DesignModelHeader {
 
 impl PartialOrd<DesignModelHeader> for DesignModelHeader {
     fn partial_cmp(&self, o: &DesignModelHeader) -> std::option::Option<std::cmp::Ordering> {
-        if self.category == o.category {
-            if self.elements.is_superset(&o.elements) && self.relations.is_superset(&o.relations) {
-                return Some(Ordering::Greater);
-            } else if self.elements.is_subset(&o.elements) && self.relations.is_subset(&o.relations)
-            {
-                return Some(Ordering::Less);
-            } else {
-                return Some(Ordering::Equal);
-            }
-        }
-        None
+        let superset = o.elements.iter().all(|v| self.elements.contains(v))
+            && o.relations.iter().all(|v| self.relations.contains(v));
+        let subset = self.elements.iter().all(|v| o.elements.contains(v))
+            && self.relations.iter().all(|v| o.relations.contains(v));
+        return match (superset, subset) {
+            (true, true) => Some(Ordering::Equal),
+            (true, false) => Some(Ordering::Greater),
+            (false, true) => Some(Ordering::Less),
+            _ => None,
+        };
     }
 }
 
@@ -103,9 +98,9 @@ impl Hash for DesignModelHeader {
 #[derive(Serialize, Clone, Deserialize, Debug)]
 pub struct DecisionModelHeader {
     pub category: String,
-    body_path: HashSet<String>,
-    pub covered_elements: HashSet<String>,
-    pub covered_relations: HashSet<LabelledArcWithPorts>,
+    pub body_path: Vec<String>,
+    pub covered_elements: Vec<String>,
+    pub covered_relations: Vec<LabelledArcWithPorts>,
 }
 
 impl PartialEq<DecisionModelHeader> for DecisionModelHeader {
@@ -118,21 +113,27 @@ impl PartialEq<DecisionModelHeader> for DecisionModelHeader {
 
 impl PartialOrd<DecisionModelHeader> for DecisionModelHeader {
     fn partial_cmp(&self, o: &DecisionModelHeader) -> std::option::Option<std::cmp::Ordering> {
-        if self.covered_elements == o.covered_elements
-            && self.covered_relations == o.covered_relations
-        {
-            return Some(Ordering::Equal);
-        } else if self.covered_elements.is_superset(&o.covered_elements)
-            && self.covered_relations.is_superset(&o.covered_relations)
-        {
-            return Some(Ordering::Greater);
-        } else if self.covered_elements.is_subset(&o.covered_elements)
-            && self.covered_relations.is_subset(&o.covered_relations)
-        {
-            return Some(Ordering::Less);
-        } else {
-            return None;
-        }
+        let superset = o
+            .covered_elements
+            .iter()
+            .all(|v| self.covered_elements.contains(v))
+            && o.covered_relations
+                .iter()
+                .all(|v| self.covered_relations.contains(v));
+        let subset = self
+            .covered_elements
+            .iter()
+            .all(|v| o.covered_elements.contains(v))
+            && self
+                .covered_relations
+                .iter()
+                .all(|v| o.covered_relations.contains(v));
+        return match (superset, subset) {
+            (true, true) => Some(Ordering::Equal),
+            (true, false) => Some(Ordering::Greater),
+            (false, true) => Some(Ordering::Less),
+            _ => None,
+        };
     }
 }
 
@@ -157,15 +158,10 @@ pub trait DecisionModel {
     fn header(&self) -> DecisionModelHeader;
 
     fn dominates(&self, o: Box<dyn DecisionModel>) -> bool {
-        self.header().category == o.header().category
-            && self
-                .header()
-                .covered_elements
-                .is_superset(&o.header().covered_elements)
-            && self
-                .header()
-                .covered_relations
-                .is_superset(&o.header().covered_relations)
+        match self.header().partial_cmp(&o.header()) {
+            Some(Ordering::Greater) => true,
+            _ => false,
+        }
     }
 }
 
@@ -175,30 +171,28 @@ impl DecisionModel for DecisionModelHeader {
     }
 }
 
-pub type IdentificationRule = fn(
-    HashSet<Box<dyn DesignModel>>,
-    HashSet<Box<dyn DecisionModel>>,
-) -> HashSet<Box<dyn DecisionModel>>;
+pub type IdentificationRule =
+    fn(Vec<Box<dyn DesignModel>>, Vec<Box<dyn DecisionModel>>) -> Vec<Box<dyn DecisionModel>>;
 
 pub enum MarkedIdentificationRule {
     DesignModelOnlyIdentificationRule(IdentificationRule),
     DecisionModelOnlyIdentificationRule(IdentificationRule),
-    SpecificDecisionModelIdentificationRule(HashSet<String>, IdentificationRule),
+    SpecificDecisionModelIdentificationRule(Vec<String>, IdentificationRule),
     GenericIdentificationRule(IdentificationRule),
 }
 
 pub trait IdentificationModule {
     fn unique_identifier(&self) -> String;
     fn run_path(&self) -> &Path;
-    fn identification_step(&self, iteration: i32) -> HashSet<DecisionModelHeader>;
+    fn identification_step(&self, iteration: i32) -> Vec<DecisionModelHeader>;
 }
 
 pub trait FullIdentificationModule {
     fn unique_identifier(&self) -> String;
     fn run_path(&self) -> &Path;
-    fn decode_design_model(&self, m: &DesignModelHeader) -> HashSet<Box<dyn DesignModel>>;
+    fn decode_design_model(&self, m: &DesignModelHeader) -> Vec<Box<dyn DesignModel>>;
     fn decode_decision_model(&self, m: &DecisionModelHeader) -> Option<Box<dyn DecisionModel>>;
-    fn identification_rules(&self) -> HashSet<MarkedIdentificationRule>;
+    fn identification_rules(&self) -> Vec<MarkedIdentificationRule>;
 }
 
 impl PartialEq<dyn IdentificationModule> for dyn IdentificationModule {

@@ -1,4 +1,4 @@
-use std::{collections::HashSet, fs, path::Path};
+use std::{fs, path::Path};
 
 use clap::Parser;
 use idesyde_rust_core::{ExplorationModule, IdentificationModule};
@@ -112,13 +112,13 @@ fn main() {
             };
         }
 
-        let mut imodules = HashSet::<Box<dyn IdentificationModule>>::new();
+        let mut imodules = Vec::<Box<dyn IdentificationModule>>::new();
         for eximod in orchestration::find_identification_modules(imodules_path, run_path) {
-            imodules.insert(Box::new(eximod));
+            imodules.push(Box::new(eximod));
         }
-        let mut emodules = HashSet::<Box<dyn ExplorationModule>>::new();
+        let mut emodules = Vec::<Box<dyn ExplorationModule>>::new();
         for exemod in orchestration::find_exploration_modules(emodules_path, run_path) {
-            emodules.insert(Box::new(exemod));
+            emodules.push(Box::new(exemod));
         }
 
         let found = orchestration::identification_procedure(run_path, &imodules);

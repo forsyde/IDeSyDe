@@ -38,7 +38,7 @@ trait Explorer {
 
   def criteriaValue(decisionModel: DecisionModel, criteria: ExplorationCriteria): Double = 0.0
 
-  def canExplore(decisionModel: DecisionModel): Boolean
+  def combination(decisionModel: DecisionModel): ExplorationCombinationDescription
 
   def dominates(
       o: Explorer,
@@ -57,7 +57,8 @@ trait Explorer {
         } else {
           false
         }
-    !comparisonResult.contains(false) && canExplore(m) && o.canExplore(m)
+    !comparisonResult.contains(false)
+  //&& combination(m) && o.combination(m)
 
   def uniqueIdentifier: String
 

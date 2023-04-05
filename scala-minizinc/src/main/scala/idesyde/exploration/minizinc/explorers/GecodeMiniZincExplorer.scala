@@ -11,11 +11,12 @@ import java.nio.file.StandardOpenOption
 import idesyde.identification.minizinc.MiniZincData
 import idesyde.core.DecisionModel
 import idesyde.identification.common.StandardDecisionModel
+import idesyde.core.ExplorationCombinationDescription
 
 final case class GecodeMiniZincExplorer() extends SimpleMiniZincCPExplorer {
 
-  def canExplore(decisionModel: DecisionModel): Boolean = false
-  // "minizinc --solvers".!!.contains("org.gecode.gecode")
+  override def combination(decisionModel: DecisionModel): ExplorationCombinationDescription =
+    ExplorationCombinationDescription(false, Map())
 
   override def explore(
       decisionModel: DecisionModel,

@@ -11,10 +11,12 @@ import java.nio.file.StandardOpenOption
 import idesyde.exploration.minizinc.explorers.ChuffedMiniZincExplorer
 import idesyde.core.DecisionModel
 import idesyde.identification.common.StandardDecisionModel
+import idesyde.core.ExplorationCombinationDescription
 
 final case class ChuffedMiniZincExplorer() extends SimpleMiniZincCPExplorer {
 
-  override def canExplore(decisionModel: DecisionModel): Boolean = false
+  override def combination(decisionModel: DecisionModel): ExplorationCombinationDescription =
+    ExplorationCombinationDescription(false, Map())
 
   override def explore(
       decisionModel: DecisionModel,

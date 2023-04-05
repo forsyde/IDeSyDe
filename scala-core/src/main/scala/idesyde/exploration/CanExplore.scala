@@ -10,7 +10,7 @@ import idesyde.core.DecisionModel
 import idesyde.utils.HasUtils
 import idesyde.utils.Logger
 import scala.annotation.targetName
-import idesyde.core.ExplorationCombination
+import idesyde.core.ExplorationCombinationDescription
 import idesyde.core.ExplorationLibrary
 
 trait CanExplore(using logger: Logger) extends HasUtils {
@@ -20,7 +20,7 @@ trait CanExplore(using logger: Logger) extends HasUtils {
       decisionModels: Set[? <: DecisionModel],
       explorationModules: Set[ExplorationLibrary],
       explorationCriteria: Set[ExplorationCriteria] = Set(ExplorationCriteria.TimeUntilOptimality)
-  ): Set[ExplorationCombination] = chooseExplorersAndModels(
+  ): Set[(? <: Explorer, ? <: DecisionModel)] = chooseExplorersAndModels(
     decisionModels,
     explorationModules.flatMap(_.explorers),
     explorationCriteria
@@ -31,14 +31,15 @@ trait CanExplore(using logger: Logger) extends HasUtils {
       decisionModels: Set[? <: DecisionModel],
       explorers: Set[Explorer],
       explorationCriteria: Set[ExplorationCriteria]
-  ): Set[ExplorationCombination] =
-    val explorableModels = decisionModels.filter(m => explorers.exists(e => e.canExplore(m)))
+  ): Set[(? <: Explorer, ? <: DecisionModel)] =
+    val explorableModels =
+      decisionModels.filter(m => explorers.exists(e => e.combination(m).can_explore))
     logger.debug(s"total of ${explorableModels.size} exp. models to find combos.")
     // for each of the explorable models build up a dominance graph of the available explorers
     // based on the criteria supplied
     val modelToExplorerSet =
       for (m <- explorableModels) yield
-        val possibleExplorers = explorers.filter(_.canExplore(m)).toVector
+        val possibleExplorers = explorers.filter(_.combination(m).can_explore).toVector
         val dominanceMatrix = possibleExplorers.map(e =>
           possibleExplorers.map(ee => e.dominates(ee, m, explorationCriteria))
         )
@@ -48,7 +49,7 @@ trait CanExplore(using logger: Logger) extends HasUtils {
         m -> dominant
       end for
     // flat map the model to set of explorers to map of model to explorers
-    val modelToExplorers = modelToExplorerSet.flatMap((m, es) => es.map(exp => ExplorationCombination(exp, m)))
+    val modelToExplorers = modelToExplorerSet.flatMap((m, es) => es.map(exp => (exp, m)))
     modelToExplorers
 
 }

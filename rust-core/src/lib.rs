@@ -172,8 +172,8 @@ impl Hash for dyn IdentificationModule {
 
 pub trait Explorer {
     fn unique_identifier(&self) -> String;
-    fn criterias(&self, m: &dyn DecisionModel) -> HashMap<String, f32>;
-    fn can_explore(&self, m: &dyn DecisionModel) -> bool;
+    fn available_criterias(&self, m: &dyn DecisionModel) -> HashMap<String, f32>;
+    fn get_combination(&self, m: &dyn DecisionModel) -> ExplorationCombinationDescription;
     fn explore(&self, m: &dyn DecisionModel) -> dyn Iterator<Item = dyn DecisionModel>;
     fn header(&self) -> ExplorerHeader;
 }
@@ -183,42 +183,32 @@ pub struct ExplorerHeader {
     identifier: String,
 }
 
-pub trait ExplorationCombination {
-    fn explorer(&self) -> &dyn Explorer;
-    fn decision_model(&self) -> &dyn DecisionModel;
-    fn header(&self) -> ExplorationCombinationheader;
-}
-
 #[derive(Debug, Deserialize, Serialize)]
-pub struct ExplorationCombinationheader {
-    explorer_header: ExplorerHeader,
-    decision_model_header: DecisionModelHeader,
+pub struct ExplorationCombinationDescription {
+    can_explore: bool,
     criteria: HashMap<String, f32>,
 }
 
-impl Hash for ExplorationCombinationheader {
+impl Hash for ExplorationCombinationDescription {
     fn hash<H: std::hash::Hasher>(&self, state: &mut H) {
-        self.explorer_header.hash(state);
-        self.decision_model_header.hash(state);
+        self.can_explore.hash(state);
         for k in self.criteria.keys() {
             k.hash(state);
         }
     }
 }
 
-impl PartialEq<ExplorationCombinationheader> for ExplorationCombinationheader {
-    fn eq(&self, other: &ExplorationCombinationheader) -> bool {
-        self.explorer_header == other.explorer_header
-            && self.decision_model_header == other.decision_model_header
-            && self.criteria == other.criteria
+impl PartialEq<ExplorationCombinationDescription> for ExplorationCombinationDescription {
+    fn eq(&self, other: &ExplorationCombinationDescription) -> bool {
+        self.can_explore == other.can_explore && self.criteria == other.criteria
     }
 }
 
-impl Eq for ExplorationCombinationheader {}
+impl Eq for ExplorationCombinationDescription {}
 
-impl PartialOrd<ExplorationCombinationheader> for ExplorationCombinationheader {
-    fn partial_cmp(&self, other: &ExplorationCombinationheader) -> Option<Ordering> {
-        if self.decision_model_header.category == other.decision_model_header.category {
+impl PartialOrd<ExplorationCombinationDescription> for ExplorationCombinationDescription {
+    fn partial_cmp(&self, other: &ExplorationCombinationDescription) -> Option<Ordering> {
+        if self.can_explore == other.can_explore {
             if self.criteria.keys().eq(other.criteria.keys()) {
                 if self
                     .criteria

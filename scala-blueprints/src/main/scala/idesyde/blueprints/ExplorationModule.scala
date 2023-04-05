@@ -7,7 +7,6 @@ import idesyde.core.headers.DecisionModelHeader
 import idesyde.core.DecisionModel
 import idesyde.core.ExplorationLibrary
 import idesyde.utils.Logger
-import idesyde.core.ExplorationCombination
 import idesyde.core.CompleteDecisionModel
 
 /** The trait/interface for an exploration module that provides the explorers rules required to
@@ -52,7 +51,7 @@ trait ExplorationModule
   def uniqueIdentifier: String
 
   def canExplore(decisionModel: DecisionModel): Boolean =
-    explorers.exists(_.canExplore(decisionModel))
+    explorers.exists(_.combination(decisionModel).can_explore)
 
   def explore(
       decisionModel: DecisionModel,
@@ -60,11 +59,11 @@ trait ExplorationModule
   ): LazyList[DecisionModel] = {
     val nonDominated =
       explorers
-        .filter(_.canExplore(decisionModel))
+        .filter(_.combination(decisionModel).can_explore)
         .filterNot(e =>
           explorers
             .filter(_ != e)
-            .filter(_.canExplore(decisionModel))
+            .filter(_.combination(decisionModel).can_explore)
             .forall(ee => ee.dominates(e, decisionModel, e.availableCriterias(decisionModel)))
         )
         .headOption
@@ -92,29 +91,36 @@ trait ExplorationModule
             .filter(_.last.startsWith("header"))
             .map(f => f -> readBinary[DecisionModelHeader](os.read.bytes(f)))
             .toMap
-        val combos = explorers.flatMap(explorer => {
-          decisionModelDecoders.flatMap(decoder => {
-            decisionModelHeaders
-              .flatMap((p, m) => decoder(m))
-              .flatMap(m => {
-                explorer.canExplore(m) match {
-                  case true  => Some(ExplorationCombination(explorer, m))
-                  case false => None
-                }
-              })
-          })
-        })
-        // save the combos back on disk
-        for (c <- combos) {
-          os.write(
-            comboMsgPack / s"combination_header_${c.explorer.uniqueIdentifier}_${c.decisionModel.uniqueIdentifier}_${uniqueIdentifier}.msgpack",
-            c.header.asBinary
-          )
-          os.write(
-            comboJson / s"combination_header_${c.explorer.uniqueIdentifier}_${c.decisionModel.uniqueIdentifier}_${uniqueIdentifier}.json",
-            c.header.asText
-          )
+        for (
+          explorer    <- explorers; decoder <- decisionModelDecoders;
+          (_, header) <- decisionModelHeaders;
+          m           <- decoder(header)
+        ) {
+          println(explorer.combination(m).asText)
         }
+        // val combos = explorers.flatMap(explorer => {
+        //   decisionModelDecoders.flatMap(decoder => {
+        //     decisionModelHeaders
+        //       .flatMap((p, m) => decoder(m))
+        //       .flatMap(m => {
+        //         explorer.canExplore(m) match {
+        //           case true  => Some(ExplorationCombination(explorer, m))
+        //           case false => None
+        //         }
+        //       })
+        //   })
+        // })
+        // save the combos back on disk
+        // for (c <- combos) {
+        //   os.write(
+        //     comboMsgPack / s"combination_header_${c.explorer.uniqueIdentifier}_${c.decisionModel.uniqueIdentifier}_${uniqueIdentifier}.msgpack",
+        //     c.header.asBinary
+        //   )
+        //   os.write(
+        //     comboJson / s"combination_header_${c.explorer.uniqueIdentifier}_${c.decisionModel.uniqueIdentifier}_${uniqueIdentifier}.json",
+        //     c.header.asText
+        //   )
+        // }
         // now explore if required
         for (
           headerPath <- value.chosenDecisionModel; header <- decisionModelHeaders.get(headerPath);

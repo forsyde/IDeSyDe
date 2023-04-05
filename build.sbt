@@ -155,6 +155,7 @@ lazy val choco = (project in file("scala-choco"))
       "APL2" -> url("https://www.apache.org/licenses/LICENSE-2.0"),
       "EPL2" -> url("https://www.eclipse.org/legal/epl-2.0/")
     ),
+    Compile / mainClass := Some("idesyde.choco.ChocoExplorationModule"),
     jlinkModulePath := {
       val paths = (jlinkBuildImage / fullClasspath).value
       paths

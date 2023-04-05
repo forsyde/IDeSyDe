@@ -3,7 +3,7 @@ package idesyde.identification.forsyde
 import forsyde.io.java.core.ForSyDeSystemGraph
 import idesyde.core.DesignModel
 import idesyde.core.DecisionModel
-import idesyde.identification.forsyde.ForSyDeDesignModel
+import idesyde.forsydeio.ForSyDeDesignModel
 
 object ForSyDeIdentificationUtils {
 

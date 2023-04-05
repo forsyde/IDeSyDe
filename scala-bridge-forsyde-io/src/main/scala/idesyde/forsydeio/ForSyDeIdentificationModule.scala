@@ -1,6 +1,6 @@
-package idesyde.forsyde
+package idesyde.forsydeio
 
-import idesyde.identification.forsyde.ForSyDeIdentificationLibrary
+import idesyde.forsydeio.ForSyDeIdentificationLibrary
 import idesyde.blueprints.IdentificationModule
 import idesyde.core.MarkedIdentificationRule
 import idesyde.identification.forsyde.rules.MixedRules
@@ -14,10 +14,13 @@ import idesyde.core.DesignModel
 import idesyde.core.headers.DesignModelHeader
 import idesyde.identification.common.CommonIdentificationLibrary
 import forsyde.io.java.drivers.ForSyDeModelHandler
-import idesyde.identification.forsyde.ForSyDeDesignModel
+import idesyde.forsydeio.ForSyDeDesignModel
 import java.nio.file.Paths
+import os.Path
 
 object ForSyDeIdentificationModule extends IdentificationModule {
+
+  def decisionHeaderToModel(m: DecisionModelHeader): Option[DecisionModel] = None
 
   given Logger = logger
 
@@ -27,21 +30,13 @@ object ForSyDeIdentificationModule extends IdentificationModule {
 
   def uniqueIdentifier: String = "ForSyDeIdentificationModule"
 
-  def designModelDecoders: Set[DesignModelHeader => Set[DesignModel]] = Set(
-    decodeForSyDeDesignModelFromHeader
-  )
-
-  def decisionModelDecoders: Set[DecisionModelHeader => Option[DecisionModel]] = Set()
-
   val identificationRules = forSyDeIdentificationLibrary.identificationRules
 
   val integrationRules = forSyDeIdentificationLibrary.integrationRules
 
-  override val inputsToDesign = Set(inputToForSyDeHeader)
-
   def main(args: Array[String]): Unit = standaloneIdentificationModule(args)
 
-  def decodeForSyDeDesignModelFromHeader(header: DesignModelHeader): Set[DesignModel] = {
+  def designHeaderToModel(header: DesignModelHeader): Set[DesignModel] = {
     header match {
       case DesignModelHeader("ForSyDeDesignModel", model_paths, _, _) =>
         model_paths.flatMap(p => {
@@ -57,7 +52,7 @@ object ForSyDeIdentificationModule extends IdentificationModule {
     }
   }
 
-  def inputToForSyDeHeader(p: os.Path): Option[DesignModelHeader | DesignModel] = {
+  override def inputsToDesignModel(p: os.Path): Option[DesignModelHeader | DesignModel] = {
     if (modelHandler.canLoadModel(p.toNIO)) {
       val m = modelHandler.loadModel(p.toNIO)
       Some(ForSyDeDesignModel(m))

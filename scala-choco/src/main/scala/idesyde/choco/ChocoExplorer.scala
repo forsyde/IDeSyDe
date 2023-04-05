@@ -25,14 +25,22 @@ import idesyde.utils.Logger
 import spire.math.Rational
 import idesyde.identification.common.models.mixed.SDFToTiledMultiCore
 import idesyde.choco.ChocoExplorableOps._
+import idesyde.core.ExplorationCombinationDescription
 
 class ChocoExplorer(using logger: Logger) extends Explorer:
 
-  def canExplore(decisionModel: DecisionModel): Boolean =
-    decisionModel match
+  def combination(decisionModel: DecisionModel): ExplorationCombinationDescription = {
+    val canExplore = decisionModel match
       case sdf: SDFToTiledMultiCore => true
       case c: ChocoDecisionModel    => true
       case _                        => false
+    ExplorationCombinationDescription(
+      canExplore,
+      availableCriterias(decisionModel)
+        .map(c => c.identifier -> criteriaValue(decisionModel, c))
+        .toMap
+    )
+  }
 
   override def availableCriterias(decisionModel: DecisionModel): Set[ExplorationCriteria] =
     decisionModel match {
@@ -89,7 +97,8 @@ class ChocoExplorer(using logger: Logger) extends Explorer:
 
   def exploreChocoExplorable[T <: DecisionModel](
       m: T,
-      explorationTotalTimeOutInSecs: Long
+      explorationTotalTimeOutInSecs: Long,
+      maximumSolutions: Long
   )(using ChocoExplorable[T]): LazyList[T] = {
     val model  = m.chocoModel
     val solver = model.getSolver()
@@ -99,17 +108,21 @@ class ChocoExplorer(using logger: Logger) extends Explorer:
     }
     LazyList
       .continually(solver.solve())
-      .takeWhile(feasible => feasible)
+      .zipWithIndex
+      .takeWhile((feasible, i) =>
+        if (maximumSolutions > 0) feasible && i < maximumSolutions else feasible
+      )
       .map(_ => solver.defaultSolution())
       .map(paretoSolution => m.mergeSolution(paretoSolution))
   }
 
   def explore(
       decisionModel: DecisionModel,
-      explorationTotalTimeOutInSecs: Long = 0L
+      explorationTotalTimeOutInSecs: Long = 0L,
+      maximumSolutions: Long = 0L
   ): LazyList[DecisionModel] = decisionModel match
     case sdf: SDFToTiledMultiCore =>
-      exploreChocoExplorable(sdf, explorationTotalTimeOutInSecs)(using
+      exploreChocoExplorable(sdf, explorationTotalTimeOutInSecs, maximumSolutions)(using
         CanSolveSDFToTiledMultiCore()
       )
     case solvable: ChocoDecisionModel =>

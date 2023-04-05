@@ -22,13 +22,11 @@ object CommonIdentificationModule
 
   given Logger = logger
 
-  val commonIdentificationLibrary = CommonIdentificationLibrary()
+  def designHeaderToModel(m: DesignModelHeader): Set[DesignModel] = Set()
 
-  def designModelDecoders: Set[DesignModelHeader => Set[DesignModel]] = Set()
+  def designHeaderToModel: Set[DesignModelHeader => Set[DesignModel]] = Set()
 
-  def decisionModelDecoders: Set[DecisionModelHeader => Option[DecisionModel]] = Set(
-    decodeDecisionModels
-  )
+  private val commonIdentificationLibrary = CommonIdentificationLibrary()
 
   def integrationRules: Set[(DesignModel, DecisionModel) => Option[? <: DesignModel]] =
     commonIdentificationLibrary.integrationRules
@@ -40,7 +38,7 @@ object CommonIdentificationModule
 
   def main(args: Array[String]) = standaloneIdentificationModule(args)
 
-  def decodeDecisionModels(m: DecisionModelHeader): Option[DecisionModel] = {
+  def decisionHeaderToModel(m: DecisionModelHeader): Option[DecisionModel] = {
     m match {
       case DecisionModelHeader("SDFApplication", body_path, _, _) =>
         body_path.flatMap(decodeFromPath[SDFApplication])

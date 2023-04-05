@@ -9,7 +9,7 @@ import idesyde.identification.common.models.platform.TiledMultiCore
 import forsyde.io.java.typed.viewers.platform.GenericProcessingModule
 import forsyde.io.java.typed.viewers.platform.GenericMemoryModule
 import forsyde.io.java.typed.viewers.platform.GenericCommunicationModule
-import idesyde.identification.forsyde.ForSyDeDesignModel
+import idesyde.forsydeio.ForSyDeDesignModel
 import forsyde.io.java.typed.viewers.platform.DigitalModule
 import scala.collection.mutable.Buffer
 import forsyde.io.java.typed.viewers.platform.InstrumentedCommunicationModule

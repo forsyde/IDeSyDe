@@ -26,6 +26,14 @@ final case class ExplorationCombinationDescription(
 
   def asBinary: Array[Byte] = writeBinary(this)
 
+  def `<?>`(o: ExplorationCombinationDescription): Char =
+    ExplorationCombinationDescription.partialOrdering.tryCompare(this, o) match {
+      case Some(1)  => '>'
+      case Some(0)  => '='
+      case Some(-1) => '<'
+      case _        => '?'
+    }
+
 }
 
 object ExplorationCombinationDescription {
@@ -52,4 +60,5 @@ object ExplorationCombinationDescription {
       )
     } else None
   }
+
 }

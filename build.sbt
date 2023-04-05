@@ -78,7 +78,7 @@ lazy val common = (project in file("scala-common"))
     )
   )
 
-lazy val forsyde = (project in file("scala-forsyde"))
+lazy val forsyde = (project in file("scala-bridge-forsyde-io"))
   .dependsOn(core)
   .dependsOn(common)
   .dependsOn(blueprints)
@@ -90,7 +90,7 @@ lazy val forsyde = (project in file("scala-forsyde"))
     libraryDependencies ++= Seq(
       "io.github.forsyde" % "forsyde-io-java-core" % forsydeIoVersion
     ),
-    Compile / mainClass := Some("idesyde.forsyde.ForSyDeIdentificationModule"),
+    Compile / mainClass := Some("idesyde.forsydeio.ForSyDeIdentificationModule"),
     licenses := Seq(
       "MIT"  -> url("https://opensource.org/license/mit/"),
       "APL2" -> url("https://www.apache.org/licenses/LICENSE-2.0"),

@@ -5,7 +5,7 @@ import scala.jdk.CollectionConverters._
 import idesyde.utils.Logger
 import idesyde.core.DesignModel
 import idesyde.core.DecisionModel
-import idesyde.identification.forsyde.ForSyDeDesignModel
+import idesyde.forsydeio.ForSyDeDesignModel
 import idesyde.identification.common.models.sdf.SDFApplication
 import forsyde.io.java.core.ForSyDeSystemGraph
 import forsyde.io.java.typed.viewers.moc.sdf.SDFElem

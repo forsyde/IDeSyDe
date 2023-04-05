@@ -8,10 +8,10 @@ import idesyde.core.headers.DesignModelHeader
 import idesyde.core.headers.DecisionModelHeader
 
 class MinizincIdentificationModule extends IdentificationModule {
-  
-  def designModelDecoders: Set[DesignModelHeader => Set[DesignModel]] = Set()
-  
-  def decisionModelDecoders: Set[DecisionModelHeader => Option[DecisionModel]] = Set()
+
+  def designHeaderToModel(m: DesignModelHeader): Set[DesignModel] = Set()
+
+  def decisionHeaderToModel(m: DecisionModelHeader): Option[DecisionModel] = None
 
   def uniqueIdentifier: String = "MinizincIdentificationModule"
 

@@ -1,4 +1,4 @@
-package idesyde.identification.forsyde
+package idesyde.forsydeio
 
 import scala.jdk.CollectionConverters.*
 import scala.jdk.OptionConverters.*

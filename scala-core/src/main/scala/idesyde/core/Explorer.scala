@@ -31,7 +31,8 @@ trait Explorer {
 
   def explore(
       decisionModel: DecisionModel,
-      totalExplorationTimeOutInSecs: Long = 0L
+      totalExplorationTimeOutInSecs: Long = 0L,
+      maximumSolutions: Long = 0L
   ): LazyList[DecisionModel]
 
   def availableCriterias(decisionModel: DecisionModel): Set[ExplorationCriteria] = Set()

@@ -9,15 +9,13 @@ import idesyde.utils.Logger
 import idesyde.core.headers.DesignModelHeader
 import idesyde.core.headers.DecisionModelHeader
 
-object SimulinkMatlabIdentificationModule
-    extends IdentificationModule
-    with ApplicationRules {
+object SimulinkMatlabIdentificationModule extends IdentificationModule with ApplicationRules {
 
-  override def decisionModelDecoders: Set[DecisionModelHeader => Option[DecisionModel]] = Set()
+  def designHeaderToModel(m: DesignModelHeader): Set[DesignModel] = Set()
 
-  override def designModelDecoders: Set[DesignModelHeader => Set[DesignModel]] = Set()
+  def decisionHeaderToModel(m: DecisionModelHeader): Option[DecisionModel] = None
 
-  override def uniqueIdentifier: String =  "SimulinkMatlabIdentificationModule"
+  override def uniqueIdentifier: String = "SimulinkMatlabIdentificationModule"
 
   override def identificationRules
       : Set[(Set[DesignModel], Set[DecisionModel]) => Set[? <: DecisionModel]] = Set(

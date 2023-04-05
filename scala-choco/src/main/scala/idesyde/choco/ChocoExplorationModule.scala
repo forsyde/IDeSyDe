@@ -10,16 +10,32 @@ import idesyde.utils.SimpleStandardIOLogger
 import idesyde.identification.common.models.mixed.SDFToTiledMultiCore
 import idesyde.choco.ChocoExplorer
 import spire.math.Rational
+import idesyde.core.ExplorationCombinationDescription
 
 object ChocoExplorationModule extends ExplorationModule {
+
+  def combination(decisionModel: DecisionModel): ExplorationCombinationDescription = {
+    val combos = explorers.map(e => e.combination(decisionModel))
+    // keep only the dominant ones and take the biggest
+    combos
+      .filter(l => {
+        combos
+          .filter(_ != l)
+          .forall(r => {
+            l `<?>` r match {
+              case '>' | '=' => true
+              case _         => false
+            }
+          })
+      })
+      .head
+  }
 
   given Fractional[Rational] = spire.compat.fractional[Rational]
 
   val logger = SimpleStandardIOLogger("WARN")
 
   given Logger = logger
-
-  override def decisionModelDecoders: Set[DecisionModelHeader => Option[DecisionModel]] = Set()
 
   override def uniqueIdentifier: String = "ChocoExplorationModule"
 
@@ -32,5 +48,7 @@ object ChocoExplorationModule extends ExplorationModule {
       case _ => None
     }
   }
+
+  def main(args: Array[String]): Unit = standaloneExplorationModule(args)
 
 }

@@ -20,7 +20,8 @@ final case class ChuffedMiniZincExplorer() extends SimpleMiniZincCPExplorer {
 
   override def explore(
       decisionModel: DecisionModel,
-      explorationTimeOutInSecs: Long
+      explorationTimeOutInSecs: Long = 0L,
+      maximumSolutions: Long = 0L
   ): LazyList[DecisionModel] = LazyList.empty
 
   def uniqueIdentifier: String = "ChuffedMiniZincExplorer"

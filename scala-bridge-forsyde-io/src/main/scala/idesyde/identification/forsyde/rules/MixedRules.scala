@@ -2,7 +2,7 @@ package idesyde.identification.forsyde.rules
 
 import idesyde.core.DesignModel
 import idesyde.core.DecisionModel
-import idesyde.identification.forsyde.ForSyDeDesignModel
+import idesyde.forsydeio.ForSyDeDesignModel
 import idesyde.identification.common.models.mixed.PeriodicWorkloadToPartitionedSharedMultiCore
 import idesyde.identification.common.models.mixed.SDFToTiledMultiCore
 import forsyde.io.java.core.ForSyDeSystemGraph

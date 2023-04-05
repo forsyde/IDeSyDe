@@ -1,4 +1,4 @@
-package idesyde.identification.forsyde
+package idesyde.forsydeio
 
 import java.util.concurrent.ThreadPoolExecutor
 

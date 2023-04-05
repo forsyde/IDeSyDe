@@ -7,7 +7,7 @@ use std::{
 use serde::{Deserialize, Serialize};
 use std::cmp::Ordering;
 
-#[derive(Serialize, Clone, Deserialize, PartialEq, Eq, Hash, Debug)]
+#[derive(Serialize, Clone, Deserialize, Debug)]
 pub struct LabelledArcWithPorts {
     src: String,
     src_port: Option<String>,
@@ -16,12 +16,52 @@ pub struct LabelledArcWithPorts {
     dst_port: Option<String>,
 }
 
+impl PartialEq<LabelledArcWithPorts> for LabelledArcWithPorts {
+    fn eq(&self, other: &LabelledArcWithPorts) -> bool {
+        self.src == other.src
+            && self.dst == other.dst
+            && match (&self.src_port, &other.src_port) {
+                (Some(a), Some(b)) => a == b,
+                (None, None) => true,
+                _ => false,
+            }
+            && match (&self.dst_port, &other.dst_port) {
+                (Some(a), Some(b)) => a == b,
+                (None, None) => true,
+                _ => false,
+            }
+            && match (&self.label, &other.label) {
+                (Some(a), Some(b)) => a == b,
+                (None, None) => true,
+                _ => false,
+            }
+    }
+}
+
+impl Eq for LabelledArcWithPorts {}
+
+impl Hash for LabelledArcWithPorts {
+    fn hash<H: std::hash::Hasher>(&self, state: &mut H) {
+        self.src.hash(state);
+        self.dst.hash(state);
+        if let Some(a) = &self.src_port {
+            a.hash(state);
+        }
+        if let Some(a) = &self.dst_port {
+            a.hash(state);
+        };
+        if let Some(a) = &self.label {
+            a.hash(state);
+        };
+    }
+}
+
 #[derive(Serialize, Clone, Deserialize, Debug)]
 pub struct DesignModelHeader {
     pub category: String,
     model_paths: HashSet<String>,
-    elements: HashSet<String>,
-    relations: HashSet<LabelledArcWithPorts>,
+    pub elements: HashSet<String>,
+    pub relations: HashSet<LabelledArcWithPorts>,
 }
 
 impl PartialEq<DesignModelHeader> for DesignModelHeader {
@@ -64,8 +104,8 @@ impl Hash for DesignModelHeader {
 pub struct DecisionModelHeader {
     pub category: String,
     body_path: HashSet<String>,
-    covered_elements: HashSet<String>,
-    covered_relations: HashSet<LabelledArcWithPorts>,
+    pub covered_elements: HashSet<String>,
+    pub covered_relations: HashSet<LabelledArcWithPorts>,
 }
 
 impl PartialEq<DecisionModelHeader> for DecisionModelHeader {
@@ -129,6 +169,12 @@ pub trait DecisionModel {
     }
 }
 
+impl DecisionModel for DecisionModelHeader {
+    fn header(&self) -> DecisionModelHeader {
+        self.to_owned()
+    }
+}
+
 pub type IdentificationRule = fn(
     HashSet<Box<dyn DesignModel>>,
     HashSet<Box<dyn DecisionModel>>,
@@ -148,8 +194,8 @@ pub trait IdentificationModule {
 }
 
 pub trait FullIdentificationModule {
-    fn unique_identifier(&self) -> &str;
-    fn run_path(&self) -> &str;
+    fn unique_identifier(&self) -> String;
+    fn run_path(&self) -> &Path;
     fn decode_design_model(&self, m: &DesignModelHeader) -> HashSet<Box<dyn DesignModel>>;
     fn decode_decision_model(&self, m: &DecisionModelHeader) -> Option<Box<dyn DecisionModel>>;
     fn identification_rules(&self) -> HashSet<MarkedIdentificationRule>;
@@ -170,17 +216,27 @@ impl Hash for dyn IdentificationModule {
     }
 }
 
-pub trait Explorer {
+pub trait ExplorationModule {
     fn unique_identifier(&self) -> String;
+    fn run_path(&self) -> &Path;
     fn available_criterias(&self, m: &dyn DecisionModel) -> HashMap<String, f32>;
     fn get_combination(&self, m: &dyn DecisionModel) -> ExplorationCombinationDescription;
-    fn explore(&self, m: &dyn DecisionModel) -> dyn Iterator<Item = dyn DecisionModel>;
-    fn header(&self) -> ExplorerHeader;
+    fn explore(&self, m: &dyn DecisionModel) -> &dyn Iterator<Item = &dyn DecisionModel>;
 }
 
-#[derive(Debug, PartialEq, Eq, Hash, Deserialize, Serialize)]
-pub struct ExplorerHeader {
-    identifier: String,
+impl PartialEq<dyn ExplorationModule> for dyn ExplorationModule {
+    fn eq(&self, other: &dyn ExplorationModule) -> bool {
+        self.unique_identifier() == other.unique_identifier() && self.run_path() == other.run_path()
+    }
+}
+
+impl Eq for dyn ExplorationModule {}
+
+impl Hash for dyn ExplorationModule {
+    fn hash<H: std::hash::Hasher>(&self, state: &mut H) {
+        self.unique_identifier().hash(state);
+        self.run_path().hash(state);
+    }
 }
 
 #[derive(Debug, Deserialize, Serialize)]

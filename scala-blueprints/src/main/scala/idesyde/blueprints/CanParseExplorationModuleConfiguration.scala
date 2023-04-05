@@ -17,13 +17,30 @@ trait CanParseExplorationModuleConfiguration {
         builder
           .opt[String]('e', "explore")
           .action((f, mc) =>
-            mc.copy(chosenDecisionModel =
+            mc.copy(decisionModelToExplore =
+              Some(if (f.startsWith("/")) then os.root / f else os.pwd / f)
+            )
+          ),
+        builder
+          .opt[String]('a', "available-criteria")
+          .action((f, mc) =>
+            mc.copy(decisionModelToGetCriterias =
+              Some(if (f.startsWith("/")) then os.root / f else os.pwd / f)
+            )
+          ),
+        builder
+          .opt[String]('c', "combine")
+          .action((f, mc) =>
+            mc.copy(decisionModelToGetCombination =
               Some(if (f.startsWith("/")) then os.root / f else os.pwd / f)
             )
           ),
         builder
           .opt[Long]("total-timeout")
-          .action((f, mc) => mc.copy(explorationTotalTimeOutInSecs = f))
+          .action((f, mc) => mc.copy(explorationTotalTimeOutInSecs = f)),
+        builder
+          .opt[Long]("maximum-solutions")
+          .action((f, mc) => mc.copy(maximumSolutions = f))
       ),
       args,
       ExplorationModuleConfiguration()

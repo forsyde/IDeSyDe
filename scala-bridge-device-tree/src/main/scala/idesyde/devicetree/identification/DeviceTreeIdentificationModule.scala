@@ -9,17 +9,19 @@ import idesyde.core.headers.DecisionModelHeader
 
 object DeviceTreeIdentificationModule extends IdentificationModule with PlatformRules {
 
-  def decisionModelDecoders: Set[DecisionModelHeader => Option[DecisionModel]] = Set()
+  def designHeaderToModel(m: DesignModelHeader): Set[DesignModel] = Set()
 
-  def designModelDecoders: Set[DesignModelHeader => Set[DesignModel]] = Set()
+  def decisionHeaderToModel(m: DecisionModelHeader): Option[DecisionModel] = None
+
+  def decodeDesignModels: Set[DesignModelHeader => Set[DesignModel]] = Set()
 
   def uniqueIdentifier: String = "DeviceTreeIdentificationModule"
 
-  def identificationRules
-      : Set[(Set[DesignModel], Set[DecisionModel]) => Set[? <: DecisionModel]] = Set(
-    identSharedMemoryMultiCore,
-    identPartitionedCoresWithRuntimes
-  )
+  def identificationRules: Set[(Set[DesignModel], Set[DecisionModel]) => Set[? <: DecisionModel]] =
+    Set(
+      identSharedMemoryMultiCore,
+      identPartitionedCoresWithRuntimes
+    )
 
   def integrationRules: Set[(DesignModel, DecisionModel) => Option[? <: DesignModel]] =
     Set()

@@ -10,14 +10,14 @@ trait CanParseExplorationModuleConfiguration {
       scopt.OParser.sequence(
         builder.head("Scala-based exploration module " + uniqueIdentifier),
         builder
-          .arg[String]("dominant-path")
+          .opt[String]('i', "dominant-path")
           .action((f, mc) =>
-            mc.copy(dominantPath = if (f.startsWith("/")) then os.root / f else os.pwd / f)
+            mc.copy(dominantPath = Some(if (f.startsWith("/")) then os.root / f else os.pwd / f))
           ),
         builder
-          .arg[String]("solution-path")
+          .opt[String]('o', "solution-path")
           .action((f, mc) =>
-            mc.copy(solutionPath = if (f.startsWith("/")) then os.root / f else os.pwd / f)
+            mc.copy(solutionPath = Some(if (f.startsWith("/")) then os.root / f else os.pwd / f))
           ),
         builder
           .opt[String]('e', "explore")

@@ -76,35 +76,43 @@ trait ExplorationModule
 
   def standaloneExplorationModule(args: Array[String]): Unit = {
     parse(args, uniqueIdentifier) match {
-      case Some(value) =>
-        os.makeDir.all(value.dominantPath)
-        os.makeDir.all(value.solutionPath)
-        (
-          value.decisionModelToGetCriterias,
-          value.decisionModelToGetCombination,
-          value.decisionModelToExplore
-        ) match {
-          case (Some(f), _, _) =>
-          case (_, Some(f), _) =>
-            val header = readBinary[DecisionModelHeader](os.read.bytes(f))
+      case Some(conf) =>
+        conf match {
+          case ExplorationModuleConfiguration(
+                Some(dominantPath),
+                Some(solutionPath),
+                _,
+                _,
+                Some(decisionModelToExplore),
+                maximumSolutions,
+                explorationTotalTimeOutInSecs
+              ) =>
+            os.makeDir.all(dominantPath)
+            os.makeDir.all(solutionPath)
+            val header = readBinary[DecisionModelHeader](os.read.bytes(decisionModelToExplore))
+            decodeDecisionModels(header) match {
+              case head :: next =>
+                explore(head, explorationTotalTimeOutInSecs).zipWithIndex.foreach((solved, idx) => {
+                  val (hPath, bPath) =
+                    solved.writeToPath(solutionPath, f"$idx%016d", uniqueIdentifier)
+                  println(hPath.get)
+                })
+              case Nil =>
+            }
+          case ExplorationModuleConfiguration(
+                Some(dominantPath),
+                _,
+                _,
+                Some(decisionModelToGetCriterias),
+                _,
+                _,
+                _
+              ) =>
+            val header = readBinary[DecisionModelHeader](os.read.bytes(decisionModelToGetCriterias))
             decodeDecisionModels(header) match {
               case head :: next => println(combination(head).asText)
               case Nil          => println(ExplorationCombinationDescription.impossible.asText)
             }
-          case (_, _, Some(f)) =>
-            val header = readBinary[DecisionModelHeader](os.read.bytes(f))
-            decodeDecisionModels(header) match {
-              case head :: next =>
-                explore(head, value.explorationTotalTimeOutInSecs).zipWithIndex.foreach(
-                  (solved, idx) => {
-                    val (hPath, bPath) =
-                      solved.writeToPath(value.solutionPath, f"$idx%016d", uniqueIdentifier)
-                    println(hPath.get)
-                  }
-                )
-              case Nil =>
-            }
-          case _ =>
         }
       case _ =>
     }

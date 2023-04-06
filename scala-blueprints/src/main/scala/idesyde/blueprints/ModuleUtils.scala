@@ -20,15 +20,12 @@ trait ModuleUtils {
   }
 
   extension (m: DesignModel)
-    def writeToPath(p: os.Path, prefix: String, suffix: String): Unit = {
-      os.write.over(
-        p / s"header_${prefix}_${m.uniqueIdentifier}_${suffix}.msgpack",
-        m.header.asBinary
-      )
-      os.write.over(
-        p / s"header_${prefix}_${m.uniqueIdentifier}_${suffix}.json",
-        m.header.asText
-      )
+    def writeToPath(
+        p: os.Path,
+        prefix: String,
+        suffix: String
+    ): (Option[os.Path], Option[os.Path]) = {
+      m.header.writeToPath(p, prefix, suffix)
     }
 
   extension (m: DesignModelHeader)

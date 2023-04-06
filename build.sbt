@@ -100,7 +100,9 @@ lazy val forsyde = (project in file("scala-bridge-forsyde-io"))
   .settings(
     name := "idesyde-scala-forsyde",
     libraryDependencies ++= Seq(
-      "io.github.forsyde" % "forsyde-io-java-core" % forsydeIoVersion
+      "io.github.forsyde" % "forsyde-io-java-core"     % forsydeIoVersion,
+      "io.github.forsyde" % "forsyde-io-java-sdf3"     % forsydeIoVersion,
+      "io.github.forsyde" % "forsyde-io-java-amalthea" % forsydeIoVersion
     ),
     Compile / mainClass := Some("idesyde.forsydeio.ForSyDeIdentificationModule"),
     publishModules := {

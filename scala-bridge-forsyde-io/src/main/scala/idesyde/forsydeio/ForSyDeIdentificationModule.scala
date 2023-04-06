@@ -17,16 +17,27 @@ import forsyde.io.java.drivers.ForSyDeModelHandler
 import idesyde.forsydeio.ForSyDeDesignModel
 import java.nio.file.Paths
 import os.Path
+import forsyde.io.java.sdf3.drivers.ForSyDeSDF3Driver
+import forsyde.io.java.amalthea.drivers.ForSyDeAmaltheaDriver
+import idesyde.identification.common.models.mixed.SDFToTiledMultiCore
 
 object ForSyDeIdentificationModule extends IdentificationModule {
 
-  def decisionHeaderToModel(m: DecisionModelHeader): Seq[DecisionModel] = Seq()
-
   given Logger = logger
+
+  def decisionHeaderToModel(m: DecisionModelHeader): Seq[DecisionModel] = {
+    m match {
+      case DecisionModelHeader("SDFToTiledMultiCore", body_path, _, _) =>
+        body_path.flatMap(decodeFromPath[SDFToTiledMultiCore])
+      case _ => Seq()
+    }
+  }
 
   val forSyDeIdentificationLibrary = ForSyDeIdentificationLibrary()
 
   val modelHandler = ForSyDeModelHandler()
+    .registerDriver(new ForSyDeSDF3Driver())
+    .registerDriver(new ForSyDeAmaltheaDriver())
 
   val identificationRules = forSyDeIdentificationLibrary.identificationRules
 
@@ -51,12 +62,23 @@ object ForSyDeIdentificationModule extends IdentificationModule {
   }
 
   override def inputsToDesignModel(p: os.Path): Option[DesignModelHeader | DesignModel] = {
-    if (modelHandler.canLoadModel(p.toNIO)) {
+    if (!p.last.startsWith("header") && modelHandler.canLoadModel(p.toNIO)) {
       val m = modelHandler.loadModel(p.toNIO)
       Some(ForSyDeDesignModel(m))
     } else {
       None
     }
+  }
+
+  override def designModelToOutput(m: DesignModel, p: Path): Boolean = m match {
+    case ForSyDeDesignModel(systemGraph) =>
+      if (modelHandler.canWriteModel(p.toNIO)) {
+        modelHandler.writeModel(systemGraph, p.toNIO)
+        return true
+      }
+      false
+    case _: DesignModel =>
+      false
   }
 
   def uniqueIdentifier: String = "ForSyDeIdentificationModule"

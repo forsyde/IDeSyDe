@@ -1,6 +1,5 @@
 use std::{collections::HashMap, fs, hash::Hash, path::Path};
 
-use log::warn;
 use serde::{Deserialize, Serialize};
 use std::cmp::Ordering;
 
@@ -202,7 +201,7 @@ impl PartialOrd<dyn DecisionModel> for dyn DecisionModel {
     }
 }
 
-pub fn write_model_header_to_path<M: DecisionModel + ?Sized>(
+pub fn write_decision_model_header_to_path<M: DecisionModel + ?Sized>(
     m: &Box<M>,
     p: &Path,
     prefix_str: &str,
@@ -237,13 +236,48 @@ pub fn write_model_header_to_path<M: DecisionModel + ?Sized>(
     }
 }
 
-pub fn write_model_to_path<M: DecisionModel + Serialize + ?Sized>(
+pub fn write_design_model_header_to_path<M: DesignModel + ?Sized>(
+    m: &Box<M>,
+    p: &Path,
+    prefix_str: &str,
+    suffix_str: &str,
+) -> DesignModelHeader {
+    let h = m.header();
+    let jstr = serde_json::to_string(&h).expect("Failed to serialize decision model to json.");
+    std::fs::write(
+        p.join(format!(
+            "header_{}_{}_{}.json",
+            prefix_str,
+            m.unique_identifier(),
+            suffix_str
+        )),
+        jstr,
+    )
+    .expect("Failed to write serialized decision model during identification.");
+    let msg = rmp_serde::to_vec(&h).expect("Failed to serialize decision model to msgpack.");
+    let target_path = p.join(format!(
+        "header_{}_{}_{}.msgpack",
+        prefix_str,
+        m.unique_identifier(),
+        suffix_str
+    ));
+    fs::write(&target_path, msg)
+        .expect("Failed to write serialized dominant model during identification.");
+    DesignModelHeader {
+        category: h.category,
+        model_paths: Vec::new(),
+        elements: h.elements,
+        relations: h.relations,
+    }
+}
+
+pub fn write_decision_model_to_path<M: DecisionModel + Serialize + ?Sized>(
     m: &Box<M>,
     p: &Path,
     prefix_str: &str,
     suffix_str: &str,
 ) -> DecisionModelHeader {
-    let h = write_model_header_to_path(m, p, prefix_str, suffix_str);
+    let h = write_decision_model_header_to_path(m, p, prefix_str, suffix_str);
     let jstr = serde_json::to_string(m).expect("Failed to serialize decision model to json.");
     std::fs::write(
         p.join(format!(
@@ -282,18 +316,14 @@ pub trait IdentificationModule {
     fn identification_step(
         &self,
         iteration: i32,
-        decision_path: &Path,
-        design_path: &Path,
         design_models: &Vec<Box<dyn DesignModel>>,
         decision_models: &Vec<Box<dyn DecisionModel>>,
     ) -> Vec<Box<dyn DecisionModel>>;
-    // fn integration(
-    //     &self,
-    //     solution_path: &Path,
-    //     design_path: &Path,
-    //     design_models: &Vec<Box<dyn DesignModel>>,
-    //     decision_models: &Vec<Box<dyn DecisionModel>>,
-    // ) -> Vec<Box<dyn DecisionModel>>;
+    fn integration(
+        &self,
+        design_model: &Box<dyn DesignModel>,
+        decision_model: &Box<dyn DecisionModel>,
+    ) -> Vec<Box<dyn DesignModel>>;
 }
 
 impl PartialEq<dyn IdentificationModule> for dyn IdentificationModule {
@@ -312,23 +342,13 @@ impl Hash for dyn IdentificationModule {
 
 pub trait ExplorationModule {
     fn unique_identifier(&self) -> String;
-    fn available_criterias(
-        &self,
-        dominant_path: &Path,
-        solution_path: &Path,
-        m: Box<dyn DecisionModel>,
-    ) -> HashMap<String, f32>;
-    fn get_combination(
-        &self,
-        dominant_path: &Path,
-        solution_path: &Path,
-        m: &Box<dyn DecisionModel>,
-    ) -> ExplorationCombinationDescription;
+    fn available_criterias(&self, m: Box<dyn DecisionModel>) -> HashMap<String, f32>;
+    fn get_combination(&self, m: &Box<dyn DecisionModel>) -> ExplorationCombinationDescription;
     fn explore(
         &self,
-        dominant_path: &Path,
-        solution_path: &Path,
         m: &Box<dyn DecisionModel>,
+        max_sols: u64,
+        total_timeout: u64,
     ) -> Box<dyn Iterator<Item = Box<dyn DecisionModel>>>;
 }
 

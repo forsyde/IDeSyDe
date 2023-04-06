@@ -1,12 +1,14 @@
 [package]
-name = "rust-orchestration"
+name = "idesyde-orchestration"
 author.workspace = true
 version.workspace = true
 edition.workspace = true
 
 [dependencies]
 clap = { workspace = true }
-idesyde-rust-core = { path = "../rust-core" }
+env_logger.workspace = true
+idesyde-core = { path = "../rust-core" }
 rmp-serde = { workspace = true }
 serde_json.workspace = true
 sha3 = { workspace = true }
+log.workspace = true

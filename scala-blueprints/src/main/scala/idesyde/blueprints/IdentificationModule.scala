@@ -31,6 +31,8 @@ trait IdentificationModule
 
   def inputsToDesignModel(p: os.Path): Option[DesignModelHeader | DesignModel] = None
 
+  def designModelToOutput(m: DesignModel, p: os.Path): Boolean = false
+
   /** decoders used to reconstruct design models from headers.
     *
     * Ideally, these functions are able to produce a design model from the headers read during a
@@ -68,38 +70,21 @@ trait IdentificationModule
     */
   def logger: Logger = SimpleStandardIOLogger("WARN")
 
-  inline def identificationStep(
-      designPath: os.Path,
-      decisionPath: os.Path,
+  def integration(
+      designModel: DesignModel,
+      solvedDecisionModel: DecisionModel
+  ): Set[DesignModel] = {
+    for (
+      irule      <- integrationRules;
+      integrated <- irule(designModel, solvedDecisionModel)
+    ) yield integrated
+  }
+
+  def identificationStep(
       stepNumber: Long,
-      loadedDesignModels: Set[DesignModel] = Set(),
-      loadedDecisionModels: Set[DecisionModel] = Set()
+      designModels: Set[DesignModel] = Set(),
+      decisionModels: Set[DecisionModel] = Set()
   ): Set[DecisionModel] = {
-    val fromDesignModelHeaders =
-      os.list(designPath)
-        .filter(_.last.startsWith("header"))
-        .filter(_.ext == "msgpack")
-        .map(f => readBinary[DesignModelHeader](os.read.bytes(f)))
-        .flatMap(designHeaderToModel)
-        .toSet
-    val designModels =
-      os.list(designPath)
-        .flatMap(h => inputsToDesignModel(h))
-        .flatMap(mm =>
-          mm match {
-            case dem: DesignModel          => Some(dem)
-            case header: DesignModelHeader => designHeaderToModel(header)
-          }
-        )
-        .toSet
-        ++ loadedDesignModels ++ fromDesignModelHeaders
-    val decisionModels =
-      os.list(decisionPath)
-        .filter(_.last.startsWith("header"))
-        .filter(_.ext == "msgpack")
-        .map(f => readBinary[DecisionModelHeader](os.read.bytes(f)))
-        .flatMap(h => decisionHeaderToModel(h))
-        .toSet ++ loadedDecisionModels
     val iterRules = if (stepNumber == 0L) {
       identificationRules.flatMap(_ match {
         case r: MarkedIdentificationRule.DecisionModelOnlyIdentificationRule         => None
@@ -122,41 +107,128 @@ trait IdentificationModule
       args: Array[String]
   ): Unit = {
     parse(args, uniqueIdentifier) match {
-      case Some(value) =>
-        os.makeDir.all(value.designPath)
-        os.makeDir.all(value.decisionPath)
-        val identStep          = value.identificationStep
-        var loadedDesignModels = mutable.Set[DesignModel]()
-        for (f <- os.walk(value.designPath); m <- inputsToDesignModel(f)) {
-          m match {
-            case header: DesignModelHeader =>
-              header.writeToPath(value.designPath, "", uniqueIdentifier)
-            case model: DesignModel =>
-              loadedDesignModels.add(model)
-              model.writeToPath(value.designPath, "", uniqueIdentifier)
-          }
-        }
-        if (value.shouldIdentify) {
-          val identified = identificationStep(
-            value.designPath,
-            value.decisionPath,
-            identStep,
-            loadedDesignModels.toSet
-          )
-          for (m <- identified) {
-            val (hPath, bPath) = m.writeToPath(
-              value.decisionPath,
-              f"${value.identificationStep}%016d",
-              uniqueIdentifier
-            )
-            println(
-              hPath.getOrElse(
-                value.decisionPath / s"header_${identStep}_${m.uniqueIdentifier}_${uniqueIdentifier}.msgpack"
+      case Right(conf) =>
+        conf match {
+          case IdentificationModuleConfiguration(
+                Some(designPath),
+                _,
+                Some(solvedPath),
+                Some(integrationPath),
+                outP,
+                _
+              ) =>
+            os.makeDir.all(designPath)
+            os.makeDir.all(solvedPath)
+            os.makeDir.all(integrationPath)
+            val fromDesignModelHeaders =
+              os.list(designPath)
+                .filter(_.last.startsWith("header"))
+                .filter(_.ext == "msgpack")
+                .map(f => readBinary[DesignModelHeader](os.read.bytes(f)))
+                .flatMap(designHeaderToModel)
+                .toSet
+            val designModels =
+              os.list(designPath)
+                .flatMap(h => inputsToDesignModel(h))
+                .flatMap(mm =>
+                  mm match {
+                    case dem: DesignModel          => Some(dem)
+                    case header: DesignModelHeader => designHeaderToModel(header)
+                  }
+                )
+                .toSet ++ fromDesignModelHeaders
+            val solvedDecisionModels =
+              os.list(solvedPath)
+                .filter(_.last.startsWith("header"))
+                .filter(_.ext == "msgpack")
+                .map(f => readBinary[DecisionModelHeader](os.read.bytes(f)))
+                .flatMap(h => decisionHeaderToModel(h))
+                .toSet
+            for (
+              (d, i) <- designModels.zipWithIndex;
+              (s, j) <- solvedDecisionModels.zipWithIndex;
+              (m, k) <- integration(
+                d,
+                s
+              ).zipWithIndex
+            ) {
+              val (hPath, bPath) = m.writeToPath(
+                integrationPath,
+                s"$i$j$k",
+                uniqueIdentifier
               )
+              println(
+                hPath.getOrElse(
+                  integrationPath / s"header_${m.uniqueIdentifier}_${uniqueIdentifier}.msgpack"
+                )
+              )
+              outP match {
+                case Some(fout) =>
+                  if (os.isFile(fout)) {
+                    designModelToOutput(m, fout)
+                  }
+                case _ =>
+              }
+            }
+          case IdentificationModuleConfiguration(
+                Some(designPath),
+                Some(identifiedPath),
+                _,
+                _,
+                _,
+                iteration
+              ) =>
+            os.makeDir.all(designPath)
+            os.makeDir.all(identifiedPath)
+            val fromDesignModelHeaders =
+              os.list(designPath)
+                .filter(_.last.startsWith("header"))
+                .filter(_.ext == "msgpack")
+                .map(f => readBinary[DesignModelHeader](os.read.bytes(f)))
+                .flatMap(designHeaderToModel)
+                .toSet
+            val designModels =
+              os.list(designPath)
+                .flatMap(h => inputsToDesignModel(h))
+                .flatMap(mm =>
+                  mm match {
+                    case dem: DesignModel          => Some(dem)
+                    case header: DesignModelHeader => designHeaderToModel(header)
+                  }
+                )
+                .toSet
+                ++ fromDesignModelHeaders
+            for (d <- designModels) {
+              d.writeToPath(designPath, "", uniqueIdentifier)
+            }
+            val decisionModels =
+              os.list(identifiedPath)
+                .filter(_.last.startsWith("header"))
+                .filter(_.ext == "msgpack")
+                .map(f => readBinary[DecisionModelHeader](os.read.bytes(f)))
+                .flatMap(h => decisionHeaderToModel(h))
+                .toSet
+            val identified = identificationStep(
+              iteration,
+              designModels,
+              decisionModels
             )
-          }
+            for (m <- identified) {
+              val (hPath, bPath) = m.writeToPath(
+                identifiedPath,
+                f"${iteration}%016d",
+                uniqueIdentifier
+              )
+              println(
+                hPath.getOrElse(
+                  identifiedPath / s"header_${iteration}_${m.uniqueIdentifier}_${uniqueIdentifier}.msgpack"
+                )
+              )
+            }
+          case _ =>
+
         }
-      case None =>
+      case Left(usage) => println(usage)
     }
   }
 }

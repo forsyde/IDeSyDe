@@ -8,17 +8,23 @@ use std::path::Path;
 use std::path::PathBuf;
 use std::process::Stdio;
 
-use idesyde_rust_core::DecisionModel;
-use idesyde_rust_core::DecisionModelHeader;
-use idesyde_rust_core::DesignModel;
-use idesyde_rust_core::DesignModelHeader;
-use idesyde_rust_core::ExplorationCombinationDescription;
-use idesyde_rust_core::ExplorationModule;
-use idesyde_rust_core::IdentificationModule;
+use idesyde_core::DecisionModel;
+use idesyde_core::DecisionModelHeader;
+use idesyde_core::DesignModel;
+use idesyde_core::DesignModelHeader;
+use idesyde_core::ExplorationCombinationDescription;
+use idesyde_core::ExplorationModule;
+use idesyde_core::IdentificationModule;
+use log::debug;
 
 #[derive(Debug, PartialEq, Eq, Hash)]
 pub struct ExternalIdentificationModule {
     command_path_: PathBuf,
+    inputs_path_: PathBuf,
+    identified_path_: PathBuf,
+    solved_path_: PathBuf,
+    integration_path_: PathBuf,
+    output_path_: PathBuf,
 }
 
 impl IdentificationModule for ExternalIdentificationModule {
@@ -29,8 +35,6 @@ impl IdentificationModule for ExternalIdentificationModule {
     fn identification_step(
         &self,
         iteration: i32,
-        decision_path: &Path,
-        design_path: &Path,
         _design_models: &Vec<Box<dyn DesignModel>>,
         _decision_models: &Vec<Box<dyn DecisionModel>>,
     ) -> Vec<Box<dyn DecisionModel>> {
@@ -44,17 +48,21 @@ impl IdentificationModule for ExternalIdentificationModule {
             true => std::process::Command::new("java")
                 .arg("-jar")
                 .arg(&self.command_path_)
-                .arg("--no-integration")
-                .arg(design_path)
-                .arg(decision_path)
+                .arg("-m")
+                .arg(&self.inputs_path_)
+                .arg("-i")
+                .arg(&self.identified_path_)
+                .arg("-t")
                 .arg(iteration.to_string())
                 .stdout(Stdio::piped())
                 .stderr(Stdio::piped())
                 .output(),
             false => std::process::Command::new(&self.command_path_)
-                .arg("--no-integration")
-                .arg(design_path)
-                .arg(decision_path)
+                .arg("-m")
+                .arg(&self.inputs_path_)
+                .arg("-i")
+                .arg(&self.identified_path_)
+                .arg("-t")
                 .arg(iteration.to_string())
                 .stdout(Stdio::piped())
                 .stderr(Stdio::piped())
@@ -79,11 +87,74 @@ impl IdentificationModule for ExternalIdentificationModule {
         }
         Vec::new()
     }
+
+    fn integration(
+        &self,
+        _design_model: &Box<dyn DesignModel>,
+        _decision_model: &Box<dyn DecisionModel>,
+    ) -> Vec<Box<dyn DesignModel>> {
+        let is_java = self
+            .command_path_
+            .extension()
+            .and_then(|s| s.to_str())
+            .map(|s| s == "jar")
+            .unwrap_or(false);
+        let output = match is_java {
+            true => std::process::Command::new("java")
+                .arg("-jar")
+                .arg(&self.command_path_)
+                .arg("-m")
+                .arg(&self.inputs_path_)
+                .arg("-s")
+                .arg(&self.solved_path_)
+                .arg("-r")
+                .arg(&self.integration_path_)
+                .arg("-o")
+                .arg(&self.output_path_)
+                .stdout(Stdio::piped())
+                .stderr(Stdio::piped())
+                .output(),
+            false => std::process::Command::new(&self.command_path_)
+                .arg("-m")
+                .arg(&self.inputs_path_)
+                .arg("-s")
+                .arg(&self.solved_path_)
+                .arg("-r")
+                .arg(&self.integration_path_)
+                .arg("-o")
+                .arg(&self.output_path_)
+                .stdout(Stdio::piped())
+                .stderr(Stdio::piped())
+                .output(),
+        };
+        debug!("Out {:?}", &output);
+        if let Ok(out) = output {
+            if let Ok(s) = String::from_utf8(out.stdout) {
+                debug!("Got {}", s);
+                let integrated: Vec<Box<dyn DesignModel>> = s
+                    .lines()
+                    .map(|p| {
+                        let b = std::fs::read(p)
+                            .expect("Failed to read header file from disk during identification");
+                        let header = rmp_serde::from_slice::<DesignModelHeader>(b.as_slice())
+                            .expect(
+                            "Failed to deserialize header file from disk during identification.",
+                        );
+                        Box::new(header) as Box<dyn DesignModel>
+                    })
+                    .collect();
+                return integrated;
+            }
+        }
+        Vec::new()
+    }
 }
 
 #[derive(Debug, PartialEq, Eq, Hash)]
 pub struct ExternalExplorationModule {
     command_path_: PathBuf,
+    identified_path_: PathBuf,
+    solved_path_: PathBuf,
 }
 
 impl ExplorationModule for ExternalExplorationModule {
@@ -93,24 +164,20 @@ impl ExplorationModule for ExternalExplorationModule {
 
     fn available_criterias(
         &self,
-        decision_path: &Path,
-        solution_path: &Path,
-        m: Box<dyn idesyde_rust_core::DecisionModel>,
+        m: Box<dyn idesyde_core::DecisionModel>,
     ) -> std::collections::HashMap<String, f32> {
         HashMap::new() // TODO: put interfaces later
     }
 
     fn get_combination(
         &self,
-        decision_path: &Path,
-        solution_path: &Path,
-        m: &Box<dyn idesyde_rust_core::DecisionModel>,
-    ) -> idesyde_rust_core::ExplorationCombinationDescription {
-        let headers = load_decision_model_headers_from_binary(decision_path);
+        m: &Box<dyn idesyde_core::DecisionModel>,
+    ) -> idesyde_core::ExplorationCombinationDescription {
+        let headers = load_decision_model_headers_from_binary(&self.identified_path_);
         let chosen_path = headers
             .iter()
-            .find(|(p, h)| h == &m.header())
-            .map(|(p, h)| p)
+            .find(|(_, h)| h == &m.header())
+            .map(|(p, _)| p)
             .unwrap();
         let is_java = self
             .command_path_
@@ -124,16 +191,16 @@ impl ExplorationModule for ExternalExplorationModule {
                 .arg(&self.command_path_)
                 .arg("-c")
                 .arg(chosen_path)
-                .arg(decision_path)
-                .arg(solution_path)
+                .arg("-i")
+                .arg(&self.identified_path_)
                 .stdout(Stdio::piped())
                 .stderr(Stdio::piped())
                 .output(),
             false => std::process::Command::new(&self.command_path_)
                 .arg("-c")
                 .arg(chosen_path)
-                .arg(decision_path)
-                .arg(solution_path)
+                .arg("-i")
+                .arg(&self.identified_path_)
                 .stdout(Stdio::piped())
                 .stderr(Stdio::piped())
                 .output(),
@@ -147,15 +214,15 @@ impl ExplorationModule for ExternalExplorationModule {
 
     fn explore(
         &self,
-        decision_path: &Path,
-        solution_path: &Path,
-        m: &Box<dyn idesyde_rust_core::DecisionModel>,
+        m: &Box<dyn idesyde_core::DecisionModel>,
+        max_sols: u64,
+        total_timeout: u64,
     ) -> Box<dyn Iterator<Item = Box<dyn DecisionModel>>> {
-        let headers = load_decision_model_headers_from_binary(decision_path);
+        let headers = load_decision_model_headers_from_binary(&self.identified_path_);
         let chosen_path = headers
             .iter()
-            .find(|(p, h)| h == &m.header())
-            .map(|(p, h)| p)
+            .find(|(_, h)| h == &m.header())
+            .map(|(p, _)| p)
             .unwrap();
         let is_java = self
             .command_path_
@@ -169,16 +236,28 @@ impl ExplorationModule for ExternalExplorationModule {
                 .arg(&self.command_path_)
                 .arg("-e")
                 .arg(chosen_path)
-                .arg(decision_path)
-                .arg(solution_path)
+                .arg("-i")
+                .arg(&self.identified_path_)
+                .arg("-o")
+                .arg(&self.solved_path_)
+                .arg("--maximum-solutions")
+                .arg(format!("{}", max_sols))
+                .arg("--total-timeout")
+                .arg(format!("{}", total_timeout))
                 .stdout(Stdio::piped())
                 .stderr(Stdio::piped())
                 .spawn(),
             false => std::process::Command::new(&self.command_path_)
                 .arg("-e")
                 .arg(chosen_path)
-                .arg(decision_path)
-                .arg(solution_path)
+                .arg("-i")
+                .arg(&self.identified_path_)
+                .arg("-o")
+                .arg(&self.solved_path_)
+                .arg("--maximum-solutions")
+                .arg(format!("{}", max_sols))
+                .arg("--total-timeout")
+                .arg(format!("{}", total_timeout))
                 .stdout(Stdio::piped())
                 .stderr(Stdio::piped())
                 .spawn(),
@@ -271,11 +350,20 @@ pub fn load_design_model_headers_from_binary(header_path: &Path) -> Vec<DesignMo
     known_design_model_paths
         .iter()
         .flat_map(|p| std::fs::read(p))
-        .flat_map(|b| rmp_serde::decode::from_slice(&b).ok())
+        .map(|b| {
+            rmp_serde::decode::from_slice(&b).expect("Failed to serialize design model header")
+        })
         .collect()
 }
 
-pub fn find_identification_modules(modules_path: &Path) -> Vec<ExternalIdentificationModule> {
+pub fn find_and_prepare_identification_modules(
+    modules_path: &Path,
+    identified_path: &Path,
+    inputs_path: &Path,
+    solved_path: &Path,
+    integration_path: &Path,
+    output_path: &Path,
+) -> Vec<ExternalIdentificationModule> {
     let mut imodules = Vec::new();
     if let Ok(read_dir) = modules_path.read_dir() {
         for e in read_dir {
@@ -283,20 +371,14 @@ pub fn find_identification_modules(modules_path: &Path) -> Vec<ExternalIdentific
                 let p = de.path();
                 if p.is_file() {
                     let prog = p.read_link().unwrap_or(p);
-                    let is_java = prog
-                        .extension()
-                        .and_then(|s| s.to_str())
-                        .map(|s| s == "jar")
-                        .unwrap_or(false);
-                    if is_java {
-                        imodules.push(ExternalIdentificationModule {
-                            command_path_: prog.clone(),
-                        });
-                    } else {
-                        imodules.push(ExternalIdentificationModule {
-                            command_path_: prog.clone(),
-                        });
-                    }
+                    imodules.push(ExternalIdentificationModule {
+                        command_path_: prog.clone(),
+                        identified_path_: identified_path.to_path_buf(),
+                        inputs_path_: inputs_path.to_path_buf(),
+                        solved_path_: solved_path.to_path_buf(),
+                        integration_path_: integration_path.to_path_buf(),
+                        output_path_: output_path.to_path_buf(),
+                    });
                 }
             }
         }
@@ -304,7 +386,11 @@ pub fn find_identification_modules(modules_path: &Path) -> Vec<ExternalIdentific
     imodules
 }
 
-pub fn find_exploration_modules(modules_path: &Path) -> Vec<ExternalExplorationModule> {
+pub fn find_exploration_modules(
+    modules_path: &Path,
+    identified_path: &Path,
+    solved_path: &Path,
+) -> Vec<ExternalExplorationModule> {
     let mut emodules = Vec::new();
     if let Ok(read_dir) = modules_path.read_dir() {
         for e in read_dir {
@@ -312,20 +398,11 @@ pub fn find_exploration_modules(modules_path: &Path) -> Vec<ExternalExplorationM
                 let p = de.path();
                 if p.is_file() {
                     let prog = p.read_link().unwrap_or(p);
-                    let is_java = prog
-                        .extension()
-                        .and_then(|s| s.to_str())
-                        .map(|s| s == "jar")
-                        .unwrap_or(false);
-                    if is_java {
-                        emodules.push(ExternalExplorationModule {
-                            command_path_: prog.clone(),
-                        });
-                    } else {
-                        emodules.push(ExternalExplorationModule {
-                            command_path_: prog.clone(),
-                        });
-                    }
+                    emodules.push(ExternalExplorationModule {
+                        command_path_: prog.clone(),
+                        identified_path_: identified_path.to_path_buf(),
+                        solved_path_: solved_path.to_path_buf(),
+                    });
                 }
             }
         }
@@ -334,37 +411,17 @@ pub fn find_exploration_modules(modules_path: &Path) -> Vec<ExternalExplorationM
 }
 
 pub fn identification_procedure(
-    run_path: &Path,
-    imodules: &Vec<&dyn IdentificationModule>,
+    imodules: &Vec<Box<dyn IdentificationModule>>,
+    design_models: &Vec<Box<dyn DesignModel>>,
+    pre_identified: &Vec<Box<dyn DecisionModel>>,
 ) -> Vec<Box<dyn DecisionModel>> {
-    let decision_path = &run_path.join("identified");
-    let design_path = &run_path.join("inputs");
-    std::fs::create_dir_all(decision_path)
-        .expect("Failed to created 'identified' folder during identification.");
-    std::fs::create_dir_all(design_path)
-        .expect("Failed to created 'inputs' folder during identification.");
-    let mut identified: Vec<Box<dyn DecisionModel>> =
-        load_decision_model_headers_from_binary(&decision_path)
-            .iter()
-            .map(|(p, h)| Box::new(h.to_owned()) as Box<dyn DecisionModel>)
-            .collect();
-    let design_model_headers = load_design_model_headers_from_binary(&design_path);
-    let design_models: Vec<Box<dyn DesignModel>> = design_model_headers
-        .iter()
-        .map(|h| Box::new(h.to_owned()) as Box<dyn DesignModel>)
-        .collect();
-    let mut step = identified.len() as i32;
+    let mut step = pre_identified.len() as i32;
     let mut fix_point = false;
+    let mut identified: Vec<Box<dyn DecisionModel>> = Vec::new();
     while !fix_point {
         fix_point = true;
-        for &imodule in imodules {
-            let mut potential = imodule.identification_step(
-                step,
-                &decision_path,
-                &design_path,
-                &design_models,
-                &identified,
-            );
+        for imodule in imodules {
+            let mut potential = imodule.identification_step(step, &design_models, &identified);
             potential.retain(|m| !identified.contains(m));
             if potential.len() > 0 {
                 fix_point = fix_point && false;
@@ -384,10 +441,8 @@ pub fn identification_procedure(
 }
 
 pub fn compute_dominant_combinations<'a>(
-    decision_path: &Path,
-    solution_path: &Path,
-    decision_models: &'a Vec<Box<dyn DecisionModel>>,
     exploration_modules: &'a Vec<Box<dyn ExplorationModule>>,
+    decision_models: &'a Vec<Box<dyn DecisionModel>>,
 ) -> Vec<(&'a Box<dyn ExplorationModule>, &'a Box<dyn DecisionModel>)> {
     let combinations: Vec<(
         &Box<dyn ExplorationModule>,
@@ -398,7 +453,7 @@ pub fn compute_dominant_combinations<'a>(
         .flat_map(|exp| {
             decision_models
                 .iter()
-                .map(move |m| (exp, m, exp.get_combination(decision_path, solution_path, m)))
+                .map(move |m| (exp, m, exp.get_combination(m)))
         })
         .filter(|(_, _, c)| c.can_explore)
         .collect();

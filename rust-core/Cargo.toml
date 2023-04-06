@@ -1,5 +1,5 @@
 [package]
-name = "idesyde-rust-core"
+name = "idesyde-core"
 version.workspace = true
 authors.workspace = true
 edition.workspace = true
@@ -8,4 +8,3 @@ edition.workspace = true
 serde = { workspace = true }
 serde_json = { workspace = true }
 rmp-serde = { workspace = true }
-log.workspace = true

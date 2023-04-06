@@ -6,37 +6,37 @@ import idesyde.core.DecisionModel
 import idesyde.core.CompleteDecisionModel
 import idesyde.core.DesignModel
 import idesyde.core.headers.DesignModelHeader
+import idesyde.core.headers.DecisionModelHeader
 
 trait ModuleUtils {
 
-  def decodeFromPath[T: ReadWriter](p: String): Option[T] = {
-    if (p.endsWith(".msgpack")) Some(readBinary[T](os.read.bytes(os.pwd / p)))
-    else if (p.endsWith(".json")) Some(read[T](os.read(os.pwd / p)))
-    else None
+  def decodeFromPath[T: ReadWriter](p: String): Seq[T] = {
+    if (p.endsWith(".msgpack") && !p.startsWith("/")) Seq(readBinary[T](os.read.bytes(os.pwd / p)))
+    else if (p.endsWith(".msgpack") && p.startsWith("/"))
+      Seq(readBinary[T](os.read.bytes(os.root / p)))
+    else if (p.endsWith(".json") && !p.startsWith("/")) Seq(read[T](os.read(os.pwd / p)))
+    else if (p.endsWith(".json") && p.startsWith("/")) Seq(read[T](os.read(os.root / p)))
+    else Seq()
   }
 
   extension (m: DesignModel)
     def writeToPath(p: os.Path, prefix: String, suffix: String): Unit = {
       os.write.over(
         p / s"header_${prefix}_${m.uniqueIdentifier}_${suffix}.msgpack",
-        m.header
-          .copy(model_paths =
-            Set((p / s"header_${prefix}_${m.uniqueIdentifier}_${suffix}.msgpack").toString)
-          )
-          .asBinary
+        m.header.asBinary
       )
       os.write.over(
         p / s"header_${prefix}_${m.uniqueIdentifier}_${suffix}.json",
-        m.header
-          .copy(model_paths =
-            Set((p / s"header_${prefix}_${m.uniqueIdentifier}_${suffix}.json").toString)
-          )
-          .asText
+        m.header.asText
       )
     }
 
   extension (m: DesignModelHeader)
-    def writeToPath(p: os.Path, prefix: String, suffix: String): Unit = {
+    def writeToPath(
+        p: os.Path,
+        prefix: String,
+        suffix: String
+    ): (Option[os.Path], Option[os.Path]) = {
       os.write.over(
         p / s"header_${prefix}_${m.category}_${suffix}.msgpack",
         m.asBinary
@@ -45,10 +45,15 @@ trait ModuleUtils {
         p / s"header_${prefix}_${m.category}_${suffix}.json",
         m.asText
       )
+      (Some(p / s"header_${prefix}_${m.category}_${suffix}.msgpack"), None)
     }
 
   extension (m: DecisionModel)
-    def writeToPath(p: os.Path, prefix: String, suffix: String): Unit = {
+    def writeToPath(
+        p: os.Path,
+        prefix: String,
+        suffix: String
+    ): (Option[os.Path], Option[os.Path]) = {
       val h = m match {
         case cm: CompleteDecisionModel =>
           os.write.over(
@@ -60,7 +65,7 @@ trait ModuleUtils {
             cm.bodyAsBinary
           )
           cm.header.copy(body_path =
-            Some(
+            Seq(
               (p / s"body_${prefix}_${m.uniqueIdentifier}_${suffix}.msgpack").toString
             )
           )
@@ -74,6 +79,10 @@ trait ModuleUtils {
       os.write.over(
         p / s"header_${prefix}_${m.uniqueIdentifier}_${suffix}.msgpack",
         h.asBinary
+      )
+      (
+        Some(p / s"header_${prefix}_${m.uniqueIdentifier}_${suffix}.msgpack"),
+        Some(p / s"body_${prefix}_${m.uniqueIdentifier}_${suffix}.msgpack")
       )
     }
 }

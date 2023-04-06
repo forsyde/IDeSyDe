@@ -1,5 +1,6 @@
 use std::{collections::HashMap, fs, hash::Hash, path::Path};
 
+use log::warn;
 use serde::{Deserialize, Serialize};
 use std::cmp::Ordering;
 
@@ -58,6 +59,16 @@ pub struct DesignModelHeader {
     pub model_paths: Vec<String>,
     pub elements: Vec<String>,
     pub relations: Vec<LabelledArcWithPorts>,
+}
+
+impl DesignModel for DesignModelHeader {
+    fn unique_identifier(&self) -> String {
+        self.category.to_owned()
+    }
+
+    fn header(&self) -> DesignModelHeader {
+        self.to_owned()
+    }
 }
 
 impl PartialEq<DesignModelHeader> for DesignModelHeader {
@@ -179,8 +190,20 @@ impl DecisionModel for DecisionModelHeader {
     }
 }
 
-pub fn write_model_to_path<M: DecisionModel + Serialize>(
-    m: &M,
+impl PartialEq<dyn DecisionModel> for dyn DecisionModel {
+    fn eq(&self, other: &dyn DecisionModel) -> bool {
+        self.unique_identifier() == other.unique_identifier() && self.header() == other.header()
+    }
+}
+
+impl PartialOrd<dyn DecisionModel> for dyn DecisionModel {
+    fn partial_cmp(&self, other: &dyn DecisionModel) -> Option<Ordering> {
+        self.header().partial_cmp(&other.header())
+    }
+}
+
+pub fn write_model_header_to_path<M: DecisionModel + ?Sized>(
+    m: &Box<M>,
     p: &Path,
     prefix_str: &str,
     suffix_str: &str,
@@ -214,6 +237,36 @@ pub fn write_model_to_path<M: DecisionModel + Serialize>(
     }
 }
 
+pub fn write_model_to_path<M: DecisionModel + Serialize + ?Sized>(
+    m: &Box<M>,
+    p: &Path,
+    prefix_str: &str,
+    suffix_str: &str,
+) -> DecisionModelHeader {
+    let h = write_model_header_to_path(m, p, prefix_str, suffix_str);
+    let jstr = serde_json::to_string(m).expect("Failed to serialize decision model to json.");
+    std::fs::write(
+        p.join(format!(
+            "body_{}_{}_{}.json",
+            prefix_str,
+            m.unique_identifier(),
+            suffix_str
+        )),
+        jstr,
+    )
+    .expect("Failed to write serialized decision model during identification.");
+    let msg = rmp_serde::to_vec(m).expect("Failed to serialize decision model to msgpack.");
+    let target_path = p.join(format!(
+        "body_{}_{}_{}.msgpack",
+        prefix_str,
+        m.unique_identifier(),
+        suffix_str
+    ));
+    fs::write(&target_path, msg)
+        .expect("Failed to write serialized dominant model during identification.");
+    h
+}
+
 pub type IdentificationRule =
     fn(Vec<Box<dyn DesignModel>>, Vec<Box<dyn DecisionModel>>) -> Vec<Box<dyn DecisionModel>>;
 
@@ -226,21 +279,26 @@ pub enum MarkedIdentificationRule {
 
 pub trait IdentificationModule {
     fn unique_identifier(&self) -> String;
-    fn run_path(&self) -> &Path;
-    fn identification_step(&self, iteration: i32) -> Vec<DecisionModelHeader>;
-}
-
-pub trait FullIdentificationModule {
-    fn unique_identifier(&self) -> String;
-    fn run_path(&self) -> &Path;
-    fn decode_design_model(&self, m: &DesignModelHeader) -> Vec<Box<dyn DesignModel>>;
-    fn decode_decision_model(&self, m: &DecisionModelHeader) -> Option<Box<dyn DecisionModel>>;
-    fn identification_rules(&self) -> Vec<MarkedIdentificationRule>;
+    fn identification_step(
+        &self,
+        iteration: i32,
+        decision_path: &Path,
+        design_path: &Path,
+        design_models: &Vec<Box<dyn DesignModel>>,
+        decision_models: &Vec<Box<dyn DecisionModel>>,
+    ) -> Vec<Box<dyn DecisionModel>>;
+    // fn integration(
+    //     &self,
+    //     solution_path: &Path,
+    //     design_path: &Path,
+    //     design_models: &Vec<Box<dyn DesignModel>>,
+    //     decision_models: &Vec<Box<dyn DecisionModel>>,
+    // ) -> Vec<Box<dyn DecisionModel>>;
 }
 
 impl PartialEq<dyn IdentificationModule> for dyn IdentificationModule {
     fn eq(&self, other: &dyn IdentificationModule) -> bool {
-        self.unique_identifier() == other.unique_identifier() && self.run_path() == other.run_path()
+        self.unique_identifier() == other.unique_identifier()
     }
 }
 
@@ -249,37 +307,49 @@ impl Eq for dyn IdentificationModule {}
 impl Hash for dyn IdentificationModule {
     fn hash<H: std::hash::Hasher>(&self, state: &mut H) {
         self.unique_identifier().hash(state);
-        self.run_path().hash(state);
     }
 }
 
 pub trait ExplorationModule {
     fn unique_identifier(&self) -> String;
-    fn run_path(&self) -> &Path;
-    fn available_criterias(&self, m: &dyn DecisionModel) -> HashMap<String, f32>;
-    fn get_combination(&self, m: &dyn DecisionModel) -> ExplorationCombinationDescription;
-    fn explore(&self, m: &dyn DecisionModel) -> &dyn Iterator<Item = &dyn DecisionModel>;
+    fn available_criterias(
+        &self,
+        dominant_path: &Path,
+        solution_path: &Path,
+        m: Box<dyn DecisionModel>,
+    ) -> HashMap<String, f32>;
+    fn get_combination(
+        &self,
+        dominant_path: &Path,
+        solution_path: &Path,
+        m: &Box<dyn DecisionModel>,
+    ) -> ExplorationCombinationDescription;
+    fn explore(
+        &self,
+        dominant_path: &Path,
+        solution_path: &Path,
+        m: &Box<dyn DecisionModel>,
+    ) -> Box<dyn Iterator<Item = Box<dyn DecisionModel>>>;
 }
 
 impl PartialEq<dyn ExplorationModule> for dyn ExplorationModule {
     fn eq(&self, other: &dyn ExplorationModule) -> bool {
-        self.unique_identifier() == other.unique_identifier() && self.run_path() == other.run_path()
+        self.unique_identifier() == other.unique_identifier()
     }
 }
 
 impl Eq for dyn ExplorationModule {}
 
-impl Hash for dyn ExplorationModule {
-    fn hash<H: std::hash::Hasher>(&self, state: &mut H) {
-        self.unique_identifier().hash(state);
-        self.run_path().hash(state);
-    }
-}
+// impl Hash for dyn ExplorationModule {
+//     fn hash<H: std::hash::Hasher>(&self, state: &mut H) {
+//         self.unique_identifier().hash(state);
+//     }
+// }
 
 #[derive(Debug, Deserialize, Serialize)]
 pub struct ExplorationCombinationDescription {
-    can_explore: bool,
-    criteria: HashMap<String, f32>,
+    pub can_explore: bool,
+    pub criteria: HashMap<String, f32>,
 }
 
 impl Hash for ExplorationCombinationDescription {

@@ -43,26 +43,30 @@ trait Explorer {
 
   def dominates(
       o: Explorer,
-      m: DecisionModel,
-      desiredCriterias: Set[ExplorationCriteria]
+      m: DecisionModel
   ): Boolean =
     val otherCriterias = o.availableCriterias(m)
-    val comparisonResult = for (
-      thisC <- availableCriterias(m)
-      if desiredCriterias.contains(thisC)
-    )
-      yield
-        if (otherCriterias.contains(thisC)) {
-          if (thisC.moreIsBetter) then criteriaValue(m, thisC) > o.criteriaValue(m, thisC)
-          else criteriaValue(m, thisC) < o.criteriaValue(m, thisC)
-        } else {
-          false
-        }
+    val comparisonResult =
+      for (thisC <- availableCriterias(m))
+        yield
+          if (otherCriterias.contains(thisC)) {
+            if (thisC.moreIsBetter) then criteriaValue(m, thisC) > o.criteriaValue(m, thisC)
+            else criteriaValue(m, thisC) < o.criteriaValue(m, thisC)
+          } else {
+            false
+          }
     !comparisonResult.contains(false)
   //&& combination(m) && o.combination(m)
 
   def uniqueIdentifier: String
 
   def header: ExplorerHeader = ExplorerHeader(uniqueIdentifier, ":embedded:")
+
+  override def equals(x: Any): Boolean = x match {
+    case o: Explorer =>
+      uniqueIdentifier == o.uniqueIdentifier
+    case _ =>
+      false
+  }
 
 }

@@ -1,7 +1,8 @@
 package idesyde.blueprints
 
 final case class ExplorationModuleConfiguration(
-    val runPath: os.Path = os.pwd / "run",
+    val dominantPath: os.Path = os.pwd / "run" / "dominant",
+    val solutionPath: os.Path = os.pwd / "run" / "explored",
     val explorationTotalTimeOutInSecs: Long = 0L,
     val maximumSolutions: Long = 0L,
     val decisionModelToGetCriterias: Option[os.Path] = None,

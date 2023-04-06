@@ -8,6 +8,7 @@ import idesyde.core.DecisionModel
 import idesyde.core.ExplorationLibrary
 import idesyde.utils.Logger
 import idesyde.core.CompleteDecisionModel
+import idesyde.core.ExplorationCombinationDescription
 
 /** The trait/interface for an exploration module that provides the explorers rules required to
   * explored identified design spaces [1].
@@ -33,7 +34,7 @@ trait ExplorationModule
     * @return
     *   decoded [[idesyde.core.DecisionModel]]
     */
-  def decodeDecisionModels(m: DecisionModelHeader): Option[DecisionModel]
+  def decodeDecisionModels(m: DecisionModelHeader): Seq[DecisionModel]
 
   /** the logger to be used during a module call.
     *
@@ -57,14 +58,14 @@ trait ExplorationModule
       totalExplorationTimeOutInSecs: Long = 0L,
       maximumSolutions: Long = 0L
   ): LazyList[DecisionModel] = {
+    val valid = explorers
+      .filter(_.combination(decisionModel).can_explore)
     val nonDominated =
-      explorers
-        .filter(_.combination(decisionModel).can_explore)
-        .filterNot(e =>
-          explorers
+      valid
+        .filter(e =>
+          !valid
             .filter(_ != e)
-            .filter(_.combination(decisionModel).can_explore)
-            .forall(ee => ee.dominates(e, decisionModel, e.availableCriterias(decisionModel)))
+            .exists(ee => ee.dominates(e, decisionModel))
         )
         .headOption
     nonDominated match {
@@ -73,14 +74,11 @@ trait ExplorationModule
     }
   }
 
-  inline def standaloneExplorationModule(args: Array[String]): Unit = {
+  def standaloneExplorationModule(args: Array[String]): Unit = {
     parse(args, uniqueIdentifier) match {
       case Some(value) =>
-        val runPath      = value.runPath
-        val dominantPath = runPath / "dominant"
-        val exploredPath = runPath / "explored"
-        os.makeDir.all(dominantPath)
-        os.makeDir.all(exploredPath)
+        os.makeDir.all(value.dominantPath)
+        os.makeDir.all(value.solutionPath)
         (
           value.decisionModelToGetCriterias,
           value.decisionModelToGetCombination,
@@ -89,28 +87,25 @@ trait ExplorationModule
           case (Some(f), _, _) =>
           case (_, Some(f), _) =>
             val header = readBinary[DecisionModelHeader](os.read.bytes(f))
-            val combos = for (m <- decodeDecisionModels(header)) {
-              println(combination(m).asText)
+            decodeDecisionModels(header) match {
+              case head :: next => println(combination(head).asText)
+              case Nil          => println(ExplorationCombinationDescription.impossible.asText)
             }
           case (_, _, Some(f)) =>
             val header = readBinary[DecisionModelHeader](os.read.bytes(f))
-            for (m <- decodeDecisionModels(header)) {
-              // this not part of the for loop to have higher certainty the for loop won t make a Set out of the LazyList
-              explore(m, value.explorationTotalTimeOutInSecs).zipWithIndex.foreach(
-                (solved, idx) => {
-                  solved.writeToPath(exploredPath, f"$idx%32d", uniqueIdentifier)
-                }
-              )
+            decodeDecisionModels(header) match {
+              case head :: next =>
+                explore(head, value.explorationTotalTimeOutInSecs).zipWithIndex.foreach(
+                  (solved, idx) => {
+                    val (hPath, bPath) =
+                      solved.writeToPath(value.solutionPath, f"$idx%016d", uniqueIdentifier)
+                    println(hPath.get)
+                  }
+                )
+              case Nil =>
             }
           case _ =>
         }
-        val decisionModelHeaders =
-          os.list(dominantPath)
-            .filter(_.last.startsWith("header"))
-            .filter(_.ext == "msgpack")
-            .map(f => f -> readBinary[DecisionModelHeader](os.read.bytes(f)))
-            .toMap
-
       case _ =>
     }
   }

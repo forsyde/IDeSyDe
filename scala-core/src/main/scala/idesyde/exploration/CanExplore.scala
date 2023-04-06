@@ -40,9 +40,8 @@ trait CanExplore(using logger: Logger) extends HasUtils {
     val modelToExplorerSet =
       for (m <- explorableModels) yield
         val possibleExplorers = explorers.filter(_.combination(m).can_explore).toVector
-        val dominanceMatrix = possibleExplorers.map(e =>
-          possibleExplorers.map(ee => e.dominates(ee, m, explorationCriteria))
-        )
+        val dominanceMatrix =
+          possibleExplorers.map(e => possibleExplorers.map(ee => e.dominates(ee, m)))
         // keep only the SCC which are leaves
         val dominant = computeSSCFromReachibility(reachibilityClosure(dominanceMatrix))
           .map(idx => possibleExplorers(idx))

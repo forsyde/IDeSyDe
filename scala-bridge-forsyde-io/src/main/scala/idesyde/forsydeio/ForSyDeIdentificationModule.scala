@@ -20,15 +20,13 @@ import os.Path
 
 object ForSyDeIdentificationModule extends IdentificationModule {
 
-  def decisionHeaderToModel(m: DecisionModelHeader): Option[DecisionModel] = None
+  def decisionHeaderToModel(m: DecisionModelHeader): Seq[DecisionModel] = Seq()
 
   given Logger = logger
 
   val forSyDeIdentificationLibrary = ForSyDeIdentificationLibrary()
 
   val modelHandler = ForSyDeModelHandler()
-
-  def uniqueIdentifier: String = "ForSyDeIdentificationModule"
 
   val identificationRules = forSyDeIdentificationLibrary.identificationRules
 
@@ -60,4 +58,6 @@ object ForSyDeIdentificationModule extends IdentificationModule {
       None
     }
   }
+
+  def uniqueIdentifier: String = "ForSyDeIdentificationModule"
 }

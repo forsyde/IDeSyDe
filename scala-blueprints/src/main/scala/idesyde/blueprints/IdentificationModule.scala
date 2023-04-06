@@ -52,7 +52,7 @@ trait IdentificationModule
     * @return
     *   the registered decoders
     */
-  def decisionHeaderToModel(m: DecisionModelHeader): Option[DecisionModel]
+  def decisionHeaderToModel(m: DecisionModelHeader): Seq[DecisionModel]
 
   /** Unique string used to identify this module during orchetration. Ideally it matches the name of
     * the implementing class (or is the implemeting class name, ditto).
@@ -69,23 +69,21 @@ trait IdentificationModule
   def logger: Logger = SimpleStandardIOLogger("WARN")
 
   inline def identificationStep(
-      runPath: os.Path,
+      designPath: os.Path,
+      decisionPath: os.Path,
       stepNumber: Long,
-      loadedDesignModels: Set[DesignModel] = Set()
+      loadedDesignModels: Set[DesignModel] = Set(),
+      loadedDecisionModels: Set[DecisionModel] = Set()
   ): Set[DecisionModel] = {
-    val designModelsPath   = runPath / "inputs"
-    val decisionModelsPath = runPath / "identified"
-    os.makeDir.all(designModelsPath)
-    os.makeDir.all(decisionModelsPath)
     val fromDesignModelHeaders =
-      os.list(designModelsPath)
+      os.list(designPath)
         .filter(_.last.startsWith("header"))
         .filter(_.ext == "msgpack")
         .map(f => readBinary[DesignModelHeader](os.read.bytes(f)))
         .flatMap(designHeaderToModel)
         .toSet
     val designModels =
-      os.list(designModelsPath)
+      os.list(designPath)
         .flatMap(h => inputsToDesignModel(h))
         .flatMap(mm =>
           mm match {
@@ -96,12 +94,12 @@ trait IdentificationModule
         .toSet
         ++ loadedDesignModels ++ fromDesignModelHeaders
     val decisionModels =
-      os.list(decisionModelsPath)
+      os.list(decisionPath)
         .filter(_.last.startsWith("header"))
         .filter(_.ext == "msgpack")
         .map(f => readBinary[DecisionModelHeader](os.read.bytes(f)))
         .flatMap(h => decisionHeaderToModel(h))
-        .toSet
+        .toSet ++ loadedDecisionModels
     val iterRules = if (stepNumber == 0L) {
       identificationRules.flatMap(_ match {
         case r: MarkedIdentificationRule.DecisionModelOnlyIdentificationRule         => None
@@ -115,8 +113,7 @@ trait IdentificationModule
       })
     } else identificationRules
     val identified = iterRules.flatMap(irule => irule(designModels, decisionModels))
-    for ((m, i) <- identified.zipWithIndex; h = m.header; if !decisionModels.contains(m)) yield {
-      m.writeToPath(decisionModelsPath, s"${stepNumber}", s"${uniqueIdentifier}")
+    for (m <- identified; if !decisionModels.contains(m)) yield {
       m
     }
   }
@@ -126,25 +123,36 @@ trait IdentificationModule
   ): Unit = {
     parse(args, uniqueIdentifier) match {
       case Some(value) =>
-        val runPath            = value.runPath
-        val inputsPath         = runPath / "inputs"
-        val decisionModelsPath = runPath / "identified"
+        os.makeDir.all(value.designPath)
+        os.makeDir.all(value.decisionPath)
         val identStep          = value.identificationStep
         var loadedDesignModels = mutable.Set[DesignModel]()
-        for (f <- os.walk(inputsPath); m <- inputsToDesignModel(f)) {
+        for (f <- os.walk(value.designPath); m <- inputsToDesignModel(f)) {
           m match {
             case header: DesignModelHeader =>
-              header.writeToPath(inputsPath, "", uniqueIdentifier)
+              header.writeToPath(value.designPath, "", uniqueIdentifier)
             case model: DesignModel =>
               loadedDesignModels.add(model)
-              model.writeToPath(inputsPath, "", uniqueIdentifier)
+              model.writeToPath(value.designPath, "", uniqueIdentifier)
           }
         }
         if (value.shouldIdentify) {
-          val identified = identificationStep(runPath, identStep, loadedDesignModels.toSet)
+          val identified = identificationStep(
+            value.designPath,
+            value.decisionPath,
+            identStep,
+            loadedDesignModels.toSet
+          )
           for (m <- identified) {
+            val (hPath, bPath) = m.writeToPath(
+              value.decisionPath,
+              f"${value.identificationStep}%016d",
+              uniqueIdentifier
+            )
             println(
-              decisionModelsPath / s"header_${identStep}_${m.uniqueIdentifier}_${uniqueIdentifier}.msgpack"
+              hPath.getOrElse(
+                value.decisionPath / s"header_${identStep}_${m.uniqueIdentifier}_${uniqueIdentifier}.msgpack"
+              )
             )
           }
         }

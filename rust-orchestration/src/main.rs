@@ -1,8 +1,10 @@
 use std::{fs, path::Path};
 
 use clap::Parser;
-use idesyde_rust_core::{ExplorationModule, IdentificationModule};
+use idesyde_rust_core::{DecisionModel, ExplorationModule, IdentificationModule};
 use sha3::Digest;
+
+use crate::orchestration::compute_dominant_combinations;
 
 pub mod orchestration;
 
@@ -75,7 +77,6 @@ fn main() {
                 hasher.update(f.as_slice());
             }
         }
-        let input_hash = hasher.finalize();
         let run_path_str = &args
             .run_path
             .expect("Failed to get run path durin initialization.");
@@ -87,16 +88,19 @@ fn main() {
         let emodules_path = &std::env::current_dir()
             .expect("Failed to get working directory.")
             .join("emodules");
-        let dominant_path = run_path.join("dominant");
+        let identified_path = run_path.join("identified");
+        let solution_path = &run_path.join("explored");
 
         std::fs::create_dir_all(inputs_path)
             .expect("Failed to create input directory during identification.");
         std::fs::create_dir_all(imodules_path)
             .expect("Failed to create imodules directory during identification.");
         std::fs::create_dir_all(emodules_path)
-            .expect("Failed to create imodules directory during identification.");
-        std::fs::create_dir_all(&dominant_path)
-            .expect("Failed to create dominant directory during identification.");
+            .expect("Failed to create emodules directory during identification.");
+        std::fs::create_dir_all(&identified_path)
+            .expect("Failed to create identified directory during identification.");
+        std::fs::create_dir_all(&solution_path)
+            .expect("Failed to create explored directory during identification.");
 
         for input in &sorted_inputs {
             let p = Path::new(input);
@@ -112,31 +116,36 @@ fn main() {
             };
         }
 
-        let mut imodules = Vec::<Box<dyn IdentificationModule>>::new();
-        for eximod in orchestration::find_identification_modules(imodules_path, run_path) {
-            imodules.push(Box::new(eximod));
+        let mut imodules: Vec<&dyn IdentificationModule> = Vec::new();
+        let ex_imodules = orchestration::find_identification_modules(imodules_path);
+        for eximod in &ex_imodules {
+            imodules.push(eximod as &dyn IdentificationModule);
         }
-        let mut emodules = Vec::<Box<dyn ExplorationModule>>::new();
-        for exemod in orchestration::find_exploration_modules(emodules_path, run_path) {
-            emodules.push(Box::new(exemod));
+        let mut emodules: Vec<Box<dyn ExplorationModule>> = Vec::new();
+        let ex_emodules = orchestration::find_exploration_modules(emodules_path);
+        for exemod in ex_emodules {
+            emodules.push(Box::new(exemod) as Box<dyn ExplorationModule>);
         }
 
-        let found = orchestration::identification_procedure(run_path, &imodules);
+        let identified = orchestration::identification_procedure(run_path, &imodules);
 
-        let dominant = orchestration::compute_dominant_decision_models(&found);
+        let dominant =
+            compute_dominant_combinations(&identified_path, &solution_path, &identified, &emodules);
 
-        let mut iter = 0;
-        for m in &dominant {
-            idesyde_rust_core::write_model_to_path(
+        for (i, (e, m)) in dominant.iter().enumerate() {
+            idesyde_rust_core::write_model_header_to_path(
                 m,
-                &dominant_path,
-                iter.to_string().as_str(),
+                &identified_path,
+                i.to_string().as_str(),
                 "Orchestrator",
             );
-            iter += 1;
         }
 
-        println!("found {:?}", dominant)
+        if let Some((exp, decision_model)) = dominant.first() {
+            for sol in exp.explore(&identified_path, &solution_path, decision_model) {
+                println!("A solved: {:?}", sol.header().category);
+            }
+        }
     } else {
         println!("At least one input design model is necessary")
     }

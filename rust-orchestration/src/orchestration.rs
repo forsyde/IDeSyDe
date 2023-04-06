@@ -1,27 +1,24 @@
 use std::cmp::Ordering;
 use std::collections::HashMap;
 
-use std::hash::BuildHasher;
 use std::hash::Hash;
+use std::io::BufRead;
+use std::io::BufReader;
 use std::path::Path;
 use std::path::PathBuf;
 use std::process::Stdio;
 
+use idesyde_rust_core::DecisionModel;
 use idesyde_rust_core::DecisionModelHeader;
+use idesyde_rust_core::DesignModel;
+use idesyde_rust_core::DesignModelHeader;
+use idesyde_rust_core::ExplorationCombinationDescription;
 use idesyde_rust_core::ExplorationModule;
 use idesyde_rust_core::IdentificationModule;
 
 #[derive(Debug, PartialEq, Eq, Hash)]
-pub enum ExternalModuleType {
-    StaticBinary,
-    JarFile,
-}
-
-#[derive(Debug, PartialEq, Eq, Hash)]
 pub struct ExternalIdentificationModule {
-    run_path_: PathBuf,
     command_path_: PathBuf,
-    module_type: ExternalModuleType,
 }
 
 impl IdentificationModule for ExternalIdentificationModule {
@@ -29,12 +26,14 @@ impl IdentificationModule for ExternalIdentificationModule {
         self.command_path_.to_str().unwrap().to_string()
     }
 
-    fn run_path(&self) -> &Path {
-        self.run_path_.as_path()
-    }
-
-    fn identification_step(&self, step_number: i32) -> Vec<DecisionModelHeader> {
-        let mut headers = Vec::new();
+    fn identification_step(
+        &self,
+        iteration: i32,
+        decision_path: &Path,
+        design_path: &Path,
+        _design_models: &Vec<Box<dyn DesignModel>>,
+        _decision_models: &Vec<Box<dyn DecisionModel>>,
+    ) -> Vec<Box<dyn DecisionModel>> {
         let is_java = self
             .command_path_
             .extension()
@@ -44,44 +43,47 @@ impl IdentificationModule for ExternalIdentificationModule {
         let output = match is_java {
             true => std::process::Command::new("java")
                 .arg("-jar")
-                .arg(self.command_path_.as_os_str())
+                .arg(&self.command_path_)
                 .arg("--no-integration")
-                .arg(self.run_path_.as_os_str())
-                .arg(step_number.to_string())
+                .arg(design_path)
+                .arg(decision_path)
+                .arg(iteration.to_string())
                 .stdout(Stdio::piped())
                 .stderr(Stdio::piped())
                 .output(),
-            false => std::process::Command::new(self.command_path_.as_os_str())
+            false => std::process::Command::new(&self.command_path_)
                 .arg("--no-integration")
-                .arg(self.run_path_.as_os_str())
-                .arg(step_number.to_string())
+                .arg(design_path)
+                .arg(decision_path)
+                .arg(iteration.to_string())
                 .stdout(Stdio::piped())
                 .stderr(Stdio::piped())
                 .output(),
         };
         if let Ok(out) = output {
             if let Ok(s) = String::from_utf8(out.stdout) {
-                for p in s.lines() {
-                    let b = std::fs::read(p)
-                        .expect("Failed to read header file from disk during identification");
-                    let header = rmp_serde::from_slice::<DecisionModelHeader>(b.as_slice()).expect(
-                        "Failed to deserialize header file from disk during identification.",
-                    );
-                    if !headers.contains(&header) {
-                        headers.push(header);
-                    }
-                }
+                let identified: Vec<Box<dyn DecisionModel>> = s
+                    .lines()
+                    .map(|p| {
+                        let b = std::fs::read(p)
+                            .expect("Failed to read header file from disk during identification");
+                        let header = rmp_serde::from_slice::<DecisionModelHeader>(b.as_slice())
+                            .expect(
+                            "Failed to deserialize header file from disk during identification.",
+                        );
+                        Box::new(header) as Box<dyn DecisionModel>
+                    })
+                    .collect();
+                return identified;
             }
         }
-        headers
+        Vec::new()
     }
 }
 
 #[derive(Debug, PartialEq, Eq, Hash)]
 pub struct ExternalExplorationModule {
-    run_path_: PathBuf,
     command_path_: PathBuf,
-    module_type: ExternalModuleType,
 }
 
 impl ExplorationModule for ExternalExplorationModule {
@@ -89,41 +91,52 @@ impl ExplorationModule for ExternalExplorationModule {
         self.command_path_.to_str().unwrap().to_string()
     }
 
-    fn run_path(&self) -> &Path {
-        self.run_path_.as_path()
-    }
-
     fn available_criterias(
         &self,
-        m: &dyn idesyde_rust_core::DecisionModel,
+        decision_path: &Path,
+        solution_path: &Path,
+        m: Box<dyn idesyde_rust_core::DecisionModel>,
     ) -> std::collections::HashMap<String, f32> {
         HashMap::new() // TODO: put interfaces later
     }
 
     fn get_combination(
         &self,
-        m: &dyn idesyde_rust_core::DecisionModel,
+        decision_path: &Path,
+        solution_path: &Path,
+        m: &Box<dyn idesyde_rust_core::DecisionModel>,
     ) -> idesyde_rust_core::ExplorationCombinationDescription {
-        let output = match self.module_type {
-            ExternalModuleType::JarFile => std::process::Command::new("java")
+        let headers = load_decision_model_headers_from_binary(decision_path);
+        let chosen_path = headers
+            .iter()
+            .find(|(p, h)| h == &m.header())
+            .map(|(p, h)| p)
+            .unwrap();
+        let is_java = self
+            .command_path_
+            .extension()
+            .and_then(|s| s.to_str())
+            .map(|s| s == "jar")
+            .unwrap_or(false);
+        let output = match is_java {
+            true => std::process::Command::new("java")
                 .arg("-jar")
-                .arg(self.command_path_.as_os_str())
+                .arg(&self.command_path_)
                 .arg("-c")
-                .arg(m.header().body_path.iter().next().unwrap())
-                .arg(self.run_path_.as_os_str())
+                .arg(chosen_path)
+                .arg(decision_path)
+                .arg(solution_path)
                 .stdout(Stdio::piped())
                 .stderr(Stdio::piped())
                 .output(),
-            ExternalModuleType::StaticBinary => {
-                std::process::Command::new(self.command_path_.as_os_str())
-                    .arg("--no-integration")
-                    .arg("-c")
-                    .arg(m.header().body_path.iter().next().unwrap())
-                    .arg(self.run_path_.as_os_str())
-                    .stdout(Stdio::piped())
-                    .stderr(Stdio::piped())
-                    .output()
-            }
+            false => std::process::Command::new(&self.command_path_)
+                .arg("-c")
+                .arg(chosen_path)
+                .arg(decision_path)
+                .arg(solution_path)
+                .stdout(Stdio::piped())
+                .stderr(Stdio::piped())
+                .output(),
         };
         let o = output
             .expect("Failed to get combination from exploration module.")
@@ -134,13 +147,64 @@ impl ExplorationModule for ExternalExplorationModule {
 
     fn explore(
         &self,
-        m: &dyn idesyde_rust_core::DecisionModel,
-    ) -> &dyn Iterator<Item = &dyn idesyde_rust_core::DecisionModel> {
-        todo!()
+        decision_path: &Path,
+        solution_path: &Path,
+        m: &Box<dyn idesyde_rust_core::DecisionModel>,
+    ) -> Box<dyn Iterator<Item = Box<dyn DecisionModel>>> {
+        let headers = load_decision_model_headers_from_binary(decision_path);
+        let chosen_path = headers
+            .iter()
+            .find(|(p, h)| h == &m.header())
+            .map(|(p, h)| p)
+            .unwrap();
+        let is_java = self
+            .command_path_
+            .extension()
+            .and_then(|s| s.to_str())
+            .map(|s| s == "jar")
+            .unwrap_or(false);
+        let child = match is_java {
+            true => std::process::Command::new("java")
+                .arg("-jar")
+                .arg(&self.command_path_)
+                .arg("-e")
+                .arg(chosen_path)
+                .arg(decision_path)
+                .arg(solution_path)
+                .stdout(Stdio::piped())
+                .stderr(Stdio::piped())
+                .spawn(),
+            false => std::process::Command::new(&self.command_path_)
+                .arg("-e")
+                .arg(chosen_path)
+                .arg(decision_path)
+                .arg(solution_path)
+                .stdout(Stdio::piped())
+                .stderr(Stdio::piped())
+                .spawn(),
+        };
+        let out = child
+            .expect("Failed to initiate explorer")
+            .stdout
+            .expect("Failed to acquire explorer STDOUT");
+        let buf = BufReader::new(out);
+        Box::new(
+            buf.lines()
+                .map(|l| l.expect("Failed to read solution during exploration"))
+                .map(|f| std::fs::read(f).expect("Failed to read solution file during exploration"))
+                .map(|b| {
+                    rmp_serde::from_slice::<DecisionModelHeader>(&b)
+                        .expect("Failed to deserialize solution header during exploration")
+                })
+                .map(|m| Box::new(m) as Box<dyn DecisionModel>),
+        )
+        // Box::new(BufRead::lines(out))
     }
 }
 
-pub fn load_decision_model_headers_from_binary(header_path: &Path) -> Vec<DecisionModelHeader> {
+pub fn load_decision_model_headers_from_binary(
+    header_path: &Path,
+) -> Vec<(PathBuf, DecisionModelHeader)> {
     let known_decision_model_paths = if let Ok(ls) = header_path.read_dir() {
         ls.flat_map(|dir_entry_r| {
             if let Ok(dir_entry) = dir_entry_r {
@@ -165,15 +229,53 @@ pub fn load_decision_model_headers_from_binary(header_path: &Path) -> Vec<Decisi
     };
     known_decision_model_paths
         .iter()
-        .flat_map(|p| std::fs::read(p))
-        .flat_map(|b| rmp_serde::decode::from_slice(&b).ok())
-        .collect::<Vec<DecisionModelHeader>>()
+        .map(|p| {
+            (
+                p,
+                std::fs::read(p).expect("Failed to read decision model header file."),
+            )
+        })
+        .map(|(p, b)| {
+            (
+                p.to_owned(),
+                rmp_serde::decode::from_slice(&b)
+                    .expect("Failed to deserialize deicsion model header."),
+            )
+        })
+        .collect()
 }
 
-pub fn find_identification_modules(
-    modules_path: &Path,
-    run_path: &Path,
-) -> Vec<ExternalIdentificationModule> {
+pub fn load_design_model_headers_from_binary(header_path: &Path) -> Vec<DesignModelHeader> {
+    let known_design_model_paths = if let Ok(ls) = header_path.read_dir() {
+        ls.flat_map(|dir_entry_r| {
+            if let Ok(dir_entry) = dir_entry_r {
+                if dir_entry
+                    .path()
+                    .file_name()
+                    .and_then(|f| f.to_str())
+                    .map_or(false, |f| f.starts_with("header"))
+                    && dir_entry
+                        .path()
+                        .extension()
+                        .map_or(false, |ext| ext.eq_ignore_ascii_case("msgpack"))
+                {
+                    return Some(dir_entry.path());
+                }
+            }
+            None
+        })
+        .collect::<Vec<PathBuf>>()
+    } else {
+        Vec::new()
+    };
+    known_design_model_paths
+        .iter()
+        .flat_map(|p| std::fs::read(p))
+        .flat_map(|b| rmp_serde::decode::from_slice(&b).ok())
+        .collect()
+}
+
+pub fn find_identification_modules(modules_path: &Path) -> Vec<ExternalIdentificationModule> {
     let mut imodules = Vec::new();
     if let Ok(read_dir) = modules_path.read_dir() {
         for e in read_dir {
@@ -188,15 +290,11 @@ pub fn find_identification_modules(
                         .unwrap_or(false);
                     if is_java {
                         imodules.push(ExternalIdentificationModule {
-                            run_path_: run_path.to_path_buf().clone(),
                             command_path_: prog.clone(),
-                            module_type: ExternalModuleType::JarFile,
                         });
                     } else {
                         imodules.push(ExternalIdentificationModule {
-                            run_path_: run_path.to_path_buf().clone(),
                             command_path_: prog.clone(),
-                            module_type: ExternalModuleType::StaticBinary,
                         });
                     }
                 }
@@ -206,10 +304,7 @@ pub fn find_identification_modules(
     imodules
 }
 
-pub fn find_exploration_modules(
-    modules_path: &Path,
-    run_path: &Path,
-) -> Vec<ExternalExplorationModule> {
+pub fn find_exploration_modules(modules_path: &Path) -> Vec<ExternalExplorationModule> {
     let mut emodules = Vec::new();
     if let Ok(read_dir) = modules_path.read_dir() {
         for e in read_dir {
@@ -224,15 +319,11 @@ pub fn find_exploration_modules(
                         .unwrap_or(false);
                     if is_java {
                         emodules.push(ExternalExplorationModule {
-                            run_path_: run_path.to_path_buf().clone(),
                             command_path_: prog.clone(),
-                            module_type: ExternalModuleType::JarFile,
                         });
                     } else {
                         emodules.push(ExternalExplorationModule {
-                            run_path_: run_path.to_path_buf().clone(),
                             command_path_: prog.clone(),
-                            module_type: ExternalModuleType::StaticBinary,
                         });
                     }
                 }
@@ -244,42 +335,91 @@ pub fn find_exploration_modules(
 
 pub fn identification_procedure(
     run_path: &Path,
-    imodules: &Vec<Box<dyn IdentificationModule>>,
-) -> Vec<DecisionModelHeader> {
-    let header_path = &run_path.join("identified");
-    std::fs::create_dir_all(header_path)
+    imodules: &Vec<&dyn IdentificationModule>,
+) -> Vec<Box<dyn DecisionModel>> {
+    let decision_path = &run_path.join("identified");
+    let design_path = &run_path.join("inputs");
+    std::fs::create_dir_all(decision_path)
         .expect("Failed to created 'identified' folder during identification.");
-    let mut identified_headers = load_decision_model_headers_from_binary(&header_path);
-    let mut step = identified_headers.len() as i32;
+    std::fs::create_dir_all(design_path)
+        .expect("Failed to created 'inputs' folder during identification.");
+    let mut identified: Vec<Box<dyn DecisionModel>> =
+        load_decision_model_headers_from_binary(&decision_path)
+            .iter()
+            .map(|(p, h)| Box::new(h.to_owned()) as Box<dyn DecisionModel>)
+            .collect();
+    let design_model_headers = load_design_model_headers_from_binary(&design_path);
+    let design_models: Vec<Box<dyn DesignModel>> = design_model_headers
+        .iter()
+        .map(|h| Box::new(h.to_owned()) as Box<dyn DesignModel>)
+        .collect();
+    let mut step = identified.len() as i32;
     let mut fix_point = false;
     while !fix_point {
         fix_point = true;
-        for imodule in imodules {
-            let mut potential = imodule.identification_step(step);
-            potential.retain(|m| !identified_headers.contains(m));
-            fix_point = fix_point && potential.is_empty();
+        for &imodule in imodules {
+            let mut potential = imodule.identification_step(
+                step,
+                &decision_path,
+                &design_path,
+                &design_models,
+                &identified,
+            );
+            potential.retain(|m| !identified.contains(m));
+            if potential.len() > 0 {
+                fix_point = fix_point && false;
+            }
             for m in potential {
-                if !identified_headers.contains(&m) {
-                    identified_headers.push(m);
-                };
+                // if let Some(b_path_str) = &m.header().body_path.first() {
+                //     let b_path = Path::new(b_path_str);
+                //     std::fs::remove_file(b_path)
+                //         .expect("Failed to remove redundant decision model body");
+                // };
+                identified.push(m);
             }
         }
         step += 1;
     }
-    identified_headers
+    identified
 }
 
-pub fn compute_dominant_decision_models(
-    headers: &Vec<DecisionModelHeader>,
-) -> Vec<DecisionModelHeader> {
-    headers
-        .iter()
-        .filter(|&h| {
-            headers.iter().all(|o| match h.partial_cmp(o) {
-                Some(Ordering::Greater) | Some(Ordering::Equal) | None => true,
-                _ => false,
-            })
+pub fn compute_dominant_combinations<'a>(
+    decision_path: &Path,
+    solution_path: &Path,
+    decision_models: &'a Vec<Box<dyn DecisionModel>>,
+    exploration_modules: &'a Vec<Box<dyn ExplorationModule>>,
+) -> Vec<(&'a Box<dyn ExplorationModule>, &'a Box<dyn DecisionModel>)> {
+    let combinations: Vec<(
+        &Box<dyn ExplorationModule>,
+        &Box<dyn DecisionModel>,
+        ExplorationCombinationDescription,
+    )> = exploration_modules
+        .into_iter()
+        .flat_map(|exp| {
+            decision_models
+                .iter()
+                .map(move |m| (exp, m, exp.get_combination(decision_path, solution_path, m)))
         })
-        .map(|h| h.to_owned())
-        .collect::<Vec<DecisionModelHeader>>()
+        .filter(|(_, _, c)| c.can_explore)
+        .collect();
+    combinations
+        .iter()
+        .filter(|(_, m, _)| {
+            combinations
+                .iter()
+                .all(|(_, o, _)| match m.partial_cmp(&o) {
+                    Some(Ordering::Greater) | Some(Ordering::Equal) | None => true,
+                    _ => false,
+                })
+        })
+        .filter(|(_, _, comb)| {
+            combinations
+                .iter()
+                .all(|(_, _, ocomb)| match comb.partial_cmp(&ocomb) {
+                    Some(Ordering::Greater) | Some(Ordering::Equal) | None => true,
+                    _ => false,
+                })
+        })
+        .map(|(e, m, _)| (*e, *m))
+        .collect()
 }

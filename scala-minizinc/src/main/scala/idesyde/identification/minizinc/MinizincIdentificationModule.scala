@@ -11,7 +11,7 @@ class MinizincIdentificationModule extends IdentificationModule {
 
   def designHeaderToModel(m: DesignModelHeader): Set[DesignModel] = Set()
 
-  def decisionHeaderToModel(m: DecisionModelHeader): Option[DecisionModel] = None
+  def decisionHeaderToModel(m: DecisionModelHeader): Seq[DecisionModel] = Seq()
 
   def uniqueIdentifier: String = "MinizincIdentificationModule"
 

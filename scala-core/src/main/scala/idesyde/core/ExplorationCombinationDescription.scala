@@ -38,6 +38,8 @@ final case class ExplorationCombinationDescription(
 
 object ExplorationCombinationDescription {
 
+  val impossible = ExplorationCombinationDescription(false, Map())
+
   val partialOrdering = new PartialOrdering[ExplorationCombinationDescription] {
     def lteq(x: ExplorationCombinationDescription, y: ExplorationCombinationDescription): Boolean =
       tryCompare(x, y) match {

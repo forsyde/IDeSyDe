@@ -38,7 +38,7 @@ object CommonIdentificationModule
 
   def main(args: Array[String]) = standaloneIdentificationModule(args)
 
-  def decisionHeaderToModel(m: DecisionModelHeader): Option[DecisionModel] = {
+  def decisionHeaderToModel(m: DecisionModelHeader): Seq[DecisionModel] = {
     m match {
       case DecisionModelHeader("SDFApplication", body_path, _, _) =>
         body_path.flatMap(decodeFromPath[SDFApplication])
@@ -50,7 +50,7 @@ object CommonIdentificationModule
         body_path.flatMap(decodeFromPath[SchedulableTiledMultiCore])
       case DecisionModelHeader("SDFToTiledMultiCore", body_path, _, _) =>
         body_path.flatMap(decodeFromPath[SDFToTiledMultiCore])
-      case _ => None
+      case _ => Seq()
     }
   }
 

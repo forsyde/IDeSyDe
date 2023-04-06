@@ -6,7 +6,6 @@ import forsyde.io.java.drivers.ForSyDeModelHandler
 import forsyde.io.java.amalthea.drivers.ForSyDeAmaltheaDriver
 import java.nio.file.Paths
 import scribe.Level
-import idesyde.identification.forsyde.ForSyDeDesignModel
 import forsyde.io.java.core.ForSyDeSystemGraph
 import scala.concurrent.ExecutionContext
 
@@ -19,6 +18,7 @@ import idesyde.exploration.CanExplore
 import idesyde.core.DecisionModel
 import idesyde.core.Explorer
 import mixins.HasShortcuts
+import idesyde.forsydeio.ForSyDeDesignModel
 
 class PanoramaUseCaseWithSolutionSuite extends AnyFunSuite with LoggingMixin with HasShortcuts {
 

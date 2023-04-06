@@ -17,7 +17,6 @@ import forsyde.io.java.typed.viewers.visualization.GreyBox
 import idesyde.identification.common.models.sdf.SDFApplication
 import forsyde.io.java.typed.viewers.platform.runtime.StaticCyclicScheduler
 import forsyde.io.java.typed.viewers.decision.Allocated
-import idesyde.identification.forsyde.ForSyDeDesignModel
 import idesyde.utils.Logger
 import idesyde.identification.common.models.platform.SchedulableTiledMultiCore
 import idesyde.identification.common.models.mixed.SDFToTiledMultiCore
@@ -33,6 +32,7 @@ import org.scalatest.Tag
 import org.scalatest.Ignore
 import idesyde.utils.SimpleStandardIOLogger
 import tags.ResourceHungry
+import idesyde.forsydeio.ForSyDeDesignModel
 
 /** This test suite uses as much as possible the experiments from the paper
   *

@@ -13,7 +13,7 @@ import mixins.PlatformExperimentCreator
 import idesyde.identification.minizinc.MinizincIdentificationModule
 import java.nio.file.Files
 import java.nio.file.Paths
-import idesyde.identification.forsyde.ForSyDeDesignModel
+import idesyde.forsydeio.ForSyDeDesignModel
 
 class RosvallSander2014Tests
     extends AnyFunSuite

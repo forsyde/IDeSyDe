@@ -4,10 +4,10 @@ import upickle.default.*
 
 case class DecisionModelHeader(
     val category: String,
-    val body_path: Seq[String],
+    val body_path: Option[String],
     val covered_elements: Set[String],
     val covered_relations: Set[LabelledArcWithPorts]
-) derives ReadWriter {
+) {
 
   override def equals(x: Any): Boolean = x match {
     case DecisionModelHeader(ocategory, _, ocovered_elements, ocovered_relations) =>
@@ -22,4 +22,42 @@ case class DecisionModelHeader(
 
   def asBinary: Array[Byte] = writeBinary(this)
 
+}
+
+object DecisionModelHeader {
+  given Conversion[LabelledArcWithPorts, ujson.Value] = LabelledArcWithPorts.conv
+  given ReadWriter[DecisionModelHeader] = upickle.default
+    .readwriter[ujson.Value]
+    .bimap[DecisionModelHeader](
+      x =>
+        ujson.Obj(
+          "category"          -> x.category,
+          "body_path"         -> x.body_path.map(ujson.Str(_)).getOrElse(ujson.Null),
+          "covered_elements"  -> ujson.Arr.from(x.covered_elements),
+          "covered_relations" -> ujson.Arr.from(x.covered_relations)
+        ),
+      json =>
+        DecisionModelHeader(
+          json.objOpt.flatMap(_.get("category").flatMap(_.strOpt)).get,
+          json.objOpt.flatMap(_.get("body_path").flatMap(_.strOpt)),
+          json.objOpt
+            .flatMap(root =>
+              root
+                .get("covered_elements")
+                .flatMap(_.arrOpt)                           // it must be an array
+                .map(elems => elems.flatMap(_.strOpt).toSet) // transform all elements to strings
+            )
+            .getOrElse(Set()),
+          json.objOpt
+            .flatMap(root =>
+              root
+                .get("covered_relations")
+                .flatMap(_.arrOpt) // it must be an array
+                .map(elems =>
+                  elems.map(LabelledArcWithPorts.invConv).toSet
+                ) // transform all elements to strings
+            )
+            .getOrElse(Set())
+        )
+    )
 }

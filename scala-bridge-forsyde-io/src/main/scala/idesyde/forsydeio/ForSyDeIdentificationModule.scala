@@ -25,11 +25,11 @@ object ForSyDeIdentificationModule extends IdentificationModule {
 
   given Logger = logger
 
-  def decisionHeaderToModel(m: DecisionModelHeader): Seq[DecisionModel] = {
+  def decisionHeaderToModel(m: DecisionModelHeader): Option[DecisionModel] = {
     m match {
       case DecisionModelHeader("SDFToTiledMultiCore", body_path, _, _) =>
         body_path.flatMap(decodeFromPath[SDFToTiledMultiCore])
-      case _ => Seq()
+      case _ => None
     }
   }
 

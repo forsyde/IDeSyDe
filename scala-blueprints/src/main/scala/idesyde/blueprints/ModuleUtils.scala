@@ -10,13 +10,13 @@ import idesyde.core.headers.DecisionModelHeader
 
 trait ModuleUtils {
 
-  def decodeFromPath[T: ReadWriter](p: String): Seq[T] = {
-    if (p.endsWith(".msgpack") && !p.startsWith("/")) Seq(readBinary[T](os.read.bytes(os.pwd / p)))
+  def decodeFromPath[T: ReadWriter](p: String): Option[T] = {
+    if (p.endsWith(".msgpack") && !p.startsWith("/")) Some(readBinary[T](os.read.bytes(os.pwd / p)))
     else if (p.endsWith(".msgpack") && p.startsWith("/"))
-      Seq(readBinary[T](os.read.bytes(os.root / p)))
-    else if (p.endsWith(".json") && !p.startsWith("/")) Seq(read[T](os.read(os.pwd / p)))
-    else if (p.endsWith(".json") && p.startsWith("/")) Seq(read[T](os.read(os.root / p)))
-    else Seq()
+      Some(readBinary[T](os.read.bytes(os.root / p)))
+    else if (p.endsWith(".json") && !p.startsWith("/")) Some(read[T](os.read(os.pwd / p)))
+    else if (p.endsWith(".json") && p.startsWith("/")) Some(read[T](os.read(os.root / p)))
+    else None
   }
 
   extension (m: DesignModel)
@@ -62,7 +62,7 @@ trait ModuleUtils {
             cm.bodyAsBinary
           )
           cm.header.copy(body_path =
-            Seq(
+            Some(
               (p / s"body_${prefix}_${m.uniqueIdentifier}_${suffix}.msgpack").toString
             )
           )

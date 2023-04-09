@@ -164,7 +164,7 @@ impl ExplorationModule for ExternalExplorationModule {
 
     fn available_criterias(
         &self,
-        m: Box<dyn idesyde_core::DecisionModel>,
+        _m: Box<dyn idesyde_core::DecisionModel>,
     ) -> std::collections::HashMap<String, f32> {
         HashMap::new() // TODO: put interfaces later
     }

@@ -113,6 +113,7 @@ trait ExplorationModule
               case head :: next => println(combination(head).asText)
               case Nil          => println(ExplorationCombinationDescription.impossible.asText)
             }
+          case _ =>
         }
       case _ =>
     }

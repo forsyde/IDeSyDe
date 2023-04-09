@@ -54,7 +54,7 @@ trait IdentificationModule
     * @return
     *   the registered decoders
     */
-  def decisionHeaderToModel(m: DecisionModelHeader): Seq[DecisionModel]
+  def decisionHeaderToModel(m: DecisionModelHeader): Option[DecisionModel]
 
   /** Unique string used to identify this module during orchetration. Ideally it matches the name of
     * the implementing class (or is the implemeting class name, ditto).

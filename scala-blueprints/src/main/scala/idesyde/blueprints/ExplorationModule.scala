@@ -34,7 +34,7 @@ trait ExplorationModule
     * @return
     *   decoded [[idesyde.core.DecisionModel]]
     */
-  def decodeDecisionModels(m: DecisionModelHeader): Seq[DecisionModel]
+  def decodeDecisionModels(m: DecisionModelHeader): Option[DecisionModel]
 
   /** the logger to be used during a module call.
     *
@@ -91,13 +91,13 @@ trait ExplorationModule
             os.makeDir.all(solutionPath)
             val header = readBinary[DecisionModelHeader](os.read.bytes(decisionModelToExplore))
             decodeDecisionModels(header) match {
-              case head :: next =>
-                explore(head, explorationTotalTimeOutInSecs).zipWithIndex.foreach((solved, idx) => {
+              case Some(m) =>
+                explore(m, explorationTotalTimeOutInSecs).zipWithIndex.foreach((solved, idx) => {
                   val (hPath, bPath) =
                     solved.writeToPath(solutionPath, f"$idx%016d", uniqueIdentifier)
                   println(hPath.get)
                 })
-              case Nil =>
+              case None =>
             }
           case ExplorationModuleConfiguration(
                 Some(dominantPath),
@@ -110,8 +110,8 @@ trait ExplorationModule
               ) =>
             val header = readBinary[DecisionModelHeader](os.read.bytes(decisionModelToGetCriterias))
             decodeDecisionModels(header) match {
-              case head :: next => println(combination(head).asText)
-              case Nil          => println(ExplorationCombinationDescription.impossible.asText)
+              case Some(m) => println(combination(m).asText)
+              case None    => println(ExplorationCombinationDescription.impossible.asText)
             }
           case _ =>
         }

@@ -13,7 +13,7 @@ object SimulinkMatlabIdentificationModule extends IdentificationModule with Appl
 
   def designHeaderToModel(m: DesignModelHeader): Set[DesignModel] = Set()
 
-  def decisionHeaderToModel(m: DecisionModelHeader): Seq[DecisionModel] = Seq()
+  def decisionHeaderToModel(m: DecisionModelHeader): Option[DecisionModel] = None
 
   override def uniqueIdentifier: String = "SimulinkMatlabIdentificationModule"
 

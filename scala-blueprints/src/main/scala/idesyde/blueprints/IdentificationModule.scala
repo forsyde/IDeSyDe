@@ -12,6 +12,7 @@ import idesyde.core.MarkedIdentificationRule
 import idesyde.core.CompleteDecisionModel
 import idesyde.core.IdentificationLibrary
 import scala.collection.mutable
+import scala.collection.mutable.Buffer
 
 /** The trait/interface for an identification module that provides the identification and
   * integration rules required to power the design space identification process [1].
@@ -127,7 +128,7 @@ trait IdentificationModule
                 .map(f => readBinary[DesignModelHeader](os.read.bytes(f)))
                 .flatMap(designHeaderToModel)
                 .toSet
-            val designModels =
+            val designModelsBeforeMerge =
               os.list(designPath)
                 .flatMap(h => inputsToDesignModel(h))
                 .flatMap(mm =>
@@ -137,6 +138,17 @@ trait IdentificationModule
                   }
                 )
                 .toSet ++ fromDesignModelHeaders
+            val designModels = designModelsBeforeMerge.foldLeft(Set[DesignModel]())((s, m) => {
+              if (s.isEmpty || s.forall(_.merge(m).isEmpty)) { s + m }
+              else {
+                s.map(prev =>
+                  prev.merge(m) match {
+                    case Some(ok) => ok
+                    case _        => prev
+                  }
+                )
+              }
+            })
             val solvedDecisionModels =
               os.list(solvedPath)
                 .filter(_.last.startsWith("header"))
@@ -158,15 +170,15 @@ trait IdentificationModule
                 uniqueIdentifier
               )
               println(
-                hPath.getOrElse(
-                  integrationPath / s"header_${m.uniqueIdentifier}_${uniqueIdentifier}.msgpack"
-                )
+                hPath
+                  .getOrElse(
+                    integrationPath / s"header_${m.uniqueIdentifier}_${uniqueIdentifier}.msgpack"
+                  )
+                  .toString
               )
               outP match {
                 case Some(fout) =>
-                  if (os.isFile(fout)) {
-                    designModelToOutput(m, fout)
-                  }
+                  designModelToOutput(m, fout)
                 case _ =>
               }
             }
@@ -220,9 +232,11 @@ trait IdentificationModule
                 uniqueIdentifier
               )
               println(
-                hPath.getOrElse(
-                  identifiedPath / s"header_${iteration}_${m.uniqueIdentifier}_${uniqueIdentifier}.msgpack"
-                )
+                hPath
+                  .getOrElse(
+                    identifiedPath / s"header_${iteration}_${m.uniqueIdentifier}_${uniqueIdentifier}.msgpack"
+                  )
+                  .toString
               )
             }
           case _ =>

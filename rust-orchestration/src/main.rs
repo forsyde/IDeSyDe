@@ -194,16 +194,21 @@ fn main() {
         //         "Orchestrator",
         //     );
         // }
-
-        debug!("{:?}", design_models.len());
+        match (args.x_total_time_out, args.x_max_solutions) {
+            (Some(t), Some(n)) => info!(
+                "Starting exploration up to {} total time-out seconds and {} solutions.",
+                t, n
+            ),
+            (Some(t), None) => info!("Starting exploration up to {} total time-out seconds.", t),
+            (None, Some(n)) => info!("Starting exploration up to {} solutions.", n),
+            (None, None) => info!("Starting exploration until completion."),
+        }
         if let Some((exp, decision_model)) = dominant.first() {
             for (i, sol) in exp.explore(&decision_model, 0, 0).enumerate() {
-                debug!("Found a solution");
+                debug!("Found a new solution. Total count is {}.", i + 1);
                 for imodule in &imodules {
-                    debug!("i");
                     for design_model in &design_models {
                         for integrated in imodule.integration(&design_model, &sol) {
-                            debug!("Write solution header");
                             idesyde_core::write_design_model_header_to_path(
                                 &integrated,
                                 &integration_path,

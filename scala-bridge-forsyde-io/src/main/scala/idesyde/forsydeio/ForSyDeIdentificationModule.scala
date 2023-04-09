@@ -72,7 +72,14 @@ object ForSyDeIdentificationModule extends IdentificationModule {
 
   override def designModelToOutput(m: DesignModel, p: Path): Boolean = m match {
     case ForSyDeDesignModel(systemGraph) =>
-      if (modelHandler.canWriteModel(p.toNIO)) {
+      if (os.isDir(p)) {
+        var targetIdx = 0
+        var target    = p / s"design_model_output_$targetIdx.fiodl"
+        while (os.isFile(target)) {
+          targetIdx += 1
+        }
+        modelHandler.writeModel(systemGraph, target.toNIO)
+      } else if (modelHandler.canWriteModel(p.toNIO)) {
         modelHandler.writeModel(systemGraph, p.toNIO)
         return true
       }

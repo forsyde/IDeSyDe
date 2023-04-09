@@ -41,11 +41,11 @@ object ChocoExplorationModule extends ExplorationModule {
 
   def explorers = Set(ChocoExplorer())
 
-  def decodeDecisionModels(m: DecisionModelHeader): Seq[DecisionModel] = {
+  def decodeDecisionModels(m: DecisionModelHeader): Option[DecisionModel] = {
     m match {
       case DecisionModelHeader("SDFToTiledMultiCore", body_path, _, _) =>
         body_path.flatMap(decodeFromPath[SDFToTiledMultiCore])
-      case _ => Seq()
+      case _ => None
     }
   }
 

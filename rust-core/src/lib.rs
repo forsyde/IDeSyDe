@@ -108,7 +108,7 @@ impl Hash for DesignModelHeader {
 #[derive(Serialize, Clone, Deserialize, Debug)]
 pub struct DecisionModelHeader {
     pub category: String,
-    pub body_path: Vec<String>,
+    pub body_path: Option<String>,
     pub covered_elements: Vec<String>,
     pub covered_relations: Vec<LabelledArcWithPorts>,
 }
@@ -230,7 +230,7 @@ pub fn write_decision_model_header_to_path<M: DecisionModel + ?Sized>(
         .expect("Failed to write serialized dominant model during identification.");
     DecisionModelHeader {
         category: h.category,
-        body_path: vec![target_path.to_str().unwrap().to_string()],
+        body_path: Some(target_path.to_str().unwrap().to_string()),
         covered_elements: h.covered_elements,
         covered_relations: h.covered_relations,
     }

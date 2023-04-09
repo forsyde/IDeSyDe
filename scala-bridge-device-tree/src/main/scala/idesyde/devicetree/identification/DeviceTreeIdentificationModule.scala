@@ -11,7 +11,7 @@ object DeviceTreeIdentificationModule extends IdentificationModule with Platform
 
   def designHeaderToModel(m: DesignModelHeader): Set[DesignModel] = Set()
 
-  def decisionHeaderToModel(m: DecisionModelHeader): Seq[DecisionModel] = Seq()
+  def decisionHeaderToModel(m: DecisionModelHeader): Option[DecisionModel] = None
 
   def decodeDesignModels: Set[DesignModelHeader => Set[DesignModel]] = Set()
 

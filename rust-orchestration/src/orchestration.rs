@@ -127,10 +127,8 @@ impl IdentificationModule for ExternalIdentificationModule {
                 .stderr(Stdio::piped())
                 .output(),
         };
-        debug!("Out {:?}", &output);
         if let Ok(out) = output {
             if let Ok(s) = String::from_utf8(out.stdout) {
-                debug!("Got {}", s);
                 let integrated: Vec<Box<dyn DesignModel>> = s
                     .lines()
                     .map(|p| {

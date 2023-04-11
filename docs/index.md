@@ -1,11 +1,8 @@
-@@@ index
-
-* [Install](usage/install.md)
-* [Quickstart](usage/quickstart.md)
-* [Status](status.md)
-* [Extending](extensions/index.md)
-
-@@@
+layout: default
+title: IDeSyDe
+description: {{ site.description }}
+isHome: true
+---
 
 # IDeSyDe
 

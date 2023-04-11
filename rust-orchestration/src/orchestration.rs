@@ -88,7 +88,7 @@ impl IdentificationModule for ExternalIdentificationModule {
         Vec::new()
     }
 
-    fn integration(
+    fn reverse_identification(
         &self,
         _design_model: &Box<dyn DesignModel>,
         _decision_model: &Box<dyn DecisionModel>,

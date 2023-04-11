@@ -208,7 +208,7 @@ fn main() {
                 debug!("Found a new solution. Total count is {}.", i + 1);
                 for imodule in &imodules {
                     for design_model in &design_models {
-                        for integrated in imodule.integration(&design_model, &sol) {
+                        for integrated in imodule.reverse_identification(&design_model, &sol) {
                             idesyde_core::write_design_model_header_to_path(
                                 &integrated,
                                 &integration_path,

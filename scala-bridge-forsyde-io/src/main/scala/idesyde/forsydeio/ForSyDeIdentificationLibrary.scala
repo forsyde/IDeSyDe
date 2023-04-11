@@ -33,7 +33,7 @@ class ForSyDeIdentificationLibrary(using Logger)
     identPeriodicWorkloadToPartitionedSharedMultiCoreWithUtilization
   )
 
-  val integrationRules = Set(
+  val reverseIdentificationRules = Set(
     integratePeriodicWorkloadToPartitionedSharedMultiCore,
     integrateSDFToTiledMultiCore
   )

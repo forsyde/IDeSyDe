@@ -41,7 +41,7 @@ object ForSyDeIdentificationModule extends IdentificationModule {
 
   val identificationRules = forSyDeIdentificationLibrary.identificationRules
 
-  val integrationRules = forSyDeIdentificationLibrary.integrationRules
+  val reverseIdentificationRules = forSyDeIdentificationLibrary.reverseIdentificationRules
 
   def main(args: Array[String]): Unit = standaloneIdentificationModule(args)
 

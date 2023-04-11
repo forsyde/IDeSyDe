@@ -3,8 +3,8 @@ package idesyde.core
 import idesyde.core.DecisionModel
 import idesyde.core.DesignModel
 
-/** The trait/interface for an identification library that provides the identification and integration
-  * rules required to power the design space identification process [1].
+/** The trait/interface for an identification library that provides the identification and
+  * integration rules required to power the design space identification process [1].
   *
   * [[identificationRules]] are functions that abstracts [[DesignModel]] s systematically to
   * [[DecisionModel]] s until it becomes a set of "solvable" parameters and functions.
@@ -12,11 +12,10 @@ import idesyde.core.DesignModel
   * [[integrationRules]] are basically the inverse of [[identificationRules]]: They take solved
   * [[DecisionModels]] and "integrate" the solutions in the abstracted domain back to the design
   * domain, in the [[DesignModel]] s.
-  * 
+  *
   * [1] R. Jordão, I. Sander and M. Becker, "Formulation of Design Space Exploration Problems by
   * Composable Design Space Identification," 2021 Design, Automation & Test in Europe Conference &
   * Exhibition (DATE), 2021, pp. 1204-1207, doi: 10.23919/DATE51398.2021.9474082.
-  *
   */
 trait IdentificationLibrary {
 
@@ -38,7 +37,7 @@ trait IdentificationLibrary {
     * @return
     *   The set of integration rules registered in this module
     */
-  def integrationRules: Set[
+  def reverseIdentificationRules: Set[
     (DesignModel, DecisionModel) => Option[? <: DesignModel]
   ]
 }

@@ -71,12 +71,12 @@ trait IdentificationModule
     */
   def logger: Logger = SimpleStandardIOLogger("WARN")
 
-  def integration(
+  def reverseIdentification(
       designModel: DesignModel,
       solvedDecisionModel: DecisionModel
   ): Set[DesignModel] = {
     for (
-      irule      <- integrationRules;
+      irule      <- reverseIdentificationRules;
       integrated <- irule(designModel, solvedDecisionModel)
     ) yield integrated
   }
@@ -159,7 +159,7 @@ trait IdentificationModule
             for (
               (d, i) <- designModels.zipWithIndex;
               (s, j) <- solvedDecisionModels.zipWithIndex;
-              (m, k) <- integration(
+              (m, k) <- reverseIdentification(
                 d,
                 s
               ).zipWithIndex

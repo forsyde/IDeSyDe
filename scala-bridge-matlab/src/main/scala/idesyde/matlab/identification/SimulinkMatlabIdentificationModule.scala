@@ -22,7 +22,8 @@ object SimulinkMatlabIdentificationModule extends IdentificationModule with Appl
     identCommunicatingAndTriggeredReactiveWorkload
   )
 
-  override def integrationRules: Set[(DesignModel, DecisionModel) => Option[? <: DesignModel]] =
+  override def reverseIdentificationRules
+      : Set[(DesignModel, DecisionModel) => Option[? <: DesignModel]] =
     Set(
     )
 

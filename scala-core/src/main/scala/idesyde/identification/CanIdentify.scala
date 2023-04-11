@@ -111,7 +111,11 @@ trait CanIdentify(using logger: Logger) extends HasUtils {
       decisions: DecisionModel,
       integrationModules: Set[IdentificationLibrary] = Set()
   ): Set[DesignModel] =
-    integrateDecisionModel(model, decisions, integrationModules.flatMap(_.integrationRules))
+    integrateDecisionModel(
+      model,
+      decisions,
+      integrationModules.flatMap(_.reverseIdentificationRules)
+    )
 
   @targetName("integrateDecisionModelWithRules")
   def integrateDecisionModel(

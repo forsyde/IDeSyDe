@@ -28,6 +28,6 @@ class CommonIdentificationLibrary(using logger: Logger)
     DecisionModelOnlyIdentificationRule(identTaksAndSDFServerToMultiCore)
   )
 
-  val integrationRules = Set()
+  val reverseIdentificationRules = Set()
 
 }

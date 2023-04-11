@@ -319,7 +319,7 @@ pub trait IdentificationModule {
         design_models: &Vec<Box<dyn DesignModel>>,
         decision_models: &Vec<Box<dyn DecisionModel>>,
     ) -> Vec<Box<dyn DecisionModel>>;
-    fn integration(
+    fn reverse_identification(
         &self,
         design_model: &Box<dyn DesignModel>,
         decision_model: &Box<dyn DecisionModel>,

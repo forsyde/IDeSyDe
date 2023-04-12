@@ -3,7 +3,7 @@ use std::{fs, path::Path};
 use clap::Parser;
 use env_logger::WriteStyle;
 use idesyde_core::{DecisionModel, DesignModel, ExplorationModule, IdentificationModule};
-use log::{debug, info};
+use log::{debug, info, Level, LevelFilter};
 
 use crate::orchestration::compute_dominant_combinations;
 
@@ -23,8 +23,8 @@ struct Args {
     #[arg(
         short,
         long,
-        help = "Sets set output file or directory.",
-        long_help = "Sets set output file or directory. \n\
+        help = "Sets output file or directory.",
+        long_help = "Sets output file or directory. \n\
          If the output path is a file, IDeSyDe will write the latest solved/optimized design model in this file. \n\
          If the output path is a directory, IDeSyDe will write all solved/optimized design model in this directory."
     )]
@@ -36,6 +36,9 @@ struct Args {
         help = "Sets the running path that IDeSyDe uses."
     )]
     run_path: Option<String>,
+
+    #[arg(short, long, help = "Sets the verbosity of this run.")]
+    verbosity: Option<String>,
 
     #[arg(
         long,
@@ -54,24 +57,34 @@ struct Args {
 
     #[arg(
         long,
-        help = "For explorer with mandatory discretization, this factor is used for the time discretization resolution.",
+        help = "For explorer with mandatory discretization, this factor is used for the time upsizing resolution.",
         group = "exploration"
     )]
-    x_time_resolution: Option<u32>,
+    x_time_resolution: Option<i64>,
 
     #[arg(
         long,
-        help = "For explorer with mandatory discretization, this factor is used for the memory discretization resolution.",
+        help = "For explorer with mandatory discretization, this factor is used for the memory downsizing resolution.",
         group = "exploration"
     )]
-    x_memory_resolution: Option<u32>,
+    x_memory_resolution: Option<i64>,
 }
 
 fn main() {
     let args = Args::parse();
+    let verbosity = args
+        .verbosity
+        .and_then(|s| match s.to_lowercase().as_str() {
+            "debug" => Some(Level::Debug),
+            "warn" | "warning" => Some(Level::Warn),
+            "err" | "error" => Some(Level::Error),
+            "info" => Some(Level::Info),
+            _ => None,
+        })
+        .unwrap_or(Level::Info);
     env_logger::Builder::new()
         .target(env_logger::Target::Stdout)
-        .filter(None, log::LevelFilter::Debug)
+        .filter(None, verbosity.to_level_filter())
         .write_style(WriteStyle::Always)
         .init();
     if args.inputs.len() > 0 {
@@ -204,7 +217,16 @@ fn main() {
             (None, None) => info!("Starting exploration until completion."),
         }
         if let Some((exp, decision_model)) = dominant.first() {
-            for (i, sol) in exp.explore(&decision_model, 0, 0).enumerate() {
+            for (i, sol) in exp
+                .explore(
+                    &decision_model,
+                    0,
+                    0,
+                    args.x_time_resolution.unwrap_or(-1),
+                    args.x_memory_resolution.unwrap_or(-1),
+                )
+                .enumerate()
+            {
                 debug!("Found a new solution. Total count is {}.", i + 1);
                 for imodule in &imodules {
                     for design_model in &design_models {

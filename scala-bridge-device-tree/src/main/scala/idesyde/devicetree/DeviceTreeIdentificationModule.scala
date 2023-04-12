@@ -1,4 +1,4 @@
-package idesyde.devicetree.identification
+package idesyde.devicetree
 
 import idesyde.blueprints.IdentificationModule
 import idesyde.core.DecisionModel
@@ -6,6 +6,7 @@ import idesyde.core.DesignModel
 import idesyde.utils.Logger
 import idesyde.core.headers.DesignModelHeader
 import idesyde.core.headers.DecisionModelHeader
+import idesyde.devicetree.identification.PlatformRules
 
 object DeviceTreeIdentificationModule extends IdentificationModule with PlatformRules {
 
@@ -23,7 +24,7 @@ object DeviceTreeIdentificationModule extends IdentificationModule with Platform
       identPartitionedCoresWithRuntimes
     )
 
-  def integrationRules: Set[(DesignModel, DecisionModel) => Option[? <: DesignModel]] =
+  def reverseIdentificationRules: Set[(DesignModel, DecisionModel) => Option[? <: DesignModel]] =
     Set()
 
 }

@@ -45,7 +45,13 @@ trait CanParseExplorationModuleConfiguration {
           .action((f, mc) => mc.copy(explorationTotalTimeOutInSecs = f)),
         builder
           .opt[Long]("maximum-solutions")
-          .action((f, mc) => mc.copy(maximumSolutions = f))
+          .action((f, mc) => mc.copy(maximumSolutions = f)),
+        builder
+          .opt[Long]("time-resolution")
+          .action((f, mc) => mc.copy(timeResolution = Some(f))),
+        builder
+          .opt[Long]("memory-resolution")
+          .action((f, mc) => mc.copy(memoryResolution = Some(f)))
       ),
       args,
       ExplorationModuleConfiguration()

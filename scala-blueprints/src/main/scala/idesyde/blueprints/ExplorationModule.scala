@@ -56,7 +56,9 @@ trait ExplorationModule
   def explore(
       decisionModel: DecisionModel,
       totalExplorationTimeOutInSecs: Long = 0L,
-      maximumSolutions: Long = 0L
+      maximumSolutions: Long = 0L,
+      timeDiscretizationFactor: Long = -1L,
+      memoryDiscretizationFactor: Long = -1L
   ): LazyList[DecisionModel] = {
     val valid = explorers
       .filter(_.combination(decisionModel).can_explore)
@@ -84,6 +86,8 @@ trait ExplorationModule
                 _,
                 _,
                 Some(decisionModelToExplore),
+                timeResolution,
+                memoryResolution,
                 maximumSolutions,
                 explorationTotalTimeOutInSecs
               ) =>
@@ -104,6 +108,8 @@ trait ExplorationModule
                 _,
                 _,
                 Some(decisionModelToGetCriterias),
+                _,
+                _,
                 _,
                 _,
                 _

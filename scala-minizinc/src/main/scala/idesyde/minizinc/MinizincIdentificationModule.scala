@@ -1,4 +1,4 @@
-package idesyde.identification.minizinc
+package idesyde.minizinc
 
 import idesyde.core.DecisionModel
 
@@ -18,6 +18,7 @@ class MinizincIdentificationModule extends IdentificationModule {
   def identificationRules: Set[(Set[DesignModel], Set[DecisionModel]) => Set[? <: DecisionModel]] =
     Set()
 
-  def integrationRules: Set[(DesignModel, DecisionModel) => Option[? <: DesignModel]] = Set()
+  def reverseIdentificationRules: Set[(DesignModel, DecisionModel) => Option[? <: DesignModel]] =
+    Set()
 
 }

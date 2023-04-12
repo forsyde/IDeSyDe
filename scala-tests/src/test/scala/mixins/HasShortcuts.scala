@@ -5,14 +5,14 @@ import idesyde.exploration.CanExplore
 import idesyde.core.DecisionModel
 import idesyde.identification.common.CommonIdentificationLibrary
 import idesyde.identification.choco.ChocoIdentificationLibrary
-import idesyde.identification.minizinc.MinizincIdentificationModule
 import idesyde.core.Explorer
 import idesyde.utils.Logger
 import idesyde.core.DesignModel
-import idesyde.devicetree.identification.DeviceTreeIdentificationModule
 import idesyde.matlab.identification.SimulinkMatlabIdentificationModule
 import idesyde.choco.ChocoExplorationModule
 import idesyde.forsydeio.ForSyDeIdentificationLibrary
+import idesyde.devicetree.DeviceTreeIdentificationModule
+import idesyde.minizinc.MinizincIdentificationModule
 
 trait HasShortcuts(using Logger) extends CanExplore with CanIdentify {
 

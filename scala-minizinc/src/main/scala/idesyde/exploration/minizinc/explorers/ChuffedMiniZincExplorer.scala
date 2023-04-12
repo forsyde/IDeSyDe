@@ -15,14 +15,22 @@ import idesyde.core.ExplorationCombinationDescription
 
 final case class ChuffedMiniZincExplorer() extends SimpleMiniZincCPExplorer {
 
+  override def explore(
+      decisionModel: DecisionModel,
+      totalExplorationTimeOutInSecs: Long,
+      maximumSolutions: Long,
+      timeDiscretizationFactor: Long,
+      memoryDiscretizationFactor: Long
+  ): LazyList[DecisionModel] = LazyList.empty
+
   override def combination(decisionModel: DecisionModel): ExplorationCombinationDescription =
     ExplorationCombinationDescription(false, Map())
 
-  override def explore(
-      decisionModel: DecisionModel,
-      explorationTimeOutInSecs: Long = 0L,
-      maximumSolutions: Long = 0L
-  ): LazyList[DecisionModel] = LazyList.empty
+  // override def explore(
+  //     decisionModel: DecisionModel,
+  //     explorationTimeOutInSecs: Long = 0L,
+  //     maximumSolutions: Long = 0L
+  // ): LazyList[DecisionModel] = LazyList.empty
 
   def uniqueIdentifier: String = "ChuffedMiniZincExplorer"
 

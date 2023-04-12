@@ -349,6 +349,8 @@ pub trait ExplorationModule {
         m: &Box<dyn DecisionModel>,
         max_sols: u64,
         total_timeout: u64,
+        time_multiplier: i64,
+        memory_divider: i64,
     ) -> Box<dyn Iterator<Item = Box<dyn DecisionModel>>>;
 }
 

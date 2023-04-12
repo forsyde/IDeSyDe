@@ -15,14 +15,16 @@ import idesyde.core.ExplorationCombinationDescription
 
 final case class GecodeMiniZincExplorer() extends SimpleMiniZincCPExplorer {
 
-  override def combination(decisionModel: DecisionModel): ExplorationCombinationDescription =
-    ExplorationCombinationDescription(false, Map())
-
   override def explore(
       decisionModel: DecisionModel,
-      explorationTimeOutInSecs: Long = 0L,
-      maximumSolutions: Long = 0L
+      totalExplorationTimeOutInSecs: Long,
+      maximumSolutions: Long,
+      timeDiscretizationFactor: Long,
+      memoryDiscretizationFactor: Long
   ): LazyList[DecisionModel] = LazyList.empty
+
+  override def combination(decisionModel: DecisionModel): ExplorationCombinationDescription =
+    ExplorationCombinationDescription(false, Map())
 
   def uniqueIdentifier: String = "GecodeMiniZincExplorer"
 }

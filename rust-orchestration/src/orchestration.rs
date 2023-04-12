@@ -215,6 +215,8 @@ impl ExplorationModule for ExternalExplorationModule {
         m: &Box<dyn idesyde_core::DecisionModel>,
         max_sols: u64,
         total_timeout: u64,
+        time_resolution: i64,
+        memory_resolution: i64,
     ) -> Box<dyn Iterator<Item = Box<dyn DecisionModel>>> {
         let headers = load_decision_model_headers_from_binary(&self.identified_path_);
         let chosen_path = headers
@@ -242,6 +244,10 @@ impl ExplorationModule for ExternalExplorationModule {
                 .arg(format!("{}", max_sols))
                 .arg("--total-timeout")
                 .arg(format!("{}", total_timeout))
+                .arg("--time-resolution")
+                .arg(format!("{}", time_resolution))
+                .arg("--memory-resolution")
+                .arg(format!("{}", memory_resolution))
                 .stdout(Stdio::piped())
                 .stderr(Stdio::piped())
                 .spawn(),
@@ -256,6 +262,10 @@ impl ExplorationModule for ExternalExplorationModule {
                 .arg(format!("{}", max_sols))
                 .arg("--total-timeout")
                 .arg(format!("{}", total_timeout))
+                .arg("--time-resolution")
+                .arg(format!("{}", time_resolution))
+                .arg("--memory-resolution")
+                .arg(format!("{}", memory_resolution))
                 .stdout(Stdio::piped())
                 .stderr(Stdio::piped())
                 .spawn(),

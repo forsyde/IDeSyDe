@@ -28,21 +28,18 @@ trait HasSDFSchedulingAnalysisAndConstraints
       m: SDFToTiledMultiCore,
       chocoModel: Model,
       processMappings: Array[IntVar],
+      actorDuration: Array[Array[Int]],
       messageTravelDuration: Array[Array[Array[IntVar]]]
   ): (Array[IntVar], Array[IntVar], Array[IntVar], IntVar, IntVar) = {
     val timeValues =
       m.wcets.flatten ++ m.platform.hardware.maxTraversalTimePerBit.flatten
     val memoryValues = m.platform.hardware.tileMemorySizes
-    val (timeFactor, memoryDivider) =
-      computeTimeMultiplierAndMemoryDivider(timeValues, memoryValues)
 
     val actors             = m.sdfApplications.actorsIdentifiers
     val jobsAndActors      = m.sdfApplications.jobsAndActors
     def jobMapping(i: Int) = processMappings(actors.indexOf(jobsAndActors(i)._1))
 
     val schedulers = m.platform.runtimes.schedulers
-    val actorDuration =
-      m.wcets.map(ws => ws.map(w => w * timeFactor).map(_.ceil.intValue))
 
     val maxRepetitionsPerActors     = m.sdfApplications.sdfRepetitionVectors
     def isSelfConcurrent(a: String) = m.sdfApplications.isSelfConcurrent(a)

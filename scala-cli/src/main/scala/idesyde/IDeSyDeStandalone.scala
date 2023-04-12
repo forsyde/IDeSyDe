@@ -15,9 +15,9 @@ import scala.collection.mutable
 import idesyde.identification.common.CommonIdentificationLibrary
 import idesyde.identification.choco.ChocoIdentificationLibrary
 import idesyde.forsydeio.ForSyDeIdentificationLibrary
-import idesyde.identification.minizinc.MinizincIdentificationModule
 import idesyde.utils.SimpleStandardIOLogger
 import idesyde.choco.ChocoExplorationModule
+import idesyde.minizinc.MinizincIdentificationModule
 
 object IDeSyDeStandalone {
 

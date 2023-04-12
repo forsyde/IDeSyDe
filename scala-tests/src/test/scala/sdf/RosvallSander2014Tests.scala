@@ -10,7 +10,6 @@ import idesyde.utils.Logger
 import mixins.LoggingMixin
 import mixins.HasShortcuts
 import mixins.PlatformExperimentCreator
-import idesyde.identification.minizinc.MinizincIdentificationModule
 import java.nio.file.Files
 import java.nio.file.Paths
 import idesyde.forsydeio.ForSyDeDesignModel

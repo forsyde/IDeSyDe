@@ -16,5 +16,6 @@ final class ChocoIdentificationLibrary(using Logger) extends IdentificationLibra
     identChocoComDepTasksToMultiCore
   )
 
-  def integrationRules: Set[(DesignModel, DecisionModel) => Option[? <: DesignModel]] = Set()
+  def reverseIdentificationRules: Set[(DesignModel, DecisionModel) => Option[? <: DesignModel]] =
+    Set()
 }

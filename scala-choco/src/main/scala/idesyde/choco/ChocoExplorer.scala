@@ -98,9 +98,11 @@ class ChocoExplorer(using logger: Logger) extends Explorer:
   def exploreChocoExplorable[T <: DecisionModel](
       m: T,
       explorationTotalTimeOutInSecs: Long,
-      maximumSolutions: Long
+      maximumSolutions: Long,
+      timeResolution: Long = -1L,
+      memoryResolution: Long = -1L
   )(using ChocoExplorable[T]): LazyList[T] = {
-    val model  = m.chocoModel
+    val model  = m.chocoModel(timeResolution, memoryResolution)
     val solver = model.getSolver()
     if (explorationTotalTimeOutInSecs > 0L) {
       logger.debug(s"setting total exploration timeout to ${explorationTotalTimeOutInSecs} seconds")
@@ -119,12 +121,18 @@ class ChocoExplorer(using logger: Logger) extends Explorer:
   def explore(
       decisionModel: DecisionModel,
       explorationTotalTimeOutInSecs: Long = 0L,
-      maximumSolutions: Long = 0L
+      maximumSolutions: Long = 0L,
+      timeDiscretizationFactor: Long = -1L,
+      memoryDiscretizationFactor: Long = -1L
   ): LazyList[DecisionModel] = decisionModel match
     case sdf: SDFToTiledMultiCore =>
-      exploreChocoExplorable(sdf, explorationTotalTimeOutInSecs, maximumSolutions)(using
-        CanSolveSDFToTiledMultiCore()
-      )
+      exploreChocoExplorable(
+        sdf,
+        explorationTotalTimeOutInSecs,
+        maximumSolutions,
+        timeDiscretizationFactor,
+        memoryDiscretizationFactor
+      )(using CanSolveSDFToTiledMultiCore())
     case solvable: ChocoDecisionModel =>
       val solver          = solvable.chocoModel.getSolver
       val isOptimization  = solvable.modelMinimizationObjectives.size > 0

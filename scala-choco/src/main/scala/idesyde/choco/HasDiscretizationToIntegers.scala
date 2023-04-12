@@ -6,38 +6,49 @@ import idesyde.utils.HasUtils
 
 trait HasDiscretizationToIntegers extends HasUtils {
 
-  def computeTimeMultiplierAndMemoryDivider[T, M](
+  def computeTimeMultiplierAndMemoryDividerWithResolution[T, M](
       timeValues: Vector[T],
-      memoryValues: Vector[M]
-  )(using numT: Numeric[T])(using numM: Numeric[M]): (T, M) = {
+      memoryValues: Vector[M],
+      timeResolution: Int = -1,
+      memoryResolution: Int = -1
+  )(using
+      numT: Numeric[T]
+  )(using numM: Numeric[M]): (Map[T, Int], Map[M, Int]) = {
     // section for time multiplier calculation
     // if there is a 1e3 scale difference between execution and communication, we consider only execution for scaling
-    var timeMultiplier = numT.one
-    val t10            = numT.fromInt(10)
-    val maxValT        = numT.fromInt(Int.MaxValue / 100 - 1)
-    var sumT           = numT.zero
-    wfor(0, _ < timeValues.size, _ + 1) { i =>
-      sumT = numT.plus(sumT, timeValues(i))
-    }
-    while (
-      // ensure that the numbers magnitudes still stay sane
-      Math.log10(numT.toDouble(numT.times(sumT, timeMultiplier))) <= -3.0
-      && sumT < maxValT
-    ) {
-      timeMultiplier = numT.times(timeMultiplier, t10)
-    }
+    val maxTime = Int.MaxValue / timeValues.size - 1
+    val timeStep =
+      if (timeResolution > 0) maxTime / timeResolution else maxTime / timeValues.size / 100
+    val discreteTimes = timeValues
+      .map(t => {
+        var r = -1
+        for (
+          td <- timeStep to maxTime by timeStep; if r == -1;
+          if numT.fromInt(td - timeStep) < t && t <= numT.fromInt(td)
+        ) {
+          r = td
+        }
+        t -> r
+      })
+      .toMap
 
     // do the same for memory numbers
-    var memoryDivider = numM.one
-    val m10           = numM.fromInt(10)
-    val ub            = numM.fromInt(10000)
-    while (
-      memoryValues
-        .forall(m => m <= numM.times(ub, memoryDivider)) && memoryDivider < numM
-        .fromInt(Int.MaxValue / 10)
-    ) {
-      memoryDivider = numM.times(memoryDivider, m10)
-    }
-    (timeMultiplier, memoryDivider)
+    val maxMemory = Int.MaxValue / memoryValues.size - 1
+    val memStep =
+      if (memoryResolution > 0) maxMemory / memoryResolution
+      else maxMemory / memoryValues.size / 100
+    val discreteMemory = memoryValues
+      .map(m => {
+        var r = -1
+        for (
+          md <- memStep to maxMemory by memStep; if r == -1;
+          if numM.fromInt(md - memStep) < m && m <= numM.fromInt(md)
+        ) {
+          r = md
+        }
+        m -> r
+      })
+      .toMap
+    (discreteTimes, discreteMemory)
   }
 }

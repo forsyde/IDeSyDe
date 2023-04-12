@@ -65,14 +65,14 @@ lazy val common = (project in file("scala-common"))
   // .enablePlugins(ScalaNativePlugin)
   .enablePlugins(UniversalPlugin, JavaAppPackaging, JlinkPlugin)
   .enablePlugins(JDKPackagerPlugin)
-  .enablePlugins(GraalVMNativeImagePlugin)
+  // .enablePlugins(GraalVMNativeImagePlugin)
   .settings(
     name := "idesyde-scala-common",
     libraryDependencies ++= Seq(
       ("org.scala-graph" %% "graph-core" % scalaGraphVersion).cross(CrossVersion.for3Use2_13),
       "org.typelevel"   %%% "spire"      % spireVersion
     ),
-    Compile / mainClass := Some("idesyde.common.CommonIdentificationModule"),
+    mainClass := Some("idesyde.common.CommonIdentificationModule"),
     publishModules := {
       IO.createDirectory(imodulesTarget)
       val jar    = assembly.value
@@ -96,15 +96,19 @@ lazy val forsyde = (project in file("scala-bridge-forsyde-io"))
   .dependsOn(blueprints)
   .enablePlugins(UniversalPlugin, JavaAppPackaging, JlinkPlugin)
   .enablePlugins(JDKPackagerPlugin)
-  .enablePlugins(GraalVMNativeImagePlugin)
+  // .enablePlugins(GraalVMNativeImagePlugin)
   .settings(
     name := "idesyde-scala-forsyde",
     libraryDependencies ++= Seq(
-      "io.github.forsyde" % "forsyde-io-java-core"     % forsydeIoVersion,
-      "io.github.forsyde" % "forsyde-io-java-sdf3"     % forsydeIoVersion,
-      "io.github.forsyde" % "forsyde-io-java-amalthea" % forsydeIoVersion
+      "io.github.forsyde"  % "forsyde-io-java-core" % forsydeIoVersion,
+      "io.github.forsyde"  % "forsyde-io-java-sdf3" % forsydeIoVersion,
+      "org.apache.commons" % "commons-lang3"        % "3.12.0"
+      // "io.github.forsyde"        % "forsyde-io-java-amalthea"          % forsydeIoVersion,
+      // "org.eclipse.app4mc"       % "org.eclipse.app4mc.amalthea.model" % "2.2.0",
+      // "org.eclipse.birt.runtime" % "org.eclipse.emf.common"            % "2.12.0.v20160420-0247",
+      // "org.eclipse.birt.runtime" % "org.eclipse.emf.ecore"             % "2.12.0.v20160420-0247"
     ),
-    Compile / mainClass := Some("idesyde.forsydeio.ForSyDeIdentificationModule"),
+    mainClass := Some("idesyde.forsydeio.ForSyDeIdentificationModule"),
     publishModules := {
       IO.createDirectory(imodulesTarget)
       val jar    = assembly.value
@@ -121,13 +125,18 @@ lazy val forsyde = (project in file("scala-bridge-forsyde-io"))
       val paths = (jlinkBuildImage / fullClasspath).value
       paths
         .filter(f => {
-          f.get(moduleID.key).exists(mID => mID.name.contains("jheaps")) ||
-          // f.get(moduleID.key).exists(mID => mID.name.contains("fastutil")) ||
-          // f.get(moduleID.key).exists(mID => mID.name.contains("commons-text")) ||
-          f.get(moduleID.key).exists(mID => mID.name.contains("antlr4")) ||
-          f.get(moduleID.key).exists(mID => mID.name.contains("automaton")) ||
-          f.get(moduleID.key).exists(mID => mID.name.contains("xchart")) ||
-          f.get(moduleID.key).exists(mID => mID.name.contains("trove4j"))
+          f.get(moduleID.key)
+            .exists(mID =>
+              mID.name.contains("jheaps") ||
+                mID.name.contains("antlr4") ||
+                mID.name.contains("automaton") ||
+                mID.name.contains("xchart") ||
+                mID.name == "commons-lang3" ||
+                mID.name.contains("trove4j")
+            )
+          // f.get(moduleID.key).exists(mID => mID.name.contains("amalthea")) ||
+          // f.get(moduleID.key).exists(mID => mID.name.contains("emf")) ||
+          // f.get(moduleID.key).exists(mID => mID.name.contains("lang3"))
         })
         .map(_.data)
     },
@@ -163,7 +172,7 @@ lazy val choco = (project in file("scala-choco"))
   .dependsOn(blueprints)
   .enablePlugins(UniversalPlugin, JavaAppPackaging, JlinkPlugin)
   .enablePlugins(JDKPackagerPlugin)
-  .enablePlugins(GraalVMNativeImagePlugin)
+  // .enablePlugins(GraalVMNativeImagePlugin)
   .settings(
     name := "idesyde-scala-choco",
     libraryDependencies ++= Seq(

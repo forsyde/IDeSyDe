@@ -18,7 +18,6 @@ import idesyde.forsydeio.ForSyDeDesignModel
 import java.nio.file.Paths
 import os.Path
 import forsyde.io.java.sdf3.drivers.ForSyDeSDF3Driver
-import forsyde.io.java.amalthea.drivers.ForSyDeAmaltheaDriver
 import idesyde.identification.common.models.mixed.SDFToTiledMultiCore
 
 object ForSyDeIdentificationModule extends IdentificationModule {
@@ -37,7 +36,7 @@ object ForSyDeIdentificationModule extends IdentificationModule {
 
   val modelHandler = ForSyDeModelHandler()
     .registerDriver(new ForSyDeSDF3Driver())
-    .registerDriver(new ForSyDeAmaltheaDriver())
+  // .registerDriver(new ForSyDeAmaltheaDriver())
 
   val identificationRules = forSyDeIdentificationLibrary.identificationRules
 

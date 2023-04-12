@@ -70,6 +70,6 @@ trait HasDiscretizationToIntegers extends HasUtils {
   def undiscretized[T](ub: Int, maxT: T)(td: Int)(using
       numT: Numeric[T]
   ): T = {
-    numT.fromInt(td / ub) * maxT
+    numT.fromInt(td * maxT.toInt / ub)
   }
 }

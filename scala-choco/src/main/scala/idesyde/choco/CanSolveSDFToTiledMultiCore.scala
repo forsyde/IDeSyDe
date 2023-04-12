@@ -415,14 +415,13 @@ final class CanSolveSDFToTiledMultiCore(using logger: Logger)
     // logger.debug(sdfAnalysisModule.invThroughputs.mkString(", "))
     val jobsAndActors =
       m.sdfApplications.jobsAndActors
-    val invDiscreteTimeValues = discreteTimeValues.groupBy(_._2).mapValues(_.keySet)
+    val factor = discreteTimeValues.keySet.max / discreteTimeValues.values.max
     val full = m.copy(
       sdfApplications = m.sdfApplications.copy(minimumActorThrouhgputs =
         invThroughputs.zipWithIndex
           .map((th, i) =>
-            invDiscreteTimeValues(th.getValue()).max *
-              (m.sdfApplications
-                .sdfRepetitionVectors(i) * th.getValue().toDouble)
+            (m.sdfApplications
+              .sdfRepetitionVectors(i) * th.getValue().toDouble) * factor
           )
           .toVector
       ),

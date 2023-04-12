@@ -1,0 +1,72 @@
+plugins {
+  id 'maven-publish'
+  id 'signing'
+  id 'idea'
+  id 'eclipse'
+}
+
+// due to how maven central works, the groupId must be the same as the
+// website which we host
+group = 'io.github.forsyde'
+archivesBaseName = project.name
+project.ext.niceName = "IDeSyDe"
+
+tasks.register('getVersion') {
+    doFirst {
+        println version
+    }
+}
+
+// In this section you declare where to find the dependencies of your project
+repositories {
+  // Use 'jcenter' for resolving your dependencies.
+  // You can declare any Maven/Ivy/file repository here.
+  mavenCentral()
+}
+
+// In this section you declare the dependencies for your production and test code
+dependencies {
+//  testImplementation('org.junit.jupiter:junit-jupiter:5.9.0')
+}
+
+//test {
+//  useJUnitPlatform()
+//}
+
+// compileJava {
+//   sourceCompatibility = JavaVersion.VERSION_11
+// }
+
+// compileTestJava {
+//   sourceCompatibility = JavaVersion.VERSION_11
+// }
+
+
+subprojects {
+
+  apply plugin: 'java'
+  apply plugin: 'idea'
+  apply plugin: 'eclipse'
+  apply plugin: 'publishing'
+  apply plugin: 'signing'
+  apply plugin: 'maven-publish'
+
+  group = 'io.github.forsyde'
+  archivesBaseName = rootProject.name + '-' + project.name
+  version = rootProject.version
+
+  repositories {
+    mavenCentral()
+  }
+
+  java {
+    withSourcesJar()
+    withJavadocJar()
+    modularity.inferModulePath = true
+  }
+
+  artifacts {
+    archives javadocJar, sourcesJar
+  }
+
+}

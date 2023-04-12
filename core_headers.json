@@ -8,17 +8,17 @@
             "properties": {
                 "decision_models": {
                     "type": "array",
-                    "items": { "$ref": "#/definitions/DecisionModelHeader" }
+                    "items": {
+                        "$ref": "#/definitions/DecisionModelHeader"
+                    }
                 },
                 "design_models": {
                     "type": "array",
-                    "items": { "$ref": "#/definitions/DesignModelHeader" }
+                    "items": {
+                        "$ref": "#/definitions/DesignModelHeader"
+                    }
                 }
-            },
-            "required": [
-                "decision_models",
-                "design_models"
-            ]
+            }
         },
         "DecisionModelHeader": {
             "type": "object",
@@ -39,15 +39,11 @@
                         "$ref": "#/definitions/LabelledArcWithPorts"
                     }
                 },
-                "body_paths": {
-                    "type": "array",
-                    "items": {
-                        "type": "string"
-                    }
+                "body_path": {
+                    "type": "string"
                 }
             },
             "required": [
-                "body_paths",
                 "category",
                 "covered_elements",
                 "covered_relations"

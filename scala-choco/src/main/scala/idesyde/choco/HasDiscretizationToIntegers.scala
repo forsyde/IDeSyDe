@@ -1,6 +1,7 @@
 package idesyde.choco
 
 import math.Ordering.Implicits.infixOrderingOps
+import math.Numeric.Implicits.infixNumericOps
 
 import idesyde.utils.HasUtils
 
@@ -50,5 +51,25 @@ trait HasDiscretizationToIntegers extends HasUtils {
       })
       .toMap
     (discreteTimes, discreteMemory)
+  }
+
+  def discretized[T](resolution: Int, ub: Int)(t: T)(using
+      numT: Numeric[T]
+  ): Int = {
+    val timeStep = ub / resolution
+    var r        = -1
+    for (
+      td <- timeStep to ub by timeStep; if r == -1;
+      if numT.fromInt(td - timeStep) < t && t <= numT.fromInt(td)
+    ) {
+      r = td
+    }
+    r
+  }
+
+  def undiscretized[T](ub: Int, maxT: T)(td: Int)(using
+      numT: Numeric[T]
+  ): T = {
+    numT.fromInt(td / ub) * maxT
   }
 }

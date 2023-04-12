@@ -60,31 +60,43 @@ final class CanSolveSDFToTiledMultiCore(using logger: Logger)
     val timeValues = m.wcets.flatten ++ m.platform.hardware.maxTraversalTimePerBit.flatten
     val memoryValues = m.platform.hardware.tileMemorySizes ++ m.sdfApplications.sdfMessages
       .map((src, _, _, mSize, p, c, tok) => mSize)
-    val (discreteTimeValues, discreteMemoryValues) =
-      computeTimeMultiplierAndMemoryDividerWithResolution(
-        timeValues,
-        memoryValues,
-        if (timeResolution > Int.MaxValue) Int.MaxValue else timeResolution.toInt,
-        if (memoryResolution > Int.MaxValue) Int.MaxValue else memoryResolution.toInt
-      )
+    // val (discreteTimeValues, discreteMemoryValues) =
+    //   computeTimeMultiplierAndMemoryDividerWithResolution(
+    //     timeValues,
+    //     memoryValues,
+    //     if (timeResolution > Int.MaxValue) Int.MaxValue else timeResolution.toInt,
+    //     if (memoryResolution > Int.MaxValue) Int.MaxValue else memoryResolution.toInt
+    //   )
+    def double2int(s: Double) = discretized(
+      if (timeResolution > Int.MaxValue) Int.MaxValue
+      else if (timeResolution <= 0L) timeValues.size * 100
+      else timeResolution.toInt,
+      Int.MaxValue / timeValues.size
+    )(s)
+    def long2int(l: Long) = discretized(
+      if (memoryResolution > Int.MaxValue) Int.MaxValue
+      else if (memoryResolution <= 0L) memoryValues.size * 100
+      else memoryResolution.toInt,
+      Int.MaxValue / memoryValues.size
+    )(l)
     val messagesSizes = m.sdfApplications.sdfMessages
       .map((src, _, _, mSize, p, c, tok) =>
         val s = (m.sdfApplications.sdfRepetitionVectors(
           m.sdfApplications.actorsIdentifiers.indexOf(src)
         ) * p + tok) * mSize
-        discreteMemoryValues(s)
+        long2int(s)
       )
       .toArray
     val execTimes = m.wcets
-      .map(ws => ws.map(discreteTimeValues))
+      .map(ws => ws.map(double2int))
       .map(_.toArray)
       .toArray
     val (processMappings, messageMappings, _) = postSingleProcessSingleMessageMemoryConstraints(
       chocoModel,
-      m.sdfApplications.processSizes.map(discreteMemoryValues).toArray,
+      m.sdfApplications.processSizes.map(long2int).toArray,
       messagesSizes,
       m.platform.hardware.tileMemorySizes
-        .map(discreteMemoryValues)
+        .map(long2int)
         .toArray
     )
     val (numVirtualChannelsForProcElem, procElemSendsDataToAnother, messageTravelDuration) =
@@ -96,7 +108,7 @@ final class CanSolveSDFToTiledMultiCore(using logger: Logger)
           .map(mSize =>
             m.platform.hardware.communicationElementsBitPerSecPerChannel
               .map(bw => mSize / bw)
-              .map(discreteTimeValues)
+              .map(double2int)
               .toArray
           )
           .toArray,
@@ -143,7 +155,7 @@ final class CanSolveSDFToTiledMultiCore(using logger: Logger)
       m,
       chocoModel,
       execTimes,
-      m.platform.hardware.maxTraversalTimePerBit.map(_.map(discreteTimeValues).toArray).toArray,
+      m.platform.hardware.maxTraversalTimePerBit.map(_.map(double2int).toArray).toArray,
       numVirtualChannelsForProcElem,
       processMappings,
       jobOrder,
@@ -378,13 +390,21 @@ final class CanSolveSDFToTiledMultiCore(using logger: Logger)
     val timeValues = m.wcets.flatten ++ m.platform.hardware.maxTraversalTimePerBit.flatten
     val memoryValues = m.platform.hardware.tileMemorySizes ++ m.sdfApplications.sdfMessages
       .map((src, _, _, mSize, p, c, tok) => mSize)
-    val (discreteTimeValues, discreteMemoryValues) =
-      computeTimeMultiplierAndMemoryDividerWithResolution(
-        timeValues,
-        memoryValues,
-        if (timeResolution > Int.MaxValue) Int.MaxValue else timeResolution.toInt,
-        if (memoryResolution > Int.MaxValue) Int.MaxValue else memoryResolution.toInt
-      )
+    def int2double(s: Int) = undiscretized(
+      Int.MaxValue / timeValues.size,
+      timeValues.max
+    )(s)
+    def int2long(l: Int) = undiscretized(
+      Int.MaxValue / memoryValues.size,
+      memoryValues.max
+    )(l)
+    // val (discreteTimeValues, discreteMemoryValues) =
+    //   computeTimeMultiplierAndMemoryDividerWithResolution(
+    //     timeValues,
+    //     memoryValues,
+    //     if (timeResolution > Int.MaxValue) Int.MaxValue else timeResolution.toInt,
+    //     if (memoryResolution > Int.MaxValue) Int.MaxValue else memoryResolution.toInt
+    //   )
     val intVars = solution.retrieveIntVars(false).asScala
     val processesMemoryMapping: Vector[IntVar] =
       m.sdfApplications.actorsIdentifiers.zipWithIndex.map((_, a) =>
@@ -415,13 +435,12 @@ final class CanSolveSDFToTiledMultiCore(using logger: Logger)
     // logger.debug(sdfAnalysisModule.invThroughputs.mkString(", "))
     val jobsAndActors =
       m.sdfApplications.jobsAndActors
-    val factor = discreteTimeValues.keySet.max / discreteTimeValues.values.max
     val full = m.copy(
       sdfApplications = m.sdfApplications.copy(minimumActorThrouhgputs =
         invThroughputs.zipWithIndex
           .map((th, i) =>
             (m.sdfApplications
-              .sdfRepetitionVectors(i) * th.getValue().toDouble) * factor
+              .sdfRepetitionVectors(i) * int2double(th.getValue()))
           )
           .toVector
       ),

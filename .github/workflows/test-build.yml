@@ -39,7 +39,7 @@ jobs:
     - name: Build assembly with sbt
       run: |
         cd ${{ github.workspace }}
-        sbt assembly
+        sbt publishModules
   test-rust-build:
     strategy:
       matrix:

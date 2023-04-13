@@ -13,10 +13,6 @@ trait CanParseIdentificationModuleConfiguration {
         .opt[String]('m', "design-path")
         .text("The path where the design models (and headers) are stored.")
         .action((f, mc) =>
-
-
-
-
           mc.copy(designPath = Some(if (f.startsWith("/")) then os.root / os.RelPath(f) else os.pwd / os.RelPath(f)))
         ),
       builder

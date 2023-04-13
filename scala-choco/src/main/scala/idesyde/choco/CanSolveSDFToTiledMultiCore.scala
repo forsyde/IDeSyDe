@@ -71,13 +71,13 @@ final class CanSolveSDFToTiledMultiCore(using logger: Logger)
       if (timeResolution > Int.MaxValue) Int.MaxValue
       else if (timeResolution <= 0L) timeValues.size
       else timeResolution.toInt,
-      timeValues.max
+      timeValues.sum
     )(s)
     def long2int(l: Long) = discretized(
       if (memoryResolution > Int.MaxValue) Int.MaxValue
       else if (memoryResolution <= 0L) memoryValues.size
       else memoryResolution.toInt,
-      memoryValues.max
+      memoryValues.sum
     )(l)
     val messagesSizes = m.sdfApplications.sdfMessages
       .map((src, _, _, mSize, p, c, tok) =>
@@ -394,7 +394,7 @@ final class CanSolveSDFToTiledMultiCore(using logger: Logger)
       if (timeResolution > Int.MaxValue) Int.MaxValue
       else if (timeResolution <= 0L) timeValues.size
       else timeResolution.toInt,
-      timeValues.max
+      timeValues.sum
     )(d)
     // val (discreteTimeValues, discreteMemoryValues) =
     //   computeTimeMultiplierAndMemoryDividerWithResolution(

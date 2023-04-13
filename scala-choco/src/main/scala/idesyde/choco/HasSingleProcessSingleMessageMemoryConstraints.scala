@@ -19,30 +19,15 @@ trait HasSingleProcessSingleMessageMemoryConstraints {
     val vars = chocoModel.getVars()
 
     val messagesMemoryMapping: Array[IntVar] = messages
-      .map(c =>
-        vars
-          .find(_.getName() == s"mapMessage($c)")
-          .getOrElse(chocoModel.intVar(s"mapMessage($c)", memorySet))
-          .asIntVar()
-      )
+      .map(c => chocoModel.intVar(s"mapMessage($c)", memorySet))
       .toArray
 
     val processesMemoryMapping: Array[IntVar] = processes
-      .map(a =>
-        vars
-          .find(_.getName() == s"mapProcess($a)")
-          .getOrElse(chocoModel.intVar(s"mapProcess($a)", memorySet))
-          .asIntVar()
-      )
+      .map(a => chocoModel.intVar(s"mapProcess($a)", memorySet))
       .toArray
 
     val memoryUsage: Array[IntVar] = memorySizes.zipWithIndex
-      .map((m, s) =>
-        vars
-          .find(_.getName() == s"memUsage($s)")
-          .getOrElse(chocoModel.intVar(s"memUsage($s)", 0, m, true))
-          .asIntVar()
-      )
+      .map((m, s) => chocoModel.intVar(s"memUsage($s)", 0, m, true))
 
     chocoModel
       .binPacking(

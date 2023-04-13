@@ -57,9 +57,9 @@ trait HasDiscretizationToIntegers extends HasUtils {
       numT: Numeric[T]
   ): Int = {
     val timeStep = ub / resolution
-    var r        = -1
+    var r        = 0
     for (
-      td <- timeStep to ub by timeStep; if r == -1;
+      td <- timeStep to ub by timeStep; if r == 0;
       if numT.fromInt(td - timeStep) < t && t <= numT.fromInt(td)
     ) {
       r = td

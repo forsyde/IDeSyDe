@@ -46,14 +46,14 @@ struct Args {
         long_help = "Sets the desired maximum number of solutions. \nIf non-positive, there is no litmit. \nThe identification and integration stages are unnafected.",
         group = "exploration"
     )]
-    x_max_solutions: Option<u32>,
+    x_max_solutions: Option<i64>,
 
     #[arg(
         long,
-        help = "Sets the _total exploration_ time-out. \nIf non-positive, there is no time-out.",
-        long_help = "Sets the _total exploration_ time-out. \nIf non-positive, there is no time-out. \nThe identification and integration stages are unnafected."
+        help = "Sets the _total exploration_ time-out in seconds. \nIf non-positive, there is no time-out.",
+        long_help = "Sets the _total exploration_ time-out in seconds. \nIf non-positive, there is no time-out. \nThe identification and integration stages are unnafected."
     )]
-    x_total_time_out: Option<u64>,
+    x_total_time_out: Option<i64>,
 
     #[arg(
         long,
@@ -220,8 +220,8 @@ fn main() {
             for (i, sol) in exp
                 .explore(
                     &decision_model,
-                    0,
-                    0,
+                    args.x_max_solutions.unwrap_or(0),
+                    args.x_total_time_out.unwrap_or(0),
                     args.x_time_resolution.unwrap_or(-1),
                     args.x_memory_resolution.unwrap_or(-1),
                 )

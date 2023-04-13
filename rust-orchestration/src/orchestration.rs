@@ -213,8 +213,8 @@ impl ExplorationModule for ExternalExplorationModule {
     fn explore(
         &self,
         m: &Box<dyn idesyde_core::DecisionModel>,
-        max_sols: u64,
-        total_timeout: u64,
+        max_sols: i64,
+        total_timeout: i64,
         time_resolution: i64,
         memory_resolution: i64,
     ) -> Box<dyn Iterator<Item = Box<dyn DecisionModel>>> {

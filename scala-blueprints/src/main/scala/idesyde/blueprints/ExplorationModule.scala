@@ -71,7 +71,7 @@ trait ExplorationModule
         )
         .headOption
     nonDominated match {
-      case Some(e) => e.explore(decisionModel, totalExplorationTimeOutInSecs, maximumSolutions)
+      case Some(e) => e.explore(decisionModel, totalExplorationTimeOutInSecs, maximumSolutions, timeDiscretizationFactor, memoryDiscretizationFactor)
       case None    => LazyList.empty
     }
   }
@@ -96,7 +96,7 @@ trait ExplorationModule
             val header = readBinary[DecisionModelHeader](os.read.bytes(decisionModelToExplore))
             decodeDecisionModels(header) match {
               case Some(m) =>
-                explore(m, explorationTotalTimeOutInSecs).zipWithIndex.foreach((solved, idx) => {
+                explore(m, explorationTotalTimeOutInSecs, maximumSolutions, timeResolution.getOrElse(-1L), memoryResolution.getOrElse(-1L)).zipWithIndex.foreach((solved, idx) => {
                   val (hPath, bPath) =
                     solved.writeToPath(solutionPath, f"$idx%016d", uniqueIdentifier)
                   println(hPath.get)

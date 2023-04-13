@@ -69,15 +69,15 @@ final class CanSolveSDFToTiledMultiCore(using logger: Logger)
     //   )
     def double2int(s: Double) = discretized(
       if (timeResolution > Int.MaxValue) Int.MaxValue
-      else if (timeResolution <= 0L) timeValues.size
+      else if (timeResolution <= 0L) timeValues.size * 100
       else timeResolution.toInt,
       timeValues.sum
     )(s)
     def long2int(l: Long) = discretized(
       if (memoryResolution > Int.MaxValue) Int.MaxValue
-      else if (memoryResolution <= 0L) memoryValues.size
+      else if (memoryResolution <= 0L) memoryValues.size * 100
       else memoryResolution.toInt,
-      memoryValues.sum
+      memoryValues.max
     )(l)
     val messagesSizes = m.sdfApplications.sdfMessages
       .map((src, _, _, mSize, p, c, tok) =>
@@ -546,8 +546,8 @@ final class CanSolveSDFToTiledMultiCore(using logger: Logger)
         (jobMapping(i).isInstantiated() && jobMapping(j).isInstantiated() && jobMapping(i)
           .getValue() == jobMapping(j).getValue() && jobOrder(j)
           .getUB() == 0 && jobOrder(i).getLB() > 0)
-    var ths = jobWeights.zipWithIndex
-      .map((t, ai) => 1.0 / (m.sdfApplications.sdfRepetitionVectors(ai).toDouble * t))
+    var ths = m.wcets.zipWithIndex
+      .map((w, ai) => 1.0 / (m.sdfApplications.sdfRepetitionVectors(ai).toDouble * w.min))
       .toBuffer
     val nJobs                 = jobsAndActors.size
     val minimumDistanceMatrix = jobWeights.toBuffer

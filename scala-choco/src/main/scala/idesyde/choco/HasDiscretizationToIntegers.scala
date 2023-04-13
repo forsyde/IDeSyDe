@@ -7,60 +7,13 @@ import idesyde.utils.HasUtils
 
 trait HasDiscretizationToIntegers extends HasUtils {
 
-  def computeTimeMultiplierAndMemoryDividerWithResolution[T, M](
-      timeValues: Vector[T],
-      memoryValues: Vector[M],
-      timeResolution: Int = -1,
-      memoryResolution: Int = -1
-  )(using
-      numT: Numeric[T]
-  )(using numM: Numeric[M]): (Map[T, Int], Map[M, Int]) = {
-    // section for time multiplier calculation
-    // if there is a 1e3 scale difference between execution and communication, we consider only execution for scaling
-    val maxTime = Int.MaxValue / timeValues.size - 1
-    val timeStep =
-      if (timeResolution > 0) maxTime / timeResolution else maxTime / timeValues.size / 100
-    val discreteTimes = timeValues
-      .map(t => {
-        var r = -1
-        for (
-          td <- timeStep to maxTime by timeStep; if r == -1;
-          if numT.fromInt(td - timeStep) < t && t <= numT.fromInt(td)
-        ) {
-          r = td
-        }
-        t -> r
-      })
-      .toMap
-
-    // do the same for memory numbers
-    val maxMemory = Int.MaxValue / memoryValues.size - 1
-    val memStep =
-      if (memoryResolution > 0) maxMemory / memoryResolution
-      else maxMemory / memoryValues.size / 100
-    val discreteMemory = memoryValues
-      .map(m => {
-        var r = -1
-        for (
-          md <- memStep to maxMemory by memStep; if r == -1;
-          if numM.fromInt(md - memStep) < m && m <= numM.fromInt(md)
-        ) {
-          r = md
-        }
-        m -> r
-      })
-      .toMap
-    (discreteTimes, discreteMemory)
-  }
-
   def discretized[T](resolution: Int, maxT: T)(t: T)(using
       numT: Numeric[T]
-  ): Int = {
-    val timeStep = maxT.toDouble / resolution.toDouble
+  )(using fracT: Fractional[T]): Int = {
+    val step = fracT.div(maxT, numT.fromInt(resolution))
     // println((resolution, ub))
-    var r       = 0
-    val tDouble = t.toDouble
-    while (r.toDouble * timeStep < tDouble) {
+    var r = 0
+    while (numT.fromInt(r) * step < t) {
       r += 1
     }
     r
@@ -71,5 +24,36 @@ trait HasDiscretizationToIntegers extends HasUtils {
   )(using fracT: Fractional[T]): T = {
     val step = fracT.div(maxT, numT.fromInt(resolution))
     numT.times(numT.fromInt(td), step)
+  }
+}
+
+object HasDiscretizationToIntegers {
+
+  val longFractional = new Fractional[Long] {
+
+    override def div(x: Long, y: Long): Long = Math.floorDiv(x, y)
+
+    override def minus(x: Long, y: Long): Long = x - y
+
+    override def compare(x: Long, y: Long): Int = x.compare(y)
+
+    override def plus(x: Long, y: Long): Long = x + y
+
+    override def fromInt(x: Int): Long = x.asInstanceOf[Long]
+
+    override def toDouble(x: Long): Double = x.toDouble
+
+    override def negate(x: Long): Long = -x
+
+    override def toLong(x: Long): Long = x
+
+    override def toFloat(x: Long): Float = x.toFloat
+
+    override def parseString(str: String): Option[Long] = None
+
+    override def times(x: Long, y: Long): Long = x * y
+
+    override def toInt(x: Long): Int = x.toInt
+
   }
 }

@@ -39,6 +39,7 @@ import org.jgrapht.graph.DefaultDirectedGraph
 import scala.collection.mutable.Stack
 import idesyde.utils.HasUtils
 import idesyde.choco.HasDiscretizationToIntegers
+import idesyde.choco.HasDiscretizationToIntegers.longFractional
 
 final class CanSolveSDFToTiledMultiCore(using logger: Logger)
     extends ChocoExplorable[SDFToTiledMultiCore]
@@ -73,6 +74,7 @@ final class CanSolveSDFToTiledMultiCore(using logger: Logger)
       else timeResolution.toInt,
       timeValues.sum
     )(s)
+    given Fractional[Long] = longFractional
     def long2int(l: Long) = discretized(
       if (memoryResolution > Int.MaxValue) Int.MaxValue
       else if (memoryResolution <= 0L) memoryValues.size * 100
@@ -304,10 +306,6 @@ final class CanSolveSDFToTiledMultiCore(using logger: Logger)
       invThroughputs: Array[IntVar],
       nUsedPEs: IntVar
   ): Array[AbstractStrategy[? <: Variable]] = {
-    val (timeMultiplier, _) = computeTimeMultiplierAndMemoryDividerWithResolution(
-      m.platform.hardware.minTraversalTimePerBit.flatten ++ m.wcets.flatten,
-      m.platform.hardware.tileMemorySizes
-    )
     val jobsAndActors =
       m.sdfApplications.firingsPrecedenceGraph.nodes
         .map(v => v.value)
@@ -392,7 +390,7 @@ final class CanSolveSDFToTiledMultiCore(using logger: Logger)
       .map((src, _, _, mSize, p, c, tok) => mSize)
     def int2double(d: Int) = undiscretized(
       if (timeResolution > Int.MaxValue) Int.MaxValue
-      else if (timeResolution <= 0L) timeValues.size
+      else if (timeResolution <= 0L) timeValues.size * 100
       else timeResolution.toInt,
       timeValues.sum
     )(d)

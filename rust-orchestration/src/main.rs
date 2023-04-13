@@ -3,7 +3,7 @@ use std::{fs, path::Path};
 use clap::Parser;
 use env_logger::WriteStyle;
 use idesyde_core::{DecisionModel, DesignModel, ExplorationModule, IdentificationModule};
-use log::{debug, info, Level, LevelFilter};
+use log::{debug, info, Level};
 
 use crate::orchestration::compute_dominant_combinations;
 
@@ -86,6 +86,7 @@ fn main() {
         .target(env_logger::Target::Stdout)
         .filter(None, verbosity.to_level_filter())
         .write_style(WriteStyle::Always)
+        .format_module_path(false)
         .init();
     if args.inputs.len() > 0 {
         // let mut hasher = sha3::Sha3_224::new();
@@ -216,6 +217,7 @@ fn main() {
             (None, Some(n)) => info!("Starting exploration up to {} solutions.", n),
             (None, None) => info!("Starting exploration until completion."),
         }
+        let mut sols_found = 0;
         if let Some((exp, decision_model)) = dominant.first() {
             for (i, sol) in exp
                 .explore(
@@ -227,6 +229,7 @@ fn main() {
                 )
                 .enumerate()
             {
+                sols_found += 1;
                 debug!("Found a new solution. Total count is {}.", i + 1);
                 for imodule in &imodules {
                     for design_model in &design_models {
@@ -242,6 +245,7 @@ fn main() {
                 }
             }
         }
+        info!("Finished exploration with {} solution(s).", sols_found)
     } else {
         info!("At least one input design model is necessary")
     }

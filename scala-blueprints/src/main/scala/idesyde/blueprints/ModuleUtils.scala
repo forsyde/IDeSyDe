@@ -7,16 +7,39 @@ import idesyde.core.CompleteDecisionModel
 import idesyde.core.DesignModel
 import idesyde.core.headers.DesignModelHeader
 import idesyde.core.headers.DecisionModelHeader
+import os.PathError
 
 trait ModuleUtils {
 
   def decodeFromPath[T: ReadWriter](p: String): Option[T] = {
-    if (p.endsWith(".msgpack") && !p.startsWith("/")) Some(readBinary[T](os.read.bytes(os.pwd / os.RelPath(p))))
-    else if (p.endsWith(".msgpack") && p.startsWith("/"))
-      Some(readBinary[T](os.read.bytes(os.root / os.RelPath(p.substring(1)))))
-    else if (p.endsWith(".json") && !p.startsWith("/")) Some(read[T](os.read(os.pwd / os.RelPath(p))))
-    else if (p.endsWith(".json") && p.startsWith("/")) Some(read[T](os.read(os.root / os.RelPath(p.substring(1)))))
-    else None
+    var decoded: Option[T] = None
+    try {
+      if (p.endsWith(".msgpack"))
+        decoded = Some(readBinary[T](os.read.bytes(os.pwd / os.RelPath(p))))
+      else if (p.endsWith(".json"))
+        decoded = Some(read[T](os.read(os.pwd / os.RelPath(p))))
+    } catch {
+      case err: IllegalArgumentException =>
+        if (p.endsWith(".msgpack"))
+          decoded = Some(readBinary[T](os.read.bytes(os.Path(p))))
+        else if (p.endsWith(".json"))
+          decoded = Some(read[T](os.read(os.Path(p))))
+      case err: PathError.NoRelativePath =>
+        if (p.endsWith(".msgpack"))
+          decoded = Some(readBinary[T](os.read.bytes(os.Path(p))))
+        else if (p.endsWith(".json"))
+          decoded = Some(read[T](os.read(os.Path(p))))
+    }
+    decoded
+    // if (p.endsWith(".msgpack") && !p.startsWith("/"))
+    //   Some(readBinary[T](os.read.bytes(os.pwd / os.RelPath(p))))
+    // else if (p.endsWith(".msgpack") && p.startsWith("/"))
+    //   Some(readBinary[T](os.read.bytes(os.root / os.RelPath(p.substring(1)))))
+    // else if (p.endsWith(".json") && !p.startsWith("/"))
+    //   Some(read[T](os.read(os.pwd / os.RelPath(p))))
+    // else if (p.endsWith(".json") && p.startsWith("/"))
+    //   Some(read[T](os.read(os.root / os.RelPath(p.substring(1)))))
+    // else None
   }
 
   extension (m: DesignModel)

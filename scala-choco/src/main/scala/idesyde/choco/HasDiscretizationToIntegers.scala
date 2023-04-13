@@ -53,23 +53,23 @@ trait HasDiscretizationToIntegers extends HasUtils {
     (discreteTimes, discreteMemory)
   }
 
-  def discretized[T](resolution: Int, ub: Int)(t: T)(using
+  def discretized[T](resolution: Int, maxT: T)(t: T)(using
       numT: Numeric[T]
   ): Int = {
-    val timeStep = ub / resolution
-    var r        = 0
-    for (
-      td <- timeStep to ub by timeStep; if r == 0;
-      if numT.fromInt(td - timeStep) < t && t <= numT.fromInt(td)
-    ) {
-      r = td
+    val timeStep = maxT.toDouble / resolution.toDouble
+    // println((resolution, ub))
+    var r       = 0
+    val tDouble = t.toDouble
+    while (r.toDouble * timeStep < tDouble) {
+      r += 1
     }
     r
   }
 
-  def undiscretized[T](ub: Int, maxT: T)(td: Int)(using
+  def undiscretized[T](resolution: Int, maxT: T)(td: Int)(using
       numT: Numeric[T]
-  ): T = {
-    numT.fromInt(td * maxT.toInt / ub)
+  )(using fracT: Fractional[T]): T = {
+    val step = fracT.div(maxT, numT.fromInt(resolution))
+    numT.times(numT.fromInt(td), step)
   }
 }

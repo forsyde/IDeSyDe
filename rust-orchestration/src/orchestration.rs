@@ -15,7 +15,6 @@ use idesyde_core::DesignModelHeader;
 use idesyde_core::ExplorationCombinationDescription;
 use idesyde_core::ExplorationModule;
 use idesyde_core::IdentificationModule;
-use log::debug;
 
 #[derive(Debug, PartialEq, Eq, Hash)]
 pub struct ExternalIdentificationModule {

@@ -69,15 +69,15 @@ final class CanSolveSDFToTiledMultiCore(using logger: Logger)
     //   )
     def double2int(s: Double) = discretized(
       if (timeResolution > Int.MaxValue) Int.MaxValue
-      else if (timeResolution <= 0L) timeValues.size * 100
+      else if (timeResolution <= 0L) timeValues.size
       else timeResolution.toInt,
-      Int.MaxValue / timeValues.size
+      timeValues.max
     )(s)
     def long2int(l: Long) = discretized(
       if (memoryResolution > Int.MaxValue) Int.MaxValue
-      else if (memoryResolution <= 0L) memoryValues.size * 100
+      else if (memoryResolution <= 0L) memoryValues.size
       else memoryResolution.toInt,
-      Int.MaxValue / memoryValues.size
+      memoryValues.max
     )(l)
     val messagesSizes = m.sdfApplications.sdfMessages
       .map((src, _, _, mSize, p, c, tok) =>
@@ -390,14 +390,12 @@ final class CanSolveSDFToTiledMultiCore(using logger: Logger)
     val timeValues = m.wcets.flatten ++ m.platform.hardware.maxTraversalTimePerBit.flatten
     val memoryValues = m.platform.hardware.tileMemorySizes ++ m.sdfApplications.sdfMessages
       .map((src, _, _, mSize, p, c, tok) => mSize)
-    def int2double(s: Int) = undiscretized(
-      Int.MaxValue / timeValues.size,
+    def int2double(d: Int) = undiscretized(
+      if (timeResolution > Int.MaxValue) Int.MaxValue
+      else if (timeResolution <= 0L) timeValues.size
+      else timeResolution.toInt,
       timeValues.max
-    )(s)
-    def int2long(l: Int) = undiscretized(
-      Int.MaxValue / memoryValues.size,
-      memoryValues.max
-    )(l)
+    )(d)
     // val (discreteTimeValues, discreteMemoryValues) =
     //   computeTimeMultiplierAndMemoryDividerWithResolution(
     //     timeValues,
@@ -438,9 +436,10 @@ final class CanSolveSDFToTiledMultiCore(using logger: Logger)
     val full = m.copy(
       sdfApplications = m.sdfApplications.copy(minimumActorThrouhgputs =
         invThroughputs.zipWithIndex
-          .map((th, i) =>
-            (m.sdfApplications
-              .sdfRepetitionVectors(i) * int2double(th.getValue()))
+          .map((invTh, i) =>
+            1.0 / (m.sdfApplications
+              .sdfRepetitionVectors(i)
+              .toDouble * int2double(invTh.getValue()))
           )
           .toVector
       ),
@@ -547,9 +546,11 @@ final class CanSolveSDFToTiledMultiCore(using logger: Logger)
         (jobMapping(i).isInstantiated() && jobMapping(j).isInstantiated() && jobMapping(i)
           .getValue() == jobMapping(j).getValue() && jobOrder(j)
           .getUB() == 0 && jobOrder(i).getLB() > 0)
-    var ths   = Buffer.fill(m.sdfApplications.actorsIdentifiers.size)(Double.PositiveInfinity)
-    val nJobs = jobsAndActors.size
-    val minimumDistanceMatrix = Buffer.fill(nJobs)(0.0)
+    var ths = jobWeights.zipWithIndex
+      .map((t, ai) => 1.0 / (m.sdfApplications.sdfRepetitionVectors(ai).toDouble * t))
+      .toBuffer
+    val nJobs                 = jobsAndActors.size
+    val minimumDistanceMatrix = jobWeights.toBuffer
     var dfsStack              = new Stack[Int](initialSize = nJobs)
     val visited               = Buffer.fill(nJobs)(false)
     val previous              = Buffer.fill(nJobs)(-1)
@@ -601,8 +602,19 @@ final class CanSolveSDFToTiledMultiCore(using logger: Logger)
       }
       val (a, _) = jobsAndActors(src)
       val adx    = m.sdfApplications.actorsIdentifiers.indexOf(a)
-      val th     = 1.0 / (m.sdfApplications.sdfRepetitionVectors(adx) * minimumDistanceMatrix(src))
-      if (ths(adx) > th) ths(adx) = th
+      val th =
+        1.0 / (m.sdfApplications.sdfRepetitionVectors(adx).toDouble * minimumDistanceMatrix(src))
+      if (minimumDistanceMatrix(src) > Double.NegativeInfinity && ths(adx) > th) ths(adx) = th
+    }
+    for (
+      group <- m.sdfApplications.sdfDisjointComponents; a1 <- group; a2 <- group; if a1 != a2;
+      a1i = m.sdfApplications.actorsIdentifiers.indexOf(a1);
+      a2i = m.sdfApplications.actorsIdentifiers.indexOf(a2);
+      qa1 = m.sdfApplications.sdfRepetitionVectors(a1i);
+      qa2 = m.sdfApplications.sdfRepetitionVectors(a2i)
+    ) {
+      ths(a1i) = Math.min(ths(a1i) * qa1, ths(a2i) * qa2) / qa1
+      ths(a2i) = Math.min(ths(a1i) * qa1, ths(a2i) * qa2) / qa2
     }
     ths.toVector
   }

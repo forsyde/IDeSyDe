@@ -11,11 +11,11 @@ import idesyde.core.headers.DecisionModelHeader
 trait ModuleUtils {
 
   def decodeFromPath[T: ReadWriter](p: String): Option[T] = {
-    if (p.endsWith(".msgpack") && !p.startsWith("/")) Some(readBinary[T](os.read.bytes(os.pwd / p)))
+    if (p.endsWith(".msgpack") && !p.startsWith("/")) Some(readBinary[T](os.read.bytes(os.pwd / os.RelPath(p))))
     else if (p.endsWith(".msgpack") && p.startsWith("/"))
-      Some(readBinary[T](os.read.bytes(os.root / p)))
-    else if (p.endsWith(".json") && !p.startsWith("/")) Some(read[T](os.read(os.pwd / p)))
-    else if (p.endsWith(".json") && p.startsWith("/")) Some(read[T](os.read(os.root / p)))
+      Some(readBinary[T](os.read.bytes(os.root / os.RelPath(p.substring(1)))))
+    else if (p.endsWith(".json") && !p.startsWith("/")) Some(read[T](os.read(os.pwd / os.RelPath(p))))
+    else if (p.endsWith(".json") && p.startsWith("/")) Some(read[T](os.read(os.root / os.RelPath(p.substring(1)))))
     else None
   }
 

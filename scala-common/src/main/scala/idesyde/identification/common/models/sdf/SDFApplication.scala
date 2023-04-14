@@ -40,7 +40,7 @@ import idesyde.core.CompleteDecisionModel
   *   the produced or consumed tokens for each edge triple in the SDF graph.
   * @param actorSizes
   *   the size in bits for each actor's instruction(s)
-  * @param minimumActorThrouhgputs
+  * @param minimumActorThroughputs
   *   the fixed throughput expected to be done for each actor, given in executions per second.
   *
   * @see
@@ -56,7 +56,7 @@ final case class SDFApplication(
     val actorComputationalNeeds: Vector[Map[String, Map[String, Long]]],
     val channelNumInitialTokens: Vector[Int],
     val channelTokenSizes: Vector[Long],
-    val minimumActorThrouhgputs: Vector[Double]
+    val minimumActorThroughputs: Vector[Double]
 ) extends StandardDecisionModel
     with ParametricRateDataflowWorkloadMixin
     with InstrumentedWorkloadMixin

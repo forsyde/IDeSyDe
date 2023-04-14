@@ -432,7 +432,7 @@ final class CanSolveSDFToTiledMultiCore(using logger: Logger)
     val jobsAndActors =
       m.sdfApplications.jobsAndActors
     val full = m.copy(
-      sdfApplications = m.sdfApplications.copy(minimumActorThrouhgputs =
+      sdfApplications = m.sdfApplications.copy(minimumActorThroughputs =
         invThroughputs.zipWithIndex
           .map((invTh, i) =>
             1.0 / (m.sdfApplications

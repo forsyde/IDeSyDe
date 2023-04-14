@@ -420,47 +420,60 @@ pub fn find_exploration_modules(
 pub fn identification_procedure(
     imodules: &Vec<Box<dyn IdentificationModule>>,
     design_models: &Vec<Box<dyn DesignModel>>,
-    pre_identified: &Vec<Box<dyn DecisionModel>>,
+    pre_identified: &mut Vec<Box<dyn DecisionModel>>,
 ) -> Vec<Box<dyn DecisionModel>> {
     let mut step = pre_identified.len() as i32;
     let mut fix_point = false;
     let mut identified: Vec<Box<dyn DecisionModel>> = Vec::new();
+    identified.append(pre_identified);
     while !fix_point {
         fix_point = true;
         for imodule in imodules {
-            let mut potential = imodule.identification_step(step, &design_models, &identified);
-            potential.retain(|m| !identified.contains(m));
-            if potential.len() > 0 {
-                fix_point = fix_point && false;
-            }
+            let potential = imodule.identification_step(step, &design_models, &identified);
+            let mut added = 0;
+            // potential.retain(|m| !identified.contains(m));
             for m in potential {
-                // if let Some(b_path_str) = &m.header().body_path.first() {
-                //     let b_path = Path::new(b_path_str);
-                //     std::fs::remove_file(b_path)
-                //         .expect("Failed to remove redundant decision model body");
-                // };
-                identified.push(m);
+                if !identified.contains(&m) {
+                    identified.push(m);
+                    added += 1;
+                }
             }
+            fix_point = fix_point && (added == 0);
         }
         step += 1;
     }
     identified
 }
 
+pub fn compute_dominant_decision_models<'a>(
+    decision_models: &'a Vec<&'a Box<dyn DecisionModel>>,
+) -> Vec<&'a Box<dyn DecisionModel>> {
+    decision_models
+        .into_iter()
+        .filter(|m| {
+            decision_models.iter().all(|o| match m.partial_cmp(&o) {
+                Some(Ordering::Greater) | Some(Ordering::Equal) | None => true,
+                _ => false,
+            })
+        })
+        .map(|o| o.to_owned())
+        .collect()
+}
+
 pub fn compute_dominant_combinations<'a>(
     exploration_modules: &'a Vec<Box<dyn ExplorationModule>>,
-    decision_models: &'a Vec<Box<dyn DecisionModel>>,
+    decision_models: &'a Vec<&'a Box<dyn DecisionModel>>,
 ) -> Vec<(&'a Box<dyn ExplorationModule>, &'a Box<dyn DecisionModel>)> {
     let combinations: Vec<(
         &Box<dyn ExplorationModule>,
         &Box<dyn DecisionModel>,
         ExplorationCombinationDescription,
     )> = exploration_modules
-        .into_iter()
+        .iter()
         .flat_map(|exp| {
             decision_models
                 .iter()
-                .map(move |m| (exp, m, exp.get_combination(m)))
+                .map(move |m| (exp, *m, exp.get_combination(m)))
         })
         .filter(|(_, _, c)| c.can_explore)
         .collect();

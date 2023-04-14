@@ -8,7 +8,28 @@ case class LabelledArcWithPorts(
     val label: Option[String] = None,
     val dst: String,
     val dst_port: Option[String] = None
-)
+) {
+  override def equals(x: Any): Boolean = x match {
+    case LabelledArcWithPorts(osrc, osrc_port, olabel, odst, odst_port) =>
+      src == osrc &&
+        dst == odst &&
+        ((src_port, osrc_port) match {
+          case (Some(a), Some(b)) => true
+          case (None, None)       => true
+          case _                  => false
+        }) &&
+        ((dst_port, odst_port) match {
+          case (Some(a), Some(b)) => true
+          case (None, None)       => true
+          case _                  => false
+        }) &&
+        ((label, olabel) match {
+          case (Some(a), Some(b)) => true
+          case (None, None)       => true
+          case _                  => false
+        })
+  }
+}
 
 object LabelledArcWithPorts {
   def conv(x: LabelledArcWithPorts): ujson.Value = ujson.Obj(

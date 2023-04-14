@@ -1,11 +1,14 @@
-use std::{fs, path::Path};
+use std::{cmp::Ordering, fs, path::Path};
 
 use clap::Parser;
 use env_logger::WriteStyle;
 use idesyde_core::{DecisionModel, DesignModel, ExplorationModule, IdentificationModule};
-use log::{debug, error, info, Level};
+use log::{debug, error, info, warn, Level};
 
-use crate::orchestration::compute_dominant_combinations;
+use crate::orchestration::{
+    compute_dominant_combinations, compute_dominant_decision_models,
+    load_decision_model_headers_from_binary,
+};
 
 pub mod orchestration;
 
@@ -190,20 +193,50 @@ fn main() {
             .iter()
             .map(|h| Box::new(h.to_owned()) as Box<dyn DesignModel>)
             .collect();
-        let mut identified: Vec<Box<dyn DecisionModel>> =
+        let mut pre_identified: Vec<Box<dyn DecisionModel>> =
             orchestration::load_decision_model_headers_from_binary(&identified_path)
                 .iter()
                 .map(|(_, h)| Box::new(h.to_owned()) as Box<dyn DecisionModel>)
                 .collect();
-        let mut new_identified =
-            orchestration::identification_procedure(&imodules, &design_models, &identified);
-        identified.append(&mut new_identified);
+        let identified =
+            orchestration::identification_procedure(&imodules, &design_models, &mut pre_identified);
         info!("Identified {} decision model(s)", identified.len());
+        let identified_refs = identified.iter().collect();
 
-        let dominant = compute_dominant_combinations(&emodules, &identified);
+        let dominant = compute_dominant_decision_models(&identified_refs);
+        info!("Kept {} dominant decision model(s)", dominant.len());
+        for (p, m) in load_decision_model_headers_from_binary(&identified_path) {
+            if dominant.iter().all(|dom| {
+                dom.header()
+                    .partial_cmp(&m)
+                    .map(|x| x == Ordering::Greater)
+                    .unwrap_or(false)
+            }) {
+                // m is domianted, proceed to delete its files
+                if let Some(bp) = m.header().body_path {
+                    let jbp = Path::new(&bp).with_extension("json");
+                    match std::fs::remove_file(jbp) {
+                        Err(_) => {
+                            warn!("Tried removing JSON decision model body but failed",)
+                        }
+                        _ => (),
+                    };
+                    std::fs::remove_file(bp).expect("Failed to remove body path of dominated decision model during identification. This is a benign error. Continuing");
+                }
+                match std::fs::remove_file(Path::new(&p.with_extension("json"))) {
+                    Err(_) => warn!("Tried remove a JSON decision model header but failed. This is a benign error. Continuing"),
+                    _ => (),
+                };
+                std::fs::remove_file(p).expect(
+                    "Failed to remove header of dominated decision model during identification",
+                );
+            }
+        }
+
+        let dominant_combinations = compute_dominant_combinations(&emodules, &dominant);
         info!(
             "Computed {} dominant explorer and decision model combination(s) ",
-            dominant.len()
+            dominant_combinations.len()
         );
 
         // for (i, (e, m)) in dominant.iter().enumerate() {
@@ -224,7 +257,7 @@ fn main() {
             (None, None) => info!("Starting exploration until completion."),
         }
         let mut sols_found = 0;
-        if let Some((exp, decision_model)) = dominant.first() {
+        if let Some((exp, decision_model)) = dominant_combinations.first() {
             for (i, sol) in exp
                 .explore(
                     &decision_model,

@@ -65,8 +65,6 @@ jobs:
     needs: [build-windows-rust, build-jars-scala]
     steps:
     - uses: actions/checkout@v2
-    - id: get_version
-      uses: battila7/get-version-action@v2
     - name: Get cached rust
       uses: actions/cache@v2
       with:
@@ -88,17 +86,15 @@ jobs:
       with:
         repo_token: ${{ secrets.GITHUB_TOKEN }}
         file: ${{ github.workspace }}\idesyde-windows-amd64.zip
-        asset_name: idesyde-windows-amd64-${{ steps.get_version.outputs.version-without-v }}.zip
+        asset_name: idesyde-windows-amd64.zip
         tag: "${{ github.ref }}"
         overwrite: true
         body: "Executable IDeSyDe standalone EXE"
   publish-linux-all:
     runs-on: ubuntu-latest
-    needs: [build-windows-rust, build-jars-scala]
+    needs: [build-linux-rust, build-jars-scala]
     steps:
     - uses: actions/checkout@v2
-    - id: get_version
-      uses: battila7/get-version-action@v2
     - name: Get cached rust
       uses: actions/cache@v2
       with:
@@ -114,13 +110,13 @@ jobs:
     - name: Make zip
       run: |
         cd ${{ github.workspace }}
-        Compress-Archive idesyde,emodules,imodules idesyde-linux-amd64.zip
+        zip -r idesyde-linux-amd64 idesyde imodules emodules
     - name: Upload binaries to release
       uses: svenstaro/upload-release-action@v2
       with:
         repo_token: ${{ secrets.GITHUB_TOKEN }}
         file: ${{ github.workspace }}\idesyde-linux-amd64.zip
-        asset_name: idesyde-linux-amd64-${{ steps.get_version.outputs.version-without-v }}.zip
+        asset_name: idesyde-linux-amd64.zip
         tag: "${{ github.ref }}"
         overwrite: true
         body: "Executable IDeSyDe standalone EXE"

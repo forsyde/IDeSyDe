@@ -41,7 +41,7 @@ jobs:
       with:
         path: ${{ github.workspace }}/idesyde
         key: ${{ github.ref }}-${{ runner.os }}-rust-orchestration
-  build-jars-scala:
+  build-jars-linux-scala:
     runs-on: ubuntu-latest
     steps:
     - uses: actions/checkout@v2
@@ -59,10 +59,29 @@ jobs:
         path: |
           ${{ github.workspace }}/imodules/*.jar
           ${{ github.workspace }}/emodules/*.jar
-        key: ${{ github.ref }}-scala-modules-jar
+        key: ${{ github.ref }}-linux-scala-modules-jar
+  build-jars-windows-scala:
+    runs-on: windows-latest
+    steps:
+    - uses: actions/checkout@v2
+    - name: Set up Scala 
+      uses: olafurpg/setup-scala@v11
+      with:
+        java-version: "amazon-corretto@1.11.0-11.9.1"
+    - name: Build assemblies with sbt
+      run: |
+        cd ${{ github.workspace }}
+        sbt publishModules
+    - name: Cache scala
+      uses: actions/cache@v2
+      with:
+        path: |
+          ${{ github.workspace }}\imodules\*.jar
+          ${{ github.workspace }}\emodules\*.jar
+        key: ${{ github.ref }}-windows-scala-modules-jar
   publish-windows-all:
     runs-on: windows-latest
-    needs: [build-windows-rust, build-jars-scala]
+    needs: [build-windows-rust, build-jars-windows-scala]
     steps:
     - uses: actions/checkout@v2
     - name: Get cached rust
@@ -74,9 +93,9 @@ jobs:
       uses: actions/cache@v2
       with:
         path: |
-          ${{ github.workspace }}/imodules/*.jar
-          ${{ github.workspace }}/emodules/*.jar
-        key: ${{ github.ref }}-scala-modules-jar
+          ${{ github.workspace }}\imodules\*.jar
+          ${{ github.workspace }}\emodules\*.jar
+        key: ${{ github.ref }}-windows-scala-modules-jar
     - name: Make zip
       run: |
         cd ${{ github.workspace }}
@@ -89,7 +108,6 @@ jobs:
         asset_name: idesyde-windows-amd64.zip
         tag: "${{ github.ref }}"
         overwrite: true
-        body: "Executable IDeSyDe standalone EXE"
   publish-linux-all:
     runs-on: ubuntu-latest
     needs: [build-linux-rust, build-jars-scala]
@@ -106,11 +124,11 @@ jobs:
         path: |
           ${{ github.workspace }}/imodules/*.jar
           ${{ github.workspace }}/emodules/*.jar
-        key: ${{ github.ref }}-scala-modules-jar
+        key: ${{ github.ref }}-linux-scala-modules-jar
     - name: Make zip
       run: |
         cd ${{ github.workspace }}
-        zip -r idesyde-linux-amd64 idesyde imodules emodules
+        zip -r idesyde-linux-amd64.zip idesyde imodules emodules
     - name: Upload binaries to release
       uses: svenstaro/upload-release-action@v2
       with:
@@ -119,27 +137,3 @@ jobs:
         asset_name: idesyde-linux-amd64.zip
         tag: "${{ github.ref }}"
         overwrite: true
-        body: "Executable IDeSyDe standalone EXE"
-  # publish-linux-build:
-  #   runs-on: ubuntu-latest
-  #   steps:
-  #   - uses: actions/checkout@v2
-  #   - id: get_version
-  #     uses: battila7/get-version-action@v2
-  #   - name: Set up JDK 
-  #     uses: olafurpg/setup-scala@v11
-  #     with:
-  #       java-version: "amazon-corretto@1.11.0-11.9.1"
-  #   - name: Build assembly with sbt
-  #     run: |
-  #       cd ${{ github.workspace }}
-  #       sbt "Universal / packageBin"
-  #   - name: Upload binaries to release
-  #     uses: svenstaro/upload-release-action@v2
-  #     with:
-  #       repo_token: ${{ secrets.GITHUB_TOKEN }}
-  #       file: ${{ github.workspace }}/scala-cli/target/universal/cli-${{ steps.get_version.outputs.version-without-v }}.zip
-  #       asset_name: idesyde-${{ steps.get_version.outputs.version-without-v }}-linux.zip
-  #       tag: "${{ github.ref }}"
-  #       overwrite: true
-  #       body: "Executable IDeSyDe standalone linux ZIP"

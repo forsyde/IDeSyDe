@@ -1,0 +1,170 @@
+<?xml version="1.0"?>
+<sdf3 xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" version="1.0" type="sdf" xsi:noNamespaceSchemaLocation="http://www.es.ele.tue.nl/sdf3/xsd/sdf3-sdf.xsd">
+  <applicationGraph name="c_rasta">
+    <sdf name="c_rasta" type="RASTA">
+      <actor name="frontEnd" type="FrontEnd">
+        <port name="p0_0" type="out" rate="1"/>
+        <port name="p1_0" type="out" rate="1"/>
+        <port name="p2_0" type="out" rate="1"/>
+        <port name="p3_0" type="out" rate="1"/>
+      </actor>
+      <actor name="rasta" type="Rasta">
+        <port name="p0_0" type="in" rate="1"/>
+        <port name="p1_0" type="in" rate="1"/>
+        <port name="p2_0" type="out" rate="1"/>
+        <port name="p3_0" type="out" rate="1"/>
+      </actor>
+      <actor name="powspec" type="Pow">
+        <port name="p0_0" type="in" rate="1"/>
+        <port name="p1_0" type="in" rate="1"/>
+        <port name="p2_0" type="out" rate="1"/>
+        <port name="p3_0" type="out" rate="1"/>
+      </actor>
+      <actor name="audspec" type="Aud">
+        <port name="p0_0" type="in" rate="1"/>
+        <port name="p1_0" type="in" rate="1"/>
+        <port name="p2_0" type="out" rate="1"/>
+        <port name="p3_0" type="out" rate="1"/>
+        <port name="p4_0" type="out" rate="1"/>
+      </actor>
+      <actor name="compJah" type="PI">
+        <port name="p0_0" type="in" rate="1"/>
+        <port name="p1_0" type="in" rate="1"/>
+        <port name="p2_0" type="in" rate="1"/>
+        <port name="p3_0" type="out" rate="1"/>
+        <port name="p4_0" type="out" rate="1"/>
+        <port name="p5_0" type="out" rate="1"/>
+      </actor>
+      <actor name="rastaFilter" type="RFilter">
+        <port name="p0_0" type="in" rate="1"/>
+        <port name="p1_0" type="in" rate="1"/>
+        <port name="p2_0" type="in" rate="1"/>
+        <port name="p3_0" type="in" rate="1"/>
+        <port name="p4_0" type="out" rate="1"/>
+      </actor>
+      <actor name="backEnd" type="BackEnd">
+        <port name="p0_0" type="in" rate="1"/>
+        <port name="p0_1" type="in" rate="1"/>
+      </actor>
+      <channel name="chRa0_0" srcActor="frontEnd" srcPort="p0_0" dstActor="rasta" dstPort="p0_0"/>
+      <channel name="chRa0_1" srcActor="frontEnd" srcPort="p1_0" dstActor="rasta" dstPort="p1_0"/>
+      <channel name="chRa0_2" srcActor="rasta" srcPort="p2_0" dstActor="powspec" dstPort="p0_0"/>
+      <channel name="chRa0_3" srcActor="rasta" srcPort="p3_0" dstActor="powspec" dstPort="p1_0"/>
+      <channel name="chRa0_4" srcActor="powspec" srcPort="p2_0" dstActor="audspec" dstPort="p0_0"/>
+      <channel name="chRa0_5" srcActor="powspec" srcPort="p3_0" dstActor="audspec" dstPort="p1_0"/>
+      <channel name="chRa0_6" srcActor="audspec" srcPort="p2_0" dstActor="rastaFilter" dstPort="p0_0"/>
+      <channel name="chRa0_7" srcActor="audspec" srcPort="p3_0" dstActor="compJah" dstPort="p0_0"/>
+      <channel name="chRa0_8" srcActor="audspec" srcPort="p4_0" dstActor="compJah" dstPort="p1_0"/>
+      <channel name="chRa0_9" srcActor="compJah" srcPort="p3_0" dstActor="rastaFilter" dstPort="p1_0"/>
+      <channel name="chRa0_10" srcActor="compJah" srcPort="p4_0" dstActor="rastaFilter" dstPort="p2_0"/>
+      <channel name="chRa0_11" srcActor="compJah" srcPort="p5_0" dstActor="rastaFilter" dstPort="p3_0"/>
+      <channel name="chRa0_12" srcActor="rastaFilter" srcPort="p4_0" dstActor="backEnd" dstPort="p0_0"/>
+      <channel name="chRa0_13" srcActor="frontEnd" srcPort="p2_0" dstActor="compJah" dstPort="p2_0"/>
+      <channel name="chRa0_14" srcActor="frontEnd" srcPort="p3_0" dstActor="backEnd" dstPort="p0_1"/>
+    </sdf>
+    <sdfProperties>
+      <actorProperties actor="frontEnd">
+        <processor type="proc" default="true">
+          <executionTime time="141"/>
+          <memory>
+            <stateSize max="2"/>
+          </memory>
+        </processor>
+      </actorProperties>
+      <actorProperties actor="rasta">
+        <processor type="proc" default="true">
+          <executionTime time="31"/>
+          <memory>
+            <stateSize max="4"/>
+          </memory>
+        </processor>
+      </actorProperties>
+      <actorProperties actor="powspec">
+        <processor type="proc" default="true">
+          <executionTime time="235"/>
+          <memory>
+            <stateSize max="6"/>
+          </memory>
+        </processor>
+      </actorProperties>
+      <actorProperties actor="audspec">
+        <processor type="proc" default="true">
+          <executionTime time="108"/>
+          <memory>
+            <stateSize max="5"/>
+          </memory>
+        </processor>
+      </actorProperties>
+      <actorProperties actor="compJah">
+        <processor type="proc" default="true">
+          <executionTime time="170"/>
+          <memory>
+            <stateSize max="4"/>
+          </memory>
+        </processor>
+      </actorProperties>
+      <actorProperties actor="rastaFilter">
+        <processor type="proc" default="true">
+          <executionTime time="194"/>
+          <memory>
+            <stateSize max="7"/>
+          </memory>
+        </processor>
+      </actorProperties>
+      <actorProperties actor="backEnd">
+        <processor type="proc" default="true">
+          <executionTime time="133"/>
+          <memory>
+            <stateSize max="5"/>
+          </memory>
+        </processor>
+      </actorProperties>
+      <channelProperties channel="chRa0_0">
+        <tokenSize sz="128"/>
+      </channelProperties>
+      <channelProperties channel="chRa0_1">
+        <tokenSize sz="128"/>
+      </channelProperties>
+      <channelProperties channel="chRa0_2">
+        <tokenSize sz="128"/>
+      </channelProperties>
+      <channelProperties channel="chRa0_3">
+        <tokenSize sz="128"/>
+      </channelProperties>
+      <channelProperties channel="chRa0_4">
+        <tokenSize sz="128"/>
+      </channelProperties>
+      <channelProperties channel="chRa0_5">
+        <tokenSize sz="128"/>
+      </channelProperties>
+      <channelProperties channel="chRa0_6">
+        <tokenSize sz="128"/>
+      </channelProperties>
+      <channelProperties channel="chRa0_7">
+        <tokenSize sz="128"/>
+      </channelProperties>
+      <channelProperties channel="chRa0_8">
+        <tokenSize sz="128"/>
+      </channelProperties>
+      <channelProperties channel="chRa0_9">
+        <tokenSize sz="128"/>
+      </channelProperties>
+      <channelProperties channel="chRa0_10">
+        <tokenSize sz="128"/>
+      </channelProperties>
+      <channelProperties channel="chRa0_11">
+        <tokenSize sz="128"/>
+      </channelProperties>
+      <channelProperties channel="chRa0_12">
+        <tokenSize sz="128"/>
+      </channelProperties>
+      <channelProperties channel="chRa0_13">
+        <tokenSize sz="128"/>
+      </channelProperties>
+      <channelProperties channel="chRa0_14">
+        <tokenSize sz="128"/>
+      </channelProperties>
+      <graphProperties/>
+    </sdfProperties>
+  </applicationGraph>
+</sdf3>

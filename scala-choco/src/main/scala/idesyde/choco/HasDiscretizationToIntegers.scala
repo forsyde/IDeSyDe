@@ -12,7 +12,7 @@ trait HasDiscretizationToIntegers extends HasUtils {
   )(using fracT: Fractional[T]): Int = {
     val step = fracT.div(maxT, numT.fromInt(resolution))
     // println((resolution, ub))
-    var r = 0
+    var r = -1
     while (numT.fromInt(r) * step < t) {
       r += 1
     }

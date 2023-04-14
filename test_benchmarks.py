@@ -34,13 +34,15 @@ class BaseTest(unittest.TestCase):
                         "--x-max-solutions",
                         "1",
                         "-v",
-                        "error",
+                        "debug",
                     ]
                     + [path + os.path.sep + f for f in files],
                     shell=True,
                 )
                 self.assertEqual(child.returncode, 0)
-                self.assertTrue(len(os.listdir(run_path)) > 0)
+                self.assertTrue(
+                    len(os.listdir(run_path + os.path.sep + "explored")) > 0
+                )
 
     def tearDown(self) -> None:
         for path, _ in self.test_cases.items():

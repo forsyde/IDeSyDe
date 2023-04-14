@@ -22,7 +22,7 @@ jobs:
       uses: actions/cache@v2
       with:
         path: ${{ github.workspace }}\idesyde.exe
-        key: ${{ runner.os }}-rust-orchestration
+        key: ${{ github.ref }}-${{ runner.os }}-rust-orchestration
   build-linux-rust:
     runs-on: ubuntu-latest
     steps:
@@ -40,7 +40,7 @@ jobs:
       uses: actions/cache@v2
       with:
         path: ${{ github.workspace }}/idesyde
-        key: ${{ runner.os }}-rust-orchestration
+        key: ${{ github.ref }}-${{ runner.os }}-rust-orchestration
   build-jars-scala:
     runs-on: ubuntu-latest
     steps:
@@ -59,7 +59,7 @@ jobs:
         path: |
           ${{ github.workspace }}/imodules/*.jar
           ${{ github.workspace }}/emodules/*.jar
-        key: scala-modules-jar
+        key: ${{ github.ref }}-scala-modules-jar
   publish-windows-all:
     runs-on: windows-latest
     needs: [build-windows-rust, build-jars-scala]
@@ -71,14 +71,14 @@ jobs:
       uses: actions/cache@v2
       with:
         path: ${{ github.workspace }}\idesyde.exe
-        key: ${{ runner.os }}-rust-orchestration
+        key: ${{ github.ref }}-${{ runner.os }}-rust-orchestration
     - name: Get cached scala
       uses: actions/cache@v2
       with:
         path: |
           ${{ github.workspace }}/imodules/*.jar
           ${{ github.workspace }}/emodules/*.jar
-        key: scala-modules-jar
+        key: ${{ github.ref }}-scala-modules-jar
     - name: Make zip
       run: |
         cd ${{ github.workspace }}
@@ -103,14 +103,14 @@ jobs:
       uses: actions/cache@v2
       with:
         path: ${{ github.workspace }}/idesyde
-        key: ${{ runner.os }}-rust-orchestration
+        key: ${{ github.ref }}-${{ runner.os }}-rust-orchestration
     - name: Get cached scala
       uses: actions/cache@v2
       with:
         path: |
           ${{ github.workspace }}/imodules/*.jar
           ${{ github.workspace }}/emodules/*.jar
-        key: scala-modules-jar
+        key: ${{ github.ref }}-scala-modules-jar
     - name: Make zip
       run: |
         cd ${{ github.workspace }}

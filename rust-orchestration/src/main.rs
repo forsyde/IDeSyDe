@@ -3,7 +3,7 @@ use std::{fs, path::Path};
 use clap::Parser;
 use env_logger::WriteStyle;
 use idesyde_core::{DecisionModel, DesignModel, ExplorationModule, IdentificationModule};
-use log::{debug, info, Level};
+use log::{debug, error, info, Level};
 
 use crate::orchestration::compute_dominant_combinations;
 
@@ -120,6 +120,8 @@ fn main() {
         let solution_path = &run_path.join("explored");
         let integration_path = &run_path.join("integrated");
 
+        std::fs::create_dir_all(run_path)
+            .expect("Failed to create run path directory during identification.");
         std::fs::create_dir_all(inputs_path)
             .expect("Failed to create input directory during identification.");
         std::fs::create_dir_all(imodules_path)
@@ -136,6 +138,10 @@ fn main() {
         debug!("Copying input files");
         for input in &sorted_inputs {
             let p = Path::new(input);
+            if !p.is_file() {
+                error!("Input {} does not exist or is not a file!", input);
+                return;
+            }
             if let Some(fname) = p.file_name() {
                 let fpath = Path::new(fname);
                 fs::copy(p, run_path.join("inputs").join(fpath))

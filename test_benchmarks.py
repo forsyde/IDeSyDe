@@ -1,6 +1,7 @@
 import os
 import unittest
 import subprocess
+import shutil
 
 
 class BaseTest(unittest.TestCase):
@@ -16,9 +17,37 @@ class BaseTest(unittest.TestCase):
         if self.scala_built.returncode != 0:
             self.fail("Failed to build the scala parts")
 
-    def atLeastOneSolution(self) -> None:
-        print(self.test_cases)
-        # print(self.scala_built)
+    def test_one_solution(self) -> None:
+        bin_path = (
+            "target" + os.path.sep + "debug" + os.path.sep + "idesyde-orchestration"
+        )
+        if os.name == "nt":
+            bin_path += ".exe"
+        for path, files in self.test_cases.items():
+            with self.subTest(path):
+                run_path = "run_" + path.replace(os.path.sep, "_")
+                child = subprocess.run(
+                    [
+                        bin_path,
+                        "--run-path",
+                        run_path,
+                        "--x-max-solutions",
+                        "1",
+                        "-v",
+                        "error",
+                    ]
+                    + [path + os.path.sep + f for f in files],
+                    shell=True,
+                )
+                self.assertEqual(child.returncode, 0)
+                self.assertTrue(len(os.listdir(run_path)) > 0)
 
     def tearDown(self) -> None:
-        return super().tearDown()
+        for path, _ in self.test_cases.items():
+            run_path = "run_" + path.replace(os.path.sep, "_")
+            if os.path.isdir(run_path):
+                shutil.rmtree(run_path)
+
+
+if __name__ == "__main__":
+    unittest.main()

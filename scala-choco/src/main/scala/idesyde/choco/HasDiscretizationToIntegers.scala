@@ -29,9 +29,13 @@ trait HasDiscretizationToIntegers extends HasUtils {
 
 object HasDiscretizationToIntegers {
 
-  val longFractional = new Fractional[Long] {
+  val ceilingLongFractional = new Fractional[Long] {
 
-    override def div(x: Long, y: Long): Long = Math.floorDiv(x, y)
+    override def div(x: Long, y: Long): Long = {
+      val v = Math.floorDiv(x, y)
+      if (Math.floorMod(x, y) == 0) v
+      else v + 1L
+    }
 
     override def minus(x: Long, y: Long): Long = x - y
 

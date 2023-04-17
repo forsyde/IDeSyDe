@@ -115,7 +115,7 @@ class ChocoExplorer(using logger: Logger) extends Explorer:
         if (maximumSolutions > 0) feasible && i < maximumSolutions else feasible
       )
       .map(_ => solver.defaultSolution())
-      .map(paretoSolution => m.mergeSolution(paretoSolution))
+      .map(paretoSolution => m.mergeSolution(paretoSolution, timeResolution, memoryResolution))
   }
 
   def explore(

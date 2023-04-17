@@ -46,8 +46,7 @@ struct Args {
     #[arg(
         long,
         help = "Sets the desired maximum number of solutions. \nIf non-positive, there is no litmit",
-        long_help = "Sets the desired maximum number of solutions. \nIf non-positive, there is no litmit. \nThe identification and integration stages are unnafected.",
-        group = "exploration"
+        long_help = "Sets the desired maximum number of solutions. \nIf non-positive, there is no litmit. \nThe identification and integration stages are unnafected."
     )]
     x_max_solutions: Option<i64>,
 
@@ -60,15 +59,13 @@ struct Args {
 
     #[arg(
         long,
-        help = "For explorer with mandatory discretization, this factor is used for the time upsizing resolution.",
-        group = "exploration"
+        help = "For explorer with mandatory discretization, this factor is used for the time upsizing resolution."
     )]
     x_time_resolution: Option<i64>,
 
     #[arg(
         long,
-        help = "For explorer with mandatory discretization, this factor is used for the memory downsizing resolution.",
-        group = "exploration"
+        help = "For explorer with mandatory discretization, this factor is used for the memory downsizing resolution."
     )]
     x_memory_resolution: Option<i64>,
 }

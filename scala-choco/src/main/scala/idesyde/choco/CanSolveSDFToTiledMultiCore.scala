@@ -39,7 +39,7 @@ import org.jgrapht.graph.DefaultDirectedGraph
 import scala.collection.mutable.Stack
 import idesyde.utils.HasUtils
 import idesyde.choco.HasDiscretizationToIntegers
-import idesyde.choco.HasDiscretizationToIntegers.longFractional
+import idesyde.choco.HasDiscretizationToIntegers.ceilingLongFractional
 
 final class CanSolveSDFToTiledMultiCore(using logger: Logger)
     extends ChocoExplorable[SDFToTiledMultiCore]
@@ -74,7 +74,7 @@ final class CanSolveSDFToTiledMultiCore(using logger: Logger)
       else timeResolution.toInt,
       timeValues.sum
     )(s)
-    given Fractional[Long] = longFractional
+    given Fractional[Long] = ceilingLongFractional
     def long2int(l: Long) = discretized(
       if (memoryResolution > Int.MaxValue) Int.MaxValue
       else if (memoryResolution <= 0L) memoryValues.size * 100

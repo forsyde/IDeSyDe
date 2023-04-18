@@ -39,7 +39,6 @@ import org.jgrapht.graph.DefaultDirectedGraph
 import scala.collection.mutable.Stack
 import idesyde.utils.HasUtils
 import idesyde.choco.HasDiscretizationToIntegers
-import idesyde.choco.HasDiscretizationToIntegers.ceilingLongFractional
 
 final class CanSolveSDFToTiledMultiCore(using logger: Logger)
     extends ChocoExplorable[SDFToTiledMultiCore]
@@ -74,7 +73,7 @@ final class CanSolveSDFToTiledMultiCore(using logger: Logger)
       else timeResolution.toInt,
       timeValues.sum
     )(s)
-    given Fractional[Long] = ceilingLongFractional
+    given Fractional[Long] = HasDiscretizationToIntegers.ceilingLongFractional
     def long2int(l: Long) = discretized(
       if (memoryResolution > Int.MaxValue) Int.MaxValue
       else if (memoryResolution <= 0L) memoryValues.size * 100
@@ -402,13 +401,26 @@ final class CanSolveSDFToTiledMultiCore(using logger: Logger)
     //     if (memoryResolution > Int.MaxValue) Int.MaxValue else memoryResolution.toInt
     //   )
     val intVars = solution.retrieveIntVars(false).asScala
-    val processesMemoryMapping: Vector[IntVar] =
+    // the mappings default to zero because choco Molde might not store the mapping variables
+    // in the solution where there is only one possible mapping, meaning that the chosen mapping
+    // was 0, by cosntruction.
+    val processesMemoryMapping: Vector[Int] =
       m.sdfApplications.actorsIdentifiers.zipWithIndex.map((_, a) =>
-        intVars.find(_.getName() == s"mapProcess($a)").get
+        intVars
+          .find(_.getName() == s"mapProcess($a)")
+          .map(solution.getIntVal(_))
+          .getOrElse(
+            m.wcets(a).indexWhere(_ > 0.0)
+          )
       )
-    val messagesMemoryMapping: Vector[IntVar] =
-      m.sdfApplications.sdfMessages.zipWithIndex.map((_, c) =>
-        intVars.find(_.getName() == s"mapMessage($c)").get
+    val messagesMemoryMapping: Vector[Int] =
+      m.sdfApplications.sdfMessages.zipWithIndex.map((messsage, c) =>
+        intVars
+          .find(_.getName() == s"mapMessage($c)")
+          .map(solution.getIntVal(_))
+          .getOrElse(
+            processesMemoryMapping(m.sdfApplications.actorsIdentifiers.indexOf(messsage._2))
+          )
       )
     val numVirtualChannelsForProcElem: Vector[Vector[IntVar]] =
       m.platform.hardware.processors.map(src =>
@@ -443,19 +455,19 @@ final class CanSolveSDFToTiledMultiCore(using logger: Logger)
       ),
       processMappings = m.sdfApplications.actorsIdentifiers.zipWithIndex.map((a, i) =>
         m.platform.hardware
-          .memories(solution.getIntVal(processesMemoryMapping(i)))
+          .memories(processesMemoryMapping(i))
       ),
       messageMappings = m.sdfApplications.channelsIdentifiers.zipWithIndex.map((c, i) => {
         val messageIdx =
           m.sdfApplications.sdfMessages.indexWhere((_, _, ms, _, _, _, _) => ms.contains(c))
         m.platform.hardware
-          .memories(solution.getIntVal(messagesMemoryMapping(messageIdx)))
+          .memories(messagesMemoryMapping(messageIdx))
       }),
       schedulerSchedules = m.platform.runtimes.schedulers.zipWithIndex.map((s, si) => {
         val unordered = for (
           ((aId, q), i) <- jobsAndActors.zipWithIndex;
           a = m.sdfApplications.actorsIdentifiers.indexOf(aId);
-          if processesMemoryMapping(a).isInstantiatedTo(si)
+          if processesMemoryMapping(a) == si
         ) yield (aId, jobOrder(i).getValue())
         unordered.sortBy((a, o) => o).map((a, _) => a)
       }),
@@ -463,10 +475,8 @@ final class CanSolveSDFToTiledMultiCore(using logger: Logger)
         // we have to look from the source perpective, since the sending processor is the one that allocates
         val (s, _, _, _, _, _, _) =
           m.sdfApplications.sdfMessages.find((s, d, cs, l, _, _, _) => cs.contains(c)).get
-        val p = solution.getIntVal(
-          processesMemoryMapping(
-            m.sdfApplications.actorsIdentifiers.indexOf(s)
-          )
+        val p = processesMemoryMapping(
+          m.sdfApplications.actorsIdentifiers.indexOf(s)
         )
         // TODO: this must be fixed later, it might clash correct slots
         val iter =
@@ -486,7 +496,7 @@ final class CanSolveSDFToTiledMultiCore(using logger: Logger)
         m,
         jobsAndActors.zipWithIndex
           .map((j, x) => (m.sdfApplications.actorsIdentifiers.indexOf(j._1), x))
-          .map((ax, i) => m.wcets(ax)(processesMemoryMapping(ax).getValue())),
+          .map((ax, i) => m.wcets(ax)(processesMemoryMapping(ax))),
         jobsAndActors
           .map((srca, srcq) =>
             jobsAndActors
@@ -497,8 +507,8 @@ final class CanSolveSDFToTiledMultiCore(using logger: Logger)
                   .find((s, t, _, _, _, _, _) => s == srca && t == dsta)
                   .map((_, _, _, m, _, _, _) => m)
                   .getOrElse(0L)
-                val srcM = processesMemoryMapping(srcax).getValue()
-                val dstM = processesMemoryMapping(dstax).getValue()
+                val srcM = processesMemoryMapping(srcax)
+                val dstM = processesMemoryMapping(dstax)
                 if (srcM != dstM) {
                   mSize * m.platform.hardware
                     .minTraversalTimePerBit(srcM)(dstM) * m.platform.hardware
@@ -523,7 +533,7 @@ final class CanSolveSDFToTiledMultiCore(using logger: Logger)
       m: SDFToTiledMultiCore,
       jobWeights: Vector[Double],
       edgeWeigths: Vector[Vector[Double]],
-      jobMapping: Array[IntVar],
+      jobMapping: Array[Int],
       jobOrder: Array[IntVar]
   ): Vector[Double] = {
     val jobsAndActors =
@@ -531,9 +541,8 @@ final class CanSolveSDFToTiledMultiCore(using logger: Logger)
         .map(v => v.value)
         .toVector
     def mustSuceed(i: Int)(j: Int): Boolean = if (
-      jobMapping(i).isInstantiated() && jobMapping(j)
-        .isInstantiated() && jobMapping(i)
-        .getValue() == jobMapping(j).getValue()
+      jobMapping(i)
+        == jobMapping(j)
     ) {
       jobOrder(i).stream().anyMatch(oi => jobOrder(j).contains(oi + 1))
     } else {
@@ -541,9 +550,9 @@ final class CanSolveSDFToTiledMultiCore(using logger: Logger)
     }
     def mustCycle(i: Int)(j: Int): Boolean =
       hasDataCycle(m)(jobsAndActors)(i)(j) ||
-        (jobMapping(i).isInstantiated() && jobMapping(j).isInstantiated() && jobMapping(i)
-          .getValue() == jobMapping(j).getValue() && jobOrder(j)
-          .getUB() == 0 && jobOrder(i).getLB() > 0)
+        (jobMapping(i)
+          == jobMapping(j) && jobOrder(j)
+            .getUB() == 0 && jobOrder(i).getLB() > 0)
     var ths = m.wcets.zipWithIndex
       .map((w, ai) => 1.0 / (m.sdfApplications.sdfRepetitionVectors(ai).toDouble * w.min))
       .toBuffer

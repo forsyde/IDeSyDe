@@ -400,7 +400,7 @@ final class CanSolveSDFToTiledMultiCore(using logger: Logger)
     //     if (timeResolution > Int.MaxValue) Int.MaxValue else timeResolution.toInt,
     //     if (memoryResolution > Int.MaxValue) Int.MaxValue else memoryResolution.toInt
     //   )
-    val intVars = solution.retrieveIntVars(false).asScala
+    val intVars = solution.retrieveIntVars(true).asScala
     // the mappings default to zero because choco Molde might not store the mapping variables
     // in the solution where there is only one possible mapping, meaning that the chosen mapping
     // was 0, by cosntruction.
@@ -409,18 +409,14 @@ final class CanSolveSDFToTiledMultiCore(using logger: Logger)
         intVars
           .find(_.getName() == s"mapProcess($a)")
           .map(solution.getIntVal(_))
-          .getOrElse(
-            m.wcets(a).indexWhere(_ > 0.0)
-          )
+          .get
       )
     val messagesMemoryMapping: Vector[Int] =
       m.sdfApplications.sdfMessages.zipWithIndex.map((messsage, c) =>
         intVars
           .find(_.getName() == s"mapMessage($c)")
           .map(solution.getIntVal(_))
-          .getOrElse(
-            processesMemoryMapping(m.sdfApplications.actorsIdentifiers.indexOf(messsage._2))
-          )
+          .get
       )
     val numVirtualChannelsForProcElem: Vector[Vector[IntVar]] =
       m.platform.hardware.processors.map(src =>

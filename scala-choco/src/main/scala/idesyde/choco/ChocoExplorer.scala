@@ -114,7 +114,7 @@ class ChocoExplorer(using logger: Logger) extends Explorer:
       .takeWhile((feasible, i) =>
         if (maximumSolutions > 0) feasible && i < maximumSolutions else feasible
       )
-      .map(_ => solver.defaultSolution())
+      .map(_ => solver.defaultSolution().record())
       .map(paretoSolution => m.mergeSolution(paretoSolution, timeResolution, memoryResolution))
   }
 

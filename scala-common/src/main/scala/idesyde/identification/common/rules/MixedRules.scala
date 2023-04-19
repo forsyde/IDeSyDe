@@ -1,7 +1,7 @@
 package idesyde.identification.common.rules
 
-import idesyde.identification.DecisionModel
-import idesyde.identification.DesignModel
+import idesyde.core.DecisionModel
+import idesyde.core.DesignModel
 import idesyde.identification.common.models.mixed.{
   PeriodicWorkloadToPartitionedSharedMultiCore,
   SDFToPartitionedSharedMemory,
@@ -12,7 +12,7 @@ import idesyde.identification.common.models.mixed.{
 import idesyde.identification.common.models.platform.SchedulableTiledMultiCore
 import idesyde.identification.common.models.platform.PartitionedSharedMemoryMultiCore
 import idesyde.identification.common.models.sdf.SDFApplication
-import idesyde.identification.common.models.workload.CommunicatingExtendedDependenciesPeriodicWorkload
+import idesyde.identification.common.models.CommunicatingAndTriggeredReactiveWorkload
 import spire.math.Rational
 import idesyde.utils.Logger
 
@@ -68,7 +68,8 @@ trait MixedRules(using logger: Logger) {
           processMappings = Vector.empty,
           messageMappings = Vector.empty,
           schedulerSchedules = Vector.empty,
-          messageSlotAllocations = Vector.empty
+          messageSlotAllocations = Vector.empty,
+          actorThroughputs = Vector.empty
         )
       )
     )
@@ -108,8 +109,8 @@ trait MixedRules(using logger: Logger) {
       identified: Set[DecisionModel]
   ): Set[PeriodicWorkloadToPartitionedSharedMultiCore] = {
     val app = identified
-      .filter(_.isInstanceOf[CommunicatingExtendedDependenciesPeriodicWorkload])
-      .map(_.asInstanceOf[CommunicatingExtendedDependenciesPeriodicWorkload])
+      .filter(_.isInstanceOf[CommunicatingAndTriggeredReactiveWorkload])
+      .map(_.asInstanceOf[CommunicatingAndTriggeredReactiveWorkload])
     val plat = identified
       .filter(_.isInstanceOf[PartitionedSharedMemoryMultiCore])
       .map(_.asInstanceOf[PartitionedSharedMemoryMultiCore])

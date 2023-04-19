@@ -1,29 +1,40 @@
 package idesyde.exploration.minizinc.explorers
 
-import idesyde.identification.minizinc.interfaces.MiniZincForSyDeDecisionModel
-
 import scala.sys.process._
 import java.time.Duration
 import idesyde.exploration.minizinc.interfaces.SimpleMiniZincCPExplorer
 import scala.concurrent.ExecutionContext
 import scala.concurrent.Future
-import forsyde.io.java.core.ForSyDeSystemGraph
 import java.nio.file.Files
 import java.nio.file.Paths
 import java.nio.file.StandardOpenOption
 import idesyde.exploration.minizinc.explorers.ChuffedMiniZincExplorer
-import idesyde.identification.DecisionModel
-import idesyde.identification.forsyde.ForSyDeDecisionModel
+import idesyde.core.DecisionModel
+import idesyde.identification.common.StandardDecisionModel
+import idesyde.core.ExplorationCombinationDescription
 
-final case class ChuffedMiniZincExplorer()
-    extends SimpleMiniZincCPExplorer:
+final case class ChuffedMiniZincExplorer() extends SimpleMiniZincCPExplorer {
 
-  override def canExploreForSyDe(decisionModel: ForSyDeDecisionModel): Boolean =
-    "minizinc --solvers".!!.contains("org.chuffed.chuffed")
+  override def explore(
+      decisionModel: DecisionModel,
+      totalExplorationTimeOutInSecs: Long,
+      maximumSolutions: Long,
+      timeDiscretizationFactor: Long,
+      memoryDiscretizationFactor: Long
+  ): LazyList[DecisionModel] = LazyList.empty
 
-  def exploreForSyDe(decisionModel: ForSyDeDecisionModel, explorationTimeOutInSecs: Long = 0L) =
-    decisionModel match
-      case _ => LazyList.empty
+  override def combination(decisionModel: DecisionModel): ExplorationCombinationDescription =
+    ExplorationCombinationDescription(false, Map())
+
+  // override def explore(
+  //     decisionModel: DecisionModel,
+  //     explorationTimeOutInSecs: Long = 0L,
+  //     maximumSolutions: Long = 0L
+  // ): LazyList[DecisionModel] = LazyList.empty
+
+  def uniqueIdentifier: String = "ChuffedMiniZincExplorer"
+
+}
 
 end ChuffedMiniZincExplorer
 

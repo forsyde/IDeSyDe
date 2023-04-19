@@ -21,16 +21,16 @@ import spire.math._
 import spire.compat.fractional
 import org.chocosolver.solver.search.loop.monitors.IMonitorContradiction
 import org.chocosolver.solver.exception.ContradictionException
-import idesyde.identification.choco.models.SingleProcessSingleMessageMemoryConstraintsModule
+import idesyde.choco.HasSingleProcessSingleMessageMemoryConstraints
 import idesyde.identification.choco.models.BaselineTimingConstraintsModule
 import idesyde.identification.choco.models.workload.ExtendedPrecedenceConstraintsModule
 import idesyde.identification.choco.models.workload.FixedPriorityConstraintsModule
 import idesyde.identification.choco.models.mixed.Active4StageDurationModule
-import idesyde.utils.CoreUtils
+import idesyde.utils.HasUtils
 import idesyde.identification.choco.interfaces.ChocoModelMixin
 import idesyde.identification.common.models.workload.CommunicatingExtendedDependenciesPeriodicWorkload
 import idesyde.identification.common.models.mixed.PeriodicWorkloadToPartitionedSharedMultiCore
-import idesyde.identification.DecisionModel
+import idesyde.core.DecisionModel
 import idesyde.identification.common.StandardDecisionModel
 import idesyde.identification.choco.ChocoDecisionModel
 
@@ -44,14 +44,16 @@ import idesyde.identification.choco.ChocoDecisionModel
 final case class ChocoComDepTasksToMultiCore(
     val dse: PeriodicWorkloadToPartitionedSharedMultiCore
 ) extends StandardDecisionModel
-    with ChocoDecisionModel() {
+    with ChocoDecisionModel
+    with HasUtils
+    with HasSingleProcessSingleMessageMemoryConstraints {
 
   val coveredElements = dse.coveredElements
 
   val coveredElementRelations = dse.coveredElementRelations
 
-  override def dominates[D <: DecisionModel](other: D): Boolean = other match {
-    case o : ChocoComDepTasksToMultiCore =>
+  override def dominates(other: DecisionModel): Boolean = other match {
+    case o: ChocoComDepTasksToMultiCore =>
       dse.dominates(o.dse)
     case _ => super.dominates(other)
   }
@@ -70,9 +72,8 @@ final case class ChocoComDepTasksToMultiCore(
       .exists(d => d.numerator <= d.denominator)
     &&
     timeValues
-      .maxBy(t =>
-        t * (timeMultiplier)
-      ) < Int.MaxValue / 40 - 1 // the four is due to how the sum is done for wcet
+      .map(t => t * (timeMultiplier))
+      .sum < Int.MaxValue / 10 - 1 // the four is due to how the sum is done for wcet
   ) {
     timeMultiplier *= 10
   }
@@ -83,7 +84,7 @@ final case class ChocoComDepTasksToMultiCore(
   var memoryDivider = 1L
   while (
     memoryValues.forall(
-      CoreUtils.ceil(_, memoryDivider) >= Int.MaxValue / 100000
+      ceil(_, memoryDivider) >= Int.MaxValue / 100000
     ) && memoryDivider < Int.MaxValue
   ) {
     memoryDivider *= 10L
@@ -106,33 +107,38 @@ final case class ChocoComDepTasksToMultiCore(
       s"task_map($t)",
       dse.platform.hardware.storageSizes.zipWithIndex
         .filter((m, j) => dse.workload.processSizes(i) <= m)
-        .map((m, j) => j).toArray
+        .map((m, j) => j)
+        .toArray
     )
   )
-  val dataBlockMapping = dse.workload.channels.zipWithIndex.map((c, i) =>
+  val dataBlockMapping = dse.workload.dataChannels.zipWithIndex.map((c, i) =>
     chocoModel.intVar(
       s"data_map($c)",
       dse.platform.hardware.storageSizes.zipWithIndex
         .filter((m, j) => dse.workload.messagesMaxSizes(i) <= m)
-        .map((m, j) => j).toArray
+        .map((m, j) => j)
+        .toArray
     )
   )
-  val memoryMappingModule = SingleProcessSingleMessageMemoryConstraintsModule(
-    chocoModel,
-    dse.workload.processSizes.map(CoreUtils.ceil(_, memoryDivider)).map(_.toInt).toArray,
-    dse.workload.messagesMaxSizes.map(CoreUtils.ceil(_, memoryDivider)).map(_.toInt).toArray,
-    dse.platform.hardware.storageSizes
-      .map(CoreUtils.ceil(_, memoryDivider))
-      .map(_.toInt).toArray
-  )
+  val (processesMemoryMapping, messagesMemoryMapping, _) =
+    postSingleProcessSingleMessageMemoryConstraints(
+      chocoModel,
+      dse.workload.processSizes.map(ceil(_, memoryDivider)).map(_.toInt).toArray,
+      dse.workload.messagesMaxSizes.map(ceil(_, memoryDivider)).map(_.toInt).toArray,
+      dse.platform.hardware.storageSizes
+        .map(ceil(_, memoryDivider))
+        .map(_.toInt)
+        .toArray
+    )
 
   // timing
   val taskExecution = dse.workload.processes.zipWithIndex.map((t, i) =>
     chocoModel.intVar(
       s"task_map($t)",
       dse.platform.hardware.processingElems.zipWithIndex
-        .filter((m, j) => dse.wcets(i)(j) >= 0)
-        .map((m, j) => j).toArray
+        .filter((m, j) => dse.wcets(i)(j) > -1)
+        .map((m, j) => j)
+        .toArray
     )
   )
   val responseTimes =
@@ -183,8 +189,8 @@ final case class ChocoComDepTasksToMultiCore(
     chocoModel,
     dse,
     taskExecution.toArray,
-    memoryMappingModule.processesMemoryMapping,
-    memoryMappingModule.messagesMemoryMapping,
+    processesMemoryMapping,
+    messagesMemoryMapping,
     processingElemsVirtualChannelInCommElem.map(_.toArray).toArray,
     timeMultiplier,
     memoryDivider
@@ -213,8 +219,6 @@ final case class ChocoComDepTasksToMultiCore(
     active4StageDurationModule.durations
   )
 
-  memoryMappingModule.postSingleProcessSingleMessageMemoryConstraints()
-
   active4StageDurationModule.postActive4StageDurationsConstraints()
 
   // timing constraints
@@ -232,7 +236,7 @@ final case class ChocoComDepTasksToMultiCore(
       fixedPriorityConstraintsModule.postFixedPrioriPreemtpiveConstraint(j)
     })
   // for each SC scheduler
-  dse.workload.processes.zipWithIndex.foreach((task, i) => {
+  dse.workload.tasks.zipWithIndex.foreach((task, i) => {
     dse.platform.runtimes.schedulers.zipWithIndex
       .filter((s, j) => dse.platform.runtimes.isCyclicExecutive(j))
       .foreach((s, j) => {
@@ -311,8 +315,8 @@ final case class ChocoComDepTasksToMultiCore(
     Search.activityBasedSearch(dataBlockMapping: _*),
     Search.minDomLBSearch(responseTimes: _*),
     Search.minDomLBSearch(blockingTimes: _*),
-    Search.minDomLBSearch(memoryMappingModule.processesMemoryMapping:_*),
-    Search.minDomLBSearch(memoryMappingModule.messagesMemoryMapping:_*)
+    Search.minDomLBSearch(processesMemoryMapping: _*),
+    Search.minDomLBSearch(messagesMemoryMapping: _*)
     // Search.intVarSearch(
     //   FirstFail(chocoModel),
     //   IntDomainMin(),
@@ -322,22 +326,27 @@ final case class ChocoComDepTasksToMultiCore(
     // )
   )
 
-  def rebuildFromChocoOutput(output: Solution): DecisionModel = {
-    val processMappings = memoryMappingModule.processesMemoryMapping.zipWithIndex.map((v, i) =>
-      dse.workload.processes(i) -> dse.platform.hardware.storageElems(output.getIntVal(v))
-    ).toVector
-    val processSchedulings = taskExecution.zipWithIndex.map((v, i) =>
-      dse.workload.processes(i) -> dse.platform.runtimes.schedulers(output.getIntVal(v))
-    ).toVector
-    val channelMappings = memoryMappingModule.messagesMemoryMapping.zipWithIndex.map((v, i) =>
-      dse.workload.channels(i) -> dse.platform.hardware.storageElems(output.getIntVal(v))
-    ).toVector
+  def rebuildFromChocoOutput(output: Solution): Set[DecisionModel] = {
+    val processMappings = processesMemoryMapping.zipWithIndex
+      .map((v, i) =>
+        dse.workload.tasks(i) -> dse.platform.hardware.storageElems(output.getIntVal(v))
+      )
+      .toVector
+    val processSchedulings = taskExecution.zipWithIndex
+      .map((v, i) => dse.workload.tasks(i) -> dse.platform.runtimes.schedulers(output.getIntVal(v)))
+      .toVector
+    val channelMappings = messagesMemoryMapping.zipWithIndex
+      .map((v, i) =>
+        dse.workload.dataChannels(i) -> dse.platform.hardware.storageElems(output.getIntVal(v))
+      )
+      .toVector
     // val channelSlotAllocations = ???
-    dse.copy(
+    val full = dse.copy(
       processMappings = processMappings,
       processSchedulings = processSchedulings,
       channelMappings = channelMappings
     )
+    Set(full)
   }
 
   def allMemorySizeNumbers() =

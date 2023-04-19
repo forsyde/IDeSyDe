@@ -23,51 +23,44 @@ import scala.collection.mutable.Buffer
   * @param additionalCoveredElementRelations
   *   this extra field exist to support wild design models being reduced to this decision model
   */
-final case class CommunicatingExtendedDependenciesPeriodicWorkload(
-    val processes: Vector[String],
-    val periods: Vector[Rational],
-    val offsets: Vector[Rational],
-    val relativeDeadlines: Vector[Rational],
-    val processSizes: Vector[Long],
-    val processComputationalNeeds: Vector[Map[String, Map[String, Long]]],
-    val channels: Vector[String],
-    val channelSizes: Vector[Long],
-    val processReadsFromChannel: Vector[Vector[Long]],
-    val processWritesToChannel: Vector[Vector[Long]],
-    val affineControlGraphSrcs: Vector[String],
-    val affineControlGraphDsts: Vector[String],
-    val affineControlGraphSrcRepeats: Vector[Int],
-    val affineControlGraphSrcSkips: Vector[Int],
-    val affineControlGraphDstRepeats: Vector[Int],
-    val affineControlGraphDstSkips: Vector[Int],
-    val additionalCoveredElements: Set[String] = Set(),
-    val additionalCoveredElementRelations: Set[(String, String)] = Set()
-) extends StandardDecisionModel
-    with InstrumentedWorkloadMixin {
+trait CommunicatingExtendedDependenciesPeriodicWorkload {
 
-  val coveredElements = (processes ++ channels ++ additionalCoveredElements).toSet
+  def periods: Vector[Rational]
+  def offsets: Vector[Rational]
+  def relativeDeadlines: Vector[Rational]
+  def affineControlGraph: Set[(Int, Int, Int, Int, Int, Int)]
+  // def affineControlGraphSrcs: Vector[String]
+  // def affineControlGraphDsts: Vector[String]
+  // def affineControlGraphSrcRepeats: Vector[Int]
+  // def affineControlGraphSrcSkips: Vector[Int]
+  // def affineControlGraphDstRepeats: Vector[Int]
+  // def affineControlGraphDstSkips: Vector[Int]
+  // val coveredElements = (processes ++ channels).toSet
 
-  val coveredElementRelations = affineControlGraphSrcs
-    .zip(affineControlGraphDsts)
-    .toSet ++ additionalCoveredElementRelations
+  // val coveredElementRelations = affineControlGraphSrcs
+  //   .zip(affineControlGraphDsts)
+  //   .toSet
+
+  def numVirtualTasks: Int = periods.size
 
   /** The edges of the instance control flow graph detail if a instance T_i,k shoud be preceeded of
     * an instance T_j,l.
     *
     * In other words, it is a precedence graph at the instance (sometimes called jobs) level.
     */
-  val affineRelationsGraph = Graph.from(
-    processes,
-    (0 until affineControlGraphSrcs.size).toArray.map(i => {
-      (affineControlGraphSrcs(i) ~+#> affineControlGraphDsts(i))(
-        (
-          affineControlGraphSrcRepeats(i),
-          affineControlGraphSrcSkips(i),
-          affineControlGraphDstRepeats(i),
-          affineControlGraphDstSkips(i)
+  def affineRelationsGraph = Graph.from(
+    0 until numVirtualTasks,
+    affineControlGraph
+      .map((src, dst, srcRepeat, srcSkip, dstRepeat, dstSkip) =>
+        (src ~+#> dst)(
+          (
+            srcRepeat,
+            srcSkip,
+            dstRepeat,
+            dstSkip
+          )
         )
       )
-    })
   )
 
   /** The edges of the communication graph should have numbers describing how much data is
@@ -75,107 +68,126 @@ final case class CommunicatingExtendedDependenciesPeriodicWorkload(
     *
     * task_0, task_1, ..., task_n, channel_1, ..., channel_m
     */
-  val communicationGraph = Graph.from(
-    processes ++ channels,
-    processes.zipWithIndex.flatMap((p, i) =>
-      channels.zipWithIndex
-        .filter((c, j) => processWritesToChannel(i)(j) > 0L)
-        .map((c, j) => p ~> c % processWritesToChannel(i)(j))
-    ) ++
-      processes.zipWithIndex.flatMap((p, i) =>
-        channels.zipWithIndex
-          .filter((c, j) => processReadsFromChannel(i)(j) > 0L)
-          .map((c, j) => c ~> p % processReadsFromChannel(i)(j))
-      )
-  )
+  // def communicationGraph = Graph.from(
+  //   processes ++ channels,
+  //   dataTransferGraph.map((src, dst, d) => src ~> dst % d)
+  //   // processes.zipWithIndex.flatMap((p, i) =>
+  //   //   channels.zipWithIndex
+  //   //     .filter((c, j) => processWritesToChannel(i)(j) > 0L)
+  //   //     .map((c, j) => p ~> c % processWritesToChannel(i)(j))
+  //   // ) ++
+  //   //   processes.zipWithIndex.flatMap((p, i) =>
+  //   //     channels.zipWithIndex
+  //   //       .filter((c, j) => processReadsFromChannel(i)(j) > 0L)
+  //   //       .map((c, j) => c ~> p % processReadsFromChannel(i)(j))
+  //   //   )
+  // )
 
-  val hyperPeriod: Rational = periods.reduce((t1, t2) => t1.lcm(t2))
+  def hyperPeriod: Rational = periods.reduce((t1, t2) => t1.lcm(t2))
 
-  val tasksNumInstances: Vector[Int] =
+  def tasksNumInstances: Vector[Int] =
     periods
       .map(p => hyperPeriod / p)
       .map(_.toInt)
 
-  val offsetsWithDependencies = {
+  def offsetsWithDependencies = {
+    val g          = affineRelationsGraph
     var offsetsMut = offsets.toBuffer
     for (
-      sorted <- affineRelationsGraph.topologicalSort();
-      node   <- sorted;
-      nodeId  = node.value;
-      nodeIdx = processes.indexOf(nodeId)
+      sorted <- g.topologicalSort();
+      innerI <- sorted;
+      i = innerI.value
     ) {
-      offsetsMut(nodeIdx) = node.diPredecessors
+      // offsetsMut(i) = innerI.diPredecessors.flatMap(predecessor => predecessor.)
+      offsetsMut(i) = innerI.diPredecessors
         .flatMap(pred => {
-          val predId  = pred.value
-          val predIdx = processes.indexOf(predId)
+          val predIdx = pred.value
           pred
-            .connectionsWith(node)
+            .connectionsWith(innerI)
             .map(e => {
-              val (ni: Int, oi: Int, nj: Int, oj: Int) = e.label
-              val offsetDelta = offsetsMut(nodeIdx) - offsetsMut(predIdx) +
-                (periods(nodeIdx) * oj - periods(predIdx) * oi)
-              val periodDelta = periods(nodeIdx) * nj - periods(predIdx) * ni
-              if (periodDelta > Rational.zero) offsetsMut(nodeIdx) - offsetDelta
+              val (ni: Int, oi: Int, nj: Int, oj: Int) = e.label: @unchecked
+              val offsetDelta = offsetsMut(i) - offsetsMut(predIdx) +
+                (periods(i) * oj - periods(predIdx) * oi)
+              val periodDelta = periods(i) * nj - periods(predIdx) * ni
+              if (periodDelta > Rational.zero) offsetsMut(i) - offsetDelta
               else {
                 val maxIncrementCoef =
-                  Math.max(tasksNumInstances(nodeIdx) / nj, tasksNumInstances(predIdx) / ni)
-                offsetsMut(nodeIdx) - offsetDelta - periodDelta * maxIncrementCoef
+                  Math.max(tasksNumInstances(i) / nj, tasksNumInstances(predIdx) / ni)
+                offsetsMut(i) - offsetDelta - periodDelta * maxIncrementCoef
               }
             })
         })
         .maxOption
-        .getOrElse(offsetsMut(nodeIdx))
+        .getOrElse(offsetsMut(i))
     }
     offsetsMut.toVector
   }
 
-  val relativeDeadlinesWithDependencies =
+  def relativeDeadlinesWithDependencies =
     relativeDeadlines.zipWithIndex.map((d, i) => d + offsets(i) - offsetsWithDependencies(i))
 
-  val (interTaskOccasionalBlock, interTaskAlwaysBlocks) = {
-    val numTasks          = processes.size
-    var canBlockMatrix    = Array.fill(numTasks)(Array.fill(numTasks)(false))
-    var alwaysBlockMatrix = Array.fill(numTasks)(Array.fill(numTasks)(false))
+  def interTaskOccasionalBlock = {
+    val g              = affineRelationsGraph
+    val numTasks       = numVirtualTasks
+    var canBlockMatrix = Array.fill(numTasks)(Array.fill(numTasks)(false))
     for (
-      sorted <- affineRelationsGraph.topologicalSort();
+      sorted <- g.topologicalSort();
       node   <- sorted;
       pred   <- node.diPredecessors;
       edge   <- pred.connectionsWith(node);
-      nodeId  = node.value;
-      nodeIdx = processes.indexOf(nodeId);
-      predId  = pred.value;
-      predIdx = processes.indexOf(predId)
+      nodeIdx = node.value;
+      predIdx = pred.value
     ) {
       // first look one behind to see immediate predecessors
       canBlockMatrix(predIdx)(nodeIdx) = true
-      if (edge.label == (1, 0, 1, 0)) alwaysBlockMatrix(nodeIdx)(predIdx) = true
       // now look to see all tasks that might send an
       // stimulus to this current next tasl
       for (i <- 0 until numTasks) {
         if (canBlockMatrix(i)(predIdx)) canBlockMatrix(i)(nodeIdx) = true
+      }
+    }
+    canBlockMatrix
+  }
+
+  def interTaskAlwaysBlocks = {
+    val g                 = affineRelationsGraph
+    val numTasks          = numVirtualTasks
+    var alwaysBlockMatrix = Array.fill(numTasks)(Array.fill(numTasks)(false))
+    for (
+      sorted <- g.topologicalSort();
+      node   <- sorted;
+      pred   <- node.diPredecessors;
+      edge   <- pred.connectionsWith(node);
+      nodeIdx = node.value;
+      predIdx = pred.value
+    ) {
+      // first look one behind to see immediate predecessors
+      if (edge.label == (1, 0, 1, 0)) alwaysBlockMatrix(nodeIdx)(predIdx) = true
+      // now look to see all tasks that might send an
+      // stimulus to this current next tasl
+      for (i <- 0 until numTasks) {
         if (alwaysBlockMatrix(i)(predIdx)) alwaysBlockMatrix(i)(nodeIdx) = true
       }
     }
-    (canBlockMatrix, alwaysBlockMatrix)
+    alwaysBlockMatrix
   }
 
-  val largestOffset = offsetsWithDependencies.max
+  def largestOffset = offsetsWithDependencies.max
 
-  val eventHorizon =
+  def eventHorizon =
     if (largestOffset != Rational.zero) then largestOffset + (hyperPeriod * 2)
     else hyperPeriod
 
-  val prioritiesForDependencies = {
-    val numTasks      = processes.size
+  def prioritiesForDependencies = {
+    val g             = affineRelationsGraph
+    val numTasks      = numVirtualTasks
     var prioritiesMut = Array.fill(numTasks)(numTasks)
     for (
-      sorted <- affineRelationsGraph.topologicalSort();
+      sorted <- g.topologicalSort();
       node   <- sorted;
       pred   <- node.diPredecessors;
-      nodeId  = node.value;
-      nodeIdx = processes.indexOf(nodeId);
-      predId  = pred.value;
-      predIdx = processes.indexOf(predId)
+      nodeIdx = node.value;
+      predIdx = pred.value;
       if prioritiesMut(nodeIdx) <= prioritiesMut(predIdx)
     ) {
       prioritiesMut(nodeIdx) = prioritiesMut(predIdx) - 1
@@ -183,9 +195,5 @@ final case class CommunicatingExtendedDependenciesPeriodicWorkload(
     // scribe.debug(prioritiesMut.mkString("[", ",", "]"))
     prioritiesMut
   }
-
-  val messagesMaxSizes = channelSizes
-
-  def uniqueIdentifier: String = "CommunicatingExtendedDependenciesPeriodicWorkload"
 
 }

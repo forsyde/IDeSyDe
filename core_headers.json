@@ -1,0 +1,114 @@
+{
+    "$schema": "http://json-schema.org/draft-06/schema#",
+    "$ref": "#/definitions/Headers",
+    "definitions": {
+        "Headers": {
+            "type": "object",
+            "additionalProperties": false,
+            "properties": {
+                "decision_models": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/DecisionModelHeader"
+                    }
+                },
+                "design_models": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/DesignModelHeader"
+                    }
+                }
+            }
+        },
+        "DecisionModelHeader": {
+            "type": "object",
+            "additionalProperties": false,
+            "properties": {
+                "category": {
+                    "type": "string"
+                },
+                "covered_elements": {
+                    "type": "array",
+                    "items": {
+                        "type": "string"
+                    }
+                },
+                "covered_relations": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/LabelledArcWithPorts"
+                    }
+                },
+                "body_path": {
+                    "type": "string"
+                }
+            },
+            "required": [
+                "category",
+                "covered_elements",
+                "covered_relations"
+            ],
+            "title": "DecisionModelHeader"
+        },
+        "DesignModelHeader": {
+            "type": "object",
+            "additionalProperties": false,
+            "properties": {
+                "category": {
+                    "type": "string"
+                },
+                "elements": {
+                    "type": "array",
+                    "items": {
+                        "type": "string"
+                    }
+                },
+                "relations": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/LabelledArcWithPorts"
+                    }
+                },
+                "model_paths": {
+                    "type": "array",
+                    "items": {
+                        "type": "string"
+                    }
+                }
+            },
+            "required": [
+                "model_paths",
+                "category",
+                "elements",
+                "relations"
+            ],
+            "title": "DesignModelHeader"
+        },
+        "LabelledArcWithPorts": {
+            "type": "object",
+            "additionalProperties": false,
+            "properties": {
+                "src": {
+                    "type": "string"
+                },
+                "dst": {
+                    "type": "string"
+                },
+                "src_port": {
+                    "type": "string"
+                },
+                "dst_port": {
+                    "type": "string"
+                },
+                "label": {
+                    "type": "string"
+                }
+            },
+            "required": [
+                "dst",
+                "src"
+            ],
+            "title": "LabelledArcWithPorts"
+        }
+    }
+}

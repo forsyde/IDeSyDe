@@ -21,9 +21,10 @@
 title: IDeSyDe
 email: jordao@kth.se
 description: >- # this means to ignore newlines until "baseurl:"
-  Identification and and Exploration of Design Spaces
-baseurl: "/IDeSyDe" # the subpath of your site, e.g. /blog
-url: "" # the base hostname & protocol for your site, e.g. http://example.com
+  Design space identification and exploration
+# baseurl: "/IDeSyDe" # the subpath of your site, e.g. /blog
+# url: "" # the base hostname & protocol for your site, e.g. http://example.com
+parent-url: https://forsyde.github.io
 # twitter_username: jekyllrb
 github_username: forsyde
 
@@ -34,18 +35,15 @@ projects:
 sources:
   forsydeio: https://github.com/forsyde/forsyde-io
   idesyde: https://github.com/forsyde/IDeSyDe
-versions:
-  idesyde: "0.2.2"
-  forsydeio: "0.3.8"
 
 # Build settings
-# remote_theme: forsyde/forsyde-web-theme
+remote_theme: forsyde/forsyde-web-theme
 # remote_theme: aksakalli/jekyll-doc-theme@gh-pages   
 plugins:
   - jekyll-feed
   - jekyll-remote-theme
 
-remote_theme: just-the-docs/just-the-docs
+# remote_theme: just-the-docs/just-the-docs
 #theme: "just-the-docs"
 
 # Exclude from processing.

@@ -7,6 +7,10 @@ on:
       - "master"
       - "develop"
 
+concurrency:
+  group: Testing known case studies @ ${{ github.ref }}
+  cancel-in-progress: true
+
 jobs:
   test-java-build:
     strategy:
@@ -22,14 +26,25 @@ jobs:
           # - "amazon-corretto@1.17.0-0.35.1"
           - "amazon-corretto@1.11.0-11.9.1"
           - "graalvm-ce-java11@21.1.0"
+        rust:
+          - stable
+          - beta
+          - nightly
     runs-on: ${{ matrix.os }}
     steps:
-    - uses: actions/checkout@v2
-    - name: Set up JDK ${{ matrix.java }}
+    - uses: actions/checkout@v3
+    - name: Set up Scala ${{ matrix.java }}
       uses: olafurpg/setup-scala@v10
       with:
         java-version: ${{ matrix.java }}
+    - name: Setup Rust
+      uses: ATiltedTree/setup-rust@v1
+      with:
+        rust-version: ${{ matrix.rust }}
+    - uses: actions/setup-python@v4
+      with:
+        python-version: '3.10' 
     - name: Run tests with sbt
       run: |
         cd ${{ github.workspace }}
-        sbt "tests/testOnly -- -l tags.ResourceHungry" 
+        python -m unittest

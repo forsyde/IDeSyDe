@@ -1,5 +1,8 @@
 package idesyde.utils
 
-object SimpleStandardIOLogger extends Logger {
-  
+class SimpleStandardIOLogger(val lvlString: String) extends Logger {
+
+  def setLoggingLevel(lvl: String): Logger = SimpleStandardIOLogger(lvl)
+
+  def loggingLevelString: String = lvlString
 }

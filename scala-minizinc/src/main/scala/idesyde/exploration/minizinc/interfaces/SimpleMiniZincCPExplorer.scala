@@ -1,36 +1,34 @@
 package idesyde.exploration.minizinc.interfaces
 
-import idesyde.identification.minizinc.interfaces.MiniZincForSyDeDecisionModel
-import idesyde.exploration.Explorer
-import forsyde.io.java.core.ForSyDeSystemGraph
+import idesyde.core.Explorer
 import scala.concurrent.ExecutionContext
 import scala.concurrent.Future
 
 import scala.sys.process.*
-import idesyde.identification.forsyde.ForSyDeDecisionModel
 import java.nio.file.Paths
 import java.nio.file.Files
 import java.nio.file.StandardOpenOption
-import idesyde.identification.minizinc.interfaces.MiniZincData
 import scala.collection.mutable.Buffer
 import scala.collection.mutable
-import idesyde.exploration.forsyde.interfaces.ForSyDeIOExplorer
+import idesyde.identification.common.StandardDecisionModel
+import idesyde.identification.minizinc.MiniZincDecisionModel
+import idesyde.identification.minizinc.MiniZincData
 
 // import me.shadaj.scalapy.py
 
 // val minizinc = py.module("minizinc")
 
-trait SimpleMiniZincCPExplorer extends ForSyDeIOExplorer:
+trait SimpleMiniZincCPExplorer extends Explorer:
 
-  def canExplore(decisionModel: ForSyDeDecisionModel): Boolean =
+  def canExplore(decisionModel: StandardDecisionModel): Boolean =
     decisionModel match
       // Just discard the minizinc output
-      case m: MiniZincForSyDeDecisionModel =>
+      case m: MiniZincDecisionModel =>
         "minizinc".!(ProcessLogger(out => ())) == 1
       case _ => false
 
   def explorationSolve(
-      ForSyDeDecisionModel: ForSyDeDecisionModel,
+      ForSyDeDecisionModel: StandardDecisionModel,
       minizincSolverName: String = "gecode",
       tempModelFileName: String = "idesyde-minizinc-model.mzn",
       tempDataFileName: String = "idesyde-minizinc-data.json",
@@ -39,7 +37,7 @@ trait SimpleMiniZincCPExplorer extends ForSyDeIOExplorer:
       callExtraFlags: List[String] = List.empty
   )(using ExecutionContext): LazyList[Map[String, MiniZincData]] =
     ForSyDeDecisionModel match
-      case m: MiniZincForSyDeDecisionModel =>
+      case m: MiniZincDecisionModel =>
         // val modelFile = Files.createTempFile("idesyde-minizinc-model", ".mzn")
         // val dataFile = Files.createTempFile("idesyde-minizinc-data", ".json")
         val modelPath = Paths.get(tempModelFileName)

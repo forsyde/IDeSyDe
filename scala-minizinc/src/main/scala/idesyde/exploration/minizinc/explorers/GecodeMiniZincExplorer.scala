@@ -1,33 +1,33 @@
 package idesyde.exploration.minizinc.explorers
 
-import idesyde.identification.minizinc.interfaces.MiniZincForSyDeDecisionModel
-
 import scala.sys.process._
 import java.time.Duration
 import idesyde.exploration.minizinc.interfaces.SimpleMiniZincCPExplorer
 import scala.concurrent.ExecutionContext
 import scala.concurrent.Future
-import forsyde.io.java.core.ForSyDeSystemGraph
 import java.nio.file.Files
-import idesyde.identification.forsyde.ForSyDeDecisionModel
 import java.nio.file.Paths
 import java.nio.file.StandardOpenOption
-import idesyde.identification.minizinc.interfaces.MiniZincData
-import forsyde.io.java.core.EdgeTrait
-import idesyde.identification.DecisionModel
-import idesyde.identification.forsyde.ForSyDeDecisionModel
+import idesyde.identification.minizinc.MiniZincData
+import idesyde.core.DecisionModel
+import idesyde.identification.common.StandardDecisionModel
+import idesyde.core.ExplorationCombinationDescription
 
-final case class GecodeMiniZincExplorer()
-    extends SimpleMiniZincCPExplorer:
+final case class GecodeMiniZincExplorer() extends SimpleMiniZincCPExplorer {
 
-  override def canExploreForSyDe(decisionModel: ForSyDeDecisionModel): Boolean =
-    "minizinc --solvers".!!.contains("org.gecode.gecode")
+  override def explore(
+      decisionModel: DecisionModel,
+      totalExplorationTimeOutInSecs: Long,
+      maximumSolutions: Long,
+      timeDiscretizationFactor: Long,
+      memoryDiscretizationFactor: Long
+  ): LazyList[DecisionModel] = LazyList.empty
 
-  def exploreForSyDe(decisionModel: ForSyDeDecisionModel, explorationTimeOutInSecs: Long = 0L) =
-    decisionModel match
-      case _ => LazyList.empty
+  override def combination(decisionModel: DecisionModel): ExplorationCombinationDescription =
+    ExplorationCombinationDescription(false, Map())
 
-end GecodeMiniZincExplorer
+  def uniqueIdentifier: String = "GecodeMiniZincExplorer"
+}
 
 object GecodeMiniZincExplorer:
 

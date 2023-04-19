@@ -5,7 +5,7 @@ import org.chocosolver.solver.constraints.Propagator
 import org.chocosolver.solver.variables.IntVar
 import org.chocosolver.solver.variables.BoolVar
 import org.chocosolver.solver.constraints.PropagatorPriority
-import idesyde.utils.CoreUtils.wfor
+import idesyde.utils.HasUtils
 
 class FixedPriorityPreemptivePropagator[T](
     val schedulerIdx: Int,
@@ -22,7 +22,8 @@ class FixedPriorityPreemptivePropagator[T](
       taskExecution ++ responseTimes ++ blockingTimes ++ durations,
       PropagatorPriority.BINARY,
       false
-    ) {
+    )
+    with HasUtils {
 
   private val numTasks = taskExecution.size
 

@@ -8,7 +8,7 @@ parent: Usage
 
 # Quick start
 
-This quick start continues from the [installation instructions](/usage/install), 
+This quick start continues from the [installation instructions](usage/install), 
 and assumes you have `idesyde.jar` available in your computer.
 
 <!-- Then, you download the `jar` file and make it available to be called from your terminal;  -->
@@ -37,11 +37,11 @@ you can execute the following:
 ## Performing DSE
 
 IDeSyDe currently consumes ForSyDe IO description files as its input. The conventional extension is `fiodl`.
-Please note that this support comes directly from [ForSyDe IO]({{ site.projects.forsydeio }}), and this
+Please note that this support comes directly from [ForSyDe IO](https://forsyde.github.io/forsyde-io), and this
 requires the extension to be either `.fiodl` to work.
 
 If the input models you have are not ForSyDe IO files, 
-then you might be able to use [ConverSyDe]({{site.projects.forsydeio}}/usage/conversyde) to convert them.
+then you might be able to use [ConverSyDe](https://forsyde.github.io/forsyde-io/usage/conversyde) to convert them.
 
 Once you have the input files `model1.fiodl`, `model2.fiodl`, etc. Then you just execute the idesyde
 `jar` with them as inputs:

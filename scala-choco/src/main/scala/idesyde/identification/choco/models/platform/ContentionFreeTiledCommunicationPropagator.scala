@@ -4,7 +4,7 @@ import org.chocosolver.solver.variables.IntVar
 import org.chocosolver.solver.constraints.Propagator
 import org.jgrapht.graph.SimpleGraph
 import org.jgrapht.graph.DefaultEdge
-import idesyde.utils.CoreUtils.wfor
+import idesyde.utils.HasUtils
 import org.chocosolver.solver.constraints.PropagatorPriority
 import org.jgrapht.alg.color.LargestDegreeFirstColoring
 import org.chocosolver.util.ESat
@@ -20,17 +20,20 @@ class ContentionFreeTiledCommunicationPropagator(
       messageIsCommunicated.flatten.flatten ++ messageVirtualChannels.flatten,
       PropagatorPriority.VERY_SLOW,
       false
-    ) {
+    )
+    with HasUtils {
 
   private val numCommElems = messageVirtualChannels.head.size
   // def numMessages = messageVirtualChannels.head.size
   // def numTiles = messageIsCommunicated.head.size
 
-  val interferenceGraphPerComm: Array[SimpleGraph[Int, DefaultEdge]] = commElems.map(ce => SimpleGraph
-    .createBuilder[Int, DefaultEdge](() => DefaultEdge())
-    .addVertices(messages: _*)
-    .build())
-  val coloringAlgorithms = interferenceGraphPerComm.map(g => LargestDegreeFirstColoring(g)) 
+  val interferenceGraphPerComm: Array[SimpleGraph[Int, DefaultEdge]] = commElems.map(ce =>
+    SimpleGraph
+      .createBuilder[Int, DefaultEdge](() => DefaultEdge())
+      .addVertices(messages: _*)
+      .build()
+  )
+  val coloringAlgorithms = interferenceGraphPerComm.map(g => LargestDegreeFirstColoring(g))
 
   def clearInterferences() = {
     wfor(0, _ < numCommElems, _ + 1) { ceIdx =>
@@ -48,7 +51,9 @@ class ContentionFreeTiledCommunicationPropagator(
           if (srci != dsti && messageIsCommunicated(mi)(srci)(dsti).getLB() > 0) {
             // this extra line is not fully part of the reference, but it is here for performance reasons,
             // i.e. to avoid duplication of looping
-            allCommunicationsInstantiated = allCommunicationsInstantiated && messageIsCommunicated(mi)(srci)(dsti).isInstantiated()
+            allCommunicationsInstantiated = allCommunicationsInstantiated && messageIsCommunicated(
+              mi
+            )(srci)(dsti).isInstantiated()
             wfor(mi + 1, _ < messages.size, _ + 1) { mj =>
               wfor(0, _ < procElems.size, _ + 1) { srcj =>
                 if (srci != srcj) {
@@ -87,43 +92,44 @@ class ContentionFreeTiledCommunicationPropagator(
       wfor(0, _ < messages.size, _ + 1) { mIdx =>
         val message = messages(mIdx)
         if (coloredVertices.containsKey(message)) {
-            // there is a possible clash, instantiate the lower message to the first available slot
+          // there is a possible clash, instantiate the lower message to the first available slot
           if (!messageVirtualChannels(mIdx)(ceIdx).isInstantiated()) {
             println(s"LB $message in $ceIdx to ${coloredVertices.get(message) + 1}")
-            messageVirtualChannels(mIdx)(ceIdx).instantiateTo(coloredVertices.get(message) + 1, this)
+            messageVirtualChannels(mIdx)(ceIdx)
+              .instantiateTo(coloredVertices.get(message) + 1, this)
           }
         }
       }
     }
-      //   wfor(mLowerIdx + 1, _ < messages.size, _ + 1) { mHigherIdx =>
-      //     val mHigher = messages(mHigherIdx)
-      //     if (
-      //       coloredVertices.containsKey(mHigher) && coloredVertices.get(mLower) != coloredVertices.get(mHigher)
-      //     ) {
-      //       wfor(0, _ < commElems.size, _ + 1) { ce =>
-      //         // there is a possible clash, instantiate the lower message to the first available slot
-      //         if (!messageVirtualChannels(mLowerIdx)(ce).isInstantiated()) {
-      //           messageVirtualChannels(mLowerIdx)(ce).instantiateTo(coloredVertices.get(mLower), this)
-      //         }
-      //         if (!messageVirtualChannels(mHigherIdx)(ce).isInstantiated()) {
-      //           messageVirtualChannels(mHigherIdx)(ce).removeValue(coloredVertices.get(mLower), this)
-      //         }
-      //       //   if (
-      //       //     messageVirtualChannels(mLowerIdx)(ce).getUB() >= messageVirtualChannels(mHigherIdx)(ce)
-      //       //       .getLB()
-      //       //   ) {
-      //       //     // val mid = (messageVirtualChannels(miIdx)(ce).getUB() + messageVirtualChannels(mjIdx)(ce).getLB()) / 2
-      //       //     // model.allDifferent(messageVirtualChannels(miIdx)(ce), messageVirtualChannels(mjIdx)(ce)).post()
-      //       //     // messageVirtualChannels(mLowerIdx)(ce)
-      //       //     //   .instantiateTo(messageVirtualChannels(mLowerIdx)(ce).getLB(), this)
-      //       //     println(s"LB $mHigher in $ce to ${messageVirtualChannels(mLowerIdx)(ce).getLB() + 1} because of $mLower")
-      //       //     messageVirtualChannels(mHigherIdx)(ce)
-      //       //     .updateLowerBound(messageVirtualChannels(mLowerIdx)(ce).getLB() + 1, this)
-      //       //   }
-      //       }
-      //     }
-      //   }
-      // }
+    //   wfor(mLowerIdx + 1, _ < messages.size, _ + 1) { mHigherIdx =>
+    //     val mHigher = messages(mHigherIdx)
+    //     if (
+    //       coloredVertices.containsKey(mHigher) && coloredVertices.get(mLower) != coloredVertices.get(mHigher)
+    //     ) {
+    //       wfor(0, _ < commElems.size, _ + 1) { ce =>
+    //         // there is a possible clash, instantiate the lower message to the first available slot
+    //         if (!messageVirtualChannels(mLowerIdx)(ce).isInstantiated()) {
+    //           messageVirtualChannels(mLowerIdx)(ce).instantiateTo(coloredVertices.get(mLower), this)
+    //         }
+    //         if (!messageVirtualChannels(mHigherIdx)(ce).isInstantiated()) {
+    //           messageVirtualChannels(mHigherIdx)(ce).removeValue(coloredVertices.get(mLower), this)
+    //         }
+    //       //   if (
+    //       //     messageVirtualChannels(mLowerIdx)(ce).getUB() >= messageVirtualChannels(mHigherIdx)(ce)
+    //       //       .getLB()
+    //       //   ) {
+    //       //     // val mid = (messageVirtualChannels(miIdx)(ce).getUB() + messageVirtualChannels(mjIdx)(ce).getLB()) / 2
+    //       //     // model.allDifferent(messageVirtualChannels(miIdx)(ce), messageVirtualChannels(mjIdx)(ce)).post()
+    //       //     // messageVirtualChannels(mLowerIdx)(ce)
+    //       //     //   .instantiateTo(messageVirtualChannels(mLowerIdx)(ce).getLB(), this)
+    //       //     println(s"LB $mHigher in $ce to ${messageVirtualChannels(mLowerIdx)(ce).getLB() + 1} because of $mLower")
+    //       //     messageVirtualChannels(mHigherIdx)(ce)
+    //       //     .updateLowerBound(messageVirtualChannels(mLowerIdx)(ce).getLB() + 1, this)
+    //       //   }
+    //       }
+    //     }
+    //   }
+    // }
     // }
     // finally, if all transmissions are defined, we finish the propagations by assingning
     // all variables to their lowerst values, since the previous algorithm would have made

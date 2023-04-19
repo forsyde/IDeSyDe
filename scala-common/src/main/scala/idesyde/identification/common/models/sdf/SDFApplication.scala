@@ -2,7 +2,8 @@ package idesyde.identification.common.models.sdf
 
 import scala.jdk.CollectionConverters.*
 
-import idesyde.utils.SDFUtils
+import upickle.default.*
+
 import idesyde.identification.common.models.workload.ParametricRateDataflowWorkloadMixin
 import idesyde.identification.common.models.workload.InstrumentedWorkloadMixin
 import scala.collection.mutable
@@ -13,6 +14,7 @@ import scalax.collection.Graph
 import scalax.collection.GraphPredef._
 import scalax.collection.edge.Implicits._
 import scala.collection.mutable.Buffer
+import idesyde.core.CompleteDecisionModel
 
 /** Decision model for synchronous dataflow graphs.
   *
@@ -38,7 +40,7 @@ import scala.collection.mutable.Buffer
   *   the produced or consumed tokens for each edge triple in the SDF graph.
   * @param actorSizes
   *   the size in bits for each actor's instruction(s)
-  * @param actorThrouhgputs
+  * @param minimumActorThroughputs
   *   the fixed throughput expected to be done for each actor, given in executions per second.
   *
   * @see
@@ -54,10 +56,12 @@ final case class SDFApplication(
     val actorComputationalNeeds: Vector[Map[String, Map[String, Long]]],
     val channelNumInitialTokens: Vector[Int],
     val channelTokenSizes: Vector[Long],
-    val actorThrouhgputs: Vector[Double]
+    val minimumActorThroughputs: Vector[Double]
 ) extends StandardDecisionModel
     with ParametricRateDataflowWorkloadMixin
-    with InstrumentedWorkloadMixin {
+    with InstrumentedWorkloadMixin
+    with CompleteDecisionModel
+    derives ReadWriter {
 
   // def dominatesSdf(other: SDFApplication) = repetitionVector.size >= other.repetitionVector.size
   val coveredElements         = (actorsIdentifiers ++ channelsIdentifiers).toSet
@@ -82,47 +86,13 @@ final case class SDFApplication(
 
   val processSizes = actorSizes
 
-  val messagesFromChannels = dataflowGraphs.zipWithIndex.map((df, dfi) => {
-    var lumpedChannels = mutable
-      .Map[(String, String), (Vector[String], Long, Int, Int, Int)]()
-      .withDefaultValue(
-        (
-          Vector(),
-          0L,
-          0,
-          0,
-          0
-        )
-      )
-    for ((c, ci) <- channelsIdentifiers.zipWithIndex) {
-      val thisInitialTokens = channelNumInitialTokens(ci)
-      for (
-        (src, _, produced) <- df.filter((s, d, _) => d == c);
-        (_, dst, consumed) <- df.filter((s, d, _) => s == c)
-      ) {
-        val srcIdx             = actorsIdentifiers.indexOf(src)
-        val dstIdex            = actorsIdentifiers.indexOf(dst)
-        val sent               = produced * channelTokenSizes(ci)
-        val (cs, d, p, q, tok) = lumpedChannels((src, dst))
-        lumpedChannels((src, dst)) = (
-          cs :+ c,
-          d + sent,
-          p + produced,
-          q + consumed,
-          tok + thisInitialTokens
-        )
-      }
-    }
-    lumpedChannels.map((k, v) => (k._1, k._2, v._1, v._2, v._3, v._4, v._5)).toVector
-  })
-
   /** This abstracts the many sdf channels in the sdf multigraph into the form commonly presented in
     * papers and texts: with just a channel between every two actors.
     *
     * Every tuple in this is given by: (src actors index, dst actors index, lumped SDF channels,
     * size of message, produced, consumed, initial tokens)
     */
-  val sdfMessages = messagesFromChannels(0)
+  val sdfMessages = computeMessagesFromChannels(0)
 
   /** this is a simple shortcut for the balance matrix (originally called topology matrix) as SDFs
     * have only one configuration
@@ -139,7 +109,7 @@ final case class SDFApplication(
 
   val sdfGraph = Graph.from(
     actorsIdentifiers,
-    messagesFromChannels.flatMap(m => m.map((s, t, _, _, _, _, _) => s ~> t))
+    sdfMessages.map((s, t, _, _, _, _, _) => s ~> t)
   )
 
   val messagesMaxSizes: Vector[Long] =
@@ -181,8 +151,9 @@ final case class SDFApplication(
   /** Same as [[firingsPrecedenceGraph]], but with one more firings per actors of the next periodic
     * phase
     */
-  lazy val firingsPrecedenceWithExtraStepGraph = {
-    var edges = Buffer[((String, Int), (String, Int))]()
+  lazy val firingsPrecedenceGraphWithCycles = {
+    val maxFiringPossible = sdfRepetitionVectors.max + 1
+    var edges             = Buffer[((String, Int), (String, Int))]()
     for ((s, d, _, _, produced, consumed, tokens) <- sdfMessages) {
       val src = actorsIdentifiers.indexOf(s)
       val dst = actorsIdentifiers.indexOf(d)
@@ -190,20 +161,25 @@ final case class SDFApplication(
       // val src = vec.indexWhere(_ > 0)
       // val dst = vec.indexWhere(_ < 0)
       for (
-        qDst <- sdfRepetitionVectors(dst) to sdfRepetitionVectors(dst) + 1;
+        qDst <- 1 to maxFiringPossible * sdfRepetitionVectors(dst);
+        qSrc <- 1 to maxFiringPossible * sdfRepetitionVectors(src);
         ratio = Rational(qDst * consumed - tokens, produced);
-        qSrc <- ratio.floor.toInt to ratio.ceil.toInt;
-        if qSrc > 0
+        if qSrc == ratio.ceil.toInt;
+        qSrcMod = ((qSrc - 1) % sdfRepetitionVectors(src)) + 1;
+        qDstMod = ((qDst - 1) % sdfRepetitionVectors(dst)) + 1
       ) {
-        edges +:= ((s, qSrc), (d, qDst))
+        edges +:= ((s, qSrcMod), (d, qDstMod))
       }
     }
-    for (a <- actorsIdentifiers; i = actorsIdentifiers.indexOf(a)) {
-      edges +:= ((a, sdfRepetitionVectors(i)), (a, sdfRepetitionVectors(i) + 1))
+    for ((a, ai) <- actorsIdentifiers.zipWithIndex; q <- 1 to sdfRepetitionVectors(ai) - 1) {
+      edges +:= ((a, q), (a, q + 1))
     }
-    val param = edges.map((s, t) => (s ~> t)).toArray
-    firingsPrecedenceGraph ++ param
+    val param = edges.map((s, t) => (s ~> t))
+    val nodes = edges.map((s, t) => s).toSet ++ edges.map((s, t) => t).toSet
+    scalax.collection.Graph.from(nodes, param)
   }
+
+  lazy val jobsAndActors = firingsPrecedenceGraph.nodes.map(_.value).toVector
 
   lazy val decreasingActorConsumptionOrder = actorsIdentifiers.zipWithIndex
     .sortBy((a, ai) => {
@@ -236,7 +212,7 @@ final case class SDFApplication(
           .toArray
     )
 
-  lazy val topologicalAndHeavyJobOrderingWithExtra = firingsPrecedenceWithExtraStepGraph
+  lazy val topologicalAndHeavyJobOrderingWithExtra = firingsPrecedenceGraphWithCycles
     .topologicalSort()
     .fold(
       cycleNode => {
@@ -246,7 +222,7 @@ final case class SDFApplication(
       topo =>
         topo
           .withLayerOrdering(
-            firingsPrecedenceWithExtraStepGraph.NodeOrdering((v1, v2) =>
+            firingsPrecedenceGraphWithCycles.NodeOrdering((v1, v2) =>
               decreasingActorConsumptionOrder
                 .indexOf(
                   v1.value._1
@@ -264,6 +240,10 @@ final case class SDFApplication(
     actorsIdentifiers.sortBy(a =>
       topologicalAndHeavyJobOrderingWithExtra.indexWhere((aa, _) => a == aa)
     )
+
+  def bodyAsText: String = write(this)
+
+  def bodyAsBinary: Array[Byte] = writeBinary(this)
 
   override val uniqueIdentifier = "SDFApplication"
 

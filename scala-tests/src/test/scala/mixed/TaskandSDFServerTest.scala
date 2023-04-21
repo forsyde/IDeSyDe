@@ -18,6 +18,7 @@ import idesyde.identification.forsyde.{ForSyDeDesignModel, ForSyDeIdentification
 import idesyde.identification.minizinc.MinizincIdentificationModule
 import idesyde.exploration.ChocoExplorationModule
 import tags.ResourceHungry
+import idesyde.identification.common.models.mixed.TasksAndSDFServerToMultiCore
 
 class TaskandSDFServerTest extends AnyFunSuite with LoggingMixin with PlatformExperimentCreator {
 
@@ -71,11 +72,14 @@ class TaskandSDFServerTest extends AnyFunSuite with LoggingMixin with PlatformEx
       .take(1)
     assert(solutions.size == 0)
   }*/
-  test("Find a ") {
-    val identified =
+  val identified =
       identificationHandler.identifyDecisionModels(Set(ForSyDeDesignModel(rasta_and_jpeg_case)))
-    assert(identified.size > 0)
-    val chosen = explorationHandler.chooseExplorersAndModels(identified)
+  test("Find a ") {
+    
+    assert(identified.size > 0)}
+    assert(identified.exists(model=>model.isInstance [TasksAndSDFServerToMultiCore]))
+  test("dcfs")
+    {val chosen = explorationHandler.chooseExplorersAndModels(identified)
     assert(chosen.size > 0)
     /*val solList = chosen.headOption
       .map((e, m) => {

@@ -233,13 +233,21 @@ lazy val devicetree = (project in file("scala-bridge-device-tree"))
   .dependsOn(core)
   .dependsOn(common)
   .dependsOn(blueprints)
+  .enablePlugins(UniversalPlugin, JavaAppPackaging, JlinkPlugin)
+  .enablePlugins(JDKPackagerPlugin)
   .settings(
     name := "idesyde-scala-bridge-devicetree",
     libraryDependencies ++= Seq(
       "org.scala-lang.modules" %%% "scala-parser-combinators" % scalaParserCombinatorsVersion,
       "com.lihaoyi"             %% "os-lib"                   % osLibVersion,
       "org.virtuslab"           %% "scala-yaml"               % scalaYamlVersion
-    )
+    ),
+    licenses := Seq(
+      "MIT"  -> url("https://opensource.org/license/mit/"),
+      "APL2" -> url("https://www.apache.org/licenses/LICENSE-2.0"),
+      "EPL2" -> url("https://www.eclipse.org/legal/epl-2.0/")
+    ),
+    Compile / mainClass := Some("idesyde.devicetree.DeviceTreeIdentificationModule")
   )
 
 lazy val cli = (project in file("scala-cli"))

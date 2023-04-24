@@ -1,1 +1,4 @@
 include 'kotlin-core'
+include 'kotlin-bridge-matlab'
+include 'kotlin-common'
+

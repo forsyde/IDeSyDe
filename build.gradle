@@ -3,6 +3,9 @@ plugins {
   id 'signing'
   id 'idea'
   id 'eclipse'
+  id 'com.github.johnrengelman.shadow' version '8.1.1'
+  id 'org.jetbrains.kotlin.jvm' version '1.8.20'
+  id 'org.jetbrains.kotlin.plugin.serialization' version '1.8.20'
 }
 
 // due to how maven central works, the groupId must be the same as the
@@ -45,11 +48,16 @@ dependencies {
 subprojects {
 
   apply plugin: 'java'
+  apply plugin: 'java-library'
   apply plugin: 'idea'
   apply plugin: 'eclipse'
   apply plugin: 'publishing'
+  apply plugin: 'application'
   apply plugin: 'signing'
   apply plugin: 'maven-publish'
+  apply plugin: 'org.jetbrains.kotlin.jvm'
+  apply plugin: 'org.jetbrains.kotlin.plugin.serialization'
+  apply plugin: 'com.github.johnrengelman.shadow'
 
   group = 'io.github.forsyde'
   archivesBaseName = rootProject.name + '-' + project.name

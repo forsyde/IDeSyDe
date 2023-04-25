@@ -1,5 +1,0 @@
-dependencies {
-    api 'org.jetbrains.kotlinx:kotlinx-serialization-json:1.5.0'
-    api "com.ensarsarajcic.kotlinx:serialization-msgpack:0.5.4"
-    api "org.jetbrains.kotlinx:kotlinx-cli:0.3.5"
-}

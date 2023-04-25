@@ -36,13 +36,13 @@ dependencies {
 //  useJUnitPlatform()
 //}
 
-// compileJava {
-//   sourceCompatibility = JavaVersion.VERSION_11
-// }
+compileJava {
+  sourceCompatibility = JavaVersion.VERSION_17
+}
 
-// compileTestJava {
-//   sourceCompatibility = JavaVersion.VERSION_11
-// }
+compileTestJava {
+  sourceCompatibility = JavaVersion.VERSION_17
+}
 
 
 subprojects {

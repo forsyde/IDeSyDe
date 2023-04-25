@@ -1,8 +1,6 @@
 package idesyde.matlab
 
 import idesyde.core.*
-import idesyde.core.headers.DecisionModelHeader
-import idesyde.core.headers.DesignModelHeader
 
 object MatlabIdentificationModule : IdentificationModule {
     override fun uniqueIdentifier(): String = "MatlabIdentificationModule"

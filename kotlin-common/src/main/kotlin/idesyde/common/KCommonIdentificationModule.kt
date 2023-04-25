@@ -1,11 +1,6 @@
 package idesyde.common
 
-import com.ensarsarajcic.kotlinx.serialization.msgpack.MsgPack
 import idesyde.core.*
-import idesyde.core.headers.DecisionModelHeader
-import idesyde.core.headers.DesignModelHeader
-import java.nio.file.Files
-import java.nio.file.Paths
 
 object KCommonIdentificationModule : IdentificationModule {
     override fun uniqueIdentifier(): String = "KCommonIdentificationModule"

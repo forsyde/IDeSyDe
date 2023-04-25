@@ -1,15 +1,13 @@
-package idesyde.core
+package idesyde.core;
 
-import com.ensarsarajcic.kotlinx.serialization.msgpack.MsgPack
-import idesyde.core.headers.DecisionModelHeader
-import idesyde.core.headers.DesignModelHeader
-import kotlinx.cli.ArgParser
-import kotlinx.cli.ArgType
-import kotlinx.serialization.json.Json
-import java.nio.file.Files
-import java.nio.file.Path
-import java.nio.file.Paths
-import kotlin.io.path.extension
+import idesyde.core.headers.DecisionModelHeader;
+import idesyde.core.headers.DesignModelHeader;
+
+import java.nio.file.Path;
+import java.util.Optional;
+import java.util.Set;
+import java.util.concurrent.Callable;
+import java.util.stream.Collectors;
 
 /** The trait/interface for an identification module that provides the identification and
  * integration rules required to power the design space identification process [1].
@@ -22,14 +20,15 @@ import kotlin.io.path.extension
  * @see
  *   [[idesyde.core.IdentificationLibrary]]
  */
-interface IdentificationModule {
+public interface IdentificationModule extends Callable<Integer> {
+
 
     /** Unique string used to identify this module during orchetration. Ideally it matches the name of
-      * the implementing class (or is the implemeting class name, ditto).
-      */
-    fun uniqueIdentifier(): String
+     * the implementing class (or is the implemeting class name, ditto).
+     */
+    String uniqueIdentifier();
 
-    fun inputsToDesignModel(p: Path): DesignModel? = null
+    default Optional<DesignModel> inputsToDesignModel(Path p) { return Optional.empty(); }
 
     /** decoders used to reconstruct decision models from headers.
      *
@@ -39,47 +38,46 @@ interface IdentificationModule {
      * @return
      *   the registered decoders
      */
-    fun decisionHeaderToModel(m: DecisionModelHeader): DecisionModel?
+    Optional<DecisionModel> decisionHeaderToModel(DecisionModelHeader header);
 
-    fun designHeaderToModel(m: DesignModelHeader): DesignModel?
+    Optional<DesignModel> designHeaderToModel(DesignModelHeader header);
 
-    fun designModelToOutput(m: DesignModel, p: Path): Path? = null
+    default Optional<Path> designModelToOutput(DesignModel m, Path p) {return Optional.empty(); }
 
-    fun reverseIdentificationRules(): Set<
-                (Set<DesignModel>, Set<DecisionModel>) -> Set<DesignModel>
-            >
+    Set<ReverseIdentificationRule<?>> reverseIdentificationRules();
 
-    fun identificationRules(): Set<IdentificationRule<DecisionModel>>
+    Set<IdentificationRule<?>> identificationRules();
 
-    fun reverseIdentification(
-        designModels: Set<DesignModel>,
-        solvedDecisionModels: Set<DecisionModel>
-    ): Set<DesignModel> {
-        return reverseIdentificationRules().flatMap { irrule ->
-            irrule.invoke(designModels, solvedDecisionModels)
-        }.toSet()
+    default Set<DesignModel> reverseIdentification(
+            Set<DesignModel> designModels,
+            Set<DecisionModel> solvedDecisionModels
+    ) {
+        return reverseIdentificationRules().stream().flatMap(irrule ->
+                irrule.apply(solvedDecisionModels, designModels).stream()
+        ).collect(Collectors.toSet());
     }
 
-    fun identificationStep(
-        stepNumber: Long,
-        designModels: Set<DesignModel>,
-        decisionModels: Set<DecisionModel>
-    ): Set<DecisionModel> {
-        val iterRules = if (stepNumber == 0L) {
-            identificationRules().filter { it.usesDesignModels() }
-        } else if (stepNumber > 0L) {
-            identificationRules().filter { it.usesDecisionModels() }
-        } else identificationRules()
-        return iterRules.flatMap { irule ->
-            irule.partiallyIdentify(designModels, decisionModels)
-        }.filter { decisionModel ->
-            !decisionModels.contains(decisionModel)
-        }.toSet()
+    default Set<DecisionModel> identificationStep(
+            long stepNumber,
+            Set<DesignModel> designModels,
+            Set<DecisionModel> decisionModels
+    ) {
+        if (stepNumber == 0L) {
+            return identificationRules().stream().filter(IdentificationRule::usesDesignModels)
+                    .flatMap(identificationRule -> identificationRule.apply(designModels, decisionModels).stream())
+                    .filter(m -> !decisionModels.contains(m))
+                    .collect(Collectors.toSet());
+        } else {
+            return identificationRules().stream().filter(IdentificationRule::usesDecisionModels)
+                    .flatMap(identificationRule -> identificationRule.apply(designModels, decisionModels).stream())
+                    .filter(m -> !decisionModels.contains(m))
+                    .collect(Collectors.toSet());
+        }
     }
 
-    fun standaloneIdentificationModule(
-        args: Array<String>
-    ): Unit {
+    default void standaloneIdentificationModule(
+            args: Array<String>
+    ) {
         val parser = ArgParser("I-Module " + uniqueIdentifier())
         val designPathStr = parser.option(ArgType.String, shortName = "m", fullName = "design-path", description = "The path where the design models (and headers) are stored.")
         val identifiedPathStr = parser.option(ArgType.String, shortName = "i", fullName = "identified-path", description = "The path where identified decision models (and headers) are stored.")
@@ -89,53 +87,53 @@ interface IdentificationModule {
         val identStep = parser.option(ArgType.Int, shortName = "t", fullName = "identification-step", description = "The overall identification iteration number.")
         parser.parse(args)
         designPathStr.value?.let {designPathStrv ->
-            val designPath = Paths.get(designPathStrv)
+                val designPath = Paths.get(designPathStrv)
             Files.createDirectories(designPath)
             val fromDesignHeaders = Files.list(designPath)
-                .filter { f -> f.startsWith("header") }
+                    .filter { f -> f.startsWith("header") }
                 .filter { f -> f.extension == ".msgpack" }
                 .map { f -> MsgPack.decodeFromByteArray(DesignModelHeader.serializer(), Files.readAllBytes(f)) }
                 .map { f -> designHeaderToModel(f) }
                 .toList()
-                .filterNotNull()
-                .toSet()
+                    .filterNotNull()
+                    .toSet()
             val directFromFile = Files.list(designPath)
-                .map { f ->
+                    .map { f ->
                     val m = inputsToDesignModel(f)
-                    m?.header()?.let {
-                        val h = it.copy(modelPaths = listOf(f.toString()))
-                        val dest = designPath.resolve(Paths.get("header_%s_%s", h.category, uniqueIdentifier()))
-                        Files.writeString(dest.resolve(".json"), Json.encodeToString(DesignModelHeader.serializer(), h))
-                        Files.write(dest.resolve(".msgpack"), MsgPack.encodeToByteArray(DesignModelHeader.serializer(), h))
-                    }
-                    m
+                m?.header()?.let {
+                    val h = it.copy(modelPaths = listOf(f.toString()))
+                    val dest = designPath.resolve(Paths.get("header_%s_%s", h.category, uniqueIdentifier()))
+                    Files.writeString(dest.resolve(".json"), Json.encodeToString(DesignModelHeader.serializer(), h))
+                    Files.write(dest.resolve(".msgpack"), MsgPack.encodeToByteArray(DesignModelHeader.serializer(), h))
                 }
+                m
+            }
                 .filter { f -> f != null }
                 .toList()
-                .filterNotNull()
-                .toSet()
+                    .filterNotNull()
+                    .toSet()
             val designModels = fromDesignHeaders.union(directFromFile)
 
             solvedPathStr.value?.let { solvedPathv ->
-                val solvedPath = Paths.get(solvedPathv)
+                    val solvedPath = Paths.get(solvedPathv)
                 reversePathStr.value?.let {reversePathv ->
-                    val reversePath = Paths.get(reversePathv)
+                        val reversePath = Paths.get(reversePathv)
                     Files.createDirectories(solvedPath)
                     Files.createDirectories(reversePath)
                     val solvedDecisionModels = Files.list(solvedPath)
-                        .filter { f -> f.startsWith("header") }
+                            .filter { f -> f.startsWith("header") }
                         .filter { f -> f.extension == ".msgpack" }
                         .map { f -> MsgPack.decodeFromByteArray(DecisionModelHeader.serializer(), Files.readAllBytes(f)) }
                         .map { f -> decisionHeaderToModel(f) }
                         .toList()
-                        .filterNotNull()
-                        .toSet()
+                            .filterNotNull()
+                            .toSet()
                     val reIdentified = reverseIdentification(designModels, solvedDecisionModels)
                     for ((i, m) in reIdentified.withIndex()) {
                         val dest = reversePath.resolve(i.toString()).resolve(uniqueIdentifier()).resolve(".msgpack")
                         val header = m.header()
                         val h = outputPath.value?.let { op ->
-                            val saved = designModelToOutput(m, Paths.get(op))
+                                val saved = designModelToOutput(m, Paths.get(op))
                             header.copy(modelPaths = listOf(saved.toString()))
                         } ?: header
                         Files.write(dest, MsgPack.encodeToByteArray(DesignModelHeader.serializer(), h))
@@ -143,20 +141,20 @@ interface IdentificationModule {
                 }
             }
             identifiedPathStr.value?.let {identifiedPathv ->
-                val identifiedPath = Paths.get(identifiedPathv)
+                    val identifiedPath = Paths.get(identifiedPathv)
                 Files.createDirectories(identifiedPath)
                 val decisionModels = Files.list(identifiedPath)
-                    .filter { f -> f.startsWith("header") }
+                        .filter { f -> f.startsWith("header") }
                     .filter { f -> f.extension == ".msgpack" }
                     .map { f -> MsgPack.decodeFromByteArray(DecisionModelHeader.serializer(), Files.readAllBytes(f)) }
                     .map { f -> decisionHeaderToModel(f) }
                     .toList()
-                    .filterNotNull()
-                    .toSet()
+                        .filterNotNull()
+                        .toSet()
                 val identified = identificationStep(
-                    identStep.value?.toLong() ?: 0L,
-                    designModels,
-                    decisionModels
+                        identStep.value?.toLong() ?: 0L,
+                        designModels,
+                        decisionModels
                 )
                 for (m in identified) {
                     val header = m.header()
@@ -175,5 +173,3 @@ interface IdentificationModule {
     }
 
 }
-
-//}

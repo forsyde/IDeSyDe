@@ -1,6 +1,6 @@
 dependencies {
     testImplementation 'org.junit.jupiter:junit-jupiter-api:5.8.1'
-    implementation project(":kotlin-core")
+    implementation project(":java-core")
     implementation project(":kotlin-common")
 }
 

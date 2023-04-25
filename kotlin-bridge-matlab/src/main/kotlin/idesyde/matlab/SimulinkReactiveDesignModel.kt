@@ -1,9 +1,5 @@
 package idesyde.matlab
 
-import idesyde.core.DesignModel
-import idesyde.core.headers.DesignModelHeader
-import idesyde.core.headers.LabelledArcWithPorts
-
 data class SimulinkReactiveDesignModel(
     val processes: Set<String>,
     val processesSizes: Map<String, Long>,

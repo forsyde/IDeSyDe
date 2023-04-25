@@ -1,10 +1,6 @@
 package idesyde.common
 
 import com.ensarsarajcic.kotlinx.serialization.msgpack.MsgPack
-import idesyde.core.DecisionModelWithBody
-import idesyde.core.headers.DecisionModelHeader
-import idesyde.core.headers.LabelledArcWithPorts
-import kotlinx.serialization.Serializable
 import kotlinx.serialization.json.Json
 
 @Serializable

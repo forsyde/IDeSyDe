@@ -1,9 +1,6 @@
 package idesyde.matlab
 
 import idesyde.common.CommunicatingAndTriggeredReactiveWorkload
-import idesyde.core.DecisionModel
-import idesyde.core.DesignModel
-import idesyde.core.IdentificationRule
 
 class CommunicatingAndTriggeredReactiveWorkloadIRule : IdentificationRule<CommunicatingAndTriggeredReactiveWorkload> {
 

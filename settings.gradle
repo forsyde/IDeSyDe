@@ -1,4 +1,5 @@
 include 'java-core'
 include 'kotlin-bridge-matlab'
 include 'kotlin-common'
+include 'java-blueprints'
 

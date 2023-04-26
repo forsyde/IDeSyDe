@@ -1,0 +1,4 @@
+dependencies {
+    implementation 'info.picocli:picocli:4.7.3'
+    implementation project(":java-core")
+}

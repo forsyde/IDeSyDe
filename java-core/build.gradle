@@ -1,3 +1,4 @@
 dependencies {
     api 'com.fasterxml.jackson.core:jackson-databind:2.0.1'
+    api 'org.msgpack:jackson-dataformat-msgpack:0.9.3'
 }

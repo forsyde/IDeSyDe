@@ -27,11 +27,11 @@ public interface IdentificationModuleBlueprint extends IdentificationModule {
             Files.createDirectories(cli.designPath);
             Set<DesignModel> designModels = new HashSet<>();
             for (Path p : Files.list(cli.designPath).toList()) {
-                if (p.startsWith("header") && p.endsWith(".msgpack")) {
-                    designHeaderToModel(objectMapper.readValue(Files.readAllBytes(p), DesignModelHeader.class))
-                            .ifPresent(designModels::add);
-
-                }
+//                if (p.startsWith("header") && p.endsWith(".msgpack")) {
+//                    designHeaderToModel(objectMapper.readValue(Files.readAllBytes(p), DesignModelHeader.class))
+//                            .ifPresent(designModels::add);
+//
+//                }
                 var opt = inputsToDesignModel(p);
                 if (opt.isPresent()) {
                     var o = opt.get();

@@ -4,8 +4,10 @@ plugins {
   id 'idea'
   id 'eclipse'
   id 'com.github.johnrengelman.shadow' version '8.1.1'
-  id 'org.jetbrains.kotlin.jvm' version '1.8.20'
-  id 'org.jetbrains.kotlin.plugin.serialization' version '1.8.20'
+//  id 'org.jetbrains.kotlin.jvm' version '1.8.20'
+//  id 'org.jetbrains.kotlin.plugin.serialization' version '1.8.20'
+  id 'org.beryx.jlink' version '2.26.0'
+  id "org.gradlex.extra-java-module-info" version "1.4"
 }
 
 // due to how maven central works, the groupId must be the same as the
@@ -27,37 +29,17 @@ repositories {
   mavenCentral()
 }
 
-// In this section you declare the dependencies for your production and test code
-dependencies {
-//  testImplementation('org.junit.jupiter:junit-jupiter:5.9.0')
-}
-
-//test {
-//  useJUnitPlatform()
-//}
-
-compileJava {
-  sourceCompatibility = JavaVersion.VERSION_17
-}
-
-compileTestJava {
-  sourceCompatibility = JavaVersion.VERSION_17
-}
-
-
 subprojects {
 
   apply plugin: 'java'
-  apply plugin: 'java-library'
   apply plugin: 'idea'
   apply plugin: 'eclipse'
-  apply plugin: 'publishing'
   apply plugin: 'application'
-  apply plugin: 'signing'
-  apply plugin: 'maven-publish'
-  apply plugin: 'org.jetbrains.kotlin.jvm'
-  apply plugin: 'org.jetbrains.kotlin.plugin.serialization'
+//  apply plugin: 'org.jetbrains.kotlin.jvm'
+//  apply plugin: 'org.jetbrains.kotlin.plugin.serialization'
   apply plugin: 'com.github.johnrengelman.shadow'
+//  apply plugin: "org.gradlex.extra-java-module-info"
+//  apply plugin: 'org.beryx.jlink'
 
   group = 'io.github.forsyde'
   archivesBaseName = rootProject.name + '-' + project.name
@@ -70,6 +52,11 @@ subprojects {
   java {
     withSourcesJar()
     withJavadocJar()
+    modularity.inferModulePath = true
+  }
+
+  compileJava {
+    sourceCompatibility = JavaVersion.VERSION_17
     modularity.inferModulePath = true
   }
 

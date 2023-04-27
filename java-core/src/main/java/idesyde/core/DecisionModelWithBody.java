@@ -1,8 +1,10 @@
 package idesyde.core;
 
+import com.fasterxml.jackson.core.JsonProcessingException;
+
 public interface DecisionModelWithBody extends DecisionModel {
 
-    String getBodyAsText();
+    String getBodyAsText() throws JsonProcessingException;
 
-    byte[] getBodyAsBytes();
+    byte[] getBodyAsBytes() throws JsonProcessingException;
 }

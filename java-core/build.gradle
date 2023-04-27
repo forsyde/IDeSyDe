@@ -1,4 +1,44 @@
 dependencies {
-    api 'com.fasterxml.jackson.core:jackson-databind:2.0.1'
-    api 'org.msgpack:jackson-dataformat-msgpack:0.9.3'
+    implementation 'com.fasterxml.jackson.module:jackson-modules-base:2.15.0'
+    implementation 'org.msgpack:msgpack-core:0.9.3'
+    implementation 'org.msgpack:jackson-dataformat-msgpack:0.9.3'
 }
+
+//extraJavaModuleInfo {
+//    module("commons-beanutils:commons-beanutils", "org.apache.commons.beanutils") {
+//        exports("org.apache.commons.beanutils")
+//        // exportAllPackages()
+//
+//        requiresTransitive("org.apache.commons.logging")
+//        requires("java.sql")
+//        requires("java.desktop")
+//
+//        // closeModule()
+//        // opens("org.apache.commons.beanutils")
+//
+//        // requiresTransitive(...)
+//        // requiresStatic(...)
+//
+//        // requireAllDefinedDependencies()
+//    }
+//    module("com.fasterxml.jackson.core:jackson-annotations", "com.fasterxml.jackson.annotations") {
+//        exportAllPackages()
+//        requireAllDefinedDependencies()
+//    }
+//    module("com.fasterxml.jackson.core:jackson-core", "com.fasterxml.jackson.core") {
+//        exportAllPackages()
+//        requireAllDefinedDependencies()
+//    }
+//    module("com.fasterxml.jackson.core:jackson-databind", "com.fasterxml.jackson.databind") {
+//        exportAllPackages()
+//        requireAllDefinedDependencies()
+//    }
+//    module("org.msgpack:jackson-dataformat-msgpack", "jackson.dataformat.msgpack") {
+//        exportAllPackages()
+//        requireAllDefinedDependencies()
+//    }
+//    module("org.msgpack:msgpack-core", "msgpack.core") {
+//        exportAllPackages()
+//        requireAllDefinedDependencies()
+//    }
+//}

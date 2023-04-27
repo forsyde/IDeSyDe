@@ -20,7 +20,7 @@ import java.util.stream.Collectors;
  * @see
  *   [[idesyde.core.IdentificationLibrary]]
  */
-public interface IdentificationModule extends Callable<Integer> {
+public interface IdentificationModule {
 
 
     /** Unique string used to identify this module during orchetration. Ideally it matches the name of
@@ -39,8 +39,6 @@ public interface IdentificationModule extends Callable<Integer> {
      *   the registered decoders
      */
     Optional<DecisionModel> decisionHeaderToModel(DecisionModelHeader header);
-
-    Optional<DesignModel> designHeaderToModel(DesignModelHeader header);
 
     default Optional<Path> designModelToOutput(DesignModel m, Path p) {return Optional.empty(); }
 

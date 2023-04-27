@@ -53,10 +53,12 @@ final case class DeviceTreeDesignModel(
     case _ => None
   }
 
-  override def elementID(elem: DeviceTreeComponent): String = crossLinked
-    .find(root => root.allChildren.exists(_ == elem))
-    .map(root => root.prefix + "/" + elem.fullId)
-    .getOrElse(elem.fullId)
+  override def elementID(elem: DeviceTreeComponent): String = elem.label.getOrElse(
+    crossLinked
+      .find(root => root.allChildren.exists(_ == elem))
+      .map(root => root.prefix + "/" + elem.fullId)
+      .getOrElse(elem.fullId)
+  )
 
   def uniqueIdentifier: String = "DeviceTreeDesignModel"
 }

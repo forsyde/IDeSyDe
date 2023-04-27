@@ -36,7 +36,7 @@ trait PlatformRules extends HasDeviceTreeUtils with HasUtils {
             val pes = root.cpus
               .map(cpu =>
                 cpu.label.getOrElse(
-                  root.prefix + "/cpus/" + cpu.nodeName + cpu.addr.map("@" + _).getOrElse("")
+                  root.prefix + "/cpus/" + cpu.fullId
                 )
               )
               .filterNot(peIDs.contains)
@@ -45,7 +45,7 @@ trait PlatformRules extends HasDeviceTreeUtils with HasUtils {
                 .map(mem =>
                   mem.label
                     .getOrElse(
-                      root.prefix + "/" + mem.nodeName + mem.addr.map("@" + _).getOrElse("")
+                      root.prefix + "/" + mem.fullId
                     )
                 )
                 .filterNot(meIDs.contains)

@@ -1,8 +1,11 @@
 package idesyde.blueprints;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
+import idesyde.core.DecisionModel;
+import idesyde.core.DecisionModelWithBody;
 import idesyde.core.DesignModel;
 import idesyde.core.IdentificationModule;
+import idesyde.core.headers.DecisionModelHeader;
 import idesyde.core.headers.DesignModelHeader;
 import org.msgpack.jackson.dataformat.MessagePackFactory;
 import picocli.CommandLine;
@@ -12,12 +15,9 @@ import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.util.HashSet;
-import java.util.Optional;
 import java.util.Set;
-import java.util.stream.Collectors;
 
 public interface IdentificationModuleBlueprint extends IdentificationModule {
-
     default void standaloneIdentificationModule(
             String[] args
     ) throws IOException {
@@ -47,64 +47,69 @@ public interface IdentificationModuleBlueprint extends IdentificationModule {
             if (cli.solvedPath != null && cli.reversePath != null) {
                 Files.createDirectories(cli.solvedPath);
                 Files.createDirectories(cli.reversePath);
-            }
-
-            solvedPathStr.value?.let { solvedPathv ->
-                    val solvedPath = Paths.get(solvedPathv)
-                reversePathStr.value?.let {reversePathv ->
-                        val reversePath = Paths.get(reversePathv)
-                    val solvedDecisionModels = Files.list(solvedPath)
-                            .filter { f -> f.startsWith("header") }
-                        .filter { f -> f.extension == ".msgpack" }
-                        .map { f -> MsgPack.decodeFromByteArray(DecisionModelHeader.serializer(), Files.readAllBytes(f)) }
-                        .map { f -> decisionHeaderToModel(f) }
-                        .toList()
-                            .filterNotNull()
-                            .toSet()
-                    val reIdentified = reverseIdentification(designModels, solvedDecisionModels)
-                    for ((i, m) in reIdentified.withIndex()) {
-                        val dest = reversePath.resolve(i.toString()).resolve(uniqueIdentifier()).resolve(".msgpack")
-                        val header = m.header()
-                        val h = outputPath.value?.let { op ->
-                                val saved = designModelToOutput(m, Paths.get(op))
-                            header.copy(modelPaths = listOf(saved.toString()))
-                        } ?: header
-                        Files.write(dest, MsgPack.encodeToByteArray(DesignModelHeader.serializer(), h))
+                var solvedDecisionModels = new HashSet<DecisionModel>();
+                for (var p : Files.list(cli.solvedPath).toList()) {
+                    if (p.startsWith("header") && p.endsWith(".msgpack")) {
+                        decisionHeaderToModel(objectMapper.readValue(Files.readAllBytes(p), DecisionModelHeader.class))
+                                .ifPresent(solvedDecisionModels::add);
                     }
                 }
+                var reIdentified = reverseIdentification(solvedDecisionModels, designModels);
+                var i = 0;
+                for (var m : reIdentified) {
+                    var dest = cli.reversePath.resolve(String.valueOf(i)).resolve(uniqueIdentifier()).resolve(".msgpack");
+                    var header = m.header();
+                    if (cli.outputPath != null) {
+                        var saved = designModelToOutput(m, cli.outputPath);
+                        header.modelPaths().add(saved.toString());
+                    }
+                    Files.write(dest, header.asBytes());
+                    i += 1;
+                }
+                return;
             }
-        }
 
-            identifiedPathStr.value?.let {identifiedPathv ->
-                    val identifiedPath = Paths.get(identifiedPathv)
-                Files.createDirectories(identifiedPath)
-                val decisionModels = Files.list(identifiedPath)
-                        .filter { f -> f.startsWith("header") }
-                    .filter { f -> f.extension == ".msgpack" }
-                    .map { f -> MsgPack.decodeFromByteArray(DecisionModelHeader.serializer(), Files.readAllBytes(f)) }
-                    .map { f -> decisionHeaderToModel(f) }
-                    .toList()
-                        .filterNotNull()
-                        .toSet()
-                val identified = identificationStep(
-                        identStep.value?.toLong() ?: 0L,
-                        designModels,
-                        decisionModels
-                )
-                for (m in identified) {
-                    val header = m.header()
-                    val destH = identifiedPath.resolve("header_%016d_%s_%s".format(identStep, header.category, uniqueIdentifier()))
-                    val h = if (m is DecisionModelWithBody) {
-                        val destB = identifiedPath.resolve("body_%016d_%s_%s".format(identStep, header.category, uniqueIdentifier()))
-                        Files.writeString(destB.resolve(".json"), m.getBodyAsText())
-                        Files.write(destB.resolve(".msgpack"), m.getBodyAsBytes())
-                        header.copy(bodyPath = "body_%016d_%s_%s.msgpack".format(identStep, header.category, uniqueIdentifier()))
-                    } else header
-                    Files.writeString(destH.resolve(".json"), Json.encodeToString(DecisionModelHeader.serializer(), h))
-                    Files.write(destH.resolve(".msgpack"), MsgPack.encodeToByteArray(DecisionModelHeader.serializer(), h))
+            if (cli.identifiedPath != null) {
+                var decisionModels = new HashSet<DecisionModel>();
+                for (var p : Files.list(cli.solvedPath).toList()) {
+                    if (p.startsWith("header") && p.endsWith(".msgpack")) {
+                        decisionHeaderToModel(objectMapper.readValue(Files.readAllBytes(p), DecisionModelHeader.class))
+                                .ifPresent(decisionModels::add);
+                    }
+                }
+                var identified = identificationStep(cli.identStep, designModels, decisionModels);
+                for (var m : identified) {
+                    DecisionModelHeader header = m.header();
+                    var destH = cli.identifiedPath.resolve("header_%016d_%s_%s".format(String.valueOf(cli.identStep), header.category(), uniqueIdentifier()));
+                    if (m instanceof DecisionModelWithBody modelWithBody) {
+                        var destB = cli.identifiedPath.resolve("body_%016d_%s_%s".format(String.valueOf(cli.identStep), header.category(), uniqueIdentifier()));
+                        Files.writeString(destB.resolve(".json"), modelWithBody.getBodyAsText());
+                        Files.write(destB.resolve(".msgpack"), modelWithBody.getBodyAsBytes());
+                        header = new DecisionModelHeader(header.category(), header.coveredElements(), header.coveredRelations(), "body_%016d_%s_%s.msgpack".format(String.valueOf(cli.identStep), header.category(), uniqueIdentifier()));
+                    }
+                    Files.writeString(destH.resolve(".json"), header.asString());
+                    Files.write(destH.resolve(".msgpack"), header.asBytes());
                 }
             }
+
+
         }
+    }
+
+    @CommandLine.Command(mixinStandardHelpOptions = true)
+    class IdentificationModuleCLI {
+        @CommandLine.Option(names = {"m", "design-path"}, description = "The path where the design models (and headers) are stored.")
+        Path designPath;
+        @CommandLine.Option(names = {"i", "identified-path"}, description = "The path where identified decision models (and headers) are stored.")
+        Path identifiedPath;
+        @CommandLine.Option(names = {"s", "solved-path"}, description = "The path where explored decision models (and headers) are stored.")
+        Path solvedPath;
+        @CommandLine.Option(names = {"r", "reverse-path"}, description = "The path where reverse identified design models (and headers) are stored.")
+        Path reversePath;
+        @CommandLine.Option(names = {"o", "output-path"}, description = "The path where final integrated design models are stored, in their original format.")
+        Path outputPath;
+        @CommandLine.Option(names = {"t", "identification-step"}, description = "The overall identification iteration number.")
+        int identStep;
     }
 
 }

@@ -247,7 +247,14 @@ lazy val devicetree = (project in file("scala-bridge-device-tree"))
       "APL2" -> url("https://www.apache.org/licenses/LICENSE-2.0"),
       "EPL2" -> url("https://www.eclipse.org/legal/epl-2.0/")
     ),
-    Compile / mainClass := Some("idesyde.devicetree.DeviceTreeIdentificationModule")
+    Compile / mainClass := Some("idesyde.devicetree.DeviceTreeIdentificationModule"),
+    publishModules := {
+      IO.createDirectory(imodulesTarget)
+      val jar    = assembly.value
+      val target = imodulesTarget / (projectInfo.value.nameFormal + ".jar")
+      IO.copyFile(jar, target)
+      target
+    }
   )
 
 lazy val cli = (project in file("scala-cli"))

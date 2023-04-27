@@ -49,8 +49,8 @@ public interface IdentificationModule extends Callable<Integer> {
     Set<IdentificationRule<?>> identificationRules();
 
     default Set<DesignModel> reverseIdentification(
-            Set<DesignModel> designModels,
-            Set<DecisionModel> solvedDecisionModels
+            Set<DecisionModel> solvedDecisionModels,
+            Set<DesignModel> designModels
     ) {
         return reverseIdentificationRules().stream().flatMap(irrule ->
                 irrule.apply(solvedDecisionModels, designModels).stream()

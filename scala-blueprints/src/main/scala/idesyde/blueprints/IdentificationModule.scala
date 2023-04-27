@@ -201,18 +201,23 @@ trait IdentificationModule
                 .toSet
             val designModels =
               os.list(designPath)
-                .flatMap(h => inputsToDesignModel(h))
-                .flatMap(mm =>
+                .map(p => (p, inputsToDesignModel(p)))
+                .flatMap((p, mm) =>
                   mm match {
-                    case dem: DesignModel          => Some(dem)
-                    case header: DesignModelHeader => designHeaderToModel(header)
+                    case Some(m) =>
+                      m match {
+                        case dem: DesignModel => {
+                          val h = dem.header.copy(model_paths = Set(p.toString()))
+                          h.writeToPath(designPath, p.baseName, uniqueIdentifier)
+                          Some(dem)
+                        }
+                        case deh: DesignModelHeader => designHeaderToModel(deh)
+                      }
+                    case None => None
                   }
                 )
                 .toSet
                 ++ fromDesignModelHeaders
-            for (d <- designModels) {
-              d.writeToPath(designPath, "", uniqueIdentifier)
-            }
             val decisionModels =
               os.list(identifiedPath)
                 .filter(_.last.startsWith("header"))

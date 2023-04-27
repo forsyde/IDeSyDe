@@ -1,0 +1,35 @@
+chassis-type = "embedded"
+compatible = "riscv"
+bus-frequency = <50000000>
+bus-concurrency = <1>
+bus-flit = <32>
+bus-clock-per-flit = <32>
+cpus {
+    tile1cpu: cpu@0 {
+        clock-frequency = <50000000>
+
+        ops-per-cycle {
+            default {
+            f64add = <1 6>
+            f64mul = <1 1000>
+            f64copy = <1 4>
+            f64comp = <1 4>
+            }
+        }
+    }
+}
+
+gbus: bus@0x800A0 {
+    compatible = "simple-bus"
+    bus-frequency = <50000000>
+    bus-concurrency = <1>
+    bus-flit = <32>
+    bus-clock-per-flit = <32>
+}
+
+memory@0x00000 {
+    clock-frequency = <50000000>
+    device-type = "memory"
+    reg = <0x0 0x800000>
+}
+

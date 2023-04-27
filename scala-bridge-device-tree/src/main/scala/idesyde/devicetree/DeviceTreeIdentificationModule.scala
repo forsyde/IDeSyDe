@@ -7,14 +7,57 @@ import idesyde.utils.Logger
 import idesyde.core.headers.DesignModelHeader
 import idesyde.core.headers.DecisionModelHeader
 import idesyde.devicetree.identification.PlatformRules
+import idesyde.devicetree.identification.CanParseDeviceTree
+import os.Path
+import idesyde.devicetree.identification.DeviceTreeDesignModel
+import idesyde.devicetree.identification.OSDescriptionDesignModel
+import org.virtuslab.yaml.*
 
-object DeviceTreeIdentificationModule extends IdentificationModule with PlatformRules {
+object DeviceTreeIdentificationModule
+    extends IdentificationModule
+    with PlatformRules
+    with CanParseDeviceTree {
+
+  override def inputsToDesignModel(p: Path): Option[DesignModelHeader | DesignModel] = {
+    p.ext match {
+      case "dts" =>
+        parseDeviceTreeWithPrefix(os.read(p), p.baseName) match {
+          case Success(result, next) => Some(DeviceTreeDesignModel(List(result)))
+          case _                     => None
+        }
+      case "yaml" =>
+        os.read(p).as[OSDescription] match {
+          case Right(value) => Some(OSDescriptionDesignModel(value))
+          case Left(value)  => None
+        }
+      case _ => None
+    }
+  }
 
   def designHeaderToModel(m: DesignModelHeader): Set[DesignModel] = Set()
+  // if (
+  //   m.category == "DeviceTreeDesignModel"
+  // ) {
+  //   m.model_paths
+  //     .map(parseDeviceTree)
+  //     .flatMap(r =>
+  //       r match {
+  //         case Success(result, next) => Some(DeviceTreeDesignModel(List(result)))
+  //         case _                     => None
+  //       }
+  //     )
+  //     .toSet
+  // } else if (m.category == "OSDescriptionDesignModel") {
+  //   m.model_paths.flatMap(s => {
+  //     val p = if (s.startsWith("/")) os.root / s else os.pwd / s
+  //     os.read(p).as[OSDescription] match {
+  //       case Right(value) => Some(OSDescriptionDesignModel(value))
+  //       case Left(value)  => None
+  //     }
+  //   })
+  // } else Set()
 
   def decisionHeaderToModel(m: DecisionModelHeader): Option[DecisionModel] = None
-
-  def decodeDesignModels: Set[DesignModelHeader => Set[DesignModel]] = Set()
 
   def uniqueIdentifier: String = "DeviceTreeIdentificationModule"
 
@@ -26,5 +69,7 @@ object DeviceTreeIdentificationModule extends IdentificationModule with Platform
 
   def reverseIdentificationRules: Set[(DesignModel, DecisionModel) => Option[? <: DesignModel]] =
     Set()
+
+  def main(args: Array[String]) = standaloneIdentificationModule(args)
 
 }

@@ -1,0 +1,15 @@
+oses:
+  os0:
+    name: bare metal
+    host: tile0cpu
+    affinity:
+      - tile0cpu
+    policy: 
+      - standalone
+  os1:
+    name: bare metal
+    host: tile1cpu
+    affinity:
+      - tile1cpu
+    policy: 
+      - standalone

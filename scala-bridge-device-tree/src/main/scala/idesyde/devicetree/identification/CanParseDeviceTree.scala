@@ -41,7 +41,11 @@ trait CanParseDeviceTree extends RegexParsers {
             else DeviceTreeProperty.EncodedArray(propName, split)
           }
         }
-        case _1 ~ _2 => DeviceTreeProperty.StringProperty(propName, s"ERROR AT ${propName}: UNKOWN DELIMITER FOR PROPERTY")
+        case _1 ~ _2 =>
+          DeviceTreeProperty.StringProperty(
+            propName,
+            s"ERROR AT ${propName}: UNKOWN DELIMITER FOR PROPERTY"
+          )
       }
     }
 
@@ -102,6 +106,9 @@ trait CanParseDeviceTree extends RegexParsers {
     }
 
   def parseDeviceTree(source: String) = parse(root, source)
+
+  def parseDeviceTreeWithPrefix(source: String, prefixStr: String) =
+    parse(root, source).map(_.copy(prefix = prefixStr))
 
   private def parseLongSpecial(s: String): Long = {
     if (s.contains("0x")) then {

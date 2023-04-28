@@ -1,0 +1,12 @@
+[package]
+name = "idesyde-common"
+author.workspace = true
+version.workspace = true
+edition.workspace = true
+
+[dependencies]
+idesyde-core = { path = "../rust-core" }
+idesyde-blueprints = { path = "../rust-blueprints" }
+clap = { workspace = true }
+env_logger.workspace = true
+log.workspace = true

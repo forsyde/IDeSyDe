@@ -12,13 +12,12 @@ import spire.math.*
 
 class SimpleWorkloadBalancingDecisionStrategy(
     val schedulers: Array[Int],
-    val periods: Array[Rational],
+    val periods: Array[Int],
     val taskExecutions: Array[IntVar],
     val utilizations: Array[IntVar],
     val durations: Array[IntVar],
     val wcets: Array[Array[Int]]
-)(using Numeric[Rational])
-    extends AbstractStrategy[IntVar](taskExecutions: _*) {
+) extends AbstractStrategy[IntVar](taskExecutions: _*) {
 
   val pool = PoolManager[IntDecision]()
 

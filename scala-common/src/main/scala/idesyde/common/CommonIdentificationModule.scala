@@ -15,6 +15,7 @@ import idesyde.identification.common.models.platform.TiledMultiCore
 import idesyde.identification.common.models.platform.PartitionedCoresWithRuntimes
 import idesyde.identification.common.models.platform.SchedulableTiledMultiCore
 import idesyde.identification.common.models.mixed.SDFToTiledMultiCore
+import idesyde.identification.common.models.platform.SharedMemoryMultiCore
 
 object CommonIdentificationModule
     extends IdentificationModule
@@ -50,6 +51,8 @@ object CommonIdentificationModule
         body_path.flatMap(decodeFromPath[SchedulableTiledMultiCore])
       case DecisionModelHeader("SDFToTiledMultiCore", body_path, _, _) =>
         body_path.flatMap(decodeFromPath[SDFToTiledMultiCore])
+      case DecisionModelHeader("SharedMemoryMultiCore", body_path, _, _) =>
+        body_path.flatMap(decodeFromPath[SharedMemoryMultiCore])
       case _ => None
     }
   }

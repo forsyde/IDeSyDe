@@ -17,8 +17,6 @@ import org.chocosolver.solver.variables.IntVar
 import org.chocosolver.solver.constraints.Constraint
 import idesyde.exploration.explorers.SimpleWorkloadBalancingDecisionStrategy
 import org.chocosolver.solver.variables.BoolVar
-import spire.math._
-import spire.compat.fractional
 import org.chocosolver.solver.search.loop.monitors.IMonitorContradiction
 import org.chocosolver.solver.exception.ContradictionException
 import idesyde.choco.HasSingleProcessSingleMessageMemoryConstraints
@@ -33,6 +31,7 @@ import idesyde.identification.common.models.mixed.PeriodicWorkloadToPartitionedS
 import idesyde.core.DecisionModel
 import idesyde.identification.common.StandardDecisionModel
 import idesyde.identification.choco.ChocoDecisionModel
+import idesyde.choco.HasDiscretizationToIntegers
 
 // object ConMonitorObj extends IMonitorContradiction {
 
@@ -46,7 +45,8 @@ final case class ChocoComDepTasksToMultiCore(
 ) extends StandardDecisionModel
     with ChocoDecisionModel
     with HasUtils
-    with HasSingleProcessSingleMessageMemoryConstraints {
+    with HasSingleProcessSingleMessageMemoryConstraints
+    with HasDiscretizationToIntegers {
 
   val coveredElements = dse.coveredElements
 
@@ -58,47 +58,40 @@ final case class ChocoComDepTasksToMultiCore(
     case _ => super.dominates(other)
   }
 
-  val chocoModel = Model()
+  val chocoModel       = Model()
+  val timeResolution   = 0L
+  val memoryResolution = 0L
 
   // chocoModel.getSolver().plugMonitor(ConMonitorObj)
 
   // section for time multiplier calculation
   val timeValues =
     (dse.workload.periods ++ dse.wcets.flatten ++ dse.workload.relativeDeadlines)
-  var timeMultiplier = 1L
-  while (
-    timeValues
-      .map(_ * (timeMultiplier))
-      .exists(d => d.numerator <= d.denominator)
-    &&
-    timeValues
-      .map(t => t * (timeMultiplier))
-      .sum < Int.MaxValue / 10 - 1 // the four is due to how the sum is done for wcet
-  ) {
-    timeMultiplier *= 10
-  }
-  // scribe.debug(timeMultiplier.toString)
+  val memoryValues = dse.platform.hardware.storageSizes ++
+    dse.workload.messagesMaxSizes ++
+    dse.workload.processSizes
 
-  // do the same for memory numbers
-  val memoryValues  = dse.platform.hardware.storageSizes
-  var memoryDivider = 1L
-  while (
-    memoryValues.forall(
-      ceil(_, memoryDivider) >= Int.MaxValue / 100000
-    ) && memoryDivider < Int.MaxValue
-  ) {
-    memoryDivider *= 10L
-  }
-  // scribe.debug(memoryMultipler.toString)
-  // scribe.debug(allMemorySizeNumbers().mkString("[", ",", "]"))
+  def double2int(s: Double): Int = discretized(
+    if (timeResolution > Int.MaxValue.toLong) Int.MaxValue
+    else if (timeResolution <= 0L) timeValues.size * 100
+    else timeResolution.toInt,
+    timeValues.sum
+  )(s)
+  given Fractional[Long] = HasDiscretizationToIntegers.ceilingLongFractional
+  def long2int(l: Long): Int = discretized(
+    if (memoryResolution > Int.MaxValue) Int.MaxValue
+    else if (memoryResolution <= 0L) memoryValues.size * 100
+    else memoryResolution.toInt,
+    memoryValues.max
+  )(l)
 
   // create the variables that each module requires
-  val periods    = dse.workload.periods.map(_ * (timeMultiplier))
+  val periods    = dse.workload.periods.map(double2int)
   val priorities = dse.workload.prioritiesForDependencies
-  val deadlines  = dse.workload.relativeDeadlines.map(_ * (timeMultiplier))
-  val wcets      = dse.wcets.map(_.map(f => (f * (timeMultiplier))))
+  val deadlines  = dse.workload.relativeDeadlines.map(double2int)
+  val wcets      = dse.wcets.map(_.map(double2int))
   val maxUtilizations =
-    dse.platform.hardware.processingElems.map(p => dse.maxUtilizations.getOrElse(p, Rational(1)))
+    dse.platform.hardware.processingElems.map(p => dse.maxUtilizations.getOrElse(p, 1.0))
 
   // build the model so that it can be acessed later
   // memory module
@@ -123,11 +116,10 @@ final case class ChocoComDepTasksToMultiCore(
   val (processesMemoryMapping, messagesMemoryMapping, _) =
     postSingleProcessSingleMessageMemoryConstraints(
       chocoModel,
-      dse.workload.processSizes.map(ceil(_, memoryDivider)).map(_.toInt).toArray,
-      dse.workload.messagesMaxSizes.map(ceil(_, memoryDivider)).map(_.toInt).toArray,
+      dse.workload.processSizes.map(long2int).toArray,
+      dse.workload.messagesMaxSizes.map(long2int).toArray,
       dse.platform.hardware.storageSizes
-        .map(ceil(_, memoryDivider))
-        .map(_.toInt)
+        .map(long2int)
         .toArray
     )
 
@@ -148,10 +140,8 @@ final case class ChocoComDepTasksToMultiCore(
         // minimum WCET possible
         wcets(i)
           .filter(p => p > -1)
-          .min
-          .ceil
-          .toInt,
-        deadlines(i).floor.toInt,
+          .min,
+        deadlines(i),
         true // keeping only bounds for the response time is enough and better
       )
     )
@@ -161,7 +151,7 @@ final case class ChocoComDepTasksToMultiCore(
         s"bt($t)",
         // minimum WCET possible
         0,
-        deadlines(i).floor.toInt,
+        deadlines(i),
         true // keeping only bounds for the response time is enough and better
       )
     )
@@ -188,12 +178,25 @@ final case class ChocoComDepTasksToMultiCore(
   val active4StageDurationModule = Active4StageDurationModule(
     chocoModel,
     dse,
+    wcets.map(_.toArray).toArray,
+    dse.workload.processSizes
+      .map(d =>
+        dse.platform.hardware.communicationElementsBitPerSecPerChannel
+          .map(b => double2int(d.toDouble / b))
+          .toArray
+      )
+      .toArray,
+    dse.workload.messagesMaxSizes
+      .map(d =>
+        dse.platform.hardware.communicationElementsBitPerSecPerChannel
+          .map(b => double2int(d.toDouble / b))
+          .toArray
+      )
+      .toArray,
     taskExecution.toArray,
     processesMemoryMapping,
     messagesMemoryMapping,
-    processingElemsVirtualChannelInCommElem.map(_.toArray).toArray,
-    timeMultiplier,
-    memoryDivider
+    processingElemsVirtualChannelInCommElem.map(_.toArray).toArray
   )
 
   val baselineTimingConstraintsModule = BaselineTimingConstraintsModule(
@@ -308,7 +311,7 @@ final case class ChocoComDepTasksToMultiCore(
       taskExecution.toArray,
       baselineTimingConstraintsModule.utilizations,
       active4StageDurationModule.durations,
-      wcets.map(_.map(_.ceil.toInt).toArray).toArray
+      wcets.map(_.toArray).toArray
     ),
     Search.inputOrderUBSearch(nUsedPEs),
     Search.activityBasedSearch(taskMapping: _*),

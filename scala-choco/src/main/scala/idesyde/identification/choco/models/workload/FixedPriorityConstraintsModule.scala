@@ -16,9 +16,9 @@ import org.chocosolver.solver.Model
 class FixedPriorityConstraintsModule(
     val chocoModel: Model,
     val priorities: Array[Int],
-    val periods: Array[Rational],
-    val deadlines: Array[Rational],
-    val wcets: Array[Array[Rational]],
+    val periods: Array[Int],
+    val deadlines: Array[Int],
+    val wcets: Array[Array[Int]],
     val taskExecution: Array[IntVar],
     val responseTimes: Array[IntVar],
     val blockingTimes: Array[IntVar],
@@ -28,7 +28,6 @@ class FixedPriorityConstraintsModule(
   def sufficientRMSchedulingPoints(taskIdx: Int): Array[Rational] = Array.empty
 
   def postFixedPrioriPreemtpiveConstraint(schedulerIdx: Int): Unit = {
-    given Conversion[Rational, Int] = (r) => r.ceil.numerator.toInt
     chocoModel.post(
       new Constraint(
         s"scheduler_${schedulerIdx}_iter_prop",

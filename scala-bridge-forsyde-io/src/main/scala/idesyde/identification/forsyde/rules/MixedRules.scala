@@ -244,10 +244,9 @@ trait MixedRules {
               if peVertex.isPresent() && UtilizationBoundedProcessingElem.conforms(peVertex.get());
               utilVertex = UtilizationBoundedProcessingElem.safeCast(peVertex.get()).get()
             )
-              yield pe -> Rational(
-                utilVertex.getMaxUtilizationNumerator(),
-                utilVertex.getMaxUtilizationDenominator()
-              )).toMap
+              yield pe -> utilVertex.getMaxUtilizationNumerator().toDouble / utilVertex
+                .getMaxUtilizationDenominator()
+                .toDouble).toMap
           )
         )
       )

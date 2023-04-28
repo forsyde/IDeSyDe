@@ -27,7 +27,7 @@ final case class TasksAndSDFServerToMultiCore(
         .toSet
 
   val processorsFrequency: Vector[Long] = platform.hardware.processorsFrequency
-  val processorsProvisions: Vector[Map[String, Map[String, spire.math.Rational]]] =
+  val processorsProvisions: Vector[Map[String, Map[String, Double]]] =
     platform.hardware.processorsProvisions
 
   val messagesMaxSizes: Vector[Long] = sdfandtask.messagesMaxSizes

@@ -230,7 +230,7 @@ trait IdentificationModule
               designModels,
               decisionModels
             )
-            for (m <- identified) {
+            for (m <- identified; if !decisionModels.contains(m)) {
               val (hPath, bPath) = m.writeToPath(
                 identifiedPath,
                 f"${iteration}%016d",

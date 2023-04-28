@@ -11,6 +11,8 @@ import scalax.collection.Graph
 import scalax.collection.GraphPredef._
 import scalax.collection.GraphEdge._
 import idesyde.identification.common.models.platform.InstrumentedPlatformMixin
+import idesyde.core.CompleteDecisionModel
+import upickle.default._
 
 final case class SharedMemoryMultiCore(
     val processingElems: Vector[String],
@@ -19,13 +21,19 @@ final case class SharedMemoryMultiCore(
     val topologySrcs: Vector[String],
     val topologyDsts: Vector[String],
     val processorsFrequency: Vector[Long],
-    val processorsProvisions: Vector[Map[String, Map[String, Rational]]],
+    val processorsProvisions: Vector[Map[String, Map[String, Double]]],
     val storageSizes: Vector[Long],
     val communicationElementsMaxChannels: Vector[Int],
-    val communicationElementsBitPerSecPerChannel: Vector[Rational],
+    val communicationElementsBitPerSecPerChannel: Vector[Double],
     val preComputedPaths: Map[String, Map[String, Iterable[String]]]
 ) extends StandardDecisionModel
-    with InstrumentedPlatformMixin[Rational] {
+    with CompleteDecisionModel
+    with InstrumentedPlatformMixin[Double]
+    derives ReadWriter {
+
+  override def bodyAsText: String = write(this)
+
+  override def bodyAsBinary: Array[Byte] = writeBinary(this)
 
   // #covering_documentation_example
   val coveredElements         = (processingElems ++ communicationElems ++ storageElems).toSet

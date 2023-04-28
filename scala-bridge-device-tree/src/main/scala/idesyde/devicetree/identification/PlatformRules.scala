@@ -20,14 +20,14 @@ trait PlatformRules extends HasDeviceTreeUtils with HasUtils {
     mergedDesignModel[DeviceTreeDesignModel, SharedMemoryMultiCore](models) { dtm =>
       val roots                 = dtm.crossLinked
       var peIDs                 = Buffer[String]()
-      var peOps                 = Buffer[Map[String, Map[String, Rational]]]()
+      var peOps                 = Buffer[Map[String, Map[String, Double]]]()
       var peFreq                = Buffer[Long]()
       var ceIDs                 = Buffer[String]()
       var meIDs                 = Buffer[String]()
       var meSizes               = Buffer[Long]()
       var topo                  = mutable.Set[(String, String)]()
       var ceMaxChannels         = Buffer[Int]()
-      var ceBitPerSecPerChannel = Buffer[Rational]()
+      var ceBitPerSecPerChannel = Buffer[Double]()
       var preComputedPaths      = mutable.Map[String, mutable.Map[String, Iterable[String]]]()
       for (island <- roots) {
         island match {
@@ -65,10 +65,8 @@ trait PlatformRules extends HasDeviceTreeUtils with HasUtils {
             peFreq ++= root.cpus.map(_.frequency)
             meSizes ++= root.memories.map(_.memorySize)
             ceMaxChannels += root.mainBusConcurrency
-            ceBitPerSecPerChannel += Rational(
-              root.mainBusFrequency * root.mainBusFlitSize,
-              root.mainBusClockPerFlit
-            )
+            ceBitPerSecPerChannel +=
+              root.mainBusFrequency.toDouble * root.mainBusFlitSize.toDouble / root.mainBusClockPerFlit.toDouble
         }
       }
       val (topoSrcs, topoDsts) = topo.toVector.unzip

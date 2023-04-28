@@ -422,7 +422,7 @@ pub fn identification_procedure(
     design_models: &Vec<Box<dyn DesignModel>>,
     pre_identified: &mut Vec<Box<dyn DecisionModel>>,
 ) -> Vec<Box<dyn DecisionModel>> {
-    let mut step = pre_identified.len() as i32;
+    let mut step = (pre_identified.len() - 1) as i32;
     let mut fix_point = false;
     let mut identified: Vec<Box<dyn DecisionModel>> = Vec::new();
     identified.append(pre_identified);

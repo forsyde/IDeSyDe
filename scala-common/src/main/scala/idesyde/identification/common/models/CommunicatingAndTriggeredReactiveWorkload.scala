@@ -35,7 +35,8 @@ final case class CommunicatingAndTriggeredReactiveWorkload(
     with CommunicatingExtendedDependenciesPeriodicWorkload
     with InstrumentedWorkloadMixin {
 
-  lazy val dataGraph = for ((s, i) <- dataGraphSrc.zipWithIndex) yield (s, dataGraphDst(i), dataGraphMessageSize(i))
+  lazy val dataGraph =
+    for ((s, i) <- dataGraphSrc.zipWithIndex) yield (s, dataGraphDst(i), dataGraphMessageSize(i))
 
   lazy val triggerGraph = triggerGraphSrc.zip(triggerGraphDst)
   val coveredElements =
@@ -43,22 +44,21 @@ final case class CommunicatingAndTriggeredReactiveWorkload(
 
   val coveredElementRelations = triggerGraph.toSet
 
-
   lazy val stimulusGraph = Graph.from(
     tasks ++ upsamples ++ downsamples ++ periodicSources,
     triggerGraph.map((s, t) => s ~> t)
   )
 
   val (processes, periods, offsets, relativeDeadlines) = {
-    var gen              = mutable.Buffer[(String, Rational, Rational, Rational)]()
-    var propagatedEvents = mutable.Map[String, Set[(Rational, Rational, Rational)]]()
+    var gen              = mutable.Buffer[(String, Double, Double, Double)]()
+    var propagatedEvents = mutable.Map[String, Set[(Double, Double, Double)]]()
     for (
       topoSort <- stimulusGraph.topologicalSort(); nextInner <- topoSort; next = nextInner.value
     ) {
       // gather all incomin stimulus
       val incomingEvents = nextInner.diPredecessors
         .flatMap(pred => propagatedEvents.get(pred.value))
-        .foldLeft(Set[(Rational, Rational, Rational)]())((s1, s2) => s1 | s2)
+        .foldLeft(Set[(Double, Double, Double)]())((s1, s2) => s1 | s2)
       val events = if (periodicSources.contains(next) || hasORTriggerSemantics.contains(next)) {
         incomingEvents
       } else {
@@ -72,18 +72,11 @@ final case class CommunicatingAndTriggeredReactiveWorkload(
         val idxSource = periodicSources.indexOf(next)
         propagatedEvents(next) = Set(
           (
-            Rational(
-              periodsNumerator(idxSource),
-              periodsDenominator(idxSource)
-            ), // period
-            Rational(
-              offsetsNumerator(idxSource),
-              offsetsDenominator(idxSource)
-            ), // offset
-            Rational(
-              periodsNumerator(idxSource),
-              periodsDenominator(idxSource)
-            ) // rel. deadline
+            periodsNumerator(idxSource).toDouble / periodsDenominator(idxSource).toDouble, // period
+            offsetsNumerator(idxSource).toDouble / offsetsDenominator(idxSource).toDouble, // offset
+            periodsNumerator(idxSource).toDouble / periodsDenominator(
+              idxSource
+            ).toDouble // rel. deadline
           )
         )
       } else if (tasks.contains(next)) {
@@ -93,18 +86,18 @@ final case class CommunicatingAndTriggeredReactiveWorkload(
         val idxUpsample = upsamples.indexOf(next)
         propagatedEvents(next) = events.map(e => {
           (
-            e._1 / Rational(upsampleRepetitiveHolds(idxUpsample)),
-            e._2 + (e._1 / Rational(upsampleInitialHolds(idxUpsample))),
-            e._3 / Rational(upsampleRepetitiveHolds(idxUpsample))
+            e._1 / upsampleRepetitiveHolds(idxUpsample).toDouble,
+            e._2 + (e._1 / upsampleInitialHolds(idxUpsample).toDouble),
+            e._3 / upsampleRepetitiveHolds(idxUpsample).toDouble
           )
         })
       } else if (downsamples.contains(next)) {
         val idxDownsample = downsamples.indexOf(next)
         propagatedEvents(next) = events.map(e => {
           (
-            e._1 * (Rational(downampleRepetitiveSkips(idxDownsample))),
-            e._2 + (e._1 * (Rational(downampleInitialSkips(idxDownsample)))),
-            e._3 * (Rational(downampleRepetitiveSkips(idxDownsample)))
+            e._1 * downampleRepetitiveSkips(idxDownsample).toDouble,
+            e._2 + (e._1 * (downampleInitialSkips(idxDownsample).toDouble)),
+            e._3 * (downampleRepetitiveSkips(idxDownsample).toDouble)
           )
         })
       }

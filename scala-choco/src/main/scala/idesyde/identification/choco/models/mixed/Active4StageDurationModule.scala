@@ -11,6 +11,9 @@ import idesyde.utils.HasUtils
 class Active4StageDurationModule(
     val chocoModel: Model,
     val tasksAndPlatform: PeriodicWorkloadToPartitionedSharedMultiCore,
+    val executionTimes: Array[Array[Int]],
+    val taskTravelTime: Array[Array[Int]],
+    val dataTravelTime: Array[Array[Int]],
     val taskExecution: Array[IntVar],
     val taskMapping: Array[IntVar],
     val dataMapping: Array[IntVar],
@@ -20,45 +23,40 @@ class Active4StageDurationModule(
 ) extends ChocoModelMixin()
     with HasUtils {
 
-  private val executionTimes =
-    tasksAndPlatform.wcets.map(_.map(_ * timeMultiplier).map(_.ceil.toInt).toArray).toArray
-  private val taskSizes =
-    tasksAndPlatform.workload.processSizes
-      .map(ceil(_, memoryDivider))
-      .map(_.toInt)
-      .toArray
-  private val messageSizes =
-    tasksAndPlatform.workload.messagesMaxSizes
-      .map(ceil(_, memoryDivider))
-      .map(_.toInt)
-      .toArray
-  private val storageSizes =
-    tasksAndPlatform.platform.hardware.storageSizes
-      .map(ceil(_, memoryDivider))
-      .map(_.toInt)
-      .toArray
+  // private val executionTimes =
+  //   tasksAndPlatform.wcets.map(_.map(_ * timeMultiplier).map(_.ceil.toInt).toArray).toArray
+  // private val taskSizes =
+  //   tasksAndPlatform.workload.processSizes
+  //     .map(ceil(_, memoryDivider))
+  //     .map(_.toInt)
+  //     .toArray
+  // private val messageSizes =
+  //   tasksAndPlatform.workload.messagesMaxSizes
+  //     .map(ceil(_, memoryDivider))
+  //     .map(_.toInt)
+  //     .toArray
 
-  private val taskTravelTime = tasksAndPlatform.workload.processSizes
-    .map(d =>
-      tasksAndPlatform.platform.hardware.communicationElementsBitPerSecPerChannel
-        .map(b =>
-          // TODO: check if this is truly conservative (pessimistic) or not
-          (d / b / timeMultiplier / memoryDivider).ceil.toInt
-        )
-        .toArray
-    )
-    .toArray
+  // private val taskTravelTime = tasksAndPlatform.workload.processSizes
+  //   .map(d =>
+  //     tasksAndPlatform.platform.hardware.communicationElementsBitPerSecPerChannel
+  //       .map(b =>
+  //         // TODO: check if this is truly conservative (pessimistic) or not
+  //         (d / b / timeMultiplier / memoryDivider).ceil.toInt
+  //       )
+  //       .toArray
+  //   )
+  //   .toArray
 
-  private val dataTravelTime = tasksAndPlatform.workload.messagesMaxSizes
-    .map(d =>
-      tasksAndPlatform.platform.hardware.communicationElementsBitPerSecPerChannel
-        .map(b =>
-          // TODO: check if this is truly conservative (pessimistic) or not
-          (d / b / (timeMultiplier) / (memoryDivider)).ceil.toInt
-        )
-        .toArray
-    )
-    .toArray
+  // private val dataTravelTime = tasksAndPlatform.workload.messagesMaxSizes
+  //   .map(d =>
+  //     tasksAndPlatform.platform.hardware.communicationElementsBitPerSecPerChannel
+  //       .map(b =>
+  //         // TODO: check if this is truly conservative (pessimistic) or not
+  //         (d / b / (timeMultiplier) / (memoryDivider)).ceil.toInt
+  //       )
+  //       .toArray
+  //   )
+  //   .toArray
 
   private val tasks         = tasksAndPlatform.workload.processes
   private val processors    = tasksAndPlatform.platform.hardware.processingElems

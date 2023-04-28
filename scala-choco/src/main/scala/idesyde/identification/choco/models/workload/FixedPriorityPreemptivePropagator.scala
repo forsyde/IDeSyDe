@@ -7,18 +7,17 @@ import org.chocosolver.solver.variables.BoolVar
 import org.chocosolver.solver.constraints.PropagatorPriority
 import idesyde.utils.HasUtils
 
-class FixedPriorityPreemptivePropagator[T](
+class FixedPriorityPreemptivePropagator(
     val schedulerIdx: Int,
     val priorities: Array[Int],
-    val periods: Array[T],
-    val deadlines: Array[T],
-    val wcets: Array[Array[T]],
+    val periods: Array[Int],
+    val deadlines: Array[Int],
+    val wcets: Array[Array[Int]],
     val taskExecution: Array[IntVar],
     val responseTimes: Array[IntVar],
     val blockingTimes: Array[IntVar],
     val durations: Array[IntVar]
-)(using Conversion[T, Int])
-    extends Propagator[IntVar](
+) extends Propagator[IntVar](
       taskExecution ++ responseTimes ++ blockingTimes ++ durations,
       PropagatorPriority.BINARY,
       false

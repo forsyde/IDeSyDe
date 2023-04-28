@@ -3,14 +3,13 @@ package idesyde.identification.choco.models
 import idesyde.identification.choco.interfaces.ChocoModelMixin
 import org.chocosolver.solver.variables.IntVar
 import org.chocosolver.solver.variables.BoolVar
-import spire.math.*
 import org.chocosolver.solver.Model
 
 class BaselineTimingConstraintsModule(
     val chocoModel: Model,
     val priorities: Array[Int],
-    val periods: Array[Rational],
-    val maxUtilizations: Array[Rational],
+    val periods: Array[Int],
+    val maxUtilizations: Array[Double],
     val durations: Array[IntVar],
     val taskExecution: Array[IntVar],
     val blockingTimes: Array[IntVar],
@@ -46,7 +45,9 @@ class BaselineTimingConstraintsModule(
     chocoModel
       .binPacking(
         taskExecution,
-        durations.zipWithIndex.map((d, i) => (d.getUB(), i)).map((d, i) => d / periods(i)).map(_.ceil.toInt),
+        durations.zipWithIndex
+          .map((d, i) => (d.getUB(), i))
+          .map((d, i) => d / periods(i)),
         utilizations,
         0
       )

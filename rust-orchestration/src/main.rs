@@ -200,41 +200,80 @@ fn main() {
         info!("Identified {} decision model(s)", identified.len());
         let identified_refs = identified.iter().collect();
 
-        let dominant = compute_dominant_decision_models(&identified_refs);
-        info!("Kept {} dominant decision model(s)", dominant.len());
-        for (p, m) in load_decision_model_headers_from_binary(&identified_path) {
-            if dominant.iter().all(|dom| {
-                dom.header()
-                    .partial_cmp(&m)
-                    .map(|x| x == Ordering::Greater)
-                    .unwrap_or(false)
-            }) {
-                // m is domianted, proceed to delete its files
-                if let Some(bp) = m.header().body_path {
-                    let jbp = Path::new(&bp).with_extension("json");
-                    match std::fs::remove_file(jbp) {
-                        Err(_) => {
-                            warn!("Tried removing JSON decision model body but failed",)
-                        }
-                        _ => (),
-                    };
-                    std::fs::remove_file(bp).expect("Failed to remove body path of dominated decision model during identification. This is a benign error. Continuing");
-                }
-                match std::fs::remove_file(Path::new(&p.with_extension("json"))) {
-                    Err(_) => warn!("Tried remove a JSON decision model header but failed. This is a benign error. Continuing"),
-                    _ => (),
-                };
-                std::fs::remove_file(p).expect(
-                    "Failed to remove header of dominated decision model during identification",
-                );
-            }
-        }
+        // let dominant = compute_dominant_decision_models(&identified_refs);
 
-        let dominant_combinations = compute_dominant_combinations(&emodules, &dominant);
+        // for (p, m) in load_decision_model_headers_from_binary(&identified_path) {
+        //     if dominant.iter().all(|dom| {
+        //         let h = dom.header();
+        //         h.partial_cmp(&m)
+        //             .map(|x| match x {
+        //                 Ordering::Greater => true,
+        //                 _ => false,
+        //             })
+        //             .unwrap_or(false)
+        //     }) {
+        //         // m is domianted, proceed to delete its files
+        //         if let Some(bp) = m.header().body_path {
+        //             let jbp = Path::new(&bp).with_extension("json");
+        //             match std::fs::remove_file(jbp) {
+        //                 Err(_) => {
+        //                     warn!("Tried removing JSON decision model body but failed",)
+        //                 }
+        //                 _ => (),
+        //             };
+        //             std::fs::remove_file(bp).expect("Failed to remove body path of dominated decision model during identification. This is a benign error. Continuing");
+        //         }
+        //         match std::fs::remove_file(Path::new(&p.with_extension("json"))) {
+        //             Err(_) => warn!("Tried remove a JSON decision model header but failed. This is a benign error. Continuing"),
+        //             _ => (),
+        //         };
+        //         std::fs::remove_file(p).expect(
+        //             "Failed to remove header of dominated decision model during identification",
+        //         );
+        //     }
+        // }
+
+        let dominant_combinations = compute_dominant_combinations(&emodules, &identified_refs);
         info!(
             "Computed {} dominant explorer and decision model combination(s) ",
             dominant_combinations.len()
         );
+        for (p, m) in load_decision_model_headers_from_binary(&identified_path) {
+            for (_, dom) in &dominant_combinations {
+                let to_be_deleted = match dom.header().partial_cmp(&m.header()) {
+                    Some(Ordering::Greater) => true,
+                    Some(Ordering::Equal) => {
+                        match dom.header().body_path.partial_cmp(&m.header().body_path) {
+                            Some(Ordering::Less) => true,
+                            _ => false,
+                        }
+                    }
+                    _ => false,
+                };
+                if to_be_deleted {
+                    if let Some(bp) = m.header().body_path {
+                        let jbp = Path::new(&bp).with_extension("json");
+                        match std::fs::remove_file(jbp) {
+                            Err(_) => {
+                                warn!("Tried removing JSON decision model body but failed",)
+                            }
+                            _ => (),
+                        };
+                        match std::fs::remove_file(bp) {
+                            Err(_) => warn!("Failed to remove body path of dominated decision model during identification. This is a benign error. Continuing"),
+                            _ => (),
+                        }
+                    }
+                    match std::fs::remove_file(Path::new(&p.with_extension("json"))) {
+                       Err(_) => warn!("Tried remove a JSON decision model header but failed. This is a benign error. Continuing"),
+                       _ => (),
+                    };
+                    std::fs::remove_file(&p).expect(
+                        "Failed to remove header of dominated decision model during identification",
+                    );
+                }
+            }
+        }
 
         // for (i, (e, m)) in dominant.iter().enumerate() {
         //     idesyde_core::write_decision_model_header_to_path(

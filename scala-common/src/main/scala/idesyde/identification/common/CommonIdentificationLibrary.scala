@@ -25,7 +25,8 @@ class CommonIdentificationLibrary(using logger: Logger)
     DecisionModelOnlyIdentificationRule(identSDFToPartitionedSharedMemory),
     DecisionModelOnlyIdentificationRule(identSDFToTiledMultiCore),
     DecisionModelOnlyIdentificationRule(identPeriodicWorkloadToPartitionedSharedMultiCore),
-    DecisionModelOnlyIdentificationRule(identTaksAndSDFServerToMultiCore)
+    DecisionModelOnlyIdentificationRule(identTaksAndSDFServerToMultiCore),
+    DecisionModelOnlyIdentificationRule(identTiledFromShared)
   )
 
   val reverseIdentificationRules = Set()

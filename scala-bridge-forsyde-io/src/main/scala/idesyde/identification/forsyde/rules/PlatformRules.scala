@@ -330,7 +330,7 @@ trait PlatformRules {
       val processorsProvisions = processingElements.map(pe => {
         // we do it mutable for simplicity...
         // the performance hit should not be a concern now, for super big instances, this can be reviewed
-        var mutMap = mutable.Map[String, Map[String, Rational]]()
+        var mutMap = mutable.Map[String, Map[String, Double]]()
         InstrumentedProcessingModule
           .safeCast(pe)
           .map(ipe => {
@@ -338,7 +338,7 @@ trait PlatformRules {
               .getModalInstructionsPerCycle()
               .entrySet()
               .forEach(e => {
-                mutMap(e.getKey()) = e.getValue().asScala.map((k, v) => k -> Rational(v)).toMap
+                mutMap(e.getKey()) = e.getValue().asScala.map((k, v) => k -> v.toDouble).toMap
               })
           })
         mutMap.toMap
@@ -381,12 +381,11 @@ trait PlatformRules {
                 InstrumentedCommunicationModule
                   .safeCast(_)
                   .map(ce =>
-                    Rational(
-                      ce.getFlitSizeInBits() * ce.getMaxCyclesPerFlit() * ce
-                        .getOperatingFrequencyInHertz()
-                    )
+                    ce.getFlitSizeInBits().toDouble * ce.getMaxCyclesPerFlit().toDouble * ce
+                      .getOperatingFrequencyInHertz()
+                      .toDouble
                   )
-                  .orElse(Rational.zero)
+                  .orElse(0.0)
               )
               .toVector,
             preComputedPaths = Map.empty

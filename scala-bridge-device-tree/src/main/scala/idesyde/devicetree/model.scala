@@ -3,7 +3,6 @@ package idesyde.devicetree
 import scala.collection.mutable.Buffer
 import scala.collection.mutable
 
-import spire.math.Rational
 import org.virtuslab.yaml.*
 
 enum DeviceTreeLink {
@@ -157,7 +156,7 @@ final case class CPUNode(
     .headOption
     .getOrElse(1L)
 
-  def operationsProvided: Map[String, Map[String, Rational]] = children
+  def operationsProvided: Map[String, Map[String, Double]] = children
     .flatMap(_ match {
       case GenericNode(nodeName, addr, label, cs, properties, connected) =>
         nodeName match {
@@ -173,7 +172,7 @@ final case class CPUNode(
         .flatMap(prop =>
           prop match
             case DeviceTreeProperty.EncodedArray(name, props) =>
-              Some(name -> Rational(props.head, props.tail.head))
+              Some(name -> props.head.toDouble / props.tail.head.toDouble)
             case _ => None
         )
         .toMap

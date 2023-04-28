@@ -25,9 +25,9 @@ import scala.collection.mutable.Buffer
   */
 trait CommunicatingExtendedDependenciesPeriodicWorkload {
 
-  def periods: Vector[Rational]
-  def offsets: Vector[Rational]
-  def relativeDeadlines: Vector[Rational]
+  def periods: Vector[Double]
+  def offsets: Vector[Double]
+  def relativeDeadlines: Vector[Double]
   def affineControlGraph: Set[(Int, Int, Int, Int, Int, Int)]
   // def affineControlGraphSrcs: Vector[String]
   // def affineControlGraphDsts: Vector[String]
@@ -83,7 +83,17 @@ trait CommunicatingExtendedDependenciesPeriodicWorkload {
   //   //   )
   // )
 
-  def hyperPeriod: Rational = periods.reduce((t1, t2) => t1.lcm(t2))
+  def hyperPeriod: Double = {
+    val factors = periods.filter(t =>
+      !periods.exists(tt => {
+        val quod = (t / tt)
+        val err  = Math.abs(quod - quod.round.toDouble)
+        err <= 1e-6
+      })
+    )
+    factors.reduce(_ * _)
+  }
+  // periods.reduce((t1, t2) => t1.lcm(t2))
 
   def tasksNumInstances: Vector[Int] =
     periods

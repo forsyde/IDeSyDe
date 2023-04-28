@@ -14,7 +14,7 @@ final case class PeriodicWorkloadToPartitionedSharedMultiCore(
     val processSchedulings: Vector[(String, String)],
     val channelMappings: Vector[(String, String)],
     val channelSlotAllocations: Map[String, Map[String, Vector[Boolean]]],
-    val maxUtilizations: Map[String, Rational]
+    val maxUtilizations: Map[String, Double]
 ) extends StandardDecisionModel
     with WCETComputationMixin(workload, platform.hardware) {
 

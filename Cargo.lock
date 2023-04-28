@@ -239,6 +239,27 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "9a3a5bfb195931eeb336b2a7b4d761daec841b97f947d34394601737a7bba5e4"
 
 [[package]]
+name = "idesyde-blueprints"
+version = "0.4.4"
+dependencies = [
+ "clap",
+ "env_logger",
+ "idesyde-core",
+ "log",
+]
+
+[[package]]
+name = "idesyde-common"
+version = "0.4.4"
+dependencies = [
+ "clap",
+ "env_logger",
+ "idesyde-blueprints",
+ "idesyde-core",
+ "log",
+]
+
+[[package]]
 name = "idesyde-core"
 version = "0.4.4"
 dependencies = [

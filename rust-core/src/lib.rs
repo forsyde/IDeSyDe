@@ -304,6 +304,8 @@ pub fn write_decision_model_to_path<M: DecisionModel + Serialize + ?Sized>(
 pub type IdentificationRule =
     fn(Vec<Box<dyn DesignModel>>, Vec<Box<dyn DecisionModel>>) -> Vec<Box<dyn DecisionModel>>;
 
+pub type ReverseIdentificationRule =
+    fn(Vec<Box<dyn DecisionModel>>, Vec<Box<dyn DesignModel>>) -> Vec<Box<dyn DesignModel>>;
 pub enum MarkedIdentificationRule {
     DesignModelOnlyIdentificationRule(IdentificationRule),
     DecisionModelOnlyIdentificationRule(IdentificationRule),

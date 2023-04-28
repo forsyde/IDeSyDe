@@ -5,10 +5,10 @@ version.workspace = true
 edition.workspace = true
 
 [dependencies]
+idesyde-core = { path = "../rust-core" }
 clap = { workspace = true }
 env_logger.workspace = true
-idesyde-core = { path = "../rust-core" }
+log.workspace = true
 rmp-serde = { workspace = true }
 serde_json.workspace = true
 sha3 = { workspace = true }
-log.workspace = true

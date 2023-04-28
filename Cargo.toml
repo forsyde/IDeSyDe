@@ -1,7 +1,9 @@
 [workspace]
 members = [
     "rust-core",
-    "rust-orchestration"
+    "rust-orchestration",
+    "rust-blueprints",
+    "rust-common"
 ]
 description = "IDeSyDe Rust suite"
 

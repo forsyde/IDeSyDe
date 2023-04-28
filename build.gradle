@@ -3,10 +3,10 @@ plugins {
   id 'signing'
   id 'idea'
   id 'eclipse'
-  id 'com.github.johnrengelman.shadow' version '8.1.1'
+  id 'com.github.johnrengelman.shadow' version '8.1.1' apply false
 //  id 'org.jetbrains.kotlin.jvm' version '1.8.20'
 //  id 'org.jetbrains.kotlin.plugin.serialization' version '1.8.20'
-  id 'org.beryx.jlink' version '2.26.0'
+//  id 'org.beryx.jlink'
   id "org.gradlex.extra-java-module-info" version "1.4"
 }
 
@@ -37,9 +37,9 @@ subprojects {
   apply plugin: 'application'
 //  apply plugin: 'org.jetbrains.kotlin.jvm'
 //  apply plugin: 'org.jetbrains.kotlin.plugin.serialization'
-  apply plugin: 'com.github.johnrengelman.shadow'
+//  apply plugin: 'com.github.johnrengelman.shadow'
 //  apply plugin: "org.gradlex.extra-java-module-info"
-//  apply plugin: 'org.beryx.jlink'
+//  apply plugin: "org.gradlex.java-module-dependencies"
 
   group = 'io.github.forsyde'
   archivesBaseName = rootProject.name + '-' + project.name
@@ -63,5 +63,19 @@ subprojects {
   artifacts {
     archives javadocJar, sourcesJar
   }
+
+//  extraJavaModuleInfo {
+//    knownModule("com.fasterxml.jackson.core:jackson-annotations", "com.fasterxml.jackson.annotations")
+//    knownModule("com.fasterxml.jackson.core:jackson-core", "com.fasterxml.jackson.core")
+//    knownModule("com.fasterxml.jackson.core:jackson-databind", "com.fasterxml.jackson.databind")
+//    module("org.msgpack:jackson-dataformat-msgpack", "jackson.dataformat.msgpack") {
+//      exportAllPackages()
+//      requireAllDefinedDependencies()
+//    }
+//    module("org.msgpack:msgpack-core", "msgpack.core") {
+//      exportAllPackages()
+//      requireAllDefinedDependencies()
+//    }
+//  }
 
 }

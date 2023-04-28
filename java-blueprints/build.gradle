@@ -1,5 +1,4 @@
 dependencies {
     implementation 'info.picocli:picocli:4.7.3'
     implementation project(":java-core")
-    implementation 'org.msgpack:jackson-dataformat-msgpack:0.9.3'
 }

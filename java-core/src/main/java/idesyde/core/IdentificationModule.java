@@ -17,8 +17,6 @@ import java.util.stream.Collectors;
  * into an independent callable library, which can be orchestrated externally. This enables modules
  * in different languages to cooperate seamlessly.
  *
- * @see
- *   [[idesyde.core.IdentificationLibrary]]
  */
 public interface IdentificationModule {
 

@@ -3,7 +3,8 @@ members = [
     "rust-core",
     "rust-orchestration",
     "rust-blueprints",
-    "rust-common"
+    "rust-common",
+    "rust-bridge-matlab-simulink"
 ]
 description = "IDeSyDe Rust suite"
 

@@ -425,6 +425,15 @@ dependencies = [
 ]
 
 [[package]]
+name = "rust-bridge-matlab-simulink"
+version = "0.4.4"
+dependencies = [
+ "idesyde-blueprints",
+ "idesyde-common",
+ "idesyde-core",
+]
+
+[[package]]
 name = "rustix"
 version = "0.37.6"
 source = "registry+https://github.com/rust-lang/crates.io-index"

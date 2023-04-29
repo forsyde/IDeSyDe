@@ -8,11 +8,12 @@ use std::path::Path;
 use std::path::PathBuf;
 use std::process::Stdio;
 
+use idesyde_core::headers::load_decision_model_headers_from_binary;
+use idesyde_core::headers::DecisionModelHeader;
+use idesyde_core::headers::DesignModelHeader;
+use idesyde_core::headers::ExplorationBid;
 use idesyde_core::DecisionModel;
-use idesyde_core::DecisionModelHeader;
 use idesyde_core::DesignModel;
-use idesyde_core::DesignModelHeader;
-use idesyde_core::ExplorationCombinationDescription;
 use idesyde_core::ExplorationModule;
 use idesyde_core::IdentificationModule;
 
@@ -22,7 +23,7 @@ pub struct ExternalIdentificationModule {
     inputs_path_: PathBuf,
     identified_path_: PathBuf,
     solved_path_: PathBuf,
-    integration_path_: PathBuf,
+    reverse_path_: PathBuf,
     output_path_: PathBuf,
 }
 
@@ -89,8 +90,8 @@ impl IdentificationModule for ExternalIdentificationModule {
 
     fn reverse_identification(
         &self,
-        _design_model: &Box<dyn DesignModel>,
-        _decision_model: &Box<dyn DecisionModel>,
+        _decision_model: &Vec<Box<dyn DecisionModel>>,
+        _design_model: &Vec<Box<dyn DesignModel>>,
     ) -> Vec<Box<dyn DesignModel>> {
         let is_java = self
             .command_path_
@@ -107,7 +108,7 @@ impl IdentificationModule for ExternalIdentificationModule {
                 .arg("-s")
                 .arg(&self.solved_path_)
                 .arg("-r")
-                .arg(&self.integration_path_)
+                .arg(&self.reverse_path_)
                 .arg("-o")
                 .arg(&self.output_path_)
                 .stdout(Stdio::piped())
@@ -119,7 +120,7 @@ impl IdentificationModule for ExternalIdentificationModule {
                 .arg("-s")
                 .arg(&self.solved_path_)
                 .arg("-r")
-                .arg(&self.integration_path_)
+                .arg(&self.reverse_path_)
                 .arg("-o")
                 .arg(&self.output_path_)
                 .stdout(Stdio::piped())
@@ -166,10 +167,7 @@ impl ExplorationModule for ExternalExplorationModule {
         HashMap::new() // TODO: put interfaces later
     }
 
-    fn get_combination(
-        &self,
-        m: &Box<dyn idesyde_core::DecisionModel>,
-    ) -> idesyde_core::ExplorationCombinationDescription {
+    fn bid(&self, m: &Box<dyn idesyde_core::DecisionModel>) -> ExplorationBid {
         let headers = load_decision_model_headers_from_binary(&self.identified_path_);
         let chosen_path = headers
             .iter()
@@ -288,81 +286,6 @@ impl ExplorationModule for ExternalExplorationModule {
     }
 }
 
-pub fn load_decision_model_headers_from_binary(
-    header_path: &Path,
-) -> Vec<(PathBuf, DecisionModelHeader)> {
-    let known_decision_model_paths = if let Ok(ls) = header_path.read_dir() {
-        ls.flat_map(|dir_entry_r| {
-            if let Ok(dir_entry) = dir_entry_r {
-                if dir_entry
-                    .path()
-                    .file_name()
-                    .and_then(|f| f.to_str())
-                    .map_or(false, |f| f.starts_with("header"))
-                    && dir_entry
-                        .path()
-                        .extension()
-                        .map_or(false, |ext| ext.eq_ignore_ascii_case("msgpack"))
-                {
-                    return Some(dir_entry.path());
-                }
-            }
-            None
-        })
-        .collect::<Vec<PathBuf>>()
-    } else {
-        Vec::new()
-    };
-    known_decision_model_paths
-        .iter()
-        .map(|p| {
-            (
-                p,
-                std::fs::read(p).expect("Failed to read decision model header file."),
-            )
-        })
-        .map(|(p, b)| {
-            (
-                p.to_owned(),
-                rmp_serde::decode::from_slice(&b)
-                    .expect("Failed to deserialize deicsion model header."),
-            )
-        })
-        .collect()
-}
-
-pub fn load_design_model_headers_from_binary(header_path: &Path) -> Vec<DesignModelHeader> {
-    let known_design_model_paths = if let Ok(ls) = header_path.read_dir() {
-        ls.flat_map(|dir_entry_r| {
-            if let Ok(dir_entry) = dir_entry_r {
-                if dir_entry
-                    .path()
-                    .file_name()
-                    .and_then(|f| f.to_str())
-                    .map_or(false, |f| f.starts_with("header"))
-                    && dir_entry
-                        .path()
-                        .extension()
-                        .map_or(false, |ext| ext.eq_ignore_ascii_case("msgpack"))
-                {
-                    return Some(dir_entry.path());
-                }
-            }
-            None
-        })
-        .collect::<Vec<PathBuf>>()
-    } else {
-        Vec::new()
-    };
-    known_design_model_paths
-        .iter()
-        .flat_map(|p| std::fs::read(p))
-        .map(|b| {
-            rmp_serde::decode::from_slice(&b).expect("Failed to serialize design model header")
-        })
-        .collect()
-}
-
 pub fn find_and_prepare_identification_modules(
     modules_path: &Path,
     identified_path: &Path,
@@ -383,7 +306,7 @@ pub fn find_and_prepare_identification_modules(
                         identified_path_: identified_path.to_path_buf(),
                         inputs_path_: inputs_path.to_path_buf(),
                         solved_path_: solved_path.to_path_buf(),
-                        integration_path_: integration_path.to_path_buf(),
+                        reverse_path_: integration_path.to_path_buf(),
                         output_path_: output_path.to_path_buf(),
                     });
                 }
@@ -467,14 +390,10 @@ pub fn compute_dominant_combinations<'a>(
     let combinations: Vec<(
         &Box<dyn ExplorationModule>,
         &Box<dyn DecisionModel>,
-        ExplorationCombinationDescription,
+        ExplorationBid,
     )> = exploration_modules
         .iter()
-        .flat_map(|exp| {
-            decision_models
-                .iter()
-                .map(move |m| (exp, *m, exp.get_combination(m)))
-        })
+        .flat_map(|exp| decision_models.iter().map(move |m| (exp, *m, exp.bid(m))))
         .filter(|(_, _, c)| c.can_explore)
         .collect();
     combinations

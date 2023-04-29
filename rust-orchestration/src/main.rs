@@ -2,13 +2,14 @@ use std::{cmp::Ordering, fs, path::Path};
 
 use clap::Parser;
 use env_logger::WriteStyle;
-use idesyde_core::{DecisionModel, DesignModel, ExplorationModule, IdentificationModule};
+use idesyde_core::{
+    headers::load_decision_model_headers_from_binary,
+    headers::load_design_model_headers_from_binary, DecisionModel, DesignModel, ExplorationModule,
+    IdentificationModule,
+};
 use log::{debug, error, info, warn, Level};
 
-use crate::orchestration::{
-    compute_dominant_combinations, compute_dominant_decision_models,
-    load_decision_model_headers_from_binary,
-};
+use crate::orchestration::compute_dominant_combinations;
 
 pub mod orchestration;
 
@@ -184,14 +185,13 @@ fn main() {
             imodule.identification_step(0, &Vec::new(), &Vec::new());
         }
         // now we can proceed safely
-        let design_model_headers =
-            orchestration::load_design_model_headers_from_binary(&inputs_path);
+        let design_model_headers = load_design_model_headers_from_binary(&inputs_path);
         let design_models: Vec<Box<dyn DesignModel>> = design_model_headers
             .iter()
             .map(|h| Box::new(h.to_owned()) as Box<dyn DesignModel>)
             .collect();
         let mut pre_identified: Vec<Box<dyn DecisionModel>> =
-            orchestration::load_decision_model_headers_from_binary(&identified_path)
+            load_decision_model_headers_from_binary(&identified_path)
                 .iter()
                 .map(|(_, h)| Box::new(h.to_owned()) as Box<dyn DecisionModel>)
                 .collect();
@@ -305,17 +305,16 @@ fn main() {
                 .enumerate()
             {
                 sols_found += 1;
+                let solv = vec![sol];
                 debug!("Found a new solution. Total count is {}.", i + 1);
                 for imodule in &imodules {
-                    for design_model in &design_models {
-                        for integrated in imodule.reverse_identification(&design_model, &sol) {
-                            idesyde_core::write_design_model_header_to_path(
-                                &integrated,
-                                &integration_path,
-                                format!("{}_{}", "integrated_", i).as_str(),
-                                "Orchestrator",
-                            );
-                        }
+                    for integrated in imodule.reverse_identification(&solv, &design_models) {
+                        idesyde_core::write_design_model_header_to_path(
+                            &integrated,
+                            &integration_path,
+                            format!("{}_{}", "integrated_", i).as_str(),
+                            "Orchestrator",
+                        );
                     }
                 }
             }

@@ -1,7 +1,4 @@
-use std::{
-    collections::{HashMap, HashSet},
-    process::Command,
-};
+use std::collections::{HashMap, HashSet};
 
 use idesyde_blueprints::execute_standalone_identification_module;
 use idesyde_core::{
@@ -70,10 +67,10 @@ fn partially_identify_wokload_model(
     _decision_models: &Vec<Box<dyn DecisionModel>>,
 ) -> Vec<Box<dyn DecisionModel>> {
     let mut identified = Vec::new();
-    let mut procs: HashSet<String> = HashSet::new();
-    let mut delays: HashSet<String> = HashSet::new();
-    let mut linksWithoutConstants: HashMap<String, HashMap<String, u32>> = HashMap::new();
-    let mut allLinks: HashMap<String, HashMap<String, u32>> = HashMap::new();
+    // let mut procs: HashSet<String> = HashSet::new();
+    // let mut delays: HashSet<String> = HashSet::new();
+    // let mut linksWithoutConstants: HashMap<String, HashMap<String, u32>> = HashMap::new();
+    // let mut allLinks: HashMap<String, HashMap<String, u32>> = HashMap::new();
     for design_model in design_models {
         if design_model.unique_identifier() == "SimulinkReactiveDesignModel" {}
     }

@@ -8,7 +8,6 @@ use std::{
 };
 
 use headers::{DecisionModelHeader, DesignModelHeader, ExplorationBid};
-use serde::Serialize;
 use std::cmp::Ordering;
 
 pub trait DesignModel {

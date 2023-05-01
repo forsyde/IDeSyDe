@@ -12,22 +12,22 @@ impl StandaloneIdentificationModule for CommonIdentificationModule {
 
     fn read_design_model(
         &self,
-        path: &std::path::Path,
+        _path: &std::path::Path,
     ) -> Option<Box<dyn idesyde_core::DesignModel>> {
         todo!()
     }
 
     fn write_design_model(
         &self,
-        design_model: &Box<dyn idesyde_core::DesignModel>,
-        dest: &std::path::Path,
+        _design_model: &Box<dyn idesyde_core::DesignModel>,
+        _dest: &std::path::Path,
     ) -> bool {
         todo!()
     }
 
     fn decision_header_to_model(
         &self,
-        header: &idesyde_core::headers::DecisionModelHeader,
+        _header: &idesyde_core::headers::DecisionModelHeader,
     ) -> Option<Box<dyn idesyde_core::DecisionModel>> {
         todo!()
     }

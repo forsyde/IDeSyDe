@@ -332,13 +332,11 @@ final class CanSolveDepTasksToPartitionedMultiCore(using logger: Logger)
       )
       .toVector
     val processSchedulings = taskExecution.zipWithIndex
-      .map((v, i) =>
-        m.workload.tasks(i) -> m.platform.runtimes.schedulers(messagesMemoryMapping(i))
-      )
+      .map((v, i) => m.workload.tasks(i) -> m.platform.runtimes.schedulers(taskExecution(i)))
       .toVector
     val channelMappings = messagesMemoryMapping.zipWithIndex
       .map((v, i) =>
-        m.workload.dataChannels(i) -> m.platform.hardware.storageElems(taskExecution(i))
+        m.workload.dataChannels(i) -> m.platform.hardware.storageElems(messagesMemoryMapping(i))
       )
       .toVector
     // val channelSlotAllocations = ???

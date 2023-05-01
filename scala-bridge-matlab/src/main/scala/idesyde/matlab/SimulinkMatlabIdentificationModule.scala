@@ -14,9 +14,11 @@ import os.Path
 object SimulinkMatlabIdentificationModule extends IdentificationModule with ApplicationRules {
 
   override def inputsToDesignModel(p: Path): Option[DesignModelHeader | DesignModel] = if (
-    p.ext == "json" && !p.baseName.startsWith("header")
+    p.ext == "slx"
   ) {
-    Some(read[SimulinkReactiveDesignModel](os.read(p)))
+    val res  = os.proc("matlab", "-batch", s"export_to_idesyde('$p')").call()
+    val dest = res.out.lines().last
+    Some(read[SimulinkReactiveDesignModel](os.read(os.pwd / dest)))
   } else None
 
   def designHeaderToModel(m: DesignModelHeader): Set[DesignModel] = Set()

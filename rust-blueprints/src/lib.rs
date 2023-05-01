@@ -1,13 +1,10 @@
-use std::{
-    collections::HashSet,
-    path::{Path, PathBuf},
-};
+use std::path::PathBuf;
 
 use clap::Parser;
 use idesyde_core::{
-    headers::{load_decision_model_headers_from_binary, DecisionModelHeader, DesignModelHeader},
+    headers::load_decision_model_headers_from_binary, write_decision_model_to_path,
     write_design_model_header_to_path, DecisionModel, DesignModel, IdentificationModule,
-    MarkedIdentificationRule, ReverseIdentificationRule,
+    StandaloneIdentificationModule,
 };
 
 #[derive(Parser, Debug)]
@@ -47,95 +44,27 @@ pub struct IdentificationModuleArgs {
     identification_step: i32,
 }
 
-pub trait StandaloneIdentificationModule {
-    fn uid(&self) -> String;
-    fn read_design_model(&self, path: &Path) -> Vec<Box<dyn DesignModel>>;
-    fn write_design_model(&self, design_model: &Box<dyn DesignModel>, dest: &Path) -> PathBuf;
-    fn decision_header_to_model(
-        &self,
-        header: &DecisionModelHeader,
-    ) -> Option<Box<dyn DecisionModel>>;
-    fn identification_rules(&self) -> Vec<MarkedIdentificationRule>;
-    fn reverse_identification_rules(&self) -> Vec<ReverseIdentificationRule>;
-}
-
-impl IdentificationModule for &dyn StandaloneIdentificationModule {
-    fn unique_identifier(&self) -> String {
-        self.uid()
-    }
-
-    fn identification_step(
-        &self,
-        iteration: i32,
-        design_models: &Vec<Box<dyn DesignModel>>,
-        decision_models: &Vec<Box<dyn DecisionModel>>,
-    ) -> Vec<Box<dyn DecisionModel>> {
-        let mut identified: Vec<Box<dyn DecisionModel>> = Vec::new();
-        for irule in self.identification_rules() {
-            let f_opt = match irule {
-                MarkedIdentificationRule::DesignModelOnlyIdentificationRule(f) => {
-                    if iteration <= 0 {
-                        Some(f)
-                    } else {
-                        None
-                    }
-                }
-                MarkedIdentificationRule::DecisionModelOnlyIdentificationRule(f) => {
-                    if iteration > 0 {
-                        Some(f)
-                    } else {
-                        None
-                    }
-                }
-                MarkedIdentificationRule::GenericIdentificationRule(f) => Some(f),
-                MarkedIdentificationRule::SpecificDecisionModelIdentificationRule(ms, f) => {
-                    let categories: HashSet<String> =
-                        identified.iter().map(|x| x.header().category).collect();
-                    if ms.iter().all(|x| categories.contains(x)) {
-                        Some(f)
-                    } else {
-                        None
-                    }
-                }
-            };
-            if let Some(f) = f_opt {
-                for m in f(design_models, decision_models) {
-                    if !identified.contains(&m) {
-                        identified.push(m);
-                    }
-                }
-            }
-        }
-        identified
-    }
-
-    fn reverse_identification(
-        &self,
-        solved_decision_model: &Vec<Box<dyn DecisionModel>>,
-        design_model: &Vec<Box<dyn DesignModel>>,
-    ) -> Vec<Box<dyn DesignModel>> {
-        let mut reverse_identified: Vec<Box<dyn DesignModel>> = Vec::new();
-        for f in self.reverse_identification_rules() {
-            for m in f(solved_decision_model, design_model) {
-                reverse_identified.push(m);
-            }
-        }
-        reverse_identified
-    }
-}
-
-fn execute_standalone_identification_module<
-    T: StandaloneIdentificationModule + IdentificationModule,
->(
-    module: T,
-) {
+pub fn execute_standalone_identification_module<T: StandaloneIdentificationModule>(module: T) {
     let args = IdentificationModuleArgs::parse();
     if let Some(design_path) = args.design_path_opt {
         std::fs::create_dir_all(&design_path)
             .expect("Failed to create the design path during reverse identification.");
-        let design_models = module.read_design_model(&design_path);
-        for m in &design_models {
-            write_design_model_header_to_path(m, &design_path, "header", &module.uid());
+        let mut design_models: Vec<Box<dyn DesignModel>> = Vec::new();
+        for pres in
+            std::fs::read_dir(&design_path).expect("Failed to read design path during start-up.")
+        {
+            let p = pres.expect("Failed to read directory entry during start-up");
+            if let Some(m) = module.read_design_model(&p.path()) {
+                let mut h = m.header();
+                h.model_paths.push(
+                    p.path()
+                        .to_str()
+                        .expect("Failed to get OS string furing start-up")
+                        .to_string(),
+                );
+                write_design_model_header_to_path(&h, &design_path, "", &module.uid());
+                design_models.push(m);
+            }
         }
         match (
             args.identified_path_opt,
@@ -155,13 +84,41 @@ fn execute_standalone_identification_module<
                 let reverse_identified = module.reverse_identification(&solved, &design_models);
                 for m in reverse_identified {
                     let mut h = m.header();
-                    if let Some(p) = module.write_design_model(&m, &reverse_path).to_str() {
-                        h.model_paths.push(p.to_string());
-                    };
-                    // write_design_model_header_to_path(m, p, prefix_str, suffix_str)
+                    if let Some(out_path) = &args.output_path_opt {
+                        if module.write_design_model(&m, out_path) {
+                            h.model_paths.push(out_path.to_str().expect("Failed to get a string out of the output path during reverse identification").to_string());
+                        };
+                    }
+                    write_design_model_header_to_path(
+                        &h,
+                        &reverse_path,
+                        "",
+                        module.unique_identifier().as_str(),
+                    );
                 }
             }
-            (Some(identified_path), None, None) => (),
+            (Some(identified_path), None, None) => {
+                std::fs::create_dir_all(&identified_path)
+                    .expect("Failed to create the identified path during reverse identification.");
+                let decision_models: Vec<Box<dyn DecisionModel>> =
+                    load_decision_model_headers_from_binary(&identified_path)
+                        .iter()
+                        .flat_map(|(p, x)| module.decision_header_to_model(x))
+                        .collect();
+                let identified = module.identification_step(
+                    args.identification_step,
+                    &design_models,
+                    &decision_models,
+                );
+                for m in identified {
+                    write_decision_model_to_path(
+                        &m,
+                        &identified_path,
+                        format!("{:0>16}", args.identification_step).as_str(),
+                        module.unique_identifier().as_str(),
+                    );
+                }
+            }
             _ => (),
         }
     }

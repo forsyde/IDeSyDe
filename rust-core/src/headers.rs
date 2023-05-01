@@ -10,11 +10,11 @@ use crate::DesignModel;
 
 #[derive(Serialize, Clone, Deserialize, Debug)]
 pub struct LabelledArcWithPorts {
-    src: String,
-    src_port: Option<String>,
-    label: Option<String>,
-    dst: String,
-    dst_port: Option<String>,
+    pub src: String,
+    pub src_port: Option<String>,
+    pub label: Option<String>,
+    pub dst: String,
+    pub dst_port: Option<String>,
 }
 
 impl PartialEq<LabelledArcWithPorts> for LabelledArcWithPorts {

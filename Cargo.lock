@@ -252,11 +252,13 @@ dependencies = [
 name = "idesyde-common"
 version = "0.4.4"
 dependencies = [
- "clap",
  "env_logger",
  "idesyde-blueprints",
  "idesyde-core",
  "log",
+ "rmp-serde",
+ "serde",
+ "serde_json",
 ]
 
 [[package]]
@@ -431,6 +433,9 @@ dependencies = [
  "idesyde-blueprints",
  "idesyde-common",
  "idesyde-core",
+ "rmp-serde",
+ "serde",
+ "serde_json",
 ]
 
 [[package]]

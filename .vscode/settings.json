@@ -15,5 +15,8 @@
     "java.configuration.updateBuildConfiguration": "automatic",
     "[python]": {
         "editor.defaultFormatter": "ms-python.black-formatter"
-    }
+    },
+    "rust-analyzer.linkedProjects": [
+        ".\\rust-common\\Cargo.toml"
+    ]
 }

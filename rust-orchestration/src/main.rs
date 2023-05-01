@@ -119,7 +119,7 @@ fn main() {
             .join("emodules");
         let identified_path = run_path.join("identified");
         let solution_path = &run_path.join("explored");
-        let integration_path = &run_path.join("integrated");
+        let reverse_path = &run_path.join("integrated");
 
         std::fs::create_dir_all(run_path)
             .expect("Failed to create run path directory during identification.");
@@ -133,7 +133,7 @@ fn main() {
             .expect("Failed to create identified directory during identification.");
         std::fs::create_dir_all(&solution_path)
             .expect("Failed to create explored directory during identification.");
-        std::fs::create_dir_all(&integration_path)
+        std::fs::create_dir_all(&reverse_path)
             .expect("Failed to create explored directory during identification.");
 
         debug!("Copying input files");
@@ -156,7 +156,7 @@ fn main() {
             &identified_path,
             &inputs_path,
             &solution_path,
-            &integration_path,
+            &reverse_path,
             &output_path,
         );
         for eximod in ex_imodules {
@@ -308,11 +308,11 @@ fn main() {
                 let solv = vec![sol];
                 debug!("Found a new solution. Total count is {}.", i + 1);
                 for imodule in &imodules {
-                    for integrated in imodule.reverse_identification(&solv, &design_models) {
+                    for reverse in imodule.reverse_identification(&solv, &design_models) {
                         idesyde_core::write_design_model_header_to_path(
-                            &integrated,
-                            &integration_path,
-                            format!("{}_{}", "integrated_", i).as_str(),
+                            &reverse.header(),
+                            &reverse_path,
+                            format!("{}_{}", "reversed_", i).as_str(),
                             "Orchestrator",
                         );
                     }

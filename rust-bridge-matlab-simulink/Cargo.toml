@@ -8,3 +8,6 @@ edition.workspace = true
 idesyde-core = { path = "../rust-core" }
 idesyde-blueprints = { path = "../rust-blueprints" }
 idesyde-common = { path = "../rust-common" }
+serde = { workspace = true }
+serde_json = { workspace = true }
+rmp-serde = { workspace = true }

@@ -1,11 +1,14 @@
 package idesyde.identification.common.models.mixed
 
+import upickle.default._
+
 import idesyde.identification.common.models.CommunicatingAndTriggeredReactiveWorkload
 import idesyde.identification.common.models.platform.PartitionedSharedMemoryMultiCore
 import idesyde.identification.common.StandardDecisionModel
 import spire.math.Rational
 import idesyde.identification.models.mixed.WCETComputationMixin
 import idesyde.core.DecisionModel
+import idesyde.core.CompleteDecisionModel
 
 final case class PeriodicWorkloadToPartitionedSharedMultiCore(
     val workload: CommunicatingAndTriggeredReactiveWorkload,
@@ -16,7 +19,13 @@ final case class PeriodicWorkloadToPartitionedSharedMultiCore(
     val channelSlotAllocations: Map[String, Map[String, Vector[Boolean]]],
     val maxUtilizations: Map[String, Double]
 ) extends StandardDecisionModel
-    with WCETComputationMixin(workload, platform.hardware) {
+    with CompleteDecisionModel
+    with WCETComputationMixin(workload, platform.hardware)
+    derives ReadWriter {
+
+  override def bodyAsText: String = write(this)
+
+  override def bodyAsBinary: Array[Byte] = writeBinary(this)
 
   val coveredElements: Set[String] = workload.coveredElements ++ platform.coveredElements
 

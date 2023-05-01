@@ -26,14 +26,16 @@ import spire.math.Rational
 import idesyde.identification.common.models.mixed.SDFToTiledMultiCore
 import idesyde.choco.ChocoExplorableOps._
 import idesyde.core.ExplorationCombinationDescription
+import idesyde.identification.common.models.mixed.PeriodicWorkloadToPartitionedSharedMultiCore
 
 class ChocoExplorer(using logger: Logger) extends Explorer:
 
   def combination(decisionModel: DecisionModel): ExplorationCombinationDescription = {
     val canExplore = decisionModel match
-      case sdf: SDFToTiledMultiCore => true
-      case c: ChocoDecisionModel    => true
-      case _                        => false
+      case sdf: SDFToTiledMultiCore                               => true
+      case workload: PeriodicWorkloadToPartitionedSharedMultiCore => true
+      case c: ChocoDecisionModel                                  => true
+      case _                                                      => false
     ExplorationCombinationDescription(
       canExplore,
       availableCriterias(decisionModel)
@@ -133,6 +135,14 @@ class ChocoExplorer(using logger: Logger) extends Explorer:
         timeDiscretizationFactor,
         memoryDiscretizationFactor
       )(using CanSolveSDFToTiledMultiCore())
+    case workload: PeriodicWorkloadToPartitionedSharedMultiCore =>
+      exploreChocoExplorable(
+        workload,
+        explorationTotalTimeOutInSecs,
+        maximumSolutions,
+        timeDiscretizationFactor,
+        memoryDiscretizationFactor
+      )(using CanSolveDepTasksToPartitionedMultiCore())
     case solvable: ChocoDecisionModel =>
       val solver          = solvable.chocoModel.getSolver
       val isOptimization  = solvable.modelMinimizationObjectives.size > 0

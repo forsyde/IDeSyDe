@@ -8,7 +8,7 @@ import idesyde.identification.choco.ChocoIdentificationLibrary
 import idesyde.core.Explorer
 import idesyde.utils.Logger
 import idesyde.core.DesignModel
-import idesyde.matlab.identification.SimulinkMatlabIdentificationModule
+import idesyde.matlab.SimulinkMatlabIdentificationModule
 import idesyde.choco.ChocoExplorationModule
 import idesyde.forsydeio.ForSyDeIdentificationLibrary
 import idesyde.devicetree.DeviceTreeIdentificationModule

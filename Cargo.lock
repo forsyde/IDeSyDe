@@ -249,6 +249,18 @@ dependencies = [
 ]
 
 [[package]]
+name = "idesyde-bridge-matlab-simulink"
+version = "0.4.4"
+dependencies = [
+ "idesyde-blueprints",
+ "idesyde-common",
+ "idesyde-core",
+ "rmp-serde",
+ "serde",
+ "serde_json",
+]
+
+[[package]]
 name = "idesyde-common"
 version = "0.4.4"
 dependencies = [
@@ -424,18 +436,6 @@ dependencies = [
  "byteorder",
  "rmp",
  "serde",
-]
-
-[[package]]
-name = "rust-bridge-matlab-simulink"
-version = "0.4.4"
-dependencies = [
- "idesyde-blueprints",
- "idesyde-common",
- "idesyde-core",
- "rmp-serde",
- "serde",
- "serde_json",
 ]
 
 [[package]]

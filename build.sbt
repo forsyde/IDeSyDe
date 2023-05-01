@@ -226,7 +226,25 @@ lazy val matlab = (project in file("scala-bridge-matlab"))
   .dependsOn(common)
   .dependsOn(blueprints)
   .settings(
-    name := "idesyde-scala-bridge-matlab"
+    name := "idesyde-scala-bridge-matlab",
+    libraryDependencies ++= Seq(
+      "org.scala-lang.modules" %%% "scala-parser-combinators" % scalaParserCombinatorsVersion,
+      "com.lihaoyi"             %% "os-lib"                   % osLibVersion,
+      "org.virtuslab"           %% "scala-yaml"               % scalaYamlVersion
+    ),
+    licenses := Seq(
+      "MIT"  -> url("https://opensource.org/license/mit/"),
+      "APL2" -> url("https://www.apache.org/licenses/LICENSE-2.0"),
+      "EPL2" -> url("https://www.eclipse.org/legal/epl-2.0/")
+    ),
+    Compile / mainClass := Some("idesyde.matlab.SimulinkMatlabIdentificationModule"),
+    publishModules := {
+      IO.createDirectory(imodulesTarget)
+      val jar    = assembly.value
+      val target = imodulesTarget / (projectInfo.value.nameFormal + ".jar")
+      IO.copyFile(jar, target)
+      target
+    }
   )
 
 lazy val devicetree = (project in file("scala-bridge-device-tree"))

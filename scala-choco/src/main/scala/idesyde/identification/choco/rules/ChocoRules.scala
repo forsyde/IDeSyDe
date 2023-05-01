@@ -5,7 +5,7 @@ import idesyde.core.DecisionModel
 import idesyde.utils.Logger
 import spire.math.Rational
 import idesyde.identification.common.models.mixed.SDFToTiledMultiCore
-import idesyde.identification.choco.models.mixed.ChocoComDepTasksToMultiCore
+import idesyde.choco.CanSolveDepTasksToPartitionedMultiCore
 import idesyde.identification.common.models.mixed.PeriodicWorkloadToPartitionedSharedMultiCore
 
 trait ChocoRules(using Logger) {
@@ -20,11 +20,11 @@ trait ChocoRules(using Logger) {
   //   .map(m => m.asInstanceOf[SDFToTiledMultiCore])
   //   .map(dse => ChocoSDFToSChedTileHW2(dse))
 
-  def identChocoComDepTasksToMultiCore(
-      models: Set[DesignModel],
-      identified: Set[DecisionModel]
-  ): Set[ChocoComDepTasksToMultiCore] = identified
-    .filter(m => m.isInstanceOf[PeriodicWorkloadToPartitionedSharedMultiCore])
-    .map(m => m.asInstanceOf[PeriodicWorkloadToPartitionedSharedMultiCore])
-    .map(dse => ChocoComDepTasksToMultiCore(dse))
+  // def identChocoComDepTasksToMultiCore(
+  //     models: Set[DesignModel],
+  //     identified: Set[DecisionModel]
+  // ): Set[CanSolveDepTasksToPartitionedMultiCore] = identified
+  //   .filter(m => m.isInstanceOf[PeriodicWorkloadToPartitionedSharedMultiCore])
+  //   .map(m => m.asInstanceOf[PeriodicWorkloadToPartitionedSharedMultiCore])
+  //   .map(dse => CanSolveDepTasksToPartitionedMultiCore(dse))
 }

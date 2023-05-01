@@ -1,9 +1,8 @@
-package idesyde.matlab.identification
+package idesyde.matlab
 
 import idesyde.core.DesignModel
 import idesyde.core.DecisionModel
 import idesyde.identification.common.models.CommunicatingAndTriggeredReactiveWorkload
-import idesyde.matlab.utils.MatlabUtils
 import spire.math.Rational
 
 trait ApplicationRules extends MatlabUtils {
@@ -22,7 +21,7 @@ trait ApplicationRules extends MatlabUtils {
       val sinks   = model.sinks.toVector
       // val (sourcesPeriodsNumerator, sourcesPeriodsDenominator) =
       val (pernums, perdens) = model.sources.toVector
-        .map(model.sourcesPeriods)
+        .map(model.sources_periods)
         .map(Rational(_))
         .map(r => (r.numeratorAsLong, r.denominatorAsLong))
         .unzip
@@ -30,15 +29,15 @@ trait ApplicationRules extends MatlabUtils {
       Set(
         CommunicatingAndTriggeredReactiveWorkload(
           procs ++ delays,
-          procs.map(model.processesSizes) ++ delays.map(model.delaysSizes),
-          procs.map(model.processesOperations) ++ delays.map(model.delaysOperations),
+          procs.map(model.processes_sizes) ++ delays.map(model.delays_sizes),
+          procs.map(model.processes_operations) ++ delays.map(model.delays_operations),
           linksWithoutConstants.map((s, t, sp, tp, _) =>
             s + ":" + sp + "--" + t + ":" + tp
           ) ++ sources ++ sinks,
           linksWithoutConstants.map((s, t, sp, tp, d) => d) ++ sources.map(
-            model.sourcesSizes
+            model.sources_sizes
           ) ++ sinks.map(
-            model.sinksSizes
+            model.sinks_sizes
           ),
           groupedLinks.keySet.toVector.map((s, t) => s),
           groupedLinks.keySet.toVector.map((s, t) => t),

@@ -8,6 +8,9 @@ import scalax.collection.immutable.Graph
 import scalax.collection.GraphPredef._
 import scala.collection.mutable
 
+import upickle.default._
+import idesyde.core.CompleteDecisionModel
+
 final case class CommunicatingAndTriggeredReactiveWorkload(
     val tasks: Vector[String],
     val taskSizes: Vector[Long],
@@ -32,8 +35,10 @@ final case class CommunicatingAndTriggeredReactiveWorkload(
     val triggerGraphDst: Vector[String],
     val hasORTriggerSemantics: Set[String]
 ) extends StandardDecisionModel
+    with CompleteDecisionModel
     with CommunicatingExtendedDependenciesPeriodicWorkload
-    with InstrumentedWorkloadMixin {
+    with InstrumentedWorkloadMixin
+    derives ReadWriter {
 
   lazy val dataGraph =
     for ((s, i) <- dataGraphSrc.zipWithIndex) yield (s, dataGraphDst(i), dataGraphMessageSize(i))
@@ -224,6 +229,10 @@ final case class CommunicatingAndTriggeredReactiveWorkload(
     }
     affineControlGraphEdges.toSet
   }
+
+  def bodyAsText: String = write(this)
+
+  def bodyAsBinary: Array[Byte] = writeBinary(this)
 
   def messagesMaxSizes = dataChannelSizes
 

@@ -16,6 +16,9 @@ import idesyde.identification.common.models.platform.PartitionedCoresWithRuntime
 import idesyde.identification.common.models.platform.SchedulableTiledMultiCore
 import idesyde.identification.common.models.mixed.SDFToTiledMultiCore
 import idesyde.identification.common.models.platform.SharedMemoryMultiCore
+import idesyde.identification.common.models.CommunicatingAndTriggeredReactiveWorkload
+import idesyde.identification.common.models.platform.PartitionedSharedMemoryMultiCore
+import idesyde.identification.common.models.mixed.PeriodicWorkloadToPartitionedSharedMultiCore
 
 object CommonIdentificationModule
     extends IdentificationModule
@@ -53,6 +56,12 @@ object CommonIdentificationModule
         body_path.flatMap(decodeFromPath[SDFToTiledMultiCore])
       case DecisionModelHeader("SharedMemoryMultiCore", body_path, _, _) =>
         body_path.flatMap(decodeFromPath[SharedMemoryMultiCore])
+      case DecisionModelHeader("CommunicatingAndTriggeredReactiveWorkload", body_path, _, _) =>
+        body_path.flatMap(decodeFromPath[CommunicatingAndTriggeredReactiveWorkload])
+      case DecisionModelHeader("PartitionedSharedMemoryMultiCore", body_path, _, _) =>
+        body_path.flatMap(decodeFromPath[PartitionedSharedMemoryMultiCore])
+      case DecisionModelHeader("PeriodicWorkloadToPartitionedSharedMultiCore", body_path, _, _) =>
+        body_path.flatMap(decodeFromPath[PeriodicWorkloadToPartitionedSharedMultiCore])
       case _ => None
     }
   }

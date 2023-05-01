@@ -13,7 +13,7 @@ final class ChocoIdentificationLibrary(using Logger) extends IdentificationLibra
 
   val identificationRules = Set(
     // identChocoSDFToSChedTileHW2,
-    identChocoComDepTasksToMultiCore
+    // identChocoComDepTasksToMultiCore
   )
 
   def reverseIdentificationRules: Set[(DesignModel, DecisionModel) => Option[? <: DesignModel]] =

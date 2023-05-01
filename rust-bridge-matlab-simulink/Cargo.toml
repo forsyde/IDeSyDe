@@ -1,5 +1,5 @@
 [package]
-name = "rust-bridge-matlab-simulink"
+name = "idesyde-bridge-matlab-simulink"
 version.workspace = true
 authors.workspace = true
 edition.workspace = true

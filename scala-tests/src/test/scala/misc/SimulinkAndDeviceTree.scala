@@ -6,13 +6,13 @@ import org.virtuslab.yaml.*
 import mixins.LoggingMixin
 import mixins.HasShortcuts
 import org.scalatest.funsuite.AnyFunSuite
-import idesyde.matlab.identification.SimulinkReactiveDesignModel
 import idesyde.identification.common.models.CommunicatingAndTriggeredReactiveWorkload
 import idesyde.devicetree.identification.CanParseDeviceTree
 import idesyde.devicetree.identification.DeviceTreeDesignModel
 import idesyde.devicetree.OSDescription
 import idesyde.devicetree.identification.OSDescriptionDesignModel
-import idesyde.identification.choco.models.mixed.ChocoComDepTasksToMultiCore
+import idesyde.choco.CanSolveDepTasksToPartitionedMultiCore
+import idesyde.matlab.SimulinkReactiveDesignModel
 
 class SimulinkAndDeviceTree
     extends AnyFunSuite
@@ -46,7 +46,7 @@ class SimulinkAndDeviceTree
 
   test("finds the DSE problem in the combined example") {
     for (iden <- identified) {
-      assert(iden.exists(_.isInstanceOf[ChocoComDepTasksToMultiCore]))
+      assert(iden.exists(_.isInstanceOf[CanSolveDepTasksToPartitionedMultiCore]))
     }
   }
 

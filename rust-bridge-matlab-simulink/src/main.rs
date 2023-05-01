@@ -5,12 +5,12 @@ use std::{
 
 use idesyde_blueprints::execute_standalone_identification_module;
 use idesyde_core::{
-    headers::{DesignModelHeader, LabelledArcWithPorts},
-    DesignModel, StandaloneIdentificationModule,
+    headers::{self, DesignModelHeader, LabelledArcWithPorts},
+    DecisionModel, DesignModel, MarkedIdentificationRule, StandaloneIdentificationModule,
 };
-use serde::Serialize;
+use serde::{Deserialize, Serialize};
 
-#[derive(Debug, PartialEq, Eq, Serialize)]
+#[derive(Debug, PartialEq, Eq, Serialize, Deserialize)]
 pub struct SimulinkReactiveDesignModel {
     pub processes: HashSet<String>,
     pub processes_sizes: HashMap<String, u32>,
@@ -39,7 +39,7 @@ impl DesignModel for SimulinkReactiveDesignModel {
         "SimulinkReactiveDesignModel".to_string()
     }
 
-    fn header(&self) -> idesyde_core::headers::DesignModelHeader {
+    fn header(&self) -> headers::DesignModelHeader {
         let mut elems: HashSet<String> = HashSet::new();
         let mut rels: HashSet<LabelledArcWithPorts> = HashSet::new();
         elems.extend(self.processes.iter().map(|x| x.to_owned()));
@@ -65,6 +65,20 @@ impl DesignModel for SimulinkReactiveDesignModel {
     }
 }
 
+fn partially_identify_wokload_model(
+    design_models: &Vec<Box<dyn DesignModel>>,
+    _decision_models: &Vec<Box<dyn DecisionModel>>,
+) -> Vec<Box<dyn DecisionModel>> {
+    let mut identified = Vec::new();
+    let mut procs: HashSet<String> = HashSet::new();
+    let mut delays: HashSet<String> = HashSet::new();
+    let mut linksWithoutConstants: HashMap<String, HashMap<String, u32>> = HashMap::new();
+    let mut allLinks: HashMap<String, HashMap<String, u32>> = HashMap::new();
+    for design_model in design_models {
+        if design_model.unique_identifier() == "SimulinkReactiveDesignModel" {}
+    }
+    identified
+}
 struct MatlabIdentificationModule {}
 
 impl StandaloneIdentificationModule for MatlabIdentificationModule {
@@ -77,16 +91,23 @@ impl StandaloneIdentificationModule for MatlabIdentificationModule {
         path: &std::path::Path,
     ) -> Option<Box<dyn idesyde_core::DesignModel>> {
         match path.extension().and_then(|x| x.to_str()) {
-            Some("slx") => {
-                Command::new("matlab")
-                    .arg("-nosplash")
-                    .arg("-batch")
-                    .arg(format!(
-                        r#"s = load("{}"); m = extract_from_subsystem(s); disp(jsonencode(m));"#,
-                        path.display()
-                    ))
-                    .output();
-                None
+            Some("json") => {
+                if path
+                    .file_name()
+                    .and_then(|x| x.to_str())
+                    .map(|x| !x.starts_with("header"))
+                    .unwrap_or(false)
+                {
+                    if let Ok(s) = std::fs::read_to_string(&path) {
+                        let m: SimulinkReactiveDesignModel =
+                            serde_json::from_str(s.as_str()).expect("something");
+                        Some(Box::new(m) as Box<dyn DesignModel>)
+                    } else {
+                        None
+                    }
+                } else {
+                    None
+                }
             }
             _ => None,
         }
@@ -102,27 +123,21 @@ impl StandaloneIdentificationModule for MatlabIdentificationModule {
 
     fn decision_header_to_model(
         &self,
-        header: &idesyde_core::headers::DecisionModelHeader,
+        _header: &headers::DecisionModelHeader,
     ) -> Option<Box<dyn idesyde_core::DecisionModel>> {
-        todo!()
+        None
     }
 
     fn identification_rules(&self) -> Vec<idesyde_core::MarkedIdentificationRule> {
-        todo!()
+        vec![MarkedIdentificationRule::DesignModelOnlyIdentificationRule(
+            partially_identify_wokload_model,
+        )]
     }
 
     fn reverse_identification_rules(&self) -> Vec<idesyde_core::ReverseIdentificationRule> {
-        todo!()
+        Vec::new()
     }
 }
 fn main() {
-    let extract_script = if cfg!(target_os = "windows") {
-        include_str!["..\\extract_from_subsystem.m"]
-    } else {
-        include_str!["../extract_from_subsystem.m"]
-    };
-    if let Ok(_) = std::fs::write("extract_from_subsystem.m", extract_script) {
-        execute_standalone_identification_module(MatlabIdentificationModule {});
-    };
-    std::fs::remove_file("extract_from_subsystem.m");
+    execute_standalone_identification_module(MatlabIdentificationModule {});
 }

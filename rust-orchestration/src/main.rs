@@ -3,9 +3,8 @@ use std::{cmp::Ordering, fs, path::Path};
 use clap::Parser;
 use env_logger::WriteStyle;
 use idesyde_core::{
-    headers::load_decision_model_headers_from_binary,
-    headers::load_design_model_headers_from_binary, DecisionModel, DesignModel, ExplorationModule,
-    IdentificationModule,
+    headers::{load_decision_model_headers_from_binary, load_design_model_headers_from_binary},
+    DecisionModel, DesignModel, ExplorationModule, IdentificationModule,
 };
 use log::{debug, error, info, warn, Level};
 

@@ -1,4 +1,4 @@
-package idesyde.matlab.identification
+package idesyde.matlab
 
 import idesyde.core.DesignModel
 import upickle.default.*
@@ -11,30 +11,38 @@ import idesyde.core.headers.LabelledArcWithPorts
   */
 final case class SimulinkReactiveDesignModel(
     val processes: Set[String],
-    val processesSizes: Map[String, Long],
+    val processes_sizes: Map[String, Long],
     val delays: Set[String],
-    val delaysSizes: Map[String, Long],
+    val delays_sizes: Map[String, Long],
     val sources: Set[String],
-    val sourcesSizes: Map[String, Long],
-    val sourcesPeriods: Map[String, Double],
+    val sources_sizes: Map[String, Long],
+    val sources_periods: Map[String, Double],
     val constants: Set[String],
     val sinks: Set[String],
-    val sinksSizes: Map[String, Long],
-    val sinksDeadlines: Map[String, Double],
-    val processesOperations: Map[String, Map[String, Map[String, Long]]],
-    val delaysOperations: Map[String, Map[String, Map[String, Long]]],
-    val links: Set[(String, String, String, String, Long)]
+    val sinks_sizes: Map[String, Long],
+    val sinks_deadlines: Map[String, Double],
+    val processes_operations: Map[String, Map[String, Map[String, Long]]],
+    val delays_operations: Map[String, Map[String, Map[String, Long]]],
+    val links_src: Vector[String],
+    val links_dst: Vector[String],
+    val links_src_port: Vector[String],
+    val links_dst_port: Vector[String],
+    val links_size: Vector[Long]
 ) extends DesignModel
     derives ReadWriter {
 
   type ElementT         = String
   type ElementRelationT = (String, String, String, String)
 
+  lazy val links = (for (i <- 0 until links_src.size)
+    yield (links_src(i), links_dst(i), links_src_port(i), links_dst_port(i), links_size(i))).toSet
+
   def elementID(elem: String): String = elem
   def elementRelationID(rel: (String, String, String, String)): LabelledArcWithPorts =
     LabelledArcWithPorts(rel._1, Some(rel._2), None, rel._3, Some(rel._4))
   val elementRelations: Set[(String, String, String, String)] =
-    links.map((s, t, sp, tp, _) => (s, t, sp, tp))
+    (for (i <- 0 until links_src.size)
+      yield (links_src(i), links_dst(i), links_src_port(i), links_dst_port(i))).toSet
   val elements: Set[String] =
     (processes ++ delays ++ sources ++ constants ++ sinks).toSet
   def merge(other: idesyde.core.DesignModel): Option[idesyde.core.DesignModel] =
@@ -53,24 +61,32 @@ final case class SimulinkReactiveDesignModel(
             osinksDeadlines,
             oprocessesOperations,
             odelaysOperations,
-            olinks
+            olinks_src,
+            olinks_dst,
+            olinks_sports,
+            olinks_dports,
+            olinks_sizes
           ) =>
         Some(
           SimulinkReactiveDesignModel(
             processes ++ oprocesses,
-            processesSizes ++ oprocessesSizes,
+            processes_sizes ++ oprocessesSizes,
             delays ++ odelays,
-            delaysSizes ++ odelaysSizes,
+            delays_sizes ++ odelaysSizes,
             sources ++ osources,
-            sourcesSizes ++ osourcesSizes,
-            sourcesPeriods ++ osourcesPeriods,
+            sources_sizes ++ osourcesSizes,
+            sources_periods ++ osourcesPeriods,
             constants ++ oconstants,
             sinks ++ osinks,
-            sinksSizes ++ osinksSizes,
-            sinksDeadlines ++ osinksDeadlines,
-            processesOperations ++ oprocessesOperations,
-            delaysOperations ++ odelaysOperations,
-            links ++ olinks
+            sinks_sizes ++ osinksSizes,
+            sinks_deadlines ++ osinksDeadlines,
+            processes_operations ++ oprocessesOperations,
+            delays_operations ++ odelaysOperations,
+            links_src ++ olinks_src,
+            links_dst ++ olinks_dst,
+            links_src_port ++ olinks_sports,
+            links_dst_port ++ olinks_dports,
+            links_size ++ olinks_sizes
           )
         )
       case _ => None

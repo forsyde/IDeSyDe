@@ -90,5 +90,5 @@ object ForSyDeIdentificationModule extends IdentificationModule {
       false
   }
 
-  def uniqueIdentifier: String = "ForSyDeIdentificationModule"
+  def uniqueIdentifier: String = "YyyYyYyIdentificationModule"
 }

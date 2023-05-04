@@ -119,7 +119,7 @@ fn main() {
             .join("emodules");
         let identified_path = run_path.join("identified");
         let solution_path = &run_path.join("explored");
-        let reverse_path = &run_path.join("integrated");
+        let reverse_path = &run_path.join("reversed");
 
         std::fs::create_dir_all(run_path)
             .expect("Failed to create run path directory during identification.");

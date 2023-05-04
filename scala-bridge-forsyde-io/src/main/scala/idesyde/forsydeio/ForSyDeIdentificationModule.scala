@@ -19,6 +19,7 @@ import java.nio.file.Paths
 import os.Path
 import forsyde.io.java.sdf3.drivers.ForSyDeSDF3Driver
 import idesyde.identification.common.models.mixed.SDFToTiledMultiCore
+import idesyde.identification.common.models.mixed.PeriodicWorkloadToPartitionedSharedMultiCore
 
 object ForSyDeIdentificationModule extends IdentificationModule {
 
@@ -28,6 +29,8 @@ object ForSyDeIdentificationModule extends IdentificationModule {
     m match {
       case DecisionModelHeader("SDFToTiledMultiCore", body_path, _, _) =>
         body_path.flatMap(decodeFromPath[SDFToTiledMultiCore])
+      case DecisionModelHeader("PeriodicWorkloadToPartitionedSharedMultiCore", body_path, _, _) =>
+        body_path.flatMap(decodeFromPath[PeriodicWorkloadToPartitionedSharedMultiCore])
       case _ => None
     }
   }

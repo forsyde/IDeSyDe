@@ -21,3 +21,6 @@ env_logger = "0.10.0"
 version = "0.4.4"
 authors = ["Rodolfo Jordao"]
 edition = "2021"
+
+[target.x86_64-pc-windows-msvc]
+rustflags = ["-C", "target-feature=+crt-static"]

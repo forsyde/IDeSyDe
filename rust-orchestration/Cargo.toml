@@ -12,3 +12,6 @@ log.workspace = true
 rmp-serde = { workspace = true }
 serde_json.workspace = true
 sha3 = { workspace = true }
+
+[target.x86_64-pc-windows-msvc]
+rustflags.workspace = true

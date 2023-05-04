@@ -14,4 +14,4 @@ serde_json.workspace = true
 sha3 = { workspace = true }
 
 [target.x86_64-pc-windows-msvc]
-rustflags.workspace = true
+rustflags = ["-C", "target-feature=+crt-static"]

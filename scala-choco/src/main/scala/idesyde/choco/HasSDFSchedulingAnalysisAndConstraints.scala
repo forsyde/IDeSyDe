@@ -24,11 +24,40 @@ trait HasSDFSchedulingAnalysisAndConstraints
     with HasSingleProcessSingleMessageMemoryConstraints
     with HasDiscretizationToIntegers {
 
+  def postTiledOrPartitionedDurations(
+      chocoModel: Model,
+      processMappings: Array[IntVar],
+      actorDuration: Array[Array[Int]]
+  ): Array[IntVar] = {
+    val actors = 0 until actorDuration.length
+    val schedulers =
+      processMappings.map(_.getLB().toInt).min until processMappings.map(_.getUB().toInt).max
+    val duration = actors.zipWithIndex
+      .map((a, i) =>
+        chocoModel.intVar(
+          s"dur($a)",
+          actorDuration(i).filter(_ > 0).toArray
+        )
+      )
+      .toArray
+    for ((a, i) <- actors.zipWithIndex; (p, j) <- schedulers.zipWithIndex) {
+      if (actorDuration(i)(j) < 0) {
+        chocoModel.arithm(processMappings(i), "!=", j).post()
+      } else {
+        chocoModel.ifThen(
+          chocoModel.arithm(processMappings(i), "=", j),
+          chocoModel.arithm(duration(i), "=", actorDuration(i)(j))
+        )
+      }
+    }
+    duration
+  }
+
   def postSDFTimingAnalysis(
       m: SDFToTiledMultiCore,
       chocoModel: Model,
       processMappings: Array[IntVar],
-      actorDuration: Array[Array[Int]],
+      durations: Array[IntVar],
       messageTravelDuration: Array[Array[Array[IntVar]]]
   ): (Array[IntVar], Array[IntVar], Array[IntVar], IntVar, IntVar) = {
     val timeValues =
@@ -49,7 +78,7 @@ trait HasSDFSchedulingAnalysisAndConstraints
     val maxLength = schedulers.zipWithIndex
       .map((_, p) => {
         actors.zipWithIndex
-          .map((a, ai) => actorDuration(ai)(p) * maxRepetitionsPerActors(ai))
+          .map((a, ai) => durations(ai).getUB() * maxRepetitionsPerActors(ai))
           .sum
       })
       .max + messageTravelDuration.flatten.flatten.map(_.getUB()).sum
@@ -58,7 +87,7 @@ trait HasSDFSchedulingAnalysisAndConstraints
       .map((a, i) =>
         chocoModel.intVar(
           s"invTh($a)",
-          actorDuration(i).filter(_ >= 0).minOption.getOrElse(0),
+          durations(i).getLB(),
           maxLength,
           true
         )
@@ -85,14 +114,14 @@ trait HasSDFSchedulingAnalysisAndConstraints
         true
       )
 
-    val duration = actors.zipWithIndex
-      .map((a, i) =>
-        chocoModel.intVar(
-          s"dur($a)",
-          actorDuration(i).filter(_ > 0).toArray
-        )
-      )
-      .toArray
+    // val duration = actors.zipWithIndex
+    //   .map((a, i) =>
+    //     chocoModel.intVar(
+    //       s"dur($a)",
+    //       actorDuration(i).filter(_ > 0).toArray
+    //     )
+    //   )
+    //   .toArray
 
     val transmissionDelay =
       m.sdfApplications.actorsIdentifiers.zipWithIndex.map((a, i) =>
@@ -136,19 +165,11 @@ trait HasSDFSchedulingAnalysisAndConstraints
     chocoModel.count(0, jobOrder, numMappedElements).post()
     // --- general duration constraints
     for ((a, i) <- actors.zipWithIndex; (p, j) <- schedulers.zipWithIndex) {
-      if (actorDuration(i)(j) < 0) {
-        chocoModel.arithm(processMappings(i), "!=", j).post()
-      } else {
+      for ((job, k) <- jobsAndActors.zipWithIndex; if job._1 == a) {
         chocoModel.ifThen(
           chocoModel.arithm(processMappings(i), "=", j),
-          chocoModel.arithm(duration(i), "=", actorDuration(i)(j))
+          chocoModel.arithm(jobOrder(k), "<", mappedJobsPerElement(j))
         )
-        for ((job, k) <- jobsAndActors.zipWithIndex; if job._1 == a) {
-          chocoModel.ifThen(
-            chocoModel.arithm(processMappings(i), "=", j),
-            chocoModel.arithm(jobOrder(k), "<", mappedJobsPerElement(j))
-          )
-        }
       }
     }
     // -------------- next and ordering parts
@@ -212,7 +233,7 @@ trait HasSDFSchedulingAnalysisAndConstraints
       hasDataCycle(m)(jobsAndActors),
       jobOrder,
       (0 until jobsAndActors.size).map(jobMapping(_)).toArray,
-      jobsAndActors.map((a, _) => duration(actors.indexOf(a))).toArray,
+      jobsAndActors.map((a, _) => durations(actors.indexOf(a))).toArray,
       jobsAndActors
         .map((src, _) =>
           jobsAndActors

@@ -15,8 +15,36 @@ import idesyde.identification.common.models.sdf.SDFApplication
 import idesyde.identification.common.models.CommunicatingAndTriggeredReactiveWorkload
 import spire.math.Rational
 import idesyde.utils.Logger
+import idesyde.identification.common.models.CommunicatingAndTriggeredReactiveWorkload
 
 trait MixedRules(using logger: Logger) {
+
+  def identTaskdAndSDFServer(
+      models: Set[DesignModel],
+      identified: Set[DecisionModel]
+  ): Set[TaskdAndSDFServer] = {
+    val sdfDecisionModel = identified
+      .filter(_.isInstanceOf[SDFApplication])
+      .map(_.asInstanceOf[SDFApplication])
+    if (sdfDecisionModel.exists(_.isConsistent))
+      logger.debug("At least one SDF decision model is inconsistent.")
+    val taskDecisionModel = identified
+      .filter(_.isInstanceOf[CommunicatingAndTriggeredReactiveWorkload])
+      .map(_.asInstanceOf[CommunicatingAndTriggeredReactiveWorkload])
+    sdfDecisionModel
+      .filter(_.isConsistent)
+      .flatMap(a =>
+        taskDecisionModel.map(b =>
+          TaskdAndSDFServer(
+            sdf = a,
+            task = b,
+            sdfServerPeriod = Vector.empty,
+            sdfServerBudget = Vector.empty
+          )
+        )
+      )
+
+  }
 
   def identSDFToTiledMultiCore(
       models: Set[DesignModel],

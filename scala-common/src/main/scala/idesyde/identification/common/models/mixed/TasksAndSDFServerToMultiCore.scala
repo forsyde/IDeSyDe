@@ -1,22 +1,31 @@
 package idesyde.identification.common.models.mixed
 
+import upickle.default._
+
 import idesyde.identification.common.StandardDecisionModel
 import idesyde.identification.common.models.sdf.SDFApplication
 import idesyde.identification.models.mixed.WCETComputationMixin
 import idesyde.identification.common.models.platform.PartitionedSharedMemoryMultiCore
+import idesyde.core.CompleteDecisionModel
 
 final case class TasksAndSDFServerToMultiCore(
-    val sdfandtask: TaskdAndSDFServer,
+    val tasksAndSDFs: TaskdAndSDFServer,
     val platform: PartitionedSharedMemoryMultiCore,
     val processesMappings: Vector[(String, String)],
     val messagesMappings: Vector[(String, String)],
     val messageSlotAllocations: Map[String, Map[String, Vector[Boolean]]]
 ) extends StandardDecisionModel
-    with WCETComputationMixin(sdfandtask, platform.hardware) {
+    with CompleteDecisionModel
+    with WCETComputationMixin(tasksAndSDFs, platform.hardware)
+    derives ReadWriter {
 
-  val coveredElements = sdfandtask.coveredElements ++ platform.coveredElements
+  def bodyAsText: String = write(this)
+
+  def bodyAsBinary: Array[Byte] = writeBinary(this)
+
+  val coveredElements = tasksAndSDFs.coveredElements ++ platform.coveredElements
   val coveredElementRelations =
-    sdfandtask.coveredElementRelations ++ platform.coveredElementRelations ++
+    tasksAndSDFs.coveredElementRelations ++ platform.coveredElementRelations ++
       processesMappings.toSet ++ messagesMappings.toSet ++
       messageSlotAllocations
         .flatMap((channel, slots) =>
@@ -30,7 +39,7 @@ final case class TasksAndSDFServerToMultiCore(
   val processorsProvisions: Vector[Map[String, Map[String, Double]]] =
     platform.hardware.processorsProvisions
 
-  val messagesMaxSizes: Vector[Long] = sdfandtask.messagesMaxSizes
+  val messagesMaxSizes: Vector[Long] = tasksAndSDFs.messagesMaxSizes
 
   val wcets = computeWcets
 

@@ -36,8 +36,8 @@ trait MixedRules(using logger: Logger) {
       .flatMap(a =>
         taskDecisionModel.map(b =>
           TaskdAndSDFServer(
-            sdf = a,
-            task = b,
+            sdfApplication = a,
+            workload = b,
             sdfServerPeriod = Vector.empty,
             sdfServerBudget = Vector.empty
           )
@@ -144,7 +144,7 @@ trait MixedRules(using logger: Logger) {
     app.flatMap(a =>
       plat.map(p =>
         TasksAndSDFServerToMultiCore(
-          sdfandtask = a,
+          tasksAndSDFs = a,
           platform = p,
           processesMappings = Vector.empty,
           messagesMappings = Vector.empty,

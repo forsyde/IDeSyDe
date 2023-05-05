@@ -36,7 +36,7 @@ trait MixedRules(using logger: Logger) {
       .flatMap(a =>
         taskDecisionModel.map(b =>
           TaskdAndSDFServer(
-            sdfApplication = a,
+            sdfApplications = a,
             workload = b,
             sdfServerPeriod = Vector.empty,
             sdfServerBudget = Vector.empty

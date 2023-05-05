@@ -85,25 +85,25 @@ final class CanSolveDepTasksToPartitionedMultiCore(using logger: Logger)
 
     // build the model so that it can be acessed later
     // memory module
-    val taskMapping = m.workload.processes.zipWithIndex.map((t, i) =>
-      chocoModel.intVar(
-        s"task_map($t)",
-        m.platform.hardware.storageSizes.zipWithIndex
-          .filter((ub, j) => m.workload.processSizes(i) <= ub)
-          .map((m, j) => j)
-          .toArray
-      )
-    )
-    val dataBlockMapping = m.workload.dataChannels.zipWithIndex.map((c, i) =>
-      chocoModel.intVar(
-        s"data_map($c)",
-        m.platform.hardware.storageSizes.zipWithIndex
-          .filter((ub, j) => m.workload.messagesMaxSizes(i) <= ub)
-          .map((m, j) => j)
-          .toArray
-      )
-    )
-    val (processesMemoryMapping, messagesMemoryMapping, _) =
+    // val taskMapping = m.workload.processes.zipWithIndex.map((t, i) =>
+    //   chocoModel.intVar(
+    //     s"task_map($t)",
+    //     m.platform.hardware.storageSizes.zipWithIndex
+    //       .filter((ub, j) => m.workload.processSizes(i) <= ub)
+    //       .map((m, j) => j)
+    //       .toArray
+    //   )
+    // )
+    // val dataBlockMapping = m.workload.dataChannels.zipWithIndex.map((c, i) =>
+    //   chocoModel.intVar(
+    //     s"data_map($c)",
+    //     m.platform.hardware.storageSizes.zipWithIndex
+    //       .filter((ub, j) => m.workload.messagesMaxSizes(i) <= ub)
+    //       .map((m, j) => j)
+    //       .toArray
+    //   )
+    // )
+    val (taskMapping, dataBlockMapping, _) =
       postSingleProcessSingleMessageMemoryConstraints(
         chocoModel,
         m.workload.processSizes.map(long2int).toArray,
@@ -209,8 +209,8 @@ final class CanSolveDepTasksToPartitionedMultiCore(using logger: Logger)
             .map((_, _, l) => l)
             .getOrElse(0L),
       taskExecution.toArray,
-      processesMemoryMapping,
-      messagesMemoryMapping,
+      taskMapping,
+      dataBlockMapping,
       processingElemsVirtualChannelInCommElem.map(_.toArray).toArray
     )
 
@@ -309,8 +309,8 @@ final class CanSolveDepTasksToPartitionedMultiCore(using logger: Logger)
         Search.activityBasedSearch(dataBlockMapping: _*),
         Search.minDomLBSearch(responseTimes: _*),
         Search.minDomLBSearch(blockingTimes: _*),
-        Search.minDomLBSearch(processesMemoryMapping: _*),
-        Search.minDomLBSearch(messagesMemoryMapping: _*)
+        Search.minDomLBSearch(taskMapping: _*),
+        Search.minDomLBSearch(dataBlockMapping: _*)
         // Search.intVarSearch(
         //   FirstFail(chocoModel),
         //   IntDomainMin(),
@@ -350,16 +350,16 @@ final class CanSolveDepTasksToPartitionedMultiCore(using logger: Logger)
     //   )
     val intVars = solution.retrieveIntVars(true).asScala
     val processesMemoryMapping: Vector[Int] =
-      m.workload.processes.zipWithIndex.map((t, _) =>
+      m.workload.processes.zipWithIndex.map((_, i) =>
         intVars
-          .find(_.getName() == s"task_map($t)")
+          .find(_.getName() == s"mapProcess($i)")
           .map(solution.getIntVal(_))
           .get
       )
     val messagesMemoryMapping: Vector[Int] =
-      m.workload.dataChannels.zipWithIndex.map((c, _) =>
+      m.workload.dataChannels.zipWithIndex.map((_, i) =>
         intVars
-          .find(_.getName() == s"data_map($c)")
+          .find(_.getName() == s"mapMessage($i)")
           .map(solution.getIntVal(_))
           .get
       )

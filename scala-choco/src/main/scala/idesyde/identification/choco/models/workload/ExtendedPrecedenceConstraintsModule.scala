@@ -7,17 +7,16 @@ import org.jgrapht.Graph
 import org.chocosolver.solver.variables.BoolVar
 import org.chocosolver.solver.Model
 
-class ExtendedPrecedenceConstraintsModule(
-  val chocoModel: Model,
-  val taskExecution: Array[IntVar],
-  val responseTimes: Array[IntVar],
-  val blockingTimes: Array[IntVar],
-  val canBeFollowedBy: Array[Array[Boolean]]
-) extends ChocoModelMixin() {
+trait HasExtendedPrecedenceConstraints {
 
-  private val processors = (0 until taskExecution.map(v => v.getUB()).max).toArray
-
-  def postInterProcessorBlocking(): Unit = {
+  def postInterProcessorBlocking(
+      chocoModel: Model,
+      taskExecution: Array[IntVar],
+      responseTimes: Array[IntVar],
+      blockingTimes: Array[IntVar],
+      canBeFollowedBy: Array[Array[Boolean]]
+  ): Unit = {
+    val processors = (0 until taskExecution.map(v => v.getUB()).max).toArray
     canBeFollowedBy.zipWithIndex.foreach((arr, src) =>
       arr.zipWithIndex
         .filter((possible, _) => possible)
@@ -25,7 +24,8 @@ class ExtendedPrecedenceConstraintsModule(
           processors.foreach(processorsIdx =>
             chocoModel.ifThen(
               // if the mappings differ in at least one processor
-              taskExecution(dst).eq(processorsIdx)
+              taskExecution(dst)
+                .eq(processorsIdx)
                 .and(taskExecution(src).ne(processorsIdx))
                 .decompose,
               blockingTimes(dst).ge(responseTimes(src)).decompose

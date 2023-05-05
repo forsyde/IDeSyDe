@@ -1,4 +1,4 @@
-package idesyde.identification.choco.models.mixed
+package idesyde.choco
 
 import idesyde.identification.choco.interfaces.ChocoModelMixin
 import org.chocosolver.solver.variables.IntVar
@@ -8,20 +8,7 @@ import org.chocosolver.solver.Model
 import idesyde.identification.common.models.mixed.PeriodicWorkloadToPartitionedSharedMultiCore
 import idesyde.utils.HasUtils
 
-class Active4StageDurationModule(
-    val chocoModel: Model,
-    val tasksAndPlatform: PeriodicWorkloadToPartitionedSharedMultiCore,
-    val executionTimes: Array[Array[Int]],
-    val taskTravelTime: Array[Array[Int]],
-    val dataTravelTime: Array[Array[Int]],
-    val taskExecution: Array[IntVar],
-    val taskMapping: Array[IntVar],
-    val dataMapping: Array[IntVar],
-    val processingElemsVirtualChannelInCommElem: Array[Array[IntVar]],
-    val timeMultiplier: Long = 1L,
-    val memoryDivider: Long = 1L
-) extends ChocoModelMixin()
-    with HasUtils {
+trait HasActive4StageDuration extends HasUtils {
 
   // private val executionTimes =
   //   tasksAndPlatform.wcets.map(_.map(_ * timeMultiplier).map(_.ceil.toInt).toArray).toArray
@@ -58,90 +45,85 @@ class Active4StageDurationModule(
   //   )
   //   .toArray
 
-  private val tasks         = tasksAndPlatform.workload.processes
-  private val processors    = tasksAndPlatform.platform.hardware.processingElems
-  private val memories      = tasksAndPlatform.platform.hardware.storageElems
-  private val communicators = tasksAndPlatform.platform.hardware.communicationElems
+  def postActive4StageDurationsConstraints(
+      chocoModel: Model,
+      executionTimes: Array[Array[Int]],
+      taskTravelTime: Array[Array[Int]],
+      dataTravelTime: Array[Array[Int]],
+      communicationElementsMaxChannels: Vector[Int],
+      computedPaths: (Int) => (Int) => Iterable[Int],
+      taskReadsData: (Int) => (Int) => Long,
+      taskWritesData: (Int) => (Int) => Long,
+      taskExecution: Array[IntVar],
+      taskMapping: Array[IntVar],
+      dataMapping: Array[IntVar],
+      processingElemsVirtualChannelInCommElem: Array[Array[IntVar]]
+  ): (Array[IntVar], Array[IntVar], Array[IntVar], Array[IntVar], Array[IntVar], Array[IntVar]) = {
+    val tasks      = 0 until executionTimes.length
+    val processors = 0 until executionTimes.head.length
+    val memories   = taskMapping.map(_.getLB().toInt).min until taskMapping.map(_.getUB().toInt).max
+    val communicators = 0 until communicationElementsMaxChannels.length
+    val durationsExec = tasks.zipWithIndex
+      .map((t, i) =>
+        chocoModel.intVar(
+          s"exe_wc($t)",
+          executionTimes(i).filter(_ > 0)
+        )
+      )
+      .toArray
+    val durationsFetch = tasks.zipWithIndex
+      .map((t, i) =>
+        chocoModel.intVar(
+          s"fetch_wc($i)",
+          0,
+          taskTravelTime(i).sum,
+          true
+        )
+      )
+      .toArray
+    val durationsRead = tasks.zipWithIndex
+      .map((t, i) =>
+        chocoModel.intVar(
+          s"input_wc($i)",
+          0,
+          dataTravelTime(i).sum,
+          true
+        )
+      )
+      .toArray
+    val durationsWrite = tasks.zipWithIndex
+      .map((t, i) =>
+        chocoModel.intVar(
+          s"output_wc($i)",
+          0,
+          dataTravelTime(i).sum,
+          true
+        )
+      )
+      .toArray
+    val durations = tasks.zipWithIndex
+      .map((t, i) =>
+        chocoModel.sum(
+          s"dur($t)",
+          durationsFetch(i),
+          durationsRead(i),
+          durationsExec(i),
+          durationsWrite(i)
+        )
+      )
+      .toArray
 
-  val durationsExec = tasks.zipWithIndex
-    .map((t, i) =>
-      chocoModel.intVar(
-        s"exe_wc($t)",
-        executionTimes(i).filter(_ > 0)
+    val totalVCPerCommElem = communicators
+      .map(c =>
+        chocoModel.intVar(
+          s"vcTotal($c)",
+          0,
+          communicationElementsMaxChannels(c) * processors.size,
+          true
+        )
       )
-    )
-    .toArray
-  val durationsFetch = tasks.zipWithIndex
-    .map((t, i) =>
-      chocoModel.intVar(
-        s"fetch_wc($i)",
-        0,
-        taskTravelTime(i).sum,
-        true
-      )
-    )
-    .toArray
-  val durationsRead = tasks.zipWithIndex
-    .map((t, i) =>
-      chocoModel.intVar(
-        s"input_wc($i)",
-        0,
-        dataTravelTime(i).sum,
-        true
-      )
-    )
-    .toArray
-  val durationsWrite = tasks.zipWithIndex
-    .map((t, i) =>
-      chocoModel.intVar(
-        s"output_wc($i)",
-        0,
-        dataTravelTime(i).sum,
-        true
-      )
-    )
-    .toArray
-  val durations = tasks.zipWithIndex
-    .map((t, i) =>
-      chocoModel.sum(
-        s"dur($t)",
-        durationsFetch(i),
-        durationsRead(i),
-        durationsExec(i),
-        durationsWrite(i)
-      )
-    )
-    .toArray
+      .toArray
 
-  val totalVCPerCommElem = communicators.zipWithIndex
-    .map((c, i) =>
-      chocoModel.intVar(
-        s"vcTotal($c)",
-        0,
-        tasksAndPlatform.platform.hardware.communicationElementsMaxChannels(i) * processors.size,
-        true
-      )
-    )
-    .toArray
-
-  private def taskReadsData(t: Int)(c: Int): Long =
-    tasksAndPlatform.workload.dataGraph
-      .find((a, b, _) =>
-        a == tasksAndPlatform.workload.tasks(t) && b == tasksAndPlatform.workload
-          .dataChannels(c)
-      )
-      .map((_, _, l) => l)
-      .getOrElse(0L)
-  private def taskWritesData(t: Int)(c: Int): Long =
-    tasksAndPlatform.workload.dataGraph
-      .find((a, b, _) =>
-        b == tasksAndPlatform.workload.tasks(t) && a == tasksAndPlatform.workload
-          .dataChannels(c)
-      )
-      .map((_, _, l) => l)
-      .getOrElse(0L)
-
-  def postActive4StageDurationsConstraints(): Unit = {
     // deduced parameters
     // auxiliary local variables
     // scribe.debug(communicators.map(c => dataTravelTime.map(t => t(c)).sum).mkString(", "))
@@ -164,10 +146,9 @@ class Active4StageDurationModule(
     for (
       (exec, _) <- taskExecution.zipWithIndex;
       (mapp, _) <- taskMapping.zipWithIndex;
-      (p, i)    <- tasksAndPlatform.platform.hardware.processingElems.zipWithIndex;
-      (m, j)    <- tasksAndPlatform.platform.hardware.storageElems.zipWithIndex;
-      ce        <- tasksAndPlatform.platform.hardware.computedPaths(p)(m);
-      k = tasksAndPlatform.platform.hardware.communicationElems.indexOf(ce)
+      i         <- processors;
+      j         <- memories;
+      k         <- computedPaths(i)(j)
     ) {
       chocoModel.ifThen(
         exec.eq(i).and(mapp.eq(j)).decompose(),
@@ -182,10 +163,9 @@ class Active4StageDurationModule(
       (exec, t) <- taskExecution.zipWithIndex;
       (mapp, c) <- dataMapping.zipWithIndex;
       if taskReadsData(t)(c) > 0 || taskReadsData(t)(c) > 0;
-      (p, i) <- tasksAndPlatform.platform.hardware.processingElems.zipWithIndex;
-      (m, j) <- tasksAndPlatform.platform.hardware.storageElems.zipWithIndex;
-      ce     <- tasksAndPlatform.platform.hardware.computedPaths(p)(m);
-      k = tasksAndPlatform.platform.hardware.communicationElems.indexOf(ce)
+      i <- processors;
+      j <- memories;
+      k <- computedPaths(i)(j)
     ) {
       chocoModel.ifThen(
         exec.eq(i).and(mapp.eq(j)).decompose(),
@@ -197,10 +177,10 @@ class Active4StageDurationModule(
     for (
       (exec, t) <- taskExecution.zipWithIndex;
       (mapp, _) <- taskMapping.zipWithIndex;
-      (p, i)    <- tasksAndPlatform.platform.hardware.processingElems.zipWithIndex;
-      (m, j)    <- tasksAndPlatform.platform.hardware.storageElems.zipWithIndex;
-      path    = tasksAndPlatform.platform.hardware.computedPaths(p)(m);
-      pathIdx = path.map(tasksAndPlatform.platform.hardware.communicationElems.indexOf(_)).toArray
+      i         <- processors;
+      j         <- memories;
+      pathIdx = computedPaths(i)(j).toArray
+      // pathIdx = path.map(tasksAndPlatform.platform.hardware.communicationElems.indexOf(_)).toArray
     ) {
       chocoModel.ifThen(
         exec.eq(i).and(mapp.eq(j)).decompose(),
@@ -216,10 +196,9 @@ class Active4StageDurationModule(
     for (
       (exec, t) <- taskExecution.zipWithIndex;
       (mapp, c) <- dataMapping.zipWithIndex;
-      (p, i)    <- tasksAndPlatform.platform.hardware.processingElems.zipWithIndex;
-      (m, j)    <- tasksAndPlatform.platform.hardware.storageElems.zipWithIndex;
-      path    = tasksAndPlatform.platform.hardware.computedPaths(p)(m);
-      pathIdx = path.map(tasksAndPlatform.platform.hardware.communicationElems.indexOf(_)).toArray
+      i         <- processors;
+      j         <- memories;
+      pathIdx = computedPaths(i)(j).toArray
     ) {
       if (taskReadsData(t)(c) > 0) {
         chocoModel.ifThen(
@@ -255,5 +234,6 @@ class Active4StageDurationModule(
         )
         .post()
     }
+    (durationsExec, durationsFetch, durationsRead, durationsWrite, durations, totalVCPerCommElem)
   }
 }

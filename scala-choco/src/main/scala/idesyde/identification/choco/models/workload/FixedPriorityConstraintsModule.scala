@@ -10,7 +10,7 @@ import org.chocosolver.solver.constraints.PropagatorPriority
 import org.chocosolver.solver.constraints.Constraint
 import org.chocosolver.solver.variables.BoolVar
 import spire.math.*
-import idesyde.identification.choco.models.workload.FixedPriorityPreemptivePropagator
+import idesyde.choco.FixedPriorityPreemptivePropagator
 import org.chocosolver.solver.Model
 
 class FixedPriorityConstraintsModule(

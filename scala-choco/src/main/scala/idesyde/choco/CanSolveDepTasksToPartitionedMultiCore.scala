@@ -21,9 +21,9 @@ import org.chocosolver.solver.search.loop.monitors.IMonitorContradiction
 import org.chocosolver.solver.exception.ContradictionException
 import idesyde.choco.HasSingleProcessSingleMessageMemoryConstraints
 import idesyde.identification.choco.models.BaselineTimingConstraintsModule
-import idesyde.identification.choco.models.workload.ExtendedPrecedenceConstraintsModule
+import idesyde.identification.choco.models.workload.HasExtendedPrecedenceConstraints
 import idesyde.identification.choco.models.workload.FixedPriorityConstraintsModule
-import idesyde.identification.choco.models.mixed.Active4StageDurationModule
+import idesyde.choco.HasActive4StageDuration
 import idesyde.utils.HasUtils
 import idesyde.identification.choco.interfaces.ChocoModelMixin
 import idesyde.identification.common.models.workload.CommunicatingExtendedDependenciesPeriodicWorkload
@@ -45,7 +45,10 @@ final class CanSolveDepTasksToPartitionedMultiCore(using logger: Logger)
     extends ChocoExplorable[PeriodicWorkloadToPartitionedSharedMultiCore]
     with HasUtils
     with HasSingleProcessSingleMessageMemoryConstraints
-    with HasDiscretizationToIntegers {
+    with HasDiscretizationToIntegers
+    with HasExtendedPrecedenceConstraints
+    with HasActive4StageDuration
+    with HasTimingConstraints {
 
   override def buildChocoModel(
       m: PeriodicWorkloadToPartitionedSharedMultiCore,
@@ -140,7 +143,8 @@ final class CanSolveDepTasksToPartitionedMultiCore(using logger: Logger)
           true // keeping only bounds for the response time is enough and better
         )
       )
-    val extendedPrecedenceConstraintsModule = ExtendedPrecedenceConstraintsModule(
+
+    postInterProcessorBlocking(
       chocoModel,
       taskExecution.toArray,
       responseTimes.toArray,
@@ -159,9 +163,15 @@ final class CanSolveDepTasksToPartitionedMultiCore(using logger: Logger)
       )
     )
 
-    val active4StageDurationModule = Active4StageDurationModule(
+    val (
+      durationsExec,
+      durationsFetch,
+      durationsRead,
+      durationsWrite,
+      durations,
+      totalVCPerCommElem
+    ) = postActive4StageDurationsConstraints(
       chocoModel,
-      m,
       wcets.map(_.toArray).toArray,
       m.workload.processSizes
         .map(d =>
@@ -177,66 +187,100 @@ final class CanSolveDepTasksToPartitionedMultiCore(using logger: Logger)
             .toArray
         )
         .toArray,
+      m.platform.hardware.communicationElementsMaxChannels,
+      (s: Int) => (t: Int) => 
+        m.platform.hardware.computedPaths(m.platform.hardware.platformElements(s))(m.platform.hardware.platformElements(t)).map(m.platform.hardware.communicationElems.indexOf),
+      (t: Int) =>
+        (c: Int) =>
+          m.workload.dataGraph
+            .find((a, b, _) =>
+              a == m.workload.tasks(t) && b == m.workload
+                .dataChannels(c)
+            )
+            .map((_, _, l) => l)
+            .getOrElse(0L),
+      (t: Int) =>
+        (c: Int) =>
+          m.workload.dataGraph
+            .find((a, b, _) =>
+              b == m.workload.tasks(t) && a == m.workload
+                .dataChannels(c)
+            )
+            .map((_, _, l) => l)
+            .getOrElse(0L),
       taskExecution.toArray,
       processesMemoryMapping,
       messagesMemoryMapping,
       processingElemsVirtualChannelInCommElem.map(_.toArray).toArray
     )
 
-    val baselineTimingConstraintsModule = BaselineTimingConstraintsModule(
+    postMinimalResponseTimesByBlocking(
       chocoModel,
       priorities,
       periods.toArray,
       maxUtilizations.toArray,
-      active4StageDurationModule.durations,
+      durations,
       taskExecution.toArray,
       blockingTimes.toArray,
       responseTimes.toArray
     )
 
-    val fixedPriorityConstraintsModule = FixedPriorityConstraintsModule(
+    val utilizations = postMaximumUtilizations(
       chocoModel,
       priorities,
       periods.toArray,
-      deadlines.toArray,
-      wcets.map(_.toArray).toArray,
+      maxUtilizations.toArray,
+      durations,
       taskExecution.toArray,
-      responseTimes.toArray,
       blockingTimes.toArray,
-      active4StageDurationModule.durations
+      responseTimes.toArray
     )
 
-    active4StageDurationModule.postActive4StageDurationsConstraints()
+    // val fixedPriorityConstraintsModule = FixedPriorityConstraintsModule(
+    //   chocoModel,
+    //   priorities,
+    //   periods.toArray,
+    //   deadlines.toArray,
+    //   wcets.map(_.toArray).toArray,
+    //   taskExecution.toArray,
+    //   responseTimes.toArray,
+    //   blockingTimes.toArray,
+    //   durations
+    // )
 
-    // timing constraints
-    extendedPrecedenceConstraintsModule.postInterProcessorBlocking()
-
-    // basic utilization
-    baselineTimingConstraintsModule.postMinimalResponseTimesByBlocking()
-    baselineTimingConstraintsModule.postMaximumUtilizations()
 
     // for each FP scheduler
     // rt >= bt + sum of all higher prio tasks in the same CPU
     m.platform.runtimes.schedulers.zipWithIndex
       .filter((s, j) => m.platform.runtimes.isFixedPriority(j))
       .foreach((s, j) => {
-        fixedPriorityConstraintsModule.postFixedPrioriPreemtpiveConstraint(j)
+        postFixedPrioriPreemtpiveConstraint(j, 
+        chocoModel,
+      priorities,
+      periods.toArray,
+      deadlines.toArray,
+      wcets.map(_.toArray).toArray,
+      maxUtilizations.toArray,
+      durations,
+      taskExecution.toArray,
+      blockingTimes.toArray,
+      responseTimes.toArray)
       })
     // for each SC scheduler
     m.workload.tasks.zipWithIndex.foreach((task, i) => {
       m.platform.runtimes.schedulers.zipWithIndex
-        .filter((s, j) => m.platform.runtimes.isCyclicExecutive(j))
-        .foreach((s, j) => {
-          postStaticCyclicExecutiveConstraint(
-            m,
-            chocoModel,
-            taskExecution.toArray,
-            responseTimes.toArray,
-            blockingTimes.toArray,
-            active4StageDurationModule
-          )(i, j)
-          //val cons = Constraint(s"FPConstrats${j}", DependentWorkloadFPPropagator())
-        })
+          .filter((s, j) => m.platform.runtimes.isCyclicExecutive(j))
+          .foreach((s, j) => {
+            postStaticCyclicExecutiveConstraint(
+              chocoModel,
+              (i: Int) => (j: Int) => m.workload.interTaskOccasionalBlock(i)(j),
+              durations,
+              taskExecution.toArray,
+              responseTimes.toArray,
+              blockingTimes.toArray,
+            //val cons = Constraint(s"FPConstrats${j}", DependentWorkloadFPPropagator())
+          )
+      })
     })
 
     // Dealing with objectives
@@ -256,8 +300,8 @@ final class CanSolveDepTasksToPartitionedMultiCore(using logger: Logger)
           (0 until m.platform.runtimes.schedulers.length).toArray,
           periods.toArray,
           taskExecution.toArray,
-          baselineTimingConstraintsModule.utilizations,
-          active4StageDurationModule.durations,
+          utilizations,
+          durations,
           wcets.map(_.toArray).toArray
         ),
         Search.inputOrderUBSearch(nUsedPEs),
@@ -364,49 +408,7 @@ final class CanSolveDepTasksToPartitionedMultiCore(using logger: Logger)
   // // def sufficientRMSchedulingPoints(taskIdx: Int): Array[Rational] =
   // //   sourceForSyDeDecisionModel.sufficientRMSchedulingPoints(taskIdx)
 
-  /** This method sets up the Worst case schedulability test for a task.
-    *
-    * The mathetical 'representation' is responseTime(i) >= blockingTime(i) + durations(i) +
-    * sum(durations of all higher prios in same scheduler)
-    *
-    * @param taskIdx
-    *   the task to be posted (takes into account all others)
-    * @param schedulerIdx
-    *   the scheduler to be posted
-    */
-  def postStaticCyclicExecutiveConstraint(
-      m: PeriodicWorkloadToPartitionedSharedMultiCore,
-      chocoModel: Model,
-      taskExecution: Array[IntVar],
-      responseTimes: Array[IntVar],
-      blockingTimes: Array[IntVar],
-      active4StageDurationModule: Active4StageDurationModule
-  )(taskIdx: Int, schedulerIdx: Int): Unit =
-    chocoModel.ifThen(
-      taskExecution(taskIdx).eq(schedulerIdx).decompose(),
-      responseTimes(taskIdx)
-        .ge(
-          active4StageDurationModule
-            .durations(taskIdx)
-            .add(blockingTimes(taskIdx))
-            .add(
-              chocoModel
-                .sum(
-                  s"sc_interference${taskIdx}_${schedulerIdx}",
-                  active4StageDurationModule.durations.zipWithIndex
-                    .filter((ws, k) => k != taskIdx)
-                    .filterNot((ws, k) =>
-                      // leave tasks k which i occasionally block
-                      m.workload.interTaskAlwaysBlocks(taskIdx)(k)
-                    )
-                    .map((w, k) => w)
-                    .toArray: _*
-                )
-            )
-        )
-        .decompose
-    )
-
+  
   // def rebuildFromChocoOutput(output: Solution): Set[DecisionModel] =
 
   val uniqueIdentifier = "ChocoComDepTasksToMultiCore"

@@ -1,11 +1,19 @@
 #if !defined(CORE_H)
 #define CORE_H
-class DecisionModel
-{
-};
 
-class DesignModel
+namespace core
 {
-};
 
+#include <headers.hh>
+
+    class DecisionModel
+    {
+        virtual DecisionModelHeader header();
+    };
+
+    class DesignModel
+    {
+        virtual DesignModelHeader header();
+    };
+}
 #endif // CORE_H

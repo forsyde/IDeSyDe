@@ -3,7 +3,8 @@ set(HEADER_FILES
 
 set(SOURCE_FILES )
 
-add_library(core STATIC ${SOURCE_FILES} ${HEADER_FILES})
 
-target_link_libraries(core PRIVATE nlohmann_json::nlohmann_json)
-target_include_directories(core PUBLIC include)
+add_library(core STATIC ${SOURCE_FILES} ${HEADER_FILES})
+set_target_properties(core PROPERTIES LINKER_LANGUAGE CXX)
+
+target_link_libraries(core PRIVATE nlohmann_json nlohmann_json::nlohmann_json)

@@ -1,8 +1,10 @@
 #if !defined(CORE_HEADERS_H)
 #define CORE_HEADERS_H
 
+// generated with the help of quicktype.io
+
 #include <optional>
-#include "json.hpp"
+#include <nlohmann_json/json.hpp>
 
 #include <optional>
 #include <stdexcept>
@@ -53,12 +55,12 @@ namespace nlohmann
 }
 #endif
 
-namespace idesyde
+namespace headers
 {
     using nlohmann::json;
 
-#ifndef NLOHMANN_UNTYPED_idesyde_HELPER
-#define NLOHMANN_UNTYPED_idesyde_HELPER
+#ifndef NLOHMANN_UNTYPED_headers_HELPER
+#define NLOHMANN_UNTYPED_headers_HELPER
     inline json get_untyped(const json &j, const char *property)
     {
         if (j.find(property) != j.end())
@@ -74,8 +76,8 @@ namespace idesyde
     }
 #endif
 
-#ifndef NLOHMANN_OPTIONAL_idesyde_HELPER
-#define NLOHMANN_OPTIONAL_idesyde_HELPER
+#ifndef NLOHMANN_OPTIONAL_headers_HELPER
+#define NLOHMANN_OPTIONAL_headers_HELPER
     template <typename T>
     inline std::shared_ptr<T> get_heap_optional(const json &j, const char *property)
     {
@@ -220,7 +222,7 @@ namespace idesyde
     };
 }
 
-namespace idesyde
+namespace headers
 {
     void from_json(const json &j, LabelledArcWithPorts &x);
     void to_json(json &j, const LabelledArcWithPorts &x);

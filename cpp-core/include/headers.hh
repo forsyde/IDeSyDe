@@ -170,11 +170,11 @@ namespace headers
         std::vector<LabelledArcWithPorts> &get_mutable_covered_relations() { return covered_relations; }
         void set_covered_relations(const std::vector<LabelledArcWithPorts> &value) { this->covered_relations = value; }
 
-        bool dominates(&DecisionModelHeader other)
+        bool dominates(DecisionModelHeader &other)
         {
-            for (auto v : other->covered_elements)
+            for (auto &v : other->get_covered_elements())
             {
-                if (std::find(this->covered_elements.begin(), this->covered_elements.end(), v) == this->covered_elements.end())
+                if (std::find(get_covered_elements().begin(), get_covered_elements().end(), v) == get_covered_elements().end())
                 {
                     return false;
                 }

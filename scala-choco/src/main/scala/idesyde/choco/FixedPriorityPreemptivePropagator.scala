@@ -1,4 +1,4 @@
-package idesyde.identification.choco.models.workload
+package idesyde.choco
 
 import org.chocosolver.util.ESat
 import org.chocosolver.solver.constraints.Propagator

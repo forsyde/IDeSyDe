@@ -123,6 +123,12 @@ final class CanSolveSDFToTiledMultiCore(using logger: Logger)
               .toArray
       )
 
+    val durations = postTiledOrPartitionedDurations(
+      chocoModel,
+      processMappings,
+      execTimes
+    )
+
     val (
       jobOrder,
       mappedJobsPerElement,
@@ -133,7 +139,7 @@ final class CanSolveSDFToTiledMultiCore(using logger: Logger)
       m,
       chocoModel,
       processMappings,
-      execTimes,
+      durations,
       messageTravelDuration
     )
 

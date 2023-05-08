@@ -12,6 +12,7 @@ import idesyde.choco.ChocoExplorer
 import spire.math.Rational
 import idesyde.core.ExplorationCombinationDescription
 import idesyde.identification.common.models.mixed.PeriodicWorkloadToPartitionedSharedMultiCore
+import idesyde.identification.common.models.mixed.TasksAndSDFServerToMultiCore
 
 object ChocoExplorationModule extends ExplorationModule {
 
@@ -48,6 +49,8 @@ object ChocoExplorationModule extends ExplorationModule {
         body_path.flatMap(decodeFromPath[SDFToTiledMultiCore])
       case DecisionModelHeader("PeriodicWorkloadToPartitionedSharedMultiCore", body_path, _, _) =>
         body_path.flatMap(decodeFromPath[PeriodicWorkloadToPartitionedSharedMultiCore])
+      case DecisionModelHeader("TasksAndSDFServerToMultiCore", body_path, _, _) =>
+        body_path.flatMap(decodeFromPath[TasksAndSDFServerToMultiCore])
       case _ => None
     }
   }

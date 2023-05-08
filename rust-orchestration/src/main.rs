@@ -14,13 +14,13 @@ pub mod orchestration;
 
 #[derive(Parser, Debug)]
 #[command(
-    name = "idesyde",
+    name = "orchestrator",
     author = "Rodolfo Jordao",
-    about = "Orchestration and entry point for IDeSyDe."
+    about = "Orchestration and entry point for XXxXxXx."
 )]
 struct Args {
     // input files
-    #[arg(help = "The input design models that IDeSyDe will identify and explore.")]
+    #[arg(help = "The input design models that XXxXxXx will identify and explore.")]
     inputs: Vec<String>,
 
     #[arg(
@@ -28,15 +28,15 @@ struct Args {
         long,
         help = "Sets output file or directory.",
         long_help = "Sets output file or directory. \n\
-         If the output path is a file, IDeSyDe will write the latest solved/optimized design model in this file. \n\
-         If the output path is a directory, IDeSyDe will write all solved/optimized design model in this directory."
+         If the output path is a file, XXxXxXx will write the latest solved/optimized design model in this file. \n\
+         If the output path is a directory, XXxXxXx will write all solved/optimized design model in this directory."
     )]
     output_path: Option<String>,
 
     #[arg(
         long,
         default_value = "run",
-        help = "Sets the running path that IDeSyDe uses."
+        help = "Sets the running path that XXxXxXx uses."
     )]
     run_path: Option<String>,
 
@@ -86,6 +86,7 @@ fn main() {
         .target(env_logger::Target::Stdout)
         .filter(None, verbosity.to_level_filter())
         .write_style(WriteStyle::Always)
+        .format_target(false)
         .format_module_path(false)
         .init();
     if args.inputs.len() > 0 {
@@ -118,7 +119,7 @@ fn main() {
             .join("emodules");
         let identified_path = run_path.join("identified");
         let solution_path = &run_path.join("explored");
-        let reverse_path = &run_path.join("integrated");
+        let reverse_path = &run_path.join("reversed");
 
         std::fs::create_dir_all(run_path)
             .expect("Failed to create run path directory during identification.");

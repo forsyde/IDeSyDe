@@ -71,7 +71,10 @@ trait PlatformRules {
         )
         val tiledNI = plat.processingElems.map(pe =>
           plat.communicationElems.minBy(ce =>
-            plat.topology.get(pe).shortestPathTo(plat.topology.get(ce)).size
+            plat.topology.get(pe).shortestPathTo(plat.topology.get(ce)) match {
+              case Some(value) => value.size
+              case None        => plat.topology.nodes.size
+            }
           )
         )
         val routers = plat.communicationElems.filterNot(tiledNI.contains)

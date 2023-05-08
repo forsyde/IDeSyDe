@@ -34,8 +34,8 @@ jobs:
     - name: Build rust
       run: |
         cd ${{ github.workspace }}
-        cargo build -r
-        cp ./target/release/idesyde-orchestration idesyde
+        cargo build -r --target x86_64-unknown-linux-musl
+        cp ./target/x86_64-unknown-linux-musl/release/idesyde-orchestration idesyde
     - name: Cache rust
       uses: actions/cache@v3
       with:

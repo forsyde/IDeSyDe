@@ -16,7 +16,7 @@ object SimulinkMatlabIdentificationModule extends IdentificationModule with Appl
   override def inputsToDesignModel(p: Path): Option[DesignModelHeader | DesignModel] = if (
     p.ext == "slx"
   ) {
-    val res  = os.proc("matlab", "-batch", s"export_to_idesyde('$p')").call()
+    val res  = os.proc("matlab", "-batch", s"export_to_xxxxxxx('$p')").call()
     val dest = res.out.lines().last
     Some(read[SimulinkReactiveDesignModel](os.read(os.pwd / dest)))
   } else None

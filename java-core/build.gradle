@@ -1,10 +1,4 @@
 dependencies {
     implementation 'com.fasterxml.jackson.module:jackson-modules-base:2.15.0'
-    implementation 'org.msgpack:msgpack-core:0.9.3'
-    implementation 'org.msgpack:jackson-dataformat-msgpack:0.9.3'
-}
-
-javadoc {
-    exclude("msgpack.core")
-    exclude("jackson.dataform.msgpack")
+    implementation 'com.fasterxml.jackson.dataformat:jackson-dataformat-cbor:2.15.0'
 }

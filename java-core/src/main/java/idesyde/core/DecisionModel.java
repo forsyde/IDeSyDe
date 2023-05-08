@@ -1,5 +1,7 @@
 package idesyde.core;
 
+import com.fasterxml.jackson.databind.ObjectMapper;
+import com.fasterxml.jackson.dataformat.cbor.CBORFactory;
 import idesyde.core.headers.DecisionModelHeader;
 
 /** The trait/interface for a decision model in the design space identification methodology, as
@@ -17,4 +19,6 @@ import idesyde.core.headers.DecisionModelHeader;
 public interface DecisionModel {
 
     DecisionModelHeader header();
+
+    static final ObjectMapper objectMapper = new ObjectMapper(new CBORFactory());
 }

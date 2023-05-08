@@ -6,7 +6,6 @@ import com.fasterxml.jackson.databind.annotation.JsonSerialize;
 import idesyde.core.DecisionModelWithBody;
 import idesyde.core.headers.DecisionModelHeader;
 import idesyde.core.headers.LabelledArcWithPorts;
-import org.msgpack.jackson.dataformat.MessagePackFactory;
 
 import java.util.HashSet;
 import java.util.List;
@@ -66,6 +65,4 @@ public record CommunicatingAndTriggeredReactiveWorkload(
     public byte[] getBodyAsBytes() throws JsonProcessingException {
         return objectMapper.writeValueAsBytes(this);
     }
-
-    static final ObjectMapper objectMapper = new ObjectMapper(new MessagePackFactory());
 }

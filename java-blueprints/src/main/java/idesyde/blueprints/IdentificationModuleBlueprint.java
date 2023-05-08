@@ -1,13 +1,13 @@
 package idesyde.blueprints;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.fasterxml.jackson.dataformat.cbor.CBORFactory;
 import idesyde.core.DecisionModel;
 import idesyde.core.DecisionModelWithBody;
 import idesyde.core.DesignModel;
 import idesyde.core.IdentificationModule;
 import idesyde.core.headers.DecisionModelHeader;
 import idesyde.core.headers.DesignModelHeader;
-import org.msgpack.jackson.dataformat.MessagePackFactory;
 import picocli.CommandLine;
 
 import java.io.IOException;
@@ -21,13 +21,13 @@ public interface IdentificationModuleBlueprint extends IdentificationModule {
     default void standaloneIdentificationModule(
             String[] args
     ) throws IOException {
-        final ObjectMapper objectMapper = new ObjectMapper(new MessagePackFactory());
+        final ObjectMapper objectMapper = new ObjectMapper(new CBORFactory());
         IdentificationModuleCLI cli = new CommandLine(new IdentificationModuleCLI()).getCommand();
         if (cli.designPath != null) {
             Files.createDirectories(cli.designPath);
             Set<DesignModel> designModels = new HashSet<>();
             for (Path p : Files.list(cli.designPath).toList()) {
-//                if (p.startsWith("header") && p.endsWith(".msgpack")) {
+//                if (p.startsWith("header") && p.endsWith(".cbor")) {
 //                    designHeaderToModel(objectMapper.readValue(Files.readAllBytes(p), DesignModelHeader.class))
 //                            .ifPresent(designModels::add);
 //
@@ -39,7 +39,7 @@ public interface IdentificationModuleBlueprint extends IdentificationModule {
                     h.modelPaths().add(p.toString());
                     var dest = cli.designPath.resolve(Paths.get("header_%s_%s", h.category(), uniqueIdentifier()));
                     Files.writeString(dest.resolve(".json"), h.asString());
-                    Files.write(dest.resolve(".msgpack"), h.asBytes());
+                    Files.write(dest.resolve(".cbor"), h.asBytes());
                     designModels.add(o);
                 }
             }
@@ -49,7 +49,7 @@ public interface IdentificationModuleBlueprint extends IdentificationModule {
                 Files.createDirectories(cli.reversePath);
                 var solvedDecisionModels = new HashSet<DecisionModel>();
                 for (var p : Files.list(cli.solvedPath).toList()) {
-                    if (p.startsWith("header") && p.endsWith(".msgpack")) {
+                    if (p.startsWith("header") && p.endsWith(".cbor")) {
                         decisionHeaderToModel(objectMapper.readValue(Files.readAllBytes(p), DecisionModelHeader.class))
                                 .ifPresent(solvedDecisionModels::add);
                     }
@@ -57,7 +57,7 @@ public interface IdentificationModuleBlueprint extends IdentificationModule {
                 var reIdentified = reverseIdentification(solvedDecisionModels, designModels);
                 var i = 0;
                 for (var m : reIdentified) {
-                    var dest = cli.reversePath.resolve(String.valueOf(i)).resolve(uniqueIdentifier()).resolve(".msgpack");
+                    var dest = cli.reversePath.resolve(String.valueOf(i)).resolve(uniqueIdentifier()).resolve(".cbor");
                     var header = m.header();
                     if (cli.outputPath != null) {
                         var saved = designModelToOutput(m, cli.outputPath);
@@ -72,7 +72,7 @@ public interface IdentificationModuleBlueprint extends IdentificationModule {
             if (cli.identifiedPath != null) {
                 var decisionModels = new HashSet<DecisionModel>();
                 for (var p : Files.list(cli.solvedPath).toList()) {
-                    if (p.startsWith("header") && p.endsWith(".msgpack")) {
+                    if (p.startsWith("header") && p.endsWith(".cbor")) {
                         decisionHeaderToModel(objectMapper.readValue(Files.readAllBytes(p), DecisionModelHeader.class))
                                 .ifPresent(decisionModels::add);
                     }
@@ -84,11 +84,11 @@ public interface IdentificationModuleBlueprint extends IdentificationModule {
                     if (m instanceof DecisionModelWithBody modelWithBody) {
                         var destB = cli.identifiedPath.resolve("body_%016d_%s_%s".format(String.valueOf(cli.identStep), header.category(), uniqueIdentifier()));
                         Files.writeString(destB.resolve(".json"), modelWithBody.getBodyAsText());
-                        Files.write(destB.resolve(".msgpack"), modelWithBody.getBodyAsBytes());
-                        header = new DecisionModelHeader(header.category(), header.coveredElements(), header.coveredRelations(), "body_%016d_%s_%s.msgpack".format(String.valueOf(cli.identStep), header.category(), uniqueIdentifier()));
+                        Files.write(destB.resolve(".cbor"), modelWithBody.getBodyAsBytes());
+                        header = new DecisionModelHeader(header.category(), header.coveredElements(), header.coveredRelations(), "body_%016d_%s_%s.cbor".format(String.valueOf(cli.identStep), header.category(), uniqueIdentifier()));
                     }
                     Files.writeString(destH.resolve(".json"), header.asString());
-                    Files.write(destH.resolve(".msgpack"), header.asBytes());
+                    Files.write(destH.resolve(".cbor"), header.asBytes());
                 }
             }
 

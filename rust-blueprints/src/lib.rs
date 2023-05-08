@@ -79,7 +79,7 @@ pub fn execute_standalone_identification_module<T: StandaloneIdentificationModul
                 let solved: Vec<Box<dyn DecisionModel>> =
                     load_decision_model_headers_from_binary(&solved_path)
                         .iter()
-                        .flat_map(|(p, x)| module.decision_header_to_model(x))
+                        .flat_map(|(_, x)| module.decision_header_to_model(x))
                         .collect();
                 let reverse_identified = module.reverse_identification(&solved, &design_models);
                 for m in reverse_identified {
@@ -103,7 +103,7 @@ pub fn execute_standalone_identification_module<T: StandaloneIdentificationModul
                 let decision_models: Vec<Box<dyn DecisionModel>> =
                     load_decision_model_headers_from_binary(&identified_path)
                         .iter()
-                        .flat_map(|(p, x)| module.decision_header_to_model(x))
+                        .flat_map(|(_, x)| module.decision_header_to_model(x))
                         .collect();
                 let identified = module.identification_step(
                     args.identification_step,

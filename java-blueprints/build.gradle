@@ -1,4 +1,6 @@
 dependencies {
     implementation 'info.picocli:picocli:4.7.3'
+    implementation 'com.fasterxml.jackson.module:jackson-modules-base:2.15.0'
+    implementation 'com.fasterxml.jackson.dataformat:jackson-dataformat-cbor:2.15.0'
     implementation project(":java-core")
 }

@@ -1,5 +1,7 @@
 package idesyde.core;
 
+import com.fasterxml.jackson.databind.ObjectMapper;
+import com.fasterxml.jackson.dataformat.cbor.CBORFactory;
 import idesyde.core.headers.DesignModelHeader;
 
 /** The trait/interface for a design model in the design space identification methodology, as
@@ -21,4 +23,6 @@ import idesyde.core.headers.DesignModelHeader;
 public interface DesignModel {
 
     DesignModelHeader header();
+
+    static final ObjectMapper objectMapper = new ObjectMapper(new CBORFactory());
 }

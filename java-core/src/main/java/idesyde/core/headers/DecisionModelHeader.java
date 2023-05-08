@@ -4,7 +4,7 @@ import com.fasterxml.jackson.annotation.JsonProperty;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.annotation.JsonSerialize;
-import org.msgpack.jackson.dataformat.MessagePackFactory;
+import com.fasterxml.jackson.dataformat.cbor.CBORFactory;
 
 import java.io.IOException;
 import java.util.Set;
@@ -36,5 +36,5 @@ public record DecisionModelHeader(
         return objectMapper.readValue(b, DecisionModelHeader.class);
     }
 
-    static final ObjectMapper objectMapper = new ObjectMapper(new MessagePackFactory());
+    static final ObjectMapper objectMapper = new ObjectMapper(new CBORFactory());
 }

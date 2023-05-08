@@ -1,5 +1,7 @@
 module idesyde.common {
+    requires transitive com.fasterxml.jackson.databind;
     requires transitive idesyde.core;
     requires transitive idesyde.blueprints;
-    requires jackson.dataformat.msgpack;
+
+    exports idesyde.common;
 }

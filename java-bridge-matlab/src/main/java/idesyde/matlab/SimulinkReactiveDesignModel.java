@@ -38,7 +38,7 @@ public record SimulinkReactiveDesignModel(
                 "SimulinkReactiveDesignModel",
                 elems,
                 links.stream().map(l ->
-                        new LabelledArcWithPorts(l.getSrc(), l.getDst(), l.getSrcPort(), l.getDstPort(), String.valueOf(l.getDataSize()))).collect(Collectors.toSet()
+                        new LabelledArcWithPorts(l.src(), l.dst(), l.srcPort(), l.dstPort(), String.valueOf(l.dataSize()))).collect(Collectors.toSet()
                 ),
                 new HashSet<>()
         );

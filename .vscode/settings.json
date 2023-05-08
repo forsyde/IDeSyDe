@@ -18,5 +18,10 @@
     },
     "rust-analyzer.linkedProjects": [
         ".\\rust-common\\Cargo.toml"
-    ]
+    ],
+    "C_Cpp.default.configurationProvider": "ms-vscode.makefile-tools",
+    "files.associations": {
+        "optional": "cpp",
+        "xutility": "cpp"
+    }
 }

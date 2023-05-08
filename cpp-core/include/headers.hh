@@ -1,14 +1,12 @@
 #if !defined(CORE_HEADERS_H)
 #define CORE_HEADERS_H
 
-// generated with the help of quicktype.io
-
-#include <optional>
-#include <nlohmann_json/json.hpp>
-
 #include <optional>
 #include <stdexcept>
 #include <regex>
+
+// generated with the help of quicktype.io
+#include <nlohmann/json.hpp>
 
 #ifndef NLOHMANN_OPT_HELPER
 #define NLOHMANN_OPT_HELPER
@@ -171,6 +169,18 @@ namespace headers
         const std::vector<LabelledArcWithPorts> &get_covered_relations() const { return covered_relations; }
         std::vector<LabelledArcWithPorts> &get_mutable_covered_relations() { return covered_relations; }
         void set_covered_relations(const std::vector<LabelledArcWithPorts> &value) { this->covered_relations = value; }
+
+        bool dominates(&DecisionModelHeader other)
+        {
+            for (auto v : other->covered_elements)
+            {
+                if (std::find(this->covered_elements.begin(), this->covered_elements.end(), v) == this->covered_elements.end())
+                {
+                    return false;
+                }
+            }
+            return true;
+        }
     };
 
     class DesignModelHeader

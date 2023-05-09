@@ -240,7 +240,7 @@ checksum = "9a3a5bfb195931eeb336b2a7b4d761daec841b97f947d34394601737a7bba5e4"
 
 [[package]]
 name = "idesyde-blueprints"
-version = "0.4.4"
+version = "0.5.3"
 dependencies = [
  "clap",
  "env_logger",
@@ -250,7 +250,7 @@ dependencies = [
 
 [[package]]
 name = "idesyde-bridge-matlab-simulink"
-version = "0.4.4"
+version = "0.5.3"
 dependencies = [
  "idesyde-blueprints",
  "idesyde-common",
@@ -262,7 +262,7 @@ dependencies = [
 
 [[package]]
 name = "idesyde-common"
-version = "0.4.4"
+version = "0.5.3"
 dependencies = [
  "env_logger",
  "idesyde-blueprints",
@@ -275,7 +275,7 @@ dependencies = [
 
 [[package]]
 name = "idesyde-core"
-version = "0.4.4"
+version = "0.5.3"
 dependencies = [
  "rmp-serde",
  "serde",
@@ -283,8 +283,17 @@ dependencies = [
 ]
 
 [[package]]
+name = "idesyde-core-derive"
+version = "0.5.3"
+dependencies = [
+ "idesyde-core",
+ "quote",
+ "syn",
+]
+
+[[package]]
 name = "idesyde-orchestration"
-version = "0.4.4"
+version = "0.5.3"
 dependencies = [
  "clap",
  "env_logger",
@@ -383,18 +392,18 @@ checksum = "9f746c4065a8fa3fe23974dd82f15431cc8d40779821001404d10d2e79ca7d79"
 
 [[package]]
 name = "proc-macro2"
-version = "1.0.54"
+version = "1.0.56"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "e472a104799c74b514a57226160104aa483546de37e839ec50e3c2e41dd87534"
+checksum = "2b63bdb0cd06f1f4dedf69b254734f9b45af66e4a031e42a7480257d9898b435"
 dependencies = [
  "unicode-ident",
 ]
 
 [[package]]
 name = "quote"
-version = "1.0.26"
+version = "1.0.27"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "4424af4bf778aae2051a77b60283332f386554255d722233d09fbfc7e30da2fc"
+checksum = "8f4f29d145265ec1c483c7c654450edde0bfe043d3938d6972630663356d9500"
 dependencies = [
  "proc-macro2",
 ]
@@ -507,9 +516,9 @@ checksum = "73473c0e59e6d5812c5dfe2a064a6444949f089e20eec9a2e5506596494e4623"
 
 [[package]]
 name = "syn"
-version = "2.0.11"
+version = "2.0.15"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "21e3787bb71465627110e7d87ed4faaa36c1f61042ee67badb9e2ef173accc40"
+checksum = "a34fcf3e8b60f57e6a14301a2e916d323af98b0ea63c599441eec8558660c822"
 dependencies = [
  "proc-macro2",
  "quote",

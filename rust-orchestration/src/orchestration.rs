@@ -383,7 +383,7 @@ pub fn compute_dominant_decision_models<'a>(
         .collect()
 }
 
-pub fn compute_dominant_combinations<'a>(
+pub fn compute_dominant_biddings<'a>(
     exploration_modules: &'a Vec<Box<dyn ExplorationModule>>,
     decision_models: &'a Vec<&'a Box<dyn DecisionModel>>,
 ) -> Vec<(&'a Box<dyn ExplorationModule>, &'a Box<dyn DecisionModel>)> {

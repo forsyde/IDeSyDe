@@ -9,7 +9,7 @@ import idesyde.core.ExplorationCriteria
 
 final case class ExplorationCombinationDescription(
     val can_explore: Boolean,
-    val criteria: Map[String, Double]
+    val properties: Map[String, Double]
 ) derives ReadWriter {
 
 //   lazy val criterias: Map[ExplorationCriteria, Double] = explorer
@@ -50,12 +50,12 @@ object ExplorationCombinationDescription {
     def tryCompare(
         x: ExplorationCombinationDescription,
         y: ExplorationCombinationDescription
-    ): Option[Int] = if (x.criteria.keySet == y.criteria.keySet) {
+    ): Option[Int] = if (x.properties.keySet == y.properties.keySet) {
       var isgt = true
       var islt = true
-      for ((k, v) <- x.criteria) {
-        isgt = isgt && v > y.criteria(k)
-        islt = islt && v < y.criteria(k)
+      for ((k, v) <- x.properties) {
+        isgt = isgt && v > y.properties(k)
+        islt = islt && v < y.properties(k)
       }
       Some(
         if (isgt) 1 else if (islt) -1 else 0

@@ -169,13 +169,13 @@ impl Hash for DecisionModelHeader {
 #[derive(Debug, Deserialize, Serialize)]
 pub struct ExplorationBid {
     pub can_explore: bool,
-    pub criteria: HashMap<String, f32>,
+    pub properties: HashMap<String, f32>,
 }
 
 impl Hash for ExplorationBid {
     fn hash<H: std::hash::Hasher>(&self, state: &mut H) {
         self.can_explore.hash(state);
-        for k in self.criteria.keys() {
+        for k in self.properties.keys() {
             k.hash(state);
         }
     }
@@ -183,7 +183,7 @@ impl Hash for ExplorationBid {
 
 impl PartialEq<ExplorationBid> for ExplorationBid {
     fn eq(&self, other: &ExplorationBid) -> bool {
-        self.can_explore == other.can_explore && self.criteria == other.criteria
+        self.can_explore == other.can_explore && self.properties == other.properties
     }
 }
 
@@ -192,23 +192,23 @@ impl Eq for ExplorationBid {}
 impl PartialOrd<ExplorationBid> for ExplorationBid {
     fn partial_cmp(&self, other: &ExplorationBid) -> Option<Ordering> {
         if self.can_explore == other.can_explore {
-            if self.criteria.keys().eq(other.criteria.keys()) {
+            if self.properties.keys().eq(other.properties.keys()) {
                 if self
-                    .criteria
+                    .properties
                     .iter()
-                    .all(|(k, v)| v > other.criteria.get(k).unwrap_or(v))
+                    .all(|(k, v)| v > other.properties.get(k).unwrap_or(v))
                 {
                     return Some(Ordering::Greater);
                 } else if self
-                    .criteria
+                    .properties
                     .iter()
-                    .all(|(k, v)| v == other.criteria.get(k).unwrap_or(v))
+                    .all(|(k, v)| v == other.properties.get(k).unwrap_or(v))
                 {
                     return Some(Ordering::Equal);
                 } else if self
-                    .criteria
+                    .properties
                     .iter()
-                    .all(|(k, v)| v < other.criteria.get(k).unwrap_or(v))
+                    .all(|(k, v)| v < other.properties.get(k).unwrap_or(v))
                 {
                     return Some(Ordering::Less);
                 }

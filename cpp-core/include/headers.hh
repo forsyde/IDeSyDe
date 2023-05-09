@@ -53,9 +53,9 @@ namespace nlohmann
 }
 #endif
 
-namespace headers
+namespace idesyde::headers
 {
-    using nlohmann::json;
+    using json = nlohmann::json;
 
 #ifndef NLOHMANN_UNTYPED_headers_HELPER
 #define NLOHMANN_UNTYPED_headers_HELPER
@@ -169,18 +169,6 @@ namespace headers
         const std::vector<LabelledArcWithPorts> &get_covered_relations() const { return covered_relations; }
         std::vector<LabelledArcWithPorts> &get_mutable_covered_relations() { return covered_relations; }
         void set_covered_relations(const std::vector<LabelledArcWithPorts> &value) { this->covered_relations = value; }
-
-        bool dominates(DecisionModelHeader &other)
-        {
-            for (auto &v : other->get_covered_elements())
-            {
-                if (std::find(get_covered_elements().begin(), get_covered_elements().end(), v) == get_covered_elements().end())
-                {
-                    return false;
-                }
-            }
-            return true;
-        }
     };
 
     class DesignModelHeader
@@ -213,27 +201,32 @@ namespace headers
         void set_relations(const std::vector<LabelledArcWithPorts> &value) { this->relations = value; }
     };
 
-    class Coordinate
+    class ExplorationBid
     {
     public:
-        Coordinate() = default;
-        virtual ~Coordinate() = default;
+        ExplorationBid() = default;
+        virtual ~ExplorationBid() = default;
 
     private:
-        std::optional<std::vector<DecisionModelHeader>> decision_models;
-        std::optional<std::vector<DesignModelHeader>> design_models;
+        bool can_explore;
+        std::map<std::string, float> properties;
 
     public:
-        std::optional<std::vector<DecisionModelHeader>> get_decision_models() const { return decision_models; }
-        void set_decision_models(std::optional<std::vector<DecisionModelHeader>> value) { this->decision_models = value; }
+        bool get_can_explore() const { return can_explore; }
+        void set_can_explore(const bool &value) { this->can_explore = value; }
 
-        std::optional<std::vector<DesignModelHeader>> get_design_models() const { return design_models; }
-        void set_design_models(std::optional<std::vector<DesignModelHeader>> value) { this->design_models = value; }
+        const std::map<std::string, float> &get_properties() const { return properties; }
+        std::map<std::string, float> &get_mutable_properties() { return properties; }
+        void set_properties(const std::map<std::string, float> &value) { this->properties = value; }
     };
+
 }
 
-namespace headers
+namespace idesyde::headers
 {
+
+    using json = nlohmann::json;
+
     void from_json(const json &j, LabelledArcWithPorts &x);
     void to_json(json &j, const LabelledArcWithPorts &x);
 
@@ -243,8 +236,8 @@ namespace headers
     void from_json(const json &j, DesignModelHeader &x);
     void to_json(json &j, const DesignModelHeader &x);
 
-    void from_json(const json &j, Coordinate &x);
-    void to_json(json &j, const Coordinate &x);
+    void from_json(const json &j, ExplorationBid &x);
+    void to_json(json &j, const ExplorationBid &x);
 
     inline void from_json(const json &j, LabelledArcWithPorts &x)
     {
@@ -299,18 +292,18 @@ namespace headers
         j["relations"] = x.get_relations();
     }
 
-    inline void from_json(const json &j, Coordinate &x)
+    inline void from_json(const json &j, ExplorationBid &x)
     {
-        x.set_decision_models(get_stack_optional<std::vector<DecisionModelHeader>>(j, "decision_models"));
-        x.set_design_models(get_stack_optional<std::vector<DesignModelHeader>>(j, "design_models"));
+        x.set_can_explore(j.at("can_explore").get<bool>());
+        x.set_properties(j.at("properties").get<std::map<std::string, float>>());
     }
 
-    inline void to_json(json &j, const Coordinate &x)
+    inline void to_json(json &j, const ExplorationBid &x)
     {
         j = json::object();
-        j["decision_models"] = x.get_decision_models();
-        j["design_models"] = x.get_design_models();
+        j["can_explore"] = x.get_can_explore();
+        j["properties"] = x.get_properties();
     }
-}
 
+}
 #endif // CORE_HEADERS_H

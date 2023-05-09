@@ -4,18 +4,21 @@
 #include <nlohmann/json.hpp>
 
 #include <optional>
-
-namespace core
-{
+#include <functional>
 
 #include <headers.hh>
 
-    virtual class DecisionModel
+using namespace std;
+
+namespace idesyde::core
+{
+    class DecisionModel
     {
     public:
-        virtual DecisionModelHeader header();
+        virtual string unique_identifier();
+        virtual idesyde::headers::DecisionModelHeader header();
 
-        std::optional<nlohmann::json> body_as_json()
+        std::optional<string> body_as_json()
         {
             return std::nullopt;
         };
@@ -24,12 +27,27 @@ namespace core
         {
             return std::nullopt;
         };
+
+        bool dominates(DecisionModel &other)
+        {
+            auto h = header();
+            auto oh = other.header();
+            for (auto &v : oh.get_covered_elements())
+            {
+                if (std::find(h.get_covered_elements().begin(), h.get_covered_elements().end(), v) == h.get_covered_elements().end())
+                {
+                    return false;
+                }
+            }
+            return true;
+        }
     };
 
-    virtual class DesignModel
+    class DesignModel
     {
     public:
-        virtual DesignModelHeader header();
+        virtual string unique_identifier();
+        virtual idesyde::headers::DesignModelHeader header();
     };
 
 }

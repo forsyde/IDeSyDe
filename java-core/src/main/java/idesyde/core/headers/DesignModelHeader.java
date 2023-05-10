@@ -13,7 +13,6 @@ import java.util.Set;
 public record DesignModelHeader(
         String category,
         Set<String> elements,
-        Set<LabelledArcWithPorts> relations,
         @JsonProperty("model_paths")
         Set<String> modelPaths
 

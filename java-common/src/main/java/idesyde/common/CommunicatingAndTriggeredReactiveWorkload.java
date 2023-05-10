@@ -3,14 +3,12 @@ package idesyde.common;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.annotation.JsonSerialize;
+import idesyde.core.DecisionModel;
 import idesyde.core.DecisionModelWithBody;
 import idesyde.core.headers.DecisionModelHeader;
 import idesyde.core.headers.LabelledArcWithPorts;
 
-import java.util.HashSet;
-import java.util.List;
-import java.util.Map;
-import java.util.Set;
+import java.util.*;
 import java.util.stream.Collectors;
 import java.util.stream.IntStream;
 
@@ -36,7 +34,7 @@ public record CommunicatingAndTriggeredReactiveWorkload(
          List<String> triggerGraphSrc,
          List<String> triggerGraphDst,
          Set<String> hasORTriggerSemantics
-) implements DecisionModelWithBody {
+) implements DecisionModel {
 
     @Override
     public DecisionModelHeader header() {
@@ -46,23 +44,23 @@ public record CommunicatingAndTriggeredReactiveWorkload(
         elems.addAll(downsamples);
         elems.addAll(periodicSources);
         elems.addAll(dataChannels);
+        elems.addAll(IntStream.range(0, triggerGraphSrc.size()).mapToObj(i ->
+                "trigger=" + triggerGraphSrc.get(i) + ":->" + triggerGraphDst.get(i)
+        ).collect(Collectors.toSet()));
         return new DecisionModelHeader(
                 "CommunicatingAndTriggeredReactiveWorkload",
                 elems,
-                IntStream.range(0, triggerGraphSrc.size()).mapToObj(i ->
-                    new LabelledArcWithPorts(triggerGraphSrc.get(i), triggerGraphDst.get(i), null, null, "")
-                ).collect(Collectors.toSet()),
                 null
             );
     }
 
     @Override
-    public String getBodyAsText() throws JsonProcessingException {
-        return objectMapper.writeValueAsString(this);
+    public Optional<String> bodyAsText() throws JsonProcessingException {
+        return Optional.of(objectMapper.writeValueAsString(this));
     }
 
     @Override
-    public byte[] getBodyAsBytes() throws JsonProcessingException {
-        return objectMapper.writeValueAsBytes(this);
+    public Optional<byte[]> bodyAsBinary() throws JsonProcessingException {
+        return Optional.of(objectMapper.writeValueAsBytes(this));
     }
 }

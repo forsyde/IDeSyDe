@@ -1,8 +1,11 @@
 package idesyde.core;
 
+import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.dataformat.cbor.CBORFactory;
 import idesyde.core.headers.DecisionModelHeader;
+
+import java.util.Optional;
 
 /** The trait/interface for a decision model in the design space identification methodology, as
  * defined in [1].
@@ -19,6 +22,10 @@ import idesyde.core.headers.DecisionModelHeader;
 public interface DecisionModel {
 
     DecisionModelHeader header();
+
+    default Optional<String> bodyAsText() throws JsonProcessingException { return Optional.empty(); };
+
+    default Optional<byte[]> bodyAsBinary() throws JsonProcessingException { return Optional.empty(); };
 
     static final ObjectMapper objectMapper = new ObjectMapper(new CBORFactory());
 }

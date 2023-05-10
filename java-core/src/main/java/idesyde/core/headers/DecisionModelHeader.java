@@ -14,8 +14,6 @@ public record DecisionModelHeader(
     String category,
     @JsonProperty("covered_elements")
     Set<String> coveredElements,
-    @JsonProperty("covered_relations")
-    Set<LabelledArcWithPorts> coveredRelations,
     @JsonProperty("body_path")
     String bodyPath
 ) {

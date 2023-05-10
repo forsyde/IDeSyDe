@@ -45,9 +45,8 @@ final case class CommunicatingAndTriggeredReactiveWorkload(
 
   lazy val triggerGraph = triggerGraphSrc.zip(triggerGraphDst)
   val coveredElements =
-    (tasks ++ upsamples ++ downsamples ++ periodicSources ++ dataChannels).toSet
-
-  val coveredElementRelations = triggerGraph.toSet
+    (tasks ++ upsamples ++ downsamples ++ periodicSources ++ dataChannels).toSet ++ triggerGraph.toSet
+      .map(_.toString)
 
   lazy val stimulusGraph = Graph.from(
     tasks ++ upsamples ++ downsamples ++ periodicSources,

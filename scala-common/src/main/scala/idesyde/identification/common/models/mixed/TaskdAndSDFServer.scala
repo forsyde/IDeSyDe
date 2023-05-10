@@ -23,8 +23,6 @@ final case class TaskdAndSDFServer(
   def bodyAsBinary: Array[Byte] = writeBinary(this)
 
   val coveredElements = sdfApplications.coveredElements ++ workload.coveredElements
-  val coveredElementRelations =
-    sdfApplications.coveredElementRelations ++ workload.coveredElementRelations
   val processComputationalNeeds: Vector[Map[String, Map[String, Long]]] =
     sdfApplications.processComputationalNeeds ++ workload.processComputationalNeeds
   val processSizes: Vector[Long] = sdfApplications.actorSizes ++ workload.processSizes

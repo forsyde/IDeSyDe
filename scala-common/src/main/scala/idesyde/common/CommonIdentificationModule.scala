@@ -44,23 +44,23 @@ object CommonIdentificationModule
 
   def decisionHeaderToModel(m: DecisionModelHeader): Option[DecisionModel] = {
     m match {
-      case DecisionModelHeader("SDFApplication", body_path, _, _) =>
+      case DecisionModelHeader("SDFApplication", body_path, _) =>
         body_path.flatMap(decodeFromPath[SDFApplication])
-      case DecisionModelHeader("TiledMultiCore", body_path, _, _) =>
+      case DecisionModelHeader("TiledMultiCore", body_path, _) =>
         body_path.flatMap(decodeFromPath[TiledMultiCore])
-      case DecisionModelHeader("PartitionedCoresWithRuntimes", body_path, _, _) =>
+      case DecisionModelHeader("PartitionedCoresWithRuntimes", body_path, _) =>
         body_path.flatMap(decodeFromPath[PartitionedCoresWithRuntimes])
-      case DecisionModelHeader("SchedulableTiledMultiCore", body_path, _, _) =>
+      case DecisionModelHeader("SchedulableTiledMultiCore", body_path, _) =>
         body_path.flatMap(decodeFromPath[SchedulableTiledMultiCore])
-      case DecisionModelHeader("SDFToTiledMultiCore", body_path, _, _) =>
+      case DecisionModelHeader("SDFToTiledMultiCore", body_path, _) =>
         body_path.flatMap(decodeFromPath[SDFToTiledMultiCore])
-      case DecisionModelHeader("SharedMemoryMultiCore", body_path, _, _) =>
+      case DecisionModelHeader("SharedMemoryMultiCore", body_path, _) =>
         body_path.flatMap(decodeFromPath[SharedMemoryMultiCore])
-      case DecisionModelHeader("CommunicatingAndTriggeredReactiveWorkload", body_path, _, _) =>
+      case DecisionModelHeader("CommunicatingAndTriggeredReactiveWorkload", body_path, _) =>
         body_path.flatMap(decodeFromPath[CommunicatingAndTriggeredReactiveWorkload])
-      case DecisionModelHeader("PartitionedSharedMemoryMultiCore", body_path, _, _) =>
+      case DecisionModelHeader("PartitionedSharedMemoryMultiCore", body_path, _) =>
         body_path.flatMap(decodeFromPath[PartitionedSharedMemoryMultiCore])
-      case DecisionModelHeader("PeriodicWorkloadToPartitionedSharedMultiCore", body_path, _, _) =>
+      case DecisionModelHeader("PeriodicWorkloadToPartitionedSharedMultiCore", body_path, _) =>
         body_path.flatMap(decodeFromPath[PeriodicWorkloadToPartitionedSharedMultiCore])
       case _ => None
     }

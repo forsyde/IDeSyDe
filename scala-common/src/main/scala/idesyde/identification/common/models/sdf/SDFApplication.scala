@@ -64,8 +64,10 @@ final case class SDFApplication(
     derives ReadWriter {
 
   // def dominatesSdf(other: SDFApplication) = repetitionVector.size >= other.repetitionVector.size
-  val coveredElements         = (actorsIdentifiers ++ channelsIdentifiers).toSet
-  val coveredElementRelations = topologySrcs.zip(topologyDsts).toSet
+  val coveredElements = (actorsIdentifiers ++ channelsIdentifiers).toSet ++ (topologySrcs
+    .zip(topologyDsts)
+    .toSet)
+    .map(_.toString)
 
   val dataflowGraphs = Vector(
     topologySrcs

@@ -8,61 +8,61 @@ use std::{
 
 use crate::DesignModel;
 
-#[derive(Serialize, Clone, Deserialize, Debug)]
-pub struct LabelledArcWithPorts {
-    pub src: String,
-    pub src_port: Option<String>,
-    pub label: Option<String>,
-    pub dst: String,
-    pub dst_port: Option<String>,
-}
+// #[derive(Serialize, Clone, Deserialize, Debug)]
+// pub struct LabelledArcWithPorts {
+//     pub src: String,
+//     pub src_port: Option<String>,
+//     pub label: Option<String>,
+//     pub dst: String,
+//     pub dst_port: Option<String>,
+// }
 
-impl PartialEq<LabelledArcWithPorts> for LabelledArcWithPorts {
-    fn eq(&self, other: &LabelledArcWithPorts) -> bool {
-        self.src == other.src
-            && self.dst == other.dst
-            && match (&self.src_port, &other.src_port) {
-                (Some(a), Some(b)) => a == b,
-                (None, None) => true,
-                _ => false,
-            }
-            && match (&self.dst_port, &other.dst_port) {
-                (Some(a), Some(b)) => a == b,
-                (None, None) => true,
-                _ => false,
-            }
-            && match (&self.label, &other.label) {
-                (Some(a), Some(b)) => a == b,
-                (None, None) => true,
-                _ => false,
-            }
-    }
-}
+// impl PartialEq<LabelledArcWithPorts> for LabelledArcWithPorts {
+//     fn eq(&self, other: &LabelledArcWithPorts) -> bool {
+//         self.src == other.src
+//             && self.dst == other.dst
+//             && match (&self.src_port, &other.src_port) {
+//                 (Some(a), Some(b)) => a == b,
+//                 (None, None) => true,
+//                 _ => false,
+//             }
+//             && match (&self.dst_port, &other.dst_port) {
+//                 (Some(a), Some(b)) => a == b,
+//                 (None, None) => true,
+//                 _ => false,
+//             }
+//             && match (&self.label, &other.label) {
+//                 (Some(a), Some(b)) => a == b,
+//                 (None, None) => true,
+//                 _ => false,
+//             }
+//     }
+// }
 
-impl Eq for LabelledArcWithPorts {}
+// impl Eq for LabelledArcWithPorts {}
 
-impl Hash for LabelledArcWithPorts {
-    fn hash<H: std::hash::Hasher>(&self, state: &mut H) {
-        self.src.hash(state);
-        self.dst.hash(state);
-        if let Some(a) = &self.src_port {
-            a.hash(state);
-        }
-        if let Some(a) = &self.dst_port {
-            a.hash(state);
-        };
-        if let Some(a) = &self.label {
-            a.hash(state);
-        };
-    }
-}
+// impl Hash for LabelledArcWithPorts {
+//     fn hash<H: std::hash::Hasher>(&self, state: &mut H) {
+//         self.src.hash(state);
+//         self.dst.hash(state);
+//         if let Some(a) = &self.src_port {
+//             a.hash(state);
+//         }
+//         if let Some(a) = &self.dst_port {
+//             a.hash(state);
+//         };
+//         if let Some(a) = &self.label {
+//             a.hash(state);
+//         };
+//     }
+// }
 
 #[derive(Serialize, Clone, Deserialize, Debug)]
 pub struct DesignModelHeader {
     pub category: String,
     pub model_paths: Vec<String>,
     pub elements: Vec<String>,
-    pub relations: Vec<LabelledArcWithPorts>,
+    // pub relations: Vec<LabelledArcWithPorts>,
 }
 
 impl DesignModel for DesignModelHeader {
@@ -77,16 +77,16 @@ impl DesignModel for DesignModelHeader {
 
 impl PartialEq<DesignModelHeader> for DesignModelHeader {
     fn eq(&self, o: &DesignModelHeader) -> bool {
-        self.category == o.category && self.elements == o.elements && self.relations == o.relations
+        self.category == o.category && self.elements == o.elements // && self.relations == o.relations
     }
 }
 
 impl PartialOrd<DesignModelHeader> for DesignModelHeader {
     fn partial_cmp(&self, o: &DesignModelHeader) -> std::option::Option<std::cmp::Ordering> {
-        let superset = o.elements.iter().all(|v| self.elements.contains(v))
-            && o.relations.iter().all(|v| self.relations.contains(v));
-        let subset = self.elements.iter().all(|v| o.elements.contains(v))
-            && self.relations.iter().all(|v| o.relations.contains(v));
+        let superset = o.elements.iter().all(|v| self.elements.contains(v));
+        // && o.relations.iter().all(|v| self.relations.contains(v));
+        let subset = self.elements.iter().all(|v| o.elements.contains(v));
+        // && self.relations.iter().all(|v| o.relations.contains(v));
         return match (superset, subset) {
             (true, true) => Some(Ordering::Equal),
             (true, false) => Some(Ordering::Greater),
@@ -104,9 +104,9 @@ impl Hash for DesignModelHeader {
         for m in &self.elements {
             m.hash(state);
         }
-        for e in &self.relations {
-            e.hash(state);
-        }
+        // for e in &self.relations {
+        //     e.hash(state);
+        // }
     }
 }
 
@@ -115,14 +115,13 @@ pub struct DecisionModelHeader {
     pub category: String,
     pub body_path: Option<String>,
     pub covered_elements: Vec<String>,
-    pub covered_relations: Vec<LabelledArcWithPorts>,
+    // pub covered_relations: Vec<LabelledArcWithPorts>,
 }
 
 impl PartialEq<DecisionModelHeader> for DecisionModelHeader {
     fn eq(&self, o: &DecisionModelHeader) -> bool {
-        self.category == o.category
-            && self.covered_elements == o.covered_elements
-            && self.covered_relations == o.covered_relations
+        self.category == o.category && self.covered_elements == o.covered_elements
+        // && self.covered_relations == o.covered_relations
     }
 }
 
@@ -131,18 +130,18 @@ impl PartialOrd<DecisionModelHeader> for DecisionModelHeader {
         let superset = o
             .covered_elements
             .iter()
-            .all(|v| self.covered_elements.contains(v))
-            && o.covered_relations
-                .iter()
-                .all(|v| self.covered_relations.contains(v));
+            .all(|v| self.covered_elements.contains(v));
+        // && o.covered_relations
+        //     .iter()
+        //     .all(|v| self.covered_relations.contains(v));
         let subset = self
             .covered_elements
             .iter()
-            .all(|v| o.covered_elements.contains(v))
-            && self
-                .covered_relations
-                .iter()
-                .all(|v| o.covered_relations.contains(v));
+            .all(|v| o.covered_elements.contains(v));
+        // && self
+        //     .covered_relations
+        //     .iter()
+        //     .all(|v| o.covered_relations.contains(v));
         return match (superset, subset) {
             (true, true) => Some(Ordering::Equal),
             (true, false) => Some(Ordering::Greater),
@@ -160,9 +159,9 @@ impl Hash for DecisionModelHeader {
         for m in &self.covered_elements {
             m.hash(state);
         }
-        for e in &self.covered_elements {
-            e.hash(state);
-        }
+        // for e in &self.covered_elements {
+        //     e.hash(state);
+        // }
     }
 }
 
@@ -221,74 +220,81 @@ impl PartialOrd<ExplorationBid> for ExplorationBid {
 pub fn load_decision_model_headers_from_binary(
     header_path: &Path,
 ) -> Vec<(PathBuf, DecisionModelHeader)> {
-    let known_decision_model_paths = if let Ok(ls) = header_path.read_dir() {
-        ls.flat_map(|dir_entry_r| {
-            if let Ok(dir_entry) = dir_entry_r {
+    let mut decision_models = Vec::new();
+    // let known_decision_model_paths =
+    if let Ok(ls) = header_path.read_dir() {
+        for dir_entry in ls.flatten() {
+            if dir_entry
+                .path()
+                .file_name()
+                .and_then(|f| f.to_str())
+                .map_or(false, |f| f.starts_with("header"))
+            {
                 if dir_entry
                     .path()
-                    .file_name()
-                    .and_then(|f| f.to_str())
-                    .map_or(false, |f| f.starts_with("header"))
-                    && dir_entry
-                        .path()
-                        .extension()
-                        .map_or(false, |ext| ext.eq_ignore_ascii_case("msgpack"))
+                    .extension()
+                    .map(|x| x.eq_ignore_ascii_case("msgpack"))
+                    .unwrap_or(false)
                 {
-                    return Some(dir_entry.path());
+                    let contents = std::fs::read(dir_entry.path())
+                        .expect("Failed to read decision model header file.");
+                    let header = rmp_serde::decode::from_slice(&contents)
+                        .expect("Failed to deserialize decision model header.");
+                    decision_models.push((dir_entry.path(), header));
+                } else if dir_entry
+                    .path()
+                    .extension()
+                    .map(|x| x.eq_ignore_ascii_case("cbor"))
+                    .unwrap_or(false)
+                {
+                    let contents = std::fs::read(dir_entry.path())
+                        .expect("Failed to read decision model header file.");
+                    let header = ciborium::from_reader(contents.as_slice())
+                        .expect("Failed to deserialize decision model header.");
+                    decision_models.push((dir_entry.path(), header));
                 }
             }
-            None
-        })
-        .collect::<Vec<PathBuf>>()
-    } else {
-        Vec::new()
-    };
-    known_decision_model_paths
-        .iter()
-        .map(|p| {
-            (
-                p,
-                std::fs::read(p).expect("Failed to read decision model header file."),
-            )
-        })
-        .map(|(p, b)| {
-            (
-                p.to_owned(),
-                rmp_serde::decode::from_slice(&b)
-                    .expect("Failed to deserialize deicsion model header."),
-            )
-        })
-        .collect()
+        }
+    }
+    decision_models
 }
 
 pub fn load_design_model_headers_from_binary(header_path: &Path) -> Vec<DesignModelHeader> {
-    let known_design_model_paths = if let Ok(ls) = header_path.read_dir() {
-        ls.flat_map(|dir_entry_r| {
-            if let Ok(dir_entry) = dir_entry_r {
+    let mut design_models = Vec::new();
+    // let known_decision_model_paths =
+    if let Ok(ls) = header_path.read_dir() {
+        for dir_entry in ls.flatten() {
+            if dir_entry
+                .path()
+                .file_name()
+                .and_then(|f| f.to_str())
+                .map_or(false, |f| f.starts_with("header"))
+            {
                 if dir_entry
                     .path()
-                    .file_name()
-                    .and_then(|f| f.to_str())
-                    .map_or(false, |f| f.starts_with("header"))
-                    && dir_entry
-                        .path()
-                        .extension()
-                        .map_or(false, |ext| ext.eq_ignore_ascii_case("msgpack"))
+                    .extension()
+                    .map(|x| x.eq_ignore_ascii_case("msgpack"))
+                    .unwrap_or(false)
                 {
-                    return Some(dir_entry.path());
+                    let contents = std::fs::read(dir_entry.path())
+                        .expect("Failed to read design model header file.");
+                    let header = rmp_serde::decode::from_slice(&contents)
+                        .expect("Failed to deserialize design model header.");
+                    design_models.push(header);
+                } else if dir_entry
+                    .path()
+                    .extension()
+                    .map(|x| x.eq_ignore_ascii_case("cbor"))
+                    .unwrap_or(false)
+                {
+                    let contents = std::fs::read(dir_entry.path())
+                        .expect("Failed to read decision model header file.");
+                    let header = ciborium::from_reader(contents.as_slice())
+                        .expect("Failed to deserialize design model header.");
+                    design_models.push(header);
                 }
             }
-            None
-        })
-        .collect::<Vec<PathBuf>>()
-    } else {
-        Vec::new()
-    };
-    known_design_model_paths
-        .iter()
-        .flat_map(|p| std::fs::read(p))
-        .map(|b| {
-            rmp_serde::decode::from_slice(&b).expect("Failed to serialize design model header")
-        })
-        .collect()
+        }
+    }
+    design_models
 }

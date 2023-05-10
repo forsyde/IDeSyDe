@@ -32,15 +32,15 @@ trait DesignModel {
 
   def elements: Set[ElementT]
 
-  def elementRelations: Set[ElementRelationT]
+  // def elementRelations: Set[ElementRelationT]
 
   def elementID(elem: ElementT): String
 
-  def elementRelationID(rel: ElementRelationT): LabelledArcWithPorts
+  // def elementRelationID(rel: ElementRelationT): String
 
   def elementIDs: Set[String] = elements.map(elementID)
 
-  def elementRelationIDs: Set[LabelledArcWithPorts] = elementRelations.map(elementRelationID)
+  // def elementRelationIDs: Set[String] = elementRelations.map(elementRelationID)
 
   def +(other: DesignModel) = merge(other)
 
@@ -49,15 +49,14 @@ trait DesignModel {
   def header: DesignModelHeader = DesignModelHeader(
     uniqueIdentifier,
     Set(),
-    elementIDs,
-    elementRelationIDs
+    elementIDs //++ elementRelationIDs
   )
 
   override def equals(x: Any): Boolean = x match {
     case dm: DesignModel =>
       uniqueIdentifier == dm.uniqueIdentifier &&
-        elementIDs == dm.elementIDs &&
-        elementRelationIDs == dm.elementRelationIDs
+        elementIDs == dm.elementIDs
+    // && elementRelationIDs == dm.elementRelationIDs
     case _ => false
   }
 }

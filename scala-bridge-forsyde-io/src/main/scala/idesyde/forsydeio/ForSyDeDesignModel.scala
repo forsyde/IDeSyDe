@@ -11,8 +11,7 @@ import idesyde.core.headers.LabelledArcWithPorts
 
 final case class ForSyDeDesignModel(val systemGraph: ForSyDeSystemGraph) extends DesignModel {
 
-  type ElementT         = Vertex
-  type ElementRelationT = EdgeInfo
+  type ElementT = Vertex | EdgeInfo
 
   def merge(other: DesignModel): Option[DesignModel] = {
     other match {
@@ -22,20 +21,22 @@ final case class ForSyDeDesignModel(val systemGraph: ForSyDeSystemGraph) extends
     }
   }
 
-  def elementID(elem: Vertex): String = elem.getIdentifier()
+  def elementID(elem: Vertex | EdgeInfo): String =
+    elem match {
+      case v: Vertex   => v.getIdentifier()
+      case e: EdgeInfo => e.toIDString()
+    }
 
-  def elementRelationID(rel: EdgeInfo): LabelledArcWithPorts =
-    LabelledArcWithPorts(
-      rel.sourceId,
-      rel.getSourcePort().toScala,
-      rel.edgeTraits.asScala.map(_.getName()).reduceLeftOption((l, s) => l + "," + s),
-      rel.getTarget(),
-      rel.getTargetPort().toScala
-    )
+  // def elementRelationID(rel: EdgeInfo): LabelledArcWithPorts =
+  //   LabelledArcWithPorts(
+  //     rel.sourceId,
+  //     rel.getSourcePort().toScala,
+  //     rel.edgeTraits.asScala.map(_.getName()).reduceLeftOption((l, s) => l + "," + s),
+  //     rel.getTarget(),
+  //     rel.getTargetPort().toScala
+  //   )
 
-  val elements = systemGraph.vertexSet().asScala.toSet
-
-  val elementRelations = systemGraph.edgeSet().asScala.toSet
+  val elements = systemGraph.vertexSet().asScala.toSet ++ systemGraph.edgeSet().asScala.toSet
 
   def uniqueIdentifier: String = "YyyYyYyDesignModel"
 }

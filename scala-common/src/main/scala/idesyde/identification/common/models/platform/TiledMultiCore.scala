@@ -23,10 +23,15 @@ final case class TiledMultiCore(
     val communicationElementsBitPerSecPerChannel: Vector[Double],
     val preComputedPaths: Map[String, Map[String, Iterable[String]]]
 ) extends StandardDecisionModel
-    with InstrumentedPlatformMixin[Double] with CompleteDecisionModel derives ReadWriter {
+    with InstrumentedPlatformMixin[Double]
+    with CompleteDecisionModel
+    derives ReadWriter {
 
-  val coveredElements         = (processors ++ memories ++ networkInterfaces ++ routers).toSet
-  val coveredElementRelations = interconnectTopologySrcs.zip(interconnectTopologyDsts).toSet
+  val coveredElements =
+    (processors ++ memories ++ networkInterfaces ++ routers).toSet ++ (interconnectTopologySrcs
+      .zip(interconnectTopologyDsts)
+      .toSet)
+      .map(_.toString)
 
   val communicationElems = networkInterfaces ++ routers
 

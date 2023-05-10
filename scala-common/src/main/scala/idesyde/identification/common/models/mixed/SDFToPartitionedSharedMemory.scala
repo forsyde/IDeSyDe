@@ -15,16 +15,15 @@ final case class SDFToPartitionedSharedMemory(
 ) extends StandardDecisionModel
     with WCETComputationMixin(sdfApplications, platform.hardware) {
 
-  val coveredElements = sdfApplications.coveredElements ++ platform.coveredElements
-  val coveredElementRelations =
-    sdfApplications.coveredElementRelations ++ platform.coveredElementRelations ++
-      sdfApplications.actorsIdentifiers.zip(processMappings) ++
+  val coveredElements = sdfApplications.coveredElements ++ platform.coveredElements ++ (
+    sdfApplications.actorsIdentifiers.zip(processMappings) ++
       sdfApplications.channelsIdentifiers.zip(memoryMappings) ++
       messageSlotAllocations.zipWithIndex.flatMap((slots, i) =>
         platform.hardware.communicationElems
           .filter(ce => slots.contains(ce) && slots(ce).exists(b => b))
           .map(ce => sdfApplications.channelsIdentifiers(i) -> ce)
       )
+  ).map(_.toString)
 
   val wcets = computeWcets
 

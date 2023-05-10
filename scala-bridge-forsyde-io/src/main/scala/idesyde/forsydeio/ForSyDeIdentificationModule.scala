@@ -27,9 +27,9 @@ object ForSyDeIdentificationModule extends IdentificationModule {
 
   def decisionHeaderToModel(m: DecisionModelHeader): Option[DecisionModel] = {
     m match {
-      case DecisionModelHeader("SDFToTiledMultiCore", body_path, _, _) =>
+      case DecisionModelHeader("SDFToTiledMultiCore", body_path, _) =>
         body_path.flatMap(decodeFromPath[SDFToTiledMultiCore])
-      case DecisionModelHeader("PeriodicWorkloadToPartitionedSharedMultiCore", body_path, _, _) =>
+      case DecisionModelHeader("PeriodicWorkloadToPartitionedSharedMultiCore", body_path, _) =>
         body_path.flatMap(decodeFromPath[PeriodicWorkloadToPartitionedSharedMultiCore])
       case _ => None
     }
@@ -49,7 +49,7 @@ object ForSyDeIdentificationModule extends IdentificationModule {
 
   def designHeaderToModel(header: DesignModelHeader): Set[DesignModel] = {
     header match {
-      case DesignModelHeader("ForSyDeDesignModel", model_paths, _, _) =>
+      case DesignModelHeader("ForSyDeDesignModel", model_paths, _) =>
         model_paths.flatMap(p => {
           modelHandler.canLoadModel(Paths.get(p)) match {
             case true =>

@@ -1,9 +1,6 @@
 use std::collections::{HashMap, HashSet};
 
-use idesyde_core::{
-    headers::{DecisionModelHeader, LabelledArcWithPorts},
-    DecisionModel,
-};
+use idesyde_core::{headers::DecisionModelHeader, DecisionModel};
 use serde::Serialize;
 
 #[derive(Debug, PartialEq, Eq, Serialize)]
@@ -38,36 +35,32 @@ impl DecisionModel for CommunicatingAndTriggeredReactiveWorkload {
     }
 
     fn header(&self) -> idesyde_core::headers::DecisionModelHeader {
-        let mut elems: Vec<String> = Vec::new();
-        let mut rels: Vec<LabelledArcWithPorts> = Vec::new();
+        let mut elems: HashSet<String> = HashSet::new();
         elems.extend(self.tasks.iter().map(|x| x.to_owned()));
         elems.extend(self.data_channels.iter().map(|x| x.to_owned()));
         elems.extend(self.periodic_sources.iter().map(|x| x.to_owned()));
         elems.extend(self.upsamples.iter().map(|x| x.to_owned()));
         elems.extend(self.downsamples.iter().map(|x| x.to_owned()));
         for i in 0..self.data_graph_src.len() {
-            rels.push(LabelledArcWithPorts {
-                src: self.data_graph_src[i].to_owned(),
-                src_port: None,
-                label: Some(format!("{}", self.data_graph_message_size[i])),
-                dst: self.data_graph_dst[i].to_owned(),
-                dst_port: None,
-            })
+            elems.insert(format!(
+                "{}={}:{}-{}:{}",
+                self.data_graph_message_size[i],
+                self.data_graph_src[i],
+                "",
+                self.data_graph_dst[i],
+                ""
+            ));
         }
         for i in 0..self.trigger_graph_src.len() {
-            rels.push(LabelledArcWithPorts {
-                src: self.trigger_graph_src[i].to_owned(),
-                src_port: None,
-                label: Some("trigger".to_string()),
-                dst: self.trigger_graph_dst[i].to_owned(),
-                dst_port: None,
-            })
+            elems.insert(format!(
+                "{}={}:{}-{}:{}",
+                "trigger", self.trigger_graph_src[i], "", self.trigger_graph_dst[i], ""
+            ));
         }
         DecisionModelHeader {
             category: self.unique_identifier(),
             body_path: None,
-            covered_elements: elems,
-            covered_relations: rels,
+            covered_elements: elems.into_iter().collect(),
         }
     }
 }

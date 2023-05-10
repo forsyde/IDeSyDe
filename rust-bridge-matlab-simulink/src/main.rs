@@ -2,7 +2,7 @@ use std::collections::{HashMap, HashSet};
 
 use idesyde_blueprints::execute_standalone_identification_module;
 use idesyde_core::{
-    headers::{self, DesignModelHeader, LabelledArcWithPorts},
+    headers::{self, DesignModelHeader},
     DecisionModel, DesignModel, MarkedIdentificationRule, StandaloneIdentificationModule,
 };
 use serde::{Deserialize, Serialize};
@@ -38,26 +38,25 @@ impl DesignModel for SimulinkReactiveDesignModel {
 
     fn header(&self) -> headers::DesignModelHeader {
         let mut elems: HashSet<String> = HashSet::new();
-        let mut rels: HashSet<LabelledArcWithPorts> = HashSet::new();
         elems.extend(self.processes.iter().map(|x| x.to_owned()));
         elems.extend(self.delays.iter().map(|x| x.to_owned()));
         elems.extend(self.sources.iter().map(|x| x.to_owned()));
         elems.extend(self.constants.iter().map(|x| x.to_owned()));
         elems.extend(self.sinks.iter().map(|x| x.to_owned()));
         for i in 0..self.links_src.len() {
-            rels.insert(LabelledArcWithPorts {
-                src: self.links_src[i].to_owned(),
-                dst: self.links_dst[i].to_owned(),
-                src_port: Some(self.links_src_port[i].to_owned()),
-                dst_port: Some(self.links_dst_port[i].to_owned()),
-                label: Some(format!("{}", self.links_size[i])),
-            });
+            elems.insert(format!(
+                "{}={}:{}-{}:{}",
+                self.links_size[i],
+                self.links_src[i],
+                self.links_src_port[i],
+                self.links_dst[i],
+                self.links_dst_port[i]
+            ));
         }
         DesignModelHeader {
             category: self.unique_identifier(),
             model_paths: Vec::new(),
             elements: elems.into_iter().collect(),
-            relations: rels.into_iter().collect(),
         }
     }
 }

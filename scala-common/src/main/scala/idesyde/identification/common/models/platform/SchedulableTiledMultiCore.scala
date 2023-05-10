@@ -10,10 +10,11 @@ final case class SchedulableTiledMultiCore(
     val hardware: TiledMultiCore,
     val runtimes: PartitionedCoresWithRuntimes
 ) extends StandardDecisionModel
-    with InstrumentedPlatformMixin[Double] with CompleteDecisionModel derives ReadWriter {
+    with InstrumentedPlatformMixin[Double]
+    with CompleteDecisionModel
+    derives ReadWriter {
 
-  val coveredElements         = hardware.coveredElements ++ runtimes.coveredElements
-  val coveredElementRelations = hardware.coveredElementRelations ++ runtimes.coveredElementRelations
+  val coveredElements = hardware.coveredElements ++ runtimes.coveredElements
 
   def processorsFrequency: Vector[Long] = hardware.processorsFrequency
   def processorsProvisions: Vector[Map[String, Map[String, Double]]] =

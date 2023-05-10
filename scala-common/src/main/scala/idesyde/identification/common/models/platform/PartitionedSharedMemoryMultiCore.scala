@@ -15,8 +15,7 @@ final case class PartitionedSharedMemoryMultiCore(
 
   override def bodyAsBinary: Array[Byte] = writeBinary(this)
 
-  val coveredElements         = runtimes.coveredElements ++ hardware.coveredElements
-  val coveredElementRelations = hardware.coveredElementRelations ++ runtimes.coveredElementRelations
+  val coveredElements = runtimes.coveredElements ++ hardware.coveredElements
 
   val uniqueIdentifier: String = "PartitionedSharedMemoryMultiCore"
 }

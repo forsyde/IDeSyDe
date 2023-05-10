@@ -29,6 +29,10 @@ pub trait DecisionModel {
         None
     }
 
+    fn body_as_cbor(&self) -> Option<Vec<u8>> {
+        None
+    }
+
     fn dominates(&self, o: Box<dyn DecisionModel>) -> bool {
         match self.header().partial_cmp(&o.header()) {
             Some(Ordering::Greater) => true,
@@ -59,44 +63,35 @@ impl PartialOrd<dyn DecisionModel> for dyn DecisionModel {
     }
 }
 
-// pub fn write_design_model_to_path<M: DesignModel + ?Sized>(
-//     m: &Box<M>,
-//     p: &Path,
-//     prefix_str: &str,
-//     suffix_str: &str,
-// ) -> DesignModelHeader {
-//     let h = m.header();
-//     write_design_model_header_to_path(&h, p, prefix_str, suffix_str);
-//     DesignModelHeader {
-//         category: h.category,
-//         model_paths: Vec::new(),
-//         elements: h.elements,
-//         relations: h.relations,
-//     }
-// }
-
 pub fn write_design_model_header_to_path(
     h: &DesignModelHeader,
     p: &Path,
     prefix_str: &str,
     suffix_str: &str,
 ) -> bool {
-    let jstr = serde_json::to_string(&h).expect("Failed to serialize decision model to json.");
     std::fs::write(
         p.join(format!(
             "header_{}_{}_{}.json",
             prefix_str, h.category, suffix_str
         )),
-        jstr,
+        serde_json::to_string(h).expect("Failed to serialize decision model to json."),
     )
-    .expect("Failed to write serialized decision model during identification.");
-    let msg = rmp_serde::to_vec(&h).expect("Failed to serialize decision model to msgpack.");
-    let target_path = p.join(format!(
-        "header_{}_{}_{}.msgpack",
+    .expect("Failed to write serialized design model during identification.");
+    fs::write(
+        p.join(format!(
+            "header_{}_{}_{}.msgpack",
+            prefix_str, h.category, suffix_str
+        )),
+        rmp_serde::to_vec(h).expect("Failed to serialize design model to msgpack."),
+    )
+    .expect("Failed to write serialized design model during identification.");
+    let cbor_file = fs::File::create(p.join(format!(
+        "header_{}_{}_{}.cbor",
         prefix_str, h.category, suffix_str
-    ));
-    fs::write(&target_path, msg)
-        .expect("Failed to write serialized dominant model during identification.");
+    )))
+    .expect("Failed to create file to deserialize CBOR design model header.");
+    ciborium::into_writer(h, cbor_file)
+        .expect("Failed to serialize design model header during identification.");
     true
 }
 
@@ -106,22 +101,29 @@ pub fn write_decision_model_header_to_path(
     prefix_str: &str,
     suffix_str: &str,
 ) -> bool {
-    let jstr = serde_json::to_string(h).expect("Failed to serialize decision model to json.");
     std::fs::write(
         p.join(format!(
-            "body_{}_{}_{}.json",
+            "header_{}_{}_{}.json",
             prefix_str, h.category, suffix_str
         )),
-        jstr,
+        serde_json::to_string(h).expect("Failed to serialize decision model to json."),
     )
     .expect("Failed to write serialized decision model during identification.");
-    let msg = rmp_serde::to_vec(h).expect("Failed to serialize decision model to msgpack.");
-    let target_path = p.join(format!(
-        "body_{}_{}_{}.msgpack",
+    fs::write(
+        p.join(format!(
+            "header_{}_{}_{}.msgpack",
+            prefix_str, h.category, suffix_str
+        )),
+        rmp_serde::to_vec(h).expect("Failed to serialize decision model to msgpack."),
+    )
+    .expect("Failed to write serialized decision model during identification.");
+    let cbor_file = fs::File::create(p.join(format!(
+        "header_{}_{}_{}.cbor",
         prefix_str, h.category, suffix_str
-    ));
-    fs::write(&target_path, msg)
-        .expect("Failed to write serialized dominant model during identification.");
+    )))
+    .expect("Failed to create file to deserialize CBOR decision model header.");
+    ciborium::into_writer(h, cbor_file)
+        .expect("Failed to serialize decision model header during identification.");
     true
 }
 
@@ -140,6 +142,11 @@ pub fn write_decision_model_to_path<M: DecisionModel + ?Sized>(
     if let Some(b) = m.body_as_msgpack() {
         let p = format!("body_{}_{}_{}.msgpack", prefix_str, h.category, suffix_str);
         std::fs::write(&p, b).expect("Failed to write MsgPack body of decision model.");
+        h.body_path = Some(p);
+    }
+    if let Some(b) = m.body_as_cbor() {
+        let p = format!("body_{}_{}_{}.cbor", prefix_str, h.category, suffix_str);
+        std::fs::write(&p, b).expect("Failed to write CBOR body of decision model.");
         h.body_path = Some(p);
     }
     write_decision_model_header_to_path(&h, p, prefix_str, suffix_str);
@@ -209,7 +216,7 @@ impl PartialEq<dyn ExplorationModule> for dyn ExplorationModule {
 
 impl Eq for dyn ExplorationModule {}
 
-pub trait StandaloneIdentificationModule {
+pub trait StandaloneIdentificationModule: IdentificationModule {
     fn uid(&self) -> String;
     fn read_design_model(&self, path: &Path) -> Option<Box<dyn DesignModel>>;
     fn write_design_model(&self, design_model: &Box<dyn DesignModel>, dest: &Path) -> bool;

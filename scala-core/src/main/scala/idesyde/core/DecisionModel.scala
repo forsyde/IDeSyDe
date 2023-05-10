@@ -25,7 +25,7 @@ trait DecisionModel {
   /** This depenent type hides away what type of element relation this [[DecisionModel]] is
     * abstracting
     */
-  type ElementRelationT
+  // type ElementRelationT
 
   /** This in theory should return the name of the class, but might be removed in the future if not
     * necessary or its generation gets automated.
@@ -54,7 +54,7 @@ trait DecisionModel {
     * @see
     *   [[coveredElements]]
     */
-  def coveredElementRelations: Set[ElementRelationT]
+  // def coveredElementRelations: Set[ElementRelationT]
 
   /** This function compares two [[DecisionModel]] s in order to find out which one identifies
     * [[idesyde.identification.DesignModel]] _better_. In other words, which one has a bigger
@@ -105,7 +105,7 @@ trait DecisionModel {
     * @return
     *   the string representation of a relation in this [[DecisionModel]]
     */
-  def elementRelationID(rel: ElementRelationT): LabelledArcWithPorts
+  // def elementRelationID(rel: ElementRelationT): String
 
   /** This function is a simple shorthand for the stringification of all [[coveredElements]].
     *
@@ -120,14 +120,13 @@ trait DecisionModel {
     * @return
     *   all stringified [[coveredElementRelations]]
     */
-  def coveredElementRelationIDs: Set[LabelledArcWithPorts] =
-    coveredElementRelations.map(elementRelationID)
+  // def coveredElementRelationIDs: Set[String] =
+  //   coveredElementRelations.map(elementRelationID)
 
   def header: DecisionModelHeader = DecisionModelHeader(
     uniqueIdentifier,
     None,
-    coveredElementIDs,
-    coveredElementRelationIDs
+    coveredElementIDs //++ coveredElementRelationIDs
   )
 
 }

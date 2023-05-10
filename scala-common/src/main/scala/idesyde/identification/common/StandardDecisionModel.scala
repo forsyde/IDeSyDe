@@ -20,11 +20,8 @@ import idesyde.core.headers.LabelledArcWithPorts
   */
 trait StandardDecisionModel extends DecisionModel {
 
-  type ElementT         = String
-  type ElementRelationT = (String, String)
+  type ElementT = String
 
   def elementID(elem: String): String = elem
 
-  def elementRelationID(rel: (String, String)): LabelledArcWithPorts =
-    LabelledArcWithPorts(rel._1, None, None, rel._2, None)
 }

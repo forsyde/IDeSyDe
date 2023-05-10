@@ -45,11 +45,11 @@ object ChocoExplorationModule extends ExplorationModule {
 
   def decodeDecisionModels(m: DecisionModelHeader): Option[DecisionModel] = {
     m match {
-      case DecisionModelHeader("SDFToTiledMultiCore", body_path, _, _) =>
+      case DecisionModelHeader("SDFToTiledMultiCore", body_path, _) =>
         body_path.flatMap(decodeFromPath[SDFToTiledMultiCore])
-      case DecisionModelHeader("PeriodicWorkloadToPartitionedSharedMultiCore", body_path, _, _) =>
+      case DecisionModelHeader("PeriodicWorkloadToPartitionedSharedMultiCore", body_path, _) =>
         body_path.flatMap(decodeFromPath[PeriodicWorkloadToPartitionedSharedMultiCore])
-      case DecisionModelHeader("TasksAndSDFServerToMultiCore", body_path, _, _) =>
+      case DecisionModelHeader("TasksAndSDFServerToMultiCore", body_path, _) =>
         body_path.flatMap(decodeFromPath[TasksAndSDFServerToMultiCore])
       case _ => None
     }

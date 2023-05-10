@@ -23,17 +23,15 @@ final case class TasksAndSDFServerToMultiCore(
 
   def bodyAsBinary: Array[Byte] = writeBinary(this)
 
-  val coveredElements = tasksAndSDFs.coveredElements ++ platform.coveredElements
-  val coveredElementRelations =
-    tasksAndSDFs.coveredElementRelations ++ platform.coveredElementRelations ++
-      processesMappings.toSet ++ messagesMappings.toSet ++
+  val coveredElements =
+    tasksAndSDFs.coveredElements ++ platform.coveredElements ++ (processesMappings.toSet ++ messagesMappings.toSet ++
       messageSlotAllocations
         .flatMap((channel, slots) =>
           platform.hardware.communicationElems
             .filter(ce => slots.contains(ce) && slots(ce).exists(b => b))
             .map(ce => (channel, ce))
         )
-        .toSet
+        .toSet).map(_.toString)
 
   val processorsFrequency: Vector[Long] = platform.hardware.processorsFrequency
   val processorsProvisions: Vector[Map[String, Map[String, Double]]] =

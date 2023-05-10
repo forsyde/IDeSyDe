@@ -27,11 +27,8 @@ final case class PeriodicWorkloadToPartitionedSharedMultiCore(
 
   override def bodyAsBinary: Array[Byte] = writeBinary(this)
 
-  val coveredElements: Set[String] = workload.coveredElements ++ platform.coveredElements
-
-  val coveredElementRelations: Set[(String, String)] =
-    workload.coveredElementRelations ++ platform.coveredElementRelations ++
-      processSchedulings.toSet ++
+  val coveredElements: Set[String] =
+    workload.coveredElements ++ platform.coveredElements ++ (processSchedulings.toSet ++
       processMappings.toSet ++
       channelMappings.toSet ++
       channelSlotAllocations
@@ -40,7 +37,7 @@ final case class PeriodicWorkloadToPartitionedSharedMultiCore(
             .filter(ce => slots.contains(ce) && slots(ce).exists(b => b))
             .map(ce => (channel, ce))
         )
-        .toSet
+        .toSet).map(_.toString)
 
   val wcets = computeWcets
 

@@ -36,8 +36,11 @@ final case class SharedMemoryMultiCore(
   override def bodyAsBinary: Array[Byte] = writeBinary(this)
 
   // #covering_documentation_example
-  val coveredElements         = (processingElems ++ communicationElems ++ storageElems).toSet
-  val coveredElementRelations = topologySrcs.zip(topologyDsts).toSet
+  val coveredElements =
+    (processingElems ++ communicationElems ++ storageElems).toSet ++ (topologySrcs
+      .zip(topologyDsts)
+      .toSet)
+      .map(_.toString)
   // #covering_documentation_example
 
   val platformElements: Vector[String] =

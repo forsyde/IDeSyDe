@@ -19,18 +19,18 @@ final case class SDFToTiledMultiCore(
     val actorThroughputs: Vector[Double]
 ) extends StandardDecisionModel
     with CompleteDecisionModel
-    with WCETComputationMixin(sdfApplications, platform) derives ReadWriter {
+    with WCETComputationMixin(sdfApplications, platform)
+    derives ReadWriter {
 
-  val coveredElements = sdfApplications.coveredElements ++ platform.coveredElements
-  val coveredElementRelations =
-    sdfApplications.coveredElementRelations ++ platform.coveredElementRelations ++
-      sdfApplications.actorsIdentifiers.zip(processMappings) ++
+  val coveredElements =
+    sdfApplications.coveredElements ++ platform.coveredElements ++ (sdfApplications.actorsIdentifiers
+      .zip(processMappings) ++
       sdfApplications.channelsIdentifiers.zip(messageMappings) ++
       messageSlotAllocations.zipWithIndex.flatMap((slots, i) =>
         platform.hardware.communicationElems
           .filter(ce => slots.contains(ce) && slots(ce).exists(b => b))
           .map(ce => sdfApplications.channelsIdentifiers(i) -> ce)
-      )
+      )).map(_.toString)
 
   val processorsFrequency: Vector[Long] = platform.hardware.processorsFrequency
   val processorsProvisions: Vector[Map[String, Map[String, Double]]] =

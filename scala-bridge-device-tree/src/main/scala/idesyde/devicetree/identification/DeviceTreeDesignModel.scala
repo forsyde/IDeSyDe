@@ -3,13 +3,15 @@ package idesyde.devicetree.identification
 import idesyde.core.DesignModel
 import idesyde.devicetree.{DeviceTreeLink, DeviceTreeComponent, RootNode}
 import idesyde.core.headers.LabelledArcWithPorts
+import idesyde.identification.common.StandardDecisionModel
 
 final case class DeviceTreeDesignModel(
     val roots: List[RootNode]
 ) extends DesignModel {
 
-  type ElementT         = DeviceTreeComponent
-  type ElementRelationT = (DeviceTreeComponent, DeviceTreeComponent)
+  type ElementT = String
+
+  override def elementID(elem: String): String = elem
 
   lazy val crossLinked: List[RootNode] = {
     val locallyLinked = roots.map(_.linked)
@@ -26,23 +28,23 @@ final case class DeviceTreeDesignModel(
     locallyLinked
   }
 
-  override def elementRelationID(
-      rel: (DeviceTreeComponent, DeviceTreeComponent)
-  ): LabelledArcWithPorts =
-    LabelledArcWithPorts(rel._1.fullId, None, None, rel._2.fullId, None)
-
-  lazy val elements: Set[DeviceTreeComponent] =
-    crossLinked.flatMap(_.allChildren).toSet
-
-  lazy val elementRelations: Set[(DeviceTreeComponent, DeviceTreeComponent)] =
-    elements.flatMap(elem => elem.children.map(child => elem -> child)) ++ elements.flatMap(elem =>
-      elem.connected.flatMap(link =>
-        link match {
-          case DeviceTreeLink.FullLink(label, other) => Some(elem -> other)
-          case _                                     => None
-        }
-      )
-    )
+  lazy val elements: Set[String] = {
+    val nodes = crossLinked.flatMap(_.allChildren).toSet.map(_.fullId)
+    // root connects all of its elements in a memory mapped way
+    val rootLinks = for (
+      root  <- crossLinked;
+      child <- root.children
+    ) yield s"${root.fullId}/devicebus->${child.fullId}"
+    // now get connections that exist otherwise
+    val moreLinks = for (
+      src <- crossLinked.flatMap(_.allChildren);
+      dst <- crossLinked.flatMap(_.allChildren);
+      if src != dst;
+      l <- src.connected;
+      if l == dst
+    ) yield s"${src.fullId}->${dst.fullId}"
+    nodes ++ rootLinks.toSet ++ moreLinks.toSet
+  }
 
   override def merge(other: DesignModel): Option[DesignModel] = other match {
     case o: DeviceTreeDesignModel => {
@@ -53,12 +55,12 @@ final case class DeviceTreeDesignModel(
     case _ => None
   }
 
-  override def elementID(elem: DeviceTreeComponent): String = elem.label.getOrElse(
-    crossLinked
-      .find(root => root.allChildren.exists(_ == elem))
-      .map(root => root.prefix + "/" + elem.fullId)
-      .getOrElse(elem.fullId)
-  )
+  // override def elementID(elem: DeviceTreeComponent): String = elem.label.getOrElse(
+  //   crossLinked
+  //     .find(root => root.allChildren.exists(_ == elem))
+  //     .map(root => root.prefix + "/" + elem.fullId)
+  //     .getOrElse(elem.fullId)
+  // )
 
   def uniqueIdentifier: String = "DeviceTreeDesignModel"
 }

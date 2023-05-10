@@ -8,17 +8,17 @@ final case class HeaderOnlyDesignModel(override val header: DesignModelHeader) e
 
   type ElementT = String
 
-  type ElementRelationT = LabelledArcWithPorts
+  type ElementRelationT = String
 
   override def merge(other: DesignModel): Option[DesignModel] = other match {
-    case HeaderOnlyDesignModel(DesignModelHeader(header.category, elems, models, rels)) =>
+    case HeaderOnlyDesignModel(DesignModelHeader(header.category, elems, models)) =>
       Some(
         HeaderOnlyDesignModel(
           DesignModelHeader(
             header.category,
             header.model_paths ++ models,
-            header.elements ++ elems.filterNot(e => header.elements.contains(e)),
-            header.relations ++ rels.filterNot(e => header.relations.contains(e))
+            header.elements ++ elems.filterNot(e => header.elements.contains(e))
+            // header.relations ++ rels.filterNot(e => header.relations.contains(e))
           )
         )
       )
@@ -27,11 +27,11 @@ final case class HeaderOnlyDesignModel(override val header: DesignModelHeader) e
 
   lazy val elements = header.elements.toSet
 
-  lazy val elementRelations = header.relations.toSet
+  lazy val elementRelations = header.elements.toSet
 
   def elementID(elem: String): String = elem
 
-  def elementRelationID(rel: LabelledArcWithPorts): LabelledArcWithPorts = rel
+  def elementRelationID(rel: String): String = rel
 
   def uniqueIdentifier = header.category
 

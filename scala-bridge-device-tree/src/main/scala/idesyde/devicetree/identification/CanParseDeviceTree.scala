@@ -10,6 +10,7 @@ import idesyde.devicetree.{
   DeviceTreeProperty,
   CPUNode
 }
+import idesyde.devicetree.BusNode
 
 trait CanParseDeviceTree extends RegexParsers {
   override def skipWhitespace: Boolean = true
@@ -83,6 +84,15 @@ trait CanParseDeviceTree extends RegexParsers {
           )
         } else if (nodename == "memory") {
           MemoryNode(
+            newNode.nodeName,
+            newNode.addr,
+            newNode.label,
+            newNode.children,
+            newNode.properties,
+            newNode.connected
+          )
+        } else if (nodename.contains("bus")) {
+          BusNode(
             newNode.nodeName,
             newNode.addr,
             newNode.label,

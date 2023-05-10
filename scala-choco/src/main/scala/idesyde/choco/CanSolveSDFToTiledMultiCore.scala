@@ -39,6 +39,8 @@ import org.jgrapht.graph.DefaultDirectedGraph
 import scala.collection.mutable.Stack
 import idesyde.utils.HasUtils
 import idesyde.choco.HasDiscretizationToIntegers
+import org.chocosolver.solver.objective.ParetoMaximizer
+import org.chocosolver.solver.constraints.Constraint
 
 final class CanSolveSDFToTiledMultiCore(using logger: Logger)
     extends ChocoExplorable[SDFToTiledMultiCore]
@@ -150,8 +152,8 @@ final class CanSolveSDFToTiledMultiCore(using logger: Logger)
       messageMappings,
       procElemSendsDataToAnother
     )
-    createAndApplyMOOPropagator(chocoModel, Array(numMappedElements, globalInvThroughput))
-    postSymmetryBreakingConstraints(
+    // createAndApplyMOOPropagator(chocoModel, Array(numMappedElements, globalInvThroughput))
+    val (computedOnlineIndexOfPe, _) = postSymmetryBreakingConstraints(
       m,
       chocoModel,
       processMappings,
@@ -169,8 +171,26 @@ final class CanSolveSDFToTiledMultiCore(using logger: Logger)
       invThroughputs,
       numMappedElements
     )
-    chocoModel.getSolver().setNoGoodRecordingFromRestarts()
+    val commSlotsSum = chocoModel.sum("commSlotsSum", numVirtualChannelsForProcElem.flatten: _*)
+    // val paretoPropagator = ParetoMaximizer(
+    //   Array(
+    //     chocoModel.intMinusView(numMappedElements),
+    //     chocoModel.intMinusView(globalInvThroughput)
+    //     // chocoModel.intMinusView(commSlotsSum)
+    //   )
+    // )
+    // chocoModel.post(Constraint("paretoOptimality", paretoPropagator))
+    // chocoModel.getSolver().plugMonitor(paretoPropagator)
+    createAndApplyMOOPropagator(
+      chocoModel,
+      Array(
+        numMappedElements,
+        globalInvThroughput,
+        commSlotsSum
+      )
+    )
     chocoModel.getSolver().setRestartOnSolutions()
+    chocoModel.getSolver().setNoGoodRecordingFromRestarts()
     // chocoModel
     //   .getSolver()
     //   .plugMonitor(new IMonitorContradiction {
@@ -217,11 +237,19 @@ final class CanSolveSDFToTiledMultiCore(using logger: Logger)
             )
           )
         )
-      chocoModel.ifOnlyIf(
-        chocoModel.or(anyMapped: _*),
-        chocoModel.arithm(procElemSendsDataToAnother(p)(pp), "=", 1)
-        // tileAnalysisModule.procElemSendsDataToAnother(sendi)(desti).eq(0).decompose()
-      )
+      if (procElemSendsDataToAnother(p)(pp).getUB() == 1) {
+        chocoModel.ifOnlyIf(
+          chocoModel.or(anyMapped: _*),
+          chocoModel.arithm(procElemSendsDataToAnother(p)(pp), "=", 1)
+          // tileAnalysisModule.procElemSendsDataToAnother(sendi)(desti).eq(0).decompose()
+        )
+      } else {
+        chocoModel.and(anyMapped.map(_.getOpposite()): _*).post()
+      }
+      // if (procElemSendsDataToAnother(p)(pp).getUB() == 1) {
+      // } else {
+      //   chocoModel.and(anyMapped.map(c => c.getOpposite()): _*)
+      // }
     }
     procElemSendsDataToAnother
   }
@@ -267,8 +295,10 @@ final class CanSolveSDFToTiledMultiCore(using logger: Logger)
           .increasing(pSorted.map(idx => computedOnlineIndexOfPe(idx)), 1)
           .post()
       })
-    val dataFlows = m.platform.runtimes.schedulers.map(i =>
-      m.platform.runtimes.schedulers.map(j => chocoModel.boolVar(s"dataFlows($i, $j)"))
+    val dataFlows = m.platform.runtimes.schedulers.zipWithIndex.map((src, i) =>
+      m.platform.runtimes.schedulers.zipWithIndex.map((dst, j) =>
+        chocoModel.boolVar(s"dataFlows($i, $j)")
+      )
     )
     for (
       (p, i)  <- m.platform.runtimes.schedulers.zipWithIndex;
@@ -342,13 +372,8 @@ final class CanSolveSDFToTiledMultiCore(using logger: Logger)
             .isDefined
     )
     val strategies: Array[AbstractStrategy[? <: Variable]] = Array(
-      FindAndProve(
-        nUsedPEs +: processesMemoryMapping,
-        compactStrategy,
-        Search
-          .sequencer(Search.minDomLBSearch(nUsedPEs), compactStrategy)
-          .asInstanceOf[AbstractStrategy[IntVar]]
-      ),
+      Search.activityBasedSearch(nUsedPEs),
+      compactStrategy,
       Search.minDomLBSearch(numVirtualChannelsForProcElem.flatten: _*),
       Search.inputOrderLBSearch(
         m.sdfApplications.topologicalAndHeavyJobOrdering
@@ -356,6 +381,7 @@ final class CanSolveSDFToTiledMultiCore(using logger: Logger)
           .map(jobOrder(_)): _*
       ),
       Search.minDomLBSearch(invThroughputs: _*)
+      // Search.minDomLBSearch(indexOfPes: _*)
     )
     chocoModel.getSolver().setSearch(strategies: _*)
     strategies
@@ -517,7 +543,8 @@ final class CanSolveSDFToTiledMultiCore(using logger: Logger)
                     .computedPaths(srcM)(dstM)
                     .map(ce => m.platform.hardware.communicationElems.indexOf(ce))
                     .map(cex => numVirtualChannelsForProcElem(srcM)(cex).getValue())
-                    .min
+                    .minOption
+                    .getOrElse(0)
                 } else 0.0
               })
           ),

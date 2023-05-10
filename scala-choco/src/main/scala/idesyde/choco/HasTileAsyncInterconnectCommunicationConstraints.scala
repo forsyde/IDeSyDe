@@ -50,10 +50,10 @@ trait HasTileAsyncInterconnectCommunicationConstraints(
     val procElemSendsDataToAnother: Array[Array[BoolVar]] =
       procElems.zipWithIndex.map((src, i) => {
         procElems.zipWithIndex.map((dst, j) => {
-          if (!commElemsPaths(src)(dst).isEmpty)
-            chocoModel.boolVar(s"sendsData(${i},${j})")
+          if (commElemsPaths(src)(dst).size > 0)
+            chocoModel.boolVar(s"sendsData(${src},${dst})")
           else
-            chocoModel.boolVar(s"sendsData(${i},${j})", false)
+            chocoModel.boolVar(s"sendsData(${src},${dst})", false)
         })
       })
 
@@ -61,7 +61,7 @@ trait HasTileAsyncInterconnectCommunicationConstraints(
       messageTravelTimePerVirtualChannel.zipWithIndex.map((t, c) => {
         procElems.zipWithIndex.map((src, i) => {
           procElems.zipWithIndex.map((dst, j) => {
-            if (i != j) {
+            if (i != j && commElemsPaths(src)(dst).size > 0) {
               chocoModel.intVar(
                 s"commTime(${c},${src},${dst})",
                 0,
@@ -99,16 +99,12 @@ trait HasTileAsyncInterconnectCommunicationConstraints(
       (p, src)  <- procElems.zipWithIndex;
       (pp, dst) <- procElems.zipWithIndex
       if src != dst;
+      if commElemsPaths(p)(pp).size > 0;
       c <- 0 until numMessages
     ) {
       val singleChannelSum = commElemsPaths(p)(pp)
         .map(ce => messageTravelTimePerVirtualChannel(c)(commElems.indexOf(ce)))
         .sum
-      if (
-        commElemsPaths(p)(pp)
-          .map(ce => numVirtualChannelsForProcElem(src)(commElems.indexOf(ce)))
-          .size == 0
-      ) then println(s"$p to $pp")
       val minVCInPath = chocoModel.min(
         s"minVCInPath($src, $dst)",
         commElemsPaths(p)(pp)

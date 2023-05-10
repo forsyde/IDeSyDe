@@ -8,9 +8,9 @@ import idesyde.identification.common.models.workload.{InstrumentedWorkloadMixin}
 import idesyde.identification.common.models.CommunicatingAndTriggeredReactiveWorkload
 import idesyde.core.CompleteDecisionModel
 
-final case class TaskdAndSDFServer(
-    val sdfApplications: SDFApplication,
+final case class PeriodicWorkloadAndSDFServers(
     val workload: CommunicatingAndTriggeredReactiveWorkload,
+    val sdfApplications: SDFApplication,
     val sdfServerPeriod: Vector[Double],
     val sdfServerBudget: Vector[Double]
 ) extends StandardDecisionModel
@@ -22,11 +22,11 @@ final case class TaskdAndSDFServer(
 
   def bodyAsBinary: Array[Byte] = writeBinary(this)
 
-  val coveredElements = sdfApplications.coveredElements ++ workload.coveredElements
+  val coveredElements = workload.coveredElements ++ sdfApplications.coveredElements
   val processComputationalNeeds: Vector[Map[String, Map[String, Long]]] =
-    sdfApplications.processComputationalNeeds ++ workload.processComputationalNeeds
+    workload.processComputationalNeeds ++ sdfApplications.processComputationalNeeds
   val processSizes: Vector[Long] = sdfApplications.actorSizes ++ workload.processSizes
 
-  val messagesMaxSizes: Vector[Long] = sdfApplications.messagesMaxSizes ++ workload.messagesMaxSizes
+  val messagesMaxSizes: Vector[Long] = workload.messagesMaxSizes ++ sdfApplications.messagesMaxSizes
   val uniqueIdentifier: String       = "TaskdAndSDFServer"
 }

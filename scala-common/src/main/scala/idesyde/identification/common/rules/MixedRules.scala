@@ -6,9 +6,10 @@ import idesyde.identification.common.models.mixed.{
   PeriodicWorkloadToPartitionedSharedMultiCore,
   SDFToPartitionedSharedMemory,
   SDFToTiledMultiCore,
-  TaskdAndSDFServer,
-  TasksAndSDFServerToMultiCore
+  PeriodicWorkloadAndSDFServers
 }
+import idesyde.identification.common.models.mixed.TasksAndSDFServerToMultiCore
+
 import idesyde.identification.common.models.platform.SchedulableTiledMultiCore
 import idesyde.identification.common.models.platform.PartitionedSharedMemoryMultiCore
 import idesyde.identification.common.models.sdf.SDFApplication
@@ -22,7 +23,7 @@ trait MixedRules(using logger: Logger) {
   def identTaskdAndSDFServer(
       models: Set[DesignModel],
       identified: Set[DecisionModel]
-  ): Set[TaskdAndSDFServer] = {
+  ): Set[PeriodicWorkloadAndSDFServers] = {
     val sdfDecisionModel = identified
       .filter(_.isInstanceOf[SDFApplication])
       .map(_.asInstanceOf[SDFApplication])
@@ -35,7 +36,7 @@ trait MixedRules(using logger: Logger) {
       .filter(_.isConsistent)
       .flatMap(a =>
         taskDecisionModel.map(b =>
-          TaskdAndSDFServer(
+          PeriodicWorkloadAndSDFServers(
             sdfApplications = a,
             workload = b,
             sdfServerPeriod = Vector.empty,
@@ -135,8 +136,8 @@ trait MixedRules(using logger: Logger) {
       identified: Set[DecisionModel]
   ): Set[TasksAndSDFServerToMultiCore] = {
     val app = identified
-      .filter(_.isInstanceOf[TaskdAndSDFServer])
-      .map(_.asInstanceOf[TaskdAndSDFServer])
+      .filter(_.isInstanceOf[PeriodicWorkloadAndSDFServers])
+      .map(_.asInstanceOf[PeriodicWorkloadAndSDFServers])
     val plat = identified
       .filter(_.isInstanceOf[PartitionedSharedMemoryMultiCore])
       .map(_.asInstanceOf[PartitionedSharedMemoryMultiCore])

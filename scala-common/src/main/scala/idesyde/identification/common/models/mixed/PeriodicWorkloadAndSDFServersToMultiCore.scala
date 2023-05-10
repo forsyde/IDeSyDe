@@ -9,7 +9,7 @@ import idesyde.identification.common.models.platform.PartitionedSharedMemoryMult
 import idesyde.core.CompleteDecisionModel
 
 final case class TasksAndSDFServerToMultiCore(
-    val tasksAndSDFs: TaskdAndSDFServer,
+    val tasksAndSDFs: PeriodicWorkloadAndSDFServers,
     val platform: PartitionedSharedMemoryMultiCore,
     val processesMappings: Vector[(String, String)],
     val messagesMappings: Vector[(String, String)],

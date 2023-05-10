@@ -8,7 +8,8 @@ trait CanSolveTasksAndSDFServersToMulticore
     extends ChocoExplorable[TasksAndSDFServerToMultiCore]
     with HasDiscretizationToIntegers
     with HasSingleProcessSingleMessageMemoryConstraints
-    with HasActive4StageDuration {
+    with HasActive4StageDuration
+    with HasTimingConstraints {
 
   def buildChocoModel(
       m: TasksAndSDFServerToMultiCore,
@@ -66,8 +67,19 @@ trait CanSolveTasksAndSDFServersToMulticore
 
     // build the model so that it can be acessed later
     // memory module
+    val taskExecution = 
+      m.tasksAndSDFs.workload.processes.zipWithIndex
+        .map((t, i) =>
+          chocoModel.intVar(
+            s"processExecution($t)",
+            m.platform.hardware.processingElems.zipWithIndex
+              .filter((_, j) => m.wcets(i)(j) > -1)
+              .map((m, j) => j)
+              .toArray
+          ))
+        
     val processExecution =
-      (m.tasksAndSDFs.workload.processes ++ m.tasksAndSDFs.sdfApplications.actorsIdentifiers).zipWithIndex
+      taskExecution ++ m.tasksAndSDFs.sdfApplications.actorsIdentifiers.zipWithIndex
         .map((t, i) =>
           chocoModel.intVar(
             s"processExecution($t)",
@@ -110,63 +122,139 @@ trait CanSolveTasksAndSDFServersToMulticore
           true // keeping only bounds for the response time is enough and better
         )
       )
+    val processingElemsVirtualChannelInCommElem = m.platform.hardware.processingElems.map(p =>
+      m.platform.hardware.communicationElems.zipWithIndex.map((c, i) =>
+        chocoModel.intVar(
+          s"vc($p, $c)",
+          0,
+          m.platform.hardware.communicationElementsMaxChannels(i),
+          true
+        )
+      )
+    )
 
-    // val (
-    //   durationsExec,
-    //   durationsFetch,
-    //   durationsRead,
-    //   durationsWrite,
-    //   durations,
-    //   totalVCPerCommElem
-    // ) = postActive4StageDurationsConstraints(
-    //   chocoModel,
-    //   wcets.map(_.toArray).toArray,
-    //   m.tasksAndSDFs.workload.processSizes
-    //     .map(d =>
-    //       m.platform.hardware.communicationElementsBitPerSecPerChannel
-    //         .map(b => double2int(d.toDouble / b))
-    //         .toArray
-    //     )
-    //     .toArray ++ m.tasksAndSDFs.sdfApplications.actorSizes.map(d =>
-    //       m.platform.hardware.communicationElementsBitPerSecPerChannel
-    //         .map(b => double2int(d.toDouble / b))
-    //         .toArray
-    //     ).toArray,
-    //   m.tasksAndSDFs.workload.messagesMaxSizes
-    //     .map(d =>
-    //       m.platform.hardware.communicationElementsBitPerSecPerChannel
-    //         .map(b => double2int(d.toDouble / b))
-    //         .toArray
-    //     )
-    //     .toArray ++ messagesSizes.map(d => m.platform.hardware.communicationElementsBitPerSecPerChannel
-    //         .map(b => double2int(d.toDouble / b))
-    //         .toArray),
-    //   m.platform.hardware.communicationElementsMaxChannels,
-    //   (s: Int) => (t: Int) =>
-    //     m.platform.hardware.computedPaths(m.platform.hardware.platformElements(s))(m.platform.hardware.platformElements(t)).map(m.platform.hardware.communicationElems.indexOf),
-    //   (t: Int) =>
-    //     (c: Int) =>
-    //       m.workload.dataGraph
-    //         .find((a, b, _) =>
-    //           a == m.workload.tasks(t) && b == m.workload
-    //             .dataChannels(c)
-    //         )
-    //         .map((_, _, l) => l)
-    //         .getOrElse(0L),
-    //   (t: Int) =>
-    //     (c: Int) =>
-    //       m.workload.dataGraph
-    //         .find((a, b, _) =>
-    //           b == m.workload.tasks(t) && a == m.workload
-    //             .dataChannels(c)
-    //         )
-    //         .map((_, _, l) => l)
-    //         .getOrElse(0L),
-    //   taskExecution.toArray,
-    //   taskMapping,
-    //   dataBlockMapping,
-    //   processingElemsVirtualChannelInCommElem.map(_.toArray).toArray
-    // )
+    val (
+      durationsExec,
+      durationsFetch,
+      durationsRead,
+      durationsWrite,
+      durations,
+      totalVCPerCommElem
+    ) = postActive4StageDurationsConstraints(
+      chocoModel,
+      wcets.map(_.toArray).toArray,
+      m.tasksAndSDFs.workload.processSizes
+        .map(d =>
+          m.platform.hardware.communicationElementsBitPerSecPerChannel
+            .map(b => double2int(d.toDouble / b))
+            .toArray
+        )
+        .toArray ++ m.tasksAndSDFs.sdfApplications.actorSizes.map(d =>
+          m.platform.hardware.communicationElementsBitPerSecPerChannel
+            .map(b => double2int(d.toDouble / b))
+            .toArray
+        ).toArray,
+      m.tasksAndSDFs.workload.messagesMaxSizes
+        .map(d =>
+          m.platform.hardware.communicationElementsBitPerSecPerChannel
+            .map(b => double2int(d.toDouble / b))
+            .toArray
+        )
+        .toArray ++ messagesSizes.map(d => m.platform.hardware.communicationElementsBitPerSecPerChannel
+            .map(b => double2int(d.toDouble / b))
+            .toArray),
+      m.platform.hardware.communicationElementsMaxChannels,
+      (s: Int) => (t: Int) =>
+        m.platform.hardware.computedPaths(m.platform.hardware.platformElements(s))(m.platform.hardware.platformElements(t)).map(m.platform.hardware.communicationElems.indexOf),
+      (t: Int) =>
+        (c: Int) =>
+          if (t < m.tasksAndSDFs.workload.tasks.size && m.tasksAndSDFs.workload
+                .dataChannels.size < c) {
+            m.tasksAndSDFs.workload.dataGraph
+              .find((a, b, _) =>
+                a == m.tasksAndSDFs.workload.tasks(t) && b == m.tasksAndSDFs.workload
+                  .dataChannels(c)
+              )
+              .map((_, _, l) => l)
+              .getOrElse(0L)
+          } else if (t < m.tasksAndSDFs.sdfApplications.actorsIdentifiers.size && c < m.tasksAndSDFs.sdfApplications.sdfMessages.size) {
+            val a = m.tasksAndSDFs.sdfApplications.actorsIdentifiers(t - m.tasksAndSDFs.workload.tasks.size)
+            val cIdx = m.tasksAndSDFs.sdfApplications.channelsIdentifiers(c - m.tasksAndSDFs.workload.dataChannels.size)
+            m.tasksAndSDFs.sdfApplications.dataflowGraphs(0).find((src, dst, l) => src == a && dst == cIdx).map((_,_,l) => l.toLong).getOrElse(0L)
+          } else 0L,
+      (t: Int) =>
+        (c: Int) =>
+          if (t < m.tasksAndSDFs.workload.tasks.size && m.tasksAndSDFs.workload
+                .dataChannels.size < c) {
+            m.tasksAndSDFs.workload.dataGraph
+              .find((a, b, _) =>
+                b == m.tasksAndSDFs.workload.tasks(t) && a == m.tasksAndSDFs.workload
+                  .dataChannels(c)
+              )
+              .map((_, _, l) => l)
+              .getOrElse(0L)
+          } else if (t < m.tasksAndSDFs.sdfApplications.actorsIdentifiers.size && c < m.tasksAndSDFs.sdfApplications.sdfMessages.size) {
+            val a = m.tasksAndSDFs.sdfApplications.actorsIdentifiers(t - m.tasksAndSDFs.workload.tasks.size)
+            val cIdx = m.tasksAndSDFs.sdfApplications.channelsIdentifiers(c - m.tasksAndSDFs.workload.dataChannels.size)
+            m.tasksAndSDFs.sdfApplications.dataflowGraphs(0).find((src, dst, l) => src == cIdx && dst == a).map((_,_,l) => l.toLong).getOrElse(0L)
+          } else 0L,
+      processExecution.toArray,
+      processMapping,
+      messageMapping,
+      processingElemsVirtualChannelInCommElem.map(_.toArray).toArray
+    )
+
+    postMinimalResponseTimesByBlocking(
+      chocoModel,
+      priorities,
+      periods.toArray,
+      maxUtilizations.toArray,
+      durations,
+      taskExecution.toArray,
+      blockingTimes.toArray,
+      responseTimes.toArray
+    )
+
+    val utilizations = postMaximumUtilizations(
+      chocoModel,
+      priorities,
+      periods.toArray,
+      maxUtilizations.toArray,
+      durations,
+      taskExecution.toArray,
+      blockingTimes.toArray,
+      responseTimes.toArray
+    )
+
+    m.platform.runtimes.schedulers.zipWithIndex
+      .filter((s, j) => m.platform.runtimes.isFixedPriority(j))
+      .foreach((s, j) => {
+        postFixedPrioriPreemtpiveConstraint(j, 
+        chocoModel,
+      priorities,
+      periods.toArray,
+      deadlines.toArray,
+      wcets.map(_.toArray).toArray,
+      maxUtilizations.toArray,
+      durations,
+      taskExecution.toArray,
+      blockingTimes.toArray,
+      responseTimes.toArray)
+      })
+    // for each SC scheduler
+    m.platform.runtimes.schedulers.zipWithIndex
+        .filter((s, j) => m.platform.runtimes.isCyclicExecutive(j))
+        .foreach((s, j) => {
+          postStaticCyclicExecutiveConstraint(
+            chocoModel,
+            (i: Int) => (j: Int) => m.tasksAndSDFs.workload.interTaskOccasionalBlock(i)(j),
+            durations,
+            taskExecution.toArray,
+            responseTimes.toArray,
+            blockingTimes.toArray,
+          //val cons = Constraint(s"FPConstrats${j}", DependentWorkloadFPPropagator())
+        )
+    })
 
     chocoModel
   }

@@ -29,191 +29,267 @@ import forsyde.io.java.typed.viewers.decision.results.AnalyzedActor
 trait MixedRules {
 
   def integratePeriodicWorkloadToPartitionedSharedMultiCore(
-      designModel: DesignModel,
-      decisionModel: DecisionModel
-  ): Option[? <: DesignModel] = {
-    designModel match {
-      case ForSyDeDesignModel(forSyDeSystemGraph) => {
-        decisionModel match {
-          case dse: PeriodicWorkloadToPartitionedSharedMultiCore => {
-            val rebuilt = ForSyDeSystemGraph().merge(forSyDeSystemGraph)
-            for (
-              (taskId, schedId) <- dse.processSchedulings;
-              // ok for now because it is a 1-to-many situation wit the current Decision Models (2023-01-16)
-              // TODO: fix it to be stable later
-              task = rebuilt
-                .vertexSet()
-                .stream()
-                .filter(v => taskId.contains(v.getIdentifier()))
-                .findAny()
-                .get();
-              sched = rebuilt.queryVertex(schedId).get()
-            ) {
-              AbstractScheduler
-                .safeCast(sched)
-                .ifPresent(scheduler => {
-                  Scheduled.enforce(task).insertSchedulersPort(rebuilt, scheduler)
-                  GreyBox.enforce(sched).insertContainedPort(rebuilt, Visualizable.enforce(task))
-                })
-            }
-            for (
-              (taskId, memId) <- dse.processMappings;
-              // ok for now because it is a 1-to-many situation wit the current Decision Models (2023-01-16)
-              // TODO: fix it to be stable later
-              task = rebuilt
-                .vertexSet()
-                .stream()
-                .filter(v => taskId.contains(v.getIdentifier()))
-                .findAny()
-                .get();
-              mem = rebuilt.queryVertex(memId).get()
-            ) {
-              GenericMemoryModule
-                .safeCast(mem)
-                .ifPresent(memory =>
-                  MemoryMapped.enforce(task).insertMappingHostsPort(rebuilt, memory)
-                )
-            }
-            for (
-              (channelId, memId) <- dse.channelMappings;
-              // ok for now because it is a 1-to-many situation wit the current Decision Models (2023-01-16)
-              // TODO: fix it to be stable later
-              channel = rebuilt
-                .vertexSet()
-                .stream()
-                .filter(v => channelId.contains(v.getIdentifier()))
-                .findAny()
-                .get();
-              mem = rebuilt.queryVertex(memId).get()
-            ) {
-              GenericMemoryModule
-                .safeCast(mem)
-                .ifPresent(memory =>
-                  MemoryMapped.enforce(channel).insertMappingHostsPort(rebuilt, memory)
-                )
-            }
-            Some(ForSyDeDesignModel(rebuilt))
-          }
-          case _ => Option.empty
-        }
+      decisionModel: Set[DecisionModel],
+      designModel: Set[DesignModel]
+  ): Set[? <: DesignModel] = {
+    val model = designModel
+      .flatMap(_ match {
+        case ForSyDeDesignModel(forSyDeSystemGraph) =>
+          Some(forSyDeSystemGraph)
+        case _ => None
+      })
+      .foldRight(ForSyDeSystemGraph())((a, b) => b.merge(a))
+    val solveds = decisionModel.flatMap(_ match {
+      case dse: PeriodicWorkloadToPartitionedSharedMultiCore => {
+        if (
+          !dse.processMappings.isEmpty && !dse.processSchedulings.isEmpty && !dse.channelMappings.isEmpty
+        )
+          Some(dse)
+        else None
       }
-      case _ => Option.empty
+      case _ => None
+    })
+    for (solved <- solveds; rebuilt = ForSyDeSystemGraph().merge(model)) yield {
+      for (
+        (taskId, schedId) <- solved.processSchedulings;
+        // ok for now because it is a 1-to-many situation wit the current Decision Models (2023-01-16)
+        // TODO: fix it to be stable later
+        task = rebuilt
+          .vertexSet()
+          .stream()
+          .filter(v => taskId.contains(v.getIdentifier()))
+          .findAny()
+          .get();
+        sched = rebuilt.queryVertex(schedId).get()
+      ) {
+        AbstractScheduler
+          .safeCast(sched)
+          .ifPresent(scheduler => {
+            Scheduled.enforce(task).insertSchedulersPort(rebuilt, scheduler)
+            GreyBox.enforce(sched).insertContainedPort(rebuilt, Visualizable.enforce(task))
+          })
+      }
+      for (
+        (taskId, memId) <- solved.processMappings;
+        // ok for now because it is a 1-to-many situation wit the current Decision Models (2023-01-16)
+        // TODO: fix it to be stable later
+        task = rebuilt
+          .vertexSet()
+          .stream()
+          .filter(v => taskId.contains(v.getIdentifier()))
+          .findAny()
+          .get();
+        mem = rebuilt.queryVertex(memId).get()
+      ) {
+        GenericMemoryModule
+          .safeCast(mem)
+          .ifPresent(memory => MemoryMapped.enforce(task).insertMappingHostsPort(rebuilt, memory))
+      }
+      for (
+        (channelId, memId) <- solved.channelMappings;
+        // ok for now because it is a 1-to-many situation wit the current Decision Models (2023-01-16)
+        // TODO: fix it to be stable later
+        channel = rebuilt
+          .vertexSet()
+          .stream()
+          .filter(v => channelId.contains(v.getIdentifier()))
+          .findAny()
+          .get();
+        mem = rebuilt.queryVertex(memId).get()
+      ) {
+        GenericMemoryModule
+          .safeCast(mem)
+          .ifPresent(memory =>
+            MemoryMapped.enforce(channel).insertMappingHostsPort(rebuilt, memory)
+          )
+      }
+      ForSyDeDesignModel(rebuilt)
+    }
+  }
+
+  def integratePeriodicWorkloadToPartitionedSharedMultiCoreFromNothing(
+      designModel: Set[DesignModel],
+      decisionModel: Set[DecisionModel]
+  ): Set[? <: DesignModel] = {
+    val model = designModel
+      .flatMap(_ match {
+        case ForSyDeDesignModel(forSyDeSystemGraph) =>
+          Some(forSyDeSystemGraph)
+        case _ => None
+      })
+      .foldRight(ForSyDeSystemGraph())((a, b) => b.merge(a))
+    val solveds = decisionModel.flatMap(_ match {
+      case dse: PeriodicWorkloadToPartitionedSharedMultiCore => {
+        if (
+          !dse.processMappings.isEmpty && !dse.processSchedulings.isEmpty && !dse.channelMappings.isEmpty
+        )
+          Some(dse)
+        else None
+      }
+      case _ => None
+    })
+    for (solved <- solveds; rebuilt = ForSyDeSystemGraph().merge(model)) yield {
+      for (
+        (taskId, schedId) <- solved.processSchedulings;
+        // ok for now because it is a 1-to-many situation wit the current Decision Models (2023-01-16)
+        // TODO: fix it to be stable later
+        task  = rebuilt.queryVertex(taskId).orElse(rebuilt.newVertex(taskId));
+        sched = rebuilt.queryVertex(schedId).orElse(rebuilt.newVertex(schedId))
+      ) {
+        AbstractScheduler
+          .safeCast(sched)
+          .ifPresent(scheduler => {
+            Scheduled.enforce(task).insertSchedulersPort(rebuilt, scheduler)
+            GreyBox.enforce(sched).insertContainedPort(rebuilt, Visualizable.enforce(task))
+          })
+      }
+      for (
+        (taskId, memId) <- solved.processMappings;
+        // ok for now because it is a 1-to-many situation wit the current Decision Models (2023-01-16)
+        // TODO: fix it to be stable later
+        task = rebuilt.queryVertex(taskId).orElse(rebuilt.newVertex(taskId));
+        mem  = rebuilt.queryVertex(memId).orElse(rebuilt.newVertex(memId))
+      ) {
+        GenericMemoryModule
+          .safeCast(mem)
+          .ifPresent(memory => MemoryMapped.enforce(task).insertMappingHostsPort(rebuilt, memory))
+      }
+      for (
+        (channelId, memId) <- solved.channelMappings;
+        // ok for now because it is a 1-to-many situation wit the current Decision Models (2023-01-16)
+        // TODO: fix it to be stable later
+        channel = rebuilt.queryVertex(channelId).orElse(rebuilt.newVertex(channelId));
+        mem     = rebuilt.queryVertex(memId).orElse(rebuilt.newVertex(memId))
+      ) {
+        GenericMemoryModule
+          .safeCast(mem)
+          .ifPresent(memory =>
+            MemoryMapped.enforce(channel).insertMappingHostsPort(rebuilt, memory)
+          )
+      }
+      ForSyDeDesignModel(rebuilt)
     }
   }
 
   def integrateSDFToTiledMultiCore(
-      designModel: DesignModel,
-      decisionModel: DecisionModel
-  ): Option[? <: DesignModel] = {
-    designModel match {
-      case ForSyDeDesignModel(forSyDeSystemGraph) => {
-        val newModel = ForSyDeSystemGraph().merge(forSyDeSystemGraph)
-        decisionModel match {
-          case dse: SDFToTiledMultiCore => {
-            // first, we take care of the process mappings
-            for (
-              (mem, i) <- dse.processMappings.zipWithIndex;
-              actorId   = dse.sdfApplications.actorsIdentifiers(i);
-              memIdx    = dse.platform.hardware.memories.indexOf(mem);
-              proc      = dse.platform.hardware.processors(memIdx);
-              scheduler = dse.platform.runtimes.schedulers(memIdx)
-            ) {
-              newModel
-                .queryVertex(actorId)
-                .ifPresent(actor => {
-                  newModel
-                    .queryVertex(mem)
-                    .ifPresent(m => {
-                      val v = MemoryMapped.enforce(actor)
-                      v.setMappingHostsPort(
-                        newModel,
-                        java.util.Set.of(GenericMemoryModule.enforce(m))
-                      )
-                    })
-                  newModel
-                    .queryVertex(scheduler)
-                    .ifPresent(s => {
-                      val v = Scheduled.enforce(actor)
-                      v.setSchedulersPort(newModel, java.util.Set.of(AbstractScheduler.enforce(s)))
-                    })
-                })
-            }
-            // now, we take care of the memory mappings
-            for (
-              (mem, i) <- dse.messageMappings.zipWithIndex;
-              channelID = dse.sdfApplications.channelsIdentifiers(i);
-              memIdx    = dse.platform.hardware.memories.indexOf(mem)
-            ) {
-              newModel
-                .queryVertex(channelID)
-                .ifPresent(actor => {
-                  newModel
-                    .queryVertex(mem)
-                    .ifPresent(m => {
-                      val v = MemoryMapped.enforce(actor)
-                      v.setMappingHostsPort(
-                        newModel,
-                        java.util.Set.of(GenericMemoryModule.enforce(m))
-                      )
-                    })
-                })
-            }
-            // now, we put the schedule in each scheduler
-            for (
-              (list, si) <- dse.schedulerSchedules.zipWithIndex;
-              proc      = dse.platform.hardware.processors(si);
-              scheduler = dse.platform.runtimes.schedulers(si)
-            ) {
-              newModel
-                .queryVertex(scheduler)
-                .ifPresent(sched => {
-                  val scs = AllocatedSingleSlotSCS.enforce(sched)
-                  scs.setEntries(list.asJava)
-                })
-            }
-            // finally, the channel comm allocations
-            var commAllocs = dse.platform.hardware.communicationElementsMaxChannels.map(maxVc =>
-              Buffer.fill(maxVc)(Buffer.empty[String])
-            )
-            for (
-              (maxVc, ce) <- dse.platform.hardware.communicationElementsMaxChannels.zipWithIndex;
-              (dict, c)   <- dse.messageSlotAllocations.zipWithIndex;
-              vc          <- 0 until maxVc;
-              commElem = dse.platform.hardware.communicationElems(ce);
-              if dict.getOrElse(commElem, Vector.fill(maxVc)(false))(vc);
-              cId = dse.sdfApplications.channelsIdentifiers(c)
-            ) {
-              commAllocs(ce)(vc) += cId
-            }
-            for ((ce, i) <- dse.platform.hardware.communicationElems.zipWithIndex) {
-              newModel
-                .queryVertex(ce)
-                .ifPresent(comm =>
-                  AllocatedSharedSlotSCS
-                    .enforce(comm)
-                    .setEntries(commAllocs(i).map(_.asJava).asJava)
-                )
-            }
-            // add the throughputs for good measure
-            for (
-              (a, ai) <- dse.sdfApplications.actorsIdentifiers.zipWithIndex;
-              th = dse.sdfApplications.minimumActorThroughputs(ai)
-            ) {
-              newModel
-                .queryVertex(a)
-                .ifPresent(actor => {
-                  val frac = Rational(th)
-                  val act  = AnalyzedActor.enforce(actor)
-                  act.setThroughputInSecsNumerator(frac.numeratorAsLong)
-                  act.setThroughputInSecsDenominator(frac.denominatorAsLong)
-                })
-            }
-            Some(ForSyDeDesignModel(newModel))
-          }
-          case _ => Option.empty
-        }
+      decisionModel: Set[DecisionModel],
+      designModel: Set[DesignModel]
+  ): Set[? <: DesignModel] = {
+    val model = designModel
+      .flatMap(_ match {
+        case ForSyDeDesignModel(forSyDeSystemGraph) =>
+          Some(forSyDeSystemGraph)
+        case _ => None
+      })
+      .foldRight(ForSyDeSystemGraph())((a, b) => b.merge(a))
+    val solveds = decisionModel.flatMap(_ match {
+      case dse: SDFToTiledMultiCore => {
+        if (!dse.messageMappings.isEmpty && !dse.processMappings.isEmpty)
+          Some(dse)
+        else None
       }
-      case _ => Option.empty
+      case _ => None
+    })
+    for (solved <- solveds; rebuilt = ForSyDeSystemGraph().merge(model)) yield {
+      // first, we take care of the process mappings
+      for (
+        (mem, i) <- solved.processMappings.zipWithIndex;
+        actorId   = solved.sdfApplications.actorsIdentifiers(i);
+        memIdx    = solved.platform.hardware.memories.indexOf(mem);
+        proc      = solved.platform.hardware.processors(memIdx);
+        scheduler = solved.platform.runtimes.schedulers(memIdx)
+      ) {
+        rebuilt
+          .queryVertex(actorId)
+          .ifPresent(actor => {
+            rebuilt
+              .queryVertex(mem)
+              .ifPresent(m => {
+                val v = MemoryMapped.enforce(actor)
+                v.setMappingHostsPort(
+                  rebuilt,
+                  java.util.Set.of(GenericMemoryModule.enforce(m))
+                )
+              })
+            rebuilt
+              .queryVertex(scheduler)
+              .ifPresent(s => {
+                val v = Scheduled.enforce(actor)
+                v.setSchedulersPort(rebuilt, java.util.Set.of(AbstractScheduler.enforce(s)))
+              })
+          })
+      }
+      // now, we take care of the memory mappings
+      for (
+        (mem, i) <- solved.messageMappings.zipWithIndex;
+        channelID = solved.sdfApplications.channelsIdentifiers(i);
+        memIdx    = solved.platform.hardware.memories.indexOf(mem)
+      ) {
+        rebuilt
+          .queryVertex(channelID)
+          .ifPresent(actor => {
+            rebuilt
+              .queryVertex(mem)
+              .ifPresent(m => {
+                val v = MemoryMapped.enforce(actor)
+                v.setMappingHostsPort(
+                  rebuilt,
+                  java.util.Set.of(GenericMemoryModule.enforce(m))
+                )
+              })
+          })
+      }
+      // now, we put the schedule in each scheduler
+      for (
+        (list, si) <- solved.schedulerSchedules.zipWithIndex;
+        proc      = solved.platform.hardware.processors(si);
+        scheduler = solved.platform.runtimes.schedulers(si)
+      ) {
+        rebuilt
+          .queryVertex(scheduler)
+          .ifPresent(sched => {
+            val scs = AllocatedSingleSlotSCS.enforce(sched)
+            scs.setEntries(list.asJava)
+          })
+      }
+      // finally, the channel comm allocations
+      var commAllocs = solved.platform.hardware.communicationElementsMaxChannels.map(maxVc =>
+        Buffer.fill(maxVc)(Buffer.empty[String])
+      )
+      for (
+        (maxVc, ce) <- solved.platform.hardware.communicationElementsMaxChannels.zipWithIndex;
+        (dict, c)   <- solved.messageSlotAllocations.zipWithIndex;
+        vc          <- 0 until maxVc;
+        commElem = solved.platform.hardware.communicationElems(ce);
+        if dict.getOrElse(commElem, Vector.fill(maxVc)(false))(vc);
+        cId = solved.sdfApplications.channelsIdentifiers(c)
+      ) {
+        commAllocs(ce)(vc) += cId
+      }
+      for ((ce, i) <- solved.platform.hardware.communicationElems.zipWithIndex) {
+        rebuilt
+          .queryVertex(ce)
+          .ifPresent(comm =>
+            AllocatedSharedSlotSCS
+              .enforce(comm)
+              .setEntries(commAllocs(i).map(_.asJava).asJava)
+          )
+      }
+      // add the throughputs for good measure
+      for (
+        (a, ai) <- solved.sdfApplications.actorsIdentifiers.zipWithIndex;
+        th = solved.sdfApplications.minimumActorThroughputs(ai)
+      ) {
+        rebuilt
+          .queryVertex(a)
+          .ifPresent(actor => {
+            val frac = Rational(th)
+            val act  = AnalyzedActor.enforce(actor)
+            act.setThroughputInSecsNumerator(frac.numeratorAsLong)
+            act.setThroughputInSecsDenominator(frac.denominatorAsLong)
+          })
+      }
+      ForSyDeDesignModel(rebuilt)
     }
   }
 

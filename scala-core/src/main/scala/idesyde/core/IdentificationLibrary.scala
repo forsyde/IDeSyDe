@@ -38,6 +38,6 @@ trait IdentificationLibrary {
     *   The set of integration rules registered in this module
     */
   def reverseIdentificationRules: Set[
-    (DesignModel, DecisionModel) => Option[? <: DesignModel]
+    (Set[DecisionModel], Set[DesignModel]) => Set[? <: DesignModel]
   ]
 }

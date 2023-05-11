@@ -107,26 +107,26 @@ trait CanIdentify(using logger: Logger) extends HasUtils {
 
   @targetName("integrateDecisionModelWithModules")
   def integrateDecisionModel(
-      model: DesignModel,
-      decisions: DecisionModel,
+      decisions: Set[DecisionModel],
+      models: Set[DesignModel],
       integrationModules: Set[IdentificationLibrary] = Set()
   ): Set[DesignModel] =
     integrateDecisionModel(
-      model,
       decisions,
+      models,
       integrationModules.flatMap(_.reverseIdentificationRules)
     )
 
   @targetName("integrateDecisionModelWithRules")
   def integrateDecisionModel(
-      model: DesignModel,
-      decisions: DecisionModel,
+      decisions: Set[DecisionModel],
+      models: Set[DesignModel],
       integrationRules: Set[
-        (DesignModel, DecisionModel) => Option[? <: DesignModel]
+        (Set[DecisionModel], Set[DesignModel]) => Set[? <: DesignModel]
       ]
   ): Set[DesignModel] = for (
     integrationRule <- integrationRules;
-    integrated      <- integrationRule(model, decisions)
+    integrated      <- integrationRule(decisions, models)
   ) yield integrated
 
   // private def reachibilityClosure(matrix: Vector[Vector[Boolean]]): Vector[Vector[Boolean]] = {

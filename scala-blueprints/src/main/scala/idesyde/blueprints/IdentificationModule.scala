@@ -72,12 +72,12 @@ trait IdentificationModule
   def logger: Logger = SimpleStandardIOLogger("WARN")
 
   def reverseIdentification(
-      designModel: DesignModel,
-      solvedDecisionModel: DecisionModel
+      solvedDecisionModels: Set[DecisionModel],
+      designModels: Set[DesignModel]
   ): Set[DesignModel] = {
     for (
       irule      <- reverseIdentificationRules;
-      integrated <- irule(designModel, solvedDecisionModel)
+      integrated <- irule(solvedDecisionModels, designModels)
     ) yield integrated
   }
 
@@ -157,16 +157,14 @@ trait IdentificationModule
                 .flatMap(h => decisionHeaderToModel(h))
                 .toSet
             for (
-              (d, i) <- designModels.zipWithIndex;
-              (s, j) <- solvedDecisionModels.zipWithIndex;
               (m, k) <- reverseIdentification(
-                d,
-                s
+                solvedDecisionModels,
+                designModels
               ).zipWithIndex
             ) {
               val (hPath, bPath) = m.writeToPath(
                 integrationPath,
-                s"$i$j$k",
+                s"$k",
                 uniqueIdentifier
               )
               println(

@@ -33,8 +33,7 @@ object CommonIdentificationModule
 
   private val commonIdentificationLibrary = CommonIdentificationLibrary()
 
-  def reverseIdentificationRules: Set[(DesignModel, DecisionModel) => Option[? <: DesignModel]] =
-    commonIdentificationLibrary.reverseIdentificationRules
+  def reverseIdentificationRules = commonIdentificationLibrary.reverseIdentificationRules
 
   def identificationRules: Set[(Set[DesignModel], Set[DecisionModel]) => Set[? <: DecisionModel]] =
     commonIdentificationLibrary.identificationRules

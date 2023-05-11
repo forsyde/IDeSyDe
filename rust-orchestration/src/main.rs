@@ -300,6 +300,13 @@ fn main() {
         //         "Orchestrator",
         //     );
         // }
+        if let Some((e, m)) = dominant_biddings.first() {
+            debug!(
+                "Proceeding to explore {} with {}",
+                m.unique_identifier(),
+                e.unique_identifier()
+            );
+        }
         match (args.x_total_time_out, args.x_max_solutions) {
             (Some(t), Some(n)) => info!(
                 "Starting exploration up to {} total time-out seconds and {} solutions.",

@@ -27,15 +27,17 @@ import idesyde.identification.common.models.mixed.SDFToTiledMultiCore
 import idesyde.choco.ChocoExplorableOps._
 import idesyde.core.ExplorationCombinationDescription
 import idesyde.identification.common.models.mixed.PeriodicWorkloadToPartitionedSharedMultiCore
+import idesyde.identification.common.models.mixed.PeriodicWorkloadAndSDFServerToMultiCore
 
 class ChocoExplorer(using logger: Logger) extends Explorer:
 
   def combination(decisionModel: DecisionModel): ExplorationCombinationDescription = {
     val canExplore = decisionModel match
-      case sdf: SDFToTiledMultiCore                               => true
-      case workload: PeriodicWorkloadToPartitionedSharedMultiCore => true
-      case c: ChocoDecisionModel                                  => true
-      case _                                                      => false
+      case sdf: SDFToTiledMultiCore                                => true
+      case workload: PeriodicWorkloadToPartitionedSharedMultiCore  => true
+      case workloadAndSDF: PeriodicWorkloadAndSDFServerToMultiCore => true
+      case c: ChocoDecisionModel                                   => true
+      case _                                                       => false
     ExplorationCombinationDescription(
       canExplore,
       availableCriterias(decisionModel)
@@ -143,6 +145,14 @@ class ChocoExplorer(using logger: Logger) extends Explorer:
         timeDiscretizationFactor,
         memoryDiscretizationFactor
       )(using CanSolveDepTasksToPartitionedMultiCore())
+    case workloadAndSDF: PeriodicWorkloadAndSDFServerToMultiCore =>
+      exploreChocoExplorable(
+        workloadAndSDF,
+        explorationTotalTimeOutInSecs,
+        maximumSolutions,
+        timeDiscretizationFactor,
+        memoryDiscretizationFactor
+      )(using CanSolvePeriodicWorkloadAndSDFServersToMulticore())
     case solvable: ChocoDecisionModel =>
       val solver          = solvable.chocoModel.getSolver
       val isOptimization  = solvable.modelMinimizationObjectives.size > 0

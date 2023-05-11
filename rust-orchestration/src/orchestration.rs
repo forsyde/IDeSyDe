@@ -16,6 +16,7 @@ use idesyde_core::DecisionModel;
 use idesyde_core::DesignModel;
 use idesyde_core::ExplorationModule;
 use idesyde_core::IdentificationModule;
+use log::debug;
 
 #[derive(Debug, PartialEq, Eq, Hash)]
 pub struct ExternalIdentificationModule {
@@ -345,15 +346,16 @@ pub fn identification_procedure(
     design_models: &Vec<Box<dyn DesignModel>>,
     pre_identified: &mut Vec<Box<dyn DecisionModel>>,
 ) -> Vec<Box<dyn DecisionModel>> {
-    let mut step = (pre_identified.len() - 1) as i32;
+    let mut step = 0;
     let mut fix_point = false;
     let mut identified: Vec<Box<dyn DecisionModel>> = Vec::new();
     identified.append(pre_identified);
-    while !fix_point {
+    while !fix_point || step <= 1 {
+        // the step condition forces the procedure to go at least one more, fundamental for incrementability
         fix_point = true;
+        let mut added = 0;
         for imodule in imodules {
             let potential = imodule.identification_step(step, &design_models, &identified);
-            let mut added = 0;
             // potential.retain(|m| !identified.contains(m));
             for m in potential {
                 if !identified.contains(&m) {
@@ -361,8 +363,9 @@ pub fn identification_procedure(
                     added += 1;
                 }
             }
-            fix_point = fix_point && (added == 0);
         }
+        debug!("{} decision models identified at step {}", added, step);
+        fix_point = fix_point && (added == 0);
         step += 1;
     }
     identified

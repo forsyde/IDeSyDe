@@ -9,7 +9,7 @@ import idesyde.identification.common.models.platform.PartitionedSharedMemoryMult
 import idesyde.core.CompleteDecisionModel
 import idesyde.identification.common.models.mixed.PeriodicWorkloadAndSDFServers
 
-final case class TasksAndSDFServerToMultiCore(
+final case class PeriodicWorkloadAndSDFServerToMultiCore(
     val tasksAndSDFs: PeriodicWorkloadAndSDFServers,
     val platform: PartitionedSharedMemoryMultiCore,
     val processesMappings: Vector[(String, String)],
@@ -42,5 +42,5 @@ final case class TasksAndSDFServerToMultiCore(
 
   val wcets = computeWcets
 
-  val uniqueIdentifier: String = "TasksAndSDFServerToMultiCore"
+  val uniqueIdentifier: String = "PeriodicWorkloadAndSDFServerToMultiCore"
 }

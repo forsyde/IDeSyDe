@@ -9,7 +9,7 @@ import idesyde.identification.common.models.mixed.{
 }
 import idesyde.identification.common.models.mixed.PeriodicWorkloadAndSDFServers
 
-import idesyde.identification.common.models.mixed.TasksAndSDFServerToMultiCore
+import idesyde.identification.common.models.mixed.PeriodicWorkloadAndSDFServerToMultiCore
 
 import idesyde.identification.common.models.platform.SchedulableTiledMultiCore
 import idesyde.identification.common.models.platform.PartitionedSharedMemoryMultiCore
@@ -135,7 +135,7 @@ trait MixedRules(using logger: Logger) {
   def identTaksAndSDFServerToMultiCore(
       models: Set[DesignModel],
       identified: Set[DecisionModel]
-  ): Set[TasksAndSDFServerToMultiCore] = {
+  ): Set[PeriodicWorkloadAndSDFServerToMultiCore] = {
     val app = identified
       .filter(_.isInstanceOf[PeriodicWorkloadAndSDFServers])
       .map(_.asInstanceOf[PeriodicWorkloadAndSDFServers])
@@ -145,7 +145,7 @@ trait MixedRules(using logger: Logger) {
     // if ((runtimes.isDefined && plat.isEmpty) || (runtimes.isEmpty && plat.isDefined))
     app.flatMap(a =>
       plat.map(p =>
-        TasksAndSDFServerToMultiCore(
+        PeriodicWorkloadAndSDFServerToMultiCore(
           tasksAndSDFs = a,
           platform = p,
           processesMappings = Vector.empty,

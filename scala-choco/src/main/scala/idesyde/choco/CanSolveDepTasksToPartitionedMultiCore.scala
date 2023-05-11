@@ -321,6 +321,14 @@ final class CanSolveDepTasksToPartitionedMultiCore(using logger: Logger)
       ): _*
     )
 
+    chocoModel.getSolver().setLearningSignedClauses()
+
+    // chocoModel
+    //   .getSolver()
+    //   .plugMonitor(new IMonitorContradiction {
+    //     def onContradiction(cex: ContradictionException): Unit = println(cex.toString())
+    //   })
+
     chocoModel
   }
 

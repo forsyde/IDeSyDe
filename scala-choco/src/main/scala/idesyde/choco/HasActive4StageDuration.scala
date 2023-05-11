@@ -59,9 +59,10 @@ trait HasActive4StageDuration extends HasUtils {
       dataMapping: Array[IntVar],
       processingElemsVirtualChannelInCommElem: Array[Array[IntVar]]
   ): (Array[IntVar], Array[IntVar], Array[IntVar], Array[IntVar], Array[IntVar], Array[IntVar]) = {
-    val tasks      = 0 until executionTimes.length
-    val processors = 0 until executionTimes.head.length
-    val memories   = taskMapping.map(_.getLB().toInt).min until taskMapping.map(_.getUB().toInt).max
+    val tasks        = 0 until executionTimes.length
+    val dataChannels = 0 until dataTravelTime.length
+    val processors   = 0 until executionTimes.head.length
+    val memories = taskMapping.map(_.getLB().toInt).min until taskMapping.map(_.getUB().toInt).max
     val communicators = 0 until communicationElementsMaxChannels.length
     val durationsExec = tasks.zipWithIndex
       .map((t, i) =>
@@ -81,38 +82,38 @@ trait HasActive4StageDuration extends HasUtils {
         )
       )
       .toArray
-    val durationsRead = tasks.zipWithIndex
+    val durationsReadPerSig = tasks.zipWithIndex
       .map((t, i) =>
-        chocoModel.intVar(
-          s"input_wc($i)",
-          0,
-          dataTravelTime(i).sum,
-          true
+        dataChannels.map(j =>
+          if (taskReadsData(i)(j) > 0) {
+            chocoModel.intVar(
+              s"input_wc($i)",
+              0,
+              dataTravelTime(j).sum,
+              true
+            )
+          } else {
+            chocoModel.intVar(0)
+          }
         )
       )
       .toArray
-    val durationsWrite = tasks.zipWithIndex
+    val durationsWritePerSig = tasks.zipWithIndex
       .map((t, i) =>
-        chocoModel.intVar(
-          s"output_wc($i)",
-          0,
-          dataTravelTime(i).sum,
-          true
+        dataChannels.map(j =>
+          if (taskWritesData(i)(j) > 0) {
+            chocoModel.intVar(
+              s"output_wc($i, $j)",
+              0,
+              dataTravelTime(j).sum,
+              true
+            )
+          } else {
+            chocoModel.intVar(0)
+          }
         )
       )
       .toArray
-    val durations = tasks.zipWithIndex
-      .map((t, i) =>
-        chocoModel.sum(
-          s"dur($t)",
-          durationsFetch(i),
-          durationsRead(i),
-          durationsExec(i),
-          durationsWrite(i)
-        )
-      )
-      .toArray
-
     val totalVCPerCommElem = communicators
       .map(c =>
         chocoModel.intVar(
@@ -206,9 +207,9 @@ trait HasActive4StageDuration extends HasUtils {
           // at least one of the paths must be taken
           chocoModel.scalar(
             pathIdx.map(totalVCPerCommElem(_)),
-            pathIdx.map(taskTravelTime(t)(_)),
+            pathIdx.map(dataTravelTime(c)(_)),
             "=",
-            durationsRead(t)
+            durationsReadPerSig(t)(c)
           )
         )
       } else if (taskWritesData(t)(c) > 0) {
@@ -217,9 +218,9 @@ trait HasActive4StageDuration extends HasUtils {
           // at least one of the paths must be taken
           chocoModel.scalar(
             pathIdx.map(totalVCPerCommElem(_)),
-            pathIdx.map(taskTravelTime(t)(_)),
+            pathIdx.map(dataTravelTime(c)(_)),
             "=",
-            durationsWrite(t)
+            durationsWritePerSig(t)(c)
           )
         )
       }
@@ -234,6 +235,23 @@ trait HasActive4StageDuration extends HasUtils {
         )
         .post()
     }
+    val durationsRead = tasks.zipWithIndex
+      .map((t, i) => chocoModel.sum(s"input_wc($i)", durationsReadPerSig(i): _*))
+      .toArray
+    val durationsWrite = tasks.zipWithIndex
+      .map((t, i) => chocoModel.sum(s"output_wc($i)", durationsWritePerSig(i): _*))
+      .toArray
+    val durations = tasks.zipWithIndex
+      .map((t, i) =>
+        chocoModel.sum(
+          s"dur($t)",
+          durationsFetch(i),
+          durationsRead(i),
+          durationsExec(i),
+          durationsWrite(i)
+        )
+      )
+      .toArray
     (durationsExec, durationsFetch, durationsRead, durationsWrite, durations, totalVCPerCommElem)
   }
 }

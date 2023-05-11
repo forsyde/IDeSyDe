@@ -9,7 +9,8 @@ trait CanSolveTasksAndSDFServersToMulticore
     with HasDiscretizationToIntegers
     with HasSingleProcessSingleMessageMemoryConstraints
     with HasActive4StageDuration
-    with HasTimingConstraints {
+    with HasTimingConstraints
+    with HasSDFSchedulingAnalysisAndConstraints {
 
   def buildChocoModel(
       m: TasksAndSDFServerToMultiCore,
@@ -56,12 +57,17 @@ trait CanSolveTasksAndSDFServersToMulticore
     val wcets      = m.wcets.map(_.map(double2int))
     val maxUtilizations =
       m.platform.hardware.processingElems.map(p => 1.0) // TODO: add this later properly
-    val messagesSizes = m.tasksAndSDFs.sdfApplications.sdfMessages
+    val messagesBufferingSizes = m.tasksAndSDFs.sdfApplications.sdfMessages
       .map((src, _, _, mSize, p, c, tok) =>
         val s = (m.tasksAndSDFs.sdfApplications.sdfRepetitionVectors(
           m.tasksAndSDFs.sdfApplications.actorsIdentifiers.indexOf(src)
         ) * p + tok) * mSize
         long2int(s)
+      )
+      .toArray
+    val sdfMessagesMaxSizes = m.tasksAndSDFs.sdfApplications.sdfMessages
+      .map((src, _, _, mSize, p, c, tok) =>
+        long2int(p * mSize)
       )
       .toArray
 
@@ -77,9 +83,8 @@ trait CanSolveTasksAndSDFServersToMulticore
               .map((m, j) => j)
               .toArray
           ))
-        
-    val processExecution =
-      taskExecution ++ m.tasksAndSDFs.sdfApplications.actorsIdentifiers.zipWithIndex
+    val actorExecution = 
+      m.tasksAndSDFs.sdfApplications.actorsIdentifiers.zipWithIndex
         .map((t, i) =>
           chocoModel.intVar(
             s"processExecution($t)",
@@ -89,13 +94,16 @@ trait CanSolveTasksAndSDFServersToMulticore
               .toArray
           )
         )
+        
+    val processExecution =
+      taskExecution ++ actorExecution
     val (processMapping, messageMapping, _) =
       postSingleProcessSingleMessageMemoryConstraints(
         chocoModel,
         m.tasksAndSDFs.workload.processSizes
           .map(long2int)
           .toArray ++ m.tasksAndSDFs.sdfApplications.actorSizes.map(long2int),
-        m.tasksAndSDFs.workload.messagesMaxSizes.map(long2int).toArray ++ messagesSizes,
+        m.tasksAndSDFs.workload.messagesMaxSizes.map(long2int).toArray ++ messagesBufferingSizes,
         m.platform.hardware.storageSizes
           .map(long2int)
           .toArray
@@ -160,7 +168,7 @@ trait CanSolveTasksAndSDFServersToMulticore
             .map(b => double2int(d.toDouble / b))
             .toArray
         )
-        .toArray ++ messagesSizes.map(d => m.platform.hardware.communicationElementsBitPerSecPerChannel
+        .toArray ++ sdfMessagesMaxSizes.map(d => m.platform.hardware.communicationElementsBitPerSecPerChannel
             .map(b => double2int(d.toDouble / b))
             .toArray),
       m.platform.hardware.communicationElementsMaxChannels,
@@ -203,6 +211,9 @@ trait CanSolveTasksAndSDFServersToMulticore
       messageMapping,
       processingElemsVirtualChannelInCommElem.map(_.toArray).toArray
     )
+
+    val taskDurations = durations.take(m.tasksAndSDFs.workload.tasks.size)
+    val actorDurations = durations.drop(m.tasksAndSDFs.workload.tasks.size)
 
     postMinimalResponseTimesByBlocking(
       chocoModel,
@@ -255,6 +266,52 @@ trait CanSolveTasksAndSDFServersToMulticore
           //val cons = Constraint(s"FPConstrats${j}", DependentWorkloadFPPropagator())
         )
     })
+
+    val actorEffectiveDuration = actorDurations.zipWithIndex.map((d, i) => {
+      val mappedPEUtilization = chocoModel.element(s"mappedPEUtilization($i)", utilizations, actorExecution(i), 0)
+      val remainingUtilization = chocoModel.intAffineView(-1, mappedPEUtilization, 100)
+      val effectiveD = chocoModel.intVar(s"actorEffectiveDuration($i)", d.getLB(), d.getUB() * 100, true)
+      chocoModel.arithm(remainingUtilization, "*", effectiveD, "=", d).post()
+      effectiveD
+    })
+
+    val (
+      jobOrder,
+      mappedJobsPerElement,
+      invThroughputs,
+      numMappedElements,
+      globalInvThroughput
+    ) = postSDFTimingAnalysis(
+      chocoModel,
+      m.tasksAndSDFs.sdfApplications.actorsIdentifiers,
+      m.tasksAndSDFs.sdfApplications.sdfDisjointComponents.map(_.toVector).toVector,
+      m.tasksAndSDFs.sdfApplications.sdfMessages.map((s, t, _, l, p, _, _) => (s, t, l * p)),
+      m.tasksAndSDFs.sdfApplications.jobsAndActors,
+      m.tasksAndSDFs.sdfApplications.jobsAndActors.flatMap(s =>
+        m.tasksAndSDFs.sdfApplications.jobsAndActors
+          .filter(t =>
+            m.tasksAndSDFs.sdfApplications.firingsPrecedenceGraph
+              .get(s)
+              .isDirectPredecessorOf(m.tasksAndSDFs.sdfApplications.firingsPrecedenceGraph.get(t))
+          )
+          .map(t => (s, t))
+      ),
+      m.tasksAndSDFs.sdfApplications.jobsAndActors.flatMap(s =>
+        m.tasksAndSDFs.sdfApplications.jobsAndActors
+          .filter(t =>
+            m.tasksAndSDFs.sdfApplications.firingsPrecedenceGraphWithCycles
+              .get(s)
+              .isDirectPredecessorOf(m.tasksAndSDFs.sdfApplications.firingsPrecedenceGraphWithCycles.get(t))
+          )
+          .map(t => (s, t))
+      ),
+      m.platform.runtimes.schedulers,
+      m.tasksAndSDFs.sdfApplications.sdfRepetitionVectors,
+      (i: Int) => actorExecution(m.tasksAndSDFs.sdfApplications.actorsIdentifiers.indexOf(m.tasksAndSDFs.sdfApplications.jobsAndActors(i)._1)),
+      actorExecution.toArray,
+      actorEffectiveDuration,
+      m.tasksAndSDFs.sdfApplications.sdfMessages.map(message => m.platform.runtimes.schedulers.map(s1 => m.platform.runtimes.schedulers.map(s2 => chocoModel.intVar(0)).toArray).toArray).toArray
+    )
 
     chocoModel
   }

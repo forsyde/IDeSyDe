@@ -1,10 +1,11 @@
 #if !defined(CORE_H)
 #define CORE_H
 
-#include <nlohmann/json.hpp>
-
 #include <optional>
 #include <functional>
+
+#include <nlohmann/json.hpp>
+#include <cxxopts.hpp>
 
 #include <headers.hh>
 
@@ -61,13 +62,13 @@ namespace idesyde::core
                                                            vector<shared_ptr<DecisionModel>> decision_models);
         bool identifies_design_models() { return true; };
         bool identifies_decision_models() { return true; };
-    }
+    };
 
     class ReverseIdentificationRule
     {
     public:
         virtual vector<shared_ptr<DesignModel>> identify(vector<shared_ptr<DecisionModel>> decision_models, vector<shared_ptr<DesignModel>> design_models);
-    }
+    };
 
     class IdentificationModule
     {
@@ -108,7 +109,7 @@ namespace idesyde::core
         {
             return 0;
         };
-    }
+    };
 
     class StandaloneExplorationModule : ExplorationModule
     {
@@ -117,7 +118,7 @@ namespace idesyde::core
         {
             return 0;
         }
-    }
+    };
 
 }
 #endif // CORE_H

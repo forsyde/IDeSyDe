@@ -7,6 +7,7 @@ import idesyde.identification.common.models.sdf.SDFApplication
 import idesyde.identification.models.mixed.WCETComputationMixin
 import idesyde.identification.common.models.platform.PartitionedSharedMemoryMultiCore
 import idesyde.core.CompleteDecisionModel
+import idesyde.identification.common.models.mixed.PeriodicWorkloadAndSDFServers
 
 final case class TasksAndSDFServerToMultiCore(
     val tasksAndSDFs: PeriodicWorkloadAndSDFServers,

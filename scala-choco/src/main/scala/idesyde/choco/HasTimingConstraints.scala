@@ -44,7 +44,7 @@ trait HasTimingConstraints {
       .map(_.floor.toInt)
       .zipWithIndex
       .map((maxU, j) => {
-        chocoModel.intVar(s"pe_${j}_utilization", 0, maxU, true)
+        chocoModel.intVar(s"pe_${j}_utilization", 0, Math.min(maxU, 100), true)
       })
     // TODO: find a way to reduce the pessimism here
     chocoModel

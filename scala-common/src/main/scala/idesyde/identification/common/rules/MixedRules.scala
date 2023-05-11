@@ -5,9 +5,10 @@ import idesyde.core.DesignModel
 import idesyde.identification.common.models.mixed.{
   PeriodicWorkloadToPartitionedSharedMultiCore,
   SDFToPartitionedSharedMemory,
-  SDFToTiledMultiCore,
-  PeriodicWorkloadAndSDFServers
+  SDFToTiledMultiCore
 }
+import idesyde.identification.common.models.mixed.PeriodicWorkloadAndSDFServers
+
 import idesyde.identification.common.models.mixed.TasksAndSDFServerToMultiCore
 
 import idesyde.identification.common.models.platform.SchedulableTiledMultiCore

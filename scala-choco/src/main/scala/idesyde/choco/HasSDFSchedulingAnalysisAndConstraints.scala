@@ -54,27 +54,20 @@ trait HasSDFSchedulingAnalysisAndConstraints
   }
 
   def postSDFTimingAnalysis(
-      m: SDFToTiledMultiCore,
       chocoModel: Model,
+      actors: Vector[String],
+      actorSubGraphs: Vector[Vector[String]],
+      messages: Vector[(String, String, Long)],
+      jobsAndActors: Vector[(String, Int)],
+      partialOrder: Vector[((String, Int), (String, Int))],
+      partialOrderWithCycles: Vector[((String, Int), (String, Int))],
+      schedulers: Vector[String],
+      maxRepetitionsPerActors: (Int) => Int,
+      jobMapping: (Int) => IntVar,
       processMappings: Array[IntVar],
       durations: Array[IntVar],
       messageTravelDuration: Array[Array[Array[IntVar]]]
   ): (Array[IntVar], Array[IntVar], Array[IntVar], IntVar, IntVar) = {
-    val timeValues =
-      m.wcets.flatten ++ m.platform.hardware.maxTraversalTimePerBit.flatten
-    val memoryValues = m.platform.hardware.tileMemorySizes
-
-    val actors             = m.sdfApplications.actorsIdentifiers
-    val jobsAndActors      = m.sdfApplications.jobsAndActors
-    def jobMapping(i: Int) = processMappings(actors.indexOf(jobsAndActors(i)._1))
-
-    val schedulers = m.platform.runtimes.schedulers
-
-    val maxRepetitionsPerActors     = m.sdfApplications.sdfRepetitionVectors
-    def isSelfConcurrent(a: String) = m.sdfApplications.isSelfConcurrent(a)
-
-    val maximumTokensPerChannel = m.sdfApplications.pessimisticTokensPerChannel
-
     val maxLength = schedulers.zipWithIndex
       .map((_, p) => {
         actors.zipWithIndex
@@ -114,22 +107,13 @@ trait HasSDFSchedulingAnalysisAndConstraints
         true
       )
 
-    // val duration = actors.zipWithIndex
-    //   .map((a, i) =>
-    //     chocoModel.intVar(
-    //       s"dur($a)",
-    //       actorDuration(i).filter(_ > 0).toArray
-    //     )
-    //   )
-    //   .toArray
-
     val transmissionDelay =
-      m.sdfApplications.actorsIdentifiers.zipWithIndex.map((a, i) =>
-        m.sdfApplications.actorsIdentifiers.zipWithIndex
+      actors.zipWithIndex.map((a, i) =>
+        actors.zipWithIndex
           .map((aa, j) => {
             val messageTimesIdx =
-              m.sdfApplications.sdfMessages
-                .indexWhere((src, dst, _, _, _, _, _) => src == a && dst == aa)
+              messages
+                .indexWhere((src, dst, _) => src == a && dst == aa)
             val maxMessageTime =
               if (messageTimesIdx > -1) then
                 chocoModel.max(
@@ -141,21 +125,11 @@ trait HasSDFSchedulingAnalysisAndConstraints
           })
       )
 
-    // val maxBufferTokens = m.sdfApplications.sdfMessages.zipWithIndex.map((tuple, i) =>
-    //   val (src, dst, _, size, p, c, tok) = tuple
-    //   chocoModel.intVar(
-    //     s"maxBufferTokens(${tuple._1}, ${tuple._2})",
-    //     0,
-    //     tok + m.sdfApplications.sdfRepetitionVectors(actors.indexOf(src)) * p,
-    //     true
-    //   )
-    // )
-
     val mappedJobsPerElement = schedulers.zipWithIndex.map((p, i) =>
       chocoModel.count(
         s"mappedJobsPerElement($p)",
         i,
-        jobsAndActors.map((a, _) => processMappings(actors.indexOf(a))): _*
+        jobsAndActors.toArray.map((a, _) => processMappings(actors.indexOf(a))): _*
       )
     )
 
@@ -185,11 +159,8 @@ trait HasSDFSchedulingAnalysisAndConstraints
     // make sure that actors in the same element follow the precedences
     for (
       ((ai, qi), i) <- jobsAndActors.zipWithIndex;
-      (aj, qj) <- m.sdfApplications.firingsPrecedenceGraph
-        .get((ai, qi))
-        .outNeighbors
-        .map(_.value);
-      j   = jobsAndActors.indexOf((aj, qj));
+      ((aj, qj), j) <- jobsAndActors.zipWithIndex;
+      if partialOrder.contains(((ai, qi), (aj, qj)));
       aix = actors.indexOf(ai);
       ajx = actors.indexOf(aj)
     ) {
@@ -229,8 +200,8 @@ trait HasSDFSchedulingAnalysisAndConstraints
     // throughput
     val thPropagator = StreamingJobsThroughputPropagator(
       jobsAndActors.size,
-      isSuccessor(m)(jobsAndActors),
-      hasDataCycle(m)(jobsAndActors),
+      isSuccessor(partialOrder)(jobsAndActors),
+      hasDataCycle(partialOrderWithCycles)(jobsAndActors),
       jobOrder,
       (0 until jobsAndActors.size).map(jobMapping(_)).toArray,
       jobsAndActors.map((a, _) => durations(actors.indexOf(a))).toArray,
@@ -245,14 +216,7 @@ trait HasSDFSchedulingAnalysisAndConstraints
     )
     chocoModel.post(new Constraint("StreamingJobsThroughputPropagator", thPropagator))
     for ((a, i) <- actors.zipWithIndex; (aa, j) <- actors.zipWithIndex; if a != aa) {
-      if (
-        m.sdfApplications.sdfGraph
-          .get(a)
-          .isPredecessorOf(m.sdfApplications.sdfGraph.get(aa))
-        || m.sdfApplications.sdfGraph
-          .get(aa)
-          .isPredecessorOf(m.sdfApplications.sdfGraph.get(a))
-      ) {
+      if (actorSubGraphs.indexWhere(_.contains(a)) == actorSubGraphs.indexWhere(_.contains(aa))) {
         chocoModel
           .arithm(
             invThroughputs(i),
@@ -279,12 +243,71 @@ trait HasSDFSchedulingAnalysisAndConstraints
     (jobOrder, mappedJobsPerElement.toArray, invThroughputs, numMappedElements, globalInvThroughput)
   }
 
+  def postSDFTimingAnalysis(
+      m: SDFToTiledMultiCore,
+      chocoModel: Model,
+      processMappings: Array[IntVar],
+      durations: Array[IntVar],
+      messageTravelDuration: Array[Array[Array[IntVar]]]
+  ): (Array[IntVar], Array[IntVar], Array[IntVar], IntVar, IntVar) = {
+    val actors             = m.sdfApplications.actorsIdentifiers
+    val jobsAndActors      = m.sdfApplications.jobsAndActors
+    def jobMapping(i: Int) = processMappings(actors.indexOf(jobsAndActors(i)._1))
+
+    val schedulers = m.platform.runtimes.schedulers
+
+    val maxRepetitionsPerActors = m.sdfApplications.sdfRepetitionVectors
+
+    postSDFTimingAnalysis(
+      chocoModel,
+      actors,
+      m.sdfApplications.sdfDisjointComponents.map(_.toVector).toVector,
+      m.sdfApplications.sdfMessages.map((s, t, _, l, p, _, _) => (s, t, l * p)),
+      jobsAndActors,
+      jobsAndActors.flatMap(s =>
+        jobsAndActors
+          .filter(t =>
+            m.sdfApplications.firingsPrecedenceGraph
+              .get(s)
+              .isDirectPredecessorOf(m.sdfApplications.firingsPrecedenceGraph.get(t))
+          )
+          .map(t => (s, t))
+      ),
+      jobsAndActors.flatMap(s =>
+        jobsAndActors
+          .filter(t =>
+            m.sdfApplications.firingsPrecedenceGraphWithCycles
+              .get(s)
+              .isDirectPredecessorOf(m.sdfApplications.firingsPrecedenceGraphWithCycles.get(t))
+          )
+          .map(t => (s, t))
+      ),
+      schedulers,
+      maxRepetitionsPerActors,
+      jobMapping,
+      processMappings,
+      durations,
+      messageTravelDuration
+    )
+  }
+
+  def isSuccessor(partialOrder: Vector[((String, Int), (String, Int))])(
+      jobsAndActors: Vector[(String, Int)]
+  )(i: Int)(j: Int) =
+    partialOrder.contains((jobsAndActors(i), jobsAndActors(j)))
+
   def isSuccessor(m: SDFToTiledMultiCore)(jobsAndActors: Vector[(String, Int)])(i: Int)(j: Int) =
     m.sdfApplications.firingsPrecedenceGraph
       .get(jobsAndActors(i))
       .isDirectPredecessorOf(
         m.sdfApplications.firingsPrecedenceGraph.get(jobsAndActors(j))
       )
+
+  def hasDataCycle(
+      partialOrderWithCycles: Vector[((String, Int), (String, Int))]
+  )(jobsAndActors: Vector[(String, Int)])(i: Int)(j: Int) =
+    partialOrderWithCycles.contains((jobsAndActors(i), jobsAndActors(j))) && partialOrderWithCycles
+      .contains((jobsAndActors(j), jobsAndActors(i)))
 
   def hasDataCycle(m: SDFToTiledMultiCore)(jobsAndActors: Vector[(String, Int)])(i: Int)(j: Int) =
     m.sdfApplications.firingsPrecedenceGraph

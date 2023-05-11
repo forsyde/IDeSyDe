@@ -13,7 +13,8 @@ final class CanSolvePeriodicWorkloadAndSDFServersToMulticore(using logger: Logge
     with HasSingleProcessSingleMessageMemoryConstraints
     with HasActive4StageDuration
     with HasTimingConstraints
-    with HasSDFSchedulingAnalysisAndConstraints {
+    with HasSDFSchedulingAnalysisAndConstraints
+    with CanSolveMultiObjective {
 
   def buildChocoModel(
       m: PeriodicWorkloadAndSDFServerToMultiCore,
@@ -322,6 +323,8 @@ final class CanSolvePeriodicWorkloadAndSDFServersToMulticore(using logger: Logge
       actorEffectiveDuration,
       m.tasksAndSDFs.sdfApplications.sdfMessages.map(message => m.platform.runtimes.schedulers.map(s1 => m.platform.runtimes.schedulers.map(s2 => chocoModel.intVar(0)).toArray).toArray).toArray
     )
+
+    createAndApplyMOOPropagator(chocoModel, Array(globalInvThroughput, numMappedElements))
 
     // chocoModel
     //   .getSolver()

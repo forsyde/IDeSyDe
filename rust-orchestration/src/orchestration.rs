@@ -345,27 +345,31 @@ pub fn identification_procedure(
     imodules: &Vec<Box<dyn IdentificationModule>>,
     design_models: &Vec<Box<dyn DesignModel>>,
     pre_identified: &mut Vec<Box<dyn DecisionModel>>,
+    starting_iter: i32,
 ) -> Vec<Box<dyn DecisionModel>> {
-    let mut step = 0;
+    let mut step = starting_iter;
     let mut fix_point = false;
     let mut identified: Vec<Box<dyn DecisionModel>> = Vec::new();
     identified.append(pre_identified);
     while !fix_point || step <= 1 {
         // the step condition forces the procedure to go at least one more, fundamental for incrementability
         fix_point = true;
-        let mut added = 0;
+        let before = identified.len();
         for imodule in imodules {
             let potential = imodule.identification_step(step, &design_models, &identified);
             // potential.retain(|m| !identified.contains(m));
             for m in potential {
                 if !identified.contains(&m) {
                     identified.push(m);
-                    added += 1;
                 }
             }
         }
-        debug!("{} decision models identified at step {}", added, step);
-        fix_point = fix_point && (added == 0);
+        debug!(
+            "{} total decision models identified at step {}",
+            identified.len(),
+            step
+        );
+        fix_point = fix_point && (identified.len() == before);
         step += 1;
     }
     identified

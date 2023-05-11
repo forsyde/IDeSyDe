@@ -195,8 +195,12 @@ fn main() {
                 .iter()
                 .map(|(_, h)| Box::new(h.to_owned()) as Box<dyn DecisionModel>)
                 .collect();
-        let identified =
-            orchestration::identification_procedure(&imodules, &design_models, &mut pre_identified);
+        let identified = orchestration::identification_procedure(
+            &imodules,
+            &design_models,
+            &mut pre_identified,
+            1,
+        );
         info!("Identified {} decision model(s)", identified.len());
         let identified_refs = identified.iter().collect();
 
@@ -243,12 +247,6 @@ fn main() {
                 to_be_deleted = to_be_deleted
                     || match dom.header().partial_cmp(&m.header()) {
                         Some(Ordering::Greater) => true,
-                        Some(Ordering::Equal) => {
-                            match dom.header().body_path.partial_cmp(&m.header().body_path) {
-                                Some(Ordering::Less) => true,
-                                _ => false,
-                            }
-                        }
                         _ => false,
                     };
             }
@@ -258,12 +256,6 @@ fn main() {
                     to_be_deleted = to_be_deleted
                         || match dom.header().partial_cmp(&m.header()) {
                             Some(Ordering::Greater) => true,
-                            Some(Ordering::Equal) => {
-                                match dom.header().body_path.partial_cmp(&m.header().body_path) {
-                                    Some(Ordering::Less) => true,
-                                    _ => false,
-                                }
-                            }
                             _ => false,
                         };
                 }

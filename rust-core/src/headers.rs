@@ -143,7 +143,7 @@ impl PartialOrd<DecisionModelHeader> for DecisionModelHeader {
         //     .iter()
         //     .all(|v| o.covered_relations.contains(v));
         return match (superset, subset) {
-            (true, true) => Some(Ordering::Equal),
+            (true, true) => self.body_path.partial_cmp(&o.body_path),
             (true, false) => Some(Ordering::Greater),
             (false, true) => Some(Ordering::Less),
             _ => None,

@@ -18,6 +18,7 @@ import os.Path
 import forsyde.io.java.sdf3.drivers.ForSyDeSDF3Driver
 import idesyde.common.SDFToTiledMultiCore
 import idesyde.common.PeriodicWorkloadToPartitionedSharedMultiCore
+import java.nio.file.Files
 
 object ForSyDeIdentificationModule
     extends IdentificationModule
@@ -86,6 +87,7 @@ object ForSyDeIdentificationModule
   override def designModelToOutput(m: DesignModel, p: Path): Boolean = m match {
     case ForSyDeDesignModel(systemGraph) =>
       if (os.isDir(p)) {
+        Files.createDirectories(p.toNIO)
         var targetIdx = 0
         var target    = p / s"design_model_output_$targetIdx.fiodl"
         while (os.isFile(target)) {

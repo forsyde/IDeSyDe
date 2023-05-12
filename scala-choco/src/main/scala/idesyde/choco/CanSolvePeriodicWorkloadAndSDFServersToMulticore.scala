@@ -290,8 +290,7 @@ final class CanSolvePeriodicWorkloadAndSDFServersToMulticore(using logger: Logge
       jobOrder,
       mappedJobsPerElement,
       invThroughputs,
-      numMappedElements,
-      globalInvThroughput
+      numMappedElements
     ) = postSDFTimingAnalysis(
       chocoModel,
       m.tasksAndSDFs.sdfApplications.actorsIdentifiers,
@@ -324,7 +323,7 @@ final class CanSolvePeriodicWorkloadAndSDFServersToMulticore(using logger: Logge
       m.tasksAndSDFs.sdfApplications.sdfMessages.map(message => m.platform.runtimes.schedulers.map(s1 => m.platform.runtimes.schedulers.map(s2 => chocoModel.intVar(0)).toArray).toArray).toArray
     )
 
-    createAndApplyMOOPropagator(chocoModel, Array(globalInvThroughput, numMappedElements))
+    createAndApplyMOOPropagator(chocoModel, Array(numMappedElements) ++ invThroughputs)
 
     // chocoModel
     //   .getSolver()

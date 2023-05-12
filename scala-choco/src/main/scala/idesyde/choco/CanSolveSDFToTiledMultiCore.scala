@@ -134,8 +134,7 @@ final class CanSolveSDFToTiledMultiCore(using logger: Logger)
       jobOrder,
       mappedJobsPerElement,
       invThroughputs,
-      numMappedElements,
-      globalInvThroughput
+      numMappedElements
     ) = postSDFTimingAnalysis(
       m,
       chocoModel,
@@ -184,9 +183,8 @@ final class CanSolveSDFToTiledMultiCore(using logger: Logger)
       chocoModel,
       Array(
         numMappedElements,
-        globalInvThroughput,
         commSlotsSum
-      )
+      ) ++ invThroughputs
     )
     chocoModel.getSolver().setRestartOnSolutions()
     chocoModel.getSolver().setNoGoodRecordingFromRestarts()

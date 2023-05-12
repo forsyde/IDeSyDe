@@ -67,7 +67,7 @@ trait HasSDFSchedulingAnalysisAndConstraints
       processMappings: Array[IntVar],
       durations: Array[IntVar],
       messageTravelDuration: Array[Array[Array[IntVar]]]
-  ): (Array[IntVar], Array[IntVar], Array[IntVar], IntVar, IntVar) = {
+  ): (Array[IntVar], Array[IntVar], Array[IntVar], IntVar) = {
     val maxLength = schedulers.zipWithIndex
       .map((_, p) => {
         actors.zipWithIndex
@@ -99,13 +99,13 @@ trait HasSDFSchedulingAnalysisAndConstraints
         )
         .toArray
 
-    val globalInvThroughput =
-      chocoModel.intVar(
-        "globalInvThroughput",
-        invThroughputs.map(_.getLB()).max,
-        maxLength,
-        true
-      )
+    // val globalInvThroughput =
+    //   chocoModel.intVar(
+    //     "globalInvThroughput",
+    //     invThroughputs.map(_.getLB()).max,
+    //     maxLength,
+    //     true
+    //   )
 
     val transmissionDelay =
       actors.zipWithIndex.map((a, i) =>
@@ -239,8 +239,8 @@ trait HasSDFSchedulingAnalysisAndConstraints
         )
       }
     }
-    chocoModel.max(globalInvThroughput, invThroughputs).post()
-    (jobOrder, mappedJobsPerElement.toArray, invThroughputs, numMappedElements, globalInvThroughput)
+    // chocoModel.max(globalInvThroughput, invThroughputs).post()
+    (jobOrder, mappedJobsPerElement.toArray, invThroughputs, numMappedElements)
   }
 
   def postSDFTimingAnalysis(
@@ -249,7 +249,7 @@ trait HasSDFSchedulingAnalysisAndConstraints
       processMappings: Array[IntVar],
       durations: Array[IntVar],
       messageTravelDuration: Array[Array[Array[IntVar]]]
-  ): (Array[IntVar], Array[IntVar], Array[IntVar], IntVar, IntVar) = {
+  ): (Array[IntVar], Array[IntVar], Array[IntVar], IntVar) = {
     val actors             = m.sdfApplications.actorsIdentifiers
     val jobsAndActors      = m.sdfApplications.jobsAndActors
     def jobMapping(i: Int) = processMappings(actors.indexOf(jobsAndActors(i)._1))

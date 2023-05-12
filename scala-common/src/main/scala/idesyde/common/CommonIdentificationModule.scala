@@ -8,7 +8,6 @@ import idesyde.core.DesignModel
 import idesyde.core.headers.DesignModelHeader
 import idesyde.core.headers.DecisionModelHeader
 import idesyde.utils.Logger
-import idesyde.identification.common.CommonIdentificationLibrary
 import idesyde.blueprints.CanParseIdentificationModuleConfiguration
 import idesyde.common.SDFApplication
 import idesyde.common.TiledMultiCore
@@ -33,8 +32,6 @@ object CommonIdentificationModule
   def designHeaderToModel(m: DesignModelHeader): Set[DesignModel] = Set()
 
   def designHeaderToModel: Set[DesignModelHeader => Set[DesignModel]] = Set()
-
-  private val commonIdentificationLibrary = CommonIdentificationLibrary()
 
   val identificationRules = Set(
     MarkedIdentificationRule.SpecificDecisionModelOnlyIdentificationRule(

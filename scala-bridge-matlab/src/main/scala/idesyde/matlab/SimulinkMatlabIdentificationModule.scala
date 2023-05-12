@@ -33,7 +33,7 @@ object SimulinkMatlabIdentificationModule extends IdentificationModule with Appl
   )
 
   override def reverseIdentificationRules
-      : Set[(DesignModel, DecisionModel) => Option[? <: DesignModel]] =
+      : Set[(Set[DecisionModel], Set[DesignModel]) => Set[? <: DesignModel]] =
     Set(
     )
 

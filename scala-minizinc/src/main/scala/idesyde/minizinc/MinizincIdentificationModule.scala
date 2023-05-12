@@ -18,7 +18,8 @@ class MinizincIdentificationModule extends IdentificationModule {
   def identificationRules: Set[(Set[DesignModel], Set[DecisionModel]) => Set[? <: DecisionModel]] =
     Set()
 
-  def reverseIdentificationRules: Set[(DesignModel, DecisionModel) => Option[? <: DesignModel]] =
+  def reverseIdentificationRules
+      : Set[(Set[DecisionModel], Set[DesignModel]) => Set[? <: DesignModel]] =
     Set()
 
 }

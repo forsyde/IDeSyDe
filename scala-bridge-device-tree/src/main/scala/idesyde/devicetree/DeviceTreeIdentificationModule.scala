@@ -67,7 +67,8 @@ object DeviceTreeIdentificationModule
       identPartitionedCoresWithRuntimes
     )
 
-  def reverseIdentificationRules: Set[(DesignModel, DecisionModel) => Option[? <: DesignModel]] =
+  def reverseIdentificationRules
+      : Set[(Set[DecisionModel], Set[DesignModel]) => Set[? <: DesignModel]] =
     Set()
 
   def main(args: Array[String]) = standaloneIdentificationModule(args)

@@ -128,47 +128,50 @@ trait MixedRules {
       }
       case _ => None
     })
-    for (solved <- solveds; rebuilt = ForSyDeSystemGraph().merge(model)) yield {
-      for (
-        (taskId, schedId) <- solved.processSchedulings;
-        // ok for now because it is a 1-to-many situation wit the current Decision Models (2023-01-16)
-        // TODO: fix it to be stable later
-        task  = rebuilt.queryVertex(taskId).orElse(rebuilt.newVertex(taskId));
-        sched = rebuilt.queryVertex(schedId).orElse(rebuilt.newVertex(schedId))
-      ) {
-        AbstractScheduler
-          .safeCast(sched)
-          .ifPresent(scheduler => {
-            Scheduled.enforce(task).insertSchedulersPort(rebuilt, scheduler)
-            GreyBox.enforce(sched).insertContainedPort(rebuilt, Visualizable.enforce(task))
-          })
+    if (model.vertexSet().isEmpty()) {
+
+      for (solved <- solveds; rebuilt = ForSyDeSystemGraph().merge(model)) yield {
+        for (
+          (taskId, schedId) <- solved.processSchedulings;
+          // ok for now because it is a 1-to-many situation wit the current Decision Models (2023-01-16)
+          // TODO: fix it to be stable later
+          task  = rebuilt.queryVertex(taskId).orElse(rebuilt.newVertex(taskId));
+          sched = rebuilt.queryVertex(schedId).orElse(rebuilt.newVertex(schedId))
+        ) {
+          AbstractScheduler
+            .safeCast(sched)
+            .ifPresent(scheduler => {
+              Scheduled.enforce(task).insertSchedulersPort(rebuilt, scheduler)
+              GreyBox.enforce(sched).insertContainedPort(rebuilt, Visualizable.enforce(task))
+            })
+        }
+        for (
+          (taskId, memId) <- solved.processMappings;
+          // ok for now because it is a 1-to-many situation wit the current Decision Models (2023-01-16)
+          // TODO: fix it to be stable later
+          task = rebuilt.queryVertex(taskId).orElse(rebuilt.newVertex(taskId));
+          mem  = rebuilt.queryVertex(memId).orElse(rebuilt.newVertex(memId))
+        ) {
+          GenericMemoryModule
+            .safeCast(mem)
+            .ifPresent(memory => MemoryMapped.enforce(task).insertMappingHostsPort(rebuilt, memory))
+        }
+        for (
+          (channelId, memId) <- solved.channelMappings;
+          // ok for now because it is a 1-to-many situation wit the current Decision Models (2023-01-16)
+          // TODO: fix it to be stable later
+          channel = rebuilt.queryVertex(channelId).orElse(rebuilt.newVertex(channelId));
+          mem     = rebuilt.queryVertex(memId).orElse(rebuilt.newVertex(memId))
+        ) {
+          GenericMemoryModule
+            .safeCast(mem)
+            .ifPresent(memory =>
+              MemoryMapped.enforce(channel).insertMappingHostsPort(rebuilt, memory)
+            )
+        }
+        ForSyDeDesignModel(rebuilt)
       }
-      for (
-        (taskId, memId) <- solved.processMappings;
-        // ok for now because it is a 1-to-many situation wit the current Decision Models (2023-01-16)
-        // TODO: fix it to be stable later
-        task = rebuilt.queryVertex(taskId).orElse(rebuilt.newVertex(taskId));
-        mem  = rebuilt.queryVertex(memId).orElse(rebuilt.newVertex(memId))
-      ) {
-        GenericMemoryModule
-          .safeCast(mem)
-          .ifPresent(memory => MemoryMapped.enforce(task).insertMappingHostsPort(rebuilt, memory))
-      }
-      for (
-        (channelId, memId) <- solved.channelMappings;
-        // ok for now because it is a 1-to-many situation wit the current Decision Models (2023-01-16)
-        // TODO: fix it to be stable later
-        channel = rebuilt.queryVertex(channelId).orElse(rebuilt.newVertex(channelId));
-        mem     = rebuilt.queryVertex(memId).orElse(rebuilt.newVertex(memId))
-      ) {
-        GenericMemoryModule
-          .safeCast(mem)
-          .ifPresent(memory =>
-            MemoryMapped.enforce(channel).insertMappingHostsPort(rebuilt, memory)
-          )
-      }
-      ForSyDeDesignModel(rebuilt)
-    }
+    } else Set()
   }
 
   def integrateSDFToTiledMultiCore(

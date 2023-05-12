@@ -11,7 +11,6 @@ import idesyde.core.DecisionModel
 import idesyde.core.headers.DecisionModelHeader
 import idesyde.core.DesignModel
 import idesyde.core.headers.DesignModelHeader
-import idesyde.identification.common.CommonIdentificationLibrary
 import forsyde.io.java.drivers.ForSyDeModelHandler
 import idesyde.forsydeio.ForSyDeDesignModel
 import java.nio.file.Paths

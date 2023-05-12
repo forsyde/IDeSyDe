@@ -12,32 +12,32 @@ trait CanParseExplorationModuleConfiguration {
         builder
           .opt[String]('i', "dominant-path")
           .action((f, mc) =>
-            mc.copy(dominantPath = Some(if (f.startsWith("/")) then os.root / os.RelPath(f) else os.pwd / os.RelPath(f)))
+            mc.copy(dominantPath = Some(if (f.startsWith("/")) then os.Path(f) else os.pwd / os.RelPath(f)))
           ),
         builder
           .opt[String]('o', "solution-path")
           .action((f, mc) =>
-            mc.copy(solutionPath = Some(if (f.startsWith("/")) then os.root / os.RelPath(f) else os.pwd / os.RelPath(f)))
+            mc.copy(solutionPath = Some(if (f.startsWith("/")) then os.Path(f) else os.pwd / os.RelPath(f)))
           ),
         builder
           .opt[String]('e', "explore")
           .action((f, mc) =>
             mc.copy(decisionModelToExplore =
-              Some(if (f.startsWith("/")) then os.root / os.RelPath(f) else os.pwd / os.RelPath(f))
+              Some(if (f.startsWith("/")) then os.Path(f) else os.pwd / os.RelPath(f))
             )
           ),
         builder
           .opt[String]('a', "available-criteria")
           .action((f, mc) =>
             mc.copy(decisionModelToGetCriterias =
-              Some(if (f.startsWith("/")) then os.root / os.RelPath(f) else os.pwd / os.RelPath(f))
+              Some(if (f.startsWith("/")) then os.Path(f) else os.pwd / os.RelPath(f))
             )
           ),
         builder
           .opt[String]('c', "combine")
           .action((f, mc) =>
             mc.copy(decisionModelToGetCombination =
-              Some(if (f.startsWith("/")) then os.root / os.RelPath(f) else os.pwd / os.RelPath(f))
+              Some(if (f.startsWith("/")) then os.Path(f) else os.pwd / os.RelPath(f))
             )
           ),
         builder

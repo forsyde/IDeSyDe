@@ -13,7 +13,6 @@ import scala.collection.mutable.Buffer
 import idesyde.utils.Logger
 import scala.collection.mutable
 import idesyde.identification.common.CommonIdentificationLibrary
-import idesyde.identification.choco.ChocoIdentificationLibrary
 import idesyde.forsydeio.ForSyDeIdentificationLibrary
 import idesyde.utils.SimpleStandardIOLogger
 import idesyde.choco.ChocoExplorationModule
@@ -33,7 +32,6 @@ object IDeSyDeStandalone {
       IDeSyDeRunConfig(
         Set(
           CommonIdentificationLibrary(),
-          ChocoIdentificationLibrary(),
           ForSyDeIdentificationLibrary(),
           MinizincIdentificationModule()
         ),

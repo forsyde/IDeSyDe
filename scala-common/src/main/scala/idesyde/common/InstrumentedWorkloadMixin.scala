@@ -1,4 +1,4 @@
-package idesyde.identification.common.models.workload
+package idesyde.common
 
 trait InstrumentedWorkloadMixin {
 

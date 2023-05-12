@@ -1,12 +1,7 @@
-package idesyde.identification.common.rules
+package idesyde.common
 
 import idesyde.core.DesignModel
 import idesyde.core.DecisionModel
-import idesyde.identification.common.models.platform.SchedulableTiledMultiCore
-import idesyde.identification.common.models.platform.PartitionedCoresWithRuntimes
-import idesyde.identification.common.models.platform.TiledMultiCore
-import idesyde.identification.common.models.platform.SharedMemoryMultiCore
-import idesyde.identification.common.models.platform.PartitionedSharedMemoryMultiCore
 import scala.collection.mutable
 
 trait PlatformRules {

@@ -1,12 +1,7 @@
-package idesyde.identification.common.models.mixed
+package idesyde.common
 
 import upickle.default.*
 
-import idesyde.identification.common.StandardDecisionModel
-import idesyde.identification.common.models.platform.SchedulableTiledMultiCore
-import idesyde.identification.common.models.sdf.SDFApplication
-import idesyde.identification.common.models.workload.InstrumentedWorkloadMixin
-import idesyde.identification.models.mixed.WCETComputationMixin
 import idesyde.core.CompleteDecisionModel
 
 final case class SDFToTiledMultiCore(

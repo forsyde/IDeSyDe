@@ -7,12 +7,12 @@ import idesyde.utils.Logger
 import idesyde.core.DecisionModel
 import idesyde.core.headers.DecisionModelHeader
 import idesyde.utils.SimpleStandardIOLogger
-import idesyde.identification.common.models.mixed.SDFToTiledMultiCore
+import idesyde.common.SDFToTiledMultiCore
 import idesyde.choco.ChocoExplorer
 import spire.math.Rational
 import idesyde.core.ExplorationCombinationDescription
-import idesyde.identification.common.models.mixed.PeriodicWorkloadToPartitionedSharedMultiCore
-import idesyde.identification.common.models.mixed.PeriodicWorkloadAndSDFServerToMultiCore
+import idesyde.common.PeriodicWorkloadToPartitionedSharedMultiCore
+import idesyde.common.PeriodicWorkloadAndSDFServerToMultiCore
 
 object ChocoExplorationModule extends ExplorationModule {
 

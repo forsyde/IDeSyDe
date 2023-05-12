@@ -1,10 +1,4 @@
-package idesyde.identification.common.models.mixed
-
-import idesyde.identification.common.StandardDecisionModel
-import idesyde.identification.common.models.sdf.SDFApplication
-import idesyde.identification.common.models.platform.PartitionedSharedMemoryMultiCore
-import idesyde.identification.models.mixed.WCETComputationMixin
-import spire.math.Rational
+package idesyde.common
 
 final case class SDFToPartitionedSharedMemory(
     val sdfApplications: SDFApplication,

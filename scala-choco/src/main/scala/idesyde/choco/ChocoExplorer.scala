@@ -23,11 +23,11 @@ import idesyde.exploration.choco.explorers.ParetoMinimizationBrancher
 import idesyde.core.ExplorationCriteria
 import idesyde.utils.Logger
 import spire.math.Rational
-import idesyde.identification.common.models.mixed.SDFToTiledMultiCore
+import idesyde.common.SDFToTiledMultiCore
 import idesyde.choco.ChocoExplorableOps._
 import idesyde.core.ExplorationCombinationDescription
-import idesyde.identification.common.models.mixed.PeriodicWorkloadToPartitionedSharedMultiCore
-import idesyde.identification.common.models.mixed.PeriodicWorkloadAndSDFServerToMultiCore
+import idesyde.common.PeriodicWorkloadToPartitionedSharedMultiCore
+import idesyde.common.PeriodicWorkloadAndSDFServerToMultiCore
 
 class ChocoExplorer(using logger: Logger) extends Explorer:
 

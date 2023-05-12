@@ -1,4 +1,4 @@
-package idesyde.identification.common.models.platform
+package idesyde.common
 
 trait InstrumentedPlatformMixin[RealT] {
 

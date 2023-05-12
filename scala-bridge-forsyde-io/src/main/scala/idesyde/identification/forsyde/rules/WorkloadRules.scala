@@ -6,8 +6,7 @@ import scala.jdk.CollectionConverters._
 import idesyde.core.DesignModel
 import idesyde.core.DecisionModel
 import idesyde.utils.Logger
-import idesyde.identification.common.models.workload.CommunicatingExtendedDependenciesPeriodicWorkload
-import idesyde.identification.common.models.CommunicatingAndTriggeredReactiveWorkload
+import idesyde.common.CommunicatingAndTriggeredReactiveWorkload
 import idesyde.identification.forsyde.ForSyDeIdentificationUtils
 import forsyde.io.java.typed.viewers.execution.Task
 import forsyde.io.java.typed.viewers.impl.DataBlock
@@ -121,7 +120,8 @@ trait WorkloadRules {
             .toSet
             .asJava
         )
-      lazy val dataGraph = AsSubgraph(model, (tasks ++ dataBlocks).map(_.getViewedVertex()).toSet.asJava)
+      lazy val dataGraph =
+        AsSubgraph(model, (tasks ++ dataBlocks).map(_.getViewedVertex()).toSet.asJava)
       lazy val connectivityInspector = ConnectivityInspector(stimulusGraph)
       lazy val allTasksAreStimulated = tasks.forall(task =>
         periodicStimulus.exists(stim =>
@@ -129,8 +129,8 @@ trait WorkloadRules {
         )
       )
       logger.debug(s"Are all tasks reachable by a periodic stimulus? ${allTasksAreStimulated}")
-      if (tasks.isEmpty || !allTasksAreStimulated) 
-        Set.empty 
+      if (tasks.isEmpty || !allTasksAreStimulated)
+        Set.empty
       else
         Set(
           CommunicatingAndTriggeredReactiveWorkload(
@@ -157,8 +157,20 @@ trait WorkloadRules {
             downsamples.map(_.getIdentifier()).toVector,
             downsamples.map(_.getRepetitivePredecessorSkips().toLong).toVector,
             downsamples.map(_.getInitialPredecessorSkips().toLong).toVector,
-            stimulusGraph.edgeSet().stream().map(e => stimulusGraph.getEdgeSource(e).getIdentifier()).collect(Collectors.toList()).asScala.toVector,
-            stimulusGraph.edgeSet().stream().map(e => stimulusGraph.getEdgeTarget(e).getIdentifier()).collect(Collectors.toList()).asScala.toVector,
+            stimulusGraph
+              .edgeSet()
+              .stream()
+              .map(e => stimulusGraph.getEdgeSource(e).getIdentifier())
+              .collect(Collectors.toList())
+              .asScala
+              .toVector,
+            stimulusGraph
+              .edgeSet()
+              .stream()
+              .map(e => stimulusGraph.getEdgeTarget(e).getIdentifier())
+              .collect(Collectors.toList())
+              .asScala
+              .toVector,
             tasks.filter(_.getHasORSemantics()).map(_.getIdentifier()).toSet ++ upsamples
               .filter(_.getHasORSemantics())
               .map(_.getIdentifier())

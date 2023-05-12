@@ -1,10 +1,9 @@
-package idesyde.identification.common.models.workload
+package idesyde.common
 
 import spire.math.Rational
 import scalax.collection.Graph
 import scalax.collection.GraphPredef._
 import scalax.collection.edge.Implicits._
-import idesyde.identification.common.StandardDecisionModel
 import scala.collection.mutable.Buffer
 
 /** A decision model for communicating periodically activated processes.

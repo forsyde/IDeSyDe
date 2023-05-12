@@ -1,15 +1,12 @@
-package idesyde.identification.common.models.sdf
+package idesyde.common
 
 import scala.jdk.CollectionConverters.*
 
 import upickle.default.*
 
-import idesyde.identification.common.models.workload.ParametricRateDataflowWorkloadMixin
-import idesyde.identification.common.models.workload.InstrumentedWorkloadMixin
 import scala.collection.mutable
 import java.util.stream.Collectors
 import spire.math.*
-import idesyde.identification.common.StandardDecisionModel
 import scalax.collection.Graph
 import scalax.collection.GraphPredef._
 import scalax.collection.edge.Implicits._

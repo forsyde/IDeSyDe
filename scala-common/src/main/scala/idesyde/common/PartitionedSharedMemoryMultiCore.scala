@@ -1,6 +1,5 @@
-package idesyde.identification.common.models.platform
+package idesyde.common
 
-import idesyde.identification.common.StandardDecisionModel
 import upickle.default._
 import idesyde.core.CompleteDecisionModel
 

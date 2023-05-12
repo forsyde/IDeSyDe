@@ -1,11 +1,7 @@
-package idesyde.identification.common.models.mixed
+package idesyde.common
 
 import upickle.default._
 
-import idesyde.identification.common.StandardDecisionModel
-import idesyde.identification.common.models.sdf.SDFApplication
-import idesyde.identification.common.models.workload.{InstrumentedWorkloadMixin}
-import idesyde.identification.common.models.CommunicatingAndTriggeredReactiveWorkload
 import idesyde.core.CompleteDecisionModel
 
 final case class PeriodicWorkloadAndSDFServers(

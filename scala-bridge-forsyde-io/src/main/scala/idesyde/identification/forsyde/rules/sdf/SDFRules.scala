@@ -6,7 +6,7 @@ import idesyde.utils.Logger
 import idesyde.core.DesignModel
 import idesyde.core.DecisionModel
 import idesyde.forsydeio.ForSyDeDesignModel
-import idesyde.identification.common.models.sdf.SDFApplication
+import idesyde.common.SDFApplication
 import forsyde.io.java.core.ForSyDeSystemGraph
 import forsyde.io.java.typed.viewers.moc.sdf.SDFElem
 import forsyde.io.java.typed.viewers.moc.sdf.SDFActor

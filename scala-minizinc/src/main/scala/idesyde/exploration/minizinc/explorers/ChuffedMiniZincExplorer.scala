@@ -10,7 +10,6 @@ import java.nio.file.Paths
 import java.nio.file.StandardOpenOption
 import idesyde.exploration.minizinc.explorers.ChuffedMiniZincExplorer
 import idesyde.core.DecisionModel
-import idesyde.identification.common.StandardDecisionModel
 import idesyde.core.ExplorationCombinationDescription
 
 final case class ChuffedMiniZincExplorer() extends SimpleMiniZincCPExplorer {

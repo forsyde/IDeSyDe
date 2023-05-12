@@ -24,8 +24,7 @@ import org.chocosolver.solver.search.loop.monitors.IMonitorContradiction
 import org.chocosolver.solver.exception.ContradictionException
 import scala.collection.mutable.Buffer
 import forsyde.io.java.core.EdgeInfo
-import idesyde.identification.common.models.mixed.SDFToTiledMultiCore
-import idesyde.identification.common.StandardDecisionModel
+import idesyde.common.SDFToTiledMultiCore
 import org.chocosolver.solver.objective.OptimizationPolicy
 import idesyde.utils.Logger
 import idesyde.identification.choco.models.sdf.CompactingMultiCoreMapping

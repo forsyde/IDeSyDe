@@ -5,7 +5,7 @@ import scala.jdk.CollectionConverters._
 import idesyde.core.DesignModel
 import idesyde.core.DecisionModel
 import idesyde.utils.Logger
-import idesyde.identification.common.models.platform.TiledMultiCore
+import idesyde.common.TiledMultiCore
 import forsyde.io.java.typed.viewers.platform.GenericProcessingModule
 import forsyde.io.java.typed.viewers.platform.GenericMemoryModule
 import forsyde.io.java.typed.viewers.platform.GenericCommunicationModule
@@ -16,12 +16,12 @@ import forsyde.io.java.typed.viewers.platform.InstrumentedCommunicationModule
 import forsyde.io.java.typed.viewers.platform.InstrumentedProcessingModule
 import scala.collection.mutable
 import spire.math.Rational
-import idesyde.identification.common.models.platform.PartitionedCoresWithRuntimes
+import idesyde.common.PartitionedCoresWithRuntimes
 import forsyde.io.java.typed.viewers.platform.runtime.AbstractScheduler
 import forsyde.io.java.core.ForSyDeSystemGraph
 import forsyde.io.java.typed.viewers.platform.runtime.FixedPriorityScheduler
 import forsyde.io.java.typed.viewers.platform.runtime.StaticCyclicScheduler
-import idesyde.identification.common.models.platform.SharedMemoryMultiCore
+import idesyde.common.SharedMemoryMultiCore
 import idesyde.identification.forsyde.ForSyDeIdentificationUtils
 import org.jgrapht.graph.AsSubgraph
 import org.jgrapht.alg.connectivity.ConnectivityInspector

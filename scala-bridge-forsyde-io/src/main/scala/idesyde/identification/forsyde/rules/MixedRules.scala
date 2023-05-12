@@ -3,8 +3,8 @@ package idesyde.identification.forsyde.rules
 import idesyde.core.DesignModel
 import idesyde.core.DecisionModel
 import idesyde.forsydeio.ForSyDeDesignModel
-import idesyde.identification.common.models.mixed.PeriodicWorkloadToPartitionedSharedMultiCore
-import idesyde.identification.common.models.mixed.SDFToTiledMultiCore
+import idesyde.common.PeriodicWorkloadToPartitionedSharedMultiCore
+import idesyde.common.SDFToTiledMultiCore
 import forsyde.io.java.core.ForSyDeSystemGraph
 import forsyde.io.java.typed.viewers.decision.results.AnalysedGenericProcessingModule
 import forsyde.io.java.typed.viewers.decision.Scheduled
@@ -13,8 +13,8 @@ import forsyde.io.java.typed.viewers.visualization.Visualizable
 import forsyde.io.java.typed.viewers.platform.runtime.AbstractScheduler
 import forsyde.io.java.typed.viewers.decision.MemoryMapped
 import forsyde.io.java.typed.viewers.platform.GenericMemoryModule
-import idesyde.identification.common.models.CommunicatingAndTriggeredReactiveWorkload
-import idesyde.identification.common.models.platform.PartitionedSharedMemoryMultiCore
+import idesyde.common.CommunicatingAndTriggeredReactiveWorkload
+import idesyde.common.PartitionedSharedMemoryMultiCore
 import idesyde.identification.forsyde.ForSyDeIdentificationUtils
 import forsyde.io.java.typed.viewers.nonfunctional.UtilizationBoundedProcessingElem
 import spire.math.Rational

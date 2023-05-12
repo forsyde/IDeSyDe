@@ -4,9 +4,9 @@ import idesyde.core.DesignModel
 import idesyde.core.DecisionModel
 import idesyde.utils.Logger
 import spire.math.Rational
-import idesyde.identification.common.models.mixed.SDFToTiledMultiCore
+import idesyde.common.SDFToTiledMultiCore
 import idesyde.choco.CanSolveDepTasksToPartitionedMultiCore
-import idesyde.identification.common.models.mixed.PeriodicWorkloadToPartitionedSharedMultiCore
+import idesyde.common.PeriodicWorkloadToPartitionedSharedMultiCore
 
 trait ChocoRules(using Logger) {
 

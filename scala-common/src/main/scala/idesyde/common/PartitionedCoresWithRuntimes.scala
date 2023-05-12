@@ -1,8 +1,7 @@
-package idesyde.identification.common.models.platform
+package idesyde.common
 
 import upickle.default.*
 
-import idesyde.identification.common.StandardDecisionModel
 import idesyde.core.CompleteDecisionModel
 
 final case class PartitionedCoresWithRuntimes(

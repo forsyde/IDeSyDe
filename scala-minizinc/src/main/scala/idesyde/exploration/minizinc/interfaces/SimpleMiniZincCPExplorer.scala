@@ -10,7 +10,7 @@ import java.nio.file.Files
 import java.nio.file.StandardOpenOption
 import scala.collection.mutable.Buffer
 import scala.collection.mutable
-import idesyde.identification.common.StandardDecisionModel
+import idesyde.common.StandardDecisionModel
 import idesyde.identification.minizinc.MiniZincDecisionModel
 import idesyde.identification.minizinc.MiniZincData
 

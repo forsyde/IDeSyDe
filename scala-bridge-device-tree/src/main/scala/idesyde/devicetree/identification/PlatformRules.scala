@@ -2,12 +2,12 @@ package idesyde.devicetree.identification
 
 import idesyde.core.DesignModel
 import idesyde.core.DecisionModel
-import idesyde.identification.common.models.platform.SharedMemoryMultiCore
+import idesyde.common.SharedMemoryMultiCore
 import idesyde.devicetree.utils.HasDeviceTreeUtils
 import scala.collection.mutable.Buffer
 import spire.math.Rational
 import scala.collection.mutable
-import idesyde.identification.common.models.platform.PartitionedCoresWithRuntimes
+import idesyde.common.PartitionedCoresWithRuntimes
 import idesyde.devicetree.RootNode
 import idesyde.utils.HasUtils
 

@@ -16,7 +16,7 @@ import idesyde.choco.HasTileAsyncInterconnectCommunicationConstraints
 import idesyde.choco.HasSingleProcessSingleMessageMemoryConstraints
 import idesyde.choco.HasDiscretizationToIntegers
 import scala.collection.mutable.Buffer
-import idesyde.identification.common.models.mixed.SDFToTiledMultiCore
+import idesyde.common.SDFToTiledMultiCore
 import idesyde.identification.choco.models.sdf.StreamingJobsThroughputPropagator
 
 trait HasSDFSchedulingAnalysisAndConstraints

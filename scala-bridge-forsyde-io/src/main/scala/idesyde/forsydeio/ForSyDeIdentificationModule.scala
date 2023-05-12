@@ -1,6 +1,5 @@
 package idesyde.forsydeio
 
-import idesyde.forsydeio.ForSyDeIdentificationLibrary
 import idesyde.blueprints.IdentificationModule
 import idesyde.core.MarkedIdentificationRule
 import idesyde.identification.forsyde.rules.MixedRules
@@ -18,10 +17,15 @@ import idesyde.forsydeio.ForSyDeDesignModel
 import java.nio.file.Paths
 import os.Path
 import forsyde.io.java.sdf3.drivers.ForSyDeSDF3Driver
-import idesyde.identification.common.models.mixed.SDFToTiledMultiCore
-import idesyde.identification.common.models.mixed.PeriodicWorkloadToPartitionedSharedMultiCore
+import idesyde.common.SDFToTiledMultiCore
+import idesyde.common.PeriodicWorkloadToPartitionedSharedMultiCore
 
-object ForSyDeIdentificationModule extends IdentificationModule {
+object ForSyDeIdentificationModule
+    extends IdentificationModule
+    with MixedRules
+    with SDFRules
+    with PlatformRules
+    with WorkloadRules {
 
   given Logger = logger
 
@@ -35,15 +39,23 @@ object ForSyDeIdentificationModule extends IdentificationModule {
     }
   }
 
-  val forSyDeIdentificationLibrary = ForSyDeIdentificationLibrary()
-
   val modelHandler = ForSyDeModelHandler()
     .registerDriver(new ForSyDeSDF3Driver())
   // .registerDriver(new ForSyDeAmaltheaDriver())
 
-  val identificationRules = forSyDeIdentificationLibrary.identificationRules
+  val identificationRules = Set(
+    MarkedIdentificationRule.DesignModelOnlyIdentificationRule(identSDFApplication),
+    MarkedIdentificationRule.DesignModelOnlyIdentificationRule(identTiledMultiCore),
+    identPartitionedCoresWithRuntimes,
+    MarkedIdentificationRule.DesignModelOnlyIdentificationRule(identPeriodicDependentWorkload),
+    MarkedIdentificationRule.DesignModelOnlyIdentificationRule(identSharedMemoryMultiCore),
+    identPeriodicWorkloadToPartitionedSharedMultiCoreWithUtilization
+  )
 
-  val reverseIdentificationRules = forSyDeIdentificationLibrary.reverseIdentificationRules
+  val reverseIdentificationRules = Set(
+    integratePeriodicWorkloadToPartitionedSharedMultiCore,
+    integrateSDFToTiledMultiCore
+  )
 
   def main(args: Array[String]): Unit = standaloneIdentificationModule(args)
 

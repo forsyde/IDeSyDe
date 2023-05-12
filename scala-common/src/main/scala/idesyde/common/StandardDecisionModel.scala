@@ -1,4 +1,4 @@
-package idesyde.identification.common
+package idesyde.common
 
 import idesyde.core.DecisionModel
 import idesyde.core.headers.LabelledArcWithPorts

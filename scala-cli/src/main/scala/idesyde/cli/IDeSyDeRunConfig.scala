@@ -114,7 +114,7 @@ case class IDeSyDeRunConfig(
                 (decisionModel, num)
               })
               .flatMap((m, res) =>
-                integrateDecisionModel(model, m, identificationModules).map((_, res))
+                integrateDecisionModel(Set(m), Set(model), identificationModules).map((_, res))
               )
               .map((m, res) =>
                 m.writeToPath(outputsPath, f"$res%32d", "IDeSyDeStandalone")

@@ -1,12 +1,7 @@
-package idesyde.identification.common.models.mixed
+package idesyde.common
 
 import upickle.default._
 
-import idesyde.identification.common.models.CommunicatingAndTriggeredReactiveWorkload
-import idesyde.identification.common.models.platform.PartitionedSharedMemoryMultiCore
-import idesyde.identification.common.StandardDecisionModel
-import spire.math.Rational
-import idesyde.identification.models.mixed.WCETComputationMixin
 import idesyde.core.DecisionModel
 import idesyde.core.CompleteDecisionModel
 

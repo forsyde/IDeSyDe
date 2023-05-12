@@ -1,10 +1,8 @@
-package idesyde.identification.common.models.platform
+package idesyde.common
 
 import upickle.default.*
 
-import idesyde.identification.common.StandardDecisionModel
-import spire.math.Rational
-import idesyde.identification.common.models.platform.InstrumentedPlatformMixin
+import idesyde.common.InstrumentedPlatformMixin
 import scalax.collection.Graph
 import scalax.collection.GraphPredef._
 import idesyde.core.CompleteDecisionModel

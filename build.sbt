@@ -38,7 +38,7 @@ lazy val root = project
     ),
     paradoxRoots := List("index.html")
   )
-  .aggregate(common, cli, choco, forsyde, minizinc, matlab, devicetree, blueprints)
+  .aggregate(common, choco, forsyde, minizinc, matlab, devicetree, blueprints)
 
 lazy val core = (project in file("scala-core")).settings(
   name := "idesyde-scala-core",
@@ -275,60 +275,60 @@ lazy val devicetree = (project in file("scala-bridge-device-tree"))
     }
   )
 
-lazy val cli = (project in file("scala-cli"))
-  .dependsOn(core)
-  .dependsOn(common)
-  .dependsOn(choco)
-  .dependsOn(forsyde)
-  .dependsOn(minizinc)
-  .dependsOn(matlab)
-  .dependsOn(devicetree)
-  // .enablePlugins(ScalaNativePlugin)
-  .enablePlugins(UniversalPlugin, JavaAppPackaging, JlinkPlugin)
-  .enablePlugins(JDKPackagerPlugin)
-  .enablePlugins(GraalVMNativeImagePlugin)
-  .settings(
-    publishArtifact := false,
-    licenses := Seq(
-      "MIT"  -> url("https://opensource.org/license/mit/"),
-      "APL2" -> url("https://www.apache.org/licenses/LICENSE-2.0"),
-      "EPL2" -> url("https://www.eclipse.org/legal/epl-2.0/")
-    ),
-    Compile / mainClass := Some("idesyde.IDeSyDeStandalone"),
-    libraryDependencies ++= Seq(
-      "com.github.scopt" %% "scopt"  % scoptVersion,
-      "com.lihaoyi"      %% "os-lib" % osLibVersion
-      // "com.outr"         %% "scribe"      % scribeVersion,
-      // "com.outr"         %% "scribe-file" % scribeVersion
-    ),
-    // taken and adapted from https://www.scala-sbt.org/sbt-native-packager/archetypes/jlink_plugin.html
-    jlinkModulePath := {
-      val paths = (jlinkBuildImage / fullClasspath).value
-      paths
-        .filter(f => {
-          f.get(moduleID.key).exists(mID => mID.name.contains("jheaps")) ||
-          // f.get(moduleID.key).exists(mID => mID.name.contains("fastutil")) ||
-          // f.get(moduleID.key).exists(mID => mID.name.contains("commons-text")) ||
-          f.get(moduleID.key).exists(mID => mID.name.contains("antlr4")) ||
-          f.get(moduleID.key).exists(mID => mID.name.contains("automaton")) ||
-          f.get(moduleID.key).exists(mID => mID.name.contains("xchart")) ||
-          f.get(moduleID.key).exists(mID => mID.name.contains("trove4j"))
-        })
-        .map(_.data)
-    },
-    graalVMNativeImageOptions := Seq("--no-fallback", "-H:+ReportExceptionStackTraces"),
-    jlinkIgnoreMissingDependency := JlinkIgnore.byPackagePrefix(
-      "scala.quoted"                          -> "scala",
-      "scalax.collection.generator"           -> "org.scalacheck",
-      "org.glassfish.jaxb.runtime.v2.runtime" -> "com.sun.xml",
-      "org.glassfish.jaxb.runtime.v2.runtime" -> "org.jvnet",
-      "org.antlr.runtime"                     -> "org.antlr.stringtemplate",
-      "org.knowm.xchart"                      -> "org.apache.pdfbox",
-      "org.knowm.xchart"                      -> "de.rototor",
-      "org.knowm.xchart"                      -> "de.erichseifert",
-      "org.knowm.xchart"                      -> "com.madgag"
-    )
-  )
+// lazy val cli = (project in file("scala-cli"))
+//   .dependsOn(core)
+//   .dependsOn(common)
+//   .dependsOn(choco)
+//   .dependsOn(forsyde)
+//   .dependsOn(minizinc)
+//   .dependsOn(matlab)
+//   .dependsOn(devicetree)
+//   // .enablePlugins(ScalaNativePlugin)
+//   .enablePlugins(UniversalPlugin, JavaAppPackaging, JlinkPlugin)
+//   .enablePlugins(JDKPackagerPlugin)
+//   .enablePlugins(GraalVMNativeImagePlugin)
+//   .settings(
+//     publishArtifact := false,
+//     licenses := Seq(
+//       "MIT"  -> url("https://opensource.org/license/mit/"),
+//       "APL2" -> url("https://www.apache.org/licenses/LICENSE-2.0"),
+//       "EPL2" -> url("https://www.eclipse.org/legal/epl-2.0/")
+//     ),
+//     Compile / mainClass := Some("idesyde.IDeSyDeStandalone"),
+//     libraryDependencies ++= Seq(
+//       "com.github.scopt" %% "scopt"  % scoptVersion,
+//       "com.lihaoyi"      %% "os-lib" % osLibVersion
+//       // "com.outr"         %% "scribe"      % scribeVersion,
+//       // "com.outr"         %% "scribe-file" % scribeVersion
+//     ),
+//     // taken and adapted from https://www.scala-sbt.org/sbt-native-packager/archetypes/jlink_plugin.html
+//     jlinkModulePath := {
+//       val paths = (jlinkBuildImage / fullClasspath).value
+//       paths
+//         .filter(f => {
+//           f.get(moduleID.key).exists(mID => mID.name.contains("jheaps")) ||
+//           // f.get(moduleID.key).exists(mID => mID.name.contains("fastutil")) ||
+//           // f.get(moduleID.key).exists(mID => mID.name.contains("commons-text")) ||
+//           f.get(moduleID.key).exists(mID => mID.name.contains("antlr4")) ||
+//           f.get(moduleID.key).exists(mID => mID.name.contains("automaton")) ||
+//           f.get(moduleID.key).exists(mID => mID.name.contains("xchart")) ||
+//           f.get(moduleID.key).exists(mID => mID.name.contains("trove4j"))
+//         })
+//         .map(_.data)
+//     },
+//     graalVMNativeImageOptions := Seq("--no-fallback", "-H:+ReportExceptionStackTraces"),
+//     jlinkIgnoreMissingDependency := JlinkIgnore.byPackagePrefix(
+//       "scala.quoted"                          -> "scala",
+//       "scalax.collection.generator"           -> "org.scalacheck",
+//       "org.glassfish.jaxb.runtime.v2.runtime" -> "com.sun.xml",
+//       "org.glassfish.jaxb.runtime.v2.runtime" -> "org.jvnet",
+//       "org.antlr.runtime"                     -> "org.antlr.stringtemplate",
+//       "org.knowm.xchart"                      -> "org.apache.pdfbox",
+//       "org.knowm.xchart"                      -> "de.rototor",
+//       "org.knowm.xchart"                      -> "de.erichseifert",
+//       "org.knowm.xchart"                      -> "com.madgag"
+//     )
+//   )
 
 lazy val tests = (project in file("scala-tests"))
   .dependsOn(core)
@@ -337,7 +337,6 @@ lazy val tests = (project in file("scala-tests"))
   .dependsOn(forsyde)
   .dependsOn(minizinc)
   .dependsOn(matlab)
-  .dependsOn(cli)
   .dependsOn(devicetree)
   .settings(
     publishArtifact := false,

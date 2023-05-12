@@ -1,30 +1,15 @@
-package idesyde.identification.common.rules
+package idesyde.common
 
 import idesyde.core.DecisionModel
 import idesyde.core.DesignModel
-import idesyde.identification.common.models.mixed.{
-  PeriodicWorkloadToPartitionedSharedMultiCore,
-  SDFToPartitionedSharedMemory,
-  SDFToTiledMultiCore
-}
-import idesyde.identification.common.models.mixed.PeriodicWorkloadAndSDFServers
-
-import idesyde.identification.common.models.mixed.PeriodicWorkloadAndSDFServerToMultiCore
-
-import idesyde.identification.common.models.platform.SchedulableTiledMultiCore
-import idesyde.identification.common.models.platform.PartitionedSharedMemoryMultiCore
-import idesyde.identification.common.models.sdf.SDFApplication
-import idesyde.identification.common.models.CommunicatingAndTriggeredReactiveWorkload
-import spire.math.Rational
 import idesyde.utils.Logger
-import idesyde.identification.common.models.CommunicatingAndTriggeredReactiveWorkload
 
-trait MixedRules(using logger: Logger) {
+trait MixedRules {
 
   def identTaskdAndSDFServer(
       models: Set[DesignModel],
       identified: Set[DecisionModel]
-  ): Set[PeriodicWorkloadAndSDFServers] = {
+  )(using logger: Logger): Set[PeriodicWorkloadAndSDFServers] = {
     val sdfDecisionModel = identified
       .filter(_.isInstanceOf[SDFApplication])
       .map(_.asInstanceOf[SDFApplication])
@@ -51,7 +36,7 @@ trait MixedRules(using logger: Logger) {
   def identSDFToTiledMultiCore(
       models: Set[DesignModel],
       identified: Set[DecisionModel]
-  ): Set[SDFToTiledMultiCore] = {
+  )(using logger: Logger): Set[SDFToTiledMultiCore] = {
     val app = identified
       .filter(_.isInstanceOf[SDFApplication])
       .map(_.asInstanceOf[SDFApplication])
@@ -80,7 +65,7 @@ trait MixedRules(using logger: Logger) {
   def identSDFToPartitionedSharedMemory(
       models: Set[DesignModel],
       identified: Set[DecisionModel]
-  ): Set[SDFToPartitionedSharedMemory] = {
+  )(using logger: Logger): Set[SDFToPartitionedSharedMemory] = {
     val app = identified
       .filter(_.isInstanceOf[SDFApplication])
       .map(_.asInstanceOf[SDFApplication])

@@ -1,6 +1,6 @@
 package idesyde.identification.minizinc
 
-import idesyde.identification.common.StandardDecisionModel
+import idesyde.common.StandardDecisionModel
 
 trait MiniZincDecisionModel extends StandardDecisionModel:
 
@@ -8,7 +8,7 @@ trait MiniZincDecisionModel extends StandardDecisionModel:
 
   def mznInputs: Map[String, MiniZincData]
 
-  // def rebuildFromMznOutputs(
-  //     output: Map[String, MiniZincData],
-  //     originalModel: ForSyDeSystemGraph
-  // ): ForSyDeSystemGraph
+// def rebuildFromMznOutputs(
+//     output: Map[String, MiniZincData],
+//     originalModel: ForSyDeSystemGraph
+// ): ForSyDeSystemGraph

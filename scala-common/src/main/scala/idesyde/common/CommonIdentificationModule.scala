@@ -10,20 +10,23 @@ import idesyde.core.headers.DecisionModelHeader
 import idesyde.utils.Logger
 import idesyde.identification.common.CommonIdentificationLibrary
 import idesyde.blueprints.CanParseIdentificationModuleConfiguration
-import idesyde.identification.common.models.sdf.SDFApplication
-import idesyde.identification.common.models.platform.TiledMultiCore
-import idesyde.identification.common.models.platform.PartitionedCoresWithRuntimes
-import idesyde.identification.common.models.platform.SchedulableTiledMultiCore
-import idesyde.identification.common.models.mixed.SDFToTiledMultiCore
-import idesyde.identification.common.models.platform.SharedMemoryMultiCore
-import idesyde.identification.common.models.CommunicatingAndTriggeredReactiveWorkload
-import idesyde.identification.common.models.platform.PartitionedSharedMemoryMultiCore
-import idesyde.identification.common.models.mixed.PeriodicWorkloadToPartitionedSharedMultiCore
-import idesyde.identification.common.models.mixed.PeriodicWorkloadAndSDFServers
+import idesyde.common.SDFApplication
+import idesyde.common.TiledMultiCore
+import idesyde.common.PartitionedCoresWithRuntimes
+import idesyde.common.SchedulableTiledMultiCore
+import idesyde.common.SDFToTiledMultiCore
+import idesyde.common.SharedMemoryMultiCore
+import idesyde.common.CommunicatingAndTriggeredReactiveWorkload
+import idesyde.common.PartitionedSharedMemoryMultiCore
+import idesyde.common.PeriodicWorkloadToPartitionedSharedMultiCore
+import idesyde.common.PeriodicWorkloadAndSDFServers
+import idesyde.core.MarkedIdentificationRule
 
 object CommonIdentificationModule
     extends IdentificationModule
-    with CanParseIdentificationModuleConfiguration {
+    with CanParseIdentificationModuleConfiguration
+    with MixedRules
+    with PlatformRules {
 
   given Logger = logger
 
@@ -33,10 +36,26 @@ object CommonIdentificationModule
 
   private val commonIdentificationLibrary = CommonIdentificationLibrary()
 
-  def reverseIdentificationRules = commonIdentificationLibrary.reverseIdentificationRules
+  val identificationRules = Set(
+    MarkedIdentificationRule.SpecificDecisionModelOnlyIdentificationRule(
+      identSchedulableTiledMultiCore,
+      Set("PartitionedCoresWithRuntimes", "TiledMultiCore")
+    ),
+    MarkedIdentificationRule.SpecificDecisionModelOnlyIdentificationRule(
+      identPartitionedSharedMemoryMultiCore,
+      Set("PartitionedCoresWithRuntimes", "SharedMemoryMultiCore")
+    ),
+    MarkedIdentificationRule.DecisionModelOnlyIdentificationRule(identSDFToPartitionedSharedMemory),
+    MarkedIdentificationRule.DecisionModelOnlyIdentificationRule(identSDFToTiledMultiCore),
+    MarkedIdentificationRule.DecisionModelOnlyIdentificationRule(
+      identPeriodicWorkloadToPartitionedSharedMultiCore
+    ),
+    MarkedIdentificationRule.DecisionModelOnlyIdentificationRule(identTaksAndSDFServerToMultiCore),
+    MarkedIdentificationRule.DecisionModelOnlyIdentificationRule(identTiledFromShared),
+    MarkedIdentificationRule.DecisionModelOnlyIdentificationRule(identTaskdAndSDFServer)
+  )
 
-  def identificationRules: Set[(Set[DesignModel], Set[DecisionModel]) => Set[? <: DecisionModel]] =
-    commonIdentificationLibrary.identificationRules
+  val reverseIdentificationRules = Set()
 
   def uniqueIdentifier: String = "CommonIdentificationModule"
 

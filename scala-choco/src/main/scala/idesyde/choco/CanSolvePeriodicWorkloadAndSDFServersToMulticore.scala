@@ -2,7 +2,7 @@ package idesyde.choco
 
 import org.chocosolver.solver.Model
 import org.chocosolver.solver.Solution
-import idesyde.identification.common.models.mixed.PeriodicWorkloadAndSDFServerToMultiCore
+import idesyde.common.PeriodicWorkloadAndSDFServerToMultiCore
 import idesyde.utils.Logger
 import org.chocosolver.solver.search.loop.monitors.IMonitorContradiction
 import org.chocosolver.solver.exception.ContradictionException
@@ -339,5 +339,7 @@ final class CanSolvePeriodicWorkloadAndSDFServersToMulticore(using logger: Logge
       solution: Solution,
       timeResolution: Long,
       memoryResolution: Long
-  ): PeriodicWorkloadAndSDFServerToMultiCore = m
+  ): PeriodicWorkloadAndSDFServerToMultiCore = {
+    m
+  }
 }

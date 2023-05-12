@@ -2,7 +2,7 @@ package idesyde.matlab
 
 import idesyde.core.DesignModel
 import idesyde.core.DecisionModel
-import idesyde.identification.common.models.CommunicatingAndTriggeredReactiveWorkload
+import idesyde.common.CommunicatingAndTriggeredReactiveWorkload
 import spire.math.Rational
 
 trait ApplicationRules extends MatlabUtils {

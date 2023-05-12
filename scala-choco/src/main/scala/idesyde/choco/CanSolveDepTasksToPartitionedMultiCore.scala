@@ -26,10 +26,8 @@ import idesyde.identification.choco.models.workload.FixedPriorityConstraintsModu
 import idesyde.choco.HasActive4StageDuration
 import idesyde.utils.HasUtils
 import idesyde.identification.choco.interfaces.ChocoModelMixin
-import idesyde.identification.common.models.workload.CommunicatingExtendedDependenciesPeriodicWorkload
-import idesyde.identification.common.models.mixed.PeriodicWorkloadToPartitionedSharedMultiCore
+import idesyde.common.PeriodicWorkloadToPartitionedSharedMultiCore
 import idesyde.core.DecisionModel
-import idesyde.identification.common.StandardDecisionModel
 import idesyde.identification.choco.ChocoDecisionModel
 import idesyde.choco.HasDiscretizationToIntegers
 import idesyde.utils.Logger

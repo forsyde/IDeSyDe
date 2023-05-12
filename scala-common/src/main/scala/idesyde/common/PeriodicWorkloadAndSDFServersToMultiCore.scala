@@ -1,13 +1,8 @@
-package idesyde.identification.common.models.mixed
+package idesyde.common
 
 import upickle.default._
 
-import idesyde.identification.common.StandardDecisionModel
-import idesyde.identification.common.models.sdf.SDFApplication
-import idesyde.identification.models.mixed.WCETComputationMixin
-import idesyde.identification.common.models.platform.PartitionedSharedMemoryMultiCore
 import idesyde.core.CompleteDecisionModel
-import idesyde.identification.common.models.mixed.PeriodicWorkloadAndSDFServers
 
 final case class PeriodicWorkloadAndSDFServerToMultiCore(
     val tasksAndSDFs: PeriodicWorkloadAndSDFServers,

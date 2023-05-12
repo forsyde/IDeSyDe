@@ -1,8 +1,5 @@
-package idesyde.identification.common.models
+package idesyde.common
 
-import idesyde.identification.common.StandardDecisionModel
-import idesyde.identification.common.models.workload.CommunicatingExtendedDependenciesPeriodicWorkload
-import idesyde.identification.common.models.workload.InstrumentedWorkloadMixin
 import spire.math.Rational
 import scalax.collection.immutable.Graph
 import scalax.collection.GraphPredef._

@@ -11,6 +11,7 @@ import org.chocosolver.solver.constraints.PropagatorPriority
 import idesyde.utils.HasUtils
 import java.time.LocalDateTime
 import org.chocosolver.solver.objective.ParetoMaximizer
+import org.chocosolver.solver.learn.ExplanationForSignedClause
 
 class ParetoMinimizationBrancher(val objectives: Array[IntVar])
     extends Propagator[IntVar](objectives, PropagatorPriority.QUADRATIC, false)
@@ -50,7 +51,12 @@ class ParetoMinimizationBrancher(val objectives: Array[IntVar])
   }
 
   override def isEntailed(): ESat =
-    if (objectives.forall(_.isInstantiated())) ESat.TRUE else ESat.UNDEFINED
+    if (paretoObjFront.forall(os => os.zipWithIndex.exists((o, i) => objectives(i).getUB() < o)))
+      ESat.TRUE
+    else if (
+      paretoObjFront.exists(os => os.zipWithIndex.forall((o, i) => o <= objectives(i).getLB()))
+    ) ESat.FALSE
+    else ESat.UNDEFINED
 
   def onSolution(): Unit = {
     val solObjs          = objectives.map(_.getValue())

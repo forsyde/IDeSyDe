@@ -179,20 +179,37 @@ final class CanSolveSDFToTiledMultiCore(using logger: Logger)
     // )
     // chocoModel.post(Constraint("paretoOptimality", paretoPropagator))
     // chocoModel.getSolver().plugMonitor(paretoPropagator)
+    val goalInvThs = invThroughputs.zipWithIndex.filter((v, i) => {
+      m.sdfApplications.minimumActorThroughputs(i) <= 0.0
+    })
+    for ((v, i) <- invThroughputs.zipWithIndex; if !goalInvThs.contains((v, i))) {
+      chocoModel
+        .arithm(v, "<=", double2int(1.0 / m.sdfApplications.minimumActorThroughputs(i)))
+        .post()
+    }
+    val uniqueGoalPerSubGraphInvThs = goalInvThs
+      .groupBy((v, i) =>
+        m.sdfApplications.sdfDisjointComponents
+          .map(_.toVector)
+          .indexWhere(as => as.contains(m.sdfApplications.actorsIdentifiers(i)))
+      )
+      .map((k, v) => v.head._1)
+    val objs = Array(
+      numMappedElements,
+      commSlotsSum
+    ) ++ uniqueGoalPerSubGraphInvThs
     createAndApplyMOOPropagator(
       chocoModel,
-      Array(
-        numMappedElements,
-        commSlotsSum
-      ) ++ invThroughputs
+      objs
     )
+    // chocoModel.getSolver().setLearningSignedClauses()
     chocoModel.getSolver().setRestartOnSolutions()
     chocoModel.getSolver().setNoGoodRecordingFromRestarts()
-    // chocoModel
-    //   .getSolver()
-    //   .plugMonitor(new IMonitorContradiction {
-    //     def onContradiction(cex: ContradictionException): Unit = println(cex.toString())
-    //   })
+    chocoModel
+      .getSolver()
+      .plugMonitor(new IMonitorContradiction {
+        def onContradiction(cex: ContradictionException): Unit = println(cex.toString())
+      })
     chocoModel
   }
 
@@ -376,8 +393,8 @@ final class CanSolveSDFToTiledMultiCore(using logger: Logger)
         m.sdfApplications.topologicalAndHeavyJobOrdering
           .map(jobsAndActors.indexOf)
           .map(jobOrder(_)): _*
-      ),
-      Search.minDomLBSearch(invThroughputs: _*)
+      )
+      // Search.minDomLBSearch(invThroughputs: _*)
       // Search.minDomLBSearch(indexOfPes: _*)
     )
     chocoModel.getSolver().setSearch(strategies: _*)

@@ -323,7 +323,22 @@ final class CanSolvePeriodicWorkloadAndSDFServersToMulticore(using logger: Logge
       m.tasksAndSDFs.sdfApplications.sdfMessages.map(message => m.platform.runtimes.schedulers.map(s1 => m.platform.runtimes.schedulers.map(s2 => chocoModel.intVar(0)).toArray).toArray).toArray
     )
 
-    createAndApplyMOOPropagator(chocoModel, Array(numMappedElements) ++ invThroughputs)
+    val goalThs = invThroughputs.zipWithIndex.filter((v, i) => {
+      m.tasksAndSDFs.sdfApplications.minimumActorThroughputs(i) <= 0.0
+    })
+    for ((v, i) <- invThroughputs.zipWithIndex; if !goalThs.contains((v, i))) {
+      chocoModel
+        .arithm(v, "<=", double2int(1.0 / m.tasksAndSDFs.sdfApplications.minimumActorThroughputs(i)))
+        .post()
+    }
+    val uniqueGoalPerSubGraphThs = goalThs
+      .groupBy((v, i) =>
+        m.tasksAndSDFs.sdfApplications.sdfDisjointComponents
+          .map(_.toVector)
+          .indexWhere(as => as.contains(m.tasksAndSDFs.sdfApplications.actorsIdentifiers(i)))
+      )
+      .map((k, v) => v.head._1)
+    createAndApplyMOOPropagator(chocoModel, Array(numMappedElements) ++ uniqueGoalPerSubGraphThs)
 
     // chocoModel
     //   .getSolver()

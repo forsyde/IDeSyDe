@@ -106,8 +106,14 @@ class ChocoExplorer(using logger: Logger) extends Explorer:
       timeResolution: Long = -1L,
       memoryResolution: Long = -1L
   )(using ChocoExplorable[T]): LazyList[T] = {
-    val model  = m.chocoModel(timeResolution, memoryResolution)
-    val solver = model.getSolver()
+    var (model, objs)                 = m.chocoModel(timeResolution, memoryResolution)
+    var solver                        = model.getSolver()
+    var prevLvlSolver                 = solver
+    var prevModel                     = model
+    var prevOjbs                      = objs
+    var frontier: Buffer[Vector[Int]] = Buffer.empty
+    var maxLvlReached                 = false
+    var elapsedTimeInSecs             = 0L
     if (explorationTotalTimeOutInSecs > 0L) {
       logger.debug(s"setting total exploration timeout to ${explorationTotalTimeOutInSecs} seconds")
       solver.limitTime(explorationTotalTimeOutInSecs * 1000L)
@@ -116,9 +122,38 @@ class ChocoExplorer(using logger: Logger) extends Explorer:
       .continually(solver.solve())
       .zipWithIndex
       .takeWhile((feasible, i) =>
-        if (maximumSolutions > 0) feasible && i < maximumSolutions else feasible
+        (!maxLvlReached || feasible) && (maximumSolutions <= 0 || i < maximumSolutions)
       )
-      .map(_ => solver.defaultSolution().record())
+      .flatMap((feasible, _) => {
+        if (feasible && maxLvlReached) {
+          // println("same lvl")
+          Some(solver.defaultSolution().record())
+        }
+        if (feasible && !maxLvlReached) {
+          // println("advance lvl from " + objs.mkString(", "))
+          prevLvlSolver = solver
+          prevModel = model
+          prevOjbs = objs
+          frontier += objs.map(_.getValue().toInt)
+          val newChocoAndObjs =
+            m.chocoModel(timeResolution, memoryResolution, frontier.toVector)
+          model = newChocoAndObjs._1
+          objs = newChocoAndObjs._2
+          solver = model.getSolver()
+          elapsedTimeInSecs += prevLvlSolver.getTimeCount().toLong
+          if (explorationTotalTimeOutInSecs > 0L) {
+            solver.limitTime((explorationTotalTimeOutInSecs - elapsedTimeInSecs) * 1000L)
+          }
+          Some(prevLvlSolver.defaultSolution().record())
+        } else if (!feasible && !maxLvlReached) {
+          // println("go back a lvl")
+          solver = prevLvlSolver
+          model = prevModel
+          objs = prevOjbs
+          maxLvlReached = true
+          None
+        } else None
+      })
       .map(paretoSolution => m.mergeSolution(paretoSolution, timeResolution, memoryResolution))
   }
 

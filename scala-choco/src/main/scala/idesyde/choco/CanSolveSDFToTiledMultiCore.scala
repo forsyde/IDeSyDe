@@ -53,8 +53,9 @@ final class CanSolveSDFToTiledMultiCore(using logger: Logger)
   def buildChocoModel(
       m: SDFToTiledMultiCore,
       timeResolution: Long = -1L,
-      memoryResolution: Long = -1L
-  ): Model = {
+      memoryResolution: Long = -1L,
+      objsUpperBounds: Vector[Vector[Int]] = Vector.empty
+  ): (Model, Vector[IntVar]) = {
     val chocoModel = Model()
     val execMax    = m.wcets.flatten.max
     val commMax    = m.platform.hardware.maxTraversalTimePerBit.flatten.max
@@ -169,7 +170,7 @@ final class CanSolveSDFToTiledMultiCore(using logger: Logger)
       invThroughputs,
       numMappedElements
     )
-    val commSlotsSum = chocoModel.sum("commSlotsSum", numVirtualChannelsForProcElem.flatten: _*)
+    // val commSlotsMax = chocoModel.max("commSlotsMax", numVirtualChannelsForProcElem.flatten)
     // val paretoPropagator = ParetoMaximizer(
     //   Array(
     //     chocoModel.intMinusView(numMappedElements),
@@ -195,22 +196,21 @@ final class CanSolveSDFToTiledMultiCore(using logger: Logger)
       )
       .map((k, v) => v.head._1)
     val objs = Array(
-      numMappedElements,
-      commSlotsSum
+      numMappedElements
     ) ++ uniqueGoalPerSubGraphInvThs
-    createAndApplyMOOPropagator(
-      chocoModel,
-      objs
-    )
+    createAndApplyMOOPropagator(chocoModel, objs, objsUpperBounds)
     // chocoModel.getSolver().setLearningSignedClauses()
     chocoModel.getSolver().setRestartOnSolutions()
     chocoModel.getSolver().setNoGoodRecordingFromRestarts()
-    chocoModel
-      .getSolver()
-      .plugMonitor(new IMonitorContradiction {
-        def onContradiction(cex: ContradictionException): Unit = println(cex.toString())
-      })
-    chocoModel
+    // chocoModel
+    //   .getSolver()
+    //   .plugMonitor(new IMonitorContradiction {
+    //     def onContradiction(cex: ContradictionException): Unit = {
+    //       println(cex.toString())
+    //       println(chocoModel.getSolver().getDecisionPath().toString())
+    //     }
+    //   })
+    (chocoModel, objs.toVector)
   }
 
   def postMapChannelsWithConsumers(
@@ -340,6 +340,7 @@ final class CanSolveSDFToTiledMultiCore(using logger: Logger)
           i
         )
       )
+      // chocoModel.arithm(dataFlows(i)(i), "=", 0).post()
     }
     (computedOnlineIndexOfPe, dataFlows)
   }
@@ -388,13 +389,13 @@ final class CanSolveSDFToTiledMultiCore(using logger: Logger)
     val strategies: Array[AbstractStrategy[? <: Variable]] = Array(
       Search.activityBasedSearch(nUsedPEs),
       compactStrategy,
-      Search.minDomLBSearch(numVirtualChannelsForProcElem.flatten: _*),
       Search.inputOrderLBSearch(
         m.sdfApplications.topologicalAndHeavyJobOrdering
           .map(jobsAndActors.indexOf)
           .map(jobOrder(_)): _*
-      )
-      // Search.minDomLBSearch(invThroughputs: _*)
+      ),
+      Search.minDomLBSearch(numVirtualChannelsForProcElem.flatten: _*),
+      Search.minDomLBSearch(invThroughputs: _*)
       // Search.minDomLBSearch(indexOfPes: _*)
     )
     chocoModel.getSolver().setSearch(strategies: _*)

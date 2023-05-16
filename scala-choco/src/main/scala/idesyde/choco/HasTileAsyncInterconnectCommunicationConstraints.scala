@@ -75,6 +75,7 @@ trait HasTileAsyncInterconnectCommunicationConstraints(
           })
         })
       })
+    // println(messageTravelDuration.flatten.flatten.mkString(", "))
 
     // first, make sure that data from different sources do not collide in any comm. elem
     for (ce <- 0 until numCommElems) {
@@ -105,7 +106,7 @@ trait HasTileAsyncInterconnectCommunicationConstraints(
       val singleChannelSum = commElemsPaths(p)(pp)
         .map(ce => messageTravelTimePerVirtualChannel(c)(commElems.indexOf(ce)))
         .sum
-      val minVCInPath = chocoModel.min(
+      val minVCInPathBySrc = chocoModel.min(
         s"minVCInPath($src, $dst)",
         commElemsPaths(p)(pp)
           .map(ce => numVirtualChannelsForProcElem(src)(commElems.indexOf(ce))): _*
@@ -115,7 +116,7 @@ trait HasTileAsyncInterconnectCommunicationConstraints(
         chocoModel.arithm(
           messageTravelDuration(c)(src)(dst),
           "*",
-          minVCInPath,
+          minVCInPathBySrc,
           "=",
           singleChannelSum
         ),
@@ -125,6 +126,7 @@ trait HasTileAsyncInterconnectCommunicationConstraints(
           0
         )
       )
+
     }
     (numVirtualChannelsForProcElem, procElemSendsDataToAnother, messageTravelDuration)
   }

@@ -6,6 +6,7 @@ import idesyde.common.PeriodicWorkloadAndSDFServerToMultiCore
 import idesyde.utils.Logger
 import org.chocosolver.solver.search.loop.monitors.IMonitorContradiction
 import org.chocosolver.solver.exception.ContradictionException
+import org.chocosolver.solver.variables.IntVar
 
 final class CanSolvePeriodicWorkloadAndSDFServersToMulticore(using logger: Logger)
     extends ChocoExplorable[PeriodicWorkloadAndSDFServerToMultiCore]
@@ -19,8 +20,9 @@ final class CanSolvePeriodicWorkloadAndSDFServersToMulticore(using logger: Logge
   def buildChocoModel(
       m: PeriodicWorkloadAndSDFServerToMultiCore,
       timeResolution: Long,
-      memoryResolution: Long
-  ): Model = {
+      memoryResolution: Long,
+      objsUpperBounds: Vector[Vector[Int]] = Vector.empty
+  ): (Model, Vector[IntVar]) = {
     val chocoModel = Model()
     val execMax    = m.wcets.flatten.max
     val commMax    = m.platform.hardware.maxTraversalTimePerBit.flatten.map(_.toDouble).max
@@ -338,14 +340,15 @@ final class CanSolvePeriodicWorkloadAndSDFServersToMulticore(using logger: Logge
           .indexWhere(as => as.contains(m.tasksAndSDFs.sdfApplications.actorsIdentifiers(i)))
       )
       .map((k, v) => v.head._1)
-    createAndApplyMOOPropagator(chocoModel, Array(numMappedElements) ++ uniqueGoalPerSubGraphThs)
+    val objs = Array(numMappedElements) ++ uniqueGoalPerSubGraphThs
+    createAndApplyMOOPropagator(chocoModel, objs, objsUpperBounds)
 
     // chocoModel
     //   .getSolver()
     //   .plugMonitor(new IMonitorContradiction {
     //     def onContradiction(cex: ContradictionException): Unit = println(cex.toString())
     //   })
-    chocoModel
+    (chocoModel, objs.toVector)
   }
 
   def rebuildDecisionModel(

@@ -51,8 +51,9 @@ final class CanSolveDepTasksToPartitionedMultiCore(using logger: Logger)
   override def buildChocoModel(
       m: PeriodicWorkloadToPartitionedSharedMultiCore,
       timeResolution: Long,
-      memoryResolution: Long
-  ): Model = {
+      memoryResolution: Long,
+      objsUpperBounds: Vector[Vector[Int]] = Vector.empty
+  ): (Model, Vector[IntVar]) = {
     val chocoModel = Model()
     val timeValues =
       (m.workload.periods ++ m.wcets.flatten ++ m.workload.relativeDeadlines)
@@ -327,7 +328,7 @@ final class CanSolveDepTasksToPartitionedMultiCore(using logger: Logger)
     //     def onContradiction(cex: ContradictionException): Unit = println(cex.toString())
     //   })
 
-    chocoModel
+    (chocoModel, Vector(nUsedPEs))
   }
 
   override def rebuildDecisionModel(

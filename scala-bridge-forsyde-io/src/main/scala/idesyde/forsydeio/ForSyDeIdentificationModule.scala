@@ -89,7 +89,7 @@ object ForSyDeIdentificationModule
       if (os.isDir(p)) {
         Files.createDirectories(p.toNIO)
         var targetIdx = 0
-        var target    = p / s"reversed_${targetIdx}_$uniqueIdentifier.fiodl"
+        var target    = p / s"header_reversed_${targetIdx}_$uniqueIdentifier.fiodl"
         while (os.isFile(target)) {
           targetIdx += 1
         }

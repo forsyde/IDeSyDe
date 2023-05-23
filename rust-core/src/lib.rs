@@ -10,13 +10,13 @@ use std::{
 use headers::{DecisionModelHeader, DesignModelHeader, ExplorationBid};
 use std::cmp::Ordering;
 
-pub trait DesignModel {
+pub trait DesignModel: Send + Sync {
     fn unique_identifier(&self) -> String;
 
     fn header(&self) -> DesignModelHeader;
 }
 
-pub trait DecisionModel {
+pub trait DecisionModel: Send + Sync {
     fn unique_identifier(&self) -> String;
 
     fn header(&self) -> DecisionModelHeader;
@@ -165,7 +165,7 @@ pub enum MarkedIdentificationRule {
     GenericIdentificationRule(IdentificationRule),
 }
 
-pub trait IdentificationModule {
+pub trait IdentificationModule: Send + Sync {
     fn unique_identifier(&self) -> String;
     fn identification_step(
         &self,
@@ -194,7 +194,7 @@ impl Hash for dyn IdentificationModule {
     }
 }
 
-pub trait ExplorationModule {
+pub trait ExplorationModule: Send + Sync {
     fn unique_identifier(&self) -> String;
     fn available_criterias(&self, m: Box<dyn DecisionModel>) -> HashMap<String, f32>;
     fn bid(&self, m: &Box<dyn DecisionModel>) -> ExplorationBid;

@@ -8,6 +8,7 @@ use std::path::Path;
 use std::path::PathBuf;
 use std::process::Stdio;
 
+use idesyde_core::headers::load_decision_model_header_from_path;
 use idesyde_core::headers::load_decision_model_headers_from_binary;
 use idesyde_core::headers::DecisionModelHeader;
 use idesyde_core::headers::DesignModelHeader;
@@ -17,6 +18,9 @@ use idesyde_core::DesignModel;
 use idesyde_core::ExplorationModule;
 use idesyde_core::IdentificationModule;
 use log::debug;
+use log::warn;
+
+use rayon::prelude::*;
 
 #[derive(Debug, PartialEq, Eq, Hash)]
 pub struct ExternalIdentificationModule {
@@ -228,7 +232,7 @@ impl ExplorationModule for ExternalExplorationModule {
             .and_then(|s| s.to_str())
             .map(|s| s == "jar")
             .unwrap_or(false);
-        let child = match is_java {
+        let child_opt = match is_java {
             true => std::process::Command::new("java")
                 .arg("-jar")
                 .arg(&self.command_path_)
@@ -268,18 +272,39 @@ impl ExplorationModule for ExternalExplorationModule {
                 .stderr(Stdio::piped())
                 .spawn(),
         };
-        let out = child
-            .expect("Failed to initiate explorer")
-            .stdout
-            .expect("Failed to acquire explorer STDOUT");
+        let uid = self.unique_identifier().clone();
+        let child = child_opt.expect("Failed to initiate explorer");
+        let out = child.stdout.expect("Failed to acquire explorer STDOUT");
+        let err = child.stderr.expect("Failed to achique explorer STDERR");
+        if BufReader::new(err).lines().flatten().any(|l| !l.is_empty()) {
+            warn!(
+                "Exploration module {} produced error messages. Please check it for correctness.",
+                uid
+            );
+        }
         let buf = BufReader::new(out);
         Box::new(
             buf.lines()
                 .map(|l| l.expect("Failed to read solution during exploration"))
-                .map(|f| std::fs::read(f).expect("Failed to read solution file during exploration"))
-                .map(|b| {
-                    rmp_serde::from_slice::<DecisionModelHeader>(&b)
-                        .expect("Failed to deserialize solution header during exploration")
+                .flat_map(move |f| {
+                    let h = load_decision_model_header_from_path(Path::new(f.as_str()));
+                    if h.is_none() {
+                        warn!("Exploration module {} produced non-compliant output '{}' during exploration. Please check it for correctness.", uid, f);
+                    }
+                    h
+                    // if (f.ends_with(".msgpack")) {
+                    //     match std::fs::read(&f).and_then(|b| rmp_serde::from_slice::<DecisionModelHeader>(&b)) {
+                    //         Ok(h) => Some(h),
+                    //         _ => None
+                    //     }
+                    // } else if (f.ends_with(".cbor")) {
+                    //     match std::fs::read(&f).and_then(|b| ::from_slice::<DecisionModelHeader>(&b)) {
+                    //         Ok(h) => Some(h),
+                    //         _ => None
+                    //     }
+                    // } else {
+                    //     None
+                    // }
                 })
                 .map(|m| Box::new(m) as Box<dyn DecisionModel>),
         )
@@ -355,15 +380,21 @@ pub fn identification_procedure(
         // the step condition forces the procedure to go at least one more, fundamental for incrementability
         fix_point = true;
         let before = identified.len();
-        for imodule in imodules {
-            let potential = imodule.identification_step(step, &design_models, &identified);
-            // potential.retain(|m| !identified.contains(m));
-            for m in potential {
-                if !identified.contains(&m) {
-                    identified.push(m);
-                }
-            }
-        }
+        let new_identified: Vec<Box<dyn DecisionModel>> = imodules
+            .par_iter()
+            .flat_map(|imodule| imodule.identification_step(step, &design_models, &identified))
+            .filter(|potential| !identified.contains(potential))
+            .collect();
+        identified.extend(new_identified.into_iter());
+        // for imodule in imodules {
+        //     let potential = imodule.identification_step(step, &design_models, &identified);
+        //     // potential.retain(|m| !identified.contains(m));
+        //     for m in potential {
+        //         if !identified.contains(&m) {
+        //             identified.push(m);
+        //         }
+        //     }
+        // }
         debug!(
             "{} total decision models identified at step {}",
             identified.len(),
@@ -399,8 +430,12 @@ pub fn compute_dominant_biddings<'a>(
         &Box<dyn DecisionModel>,
         ExplorationBid,
     )> = exploration_modules
-        .iter()
-        .flat_map(|exp| decision_models.iter().map(move |m| (exp, *m, exp.bid(m))))
+        .par_iter()
+        .flat_map(|exp| {
+            decision_models
+                .par_iter()
+                .map(move |m| (exp, *m, exp.bid(m)))
+        })
         .filter(|(_, _, c)| c.can_explore)
         .collect();
     combinations

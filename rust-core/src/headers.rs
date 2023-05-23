@@ -3,6 +3,7 @@ use std::{
     cmp::Ordering,
     collections::HashMap,
     hash::Hash,
+    io::BufReader,
     path::{Path, PathBuf},
 };
 
@@ -217,6 +218,33 @@ impl PartialOrd<ExplorationBid> for ExplorationBid {
     }
 }
 
+pub fn load_decision_model_header_from_path(p: &Path) -> Option<DecisionModelHeader> {
+    if let Ok(f) = std::fs::File::open(p) {
+        // let inb = std::io::BufReader::new(f);
+        if p.extension()
+            .map(|ext| ext.eq_ignore_ascii_case("msgpack"))
+            .unwrap_or(false)
+        {
+            // rmp_serde::from_read::<std::fs::File, DecisionModelHeader>(f).expect("Problems");
+            // return None;
+            return rmp_serde::from_read(f).ok();
+        } else if p
+            .extension()
+            .map(|ext| ext.eq_ignore_ascii_case("cbor"))
+            .unwrap_or(false)
+        {
+            return ciborium::from_reader(f).ok();
+        } else if p
+            .extension()
+            .map(|ext| ext.eq_ignore_ascii_case("json"))
+            .unwrap_or(false)
+        {
+            return serde_json::from_reader(f).ok();
+        }
+    }
+    None
+}
+
 pub fn load_decision_model_headers_from_binary(
     header_path: &Path,
 ) -> Vec<(PathBuf, DecisionModelHeader)> {
@@ -233,25 +261,13 @@ pub fn load_decision_model_headers_from_binary(
                 if dir_entry
                     .path()
                     .extension()
-                    .map(|x| x.eq_ignore_ascii_case("msgpack"))
+                    .map(|x| x.eq_ignore_ascii_case("msgpack") || x.eq_ignore_ascii_case("cbor"))
                     .unwrap_or(false)
                 {
-                    let contents = std::fs::read(dir_entry.path())
-                        .expect("Failed to read decision model header file.");
-                    let header = rmp_serde::decode::from_slice(&contents)
-                        .expect("Failed to deserialize decision model header.");
-                    decision_models.push((dir_entry.path(), header));
-                } else if dir_entry
-                    .path()
-                    .extension()
-                    .map(|x| x.eq_ignore_ascii_case("cbor"))
-                    .unwrap_or(false)
-                {
-                    let contents = std::fs::read(dir_entry.path())
-                        .expect("Failed to read decision model header file.");
-                    let header = ciborium::from_reader(contents.as_slice())
-                        .expect("Failed to deserialize decision model header.");
-                    decision_models.push((dir_entry.path(), header));
+                    let h = load_decision_model_header_from_path(dir_entry.path().as_path());
+                    if let Some(header) = h {
+                        decision_models.push((dir_entry.path(), header));
+                    }
                 }
             }
         }

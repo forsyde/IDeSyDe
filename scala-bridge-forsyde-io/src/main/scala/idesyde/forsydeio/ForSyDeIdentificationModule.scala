@@ -84,23 +84,23 @@ object ForSyDeIdentificationModule
     }
   }
 
-  override def designModelToOutput(m: DesignModel, p: Path): Boolean = m match {
+  override def designModelToOutput(m: DesignModel, p: Path): Option[Path] = m match {
     case ForSyDeDesignModel(systemGraph) =>
       if (os.isDir(p)) {
         Files.createDirectories(p.toNIO)
         var targetIdx = 0
-        var target    = p / s"design_model_output_$targetIdx.fiodl"
+        var target    = p / s"reversed_${targetIdx}_$uniqueIdentifier.fiodl"
         while (os.isFile(target)) {
           targetIdx += 1
         }
         modelHandler.writeModel(systemGraph, target.toNIO)
+        Some(target)
       } else if (modelHandler.canWriteModel(p.toNIO)) {
         modelHandler.writeModel(systemGraph, p.toNIO)
-        return true
-      }
-      false
+        Some(p)
+      } else None
     case _: DesignModel =>
-      false
+      None
   }
 
   def uniqueIdentifier: String = "YyyYyYyIdentificationModule"

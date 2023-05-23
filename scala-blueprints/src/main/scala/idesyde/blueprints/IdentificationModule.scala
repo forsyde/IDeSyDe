@@ -32,7 +32,7 @@ trait IdentificationModule
 
   def inputsToDesignModel(p: os.Path): Option[DesignModelHeader | DesignModel] = None
 
-  def designModelToOutput(m: DesignModel, p: os.Path): Boolean = false
+  def designModelToOutput(m: DesignModel, p: os.Path): Option[os.Path] = None
 
   /** decoders used to reconstruct design models from headers.
     *
@@ -114,13 +114,13 @@ trait IdentificationModule
                 Some(designPath),
                 _,
                 Some(solvedPath),
-                Some(integrationPath),
+                Some(reversePath),
                 outP,
                 _
               ) =>
             os.makeDir.all(designPath)
             os.makeDir.all(solvedPath)
-            os.makeDir.all(integrationPath)
+            os.makeDir.all(reversePath)
             val fromDesignModelHeaders =
               os.list(designPath)
                 .filter(_.last.startsWith("header"))
@@ -160,17 +160,19 @@ trait IdentificationModule
               (m, k) <- reverseIdentification(
                 solvedDecisionModels,
                 designModels
-              ).zipWithIndex
+              ).zipWithIndex;
+              written <- designModelToOutput(m, reversePath)
             ) {
-              val (hPath, bPath) = m.writeToPath(
-                integrationPath,
-                s"$k",
+              val header = m.header.copy(model_paths = Set(written.toString))
+              val (hPath, bPath) = header.writeToPath(
+                reversePath,
+                s"${k}",
                 uniqueIdentifier
               )
               println(
                 hPath
                   .getOrElse(
-                    integrationPath / s"header_${m.uniqueIdentifier}_${uniqueIdentifier}.msgpack"
+                    reversePath / s"header_${m.uniqueIdentifier}_${uniqueIdentifier}.msgpack"
                   )
                   .toString
               )

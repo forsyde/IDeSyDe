@@ -293,6 +293,10 @@ final class CanSolveDepTasksToPartitionedMultiCore(using logger: Logger)
 
     val solver = chocoModel.getSolver()
     chocoModel.setObjective(false, nUsedPEs)
+    // if there is already a previous solution
+    val minPrevSol = objsUpperBounds.minByOption(s => s(0)).foreach(sol => {
+      chocoModel.arithm(nUsedPEs, "<", sol(0)).post() // there is only one in this case
+    })
     solver.setSearch(
       Array(
         SimpleWorkloadBalancingDecisionStrategy(
@@ -391,12 +395,11 @@ final class CanSolveDepTasksToPartitionedMultiCore(using logger: Logger)
       )
       .toVector
     // val channelSlotAllocations = ???
-    val full = m.copy(
+    m.copy(
       processMappings = processMappings,
       processSchedulings = processSchedulings,
       channelMappings = channelMappings
     )
-    m
   }
 
   // chocoModel.getSolver().plugMonitor(ConMonitorObj)

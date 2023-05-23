@@ -7,6 +7,7 @@ use idesyde_core::{
     DecisionModel, DesignModel, ExplorationModule, IdentificationModule,
 };
 use log::{debug, error, info, warn, Level};
+use rayon::prelude::*;
 
 use crate::orchestration::{compute_dominant_biddings, compute_dominant_decision_models};
 
@@ -42,6 +43,13 @@ struct Args {
 
     #[arg(short, long, help = "Sets the verbosity of this run.")]
     verbosity: Option<String>,
+
+    #[arg(
+        short,
+        long,
+        help = "Sets the maximum number of parallel jobs (or threads) for the non-exploration procedures. Default is 1."
+    )]
+    parallel_jobs: Option<usize>,
 
     #[arg(
         long,
@@ -90,6 +98,10 @@ fn main() {
         .format_module_path(false)
         .init();
     if args.inputs.len() > 0 {
+        rayon::ThreadPoolBuilder::new()
+            .num_threads(args.parallel_jobs.unwrap_or(1))
+            .build_global()
+            .unwrap();
         // let mut hasher = sha3::Sha3_224::new();
         let mut sorted_inputs = args.inputs.clone();
         sorted_inputs.sort();
@@ -308,9 +320,9 @@ fn main() {
             (None, Some(n)) => info!("Starting exploration up to {} solutions.", n),
             (None, None) => info!("Starting exploration until completion."),
         }
-        let mut sols_found = 0;
         if let Some((exp, decision_model)) = dominant_biddings.first() {
-            for (i, sol) in exp
+            // let (mut tx, rx) = spmc::channel();
+            let sols_found = exp
                 .explore(
                     &decision_model,
                     args.x_max_solutions.unwrap_or(0),
@@ -319,23 +331,57 @@ fn main() {
                     args.x_memory_resolution.unwrap_or(-1),
                 )
                 .enumerate()
-            {
-                sols_found += 1;
-                let solv = vec![sol];
-                debug!("Found a new solution. Total count is {}.", i + 1);
-                for imodule in &imodules {
-                    for reverse in imodule.reverse_identification(&solv, &design_models) {
-                        idesyde_core::write_design_model_header_to_path(
-                            &reverse.header(),
-                            &reverse_path,
-                            format!("{}_{}", "reversed_", i).as_str(),
-                            "Orchestrator",
-                        );
-                    }
-                }
-            }
+                .inspect(|(i, _)| debug!("Found a new solution. Total count is {}.", i + 1))
+                // .par_bridge()
+                .map(|(i, sol)| {
+                    let solv = vec![sol];
+                    imodules.par_iter().for_each(|imodule| {
+                        for reverse in imodule.reverse_identification(&solv, &design_models) {
+                            debug!(
+                                "Reverse identified the design model {} at {}",
+                                reverse.unique_identifier(),
+                                reverse_path.display()
+                            );
+                            idesyde_core::write_design_model_header_to_path(
+                                &reverse.header(),
+                                &reverse_path,
+                                format!("{}_{}", "reversed_", i).as_str(),
+                                "Orchestrator",
+                            );
+                        }
+                    });
+                    i + 1
+                })
+                .max()
+                .unwrap_or(0);
+            // for (i, sol) in exp
+            //     .explore(
+            //         &decision_model,
+            //         args.x_max_solutions.unwrap_or(0),
+            //         args.x_total_time_out.unwrap_or(0),
+            //         args.x_time_resolution.unwrap_or(-1),
+            //         args.x_memory_resolution.unwrap_or(-1),
+            //     )
+            //     .enumerate()
+            // {
+            //     sols_found += 1;
+            //     let solv = vec![sol];
+            //     debug!("Found a new solution. Total count is {}.", i + 1);
+            //     imodules.par_iter().for_each(|imodule| {
+            //         for reverse in imodule.reverse_identification(&solv, &design_models) {
+            //             idesyde_core::write_design_model_header_to_path(
+            //                 &reverse.header(),
+            //                 &reverse_path,
+            //                 format!("{}_{}", "reversed_", i).as_str(),
+            //                 "Orchestrator",
+            //             );
+            //         }
+            //     });
+            // }
+            info!("Finished exploration with {} solution(s).", sols_found)
+        } else {
+            info!("No dominant bidding to start exploration. Finished.")
         }
-        info!("Finished exploration with {} solution(s).", sols_found)
     } else {
         info!("At least one input design model is necessary")
     }

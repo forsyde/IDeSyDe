@@ -12,3 +12,4 @@ log.workspace = true
 rmp-serde = { workspace = true }
 serde_json.workspace = true
 sha3 = { workspace = true }
+rayon.workspace = true

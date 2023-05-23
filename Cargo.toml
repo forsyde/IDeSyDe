@@ -1,7 +1,6 @@
 [workspace]
 members = [
     "rust-core",
-    "rust-core-derive",
     "rust-orchestration",
     "rust-blueprints",
     "rust-common",
@@ -20,6 +19,7 @@ env_logger = "0.10.0"
 quote = "1.0.27"
 syn = "2.0.15"
 ciborium = "0.2.1"
+rayon = "1.7"
 
 [workspace.package]
 version = "0.5.3"

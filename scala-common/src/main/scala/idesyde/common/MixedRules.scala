@@ -103,8 +103,8 @@ trait MixedRules {
       .map(_.asInstanceOf[PartitionedSharedMemoryMultiCore])
     // if ((runtimes.isDefined && plat.isEmpty) || (runtimes.isEmpty && plat.isDefined))
     app.flatMap(a =>
-      plat.map(p =>
-        PeriodicWorkloadToPartitionedSharedMultiCore(
+      plat.flatMap(p =>
+        val potential = PeriodicWorkloadToPartitionedSharedMultiCore(
           workload = a,
           platform = p,
           processMappings = Vector.empty,
@@ -113,6 +113,9 @@ trait MixedRules {
           channelSlotAllocations = Map(),
           maxUtilizations = Map()
         )
+        if (potential.wcets.forall(_.exists(_ > 0.0))) {
+          Some(potential)
+        } else None
       )
     )
   }

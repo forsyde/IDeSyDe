@@ -27,7 +27,7 @@ class StreamingJobsThroughputPropagator(
     val jobMapping: Array[IntVar],
     val jobWeight: Array[IntVar],
     val edgeWeight: Array[Array[IntVar]],
-    val jobThroughput: Array[IntVar]
+    val jobMaxCycleLength: Array[IntVar]
 ) extends Propagator[IntVar](
       jobOrdering.toArray ++ jobMapping.toArray ++ edgeWeight.flatten.toArray ++ jobWeight.toArray,
       PropagatorPriority.CUBIC,
@@ -153,12 +153,12 @@ class StreamingJobsThroughputPropagator(
           }
         }
       }
-      jobThroughput(src).updateLowerBound(minimumDistanceMatrix(src), this)
+      jobMaxCycleLength(src).updateLowerBound(minimumDistanceMatrix(src), this)
     }
   }
 
   def isEntailed(): ESat = if (
-    (0 until nJobs).map(jobThroughput(_)).forall(_.isInstantiated())
+    (0 until nJobs).map(jobMaxCycleLength(_)).forall(_.isInstantiated())
   ) then ESat.TRUE
   else ESat.UNDEFINED
 

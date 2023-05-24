@@ -19,69 +19,76 @@ trait PlatformRules extends HasDeviceTreeUtils with HasUtils {
   ): Set[SharedMemoryMultiCore] =
     mergedDesignModel[DeviceTreeDesignModel, SharedMemoryMultiCore](models) { dtm =>
       val roots                 = dtm.crossLinked
-      var peIDs                 = Buffer[String]()
-      var peOps                 = Buffer[Map[String, Map[String, Double]]]()
-      var peFreq                = Buffer[Long]()
-      var ceIDs                 = Buffer[String]()
-      var meIDs                 = Buffer[String]()
-      var meSizes               = Buffer[Long]()
+      var peIDs                 = mutable.Set[String]()
+      var peOps                 = Map[String, Map[String, Map[String, Double]]]()
+      var peFreq                = Map[String, Long]()
+      var ceIDs                 = mutable.Set[String]()
+      var meIDs                 = mutable.Set[String]()
+      var meSizes               = Map[String, Long]()
       var topo                  = mutable.Set[(String, String)]()
-      var ceMaxChannels         = Buffer[Int]()
-      var ceBitPerSecPerChannel = Buffer[Double]()
+      var ceMaxChannels         = Map[String, Int]()
+      var ceBitPerSecPerChannel = Map[String, Double]()
       var preComputedPaths      = mutable.Map[String, mutable.Map[String, Iterable[String]]]()
       for (island <- roots) {
         island match {
           case root @ RootNode(children, properties, prefix) =>
             val mainBus = root.prefix + "/devicebus"
             val pes = root.cpus
-              .map(cpu =>
-                cpu.label.getOrElse(
-                  root.prefix + "/cpus/" + cpu.fullId
-                )
-              )
+              .map(cpu => cpu.prefixedFullId(root.prefix + "/cpus"))
               .filterNot(peIDs.contains)
             val mems =
               root.memories
-                .map(mem =>
-                  mem.label
-                    .getOrElse(
-                      root.prefix + "/" + mem.fullId
-                    )
-                )
+                .map(mem => mem.prefixedFullId(root.prefix))
                 .filterNot(meIDs.contains)
-            topo ++= pes.map(pe => (mainBus, pe)) ++ pes.map(pe => (pe, mainBus)) ++
-              mems.map(mem => (mainBus, mem)) ++ mems.map(mem => (mem, mainBus))
+            var othersCEs =
+              root.extraBuses.map(ce => ce.prefixedFullId(root.prefix))
+            // topo ++= pes.map(pe => (mainBus, pe)) ++ pes.map(pe => (pe, mainBus)) ++
+            //   mems.map(mem => (mainBus, mem)) ++ mems.map(mem => (mem, mainBus))
             // now add additional connections of the main bus
-            for (comp <- root.allChildren; idx = ceIDs.indexOf(comp); if idx > -1) {
-              topo += (mainBus, comp.label.getOrElse(root.prefix + comp.nodeName))
-              topo += (comp.label.getOrElse(root.prefix + comp.nodeName), mainBus)
+            for (comp <- pes ++ mems ++ othersCEs) {
+              topo += (mainBus, comp)
+              topo += (comp, mainBus)
             }
             // the found elements
             peIDs ++= pes
             meIDs ++= mems
             ceIDs += mainBus
+            ceIDs ++= othersCEs
             // now the properties for each important element
-            peOps ++= root.cpus.map(_.operationsProvided)
-            peFreq ++= root.cpus.map(_.frequency)
-            meSizes ++= root.memories.map(_.memorySize)
-            ceMaxChannels += root.mainBusConcurrency
-            ceBitPerSecPerChannel +=
+            peOps ++= root.cpus.map(pe =>
+              pe.prefixedFullId(root.prefix + "/cpus") -> pe.operationsProvided
+            )
+            peFreq ++= root.cpus.map(pe => pe.prefixedFullId(root.prefix + "/cpus") -> pe.frequency)
+            meSizes ++= root.memories.map(me => me.prefixedFullId(root.prefix) -> me.memorySize)
+            ceMaxChannels += mainBus -> root.mainBusConcurrency
+            ceMaxChannels ++= root.extraBuses.map(ce =>
+              ce.prefixedFullId(root.prefix) -> ce.busConcurrency
+            )
+            ceBitPerSecPerChannel += mainBus ->
               root.mainBusFrequency.toDouble * root.mainBusFlitSize.toDouble / root.mainBusClockPerFlit.toDouble
+            ceBitPerSecPerChannel ++=
+              root.extraBuses.map(bus =>
+                bus.prefixedFullId(root.prefix) ->
+                  bus.busFrequency.toDouble * bus.busFlitSize.toDouble / bus.busClockPerFlit.toDouble
+              )
         }
       }
       val (topoSrcs, topoDsts) = topo.toVector.unzip
+      val peVec                = peIDs.toVector
+      val meVec                = meIDs.toVector
+      val ceVec                = ceIDs.toVector
       Set(
         SharedMemoryMultiCore(
-          peIDs.toVector,
-          meIDs.toVector,
-          ceIDs.toVector,
+          peVec,
+          meVec,
+          ceVec,
           topoSrcs,
           topoDsts,
-          peFreq.toVector,
-          peOps.toVector,
-          meSizes.toVector,
-          ceMaxChannels.toVector,
-          ceBitPerSecPerChannel.toVector,
+          peVec.map(peFreq),
+          peVec.map(peOps),
+          meVec.map(meSizes),
+          ceVec.map(ceMaxChannels),
+          ceVec.map(ceBitPerSecPerChannel),
           preComputedPaths.map((s, m) => s -> m.toMap).toMap
         )
       )

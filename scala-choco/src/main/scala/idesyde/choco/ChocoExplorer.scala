@@ -119,11 +119,10 @@ class ChocoExplorer(using logger: Logger) extends Explorer:
       solver.limitTime(explorationTotalTimeOutInSecs * 1000L)
     }
     LazyList
-      .continually(solver.solve())
-      .zipWithIndex
-      .takeWhile((feasible, i) =>
-        (!maxLvlReached || feasible) && (maximumSolutions <= 0 || i < maximumSolutions)
-      )
+      .from(0)
+      .takeWhile(i => (maximumSolutions <= 0 || i < maximumSolutions))
+      .map(i => (solver.solve(), i))
+      .takeWhile((feasible, i) => (!maxLvlReached || feasible))
       .flatMap((feasible, _) => {
         if (feasible && maxLvlReached) {
           // println("same lvl")

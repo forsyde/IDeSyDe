@@ -2,6 +2,7 @@ package idesyde.identification.forsyde.rules
 
 import scala.jdk.StreamConverters._
 import scala.jdk.CollectionConverters._
+import scala.jdk.OptionConverters._
 
 import idesyde.core.DesignModel
 import idesyde.core.DecisionModel
@@ -25,6 +26,7 @@ import forsyde.io.java.typed.viewers.impl.InstrumentedExecutable
 import forsyde.io.java.core.ForSyDeSystemGraph
 import forsyde.io.java.typed.viewers.execution.LoopingTask
 import java.util.stream.Collectors
+import forsyde.io.java.typed.viewers.impl.CommunicatingExecutable
 
 trait WorkloadRules {
 
@@ -111,6 +113,46 @@ trait WorkloadRules {
             }
           })
       }
+      for (
+        task       <- tasks;
+        ctask      <- LoopingTask.safeCast(task).toScala;
+        executable <- ctask.getLoopSequencePort(model).asScala;
+        commexec   <- CommunicatingExecutable.safeCast(executable).toScala;
+        dataBlock  <- dataBlocks
+      ) {
+        if (model.hasConnection(commexec, dataBlock)) {
+          val dataWritten = model
+            .getAllEdges(commexec.getViewedVertex, dataBlock.getViewedVertex)
+            .stream
+            .mapToLong(e =>
+              e.getSourcePort
+                .map(outPort =>
+                  commexec
+                    .getPortDataWrittenSize()
+                    .getOrDefault(outPort, dataBlock.getMaxSizeInBits)
+                )
+                .orElse(0L)
+            )
+            .sum
+          communicationGraphEdges :+= (ctask.getIdentifier(), dataBlock
+            .getIdentifier(), dataWritten)
+        }
+        if (model.hasConnection(dataBlock, commexec)) {
+          val dataRead = model
+            .getAllEdges(dataBlock.getViewedVertex, commexec.getViewedVertex)
+            .stream
+            .mapToLong(e =>
+              e.getTargetPort
+                .map(inPort =>
+                  commexec.getPortDataReadSize().getOrDefault(inPort, dataBlock.getMaxSizeInBits)
+                )
+                .orElse(0L)
+            )
+            .sum
+          communicationGraphEdges :+= (dataBlock.getIdentifier(), ctask
+            .getIdentifier(), dataRead)
+        }
+      }
       // check if every task has a periodic stimulus
       lazy val stimulusGraph =
         AsSubgraph(
@@ -120,8 +162,6 @@ trait WorkloadRules {
             .toSet
             .asJava
         )
-      lazy val dataGraph =
-        AsSubgraph(model, (tasks ++ dataBlocks).map(_.getViewedVertex()).toSet.asJava)
       lazy val connectivityInspector = ConnectivityInspector(stimulusGraph)
       lazy val allTasksAreStimulated = tasks.forall(task =>
         periodicStimulus.exists(stim =>

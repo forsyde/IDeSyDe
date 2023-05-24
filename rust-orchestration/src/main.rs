@@ -193,9 +193,12 @@ fn main() {
         }
 
         // a zero-step to make design model headers available
-        for imodule in &imodules {
+        imodules.par_iter().for_each(|imodule| {
             imodule.identification_step(0, &Vec::new(), &Vec::new());
-        }
+        });
+        // for imodule in &imodules {
+        //     imodule.identification_step(0, &Vec::new(), &Vec::new());
+        // }
         // now we can proceed safely
         let design_model_headers = load_design_model_headers_from_binary(&inputs_path);
         let design_models: Vec<Box<dyn DesignModel>> = design_model_headers
@@ -249,52 +252,52 @@ fn main() {
         //     }
         // }
 
-        let dominant_without_biddings = compute_dominant_decision_models(&identified_refs);
+        // let dominant_without_biddings = compute_dominant_decision_models(&identified_refs);
         let dominant_biddings = compute_dominant_biddings(&emodules, &identified_refs);
         info!("Computed {} dominant bidding(s) ", dominant_biddings.len());
 
-        for (p, m) in load_decision_model_headers_from_binary(&identified_path) {
-            let mut to_be_deleted = false;
-            for (_, dom) in &dominant_biddings {
-                to_be_deleted = to_be_deleted
-                    || match dom.header().partial_cmp(&m.header()) {
-                        Some(Ordering::Greater) => true,
-                        _ => false,
-                    };
-            }
-            // consider the case of no explorer avaialable
-            if dominant_biddings.is_empty() {
-                for dom in &dominant_without_biddings {
-                    to_be_deleted = to_be_deleted
-                        || match dom.header().partial_cmp(&m.header()) {
-                            Some(Ordering::Greater) => true,
-                            _ => false,
-                        };
-                }
-            }
-            if to_be_deleted {
-                if let Some(bp) = m.header().body_path {
-                    let jbp = Path::new(&bp).with_extension("json");
-                    match std::fs::remove_file(jbp) {
-                        Err(_) => {
-                            warn!("Tried removing JSON decision model body but failed",)
-                        }
-                        _ => (),
-                    };
-                    match std::fs::remove_file(bp) {
-                        Err(_) => warn!("Failed to remove body path of dominated decision model during identification. This is a benign error. Continuing"),
-                        _ => (),
-                    }
-                }
-                match std::fs::remove_file(Path::new(&p.with_extension("json"))) {
-                   Err(_) => warn!("Tried remove a JSON decision model header but failed. This is a benign error. Continuing"),
-                   _ => (),
-                };
-                std::fs::remove_file(&p).expect(
-                    "Failed to remove header of dominated decision model during identification",
-                );
-            }
-        }
+        // for (p, m) in load_decision_model_headers_from_binary(&identified_path) {
+        //     let mut to_be_deleted = false;
+        //     for (_, dom) in &dominant_biddings {
+        //         to_be_deleted = to_be_deleted
+        //             || match dom.header().partial_cmp(&m.header()) {
+        //                 Some(Ordering::Greater) => true,
+        //                 _ => false,
+        //             };
+        //     }
+        //     // consider the case of no explorer avaialable
+        //     if dominant_biddings.is_empty() {
+        //         for dom in &dominant_without_biddings {
+        //             to_be_deleted = to_be_deleted
+        //                 || match dom.header().partial_cmp(&m.header()) {
+        //                     Some(Ordering::Greater) => true,
+        //                     _ => false,
+        //                 };
+        //         }
+        //     }
+        //     if to_be_deleted {
+        //         if let Some(bp) = m.header().body_path {
+        //             let jbp = Path::new(&bp).with_extension("json");
+        //             match std::fs::remove_file(jbp) {
+        //                 Err(_) => {
+        //                     warn!("Tried removing JSON decision model body but failed",)
+        //                 }
+        //                 _ => (),
+        //             };
+        //             match std::fs::remove_file(bp) {
+        //                 Err(_) => warn!("Failed to remove body path of dominated decision model during identification. This is a benign error. Continuing"),
+        //                 _ => (),
+        //             }
+        //         }
+        //         match std::fs::remove_file(Path::new(&p.with_extension("json"))) {
+        //            Err(_) => warn!("Tried remove a JSON decision model header but failed. This is a benign error. Continuing"),
+        //            _ => (),
+        //         };
+        //         std::fs::remove_file(&p).expect(
+        //             "Failed to remove header of dominated decision model during identification",
+        //         );
+        //     }
+        // }
 
         // for (i, (e, m)) in dominant.iter().enumerate() {
         //     idesyde_core::write_decision_model_header_to_path(
@@ -322,7 +325,7 @@ fn main() {
         }
         if let Some((exp, decision_model)) = dominant_biddings.first() {
             // let (mut tx, rx) = spmc::channel();
-            let sols_found = exp
+            let sols_found: Vec<Box<dyn DecisionModel>> = exp
                 .explore(
                     &decision_model,
                     args.x_max_solutions.unwrap_or(0),
@@ -331,29 +334,45 @@ fn main() {
                     args.x_memory_resolution.unwrap_or(-1),
                 )
                 .enumerate()
-                .inspect(|(i, _)| debug!("Found a new solution. Total count is {}.", i + 1))
                 // .par_bridge()
                 .map(|(i, sol)| {
-                    let solv = vec![sol];
-                    imodules.par_iter().for_each(|imodule| {
-                        for reverse in imodule.reverse_identification(&solv, &design_models) {
-                            debug!(
-                                "Reverse identified the design model {} at {}",
-                                reverse.unique_identifier(),
-                                reverse_path.display()
-                            );
+                    debug!("Found a new solution. Total count is {}.", i + 1);
+                    sol
+                })
+                .collect();
+            info!(
+                "Finished exploration with {} solution(s).",
+                sols_found.len()
+            );
+            if !sols_found.is_empty() {
+                let total_reversed: usize = imodules
+                    .par_iter()
+                    .enumerate()
+                    .map(|(i, imodule)| {
+                        let mut n_reversed = 0;
+                        for reverse in imodule.reverse_identification(&sols_found, &design_models) {
                             idesyde_core::write_design_model_header_to_path(
                                 &reverse.header(),
                                 &reverse_path,
-                                format!("{}_{}", "reversed_", i).as_str(),
+                                format!("{}", n_reversed).as_str(),
                                 "Orchestrator",
                             );
+                            n_reversed += 1;
+                            debug!(
+                                "Reverse identified a {} design model.",
+                                reverse.unique_identifier()
+                            );
                         }
-                    });
-                    i + 1
-                })
-                .max()
-                .unwrap_or(0);
+                        n_reversed
+                    })
+                    .sum();
+                info!(
+                    "Finished reverse identification of {} design model(s).",
+                    total_reversed
+                );
+            } else {
+                info!("No solution to reverse identify.");
+            }
             // for (i, sol) in exp
             //     .explore(
             //         &decision_model,
@@ -378,7 +397,6 @@ fn main() {
             //         }
             //     });
             // }
-            info!("Finished exploration with {} solution(s).", sols_found)
         } else {
             info!("No dominant bidding to start exploration. Finished.")
         }

@@ -90,8 +90,9 @@ object ForSyDeIdentificationModule
         Files.createDirectories(p.toNIO)
         var targetIdx = 0
         var target    = p / s"reversed_${targetIdx}_$uniqueIdentifier.fiodl"
-        while (os.isFile(target)) {
+        while (os.isFile(target) && os.exists(target)) {
           targetIdx += 1
+          target = p / s"reversed_${targetIdx}_$uniqueIdentifier.fiodl"
         }
         modelHandler.writeModel(systemGraph, target.toNIO)
         Some(target)

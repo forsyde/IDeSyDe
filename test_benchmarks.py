@@ -5,6 +5,8 @@ import shutil
 
 
 class BaseTest(unittest.TestCase):
+    parallel_lvl = min(5, os.cpu_count() or 1)
+
     def setUp(self) -> None:
         self.test_cases = dict()
         for root, dirs, files in os.walk("examples_and_benchmarks"):
@@ -33,6 +35,8 @@ class BaseTest(unittest.TestCase):
                         run_path,
                         "--x-max-solutions",
                         "1",
+                        "-p",
+                        str(self.parallel_lvl),
                         "-v",
                         "debug",
                     ]

@@ -125,6 +125,11 @@ final class CanSolveSDFToTiledMultiCore(using logger: Logger)
               .toArray
       )
 
+    // disable mappings to places that cannnot run stuff
+    for ((pm, a) <- processMappings.zipWithIndex; (w, pe) <- m.wcets(a).zipWithIndex; if w <= 0.0) {
+      chocoModel.arithm(pm, "!=", pe).post()
+    }
+
     val durations = postTiledOrPartitionedDurations(
       chocoModel,
       processMappings,
@@ -180,6 +185,7 @@ final class CanSolveSDFToTiledMultiCore(using logger: Logger)
     // )
     // chocoModel.post(Constraint("paretoOptimality", paretoPropagator))
     // chocoModel.getSolver().plugMonitor(paretoPropagator)
+    val globalInvTh = chocoModel.max("globalInvTh", invThroughputs)
     val goalInvThs = invThroughputs.zipWithIndex.filter((v, i) => {
       m.sdfApplications.minimumActorThroughputs(i) <= 0.0
     })
@@ -188,16 +194,17 @@ final class CanSolveSDFToTiledMultiCore(using logger: Logger)
         .arithm(v, "<=", double2int(1.0 / m.sdfApplications.minimumActorThroughputs(i)))
         .post()
     }
-    val uniqueGoalPerSubGraphInvThs = goalInvThs
-      .groupBy((v, i) =>
-        m.sdfApplications.sdfDisjointComponents
-          .map(_.toVector)
-          .indexWhere(as => as.contains(m.sdfApplications.actorsIdentifiers(i)))
-      )
-      .map((k, v) => v.head._1)
+    // val uniqueGoalPerSubGraphInvThs = goalInvThs
+    //   .groupBy((v, i) =>
+    //     m.sdfApplications.sdfDisjointComponents
+    //       .map(_.toVector)
+    //       .indexWhere(as => as.contains(m.sdfApplications.actorsIdentifiers(i)))
+    //   )
+    //   .map((k, v) => v.head._1)
     val objs = Array(
-      numMappedElements
-    ) ++ uniqueGoalPerSubGraphInvThs
+      numMappedElements,
+      chocoModel.max("globalInvTh", invThroughputs)
+    ) // ++ uniqueGoalPerSubGraphInvThs
     createAndApplyMOOPropagator(chocoModel, objs, objsUpperBounds)
     // chocoModel.getSolver().setLearningSignedClauses()
     chocoModel.getSolver().setRestartOnSolutions()
@@ -598,7 +605,7 @@ final class CanSolveSDFToTiledMultiCore(using logger: Logger)
           == jobMapping(j) && jobOrder(j)
             .getUB() == 0 && jobOrder(i).getLB() > 0)
     var ths = m.wcets.zipWithIndex
-      .map((w, ai) => 1.0 / (m.sdfApplications.sdfRepetitionVectors(ai).toDouble * w.min))
+      .map((w, ai) => m.sdfApplications.sdfRepetitionVectors(ai).toDouble / w.filter(_ > 0.0).min)
       .toBuffer
     val nJobs                 = jobsAndActors.size
     val minimumDistanceMatrix = jobWeights.toBuffer
@@ -654,7 +661,7 @@ final class CanSolveSDFToTiledMultiCore(using logger: Logger)
       val (a, _) = jobsAndActors(src)
       val adx    = m.sdfApplications.actorsIdentifiers.indexOf(a)
       val th =
-        1.0 / (m.sdfApplications.sdfRepetitionVectors(adx).toDouble * minimumDistanceMatrix(src))
+        m.sdfApplications.sdfRepetitionVectors(adx).toDouble / minimumDistanceMatrix(src)
       if (minimumDistanceMatrix(src) > Double.NegativeInfinity && ths(adx) > th) ths(adx) = th
     }
     for (
@@ -664,8 +671,8 @@ final class CanSolveSDFToTiledMultiCore(using logger: Logger)
       qa1 = m.sdfApplications.sdfRepetitionVectors(a1i);
       qa2 = m.sdfApplications.sdfRepetitionVectors(a2i)
     ) {
-      ths(a1i) = Math.min(ths(a1i) * qa1, ths(a2i) * qa2) / qa1
-      ths(a2i) = Math.min(ths(a1i) * qa1, ths(a2i) * qa2) / qa2
+      ths(a1i) = Math.min(ths(a1i), ths(a2i) * qa1 / qa2)
+      ths(a2i) = Math.min(ths(a1i) * qa2 / qa1, ths(a2i))
     }
     ths.toVector
   }

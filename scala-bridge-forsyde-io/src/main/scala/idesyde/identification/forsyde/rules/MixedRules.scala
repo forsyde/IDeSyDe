@@ -54,62 +54,42 @@ trait MixedRules {
         (taskId, schedId) <- solved.processSchedulings;
         // ok for now because it is a 1-to-many situation wit the current Decision Models (2023-01-16)
         // TODO: fix it to be stable later
-        task = rebuilt
-          .vertexSet()
-          .stream()
-          .filter(v => taskId.contains(v.getIdentifier()))
-          .findAny()
-          .get();
-        sched = rebuilt.queryVertex(schedId).get()
+        task = Scheduled.enforce(rebuilt.queryVertex(taskId).orElse(rebuilt.newVertex(taskId)));
+        sched = AbstractScheduler
+          .enforce(rebuilt.queryVertex(schedId).orElse(rebuilt.newVertex(schedId)))
       ) {
-        AbstractScheduler
-          .safeCast(sched)
-          .ifPresent(scheduler => {
-            Scheduled.enforce(task).insertSchedulersPort(rebuilt, scheduler)
-            GreyBox.enforce(sched).insertContainedPort(rebuilt, Visualizable.enforce(task))
-          })
+        task.insertSchedulersPort(rebuilt, sched)
+        GreyBox.enforce(sched).insertContainedPort(rebuilt, Visualizable.enforce(task))
       }
       for (
         (taskId, memId) <- solved.processMappings;
         // ok for now because it is a 1-to-many situation wit the current Decision Models (2023-01-16)
         // TODO: fix it to be stable later
-        task = rebuilt
-          .vertexSet()
-          .stream()
-          .filter(v => taskId.contains(v.getIdentifier()))
-          .findAny()
-          .get();
-        mem = rebuilt.queryVertex(memId).get()
+        task = MemoryMapped
+          .enforce(rebuilt.queryVertex(taskId).orElse(rebuilt.newVertex(taskId)));
+        mem = GenericMemoryModule
+          .enforce(rebuilt.queryVertex(memId).orElse(rebuilt.newVertex(memId)))
       ) {
-        GenericMemoryModule
-          .safeCast(mem)
-          .ifPresent(memory => MemoryMapped.enforce(task).insertMappingHostsPort(rebuilt, memory))
+        task.insertMappingHostsPort(rebuilt, mem)
       }
       for (
         (channelId, memId) <- solved.channelMappings;
         // ok for now because it is a 1-to-many situation wit the current Decision Models (2023-01-16)
         // TODO: fix it to be stable later
-        channel = rebuilt
-          .vertexSet()
-          .stream()
-          .filter(v => channelId.contains(v.getIdentifier()))
-          .findAny()
-          .get();
-        mem = rebuilt.queryVertex(memId).get()
+        channel = MemoryMapped
+          .enforce(rebuilt.queryVertex(channelId).orElse(rebuilt.newVertex(channelId)));
+        mem = GenericMemoryModule
+          .enforce(rebuilt.queryVertex(memId).orElse(rebuilt.newVertex(memId)))
       ) {
-        GenericMemoryModule
-          .safeCast(mem)
-          .ifPresent(memory =>
-            MemoryMapped.enforce(channel).insertMappingHostsPort(rebuilt, memory)
-          )
+        channel.insertMappingHostsPort(rebuilt, mem)
       }
       ForSyDeDesignModel(rebuilt)
     }
   }
 
   def integratePeriodicWorkloadToPartitionedSharedMultiCoreFromNothing(
-      designModel: Set[DesignModel],
-      decisionModel: Set[DecisionModel]
+      decisionModel: Set[DecisionModel],
+      designModel: Set[DesignModel]
   ): Set[? <: DesignModel] = {
     val model = designModel
       .flatMap(_ match {
@@ -129,45 +109,39 @@ trait MixedRules {
       case _ => None
     })
     if (model.vertexSet().isEmpty()) {
-
       for (solved <- solveds; rebuilt = ForSyDeSystemGraph().merge(model)) yield {
         for (
           (taskId, schedId) <- solved.processSchedulings;
           // ok for now because it is a 1-to-many situation wit the current Decision Models (2023-01-16)
           // TODO: fix it to be stable later
-          task  = rebuilt.queryVertex(taskId).orElse(rebuilt.newVertex(taskId));
-          sched = rebuilt.queryVertex(schedId).orElse(rebuilt.newVertex(schedId))
+          task = Scheduled.enforce(rebuilt.queryVertex(taskId).orElse(rebuilt.newVertex(taskId)));
+          sched = AbstractScheduler
+            .enforce(rebuilt.queryVertex(schedId).orElse(rebuilt.newVertex(schedId)))
         ) {
-          AbstractScheduler
-            .safeCast(sched)
-            .ifPresent(scheduler => {
-              Scheduled.enforce(task).insertSchedulersPort(rebuilt, scheduler)
-              GreyBox.enforce(sched).insertContainedPort(rebuilt, Visualizable.enforce(task))
-            })
+          task.insertSchedulersPort(rebuilt, sched)
+          GreyBox.enforce(sched).insertContainedPort(rebuilt, Visualizable.enforce(task))
         }
         for (
           (taskId, memId) <- solved.processMappings;
           // ok for now because it is a 1-to-many situation wit the current Decision Models (2023-01-16)
           // TODO: fix it to be stable later
-          task = rebuilt.queryVertex(taskId).orElse(rebuilt.newVertex(taskId));
-          mem  = rebuilt.queryVertex(memId).orElse(rebuilt.newVertex(memId))
+          task = MemoryMapped
+            .enforce(rebuilt.queryVertex(taskId).orElse(rebuilt.newVertex(taskId)));
+          mem = GenericMemoryModule
+            .enforce(rebuilt.queryVertex(memId).orElse(rebuilt.newVertex(memId)))
         ) {
-          GenericMemoryModule
-            .safeCast(mem)
-            .ifPresent(memory => MemoryMapped.enforce(task).insertMappingHostsPort(rebuilt, memory))
+          task.insertMappingHostsPort(rebuilt, mem)
         }
         for (
           (channelId, memId) <- solved.channelMappings;
           // ok for now because it is a 1-to-many situation wit the current Decision Models (2023-01-16)
           // TODO: fix it to be stable later
-          channel = rebuilt.queryVertex(channelId).orElse(rebuilt.newVertex(channelId));
-          mem     = rebuilt.queryVertex(memId).orElse(rebuilt.newVertex(memId))
+          channel = MemoryMapped
+            .enforce(rebuilt.queryVertex(channelId).orElse(rebuilt.newVertex(channelId)));
+          mem = GenericMemoryModule
+            .enforce(rebuilt.queryVertex(memId).orElse(rebuilt.newVertex(memId)))
         ) {
-          GenericMemoryModule
-            .safeCast(mem)
-            .ifPresent(memory =>
-              MemoryMapped.enforce(channel).insertMappingHostsPort(rebuilt, memory)
-            )
+          channel.insertMappingHostsPort(rebuilt, mem)
         }
         ForSyDeDesignModel(rebuilt)
       }

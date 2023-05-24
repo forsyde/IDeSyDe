@@ -25,7 +25,8 @@ object CommonIdentificationModule
     extends IdentificationModule
     with CanParseIdentificationModuleConfiguration
     with MixedRules
-    with PlatformRules {
+    with PlatformRules
+    with WorkloadRules {
 
   given Logger = logger
 
@@ -49,7 +50,11 @@ object CommonIdentificationModule
     ),
     MarkedIdentificationRule.DecisionModelOnlyIdentificationRule(identTaksAndSDFServerToMultiCore),
     MarkedIdentificationRule.DecisionModelOnlyIdentificationRule(identTiledFromShared),
-    MarkedIdentificationRule.DecisionModelOnlyIdentificationRule(identTaskdAndSDFServer)
+    MarkedIdentificationRule.DecisionModelOnlyIdentificationRule(identTaskdAndSDFServer),
+    MarkedIdentificationRule.SpecificDecisionModelOnlyIdentificationRule(
+      identAggregatedCommunicatingAndTriggeredReactiveWorkload,
+      Set("CommunicatingAndTriggeredReactiveWorkload")
+    )
   )
 
   val reverseIdentificationRules = Set()

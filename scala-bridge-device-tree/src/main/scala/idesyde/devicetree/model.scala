@@ -36,6 +36,8 @@ sealed trait DeviceTreeComponent {
   def connect(dst: DeviceTreeLink): Unit
   def properties: Iterable[DeviceTreeProperty]
   def fullId: String = label.getOrElse(nodeName + label.map("@" + _).getOrElse(""))
+  def prefixedFullId(prefix: String): String =
+    label.getOrElse(prefix + "/" + nodeName + label.map("@" + _).getOrElse(""))
 
   def allChildren: Iterable[DeviceTreeComponent] = children ++ children.flatMap(_.allChildren)
   def propertiesNames                            = properties.map(_.name)
@@ -85,6 +87,11 @@ final case class RootNode(
   def memories = allChildren.flatMap(_ match {
     case a: MemoryNode => Some(a)
     case _             => None
+  })
+
+  def extraBuses = allChildren.flatMap(_ match {
+    case bus: BusNode => Some(bus)
+    case _            => None
   })
 
   def mainBusFrequency: Long = properties
@@ -208,7 +215,47 @@ final case class BusNode(
     val properties: List[DeviceTreeProperty],
     var connected: Buffer[DeviceTreeLink]
 ) extends DeviceTreeComponent
-    with HasDefaultConnect {}
+    with HasDefaultConnect {
+
+  def busFrequency: Long = properties
+    .flatMap(_ match {
+      case DeviceTreeProperty.U64Property("bus-frequency", prop)   => Some(prop)
+      case DeviceTreeProperty.U32Property("bus-frequency", prop)   => Some(prop.toLong)
+      case DeviceTreeProperty.U64Property("clock-frequency", prop) => Some(prop)
+      case DeviceTreeProperty.U32Property("clock-frequency", prop) => Some(prop.toLong)
+      case _                                                       => None
+    })
+    .headOption
+    .getOrElse(1L)
+
+  def busConcurrency: Int = properties
+    .flatMap(_ match {
+      case DeviceTreeProperty.U64Property("bus-concurrency", prop) => Some(prop.toInt)
+      case DeviceTreeProperty.U32Property("bus-concurrency", prop) => Some(prop)
+      case _                                                       => None
+    })
+    .headOption
+    .getOrElse(1)
+
+  def busFlitSize: Long = properties
+    .flatMap(_ match {
+      case DeviceTreeProperty.U64Property("bus-flit", prop) => Some(prop)
+      case DeviceTreeProperty.U32Property("bus-flit", prop) => Some(prop.toLong)
+      case _                                                => None
+    })
+    .headOption
+    .getOrElse(1L)
+
+  def busClockPerFlit: Long = properties
+    .flatMap(_ match {
+      case DeviceTreeProperty.U64Property("bus-clock-per-flit", prop) => Some(prop)
+      case DeviceTreeProperty.U32Property("bus-clock-per-flit", prop) => Some(prop.toLong)
+      case _                                                          => None
+    })
+    .headOption
+    .getOrElse(1L)
+
+}
 
 final case class GenericNode(
     val nodeName: String,

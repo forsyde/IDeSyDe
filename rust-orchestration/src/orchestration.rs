@@ -134,7 +134,7 @@ impl IdentificationModule for ExternalIdentificationModule {
         };
         if let Ok(out) = output {
             if let Ok(s) = String::from_utf8(out.stdout) {
-                let integrated: Vec<Box<dyn DesignModel>> = s
+                let reversed: Vec<Box<dyn DesignModel>> = s
                     .lines()
                     .map(|p| {
                         let b = std::fs::read(p)
@@ -146,7 +146,7 @@ impl IdentificationModule for ExternalIdentificationModule {
                         Box::new(header) as Box<dyn DesignModel>
                     })
                     .collect();
-                return integrated;
+                return reversed;
             }
         }
         Vec::new()
@@ -440,22 +440,26 @@ pub fn compute_dominant_biddings<'a>(
         .collect();
     combinations
         .iter()
-        .filter(|(_, m, _)| {
+        .enumerate()
+        .filter(|(i, (_, m, _))| {
             combinations
                 .iter()
-                .all(|(_, o, _)| match m.partial_cmp(&o) {
-                    Some(Ordering::Greater) | Some(Ordering::Equal) | None => true,
+                .enumerate()
+                .all(|(j, (_, o, _))| match m.partial_cmp(&o) {
+                    Some(Ordering::Greater) | None => true,
+                    Some(Ordering::Equal) => i <= &j,
                     _ => false,
                 })
         })
-        .filter(|(_, _, comb)| {
-            combinations
-                .iter()
-                .all(|(_, _, ocomb)| match comb.partial_cmp(&ocomb) {
-                    Some(Ordering::Greater) | Some(Ordering::Equal) | None => true,
+        .filter(|(i, (_, _, comb))| {
+            combinations.iter().enumerate().all(|(j, (_, _, ocomb))| {
+                match comb.partial_cmp(&ocomb) {
+                    Some(Ordering::Greater) | None => true,
+                    Some(Ordering::Equal) => i <= &j,
                     _ => false,
-                })
+                }
+            })
         })
-        .map(|(e, m, _)| (*e, *m))
+        .map(|(_, (e, m, _))| (*e, *m))
         .collect()
 }

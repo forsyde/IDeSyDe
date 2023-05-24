@@ -206,9 +206,9 @@ final class CanSolveSDFToTiledMultiCore(using logger: Logger)
       chocoModel.max("globalInvTh", invThroughputs)
     ) // ++ uniqueGoalPerSubGraphInvThs
     createAndApplyMOOPropagator(chocoModel, objs, objsUpperBounds)
-    // chocoModel.getSolver().setLearningSignedClauses()
-    chocoModel.getSolver().setRestartOnSolutions()
-    chocoModel.getSolver().setNoGoodRecordingFromRestarts()
+    chocoModel.getSolver().setLearningSignedClauses()
+    // chocoModel.getSolver().setRestartOnSolutions()
+    // chocoModel.getSolver().setNoGoodRecordingFromRestarts()
     // chocoModel
     //   .getSolver()
     //   .plugMonitor(new IMonitorContradiction {
@@ -401,8 +401,13 @@ final class CanSolveSDFToTiledMultiCore(using logger: Logger)
           .map(jobsAndActors.indexOf)
           .map(jobOrder(_)): _*
       ),
-      Search.minDomLBSearch(numVirtualChannelsForProcElem.flatten: _*),
-      Search.minDomLBSearch(invThroughputs: _*)
+      Search.intVarSearch(
+        (x) => x.minBy(_.getRange()),
+        (v) => v.getUB(),
+        numVirtualChannelsForProcElem.flatten: _*
+      )
+      // Search.activityBasedSearch(numVirtualChannelsForProcElem.flatten: _*)
+      // Search.minDomLBSearch(invThroughputs: _*)
       // Search.minDomLBSearch(indexOfPes: _*)
     )
     chocoModel.getSolver().setSearch(strategies: _*)
@@ -532,12 +537,16 @@ final class CanSolveSDFToTiledMultiCore(using logger: Logger)
         val iter =
           for (
             (ce, j) <- m.platform.hardware.communicationElems.zipWithIndex;
-            if solution.getIntVal(numVirtualChannelsForProcElem(p)(j)) > 0
+            // if solution.getIntVal(numVirtualChannelsForProcElem(p)(j)) > 0
+            if numVirtualChannelsForProcElem(p)(j).getValue() > 0
           )
             yield ce -> (0 until m.platform.hardware.communicationElementsMaxChannels(j))
               .map(slot =>
-                (slot + j % m.platform.hardware.communicationElementsMaxChannels(j)) < solution
-                  .getIntVal(numVirtualChannelsForProcElem(p)(j))
+                // (slot + j % m.platform.hardware.communicationElementsMaxChannels(j)) < solution
+                //   .getIntVal(numVirtualChannelsForProcElem(p)(j))
+                (slot + j % m.platform.hardware.communicationElementsMaxChannels(
+                  j
+                )) < numVirtualChannelsForProcElem(p)(j).getValue()
               )
               .toVector
         iter.toMap

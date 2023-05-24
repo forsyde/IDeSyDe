@@ -127,8 +127,7 @@ class ChocoExplorer(using logger: Logger) extends Explorer:
         if (feasible && maxLvlReached) {
           // println("same lvl")
           Some(solver.defaultSolution().record())
-        }
-        if (feasible && !maxLvlReached) {
+        } else if (feasible && !maxLvlReached) {
           // println("advance lvl from " + objs.mkString(", "))
           prevLvlSolver = solver
           prevModel = model

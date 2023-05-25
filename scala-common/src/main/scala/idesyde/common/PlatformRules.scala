@@ -61,7 +61,10 @@ trait PlatformRules {
       if (isTiled) {
         val tiledMemories = plat.processingElems.map(pe =>
           plat.storageElems.minBy(me =>
-            plat.topology.get(pe).shortestPathTo(plat.topology.get(me)).size
+            plat.topology.get(pe).shortestPathTo(plat.topology.get(me)) match {
+              case Some(path) => path.size
+              case None       => plat.communicationElems.length + 1
+            }
           )
         )
         val tiledNI = plat.processingElems.map(pe =>

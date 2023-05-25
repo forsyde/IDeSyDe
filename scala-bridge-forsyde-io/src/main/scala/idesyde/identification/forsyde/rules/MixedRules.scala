@@ -176,25 +176,20 @@ trait MixedRules {
         proc      = solved.platform.hardware.processors(memIdx);
         scheduler = solved.platform.runtimes.schedulers(memIdx)
       ) {
-        rebuilt
-          .queryVertex(actorId)
-          .ifPresent(actor => {
-            rebuilt
-              .queryVertex(mem)
-              .ifPresent(m => {
-                val v = MemoryMapped.enforce(actor)
-                v.setMappingHostsPort(
-                  rebuilt,
-                  java.util.Set.of(GenericMemoryModule.enforce(m))
-                )
-              })
-            rebuilt
-              .queryVertex(scheduler)
-              .ifPresent(s => {
-                val v = Scheduled.enforce(actor)
-                v.setSchedulersPort(rebuilt, java.util.Set.of(AbstractScheduler.enforce(s)))
-              })
-          })
+        val v =
+          MemoryMapped.enforce(rebuilt.queryVertex(actorId).orElse(rebuilt.newVertex(actorId)))
+        val m =
+          GenericMemoryModule.enforce(rebuilt.queryVertex(mem).orElse(rebuilt.newVertex(mem)))
+        v.setMappingHostsPort(
+          rebuilt,
+          java.util.Set.of(GenericMemoryModule.enforce(m))
+        )
+        val s = AbstractScheduler.enforce(
+          rebuilt
+            .queryVertex(scheduler)
+            .orElse(rebuilt.newVertex(scheduler))
+        )
+        Scheduled.enforce(v).setSchedulersPort(rebuilt, java.util.Set.of(s))
       }
       // now, we take care of the memory mappings
       for (
@@ -202,19 +197,14 @@ trait MixedRules {
         channelID = solved.sdfApplications.channelsIdentifiers(i);
         memIdx    = solved.platform.hardware.memories.indexOf(mem)
       ) {
-        rebuilt
-          .queryVertex(channelID)
-          .ifPresent(actor => {
-            rebuilt
-              .queryVertex(mem)
-              .ifPresent(m => {
-                val v = MemoryMapped.enforce(actor)
-                v.setMappingHostsPort(
-                  rebuilt,
-                  java.util.Set.of(GenericMemoryModule.enforce(m))
-                )
-              })
-          })
+        val v =
+          MemoryMapped.enforce(rebuilt.queryVertex(channelID).orElse(rebuilt.newVertex(channelID)))
+        val m =
+          GenericMemoryModule.enforce(rebuilt.queryVertex(mem).orElse(rebuilt.newVertex(mem)))
+        v.setMappingHostsPort(
+          rebuilt,
+          java.util.Set.of(GenericMemoryModule.enforce(m))
+        )
       }
       // now, we put the schedule in each scheduler
       for (
@@ -222,12 +212,12 @@ trait MixedRules {
         proc      = solved.platform.hardware.processors(si);
         scheduler = solved.platform.runtimes.schedulers(si)
       ) {
-        rebuilt
-          .queryVertex(scheduler)
-          .ifPresent(sched => {
-            val scs = AllocatedSingleSlotSCS.enforce(sched)
-            scs.setEntries(list.asJava)
-          })
+        val scs = AllocatedSingleSlotSCS.enforce(
+          rebuilt
+            .queryVertex(scheduler)
+            .orElse(rebuilt.newVertex(scheduler))
+        )
+        scs.setEntries(list.asJava)
       }
       // finally, the channel comm allocations
       var commAllocs = solved.platform.hardware.communicationElementsMaxChannels.map(maxVc =>
@@ -244,27 +234,26 @@ trait MixedRules {
         commAllocs(ce)(vc) += cId
       }
       for ((ce, i) <- solved.platform.hardware.communicationElems.zipWithIndex) {
-        rebuilt
-          .queryVertex(ce)
-          .ifPresent(comm =>
-            AllocatedSharedSlotSCS
-              .enforce(comm)
-              .setEntries(commAllocs(i).map(_.asJava).asJava)
-          )
+        val comm = AllocatedSharedSlotSCS.enforce(
+          rebuilt
+            .queryVertex(ce)
+            .orElse(rebuilt.newVertex(ce))
+        )
+        comm.setEntries(commAllocs(i).map(_.asJava).asJava)
       }
       // add the throughputs for good measure
       for (
         (a, ai) <- solved.sdfApplications.actorsIdentifiers.zipWithIndex;
         th = solved.sdfApplications.minimumActorThroughputs(ai)
       ) {
-        rebuilt
-          .queryVertex(a)
-          .ifPresent(actor => {
-            val frac = Rational(th)
-            val act  = AnalyzedActor.enforce(actor)
-            act.setThroughputInSecsNumerator(frac.numeratorAsLong)
-            act.setThroughputInSecsDenominator(frac.denominatorAsLong)
-          })
+        val act = AnalyzedActor.enforce(
+          rebuilt
+            .queryVertex(a)
+            .orElse(rebuilt.newVertex(a))
+        )
+        val frac = Rational(th)
+        act.setThroughputInSecsNumerator(frac.numeratorAsLong)
+        act.setThroughputInSecsDenominator(frac.denominatorAsLong)
       }
       ForSyDeDesignModel(rebuilt)
     }

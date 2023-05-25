@@ -52,11 +52,11 @@ trait DesignModel {
     elementIDs //++ elementRelationIDs
   )
 
-  override def equals(x: Any): Boolean = x match {
-    case dm: DesignModel =>
-      uniqueIdentifier == dm.uniqueIdentifier &&
-        elementIDs == dm.elementIDs
-    // && elementRelationIDs == dm.elementRelationIDs
-    case _ => false
-  }
+  // override def equals(x: Any): Boolean = x match {
+  //   case dm: DesignModel =>
+  //     uniqueIdentifier == dm.uniqueIdentifier &&
+  //       elementIDs == dm.elementIDs
+  //   // && elementRelationIDs == dm.elementRelationIDs
+  //   case _ => false
+  // }
 }

@@ -77,14 +77,17 @@ impl IdentificationModule for ExternalIdentificationModule {
             if let Ok(s) = String::from_utf8(out.stdout) {
                 let identified: Vec<Box<dyn DecisionModel>> = s
                     .lines()
-                    .map(|p| {
-                        let b = std::fs::read(p)
-                            .expect("Failed to read header file from disk during identification");
-                        let header = rmp_serde::from_slice::<DecisionModelHeader>(b.as_slice())
-                            .expect(
-                            "Failed to deserialize header file from disk during identification.",
-                        );
-                        Box::new(header) as Box<dyn DecisionModel>
+                    .flat_map(|p| {
+                        if let Ok(b) = std::fs::read(p) {
+                            if let Ok(header) = rmp_serde::from_slice::<DecisionModelHeader>(b.as_slice()) {
+                                return Some(Box::new(header) as Box<dyn DecisionModel>);
+                            } else {
+                                warn!("Failed to deserialize header coming from {}. Check this module for correctness.", self.unique_identifier());
+                            }
+                        } else {
+                            warn!("Unexpected header file from module {}. Check this module for correctness.", self.unique_identifier())
+                        }
+                        None
                     })
                     .collect();
                 return identified;

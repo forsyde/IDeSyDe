@@ -65,7 +65,7 @@ final class CanSolveDepTasksToPartitionedMultiCore(using logger: Logger)
       if (timeResolution > Int.MaxValue.toLong) Int.MaxValue
       else if (timeResolution <= 0L) timeValues.size * 100
       else timeResolution.toInt,
-      timeValues.sum
+      timeValues.max
     )(s)
     given Fractional[Long] = HasDiscretizationToIntegers.ceilingLongFractional
     def long2int(l: Long): Int = discretized(
@@ -172,41 +172,31 @@ final class CanSolveDepTasksToPartitionedMultiCore(using logger: Logger)
     ) = postActive4StageDurationsConstraints(
       chocoModel,
       wcets.map(_.toArray).toArray,
-      m.workload.processSizes
-        .map(d =>
-          m.platform.hardware.communicationElementsBitPerSecPerChannel
-            .map(b => double2int(d.toDouble / b))
-            .toArray
-        )
-        .toArray,
-      m.workload.messagesMaxSizes
-        .map(d =>
-          m.platform.hardware.communicationElementsBitPerSecPerChannel
-            .map(b => double2int(d.toDouble / b))
-            .toArray
-        )
-        .toArray,
       m.platform.hardware.communicationElementsMaxChannels,
-      (s: Int) => (t: Int) => 
-        m.platform.hardware.computedPaths(m.platform.hardware.platformElements(s))(m.platform.hardware.platformElements(t)).map(m.platform.hardware.communicationElems.indexOf),
+      (t: Int) => (ce: Int) =>
+        long2int(m.workload.processSizes(t)) / double2int(m.platform.hardware.communicationElementsBitPerSecPerChannel(ce)),
       (t: Int) =>
         (c: Int) =>
-          m.workload.dataGraph
-            .find((a, b, _) =>
-              a == m.workload.tasks(t) && b == m.workload
-                .dataChannels(c)
-            )
-            .map((_, _, l) => l)
-            .getOrElse(0L),
-      (t: Int) =>
-        (c: Int) =>
+          (ce: Int) =>
           m.workload.dataGraph
             .find((a, b, _) =>
               b == m.workload.tasks(t) && a == m.workload
                 .dataChannels(c)
             )
-            .map((_, _, l) => l)
-            .getOrElse(0L),
+            .map((_, _, l) => long2int(l) / double2int(m.platform.hardware.communicationElementsBitPerSecPerChannel(ce)))
+            .getOrElse(0),
+      (t: Int) =>
+        (c: Int) =>
+          (ce: Int) =>
+            m.workload.dataGraph
+            .find((a, b, _) =>
+              a == m.workload.tasks(t) && b == m.workload
+              .dataChannels(c)
+            )
+            .map((_, _, l) => long2int(l) / double2int(m.platform.hardware.communicationElementsBitPerSecPerChannel(ce)))
+            .getOrElse(0),
+      (s: Int) => (t: Int) => 
+        m.platform.hardware.computedPaths(m.platform.hardware.platformElements(s))(m.platform.hardware.platformElements(t)).map(m.platform.hardware.communicationElems.indexOf),
       taskExecution.toArray,
       taskMapping,
       dataBlockMapping,
@@ -309,11 +299,9 @@ final class CanSolveDepTasksToPartitionedMultiCore(using logger: Logger)
         ),
         Search.inputOrderUBSearch(nUsedPEs),
         Search.activityBasedSearch(taskMapping: _*),
-        Search.activityBasedSearch(dataBlockMapping: _*),
-        Search.minDomLBSearch(responseTimes: _*),
-        Search.minDomLBSearch(blockingTimes: _*),
-        Search.minDomLBSearch(taskMapping: _*),
-        Search.minDomLBSearch(dataBlockMapping: _*)
+        Search.activityBasedSearch(dataBlockMapping: _*)
+        // Search.minDomLBSearch(responseTimes: _*),
+        // Search.minDomLBSearch(blockingTimes: _*)
         // Search.intVarSearch(
         //   FirstFail(chocoModel),
         //   IntDomainMin(),
@@ -323,6 +311,14 @@ final class CanSolveDepTasksToPartitionedMultiCore(using logger: Logger)
         // )
       ): _*
     )
+    // chocoModel
+    //   .getSolver()
+    //   .plugMonitor(new IMonitorContradiction {
+    //     def onContradiction(cex: ContradictionException): Unit = {
+    //       println(cex.toString())
+    //       println(chocoModel.getSolver().getDecisionPath().toString())
+    //     }
+    //   })
 
     chocoModel.getSolver().setLearningSignedClauses()
 

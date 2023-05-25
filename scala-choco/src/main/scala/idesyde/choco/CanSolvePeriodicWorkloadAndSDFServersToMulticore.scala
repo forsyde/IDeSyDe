@@ -157,64 +157,53 @@ final class CanSolvePeriodicWorkloadAndSDFServersToMulticore(using logger: Logge
     ) = postActive4StageDurationsConstraints(
       chocoModel,
       wcets.map(_.toArray).toArray,
-      m.tasksAndSDFs.workload.processSizes
-        .map(d =>
-          m.platform.hardware.communicationElementsBitPerSecPerChannel
-            .map(b => double2int(d.toDouble / b))
-            .toArray
-        )
-        .toArray ++ m.tasksAndSDFs.sdfApplications.actorSizes.map(d =>
-          m.platform.hardware.communicationElementsBitPerSecPerChannel
-            .map(b => double2int(d.toDouble / b))
-            .toArray
-        ).toArray,
-      m.tasksAndSDFs.workload.messagesMaxSizes
-        .map(d =>
-          m.platform.hardware.communicationElementsBitPerSecPerChannel
-            .map(b => double2int(d.toDouble / b))
-            .toArray
-        )
-        .toArray ++ sdfMessagesMaxSizes.map(d => m.platform.hardware.communicationElementsBitPerSecPerChannel
-            .map(b => double2int(d.toDouble / b))
-            .toArray),
       m.platform.hardware.communicationElementsMaxChannels,
-      (s: Int) => (t: Int) =>
-        m.platform.hardware.computedPaths(m.platform.hardware.platformElements(s))(m.platform.hardware.platformElements(t)).map(m.platform.hardware.communicationElems.indexOf),
+      (t: Int) => (ce: Int) =>
+        if (t < m.tasksAndSDFs.workload.taskSizes.length) {
+          long2int(m.tasksAndSDFs.workload.processSizes(t)) / double2int(m.platform.hardware.communicationElementsBitPerSecPerChannel(ce))
+        } else {
+          val tOffset = t - m.tasksAndSDFs.workload.taskSizes.length
+          long2int(m.tasksAndSDFs.sdfApplications.actorSizes(tOffset)) / double2int(m.platform.hardware.communicationElementsBitPerSecPerChannel(ce))
+        },
       (t: Int) =>
         (c: Int) =>
-          if (t < m.tasksAndSDFs.workload.tasks.size && m.tasksAndSDFs.workload
-                .dataChannels.size < c) {
-            m.tasksAndSDFs.workload.dataGraph
-              .find((a, b, _) =>
-                a == m.tasksAndSDFs.workload.tasks(t) && b == m.tasksAndSDFs.workload
-                  .dataChannels(c)
-              )
-              .map((_, _, l) => long2int(l))
-              .getOrElse(0)
-          } else if (0 <= t - m.tasksAndSDFs.workload.tasks.size && t - m.tasksAndSDFs.workload.tasks.size < m.tasksAndSDFs.sdfApplications.actorsIdentifiers.size 
-                  && 0 <= c - m.tasksAndSDFs.workload.dataChannels.size && c - m.tasksAndSDFs.workload.dataChannels.size < m.tasksAndSDFs.sdfApplications.sdfMessages.size) {
-            val a = m.tasksAndSDFs.sdfApplications.actorsIdentifiers(t - m.tasksAndSDFs.workload.tasks.size)
-            val (src, _, cs, l, p, _, _) = m.tasksAndSDFs.sdfApplications.sdfMessages(c - m.tasksAndSDFs.workload.dataChannels.size)
-            if (src == a) long2int(l * p) else 0
-          } else {0},
-      (t: Int) =>
-        (c: Int) =>
-          if (t < m.tasksAndSDFs.workload.tasks.size && m.tasksAndSDFs.workload
-                .dataChannels.size < c) {
+          (ce: Int) =>
+          if (t < m.tasksAndSDFs.workload.tasks.size && c < m.tasksAndSDFs.workload
+                .dataChannels.size) {
             m.tasksAndSDFs.workload.dataGraph
               .find((a, b, _) =>
                 b == m.tasksAndSDFs.workload.tasks(t) && a == m.tasksAndSDFs.workload
                   .dataChannels(c)
               )
-              .map((_, _, l) => l)
-              .getOrElse(0L)
+              .map((_, _, l) => long2int(l) / double2int(m.platform.hardware.communicationElementsBitPerSecPerChannel(ce)))
+              .getOrElse(0)
+          } else if (0 <= t - m.tasksAndSDFs.workload.tasks.size && t - m.tasksAndSDFs.workload.tasks.size < m.tasksAndSDFs.sdfApplications.actorsIdentifiers.size 
+                  && 0 <= c - m.tasksAndSDFs.workload.dataChannels.size && c - m.tasksAndSDFs.workload.dataChannels.size < m.tasksAndSDFs.sdfApplications.sdfMessages.size) {
+            val a = m.tasksAndSDFs.sdfApplications.actorsIdentifiers(t - m.tasksAndSDFs.workload.tasks.size)
+            val (src, _, cs, l, p, _, _) = m.tasksAndSDFs.sdfApplications.sdfMessages(c - m.tasksAndSDFs.workload.dataChannels.size)
+            if (src == a) long2int(l * p) / double2int(m.platform.hardware.communicationElementsBitPerSecPerChannel(ce)) else 0
+          } else {0},
+      (t: Int) =>
+        (c: Int) =>
+          (ce: Int) =>
+          if (t < m.tasksAndSDFs.workload.tasks.size && c < m.tasksAndSDFs.workload
+                .dataChannels.size) {
+            m.tasksAndSDFs.workload.dataGraph
+              .find((a, b, _) =>
+                a == m.tasksAndSDFs.workload.tasks(t) && b == m.tasksAndSDFs.workload
+                  .dataChannels(c)
+              )
+              .map((_, _, l) => long2int(l) / double2int(m.platform.hardware.communicationElementsBitPerSecPerChannel(ce)))
+              .getOrElse(0)
           } else if (0 <= t - m.tasksAndSDFs.workload.tasks.size && t - m.tasksAndSDFs.workload.tasks.size < m.tasksAndSDFs.sdfApplications.actorsIdentifiers.size && 0 <= c - m.tasksAndSDFs.workload
                 .dataChannels.size && c - m.tasksAndSDFs.workload
                 .dataChannels.size < m.tasksAndSDFs.sdfApplications.sdfMessages.size) {
             val a = m.tasksAndSDFs.sdfApplications.actorsIdentifiers(t - m.tasksAndSDFs.workload.tasks.size)
             val (_, dst, cs, l, _, cons, _) = m.tasksAndSDFs.sdfApplications.sdfMessages(c - m.tasksAndSDFs.workload.dataChannels.size)
-            if (dst == a) then long2int(l * cons) else 0
+            if (dst == a) then long2int(l * cons) / double2int(m.platform.hardware.communicationElementsBitPerSecPerChannel(ce)) else 0
           } else 0,
+      (s: Int) => (t: Int) =>
+        m.platform.hardware.computedPaths(m.platform.hardware.platformElements(s))(m.platform.hardware.platformElements(t)).map(m.platform.hardware.communicationElems.indexOf),
       processExecution.toArray,
       processMapping,
       messageMapping,

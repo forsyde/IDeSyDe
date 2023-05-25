@@ -27,6 +27,7 @@ import forsyde.io.java.core.ForSyDeSystemGraph
 import forsyde.io.java.typed.viewers.execution.LoopingTask
 import java.util.stream.Collectors
 import forsyde.io.java.typed.viewers.impl.CommunicatingExecutable
+import forsyde.io.java.typed.viewers.impl.TokenizableDataBlock
 
 trait WorkloadRules {
 
@@ -82,34 +83,83 @@ trait WorkloadRules {
           .safeCast(task)
           .ifPresent(commTask => {
             if (model.hasConnection(commTask, dataBlock)) {
-              val dataWritten = model
-                .getAllEdges(commTask.getViewedVertex, dataBlock.getViewedVertex)
-                .stream
-                .mapToLong(e =>
-                  e.getSourcePort
-                    .map(outPort =>
-                      commTask.getPortDataWrittenSize
-                        .getOrDefault(outPort, dataBlock.getMaxSizeInBits)
-                    )
-                    .orElse(0L)
+              TokenizableDataBlock
+                .safeCast(dataBlock)
+                .ifPresentOrElse(
+                  tokenDB => {
+                    val dataWritten = model
+                      .getAllEdges(commTask.getViewedVertex, dataBlock.getViewedVertex)
+                      .stream
+                      .mapToLong(e =>
+                        e.getSourcePort
+                          .map(outPort =>
+                            commTask
+                              .getPortDataWrittenSize()
+                              .getOrDefault(outPort, tokenDB.getTokenSizeInBits())
+                          )
+                          .orElse(0L)
+                      )
+                      .sum
+                    communicationGraphEdges :+= (commTask.getIdentifier(), dataBlock
+                      .getIdentifier(), dataWritten)
+                  },
+                  () => {
+                    val dataWritten = model
+                      .getAllEdges(commTask.getViewedVertex, dataBlock.getViewedVertex)
+                      .stream
+                      .mapToLong(e =>
+                        e.getSourcePort
+                          .map(outPort =>
+                            commTask
+                              .getPortDataWrittenSize()
+                              .getOrDefault(outPort, dataBlock.getMaxSizeInBits)
+                          )
+                          .orElse(0L)
+                      )
+                      .sum
+                    communicationGraphEdges :+= (commTask.getIdentifier(), dataBlock
+                      .getIdentifier(), dataWritten)
+                  }
                 )
-                .sum
-              communicationGraphEdges :+= (commTask.getIdentifier(), dataBlock
-                .getIdentifier(), dataWritten)
             } else if (model.hasConnection(dataBlock, commTask)) {
-              val dataRead = model
-                .getAllEdges(dataBlock.getViewedVertex, commTask.getViewedVertex)
-                .stream
-                .mapToLong(e =>
-                  e.getTargetPort
-                    .map(inPort =>
-                      commTask.getPortDataReadSize.getOrDefault(inPort, dataBlock.getMaxSizeInBits)
-                    )
-                    .orElse(0L)
+              TokenizableDataBlock
+                .safeCast(dataBlock)
+                .ifPresentOrElse(
+                  tokenDB => {
+                    val dataRead = model
+                      .getAllEdges(dataBlock.getViewedVertex, commTask.getViewedVertex)
+                      .stream
+                      .mapToLong(e =>
+                        e.getTargetPort
+                          .map(inPort =>
+                            commTask
+                              .getPortDataReadSize()
+                              .getOrDefault(inPort, tokenDB.getTokenSizeInBits())
+                          )
+                          .orElse(0L)
+                      )
+                      .sum
+                    communicationGraphEdges :+= (dataBlock.getIdentifier(), commTask
+                      .getIdentifier(), dataRead)
+                  },
+                  () => {
+                    val dataRead = model
+                      .getAllEdges(dataBlock.getViewedVertex, commTask.getViewedVertex)
+                      .stream
+                      .mapToLong(e =>
+                        e.getTargetPort
+                          .map(inPort =>
+                            commTask
+                              .getPortDataReadSize()
+                              .getOrDefault(inPort, dataBlock.getMaxSizeInBits)
+                          )
+                          .orElse(0L)
+                      )
+                      .sum
+                    communicationGraphEdges :+= (dataBlock.getIdentifier(), commTask
+                      .getIdentifier(), dataRead)
+                  }
                 )
-                .sum
-              communicationGraphEdges :+= (dataBlock.getIdentifier(), commTask
-                .getIdentifier(), dataRead)
             }
           })
       }
@@ -121,36 +171,84 @@ trait WorkloadRules {
         dataBlock  <- dataBlocks
       ) {
         if (model.hasConnection(commexec, dataBlock)) {
-          val dataWritten = model
-            .getAllEdges(commexec.getViewedVertex, dataBlock.getViewedVertex)
-            .stream
-            .mapToLong(e =>
-              e.getSourcePort
-                .map(outPort =>
-                  commexec
-                    .getPortDataWrittenSize()
-                    .getOrDefault(outPort, dataBlock.getMaxSizeInBits)
-                )
-                .orElse(0L)
+          TokenizableDataBlock
+            .safeCast(dataBlock)
+            .ifPresentOrElse(
+              tokenDB => {
+                val dataWritten = model
+                  .getAllEdges(commexec.getViewedVertex, dataBlock.getViewedVertex)
+                  .stream
+                  .mapToLong(e =>
+                    e.getSourcePort
+                      .map(outPort =>
+                        commexec
+                          .getPortDataWrittenSize()
+                          .getOrDefault(outPort, tokenDB.getTokenSizeInBits())
+                      )
+                      .orElse(0L)
+                  )
+                  .sum
+                communicationGraphEdges :+= (ctask.getIdentifier(), dataBlock
+                  .getIdentifier(), dataWritten)
+              },
+              () => {
+                val dataWritten = model
+                  .getAllEdges(commexec.getViewedVertex, dataBlock.getViewedVertex)
+                  .stream
+                  .mapToLong(e =>
+                    e.getSourcePort
+                      .map(outPort =>
+                        commexec
+                          .getPortDataWrittenSize()
+                          .getOrDefault(outPort, dataBlock.getMaxSizeInBits)
+                      )
+                      .orElse(0L)
+                  )
+                  .sum
+                communicationGraphEdges :+= (ctask.getIdentifier(), dataBlock
+                  .getIdentifier(), dataWritten)
+              }
             )
-            .sum
-          communicationGraphEdges :+= (ctask.getIdentifier(), dataBlock
-            .getIdentifier(), dataWritten)
         }
         if (model.hasConnection(dataBlock, commexec)) {
-          val dataRead = model
-            .getAllEdges(dataBlock.getViewedVertex, commexec.getViewedVertex)
-            .stream
-            .mapToLong(e =>
-              e.getTargetPort
-                .map(inPort =>
-                  commexec.getPortDataReadSize().getOrDefault(inPort, dataBlock.getMaxSizeInBits)
-                )
-                .orElse(0L)
+          TokenizableDataBlock
+            .safeCast(dataBlock)
+            .ifPresentOrElse(
+              tokenDB => {
+                val dataRead = model
+                  .getAllEdges(dataBlock.getViewedVertex, commexec.getViewedVertex)
+                  .stream
+                  .mapToLong(e =>
+                    e.getTargetPort
+                      .map(inPort =>
+                        commexec
+                          .getPortDataReadSize()
+                          .getOrDefault(inPort, tokenDB.getTokenSizeInBits())
+                      )
+                      .orElse(0L)
+                  )
+                  .sum
+                communicationGraphEdges :+= (dataBlock.getIdentifier(), ctask
+                  .getIdentifier(), dataRead)
+              },
+              () => {
+                val dataRead = model
+                  .getAllEdges(dataBlock.getViewedVertex, commexec.getViewedVertex)
+                  .stream
+                  .mapToLong(e =>
+                    e.getTargetPort
+                      .map(inPort =>
+                        commexec
+                          .getPortDataReadSize()
+                          .getOrDefault(inPort, dataBlock.getMaxSizeInBits)
+                      )
+                      .orElse(0L)
+                  )
+                  .sum
+                communicationGraphEdges :+= (dataBlock.getIdentifier(), ctask
+                  .getIdentifier(), dataRead)
+              }
             )
-            .sum
-          communicationGraphEdges :+= (dataBlock.getIdentifier(), ctask
-            .getIdentifier(), dataRead)
         }
       }
       // check if every task has a periodic stimulus

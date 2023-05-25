@@ -11,12 +11,12 @@ trait HasDiscretizationToIntegers extends HasUtils {
       numT: Numeric[T]
   )(using fracT: Fractional[T]): Int = {
     val step = fracT.div(maxT, numT.fromInt(resolution))
-    // println((resolution, ub))
-    var r = -1
-    while (numT.fromInt(r) * step < t) {
-      r += 1
-    }
-    r
+    // var r    = 0
+    // while (numT.fromInt(r) * step < t) {
+    //   r += 1
+    //   println("asd " + t + " - " + r)
+    // }
+    fracT.div(t, step).toDouble.ceil.toInt
   }
 
   def undiscretized[T](resolution: Int, maxT: T)(td: Int)(using

@@ -48,19 +48,18 @@ trait HasActive4StageDuration extends HasUtils {
   def postActive4StageDurationsConstraints(
       chocoModel: Model,
       executionTimes: Array[Array[Int]],
-      taskTravelTime: Array[Array[Int]],
-      dataTravelTime: Array[Array[Int]],
       communicationElementsMaxChannels: Vector[Int],
+      taskFetchTimePerChannel: (Int) => (Int) => Int,
+      taskReadsDataTimePerChannel: (Int) => (Int) => (Int) => Int,
+      taskWritesDataTimePerChannel: (Int) => (Int) => (Int) => Int,
       computedPaths: (Int) => (Int) => Iterable[Int],
-      taskReadsData: (Int) => (Int) => Long,
-      taskWritesData: (Int) => (Int) => Long,
       taskExecution: Array[IntVar],
       taskMapping: Array[IntVar],
       dataMapping: Array[IntVar],
       processingElemsVirtualChannelInCommElem: Array[Array[IntVar]]
   ): (Array[IntVar], Array[IntVar], Array[IntVar], Array[IntVar], Array[IntVar], Array[IntVar]) = {
     val tasks        = 0 until executionTimes.length
-    val dataChannels = 0 until dataTravelTime.length
+    val dataChannels = 0 until dataMapping.length
     val processors   = 0 until executionTimes.head.length
     val memories = taskMapping.map(_.getLB().toInt).min until taskMapping.map(_.getUB().toInt).max
     val communicators = 0 until communicationElementsMaxChannels.length
@@ -77,7 +76,7 @@ trait HasActive4StageDuration extends HasUtils {
         chocoModel.intVar(
           s"fetch_wc($i)",
           0,
-          taskTravelTime(i).sum,
+          communicators.map(ce => taskFetchTimePerChannel(i)(ce)).sum,
           true
         )
       )
@@ -85,11 +84,11 @@ trait HasActive4StageDuration extends HasUtils {
     val durationsReadPerSig = tasks.zipWithIndex
       .map((t, i) =>
         dataChannels.map(j =>
-          if (taskReadsData(i)(j) > 0) {
+          if (communicators.exists(ce => taskReadsDataTimePerChannel(i)(j)(ce) > 0)) {
             chocoModel.intVar(
-              s"input_wc($i)",
+              s"input_wc($i, $j)",
               0,
-              dataTravelTime(j).sum,
+              communicators.map(ce => taskReadsDataTimePerChannel(i)(j)(ce)).sum,
               true
             )
           } else {
@@ -101,11 +100,11 @@ trait HasActive4StageDuration extends HasUtils {
     val durationsWritePerSig = tasks.zipWithIndex
       .map((t, i) =>
         dataChannels.map(j =>
-          if (taskWritesData(i)(j) > 0) {
+          if (communicators.exists(ce => taskWritesDataTimePerChannel(i)(j)(ce) > 0)) {
             chocoModel.intVar(
               s"output_wc($i, $j)",
               0,
-              dataTravelTime(j).sum,
+              communicators.map(ce => taskWritesDataTimePerChannel(i)(j)(ce)).sum,
               true
             )
           } else {
@@ -119,7 +118,7 @@ trait HasActive4StageDuration extends HasUtils {
         chocoModel.intVar(
           s"vcTotal($c)",
           0,
-          communicationElementsMaxChannels(c) * processors.size,
+          communicationElementsMaxChannels(c),
           true
         )
       )
@@ -163,10 +162,10 @@ trait HasActive4StageDuration extends HasUtils {
     for (
       (exec, t) <- taskExecution.zipWithIndex;
       (mapp, c) <- dataMapping.zipWithIndex;
-      if taskReadsData(t)(c) > 0 || taskReadsData(t)(c) > 0;
-      i <- processors;
-      j <- memories;
-      k <- computedPaths(i)(j)
+      i         <- processors;
+      j         <- memories;
+      k         <- computedPaths(i)(j);
+      if taskReadsDataTimePerChannel(t)(c)(k) > 0 || taskReadsDataTimePerChannel(t)(c)(k) > 0
     ) {
       chocoModel.ifThen(
         exec.eq(i).and(mapp.eq(j)).decompose(),
@@ -186,11 +185,12 @@ trait HasActive4StageDuration extends HasUtils {
       chocoModel.ifThen(
         exec.eq(i).and(mapp.eq(j)).decompose(),
         // at least one of the paths must be taken
-        chocoModel.scalar(
-          pathIdx.map(totalVCPerCommElem(_)),
-          pathIdx.map(taskTravelTime(t)(_)),
+        chocoModel.arithm(
+          durationsFetch(t),
           "=",
-          durationsFetch(t)
+          pathIdx
+            .map(ce => taskFetchTimePerChannel(t)(ce))
+            .sum
         )
       )
     }
@@ -201,27 +201,41 @@ trait HasActive4StageDuration extends HasUtils {
       j         <- memories;
       pathIdx = computedPaths(i)(j).toArray
     ) {
-      if (taskReadsData(t)(c) > 0) {
+      if (pathIdx.forall(ce => taskReadsDataTimePerChannel(t)(c)(ce) > 0)) {
         chocoModel.ifThen(
           exec.eq(i).and(mapp.eq(j)).decompose(),
           // at least one of the paths must be taken
-          chocoModel.scalar(
-            pathIdx.map(totalVCPerCommElem(_)),
-            pathIdx.map(dataTravelTime(c)(_)),
+          chocoModel.arithm(
+            durationsReadPerSig(t)(c),
             "=",
-            durationsReadPerSig(t)(c)
+            pathIdx
+              .map(ce => taskReadsDataTimePerChannel(t)(c)(ce))
+              .sum
           )
+          // chocoModel.scalar(
+          //   pathIdx.map(totalVCPerCommElem(_)),
+          //   pathIdx.map(dataTravelTime(c)(_)),
+          //   "=",
+          //   durationsReadPerSig(t)(c)
+          // )
         )
-      } else if (taskWritesData(t)(c) > 0) {
+      } else if (pathIdx.forall(ce => taskWritesDataTimePerChannel(t)(c)(ce) > 0)) {
         chocoModel.ifThen(
           exec.eq(i).and(mapp.eq(j)).decompose(),
           // at least one of the paths must be taken
-          chocoModel.scalar(
-            pathIdx.map(totalVCPerCommElem(_)),
-            pathIdx.map(dataTravelTime(c)(_)),
+          chocoModel.arithm(
+            durationsWritePerSig(t)(c),
             "=",
-            durationsWritePerSig(t)(c)
+            pathIdx
+              .map(ce => taskWritesDataTimePerChannel(t)(c)(ce))
+              .sum
           )
+          // chocoModel.scalar(
+          //   pathIdx.map(totalVCPerCommElem(_)),
+          //   pathIdx.map(dataTravelTime(c)(_)),
+          //   "=",
+          //   durationsWritePerSig(t)(c)
+          // )
         )
       }
     }

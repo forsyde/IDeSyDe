@@ -133,7 +133,7 @@ jobs:
       uses: svenstaro/upload-release-action@v2
       with:
         repo_token: ${{ secrets.GITHUB_TOKEN }}
-        file: ${{ github.workspace }}\idesyde-linux-amd64.zip
+        file: ${{ github.workspace }}/idesyde-linux-amd64.zip
         asset_name: idesyde-linux-amd64.zip
         tag: "${{ github.ref }}"
         overwrite: true

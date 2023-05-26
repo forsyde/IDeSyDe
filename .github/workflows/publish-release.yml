@@ -59,7 +59,7 @@ jobs:
         path: |
           ${{ github.workspace }}/imodules
           ${{ github.workspace }}/emodules
-        key: ${{ github.ref }}-linux-scala-modules-jar
+        key: ${{ github.ref }}-${{ runner.os }}-scala-modules-jar
   build-jars-windows-scala:
     runs-on: windows-latest
     steps:
@@ -124,7 +124,7 @@ jobs:
         path: |
           ${{ github.workspace }}/imodules
           ${{ github.workspace }}/emodules
-        key: ${{ github.ref }}-linux-scala-modules-jar
+        key: ${{ github.ref }}-${{ runner.os }}-scala-modules-jar
     - name: Make zip
       run: |
         cd ${{ github.workspace }}

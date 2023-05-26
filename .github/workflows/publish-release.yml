@@ -57,8 +57,8 @@ jobs:
       uses: actions/cache@v3
       with:
         path: |
-          ${{ github.workspace }}/imodules/*.jar
-          ${{ github.workspace }}/emodules/*.jar
+          ${{ github.workspace }}/imodules
+          ${{ github.workspace }}/emodules
         key: ${{ github.ref }}-linux-scala-modules-jar
   build-jars-windows-scala:
     runs-on: windows-latest
@@ -76,9 +76,9 @@ jobs:
       uses: actions/cache@v3
       with:
         path: |
-          ${{ github.workspace }}\imodules\*.jar
-          ${{ github.workspace }}\emodules\*.jar
-        key: ${{ github.ref }}-windows-scala-modules-jar
+          ${{ github.workspace }}\imodules
+          ${{ github.workspace }}\emodules
+        key: ${{ github.ref }}-${{ runner.os }}-scala-modules-jar
   publish-windows-all:
     runs-on: windows-latest
     needs: [build-windows-rust, build-jars-windows-scala]
@@ -93,9 +93,9 @@ jobs:
       uses: actions/cache@v3
       with:
         path: |
-          ${{ github.workspace }}\imodules\*.jar
-          ${{ github.workspace }}\emodules\*.jar
-        key: ${{ github.ref }}-windows-scala-modules-jar
+          ${{ github.workspace }}\imodules
+          ${{ github.workspace }}\emodules
+        key: ${{ github.ref }}-${{ runner.os }}-scala-modules-jar
     - name: Make zip
       run: |
         cd ${{ github.workspace }}
@@ -122,8 +122,8 @@ jobs:
       uses: actions/cache@v3
       with:
         path: |
-          ${{ github.workspace }}/imodules/*.jar
-          ${{ github.workspace }}/emodules/*.jar
+          ${{ github.workspace }}/imodules
+          ${{ github.workspace }}/emodules
         key: ${{ github.ref }}-linux-scala-modules-jar
     - name: Make zip
       run: |

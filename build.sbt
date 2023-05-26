@@ -98,7 +98,7 @@ lazy val forsyde = (project in file("scala-bridge-forsyde-io"))
   .enablePlugins(JDKPackagerPlugin)
   // .enablePlugins(GraalVMNativeImagePlugin)
   .settings(
-    name := "idesyde-scala-forsyde",
+    name := "idesyde-scala-bridge-forsyde-io",
     libraryDependencies ++= Seq(
       "io.github.forsyde"  % "forsyde-io-java-core" % forsydeIoVersion,
       "io.github.forsyde"  % "forsyde-io-java-sdf3" % forsydeIoVersion,

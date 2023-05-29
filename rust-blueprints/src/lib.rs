@@ -59,7 +59,7 @@ pub fn execute_standalone_identification_module<T: StandaloneIdentificationModul
                 h.model_paths.push(
                     p.path()
                         .to_str()
-                        .expect("Failed to get OS string furing start-up")
+                        .expect("Failed to get OS string during start-up")
                         .to_string(),
                 );
                 write_design_model_header_to_path(&h, &design_path, "", &module.uid());

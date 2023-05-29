@@ -1,7 +1,6 @@
 use idesyde_blueprints::execute_standalone_identification_module;
+use idesyde_common::identify_partitioned_tiled_multicore;
 use idesyde_core::StandaloneIdentificationModule;
-
-pub mod common;
 
 struct CommonIdentificationModule {}
 
@@ -33,11 +32,15 @@ impl StandaloneIdentificationModule for CommonIdentificationModule {
     }
 
     fn identification_rules(&self) -> Vec<idesyde_core::MarkedIdentificationRule> {
-        todo!()
+        vec![
+            idesyde_core::MarkedIdentificationRule::DesignModelOnlyIdentificationRule(
+                identify_partitioned_tiled_multicore,
+            ),
+        ]
     }
 
     fn reverse_identification_rules(&self) -> Vec<idesyde_core::ReverseIdentificationRule> {
-        todo!()
+        Vec::new()
     }
 }
 fn main() {

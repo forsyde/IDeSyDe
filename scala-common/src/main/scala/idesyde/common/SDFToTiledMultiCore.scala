@@ -5,7 +5,7 @@ import upickle.default.*
 import idesyde.core.CompleteDecisionModel
 
 final case class SDFToTiledMultiCore(
-    val sdfApplications: SDFApplication,
+    val sdfApplications: SDFApplicationWithFunctions,
     val platform: SchedulableTiledMultiCore,
     val processMappings: Vector[String],
     val messageMappings: Vector[String],

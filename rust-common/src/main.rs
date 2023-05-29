@@ -14,7 +14,7 @@ impl StandaloneIdentificationModule for CommonIdentificationModule {
         &self,
         _path: &std::path::Path,
     ) -> Option<Box<dyn idesyde_core::DesignModel>> {
-        todo!()
+        None
     }
 
     fn write_design_model(
@@ -22,7 +22,7 @@ impl StandaloneIdentificationModule for CommonIdentificationModule {
         _design_model: &Box<dyn idesyde_core::DesignModel>,
         _dest: &std::path::Path,
     ) -> bool {
-        todo!()
+        false
     }
 
     fn decision_header_to_model(

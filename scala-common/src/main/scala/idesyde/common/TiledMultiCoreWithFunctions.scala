@@ -7,7 +7,7 @@ import scalax.collection.Graph
 import scalax.collection.GraphPredef._
 import idesyde.core.CompleteDecisionModel
 
-final case class TiledMultiCore(
+final case class TiledMultiCoreWithFunctions(
     val processors: Vector[String],
     val memories: Vector[String],
     val networkInterfaces: Vector[String],
@@ -134,5 +134,5 @@ final case class TiledMultiCore(
 
   def bodyAsBinary: Array[Byte] = writeBinary(this)
 
-  def uniqueIdentifier: String = "TiledMultiCore"
+  def uniqueIdentifier: String = "TiledMultiCoreWithFunctions"
 }

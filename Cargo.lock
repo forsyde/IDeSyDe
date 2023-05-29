@@ -247,6 +247,12 @@ dependencies = [
 ]
 
 [[package]]
+name = "downcast-rs"
+version = "1.2.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "9ea835d29036a4087793836fa931b08837ad5e957da9e23886b29586fb9b6650"
+
+[[package]]
 name = "either"
 version = "1.8.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -355,6 +361,7 @@ dependencies = [
 name = "idesyde-common"
 version = "0.5.3"
 dependencies = [
+ "ciborium",
  "env_logger",
  "idesyde-blueprints",
  "idesyde-core",
@@ -369,6 +376,7 @@ name = "idesyde-core"
 version = "0.5.3"
 dependencies = [
  "ciborium",
+ "downcast-rs",
  "rmp-serde",
  "serde",
  "serde_json",

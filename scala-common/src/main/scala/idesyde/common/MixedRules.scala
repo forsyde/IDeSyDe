@@ -11,8 +11,8 @@ trait MixedRules {
       identified: Set[DecisionModel]
   )(using logger: Logger): Set[PeriodicWorkloadAndSDFServers] = {
     val sdfDecisionModel = identified
-      .filter(_.isInstanceOf[SDFApplication])
-      .map(_.asInstanceOf[SDFApplication])
+      .filter(_.isInstanceOf[SDFApplicationWithFunctions])
+      .map(_.asInstanceOf[SDFApplicationWithFunctions])
     if (sdfDecisionModel.exists(_.isConsistent))
       logger.debug("At least one SDF decision model is inconsistent.")
     val taskDecisionModel = identified
@@ -38,8 +38,8 @@ trait MixedRules {
       identified: Set[DecisionModel]
   )(using logger: Logger): Set[SDFToTiledMultiCore] = {
     val app = identified
-      .filter(_.isInstanceOf[SDFApplication])
-      .map(_.asInstanceOf[SDFApplication])
+      .filter(_.isInstanceOf[SDFApplicationWithFunctions])
+      .map(_.asInstanceOf[SDFApplicationWithFunctions])
       .filter(_.isConsistent) // only go forward if the SDF is consistent
     if (app.isEmpty)
       logger.debug("SDFApplication is not consistent. Impossible to identify SDFToTiledMultiCore.")
@@ -67,8 +67,8 @@ trait MixedRules {
       identified: Set[DecisionModel]
   )(using logger: Logger): Set[SDFToPartitionedSharedMemory] = {
     val app = identified
-      .filter(_.isInstanceOf[SDFApplication])
-      .map(_.asInstanceOf[SDFApplication])
+      .filter(_.isInstanceOf[SDFApplicationWithFunctions])
+      .map(_.asInstanceOf[SDFApplicationWithFunctions])
       .filter(_.isConsistent) // only go forward if the SDF is consistent
     if (app.isEmpty)
       logger.debug(

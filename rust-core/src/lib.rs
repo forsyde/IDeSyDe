@@ -7,16 +7,18 @@ use std::{
     path::Path,
 };
 
+use downcast_rs::{impl_downcast, DowncastSync};
 use headers::{DecisionModelHeader, DesignModelHeader, ExplorationBid};
 use std::cmp::Ordering;
 
-pub trait DesignModel: Send + Sync {
+pub trait DesignModel: Send + DowncastSync {
     fn unique_identifier(&self) -> String;
 
     fn header(&self) -> DesignModelHeader;
 }
+impl_downcast!(sync DesignModel);
 
-pub trait DecisionModel: Send + Sync {
+pub trait DecisionModel: Send + DowncastSync {
     fn unique_identifier(&self) -> String;
 
     fn header(&self) -> DecisionModelHeader;
@@ -40,6 +42,7 @@ pub trait DecisionModel: Send + Sync {
         }
     }
 }
+impl_downcast!(sync DecisionModel);
 
 impl DecisionModel for DecisionModelHeader {
     fn unique_identifier(&self) -> String {

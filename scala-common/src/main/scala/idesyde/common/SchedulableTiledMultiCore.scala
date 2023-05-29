@@ -5,7 +5,7 @@ import upickle.default.*
 import idesyde.core.CompleteDecisionModel
 
 final case class SchedulableTiledMultiCore(
-    val hardware: TiledMultiCore,
+    val hardware: TiledMultiCoreWithFunctions,
     val runtimes: PartitionedCoresWithRuntimes
 ) extends StandardDecisionModel
     with InstrumentedPlatformMixin[Double]

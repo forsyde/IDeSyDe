@@ -10,5 +10,6 @@ idesyde-blueprints = { path = "../rust-blueprints" }
 serde = { workspace = true }
 serde_json = { workspace = true }
 rmp-serde = { workspace = true }
+ciborium.workspace = true
 env_logger.workspace = true
 log.workspace = true

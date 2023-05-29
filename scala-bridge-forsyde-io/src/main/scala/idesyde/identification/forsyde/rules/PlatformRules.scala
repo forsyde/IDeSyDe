@@ -5,7 +5,7 @@ import scala.jdk.CollectionConverters._
 import idesyde.core.DesignModel
 import idesyde.core.DecisionModel
 import idesyde.utils.Logger
-import idesyde.common.TiledMultiCore
+import idesyde.common.TiledMultiCoreWithFunctions
 import forsyde.io.java.typed.viewers.platform.GenericProcessingModule
 import forsyde.io.java.typed.viewers.platform.GenericMemoryModule
 import forsyde.io.java.typed.viewers.platform.GenericCommunicationModule
@@ -78,7 +78,7 @@ trait PlatformRules {
   def identTiledMultiCore(
       models: Set[DesignModel],
       identified: Set[DecisionModel]
-  )(using logger: Logger): Set[TiledMultiCore] = {
+  )(using logger: Logger): Set[TiledMultiCoreWithFunctions] = {
     val modelOpt = models
       .filter(_.isInstanceOf[ForSyDeDesignModel])
       .map(_.asInstanceOf[ForSyDeDesignModel])
@@ -216,7 +216,7 @@ trait PlatformRules {
           interconnectTopologyDsts += topology.getEdgeTarget(e).getIdentifier()
         })
       Set(
-        TiledMultiCore(
+        TiledMultiCoreWithFunctions(
           processingElements.map(_.getIdentifier()).toVector,
           memoryElements.map(_.getIdentifier()).toVector,
           tiledCommElems.map(_.getIdentifier()).toVector,

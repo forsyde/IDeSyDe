@@ -9,8 +9,8 @@ import idesyde.core.headers.DesignModelHeader
 import idesyde.core.headers.DecisionModelHeader
 import idesyde.utils.Logger
 import idesyde.blueprints.CanParseIdentificationModuleConfiguration
-import idesyde.common.SDFApplication
-import idesyde.common.TiledMultiCore
+import idesyde.common.SDFApplicationWithFunctions
+import idesyde.common.TiledMultiCoreWithFunctions
 import idesyde.common.PartitionedCoresWithRuntimes
 import idesyde.common.SchedulableTiledMultiCore
 import idesyde.common.SDFToTiledMultiCore
@@ -37,7 +37,7 @@ object CommonIdentificationModule
   val identificationRules = Set(
     MarkedIdentificationRule.SpecificDecisionModelOnlyIdentificationRule(
       identSchedulableTiledMultiCore,
-      Set("PartitionedCoresWithRuntimes", "TiledMultiCore")
+      Set("PartitionedCoresWithRuntimes", "TiledMultiCoreWithFunctions")
     ),
     MarkedIdentificationRule.SpecificDecisionModelOnlyIdentificationRule(
       identPartitionedSharedMemoryMultiCore,
@@ -66,9 +66,9 @@ object CommonIdentificationModule
   def decisionHeaderToModel(m: DecisionModelHeader): Option[DecisionModel] = {
     m match {
       case DecisionModelHeader("SDFApplication", body_path, _) =>
-        body_path.flatMap(decodeFromPath[SDFApplication])
+        body_path.flatMap(decodeFromPath[SDFApplicationWithFunctions])
       case DecisionModelHeader("TiledMultiCore", body_path, _) =>
-        body_path.flatMap(decodeFromPath[TiledMultiCore])
+        body_path.flatMap(decodeFromPath[TiledMultiCoreWithFunctions])
       case DecisionModelHeader("PartitionedCoresWithRuntimes", body_path, _) =>
         body_path.flatMap(decodeFromPath[PartitionedCoresWithRuntimes])
       case DecisionModelHeader("SchedulableTiledMultiCore", body_path, _) =>

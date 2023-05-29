@@ -43,7 +43,7 @@ import idesyde.core.CompleteDecisionModel
   * @see
   *   [[InstrumentedWorkloadMixin]] for descriptions of the computational and memory needs.
   */
-final case class SDFApplication(
+final case class SDFApplicationWithFunctions(
     val actorsIdentifiers: Vector[String],
     val channelsIdentifiers: Vector[String],
     val topologySrcs: Vector[String],
@@ -244,6 +244,6 @@ final case class SDFApplication(
 
   def bodyAsBinary: Array[Byte] = writeBinary(this)
 
-  override val uniqueIdentifier = "SDFApplication"
+  override val uniqueIdentifier = "SDFApplicationWithFunctions"
 
 }

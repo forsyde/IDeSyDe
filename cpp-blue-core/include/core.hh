@@ -5,7 +5,6 @@
 #include <functional>
 
 #include <nlohmann/json.hpp>
-#include <cxxopts.hpp>
 
 #include <headers.hh>
 
@@ -95,29 +94,6 @@ namespace idesyde::core
             uint64_t total_timeout,
             uint64_t time_resolution,
             uint64_t memory_resolution);
-    };
-
-    class StandaloneIdentificationModule : IdentificationModule
-    {
-    public:
-        virtual shared_ptr<DecisionModel> read_design_model(filesystem::path path);
-        virtual bool write_design_model(shared_ptr<DecisionModel> design_model, filesystem::path dest);
-        virtual optional<shared_ptr<DecisionModel>> decision_header_to_model(idesyde::headers::DecisionModelHeader header);
-        virtual vector<IdentificationRule> identification_rules();
-        virtual vector<ReverseIdentificationRule> reverse_identification_rules();
-        int standalone_identification_module(int argc, char **argv)
-        {
-            return 0;
-        };
-    };
-
-    class StandaloneExplorationModule : ExplorationModule
-    {
-    public:
-        int standalone_exploration_module(int argc, char **argv)
-        {
-            return 0;
-        }
     };
 
 }

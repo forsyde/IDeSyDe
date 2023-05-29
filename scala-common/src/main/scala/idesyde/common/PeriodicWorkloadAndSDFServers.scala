@@ -6,7 +6,7 @@ import idesyde.core.CompleteDecisionModel
 
 final case class PeriodicWorkloadAndSDFServers(
     val workload: CommunicatingAndTriggeredReactiveWorkload,
-    val sdfApplications: SDFApplication,
+    val sdfApplications: SDFApplicationWithFunctions,
     val sdfServerPeriod: Vector[Double],
     val sdfServerBudget: Vector[Double]
 ) extends StandardDecisionModel

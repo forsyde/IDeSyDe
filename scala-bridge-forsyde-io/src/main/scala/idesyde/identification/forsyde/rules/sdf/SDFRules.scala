@@ -6,7 +6,7 @@ import idesyde.utils.Logger
 import idesyde.core.DesignModel
 import idesyde.core.DecisionModel
 import idesyde.forsydeio.ForSyDeDesignModel
-import idesyde.common.SDFApplication
+import idesyde.common.SDFApplicationWithFunctions
 import forsyde.io.java.core.ForSyDeSystemGraph
 import forsyde.io.java.typed.viewers.moc.sdf.SDFElem
 import forsyde.io.java.typed.viewers.moc.sdf.SDFActor
@@ -21,7 +21,7 @@ trait SDFRules {
   def identSDFApplication(
       models: Set[DesignModel],
       identified: Set[DecisionModel]
-  )(using logger: Logger): Set[SDFApplication] = {
+  )(using logger: Logger): Set[SDFApplicationWithFunctions] = {
     val modelOpt = models
       .filter(_.isInstanceOf[ForSyDeDesignModel])
       .map(_.asInstanceOf[ForSyDeDesignModel])
@@ -100,7 +100,7 @@ trait SDFRules {
       .toVector
     val processComputationalNeeds = sdfActors.map(fromSDFActorToNeeds(model, _)).toVector
     Set(
-      SDFApplication(
+      SDFApplicationWithFunctions(
         sdfActors.map(_.getIdentifier()).toVector,
         sdfChannels.map(_.getIdentifier()).toVector,
         topologySrcs.toVector,

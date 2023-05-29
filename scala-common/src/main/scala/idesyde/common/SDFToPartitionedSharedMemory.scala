@@ -1,7 +1,7 @@
 package idesyde.common
 
 final case class SDFToPartitionedSharedMemory(
-    val sdfApplications: SDFApplication,
+    val sdfApplications: SDFApplicationWithFunctions,
     val platform: PartitionedSharedMemoryMultiCore,
     val processMappings: Vector[String],
     val memoryMappings: Vector[String],

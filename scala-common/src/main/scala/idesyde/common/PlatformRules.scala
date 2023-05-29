@@ -13,7 +13,9 @@ trait PlatformRules {
     val runtimes = identified
       .filter(_.isInstanceOf[PartitionedCoresWithRuntimes])
       .map(_.asInstanceOf[PartitionedCoresWithRuntimes])
-    val plat = identified.filter(_.isInstanceOf[TiledMultiCore]).map(_.asInstanceOf[TiledMultiCore])
+    val plat = identified
+      .filter(_.isInstanceOf[TiledMultiCoreWithFunctions])
+      .map(_.asInstanceOf[TiledMultiCoreWithFunctions])
     // if ((runtimes.isDefined && plat.isEmpty) || (runtimes.isEmpty && plat.isDefined))
     runtimes.flatMap(r => plat.map(p => SchedulableTiledMultiCore(hardware = p, runtimes = r)))
   }
@@ -37,11 +39,11 @@ trait PlatformRules {
   def identTiledFromShared(
       models: Set[DesignModel],
       identified: Set[DecisionModel]
-  ): Set[TiledMultiCore] = {
+  ): Set[TiledMultiCoreWithFunctions] = {
     val plats = identified
       .filter(_.isInstanceOf[SharedMemoryMultiCore])
       .map(_.asInstanceOf[SharedMemoryMultiCore])
-    var tiledPlats = mutable.Set[TiledMultiCore]()
+    var tiledPlats = mutable.Set[TiledMultiCoreWithFunctions]()
     for (plat <- plats) {
       val isTiled = plat.communicationElems.forall(p =>
         plat.topology
@@ -76,7 +78,7 @@ trait PlatformRules {
           )
         )
         val routers = plat.communicationElems.filterNot(tiledNI.contains)
-        tiledPlats += TiledMultiCore(
+        tiledPlats += TiledMultiCoreWithFunctions(
           processors = plat.processingElems,
           memories = tiledMemories,
           networkInterfaces = tiledNI,

@@ -10,24 +10,24 @@ import idesyde.core.headers.DesignModelHeader
 import idesyde.core.headers.DecisionModelHeader
 import idesyde.core.MarkedIdentificationRule
 import idesyde.core.CompleteDecisionModel
-import idesyde.core.IdentificationLibrary
+import idesyde.core.IdentificationModule
 import scala.collection.mutable
 import scala.collection.mutable.Buffer
 
 /** The trait/interface for an identification module that provides the identification and
   * integration rules required to power the design space identification process [1].
   *
-  * This trait extends [[idesyde.core.IdentificationLibrary]] to push further the modularization of
-  * the DSI methodology. In essence, this trait transforms an [[idesyde.core.IdentificationLibrary]]
+  * This trait extends [[idesyde.core.IdentificationModule]] to push further the modularization of
+  * the DSI methodology. In essence, this trait transforms an [[idesyde.core.IdentificationModule]]
   * into an independent callable library, which can be orchestrated externally. This enables modules
   * in different languages to cooperate seamlessly.
   *
   * @see
-  *   [[idesyde.core.IdentificationLibrary]]
+  *   [[idesyde.core.IdentificationModule]]
   */
-trait IdentificationModule
+trait StandaloneIdentificationModule
     extends CanParseIdentificationModuleConfiguration
-    with IdentificationLibrary
+    with IdentificationModule
     with ModuleUtils {
 
   def inputsToDesignModel(p: os.Path): Option[DesignModelHeader | DesignModel] = None
@@ -70,39 +70,6 @@ trait IdentificationModule
     *   [[idesyde.utils.Logger]]
     */
   def logger: Logger = SimpleStandardIOLogger("WARN")
-
-  def reverseIdentification(
-      solvedDecisionModels: Set[DecisionModel],
-      designModels: Set[DesignModel]
-  ): Set[DesignModel] = {
-    for (
-      irule      <- reverseIdentificationRules;
-      integrated <- irule(solvedDecisionModels, designModels)
-    ) yield integrated
-  }
-
-  def identificationStep(
-      stepNumber: Long,
-      designModels: Set[DesignModel] = Set(),
-      decisionModels: Set[DecisionModel] = Set()
-  ): Set[DecisionModel] = {
-    val iterRules = if (stepNumber == 0L) {
-      identificationRules.flatMap(_ match {
-        case r: MarkedIdentificationRule.DecisionModelOnlyIdentificationRule         => None
-        case r: MarkedIdentificationRule.SpecificDecisionModelOnlyIdentificationRule => None
-        case r                                                                       => Some(r)
-      })
-    } else if (stepNumber > 0L) {
-      identificationRules.flatMap(_ match {
-        case r: MarkedIdentificationRule.DesignModelOnlyIdentificationRule => None
-        case r                                                             => Some(r)
-      })
-    } else identificationRules
-    val identified = iterRules.flatMap(irule => irule(designModels, decisionModels))
-    for (m <- identified; if !decisionModels.contains(m)) yield {
-      m
-    }
-  }
 
   inline def standaloneIdentificationModule(
       args: Array[String]

@@ -2,12 +2,12 @@ package idesyde.minizinc
 
 import idesyde.core.DecisionModel
 
-import idesyde.blueprints.IdentificationModule
+import idesyde.blueprints.StandaloneIdentificationModule
 import idesyde.core.DesignModel
 import idesyde.core.headers.DesignModelHeader
 import idesyde.core.headers.DecisionModelHeader
 
-class MinizincIdentificationModule extends IdentificationModule {
+class MinizincIdentificationModule extends StandaloneIdentificationModule {
 
   def designHeaderToModel(m: DesignModelHeader): Set[DesignModel] = Set()
 

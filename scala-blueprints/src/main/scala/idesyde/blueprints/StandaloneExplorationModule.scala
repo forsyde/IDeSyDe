@@ -5,7 +5,7 @@ import upickle.default._
 import idesyde.core.Explorer
 import idesyde.core.headers.DecisionModelHeader
 import idesyde.core.DecisionModel
-import idesyde.core.ExplorationLibrary
+import idesyde.core.ExplorationModule
 import idesyde.utils.Logger
 import idesyde.core.CompleteDecisionModel
 import idesyde.core.ExplorationCombinationDescription
@@ -14,15 +14,14 @@ import idesyde.core.ExplorationCombinationDescription
   * explored identified design spaces [1].
   *
   * Like [[idesyde.blueprints.IdentificationModule]], this trait extends
-  * [[idesyde.core.ExplorationLibrary]] to an independent callable, which can be used externally in
-  * a multi-language exploration process.
+  * [[idesyde.core.ExplorationModule]] to an independent callable, which can be used externally in a
+  * multi-language exploration process.
   *
   * @see
-  *   [[idesyde.core.ExplorationLibrary]]
+  *   [[idesyde.core.ExplorationModule]]
   */
-trait ExplorationModule
-    extends Explorer
-    with ExplorationLibrary
+trait StandaloneExplorationModule
+    extends ExplorationModule
     with CanParseExplorationModuleConfiguration
     with ModuleUtils {
 
@@ -50,32 +49,6 @@ trait ExplorationModule
     */
   def uniqueIdentifier: String
 
-  def canExplore(decisionModel: DecisionModel): Boolean =
-    explorers.exists(_.combination(decisionModel).can_explore)
-
-  def explore(
-      decisionModel: DecisionModel,
-      totalExplorationTimeOutInSecs: Long = 0L,
-      maximumSolutions: Long = 0L,
-      timeDiscretizationFactor: Long = -1L,
-      memoryDiscretizationFactor: Long = -1L
-  ): LazyList[DecisionModel] = {
-    val valid = explorers
-      .filter(_.combination(decisionModel).can_explore)
-    val nonDominated =
-      valid
-        .filter(e =>
-          !valid
-            .filter(_ != e)
-            .exists(ee => ee.dominates(e, decisionModel))
-        )
-        .headOption
-    nonDominated match {
-      case Some(e) => e.explore(decisionModel, totalExplorationTimeOutInSecs, maximumSolutions, timeDiscretizationFactor, memoryDiscretizationFactor)
-      case None    => LazyList.empty
-    }
-  }
-
   def standaloneExplorationModule(args: Array[String]): Unit = {
     parse(args, uniqueIdentifier) match {
       case Some(conf) =>
@@ -96,7 +69,13 @@ trait ExplorationModule
             val header = readBinary[DecisionModelHeader](os.read.bytes(decisionModelToExplore))
             decodeDecisionModels(header) match {
               case Some(m) =>
-                explore(m, explorationTotalTimeOutInSecs, maximumSolutions, timeResolution.getOrElse(-1L), memoryResolution.getOrElse(-1L)).zipWithIndex.foreach((solved, idx) => {
+                explore(
+                  m,
+                  explorationTotalTimeOutInSecs,
+                  maximumSolutions,
+                  timeResolution.getOrElse(-1L),
+                  memoryResolution.getOrElse(-1L)
+                ).zipWithIndex.foreach((solved, idx) => {
                   val (hPath, bPath) =
                     solved.writeToPath(solutionPath, f"$idx%016d", uniqueIdentifier)
                   println(hPath.get)

@@ -1,6 +1,6 @@
 package idesyde.forsydeio
 
-import idesyde.blueprints.IdentificationModule
+import idesyde.blueprints.StandaloneIdentificationModule
 import idesyde.core.MarkedIdentificationRule
 import idesyde.identification.forsyde.rules.MixedRules
 import idesyde.identification.forsyde.rules.sdf.SDFRules
@@ -21,7 +21,7 @@ import idesyde.common.PeriodicWorkloadToPartitionedSharedMultiCore
 import java.nio.file.Files
 
 object ForSyDeIdentificationModule
-    extends IdentificationModule
+    extends StandaloneIdentificationModule
     with MixedRules
     with SDFRules
     with PlatformRules

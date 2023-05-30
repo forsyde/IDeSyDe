@@ -1,6 +1,6 @@
 package idesyde.devicetree
 
-import idesyde.blueprints.IdentificationModule
+import idesyde.blueprints.StandaloneIdentificationModule
 import idesyde.core.DecisionModel
 import idesyde.core.DesignModel
 import idesyde.utils.Logger
@@ -14,7 +14,7 @@ import idesyde.devicetree.identification.OSDescriptionDesignModel
 import org.virtuslab.yaml.*
 
 object DeviceTreeIdentificationModule
-    extends IdentificationModule
+    extends StandaloneIdentificationModule
     with PlatformRules
     with CanParseDeviceTree {
 

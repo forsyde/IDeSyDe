@@ -2,7 +2,7 @@ package idesyde.choco
 
 import upickle.default._
 
-import idesyde.blueprints.ExplorationModule
+import idesyde.blueprints.StandaloneExplorationModule
 import idesyde.utils.Logger
 import idesyde.core.DecisionModel
 import idesyde.core.headers.DecisionModelHeader
@@ -14,7 +14,7 @@ import idesyde.core.ExplorationCombinationDescription
 import idesyde.common.PeriodicWorkloadToPartitionedSharedMultiCore
 import idesyde.common.PeriodicWorkloadAndSDFServerToMultiCore
 
-object ChocoExplorationModule extends ExplorationModule {
+object ChocoExplorationModule extends StandaloneExplorationModule {
 
   def combination(decisionModel: DecisionModel): ExplorationCombinationDescription = {
     val combos = explorers.map(e => e.combination(decisionModel))

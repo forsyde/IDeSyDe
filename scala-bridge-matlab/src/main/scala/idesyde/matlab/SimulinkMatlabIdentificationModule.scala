@@ -1,6 +1,6 @@
 package idesyde.matlab
 
-import idesyde.blueprints.IdentificationModule
+import idesyde.blueprints.StandaloneIdentificationModule
 import idesyde.core.DecisionModel
 import idesyde.core.DesignModel
 
@@ -11,7 +11,9 @@ import idesyde.core.headers.DesignModelHeader
 import idesyde.core.headers.DecisionModelHeader
 import os.Path
 
-object SimulinkMatlabIdentificationModule extends IdentificationModule with ApplicationRules {
+object SimulinkMatlabIdentificationModule
+    extends StandaloneIdentificationModule
+    with ApplicationRules {
 
   override def inputsToDesignModel(p: Path): Option[DesignModelHeader | DesignModel] = if (
     p.ext == "slx"

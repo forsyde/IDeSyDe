@@ -19,7 +19,7 @@ import idesyde.core.headers.LabelledArcWithPorts
   * Exhibition (DATE), 2021, pp. 1204-1207, doi: 10.23919/DATE51398.2021.9474082.
   *
   * @see
-  *   [[idesyde.identification.IdentificationModule]]
+  *   [[idesyde.identification.StandaloneIdentificationModule]]
   * @see
   *   [[idesyde.identification.IdentificationHandler]]
   */

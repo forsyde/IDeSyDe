@@ -330,30 +330,6 @@ lazy val devicetree = (project in file("scala-bridge-device-tree"))
 //     )
 //   )
 
-lazy val tests = (project in file("scala-tests"))
-  .dependsOn(core)
-  .dependsOn(common)
-  .dependsOn(choco)
-  .dependsOn(forsyde)
-  .dependsOn(minizinc)
-  .dependsOn(matlab)
-  .dependsOn(devicetree)
-  .settings(
-    publishArtifact := false,
-    libraryDependencies ++= Seq(
-      ("org.scala-graph" %% "graph-core" % scalaGraphVersion).cross(CrossVersion.for3Use2_13),
-      "org.scalatest"    %% "scalatest"  % "3.2.12" % "test",
-      "org.scalatest"    %% "scalatest-funsuite"       % "3.2.12" % "test",
-      "io.github.forsyde" % "forsyde-io-java-core"     % forsydeIoVersion,
-      "io.github.forsyde" % "forsyde-io-java-amalthea" % forsydeIoVersion,
-      "io.github.forsyde" % "forsyde-io-java-sdf3"     % forsydeIoVersion,
-      "io.github.forsyde" % "forsyde-io-java-graphviz" % forsydeIoVersion,
-      "com.outr"         %% "scribe"                   % scribeVersion,
-      "org.virtuslab"    %% "scala-yaml"               % scalaYamlVersion
-    ),
-    Test / parallelExecution := false
-  )
-
 // TODO: figure out what is
 ThisBuild / assembly / assemblyMergeStrategy := {
   case PathList("META-INF", xs @ _*) => MergeStrategy.discard

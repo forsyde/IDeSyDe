@@ -17,7 +17,7 @@ import idesyde.core.DesignModel
   * Composable Design Space Identification," 2021 Design, Automation & Test in Europe Conference &
   * Exhibition (DATE), 2021, pp. 1204-1207, doi: 10.23919/DATE51398.2021.9474082.
   */
-trait IdentificationLibrary {
+trait IdentificationModule {
 
   /** Each identification rule takes a set of design models and a set of decision models to produce
     * a new decision model. The new decision model must cover at least more of the design models
@@ -40,4 +40,37 @@ trait IdentificationLibrary {
   def reverseIdentificationRules: Set[
     (Set[DecisionModel], Set[DesignModel]) => Set[? <: DesignModel]
   ]
+
+  def reverseIdentification(
+      solvedDecisionModels: Set[DecisionModel],
+      designModels: Set[DesignModel]
+  ): Set[DesignModel] = {
+    for (
+      irule      <- reverseIdentificationRules;
+      integrated <- irule(solvedDecisionModels, designModels)
+    ) yield integrated
+  }
+
+  def identificationStep(
+      stepNumber: Long,
+      designModels: Set[DesignModel] = Set(),
+      decisionModels: Set[DecisionModel] = Set()
+  ): Set[DecisionModel] = {
+    val iterRules = if (stepNumber == 0L) {
+      identificationRules.flatMap(_ match {
+        case r: MarkedIdentificationRule.DecisionModelOnlyIdentificationRule         => None
+        case r: MarkedIdentificationRule.SpecificDecisionModelOnlyIdentificationRule => None
+        case r                                                                       => Some(r)
+      })
+    } else if (stepNumber > 0L) {
+      identificationRules.flatMap(_ match {
+        case r: MarkedIdentificationRule.DesignModelOnlyIdentificationRule => None
+        case r                                                             => Some(r)
+      })
+    } else identificationRules
+    val identified = iterRules.flatMap(irule => irule(designModels, decisionModels))
+    for (m <- identified; if !decisionModels.contains(m)) yield {
+      m
+    }
+  }
 }

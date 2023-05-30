@@ -2,7 +2,7 @@ package idesyde.common
 
 import upickle.default.*
 
-import idesyde.blueprints.IdentificationModule
+import idesyde.blueprints.StandaloneIdentificationModule
 import idesyde.core.DecisionModel
 import idesyde.core.DesignModel
 import idesyde.core.headers.DesignModelHeader
@@ -22,7 +22,7 @@ import idesyde.common.PeriodicWorkloadAndSDFServers
 import idesyde.core.MarkedIdentificationRule
 
 object CommonIdentificationModule
-    extends IdentificationModule
+    extends StandaloneIdentificationModule
     with CanParseIdentificationModuleConfiguration
     with MixedRules
     with PlatformRules

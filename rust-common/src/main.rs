@@ -1,6 +1,7 @@
 use idesyde_blueprints::execute_standalone_identification_module;
 use idesyde_common::identify_partitioned_tiled_multicore;
 use idesyde_core::StandaloneIdentificationModule;
+use schemars::schema_for;
 
 struct CommonIdentificationModule {}
 
@@ -41,6 +42,17 @@ impl StandaloneIdentificationModule for CommonIdentificationModule {
 
     fn reverse_identification_rules(&self) -> Vec<idesyde_core::ReverseIdentificationRule> {
         Vec::new()
+    }
+
+    fn decision_models_schemas(&self) -> Vec<String> {
+        vec![
+            serde_json::to_string_pretty(&schema_for!(idesyde_common::SDFApplication)).unwrap(),
+            serde_json::to_string_pretty(&schema_for!(idesyde_common::TiledMultiCore)).unwrap(),
+            serde_json::to_string_pretty(&schema_for!(idesyde_common::RuntimesAndProcessors))
+                .unwrap(),
+            serde_json::to_string_pretty(&schema_for!(idesyde_common::PartitionedTiledMulticore))
+                .unwrap(),
+        ]
     }
 }
 fn main() {

@@ -1,9 +1,10 @@
 use std::collections::{HashMap, HashSet};
 
 use idesyde_core::{headers::DecisionModelHeader, DecisionModel, DesignModel};
+use schemars::JsonSchema;
 use serde::{Deserialize, Serialize};
 
-#[derive(Debug, PartialEq, Eq, Serialize, Deserialize, Clone)]
+#[derive(Debug, PartialEq, Eq, Serialize, Deserialize, Clone, JsonSchema)]
 pub struct CommunicatingAndTriggeredReactiveWorkload {
     pub tasks: Vec<String>,
     pub task_sizes: Vec<u32>,
@@ -77,7 +78,7 @@ impl DecisionModel for CommunicatingAndTriggeredReactiveWorkload {
 /// This decision model is already analised, and provides the repetition vector for the SDF graphs contained as well
 /// as a schedule if these SDF graphs are consistent.
 ///
-#[derive(Debug, PartialEq, Serialize, Deserialize, Clone)]
+#[derive(Debug, PartialEq, Serialize, Deserialize, Clone, JsonSchema)]
 pub struct SDFApplication {
     pub actors_identifiers: Vec<String>,
     pub channels_identifiers: Vec<String>,
@@ -89,8 +90,7 @@ pub struct SDFApplication {
     pub channel_num_initial_tokens: HashMap<String, i64>,
     pub channel_token_sizes: HashMap<String, u64>,
     pub minimum_actor_throughputs: HashMap<String, f64>,
-    pub topology_matrix: Vec<Vec<i64>>,
-    pub repetition_vector: Vec<i64>,
+    pub repetition_vector: Vec<String>,
     pub topological_and_heavy_job_ordering: Vec<String>,
 }
 
@@ -134,7 +134,7 @@ impl DecisionModel for SDFApplication {
     }
 }
 
-#[derive(Debug, PartialEq, Serialize, Deserialize, Clone)]
+#[derive(Debug, PartialEq, Serialize, Deserialize, Clone, JsonSchema)]
 pub struct TiledMultiCore {
     pub processors: Vec<String>,
     pub memories: Vec<String>,
@@ -196,7 +196,7 @@ impl DecisionModel for TiledMultiCore {
     }
 }
 
-#[derive(Debug, PartialEq, Serialize, Deserialize, Clone)]
+#[derive(Debug, PartialEq, Serialize, Deserialize, Clone, JsonSchema)]
 pub struct RuntimesAndProcessors {
     pub runtimes: Vec<String>,
     pub processors: Vec<String>,
@@ -248,7 +248,7 @@ impl DecisionModel for RuntimesAndProcessors {
     }
 }
 
-#[derive(Debug, PartialEq, Serialize, Deserialize, Clone)]
+#[derive(Debug, PartialEq, Serialize, Deserialize, Clone, JsonSchema)]
 pub struct PartitionedTiledMulticore {
     pub hardware: TiledMultiCore,
     pub runtimes: RuntimesAndProcessors,

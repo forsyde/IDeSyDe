@@ -11,6 +11,18 @@ use downcast_rs::{impl_downcast, DowncastSync};
 use headers::{DecisionModelHeader, DesignModelHeader, ExplorationBid};
 use std::cmp::Ordering;
 
+/// The trait/interface for a design model in the design space identification methodology, as
+/// defined in [1].
+///
+/// A design model is a model used by MDE frameworks and tools, e.g. Simulink and ForSyDe IO.
+/// Like [DesignModel], this trait requires a header so that the identification procedure can work
+/// correctly and terminate. The header gives an idea to the framework on how much can be "identified"
+/// from the input MDE model, i.e. the [DesignModel].
+///
+/// [1] R. Jordão, I. Sander and M. Becker, "Formulation of Design Space Exploration Problems by
+/// Composable Design Space Identification," 2021 Design, Automation & Test in Europe Conference &
+/// Exhibition (DATE), 2021, pp. 1204-1207, doi: 10.23919/DATE51398.2021.9474082.
+///
 pub trait DesignModel: Send + DowncastSync {
     fn unique_identifier(&self) -> String;
 
@@ -18,6 +30,19 @@ pub trait DesignModel: Send + DowncastSync {
 }
 impl_downcast!(sync DesignModel);
 
+/// The trait/interface for a decision model in the design space identification methodology, as
+/// defined in [1].
+///
+/// A decision model is a collection of parameters and associated functions that potentially define design spaces,
+///  e.g. a decision model for SDFs with a topology matrix parameter and an associated function to check the existence of deadlocks.
+///
+/// The header is a necessary abstraction to ensure that the identification procedure terminates properly.
+/// It also gives and idea on how much of the input models are being "covered" by the decision model in question.
+///
+/// [1] R. Jordão, I. Sander and M. Becker, "Formulation of Design Space Exploration Problems by
+/// Composable Design Space Identification," 2021 Design, Automation & Test in Europe Conference &
+/// Exhibition (DATE), 2021, pp. 1204-1207, doi: 10.23919/DATE51398.2021.9474082.
+///
 pub trait DecisionModel: Send + DowncastSync {
     fn unique_identifier(&self) -> String;
 
@@ -229,6 +254,9 @@ pub trait StandaloneIdentificationModule: IdentificationModule {
     ) -> Option<Box<dyn DecisionModel>>;
     fn identification_rules(&self) -> Vec<MarkedIdentificationRule>;
     fn reverse_identification_rules(&self) -> Vec<ReverseIdentificationRule>;
+    fn decision_models_schemas(&self) -> Vec<String> {
+        Vec::new()
+    }
 }
 
 impl<T: StandaloneIdentificationModule> IdentificationModule for T {

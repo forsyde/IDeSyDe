@@ -69,9 +69,11 @@ final class CanSolveSDFToTiledMultiCore(using logger: Logger)
     //     if (timeResolution > Int.MaxValue) Int.MaxValue else timeResolution.toInt,
     //     if (memoryResolution > Int.MaxValue) Int.MaxValue else memoryResolution.toInt
     //   )
+    def log2(x: Double) = scala.math.log10(x) / scala.math.log10(2)
     def double2int(s: Double) = discretized(
       if (timeResolution > Int.MaxValue) Int.MaxValue
-      else if (timeResolution <= 0L) timeValues.size * 100
+      else if (timeResolution <= 0L)
+        scala.math.ceil(log2(m.platform.runtimes.schedulers.length) + 2 * log2(10) - 1.0).toInt
       else timeResolution.toInt,
       timeValues.sum
     )(s)

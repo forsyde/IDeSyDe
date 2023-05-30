@@ -3,8 +3,7 @@ use std::path::PathBuf;
 use clap::Parser;
 use idesyde_core::{
     headers::load_decision_model_headers_from_binary, write_decision_model_to_path,
-    write_design_model_header_to_path, DecisionModel, DesignModel, IdentificationModule,
-    StandaloneIdentificationModule,
+    write_design_model_header_to_path, DecisionModel, DesignModel, StandaloneIdentificationModule,
 };
 
 #[derive(Parser, Debug)]

@@ -65,9 +65,9 @@ object CommonIdentificationModule
 
   def decisionHeaderToModel(m: DecisionModelHeader): Option[DecisionModel] = {
     m match {
-      case DecisionModelHeader("SDFApplication", body_path, _) =>
+      case DecisionModelHeader("SDFApplicationWithFunctions", body_path, _) =>
         body_path.flatMap(decodeFromPath[SDFApplicationWithFunctions])
-      case DecisionModelHeader("TiledMultiCore", body_path, _) =>
+      case DecisionModelHeader("TiledMultiCoreWithFunctions", body_path, _) =>
         body_path.flatMap(decodeFromPath[TiledMultiCoreWithFunctions])
       case DecisionModelHeader("PartitionedCoresWithRuntimes", body_path, _) =>
         body_path.flatMap(decodeFromPath[PartitionedCoresWithRuntimes])

@@ -3,7 +3,6 @@ use std::{
     cmp::Ordering,
     collections::HashMap,
     hash::Hash,
-    io::BufReader,
     path::{Path, PathBuf},
 };
 

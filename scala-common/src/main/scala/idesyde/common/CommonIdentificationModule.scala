@@ -1,7 +1,6 @@
 package idesyde.common
 
-import upickle.default.*
-
+// import upickle.default.*
 import idesyde.blueprints.StandaloneIdentificationModule
 import idesyde.core.DecisionModel
 import idesyde.core.DesignModel
@@ -88,5 +87,8 @@ object CommonIdentificationModule
       case _ => None
     }
   }
+
+  override def decisionModelSchemas: Vector[String] = Vector(
+  )
 
 }

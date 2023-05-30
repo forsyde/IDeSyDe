@@ -4,11 +4,13 @@ use std::{
     collections::{HashMap, HashSet},
     fs,
     hash::Hash,
+    io::BufReader,
     path::Path,
 };
 
 use downcast_rs::{impl_downcast, DowncastSync};
 use headers::{DecisionModelHeader, DesignModelHeader, ExplorationBid};
+use serde::de::DeserializeOwned;
 use std::cmp::Ordering;
 
 /// The trait/interface for a design model in the design space identification methodology, as
@@ -322,4 +324,21 @@ impl<T: StandaloneIdentificationModule> IdentificationModule for T {
         }
         reverse_identified
     }
+}
+
+pub fn load_decision_model<T: DecisionModel + DeserializeOwned>(
+    path: &std::path::PathBuf,
+) -> Option<T> {
+    if let Ok(f) = std::fs::File::open(path) {
+        if let Some(ext) = path.extension() {
+            if ext.eq_ignore_ascii_case("cbor") {
+                return ciborium::from_reader(f).ok();
+            } else if ext.eq_ignore_ascii_case("msgpack") {
+                return rmp_serde::from_read(f).ok();
+            } else if ext.eq_ignore_ascii_case("json") {
+                return serde_json::from_reader(f).ok();
+            }
+        }
+    }
+    None
 }

@@ -17,6 +17,7 @@ lazy val chocoSolverVersion            = "4.10.10"
 lazy val osLibVersion                  = "0.9.1"
 lazy val scalaYamlVersion              = "0.0.6"
 lazy val scoptVersion                  = "4.1.0"
+lazy val scalaJsonSchemaVersion        = "0.7.8"
 
 lazy val imodulesTarget = file("imodules")
 lazy val emodulesTarget = file("emodules")

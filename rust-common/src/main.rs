@@ -1,6 +1,9 @@
 use idesyde_blueprints::execute_standalone_identification_module;
-use idesyde_common::identify_partitioned_tiled_multicore;
-use idesyde_core::StandaloneIdentificationModule;
+use idesyde_common::{
+    identify_partitioned_tiled_multicore, PartitionedTiledMulticore, RuntimesAndProcessors,
+    SDFApplication, TiledMultiCore,
+};
+use idesyde_core::{load_decision_model, DecisionModel, StandaloneIdentificationModule};
 use schemars::schema_for;
 
 struct CommonIdentificationModule {}
@@ -27,9 +30,24 @@ impl StandaloneIdentificationModule for CommonIdentificationModule {
 
     fn decision_header_to_model(
         &self,
-        _header: &idesyde_core::headers::DecisionModelHeader,
+        header: &idesyde_core::headers::DecisionModelHeader,
     ) -> Option<Box<dyn idesyde_core::DecisionModel>> {
-        todo!()
+        header.body_path.as_ref().and_then(|bp| {
+            let bpath = std::path::PathBuf::from(bp);
+            match header.category.as_str() {
+                "SDFApplication" => load_decision_model::<SDFApplication>(&bpath)
+                    .map(|m| Box::new(m) as Box<dyn DecisionModel>),
+                "TiledMultiCore" => load_decision_model::<TiledMultiCore>(&bpath)
+                    .map(|m| Box::new(m) as Box<dyn DecisionModel>),
+                "RuntimesAndProcessors" => load_decision_model::<RuntimesAndProcessors>(&bpath)
+                    .map(|m| Box::new(m) as Box<dyn DecisionModel>),
+                "PartitionedTiledMulticore" => {
+                    load_decision_model::<PartitionedTiledMulticore>(&bpath)
+                        .map(|m| Box::new(m) as Box<dyn DecisionModel>)
+                }
+                _ => None,
+            }
+        })
     }
 
     fn identification_rules(&self) -> Vec<idesyde_core::MarkedIdentificationRule> {

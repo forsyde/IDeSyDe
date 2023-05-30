@@ -71,19 +71,24 @@ trait StandaloneIdentificationModule
     */
   def logger: Logger = SimpleStandardIOLogger("WARN")
 
+  def decisionModelSchemas: Vector[String] = Vector()
+
   inline def standaloneIdentificationModule(
       args: Array[String]
   ): Unit = {
     parse(args, uniqueIdentifier) match {
       case Right(conf) =>
         conf match {
+          case IdentificationModuleConfiguration(_, _, _, _, _, _, true) =>
+            for (schema <- decisionModelSchemas) println(schema)
           case IdentificationModuleConfiguration(
                 Some(designPath),
                 _,
                 Some(solvedPath),
                 Some(reversePath),
                 outP,
-                _
+                _,
+                false
               ) =>
             os.makeDir.all(designPath)
             os.makeDir.all(solvedPath)
@@ -155,7 +160,8 @@ trait StandaloneIdentificationModule
                 _,
                 _,
                 _,
-                iteration
+                iteration,
+                false
               ) =>
             os.makeDir.all(designPath)
             os.makeDir.all(identifiedPath)

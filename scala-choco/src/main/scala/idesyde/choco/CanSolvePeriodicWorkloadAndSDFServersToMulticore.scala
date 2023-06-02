@@ -1,5 +1,7 @@
 package idesyde.choco
 
+  import scala.jdk.CollectionConverters._
+
 import org.chocosolver.solver.Model
 import org.chocosolver.solver.Solution
 import idesyde.common.PeriodicWorkloadAndSDFServerToMultiCore
@@ -346,6 +348,132 @@ final class CanSolvePeriodicWorkloadAndSDFServersToMulticore(using logger: Logge
       timeResolution: Long,
       memoryResolution: Long
   ): PeriodicWorkloadAndSDFServerToMultiCore = {
-    m
+    val timeValues =
+      m.wcets.flatten ++ m.platform.hardware.maxTraversalTimePerBit.flatten
+        .map(
+          _.toDouble
+        ) ++ m.tasksAndSDFs.workload.periods ++ m.wcets.flatten ++ m.tasksAndSDFs.workload.relativeDeadlines
+    val memoryValues =
+      m.platform.hardware.storageSizes ++ m.tasksAndSDFs.sdfApplications.sdfMessages
+        .map((src, _, _, mSize, p, c, tok) =>
+          mSize
+        ) ++ m.tasksAndSDFs.workload.messagesMaxSizes ++ m.tasksAndSDFs.workload.processSizes
+    def int2double(d: Int) = undiscretized(
+      if (timeResolution > Int.MaxValue) Int.MaxValue
+      else if (timeResolution <= 0L) timeValues.size * 100
+      else timeResolution.toInt,
+      timeValues.sum
+    )(d)
+    // val (discreteTimeValues, discreteMemoryValues) =
+    //   computeTimeMultiplierAndMemoryDividerWithResolution(
+    //     timeValues,
+    //     memoryValues,
+    //     if (timeResolution > Int.MaxValue) Int.MaxValue else timeResolution.toInt,
+    //     if (memoryResolution > Int.MaxValue) Int.MaxValue else memoryResolution.toInt
+    //   )
+    val intVars = solution.retrieveIntVars(true).asScala
+    val tasksMemoryMapping: Vector[Int] =
+      m.tasksAndSDFs.workload.processes.zipWithIndex.map((_, i) =>
+        intVars
+          .find(_.getName() == s"mapProcess($i)")
+          .map(solution.getIntVal(_))
+          .get
+      )
+    val actorsMemoryMapping: Vector[Int] =
+      m.tasksAndSDFs.sdfApplications.actorsIdentifiers.zipWithIndex.map((_, prei) =>
+        val i = prei + m.tasksAndSDFs.workload.processes.length
+        intVars
+          .find(_.getName() == s"mapProcess($i)")
+          .map(solution.getIntVal(_))
+          .get
+      )
+    val dataChannelsMemoryMapping: Vector[Int] =
+      m.tasksAndSDFs.workload.dataChannels.zipWithIndex.map((_, i) =>
+        intVars
+          .find(_.getName() == s"mapMessage($i)")
+          .map(solution.getIntVal(_))
+          .get
+      )
+    val sdfMessageMemoryMappings = m.tasksAndSDFs.sdfApplications.channelsIdentifiers.zipWithIndex.map((c, i) => {
+        val messageIdx =
+          m.tasksAndSDFs.sdfApplications.sdfMessages.indexWhere((_, _, ms, _, _, _, _) => ms.contains(c))
+          + m.tasksAndSDFs.workload.dataChannels.length
+        val mapping = intVars
+          .find(_.getName() == s"mapMessage($messageIdx)")
+          .map(solution.getIntVal(_))
+          .get
+        c -> m.platform.hardware.storageElems(mapping)
+      })
+    val taskExecution = 
+      m.tasksAndSDFs.workload.processes.zipWithIndex
+        .map((t, i) =>
+        intVars.find(
+            _.getName() == s"processExecution($t)"
+         ).map(solution.getIntVal(_))
+         .get)
+    val actorExecution = 
+      m.tasksAndSDFs.sdfApplications.actorsIdentifiers.zipWithIndex
+        .map((t, i) =>
+         intVars.find(
+            _.getName() == s"processExecution($t)"
+         ).map(solution.getIntVal(_))
+         .get
+      )
+    val numVirtualChannelsForProcElem: Vector[Vector[IntVar]] =
+      m.platform.hardware.processingElems.map(src =>
+        m.platform.hardware.communicationElems.map(ce =>
+          intVars.find(_.getName() == s"vc($src, $ce)").get
+        )
+      )
+    val dataChannelsSlotAllocations = m.tasksAndSDFs.workload.dataChannels.zipWithIndex.map((c, ci) => c -> {
+        // we have to look from the source perpective, since the sending processor is the one that allocates
+        val mem = dataChannelsMemoryMapping(ci)
+        // TODO: this must be fixed later, it might clash correct slots
+        val iter =
+          for (
+            (t, ti) <- m.tasksAndSDFs.workload.tasks.zipWithIndex;
+            if m.tasksAndSDFs.workload.dataGraph.exists((a, b, _) => (t, c) == (a, b) || (t, c) == (b, a));
+            p = taskExecution(ti);
+            (ce, j) <- m.platform.hardware.communicationElems.zipWithIndex;
+            // if solution.getIntVal(numVirtualChannelsForProcElem(p)(j)) > 0
+            if numVirtualChannelsForProcElem(p)(j).getValue() > 0
+          )
+            yield ce -> (0 until m.platform.hardware.communicationElementsMaxChannels(j))
+              .map(slot =>
+                // (slot + j % m.platform.hardware.communicationElementsMaxChannels(j)) < solution
+                //   .getIntVal(numVirtualChannelsForProcElem(p)(j))
+                (slot + j % m.platform.hardware.communicationElementsMaxChannels(
+                  j
+                )) < numVirtualChannelsForProcElem(p)(j).getValue()
+              )
+              .toVector
+        iter.toMap
+      }).toMap
+      val sdfChannelsSlotAllocations = sdfMessageMemoryMappings.map((c, mem) => c -> {
+        val iter =
+          for (
+            (t, ti) <- m.tasksAndSDFs.sdfApplications.actorsIdentifiers.zipWithIndex
+            if m.tasksAndSDFs.sdfApplications.dataflowGraphs(0).exists((a, b, _) => (t, c) == (a, b) || (t, c) == (b, a));
+            p = actorExecution(ti);
+            (ce, j) <- m.platform.hardware.communicationElems.zipWithIndex;
+            // if solution.getIntVal(numVirtualChannelsForProcElem(p)(j)) > 0
+            if numVirtualChannelsForProcElem(p)(j).getValue() > 0
+          )
+            yield ce -> (0 until m.platform.hardware.communicationElementsMaxChannels(j))
+              .map(slot =>
+                // (slot + j % m.platform.hardware.communicationElementsMaxChannels(j)) < solution
+                //   .getIntVal(numVirtualChannelsForProcElem(p)(j))
+                (slot + j % m.platform.hardware.communicationElementsMaxChannels(
+                  j
+                )) < numVirtualChannelsForProcElem(p)(j).getValue()
+              )
+              .toVector
+        iter.toMap
+      }).toMap
+    m.copy(
+      processesMappings = taskExecution.zipWithIndex.map((mi, ti) => m.tasksAndSDFs.workload.processes(ti) -> m.platform.runtimes.schedulers(mi))  ++ actorExecution.zipWithIndex.map((mi, ti) => m.tasksAndSDFs.sdfApplications.actorsIdentifiers(ti) -> m.platform.runtimes.schedulers(mi)),
+      messagesMappings = dataChannelsMemoryMapping.zipWithIndex.map((mi, ci) => m.tasksAndSDFs.workload.dataChannels(ci) -> m.platform.hardware.storageElems(mi)) ++ sdfMessageMemoryMappings,
+      messageSlotAllocations = dataChannelsSlotAllocations ++ sdfChannelsSlotAllocations
+    )
   }
 }

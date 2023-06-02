@@ -187,26 +187,32 @@ final class CanSolveSDFToTiledMultiCore(using logger: Logger)
     // )
     // chocoModel.post(Constraint("paretoOptimality", paretoPropagator))
     // chocoModel.getSolver().plugMonitor(paretoPropagator)
-    val globalInvTh = chocoModel.max("globalInvTh", invThroughputs)
+    // val globalInvTh = chocoModel.max("globalInvTh", invThroughputs)
     val goalInvThs = invThroughputs.zipWithIndex.filter((v, i) => {
       m.sdfApplications.minimumActorThroughputs(i) <= 0.0
     })
     for ((v, i) <- invThroughputs.zipWithIndex; if !goalInvThs.contains((v, i))) {
       chocoModel
-        .arithm(v, "<=", double2int(1.0 / m.sdfApplications.minimumActorThroughputs(i)))
+        .arithm(
+          v,
+          "<=",
+          double2int(
+            m.sdfApplications.sdfRepetitionVectors(i).toDouble / m.sdfApplications
+              .minimumActorThroughputs(i)
+          )
+        )
         .post()
     }
-    // val uniqueGoalPerSubGraphInvThs = goalInvThs
-    //   .groupBy((v, i) =>
-    //     m.sdfApplications.sdfDisjointComponents
-    //       .map(_.toVector)
-    //       .indexWhere(as => as.contains(m.sdfApplications.actorsIdentifiers(i)))
-    //   )
-    //   .map((k, v) => v.head._1)
+    val uniqueGoalPerSubGraphInvThs = goalInvThs
+      .groupBy((v, i) =>
+        m.sdfApplications.sdfDisjointComponents
+          .map(_.toVector)
+          .indexWhere(as => as.contains(m.sdfApplications.actorsIdentifiers(i)))
+      )
+      .map((k, v) => v.head._1)
     val objs = Array(
-      numMappedElements,
-      chocoModel.max("globalInvTh", invThroughputs)
-    ) // ++ uniqueGoalPerSubGraphInvThs
+      numMappedElements
+    ) ++ uniqueGoalPerSubGraphInvThs
     createAndApplyMOOPropagator(chocoModel, objs, objsUpperBounds)
     chocoModel.getSolver().setLearningSignedClauses()
     // chocoModel.getSolver().setRestartOnSolutions()
@@ -504,9 +510,9 @@ final class CanSolveSDFToTiledMultiCore(using logger: Logger)
       sdfApplications = m.sdfApplications.copy(minimumActorThroughputs =
         invThroughputs.zipWithIndex
           .map((invTh, i) =>
-            1.0 / (m.sdfApplications
+            m.sdfApplications
               .sdfRepetitionVectors(i)
-              .toDouble * int2double(invTh.getValue()))
+              .toDouble / int2double(invTh.getValue())
           )
           .toVector
       ),

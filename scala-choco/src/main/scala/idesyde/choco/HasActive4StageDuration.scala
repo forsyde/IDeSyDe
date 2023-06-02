@@ -116,7 +116,7 @@ trait HasActive4StageDuration extends HasUtils {
     val totalVCPerCommElem = communicators
       .map(c =>
         chocoModel.intVar(
-          s"vcTotal($c)",
+          s"totalVCPerCommElem($c)",
           0,
           communicationElementsMaxChannels(c),
           true

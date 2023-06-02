@@ -1,3 +1,9 @@
+# these files must be forcefully added to the repo. This will stop anyone from doing
+# the famous `git add .` which destroys the pristine nature of any repo.
+**.kgt
+**.fiodl
+run*/
+
 
 # Created by https://www.toptal.com/developers/gitignore/api/scala,bloop,gradle,java,eclipse,sbt
 # Edit at https://www.toptal.com/developers/gitignore?templates=scala,bloop,gradle,java,eclipse,sbt
@@ -244,11 +250,6 @@ fabric.properties
 
 # End of https://www.toptal.com/developers/gitignore/api/pants
 
-run/
-# these files must be forcefully added to the repo. This will stop anyone from doing
-# the famous `git add .` which destroys the pristine nature of any repo.
-**.kgt
-**.fiodl
 
 # Created by https://www.toptal.com/developers/gitignore/api/cmake,vcpkg,visualstudio,visualstudiocode
 # Edit at https://www.toptal.com/developers/gitignore?templates=cmake,vcpkg,visualstudio,visualstudiocode

@@ -377,6 +377,12 @@ final class CanSolveDepTasksToPartitionedMultiCore(using logger: Logger)
           .map(solution.getIntVal(_))
           .get
       )
+    val numVirtualChannelsForProcElem: Vector[Vector[IntVar]] =
+      m.platform.hardware.processingElems.map(src =>
+        m.platform.hardware.communicationElems.map(ce =>
+          intVars.find(_.getName() == s"vc($src, $ce)").get
+        )
+      )
     val processMappings = processesMemoryMapping.zipWithIndex
       .map((v, i) =>
         m.workload.tasks(i) -> m.platform.hardware.storageElems(processesMemoryMapping(i))
@@ -390,11 +396,36 @@ final class CanSolveDepTasksToPartitionedMultiCore(using logger: Logger)
         m.workload.dataChannels(i) -> m.platform.hardware.storageElems(messagesMemoryMapping(i))
       )
       .toVector
+    val messageSlotAllocations = m.workload.dataChannels.zipWithIndex.map((c, ci) => c -> {
+        // we have to look from the source perpective, since the sending processor is the one that allocates
+        val mem = messagesMemoryMapping(ci)
+        // TODO: this must be fixed later, it might clash correct slots
+        val iter =
+          for (
+            (t, ti) <- m.workload.tasks.zipWithIndex;
+            if m.workload.dataGraph.exists((a, b, _) => (t, c) == (a, b) || (t, c) == (b, a));
+            p = taskExecution(ti);
+            (ce, j) <- m.platform.hardware.communicationElems.zipWithIndex;
+            // if solution.getIntVal(numVirtualChannelsForProcElem(p)(j)) > 0
+            if numVirtualChannelsForProcElem(p)(j).getValue() > 0
+          )
+            yield ce -> (0 until m.platform.hardware.communicationElementsMaxChannels(j))
+              .map(slot =>
+                // (slot + j % m.platform.hardware.communicationElementsMaxChannels(j)) < solution
+                //   .getIntVal(numVirtualChannelsForProcElem(p)(j))
+                (slot + j % m.platform.hardware.communicationElementsMaxChannels(
+                  j
+                )) < numVirtualChannelsForProcElem(p)(j).getValue()
+              )
+              .toVector
+        iter.toMap
+      }).toMap
     // val channelSlotAllocations = ???
     m.copy(
       processMappings = processMappings,
       processSchedulings = processSchedulings,
-      channelMappings = channelMappings
+      channelMappings = channelMappings,
+      channelSlotAllocations = messageSlotAllocations
     )
   }
 

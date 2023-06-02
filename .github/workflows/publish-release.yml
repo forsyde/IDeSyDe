@@ -33,6 +33,7 @@ jobs:
         rust-version: stable
     - name: Build rust
       run: |
+        rustup target add x86_64-unknown-linux-musl
         cd ${{ github.workspace }}
         cargo build -r --target x86_64-unknown-linux-musl
         cp ./target/x86_64-unknown-linux-musl/release/idesyde-orchestration idesyde

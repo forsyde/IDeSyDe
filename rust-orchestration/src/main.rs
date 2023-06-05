@@ -1,4 +1,9 @@
-use std::{cmp::Ordering, fs, path::Path};
+use std::{
+    cmp::Ordering,
+    fs,
+    path::{Path, PathBuf},
+    time::UNIX_EPOCH,
+};
 
 use clap::Parser;
 use env_logger::WriteStyle;
@@ -130,7 +135,7 @@ fn main() {
             .expect("Failed to get working directory.")
             .join("emodules");
         let identified_path = run_path.join("identified");
-        let solution_path = &run_path.join("explored");
+        let explored_path = &run_path.join("explored");
         let reverse_path = &run_path.join("reversed");
 
         std::fs::create_dir_all(run_path)
@@ -143,10 +148,54 @@ fn main() {
             .expect("Failed to create emodules directory during identification.");
         std::fs::create_dir_all(&identified_path)
             .expect("Failed to create identified directory during identification.");
-        std::fs::create_dir_all(&solution_path)
+        std::fs::create_dir_all(&explored_path)
             .expect("Failed to create explored directory during identification.");
         std::fs::create_dir_all(&reverse_path)
             .expect("Failed to create explored directory during identification.");
+
+        let mut is_input_incremental = true;
+        let mut current_input_stamp: Vec<(String, u64)> = sorted_inputs
+            .iter()
+            .map(|x| {
+                (
+                    x.to_owned(),
+                    std::fs::metadata(std::path::PathBuf::from(x))
+                        .ok()
+                        .and_then(|y| y.modified().ok())
+                        .and_then(|y| y.duration_since(UNIX_EPOCH).ok())
+                        .map(|y| y.as_secs())
+                        .unwrap_or(0),
+                )
+            })
+            .collect();
+        if let Ok(f) = std::fs::read(run_path.join("input_stamp.json")) {
+            let previous_input_stream: Vec<(String, u64)> =
+                serde_json::from_slice(&f).unwrap_or(Vec::new());
+            for x in &current_input_stamp {
+                if !previous_input_stream.contains(x) {
+                    is_input_incremental = false;
+                    break;
+                }
+            }
+            for x in previous_input_stream {
+                if !current_input_stamp.contains(&x) {
+                    current_input_stamp.push(x);
+                }
+            }
+        }
+
+        if !is_input_incremental {
+            debug!("Detected that the inputs are not incremental. Cleaning the workspace before proceeding.");
+            for dir in vec![inputs_path, &identified_path, &explored_path, &reverse_path] {
+                if let Ok(d) = std::fs::read_dir(dir) {
+                    for x in d {
+                        if let Ok(f) = x {
+                            std::fs::remove_file(f.path());
+                        }
+                    }
+                };
+            }
+        }
 
         debug!("Copying input files");
         for input in &sorted_inputs {
@@ -167,7 +216,7 @@ fn main() {
             imodules_path,
             &identified_path,
             &inputs_path,
-            &solution_path,
+            &explored_path,
             &reverse_path,
             &output_path,
         );
@@ -182,7 +231,7 @@ fn main() {
         let ex_emodules = orchestration::find_exploration_modules(
             emodules_path,
             &identified_path,
-            &solution_path,
+            &explored_path,
         );
         for exemod in ex_emodules {
             debug!(

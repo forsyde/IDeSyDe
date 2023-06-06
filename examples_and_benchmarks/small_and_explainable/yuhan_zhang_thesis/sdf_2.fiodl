@@ -1,0 +1,59 @@
+systemgraph {
+  vertex "d"
+  [impl::InstrumentedExecutable, moc::sdf::SDFActor, visualization::Visualizable]
+  (combFunctions, p0_0)
+  {
+    "production": {      
+      "p0_0": 1_i
+    },
+    "consumption": {
+
+    },
+    "operationRequirements": {
+      "default": {
+        "p_1": 1_l,
+        "p_2": 1_l
+      }
+    },
+    "sizeInBits": 4_l
+  }
+  vertex "e"
+  [impl::InstrumentedExecutable, moc::sdf::SDFActor, visualization::Visualizable]
+  (combFunctions, p0_0)
+  {
+    "production": {},
+    "consumption": {
+      "p0_0": 1_i
+    },
+    "operationRequirements": {
+      "default": {
+        "p_1": 1_l,
+        "p_2": 2_l
+      }
+    },
+    "sizeInBits": 4_l
+  }
+ 
+  vertex "ch1_0"
+  [impl::TokenizableDataBlock, moc::sdf::SDFChannel, visualization::Visualizable]
+  (consumer, initialTokenValues, producer)
+  {
+    "numOfInitialTokens": 0_i,
+    "maxSizeInBits": 0_l,
+    "tokenSizeInBits": 8_l
+  }
+ 
+ 
+  
+  edge [moc::sdf::SDFDataEdge,visualization::VisualConnection] from "d" port "p0_0" to "ch1_0" port "producer"
+  edge [moc::sdf::SDFDataEdge,visualization::VisualConnection] from "ch1_0" port "consumer" to "e" port "p0_0"
+ 
+
+
+
+
+
+
+ 
+
+}

@@ -1,0 +1,114 @@
+systemgraph {
+  vertex "a"
+  [impl::InstrumentedExecutable, moc::sdf::SDFActor, visualization::Visualizable]
+  (combFunctions, p0_0, p0_1, p0_2, p1_0)
+  {
+    "production": {      
+      "p0_0": 1_i,
+      "p0_1": 1_i,
+      "p0_2": 1_i,
+      "p1_0": 1_i
+    },
+    "consumption": {},
+    "operationRequirements": {
+      "default": {
+        "p_1": 1_l,
+        "p_2": 1_l
+      }
+    },
+    "sizeInBits": 4_l
+  }
+  vertex "b"
+  [impl::InstrumentedExecutable, moc::sdf::SDFActor, visualization::Visualizable]
+  (combFunctions, p0_0, p0_1, p0_2)
+  {
+    "production": {
+      
+    },
+    "consumption": {
+      "p0_2": 1_i,
+      "p0_1": 1_i,
+      "p0_0": 1_i
+    },
+    "operationRequirements": {
+      "default": {
+        "p_1": 2_l,
+        "p_2": 3_l
+      }
+    },
+    "sizeInBits": 4_l
+  }
+  vertex "c"
+  [impl::InstrumentedExecutable, moc::sdf::SDFActor, visualization::Visualizable]
+  (combFunctions, p0_0)
+  {
+    "production": {
+      
+    },
+    "consumption": {
+      "p0_0": 1_i
+    },
+    "operationRequirements": {
+      "default": {
+        "p_1": 2_l,
+        "p_2": 3_l
+      }
+    },
+    "sizeInBits": 4_l
+  }
+
+  vertex "aTob_0"
+  [impl::TokenizableDataBlock, moc::sdf::SDFChannel, visualization::Visualizable]
+  (consumer, initialTokenValues, producer)
+  {
+    "numOfInitialTokens": 0_i,
+    "maxSizeInBits": 0_l,
+    "tokenSizeInBits": 8_l
+  }
+  vertex "aTob_1"
+  [impl::TokenizableDataBlock, moc::sdf::SDFChannel, visualization::Visualizable]
+  (consumer, initialTokenValues, producer)
+  {
+    "numOfInitialTokens": 0_i,
+    "maxSizeInBits": 0_l,
+    "tokenSizeInBits": 8_l
+  }
+  vertex "aTob_2"
+  [impl::TokenizableDataBlock, moc::sdf::SDFChannel, visualization::Visualizable]
+  (consumer, initialTokenValues, producer)
+  {
+    "numOfInitialTokens": 0_i,
+    "maxSizeInBits": 0_l,
+    "tokenSizeInBits": 8_l
+  }
+  
+  vertex "aToc_0"
+  [impl::TokenizableDataBlock, moc::sdf::SDFChannel, visualization::Visualizable]
+  (consumer, initialTokenValues, producer)
+  {
+    "numOfInitialTokens": 0_i,
+    "maxSizeInBits": 0_l,
+    "tokenSizeInBits": 8_l
+  }
+ 
+  
+ 
+  
+  
+  edge [moc::sdf::SDFDataEdge,visualization::VisualConnection] from "a" port "p0_0" to "aTob_0" port "producer"
+  edge [moc::sdf::SDFDataEdge,visualization::VisualConnection] from "aTob_0" port "consumer" to "b" port "p0_0"
+  edge [moc::sdf::SDFDataEdge,visualization::VisualConnection] from "a" port "p0_1" to "aTob_1" port "producer"
+  edge [moc::sdf::SDFDataEdge,visualization::VisualConnection] from "aTob_1" port "consumer" to "b" port "p0_1"
+  edge [moc::sdf::SDFDataEdge,visualization::VisualConnection] from "a" port "p0_2" to "aTob_2" port "producer"
+  edge [moc::sdf::SDFDataEdge,visualization::VisualConnection] from "aTob_2" port "consumer" to "b" port "p0_2"
+  edge [moc::sdf::SDFDataEdge,visualization::VisualConnection] from "a" port "p1_0" to "aToc_0" port "producer"
+  edge [moc::sdf::SDFDataEdge,visualization::VisualConnection] from "aToc_0" port "consumer" to "c" port "p0_0"
+
+
+
+
+
+
+ 
+
+}

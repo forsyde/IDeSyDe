@@ -1,9 +1,4 @@
-use std::{
-    cmp::Ordering,
-    fs,
-    path::{Path, PathBuf},
-    time::UNIX_EPOCH,
-};
+use std::{path::Path, time::UNIX_EPOCH};
 
 use clap::Parser;
 use env_logger::WriteStyle;
@@ -14,7 +9,7 @@ use idesyde_core::{
 use log::{debug, error, info, warn, Level};
 use rayon::prelude::*;
 
-use crate::orchestration::{compute_dominant_biddings, compute_dominant_decision_models};
+use crate::orchestration::compute_dominant_biddings;
 
 pub mod orchestration;
 
@@ -190,11 +185,20 @@ fn main() {
                 if let Ok(d) = std::fs::read_dir(dir) {
                     for x in d {
                         if let Ok(f) = x {
-                            std::fs::remove_file(f.path());
+                            if std::fs::remove_file(f.path()).is_err() {
+                                warn!("Failed to remove workspace file during incremental reset. Trying to proceed");
+                            };
                         }
                     }
                 };
             }
+        }
+        if let Ok(f) = std::fs::File::create(run_path.join("input_stamp.json")) {
+            if serde_json::to_writer(f, &current_input_stamp).is_err() {
+                warn!("Failed to produce increment stamps. Incremetability might not work.")
+            };
+        } else {
+            warn!("Failed to create increment stamps. Incremetability might not work.")
         }
 
         debug!("Copying input files");
@@ -206,7 +210,7 @@ fn main() {
             }
             if let Some(fname) = p.file_name() {
                 let fpath = Path::new(fname);
-                fs::copy(p, run_path.join("inputs").join(fpath))
+                std::fs::copy(p, run_path.join("inputs").join(fpath))
                     .expect("Failed to copy input models during identification.");
             }
         }
@@ -397,7 +401,7 @@ fn main() {
                 let total_reversed: usize = imodules
                     .par_iter()
                     .enumerate()
-                    .map(|(i, imodule)| {
+                    .map(|(_, imodule)| {
                         let mut n_reversed = 0;
                         for reverse in imodule.reverse_identification(&sols_found, &design_models) {
                             idesyde_core::write_design_model_header_to_path(

@@ -21,7 +21,7 @@ jobs:
     - name: Cache rust
       uses: actions/cache@v3
       with:
-        path: ${{ github.workspace }}\idesyde.exe
+        path: "${{ github.workspace }}\\idesyde.exe"
         key: ${{ github.ref }}-${{ runner.os }}-rust-orchestration
   build-linux-rust:
     runs-on: ubuntu-latest
@@ -77,8 +77,8 @@ jobs:
       uses: actions/cache@v3
       with:
         path: |
-          ${{ github.workspace }}\imodules
-          ${{ github.workspace }}\emodules
+          "${{ github.workspace }}\\imodules"
+          "${{ github.workspace }}\\emodules"
         key: ${{ github.ref }}-${{ runner.os }}-scala-modules-jar
   publish-windows-all:
     runs-on: windows-latest
@@ -88,14 +88,14 @@ jobs:
     - name: Get cached rust
       uses: actions/cache@v3
       with:
-        path: ${{ github.workspace }}\idesyde.exe
+        path: "${{ github.workspace }}\\idesyde.exe"
         key: ${{ github.ref }}-${{ runner.os }}-rust-orchestration
     - name: Get cached scala
       uses: actions/cache@v3
       with:
         path: |
-          ${{ github.workspace }}\imodules
-          ${{ github.workspace }}\emodules
+          "${{ github.workspace }}\\imodules"
+          "${{ github.workspace }}\\emodules"
         key: ${{ github.ref }}-${{ runner.os }}-scala-modules-jar
     - name: Make zip
       run: |
@@ -105,7 +105,7 @@ jobs:
       uses: svenstaro/upload-release-action@v2
       with:
         repo_token: ${{ secrets.GITHUB_TOKEN }}
-        file: ${{ github.workspace }}\idesyde-windows-amd64.zip
+        file: "${{ github.workspace }}\\idesyde-windows-amd64.zip"
         asset_name: idesyde-windows-amd64.zip
         tag: "${{ github.ref }}"
         overwrite: true

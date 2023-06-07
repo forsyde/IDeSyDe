@@ -120,7 +120,7 @@ class ChocoExplorer(using logger: Logger) extends Explorer:
     }
     LazyList
       .from(0)
-      .takeWhile(i => (maximumSolutions <= 0 || i < maximumSolutions))
+      .takeWhile(i => (maximumSolutions <= 0 || i <= maximumSolutions))
       .map(i => (solver.solve(), i))
       .takeWhile((feasible, i) => (!maxLvlReached || feasible))
       .flatMap((feasible, _) => {

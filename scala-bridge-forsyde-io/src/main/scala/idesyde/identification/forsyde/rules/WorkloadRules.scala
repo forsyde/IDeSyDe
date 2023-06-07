@@ -355,6 +355,7 @@ trait WorkloadRules {
           .forEach((opName, opReqs) => {
             if (!maps.contains(opName)) maps(opName) = mutable.Map[String, Long]()
             opReqs.forEach((opKey, opVal) => {
+              if (!maps(opName).contains(opKey)) maps(opName)(opKey) = 0L
               maps(opName)(opKey) += opVal
             })
           })

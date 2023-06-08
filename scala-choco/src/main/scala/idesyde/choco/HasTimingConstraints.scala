@@ -88,7 +88,55 @@ trait HasTimingConstraints {
       taskExecution: Array[IntVar],
       blockingTimes: Array[IntVar],
       responseTimes: Array[IntVar]
-  ): Constraint = {
+  ): Array[Array[IntVar]] = {
+    println(priorities.mkString(", "))
+    val preemptionInterference = responseTimes.zipWithIndex.map((ri, i) => {
+      responseTimes.zipWithIndex.map((rj, j) => {
+        if (i != j && priorities(i) >= priorities(j)) {
+          chocoModel.intVar(
+            s"preemptionInterference($i, $j)",
+            0,
+            (1 + scala.math.floorDiv(responseTimes(j).getUB(), periods(i))) * durations(i).getUB(),
+            true
+          )
+        } else {
+          chocoModel.intVar(s"preemptionInterference($i, $j)", 0)
+        }
+      })
+    })
+    for ((ri, i) <- responseTimes.zipWithIndex) {
+      chocoModel
+        .sum(
+          Array(durations(i), blockingTimes(i)) ++ preemptionInterference.map(v => v(i)),
+          "<=",
+          responseTimes(i)
+        )
+        .post()
+      for ((cj, j) <- durations.zipWithIndex) {
+        chocoModel.ifThen(
+          taskExecution(i).eq(schedulerIdx).and(taskExecution(j).eq(schedulerIdx)).decompose(),
+          chocoModel
+            .arithm(
+              responseTimes(i),
+              "*",
+              durations(j),
+              ">",
+              chocoModel.intAffineView(periods(j), preemptionInterference(j)(i), 0)
+            )
+        )
+        chocoModel.ifThen(
+          taskExecution(i).eq(schedulerIdx).and(taskExecution(j).eq(schedulerIdx)).decompose(),
+          chocoModel
+            .arithm(
+              responseTimes(i),
+              "*",
+              durations(j),
+              "<=",
+              chocoModel.intAffineView(periods(j), preemptionInterference(j)(i), 1)
+            )
+        )
+      }
+    }
     val const = new Constraint(
       s"scheduler_${schedulerIdx}_iter_prop",
       FixedPriorityPreemptivePropagator(
@@ -104,7 +152,8 @@ trait HasTimingConstraints {
       )
     )
     chocoModel.post(const)
-    const
+    preemptionInterference
+    // const
   }
 
   /** This method sets up the Worst case schedulability test for a task.

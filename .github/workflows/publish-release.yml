@@ -125,7 +125,7 @@ jobs:
         overwrite: true
   publish-linux-all:
     runs-on: ubuntu-latest
-    needs: [build-linux-rust, build-jars-linux-scala]
+    needs: [build-linux-rust, build-jars-scala]
     steps:
     - uses: actions/checkout@v3
     - name: Get cached rust

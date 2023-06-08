@@ -76,7 +76,7 @@ final class CanSolveDepTasksToPartitionedMultiCore(using logger: Logger)
     )(l)
 
     val periods    = m.workload.periods.map(double2int)
-    val priorities = m.workload.prioritiesForDependencies
+    val priorities = m.workload.prioritiesForDependencies.toArray
     val deadlines  = m.workload.relativeDeadlines.map(double2int)
     val wcets      = m.wcets.map(_.map(double2int))
     val maxUtilizations =

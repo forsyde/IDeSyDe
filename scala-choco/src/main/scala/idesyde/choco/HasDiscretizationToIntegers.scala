@@ -16,6 +16,7 @@ trait HasDiscretizationToIntegers extends HasUtils {
     //   r += 1
     //   println("asd " + t + " - " + r)
     // }
+    // println((t, step))
     fracT.div(t, step).toDouble.ceil.toInt
   }
 

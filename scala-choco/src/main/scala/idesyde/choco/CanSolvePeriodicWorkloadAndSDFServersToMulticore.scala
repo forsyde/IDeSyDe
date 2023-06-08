@@ -32,7 +32,7 @@ final class CanSolvePeriodicWorkloadAndSDFServersToMulticore(using logger: Logge
       m.wcets.flatten ++ m.platform.hardware.maxTraversalTimePerBit.flatten
         .map(
           _.toDouble
-        ) ++ m.tasksAndSDFs.workload.periods ++ m.wcets.flatten ++ m.tasksAndSDFs.workload.relativeDeadlines
+        ) ++ m.tasksAndSDFs.workload.periods.zip(m.tasksAndSDFs.workload.relativeDeadlines).map((a, b) => scala.math.max(a, b))
     val memoryValues =
       m.platform.hardware.storageSizes ++ m.tasksAndSDFs.sdfApplications.sdfMessages
         .map((src, _, _, mSize, p, c, tok) =>
@@ -47,7 +47,7 @@ final class CanSolvePeriodicWorkloadAndSDFServersToMulticore(using logger: Logge
     //   )
     def double2int(s: Double) = discretized(
       if (timeResolution > Int.MaxValue) Int.MaxValue
-      else if (timeResolution <= 0L) timeValues.size * 100
+      else if (timeResolution <= 0L) (timeValues.sum / timeValues.min).ceil.toDouble.toInt
       else timeResolution.toInt,
       timeValues.sum
     )(s)
@@ -60,9 +60,13 @@ final class CanSolvePeriodicWorkloadAndSDFServersToMulticore(using logger: Logge
     )(l)
 
     val periods    = m.tasksAndSDFs.workload.periods.map(double2int)
-    val priorities = m.tasksAndSDFs.workload.prioritiesForDependencies
-    val deadlines  = m.tasksAndSDFs.workload.relativeDeadlines.map(double2int)
-    val wcets      = m.wcets.map(_.map(double2int))
+    val priorities = m.tasksAndSDFs.workload.prioritiesForDependencies.toArray
+    val discretizedRelDeadlines  = m.tasksAndSDFs.workload.relativeDeadlines.map(double2int)
+    val discretizedWcets      = m.wcets.map(_.map(double2int))
+    println(m.wcets.map(_.mkString(",")).mkString("\n"))
+    println(m.tasksAndSDFs.workload.relativeDeadlines.mkString(","))
+    println(discretizedWcets.map(_.mkString(",")).mkString("\n"))
+    println(discretizedRelDeadlines.mkString(","))
     val maxUtilizations =
       m.platform.hardware.processingElems.map(p => 1.0) // TODO: add this later properly
     val messagesBufferingSizes = m.tasksAndSDFs.sdfApplications.sdfMessages
@@ -121,10 +125,10 @@ final class CanSolvePeriodicWorkloadAndSDFServersToMulticore(using logger: Logge
         chocoModel.intVar(
           s"rt($t)",
           // minimum WCET possible
-          wcets(i)
+          discretizedWcets(i)
             .filter(p => p > -1)
             .min,
-          deadlines(i),
+          discretizedRelDeadlines(i),
           true // keeping only bounds for the response time is enough and better
         )
       )
@@ -134,7 +138,7 @@ final class CanSolvePeriodicWorkloadAndSDFServersToMulticore(using logger: Logge
           s"bt($t)",
           // minimum WCET possible
           0,
-          deadlines(i),
+          discretizedRelDeadlines(i),
           true // keeping only bounds for the response time is enough and better
         )
       )
@@ -158,7 +162,7 @@ final class CanSolvePeriodicWorkloadAndSDFServersToMulticore(using logger: Logge
       totalVCPerCommElem
     ) = postActive4StageDurationsConstraints(
       chocoModel,
-      wcets.map(_.toArray).toArray,
+      discretizedWcets.map(_.toArray).toArray,
       m.platform.hardware.communicationElementsMaxChannels,
       (t: Int) => (ce: Int) =>
         if (t < m.tasksAndSDFs.workload.taskSizes.length) {
@@ -237,6 +241,7 @@ final class CanSolvePeriodicWorkloadAndSDFServersToMulticore(using logger: Logge
       responseTimes.toArray
     )
 
+    println(m.platform.runtimes)
     m.platform.runtimes.schedulers.zipWithIndex
       .filter((s, j) => m.platform.runtimes.isFixedPriority(j))
       .foreach((s, j) => {
@@ -244,8 +249,8 @@ final class CanSolvePeriodicWorkloadAndSDFServersToMulticore(using logger: Logge
         chocoModel,
       priorities,
       periods.toArray,
-      deadlines.toArray,
-      wcets.map(_.toArray).toArray,
+      discretizedRelDeadlines.toArray,
+      discretizedWcets.map(_.toArray).toArray,
       maxUtilizations.toArray,
       taskDurations,
       taskExecution.toArray,
@@ -472,7 +477,7 @@ final class CanSolvePeriodicWorkloadAndSDFServersToMulticore(using logger: Logge
       }).toMap
     m.copy(
       processesSchedulings = taskExecution.zipWithIndex.map((mi, ti) => m.tasksAndSDFs.workload.processes(ti) -> m.platform.runtimes.schedulers(mi))  ++ actorExecution.zipWithIndex.map((mi, ti) => m.tasksAndSDFs.sdfApplications.actorsIdentifiers(ti) -> m.platform.runtimes.schedulers(mi)),
-      processesMappings = tasksMemoryMapping.zipWithIndex.map((mi, ti) => m.tasksAndSDFs.workload.processes(ti) -> m.platform.runtimes.schedulers(mi))  ++ actorsMemoryMapping.zipWithIndex.map((mi, ti) => m.tasksAndSDFs.sdfApplications.actorsIdentifiers(ti) -> m.platform.runtimes.schedulers(mi)),
+      processesMappings = tasksMemoryMapping.zipWithIndex.map((mi, ti) => m.tasksAndSDFs.workload.processes(ti) -> m.platform.hardware.storageElems(mi))  ++ actorsMemoryMapping.zipWithIndex.map((mi, ti) => m.tasksAndSDFs.sdfApplications.actorsIdentifiers(ti) -> m.platform.hardware.storageElems(mi)),
       messagesMappings = dataChannelsMemoryMapping.zipWithIndex.map((mi, ci) => m.tasksAndSDFs.workload.dataChannels(ci) -> m.platform.hardware.storageElems(mi)) ++ sdfMessageMemoryMappings,
       messageSlotAllocations = dataChannelsSlotAllocations ++ sdfChannelsSlotAllocations
     )

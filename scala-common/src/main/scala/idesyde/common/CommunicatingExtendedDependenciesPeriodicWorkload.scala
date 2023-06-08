@@ -190,7 +190,7 @@ trait CommunicatingExtendedDependenciesPeriodicWorkload {
   def prioritiesForDependencies = {
     val g             = affineRelationsGraph
     val numTasks      = numVirtualTasks
-    var prioritiesMut = Array.fill(numTasks)(numTasks)
+    var prioritiesMut = Buffer.fill(numTasks)(numTasks)
     for (
       sorted <- g.topologicalSort();
       node   <- sorted;
@@ -204,5 +204,7 @@ trait CommunicatingExtendedDependenciesPeriodicWorkload {
     // scribe.debug(prioritiesMut.mkString("[", ",", "]"))
     prioritiesMut
   }
+
+  def prioritiesRateMonotonic = {}
 
 }

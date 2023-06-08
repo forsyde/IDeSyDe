@@ -205,6 +205,19 @@ trait CommunicatingExtendedDependenciesPeriodicWorkload {
     prioritiesMut
   }
 
-  def prioritiesRateMonotonic = {}
+  def prioritiesRateMonotonic = {
+    var prioritiesMut = prioritiesForDependencies
+    for (
+      i <- 0 until prioritiesMut.size;
+      j <- 0 until prioritiesMut.size;
+      if i != j;
+      if prioritiesMut(i) > prioritiesMut(j) || (prioritiesMut(i) == prioritiesMut(j) && periods(
+        i
+      ) < periods(j))
+    ) {
+      prioritiesMut(j) -= 1
+    }
+    prioritiesMut
+  }
 
 }

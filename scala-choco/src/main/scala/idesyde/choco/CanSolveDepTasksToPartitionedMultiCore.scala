@@ -76,7 +76,7 @@ final class CanSolveDepTasksToPartitionedMultiCore(using logger: Logger)
     )(l)
 
     val periods    = m.workload.periods.map(double2int)
-    val priorities = m.workload.prioritiesForDependencies.toArray
+    val priorities = m.workload.prioritiesRateMonotonic.toArray
     val deadlines  = m.workload.relativeDeadlines.map(double2int)
     val wcets      = m.wcets.map(_.map(double2int))
     val maxUtilizations =
@@ -240,21 +240,20 @@ final class CanSolveDepTasksToPartitionedMultiCore(using logger: Logger)
 
     // for each FP scheduler
     // rt >= bt + sum of all higher prio tasks in the same CPU
-    m.platform.runtimes.schedulers.zipWithIndex
+    postFixedPrioriPreemtpiveConstraint(m.platform.runtimes.schedulers.zipWithIndex
       .filter((s, j) => m.platform.runtimes.isFixedPriority(j))
-      .foreach((s, j) => {
-        postFixedPrioriPreemtpiveConstraint(j, 
-        chocoModel,
-      priorities,
-      periods.toArray,
-      deadlines.toArray,
-      wcets.map(_.toArray).toArray,
-      maxUtilizations.toArray,
-      durations,
-      taskExecution.toArray,
-      blockingTimes.toArray,
-      responseTimes.toArray)
-      })
+      .map((s, j) => j), 
+      chocoModel,
+    priorities,
+    periods.toArray,
+    deadlines.toArray,
+    wcets.map(_.toArray).toArray,
+    maxUtilizations.toArray,
+    durations,
+    taskExecution.toArray,
+    blockingTimes.toArray,
+    responseTimes.toArray)
+    
     // for each SC scheduler
     m.workload.tasks.zipWithIndex.foreach((task, i) => {
       m.platform.runtimes.schedulers.zipWithIndex

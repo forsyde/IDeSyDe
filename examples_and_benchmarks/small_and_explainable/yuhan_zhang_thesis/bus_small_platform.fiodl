@@ -24,7 +24,7 @@ systemgraph {
   (instructionsAndData, networkInterface)
   {
     "spaceInBits": 8388608_l,
-    "operatingFrequencyInHertz": 50000000_l
+    "operatingFrequencyInHertz": 1_l
   }
   vertex "micro_blaze_ni0"
   [platform::InstrumentedCommunicationModule, visualization::Visualizable]
@@ -33,11 +33,11 @@ systemgraph {
     "maxCyclesPerFlit": 8_i,
     "flitSizeInBits": 128_l,
     "initialLatency": 0_l,
-    "operatingFrequencyInHertz": 50000000_l,
+    "operatingFrequencyInHertz": 1_l,
     "maxConcurrentFlits": 8_i
   }
   vertex "micro_blaze_os0"
-  [decision::Allocated, platform::runtime::StaticCyclicScheduler, visualization::Visualizable]
+  [decision::Allocated, platform::runtime::FixedPriorityScheduler, visualization::Visualizable]
   (allocationHosts)
   {}
   vertex "micro_blaze_ni_slots0"
@@ -69,7 +69,7 @@ systemgraph {
   (instructionsAndData, networkInterface)
   {
     "spaceInBits": 8388608_l,
-    "operatingFrequencyInHertz": 50000000_l
+    "operatingFrequencyInHertz": 1_l
   }
   vertex "micro_blaze_ni1"
   [platform::InstrumentedCommunicationModule, visualization::Visualizable]
@@ -78,11 +78,11 @@ systemgraph {
     "maxCyclesPerFlit": 8_i,
     "flitSizeInBits": 128_l,
     "initialLatency": 0_l,
-    "operatingFrequencyInHertz": 50000000_l,
+    "operatingFrequencyInHertz": 1_l,
     "maxConcurrentFlits": 8_i
   }
   vertex "micro_blaze_os1"
-  [decision::Allocated, platform::runtime::StaticCyclicScheduler, visualization::Visualizable]
+  [decision::Allocated, platform::runtime::FixedPriorityScheduler, visualization::Visualizable]
   (allocationHosts)
   {}
   vertex "micro_blaze_ni_slots1"
@@ -99,7 +99,7 @@ systemgraph {
     "maxCyclesPerFlit": 8_i,
     "flitSizeInBits": 128_l,
     "initialLatency": 0_l,
-    "operatingFrequencyInHertz": 666667000_l,
+    "operatingFrequencyInHertz": 1_l,
     "maxConcurrentFlits": 8_i
   }
   vertex "busSched"

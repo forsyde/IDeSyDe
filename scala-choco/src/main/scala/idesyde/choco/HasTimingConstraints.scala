@@ -77,7 +77,7 @@ trait HasTimingConstraints {
   }
 
   def postFixedPrioriPreemtpiveConstraint(
-      schedulerIdx: Int,
+      schedulers: Vector[Int],
       chocoModel: Model,
       priorities: Array[Int],
       periods: Array[Int],
@@ -89,7 +89,6 @@ trait HasTimingConstraints {
       blockingTimes: Array[IntVar],
       responseTimes: Array[IntVar]
   ): Array[Array[IntVar]] = {
-    println(priorities.mkString(", "))
     val preemptionInterference = responseTimes.zipWithIndex.map((ri, i) => {
       responseTimes.zipWithIndex.map((rj, j) => {
         if (i != j && priorities(i) >= priorities(j)) {
@@ -112,7 +111,10 @@ trait HasTimingConstraints {
           responseTimes(i)
         )
         .post()
-      for ((cj, j) <- durations.zipWithIndex) {
+      for (
+        schedulerIdx <- schedulers; (cj, j) <- durations.zipWithIndex;
+        if preemptionInterference(j)(i).getUB() > 0
+      ) {
         chocoModel.ifThen(
           taskExecution(i).eq(schedulerIdx).and(taskExecution(j).eq(schedulerIdx)).decompose(),
           chocoModel
@@ -132,27 +134,28 @@ trait HasTimingConstraints {
               "*",
               durations(j),
               "<=",
-              chocoModel.intAffineView(periods(j), preemptionInterference(j)(i), 1)
+              chocoModel.intAffineView(periods(j), preemptionInterference(j)(i), periods(j))
             )
         )
       }
     }
-    val const = new Constraint(
-      s"scheduler_${schedulerIdx}_iter_prop",
-      FixedPriorityPreemptivePropagator(
-        schedulerIdx,
-        priorities,
-        periods,
-        deadlines,
-        wcets,
-        taskExecution,
-        responseTimes,
-        blockingTimes,
-        durations
-      )
-    )
-    chocoModel.post(const)
+    // val const = new Constraint(
+    //   s"scheduler_${schedulerIdx}_iter_prop",
+    //   FixedPriorityPreemptivePropagator(
+    //     schedulerIdx,
+    //     priorities,
+    //     periods,
+    //     deadlines,
+    //     wcets,
+    //     taskExecution,
+    //     responseTimes,
+    //     blockingTimes,
+    //     durations
+    //   )
+    // )
+    // chocoModel.post(const)
     preemptionInterference
+    // Array.empty
     // const
   }
 

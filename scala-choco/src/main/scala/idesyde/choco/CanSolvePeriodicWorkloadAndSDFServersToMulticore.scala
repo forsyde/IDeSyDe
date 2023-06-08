@@ -9,6 +9,9 @@ import idesyde.utils.Logger
 import org.chocosolver.solver.search.loop.monitors.IMonitorContradiction
 import org.chocosolver.solver.exception.ContradictionException
 import org.chocosolver.solver.variables.IntVar
+import idesyde.exploration.explorers.SimpleWorkloadBalancingDecisionStrategy
+import org.chocosolver.solver.search.strategy.Search
+import idesyde.identification.choco.models.sdf.CompactingMultiCoreMapping
 
 final class CanSolvePeriodicWorkloadAndSDFServersToMulticore(using logger: Logger)
     extends ChocoExplorable[PeriodicWorkloadAndSDFServerToMultiCore]
@@ -47,7 +50,7 @@ final class CanSolvePeriodicWorkloadAndSDFServersToMulticore(using logger: Logge
     //   )
     def double2int(s: Double) = discretized(
       if (timeResolution > Int.MaxValue) Int.MaxValue
-      else if (timeResolution <= 0L) (timeValues.sum / timeValues.min).ceil.toDouble.toInt
+      else if (timeResolution <= 0L) (timeValues.sum / timeValues.min).ceil.toDouble.toInt / 100
       else timeResolution.toInt,
       timeValues.sum
     )(s)
@@ -60,13 +63,9 @@ final class CanSolvePeriodicWorkloadAndSDFServersToMulticore(using logger: Logge
     )(l)
 
     val periods    = m.tasksAndSDFs.workload.periods.map(double2int)
-    val priorities = m.tasksAndSDFs.workload.prioritiesForDependencies.toArray
+    val priorities = m.tasksAndSDFs.workload.prioritiesRateMonotonic.toArray
     val discretizedRelDeadlines  = m.tasksAndSDFs.workload.relativeDeadlines.map(double2int)
     val discretizedWcets      = m.wcets.map(_.map(double2int))
-    println(m.wcets.map(_.mkString(",")).mkString("\n"))
-    println(m.tasksAndSDFs.workload.relativeDeadlines.mkString(","))
-    println(discretizedWcets.map(_.mkString(",")).mkString("\n"))
-    println(discretizedRelDeadlines.mkString(","))
     val maxUtilizations =
       m.platform.hardware.processingElems.map(p => 1.0) // TODO: add this later properly
     val messagesBufferingSizes = m.tasksAndSDFs.sdfApplications.sdfMessages
@@ -241,22 +240,20 @@ final class CanSolvePeriodicWorkloadAndSDFServersToMulticore(using logger: Logge
       responseTimes.toArray
     )
 
-    println(m.platform.runtimes)
-    m.platform.runtimes.schedulers.zipWithIndex
+    postFixedPrioriPreemtpiveConstraint(
+      m.platform.runtimes.schedulers.zipWithIndex
       .filter((s, j) => m.platform.runtimes.isFixedPriority(j))
-      .foreach((s, j) => {
-        postFixedPrioriPreemtpiveConstraint(j, 
-        chocoModel,
-      priorities,
-      periods.toArray,
-      discretizedRelDeadlines.toArray,
-      discretizedWcets.map(_.toArray).toArray,
-      maxUtilizations.toArray,
-      taskDurations,
-      taskExecution.toArray,
-      blockingTimes.toArray,
-      responseTimes.toArray)
-      })
+      .map((s, j) => j), 
+    chocoModel,
+  priorities,
+  periods.toArray,
+  discretizedRelDeadlines.toArray,
+  discretizedWcets.map(_.toArray).toArray,
+  maxUtilizations.toArray,
+  taskDurations,
+  taskExecution.toArray,
+  blockingTimes.toArray,
+  responseTimes.toArray)
     // for each SC scheduler
     m.platform.runtimes.schedulers.zipWithIndex
         .filter((s, j) => m.platform.runtimes.isCyclicExecutive(j))
@@ -339,10 +336,32 @@ final class CanSolvePeriodicWorkloadAndSDFServersToMulticore(using logger: Logge
     val objs = Array(numMappedElements) ++ uniqueGoalPerSubGraphThs
     createAndApplyMOOPropagator(chocoModel, objs, objsUpperBounds)
 
+    chocoModel.getSolver().setLearningSignedClauses()
+
+    chocoModel.getSolver().setSearch(
+      Array(
+        Search.activityBasedSearch(processExecution:_*),
+        Search.activityBasedSearch(processMapping: _*),
+        Search.activityBasedSearch(messageMapping: _*)
+        // Search.minDomLBSearch(responseTimes: _*),
+        // Search.minDomLBSearch(blockingTimes: _*)
+        // Search.intVarSearch(
+        //   FirstFail(chocoModel),
+        //   IntDomainMin(),
+        //   DecisionOperatorFactory.makeIntEq,
+        //   (durationsRead.flatten ++ durationsWrite.flatten ++ durationsFetch.flatten ++
+        //     durations.flatten ++ utilizations ++ taskCommunicationMapping.flatten ++ dataBlockCommMapping.flatten): _*
+        // )
+      ): _*
+    )
+
     // chocoModel
     //   .getSolver()
     //   .plugMonitor(new IMonitorContradiction {
-    //     def onContradiction(cex: ContradictionException): Unit = println(cex.toString())
+    //     def onContradiction(cex: ContradictionException): Unit = {
+    //       println(cex.toString())
+    //       println(chocoModel.getSolver().getDecisionPath().toString())
+    //     }
     //   })
     (chocoModel, objs.toVector)
   }

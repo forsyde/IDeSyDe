@@ -47,7 +47,7 @@ jobs:
     steps:
     - uses: actions/checkout@v3
     - name: Set up Scala 
-      uses: olafurpg/setup-scala@v11
+      uses: olafurpg/setup-scala@v10
       with:
         java-version: "amazon-corretto@1.11.0-11.9.1"
     - name: Build assemblies with sbt
@@ -64,12 +64,16 @@ jobs:
   build-jars-windows-scala:
     runs-on: windows-latest
     steps:
+    - name: Configure git because of setup-scala
+      run: "git config --global core.autocrlf false"
+      shell: bash
     - uses: actions/checkout@v3
     - name: Set up Scala 
-      uses: olafurpg/setup-scala@v11
+      uses: olafurpg/setup-scala@v10
       with:
         java-version: "amazon-corretto@1.11.0-11.9.1"
     - name: Build assemblies with sbt
+      shell: bash
       run: |
         cd ${{ github.workspace }}
         sbt publishModules

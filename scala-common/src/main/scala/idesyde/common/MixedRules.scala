@@ -136,6 +136,7 @@ trait MixedRules {
         PeriodicWorkloadAndSDFServerToMultiCore(
           tasksAndSDFs = a,
           platform = p,
+          processesSchedulings = Vector.empty,
           processesMappings = Vector.empty,
           messagesMappings = Vector.empty,
           messageSlotAllocations = Map.empty

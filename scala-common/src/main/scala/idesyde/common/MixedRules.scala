@@ -24,9 +24,7 @@ trait MixedRules {
         taskDecisionModel.map(b =>
           PeriodicWorkloadAndSDFServers(
             sdfApplications = a,
-            workload = b,
-            sdfServerPeriod = Vector.empty,
-            sdfServerBudget = Vector.empty
+            workload = b
           )
         )
       )
@@ -139,7 +137,10 @@ trait MixedRules {
           processesSchedulings = Vector.empty,
           processesMappings = Vector.empty,
           messagesMappings = Vector.empty,
-          messageSlotAllocations = Map.empty
+          messageSlotAllocations = Map.empty,
+          sdfServerPeriod = Vector.empty[Double],
+          sdfServerBudget = Vector.empty[Double],
+          sdfOrderBasedSchedules = p.runtimes.schedulers.map(p => Vector.empty)
         )
       )
     )

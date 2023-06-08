@@ -471,7 +471,8 @@ final class CanSolvePeriodicWorkloadAndSDFServersToMulticore(using logger: Logge
         iter.toMap
       }).toMap
     m.copy(
-      processesMappings = taskExecution.zipWithIndex.map((mi, ti) => m.tasksAndSDFs.workload.processes(ti) -> m.platform.runtimes.schedulers(mi))  ++ actorExecution.zipWithIndex.map((mi, ti) => m.tasksAndSDFs.sdfApplications.actorsIdentifiers(ti) -> m.platform.runtimes.schedulers(mi)),
+      processesSchedulings = taskExecution.zipWithIndex.map((mi, ti) => m.tasksAndSDFs.workload.processes(ti) -> m.platform.runtimes.schedulers(mi))  ++ actorExecution.zipWithIndex.map((mi, ti) => m.tasksAndSDFs.sdfApplications.actorsIdentifiers(ti) -> m.platform.runtimes.schedulers(mi)),
+      processesMappings = tasksMemoryMapping.zipWithIndex.map((mi, ti) => m.tasksAndSDFs.workload.processes(ti) -> m.platform.runtimes.schedulers(mi))  ++ actorsMemoryMapping.zipWithIndex.map((mi, ti) => m.tasksAndSDFs.sdfApplications.actorsIdentifiers(ti) -> m.platform.runtimes.schedulers(mi)),
       messagesMappings = dataChannelsMemoryMapping.zipWithIndex.map((mi, ci) => m.tasksAndSDFs.workload.dataChannels(ci) -> m.platform.hardware.storageElems(mi)) ++ sdfMessageMemoryMappings,
       messageSlotAllocations = dataChannelsSlotAllocations ++ sdfChannelsSlotAllocations
     )

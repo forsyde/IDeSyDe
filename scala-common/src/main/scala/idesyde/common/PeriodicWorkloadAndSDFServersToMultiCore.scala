@@ -7,6 +7,7 @@ import idesyde.core.CompleteDecisionModel
 final case class PeriodicWorkloadAndSDFServerToMultiCore(
     val tasksAndSDFs: PeriodicWorkloadAndSDFServers,
     val platform: PartitionedSharedMemoryMultiCore,
+    val processesSchedulings: Vector[(String, String)],
     val processesMappings: Vector[(String, String)],
     val messagesMappings: Vector[(String, String)],
     val messageSlotAllocations: Map[String, Map[String, Vector[Boolean]]]

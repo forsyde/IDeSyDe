@@ -42,7 +42,7 @@ jobs:
       with:
         path: ${{ github.workspace }}/idesyde
         key: ${{ github.ref }}-${{ runner.os }}-rust-orchestration
-  build-jars-linux-scala:
+  build-jars-scala:
     runs-on: ubuntu-latest
     steps:
     - uses: actions/checkout@v3
@@ -54,39 +54,44 @@ jobs:
       run: |
         cd ${{ github.workspace }}
         sbt publishModules
-    - name: Cache scala
-      uses: actions/cache@v3
-      with:
-        path: |
-          ${{ github.workspace }}/imodules
-          ${{ github.workspace }}/emodules
-        key: ${{ github.ref }}-${{ runner.os }}-scala-modules-jar
-  build-jars-windows-scala:
-    runs-on: windows-latest
-    steps:
-    - name: Configure git because of setup-scala
-      run: "git config --global core.autocrlf false"
-      shell: bash
-    - uses: actions/checkout@v3
-    - name: Set up Scala 
-      uses: olafurpg/setup-scala@v10
-      with:
-        java-version: "amazon-corretto@1.11.0-11.9.1"
-    - name: Build assemblies with sbt
-      shell: bash
+    - name: Copy build artifacts
       run: |
-        cd ${{ github.workspace }}
-        sbt publishModules
+        cp -r ${{ github.workspace }}/imodules imodules
+        cp -r ${{ github.workspace }}/emodules emodules
     - name: Cache scala
       uses: actions/cache@v3
       with:
         path: |
-          "${{ github.workspace }}\\imodules"
-          "${{ github.workspace }}\\emodules"
-        key: ${{ github.ref }}-${{ runner.os }}-scala-modules-jar
+          imodules
+          emodules
+        key: ${{ github.ref }}-scala-modules-jar
+        enableCrossOsArchive: true
+  # build-jars-windows-scala:
+  #   runs-on: windows-latest
+  #   steps:
+  #   - name: Configure git because of setup-scala
+  #     run: "git config --global core.autocrlf false"
+  #     shell: bash
+  #   - uses: actions/checkout@v3
+  #   - name: Set up Scala 
+  #     uses: olafurpg/setup-scala@v10
+  #     with:
+  #       java-version: "amazon-corretto@1.11.0-11.9.1"
+  #   - name: Build assemblies with sbt
+  #     shell: bash
+  #     run: |
+  #       cd ${{ github.workspace }}
+  #       sbt publishModules
+  #   - name: Cache scala
+  #     uses: actions/cache@v3
+  #     with:
+  #       path: |
+  #         "${{ github.workspace }}\\imodules"
+  #         "${{ github.workspace }}\\emodules"
+  #       key: ${{ github.ref }}-${{ runner.os }}-scala-modules-jar
   publish-windows-all:
     runs-on: windows-latest
-    needs: [build-windows-rust, build-jars-windows-scala]
+    needs: [build-windows-rust, build-jars-scala]
     steps:
     - uses: actions/checkout@v3
     - name: Get cached rust
@@ -98,9 +103,14 @@ jobs:
       uses: actions/cache@v3
       with:
         path: |
-          "${{ github.workspace }}\\imodules"
-          "${{ github.workspace }}\\emodules"
-        key: ${{ github.ref }}-${{ runner.os }}-scala-modules-jar
+          imodules
+          emodules
+        key: ${{ github.ref }}-scala-modules-jar
+        enableCrossOsArchive: true
+    - name: Copy artifacts to the right places
+      run: |
+        cp -r imodules ${{ github.workspace }}\
+        cp -r emodules ${{ github.workspace }}\
     - name: Make zip
       run: |
         cd ${{ github.workspace }}
@@ -127,9 +137,14 @@ jobs:
       uses: actions/cache@v3
       with:
         path: |
-          ${{ github.workspace }}/imodules
-          ${{ github.workspace }}/emodules
-        key: ${{ github.ref }}-${{ runner.os }}-scala-modules-jar
+          imodules
+          emodules
+        key: ${{ github.ref }}-scala-modules-jar
+        enableCrossOsArchive: true
+    - name: Copy artifacts to the right places
+      run: |
+        cp -r imodules ${{ github.workspace }}/
+        cp -r emodules ${{ github.workspace }}/
     - name: Make zip
       run: |
         cd ${{ github.workspace }}

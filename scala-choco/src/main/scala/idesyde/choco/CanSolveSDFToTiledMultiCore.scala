@@ -454,9 +454,11 @@ final class CanSolveSDFToTiledMultiCore(using logger: Logger)
     val timeValues = m.wcets.flatten ++ m.platform.hardware.maxTraversalTimePerBit.flatten
     val memoryValues = m.platform.hardware.tileMemorySizes ++ m.sdfApplications.sdfMessages
       .map((src, _, _, mSize, p, c, tok) => mSize)
+    def log2(x: Double) = scala.math.log10(x) / scala.math.log10(2)
     def int2double(d: Int) = undiscretized(
       if (timeResolution > Int.MaxValue) Int.MaxValue
-      else if (timeResolution <= 0L) timeValues.size * 100
+      else if (timeResolution <= 0L)
+        scala.math.ceil(log2(m.platform.runtimes.schedulers.length) + 3 * log2(10) - 1.0).toInt
       else timeResolution.toInt,
       timeValues.sum
     )(d)

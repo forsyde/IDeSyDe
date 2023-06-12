@@ -18,10 +18,18 @@ jobs:
         cd ${{ github.workspace }}
         cargo build -r
         cp .\target\release\idesyde-orchestration.exe idesyde.exe
-    - name: Set up Scala 
-      uses: olafurpg/setup-scala@v10
+    - name: Set up Java 
+      uses: actions/setup-java@v3
       with:
-        java-version: "amazon-corretto@1.11.0-11.9.1"
+        distribution: 'corretto' # See 'Supported distributions' for available options
+        java-version: '11'
+    - name: Set up Scala
+      run: |
+        Invoke-WebRequest -Uri "https://github.com/coursier/launchers/raw/master/cs-x86_64-pc-win32.zip" -OutFile "cs-x86_64-pc-win32.zip"
+        Expand-Archive -Path "cs-x86_64-pc-win32.zip"
+        Rename-Item -Path "cs-x86_64-pc-win32.exe" -NewName "cs.exe"
+        Remove-Item -Path "cs-x86_64-pc-win32.zip"
+        .\cs.exe setup --yes
     - name: Build assemblies with sbt
       run: |
         cd ${{ github.workspace }}

@@ -92,7 +92,7 @@ trait MixedRules {
   def identPeriodicWorkloadToPartitionedSharedMultiCore(
       models: Set[DesignModel],
       identified: Set[DecisionModel]
-  ): Set[PeriodicWorkloadToPartitionedSharedMultiCore] = {
+  )(using logger: Logger): Set[PeriodicWorkloadToPartitionedSharedMultiCore] = {
     val app = identified
       .filter(_.isInstanceOf[CommunicatingAndTriggeredReactiveWorkload])
       .map(_.asInstanceOf[CommunicatingAndTriggeredReactiveWorkload])
@@ -111,9 +111,14 @@ trait MixedRules {
           channelSlotAllocations = Map(),
           maxUtilizations = Map()
         )
-        if (potential.wcets.forall(_.exists(_ > 0.0))) {
+        if (
+          potential.wcets.zipWithIndex
+            .forall((wi, i) => wi.exists(w => w > 0.0 && w <= a.relativeDeadlines(i)))
+        ) {
           Some(potential)
-        } else None
+        } else {
+          None
+        }
       )
     )
   }

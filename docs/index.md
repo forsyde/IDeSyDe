@@ -7,13 +7,14 @@ isHome: true
 
 # IDeSyDe
 
-Welcome to IDeSyDe's documentation page! Here you can find some quick links to help you navigate the documentation
-and also to situate you about the tool (and its methods). 
-Many segments of this documentation are derivations and improvements over the MEMOCODE'23 paper describing IDeSyDe (link in the future!).
+Welcome to IDeSyDe's documentation page.
+Here you can find some quick links to help you navigate the documentation
+and also to situate you about the tool and its methods. 
+<!-- Many segments of this documentation are derivations and improvements over the MEMOCODE'23 paper describing IDeSyDe (link in the future!). -->
 
- * [How to use IDeSyDe](usage)
+ * [IDeSyDe for the end-user: demonstrators](usage)
  * [Design space identification and exploration](dsi_dse)
- * [How to extend IDeSyDe](extensions)
+ * IDeSyDe for the experts: extensions
 
 <!-- A quick glance at [Concepts](/concepts) can likely clarify this further! -->
 

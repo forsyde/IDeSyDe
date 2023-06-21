@@ -44,8 +44,8 @@ systemgraph {
         "tick":      1.00000000000_64
       },
       "defaultNeeds": {
-        "FloatOp":      0.43000000000_64,
-        "NonFloatOp":      2.32500000000_64
+        "FloatOp":      1.0000000000_64,
+        "NonFloatOp":      1.000000000_64
       }
     }
   }
@@ -68,8 +68,8 @@ systemgraph {
         "tick":      1.00000000000_64
       },
       "defaultNeeds": {
-        "FloatOp":      0.43000000000_64,
-        "NonFloatOp":      2.32500000000_64
+        "FloatOp":      1.0000000000_64,
+        "NonFloatOp":      1.000000000_64
       }
     }
   }
@@ -92,8 +92,8 @@ systemgraph {
         "tick":      1.00000000000_64
       },
       "defaultNeeds": {
-        "FloatOp":      0.43000000000_64,
-        "NonFloatOp":      2.32500000000_64
+        "FloatOp":      1.0000000000_64,
+        "NonFloatOp":      1.000000000_64
       }
     }
   }
@@ -116,8 +116,8 @@ systemgraph {
         "tick":      1.00000000000_64
       },
       "defaultNeeds": {
-        "FloatOp":      0.43000000000_64,
-        "NonFloatOp":      2.32500000000_64
+        "FloatOp":      1.0000000000_64,
+        "NonFloatOp":      1.000000000_64
       }
     }
   }
@@ -144,8 +144,9 @@ systemgraph {
         "tick":      1.00000000000_64
       },
       "defaultNeeds": {
-        "FloatOp":      1.00000000000_64,
-        "NonFloatOp":      4.65000000000_64
+        "SafetyMask": 100.0_64,
+        "FloatOp":      0.07692307692307693_64,
+        "NonFloatOp":      1.00000_64
       }
     }
   }
@@ -168,8 +169,9 @@ systemgraph {
         "tick":      1.00000000000_64
       },
       "defaultNeeds": {
-        "FloatOp":      1.00000000000_64,
-        "NonFloatOp":      4.65000000000_64
+        "SafetyMask": 100.0_64,
+        "FloatOp":      0.07692307692307693_64,
+        "NonFloatOp":      1.0_64
       }
     }
   }
@@ -452,6 +454,7 @@ systemgraph {
     },
     "operationRequirements": {
       "defaultNeeds": {
+        "SafetyMask": 1_l,
         "FloatOp": 480000_l
       }
     },
@@ -469,6 +472,7 @@ systemgraph {
     },
     "operationRequirements": {
       "defaultNeeds": {
+        "SafetyMask": 1_l,
         "FloatOp": 900000_l
       }
     },
@@ -487,6 +491,7 @@ systemgraph {
     },
     "operationRequirements": {
       "defaultNeeds": {
+        "SafetyMask": 1_l,
         "FloatOp": 600000_l
       }
     },
@@ -505,6 +510,7 @@ systemgraph {
     },
     "operationRequirements": {
       "defaultNeeds": {
+        "SafetyMask": 1_l,
         "FloatOp": 600000_l
       }
     },
@@ -523,6 +529,7 @@ systemgraph {
     },
     "operationRequirements": {
       "defaultNeeds": {
+        "SafetyMask": 1_l,
         "FloatOp": 120000_l
       }
     },
@@ -541,6 +548,7 @@ systemgraph {
     },
     "operationRequirements": {
       "defaultNeeds": {
+        "SafetyMask": 1_l,
         "FloatOp": 420000_l
       }
     },
@@ -558,6 +566,7 @@ systemgraph {
     },
     "operationRequirements": {
       "defaultNeeds": {
+        "SafetyMask": 1_l,
         "FloatOp": 600000_l
       }
     },
@@ -576,6 +585,7 @@ systemgraph {
     },
     "operationRequirements": {
       "defaultNeeds": {
+        "SafetyMask": 1_l,
         "FloatOp": 120000_l
       }
     },
@@ -593,6 +603,7 @@ systemgraph {
     },
     "operationRequirements": {
       "defaultNeeds": {
+        "SafetyMask": 1_l,
         "FloatOp": 1200000_l
       }
     },
@@ -610,6 +621,7 @@ systemgraph {
     },
     "operationRequirements": {
       "defaultNeeds": {
+        "SafetyMask": 1_l,
         "FloatOp": 900000_l
       }
     },

@@ -82,6 +82,8 @@ final class CanSolveDepTasksToPartitionedMultiCore(using logger: Logger)
     val maxUtilizations =
       m.platform.hardware.processingElems.map(p => m.maxUtilizations.getOrElse(p, 1.0))
 
+    // println(wcets.map(_.mkString(",")).mkString("\n"))
+    // println(deadlines.mkString(", "))
     // build the model so that it can be acessed later
     // memory module
     // val taskMapping = m.workload.processes.zipWithIndex.map((t, i) =>
@@ -288,15 +290,16 @@ final class CanSolveDepTasksToPartitionedMultiCore(using logger: Logger)
     })
     solver.setSearch(
       Array(
-        SimpleWorkloadBalancingDecisionStrategy(
-          (0 until m.platform.runtimes.schedulers.length).toArray,
-          periods.toArray,
-          taskExecution.toArray,
-          utilizations,
-          durations,
-          wcets.map(_.toArray).toArray
-        ),
+        // SimpleWorkloadBalancingDecisionStrategy(
+        //   (0 until m.platform.runtimes.schedulers.length).toArray,
+        //   periods.toArray,
+        //   taskExecution.toArray,
+        //   utilizations,
+        //   durations,
+        //   wcets.map(_.toArray).toArray
+        // ),
         Search.inputOrderUBSearch(nUsedPEs),
+        Search.activityBasedSearch(taskExecution: _*),
         Search.activityBasedSearch(taskMapping: _*),
         Search.activityBasedSearch(dataBlockMapping: _*)
         // Search.minDomLBSearch(responseTimes: _*),
@@ -320,6 +323,7 @@ final class CanSolveDepTasksToPartitionedMultiCore(using logger: Logger)
     //   })
 
     chocoModel.getSolver().setLearningSignedClauses()
+    // chocoModel.getSolver().setRestarts(FailCounter(chocoModel, m.workload.taskSizes.size * m.platform.runtimes.schedulers.size), LubyCutoffStrategy(m.workload.taskSizes.size * m.platform.runtimes.schedulers.size), 0)
 
     // chocoModel
     //   .getSolver()

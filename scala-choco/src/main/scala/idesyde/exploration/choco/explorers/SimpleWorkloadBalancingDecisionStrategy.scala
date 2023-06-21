@@ -8,7 +8,7 @@ import org.chocosolver.solver.search.strategy.decision.Decision
 import org.chocosolver.solver.search.strategy.assignments.DecisionOperatorFactory
 import org.chocosolver.solver.variables.BoolVar
 import org.chocosolver.util.ESat
-import spire.math.*
+// import spire.math._
 
 class SimpleWorkloadBalancingDecisionStrategy(
     val schedulers: Array[Int],
@@ -17,7 +17,7 @@ class SimpleWorkloadBalancingDecisionStrategy(
     val utilizations: Array[IntVar],
     val durations: Array[IntVar],
     val wcets: Array[Array[Int]]
-) extends AbstractStrategy[IntVar](taskExecutions: _*) {
+) extends AbstractStrategy[IntVar](taskExecutions) {
 
   val pool = PoolManager[IntDecision]()
 

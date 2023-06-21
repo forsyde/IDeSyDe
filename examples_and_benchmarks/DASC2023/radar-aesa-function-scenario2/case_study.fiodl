@@ -20,11 +20,11 @@ systemgraph {
   [platform::DigitalModule, platform::GenericProcessingModule, platform::InstrumentedProcessingModule, platform::SynthetizableDigitalPorts, visualization::GreyBox, visualization::Visualizable]
   (contained, core1Port1)
   {
-    "portIsInitiator": {
-      "core1Port1": 1_b
-    },
     "portWidthInBits": {
       "core1Port1": 128_i
+    },
+    "portIsInitiator": {
+      "core1Port1": 1_b
     },
     "operatingFrequencyInHertz": 1200000000_l,
     "portProtocolAcronym": {
@@ -35,8 +35,8 @@ systemgraph {
         "tick":      1.00000000000_64
       },
       "defaultNeeds": {
-        "FloatOp":      0.43000000000_64,
-        "NonFloatOp":      2.32500000000_64
+        "FloatOp":      1.0000000000_64,
+        "NonFloatOp":      1.000000000_64
       }
     }
   }
@@ -44,11 +44,11 @@ systemgraph {
   [platform::DigitalModule, platform::GenericProcessingModule, platform::InstrumentedProcessingModule, platform::SynthetizableDigitalPorts, visualization::GreyBox, visualization::Visualizable]
   (contained, core2Port1)
   {
-    "portIsInitiator": {
-      "core2Port1": 1_b
-    },
     "portWidthInBits": {
       "core2Port1": 128_i
+    },
+    "portIsInitiator": {
+      "core2Port1": 1_b
     },
     "operatingFrequencyInHertz": 1200000000_l,
     "portProtocolAcronym": {
@@ -59,8 +59,8 @@ systemgraph {
         "tick":      1.00000000000_64
       },
       "defaultNeeds": {
-        "FloatOp":      0.43000000000_64,
-        "NonFloatOp":      2.32500000000_64
+        "FloatOp":      1.0000000000_64,
+        "NonFloatOp":      1.000000000_64
       }
     }
   }
@@ -68,11 +68,11 @@ systemgraph {
   [platform::DigitalModule, platform::GenericProcessingModule, platform::InstrumentedProcessingModule, platform::SynthetizableDigitalPorts, visualization::GreyBox, visualization::Visualizable]
   (contained, core3Port1)
   {
-    "portIsInitiator": {
-      "core3Port1": 1_b
-    },
     "portWidthInBits": {
       "core3Port1": 128_i
+    },
+    "portIsInitiator": {
+      "core3Port1": 1_b
     },
     "operatingFrequencyInHertz": 1200000000_l,
     "portProtocolAcronym": {
@@ -83,8 +83,8 @@ systemgraph {
         "tick":      1.00000000000_64
       },
       "defaultNeeds": {
-        "FloatOp":      0.43000000000_64,
-        "NonFloatOp":      2.32500000000_64
+        "FloatOp":      1.0000000000_64,
+        "NonFloatOp":      1.000000000_64
       }
     }
   }
@@ -92,11 +92,11 @@ systemgraph {
   [platform::DigitalModule, platform::GenericProcessingModule, platform::InstrumentedProcessingModule, platform::SynthetizableDigitalPorts, visualization::GreyBox, visualization::Visualizable]
   (contained, core4Port1)
   {
-    "portIsInitiator": {
-      "core4Port1": 1_b
-    },
     "portWidthInBits": {
       "core4Port1": 128_i
+    },
+    "portIsInitiator": {
+      "core4Port1": 1_b
     },
     "operatingFrequencyInHertz": 1200000000_l,
     "portProtocolAcronym": {
@@ -107,8 +107,8 @@ systemgraph {
         "tick":      1.00000000000_64
       },
       "defaultNeeds": {
-        "FloatOp":      0.43000000000_64,
-        "NonFloatOp":      2.32500000000_64
+        "FloatOp":      1.0000000000_64,
+        "NonFloatOp":      1.000000000_64
       }
     }
   }
@@ -120,13 +120,13 @@ systemgraph {
   [platform::DigitalModule, platform::GenericProcessingModule, platform::InstrumentedProcessingModule, platform::SynthetizableDigitalPorts, visualization::GreyBox, visualization::Visualizable]
   (contained, core3Port1)
   {
-    "portIsInitiator": {
-      "core3Port1": 1_b
-    },
     "portWidthInBits": {
       "core3Port1": 128_i
     },
-    "operatingFrequencyInHertz": 1200000000_l,
+    "portIsInitiator": {
+      "core3Port1": 1_b
+    },
+    "operatingFrequencyInHertz": 600000000_l,
     "portProtocolAcronym": {
       "core3Port1": "AXI"
     },
@@ -135,8 +135,9 @@ systemgraph {
         "tick":      1.00000000000_64
       },
       "defaultNeeds": {
-        "FloatOp":      1.00000000000_64,
-        "NonFloatOp":      4.65000000000_64
+        "SafetyMask": 100.0_64,
+        "FloatOp":      0.07692307692307693_64,
+        "NonFloatOp":      1.00000_64
       }
     }
   }
@@ -144,13 +145,13 @@ systemgraph {
   [platform::DigitalModule, platform::GenericProcessingModule, platform::InstrumentedProcessingModule, platform::SynthetizableDigitalPorts, visualization::GreyBox, visualization::Visualizable]
   (contained, core4Port1)
   {
-    "portIsInitiator": {
-      "core4Port1": 1_b
-    },
     "portWidthInBits": {
       "core4Port1": 128_i
     },
-    "operatingFrequencyInHertz": 1200000000_l,
+    "portIsInitiator": {
+      "core4Port1": 1_b
+    },
+    "operatingFrequencyInHertz": 600000000_l,
     "portProtocolAcronym": {
       "core4Port1": "AXI"
     },
@@ -159,8 +160,9 @@ systemgraph {
         "tick":      1.00000000000_64
       },
       "defaultNeeds": {
-        "FloatOp":      1.00000000000_64,
-        "NonFloatOp":      4.65000000000_64
+        "SafetyMask": 100.0_64,
+        "FloatOp":      0.07692307692307693_64,
+        "NonFloatOp":      1.0_64
       }
     }
   }
@@ -169,11 +171,11 @@ systemgraph {
   (MainBusPort1, MainBusPort2, MainBusPort3, contained)
   {
     "maxCyclesPerFlit": 1_i,
-    "portIsInitiator": {
-      "MainBusPort1": 0_b
-    },
     "portWidthInBits": {
       "MainBusPort1": 128_i
+    },
+    "portIsInitiator": {
+      "MainBusPort1": 0_b
     },
     "flitSizeInBits": 8_l,
     "allocatedWeights": {
@@ -197,8 +199,8 @@ systemgraph {
   [decision::Allocated, platform::runtime::RoundRobinScheduler, visualization::Visualizable]
   (allocationHosts)
   {
-    "maximumTimeSliceInCycles": 0_l,
     "maximumTimeSlices": 0_i,
+    "maximumTimeSliceInCycles": 0_l,
     "minimumTimeSliceInCycles": 0_l
   }
   vertex "Platform.SDRAM"
@@ -206,11 +208,11 @@ systemgraph {
   (MainSDRAMPort1, contained)
   {
     "spaceInBits": 32000000000_l,
-    "portIsInitiator": {
-      "MainSDRAMPort1": 0_b
-    },
     "portWidthInBits": {
       "MainSDRAMPort1": 0_i
+    },
+    "portIsInitiator": {
+      "MainSDRAMPort1": 0_b
     },
     "operatingFrequencyInHertz": 600000000_l,
     "portProtocolAcronym": {
@@ -222,11 +224,11 @@ systemgraph {
   (OCM1Port1)
   {
     "spaceInBits": 16000000_l,
-    "portIsInitiator": {
-      "OCM1Port1": 0_b
-    },
     "portWidthInBits": {
       "OCM1Port1": 128_i
+    },
+    "portIsInitiator": {
+      "OCM1Port1": 0_b
     },
     "operatingFrequencyInHertz": 600000000_l,
     "portProtocolAcronym": {
@@ -238,17 +240,17 @@ systemgraph {
   (CPM1AXIPort1, CPM1AXIPort2, CPM1AXIPort3, CPM1AXIPort4, contained)
   {
     "maxCyclesPerFlit": 1_i,
-    "portIsInitiator": {
-      "CPM1AXIPort2": 0_b,
-      "CPM1AXIPort3": 1_b,
-      "CPM1AXIPort4": 1_b,
-      "CPM1AXIPort1": 0_b
-    },
     "portWidthInBits": {
       "CPM1AXIPort2": 128_i,
       "CPM1AXIPort3": 128_i,
       "CPM1AXIPort4": 128_i,
       "CPM1AXIPort1": 128_i
+    },
+    "portIsInitiator": {
+      "CPM1AXIPort2": 0_b,
+      "CPM1AXIPort3": 1_b,
+      "CPM1AXIPort4": 1_b,
+      "CPM1AXIPort1": 0_b
     },
     "flitSizeInBits": 8_l,
     "allocatedWeights": {
@@ -275,8 +277,8 @@ systemgraph {
   [decision::Allocated, platform::runtime::RoundRobinScheduler, visualization::Visualizable]
   (allocationHosts)
   {
-    "maximumTimeSliceInCycles": 0_l,
     "maximumTimeSlices": 0_i,
+    "maximumTimeSliceInCycles": 0_l,
     "minimumTimeSliceInCycles": 0_l
   }
   vertex "Platform.SDRAMBus"
@@ -284,11 +286,11 @@ systemgraph {
   (MainBusPort1, MainBusPort2, MainBusPort3, contained)
   {
     "maxCyclesPerFlit": 1_i,
-    "portIsInitiator": {
-      "MainBusPort1": 0_b
-    },
     "portWidthInBits": {
       "MainBusPort1": 128_i
+    },
+    "portIsInitiator": {
+      "MainBusPort1": 0_b
     },
     "flitSizeInBits": 8_l,
     "allocatedWeights": {
@@ -313,8 +315,8 @@ systemgraph {
   [decision::Allocated, platform::runtime::RoundRobinScheduler, visualization::Visualizable]
   (allocationHosts)
   {
-    "maximumTimeSliceInCycles": 0_l,
     "maximumTimeSlices": 0_i,
+    "maximumTimeSliceInCycles": 0_l,
     "minimumTimeSliceInCycles": 0_l
   }
   vertex "PCtoDFB"

@@ -4,7 +4,6 @@ use std::{
     collections::{HashMap, HashSet},
     fs,
     hash::Hash,
-    io::BufReader,
     path::Path,
 };
 

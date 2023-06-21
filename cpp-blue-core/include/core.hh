@@ -66,7 +66,7 @@ namespace idesyde::core
     class ReverseIdentificationRule
     {
     public:
-        virtual vector<shared_ptr<DesignModel>> identify(vector<shared_ptr<DecisionModel>> decision_models, vector<shared_ptr<DesignModel>> design_models);
+        virtual vector<shared_ptr<DesignModel>> reverse_identify(vector<shared_ptr<DecisionModel>> decision_models, vector<shared_ptr<DesignModel>> design_models);
     };
 
     class IdentificationModule
@@ -86,7 +86,6 @@ namespace idesyde::core
     {
     public:
         virtual string unique_identifier();
-        virtual map<string, float> available_criterias(shared_ptr<DecisionModel> m);
         virtual idesyde::headers::ExplorationBid bid(shared_ptr<DecisionModel> m);
         virtual vector<DecisionModel> explore(
             shared_ptr<DecisionModel> m,

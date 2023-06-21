@@ -296,5 +296,20 @@ namespace idesyde::headers
         j["properties"] = x.get_properties();
     }
 
+    std::optional<DecisionModelHeader> header_from_path(std::filesystem::path &file_path)
+    {
+        // std::ifstream asdasd(file_path);
+        // auto json::parse()
+        std::ifstream file(file_path, std::ios::in);
+        auto j = json::parse(file);
+        if (file_path.extension() == "json")
+        {
+            DecisionModelHeader new_header;
+            from_json(j, new_header);
+            return std::make_optional(new_header);
+        }
+        return std::nullopt;
+    }
+
 }
 #endif // CORE_HEADERS_H

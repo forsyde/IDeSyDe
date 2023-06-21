@@ -2,6 +2,7 @@ import os
 import unittest
 import subprocess
 import shutil
+import configparser
 
 
 class BaseTest(unittest.TestCase):
@@ -26,33 +27,81 @@ class BaseTest(unittest.TestCase):
         if os.name == "nt":
             bin_path += ".exe"
         for path, files in self.test_cases.items():
-            with self.subTest(path):
-                run_path = "run_" + path.replace(os.path.sep, "_")
-                child = subprocess.run(
-                    [
-                        bin_path,
-                        "--run-path",
-                        run_path,
-                        "--x-max-solutions",
-                        "1",
-                        "-p",
-                        str(self.parallel_lvl),
-                        "-v",
-                        "debug",
-                    ]
-                    + [path + os.path.sep + f for f in files],
-                    shell=True,
-                )
-                self.assertEqual(child.returncode, 0)
-                self.assertTrue(
-                    len(os.listdir(run_path + os.path.sep + "explored")) > 0
-                )
+            config = configparser.ConfigParser()
+            config.read(path + os.path.sep + "testcase.cfg")
+            has_solution = (
+                (config["solutions"]["has-solution"] or "true").lower() == "true"
+                if "testcase.cfg" in files
+                else True
+            )
+            if has_solution:
+                with self.subTest(path):
+                    run_path = "testruns" + os.path.sep + path
+                    os.makedirs(run_path)
+                    child = subprocess.run(
+                        [
+                            bin_path,
+                            "--run-path",
+                            run_path,
+                            "--x-max-solutions",
+                            "1",
+                            "-p",
+                            str(self.parallel_lvl),
+                            "-v",
+                            "debug",
+                        ]
+                        + [path + os.path.sep + f for f in files],
+                        shell=True,
+                    )
+                    self.assertEqual(child.returncode, 0)
+                    self.assertTrue(
+                        len(os.listdir(run_path + os.path.sep + "explored")) > 0
+                    )
+
+    def test_no_solution(self) -> None:
+        bin_path = (
+            "target" + os.path.sep + "debug" + os.path.sep + "idesyde-orchestration"
+        )
+        if os.name == "nt":
+            bin_path += ".exe"
+        for path, files in self.test_cases.items():
+            config = configparser.ConfigParser()
+            config.read(path + os.path.sep + "testcase.cfg")
+            has_solution = (
+                (config["solutions"]["has-solution"] or "true").lower() == "true"
+                if "testcase.cfg" in files
+                else True
+            )
+            if not has_solution:
+                with self.subTest(path):
+                    run_path = "testruns" + os.path.sep + path
+                    os.makedirs(run_path)
+                    child = subprocess.run(
+                        [
+                            bin_path,
+                            "--run-path",
+                            run_path,
+                            "--x-max-solutions",
+                            "1",
+                            "-p",
+                            str(self.parallel_lvl),
+                            "-v",
+                            "debug",
+                        ]
+                        + [path + os.path.sep + f for f in files],
+                        shell=True,
+                    )
+                    self.assertEqual(child.returncode, 0)
+                    self.assertTrue(
+                        len(os.listdir(run_path + os.path.sep + "explored")) == 0
+                    )
 
     def tearDown(self) -> None:
-        for path, _ in self.test_cases.items():
-            run_path = "run_" + path.replace(os.path.sep, "_")
-            if os.path.isdir(run_path):
-                shutil.rmtree(run_path)
+        shutil.rmtree("testruns")
+        # for path, _ in self.test_cases.items():
+        #     run_path = "testruns" + os.path.sep + path
+        #     if os.path.isdir(run_path):
+        #         shutil.rmtree(run_path)
 
 
 if __name__ == "__main__":

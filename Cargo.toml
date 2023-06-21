@@ -24,6 +24,6 @@ downcast-rs = "1.2.0"
 schemars = "0.8.12"
 
 [workspace.package]
-version = "0.5.5"
+version = "0.5.10"
 authors = ["Rodolfo Jordao"]
 edition = "2021"

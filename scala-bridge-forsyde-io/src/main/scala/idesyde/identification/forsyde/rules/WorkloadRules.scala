@@ -274,8 +274,31 @@ trait WorkloadRules {
           CommunicatingAndTriggeredReactiveWorkload(
             tasks.map(_.getIdentifier()).toVector,
             tasks
-              .map(
-                InstrumentedExecutable.safeCast(_).map(_.getSizeInBits().toLong).orElse(0L)
+              .map(t =>
+                InstrumentedExecutable.safeCast(t).map(_.getSizeInBits().toLong).orElse(0L) +
+                  LoopingTask
+                    .safeCast(t)
+                    .map(lt =>
+                      lt.getInitSequencePort(model)
+                        .stream()
+                        .mapToLong(r =>
+                          InstrumentedExecutable
+                            .safeCast(r)
+                            .map(_.getSizeInBits().toLong)
+                            .orElse(0L)
+                        )
+                        .sum() + lt
+                        .getLoopSequencePort(model)
+                        .stream()
+                        .mapToLong(r =>
+                          InstrumentedExecutable
+                            .safeCast(r)
+                            .map(_.getSizeInBits().toLong)
+                            .orElse(0L)
+                        )
+                        .sum()
+                    )
+                    .orElse(0L)
               )
               .toVector,
             tasks.map(t => taskComputationNeeds(t, model)).toVector,

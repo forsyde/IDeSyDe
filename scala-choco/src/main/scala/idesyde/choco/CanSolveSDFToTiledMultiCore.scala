@@ -73,7 +73,7 @@ final class CanSolveSDFToTiledMultiCore(using logger: Logger)
     def double2int(s: Double) = discretized(
       if (timeResolution > Int.MaxValue) Int.MaxValue
       else if (timeResolution <= 0L)
-        scala.math.ceil(log2(m.platform.runtimes.schedulers.length) + 3 * log2(10) - 1.0).toInt
+        scala.math.ceil(log2(m.platform.runtimes.schedulers.length) + 5 * log2(10) - 1.0).toInt
       else timeResolution.toInt,
       timeValues.sum
     )(s)
@@ -214,7 +214,7 @@ final class CanSolveSDFToTiledMultiCore(using logger: Logger)
       numMappedElements
     ) ++ uniqueGoalPerSubGraphInvThs
     createAndApplyMOOPropagator(chocoModel, objs, objsUpperBounds)
-    chocoModel.getSolver().setLearningSignedClauses()
+    // chocoModel.getSolver().setLearningSignedClauses()
     // chocoModel.getSolver().setRestartOnSolutions()
     // chocoModel.getSolver().setNoGoodRecordingFromRestarts()
     // chocoModel
@@ -458,7 +458,7 @@ final class CanSolveSDFToTiledMultiCore(using logger: Logger)
     def int2double(d: Int) = undiscretized(
       if (timeResolution > Int.MaxValue) Int.MaxValue
       else if (timeResolution <= 0L)
-        scala.math.ceil(log2(m.platform.runtimes.schedulers.length) + 3 * log2(10) - 1.0).toInt
+        scala.math.ceil(log2(m.platform.runtimes.schedulers.length) + 5 * log2(10) - 1.0).toInt
       else timeResolution.toInt,
       timeValues.sum
     )(d)

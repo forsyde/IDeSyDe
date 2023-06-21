@@ -22,7 +22,7 @@ class CompactingMultiCoreMapping[TimeT](
     val processesIsFollowedBy: (Int) => (Int) => Boolean
     // val invThroughputs: Array[IntVar],
 )(using timeT: spire.math.Integral[TimeT])
-    extends AbstractStrategy[IntVar](processesMappings: _*)
+    extends AbstractStrategy[IntVar](processesMappings)
     with HasUtils {
 
   private val numProcesses: Int  = processesMappings.size
@@ -96,7 +96,8 @@ class CompactingMultiCoreMapping[TimeT](
       if (!processesMappings(job).isInstantiated()) {
         wfor(processesMappings(job).getLB(), _ <= processesMappings(job).getUB(), _ + 1) { s =>
           if (processesMappings(job).contains(s)) {
-            val score = (calculateDistanceScore(job)(s), calculateCrossings(job)(s), processesWeights(job)(s))
+            val score =
+              (calculateDistanceScore(job)(s), calculateCrossings(job)(s), processesWeights(job)(s))
             // val invTh = invThroughputs(s).getLB() + durations(job).getUB()
             if (bestPCompact == -1 || score < bestScoreCompact) { // || (score == bestScoreCompact && durations(job).getUB() < bestDuration)) {
               bestPCompact = job

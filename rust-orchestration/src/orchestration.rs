@@ -211,8 +211,21 @@ impl ExplorationModule for ExternalExplorationModule {
         let o = output
             .expect("Failed to get combination from exploration module.")
             .stdout;
-        serde_json::from_slice(o.as_slice())
-            .expect("Failed to deserialize combination from exploration module.")
+        match serde_json::from_slice(&o.as_slice()) {
+            Ok(bid) => bid,
+            Err(e) => {
+                warn!("Failed to deserialize combination from exploration module. Assuming it cannot explore.");
+                debug!("Given error is: {}", e.to_string());
+                debug!(
+                    "Return output from the exploratio module is: {}",
+                    std::str::from_utf8(&o).unwrap_or("NOT UTF8")
+                );
+                ExplorationBid {
+                    can_explore: false,
+                    properties: HashMap::new(),
+                }
+            }
+        }
     }
 
     fn explore(

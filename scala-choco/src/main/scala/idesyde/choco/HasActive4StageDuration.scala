@@ -131,10 +131,14 @@ trait HasActive4StageDuration extends HasUtils {
     for ((t, i) <- tasks.zipWithIndex; (p, j) <- processors.zipWithIndex) {
       // sum of all durations
       // for the execution times
-      chocoModel.ifThen(
-        chocoModel.arithm(taskExecution(i), "=", j),
-        chocoModel.arithm(durationsExec(i), "=", executionTimes(i)(j))
-      )
+      if (executionTimes(i)(j) > 0) {
+        chocoModel.ifThen(
+          chocoModel.arithm(taskExecution(i), "=", j),
+          chocoModel.arithm(durationsExec(i), "=", executionTimes(i)(j))
+        )
+      } else {
+        chocoModel.arithm(taskExecution(i), "!=", j).post()
+      }
     }
     // now for the communications
     // at least one path needs to be satisfied for isntruction fetching

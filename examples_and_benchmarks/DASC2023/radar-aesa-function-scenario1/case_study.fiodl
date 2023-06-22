@@ -373,7 +373,7 @@ systemgraph {
     },
     "operationRequirements": {
       "defaultNeeds": {
-        "FloatOp": 448_l
+        "FloatOp": 896_l
       }
     },
     "sizeInBits": 0_l
@@ -390,7 +390,7 @@ systemgraph {
     },
     "operationRequirements": {
       "defaultNeeds": {
-        "FloatOp": 768_l
+        "FloatOp": 1536_l
       }
     },
     "sizeInBits": 0_l
@@ -424,7 +424,7 @@ systemgraph {
     },
     "operationRequirements": {
       "defaultNeeds": {
-        "FloatOp": 30_l
+        "FloatOp": 1024_l
       }
     },
     "sizeInBits": 655000_l

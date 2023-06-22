@@ -340,9 +340,11 @@ final class CanSolvePeriodicWorkloadAndSDFServersToMulticore(using logger: Logge
 
     chocoModel.getSolver().setSearch(
       Array(
+        Search.minDomLBSearch(numMappedElements),
         Search.activityBasedSearch(processExecution:_*),
         Search.activityBasedSearch(processMapping: _*),
-        Search.activityBasedSearch(messageMapping: _*)
+        Search.activityBasedSearch(messageMapping: _*),
+        Search.minDomLBSearch(goalThs.map((v, i) => v):_*)
         // Search.minDomLBSearch(responseTimes: _*),
         // Search.minDomLBSearch(blockingTimes: _*)
         // Search.intVarSearch(
@@ -460,7 +462,7 @@ final class CanSolvePeriodicWorkloadAndSDFServersToMulticore(using logger: Logge
             p = taskExecution(ti);
             (ce, j) <- m.platform.hardware.communicationElems.zipWithIndex;
             // if solution.getIntVal(numVirtualChannelsForProcElem(p)(j)) > 0
-            if numVirtualChannelsForProcElem(p)(j).getValue() > 0
+            if numVirtualChannelsForProcElem(p)(j).getLB() > 0
           )
             yield ce -> (0 until m.platform.hardware.communicationElementsMaxChannels(j))
               .map(slot =>
@@ -468,7 +470,7 @@ final class CanSolvePeriodicWorkloadAndSDFServersToMulticore(using logger: Logge
                 //   .getIntVal(numVirtualChannelsForProcElem(p)(j))
                 (slot + j % m.platform.hardware.communicationElementsMaxChannels(
                   j
-                )) < numVirtualChannelsForProcElem(p)(j).getValue()
+                )) < numVirtualChannelsForProcElem(p)(j).getLB()
               )
               .toVector
         iter.toMap
@@ -481,7 +483,7 @@ final class CanSolvePeriodicWorkloadAndSDFServersToMulticore(using logger: Logge
             p = actorExecution(ti);
             (ce, j) <- m.platform.hardware.communicationElems.zipWithIndex;
             // if solution.getIntVal(numVirtualChannelsForProcElem(p)(j)) > 0
-            if numVirtualChannelsForProcElem(p)(j).getValue() > 0
+            if numVirtualChannelsForProcElem(p)(j).getLB() > 0
           )
             yield ce -> (0 until m.platform.hardware.communicationElementsMaxChannels(j))
               .map(slot =>
@@ -489,7 +491,7 @@ final class CanSolvePeriodicWorkloadAndSDFServersToMulticore(using logger: Logge
                 //   .getIntVal(numVirtualChannelsForProcElem(p)(j))
                 (slot + j % m.platform.hardware.communicationElementsMaxChannels(
                   j
-                )) < numVirtualChannelsForProcElem(p)(j).getValue()
+                )) < numVirtualChannelsForProcElem(p)(j).getLB()
               )
               .toVector
         iter.toMap

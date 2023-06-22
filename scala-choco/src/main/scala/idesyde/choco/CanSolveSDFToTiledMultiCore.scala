@@ -413,9 +413,9 @@ final class CanSolveSDFToTiledMultiCore(using logger: Logger)
         (x) => x.minBy(_.getRange()),
         (v) => v.getUB(),
         numVirtualChannelsForProcElem.flatten: _*
-      )
+      ),
       // Search.activityBasedSearch(numVirtualChannelsForProcElem.flatten: _*)
-      // Search.minDomLBSearch(invThroughputs: _*)
+      Search.minDomLBSearch(invThroughputs: _*)
       // Search.minDomLBSearch(indexOfPes: _*)
     )
     chocoModel.getSolver().setSearch(strategies: _*)
@@ -548,7 +548,7 @@ final class CanSolveSDFToTiledMultiCore(using logger: Logger)
           for (
             (ce, j) <- m.platform.hardware.communicationElems.zipWithIndex;
             // if solution.getIntVal(numVirtualChannelsForProcElem(p)(j)) > 0
-            if numVirtualChannelsForProcElem(p)(j).getValue() > 0
+            if numVirtualChannelsForProcElem(p)(j).getLB() > 0
           )
             yield ce -> (0 until m.platform.hardware.communicationElementsMaxChannels(j))
               .map(slot =>
@@ -556,7 +556,7 @@ final class CanSolveSDFToTiledMultiCore(using logger: Logger)
                 //   .getIntVal(numVirtualChannelsForProcElem(p)(j))
                 (slot + j % m.platform.hardware.communicationElementsMaxChannels(
                   j
-                )) < numVirtualChannelsForProcElem(p)(j).getValue()
+                )) < numVirtualChannelsForProcElem(p)(j).getLB()
               )
               .toVector
         iter.toMap
@@ -583,7 +583,7 @@ final class CanSolveSDFToTiledMultiCore(using logger: Logger)
                     .minTraversalTimePerBit(srcM)(dstM) * m.platform.hardware
                     .computedPaths(srcM)(dstM)
                     .map(ce => m.platform.hardware.communicationElems.indexOf(ce))
-                    .map(cex => numVirtualChannelsForProcElem(srcM)(cex).getValue())
+                    .map(cex => numVirtualChannelsForProcElem(srcM)(cex).getLB())
                     .minOption
                     .getOrElse(0)
                 } else 0.0

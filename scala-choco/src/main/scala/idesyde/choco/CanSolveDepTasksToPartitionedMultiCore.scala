@@ -302,7 +302,7 @@ final class CanSolveDepTasksToPartitionedMultiCore(using logger: Logger)
         // Search.activityBasedSearch(taskExecution: _*),
         Search.activityBasedSearch(taskMapping: _*),
         Search.activityBasedSearch(dataBlockMapping: _*),
-        Search.activityBasedSearch(processingElemsVirtualChannelInCommElem.flatten:_*)
+        // Search.activityBasedSearch(processingElemsVirtualChannelInCommElem.flatten:_*)
         // Search.minDomLBSearch(responseTimes: _*),
         // Search.minDomLBSearch(blockingTimes: _*)
         // Search.intVarSearch(
@@ -411,7 +411,7 @@ final class CanSolveDepTasksToPartitionedMultiCore(using logger: Logger)
             p = taskExecution(ti);
             (ce, j) <- m.platform.hardware.communicationElems.zipWithIndex;
             // if solution.getIntVal(numVirtualChannelsForProcElem(p)(j)) > 0
-            if numVirtualChannelsForProcElem(p)(j).getValue() > 0
+            if numVirtualChannelsForProcElem(p)(j).getLB() > 0
           )
             yield ce -> (0 until m.platform.hardware.communicationElementsMaxChannels(j))
               .map(slot =>
@@ -419,7 +419,7 @@ final class CanSolveDepTasksToPartitionedMultiCore(using logger: Logger)
                 //   .getIntVal(numVirtualChannelsForProcElem(p)(j))
                 (slot + j % m.platform.hardware.communicationElementsMaxChannels(
                   j
-                )) < numVirtualChannelsForProcElem(p)(j).getValue()
+                )) < numVirtualChannelsForProcElem(p)(j).getLB()
               )
               .toVector
         iter.toMap

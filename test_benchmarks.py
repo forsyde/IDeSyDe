@@ -34,7 +34,17 @@ class BaseTest(unittest.TestCase):
                 if "testcase.cfg" in files
                 else True
             )
-            if has_solution:
+            is_slow = (
+                (
+                    "slow" in config["solutions"]
+                    and config["solutions"]["slow"]
+                    or "false"
+                ).lower()
+                == "true"
+                if "testcase.cfg" in files
+                else False
+            )
+            if has_solution and not is_slow:
                 with self.subTest(path):
                     run_path = "testruns" + os.path.sep + path
                     os.makedirs(run_path)
@@ -72,7 +82,17 @@ class BaseTest(unittest.TestCase):
                 if "testcase.cfg" in files
                 else True
             )
-            if not has_solution:
+            is_slow = (
+                (
+                    "slow" in config["solutions"]
+                    and config["solutions"]["slow"]
+                    or "false"
+                ).lower()
+                == "true"
+                if "testcase.cfg" in files
+                else False
+            )
+            if not has_solution and not is_slow:
                 with self.subTest(path):
                     run_path = "testruns" + os.path.sep + path
                     os.makedirs(run_path)

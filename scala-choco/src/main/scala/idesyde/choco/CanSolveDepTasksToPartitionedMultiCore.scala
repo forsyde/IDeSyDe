@@ -20,9 +20,6 @@ import org.chocosolver.solver.variables.BoolVar
 import org.chocosolver.solver.search.loop.monitors.IMonitorContradiction
 import org.chocosolver.solver.exception.ContradictionException
 import idesyde.choco.HasSingleProcessSingleMessageMemoryConstraints
-import idesyde.identification.choco.models.BaselineTimingConstraintsModule
-import idesyde.identification.choco.models.workload.HasExtendedPrecedenceConstraints
-import idesyde.identification.choco.models.workload.FixedPriorityConstraintsModule
 import idesyde.choco.HasActive4StageDuration
 import idesyde.utils.HasUtils
 import idesyde.identification.choco.interfaces.ChocoModelMixin
@@ -137,19 +134,29 @@ final class CanSolveDepTasksToPartitionedMultiCore(using logger: Logger)
     val blockingTimes =
       m.workload.processes.zipWithIndex.map((t, i) =>
         chocoModel.intVar(
-          s"bt($t)",
+          s"blockingTimes($t)",
           // minimum WCET possible
           0,
-          deadlines(i),
+          0, //deadlines(i) - wcets(i).filter(_ > 0).minOption.getOrElse(0),
+          true // keeping only bounds for the response time is enough and better
+        )
+      )
+    val releaseJitters =
+      m.workload.processes.zipWithIndex.map((t, i) =>
+        chocoModel.intVar(
+          s"releaseJitters($t)",
+          // minimum WCET possible
+          0,
+          deadlines(i) - wcets(i).filter(_ > 0).minOption.getOrElse(0),
           true // keeping only bounds for the response time is enough and better
         )
       )
 
-    postInterProcessorBlocking(
+    postInterProcessorJitters(
       chocoModel,
       taskExecution.toArray,
       responseTimes.toArray,
-      blockingTimes.toArray,
+      releaseJitters.toArray,
       m.workload.interTaskOccasionalBlock
     )
 
@@ -213,6 +220,7 @@ final class CanSolveDepTasksToPartitionedMultiCore(using logger: Logger)
       durations,
       taskExecution.toArray,
       blockingTimes.toArray,
+      releaseJitters.toArray,
       responseTimes.toArray
     )
 
@@ -254,6 +262,7 @@ final class CanSolveDepTasksToPartitionedMultiCore(using logger: Logger)
     durations,
     taskExecution.toArray,
     blockingTimes.toArray,
+    releaseJitters.toArray,
     responseTimes.toArray)
     
     // for each SC scheduler

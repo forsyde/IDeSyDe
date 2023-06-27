@@ -14,10 +14,11 @@ trait HasTimingConstraints {
       durations: Array[IntVar],
       taskExecution: Array[IntVar],
       blockingTimes: Array[IntVar],
+      releaseJitters: Array[IntVar],
       responseTimes: Array[IntVar]
   ): Unit = {
     responseTimes.zipWithIndex.foreach((r, i) => {
-      r.ge(blockingTimes(i)).post
+      r.ge(blockingTimes(i).add(releaseJitters(i))).post
     })
     durations.zipWithIndex.foreach((w, i) => {
       (0 until maxUtilizations.length).map(j => {
@@ -87,6 +88,7 @@ trait HasTimingConstraints {
       durations: Array[IntVar],
       taskExecution: Array[IntVar],
       blockingTimes: Array[IntVar],
+      releaseJitters: Array[IntVar],
       responseTimes: Array[IntVar]
   ): Array[Array[IntVar]] = {
     val preemptionInterference = responseTimes.zipWithIndex.map((ri, i) => {
@@ -106,7 +108,8 @@ trait HasTimingConstraints {
     for ((ri, i) <- responseTimes.zipWithIndex) {
       chocoModel
         .sum(
-          Array(durations(i), blockingTimes(i)) ++ preemptionInterference.map(v => v(i)),
+          Array(durations(i), blockingTimes(i), releaseJitters(i)) ++ preemptionInterference
+            .map(v => v(i)),
           "<=",
           responseTimes(i)
         )
@@ -119,7 +122,7 @@ trait HasTimingConstraints {
           taskExecution(i).eq(schedulerIdx).and(taskExecution(j).eq(schedulerIdx)).decompose(),
           chocoModel
             .arithm(
-              responseTimes(i),
+              responseTimes(i).add(releaseJitters(j)).intVar(),
               "*",
               durations(j),
               ">",
@@ -130,7 +133,7 @@ trait HasTimingConstraints {
           taskExecution(i).eq(schedulerIdx).and(taskExecution(j).eq(schedulerIdx)).decompose(),
           chocoModel
             .arithm(
-              responseTimes(i),
+              responseTimes(i).add(releaseJitters(j)).intVar(),
               "*",
               durations(j),
               "<=",

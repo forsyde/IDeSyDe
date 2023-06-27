@@ -1,4 +1,4 @@
-package idesyde.identification.choco.models.workload
+package idesyde.choco
 
 import idesyde.identification.choco.interfaces.ChocoModelMixin
 import org.chocosolver.solver.variables.IntVar
@@ -9,11 +9,11 @@ import org.chocosolver.solver.Model
 
 trait HasExtendedPrecedenceConstraints {
 
-  def postInterProcessorBlocking(
+  def postInterProcessorJitters(
       chocoModel: Model,
       taskExecution: Array[IntVar],
       responseTimes: Array[IntVar],
-      blockingTimes: Array[IntVar],
+      releaseJitters: Array[IntVar],
       canBeFollowedBy: Array[Array[Boolean]]
   ): Unit = {
     val processors = (0 until taskExecution.map(v => v.getUB()).max).toArray
@@ -28,7 +28,7 @@ trait HasExtendedPrecedenceConstraints {
                 .eq(processorsIdx)
                 .and(taskExecution(src).ne(processorsIdx))
                 .decompose,
-              blockingTimes(dst).ge(responseTimes(src)).decompose
+              releaseJitters(dst).ge(responseTimes(src)).decompose
             )
           )
         )

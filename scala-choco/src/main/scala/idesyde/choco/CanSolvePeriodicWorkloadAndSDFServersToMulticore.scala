@@ -20,6 +20,7 @@ final class CanSolvePeriodicWorkloadAndSDFServersToMulticore(using logger: Logge
     with HasActive4StageDuration
     with HasTimingConstraints
     with HasSDFSchedulingAnalysisAndConstraints
+    with HasExtendedPrecedenceConstraints
     with CanSolveMultiObjective {
 
   def buildChocoModel(
@@ -134,10 +135,20 @@ final class CanSolvePeriodicWorkloadAndSDFServersToMulticore(using logger: Logge
     val blockingTimes =
       m.tasksAndSDFs.workload.processes.zipWithIndex.map((t, i) =>
         chocoModel.intVar(
-          s"bt($t)",
+          s"blockingTimes($t)",
           // minimum WCET possible
           0,
-          discretizedRelDeadlines(i),
+          0, //deadlines(i) - wcets(i).filter(_ > 0).minOption.getOrElse(0),
+          true // keeping only bounds for the response time is enough and better
+        )
+      )
+    val releaseJitters =
+      m.tasksAndSDFs.workload.processes.zipWithIndex.map((t, i) =>
+        chocoModel.intVar(
+          s"releaseJitters($t)",
+          // minimum WCET possible
+          0,
+          discretizedRelDeadlines(i) - discretizedWcets(i).filter(_ > 0).minOption.getOrElse(0),
           true // keeping only bounds for the response time is enough and better
         )
       )
@@ -218,6 +229,14 @@ final class CanSolvePeriodicWorkloadAndSDFServersToMulticore(using logger: Logge
     val taskDurations = durations.take(m.tasksAndSDFs.workload.tasks.size)
     val actorDurations = durations.drop(m.tasksAndSDFs.workload.tasks.size)
 
+    postInterProcessorJitters(
+      chocoModel,
+      taskExecution.toArray,
+      responseTimes.toArray,
+      releaseJitters.toArray,
+      m.tasksAndSDFs.workload.interTaskOccasionalBlock
+    )
+
     postMinimalResponseTimesByBlocking(
       chocoModel,
       priorities,
@@ -226,6 +245,7 @@ final class CanSolvePeriodicWorkloadAndSDFServersToMulticore(using logger: Logge
       taskDurations,
       taskExecution.toArray,
       blockingTimes.toArray,
+      releaseJitters.toArray,
       responseTimes.toArray
     )
 
@@ -253,6 +273,7 @@ final class CanSolvePeriodicWorkloadAndSDFServersToMulticore(using logger: Logge
   taskDurations,
   taskExecution.toArray,
   blockingTimes.toArray,
+  releaseJitters.toArray,
   responseTimes.toArray)
     // for each SC scheduler
     m.platform.runtimes.schedulers.zipWithIndex

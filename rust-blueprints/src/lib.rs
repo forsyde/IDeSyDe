@@ -3,7 +3,8 @@ use std::path::PathBuf;
 use clap::Parser;
 use idesyde_core::{
     headers::load_decision_model_headers_from_binary, write_decision_model_to_path,
-    write_design_model_header_to_path, DecisionModel, DesignModel, StandaloneIdentificationModule,
+    write_design_model_header_to_path, DecisionModel, DesignModel, IdentificationModule,
+    StandaloneIdentificationModule,
 };
 
 #[derive(Parser, Debug)]
@@ -49,10 +50,10 @@ pub struct IdentificationModuleArgs {
     print_schema: bool,
 }
 
-pub fn execute_standalone_identification_module<T: StandaloneIdentificationModule>(module: T) {
+pub fn execute_standalone_identification_module(module: StandaloneIdentificationModule) {
     let args = IdentificationModuleArgs::parse();
     if args.print_schema {
-        for schema in &module.decision_models_schemas() {
+        for schema in &module.decision_model_schemas {
             println!("{}", schema);
         }
     } else {
@@ -72,7 +73,12 @@ pub fn execute_standalone_identification_module<T: StandaloneIdentificationModul
                             .expect("Failed to get OS string during start-up")
                             .to_string(),
                     );
-                    write_design_model_header_to_path(&h, &design_path, "", &module.uid());
+                    write_design_model_header_to_path(
+                        &h,
+                        &design_path,
+                        "",
+                        &module.unique_identifier(),
+                    );
                     design_models.push(m);
                 }
             }

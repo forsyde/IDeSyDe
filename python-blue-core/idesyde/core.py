@@ -1,11 +1,14 @@
 from dataclasses import dataclass, asdict, is_dataclass
-from json import dumps
-from cbor2 import dumps
-from typing import Dict, Optional, List, Set
+import json
+import os
+from typing import Dict, Optional, List, Set, Iterable, Callable
+
+import cbor2
+
 
 
 @dataclass
-class ExplorationCombinationDescription:
+class ExplorationBid:
     can_explore: bool = False
     criteria: Dict[str, float] = dict()
 
@@ -21,12 +24,25 @@ class DecisionModelHeader:
             elem in self.covered_elements for elem in other.covered_elements
         )
 
+    def write_to_path(self, base_path: str, preffix: str = "", suffix: str = ""):
+        with open(base_path + os.path.sep + "header_" + preffix + "_" + self.category + "_" + suffix + ".json", "w") as jsonf:
+            json.dump(asdict(self), jsonf)
+        with open(base_path + os.path.sep + "header_" + preffix + "_" + self.category + "_" + suffix + ".cbor", "w") as cborf:
+            cbor2.dump(asdict(self), cborf)
+
+
 
 @dataclass
 class DesignModelHeader:
     category: str
     elements: Set[str] = set()
     model_paths: List[str] = list()
+
+    def write_to_path(self, base_path: str, preffix: str = "", suffix: str = ""):
+        with open(base_path + os.path.sep +  "header_" + preffix + "_" + self.category + "_" + suffix + ".json", "w") as jsonf:
+            json.dump(asdict(self), jsonf)
+        with open(base_path + os.path.sep + "header_" + preffix + "_" + self.category + "_" + suffix + ".cbor", "w") as cborf:
+            cbor2.dump(asdict(self), cborf)
 
 
 class DecisionModel:
@@ -52,19 +68,34 @@ class DecisionModel:
         return DecisionModelHeader(category=self.unique_identifier())
 
     def dominates(self, other: "DecisionModel") -> bool:
-        return self.header() > other.header()
+        return self.header().dominates(other.header()) 
 
     def body_as_json(self) -> Optional[str]:
         if is_dataclass(self):
-            return dumps(asdict(self))
+            return json.dumps(asdict(self))
         else:
             return None
 
     def body_as_cbor(self) -> Optional[bytes]:
         if is_dataclass(self):
-            return dumps(asdict(self))
+            return cbor2.dumps(asdict(self))
         else:
             return None
+        
+    def write_to_path(self, base_path: str, preffix: str = "", suffix: str = "") -> DecisionModelHeader:
+        header = self.header()
+        json_body = self.body_as_json()
+        if json_body:
+            with open(base_path + os.path.sep + "body_" + preffix + "_" + header.category + "_" + suffix + ".json", "w") as jsonf:
+                jsonf.write(json_body)
+                header.body_path = base_path + os.path.sep + "body_" + preffix + "_" + header.category + "_" + suffix + ".json"
+        cbor_body = self.body_as_cbor()
+        if cbor_body:
+            with open(base_path + os.path.sep + "body_" + preffix + "_" + header.category + "_" + suffix + ".cbor", "wb") as cborf:
+                cborf.write(cbor_body)
+                header.body_path = base_path + os.path.sep + "body_" + preffix + "_" + header.category + "_" + suffix + ".cbor"
+        header.write_to_path(base_path, preffix, suffix)
+        return header
 
 
 class DesignModel:
@@ -86,3 +117,44 @@ class DesignModel:
 
     def header(self) -> DesignModelHeader:
         return DesignModelHeader(category=self.unique_identifier())
+
+class IdentificationModule:
+    
+    def unique_identifier(self) -> str:
+        return self.__class__.__name__
+    
+    def identification_step(
+        self,
+        iteration: int,
+        design_models: Set[DesignModel],
+        decision_models: Set[DecisionModel],
+    ) -> Set[DecisionModel]:
+        return set()
+    
+    def reverse_identification(
+        self,
+        decision_models: Set[DecisionModel],
+        design_models: Set[DesignModel],
+    ) -> Set[DesignModel]:
+        return set()
+
+class ExplorationModule:
+    
+    def unique_identifier(self) -> str:
+        return self.__class__.__name__
+    
+    def bid(self, m: DecisionModel) -> ExplorationBid:
+        return ExplorationBid()
+    
+    def explore(
+        self,
+        m: DecisionModel,
+        max_sols: int,
+        total_timeout: int,
+        time_resolution: int,
+        memory_resolution: int,
+    ) -> Iterable[DecisionModel]:
+        return []
+    
+IdentificationRuleT = Callable[[Set[DesignModel], Set[DecisionModel]], Set[DecisionModel]]
+ReverseIdentificationRuleT = Callable[[Set[DecisionModel], Set[DesignModel]], Set[DesignModel]]

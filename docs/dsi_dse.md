@@ -9,6 +9,14 @@ permalink: /dsi_dse
 
 # Design space identification and exploration
 
+> **Note:** Math expressions may not render correctly on GitHub.com.
+>
+> GitHub's markdown rendering engine does not support the rendering of mathematical expressions using tools like MathJax. As a result, the math equations and symbols in this document may not display as intended.
+>
+> To ensure proper rendering of math expressions, we recommend that you generate the document locally using a markdown viewer or compiler that supports math rendering, such as Typora or VS Code with appropriate extensions. Alternatively, you can copy the markdown content and paste it into an online markdown editor that supports math rendering, such as StackEdit or Dillinger.
+>
+> Please refer to the generated output or use an alternative markdown viewer/compiler to view the math expressions accurately.
+
 Design space identification (DSI) is a _compositional and systematic_ approach for creating design space exploration (DSE) solutions that distinguishes between the _design domain_ and the _optimisation and decision domain_. The design domain contains _design models_ typically used by MDE tools that implicitly define design spaces. The optimisation and decision domain contains _decision models_ that are sets of parameters and associated functions that explicitly abstract design spaces and are potentially explorable. The bridge between both domains is achieved through the combination of _composable identification rules_ and an _identification procedure_.
 
 <!-- <figure id="fig:enhanced-position">

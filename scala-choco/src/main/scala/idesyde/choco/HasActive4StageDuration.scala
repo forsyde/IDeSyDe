@@ -49,6 +49,7 @@ trait HasActive4StageDuration extends HasUtils {
       chocoModel: Model,
       executionTimes: Array[Array[Int]],
       communicationElementsMaxChannels: Vector[Int],
+      communicationElementsFrameSize: Vector[Int],
       taskFetchTimePerChannel: (Int) => (Int) => Int,
       taskReadsDataTimePerChannel: (Int) => (Int) => (Int) => Int,
       taskWritesDataTimePerChannel: (Int) => (Int) => (Int) => Int,
@@ -124,6 +125,22 @@ trait HasActive4StageDuration extends HasUtils {
       )
       .toArray
 
+    val minVCInPath = processors.map(src =>
+      processors.map(dst =>
+        if (computedPaths(src)(dst).isEmpty) {
+          chocoModel.intVar(
+            s"minVCInPath($src, $dst)",
+            0
+          )
+        } else {
+          chocoModel.min(
+            s"minVCInPath($src, $dst)",
+            computedPaths(src)(dst).map(totalVCPerCommElem(_)).toArray: _*
+          )
+        }
+      )
+    )
+
     // deduced parameters
     // auxiliary local variables
     // scribe.debug(communicators.map(c => dataTravelTime.map(t => t(c)).sum).mkString(", "))
@@ -189,12 +206,17 @@ trait HasActive4StageDuration extends HasUtils {
       chocoModel.ifThen(
         exec.eq(i).and(mapp.eq(j)).decompose(),
         // at least one of the paths must be taken
-        chocoModel.arithm(
-          durationsFetch(t),
-          "=",
+        chocoModel.sum(
           pathIdx
-            .map(ce => taskFetchTimePerChannel(t)(ce))
-            .sum
+            .map(ce =>
+              chocoModel.intAffineView(
+                communicationElementsFrameSize(ce),
+                minVCInPath(i)(j),
+                taskFetchTimePerChannel(t)(ce)
+              )
+            ),
+          "=",
+          minVCInPath(i)(j).mul(durationsFetch(t)).intVar()
         )
       )
     }
@@ -209,12 +231,17 @@ trait HasActive4StageDuration extends HasUtils {
         chocoModel.ifThen(
           exec.eq(i).and(mapp.eq(j)).decompose(),
           // at least one of the paths must be taken
-          chocoModel.arithm(
-            durationsReadPerSig(t)(c),
-            "=",
+          chocoModel.sum(
             pathIdx
-              .map(ce => taskReadsDataTimePerChannel(t)(c)(ce))
-              .sum
+              .map(ce =>
+                chocoModel.intAffineView(
+                  communicationElementsFrameSize(ce),
+                  minVCInPath(i)(j),
+                  taskReadsDataTimePerChannel(t)(c)(ce)
+                )
+              ),
+            "=",
+            minVCInPath(i)(j).mul(durationsReadPerSig(t)(c)).intVar()
           )
           // chocoModel.scalar(
           //   pathIdx.map(totalVCPerCommElem(_)),
@@ -227,12 +254,17 @@ trait HasActive4StageDuration extends HasUtils {
         chocoModel.ifThen(
           exec.eq(i).and(mapp.eq(j)).decompose(),
           // at least one of the paths must be taken
-          chocoModel.arithm(
-            durationsWritePerSig(t)(c),
-            "=",
+          chocoModel.sum(
             pathIdx
-              .map(ce => taskWritesDataTimePerChannel(t)(c)(ce))
-              .sum
+              .map(ce =>
+                chocoModel.intAffineView(
+                  communicationElementsFrameSize(ce),
+                  minVCInPath(i)(j),
+                  taskWritesDataTimePerChannel(t)(c)(ce)
+                )
+              ),
+            "=",
+            minVCInPath(i)(j).mul(durationsWritePerSig(t)(c)).intVar()
           )
           // chocoModel.scalar(
           //   pathIdx.map(totalVCPerCommElem(_)),

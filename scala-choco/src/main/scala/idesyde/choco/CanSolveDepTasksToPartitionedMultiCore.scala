@@ -182,6 +182,7 @@ final class CanSolveDepTasksToPartitionedMultiCore(using logger: Logger)
       chocoModel,
       wcets.map(_.toArray).toArray,
       m.platform.hardware.communicationElementsMaxChannels,
+      m.platform.hardware.communicationElems.map(c => 0), // TODO: find how to incldue frames later
       (t: Int) => (ce: Int) =>
         long2int(m.workload.processSizes(t)) / double2int(m.platform.hardware.communicationElementsBitPerSecPerChannel(ce)),
       (t: Int) =>

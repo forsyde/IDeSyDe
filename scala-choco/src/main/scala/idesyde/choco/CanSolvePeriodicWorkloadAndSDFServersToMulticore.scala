@@ -174,6 +174,7 @@ final class CanSolvePeriodicWorkloadAndSDFServersToMulticore(using logger: Logge
       chocoModel,
       discretizedWcets.map(_.toArray).toArray,
       m.platform.hardware.communicationElementsMaxChannels,
+      m.platform.hardware.communicationElems.map(c => 0), // TODO: find how to include frames later
       (t: Int) => (ce: Int) =>
         if (t < m.tasksAndSDFs.workload.taskSizes.length) {
           long2int(m.tasksAndSDFs.workload.processSizes(t)) / double2int(m.platform.hardware.communicationElementsBitPerSecPerChannel(ce))

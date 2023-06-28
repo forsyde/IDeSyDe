@@ -16,20 +16,14 @@ trait HasExtendedPrecedenceConstraints {
       releaseJitters: Array[IntVar],
       canBeFollowedBy: Array[Array[Boolean]]
   ): Unit = {
-    val processors = (0 until taskExecution.map(v => v.getUB()).max).toArray
     canBeFollowedBy.zipWithIndex.foreach((arr, src) =>
       arr.zipWithIndex
         .filter((possible, _) => possible)
         .foreach((_, dst) =>
-          processors.foreach(processorsIdx =>
-            chocoModel.ifThen(
-              // if the mappings differ in at least one processor
-              taskExecution(dst)
-                .eq(processorsIdx)
-                .and(taskExecution(src).ne(processorsIdx))
-                .decompose,
-              releaseJitters(dst).ge(responseTimes(src)).decompose
-            )
+          chocoModel.ifThen(
+            // if the mappings differ in at least one processor
+            taskExecution(dst).ne(taskExecution(src)).decompose,
+            releaseJitters(dst).ge(responseTimes(src)).decompose
           )
         )
     )

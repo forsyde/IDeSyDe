@@ -45,10 +45,7 @@ class SimpleWorkloadBalancingDecisionStrategy(
             j,
             utilizations(j).getLB() + Math.max(durations(i).getLB(), wcets(i)(j)) / periods(
               i
-            ) + utilizations.zipWithIndex
-              .filter((_, jj) => jj != j)
-              .map((ujj, _) => ujj.getLB())
-              .sum
+            )
           )
         )
       )

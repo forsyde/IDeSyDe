@@ -251,7 +251,7 @@ final class CanSolveDepTasksToPartitionedMultiCore(using logger: Logger)
 
     // for each FP scheduler
     // rt >= bt + sum of all higher prio tasks in the same CPU
-    postFixedPrioriPreemtpiveConstraint(m.platform.runtimes.schedulers.zipWithIndex
+    postPartitionedFixedPrioriPreemtpiveConstraint(m.platform.runtimes.schedulers.zipWithIndex
       .filter((s, j) => m.platform.runtimes.isFixedPriority(j))
       .map((s, j) => j), 
       chocoModel,
@@ -300,7 +300,7 @@ final class CanSolveDepTasksToPartitionedMultiCore(using logger: Logger)
     })
     solver.setSearch(
       Array(
-        Search.inputOrderUBSearch(nUsedPEs),
+        Search.inputOrderLBSearch(nUsedPEs),
         SimpleWorkloadBalancingDecisionStrategy(
           (0 until m.platform.runtimes.schedulers.length).toArray,
           periods.toArray,

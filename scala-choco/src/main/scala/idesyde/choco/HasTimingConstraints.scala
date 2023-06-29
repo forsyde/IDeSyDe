@@ -77,7 +77,7 @@ trait HasTimingConstraints {
     utilizations
   }
 
-  def postFixedPrioriPreemtpiveConstraint(
+  def postPartitionedFixedPrioriPreemtpiveConstraint(
       schedulers: Vector[Int],
       chocoModel: Model,
       priorities: Array[Int],

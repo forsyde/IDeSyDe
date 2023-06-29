@@ -234,6 +234,21 @@ trait HasActive4StageDuration extends HasUtils {
             .sum
         )
       )
+      chocoModel.ifThen(
+        exec.eq(i).and(mapp.eq(j)).decompose(),
+        // at least one of the paths must be taken
+        chocoModel.arithm(
+          durationsFetch(t),
+          ">=",
+          pathIdx
+            .map(ce =>
+              communicationElementsFrameSize(ce)
+              +
+              taskFetchTimePerChannel(t)(ce) / communicationElementsMaxChannels(ce)
+            )
+            .sum
+        )
+      )
     }
     for (
       (exec, t) <- taskExecution.zipWithIndex;
@@ -280,6 +295,21 @@ trait HasActive4StageDuration extends HasUtils {
               .sum
           )
         )
+        chocoModel.ifThen(
+          exec.eq(i).and(mapp.eq(j)).decompose(),
+          // at least one of the paths must be taken
+          chocoModel.arithm(
+            durationsReadPerSig(t)(c),
+            ">=",
+            pathIdx
+              .map(ce =>
+                communicationElementsFrameSize(ce)
+                +
+                taskReadsDataTimePerChannel(t)(c)(ce) / communicationElementsMaxChannels(ce)
+              )
+              .sum
+          )
+        )
       } else if (pathIdx.forall(ce => taskWritesDataTimePerChannel(t)(c)(ce) > 0)) {
         chocoModel.ifThen(
           exec.eq(i).and(mapp.eq(j)).decompose(),
@@ -314,6 +344,21 @@ trait HasActive4StageDuration extends HasUtils {
                 communicationElementsFrameSize(ce)
                 +
                 taskWritesDataTimePerChannel(t)(c)(ce)
+              )
+              .sum
+          )
+        )
+        chocoModel.ifThen(
+          exec.eq(i).and(mapp.eq(j)).decompose(),
+          // at least one of the paths must be taken
+          chocoModel.arithm(
+            durationsWritePerSig(t)(c),
+            ">=",
+            pathIdx
+              .map(ce =>
+                communicationElementsFrameSize(ce)
+                +
+                taskWritesDataTimePerChannel(t)(c)(ce) / communicationElementsMaxChannels(ce)
               )
               .sum
           )

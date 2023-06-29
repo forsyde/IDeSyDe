@@ -261,7 +261,7 @@ final class CanSolvePeriodicWorkloadAndSDFServersToMulticore(using logger: Logge
       responseTimes.toArray
     )
 
-    postFixedPrioriPreemtpiveConstraint(
+    postPartitionedFixedPrioriPreemtpiveConstraint(
       m.platform.runtimes.schedulers.zipWithIndex
       .filter((s, j) => m.platform.runtimes.isFixedPriority(j))
       .map((s, j) => j), 

@@ -9,12 +9,14 @@ isHome: true
 
 Welcome to IDeSyDe's documentation page.
 Here you can find some quick links to help you navigate the documentation
-and also to situate you about the tool and its methods. 
+and also to situate you about the tool and its methods.
 <!-- Many segments of this documentation are derivations and improvements over the MEMOCODE'23 paper describing IDeSyDe (link in the future!). -->
 
- * [IDeSyDe for the end-user: demonstrators](usage)
- * [Design space identification and exploration](dsi_dse)
- * IDeSyDe for the experts: extensions
+* [IDeSyDe for the end-user: demonstrators](usage)
+* [IDeSyDe key concepts: design space identification and exploration](dsi_dse)
+* [IDeSyDe overview: software architecture and implementation aspects](overview)
+* [IDeSyDe formalities: mathematical proofs and other theoretical guarantees](formals)
+* IDeSyDe for the experts: extensions
 
 <!-- A quick glance at [Concepts](/concepts) can likely clarify this further! -->
 
@@ -33,4 +35,3 @@ design constraints such as memory, time or energy.
 This also means that if you let IDeSyDe run long enough, and have just the right amount of computational resources,
 it can can give back a solution "*Your design is not possible*".
 It is always good to know designs are not possible before they crash! -->
-

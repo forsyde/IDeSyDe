@@ -217,10 +217,11 @@ impl ExplorationModule for ExternalExplorationModule {
                 warn!("Failed to deserialize combination from exploration module. Assuming it cannot explore.");
                 debug!("Given error is: {}", e.to_string());
                 debug!(
-                    "Return output from the exploratio module is: {}",
+                    "Return output from the exploration module is: {}",
                     std::str::from_utf8(&o).unwrap_or("NOT UTF8")
                 );
                 ExplorationBid {
+                    unique_identifier: self.unique_identifier(),
                     can_explore: false,
                     properties: HashMap::new(),
                 }

@@ -8,11 +8,11 @@ usemathjax: true
 
 # IDeSyDe overview {#sec:implementation}
 
-This documentation section is reasonably self-contained, but uses many concepts, terms and symbols from [the DSI section](/dsi_dse).
+This documentation section is reasonably self-contained, but uses many concepts, terms and symbols from [the DSI section]({{ site.baseurl }}/dsi_dse).
 
 IDeSyDe follows a __multi-module architecture__
 as shown in the figure below, where an __orchestrator__
-coordinates different modules during a [flow run](/dsi_dse#design-space-identification-and-exploration). The modules are loosely coupled
+coordinates different modules during a [flow run]({{ site.baseurl }}/dsi_dse#design-space-identification-and-exploration). The modules are loosely coupled
 standalone executable programs and can be either __identification
 modules__ (I-modules) or __exploration modules__ (E-modules). For the sake
 of simplicity, we exclusively use the word __modules__ to imply both
@@ -20,7 +20,7 @@ I-modules and E-modules. During a flow run, this loose coupling is
 realised through a shared __workspace__ between the orchestrator and the
 modules.
 
-<img src="/assets/images/svg/idesyde_architecture_mm.svg" style="width: 100%;" alt="Multi-module architecture diagram">
+<img src="{{ site.baseurl }}/assets/images/svg/idesyde_architecture_mm.svg" style="width: 100%;" alt="Multi-module architecture diagram">
 
 This architecture enables seamlessly combining independently developed
 modules. The orchestrator can detect all modules available in the
@@ -40,7 +40,7 @@ IDeSyDe uses the operating system's filesystem with naming conventions
 as the shared workspace. Namely, a __run path__ is given to IDeSyDe at the
 beginning of every flow run; IDeSyDe creates one nested folder in this
 run path for the sets $$\mathcal{M}$$, $$\mathcal{X}$$, $$\mathcal{Y}$$ and
-$$\mathcal{X}'$$, per [the design space identification (DSI) approach](/dsi_dse).
+$$\mathcal{X}'$$, per [the design space identification (DSI) approach]({{ site.baseurl }}/dsi_dse).
 The orchestrator creates all four appropriate filesystem folders.
 Then, modules produce and consume model data and __headers__ in these folders during a flow run.
 

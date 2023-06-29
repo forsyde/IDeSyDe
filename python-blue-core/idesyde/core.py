@@ -1,4 +1,4 @@
-from dataclasses import dataclass, asdict, is_dataclass
+from dataclasses import dataclass, asdict, is_dataclass, field
 import json
 import os
 from typing import Dict, Optional, List, Set, Iterable, Callable
@@ -6,9 +6,9 @@ from typing import Dict, Optional, List, Set, Iterable, Callable
 import cbor2
 
 
-
 @dataclass
 class ExplorationBid:
+    explorer: str
     can_explore: bool = False
     criteria: Dict[str, float] = dict()
 
@@ -25,11 +25,32 @@ class DecisionModelHeader:
         )
 
     def write_to_path(self, base_path: str, preffix: str = "", suffix: str = ""):
-        with open(base_path + os.path.sep + "header_" + preffix + "_" + self.category + "_" + suffix + ".json", "w") as jsonf:
+        with open(
+            base_path
+            + os.path.sep
+            + "header_"
+            + preffix
+            + "_"
+            + self.category
+            + "_"
+            + suffix
+            + ".json",
+            "w",
+        ) as jsonf:
             json.dump(asdict(self), jsonf)
-        with open(base_path + os.path.sep + "header_" + preffix + "_" + self.category + "_" + suffix + ".cbor", "w") as cborf:
+        with open(
+            base_path
+            + os.path.sep
+            + "header_"
+            + preffix
+            + "_"
+            + self.category
+            + "_"
+            + suffix
+            + ".cbor",
+            "w",
+        ) as cborf:
             cbor2.dump(asdict(self), cborf)
-
 
 
 @dataclass
@@ -39,9 +60,31 @@ class DesignModelHeader:
     model_paths: List[str] = list()
 
     def write_to_path(self, base_path: str, preffix: str = "", suffix: str = ""):
-        with open(base_path + os.path.sep +  "header_" + preffix + "_" + self.category + "_" + suffix + ".json", "w") as jsonf:
+        with open(
+            base_path
+            + os.path.sep
+            + "header_"
+            + preffix
+            + "_"
+            + self.category
+            + "_"
+            + suffix
+            + ".json",
+            "w",
+        ) as jsonf:
             json.dump(asdict(self), jsonf)
-        with open(base_path + os.path.sep + "header_" + preffix + "_" + self.category + "_" + suffix + ".cbor", "w") as cborf:
+        with open(
+            base_path
+            + os.path.sep
+            + "header_"
+            + preffix
+            + "_"
+            + self.category
+            + "_"
+            + suffix
+            + ".cbor",
+            "w",
+        ) as cborf:
             cbor2.dump(asdict(self), cborf)
 
 
@@ -68,7 +111,7 @@ class DecisionModel:
         return DecisionModelHeader(category=self.unique_identifier())
 
     def dominates(self, other: "DecisionModel") -> bool:
-        return self.header().dominates(other.header()) 
+        return self.header().dominates(other.header())
 
     def body_as_json(self) -> Optional[str]:
         if is_dataclass(self):
@@ -81,19 +124,63 @@ class DecisionModel:
             return cbor2.dumps(asdict(self))
         else:
             return None
-        
-    def write_to_path(self, base_path: str, preffix: str = "", suffix: str = "") -> DecisionModelHeader:
+
+    def write_to_path(
+        self, base_path: str, preffix: str = "", suffix: str = ""
+    ) -> DecisionModelHeader:
         header = self.header()
         json_body = self.body_as_json()
         if json_body:
-            with open(base_path + os.path.sep + "body_" + preffix + "_" + header.category + "_" + suffix + ".json", "w") as jsonf:
+            with open(
+                base_path
+                + os.path.sep
+                + "body_"
+                + preffix
+                + "_"
+                + header.category
+                + "_"
+                + suffix
+                + ".json",
+                "w",
+            ) as jsonf:
                 jsonf.write(json_body)
-                header.body_path = base_path + os.path.sep + "body_" + preffix + "_" + header.category + "_" + suffix + ".json"
+                header.body_path = (
+                    base_path
+                    + os.path.sep
+                    + "body_"
+                    + preffix
+                    + "_"
+                    + header.category
+                    + "_"
+                    + suffix
+                    + ".json"
+                )
         cbor_body = self.body_as_cbor()
         if cbor_body:
-            with open(base_path + os.path.sep + "body_" + preffix + "_" + header.category + "_" + suffix + ".cbor", "wb") as cborf:
+            with open(
+                base_path
+                + os.path.sep
+                + "body_"
+                + preffix
+                + "_"
+                + header.category
+                + "_"
+                + suffix
+                + ".cbor",
+                "wb",
+            ) as cborf:
                 cborf.write(cbor_body)
-                header.body_path = base_path + os.path.sep + "body_" + preffix + "_" + header.category + "_" + suffix + ".cbor"
+                header.body_path = (
+                    base_path
+                    + os.path.sep
+                    + "body_"
+                    + preffix
+                    + "_"
+                    + header.category
+                    + "_"
+                    + suffix
+                    + ".cbor"
+                )
         header.write_to_path(base_path, preffix, suffix)
         return header
 
@@ -118,11 +205,19 @@ class DesignModel:
     def header(self) -> DesignModelHeader:
         return DesignModelHeader(category=self.unique_identifier())
 
+
+IdentificationRuleT = Callable[
+    [Set[DesignModel], Set[DecisionModel]], Set[DecisionModel]
+]
+ReverseIdentificationRuleT = Callable[
+    [Set[DecisionModel], Set[DesignModel]], Set[DesignModel]
+]
+
+
 class IdentificationModule:
-    
     def unique_identifier(self) -> str:
         return self.__class__.__name__
-    
+
     def identification_step(
         self,
         iteration: int,
@@ -130,7 +225,7 @@ class IdentificationModule:
         decision_models: Set[DecisionModel],
     ) -> Set[DecisionModel]:
         return set()
-    
+
     def reverse_identification(
         self,
         decision_models: Set[DecisionModel],
@@ -138,15 +233,15 @@ class IdentificationModule:
     ) -> Set[DesignModel]:
         return set()
 
-class ExplorationModule:
-    
+
+class Explorer:
     def unique_identifier(self) -> str:
         return self.__class__.__name__
-    
+
     def bid(self, m: DecisionModel) -> ExplorationBid:
-        return ExplorationBid()
-    
-    def explore(
+        return ExplorationBid(explorer=self.unique_identifier())
+
+    async def explore(
         self,
         m: DecisionModel,
         max_sols: int,
@@ -155,6 +250,25 @@ class ExplorationModule:
         memory_resolution: int,
     ) -> Iterable[DecisionModel]:
         return []
-    
-IdentificationRuleT = Callable[[Set[DesignModel], Set[DecisionModel]], Set[DecisionModel]]
-ReverseIdentificationRuleT = Callable[[Set[DecisionModel], Set[DesignModel]], Set[DesignModel]]
+
+
+@dataclass
+class ExplorationModule:
+    unique_identifier: str
+    explorers: List[Explorer] = field(defaul_factory=list)
+
+    def bid(self, m: DecisionModel) -> List[ExplorationBid]:
+        return [explorer.bid(m) for explorer in self.explorers]
+
+    async def explore(
+        self,
+        m: DecisionModel,
+        explorer_index: int = 0,
+        max_sols: int = 0,
+        total_timeout: int = 0,
+        time_resolution: int = 0,
+        memory_resolution: int = 0,
+    ) -> Iterable[DecisionModel]:
+        yield self.explorers[explorer_index].explore(
+            m, max_sols, total_timeout, time_resolution, memory_resolution
+        )

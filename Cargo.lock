@@ -359,6 +359,7 @@ dependencies = [
  "idesyde-common",
  "idesyde-core",
  "rmp-serde",
+ "schemars",
  "serde",
  "serde_json",
 ]

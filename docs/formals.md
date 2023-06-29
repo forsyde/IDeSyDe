@@ -147,7 +147,7 @@ discussion.
 __Corollary 4__. _For a set of explorers $$\mathcal{E}$$ and a set of
 identified design models $$\mathcal{X}$$, the bidding has complexity bound
 $$\Theta(|\mathcal{E}||\mathcal{X}||\mathit{elems}(\mathcal{M})|^a)$$ with
-$$a \in \mathbb{N}$$_
+$$a \in \mathbb{N}$$_.
 
 __Corollary 5__. _For a set of design models $$\mathcal{M}$$, a set of
 explored decision models $$\mathcal{Y}$$ and set of reverse identification

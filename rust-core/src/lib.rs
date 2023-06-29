@@ -187,6 +187,7 @@ pub type IdentificationRule =
 
 pub type ReverseIdentificationRule =
     fn(&Vec<Box<dyn DecisionModel>>, &Vec<Box<dyn DesignModel>>) -> Vec<Box<dyn DesignModel>>;
+
 pub enum MarkedIdentificationRule {
     DesignModelOnlyIdentificationRule(IdentificationRule),
     DecisionModelOnlyIdentificationRule(IdentificationRule),
@@ -245,24 +246,56 @@ impl PartialEq<dyn ExplorationModule> for dyn ExplorationModule {
 
 impl Eq for dyn ExplorationModule {}
 
-pub trait StandaloneIdentificationModule: IdentificationModule {
-    fn uid(&self) -> String;
-    fn read_design_model(&self, path: &Path) -> Option<Box<dyn DesignModel>>;
-    fn write_design_model(&self, design_model: &Box<dyn DesignModel>, dest: &Path) -> bool;
-    fn decision_header_to_model(
+pub struct StandaloneIdentificationModule {
+    unique_identifier: String,
+    identification_rules: Vec<MarkedIdentificationRule>,
+    reverse_identification_rules: Vec<ReverseIdentificationRule>,
+    read_design_model: fn(path: &Path) -> Option<Box<dyn DesignModel>>,
+    write_design_model: fn(design_model: &Box<dyn DesignModel>, dest: &Path) -> bool,
+    decision_header_to_model: fn(header: &DecisionModelHeader) -> Option<Box<dyn DecisionModel>>,
+    pub decision_model_schemas: HashSet<String>,
+}
+
+impl StandaloneIdentificationModule {
+    pub fn new(
+        unique_identifier: String,
+        identification_rules: Vec<MarkedIdentificationRule>,
+        reverse_identification_rules: Vec<ReverseIdentificationRule>,
+        read_design_model: fn(path: &Path) -> Option<Box<dyn DesignModel>>,
+        write_design_model: fn(design_model: &Box<dyn DesignModel>, dest: &Path) -> bool,
+        decision_header_to_model: fn(
+            header: &DecisionModelHeader,
+        ) -> Option<Box<dyn DecisionModel>>,
+        decision_model_schemas: HashSet<String>,
+    ) -> StandaloneIdentificationModule {
+        return StandaloneIdentificationModule {
+            unique_identifier,
+            identification_rules,
+            reverse_identification_rules,
+            read_design_model,
+            write_design_model,
+            decision_header_to_model,
+            decision_model_schemas,
+        };
+    }
+
+    pub fn read_design_model(&self, path: &Path) -> Option<Box<dyn DesignModel>> {
+        return (self.read_design_model)(path);
+    }
+    pub fn write_design_model(&self, design_model: &Box<dyn DesignModel>, dest: &Path) -> bool {
+        return (self.write_design_model)(design_model, dest);
+    }
+    pub fn decision_header_to_model(
         &self,
         header: &DecisionModelHeader,
-    ) -> Option<Box<dyn DecisionModel>>;
-    fn identification_rules(&self) -> Vec<MarkedIdentificationRule>;
-    fn reverse_identification_rules(&self) -> Vec<ReverseIdentificationRule>;
-    fn decision_models_schemas(&self) -> Vec<String> {
-        Vec::new()
+    ) -> Option<Box<dyn DecisionModel>> {
+        return (self.decision_header_to_model)(header);
     }
 }
 
-impl<T: StandaloneIdentificationModule> IdentificationModule for T {
+impl IdentificationModule for StandaloneIdentificationModule {
     fn unique_identifier(&self) -> String {
-        self.uid()
+        self.unique_identifier.to_owned()
     }
 
     fn identification_step(
@@ -272,7 +305,7 @@ impl<T: StandaloneIdentificationModule> IdentificationModule for T {
         decision_models: &Vec<Box<dyn DecisionModel>>,
     ) -> Vec<Box<dyn DecisionModel>> {
         let mut identified: Vec<Box<dyn DecisionModel>> = Vec::new();
-        for irule in self.identification_rules() {
+        for irule in &self.identification_rules {
             let f_opt = match irule {
                 MarkedIdentificationRule::DesignModelOnlyIdentificationRule(f) => {
                     if iteration <= 0 {
@@ -312,18 +345,99 @@ impl<T: StandaloneIdentificationModule> IdentificationModule for T {
 
     fn reverse_identification(
         &self,
-        solved_decision_model: &Vec<Box<dyn DecisionModel>>,
-        design_model: &Vec<Box<dyn DesignModel>>,
+        solved_decision_models: &Vec<Box<dyn DecisionModel>>,
+        design_models: &Vec<Box<dyn DesignModel>>,
     ) -> Vec<Box<dyn DesignModel>> {
         let mut reverse_identified: Vec<Box<dyn DesignModel>> = Vec::new();
-        for f in self.reverse_identification_rules() {
-            for m in f(solved_decision_model, design_model) {
+        for f in &self.reverse_identification_rules {
+            for m in f(solved_decision_models, design_models) {
                 reverse_identified.push(m);
             }
         }
         reverse_identified
     }
 }
+
+// pub trait StandaloneIdentificationModule: IdentificationModule {
+//     // fn unique_identifier(&self) -> String;
+//     fn uid(&self) -> String;
+//     fn read_design_model(&self, path: &Path) -> Option<Box<dyn DesignModel>>;
+//     fn write_design_model(&self, design_model: &Box<dyn DesignModel>, dest: &Path) -> bool;
+//     fn decision_header_to_model(
+//         &self,
+//         header: &DecisionModelHeader,
+//     ) -> Option<Box<dyn DecisionModel>>;
+//     fn identification_rules(&self) -> Vec<MarkedIdentificationRule>;
+//     fn reverse_identification_rules(&self) -> Vec<ReverseIdentificationRule>;
+//     fn decision_models_schemas(&self) -> Vec<String> {
+//         Vec::new()
+//     }
+// }
+
+// impl<T: StandaloneIdentificationModule> IdentificationModule for T {
+//     fn unique_identifier(&self) -> String {
+//         self.uid()
+//     }
+
+//     fn identification_step(
+//         &self,
+//         iteration: i32,
+//         design_models: &Vec<Box<dyn DesignModel>>,
+//         decision_models: &Vec<Box<dyn DecisionModel>>,
+//     ) -> Vec<Box<dyn DecisionModel>> {
+//         let mut identified: Vec<Box<dyn DecisionModel>> = Vec::new();
+//         for irule in self.identification_rules() {
+//             let f_opt = match irule {
+//                 MarkedIdentificationRule::DesignModelOnlyIdentificationRule(f) => {
+//                     if iteration <= 0 {
+//                         Some(f)
+//                     } else {
+//                         None
+//                     }
+//                 }
+//                 MarkedIdentificationRule::DecisionModelOnlyIdentificationRule(f) => {
+//                     if iteration > 0 {
+//                         Some(f)
+//                     } else {
+//                         None
+//                     }
+//                 }
+//                 MarkedIdentificationRule::GenericIdentificationRule(f) => Some(f),
+//                 MarkedIdentificationRule::SpecificDecisionModelIdentificationRule(ms, f) => {
+//                     let categories: HashSet<String> =
+//                         identified.iter().map(|x| x.header().category).collect();
+//                     if ms.iter().all(|x| categories.contains(x)) {
+//                         Some(f)
+//                     } else {
+//                         None
+//                     }
+//                 }
+//             };
+//             if let Some(f) = f_opt {
+//                 for m in f(design_models, decision_models) {
+//                     if !identified.contains(&m) {
+//                         identified.push(m);
+//                     }
+//                 }
+//             }
+//         }
+//         identified
+//     }
+
+//     fn reverse_identification(
+//         &self,
+//         solved_decision_models: &Vec<Box<dyn DecisionModel>>,
+//         design_models: &Vec<Box<dyn DesignModel>>,
+//     ) -> Vec<Box<dyn DesignModel>> {
+//         let mut reverse_identified: Vec<Box<dyn DesignModel>> = Vec::new();
+//         for f in self.reverse_identification_rules() {
+//             for m in f(solved_decision_models, design_models) {
+//                 reverse_identified.push(m);
+//             }
+//         }
+//         reverse_identified
+//     }
+// }
 
 pub fn load_decision_model<T: DecisionModel + DeserializeOwned>(
     path: &std::path::PathBuf,

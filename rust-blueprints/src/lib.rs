@@ -128,3 +128,21 @@ pub fn execute_standalone_identification_module(module: StandaloneIdentification
         }
     }
 }
+
+#[macro_export]
+macro_rules! decision_header_to_model_gen {
+    ($($x:ty),*) => {
+        |header: DecisionModelHeader| {
+            header.body_path.as_ref().and_then(|bp| {
+                let bpath = std::path::PathBuf::from(bp);
+                match header.category.as_str() {
+                    $(
+                        "$x" => load_decision_model::<$x>(&bpath)
+                        .map(|m| Box::new(m) as Box<dyn DecisionModel>),
+                    )*
+                    _ => None,
+                }
+            })
+        }
+    };
+}

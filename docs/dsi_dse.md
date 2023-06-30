@@ -31,7 +31,7 @@ DSI consists of three consecutive stages (grey boxes in the Figure below) and i
     This stage represents the systematic production of MDE models from the DSE solutions of the bidding and exploration stage.
     The systematic production includes both textual and graphical MDE models.
 
-![enhanced-position](/assets/images/png/enhanced-position.png)
+![enhanced-position]({{ site.baseurl }}/assets/images/png/enhanced-position.png)
 
 Executing the three stages consecutively is called a __flow run__.
 The three explicit stages contrast to [the first proposal](https://ieeexplore.ieee.org/abstract/document/9474082),

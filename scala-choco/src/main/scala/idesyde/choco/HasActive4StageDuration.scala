@@ -77,7 +77,9 @@ trait HasActive4StageDuration extends HasUtils {
         chocoModel.intVar(
           s"fetch_wc($i)",
           0,
-          communicators.map(ce => taskFetchTimePerChannel(i)(ce)).sum,
+          communicators
+            .map(ce => communicationElementsFrameSize(ce) + taskFetchTimePerChannel(i)(ce))
+            .sum,
           true
         )
       )
@@ -89,7 +91,11 @@ trait HasActive4StageDuration extends HasUtils {
             chocoModel.intVar(
               s"input_wc($i, $j)",
               0,
-              communicators.map(ce => taskReadsDataTimePerChannel(i)(j)(ce)).sum,
+              communicators
+                .map(ce =>
+                  communicationElementsFrameSize(ce) + taskReadsDataTimePerChannel(i)(j)(ce)
+                )
+                .sum,
               true
             )
           } else {
@@ -105,7 +111,11 @@ trait HasActive4StageDuration extends HasUtils {
             chocoModel.intVar(
               s"output_wc($i, $j)",
               0,
-              communicators.map(ce => taskWritesDataTimePerChannel(i)(j)(ce)).sum,
+              communicators
+                .map(ce =>
+                  communicationElementsFrameSize(ce) + taskWritesDataTimePerChannel(i)(j)(ce)
+                )
+                .sum,
               true
             )
           } else {

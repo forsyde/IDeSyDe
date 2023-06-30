@@ -258,7 +258,7 @@ pub struct StandaloneIdentificationModule {
 
 impl StandaloneIdentificationModule {
     pub fn new(
-        unique_identifier: String,
+        unique_identifier: &str,
         identification_rules: Vec<MarkedIdentificationRule>,
         reverse_identification_rules: Vec<ReverseIdentificationRule>,
         read_design_model: fn(path: &Path) -> Option<Box<dyn DesignModel>>,
@@ -269,7 +269,7 @@ impl StandaloneIdentificationModule {
         decision_model_schemas: HashSet<String>,
     ) -> StandaloneIdentificationModule {
         return StandaloneIdentificationModule {
-            unique_identifier,
+            unique_identifier: unique_identifier.to_owned(),
             identification_rules,
             reverse_identification_rules,
             read_design_model,

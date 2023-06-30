@@ -23,7 +23,7 @@ final case class ChuffedMiniZincExplorer() extends SimpleMiniZincCPExplorer {
   ): LazyList[DecisionModel] = LazyList.empty
 
   override def combination(decisionModel: DecisionModel): ExplorationCombinationDescription =
-    ExplorationCombinationDescription(false, Map())
+    ExplorationCombinationDescription(uniqueIdentifier, false, Map())
 
   // override def explore(
   //     decisionModel: DecisionModel,

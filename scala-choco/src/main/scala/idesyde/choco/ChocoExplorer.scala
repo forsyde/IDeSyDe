@@ -39,6 +39,7 @@ class ChocoExplorer(using logger: Logger) extends Explorer:
       case c: ChocoDecisionModel                                   => true
       case _                                                       => false
     ExplorationCombinationDescription(
+      uniqueIdentifier,
       canExplore,
       availableCriterias(decisionModel)
         .map(c => c.identifier -> criteriaValue(decisionModel, c))

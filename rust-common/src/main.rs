@@ -28,7 +28,7 @@ fn decision_header_to_model(
 }
 fn main() {
     let common_module = StandaloneIdentificationModule::new(
-        "CommonIdentificationModule".to_owned(),
+        "CommonIdentificationModule",
         vec![
             idesyde_core::MarkedIdentificationRule::DesignModelOnlyIdentificationRule(
                 identify_partitioned_tiled_multicore,

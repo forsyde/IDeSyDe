@@ -96,7 +96,8 @@ trait StandaloneExplorationModule
             val header = readBinary[DecisionModelHeader](os.read.bytes(decisionModelToGetCriterias))
             decodeDecisionModels(header) match {
               case Some(m) => println(combination(m).asText)
-              case None    => println(ExplorationCombinationDescription.impossible.asText)
+              case None =>
+                println(ExplorationCombinationDescription.impossible(uniqueIdentifier).asText)
             }
           case _ =>
         }

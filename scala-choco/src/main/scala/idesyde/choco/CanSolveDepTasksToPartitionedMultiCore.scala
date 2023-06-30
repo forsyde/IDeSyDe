@@ -301,15 +301,15 @@ final class CanSolveDepTasksToPartitionedMultiCore(using logger: Logger)
     solver.setSearch(
       Array(
         Search.inputOrderLBSearch(nUsedPEs),
-        SimpleWorkloadBalancingDecisionStrategy(
-          (0 until m.platform.runtimes.schedulers.length).toArray,
-          periods.toArray,
-          taskExecution.toArray,
-          utilizations,
-          durations,
-          wcets.map(_.toArray).toArray
-        ),
-        // Search.activityBasedSearch(taskExecution: _*),
+        // SimpleWorkloadBalancingDecisionStrategy(
+        //   (0 until m.platform.runtimes.schedulers.length).toArray,
+        //   periods.toArray,
+        //   taskExecution.toArray,
+        //   utilizations,
+        //   durations,
+        //   wcets.map(_.toArray).toArray
+        // ),
+        Search.activityBasedSearch(taskExecution: _*),
         Search.activityBasedSearch(taskMapping: _*),
         Search.activityBasedSearch(dataBlockMapping: _*),
         // Search.activityBasedSearch(processingElemsVirtualChannelInCommElem.flatten:_*)

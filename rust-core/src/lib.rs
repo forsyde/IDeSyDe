@@ -4,7 +4,7 @@ use std::{
     collections::{HashMap, HashSet},
     fs,
     hash::Hash,
-    path::Path,
+    path::{Path, PathBuf},
 };
 
 use downcast_rs::{impl_downcast, DowncastSync};
@@ -251,7 +251,7 @@ pub struct StandaloneIdentificationModule {
     identification_rules: Vec<MarkedIdentificationRule>,
     reverse_identification_rules: Vec<ReverseIdentificationRule>,
     read_design_model: fn(path: &Path) -> Option<Box<dyn DesignModel>>,
-    write_design_model: fn(design_model: &Box<dyn DesignModel>, dest: &Path) -> bool,
+    write_design_model: fn(design_model: &Box<dyn DesignModel>, dest: &Path) -> Vec<PathBuf>,
     decision_header_to_model: fn(header: &DecisionModelHeader) -> Option<Box<dyn DecisionModel>>,
     pub decision_model_schemas: HashSet<String>,
 }
@@ -262,7 +262,7 @@ impl StandaloneIdentificationModule {
         identification_rules: Vec<MarkedIdentificationRule>,
         reverse_identification_rules: Vec<ReverseIdentificationRule>,
         read_design_model: fn(path: &Path) -> Option<Box<dyn DesignModel>>,
-        write_design_model: fn(design_model: &Box<dyn DesignModel>, dest: &Path) -> bool,
+        write_design_model: fn(design_model: &Box<dyn DesignModel>, dest: &Path) -> Vec<PathBuf>,
         decision_header_to_model: fn(
             header: &DecisionModelHeader,
         ) -> Option<Box<dyn DecisionModel>>,
@@ -282,7 +282,11 @@ impl StandaloneIdentificationModule {
     pub fn read_design_model(&self, path: &Path) -> Option<Box<dyn DesignModel>> {
         return (self.read_design_model)(path);
     }
-    pub fn write_design_model(&self, design_model: &Box<dyn DesignModel>, dest: &Path) -> bool {
+    pub fn write_design_model(
+        &self,
+        design_model: &Box<dyn DesignModel>,
+        dest: &Path,
+    ) -> Vec<PathBuf> {
         return (self.write_design_model)(design_model, dest);
     }
     pub fn decision_header_to_model(

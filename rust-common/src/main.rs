@@ -36,7 +36,7 @@ fn main() {
         ],
         Vec::new(),
         |_x| None,
-        |_x, _p| false,
+        |_x, _p| vec![],
         decision_header_to_model,
         HashSet::from([
             serde_json::to_string_pretty(&schema_for!(idesyde_common::SDFApplication)).unwrap(),

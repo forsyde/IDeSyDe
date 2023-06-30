@@ -1,4 +1,7 @@
-use std::collections::{HashMap, HashSet};
+use std::{
+    collections::{HashMap, HashSet},
+    path::PathBuf,
+};
 
 use idesyde_blueprints::execute_standalone_identification_module;
 use idesyde_core::{
@@ -109,8 +112,8 @@ fn read_design_model(path: &std::path::Path) -> Option<Box<dyn idesyde_core::Des
 fn write_design_model(
     _design_model: &Box<dyn idesyde_core::DesignModel>,
     _dest: &std::path::Path,
-) -> bool {
-    false
+) -> Vec<PathBuf> {
+    vec![]
 }
 
 fn decision_header_to_model(

@@ -100,18 +100,19 @@ pub fn execute_standalone_identification_module(module: StandaloneIdentification
                             .collect();
                     let reverse_identified = module.reverse_identification(&solved, &design_models);
                     for m in reverse_identified {
-                        let mut h = m.header();
-                        if let Some(out_path) = &args.output_path_opt {
-                            if module.write_design_model(&m, out_path) {
-                                h.model_paths.push(out_path.to_str().expect("Failed to get a string out of the output path during reverse identification").to_string());
-                            };
+                        for rpath in module.write_design_model(&m, &reverse_path) {
+                            let mut h = m.header();
+                            h.model_paths.push(rpath.to_str().expect("Failed to get a string out of the output path during reverse identification").to_string());
+                            write_design_model_header_to_path(
+                                &h,
+                                &reverse_path,
+                                "",
+                                module.unique_identifier().as_str(),
+                            );
                         }
-                        write_design_model_header_to_path(
-                            &h,
-                            &reverse_path,
-                            "",
-                            module.unique_identifier().as_str(),
-                        );
+                        if let Some(out_path) = &args.output_path_opt {
+                            module.write_design_model(&m, out_path);
+                        }
                     }
                 }
                 (Some(identified_path), None, None, Some(ident_step)) => {

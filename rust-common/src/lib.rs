@@ -1,6 +1,8 @@
 use std::collections::{HashMap, HashSet};
 
-use idesyde_core::{headers::DecisionModelHeader, DecisionModel, DesignModel};
+use idesyde_core::{
+    headers::DecisionModelHeader, impl_decision_model_standard_parts, DecisionModel, DesignModel,
+};
 use schemars::JsonSchema;
 use serde::{Deserialize, Serialize};
 
@@ -31,9 +33,7 @@ pub struct CommunicatingAndTriggeredReactiveWorkload {
 }
 
 impl DecisionModel for CommunicatingAndTriggeredReactiveWorkload {
-    fn unique_identifier(&self) -> String {
-        "CommunicatingAndTriggeredReactiveWorkload".to_string()
-    }
+    impl_decision_model_standard_parts!(CommunicatingAndTriggeredReactiveWorkload);
 
     fn header(&self) -> idesyde_core::headers::DecisionModelHeader {
         let mut elems: HashSet<String> = HashSet::new();
@@ -95,26 +95,7 @@ pub struct SDFApplication {
 }
 
 impl DecisionModel for SDFApplication {
-    fn body_as_json(&self) -> Option<String> {
-        serde_json::to_string(self).ok()
-    }
-
-    fn body_as_msgpack(&self) -> Option<Vec<u8>> {
-        rmp_serde::to_vec(self).ok()
-    }
-
-    fn body_as_cbor(&self) -> Option<Vec<u8>> {
-        let mut b: Vec<u8> = Vec::new();
-        if let Ok(_) = ciborium::into_writer(self, &mut b) {
-            Some(b)
-        } else {
-            None
-        }
-    }
-
-    fn unique_identifier(&self) -> String {
-        "SDFApplication".to_string()
-    }
+    impl_decision_model_standard_parts!(SDFApplication);
 
     fn header(&self) -> DecisionModelHeader {
         let mut elems: HashSet<String> = HashSet::new();
@@ -151,26 +132,7 @@ pub struct TiledMultiCore {
 }
 
 impl DecisionModel for TiledMultiCore {
-    fn body_as_json(&self) -> Option<String> {
-        serde_json::to_string(self).ok()
-    }
-
-    fn body_as_msgpack(&self) -> Option<Vec<u8>> {
-        rmp_serde::to_vec(self).ok()
-    }
-
-    fn body_as_cbor(&self) -> Option<Vec<u8>> {
-        let mut b: Vec<u8> = Vec::new();
-        if let Ok(_) = ciborium::into_writer(self, &mut b) {
-            Some(b)
-        } else {
-            None
-        }
-    }
-
-    fn unique_identifier(&self) -> String {
-        "TiledMultiCore".to_string()
-    }
+    impl_decision_model_standard_parts!(TiledMultiCore);
 
     fn header(&self) -> DecisionModelHeader {
         let mut elems: HashSet<String> = HashSet::new();
@@ -209,26 +171,7 @@ pub struct RuntimesAndProcessors {
 }
 
 impl DecisionModel for RuntimesAndProcessors {
-    fn body_as_json(&self) -> Option<String> {
-        serde_json::to_string(self).ok()
-    }
-
-    fn body_as_msgpack(&self) -> Option<Vec<u8>> {
-        rmp_serde::to_vec(self).ok()
-    }
-
-    fn body_as_cbor(&self) -> Option<Vec<u8>> {
-        let mut b: Vec<u8> = Vec::new();
-        if let Ok(_) = ciborium::into_writer(self, &mut b) {
-            Some(b)
-        } else {
-            None
-        }
-    }
-
-    fn unique_identifier(&self) -> String {
-        "RuntimesAndProcessors".to_string()
-    }
+    impl_decision_model_standard_parts!(RuntimesAndProcessors);
 
     fn header(&self) -> DecisionModelHeader {
         let mut elems: HashSet<String> = HashSet::new();
@@ -255,26 +198,7 @@ pub struct PartitionedTiledMulticore {
 }
 
 impl DecisionModel for PartitionedTiledMulticore {
-    fn body_as_json(&self) -> Option<String> {
-        serde_json::to_string(self).ok()
-    }
-
-    fn body_as_msgpack(&self) -> Option<Vec<u8>> {
-        rmp_serde::to_vec(self).ok()
-    }
-
-    fn body_as_cbor(&self) -> Option<Vec<u8>> {
-        let mut b: Vec<u8> = Vec::new();
-        if let Ok(_) = ciborium::into_writer(self, &mut b) {
-            Some(b)
-        } else {
-            None
-        }
-    }
-
-    fn unique_identifier(&self) -> String {
-        "PartitionedTiledMulticore".to_string()
-    }
+    impl_decision_model_standard_parts!(PartitionedTiledMulticore);
 
     fn header(&self) -> DecisionModelHeader {
         let mut elems: HashSet<String> = HashSet::new();

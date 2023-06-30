@@ -52,6 +52,17 @@ class DecisionModelHeader:
         ) as cborf:
             cbor2.dump(asdict(self), cborf)
 
+    @classmethod
+    def load_from_path(cls, full_path: str) -> Optional["DecisionModelHeader"]:
+        if full_path.endswith("cbor"):
+            d = cbor2.load(full_path)
+            return DecisionModelHeader(**d)
+        elif full_path.endswith("json"):
+            d = json.load(full_path)
+            return DecisionModelHeader(**d)
+        else:
+            return None
+
 
 @dataclass
 class DesignModelHeader:

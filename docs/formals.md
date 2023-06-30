@@ -13,7 +13,7 @@ it is also a place to give formal performance guarantees when possible.
 
 ## Bounds for non-exploration procedures
 
-Make sure to read and understand [the key DSI concepts and definitions](/dsi_dse) before proceeding.
+Make sure to read and understand [the key DSI concepts and definitions]({{ site.basurl }}/dsi_dse) before proceeding.
 
 We discuss the asymptotic bounds for each non-exploration procedure
 regarding "computational time". We present the bounds as theorems and

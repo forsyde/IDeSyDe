@@ -187,7 +187,7 @@ pub struct StandaloneIdentificationModule {
 }
 
 impl StandaloneIdentificationModule {
-    pub fn without_design_model(
+    pub fn without_design_models(
         unique_identifier: &str,
         identification_rules: Vec<MarkedIdentificationRule>,
         reverse_identification_rules: Vec<ReverseIdentificationRule>,
@@ -327,4 +327,33 @@ pub fn load_decision_model<T: DecisionModel + DeserializeOwned>(
         }
     }
     None
+}
+
+#[macro_export]
+macro_rules! decision_header_to_model_gen {
+    ($($x:ty),*) => {
+        |header: &idesyde_core::headers::DecisionModelHeader| {
+            header.body_path.as_ref().and_then(|bp| {
+                let bpath = std::path::PathBuf::from(bp);
+                match header.category.as_str() {
+                    $(
+                        "$x" => load_decision_model::<$x>(&bpath)
+                        .map(|m| Box::new(m) as Box<dyn DecisionModel>),
+                    )*
+                    _ => None,
+                }
+            })
+        }
+    };
+}
+
+#[macro_export]
+macro_rules! decision_models_schemas_gen {
+    ($($x:ty),*) => {
+        HashSet::from([
+            $(
+                serde_json::to_string_pretty(&schema_for!($x)).unwrap(),
+            )*
+        ])
+    };
 }

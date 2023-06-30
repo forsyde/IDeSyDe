@@ -1,33 +1,15 @@
 use std::collections::HashSet;
 
 use idesyde_blueprints::execute_standalone_identification_module;
-use idesyde_common::{
-    identify_partitioned_tiled_multicore, PartitionedTiledMulticore, RuntimesAndProcessors,
-    SDFApplication, TiledMultiCore,
+use idesyde_common::identify_partitioned_tiled_multicore;
+use idesyde_core::{
+    decision_header_to_model_gen, decision_models_schemas_gen, load_decision_model, DecisionModel,
+    StandaloneIdentificationModule,
 };
-use idesyde_core::{load_decision_model, DecisionModel, StandaloneIdentificationModule};
 use schemars::schema_for;
 
-fn decision_header_to_model(
-    header: &idesyde_core::headers::DecisionModelHeader,
-) -> Option<Box<dyn idesyde_core::DecisionModel>> {
-    header.body_path.as_ref().and_then(|bp| {
-        let bpath = std::path::PathBuf::from(bp);
-        match header.category.as_str() {
-            "SDFApplication" => load_decision_model::<SDFApplication>(&bpath)
-                .map(|m| Box::new(m) as Box<dyn DecisionModel>),
-            "TiledMultiCore" => load_decision_model::<TiledMultiCore>(&bpath)
-                .map(|m| Box::new(m) as Box<dyn DecisionModel>),
-            "RuntimesAndProcessors" => load_decision_model::<RuntimesAndProcessors>(&bpath)
-                .map(|m| Box::new(m) as Box<dyn DecisionModel>),
-            "PartitionedTiledMulticore" => load_decision_model::<PartitionedTiledMulticore>(&bpath)
-                .map(|m| Box::new(m) as Box<dyn DecisionModel>),
-            _ => None,
-        }
-    })
-}
 fn main() {
-    let common_module = StandaloneIdentificationModule::complete(
+    let common_module = StandaloneIdentificationModule::without_design_models(
         "CommonIdentificationModule",
         vec![
             idesyde_core::MarkedIdentificationRule::DesignModelOnlyIdentificationRule(
@@ -35,17 +17,18 @@ fn main() {
             ),
         ],
         Vec::new(),
-        |_x| None,
-        |_x, _p| vec![],
-        decision_header_to_model,
-        HashSet::from([
-            serde_json::to_string_pretty(&schema_for!(idesyde_common::SDFApplication)).unwrap(),
-            serde_json::to_string_pretty(&schema_for!(idesyde_common::TiledMultiCore)).unwrap(),
-            serde_json::to_string_pretty(&schema_for!(idesyde_common::RuntimesAndProcessors))
-                .unwrap(),
-            serde_json::to_string_pretty(&schema_for!(idesyde_common::PartitionedTiledMulticore))
-                .unwrap(),
-        ]),
+        decision_header_to_model_gen!(
+            idesyde_common::SDFApplication,
+            idesyde_common::TiledMultiCore,
+            idesyde_common::RuntimesAndProcessors,
+            idesyde_common::PartitionedTiledMulticore
+        ),
+        decision_models_schemas_gen!(
+            idesyde_common::SDFApplication,
+            idesyde_common::TiledMultiCore,
+            idesyde_common::RuntimesAndProcessors,
+            idesyde_common::PartitionedTiledMulticore
+        ),
     );
     execute_standalone_identification_module(common_module);
 }

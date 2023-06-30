@@ -130,7 +130,7 @@ fn decision_header_to_model(
 //     }
 // }
 fn main() {
-    execute_standalone_identification_module(StandaloneIdentificationModule::new(
+    execute_standalone_identification_module(StandaloneIdentificationModule::complete(
         "MatlabIdentificationModule",
         vec![MarkedIdentificationRule::DesignModelOnlyIdentificationRule(
             partially_identify_wokload_model,

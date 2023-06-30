@@ -81,6 +81,8 @@ impl PartialEq<DesignModelHeader> for DesignModelHeader {
     }
 }
 
+impl Eq for DesignModelHeader {}
+
 impl PartialOrd<DesignModelHeader> for DesignModelHeader {
     fn partial_cmp(&self, o: &DesignModelHeader) -> std::option::Option<std::cmp::Ordering> {
         let superset = o.elements.iter().all(|v| self.elements.contains(v));
@@ -96,8 +98,6 @@ impl PartialOrd<DesignModelHeader> for DesignModelHeader {
     }
 }
 
-impl Eq for DesignModelHeader {}
-
 impl Hash for DesignModelHeader {
     fn hash<H: std::hash::Hasher>(&self, state: &mut H) {
         self.category.hash(state);
@@ -108,6 +108,75 @@ impl Hash for DesignModelHeader {
         //     e.hash(state);
         // }
     }
+}
+
+impl DesignModelHeader {
+    pub fn write_to_dir(&self, base_path: &Path, prefix: &str, suffix: &str) -> bool {
+        std::fs::write(
+            base_path.join(format!(
+                "header_{}_{}_{}.json",
+                prefix, self.category, suffix
+            )),
+            serde_json::to_string(self).expect("Failed to serialize decision model to json."),
+        )
+        .expect("Failed to write serialized design model during identification.");
+        std::fs::write(
+            base_path.join(format!(
+                "header_{}_{}_{}.msgpack",
+                prefix, self.category, suffix
+            )),
+            rmp_serde::to_vec(self).expect("Failed to serialize design model to msgpack."),
+        )
+        .expect("Failed to write serialized design model during identification.");
+        let cbor_file = std::fs::File::create(base_path.join(format!(
+            "header_{}_{}_{}.cbor",
+            prefix, self.category, suffix
+        )))
+        .expect("Failed to create file to deserialize CBOR design model header.");
+        ciborium::into_writer(self, cbor_file)
+            .expect("Failed to serialize design model header during identification.");
+        true
+    }
+}
+
+pub fn load_design_model_headers_from_binary(header_path: &Path) -> Vec<DesignModelHeader> {
+    let mut design_models = Vec::new();
+    // let known_decision_model_paths =
+    if let Ok(ls) = header_path.read_dir() {
+        for dir_entry in ls.flatten() {
+            if dir_entry
+                .path()
+                .file_name()
+                .and_then(|f| f.to_str())
+                .map_or(false, |f| f.starts_with("header"))
+            {
+                if dir_entry
+                    .path()
+                    .extension()
+                    .map(|x| x.eq_ignore_ascii_case("msgpack"))
+                    .unwrap_or(false)
+                {
+                    let contents = std::fs::read(dir_entry.path())
+                        .expect("Failed to read design model header file.");
+                    let header = rmp_serde::decode::from_slice(&contents)
+                        .expect("Failed to deserialize design model header.");
+                    design_models.push(header);
+                } else if dir_entry
+                    .path()
+                    .extension()
+                    .map(|x| x.eq_ignore_ascii_case("cbor"))
+                    .unwrap_or(false)
+                {
+                    let contents = std::fs::read(dir_entry.path())
+                        .expect("Failed to read decision model header file.");
+                    let header = ciborium::from_reader(contents.as_slice())
+                        .expect("Failed to deserialize design model header.");
+                    design_models.push(header);
+                }
+            }
+        }
+    }
+    design_models
 }
 
 #[derive(Serialize, Clone, Deserialize, Debug)]
@@ -221,6 +290,35 @@ impl PartialOrd<ExplorationBid> for ExplorationBid {
     }
 }
 
+impl DecisionModelHeader {
+    pub fn write_to_dir(&self, base_path: &Path, prefix: &str, suffix: &str) -> bool {
+        std::fs::write(
+            base_path.join(format!(
+                "header_{}_{}_{}.json",
+                prefix, self.category, suffix
+            )),
+            serde_json::to_string(self).expect("Failed to serialize decision model to json."),
+        )
+        .expect("Failed to write serialized decision model during identification.");
+        std::fs::write(
+            base_path.join(format!(
+                "header_{}_{}_{}.msgpack",
+                prefix, self.category, suffix
+            )),
+            rmp_serde::to_vec(self).expect("Failed to serialize decision model to msgpack."),
+        )
+        .expect("Failed to write serialized decision model during identification.");
+        let cbor_file = std::fs::File::create(base_path.join(format!(
+            "header_{}_{}_{}.cbor",
+            prefix, self.category, suffix
+        )))
+        .expect("Failed to create file to deserialize CBOR decision model header.");
+        ciborium::into_writer(self, cbor_file)
+            .expect("Failed to serialize decision model header during identification.");
+        true
+    }
+}
+
 pub fn load_decision_model_header_from_path(p: &Path) -> Option<DecisionModelHeader> {
     if let Ok(f) = std::fs::File::open(p) {
         // let inb = std::io::BufReader::new(f);
@@ -276,44 +374,4 @@ pub fn load_decision_model_headers_from_binary(
         }
     }
     decision_models
-}
-
-pub fn load_design_model_headers_from_binary(header_path: &Path) -> Vec<DesignModelHeader> {
-    let mut design_models = Vec::new();
-    // let known_decision_model_paths =
-    if let Ok(ls) = header_path.read_dir() {
-        for dir_entry in ls.flatten() {
-            if dir_entry
-                .path()
-                .file_name()
-                .and_then(|f| f.to_str())
-                .map_or(false, |f| f.starts_with("header"))
-            {
-                if dir_entry
-                    .path()
-                    .extension()
-                    .map(|x| x.eq_ignore_ascii_case("msgpack"))
-                    .unwrap_or(false)
-                {
-                    let contents = std::fs::read(dir_entry.path())
-                        .expect("Failed to read design model header file.");
-                    let header = rmp_serde::decode::from_slice(&contents)
-                        .expect("Failed to deserialize design model header.");
-                    design_models.push(header);
-                } else if dir_entry
-                    .path()
-                    .extension()
-                    .map(|x| x.eq_ignore_ascii_case("cbor"))
-                    .unwrap_or(false)
-                {
-                    let contents = std::fs::read(dir_entry.path())
-                        .expect("Failed to read decision model header file.");
-                    let header = ciborium::from_reader(contents.as_slice())
-                        .expect("Failed to deserialize design model header.");
-                    design_models.push(header);
-                }
-            }
-        }
-    }
-    design_models
 }

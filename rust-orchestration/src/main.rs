@@ -404,8 +404,8 @@ fn main() {
                     .map(|(_, imodule)| {
                         let mut n_reversed = 0;
                         for reverse in imodule.reverse_identification(&sols_found, &design_models) {
-                            idesyde_core::write_design_model_header_to_path(
-                                &reverse.header(),
+                            let reverse_header = reverse.header();
+                            reverse_header.write_to_dir(
                                 &reverse_path,
                                 format!("{}", n_reversed).as_str(),
                                 "Orchestrator",

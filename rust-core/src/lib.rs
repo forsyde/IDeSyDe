@@ -2,7 +2,6 @@ pub mod headers;
 
 use std::{
     collections::{HashMap, HashSet},
-    fs,
     hash::Hash,
     path::{Path, PathBuf},
 };
@@ -67,6 +66,27 @@ pub trait DecisionModel: Send + DowncastSync {
             _ => false,
         }
     }
+
+    fn write_to_dir(&self, p: &Path, prefix_str: &str, suffix_str: &str) -> DecisionModelHeader {
+        let mut h = self.header();
+        if let Some(j) = self.body_as_json() {
+            let p = format!("body_{}_{}_{}.json", prefix_str, h.category, suffix_str);
+            std::fs::write(&p, j).expect("Failed to write JSON body of decision model.");
+            h.body_path = Some(p);
+        }
+        if let Some(b) = self.body_as_msgpack() {
+            let p = format!("body_{}_{}_{}.msgpack", prefix_str, h.category, suffix_str);
+            std::fs::write(&p, b).expect("Failed to write MsgPack body of decision model.");
+            h.body_path = Some(p);
+        }
+        if let Some(b) = self.body_as_cbor() {
+            let p = format!("body_{}_{}_{}.cbor", prefix_str, h.category, suffix_str);
+            std::fs::write(&p, b).expect("Failed to write CBOR body of decision model.");
+            h.body_path = Some(p);
+        }
+        h.write_to_dir(p, prefix_str, suffix_str);
+        h
+    }
 }
 impl_downcast!(sync DecisionModel);
 
@@ -90,96 +110,6 @@ impl PartialOrd<dyn DecisionModel> for dyn DecisionModel {
     fn partial_cmp(&self, other: &dyn DecisionModel) -> Option<Ordering> {
         self.header().partial_cmp(&other.header())
     }
-}
-
-pub fn write_design_model_header_to_path(
-    h: &DesignModelHeader,
-    p: &Path,
-    prefix_str: &str,
-    suffix_str: &str,
-) -> bool {
-    std::fs::write(
-        p.join(format!(
-            "header_{}_{}_{}.json",
-            prefix_str, h.category, suffix_str
-        )),
-        serde_json::to_string(h).expect("Failed to serialize decision model to json."),
-    )
-    .expect("Failed to write serialized design model during identification.");
-    fs::write(
-        p.join(format!(
-            "header_{}_{}_{}.msgpack",
-            prefix_str, h.category, suffix_str
-        )),
-        rmp_serde::to_vec(h).expect("Failed to serialize design model to msgpack."),
-    )
-    .expect("Failed to write serialized design model during identification.");
-    let cbor_file = fs::File::create(p.join(format!(
-        "header_{}_{}_{}.cbor",
-        prefix_str, h.category, suffix_str
-    )))
-    .expect("Failed to create file to deserialize CBOR design model header.");
-    ciborium::into_writer(h, cbor_file)
-        .expect("Failed to serialize design model header during identification.");
-    true
-}
-
-pub fn write_decision_model_header_to_path(
-    h: &DecisionModelHeader,
-    p: &Path,
-    prefix_str: &str,
-    suffix_str: &str,
-) -> bool {
-    std::fs::write(
-        p.join(format!(
-            "header_{}_{}_{}.json",
-            prefix_str, h.category, suffix_str
-        )),
-        serde_json::to_string(h).expect("Failed to serialize decision model to json."),
-    )
-    .expect("Failed to write serialized decision model during identification.");
-    fs::write(
-        p.join(format!(
-            "header_{}_{}_{}.msgpack",
-            prefix_str, h.category, suffix_str
-        )),
-        rmp_serde::to_vec(h).expect("Failed to serialize decision model to msgpack."),
-    )
-    .expect("Failed to write serialized decision model during identification.");
-    let cbor_file = fs::File::create(p.join(format!(
-        "header_{}_{}_{}.cbor",
-        prefix_str, h.category, suffix_str
-    )))
-    .expect("Failed to create file to deserialize CBOR decision model header.");
-    ciborium::into_writer(h, cbor_file)
-        .expect("Failed to serialize decision model header during identification.");
-    true
-}
-
-pub fn write_decision_model_to_path<M: DecisionModel + ?Sized>(
-    m: &Box<M>,
-    p: &Path,
-    prefix_str: &str,
-    suffix_str: &str,
-) -> DecisionModelHeader {
-    let mut h = m.header();
-    if let Some(j) = m.body_as_json() {
-        let p = format!("body_{}_{}_{}.json", prefix_str, h.category, suffix_str);
-        std::fs::write(&p, j).expect("Failed to write JSON body of decision model.");
-        h.body_path = Some(p);
-    }
-    if let Some(b) = m.body_as_msgpack() {
-        let p = format!("body_{}_{}_{}.msgpack", prefix_str, h.category, suffix_str);
-        std::fs::write(&p, b).expect("Failed to write MsgPack body of decision model.");
-        h.body_path = Some(p);
-    }
-    if let Some(b) = m.body_as_cbor() {
-        let p = format!("body_{}_{}_{}.cbor", prefix_str, h.category, suffix_str);
-        std::fs::write(&p, b).expect("Failed to write CBOR body of decision model.");
-        h.body_path = Some(p);
-    }
-    write_decision_model_header_to_path(&h, p, prefix_str, suffix_str);
-    h
 }
 
 pub type IdentificationRule =
@@ -257,7 +187,27 @@ pub struct StandaloneIdentificationModule {
 }
 
 impl StandaloneIdentificationModule {
-    pub fn new(
+    pub fn without_design_model(
+        unique_identifier: &str,
+        identification_rules: Vec<MarkedIdentificationRule>,
+        reverse_identification_rules: Vec<ReverseIdentificationRule>,
+        decision_header_to_model: fn(
+            header: &DecisionModelHeader,
+        ) -> Option<Box<dyn DecisionModel>>,
+        decision_model_schemas: HashSet<String>,
+    ) -> StandaloneIdentificationModule {
+        return StandaloneIdentificationModule {
+            unique_identifier: unique_identifier.to_owned(),
+            identification_rules,
+            reverse_identification_rules,
+            read_design_model: |_x| None,
+            write_design_model: |_x, _p| vec![],
+            decision_header_to_model,
+            decision_model_schemas,
+        };
+    }
+
+    pub fn complete(
         unique_identifier: &str,
         identification_rules: Vec<MarkedIdentificationRule>,
         reverse_identification_rules: Vec<ReverseIdentificationRule>,
@@ -361,87 +311,6 @@ impl IdentificationModule for StandaloneIdentificationModule {
         reverse_identified
     }
 }
-
-// pub trait StandaloneIdentificationModule: IdentificationModule {
-//     // fn unique_identifier(&self) -> String;
-//     fn uid(&self) -> String;
-//     fn read_design_model(&self, path: &Path) -> Option<Box<dyn DesignModel>>;
-//     fn write_design_model(&self, design_model: &Box<dyn DesignModel>, dest: &Path) -> bool;
-//     fn decision_header_to_model(
-//         &self,
-//         header: &DecisionModelHeader,
-//     ) -> Option<Box<dyn DecisionModel>>;
-//     fn identification_rules(&self) -> Vec<MarkedIdentificationRule>;
-//     fn reverse_identification_rules(&self) -> Vec<ReverseIdentificationRule>;
-//     fn decision_models_schemas(&self) -> Vec<String> {
-//         Vec::new()
-//     }
-// }
-
-// impl<T: StandaloneIdentificationModule> IdentificationModule for T {
-//     fn unique_identifier(&self) -> String {
-//         self.uid()
-//     }
-
-//     fn identification_step(
-//         &self,
-//         iteration: i32,
-//         design_models: &Vec<Box<dyn DesignModel>>,
-//         decision_models: &Vec<Box<dyn DecisionModel>>,
-//     ) -> Vec<Box<dyn DecisionModel>> {
-//         let mut identified: Vec<Box<dyn DecisionModel>> = Vec::new();
-//         for irule in self.identification_rules() {
-//             let f_opt = match irule {
-//                 MarkedIdentificationRule::DesignModelOnlyIdentificationRule(f) => {
-//                     if iteration <= 0 {
-//                         Some(f)
-//                     } else {
-//                         None
-//                     }
-//                 }
-//                 MarkedIdentificationRule::DecisionModelOnlyIdentificationRule(f) => {
-//                     if iteration > 0 {
-//                         Some(f)
-//                     } else {
-//                         None
-//                     }
-//                 }
-//                 MarkedIdentificationRule::GenericIdentificationRule(f) => Some(f),
-//                 MarkedIdentificationRule::SpecificDecisionModelIdentificationRule(ms, f) => {
-//                     let categories: HashSet<String> =
-//                         identified.iter().map(|x| x.header().category).collect();
-//                     if ms.iter().all(|x| categories.contains(x)) {
-//                         Some(f)
-//                     } else {
-//                         None
-//                     }
-//                 }
-//             };
-//             if let Some(f) = f_opt {
-//                 for m in f(design_models, decision_models) {
-//                     if !identified.contains(&m) {
-//                         identified.push(m);
-//                     }
-//                 }
-//             }
-//         }
-//         identified
-//     }
-
-//     fn reverse_identification(
-//         &self,
-//         solved_decision_models: &Vec<Box<dyn DecisionModel>>,
-//         design_models: &Vec<Box<dyn DesignModel>>,
-//     ) -> Vec<Box<dyn DesignModel>> {
-//         let mut reverse_identified: Vec<Box<dyn DesignModel>> = Vec::new();
-//         for f in self.reverse_identification_rules() {
-//             for m in f(solved_decision_models, design_models) {
-//                 reverse_identified.push(m);
-//             }
-//         }
-//         reverse_identified
-//     }
-// }
 
 pub fn load_decision_model<T: DecisionModel + DeserializeOwned>(
     path: &std::path::PathBuf,

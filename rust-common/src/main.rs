@@ -27,7 +27,7 @@ fn decision_header_to_model(
     })
 }
 fn main() {
-    let common_module = StandaloneIdentificationModule::new(
+    let common_module = StandaloneIdentificationModule::complete(
         "CommonIdentificationModule",
         vec![
             idesyde_core::MarkedIdentificationRule::DesignModelOnlyIdentificationRule(

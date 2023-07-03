@@ -20,7 +20,7 @@ final case class SDFApplication(
     with CompleteDecisionModel
     derives ReadWriter {
 
-  override def uniqueIdentifier: String = "SDFApplication"
+  override def category: String = "SDFApplication"
 
   override def coveredElements: Set[String] =
     actors_identifiers ++ channels_identifiers ++ topology_srcs.zipWithIndex

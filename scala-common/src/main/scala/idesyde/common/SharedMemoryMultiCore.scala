@@ -106,6 +106,6 @@ final case class SharedMemoryMultiCore(
     })
   }
 
-  override val uniqueIdentifier = "SharedMemoryMultiCore"
+  override val category = "SharedMemoryMultiCore"
 
 }

@@ -41,7 +41,11 @@ trait Explorer {
 
   def criteriaValue(decisionModel: DecisionModel, criteria: ExplorationCriteria): Double = 0.0
 
-  def combination(decisionModel: DecisionModel): ExplorationCombinationDescription
+  def combination(decisionModel: DecisionModel): ExplorationCombinationDescription =
+    ExplorationCombinationDescription.impossible(uniqueIdentifier, decisionModel.category)
+
+  def canExplore(decisionModel: DecisionModel): Boolean =
+    combination(decisionModel).can_explore
 
   def dominates(
       o: Explorer,

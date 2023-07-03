@@ -232,5 +232,5 @@ final case class CommunicatingAndTriggeredReactiveWorkload(
 
   def messagesMaxSizes = dataChannelSizes
 
-  def uniqueIdentifier = "CommunicatingAndTriggeredReactiveWorkload"
+  def category = "CommunicatingAndTriggeredReactiveWorkload"
 }

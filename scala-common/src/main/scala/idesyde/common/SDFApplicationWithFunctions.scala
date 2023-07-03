@@ -244,6 +244,6 @@ final case class SDFApplicationWithFunctions(
 
   def bodyAsBinary: Array[Byte] = writeBinary(this)
 
-  override val uniqueIdentifier = "SDFApplicationWithFunctions"
+  override val category = "SDFApplicationWithFunctions"
 
 }

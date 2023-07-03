@@ -45,5 +45,5 @@ final case class PeriodicWorkloadToPartitionedSharedMultiCore(
     case _ => super.dominates(other)
   }
 
-  def uniqueIdentifier: String = "PeriodicWorkloadToPartitionedSharedMultiCore"
+  def category: String = "PeriodicWorkloadToPartitionedSharedMultiCore"
 }

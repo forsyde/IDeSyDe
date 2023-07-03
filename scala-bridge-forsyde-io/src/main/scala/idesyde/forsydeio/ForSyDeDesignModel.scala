@@ -38,5 +38,5 @@ final case class ForSyDeDesignModel(val systemGraph: ForSyDeSystemGraph) extends
 
   val elements = systemGraph.vertexSet().asScala.toSet ++ systemGraph.edgeSet().asScala.toSet
 
-  def uniqueIdentifier: String = "YyyYyYyDesignModel"
+  def category: String = "YyyYyYyDesignModel"
 }

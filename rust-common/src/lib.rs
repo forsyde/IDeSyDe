@@ -59,7 +59,7 @@ impl DecisionModel for CommunicatingAndTriggeredReactiveWorkload {
             ));
         }
         DecisionModelHeader {
-            category: self.unique_identifier(),
+            category: self.category(),
             body_path: None,
             covered_elements: elems.into_iter().collect(),
         }
@@ -108,7 +108,7 @@ impl DecisionModel for SDFApplication {
             ));
         }
         DecisionModelHeader {
-            category: self.unique_identifier(),
+            category: self.category(),
             body_path: None,
             covered_elements: elems.into_iter().collect(),
         }
@@ -151,7 +151,7 @@ impl DecisionModel for TiledMultiCore {
             ));
         }
         DecisionModelHeader {
-            category: self.unique_identifier(),
+            category: self.category(),
             body_path: None,
             covered_elements: elems.into_iter().collect(),
         }
@@ -184,7 +184,7 @@ impl DecisionModel for RuntimesAndProcessors {
             elems.insert(format!("{}={}:{}-{}:{}", "scheduler", pe, "", sched, ""));
         }
         DecisionModelHeader {
-            category: self.unique_identifier(),
+            category: self.category(),
             body_path: None,
             covered_elements: elems.into_iter().collect(),
         }
@@ -217,7 +217,7 @@ impl DecisionModel for PartitionedTiledMulticore {
                 .map(|x| x.to_owned()),
         );
         DecisionModelHeader {
-            category: self.unique_identifier(),
+            category: self.category(),
             body_path: None,
             covered_elements: elems.into_iter().collect(),
         }

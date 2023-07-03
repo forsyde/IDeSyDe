@@ -211,3 +211,60 @@ def stadalone_identification_module_main(module: StandaloneIdentificationModule)
                         module.unique_identifier,
                     )
     return 0
+
+
+def standalone_exploration_module_main(module: StandaloneExplorationModule) -> int:
+    parser = argparse.ArgumentParser(
+        description="ExplorationModule " + module.unique_identifier
+    )
+    parser.add_argument(
+        "-i,--dominant-path",
+        type=str,
+        help="The path where dominant identified decision models (and headers) are stored.",
+    )
+    parser.add_argument(
+        "-o,--solution-path",
+        type=str,
+        help="The path where explored decision models (and headers) are stored.",
+    )
+    parser.add_argument(
+        "-c,--combine",
+        type=str,
+        help="The path to a decision model header to make a bidding.",
+    )
+    parser.add_argument(
+        "-e,--explore",
+        type=str,
+        help="The path to a decision model header to be explored.",
+    )
+    parser.add_argument(
+        "-n,--explorer-idx",
+        type=int,
+        help="The index of the explorer inside the module to be used.",
+    )
+    parser.add_argument("--total-timeout", type=int, default=0)
+    parser.add_argument("--maximum-solutions", type=int, default=0)
+    parser.add_argument("--time-resolution", type=int, default=0)
+    parser.add_argument("--memory-resolution", type=int, default=0)
+    if args.dominant_path and args.solution_path and args.explore:
+        header = DecisionModelHeader.load_from_path(args.explore)
+        m = module.decision_header_to_model(header)
+        if args.explorer_idx:
+            module.explore(
+                m,
+                args.explorer_idx,
+                args.maximum_solutions,
+                args.total_timeout,
+                args.time_resolution,
+                args.memory_resolution,
+            )
+        else:
+            pass
+        pass
+    elif args.dominant_path and args.combine:
+        header = DecisionModelHeader.load_from_path(args.combine)
+        m = module.decision_header_to_model(header)
+        if m:
+            for comb in module.bid(m):
+                println(comb.to_json())
+    return 0

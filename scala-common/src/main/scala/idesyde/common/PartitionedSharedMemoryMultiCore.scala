@@ -16,5 +16,5 @@ final case class PartitionedSharedMemoryMultiCore(
 
   val coveredElements = runtimes.coveredElements ++ hardware.coveredElements
 
-  val uniqueIdentifier: String = "PartitionedSharedMemoryMultiCore"
+  val category: String = "PartitionedSharedMemoryMultiCore"
 }

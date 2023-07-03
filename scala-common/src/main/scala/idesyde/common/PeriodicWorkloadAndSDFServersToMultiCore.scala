@@ -41,5 +41,5 @@ final case class PeriodicWorkloadAndSDFServerToMultiCore(
 
   val wcets = computeWcets
 
-  val uniqueIdentifier: String = "PeriodicWorkloadAndSDFServerToMultiCore"
+  val category: String = "PeriodicWorkloadAndSDFServerToMultiCore"
 }

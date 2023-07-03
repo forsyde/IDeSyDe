@@ -35,7 +35,7 @@ pub struct SimulinkReactiveDesignModel {
 }
 
 impl DesignModel for SimulinkReactiveDesignModel {
-    fn unique_identifier(&self) -> String {
+    fn category(&self) -> String {
         "SimulinkReactiveDesignModel".to_string()
     }
 
@@ -57,7 +57,7 @@ impl DesignModel for SimulinkReactiveDesignModel {
             ));
         }
         DesignModelHeader {
-            category: self.unique_identifier(),
+            category: self.category(),
             model_paths: Vec::new(),
             elements: elems.into_iter().collect(),
         }
@@ -74,7 +74,7 @@ fn partially_identify_wokload_model(
     // let mut linksWithoutConstants: HashMap<String, HashMap<String, u32>> = HashMap::new();
     // let mut allLinks: HashMap<String, HashMap<String, u32>> = HashMap::new();
     for design_model in design_models {
-        if design_model.unique_identifier() == "SimulinkReactiveDesignModel" {}
+        if design_model.category() == "SimulinkReactiveDesignModel" {}
     }
     _identified
 }

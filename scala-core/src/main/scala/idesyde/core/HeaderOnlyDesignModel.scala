@@ -33,6 +33,6 @@ final case class HeaderOnlyDesignModel(override val header: DesignModelHeader) e
 
   def elementRelationID(rel: String): String = rel
 
-  def uniqueIdentifier = header.category
+  def category = header.category
 
 }

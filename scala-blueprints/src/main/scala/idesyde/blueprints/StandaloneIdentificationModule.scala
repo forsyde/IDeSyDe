@@ -144,7 +144,7 @@ trait StandaloneIdentificationModule
               println(
                 hPath
                   .getOrElse(
-                    reversePath / s"header_${m.uniqueIdentifier}_${uniqueIdentifier}.msgpack"
+                    reversePath / s"header_${m.category}_${uniqueIdentifier}.msgpack"
                   )
                   .toString
               )
@@ -212,7 +212,7 @@ trait StandaloneIdentificationModule
               println(
                 hPath
                   .getOrElse(
-                    identifiedPath / s"header_${iteration}_${m.uniqueIdentifier}_${uniqueIdentifier}.msgpack"
+                    identifiedPath / s"header_${iteration}_${m.category}_${uniqueIdentifier}.msgpack"
                   )
                   .toString
               )

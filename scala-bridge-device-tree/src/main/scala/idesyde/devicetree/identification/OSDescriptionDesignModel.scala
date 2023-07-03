@@ -27,5 +27,5 @@ final case class OSDescriptionDesignModel(
 
   override def elementID(elem: ElementT): String = elem
 
-  def uniqueIdentifier: String = "OSDescriptionDesignModel"
+  def category: String = "OSDescriptionDesignModel"
 }

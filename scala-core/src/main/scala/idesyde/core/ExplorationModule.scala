@@ -9,7 +9,7 @@ import idesyde.core.Explorer
   * Composable Design Space Identification," 2021 Design, Automation & Test in Europe Conference &
   * Exhibition (DATE), 2021, pp. 1204-1207, doi: 10.23919/DATE51398.2021.9474082.
   */
-trait ExplorationModule extends Explorer {
+trait ExplorationModule {
 
   /** The set of explorers registred in this library
     *
@@ -19,12 +19,31 @@ trait ExplorationModule extends Explorer {
     * @see
     *   [[idesyde.core.Explorer]]
     */
-  def explorers: Set[Explorer]
+  def explorers: List[Explorer] = List()
 
   def canExplore(decisionModel: DecisionModel): Boolean =
-    explorers.exists(_.combination(decisionModel).can_explore)
+    explorers.exists(e => e.combination(decisionModel).can_explore)
+
+  def combination(decisionModel: DecisionModel): List[ExplorationCombinationDescription] =
+    explorers.map(e => e.combination(decisionModel))
 
   def explore(
+      decisionModel: DecisionModel,
+      explorerIdx: Int,
+      totalExplorationTimeOutInSecs: Long = 0L,
+      maximumSolutions: Long = 0L,
+      timeDiscretizationFactor: Long = -1L,
+      memoryDiscretizationFactor: Long = -1L
+  ): LazyList[DecisionModel] =
+    explorers(explorerIdx).explore(
+      decisionModel,
+      totalExplorationTimeOutInSecs,
+      maximumSolutions,
+      timeDiscretizationFactor,
+      memoryDiscretizationFactor
+    )
+
+  def exploreBest(
       decisionModel: DecisionModel,
       totalExplorationTimeOutInSecs: Long = 0L,
       maximumSolutions: Long = 0L,
@@ -32,7 +51,7 @@ trait ExplorationModule extends Explorer {
       memoryDiscretizationFactor: Long = -1L
   ): LazyList[DecisionModel] = {
     val valid = explorers
-      .filter(_.combination(decisionModel).can_explore)
+      .filter(e => canExplore(decisionModel))
     val nonDominated =
       valid
         .filter(e =>

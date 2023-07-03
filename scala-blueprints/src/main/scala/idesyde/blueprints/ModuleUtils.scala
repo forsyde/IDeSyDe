@@ -77,32 +77,32 @@ trait ModuleUtils {
       val h = m match {
         case cm: CompleteDecisionModel =>
           os.write.over(
-            p / s"body_${prefix}_${m.uniqueIdentifier}_${suffix}.json",
+            p / s"body_${prefix}_${m.category}_${suffix}.json",
             cm.bodyAsText
           )
           os.write.over(
-            p / s"body_${prefix}_${m.uniqueIdentifier}_${suffix}.msgpack",
+            p / s"body_${prefix}_${m.category}_${suffix}.msgpack",
             cm.bodyAsBinary
           )
           cm.header.copy(body_path =
             Some(
-              (p / s"body_${prefix}_${m.uniqueIdentifier}_${suffix}.msgpack").toString
+              (p / s"body_${prefix}_${m.category}_${suffix}.msgpack").toString
             )
           )
         case _ =>
           m.header
       }
       os.write.over(
-        p / s"header_${prefix}_${m.uniqueIdentifier}_${suffix}.json",
+        p / s"header_${prefix}_${m.category}_${suffix}.json",
         h.asText
       )
       os.write.over(
-        p / s"header_${prefix}_${m.uniqueIdentifier}_${suffix}.msgpack",
+        p / s"header_${prefix}_${m.category}_${suffix}.msgpack",
         h.asBinary
       )
       (
-        Some(p / s"header_${prefix}_${m.uniqueIdentifier}_${suffix}.msgpack"),
-        Some(p / s"body_${prefix}_${m.uniqueIdentifier}_${suffix}.msgpack")
+        Some(p / s"header_${prefix}_${m.category}_${suffix}.msgpack"),
+        Some(p / s"body_${prefix}_${m.category}_${suffix}.msgpack")
       )
     }
 }

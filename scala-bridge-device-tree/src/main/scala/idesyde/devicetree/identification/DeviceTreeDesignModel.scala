@@ -61,5 +61,5 @@ final case class DeviceTreeDesignModel(
   //     .getOrElse(elem.fullId)
   // )
 
-  def uniqueIdentifier: String = "DeviceTreeDesignModel"
+  def category: String = "DeviceTreeDesignModel"
 }

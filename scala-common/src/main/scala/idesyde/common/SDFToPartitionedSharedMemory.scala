@@ -21,6 +21,6 @@ final case class SDFToPartitionedSharedMemory(
 
   val wcets = computeWcets
 
-  val uniqueIdentifier: String = "SDFToPartitionedSharedMemory"
+  val category: String = "SDFToPartitionedSharedMemory"
 
 }

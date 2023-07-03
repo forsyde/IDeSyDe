@@ -3,15 +3,14 @@ use std::{path::Path, time::UNIX_EPOCH};
 use clap::Parser;
 use env_logger::WriteStyle;
 use idesyde_core::{
-    headers::{load_decision_model_headers_from_binary, load_design_model_headers_from_binary},
+    headers::{
+        load_decision_model_headers_from_binary, load_design_model_headers_from_binary,
+        ExplorationBid,
+    },
     DecisionModel, DesignModel, ExplorationModule, IdentificationModule,
 };
 use log::{debug, error, info, warn, Level};
 use rayon::prelude::*;
-
-use crate::orchestration::compute_dominant_biddings;
-
-pub mod orchestration;
 
 #[derive(Parser, Debug)]
 #[command(
@@ -216,7 +215,7 @@ fn main() {
         }
 
         let mut imodules: Vec<Box<dyn IdentificationModule>> = Vec::new();
-        let ex_imodules = orchestration::find_and_prepare_identification_modules(
+        let ex_imodules = idesyde_orchestration::find_and_prepare_identification_modules(
             imodules_path,
             &identified_path,
             &inputs_path,
@@ -232,7 +231,7 @@ fn main() {
             imodules.push(Box::new(eximod) as Box<dyn IdentificationModule>);
         }
         let mut emodules: Vec<Box<dyn ExplorationModule>> = Vec::new();
-        let ex_emodules = orchestration::find_exploration_modules(
+        let ex_emodules = idesyde_orchestration::find_exploration_modules(
             emodules_path,
             &identified_path,
             &explored_path,
@@ -263,14 +262,13 @@ fn main() {
                 .iter()
                 .map(|(_, h)| Box::new(h.to_owned()) as Box<dyn DecisionModel>)
                 .collect();
-        let identified = orchestration::identification_procedure(
+        let identified = idesyde_orchestration::identification_procedure(
             &imodules,
             &design_models,
             &mut pre_identified,
             1,
         );
         info!("Identified {} decision model(s)", identified.len());
-        let identified_refs = identified.iter().collect();
 
         // let dominant = compute_dominant_decision_models(&identified_refs);
 
@@ -306,8 +304,29 @@ fn main() {
         // }
 
         // let dominant_without_biddings = compute_dominant_decision_models(&identified_refs);
-        let dominant_biddings = compute_dominant_biddings(&emodules, &identified_refs);
-        info!("Computed {} dominant bidding(s) ", dominant_biddings.len());
+        let pairs: Vec<(&Box<dyn ExplorationModule>, &Box<dyn DecisionModel>)> = emodules
+            .iter()
+            .flat_map(|e| identified.iter().map(move |m| (e, m)))
+            .collect();
+        let biddings: Vec<(
+            &Box<dyn ExplorationModule>,
+            usize,
+            &Box<dyn DecisionModel>,
+            ExplorationBid,
+        )> = pairs
+            .par_iter()
+            .flat_map(|(e, m)| {
+                e.bid(m)
+                    .into_par_iter()
+                    .enumerate()
+                    .map(|(k, b)| (*e, k, *m, b))
+            })
+            .filter(|(_, _, _, b)| b.can_explore)
+            .collect();
+        info!("Computed {} bidding(s) ", biddings.len());
+        let dominant_bidding_opt = idesyde_core::compute_dominant_biddings(
+            &biddings.iter().map(|(_, _, _, b)| b.to_owned()).collect(),
+        );
 
         // for (p, m) in load_decision_model_headers_from_binary(&identified_path) {
         //     let mut to_be_deleted = false;
@@ -360,27 +379,29 @@ fn main() {
         //         "Orchestrator",
         //     );
         // }
-        if let Some((e, m)) = dominant_biddings.first() {
+        if let Some((idx, dominant_bid)) = dominant_bidding_opt {
             debug!(
                 "Proceeding to explore {} with {}",
-                m.unique_identifier(),
-                e.unique_identifier()
+                dominant_bid.explorer_unique_identifier,
+                dominant_bid.decision_model_unique_identifier
             );
-        }
-        match (args.x_total_time_out, args.x_max_solutions) {
-            (Some(t), Some(n)) => info!(
-                "Starting exploration up to {} total time-out seconds and {} solutions.",
-                t, n
-            ),
-            (Some(t), None) => info!("Starting exploration up to {} total time-out seconds.", t),
-            (None, Some(n)) => info!("Starting exploration up to {} solutions.", n),
-            (None, None) => info!("Starting exploration until completion."),
-        }
-        if let Some((exp, decision_model)) = dominant_biddings.first() {
+            match (args.x_total_time_out, args.x_max_solutions) {
+                (Some(t), Some(n)) => info!(
+                    "Starting exploration up to {} total time-out seconds and {} solutions.",
+                    t, n
+                ),
+                (Some(t), None) => {
+                    info!("Starting exploration up to {} total time-out seconds.", t)
+                }
+                (None, Some(n)) => info!("Starting exploration up to {} solutions.", n),
+                (None, None) => info!("Starting exploration until completion."),
+            }
             // let (mut tx, rx) = spmc::channel();
-            let sols_found: Vec<Box<dyn DecisionModel>> = exp
+            let (chosen_exploration_module, chosen_idx, chosen_decision_model, _) = biddings[idx];
+            let sols_found: Vec<Box<dyn DecisionModel>> = chosen_exploration_module
                 .explore(
-                    &decision_model,
+                    &chosen_decision_model,
+                    chosen_idx,
                     args.x_max_solutions.unwrap_or(0),
                     args.x_total_time_out.unwrap_or(0),
                     args.x_time_resolution.unwrap_or(-1),
@@ -411,10 +432,7 @@ fn main() {
                                 "Orchestrator",
                             );
                             n_reversed += 1;
-                            debug!(
-                                "Reverse identified a {} design model.",
-                                reverse.unique_identifier()
-                            );
+                            debug!("Reverse identified a {} design model.", reverse.category());
                         }
                         n_reversed
                     })

@@ -16,22 +16,22 @@ import idesyde.common.PeriodicWorkloadAndSDFServerToMultiCore
 
 object ChocoExplorationModule extends StandaloneExplorationModule {
 
-  def combination(decisionModel: DecisionModel): ExplorationCombinationDescription = {
-    val combos = explorers.map(e => e.combination(decisionModel))
-    // keep only the dominant ones and take the biggest
-    combos
-      .filter(l => {
-        combos
-          .filter(_ != l)
-          .forall(r => {
-            l `<?>` r match {
-              case '>' | '=' => true
-              case _         => false
-            }
-          })
-      })
-      .head
-  }
+  // def combination(decisionModel: DecisionModel): ExplorationCombinationDescription = {
+  //   val combos = explorers.map(e => e.combination(decisionModel))
+  //   // keep only the dominant ones and take the biggest
+  //   combos
+  //     .filter(l => {
+  //       combos
+  //         .filter(_ != l)
+  //         .forall(r => {
+  //           l `<?>` r match {
+  //             case '>' | '=' => true
+  //             case _         => false
+  //           }
+  //         })
+  //     })
+  //     .head
+  // }
 
   given Fractional[Rational] = spire.compat.fractional[Rational]
 
@@ -41,7 +41,7 @@ object ChocoExplorationModule extends StandaloneExplorationModule {
 
   override def uniqueIdentifier: String = "ChocoExplorationModule"
 
-  def explorers = Set(ChocoExplorer())
+  override def explorers = List(ChocoExplorer())
 
   def decodeDecisionModels(m: DecisionModelHeader): Option[DecisionModel] = {
     m match {

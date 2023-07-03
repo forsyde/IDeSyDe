@@ -30,7 +30,7 @@ trait DecisionModel {
   /** This in theory should return the name of the class, but might be removed in the future if not
     * necessary or its generation gets automated.
     */
-  def uniqueIdentifier: String
+  def category: String
 
   /** This function is of great important because it is used to check whether this [[DecisionModel]]
     * is a good identification coverage of any set of [[idesyde.identification.DesignModel]] or not.
@@ -124,7 +124,7 @@ trait DecisionModel {
   //   coveredElementRelations.map(elementRelationID)
 
   def header: DecisionModelHeader = DecisionModelHeader(
-    uniqueIdentifier,
+    category,
     None,
     coveredElementIDs //++ coveredElementRelationIDs
   )

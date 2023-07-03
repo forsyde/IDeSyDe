@@ -61,6 +61,7 @@ trait StandaloneExplorationModule
                 Some(decisionModelToExplore),
                 timeResolution,
                 memoryResolution,
+                explorerIdxOpt,
                 maximumSolutions,
                 explorationTotalTimeOutInSecs
               ) =>
@@ -69,17 +70,33 @@ trait StandaloneExplorationModule
             val header = readBinary[DecisionModelHeader](os.read.bytes(decisionModelToExplore))
             decodeDecisionModels(header) match {
               case Some(m) =>
-                explore(
-                  m,
-                  explorationTotalTimeOutInSecs,
-                  maximumSolutions,
-                  timeResolution.getOrElse(-1L),
-                  memoryResolution.getOrElse(-1L)
-                ).zipWithIndex.foreach((solved, idx) => {
-                  val (hPath, bPath) =
-                    solved.writeToPath(solutionPath, f"$idx%016d", uniqueIdentifier)
-                  println(hPath.get)
-                })
+                explorerIdxOpt match {
+                  case Some(idx) =>
+                    explore(
+                      m,
+                      idx,
+                      explorationTotalTimeOutInSecs,
+                      maximumSolutions,
+                      timeResolution.getOrElse(-1L),
+                      memoryResolution.getOrElse(-1L)
+                    ).zipWithIndex.foreach((solved, idx) => {
+                      val (hPath, bPath) =
+                        solved.writeToPath(solutionPath, f"$idx%016d", uniqueIdentifier)
+                      println(hPath.get)
+                    })
+                  case None =>
+                    exploreBest(
+                      m,
+                      explorationTotalTimeOutInSecs,
+                      maximumSolutions,
+                      timeResolution.getOrElse(-1L),
+                      memoryResolution.getOrElse(-1L)
+                    ).zipWithIndex.foreach((solved, idx) => {
+                      val (hPath, bPath) =
+                        solved.writeToPath(solutionPath, f"$idx%016d", uniqueIdentifier)
+                      println(hPath.get)
+                    })
+                }
               case None =>
             }
           case ExplorationModuleConfiguration(
@@ -91,13 +108,14 @@ trait StandaloneExplorationModule
                 _,
                 _,
                 _,
+                _,
                 _
               ) =>
             val header = readBinary[DecisionModelHeader](os.read.bytes(decisionModelToGetCriterias))
             decodeDecisionModels(header) match {
-              case Some(m) => println(combination(m).asText)
-              case None =>
-                println(ExplorationCombinationDescription.impossible(uniqueIdentifier).asText)
+              case Some(m) => for (comb <- combination(m)) println(comb.asText)
+              case None    =>
+
             }
           case _ =>
         }

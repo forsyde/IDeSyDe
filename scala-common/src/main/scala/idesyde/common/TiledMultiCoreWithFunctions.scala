@@ -134,5 +134,5 @@ final case class TiledMultiCoreWithFunctions(
 
   def bodyAsBinary: Array[Byte] = writeBinary(this)
 
-  def uniqueIdentifier: String = "TiledMultiCoreWithFunctions"
+  def category: String = "TiledMultiCoreWithFunctions"
 }

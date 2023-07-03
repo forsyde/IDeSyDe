@@ -22,5 +22,5 @@ final case class SchedulableTiledMultiCore(
 
   def bodyAsText: String = write(this)
 
-  val uniqueIdentifier: String = "SchedulableTiledMultiCore"
+  val category: String = "SchedulableTiledMultiCore"
 }

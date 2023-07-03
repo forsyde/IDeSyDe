@@ -1,12 +1,12 @@
 pub mod headers;
 
 use std::{
-    collections::{HashMap, HashSet},
+    collections::HashSet,
     hash::Hash,
     path::{Path, PathBuf},
 };
 
-use downcast_rs::{impl_downcast, DowncastSync};
+use downcast_rs::{impl_downcast, Downcast, DowncastSync};
 use headers::{DecisionModelHeader, DesignModelHeader, ExplorationBid};
 use serde::de::DeserializeOwned;
 use std::cmp::Ordering;
@@ -24,7 +24,7 @@ use std::cmp::Ordering;
 /// Exhibition (DATE), 2021, pp. 1204-1207, doi: 10.23919/DATE51398.2021.9474082.
 ///
 pub trait DesignModel: Send + DowncastSync {
-    fn unique_identifier(&self) -> String;
+    fn category(&self) -> String;
 
     fn header(&self) -> DesignModelHeader;
 }
@@ -44,7 +44,7 @@ impl_downcast!(sync DesignModel);
 /// Exhibition (DATE), 2021, pp. 1204-1207, doi: 10.23919/DATE51398.2021.9474082.
 ///
 pub trait DecisionModel: Send + DowncastSync {
-    fn unique_identifier(&self) -> String;
+    fn category(&self) -> String;
 
     fn header(&self) -> DecisionModelHeader;
 
@@ -91,7 +91,7 @@ pub trait DecisionModel: Send + DowncastSync {
 impl_downcast!(sync DecisionModel);
 
 impl DecisionModel for DecisionModelHeader {
-    fn unique_identifier(&self) -> String {
+    fn category(&self) -> String {
         self.category.to_owned()
     }
 
@@ -102,7 +102,7 @@ impl DecisionModel for DecisionModelHeader {
 
 impl PartialEq<dyn DecisionModel> for dyn DecisionModel {
     fn eq(&self, other: &dyn DecisionModel) -> bool {
-        self.unique_identifier() == other.unique_identifier() && self.header() == other.header()
+        self.category() == other.category() && self.header() == other.header()
     }
 }
 
@@ -153,10 +153,28 @@ impl Hash for dyn IdentificationModule {
         self.unique_identifier().hash(state);
     }
 }
-
-pub trait ExplorationModule: Send + Sync {
+/// This trait is the root for all possible explorers within IDeSyDe. A real explorer should
+/// implement this trait by dispatching the real exploration from 'explore'.
+///
+/// The Design model is left a type parameter because the explorer might be used in a context where
+/// explorers for different decision models and design models are used together. A correct
+/// implemention of the explorer should then:
+///
+///   1. if the DesignModel is part of the possible design models covered, it should return a
+///      lazylist accodingly. 2. If the DesignModel si not part of the possible design models, then
+///      the explorer should return an empty lazy list. 3. If the decision model is unexplorable
+///      regardless, an empty list should be returned.
+///
+/// See [1] for some extra information on how the explorer fits the design space identifcation
+/// approach, as well as [[idesyde.exploration.api.ExplorationHandler]] to see how explorers used
+/// together in a generic context.
+///
+/// [1] R. Jordão, I. Sander and M. Becker, "Formulation of Design Space Exploration Problems by
+/// Composable Design Space Identification," 2021 Design, Automation & Test in Europe Conference &
+/// Exhibition (DATE), 2021, pp. 1204-1207, doi: 10.23919/DATE51398.2021.9474082.
+///
+pub trait Explorer: Downcast + Send + Sync {
     fn unique_identifier(&self) -> String;
-    fn available_criterias(&self, m: Box<dyn DecisionModel>) -> HashMap<String, f32>;
     fn bid(&self, m: &Box<dyn DecisionModel>) -> ExplorationBid;
     fn explore(
         &self,
@@ -167,6 +185,48 @@ pub trait ExplorationModule: Send + Sync {
         memory_resolution: i64,
     ) -> Box<dyn Iterator<Item = Box<dyn DecisionModel>>>;
 }
+impl_downcast!(Explorer);
+
+/// The trait/interface for an exploration module that provides the API for exploration [1].
+///
+/// [1] R. Jordão, I. Sander and M. Becker, "Formulation of Design Space Exploration Problems by
+/// Composable Design Space Identification," 2021 Design, Automation & Test in Europe Conference &
+/// Exhibition (DATE), 2021, pp. 1204-1207, doi: 10.23919/DATE51398.2021.9474082.
+///
+pub trait ExplorationModule: Send + Sync {
+    fn unique_identifier(&self) -> String;
+    fn bid(&self, m: &Box<dyn DecisionModel>) -> Vec<ExplorationBid>;
+    fn explore(
+        &self,
+        m: &Box<dyn DecisionModel>,
+        explorer_idx: usize,
+        max_sols: i64,
+        total_timeout: i64,
+        time_resolution: i64,
+        memory_resolution: i64,
+    ) -> Box<dyn Iterator<Item = Box<dyn DecisionModel>>>;
+    fn explore_best(
+        &self,
+        m: &Box<dyn DecisionModel>,
+        max_sols: i64,
+        total_timeout: i64,
+        time_resolution: i64,
+        memory_resolution: i64,
+    ) -> Box<dyn Iterator<Item = Box<dyn DecisionModel>>> {
+        let bids = self.bid(m);
+        match compute_dominant_biddings(&bids) {
+            Some((explorer_idx, _)) => self.explore(
+                m,
+                explorer_idx,
+                max_sols,
+                total_timeout,
+                time_resolution,
+                memory_resolution,
+            ),
+            None => Box::new(std::iter::empty()),
+        }
+    }
+}
 
 impl PartialEq<dyn ExplorationModule> for dyn ExplorationModule {
     fn eq(&self, other: &dyn ExplorationModule) -> bool {
@@ -175,6 +235,39 @@ impl PartialEq<dyn ExplorationModule> for dyn ExplorationModule {
 }
 
 impl Eq for dyn ExplorationModule {}
+
+pub struct StandaloneExplorationModule {
+    unique_identifier: String,
+    explorers: Vec<Box<dyn Explorer>>,
+}
+
+impl ExplorationModule for StandaloneExplorationModule {
+    fn unique_identifier(&self) -> String {
+        self.unique_identifier.to_owned()
+    }
+
+    fn bid(&self, m: &Box<dyn DecisionModel>) -> Vec<ExplorationBid> {
+        self.explorers.iter().map(|e| e.bid(m)).collect()
+    }
+
+    fn explore(
+        &self,
+        m: &Box<dyn DecisionModel>,
+        explorer_idx: usize,
+        max_sols: i64,
+        total_timeout: i64,
+        time_resolution: i64,
+        memory_resolution: i64,
+    ) -> Box<dyn Iterator<Item = Box<dyn DecisionModel>>> {
+        self.explorers[explorer_idx].explore(
+            m,
+            max_sols,
+            total_timeout,
+            time_resolution,
+            memory_resolution,
+        )
+    }
+}
 
 pub struct StandaloneIdentificationModule {
     unique_identifier: String,
@@ -312,6 +405,25 @@ impl IdentificationModule for StandaloneIdentificationModule {
     }
 }
 
+pub fn compute_dominant_biddings(
+    biddings: &Vec<ExplorationBid>,
+) -> Option<(usize, ExplorationBid)> {
+    biddings
+        .iter()
+        .enumerate()
+        .find(|(i, b)| {
+            biddings
+                .iter()
+                .enumerate()
+                .all(|(j, bb)| match b.partial_cmp(&bb) {
+                    Some(Ordering::Greater) | None => true,
+                    Some(Ordering::Equal) => i <= &j,
+                    _ => false,
+                })
+        })
+        .map(|(i, b)| (i, b.to_owned()))
+}
+
 pub fn load_decision_model<T: DecisionModel + DeserializeOwned>(
     path: &std::path::PathBuf,
 ) -> Option<T> {
@@ -378,7 +490,7 @@ macro_rules! impl_decision_model_standard_parts {
             }
         }
 
-        fn unique_identifier(&self) -> String {
+        fn category(&self) -> String {
             "$x".to_string()
         }
     };

@@ -44,10 +44,10 @@ trait DesignModel {
 
   def +(other: DesignModel) = merge(other)
 
-  def uniqueIdentifier: String
+  def category: String
 
   def header: DesignModelHeader = DesignModelHeader(
-    uniqueIdentifier,
+    category,
     Set(),
     elementIDs //++ elementRelationIDs
   )

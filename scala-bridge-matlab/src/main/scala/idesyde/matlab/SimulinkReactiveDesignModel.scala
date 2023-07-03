@@ -92,6 +92,6 @@ final case class SimulinkReactiveDesignModel(
       case _ => None
     }
 
-  def uniqueIdentifier: String = "SimulinkReactiveDesignModel"
+  def category: String = "SimulinkReactiveDesignModel"
 
 }

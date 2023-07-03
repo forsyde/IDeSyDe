@@ -22,5 +22,5 @@ final case class PeriodicWorkloadAndSDFServers(
   val processSizes: Vector[Long] = sdfApplications.actorSizes ++ workload.processSizes
 
   val messagesMaxSizes: Vector[Long] = workload.messagesMaxSizes ++ sdfApplications.messagesMaxSizes
-  val uniqueIdentifier: String       = "PeriodicWorkloadAndSDFServers"
+  val category: String       = "PeriodicWorkloadAndSDFServers"
 }

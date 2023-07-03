@@ -8,9 +8,18 @@ import cbor2
 
 @dataclass
 class ExplorationBid:
-    explorer: str
+    explorer_unique_identifier: str
+    decision_model_unique_identifier: str
     can_explore: bool = False
     criteria: Dict[str, float] = dict()
+
+    def to_json(self) -> str:
+        return json.dumps(asdict(self))
+
+    def __lt__(self, o: "ExplorationBid") -> bool:
+        if self.can_explore == o.can_explore and \
+            self.decision_model_unique_identifier == o.decision_model_unique_identifier:
+            return self.criteria.keys() == o.criteria.keys() and all(o.criteria[k] > v for (k, v) in self.criteria.items())
 
 
 @dataclass
@@ -280,6 +289,22 @@ class ExplorationModule:
         time_resolution: int = 0,
         memory_resolution: int = 0,
     ) -> Iterable[DecisionModel]:
-        yield self.explorers[explorer_index].explore(
+        for sol in self.explorers[explorer_index].explore(
             m, max_sols, total_timeout, time_resolution, memory_resolution
-        )
+        ):
+            yield sol
+
+    async def explore_best(
+        self,
+        m: DecisionModel,
+        max_sols: int = 0,
+        total_timeout: int = 0,
+        time_resolution: int = 0,
+        memory_resolution: int = 0,
+    ) -> Iterable[DecisionModel]:
+        combs = sorted(enumerate(self.bid(m)), key=lambda x: x[1])
+        explorer_index = combs[0][0]
+        for sol in self.explorers[explorer_index].explore(
+            m, max_sols, total_timeout, time_resolution, memory_resolution
+        ):
+            yield sol

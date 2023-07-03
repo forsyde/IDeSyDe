@@ -42,5 +42,5 @@ final case class SDFToTiledMultiCore(
 
   val bodyAsText: String = write(this)
 
-  val uniqueIdentifier: String = "SDFToTiledMultiCore"
+  val category: String = "SDFToTiledMultiCore"
 }

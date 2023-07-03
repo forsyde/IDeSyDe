@@ -191,7 +191,20 @@ impl DecisionModel for RuntimesAndProcessors {
     }
 }
 
-#[derive(Debug, PartialEq, Serialize, Deserialize, Clone, JsonSchema)]
+#[derive(
+    Debug,
+    PartialEq,
+    Serialize,
+    Deserialize,
+    Clone,
+    JsonSchema,
+    Debug,
+    PartialEq,
+    Serialize,
+    Deserialize,
+    Clone,
+    JsonSchema,
+)]
 pub struct PartitionedTiledMulticore {
     pub hardware: TiledMultiCore,
     pub runtimes: RuntimesAndProcessors,
@@ -222,6 +235,15 @@ impl DecisionModel for PartitionedTiledMulticore {
             covered_elements: elems.into_iter().collect(),
         }
     }
+}
+
+#[derive(Debug, PartialEq, Serialize, Deserialize, Clone, JsonSchema)]
+pub struct AsynchronousAperiodicDataflow {
+    pub processes: HashSet<String>,
+    pub job_graph_must_follow_src: Vec<(String, u32)>,
+    pub job_graph_must_follow_dst: Vec<(String, u32)>,
+    pub job_graph_may_follow_src: Vec<(String, u32)>,
+    pub job_graph_may_follow_dst: Vec<(String, u32)>,
 }
 
 pub fn identify_partitioned_tiled_multicore(

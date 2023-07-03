@@ -324,9 +324,8 @@ fn main() {
             .filter(|(_, _, _, b)| b.can_explore)
             .collect();
         info!("Computed {} bidding(s) ", biddings.len());
-        let dominant_bidding_opt = idesyde_core::compute_dominant_biddings(
-            &biddings.iter().map(|(_, _, _, b)| b.to_owned()).collect(),
-        );
+        let dominant_bidding_opt =
+            idesyde_core::compute_dominant_biddings(biddings.iter().map(|(_, _, _, b)| b));
 
         // for (p, m) in load_decision_model_headers_from_binary(&identified_path) {
         //     let mut to_be_deleted = false;
@@ -382,8 +381,8 @@ fn main() {
         if let Some((idx, dominant_bid)) = dominant_bidding_opt {
             debug!(
                 "Proceeding to explore {} with {}",
-                dominant_bid.explorer_unique_identifier,
-                dominant_bid.decision_model_unique_identifier
+                dominant_bid.decision_model_unique_identifier,
+                dominant_bid.explorer_unique_identifier
             );
             match (args.x_total_time_out, args.x_max_solutions) {
                 (Some(t), Some(n)) => info!(

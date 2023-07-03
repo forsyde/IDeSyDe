@@ -214,7 +214,7 @@ pub trait ExplorationModule: Send + Sync {
         memory_resolution: i64,
     ) -> Box<dyn Iterator<Item = Box<dyn DecisionModel>>> {
         let bids = self.bid(m);
-        match compute_dominant_biddings(&bids) {
+        match compute_dominant_biddings(bids.iter()) {
             Some((explorer_idx, _)) => self.explore(
                 m,
                 explorer_idx,
@@ -405,21 +405,15 @@ impl IdentificationModule for StandaloneIdentificationModule {
     }
 }
 
-pub fn compute_dominant_biddings(
-    biddings: &Vec<ExplorationBid>,
-) -> Option<(usize, ExplorationBid)> {
+pub fn compute_dominant_biddings<'a, I>(biddings: I) -> Option<(usize, ExplorationBid)>
+where
+    I: Iterator<Item = &'a ExplorationBid>,
+{
     biddings
-        .iter()
         .enumerate()
-        .find(|(i, b)| {
-            biddings
-                .iter()
-                .enumerate()
-                .all(|(j, bb)| match b.partial_cmp(&bb) {
-                    Some(Ordering::Greater) | None => true,
-                    Some(Ordering::Equal) => i <= &j,
-                    _ => false,
-                })
+        .reduce(|(i, b), (j, bb)| match b.partial_cmp(&bb) {
+            Some(Ordering::Less) => (j, bb),
+            _ => (i, b),
         })
         .map(|(i, b)| (i, b.to_owned()))
 }

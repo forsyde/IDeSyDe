@@ -73,7 +73,7 @@ final case class SDFApplicationWithFunctions(
       .map((srcdst, i) => (srcdst._1, srcdst._2, topologyEdgeValue(i)))
   )
 
-  def isSelfConcurrent(actor: String): Boolean = channelsIdentifiers.exists(c =>
+  def isSelfConcurrent(actor: String): Boolean = !channelsIdentifiers.exists(c =>
     dataflowGraphs(0).exists((a, cc, _) =>
       cc == c && dataflowGraphs(0).exists((ccc, a, _) => ccc == c)
     )

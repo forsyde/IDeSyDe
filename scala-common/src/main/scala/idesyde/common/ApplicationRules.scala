@@ -5,7 +5,7 @@ import idesyde.core.DecisionModel
 import idesyde.utils.Logger
 
 trait ApplicationRules {
-  def identSDFApplication(
+  def identCommonSDFApplication(
       models: Set[DesignModel],
       identified: Set[DecisionModel]
   )(using logger: Logger): Set[SDFApplication] = {
@@ -18,52 +18,29 @@ trait ApplicationRules {
         val actors   = sdfWithFunctions.actorsIdentifiers.toSet
         val channels = sdfWithFunctions.channelsIdentifiers.toSet
         SDFApplication(
-          actor_computational_needs = actors
-            .map(a =>
-              a -> sdfWithFunctions
-                .actorComputationalNeeds(sdfWithFunctions.actorsIdentifiers.indexOf(a))
-            )
-            .toMap,
-          actor_sizes = actors
-            .map(a =>
-              a -> sdfWithFunctions.actorSizes(sdfWithFunctions.actorsIdentifiers.indexOf(a))
-            )
-            .toMap,
           actors_identifiers = actors,
-          channel_num_initial_tokens = channels
-            .map(c =>
-              c -> sdfWithFunctions
-                .channelNumInitialTokens(sdfWithFunctions.channelsIdentifiers.indexOf(c))
-                .toLong
-            )
-            .toMap,
-          channel_token_sizes = channels
-            .map(c =>
-              c -> sdfWithFunctions
-                .channelTokenSizes(sdfWithFunctions.channelsIdentifiers.indexOf(c))
-            )
-            .toMap,
           channels_identifiers = channels,
-          minimum_actor_throughputs = actors
+          self_concurrent_actors = actors.filter(sdfWithFunctions.isSelfConcurrent),
+          actor_minimum_throughputs = actors
             .map(a =>
               a -> sdfWithFunctions
                 .minimumActorThroughputs(sdfWithFunctions.actorsIdentifiers.indexOf(a))
             )
             .toMap,
-          repetition_vector = actors
-            .map(a =>
-              a -> sdfWithFunctions
-                .sdfRepetitionVectors(sdfWithFunctions.actorsIdentifiers.indexOf(a))
-                .toLong
-            )
-            .toMap,
-          topological_and_heavy_job_ordering =
-            sdfWithFunctions.topologicalAndHeavyJobOrdering.map((a, q) => a).toVector,
-          topology_dsts = sdfWithFunctions.topologyDsts,
-          topology_edge_value = sdfWithFunctions.topologyEdgeValue.map(_.toLong),
-          topology_srcs = sdfWithFunctions.topologySrcs
+          topology_dsts =
+            sdfWithFunctions.sdfMessages.map((src, dst, channel, msize, prod, cons, toks) => dst),
+          topology_production =
+            sdfWithFunctions.sdfMessages.map((src, dst, channel, msize, prod, cons, toks) => prod),
+          topology_srcs =
+            sdfWithFunctions.sdfMessages.map((src, dst, channel, msize, prod, cons, toks) => src),
+          topology_consumption =
+            sdfWithFunctions.sdfMessages.map((src, dst, channel, msize, prod, cons, toks) => cons),
+          topology_initial_token =
+            sdfWithFunctions.sdfMessages.map((src, dst, channel, msize, prod, cons, toks) => toks),
+          topology_channel_names = sdfWithFunctions.sdfMessages
+            .map((src, dst, channels, msize, prod, cons, toks) => channels),
+          chain_maximum_latency = Map()
         )
       })
-    Set()
   }
 }

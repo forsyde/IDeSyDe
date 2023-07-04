@@ -25,7 +25,8 @@ object CommonIdentificationModule
     with CanParseIdentificationModuleConfiguration
     with MixedRules
     with PlatformRules
-    with WorkloadRules {
+    with WorkloadRules
+    with ApplicationRules {
 
   given Logger = logger
 
@@ -50,6 +51,7 @@ object CommonIdentificationModule
     MarkedIdentificationRule.DecisionModelOnlyIdentificationRule(identTaksAndSDFServerToMultiCore),
     MarkedIdentificationRule.DecisionModelOnlyIdentificationRule(identTiledFromShared),
     MarkedIdentificationRule.DecisionModelOnlyIdentificationRule(identTaskdAndSDFServer),
+    MarkedIdentificationRule.DecisionModelOnlyIdentificationRule(identCommonSDFApplication),
     MarkedIdentificationRule.SpecificDecisionModelOnlyIdentificationRule(
       identAggregatedCommunicatingAndTriggeredReactiveWorkload,
       Set("CommunicatingAndTriggeredReactiveWorkload")
@@ -66,6 +68,8 @@ object CommonIdentificationModule
     m match {
       case DecisionModelHeader("SDFApplicationWithFunctions", body_path, _) =>
         body_path.flatMap(decodeFromPath[SDFApplicationWithFunctions])
+      case DecisionModelHeader("SDFApplication", body_path, _) =>
+        body_path.flatMap(decodeFromPath[SDFApplication])
       case DecisionModelHeader("TiledMultiCoreWithFunctions", body_path, _) =>
         body_path.flatMap(decodeFromPath[TiledMultiCoreWithFunctions])
       case DecisionModelHeader("PartitionedCoresWithRuntimes", body_path, _) =>

@@ -80,18 +80,17 @@ impl DecisionModel for CommunicatingAndTriggeredReactiveWorkload {
 ///
 #[derive(Debug, PartialEq, Serialize, Deserialize, Clone, JsonSchema)]
 pub struct SDFApplication {
-    pub actors_identifiers: Vec<String>,
-    pub channels_identifiers: Vec<String>,
+    pub actors_identifiers: HashSet<String>,
+    pub self_concurrent_actors: HashSet<String>,
+    pub channels_identifiers: HashSet<String>,
     pub topology_srcs: Vec<String>,
     pub topology_dsts: Vec<String>,
-    pub topology_edge_value: Vec<i64>,
-    pub actor_sizes: HashMap<String, u64>,
-    pub actor_computational_needs: HashMap<String, HashMap<String, HashMap<String, u64>>>,
-    pub channel_num_initial_tokens: HashMap<String, i64>,
-    pub channel_token_sizes: HashMap<String, u64>,
-    pub minimum_actor_throughputs: HashMap<String, f64>,
-    pub repetition_vector: Vec<String>,
-    pub topological_and_heavy_job_ordering: Vec<String>,
+    pub topology_production: Vec<i64>,
+    pub topology_consumption: Vec<i64>,
+    pub topology_initial_token: Vec<i64>,
+    pub topology_channel_names: Vec<HashSet<String>>,
+    pub actor_minimum_throughputs: HashMap<String, f64>,
+    pub chain_maximum_latency: HashMap<String, HashMap<String, f64>>,
 }
 
 impl DecisionModel for SDFApplication {
@@ -101,12 +100,45 @@ impl DecisionModel for SDFApplication {
         let mut elems: HashSet<String> = HashSet::new();
         elems.extend(self.actors_identifiers.iter().map(|x| x.to_owned()));
         elems.extend(self.channels_identifiers.iter().map(|x| x.to_owned()));
-        for i in 0..self.topology_srcs.len() {
-            elems.insert(format!(
-                "{}={}:{}-{}:{}",
-                self.topology_edge_value[i], self.topology_srcs[i], "", self.topology_dsts[i], ""
-            ));
+        // for i in 0..self.topology_srcs.len() {
+        //     elems.insert(format!(
+        //         "({}, {}, {})={}:{}-{}:{}",
+        //         self.topology_production[i],
+        //         self.topology_production[i],
+        //         self.topology_initial_token[i],
+        //         self.topology_srcs[i],
+        //         "",
+        //         self.topology_dsts[i],
+        //         ""
+        //     ));
+        // }
+        DecisionModelHeader {
+            category: self.category(),
+            body_path: None,
+            covered_elements: elems.into_iter().collect(),
         }
+    }
+}
+
+/// Decision model for analysed synchronous dataflow graphs.
+///
+/// Aside from the same information in the original SDF application,
+/// it also includes liveness information like its repetition vector.
+///
+#[derive(Debug, PartialEq, Serialize, Deserialize, Clone, JsonSchema)]
+pub struct AnalysedSDFApplication {
+    pub sdf_application: SDFApplication,
+    pub repetition_vector: HashMap<String, u64>,
+    pub periodic_admissible_static_schedule: Vec<String>,
+}
+
+impl DecisionModel for AnalysedSDFApplication {
+    impl_decision_model_standard_parts!(AnalysedSDFApplication);
+
+    fn header(&self) -> DecisionModelHeader {
+        let mut elems: HashSet<String> = HashSet::new();
+        let sdfheader = self.sdf_application.header();
+        elems.extend(sdfheader.covered_elements.iter().map(|x| x.to_owned()));
         DecisionModelHeader {
             category: self.category(),
             body_path: None,

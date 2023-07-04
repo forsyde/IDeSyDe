@@ -23,7 +23,7 @@ final case class GecodeMiniZincExplorer() extends SimpleMiniZincCPExplorer {
   ): LazyList[DecisionModel] = LazyList.empty
 
   override def combination(decisionModel: DecisionModel): ExplorationCombinationDescription =
-    ExplorationCombinationDescription(uniqueIdentifier, false, Map())
+    ExplorationCombinationDescription.impossible(uniqueIdentifier, decisionModel.category)
 
   def uniqueIdentifier: String = "GecodeMiniZincExplorer"
 }

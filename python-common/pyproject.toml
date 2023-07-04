@@ -1,0 +1,16 @@
+[tool.poetry]
+name = "idesyde-common"
+version = "0.1.0"
+description = ""
+authors = ["Rodolfo Jordão <jordao@kth.se>"]
+readme = "README.md"
+packages = [{include = "idesyde"}]
+
+[tool.poetry.dependencies]
+python = "^3.11"
+cbor2 = "^5.4.6"
+
+
+[build-system]
+requires = ["poetry-core"]
+build-backend = "poetry.core.masonry.api"

@@ -1,7 +1,7 @@
 use serde::{Deserialize, Serialize};
 use std::{
     cmp::Ordering,
-    collections::HashMap,
+    collections::{HashMap, HashSet},
     hash::Hash,
     path::{Path, PathBuf},
 };
@@ -61,7 +61,7 @@ use crate::DesignModel;
 pub struct DesignModelHeader {
     pub category: String,
     pub model_paths: Vec<String>,
-    pub elements: Vec<String>,
+    pub elements: HashSet<String>,
     // pub relations: Vec<LabelledArcWithPorts>,
 }
 
@@ -183,7 +183,7 @@ pub fn load_design_model_headers_from_binary(header_path: &Path) -> Vec<DesignMo
 pub struct DecisionModelHeader {
     pub category: String,
     pub body_path: Option<String>,
-    pub covered_elements: Vec<String>,
+    pub covered_elements: HashSet<String>,
     // pub covered_relations: Vec<LabelledArcWithPorts>,
 }
 

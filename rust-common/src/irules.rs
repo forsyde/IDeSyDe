@@ -1,7 +1,14 @@
 use std::collections::HashMap;
 
 use idesyde_core::{DecisionModel, DesignModel};
-use petgraph::{algo::connected_components, Graph};
+use petgraph::{
+    algo::connected_components,
+    visit::{
+        Bfs, Dfs, GraphBase, IntoEdgeReferences, IntoNeighborsDirected, IntoNodeIdentifiers,
+        NodeCompactIndexable, Visitable,
+    },
+    Graph,
+};
 
 use crate::models::{
     PartitionedTiledMulticore, RuntimesAndProcessors, SDFApplication, TiledMultiCore,
@@ -51,40 +58,47 @@ pub fn identify_asynchronous_aperiodic_dataflow_from_sdf(
     let mut identified = Vec::new();
     for m in decision_models {
         if let Some(sdf_application) = m.downcast_ref::<SDFApplication>() {
-            let mut actors_graph: Graph<&str, &str, petgraph::Directed> = Graph::new();
+            let mut actors_graph: Graph<&str, (), petgraph::Directed> = Graph::new();
             let mut nodes = HashMap::new();
             for a in &sdf_application.actors_identifiers {
                 nodes.insert(a, actors_graph.add_node(a.as_str()));
             }
-            for (srci, dsti) in sdf_application
+            for (src, dst) in sdf_application
                 .topology_srcs
                 .iter()
                 .zip(sdf_application.topology_dsts.iter())
             {
-                if sdf_application.actors_identifiers.contains(srci) {
-                    for (srcj, dstj) in sdf_application
-                        .topology_srcs
-                        .iter()
-                        .zip(sdf_application.topology_dsts.iter())
-                    {
-                        if sdf_application.actors_identifiers.contains(dstj)
-                            && sdf_application.channels_identifiers.contains(dsti)
-                            && dsti == srcj
-                        {
-                            actors_graph.add_edge(
-                                nodes.get(srci).unwrap().to_owned(),
-                                nodes.get(dstj).unwrap().to_owned(),
-                                dsti,
-                            );
-                        }
-                    }
-                }
+                actors_graph.add_edge(
+                    nodes.get(src).unwrap().to_owned(),
+                    nodes.get(dst).unwrap().to_owned(),
+                    (),
+                );
             }
-            // if there is only one SDF subgraph, i.e. one application, proceed
-            if connected_components(&actors_graph) == 1 {}
+            let wccs = weakly_connected_components(&actors_graph);
+            for wcc in wccs {}
             // Graph::from_edges(edges.into_iter());
             // actors_graph.extend_with_edges(edges.into_iter());
         }
     }
     identified
+}
+
+pub fn weakly_connected_components<G>(g: G) -> Vec<Vec<G::NodeId>>
+where
+    G: IntoNeighborsDirected + Visitable + IntoNodeIdentifiers,
+{
+    let mut components = Vec::new();
+    let mut visited: Vec<<G as GraphBase>::NodeId> = Vec::new();
+    for node in g.node_identifiers() {
+        if !visited.contains(&node) {
+            let mut bfs = Bfs::new(g, node);
+            let mut new_component = Vec::new();
+            while let Some(v) = bfs.next(g) {
+                new_component.push(v);
+                visited.push(v);
+            }
+            components.push(new_component);
+        }
+    }
+    components
 }

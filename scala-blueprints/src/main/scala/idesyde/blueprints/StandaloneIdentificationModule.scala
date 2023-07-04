@@ -13,6 +13,7 @@ import idesyde.core.CompleteDecisionModel
 import idesyde.core.IdentificationModule
 import scala.collection.mutable
 import scala.collection.mutable.Buffer
+import scala.quoted._
 
 /** The trait/interface for an identification module that provides the identification and
   * integration rules required to power the design space identification process [1].

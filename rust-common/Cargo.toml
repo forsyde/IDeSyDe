@@ -14,3 +14,4 @@ ciborium.workspace = true
 env_logger.workspace = true
 log.workspace = true
 schemars.workspace = true
+petgraph.workspace = true

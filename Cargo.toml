@@ -22,8 +22,9 @@ ciborium = "0.2.1"
 rayon = "1.7"
 downcast-rs = "1.2.0"
 schemars = "0.8.12"
+petgraph = "0.6.3"
 
 [workspace.package]
-version = "0.5.10"
+version = "0.5.11"
 authors = ["Rodolfo Jordao"]
 edition = "2021"

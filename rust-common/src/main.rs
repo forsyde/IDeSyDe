@@ -1,7 +1,6 @@
 use std::collections::HashSet;
 
 use idesyde_blueprints::execute_standalone_identification_module;
-use idesyde_common::identify_partitioned_tiled_multicore;
 use idesyde_core::{
     decision_header_to_model_gen, decision_models_schemas_gen, load_decision_model, DecisionModel,
     StandaloneIdentificationModule,
@@ -12,22 +11,24 @@ fn main() {
     let common_module = StandaloneIdentificationModule::without_design_models(
         "CommonIdentificationModule",
         vec![
-            idesyde_core::MarkedIdentificationRule::DesignModelOnlyIdentificationRule(
-                identify_partitioned_tiled_multicore,
+            idesyde_core::MarkedIdentificationRule::DecisionModelOnlyIdentificationRule(
+                idesyde_common::irules::identify_partitioned_tiled_multicore,
             ),
         ],
         Vec::new(),
         decision_header_to_model_gen!(
-            idesyde_common::SDFApplication,
-            idesyde_common::TiledMultiCore,
-            idesyde_common::RuntimesAndProcessors,
-            idesyde_common::PartitionedTiledMulticore
+            idesyde_common::models::SDFApplication,
+            idesyde_common::models::TiledMultiCore,
+            idesyde_common::models::RuntimesAndProcessors,
+            idesyde_common::models::PartitionedTiledMulticore,
+            idesyde_common::models::AsynchronousAperiodicDataflow
         ),
         decision_models_schemas_gen!(
-            idesyde_common::SDFApplication,
-            idesyde_common::TiledMultiCore,
-            idesyde_common::RuntimesAndProcessors,
-            idesyde_common::PartitionedTiledMulticore
+            idesyde_common::models::SDFApplication,
+            idesyde_common::models::TiledMultiCore,
+            idesyde_common::models::RuntimesAndProcessors,
+            idesyde_common::models::PartitionedTiledMulticore,
+            idesyde_common::models::AsynchronousAperiodicDataflow
         ),
     );
     execute_standalone_identification_module(common_module);

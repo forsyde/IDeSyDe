@@ -39,7 +39,7 @@ build-rust:
     ENV RUSTUP_HOME=/rustup
     ENV CARGO_HOME=/cargo
     WORKDIR /rust-workdir
-    RUN apk --no-cache add --update curl bash build-base
+    RUN apk --no-cache add --update curl bash build-base mingw-w64-gcc mingw-w64-crt
     RUN curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh -s -- --default-toolchain none -y 
     COPY Cargo.toml .
     COPY --dir rust-core .
@@ -50,7 +50,8 @@ build-rust:
 
 build-rust-linux:
     FROM +build-rust
-    RUN source "/cargo/env" && rustup target add stable-x86_64-unknown-linux-musl
+    RUN source "/cargo/env" && rustup toolchain install stable-x86_64-unknown-linux-musl
+    RUN source "/cargo/env" && rustup target add x86_64-unknown-linux-musl
     RUN source "/cargo/env" && cargo build -r --target x86_64-unknown-linux-musl
     SAVE ARTIFACT target/x86_64-unknown-linux-musl/release/idesyde-common x86_64-unknown-linux/imodules/idesyde-rust-common 
     SAVE ARTIFACT target/x86_64-unknown-linux-musl/release/idesyde-common AS LOCAL dist/x86_64-unknown-linux/imodules/idesyde-rust-common 
@@ -59,7 +60,8 @@ build-rust-linux:
 
 build-rust-windows:
     FROM +build-rust
-    RUN source "/cargo/env" && rustup target add stable-x86_64-pc-windows-gnu
+    RUN source "/cargo/env" && rustup toolchain install stable-x86_64-pc-windows-gnu
+    RUN source "/cargo/env" && rustup target add x86_64-pc-windows-gnu
     RUN source "/cargo/env" && cargo build -r --target x86_64-pc-windows-gnu
     SAVE ARTIFACT target/x86_64-pc-windows-gnu/release/idesyde-common x86_64-windows-gnu/imodules/idesyde-rust-common 
     SAVE ARTIFACT target/x86_64-pc-windows-gnu/release/idesyde-common AS LOCAL dist/x86_64-windows-gnu/imodules/idesyde-rust-common 

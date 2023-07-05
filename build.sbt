@@ -24,6 +24,16 @@ lazy val emodulesTarget = file("emodules")
 
 lazy val publishModules = taskKey[File]("Copy and return modules")
 
+lazy val imoduleSettings = Seq(
+  publishModules := {
+    IO.createDirectory(imodulesTarget)
+    val jar    = assembly.value
+    val target = imodulesTarget / (name.value + ".jar")
+    IO.copyFile(jar, target)
+    target
+  }
+)
+
 lazy val root = project
   .in(file("."))
   .enablePlugins(ScalaUnidocPlugin)
@@ -42,14 +52,14 @@ lazy val root = project
   .aggregate(common, choco, forsyde, minizinc, matlab, devicetree, blueprints)
 
 lazy val core = (project in file("scala-core")).settings(
-  name := "idesyde-scala-core",
+  // name := "idesyde-scala-core",
   libraryDependencies ++= Seq("com.lihaoyi" %%% "upickle" % upickleVersion)
 )
 
 lazy val blueprints = (project in file("scala-blueprints"))
   .dependsOn(core)
   .settings(
-    name := "idesyde-scala-blueprints",
+    // name := "idesyde-scala-blueprints",
     libraryDependencies ++= Seq(
       "com.lihaoyi"      %%% "os-lib" % osLibVersion,
       "com.github.scopt" %%% "scopt"  % scoptVersion
@@ -68,19 +78,13 @@ lazy val common = (project in file("scala-common"))
   .enablePlugins(JDKPackagerPlugin)
   // .enablePlugins(GraalVMNativeImagePlugin)
   .settings(
-    name := "idesyde-scala-common",
+    // name := "idesyde-scala-common",
     libraryDependencies ++= Seq(
       ("org.scala-graph" %% "graph-core" % scalaGraphVersion).cross(CrossVersion.for3Use2_13),
       "org.typelevel"   %%% "spire"      % spireVersion
     ),
     mainClass := Some("idesyde.common.CommonIdentificationModule"),
-    publishModules := {
-      IO.createDirectory(imodulesTarget)
-      val jar    = assembly.value
-      val target = imodulesTarget / (projectInfo.value.nameFormal + ".jar")
-      IO.copyFile(jar, target)
-      target
-    },
+    imoduleSettings,
     licenses := Seq(
       "MIT"  -> url("https://opensource.org/license/mit/"),
       "APL2" -> url("https://www.apache.org/licenses/LICENSE-2.0")
@@ -99,7 +103,7 @@ lazy val forsyde = (project in file("scala-bridge-forsyde-io"))
   .enablePlugins(JDKPackagerPlugin)
   // .enablePlugins(GraalVMNativeImagePlugin)
   .settings(
-    name := "idesyde-scala-bridge-forsyde-io",
+    // name := "idesyde-scala-bridge-forsyde-io",
     libraryDependencies ++= Seq(
       "io.github.forsyde"  % "forsyde-io-java-core" % forsydeIoVersion,
       "io.github.forsyde"  % "forsyde-io-java-sdf3" % forsydeIoVersion,
@@ -155,7 +159,7 @@ lazy val minizinc = (project in file("scala-minizinc"))
   .dependsOn(common)
   .dependsOn(blueprints)
   .settings(
-    name := "idesyde-scala-minizinc",
+    // name := "idesyde-scala-minizinc",
     libraryDependencies ++= Seq(
       "com.lihaoyi" %% "upickle" % upickleVersion
     ),
@@ -175,7 +179,7 @@ lazy val choco = (project in file("scala-choco"))
   .enablePlugins(JDKPackagerPlugin)
   // .enablePlugins(GraalVMNativeImagePlugin)
   .settings(
-    name := "idesyde-scala-choco",
+    // name := "idesyde-scala-choco",
     libraryDependencies ++= Seq(
       "com.novocode"     % "junit-interface" % "0.11" % "test",
       "org.choco-solver" % "choco-solver"    % chocoSolverVersion,
@@ -227,7 +231,7 @@ lazy val matlab = (project in file("scala-bridge-matlab"))
   .dependsOn(common)
   .dependsOn(blueprints)
   .settings(
-    name := "idesyde-scala-bridge-matlab",
+    // name := "idesyde-scala-bridge-matlab",
     libraryDependencies ++= Seq(
       "org.scala-lang.modules" %%% "scala-parser-combinators" % scalaParserCombinatorsVersion,
       "com.lihaoyi"             %% "os-lib"                   % osLibVersion,
@@ -255,7 +259,7 @@ lazy val devicetree = (project in file("scala-bridge-device-tree"))
   .enablePlugins(UniversalPlugin, JavaAppPackaging, JlinkPlugin)
   .enablePlugins(JDKPackagerPlugin)
   .settings(
-    name := "idesyde-scala-bridge-devicetree",
+    // name := "idesyde-scala-bridge-device-tree",
     libraryDependencies ++= Seq(
       "org.scala-lang.modules" %%% "scala-parser-combinators" % scalaParserCombinatorsVersion,
       "com.lihaoyi"             %% "os-lib"                   % osLibVersion,

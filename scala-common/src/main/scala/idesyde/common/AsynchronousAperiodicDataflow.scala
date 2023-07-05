@@ -18,9 +18,9 @@ import idesyde.core.CompleteDecisionModel
   */
 final case class AsynchronousAperiodicDataflow(
     val buffer_max_sizes: Map[String, Long],
-    val job_graph_buffer_name: Vector[Vector[String]],
-    val job_graph_data_read: Vector[Vector[Long]],
-    val job_graph_data_sent: Vector[Vector[Long]],
+    val job_graph_buffer_name: Vector[Set[String]],
+    val job_graph_data_read: Vector[Long],
+    val job_graph_data_sent: Vector[Long],
     val job_graph_dst: Vector[Long],
     val job_graph_src: Vector[Long],
     val jobs_of_processes: Vector[String],

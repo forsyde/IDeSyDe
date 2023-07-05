@@ -85,9 +85,10 @@ pub struct SDFApplication {
     pub channels_identifiers: HashSet<String>,
     pub topology_srcs: Vec<String>,
     pub topology_dsts: Vec<String>,
-    pub topology_production: Vec<i64>,
-    pub topology_consumption: Vec<i64>,
-    pub topology_initial_token: Vec<i64>,
+    pub topology_production: Vec<u64>,
+    pub topology_consumption: Vec<u64>,
+    pub topology_initial_tokens: Vec<u64>,
+    pub topology_token_size_in_bits: Vec<u64>,
     pub topology_channel_names: Vec<HashSet<String>>,
     pub actor_minimum_throughputs: HashMap<String, f64>,
     pub chain_maximum_latency: HashMap<String, HashMap<String, f64>>,
@@ -271,13 +272,14 @@ impl DecisionModel for PartitionedTiledMulticore {
 #[derive(Debug, PartialEq, Serialize, Deserialize, Clone, JsonSchema)]
 pub struct AsynchronousAperiodicDataflow {
     pub processes: HashSet<String>,
+    pub buffers: HashSet<String>,
+    pub buffer_max_size_in_bits: HashMap<String, u64>,
+    pub process_put_in_buffer_in_bits: HashMap<String, HashMap<String, u64>>,
+    pub process_get_from_buffer_in_bits: HashMap<String, HashMap<String, u64>>,
     pub jobs_of_processes: Vec<String>,
-    pub job_graph_src: Vec<u32>,
-    pub job_graph_dst: Vec<u32>,
-    pub job_graph_data_sent: Vec<Vec<u64>>,
-    pub job_graph_data_read: Vec<Vec<u64>>,
-    pub job_graph_buffer_name: Vec<Vec<String>>,
-    pub buffer_max_sizes: HashMap<String, u64>,
+    pub job_graph_src: Vec<usize>,
+    pub job_graph_dst: Vec<usize>,
+    pub job_graph_is_strong_precedence: Vec<bool>,
     pub process_minimum_throughput: HashMap<String, f64>,
     pub process_path_maximum_latency: HashMap<String, HashMap<String, f64>>,
 }
@@ -288,12 +290,7 @@ impl DecisionModel for AsynchronousAperiodicDataflow {
     fn header(&self) -> DecisionModelHeader {
         let mut elems: HashSet<String> = HashSet::new();
         elems.extend(self.processes.iter().map(|x| x.to_owned()));
-        elems.extend(
-            self.job_graph_buffer_name
-                .iter()
-                .flatten()
-                .map(|x| x.to_owned()),
-        );
+        elems.extend(self.buffers.iter().map(|x| x.to_string()));
         DecisionModelHeader {
             category: self.category(),
             body_path: None,

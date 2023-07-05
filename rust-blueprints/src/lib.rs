@@ -11,31 +11,31 @@ use idesyde_core::{
 pub struct IdentificationModuleArgs {
     #[arg(
         short = 'm',
-        long,
+        long = "design-path",
         help = "The path where the design models (and headers) are stored."
     )]
     design_path_opt: Option<PathBuf>,
     #[arg(
         short = 'i',
-        long,
+        long = "identified-path",
         help = "The path where identified decision models (and headers) are stored."
     )]
     identified_path_opt: Option<PathBuf>,
     #[arg(
         short = 's',
-        long,
+        long = "solved-path",
         help = "The path where explored decision models (and headers) are stored."
     )]
     solved_path_opt: Option<PathBuf>,
     #[arg(
         short = 'r',
-        long,
+        long = "reverse-path",
         help = "The path where integrated design models (and headers) are stored."
     )]
     reverse_path_opt: Option<PathBuf>,
     #[arg(
         short = 'o',
-        long,
+        long = "output-path",
         help = "The path where final integrated design models are stored, in their original format."
     )]
     output_path_opt: Option<PathBuf>,

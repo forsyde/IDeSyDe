@@ -6,8 +6,6 @@ import configparser
 
 
 class BaseTest(unittest.TestCase):
-    parallel_lvl = min(5, os.cpu_count() or 1)
-
     def setUp(self) -> None:
         self.test_cases = dict()
         for root, dirs, files in os.walk("examples_and_benchmarks"):
@@ -15,8 +13,16 @@ class BaseTest(unittest.TestCase):
                 self.test_cases[root] = files
         if os.name == "nt":
             self.rust_built = subprocess.run(["cargo", "build"], shell=True)
+            shutil.copyfile(
+                "target" + os.path.sep + "debug" + os.path.sep + "idesyde-common.exe",
+                "imodules" + os.path.sep + "idesyde-rust-common.exe",
+            )
         else:
             self.rust_built = subprocess.run(["cargo", "build"])
+            shutil.copyfile(
+                "target" + os.path.sep + "debug" + os.path.sep + "idesyde-common",
+                "imodules" + os.path.sep + "idesyde-rust-common",
+            )
         if os.name == "nt":
             self.scala_built = subprocess.run(["sbt", "publishModules"], shell=True)
         else:
@@ -25,6 +31,7 @@ class BaseTest(unittest.TestCase):
             self.fail("Failed to build the rust parts")
         if self.scala_built.returncode != 0:
             self.fail("Failed to build the scala parts")
+        self.parallel_lvl = min(len(os.listdir("imodules")), os.cpu_count() or 1)
         self.test_slow = os.environ.get("TEST_SLOW", "no").lower() == "yes"
 
     def test_solutions(self) -> None:
@@ -55,7 +62,17 @@ class BaseTest(unittest.TestCase):
                 with self.subTest(path):
                     run_path = "testruns" + os.path.sep + path
                     os.makedirs(run_path)
-                    args = [ bin_path, "--run-path", run_path, "--x-max-solutions", "1", "-p", str(self.parallel_lvl), "-v", "debug" ] + [path + os.path.sep + f for f in files]
+                    args = [
+                        bin_path,
+                        "--run-path",
+                        run_path,
+                        "--x-max-solutions",
+                        "1",
+                        "-p",
+                        str(self.parallel_lvl),
+                        "-v",
+                        "debug",
+                    ] + [path + os.path.sep + f for f in files]
                     if os.name == "nt":
                         child = subprocess.run(args, shell=True)
                     else:

@@ -1,8 +1,9 @@
 VERSION 0.7
 
 
-build-scala:
+build-scala-all:
     ARG jdk='17'
+    ARG targets="x86_64-pc-windows-gnu x86_64-unknown-linux-musl"
     FROM amazoncorretto:$jdk-alpine-jdk
     WORKDIR /scala-workdir
     RUN apk --no-cache add --update curl bash
@@ -21,20 +22,20 @@ build-scala:
     COPY --dir scala-choco .
     COPY --dir scala-minizinc .
     RUN /coursier/sbt publishModules
-    FOR os IN x86_64-windows-gnu x86_64-unknown-linux
-        FOR imodule IN $(cd imodules && ls imodules/*.jar)
-            SAVE ARTIFACT imodules/${imodule} imodules/${os}/idesyde-scala-${imodule}
+    FOR target IN ${targets}
+        FOR imodule IN $(cd imodules && ls *.jar)
             RUN mv imodules/${imodule} imodules/idesyde-scala-${imodule}
         END
-        FOR emodule IN $(cd emodules && ls emodules/*.jar)
-            SAVE ARTIFACT emodules/${emodule} emodules/${os}/idesyde-scala-${emodule}
+        FOR emodule IN $(cd emodules && ls *.jar)
             RUN mv emodules/${emodule} emodules/idesyde-scala-${emodule}
         END
-        SAVE ARTIFACT imodules/* AS LOCAL dist/${os}/imodules
-        SAVE ARTIFACT emodules/* AS LOCAL dist/${os}/emodules
+        SAVE ARTIFACT imodules/* ${target}/imodules/
+        SAVE ARTIFACT emodules/* ${target}/emodules/
+        SAVE ARTIFACT imodules/* AS LOCAL dist/${target}/imodules/
+        SAVE ARTIFACT emodules/* AS LOCAL dist/${target}/emodules/
     END
     
-build-rust:
+build-rust-all:
     FROM alpine:latest
     ENV RUSTUP_HOME=/rustup
     ENV CARGO_HOME=/cargo
@@ -48,20 +49,40 @@ build-rust:
     COPY --dir rust-blueprints .
     COPY --dir rust-bridge-matlab-simulink .
 
-build-rust-linux:
-    FROM +build-rust
-    # RUN source "/cargo/env" && rustup toolchain install stable-x86_64-unknown-linux-musl
-    RUN source "/cargo/env" && rustup target add x86_64-unknown-linux-musl
-    RUN source "/cargo/env" && cargo build -r --target x86_64-unknown-linux-musl
-    SAVE ARTIFACT target/x86_64-unknown-linux-musl/release/idesyde-common x86_64-unknown-linux/imodules/idesyde-rust-common 
-    SAVE ARTIFACT target/x86_64-unknown-linux-musl/release/idesyde-common AS LOCAL dist/x86_64-unknown-linux/imodules/idesyde-rust-common 
-    SAVE ARTIFACT target/x86_64-unknown-linux-musl/release/idesyde-orchestration x86_64-unknown-linux/idesyde-orchestrator
-    SAVE ARTIFACT target/x86_64-unknown-linux-musl/release/idesyde-orchestration AS LOCAL dist/x86_64-unknown-linux/idesyde-orchestrator
+build-rust-linux-host:
+    FROM +build-rust-all
+    ARG targets=""
+    FOR target IN ${targets}
+        IF $(echo "${target}" | grep -q "windows")
+            RUN apk --no-cache add --update mingw-w64-gcc mingw-w64-crt
+        END
+        RUN source "/cargo/env" && rustup target add ${target}
+        RUN source "/cargo/env" && cargo build -r --target ${target}
+        IF $(echo "${target}" | grep -q "windows")
+            SAVE ARTIFACT target/${target}/release/idesyde-common.exe ${target}/imodules/idesyde-rust-common.exe
+            SAVE ARTIFACT target/${target}/release/idesyde-common.exe AS LOCAL dist/${target}/imodules/idesyde-rust-common.exe
+            SAVE ARTIFACT target/${target}/release/idesyde-orchestration.exe ${target}/idesyde-orchestrator.exe
+            SAVE ARTIFACT target/${target}/release/idesyde-orchestration.exe AS LOCAL dist/${target}/idesyde-orchestrator.exe
+        ELSE
+            SAVE ARTIFACT target/${target}/release/idesyde-common ${target}/imodules/idesyde-rust-common 
+            SAVE ARTIFACT target/${target}/release/idesyde-common AS LOCAL dist/${target}/imodules/idesyde-rust-common 
+            SAVE ARTIFACT target/${target}/release/idesyde-orchestration ${target}/idesyde-orchestrator
+            SAVE ARTIFACT target/${target}/release/idesyde-orchestration AS LOCAL dist/${target}/idesyde-orchestrator
+        END
+    END
 
-build-rust-windows:
-    FROM +build-rust
-    RUN apk --no-cache add --update mingw-w64-gcc mingw-w64-crt
-    # RUN source "/cargo/env" && rustup toolchain install stable-x86_64-pc-windows-gnu
+build-rust-windows-native:
+    FROM mcr.microsoft.com/windows/server:ltsc2022
+    ENV RUSTUP_HOME=/rustup
+    ENV CARGO_HOME=/cargo
+    WORKDIR /rust-workdir
+    RUN curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh -s -- --default-toolchain stable -y 
+    COPY Cargo.toml .
+    COPY --dir rust-core .
+    COPY --dir rust-common .
+    COPY --dir rust-orchestration .
+    COPY --dir rust-blueprints .
+    COPY --dir rust-bridge-matlab-simulink .
     RUN source "/cargo/env" && rustup target add x86_64-pc-windows-gnu
     RUN source "/cargo/env" && cargo build -r --target x86_64-pc-windows-gnu
     SAVE ARTIFACT target/x86_64-pc-windows-gnu/release/idesyde-common.exe x86_64-windows-gnu/imodules/idesyde-rust-common.exe
@@ -69,14 +90,34 @@ build-rust-windows:
     SAVE ARTIFACT target/x86_64-pc-windows-gnu/release/idesyde-orchestration.exe x86_64-windows-gnu/idesyde-orchestrator.exe
     SAVE ARTIFACT target/x86_64-pc-windows-gnu/release/idesyde-orchestration.exe AS LOCAL dist/x86_64-windows-gnu/idesyde-orchestrator.exe
 
-dist-linux:
-    BUILD +build-scala
-    BUILD +build-rust-linux
+zip-build:
+    FROM alpine:latest
+    ARG targets=""
+    ARG tag="no-tag"
+    WORKDIR /zipdir
+    RUN apk --no-cache add --update zip
+    FOR target IN ${targets}
+        COPY --dir +build-scala-all/${target}/* ${target}/
+        COPY --dir +build-rust-linux-host/${target}/* ${target}/
+        RUN cd ${target} && zip -r idesyde-${tag}-${target}.zip *
+        SAVE ARTIFACT ${target}/idesyde-${tag}-${target}.zip AS LOCAL dist/idesyde-${tag}-${target}.zip
+        RUN rm -r ${target}
+    END
 
-dist-windows:
-    BUILD +build-scala
-    BUILD +build-rust-windows
+dist-linux:
+    ARG tag="no-tag"
+    BUILD +build-scala-all --targets="x86_64-unknown-linux-musl"
+    BUILD +build-rust-linux-host --targets="x86_64-unknown-linux-musl"
+    BUILD +zip-build --targets="x86_64-unknown-linux-musl" --tag=${tag}
+
+dist-windows-cross:
+    ARG tag="no-tag"
+    BUILD +build-scala-all --targets="x86_64-pc-windows-gnu"
+    BUILD +build-rust-linux-host --targets="x86_64-pc-windows-gnu"
+    BUILD +zip-build --targets="x86_64-pc-windows-gnu" --tag=${tag}
 
 dist-all:
-    BUILD +dist-linux
-    BUILD +dist-windows
+    ARG tag="no-tag"
+    BUILD +build-scala-all --targets="x86_64-unknown-linux-musl x86_64-pc-windows-gnu"
+    BUILD +build-rust-linux-host --targets="x86_64-unknown-linux-musl x86_64-pc-windows-gnu"
+    BUILD +zip-build --targets="x86_64-unknown-linux-musl x86_64-pc-windows-gnu" --tag=${tag}

@@ -5,78 +5,32 @@ on:
     types: [created]
 
 jobs:
-  publish-windows-all:
-    runs-on: windows-latest
-    steps:
-    - uses: actions/checkout@v3
-    - name: Setup Rust
-      uses: ATiltedTree/setup-rust@v1
-      with:
-        rust-version: stable
-    - name: Build rust
-      run: |
-        cd ${{ github.workspace }}
-        cargo build -r
-        cp .\target\release\idesyde-orchestration.exe idesyde.exe
-    - name: Set up Java 
-      uses: actions/setup-java@v3
-      with:
-        distribution: 'corretto' # See 'Supported distributions' for available options
-        java-version: '11'
-    - name: Set up Scala
-      run: |
-        Invoke-WebRequest -Uri "https://github.com/coursier/launchers/raw/master/cs-x86_64-pc-win32.zip" -OutFile "cs-x86_64-pc-win32.zip"
-        Expand-Archive -Path "cs-x86_64-pc-win32.zip"
-        Rename-Item -Path "cs-x86_64-pc-win32.exe" -NewName "cs.exe"
-        Remove-Item -Path "cs-x86_64-pc-win32.zip"
-        .\cs.exe setup --yes
-    - name: Build assemblies with sbt
-      run: |
-        cd ${{ github.workspace }}
-        sbt publishModules
-    - name: Make zip
-      run: |
-        cd ${{ github.workspace }}
-        Compress-Archive idesyde.exe,emodules,imodules idesyde-windows-amd64.zip
-    - name: Upload binaries to release
-      uses: svenstaro/upload-release-action@v2
-      with:
-        repo_token: ${{ secrets.GITHUB_TOKEN }}
-        file: "${{ github.workspace }}\\idesyde-windows-amd64.zip"
-        asset_name: idesyde-windows-amd64.zip
-        tag: "${{ github.ref }}"
-        overwrite: true
-  publish-linux-all:
+  publish-all:
     runs-on: ubuntu-latest
     steps:
     - uses: actions/checkout@v3
-    - name: Setup Rust
-      uses: ATiltedTree/setup-rust@v1
+    - id: get_version
+      uses: battila7/get-version-action@v2
+    - uses: earthly/actions-setup@v1
       with:
-        rust-version: stable
-    - name: Build rust
-      run: |
-        rustup target add x86_64-unknown-linux-musl
-        cd ${{ github.workspace }}
-        cargo build -r --target x86_64-unknown-linux-musl
-        cp ./target/x86_64-unknown-linux-musl/release/idesyde-orchestration idesyde
-    - name: Set up Scala 
-      uses: olafurpg/setup-scala@v10
-      with:
-        java-version: "amazon-corretto@1.11.0-11.9.1"
-    - name: Build assemblies with sbt
-      run: |
-          cd ${{ github.workspace }}
-          sbt publishModules
-    - name: Make zip
+        version: v0.7.8
+    - name: Build everything
       run: |
         cd ${{ github.workspace }}
-        zip -r idesyde-linux-amd64.zip idesyde imodules emodules
-    - name: Upload binaries to release
+        earthly +dist-all --tag=${{ steps.get_version.outputs.version }}
+    - name: Upload windows binaries to release
       uses: svenstaro/upload-release-action@v2
       with:
         repo_token: ${{ secrets.GITHUB_TOKEN }}
-        file: ${{ github.workspace }}/idesyde-linux-amd64.zip
-        asset_name: idesyde-linux-amd64.zip
+        file: "${{ github.workspace }}/dist/idesyde-${{ steps.get_version.outputs.version }}-x86_64-pc-windows-gnu.zip"
+        asset_name: idesyde-${{ steps.get_version.outputs.version }}-x86_64-windows.zip
+        tag: "${{ github.ref }}"
+        overwrite: true
+    - name: Upload linux binaries to release
+      uses: svenstaro/upload-release-action@v2
+      with:
+        repo_token: ${{ secrets.GITHUB_TOKEN }}
+        file: "${{ github.workspace }}/dist/idesyde-${{ steps.get_version.outputs.version }}-x86_64-unknown-linux-musl.zip"
+        asset_name: idesyde-${{ steps.get_version.outputs.version }}-x86_64-linux.zip
         tag: "${{ github.ref }}"
         overwrite: true

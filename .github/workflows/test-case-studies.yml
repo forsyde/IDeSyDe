@@ -15,36 +15,15 @@ jobs:
   test-cases:
     strategy:
       matrix:
-        os: [ubuntu-latest, macos-latest, windows-latest]
-        java:
-          - "openjdk@1.11.0"
-          - "openjdk@1.15.0"
-          - "openjdk@1.17.0"
-          - "zulu@1.11.0"
-          - "zulu@1.15.0"
-          - "zulu@1.17.0"
-          # - "amazon-corretto@1.17.0-0.35.1"
-          - "amazon-corretto@1.11.0-11.9.1"
-          - "graalvm-ce-java11@21.1.0"
-        rust:
-          - stable
-          - beta
-          - nightly
-    runs-on: ${{ matrix.os }}
+        jdk_base: ["eclipse-temurin:11-alpine", "eclipse-temurin:17-alpine", "amazoncorretto:11-alpine-jdk", "amazoncorretto:17-alpine-jdk"]
+        target: [x86_64-unknown-linux-musl, x86_64-pc-windows-gnu]
+    runs-on: ubuntu-latest
     steps:
-    - uses: actions/checkout@v3
-    - name: Set up Scala ${{ matrix.java }}
-      uses: olafurpg/setup-scala@v10
-      with:
-        java-version: ${{ matrix.java }}
-    - name: Setup Rust
-      uses: ATiltedTree/setup-rust@v1
-      with:
-        rust-version: ${{ matrix.rust }}
-    - uses: actions/setup-python@v4
-      with:
-        python-version: '3.10' 
-    - name: Run tests with sbt
-      run: |
-        cd ${{ github.workspace }}
-        python -m unittest
+      - uses: actions/checkout@v3
+      - uses: earthly/actions-setup@v1
+        with:
+          version: v0.7.8
+      - name: Test cases
+        run: |
+          cd ${{ github.workspace }}
+          earthly +test-case-studies --jdk_base="${{ matrix.jdk_base }}" --targets="${{ matrix.target }}"

@@ -35,7 +35,7 @@ build-scala-all:
     END
     
 build-rust-all:
-    FROM bash:latest
+    FROM alpine:latest
     ENV RUSTUP_HOME=/rustup
     ENV CARGO_HOME=/cargo
     WORKDIR /rust-workdir
@@ -50,7 +50,7 @@ build-rust-all:
 
 build-rust-linux-host:
     FROM +build-rust-all
-    ARG targets=""
+    ARG targets="x86_64-unknown-linux-musl"
     FOR target IN ${targets}
         IF $(echo "${target}" | grep -q "windows")
             RUN apk --no-cache add --update mingw-w64-gcc mingw-w64-crt
@@ -90,8 +90,8 @@ build-rust-windows-native:
     SAVE ARTIFACT target/x86_64-pc-windows-gnu/release/idesyde-orchestration.exe AS LOCAL dist/x86_64-windows-gnu/idesyde-orchestrator.exe
 
 zip-build:
-    FROM bash:latest
-    ARG targets=""
+    FROM alpine:latest
+    ARG targets="x86_64-unknown-linux-musl"
     ARG tag="no-tag"
     WORKDIR /zipdir
     RUN apk --no-cache add --update zip
@@ -123,3 +123,22 @@ dist-all:
     BUILD +build-scala-all --targets="x86_64-unknown-linux-musl x86_64-pc-windows-gnu" --jdk_base=${jdk_base}
     BUILD +build-rust-linux-host --targets="x86_64-unknown-linux-musl x86_64-pc-windows-gnu"
     BUILD +zip-build --targets="x86_64-unknown-linux-musl x86_64-pc-windows-gnu" --tag=${tag}
+
+test-case-studies:
+    ARG test_slow="no"
+    ARG jdk_base='eclipse-temurin:11-alpine'
+    ARG targets="x86_64-unknown-linux-musl"
+    BUILD +build-scala-all --targets=${targets} --jdk_base=${jdk_base}
+    BUILD +build-rust-linux-host --targets=${targets}
+    FROM ${jdk_base}
+    ENV TEST_SLOW=${test_slow}
+    RUN apk --no-cache add --update python3 py3-pip
+    RUN python -m pip install robotframework
+    FOR target IN ${targets}
+        COPY --dir +build-scala-all/${target}/* ${target}/
+        COPY --dir +build-rust-linux-host/${target}/* ${target}/
+        COPY TestRobot.py ${target}/
+        COPY TestsBenchmark.robot ${target}/
+        RUN cd ${target}/
+        RUN robot ./TestsBenchmark.robot
+    END

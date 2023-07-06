@@ -2,14 +2,11 @@ VERSION 0.7
 
 
 build-scala-all:
-    ARG jdk='17'
+    ARG jdk_base='eclipse-temurin:11-alpine'
     ARG targets="x86_64-pc-windows-gnu x86_64-unknown-linux-musl"
-    FROM amazoncorretto:$jdk-alpine-jdk
-    WORKDIR /scala-workdir
-    RUN apk --no-cache add --update curl bash
-    RUN curl -fL "https://github.com/coursier/launchers/raw/master/cs-x86_64-pc-linux-static.gz" | gzip -d > cs
-    RUN chmod +x ./cs
-    RUN eval "$(./cs setup --env --apps coursier,cs,sbt,sbtn,scala,scalac --install-dir /coursier)"
+    FROM ${jdk_base}
+    WORKDIR scala-workdir
+    RUN apk --no-cache add --update curl
     COPY build.sbt build.sbt
     COPY project/plugins.sbt project/plugins.sbt
     COPY project/build.properties project/build.properties
@@ -21,7 +18,9 @@ build-scala-all:
     COPY --dir scala-bridge-matlab .
     COPY --dir scala-choco .
     COPY --dir scala-minizinc .
-    RUN /coursier/sbt publishModules
+    RUN curl -fL "https://github.com/coursier/launchers/raw/master/cs-x86_64-pc-linux-static.gz" | gzip -d > cs
+    RUN chmod +x ./cs
+    RUN eval "$(./cs setup --env --apps coursier,cs,sbt,sbtn,scala,scalac)" && ./cs launch sbt -- publishModules
     FOR target IN ${targets}
         FOR imodule IN $(cd imodules && ls *.jar)
             RUN mv imodules/${imodule} imodules/idesyde-scala-${imodule}
@@ -36,7 +35,7 @@ build-scala-all:
     END
     
 build-rust-all:
-    FROM alpine:latest
+    FROM bash:latest
     ENV RUSTUP_HOME=/rustup
     ENV CARGO_HOME=/cargo
     WORKDIR /rust-workdir
@@ -91,7 +90,7 @@ build-rust-windows-native:
     SAVE ARTIFACT target/x86_64-pc-windows-gnu/release/idesyde-orchestration.exe AS LOCAL dist/x86_64-windows-gnu/idesyde-orchestrator.exe
 
 zip-build:
-    FROM alpine:latest
+    FROM bash:latest
     ARG targets=""
     ARG tag="no-tag"
     WORKDIR /zipdir
@@ -106,18 +105,21 @@ zip-build:
 
 dist-linux:
     ARG tag="no-tag"
-    BUILD +build-scala-all --targets="x86_64-unknown-linux-musl"
+    ARG jdk_base='eclipse-temurin:11-alpine'
+    BUILD +build-scala-all --targets="x86_64-unknown-linux-musl" --jdk_base=${jdk_base}
     BUILD +build-rust-linux-host --targets="x86_64-unknown-linux-musl"
     BUILD +zip-build --targets="x86_64-unknown-linux-musl" --tag=${tag}
 
 dist-windows-cross:
     ARG tag="no-tag"
-    BUILD +build-scala-all --targets="x86_64-pc-windows-gnu"
+    ARG jdk_base='eclipse-temurin:11-alpine'
+    BUILD +build-scala-all --targets="x86_64-pc-windows-gnu" --jdk_base=${jdk_base}
     BUILD +build-rust-linux-host --targets="x86_64-pc-windows-gnu"
     BUILD +zip-build --targets="x86_64-pc-windows-gnu" --tag=${tag}
 
 dist-all:
     ARG tag="no-tag"
-    BUILD +build-scala-all --targets="x86_64-unknown-linux-musl x86_64-pc-windows-gnu"
+    ARG jdk_base='eclipse-temurin:11-alpine'
+    BUILD +build-scala-all --targets="x86_64-unknown-linux-musl x86_64-pc-windows-gnu" --jdk_base=${jdk_base}
     BUILD +build-rust-linux-host --targets="x86_64-unknown-linux-musl x86_64-pc-windows-gnu"
     BUILD +zip-build --targets="x86_64-unknown-linux-musl x86_64-pc-windows-gnu" --tag=${tag}

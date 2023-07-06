@@ -1,5 +1,5 @@
 ---
-name: "Building executables"
+name: "Building IDeSyDe modules and executables"
 
 on:
   push:
@@ -10,49 +10,37 @@ on:
     types: [opened, reopened]
 
 concurrency:
-  group: Building executables @ ${{ github.ref }}
+  group: test-build @ ${{ github.ref }}
   cancel-in-progress: true
 
 jobs:
   test-scala-build:
     strategy:
       matrix:
-        os: [ubuntu-latest, macos-latest, windows-latest]
-        java:
-          - "openjdk@1.11.0"
-          - "openjdk@1.15.0"
-          - "openjdk@1.17.0"
-          - "zulu@1.11.0"
-          - "zulu@1.15.0"
-          - "zulu@1.17.0"
-          # - "amazon-corretto@1.17.0-0.35.1"
-          - "amazon-corretto@1.11.0-11.9.1"
-          - "graalvm-ce-java11@21.1.0"
+        jdk_base: [eclipse-temurin:11-alpine, eclipse-temurin:17-alpine, amazoncorretto:11-alpine-jdk, amazoncorretto:17-alpine-jdk]
       fail-fast: false
-    runs-on: ${{ matrix.os }}
+    runs-on: ubuntu-latest
     steps:
     - uses: actions/checkout@v3
-    - name: Set up JDK ${{ matrix.java }}
-      uses: olafurpg/setup-scala@v10
+    - uses: earthly/actions-setup@v1
       with:
-        java-version: ${{ matrix.java }}
-    - name: Build assembly with sbt
+        version: v0.7.8
+    - name: Build scala
       run: |
         cd ${{ github.workspace }}
-        sbt publishModules
+        earthly +build-scala-all --jdk_base=${{ matrix.jdk_base }}
   test-rust-build:
     strategy:
       matrix:
-        os: [ubuntu-latest, macos-latest, windows-latest]
+        target: [x86_64-unknown-linux-musl, x86_64-pc-windows-gnu]
       fail-fast: false
-    runs-on: ${{ matrix.os }}
+    runs-on: ubuntu-latest
     steps:
     - uses: actions/checkout@v3
-    - name: Setup Rust
-      uses: ATiltedTree/setup-rust@v1
+    - uses: earthly/actions-setup@v1
       with:
-        rust-version: stable
+        version: v0.7.8
     - name: Build rust
       run: |
         cd ${{ github.workspace }}
-        cargo build -r
+        earthly +build-rust-linux-host --targets="${{ matrix.target }}"

@@ -139,6 +139,5 @@ test-case-studies:
         COPY --dir +build-rust-linux-host/${target}/* ${target}/
         COPY TestRobot.py ${target}/
         COPY TestsBenchmark.robot ${target}/
-        RUN cd ${target}/
-        RUN robot ./TestsBenchmark.robot
+        RUN cd ${target} && robot TestsBenchmark.robot
     END

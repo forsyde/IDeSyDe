@@ -23,10 +23,16 @@ build-scala-all:
     RUN eval "$(./cs setup --env --apps coursier,cs,sbt,sbtn,scala,scalac)" && ./cs launch sbt -- publishModules
     FOR target IN ${targets}
         FOR imodule IN $(cd imodules && ls *.jar)
-            RUN mv imodules/${imodule} imodules/idesyde-scala-${imodule}
+            IF $(echo "${imodule}" | grep -q "idesyde-scala")
+            ELSE
+                RUN mv imodules/${imodule} imodules/idesyde-scala-${imodule}
+            END
         END
         FOR emodule IN $(cd emodules && ls *.jar)
-            RUN mv emodules/${emodule} emodules/idesyde-scala-${emodule}
+            IF $(echo "${emodule}" | grep -q "idesyde-scala")
+            ELSE
+                RUN mv emodules/${emodule} emodules/idesyde-scala-${emodule}
+            END
         END
         SAVE ARTIFACT imodules/* ${target}/imodules/
         SAVE ARTIFACT emodules/* ${target}/emodules/
@@ -142,4 +148,5 @@ test-case-studies:
         COPY *.py /testing/${target}/
         COPY *.robot /testing/${target}/
         RUN cd /testing/${target} && robot TestsBenchmark.robot
+        SAVE ARTIFACT /testing/${target}/report.html AS LOCAL test_report.html
     END

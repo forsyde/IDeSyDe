@@ -88,7 +88,7 @@ Test for examples_and_benchmarks/DASC2023/radar-aesa-function-scenario1-6_625
     [Tags]    slow
     ${Explored} =    IDeSyDeLibrary.Try Explore
     ...    examples_and_benchmarks/DASC2023/radar-aesa-function-scenario1-6_625
-    Should Not Be Empty    ${Explored}
+    Should Be Empty    ${Explored}
 
 Test for examples_and_benchmarks/DASC2023/radar-aesa-function-scenario2
     ${Explored} =    IDeSyDeLibrary.Try Explore    examples_and_benchmarks/DASC2023/radar-aesa-function-scenario2

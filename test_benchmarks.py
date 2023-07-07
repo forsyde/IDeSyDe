@@ -36,7 +36,7 @@ class BaseTest(unittest.TestCase):
 
     def test_solutions(self) -> None:
         bin_path = (
-            "target" + os.path.sep + "debug" + os.path.sep + "idesyde-orchestration"
+            "target" + os.path.sep + "debug" + os.path.sep + "idesyde-orchestrator"
         )
         if os.name == "nt":
             bin_path += ".exe"
@@ -86,54 +86,6 @@ class BaseTest(unittest.TestCase):
                         self.assertTrue(
                             len(os.listdir(run_path + os.path.sep + "explored")) == 0
                         )
-
-    # def test_no_solution(self) -> None:
-    #     bin_path = (
-    #         "target" + os.path.sep + "debug" + os.path.sep + "idesyde-orchestration"
-    #     )
-    #     if os.name == "nt":
-    #         bin_path += ".exe"
-    #     for path, files in self.test_cases.items():
-    #         config = configparser.ConfigParser()
-    #         config.read(path + os.path.sep + "testcase.cfg")
-    #         has_solution = (
-    #             (config["solutions"]["has-solution"] or "true").lower() == "true"
-    #             if "testcase.cfg" in files
-    #             else True
-    #         )
-    #         is_slow = (
-    #             (
-    #                 "slow" in config["solutions"]
-    #                 and config["solutions"]["slow"]
-    #                 or "false"
-    #             ).lower()
-    #             == "true"
-    #             if "testcase.cfg" in files
-    #             else False
-    #         )
-    #         if not has_solution and not is_slow:
-    #             with self.subTest(path):
-    #                 run_path = "testruns" + os.path.sep + path
-    #                 os.makedirs(run_path)
-    #                 child = subprocess.run(
-    #                     [
-    #                         bin_path,
-    #                         "--run-path",
-    #                         run_path,
-    #                         "--x-max-solutions",
-    #                         "1",
-    #                         "-p",
-    #                         str(self.parallel_lvl),
-    #                         "-v",
-    #                         "debug",
-    #                     ]
-    #                     + [path + os.path.sep + f for f in files],
-    #                     shell=True,
-    #                 )
-    #                 self.assertEqual(child.returncode, 0)
-    #                 self.assertTrue(
-    #                     len(os.listdir(run_path + os.path.sep + "explored")) == 0
-    #                 )
 
     def tearDown(self) -> None:
         shutil.rmtree("testruns")

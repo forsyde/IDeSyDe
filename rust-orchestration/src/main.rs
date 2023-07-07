@@ -381,8 +381,7 @@ fn main() {
         if let Some((idx, dominant_bid)) = dominant_bidding_opt {
             debug!(
                 "Proceeding to explore {} with {}",
-                dominant_bid.decision_model_unique_identifier,
-                dominant_bid.explorer_unique_identifier
+                dominant_bid.decision_model_category, dominant_bid.explorer_unique_identifier
             );
             match (args.x_total_time_out, args.x_max_solutions) {
                 (Some(t), Some(n)) => info!(

@@ -138,7 +138,8 @@ test-case-studies:
     FOR target IN ${targets}
         COPY --dir +build-scala-all/${target}/* /testing/${target}/
         COPY --dir +build-rust-linux-host/${target}/* /testing/${target}/
-        COPY TestRobot.py /testing/${target}/
-        COPY TestsBenchmark.robot /testing/${target}/
+        COPY --dir examples_and_benchmarks /testing/${target}/
+        COPY *.py /testing/${target}/
+        COPY *.robot /testing/${target}/
         RUN cd /testing/${target} && robot TestsBenchmark.robot
     END

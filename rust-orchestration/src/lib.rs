@@ -223,7 +223,7 @@ impl ExplorationModule for ExternalExplorationModule {
                     );
                     ExplorationBid {
                         explorer_unique_identifier: self.unique_identifier(),
-                        decision_model_unique_identifier: m.category(),
+                        decision_model_category: m.category(),
                         can_explore: false,
                         properties: HashMap::new(),
                     }

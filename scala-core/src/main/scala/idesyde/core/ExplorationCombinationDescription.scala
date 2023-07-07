@@ -3,13 +3,12 @@ package idesyde.core
 import upickle.default._
 
 import idesyde.core.Explorer
-import idesyde.core.headers.ExplorationCombinationHeader
 import idesyde.core.headers.ExplorerHeader
 import idesyde.core.ExplorationCriteria
 
 final case class ExplorationCombinationDescription(
     val explorer_unique_identifier: String,
-    val decision_model_unique_identifier: String,
+    val decision_model_category: String,
     val can_explore: Boolean,
     val properties: Map[String, Double]
 ) derives ReadWriter {

@@ -94,9 +94,9 @@ class IDeSyDeLibrary:
             if "testcase.cfg" in files
             else False
         )
+        run_path = test_workdir + os.path.sep + path
+        os.makedirs(run_path, exist_ok=True)
         if not is_slow or is_slow == test_slow:
-            run_path = test_workdir + os.path.sep + path
-            os.makedirs(run_path, exist_ok=True)
             args = [
                 bin_path,
                 "--run-path",

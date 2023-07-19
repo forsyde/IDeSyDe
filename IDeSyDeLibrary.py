@@ -81,11 +81,6 @@ class IDeSyDeLibrary:
         files = os.listdir(path)
         config = configparser.ConfigParser()
         config.read(path + os.path.sep + "testcase.cfg")
-        has_solution = (
-            (config["solutions"]["has-solution"] or "true").lower() == "true"
-            if "testcase.cfg" in files
-            else True
-        )
         is_slow = (
             (
                 "slow" in config["solutions"] and config["solutions"]["slow"] or "false"

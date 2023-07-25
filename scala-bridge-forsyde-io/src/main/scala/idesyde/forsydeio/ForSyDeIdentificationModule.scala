@@ -11,14 +11,16 @@ import idesyde.core.DecisionModel
 import idesyde.core.headers.DecisionModelHeader
 import idesyde.core.DesignModel
 import idesyde.core.headers.DesignModelHeader
-import forsyde.io.java.drivers.ForSyDeModelHandler
+import forsyde.io.core.ModelHandler
 import idesyde.forsydeio.ForSyDeDesignModel
 import java.nio.file.Paths
 import os.Path
-import forsyde.io.java.sdf3.drivers.ForSyDeSDF3Driver
 import idesyde.common.SDFToTiledMultiCore
 import idesyde.common.PeriodicWorkloadToPartitionedSharedMultiCore
 import java.nio.file.Files
+import forsyde.io.bridge.sdf3.drivers.SDF3Driver
+import forsyde.io.lib.ForSyDeHierarchy
+import forsyde.io.lib.TraitNamesFrom0_6To0_7
 
 object ForSyDeIdentificationModule
     extends StandaloneIdentificationModule
@@ -39,8 +41,10 @@ object ForSyDeIdentificationModule
     }
   }
 
-  val modelHandler = ForSyDeModelHandler()
-    .registerDriver(new ForSyDeSDF3Driver())
+  val modelHandler = ModelHandler()
+    .registerDriver(SDF3Driver())
+    .registerTraitHierarchy(ForSyDeHierarchy())
+    .registerSystemGraphMigrator(TraitNamesFrom0_6To0_7())
   // .registerDriver(new ForSyDeAmaltheaDriver())
 
   val identificationRules = Set(

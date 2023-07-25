@@ -6,25 +6,20 @@ import idesyde.core.DesignModel
 import idesyde.core.DecisionModel
 import idesyde.utils.Logger
 import idesyde.common.TiledMultiCoreWithFunctions
-import forsyde.io.java.typed.viewers.platform.GenericProcessingModule
-import forsyde.io.java.typed.viewers.platform.GenericMemoryModule
-import forsyde.io.java.typed.viewers.platform.GenericCommunicationModule
 import idesyde.forsydeio.ForSyDeDesignModel
-import forsyde.io.java.typed.viewers.platform.DigitalModule
 import scala.collection.mutable.Buffer
-import forsyde.io.java.typed.viewers.platform.InstrumentedCommunicationModule
-import forsyde.io.java.typed.viewers.platform.InstrumentedProcessingModule
 import scala.collection.mutable
 import spire.math.Rational
 import idesyde.common.PartitionedCoresWithRuntimes
-import forsyde.io.java.typed.viewers.platform.runtime.AbstractScheduler
-import forsyde.io.java.core.ForSyDeSystemGraph
-import forsyde.io.java.typed.viewers.platform.runtime.FixedPriorityScheduler
-import forsyde.io.java.typed.viewers.platform.runtime.StaticCyclicScheduler
 import idesyde.common.SharedMemoryMultiCore
 import idesyde.identification.forsyde.ForSyDeIdentificationUtils
 import org.jgrapht.graph.AsSubgraph
 import org.jgrapht.alg.connectivity.ConnectivityInspector
+import forsyde.io.lib.platform.hardware.GenericProcessingModule
+import forsyde.io.lib.platform.runtime.AbstractRuntime
+import forsyde.io.lib.ForSyDeHierarchy
+import forsyde.io.lib.platform.hardware.GenericMemoryModule
+import forsyde.io.lib.platform.hardware.GenericCommunicationModule
 
 trait PlatformRules {
 
@@ -34,14 +29,14 @@ trait PlatformRules {
   )(using logger: Logger): Set[PartitionedCoresWithRuntimes] = {
     ForSyDeIdentificationUtils.toForSyDe(models) { model =>
       var processingElements = Buffer[GenericProcessingModule]()
-      var runtimeElements    = Buffer[AbstractScheduler]()
+      var runtimeElements    = Buffer[AbstractRuntime]()
       model.vertexSet.stream
         .forEach(v => {
-          GenericProcessingModule
-            .safeCast(v)
+          ForSyDeHierarchy.GenericProcessingModule
+            .tryView(model, v)
             .ifPresent(p => processingElements :+= p)
-          AbstractScheduler
-            .safeCast(v)
+          ForSyDeHierarchy.AbstractRuntime
+            .tryView(model, v)
             .ifPresent(p => runtimeElements :+= p)
         })
       lazy val allocated = processingElements.map(pe => {
@@ -59,15 +54,33 @@ trait PlatformRules {
             allocated.map(_.get.getIdentifier()).toVector,
             allocated
               .map(_.get)
-              .map(v => !FixedPriorityScheduler.conforms(v) && !StaticCyclicScheduler.conforms(v))
+              .map(v =>
+                !ForSyDeHierarchy.FixedPriorityScheduledRuntime
+                  .tryView(v)
+                  .isPresent() && !ForSyDeHierarchy.SuperLoopRuntime
+                  .tryView(v)
+                  .isPresent()
+              )
               .toVector,
             allocated
               .map(_.get)
-              .map(v => FixedPriorityScheduler.conforms(v) && !StaticCyclicScheduler.conforms(v))
+              .map(v =>
+                ForSyDeHierarchy.FixedPriorityScheduledRuntime
+                  .tryView(v)
+                  .isPresent() && !ForSyDeHierarchy.SuperLoopRuntime
+                  .tryView(v)
+                  .isPresent()
+              )
               .toVector,
             allocated
               .map(_.get)
-              .map(v => !FixedPriorityScheduler.conforms(v) && StaticCyclicScheduler.conforms(v))
+              .map(v =>
+                !ForSyDeHierarchy.FixedPriorityScheduledRuntime
+                  .tryView(v)
+                  .isPresent() && ForSyDeHierarchy.SuperLoopRuntime
+                  .tryView(v)
+                  .isPresent()
+              )
               .toVector
           )
         )
@@ -92,16 +105,16 @@ trait PlatformRules {
     var memoryElements        = Buffer.empty[GenericMemoryModule]
     var communicationElements = Buffer.empty[GenericCommunicationModule]
     model.vertexSet.stream
-      .filter(v => DigitalModule.conforms(v))
+      .filter(v => ForSyDeHierarchy.DigitalModule.tryView(model, v).isPresent())
       .forEach(v => {
-        GenericProcessingModule
-          .safeCast(v)
+        ForSyDeHierarchy.GenericProcessingModule
+          .tryView(model, v)
           .ifPresent(p => processingElements :+= p)
-        GenericMemoryModule
-          .safeCast(v)
+        ForSyDeHierarchy.GenericMemoryModule
+          .tryView(model, v)
           .ifPresent(p => memoryElements :+= p)
-        GenericCommunicationModule
-          .safeCast(v)
+        ForSyDeHierarchy.GenericCommunicationModule
+          .tryView(model, v)
           .ifPresent(p => communicationElements :+= p)
       })
     val topology = AsSubgraph(
@@ -117,15 +130,23 @@ trait PlatformRules {
         .outgoingEdgesOf(pe.getViewedVertex)
         .stream
         .map(topology.getEdgeTarget(_))
-        .filter(DigitalModule.conforms(_))
-        .allMatch(v => GenericCommunicationModule.conforms(v) || GenericMemoryModule.conforms(v))
+        .filter(ForSyDeHierarchy.DigitalModule.tryView(model, _).isPresent())
+        .allMatch(v =>
+          ForSyDeHierarchy.GenericCommunicationModule
+            .tryView(model, v)
+            .isPresent() || ForSyDeHierarchy.GenericMemoryModule.tryView(model, v).isPresent()
+        )
       &&
       topology
         .incomingEdgesOf(pe.getViewedVertex)
         .stream
         .map(topology.getEdgeSource(_))
-        .filter(DigitalModule.conforms(_))
-        .allMatch(v => GenericCommunicationModule.conforms(v) || GenericMemoryModule.conforms(v))
+        .filter(ForSyDeHierarchy.DigitalModule.tryView(model, _).isPresent())
+        .allMatch(v =>
+          ForSyDeHierarchy.GenericCommunicationModule
+            .tryView(model, v)
+            .isPresent() || ForSyDeHierarchy.GenericMemoryModule.tryView(model, v).isPresent()
+        )
     })
     // do the same for MEs
     lazy val memoryOnlyValidLinks = memoryElements.forall(me => {
@@ -133,18 +154,22 @@ trait PlatformRules {
         .outgoingEdgesOf(me.getViewedVertex)
         .stream
         .map(topology.getEdgeTarget(_))
-        .filter(DigitalModule.conforms(_))
+        .filter(ForSyDeHierarchy.DigitalModule.tryView(model, _).isPresent())
         .allMatch(v =>
-          GenericCommunicationModule.conforms(v) || GenericProcessingModule.conforms(v)
+          ForSyDeHierarchy.GenericCommunicationModule
+            .tryView(model, v)
+            .isPresent() || ForSyDeHierarchy.GenericProcessingModule.tryView(model, v).isPresent()
         )
       &&
       topology
         .incomingEdgesOf(me.getViewedVertex)
         .stream
         .map(topology.getEdgeSource(_))
-        .filter(DigitalModule.conforms(_))
+        .filter(ForSyDeHierarchy.DigitalModule.tryView(model, _).isPresent())
         .allMatch(v =>
-          GenericCommunicationModule.conforms(v) || GenericProcessingModule.conforms(v)
+          ForSyDeHierarchy.GenericCommunicationModule
+            .tryView(model, v)
+            .isPresent() || ForSyDeHierarchy.GenericProcessingModule.tryView(model, v).isPresent()
         )
     })
     // check if the elements can all be distributed in tiles
@@ -187,11 +212,11 @@ trait PlatformRules {
       // we do it mutable for simplicity...
       // the performance hit should not be a concern now, for super big instances, this can be reviewed
       var mutMap = mutable.Map[String, Map[String, Double]]()
-      InstrumentedProcessingModule
-        .safeCast(pe)
+      ForSyDeHierarchy.InstrumentedProcessingModule
+        .tryView(pe)
         .map(ipe => {
           ipe
-            .getModalInstructionsPerCycle()
+            .modalInstructionsPerCycle()
             .entrySet()
             .forEach(e => {
               mutMap(e.getKey()) = e.getValue().asScala.map((k, v) => k -> v.toDouble).toMap
@@ -224,23 +249,23 @@ trait PlatformRules {
           interconnectTopologySrcs.toVector,
           interconnectTopologyDsts.toVector,
           processorsProvisions.toVector,
-          processingElements.map(_.getOperatingFrequencyInHertz().toLong).toVector,
-          tiledMemories.map(_.getSpaceInBits().toLong).toVector,
+          processingElements.map(_.operatingFrequencyInHertz().toLong).toVector,
+          tiledMemories.map(_.spaceInBits().toLong).toVector,
           communicationElements
             .map(
-              InstrumentedCommunicationModule
-                .safeCast(_)
-                .map(_.getMaxConcurrentFlits().toInt)
+              ForSyDeHierarchy.InstrumentedCommunicationModule
+                .tryView(_)
+                .map(_.maxConcurrentFlits().toInt)
                 .orElse(1)
             )
             .toVector,
           communicationElements
             .map(
-              InstrumentedCommunicationModule
-                .safeCast(_)
+              ForSyDeHierarchy.InstrumentedCommunicationModule
+                .tryView(_)
                 .map(ce =>
-                  ce.getFlitSizeInBits() * ce.getMaxCyclesPerFlit() * ce
-                    .getOperatingFrequencyInHertz()
+                  ce.flitSizeInBits() * ce.maxCyclesPerFlit() * ce
+                    .operatingFrequencyInHertz()
                 )
                 .map(_.toDouble)
                 .orElse(0.0)
@@ -261,16 +286,16 @@ trait PlatformRules {
       var memoryElements        = Buffer.empty[GenericMemoryModule]
       var communicationElements = Buffer.empty[GenericCommunicationModule]
       model.vertexSet.stream
-        .filter(v => DigitalModule.conforms(v))
+        .filter(v => ForSyDeHierarchy.DigitalModule.tryView(model, v).isPresent())
         .forEach(v => {
-          GenericProcessingModule
-            .safeCast(v)
+          ForSyDeHierarchy.GenericProcessingModule
+            .tryView(model, v)
             .ifPresent(p => processingElements :+= p)
-          GenericMemoryModule
-            .safeCast(v)
+          ForSyDeHierarchy.GenericMemoryModule
+            .tryView(model, v)
             .ifPresent(p => memoryElements :+= p)
-          GenericCommunicationModule
-            .safeCast(v)
+          ForSyDeHierarchy.GenericCommunicationModule
+            .tryView(model, v)
             .ifPresent(p => communicationElements :+= p)
         })
       // build the topology graph with just the known elements
@@ -287,15 +312,25 @@ trait PlatformRules {
           .outgoingEdgesOf(pe.getViewedVertex)
           .stream
           .map(topology.getEdgeTarget(_))
-          .filter(DigitalModule.conforms(_))
-          .allMatch(v => GenericCommunicationModule.conforms(v) || GenericMemoryModule.conforms(v))
+          .filter(ForSyDeHierarchy.DigitalModule.tryView(model, _).isPresent())
+          .allMatch(v =>
+            ForSyDeHierarchy.GenericCommunicationModule
+              .tryView(model, v)
+              .isPresent() || ForSyDeHierarchy.GenericMemoryModule.tryView(model, v).isPresent()
+          )
         &&
         topology
           .incomingEdgesOf(pe.getViewedVertex)
           .stream
           .map(topology.getEdgeSource(_))
-          .filter(DigitalModule.conforms(_))
-          .allMatch(v => GenericCommunicationModule.conforms(v) || GenericMemoryModule.conforms(v))
+          .filter(ForSyDeHierarchy.DigitalModule.tryView(model, _).isPresent())
+          .allMatch(v =>
+            ForSyDeHierarchy.GenericCommunicationModule
+              .tryView(model, v)
+              .isPresent() || ForSyDeHierarchy.GenericMemoryModule
+              .tryView(model, v)
+              .isPresent()
+          )
       })
       // do the same for MEs
       lazy val memoryOnlyValidLinks = memoryElements.forall(me => {
@@ -303,18 +338,26 @@ trait PlatformRules {
           .outgoingEdgesOf(me.getViewedVertex)
           .stream
           .map(topology.getEdgeTarget(_))
-          .filter(DigitalModule.conforms(_))
+          .filter(ForSyDeHierarchy.DigitalModule.tryView(model, _).isPresent())
           .allMatch(v =>
-            GenericCommunicationModule.conforms(v) || GenericProcessingModule.conforms(v)
+            ForSyDeHierarchy.GenericCommunicationModule
+              .tryView(model, v)
+              .isPresent() || ForSyDeHierarchy.GenericProcessingModule
+              .tryView(model, v)
+              .isPresent()
           )
         &&
         topology
           .incomingEdgesOf(me.getViewedVertex)
           .stream
           .map(topology.getEdgeSource(_))
-          .filter(DigitalModule.conforms(_))
+          .filter(ForSyDeHierarchy.DigitalModule.tryView(model, _).isPresent())
           .allMatch(v =>
-            GenericCommunicationModule.conforms(v) || GenericProcessingModule.conforms(v)
+            ForSyDeHierarchy.GenericCommunicationModule
+              .tryView(model, v)
+              .isPresent() || ForSyDeHierarchy.GenericProcessingModule
+              .tryView(model, v)
+              .isPresent()
           )
       })
       // check if all processors are connected to at least one memory element
@@ -331,11 +374,11 @@ trait PlatformRules {
         // we do it mutable for simplicity...
         // the performance hit should not be a concern now, for super big instances, this can be reviewed
         var mutMap = mutable.Map[String, Map[String, Double]]()
-        InstrumentedProcessingModule
-          .safeCast(pe)
+        ForSyDeHierarchy.InstrumentedProcessingModule
+          .tryView(pe)
           .map(ipe => {
             ipe
-              .getModalInstructionsPerCycle()
+              .modalInstructionsPerCycle()
               .entrySet()
               .forEach(e => {
                 mutMap(e.getKey()) = e.getValue().asScala.map((k, v) => k -> v.toDouble).toMap
@@ -365,24 +408,24 @@ trait PlatformRules {
             communicationElements.map(_.getIdentifier()).toVector,
             interconnectTopologySrcs.toVector,
             interconnectTopologyDsts.toVector,
-            processingElements.map(_.getOperatingFrequencyInHertz().toLong).toVector,
+            processingElements.map(_.operatingFrequencyInHertz().toLong).toVector,
             processorsProvisions.toVector,
-            memoryElements.map(_.getSpaceInBits().toLong).toVector,
+            memoryElements.map(_.spaceInBits().toLong).toVector,
             communicationElements
               .map(
-                InstrumentedCommunicationModule
-                  .safeCast(_)
-                  .map(_.getMaxConcurrentFlits().toInt)
+                ForSyDeHierarchy.InstrumentedCommunicationModule
+                  .tryView(_)
+                  .map(_.maxConcurrentFlits().toInt)
                   .orElse(1)
               )
               .toVector,
             communicationElements
               .map(
-                InstrumentedCommunicationModule
-                  .safeCast(_)
+                ForSyDeHierarchy.InstrumentedCommunicationModule
+                  .tryView(_)
                   .map(ce =>
-                    ce.getFlitSizeInBits().toDouble * ce.getMaxCyclesPerFlit().toDouble * ce
-                      .getOperatingFrequencyInHertz()
+                    ce.flitSizeInBits().toDouble * ce.maxCyclesPerFlit().toDouble * ce
+                      .operatingFrequencyInHertz()
                       .toDouble
                   )
                   .orElse(0.0)

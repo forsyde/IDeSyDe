@@ -1,14 +1,14 @@
 package idesyde.identification.forsyde
 
-import forsyde.io.java.core.ForSyDeSystemGraph
 import idesyde.core.DesignModel
 import idesyde.core.DecisionModel
 import idesyde.forsydeio.ForSyDeDesignModel
+import forsyde.io.core.SystemGraph
 
 object ForSyDeIdentificationUtils {
 
   inline def toForSyDe[M <: DecisionModel](models: Set[DesignModel])(
-      inline body: (ForSyDeSystemGraph) => Set[M]
+      inline body: (SystemGraph) => Set[M]
   ): Set[M] = {
     models
       .filter(_.isInstanceOf[ForSyDeDesignModel])

@@ -4,12 +4,12 @@ import scala.jdk.CollectionConverters.*
 import scala.jdk.OptionConverters.*
 
 import idesyde.core.DesignModel
-import forsyde.io.java.core.ForSyDeSystemGraph
-import forsyde.io.java.core.Vertex
-import forsyde.io.java.core.EdgeInfo
 import idesyde.core.headers.LabelledArcWithPorts
+import forsyde.io.core.SystemGraph
+import forsyde.io.core.EdgeInfo
+import forsyde.io.core.Vertex
 
-final case class ForSyDeDesignModel(val systemGraph: ForSyDeSystemGraph) extends DesignModel {
+final case class ForSyDeDesignModel(val systemGraph: SystemGraph) extends DesignModel {
 
   type ElementT = Vertex | EdgeInfo
 

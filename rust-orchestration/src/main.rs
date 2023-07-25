@@ -407,10 +407,8 @@ fn main() {
                 )
                 .enumerate()
                 // .par_bridge()
-                .map(|(i, sol)| {
-                    debug!("Found a new solution. Total count is {}.", i + 1);
-                    sol
-                })
+                .inspect(|(i, _)| debug!("Found a new solution. Total count is {}.", i + 1))
+                .map(|(_, sol)| sol)
                 .collect();
             info!(
                 "Finished exploration with {} solution(s).",

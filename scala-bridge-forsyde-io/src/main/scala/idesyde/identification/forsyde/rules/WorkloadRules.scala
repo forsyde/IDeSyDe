@@ -9,25 +9,19 @@ import idesyde.core.DecisionModel
 import idesyde.utils.Logger
 import idesyde.common.CommunicatingAndTriggeredReactiveWorkload
 import idesyde.identification.forsyde.ForSyDeIdentificationUtils
-import forsyde.io.java.typed.viewers.execution.Task
-import forsyde.io.java.typed.viewers.impl.DataBlock
-import forsyde.io.java.typed.viewers.execution.PeriodicStimulus
-import forsyde.io.java.typed.viewers.execution.Upsample
-import forsyde.io.java.typed.viewers.execution.Downsample
-import forsyde.io.java.typed.viewers.execution.CommunicatingTask
 import scala.collection.mutable.Buffer
 import org.jgrapht.graph.AsSubgraph
 import org.jgrapht.alg.connectivity.ConnectivityInspector
 import spire.math._
 import scala.collection.mutable
 import org.jgrapht.traverse.TopologicalOrderIterator
-import forsyde.io.java.typed.viewers.execution.Stimulatable
-import forsyde.io.java.typed.viewers.impl.InstrumentedExecutable
-import forsyde.io.java.core.ForSyDeSystemGraph
-import forsyde.io.java.typed.viewers.execution.LoopingTask
 import java.util.stream.Collectors
-import forsyde.io.java.typed.viewers.impl.CommunicatingExecutable
-import forsyde.io.java.typed.viewers.impl.TokenizableDataBlock
+import forsyde.io.lib.behavior.execution.Task
+import forsyde.io.lib.behavior.execution.PeriodicStimulator
+import forsyde.io.lib.behavior.execution.Upsample
+import forsyde.io.lib.behavior.execution.Downsample
+import forsyde.io.lib.implementation.functional.RegisterLike
+import forsyde.io.lib.ForSyDeHierarchy
 
 trait WorkloadRules {
 
@@ -37,28 +31,28 @@ trait WorkloadRules {
   )(using logger: Logger): Set[CommunicatingAndTriggeredReactiveWorkload] = {
     ForSyDeIdentificationUtils.toForSyDe(models) { model =>
       var tasks                   = Buffer[Task]()
-      var dataBlocks              = Buffer[DataBlock]()
-      var periodicStimulus        = Buffer[PeriodicStimulus]()
+      var registers               = Buffer[RegisterLike]()
+      var periodicStimulus        = Buffer[PeriodicStimulator]()
       var upsamples               = Buffer[Upsample]()
       var downsamples             = Buffer[Downsample]()
       var communicationGraphEdges = Buffer[(String, String, Long)]()
       model.vertexSet.forEach(v =>
-        Task
-          .safeCast(v)
+        ForSyDeHierarchy.Task
+          .tryView(v)
           .ifPresent(task => tasks :+= task)
-        DataBlock
-          .safeCast(v)
-          .ifPresent(channel => dataBlocks :+= channel)
-        PeriodicStimulus
-          .safeCast(v)
+        ForSyDeHierarchy.RegisterLike
+          .tryView(v)
+          .ifPresent(channel => RegisterLikes :+= channel)
+        ForSyDeHierarchy.PeriodicStimulator
+          .tryView(v)
           .ifPresent(stim => periodicStimulus :+= stim)
-        Upsample
-          .safeCast(v)
+        ForSyDeHierarchy.Upsample
+          .tryView(v)
           .ifPresent(upsample => {
             upsamples :+= upsample
           })
-        Downsample
-          .safeCast(v)
+        ForSyDeHierarchy.Downsample
+          .tryView(v)
           .ifPresent(downsample => {
             downsamples :+= downsample
           })
@@ -76,19 +70,19 @@ trait WorkloadRules {
       // )
       // do the task communication calculations
       for (
-        task      <- tasks;
-        dataBlock <- dataBlocks
+        task <- tasks;
+        reg  <- registers
       ) {
-        CommunicatingTask
-          .safeCast(task)
+        ForSyDeHierarchy.CommunicatingTask
+          .tryView(task)
           .ifPresent(commTask => {
-            if (model.hasConnection(commTask, dataBlock)) {
-              TokenizableDataBlock
-                .safeCast(dataBlock)
+            if (model.hasConnection(commTask, reg)) {
+              ForSyDeHierarchy.RegisterArrayLike
+                .safeCast(reg)
                 .ifPresentOrElse(
                   tokenDB => {
                     val dataWritten = model
-                      .getAllEdges(commTask.getViewedVertex, dataBlock.getViewedVertex)
+                      .getAllEdges(commTask.getViewedVertex, reg.getViewedVertex)
                       .stream
                       .mapToLong(e =>
                         e.getSourcePort
@@ -100,34 +94,34 @@ trait WorkloadRules {
                           .orElse(0L)
                       )
                       .sum
-                    communicationGraphEdges :+= (commTask.getIdentifier(), dataBlock
+                    communicationGraphEdges :+= (commTask.getIdentifier(), reg
                       .getIdentifier(), dataWritten)
                   },
                   () => {
                     val dataWritten = model
-                      .getAllEdges(commTask.getViewedVertex, dataBlock.getViewedVertex)
+                      .getAllEdges(commTask.getViewedVertex, reg.getViewedVertex)
                       .stream
                       .mapToLong(e =>
                         e.getSourcePort
                           .map(outPort =>
                             commTask
                               .getPortDataWrittenSize()
-                              .getOrDefault(outPort, dataBlock.getMaxSizeInBits)
+                              .getOrDefault(outPort, reg.getMaxSizeInBits)
                           )
                           .orElse(0L)
                       )
                       .sum
-                    communicationGraphEdges :+= (commTask.getIdentifier(), dataBlock
+                    communicationGraphEdges :+= (commTask.getIdentifier(), reg
                       .getIdentifier(), dataWritten)
                   }
                 )
-            } else if (model.hasConnection(dataBlock, commTask)) {
-              TokenizableDataBlock
-                .safeCast(dataBlock)
+            } else if (model.hasConnection(reg, commTask)) {
+              ForSyDeHierarchy.RegisterArrayLike
+                .safeCast(reg)
                 .ifPresentOrElse(
                   tokenDB => {
                     val dataRead = model
-                      .getAllEdges(dataBlock.getViewedVertex, commTask.getViewedVertex)
+                      .getAllEdges(reg.getViewedVertex, commTask.getViewedVertex)
                       .stream
                       .mapToLong(e =>
                         e.getTargetPort
@@ -139,24 +133,24 @@ trait WorkloadRules {
                           .orElse(0L)
                       )
                       .sum
-                    communicationGraphEdges :+= (dataBlock.getIdentifier(), commTask
+                    communicationGraphEdges :+= (reg.getIdentifier(), commTask
                       .getIdentifier(), dataRead)
                   },
                   () => {
                     val dataRead = model
-                      .getAllEdges(dataBlock.getViewedVertex, commTask.getViewedVertex)
+                      .getAllEdges(reg.getViewedVertex, commTask.getViewedVertex)
                       .stream
                       .mapToLong(e =>
                         e.getTargetPort
                           .map(inPort =>
                             commTask
                               .getPortDataReadSize()
-                              .getOrDefault(inPort, dataBlock.getMaxSizeInBits)
+                              .getOrDefault(inPort, reg.getMaxSizeInBits)
                           )
                           .orElse(0L)
                       )
                       .sum
-                    communicationGraphEdges :+= (dataBlock.getIdentifier(), commTask
+                    communicationGraphEdges :+= (reg.getIdentifier(), commTask
                       .getIdentifier(), dataRead)
                   }
                 )
@@ -164,19 +158,19 @@ trait WorkloadRules {
           })
       }
       for (
-        task       <- tasks;
-        ctask      <- LoopingTask.safeCast(task).toScala;
-        executable <- ctask.getLoopSequencePort(model).asScala;
-        commexec   <- CommunicatingExecutable.safeCast(executable).toScala;
-        dataBlock  <- dataBlocks
+        task         <- tasks;
+        ctask        <- ForSyDeHierarchy.LoopingTask.tryView(task).toScala;
+        executable   <- ctask.getLoopSequencePort(model).asScala;
+        commexec     <- ForSyDeHierarchy.CommunicatingExecutable.tryView(executable).toScala;
+        RegisterLike <- RegisterLikes
       ) {
-        if (model.hasConnection(commexec, dataBlock)) {
-          TokenizableDataBlock
-            .safeCast(dataBlock)
+        if (model.hasConnection(commexec, RegisterLike)) {
+          ForSyDeHierarchy.RegisterArrayLike
+            .safeCast(RegisterLike)
             .ifPresentOrElse(
               tokenDB => {
                 val dataWritten = model
-                  .getAllEdges(commexec.getViewedVertex, dataBlock.getViewedVertex)
+                  .getAllEdges(commexec.getViewedVertex, RegisterLike.getViewedVertex)
                   .stream
                   .mapToLong(e =>
                     e.getSourcePort
@@ -188,35 +182,35 @@ trait WorkloadRules {
                       .orElse(0L)
                   )
                   .sum
-                communicationGraphEdges :+= (ctask.getIdentifier(), dataBlock
+                communicationGraphEdges :+= (ctask.getIdentifier(), RegisterLike
                   .getIdentifier(), dataWritten)
               },
               () => {
                 val dataWritten = model
-                  .getAllEdges(commexec.getViewedVertex, dataBlock.getViewedVertex)
+                  .getAllEdges(commexec.getViewedVertex, RegisterLike.getViewedVertex)
                   .stream
                   .mapToLong(e =>
                     e.getSourcePort
                       .map(outPort =>
                         commexec
                           .getPortDataWrittenSize()
-                          .getOrDefault(outPort, dataBlock.getMaxSizeInBits)
+                          .getOrDefault(outPort, RegisterLike.getMaxSizeInBits)
                       )
                       .orElse(0L)
                   )
                   .sum
-                communicationGraphEdges :+= (ctask.getIdentifier(), dataBlock
+                communicationGraphEdges :+= (ctask.getIdentifier(), RegisterLike
                   .getIdentifier(), dataWritten)
               }
             )
         }
-        if (model.hasConnection(dataBlock, commexec)) {
-          TokenizableDataBlock
-            .safeCast(dataBlock)
+        if (model.hasConnection(RegisterLike, commexec)) {
+          ForSyDeHierarchy.RegisterArrayLike
+            .safeCast(RegisterLike)
             .ifPresentOrElse(
               tokenDB => {
                 val dataRead = model
-                  .getAllEdges(dataBlock.getViewedVertex, commexec.getViewedVertex)
+                  .getAllEdges(RegisterLike.getViewedVertex, commexec.getViewedVertex)
                   .stream
                   .mapToLong(e =>
                     e.getTargetPort
@@ -228,24 +222,24 @@ trait WorkloadRules {
                       .orElse(0L)
                   )
                   .sum
-                communicationGraphEdges :+= (dataBlock.getIdentifier(), ctask
+                communicationGraphEdges :+= (RegisterLike.getIdentifier(), ctask
                   .getIdentifier(), dataRead)
               },
               () => {
                 val dataRead = model
-                  .getAllEdges(dataBlock.getViewedVertex, commexec.getViewedVertex)
+                  .getAllEdges(RegisterLike.getViewedVertex, commexec.getViewedVertex)
                   .stream
                   .mapToLong(e =>
                     e.getTargetPort
                       .map(inPort =>
                         commexec
                           .getPortDataReadSize()
-                          .getOrDefault(inPort, dataBlock.getMaxSizeInBits)
+                          .getOrDefault(inPort, RegisterLike.getMaxSizeInBits)
                       )
                       .orElse(0L)
                   )
                   .sum
-                communicationGraphEdges :+= (dataBlock.getIdentifier(), ctask
+                communicationGraphEdges :+= (RegisterLike.getIdentifier(), ctask
                   .getIdentifier(), dataRead)
               }
             )
@@ -275,7 +269,10 @@ trait WorkloadRules {
             tasks.map(_.getIdentifier()).toVector,
             tasks
               .map(t =>
-                InstrumentedExecutable.safeCast(t).map(_.getSizeInBits().toLong).orElse(0L) +
+                ForSyDeHierarchy.InstrumentedBehaviour
+                  .tryView(t)
+                  .map(_.getSizeInBits().toLong)
+                  .orElse(0L) +
                   LoopingTask
                     .safeCast(t)
                     .map(lt =>
@@ -302,8 +299,8 @@ trait WorkloadRules {
               )
               .toVector,
             tasks.map(t => taskComputationNeeds(t, model)).toVector,
-            dataBlocks.map(_.getIdentifier()).toVector,
-            dataBlocks.map(_.getMaxSizeInBits().toLong).toVector,
+            registers.map(_.getIdentifier()).toVector,
+            registers.map(_.getMaxSizeInBits().toLong).toVector,
             communicationGraphEdges.toVector.map((s, t, m) => s),
             communicationGraphEdges.toVector.map((s, t, m) => t),
             communicationGraphEdges.toVector.map((s, t, m) => m),

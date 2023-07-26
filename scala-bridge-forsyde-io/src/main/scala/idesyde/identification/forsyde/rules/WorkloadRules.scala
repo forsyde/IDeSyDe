@@ -22,6 +22,7 @@ import forsyde.io.lib.behavior.execution.Upsample
 import forsyde.io.lib.behavior.execution.Downsample
 import forsyde.io.lib.implementation.functional.RegisterLike
 import forsyde.io.lib.ForSyDeHierarchy
+import forsyde.io.core.SystemGraph
 
 trait WorkloadRules {
 
@@ -38,21 +39,21 @@ trait WorkloadRules {
       var communicationGraphEdges = Buffer[(String, String, Long)]()
       model.vertexSet.forEach(v =>
         ForSyDeHierarchy.Task
-          .tryView(v)
+          .tryView(model, v)
           .ifPresent(task => tasks :+= task)
         ForSyDeHierarchy.RegisterLike
-          .tryView(v)
-          .ifPresent(channel => RegisterLikes :+= channel)
+          .tryView(model, v)
+          .ifPresent(channel => registers :+= channel)
         ForSyDeHierarchy.PeriodicStimulator
-          .tryView(v)
+          .tryView(model, v)
           .ifPresent(stim => periodicStimulus :+= stim)
         ForSyDeHierarchy.Upsample
-          .tryView(v)
+          .tryView(model, v)
           .ifPresent(upsample => {
             upsamples :+= upsample
           })
         ForSyDeHierarchy.Downsample
-          .tryView(v)
+          .tryView(model, v)
           .ifPresent(downsample => {
             downsamples :+= downsample
           })
@@ -78,7 +79,7 @@ trait WorkloadRules {
           .ifPresent(commTask => {
             if (model.hasConnection(commTask, reg)) {
               ForSyDeHierarchy.RegisterArrayLike
-                .safeCast(reg)
+                .tryView(reg)
                 .ifPresentOrElse(
                   tokenDB => {
                     val dataWritten = model
@@ -88,8 +89,8 @@ trait WorkloadRules {
                         e.getSourcePort
                           .map(outPort =>
                             commTask
-                              .getPortDataWrittenSize()
-                              .getOrDefault(outPort, tokenDB.getTokenSizeInBits())
+                              .portDataWrittenSize()
+                              .getOrDefault(outPort, tokenDB.elementSizeInBits())
                           )
                           .orElse(0L)
                       )
@@ -105,8 +106,8 @@ trait WorkloadRules {
                         e.getSourcePort
                           .map(outPort =>
                             commTask
-                              .getPortDataWrittenSize()
-                              .getOrDefault(outPort, reg.getMaxSizeInBits)
+                              .portDataWrittenSize()
+                              .getOrDefault(outPort, reg.sizeInBits())
                           )
                           .orElse(0L)
                       )
@@ -117,7 +118,7 @@ trait WorkloadRules {
                 )
             } else if (model.hasConnection(reg, commTask)) {
               ForSyDeHierarchy.RegisterArrayLike
-                .safeCast(reg)
+                .tryView(reg)
                 .ifPresentOrElse(
                   tokenDB => {
                     val dataRead = model
@@ -127,8 +128,8 @@ trait WorkloadRules {
                         e.getTargetPort
                           .map(inPort =>
                             commTask
-                              .getPortDataReadSize()
-                              .getOrDefault(inPort, tokenDB.getTokenSizeInBits())
+                              .portDataReadSize()
+                              .getOrDefault(inPort, tokenDB.elementSizeInBits())
                           )
                           .orElse(0L)
                       )
@@ -144,8 +145,8 @@ trait WorkloadRules {
                         e.getTargetPort
                           .map(inPort =>
                             commTask
-                              .getPortDataReadSize()
-                              .getOrDefault(inPort, reg.getMaxSizeInBits)
+                              .portDataReadSize()
+                              .getOrDefault(inPort, reg.sizeInBits())
                           )
                           .orElse(0L)
                       )
@@ -158,88 +159,88 @@ trait WorkloadRules {
           })
       }
       for (
-        task         <- tasks;
-        ctask        <- ForSyDeHierarchy.LoopingTask.tryView(task).toScala;
-        executable   <- ctask.getLoopSequencePort(model).asScala;
-        commexec     <- ForSyDeHierarchy.CommunicatingExecutable.tryView(executable).toScala;
-        RegisterLike <- RegisterLikes
+        task       <- tasks;
+        ctask      <- ForSyDeHierarchy.LoopingTask.tryView(task).toScala;
+        executable <- ctask.loopSequence().asScala;
+        commexec   <- ForSyDeHierarchy.CommunicatingTask.tryView(executable).toScala;
+        register   <- registers
       ) {
-        if (model.hasConnection(commexec, RegisterLike)) {
+        if (model.hasConnection(commexec, register)) {
           ForSyDeHierarchy.RegisterArrayLike
-            .safeCast(RegisterLike)
+            .tryView(register)
             .ifPresentOrElse(
               tokenDB => {
                 val dataWritten = model
-                  .getAllEdges(commexec.getViewedVertex, RegisterLike.getViewedVertex)
+                  .getAllEdges(commexec.getViewedVertex, register.getViewedVertex)
                   .stream
                   .mapToLong(e =>
                     e.getSourcePort
                       .map(outPort =>
                         commexec
-                          .getPortDataWrittenSize()
-                          .getOrDefault(outPort, tokenDB.getTokenSizeInBits())
+                          .portDataWrittenSize()
+                          .getOrDefault(outPort, tokenDB.elementSizeInBits())
                       )
                       .orElse(0L)
                   )
                   .sum
-                communicationGraphEdges :+= (ctask.getIdentifier(), RegisterLike
+                communicationGraphEdges :+= (ctask.getIdentifier(), register
                   .getIdentifier(), dataWritten)
               },
               () => {
                 val dataWritten = model
-                  .getAllEdges(commexec.getViewedVertex, RegisterLike.getViewedVertex)
+                  .getAllEdges(commexec.getViewedVertex, register.getViewedVertex)
                   .stream
                   .mapToLong(e =>
                     e.getSourcePort
                       .map(outPort =>
                         commexec
-                          .getPortDataWrittenSize()
-                          .getOrDefault(outPort, RegisterLike.getMaxSizeInBits)
+                          .portDataWrittenSize()
+                          .getOrDefault(outPort, register.sizeInBits())
                       )
                       .orElse(0L)
                   )
                   .sum
-                communicationGraphEdges :+= (ctask.getIdentifier(), RegisterLike
+                communicationGraphEdges :+= (ctask.getIdentifier(), register
                   .getIdentifier(), dataWritten)
               }
             )
         }
-        if (model.hasConnection(RegisterLike, commexec)) {
+        if (model.hasConnection(register, commexec)) {
           ForSyDeHierarchy.RegisterArrayLike
-            .safeCast(RegisterLike)
+            .tryView(register)
             .ifPresentOrElse(
               tokenDB => {
                 val dataRead = model
-                  .getAllEdges(RegisterLike.getViewedVertex, commexec.getViewedVertex)
+                  .getAllEdges(register.getViewedVertex, commexec.getViewedVertex)
                   .stream
                   .mapToLong(e =>
                     e.getTargetPort
                       .map(inPort =>
                         commexec
-                          .getPortDataReadSize()
-                          .getOrDefault(inPort, tokenDB.getTokenSizeInBits())
+                          .portDataReadSize()
+                          .getOrDefault(inPort, tokenDB.elementSizeInBits())
                       )
                       .orElse(0L)
                   )
                   .sum
-                communicationGraphEdges :+= (RegisterLike.getIdentifier(), ctask
+                communicationGraphEdges :+= (register.getIdentifier(), ctask
                   .getIdentifier(), dataRead)
               },
               () => {
                 val dataRead = model
-                  .getAllEdges(RegisterLike.getViewedVertex, commexec.getViewedVertex)
+                  .getAllEdges(register.getViewedVertex, commexec.getViewedVertex)
                   .stream
                   .mapToLong(e =>
                     e.getTargetPort
                       .map(inPort =>
                         commexec
-                          .getPortDataReadSize()
-                          .getOrDefault(inPort, RegisterLike.getMaxSizeInBits)
+                          .portDataReadSize()
+                          .getOrDefault(inPort, register.sizeInBits())
                       )
                       .orElse(0L)
                   )
                   .sum
-                communicationGraphEdges :+= (RegisterLike.getIdentifier(), ctask
+                communicationGraphEdges :+= (register.getIdentifier(), ctask
                   .getIdentifier(), dataRead)
               }
             )
@@ -271,26 +272,28 @@ trait WorkloadRules {
               .map(t =>
                 ForSyDeHierarchy.InstrumentedBehaviour
                   .tryView(t)
-                  .map(_.getSizeInBits().toLong)
+                  .map(
+                    _.maxSizeInBits().values().asScala.max.toLong
+                  )
                   .orElse(0L) +
-                  LoopingTask
-                    .safeCast(t)
+                  ForSyDeHierarchy.LoopingTask
+                    .tryView(t)
                     .map(lt =>
-                      lt.getInitSequencePort(model)
+                      lt.initSequence()
                         .stream()
                         .mapToLong(r =>
-                          InstrumentedExecutable
-                            .safeCast(r)
-                            .map(_.getSizeInBits().toLong)
+                          ForSyDeHierarchy.InstrumentedBehaviour
+                            .tryView(r)
+                            .map(_.maxSizeInBits().values().asScala.max.toLong)
                             .orElse(0L)
                         )
                         .sum() + lt
-                        .getLoopSequencePort(model)
+                        .loopSequence()
                         .stream()
                         .mapToLong(r =>
-                          InstrumentedExecutable
-                            .safeCast(r)
-                            .map(_.getSizeInBits().toLong)
+                          ForSyDeHierarchy.InstrumentedBehaviour
+                            .tryView(r)
+                            .map(_.maxSizeInBits().values().asScala.max.toLong)
                             .orElse(0L)
                         )
                         .sum()
@@ -300,21 +303,21 @@ trait WorkloadRules {
               .toVector,
             tasks.map(t => taskComputationNeeds(t, model)).toVector,
             registers.map(_.getIdentifier()).toVector,
-            registers.map(_.getMaxSizeInBits().toLong).toVector,
+            registers.map(_.sizeInBits().toLong).toVector,
             communicationGraphEdges.toVector.map((s, t, m) => s),
             communicationGraphEdges.toVector.map((s, t, m) => t),
             communicationGraphEdges.toVector.map((s, t, m) => m),
             periodicStimulus.map(_.getIdentifier()).toVector,
-            periodicStimulus.map(_.getPeriodNumerator().toLong).toVector,
-            periodicStimulus.map(_.getPeriodDenominator().toLong).toVector,
-            periodicStimulus.map(_.getOffsetNumerator().toLong).toVector,
-            periodicStimulus.map(_.getOffsetDenominator().toLong).toVector,
+            periodicStimulus.map(_.periodNumerator().toLong).toVector,
+            periodicStimulus.map(_.periodDenominator().toLong).toVector,
+            periodicStimulus.map(_.offsetNumerator().toLong).toVector,
+            periodicStimulus.map(_.offsetDenominator().toLong).toVector,
             upsamples.map(_.getIdentifier()).toVector,
-            upsamples.map(_.getRepetitivePredecessorHolds().toLong).toVector,
-            upsamples.map(_.getInitialPredecessorHolds().toLong).toVector,
+            upsamples.map(_.repetitivePredecessorHolds().toLong).toVector,
+            upsamples.map(_.initialPredecessorHolds().toLong).toVector,
             downsamples.map(_.getIdentifier()).toVector,
-            downsamples.map(_.getRepetitivePredecessorSkips().toLong).toVector,
-            downsamples.map(_.getInitialPredecessorSkips().toLong).toVector,
+            downsamples.map(_.repetitivePredecessorSkips().toLong).toVector,
+            downsamples.map(_.initialPredecessorSkips().toLong).toVector,
             stimulusGraph
               .edgeSet()
               .stream()
@@ -329,11 +332,11 @@ trait WorkloadRules {
               .collect(Collectors.toList())
               .asScala
               .toVector,
-            tasks.filter(_.getHasORSemantics()).map(_.getIdentifier()).toSet ++ upsamples
-              .filter(_.getHasORSemantics())
+            tasks.filter(_.hasORSemantics()).map(_.getIdentifier()).toSet ++ upsamples
+              .filter(_.hasORSemantics())
               .map(_.getIdentifier())
               .toSet ++ downsamples
-              .filter(_.getHasORSemantics())
+              .filter(_.hasORSemantics())
               .map(_.getIdentifier())
               .toSet
           )
@@ -343,20 +346,20 @@ trait WorkloadRules {
 
   private def taskComputationNeeds(
       task: Task,
-      model: ForSyDeSystemGraph
+      model: SystemGraph
   ): Map[String, Map[String, Long]] = {
     var maps = mutable.Map[String, mutable.Map[String, Long]]()
-    LoopingTask
-      .safeCast(task)
+    ForSyDeHierarchy.LoopingTask
+      .tryView(task)
       .ifPresent(lt => {
         java.util.stream.Stream
-          .concat(lt.getInitSequencePort(model).stream(), lt.getLoopSequencePort(model).stream())
+          .concat(lt.initSequence().stream(), lt.loopSequence().stream())
           .forEach(exec => {
-            InstrumentedExecutable
-              .safeCast(exec)
+            ForSyDeHierarchy.InstrumentedBehaviour
+              .tryView(exec)
               .ifPresent(iexec => {
                 iexec
-                  .getOperationRequirements()
+                  .computationalRequirements()
                   .forEach((opName, opReqs) => {
                     if (!maps.contains(opName)) maps(opName) = mutable.Map[String, Long]()
                     opReqs.forEach((opKey, opVal) => {
@@ -367,11 +370,11 @@ trait WorkloadRules {
               })
           })
       })
-    InstrumentedExecutable
-      .safeCast(task)
+    ForSyDeHierarchy.InstrumentedBehaviour
+      .tryView(task)
       .ifPresent(itask => {
         itask
-          .getOperationRequirements()
+          .computationalRequirements()
           .forEach((opName, opReqs) => {
             if (!maps.contains(opName)) maps(opName) = mutable.Map[String, Long]()
             opReqs.forEach((opKey, opVal) => {

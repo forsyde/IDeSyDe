@@ -2,7 +2,6 @@ package idesyde.choco
 
 import idesyde.identification.choco.ChocoDecisionModel
 import java.time.Duration
-import forsyde.io.java.core.ForSyDeSystemGraph
 import scala.concurrent.ExecutionContext
 import idesyde.core.Explorer
 

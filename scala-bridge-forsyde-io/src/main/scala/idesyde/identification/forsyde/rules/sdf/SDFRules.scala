@@ -7,14 +7,13 @@ import idesyde.core.DesignModel
 import idesyde.core.DecisionModel
 import idesyde.forsydeio.ForSyDeDesignModel
 import idesyde.common.SDFApplicationWithFunctions
-import forsyde.io.java.core.ForSyDeSystemGraph
-import forsyde.io.java.typed.viewers.moc.sdf.SDFElem
-import forsyde.io.java.typed.viewers.moc.sdf.SDFActor
-import forsyde.io.java.typed.viewers.moc.sdf.SDFChannel
 import scala.collection.mutable.Buffer
 import scala.collection.mutable
-import forsyde.io.java.typed.viewers.impl.InstrumentedExecutable
-import forsyde.io.java.typed.viewers.impl.TokenizableDataBlock
+import forsyde.io.lib.behavior.moc.sdf.SDFActor
+import forsyde.io.core.SystemGraph
+import forsyde.io.lib.implementation.functional.BufferLike
+import forsyde.io.lib.behavior.moc.sdf.SDFChannel
+import forsyde.io.lib.ForSyDeHierarchy
 
 trait SDFRules {
 
@@ -34,16 +33,17 @@ trait SDFRules {
     var sdfActors   = Buffer.empty[SDFActor]
     var sdfChannels = Buffer.empty[SDFChannel]
     model.vertexSet.stream
-      .filter(SDFElem.conforms(_))
       .forEach(v => {
-        if (SDFActor.conforms(v)) sdfActors += SDFActor.enforce(v)
+        if (ForSyDeHierarchy.SDFActor.tryView(model, v).isPresent())
+          sdfActors += ForSyDeHierarchy.SDFActor.tryView(model, v).get()
         //else if (SDFDelay.conforms(v)) sdfDelays = SDFDelay.enforce(v)
-        else if (SDFChannel.conforms(v)) sdfChannels += SDFChannel.enforce(v)
+        else if (ForSyDeHierarchy.SDFChannel.tryView(model, v).isPresent())
+          sdfChannels += ForSyDeHierarchy.SDFChannel.tryView(model, v).get()
       })
     val channelsConnectActors =
       sdfChannels.forall(c =>
-        c.getConsumerPort(model).map(a => sdfActors.contains(a)).orElse(false)
-          && c.getProducerPort(model).map(a => sdfActors.contains(a)).orElse(false)
+        c.consumer().map(a => sdfActors.contains(a)).orElse(false)
+          && c.producer().map(a => sdfActors.contains(a)).orElse(false)
       )
     if (sdfActors.size == 0 || !channelsConnectActors) {
       logger.debug("No actors, or channels do not connect actors")
@@ -53,13 +53,13 @@ trait SDFRules {
     var topologyDsts      = Buffer[String]()
     var topologyEdgeValue = Buffer[Int]()
     sdfChannels.foreach(c => {
-      c.getProducerPort(model)
+      c.producer()
         .ifPresent(src => {
           val rate = model
             .getAllEdges(src.getViewedVertex, c.getViewedVertex)
             .stream
             .mapToInt(e => {
-              e.getSourcePort.map(sp => src.getProduction.get(sp)).orElse(0)
+              e.getSourcePort.map(sp => src.production().get(sp)).orElse(0)
             })
             .sum()
             .toInt
@@ -68,13 +68,13 @@ trait SDFRules {
           topologyDsts += c.getIdentifier()
           topologyEdgeValue += rate
         })
-      c.getConsumerPort(model)
+      c.consumer()
         .ifPresent(dst => {
           val rate = model
             .getAllEdges(c.getViewedVertex, dst.getViewedVertex)
             .stream
             .mapToInt(e => {
-              e.getTargetPort.map(tp => dst.getConsumption.get(tp)).orElse(0)
+              e.getTargetPort.map(tp => dst.consumption().get(tp)).orElse(0)
             })
             .sum()
             .toInt
@@ -86,13 +86,16 @@ trait SDFRules {
     })
     val processSizes = sdfActors.zipWithIndex
       .map((a, i) =>
-        InstrumentedExecutable.safeCast(a).map(_.getSizeInBits().asInstanceOf[Long]).orElse(0L) +
-          a.getCombFunctionsPort(model)
+        ForSyDeHierarchy.InstrumentedBehaviour
+          .tryView(a)
+          .map(_.maxSizeInBits().asInstanceOf[Long])
+          .orElse(0L) +
+          a.combFunctions()
             .stream()
             .mapToLong(fs =>
-              InstrumentedExecutable
-                .safeCast(fs)
-                .map(_.getSizeInBits().asInstanceOf[Long])
+              ForSyDeHierarchy.InstrumentedBehaviour
+                .tryView(fs)
+                .map(_.maxSizeInBits().asInstanceOf[Long])
                 .orElse(0L)
             )
             .sum
@@ -108,9 +111,9 @@ trait SDFRules {
         topologyEdgeValue.toVector,
         processSizes,
         processComputationalNeeds,
-        sdfChannels.map(_.getNumOfInitialTokens().toInt).toVector,
+        sdfChannels.map(_.numInitialTokens().toInt).toVector,
         sdfChannels
-          .map(TokenizableDataBlock.safeCast(_).map(_.getTokenSizeInBits().toLong).orElse(0L))
+          .map(ForSyDeHierarchy.BufferLike.tryView(_).map(_.elementSizeInBits().toLong).orElse(0L))
           .toVector,
         sdfActors.map(a => -1.0).toVector
       )
@@ -118,21 +121,21 @@ trait SDFRules {
   }
 
   private def fromSDFActorToNeeds(
-      model: ForSyDeSystemGraph,
+      model: SystemGraph,
       actor: SDFActor
   ): Map[String, Map[String, Long]] = {
     // we do it mutable for simplicity...
     // the performance hit should not be a concern now, for super big instances, this can be reviewed
     var mutMap = mutable.Map[String, mutable.Map[String, Long]]()
     actor
-      .getCombFunctionsPort(model)
+      .combFunctions()
       .forEach(func => {
-        InstrumentedExecutable
-          .safeCast(func)
+        ForSyDeHierarchy.InstrumentedBehaviour
+          .tryView(func)
           .ifPresent(ifunc => {
             // now they have to be aggregated
             ifunc
-              .getOperationRequirements()
+              .computationalRequirements()
               .entrySet()
               .forEach(e => {
                 if (mutMap.contains(e.getKey())) {
@@ -149,12 +152,12 @@ trait SDFRules {
     // check also the actor, just in case, this might be best
     // in case the functions don't exist, but the actors is instrumented
     // anyway
-    InstrumentedExecutable
-      .safeCast(actor)
+    ForSyDeHierarchy.InstrumentedBehaviour
+      .tryView(actor)
       .ifPresent(ia => {
         // now they have to be aggregated
         ia
-          .getOperationRequirements()
+          .computationalRequirements()
           .entrySet()
           .forEach(e => {
             if (mutMap.contains(e.getKey())) {

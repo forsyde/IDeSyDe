@@ -4,9 +4,7 @@ import scala.jdk.CollectionConverters._
 
 import idesyde.identification.choco.ChocoDecisionModel
 import org.chocosolver.solver.Model
-import forsyde.io.java.core.Vertex
 import org.chocosolver.solver.Solution
-import forsyde.io.java.core.ForSyDeSystemGraph
 import idesyde.core.DecisionModel
 import org.chocosolver.solver.variables.BoolVar
 import org.chocosolver.solver.variables.IntVar
@@ -23,7 +21,6 @@ import idesyde.identification.choco.interfaces.ChocoModelMixin
 import org.chocosolver.solver.search.loop.monitors.IMonitorContradiction
 import org.chocosolver.solver.exception.ContradictionException
 import scala.collection.mutable.Buffer
-import forsyde.io.java.core.EdgeInfo
 import idesyde.common.SDFToTiledMultiCore
 import org.chocosolver.solver.objective.OptimizationPolicy
 import idesyde.utils.Logger

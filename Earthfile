@@ -2,11 +2,15 @@ VERSION 0.7
 
 
 build-scala-all:
-    ARG jdk_base='eclipse-temurin:11-alpine'
+    ARG jabba_jdk='amazon-corretto@1.17.0-0.35.1'
     ARG targets="x86_64-pc-windows-gnu x86_64-unknown-linux-musl"
-    FROM ${jdk_base}
+    FROM debian:latest
     WORKDIR scala-workdir
-    RUN apk --no-cache add --update curl
+    RUN apt-get update
+    RUN apt-get install -y curl bash wget
+    RUN curl -sL https://github.com/shyiko/jabba/raw/master/install.sh | JABBA_COMMAND="install ${jabba_jdk} -o /jdk" bash
+    ENV JAVA_HOME /jdk
+    ENV PATH $JAVA_HOME/bin:$PATH
     COPY build.sbt build.sbt
     COPY project/plugins.sbt project/plugins.sbt
     COPY project/build.properties project/build.properties
@@ -111,34 +115,38 @@ zip-build:
 
 dist-linux:
     ARG tag="no-tag"
-    ARG jdk_base='eclipse-temurin:11-alpine'
-    BUILD +build-scala-all --targets="x86_64-unknown-linux-musl" --jdk_base=${jdk_base}
+    ARG jabba_jdk='amazon-corretto@1.17.0-0.35.1'
+    BUILD +build-scala-all --targets="x86_64-unknown-linux-musl" --jabba_jdk=${jabba_jdk}
     BUILD +build-rust-linux-host --targets="x86_64-unknown-linux-musl"
     BUILD +zip-build --targets="x86_64-unknown-linux-musl" --tag=${tag}
 
 dist-windows-cross:
     ARG tag="no-tag"
-    ARG jdk_base='eclipse-temurin:11-alpine'
-    BUILD +build-scala-all --targets="x86_64-pc-windows-gnu" --jdk_base=${jdk_base}
+    ARG jabba_jdk='amazon-corretto@1.17.0-0.35.1'
+    BUILD +build-scala-all --targets="x86_64-pc-windows-gnu" --jabba_jdk=${jabba_jdk}
     BUILD +build-rust-linux-host --targets="x86_64-pc-windows-gnu"
     BUILD +zip-build --targets="x86_64-pc-windows-gnu" --tag=${tag}
 
 dist-all:
     ARG tag="no-tag"
-    ARG jdk_base='eclipse-temurin:11-alpine'
-    BUILD +build-scala-all --targets="x86_64-unknown-linux-musl x86_64-pc-windows-gnu" --jdk_base=${jdk_base}
+    ARG jabba_jdk='amazon-corretto@1.17.0-0.35.1'
+    BUILD +build-scala-all --targets="x86_64-unknown-linux-musl x86_64-pc-windows-gnu" --jabba_jdk=${jabba_jdk}
     BUILD +build-rust-linux-host --targets="x86_64-unknown-linux-musl x86_64-pc-windows-gnu"
     BUILD +zip-build --targets="x86_64-unknown-linux-musl x86_64-pc-windows-gnu" --tag=${tag}
 
 test-case-studies:
     ARG test_slow="no"
-    ARG jdk_base='eclipse-temurin:11-alpine'
+    ARG jabba_jdk='amazon-corretto@1.17.0-0.35.1'
     ARG targets="x86_64-unknown-linux-musl"
     BUILD +build-scala-all --targets=${targets} --jdk_base=${jdk_base}
     BUILD +build-rust-linux-host --targets=${targets}
-    FROM ${jdk_base}
+    FROM debian:latest
+    RUN apt-get update
+    RUN apt-get install -y curl bash wget python3-pip
+    RUN curl -sL https://github.com/shyiko/jabba/raw/master/install.sh | JABBA_COMMAND="install ${jabba_jdk} -o /jdk" bash
+    ENV JAVA_HOME /jdk
+    ENV PATH $JAVA_HOME/bin:$PATH
     ENV TEST_SLOW=${test_slow}
-    RUN apk --no-cache add --update python3 py3-pip
     RUN python -m pip install robotframework
     WORKDIR /testing
     FOR target IN ${targets}

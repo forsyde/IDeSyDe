@@ -17,7 +17,7 @@ jobs:
   test-scala-build:
     strategy:
       matrix:
-        jdk: [amazon-corretto@1.17.0-8.7.1]
+        jdk: [amazon-corretto@1.17.0-0.35.1]
       fail-fast: false
     runs-on: ubuntu-latest
     steps:

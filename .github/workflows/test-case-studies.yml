@@ -15,7 +15,7 @@ jobs:
   test-cases:
     strategy:
       matrix:
-        jdk_base: [temurin@17, amazon-corretto@17, zulu@17, microsoft@17]
+        jabba_jdk: [temurin@17, amazon-corretto@17, zulu@17, microsoft@17]
         target: [x86_64-unknown-linux-musl, x86_64-pc-windows-gnu]
     runs-on: ubuntu-latest
     steps:

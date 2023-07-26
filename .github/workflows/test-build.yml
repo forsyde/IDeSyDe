@@ -17,7 +17,7 @@ jobs:
   test-scala-build:
     strategy:
       matrix:
-        jdk_base: ["eclipse-temurin:11-alpine", "eclipse-temurin:17-alpine", "amazoncorretto:11-alpine-jdk", "amazoncorretto:17-alpine-jdk"]
+        jdk: [temurin, corretto, zulu, microsoft]
       fail-fast: false
     runs-on: ubuntu-latest
     steps:
@@ -28,7 +28,7 @@ jobs:
     - name: Build scala
       run: |
         cd ${{ github.workspace }}
-        earthly +build-scala-all --jdk_base="${{ matrix.jdk_base }}"
+        earthly +build-scala-all --jabba_jdk="${{ matrix.jdk }}"
   test-rust-build:
     strategy:
       matrix:

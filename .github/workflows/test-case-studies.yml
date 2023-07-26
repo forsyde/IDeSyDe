@@ -26,4 +26,4 @@ jobs:
       - name: Test cases
         run: |
           cd ${{ github.workspace }}
-          earthly +test-case-studies --jabba_jdk="${{ matrix.jdk_base }}" --targets="${{ matrix.target }}"
+          earthly +test-case-studies --jabba_jdk="${{ matrix.jabba_jdk }}" --targets="${{ matrix.target }}"

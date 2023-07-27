@@ -7,6 +7,7 @@ import com.fasterxml.jackson.databind.annotation.JsonSerialize;
 import com.fasterxml.jackson.dataformat.cbor.CBORFactory;
 
 import java.io.IOException;
+import java.util.Optional;
 import java.util.Set;
 
 @JsonSerialize
@@ -15,7 +16,7 @@ public record DecisionModelHeader(
     @JsonProperty("covered_elements")
     Set<String> coveredElements,
     @JsonProperty("body_path")
-    String bodyPath
+    Optional<String> bodyPath
 ) {
 
     public String asString() throws JsonProcessingException {

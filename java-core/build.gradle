@@ -1,3 +1,7 @@
+plugins {
+    id 'idesyde.java-library'
+}
+
 dependencies {
     implementation 'com.fasterxml.jackson.module:jackson-modules-base:2.15.0'
     implementation 'com.fasterxml.jackson.dataformat:jackson-dataformat-cbor:2.15.0'

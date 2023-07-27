@@ -23,9 +23,9 @@ public interface DecisionModel {
 
     DecisionModelHeader header();
 
-    default Optional<String> bodyAsText() throws JsonProcessingException { return Optional.empty(); };
+    default Optional<String> bodyAsText() throws JsonProcessingException { return Optional.of(objectMapper.writeValueAsString(this)); };
 
-    default Optional<byte[]> bodyAsBinary() throws JsonProcessingException { return Optional.empty(); };
+    default Optional<byte[]> bodyAsBinary() throws JsonProcessingException { return Optional.of(objectMapper.writeValueAsBytes(this)); };
 
     static final ObjectMapper objectMapper = new ObjectMapper(new CBORFactory());
 }

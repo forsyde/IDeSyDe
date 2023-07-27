@@ -88,8 +88,8 @@ object CommonIdentificationModule
         body_path.flatMap(decodeFromPath[PeriodicWorkloadAndSDFServers])
       case DecisionModelHeader("PeriodicWorkloadToPartitionedSharedMultiCore", body_path, _) =>
         body_path.flatMap(decodeFromPath[PeriodicWorkloadToPartitionedSharedMultiCore])
-      case DecisionModelHeader("AsynchronousAperiodicDataflow", body_path, _) =>
-        body_path.flatMap(decodeFromPath[AsynchronousAperiodicDataflow])
+      case DecisionModelHeader("AperiodicAsynchronousDataflow", body_path, _) =>
+        body_path.flatMap(decodeFromPath[AperiodicAsynchronousDataflow])
       case _ => None
     }
   }

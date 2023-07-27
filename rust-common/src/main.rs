@@ -17,6 +17,9 @@ fn main() {
             idesyde_core::MarkedIdentificationRule::DecisionModelOnlyIdentificationRule(
                 idesyde_common::irules::identify_asynchronous_aperiodic_dataflow_from_sdf,
             ),
+            idesyde_core::MarkedIdentificationRule::DecisionModelOnlyIdentificationRule(
+                idesyde_common::irules::identify_aperiodic_asynchronous_dataflow_to_partitioned_tiled_multicore,
+            ),
         ],
         Vec::new(),
         decision_header_to_model_gen!(
@@ -25,7 +28,9 @@ fn main() {
             idesyde_common::models::TiledMultiCore,
             idesyde_common::models::RuntimesAndProcessors,
             idesyde_common::models::PartitionedTiledMulticore,
-            idesyde_common::models::AsynchronousAperiodicDataflow
+            idesyde_common::models::AperiodicAsynchronousDataflow,
+            idesyde_common::models::InstrumentedComputationTimes,
+            idesyde_common::models::AperiodicAsynchronousDataflowToPartitionedTiledMulticore
         ),
         decision_models_schemas_gen!(
             idesyde_common::models::SDFApplication,
@@ -33,7 +38,9 @@ fn main() {
             idesyde_common::models::TiledMultiCore,
             idesyde_common::models::RuntimesAndProcessors,
             idesyde_common::models::PartitionedTiledMulticore,
-            idesyde_common::models::AsynchronousAperiodicDataflow
+            idesyde_common::models::AperiodicAsynchronousDataflow,
+            idesyde_common::models::InstrumentedComputationTimes,
+            idesyde_common::models::AperiodicAsynchronousDataflowToPartitionedTiledMulticore
         ),
     );
     execute_standalone_identification_module(common_module);

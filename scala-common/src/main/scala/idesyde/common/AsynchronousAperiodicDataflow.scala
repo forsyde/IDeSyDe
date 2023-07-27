@@ -16,7 +16,7 @@ import idesyde.core.CompleteDecisionModel
   * 3. The job graph ois weakly connected. If you wish to have multiple "applications", you should
   * generate one decision model for each application.
   */
-final case class AsynchronousAperiodicDataflow(
+final case class AperiodicAsynchronousDataflow(
     val buffer_max_sizes: Map[String, Long],
     val job_graph_buffer_name: Vector[Set[String]],
     val job_graph_data_read: Vector[Long],
@@ -35,7 +35,7 @@ final case class AsynchronousAperiodicDataflow(
 
   override def bodyAsText: String = write(this)
 
-  override def category: String = "AsynchronousAperiodicDataflow"
+  override def category: String = "AperiodicAsynchronousDataflow"
 
   override def bodyAsBinary: Array[Byte] = writeBinary(this)
 

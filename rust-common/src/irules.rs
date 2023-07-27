@@ -9,8 +9,9 @@ use petgraph::{
 };
 
 use crate::models::{
-    AnalysedSDFApplication, AsynchronousAperiodicDataflow, PartitionedTiledMulticore,
-    RuntimesAndProcessors, TiledMultiCore,
+    AnalysedSDFApplication, AperiodicAsynchronousDataflow,
+    AperiodicAsynchronousDataflowToPartitionedTiledMulticore, InstrumentedComputationTimes,
+    PartitionedTiledMulticore, RuntimesAndProcessors, TiledMultiCore,
 };
 
 pub fn identify_partitioned_tiled_multicore(
@@ -223,7 +224,7 @@ pub fn identify_asynchronous_aperiodic_dataflow_from_sdf(
                     }
                 }
                 // we finish by building the decision model
-                identified.push(Box::new(AsynchronousAperiodicDataflow {
+                identified.push(Box::new(AperiodicAsynchronousDataflow {
                     processes: component_actors
                         .into_iter()
                         .map(|s| s.to_string())
@@ -267,6 +268,52 @@ pub fn identify_asynchronous_aperiodic_dataflow_from_sdf(
             }
             // Graph::from_edges(edges.into_iter());
             // actors_graph.extend_with_edges(edges.into_iter());
+        }
+    }
+    identified
+}
+
+pub fn identify_aperiodic_asynchronous_dataflow_to_partitioned_tiled_multicore(
+    _design_models: &Vec<Box<dyn DesignModel>>,
+    decision_models: &Vec<Box<dyn DecisionModel>>,
+) -> Vec<Box<dyn DecisionModel>> {
+    let mut identified: Vec<Box<dyn DecisionModel>> = Vec::new();
+    if let Some(app) = decision_models
+        .iter()
+        .find_map(|x| x.downcast_ref::<AperiodicAsynchronousDataflow>())
+    {
+        if let Some(plat) = decision_models
+            .iter()
+            .find_map(|x| x.downcast_ref::<PartitionedTiledMulticore>())
+        {
+            if let Some(data) = decision_models
+                .iter()
+                .find_map(|x| x.downcast_ref::<InstrumentedComputationTimes>())
+            {
+                // check if all processes can be mapped
+                let all_mappable = app.processes.iter().all(|p| {
+                    plat.hardware.processors.iter().any(|pe| {
+                        data.average_execution_times
+                            .get(p)
+                            .map(|m| m.contains_key(pe))
+                            .unwrap_or(false)
+                    })
+                });
+                if all_mappable {
+                    identified.push(Box::new(
+                        AperiodicAsynchronousDataflowToPartitionedTiledMulticore {
+                            aperiodic_asynchronous_dataflow: app.to_owned(),
+                            partitioned_tiled_multicore: plat.to_owned(),
+                            instrumented_computation_times: data.to_owned(),
+                            processes_to_runtime_scheduling: HashMap::new(),
+                            processes_to_memory_mapping: HashMap::new(),
+                            buffer_to_memory_mappings: HashMap::new(),
+                            super_loop_schedules: HashMap::new(),
+                            buffer_to_routers_reservations: HashMap::new(),
+                        },
+                    ))
+                }
+            }
         }
     }
     identified

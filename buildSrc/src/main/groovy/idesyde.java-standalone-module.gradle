@@ -1,0 +1,11 @@
+plugins {
+    id 'idesyde.java-library'
+    id 'application'
+    id 'com.github.johnrengelman.shadow'
+//  id 'org.jetbrains.kotlin.jvm' version '1.8.20'
+//  id 'org.jetbrains.kotlin.plugin.serialization' version '1.8.20'
+//  id 'org.beryx.jlink'
+//    id "org.gradlex.extra-java-module-info" version "1.4"
+}
+
+archivesBaseName = project.name

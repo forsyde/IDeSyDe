@@ -1,81 +1,11 @@
-plugins {
-  id 'maven-publish'
-  id 'signing'
-  id 'idea'
-  id 'eclipse'
-  id 'com.github.johnrengelman.shadow' version '8.1.1' apply false
-//  id 'org.jetbrains.kotlin.jvm' version '1.8.20'
-//  id 'org.jetbrains.kotlin.plugin.serialization' version '1.8.20'
-//  id 'org.beryx.jlink'
-  id "org.gradlex.extra-java-module-info" version "1.4"
-}
 
 // due to how maven central works, the groupId must be the same as the
 // website which we host
 group = 'io.github.forsyde'
-archivesBaseName = project.name
 project.ext.niceName = "IDeSyDe"
 
 tasks.register('getVersion') {
     doFirst {
         println version
     }
-}
-
-// In this section you declare where to find the dependencies of your project
-repositories {
-  // Use 'jcenter' for resolving your dependencies.
-  // You can declare any Maven/Ivy/file repository here.
-  mavenCentral()
-}
-
-subprojects {
-
-  apply plugin: 'java'
-  apply plugin: 'idea'
-  apply plugin: 'eclipse'
-  apply plugin: 'application'
-//  apply plugin: 'org.jetbrains.kotlin.jvm'
-//  apply plugin: 'org.jetbrains.kotlin.plugin.serialization'
-//  apply plugin: 'com.github.johnrengelman.shadow'
-//  apply plugin: "org.gradlex.extra-java-module-info"
-//  apply plugin: "org.gradlex.java-module-dependencies"
-
-  group = 'io.github.forsyde'
-  archivesBaseName = rootProject.name + '-' + project.name
-  version = rootProject.version
-
-  repositories {
-    mavenCentral()
-  }
-
-  java {
-    withSourcesJar()
-    withJavadocJar()
-    modularity.inferModulePath = true
-  }
-
-  compileJava {
-    sourceCompatibility = JavaVersion.VERSION_17
-    modularity.inferModulePath = true
-  }
-
-  artifacts {
-    archives javadocJar, sourcesJar
-  }
-
-//  extraJavaModuleInfo {
-//    knownModule("com.fasterxml.jackson.core:jackson-annotations", "com.fasterxml.jackson.annotations")
-//    knownModule("com.fasterxml.jackson.core:jackson-core", "com.fasterxml.jackson.core")
-//    knownModule("com.fasterxml.jackson.core:jackson-databind", "com.fasterxml.jackson.databind")
-//    module("org.msgpack:jackson-dataformat-msgpack", "jackson.dataformat.msgpack") {
-//      exportAllPackages()
-//      requireAllDefinedDependencies()
-//    }
-//    module("org.msgpack:msgpack-core", "msgpack.core") {
-//      exportAllPackages()
-//      requireAllDefinedDependencies()
-//    }
-//  }
-
 }

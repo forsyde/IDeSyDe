@@ -1,0 +1,29 @@
+plugins {
+    id 'java'
+    id 'idea'
+    id 'eclipse'
+    id 'java-library'
+}
+
+group = 'io.github.forsyde'
+archivesBaseName = rootProject.name + '-' + project.name
+version = rootProject.version
+
+repositories {
+    mavenCentral()
+}
+
+java {
+    withSourcesJar()
+    withJavadocJar()
+    modularity.inferModulePath = true
+}
+
+compileJava {
+    sourceCompatibility = JavaVersion.VERSION_17
+    modularity.inferModulePath = true
+}
+
+artifacts {
+    archives javadocJar, sourcesJar
+}

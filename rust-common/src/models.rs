@@ -191,16 +191,24 @@ impl DecisionModel for TiledMultiCore {
     }
 }
 
+/// A decision model capturing the binding between procesing element and runtimes.
+///
+/// A runtime here is used in a loose sense: it can be simply a programmable bare-metal
+/// environment. The assumption is that every runtime has one processing element host
+/// and all processing elements might have only one runtime that it is affine to.
+/// A processing element having affinity to a runtime simply means that this
+/// runtime is managing the processing element according to any policy.
 #[derive(Debug, PartialEq, Serialize, Deserialize, Clone, JsonSchema)]
 pub struct RuntimesAndProcessors {
-    pub runtimes: Vec<String>,
-    pub processors: Vec<String>,
+    pub runtimes: HashSet<String>,
+    pub processors: HashSet<String>,
     pub runtime_host: HashMap<String, String>,
     pub processor_affinities: HashMap<String, String>,
-    pub is_bare_metal: Vec<bool>,
-    pub is_fixed_priority: Vec<bool>,
-    pub is_earliest_deadline_first: Vec<bool>,
-    pub is_cyclic_executive: Vec<bool>,
+    pub is_bare_metal: HashSet<String>,
+    pub is_fixed_priority: HashSet<String>,
+    pub is_preemptive: HashSet<String>,
+    pub is_earliest_deadline_first: HashSet<String>,
+    pub is_super_loop: HashSet<String>,
 }
 
 impl DecisionModel for RuntimesAndProcessors {
@@ -224,6 +232,11 @@ impl DecisionModel for RuntimesAndProcessors {
     }
 }
 
+/// A decision model that captures a paritioned-scheduled multicore machine
+///
+/// This means that every processing element hosts and has affinity for one and only one runtime element.
+/// This runtime element can execute according to any scheduling policy, but it must control only
+/// its host.
 #[derive(Debug, PartialEq, Serialize, Deserialize, Clone, JsonSchema)]
 pub struct PartitionedTiledMulticore {
     pub hardware: TiledMultiCore,
@@ -270,7 +283,7 @@ impl DecisionModel for PartitionedTiledMulticore {
 /// 3. The job graph ois weakly connected. If you wish to have multiple "applications", you should generate
 /// one decision model for each application.
 #[derive(Debug, PartialEq, Serialize, Deserialize, Clone, JsonSchema)]
-pub struct AsynchronousAperiodicDataflow {
+pub struct AperiodicAsynchronousDataflow {
     pub processes: HashSet<String>,
     pub buffers: HashSet<String>,
     pub buffer_max_size_in_bits: HashMap<String, u64>,
@@ -284,13 +297,121 @@ pub struct AsynchronousAperiodicDataflow {
     pub process_path_maximum_latency: HashMap<String, HashMap<String, f64>>,
 }
 
-impl DecisionModel for AsynchronousAperiodicDataflow {
+impl DecisionModel for AperiodicAsynchronousDataflow {
     impl_decision_model_standard_parts!(AsynchronousAperiodicDataflow);
 
     fn header(&self) -> DecisionModelHeader {
         let mut elems: HashSet<String> = HashSet::new();
         elems.extend(self.processes.iter().map(|x| x.to_owned()));
         elems.extend(self.buffers.iter().map(|x| x.to_string()));
+        DecisionModelHeader {
+            category: self.category(),
+            body_path: None,
+            covered_elements: elems.into_iter().collect(),
+        }
+    }
+}
+
+/// A decision model to hold computation times between processsables and processing elements.
+///
+/// As the decision model stores these computation in associative arrays (maps), the lack
+/// of an association between a processable and a processing element means that
+/// this processable _cannot_ be executed in the processing element.
+///
+/// In order to maintain the precision as pristine as possible, the values are stored
+/// in a "scaled" manner. That is, there is a scaling factor that denotes the denominator
+/// in which all the stored values must be divided by. This enables us to move the
+/// computational numbers around as integers. Therefore, for any value in this
+/// decision model:
+///
+/// actual_value = integer_value / scale_factor
+///
+#[derive(Debug, PartialEq, Serialize, Deserialize, Clone, JsonSchema)]
+pub struct InstrumentedComputationTimes {
+    pub processes: HashSet<String>,
+    pub processing_elements: HashSet<String>,
+    pub best_execution_times: HashMap<String, HashMap<String, u64>>,
+    pub average_execution_times: HashMap<String, HashMap<String, u64>>,
+    pub worst_execution_times: HashMap<String, HashMap<String, u64>>,
+    pub scale_factor: u64,
+}
+
+impl DecisionModel for InstrumentedComputationTimes {
+    impl_decision_model_standard_parts!(InstrumentedComputationTimes);
+
+    fn header(&self) -> DecisionModelHeader {
+        let mut elems: HashSet<String> = HashSet::new();
+        elems.extend(self.processes.iter().map(|x| x.to_owned()));
+        elems.extend(self.processing_elements.iter().map(|x| x.to_string()));
+        DecisionModelHeader {
+            category: self.category(),
+            body_path: None,
+            covered_elements: elems.into_iter().collect(),
+        }
+    }
+}
+
+/// A decision model that combines one type of application, platform and information to bind them.
+///
+/// The assumptions of this decision model are:
+///  1. For every process, there is at least one processing element in the platform that can run it.
+///     Otherwise, even the trivial mapping is impossible.
+///  2. Super loop schedules are self-timed and stall the processing element that is hosting them.
+///     That is, if we have a poor schedule, the processing element will get "blocked" often.
+#[derive(Debug, PartialEq, Serialize, Deserialize, Clone, JsonSchema)]
+pub struct AperiodicAsynchronousDataflowToPartitionedTiledMulticore {
+    pub aperiodic_asynchronous_dataflow: AperiodicAsynchronousDataflow,
+    pub partitioned_tiled_multicore: PartitionedTiledMulticore,
+    pub instrumented_computation_times: InstrumentedComputationTimes,
+    pub processes_to_runtime_scheduling: HashMap<String, String>,
+    pub processes_to_memory_mapping: HashMap<String, String>,
+    pub buffer_to_memory_mappings: HashMap<String, String>,
+    pub super_loop_schedules: HashMap<String, Vec<String>>,
+    pub buffer_to_routers_reservations: HashMap<String, HashMap<String, HashSet<u16>>>,
+}
+
+impl DecisionModel for AperiodicAsynchronousDataflowToPartitionedTiledMulticore {
+    impl_decision_model_standard_parts!(AperiodicAsynchronousDataflowToPartitionedTiledMulticore);
+
+    fn header(&self) -> DecisionModelHeader {
+        let mut elems: HashSet<String> = HashSet::new();
+        elems.extend(
+            self.aperiodic_asynchronous_dataflow
+                .header()
+                .covered_elements
+                .iter()
+                .map(|x| x.to_owned()),
+        );
+        elems.extend(
+            self.partitioned_tiled_multicore
+                .header()
+                .covered_elements
+                .iter()
+                .map(|x| x.to_owned()),
+        );
+        elems.extend(
+            self.instrumented_computation_times
+                .header()
+                .covered_elements
+                .iter()
+                .map(|x| x.to_owned()),
+        );
+        for (pe, sched) in &self.processes_to_runtime_scheduling {
+            elems.insert(format!("{}={}:{}-{}:{}", "scheduling", pe, "", sched, ""));
+        }
+        for (pe, mem) in &self.processes_to_memory_mapping {
+            elems.insert(format!("{}={}:{}-{}:{}", "mapping", pe, "", mem, ""));
+        }
+        for (buf, mem) in &self.buffer_to_memory_mappings {
+            elems.insert(format!("{}={}:{}-{}:{}", "mapping", buf, "", mem, ""));
+        }
+        for (buf, ce_slots) in &self.buffer_to_routers_reservations {
+            for (ce, slots) in ce_slots {
+                if !slots.is_empty() {
+                    elems.insert(format!("{}={}:{}-{}:{}", "reservation", buf, "", ce, ""));
+                }
+            }
+        }
         DecisionModelHeader {
             category: self.category(),
             body_path: None,

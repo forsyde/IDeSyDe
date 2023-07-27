@@ -141,21 +141,21 @@ test-case-studies:
     BUILD +build-scala-all --targets=${targets} --jdk_base=${jdk_base}
     BUILD +build-rust-linux-host --targets=${targets}
     FROM debian:latest
-    WORKDIR /testing
     RUN apt-get update
     RUN apt-get install -y curl bash wget python3 python3-pip python3-venv
-    RUN curl -sL https://github.com/shyiko/jabba/raw/master/install.sh | JABBA_COMMAND="install ${jabba_jdk} -o /jdk" bash
+    RUN curl -sL https://github.com/Jabba-Team/jabba/raw/main/install.sh | JABBA_COMMAND="install ${jabba_jdk} -o /jdk" bash
     ENV JAVA_HOME /jdk
     ENV PATH $JAVA_HOME/bin:$PATH
     ENV TEST_SLOW=${test_slow}
     RUN python3 -m venv robotenv
-    RUN robotenv/bin/python -m pip install robotframework
+    RUN /robotenv/bin/python -m pip install robotframework
     FOR target IN ${targets}
-        COPY --dir +build-scala-all/${target}/* /testing/${target}/
-        COPY --dir +build-rust-linux-host/${target}/* /testing/${target}/
-        COPY --dir examples_and_benchmarks /testing/${target}/
-        COPY *.py /testing/${target}/
-        COPY *.robot /testing/${target}/
-        RUN cd /testing/${target} && ../robotenv/bin/python -m robot TestsBenchmark.robot
-        SAVE ARTIFACT /testing/${target}/report.html AS LOCAL test_report.html
+        WORKDIR /${target}
+        COPY --dir +build-scala-all/${target}/* .
+        COPY --dir +build-rust-linux-host/${target}/* .
+        COPY --dir examples_and_benchmarks .
+        COPY *.py .
+        COPY *.robot .
+        RUN /robotenv/bin/python -m robot TestsBenchmark.robot
+        SAVE ARTIFACT report.html AS LOCAL test_report.html
     END

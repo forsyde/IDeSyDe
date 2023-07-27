@@ -32,13 +32,16 @@ trait SDFRules {
     val model       = modelOpt.get
     var sdfActors   = Buffer.empty[SDFActor]
     var sdfChannels = Buffer.empty[SDFChannel]
-    model.vertexSet.stream
+    // println(model)
+    model
+      .vertexSet()
       .forEach(v => {
         if (ForSyDeHierarchy.SDFActor.tryView(model, v).isPresent())
           sdfActors += ForSyDeHierarchy.SDFActor.tryView(model, v).get()
         //else if (SDFDelay.conforms(v)) sdfDelays = SDFDelay.enforce(v)
-        else if (ForSyDeHierarchy.SDFChannel.tryView(model, v).isPresent())
+        if (ForSyDeHierarchy.SDFChannel.tryView(model, v).isPresent()) {
           sdfChannels += ForSyDeHierarchy.SDFChannel.tryView(model, v).get()
+        }
       })
     val channelsConnectActors =
       sdfChannels.forall(c =>
@@ -88,14 +91,14 @@ trait SDFRules {
       .map((a, i) =>
         ForSyDeHierarchy.InstrumentedBehaviour
           .tryView(a)
-          .map(_.maxSizeInBits().asInstanceOf[Long])
+          .map(_.maxSizeInBits().values().asScala.max)
           .orElse(0L) +
           a.combFunctions()
             .stream()
             .mapToLong(fs =>
               ForSyDeHierarchy.InstrumentedBehaviour
                 .tryView(fs)
-                .map(_.maxSizeInBits().asInstanceOf[Long])
+                .map(_.maxSizeInBits().values().asScala.max)
                 .orElse(0L)
             )
             .sum

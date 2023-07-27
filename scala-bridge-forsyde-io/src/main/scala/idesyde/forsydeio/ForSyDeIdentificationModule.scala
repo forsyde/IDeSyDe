@@ -44,7 +44,6 @@ object ForSyDeIdentificationModule
   val modelHandler = ModelHandler()
     .registerDriver(SDF3Driver())
     .registerTraitHierarchy(ForSyDeHierarchy())
-    .registerSystemGraphMigrator(TraitNamesFrom0_6To0_7())
   // .registerDriver(new ForSyDeAmaltheaDriver())
 
   val identificationRules = Set(

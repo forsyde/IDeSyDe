@@ -11,6 +11,9 @@ run*/
 ### Bloop ###
 .bloop/
 
+### Metals ###
+.metals/
+
 ### Eclipse ###
 .metadata
 bin/

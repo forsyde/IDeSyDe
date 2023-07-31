@@ -6,9 +6,9 @@ ThisBuild / versionScheme := Some("early-semver")
 ThisBuild / publishMavenStyle := true
 ThisBuild / publishTo := Some(Opts.resolver.sonatypeStaging)
 
-ThisBuild / resolvers += Resolver.mavenLocal
+// ThisBuild / resolvers += Resolver.mavenLocal
 
-lazy val forsydeIoVersion              = "0.7.4-1-gf433301.dirty"
+lazy val forsydeIoVersion              = "0.7.5"
 lazy val jgraphtVersion                = "1.5.1"
 lazy val scribeVersion                 = "3.10.2"
 lazy val scalaGraphVersion             = "1.13.5"

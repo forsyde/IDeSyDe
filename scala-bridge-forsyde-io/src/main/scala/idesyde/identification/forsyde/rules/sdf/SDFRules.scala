@@ -66,7 +66,7 @@ trait SDFRules {
             })
             .sum()
             .toInt
-          // scribe.debug(s"adding ${src.getIdentifier()} -> ${c.getIdentifier()} : ${rate}")
+          // println(s"adding ${src.getIdentifier()} -> ${c.getIdentifier()} : ${rate}")
           topologySrcs += src.getIdentifier()
           topologyDsts += c.getIdentifier()
           topologyEdgeValue += rate
@@ -81,7 +81,7 @@ trait SDFRules {
             })
             .sum()
             .toInt
-          // scribe.debug(s"adding ${c.getIdentifier()} -> ${dst.getIdentifier()} : ${rate}")
+          // println(s"adding ${c.getIdentifier()} -> ${dst.getIdentifier()} : ${rate}")
           topologySrcs += c.getIdentifier()
           topologyDsts += dst.getIdentifier()
           topologyEdgeValue += rate

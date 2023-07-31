@@ -286,7 +286,6 @@ trait PlatformRules {
       var memoryElements        = Buffer.empty[GenericMemoryModule]
       var communicationElements = Buffer.empty[GenericCommunicationModule]
       model.vertexSet.stream
-        .filter(v => ForSyDeHierarchy.DigitalModule.tryView(model, v).isPresent())
         .forEach(v => {
           ForSyDeHierarchy.GenericProcessingModule
             .tryView(model, v)

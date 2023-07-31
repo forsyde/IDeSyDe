@@ -60,7 +60,7 @@ trait WorkloadRules {
       )
       // nothing can be done if there are no tasks
       // so we terminate early to avoid undefined analysis results
-      logger.debug(s"Num of tasks found in model: ${tasks.size}")
+      // println(s"Num of tasks found in model: ${tasks.size}")
       // if (tasks.isEmpty)
       //   return Set.empty
       // now take a look which of the relevant vertexes are connected
@@ -261,7 +261,7 @@ trait WorkloadRules {
           connectivityInspector.pathExists(stim.getViewedVertex(), task.getViewedVertex())
         )
       )
-      logger.debug(s"Are all tasks reachable by a periodic stimulus? ${allTasksAreStimulated}")
+      // println(s"Are all tasks reachable by a periodic stimulus? ${allTasksAreStimulated}")
       if (tasks.isEmpty || !allTasksAreStimulated)
         Set.empty
       else

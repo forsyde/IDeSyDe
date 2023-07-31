@@ -32,14 +32,17 @@ Test for examples_and_benchmarks/CODES_ISSS_2023/SuRaJp
     Should Not Be Empty    ${Explored}
 
 Test for examples_and_benchmarks/DASC2023/combination-50-1_5625
+    [Tags]    slow
     ${Explored} =    IDeSyDeLibrary.Try Explore    examples_and_benchmarks/DASC2023/combination-50-1_5625
     Should Not Be Empty    ${Explored}
 
 Test for examples_and_benchmarks/DASC2023/combination-55-3_125
+    [Tags]    slow
     ${Explored} =    IDeSyDeLibrary.Try Explore    examples_and_benchmarks/DASC2023/combination-55-3_125
     Should Not Be Empty    ${Explored}
 
 Test for examples_and_benchmarks/DASC2023/flight-information-function
+    [Tags]    slow
     ${Explored} =    IDeSyDeLibrary.Try Explore    examples_and_benchmarks/DASC2023/flight-information-function
     Should Be Empty    ${Explored}
 
@@ -48,18 +51,24 @@ Test for examples_and_benchmarks/DASC2023/flight-information-function-50
     Should Not Be Empty    ${Explored}
 
 Test for examples_and_benchmarks/DASC2023/flight-information-function-55
+    [Tags]    slow
     ${Explored} =    IDeSyDeLibrary.Try Explore    examples_and_benchmarks/DASC2023/flight-information-function-55
     Should Not Be Empty    ${Explored}
 
 Test for examples_and_benchmarks/DASC2023/flight-information-function-58_75
-    ${Explored} =    IDeSyDeLibrary.Try Explore    examples_and_benchmarks/DASC2023/flight-information-function-58_75
+    [Tags]    slow
+    ${Explored} =    IDeSyDeLibrary.Try Explore
+    ...    examples_and_benchmarks/DASC2023/flight-information-function-58_75
     Should Be Empty    ${Explored}
 
 Test for examples_and_benchmarks/DASC2023/flight-information-function-62_5
-    ${Explored} =    IDeSyDeLibrary.Try Explore    examples_and_benchmarks/DASC2023/flight-information-function-62_5
+    [Tags]    slow
+    ${Explored} =    IDeSyDeLibrary.Try Explore
+    ...    examples_and_benchmarks/DASC2023/flight-information-function-62_5
     Should Be Empty    ${Explored}
 
 Test for examples_and_benchmarks/DASC2023/flight-information-function-75
+    [Tags]    slow
     ${Explored} =    IDeSyDeLibrary.Try Explore    examples_and_benchmarks/DASC2023/flight-information-function-75
     Should Be Empty    ${Explored}
 

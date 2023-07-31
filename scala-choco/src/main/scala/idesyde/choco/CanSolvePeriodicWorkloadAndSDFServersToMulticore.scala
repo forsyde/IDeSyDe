@@ -362,11 +362,11 @@ final class CanSolvePeriodicWorkloadAndSDFServersToMulticore(using logger: Logge
 
     chocoModel.getSolver().setSearch(
       Array(
-        Search.minDomLBSearch(numMappedElements),
         Search.activityBasedSearch(processExecution:_*),
         Search.activityBasedSearch(processMapping: _*),
         Search.activityBasedSearch(messageMapping: _*),
-        Search.minDomLBSearch(goalThs.map((v, i) => v):_*)
+        Search.minDomLBSearch(goalThs.map((v, i) => v):_*),
+        Search.minDomLBSearch(numMappedElements),
         // Search.minDomLBSearch(responseTimes: _*),
         // Search.minDomLBSearch(blockingTimes: _*)
         // Search.intVarSearch(

@@ -300,7 +300,6 @@ final class CanSolveDepTasksToPartitionedMultiCore(using logger: Logger)
     })
     solver.setSearch(
       Array(
-        Search.inputOrderLBSearch(nUsedPEs),
         // SimpleWorkloadBalancingDecisionStrategy(
         //   (0 until m.platform.runtimes.schedulers.length).toArray,
         //   periods.toArray,
@@ -312,6 +311,7 @@ final class CanSolveDepTasksToPartitionedMultiCore(using logger: Logger)
         Search.activityBasedSearch(taskExecution: _*),
         Search.activityBasedSearch(taskMapping: _*),
         Search.activityBasedSearch(dataBlockMapping: _*),
+        Search.inputOrderLBSearch(nUsedPEs),
         // Search.activityBasedSearch(processingElemsVirtualChannelInCommElem.flatten:_*)
         // Search.minDomLBSearch(responseTimes: _*),
         // Search.minDomLBSearch(blockingTimes: _*)

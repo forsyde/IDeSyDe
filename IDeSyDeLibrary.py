@@ -79,34 +79,23 @@ class IDeSyDeLibrary:
         else:
             bin_path = "./" + bin_path
         files = os.listdir(path)
-        config = configparser.ConfigParser()
-        config.read(path + os.path.sep + "testcase.cfg")
-        is_slow = (
-            (
-                "slow" in config["solutions"] and config["solutions"]["slow"] or "false"
-            ).lower()
-            == "true"
-            if "testcase.cfg" in files
-            else False
-        )
         run_path = test_workdir + os.path.sep + path
         os.makedirs(run_path, exist_ok=True)
-        if not is_slow or is_slow == test_slow:
-            args = [
-                bin_path,
-                "--run-path",
-                run_path,
-                "--x-max-solutions",
-                "1",
-                "-p",
-                str(self.parallel_lvl),
-                "-v",
-                log_level,
-            ] + [path + os.path.sep + f for f in files]
-            if os.name == "nt":
-                child = subprocess.run(args, shell=True)
-            else:
-                child = subprocess.run(args)
+        args = [
+            bin_path,
+            "--run-path",
+            run_path,
+            "--x-max-solutions",
+            "1",
+            "-p",
+            str(self.parallel_lvl),
+            "-v",
+            log_level,
+        ] + [path + os.path.sep + f for f in files]
+        if os.name == "nt":
+            child = subprocess.run(args, shell=True)
+        else:
+            child = subprocess.run(args)
         return os.listdir(run_path + os.path.sep + "explored") or []
         # assert child.returncode == 0
         # if has_solution:

@@ -156,6 +156,6 @@ test-case-studies:
         COPY --dir examples_and_benchmarks .
         COPY *.py .
         COPY *.robot .
-        RUN /robotenv/bin/python -m robot TestsBenchmark.robot
+        RUN /robotenv/bin/python -m robot --exclude slow TestsBenchmark.robot
         SAVE ARTIFACT report.html AS LOCAL test_report.html
     END

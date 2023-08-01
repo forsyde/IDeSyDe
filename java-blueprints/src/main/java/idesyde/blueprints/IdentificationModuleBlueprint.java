@@ -15,6 +15,7 @@ import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.util.HashSet;
+import java.util.Optional;
 import java.util.Set;
 
 public interface IdentificationModuleBlueprint extends IdentificationModule {
@@ -85,7 +86,7 @@ public interface IdentificationModuleBlueprint extends IdentificationModule {
                         var destB = cli.identifiedPath.resolve("body_%016d_%s_%s".format(String.valueOf(cli.identStep), header.category(), uniqueIdentifier()));
                         Files.writeString(destB.resolve(".json"), modelWithBody.getBodyAsText());
                         Files.write(destB.resolve(".cbor"), modelWithBody.getBodyAsBytes());
-                        header = new DecisionModelHeader(header.category(), header.coveredElements(), "body_%016d_%s_%s.cbor".format(String.valueOf(cli.identStep), header.category(), uniqueIdentifier()));
+                        header = new DecisionModelHeader(header.category(), header.coveredElements(), Optional.of("body_%016d_%s_%s.cbor".format(String.valueOf(cli.identStep), header.category(), uniqueIdentifier())));
                     }
                     Files.writeString(destH.resolve(".json"), header.asString());
                     Files.write(destH.resolve(".cbor"), header.asBytes());

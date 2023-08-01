@@ -4,8 +4,13 @@ use std::collections::HashMap;
 use std::hash::Hash;
 use std::io::BufRead;
 use std::io::BufReader;
+use std::io::Write;
+
 use std::path::Path;
 use std::path::PathBuf;
+use std::process::Child;
+
+use std::process::ChildStdin;
 use std::process::Stdio;
 
 use idesyde_core::headers::load_decision_model_header_from_path;
@@ -446,48 +451,111 @@ pub fn compute_dominant_decision_models<'a>(
         .collect()
 }
 
-// pub fn compute_dominant_biddings<'a>(
-//     exploration_modules: &'a Vec<Box<dyn ExplorationModule>>,
-//     decision_models: &'a Vec<Box<dyn DecisionModel>>,
-// ) -> Vec<(
-//     &'a Box<dyn ExplorationModule>,
-//     usize,
-//     &'a Box<dyn DecisionModel>,
-//     ExplorationBid,
-// )> {
-//     let combinations: Vec<(usize, usize, usize, ExplorationBid)> = exploration_modules
-//         .par_iter()
-//         .enumerate()
-//         .flat_map(|(i, exp)| {
-//             decision_models.par_iter().enumerate().flat_map(|(j, m)| {
-//                 exp.bid(m)
-//                     .par_iter()
-//                     .enumerate()
-//                     .map(|(k, b)| (i.to_owned(), k, j.to_owned(), b.to_owned()))
-//             })
-//         })
-//         .filter(|(_, _, _, b)| b.can_explore)
-//         .collect();
-//     combinations
-//         .iter()
-//         .enumerate()
-//         .filter(|(i, (_, _, _, b))| {
-//             combinations
-//                 .iter()
-//                 .enumerate()
-//                 .all(|(j, (_, _, _, ob))| match b.partial_cmp(&ob) {
-//                     Some(Ordering::Greater) | None => true,
-//                     Some(Ordering::Equal) => i <= &j,
-//                     _ => false,
-//                 })
-//         })
-//         .map(|(_, (i, k, j, b))| {
-//             (
-//                 &exploration_modules[*i],
-//                 *k,
-//                 &decision_models[*j],
-//                 b.to_owned(),
-//             )
-//         })
-//         .collect()
-// }
+#[derive(Debug)]
+pub struct ExternalServerIdentificationModule {
+    command_path_: PathBuf,
+    inputs_path_: PathBuf,
+    identified_path_: PathBuf,
+    solved_path_: PathBuf,
+    reverse_path_: PathBuf,
+    output_path_: PathBuf,
+    process: Child,
+}
+
+impl PartialEq for ExternalServerIdentificationModule {
+    fn eq(&self, other: &Self) -> bool {
+        self.command_path_ == other.command_path_
+            && self.inputs_path_ == other.inputs_path_
+            && self.identified_path_ == other.identified_path_
+            && self.solved_path_ == other.solved_path_
+            && self.reverse_path_ == other.reverse_path_
+            && self.output_path_ == other.output_path_
+    }
+}
+
+impl Eq for ExternalServerIdentificationModule {}
+
+impl Hash for ExternalServerIdentificationModule {
+    fn hash<H: std::hash::Hasher>(&self, state: &mut H) {
+        self.command_path_.hash(state);
+    }
+}
+
+impl Drop for ExternalServerIdentificationModule {
+    fn drop(&mut self) {
+        if let Some(input) = &mut self.process.stdin {
+            writeln!(input, "EXIT").expect("Could not send EXIT to a identification module");
+        };
+    }
+}
+
+impl IdentificationModule for ExternalServerIdentificationModule {
+    fn unique_identifier(&self) -> String {
+        self.command_path_.to_str().unwrap().to_string()
+    }
+
+    fn identification_step(
+        &self,
+        iteration: i32,
+        design_models: &Vec<Box<dyn DesignModel>>,
+        decision_models: &Vec<Box<dyn DecisionModel>>,
+    ) -> Vec<Box<dyn DecisionModel>> {
+        let identified = Vec::new();
+        // save decision models and design models and ask the module to read them
+        for design_model in design_models {
+            if design_model.header().write_to_dir(
+                self.inputs_path_.as_path(),
+                format!("{:0>16}", iteration).as_str(),
+                self.unique_identifier().as_str(),
+            ) {
+                if let Some(childin) = &self.process.stdin {
+                    writeln!(
+                        childin.clone().by_ref(),
+                        "DESIGN {}_{}_{}.msgpack",
+                        self.inputs_path_
+                            .to_str()
+                            .expect("Failed to cast path to str during external identification"),
+                        format!("{:0>16}", iteration).as_str(),
+                        self.unique_identifier().as_str()
+                    )
+                    .expect("Failed to request identification module to read decision reader");
+                }
+            }
+        }
+        for decision_model in decision_models {
+            decision_model.write_to_dir(
+                self.inputs_path_.as_path(),
+                format!("{:0>16}", iteration).as_str(),
+                self.unique_identifier().as_str(),
+            );
+            if let Some(childin) = &self.process.stdin {
+                writeln!(
+                    childin.clone().by_ref(),
+                    "DECISION HEADER {}_{}_{}.msgpack",
+                    self.inputs_path_
+                        .to_str()
+                        .expect("Failed to cast path to str during external identification"),
+                    format!("{:0>16}", iteration).as_str(),
+                    self.unique_identifier().as_str()
+                )
+                .expect("Failed to request identification module to read decision reader");
+            }
+        }
+        // ask the module to perform identification
+        if let Some(childin) = &self.process.stdin {
+            writeln!(childin.clone().by_ref(), "IDENTIFY {}", iteration)
+                .expect("Failed to request identification module to identify");
+        }
+        // TODO: Continue here
+        // .. now get the decision models
+        identified
+    }
+
+    fn reverse_identification(
+        &self,
+        decision_model: &Vec<Box<dyn DecisionModel>>,
+        design_model: &Vec<Box<dyn DesignModel>>,
+    ) -> Vec<Box<dyn DesignModel>> {
+        todo!()
+    }
+}

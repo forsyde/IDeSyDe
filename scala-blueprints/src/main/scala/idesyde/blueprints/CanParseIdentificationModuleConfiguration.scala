@@ -69,9 +69,13 @@ trait CanParseIdentificationModuleConfiguration {
         .text("The overall identification iteration number.")
         .action((f, mc) => mc.copy(identificationStep = f)),
       builder
-        .opt[Boolean]("schemas")
+        .opt[Unit]("schemas")
         .text("Schemas for the design models considered in this module.")
-        .action((f, mc) => mc.copy(printSchemas = f)),
+        .action((f, mc) => mc.copy(printSchemas = true)),
+      builder
+        .opt[Unit]("stdio-server")
+        .text("Run this module continously in server mode with STDIO as the interface.")
+        .action((f, mc) => mc.copy(stdioServerMode = true)),
       builder.note(
         """The module needs to be invoked with at least the design and identified paths. 
         If the module is invoked with the integration path as well, 

@@ -14,22 +14,22 @@ trait Logger {
 
   def debug(s: String): Unit = loggingLevel match {
     case LoggingLevel.DEBUG =>
-      println("[debug  ] " + s)
+      println("DEBUG   " + s)
     case _ =>
   }
   def info(s: String): Unit = loggingLevel match {
     case LoggingLevel.DEBUG | LoggingLevel.INFO =>
-      println("[info   ] " + s)
+      println("INFO    " + s)
     case _ =>
   }
   def warn(s: String): Unit = loggingLevel match {
     case LoggingLevel.DEBUG | LoggingLevel.INFO | LoggingLevel.WARN =>
-      println("[warning] " + s)
+      println("WARNING " + s)
     case _ =>
   }
   def error(s: String): Unit = loggingLevel match {
     case LoggingLevel.DEBUG | LoggingLevel.INFO | LoggingLevel.WARN | LoggingLevel.ERROR =>
-      println("[error  ] " + s)
+      println("ERROR   " + s)
   }
 
   def setLoggingLevel(lvl: LoggingLevel): Logger = setLoggingLevel(lvl.repr)

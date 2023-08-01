@@ -80,7 +80,9 @@ trait StandaloneIdentificationModule
     parse(args, uniqueIdentifier) match {
       case Right(conf) =>
         conf match {
-          case IdentificationModuleConfiguration(_, _, _, _, _, _, true) =>
+          case IdentificationModuleConfiguration(_, _, _, _, _, _, _, true) =>
+            serverStandalineIdentificationModule(conf)
+          case IdentificationModuleConfiguration(_, _, _, _, _, _, true, false) =>
             for (schema <- decisionModelSchemas) println(schema)
           case IdentificationModuleConfiguration(
                 Some(designPath),
@@ -89,6 +91,7 @@ trait StandaloneIdentificationModule
                 Some(reversePath),
                 outP,
                 _,
+                false,
                 false
               ) =>
             os.makeDir.all(designPath)
@@ -162,6 +165,7 @@ trait StandaloneIdentificationModule
                 _,
                 _,
                 iteration,
+                false,
                 false
               ) =>
             os.makeDir.all(designPath)
@@ -222,6 +226,185 @@ trait StandaloneIdentificationModule
 
         }
       case Left(usage) => println(usage)
+    }
+  }
+
+  inline def serverStandalineIdentificationModule(conf: IdentificationModuleConfiguration): Unit = {
+    var command              = ""
+    var urlsConsumed         = Set[String]()
+    var designModels         = Set[DesignModel]()
+    var decisionModels       = Set[DecisionModel]()
+    var solvedDecisionModels = Set[DecisionModel]()
+    var identifiedPath       = conf.identifiedPath.getOrElse(os.pwd / "run" / "identified")
+    var designPath           = conf.designPath.getOrElse(os.pwd / "run" / "inputs")
+    var solvedPath           = conf.solvedPath.getOrElse(os.pwd / "run" / "explored")
+    var integrationPath      = conf.integrationPath.getOrElse(os.pwd / "run" / "integrated")
+    os.makeDir.all(identifiedPath)
+    os.makeDir.all(designPath)
+    os.makeDir.all(solvedPath)
+    os.makeDir.all(integrationPath)
+    // populate the initial set just for the sake of completion
+    for (path <- os.list(designPath)) {
+      // headers
+      if (path.baseName.startsWith("header")) {
+        if (path.ext == "msgpack") {
+          for (m <- designHeaderToModel(readBinary[DesignModelHeader](os.read.bytes(path))))
+            designModels += m
+        } else if (path.ext == "json") {
+          for (m <- designHeaderToModel(read[DesignModelHeader](os.read(path))))
+            designModels += m
+        }
+      } else {
+        for (mread <- inputsToDesignModel(path)) {
+          mread match {
+            case d: DesignModel       => designModels += d
+            case h: DesignModelHeader => for (m <- designHeaderToModel(h)) designModels += m
+          }
+        }
+      }
+      // write down the found design models
+      for (dem <- designModels) {
+        val h = dem.header.copy(model_paths = Set(path.toString()))
+        h.writeToPath(designPath, path.baseName, uniqueIdentifier)
+      }
+      urlsConsumed += path.toString
+    }
+    // now the decision models
+    for (path <- os.list(identifiedPath); if path.baseName.startsWith("header")) {
+      if (path.ext == "msgpack") {
+        for (m <- decisionHeaderToModel(readBinary[DecisionModelHeader](os.read.bytes(path))))
+          decisionModels += m
+      } else if (path.ext == "json") {
+        for (m <- decisionHeaderToModel(read[DecisionModelHeader](os.read(path))))
+          decisionModels += m
+      }
+      urlsConsumed += path.toString
+    }
+    // finally, for the solved ones
+    for (path <- os.list(integrationPath); if path.baseName.startsWith("header")) {
+      if (path.ext == "msgpack") {
+        for (m <- decisionHeaderToModel(readBinary[DecisionModelHeader](os.read.bytes(path))))
+          solvedDecisionModels += m
+      } else if (path.ext == "json") {
+        for (m <- decisionHeaderToModel(read[DecisionModelHeader](os.read(path))))
+          solvedDecisionModels += m
+      }
+      urlsConsumed += path.toString
+    }
+    while (command != "EXIT") {
+      command = scala.io.StdIn.readLine()
+      // now branch, depending on the command passed
+      if (command.startsWith("DESIGN")) {
+        val url  = command.substring(6).strip()
+        val path = os.Path(url)
+        if (!urlsConsumed.contains(url)) {
+          if (path.baseName.startsWith("header")) {
+            if (path.ext == "msgpack") {
+              for (m <- designHeaderToModel(readBinary[DesignModelHeader](os.read.bytes(path))))
+                designModels += m
+            } else if (path.ext == "json") {
+              for (m <- designHeaderToModel(read[DesignModelHeader](os.read(path))))
+                designModels += m
+            }
+          } else {
+            for (mread <- inputsToDesignModel(path)) {
+              mread match {
+                case d: DesignModel       => designModels += d
+                case h: DesignModelHeader => for (m <- designHeaderToModel(h)) designModels += m
+              }
+            }
+          }
+          // write down the found design models
+          for (dem <- designModels) {
+            val h = dem.header.copy(model_paths = Set(path.toString()))
+            h.writeToPath(designPath, path.baseName, uniqueIdentifier)
+          }
+          urlsConsumed += url
+        }
+      } else if (command.startsWith("DECISION HEADER")) {
+        val url  = command.substring(15).strip()
+        val path = os.Path(url)
+        if (!urlsConsumed.contains(url)) {
+          if (path.ext == "msgpack") {
+            for (m <- decisionHeaderToModel(readBinary[DecisionModelHeader](os.read.bytes(path))))
+              decisionModels += m
+          } else if (path.ext == "json") {
+            for (m <- decisionHeaderToModel(read[DecisionModelHeader](os.read(path))))
+              decisionModels += m
+          }
+          urlsConsumed += url
+        }
+      } else if (command.startsWith("SOLVED DECISION HEADER")) {
+        val url  = command.substring(22).strip()
+        val path = os.Path(url)
+        if (!urlsConsumed.contains(url)) {
+          if (path.ext == "msgpack") {
+            for (m <- decisionHeaderToModel(readBinary[DecisionModelHeader](os.read.bytes(path))))
+              solvedDecisionModels += m
+          } else if (path.ext == "json") {
+            for (m <- decisionHeaderToModel(read[DecisionModelHeader](os.read(path))))
+              solvedDecisionModels += m
+          }
+          urlsConsumed += url
+        }
+      } else if (command.startsWith("IDENTIFY")) {
+        var iteration = command.substring(8).strip().toInt
+        val identified = identificationStep(
+          iteration,
+          designModels,
+          decisionModels
+        )
+        val newIdentified = identified -- decisionModels
+        println("NEW DECISION " + newIdentified.size)
+        for (m <- newIdentified) {
+          val (hPath, bPath) = m.writeToPath(
+            identifiedPath,
+            f"${iteration}%016d",
+            uniqueIdentifier
+          )
+          println(
+            "DECISION HEADER " +
+              hPath
+                .getOrElse(
+                  identifiedPath / s"header_${iteration}_${m.category}_${uniqueIdentifier}.msgpack"
+                )
+                .toString
+          )
+        }
+        decisionModels ++= identified
+      } else if (command.startsWith("INTEGRATE")) {
+        val url = command.substring(9).strip()
+        for (
+          (m, k) <- reverseIdentification(
+            solvedDecisionModels,
+            designModels
+          ).zipWithIndex;
+          written <- designModelToOutput(m, integrationPath)
+        ) {
+          val header = m.header.copy(model_paths = Set(written.toString))
+          val (hPath, bPath) = header.writeToPath(
+            integrationPath,
+            s"${k}",
+            uniqueIdentifier
+          )
+          println(
+            hPath
+              .getOrElse(
+                integrationPath / s"header_${m.category}_${uniqueIdentifier}.msgpack"
+              )
+              .toString
+          )
+          if (url.length() > 0) {
+            designModelToOutput(m, os.Path(url))
+          }
+        }
+      } else if (command.startsWith("STAT")) {
+        println("DECISION " + decisionModels.toVector.map(_.category).mkString(", "))
+        println("DESIGN " + designModels.toVector.map(_.category).mkString(", "))
+        println("SOLVED " + solvedDecisionModels.toVector.map(_.category).mkString(", "))
+      } else if (!command.startsWith("EXIT")) {
+        logger.error("Passed invalid command: " + command)
+      }
     }
   }
 }

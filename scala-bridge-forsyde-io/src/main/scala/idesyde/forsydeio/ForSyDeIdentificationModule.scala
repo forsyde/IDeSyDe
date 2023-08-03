@@ -108,5 +108,5 @@ object ForSyDeIdentificationModule
       None
   }
 
-  def uniqueIdentifier: String = "YyyYyYyIdentificationModule"
+  def uniqueIdentifier: String = "ForSyDeIdentificationModule"
 }

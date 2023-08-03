@@ -4,25 +4,30 @@ use std::collections::HashMap;
 use std::hash::Hash;
 use std::io::BufRead;
 use std::io::BufReader;
+use std::io::BufWriter;
 use std::io::Write;
 
+use std::ops::DerefMut;
 use std::path::Path;
 use std::path::PathBuf;
-use std::process::Child;
 
-use std::process::ChildStdin;
+use std::process::Child;
 use std::process::Stdio;
+use std::sync::Mutex;
 
 use idesyde_core::headers::load_decision_model_header_from_path;
 use idesyde_core::headers::load_decision_model_headers_from_binary;
+
 use idesyde_core::headers::DecisionModelHeader;
 use idesyde_core::headers::DesignModelHeader;
 use idesyde_core::headers::ExplorationBid;
+
 use idesyde_core::DecisionModel;
 use idesyde_core::DesignModel;
 use idesyde_core::ExplorationModule;
 use idesyde_core::IdentificationModule;
 use log::debug;
+use log::error;
 use log::warn;
 
 use rayon::prelude::*;
@@ -35,6 +40,16 @@ pub struct ExternalIdentificationModule {
     solved_path_: PathBuf,
     reverse_path_: PathBuf,
     output_path_: PathBuf,
+}
+
+impl ExternalIdentificationModule {
+    pub fn is_java(&self) -> bool {
+        self.command_path_
+            .extension()
+            .and_then(|s| s.to_str())
+            .map(|s| s == "jar")
+            .unwrap_or(false)
+    }
 }
 
 impl IdentificationModule for ExternalIdentificationModule {
@@ -168,6 +183,16 @@ pub struct ExternalExplorationModule {
     solved_path_: PathBuf,
 }
 
+impl ExternalExplorationModule {
+    pub fn is_java(&self) -> bool {
+        self.command_path_
+            .extension()
+            .and_then(|s| s.to_str())
+            .map(|s| s == "jar")
+            .unwrap_or(false)
+    }
+}
+
 impl ExplorationModule for ExternalExplorationModule {
     fn unique_identifier(&self) -> String {
         self.command_path_.to_str().unwrap().to_string()
@@ -187,13 +212,7 @@ impl ExplorationModule for ExternalExplorationModule {
             .find(|(_, h)| h == &m.header())
             .map(|(p, _)| p)
             .unwrap();
-        let is_java = self
-            .command_path_
-            .extension()
-            .and_then(|s| s.to_str())
-            .map(|s| s == "jar")
-            .unwrap_or(false);
-        let output = match is_java {
+        let output = match self.is_java() {
             true => std::process::Command::new("java")
                 .arg("-jar")
                 .arg(&self.command_path_)
@@ -252,13 +271,7 @@ impl ExplorationModule for ExternalExplorationModule {
             .find(|(_, h)| h == &m.header())
             .map(|(p, _)| p)
             .unwrap();
-        let is_java = self
-            .command_path_
-            .extension()
-            .and_then(|s| s.to_str())
-            .map(|s| s == "jar")
-            .unwrap_or(false);
-        let child_opt = match is_java {
+        let child_opt = match self.is_java() {
             true => std::process::Command::new("java")
                 .arg("-jar")
                 .arg(&self.command_path_)
@@ -349,22 +362,33 @@ pub fn find_and_prepare_identification_modules(
     solved_path: &Path,
     integration_path: &Path,
     output_path: &Path,
-) -> Vec<ExternalIdentificationModule> {
-    let mut imodules = Vec::new();
+) -> Vec<Box<dyn IdentificationModule>> {
+    let mut imodules: Vec<Box<dyn IdentificationModule>> = Vec::new();
     if let Ok(read_dir) = modules_path.read_dir() {
         for e in read_dir {
             if let Ok(de) = e {
                 let p = de.path();
                 if p.is_file() {
                     let prog = p.read_link().unwrap_or(p);
-                    imodules.push(ExternalIdentificationModule {
-                        command_path_: prog.clone(),
-                        identified_path_: identified_path.to_path_buf(),
-                        inputs_path_: inputs_path.to_path_buf(),
-                        solved_path_: solved_path.to_path_buf(),
-                        reverse_path_: integration_path.to_path_buf(),
-                        output_path_: output_path.to_path_buf(),
-                    });
+                    if let Some(imodule) = ExternalServerIdentificationModule::try_create(
+                        prog.clone(),
+                        inputs_path.to_path_buf(),
+                        identified_path.to_path_buf(),
+                        solved_path.to_path_buf(),
+                        integration_path.to_path_buf(),
+                        output_path.to_path_buf(),
+                    ) {
+                        imodules.push(Box::new(imodule));
+                    } else {
+                        imodules.push(Box::new(ExternalIdentificationModule {
+                            command_path_: prog.clone(),
+                            identified_path_: identified_path.to_path_buf(),
+                            inputs_path_: inputs_path.to_path_buf(),
+                            solved_path_: solved_path.to_path_buf(),
+                            reverse_path_: integration_path.to_path_buf(),
+                            output_path_: output_path.to_path_buf(),
+                        }));
+                    }
                 }
             }
         }
@@ -406,7 +430,7 @@ pub fn identification_procedure(
     let mut fix_point = false;
     let mut identified: Vec<Box<dyn DecisionModel>> = Vec::new();
     identified.append(pre_identified);
-    while !fix_point || step <= 1 {
+    while !fix_point {
         // the step condition forces the procedure to go at least one more, fundamental for incrementability
         fix_point = true;
         let before = identified.len();
@@ -453,18 +477,99 @@ pub fn compute_dominant_decision_models<'a>(
 
 #[derive(Debug)]
 pub struct ExternalServerIdentificationModule {
-    command_path_: PathBuf,
+    name: String,
     inputs_path_: PathBuf,
     identified_path_: PathBuf,
     solved_path_: PathBuf,
     reverse_path_: PathBuf,
     output_path_: PathBuf,
-    process: Child,
+    process: Mutex<Child>,
+}
+
+impl ExternalServerIdentificationModule {
+    pub fn try_create(
+        command_path_: PathBuf,
+        inputs_path_: PathBuf,
+        identified_path_: PathBuf,
+        solved_path_: PathBuf,
+        reverse_path_: PathBuf,
+        output_path_: PathBuf,
+    ) -> Option<ExternalServerIdentificationModule> {
+        // first check if it is indeed a serve-able module
+        let is_java = command_path_
+            .extension()
+            .and_then(|s| s.to_str())
+            .map(|s| s == "jar")
+            .unwrap_or(false);
+        let child_res = match is_java {
+            true => std::process::Command::new("java")
+                .arg("-jar")
+                .arg(&command_path_)
+                .arg("--stdio-server")
+                .arg("-m")
+                .arg(&inputs_path_)
+                .arg("-i")
+                .arg(&identified_path_)
+                .arg("-s")
+                .arg(&solved_path_)
+                .arg("-r")
+                .arg(&reverse_path_)
+                .arg("-o")
+                .arg(&output_path_)
+                .stdin(Stdio::piped())
+                .stdout(Stdio::piped())
+                .stderr(Stdio::piped())
+                .spawn(),
+            false => std::process::Command::new(&command_path_)
+                .arg("--stdio-server")
+                .arg("-m")
+                .arg(&inputs_path_)
+                .arg("-i")
+                .arg(&identified_path_)
+                .arg("-s")
+                .arg(&solved_path_)
+                .arg("-r")
+                .arg(&reverse_path_)
+                .arg("-o")
+                .arg(&output_path_)
+                .stdin(Stdio::piped())
+                .stdout(Stdio::piped())
+                .stderr(Stdio::piped())
+                .spawn(),
+        };
+        // the test involves just exitting it
+        if let Ok(mut server_child) = child_res {
+            if let Some(childout) = &mut server_child.stdout {
+                let mut line = "".to_string();
+                let mut buf = BufReader::new(childout);
+                buf.read_line(&mut line)
+                    .expect("Could not read initialization line for imodule.");
+                if line.contains("INITIALIZED") {
+                    return Some(ExternalServerIdentificationModule {
+                        name: command_path_
+                            .clone()
+                            .file_name()
+                            .and_then(|x| x.to_str())
+                            .and_then(|x| x.split('.').next())
+                            .expect("Could not fetch name from imodule file name.")
+                            .to_string(),
+                        identified_path_: identified_path_.to_path_buf(),
+                        inputs_path_: inputs_path_.to_path_buf(),
+                        solved_path_: solved_path_.to_path_buf(),
+                        reverse_path_: reverse_path_.to_path_buf(),
+                        output_path_: output_path_.to_path_buf(),
+                        process: Mutex::new(server_child),
+                    });
+                }
+            }
+        }
+        None
+    }
 }
 
 impl PartialEq for ExternalServerIdentificationModule {
     fn eq(&self, other: &Self) -> bool {
-        self.command_path_ == other.command_path_
+        self.name == other.name
             && self.inputs_path_ == other.inputs_path_
             && self.identified_path_ == other.identified_path_
             && self.solved_path_ == other.solved_path_
@@ -477,21 +582,27 @@ impl Eq for ExternalServerIdentificationModule {}
 
 impl Hash for ExternalServerIdentificationModule {
     fn hash<H: std::hash::Hasher>(&self, state: &mut H) {
-        self.command_path_.hash(state);
+        self.name.hash(state);
     }
 }
 
 impl Drop for ExternalServerIdentificationModule {
     fn drop(&mut self) {
-        if let Some(input) = &mut self.process.stdin {
-            writeln!(input, "EXIT").expect("Could not send EXIT to a identification module");
-        };
+        if let Ok(mut child) = self.process.lock() {
+            if let Err(e) = child.kill() {
+                debug!(
+                    "Ignoring error whilst killing imodule {}: {}",
+                    self.unique_identifier(),
+                    e.to_string(),
+                );
+            }
+        }
     }
 }
 
 impl IdentificationModule for ExternalServerIdentificationModule {
     fn unique_identifier(&self) -> String {
-        self.command_path_.to_str().unwrap().to_string()
+        self.name.clone()
     }
 
     fn identification_step(
@@ -500,62 +611,172 @@ impl IdentificationModule for ExternalServerIdentificationModule {
         design_models: &Vec<Box<dyn DesignModel>>,
         decision_models: &Vec<Box<dyn DecisionModel>>,
     ) -> Vec<Box<dyn DecisionModel>> {
-        let identified = Vec::new();
-        // save decision models and design models and ask the module to read them
-        for design_model in design_models {
-            if design_model.header().write_to_dir(
-                self.inputs_path_.as_path(),
-                format!("{:0>16}", iteration).as_str(),
-                self.unique_identifier().as_str(),
-            ) {
-                if let Some(childin) = &self.process.stdin {
-                    writeln!(
-                        childin.clone().by_ref(),
-                        "DESIGN {}_{}_{}.msgpack",
-                        self.inputs_path_
-                            .to_str()
-                            .expect("Failed to cast path to str during external identification"),
-                        format!("{:0>16}", iteration).as_str(),
-                        self.unique_identifier().as_str()
+        let mut identified: Vec<Box<dyn DecisionModel>> = Vec::new();
+        if let Ok(mut server_guard) = self.process.lock() {
+            let server = server_guard.deref_mut();
+            if let Some(childin) = &mut server.stdin {
+                let mut buf = BufWriter::new(childin);
+                // save decision models and design models and ask the module to read them
+                for design_model in design_models {
+                    for mpath in design_model.header().model_paths {
+                        writeln!(buf, "DESIGN {}", mpath)
+                            .expect("Failed to request identification module to read design model");
+                    }
+                    // if design_model.header().write_to_dir(
+                    //     self.inputs_path_.as_path(),
+                    //     format!("{:0>16}", iteration).as_str(),
+                    //     "Orchestrator",
+                    // ) {
+                    //     writeln!(
+                    //         buf,
+                    //         "DESIGN header_{}_{}_{}.msgpack",
+                    //         self.inputs_path_.to_str().expect(
+                    //             "Failed to cast path to str during external identification"
+                    //         ),
+                    //         format!("{:0>16}", iteration).as_str(),
+                    //         "Orchestrator"
+                    //     )
+                    //     .expect(
+                    //         "Failed to request identification module to read design model header",
+                    //     );
+                    // }
+                }
+                for decision_model in decision_models {
+                    let h = decision_model.header();
+                    // this path for the header exists BY CONVENTION. Maybe in the future this can be parametrized
+                    writeln!(buf, "DECISION INLINE {}", h.to_json_str())
+                        .expect("Failed to request identification module to read decision reader");
+                }
+                // ask the module to perform identification
+
+                // buf.flush().expect("could not flush");
+                writeln!(buf, "IDENTIFY {}", iteration).expect(
+                    format!(
+                        "Failed to request identification module {} to identify",
+                        self.unique_identifier()
                     )
-                    .expect("Failed to request identification module to read decision reader");
+                    .as_str(),
+                );
+                buf.flush().expect("Failed to flush input to imodule.");
+            }
+            // get the results
+            if let Some(out) = &mut server.stdout {
+                // let mut out = childout.deref_mut();
+                let mut buf = BufReader::new(out);
+                let mut line: String = "".to_string();
+                // first get the number of models
+                buf.read_line(&mut line)
+                    .expect("Error while getting number of models from imodule");
+                // println!("{}, {}", line, iteration);
+                let num_models = line[4..].trim().parse().ok().unwrap_or(0usize);
+                for _ in 0..num_models {
+                    line = "".to_string();
+                    match &buf.read_line(&mut line) {
+                        Ok(_) => {
+                            if line.contains("DECISION INLINE") {
+                                let payload = &line[15..].trim();
+                                let h = serde_json::from_str::<DecisionModelHeader>(payload);
+                                if let Ok(header) = h {
+                                    let boxed = Box::new(header) as Box<dyn DecisionModel>;
+                                    if !identified.contains(&boxed) {
+                                        identified.push(boxed);
+                                    }
+                                }
+                            } else {
+                                warn!(
+                                    "Ignoring non-compliant identification result by module {}: {}",
+                                    self.unique_identifier(),
+                                    line
+                                )
+                            }
+                        }
+                        Err(e) => error!("Module {} errored with {}", self.unique_identifier(), e),
+                    }
                 }
             }
         }
-        for decision_model in decision_models {
-            decision_model.write_to_dir(
-                self.inputs_path_.as_path(),
-                format!("{:0>16}", iteration).as_str(),
-                self.unique_identifier().as_str(),
-            );
-            if let Some(childin) = &self.process.stdin {
-                writeln!(
-                    childin.clone().by_ref(),
-                    "DECISION HEADER {}_{}_{}.msgpack",
-                    self.inputs_path_
-                        .to_str()
-                        .expect("Failed to cast path to str during external identification"),
-                    format!("{:0>16}", iteration).as_str(),
-                    self.unique_identifier().as_str()
-                )
-                .expect("Failed to request identification module to read decision reader");
-            }
-        }
-        // ask the module to perform identification
-        if let Some(childin) = &self.process.stdin {
-            writeln!(childin.clone().by_ref(), "IDENTIFY {}", iteration)
-                .expect("Failed to request identification module to identify");
-        }
-        // TODO: Continue here
-        // .. now get the decision models
         identified
     }
 
     fn reverse_identification(
         &self,
-        decision_model: &Vec<Box<dyn DecisionModel>>,
-        design_model: &Vec<Box<dyn DesignModel>>,
+        decision_models: &Vec<Box<dyn DecisionModel>>,
+        design_models: &Vec<Box<dyn DesignModel>>,
     ) -> Vec<Box<dyn DesignModel>> {
-        todo!()
+        let mut integrated: Vec<Box<dyn DesignModel>> = Vec::new();
+        // save decision models and design models and ask the module to read them
+        // for design_model in design_models {
+        //     if design_model.header().write_to_dir(
+        //         self.inputs_path_.as_path(),
+        //         "integration",
+        //         "Orchestrator",
+        //     ) {
+        //         if let Ok(mut childin) = self.process_in.lock() {
+        //             writeln!(
+        //                 childin.deref_mut(),
+        //                 "DESIGN {}_{}_{}.msgpack",
+        //                 self.inputs_path_
+        //                     .to_str()
+        //                     .expect("Failed to cast path to str during external identification"),
+        //                 "integration",
+        //                 "Orchestrator"
+        //             )
+        //             .expect("Failed to request identification module to read decision reader");
+        //         }
+        //     }
+        // }
+        // for decision_model in decision_models {
+        //     decision_model.write_to_dir(
+        //         self.inputs_path_.as_path(),
+        //         "integration",
+        //         "Orchestrator",
+        //     );
+        //     if let Ok(mut childin) = self.process_in.lock() {
+        //         writeln!(
+        //             childin.deref_mut(),
+        //             "DECISION {}_{}_{}.msgpack",
+        //             self.inputs_path_
+        //                 .to_str()
+        //                 .expect("Failed to cast path to str during external identification"),
+        //             "integration",
+        //             "Orchestrator"
+        //         )
+        //         .expect("Failed to request identification module to read decision reader");
+        //     }
+        // }
+        // // ask the module to perform identification
+        // if let Ok(mut childin) = self.process_in.lock() {
+        //     writeln!(childin.deref_mut(), "INTEGRATE")
+        //         .expect("Failed to request identification module to integrate");
+        // }
+        // // get the results
+        // if let Ok(mut childout) = self.process_out.lock() {
+        //     let mut out = childout.deref_mut();
+        //     let buf = BufReader::new(&mut out);
+        //     for line in buf.lines() {
+        //         match line {
+        //             Ok(l) => {
+        //                 if l.contains("DESIGN") {
+        //                     let path_str = &l[6..];
+        //                     let h = DesignModelHeader::from_file(Path::new(path_str));
+        //                     if let Some(header) = h {
+        //                         let boxed = Box::new(header) as Box<dyn DesignModel>;
+        //                         if !integrated.contains(&boxed) {
+        //                             integrated.push(boxed);
+        //                         }
+        //                     }
+        //                 } else {
+        //                     warn!(
+        //                         "Ignoring non-compliant integration result by module {}: {}",
+        //                         self.unique_identifier(),
+        //                         l
+        //                     )
+        //                 }
+        //             }
+        //             Err(e) => error!("Module {} errored with {}", self.unique_identifier(), e),
+        //         }
+        //     }
+        // }
+        integrated
     }
 }

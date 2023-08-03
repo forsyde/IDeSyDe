@@ -27,7 +27,6 @@ case class DecisionModelHeader(
 }
 
 object DecisionModelHeader {
-  given Conversion[LabelledArcWithPorts, ujson.Value] = LabelledArcWithPorts.conv
   given ReadWriter[DecisionModelHeader] = upickle.default
     .readwriter[ujson.Value]
     .bimap[DecisionModelHeader](
@@ -39,6 +38,7 @@ object DecisionModelHeader {
           // "covered_relations" -> ujson.Arr.from(x.covered_relations)
         ),
       json =>
+        // println(json.toString)
         DecisionModelHeader(
           json.objOpt.flatMap(_.get("category").flatMap(_.strOpt)).get,
           json.objOpt.flatMap(_.get("body_path").flatMap(_.strOpt)),

@@ -13,23 +13,10 @@ trait ModuleUtils {
 
   def decodeFromPath[T: ReadWriter](p: String): Option[T] = {
     var decoded: Option[T] = None
-    try {
-      if (p.endsWith(".msgpack"))
-        decoded = Some(readBinary[T](os.read.bytes(os.pwd / os.RelPath(p))))
-      else if (p.endsWith(".json"))
-        decoded = Some(read[T](os.read(os.pwd / os.RelPath(p))))
-    } catch {
-      case err: IllegalArgumentException =>
-        if (p.endsWith(".msgpack"))
-          decoded = Some(readBinary[T](os.read.bytes(os.Path(p))))
-        else if (p.endsWith(".json"))
-          decoded = Some(read[T](os.read(os.Path(p))))
-      case err: PathError.NoRelativePath =>
-        if (p.endsWith(".msgpack"))
-          decoded = Some(readBinary[T](os.read.bytes(os.Path(p))))
-        else if (p.endsWith(".json"))
-          decoded = Some(read[T](os.read(os.Path(p))))
-    }
+    if (p.endsWith(".msgpack"))
+      decoded = Some(readBinary[T](os.read.bytes(stringToPath(p))))
+    else if (p.endsWith(".json"))
+      decoded = Some(read[T](os.read(stringToPath(p))))
     decoded
     // if (p.endsWith(".msgpack") && !p.startsWith("/"))
     //   Some(readBinary[T](os.read.bytes(os.pwd / os.RelPath(p))))
@@ -40,6 +27,20 @@ trait ModuleUtils {
     // else if (p.endsWith(".json") && p.startsWith("/"))
     //   Some(read[T](os.read(os.root / os.RelPath(p.substring(1)))))
     // else None
+  }
+
+  def stringToPath(s: String): os.Path = {
+    try {
+      val p = os.RelPath(s)
+      p.resolveFrom(os.pwd)
+    } catch {
+      case err: IllegalArgumentException =>
+        os.Path(s)
+      case err: PathError.NoRelativePath =>
+        os.Path(s)
+      case err =>
+        throw err
+    }
   }
 
   extension (m: DesignModel)

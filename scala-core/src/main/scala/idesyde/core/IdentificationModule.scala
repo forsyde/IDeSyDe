@@ -56,13 +56,7 @@ trait IdentificationModule {
       designModels: Set[DesignModel] = Set(),
       decisionModels: Set[DecisionModel] = Set()
   ): Set[DecisionModel] = {
-    val iterRules = if (stepNumber == 0L) {
-      identificationRules.flatMap(_ match {
-        case r: MarkedIdentificationRule.DecisionModelOnlyIdentificationRule         => None
-        case r: MarkedIdentificationRule.SpecificDecisionModelOnlyIdentificationRule => None
-        case r                                                                       => Some(r)
-      })
-    } else if (stepNumber > 0L) {
+    val iterRules = if (stepNumber > 0L) {
       identificationRules.flatMap(_ match {
         case r: MarkedIdentificationRule.DesignModelOnlyIdentificationRule => None
         case r                                                             => Some(r)

@@ -3,7 +3,6 @@ package idesyde.devicetree.identification
 import idesyde.devicetree.OSDescription
 import idesyde.core.DecisionModel
 import idesyde.core.DesignModel
-import idesyde.core.headers.LabelledArcWithPorts
 
 final case class OSDescriptionDesignModel(
     val description: OSDescription

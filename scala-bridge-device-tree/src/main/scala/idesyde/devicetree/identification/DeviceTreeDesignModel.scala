@@ -2,7 +2,6 @@ package idesyde.devicetree.identification
 
 import idesyde.core.DesignModel
 import idesyde.devicetree.{DeviceTreeLink, DeviceTreeComponent, RootNode}
-import idesyde.core.headers.LabelledArcWithPorts
 
 final case class DeviceTreeDesignModel(
     val roots: List[RootNode]

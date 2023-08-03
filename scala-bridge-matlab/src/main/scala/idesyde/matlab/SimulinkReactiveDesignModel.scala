@@ -2,7 +2,6 @@ package idesyde.matlab
 
 import idesyde.core.DesignModel
 import upickle.default.*
-import idesyde.core.headers.LabelledArcWithPorts
 
 /** A design model for a subset of all possible simulink models.
   *
@@ -38,11 +37,7 @@ final case class SimulinkReactiveDesignModel(
     yield (links_src(i), links_dst(i), links_src_port(i), links_dst_port(i), links_size(i))).toSet
 
   def elementID(elem: String): String = elem
-  def elementRelationID(rel: (String, String, String, String)): LabelledArcWithPorts =
-    LabelledArcWithPorts(rel._1, Some(rel._2), None, rel._3, Some(rel._4))
-  val elementRelations: Set[(String, String, String, String)] =
-    (for (i <- 0 until links_src.size)
-      yield (links_src(i), links_dst(i), links_src_port(i), links_dst_port(i))).toSet
+
   val elements: Set[String] =
     (processes ++ delays ++ sources ++ constants ++ sinks).toSet
   def merge(other: idesyde.core.DesignModel): Option[idesyde.core.DesignModel] =

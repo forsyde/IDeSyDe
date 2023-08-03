@@ -1,6 +1,5 @@
 package idesyde.core
 
-import idesyde.core.headers.LabelledArcWithPorts
 import idesyde.core.headers.DecisionModelHeader
 import javax.lang.model.element.Element
 

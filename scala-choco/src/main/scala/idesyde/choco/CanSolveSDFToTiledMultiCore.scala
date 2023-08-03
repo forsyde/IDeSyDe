@@ -27,7 +27,6 @@ import idesyde.utils.Logger
 import idesyde.identification.choco.models.sdf.CompactingMultiCoreMapping
 import scalax.collection.GraphEdge.DiEdge
 import idesyde.core.headers.DecisionModelHeader
-import idesyde.core.headers.LabelledArcWithPorts
 import org.jgrapht.graph.SimpleDirectedGraph
 import org.jgrapht.graph.DefaultEdge
 import org.jgrapht.alg.cycle.JohnsonSimpleCycles

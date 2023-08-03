@@ -1,11 +1,11 @@
-use std::{path::Path, time::UNIX_EPOCH};
+use std::{collections::HashSet, path::Path, time::UNIX_EPOCH};
 
 use clap::Parser;
 use env_logger::WriteStyle;
 use idesyde_core::{
     headers::{
         load_decision_model_headers_from_binary, load_design_model_headers_from_binary,
-        ExplorationBid,
+        DesignModelHeader, ExplorationBid,
     },
     DecisionModel, DesignModel, ExplorationModule, IdentificationModule,
 };
@@ -214,6 +214,7 @@ fn main() {
             }
         }
 
+        debug!("Initializing imodules");
         let mut imodules: Vec<Box<dyn IdentificationModule>> = Vec::new();
         let ex_imodules = idesyde_orchestration::find_and_prepare_identification_modules(
             imodules_path,
@@ -225,11 +226,12 @@ fn main() {
         );
         for eximod in ex_imodules {
             debug!(
-                "Registering external identification module with identifier {}",
+                "Initialized identification module with identifier {}",
                 &eximod.unique_identifier()
             );
-            imodules.push(Box::new(eximod) as Box<dyn IdentificationModule>);
+            imodules.push(eximod);
         }
+        debug!("Initializing emodules");
         let mut emodules: Vec<Box<dyn ExplorationModule>> = Vec::new();
         let ex_emodules = idesyde_orchestration::find_exploration_modules(
             emodules_path,
@@ -238,25 +240,31 @@ fn main() {
         );
         for exemod in ex_emodules {
             debug!(
-                "Registering external exploration module with identifier {}",
+                "Initialized exploration module with identifier {}",
                 &exemod.unique_identifier()
             );
             emodules.push(Box::new(exemod) as Box<dyn ExplorationModule>);
         }
 
         // a zero-step to make design model headers available
-        imodules.par_iter().for_each(|imodule| {
-            imodule.identification_step(0, &Vec::new(), &Vec::new());
-        });
+        // imodules.par_iter().for_each(|imodule| {
+        //     imodule.identification_step(0, &Vec::new(), &Vec::new());
+        // });
         // for imodule in &imodules {
         //     imodule.identification_step(0, &Vec::new(), &Vec::new());
         // }
         // now we can proceed safely
         let design_model_headers = load_design_model_headers_from_binary(&inputs_path);
-        let design_models: Vec<Box<dyn DesignModel>> = design_model_headers
+        let mut design_models: Vec<Box<dyn DesignModel>> = design_model_headers
             .iter()
             .map(|h| Box::new(h.to_owned()) as Box<dyn DesignModel>)
             .collect();
+        // add an "Opaque" design model header so that all modules are aware of the input models
+        design_models.push(Box::new(DesignModelHeader {
+            category: "Any".to_string(),
+            model_paths: args.inputs,
+            elements: HashSet::new(),
+        }));
         let mut pre_identified: Vec<Box<dyn DecisionModel>> =
             load_decision_model_headers_from_binary(&identified_path)
                 .iter()
@@ -266,7 +274,7 @@ fn main() {
             &imodules,
             &design_models,
             &mut pre_identified,
-            1,
+            0,
         );
         info!("Identified {} decision model(s)", identified.len());
 
@@ -385,13 +393,13 @@ fn main() {
             );
             match (args.x_total_time_out, args.x_max_solutions) {
                 (Some(t), Some(n)) => info!(
-                    "Starting exploration up to {} total time-out seconds and {} solutions.",
+                    "Starting exploration up to {} total time-out seconds and {} solution(s).",
                     t, n
                 ),
                 (Some(t), None) => {
-                    info!("Starting exploration up to {} total time-out seconds.", t)
+                    info!("Starting exploration up to {} total time-out second(s).", t)
                 }
-                (None, Some(n)) => info!("Starting exploration up to {} solutions.", n),
+                (None, Some(n)) => info!("Starting exploration up to {} solution(s).", n),
                 (None, None) => info!("Starting exploration until completion."),
             }
             // let (mut tx, rx) = spmc::channel();

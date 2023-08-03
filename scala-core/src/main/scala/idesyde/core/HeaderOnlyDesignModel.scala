@@ -2,7 +2,6 @@ package idesyde.core
 
 import idesyde.core.headers.DesignModelHeader
 import idesyde.core.DesignModel
-import idesyde.core.headers.LabelledArcWithPorts
 
 final case class HeaderOnlyDesignModel(override val header: DesignModelHeader) extends DesignModel {
 

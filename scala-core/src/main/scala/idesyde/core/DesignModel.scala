@@ -1,7 +1,6 @@
 package idesyde.core
 
 import idesyde.core.headers.DesignModelHeader
-import idesyde.core.headers.LabelledArcWithPorts
 
 /** The trait/interface for a design model in the design space identification methodology, as
   * defined in [1].
@@ -52,11 +51,11 @@ trait DesignModel {
     elementIDs //++ elementRelationIDs
   )
 
-  // override def equals(x: Any): Boolean = x match {
-  //   case dm: DesignModel =>
-  //     uniqueIdentifier == dm.uniqueIdentifier &&
-  //       elementIDs == dm.elementIDs
-  //   // && elementRelationIDs == dm.elementRelationIDs
-  //   case _ => false
-  // }
+  override def equals(x: Any): Boolean = x match {
+    case dm: DesignModel =>
+      category == dm.category &&
+        elementIDs == dm.elementIDs
+    // && elementRelationIDs == dm.elementRelationIDs
+    case _ => false
+  }
 }

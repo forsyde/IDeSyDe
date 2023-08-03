@@ -1,7 +1,6 @@
 package idesyde.common
 
 import idesyde.core.DecisionModel
-import idesyde.core.headers.LabelledArcWithPorts
 
 /** The [[StandardDecisionModel]] is a simple decision model in which all elements are simply
   * described by a [[String]].

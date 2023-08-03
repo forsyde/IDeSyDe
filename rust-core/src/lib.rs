@@ -30,6 +30,12 @@ pub trait DesignModel: Send + DowncastSync {
 }
 impl_downcast!(sync DesignModel);
 
+impl PartialEq<dyn DesignModel> for dyn DesignModel {
+    fn eq(&self, other: &Self) -> bool {
+        self.header().eq(&other.header())
+    }
+}
+
 /// The trait/interface for a decision model in the design space identification methodology, as
 /// defined in [1].
 ///

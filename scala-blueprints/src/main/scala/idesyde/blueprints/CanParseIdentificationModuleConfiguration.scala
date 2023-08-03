@@ -73,9 +73,11 @@ trait CanParseIdentificationModuleConfiguration {
         .text("Schemas for the design models considered in this module.")
         .action((f, mc) => mc.copy(printSchemas = true)),
       builder
-        .opt[Unit]("stdio-server")
-        .text("Run this module continously in server mode with STDIO as the interface.")
-        .action((f, mc) => mc.copy(stdioServerMode = true)),
+        .opt[String]("server")
+        .text(
+          "Run this module continously in server mode with STDIO or a TCP port as the interface."
+        )
+        .action((f, mc) => mc.copy(serverMode = Some(f))),
       builder.note(
         """The module needs to be invoked with at least the design and identified paths. 
         If the module is invoked with the integration path as well, 

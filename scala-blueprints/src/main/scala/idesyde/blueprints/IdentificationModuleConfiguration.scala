@@ -8,5 +8,5 @@ final case class IdentificationModuleConfiguration(
     val outputPath: Option[os.Path] = None,
     val identificationStep: Long = 0,
     val printSchemas: Boolean = false,
-    val stdioServerMode: Boolean = false
+    val serverMode: Option[String] = None
 )

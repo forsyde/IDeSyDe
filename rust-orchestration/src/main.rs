@@ -179,7 +179,7 @@ fn main() {
         }
 
         if !is_input_incremental {
-            debug!("Detected that the inputs are not incremental. Cleaning the workspace before proceeding.");
+            debug!("Detected that the inputs are not incremental. Cleaning the workspace before proceeding");
             for dir in vec![inputs_path, &identified_path, &explored_path, &reverse_path] {
                 if let Ok(d) = std::fs::read_dir(dir) {
                     for x in d {
@@ -194,10 +194,10 @@ fn main() {
         }
         if let Ok(f) = std::fs::File::create(run_path.join("input_stamp.json")) {
             if serde_json::to_writer(f, &current_input_stamp).is_err() {
-                warn!("Failed to produce increment stamps. Incremetability might not work.")
+                warn!("Failed to produce increment stamps. Incremetability might not work")
             };
         } else {
-            warn!("Failed to create increment stamps. Incremetability might not work.")
+            warn!("Failed to create increment stamps. Incremetability might not work")
         }
 
         debug!("Copying input files");
@@ -271,8 +271,7 @@ fn main() {
                 .map(|(_, h)| Box::new(h.to_owned()) as Box<dyn DecisionModel>)
                 .collect();
         info!(
-            "Starting identification with {} design models and {} pre-identified decision models",
-            design_models.len(),
+            "Starting identification with {} pre-identified decision models",
             pre_identified.len()
         );
         let identified = idesyde_orchestration::identification_procedure(
@@ -398,14 +397,14 @@ fn main() {
             );
             match (args.x_total_time_out, args.x_max_solutions) {
                 (Some(t), Some(n)) => info!(
-                    "Starting exploration up to {} total time-out seconds and {} solution(s).",
+                    "Starting exploration up to {} total time-out seconds and {} solution(s)",
                     t, n
                 ),
                 (Some(t), None) => {
-                    info!("Starting exploration up to {} total time-out second(s).", t)
+                    info!("Starting exploration up to {} total time-out second(s)", t)
                 }
-                (None, Some(n)) => info!("Starting exploration up to {} solution(s).", n),
-                (None, None) => info!("Starting exploration until completion."),
+                (None, Some(n)) => info!("Starting exploration up to {} solution(s)", n),
+                (None, None) => info!("Starting exploration until completion"),
             }
             // let (mut tx, rx) = spmc::channel();
             let (chosen_exploration_module, chosen_idx, chosen_decision_model, _) = biddings[idx];
@@ -420,15 +419,12 @@ fn main() {
                 )
                 .enumerate()
                 // .par_bridge()
-                .inspect(|(i, _)| debug!("Found a new solution. Total count is {}.", i + 1))
+                .inspect(|(i, _)| debug!("Found a new solution. Total count is {}", i + 1))
                 .map(|(_, sol)| sol)
                 .collect();
-            info!(
-                "Finished exploration with {} solution(s).",
-                sols_found.len()
-            );
+            info!("Finished exploration with {} solution(s)", sols_found.len());
             if !sols_found.is_empty() {
-                info!("Starting integration.");
+                info!("Starting integration");
                 let total_reversed: usize = imodules
                     .par_iter()
                     .enumerate()
@@ -442,17 +438,17 @@ fn main() {
                                 "Orchestrator",
                             );
                             n_reversed += 1;
-                            debug!("Reverse identified a {} design model.", reverse.category());
+                            debug!("Reverse identified a {} design model", reverse.category());
                         }
                         n_reversed
                     })
                     .sum();
                 info!(
-                    "Finished reverse identification of {} design model(s).",
+                    "Finished reverse identification of {} design model(s)",
                     total_reversed
                 );
             } else {
-                info!("No solution to reverse identify.");
+                info!("No solution to reverse identify");
             }
             // for (i, sol) in exp
             //     .explore(
@@ -479,7 +475,7 @@ fn main() {
             //     });
             // }
         } else {
-            info!("No dominant bidding to start exploration. Finished.")
+            info!("No dominant bidding to start exploration. Finished")
         }
     } else {
         info!("At least one input design model is necessary")

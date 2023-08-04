@@ -270,6 +270,11 @@ fn main() {
                 .iter()
                 .map(|(_, h)| Box::new(h.to_owned()) as Box<dyn DecisionModel>)
                 .collect();
+        info!(
+            "Starting identification with {} design models and {} pre-identified decision models",
+            design_models.len(),
+            pre_identified.len()
+        );
         let identified = idesyde_orchestration::identification_procedure(
             &imodules,
             &design_models,
@@ -423,6 +428,7 @@ fn main() {
                 sols_found.len()
             );
             if !sols_found.is_empty() {
+                info!("Starting integration.");
                 let total_reversed: usize = imodules
                     .par_iter()
                     .enumerate()

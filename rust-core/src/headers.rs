@@ -65,51 +65,6 @@ pub struct DesignModelHeader {
     // pub relations: Vec<LabelledArcWithPorts>,
 }
 
-impl DesignModel for DesignModelHeader {
-    fn category(&self) -> String {
-        self.category.to_owned()
-    }
-
-    fn header(&self) -> DesignModelHeader {
-        self.to_owned()
-    }
-}
-
-impl PartialEq<DesignModelHeader> for DesignModelHeader {
-    fn eq(&self, o: &DesignModelHeader) -> bool {
-        self.category == o.category && self.elements == o.elements // && self.relations == o.relations
-    }
-}
-
-impl Eq for DesignModelHeader {}
-
-impl PartialOrd<DesignModelHeader> for DesignModelHeader {
-    fn partial_cmp(&self, o: &DesignModelHeader) -> std::option::Option<std::cmp::Ordering> {
-        let superset = o.elements.iter().all(|v| self.elements.contains(v));
-        // && o.relations.iter().all(|v| self.relations.contains(v));
-        let subset = self.elements.iter().all(|v| o.elements.contains(v));
-        // && self.relations.iter().all(|v| o.relations.contains(v));
-        return match (superset, subset) {
-            (true, true) => Some(Ordering::Equal),
-            (true, false) => Some(Ordering::Greater),
-            (false, true) => Some(Ordering::Less),
-            _ => None,
-        };
-    }
-}
-
-impl Hash for DesignModelHeader {
-    fn hash<H: std::hash::Hasher>(&self, state: &mut H) {
-        self.category.hash(state);
-        for m in &self.elements {
-            m.hash(state);
-        }
-        // for e in &self.relations {
-        //     e.hash(state);
-        // }
-    }
-}
-
 impl DesignModelHeader {
     pub fn write_to_dir(&self, base_path: &Path, prefix: &str, suffix: &str) -> bool {
         let json_path = base_path.join(format!(
@@ -188,6 +143,51 @@ impl DesignModelHeader {
     }
 }
 
+impl DesignModel for DesignModelHeader {
+    fn category(&self) -> String {
+        self.category.to_owned()
+    }
+
+    fn header(&self) -> DesignModelHeader {
+        self.to_owned()
+    }
+}
+
+impl PartialEq<DesignModelHeader> for DesignModelHeader {
+    fn eq(&self, o: &DesignModelHeader) -> bool {
+        self.category == o.category && self.elements == o.elements // && self.relations == o.relations
+    }
+}
+
+impl Eq for DesignModelHeader {}
+
+impl PartialOrd<DesignModelHeader> for DesignModelHeader {
+    fn partial_cmp(&self, o: &DesignModelHeader) -> std::option::Option<std::cmp::Ordering> {
+        let superset = o.elements.iter().all(|v| self.elements.contains(v));
+        // && o.relations.iter().all(|v| self.relations.contains(v));
+        let subset = self.elements.iter().all(|v| o.elements.contains(v));
+        // && self.relations.iter().all(|v| o.relations.contains(v));
+        return match (superset, subset) {
+            (true, true) => Some(Ordering::Equal),
+            (true, false) => Some(Ordering::Greater),
+            (false, true) => Some(Ordering::Less),
+            _ => None,
+        };
+    }
+}
+
+impl Hash for DesignModelHeader {
+    fn hash<H: std::hash::Hasher>(&self, state: &mut H) {
+        self.category.hash(state);
+        for m in &self.elements {
+            m.hash(state);
+        }
+        // for e in &self.relations {
+        //     e.hash(state);
+        // }
+    }
+}
+
 pub fn load_design_model_headers_from_binary(header_path: &Path) -> Vec<DesignModelHeader> {
     let mut design_models = Vec::new();
     // let known_decision_model_paths =
@@ -247,6 +247,10 @@ impl DecisionModelHeader {
             )
             .as_str(),
         )
+    }
+
+    pub fn from_json_str(s: &str) -> Option<DecisionModelHeader> {
+        serde_json::from_str(s).ok()
     }
 
     /// Utility function to write this header model in different formats in the `base_path`.

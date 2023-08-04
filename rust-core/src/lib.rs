@@ -141,7 +141,7 @@ pub trait IdentificationModule: Send + Sync {
     ) -> Vec<Box<dyn DecisionModel>>;
     fn reverse_identification(
         &self,
-        decision_model: &Vec<Box<dyn DecisionModel>>,
+        solved_decision_model: &Vec<Box<dyn DecisionModel>>,
         design_model: &Vec<Box<dyn DesignModel>>,
     ) -> Vec<Box<dyn DesignModel>>;
 }

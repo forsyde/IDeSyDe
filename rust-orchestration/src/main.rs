@@ -246,14 +246,10 @@ fn main() {
             emodules.push(exemod);
         }
 
-        // a zero-step to make design model headers available
-        // imodules.par_iter().for_each(|imodule| {
-        //     imodule.identification_step(0, &Vec::new(), &Vec::new());
-        // });
-        // for imodule in &imodules {
-        //     imodule.identification_step(0, &Vec::new(), &Vec::new());
-        // }
-        // now we can proceed safely
+        // add embedded modules
+        imodules.push(Arc::new(idesyde_common::make_common_module()));
+
+        // continue
         let design_model_headers = load_design_model_headers_from_binary(&inputs_path);
         let mut design_models: Vec<Box<dyn DesignModel>> = design_model_headers
             .iter()

@@ -409,6 +409,7 @@ version = "0.5.12"
 dependencies = [
  "clap",
  "env_logger",
+ "idesyde-common",
  "idesyde-core",
  "log",
  "rayon",

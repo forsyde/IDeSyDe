@@ -6,6 +6,7 @@ edition.workspace = true
 
 [dependencies]
 idesyde-core = { path = "../rust-core" }
+idesyde-common = { path = "../rust-common" }
 clap = { workspace = true }
 env_logger.workspace = true
 log.workspace = true

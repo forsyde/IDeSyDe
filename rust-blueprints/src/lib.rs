@@ -1,4 +1,4 @@
-use std::path::PathBuf;
+use std::{path::PathBuf, sync::Arc};
 
 use clap::Parser;
 use idesyde_core::{
@@ -90,7 +90,7 @@ pub fn execute_standalone_identification_module(module: StandaloneIdentification
                             std::fs::create_dir_all(&reverse_path).expect(
                                 "Failed to create the reverse path during reverse identification.",
                             );
-                            let solved: Vec<Box<dyn DecisionModel>> =
+                            let solved: Vec<Arc<dyn DecisionModel>> =
                                 load_decision_model_headers_from_binary(&solved_path)
                                     .iter()
                                     .flat_map(|(_, x)| module.decision_header_to_model(x))
@@ -116,7 +116,7 @@ pub fn execute_standalone_identification_module(module: StandaloneIdentification
                             std::fs::create_dir_all(&identified_path).expect(
                                 "Failed to create the identified path during reverse identification.",
                             );
-                            let decision_models: Vec<Box<dyn DecisionModel>> =
+                            let decision_models: Vec<Arc<dyn DecisionModel>> =
                                 load_decision_model_headers_from_binary(&identified_path)
                                     .iter()
                                     .flat_map(|(_, x)| module.decision_header_to_model(x))

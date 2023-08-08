@@ -74,7 +74,7 @@ trait ModuleUtils {
         p: os.Path,
         prefix: String,
         suffix: String
-    ): (Option[os.Path], Option[os.Path]) = {
+    ): (Option[os.Path], Option[os.Path], DecisionModelHeader) = {
       val h = m match {
         case cm: CompleteDecisionModel =>
           os.write.over(
@@ -103,7 +103,8 @@ trait ModuleUtils {
       )
       (
         Some(p / s"header_${prefix}_${m.category}_${suffix}.msgpack"),
-        Some(p / s"body_${prefix}_${m.category}_${suffix}.msgpack")
+        Some(p / s"body_${prefix}_${m.category}_${suffix}.msgpack"),
+        h
       )
     }
 }

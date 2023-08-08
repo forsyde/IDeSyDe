@@ -4,6 +4,7 @@ use std::{
     collections::HashSet,
     hash::Hash,
     path::{Path, PathBuf},
+    sync::Arc,
 };
 
 use downcast_rs::{impl_downcast, Downcast, DowncastSync};
@@ -66,7 +67,7 @@ pub trait DecisionModel: Send + DowncastSync {
         None
     }
 
-    fn dominates(&self, o: Box<dyn DecisionModel>) -> bool {
+    fn dominates(&self, o: Arc<dyn DecisionModel>) -> bool {
         match self.header().partial_cmp(&o.header()) {
             Some(Ordering::Greater) => true,
             _ => false,
@@ -119,10 +120,10 @@ impl PartialOrd<dyn DecisionModel> for dyn DecisionModel {
 }
 
 pub type IdentificationRule =
-    fn(&Vec<Box<dyn DesignModel>>, &Vec<Box<dyn DecisionModel>>) -> Vec<Box<dyn DecisionModel>>;
+    fn(&Vec<Box<dyn DesignModel>>, &Vec<Arc<dyn DecisionModel>>) -> Vec<Arc<dyn DecisionModel>>;
 
 pub type ReverseIdentificationRule =
-    fn(&Vec<Box<dyn DecisionModel>>, &Vec<Box<dyn DesignModel>>) -> Vec<Box<dyn DesignModel>>;
+    fn(&Vec<Arc<dyn DecisionModel>>, &Vec<Box<dyn DesignModel>>) -> Vec<Box<dyn DesignModel>>;
 
 pub enum MarkedIdentificationRule {
     DesignModelOnlyIdentificationRule(IdentificationRule),
@@ -137,11 +138,11 @@ pub trait IdentificationModule: Send + Sync {
         &self,
         iteration: i32,
         design_models: &Vec<Box<dyn DesignModel>>,
-        decision_models: &Vec<Box<dyn DecisionModel>>,
-    ) -> Vec<Box<dyn DecisionModel>>;
+        decision_models: &Vec<Arc<dyn DecisionModel>>,
+    ) -> Vec<Arc<dyn DecisionModel>>;
     fn reverse_identification(
         &self,
-        solved_decision_model: &Vec<Box<dyn DecisionModel>>,
+        solved_decision_model: &Vec<Arc<dyn DecisionModel>>,
         design_model: &Vec<Box<dyn DesignModel>>,
     ) -> Vec<Box<dyn DesignModel>>;
 }
@@ -181,15 +182,15 @@ impl Hash for dyn IdentificationModule {
 ///
 pub trait Explorer: Downcast + Send + Sync {
     fn unique_identifier(&self) -> String;
-    fn bid(&self, m: &Box<dyn DecisionModel>) -> ExplorationBid;
+    fn bid(&self, m: Arc<dyn DecisionModel>) -> ExplorationBid;
     fn explore(
         &self,
-        m: &Box<dyn DecisionModel>,
+        m: Arc<dyn DecisionModel>,
         max_sols: i64,
         total_timeout: i64,
         time_resolution: i64,
         memory_resolution: i64,
-    ) -> Box<dyn Iterator<Item = Box<dyn DecisionModel>>>;
+    ) -> Box<dyn Iterator<Item = Arc<dyn DecisionModel>>>;
 }
 impl_downcast!(Explorer);
 
@@ -201,29 +202,29 @@ impl_downcast!(Explorer);
 ///
 pub trait ExplorationModule: Send + Sync {
     fn unique_identifier(&self) -> String;
-    fn bid(&self, m: &Box<dyn DecisionModel>) -> Vec<ExplorationBid>;
+    fn bid(&self, m: Arc<dyn DecisionModel>) -> Vec<ExplorationBid>;
     fn explore(
         &self,
-        m: &Box<dyn DecisionModel>,
-        explorer_idx: usize,
+        m: Arc<dyn DecisionModel>,
+        explorer_id: &str,
         max_sols: i64,
         total_timeout: i64,
         time_resolution: i64,
         memory_resolution: i64,
-    ) -> Box<dyn Iterator<Item = Box<dyn DecisionModel>>>;
+    ) -> Box<dyn Iterator<Item = Arc<dyn DecisionModel>>>;
     fn explore_best(
         &self,
-        m: &Box<dyn DecisionModel>,
+        m: Arc<dyn DecisionModel>,
         max_sols: i64,
         total_timeout: i64,
         time_resolution: i64,
         memory_resolution: i64,
-    ) -> Box<dyn Iterator<Item = Box<dyn DecisionModel>>> {
-        let bids = self.bid(m);
+    ) -> Box<dyn Iterator<Item = Arc<dyn DecisionModel>>> {
+        let bids = self.bid(m.clone());
         match compute_dominant_biddings(bids.iter()) {
-            Some((explorer_idx, _)) => self.explore(
+            Some((_, bid)) => self.explore(
                 m,
-                explorer_idx,
+                bid.explorer_unique_identifier.as_str(),
                 max_sols,
                 total_timeout,
                 time_resolution,
@@ -252,26 +253,32 @@ impl ExplorationModule for StandaloneExplorationModule {
         self.unique_identifier.to_owned()
     }
 
-    fn bid(&self, m: &Box<dyn DecisionModel>) -> Vec<ExplorationBid> {
-        self.explorers.iter().map(|e| e.bid(m)).collect()
+    fn bid(&self, m: Arc<dyn DecisionModel>) -> Vec<ExplorationBid> {
+        self.explorers.iter().map(|e| e.bid(m.clone())).collect()
     }
 
     fn explore(
         &self,
-        m: &Box<dyn DecisionModel>,
-        explorer_idx: usize,
+        m: Arc<dyn DecisionModel>,
+        explorer_id: &str,
         max_sols: i64,
         total_timeout: i64,
         time_resolution: i64,
         memory_resolution: i64,
-    ) -> Box<dyn Iterator<Item = Box<dyn DecisionModel>>> {
-        self.explorers[explorer_idx].explore(
-            m,
-            max_sols,
-            total_timeout,
-            time_resolution,
-            memory_resolution,
-        )
+    ) -> Box<dyn Iterator<Item = Arc<dyn DecisionModel>>> {
+        self.explorers
+            .iter()
+            .find(|e| e.unique_identifier() == explorer_id)
+            .map(|e| {
+                e.explore(
+                    m,
+                    max_sols,
+                    total_timeout,
+                    time_resolution,
+                    memory_resolution,
+                )
+            })
+            .unwrap_or(Box::new(std::iter::empty::<Arc<dyn DecisionModel>>()))
     }
 }
 
@@ -281,7 +288,7 @@ pub struct StandaloneIdentificationModule {
     reverse_identification_rules: Vec<ReverseIdentificationRule>,
     read_design_model: fn(path: &Path) -> Option<Box<dyn DesignModel>>,
     write_design_model: fn(design_model: &Box<dyn DesignModel>, dest: &Path) -> Vec<PathBuf>,
-    decision_header_to_model: fn(header: &DecisionModelHeader) -> Option<Box<dyn DecisionModel>>,
+    decision_header_to_model: fn(header: &DecisionModelHeader) -> Option<Arc<dyn DecisionModel>>,
     pub decision_model_schemas: HashSet<String>,
 }
 
@@ -292,7 +299,7 @@ impl StandaloneIdentificationModule {
         reverse_identification_rules: Vec<ReverseIdentificationRule>,
         decision_header_to_model: fn(
             header: &DecisionModelHeader,
-        ) -> Option<Box<dyn DecisionModel>>,
+        ) -> Option<Arc<dyn DecisionModel>>,
         decision_model_schemas: HashSet<String>,
     ) -> StandaloneIdentificationModule {
         return StandaloneIdentificationModule {
@@ -314,7 +321,7 @@ impl StandaloneIdentificationModule {
         write_design_model: fn(design_model: &Box<dyn DesignModel>, dest: &Path) -> Vec<PathBuf>,
         decision_header_to_model: fn(
             header: &DecisionModelHeader,
-        ) -> Option<Box<dyn DecisionModel>>,
+        ) -> Option<Arc<dyn DecisionModel>>,
         decision_model_schemas: HashSet<String>,
     ) -> StandaloneIdentificationModule {
         return StandaloneIdentificationModule {
@@ -341,7 +348,7 @@ impl StandaloneIdentificationModule {
     pub fn decision_header_to_model(
         &self,
         header: &DecisionModelHeader,
-    ) -> Option<Box<dyn DecisionModel>> {
+    ) -> Option<Arc<dyn DecisionModel>> {
         return (self.decision_header_to_model)(header);
     }
 }
@@ -355,9 +362,9 @@ impl IdentificationModule for StandaloneIdentificationModule {
         &self,
         iteration: i32,
         design_models: &Vec<Box<dyn DesignModel>>,
-        decision_models: &Vec<Box<dyn DecisionModel>>,
-    ) -> Vec<Box<dyn DecisionModel>> {
-        let mut identified: Vec<Box<dyn DecisionModel>> = Vec::new();
+        decision_models: &Vec<Arc<dyn DecisionModel>>,
+    ) -> Vec<Arc<dyn DecisionModel>> {
+        let mut identified: Vec<Arc<dyn DecisionModel>> = Vec::new();
         for irule in &self.identification_rules {
             let f_opt = match irule {
                 MarkedIdentificationRule::DesignModelOnlyIdentificationRule(f) => {
@@ -398,7 +405,7 @@ impl IdentificationModule for StandaloneIdentificationModule {
 
     fn reverse_identification(
         &self,
-        solved_decision_models: &Vec<Box<dyn DecisionModel>>,
+        solved_decision_models: &Vec<Arc<dyn DecisionModel>>,
         design_models: &Vec<Box<dyn DesignModel>>,
     ) -> Vec<Box<dyn DesignModel>> {
         let mut reverse_identified: Vec<Box<dyn DesignModel>> = Vec::new();
@@ -450,7 +457,7 @@ macro_rules! decision_header_to_model_gen {
                 match header.category.as_str() {
                     $(
                         "$x" => load_decision_model::<$x>(&bpath)
-                        .map(|m| Box::new(m) as Box<dyn DecisionModel>),
+                        .map(|m| Arc::new(m) as Arc<dyn DecisionModel>),
                     )*
                     _ => None,
                 }

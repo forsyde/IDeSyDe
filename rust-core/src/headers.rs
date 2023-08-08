@@ -366,6 +366,12 @@ pub struct ExplorationBid {
     pub properties: HashMap<String, f32>,
 }
 
+impl ExplorationBid {
+    pub fn from_json_str(s: &str) -> Option<ExplorationBid> {
+        serde_json::from_str(s).ok()
+    }
+}
+
 impl Hash for ExplorationBid {
     fn hash<H: std::hash::Hasher>(&self, state: &mut H) {
         self.explorer_unique_identifier.hash(state);

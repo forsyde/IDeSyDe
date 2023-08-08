@@ -8,7 +8,8 @@ final case class ExplorationModuleConfiguration(
     val decisionModelToExplore: Option[os.Path] = None,
     val timeResolution: Option[Long] = None,
     val memoryResolution: Option[Long] = None,
-    val explorerIdx: Option[Int] = None,
+    val explorerId: Option[String] = None,
     val maximumSolutions: Long = 0L,
-    val explorationTotalTimeOutInSecs: Long = 0L
+    val explorationTotalTimeOutInSecs: Long = 0L,
+    val serverMode: Option[String] = None
 )

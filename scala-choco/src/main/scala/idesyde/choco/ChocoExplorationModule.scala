@@ -43,7 +43,7 @@ object ChocoExplorationModule extends StandaloneExplorationModule {
 
   override def explorers = List(ChocoExplorer())
 
-  def decodeDecisionModels(m: DecisionModelHeader): Option[DecisionModel] = {
+  def decisionHeaderToModel(m: DecisionModelHeader): Option[DecisionModel] = {
     m match {
       case DecisionModelHeader("SDFToTiledMultiCore", body_path, _) =>
         body_path.flatMap(decodeFromPath[SDFToTiledMultiCore])

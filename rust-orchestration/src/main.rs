@@ -1,4 +1,4 @@
-use std::{collections::HashSet, path::Path, time::UNIX_EPOCH};
+use std::{collections::HashSet, path::Path, sync::Arc, time::UNIX_EPOCH};
 
 use clap::Parser;
 use env_logger::WriteStyle;
@@ -215,7 +215,7 @@ fn main() {
         }
 
         debug!("Initializing imodules");
-        let mut imodules: Vec<Box<dyn IdentificationModule>> = Vec::new();
+        let mut imodules: Vec<Arc<dyn IdentificationModule>> = Vec::new();
         let ex_imodules = idesyde_orchestration::find_and_prepare_identification_modules(
             imodules_path,
             &identified_path,
@@ -232,7 +232,7 @@ fn main() {
             imodules.push(eximod);
         }
         debug!("Initializing emodules");
-        let mut emodules: Vec<Box<dyn ExplorationModule>> = Vec::new();
+        let mut emodules: Vec<Arc<dyn ExplorationModule>> = Vec::new();
         let ex_emodules = idesyde_orchestration::find_exploration_modules(
             emodules_path,
             &identified_path,
@@ -243,7 +243,7 @@ fn main() {
                 "Initialized exploration module with identifier {}",
                 &exemod.unique_identifier()
             );
-            emodules.push(Box::new(exemod) as Box<dyn ExplorationModule>);
+            emodules.push(exemod);
         }
 
         // a zero-step to make design model headers available
@@ -265,10 +265,10 @@ fn main() {
             model_paths: args.inputs,
             elements: HashSet::new(),
         }));
-        let mut pre_identified: Vec<Box<dyn DecisionModel>> =
+        let mut pre_identified: Vec<Arc<dyn DecisionModel>> =
             load_decision_model_headers_from_binary(&identified_path)
                 .iter()
-                .map(|(_, h)| Box::new(h.to_owned()) as Box<dyn DecisionModel>)
+                .map(|(_, h)| Arc::new(h.to_owned()) as Arc<dyn DecisionModel>)
                 .collect();
         info!(
             "Starting identification with {} pre-identified decision models",
@@ -316,80 +316,27 @@ fn main() {
         // }
 
         // let dominant_without_biddings = compute_dominant_decision_models(&identified_refs);
-        let pairs: Vec<(&Box<dyn ExplorationModule>, &Box<dyn DecisionModel>)> = emodules
+        let pairs: Vec<(Arc<dyn ExplorationModule>, Arc<dyn DecisionModel>)> = emodules
             .iter()
-            .flat_map(|e| identified.iter().map(move |m| (e, m)))
+            .flat_map(|e| identified.iter().map(move |m| (e.clone(), m.clone())))
             .collect();
         let biddings: Vec<(
-            &Box<dyn ExplorationModule>,
-            usize,
-            &Box<dyn DecisionModel>,
+            Arc<dyn ExplorationModule>,
+            Arc<dyn DecisionModel>,
             ExplorationBid,
         )> = pairs
             .par_iter()
             .flat_map(|(e, m)| {
-                e.bid(m)
+                e.bid(m.clone())
                     .into_par_iter()
-                    .enumerate()
-                    .map(|(k, b)| (*e, k, *m, b))
+                    .map(|b| (e.clone(), m.clone(), b))
             })
-            .filter(|(_, _, _, b)| b.can_explore)
+            .filter(|(_, _, b)| b.can_explore)
             .collect();
         info!("Computed {} bidding(s) ", biddings.len());
         let dominant_bidding_opt =
-            idesyde_core::compute_dominant_biddings(biddings.iter().map(|(_, _, _, b)| b));
+            idesyde_core::compute_dominant_biddings(biddings.iter().map(|(_, _, b)| b));
 
-        // for (p, m) in load_decision_model_headers_from_binary(&identified_path) {
-        //     let mut to_be_deleted = false;
-        //     for (_, dom) in &dominant_biddings {
-        //         to_be_deleted = to_be_deleted
-        //             || match dom.header().partial_cmp(&m.header()) {
-        //                 Some(Ordering::Greater) => true,
-        //                 _ => false,
-        //             };
-        //     }
-        //     // consider the case of no explorer avaialable
-        //     if dominant_biddings.is_empty() {
-        //         for dom in &dominant_without_biddings {
-        //             to_be_deleted = to_be_deleted
-        //                 || match dom.header().partial_cmp(&m.header()) {
-        //                     Some(Ordering::Greater) => true,
-        //                     _ => false,
-        //                 };
-        //         }
-        //     }
-        //     if to_be_deleted {
-        //         if let Some(bp) = m.header().body_path {
-        //             let jbp = Path::new(&bp).with_extension("json");
-        //             match std::fs::remove_file(jbp) {
-        //                 Err(_) => {
-        //                     warn!("Tried removing JSON decision model body but failed",)
-        //                 }
-        //                 _ => (),
-        //             };
-        //             match std::fs::remove_file(bp) {
-        //                 Err(_) => warn!("Failed to remove body path of dominated decision model during identification. This is a benign error. Continuing"),
-        //                 _ => (),
-        //             }
-        //         }
-        //         match std::fs::remove_file(Path::new(&p.with_extension("json"))) {
-        //            Err(_) => warn!("Tried remove a JSON decision model header but failed. This is a benign error. Continuing"),
-        //            _ => (),
-        //         };
-        //         std::fs::remove_file(&p).expect(
-        //             "Failed to remove header of dominated decision model during identification",
-        //         );
-        //     }
-        // }
-
-        // for (i, (e, m)) in dominant.iter().enumerate() {
-        //     idesyde_core::write_decision_model_header_to_path(
-        //         m,
-        //         &identified_path,
-        //         format!("{}_{}", "dominant_", i).as_str(),
-        //         "Orchestrator",
-        //     );
-        // }
         if let Some((idx, dominant_bid)) = dominant_bidding_opt {
             debug!(
                 "Proceeding to explore {} with {}",
@@ -407,11 +354,11 @@ fn main() {
                 (None, None) => info!("Starting exploration until completion"),
             }
             // let (mut tx, rx) = spmc::channel();
-            let (chosen_exploration_module, chosen_idx, chosen_decision_model, _) = biddings[idx];
-            let sols_found: Vec<Box<dyn DecisionModel>> = chosen_exploration_module
+            let (chosen_exploration_module, chosen_decision_model, _) = &biddings[idx];
+            let sols_found: Vec<Arc<dyn DecisionModel>> = chosen_exploration_module
                 .explore(
-                    &chosen_decision_model,
-                    chosen_idx,
+                    chosen_decision_model.clone(),
+                    &dominant_bid.explorer_unique_identifier,
                     args.x_max_solutions.unwrap_or(0),
                     args.x_total_time_out.unwrap_or(0),
                     args.x_time_resolution.unwrap_or(-1),

@@ -13,6 +13,7 @@ use std::path::PathBuf;
 
 use std::process::Child;
 use std::process::Stdio;
+use std::sync::Arc;
 use std::sync::Mutex;
 
 use idesyde_core::headers::load_decision_model_header_from_path;
@@ -30,6 +31,35 @@ use log::debug;
 use log::warn;
 
 use rayon::prelude::*;
+
+trait LocalServerLike {
+    fn get_process(&self) -> Arc<Mutex<Child>>;
+
+    fn write_line_to_input(&self, s: &str) -> Option<()> {
+        if let Ok(mut server_guard) = self.get_process().lock() {
+            let server = server_guard.deref_mut();
+            if let Some(childin) = &mut server.stdin {
+                let mut buf = BufWriter::new(childin);
+                return writeln!(buf, "{}", s).ok();
+            }
+        }
+        None
+    }
+
+    fn read_line_from_output(&self) -> Option<String> {
+        if let Ok(mut server_guard) = self.get_process().lock() {
+            let server = server_guard.deref_mut();
+            if let Some(out) = &mut server.stdout {
+                let mut buf = BufReader::new(out);
+                let mut line: String = "".to_string();
+                if let Ok(_) = buf.read_line(&mut line) {
+                    return Some(line);
+                };
+            }
+        }
+        None
+    }
+}
 
 #[derive(Debug, PartialEq, Eq, Hash)]
 pub struct ExternalIdentificationModule {
@@ -60,8 +90,8 @@ impl IdentificationModule for ExternalIdentificationModule {
         &self,
         iteration: i32,
         _design_models: &Vec<Box<dyn DesignModel>>,
-        _decision_models: &Vec<Box<dyn DecisionModel>>,
-    ) -> Vec<Box<dyn DecisionModel>> {
+        _decision_models: &Vec<Arc<dyn DecisionModel>>,
+    ) -> Vec<Arc<dyn DecisionModel>> {
         let is_java = self
             .command_path_
             .extension()
@@ -94,12 +124,12 @@ impl IdentificationModule for ExternalIdentificationModule {
         };
         if let Ok(out) = output {
             if let Ok(s) = String::from_utf8(out.stdout) {
-                let identified: Vec<Box<dyn DecisionModel>> = s
+                let identified: Vec<Arc<dyn DecisionModel>> = s
                     .lines()
                     .flat_map(|p| {
                         if let Ok(b) = std::fs::read(p) {
                             if let Ok(header) = rmp_serde::from_slice::<DecisionModelHeader>(b.as_slice()) {
-                                return Some(Box::new(header) as Box<dyn DecisionModel>);
+                                return Some(Arc::new(header) as Arc<dyn DecisionModel>);
                             } else {
                                 warn!("Failed to deserialize header coming from {}. Check this module for correctness.", self.unique_identifier());
                             }
@@ -117,7 +147,7 @@ impl IdentificationModule for ExternalIdentificationModule {
 
     fn reverse_identification(
         &self,
-        _decision_model: &Vec<Box<dyn DecisionModel>>,
+        _decision_model: &Vec<Arc<dyn DecisionModel>>,
         _design_model: &Vec<Box<dyn DesignModel>>,
     ) -> Vec<Box<dyn DesignModel>> {
         let is_java = self
@@ -204,7 +234,7 @@ impl ExplorationModule for ExternalExplorationModule {
     //     HashMap::new() // TODO: put interfaces later
     // }
 
-    fn bid(&self, m: &Box<dyn idesyde_core::DecisionModel>) -> Vec<ExplorationBid> {
+    fn bid(&self, m: Arc<dyn idesyde_core::DecisionModel>) -> Vec<ExplorationBid> {
         let headers = load_decision_model_headers_from_binary(&self.identified_path_);
         let chosen_path = headers
             .iter()
@@ -257,13 +287,13 @@ impl ExplorationModule for ExternalExplorationModule {
 
     fn explore(
         &self,
-        m: &Box<dyn idesyde_core::DecisionModel>,
-        explorer_idx: usize,
+        m: Arc<dyn idesyde_core::DecisionModel>,
+        explorer_id: &str,
         max_sols: i64,
         total_timeout: i64,
         time_resolution: i64,
         memory_resolution: i64,
-    ) -> Box<dyn Iterator<Item = Box<dyn DecisionModel>>> {
+    ) -> Box<dyn Iterator<Item = Arc<dyn DecisionModel>>> {
         let headers = load_decision_model_headers_from_binary(&self.identified_path_);
         let chosen_path = headers
             .iter()
@@ -281,7 +311,7 @@ impl ExplorationModule for ExternalExplorationModule {
                 .arg("-o")
                 .arg(&self.solved_path_)
                 .arg("-n")
-                .arg(explorer_idx.to_string())
+                .arg(explorer_id.to_string())
                 .arg("--maximum-solutions")
                 .arg(format!("{}", max_sols))
                 .arg("--total-timeout")
@@ -301,7 +331,7 @@ impl ExplorationModule for ExternalExplorationModule {
                 .arg("-o")
                 .arg(&self.solved_path_)
                 .arg("-n")
-                .arg(explorer_idx.to_string())
+                .arg(explorer_id.to_string())
                 .arg("--maximum-solutions")
                 .arg(format!("{}", max_sols))
                 .arg("--total-timeout")
@@ -334,23 +364,186 @@ impl ExplorationModule for ExternalExplorationModule {
                         warn!("Exploration module {} produced non-compliant output '{}' during exploration. Please check it for correctness.", uid, f);
                     }
                     h
-                    // if (f.ends_with(".msgpack")) {
-                    //     match std::fs::read(&f).and_then(|b| rmp_serde::from_slice::<DecisionModelHeader>(&b)) {
-                    //         Ok(h) => Some(h),
-                    //         _ => None
-                    //     }
-                    // } else if (f.ends_with(".cbor")) {
-                    //     match std::fs::read(&f).and_then(|b| ::from_slice::<DecisionModelHeader>(&b)) {
-                    //         Ok(h) => Some(h),
-                    //         _ => None
-                    //     }
-                    // } else {
-                    //     None
-                    // }
                 })
-                .map(|m| Box::new(m) as Box<dyn DecisionModel>),
+                .map(|m| Arc::new(m) as Arc<dyn DecisionModel>),
         )
-        // Box::new(BufRead::lines(out))
+    }
+}
+
+pub struct ExternalServerExplorationModule {
+    name: String,
+    identified_path: PathBuf,
+    solved_path: PathBuf,
+    process: Arc<Mutex<Child>>,
+}
+
+impl ExternalServerExplorationModule {
+    pub fn try_create_local(
+        command_path_: PathBuf,
+        identified_path_: PathBuf,
+        solved_path_: PathBuf,
+    ) -> Option<ExternalServerExplorationModule> {
+        // first check if it is indeed a serve-able module
+        let is_java = command_path_
+            .extension()
+            .and_then(|s| s.to_str())
+            .map(|s| s == "jar")
+            .unwrap_or(false);
+        let child_res = match is_java {
+            true => std::process::Command::new("java")
+                .arg("-jar")
+                .arg(&command_path_)
+                .arg("--server")
+                .arg("stdio")
+                .arg("-i")
+                .arg(&identified_path_)
+                .arg("-o")
+                .arg(&solved_path_)
+                .stdin(Stdio::piped())
+                .stdout(Stdio::piped())
+                .stderr(Stdio::piped())
+                .spawn(),
+            false => std::process::Command::new(&command_path_)
+                .arg("--server")
+                .arg("stdio")
+                .arg("-i")
+                .arg(&identified_path_)
+                .arg("-o")
+                .arg(&solved_path_)
+                .stdin(Stdio::piped())
+                .stdout(Stdio::piped())
+                .stderr(Stdio::piped())
+                .spawn(),
+        };
+        // the test involves just exitting it
+        if let Ok(mut server_child) = child_res {
+            if let Some(childout) = &mut server_child.stdout {
+                let mut line = "".to_string();
+                let mut buf = BufReader::new(childout);
+                buf.read_line(&mut line)
+                    .expect("Could not read initialization line for imodule.");
+                if line.contains("INITIALIZED") {
+                    return Some(ExternalServerExplorationModule {
+                        name: command_path_
+                            .clone()
+                            .file_name()
+                            .and_then(|x| x.to_str())
+                            .and_then(|x| x.split('.').next())
+                            .expect("Could not fetch name from imodule file name.")
+                            .to_string(),
+                        identified_path: identified_path_.to_path_buf(),
+                        solved_path: solved_path_.to_path_buf(),
+                        process: Arc::new(Mutex::new(server_child)),
+                    });
+                }
+            }
+        }
+        None
+    }
+}
+
+impl LocalServerLike for ExternalServerExplorationModule {
+    fn get_process(&self) -> Arc<Mutex<Child>> {
+        self.process.clone()
+    }
+}
+
+impl ExplorationModule for ExternalServerExplorationModule {
+    fn unique_identifier(&self) -> String {
+        self.name.to_owned()
+    }
+
+    fn bid(&self, m: Arc<dyn DecisionModel>) -> Vec<ExplorationBid> {
+        if let Some(()) =
+            self.write_line_to_input(format!("BID {}", m.header().to_json_str()).as_str())
+        {
+            return std::iter::repeat_with(|| self.read_line_from_output())
+                .flatten()
+                .map(|line| {
+                    if line.starts_with("RESULT") {
+                        return ExplorationBid::from_json_str(&line[6..].trim());
+                    } else if line.eq_ignore_ascii_case("FINISHED") {
+                        return None;
+                    }
+                    None
+                })
+                .take_while(|x| x.is_some())
+                .flatten()
+                .collect();
+            // let num_bids = self
+            //     .read_line_from_output()
+            //     .and_then(|s| s[5..].trim().parse::<usize>().ok())
+            //     .unwrap_or(0usize);
+            // for _ in 0..num_bids {
+            //     if let Some(bid_str) = self.read_line_from_output() {
+            //         if bid_str.starts_with("RESULT ") {
+            //             if let Some(bid) = ExplorationBid::from_json_str(&bid_str[6..].trim()) {
+            //                 bids.push(bid);
+            //             }
+            //         } else if bid_str.eq_ignore_ascii_case("FINISHED") {
+            //             return;
+            //         }
+            //     }
+            // }
+        }
+        Vec::new()
+    }
+
+    fn explore(
+        &self,
+        m: Arc<dyn DecisionModel>,
+        explorer_id: &str,
+        max_sols: i64,
+        total_timeout: i64,
+        time_resolution: i64,
+        memory_resolution: i64,
+    ) -> Box<dyn Iterator<Item = Arc<dyn DecisionModel>>> {
+        self.write_line_to_input(
+            format!("SET identified-path {}", self.identified_path.display()).as_str(),
+        );
+        self.write_line_to_input(
+            format!("SET solved-path {}", self.solved_path.display()).as_str(),
+        );
+        self.write_line_to_input(format!("SET max-sols {}", max_sols).as_str());
+        self.write_line_to_input(format!("SET total-timeout {}", total_timeout).as_str());
+        self.write_line_to_input(format!("SET time-resolution {}", time_resolution).as_str());
+        self.write_line_to_input(format!("SET memory-resolution {}", memory_resolution).as_str());
+        self.write_line_to_input(
+            format!("EXPLORE {} {}", explorer_id, m.header().to_json_str()).as_str(),
+        );
+        let explored: Vec<Arc<dyn DecisionModel>> =
+            std::iter::repeat_with(|| self.read_line_from_output())
+                .flatten()
+                .map(|line| {
+                    if line.contains("RESULT") {
+                        let mut payload = line[6..].trim().split(" ");
+                        let _objs_ = payload.next();
+                        return payload
+                            .next()
+                            .and_then(|m_str| DecisionModelHeader::from_json_str(m_str.trim()))
+                            .map(|m| Arc::new(m) as Arc<dyn DecisionModel>);
+                    } else if line.contains("FINISHED") {
+                        return None;
+                    }
+                    None
+                })
+                .take_while(|x| x.is_some())
+                .flatten()
+                .collect();
+        Box::new(explored.into_iter())
+        // Box::new(std::iter::from_fn(move || {
+        //     if let Some(line) = self.read_line_from_output() {
+        //         if line.contains("RESULT") {
+        //             let mut payload = line[6..].split(" ");
+        //             let _objs_ = payload.next();
+        //             return payload
+        //                 .next()
+        //                 .and_then(|m_str| DecisionModelHeader::from_json_str(m_str))
+        //                 .map(|m| Box::new(m) as Arc<dyn DecisionModel>);
+        //         }
+        //     }
+        //     None
+        // }))
     }
 }
 
@@ -361,36 +554,43 @@ pub fn find_and_prepare_identification_modules(
     solved_path: &Path,
     integration_path: &Path,
     output_path: &Path,
-) -> Vec<Box<dyn IdentificationModule>> {
-    let mut imodules: Vec<Box<dyn IdentificationModule>> = Vec::new();
+) -> Vec<Arc<dyn IdentificationModule>> {
+    let mut imodules: Vec<Arc<dyn IdentificationModule>> = Vec::new();
     if let Ok(read_dir) = modules_path.read_dir() {
-        for e in read_dir {
-            if let Ok(de) = e {
-                let p = de.path();
-                if p.is_file() {
-                    let prog = p.read_link().unwrap_or(p);
-                    if let Some(imodule) = ExternalServerIdentificationModule::try_create_local(
-                        prog.clone(),
-                        inputs_path.to_path_buf(),
-                        identified_path.to_path_buf(),
-                        solved_path.to_path_buf(),
-                        integration_path.to_path_buf(),
-                        output_path.to_path_buf(),
-                    ) {
-                        imodules.push(Box::new(imodule));
-                    } else {
-                        imodules.push(Box::new(ExternalIdentificationModule {
-                            command_path_: prog.clone(),
-                            identified_path_: identified_path.to_path_buf(),
-                            inputs_path_: inputs_path.to_path_buf(),
-                            solved_path_: solved_path.to_path_buf(),
-                            reverse_path_: integration_path.to_path_buf(),
-                            output_path_: output_path.to_path_buf(),
-                        }));
+        let prepared: Vec<Arc<dyn IdentificationModule>> = read_dir
+            .par_bridge()
+            .into_par_iter()
+            .flat_map(|e| {
+                if let Ok(de) = e {
+                    let p = de.path();
+                    if p.is_file() {
+                        let prog = p.read_link().unwrap_or(p);
+                        if let Some(imodule) = ExternalServerIdentificationModule::try_create_local(
+                            prog.clone(),
+                            inputs_path.to_path_buf(),
+                            identified_path.to_path_buf(),
+                            solved_path.to_path_buf(),
+                            integration_path.to_path_buf(),
+                            output_path.to_path_buf(),
+                        ) {
+                            return Some(Arc::new(imodule) as Arc<dyn IdentificationModule>);
+                        } else {
+                            return Some(Arc::new(ExternalIdentificationModule {
+                                command_path_: prog.clone(),
+                                identified_path_: identified_path.to_path_buf(),
+                                inputs_path_: inputs_path.to_path_buf(),
+                                solved_path_: solved_path.to_path_buf(),
+                                reverse_path_: integration_path.to_path_buf(),
+                                output_path_: output_path.to_path_buf(),
+                            })
+                                as Arc<dyn IdentificationModule>);
+                        }
                     }
                 }
-            }
-        }
+                None
+            })
+            .collect();
+        imodules.extend(prepared.into_iter());
     }
     imodules
 }
@@ -399,19 +599,27 @@ pub fn find_exploration_modules(
     modules_path: &Path,
     identified_path: &Path,
     solved_path: &Path,
-) -> Vec<ExternalExplorationModule> {
-    let mut emodules = Vec::new();
+) -> Vec<Arc<dyn ExplorationModule>> {
+    let mut emodules: Vec<Arc<dyn ExplorationModule>> = Vec::new();
     if let Ok(read_dir) = modules_path.read_dir() {
         for e in read_dir {
             if let Ok(de) = e {
                 let p = de.path();
                 if p.is_file() {
                     let prog = p.read_link().unwrap_or(p);
-                    emodules.push(ExternalExplorationModule {
-                        command_path_: prog.clone(),
-                        identified_path_: identified_path.to_path_buf(),
-                        solved_path_: solved_path.to_path_buf(),
-                    });
+                    if let Some(emodule) = ExternalServerExplorationModule::try_create_local(
+                        prog.clone(),
+                        identified_path.to_path_buf(),
+                        solved_path.to_path_buf(),
+                    ) {
+                        emodules.push(Arc::new(emodule));
+                    } else {
+                        emodules.push(Arc::new(ExternalExplorationModule {
+                            command_path_: prog.clone(),
+                            identified_path_: identified_path.to_path_buf(),
+                            solved_path_: solved_path.to_path_buf(),
+                        }));
+                    }
                 }
             }
         }
@@ -420,20 +628,20 @@ pub fn find_exploration_modules(
 }
 
 pub fn identification_procedure(
-    imodules: &Vec<Box<dyn IdentificationModule>>,
+    imodules: &Vec<Arc<dyn IdentificationModule>>,
     design_models: &Vec<Box<dyn DesignModel>>,
-    pre_identified: &mut Vec<Box<dyn DecisionModel>>,
+    pre_identified: &mut Vec<Arc<dyn DecisionModel>>,
     starting_iter: i32,
-) -> Vec<Box<dyn DecisionModel>> {
+) -> Vec<Arc<dyn DecisionModel>> {
     let mut step = starting_iter;
     let mut fix_point = false;
-    let mut identified: Vec<Box<dyn DecisionModel>> = Vec::new();
+    let mut identified: Vec<Arc<dyn DecisionModel>> = Vec::new();
     identified.append(pre_identified);
     while !fix_point {
         // the step condition forces the procedure to go at least one more, fundamental for incrementability
         fix_point = true;
         let before = identified.len();
-        let new_identified: Vec<Box<dyn DecisionModel>> = imodules
+        let new_identified: Vec<Arc<dyn DecisionModel>> = imodules
             .par_iter()
             .flat_map(|imodule| imodule.identification_step(step, &design_models, &identified))
             .filter(|potential| !identified.contains(potential))
@@ -460,8 +668,8 @@ pub fn identification_procedure(
 }
 
 pub fn compute_dominant_decision_models<'a>(
-    decision_models: &'a Vec<&'a Box<dyn DecisionModel>>,
-) -> Vec<&'a Box<dyn DecisionModel>> {
+    decision_models: &'a Vec<&'a Arc<dyn DecisionModel>>,
+) -> Vec<&'a Arc<dyn DecisionModel>> {
     decision_models
         .into_iter()
         .filter(|m| {
@@ -482,7 +690,7 @@ pub struct ExternalServerIdentificationModule {
     solved_path_: PathBuf,
     reverse_path_: PathBuf,
     output_path_: PathBuf,
-    process: Mutex<Child>,
+    process: Arc<Mutex<Child>>,
 }
 
 impl ExternalServerIdentificationModule {
@@ -559,37 +767,18 @@ impl ExternalServerIdentificationModule {
                         solved_path_: solved_path_.to_path_buf(),
                         reverse_path_: reverse_path_.to_path_buf(),
                         output_path_: output_path_.to_path_buf(),
-                        process: Mutex::new(server_child),
+                        process: Arc::new(Mutex::new(server_child)),
                     });
                 }
             }
         }
         None
     }
+}
 
-    pub fn write_line_to_input(&self, s: &str) -> Option<()> {
-        if let Ok(mut server_guard) = self.process.lock() {
-            let server = server_guard.deref_mut();
-            if let Some(childin) = &mut server.stdin {
-                let mut buf = BufWriter::new(childin);
-                return writeln!(buf, "{}", s).ok();
-            }
-        }
-        None
-    }
-
-    pub fn read_line_from_output(&self) -> Option<String> {
-        if let Ok(mut server_guard) = self.process.lock() {
-            let server = server_guard.deref_mut();
-            if let Some(out) = &mut server.stdout {
-                let mut buf = BufReader::new(out);
-                let mut line: String = "".to_string();
-                if let Ok(_) = buf.read_line(&mut line) {
-                    return Some(line);
-                };
-            }
-        }
-        None
+impl LocalServerLike for ExternalServerIdentificationModule {
+    fn get_process(&self) -> Arc<Mutex<Child>> {
+        self.process.clone()
     }
 }
 
@@ -614,8 +803,8 @@ impl Hash for ExternalServerIdentificationModule {
 
 impl Drop for ExternalServerIdentificationModule {
     fn drop(&mut self) {
-        if let Ok(mut child) = self.process.lock() {
-            if let Err(e) = child.kill() {
+        if let Ok(mut server_guard) = self.process.lock() {
+            if let Err(e) = server_guard.kill() {
                 debug!(
                     "Ignoring error whilst killing imodule {}: {}",
                     self.unique_identifier(),
@@ -635,9 +824,9 @@ impl IdentificationModule for ExternalServerIdentificationModule {
         &self,
         iteration: i32,
         design_models: &Vec<Box<dyn DesignModel>>,
-        decision_models: &Vec<Box<dyn DecisionModel>>,
-    ) -> Vec<Box<dyn DecisionModel>> {
-        let mut identified: Vec<Box<dyn DecisionModel>> = Vec::new();
+        decision_models: &Vec<Arc<dyn DecisionModel>>,
+    ) -> Vec<Arc<dyn DecisionModel>> {
+        let mut identified: Vec<Arc<dyn DecisionModel>> = Vec::new();
         for design_model in design_models {
             for mpath in design_model.header().model_paths {
                 self.write_line_to_input(format!("DESIGN {}", mpath).as_str());
@@ -656,7 +845,7 @@ impl IdentificationModule for ExternalServerIdentificationModule {
                         let payload = &decision_model_line[15..].trim();
                         let h = DecisionModelHeader::from_json_str(payload);
                         if let Some(header) = h {
-                            let boxed = Box::new(header) as Box<dyn DecisionModel>;
+                            let boxed = Arc::new(header) as Arc<dyn DecisionModel>;
                             if !identified.contains(&boxed) {
                                 identified.push(boxed);
                             }
@@ -676,7 +865,7 @@ impl IdentificationModule for ExternalServerIdentificationModule {
 
     fn reverse_identification(
         &self,
-        solved_decision_models: &Vec<Box<dyn DecisionModel>>,
+        solved_decision_models: &Vec<Arc<dyn DecisionModel>>,
         design_models: &Vec<Box<dyn DesignModel>>,
     ) -> Vec<Box<dyn DesignModel>> {
         let mut integrated: Vec<Box<dyn DesignModel>> = Vec::new();

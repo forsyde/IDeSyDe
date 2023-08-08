@@ -1,4 +1,5 @@
 use std::collections::HashSet;
+use std::sync::Arc;
 
 use idesyde_blueprints::execute_standalone_identification_module;
 use idesyde_core::{

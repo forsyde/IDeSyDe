@@ -102,172 +102,184 @@ class ChocoExplorer(using logger: Logger) extends Explorer:
 
   def exploreChocoExplorable[T <: DecisionModel](
       m: T,
+      objectivesUpperLimits: Set[Map[String, Double]],
       explorationTotalTimeOutInSecs: Long,
       maximumSolutions: Long,
       timeResolution: Long = -1L,
       memoryResolution: Long = -1L
-  )(using ChocoExplorable[T]): LazyList[T] = {
-    var (model, objs)                 = m.chocoModel(timeResolution, memoryResolution)
-    var solver                        = model.getSolver()
-    var prevLvlSolver                 = solver
-    var prevModel                     = model
-    var prevOjbs                      = objs
+  )(using ChocoExplorable[T]): LazyList[(T, Map[String, Double])] = {
+    var (model, objs) = m.chocoModel(objectivesUpperLimits, timeResolution, memoryResolution)
+    var solver        = model.getSolver()
+    var prevLvlSolver = solver
+    var prevModel     = model
+    var prevOjbs      = objs
     var frontier: Buffer[Vector[Int]] = Buffer.empty
     var maxLvlReached                 = false
     var elapsedTimeInSecs             = 0L
-    if (explorationTotalTimeOutInSecs > 0L) {
-      logger.debug(s"setting total exploration timeout to ${explorationTotalTimeOutInSecs} seconds")
-      solver.limitTime(explorationTotalTimeOutInSecs * 1000L)
+    if (explorationTotalTimeOutInSecs > 0L) solver.limitTime(explorationTotalTimeOutInSecs * 1000L)
+    val oneFeasible = solver.solve()
+    if (oneFeasible) {
+      val (solved, solvedObjs) =
+        m.mergeSolution(solver.defaultSolution().record(), timeResolution, memoryResolution)
+      (solved, solvedObjs) #::
+        (if (maximumSolutions <= 0 || maximumSolutions > 1) {
+           // try to push the pareto frontier more
+           val newTimeOut = (explorationTotalTimeOutInSecs - solver.getTimeCount().toLong) * 1000L
+           val potentialDominant = exploreChocoExplorable(
+             m,
+             objectivesUpperLimits + solvedObjs,
+             newTimeOut,
+             maximumSolutions - 1L,
+             timeResolution,
+             memoryResolution
+           )
+           if (potentialDominant.isEmpty) {
+             LazyList
+               .from(0)
+               .takeWhile(i => (maximumSolutions <= 0 || i <= maximumSolutions - 1))
+               .map(i => (solver.solve(), i))
+               .takeWhile((feasible, i) => feasible)
+               .map((_, i) =>
+                 m.mergeSolution(
+                   solver.defaultSolution().record(),
+                   timeResolution,
+                   memoryResolution
+                 )
+               )
+           } else {
+             potentialDominant
+           }
+         } else {
+           LazyList.empty
+         })
+      // val objsMap              = objs.map(v => v.getName() -> v.getValue().toInt).toMap
+      // val oneLvlDown           = exploreChocoExplorable(m, objectivesUpperLimits + obj)
+    } else {
+      LazyList.empty
     }
-    LazyList
-      .from(0)
-      .takeWhile(i => (maximumSolutions <= 0 || i <= maximumSolutions))
-      .map(i => (solver.solve(), i))
-      .takeWhile((feasible, i) => (!maxLvlReached || feasible))
-      .flatMap((feasible, _) => {
-        if (feasible && maxLvlReached) {
-          // println("same lvl")
-          Some(solver.defaultSolution().record())
-        } else if (feasible && !maxLvlReached) {
-          // println("advance lvl from " + objs.mkString(", "))
-          prevLvlSolver = solver
-          prevModel = model
-          prevOjbs = objs
-          frontier += objs.map(_.getValue().toInt)
-          val newChocoAndObjs =
-            m.chocoModel(timeResolution, memoryResolution, frontier.toVector)
-          model = newChocoAndObjs._1
-          objs = newChocoAndObjs._2
-          solver = model.getSolver()
-          elapsedTimeInSecs += prevLvlSolver.getTimeCount().toLong
-          if (explorationTotalTimeOutInSecs > 0L) {
-            solver.limitTime((explorationTotalTimeOutInSecs - elapsedTimeInSecs) * 1000L)
-          }
-          Some(prevLvlSolver.defaultSolution().record())
-        } else if (!feasible && !maxLvlReached) {
-          // println("go back a lvl")
-          solver = prevLvlSolver
-          model = prevModel
-          objs = prevOjbs
-          maxLvlReached = true
-          None
-        } else None
-      })
-      .map(paretoSolution => m.mergeSolution(paretoSolution, timeResolution, memoryResolution))
+    // LazyList
+    //   .from(0)
+    //   .takeWhile(i => (maximumSolutions <= 0 || i <= maximumSolutions))
+    //   .map(i => (solver.solve(), i))
+    //   .takeWhile((feasible, i) => feasible)
+    //   .flatMap((feasible, _) => {
+    //     if (feasible && maxLvlReached) {
+    //       // println("same lvl")
+    //       Some(solver.defaultSolution().record())
+    //     } else if (feasible && !maxLvlReached) {
+    //       // println("advance lvl from " + objs.mkString(", "))
+    //       prevLvlSolver = solver
+    //       prevModel = model
+    //       prevOjbs = objs
+    //       frontier += objs.map(_.getValue().toInt)
+    //       val newChocoAndObjs =
+    //         m.chocoModel(timeResolution, memoryResolution, frontier.toVector)
+    //       model = newChocoAndObjs._1
+    //       objs = newChocoAndObjs._2
+    //       solver = model.getSolver()
+    //       elapsedTimeInSecs += prevLvlSolver.getTimeCount().toLong
+    //       if (explorationTotalTimeOutInSecs > 0L) {
+    //         solver.limitTime((explorationTotalTimeOutInSecs - elapsedTimeInSecs) * 1000L)
+    //       }
+    //       Some(prevLvlSolver.defaultSolution().record())
+    //     } else if (!feasible && !maxLvlReached) {
+    //       // println("go back a lvl")
+    //       solver = prevLvlSolver
+    //       model = prevModel
+    //       objs = prevOjbs
+    //       maxLvlReached = true
+    //       None
+    //     } else None
+    //   })
+    //   .map(paretoSolution => m.mergeSolution(paretoSolution, timeResolution, memoryResolution))
   }
 
   def explore(
       decisionModel: DecisionModel,
+      objectivesUpperLimits: Set[Map[String, Double]] = Set(),
       explorationTotalTimeOutInSecs: Long = 0L,
       maximumSolutions: Long = 0L,
       timeDiscretizationFactor: Long = -1L,
       memoryDiscretizationFactor: Long = -1L
-  ): LazyList[DecisionModel] = decisionModel match
-    case sdf: SDFToTiledMultiCore =>
-      exploreChocoExplorable(
-        sdf,
-        explorationTotalTimeOutInSecs,
-        maximumSolutions,
-        timeDiscretizationFactor,
-        memoryDiscretizationFactor
-      )(using CanSolveSDFToTiledMultiCore())
-    case workload: PeriodicWorkloadToPartitionedSharedMultiCore =>
-      exploreChocoExplorable(
-        workload,
-        explorationTotalTimeOutInSecs,
-        maximumSolutions,
-        timeDiscretizationFactor,
-        memoryDiscretizationFactor
-      )(using CanSolveDepTasksToPartitionedMultiCore())
-    case workloadAndSDF: PeriodicWorkloadAndSDFServerToMultiCore =>
-      exploreChocoExplorable(
-        workloadAndSDF,
-        explorationTotalTimeOutInSecs,
-        maximumSolutions,
-        timeDiscretizationFactor,
-        memoryDiscretizationFactor
-      )(using CanSolvePeriodicWorkloadAndSDFServersToMulticore())
-    case solvable: ChocoDecisionModel =>
-      val solver          = solvable.chocoModel.getSolver
-      val isOptimization  = solvable.modelMinimizationObjectives.size > 0
-      val paretoMinimizer = ParetoMinimizationBrancher(solvable.modelMinimizationObjectives)
-      // lazy val paretoMaximizer = ParetoMaximizer(
-      //   solvable.modelMinimizationObjectives.map(o => solvable.chocoModel.intMinusView(o))
-      // )
-      // var lastParetoFrontValues = solvable.modelMinimizationObjectives.map(_.getUB())
-      // var lastParetoFrontSize = 0
-      if (isOptimization) {
-        if (solvable.modelMinimizationObjectives.size == 1) {
-          solvable.chocoModel.setObjective(
-            false,
-            solvable.modelMinimizationObjectives.head
-          )
-        }
-        solver.plugMonitor(paretoMinimizer)
-        solvable.chocoModel.post(new Constraint("paretoOptConstraint", paretoMinimizer))
-        // val objFunc = getLinearizedObj(solvable)
-        // solvable.chocoModel.setObjective(false, objFunc)
-        // strategies +:= Search.bestBound(Search.minDomLBSearch(objFunc))
-      }
-      // solver.addStopCriterion(SolutionCounter(solvable.chocoModel, 2L))
-      if (!solvable.strategies.isEmpty) {
-        solver.setSearch(solvable.strategies: _*)
-      }
-      if (solvable.shouldLearnSignedClauses) {
-        solver.setLearningSignedClauses
-      }
-      if (solvable.shouldRestartOnSolution) {
-        solver.setNoGoodRecordingFromRestarts
-        solver.setRestartOnSolutions
-      }
-      if (explorationTotalTimeOutInSecs > 0L) {
-        logger.debug(
-          s"setting total exploration timeout to ${explorationTotalTimeOutInSecs} seconds"
-        )
-        solver.limitTime(explorationTotalTimeOutInSecs * 1000L)
-      }
-      LazyList
-        .continually(solver.solve())
-        // .scanLeft(
-        //   (true, 0, chocoCpModel.modelMinimizationObjectives.map(_.getUB()))
-        // )((accum, feasible) => {
-        //   var (paretoFrontChanged, lastParetoFrontSize, lastParetoFrontValues) = accum
-        //   if (isOptimization) {
-        //     paretoFrontChanged = false
-        //     if (lastParetoFrontSize != paretoMaximizer.getParetoFront().size()) {
-        //       lastParetoFrontSize = paretoMaximizer.getParetoFront().size()
-        //       paretoFrontChanged = true
-        //     } else {
-        //       paretoMaximizer
-        //         .getParetoFront()
-        //         .forEach(s => {
-        //           val isDominator =
-        //             chocoCpModel.modelMinimizationObjectives.zipWithIndex.forall((o, i) => {
-        //               s.getIntVal(o) < lastParetoFrontValues(i)
-        //             })
-        //           if (isDominator) {
-        //             lastParetoFrontValues =
-        //               chocoCpModel.modelMinimizationObjectives.map(o => s.getIntVal(o))
-        //             paretoFrontChanged = true
-        //           }
-        //         })
-        //     }
-        //   }
-        //   // println("the values " + (feasible && paretoFrontChanged, lastParetoFrontSize, lastParetoFrontValues.mkString(", ")))
-        //   (feasible && paretoFrontChanged, lastParetoFrontSize, lastParetoFrontValues)
-        // })
-        // .takeWhile((shouldContinue, _, _) => shouldContinue)
-        .takeWhile(feasible => feasible)
-        // .filter(feasible => feasible)
-        .map(_ => {
-          // scribe.debug(s"Current heap memory used: ${Runtime.getRuntime().totalMemory() - Runtime.getRuntime().freeMemory()} bytes")
-          solver.defaultSolution()
-        })
-        .flatMap(paretoSolution => {
-          // println("obj " + chocoCpModel.modelMinimizationObjectives.map(o => paretoSolution.getIntVal(o)).mkString(", "))
-          solvable.rebuildFromChocoOutput(paretoSolution)
-        })
-    case _ => LazyList.empty
+  ): LazyList[(DecisionModel, Map[String, Double])] = {
+    decisionModel match
+      case sdf: SDFToTiledMultiCore =>
+        exploreChocoExplorable(
+          sdf,
+          objectivesUpperLimits,
+          explorationTotalTimeOutInSecs,
+          maximumSolutions,
+          timeDiscretizationFactor,
+          memoryDiscretizationFactor
+        )(using CanSolveSDFToTiledMultiCore())
+      case workload: PeriodicWorkloadToPartitionedSharedMultiCore =>
+        exploreChocoExplorable(
+          workload,
+          objectivesUpperLimits,
+          explorationTotalTimeOutInSecs,
+          maximumSolutions,
+          timeDiscretizationFactor,
+          memoryDiscretizationFactor
+        )(using CanSolveDepTasksToPartitionedMultiCore())
+      case workloadAndSDF: PeriodicWorkloadAndSDFServerToMultiCore =>
+        exploreChocoExplorable(
+          workloadAndSDF,
+          objectivesUpperLimits,
+          explorationTotalTimeOutInSecs,
+          maximumSolutions,
+          timeDiscretizationFactor,
+          memoryDiscretizationFactor
+        )(using CanSolvePeriodicWorkloadAndSDFServersToMulticore())
+      // case solvable: ChocoDecisionModel =>
+      //   val solver          = solvable.chocoModel.getSolver
+      //   val isOptimization  = solvable.modelMinimizationObjectives.size > 0
+      //   val paretoMinimizer = ParetoMinimizationBrancher(solvable.modelMinimizationObjectives)
+      //   // lazy val paretoMaximizer = ParetoMaximizer(
+      //   //   solvable.modelMinimizationObjectives.map(o => solvable.chocoModel.intMinusView(o))
+      //   // )
+      //   // var lastParetoFrontValues = solvable.modelMinimizationObjectives.map(_.getUB())
+      //   // var lastParetoFrontSize = 0
+      //   if (isOptimization) {
+      //     if (solvable.modelMinimizationObjectives.size == 1) {
+      //       solvable.chocoModel.setObjective(
+      //         false,
+      //         solvable.modelMinimizationObjectives.head
+      //       )
+      //     }
+      //     solver.plugMonitor(paretoMinimizer)
+      //     solvable.chocoModel.post(new Constraint("paretoOptConstraint", paretoMinimizer))
+      //     // val objFunc = getLinearizedObj(solvable)
+      //     // solvable.chocoModel.setObjective(false, objFunc)
+      //     // strategies +:= Search.bestBound(Search.minDomLBSearch(objFunc))
+      //   }
+      //   // solver.addStopCriterion(SolutionCounter(solvable.chocoModel, 2L))
+      //   if (!solvable.strategies.isEmpty) {
+      //     solver.setSearch(solvable.strategies: _*)
+      //   }
+      //   if (solvable.shouldLearnSignedClauses) {
+      //     solver.setLearningSignedClauses
+      //   }
+      //   if (solvable.shouldRestartOnSolution) {
+      //     solver.setNoGoodRecordingFromRestarts
+      //     solver.setRestartOnSolutions
+      //   }
+      //   if (explorationTotalTimeOutInSecs > 0L) {
+      //     logger.debug(
+      //       s"setting total exploration timeout to ${explorationTotalTimeOutInSecs} seconds"
+      //     )
+      //     solver.limitTime(explorationTotalTimeOutInSecs * 1000L)
+      //   }
+      //   LazyList
+      //     .continually(solver.solve())
+      //     .takeWhile(feasible => feasible)
+      //     .map(_ => {
+      //       solver.defaultSolution()
+      //     })
+      //     .flatMap(paretoSolution => {
+      //       solvable.rebuildFromChocoOutput(paretoSolution)
+      //     })
+      case _ => LazyList.empty
+  }
 
   def uniqueIdentifier: String = "ChocoExplorer"
 

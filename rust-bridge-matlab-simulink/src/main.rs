@@ -1,6 +1,7 @@
 use std::{
     collections::{HashMap, HashSet},
     path::PathBuf,
+    sync::Arc,
 };
 
 use idesyde_blueprints::execute_standalone_identification_module;
@@ -66,8 +67,8 @@ impl DesignModel for SimulinkReactiveDesignModel {
 
 fn partially_identify_wokload_model(
     design_models: &Vec<Box<dyn DesignModel>>,
-    _decision_models: &Vec<Box<dyn DecisionModel>>,
-) -> Vec<Box<dyn DecisionModel>> {
+    _decision_models: &Vec<Arc<dyn DecisionModel>>,
+) -> Vec<Arc<dyn DecisionModel>> {
     let mut _identified = Vec::new();
     // let mut procs: HashSet<String> = HashSet::new();
     // let mut delays: HashSet<String> = HashSet::new();
@@ -118,7 +119,7 @@ fn write_design_model(
 
 fn decision_header_to_model(
     _header: &headers::DecisionModelHeader,
-) -> Option<Box<dyn idesyde_core::DecisionModel>> {
+) -> Option<Arc<dyn idesyde_core::DecisionModel>> {
     None
 }
 

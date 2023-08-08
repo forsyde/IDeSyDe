@@ -50,8 +50,8 @@ trait CanParseExplorationModuleConfiguration {
             )
           ),
         builder
-          .opt[Int]('n', "explorer-idx")
-          .action((f, mc) => mc.copy(explorerIdx = Some(f))),
+          .opt[String]('n', "explorer-id")
+          .action((f, mc) => mc.copy(explorerId = Some(f))),
         builder
           .opt[Long]("total-timeout")
           .action((f, mc) => mc.copy(explorationTotalTimeOutInSecs = f)),
@@ -63,7 +63,13 @@ trait CanParseExplorationModuleConfiguration {
           .action((f, mc) => mc.copy(timeResolution = Some(f))),
         builder
           .opt[Long]("memory-resolution")
-          .action((f, mc) => mc.copy(memoryResolution = Some(f)))
+          .action((f, mc) => mc.copy(memoryResolution = Some(f))),
+        builder
+          .opt[String]("server")
+          .text(
+            "Run this module continously in server mode with STDIO or a TCP port as the interface."
+          )
+          .action((f, mc) => mc.copy(serverMode = Some(f)))
       ),
       args,
       ExplorationModuleConfiguration()

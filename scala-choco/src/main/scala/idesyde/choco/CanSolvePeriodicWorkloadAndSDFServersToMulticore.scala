@@ -25,10 +25,10 @@ final class CanSolvePeriodicWorkloadAndSDFServersToMulticore(using logger: Logge
 
   def buildChocoModel(
       m: PeriodicWorkloadAndSDFServerToMultiCore,
+      objectivesUpperLimits: Set[Map[String, Double]],
       timeResolution: Long,
-      memoryResolution: Long,
-      objsUpperBounds: Vector[Vector[Int]] = Vector.empty
-  ): (Model, Vector[IntVar]) = {
+      memoryResolution: Long
+  ): (Model, Map[String, IntVar]) = {
     val chocoModel = Model()
     val execMax    = m.wcets.flatten.max
     val commMax    = m.platform.hardware.maxTraversalTimePerBit.flatten.map(_.toDouble).max
@@ -356,7 +356,16 @@ final class CanSolvePeriodicWorkloadAndSDFServersToMulticore(using logger: Logge
       )
       .map((k, v) => v.head._1)
     val objs = Array(numMappedElements) ++ uniqueGoalPerSubGraphThs
-    createAndApplyMOOPropagator(chocoModel, objs, objsUpperBounds)
+    createAndApplyMOOPropagator(
+      chocoModel,
+      objs,
+      objectivesUpperLimits.map(
+        _.map((k, v) =>
+          if (uniqueGoalPerSubGraphThs.exists(_.getName().equals(k))) k -> double2int(v)
+          else k                                                           -> v.toInt
+        )
+      )
+    )
 
     chocoModel.getSolver().setLearningSignedClauses()
 
@@ -387,7 +396,7 @@ final class CanSolvePeriodicWorkloadAndSDFServersToMulticore(using logger: Logge
     //       println(chocoModel.getSolver().getDecisionPath().toString())
     //     }
     //   })
-    (chocoModel, objs.toVector)
+    (chocoModel, objs.map(o => o.getName() -> o).toMap)
   }
 
   def rebuildDecisionModel(
@@ -395,7 +404,7 @@ final class CanSolvePeriodicWorkloadAndSDFServersToMulticore(using logger: Logge
       solution: Solution,
       timeResolution: Long,
       memoryResolution: Long
-  ): PeriodicWorkloadAndSDFServerToMultiCore = {
+  ): (PeriodicWorkloadAndSDFServerToMultiCore, Map[String, Double]) = {
     val timeValues =
       m.wcets.flatten ++ m.platform.hardware.maxTraversalTimePerBit.flatten
         .map(
@@ -473,6 +482,8 @@ final class CanSolvePeriodicWorkloadAndSDFServersToMulticore(using logger: Logge
           intVars.find(_.getName() == s"vc($src, $ce)").get
         )
       )
+    val numMappedElements = intVars.find(_.getName() == "numMappedElements").get
+    val invThs = intVars.filter(_.getName().startsWith("invTh"))
     val dataChannelsSlotAllocations = m.tasksAndSDFs.workload.dataChannels.zipWithIndex.map((c, ci) => c -> {
         // we have to look from the source perpective, since the sending processor is the one that allocates
         val mem = dataChannelsMemoryMapping(ci)
@@ -518,11 +529,11 @@ final class CanSolvePeriodicWorkloadAndSDFServersToMulticore(using logger: Logge
               .toVector
         iter.toMap
       }).toMap
-    m.copy(
+    (m.copy(
       processesSchedulings = taskExecution.zipWithIndex.map((mi, ti) => m.tasksAndSDFs.workload.processes(ti) -> m.platform.runtimes.schedulers(mi))  ++ actorExecution.zipWithIndex.map((mi, ti) => m.tasksAndSDFs.sdfApplications.actorsIdentifiers(ti) -> m.platform.runtimes.schedulers(mi)),
       processesMappings = tasksMemoryMapping.zipWithIndex.map((mi, ti) => m.tasksAndSDFs.workload.processes(ti) -> m.platform.hardware.storageElems(mi))  ++ actorsMemoryMapping.zipWithIndex.map((mi, ti) => m.tasksAndSDFs.sdfApplications.actorsIdentifiers(ti) -> m.platform.hardware.storageElems(mi)),
       messagesMappings = dataChannelsMemoryMapping.zipWithIndex.map((mi, ci) => m.tasksAndSDFs.workload.dataChannels(ci) -> m.platform.hardware.storageElems(mi)) ++ sdfMessageMemoryMappings,
       messageSlotAllocations = dataChannelsSlotAllocations ++ sdfChannelsSlotAllocations
-    )
+    ), Map("numMappedElements" -> numMappedElements.getValue().toDouble) ++ invThs.map(v => v.getName() -> int2double(v.getValue())).toMap)
   }
 }

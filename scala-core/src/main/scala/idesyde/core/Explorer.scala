@@ -31,11 +31,12 @@ trait Explorer {
 
   def explore(
       decisionModel: DecisionModel,
+      objectivesUpperLimits: Set[Map[String, Double]] = Set(),
       totalExplorationTimeOutInSecs: Long = 0L,
       maximumSolutions: Long = 0L,
       timeDiscretizationFactor: Long = -1L,
       memoryDiscretizationFactor: Long = -1L
-  ): LazyList[DecisionModel]
+  ): LazyList[(DecisionModel, Map[String, Double])]
 
   def availableCriterias(decisionModel: DecisionModel): Set[ExplorationCriteria] = Set()
 

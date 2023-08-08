@@ -47,10 +47,10 @@ final class CanSolveDepTasksToPartitionedMultiCore(using logger: Logger)
 
   override def buildChocoModel(
       m: PeriodicWorkloadToPartitionedSharedMultiCore,
+      objectivesUpperLimits: Set[Map[String, Double]],
       timeResolution: Long,
-      memoryResolution: Long,
-      objsUpperBounds: Vector[Vector[Int]] = Vector.empty
-  ): (Model, Vector[IntVar]) = {
+      memoryResolution: Long
+  ): (Model, Map[String, IntVar]) = {
     val chocoModel = Model()
     val timeValues =
       (m.workload.periods ++ m.wcets.flatten ++ m.workload.relativeDeadlines)
@@ -295,8 +295,8 @@ final class CanSolveDepTasksToPartitionedMultiCore(using logger: Logger)
     val solver = chocoModel.getSolver()
     chocoModel.setObjective(false, nUsedPEs)
     // if there is already a previous solution
-    val minPrevSol = objsUpperBounds.minByOption(s => s(0)).foreach(sol => {
-      chocoModel.arithm(nUsedPEs, "<", sol(0)).post() // there is only one in this case
+    val minPrevSol = objectivesUpperLimits.minByOption(s => s.values.min).foreach(sol => {
+      chocoModel.arithm(nUsedPEs, "<", sol.values.min.toInt).post() // there is only one in this case
     })
     solver.setSearch(
       Array(
@@ -342,7 +342,7 @@ final class CanSolveDepTasksToPartitionedMultiCore(using logger: Logger)
     //     def onContradiction(cex: ContradictionException): Unit = println(cex.toString())
     //   })
 
-    (chocoModel, Vector(nUsedPEs))
+    (chocoModel, Map("nUsedPEs" -> nUsedPEs))
   }
 
   override def rebuildDecisionModel(
@@ -350,7 +350,7 @@ final class CanSolveDepTasksToPartitionedMultiCore(using logger: Logger)
       solution: Solution,
       timeResolution: Long,
       memoryResolution: Long
-  ): PeriodicWorkloadToPartitionedSharedMultiCore = {
+  ): (PeriodicWorkloadToPartitionedSharedMultiCore, Map[String, Double]) = {
     val timeValues =
       (m.workload.periods ++ m.wcets.flatten ++ m.workload.relativeDeadlines)
     val memoryValues = m.platform.hardware.storageSizes ++
@@ -397,6 +397,7 @@ final class CanSolveDepTasksToPartitionedMultiCore(using logger: Logger)
           intVars.find(_.getName() == s"vc($src, $ce)").get
         )
       )
+    val nUsedPEs = intVars.find(_.getName() == "nUsedPEs").get
     val processMappings = processesMemoryMapping.zipWithIndex
       .map((v, i) =>
         m.workload.tasks(i) -> m.platform.hardware.storageElems(processesMemoryMapping(i))
@@ -435,12 +436,12 @@ final class CanSolveDepTasksToPartitionedMultiCore(using logger: Logger)
         iter.toMap
       }).toMap
     // val channelSlotAllocations = ???
-    m.copy(
+    (m.copy(
       processMappings = processMappings,
       processSchedulings = processSchedulings,
       channelMappings = channelMappings,
       channelSlotAllocations = messageSlotAllocations
-    )
+    ), Map("nUsedPEs" -> nUsedPEs.getValue().toDouble))
   }
 
   // chocoModel.getSolver().plugMonitor(ConMonitorObj)

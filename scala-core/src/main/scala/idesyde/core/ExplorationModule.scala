@@ -29,27 +29,35 @@ trait ExplorationModule {
 
   def explore(
       decisionModel: DecisionModel,
-      explorerIdx: Int,
+      explorerId: String,
+      objectivesUpperLimits: Set[Map[String, Double]] = Set(),
       totalExplorationTimeOutInSecs: Long = 0L,
       maximumSolutions: Long = 0L,
       timeDiscretizationFactor: Long = -1L,
       memoryDiscretizationFactor: Long = -1L
-  ): LazyList[DecisionModel] =
-    explorers(explorerIdx).explore(
-      decisionModel,
-      totalExplorationTimeOutInSecs,
-      maximumSolutions,
-      timeDiscretizationFactor,
-      memoryDiscretizationFactor
-    )
+  ): LazyList[(DecisionModel, Map[String, Double])] =
+    explorers
+      .find(_.uniqueIdentifier == explorerId)
+      .map(
+        _.explore(
+          decisionModel,
+          objectivesUpperLimits,
+          totalExplorationTimeOutInSecs,
+          maximumSolutions,
+          timeDiscretizationFactor,
+          memoryDiscretizationFactor
+        )
+      )
+      .getOrElse(LazyList.empty)
 
   def exploreBest(
       decisionModel: DecisionModel,
+      objectivesUpperLimits: Set[Map[String, Double]] = Set(),
       totalExplorationTimeOutInSecs: Long = 0L,
       maximumSolutions: Long = 0L,
       timeDiscretizationFactor: Long = -1L,
       memoryDiscretizationFactor: Long = -1L
-  ): LazyList[DecisionModel] = {
+  ): LazyList[(DecisionModel, Map[String, Double])] = {
     val valid = explorers
       .filter(e => canExplore(decisionModel))
     val nonDominated =
@@ -64,6 +72,7 @@ trait ExplorationModule {
       case Some(e) =>
         e.explore(
           decisionModel,
+          objectivesUpperLimits,
           totalExplorationTimeOutInSecs,
           maximumSolutions,
           timeDiscretizationFactor,

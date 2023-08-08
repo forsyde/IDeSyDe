@@ -51,7 +51,7 @@ lazy val root = project
     ),
     paradoxRoots := List("index.html")
   )
-  .aggregate(common, choco, forsyde, minizinc, matlab, devicetree, blueprints)
+  .aggregate(common, choco, forsyde, matlab, devicetree, blueprints)
 
 lazy val core = (project in file("scala-core")).settings(
   // name := "idesyde-scala-core",
@@ -157,21 +157,21 @@ lazy val forsyde = (project in file("scala-bridge-forsyde-io"))
     )
   )
 
-lazy val minizinc = (project in file("scala-minizinc"))
-  .dependsOn(core)
-  .dependsOn(common)
-  .dependsOn(blueprints)
-  .settings(
-    // name := "idesyde-scala-minizinc",
-    libraryDependencies ++= Seq(
-      "com.lihaoyi" %% "upickle" % upickleVersion
-    ),
-    licenses := Seq(
-      "MIT"  -> url("https://opensource.org/license/mit/"),
-      "APL2" -> url("https://www.apache.org/licenses/LICENSE-2.0"),
-      "EPL2" -> url("https://www.eclipse.org/legal/epl-2.0/")
-    )
-  )
+// lazy val minizinc = (project in file("scala-minizinc"))
+//   .dependsOn(core)
+//   .dependsOn(common)
+//   .dependsOn(blueprints)
+//   .settings(
+//     // name := "idesyde-scala-minizinc",
+//     libraryDependencies ++= Seq(
+//       "com.lihaoyi" %% "upickle" % upickleVersion
+//     ),
+//     licenses := Seq(
+//       "MIT"  -> url("https://opensource.org/license/mit/"),
+//       "APL2" -> url("https://www.apache.org/licenses/LICENSE-2.0"),
+//       "EPL2" -> url("https://www.eclipse.org/legal/epl-2.0/")
+//     )
+//   )
 
 lazy val choco = (project in file("scala-choco"))
   .dependsOn(core)

@@ -128,4 +128,6 @@ trait DecisionModel {
     coveredElementIDs //++ coveredElementRelationIDs
   )
 
+  override def hashCode(): Int = category.hashCode()
+
 }

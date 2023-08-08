@@ -227,7 +227,7 @@ trait StandaloneIdentificationModule
               decisionModels
             )
             for (m <- identified; if !decisionModels.contains(m)) {
-              val (hPath, bPath) = m.writeToPath(
+              val (hPath, bPath, header) = m.writeToPath(
                 identifiedPath,
                 f"${iteration}%016d",
                 uniqueIdentifier
@@ -391,14 +391,13 @@ trait StandaloneIdentificationModule
         val newIdentified = identified -- decisionModels
         sendOutputLine("NEW " + newIdentified.size)
         for (m <- newIdentified) {
-          val (hPath, bPath) = m.writeToPath(
+          val (hPath, bPath, header) = m.writeToPath(
             identifiedPath,
             f"${iteration}%016d",
             uniqueIdentifier
           )
           sendOutputLine(
-            "DECISION INLINE" +
-              m.header.copy(body_path = bPath.map(_.toString)).asText
+            "DECISION INLINE" + header.asText
             // hPath
             //   .getOrElse(
             //     identifiedPath / s"header_${iteration}_${m.category}_${uniqueIdentifier}.msgpack"

@@ -9,28 +9,28 @@ trait ChocoExplorable[T <: DecisionModel] {
 
   def buildChocoModel(
       m: T,
+      objsUpperBounds: Set[Map[String, Double]] = Set(),
       timeResolution: Long = -1L,
-      memoryResolution: Long = -1L,
-      objsUpperBounds: Vector[Vector[Int]] = Vector.empty
-  ): (Model, Vector[IntVar])
+      memoryResolution: Long = -1L
+  ): (Model, Map[String, IntVar])
 
   def rebuildDecisionModel(
       m: T,
       solution: Solution,
       timeResolution: Long = -1L,
       memoryResolution: Long = -1L
-  ): T
+  ): (T, Map[String, Double])
 }
 
 object ChocoExplorableOps {
   extension [T <: DecisionModel](m: T)
     def chocoModel(
+        objsUpperBounds: Set[Map[String, Double]] = Set(),
         timeResolution: Long = -1L,
-        memoryResolution: Long = -1L,
-        objsUpperBounds: Vector[Vector[Int]] = Vector.empty
+        memoryResolution: Long = -1L
     )(using
         exp: ChocoExplorable[T]
-    ) = exp.buildChocoModel(m, timeResolution, memoryResolution, objsUpperBounds)
+    ) = exp.buildChocoModel(m, objsUpperBounds, timeResolution, memoryResolution)
   extension [T <: DecisionModel](m: T)
     def mergeSolution(sol: Solution, timeResolution: Long = -1L, memoryResolution: Long = -1L)(using
         exp: ChocoExplorable[T]

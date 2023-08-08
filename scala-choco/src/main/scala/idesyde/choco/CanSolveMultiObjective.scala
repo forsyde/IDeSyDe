@@ -11,7 +11,7 @@ trait CanSolveMultiObjective {
   def createAndApplyMOOPropagator(
       m: Model,
       objs: Array[IntVar],
-      objsUpperBounds: Vector[Vector[Int]]
+      objectivesUpperLimits: Set[Map[String, Int]]
   ): Unit = {
     if (objs.size == 1) {
       m.setObjective(
@@ -26,21 +26,28 @@ trait CanSolveMultiObjective {
     // m.post(constraint)
     // keep only domninant solutions
     // println("got " + objsUpperBounds.map(_.mkString(", ")).mkString("\n"))
-    val dominantUpperBounds = objsUpperBounds.filterNot(o1 =>
-      objsUpperBounds
+    val dominantUpperBounds = objectivesUpperLimits.filterNot(o1 =>
+      objectivesUpperLimits
         .filter(o2 => o2 != o1)
-        .exists(o2 => o2.zipWithIndex.forall((ov2, i) => ov2 <= o1(i)))
+        .exists(o2 => o2.forall((k2, v2) => !o1.contains(k2) || v2 <= o1(k2)))
     )
     // println("using " + dominantUpperBounds.map(_.mkString(", ")).mkString("\n"))
     // pareto constraint
-    if (dominantUpperBounds.length > 0) {
-      m
-        .and(
-          dominantUpperBounds.map(ov =>
-            m.or(ov.zipWithIndex.map((o, i) => m.arithm(objs(i), "<", o)): _*)
-          ): _*
-        )
-        .post()
+    if (dominantUpperBounds.size > 0) {
+      for (objMap <- dominantUpperBounds) {
+        m.or(
+          objMap
+            .flatMap((name, v) =>
+              objs.find(_.getName().equals(name)).map(objVar => m.arithm(objVar, "<", v))
+            )
+            .toSeq: _*
+        ).post()
+      }
+      // m
+      //   .and(
+
+      //   )
+      //   .post()
     }
     // constraint
   }

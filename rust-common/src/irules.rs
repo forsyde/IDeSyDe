@@ -1,4 +1,4 @@
-use std::collections::HashMap;
+use std::{collections::HashMap, sync::Arc};
 
 use idesyde_core::{DecisionModel, DesignModel};
 
@@ -16,8 +16,8 @@ use crate::models::{
 
 pub fn identify_partitioned_tiled_multicore(
     _design_models: &Vec<Box<dyn DesignModel>>,
-    decision_models: &Vec<Box<dyn DecisionModel>>,
-) -> Vec<Box<dyn DecisionModel>> {
+    decision_models: &Vec<Arc<dyn DecisionModel>>,
+) -> Vec<Arc<dyn DecisionModel>> {
     let mut new_models = Vec::new();
     for m2 in decision_models {
         if let Some(runt) = m2.downcast_ref::<RuntimesAndProcessors>() {
@@ -35,11 +35,11 @@ pub fn identify_partitioned_tiled_multicore(
             if same_number && one_proc_per_scheduler && one_scheduler_per_proc {
                 for m1 in decision_models {
                     if let Some(plat) = m1.downcast_ref::<TiledMultiCore>() {
-                        let potential = Box::new(PartitionedTiledMulticore {
+                        let potential = Arc::new(PartitionedTiledMulticore {
                             hardware: plat.to_owned(),
                             runtimes: runt.to_owned(),
                         });
-                        let upcast = potential as Box<dyn DecisionModel>;
+                        let upcast = potential as Arc<dyn DecisionModel>;
                         if !decision_models.contains(&upcast) {
                             new_models.push(upcast);
                         }
@@ -63,8 +63,8 @@ pub fn identify_partitioned_tiled_multicore(
 /// 4. return all the built AsynchronousAperiodicDataflow.
 pub fn identify_asynchronous_aperiodic_dataflow_from_sdf(
     _design_models: &Vec<Box<dyn DesignModel>>,
-    decision_models: &Vec<Box<dyn DecisionModel>>,
-) -> Vec<Box<dyn DecisionModel>> {
+    decision_models: &Vec<Arc<dyn DecisionModel>>,
+) -> Vec<Arc<dyn DecisionModel>> {
     let mut identified = Vec::new();
     for m in decision_models {
         if let Some(analysed_sdf_application) = m.downcast_ref::<AnalysedSDFApplication>() {
@@ -224,7 +224,7 @@ pub fn identify_asynchronous_aperiodic_dataflow_from_sdf(
                     }
                 }
                 // we finish by building the decision model
-                identified.push(Box::new(AperiodicAsynchronousDataflow {
+                identified.push(Arc::new(AperiodicAsynchronousDataflow {
                     processes: component_actors
                         .into_iter()
                         .map(|s| s.to_string())
@@ -264,7 +264,7 @@ pub fn identify_asynchronous_aperiodic_dataflow_from_sdf(
                         .collect(),
                     process_put_in_buffer_in_bits: data_sent,
                     process_get_from_buffer_in_bits: data_read,
-                }) as Box<dyn DecisionModel>)
+                }) as Arc<dyn DecisionModel>)
             }
             // Graph::from_edges(edges.into_iter());
             // actors_graph.extend_with_edges(edges.into_iter());
@@ -275,9 +275,9 @@ pub fn identify_asynchronous_aperiodic_dataflow_from_sdf(
 
 pub fn identify_aperiodic_asynchronous_dataflow_to_partitioned_tiled_multicore(
     _design_models: &Vec<Box<dyn DesignModel>>,
-    decision_models: &Vec<Box<dyn DecisionModel>>,
-) -> Vec<Box<dyn DecisionModel>> {
-    let mut identified: Vec<Box<dyn DecisionModel>> = Vec::new();
+    decision_models: &Vec<Arc<dyn DecisionModel>>,
+) -> Vec<Arc<dyn DecisionModel>> {
+    let mut identified: Vec<Arc<dyn DecisionModel>> = Vec::new();
     if let Some(app) = decision_models
         .iter()
         .find_map(|x| x.downcast_ref::<AperiodicAsynchronousDataflow>())
@@ -300,7 +300,7 @@ pub fn identify_aperiodic_asynchronous_dataflow_to_partitioned_tiled_multicore(
                     })
                 });
                 if all_mappable {
-                    identified.push(Box::new(
+                    identified.push(Arc::new(
                         AperiodicAsynchronousDataflowToPartitionedTiledMulticore {
                             aperiodic_asynchronous_dataflow: app.to_owned(),
                             partitioned_tiled_multicore: plat.to_owned(),

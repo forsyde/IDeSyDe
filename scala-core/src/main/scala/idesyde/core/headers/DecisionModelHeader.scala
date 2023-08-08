@@ -15,6 +15,8 @@ case class DecisionModelHeader(
     case _ => false
   }
 
+  override def hashCode(): Int = category.hashCode()
+
   def dominates(o: DecisionModelHeader): Boolean = category == o.category &&
     o.covered_elements.subsetOf(
       covered_elements
@@ -62,4 +64,6 @@ object DecisionModelHeader {
           //   .getOrElse(Set())
         )
     )
+
+  def fromString(s: String): DecisionModelHeader = read[DecisionModelHeader](s)
 }

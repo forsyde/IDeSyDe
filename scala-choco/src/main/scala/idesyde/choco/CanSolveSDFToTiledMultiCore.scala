@@ -48,10 +48,10 @@ final class CanSolveSDFToTiledMultiCore(using logger: Logger)
 
   def buildChocoModel(
       m: SDFToTiledMultiCore,
+      objectivesUpperLimits: Set[Map[String, Double]],
       timeResolution: Long = -1L,
-      memoryResolution: Long = -1L,
-      objsUpperBounds: Vector[Vector[Int]] = Vector.empty
-  ): (Model, Vector[IntVar]) = {
+      memoryResolution: Long = -1L
+  ): (Model, Map[String, IntVar]) = {
     val chocoModel = Model()
     val execMax    = m.wcets.flatten.max
     val commMax    = m.platform.hardware.maxTraversalTimePerBit.flatten.max
@@ -209,7 +209,16 @@ final class CanSolveSDFToTiledMultiCore(using logger: Logger)
     val objs = Array(
       numMappedElements
     ) ++ uniqueGoalPerSubGraphInvThs
-    createAndApplyMOOPropagator(chocoModel, objs, objsUpperBounds)
+    createAndApplyMOOPropagator(
+      chocoModel,
+      objs,
+      objectivesUpperLimits.map(
+        _.map((k, v) =>
+          if (uniqueGoalPerSubGraphInvThs.exists(_.getName().equals(k))) k -> double2int(v)
+          else k                                                           -> v.toInt
+        )
+      )
+    )
     // chocoModel.getSolver().setLearningSignedClauses()
     // chocoModel.getSolver().setRestartOnSolutions()
     // chocoModel.getSolver().setNoGoodRecordingFromRestarts()
@@ -221,7 +230,7 @@ final class CanSolveSDFToTiledMultiCore(using logger: Logger)
     //       println(chocoModel.getSolver().getDecisionPath().toString())
     //     }
     //   })
-    (chocoModel, objs.toVector)
+    (chocoModel, objs.map(o => o.getName() -> o).toMap)
   }
 
   def postMapChannelsWithConsumers(
@@ -447,7 +456,7 @@ final class CanSolveSDFToTiledMultiCore(using logger: Logger)
       solution: Solution,
       timeResolution: Long = -1L,
       memoryResolution: Long = -1L
-  ): SDFToTiledMultiCore = {
+  ): (SDFToTiledMultiCore, Map[String, Double]) = {
     val timeValues = m.wcets.flatten ++ m.platform.hardware.maxTraversalTimePerBit.flatten
     val memoryValues = m.platform.hardware.tileMemorySizes ++ m.sdfApplications.sdfMessages
       .map((src, _, _, mSize, p, c, tok) => mSize)
@@ -495,14 +504,7 @@ final class CanSolveSDFToTiledMultiCore(using logger: Logger)
       .toVector
     val invThroughputs: Vector[IntVar] =
       m.sdfApplications.actorsIdentifiers.map(a => intVars.find(_.getName() == s"invTh($a)").get)
-    // logger.debug(
-    //   s"solution: nUsedPEs = ${solution.getIntVal(nUsedPEs)}, globalInvThroughput = ${output
-    //     .getIntVal(sdfAnalysisModule.globalInvThroughput)} / $timeMultiplier"
-    // )
-    // logger.debug(sdfAnalysisModule.duration.mkString(", "))
-    // logger.debug(memoryMappingModule.processesMemoryMapping.mkString(", "))
-    // logger.debug(sdfAnalysisModule.jobOrder.mkString(", "))
-    // logger.debug(sdfAnalysisModule.invThroughputs.mkString(", "))
+    val numMappedElements = intVars.find(_.getName() == "numMappedElements").get
     val jobsAndActors =
       m.sdfApplications.jobsAndActors
     val full = m.copy(
@@ -593,7 +595,12 @@ final class CanSolveSDFToTiledMultiCore(using logger: Logger)
       )
     )
     // return both
-    full
+    (
+      full,
+      Map("numMappedElements" -> numMappedElements.getValue().toDouble) ++ invThroughputs
+        .map(v => v.getName() -> int2double(v.getValue()))
+        .toMap
+    )
   }
 
   private def recomputeTh(

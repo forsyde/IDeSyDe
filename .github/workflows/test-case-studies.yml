@@ -33,8 +33,9 @@ jobs:
       - run: |
           cd ${{ github.workspace }}
           cp -r ${{ github.workspace }}/dist/x86_64-unknown-linux-musl/* .
-          curl -sL https://github.com/Jabba-Team/jabba/raw/main/install.sh | JABBA_COMMAND="install ${{ matrix.jabba_jdk }} -o /jdk" bash
-          export JAVA_HOME=/jdk
-          export PATH=$JAVA_HOME/bin:$PATH
+          mkdir -p /opt/jdk
+          curl -sL https://github.com/Jabba-Team/jabba/raw/main/install.sh | JABBA_COMMAND="install ${{ matrix.jabba_jdk }} -o /opt/jdk" bash
+          export JAVA_HOME=/opt/jdk
+          export PATH="$JAVA_HOME/bin:$PATH"
           python -m pip install robotframework
           python -m robot --exclude slow TestsBenchmark.robot

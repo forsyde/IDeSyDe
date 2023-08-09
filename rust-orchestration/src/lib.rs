@@ -630,13 +630,13 @@ pub fn find_exploration_modules(
 pub fn identification_procedure(
     imodules: &Vec<Arc<dyn IdentificationModule>>,
     design_models: &Vec<Box<dyn DesignModel>>,
-    pre_identified: &mut Vec<Arc<dyn DecisionModel>>,
+    pre_identified: &Vec<Arc<dyn DecisionModel>>,
     starting_iter: i32,
 ) -> Vec<Arc<dyn DecisionModel>> {
     let mut step = starting_iter;
     let mut fix_point = false;
     let mut identified: Vec<Arc<dyn DecisionModel>> = Vec::new();
-    identified.append(pre_identified);
+    identified.extend_from_slice(pre_identified);
     while !fix_point {
         // the step condition forces the procedure to go at least one more, fundamental for incrementability
         fix_point = true;
@@ -646,7 +646,15 @@ pub fn identification_procedure(
             .flat_map(|imodule| imodule.identification_step(step, &design_models, &identified))
             .filter(|potential| !identified.contains(potential))
             .collect();
-        identified.extend(new_identified.into_iter());
+        // this contain check is done again because there might be imodules that identify the same decision model,
+        // and since the filtering before is step-based, it would add both identical decision models.
+        // This new for-if fixes this by checking every model of this step.
+        for m in new_identified {
+            if !identified.contains(&m) {
+                identified.push(m);
+            }
+        }
+        // identified.extend(new_identified.into_iter());
         // for imodule in imodules {
         //     let potential = imodule.identification_step(step, &design_models, &identified);
         //     // potential.retain(|m| !identified.contains(m));
@@ -826,7 +834,6 @@ impl IdentificationModule for ExternalServerIdentificationModule {
         design_models: &Vec<Box<dyn DesignModel>>,
         decision_models: &Vec<Arc<dyn DecisionModel>>,
     ) -> Vec<Arc<dyn DecisionModel>> {
-        let mut identified: Vec<Arc<dyn DecisionModel>> = Vec::new();
         for design_model in design_models {
             for mpath in design_model.header().model_paths {
                 self.write_line_to_input(format!("DESIGN {}", mpath).as_str());
@@ -837,30 +844,52 @@ impl IdentificationModule for ExternalServerIdentificationModule {
             self.write_line_to_input(format!("DECISION INLINE {}", h.to_json_str()).as_str());
         }
         self.write_line_to_input(format!("IDENTIFY {}", iteration).as_str());
-        if let Some(identified_line) = self.read_line_from_output() {
-            let num_models = identified_line[4..].trim().parse().ok().unwrap_or(0usize);
-            for _ in 0..num_models {
-                if let Some(decision_model_line) = self.read_line_from_output() {
-                    if decision_model_line.contains("DECISION INLINE") {
-                        let payload = &decision_model_line[15..].trim();
-                        let h = DecisionModelHeader::from_json_str(payload);
-                        if let Some(header) = h {
-                            let boxed = Arc::new(header) as Arc<dyn DecisionModel>;
-                            if !identified.contains(&boxed) {
-                                identified.push(boxed);
-                            }
-                        }
-                    } else {
-                        warn!(
-                            "Ignoring non-compliant identification result by module {}: {}",
-                            self.unique_identifier(),
-                            decision_model_line
-                        )
+        return std::iter::repeat_with(|| self.read_line_from_output())
+            .flatten()
+            .map(|line| {
+                if line.contains("DECISION INLINE") {
+                    let payload = &line[15..].trim();
+                    let h = DecisionModelHeader::from_json_str(payload);
+                    if let Some(header) = h {
+                        let boxed = Arc::new(header) as Arc<dyn DecisionModel>;
+                        return Some(boxed);
                     }
+                } else if !line.trim().eq_ignore_ascii_case("FINISHED") {
+                    warn!(
+                        "Ignoring non-compliant identification result by module {}: {}",
+                        self.unique_identifier(),
+                        line
+                    );
                 }
-            }
-        }
-        identified
+                None
+            })
+            .take_while(|x| x.is_some())
+            .flatten()
+            .collect();
+        // if let Some(identified_line) = self.read_line_from_output() {
+        //     let num_models = identified_line[4..].trim().parse().ok().unwrap_or(0usize);
+        //     for _ in 0..num_models {
+        //         if let Some(decision_model_line) = self.read_line_from_output() {
+        //             if decision_model_line.contains("DECISION INLINE") {
+        //                 let payload = &decision_model_line[15..].trim();
+        //                 let h = DecisionModelHeader::from_json_str(payload);
+        //                 if let Some(header) = h {
+        //                     let boxed = Arc::new(header) as Arc<dyn DecisionModel>;
+        //                     if !identified.contains(&boxed) {
+        //                         identified.push(boxed);
+        //                     }
+        //                 }
+        //             } else {
+        //                 warn!(
+        //                     "Ignoring non-compliant identification result by module {}: {}",
+        //                     self.unique_identifier(),
+        //                     decision_model_line
+        //                 )
+        //             }
+        //         }
+        //     }
+        // }
+        // identified
     }
 
     fn reverse_identification(
@@ -868,7 +897,7 @@ impl IdentificationModule for ExternalServerIdentificationModule {
         solved_decision_models: &Vec<Arc<dyn DecisionModel>>,
         design_models: &Vec<Box<dyn DesignModel>>,
     ) -> Vec<Box<dyn DesignModel>> {
-        let mut integrated: Vec<Box<dyn DesignModel>> = Vec::new();
+        // let mut integrated: Vec<Box<dyn DesignModel>> = Vec::new();
         // save decision models and design models and ask the module to read them
         for design_model in design_models {
             for mpath in design_model.header().model_paths {
@@ -880,29 +909,51 @@ impl IdentificationModule for ExternalServerIdentificationModule {
             self.write_line_to_input(format!("SOLVED INLINE {}", h.to_json_str()).as_str());
         }
         self.write_line_to_input("INTEGRATE");
-        if let Some(integrated_line) = self.read_line_from_output() {
-            let num_models = integrated_line[10..].trim().parse().ok().unwrap_or(0usize);
-            for _ in 0..num_models {
-                if let Some(design_model_line) = self.read_line_from_output() {
-                    if design_model_line.contains("DESIGN") {
-                        let payload = &design_model_line[6..].trim();
-                        let h = DesignModelHeader::from_file(std::path::Path::new(payload));
-                        if let Some(header) = h {
-                            let boxed = Box::new(header) as Box<dyn DesignModel>;
-                            if !integrated.contains(&boxed) {
-                                integrated.push(boxed);
-                            }
-                        }
-                    } else {
-                        warn!(
-                            "Ignoring non-compliant identification result by module {}: {}",
-                            self.unique_identifier(),
-                            design_model_line
-                        )
+        return std::iter::repeat_with(|| self.read_line_from_output())
+            .flatten()
+            .map(|line| {
+                if line.contains("DESIGN") {
+                    let payload = &line[6..].trim();
+                    let h = DesignModelHeader::from_file(std::path::Path::new(payload));
+                    if let Some(header) = h {
+                        let boxed = Box::new(header) as Box<dyn DesignModel>;
+                        return Some(boxed);
                     }
+                } else if !line.trim().eq_ignore_ascii_case("FINISHED") {
+                    warn!(
+                        "Ignoring non-compliant integration result by module {}: {}",
+                        self.unique_identifier(),
+                        line
+                    );
                 }
-            }
-        }
-        integrated
+                None
+            })
+            .take_while(|x| x.is_some())
+            .flatten()
+            .collect();
+        // if let Some(integrated_line) = self.read_line_from_output() {
+        //     let num_models = integrated_line[10..].trim().parse().ok().unwrap_or(0usize);
+        //     for _ in 0..num_models {
+        //         if let Some(design_model_line) = self.read_line_from_output() {
+        //             if design_model_line.contains("DESIGN") {
+        //                 let payload = &design_model_line[6..].trim();
+        //                 let h = DesignModelHeader::from_file(std::path::Path::new(payload));
+        //                 if let Some(header) = h {
+        //                     let boxed = Box::new(header) as Box<dyn DesignModel>;
+        //                     if !integrated.contains(&boxed) {
+        //                         integrated.push(boxed);
+        //                     }
+        //                 }
+        //             } else {
+        //                 warn!(
+        //                     "Ignoring non-compliant identification result by module {}: {}",
+        //                     self.unique_identifier(),
+        //                     design_model_line
+        //                 )
+        //             }
+        //         }
+        //     }
+        // }
+        // integrated
     }
 }

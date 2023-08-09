@@ -186,7 +186,9 @@ trait StandaloneExplorationModule
           case "total-timeout"                  => explorationTotalTimeOutInSecs = value.toLong
           case "time-resolution" | "time-res"   => timeResolution = value.toLong
           case "memory-resolution" | "memory-res" | "mem-res" => memoryResolution = value.toLong
-          case _                                              =>
+          case "identified-path" | "ident-path"             => identifiedPath = stringToPath(value)
+          case "explored-path" | "solved-path" | "sol-path" => solvedPath = stringToPath(value)
+          case _                                            =>
         }
       } else if (command.startsWith("DECISION INLINE")) {
         val payload = command.substring(15).strip()

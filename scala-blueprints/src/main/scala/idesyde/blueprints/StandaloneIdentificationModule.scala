@@ -320,6 +320,20 @@ trait StandaloneIdentificationModule
       command = fetchInputLine()
       // now branch, depending on the command passed
       if (command == null) { // likely recieved a SIGNIT, so we just shutdown
+      } else if (command.startsWith("SET")) {
+        val payload = command.substring(3).strip().split(" ")
+        val option  = payload(0)
+        val value   = payload(1)
+        option.toLowerCase() match {
+          case "desing-path"                                => designPath = stringToPath(value)
+          case "identified-path" | "ident-path"             => identifiedPath = stringToPath(value)
+          case "explored-path" | "solved-path" | "sol-path" => solvedPath = stringToPath(value)
+          case "integrated-path" | "integration-path" | "int-path" =>
+            integrationPath = stringToPath(value)
+          case "output-path" | "out-path" =>
+            integrationPath = stringToPath(value)
+          case _ =>
+        }
       } else if (command.startsWith("DESIGN")) {
         val url  = command.substring(6).strip()
         val path = stringToPath(url)
@@ -389,7 +403,6 @@ trait StandaloneIdentificationModule
           decisionModels
         )
         val newIdentified = identified -- decisionModels
-        sendOutputLine("NEW " + newIdentified.size)
         for (m <- newIdentified) {
           val (hPath, bPath, header) = m.writeToPath(
             identifiedPath,
@@ -405,6 +418,7 @@ trait StandaloneIdentificationModule
             //   .toString
           )
         }
+        sendOutputLine("FINISHED")
         decisionModels ++= identified
       } else if (command.startsWith("INTEGRATE")) {
         val url = command.substring(9).strip()
@@ -412,7 +426,6 @@ trait StandaloneIdentificationModule
           solvedDecisionModels,
           designModels
         )
-        sendOutputLine("INTEGRATED " + integrated.size)
         for (
           (m, k)  <- integrated.zipWithIndex;
           written <- designModelToOutput(m, integrationPath)
@@ -434,6 +447,7 @@ trait StandaloneIdentificationModule
             designModelToOutput(m, os.Path(url))
           }
         }
+        sendOutputLine("FINISHED")
       } else if (command.startsWith("STAT")) {
         sendOutputLine("DECISION " + decisionModels.toVector.map(_.category).mkString(", "))
         sendOutputLine("DESIGN " + designModels.toVector.map(_.category).mkString(", "))

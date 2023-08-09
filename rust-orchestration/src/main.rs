@@ -214,37 +214,43 @@ fn main() {
             }
         }
 
-        debug!("Initializing imodules");
+        debug!("Initializing modules");
         let mut imodules: Vec<Arc<dyn IdentificationModule>> = Vec::new();
-        let ex_imodules = idesyde_orchestration::find_and_prepare_identification_modules(
-            imodules_path,
-            &identified_path,
-            &inputs_path,
-            &explored_path,
-            &reverse_path,
-            &output_path,
-        );
-        for eximod in ex_imodules {
-            debug!(
-                "Initialized identification module with identifier {}",
-                &eximod.unique_identifier()
-            );
-            imodules.push(eximod);
-        }
-        debug!("Initializing emodules");
         let mut emodules: Vec<Arc<dyn ExplorationModule>> = Vec::new();
-        let ex_emodules = idesyde_orchestration::find_exploration_modules(
-            emodules_path,
-            &identified_path,
-            &explored_path,
-        );
-        for exemod in ex_emodules {
-            debug!(
-                "Initialized exploration module with identifier {}",
-                &exemod.unique_identifier()
-            );
-            emodules.push(exemod);
-        }
+        rayon::scope(|s| {
+            s.spawn(|_| {
+                let ex_imodules = idesyde_orchestration::find_and_prepare_identification_modules(
+                    imodules_path,
+                    &identified_path,
+                    &inputs_path,
+                    &explored_path,
+                    &reverse_path,
+                    &output_path,
+                );
+                for eximod in ex_imodules {
+                    debug!(
+                        "Initialized identification module with identifier {}",
+                        &eximod.unique_identifier()
+                    );
+                    imodules.push(eximod);
+                }
+            });
+            s.spawn(|_| {
+                let ex_emodules = idesyde_orchestration::find_exploration_modules(
+                    emodules_path,
+                    &identified_path,
+                    &explored_path,
+                );
+                for exemod in ex_emodules {
+                    debug!(
+                        "Initialized exploration module with identifier {}",
+                        &exemod.unique_identifier()
+                    );
+                    emodules.push(exemod);
+                }
+            });
+        });
+        // debug!("Initializing emodules");
 
         // add embedded modules
         imodules.push(Arc::new(idesyde_common::make_common_module()));
@@ -261,7 +267,7 @@ fn main() {
             model_paths: args.inputs,
             elements: HashSet::new(),
         }));
-        let mut pre_identified: Vec<Arc<dyn DecisionModel>> =
+        let pre_identified: Vec<Arc<dyn DecisionModel>> =
             load_decision_model_headers_from_binary(&identified_path)
                 .iter()
                 .map(|(_, h)| Arc::new(h.to_owned()) as Arc<dyn DecisionModel>)
@@ -273,7 +279,7 @@ fn main() {
         let identified = idesyde_orchestration::identification_procedure(
             &imodules,
             &design_models,
-            &mut pre_identified,
+            &pre_identified,
             0,
         );
         info!("Identified {} decision model(s)", identified.len());

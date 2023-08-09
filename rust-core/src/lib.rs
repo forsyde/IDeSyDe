@@ -34,6 +34,8 @@ impl_downcast!(sync DesignModel);
 impl PartialEq<dyn DesignModel> for dyn DesignModel {
     fn eq(&self, other: &Self) -> bool {
         self.header().eq(&other.header())
+            && self.downcast_ref::<DesignModelHeader>().is_some()
+                == other.downcast_ref::<DesignModelHeader>().is_some()
     }
 }
 
@@ -109,7 +111,9 @@ impl DecisionModel for DecisionModelHeader {
 
 impl PartialEq<dyn DecisionModel> for dyn DecisionModel {
     fn eq(&self, other: &dyn DecisionModel) -> bool {
-        self.category() == other.category() && self.header() == other.header()
+        self.category() == other.category()
+            && self.header() == other.header()
+            && self.body_as_json().is_some() == other.body_as_json().is_some()
     }
 }
 

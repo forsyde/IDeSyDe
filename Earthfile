@@ -68,13 +68,15 @@ build-rust-linux-host:
         RUN source "/cargo/env" && rustup target add ${target}
         RUN source "/cargo/env" && cargo build -r --target ${target}
         IF $(echo "${target}" | grep -q "windows")
-            SAVE ARTIFACT target/${target}/release/idesyde-common.exe ${target}/imodules/idesyde-rust-common.exe
-            SAVE ARTIFACT target/${target}/release/idesyde-common.exe AS LOCAL dist/${target}/imodules/idesyde-rust-common.exe
+            # Took away common module as it is embedded in the orchestrator now
+            # SAVE ARTIFACT target/${target}/release/idesyde-common.exe ${target}/imodules/idesyde-rust-common.exe
+            # SAVE ARTIFACT target/${target}/release/idesyde-common.exe AS LOCAL dist/${target}/imodules/idesyde-rust-common.exe
             SAVE ARTIFACT target/${target}/release/idesyde-orchestration.exe ${target}/idesyde-orchestrator.exe
             SAVE ARTIFACT target/${target}/release/idesyde-orchestration.exe AS LOCAL dist/${target}/idesyde-orchestrator.exe
         ELSE
-            SAVE ARTIFACT target/${target}/release/idesyde-common ${target}/imodules/idesyde-rust-common 
-            SAVE ARTIFACT target/${target}/release/idesyde-common AS LOCAL dist/${target}/imodules/idesyde-rust-common 
+            # Took away common module as it is embedded in the orchestrator now
+            # SAVE ARTIFACT target/${target}/release/idesyde-common ${target}/imodules/idesyde-rust-common 
+            # SAVE ARTIFACT target/${target}/release/idesyde-common AS LOCAL dist/${target}/imodules/idesyde-rust-common 
             SAVE ARTIFACT target/${target}/release/idesyde-orchestration ${target}/idesyde-orchestrator
             SAVE ARTIFACT target/${target}/release/idesyde-orchestration AS LOCAL dist/${target}/idesyde-orchestrator
         END
@@ -94,8 +96,9 @@ build-rust-windows-native:
     COPY --dir rust-bridge-matlab-simulink .
     RUN source "/cargo/env" && rustup target add x86_64-pc-windows-gnu
     RUN source "/cargo/env" && cargo build -r --target x86_64-pc-windows-gnu
-    SAVE ARTIFACT target/x86_64-pc-windows-gnu/release/idesyde-common.exe x86_64-windows-gnu/imodules/idesyde-rust-common.exe
-    SAVE ARTIFACT target/x86_64-pc-windows-gnu/release/idesyde-common.exe AS LOCAL dist/x86_64-windows-gnu/imodules/idesyde-rust-common.exe
+    # Took away common module as it is embedded in the orchestrator now
+    # SAVE ARTIFACT target/x86_64-pc-windows-gnu/release/idesyde-common.exe x86_64-windows-gnu/imodules/idesyde-rust-common.exe
+    # SAVE ARTIFACT target/x86_64-pc-windows-gnu/release/idesyde-common.exe AS LOCAL dist/x86_64-windows-gnu/imodules/idesyde-rust-common.exe
     SAVE ARTIFACT target/x86_64-pc-windows-gnu/release/idesyde-orchestration.exe x86_64-windows-gnu/idesyde-orchestrator.exe
     SAVE ARTIFACT target/x86_64-pc-windows-gnu/release/idesyde-orchestration.exe AS LOCAL dist/x86_64-windows-gnu/idesyde-orchestrator.exe
 
@@ -156,7 +159,6 @@ test-case-studies:
         COPY --dir examples_and_benchmarks .
         COPY *.py .
         COPY *.robot .
-        RUN ls
         RUN /robotenv/bin/python -m robot --exclude slow TestsBenchmark.robot
         SAVE ARTIFACT report.html AS LOCAL test_report.html
     END

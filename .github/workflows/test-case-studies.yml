@@ -8,7 +8,7 @@ on:
       - "develop"
 
 concurrency:
-  group: Testing known case studies @ ${{ github.ref }}
+  group: Testing known case studies
   cancel-in-progress: true
 
 jobs:
@@ -26,4 +26,14 @@ jobs:
       - name: Test cases
         run: |
           cd ${{ github.workspace }}
-          earthly +test-case-studies --jabba_jdk="${{ matrix.jabba_jdk }}" --targets="${{ matrix.target }}"
+          earthly +dist-all --jabba_jdk="${{ matrix.jabba_jdk }}" --targets="${{ matrix.target }}"
+          cp -r dist/x86_64-unknown-linux-musl .
+      - uses: actions/setup-python@v4
+        with:
+          python-version: '3.10' 
+      - run: |
+          curl -sL https://github.com/Jabba-Team/jabba/raw/main/install.sh | JABBA_COMMAND="install ${{ matrix.jabba_jdk }} -o /jdk" bash
+          export JAVA_HOME=/jdk
+          export PATH=$JAVA_HOME/bin:$PATH
+          python -m pip install robotframework
+          python -m robot --exclude slow TestsBenchmark.robot

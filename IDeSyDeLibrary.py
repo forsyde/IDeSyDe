@@ -75,7 +75,7 @@ class IDeSyDeLibrary:
     ) -> List[str]:
         bin_path = next(f for f in os.listdir(".") if "idesyde" in f)
         # bin_path = "idesyde-orchestrator"
-        bin_path = "./" + bin_path
+        bin_path = (".\\" if os.name == "nt" else "./") + bin_path
         files = os.listdir(path)
         run_path = test_workdir + os.path.sep + path
         os.makedirs(run_path, exist_ok=True)
@@ -90,10 +90,16 @@ class IDeSyDeLibrary:
             "-v",
             log_level,
         ] + [path + os.path.sep + f for f in files]
-        if os.name == "nt":
-            logger.debug(subprocess.check_output(args, shell=True))
-        else:
-            logger.debug(subprocess.check_output(args))
+        with subprocess.Popen(
+            args, shell=(True if os.name == "nt" else False), stdout=subprocess.PIPE
+        ) as child:
+            for line in child.stdout:
+                logger.console(line)
+                logger.debug(line)
+        # if os.name == "nt":
+        #     logger.console(subprocess.check_output(args, shell=True))
+        # else:
+        #     logger.console(subprocess.check_output(args))
         return os.listdir(run_path + os.path.sep + "explored") or []
         # assert child.returncode == 0
         # if has_solution:

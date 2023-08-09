@@ -4,6 +4,7 @@ import subprocess
 import shutil
 import configparser
 from robot.api import FatalError
+from robot.api import logger
 from robot.api.deco import library, keyword
 
 
@@ -18,10 +19,10 @@ class IDeSyDeLibrary:
             rust_built = subprocess.run(["cargo", "build"], shell=True)
             if rust_built.returncode != 0:
                 raise FatalError("Failed to build the rust parts")
-            shutil.copyfile(
-                "target" + os.path.sep + "debug" + os.path.sep + "idesyde-common.exe",
-                "imodules" + os.path.sep + "idesyde-rust-common.exe",
-            )
+            # shutil.copyfile(
+            #     "target" + os.path.sep + "debug" + os.path.sep + "idesyde-common.exe",
+            #     "imodules" + os.path.sep + "idesyde-rust-common.exe",
+            # )
             shutil.copyfile(
                 "target"
                 + os.path.sep
@@ -69,14 +70,12 @@ class IDeSyDeLibrary:
     def try_explore(
         self,
         path: str,
-        test_slow: bool = False,
+        log_level: str = "DEBUG",
         test_workdir: str = "test_runs",
-        log_level: str = "WARN",
     ) -> List[str]:
-        bin_path = "idesyde-orchestrator"
-        if os.name == "nt":
-            bin_path += ".exe"
-        else:
+        bin_path = next(f for f in os.listdir(".") if "idesyde" in f)
+        # bin_path = "idesyde-orchestrator"
+        if os.name != "nt":
             bin_path = "./" + bin_path
         files = os.listdir(path)
         run_path = test_workdir + os.path.sep + path
@@ -93,9 +92,9 @@ class IDeSyDeLibrary:
             log_level,
         ] + [path + os.path.sep + f for f in files]
         if os.name == "nt":
-            child = subprocess.run(args, shell=True)
+            logger.debug(subprocess.check_output(args, shell=True))
         else:
-            child = subprocess.run(args)
+            logger.debug(subprocess.check_output(args))
         return os.listdir(run_path + os.path.sep + "explored") or []
         # assert child.returncode == 0
         # if has_solution:

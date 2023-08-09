@@ -1,6 +1,6 @@
 package idesyde.blueprints
 
-trait CanParseExplorationModuleConfiguration {
+trait CanParseExplorationModuleConfiguration extends ModuleUtils {
   def parse(
       args: Array[String],
       uniqueIdentifier: String = ""
@@ -14,8 +14,7 @@ trait CanParseExplorationModuleConfiguration {
           .action((f, mc) =>
             mc.copy(dominantPath =
               Some(
-                if (f.startsWith("/")) then os.Path(f)
-                else os.pwd / os.RelPath(f)
+                stringToPath(f)
               )
             )
           ),
@@ -24,8 +23,7 @@ trait CanParseExplorationModuleConfiguration {
           .action((f, mc) =>
             mc.copy(solutionPath =
               Some(
-                if (f.startsWith("/")) then os.Path(f)
-                else os.pwd / os.RelPath(f)
+                stringToPath(f)
               )
             )
           ),
@@ -34,8 +32,7 @@ trait CanParseExplorationModuleConfiguration {
           .action((f, mc) =>
             mc.copy(decisionModelToExplore =
               Some(
-                if (f.startsWith("/")) then os.Path(f)
-                else os.pwd / os.RelPath(f)
+                stringToPath(f)
               )
             )
           ),
@@ -44,8 +41,7 @@ trait CanParseExplorationModuleConfiguration {
           .action((f, mc) =>
             mc.copy(decisionModelToGetCombination =
               Some(
-                if (f.startsWith("/")) then os.Path(f)
-                else os.pwd / os.RelPath(f)
+                stringToPath(f)
               )
             )
           ),

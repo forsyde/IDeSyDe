@@ -219,7 +219,7 @@ fn main() {
         let mut emodules: Vec<Arc<dyn ExplorationModule>> = Vec::new();
         rayon::scope(|s| {
             s.spawn(|_| {
-                let ex_imodules = idesyde_orchestration::find_and_prepare_identification_modules(
+                let ex_imodules = idesyde_orchestration::find_identification_modules(
                     imodules_path,
                     &identified_path,
                     &inputs_path,

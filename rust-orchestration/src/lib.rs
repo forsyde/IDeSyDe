@@ -448,6 +448,20 @@ impl LocalServerLike for ExternalServerExplorationModule {
     }
 }
 
+impl Drop for ExternalServerExplorationModule {
+    fn drop(&mut self) {
+        if let Ok(mut server_guard) = self.process.lock() {
+            if let Err(e) = server_guard.kill() {
+                debug!(
+                    "Ignoring error whilst killing imodule {}: {}",
+                    self.unique_identifier(),
+                    e.to_string(),
+                );
+            }
+        }
+    }
+}
+
 impl ExplorationModule for ExternalServerExplorationModule {
     fn unique_identifier(&self) -> String {
         self.name.to_owned()
@@ -547,7 +561,7 @@ impl ExplorationModule for ExternalServerExplorationModule {
     }
 }
 
-pub fn find_and_prepare_identification_modules(
+pub fn find_identification_modules(
     modules_path: &Path,
     identified_path: &Path,
     inputs_path: &Path,

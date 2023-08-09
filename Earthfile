@@ -71,14 +71,14 @@ build-rust-linux-host:
             # Took away common module as it is embedded in the orchestrator now
             # SAVE ARTIFACT target/${target}/release/idesyde-common.exe ${target}/imodules/idesyde-rust-common.exe
             # SAVE ARTIFACT target/${target}/release/idesyde-common.exe AS LOCAL dist/${target}/imodules/idesyde-rust-common.exe
-            SAVE ARTIFACT target/${target}/release/idesyde-orchestration.exe ${target}/idesyde-orchestrator.exe
-            SAVE ARTIFACT target/${target}/release/idesyde-orchestration.exe AS LOCAL dist/${target}/idesyde-orchestrator.exe
+            SAVE ARTIFACT target/${target}/release/idesyde-orchestration.exe ${target}/idesyde.exe
+            SAVE ARTIFACT target/${target}/release/idesyde-orchestration.exe AS LOCAL dist/${target}/idesyde.exe
         ELSE
             # Took away common module as it is embedded in the orchestrator now
             # SAVE ARTIFACT target/${target}/release/idesyde-common ${target}/imodules/idesyde-rust-common 
             # SAVE ARTIFACT target/${target}/release/idesyde-common AS LOCAL dist/${target}/imodules/idesyde-rust-common 
-            SAVE ARTIFACT target/${target}/release/idesyde-orchestration ${target}/idesyde-orchestrator
-            SAVE ARTIFACT target/${target}/release/idesyde-orchestration AS LOCAL dist/${target}/idesyde-orchestrator
+            SAVE ARTIFACT target/${target}/release/idesyde-orchestration ${target}/idesyde
+            SAVE ARTIFACT target/${target}/release/idesyde-orchestration AS LOCAL dist/${target}/idesyde
         END
     END
 

@@ -73,9 +73,13 @@ class IDeSyDeLibrary:
         log_level: str = "DEBUG",
         test_workdir: str = "test_runs",
     ) -> List[str]:
-        bin_path = next(f for f in os.listdir(".") if "idesyde" in f)
+        # bin_path = next(f for f in os.listdir(".") if "idesyde" in f)
         # bin_path = "idesyde-orchestrator"
-        bin_path = (".\\" if os.name == "nt" else "./") + bin_path
+        bin_path = (
+            (".\\" if os.name == "nt" else "./")
+            + "idesyde"
+            + (".exe" if os.name == "nt" else "")
+        )
         files = os.listdir(path)
         run_path = test_workdir + os.path.sep + path
         os.makedirs(run_path, exist_ok=True)

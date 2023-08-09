@@ -75,8 +75,7 @@ class IDeSyDeLibrary:
     ) -> List[str]:
         bin_path = next(f for f in os.listdir(".") if "idesyde" in f)
         # bin_path = "idesyde-orchestrator"
-        if os.name != "nt":
-            bin_path = "./" + bin_path
+        bin_path = "./" + bin_path
         files = os.listdir(path)
         run_path = test_workdir + os.path.sep + path
         os.makedirs(run_path, exist_ok=True)

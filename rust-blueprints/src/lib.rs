@@ -1,7 +1,7 @@
 pub mod macros;
 
 use std::{
-    collections::HashSet,
+    collections::{HashMap, HashSet},
     path::{Path, PathBuf},
     sync::Arc,
 };
@@ -9,8 +9,8 @@ use std::{
 use clap::Parser;
 use idesyde_core::{
     headers::{load_decision_model_headers_from_binary, DecisionModelHeader, ExplorationBid},
-    DecisionModel, DesignModel, ExplorationModule, Explorer, IdentificationModule,
-    MarkedIdentificationRule, ReverseIdentificationRule,
+    DecisionModel, DesignModel, ExplorationModule, ExplorationSolution, Explorer,
+    IdentificationModule, MarkedIdentificationRule, ReverseIdentificationRule,
 };
 use serde::{Deserialize, Serialize};
 
@@ -65,6 +65,18 @@ impl DecisionModelMessage {
     }
 }
 
+#[derive(Clone, PartialEq, Serialize, Deserialize)]
+pub struct ExplorationSolutionMessage {
+    pub objectives: HashMap<String, f64>,
+    pub solved: DecisionModelMessage,
+}
+
+impl ExplorationSolutionMessage {
+    pub fn from_json_str(s: &str) -> Option<ExplorationSolutionMessage> {
+        serde_json::from_str(s).ok()
+    }
+}
+
 pub struct StandaloneExplorationModule {
     unique_identifier: String,
     explorers: Vec<Box<dyn Explorer>>,
@@ -101,6 +113,28 @@ impl ExplorationModule for StandaloneExplorationModule {
                 )
             })
             .unwrap_or(Box::new(std::iter::empty::<Arc<dyn DecisionModel>>()))
+    }
+
+    fn iter_explore(
+        &self,
+        m: Arc<dyn DecisionModel>,
+        explorer_id: &str,
+        currrent_solutions: Vec<idesyde_core::ExplorationSolution>,
+        exploration_configuration: idesyde_core::ExplorationConfiguration,
+        solution_iter: fn(ExplorationSolution) -> (),
+    ) -> Vec<idesyde_core::ExplorationSolution> {
+        self.explorers
+            .iter()
+            .find(|e| e.unique_identifier() == explorer_id)
+            .map(|e| {
+                e.iter_explore(
+                    m,
+                    currrent_solutions,
+                    solution_iter,
+                    exploration_configuration,
+                )
+            })
+            .unwrap_or(vec![])
     }
 }
 

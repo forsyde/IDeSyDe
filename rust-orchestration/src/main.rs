@@ -7,7 +7,7 @@ use idesyde_core::{
         load_decision_model_headers_from_binary, load_design_model_headers_from_binary,
         DesignModelHeader, ExplorationBid,
     },
-    DecisionModel, DesignModel, ExplorationModule, IdentificationModule,
+    DecisionModel, DesignModel, ExplorationConfiguration, ExplorationModule, IdentificationModule,
 };
 use idesyde_orchestration::OpaqueDecisionModel;
 use log::{debug, error, info, warn, Level};
@@ -56,26 +56,26 @@ struct Args {
         help = "Sets the desired maximum number of solutions. \nIf non-positive, there is no litmit",
         long_help = "Sets the desired maximum number of solutions. \nIf non-positive, there is no litmit. \nThe identification and integration stages are unnafected."
     )]
-    x_max_solutions: Option<i64>,
+    x_max_solutions: Option<u64>,
 
     #[arg(
         long,
         help = "Sets the _total exploration_ time-out in seconds. \nIf non-positive, there is no time-out.",
         long_help = "Sets the _total exploration_ time-out in seconds. \nIf non-positive, there is no time-out. \nThe identification and integration stages are unnafected."
     )]
-    x_total_time_out: Option<i64>,
+    x_total_time_out: Option<u64>,
 
     #[arg(
         long,
         help = "For explorer with mandatory discretization, this factor is used for the time upsizing resolution."
     )]
-    x_time_resolution: Option<i64>,
+    x_time_resolution: Option<u64>,
 
     #[arg(
         long,
         help = "For explorer with mandatory discretization, this factor is used for the memory downsizing resolution."
     )]
-    x_memory_resolution: Option<i64>,
+    x_memory_resolution: Option<u64>,
 }
 
 fn main() {
@@ -360,21 +360,23 @@ fn main() {
             }
             // let (mut tx, rx) = spmc::channel();
             let (chosen_exploration_module, chosen_decision_model, _) = &biddings[idx];
-            let sols_found: Vec<Arc<dyn DecisionModel>> = chosen_exploration_module
-                .explore(
-                    chosen_decision_model.clone(),
-                    &dominant_bid.explorer_unique_identifier,
-                    args.x_max_solutions.unwrap_or(0),
-                    args.x_total_time_out.unwrap_or(0),
-                    args.x_time_resolution.unwrap_or(-1),
-                    args.x_memory_resolution.unwrap_or(-1),
-                )
-                .enumerate()
-                // .par_bridge()
-                .inspect(|(i, _)| debug!("Found a new solution. Total count is {}", i + 1))
-                .map(|(_, sol)| sol)
-                .collect();
+            let sols_found = chosen_exploration_module.iter_explore(
+                chosen_decision_model.clone(),
+                &dominant_bid.explorer_unique_identifier,
+                vec![],
+                ExplorationConfiguration {
+                    max_sols: args.x_max_solutions.unwrap_or(0),
+                    total_timeout: args.x_total_time_out.unwrap_or(0),
+                    time_resolution: args.x_time_resolution.unwrap_or(0),
+                    memory_resolution: args.x_memory_resolution.unwrap_or(0),
+                },
+                |_| {
+                    debug!("Found a new solution.");
+                },
+            );
             info!("Finished exploration with {} solution(s)", sols_found.len());
+            let solved_models: Vec<Arc<dyn DecisionModel>> =
+                sols_found.iter().map(|(x, _)| x.clone()).collect();
             if !sols_found.is_empty() {
                 info!("Starting integration");
                 let total_reversed: usize = imodules
@@ -382,7 +384,9 @@ fn main() {
                     .enumerate()
                     .map(|(_, imodule)| {
                         let mut n_reversed = 0;
-                        for reverse in imodule.reverse_identification(&sols_found, &design_models) {
+                        for reverse in
+                            imodule.reverse_identification(&solved_models, &design_models)
+                        {
                             let reverse_header = reverse.header();
                             reverse_header.write_to_dir(
                                 &reverse_path,

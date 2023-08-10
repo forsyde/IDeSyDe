@@ -13,13 +13,11 @@ final case class DecisionModelMessage(
 
   def asText: String = write(this)
 
-  def withEscapedNewLinesText: String = write(
+  def withEscapedNewLinesText: DecisionModelMessage =
     copy(body = body.map(_.replace("\r\n", "\\r\\n").replace("\n", "\\n")))
-  )
 
-  def withUnescapedNewLinesText: String = write(
+  def withUnescapedNewLinesText: DecisionModelMessage =
     copy(body = body.map(_.replace("\\r\\n", "\r\n").replace("\\n", "\n")))
-  )
 }
 
 object DecisionModelMessage {

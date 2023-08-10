@@ -18,8 +18,10 @@ use std::sync::Arc;
 use std::sync::Mutex;
 
 use idesyde_blueprints::DecisionModelMessage;
+use idesyde_blueprints::ExplorationSolutionMessage;
 use idesyde_core::headers::load_decision_model_header_from_path;
 use idesyde_core::headers::load_decision_model_headers_from_binary;
+use idesyde_core::ExplorationSolution;
 
 use idesyde_core::headers::DecisionModelHeader;
 use idesyde_core::headers::DesignModelHeader;
@@ -485,6 +487,17 @@ impl ExplorationModule for ExternalExplorationModule {
                 .map(|m| Arc::new(m) as Arc<dyn DecisionModel>),
         )
     }
+
+    fn iter_explore(
+        &self,
+        m: Arc<dyn DecisionModel>,
+        explorer_id: &str,
+        currrent_solutions: Vec<ExplorationSolution>,
+        exploration_configuration: idesyde_core::ExplorationConfiguration,
+        solution_iter: fn(ExplorationSolution) -> (),
+    ) -> Vec<ExplorationSolution> {
+        vec![]
+    }
 }
 
 pub struct ExternalServerExplorationModule {
@@ -609,19 +622,6 @@ impl ExplorationModule for ExternalServerExplorationModule {
                         .collect()
                 })
                 .unwrap_or(Vec::new());
-            // return std::iter::repeat_with(|| self.read_line_from_output())
-            //     .flatten()
-            //     .map(|line| {
-            //         if line.starts_with("RESULT") {
-            //             return ExplorationBid::from_json_str(&line[6..].trim());
-            //         } else if line.eq_ignore_ascii_case("FINISHED") {
-            //             return None;
-            //         }
-            //         None
-            //     })
-            //     .take_while(|x| x.is_some())
-            //     .flatten()
-            //     .collect();
         }
         Vec::new()
     }
@@ -676,27 +676,81 @@ impl ExplorationModule for ExternalServerExplorationModule {
                     .collect()
             })
             .unwrap_or(Vec::new());
-        // let explored: Vec<Arc<dyn DecisionModel>> =
-        //     std::iter::repeat_with(|| self.read_line_from_output())
-        //         .flatten()
-        //         .map(|line| {
-        //             if line.contains("RESULT") {
-        //                 let mut payload = line[6..].trim().split(" ");
-        //                 let _objs_ = payload.next();
-        //                 return payload
-        //                     .next()
-        //                     .and_then(|m_str| DecisionModelMessage::from_json_str(m_str.trim()))
-        //                     .map(|x| OpaqueDecisionModel::from_decision_message(&x))
-        //                     .map(|m| Arc::new(m) as Arc<dyn DecisionModel>);
-        //             } else if line.contains("FINISHED") {
-        //                 return None;
-        //             }
-        //             None
-        //         })
-        //         .take_while(|x| x.is_some())
-        //         .flatten()
-        //         .collect();
         Box::new(explored.into_iter())
+    }
+
+    fn iter_explore(
+        &self,
+        m: Arc<dyn DecisionModel>,
+        explorer_id: &str,
+        currrent_solutions: Vec<idesyde_core::ExplorationSolution>,
+        exploration_configuration: idesyde_core::ExplorationConfiguration,
+        solution_iter: fn(ExplorationSolution) -> (),
+    ) -> Vec<idesyde_core::ExplorationSolution> {
+        self.write_line_to_input(
+            format!("SET identified-path {}", self.identified_path.display()).as_str(),
+        );
+        self.write_line_to_input(
+            format!("SET solved-path {}", self.solved_path.display()).as_str(),
+        );
+        self.write_line_to_input(
+            format!("SET max-sols {}", exploration_configuration.max_sols).as_str(),
+        );
+        self.write_line_to_input(
+            format!(
+                "SET total-timeout {}",
+                exploration_configuration.total_timeout
+            )
+            .as_str(),
+        );
+        self.write_line_to_input(
+            format!(
+                "SET time-resolution {}",
+                exploration_configuration.time_resolution
+            )
+            .as_str(),
+        );
+        self.write_line_to_input(
+            format!(
+                "SET memory-resolution {}",
+                exploration_configuration.memory_resolution
+            )
+            .as_str(),
+        );
+        self.write_line_to_input(
+            format!(
+                "EXPLORE {} {}",
+                explorer_id,
+                DecisionModelMessage::from_dyn_decision_model(m.as_ref()).to_json_str()
+            )
+            .as_str(),
+        );
+        self.map_output(|buf| {
+            buf.lines()
+                .flatten()
+                .map(|line| {
+                    if line.contains("RESULT") {
+                        let payload = line[6..].trim();
+                        if let Some(message) = ExplorationSolutionMessage::from_json_str(payload) {
+                            let solution = (
+                                Arc::new(OpaqueDecisionModel::from_decision_message(
+                                    &message.solved,
+                                )) as Arc<dyn DecisionModel>,
+                                message.objectives.to_owned(),
+                            );
+                            solution_iter(solution.clone());
+                            return Some(solution);
+                        }
+                    } else if line.contains("FINISHED") {
+                        return None;
+                    }
+                    None
+                })
+                .take_while(|x| x.is_some())
+                .flatten()
+                .collect()
+        })
+        .unwrap_or(Vec::new())
     }
 }
 

@@ -255,14 +255,15 @@ trait StandaloneExplorationModule
             maximumSolutions,
             timeResolution,
             memoryResolution
-          ).zipWithIndex
+          ).zipWithIndex;
+          message = ExplorationSolutionMessage.fromSolution(solved, objs)
           // if !solvedDecisionModels.contains(solved)
         ) {
-          val (hPath, bPath, header) =
-            solved.writeToPath(solvedPath, f"$idx%016d", uniqueIdentifier)
+          // val (hPath, bPath, header) =
+          //   solved.writeToPath(solvedPath, f"$idx%016d", uniqueIdentifier)
           solvedDecisionModels += solved
           solvedDecisionObjs(solved) = objs
-          sendOutputLine(f"RESULT ${write(objs)} ${header.asText}")
+          sendOutputLine(f"RESULT ${message.withEscapedNewLinesText.asText}")
         }
         sendOutputLine("FINISHED")
       } else if (command.startsWith("EXPLORE")) {
@@ -281,15 +282,15 @@ trait StandaloneExplorationModule
               timeResolution,
               memoryResolution
             )
-            .zipWithIndex
+            .zipWithIndex;
+          message = ExplorationSolutionMessage.fromSolution(solved, objs)
         ) {
-          val (hPath, bPath, header) =
-            solved.writeToPath(solvedPath, f"$idx%016d", uniqueIdentifier)
+          // val (hPath, bPath, header) =
+          //   solved.writeToPath(solvedPath, f"$idx%016d", uniqueIdentifier)
           solvedDecisionModels += solved
           solvedDecisionObjs(solved) = objs
-          val message = DecisionModelMessage.fromDecisionModel(solved)
           sendOutputLine(
-            f"RESULT ${write(objs)} ${message.withEscapedNewLinesText}"
+            f"RESULT ${message.withEscapedNewLinesText.asText}"
           )
         }
         sendOutputLine("FINISHED")

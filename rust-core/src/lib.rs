@@ -1,7 +1,7 @@
 pub mod headers;
 pub mod macros;
 
-use std::{hash::Hash, path::Path, sync::Arc};
+use std::{collections::HashMap, hash::Hash, path::Path, sync::Arc};
 
 use downcast_rs::{impl_downcast, Downcast, DowncastSync};
 use headers::{DecisionModelHeader, DesignModelHeader, ExplorationBid};
@@ -160,6 +160,28 @@ impl Hash for dyn IdentificationModule {
         self.unique_identifier().hash(state);
     }
 }
+
+#[derive(Clone, Copy, PartialEq, Eq, serde::Serialize, serde::Deserialize)]
+pub struct ExplorationConfiguration {
+    pub max_sols: u64,
+    pub total_timeout: u64,
+    pub time_resolution: u64,
+    pub memory_resolution: u64,
+}
+
+impl ExplorationConfiguration {
+    pub fn default() -> ExplorationConfiguration {
+        ExplorationConfiguration {
+            max_sols: 0,
+            total_timeout: 0,
+            time_resolution: 0,
+            memory_resolution: 0,
+        }
+    }
+}
+
+pub type ExplorationSolution = (Arc<dyn DecisionModel>, HashMap<String, f64>);
+
 /// This trait is the root for all possible explorers within IDeSyDe. A real explorer should
 /// implement this trait by dispatching the real exploration from 'explore'.
 ///
@@ -191,6 +213,13 @@ pub trait Explorer: Downcast + Send + Sync {
         time_resolution: i64,
         memory_resolution: i64,
     ) -> Box<dyn Iterator<Item = Arc<dyn DecisionModel>>>;
+    fn iter_explore(
+        &self,
+        m: Arc<dyn DecisionModel>,
+        currrent_solutions: Vec<ExplorationSolution>,
+        solution_iter: fn(ExplorationSolution) -> (),
+        exploration_configuration: ExplorationConfiguration,
+    ) -> Vec<ExplorationSolution>;
 }
 impl_downcast!(Explorer);
 
@@ -231,6 +260,33 @@ pub trait ExplorationModule: Send + Sync {
                 memory_resolution,
             ),
             None => Box::new(std::iter::empty()),
+        }
+    }
+    fn iter_explore(
+        &self,
+        m: Arc<dyn DecisionModel>,
+        explorer_id: &str,
+        currrent_solutions: Vec<ExplorationSolution>,
+        exploration_configuration: ExplorationConfiguration,
+        solution_iter: fn(ExplorationSolution) -> (),
+    ) -> Vec<ExplorationSolution>;
+    fn iter_explore_best(
+        &self,
+        m: Arc<dyn DecisionModel>,
+        currrent_solutions: Vec<ExplorationSolution>,
+        exploration_configuration: ExplorationConfiguration,
+        solution_iter: fn(ExplorationSolution) -> (),
+    ) -> Vec<ExplorationSolution> {
+        let bids = self.bid(m.clone());
+        match compute_dominant_biddings(bids.iter()) {
+            Some((_, bid)) => self.iter_explore(
+                m,
+                bid.explorer_unique_identifier.as_str(),
+                currrent_solutions,
+                exploration_configuration,
+                solution_iter,
+            ),
+            None => vec![],
         }
     }
 }

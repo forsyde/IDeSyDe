@@ -25,6 +25,6 @@ schemars = "0.8.12"
 petgraph = "0.6.3"
 
 [workspace.package]
-version = "0.5.12"
+version = "0.6.0"
 authors = ["Rodolfo Jordao"]
 edition = "2021"

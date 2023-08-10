@@ -1,10 +1,9 @@
-use idesyde_core::{
-    decision_header_to_model_gen, decision_models_schemas_gen, load_decision_model, DecisionModel,
-    StandaloneIdentificationModule,
+use idesyde_blueprints::{
+    decision_header_to_model_gen, decision_message_to_model_gen, StandaloneIdentificationModule,
 };
+use idesyde_core::decision_models_schemas_gen;
 use schemars::schema_for;
 use std::collections::HashSet;
-use std::sync::Arc;
 
 pub mod irules;
 pub mod models;
@@ -25,6 +24,16 @@ pub fn make_common_module() -> StandaloneIdentificationModule {
         ],
         Vec::new(),
         decision_header_to_model_gen!(
+            models::SDFApplication,
+            models::AnalysedSDFApplication,
+            models::TiledMultiCore,
+            models::RuntimesAndProcessors,
+            models::PartitionedTiledMulticore,
+            models::AperiodicAsynchronousDataflow,
+            models::InstrumentedComputationTimes,
+            models::AperiodicAsynchronousDataflowToPartitionedTiledMulticore
+        ),
+        decision_message_to_model_gen!(
             models::SDFApplication,
             models::AnalysedSDFApplication,
             models::TiledMultiCore,

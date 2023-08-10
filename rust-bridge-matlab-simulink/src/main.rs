@@ -4,10 +4,13 @@ use std::{
     sync::Arc,
 };
 
-use idesyde_blueprints::execute_standalone_identification_module;
+use idesyde_blueprints::{
+    decision_header_to_model_gen, decision_message_to_model_gen,
+    execute_standalone_identification_module, StandaloneIdentificationModule,
+};
 use idesyde_core::{
     headers::{self, DesignModelHeader},
-    DecisionModel, DesignModel, MarkedIdentificationRule, StandaloneIdentificationModule,
+    DecisionModel, DesignModel, MarkedIdentificationRule,
 };
 use serde::{Deserialize, Serialize};
 
@@ -117,12 +120,6 @@ fn write_design_model(
     vec![]
 }
 
-fn decision_header_to_model(
-    _header: &headers::DecisionModelHeader,
-) -> Option<Arc<dyn idesyde_core::DecisionModel>> {
-    None
-}
-
 //     fn identification_rules(&self) -> Vec<idesyde_core::MarkedIdentificationRule> {
 //     }
 
@@ -139,7 +136,8 @@ fn main() {
         vec![],
         read_design_model,
         write_design_model,
-        decision_header_to_model,
+        decision_header_to_model_gen!(),
+        decision_message_to_model_gen!(),
         HashSet::new(),
     ));
 }

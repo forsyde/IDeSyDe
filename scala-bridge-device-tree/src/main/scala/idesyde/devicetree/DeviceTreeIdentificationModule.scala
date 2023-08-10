@@ -12,6 +12,7 @@ import os.Path
 import idesyde.devicetree.identification.DeviceTreeDesignModel
 import idesyde.devicetree.identification.OSDescriptionDesignModel
 import org.virtuslab.yaml.*
+import idesyde.blueprints.DecisionModelMessage
 
 object DeviceTreeIdentificationModule
     extends StandaloneIdentificationModule
@@ -35,29 +36,10 @@ object DeviceTreeIdentificationModule
   }
 
   def designHeaderToModel(m: DesignModelHeader): Set[DesignModel] = Set()
-  // if (
-  //   m.category == "DeviceTreeDesignModel"
-  // ) {
-  //   m.model_paths
-  //     .map(parseDeviceTree)
-  //     .flatMap(r =>
-  //       r match {
-  //         case Success(result, next) => Some(DeviceTreeDesignModel(List(result)))
-  //         case _                     => None
-  //       }
-  //     )
-  //     .toSet
-  // } else if (m.category == "OSDescriptionDesignModel") {
-  //   m.model_paths.flatMap(s => {
-  //     val p = if (s.startsWith("/")) os.root / s else os.pwd / s
-  //     os.read(p).as[OSDescription] match {
-  //       case Right(value) => Some(OSDescriptionDesignModel(value))
-  //       case Left(value)  => None
-  //     }
-  //   })
-  // } else Set()
 
   def decisionHeaderToModel(m: DecisionModelHeader): Option[DecisionModel] = None
+
+  def decisionMessageToModel(m: DecisionModelMessage): Option[DecisionModel] = None
 
   def uniqueIdentifier: String = "DeviceTreeIdentificationModule"
 

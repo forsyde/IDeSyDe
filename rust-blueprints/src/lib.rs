@@ -1,10 +1,266 @@
-use std::{path::PathBuf, sync::Arc};
+pub mod macros;
+
+use std::{
+    collections::HashSet,
+    path::{Path, PathBuf},
+    sync::Arc,
+};
 
 use clap::Parser;
 use idesyde_core::{
-    headers::load_decision_model_headers_from_binary, DecisionModel, DesignModel,
-    IdentificationModule, StandaloneIdentificationModule,
+    headers::{load_decision_model_headers_from_binary, DecisionModelHeader, ExplorationBid},
+    DecisionModel, DesignModel, ExplorationModule, Explorer, IdentificationModule,
+    MarkedIdentificationRule, ReverseIdentificationRule,
 };
+use serde::{Deserialize, Serialize};
+
+#[derive(Serialize, Clone, Deserialize, Debug, PartialEq, Eq)]
+pub struct DecisionModelMessage {
+    header: DecisionModelHeader,
+    body: Option<String>,
+}
+
+impl DecisionModelMessage {
+    pub fn from_dyn_decision_model(m: &dyn DecisionModel) -> DecisionModelMessage {
+        DecisionModelMessage {
+            header: m.header(),
+            body: m
+                .body_as_json()
+                .map(|x| x.replace("\r\n", "\\r\\n").replace("\n", "\\n")),
+        }
+    }
+
+    pub fn from_decision_model<T: DecisionModel>(m: &T) -> DecisionModelMessage {
+        DecisionModelMessage {
+            header: m.header(),
+            body: m
+                .body_as_json()
+                .map(|x| x.replace("\r\n", "\\r\\n").replace("\n", "\\n")),
+        }
+    }
+
+    pub fn from_json_str(s: &str) -> Option<DecisionModelMessage> {
+        match serde_json::from_str(s) {
+            Ok(m) => Some(m),
+            Err(e) => {
+                println!("{}", e);
+                None
+            }
+        }
+    }
+
+    pub fn header(&self) -> DecisionModelHeader {
+        self.header.to_owned()
+    }
+
+    pub fn body_with_newlines_unescaped(&self) -> Option<String> {
+        self.body
+            .to_owned()
+            .map(|x| x.replace("\\r\\n", "\r\n").replace("\\n", "\n"))
+    }
+
+    pub fn to_json_str(&self) -> String {
+        serde_json::to_string(self)
+            .expect("Failed to serialize DecisionModelMessage, which should always suceed.")
+    }
+}
+
+pub struct StandaloneExplorationModule {
+    unique_identifier: String,
+    explorers: Vec<Box<dyn Explorer>>,
+}
+
+impl ExplorationModule for StandaloneExplorationModule {
+    fn unique_identifier(&self) -> String {
+        self.unique_identifier.to_owned()
+    }
+
+    fn bid(&self, m: Arc<dyn DecisionModel>) -> Vec<ExplorationBid> {
+        self.explorers.iter().map(|e| e.bid(m.clone())).collect()
+    }
+
+    fn explore(
+        &self,
+        m: Arc<dyn DecisionModel>,
+        explorer_id: &str,
+        max_sols: i64,
+        total_timeout: i64,
+        time_resolution: i64,
+        memory_resolution: i64,
+    ) -> Box<dyn Iterator<Item = Arc<dyn DecisionModel>>> {
+        self.explorers
+            .iter()
+            .find(|e| e.unique_identifier() == explorer_id)
+            .map(|e| {
+                e.explore(
+                    m,
+                    max_sols,
+                    total_timeout,
+                    time_resolution,
+                    memory_resolution,
+                )
+            })
+            .unwrap_or(Box::new(std::iter::empty::<Arc<dyn DecisionModel>>()))
+    }
+}
+
+pub struct StandaloneIdentificationModule {
+    unique_identifier: String,
+    identification_rules: Vec<MarkedIdentificationRule>,
+    reverse_identification_rules: Vec<ReverseIdentificationRule>,
+    read_design_model: fn(path: &Path) -> Option<Box<dyn DesignModel>>,
+    write_design_model: fn(design_model: &Box<dyn DesignModel>, dest: &Path) -> Vec<PathBuf>,
+    decision_header_to_model: fn(header: &DecisionModelHeader) -> Option<Arc<dyn DecisionModel>>,
+    decision_message_to_model: fn(header: &DecisionModelMessage) -> Option<Arc<dyn DecisionModel>>,
+    pub decision_model_schemas: HashSet<String>,
+}
+
+impl StandaloneIdentificationModule {
+    pub fn minimal(unique_identifier: &str) -> StandaloneIdentificationModule {
+        return StandaloneIdentificationModule {
+            unique_identifier: unique_identifier.to_owned(),
+            identification_rules: vec![],
+            reverse_identification_rules: vec![],
+            read_design_model: |_x| None,
+            write_design_model: |_x, _p| vec![],
+            decision_header_to_model: |_x| None,
+            decision_message_to_model: |_x| None,
+            decision_model_schemas: HashSet::new(),
+        };
+    }
+
+    pub fn without_design_models(
+        unique_identifier: &str,
+        identification_rules: Vec<MarkedIdentificationRule>,
+        reverse_identification_rules: Vec<ReverseIdentificationRule>,
+        decision_header_to_model: fn(
+            header: &DecisionModelHeader,
+        ) -> Option<Arc<dyn DecisionModel>>,
+        decision_message_to_model: fn(
+            header: &DecisionModelMessage,
+        ) -> Option<Arc<dyn DecisionModel>>,
+        decision_model_schemas: HashSet<String>,
+    ) -> StandaloneIdentificationModule {
+        return StandaloneIdentificationModule {
+            unique_identifier: unique_identifier.to_owned(),
+            identification_rules,
+            reverse_identification_rules,
+            read_design_model: |_x| None,
+            write_design_model: |_x, _p| vec![],
+            decision_header_to_model,
+            decision_message_to_model,
+            decision_model_schemas,
+        };
+    }
+
+    pub fn complete(
+        unique_identifier: &str,
+        identification_rules: Vec<MarkedIdentificationRule>,
+        reverse_identification_rules: Vec<ReverseIdentificationRule>,
+        read_design_model: fn(path: &Path) -> Option<Box<dyn DesignModel>>,
+        write_design_model: fn(design_model: &Box<dyn DesignModel>, dest: &Path) -> Vec<PathBuf>,
+        decision_header_to_model: fn(
+            header: &DecisionModelHeader,
+        ) -> Option<Arc<dyn DecisionModel>>,
+        decision_message_to_model: fn(
+            header: &DecisionModelMessage,
+        ) -> Option<Arc<dyn DecisionModel>>,
+        decision_model_schemas: HashSet<String>,
+    ) -> StandaloneIdentificationModule {
+        return StandaloneIdentificationModule {
+            unique_identifier: unique_identifier.to_owned(),
+            identification_rules,
+            reverse_identification_rules,
+            read_design_model,
+            write_design_model,
+            decision_header_to_model,
+            decision_message_to_model,
+            decision_model_schemas,
+        };
+    }
+
+    pub fn read_design_model(&self, path: &Path) -> Option<Box<dyn DesignModel>> {
+        return (self.read_design_model)(path);
+    }
+    pub fn write_design_model(
+        &self,
+        design_model: &Box<dyn DesignModel>,
+        dest: &Path,
+    ) -> Vec<PathBuf> {
+        return (self.write_design_model)(design_model, dest);
+    }
+    pub fn decision_header_to_model(
+        &self,
+        header: &DecisionModelHeader,
+    ) -> Option<Arc<dyn DecisionModel>> {
+        return (self.decision_header_to_model)(header);
+    }
+}
+
+impl IdentificationModule for StandaloneIdentificationModule {
+    fn unique_identifier(&self) -> String {
+        self.unique_identifier.to_owned()
+    }
+
+    fn identification_step(
+        &self,
+        iteration: i32,
+        design_models: &Vec<Box<dyn DesignModel>>,
+        decision_models: &Vec<Arc<dyn DecisionModel>>,
+    ) -> Vec<Arc<dyn DecisionModel>> {
+        let mut identified: Vec<Arc<dyn DecisionModel>> = Vec::new();
+        for irule in &self.identification_rules {
+            let f_opt = match irule {
+                MarkedIdentificationRule::DesignModelOnlyIdentificationRule(f) => {
+                    if iteration <= 0 {
+                        Some(f)
+                    } else {
+                        None
+                    }
+                }
+                MarkedIdentificationRule::DecisionModelOnlyIdentificationRule(f) => {
+                    if iteration > 0 {
+                        Some(f)
+                    } else {
+                        None
+                    }
+                }
+                MarkedIdentificationRule::GenericIdentificationRule(f) => Some(f),
+                MarkedIdentificationRule::SpecificDecisionModelIdentificationRule(ms, f) => {
+                    let categories: HashSet<String> =
+                        identified.iter().map(|x| x.header().category).collect();
+                    if ms.iter().all(|x| categories.contains(x)) {
+                        Some(f)
+                    } else {
+                        None
+                    }
+                }
+            };
+            if let Some(f) = f_opt {
+                for m in f(design_models, decision_models) {
+                    if !identified.contains(&m) {
+                        identified.push(m);
+                    }
+                }
+            }
+        }
+        identified
+    }
+
+    fn reverse_identification(
+        &self,
+        solved_decision_models: &Vec<Arc<dyn DecisionModel>>,
+        design_models: &Vec<Box<dyn DesignModel>>,
+    ) -> Vec<Box<dyn DesignModel>> {
+        let mut reverse_identified: Vec<Box<dyn DesignModel>> = Vec::new();
+        for f in &self.reverse_identification_rules {
+            for m in f(solved_decision_models, design_models) {
+                reverse_identified.push(m);
+            }
+        }
+        reverse_identified
+    }
+}
 
 #[derive(Parser, Debug)]
 #[command(author = "Rodolfo Jordao")]

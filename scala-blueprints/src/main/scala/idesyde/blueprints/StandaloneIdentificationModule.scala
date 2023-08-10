@@ -70,6 +70,8 @@ trait StandaloneIdentificationModule
     */
   def decisionHeaderToModel(m: DecisionModelHeader): Option[DecisionModel]
 
+  def decisionMessageToModel(m: DecisionModelMessage): Option[DecisionModel]
+
   /** Unique string used to identify this module during orchetration. Ideally it matches the name of
     * the implementing class (or is the implemeting class name, ditto).
     */
@@ -359,7 +361,9 @@ trait StandaloneIdentificationModule
         }
       } else if (command.startsWith("DECISION INLINE")) {
         val payload = command.substring(15).strip()
-        for (m <- decisionHeaderToModel(read[DecisionModelHeader](payload))) decisionModels += m
+        for (m <- decisionMessageToModel(DecisionModelMessage.fromJsonString(payload))) {
+          decisionModels += m
+        }
       } else if (command.startsWith("DECISION PATH")) {
         val url = command.substring(8).strip()
         if (!urlsConsumed.contains(url)) {
@@ -374,7 +378,7 @@ trait StandaloneIdentificationModule
         }
       } else if (command.startsWith("SOLVED INLINE")) {
         val payload = command.substring(13).strip()
-        for (m <- decisionHeaderToModel(read[DecisionModelHeader](payload)))
+        for (m <- decisionMessageToModel(DecisionModelMessage.fromJsonString(payload)))
           solvedDecisionModels += m
       } else if (command.startsWith("SOLVED")) {
         val url  = command.substring(6).strip()
@@ -404,18 +408,13 @@ trait StandaloneIdentificationModule
         )
         val newIdentified = identified -- decisionModels
         for (m <- newIdentified) {
-          val (hPath, bPath, header) = m.writeToPath(
-            identifiedPath,
-            f"${iteration}%016d",
-            uniqueIdentifier
-          )
+          // val (hPath, bPath, header) = m.writeToPath(
+          //   identifiedPath,
+          //   f"${iteration}%016d",
+          //   uniqueIdentifier
+          // )
           sendOutputLine(
-            "DECISION INLINE" + header.asText
-            // hPath
-            //   .getOrElse(
-            //     identifiedPath / s"header_${iteration}_${m.category}_${uniqueIdentifier}.msgpack"
-            //   )
-            //   .toString
+            "DECISION INLINE " + DecisionModelMessage.fromDecisionModel(m).withEscapedNewLinesText
           )
         }
         sendOutputLine("FINISHED")

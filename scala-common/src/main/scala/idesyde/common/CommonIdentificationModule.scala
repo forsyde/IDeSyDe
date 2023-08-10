@@ -1,6 +1,7 @@
 package idesyde.common
 
-// import upickle.default.*
+import upickle.default.*
+
 import idesyde.blueprints.StandaloneIdentificationModule
 import idesyde.core.DecisionModel
 import idesyde.core.DesignModel
@@ -19,6 +20,7 @@ import idesyde.common.PartitionedSharedMemoryMultiCore
 import idesyde.common.PeriodicWorkloadToPartitionedSharedMultiCore
 import idesyde.common.PeriodicWorkloadAndSDFServers
 import idesyde.core.MarkedIdentificationRule
+import idesyde.blueprints.DecisionModelMessage
 
 object CommonIdentificationModule
     extends StandaloneIdentificationModule
@@ -90,6 +92,36 @@ object CommonIdentificationModule
         body_path.flatMap(decodeFromPath[PeriodicWorkloadToPartitionedSharedMultiCore])
       case DecisionModelHeader("AperiodicAsynchronousDataflow", body_path, _) =>
         body_path.flatMap(decodeFromPath[AperiodicAsynchronousDataflow])
+      case _ => None
+    }
+  }
+
+  def decisionMessageToModel(m: DecisionModelMessage): Option[DecisionModel] = {
+    m.header match {
+      case DecisionModelHeader("SDFApplicationWithFunctions", body_path, _) =>
+        m.body.map(s => read[SDFApplicationWithFunctions](s))
+      case DecisionModelHeader("SDFApplication", body_path, _) =>
+        m.body.map(s => read[SDFApplication](s))
+      case DecisionModelHeader("TiledMultiCoreWithFunctions", body_path, _) =>
+        m.body.map(s => read[TiledMultiCoreWithFunctions](s))
+      case DecisionModelHeader("PartitionedCoresWithRuntimes", body_path, _) =>
+        m.body.map(s => read[PartitionedCoresWithRuntimes](s))
+      case DecisionModelHeader("SchedulableTiledMultiCore", body_path, _) =>
+        m.body.map(s => read[SchedulableTiledMultiCore](s))
+      case DecisionModelHeader("SDFToTiledMultiCore", body_path, _) =>
+        m.body.map(s => read[SDFToTiledMultiCore](s))
+      case DecisionModelHeader("SharedMemoryMultiCore", body_path, _) =>
+        m.body.map(s => read[SharedMemoryMultiCore](s))
+      case DecisionModelHeader("CommunicatingAndTriggeredReactiveWorkload", body_path, _) =>
+        m.body.map(s => read[CommunicatingAndTriggeredReactiveWorkload](s))
+      case DecisionModelHeader("PartitionedSharedMemoryMultiCore", body_path, _) =>
+        m.body.map(s => read[PartitionedSharedMemoryMultiCore](s))
+      case DecisionModelHeader("PeriodicWorkloadAndSDFServers", body_path, _) =>
+        m.body.map(s => read[PeriodicWorkloadAndSDFServers](s))
+      case DecisionModelHeader("PeriodicWorkloadToPartitionedSharedMultiCore", body_path, _) =>
+        m.body.map(s => read[PeriodicWorkloadToPartitionedSharedMultiCore](s))
+      case DecisionModelHeader("AperiodicAsynchronousDataflow", body_path, _) =>
+        m.body.map(s => read[AperiodicAsynchronousDataflow](s))
       case _ => None
     }
   }

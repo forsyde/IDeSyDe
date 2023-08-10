@@ -36,6 +36,8 @@ trait StandaloneExplorationModule
     */
   def decisionHeaderToModel(m: DecisionModelHeader): Option[DecisionModel]
 
+  def decisionMessageToModel(m: DecisionModelMessage): Option[DecisionModel]
+
   /** the logger to be used during a module call.
     *
     * @return
@@ -192,7 +194,9 @@ trait StandaloneExplorationModule
         }
       } else if (command.startsWith("DECISION INLINE")) {
         val payload = command.substring(15).strip()
-        for (m <- decisionHeaderToModel(read[DecisionModelHeader](payload))) decisionModels += m
+        for (m <- decisionMessageToModel(DecisionModelMessage.fromJsonString(payload))) {
+          decisionModels += m
+        }
       } else if (command.startsWith("DECISION PATH")) {
         val url = command.substring(8).strip()
         if (!urlsConsumed.contains(url)) {
@@ -207,7 +211,7 @@ trait StandaloneExplorationModule
         }
       } else if (command.startsWith("SOLVED INLINE")) {
         val payload = command.substring(13).strip()
-        for (m <- decisionHeaderToModel(read[DecisionModelHeader](payload)))
+        for (m <- decisionMessageToModel(DecisionModelMessage.fromJsonString(payload)))
           solvedDecisionModels += m
       } else if (command.startsWith("SOLVED")) {
         val url  = command.substring(6).strip()
@@ -229,37 +233,21 @@ trait StandaloneExplorationModule
           urlsConsumed += url
         }
       } else if (command.startsWith("BID")) {
-        val payload       = command.substring(3).strip()
-        val modelHeader   = DecisionModelHeader.fromString(payload)
-        val modelElements = modelHeader.covered_elements
-        for (bpath <- modelHeader.body_path) {
-          if (!urlsConsumed.contains(bpath)) {
-            for (m <- decisionHeaderToModel(modelHeader)) { decisionModels += m }
-          }
-        }
+        val payload      = command.substring(3).strip()
+        val modelMessage = DecisionModelMessage.fromJsonString(payload)
         for (
           explorer <- explorers;
-          modelWithAllElements = decisionModels.filter(_.category == modelHeader.category);
-          model <- modelWithAllElements.filter(_.coveredElementIDs == modelElements);
+          model    <- decisionMessageToModel(modelMessage);
           bid = explorer.combination(model)
         ) {
           sendOutputLine("RESULT " + bid.asText)
         }
         sendOutputLine("FINISHED")
-        // val explorerOpt = explorers.find()
       } else if (command.startsWith("EXPLORE BEST")) {
-        val payload       = command.substring(12).strip()
-        val modelHeader   = DecisionModelHeader.fromString(payload)
-        val modelElements = modelHeader.covered_elements
-        for (bpath <- modelHeader.body_path) {
-          if (!urlsConsumed.contains(bpath)) {
-            for (m <- decisionHeaderToModel(modelHeader)) { decisionModels += m }
-          }
-        }
+        val payload      = command.substring(12).strip()
+        val modelMessage = DecisionModelMessage.fromJsonString(payload)
         for (
-          model <- decisionModels
-            .filter(_.category == modelHeader.category)
-            .filter(_.coveredElementIDs == modelElements);
+          model <- decisionMessageToModel(modelMessage);
           ((solved, objs), idx) <- exploreBest(
             model,
             Set(),
@@ -278,19 +266,12 @@ trait StandaloneExplorationModule
         }
         sendOutputLine("FINISHED")
       } else if (command.startsWith("EXPLORE")) {
-        val payloadArray  = command.substring(7).strip().split(" ")
-        val explorerName  = payloadArray(0)
-        val modelHeader   = DecisionModelHeader.fromString(payloadArray(1))
-        val modelElements = modelHeader.covered_elements
-        for (bpath <- modelHeader.body_path) {
-          if (!urlsConsumed.contains(bpath)) {
-            for (m <- decisionHeaderToModel(modelHeader)) { decisionModels += m }
-          }
-        }
+        val payloadArray = command.substring(7).strip().split(" ")
+        val explorerName = payloadArray(0)
+        val modelMessage = DecisionModelMessage.fromJsonString(payloadArray(1))
         for (
           explorer <- explorers.find(_.uniqueIdentifier == explorerName);
-          modelWithAllElements = decisionModels.filter(_.category == modelHeader.category);
-          model <- modelWithAllElements.filter(_.coveredElementIDs == modelElements);
+          model    <- decisionMessageToModel(modelMessage);
           ((solved, objs), idx) <- explorer
             .explore(
               model,
@@ -301,13 +282,15 @@ trait StandaloneExplorationModule
               memoryResolution
             )
             .zipWithIndex
-          // if !solvedDecisionModels.contains(solved)
         ) {
           val (hPath, bPath, header) =
             solved.writeToPath(solvedPath, f"$idx%016d", uniqueIdentifier)
           solvedDecisionModels += solved
           solvedDecisionObjs(solved) = objs
-          sendOutputLine(f"RESULT ${write(objs)} ${header.asText}")
+          val message = DecisionModelMessage.fromDecisionModel(solved)
+          sendOutputLine(
+            f"RESULT ${write(objs)} ${message.withEscapedNewLinesText}"
+          )
         }
         sendOutputLine("FINISHED")
       } else if (command.startsWith("STAT")) {

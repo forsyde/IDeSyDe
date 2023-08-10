@@ -8,55 +8,6 @@ use std::{
 
 use crate::DesignModel;
 
-// #[derive(Serialize, Clone, Deserialize, Debug)]
-// pub struct LabelledArcWithPorts {
-//     pub src: String,
-//     pub src_port: Option<String>,
-//     pub label: Option<String>,
-//     pub dst: String,
-//     pub dst_port: Option<String>,
-// }
-
-// impl PartialEq<LabelledArcWithPorts> for LabelledArcWithPorts {
-//     fn eq(&self, other: &LabelledArcWithPorts) -> bool {
-//         self.src == other.src
-//             && self.dst == other.dst
-//             && match (&self.src_port, &other.src_port) {
-//                 (Some(a), Some(b)) => a == b,
-//                 (None, None) => true,
-//                 _ => false,
-//             }
-//             && match (&self.dst_port, &other.dst_port) {
-//                 (Some(a), Some(b)) => a == b,
-//                 (None, None) => true,
-//                 _ => false,
-//             }
-//             && match (&self.label, &other.label) {
-//                 (Some(a), Some(b)) => a == b,
-//                 (None, None) => true,
-//                 _ => false,
-//             }
-//     }
-// }
-
-// impl Eq for LabelledArcWithPorts {}
-
-// impl Hash for LabelledArcWithPorts {
-//     fn hash<H: std::hash::Hasher>(&self, state: &mut H) {
-//         self.src.hash(state);
-//         self.dst.hash(state);
-//         if let Some(a) = &self.src_port {
-//             a.hash(state);
-//         }
-//         if let Some(a) = &self.dst_port {
-//             a.hash(state);
-//         };
-//         if let Some(a) = &self.label {
-//             a.hash(state);
-//         };
-//     }
-// }
-
 #[derive(Serialize, Clone, Deserialize, Debug)]
 pub struct DesignModelHeader {
     pub category: String,

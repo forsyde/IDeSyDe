@@ -355,17 +355,20 @@ checksum = "9a3a5bfb195931eeb336b2a7b4d761daec841b97f947d34394601737a7bba5e4"
 
 [[package]]
 name = "idesyde-blueprints"
-version = "0.5.12"
+version = "0.6.0"
 dependencies = [
  "clap",
  "env_logger",
  "idesyde-core",
  "log",
+ "rmp-serde",
+ "serde",
+ "serde_json",
 ]
 
 [[package]]
 name = "idesyde-bridge-matlab-simulink"
-version = "0.5.12"
+version = "0.6.0"
 dependencies = [
  "idesyde-blueprints",
  "idesyde-common",
@@ -378,7 +381,7 @@ dependencies = [
 
 [[package]]
 name = "idesyde-common"
-version = "0.5.12"
+version = "0.6.0"
 dependencies = [
  "ciborium",
  "env_logger",
@@ -394,7 +397,7 @@ dependencies = [
 
 [[package]]
 name = "idesyde-core"
-version = "0.5.12"
+version = "0.6.0"
 dependencies = [
  "ciborium",
  "downcast-rs",
@@ -405,10 +408,11 @@ dependencies = [
 
 [[package]]
 name = "idesyde-orchestration"
-version = "0.5.12"
+version = "0.6.0"
 dependencies = [
  "clap",
  "env_logger",
+ "idesyde-blueprints",
  "idesyde-common",
  "idesyde-core",
  "log",

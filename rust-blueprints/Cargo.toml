@@ -9,3 +9,6 @@ idesyde-core = { path = "../rust-core" }
 clap = { workspace = true }
 env_logger.workspace = true
 log.workspace = true
+serde.workspace = true
+serde_json.workspace = true
+rmp-serde.workspace = true

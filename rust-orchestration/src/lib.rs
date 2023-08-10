@@ -12,10 +12,12 @@ use std::path::Path;
 use std::path::PathBuf;
 
 use std::process::Child;
+use std::process::ChildStdout;
 use std::process::Stdio;
 use std::sync::Arc;
 use std::sync::Mutex;
 
+use idesyde_blueprints::DecisionModelMessage;
 use idesyde_core::headers::load_decision_model_header_from_path;
 use idesyde_core::headers::load_decision_model_headers_from_binary;
 
@@ -31,6 +33,75 @@ use log::debug;
 use log::warn;
 
 use rayon::prelude::*;
+
+#[derive(Eq, Clone)]
+pub struct OpaqueDecisionModel {
+    header: DecisionModelHeader,
+    body_json: Option<String>,
+    body_msgpack: Option<Vec<u8>>,
+    body_cbor: Option<Vec<u8>>,
+}
+
+impl OpaqueDecisionModel {
+    pub fn from_json_str(header: &DecisionModelHeader, s: &str) -> OpaqueDecisionModel {
+        OpaqueDecisionModel {
+            header: header.to_owned(),
+            body_json: Some(s.to_string()),
+            body_msgpack: None,
+            body_cbor: None,
+        }
+    }
+
+    pub fn from_decision_message(message: &DecisionModelMessage) -> OpaqueDecisionModel {
+        OpaqueDecisionModel {
+            header: message.header().to_owned(),
+            body_json: message.body_with_newlines_unescaped().to_owned(),
+            body_msgpack: None,
+            body_cbor: None,
+        }
+    }
+
+    pub fn from_header(header: &DecisionModelHeader) -> OpaqueDecisionModel {
+        OpaqueDecisionModel {
+            header: header.to_owned(),
+            body_json: header
+                .body_path
+                .to_owned()
+                .and_then(|x| std::fs::read_to_string(x).ok())
+                .and_then(|x| serde_json::from_str(&x).ok()),
+            body_msgpack: None,
+            body_cbor: None,
+        }
+    }
+}
+
+impl DecisionModel for OpaqueDecisionModel {
+    fn category(&self) -> String {
+        self.header.category.to_owned()
+    }
+
+    fn header(&self) -> DecisionModelHeader {
+        self.header.to_owned()
+    }
+
+    fn body_as_json(&self) -> Option<String> {
+        self.body_json.to_owned()
+    }
+
+    fn body_as_msgpack(&self) -> Option<Vec<u8>> {
+        self.body_msgpack.to_owned()
+    }
+
+    fn body_as_cbor(&self) -> Option<Vec<u8>> {
+        self.body_cbor.to_owned()
+    }
+}
+
+impl PartialEq for OpaqueDecisionModel {
+    fn eq(&self, other: &Self) -> bool {
+        self.header == other.header && self.body_as_json() == other.body_as_json()
+    }
+}
 
 trait LocalServerLike {
     fn get_process(&self) -> Arc<Mutex<Child>>;
@@ -53,13 +124,59 @@ trait LocalServerLike {
                 let mut buf = BufReader::new(out);
                 let mut line: String = "".to_string();
                 if let Ok(_) = buf.read_line(&mut line) {
-                    return Some(line);
+                    return Some(line.trim().to_string());
                 };
             }
         }
         None
     }
+
+    fn read_lines_from_output(&self) -> Vec<String> {
+        if let Ok(mut server_guard) = self.get_process().lock() {
+            let server = server_guard.deref_mut();
+            if let Some(out) = &mut server.stdout {
+                let buf = BufReader::new(out);
+                return buf.lines().flatten().collect();
+            }
+        }
+        vec![]
+    }
+
+    fn map_output<F, O>(&self, f: F) -> Option<O>
+    where
+        F: Fn(BufReader<&mut ChildStdout>) -> O,
+    {
+        if let Ok(mut server_guard) = self.get_process().lock() {
+            let server = server_guard.deref_mut();
+            if let Some(out) = &mut server.stdout {
+                return Some(f(BufReader::new(out)));
+            }
+        }
+        None
+    }
+
+    fn read_all_err(&self) -> Option<String> {
+        if let Ok(mut server_guard) = self.get_process().lock() {
+            let server = server_guard.deref_mut();
+            if let Some(out) = &mut server.stderr {
+                let buf = BufReader::new(out);
+                return buf.lines().flatten().reduce(|s1, s2| s1 + &s2);
+            }
+        }
+        None
+    }
 }
+
+// fn stream_lines_from_output<T: LocalServerLike>(module: T) -> Option<impl Iterator<Item = String>> {
+//     if let Ok(mut server_guard) = module.get_process().lock() {
+//         let server = server_guard.deref_mut();
+//         if let Some(out) = &mut server.stdout {
+//             let it = BufReader::new(out).lines().flatten();
+//             return Some(it);
+//         }
+//     }
+//     None
+// }
 
 #[derive(Debug, PartialEq, Eq, Hash)]
 pub struct ExternalIdentificationModule {
@@ -468,9 +585,13 @@ impl ExplorationModule for ExternalServerExplorationModule {
     }
 
     fn bid(&self, m: Arc<dyn DecisionModel>) -> Vec<ExplorationBid> {
-        if let Some(()) =
-            self.write_line_to_input(format!("BID {}", m.header().to_json_str()).as_str())
-        {
+        if let Some(()) = self.write_line_to_input(
+            format!(
+                "BID {}",
+                DecisionModelMessage::from_dyn_decision_model(m.as_ref()).to_json_str()
+            )
+            .as_str(),
+        ) {
             return std::iter::repeat_with(|| self.read_line_from_output())
                 .flatten()
                 .map(|line| {
@@ -484,21 +605,6 @@ impl ExplorationModule for ExternalServerExplorationModule {
                 .take_while(|x| x.is_some())
                 .flatten()
                 .collect();
-            // let num_bids = self
-            //     .read_line_from_output()
-            //     .and_then(|s| s[5..].trim().parse::<usize>().ok())
-            //     .unwrap_or(0usize);
-            // for _ in 0..num_bids {
-            //     if let Some(bid_str) = self.read_line_from_output() {
-            //         if bid_str.starts_with("RESULT ") {
-            //             if let Some(bid) = ExplorationBid::from_json_str(&bid_str[6..].trim()) {
-            //                 bids.push(bid);
-            //             }
-            //         } else if bid_str.eq_ignore_ascii_case("FINISHED") {
-            //             return;
-            //         }
-            //     }
-            // }
         }
         Vec::new()
     }
@@ -523,41 +629,57 @@ impl ExplorationModule for ExternalServerExplorationModule {
         self.write_line_to_input(format!("SET time-resolution {}", time_resolution).as_str());
         self.write_line_to_input(format!("SET memory-resolution {}", memory_resolution).as_str());
         self.write_line_to_input(
-            format!("EXPLORE {} {}", explorer_id, m.header().to_json_str()).as_str(),
+            format!(
+                "EXPLORE {} {}",
+                explorer_id,
+                DecisionModelMessage::from_dyn_decision_model(m.as_ref()).to_json_str()
+            )
+            .as_str(),
         );
-        let explored: Vec<Arc<dyn DecisionModel>> =
-            std::iter::repeat_with(|| self.read_line_from_output())
-                .flatten()
-                .map(|line| {
-                    if line.contains("RESULT") {
-                        let mut payload = line[6..].trim().split(" ");
-                        let _objs_ = payload.next();
-                        return payload
-                            .next()
-                            .and_then(|m_str| DecisionModelHeader::from_json_str(m_str.trim()))
-                            .map(|m| Arc::new(m) as Arc<dyn DecisionModel>);
-                    } else if line.contains("FINISHED") {
-                        return None;
-                    }
-                    None
-                })
-                .take_while(|x| x.is_some())
-                .flatten()
-                .collect();
+        let explored: Vec<Arc<dyn DecisionModel>> = self
+            .map_output(|buf| {
+                buf.lines()
+                    .flatten()
+                    .map(|line| {
+                        if line.contains("RESULT") {
+                            let mut payload = line[6..].trim().split(" ");
+                            let _objs_ = payload.next();
+                            return payload
+                                .next()
+                                .and_then(|m_str| DecisionModelMessage::from_json_str(m_str.trim()))
+                                .map(|x| OpaqueDecisionModel::from_decision_message(&x))
+                                .map(|m| Arc::new(m) as Arc<dyn DecisionModel>);
+                        } else if line.contains("FINISHED") {
+                            return None;
+                        }
+                        None
+                    })
+                    .take_while(|x| x.is_some())
+                    .flatten()
+                    .collect()
+            })
+            .unwrap_or(Vec::new());
+        // let explored: Vec<Arc<dyn DecisionModel>> =
+        //     std::iter::repeat_with(|| self.read_line_from_output())
+        //         .flatten()
+        //         .map(|line| {
+        //             if line.contains("RESULT") {
+        //                 let mut payload = line[6..].trim().split(" ");
+        //                 let _objs_ = payload.next();
+        //                 return payload
+        //                     .next()
+        //                     .and_then(|m_str| DecisionModelMessage::from_json_str(m_str.trim()))
+        //                     .map(|x| OpaqueDecisionModel::from_decision_message(&x))
+        //                     .map(|m| Arc::new(m) as Arc<dyn DecisionModel>);
+        //             } else if line.contains("FINISHED") {
+        //                 return None;
+        //             }
+        //             None
+        //         })
+        //         .take_while(|x| x.is_some())
+        //         .flatten()
+        //         .collect();
         Box::new(explored.into_iter())
-        // Box::new(std::iter::from_fn(move || {
-        //     if let Some(line) = self.read_line_from_output() {
-        //         if line.contains("RESULT") {
-        //             let mut payload = line[6..].split(" ");
-        //             let _objs_ = payload.next();
-        //             return payload
-        //                 .next()
-        //                 .and_then(|m_str| DecisionModelHeader::from_json_str(m_str))
-        //                 .map(|m| Box::new(m) as Arc<dyn DecisionModel>);
-        //         }
-        //     }
-        //     None
-        // }))
     }
 }
 
@@ -854,56 +976,112 @@ impl IdentificationModule for ExternalServerIdentificationModule {
             }
         }
         for decision_model in decision_models {
-            let h = decision_model.header();
-            self.write_line_to_input(format!("DECISION INLINE {}", h.to_json_str()).as_str());
+            let message = DecisionModelMessage::from_dyn_decision_model(decision_model.as_ref());
+            // let h = decision_model.header();
+            self.write_line_to_input(format!("DECISION INLINE {}", message.to_json_str()).as_str());
         }
         self.write_line_to_input(format!("IDENTIFY {}", iteration).as_str());
-        return std::iter::repeat_with(|| self.read_line_from_output())
-            .flatten()
-            .map(|line| {
-                if line.contains("DECISION INLINE") {
-                    let payload = &line[15..].trim();
-                    let h = DecisionModelHeader::from_json_str(payload);
-                    if let Some(header) = h {
-                        let boxed = Arc::new(header) as Arc<dyn DecisionModel>;
-                        return Some(boxed);
+        self.map_output(|buf| {
+            buf.lines()
+                .flatten()
+                .map(|line| {
+                    if line.contains("DECISION INLINE") {
+                        let payload = &line[15..].trim();
+                        let mes = DecisionModelMessage::from_json_str(payload);
+                        if let Some(message) = mes {
+                            let boxed =
+                                Arc::new(OpaqueDecisionModel::from_decision_message(&message))
+                                    as Arc<dyn DecisionModel>;
+                            return Some(boxed);
+                        }
+                    } else if !line.trim().eq_ignore_ascii_case("FINISHED") {
+                        warn!(
+                            "Ignoring non-compliant identification result by module {}: {}",
+                            self.unique_identifier(),
+                            line
+                        );
+                        debug!(
+                            "module {} error: {}",
+                            self.unique_identifier(),
+                            self.read_all_err()
+                                .unwrap_or("Unable to capture".to_string())
+                        )
                     }
-                } else if !line.trim().eq_ignore_ascii_case("FINISHED") {
-                    warn!(
-                        "Ignoring non-compliant identification result by module {}: {}",
-                        self.unique_identifier(),
-                        line
-                    );
-                }
-                None
-            })
-            .take_while(|x| x.is_some())
-            .flatten()
-            .collect();
-        // if let Some(identified_line) = self.read_line_from_output() {
-        //     let num_models = identified_line[4..].trim().parse().ok().unwrap_or(0usize);
-        //     for _ in 0..num_models {
-        //         if let Some(decision_model_line) = self.read_line_from_output() {
-        //             if decision_model_line.contains("DECISION INLINE") {
-        //                 let payload = &decision_model_line[15..].trim();
-        //                 let h = DecisionModelHeader::from_json_str(payload);
-        //                 if let Some(header) = h {
-        //                     let boxed = Arc::new(header) as Arc<dyn DecisionModel>;
-        //                     if !identified.contains(&boxed) {
-        //                         identified.push(boxed);
+                    None
+                })
+                .take_while(|x| x.is_some())
+                .flatten()
+                .collect()
+        })
+        .unwrap_or(Vec::new())
+        // if let Ok(mut server_guard) = self.get_process().lock() {
+        //     let server = server_guard.deref_mut();
+        //     if let Some(out) = &mut server.stdout {
+        //         return BufReader::new(out)
+        //             .lines()
+        //             .flatten()
+        //             .map(|line| {
+        //                 if line.contains("DECISION INLINE") {
+        //                     let payload = &line[15..].trim();
+        //                     let mes = DecisionModelMessage::from_json_str(payload);
+        //                     if let Some(message) = mes {
+        //                         let boxed =
+        //                             Arc::new(OpaqueDecisionModel::from_decision_message(&message))
+        //                                 as Arc<dyn DecisionModel>;
+        //                         return Some(boxed);
         //                     }
+        //                 } else if !line.trim().eq_ignore_ascii_case("FINISHED") {
+        //                     warn!(
+        //                         "Ignoring non-compliant identification result by module {}: {}",
+        //                         self.unique_identifier(),
+        //                         line
+        //                     );
+        //                     debug!(
+        //                         "module {} error: {}",
+        //                         self.unique_identifier(),
+        //                         self.read_all_err()
+        //                             .unwrap_or("Unable to capture".to_string())
+        //                     )
         //                 }
-        //             } else {
-        //                 warn!(
-        //                     "Ignoring non-compliant identification result by module {}: {}",
-        //                     self.unique_identifier(),
-        //                     decision_model_line
-        //                 )
-        //             }
-        //         }
+        //                 None
+        //             })
+        //             .take_while(|x| x.is_some())
+        //             .flatten()
+        //             .collect();
         //     }
         // }
-        // identified
+        // Vec::new()
+        // return std::iter::repeat_with(|| self.read_line_from_output())
+        //     .inspect(|line| print!("{}", line.to_owned().unwrap_or("Shit is empty".to_string())))
+        //     .flatten()
+        //     .map(|line| {
+        //         if line.contains("DECISION INLINE") {
+        //             let payload = &line[15..].trim();
+        //             let mes = DecisionModelMessage::from_json_str(payload);
+        //             if let Some(message) = mes {
+        //                 let boxed = Arc::new(OpaqueDecisionModel::from_decision_message(&message))
+        //                     as Arc<dyn DecisionModel>;
+        //                 return Some(boxed);
+        //             }
+        //         } else if !line.trim().eq_ignore_ascii_case("FINISHED") {
+        //             warn!(
+        //                 "Ignoring non-compliant identification result by module {}: {}",
+        //                 self.unique_identifier(),
+        //                 line
+        //             );
+        //             debug!(
+        //                 "module {} error: {}",
+        //                 self.unique_identifier(),
+        //                 self.read_all_err()
+        //                     .unwrap_or("Unable to capture".to_string())
+        //             )
+        //         }
+        //         None
+        //     })
+        //     .inspect(|x| println!("result is {}", x.is_some()))
+        //     .take_while(|x| x.is_some())
+        //     .flatten()
+        //     .collect();
     }
 
     fn reverse_identification(
@@ -919,8 +1097,8 @@ impl IdentificationModule for ExternalServerIdentificationModule {
             }
         }
         for decision_model in solved_decision_models {
-            let h = decision_model.header();
-            self.write_line_to_input(format!("SOLVED INLINE {}", h.to_json_str()).as_str());
+            let message = DecisionModelMessage::from_dyn_decision_model(decision_model.as_ref());
+            self.write_line_to_input(format!("SOLVED INLINE {}", message.to_json_str()).as_str());
         }
         self.write_line_to_input("INTEGRATE");
         return std::iter::repeat_with(|| self.read_line_from_output())

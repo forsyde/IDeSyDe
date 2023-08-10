@@ -10,6 +10,7 @@ import idesyde.utils.Logger
 import idesyde.core.headers.DesignModelHeader
 import idesyde.core.headers.DecisionModelHeader
 import os.Path
+import idesyde.blueprints.DecisionModelMessage
 
 object SimulinkMatlabIdentificationModule
     extends StandaloneIdentificationModule
@@ -26,6 +27,8 @@ object SimulinkMatlabIdentificationModule
   def designHeaderToModel(m: DesignModelHeader): Set[DesignModel] = Set()
 
   def decisionHeaderToModel(m: DecisionModelHeader): Option[DecisionModel] = None
+
+  def decisionMessageToModel(m: DecisionModelMessage): Option[DecisionModel] = None
 
   override def uniqueIdentifier: String = "SimulinkMatlabIdentificationModule"
 

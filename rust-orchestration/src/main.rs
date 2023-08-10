@@ -9,6 +9,7 @@ use idesyde_core::{
     },
     DecisionModel, DesignModel, ExplorationModule, IdentificationModule,
 };
+use idesyde_orchestration::OpaqueDecisionModel;
 use log::{debug, error, info, warn, Level};
 use rayon::prelude::*;
 
@@ -270,7 +271,9 @@ fn main() {
         let pre_identified: Vec<Arc<dyn DecisionModel>> =
             load_decision_model_headers_from_binary(&identified_path)
                 .iter()
-                .map(|(_, h)| Arc::new(h.to_owned()) as Arc<dyn DecisionModel>)
+                .map(|(_, h)| {
+                    Arc::new(OpaqueDecisionModel::from_header(h)) as Arc<dyn DecisionModel>
+                })
                 .collect();
         info!(
             "Starting identification with {} pre-identified decision models",

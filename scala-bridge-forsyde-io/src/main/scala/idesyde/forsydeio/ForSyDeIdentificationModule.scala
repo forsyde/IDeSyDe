@@ -1,5 +1,7 @@
 package idesyde.forsydeio
 
+import upickle.default._
+
 import idesyde.blueprints.StandaloneIdentificationModule
 import idesyde.core.MarkedIdentificationRule
 import idesyde.identification.forsyde.rules.MixedRules
@@ -21,6 +23,7 @@ import java.nio.file.Files
 import forsyde.io.bridge.sdf3.drivers.SDF3Driver
 import forsyde.io.lib.ForSyDeHierarchy
 import forsyde.io.lib.TraitNamesFrom0_6To0_7
+import idesyde.blueprints.DecisionModelMessage
 
 object ForSyDeIdentificationModule
     extends StandaloneIdentificationModule
@@ -37,6 +40,16 @@ object ForSyDeIdentificationModule
         body_path.flatMap(decodeFromPath[SDFToTiledMultiCore])
       case DecisionModelHeader("PeriodicWorkloadToPartitionedSharedMultiCore", body_path, _) =>
         body_path.flatMap(decodeFromPath[PeriodicWorkloadToPartitionedSharedMultiCore])
+      case _ => None
+    }
+  }
+
+  def decisionMessageToModel(m: DecisionModelMessage): Option[DecisionModel] = {
+    m.header match {
+      case DecisionModelHeader("SDFToTiledMultiCore", _, _) =>
+        m.body.map(s => read[SDFToTiledMultiCore](s))
+      case DecisionModelHeader("PeriodicWorkloadToPartitionedSharedMultiCore", body_path, _) =>
+        m.body.map(s => read[PeriodicWorkloadToPartitionedSharedMultiCore](s))
       case _ => None
     }
   }

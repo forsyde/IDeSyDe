@@ -1118,28 +1118,53 @@ impl IdentificationModule for ExternalServerIdentificationModule {
             self.write_line_to_input(format!("SOLVED INLINE {}", message.to_json_str()).as_str());
         }
         self.write_line_to_input("INTEGRATE");
-        return std::iter::repeat_with(|| self.read_line_from_output())
-            .flatten()
-            .map(|line| {
-                if line.contains("DESIGN") {
-                    let payload = &line[6..].trim();
-                    let h = DesignModelHeader::from_file(std::path::Path::new(payload));
-                    if let Some(header) = h {
-                        let boxed = Box::new(header) as Box<dyn DesignModel>;
-                        return Some(boxed);
+        self.map_output(|buf| {
+            buf.lines()
+                .flatten()
+                .map(|line| {
+                    if line.contains("DESIGN") {
+                        let payload = &line[6..].trim();
+                        let h = DesignModelHeader::from_file(std::path::Path::new(payload));
+                        if let Some(header) = h {
+                            let boxed = Box::new(header) as Box<dyn DesignModel>;
+                            return Some(boxed);
+                        }
+                    } else if !line.trim().eq_ignore_ascii_case("FINISHED") {
+                        warn!(
+                            "Ignoring non-compliant integration result by module {}: {}",
+                            self.unique_identifier(),
+                            line
+                        );
                     }
-                } else if !line.trim().eq_ignore_ascii_case("FINISHED") {
-                    warn!(
-                        "Ignoring non-compliant integration result by module {}: {}",
-                        self.unique_identifier(),
-                        line
-                    );
-                }
-                None
-            })
-            .take_while(|x| x.is_some())
-            .flatten()
-            .collect();
+                    None
+                })
+                .take_while(|x| x.is_some())
+                .flatten()
+                .collect()
+        })
+        .unwrap_or(Vec::new())
+        // return std::iter::repeat_with(|| self.read_line_from_output())
+        //     .flatten()
+        //     .map(|line| {
+        //         if line.contains("DESIGN") {
+        //             let payload = &line[6..].trim();
+        //             let h = DesignModelHeader::from_file(std::path::Path::new(payload));
+        //             if let Some(header) = h {
+        //                 let boxed = Box::new(header) as Box<dyn DesignModel>;
+        //                 return Some(boxed);
+        //             }
+        //         } else if !line.trim().eq_ignore_ascii_case("FINISHED") {
+        //             warn!(
+        //                 "Ignoring non-compliant integration result by module {}: {}",
+        //                 self.unique_identifier(),
+        //                 line
+        //             );
+        //         }
+        //         None
+        //     })
+        //     .take_while(|x| x.is_some())
+        //     .flatten()
+        //     .collect();
         // if let Some(integrated_line) = self.read_line_from_output() {
         //     let num_models = integrated_line[10..].trim().parse().ok().unwrap_or(0usize);
         //     for _ in 0..num_models {

@@ -414,7 +414,10 @@ trait StandaloneIdentificationModule
           //   uniqueIdentifier
           // )
           sendOutputLine(
-            "DECISION INLINE " + DecisionModelMessage.fromDecisionModel(m).withEscapedNewLinesText
+            "DECISION INLINE " + DecisionModelMessage
+              .fromDecisionModel(m)
+              .withEscapedNewLinesText
+              .asText
           )
         }
         sendOutputLine("FINISHED")

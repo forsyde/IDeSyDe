@@ -98,7 +98,7 @@ class IDeSyDeLibrary:
             args, shell=(True if os.name == "nt" else False), stdout=subprocess.PIPE
         ) as child:
             for line in child.stdout:
-                logger.console(line)
+                # logger.console(line)
                 logger.debug(line)
         # if os.name == "nt":
         #     logger.console(subprocess.check_output(args, shell=True))

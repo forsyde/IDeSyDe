@@ -1085,74 +1085,6 @@ impl IdentificationModule for ExternalServerIdentificationModule {
                 .collect()
         })
         .unwrap_or(Vec::new())
-        // if let Ok(mut server_guard) = self.get_process().lock() {
-        //     let server = server_guard.deref_mut();
-        //     if let Some(out) = &mut server.stdout {
-        //         return BufReader::new(out)
-        //             .lines()
-        //             .flatten()
-        //             .map(|line| {
-        //                 if line.contains("DECISION INLINE") {
-        //                     let payload = &line[15..].trim();
-        //                     let mes = DecisionModelMessage::from_json_str(payload);
-        //                     if let Some(message) = mes {
-        //                         let boxed =
-        //                             Arc::new(OpaqueDecisionModel::from_decision_message(&message))
-        //                                 as Arc<dyn DecisionModel>;
-        //                         return Some(boxed);
-        //                     }
-        //                 } else if !line.trim().eq_ignore_ascii_case("FINISHED") {
-        //                     warn!(
-        //                         "Ignoring non-compliant identification result by module {}: {}",
-        //                         self.unique_identifier(),
-        //                         line
-        //                     );
-        //                     debug!(
-        //                         "module {} error: {}",
-        //                         self.unique_identifier(),
-        //                         self.read_all_err()
-        //                             .unwrap_or("Unable to capture".to_string())
-        //                     )
-        //                 }
-        //                 None
-        //             })
-        //             .take_while(|x| x.is_some())
-        //             .flatten()
-        //             .collect();
-        //     }
-        // }
-        // Vec::new()
-        // return std::iter::repeat_with(|| self.read_line_from_output())
-        //     .inspect(|line| print!("{}", line.to_owned().unwrap_or("Shit is empty".to_string())))
-        //     .flatten()
-        //     .map(|line| {
-        //         if line.contains("DECISION INLINE") {
-        //             let payload = &line[15..].trim();
-        //             let mes = DecisionModelMessage::from_json_str(payload);
-        //             if let Some(message) = mes {
-        //                 let boxed = Arc::new(OpaqueDecisionModel::from_decision_message(&message))
-        //                     as Arc<dyn DecisionModel>;
-        //                 return Some(boxed);
-        //             }
-        //         } else if !line.trim().eq_ignore_ascii_case("FINISHED") {
-        //             warn!(
-        //                 "Ignoring non-compliant identification result by module {}: {}",
-        //                 self.unique_identifier(),
-        //                 line
-        //             );
-        //             debug!(
-        //                 "module {} error: {}",
-        //                 self.unique_identifier(),
-        //                 self.read_all_err()
-        //                     .unwrap_or("Unable to capture".to_string())
-        //             )
-        //         }
-        //         None
-        //     })
-        //     .inspect(|x| println!("result is {}", x.is_some()))
-        //     .take_while(|x| x.is_some())
-        //     .flatten()
-        //     .collect();
     }
 
     fn reverse_identification(
@@ -1197,51 +1129,5 @@ impl IdentificationModule for ExternalServerIdentificationModule {
                 .collect()
         })
         .unwrap_or(Vec::new())
-        // return std::iter::repeat_with(|| self.read_line_from_output())
-        //     .flatten()
-        //     .map(|line| {
-        //         if line.contains("DESIGN") {
-        //             let payload = &line[6..].trim();
-        //             let h = DesignModelHeader::from_file(std::path::Path::new(payload));
-        //             if let Some(header) = h {
-        //                 let boxed = Box::new(header) as Box<dyn DesignModel>;
-        //                 return Some(boxed);
-        //             }
-        //         } else if !line.trim().eq_ignore_ascii_case("FINISHED") {
-        //             warn!(
-        //                 "Ignoring non-compliant integration result by module {}: {}",
-        //                 self.unique_identifier(),
-        //                 line
-        //             );
-        //         }
-        //         None
-        //     })
-        //     .take_while(|x| x.is_some())
-        //     .flatten()
-        //     .collect();
-        // if let Some(integrated_line) = self.read_line_from_output() {
-        //     let num_models = integrated_line[10..].trim().parse().ok().unwrap_or(0usize);
-        //     for _ in 0..num_models {
-        //         if let Some(design_model_line) = self.read_line_from_output() {
-        //             if design_model_line.contains("DESIGN") {
-        //                 let payload = &design_model_line[6..].trim();
-        //                 let h = DesignModelHeader::from_file(std::path::Path::new(payload));
-        //                 if let Some(header) = h {
-        //                     let boxed = Box::new(header) as Box<dyn DesignModel>;
-        //                     if !integrated.contains(&boxed) {
-        //                         integrated.push(boxed);
-        //                     }
-        //                 }
-        //             } else {
-        //                 warn!(
-        //                     "Ignoring non-compliant identification result by module {}: {}",
-        //                     self.unique_identifier(),
-        //                     design_model_line
-        //                 )
-        //             }
-        //         }
-        //     }
-        // }
-        // integrated
     }
 }

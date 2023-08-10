@@ -592,19 +592,36 @@ impl ExplorationModule for ExternalServerExplorationModule {
             )
             .as_str(),
         ) {
-            return std::iter::repeat_with(|| self.read_line_from_output())
-                .flatten()
-                .map(|line| {
-                    if line.starts_with("RESULT") {
-                        return ExplorationBid::from_json_str(&line[6..].trim());
-                    } else if line.eq_ignore_ascii_case("FINISHED") {
-                        return None;
-                    }
-                    None
+            return self
+                .map_output(|buf| {
+                    buf.lines()
+                        .flatten()
+                        .map(|line| {
+                            if line.starts_with("RESULT") {
+                                return ExplorationBid::from_json_str(&line[6..].trim());
+                            } else if line.eq_ignore_ascii_case("FINISHED") {
+                                return None;
+                            }
+                            None
+                        })
+                        .take_while(|x| x.is_some())
+                        .flatten()
+                        .collect()
                 })
-                .take_while(|x| x.is_some())
-                .flatten()
-                .collect();
+                .unwrap_or(Vec::new());
+            // return std::iter::repeat_with(|| self.read_line_from_output())
+            //     .flatten()
+            //     .map(|line| {
+            //         if line.starts_with("RESULT") {
+            //             return ExplorationBid::from_json_str(&line[6..].trim());
+            //         } else if line.eq_ignore_ascii_case("FINISHED") {
+            //             return None;
+            //         }
+            //         None
+            //     })
+            //     .take_while(|x| x.is_some())
+            //     .flatten()
+            //     .collect();
         }
         Vec::new()
     }

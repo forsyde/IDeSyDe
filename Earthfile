@@ -145,13 +145,13 @@ test-case-studies:
     BUILD +build-rust-linux-host --targets=${targets}
     FROM debian:latest
     RUN apt-get update
-    RUN apt-get install -y curl bash wget python3 python3-pip python3-venv
+    RUN apt-get install -y curl bash wget python3 python3-pip python3-venv pipx
     RUN curl -sL https://github.com/Jabba-Team/jabba/raw/main/install.sh | JABBA_COMMAND="install ${jabba_jdk} -o /jdk" bash
     ENV JAVA_HOME /jdk
     ENV PATH $JAVA_HOME/bin:$PATH
     ENV TEST_SLOW=${test_slow}
-    RUN python3 -m venv robotenv
-    RUN /robotenv/bin/python -m pip install robotframework
+    RUN pipx install robotframework
+    # RUN /robotenv/bin/python -m pip install robotframework
     FOR target IN ${targets}
         WORKDIR /${target}
         COPY --dir +build-scala-all/${target}/* .
@@ -159,7 +159,7 @@ test-case-studies:
         COPY --dir examples_and_benchmarks .
         COPY *.py .
         COPY *.robot .
-        RUN /robotenv/bin/python -m robot --exclude slow TestsBenchmark.robot
+        RUN robot --exclude slow TestsBenchmark.robot
         SAVE ARTIFACT report.html AS LOCAL report.html
         SAVE ARTIFACT log.html AS LOCAL log.html
         SAVE ARTIFACT output.xml AS LOCAL output.xml

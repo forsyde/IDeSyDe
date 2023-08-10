@@ -29,6 +29,7 @@ jobs:
       - name: Cache-out outputs
         uses: actions/cache@v3
         with:
+          enableCrossOsArchive: true
           path: ${{ github.workspace }}/dist
           key: ${{ github.ref }}-${{ matrix.jabba_jdk }}-dist
   test-cases-linux:
@@ -43,6 +44,7 @@ jobs:
       - name: Cache-in outputs
         uses: actions/cache@v3
         with:
+          enableCrossOsArchive: true
           path: ${{ github.workspace }}/dist
           key: ${{ github.ref }}-${{ matrix.jabba_jdk }}-dist
       - uses: actions/setup-python@v4
@@ -71,6 +73,7 @@ jobs:
       - name: Cache-in outputs
         uses: actions/cache@v3
         with:
+          enableCrossOsArchive: true
           path: ${{ github.workspace }}/dist
           key: ${{ github.ref }}-${{ matrix.jabba_jdk }}-dist
       - run: |

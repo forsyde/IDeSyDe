@@ -150,7 +150,6 @@ test-case-studies:
     ENV JAVA_HOME /jdk
     ENV PATH $JAVA_HOME/bin:$PATH
     ENV TEST_SLOW=${test_slow}
-    RUN pipx install robotframework
     # RUN /robotenv/bin/python -m pip install robotframework
     FOR target IN ${targets}
         WORKDIR /${target}
@@ -159,7 +158,7 @@ test-case-studies:
         COPY --dir examples_and_benchmarks .
         COPY *.py .
         COPY *.robot .
-        RUN robot --exclude slow TestsBenchmark.robot
+        RUN pipx run --spec robotframework robot --exclude slow TestsBenchmark.robot
         SAVE ARTIFACT report.html AS LOCAL report.html
         SAVE ARTIFACT log.html AS LOCAL log.html
         SAVE ARTIFACT output.xml AS LOCAL output.xml

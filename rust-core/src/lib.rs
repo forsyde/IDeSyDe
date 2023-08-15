@@ -1,7 +1,12 @@
 pub mod headers;
 pub mod macros;
 
-use std::{collections::HashMap, hash::Hash, path::Path, sync::Arc};
+use std::{
+    collections::{HashMap, HashSet},
+    hash::Hash,
+    path::Path,
+    sync::Arc,
+};
 
 use downcast_rs::{impl_downcast, Downcast, DowncastSync};
 use headers::{DecisionModelHeader, DesignModelHeader, ExplorationBid};
@@ -24,6 +29,10 @@ pub trait DesignModel: Send + DowncastSync {
     fn category(&self) -> String;
 
     fn header(&self) -> DesignModelHeader;
+
+    fn body_as_string(&self) -> Option<String> {
+        None
+    }
 }
 impl_downcast!(sync DesignModel);
 
@@ -119,11 +128,13 @@ impl PartialOrd<dyn DecisionModel> for dyn DecisionModel {
     }
 }
 
+pub type IdentificationResult = (Vec<Arc<dyn DecisionModel>>, HashSet<String>);
+
 pub type IdentificationRule =
-    fn(&Vec<Box<dyn DesignModel>>, &Vec<Arc<dyn DecisionModel>>) -> Vec<Arc<dyn DecisionModel>>;
+    fn(&Vec<Arc<dyn DesignModel>>, &Vec<Arc<dyn DecisionModel>>) -> IdentificationResult;
 
 pub type ReverseIdentificationRule =
-    fn(&Vec<Arc<dyn DecisionModel>>, &Vec<Box<dyn DesignModel>>) -> Vec<Box<dyn DesignModel>>;
+    fn(&Vec<Arc<dyn DecisionModel>>, &Vec<Arc<dyn DesignModel>>) -> Vec<Arc<dyn DesignModel>>;
 
 pub enum MarkedIdentificationRule {
     DesignModelOnlyIdentificationRule(IdentificationRule),
@@ -137,14 +148,14 @@ pub trait IdentificationModule: Send + Sync {
     fn identification_step(
         &self,
         iteration: i32,
-        design_models: &Vec<Box<dyn DesignModel>>,
+        design_models: &Vec<Arc<dyn DesignModel>>,
         decision_models: &Vec<Arc<dyn DecisionModel>>,
-    ) -> Vec<Arc<dyn DecisionModel>>;
+    ) -> IdentificationResult;
     fn reverse_identification(
         &self,
         solved_decision_model: &Vec<Arc<dyn DecisionModel>>,
-        design_model: &Vec<Box<dyn DesignModel>>,
-    ) -> Vec<Box<dyn DesignModel>>;
+        design_model: &Vec<Arc<dyn DesignModel>>,
+    ) -> Vec<Arc<dyn DesignModel>>;
 }
 
 impl PartialEq<dyn IdentificationModule> for dyn IdentificationModule {

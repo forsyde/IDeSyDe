@@ -191,7 +191,7 @@ trait HasUtils {
   }
 
   inline def mergedDesignModel[T <: DesignModel, M <: DecisionModel](models: Set[DesignModel])(
-      inline body: (T) => Set[M]
+      inline body: (T) => (Set[M], Set[String])
   ) = {
     val ms = models.flatMap(_ match {
       case m: T => Some(m)
@@ -209,9 +209,9 @@ trait HasUtils {
             )
         )
       )
-      mergedOpt.map(m => body(m)).getOrElse(Set())
+      mergedOpt.map(m => body(m)).getOrElse((Set(), Set()))
     } else {
-      Set()
+      (Set(), Set())
     }
   }
 }

@@ -27,7 +27,7 @@ trait IdentificationModule {
     *   The set of identification rules registered in this module
     */
   def identificationRules: Set[
-    (Set[DesignModel], Set[DecisionModel]) => Set[? <: DecisionModel]
+    (Set[DesignModel], Set[DecisionModel]) => (Set[? <: DecisionModel], Set[String])
   ]
 
   /** Each integration rule takes a design model and (solved/explored) decision model to produce a
@@ -55,16 +55,17 @@ trait IdentificationModule {
       stepNumber: Long,
       designModels: Set[DesignModel] = Set(),
       decisionModels: Set[DecisionModel] = Set()
-  ): Set[DecisionModel] = {
+  ): (Set[DecisionModel], Set[String]) = {
     val iterRules = if (stepNumber > 0L) {
       identificationRules.flatMap(_ match {
         case r: MarkedIdentificationRule.DesignModelOnlyIdentificationRule => None
         case r                                                             => Some(r)
       })
     } else identificationRules
-    val identified = iterRules.flatMap(irule => irule(designModels, decisionModels))
-    for (m <- identified; if !decisionModels.contains(m)) yield {
-      m
-    }
+    val (identifiedSets, errorSets) = iterRules.unzip(irule => irule(designModels, decisionModels))
+    (
+      identifiedSets.flatten.filter(!decisionModels.contains(_)),
+      errorSets.flatten
+    )
   }
 }

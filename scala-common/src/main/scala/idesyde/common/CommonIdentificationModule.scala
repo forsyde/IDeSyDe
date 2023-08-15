@@ -21,6 +21,7 @@ import idesyde.common.PeriodicWorkloadToPartitionedSharedMultiCore
 import idesyde.common.PeriodicWorkloadAndSDFServers
 import idesyde.core.MarkedIdentificationRule
 import idesyde.blueprints.DecisionModelMessage
+import idesyde.blueprints.DesignModelMessage
 
 object CommonIdentificationModule
     extends StandaloneIdentificationModule
@@ -125,6 +126,8 @@ object CommonIdentificationModule
       case _ => None
     }
   }
+
+  def designMessageToModel(message: DesignModelMessage): Set[DesignModel] = Set()
 
   override def decisionModelSchemas: Vector[String] = Vector(
   )

@@ -16,7 +16,7 @@ trait PlatformRules extends HasDeviceTreeUtils with HasUtils {
   def identSharedMemoryMultiCore(
       models: Set[DesignModel],
       identified: Set[DecisionModel]
-  ): Set[SharedMemoryMultiCore] =
+  ): (Set[SharedMemoryMultiCore], Set[String]) =
     mergedDesignModel[DeviceTreeDesignModel, SharedMemoryMultiCore](models) { dtm =>
       val roots                 = dtm.crossLinked
       var peIDs                 = mutable.Set[String]()
@@ -77,43 +77,49 @@ trait PlatformRules extends HasDeviceTreeUtils with HasUtils {
       val peVec                = peIDs.toVector
       val meVec                = meIDs.toVector
       val ceVec                = ceIDs.toVector
-      Set(
-        SharedMemoryMultiCore(
-          peVec,
-          meVec,
-          ceVec,
-          topoSrcs,
-          topoDsts,
-          peVec.map(peFreq),
-          peVec.map(peOps),
-          meVec.map(meSizes),
-          ceVec.map(ceMaxChannels),
-          ceVec.map(ceBitPerSecPerChannel),
-          preComputedPaths.map((s, m) => s -> m.toMap).toMap
-        )
+      (
+        Set(
+          SharedMemoryMultiCore(
+            peVec,
+            meVec,
+            ceVec,
+            topoSrcs,
+            topoDsts,
+            peVec.map(peFreq),
+            peVec.map(peOps),
+            meVec.map(meSizes),
+            ceVec.map(ceMaxChannels),
+            ceVec.map(ceBitPerSecPerChannel),
+            preComputedPaths.map((s, m) => s -> m.toMap).toMap
+          )
+        ),
+        Set()
       )
     }
 
   def identPartitionedCoresWithRuntimes(
       models: Set[DesignModel],
       identified: Set[DecisionModel]
-  ): Set[PartitionedCoresWithRuntimes] =
+  ): (Set[PartitionedCoresWithRuntimes], Set[String]) =
     mergedDesignModel[OSDescriptionDesignModel, PartitionedCoresWithRuntimes](models) { dm =>
       val isPartitioned = dm.description.oses.values.forall(_.affinity.size == 1)
       if (isPartitioned) {
-        Set(
-          PartitionedCoresWithRuntimes(
-            processors = dm.description.oses.values.map(_.affinity.head).toVector,
-            schedulers = dm.description.oses.keySet.toVector,
-            isBareMetal =
-              dm.description.oses.values.map(o => o.policy.exists(_ == "standalone")).toVector,
-            isFixedPriority =
-              dm.description.oses.values.map(o => o.policy.exists(_.contains("FP"))).toVector,
-            isCyclicExecutive =
-              dm.description.oses.values.map(o => o.policy.exists(_.contains("SCS"))).toVector
-          )
+        (
+          Set(
+            PartitionedCoresWithRuntimes(
+              processors = dm.description.oses.values.map(_.affinity.head).toVector,
+              schedulers = dm.description.oses.keySet.toVector,
+              isBareMetal =
+                dm.description.oses.values.map(o => o.policy.exists(_ == "standalone")).toVector,
+              isFixedPriority =
+                dm.description.oses.values.map(o => o.policy.exists(_.contains("FP"))).toVector,
+              isCyclicExecutive =
+                dm.description.oses.values.map(o => o.policy.exists(_.contains("SCS"))).toVector
+            )
+          ),
+          Set()
         )
-      } else Set()
+      } else (Set(), Set("identPartitionedCoresWithRuntimes: platform is not partitioned"))
     }
 
 }

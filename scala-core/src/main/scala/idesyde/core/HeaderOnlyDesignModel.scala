@@ -34,4 +34,6 @@ final case class HeaderOnlyDesignModel(override val header: DesignModelHeader) e
 
   def category = header.category
 
+  def bodyAsText = None
+
 }

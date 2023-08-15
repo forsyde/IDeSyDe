@@ -6,8 +6,8 @@ import idesyde.core.DesignModel
 trait MatlabUtils {
 
   inline def toSimulinkReactiveDesignModel[M <: DecisionModel](models: Set[DesignModel])(
-      inline body: (SimulinkReactiveDesignModel) => Set[M]
-  ): Set[M] = {
+      inline body: (SimulinkReactiveDesignModel) => (Set[M], Set[String])
+  ): (Set[M], Set[String]) = {
     val ms = models
       .filter(_.isInstanceOf[SimulinkReactiveDesignModel])
       .map(_.asInstanceOf[SimulinkReactiveDesignModel])
@@ -26,10 +26,10 @@ trait MatlabUtils {
       if (defined) {
         body(m)
       } else {
-        Set()
+        (Set(), Set())
       }
     } else {
-      Set()
+      (Set(), Set())
     }
   }
 }

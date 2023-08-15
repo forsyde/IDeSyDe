@@ -273,7 +273,7 @@ trait MixedRules {
   def identPeriodicWorkloadToPartitionedSharedMultiCoreWithUtilization(
       models: Set[DesignModel],
       identified: Set[DecisionModel]
-  ): Set[PeriodicWorkloadToPartitionedSharedMultiCore] = {
+  ): (Set[PeriodicWorkloadToPartitionedSharedMultiCore], Set[String]) = {
     ForSyDeIdentificationUtils.toForSyDe(models) { model =>
       val app = identified
         .filter(_.isInstanceOf[CommunicatingAndTriggeredReactiveWorkload])
@@ -282,26 +282,29 @@ trait MixedRules {
         .filter(_.isInstanceOf[PartitionedSharedMemoryMultiCore])
         .map(_.asInstanceOf[PartitionedSharedMemoryMultiCore])
       // if ((runtimes.isDefined && plat.isEmpty) || (runtimes.isEmpty && plat.isDefined))
-      app.flatMap(a =>
-        plat.map(p =>
-          PeriodicWorkloadToPartitionedSharedMultiCore(
-            workload = a,
-            platform = p,
-            processMappings = Vector.empty,
-            processSchedulings = Vector.empty,
-            channelMappings = Vector.empty,
-            channelSlotAllocations = Map(),
-            maxUtilizations = (for (
-              pe <- p.hardware.processingElems;
-              peVertex = model.queryVertex(pe);
-              if peVertex.isPresent() && ForSyDeHierarchy.UtilizationBound
-                .tryView(model, peVertex.get())
-                .isPresent();
-              utilVertex = ForSyDeHierarchy.UtilizationBound.tryView(model, peVertex.get()).get()
+      (
+        app.flatMap(a =>
+          plat.map(p =>
+            PeriodicWorkloadToPartitionedSharedMultiCore(
+              workload = a,
+              platform = p,
+              processMappings = Vector.empty,
+              processSchedulings = Vector.empty,
+              channelMappings = Vector.empty,
+              channelSlotAllocations = Map(),
+              maxUtilizations = (for (
+                pe <- p.hardware.processingElems;
+                peVertex = model.queryVertex(pe);
+                if peVertex.isPresent() && ForSyDeHierarchy.UtilizationBound
+                  .tryView(model, peVertex.get())
+                  .isPresent();
+                utilVertex = ForSyDeHierarchy.UtilizationBound.tryView(model, peVertex.get()).get()
+              )
+                yield pe -> utilVertex.maxUtilization().toDouble).toMap
             )
-              yield pe -> utilVertex.maxUtilization().toDouble).toMap
           )
-        )
+        ),
+        Set()
       )
     }
   }

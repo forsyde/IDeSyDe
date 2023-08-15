@@ -7,6 +7,9 @@ import idesyde.core.DesignModel
 import forsyde.io.core.SystemGraph
 import forsyde.io.core.EdgeInfo
 import forsyde.io.core.Vertex
+import forsyde.io.core.ModelHandler
+import forsyde.io.lib.TraitNamesFrom0_6To0_7
+import idesyde.forsydeio.ForSyDeDesignModel.modelHandler
 
 final case class ForSyDeDesignModel(val systemGraph: SystemGraph) extends DesignModel {
 
@@ -38,4 +41,21 @@ final case class ForSyDeDesignModel(val systemGraph: SystemGraph) extends Design
   val elements = systemGraph.vertexSet().asScala.toSet ++ systemGraph.edgeSet().asScala.toSet
 
   def category: String = "ForSyDeDesignModel"
+
+  def bodyAsText: Option[String] = {
+    Some(modelHandler.printModel(systemGraph, "fiodl"))
+  }
+}
+
+object ForSyDeDesignModel {
+  val modelHandler = ModelHandler().registerSystemGraphMigrator(TraitNamesFrom0_6To0_7())
+
+  def fromText(s: String): Option[ForSyDeDesignModel] = {
+    try {
+      val sgraph = modelHandler.readModel(s, "fiodl")
+      Some(ForSyDeDesignModel(sgraph))
+    } catch {
+      case e: Exception => None
+    }
+  }
 }

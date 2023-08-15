@@ -89,4 +89,6 @@ final case class SimulinkReactiveDesignModel(
 
   def category: String = "SimulinkReactiveDesignModel"
 
+  def bodyAsText: Option[String] = Some(write(this))
+
 }

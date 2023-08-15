@@ -24,6 +24,8 @@ import forsyde.io.bridge.sdf3.drivers.SDF3Driver
 import forsyde.io.lib.ForSyDeHierarchy
 import forsyde.io.lib.TraitNamesFrom0_6To0_7
 import idesyde.blueprints.DecisionModelMessage
+import idesyde.blueprints.DesignModelMessage
+import java.io.StringReader
 
 object ForSyDeIdentificationModule
     extends StandaloneIdentificationModule
@@ -119,6 +121,25 @@ object ForSyDeIdentificationModule
       } else None
     case _: DesignModel =>
       None
+  }
+
+  def designMessageToModel(message: DesignModelMessage): Set[DesignModel] = {
+    // println(message.withEscapedNewLinesText)
+    for (
+      path_str <- message.header.model_paths;
+      path = Paths.get(path_str);
+      if modelHandler.canLoadModel(path);
+      content <- message.body;
+      ext_start = path.getFileName().toString().indexOf(".")
+    )
+      yield {
+        // println(path.getFileName().toString().substring(ext_start + 1))
+        val m = ForSyDeDesignModel(
+          modelHandler.readModel(content, path.getFileName().toString().substring(ext_start + 1))
+        )
+        // println("sucess")
+        m
+      }
   }
 
   def uniqueIdentifier: String = "ForSyDeIdentificationModule"

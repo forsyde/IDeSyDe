@@ -11,6 +11,7 @@ import idesyde.core.headers.DesignModelHeader
 import idesyde.core.headers.DecisionModelHeader
 import os.Path
 import idesyde.blueprints.DecisionModelMessage
+import idesyde.blueprints.DesignModelMessage
 
 object SimulinkMatlabIdentificationModule
     extends StandaloneIdentificationModule
@@ -30,10 +31,21 @@ object SimulinkMatlabIdentificationModule
 
   def decisionMessageToModel(m: DecisionModelMessage): Option[DecisionModel] = None
 
+  def designMessageToModel(message: DesignModelMessage): Set[DesignModel] = {
+    for (
+      path <- message.header.model_paths;
+      if path.endsWith("slx")
+    ) yield {
+      val res  = os.proc("matlab", "-batch", s"export_to_xxxxxxx('$path')").call()
+      val dest = res.out.lines().last
+      read[SimulinkReactiveDesignModel](os.read(os.pwd / dest))
+    }
+  }
+
   override def uniqueIdentifier: String = "SimulinkMatlabIdentificationModule"
 
   override def identificationRules
-      : Set[(Set[DesignModel], Set[DecisionModel]) => Set[? <: DecisionModel]] = Set(
+      : Set[(Set[DesignModel], Set[DecisionModel]) => (Set[? <: DecisionModel], Set[String])] = Set(
     identCommunicatingAndTriggeredReactiveWorkload
   )
 

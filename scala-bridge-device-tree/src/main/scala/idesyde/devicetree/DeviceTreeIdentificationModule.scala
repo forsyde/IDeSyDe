@@ -13,6 +13,7 @@ import idesyde.devicetree.identification.DeviceTreeDesignModel
 import idesyde.devicetree.identification.OSDescriptionDesignModel
 import org.virtuslab.yaml.*
 import idesyde.blueprints.DecisionModelMessage
+import idesyde.blueprints.DesignModelMessage
 
 object DeviceTreeIdentificationModule
     extends StandaloneIdentificationModule
@@ -41,9 +42,31 @@ object DeviceTreeIdentificationModule
 
   def decisionMessageToModel(m: DecisionModelMessage): Option[DecisionModel] = None
 
+  def designMessageToModel(message: DesignModelMessage): Set[DesignModel] = {
+    if (message.header.model_paths.forall(_.endsWith("dts"))) {
+      message.body
+        .flatMap(src =>
+          parseDeviceTreeWithPrefix(src, "") match
+            case Success(result, next) => Some(DeviceTreeDesignModel(List(result)))
+            case _                     => None
+        )
+        .toSet
+    } else if (message.header.model_paths.forall(_.endsWith("yaml"))) {
+      message.body
+        .flatMap(src =>
+          src.as[OSDescription] match {
+            case Right(value) => Some(OSDescriptionDesignModel(value))
+            case Left(value)  => None
+          }
+        )
+        .toSet
+    } else Set()
+  }
+
   def uniqueIdentifier: String = "DeviceTreeIdentificationModule"
 
-  def identificationRules: Set[(Set[DesignModel], Set[DecisionModel]) => Set[? <: DecisionModel]] =
+  def identificationRules
+      : Set[(Set[DesignModel], Set[DecisionModel]) => (Set[? <: DecisionModel], Set[String])] =
     Set(
       identSharedMemoryMultiCore,
       identPartitionedCoresWithRuntimes

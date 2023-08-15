@@ -4,6 +4,7 @@ import scala.collection.mutable.Buffer
 import scala.collection.mutable
 
 import org.virtuslab.yaml.*
+import upickle.default._
 
 enum DeviceTreeLink {
   def label: String
@@ -272,11 +273,13 @@ case class OSIsland(
     val host: String,
     val affinity: List[String],
     val policy: List[String]
-) derives YamlCodec
+) derives YamlCodec,
+      ReadWriter
 
 case class OSDescription(
     val oses: Map[String, OSIsland]
-) derives YamlCodec {
+) derives YamlCodec,
+      ReadWriter {
 
   /** Return a new merged OSDescription
     *

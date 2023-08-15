@@ -9,7 +9,7 @@ trait PlatformRules {
   def identSchedulableTiledMultiCore(
       models: Set[DesignModel],
       identified: Set[DecisionModel]
-  ): Set[SchedulableTiledMultiCore] = {
+  ): (Set[SchedulableTiledMultiCore], Set[String]) = {
     val runtimes = identified
       .filter(_.isInstanceOf[PartitionedCoresWithRuntimes])
       .map(_.asInstanceOf[PartitionedCoresWithRuntimes])
@@ -17,13 +17,16 @@ trait PlatformRules {
       .filter(_.isInstanceOf[TiledMultiCoreWithFunctions])
       .map(_.asInstanceOf[TiledMultiCoreWithFunctions])
     // if ((runtimes.isDefined && plat.isEmpty) || (runtimes.isEmpty && plat.isDefined))
-    runtimes.flatMap(r => plat.map(p => SchedulableTiledMultiCore(hardware = p, runtimes = r)))
+    (
+      runtimes.flatMap(r => plat.map(p => SchedulableTiledMultiCore(hardware = p, runtimes = r))),
+      Set()
+    )
   }
 
   def identPartitionedSharedMemoryMultiCore(
       models: Set[DesignModel],
       identified: Set[DecisionModel]
-  ): Set[PartitionedSharedMemoryMultiCore] = {
+  ): (Set[PartitionedSharedMemoryMultiCore], Set[String]) = {
     val runtimes = identified
       .filter(_.isInstanceOf[PartitionedCoresWithRuntimes])
       .map(_.asInstanceOf[PartitionedCoresWithRuntimes])
@@ -31,19 +34,23 @@ trait PlatformRules {
       .filter(_.isInstanceOf[SharedMemoryMultiCore])
       .map(_.asInstanceOf[SharedMemoryMultiCore])
     // if ((runtimes.isDefined && plat.isEmpty) || (runtimes.isEmpty && plat.isDefined))
-    runtimes.flatMap(r =>
-      plat.map(p => PartitionedSharedMemoryMultiCore(hardware = p, runtimes = r))
+    (
+      runtimes.flatMap(r =>
+        plat.map(p => PartitionedSharedMemoryMultiCore(hardware = p, runtimes = r))
+      ),
+      Set()
     )
   }
 
   def identTiledFromShared(
       models: Set[DesignModel],
       identified: Set[DecisionModel]
-  ): Set[TiledMultiCoreWithFunctions] = {
+  ): (Set[TiledMultiCoreWithFunctions], Set[String]) = {
     val plats = identified
       .filter(_.isInstanceOf[SharedMemoryMultiCore])
       .map(_.asInstanceOf[SharedMemoryMultiCore])
     var tiledPlats = mutable.Set[TiledMultiCoreWithFunctions]()
+    var errors     = mutable.Set[String]()
     for (plat <- plats) {
       val isTiled = plat.communicationElems.forall(p =>
         plat.topology
@@ -93,9 +100,11 @@ trait PlatformRules {
           communicationElementsBitPerSecPerChannel = plat.communicationElementsBitPerSecPerChannel,
           preComputedPaths = plat.preComputedPaths
         )
+      } else {
+        errors += s"The shared memory platform containing processing element ${plat.processingElems.head} is not tiled."
       }
     }
-    tiledPlats.toSet
+    (tiledPlats.toSet, errors.toSet)
   }
 
 }

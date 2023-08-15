@@ -24,6 +24,9 @@ import scala.io.BufferedSource
 import java.io.BufferedWriter
 import java.io.BufferedOutputStream
 import java.io.PrintStream
+import ujson.ParsingFailedException
+import io.javalin.Javalin
+import java.nio.charset.StandardCharsets
 
 /** The trait/interface for an identification module that provides the identification and
   * integration rules required to power the design space identification process [1].
@@ -46,6 +49,8 @@ trait StandaloneIdentificationModule
   def inputsToDesignModel(p: os.Path): Option[DesignModelHeader | DesignModel] = None
 
   def designModelToOutput(m: DesignModel, p: os.Path): Option[os.Path] = None
+
+  def designMessageToModel(message: DesignModelMessage): Set[DesignModel]
 
   /** decoders used to reconstruct design models from headers.
     *
@@ -100,8 +105,8 @@ trait StandaloneIdentificationModule
               scala.io.StdIn.readLine,
               println
             )
-          // case IdentificationModuleConfiguration(_, _, _, _, _, _, _, Some("tcp")) =>
-          //   tcpServerStandalineIdentificationModule(conf)
+          case IdentificationModuleConfiguration(_, _, _, _, _, _, _, Some("http")) =>
+            startServer()
           case IdentificationModuleConfiguration(_, _, _, _, _, _, true, None) =>
             for (schema <- decisionModelSchemas) println(schema)
           case IdentificationModuleConfiguration(
@@ -223,7 +228,7 @@ trait StandaloneIdentificationModule
                 .map(f => readBinary[DecisionModelHeader](os.read.bytes(f)))
                 .flatMap(h => decisionHeaderToModel(h))
                 .toSet
-            val identified = identificationStep(
+            val (identified, errors) = identificationStep(
               iteration,
               designModels,
               decisionModels
@@ -241,6 +246,9 @@ trait StandaloneIdentificationModule
                   )
                   .toString
               )
+            }
+            for (e <- errors) {
+              println("ERROR: " + e)
             }
           case _ =>
 
@@ -327,38 +335,48 @@ trait StandaloneIdentificationModule
         val option  = payload(0)
         val value   = payload(1)
         option.toLowerCase() match {
-          case "desing-path"                                => designPath = stringToPath(value)
+          case "design-path"                                => designPath = stringToPath(value)
           case "identified-path" | "ident-path"             => identifiedPath = stringToPath(value)
           case "explored-path" | "solved-path" | "sol-path" => solvedPath = stringToPath(value)
-          case "integrated-path" | "integration-path" | "int-path" =>
+          case "integrated-path" | "integration-path" | "int-path" | "reverse-path" =>
             integrationPath = stringToPath(value)
           case "output-path" | "out-path" =>
             integrationPath = stringToPath(value)
           case _ =>
         }
       } else if (command.startsWith("DESIGN")) {
-        val url  = command.substring(6).strip()
-        val path = stringToPath(url)
-        if (!urlsConsumed.contains(url)) {
-          if (path.baseName.startsWith("header")) {
-            for (
-              decoded <- decodeFromPath[DesignModelHeader](url); m <- designHeaderToModel(decoded)
-            )
-              designModels += m
-          } else {
-            for (mread <- inputsToDesignModel(path)) {
-              mread match {
-                case d: DesignModel => {
-                  val h = d.header.copy(model_paths = Set(path.toString()))
-                  h.writeToPath(designPath, path.baseName, uniqueIdentifier)
-                  designModels += d
-                }
-                case h: DesignModelHeader => for (m <- designHeaderToModel(h)) designModels += m
-              }
-            }
+        val payload = command.substring(6).strip()
+        try {
+          for (m <- designMessageToModel(DesignModelMessage.fromJsonString(payload))) {
+            designModels += m
+            // println("done")
           }
-          urlsConsumed += url
+        } catch {
+          case e: ParsingFailedException => println("parsing failed")
+          case _                         => println("duno")
         }
+        // val path = stringToPath(url)
+        // if (!urlsConsumed.contains(payload)) {
+        //   if (path.baseName.startsWith("header")) {
+        //     for (
+        //       decoded <- decodeFromPath[DesignModelHeader](payload);
+        //       m       <- designHeaderToModel(decoded)
+        //     )
+        //       designModels += m
+        //   } else {
+        //     for (mread <- inputsToDesignModel(path)) {
+        //       mread match {
+        //         case d: DesignModel => {
+        //           val h = d.header.copy(model_paths = Set(path.toString()))
+        //           h.writeToPath(designPath, path.baseName, uniqueIdentifier)
+        //           designModels += d
+        //         }
+        //         case h: DesignModelHeader => for (m <- designHeaderToModel(h)) designModels += m
+        //       }
+        //     }
+        //   }
+        //   urlsConsumed += payload
+        // }
       } else if (command.startsWith("DECISION INLINE")) {
         val payload = command.substring(15).strip()
         for (m <- decisionMessageToModel(DecisionModelMessage.fromJsonString(payload))) {
@@ -401,7 +419,7 @@ trait StandaloneIdentificationModule
         }
       } else if (command.startsWith("IDENTIFY")) {
         var iteration = command.substring(8).strip().toInt
-        val identified = identificationStep(
+        val (identified, errors) = identificationStep(
           iteration,
           designModels,
           decisionModels
@@ -423,31 +441,32 @@ trait StandaloneIdentificationModule
         sendOutputLine("FINISHED")
         decisionModels ++= identified
       } else if (command.startsWith("INTEGRATE")) {
-        val url = command.substring(9).strip()
+        // val url = command.substring(9).strip()
         val integrated = reverseIdentification(
           solvedDecisionModels,
           designModels
         )
         for (
-          (m, k)  <- integrated.zipWithIndex;
-          written <- designModelToOutput(m, integrationPath)
+          (m, k) <- integrated.zipWithIndex
+          // written <- designModelToOutput(m, integrationPath)
         ) {
-          val header = m.header.copy(model_paths = Set(written.toString))
-          val (hPath, bPath) = header.writeToPath(
-            integrationPath,
-            s"${k}",
-            uniqueIdentifier
-          )
-          sendOutputLine(
-            "DESIGN " + hPath
-              .getOrElse(
-                integrationPath / s"header_${m.category}_${uniqueIdentifier}.msgpack"
-              )
-              .toString
-          )
-          if (url.length() > 0) {
-            designModelToOutput(m, os.Path(url))
-          }
+          sendOutputLine("DESIGN " + DesignModelMessage(m.header, m.bodyAsText).asText)
+          // val header = m.header.copy(model_paths = Set(written.toString))
+          // val (hPath, bPath) = header.writeToPath(
+          //   integrationPath,
+          //   s"${k}",
+          //   uniqueIdentifier
+          // )
+          // sendOutputLine(
+          //   "DESIGN " + hPath
+          //     .getOrElse(
+          //       integrationPath / s"header_${m.category}_${uniqueIdentifier}.msgpack"
+          //     )
+          //     .toString
+          // )
+          // if (url.length() > 0) {
+          //   designModelToOutput(m, os.Path(url))
+          // }
         }
         sendOutputLine("FINISHED")
       } else if (command.startsWith("STAT")) {
@@ -458,6 +477,89 @@ trait StandaloneIdentificationModule
         logger.error("Passed invalid command: " + command)
       }
     }
+  }
+
+  inline def startServer(port: Int = 0): Unit = {
+    var urlsConsumed         = Set[String]()
+    var designModels         = Set[DesignModel]()
+    var decisionModels       = Set[DecisionModel]()
+    var solvedDecisionModels = Set[DecisionModel]()
+    val server = Javalin
+      .create()
+      .post(
+        "/decision",
+        ctx => {
+          for (m <- decisionMessageToModel(DecisionModelMessage.fromJsonString(ctx.body()))) {
+            decisionModels += m
+          }
+        }
+      )
+      .post(
+        "/solved",
+        ctx => {
+          for (m <- decisionMessageToModel(DecisionModelMessage.fromJsonString(ctx.body()))) {
+            solvedDecisionModels += m
+          }
+        }
+      )
+      .post(
+        "/design",
+        ctx => {
+          if (ctx.isMultipart()) {
+            ctx
+              .uploadedFiles("messages")
+              .forEach(message => {
+                val msg = String(message.content().readAllBytes(), StandardCharsets.UTF_8)
+                for (m <- designMessageToModel(DesignModelMessage.fromJsonString(msg))) {
+                  designModels += m
+                }
+              })
+          } else {
+            for (m <- designMessageToModel(DesignModelMessage.fromJsonString(ctx.body()))) {
+              designModels += m
+            }
+          }
+        }
+      )
+      .get(
+        "/identify",
+        ctx => {
+          val iteration = if (ctx.queryParamMap().containsKey("iteration")) {
+            ctx.queryParam("iteration").toInt
+          } else 0
+          val (identified, errors) = identificationStep(
+            iteration,
+            designModels,
+            decisionModels
+          )
+          val newIdentified = identified -- decisionModels
+          decisionModels ++= newIdentified
+          ctx.result(
+            write(
+              IdentificationResultMessage(
+                newIdentified.map(DecisionModelMessage.fromDecisionModel(_)),
+                errors
+              )
+            )
+          )
+        }
+      )
+      .get(
+        "/integrate",
+        ctx => {
+          val integrated = reverseIdentification(
+            solvedDecisionModels,
+            designModels
+          )
+          ctx.result(write(integrated.map(DesignModelMessage.fromDesignModel(_))))
+        }
+      )
+    server.events(es => {
+      es.serverStarted(() => {
+        println("INITIALIZED " + server.port())
+      })
+    })
+    server.start(0);
   }
 
 }

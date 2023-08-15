@@ -6,9 +6,9 @@ ThisBuild / versionScheme := Some("early-semver")
 ThisBuild / publishMavenStyle := true
 ThisBuild / publishTo := Some(Opts.resolver.sonatypeStaging)
 
-// ThisBuild / resolvers += Resolver.mavenLocal
+ThisBuild / resolvers += Resolver.mavenLocal
 
-lazy val forsydeIoVersion              = "0.7.5"
+lazy val forsydeIoVersion              = "0.7.5-5-gb333f02.dirty"
 lazy val jgraphtVersion                = "1.5.1"
 lazy val scribeVersion                 = "3.10.2"
 lazy val scalaGraphVersion             = "1.13.5"
@@ -20,6 +20,8 @@ lazy val osLibVersion                  = "0.9.1"
 lazy val scalaYamlVersion              = "0.0.6"
 lazy val scoptVersion                  = "4.1.0"
 lazy val scalaJsonSchemaVersion        = "0.7.8"
+lazy val javalinVersion                = "5.6.1"
+lazy val slf4jVersion                  = "2.0.7"
 
 lazy val imodulesTarget = file("imodules")
 lazy val emodulesTarget = file("emodules")
@@ -63,8 +65,10 @@ lazy val blueprints = (project in file("scala-blueprints"))
   .settings(
     // name := "idesyde-scala-blueprints",
     libraryDependencies ++= Seq(
-      "com.lihaoyi"      %%% "os-lib" % osLibVersion,
-      "com.github.scopt" %%% "scopt"  % scoptVersion
+      "com.lihaoyi"      %%% "os-lib"       % osLibVersion,
+      "com.github.scopt" %%% "scopt"        % scoptVersion,
+      "org.slf4j"          % "slf4j-simple" % slf4jVersion % Runtime,
+      "io.javalin"         % "javalin"      % javalinVersion
     ),
     licenses := Seq(
       "MIT"  -> url("https://opensource.org/license/mit/"),
@@ -338,10 +342,14 @@ lazy val devicetree = (project in file("scala-bridge-device-tree"))
 //     )
 //   )
 
-// TODO: figure out what is
 ThisBuild / assembly / assemblyMergeStrategy := {
-  case PathList("META-INF", xs @ _*) => MergeStrategy.discard
-  case x                             => MergeStrategy.first
+  case PathList("META-INF", xs @ _*) =>
+    (xs map { _.toLowerCase }) match {
+      case "services" :: xs =>
+        MergeStrategy.filterDistinctLines
+      case _ => MergeStrategy.discard
+    }
+  case x => MergeStrategy.first
 }
 
 // /Compile / resourceDirectory := root.base / "resources"

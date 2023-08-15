@@ -29,8 +29,9 @@ trait WorkloadRules {
   def identPeriodicDependentWorkload(
       models: Set[DesignModel],
       identified: Set[DecisionModel]
-  )(using logger: Logger): Set[CommunicatingAndTriggeredReactiveWorkload] = {
+  ): (Set[CommunicatingAndTriggeredReactiveWorkload], Set[String]) = {
     ForSyDeIdentificationUtils.toForSyDe(models) { model =>
+      var errors                  = mutable.Set[String]()
       var tasks                   = Buffer[Task]()
       var registers               = Buffer[RegisterLike]()
       var periodicStimulus        = Buffer[PeriodicStimulator]()
@@ -262,85 +263,91 @@ trait WorkloadRules {
         )
       )
       // println(s"Are all tasks reachable by a periodic stimulus? ${allTasksAreStimulated}")
-      if (tasks.isEmpty || !allTasksAreStimulated)
-        Set.empty
-      else
-        Set(
-          CommunicatingAndTriggeredReactiveWorkload(
-            tasks.map(_.getIdentifier()).toVector,
-            tasks
-              .map(t =>
-                ForSyDeHierarchy.InstrumentedBehaviour
-                  .tryView(t)
-                  .map(
-                    _.maxSizeInBits().values().asScala.max.toLong
-                  )
-                  .orElse(0L) +
-                  ForSyDeHierarchy.LoopingTask
+      if (tasks.isEmpty) { errors += "identPeriodicDependentWorkload: there are no tasks" }
+      if (!allTasksAreStimulated) {
+        errors += "identPeriodicDependentWorkload: not all tasks are stimulated"
+      }
+      val m =
+        if (tasks.isEmpty || !allTasksAreStimulated)
+          Set.empty
+        else
+          Set(
+            CommunicatingAndTriggeredReactiveWorkload(
+              tasks.map(_.getIdentifier()).toVector,
+              tasks
+                .map(t =>
+                  ForSyDeHierarchy.InstrumentedBehaviour
                     .tryView(t)
-                    .map(lt =>
-                      lt.initSequence()
-                        .stream()
-                        .mapToLong(r =>
-                          ForSyDeHierarchy.InstrumentedBehaviour
-                            .tryView(r)
-                            .map(_.maxSizeInBits().values().asScala.max.toLong)
-                            .orElse(0L)
-                        )
-                        .sum() + lt
-                        .loopSequence()
-                        .stream()
-                        .mapToLong(r =>
-                          ForSyDeHierarchy.InstrumentedBehaviour
-                            .tryView(r)
-                            .map(_.maxSizeInBits().values().asScala.max.toLong)
-                            .orElse(0L)
-                        )
-                        .sum()
+                    .map(
+                      _.maxSizeInBits().values().asScala.max.toLong
                     )
-                    .orElse(0L)
-              )
-              .toVector,
-            tasks.map(t => taskComputationNeeds(t, model)).toVector,
-            registers.map(_.getIdentifier()).toVector,
-            registers.map(_.sizeInBits().toLong).toVector,
-            communicationGraphEdges.toVector.map((s, t, m) => s),
-            communicationGraphEdges.toVector.map((s, t, m) => t),
-            communicationGraphEdges.toVector.map((s, t, m) => m),
-            periodicStimulus.map(_.getIdentifier()).toVector,
-            periodicStimulus.map(_.periodNumerator().toLong).toVector,
-            periodicStimulus.map(_.periodDenominator().toLong).toVector,
-            periodicStimulus.map(_.offsetNumerator().toLong).toVector,
-            periodicStimulus.map(_.offsetDenominator().toLong).toVector,
-            upsamples.map(_.getIdentifier()).toVector,
-            upsamples.map(_.repetitivePredecessorHolds().toLong).toVector,
-            upsamples.map(_.initialPredecessorHolds().toLong).toVector,
-            downsamples.map(_.getIdentifier()).toVector,
-            downsamples.map(_.repetitivePredecessorSkips().toLong).toVector,
-            downsamples.map(_.initialPredecessorSkips().toLong).toVector,
-            stimulusGraph
-              .edgeSet()
-              .stream()
-              .map(e => stimulusGraph.getEdgeSource(e).getIdentifier())
-              .collect(Collectors.toList())
-              .asScala
-              .toVector,
-            stimulusGraph
-              .edgeSet()
-              .stream()
-              .map(e => stimulusGraph.getEdgeTarget(e).getIdentifier())
-              .collect(Collectors.toList())
-              .asScala
-              .toVector,
-            tasks.filter(_.hasORSemantics()).map(_.getIdentifier()).toSet ++ upsamples
-              .filter(_.hasORSemantics())
-              .map(_.getIdentifier())
-              .toSet ++ downsamples
-              .filter(_.hasORSemantics())
-              .map(_.getIdentifier())
-              .toSet
+                    .orElse(0L) +
+                    ForSyDeHierarchy.LoopingTask
+                      .tryView(t)
+                      .map(lt =>
+                        lt.initSequence()
+                          .stream()
+                          .mapToLong(r =>
+                            ForSyDeHierarchy.InstrumentedBehaviour
+                              .tryView(r)
+                              .map(_.maxSizeInBits().values().asScala.max.toLong)
+                              .orElse(0L)
+                          )
+                          .sum() + lt
+                          .loopSequence()
+                          .stream()
+                          .mapToLong(r =>
+                            ForSyDeHierarchy.InstrumentedBehaviour
+                              .tryView(r)
+                              .map(_.maxSizeInBits().values().asScala.max.toLong)
+                              .orElse(0L)
+                          )
+                          .sum()
+                      )
+                      .orElse(0L)
+                )
+                .toVector,
+              tasks.map(t => taskComputationNeeds(t, model)).toVector,
+              registers.map(_.getIdentifier()).toVector,
+              registers.map(_.sizeInBits().toLong).toVector,
+              communicationGraphEdges.toVector.map((s, t, m) => s),
+              communicationGraphEdges.toVector.map((s, t, m) => t),
+              communicationGraphEdges.toVector.map((s, t, m) => m),
+              periodicStimulus.map(_.getIdentifier()).toVector,
+              periodicStimulus.map(_.periodNumerator().toLong).toVector,
+              periodicStimulus.map(_.periodDenominator().toLong).toVector,
+              periodicStimulus.map(_.offsetNumerator().toLong).toVector,
+              periodicStimulus.map(_.offsetDenominator().toLong).toVector,
+              upsamples.map(_.getIdentifier()).toVector,
+              upsamples.map(_.repetitivePredecessorHolds().toLong).toVector,
+              upsamples.map(_.initialPredecessorHolds().toLong).toVector,
+              downsamples.map(_.getIdentifier()).toVector,
+              downsamples.map(_.repetitivePredecessorSkips().toLong).toVector,
+              downsamples.map(_.initialPredecessorSkips().toLong).toVector,
+              stimulusGraph
+                .edgeSet()
+                .stream()
+                .map(e => stimulusGraph.getEdgeSource(e).getIdentifier())
+                .collect(Collectors.toList())
+                .asScala
+                .toVector,
+              stimulusGraph
+                .edgeSet()
+                .stream()
+                .map(e => stimulusGraph.getEdgeTarget(e).getIdentifier())
+                .collect(Collectors.toList())
+                .asScala
+                .toVector,
+              tasks.filter(_.hasORSemantics()).map(_.getIdentifier()).toSet ++ upsamples
+                .filter(_.hasORSemantics())
+                .map(_.getIdentifier())
+                .toSet ++ downsamples
+                .filter(_.hasORSemantics())
+                .map(_.getIdentifier())
+                .toSet
+            )
           )
-        )
+      (m, errors.toSet)
     }
   }
 

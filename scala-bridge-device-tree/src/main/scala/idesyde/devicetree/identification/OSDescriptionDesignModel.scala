@@ -1,5 +1,7 @@
 package idesyde.devicetree.identification
 
+import org.virtuslab.yaml.*
+
 import idesyde.devicetree.OSDescription
 import idesyde.core.DecisionModel
 import idesyde.core.DesignModel
@@ -27,4 +29,6 @@ final case class OSDescriptionDesignModel(
   override def elementID(elem: ElementT): String = elem
 
   def category: String = "OSDescriptionDesignModel"
+
+  def bodyAsText: Option[String] = Some(description.asYaml)
 }

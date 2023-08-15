@@ -61,4 +61,6 @@ final case class DeviceTreeDesignModel(
   // )
 
   def category: String = "DeviceTreeDesignModel"
+
+  def bodyAsText: Option[String] = None
 }

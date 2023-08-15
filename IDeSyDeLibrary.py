@@ -69,12 +69,13 @@ class IDeSyDeLibrary:
     @keyword
     def try_explore(
         self,
-        path: str,
+        path_unix_like: str,
         log_level: str = "DEBUG",
         test_workdir: str = "test_runs",
-    ) -> List[str]:
+    ) -> int:
         # bin_path = next(f for f in os.listdir(".") if "idesyde" in f)
         # bin_path = "idesyde-orchestrator"
+        path = path_unix_like.replace("/", os.path.sep)
         bin_path = (
             (".\\" if os.name == "nt" else "./")
             + "idesyde"
@@ -94,17 +95,26 @@ class IDeSyDeLibrary:
             "-v",
             log_level,
         ] + [path + os.path.sep + f for f in files]
-        with subprocess.Popen(
-            args, shell=(True if os.name == "nt" else False), stdout=subprocess.PIPE
-        ) as child:
-            for line in child.stdout:
-                # logger.console(line)
-                logger.debug(line)
+        solutions_found = 0
+        out = subprocess.check_output(
+            args,
+            shell=(True if os.name == "nt" else False),
+            text=True,  # , stdout=subprocess.PIPE, stderr=subprocess.PIPE
+        )
+        for line in out.splitlines():
+            # logger.console(line)
+            logger.debug(line)
+            if "INFO" in line:
+                logger.info(line)
+            if "exploration with" in line:
+                b_idx = line.index("exploration with")
+                e_idx = line.index("solution(s)")
+                solutions_found = int(line[(b_idx + 16) : e_idx].strip())
         # if os.name == "nt":
         #     logger.console(subprocess.check_output(args, shell=True))
         # else:
         #     logger.console(subprocess.check_output(args))
-        return os.listdir(run_path + os.path.sep + "explored") or []
+        return solutions_found
         # assert child.returncode == 0
         # if has_solution:
         #     assert len(os.listdir(run_path + os.path.sep + "explored")) > 0

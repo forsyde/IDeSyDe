@@ -68,20 +68,20 @@ impl DesignModel for SimulinkReactiveDesignModel {
     }
 }
 
-fn partially_identify_wokload_model(
-    design_models: &Vec<Box<dyn DesignModel>>,
-    _decision_models: &Vec<Arc<dyn DecisionModel>>,
-) -> Vec<Arc<dyn DecisionModel>> {
-    let mut _identified = Vec::new();
-    // let mut procs: HashSet<String> = HashSet::new();
-    // let mut delays: HashSet<String> = HashSet::new();
-    // let mut linksWithoutConstants: HashMap<String, HashMap<String, u32>> = HashMap::new();
-    // let mut allLinks: HashMap<String, HashMap<String, u32>> = HashMap::new();
-    for design_model in design_models {
-        if design_model.category() == "SimulinkReactiveDesignModel" {}
-    }
-    _identified
-}
+// fn partially_identify_wokload_model(
+//     design_models: &Vec<Arc<dyn DesignModel>>,
+//     _decision_models: &Vec<Arc<dyn DecisionModel>>,
+// ) -> Vec<Arc<dyn DecisionModel>> {
+//     let mut _identified = Vec::new();
+//     // let mut procs: HashSet<String> = HashSet::new();
+//     // let mut delays: HashSet<String> = HashSet::new();
+//     // let mut linksWithoutConstants: HashMap<String, HashMap<String, u32>> = HashMap::new();
+//     // let mut allLinks: HashMap<String, HashMap<String, u32>> = HashMap::new();
+//     for design_model in design_models {
+//         if design_model.category() == "SimulinkReactiveDesignModel" {}
+//     }
+//     _identified
+// }
 // struct MatlabIdentificationModule {}
 
 // impl StandaloneIdentificationModule for MatlabIdentificationModule {
@@ -89,7 +89,7 @@ fn partially_identify_wokload_model(
 //         "MatlabIdentificationModule".to_string()
 //     }
 
-fn read_design_model(path: &std::path::Path) -> Option<Box<dyn idesyde_core::DesignModel>> {
+fn read_design_model(path: &std::path::Path) -> Option<Arc<dyn idesyde_core::DesignModel>> {
     match path.extension().and_then(|x| x.to_str()) {
         Some("json") => {
             if path
@@ -101,7 +101,7 @@ fn read_design_model(path: &std::path::Path) -> Option<Box<dyn idesyde_core::Des
                 if let Ok(s) = std::fs::read_to_string(&path) {
                     let m: SimulinkReactiveDesignModel =
                         serde_json::from_str(s.as_str()).expect("something");
-                    Some(Box::new(m) as Box<dyn DesignModel>)
+                    Some(Arc::new(m) as Arc<dyn DesignModel>)
                 } else {
                     None
                 }
@@ -114,7 +114,7 @@ fn read_design_model(path: &std::path::Path) -> Option<Box<dyn idesyde_core::Des
 }
 
 fn write_design_model(
-    _design_model: &Box<dyn idesyde_core::DesignModel>,
+    _design_model: &Arc<dyn idesyde_core::DesignModel>,
     _dest: &std::path::Path,
 ) -> Vec<PathBuf> {
     vec![]
@@ -130,9 +130,7 @@ fn write_design_model(
 fn main() {
     execute_standalone_identification_module(StandaloneIdentificationModule::complete(
         "MatlabIdentificationModule",
-        vec![MarkedIdentificationRule::DesignModelOnlyIdentificationRule(
-            partially_identify_wokload_model,
-        )],
+        vec![],
         vec![],
         read_design_model,
         write_design_model,

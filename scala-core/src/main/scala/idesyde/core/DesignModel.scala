@@ -51,6 +51,8 @@ trait DesignModel {
     elementIDs //++ elementRelationIDs
   )
 
+  def bodyAsText: Option[String]
+
   override def equals(x: Any): Boolean = x match {
     case dm: DesignModel =>
       category == dm.category &&

@@ -1,4 +1,4 @@
-use std::{collections::HashSet, path::Path, sync::Arc, time::UNIX_EPOCH};
+use std::{collections::HashSet, path::Path, sync::Arc};
 
 use clap::Parser;
 use env_logger::WriteStyle;
@@ -7,10 +7,13 @@ use idesyde_core::{
         load_decision_model_headers_from_binary, load_design_model_headers_from_binary,
         DesignModelHeader, ExplorationBid,
     },
-    DecisionModel, DesignModel, ExplorationConfiguration, ExplorationModule, IdentificationModule,
+    DecisionModel, DesignModel, ExplorationConfiguration, ExplorationModule,
 };
-use idesyde_orchestration::OpaqueDecisionModel;
-use log::{debug, error, info, warn, Level};
+use idesyde_orchestration::{
+    identification::identification_procedure,
+    models::{OpaqueDecisionModel, OpaqueDesignModel},
+};
+use log::{debug, error, info, Level};
 use rayon::prelude::*;
 
 #[derive(Parser, Debug)]
@@ -148,143 +151,153 @@ fn main() {
         std::fs::create_dir_all(&reverse_path)
             .expect("Failed to create explored directory during identification.");
 
-        let mut is_input_incremental = true;
-        let mut current_input_stamp: Vec<(String, u64)> = sorted_inputs
-            .iter()
-            .map(|x| {
-                (
-                    x.to_owned(),
-                    std::fs::metadata(std::path::PathBuf::from(x))
-                        .ok()
-                        .and_then(|y| y.modified().ok())
-                        .and_then(|y| y.duration_since(UNIX_EPOCH).ok())
-                        .map(|y| y.as_secs())
-                        .unwrap_or(0),
-                )
-            })
-            .collect();
-        if let Ok(f) = std::fs::read(run_path.join("input_stamp.json")) {
-            let previous_input_stream: Vec<(String, u64)> =
-                serde_json::from_slice(&f).unwrap_or(Vec::new());
-            for x in &current_input_stamp {
-                if !previous_input_stream.contains(x) {
-                    is_input_incremental = false;
-                    break;
-                }
-            }
-            for x in previous_input_stream {
-                if !current_input_stamp.contains(&x) {
-                    current_input_stamp.push(x);
-                }
-            }
-        }
+        // let mut is_input_incremental = false;
+        // let mut current_input_stamp: Vec<(String, u64)> = sorted_inputs
+        //     .iter()
+        //     .map(|x| {
+        //         (
+        //             x.to_owned(),
+        //             std::fs::metadata(std::path::PathBuf::from(x))
+        //                 .ok()
+        //                 .and_then(|y| y.modified().ok())
+        //                 .and_then(|y| y.duration_since(UNIX_EPOCH).ok())
+        //                 .map(|y| y.as_secs())
+        //                 .unwrap_or(0),
+        //         )
+        //     })
+        //     .collect();
+        // if let Ok(f) = std::fs::read(run_path.join("input_stamp.json")) {
+        //     let previous_input_stream: Vec<(String, u64)> =
+        //         serde_json::from_slice(&f).unwrap_or(Vec::new());
+        //     for x in &current_input_stamp {
+        //         if !previous_input_stream.contains(x) {
+        //             is_input_incremental = false;
+        //             break;
+        //         }
+        //     }
+        //     for x in previous_input_stream {
+        //         if !current_input_stamp.contains(&x) {
+        //             current_input_stamp.push(x);
+        //         }
+        //     }
+        // }
 
-        if !is_input_incremental {
-            debug!("Detected that the inputs are not incremental. Cleaning the workspace before proceeding");
-            for dir in vec![inputs_path, &identified_path, &explored_path, &reverse_path] {
-                if let Ok(d) = std::fs::read_dir(dir) {
-                    for x in d {
-                        if let Ok(f) = x {
-                            if std::fs::remove_file(f.path()).is_err() {
-                                warn!("Failed to remove workspace file during incremental reset. Trying to proceed");
-                            };
-                        }
-                    }
-                };
-            }
-        }
-        if let Ok(f) = std::fs::File::create(run_path.join("input_stamp.json")) {
-            if serde_json::to_writer(f, &current_input_stamp).is_err() {
-                warn!("Failed to produce increment stamps. Incremetability might not work")
-            };
-        } else {
-            warn!("Failed to create increment stamps. Incremetability might not work")
-        }
+        // if !is_input_incremental {
+        //     debug!("Detected that the inputs are not incremental. Cleaning the workspace before proceeding");
+        //     for dir in vec![inputs_path, &identified_path, &explored_path, &reverse_path] {
+        //         if let Ok(d) = std::fs::read_dir(dir) {
+        //             for x in d {
+        //                 if let Ok(f) = x {
+        //                     if std::fs::remove_file(f.path()).is_err() {
+        //                         warn!("Failed to remove workspace file during incremental reset. Trying to proceed");
+        //                     };
+        //                 }
+        //             }
+        //         };
+        //     }
+        // }
+        // if let Ok(f) = std::fs::File::create(run_path.join("input_stamp.json")) {
+        //     if serde_json::to_writer(f, &current_input_stamp).is_err() {
+        //         warn!("Failed to produce increment stamps. Incremetability might not work")
+        //     };
+        // } else {
+        //     warn!("Failed to create increment stamps. Incremetability might not work")
+        // }
 
-        debug!("Copying input files");
-        for input in &sorted_inputs {
-            let p = Path::new(input);
-            if !p.is_file() {
-                error!("Input {} does not exist or is not a file!", input);
-                return;
-            }
-            if let Some(fname) = p.file_name() {
-                let fpath = Path::new(fname);
-                std::fs::copy(p, run_path.join("inputs").join(fpath))
-                    .expect("Failed to copy input models during identification.");
-            }
-        }
+        // debug!("Reading and preparing input files");
+        // for input in &sorted_inputs {
+        //     let p = Path::new(input);
+        //     if !p.is_file() {
+        //         error!("Input {} does not exist or is not a file!", input);
+        //         return;
+        //     }
+        //     if let Some(fname) = p.file_name() {
+        //         let fpath = Path::new(fname);
+        //         std::fs::copy(p, run_path.join("inputs").join(fpath))
+        //             .expect("Failed to copy input models during identification.");
+        //     }
+        // }
 
         debug!("Initializing modules");
-        let mut imodules: Vec<Arc<dyn IdentificationModule>> = Vec::new();
-        let mut emodules: Vec<Arc<dyn ExplorationModule>> = Vec::new();
-        rayon::scope(|s| {
-            s.spawn(|_| {
-                let ex_imodules = idesyde_orchestration::find_identification_modules(
+        // let mut imodules: Vec<Arc<dyn IdentificationModule>> = Vec::new();
+        // let mut emodules: Vec<Arc<dyn ExplorationModule>> = Vec::new();
+        let (mut imodules, emodules) = rayon::join(
+            || {
+                idesyde_orchestration::find_identification_modules(
                     imodules_path,
                     &identified_path,
                     &inputs_path,
                     &explored_path,
                     &reverse_path,
                     &output_path,
-                );
-                for eximod in ex_imodules {
-                    debug!(
-                        "Initialized identification module with identifier {}",
-                        &eximod.unique_identifier()
-                    );
-                    imodules.push(eximod);
-                }
-            });
-            s.spawn(|_| {
-                let ex_emodules = idesyde_orchestration::find_exploration_modules(
+                )
+            },
+            || {
+                idesyde_orchestration::find_exploration_modules(
                     emodules_path,
                     &identified_path,
                     &explored_path,
-                );
-                for exemod in ex_emodules {
-                    debug!(
-                        "Initialized exploration module with identifier {}",
-                        &exemod.unique_identifier()
-                    );
-                    emodules.push(exemod);
-                }
-            });
-        });
-        // debug!("Initializing emodules");
+                )
+            },
+        );
+        for eximod in &imodules {
+            debug!(
+                "Initialized identification module with identifier {}",
+                &eximod.unique_identifier()
+            );
+        }
+        for exemod in &emodules {
+            debug!(
+                "Initialized exploration module with identifier {}",
+                &exemod.unique_identifier()
+            );
+        }
 
         // add embedded modules
         imodules.push(Arc::new(idesyde_common::make_common_module()));
 
         // continue
-        let design_model_headers = load_design_model_headers_from_binary(&inputs_path);
-        let mut design_models: Vec<Box<dyn DesignModel>> = design_model_headers
-            .iter()
-            .map(|h| Box::new(h.to_owned()) as Box<dyn DesignModel>)
-            .collect();
+        debug!("Reading and preparing input files");
+        // let design_model_headers = load_design_model_headers_from_binary(&inputs_path);
+        // let mut design_models: Vec<Box<dyn DesignModel>> = design_model_headers
+        //     .iter()
+        //     .map(|h| Box::new(h.to_owned()) as Box<dyn DesignModel>)
+        //     .collect();
         // add an "Opaque" design model header so that all modules are aware of the input models
-        design_models.push(Box::new(DesignModelHeader {
-            category: "Any".to_string(),
-            model_paths: args.inputs,
-            elements: HashSet::new(),
-        }));
+        let design_models: Vec<Arc<dyn DesignModel>> = sorted_inputs
+            .iter()
+            .map(|s| Arc::new(OpaqueDesignModel::from_path_str(s)) as Arc<dyn DesignModel>)
+            .collect();
+        for m in &design_models {
+            if m.body_as_string().is_none() {
+                error!(
+                    "Failed to read and prepare input {}",
+                    m.header()
+                        .model_paths
+                        .first()
+                        .map(|x| x.to_owned())
+                        .unwrap_or("NO_FILE".to_string())
+                );
+                return;
+            }
+        }
+        if design_models.iter().any(|x| x.body_as_string().is_none()) {}
+        // design_models.push(Box::new(DesignModelHeader {
+        //     category: "Any".to_string(),
+        //     model_paths: args.inputs,
+        //     elements: HashSet::new(),
+        // }));
         let pre_identified: Vec<Arc<dyn DecisionModel>> =
             load_decision_model_headers_from_binary(&identified_path)
                 .iter()
-                .map(|(_, h)| {
-                    Arc::new(OpaqueDecisionModel::from_header(h)) as Arc<dyn DecisionModel>
-                })
+                .map(|(_, h)| Arc::new(OpaqueDecisionModel::from(h)) as Arc<dyn DecisionModel>)
                 .collect();
         info!(
             "Starting identification with {} pre-identified decision models",
             pre_identified.len()
         );
-        let identified = idesyde_orchestration::identification_procedure(
-            &imodules,
-            &design_models,
-            &pre_identified,
-            0,
-        );
+        let (identified, _) =
+            identification_procedure(&imodules, &design_models, &pre_identified, 0);
         info!("Identified {} decision model(s)", identified.len());
 
         // let dominant = compute_dominant_decision_models(&identified_refs);

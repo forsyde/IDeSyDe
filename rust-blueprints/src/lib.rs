@@ -8,9 +8,13 @@ use std::{
 
 use clap::Parser;
 use idesyde_core::{
-    headers::{load_decision_model_headers_from_binary, DecisionModelHeader, ExplorationBid},
+    headers::{
+        load_decision_model_headers_from_binary, DecisionModelHeader, DesignModelHeader,
+        ExplorationBid,
+    },
     DecisionModel, DesignModel, ExplorationModule, ExplorationSolution, Explorer,
-    IdentificationModule, MarkedIdentificationRule, ReverseIdentificationRule,
+    IdentificationModule, IdentificationResult, MarkedIdentificationRule,
+    ReverseIdentificationRule,
 };
 use serde::{Deserialize, Serialize};
 
@@ -22,15 +26,6 @@ pub struct DecisionModelMessage {
 
 impl DecisionModelMessage {
     pub fn from_dyn_decision_model(m: &dyn DecisionModel) -> DecisionModelMessage {
-        DecisionModelMessage {
-            header: m.header(),
-            body: m
-                .body_as_json()
-                .map(|x| x.replace("\r\n", "\\r\\n").replace("\n", "\\n")),
-        }
-    }
-
-    pub fn from_decision_model<T: DecisionModel>(m: &T) -> DecisionModelMessage {
         DecisionModelMessage {
             header: m.header(),
             body: m
@@ -61,9 +56,58 @@ impl DecisionModelMessage {
 
     pub fn to_json_str(&self) -> String {
         serde_json::to_string(self)
-            .expect("Failed to serialize DecisionModelMessage, which should always suceed.")
+            .expect("Failed to serialize a DecisionModelMessage, which should always suceed.")
     }
 }
+
+impl<T: DecisionModel + ?Sized> From<&T> for DecisionModelMessage {
+    fn from(value: &T) -> Self {
+        DecisionModelMessage {
+            header: value.header(),
+            body: value
+                .body_as_json()
+                .map(|x| x.replace("\r\n", "\\r\\n").replace("\n", "\\n")),
+        }
+    }
+}
+
+#[derive(Serialize, Clone, Deserialize, Debug, PartialEq, Eq)]
+pub struct DesignModelMessage {
+    pub header: DesignModelHeader,
+    pub body: Option<String>,
+}
+
+impl DesignModelMessage {
+    pub fn from_dyn_design_model(m: &dyn DesignModel) -> DesignModelMessage {
+        DesignModelMessage {
+            header: m.header(),
+            body: m.body_as_string(),
+        }
+    }
+
+    pub fn from_json_str(s: &str) -> Option<DesignModelMessage> {
+        serde_json::from_str(s).ok()
+    }
+
+    pub fn to_json_str(&self) -> String {
+        serde_json::to_string(self)
+            .expect("Failed to serialize a DesignModelMessage, which should always suceed.")
+    }
+}
+
+impl<T> From<&T> for DesignModelMessage
+where
+    T: DesignModel + ?Sized,
+{
+    fn from(value: &T) -> Self {
+        DesignModelMessage {
+            header: value.header(),
+            body: value.body_as_string(),
+        }
+    }
+}
+
+// impl From<&dyn DesignModel> for DesignModelMessage {}
 
 #[derive(Clone, PartialEq, Serialize, Deserialize)]
 pub struct ExplorationSolutionMessage {
@@ -74,6 +118,20 @@ pub struct ExplorationSolutionMessage {
 impl ExplorationSolutionMessage {
     pub fn from_json_str(s: &str) -> Option<ExplorationSolutionMessage> {
         serde_json::from_str(s).ok()
+    }
+}
+
+#[derive(Clone, PartialEq, Serialize, Deserialize)]
+pub struct IdentificationResultMessage {
+    pub identified: Vec<DecisionModelMessage>,
+    pub errors: HashSet<String>,
+}
+
+impl TryFrom<&str> for IdentificationResultMessage {
+    type Error = serde_json::Error;
+
+    fn try_from(value: &str) -> Result<Self, Self::Error> {
+        serde_json::from_str(value)
     }
 }
 
@@ -119,7 +177,7 @@ impl ExplorationModule for StandaloneExplorationModule {
         &self,
         m: Arc<dyn DecisionModel>,
         explorer_id: &str,
-        currrent_solutions: Vec<idesyde_core::ExplorationSolution>,
+        currrent_solutions: Vec<ExplorationSolution>,
         exploration_configuration: idesyde_core::ExplorationConfiguration,
         solution_iter: fn(ExplorationSolution) -> (),
     ) -> Vec<idesyde_core::ExplorationSolution> {
@@ -142,10 +200,10 @@ pub struct StandaloneIdentificationModule {
     unique_identifier: String,
     identification_rules: Vec<MarkedIdentificationRule>,
     reverse_identification_rules: Vec<ReverseIdentificationRule>,
-    read_design_model: fn(path: &Path) -> Option<Box<dyn DesignModel>>,
-    write_design_model: fn(design_model: &Box<dyn DesignModel>, dest: &Path) -> Vec<PathBuf>,
+    read_design_model: fn(path: &Path) -> Option<Arc<dyn DesignModel>>,
+    write_design_model: fn(design_model: &Arc<dyn DesignModel>, dest: &Path) -> Vec<PathBuf>,
     decision_header_to_model: fn(header: &DecisionModelHeader) -> Option<Arc<dyn DecisionModel>>,
-    decision_message_to_model: fn(header: &DecisionModelMessage) -> Option<Arc<dyn DecisionModel>>,
+    _decision_message_to_model: fn(header: &DecisionModelMessage) -> Option<Arc<dyn DecisionModel>>,
     pub decision_model_schemas: HashSet<String>,
 }
 
@@ -158,7 +216,7 @@ impl StandaloneIdentificationModule {
             read_design_model: |_x| None,
             write_design_model: |_x, _p| vec![],
             decision_header_to_model: |_x| None,
-            decision_message_to_model: |_x| None,
+            _decision_message_to_model: |_x| None,
             decision_model_schemas: HashSet::new(),
         };
     }
@@ -182,7 +240,7 @@ impl StandaloneIdentificationModule {
             read_design_model: |_x| None,
             write_design_model: |_x, _p| vec![],
             decision_header_to_model,
-            decision_message_to_model,
+            _decision_message_to_model: decision_message_to_model,
             decision_model_schemas,
         };
     }
@@ -191,8 +249,8 @@ impl StandaloneIdentificationModule {
         unique_identifier: &str,
         identification_rules: Vec<MarkedIdentificationRule>,
         reverse_identification_rules: Vec<ReverseIdentificationRule>,
-        read_design_model: fn(path: &Path) -> Option<Box<dyn DesignModel>>,
-        write_design_model: fn(design_model: &Box<dyn DesignModel>, dest: &Path) -> Vec<PathBuf>,
+        read_design_model: fn(path: &Path) -> Option<Arc<dyn DesignModel>>,
+        write_design_model: fn(design_model: &Arc<dyn DesignModel>, dest: &Path) -> Vec<PathBuf>,
         decision_header_to_model: fn(
             header: &DecisionModelHeader,
         ) -> Option<Arc<dyn DecisionModel>>,
@@ -208,17 +266,17 @@ impl StandaloneIdentificationModule {
             read_design_model,
             write_design_model,
             decision_header_to_model,
-            decision_message_to_model,
+            _decision_message_to_model: decision_message_to_model,
             decision_model_schemas,
         };
     }
 
-    pub fn read_design_model(&self, path: &Path) -> Option<Box<dyn DesignModel>> {
+    pub fn read_design_model(&self, path: &Path) -> Option<Arc<dyn DesignModel>> {
         return (self.read_design_model)(path);
     }
     pub fn write_design_model(
         &self,
-        design_model: &Box<dyn DesignModel>,
+        design_model: &Arc<dyn DesignModel>,
         dest: &Path,
     ) -> Vec<PathBuf> {
         return (self.write_design_model)(design_model, dest);
@@ -239,10 +297,11 @@ impl IdentificationModule for StandaloneIdentificationModule {
     fn identification_step(
         &self,
         iteration: i32,
-        design_models: &Vec<Box<dyn DesignModel>>,
+        design_models: &Vec<Arc<dyn DesignModel>>,
         decision_models: &Vec<Arc<dyn DecisionModel>>,
-    ) -> Vec<Arc<dyn DecisionModel>> {
+    ) -> IdentificationResult {
         let mut identified: Vec<Arc<dyn DecisionModel>> = Vec::new();
+        let mut errors: HashSet<String> = HashSet::new();
         for irule in &self.identification_rules {
             let f_opt = match irule {
                 MarkedIdentificationRule::DesignModelOnlyIdentificationRule(f) => {
@@ -271,22 +330,24 @@ impl IdentificationModule for StandaloneIdentificationModule {
                 }
             };
             if let Some(f) = f_opt {
-                for m in f(design_models, decision_models) {
+                let (models, errs) = f(design_models, decision_models);
+                for m in models {
                     if !identified.contains(&m) {
                         identified.push(m);
                     }
                 }
+                errors.extend(errs.into_iter());
             }
         }
-        identified
+        (identified, errors)
     }
 
     fn reverse_identification(
         &self,
         solved_decision_models: &Vec<Arc<dyn DecisionModel>>,
-        design_models: &Vec<Box<dyn DesignModel>>,
-    ) -> Vec<Box<dyn DesignModel>> {
-        let mut reverse_identified: Vec<Box<dyn DesignModel>> = Vec::new();
+        design_models: &Vec<Arc<dyn DesignModel>>,
+    ) -> Vec<Arc<dyn DesignModel>> {
+        let mut reverse_identified: Vec<Arc<dyn DesignModel>> = Vec::new();
         for f in &self.reverse_identification_rules {
             for m in f(solved_decision_models, design_models) {
                 reverse_identified.push(m);
@@ -350,7 +411,7 @@ pub fn execute_standalone_identification_module(module: StandaloneIdentification
                 if let Some(design_path) = args.design_path_opt {
                     std::fs::create_dir_all(&design_path)
                         .expect("Failed to create the design path during reverse identification.");
-                    let mut design_models: Vec<Box<dyn DesignModel>> = Vec::new();
+                    let mut design_models: Vec<Arc<dyn DesignModel>> = Vec::new();
                     for pres in std::fs::read_dir(&design_path)
                         .expect("Failed to read design path during start-up.")
                     {
@@ -411,7 +472,7 @@ pub fn execute_standalone_identification_module(module: StandaloneIdentification
                                     .iter()
                                     .flat_map(|(_, x)| module.decision_header_to_model(x))
                                     .collect();
-                            let identified = module.identification_step(
+                            let (identified, _) = module.identification_step(
                                 ident_step,
                                 &design_models,
                                 &decision_models,

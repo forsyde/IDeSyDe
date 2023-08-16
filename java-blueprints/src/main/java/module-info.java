@@ -4,6 +4,7 @@ module idesyde.blueprints {
     requires transitive com.fasterxml.jackson.core;
     requires transitive com.fasterxml.jackson.databind;
     requires transitive com.fasterxml.jackson.dataformat.cbor;
+    requires transitive io.javalin;
 
     exports idesyde.blueprints;
 }

@@ -14,6 +14,7 @@ import forsyde.io.core.SystemGraph
 import forsyde.io.lib.implementation.functional.BufferLike
 import forsyde.io.lib.behavior.moc.sdf.SDFChannel
 import forsyde.io.lib.ForSyDeHierarchy
+import idesyde.identification.forsyde.ForSyDeIdentificationUtils
 
 trait SDFRules {
 
@@ -21,91 +22,87 @@ trait SDFRules {
       models: Set[DesignModel],
       identified: Set[DecisionModel]
   ): (Set[SDFApplicationWithFunctions], Set[String]) = {
-    var errors = mutable.Set[String]()
-    val modelOpt = models
-      .filter(_.isInstanceOf[ForSyDeDesignModel])
-      .map(_.asInstanceOf[ForSyDeDesignModel])
-      .map(_.systemGraph)
-      .reduceOption(_.merge(_))
-    modelOpt
-      .map(model => {
-
-        val model       = modelOpt.get
-        var sdfActors   = Buffer.empty[SDFActor]
-        var sdfChannels = Buffer.empty[SDFChannel]
-        // println(model)
-        model
-          .vertexSet()
-          .forEach(v => {
-            if (ForSyDeHierarchy.SDFActor.tryView(model, v).isPresent())
-              sdfActors += ForSyDeHierarchy.SDFActor.tryView(model, v).get()
-            //else if (SDFDelay.conforms(v)) sdfDelays = SDFDelay.enforce(v)
-            if (ForSyDeHierarchy.SDFChannel.tryView(model, v).isPresent()) {
-              sdfChannels += ForSyDeHierarchy.SDFChannel.tryView(model, v).get()
-            }
-          })
-        val channelsConnectActors =
-          sdfChannels.forall(c =>
-            c.consumer().map(a => sdfActors.contains(a)).orElse(false)
-              && c.producer().map(a => sdfActors.contains(a)).orElse(false)
-          )
-        if (sdfActors.size == 0 || !channelsConnectActors) {
-          errors += s"identSDFApplication: No actors, or channels do not connect actors"
-        }
-        var topologySrcs      = Buffer[String]()
-        var topologyDsts      = Buffer[String]()
-        var topologyEdgeValue = Buffer[Int]()
-        sdfChannels.foreach(c => {
-          c.producer()
-            .ifPresent(src => {
-              val rate = model
-                .getAllEdges(src.getViewedVertex, c.getViewedVertex)
-                .stream
-                .mapToInt(e => {
-                  e.getSourcePort.map(sp => src.production().get(sp)).orElse(0)
-                })
-                .sum()
-                .toInt
-              // println(s"adding ${src.getIdentifier()} -> ${c.getIdentifier()} : ${rate}")
-              topologySrcs += src.getIdentifier()
-              topologyDsts += c.getIdentifier()
-              topologyEdgeValue += rate
-            })
-          c.consumer()
-            .ifPresent(dst => {
-              val rate = model
-                .getAllEdges(c.getViewedVertex, dst.getViewedVertex)
-                .stream
-                .mapToInt(e => {
-                  e.getTargetPort.map(tp => dst.consumption().get(tp)).orElse(0)
-                })
-                .sum()
-                .toInt
-              // println(s"adding ${c.getIdentifier()} -> ${dst.getIdentifier()} : ${rate}")
-              topologySrcs += c.getIdentifier()
-              topologyDsts += dst.getIdentifier()
-              topologyEdgeValue += rate
-            })
+    ForSyDeIdentificationUtils.toForSyDe(models) { model =>
+      var errors      = mutable.Set[String]()
+      var sdfActors   = Buffer.empty[SDFActor]
+      var sdfChannels = Buffer.empty[SDFChannel]
+      // println(model)
+      model
+        .vertexSet()
+        .forEach(v => {
+          if (ForSyDeHierarchy.SDFActor.tryView(model, v).isPresent())
+            sdfActors += ForSyDeHierarchy.SDFActor.tryView(model, v).get()
+          //else if (SDFDelay.conforms(v)) sdfDelays = SDFDelay.enforce(v)
+          if (ForSyDeHierarchy.SDFChannel.tryView(model, v).isPresent()) {
+            sdfChannels += ForSyDeHierarchy.SDFChannel.tryView(model, v).get()
+          }
         })
-        val processSizes = sdfActors.zipWithIndex
-          .map((a, i) =>
-            ForSyDeHierarchy.InstrumentedBehaviour
-              .tryView(a)
-              .map(_.maxSizeInBits().values().asScala.max)
-              .orElse(0L) +
-              a.combFunctions()
-                .stream()
-                .mapToLong(fs =>
-                  ForSyDeHierarchy.InstrumentedBehaviour
-                    .tryView(fs)
-                    .map(_.maxSizeInBits().values().asScala.max)
-                    .orElse(0L)
-                )
-                .sum
-          )
-          .toVector
-        val processComputationalNeeds = sdfActors.map(fromSDFActorToNeeds(model, _)).toVector
-        (
+      val channelsConnectActors =
+        sdfChannels.forall(c =>
+          c.consumer().map(a => sdfActors.contains(a)).orElse(false)
+            && c.producer().map(a => sdfActors.contains(a)).orElse(false)
+        )
+      if (sdfActors.size == 0) {
+        errors += s"identSDFApplication: No actors"
+      }
+      if (!channelsConnectActors) {
+        errors += s"identSDFApplication: channels do not connect actors; not all have consumer and producer"
+      }
+      var topologySrcs      = Buffer[String]()
+      var topologyDsts      = Buffer[String]()
+      var topologyEdgeValue = Buffer[Int]()
+      sdfChannels.foreach(c => {
+        c.producer()
+          .ifPresent(src => {
+            val rate = model
+              .getAllEdges(src.getViewedVertex, c.getViewedVertex)
+              .stream
+              .mapToInt(e => {
+                e.getSourcePort.map(sp => src.production().get(sp)).orElse(0)
+              })
+              .sum()
+              .toInt
+            // println(s"adding ${src.getIdentifier()} -> ${c.getIdentifier()} : ${rate}")
+            topologySrcs += src.getIdentifier()
+            topologyDsts += c.getIdentifier()
+            topologyEdgeValue += rate
+          })
+        c.consumer()
+          .ifPresent(dst => {
+            val rate = model
+              .getAllEdges(c.getViewedVertex, dst.getViewedVertex)
+              .stream
+              .mapToInt(e => {
+                e.getTargetPort.map(tp => dst.consumption().get(tp)).orElse(0)
+              })
+              .sum()
+              .toInt
+            // println(s"adding ${c.getIdentifier()} -> ${dst.getIdentifier()} : ${rate}")
+            topologySrcs += c.getIdentifier()
+            topologyDsts += dst.getIdentifier()
+            topologyEdgeValue += rate
+          })
+      })
+      val processSizes = sdfActors.zipWithIndex
+        .map((a, i) =>
+          ForSyDeHierarchy.InstrumentedBehaviour
+            .tryView(a)
+            .map(_.maxSizeInBits().values().asScala.max)
+            .orElse(0L) +
+            a.combFunctions()
+              .stream()
+              .mapToLong(fs =>
+                ForSyDeHierarchy.InstrumentedBehaviour
+                  .tryView(fs)
+                  .map(_.maxSizeInBits().values().asScala.max)
+                  .orElse(0L)
+              )
+              .sum
+        )
+        .toVector
+      val processComputationalNeeds = sdfActors.map(fromSDFActorToNeeds(model, _)).toVector
+      (
+        if (sdfActors.size > 0 && channelsConnectActors) {
           Set(
             SDFApplicationWithFunctions(
               sdfActors.map(_.getIdentifier()).toVector,
@@ -126,11 +123,22 @@ trait SDFRules {
                 .toVector,
               sdfActors.map(a => -1.0).toVector
             )
-          ),
-          errors.toSet
-        )
-      })
-      .getOrElse((Set(), Set()))
+          )
+        } else Set(),
+        errors.toSet
+      )
+    }
+    // val modelOpt = models
+    //   .filter(_.isInstanceOf[ForSyDeDesignModel])
+    //   .map(_.asInstanceOf[ForSyDeDesignModel])
+    //   .map(_.systemGraph)
+    //   .reduceOption(_.merge(_))
+    // modelOpt
+    //   .map(model => {
+
+    //     val model       = modelOpt.get
+    //   })
+    //   .getOrElse((Set(), Set()))
   }
 
   private def fromSDFActorToNeeds(

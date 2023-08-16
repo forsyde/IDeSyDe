@@ -554,6 +554,12 @@ trait StandaloneIdentificationModule
           ctx.result(write(integrated.map(DesignModelMessage.fromDesignModel(_))))
         }
       )
+      .exception(
+        classOf[Exception],
+        (e, ctx) => {
+          e.printStackTrace()
+        }
+      )
     server.events(es => {
       es.serverStarted(() => {
         println("INITIALIZED " + server.port())

@@ -281,7 +281,6 @@ fn main() {
                 return;
             }
         }
-        if design_models.iter().any(|x| x.body_as_string().is_none()) {}
         // design_models.push(Box::new(DesignModelHeader {
         //     category: "Any".to_string(),
         //     model_paths: args.inputs,

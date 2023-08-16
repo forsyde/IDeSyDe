@@ -104,213 +104,216 @@ trait PlatformRules {
       models: Set[DesignModel],
       identified: Set[DecisionModel]
   ): (Set[TiledMultiCoreWithFunctions], Set[String]) = {
-    val modelOpt = models
-      .filter(_.isInstanceOf[ForSyDeDesignModel])
-      .map(_.asInstanceOf[ForSyDeDesignModel])
-      .map(_.systemGraph)
-      .reduceOption(_.merge(_))
-    modelOpt
-      .map(model => {
-        var errors                = mutable.Set[String]()
-        val model                 = modelOpt.get
-        var processingElements    = Buffer.empty[GenericProcessingModule]
-        var memoryElements        = Buffer.empty[GenericMemoryModule]
-        var communicationElements = Buffer.empty[GenericCommunicationModule]
-        model.vertexSet.stream
-          .filter(v => ForSyDeHierarchy.DigitalModule.tryView(model, v).isPresent())
-          .forEach(v => {
-            ForSyDeHierarchy.GenericProcessingModule
-              .tryView(model, v)
-              .ifPresent(p => processingElements :+= p)
-            ForSyDeHierarchy.GenericMemoryModule
-              .tryView(model, v)
-              .ifPresent(p => memoryElements :+= p)
+    ForSyDeIdentificationUtils.toForSyDe(models) { model =>
+      var errors      = mutable.Set[String]()
+      var processingElements    = Buffer.empty[GenericProcessingModule]
+      var memoryElements        = Buffer.empty[GenericMemoryModule]
+      var communicationElements = Buffer.empty[GenericCommunicationModule]
+      model.vertexSet.stream
+        .filter(v => ForSyDeHierarchy.DigitalModule.tryView(model, v).isPresent())
+        .forEach(v => {
+          ForSyDeHierarchy.GenericProcessingModule
+            .tryView(model, v)
+            .ifPresent(p => processingElements :+= p)
+          ForSyDeHierarchy.GenericMemoryModule
+            .tryView(model, v)
+            .ifPresent(p => memoryElements :+= p)
+          ForSyDeHierarchy.GenericCommunicationModule
+            .tryView(model, v)
+            .ifPresent(p => communicationElements :+= p)
+        })
+      val topology = AsSubgraph(
+        model,
+        (processingElements ++ memoryElements ++ communicationElements)
+          .map(_.getViewedVertex())
+          .toSet
+          .asJava
+      )
+      // check if pes and mes connect only to CE etc
+      lazy val processingOnlyValidLinks = processingElements.forall(pe => {
+        topology
+          .outgoingEdgesOf(pe.getViewedVertex)
+          .stream
+          .map(topology.getEdgeTarget(_))
+          .filter(ForSyDeHierarchy.DigitalModule.tryView(model, _).isPresent())
+          .allMatch(v =>
             ForSyDeHierarchy.GenericCommunicationModule
               .tryView(model, v)
-              .ifPresent(p => communicationElements :+= p)
-          })
-        val topology = AsSubgraph(
-          model,
-          (processingElements ++ memoryElements ++ communicationElements)
-            .map(_.getViewedVertex())
-            .toSet
-            .asJava
-        )
-        // check if pes and mes connect only to CE etc
-        lazy val processingOnlyValidLinks = processingElements.forall(pe => {
-          topology
-            .outgoingEdgesOf(pe.getViewedVertex)
-            .stream
-            .map(topology.getEdgeTarget(_))
-            .filter(ForSyDeHierarchy.DigitalModule.tryView(model, _).isPresent())
-            .allMatch(v =>
-              ForSyDeHierarchy.GenericCommunicationModule
-                .tryView(model, v)
-                .isPresent() || ForSyDeHierarchy.GenericMemoryModule.tryView(model, v).isPresent()
-            )
-          &&
-          topology
-            .incomingEdgesOf(pe.getViewedVertex)
-            .stream
-            .map(topology.getEdgeSource(_))
-            .filter(ForSyDeHierarchy.DigitalModule.tryView(model, _).isPresent())
-            .allMatch(v =>
-              ForSyDeHierarchy.GenericCommunicationModule
-                .tryView(model, v)
-                .isPresent() || ForSyDeHierarchy.GenericMemoryModule.tryView(model, v).isPresent()
-            )
-        })
-        // do the same for MEs
-        lazy val memoryOnlyValidLinks = memoryElements.forall(me => {
-          topology
-            .outgoingEdgesOf(me.getViewedVertex)
-            .stream
-            .map(topology.getEdgeTarget(_))
-            .filter(ForSyDeHierarchy.DigitalModule.tryView(model, _).isPresent())
-            .allMatch(v =>
-              ForSyDeHierarchy.GenericCommunicationModule
-                .tryView(model, v)
-                .isPresent() || ForSyDeHierarchy.GenericProcessingModule
-                .tryView(model, v)
-                .isPresent()
-            )
-          &&
-          topology
-            .incomingEdgesOf(me.getViewedVertex)
-            .stream
-            .map(topology.getEdgeSource(_))
-            .filter(ForSyDeHierarchy.DigitalModule.tryView(model, _).isPresent())
-            .allMatch(v =>
-              ForSyDeHierarchy.GenericCommunicationModule
-                .tryView(model, v)
-                .isPresent() || ForSyDeHierarchy.GenericProcessingModule
-                .tryView(model, v)
-                .isPresent()
-            )
-        })
-        // check if the elements can all be distributed in tiles
-        // basically this check to see if there are always neighboring
-        // pe, mem and ce
-        lazy val tilesExist = processingElements.forall(pe => {
-          memoryElements
-            .find(mem => model.hasConnection(mem, pe) || model.hasConnection(pe, mem))
-            .map(mem =>
-              communicationElements.exists(ce =>
-                (model.hasConnection(ce, pe) || model.hasConnection(pe, ce)) &&
-                  (model.hasConnection(mem, ce) || model.hasConnection(ce, mem))
-              )
-            )
-            .getOrElse(false)
-        })
-        // now tile elements via sorting of the processing elements
-        lazy val tiledMemories = memoryElements.sortBy(mem => {
-          processingElements
-            .filter(pe => model.hasConnection(pe, mem) || model.hasConnection(mem, pe))
-            .map(pe => processingElements.indexOf(pe))
-            .minOption
-            .getOrElse(-1)
-        })
-        // we separate the comms in NI and routers
-        lazy val tileableCommElems = communicationElements.filter(ce => {
-          processingElements.exists(pe =>
-            model.hasConnection(pe, ce) || model.hasConnection(ce, pe)
+              .isPresent() || ForSyDeHierarchy.GenericMemoryModule.tryView(model, v).isPresent()
           )
-        })
-        // and do the same as done for the memories
-        lazy val tiledCommElems = tileableCommElems.sortBy(ce => {
-          processingElements
-            .filter(pe => model.hasConnection(pe, ce) || model.hasConnection(ce, pe))
-            .map(pe => processingElements.indexOf(pe))
-            .minOption
-            .getOrElse(-1)
-        })
-        lazy val routers = communicationElements.filterNot(ce => tileableCommElems.contains(ce))
-        // and also the subset of only communication elements
-        lazy val processorsProvisions = processingElements.map(pe => {
-          // we do it mutable for simplicity...
-          // the performance hit should not be a concern now, for super big instances, this can be reviewed
-          var mutMap = mutable.Map[String, Map[String, Double]]()
-          ForSyDeHierarchy.InstrumentedProcessingModule
-            .tryView(pe)
-            .map(ipe => {
-              ipe
-                .modalInstructionsPerCycle()
-                .entrySet()
-                .forEach(e => {
-                  mutMap(e.getKey()) = e.getValue().asScala.map((k, v) => k -> v.toDouble).toMap
-                })
-            })
-          mutMap.toMap
-        })
-        if (processingElements.length <= 0) {
-          errors += "identTiledMultiCore: no processing elements"
-        }
-        if (processingElements.size > memoryElements.size) {
-          errors += "identTiledMultiCore: less memories than processors"
-        }
-        if (processingElements.size > communicationElements.size) {
-          errors += "identTiledMultiCore: less communication elements than processors"
-        }
-        if (
-          !processingOnlyValidLinks ||
-          !memoryOnlyValidLinks
-        ) { errors += "identTiledMultiCore: processing or memory have invalid links for tiling" }
-        if (!tilesExist) { errors += "identTiledMultiCore: not all tiles exist" }
-        val m =
-          if (
-            processingElements.length > 0 &&
-            processingElements.size <= memoryElements.size &&
-            processingElements.size <= communicationElements.size &&
-            processingOnlyValidLinks &&
-            memoryOnlyValidLinks &&
-            tilesExist
-          ) {
-            var interconnectTopologySrcs = Buffer[String]()
-            var interconnectTopologyDsts = Buffer[String]()
-            topology
-              .edgeSet()
-              .forEach(e => {
-                interconnectTopologySrcs += topology.getEdgeSource(e).getIdentifier()
-                interconnectTopologyDsts += topology.getEdgeTarget(e).getIdentifier()
-              })
-            Set(
-              TiledMultiCoreWithFunctions(
-                processingElements.map(_.getIdentifier()).toVector,
-                memoryElements.map(_.getIdentifier()).toVector,
-                tiledCommElems.map(_.getIdentifier()).toVector,
-                routers.map(_.getIdentifier()).toVector,
-                interconnectTopologySrcs.toVector,
-                interconnectTopologyDsts.toVector,
-                processorsProvisions.toVector,
-                processingElements.map(_.operatingFrequencyInHertz().toLong).toVector,
-                tiledMemories.map(_.spaceInBits().toLong).toVector,
-                communicationElements
-                  .map(
-                    ForSyDeHierarchy.InstrumentedCommunicationModule
-                      .tryView(_)
-                      .map(_.maxConcurrentFlits().toInt)
-                      .orElse(1)
-                  )
-                  .toVector,
-                communicationElements
-                  .map(
-                    ForSyDeHierarchy.InstrumentedCommunicationModule
-                      .tryView(_)
-                      .map(ce =>
-                        ce.flitSizeInBits() * ce.maxCyclesPerFlit() * ce
-                          .operatingFrequencyInHertz()
-                      )
-                      .map(_.toDouble)
-                      .orElse(0.0)
-                  )
-                  .toVector,
-                preComputedPaths = Map.empty
-              )
-            )
-          } else Set()
-        (m, errors.toSet)
+        &&
+        topology
+          .incomingEdgesOf(pe.getViewedVertex)
+          .stream
+          .map(topology.getEdgeSource(_))
+          .filter(ForSyDeHierarchy.DigitalModule.tryView(model, _).isPresent())
+          .allMatch(v =>
+            ForSyDeHierarchy.GenericCommunicationModule
+              .tryView(model, v)
+              .isPresent() || ForSyDeHierarchy.GenericMemoryModule.tryView(model, v).isPresent()
+          )
       })
-      .getOrElse((Set(), Set()))
+      // do the same for MEs
+      lazy val memoryOnlyValidLinks = memoryElements.forall(me => {
+        topology
+          .outgoingEdgesOf(me.getViewedVertex)
+          .stream
+          .map(topology.getEdgeTarget(_))
+          .filter(ForSyDeHierarchy.DigitalModule.tryView(model, _).isPresent())
+          .allMatch(v =>
+            ForSyDeHierarchy.GenericCommunicationModule
+              .tryView(model, v)
+              .isPresent() || ForSyDeHierarchy.GenericProcessingModule
+              .tryView(model, v)
+              .isPresent()
+          )
+        &&
+        topology
+          .incomingEdgesOf(me.getViewedVertex)
+          .stream
+          .map(topology.getEdgeSource(_))
+          .filter(ForSyDeHierarchy.DigitalModule.tryView(model, _).isPresent())
+          .allMatch(v =>
+            ForSyDeHierarchy.GenericCommunicationModule
+              .tryView(model, v)
+              .isPresent() || ForSyDeHierarchy.GenericProcessingModule
+              .tryView(model, v)
+              .isPresent()
+          )
+      })
+      // check if the elements can all be distributed in tiles
+      // basically this check to see if there are always neighboring
+      // pe, mem and ce
+      lazy val tilesExist = processingElements.forall(pe => {
+        memoryElements
+          .find(mem => model.hasConnection(mem, pe) || model.hasConnection(pe, mem))
+          .map(mem =>
+            communicationElements.exists(ce =>
+              (model.hasConnection(ce, pe) || model.hasConnection(pe, ce)) &&
+                (model.hasConnection(mem, ce) || model.hasConnection(ce, mem))
+            )
+          )
+          .getOrElse(false)
+      })
+      // now tile elements via sorting of the processing elements
+      lazy val tiledMemories = memoryElements.sortBy(mem => {
+        processingElements
+          .filter(pe => model.hasConnection(pe, mem) || model.hasConnection(mem, pe))
+          .map(pe => processingElements.indexOf(pe))
+          .minOption
+          .getOrElse(-1)
+      })
+      // we separate the comms in NI and routers
+      lazy val tileableCommElems = communicationElements.filter(ce => {
+        processingElements.exists(pe =>
+          model.hasConnection(pe, ce) || model.hasConnection(ce, pe)
+        )
+      })
+      // and do the same as done for the memories
+      lazy val tiledCommElems = tileableCommElems.sortBy(ce => {
+        processingElements
+          .filter(pe => model.hasConnection(pe, ce) || model.hasConnection(ce, pe))
+          .map(pe => processingElements.indexOf(pe))
+          .minOption
+          .getOrElse(-1)
+      })
+      lazy val routers = communicationElements.filterNot(ce => tileableCommElems.contains(ce))
+      // and also the subset of only communication elements
+      lazy val processorsProvisions = processingElements.map(pe => {
+        // we do it mutable for simplicity...
+        // the performance hit should not be a concern now, for super big instances, this can be reviewed
+        var mutMap = mutable.Map[String, Map[String, Double]]()
+        ForSyDeHierarchy.InstrumentedProcessingModule
+          .tryView(pe)
+          .map(ipe => {
+            ipe
+              .modalInstructionsPerCycle()
+              .entrySet()
+              .forEach(e => {
+                mutMap(e.getKey()) = e.getValue().asScala.map((k, v) => k -> v.toDouble).toMap
+              })
+          })
+        mutMap.toMap
+      })
+      if (processingElements.length <= 0) {
+        errors += "identTiledMultiCore: no processing elements"
+      }
+      if (processingElements.size > memoryElements.size) {
+        errors += "identTiledMultiCore: less memories than processors"
+      }
+      if (processingElements.size > communicationElements.size) {
+        errors += "identTiledMultiCore: less communication elements than processors"
+      }
+      if (
+        !processingOnlyValidLinks ||
+        !memoryOnlyValidLinks
+      ) { errors += "identTiledMultiCore: processing or memory have invalid links for tiling" }
+      if (!tilesExist) { errors += "identTiledMultiCore: not all tiles exist" }
+      val m =
+        if (
+          processingElements.length > 0 &&
+          processingElements.size <= memoryElements.size &&
+          processingElements.size <= communicationElements.size &&
+          processingOnlyValidLinks &&
+          memoryOnlyValidLinks &&
+          tilesExist
+        ) {
+          var interconnectTopologySrcs = Buffer[String]()
+          var interconnectTopologyDsts = Buffer[String]()
+          topology
+            .edgeSet()
+            .forEach(e => {
+              interconnectTopologySrcs += topology.getEdgeSource(e).getIdentifier()
+              interconnectTopologyDsts += topology.getEdgeTarget(e).getIdentifier()
+            })
+          Set(
+            TiledMultiCoreWithFunctions(
+              processingElements.map(_.getIdentifier()).toVector,
+              memoryElements.map(_.getIdentifier()).toVector,
+              tiledCommElems.map(_.getIdentifier()).toVector,
+              routers.map(_.getIdentifier()).toVector,
+              interconnectTopologySrcs.toVector,
+              interconnectTopologyDsts.toVector,
+              processorsProvisions.toVector,
+              processingElements.map(_.operatingFrequencyInHertz().toLong).toVector,
+              tiledMemories.map(_.spaceInBits().toLong).toVector,
+              communicationElements
+                .map(
+                  ForSyDeHierarchy.InstrumentedCommunicationModule
+                    .tryView(_)
+                    .map(_.maxConcurrentFlits().toInt)
+                    .orElse(1)
+                )
+                .toVector,
+              communicationElements
+                .map(
+                  ForSyDeHierarchy.InstrumentedCommunicationModule
+                    .tryView(_)
+                    .map(ce =>
+                      ce.flitSizeInBits() * ce.maxCyclesPerFlit() * ce
+                        .operatingFrequencyInHertz()
+                    )
+                    .map(_.toDouble)
+                    .orElse(0.0)
+                )
+                .toVector,
+              preComputedPaths = Map.empty
+            )
+          )
+        } else Set()
+      (m, errors.toSet)
+    }
+    // val modelOpt = models
+    //   .filter(_.isInstanceOf[ForSyDeDesignModel])
+    //   .map(_.asInstanceOf[ForSyDeDesignModel])
+    //   .map(_.systemGraph)
+    //   .reduceOption(_.merge(_))
+    // modelOpt
+    //   .map(model => {
+    //     var errors                = mutable.Set[String]()
+    //     val model                 = modelOpt.get
+    //   })
+    //   .getOrElse((Set(), Set()))
   }
 
   def identSharedMemoryMultiCore(

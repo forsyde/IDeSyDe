@@ -127,6 +127,7 @@ trait HttpServerLike {
 
     fn send_design<T: DesignModel + ?Sized>(&self, model: &T) -> Result<Response, Error> {
         let client = self.get_client();
+        // println!("{}", DesignModelMessage::from(model).to_json_str());
         client
             .post(format!(
                 "http://{}:{}/design",

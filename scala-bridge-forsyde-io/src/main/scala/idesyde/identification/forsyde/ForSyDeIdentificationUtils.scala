@@ -16,6 +16,6 @@ object ForSyDeIdentificationUtils {
       .map(_.systemGraph)
       .reduceOption(_.merge(_))
       .map(body(_))
-      .getOrElse((Set(), Set()))
+      .getOrElse((Set(), Set("No ForSyDe model present")))
   }
 }

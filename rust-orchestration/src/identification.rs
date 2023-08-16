@@ -187,12 +187,13 @@ impl IdentificationModule for ExternalServerIdentificationModule {
         // );
         for design_model in design_models {
             // let message = DesignModelMessage::from_dyn_design_model(design_model.as_ref());
-            if let Err(e) = self.send_design(design_model.as_ref()) {
-                warn!(
+            match self.send_design(design_model.as_ref()) {
+                Ok(_) => {}
+                Err(e) => warn!(
                     "Module {} had an error while recieving a design model at {}.",
                     self.unique_identifier(),
                     e.url().map(|x| x.as_str()).unwrap_or("<MissingUrl>")
-                )
+                ),
             }
             // self.write_line_to_input(format!("DESIGN {}", message.to_json_str()).as_str())
             //     .expect("Error at writing");

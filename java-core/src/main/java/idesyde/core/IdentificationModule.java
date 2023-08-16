@@ -40,9 +40,9 @@ public interface IdentificationModule {
 
     default Optional<Path> designModelToOutput(DesignModel m, Path p) {return Optional.empty(); }
 
-    Set<ReverseIdentificationRule<?>> reverseIdentificationRules();
+    Set<ReverseIdentificationRule> reverseIdentificationRules();
 
-    Set<IdentificationRule<?>> identificationRules();
+    Set<IdentificationRule> identificationRules();
 
     default Set<DesignModel> reverseIdentification(
             Set<DecisionModel> solvedDecisionModels,
@@ -53,22 +53,22 @@ public interface IdentificationModule {
         ).collect(Collectors.toSet());
     }
 
-    default Set<DecisionModel> identificationStep(
+    default Set<IdentificationResult> identificationStep(
             long stepNumber,
             Set<DesignModel> designModels,
             Set<DecisionModel> decisionModels
     ) {
-        if (stepNumber == 0L) {
-            return identificationRules().stream().filter(IdentificationRule::usesDesignModels)
-                    .flatMap(identificationRule -> identificationRule.apply(designModels, decisionModels).stream())
-                    .filter(m -> !decisionModels.contains(m))
-                    .collect(Collectors.toSet());
-        } else {
-            return identificationRules().stream().filter(IdentificationRule::usesDecisionModels)
-                    .flatMap(identificationRule -> identificationRule.apply(designModels, decisionModels).stream())
-                    .filter(m -> !decisionModels.contains(m))
-                    .collect(Collectors.toSet());
-        }
+        return identificationRules().stream()
+                .map(identificationRule -> identificationRule.apply(designModels, decisionModels))
+                .filter(m -> !decisionModels.containsAll(m.identified()))
+                .collect(Collectors.toSet());
+//        if (stepNumber == 0L) {
+//        } else {
+//            return identificationRules().stream().filter(x -> !x.usesDesignModels())
+//                    .flatMap(identificationRule -> identificationRule.apply(designModels, decisionModels).stream())
+//                    .filter(m -> !decisionModels.contains(m))
+//                    .collect(Collectors.toSet());
+//        }
     }
 
 }

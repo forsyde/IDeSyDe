@@ -22,12 +22,12 @@ public class MatlabIdentificationModule implements IdentificationModuleBlueprint
     }
 
     @Override
-    public Set<ReverseIdentificationRule<?>> reverseIdentificationRules() {
+    public Set<ReverseIdentificationRule> reverseIdentificationRules() {
         return Set.of();
     }
 
     @Override
-    public Set<IdentificationRule<?>> identificationRules() {
+    public Set<IdentificationRule> identificationRules() {
         return Set.of(
                 new CommunicatingAndTriggeredReactiveWorkloadIRule()
         );

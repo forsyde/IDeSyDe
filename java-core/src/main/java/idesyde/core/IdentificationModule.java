@@ -4,6 +4,7 @@ import idesyde.core.headers.DecisionModelHeader;
 import idesyde.core.headers.DesignModelHeader;
 
 import java.nio.file.Path;
+import java.util.HashSet;
 import java.util.Optional;
 import java.util.Set;
 import java.util.concurrent.Callable;
@@ -26,7 +27,7 @@ public interface IdentificationModule {
      */
     String uniqueIdentifier();
 
-    default Optional<DesignModel> inputsToDesignModel(Path p) { return Optional.empty(); }
+//    default Optional<DesignModel> inputsToDesignModel(Path p) { return Optional.empty(); }
 
     /** decoders used to reconstruct decision models from headers.
      *
@@ -36,9 +37,9 @@ public interface IdentificationModule {
      * @return
      *   the registered decoders
      */
-    Optional<DecisionModel> decisionHeaderToModel(DecisionModelHeader header);
+//    Optional<DecisionModel> decisionHeaderToModel(DecisionModelHeader header);
 
-    default Optional<Path> designModelToOutput(DesignModel m, Path p) {return Optional.empty(); }
+//    default Optional<Path> designModelToOutput(DesignModel m, Path p) {return Optional.empty(); }
 
     Set<ReverseIdentificationRule> reverseIdentificationRules();
 
@@ -53,15 +54,25 @@ public interface IdentificationModule {
         ).collect(Collectors.toSet());
     }
 
-    default Set<IdentificationResult> identificationStep(
+    default IdentificationResult identificationStep(
             long stepNumber,
             Set<DesignModel> designModels,
             Set<DecisionModel> decisionModels
     ) {
         return identificationRules().stream()
                 .map(identificationRule -> identificationRule.apply(designModels, decisionModels))
-                .filter(m -> !decisionModels.containsAll(m.identified()))
-                .collect(Collectors.toSet());
+                .reduce((res1, res2) -> {
+                    var merged = new HashSet<DecisionModel>();
+                    var errs = new HashSet<String>();
+                    merged.addAll(res1.identified());
+                    merged.addAll(res2.identified());
+                    errs.addAll(res1.errors());
+                    errs.addAll(res2.errors());
+                    return new IdentificationResult(merged, errs);
+                })
+                .orElse(new IdentificationResult(Set.of(), Set.of()));
+//                .filter(m -> !decisionModels.containsAll(m.identified()))
+//                .collect(Collectors.toSet());
 //        if (stepNumber == 0L) {
 //        } else {
 //            return identificationRules().stream().filter(x -> !x.usesDesignModels())

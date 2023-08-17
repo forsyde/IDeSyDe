@@ -1,9 +1,9 @@
 package idesyde.core;
 
-import java.util.List;
+import java.util.Set;
 
 public record IdentificationResult(
-        List<DecisionModel> identified,
-        List<String> errors
+        Set<DecisionModel> identified,
+        Set<String> errors
 ) {
 }

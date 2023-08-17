@@ -298,6 +298,14 @@ fn main() {
         let (identified, _) =
             identification_procedure(&imodules, &design_models, &pre_identified, 0);
         info!("Identified {} decision model(s)", identified.len());
+        debug!(
+            "identified categories: {}",
+            identified
+                .iter()
+                .map(|x| x.category())
+                .reduce(|s1, s2| s1.clone() + ", " + &s2)
+                .unwrap_or("None".to_string())
+        );
 
         // let dominant = compute_dominant_decision_models(&identified_refs);
 

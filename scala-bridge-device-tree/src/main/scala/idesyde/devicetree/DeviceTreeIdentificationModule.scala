@@ -44,9 +44,13 @@ object DeviceTreeIdentificationModule
 
   def designMessageToModel(message: DesignModelMessage): Set[DesignModel] = {
     if (message.header.model_paths.forall(_.endsWith("dts"))) {
+      val prefix = message.header.model_paths
+        .map(stringToPath(_))
+        .map(p => p.last.replace(p.ext, ""))
+        .foldLeft("")((s1, s2) => s1 + s2)
       message.body
         .flatMap(src =>
-          parseDeviceTreeWithPrefix(src, "") match
+          parseDeviceTreeWithPrefix(src, prefix) match
             case Success(result, next) => Some(DeviceTreeDesignModel(List(result)))
             case _                     => None
         )

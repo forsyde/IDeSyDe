@@ -4,6 +4,7 @@ import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.annotation.JsonSerialize;
 import com.fasterxml.jackson.dataformat.cbor.CBORFactory;
+import idesyde.core.DecisionModel;
 import idesyde.core.headers.DecisionModelHeader;
 
 import java.util.Optional;
@@ -28,6 +29,10 @@ public record DecisionModelMessage(
         } catch (JsonProcessingException e) {
             return Optional.empty();
         }
+    }
+
+    public static DecisionModelMessage from(DecisionModel model) {
+        return new DecisionModelMessage(model.header(), model.bodyAsText());
     }
 
     static final ObjectMapper objectMapper = new ObjectMapper(new CBORFactory());

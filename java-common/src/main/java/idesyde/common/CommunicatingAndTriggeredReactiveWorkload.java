@@ -1,12 +1,10 @@
 package idesyde.common;
 
 import com.fasterxml.jackson.core.JsonProcessingException;
-import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.annotation.JsonSerialize;
 import idesyde.core.DecisionModel;
 import idesyde.core.DecisionModelWithBody;
 import idesyde.core.headers.DecisionModelHeader;
-import idesyde.core.headers.LabelledArcWithPorts;
 
 import java.util.*;
 import java.util.stream.Collectors;

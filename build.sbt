@@ -55,10 +55,26 @@ lazy val root = project
   )
   .aggregate(common, choco, forsyde, matlab, devicetree, blueprints)
 
-lazy val core = (project in file("scala-core")).settings(
-  // name := "idesyde-scala-core",
-  libraryDependencies ++= Seq("com.lihaoyi" %%% "upickle" % upickleVersion)
-)
+// lazy val java_core = (project in file("java-core")).settings(
+//   // name := "idesyde-scala-core",
+//   libraryDependencies += "com.fasterxml.jackson.module"     % "jackson-modules-base"    % "2.15.0",
+//   libraryDependencies += "com.fasterxml.jackson.dataformat" % "jackson-dataformat-cbor" % "2.15.0",
+//   target := baseDirectory.value / "sbt-target" / name.value
+// )
+
+// lazy val java_blueprints = (project in file("java-core")).settings(
+//   // name := "idesyde-scala-core",
+//   libraryDependencies += "info.picocli" % "picocli"      % "4.7.3",
+//   libraryDependencies += "org.slf4j"    % "slf4j-simple" % slf4jVersion % Runtime,
+//   libraryDependencies += "io.javalin"   % "javalin"      % javalinVersion,
+//   target := baseDirectory.value / "sbt-target" / name.value
+// )
+
+lazy val core = (project in file("scala-core"))
+  .settings(
+    // name := "idesyde-scala-core",
+    libraryDependencies ++= Seq("com.lihaoyi" %%% "upickle" % upickleVersion)
+  )
 
 lazy val blueprints = (project in file("scala-blueprints"))
   .dependsOn(core)

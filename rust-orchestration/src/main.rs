@@ -1,12 +1,9 @@
-use std::{collections::HashSet, path::Path, sync::Arc};
+use std::{path::Path, sync::Arc};
 
 use clap::Parser;
 use env_logger::WriteStyle;
 use idesyde_core::{
-    headers::{
-        load_decision_model_headers_from_binary, load_design_model_headers_from_binary,
-        DesignModelHeader, ExplorationBid,
-    },
+    headers::{load_decision_model_headers_from_binary, ExplorationBid},
     DecisionModel, DesignModel, ExplorationConfiguration, ExplorationModule,
 };
 use idesyde_orchestration::{
@@ -232,13 +229,7 @@ fn main() {
                     &output_path,
                 )
             },
-            || {
-                idesyde_orchestration::find_exploration_modules(
-                    emodules_path,
-                    &identified_path,
-                    &explored_path,
-                )
-            },
+            || idesyde_orchestration::find_exploration_modules(emodules_path),
         );
         for eximod in &imodules {
             debug!(

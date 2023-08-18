@@ -9,5 +9,6 @@ repositories {
 dependencies {
     implementation 'com.github.johnrengelman:shadow:8.1.1'
     implementation "org.beryx:badass-jlink-plugin:2.26.0"
+    implementation 'ch.epfl.scala:gradle-bloop_2.12:1.6.1'
 }
 

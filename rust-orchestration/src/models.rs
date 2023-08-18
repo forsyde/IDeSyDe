@@ -1,6 +1,6 @@
 use std::{collections::HashSet, path::Path};
 
-use idesyde_blueprints::{DecisionModelMessage, DesignModelMessage};
+use idesyde_blueprints::{DecisionModelMessage, DesignModelMessage, ExplorationSolutionMessage};
 use idesyde_core::{
     headers::{DecisionModelHeader, DesignModelHeader},
     DecisionModel, DesignModel,
@@ -73,6 +73,17 @@ impl From<&DecisionModelHeader> for OpaqueDecisionModel {
                 .to_owned()
                 .and_then(|x| std::fs::read_to_string(x).ok())
                 .and_then(|x| serde_json::from_str(&x).ok()),
+            body_msgpack: None,
+            body_cbor: None,
+        }
+    }
+}
+
+impl From<&ExplorationSolutionMessage> for OpaqueDecisionModel {
+    fn from(value: &ExplorationSolutionMessage) -> Self {
+        OpaqueDecisionModel {
+            header: value.solved.header().to_owned(),
+            body_json: value.solved.body_with_newlines_unescaped(),
             body_msgpack: None,
             body_cbor: None,
         }

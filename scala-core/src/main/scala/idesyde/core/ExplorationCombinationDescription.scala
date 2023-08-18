@@ -8,7 +8,6 @@ import idesyde.core.ExplorationCriteria
 
 final case class ExplorationCombinationDescription(
     val explorer_unique_identifier: String,
-    val decision_model_category: String,
     val can_explore: Boolean,
     val properties: Map[String, Double]
 ) derives ReadWriter {
@@ -39,8 +38,8 @@ final case class ExplorationCombinationDescription(
 
 object ExplorationCombinationDescription {
 
-  def impossible(uniqueIdentifier: String, decisionModelIdentifier: String) =
-    ExplorationCombinationDescription(uniqueIdentifier, decisionModelIdentifier, false, Map())
+  def impossible(uniqueIdentifier: String) =
+    ExplorationCombinationDescription(uniqueIdentifier, false, Map())
 
   val partialOrdering = new PartialOrdering[ExplorationCombinationDescription] {
     def lteq(x: ExplorationCombinationDescription, y: ExplorationCombinationDescription): Boolean =

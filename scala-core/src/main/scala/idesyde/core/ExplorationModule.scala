@@ -22,10 +22,10 @@ trait ExplorationModule {
   def explorers: List[Explorer] = List()
 
   def canExplore(decisionModel: DecisionModel): Boolean =
-    explorers.exists(e => e.combination(decisionModel).can_explore)
+    explorers.exists(e => e.bid(decisionModel).can_explore)
 
   def combination(decisionModel: DecisionModel): List[ExplorationCombinationDescription] =
-    explorers.map(e => e.combination(decisionModel))
+    explorers.map(e => e.bid(decisionModel))
 
   def explore(
       decisionModel: DecisionModel,

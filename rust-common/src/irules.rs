@@ -85,7 +85,7 @@ pub fn identify_asynchronous_aperiodic_dataflow_from_sdf(
     decision_models: &Vec<Arc<dyn DecisionModel>>,
 ) -> IdentificationResult {
     let mut identified = Vec::new();
-    let mut errors: HashSet<String> = HashSet::new();
+    let errors: HashSet<String> = HashSet::new();
     for m in decision_models {
         if let Some(analysed_sdf_application) = m.downcast_ref::<AnalysedSDFApplication>() {
             // build a temporary graph for analysis

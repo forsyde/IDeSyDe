@@ -3,4 +3,5 @@ include 'java-core'
 include 'java-common'
 include 'java-blueprints'
 include 'java-bridge-forsyde-io'
+//include 'scala-common'
 

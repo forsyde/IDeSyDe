@@ -31,7 +31,6 @@ public interface IdentificationModuleBlueprint extends IdentificationModule {
     default void standaloneIdentificationModule(
             String[] args
     ) {
-        final ObjectMapper objectMapper = new ObjectMapper(new CBORFactory());
         IdentificationModuleCLI cli = new CommandLine(new IdentificationModuleCLI()).getCommand();
         var decisionModels = new HashSet<DecisionModel>();
         var solvedDecisionModels = new HashSet<DecisionModel>();

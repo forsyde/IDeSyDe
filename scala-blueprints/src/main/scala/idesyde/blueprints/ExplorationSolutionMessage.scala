@@ -31,4 +31,7 @@ object ExplorationSolutionMessage {
       solved = DecisionModelMessage.fromDecisionModel(sol._1)
     )
 
+  def fromJsonString(s: String): ExplorationSolutionMessage =
+    read(s)
+
 }

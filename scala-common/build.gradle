@@ -1,6 +1,4 @@
-
-
 plugins {
-    id 'scala'
+    id 'idesyde.scala-library'
 }
 

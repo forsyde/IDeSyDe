@@ -30,7 +30,7 @@ import idesyde.common.PeriodicWorkloadAndSDFServerToMultiCore
 
 class ChocoExplorer(using logger: Logger) extends Explorer:
 
-  override def combination(decisionModel: DecisionModel): ExplorationCombinationDescription = {
+  override def bid(decisionModel: DecisionModel): ExplorationCombinationDescription = {
     val canExplore = decisionModel match
       case sdf: SDFToTiledMultiCore                                => true
       case workload: PeriodicWorkloadToPartitionedSharedMultiCore  => true
@@ -39,7 +39,6 @@ class ChocoExplorer(using logger: Logger) extends Explorer:
       case _                                                       => false
     ExplorationCombinationDescription(
       uniqueIdentifier,
-      decisionModel.category,
       canExplore,
       availableCriterias(decisionModel)
         .map(c => c.identifier -> criteriaValue(decisionModel, c))

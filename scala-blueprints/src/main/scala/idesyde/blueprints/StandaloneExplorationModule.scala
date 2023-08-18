@@ -10,6 +10,7 @@ import idesyde.utils.Logger
 import idesyde.core.CompleteDecisionModel
 import idesyde.core.ExplorationCombinationDescription
 import scala.collection.mutable
+import io.javalin.Javalin
 
 /** The trait/interface for an exploration module that provides the explorers rules required to
   * explored identified design spaces [1].
@@ -58,6 +59,8 @@ trait StandaloneExplorationModule
         conf match {
           case ExplorationModuleConfiguration(_, _, _, _, _, _, _, _, _, _, Some("stdio")) =>
             serverStandaloneExplorationModule(conf, scala.io.StdIn.readLine, println)
+          case ExplorationModuleConfiguration(_, _, _, _, _, _, _, _, _, _, Some("http")) =>
+            standaloneHttpExplorationModule(0)
           case ExplorationModuleConfiguration(
                 Some(dominantPath),
                 Some(solutionPath),
@@ -238,7 +241,7 @@ trait StandaloneExplorationModule
         for (
           explorer <- explorers;
           model    <- decisionMessageToModel(modelMessage);
-          bid = explorer.combination(model)
+          bid = explorer.bid(model)
         ) {
           sendOutputLine("RESULT " + bid.asText)
         }
@@ -301,6 +304,103 @@ trait StandaloneExplorationModule
         logger.error("Passed invalid command: " + command)
       }
     }
+  }
+
+  inline def standaloneHttpExplorationModule(port: Int): Unit = {
+    var decisionModels                = mutable.Set[DecisionModel]()
+    var solvedDecisionModels          = mutable.Set[DecisionModel]()
+    var solvedDecisionObjs            = mutable.Map[DecisionModel, Map[String, Double]]()
+    var maximumSolutions              = 0L
+    var explorationTotalTimeOutInSecs = 0L
+    var timeResolution                = 0L
+    var memoryResolution              = 0L
+    val server = Javalin
+      .create()
+      .post(
+        "/set",
+        ctx => {
+          if (ctx.queryParamMap().containsKey("parameter")) {
+            ctx.queryParam("parameter").toLowerCase() match {
+              case "maximum-solutions" | "max-sols" => maximumSolutions = ctx.body().toLong
+              case "total-timeout" => explorationTotalTimeOutInSecs = ctx.body().toLong
+              case "time-resolution" | "time-res" => timeResolution = ctx.body().toLong
+              case "memory-resolution" | "memory-res" | "mem-res" =>
+                memoryResolution = ctx.body().toLong
+              case _ =>
+            }
+          }
+        }
+      )
+      .post(
+        "/decision",
+        ctx =>
+          for (m <- decisionMessageToModel(DecisionModelMessage.fromJsonString(ctx.body()))) {
+            decisionModels += m
+          }
+      )
+      .post(
+        "/solved",
+        ctx =>
+          val sol = ExplorationSolutionMessage.fromJsonString(ctx.body())
+          for (m <- decisionMessageToModel(sol.solved)) {
+            solvedDecisionModels += m
+            solvedDecisionObjs(m) = sol.objectives
+          }
+      )
+      .get(
+        "/bid",
+        ctx => {
+          var bids = decisionMessageToModel(
+            DecisionModelMessage
+              .fromJsonString(ctx.body())
+          )
+            .map(decisionModel =>
+              explorers
+                .map(explorer => explorer.bid(decisionModel))
+            )
+            .getOrElse(List())
+          ctx.result(write(bids));
+        }
+      )
+      .ws(
+        "/explore",
+        ws => {
+          ws.onMessage(ctx => {
+            val request = ExplorationRequestMessage.fromJsonString(ctx.message())
+            // var request = objectMapper.readValue(ctx.message(), classOf[ExplorationRequestMessage]);
+            for (
+              explorer      <- explorers.find(e => e.uniqueIdentifier == request.explorer_id);
+              decisionModel <- decisionMessageToModel(request.model_message);
+              (sol, objs) <- explorer.explore(
+                decisionModel,
+                request.objectives,
+                maximumSolutions,
+                explorationTotalTimeOutInSecs,
+                timeResolution,
+                memoryResolution
+              )
+            ) {
+              val message = ExplorationSolutionMessage.fromSolution(sol, objs)
+              solvedDecisionModels += sol
+              solvedDecisionObjs(sol) = objs
+              ctx.send(message.asText)
+            }
+            ctx.closeSession()
+          });
+        }
+      )
+      .exception(
+        classOf[Exception],
+        (e, ctx) => {
+          e.printStackTrace();
+        }
+      );
+    server.events(es => {
+      es.serverStarted(() => {
+        System.out.println("INITIALIZED " + server.port());
+      });
+    });
+    server.start(0);
   }
 
 }

@@ -11,7 +11,7 @@ use std::{
 
 use rayon::prelude::*;
 
-use idesyde_blueprints::{DecisionModelMessage, DesignModelMessage, IdentificationResultMessage};
+use idesyde_blueprints::{DesignModelMessage, IdentificationResultMessage};
 use idesyde_core::{
     headers::{DecisionModelHeader, DesignModelHeader},
     DecisionModel, DesignModel, IdentificationModule, IdentificationResult,
@@ -84,23 +84,6 @@ impl ExternalServerIdentificationModule {
                         process: Some(Arc::new(Mutex::new(server_child))),
                     });
                 }
-                // if line.contains("INITIALIZED") {
-                //     return Some(ExternalServerIdentificationModule {
-                //         name: command_path_
-                //             .clone()
-                //             .file_name()
-                //             .and_then(|x| x.to_str())
-                //             .and_then(|x| x.split('.').next())
-                //             .expect("Could not fetch name from imodule file name.")
-                //             .to_string(),
-                //         identified_path: identified_path_.to_path_buf(),
-                //         inputs_path: inputs_path_.to_path_buf(),
-                //         solved_path: solved_path_.to_path_buf(),
-                //         reverse_path: reverse_path_.to_path_buf(),
-                //         output_path_: output_path_.to_path_buf(),
-                //         process: Arc::new(Mutex::new(server_child)),
-                //     });
-                // }
             }
         }
         None
@@ -295,12 +278,34 @@ impl IdentificationModule for ExternalServerIdentificationModule {
         for design_model in design_models {
             // let message = DesignModelMessage::from_dyn_design_model(design_model.as_ref());
             // self.write_line_to_input(format!("DESIGN {}", message.to_json_str()).as_str());
-            self.send_design(design_model.as_ref());
+            match self.send_design(design_model.as_ref()) {
+                Ok(a) => {
+                    if !a.status().is_success() {
+                        warn!(
+                            "Module {} raised error at design model input: {}",
+                            self.unique_identifier(),
+                            a.text().unwrap_or("<Empty>".to_string())
+                        )
+                    }
+                }
+                Err(_) => {}
+            };
         }
         for decision_model in solved_decision_models {
             // let message = DecisionModelMessage::from_dyn_decision_model(decision_model.as_ref());
             // self.write_line_to_input(format!("SOLVED INLINE {}", message.to_json_str()).as_str());
-            self.send_solved_decision(decision_model.as_ref());
+            match self.send_solved_decision(decision_model.as_ref()) {
+                Ok(a) => {
+                    if !a.status().is_success() {
+                        warn!(
+                            "Module {} raised error at solved model input: {}",
+                            self.unique_identifier(),
+                            a.text().unwrap_or("<Empty>".to_string())
+                        )
+                    }
+                }
+                Err(_) => {}
+            };
         }
         if let Ok(response) = self
             .send_command("integrate", &vec![])

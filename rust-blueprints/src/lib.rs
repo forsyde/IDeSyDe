@@ -121,6 +121,16 @@ impl ExplorationSolutionMessage {
     }
 }
 
+impl From<ExplorationSolution> for ExplorationSolutionMessage {
+    fn from(value: ExplorationSolution) -> Self {
+        let (sol, objs) = value;
+        ExplorationSolutionMessage {
+            objectives: objs.clone(),
+            solved: DecisionModelMessage::from(sol.as_ref()),
+        }
+    }
+}
+
 #[derive(Clone, PartialEq, Serialize, Deserialize)]
 pub struct IdentificationResultMessage {
     pub identified: Vec<DecisionModelMessage>,
@@ -157,7 +167,7 @@ impl ExplorationModule for StandaloneExplorationModule {
         total_timeout: i64,
         time_resolution: i64,
         memory_resolution: i64,
-    ) -> Box<dyn Iterator<Item = Arc<dyn DecisionModel>>> {
+    ) -> Vec<ExplorationSolution> {
         self.explorers
             .iter()
             .find(|e| e.unique_identifier() == explorer_id)
@@ -170,7 +180,7 @@ impl ExplorationModule for StandaloneExplorationModule {
                     memory_resolution,
                 )
             })
-            .unwrap_or(Box::new(std::iter::empty::<Arc<dyn DecisionModel>>()))
+            .unwrap_or(vec![])
     }
 
     fn iter_explore(
@@ -179,7 +189,7 @@ impl ExplorationModule for StandaloneExplorationModule {
         explorer_id: &str,
         currrent_solutions: Vec<ExplorationSolution>,
         exploration_configuration: idesyde_core::ExplorationConfiguration,
-        solution_iter: fn(ExplorationSolution) -> (),
+        solution_iter: fn(&ExplorationSolution) -> (),
     ) -> Vec<idesyde_core::ExplorationSolution> {
         self.explorers
             .iter()

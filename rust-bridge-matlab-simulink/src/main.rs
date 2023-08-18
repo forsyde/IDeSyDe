@@ -10,7 +10,7 @@ use idesyde_blueprints::{
 };
 use idesyde_core::{
     headers::{self, DesignModelHeader},
-    DecisionModel, DesignModel, MarkedIdentificationRule,
+    DesignModel,
 };
 use serde::{Deserialize, Serialize};
 

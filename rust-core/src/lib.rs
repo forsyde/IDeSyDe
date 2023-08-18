@@ -223,12 +223,12 @@ pub trait Explorer: Downcast + Send + Sync {
         total_timeout: i64,
         time_resolution: i64,
         memory_resolution: i64,
-    ) -> Box<dyn Iterator<Item = Arc<dyn DecisionModel>>>;
+    ) -> Vec<ExplorationSolution>;
     fn iter_explore(
         &self,
         m: Arc<dyn DecisionModel>,
         currrent_solutions: Vec<ExplorationSolution>,
-        solution_iter: fn(ExplorationSolution) -> (),
+        solution_iter: fn(&ExplorationSolution) -> (),
         exploration_configuration: ExplorationConfiguration,
     ) -> Vec<ExplorationSolution>;
 }
@@ -251,7 +251,7 @@ pub trait ExplorationModule: Send + Sync {
         total_timeout: i64,
         time_resolution: i64,
         memory_resolution: i64,
-    ) -> Box<dyn Iterator<Item = Arc<dyn DecisionModel>>>;
+    ) -> Vec<ExplorationSolution>;
     fn explore_best(
         &self,
         m: Arc<dyn DecisionModel>,
@@ -259,7 +259,7 @@ pub trait ExplorationModule: Send + Sync {
         total_timeout: i64,
         time_resolution: i64,
         memory_resolution: i64,
-    ) -> Box<dyn Iterator<Item = Arc<dyn DecisionModel>>> {
+    ) -> Vec<ExplorationSolution> {
         let bids = self.bid(m.clone());
         match compute_dominant_biddings(bids.iter()) {
             Some((_, bid)) => self.explore(
@@ -270,7 +270,7 @@ pub trait ExplorationModule: Send + Sync {
                 time_resolution,
                 memory_resolution,
             ),
-            None => Box::new(std::iter::empty()),
+            None => vec![],
         }
     }
     fn iter_explore(
@@ -279,14 +279,14 @@ pub trait ExplorationModule: Send + Sync {
         explorer_id: &str,
         currrent_solutions: Vec<ExplorationSolution>,
         exploration_configuration: ExplorationConfiguration,
-        solution_iter: fn(ExplorationSolution) -> (),
+        solution_iter: fn(&ExplorationSolution) -> (),
     ) -> Vec<ExplorationSolution>;
     fn iter_explore_best(
         &self,
         m: Arc<dyn DecisionModel>,
         currrent_solutions: Vec<ExplorationSolution>,
         exploration_configuration: ExplorationConfiguration,
-        solution_iter: fn(ExplorationSolution) -> (),
+        solution_iter: fn(&ExplorationSolution) -> (),
     ) -> Vec<ExplorationSolution> {
         let bids = self.bid(m.clone());
         match compute_dominant_biddings(bids.iter()) {

@@ -5,7 +5,6 @@ pub mod models;
 use std::borrow::BorrowMut;
 use std::cmp::Ordering;
 
-use std::collections::HashMap;
 use std::io::BufRead;
 use std::io::BufReader;
 use std::io::BufWriter;
@@ -20,7 +19,6 @@ use std::process::ChildStdout;
 use std::sync::Arc;
 use std::sync::Mutex;
 
-use exploration::ExternalExplorationModule;
 use exploration::ExternalServerExplorationModule;
 use identification::ExternalIdentificationModule;
 use identification::ExternalServerIdentificationModule;
@@ -35,6 +33,7 @@ use idesyde_core::IdentificationModule;
 use rayon::prelude::*;
 use reqwest::blocking::Response;
 use reqwest::Error;
+use serde::Serialize;
 
 trait LocalServerLike {
     fn get_process(&self) -> Arc<Mutex<Child>>;
@@ -165,6 +164,50 @@ trait HttpServerLike {
             .query(query)
             .send()
     }
+
+    fn http_get<T: Serialize + ?Sized>(
+        &self,
+        point: &str,
+        query: &Vec<(&str, &str)>,
+        body: &T,
+    ) -> Result<Response, Error> {
+        let client = self.get_client();
+        client
+            .get(format!(
+                "http://{}:{}/{}",
+                self.get_address(),
+                self.get_port(),
+                point
+            ))
+            .query(query)
+            .body(
+                serde_json::to_string(body)
+                    .expect("Failed to serialized an object that shoudl always work"),
+            )
+            .send()
+    }
+
+    fn http_post<T: Serialize + ?Sized>(
+        &self,
+        point: &str,
+        query: &Vec<(&str, &str)>,
+        body: &T,
+    ) -> Result<Response, Error> {
+        let client = self.get_client();
+        client
+            .post(format!(
+                "http://{}:{}/{}",
+                self.get_address(),
+                self.get_port(),
+                point
+            ))
+            .query(query)
+            .body(
+                serde_json::to_string(body)
+                    .expect("Failed to serialized an object that shoudl always work"),
+            )
+            .send()
+    }
 }
 
 // fn stream_lines_from_output<T: LocalServerLike>(module: T) -> Option<impl Iterator<Item = String>> {
@@ -221,11 +264,7 @@ pub fn find_identification_modules(
     imodules
 }
 
-pub fn find_exploration_modules(
-    modules_path: &Path,
-    identified_path: &Path,
-    solved_path: &Path,
-) -> Vec<Arc<dyn ExplorationModule>> {
+pub fn find_exploration_modules(modules_path: &Path) -> Vec<Arc<dyn ExplorationModule>> {
     let mut emodules: Vec<Arc<dyn ExplorationModule>> = Vec::new();
     if let Ok(read_dir) = modules_path.read_dir() {
         for e in read_dir {
@@ -233,18 +272,10 @@ pub fn find_exploration_modules(
                 let p = de.path();
                 if p.is_file() {
                     let prog = p.read_link().unwrap_or(p);
-                    if let Some(emodule) = ExternalServerExplorationModule::try_create_local(
-                        prog.clone(),
-                        identified_path.to_path_buf(),
-                        solved_path.to_path_buf(),
-                    ) {
+                    if let Some(emodule) =
+                        ExternalServerExplorationModule::try_create_local(prog.clone())
+                    {
                         emodules.push(Arc::new(emodule));
-                    } else {
-                        emodules.push(Arc::new(ExternalExplorationModule {
-                            command_path_: prog.clone(),
-                            identified_path_: identified_path.to_path_buf(),
-                            solved_path_: solved_path.to_path_buf(),
-                        }));
                     }
                 }
             }

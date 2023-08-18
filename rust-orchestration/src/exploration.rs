@@ -217,6 +217,7 @@ impl ExplorationModule for ExternalServerExplorationModule {
                 if let Ok(_) = conn.send_message(&Message::text(message.to_json_str())) {
                     return conn
                         .incoming_messages()
+                        .take_while(|x| x.is_ok())
                         .flat_map(|x| x.ok())
                         .flat_map(|res| match res {
                             websocket::OwnedMessage::Text(sol_txt) => {
@@ -281,6 +282,7 @@ impl ExplorationModule for ExternalServerExplorationModule {
                 if let Ok(_) = conn.send_message(&Message::text(message.to_json_str())) {
                     return conn
                         .incoming_messages()
+                        .take_while(|x| x.is_ok())
                         .flat_map(|x| x.ok())
                         .flat_map(|res| match res {
                             websocket::OwnedMessage::Text(sol_txt) => {

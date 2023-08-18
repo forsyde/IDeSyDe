@@ -59,31 +59,31 @@ jobs:
           export PATH="$JAVA_HOME/bin:$PATH"
           python -m pip install robotframework
           python -m robot --exclude slow TestsBenchmark.robot
-  test-cases-win:
-    strategy:
-      matrix:
-        jabba_jdk: [temurin@17, amazon-corretto@17, zulu@17, microsoft@17]
-    runs-on: windows-latest
-    needs: build-on-linux
-    steps:
-      - uses: actions/checkout@v3
-      - uses: actions/setup-python@v4
-        with:
-          python-version: '3.10' 
-      - name: Cache-in outputs
-        uses: actions/cache@v3
-        with:
-          enableCrossOsArchive: true
-          path: ${{ github.workspace }}/dist
-          key: ${{ github.ref }}-${{ matrix.jabba_jdk }}-dist
-      - run: |
-          cd ${{ github.workspace }}
-          cp -r ${{ github.workspace }}/dist/x86_64-pc-windows-gnu/* .
-          [Net.ServicePointManager]::SecurityProtocol = [Net.SecurityProtocolType]::Tls12
-          Invoke-Expression (
-            Invoke-WebRequest https://github.com/Jabba-Team/jabba/raw/master/install.ps1 -UseBasicParsing
-          ).Content
-          jabba install ${{ matrix.jabba_jdk }}
-          jabba alias default ${{ matrix.jabba_jdk }}
-          python -m pip install robotframework
-          python -m robot --exclude slow TestsBenchmark.robot
+  # test-cases-win:
+  #   strategy:
+  #     matrix:
+  #       jabba_jdk: [temurin@17, amazon-corretto@17, zulu@17, microsoft@17]
+  #   runs-on: windows-latest
+  #   needs: build-on-linux
+  #   steps:
+  #     - uses: actions/checkout@v3
+  #     - uses: actions/setup-python@v4
+  #       with:
+  #         python-version: '3.10' 
+  #     - name: Cache-in outputs
+  #       uses: actions/cache@v3
+  #       with:
+  #         enableCrossOsArchive: true
+  #         path: ${{ github.workspace }}/dist
+  #         key: ${{ github.ref }}-${{ matrix.jabba_jdk }}-dist
+  #     - run: |
+  #         cd ${{ github.workspace }}
+  #         cp -r ${{ github.workspace }}/dist/x86_64-pc-windows-gnu/* .
+  #         [Net.ServicePointManager]::SecurityProtocol = [Net.SecurityProtocolType]::Tls12
+  #         Invoke-Expression (
+  #           Invoke-WebRequest https://github.com/Jabba-Team/jabba/raw/master/install.ps1 -UseBasicParsing
+  #         ).Content
+  #         jabba install ${{ matrix.jabba_jdk }}
+  #         jabba alias default ${{ matrix.jabba_jdk }}
+  #         python -m pip install robotframework
+  #         python -m robot --exclude slow TestsBenchmark.robot

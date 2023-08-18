@@ -172,6 +172,8 @@ trait HttpServerLike {
         body: &T,
     ) -> Result<Response, Error> {
         let client = self.get_client();
+        let m = serde_json::to_string(body)
+            .expect("Failed to serialized an object that shoudl always work");
         client
             .get(format!(
                 "http://{}:{}/{}",
@@ -180,10 +182,7 @@ trait HttpServerLike {
                 point
             ))
             .query(query)
-            .body(
-                serde_json::to_string(body)
-                    .expect("Failed to serialized an object that shoudl always work"),
-            )
+            .body(m)
             .send()
     }
 

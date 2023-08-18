@@ -354,9 +354,11 @@ fn main() {
             idesyde_core::compute_dominant_biddings(biddings.iter().map(|(_, _, b)| b));
 
         if let Some((idx, dominant_bid)) = dominant_bidding_opt {
+            let (chosen_exploration_module, chosen_decision_model, _) = &biddings[idx];
             debug!(
                 "Proceeding to explore {} with {}",
-                dominant_bid.decision_model_category, dominant_bid.explorer_unique_identifier
+                chosen_decision_model.category(),
+                dominant_bid.explorer_unique_identifier
             );
             match (args.x_total_time_out, args.x_max_solutions) {
                 (Some(t), Some(n)) => info!(
@@ -370,7 +372,6 @@ fn main() {
                 (None, None) => info!("Starting exploration until completion"),
             }
             // let (mut tx, rx) = spmc::channel();
-            let (chosen_exploration_module, chosen_decision_model, _) = &biddings[idx];
             let sols_found = chosen_exploration_module.iter_explore(
                 chosen_decision_model.clone(),
                 &dominant_bid.explorer_unique_identifier,

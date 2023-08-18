@@ -312,7 +312,6 @@ impl Hash for DecisionModelHeader {
 #[derive(Debug, Deserialize, Serialize, Clone)]
 pub struct ExplorationBid {
     pub explorer_unique_identifier: String,
-    pub decision_model_category: String,
     pub can_explore: bool,
     pub properties: HashMap<String, f32>,
 }
@@ -326,7 +325,6 @@ impl ExplorationBid {
 impl Hash for ExplorationBid {
     fn hash<H: std::hash::Hasher>(&self, state: &mut H) {
         self.explorer_unique_identifier.hash(state);
-        self.decision_model_category.hash(state);
         self.can_explore.hash(state);
         for k in self.properties.keys() {
             k.hash(state);
@@ -337,7 +335,6 @@ impl Hash for ExplorationBid {
 impl PartialEq<ExplorationBid> for ExplorationBid {
     fn eq(&self, other: &ExplorationBid) -> bool {
         self.explorer_unique_identifier == other.explorer_unique_identifier
-            && self.decision_model_category == other.decision_model_category
             && self.can_explore == other.can_explore
             && self.properties == other.properties
     }

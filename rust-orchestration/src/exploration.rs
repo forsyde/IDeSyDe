@@ -127,6 +127,16 @@ impl ExternalServerExplorationModule {
         }
         None
     }
+
+    fn from(name: &str, ipv4: &Ipv4Addr, port: usize) -> ExternalServerExplorationModule {
+        ExternalServerExplorationModule {
+            name: name.to_string(),
+            address: std::net::IpAddr::V4(ipv4.to_owned()),
+            port: port,
+            client: Arc::new(reqwest::blocking::Client::new()),
+            process: None,
+        }
+    }
 }
 
 impl HttpServerLike for ExternalServerExplorationModule {
@@ -187,19 +197,15 @@ impl ExplorationModule for ExternalServerExplorationModule {
         time_resolution: i64,
         memory_resolution: i64,
     ) -> Vec<ExplorationSolution> {
-        self.http_post("/set", &vec![("parameter", "max-sols")], &max_sols);
+        self.http_post("set", &vec![("parameter", "max-sols")], &max_sols);
+        self.http_post("set", &vec![("parameter", "total-timeout")], &total_timeout);
         self.http_post(
-            "/set",
-            &vec![("parameter", "total-timeout")],
-            &total_timeout,
-        );
-        self.http_post(
-            "/set",
+            "set",
             &vec![("parameter", "time-resolution")],
             &time_resolution,
         );
         self.http_post(
-            "/set",
+            "set",
             &vec![("parameter", "memory-resolution")],
             &memory_resolution,
         );
@@ -248,22 +254,22 @@ impl ExplorationModule for ExternalServerExplorationModule {
         solution_iter: fn(&ExplorationSolution) -> (),
     ) -> Vec<idesyde_core::ExplorationSolution> {
         self.http_post(
-            "/set",
+            "set",
             &vec![("parameter", "max-sols")],
             &exploration_configuration.max_sols,
         );
         self.http_post(
-            "/set",
+            "set",
             &vec![("parameter", "total-timeout")],
             &exploration_configuration.total_timeout,
         );
         self.http_post(
-            "/set",
+            "set",
             &vec![("parameter", "time-resolution")],
             &exploration_configuration.time_resolution,
         );
         self.http_post(
-            "/set",
+            "set",
             &vec![("parameter", "memory-resolution")],
             &exploration_configuration.memory_resolution,
         );

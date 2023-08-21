@@ -1,14 +1,19 @@
-use std::{path::Path, sync::Arc};
+use std::{
+    net::{IpAddr, Ipv4Addr},
+    path::Path,
+    sync::Arc,
+};
 
 use clap::Parser;
 use env_logger::WriteStyle;
+use idesyde_blueprints::OpaqueDecisionModel;
 use idesyde_core::{
     headers::{load_decision_model_headers_from_binary, ExplorationBid},
     DecisionModel, DesignModel, ExplorationConfiguration, ExplorationModule,
 };
 use idesyde_orchestration::{
-    identification::identification_procedure,
-    models::{OpaqueDecisionModel, OpaqueDesignModel},
+    identification::{identification_procedure, ExternalServerIdentificationModule},
+    models::OpaqueDesignModel,
 };
 use log::{debug, error, info, Level};
 use rayon::prelude::*;
@@ -76,6 +81,18 @@ struct Args {
         help = "For explorer with mandatory discretization, this factor is used for the memory downsizing resolution."
     )]
     x_memory_resolution: Option<u64>,
+
+    #[arg(
+        long,
+        help = "An URL for exploration modules that are not created and destroyed by the orchestrator. Currently supported protocols are: http."
+    )]
+    emodule: Option<Vec<String>>,
+
+    #[arg(
+        long,
+        help = "An URL for identification modules that are not created and destroyed by the orchestrator. Currently supported protocols are: http."
+    )]
+    imodule: Option<Vec<String>>,
 }
 
 fn main() {
@@ -246,6 +263,30 @@ fn main() {
 
         // add embedded modules
         imodules.push(Arc::new(idesyde_common::make_common_module()));
+
+        // add externally declared modules
+        if let Some(external_modules) = args.imodule {
+            for url in external_modules {
+                if url.starts_with("http://") {
+                    let mut splitted = url[7..].split(":");
+                    if let Some(ip) = splitted.next().and_then(|x| x.parse::<IpAddr>().ok()) {
+                        match ip {
+                            IpAddr::V4(ipv4) => {
+                                imodules.push(Arc::new(ExternalServerIdentificationModule::from(
+                                    ipv4.to_string().as_str(),
+                                    &ipv4,
+                                    splitted
+                                        .next()
+                                        .and_then(|p| p.parse::<usize>().ok())
+                                        .unwrap_or(80usize),
+                                )))
+                            }
+                            _ => (),
+                        }
+                    }
+                }
+            }
+        }
 
         // continue
         debug!("Reading and preparing input files");

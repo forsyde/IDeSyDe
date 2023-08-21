@@ -22,6 +22,7 @@ import idesyde.common.PeriodicWorkloadAndSDFServers
 import idesyde.core.MarkedIdentificationRule
 import idesyde.blueprints.DecisionModelMessage
 import idesyde.blueprints.DesignModelMessage
+import idesyde.common.AnalysedSDFApplication
 
 object CommonIdentificationModule
     extends StandaloneIdentificationModule
@@ -48,6 +49,10 @@ object CommonIdentificationModule
     ),
     MarkedIdentificationRule.DecisionModelOnlyIdentificationRule(identSDFToPartitionedSharedMemory),
     MarkedIdentificationRule.DecisionModelOnlyIdentificationRule(identSDFToTiledMultiCore),
+    MarkedIdentificationRule.SpecificDecisionModelOnlyIdentificationRule(
+      identAnalysedSDFApplication,
+      Set("SDFApplication", "SDFApplicationWithFunctions")
+    ),
     MarkedIdentificationRule.DecisionModelOnlyIdentificationRule(
       identPeriodicWorkloadToPartitionedSharedMultiCore
     ),
@@ -73,6 +78,8 @@ object CommonIdentificationModule
         body_path.flatMap(decodeFromPath[SDFApplicationWithFunctions])
       case DecisionModelHeader("SDFApplication", body_path, _) =>
         body_path.flatMap(decodeFromPath[SDFApplication])
+      case DecisionModelHeader("AnalysedSDFApplication", body_path, _) =>
+        body_path.flatMap(decodeFromPath[AnalysedSDFApplication])
       case DecisionModelHeader("TiledMultiCoreWithFunctions", body_path, _) =>
         body_path.flatMap(decodeFromPath[TiledMultiCoreWithFunctions])
       case DecisionModelHeader("PartitionedCoresWithRuntimes", body_path, _) =>
@@ -91,8 +98,6 @@ object CommonIdentificationModule
         body_path.flatMap(decodeFromPath[PeriodicWorkloadAndSDFServers])
       case DecisionModelHeader("PeriodicWorkloadToPartitionedSharedMultiCore", body_path, _) =>
         body_path.flatMap(decodeFromPath[PeriodicWorkloadToPartitionedSharedMultiCore])
-      case DecisionModelHeader("AperiodicAsynchronousDataflow", body_path, _) =>
-        body_path.flatMap(decodeFromPath[AperiodicAsynchronousDataflow])
       case _ => None
     }
   }
@@ -103,6 +108,8 @@ object CommonIdentificationModule
         m.body.map(s => read[SDFApplicationWithFunctions](s))
       case DecisionModelHeader("SDFApplication", body_path, _) =>
         m.body.map(s => read[SDFApplication](s))
+      case DecisionModelHeader("AnalysedSDFApplication", body_path, _) =>
+        m.body.map(s => read[AnalysedSDFApplication](s))
       case DecisionModelHeader("TiledMultiCoreWithFunctions", body_path, _) =>
         m.body.map(s => read[TiledMultiCoreWithFunctions](s))
       case DecisionModelHeader("PartitionedCoresWithRuntimes", body_path, _) =>
@@ -121,8 +128,6 @@ object CommonIdentificationModule
         m.body.map(s => read[PeriodicWorkloadAndSDFServers](s))
       case DecisionModelHeader("PeriodicWorkloadToPartitionedSharedMultiCore", body_path, _) =>
         m.body.map(s => read[PeriodicWorkloadToPartitionedSharedMultiCore](s))
-      case DecisionModelHeader("AperiodicAsynchronousDataflow", body_path, _) =>
-        m.body.map(s => read[AperiodicAsynchronousDataflow](s))
       case _ => None
     }
   }

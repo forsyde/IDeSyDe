@@ -16,6 +16,7 @@ use idesyde_core::{
     IdentificationModule, IdentificationResult, MarkedIdentificationRule,
     ReverseIdentificationRule,
 };
+use log::debug;
 use serde::{Deserialize, Serialize};
 
 #[derive(Serialize, Clone, Deserialize, Debug, PartialEq, Eq)]
@@ -145,6 +146,90 @@ impl TryFrom<&str> for IdentificationResultMessage {
     }
 }
 
+#[derive(Eq, Clone)]
+pub struct OpaqueDecisionModel {
+    header: DecisionModelHeader,
+    body_json: Option<String>,
+    body_msgpack: Option<Vec<u8>>,
+    body_cbor: Option<Vec<u8>>,
+}
+
+impl OpaqueDecisionModel {
+    pub fn from_json_str(header: &DecisionModelHeader, s: &str) -> OpaqueDecisionModel {
+        OpaqueDecisionModel {
+            header: header.to_owned(),
+            body_json: Some(s.to_string()),
+            body_msgpack: None,
+            body_cbor: None,
+        }
+    }
+}
+
+impl DecisionModel for OpaqueDecisionModel {
+    fn category(&self) -> String {
+        self.header.category.to_owned()
+    }
+
+    fn header(&self) -> DecisionModelHeader {
+        self.header.to_owned()
+    }
+
+    fn body_as_json(&self) -> Option<String> {
+        self.body_json.to_owned()
+    }
+
+    fn body_as_msgpack(&self) -> Option<Vec<u8>> {
+        self.body_msgpack.to_owned()
+    }
+
+    fn body_as_cbor(&self) -> Option<Vec<u8>> {
+        self.body_cbor.to_owned()
+    }
+}
+
+impl PartialEq for OpaqueDecisionModel {
+    fn eq(&self, other: &Self) -> bool {
+        self.header == other.header && self.body_as_json() == other.body_as_json()
+    }
+}
+
+impl From<&DecisionModelMessage> for OpaqueDecisionModel {
+    fn from(value: &DecisionModelMessage) -> Self {
+        OpaqueDecisionModel {
+            header: value.header().to_owned(),
+            body_json: value.body_with_newlines_unescaped().to_owned(),
+            body_msgpack: None,
+            body_cbor: None,
+        }
+    }
+}
+
+impl From<&DecisionModelHeader> for OpaqueDecisionModel {
+    fn from(value: &DecisionModelHeader) -> Self {
+        OpaqueDecisionModel {
+            header: value.to_owned(),
+            body_json: value
+                .body_path
+                .to_owned()
+                .and_then(|x| std::fs::read_to_string(x).ok())
+                .and_then(|x| serde_json::from_str(&x).ok()),
+            body_msgpack: None,
+            body_cbor: None,
+        }
+    }
+}
+
+impl From<&ExplorationSolutionMessage> for OpaqueDecisionModel {
+    fn from(value: &ExplorationSolutionMessage) -> Self {
+        OpaqueDecisionModel {
+            header: value.solved.header().to_owned(),
+            body_json: value.solved.body_with_newlines_unescaped(),
+            body_msgpack: None,
+            body_cbor: None,
+        }
+    }
+}
+
 pub struct StandaloneExplorationModule {
     unique_identifier: String,
     explorers: Vec<Box<dyn Explorer>>,
@@ -212,7 +297,7 @@ pub struct StandaloneIdentificationModule {
     reverse_identification_rules: Vec<ReverseIdentificationRule>,
     read_design_model: fn(path: &Path) -> Option<Arc<dyn DesignModel>>,
     write_design_model: fn(design_model: &Arc<dyn DesignModel>, dest: &Path) -> Vec<PathBuf>,
-    decision_header_to_model: fn(header: &DecisionModelHeader) -> Option<Arc<dyn DecisionModel>>,
+    opaque_to_model: fn(header: &OpaqueDecisionModel) -> Option<Arc<dyn DecisionModel>>,
     _decision_message_to_model: fn(header: &DecisionModelMessage) -> Option<Arc<dyn DecisionModel>>,
     pub decision_model_schemas: HashSet<String>,
 }
@@ -225,7 +310,7 @@ impl StandaloneIdentificationModule {
             reverse_identification_rules: vec![],
             read_design_model: |_x| None,
             write_design_model: |_x, _p| vec![],
-            decision_header_to_model: |_x| None,
+            opaque_to_model: |_x| None,
             _decision_message_to_model: |_x| None,
             decision_model_schemas: HashSet::new(),
         };
@@ -235,9 +320,7 @@ impl StandaloneIdentificationModule {
         unique_identifier: &str,
         identification_rules: Vec<MarkedIdentificationRule>,
         reverse_identification_rules: Vec<ReverseIdentificationRule>,
-        decision_header_to_model: fn(
-            header: &DecisionModelHeader,
-        ) -> Option<Arc<dyn DecisionModel>>,
+        opaque_to_model: fn(&OpaqueDecisionModel) -> Option<Arc<dyn DecisionModel>>,
         decision_message_to_model: fn(
             header: &DecisionModelMessage,
         ) -> Option<Arc<dyn DecisionModel>>,
@@ -248,8 +331,8 @@ impl StandaloneIdentificationModule {
             identification_rules,
             reverse_identification_rules,
             read_design_model: |_x| None,
-            write_design_model: |_x, _p| vec![],
-            decision_header_to_model,
+            write_design_model: |_x: &Arc<dyn DesignModel>, _p| vec![],
+            opaque_to_model,
             _decision_message_to_model: decision_message_to_model,
             decision_model_schemas,
         };
@@ -259,11 +342,9 @@ impl StandaloneIdentificationModule {
         unique_identifier: &str,
         identification_rules: Vec<MarkedIdentificationRule>,
         reverse_identification_rules: Vec<ReverseIdentificationRule>,
-        read_design_model: fn(path: &Path) -> Option<Arc<dyn DesignModel>>,
+        read_design_model: fn(&Path) -> Option<Arc<dyn DesignModel>>,
         write_design_model: fn(design_model: &Arc<dyn DesignModel>, dest: &Path) -> Vec<PathBuf>,
-        decision_header_to_model: fn(
-            header: &DecisionModelHeader,
-        ) -> Option<Arc<dyn DecisionModel>>,
+        opaque_to_model: fn(&OpaqueDecisionModel) -> Option<Arc<dyn DecisionModel>>,
         decision_message_to_model: fn(
             header: &DecisionModelMessage,
         ) -> Option<Arc<dyn DecisionModel>>,
@@ -275,7 +356,7 @@ impl StandaloneIdentificationModule {
             reverse_identification_rules,
             read_design_model,
             write_design_model,
-            decision_header_to_model,
+            opaque_to_model,
             _decision_message_to_model: decision_message_to_model,
             decision_model_schemas,
         };
@@ -291,11 +372,8 @@ impl StandaloneIdentificationModule {
     ) -> Vec<PathBuf> {
         return (self.write_design_model)(design_model, dest);
     }
-    pub fn decision_header_to_model(
-        &self,
-        header: &DecisionModelHeader,
-    ) -> Option<Arc<dyn DecisionModel>> {
-        return (self.decision_header_to_model)(header);
+    pub fn opaque_to_model(&self, header: &OpaqueDecisionModel) -> Option<Arc<dyn DecisionModel>> {
+        return (self.opaque_to_model)(header);
     }
 }
 
@@ -311,7 +389,19 @@ impl IdentificationModule for StandaloneIdentificationModule {
         decision_models: &Vec<Arc<dyn DecisionModel>>,
     ) -> IdentificationResult {
         let mut identified: Vec<Arc<dyn DecisionModel>> = Vec::new();
+        let mut refined = decision_models.clone();
         let mut errors: HashSet<String> = HashSet::new();
+        for m in decision_models {
+            if let Some(non_opaque) = m
+                .downcast_ref::<OpaqueDecisionModel>()
+                .and_then(|opaque| self.opaque_to_model(opaque))
+            {
+                if !identified.contains(&non_opaque) {
+                    identified.push(non_opaque.clone());
+                    refined.push(non_opaque);
+                }
+            }
+        }
         for irule in &self.identification_rules {
             let f_opt = match irule {
                 MarkedIdentificationRule::DesignModelOnlyIdentificationRule(f) => {
@@ -340,7 +430,7 @@ impl IdentificationModule for StandaloneIdentificationModule {
                 }
             };
             if let Some(f) = f_opt {
-                let (models, errs) = f(design_models, decision_models);
+                let (models, errs) = f(design_models, &refined);
                 for m in models {
                     if !identified.contains(&m) {
                         identified.push(m);
@@ -451,11 +541,11 @@ pub fn execute_standalone_identification_module(module: StandaloneIdentification
                             std::fs::create_dir_all(&reverse_path).expect(
                                 "Failed to create the reverse path during reverse identification.",
                             );
-                            let solved: Vec<Arc<dyn DecisionModel>> =
-                                load_decision_model_headers_from_binary(&solved_path)
-                                    .iter()
-                                    .flat_map(|(_, x)| module.decision_header_to_model(x))
-                                    .collect();
+                            let solved: Vec<Arc<dyn DecisionModel>> = todo!();
+                            // load_decision_model_headers_from_binary(&solved_path)
+                            //     .iter()
+                            //     .flat_map(|(_, x)| module.decision_header_to_model(x))
+                            //     .collect();
                             let reverse_identified =
                                 module.reverse_identification(&solved, &design_models);
                             for m in reverse_identified {
@@ -477,11 +567,11 @@ pub fn execute_standalone_identification_module(module: StandaloneIdentification
                             std::fs::create_dir_all(&identified_path).expect(
                                 "Failed to create the identified path during reverse identification.",
                             );
-                            let decision_models: Vec<Arc<dyn DecisionModel>> =
-                                load_decision_model_headers_from_binary(&identified_path)
-                                    .iter()
-                                    .flat_map(|(_, x)| module.decision_header_to_model(x))
-                                    .collect();
+                            let decision_models: Vec<Arc<dyn DecisionModel>> = todo!();
+                            // load_decision_model_headers_from_binary(&identified_path)
+                            //     .iter()
+                            //     .flat_map(|(_, x)| module.decision_header_to_model(x))
+                            //     .collect();
                             let (identified, _) = module.identification_step(
                                 ident_step,
                                 &design_models,

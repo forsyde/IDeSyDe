@@ -1,7 +1,12 @@
 use idesyde_blueprints::{
-    decision_header_to_model_gen, decision_message_to_model_gen, StandaloneIdentificationModule,
+    decision_message_to_model_gen, opaque_to_model_gen, StandaloneIdentificationModule,
 };
 use idesyde_core::decision_models_schemas_gen;
+use models::{
+    AnalysedSDFApplication, AperiodicAsynchronousDataflow,
+    AperiodicAsynchronousDataflowToPartitionedTiledMulticore, InstrumentedComputationTimes,
+    PartitionedTiledMulticore, RuntimesAndProcessors, SDFApplication, TiledMultiCore,
+};
 use schemars::schema_for;
 use std::collections::HashSet;
 
@@ -23,35 +28,35 @@ pub fn make_common_module() -> StandaloneIdentificationModule {
             ),
         ],
         Vec::new(),
-        decision_header_to_model_gen!(
-            models::SDFApplication,
-            models::AnalysedSDFApplication,
-            models::TiledMultiCore,
-            models::RuntimesAndProcessors,
-            models::PartitionedTiledMulticore,
-            models::AperiodicAsynchronousDataflow,
-            models::InstrumentedComputationTimes,
-            models::AperiodicAsynchronousDataflowToPartitionedTiledMulticore
+        opaque_to_model_gen!(
+            SDFApplication,
+            AnalysedSDFApplication,
+            TiledMultiCore,
+            RuntimesAndProcessors,
+            PartitionedTiledMulticore,
+            AperiodicAsynchronousDataflow,
+            InstrumentedComputationTimes,
+            AperiodicAsynchronousDataflowToPartitionedTiledMulticore
         ),
         decision_message_to_model_gen!(
-            models::SDFApplication,
-            models::AnalysedSDFApplication,
-            models::TiledMultiCore,
-            models::RuntimesAndProcessors,
-            models::PartitionedTiledMulticore,
-            models::AperiodicAsynchronousDataflow,
-            models::InstrumentedComputationTimes,
-            models::AperiodicAsynchronousDataflowToPartitionedTiledMulticore
+            SDFApplication,
+            AnalysedSDFApplication,
+            TiledMultiCore,
+            RuntimesAndProcessors,
+            PartitionedTiledMulticore,
+            AperiodicAsynchronousDataflow,
+            InstrumentedComputationTimes,
+            AperiodicAsynchronousDataflowToPartitionedTiledMulticore
         ),
         decision_models_schemas_gen!(
-            models::SDFApplication,
-            models::AnalysedSDFApplication,
-            models::TiledMultiCore,
-            models::RuntimesAndProcessors,
-            models::PartitionedTiledMulticore,
-            models::AperiodicAsynchronousDataflow,
-            models::InstrumentedComputationTimes,
-            models::AperiodicAsynchronousDataflowToPartitionedTiledMulticore
+            SDFApplication,
+            AnalysedSDFApplication,
+            TiledMultiCore,
+            RuntimesAndProcessors,
+            PartitionedTiledMulticore,
+            AperiodicAsynchronousDataflow,
+            InstrumentedComputationTimes,
+            AperiodicAsynchronousDataflowToPartitionedTiledMulticore
         ),
     )
 }

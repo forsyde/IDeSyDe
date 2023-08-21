@@ -101,7 +101,7 @@ trait PlatformRules {
           preComputedPaths = plat.preComputedPaths
         )
       } else {
-        errors += s"The shared memory platform containing processing element ${plat.processingElems.head} is not tiled."
+        errors += s"identTiledFromShared: The shared memory platform containing processing element ${plat.processingElems.head} is not tiled."
       }
     }
     (tiledPlats.toSet, errors.toSet)

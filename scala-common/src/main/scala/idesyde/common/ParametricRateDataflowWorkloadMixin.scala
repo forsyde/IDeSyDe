@@ -115,54 +115,59 @@ trait ParametricRateDataflowWorkloadMixin {
   def computeRepetitionVectors
       : scala.collection.immutable.Vector[scala.collection.immutable.Vector[Int]] =
     dataflowGraphs.zipWithIndex.map((df, dfi) => {
-      val minus_one = Rational(-1)
-      val nodes     = df.map((s, _, _) => s).toSet.union(df.map((_, t, _) => t).toSet)
-      // val g         = Graph.from(nodes, df.map((src, dst, w) => src ~> dst))
-      // first we build a compressed g with only the actors
-      // with the fractional flows in a matrix
-      var gEdges = Buffer[(String, String)]()
-      val mat =
-        Buffer.fill(channelsIdentifiers.size)(Buffer.fill(actorsIdentifiers.size)(Rational.zero))
-      for (
-        (src, c, prod)  <- df;
-        (cc, dst, cons) <- df;
-        if c == cc && channelsIdentifiers.contains(c) && actorsIdentifiers
-          .contains(src) && actorsIdentifiers
-          .contains(dst);
-        cIdx   = channelsIdentifiers.indexOf(c);
-        srcIdx = actorsIdentifiers.indexOf(src);
-        dstIdx = actorsIdentifiers.indexOf(dst)
-      ) {
-        gEdges += (src -> dst)
-        mat(cIdx)(srcIdx) = prod
-        mat(cIdx)(dstIdx) = -cons
-      }
-      // val gActors    = Graph.from(actorsIdentifiers, gEdges.map((src, dst) => src ~ dst))
-      val gActorsDir = Graph.from(actorsIdentifiers, gEdges.map((src, dst) => src ~> dst))
-      // we iterate on the undirected version as to 'come back'
-      // to vertex in feed-forward paths
-      // val rates      = actorsIdentifiers.map(_ => minus_one).toBuffer
-      val reducedMat  = computeReducedForm(mat)
-      val components  = gActorsDir.componentTraverser()
-      val nComponents = components.size
-      // count the basis
-      val nullBasis = computeRightNullBasisFromReduced(reducedMat)
-      val nullRank  = nullBasis.size
-      val matRank   = actorsIdentifiers.size - nullRank
-      if (nullRank == nComponents) { // it can be consistent
-        // val componentBasis = computeRightNullBasisFromReduced(reducedMat)
-        // now reduce each base vector to its "integer" values and just compose then
-        val normalized = nullBasis.map(rates => {
-          val gcdV = rates.map(_.numerator.toLong).reduce((i1, i2) => spire.math.gcd(i1, i2))
-          val lcmV = rates
-            .map(_.denominator.toLong)
-            .reduce((i1, i2) => spire.math.lcm(i1, i2))
-          rates.map(_ * lcmV / gcdV).map(_.numerator.toInt).toVector
-        })
-        // return the sum of all normalized vectors
-        normalized.reduce(_.zip(_).map(_ + _))
-      } else { // it cannot be consistent
-        scala.collection.immutable.Vector()
+      // we also take care of the extreme case where all actors in independent
+      if (df.size == 0) {
+        Vector.fill(actorsIdentifiers.size)(1)
+      } else {
+        val minus_one = Rational(-1)
+        val nodes     = df.map((s, _, _) => s).toSet.union(df.map((_, t, _) => t).toSet)
+        // val g         = Graph.from(nodes, df.map((src, dst, w) => src ~> dst))
+        // first we build a compressed g with only the actors
+        // with the fractional flows in a matrix
+        var gEdges = Buffer[(String, String)]()
+        val mat =
+          Buffer.fill(channelsIdentifiers.size)(Buffer.fill(actorsIdentifiers.size)(Rational.zero))
+        for (
+          (src, c, prod)  <- df;
+          (cc, dst, cons) <- df;
+          if c == cc && channelsIdentifiers.contains(c) && actorsIdentifiers
+            .contains(src) && actorsIdentifiers
+            .contains(dst);
+          cIdx   = channelsIdentifiers.indexOf(c);
+          srcIdx = actorsIdentifiers.indexOf(src);
+          dstIdx = actorsIdentifiers.indexOf(dst)
+        ) {
+          gEdges += (src -> dst)
+          mat(cIdx)(srcIdx) = prod
+          mat(cIdx)(dstIdx) = -cons
+        }
+        // val gActors    = Graph.from(actorsIdentifiers, gEdges.map((src, dst) => src ~ dst))
+        val gActorsDir = Graph.from(actorsIdentifiers, gEdges.map((src, dst) => src ~> dst))
+        // we iterate on the undirected version as to 'come back'
+        // to vertex in feed-forward paths
+        // val rates      = actorsIdentifiers.map(_ => minus_one).toBuffer
+        val reducedMat  = computeReducedForm(mat)
+        val components  = gActorsDir.componentTraverser()
+        val nComponents = components.size
+        // count the basis
+        val nullBasis = computeRightNullBasisFromReduced(reducedMat)
+        val nullRank  = nullBasis.size
+        val matRank   = actorsIdentifiers.size - nullRank
+        if (nullRank == nComponents) { // it can be consistent
+          // val componentBasis = computeRightNullBasisFromReduced(reducedMat)
+          // now reduce each base vector to its "integer" values and just compose then
+          val normalized = nullBasis.map(rates => {
+            val gcdV = rates.map(_.numerator.toLong).reduce((i1, i2) => spire.math.gcd(i1, i2))
+            val lcmV = rates
+              .map(_.denominator.toLong)
+              .reduce((i1, i2) => spire.math.lcm(i1, i2))
+            rates.map(_ * lcmV / gcdV).map(_.numerator.toInt).toVector
+          })
+          // return the sum of all normalized vectors
+          normalized.reduce(_.zip(_).map(_ + _))
+        } else { // it cannot be consistent
+          scala.collection.immutable.Vector()
+        }
       }
       // var consistent = true
       // for (

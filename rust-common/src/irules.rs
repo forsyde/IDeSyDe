@@ -85,7 +85,7 @@ pub fn identify_asynchronous_aperiodic_dataflow_from_sdf(
     decision_models: &Vec<Arc<dyn DecisionModel>>,
 ) -> IdentificationResult {
     let mut identified = Vec::new();
-    let errors: HashSet<String> = HashSet::new();
+    let mut errors: HashSet<String> = HashSet::new();
     for m in decision_models {
         if let Some(analysed_sdf_application) = m.downcast_ref::<AnalysedSDFApplication>() {
             // build a temporary graph for analysis
@@ -209,7 +209,7 @@ pub fn identify_asynchronous_aperiodic_dataflow_from_sdf(
                 let mut job_graph_edges: Vec<((&str, u64), (&str, u64), bool)> = Vec::new();
                 for (src, q_src) in &jobs_of_processes {
                     for (dst, q_dst) in &jobs_of_processes {
-                        let (cidx, _) = analysed_sdf_application
+                        if let Some((cidx, _)) = analysed_sdf_application
                             .sdf_application
                             .topology_srcs
                             .iter()
@@ -221,25 +221,26 @@ pub fn identify_asynchronous_aperiodic_dataflow_from_sdf(
                             )
                             .enumerate()
                             .find(|(_, (s, t))| s == src && t == dst)
-                            .expect("Impossible lack of channel during analysed sdf identification rule");
-                        // let q_src_max = analysed_sdf_application.repetition_vector.get(*src).expect("Impossible empty entry for repetition vector during identification rule");
-                        let consumed = analysed_sdf_application
-                            .sdf_application
-                            .topology_consumption[cidx];
-                        let produced =
-                            analysed_sdf_application.sdf_application.topology_production[cidx];
-                        let initial_tokens = analysed_sdf_application
-                            .sdf_application
-                            .topology_initial_tokens[cidx];
-                        let ratio =
-                            ((q_dst * consumed - initial_tokens) as f64) / (produced as f64);
-                        // if the jobs are different and the ratio of tokens is satisfied, they
-                        // have a strong dependency, otherwise, they might only have a weak dependency
-                        // or nothing at all.
-                        if src != dst && *q_src == (ratio.ceil() as u64) {
-                            job_graph_edges.push(((src, *q_src), (dst, *q_dst), true))
-                        } else if src == dst && *q_dst == *q_src + 1 {
-                            job_graph_edges.push(((src, *q_src), (dst, *q_dst), false))
+                        {
+                            // let q_src_max = analysed_sdf_application.repetition_vector.get(*src).expect("Impossible empty entry for repetition vector during identification rule");
+                            let consumed = analysed_sdf_application
+                                .sdf_application
+                                .topology_consumption[cidx];
+                            let produced =
+                                analysed_sdf_application.sdf_application.topology_production[cidx];
+                            let initial_tokens = analysed_sdf_application
+                                .sdf_application
+                                .topology_initial_tokens[cidx];
+                            let ratio =
+                                ((q_dst * consumed - initial_tokens) as f64) / (produced as f64);
+                            // if the jobs are different and the ratio of tokens is satisfied, they
+                            // have a strong dependency, otherwise, they might only have a weak dependency
+                            // or nothing at all.
+                            if src != dst && *q_src == (ratio.ceil() as u64) {
+                                job_graph_edges.push(((src, *q_src), (dst, *q_dst), true))
+                            } else if src == dst && *q_dst == *q_src + 1 {
+                                job_graph_edges.push(((src, *q_src), (dst, *q_dst), false))
+                            }
                         }
                     }
                 }
@@ -260,11 +261,11 @@ pub fn identify_asynchronous_aperiodic_dataflow_from_sdf(
                         .collect(),
                     job_graph_src: job_graph_edges
                         .iter()
-                        .map(|(st, _, _)| jobs_of_processes.iter().position(|aq| aq == st).unwrap())
+                        .map(|((s, _), _, _)| s.to_string()) // jobs_of_processes.iter().position(|aq| aq == st).unwrap())
                         .collect(),
                     job_graph_dst: job_graph_edges
                         .iter()
-                        .map(|(_, dt, _)| jobs_of_processes.iter().position(|aq| aq == dt).unwrap())
+                        .map(|(_, (t, _), _)| t.to_string()) // jobs_of_processes.iter().position(|aq| aq == dt).unwrap())
                         .collect(),
                     job_graph_is_strong_precedence: job_graph_edges
                         .iter()
@@ -288,6 +289,8 @@ pub fn identify_asynchronous_aperiodic_dataflow_from_sdf(
             }
             // Graph::from_edges(edges.into_iter());
             // actors_graph.extend_with_edges(edges.into_iter());
+        } else {
+            errors.insert("identify_asynchronous_aperiodic_dataflow_from_sdf: no AnalyzedSDFApplication detected".to_string());
         }
     }
     (identified, errors)

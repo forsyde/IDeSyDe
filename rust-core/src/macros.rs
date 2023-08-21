@@ -30,7 +30,7 @@ macro_rules! impl_decision_model_standard_parts {
         }
 
         fn category(&self) -> String {
-            "$x".to_string()
+            stringify!($x).to_string()
         }
     };
 }

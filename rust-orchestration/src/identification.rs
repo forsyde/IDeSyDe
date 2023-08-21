@@ -11,17 +11,14 @@ use std::{
 
 use rayon::prelude::*;
 
-use idesyde_blueprints::{DesignModelMessage, IdentificationResultMessage};
+use idesyde_blueprints::{DesignModelMessage, IdentificationResultMessage, OpaqueDecisionModel};
 use idesyde_core::{
     headers::{DecisionModelHeader, DesignModelHeader},
     DecisionModel, DesignModel, IdentificationModule, IdentificationResult,
 };
 use log::{debug, warn};
 
-use crate::{
-    models::{OpaqueDecisionModel, OpaqueDesignModel},
-    HttpServerLike,
-};
+use crate::{models::OpaqueDesignModel, HttpServerLike};
 
 #[derive(Debug)]
 pub struct ExternalServerIdentificationModule {
@@ -87,6 +84,16 @@ impl ExternalServerIdentificationModule {
             }
         }
         None
+    }
+
+    pub fn from(name: &str, ipv4: &Ipv4Addr, port: usize) -> ExternalServerIdentificationModule {
+        ExternalServerIdentificationModule {
+            name: name.to_string(),
+            address: std::net::IpAddr::V4(ipv4.to_owned()),
+            port: port,
+            client: Arc::new(reqwest::blocking::Client::new()),
+            process: None,
+        }
     }
 }
 

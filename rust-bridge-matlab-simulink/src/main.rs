@@ -5,8 +5,8 @@ use std::{
 };
 
 use idesyde_blueprints::{
-    decision_header_to_model_gen, decision_message_to_model_gen,
-    execute_standalone_identification_module, StandaloneIdentificationModule,
+    decision_message_to_model_gen, execute_standalone_identification_module, opaque_to_model_gen,
+    StandaloneIdentificationModule,
 };
 use idesyde_core::{
     headers::{self, DesignModelHeader},
@@ -134,7 +134,7 @@ fn main() {
         vec![],
         read_design_model,
         write_design_model,
-        decision_header_to_model_gen!(),
+        opaque_to_model_gen!(),
         decision_message_to_model_gen!(),
         HashSet::new(),
     ));

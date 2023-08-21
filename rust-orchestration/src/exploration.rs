@@ -8,7 +8,7 @@ use std::{
     sync::{Arc, Mutex},
 };
 
-use idesyde_blueprints::{DecisionModelMessage, ExplorationSolutionMessage};
+use idesyde_blueprints::{DecisionModelMessage, ExplorationSolutionMessage, OpaqueDecisionModel};
 use idesyde_core::{
     headers::ExplorationBid, DecisionModel, ExplorationModule, ExplorationSolution,
 };
@@ -16,7 +16,7 @@ use log::{debug, warn};
 use serde::{Deserialize, Serialize};
 use websocket::Message;
 
-use crate::{models::OpaqueDecisionModel, HttpServerLike};
+use crate::HttpServerLike;
 
 #[derive(Deserialize, Serialize, PartialEq, Clone)]
 pub struct ExplorerBidding {

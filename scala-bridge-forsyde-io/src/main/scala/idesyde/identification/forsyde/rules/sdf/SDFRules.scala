@@ -23,9 +23,9 @@ trait SDFRules {
       identified: Set[DecisionModel]
   ): (Set[SDFApplicationWithFunctions], Set[String]) = {
     ForSyDeIdentificationUtils.toForSyDe(models) { model =>
-      var errors      = mutable.Set[String]()
-      var sdfActors   = Buffer.empty[SDFActor]
-      var sdfChannels = Buffer.empty[SDFChannel]
+      var errors         = mutable.Set[String]()
+      var sdfActors      = Buffer.empty[SDFActor]
+      var allSdfChannels = Buffer.empty[SDFChannel]
       // println(model)
       model
         .vertexSet()
@@ -34,20 +34,31 @@ trait SDFRules {
             sdfActors += ForSyDeHierarchy.SDFActor.tryView(model, v).get()
           //else if (SDFDelay.conforms(v)) sdfDelays = SDFDelay.enforce(v)
           if (ForSyDeHierarchy.SDFChannel.tryView(model, v).isPresent()) {
-            sdfChannels += ForSyDeHierarchy.SDFChannel.tryView(model, v).get()
+            allSdfChannels += ForSyDeHierarchy.SDFChannel.tryView(model, v).get()
           }
         })
-      val channelsConnectActors =
-        sdfChannels.forall(c =>
-          c.consumer().map(a => sdfActors.contains(a)).orElse(false)
-            && c.producer().map(a => sdfActors.contains(a)).orElse(false)
-        )
+      val sdfChannels = allSdfChannels.filter(c =>
+        c.consumer()
+          .map(a => sdfActors.map(_.getIdentifier()).contains(a.getIdentifier()))
+          .orElse(false)
+          && c
+            .producer()
+            .map(a => sdfActors.map(_.getIdentifier()).contains(a.getIdentifier()))
+            .orElse(false)
+      )
+      // val channelsConnectActors =
+      //   sdfChannels.forall(c =>
+      //     val b = c.consumer().map(a => sdfActors.contains(a)).orElse(false)
+      //       || c.producer().map(a => sdfActors.contains(a)).orElse(false)
+      //     if (!b) then errors += s"Channel ${c.getIdentifier()} is loose"
+      //     b
+      //   )
       if (sdfActors.size == 0) {
         errors += s"identSDFApplication: No actors"
       }
-      if (!channelsConnectActors) {
-        errors += s"identSDFApplication: channels do not connect actors; not all have consumer and producer"
-      }
+      // if (!channelsConnectActors) {
+      //   errors += s"identSDFApplication: channels do not connect actors; not all have consumer and producer"
+      // }
       var topologySrcs      = Buffer[String]()
       var topologyDsts      = Buffer[String]()
       var topologyEdgeValue = Buffer[Int]()
@@ -102,7 +113,7 @@ trait SDFRules {
         .toVector
       val processComputationalNeeds = sdfActors.map(fromSDFActorToNeeds(model, _)).toVector
       (
-        if (sdfActors.size > 0 && channelsConnectActors) {
+        if (sdfActors.size > 0) {
           Set(
             SDFApplicationWithFunctions(
               sdfActors.map(_.getIdentifier()).toVector,

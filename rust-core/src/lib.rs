@@ -39,8 +39,10 @@ impl_downcast!(sync DesignModel);
 impl PartialEq<dyn DesignModel> for dyn DesignModel {
     fn eq(&self, other: &Self) -> bool {
         self.header().eq(&other.header())
-            && self.downcast_ref::<DesignModelHeader>().is_some()
-                == other.downcast_ref::<DesignModelHeader>().is_some()
+            && self
+                .body_as_string()
+                .and_then(|b| other.body_as_string().map(|bb| b == bb))
+                .unwrap_or(false)
     }
 }
 

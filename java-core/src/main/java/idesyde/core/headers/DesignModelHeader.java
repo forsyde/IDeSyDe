@@ -34,5 +34,6 @@ public record DesignModelHeader(
         return objectMapper.readValue(b, DecisionModelHeader.class);
     }
 
-    static final ObjectMapper objectMapper = new ObjectMapper(new CBORFactory());
+    static final ObjectMapper objectMapperCBOR = new ObjectMapper(new CBORFactory());
+    static final ObjectMapper objectMapper = new ObjectMapper();
 }

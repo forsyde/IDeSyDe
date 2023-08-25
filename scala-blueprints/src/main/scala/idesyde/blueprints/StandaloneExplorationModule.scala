@@ -371,11 +371,13 @@ trait StandaloneExplorationModule
             for (
               explorer      <- explorers.find(e => e.uniqueIdentifier == request.explorer_id);
               decisionModel <- decisionMessageToModel(request.model_message);
+              previousSolutions = request.previous_solutions
+                .flatMap(m => decisionMessageToModel(m.solved).map(mm => (mm, m.objectives)));
               (sol, objs) <- explorer.explore(
                 decisionModel,
-                request.objectives,
-                maximumSolutions,
+                previousSolutions,
                 explorationTotalTimeOutInSecs,
+                maximumSolutions,
                 timeResolution,
                 memoryResolution
               )

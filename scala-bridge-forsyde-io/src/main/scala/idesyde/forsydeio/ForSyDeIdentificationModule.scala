@@ -4,10 +4,10 @@ import upickle.default._
 
 import idesyde.blueprints.StandaloneIdentificationModule
 import idesyde.core.MarkedIdentificationRule
-import idesyde.identification.forsyde.rules.MixedRules
-import idesyde.identification.forsyde.rules.sdf.SDFRules
-import idesyde.identification.forsyde.rules.PlatformRules
-import idesyde.identification.forsyde.rules.WorkloadRules
+import idesyde.forsydeio.MixedRules
+import idesyde.forsydeio.SDFRules
+import idesyde.forsydeio.PlatformRules
+import idesyde.forsydeio.WorkloadRules
 import idesyde.utils.Logger
 import idesyde.core.DecisionModel
 import idesyde.core.headers.DecisionModelHeader
@@ -26,13 +26,15 @@ import forsyde.io.lib.TraitNamesFrom0_6To0_7
 import idesyde.blueprints.DecisionModelMessage
 import idesyde.blueprints.DesignModelMessage
 import java.io.StringReader
+import idesyde.common.AperiodicAsynchronousDataflow
 
 object ForSyDeIdentificationModule
     extends StandaloneIdentificationModule
     with MixedRules
     with SDFRules
     with PlatformRules
-    with WorkloadRules {
+    with WorkloadRules
+    with ApplicationRules {
 
   given Logger = logger
 
@@ -42,6 +44,8 @@ object ForSyDeIdentificationModule
         body_path.flatMap(decodeFromPath[SDFToTiledMultiCore])
       case DecisionModelHeader("PeriodicWorkloadToPartitionedSharedMultiCore", body_path, _) =>
         body_path.flatMap(decodeFromPath[PeriodicWorkloadToPartitionedSharedMultiCore])
+      case DecisionModelHeader("AperiodicAsynchronousDataflow", body_path, _) =>
+        body_path.flatMap(decodeFromPath[AperiodicAsynchronousDataflow])
       case _ => None
     }
   }
@@ -52,6 +56,8 @@ object ForSyDeIdentificationModule
         m.body.map(s => read[SDFToTiledMultiCore](s))
       case DecisionModelHeader("PeriodicWorkloadToPartitionedSharedMultiCore", body_path, _) =>
         m.body.map(s => read[PeriodicWorkloadToPartitionedSharedMultiCore](s))
+      case DecisionModelHeader("AperiodicAsynchronousDataflow", body_path, _) =>
+        m.body.map(s => read[AperiodicAsynchronousDataflow](s))
       case _ => None
     }
   }
@@ -68,7 +74,10 @@ object ForSyDeIdentificationModule
     identPartitionedCoresWithRuntimes,
     MarkedIdentificationRule.DesignModelOnlyIdentificationRule(identPeriodicDependentWorkload),
     MarkedIdentificationRule.DesignModelOnlyIdentificationRule(identSharedMemoryMultiCore),
-    identPeriodicWorkloadToPartitionedSharedMultiCoreWithUtilization
+    identPeriodicWorkloadToPartitionedSharedMultiCoreWithUtilization,
+    MarkedIdentificationRule.DesignModelOnlyIdentificationRule(identAperiodicDataflowFromSY),
+    MarkedIdentificationRule.DesignModelOnlyIdentificationRule(identRuntimesAndProcessors),
+    MarkedIdentificationRule.DesignModelOnlyIdentificationRule(identInstrumentedComputationTimes)
   )
 
   val reverseIdentificationRules = Set(

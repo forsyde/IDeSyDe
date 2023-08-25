@@ -1,10 +1,7 @@
 use std::{collections::HashSet, path::Path};
 
-use idesyde_blueprints::{DecisionModelMessage, DesignModelMessage, ExplorationSolutionMessage};
-use idesyde_core::{
-    headers::{DecisionModelHeader, DesignModelHeader},
-    DecisionModel, DesignModel,
-};
+use idesyde_blueprints::DesignModelMessage;
+use idesyde_core::{headers::DesignModelHeader, DesignModel};
 pub struct OpaqueDesignModel {
     header: DesignModelHeader,
     body: Option<String>,

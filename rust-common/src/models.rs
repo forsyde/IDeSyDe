@@ -191,6 +191,50 @@ impl DecisionModel for TiledMultiCore {
     }
 }
 
+/// A decision model capturing the memory mappable platform abstraction.
+///
+/// This type of platform is what one would expect from most COTS platforms
+/// and hardware designs, which completely or partially follows a von neumman
+/// architecture. This means that the storage elements store both data and instructions
+/// and the processors access them going through the communication elements; the latter
+/// that form the 'interconnect'.
+#[derive(Debug, Deserialize, Serialize, Clone, PartialEq, JsonSchema)]
+pub struct MemoryMappableMultiCore {
+    pub processing_elems: HashSet<String>,
+    pub storage_elems: HashSet<String>,
+    pub communication_elems: HashSet<String>,
+    pub topology_srcs: Vec<String>,
+    pub topology_dsts: Vec<String>,
+    pub processors_frequency: Vec<u64>,
+    pub processors_provisions: Vec<HashMap<String, HashMap<String, f64>>>,
+    pub storage_sizes: Vec<u64>,
+    pub communication_elements_max_channels: Vec<u32>,
+    pub communication_elements_bit_per_sec_per_channel: Vec<f64>,
+    pub pre_computed_paths: HashMap<String, HashMap<String, Vec<String>>>,
+}
+
+impl DecisionModel for MemoryMappableMultiCore {
+    impl_decision_model_standard_parts!(MemoryMappableMultiCore);
+
+    fn header(&self) -> DecisionModelHeader {
+        let mut elems: HashSet<String> = HashSet::new();
+        elems.extend(self.processing_elems.iter().map(|x| x.to_owned()));
+        elems.extend(self.storage_elems.iter().map(|x| x.to_owned()));
+        elems.extend(self.communication_elems.iter().map(|x| x.to_owned()));
+        for i in 0..self.topology_dsts.len() {
+            elems.insert(format!(
+                "{}:{}-{}:{}",
+                self.topology_srcs[i], "", self.topology_dsts[i], ""
+            ));
+        }
+        DecisionModelHeader {
+            category: self.category(),
+            body_path: None,
+            covered_elements: elems.into_iter().collect(),
+        }
+    }
+}
+
 /// A decision model capturing the binding between procesing element and runtimes.
 ///
 /// A runtime here is used in a loose sense: it can be simply a programmable bare-metal
@@ -232,7 +276,7 @@ impl DecisionModel for RuntimesAndProcessors {
     }
 }
 
-/// A decision model that captures a paritioned-scheduled multicore machine
+/// A decision model that captures a paritioned-scheduled tiled multicore machine
 ///
 /// This means that every processing element hosts and has affinity for one and only one runtime element.
 /// This runtime element can execute according to any scheduling policy, but it must control only
@@ -245,6 +289,44 @@ pub struct PartitionedTiledMulticore {
 
 impl DecisionModel for PartitionedTiledMulticore {
     impl_decision_model_standard_parts!(PartitionedTiledMulticore);
+
+    fn header(&self) -> DecisionModelHeader {
+        let mut elems: HashSet<String> = HashSet::new();
+        elems.extend(
+            self.hardware
+                .header()
+                .covered_elements
+                .iter()
+                .map(|x| x.to_owned()),
+        );
+        elems.extend(
+            self.runtimes
+                .header()
+                .covered_elements
+                .iter()
+                .map(|x| x.to_owned()),
+        );
+        DecisionModelHeader {
+            category: self.category(),
+            body_path: None,
+            covered_elements: elems.into_iter().collect(),
+        }
+    }
+}
+
+/// A decision model that captures a paritioned-scheduled memory mappable multicore machine
+///
+/// This means that every processing element hosts and has affinity for one and only one runtime element.
+/// This runtime element can execute according to any scheduling policy, but it must control only
+/// its host.
+#[derive(Debug, PartialEq, Serialize, Deserialize, Clone, JsonSchema)]
+pub struct PartitionedMemoryMappableMulticore {
+    pub hardware: MemoryMappableMultiCore,
+    pub runtimes: RuntimesAndProcessors,
+}
+
+impl DecisionModel for PartitionedMemoryMappableMulticore {
+    impl_decision_model_standard_parts!(PartitionedMemoryMappableMulticore);
 
     fn header(&self) -> DecisionModelHeader {
         let mut elems: HashSet<String> = HashSet::new();
@@ -289,9 +371,10 @@ pub struct AperiodicAsynchronousDataflow {
     pub buffer_max_size_in_bits: HashMap<String, u64>,
     pub process_put_in_buffer_in_bits: HashMap<String, HashMap<String, u64>>,
     pub process_get_from_buffer_in_bits: HashMap<String, HashMap<String, u64>>,
-    pub jobs_of_processes: Vec<String>,
-    pub job_graph_src: Vec<String>,
-    pub job_graph_dst: Vec<String>,
+    pub job_graph_src_name: Vec<String>,
+    pub job_graph_dst_name: Vec<String>,
+    pub job_graph_src_instance: Vec<u64>,
+    pub job_graph_dst_instance: Vec<u64>,
     pub job_graph_is_strong_precedence: Vec<bool>,
     pub process_minimum_throughput: HashMap<String, f64>,
     pub process_path_maximum_latency: HashMap<String, HashMap<String, f64>>,
@@ -360,7 +443,7 @@ impl DecisionModel for InstrumentedComputationTimes {
 ///     That is, if we have a poor schedule, the processing element will get "blocked" often.
 #[derive(Debug, PartialEq, Serialize, Deserialize, Clone, JsonSchema)]
 pub struct AperiodicAsynchronousDataflowToPartitionedTiledMulticore {
-    pub aperiodic_asynchronous_dataflow: AperiodicAsynchronousDataflow,
+    pub aperiodic_asynchronous_dataflows: Vec<AperiodicAsynchronousDataflow>,
     pub partitioned_tiled_multicore: PartitionedTiledMulticore,
     pub instrumented_computation_times: InstrumentedComputationTimes,
     pub processes_to_runtime_scheduling: HashMap<String, String>,
@@ -375,15 +458,78 @@ impl DecisionModel for AperiodicAsynchronousDataflowToPartitionedTiledMulticore 
 
     fn header(&self) -> DecisionModelHeader {
         let mut elems: HashSet<String> = HashSet::new();
+        for app in &self.aperiodic_asynchronous_dataflows {
+            elems.extend(app.header().covered_elements.iter().map(|x| x.to_owned()));
+        }
         elems.extend(
-            self.aperiodic_asynchronous_dataflow
+            self.partitioned_tiled_multicore
                 .header()
                 .covered_elements
                 .iter()
                 .map(|x| x.to_owned()),
         );
         elems.extend(
-            self.partitioned_tiled_multicore
+            self.instrumented_computation_times
+                .header()
+                .covered_elements
+                .iter()
+                .map(|x| x.to_owned()),
+        );
+        for (pe, sched) in &self.processes_to_runtime_scheduling {
+            elems.insert(format!("{}={}:{}-{}:{}", "scheduling", pe, "", sched, ""));
+        }
+        for (pe, mem) in &self.processes_to_memory_mapping {
+            elems.insert(format!("{}={}:{}-{}:{}", "mapping", pe, "", mem, ""));
+        }
+        for (buf, mem) in &self.buffer_to_memory_mappings {
+            elems.insert(format!("{}={}:{}-{}:{}", "mapping", buf, "", mem, ""));
+        }
+        for (buf, ce_slots) in &self.buffer_to_routers_reservations {
+            for (ce, slots) in ce_slots {
+                if !slots.is_empty() {
+                    elems.insert(format!("{}={}:{}-{}:{}", "reservation", buf, "", ce, ""));
+                }
+            }
+        }
+        DecisionModelHeader {
+            category: self.category(),
+            body_path: None,
+            covered_elements: elems.into_iter().collect(),
+        }
+    }
+}
+
+/// A decision model that combines aperiodic dataflows to partitioned memory mappable platforms.
+///
+/// The assumptions of this decision model are:
+///  1. For every process, there is at least one processing element in the platform that can run it.
+///     Otherwise, even the trivial mapping is impossible.
+///  2. Super loop schedules are self-timed and stall the processing element that is hosting them.
+///     That is, if we have a poor schedule, the processing element will get "blocked" often.
+#[derive(Debug, PartialEq, Serialize, Deserialize, Clone, JsonSchema)]
+pub struct AperiodicAsynchronousDataflowToPartitionedMemoryMappableMulticore {
+    pub aperiodic_asynchronous_dataflows: Vec<AperiodicAsynchronousDataflow>,
+    pub partitioned_mem_mappable_multicore: PartitionedMemoryMappableMulticore,
+    pub instrumented_computation_times: InstrumentedComputationTimes,
+    pub processes_to_runtime_scheduling: HashMap<String, String>,
+    pub processes_to_memory_mapping: HashMap<String, String>,
+    pub buffer_to_memory_mappings: HashMap<String, String>,
+    pub super_loop_schedules: HashMap<String, Vec<String>>,
+    pub buffer_to_routers_reservations: HashMap<String, HashMap<String, HashSet<u16>>>,
+}
+
+impl DecisionModel for AperiodicAsynchronousDataflowToPartitionedMemoryMappableMulticore {
+    impl_decision_model_standard_parts!(
+        AperiodicAsynchronousDataflowToPartitionedMemoryMappableMulticore
+    );
+
+    fn header(&self) -> DecisionModelHeader {
+        let mut elems: HashSet<String> = HashSet::new();
+        for app in &self.aperiodic_asynchronous_dataflows {
+            elems.extend(app.header().covered_elements.iter().map(|x| x.to_owned()));
+        }
+        elems.extend(
+            self.partitioned_mem_mappable_multicore
                 .header()
                 .covered_elements
                 .iter()

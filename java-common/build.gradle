@@ -1,12 +1,11 @@
 plugins {
-    id 'idesyde.java-standalone-module'
+    id 'idesyde.java-library'
 }
 
 dependencies {
     testImplementation 'org.junit.jupiter:junit-jupiter-api:5.8.1'
     implementation project(":java-core")
     implementation project(":java-blueprints")
-    implementation 'com.fasterxml.jackson.core:jackson-databind:2.15.2'
 }
 
 test {

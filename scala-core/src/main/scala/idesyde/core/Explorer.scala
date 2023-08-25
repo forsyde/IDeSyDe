@@ -29,14 +29,16 @@ import idesyde.core.headers.ExplorerHeader
   */
 trait Explorer {
 
+  type ExplorationSolution = (DecisionModel, Map[String, Double])
+
   def explore(
       decisionModel: DecisionModel,
-      objectivesUpperLimits: Set[Map[String, Double]] = Set(),
+      previousSolutions: Set[ExplorationSolution] = Set(),
       totalExplorationTimeOutInSecs: Long = 0L,
       maximumSolutions: Long = 0L,
       timeDiscretizationFactor: Long = -1L,
       memoryDiscretizationFactor: Long = -1L
-  ): LazyList[(DecisionModel, Map[String, Double])]
+  ): LazyList[ExplorationSolution]
 
   def availableCriterias(decisionModel: DecisionModel): Set[ExplorationCriteria] = Set()
 

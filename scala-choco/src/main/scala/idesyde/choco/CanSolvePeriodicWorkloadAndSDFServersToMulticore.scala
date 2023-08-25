@@ -25,7 +25,7 @@ final class CanSolvePeriodicWorkloadAndSDFServersToMulticore(using logger: Logge
 
   def buildChocoModel(
       m: PeriodicWorkloadAndSDFServerToMultiCore,
-      objectivesUpperLimits: Set[Map[String, Double]],
+      objectivesUpperLimits: Set[(PeriodicWorkloadAndSDFServerToMultiCore, Map[String, Double])],
       timeResolution: Long,
       memoryResolution: Long
   ): (Model, Map[String, IntVar]) = {
@@ -359,8 +359,8 @@ final class CanSolvePeriodicWorkloadAndSDFServersToMulticore(using logger: Logge
     createAndApplyMOOPropagator(
       chocoModel,
       objs,
-      objectivesUpperLimits.map(
-        _.map((k, v) =>
+      objectivesUpperLimits.map((m, o) =>
+        o.map((k, v) =>
           if (uniqueGoalPerSubGraphThs.exists(_.getName().equals(k))) k -> double2int(v)
           else k                                                           -> v.toInt
         )

@@ -48,7 +48,7 @@ final class CanSolveSDFToTiledMultiCore(using logger: Logger)
 
   def buildChocoModel(
       m: SDFToTiledMultiCore,
-      objectivesUpperLimits: Set[Map[String, Double]],
+      objectivesUpperLimits: Set[(SDFToTiledMultiCore, Map[String, Double])],
       timeResolution: Long = -1L,
       memoryResolution: Long = -1L
   ): (Model, Map[String, IntVar]) = {
@@ -212,8 +212,8 @@ final class CanSolveSDFToTiledMultiCore(using logger: Logger)
     createAndApplyMOOPropagator(
       chocoModel,
       objs,
-      objectivesUpperLimits.map(
-        _.map((k, v) =>
+      objectivesUpperLimits.map((_, o) =>
+        o.map((k, v) =>
           if (uniqueGoalPerSubGraphInvThs.exists(_.getName().equals(k))) k -> double2int(v)
           else k                                                           -> v.toInt
         )

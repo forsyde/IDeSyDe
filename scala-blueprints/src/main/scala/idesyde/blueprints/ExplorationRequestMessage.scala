@@ -5,7 +5,7 @@ import upickle.default._
 final case class ExplorationRequestMessage(
     explorer_id: String,
     model_message: DecisionModelMessage,
-    objectives: Set[Map[String, Double]]
+    previous_solutions: Set[ExplorationSolutionMessage]
 ) derives ReadWriter
 
 object ExplorationRequestMessage {

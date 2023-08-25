@@ -12,19 +12,24 @@ import scalax.collection.GraphEdge._
 import idesyde.common.InstrumentedPlatformMixin
 import idesyde.core.CompleteDecisionModel
 import upickle.default._
+import upickle.implicits.key
 
 final case class SharedMemoryMultiCore(
-    val processingElems: Vector[String],
-    val storageElems: Vector[String],
-    val communicationElems: Vector[String],
-    val topologySrcs: Vector[String],
-    val topologyDsts: Vector[String],
-    val processorsFrequency: Vector[Long],
-    val processorsProvisions: Vector[Map[String, Map[String, Double]]],
-    val storageSizes: Vector[Long],
-    val communicationElementsMaxChannels: Vector[Int],
-    val communicationElementsBitPerSecPerChannel: Vector[Double],
-    val preComputedPaths: Map[String, Map[String, Iterable[String]]]
+    @key("processing_elems") val processingElems: Vector[String],
+    @key("storage_elems") val storageElems: Vector[String],
+    @key("communication_elems") val communicationElems: Vector[String],
+    @key("topology_srcs") val topologySrcs: Vector[String],
+    @key("topology_dsts") val topologyDsts: Vector[String],
+    @key("processors_frequency") val processorsFrequency: Vector[Long],
+    @key("processors_provisions") val processorsProvisions: Vector[
+      Map[String, Map[String, Double]]
+    ],
+    @key("storage_sizes") val storageSizes: Vector[Long],
+    @key("communication_elements_max_channels") val communicationElementsMaxChannels: Vector[Int],
+    @key(
+      "communication_elements_bit_per_sec_per_channel"
+    ) val communicationElementsBitPerSecPerChannel: Vector[Double],
+    @key("pre_computed_paths") val preComputedPaths: Map[String, Map[String, Iterable[String]]]
 ) extends StandardDecisionModel
     with CompleteDecisionModel
     with InstrumentedPlatformMixin[Double]
@@ -106,6 +111,6 @@ final case class SharedMemoryMultiCore(
     })
   }
 
-  override val category = "SharedMemoryMultiCore"
+  override val category = "MemoryMappableMultiCore"
 
 }

@@ -269,27 +269,39 @@ impl PartialEq<DecisionModelHeader> for DecisionModelHeader {
     }
 }
 
+// impl Ord for DecisionModelHeader {
+//     fn cmp(&self, o: &DecisionModelHeader) -> std::cmp::Ordering {
+//         let superset = o
+//             .covered_elements
+//             .iter()
+//             .all(|v| self.covered_elements.contains(v));
+//         let subset = self
+//             .covered_elements
+//             .iter()
+//             .all(|v| o.covered_elements.contains(v));
+//         return match (superset, subset) {
+//             (true, true) => Ordering::Equal,
+//             (true, false) => Ordering::Greater,
+//             (false, true) => Ordering::Less,
+//             _ => self.category.cmp(&o.category),
+//         };
+//     }
+// }
+
 impl PartialOrd<DecisionModelHeader> for DecisionModelHeader {
-    fn partial_cmp(&self, o: &DecisionModelHeader) -> std::option::Option<std::cmp::Ordering> {
+    fn partial_cmp(&self, o: &DecisionModelHeader) -> Option<Ordering> {
         let superset = o
             .covered_elements
             .iter()
             .all(|v| self.covered_elements.contains(v));
-        // && o.covered_relations
-        //     .iter()
-        //     .all(|v| self.covered_relations.contains(v));
         let subset = self
             .covered_elements
             .iter()
             .all(|v| o.covered_elements.contains(v));
-        // && self
-        //     .covered_relations
-        //     .iter()
-        //     .all(|v| o.covered_relations.contains(v));
-        return match (superset, subset) {
-            (true, true) => self.body_path.partial_cmp(&o.body_path),
-            (true, false) => Some(Ordering::Greater),
-            (false, true) => Some(Ordering::Less),
+        return match (self.category == o.category, superset, subset) {
+            (true, true, true) => Some(Ordering::Equal),
+            (true, true, false) => Some(Ordering::Greater),
+            (true, false, true) => Some(Ordering::Less),
             _ => None,
         };
     }

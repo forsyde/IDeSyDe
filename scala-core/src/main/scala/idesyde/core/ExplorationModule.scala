@@ -11,6 +11,8 @@ import idesyde.core.Explorer
   */
 trait ExplorationModule {
 
+  type ExplorationSolution = (DecisionModel, Map[String, Double])
+
   /** The set of explorers registred in this library
     *
     * @return
@@ -30,18 +32,18 @@ trait ExplorationModule {
   def explore(
       decisionModel: DecisionModel,
       explorerId: String,
-      objectivesUpperLimits: Set[Map[String, Double]] = Set(),
+      previousSolutions: Set[ExplorationSolution] = Set(),
       totalExplorationTimeOutInSecs: Long = 0L,
       maximumSolutions: Long = 0L,
       timeDiscretizationFactor: Long = -1L,
       memoryDiscretizationFactor: Long = -1L
-  ): LazyList[(DecisionModel, Map[String, Double])] =
+  ): LazyList[ExplorationSolution] =
     explorers
       .find(_.uniqueIdentifier == explorerId)
       .map(
         _.explore(
           decisionModel,
-          objectivesUpperLimits,
+          previousSolutions,
           totalExplorationTimeOutInSecs,
           maximumSolutions,
           timeDiscretizationFactor,
@@ -52,12 +54,12 @@ trait ExplorationModule {
 
   def exploreBest(
       decisionModel: DecisionModel,
-      objectivesUpperLimits: Set[Map[String, Double]] = Set(),
+      previousSolutions: Set[ExplorationSolution] = Set(),
       totalExplorationTimeOutInSecs: Long = 0L,
       maximumSolutions: Long = 0L,
       timeDiscretizationFactor: Long = -1L,
       memoryDiscretizationFactor: Long = -1L
-  ): LazyList[(DecisionModel, Map[String, Double])] = {
+  ): LazyList[ExplorationSolution] = {
     val valid = explorers
       .filter(e => canExplore(decisionModel))
     val nonDominated =
@@ -72,7 +74,7 @@ trait ExplorationModule {
       case Some(e) =>
         e.explore(
           decisionModel,
-          objectivesUpperLimits,
+          previousSolutions,
           totalExplorationTimeOutInSecs,
           maximumSolutions,
           timeDiscretizationFactor,

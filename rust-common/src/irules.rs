@@ -5,17 +5,69 @@ use std::{
 
 use idesyde_core::{DecisionModel, DesignModel, IdentificationResult};
 
+use log::debug;
 use petgraph::{
-    visit::{Bfs, GraphBase, IntoNeighborsDirected, IntoNodeIdentifiers, Visitable},
+    visit::{Bfs, GraphBase, IntoNeighbors, IntoNeighborsDirected, IntoNodeIdentifiers, Visitable},
     Direction::{Incoming, Outgoing},
-    Graph,
+    Graph, Undirected,
 };
 
 use crate::models::{
     AnalysedSDFApplication, AperiodicAsynchronousDataflow,
+    AperiodicAsynchronousDataflowToPartitionedMemoryMappableMulticore,
     AperiodicAsynchronousDataflowToPartitionedTiledMulticore, InstrumentedComputationTimes,
-    PartitionedTiledMulticore, RuntimesAndProcessors, TiledMultiCore,
+    MemoryMappableMultiCore, PartitionedMemoryMappableMulticore, PartitionedTiledMulticore,
+    RuntimesAndProcessors, TiledMultiCore,
 };
+
+pub fn identify_partitioned_mem_mapped_multicore(
+    _design_models: &Vec<Arc<dyn DesignModel>>,
+    decision_models: &Vec<Arc<dyn DecisionModel>>,
+) -> IdentificationResult {
+    let mut new_models = Vec::new();
+    let mut errors: HashSet<String> = HashSet::new();
+    for m2 in decision_models {
+        if let Some(runt) = m2.downcast_ref::<RuntimesAndProcessors>() {
+            let one_scheduler_per_proc = runt
+                .processors
+                .iter()
+                .all(|p| runt.runtime_host.values().find(|y| y == &p).is_some());
+            let one_proc_per_scheduler = runt.runtimes.iter().all(|s| {
+                runt.processor_affinities
+                    .values()
+                    .find(|y| y == &s)
+                    .is_some()
+            });
+            if !one_proc_per_scheduler {
+                errors.insert(
+                    "identify_partitioned_tiled_multicore: more than one processor per scheduler"
+                        .to_string(),
+                );
+            }
+            if !one_scheduler_per_proc {
+                errors.insert(
+                    "identify_partitioned_tiled_multicore: more than one scheduler per processor"
+                        .to_string(),
+                );
+            }
+            if one_proc_per_scheduler && one_scheduler_per_proc {
+                for m1 in decision_models {
+                    if let Some(plat) = m1.downcast_ref::<MemoryMappableMultiCore>() {
+                        let potential = Arc::new(PartitionedMemoryMappableMulticore {
+                            hardware: plat.to_owned(),
+                            runtimes: runt.to_owned(),
+                        });
+                        let upcast = potential as Arc<dyn DecisionModel>;
+                        if !decision_models.contains(&upcast) {
+                            new_models.push(upcast);
+                        }
+                    }
+                }
+            }
+        }
+    }
+    (new_models, errors)
+}
 
 pub fn identify_partitioned_tiled_multicore(
     _design_models: &Vec<Arc<dyn DesignModel>>,
@@ -112,7 +164,8 @@ pub fn identify_asynchronous_aperiodic_dataflow_from_sdf(
                     idx,
                 );
             }
-            let wccs = weakly_connected_components(&total_actors_graph);
+            let undirected = total_actors_graph.clone().into_edge_type::<Undirected>();
+            let wccs = weakly_connected_components(&undirected);
             // analysize each weakly connected component and build the entries for the dataflow model
             for wcc in wccs {
                 // this first section build parameters of the WCC and
@@ -255,17 +308,21 @@ pub fn identify_asynchronous_aperiodic_dataflow_from_sdf(
                         .map(|s| s.to_string())
                         .collect(),
                     buffer_max_size_in_bits: HashMap::new(),
-                    jobs_of_processes: jobs_of_processes
+                    job_graph_src_name: job_graph_edges
                         .iter()
-                        .map(|(a, _)| a.to_string())
+                        .map(|((s, _), _, _)| s.to_string())
                         .collect(),
-                    job_graph_src: job_graph_edges
+                    job_graph_dst_name: job_graph_edges
                         .iter()
-                        .map(|((s, _), _, _)| s.to_string()) // jobs_of_processes.iter().position(|aq| aq == st).unwrap())
+                        .map(|(_, (t, _), _)| t.to_string())
                         .collect(),
-                    job_graph_dst: job_graph_edges
+                    job_graph_src_instance: job_graph_edges
                         .iter()
-                        .map(|(_, (t, _), _)| t.to_string()) // jobs_of_processes.iter().position(|aq| aq == dt).unwrap())
+                        .map(|((_, qs), _, _)| *qs)
+                        .collect(),
+                    job_graph_dst_instance: job_graph_edges
+                        .iter()
+                        .map(|(_, (_, qt), _)| *qt)
                         .collect(),
                     job_graph_is_strong_precedence: job_graph_edges
                         .iter()
@@ -302,46 +359,111 @@ pub fn identify_aperiodic_asynchronous_dataflow_to_partitioned_tiled_multicore(
 ) -> IdentificationResult {
     let mut identified: Vec<Arc<dyn DecisionModel>> = Vec::new();
     let mut errors: HashSet<String> = HashSet::new();
-    if let Some(app) = decision_models
+    if let Some(plat) = decision_models
         .iter()
-        .find_map(|x| x.downcast_ref::<AperiodicAsynchronousDataflow>())
+        .find_map(|x| x.downcast_ref::<PartitionedTiledMulticore>())
     {
-        if let Some(plat) = decision_models
+        if let Some(data) = decision_models
             .iter()
-            .find_map(|x| x.downcast_ref::<PartitionedTiledMulticore>())
+            .find_map(|x| x.downcast_ref::<InstrumentedComputationTimes>())
         {
-            if let Some(data) = decision_models
+            let apps: Vec<&AperiodicAsynchronousDataflow> = decision_models
                 .iter()
-                .find_map(|x| x.downcast_ref::<InstrumentedComputationTimes>())
-            {
-                // check if all processes can be mapped
-                let all_mappable = app.processes.iter().all(|p| {
-                    plat.hardware.processors.iter().any(|pe| {
-                        data.average_execution_times
-                            .get(p)
-                            .map(|m| m.contains_key(pe))
-                            .unwrap_or(false)
+                .flat_map(|x| x.downcast_ref::<AperiodicAsynchronousDataflow>())
+                .collect();
+            // check if all processes can be mapped
+            let all_mappable = apps.len() > 0
+                && apps.iter().all(|app| {
+                    app.processes.iter().all(|p| {
+                        plat.hardware.processors.iter().any(|pe| {
+                            data.average_execution_times
+                                .get(p)
+                                .map(|m| m.contains_key(pe))
+                                .unwrap_or(false)
+                        })
                     })
                 });
-                if !all_mappable {
-                    errors.insert("identify_aperiodic_asynchronous_dataflow_to_partitioned_tiled_multicore: not all apps are mappable".to_string());
-                }
-                if all_mappable {
-                    identified.push(Arc::new(
-                        AperiodicAsynchronousDataflowToPartitionedTiledMulticore {
-                            aperiodic_asynchronous_dataflow: app.to_owned(),
-                            partitioned_tiled_multicore: plat.to_owned(),
-                            instrumented_computation_times: data.to_owned(),
-                            processes_to_runtime_scheduling: HashMap::new(),
-                            processes_to_memory_mapping: HashMap::new(),
-                            buffer_to_memory_mappings: HashMap::new(),
-                            super_loop_schedules: HashMap::new(),
-                            buffer_to_routers_reservations: HashMap::new(),
-                        },
-                    ))
-                }
+            if !all_mappable {
+                errors.insert("identify_aperiodic_asynchronous_dataflow_to_partitioned_tiled_multicore: not all apps are mappable".to_string());
+            }
+            if all_mappable {
+                identified.push(Arc::new(
+                    AperiodicAsynchronousDataflowToPartitionedTiledMulticore {
+                        aperiodic_asynchronous_dataflows: apps
+                            .into_iter()
+                            .map(|x| x.to_owned())
+                            .collect(),
+                        partitioned_tiled_multicore: plat.to_owned(),
+                        instrumented_computation_times: data.to_owned(),
+                        processes_to_runtime_scheduling: HashMap::new(),
+                        processes_to_memory_mapping: HashMap::new(),
+                        buffer_to_memory_mappings: HashMap::new(),
+                        super_loop_schedules: HashMap::new(),
+                        buffer_to_routers_reservations: HashMap::new(),
+                    },
+                ))
             }
         }
+    }
+    (identified, errors)
+}
+
+pub fn identify_aperiodic_asynchronous_dataflow_to_partitioned_mem_mappable_multicore(
+    _design_models: &Vec<Arc<dyn DesignModel>>,
+    decision_models: &Vec<Arc<dyn DecisionModel>>,
+) -> IdentificationResult {
+    let mut identified: Vec<Arc<dyn DecisionModel>> = Vec::new();
+    let mut errors: HashSet<String> = HashSet::new();
+    if let Some(plat) = decision_models
+        .iter()
+        .find_map(|x| x.downcast_ref::<PartitionedMemoryMappableMulticore>())
+    {
+        if let Some(data) = decision_models
+            .iter()
+            .find_map(|x| x.downcast_ref::<InstrumentedComputationTimes>())
+        {
+            let apps: Vec<&AperiodicAsynchronousDataflow> = decision_models
+                .iter()
+                .flat_map(|x| x.downcast_ref::<AperiodicAsynchronousDataflow>())
+                .collect();
+            println!("{} apps", apps.len());
+            // check if all processes can be mapped
+            let all_mappable = apps.len() > 0
+                && apps.iter().all(|app| {
+                    app.processes.iter().all(|p| {
+                        plat.hardware.processing_elems.iter().any(|pe| {
+                            data.average_execution_times
+                                .get(p)
+                                .map(|m| m.contains_key(pe))
+                                .unwrap_or(false)
+                        })
+                    })
+                });
+            if !all_mappable {
+                errors.insert("identify_aperiodic_asynchronous_dataflow_to_partitioned_mem_mappable_multicore: not all apps are mappable".to_string());
+            }
+            if all_mappable {
+                identified.push(Arc::new(
+                    AperiodicAsynchronousDataflowToPartitionedMemoryMappableMulticore {
+                        aperiodic_asynchronous_dataflows: apps
+                            .into_iter()
+                            .map(|x| x.to_owned())
+                            .collect(),
+                        partitioned_mem_mappable_multicore: plat.to_owned(),
+                        instrumented_computation_times: data.to_owned(),
+                        processes_to_runtime_scheduling: HashMap::new(),
+                        processes_to_memory_mapping: HashMap::new(),
+                        buffer_to_memory_mappings: HashMap::new(),
+                        super_loop_schedules: HashMap::new(),
+                        buffer_to_routers_reservations: HashMap::new(),
+                    },
+                ))
+            }
+        } else {
+            debug!("identify_aperiodic_asynchronous_dataflow_to_partitioned_mem_mappable_multicore: no instrumentation decision model")
+        }
+    } else {
+        debug!("identify_aperiodic_asynchronous_dataflow_to_partitioned_mem_mappable_multicore: no mem mappable platform model")
     }
     (identified, errors)
 }
@@ -352,7 +474,7 @@ pub fn identify_aperiodic_asynchronous_dataflow_to_partitioned_tiled_multicore(
 /// the actual WCC of a graph, but only counts them.
 pub fn weakly_connected_components<G>(g: G) -> Vec<Vec<G::NodeId>>
 where
-    G: IntoNeighborsDirected + Visitable + IntoNodeIdentifiers,
+    G: IntoNeighbors + Visitable + IntoNodeIdentifiers,
 {
     let mut components = Vec::new();
     let mut visited: Vec<<G as GraphBase>::NodeId> = Vec::new();

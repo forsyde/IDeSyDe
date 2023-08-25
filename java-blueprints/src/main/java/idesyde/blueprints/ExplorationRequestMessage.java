@@ -2,8 +2,8 @@ package idesyde.blueprints;
 
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.fasterxml.jackson.databind.annotation.JsonSerialize;
+import idesyde.core.ExplorationSolution;
 
-import java.util.Map;
 import java.util.Set;
 
 @JsonSerialize
@@ -12,6 +12,7 @@ public record ExplorationRequestMessage(
         String explorerIdentifier,
         @JsonProperty("model_message")
         DecisionModelMessage modelMessage,
-        Set<Map<String, Double>> objectives
+        @JsonProperty("previous_solutions")
+        Set<ExplorationSolution> previousSolutions
 ) {
 }

@@ -21,7 +21,6 @@ java {
 
 compileJava {
     sourceCompatibility = JavaVersion.VERSION_17
-    modularity.inferModulePath = true
 }
 
 artifacts {

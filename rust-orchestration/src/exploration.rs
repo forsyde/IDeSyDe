@@ -36,7 +36,7 @@ impl TryFrom<&str> for ExplorerBidding {
 pub struct ExplorationRequestMessage {
     explorer_id: String,
     model_message: DecisionModelMessage,
-    objectives: Vec<HashMap<String, f64>>,
+    previous_solutions: Vec<ExplorationSolutionMessage>,
 }
 
 impl ExplorationRequestMessage {
@@ -47,7 +47,7 @@ impl ExplorationRequestMessage {
         ExplorationRequestMessage {
             explorer_id: explorer_name.to_owned(),
             model_message: DecisionModelMessage::from(decision_model),
-            objectives: vec![],
+            previous_solutions: vec![],
         }
     }
 
@@ -128,7 +128,7 @@ impl ExternalServerExplorationModule {
         None
     }
 
-    fn from(name: &str, ipv4: &Ipv4Addr, port: usize) -> ExternalServerExplorationModule {
+    pub fn from(name: &str, ipv4: &Ipv4Addr, port: usize) -> ExternalServerExplorationModule {
         ExternalServerExplorationModule {
             name: name.to_string(),
             address: std::net::IpAddr::V4(ipv4.to_owned()),
@@ -197,18 +197,26 @@ impl ExplorationModule for ExternalServerExplorationModule {
         time_resolution: i64,
         memory_resolution: i64,
     ) -> Vec<ExplorationSolution> {
-        self.http_post("set", &vec![("parameter", "max-sols")], &max_sols);
-        self.http_post("set", &vec![("parameter", "total-timeout")], &total_timeout);
-        self.http_post(
-            "set",
-            &vec![("parameter", "time-resolution")],
-            &time_resolution,
-        );
-        self.http_post(
-            "set",
-            &vec![("parameter", "memory-resolution")],
-            &memory_resolution,
-        );
+        if let Err(e) = self
+            .http_post("set", &vec![("parameter", "max-sols")], &max_sols)
+            .and(self.http_post("set", &vec![("parameter", "total-timeout")], &total_timeout))
+            .and(self.http_post(
+                "set",
+                &vec![("parameter", "time-resolution")],
+                &time_resolution,
+            ))
+            .and(self.http_post(
+                "set",
+                &vec![("parameter", "memory-resolution")],
+                &memory_resolution,
+            ))
+        {
+            warn!(
+                "Could not set exploration parameters for module {}. Trying to continue.",
+                self.unique_identifier()
+            );
+            debug!("Error is {}", e.to_string());
+        };
         if let Ok(mut client) = websocket::ClientBuilder::new(
             format!("ws://{}:{}/explore", self.address, self.port).as_str(),
         ) {
@@ -254,26 +262,34 @@ impl ExplorationModule for ExternalServerExplorationModule {
         exploration_configuration: idesyde_core::ExplorationConfiguration,
         solution_iter: fn(&ExplorationSolution) -> (),
     ) -> Vec<idesyde_core::ExplorationSolution> {
-        self.http_post(
-            "set",
-            &vec![("parameter", "max-sols")],
-            &exploration_configuration.max_sols,
-        );
-        self.http_post(
-            "set",
-            &vec![("parameter", "total-timeout")],
-            &exploration_configuration.total_timeout,
-        );
-        self.http_post(
-            "set",
-            &vec![("parameter", "time-resolution")],
-            &exploration_configuration.time_resolution,
-        );
-        self.http_post(
-            "set",
-            &vec![("parameter", "memory-resolution")],
-            &exploration_configuration.memory_resolution,
-        );
+        if let Err(e) = self
+            .http_post(
+                "set",
+                &vec![("parameter", "max-sols")],
+                &exploration_configuration.max_sols,
+            )
+            .and(self.http_post(
+                "set",
+                &vec![("parameter", "total-timeout")],
+                &exploration_configuration.total_timeout,
+            ))
+            .and(self.http_post(
+                "set",
+                &vec![("parameter", "time-resolution")],
+                &exploration_configuration.time_resolution,
+            ))
+            .and(self.http_post(
+                "set",
+                &vec![("parameter", "memory-resolution")],
+                &exploration_configuration.memory_resolution,
+            ))
+        {
+            warn!(
+                "Could not set exploration parameters for module {}. Trying to continue.",
+                self.unique_identifier()
+            );
+            debug!("Error is {}", e.to_string());
+        };
         if let Ok(mut client) = websocket::ClientBuilder::new(
             format!("ws://{}:{}/explore", self.address, self.port).as_str(),
         ) {

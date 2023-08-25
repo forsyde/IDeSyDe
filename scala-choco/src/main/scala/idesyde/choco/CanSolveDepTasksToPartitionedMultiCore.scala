@@ -47,7 +47,7 @@ final class CanSolveDepTasksToPartitionedMultiCore(using logger: Logger)
 
   override def buildChocoModel(
       m: PeriodicWorkloadToPartitionedSharedMultiCore,
-      objectivesUpperLimits: Set[Map[String, Double]],
+      objectivesUpperLimits: Set[(PeriodicWorkloadToPartitionedSharedMultiCore, Map[String, Double])],
       timeResolution: Long,
       memoryResolution: Long
   ): (Model, Map[String, IntVar]) = {
@@ -295,7 +295,7 @@ final class CanSolveDepTasksToPartitionedMultiCore(using logger: Logger)
     val solver = chocoModel.getSolver()
     chocoModel.setObjective(false, nUsedPEs)
     // if there is already a previous solution
-    val minPrevSol = objectivesUpperLimits.minByOption(s => s.values.min).foreach(sol => {
+    val minPrevSol = objectivesUpperLimits.minByOption((_, s) => s.values.min).foreach((_, sol) => {
       chocoModel.arithm(nUsedPEs, "<", sol.values.min.toInt).post() // there is only one in this case
     })
     solver.setSearch(

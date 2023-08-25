@@ -4,8 +4,10 @@ use idesyde_blueprints::{
 use idesyde_core::decision_models_schemas_gen;
 use models::{
     AnalysedSDFApplication, AperiodicAsynchronousDataflow,
+    AperiodicAsynchronousDataflowToPartitionedMemoryMappableMulticore,
     AperiodicAsynchronousDataflowToPartitionedTiledMulticore, InstrumentedComputationTimes,
-    PartitionedTiledMulticore, RuntimesAndProcessors, SDFApplication, TiledMultiCore,
+    MemoryMappableMultiCore, PartitionedMemoryMappableMulticore, PartitionedTiledMulticore,
+    RuntimesAndProcessors, SDFApplication, TiledMultiCore,
 };
 use schemars::schema_for;
 use std::collections::HashSet;
@@ -26,6 +28,12 @@ pub fn make_common_module() -> StandaloneIdentificationModule {
             idesyde_core::MarkedIdentificationRule::DecisionModelOnlyIdentificationRule(
                 irules::identify_aperiodic_asynchronous_dataflow_to_partitioned_tiled_multicore,
             ),
+            idesyde_core::MarkedIdentificationRule::DecisionModelOnlyIdentificationRule(
+                irules::identify_partitioned_mem_mapped_multicore,
+            ),
+            idesyde_core::MarkedIdentificationRule::DecisionModelOnlyIdentificationRule(
+                irules::identify_aperiodic_asynchronous_dataflow_to_partitioned_mem_mappable_multicore,
+            ),
         ],
         Vec::new(),
         opaque_to_model_gen!(
@@ -36,7 +44,10 @@ pub fn make_common_module() -> StandaloneIdentificationModule {
             PartitionedTiledMulticore,
             AperiodicAsynchronousDataflow,
             InstrumentedComputationTimes,
-            AperiodicAsynchronousDataflowToPartitionedTiledMulticore
+            AperiodicAsynchronousDataflowToPartitionedTiledMulticore,
+            MemoryMappableMultiCore,
+            PartitionedMemoryMappableMulticore,
+            AperiodicAsynchronousDataflowToPartitionedMemoryMappableMulticore
         ),
         decision_message_to_model_gen!(
             SDFApplication,
@@ -46,7 +57,10 @@ pub fn make_common_module() -> StandaloneIdentificationModule {
             PartitionedTiledMulticore,
             AperiodicAsynchronousDataflow,
             InstrumentedComputationTimes,
-            AperiodicAsynchronousDataflowToPartitionedTiledMulticore
+            AperiodicAsynchronousDataflowToPartitionedTiledMulticore,
+            MemoryMappableMultiCore,
+            PartitionedMemoryMappableMulticore,
+            AperiodicAsynchronousDataflowToPartitionedMemoryMappableMulticore
         ),
         decision_models_schemas_gen!(
             SDFApplication,
@@ -56,7 +70,10 @@ pub fn make_common_module() -> StandaloneIdentificationModule {
             PartitionedTiledMulticore,
             AperiodicAsynchronousDataflow,
             InstrumentedComputationTimes,
-            AperiodicAsynchronousDataflowToPartitionedTiledMulticore
+            AperiodicAsynchronousDataflowToPartitionedTiledMulticore,
+            MemoryMappableMultiCore,
+            PartitionedMemoryMappableMulticore,
+            AperiodicAsynchronousDataflowToPartitionedMemoryMappableMulticore
         ),
     )
 }

@@ -19,7 +19,7 @@ final case class PartitionedCoresWithRuntimes(
 
   def bodyAsBinary: Array[Byte] = writeBinary(this)
 
-  def bodyAsText: String       = write(this)
-  val category: String = "PartitionedCoresWithRuntimes"
+  def bodyAsText: String = write(this)
+  val category: String   = "PartitionedCoresWithRuntimes"
 
 }

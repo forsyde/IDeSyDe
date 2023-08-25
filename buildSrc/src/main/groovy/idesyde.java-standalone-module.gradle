@@ -9,3 +9,7 @@ plugins {
 }
 
 archivesBaseName = project.name
+
+shadowJar {
+    zip64 true
+}

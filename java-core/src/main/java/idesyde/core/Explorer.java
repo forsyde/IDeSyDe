@@ -31,11 +31,11 @@ import java.util.stream.Stream;
 public interface Explorer {
 
     default ExplorationBidding bid(DecisionModel decisionModel) {
-        return new ExplorationBidding(uniqueIdentifer(), decisionModel.header().category(), false, Map.of());
+        return new ExplorationBidding(uniqueIdentifer(), false, Map.of());
     }
 
     default Stream<? extends ExplorationSolution> explore(DecisionModel decisionModel,
-                                                  Set<Map<String, Double>> objectivesUpperLimits,
+                                                  Set<ExplorationSolution> previousSolutions,
                                                   Configuration configuration) {
         return Stream.empty();
     }

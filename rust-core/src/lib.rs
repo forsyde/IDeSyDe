@@ -83,24 +83,38 @@ pub trait DecisionModel: Send + DowncastSync {
         }
     }
 
-    fn write_to_dir(&self, p: &Path, prefix_str: &str, suffix_str: &str) -> DecisionModelHeader {
+    fn write_to_dir(
+        &self,
+        base_path: &Path,
+        prefix_str: &str,
+        suffix_str: &str,
+    ) -> DecisionModelHeader {
         let mut h = self.header();
         if let Some(j) = self.body_as_json() {
-            let p = format!("body_{}_{}_{}.json", prefix_str, h.category, suffix_str);
+            let p = base_path.join(format!(
+                "body_{}_{}_{}.json",
+                prefix_str, h.category, suffix_str
+            ));
             std::fs::write(&p, j).expect("Failed to write JSON body of decision model.");
-            h.body_path = Some(p);
+            h.body_path = p.to_str().map(|x| x.to_string());
         }
         if let Some(b) = self.body_as_msgpack() {
-            let p = format!("body_{}_{}_{}.msgpack", prefix_str, h.category, suffix_str);
+            let p = base_path.join(format!(
+                "body_{}_{}_{}.msgpack",
+                prefix_str, h.category, suffix_str
+            ));
             std::fs::write(&p, b).expect("Failed to write MsgPack body of decision model.");
-            h.body_path = Some(p);
+            h.body_path = p.to_str().map(|x| x.to_string());
         }
         if let Some(b) = self.body_as_cbor() {
-            let p = format!("body_{}_{}_{}.cbor", prefix_str, h.category, suffix_str);
+            let p = base_path.join(format!(
+                "body_{}_{}_{}.cbor",
+                prefix_str, h.category, suffix_str
+            ));
             std::fs::write(&p, b).expect("Failed to write CBOR body of decision model.");
-            h.body_path = Some(p);
+            h.body_path = p.to_str().map(|x| x.to_string());
         }
-        h.write_to_dir(p, prefix_str, suffix_str);
+        h.write_to_dir(base_path, prefix_str, suffix_str);
         h
     }
 }
@@ -118,11 +132,11 @@ impl DecisionModel for DecisionModelHeader {
 
 impl PartialEq<dyn DecisionModel> for dyn DecisionModel {
     fn eq(&self, other: &dyn DecisionModel) -> bool {
-        self.category() == other.category()
-            && self.header() == other.header()
-            && self.body_as_json().is_some() == other.body_as_json().is_some()
+        self.category() == other.category() && self.header() == other.header()
     }
 }
+
+impl Eq for dyn DecisionModel {}
 
 impl PartialOrd<dyn DecisionModel> for dyn DecisionModel {
     fn partial_cmp(&self, other: &dyn DecisionModel) -> Option<Ordering> {

@@ -3,7 +3,6 @@ package idesyde.common;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.annotation.JsonSerialize;
 import idesyde.core.DecisionModel;
-import idesyde.core.DecisionModelWithBody;
 import idesyde.core.headers.DecisionModelHeader;
 
 import java.util.*;
@@ -52,13 +51,4 @@ public record CommunicatingAndTriggeredReactiveWorkload(
             );
     }
 
-    @Override
-    public Optional<String> bodyAsText() throws JsonProcessingException {
-        return Optional.of(objectMapper.writeValueAsString(this));
-    }
-
-    @Override
-    public Optional<byte[]> bodyAsBinary() throws JsonProcessingException {
-        return Optional.of(objectMapper.writeValueAsBytes(this));
-    }
 }

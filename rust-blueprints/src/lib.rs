@@ -8,15 +8,11 @@ use std::{
 
 use clap::Parser;
 use idesyde_core::{
-    headers::{
-        load_decision_model_headers_from_binary, DecisionModelHeader, DesignModelHeader,
-        ExplorationBid,
-    },
+    headers::{DecisionModelHeader, DesignModelHeader, ExplorationBid},
     DecisionModel, DesignModel, ExplorationModule, ExplorationSolution, Explorer,
     IdentificationModule, IdentificationResult, MarkedIdentificationRule,
     ReverseIdentificationRule,
 };
-use log::debug;
 use serde::{Deserialize, Serialize};
 
 #[derive(Serialize, Clone, Deserialize, Debug, PartialEq, Eq)]
@@ -389,17 +385,32 @@ impl IdentificationModule for StandaloneIdentificationModule {
         decision_models: &Vec<Arc<dyn DecisionModel>>,
     ) -> IdentificationResult {
         let mut identified: Vec<Arc<dyn DecisionModel>> = Vec::new();
-        let mut refined = decision_models.clone();
         let mut errors: HashSet<String> = HashSet::new();
+        let mut decision_models_refined = decision_models.clone();
         for m in decision_models {
-            if let Some(non_opaque) = m
-                .downcast_ref::<OpaqueDecisionModel>()
-                .and_then(|opaque| self.opaque_to_model(opaque))
-            {
-                if !identified.contains(&non_opaque) {
-                    identified.push(non_opaque.clone());
-                    refined.push(non_opaque);
+            if let Some(opaque) = m.downcast_ref::<OpaqueDecisionModel>() {
+                if decision_models
+                    .iter()
+                    .all(|x| x != m || x.downcast_ref::<OpaqueDecisionModel>().is_some())
+                {
+                    // there are no other decision models that are equal but are opaque
+                    if let Some(recovered) = self.opaque_to_model(opaque) {
+                        decision_models_refined.push(recovered);
+                    }
                 }
+            }
+        }
+        while let Some((idx, opaque)) = identified
+            .iter()
+            .enumerate()
+            .find(|(i, m)| m.downcast_ref::<OpaqueDecisionModel>().is_some())
+        {
+            let non_opaque_exists = identified
+                .iter()
+                .filter(|x| x == &opaque)
+                .any(|x| x.downcast_ref::<OpaqueDecisionModel>().is_none());
+            if non_opaque_exists {
+                identified.remove(idx);
             }
         }
         for irule in &self.identification_rules {
@@ -430,7 +441,7 @@ impl IdentificationModule for StandaloneIdentificationModule {
                 }
             };
             if let Some(f) = f_opt {
-                let (models, errs) = f(design_models, &refined);
+                let (models, errs) = f(design_models, &decision_models_refined);
                 for m in models {
                     if !identified.contains(&m) {
                         identified.push(m);

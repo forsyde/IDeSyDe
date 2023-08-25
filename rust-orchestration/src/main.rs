@@ -1,8 +1,4 @@
-use std::{
-    net::{IpAddr, Ipv4Addr},
-    path::Path,
-    sync::Arc,
-};
+use std::{net::IpAddr, path::Path, sync::Arc};
 
 use clap::Parser;
 use env_logger::WriteStyle;
@@ -12,6 +8,7 @@ use idesyde_core::{
     DecisionModel, DesignModel, ExplorationConfiguration, ExplorationModule,
 };
 use idesyde_orchestration::{
+    exploration::ExternalServerExplorationModule,
     identification::{identification_procedure, ExternalServerIdentificationModule},
     models::OpaqueDesignModel,
 };
@@ -128,9 +125,7 @@ fn main() {
         //     }
         // }
 
-        let run_path_str = &args
-            .run_path
-            .expect("Failed to get run path durin initialization.");
+        let run_path_str = &args.run_path.unwrap_or("run".to_string());
         info!("Run directory is {}", &run_path_str);
         let output_path_str = &args
             .output_path
@@ -235,7 +230,7 @@ fn main() {
         debug!("Initializing modules");
         // let mut imodules: Vec<Arc<dyn IdentificationModule>> = Vec::new();
         // let mut emodules: Vec<Arc<dyn ExplorationModule>> = Vec::new();
-        let (mut imodules, emodules) = rayon::join(
+        let (mut imodules, mut emodules) = rayon::join(
             || {
                 idesyde_orchestration::find_identification_modules(
                     imodules_path,
@@ -248,18 +243,6 @@ fn main() {
             },
             || idesyde_orchestration::find_exploration_modules(emodules_path),
         );
-        for eximod in &imodules {
-            debug!(
-                "Initialized identification module with identifier {}",
-                &eximod.unique_identifier()
-            );
-        }
-        for exemod in &emodules {
-            debug!(
-                "Initialized exploration module with identifier {}",
-                &exemod.unique_identifier()
-            );
-        }
 
         // add embedded modules
         imodules.push(Arc::new(idesyde_common::make_common_module()));
@@ -286,6 +269,42 @@ fn main() {
                     }
                 }
             }
+        }
+
+        if let Some(external_modules) = args.emodule {
+            for url in external_modules {
+                if url.starts_with("http://") {
+                    let mut splitted = url[7..].split(":");
+                    if let Some(ip) = splitted.next().and_then(|x| x.parse::<IpAddr>().ok()) {
+                        match ip {
+                            IpAddr::V4(ipv4) => {
+                                emodules.push(Arc::new(ExternalServerExplorationModule::from(
+                                    ipv4.to_string().as_str(),
+                                    &ipv4,
+                                    splitted
+                                        .next()
+                                        .and_then(|p| p.parse::<usize>().ok())
+                                        .unwrap_or(80usize),
+                                )))
+                            }
+                            _ => (),
+                        }
+                    }
+                }
+            }
+        }
+
+        for eximod in &imodules {
+            debug!(
+                "Registered identification module with identifier {}",
+                &eximod.unique_identifier()
+            );
+        }
+        for exemod in &emodules {
+            debug!(
+                "Registered exploration module with identifier {}",
+                &exemod.unique_identifier()
+            );
         }
 
         // continue
@@ -338,6 +357,17 @@ fn main() {
                 .reduce(|s1, s2| s1.clone() + ", " + &s2)
                 .unwrap_or("None".to_string())
         );
+        // for (i, m) in identified.iter().enumerate() {
+        //     m.write_to_dir(&identified_path, "final", "Orchestratror");
+        // }
+        // println!(
+        //     "{}",
+        //     identified
+        //         .iter()
+        //         .map(|x| x.body_as_json().unwrap_or("NONE".to_string()))
+        //         .reduce(|s1, s2| s1.clone() + ";\n " + &s2)
+        //         .unwrap_or("None".to_string())
+        // );
 
         // let dominant = compute_dominant_decision_models(&identified_refs);
 
@@ -413,6 +443,7 @@ fn main() {
                 (None, None) => info!("Starting exploration until completion"),
             }
             // let (mut tx, rx) = spmc::channel();
+            // let mut total_reversed = 0;
             let sols_found = chosen_exploration_module.iter_explore(
                 chosen_decision_model.clone(),
                 &dominant_bid.explorer_unique_identifier,

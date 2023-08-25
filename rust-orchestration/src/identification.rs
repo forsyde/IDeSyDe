@@ -367,6 +367,19 @@ pub fn identification_procedure(
     let mut errors: HashSet<String> = HashSet::new();
     identified.extend_from_slice(pre_identified);
     while !fix_point {
+        // try to eliminate opaque repeated decision models
+        while let Some((idx, _)) = identified
+            .iter()
+            .enumerate()
+            .filter(|(_, m)| m.downcast_ref::<OpaqueDecisionModel>().is_some())
+            .find(|(_, opaque)| {
+                identified
+                    .iter()
+                    .any(|x| &x == opaque && x.downcast_ref::<OpaqueDecisionModel>().is_none())
+            })
+        {
+            identified.remove(idx);
+        }
         // the step condition forces the procedure to go at least one more, fundamental for incrementability
         fix_point = true;
         let before = identified.len();
@@ -375,14 +388,10 @@ pub fn identification_procedure(
             .map(|imodule| imodule.identification_step(step, &design_models, &identified))
             .reduce(
                 || (vec![], HashSet::new()),
-                |(m1, e1), (m2, e2)| {
-                    let mut v = vec![];
-                    let mut e = HashSet::new();
-                    v.extend(m1);
-                    v.extend(m2);
-                    e.extend(e1);
-                    e.extend(e2);
-                    (v, e)
+                |(mut m1, mut e1), (m2, e2)| {
+                    m1.extend(m2);
+                    e1.extend(e2);
+                    (m1, e1)
                 },
             );
         for m in identified_step {
@@ -391,7 +400,7 @@ pub fn identification_procedure(
             }
         }
         for e in errors_step {
-            debug!("IRule error at step {}, {}", step, e);
+            debug!("{}", e);
             errors.insert(e);
         }
         // .filter(|potential| !identified.contains(potential))

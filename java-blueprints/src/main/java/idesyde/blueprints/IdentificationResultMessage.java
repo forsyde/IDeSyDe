@@ -22,5 +22,6 @@ public record IdentificationResultMessage(
         }
     }
 
-    static final ObjectMapper objectMapper = new ObjectMapper(new CBORFactory());
+    static final ObjectMapper objectMapperCBOR = new ObjectMapper(new CBORFactory());
+    static final ObjectMapper objectMapper = new ObjectMapper();
 }

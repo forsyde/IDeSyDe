@@ -8,7 +8,7 @@ ThisBuild / publishTo := Some(Opts.resolver.sonatypeStaging)
 
 ThisBuild / resolvers += Resolver.mavenLocal
 
-lazy val forsydeIoVersion              = "0.7.7-9-g8b0d982.dirty"
+lazy val forsydeIoVersion              = "0.7.8"
 lazy val jgraphtVersion                = "1.5.1"
 lazy val scribeVersion                 = "3.10.2"
 lazy val scalaGraphVersion             = "1.13.5"

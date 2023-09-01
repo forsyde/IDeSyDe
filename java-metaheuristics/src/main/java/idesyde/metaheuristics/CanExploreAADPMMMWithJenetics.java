@@ -63,7 +63,8 @@ public interface CanExploreAADPMMMWithJenetics {
                                                         bufs.size());
                                         var channelReservationsChromossome = IntegerChromosome.of(0,
                                                         decisionModel.partitionedMemMappableMulticore().hardware()
-                                                                        .communicationElementsMaxChannels().stream()
+                                                                        .communicationElementsMaxChannels().values()
+                                                                        .stream()
                                                                         .mapToInt(x -> x).max().orElse(0) + 1,
                                                         decisionModel.partitionedMemMappableMulticore().hardware()
                                                                         .processingElems().size()

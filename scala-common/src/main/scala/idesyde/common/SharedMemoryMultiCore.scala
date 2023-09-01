@@ -111,6 +111,6 @@ final case class SharedMemoryMultiCore(
     })
   }
 
-  override val category = "MemoryMappableMultiCore"
+  override val category = "SharedMemoryMultiCore"
 
 }

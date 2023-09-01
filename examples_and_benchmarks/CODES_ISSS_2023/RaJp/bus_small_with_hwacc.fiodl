@@ -283,7 +283,7 @@ systemgraph {
   [platform::AbstractStructure, visualization::GreyBox]
   (contained, submodules)
   {}
-  vertex "micro_blaze_7"
+  vertex "acc_7"
   [platform::InstrumentedProcessingModule, visualization::GreyBox, visualization::Visualizable]
   (contained, defaultMemory, networkInterface)
   {
@@ -438,20 +438,20 @@ systemgraph {
   edge [visualization::VisualContainment] from "micro_blaze_6" port "contained" to "micro_blaze_os6" 
   edge [decision::AbstractAllocation] from "micro_blaze_os6" port "allocationHosts" to "micro_blaze_6" 
   edge [decision::AbstractAllocation] from "micro_blaze_ni_slots6" port "allocationHosts" to "micro_blaze_ni6" 
-  edge [] from "tile_7" port "submodules" to "micro_blaze_7" 
-  edge [visualization::VisualContainment] from "tile_7" port "contained" to "micro_blaze_7" 
+  edge [] from "tile_7" port "submodules" to "acc_7" 
+  edge [visualization::VisualContainment] from "tile_7" port "contained" to "acc_7" 
   edge [] from "tile_7" port "submodules" to "micro_blaze_mem7" 
   edge [visualization::VisualContainment] from "tile_7" port "contained" to "micro_blaze_mem7" 
   edge [] from "tile_7" port "submodules" to "micro_blaze_ni7" 
   edge [visualization::VisualContainment] from "tile_7" port "contained" to "micro_blaze_ni7" 
-  edge [platform::PhysicalConnection,visualization::VisualConnection] from "micro_blaze_7" port "networkInterface" to "micro_blaze_ni7" port "tileProcessor"
-  edge [platform::PhysicalConnection,visualization::VisualConnection] from "micro_blaze_ni7" port "tileProcessor" to "micro_blaze_7" port "networkInterface"
-  edge [platform::PhysicalConnection,visualization::VisualConnection] from "micro_blaze_7" port "defaultMemory" to "micro_blaze_mem7" port "instructionsAndData"
-  edge [platform::PhysicalConnection,visualization::VisualConnection] from "micro_blaze_mem7" port "instructionsAndData" to "micro_blaze_7" port "defaultMemory"
+  edge [platform::PhysicalConnection,visualization::VisualConnection] from "acc_7" port "networkInterface" to "micro_blaze_ni7" port "tileProcessor"
+  edge [platform::PhysicalConnection,visualization::VisualConnection] from "micro_blaze_ni7" port "tileProcessor" to "acc_7" port "networkInterface"
+  edge [platform::PhysicalConnection,visualization::VisualConnection] from "acc_7" port "defaultMemory" to "micro_blaze_mem7" port "instructionsAndData"
+  edge [platform::PhysicalConnection,visualization::VisualConnection] from "micro_blaze_mem7" port "instructionsAndData" to "acc_7" port "defaultMemory"
   edge [platform::PhysicalConnection,visualization::VisualConnection] from "micro_blaze_mem7" port "networkInterface" to "micro_blaze_ni7" port "tileMemory"
   edge [platform::PhysicalConnection,visualization::VisualConnection] from "micro_blaze_ni7" port "tileMemory" to "micro_blaze_mem7" port "networkInterface"
-  edge [visualization::VisualContainment] from "micro_blaze_7" port "contained" to "micro_blaze_os7" 
-  edge [decision::AbstractAllocation] from "micro_blaze_os7" port "allocationHosts" to "micro_blaze_7" 
+  edge [visualization::VisualContainment] from "acc_7" port "contained" to "micro_blaze_os7" 
+  edge [decision::AbstractAllocation] from "micro_blaze_os7" port "allocationHosts" to "acc_7" 
   edge [decision::AbstractAllocation] from "micro_blaze_ni_slots7" port "allocationHosts" to "micro_blaze_ni7" 
   edge [decision::AbstractAllocation] from "busSched" port "allocationHosts" to "TDMBus" 
   edge [platform::PhysicalConnection,visualization::VisualConnection] from "micro_blaze_ni0" port "bus" to "TDMBus" port "ni_0"

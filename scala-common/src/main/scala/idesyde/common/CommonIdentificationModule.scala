@@ -88,7 +88,7 @@ object CommonIdentificationModule
         body_path.flatMap(decodeFromPath[SchedulableTiledMultiCore])
       case DecisionModelHeader("SDFToTiledMultiCore", body_path, _) =>
         body_path.flatMap(decodeFromPath[SDFToTiledMultiCore])
-      case DecisionModelHeader("MemoryMappableMultiCore", body_path, _) =>
+      case DecisionModelHeader("SharedMemoryMultiCore", body_path, _) =>
         body_path.flatMap(decodeFromPath[SharedMemoryMultiCore])
       case DecisionModelHeader("CommunicatingAndTriggeredReactiveWorkload", body_path, _) =>
         body_path.flatMap(decodeFromPath[CommunicatingAndTriggeredReactiveWorkload])
@@ -118,7 +118,7 @@ object CommonIdentificationModule
         m.body.map(s => read[SchedulableTiledMultiCore](s))
       case DecisionModelHeader("SDFToTiledMultiCore", body_path, _) =>
         m.body.map(s => read[SDFToTiledMultiCore](s))
-      case DecisionModelHeader("MemoryMappableMultiCore", body_path, _) =>
+      case DecisionModelHeader("SharedMemoryMultiCore", body_path, _) =>
         m.body.map(s => read[SharedMemoryMultiCore](s))
       case DecisionModelHeader("RuntimesAndProcessors", body_path, _) =>
         m.body.map(s => read[RuntimesAndProcessors](s))

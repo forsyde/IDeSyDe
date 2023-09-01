@@ -426,7 +426,6 @@ pub fn identify_aperiodic_asynchronous_dataflow_to_partitioned_mem_mappable_mult
                 .iter()
                 .flat_map(|x| x.downcast_ref::<AperiodicAsynchronousDataflow>())
                 .collect();
-            println!("{} apps", apps.len());
             // check if all processes can be mapped
             let all_mappable = apps.len() > 0
                 && apps.iter().all(|app| {
@@ -455,7 +454,7 @@ pub fn identify_aperiodic_asynchronous_dataflow_to_partitioned_mem_mappable_mult
                         processes_to_memory_mapping: HashMap::new(),
                         buffer_to_memory_mappings: HashMap::new(),
                         super_loop_schedules: HashMap::new(),
-                        buffer_to_routers_reservations: HashMap::new(),
+                        processing_elements_to_routers_reservations: HashMap::new(),
                     },
                 ))
             }

@@ -53,9 +53,9 @@ trait ApplicationRules {
             })
           val msgSizes = sySignals
             .map(sig =>
-              sig.getIdentifier() -> ForSyDeHierarchy.RegisterLike
+              sig.getIdentifier() -> ForSyDeHierarchy.RegisterArrayLike
                 .tryView(sig)
-                .map(_.sizeInBits().toLong)
+                .map(_.elementSizeInBits().toLong)
                 .orElse(0L)
             )
             .toMap

@@ -205,11 +205,11 @@ pub struct MemoryMappableMultiCore {
     pub communication_elems: HashSet<String>,
     pub topology_srcs: Vec<String>,
     pub topology_dsts: Vec<String>,
-    pub processors_frequency: Vec<u64>,
-    pub processors_provisions: Vec<HashMap<String, HashMap<String, f64>>>,
-    pub storage_sizes: Vec<u64>,
-    pub communication_elements_max_channels: Vec<u32>,
-    pub communication_elements_bit_per_sec_per_channel: Vec<f64>,
+    pub processors_frequency: HashMap<String, u64>,
+    pub processors_provisions: HashMap<String, HashMap<String, HashMap<String, f64>>>,
+    pub storage_sizes: HashMap<String, u64>,
+    pub communication_elements_max_channels: HashMap<String, u32>,
+    pub communication_elements_bit_per_sec_per_channel: HashMap<String, f64>,
     pub pre_computed_paths: HashMap<String, HashMap<String, Vec<String>>>,
 }
 
@@ -515,7 +515,7 @@ pub struct AperiodicAsynchronousDataflowToPartitionedMemoryMappableMulticore {
     pub processes_to_memory_mapping: HashMap<String, String>,
     pub buffer_to_memory_mappings: HashMap<String, String>,
     pub super_loop_schedules: HashMap<String, Vec<String>>,
-    pub buffer_to_routers_reservations: HashMap<String, HashMap<String, HashSet<u16>>>,
+    pub processing_elements_to_routers_reservations: HashMap<String, HashMap<String, u16>>,
 }
 
 impl DecisionModel for AperiodicAsynchronousDataflowToPartitionedMemoryMappableMulticore {
@@ -551,10 +551,10 @@ impl DecisionModel for AperiodicAsynchronousDataflowToPartitionedMemoryMappableM
         for (buf, mem) in &self.buffer_to_memory_mappings {
             elems.insert(format!("{}={}:{}-{}:{}", "mapping", buf, "", mem, ""));
         }
-        for (buf, ce_slots) in &self.buffer_to_routers_reservations {
+        for (pe, ce_slots) in &self.processing_elements_to_routers_reservations {
             for (ce, slots) in ce_slots {
-                if !slots.is_empty() {
-                    elems.insert(format!("{}={}:{}-{}:{}", "reservation", buf, "", ce, ""));
+                if *slots > 0 {
+                    elems.insert(format!("{}={}:{}-{}:{}", "reservation", pe, "", ce, ""));
                 }
             }
         }

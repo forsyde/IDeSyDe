@@ -2,7 +2,7 @@ include 'java-core'
 //include 'java-bridge-matlab'
 include 'java-common'
 include 'java-blueprints'
-//include 'java-bridge-forsyde-io'
+include 'java-bridge-forsyde-io'
 //include 'scala-common'
 include 'java-metaheuristics'
 

@@ -21,11 +21,11 @@ public record AperiodicAsynchronousDataflowToPartitionedMemoryMappableMulticore(
 		@JsonProperty("processes_to_memory_mapping") Map<String, String> processesToMemoryMapping,
 		@JsonProperty("buffer_to_memory_mappings") Map<String, String> bufferToMemoryMappings,
 		@JsonProperty("super_loop_schedules") Map<String, List<String>> superLoopSchedules,
-		@JsonProperty("buffer_to_routers_reservations") Map<String, Map<String, Set<Integer>>> bufferToRoutersReservations)
+		@JsonProperty("processing_elements_to_routers_reservations") Map<String, Map<String, Integer>> processingElementsToRoutersReservations)
 		implements DecisionModel {
 	@Override
 	public DecisionModelHeader header() {
-		return new DecisionModelHeader("AperiodicAsynchronousDataflowToPartitionedTiledMulticore", Stream
+		return new DecisionModelHeader("AperiodicAsynchronousDataflowToPartitionedMemoryMappableMulticore", Stream
 				.concat(aperiodicAsynchronousDataflows.stream().flatMap(x -> x.header().coveredElements().stream()),
 						Stream.concat(partitionedMemMappableMulticore.header().coveredElements().stream(),
 								instrumentedComputationTimes.header().coveredElements().stream()))

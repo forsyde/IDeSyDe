@@ -58,7 +58,7 @@ trait MixedRules {
                 .vertexSet()
                 .forEach(proc =>
                   ForSyDeHierarchy.InstrumentedProcessingModule
-                    .tryView(model, task)
+                    .tryView(model, proc)
                     .ifPresent(instrumentedProc => {
                       val peName = instrumentedProc.getIdentifier()
                       processing_elements += peName

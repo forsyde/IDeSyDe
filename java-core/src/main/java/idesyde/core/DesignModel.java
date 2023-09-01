@@ -1,5 +1,7 @@
 package idesyde.core;
 
+import java.util.Optional;
+
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.dataformat.cbor.CBORFactory;
 import idesyde.core.headers.DesignModelHeader;
@@ -24,5 +26,10 @@ public interface DesignModel {
 
     DesignModelHeader header();
 
-    static final ObjectMapper objectMapper = new ObjectMapper(new CBORFactory());
+    default Optional<String> bodyAsString() {
+        return Optional.empty();
+    }
+
+    static final ObjectMapper objectMapper = new ObjectMapper();
+    static final ObjectMapper objectMapperCBOR = new ObjectMapper(new CBORFactory());
 }

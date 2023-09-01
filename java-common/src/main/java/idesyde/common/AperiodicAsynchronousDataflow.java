@@ -62,4 +62,23 @@ public record AperiodicAsynchronousDataflow(
         return jobs;
     }
 
+    public boolean isSucessor(Job predecessor, Job potentialSucessor) {
+        // first check if is not an immediate sucessor
+        for (int i = 0; i < jobGraphSrcName.size(); i++) {
+            if (jobGraphSrcName.get(i).equals(predecessor.process()) && jobGraphSrcInstance.get(i).equals(predecessor.instance())) {
+                if (jobGraphDstName.get(i).equals(potentialSucessor.process()) && jobGraphDstInstance.get(i).equals(potentialSucessor.instance())) {
+                    return true;
+                }
+            }
+        }
+        // if this is not true, now we recurse the graph to if there is any conneciton
+        for (int i = 0; i < jobGraphSrcName.size(); i++) {
+            if (jobGraphSrcName.get(i).equals(predecessor.process()) && jobGraphSrcInstance.get(i).equals(predecessor.instance())) {
+                var nextJob = new Job(jobGraphDstName.get(i), jobGraphSrcInstance.get(i));
+                return isSucessor(nextJob, potentialSucessor);
+            }
+        }
+        return false;
+    }
+
 }

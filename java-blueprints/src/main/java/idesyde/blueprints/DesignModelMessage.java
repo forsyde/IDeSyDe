@@ -5,6 +5,8 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.annotation.JsonSerialize;
 import com.fasterxml.jackson.dataformat.cbor.CBORFactory;
 import com.fasterxml.jackson.datatype.jdk8.Jdk8Module;
+
+import idesyde.core.DesignModel;
 import idesyde.core.headers.DesignModelHeader;
 
 import java.util.Optional;
@@ -14,6 +16,10 @@ public record DesignModelMessage(
         DesignModelHeader header,
         Optional<String> body
 ) {
+
+    public static DesignModelMessage from(DesignModel m) {
+        return new DesignModelMessage(m.header(), m.bodyAsString());
+    }
 
     public Optional<String> toJsonString() {
         try {

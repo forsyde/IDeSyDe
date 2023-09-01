@@ -5,7 +5,7 @@ use env_logger::WriteStyle;
 use idesyde_blueprints::OpaqueDecisionModel;
 use idesyde_core::{
     headers::{load_decision_model_headers_from_binary, ExplorationBid},
-    DecisionModel, DesignModel, ExplorationConfiguration, ExplorationModule,
+    DecisionModel, DesignModel, ExplorationConfiguration, ExplorationModule, ExplorationSolution,
 };
 use idesyde_orchestration::{
     exploration::ExternalServerExplorationModule,
@@ -337,11 +337,11 @@ fn main() {
         //     model_paths: args.inputs,
         //     elements: HashSet::new(),
         // }));
-        let pre_identified: Vec<Arc<dyn DecisionModel>> =
-            load_decision_model_headers_from_binary(&identified_path)
-                .iter()
-                .map(|(_, h)| Arc::new(OpaqueDecisionModel::from(h)) as Arc<dyn DecisionModel>)
-                .collect();
+        let pre_identified: Vec<Arc<dyn DecisionModel>> = vec![];
+        // load_decision_model_headers_from_binary(&identified_path)
+        //     .iter()
+        //     .map(|(_, h)| Arc::new(OpaqueDecisionModel::from(h)) as Arc<dyn DecisionModel>)
+        //     .collect();
         info!(
             "Starting identification with {} pre-identified decision models",
             pre_identified.len()
@@ -357,9 +357,9 @@ fn main() {
                 .reduce(|s1, s2| s1.clone() + ", " + &s2)
                 .unwrap_or("None".to_string())
         );
-        // for (i, m) in identified.iter().enumerate() {
-        //     m.write_to_dir(&identified_path, "final", "Orchestratror");
-        // }
+        for (_, m) in identified.iter().enumerate() {
+            m.write_to_dir(&identified_path, "final", "Orchestratror");
+        }
         // println!(
         //     "{}",
         //     identified
@@ -444,7 +444,7 @@ fn main() {
             }
             // let (mut tx, rx) = spmc::channel();
             // let mut total_reversed = 0;
-            let sols_found = chosen_exploration_module.iter_explore(
+            let mut sols_found = chosen_exploration_module.iter_explore(
                 chosen_decision_model.clone(),
                 &dominant_bid.explorer_unique_identifier,
                 vec![],
@@ -454,14 +454,45 @@ fn main() {
                     time_resolution: args.x_time_resolution.unwrap_or(0),
                     memory_resolution: args.x_memory_resolution.unwrap_or(0),
                 },
-                |_| {
-                    debug!("Found a new solution.");
+                |(_, sol)| {
+                    debug!(
+                        "Found a new solution with objectives: {}.",
+                        sol.iter()
+                            .map(|(k, v)| format!("{}: {}", k, v))
+                            .reduce(|s1, s2| format!("{}, {}", s1, s2))
+                            .unwrap_or("None".to_owned())
+                    );
+                    // sol.write_to_dir(&explored_path.to_owned(), "latest", "Orchestrator");
                 },
             );
-            info!("Finished exploration with {} solution(s)", sols_found.len());
+            sols_found.dedup_by(|(_, a), (_, b)| a == b);
+            let dominant_sols: Vec<ExplorationSolution> = sols_found
+                .iter()
+                .filter(|x @ (_, objs)| {
+                    sols_found.iter().filter(|y| x != y).all(|(_, other_objs)| {
+                        objs.iter().any(|(k, v)| v < other_objs.get(k).unwrap())
+                    })
+                })
+                .map(|x| x.to_owned())
+                .collect();
+            info!(
+                "Finished exploration with {} total and {} dominant solution(s)",
+                sols_found.len(),
+                dominant_sols.len()
+            );
+            for (i, (m, objs)) in dominant_sols.iter().enumerate() {
+                m.write_to_dir(&explored_path, format!("{}", i).as_str(), "Orchestratror");
+                debug!(
+                    "Written dominant with objectives: {}",
+                    objs.iter()
+                        .map(|(k, v)| format!("{}: {}", k, v))
+                        .reduce(|s1, s2| format!("{}, {}", s1, s2))
+                        .unwrap_or("None".to_owned())
+                )
+            }
             let solved_models: Vec<Arc<dyn DecisionModel>> =
-                sols_found.iter().map(|(x, _)| x.clone()).collect();
-            if !sols_found.is_empty() {
+                dominant_sols.iter().map(|(x, _)| x.clone()).collect();
+            if !dominant_sols.is_empty() {
                 info!("Starting integration");
                 let total_reversed: usize = imodules
                     .par_iter()
@@ -471,8 +502,8 @@ fn main() {
                         for reverse in
                             imodule.reverse_identification(&solved_models, &design_models)
                         {
-                            let reverse_header = reverse.header();
-                            reverse_header.write_to_dir(
+                            // let reverse_header = reverse.header();
+                            reverse.write_to_dir(
                                 &reverse_path,
                                 format!("{}", n_reversed).as_str(),
                                 "Orchestrator",

@@ -23,22 +23,22 @@ import java.util.stream.Stream;
  */
 @JsonSerialize
 public record MemoryMappableMultiCore(@JsonProperty("processing_elems") Set<String> processingElems,
-                                      @JsonProperty("storage_elems") Set<String> storageElems,
-                                      @JsonProperty("communication_elems") Set<String> communicationElems,
-                                      @JsonProperty("topology_srcs") List<String> topologySrcs,
-                                      @JsonProperty("topology_dsts") List<String> topologyDsts,
-                                      @JsonProperty("processors_frequency") List<Long> processorsFrequency,
-                                      @JsonProperty("processors_provisions") List<Map<String, Map<String, Double>>> processorsProvisions,
-                                      @JsonProperty("storage_sizes") List<Long> storageSizes,
-                                      @JsonProperty("communication_elements_max_channels") List<Integer> communicationElementsMaxChannels,
-                                      @JsonProperty("communication_elements_bit_per_sec_per_channel") List<Double> communicationElementsBitPerSecPerChannel,
-                                      @JsonProperty("pre_computed_paths") Map<String, Map<String, List<String>>> preComputedPaths)
+        @JsonProperty("storage_elems") Set<String> storageElems,
+        @JsonProperty("communication_elems") Set<String> communicationElems,
+        @JsonProperty("topology_srcs") List<String> topologySrcs,
+        @JsonProperty("topology_dsts") List<String> topologyDsts,
+        @JsonProperty("processors_frequency") Map<String, Long> processorsFrequency,
+        @JsonProperty("processors_provisions") Map<String, Map<String, Map<String, Double>>> processorsProvisions,
+        @JsonProperty("storage_sizes") Map<String, Long> storageSizes,
+        @JsonProperty("communication_elements_max_channels") Map<String, Integer> communicationElementsMaxChannels,
+        @JsonProperty("communication_elements_bit_per_sec_per_channel") Map<String, Double> communicationElementsBitPerSecPerChannel,
+        @JsonProperty("pre_computed_paths") Map<String, Map<String, List<String>>> preComputedPaths)
         implements DecisionModel {
     @Override
     public DecisionModelHeader header() {
         return new DecisionModelHeader("MemoryMappableMultiCore",
                 Stream.concat(processingElems.stream(),
-                                Stream.concat(storageElems.stream(), communicationElems.stream()))
+                        Stream.concat(storageElems.stream(), communicationElems.stream()))
                         .collect(Collectors.toSet()),
                 Optional.empty());
     }

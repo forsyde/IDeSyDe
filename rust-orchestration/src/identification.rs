@@ -269,18 +269,6 @@ impl IdentificationModule for ExternalServerIdentificationModule {
         design_models: &Vec<Arc<dyn DesignModel>>,
     ) -> Vec<Arc<dyn DesignModel>> {
         // let mut integrated: Vec<Box<dyn DesignModel>> = Vec::new();
-        // self.write_line_to_input(
-        //     format!("SET identified-path {}", self.identified_path.display()).as_str(),
-        // );
-        // self.write_line_to_input(
-        //     format!("SET solved-path {}", self.solved_path.display()).as_str(),
-        // );
-        // self.write_line_to_input(
-        //     format!("SET design-path {}", self.inputs_path.display()).as_str(),
-        // );
-        // self.write_line_to_input(
-        //     format!("SET reverse-path {}", self.reverse_path.display()).as_str(),
-        // );
         // save decision models and design models and ask the module to read them
         for design_model in design_models {
             // let message = DesignModelMessage::from_dyn_design_model(design_model.as_ref());

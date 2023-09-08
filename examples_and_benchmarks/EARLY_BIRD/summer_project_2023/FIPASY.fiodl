@@ -1,0 +1,1945 @@
+systemgraph {
+  vertex "rgb2gray"
+  [impl::ANSICBlackBoxExecutable, visualization::VisualizableWithProperties]
+  (res, rgb)
+  {
+    "visualizedPropertiesNames": [
+      "inlinedCode"
+    ],
+    "consumerArgumentPorts": [
+
+    ],
+    "returnPort": "res",
+    "inlinedCode": "res = px.r + px.g + px.b;",
+    "producerArgumentPorts": [
+      "px"
+    ]
+  }
+  vertex "brightnessReduceVA"
+  [impl::Executable, parallel::ReduceV, visualization::GreyBox]
+  (contained, kernels, maxMapVReduceVVec, resizedSig)
+  {
+    "producerArray": [
+      "resizedSig"
+    ],
+    "visualizedPropertiesNames": [
+
+    ],
+    "consumerScalar": [
+      "maxMapVReduceVVec"
+    ]
+  }
+  vertex "minmax"
+  [impl::ANSICBlackBoxExecutable, visualization::Visualizable, visualization::VisualizableWithProperties]
+  (a, b, res)
+  {
+    "visualizedPropertiesNames": [
+      "inlinedCode"
+    ],
+    "consumerArgumentPorts": [
+
+    ],
+    "returnPort": "res",
+    "inlinedCode": "res = a > b ? a : b;",
+    "producerArgumentPorts": [
+      "a",
+      "b"
+    ]
+  }
+  vertex "gamma"
+  [impl::ANSICBlackBoxExecutable, visualization::VisualizableWithProperties]
+  (bright, ctrl, px, res)
+  {
+    "visualizedPropertiesNames": [
+      "inlinedCode"
+    ],
+    "consumerArgumentPorts": [
+
+    ],
+    "returnPort": "res",
+    "inlinedCode": "res = ctrl ? (px * (bright.max - bright.min) / 256) : px;",
+    "producerArgumentPorts": [
+      "ctrl",
+      "px",
+      "bright"
+    ]
+  }
+  vertex "neighbors"
+  [impl::ANSICBlackBoxExecutable, visualization::VisualizableWithProperties]
+  (px, res)
+  {
+    "visualizedPropertiesNames": [
+      "inlinedCode"
+    ],
+    "consumerArgumentPorts": [
+
+    ],
+    "returnPort": "res",
+    "inlinedCode": "res = neighbors(px);",
+    "producerArgumentPorts": [
+      "px"
+    ]
+  }
+  vertex "application"
+  [visualization::GreyBox]
+  (contained)
+  {}
+  vertex "parallelStruct"
+  [ParStruct]
+  (tuplets)
+  {}
+  vertex "graySYTSY0"
+  [impl::InstrumentedExecutable, moc::sdf::SDFActor, visualization::GreyBox]
+  (combFunctions, contained, newSYSignalTransformedIn, newSYSignalTransformedOut)
+  {
+    "production": {
+      "graySYTSY0graySYunZipxSYtransformedSYSig": 960_i
+    },
+    "consumption": {
+      "graySYzipxSYtransformedSYgraySYTSY0Sig": 960_i
+    },
+    "sizeInBits":100_l,
+    "operationRequirements": {
+      "default": {
+        "iop": 960_l
+      }
+    }
+  }
+  vertex "graySYTSY1"
+  [impl::InstrumentedExecutable, moc::sdf::SDFActor, visualization::GreyBox]
+  (combFunctions, contained, newSYSignalTransformedIn, newSYSignalTransformedOut)
+  {
+    "production": {
+      "graySYTSY1graySYunZipxSYtransformedSYSig": 960_i
+    },
+    "consumption": {
+      "graySYzipxSYtransformedSYgraySYTSY1Sig": 960_i
+    },
+    "sizeInBits":100_l,
+    "operationRequirements": {
+      "default": {
+        "iop": 960_l
+      }
+    }
+  }
+  vertex "graySYTSY2"
+  [impl::InstrumentedExecutable, moc::sdf::SDFActor, visualization::GreyBox]
+  (combFunctions, contained, newSYSignalTransformedIn, newSYSignalTransformedOut)
+  {
+    "production": {
+      "graySYTSY2graySYunZipxSYtransformedSYSig": 960_i
+    },
+    "consumption": {
+      "graySYzipxSYtransformedSYgraySYTSY2Sig": 960_i
+    },
+    "sizeInBits":100_l,
+    "operationRequirements": {
+      "default": {
+        "iop": 960_l
+      }
+    }
+  }
+  vertex "graySYTSY3"
+  [impl::InstrumentedExecutable, moc::sdf::SDFActor, visualization::GreyBox]
+  (combFunctions, contained, newSYSignalTransformedIn, newSYSignalTransformedOut)
+  {
+    "production": {
+      "graySYTSY3graySYunZipxSYtransformedSYSig": 960_i
+    },
+    "consumption": {
+      "graySYzipxSYtransformedSYgraySYTSY3Sig": 960_i
+    },
+    "sizeInBits":100_l,
+    "operationRequirements": {
+      "default": {
+        "iop": 960_l
+      }
+    }
+  }
+  vertex "graySYTSY4"
+  [impl::InstrumentedExecutable, moc::sdf::SDFActor, visualization::GreyBox]
+  (combFunctions, contained, newSYSignalTransformedIn, newSYSignalTransformedOut)
+  {
+    "production": {
+      "graySYTSY4graySYunZipxSYtransformedSYSig": 960_i
+    },
+    "consumption": {
+      "graySYzipxSYtransformedSYgraySYTSY4Sig": 960_i
+    },
+    "sizeInBits":100_l,
+    "operationRequirements": {
+      "default": {
+        "iop": 960_l
+      }
+    }
+  }
+  vertex "sobelSYTSY0"
+  [impl::InstrumentedExecutable, moc::sdf::SDFActor, visualization::GreyBox]
+  (combFunctions, contained, newSYSignalTransformedIn, newSYSignalTransformedOut)
+  {
+    "production": {
+      "sobelSYTSY0sobelSYunZipxSYtransformedSYSig": 72_i
+    },
+    "consumption": {
+      "sobelSYzipxSYtransformedSYsobelSYTSY0Sig": 80_i
+    },
+    "sizeInBits":100_l,
+    "operationRequirements": {
+      "default": {
+        "iop": 72_l
+      }
+    }
+  }
+  vertex "sobelSYTSY1"
+  [impl::InstrumentedExecutable, moc::sdf::SDFActor, visualization::GreyBox]
+  (combFunctions, contained, newSYSignalTransformedIn, newSYSignalTransformedOut)
+  {
+    "production": {
+      "sobelSYTSY1sobelSYunZipxSYtransformedSYSig": 72_i
+    },
+    "consumption": {
+      "sobelSYzipxSYtransformedSYsobelSYTSY1Sig": 80_i
+    },
+    "sizeInBits":100_l,
+    "operationRequirements": {
+      "default": {
+        "iop": 72_l
+      }
+    }
+  }
+  vertex "sobelSYTSY2"
+  [impl::InstrumentedExecutable, moc::sdf::SDFActor, visualization::GreyBox]
+  (combFunctions, contained, newSYSignalTransformedIn, newSYSignalTransformedOut)
+  {
+    "production": {
+      "sobelSYTSY2sobelSYunZipxSYtransformedSYSig": 72_i
+    },
+    "consumption": {
+      "sobelSYzipxSYtransformedSYsobelSYTSY2Sig": 80_i
+    },
+    "sizeInBits":100_l,
+    "operationRequirements": {
+      "default": {
+        "iop": 72_l
+      }
+    }
+  }
+  vertex "sobelSYTSY3"
+  [impl::InstrumentedExecutable, moc::sdf::SDFActor, visualization::GreyBox]
+  (combFunctions, contained, newSYSignalTransformedIn, newSYSignalTransformedOut)
+  {
+    "production": {
+      "sobelSYTSY3sobelSYunZipxSYtransformedSYSig": 72_i
+    },
+    "consumption": {
+      "sobelSYzipxSYtransformedSYsobelSYTSY3Sig": 80_i
+    },
+    "sizeInBits":100_l,
+    "operationRequirements": {
+      "default": {
+        "iop": 72_l
+      }
+    }
+  }
+  vertex "sobelSYTSY4"
+  [impl::InstrumentedExecutable, moc::sdf::SDFActor, visualization::GreyBox]
+  (combFunctions, contained, newSYSignalTransformedIn, newSYSignalTransformedOut)
+  {
+    "production": {
+      "sobelSYTSY4sobelSYunZipxSYtransformedSYSig": 72_i
+    },
+    "consumption": {
+      "sobelSYzipxSYtransformedSYsobelSYTSY4Sig": 80_i
+    },
+    "sizeInBits":100_l,
+    "operationRequirements": {
+      "default": {
+        "iop": 72_l
+      }
+    }
+  }
+  vertex "brightnessMapVTSYTSY0"
+  [impl::InstrumentedExecutable, moc::sdf::SDFActor, visualization::GreyBox]
+  (combFunctions, contained, newSYSignalTransformedIn, newSYSignalTransformedOut)
+  {
+    "production": {
+      "brightnessMapVTSYTSY0brightnessMapVTSYunZipxSYtransformedSYSig": 4_i
+    },
+    "consumption": {
+      "brightnessMapVTSYzipxSYtransformedSYbrightnessMapVTSYTSY0Sig": 80_i
+    },
+    "sizeInBits":100_l,
+    "operationRequirements": {
+      "default": {
+        "iop": 4_l
+      }
+    }
+  }
+  vertex "brightnessMapVTSYTSY1"
+  [impl::InstrumentedExecutable, moc::sdf::SDFActor, visualization::GreyBox]
+  (combFunctions, contained, newSYSignalTransformedIn, newSYSignalTransformedOut)
+  {
+    "production": {
+      "brightnessMapVTSYTSY1brightnessMapVTSYunZipxSYtransformedSYSig": 4_i
+    },
+    "consumption": {
+      "brightnessMapVTSYzipxSYtransformedSYbrightnessMapVTSYTSY1Sig": 80_i
+    },
+    "sizeInBits":100_l,
+    "operationRequirements": {
+      "default": {
+        "iop": 4_l
+      }
+    }
+  }
+  vertex "brightnessMapVTSYTSY2"
+  [impl::InstrumentedExecutable, moc::sdf::SDFActor, visualization::GreyBox]
+  (combFunctions, contained, newSYSignalTransformedIn, newSYSignalTransformedOut)
+  {
+    "production": {
+      "brightnessMapVTSYTSY2brightnessMapVTSYunZipxSYtransformedSYSig": 4_i
+    },
+    "consumption": {
+      "brightnessMapVTSYzipxSYtransformedSYbrightnessMapVTSYTSY2Sig": 80_i
+    },
+    "sizeInBits":100_l,
+    "operationRequirements": {
+      "default": {
+        "iop": 4_l
+      }
+    }
+  }
+  vertex "brightnessMapVTSYTSY3"
+  [impl::InstrumentedExecutable, moc::sdf::SDFActor, visualization::GreyBox]
+  (combFunctions, contained, newSYSignalTransformedIn, newSYSignalTransformedOut)
+  {
+    "production": {
+      "brightnessMapVTSYTSY3brightnessMapVTSYunZipxSYtransformedSYSig": 4_i
+    },
+    "consumption": {
+      "brightnessMapVTSYzipxSYtransformedSYbrightnessMapVTSYTSY3Sig": 80_i
+    },
+    "sizeInBits":100_l,
+    "operationRequirements": {
+      "default": {
+        "iop": 4_l
+      }
+    }
+  }
+  vertex "brightnessMapVTSYTSY4"
+  [impl::InstrumentedExecutable, moc::sdf::SDFActor, visualization::GreyBox]
+  (combFunctions, contained, newSYSignalTransformedIn, newSYSignalTransformedOut)
+  {
+    "production": {
+      "brightnessMapVTSYTSY4brightnessMapVTSYunZipxSYtransformedSYSig": 4_i
+    },
+    "consumption": {
+      "brightnessMapVTSYzipxSYtransformedSYbrightnessMapVTSYTSY4Sig": 80_i
+    },
+    "sizeInBits":100_l,
+    "operationRequirements": {
+      "default": {
+        "iop": 4_l
+      }
+    }
+  }
+  vertex "brightnessReduceVBTSYTSY0"
+  [moc::sy::SYMap, visualization::GreyBox]
+  (combFunctions, contained, newSYMapTransformedOut, newSYSignalTransformedIn1, newSYSignalTransformedIn2)
+  {
+    "consumerPorts": [
+      "newSYMapTransformedOut"
+    ],
+    "producerPorts": [
+      "newSYSignalTransformedIn1",
+      "newSYSignalTransformedIn2"
+    ]
+  }
+  vertex "brightnessReduceVBTSYTSY1"
+  [moc::sy::SYMap, visualization::GreyBox]
+  (combFunctions, contained, newSYMapTransformedOut, newSYSignalTransformedIn1, newSYSignalTransformedIn2)
+  {
+    "consumerPorts": [
+      "newSYMapTransformedOut"
+    ],
+    "producerPorts": [
+      "newSYSignalTransformedIn1",
+      "newSYSignalTransformedIn2"
+    ]
+  }
+  vertex "brightnessReduceVBTSYTSY2"
+  [moc::sy::SYMap, visualization::GreyBox]
+  (combFunctions, contained, newSYMapTransformedOut, newSYSignalTransformedIn1, newSYSignalTransformedIn2)
+  {
+    "consumerPorts": [
+      "newSYMapTransformedOut"
+    ],
+    "producerPorts": [
+      "newSYSignalTransformedIn1",
+      "newSYSignalTransformedIn2"
+    ]
+  }
+  vertex "brightnessReduceVBTSYTSY3"
+  [moc::sy::SYMap, visualization::GreyBox]
+  (combFunctions, contained, newSYMapTransformedOut, newSYSignalTransformedIn1, newSYSignalTransformedIn2)
+  {
+    "consumerPorts": [
+      "newSYMapTransformedOut"
+    ],
+    "producerPorts": [
+      "newSYSignalTransformedIn1",
+      "newSYSignalTransformedIn2"
+    ]
+  }
+  vertex "brightnessReduceVBTSYTSY4"
+  [moc::sy::SYMap, visualization::GreyBox]
+  (combFunctions, contained, newSYMapTransformedOut, newSYSignalTransformedIn1, newSYSignalTransformedIn2)
+  {
+    "consumerPorts": [
+      "newSYMapTransformedOut"
+    ],
+    "producerPorts": [
+      "newSYSignalTransformedIn1",
+      "newSYSignalTransformedIn2"
+    ]
+  }
+  vertex "brightnessReduceVBTSYTSY5"
+  [moc::sy::SYMap, visualization::GreyBox]
+  (combFunctions, contained, newSYMapTransformedOut, newSYSignalTransformedIn1, newSYSignalTransformedIn2)
+  {
+    "consumerPorts": [
+      "newSYMapTransformedOut"
+    ],
+    "producerPorts": [
+      "newSYSignalTransformedIn1",
+      "newSYSignalTransformedIn2"
+    ]
+  }
+  vertex "brightnessReduceVBTSYTSY6"
+  [moc::sy::SYMap, visualization::GreyBox]
+  (combFunctions, contained, newSYMapTransformedOut, newSYSignalTransformedIn1, newSYSignalTransformedIn2)
+  {
+    "consumerPorts": [
+      "newSYMapTransformedOut"
+    ],
+    "producerPorts": [
+      "newSYSignalTransformedIn1",
+      "newSYSignalTransformedIn2"
+    ]
+  }
+  vertex "brightnessReduceVBTSYTSY7"
+  [moc::sy::SYMap, visualization::GreyBox]
+  (combFunctions, contained, newSYMapTransformedOut, newSYSignalTransformedIn1, newSYSignalTransformedIn2)
+  {
+    "consumerPorts": [
+      "newSYMapTransformedOut"
+    ],
+    "producerPorts": [
+      "newSYSignalTransformedIn1",
+      "newSYSignalTransformedIn2"
+    ]
+  }
+  vertex "brightnessReduceVBTSYTSY8"
+  [moc::sy::SYMap, visualization::GreyBox]
+  (combFunctions, contained, newSYMapTransformedOut, newSYSignalTransformedIn1, newSYSignalTransformedIn2)
+  {
+    "consumerPorts": [
+      "newSYMapTransformedOut"
+    ],
+    "producerPorts": [
+      "newSYSignalTransformedIn1",
+      "newSYSignalTransformedIn2"
+    ]
+  }
+  vertex "brightnessReduceVBTSYTSY9"
+  [moc::sy::SYMap, visualization::GreyBox]
+  (combFunctions, contained, newSYMapTransformedOut, newSYSignalTransformedIn1, newSYSignalTransformedIn2)
+  {
+    "consumerPorts": [
+      "newSYMapTransformedOut"
+    ],
+    "producerPorts": [
+      "newSYSignalTransformedIn1",
+      "newSYSignalTransformedIn2"
+    ]
+  }
+  vertex "brightnessReduceVBTSYTSY10"
+  [moc::sy::SYMap, visualization::GreyBox]
+  (combFunctions, contained, newSYMapTransformedOut, newSYSignalTransformedIn1, newSYSignalTransformedIn2)
+  {
+    "consumerPorts": [
+      "newSYMapTransformedOut"
+    ],
+    "producerPorts": [
+      "newSYSignalTransformedIn1",
+      "newSYSignalTransformedIn2"
+    ]
+  }
+  vertex "brightnessReduceVBTSYTSY11"
+  [moc::sy::SYMap, visualization::GreyBox]
+  (combFunctions, contained, newSYMapTransformedOut, newSYSignalTransformedIn1, newSYSignalTransformedIn2)
+  {
+    "consumerPorts": [
+      "newSYMapTransformedOut"
+    ],
+    "producerPorts": [
+      "newSYSignalTransformedIn1",
+      "newSYSignalTransformedIn2"
+    ]
+  }
+  vertex "brightnessReduceVBTSYTSY12"
+  [moc::sy::SYMap, visualization::GreyBox]
+  (combFunctions, contained, newSYMapTransformedOut, newSYSignalTransformedIn1, newSYSignalTransformedIn2)
+  {
+    "consumerPorts": [
+      "newSYMapTransformedOut"
+    ],
+    "producerPorts": [
+      "newSYSignalTransformedIn1",
+      "newSYSignalTransformedIn2"
+    ]
+  }
+  vertex "brightnessReduceVBTSYTSY13"
+  [moc::sy::SYMap, visualization::GreyBox]
+  (combFunctions, contained, newSYMapTransformedOut, newSYSignalTransformedIn1, newSYSignalTransformedIn2)
+  {
+    "consumerPorts": [
+      "newSYMapTransformedOut"
+    ],
+    "producerPorts": [
+      "newSYSignalTransformedIn1",
+      "newSYSignalTransformedIn2"
+    ]
+  }
+  vertex "brightnessReduceVBTSYTSY14"
+  [moc::sy::SYMap, visualization::GreyBox]
+  (combFunctions, contained, newSYMapTransformedOut, newSYSignalTransformedIn1, newSYSignalTransformedIn2)
+  {
+    "consumerPorts": [
+      "newSYMapTransformedOut"
+    ],
+    "producerPorts": [
+      "newSYSignalTransformedIn1",
+      "newSYSignalTransformedIn2"
+    ]
+  }
+  vertex "brightnessReduceVBTSYTSY15"
+  [moc::sy::SYMap, visualization::GreyBox]
+  (combFunctions, contained, newSYMapTransformedOut, newSYSignalTransformedIn1, newSYSignalTransformedIn2)
+  {
+    "consumerPorts": [
+      "newSYMapTransformedOut"
+    ],
+    "producerPorts": [
+      "newSYSignalTransformedIn1",
+      "newSYSignalTransformedIn2"
+    ]
+  }
+  vertex "brightnessReduceVBTSYTSY16"
+  [moc::sy::SYMap, visualization::GreyBox]
+  (combFunctions, contained, newSYMapTransformedOut, newSYSignalTransformedIn1, newSYSignalTransformedIn2)
+  {
+    "consumerPorts": [
+      "newSYMapTransformedOut"
+    ],
+    "producerPorts": [
+      "newSYSignalTransformedIn1",
+      "newSYSignalTransformedIn2"
+    ]
+  }
+  vertex "brightnessReduceVBTSYTSY17"
+  [moc::sy::SYMap, visualization::GreyBox]
+  (combFunctions, contained, newSYMapTransformedOut, newSYSignalTransformedIn1, newSYSignalTransformedIn2)
+  {
+    "consumerPorts": [
+      "newSYMapTransformedOut"
+    ],
+    "producerPorts": [
+      "newSYSignalTransformedIn1",
+      "newSYSignalTransformedIn2"
+    ]
+  }
+  vertex "brightnessReduceVBTSYTSY18"
+  [impl::InstrumentedExecutable, moc::sdf::SDFActor, visualization::GreyBox]
+  (combFunctions, contained, newSYMapTransformedOut, newSYSignalTransformedIn1, newSYSignalTransformedIn2)
+  {
+    "production": {
+      "brightnessSig": 1_i
+    },
+    "sizeInBits":100_l,
+    "operationRequirements": {
+      "default": {
+        "iop": 1_l
+      }
+    }
+  }
+  vertex "resizeSY"
+  [impl::InstrumentedExecutable, moc::sdf::SDFActor, visualization::GreyBox]
+  (combFunctions, graySig, resizedSig)
+  {
+    "production": {
+      "resizedSig": 400_i
+    },
+    "consumption": {
+      "graySig": 1600_i
+    },
+    "sizeInBits":13824_l,
+    "operationRequirements": {
+      "default": {
+        "iop": 400_l
+      }
+    }
+  }
+  vertex "controlSY"
+  [impl::InstrumentedExecutable, moc::sdf::SDFActor, visualization::GreyBox]
+  (brightnessSig, combFunctions, controlSig)
+  {
+    "production": {
+      "controlSig": 1_i
+    },
+    "consumption": {
+      "brightnessSig": 1_i
+    },
+    "sizeInBits":14016_l,
+    "operationRequirements": {
+      "default": {
+        "iop": 1_l
+      }
+    }
+  }
+  vertex "correctionSY"
+  [impl::InstrumentedExecutable, moc::sdf::SDFActor, visualization::GreyBox]
+  (brightnessSig, combFunctions, contained, controlSig, correctedSig, resizedSig)
+  {
+    "production": {
+      "correctedSig": 400_i
+    },
+    "consumption": {
+      "brightnessSig": 1_i,
+      "controlSig": 1_i,
+      "resizedSig": 400_i
+    },
+    "sizeInBits":14080_l,
+    "operationRequirements": {
+      "default": {
+        "iop": 400_l
+      }
+    }
+  }
+  vertex "graySYzipxSYtransformedSY"
+  [impl::InstrumentedExecutable, moc::sdf::SDFActor, visualization::GreyBox]
+  (combFunctions, contained, inSig, newZipxSYTransformedOut)
+  {
+    "production": {
+      "graySYzipxSYtransformedSYgraySYTSY3Sig": 960_i,
+      "graySYzipxSYtransformedSYgraySYTSY2Sig": 960_i,
+      "graySYzipxSYtransformedSYgraySYTSY0Sig": 960_i,
+      "graySYzipxSYtransformedSYgraySYTSY1Sig": 960_i,
+      "graySYzipxSYtransformedSYgraySYTSY4Sig": 960_i
+    },
+    "consumption": {
+      "inSig": 4800_i
+    },
+    "sizeInBits":100_l,
+    "operationRequirements": {
+      "default": {
+        "iop": 960_l
+      }
+    }
+  }
+  vertex "graySYunZipxSYtransformedSY"
+  [impl::InstrumentedExecutable, moc::sdf::SDFActor, visualization::GreyBox]
+  (combFunctions, contained, graySig, newunZipxSYTransformedIn)
+  {
+    "production": {
+      "graySig": 1600_i
+    },
+    "consumption": {
+      "graySYTSY0graySYunZipxSYtransformedSYSig": 960_i,
+      "graySYTSY1graySYunZipxSYtransformedSYSig": 960_i,
+      "graySYTSY4graySYunZipxSYtransformedSYSig": 960_i,
+      "graySYTSY2graySYunZipxSYtransformedSYSig": 960_i,
+      "graySYTSY3graySYunZipxSYtransformedSYSig": 960_i
+    },
+    "sizeInBits":100_l,
+    "operationRequirements": {
+      "default": {
+        "iop": 960_l
+      }
+    }
+  }
+  vertex "sobelSYzipxSYtransformedSY"
+  [impl::InstrumentedExecutable, moc::sdf::SDFActor, visualization::GreyBox]
+  (combFunctions, contained, correctedSig, newZipxSYTransformedOut)
+  {
+    "production": {
+      "sobelSYzipxSYtransformedSYsobelSYTSY0Sig": 80_i,
+      "sobelSYzipxSYtransformedSYsobelSYTSY1Sig": 80_i,
+      "sobelSYzipxSYtransformedSYsobelSYTSY3Sig": 80_i,
+      "sobelSYzipxSYtransformedSYsobelSYTSY2Sig": 80_i,
+      "sobelSYzipxSYtransformedSYsobelSYTSY4Sig": 80_i
+    },
+    "consumption": {
+      "correctedSig": 400_i
+    },
+    "sizeInBits":100_l,
+    "operationRequirements": {
+      "default": {
+        "iop": 80_l
+      }
+    }
+  }
+  vertex "sobelSYunZipxSYtransformedSY"
+  [impl::InstrumentedExecutable, moc::sdf::SDFActor, visualization::GreyBox]
+  (combFunctions, contained, newunZipxSYTransformedIn, sobelSig)
+  {
+    "production": {
+      "sobelSig": 324_i
+    },
+    "consumption": {
+      "sobelSYTSY3sobelSYunZipxSYtransformedSYSig": 72_i,
+      "sobelSYTSY4sobelSYunZipxSYtransformedSYSig": 72_i,
+      "sobelSYTSY1sobelSYunZipxSYtransformedSYSig": 72_i,
+      "sobelSYTSY2sobelSYunZipxSYtransformedSYSig": 72_i,
+      "sobelSYTSY0sobelSYunZipxSYtransformedSYSig": 72_i
+    },
+    "sizeInBits":100_l,
+    "operationRequirements": {
+      "default": {
+        "iop": 72_l
+      }
+    }
+  }
+  vertex "brightnessMapVTSYzipxSYtransformedSY"
+  [impl::InstrumentedExecutable, moc::sdf::SDFActor, visualization::GreyBox]
+  (combFunctions, contained, newZipxSYTransformedOut, resizedSig)
+  {
+    "production": {
+      "brightnessMapVTSYzipxSYtransformedSYbrightnessMapVTSYTSY4Sig": 80_i,
+      "brightnessMapVTSYzipxSYtransformedSYbrightnessMapVTSYTSY0Sig": 80_i,
+      "brightnessMapVTSYzipxSYtransformedSYbrightnessMapVTSYTSY3Sig": 80_i,
+      "brightnessMapVTSYzipxSYtransformedSYbrightnessMapVTSYTSY1Sig": 80_i,
+      "brightnessMapVTSYzipxSYtransformedSYbrightnessMapVTSYTSY2Sig": 80_i
+    },
+    "consumption": {
+      "resizedSig": 400_i
+    },
+    "sizeInBits":100_l,
+    "operationRequirements": {
+      "default": {
+        "iop": 80_l
+      }
+    }
+  }
+  vertex "brightnessMapVTSYunZipxSYtransformedSY"
+  [impl::InstrumentedExecutable, moc::sdf::SDFActor, visualization::GreyBox]
+  (combFunctions, contained, mapSplitTransformedOut, newunZipxSYTransformedIn)
+  {
+    "consumption": {
+      "brightnessMapVTSYTSY2brightnessMapVTSYunZipxSYtransformedSYSig": 4_i,
+      "brightnessMapVTSYTSY3brightnessMapVTSYunZipxSYtransformedSYSig": 4_i,
+      "brightnessMapVTSYTSY0brightnessMapVTSYunZipxSYtransformedSYSig": 4_i,
+      "brightnessMapVTSYTSY1brightnessMapVTSYunZipxSYtransformedSYSig": 4_i,
+      "brightnessMapVTSYTSY4brightnessMapVTSYunZipxSYtransformedSYSig": 4_i
+    },
+    "sizeInBits":100_l,
+    "operationRequirements": {
+      "default": {
+        "iop": 4_l
+      }
+    }
+  }
+  vertex "brightnessReduceVBTSYunZipxSYtransformedSY"
+  [moc::sy::SYMap, visualization::GreyBox]
+  (combFunctions, contained, mapSplitTransformedIn, newunZipxSYTransformedOut)
+  {
+    "consumerPorts": [
+      "newunZipxSYTransformedOut"
+    ],
+    "producerPorts": [
+      "mapSplitTransformedIn"
+    ]
+  }
+  vertex "grayMapV"
+  [impl::Executable, parallel::MapV, visualization::GreyBox, visualization::Visualizable]
+  (contained, graySig, inSig, kernels)
+  {
+    "visualizedPropertiesNames": [
+
+    ],
+    "consumerPorts": [
+      "graySig"
+    ],
+    "producerPorts": [
+      "inSig"
+    ]
+  }
+  vertex "grayMapMapV"
+  [impl::Executable, parallel::MapV, visualization::GreyBox]
+  (contained, graySig, inSig, kernels)
+  {
+    "visualizedPropertiesNames": [
+
+    ],
+    "consumerPorts": [
+      "graySig"
+    ],
+    "producerPorts": [
+      "inSig"
+    ]
+  }
+  vertex "brightnessMapV"
+  [impl::Executable, parallel::MapV, visualization::GreyBox, visualization::Visualizable]
+  (contained, kernels, maxMapVReduceVVec, resizedSig)
+  {
+    "visualizedPropertiesNames": [
+
+    ],
+    "consumerPorts": [
+      "maxMapVReduceVVec"
+    ],
+    "producerPorts": [
+      "resizedSig"
+    ]
+  }
+  vertex "correctionMapV"
+  [impl::Executable, parallel::MapV, visualization::GreyBox]
+  (brightnessSig, contained, controlSig, correctedSig, kernels, resizedSig)
+  {
+    "visualizedPropertiesNames": [
+
+    ],
+    "consumerPorts": [
+      "correctedSig"
+    ],
+    "producerPorts": [
+      "controlSig",
+      "resizedSig",
+      "brightnessSig"
+    ]
+  }
+  vertex "correctionMapMapV"
+  [impl::Executable, parallel::MapV, visualization::GreyBox]
+  (brightnessSig, contained, controlSig, correctedSig, kernels, resizedSig)
+  {
+    "visualizedPropertiesNames": [
+
+    ],
+    "consumerPorts": [
+      "correctedSig"
+    ],
+    "producerPorts": [
+      "controlSig",
+      "resizedSig",
+      "brightnessSig"
+    ]
+  }
+  vertex "sobelMapV"
+  [impl::Executable, parallel::MapV, visualization::GreyBox, visualization::Visualizable]
+  (contained, correctedSig, kernels, sobelSig)
+  {
+    "visualizedPropertiesNames": [
+
+    ],
+    "consumerPorts": [
+      "sobelSig"
+    ],
+    "producerPorts": [
+      "correctedSig"
+    ]
+  }
+  vertex "sobelMapMapV"
+  [impl::Executable, parallel::MapV, visualization::GreyBox]
+  (contained, correctedSig, kernels, sobelSig)
+  {
+    "visualizedPropertiesNames": [
+
+    ],
+    "consumerPorts": [
+      "sobelSig"
+    ],
+    "producerPorts": [
+      "correctedSig"
+    ]
+  }
+  vertex "inSig"
+  [impl::BufferLike, moc::sdf::SDFChannel, visualization::Visualizable]
+  (producer, consumer)
+  {
+    "numOfInitialTokens": 4800_i,
+    "maxSizeInBits": 153600_i,
+    "elementSizeInBits":32_l
+  }
+  vertex "graySig"
+  [impl::BufferLike, moc::sdf::SDFChannel, visualization::Visualizable]
+  (producer, consumer)
+  {
+    "numOfInitialTokens": 1600_i,
+    "maxSizeInBits": 51200_i,
+    "elementSizeInBits":64_l
+  }
+  vertex "resizedSig"
+  [impl::BufferLike, moc::sdf::SDFChannel, visualization::Visualizable]
+  (producer, consumer)
+  {
+    "numOfInitialTokens": 400_i,
+    "maxSizeInBits": 12800_i,
+    "elementSizeInBits":64_l
+  }
+  vertex "brightnessSig"
+  [impl::BufferLike, moc::sdf::SDFChannel, visualization::Visualizable]
+  (producer, consumer)
+  {
+    "numOfInitialTokens": 1_i,
+    "maxSizeInBits": 32_i,
+    "elementSizeInBits":64_l
+  }
+  vertex "controlSig"
+  [impl::BufferLike, moc::sdf::SDFChannel, visualization::Visualizable]
+  (producer, consumer)
+  {
+    "numOfInitialTokens": 1_i,
+    "maxSizeInBits": 32_i,
+    "elementSizeInBits":1_l
+  }
+  vertex "correctedSig"
+  [impl::BufferLike, moc::sdf::SDFChannel, visualization::Visualizable]
+  (producer, consumer)
+  {
+    "numOfInitialTokens": 400_i,
+    "maxSizeInBits": 12800_i,
+    "elementSizeInBits":64_l
+  }
+  vertex "sobelSig"
+  [impl::BufferLike, moc::sdf::SDFChannel, visualization::Visualizable]
+  (producer, consumer)
+  {
+    "numOfInitialTokens": 324_i,
+    "maxSizeInBits": 10368_i,
+    "elementSizeInBits":64_l
+  }
+  vertex "brightnessMapVTSYbrightnessReduceVBTSYSig"
+  [moc::sy::SYSignal, visualization::GreyBox, visualization::Visualizable]
+  (contained, producer, consumer, maxMapVReduceVVec)
+  {}
+  vertex "graySYzipxSYtransformedSYgraySYTSY0Sig"
+  [impl::BufferLike, moc::sdf::SDFChannel, visualization::Visualizable]
+  (producer, consumer)
+  {
+    "numOfInitialTokens": 960_i,
+    "maxSizeInBits": 30720_i,
+     "elementSizeInBits":100_l
+  }
+  vertex "graySYzipxSYtransformedSYgraySYTSY1Sig"
+  [impl::BufferLike, moc::sdf::SDFChannel, visualization::Visualizable]
+  (producer, consumer)
+  {
+    "numOfInitialTokens": 960_i,
+    "maxSizeInBits": 30720_i,
+     "elementSizeInBits":100_l
+  }
+  vertex "graySYzipxSYtransformedSYgraySYTSY2Sig"
+  [impl::BufferLike, moc::sdf::SDFChannel, visualization::Visualizable]
+  (producer, consumer)
+  {
+    "numOfInitialTokens": 960_i,
+    "maxSizeInBits": 30720_i,
+     "elementSizeInBits":100_l
+  }
+  vertex "graySYzipxSYtransformedSYgraySYTSY3Sig"
+  [impl::BufferLike, moc::sdf::SDFChannel, visualization::Visualizable]
+  (producer, consumer)
+  {
+    "numOfInitialTokens": 960_i,
+    "maxSizeInBits": 30720_i,
+     "elementSizeInBits":100_l
+  }
+  vertex "graySYzipxSYtransformedSYgraySYTSY4Sig"
+  [impl::BufferLike, moc::sdf::SDFChannel, visualization::Visualizable]
+  (producer, consumer)
+  {
+    "numOfInitialTokens": 960_i,
+    "maxSizeInBits": 30720_i,
+     "elementSizeInBits":100_l
+  }
+  vertex "graySYTSY0graySYunZipxSYtransformedSYSig"
+  [impl::BufferLike, moc::sdf::SDFChannel, visualization::Visualizable]
+  (producer, consumer)
+  {
+    "numOfInitialTokens": 960_i,
+    "maxSizeInBits": 30720_i,
+     "elementSizeInBits":100_l
+  }
+  vertex "graySYTSY1graySYunZipxSYtransformedSYSig"
+  [impl::BufferLike, moc::sdf::SDFChannel, visualization::Visualizable]
+  (producer, consumer)
+  {
+    "numOfInitialTokens": 960_i,
+    "maxSizeInBits": 30720_i,
+     "elementSizeInBits":100_l
+  }
+  vertex "graySYTSY2graySYunZipxSYtransformedSYSig"
+  [impl::BufferLike, moc::sdf::SDFChannel, visualization::Visualizable]
+  (producer, consumer)
+  {
+    "numOfInitialTokens": 960_i,
+    "maxSizeInBits": 30720_i,
+     "elementSizeInBits":100_l
+  }
+  vertex "graySYTSY3graySYunZipxSYtransformedSYSig"
+  [impl::BufferLike, moc::sdf::SDFChannel, visualization::Visualizable]
+  (producer, consumer)
+  {
+    "numOfInitialTokens": 960_i,
+    "maxSizeInBits": 30720_i,
+     "elementSizeInBits":100_l
+  }
+  vertex "graySYTSY4graySYunZipxSYtransformedSYSig"
+  [impl::BufferLike, moc::sdf::SDFChannel, visualization::Visualizable]
+  (producer, consumer)
+  {
+    "numOfInitialTokens": 960_i,
+    "maxSizeInBits": 30720_i,
+     "elementSizeInBits":100_l
+  }
+  vertex "sobelSYzipxSYtransformedSYsobelSYTSY0Sig"
+  [impl::BufferLike, moc::sdf::SDFChannel, visualization::Visualizable]
+  (producer, consumer)
+  {
+    "numOfInitialTokens": 80_i,
+    "maxSizeInBits": 2560_i,
+     "elementSizeInBits":100_l
+  }
+  vertex "sobelSYzipxSYtransformedSYsobelSYTSY1Sig"
+  [impl::BufferLike, moc::sdf::SDFChannel, visualization::Visualizable]
+  (producer, consumer)
+  {
+    "numOfInitialTokens": 80_i,
+    "maxSizeInBits": 2560_i,
+     "elementSizeInBits":100_l
+  }
+  vertex "sobelSYzipxSYtransformedSYsobelSYTSY2Sig"
+  [impl::BufferLike, moc::sdf::SDFChannel, visualization::Visualizable]
+  (producer, consumer)
+  {
+    "numOfInitialTokens": 80_i,
+    "maxSizeInBits": 2560_i,
+     "elementSizeInBits":100_l
+  }
+  vertex "sobelSYzipxSYtransformedSYsobelSYTSY3Sig"
+  [impl::BufferLike, moc::sdf::SDFChannel, visualization::Visualizable]
+  (producer, consumer)
+  {
+    "numOfInitialTokens": 80_i,
+    "maxSizeInBits": 2560_i,
+     "elementSizeInBits":100_l
+  }
+  vertex "sobelSYzipxSYtransformedSYsobelSYTSY4Sig"
+  [impl::BufferLike, moc::sdf::SDFChannel, visualization::Visualizable]
+  (producer, consumer)
+  {
+    "numOfInitialTokens": 80_i,
+    "maxSizeInBits": 2560_i,
+     "elementSizeInBits":100_l
+  }
+  vertex "sobelSYTSY0sobelSYunZipxSYtransformedSYSig"
+  [impl::BufferLike, moc::sdf::SDFChannel, visualization::Visualizable]
+  (producer, consumer)
+  {
+    "numOfInitialTokens": 72_i,
+    "maxSizeInBits": 2304_i,
+     "elementSizeInBits":100_l
+  }
+  vertex "sobelSYTSY1sobelSYunZipxSYtransformedSYSig"
+  [impl::BufferLike, moc::sdf::SDFChannel, visualization::Visualizable]
+  (producer, consumer)
+  {
+    "numOfInitialTokens": 72_i,
+    "maxSizeInBits": 2304_i,
+     "elementSizeInBits":100_l
+  }
+  vertex "sobelSYTSY2sobelSYunZipxSYtransformedSYSig"
+  [impl::BufferLike, moc::sdf::SDFChannel, visualization::Visualizable]
+  (producer, consumer)
+  {
+    "numOfInitialTokens": 72_i,
+    "maxSizeInBits": 2304_i,
+     "elementSizeInBits":100_l
+  }
+  vertex "sobelSYTSY3sobelSYunZipxSYtransformedSYSig"
+  [impl::BufferLike, moc::sdf::SDFChannel, visualization::Visualizable]
+  (producer, consumer)
+  {
+    "numOfInitialTokens": 72_i,
+    "maxSizeInBits": 2304_i,
+     "elementSizeInBits":100_l
+  }
+  vertex "sobelSYTSY4sobelSYunZipxSYtransformedSYSig"
+  [impl::BufferLike, moc::sdf::SDFChannel, visualization::Visualizable]
+  (producer, consumer)
+  {
+    "numOfInitialTokens": 72_i,
+    "maxSizeInBits": 2304_i,
+     "elementSizeInBits":100_l
+  }
+  vertex "brightnessMapVTSYzipxSYtransformedSYbrightnessMapVTSYTSY0Sig"
+  [impl::BufferLike, moc::sdf::SDFChannel, visualization::Visualizable]
+  (producer, consumer)
+  {
+    "numOfInitialTokens": 80_i,
+    "maxSizeInBits": 2560_i,
+     "elementSizeInBits":100_l
+  }
+  vertex "brightnessMapVTSYzipxSYtransformedSYbrightnessMapVTSYTSY1Sig"
+  [impl::BufferLike, moc::sdf::SDFChannel, visualization::Visualizable]
+  (producer, consumer)
+  {
+    "numOfInitialTokens": 80_i,
+    "maxSizeInBits": 2560_i,
+     "elementSizeInBits":100_l
+  }
+  vertex "brightnessMapVTSYzipxSYtransformedSYbrightnessMapVTSYTSY2Sig"
+  [impl::BufferLike, moc::sdf::SDFChannel, visualization::Visualizable]
+  (producer, consumer)
+  {
+    "numOfInitialTokens": 80_i,
+    "maxSizeInBits": 2560_i,
+     "elementSizeInBits":100_l
+  }
+  vertex "brightnessMapVTSYzipxSYtransformedSYbrightnessMapVTSYTSY3Sig"
+  [impl::BufferLike, moc::sdf::SDFChannel, visualization::Visualizable]
+  (producer, consumer)
+  {
+    "numOfInitialTokens": 80_i,
+    "maxSizeInBits": 2560_i,
+     "elementSizeInBits":100_l
+  }
+  vertex "brightnessMapVTSYzipxSYtransformedSYbrightnessMapVTSYTSY4Sig"
+  [impl::BufferLike, moc::sdf::SDFChannel, visualization::Visualizable]
+  (producer, consumer)
+  {
+    "numOfInitialTokens": 80_i,
+    "maxSizeInBits": 2560_i,
+     "elementSizeInBits":100_l
+  }
+  vertex "brightnessMapVTSYTSY0brightnessMapVTSYunZipxSYtransformedSYSig"
+  [impl::BufferLike, moc::sdf::SDFChannel, visualization::Visualizable]
+  (producer, consumer)
+  {
+    "numOfInitialTokens": 4_i,
+    "maxSizeInBits": 128_i,
+     "elementSizeInBits":100_l
+  }
+  vertex "brightnessMapVTSYTSY1brightnessMapVTSYunZipxSYtransformedSYSig"
+  [impl::BufferLike, moc::sdf::SDFChannel, visualization::Visualizable]
+  (producer, consumer)
+  {
+    "numOfInitialTokens": 4_i,
+    "maxSizeInBits": 128_i,
+     "elementSizeInBits":100_l
+  }
+  vertex "brightnessMapVTSYTSY2brightnessMapVTSYunZipxSYtransformedSYSig"
+  [impl::BufferLike, moc::sdf::SDFChannel, visualization::Visualizable]
+  (producer, consumer)
+  {
+    "numOfInitialTokens": 4_i,
+    "maxSizeInBits": 128_i,
+     "elementSizeInBits":100_l
+  }
+  vertex "brightnessMapVTSYTSY3brightnessMapVTSYunZipxSYtransformedSYSig"
+  [impl::BufferLike, moc::sdf::SDFChannel, visualization::Visualizable]
+  (producer, consumer)
+  {
+    "numOfInitialTokens": 4_i,
+    "maxSizeInBits": 128_i,
+     "elementSizeInBits":100_l
+  }
+  vertex "brightnessMapVTSYTSY4brightnessMapVTSYunZipxSYtransformedSYSig"
+  [impl::BufferLike, moc::sdf::SDFChannel, visualization::Visualizable]
+  (producer, consumer)
+  {
+    "numOfInitialTokens": 4_i,
+    "maxSizeInBits": 128_i,
+     "elementSizeInBits":100_l
+  }
+  vertex "brightnessReduceVBTSYunZipxSYtransformedSYbrightnessReduceVBTSYTSY0Sig"
+  [impl::BufferLike, moc::sdf::SDFChannel, visualization::Visualizable]
+  (producer, consumer)
+  {
+    "numOfInitialTokens": 4_i,
+    "maxSizeInBits": 128_i,
+     "elementSizeInBits":100_l
+  }
+  vertex "brightnessReduceVBTSYunZipxSYtransformedSYbrightnessReduceVBTSYTSY1Sig"
+  [impl::BufferLike, moc::sdf::SDFChannel, visualization::Visualizable]
+  (producer, consumer)
+  {
+    "numOfInitialTokens": 4_i,
+    "maxSizeInBits": 128_i,
+     "elementSizeInBits":100_l
+  }
+  vertex "brightnessReduceVBTSYunZipxSYtransformedSYbrightnessReduceVBTSYTSY2Sig"
+  [impl::BufferLike, moc::sdf::SDFChannel, visualization::Visualizable]
+  (producer, consumer)
+  {
+    "numOfInitialTokens": 4_i,
+    "maxSizeInBits": 128_i,
+     "elementSizeInBits":100_l
+  }
+  vertex "brightnessReduceVBTSYunZipxSYtransformedSYbrightnessReduceVBTSYTSY3Sig"
+  [impl::BufferLike, moc::sdf::SDFChannel, visualization::Visualizable]
+  (producer, consumer)
+  {
+    "numOfInitialTokens": 4_i,
+    "maxSizeInBits": 128_i,
+     "elementSizeInBits":100_l
+  }
+  vertex "brightnessReduceVBTSYunZipxSYtransformedSYbrightnessReduceVBTSYTSY4Sig"
+  [impl::BufferLike, moc::sdf::SDFChannel, visualization::Visualizable]
+  (producer, consumer)
+  {
+    "numOfInitialTokens": 4_i,
+    "maxSizeInBits": 128_i,
+     "elementSizeInBits":100_l
+  }
+  vertex "brightnessReduceVBTSYunZipxSYtransformedSYbrightnessReduceVBTSYTSY5Sig"
+  [impl::BufferLike, moc::sdf::SDFChannel, visualization::Visualizable]
+  (producer, consumer)
+  {
+    "numOfInitialTokens": 4_i,
+    "maxSizeInBits": 128_i,
+     "elementSizeInBits":100_l
+  }
+  vertex "brightnessReduceVBTSYunZipxSYtransformedSYbrightnessReduceVBTSYTSY6Sig"
+  [impl::BufferLike, moc::sdf::SDFChannel, visualization::Visualizable]
+  (producer, consumer)
+  {
+    "numOfInitialTokens": 4_i,
+    "maxSizeInBits": 128_i,
+     "elementSizeInBits":100_l
+  }
+  vertex "brightnessReduceVBTSYunZipxSYtransformedSYbrightnessReduceVBTSYTSY7Sig"
+  [impl::BufferLike, moc::sdf::SDFChannel, visualization::Visualizable]
+  (producer, consumer)
+  {
+    "numOfInitialTokens": 4_i,
+    "maxSizeInBits": 128_i,
+     "elementSizeInBits":100_l
+  }
+  vertex "brightnessReduceVBTSYunZipxSYtransformedSYbrightnessReduceVBTSYTSY8Sig"
+  [impl::BufferLike, moc::sdf::SDFChannel, visualization::Visualizable]
+  (producer, consumer)
+  {
+    "numOfInitialTokens": 4_i,
+    "maxSizeInBits": 128_i,
+     "elementSizeInBits":100_l
+  }
+  vertex "brightnessReduceVBTSYunZipxSYtransformedSYbrightnessReduceVBTSYTSY9Sig"
+  [impl::BufferLike, moc::sdf::SDFChannel, visualization::Visualizable]
+  (producer, consumer)
+  {
+    "numOfInitialTokens": 4_i,
+    "maxSizeInBits": 128_i,
+     "elementSizeInBits":100_l
+  }
+  vertex "brightnessReduceVBTSYunZipxSYtransformedSYbrightnessReduceVBTSYTSY10Sig"
+  [impl::BufferLike, moc::sdf::SDFChannel, visualization::Visualizable]
+  (producer, consumer)
+  {
+    "numOfInitialTokens": 4_i,
+    "maxSizeInBits": 128_i,
+     "elementSizeInBits":100_l
+  }
+  vertex "brightnessReduceVBTSYunZipxSYtransformedSYbrightnessReduceVBTSYTSY11Sig"
+  [impl::BufferLike, moc::sdf::SDFChannel, visualization::Visualizable]
+  (producer, consumer)
+  {
+    "numOfInitialTokens": 4_i,
+    "maxSizeInBits": 128_i,
+     "elementSizeInBits":100_l
+  }
+  vertex "brightnessReduceVBTSYunZipxSYtransformedSYbrightnessReduceVBTSYTSY12Sig"
+  [impl::BufferLike, moc::sdf::SDFChannel, visualization::Visualizable]
+  (producer, consumer)
+  {
+    "numOfInitialTokens": 4_i,
+    "maxSizeInBits": 128_i,
+     "elementSizeInBits":100_l
+  }
+  vertex "brightnessReduceVBTSYunZipxSYtransformedSYbrightnessReduceVBTSYTSY13Sig"
+  [impl::BufferLike, moc::sdf::SDFChannel, visualization::Visualizable]
+  (producer, consumer)
+  {
+    "numOfInitialTokens": 4_i,
+    "maxSizeInBits": 128_i,
+     "elementSizeInBits":100_l
+  }
+  vertex "brightnessReduceVBTSYunZipxSYtransformedSYbrightnessReduceVBTSYTSY14Sig"
+  [impl::BufferLike, moc::sdf::SDFChannel, visualization::Visualizable]
+  (producer, consumer)
+  {
+    "numOfInitialTokens": 4_i,
+    "maxSizeInBits": 128_i,
+     "elementSizeInBits":100_l
+  }
+  vertex "brightnessReduceVBTSYunZipxSYtransformedSYbrightnessReduceVBTSYTSY15Sig"
+  [impl::BufferLike, moc::sdf::SDFChannel, visualization::Visualizable]
+  (producer, consumer)
+  {
+    "numOfInitialTokens": 4_i,
+    "maxSizeInBits": 128_i,
+     "elementSizeInBits":100_l
+  }
+  vertex "brightnessReduceVBTSYunZipxSYtransformedSYbrightnessReduceVBTSYTSY16Sig"
+  [impl::BufferLike, moc::sdf::SDFChannel, visualization::Visualizable]
+  (producer, consumer)
+  {
+    "numOfInitialTokens": 4_i,
+    "maxSizeInBits": 128_i,
+     "elementSizeInBits":100_l
+  }
+  vertex "brightnessReduceVBTSYunZipxSYtransformedSYbrightnessReduceVBTSYTSY17Sig"
+  [impl::BufferLike, moc::sdf::SDFChannel, visualization::Visualizable]
+  (producer, consumer)
+  {
+    "numOfInitialTokens": 4_i,
+    "maxSizeInBits": 128_i,
+     "elementSizeInBits":100_l
+  }
+  vertex "brightnessReduceVBTSYunZipxSYtransformedSYbrightnessReduceVBTSYTSY18Sig"
+  [impl::BufferLike, moc::sdf::SDFChannel, visualization::Visualizable]
+  (producer, consumer)
+  {
+    "numOfInitialTokens": 4_i,
+    "maxSizeInBits": 128_i,
+     "elementSizeInBits":100_l
+  }
+  vertex "brightnessReduceVBTSYunZipxSYtransformedSYbrightnessReduceVBTSYTSY19Sig"
+  [impl::BufferLike, moc::sdf::SDFChannel, visualization::Visualizable]
+  (producer, consumer)
+  {
+    "numOfInitialTokens": 4_i,
+    "maxSizeInBits": 128_i,
+     "elementSizeInBits":100_l
+  }
+  vertex "brightnessReduceVBTSYTSY0brightnessReduceVBTSYTSY1Sig"
+  [impl::BufferLike, moc::sdf::SDFChannel, visualization::Visualizable]
+  (producer, consumer)
+  {
+    "numOfInitialTokens": 4_i,
+    "maxSizeInBits": 128_i,
+     "elementSizeInBits":100_l
+  }
+  vertex "brightnessReduceVBTSYTSY1brightnessReduceVBTSYTSY2Sig"
+  [impl::BufferLike, moc::sdf::SDFChannel, visualization::Visualizable]
+  (producer, consumer)
+  {
+    "numOfInitialTokens": 4_i,
+    "maxSizeInBits": 128_i,
+     "elementSizeInBits":100_l
+  }
+  vertex "brightnessReduceVBTSYTSY2brightnessReduceVBTSYTSY3Sig"
+  [impl::BufferLike, moc::sdf::SDFChannel, visualization::Visualizable]
+  (producer, consumer)
+  {
+    "numOfInitialTokens": 4_i,
+    "maxSizeInBits": 128_i,
+     "elementSizeInBits":100_l
+  }
+  vertex "brightnessReduceVBTSYTSY3brightnessReduceVBTSYTSY4Sig"
+  [impl::BufferLike, moc::sdf::SDFChannel, visualization::Visualizable]
+  (producer, consumer)
+  {
+    "numOfInitialTokens": 4_i,
+    "maxSizeInBits": 128_i,
+     "elementSizeInBits":100_l
+  }
+  vertex "brightnessReduceVBTSYTSY4brightnessReduceVBTSYTSY5Sig"
+  [impl::BufferLike, moc::sdf::SDFChannel, visualization::Visualizable]
+  (producer, consumer)
+  {
+    "numOfInitialTokens": 4_i,
+    "maxSizeInBits": 128_i,
+     "elementSizeInBits":100_l
+  }
+  vertex "brightnessReduceVBTSYTSY5brightnessReduceVBTSYTSY6Sig"
+  [impl::BufferLike, moc::sdf::SDFChannel, visualization::Visualizable]
+  (producer, consumer)
+  {
+    "numOfInitialTokens": 4_i,
+    "maxSizeInBits": 128_i,
+     "elementSizeInBits":100_l
+  }
+  vertex "brightnessReduceVBTSYTSY6brightnessReduceVBTSYTSY7Sig"
+  [impl::BufferLike, moc::sdf::SDFChannel, visualization::Visualizable]
+  (producer, consumer)
+  {
+    "numOfInitialTokens": 4_i,
+    "maxSizeInBits": 128_i,
+     "elementSizeInBits":100_l
+  }
+  vertex "brightnessReduceVBTSYTSY7brightnessReduceVBTSYTSY8Sig"
+  [impl::BufferLike, moc::sdf::SDFChannel, visualization::Visualizable]
+  (producer, consumer)
+  {
+    "numOfInitialTokens": 4_i,
+    "maxSizeInBits": 128_i,
+     "elementSizeInBits":100_l
+  }
+  vertex "brightnessReduceVBTSYTSY8brightnessReduceVBTSYTSY9Sig"
+  [impl::BufferLike, moc::sdf::SDFChannel, visualization::Visualizable]
+  (producer, consumer)
+  {
+    "numOfInitialTokens": 4_i,
+    "maxSizeInBits": 128_i,
+     "elementSizeInBits":100_l
+  }
+  vertex "brightnessReduceVBTSYTSY9brightnessReduceVBTSYTSY10Sig"
+  [impl::BufferLike, moc::sdf::SDFChannel, visualization::Visualizable]
+  (producer, consumer)
+  {
+    "numOfInitialTokens": 4_i,
+    "maxSizeInBits": 128_i,
+     "elementSizeInBits":100_l
+  }
+  vertex "brightnessReduceVBTSYTSY10brightnessReduceVBTSYTSY11Sig"
+  [impl::BufferLike, moc::sdf::SDFChannel, visualization::Visualizable]
+  (producer, consumer)
+  {
+    "numOfInitialTokens": 4_i,
+    "maxSizeInBits": 128_i,
+     "elementSizeInBits":100_l
+  }
+  vertex "brightnessReduceVBTSYTSY11brightnessReduceVBTSYTSY12Sig"
+  [impl::BufferLike, moc::sdf::SDFChannel, visualization::Visualizable]
+  (producer, consumer)
+  {
+    "numOfInitialTokens": 4_i,
+    "maxSizeInBits": 128_i,
+     "elementSizeInBits":100_l
+  }
+  vertex "brightnessReduceVBTSYTSY12brightnessReduceVBTSYTSY13Sig"
+  [impl::BufferLike, moc::sdf::SDFChannel, visualization::Visualizable]
+  (producer, consumer)
+  {
+    "numOfInitialTokens": 4_i,
+    "maxSizeInBits": 128_i,
+     "elementSizeInBits":100_l
+  }
+  vertex "brightnessReduceVBTSYTSY13brightnessReduceVBTSYTSY14Sig"
+  [impl::BufferLike, moc::sdf::SDFChannel, visualization::Visualizable]
+  (producer, consumer)
+  {
+    "numOfInitialTokens": 4_i,
+    "maxSizeInBits": 128_i,
+     "elementSizeInBits":100_l
+  }
+  vertex "brightnessReduceVBTSYTSY14brightnessReduceVBTSYTSY15Sig"
+  [impl::BufferLike, moc::sdf::SDFChannel, visualization::Visualizable]
+  (producer, consumer)
+  {
+    "numOfInitialTokens": 4_i,
+    "maxSizeInBits": 128_i,
+     "elementSizeInBits":100_l
+  }
+  vertex "brightnessReduceVBTSYTSY15brightnessReduceVBTSYTSY16Sig"
+  [impl::BufferLike, moc::sdf::SDFChannel, visualization::Visualizable]
+  (producer, consumer)
+  {
+    "numOfInitialTokens": 4_i,
+    "maxSizeInBits": 128_i,
+     "elementSizeInBits":100_l
+  }
+  vertex "brightnessReduceVBTSYTSY16brightnessReduceVBTSYTSY17Sig"
+  [impl::BufferLike, moc::sdf::SDFChannel, visualization::Visualizable]
+  (producer, consumer)
+  {
+    "numOfInitialTokens": 4_i,
+    "maxSizeInBits": 128_i,
+     "elementSizeInBits":100_l
+  }
+  vertex "brightnessReduceVBTSYTSY17brightnessReduceVBTSYTSY18Sig"
+  [impl::BufferLike, moc::sdf::SDFChannel, visualization::Visualizable]
+  (producer, consumer)
+  {
+    "numOfInitialTokens": 4_i,
+    "maxSizeInBits": 128_i,
+     "elementSizeInBits":100_l
+  }
+  edge [visualization::VisualContainment] from "grayMapV" port "contained" to "grayMapMapV" 
+  edge [visualization::VisualContainment] from "grayMapMapV" port "contained" to "rgb2gray" 
+  edge [parallel::ParallelContainerEdge,visualization::VisualConnection] from "grayMapV" port "kernels" to "grayMapMapV" 
+  edge [parallel::ParallelContainerEdge,visualization::VisualConnection] from "grayMapMapV" port "kernels" to "rgb2gray" 
+  edge [parallel::ParallelContainerEdge,visualization::VisualConnection] from "grayMapV" port "inSig" to "grayMapMapV" port "inSig"
+  edge [parallel::ParallelContainerEdge,visualization::VisualConnection] from "grayMapMapV" port "graySig" to "grayMapV" port "graySig"
+  edge [moc::sy::SYDataEdge,visualization::VisualConnection] from "graySig" port "consumer" to "resizeSY" port "graySig"
+  edge [moc::sy::SYDataEdge,visualization::VisualConnection] from "resizeSY" port "resizedSig" to "resizedSig" port "producer"
+  edge [moc::sy::SYDataEdge,visualization::VisualConnection] from "resizedSig" port "consumer" to "correctionSY" port "resizedSig"
+  edge [visualization::VisualContainment] from "brightnessMapV" port "contained" to "brightnessReduceVA" 
+  edge [visualization::VisualContainment] from "brightnessReduceVA" port "contained" to "minmax" 
+  edge [parallel::ParallelContainerEdge,visualization::VisualConnection] from "brightnessMapV" port "resizedSig" to "brightnessReduceVA" port "resizedSig"
+  edge [parallel::ParallelContainerEdge,visualization::VisualConnection] from "brightnessReduceVA" port "maxMapVReduceVVec" to "brightnessMapV" port "maxMapVReduceVVec"
+  edge [parallel::ParallelContainerEdge,visualization::VisualConnection] from "brightnessMapV" port "kernels" to "brightnessReduceVA" 
+  edge [parallel::ParallelContainerEdge,visualization::VisualConnection] from "brightnessReduceVA" port "kernels" to "minmax" 
+  edge [moc::sy::SYDataEdge,visualization::VisualConnection] from "brightnessSig" port "consumer" to "controlSY" port "brightnessSig"
+  edge [moc::sy::SYDataEdge,visualization::VisualConnection] from "brightnessSig" port "consumer" to "correctionSY" port "brightnessSig"
+  edge [moc::sy::SYDataEdge,visualization::VisualConnection] from "controlSY" port "controlSig" to "controlSig" port "producer"
+  edge [moc::sy::SYDataEdge,visualization::VisualConnection] from "controlSig" port "consumer" to "correctionSY" port "controlSig"
+  edge [visualization::VisualContainment] from "correctionSY" port "contained" to "correctionMapV" 
+  edge [visualization::VisualContainment] from "correctionMapV" port "contained" to "correctionMapMapV" 
+  edge [visualization::VisualContainment] from "correctionMapMapV" port "contained" to "gamma" 
+  edge [moc::AbstractionEdge] from "correctionSY" port "combFunctions" to "correctionMapV" 
+  edge [parallel::ParallelContainerEdge,visualization::VisualConnection] from "correctionMapV" port "kernels" to "correctionMapMapV" 
+  edge [parallel::ParallelContainerEdge,visualization::VisualConnection] from "correctionMapMapV" port "kernels" to "gamma" 
+  edge [parallel::ParallelContainerEdge,visualization::VisualConnection] from "correctionSY" port "brightnessSig" to "correctionMapV" port "brightnessSig"
+  edge [parallel::ParallelContainerEdge,visualization::VisualConnection] from "correctionSY" port "controlSig" to "correctionMapV" port "controlSig"
+  edge [parallel::ParallelContainerEdge,visualization::VisualConnection] from "correctionSY" port "resizedSig" to "correctionMapV" port "resizedSig"
+  edge [parallel::ParallelContainerEdge,visualization::VisualConnection] from "correctionMapV" port "brightnessSig" to "correctionMapMapV" port "brightnessSig"
+  edge [parallel::ParallelContainerEdge,visualization::VisualConnection] from "correctionMapV" port "controlSig" to "correctionMapMapV" port "controlSig"
+  edge [parallel::ParallelContainerEdge,visualization::VisualConnection] from "correctionMapV" port "resizedSig" to "correctionMapMapV" port "resizedSig"
+  edge [parallel::ParallelContainerEdge,visualization::VisualConnection] from "correctionMapMapV" port "correctedSig" to "correctionMapV" port "correctedSig"
+  edge [parallel::ParallelContainerEdge,visualization::VisualConnection] from "correctionMapV" port "correctedSig" to "correctionSY" port "correctedSig"
+  edge [moc::sy::SYDataEdge,visualization::VisualConnection] from "correctionSY" port "correctedSig" to "correctedSig" port "producer"
+  edge [visualization::VisualContainment] from "sobelMapV" port "contained" to "sobelMapMapV" 
+  edge [visualization::VisualContainment] from "sobelMapMapV" port "contained" to "neighbors" 
+  edge [parallel::ParallelContainerEdge,visualization::VisualConnection] from "sobelMapV" port "kernels" to "sobelMapMapV" 
+  edge [parallel::ParallelContainerEdge,visualization::VisualConnection] from "sobelMapMapV" port "kernels" to "neighbors" 
+  edge [parallel::ParallelContainerEdge,visualization::VisualConnection] from "sobelMapV" port "correctedSig" to "sobelMapMapV" port "correctedSig"
+  edge [parallel::ParallelContainerEdge,visualization::VisualConnection] from "sobelMapMapV" port "sobelSig" to "sobelMapV" port "sobelSig"
+  edge [visualization::VisualContainment] from "application" port "contained" to "resizeSY" 
+  edge [visualization::VisualContainment] from "application" port "contained" to "controlSY" 
+  edge [visualization::VisualContainment] from "application" port "contained" to "correctionSY" 
+  edge [visualization::VisualContainment] from "application" port "contained" to "inSig" 
+  edge [visualization::VisualContainment] from "application" port "contained" to "graySig" 
+  edge [visualization::VisualContainment] from "application" port "contained" to "resizedSig" 
+  edge [visualization::VisualContainment] from "application" port "contained" to "brightnessSig" 
+  edge [visualization::VisualContainment] from "application" port "contained" to "controlSig" 
+  edge [visualization::VisualContainment] from "application" port "contained" to "correctedSig" 
+  edge [visualization::VisualContainment] from "application" port "contained" to "sobelSig" 
+  edge [visualization::VisualContainment] from "application" port "contained" to "brightnessMapVTSYbrightnessReduceVBTSYSig" 
+  edge [moc::AbstractionEdge] from "graySYTSY0" port "combFunctions" to "grayMapV" 
+  edge [visualization::VisualContainment] from "graySYTSY0" port "contained" to "grayMapV" 
+  edge [moc::AbstractionEdge] from "parallelStruct" port "tuplets" to "graySYTSY0" 
+  edge [visualization::VisualContainment] from "application" port "contained" to "graySYTSY0" 
+  edge [moc::AbstractionEdge] from "graySYTSY1" port "combFunctions" to "grayMapV" 
+  edge [visualization::VisualContainment] from "graySYTSY1" port "contained" to "grayMapV" 
+  edge [moc::AbstractionEdge] from "parallelStruct" port "tuplets" to "graySYTSY1" 
+  edge [visualization::VisualContainment] from "application" port "contained" to "graySYTSY1" 
+  edge [moc::AbstractionEdge] from "graySYTSY2" port "combFunctions" to "grayMapV" 
+  edge [visualization::VisualContainment] from "graySYTSY2" port "contained" to "grayMapV" 
+  edge [moc::AbstractionEdge] from "parallelStruct" port "tuplets" to "graySYTSY2" 
+  edge [visualization::VisualContainment] from "application" port "contained" to "graySYTSY2" 
+  edge [moc::AbstractionEdge] from "graySYTSY3" port "combFunctions" to "grayMapV" 
+  edge [visualization::VisualContainment] from "graySYTSY3" port "contained" to "grayMapV" 
+  edge [moc::AbstractionEdge] from "parallelStruct" port "tuplets" to "graySYTSY3" 
+  edge [visualization::VisualContainment] from "application" port "contained" to "graySYTSY3" 
+  edge [moc::AbstractionEdge] from "graySYTSY4" port "combFunctions" to "grayMapV" 
+  edge [visualization::VisualContainment] from "graySYTSY4" port "contained" to "grayMapV" 
+  edge [moc::AbstractionEdge] from "parallelStruct" port "tuplets" to "graySYTSY4" 
+  edge [visualization::VisualContainment] from "application" port "contained" to "graySYTSY4" 
+  edge [visualization::VisualContainment] from "application" port "contained" to "graySYzipxSYtransformedSY" 
+  edge [visualization::VisualContainment] from "application" port "contained" to "graySYunZipxSYtransformedSY" 
+  edge [moc::sy::SYDataEdge,visualization::VisualConnection] from "inSig" port "consumer" to "graySYzipxSYtransformedSY" port "inSig"
+  edge [moc::sy::SYDataEdge,visualization::VisualConnection] from "graySYunZipxSYtransformedSY" port "graySig" to "graySig" port "producer"
+  edge [visualization::VisualContainment] from "application" port "contained" to "graySYzipxSYtransformedSYgraySYTSY0Sig" 
+  edge [moc::sy::SYDataEdge,visualization::VisualConnection] from "graySYzipxSYtransformedSY" port "newZipxSYTransformedOut" to "graySYzipxSYtransformedSYgraySYTSY0Sig" port "producer"
+  edge [moc::sy::SYDataEdge,visualization::VisualConnection] from "graySYzipxSYtransformedSYgraySYTSY0Sig" port "consumer" to "graySYTSY0" port "newSYSignalTransformedIn"
+  edge [visualization::VisualContainment] from "application" port "contained" to "graySYzipxSYtransformedSYgraySYTSY1Sig" 
+  edge [moc::sy::SYDataEdge,visualization::VisualConnection] from "graySYzipxSYtransformedSY" port "newZipxSYTransformedOut" to "graySYzipxSYtransformedSYgraySYTSY1Sig" port "producer"
+  edge [moc::sy::SYDataEdge,visualization::VisualConnection] from "graySYzipxSYtransformedSYgraySYTSY1Sig" port "consumer" to "graySYTSY1" port "newSYSignalTransformedIn"
+  edge [visualization::VisualContainment] from "application" port "contained" to "graySYzipxSYtransformedSYgraySYTSY2Sig" 
+  edge [moc::sy::SYDataEdge,visualization::VisualConnection] from "graySYzipxSYtransformedSY" port "newZipxSYTransformedOut" to "graySYzipxSYtransformedSYgraySYTSY2Sig" port "producer"
+  edge [moc::sy::SYDataEdge,visualization::VisualConnection] from "graySYzipxSYtransformedSYgraySYTSY2Sig" port "consumer" to "graySYTSY2" port "newSYSignalTransformedIn"
+  edge [visualization::VisualContainment] from "application" port "contained" to "graySYzipxSYtransformedSYgraySYTSY3Sig" 
+  edge [moc::sy::SYDataEdge,visualization::VisualConnection] from "graySYzipxSYtransformedSY" port "newZipxSYTransformedOut" to "graySYzipxSYtransformedSYgraySYTSY3Sig" port "producer"
+  edge [moc::sy::SYDataEdge,visualization::VisualConnection] from "graySYzipxSYtransformedSYgraySYTSY3Sig" port "consumer" to "graySYTSY3" port "newSYSignalTransformedIn"
+  edge [visualization::VisualContainment] from "application" port "contained" to "graySYzipxSYtransformedSYgraySYTSY4Sig" 
+  edge [moc::sy::SYDataEdge,visualization::VisualConnection] from "graySYzipxSYtransformedSY" port "newZipxSYTransformedOut" to "graySYzipxSYtransformedSYgraySYTSY4Sig" port "producer"
+  edge [moc::sy::SYDataEdge,visualization::VisualConnection] from "graySYzipxSYtransformedSYgraySYTSY4Sig" port "consumer" to "graySYTSY4" port "newSYSignalTransformedIn"
+  edge [visualization::VisualContainment] from "application" port "contained" to "graySYTSY0graySYunZipxSYtransformedSYSig" 
+  edge [visualization::VisualConnection] from "graySYTSY0" port "newSYSignalTransformedIn" to "grayMapV" port "inSig"
+  edge [visualization::VisualConnection] from "grayMapV" port "graySig" to "graySYTSY0" port "newSYSignalTransformedOut"
+  edge [moc::sy::SYDataEdge,visualization::VisualConnection] from "graySYTSY0" port "newSYSignalTransformedOut" to "graySYTSY0graySYunZipxSYtransformedSYSig" port "producer"
+  edge [moc::sy::SYDataEdge,visualization::VisualConnection] from "graySYTSY0graySYunZipxSYtransformedSYSig" port "consumer" to "graySYunZipxSYtransformedSY" port "newunZipxSYTransformedIn"
+  edge [visualization::VisualContainment] from "application" port "contained" to "graySYTSY1graySYunZipxSYtransformedSYSig" 
+  edge [visualization::VisualConnection] from "graySYTSY1" port "newSYSignalTransformedIn" to "grayMapV" port "inSig"
+  edge [visualization::VisualConnection] from "grayMapV" port "graySig" to "graySYTSY1" port "newSYSignalTransformedOut"
+  edge [moc::sy::SYDataEdge,visualization::VisualConnection] from "graySYTSY1" port "newSYSignalTransformedOut" to "graySYTSY1graySYunZipxSYtransformedSYSig" port "producer"
+  edge [moc::sy::SYDataEdge,visualization::VisualConnection] from "graySYTSY1graySYunZipxSYtransformedSYSig" port "consumer" to "graySYunZipxSYtransformedSY" port "newunZipxSYTransformedIn"
+  edge [visualization::VisualContainment] from "application" port "contained" to "graySYTSY2graySYunZipxSYtransformedSYSig" 
+  edge [visualization::VisualConnection] from "graySYTSY2" port "newSYSignalTransformedIn" to "grayMapV" port "inSig"
+  edge [visualization::VisualConnection] from "grayMapV" port "graySig" to "graySYTSY2" port "newSYSignalTransformedOut"
+  edge [moc::sy::SYDataEdge,visualization::VisualConnection] from "graySYTSY2" port "newSYSignalTransformedOut" to "graySYTSY2graySYunZipxSYtransformedSYSig" port "producer"
+  edge [moc::sy::SYDataEdge,visualization::VisualConnection] from "graySYTSY2graySYunZipxSYtransformedSYSig" port "consumer" to "graySYunZipxSYtransformedSY" port "newunZipxSYTransformedIn"
+  edge [visualization::VisualContainment] from "application" port "contained" to "graySYTSY3graySYunZipxSYtransformedSYSig" 
+  edge [visualization::VisualConnection] from "graySYTSY3" port "newSYSignalTransformedIn" to "grayMapV" port "inSig"
+  edge [visualization::VisualConnection] from "grayMapV" port "graySig" to "graySYTSY3" port "newSYSignalTransformedOut"
+  edge [moc::sy::SYDataEdge,visualization::VisualConnection] from "graySYTSY3" port "newSYSignalTransformedOut" to "graySYTSY3graySYunZipxSYtransformedSYSig" port "producer"
+  edge [moc::sy::SYDataEdge,visualization::VisualConnection] from "graySYTSY3graySYunZipxSYtransformedSYSig" port "consumer" to "graySYunZipxSYtransformedSY" port "newunZipxSYTransformedIn"
+  edge [visualization::VisualContainment] from "application" port "contained" to "graySYTSY4graySYunZipxSYtransformedSYSig" 
+  edge [visualization::VisualConnection] from "graySYTSY4" port "newSYSignalTransformedIn" to "grayMapV" port "inSig"
+  edge [visualization::VisualConnection] from "grayMapV" port "graySig" to "graySYTSY4" port "newSYSignalTransformedOut"
+  edge [moc::sy::SYDataEdge,visualization::VisualConnection] from "graySYTSY4" port "newSYSignalTransformedOut" to "graySYTSY4graySYunZipxSYtransformedSYSig" port "producer"
+  edge [moc::sy::SYDataEdge,visualization::VisualConnection] from "graySYTSY4graySYunZipxSYtransformedSYSig" port "consumer" to "graySYunZipxSYtransformedSY" port "newunZipxSYTransformedIn"
+  edge [moc::AbstractionEdge] from "sobelSYTSY0" port "combFunctions" to "sobelMapV" 
+  edge [visualization::VisualContainment] from "sobelSYTSY0" port "contained" to "sobelMapV" 
+  edge [moc::AbstractionEdge] from "parallelStruct" port "tuplets" to "sobelSYTSY0" 
+  edge [visualization::VisualContainment] from "application" port "contained" to "sobelSYTSY0" 
+  edge [moc::AbstractionEdge] from "sobelSYTSY1" port "combFunctions" to "sobelMapV" 
+  edge [visualization::VisualContainment] from "sobelSYTSY1" port "contained" to "sobelMapV" 
+  edge [moc::AbstractionEdge] from "parallelStruct" port "tuplets" to "sobelSYTSY1" 
+  edge [visualization::VisualContainment] from "application" port "contained" to "sobelSYTSY1" 
+  edge [moc::AbstractionEdge] from "sobelSYTSY2" port "combFunctions" to "sobelMapV" 
+  edge [visualization::VisualContainment] from "sobelSYTSY2" port "contained" to "sobelMapV" 
+  edge [moc::AbstractionEdge] from "parallelStruct" port "tuplets" to "sobelSYTSY2" 
+  edge [visualization::VisualContainment] from "application" port "contained" to "sobelSYTSY2" 
+  edge [moc::AbstractionEdge] from "sobelSYTSY3" port "combFunctions" to "sobelMapV" 
+  edge [visualization::VisualContainment] from "sobelSYTSY3" port "contained" to "sobelMapV" 
+  edge [moc::AbstractionEdge] from "parallelStruct" port "tuplets" to "sobelSYTSY3" 
+  edge [visualization::VisualContainment] from "application" port "contained" to "sobelSYTSY3" 
+  edge [moc::AbstractionEdge] from "sobelSYTSY4" port "combFunctions" to "sobelMapV" 
+  edge [visualization::VisualContainment] from "sobelSYTSY4" port "contained" to "sobelMapV" 
+  edge [moc::AbstractionEdge] from "parallelStruct" port "tuplets" to "sobelSYTSY4" 
+  edge [visualization::VisualContainment] from "application" port "contained" to "sobelSYTSY4" 
+  edge [visualization::VisualContainment] from "application" port "contained" to "sobelSYzipxSYtransformedSY" 
+  edge [visualization::VisualContainment] from "application" port "contained" to "sobelSYunZipxSYtransformedSY" 
+  edge [moc::sy::SYDataEdge,visualization::VisualConnection] from "correctedSig" port "consumer" to "sobelSYzipxSYtransformedSY" port "correctedSig"
+  edge [moc::sy::SYDataEdge,visualization::VisualConnection] from "sobelSYunZipxSYtransformedSY" port "sobelSig" to "sobelSig" port "producer"
+  edge [visualization::VisualContainment] from "application" port "contained" to "sobelSYzipxSYtransformedSYsobelSYTSY0Sig" 
+  edge [moc::sy::SYDataEdge,visualization::VisualConnection] from "sobelSYzipxSYtransformedSY" port "newZipxSYTransformedOut" to "sobelSYzipxSYtransformedSYsobelSYTSY0Sig" port "producer"
+  edge [moc::sy::SYDataEdge,visualization::VisualConnection] from "sobelSYzipxSYtransformedSYsobelSYTSY0Sig" port "consumer" to "sobelSYTSY0" port "newSYSignalTransformedIn"
+  edge [visualization::VisualContainment] from "application" port "contained" to "sobelSYzipxSYtransformedSYsobelSYTSY1Sig" 
+  edge [moc::sy::SYDataEdge,visualization::VisualConnection] from "sobelSYzipxSYtransformedSY" port "newZipxSYTransformedOut" to "sobelSYzipxSYtransformedSYsobelSYTSY1Sig" port "producer"
+  edge [moc::sy::SYDataEdge,visualization::VisualConnection] from "sobelSYzipxSYtransformedSYsobelSYTSY1Sig" port "consumer" to "sobelSYTSY1" port "newSYSignalTransformedIn"
+  edge [visualization::VisualContainment] from "application" port "contained" to "sobelSYzipxSYtransformedSYsobelSYTSY2Sig" 
+  edge [moc::sy::SYDataEdge,visualization::VisualConnection] from "sobelSYzipxSYtransformedSY" port "newZipxSYTransformedOut" to "sobelSYzipxSYtransformedSYsobelSYTSY2Sig" port "producer"
+  edge [moc::sy::SYDataEdge,visualization::VisualConnection] from "sobelSYzipxSYtransformedSYsobelSYTSY2Sig" port "consumer" to "sobelSYTSY2" port "newSYSignalTransformedIn"
+  edge [visualization::VisualContainment] from "application" port "contained" to "sobelSYzipxSYtransformedSYsobelSYTSY3Sig" 
+  edge [moc::sy::SYDataEdge,visualization::VisualConnection] from "sobelSYzipxSYtransformedSY" port "newZipxSYTransformedOut" to "sobelSYzipxSYtransformedSYsobelSYTSY3Sig" port "producer"
+  edge [moc::sy::SYDataEdge,visualization::VisualConnection] from "sobelSYzipxSYtransformedSYsobelSYTSY3Sig" port "consumer" to "sobelSYTSY3" port "newSYSignalTransformedIn"
+  edge [visualization::VisualContainment] from "application" port "contained" to "sobelSYzipxSYtransformedSYsobelSYTSY4Sig" 
+  edge [moc::sy::SYDataEdge,visualization::VisualConnection] from "sobelSYzipxSYtransformedSY" port "newZipxSYTransformedOut" to "sobelSYzipxSYtransformedSYsobelSYTSY4Sig" port "producer"
+  edge [moc::sy::SYDataEdge,visualization::VisualConnection] from "sobelSYzipxSYtransformedSYsobelSYTSY4Sig" port "consumer" to "sobelSYTSY4" port "newSYSignalTransformedIn"
+  edge [visualization::VisualContainment] from "application" port "contained" to "sobelSYTSY0sobelSYunZipxSYtransformedSYSig" 
+  edge [visualization::VisualConnection] from "sobelSYTSY0" port "newSYSignalTransformedIn" to "sobelMapV" port "correctedSig"
+  edge [visualization::VisualConnection] from "sobelMapV" port "sobelSig" to "sobelSYTSY0" port "newSYSignalTransformedOut"
+  edge [moc::sy::SYDataEdge,visualization::VisualConnection] from "sobelSYTSY0" port "newSYSignalTransformedOut" to "sobelSYTSY0sobelSYunZipxSYtransformedSYSig" port "producer"
+  edge [moc::sy::SYDataEdge,visualization::VisualConnection] from "sobelSYTSY0sobelSYunZipxSYtransformedSYSig" port "consumer" to "sobelSYunZipxSYtransformedSY" port "newunZipxSYTransformedIn"
+  edge [visualization::VisualContainment] from "application" port "contained" to "sobelSYTSY1sobelSYunZipxSYtransformedSYSig" 
+  edge [visualization::VisualConnection] from "sobelSYTSY1" port "newSYSignalTransformedIn" to "sobelMapV" port "correctedSig"
+  edge [visualization::VisualConnection] from "sobelMapV" port "sobelSig" to "sobelSYTSY1" port "newSYSignalTransformedOut"
+  edge [moc::sy::SYDataEdge,visualization::VisualConnection] from "sobelSYTSY1" port "newSYSignalTransformedOut" to "sobelSYTSY1sobelSYunZipxSYtransformedSYSig" port "producer"
+  edge [moc::sy::SYDataEdge,visualization::VisualConnection] from "sobelSYTSY1sobelSYunZipxSYtransformedSYSig" port "consumer" to "sobelSYunZipxSYtransformedSY" port "newunZipxSYTransformedIn"
+  edge [visualization::VisualContainment] from "application" port "contained" to "sobelSYTSY2sobelSYunZipxSYtransformedSYSig" 
+  edge [visualization::VisualConnection] from "sobelSYTSY2" port "newSYSignalTransformedIn" to "sobelMapV" port "correctedSig"
+  edge [visualization::VisualConnection] from "sobelMapV" port "sobelSig" to "sobelSYTSY2" port "newSYSignalTransformedOut"
+  edge [moc::sy::SYDataEdge,visualization::VisualConnection] from "sobelSYTSY2" port "newSYSignalTransformedOut" to "sobelSYTSY2sobelSYunZipxSYtransformedSYSig" port "producer"
+  edge [moc::sy::SYDataEdge,visualization::VisualConnection] from "sobelSYTSY2sobelSYunZipxSYtransformedSYSig" port "consumer" to "sobelSYunZipxSYtransformedSY" port "newunZipxSYTransformedIn"
+  edge [visualization::VisualContainment] from "application" port "contained" to "sobelSYTSY3sobelSYunZipxSYtransformedSYSig" 
+  edge [visualization::VisualConnection] from "sobelSYTSY3" port "newSYSignalTransformedIn" to "sobelMapV" port "correctedSig"
+  edge [visualization::VisualConnection] from "sobelMapV" port "sobelSig" to "sobelSYTSY3" port "newSYSignalTransformedOut"
+  edge [moc::sy::SYDataEdge,visualization::VisualConnection] from "sobelSYTSY3" port "newSYSignalTransformedOut" to "sobelSYTSY3sobelSYunZipxSYtransformedSYSig" port "producer"
+  edge [moc::sy::SYDataEdge,visualization::VisualConnection] from "sobelSYTSY3sobelSYunZipxSYtransformedSYSig" port "consumer" to "sobelSYunZipxSYtransformedSY" port "newunZipxSYTransformedIn"
+  edge [visualization::VisualContainment] from "application" port "contained" to "sobelSYTSY4sobelSYunZipxSYtransformedSYSig" 
+  edge [visualization::VisualConnection] from "sobelSYTSY4" port "newSYSignalTransformedIn" to "sobelMapV" port "correctedSig"
+  edge [visualization::VisualConnection] from "sobelMapV" port "sobelSig" to "sobelSYTSY4" port "newSYSignalTransformedOut"
+  edge [moc::sy::SYDataEdge,visualization::VisualConnection] from "sobelSYTSY4" port "newSYSignalTransformedOut" to "sobelSYTSY4sobelSYunZipxSYtransformedSYSig" port "producer"
+  edge [moc::sy::SYDataEdge,visualization::VisualConnection] from "sobelSYTSY4sobelSYunZipxSYtransformedSYSig" port "consumer" to "sobelSYunZipxSYtransformedSY" port "newunZipxSYTransformedIn"
+  edge [moc::AbstractionEdge] from "brightnessMapVTSYTSY0" port "combFunctions" to "brightnessMapV" 
+  edge [visualization::VisualContainment] from "brightnessMapVTSYTSY0" port "contained" to "brightnessMapV" 
+  edge [moc::AbstractionEdge] from "parallelStruct" port "tuplets" to "brightnessMapVTSYTSY0" 
+  edge [visualization::VisualContainment] from "application" port "contained" to "brightnessMapVTSYTSY0" 
+  edge [moc::AbstractionEdge] from "brightnessMapVTSYTSY1" port "combFunctions" to "brightnessMapV" 
+  edge [visualization::VisualContainment] from "brightnessMapVTSYTSY1" port "contained" to "brightnessMapV" 
+  edge [moc::AbstractionEdge] from "parallelStruct" port "tuplets" to "brightnessMapVTSYTSY1" 
+  edge [visualization::VisualContainment] from "application" port "contained" to "brightnessMapVTSYTSY1" 
+  edge [moc::AbstractionEdge] from "brightnessMapVTSYTSY2" port "combFunctions" to "brightnessMapV" 
+  edge [visualization::VisualContainment] from "brightnessMapVTSYTSY2" port "contained" to "brightnessMapV" 
+  edge [moc::AbstractionEdge] from "parallelStruct" port "tuplets" to "brightnessMapVTSYTSY2" 
+  edge [visualization::VisualContainment] from "application" port "contained" to "brightnessMapVTSYTSY2" 
+  edge [moc::AbstractionEdge] from "brightnessMapVTSYTSY3" port "combFunctions" to "brightnessMapV" 
+  edge [visualization::VisualContainment] from "brightnessMapVTSYTSY3" port "contained" to "brightnessMapV" 
+  edge [moc::AbstractionEdge] from "parallelStruct" port "tuplets" to "brightnessMapVTSYTSY3" 
+  edge [visualization::VisualContainment] from "application" port "contained" to "brightnessMapVTSYTSY3" 
+  edge [moc::AbstractionEdge] from "brightnessMapVTSYTSY4" port "combFunctions" to "brightnessMapV" 
+  edge [visualization::VisualContainment] from "brightnessMapVTSYTSY4" port "contained" to "brightnessMapV" 
+  edge [moc::AbstractionEdge] from "parallelStruct" port "tuplets" to "brightnessMapVTSYTSY4" 
+  edge [visualization::VisualContainment] from "application" port "contained" to "brightnessMapVTSYTSY4" 
+  edge [visualization::VisualContainment] from "application" port "contained" to "brightnessMapVTSYzipxSYtransformedSY" 
+  edge [visualization::VisualContainment] from "application" port "contained" to "brightnessMapVTSYunZipxSYtransformedSY" 
+  edge [moc::sy::SYDataEdge,visualization::VisualConnection] from "resizedSig" port "consumer" to "brightnessMapVTSYzipxSYtransformedSY" port "resizedSig"
+  edge [moc::sy::SYDataEdge,visualization::VisualConnection] from "brightnessMapVTSYunZipxSYtransformedSY" port "mapSplitTransformedOut" to "brightnessMapVTSYbrightnessReduceVBTSYSig" port "producer"
+  edge [visualization::VisualContainment] from "application" port "contained" to "brightnessMapVTSYzipxSYtransformedSYbrightnessMapVTSYTSY0Sig" 
+  edge [moc::sy::SYDataEdge,visualization::VisualConnection] from "brightnessMapVTSYzipxSYtransformedSY" port "newZipxSYTransformedOut" to "brightnessMapVTSYzipxSYtransformedSYbrightnessMapVTSYTSY0Sig" port "producer"
+  edge [moc::sy::SYDataEdge,visualization::VisualConnection] from "brightnessMapVTSYzipxSYtransformedSYbrightnessMapVTSYTSY0Sig" port "consumer" to "brightnessMapVTSYTSY0" port "newSYSignalTransformedIn"
+  edge [visualization::VisualContainment] from "application" port "contained" to "brightnessMapVTSYzipxSYtransformedSYbrightnessMapVTSYTSY1Sig" 
+  edge [moc::sy::SYDataEdge,visualization::VisualConnection] from "brightnessMapVTSYzipxSYtransformedSY" port "newZipxSYTransformedOut" to "brightnessMapVTSYzipxSYtransformedSYbrightnessMapVTSYTSY1Sig" port "producer"
+  edge [moc::sy::SYDataEdge,visualization::VisualConnection] from "brightnessMapVTSYzipxSYtransformedSYbrightnessMapVTSYTSY1Sig" port "consumer" to "brightnessMapVTSYTSY1" port "newSYSignalTransformedIn"
+  edge [visualization::VisualContainment] from "application" port "contained" to "brightnessMapVTSYzipxSYtransformedSYbrightnessMapVTSYTSY2Sig" 
+  edge [moc::sy::SYDataEdge,visualization::VisualConnection] from "brightnessMapVTSYzipxSYtransformedSY" port "newZipxSYTransformedOut" to "brightnessMapVTSYzipxSYtransformedSYbrightnessMapVTSYTSY2Sig" port "producer"
+  edge [moc::sy::SYDataEdge,visualization::VisualConnection] from "brightnessMapVTSYzipxSYtransformedSYbrightnessMapVTSYTSY2Sig" port "consumer" to "brightnessMapVTSYTSY2" port "newSYSignalTransformedIn"
+  edge [visualization::VisualContainment] from "application" port "contained" to "brightnessMapVTSYzipxSYtransformedSYbrightnessMapVTSYTSY3Sig" 
+  edge [moc::sy::SYDataEdge,visualization::VisualConnection] from "brightnessMapVTSYzipxSYtransformedSY" port "newZipxSYTransformedOut" to "brightnessMapVTSYzipxSYtransformedSYbrightnessMapVTSYTSY3Sig" port "producer"
+  edge [moc::sy::SYDataEdge,visualization::VisualConnection] from "brightnessMapVTSYzipxSYtransformedSYbrightnessMapVTSYTSY3Sig" port "consumer" to "brightnessMapVTSYTSY3" port "newSYSignalTransformedIn"
+  edge [visualization::VisualContainment] from "application" port "contained" to "brightnessMapVTSYzipxSYtransformedSYbrightnessMapVTSYTSY4Sig" 
+  edge [moc::sy::SYDataEdge,visualization::VisualConnection] from "brightnessMapVTSYzipxSYtransformedSY" port "newZipxSYTransformedOut" to "brightnessMapVTSYzipxSYtransformedSYbrightnessMapVTSYTSY4Sig" port "producer"
+  edge [moc::sy::SYDataEdge,visualization::VisualConnection] from "brightnessMapVTSYzipxSYtransformedSYbrightnessMapVTSYTSY4Sig" port "consumer" to "brightnessMapVTSYTSY4" port "newSYSignalTransformedIn"
+  edge [visualization::VisualContainment] from "application" port "contained" to "brightnessMapVTSYTSY0brightnessMapVTSYunZipxSYtransformedSYSig" 
+  edge [visualization::VisualConnection] from "brightnessMapVTSYTSY0" port "newSYSignalTransformedIn" to "brightnessMapV" port "resizedSig"
+  edge [visualization::VisualConnection] from "brightnessMapV" port "maxMapVReduceVVec" to "brightnessMapVTSYTSY0" port "newSYSignalTransformedOut"
+  edge [moc::sy::SYDataEdge,visualization::VisualConnection] from "brightnessMapVTSYTSY0" port "newSYSignalTransformedOut" to "brightnessMapVTSYTSY0brightnessMapVTSYunZipxSYtransformedSYSig" port "producer"
+  edge [moc::sy::SYDataEdge,visualization::VisualConnection] from "brightnessMapVTSYTSY0brightnessMapVTSYunZipxSYtransformedSYSig" port "consumer" to "brightnessMapVTSYunZipxSYtransformedSY" port "newunZipxSYTransformedIn"
+  edge [visualization::VisualContainment] from "application" port "contained" to "brightnessMapVTSYTSY1brightnessMapVTSYunZipxSYtransformedSYSig" 
+  edge [visualization::VisualConnection] from "brightnessMapVTSYTSY1" port "newSYSignalTransformedIn" to "brightnessMapV" port "resizedSig"
+  edge [visualization::VisualConnection] from "brightnessMapV" port "maxMapVReduceVVec" to "brightnessMapVTSYTSY1" port "newSYSignalTransformedOut"
+  edge [moc::sy::SYDataEdge,visualization::VisualConnection] from "brightnessMapVTSYTSY1" port "newSYSignalTransformedOut" to "brightnessMapVTSYTSY1brightnessMapVTSYunZipxSYtransformedSYSig" port "producer"
+  edge [moc::sy::SYDataEdge,visualization::VisualConnection] from "brightnessMapVTSYTSY1brightnessMapVTSYunZipxSYtransformedSYSig" port "consumer" to "brightnessMapVTSYunZipxSYtransformedSY" port "newunZipxSYTransformedIn"
+  edge [visualization::VisualContainment] from "application" port "contained" to "brightnessMapVTSYTSY2brightnessMapVTSYunZipxSYtransformedSYSig" 
+  edge [visualization::VisualConnection] from "brightnessMapVTSYTSY2" port "newSYSignalTransformedIn" to "brightnessMapV" port "resizedSig"
+  edge [visualization::VisualConnection] from "brightnessMapV" port "maxMapVReduceVVec" to "brightnessMapVTSYTSY2" port "newSYSignalTransformedOut"
+  edge [moc::sy::SYDataEdge,visualization::VisualConnection] from "brightnessMapVTSYTSY2" port "newSYSignalTransformedOut" to "brightnessMapVTSYTSY2brightnessMapVTSYunZipxSYtransformedSYSig" port "producer"
+  edge [moc::sy::SYDataEdge,visualization::VisualConnection] from "brightnessMapVTSYTSY2brightnessMapVTSYunZipxSYtransformedSYSig" port "consumer" to "brightnessMapVTSYunZipxSYtransformedSY" port "newunZipxSYTransformedIn"
+  edge [visualization::VisualContainment] from "application" port "contained" to "brightnessMapVTSYTSY3brightnessMapVTSYunZipxSYtransformedSYSig" 
+  edge [visualization::VisualConnection] from "brightnessMapVTSYTSY3" port "newSYSignalTransformedIn" to "brightnessMapV" port "resizedSig"
+  edge [visualization::VisualConnection] from "brightnessMapV" port "maxMapVReduceVVec" to "brightnessMapVTSYTSY3" port "newSYSignalTransformedOut"
+  edge [moc::sy::SYDataEdge,visualization::VisualConnection] from "brightnessMapVTSYTSY3" port "newSYSignalTransformedOut" to "brightnessMapVTSYTSY3brightnessMapVTSYunZipxSYtransformedSYSig" port "producer"
+  edge [moc::sy::SYDataEdge,visualization::VisualConnection] from "brightnessMapVTSYTSY3brightnessMapVTSYunZipxSYtransformedSYSig" port "consumer" to "brightnessMapVTSYunZipxSYtransformedSY" port "newunZipxSYTransformedIn"
+  edge [visualization::VisualContainment] from "application" port "contained" to "brightnessMapVTSYTSY4brightnessMapVTSYunZipxSYtransformedSYSig" 
+  edge [visualization::VisualConnection] from "brightnessMapVTSYTSY4" port "newSYSignalTransformedIn" to "brightnessMapV" port "resizedSig"
+  edge [visualization::VisualConnection] from "brightnessMapV" port "maxMapVReduceVVec" to "brightnessMapVTSYTSY4" port "newSYSignalTransformedOut"
+  edge [moc::sy::SYDataEdge,visualization::VisualConnection] from "brightnessMapVTSYTSY4" port "newSYSignalTransformedOut" to "brightnessMapVTSYTSY4brightnessMapVTSYunZipxSYtransformedSYSig" port "producer"
+  edge [moc::sy::SYDataEdge,visualization::VisualConnection] from "brightnessMapVTSYTSY4brightnessMapVTSYunZipxSYtransformedSYSig" port "consumer" to "brightnessMapVTSYunZipxSYtransformedSY" port "newunZipxSYTransformedIn"
+  edge [moc::AbstractionEdge] from "brightnessReduceVBTSYTSY0" port "combFunctions" to "minmax" 
+  edge [visualization::VisualContainment] from "brightnessReduceVBTSYTSY0" port "contained" to "minmax" 
+  edge [visualization::VisualContainment] from "application" port "contained" to "brightnessReduceVBTSYTSY0" 
+  edge [moc::AbstractionEdge] from "brightnessReduceVBTSYTSY1" port "combFunctions" to "minmax" 
+  edge [visualization::VisualContainment] from "brightnessReduceVBTSYTSY1" port "contained" to "minmax" 
+  edge [visualization::VisualContainment] from "application" port "contained" to "brightnessReduceVBTSYTSY1" 
+  edge [moc::AbstractionEdge] from "brightnessReduceVBTSYTSY2" port "combFunctions" to "minmax" 
+  edge [visualization::VisualContainment] from "brightnessReduceVBTSYTSY2" port "contained" to "minmax" 
+  edge [visualization::VisualContainment] from "application" port "contained" to "brightnessReduceVBTSYTSY2" 
+  edge [moc::AbstractionEdge] from "brightnessReduceVBTSYTSY3" port "combFunctions" to "minmax" 
+  edge [visualization::VisualContainment] from "brightnessReduceVBTSYTSY3" port "contained" to "minmax" 
+  edge [visualization::VisualContainment] from "application" port "contained" to "brightnessReduceVBTSYTSY3" 
+  edge [moc::AbstractionEdge] from "brightnessReduceVBTSYTSY4" port "combFunctions" to "minmax" 
+  edge [visualization::VisualContainment] from "brightnessReduceVBTSYTSY4" port "contained" to "minmax" 
+  edge [visualization::VisualContainment] from "application" port "contained" to "brightnessReduceVBTSYTSY4" 
+  edge [moc::AbstractionEdge] from "brightnessReduceVBTSYTSY5" port "combFunctions" to "minmax" 
+  edge [visualization::VisualContainment] from "brightnessReduceVBTSYTSY5" port "contained" to "minmax" 
+  edge [visualization::VisualContainment] from "application" port "contained" to "brightnessReduceVBTSYTSY5" 
+  edge [moc::AbstractionEdge] from "brightnessReduceVBTSYTSY6" port "combFunctions" to "minmax" 
+  edge [visualization::VisualContainment] from "brightnessReduceVBTSYTSY6" port "contained" to "minmax" 
+  edge [visualization::VisualContainment] from "application" port "contained" to "brightnessReduceVBTSYTSY6" 
+  edge [moc::AbstractionEdge] from "brightnessReduceVBTSYTSY7" port "combFunctions" to "minmax" 
+  edge [visualization::VisualContainment] from "brightnessReduceVBTSYTSY7" port "contained" to "minmax" 
+  edge [visualization::VisualContainment] from "application" port "contained" to "brightnessReduceVBTSYTSY7" 
+  edge [moc::AbstractionEdge] from "brightnessReduceVBTSYTSY8" port "combFunctions" to "minmax" 
+  edge [visualization::VisualContainment] from "brightnessReduceVBTSYTSY8" port "contained" to "minmax" 
+  edge [visualization::VisualContainment] from "application" port "contained" to "brightnessReduceVBTSYTSY8" 
+  edge [moc::AbstractionEdge] from "brightnessReduceVBTSYTSY9" port "combFunctions" to "minmax" 
+  edge [visualization::VisualContainment] from "brightnessReduceVBTSYTSY9" port "contained" to "minmax" 
+  edge [visualization::VisualContainment] from "application" port "contained" to "brightnessReduceVBTSYTSY9" 
+  edge [moc::AbstractionEdge] from "brightnessReduceVBTSYTSY10" port "combFunctions" to "minmax" 
+  edge [visualization::VisualContainment] from "brightnessReduceVBTSYTSY10" port "contained" to "minmax" 
+  edge [visualization::VisualContainment] from "application" port "contained" to "brightnessReduceVBTSYTSY10" 
+  edge [moc::AbstractionEdge] from "brightnessReduceVBTSYTSY11" port "combFunctions" to "minmax" 
+  edge [visualization::VisualContainment] from "brightnessReduceVBTSYTSY11" port "contained" to "minmax" 
+  edge [visualization::VisualContainment] from "application" port "contained" to "brightnessReduceVBTSYTSY11" 
+  edge [moc::AbstractionEdge] from "brightnessReduceVBTSYTSY12" port "combFunctions" to "minmax" 
+  edge [visualization::VisualContainment] from "brightnessReduceVBTSYTSY12" port "contained" to "minmax" 
+  edge [visualization::VisualContainment] from "application" port "contained" to "brightnessReduceVBTSYTSY12" 
+  edge [moc::AbstractionEdge] from "brightnessReduceVBTSYTSY13" port "combFunctions" to "minmax" 
+  edge [visualization::VisualContainment] from "brightnessReduceVBTSYTSY13" port "contained" to "minmax" 
+  edge [visualization::VisualContainment] from "application" port "contained" to "brightnessReduceVBTSYTSY13" 
+  edge [moc::AbstractionEdge] from "brightnessReduceVBTSYTSY14" port "combFunctions" to "minmax" 
+  edge [visualization::VisualContainment] from "brightnessReduceVBTSYTSY14" port "contained" to "minmax" 
+  edge [visualization::VisualContainment] from "application" port "contained" to "brightnessReduceVBTSYTSY14" 
+  edge [moc::AbstractionEdge] from "brightnessReduceVBTSYTSY15" port "combFunctions" to "minmax" 
+  edge [visualization::VisualContainment] from "brightnessReduceVBTSYTSY15" port "contained" to "minmax" 
+  edge [visualization::VisualContainment] from "application" port "contained" to "brightnessReduceVBTSYTSY15" 
+  edge [moc::AbstractionEdge] from "brightnessReduceVBTSYTSY16" port "combFunctions" to "minmax" 
+  edge [visualization::VisualContainment] from "brightnessReduceVBTSYTSY16" port "contained" to "minmax" 
+  edge [visualization::VisualContainment] from "application" port "contained" to "brightnessReduceVBTSYTSY16" 
+  edge [moc::AbstractionEdge] from "brightnessReduceVBTSYTSY17" port "combFunctions" to "minmax" 
+  edge [visualization::VisualContainment] from "brightnessReduceVBTSYTSY17" port "contained" to "minmax" 
+  edge [visualization::VisualContainment] from "application" port "contained" to "brightnessReduceVBTSYTSY17" 
+  edge [moc::AbstractionEdge] from "brightnessReduceVBTSYTSY18" port "combFunctions" to "minmax" 
+  edge [visualization::VisualContainment] from "brightnessReduceVBTSYTSY18" port "contained" to "minmax" 
+  edge [visualization::VisualContainment] from "application" port "contained" to "brightnessReduceVBTSYTSY18" 
+  edge [visualization::VisualContainment] from "application" port "contained" to "brightnessReduceVBTSYunZipxSYtransformedSY" 
+  edge [moc::sy::SYDataEdge,visualization::VisualConnection] from "brightnessMapVTSYbrightnessReduceVBTSYSig" port "consumer" to "brightnessReduceVBTSYunZipxSYtransformedSY" port "mapSplitTransformedIn"
+  edge [visualization::VisualContainment] from "application" port "contained" to "brightnessReduceVBTSYunZipxSYtransformedSYbrightnessReduceVBTSYTSY0Sig" 
+  edge [visualization::VisualContainment] from "application" port "contained" to "brightnessReduceVBTSYunZipxSYtransformedSYbrightnessReduceVBTSYTSY1Sig" 
+  edge [visualization::VisualContainment] from "application" port "contained" to "brightnessReduceVBTSYunZipxSYtransformedSYbrightnessReduceVBTSYTSY2Sig" 
+  edge [visualization::VisualContainment] from "application" port "contained" to "brightnessReduceVBTSYunZipxSYtransformedSYbrightnessReduceVBTSYTSY3Sig" 
+  edge [visualization::VisualContainment] from "application" port "contained" to "brightnessReduceVBTSYunZipxSYtransformedSYbrightnessReduceVBTSYTSY4Sig" 
+  edge [visualization::VisualContainment] from "application" port "contained" to "brightnessReduceVBTSYunZipxSYtransformedSYbrightnessReduceVBTSYTSY5Sig" 
+  edge [visualization::VisualContainment] from "application" port "contained" to "brightnessReduceVBTSYunZipxSYtransformedSYbrightnessReduceVBTSYTSY6Sig" 
+  edge [visualization::VisualContainment] from "application" port "contained" to "brightnessReduceVBTSYunZipxSYtransformedSYbrightnessReduceVBTSYTSY7Sig" 
+  edge [visualization::VisualContainment] from "application" port "contained" to "brightnessReduceVBTSYunZipxSYtransformedSYbrightnessReduceVBTSYTSY8Sig" 
+  edge [visualization::VisualContainment] from "application" port "contained" to "brightnessReduceVBTSYunZipxSYtransformedSYbrightnessReduceVBTSYTSY9Sig" 
+  edge [visualization::VisualContainment] from "application" port "contained" to "brightnessReduceVBTSYunZipxSYtransformedSYbrightnessReduceVBTSYTSY10Sig" 
+  edge [visualization::VisualContainment] from "application" port "contained" to "brightnessReduceVBTSYunZipxSYtransformedSYbrightnessReduceVBTSYTSY11Sig" 
+  edge [visualization::VisualContainment] from "application" port "contained" to "brightnessReduceVBTSYunZipxSYtransformedSYbrightnessReduceVBTSYTSY12Sig" 
+  edge [visualization::VisualContainment] from "application" port "contained" to "brightnessReduceVBTSYunZipxSYtransformedSYbrightnessReduceVBTSYTSY13Sig" 
+  edge [visualization::VisualContainment] from "application" port "contained" to "brightnessReduceVBTSYunZipxSYtransformedSYbrightnessReduceVBTSYTSY14Sig" 
+  edge [visualization::VisualContainment] from "application" port "contained" to "brightnessReduceVBTSYunZipxSYtransformedSYbrightnessReduceVBTSYTSY15Sig" 
+  edge [visualization::VisualContainment] from "application" port "contained" to "brightnessReduceVBTSYunZipxSYtransformedSYbrightnessReduceVBTSYTSY16Sig" 
+  edge [visualization::VisualContainment] from "application" port "contained" to "brightnessReduceVBTSYunZipxSYtransformedSYbrightnessReduceVBTSYTSY17Sig" 
+  edge [visualization::VisualContainment] from "application" port "contained" to "brightnessReduceVBTSYunZipxSYtransformedSYbrightnessReduceVBTSYTSY18Sig" 
+  edge [visualization::VisualContainment] from "application" port "contained" to "brightnessReduceVBTSYunZipxSYtransformedSYbrightnessReduceVBTSYTSY19Sig" 
+  edge [visualization::VisualContainment] from "application" port "contained" to "brightnessReduceVBTSYTSY0brightnessReduceVBTSYTSY1Sig" 
+  edge [visualization::VisualContainment] from "application" port "contained" to "brightnessReduceVBTSYTSY1brightnessReduceVBTSYTSY2Sig" 
+  edge [visualization::VisualContainment] from "application" port "contained" to "brightnessReduceVBTSYTSY2brightnessReduceVBTSYTSY3Sig" 
+  edge [visualization::VisualContainment] from "application" port "contained" to "brightnessReduceVBTSYTSY3brightnessReduceVBTSYTSY4Sig" 
+  edge [visualization::VisualContainment] from "application" port "contained" to "brightnessReduceVBTSYTSY4brightnessReduceVBTSYTSY5Sig" 
+  edge [visualization::VisualContainment] from "application" port "contained" to "brightnessReduceVBTSYTSY5brightnessReduceVBTSYTSY6Sig" 
+  edge [visualization::VisualContainment] from "application" port "contained" to "brightnessReduceVBTSYTSY6brightnessReduceVBTSYTSY7Sig" 
+  edge [visualization::VisualContainment] from "application" port "contained" to "brightnessReduceVBTSYTSY7brightnessReduceVBTSYTSY8Sig" 
+  edge [visualization::VisualContainment] from "application" port "contained" to "brightnessReduceVBTSYTSY8brightnessReduceVBTSYTSY9Sig" 
+  edge [visualization::VisualContainment] from "application" port "contained" to "brightnessReduceVBTSYTSY9brightnessReduceVBTSYTSY10Sig" 
+  edge [visualization::VisualContainment] from "application" port "contained" to "brightnessReduceVBTSYTSY10brightnessReduceVBTSYTSY11Sig" 
+  edge [visualization::VisualContainment] from "application" port "contained" to "brightnessReduceVBTSYTSY11brightnessReduceVBTSYTSY12Sig" 
+  edge [visualization::VisualContainment] from "application" port "contained" to "brightnessReduceVBTSYTSY12brightnessReduceVBTSYTSY13Sig" 
+  edge [visualization::VisualContainment] from "application" port "contained" to "brightnessReduceVBTSYTSY13brightnessReduceVBTSYTSY14Sig" 
+  edge [visualization::VisualContainment] from "application" port "contained" to "brightnessReduceVBTSYTSY14brightnessReduceVBTSYTSY15Sig" 
+  edge [visualization::VisualContainment] from "application" port "contained" to "brightnessReduceVBTSYTSY15brightnessReduceVBTSYTSY16Sig" 
+  edge [visualization::VisualContainment] from "application" port "contained" to "brightnessReduceVBTSYTSY16brightnessReduceVBTSYTSY17Sig" 
+  edge [visualization::VisualContainment] from "application" port "contained" to "brightnessReduceVBTSYTSY17brightnessReduceVBTSYTSY18Sig" 
+  edge [moc::sy::SYDataEdge,visualization::VisualConnection] from "brightnessReduceVBTSYTSY0" port "newSYMapTransformedOut" to "brightnessReduceVBTSYTSY0brightnessReduceVBTSYTSY1Sig" port "producer"
+  edge [moc::sy::SYDataEdge,visualization::VisualConnection] from "brightnessReduceVBTSYTSY0brightnessReduceVBTSYTSY1Sig" port "consumer" to "brightnessReduceVBTSYTSY1" port "newSYSignalTransformedIn1"
+  edge [moc::sy::SYDataEdge,visualization::VisualConnection] from "brightnessReduceVBTSYTSY1" port "newSYMapTransformedOut" to "brightnessReduceVBTSYTSY1brightnessReduceVBTSYTSY2Sig" port "producer"
+  edge [moc::sy::SYDataEdge,visualization::VisualConnection] from "brightnessReduceVBTSYTSY1brightnessReduceVBTSYTSY2Sig" port "consumer" to "brightnessReduceVBTSYTSY2" port "newSYSignalTransformedIn1"
+  edge [moc::sy::SYDataEdge,visualization::VisualConnection] from "brightnessReduceVBTSYTSY2" port "newSYMapTransformedOut" to "brightnessReduceVBTSYTSY2brightnessReduceVBTSYTSY3Sig" port "producer"
+  edge [moc::sy::SYDataEdge,visualization::VisualConnection] from "brightnessReduceVBTSYTSY2brightnessReduceVBTSYTSY3Sig" port "consumer" to "brightnessReduceVBTSYTSY3" port "newSYSignalTransformedIn1"
+  edge [moc::sy::SYDataEdge,visualization::VisualConnection] from "brightnessReduceVBTSYTSY3" port "newSYMapTransformedOut" to "brightnessReduceVBTSYTSY3brightnessReduceVBTSYTSY4Sig" port "producer"
+  edge [moc::sy::SYDataEdge,visualization::VisualConnection] from "brightnessReduceVBTSYTSY3brightnessReduceVBTSYTSY4Sig" port "consumer" to "brightnessReduceVBTSYTSY4" port "newSYSignalTransformedIn1"
+  edge [moc::sy::SYDataEdge,visualization::VisualConnection] from "brightnessReduceVBTSYTSY4" port "newSYMapTransformedOut" to "brightnessReduceVBTSYTSY4brightnessReduceVBTSYTSY5Sig" port "producer"
+  edge [moc::sy::SYDataEdge,visualization::VisualConnection] from "brightnessReduceVBTSYTSY4brightnessReduceVBTSYTSY5Sig" port "consumer" to "brightnessReduceVBTSYTSY5" port "newSYSignalTransformedIn1"
+  edge [moc::sy::SYDataEdge,visualization::VisualConnection] from "brightnessReduceVBTSYTSY5" port "newSYMapTransformedOut" to "brightnessReduceVBTSYTSY5brightnessReduceVBTSYTSY6Sig" port "producer"
+  edge [moc::sy::SYDataEdge,visualization::VisualConnection] from "brightnessReduceVBTSYTSY5brightnessReduceVBTSYTSY6Sig" port "consumer" to "brightnessReduceVBTSYTSY6" port "newSYSignalTransformedIn1"
+  edge [moc::sy::SYDataEdge,visualization::VisualConnection] from "brightnessReduceVBTSYTSY6" port "newSYMapTransformedOut" to "brightnessReduceVBTSYTSY6brightnessReduceVBTSYTSY7Sig" port "producer"
+  edge [moc::sy::SYDataEdge,visualization::VisualConnection] from "brightnessReduceVBTSYTSY6brightnessReduceVBTSYTSY7Sig" port "consumer" to "brightnessReduceVBTSYTSY7" port "newSYSignalTransformedIn1"
+  edge [moc::sy::SYDataEdge,visualization::VisualConnection] from "brightnessReduceVBTSYTSY7" port "newSYMapTransformedOut" to "brightnessReduceVBTSYTSY7brightnessReduceVBTSYTSY8Sig" port "producer"
+  edge [moc::sy::SYDataEdge,visualization::VisualConnection] from "brightnessReduceVBTSYTSY7brightnessReduceVBTSYTSY8Sig" port "consumer" to "brightnessReduceVBTSYTSY8" port "newSYSignalTransformedIn1"
+  edge [moc::sy::SYDataEdge,visualization::VisualConnection] from "brightnessReduceVBTSYTSY8" port "newSYMapTransformedOut" to "brightnessReduceVBTSYTSY8brightnessReduceVBTSYTSY9Sig" port "producer"
+  edge [moc::sy::SYDataEdge,visualization::VisualConnection] from "brightnessReduceVBTSYTSY8brightnessReduceVBTSYTSY9Sig" port "consumer" to "brightnessReduceVBTSYTSY9" port "newSYSignalTransformedIn1"
+  edge [moc::sy::SYDataEdge,visualization::VisualConnection] from "brightnessReduceVBTSYTSY9" port "newSYMapTransformedOut" to "brightnessReduceVBTSYTSY9brightnessReduceVBTSYTSY10Sig" port "producer"
+  edge [moc::sy::SYDataEdge,visualization::VisualConnection] from "brightnessReduceVBTSYTSY9brightnessReduceVBTSYTSY10Sig" port "consumer" to "brightnessReduceVBTSYTSY10" port "newSYSignalTransformedIn1"
+  edge [moc::sy::SYDataEdge,visualization::VisualConnection] from "brightnessReduceVBTSYTSY10" port "newSYMapTransformedOut" to "brightnessReduceVBTSYTSY10brightnessReduceVBTSYTSY11Sig" port "producer"
+  edge [moc::sy::SYDataEdge,visualization::VisualConnection] from "brightnessReduceVBTSYTSY10brightnessReduceVBTSYTSY11Sig" port "consumer" to "brightnessReduceVBTSYTSY11" port "newSYSignalTransformedIn1"
+  edge [moc::sy::SYDataEdge,visualization::VisualConnection] from "brightnessReduceVBTSYTSY11" port "newSYMapTransformedOut" to "brightnessReduceVBTSYTSY11brightnessReduceVBTSYTSY12Sig" port "producer"
+  edge [moc::sy::SYDataEdge,visualization::VisualConnection] from "brightnessReduceVBTSYTSY11brightnessReduceVBTSYTSY12Sig" port "consumer" to "brightnessReduceVBTSYTSY12" port "newSYSignalTransformedIn1"
+  edge [moc::sy::SYDataEdge,visualization::VisualConnection] from "brightnessReduceVBTSYTSY12" port "newSYMapTransformedOut" to "brightnessReduceVBTSYTSY12brightnessReduceVBTSYTSY13Sig" port "producer"
+  edge [moc::sy::SYDataEdge,visualization::VisualConnection] from "brightnessReduceVBTSYTSY12brightnessReduceVBTSYTSY13Sig" port "consumer" to "brightnessReduceVBTSYTSY13" port "newSYSignalTransformedIn1"
+  edge [moc::sy::SYDataEdge,visualization::VisualConnection] from "brightnessReduceVBTSYTSY13" port "newSYMapTransformedOut" to "brightnessReduceVBTSYTSY13brightnessReduceVBTSYTSY14Sig" port "producer"
+  edge [moc::sy::SYDataEdge,visualization::VisualConnection] from "brightnessReduceVBTSYTSY13brightnessReduceVBTSYTSY14Sig" port "consumer" to "brightnessReduceVBTSYTSY14" port "newSYSignalTransformedIn1"
+  edge [moc::sy::SYDataEdge,visualization::VisualConnection] from "brightnessReduceVBTSYTSY14" port "newSYMapTransformedOut" to "brightnessReduceVBTSYTSY14brightnessReduceVBTSYTSY15Sig" port "producer"
+  edge [moc::sy::SYDataEdge,visualization::VisualConnection] from "brightnessReduceVBTSYTSY14brightnessReduceVBTSYTSY15Sig" port "consumer" to "brightnessReduceVBTSYTSY15" port "newSYSignalTransformedIn1"
+  edge [moc::sy::SYDataEdge,visualization::VisualConnection] from "brightnessReduceVBTSYTSY15" port "newSYMapTransformedOut" to "brightnessReduceVBTSYTSY15brightnessReduceVBTSYTSY16Sig" port "producer"
+  edge [moc::sy::SYDataEdge,visualization::VisualConnection] from "brightnessReduceVBTSYTSY15brightnessReduceVBTSYTSY16Sig" port "consumer" to "brightnessReduceVBTSYTSY16" port "newSYSignalTransformedIn1"
+  edge [moc::sy::SYDataEdge,visualization::VisualConnection] from "brightnessReduceVBTSYTSY16" port "newSYMapTransformedOut" to "brightnessReduceVBTSYTSY16brightnessReduceVBTSYTSY17Sig" port "producer"
+  edge [moc::sy::SYDataEdge,visualization::VisualConnection] from "brightnessReduceVBTSYTSY16brightnessReduceVBTSYTSY17Sig" port "consumer" to "brightnessReduceVBTSYTSY17" port "newSYSignalTransformedIn1"
+  edge [moc::sy::SYDataEdge,visualization::VisualConnection] from "brightnessReduceVBTSYTSY17" port "newSYMapTransformedOut" to "brightnessReduceVBTSYTSY17brightnessReduceVBTSYTSY18Sig" port "producer"
+  edge [moc::sy::SYDataEdge,visualization::VisualConnection] from "brightnessReduceVBTSYTSY17brightnessReduceVBTSYTSY18Sig" port "consumer" to "brightnessReduceVBTSYTSY18" port "newSYSignalTransformedIn1"
+  edge [moc::sy::SYDataEdge,visualization::VisualConnection] from "brightnessReduceVBTSYunZipxSYtransformedSY" port "newunZipxSYTransformedOut" to "brightnessReduceVBTSYunZipxSYtransformedSYbrightnessReduceVBTSYTSY0Sig" port "producer"
+  edge [moc::sy::SYDataEdge,visualization::VisualConnection] from "brightnessReduceVBTSYunZipxSYtransformedSYbrightnessReduceVBTSYTSY0Sig" port "consumer" to "brightnessReduceVBTSYTSY0" port "newSYSignalTransformedIn1"
+  edge [moc::sy::SYDataEdge,visualization::VisualConnection] from "brightnessReduceVBTSYunZipxSYtransformedSY" port "newunZipxSYTransformedOut" to "brightnessReduceVBTSYunZipxSYtransformedSYbrightnessReduceVBTSYTSY1Sig" port "producer"
+  edge [moc::sy::SYDataEdge,visualization::VisualConnection] from "brightnessReduceVBTSYunZipxSYtransformedSYbrightnessReduceVBTSYTSY1Sig" port "consumer" to "brightnessReduceVBTSYTSY0" port "newSYSignalTransformedIn2"
+  edge [moc::sy::SYDataEdge,visualization::VisualConnection] from "brightnessReduceVBTSYunZipxSYtransformedSY" port "newunZipxSYTransformedOut" to "brightnessReduceVBTSYunZipxSYtransformedSYbrightnessReduceVBTSYTSY2Sig" port "producer"
+  edge [moc::sy::SYDataEdge,visualization::VisualConnection] from "brightnessReduceVBTSYunZipxSYtransformedSYbrightnessReduceVBTSYTSY2Sig" port "consumer" to "brightnessReduceVBTSYTSY1" port "newSYSignalTransformedIn2"
+  edge [moc::sy::SYDataEdge,visualization::VisualConnection] from "brightnessReduceVBTSYunZipxSYtransformedSY" port "newunZipxSYTransformedOut" to "brightnessReduceVBTSYunZipxSYtransformedSYbrightnessReduceVBTSYTSY3Sig" port "producer"
+  edge [moc::sy::SYDataEdge,visualization::VisualConnection] from "brightnessReduceVBTSYunZipxSYtransformedSYbrightnessReduceVBTSYTSY3Sig" port "consumer" to "brightnessReduceVBTSYTSY2" port "newSYSignalTransformedIn2"
+  edge [moc::sy::SYDataEdge,visualization::VisualConnection] from "brightnessReduceVBTSYunZipxSYtransformedSY" port "newunZipxSYTransformedOut" to "brightnessReduceVBTSYunZipxSYtransformedSYbrightnessReduceVBTSYTSY4Sig" port "producer"
+  edge [moc::sy::SYDataEdge,visualization::VisualConnection] from "brightnessReduceVBTSYunZipxSYtransformedSYbrightnessReduceVBTSYTSY4Sig" port "consumer" to "brightnessReduceVBTSYTSY3" port "newSYSignalTransformedIn2"
+  edge [moc::sy::SYDataEdge,visualization::VisualConnection] from "brightnessReduceVBTSYunZipxSYtransformedSY" port "newunZipxSYTransformedOut" to "brightnessReduceVBTSYunZipxSYtransformedSYbrightnessReduceVBTSYTSY5Sig" port "producer"
+  edge [moc::sy::SYDataEdge,visualization::VisualConnection] from "brightnessReduceVBTSYunZipxSYtransformedSYbrightnessReduceVBTSYTSY5Sig" port "consumer" to "brightnessReduceVBTSYTSY4" port "newSYSignalTransformedIn2"
+  edge [moc::sy::SYDataEdge,visualization::VisualConnection] from "brightnessReduceVBTSYunZipxSYtransformedSY" port "newunZipxSYTransformedOut" to "brightnessReduceVBTSYunZipxSYtransformedSYbrightnessReduceVBTSYTSY6Sig" port "producer"
+  edge [moc::sy::SYDataEdge,visualization::VisualConnection] from "brightnessReduceVBTSYunZipxSYtransformedSYbrightnessReduceVBTSYTSY6Sig" port "consumer" to "brightnessReduceVBTSYTSY5" port "newSYSignalTransformedIn2"
+  edge [moc::sy::SYDataEdge,visualization::VisualConnection] from "brightnessReduceVBTSYunZipxSYtransformedSY" port "newunZipxSYTransformedOut" to "brightnessReduceVBTSYunZipxSYtransformedSYbrightnessReduceVBTSYTSY7Sig" port "producer"
+  edge [moc::sy::SYDataEdge,visualization::VisualConnection] from "brightnessReduceVBTSYunZipxSYtransformedSYbrightnessReduceVBTSYTSY7Sig" port "consumer" to "brightnessReduceVBTSYTSY6" port "newSYSignalTransformedIn2"
+  edge [moc::sy::SYDataEdge,visualization::VisualConnection] from "brightnessReduceVBTSYunZipxSYtransformedSY" port "newunZipxSYTransformedOut" to "brightnessReduceVBTSYunZipxSYtransformedSYbrightnessReduceVBTSYTSY8Sig" port "producer"
+  edge [moc::sy::SYDataEdge,visualization::VisualConnection] from "brightnessReduceVBTSYunZipxSYtransformedSYbrightnessReduceVBTSYTSY8Sig" port "consumer" to "brightnessReduceVBTSYTSY7" port "newSYSignalTransformedIn2"
+  edge [moc::sy::SYDataEdge,visualization::VisualConnection] from "brightnessReduceVBTSYunZipxSYtransformedSY" port "newunZipxSYTransformedOut" to "brightnessReduceVBTSYunZipxSYtransformedSYbrightnessReduceVBTSYTSY9Sig" port "producer"
+  edge [moc::sy::SYDataEdge,visualization::VisualConnection] from "brightnessReduceVBTSYunZipxSYtransformedSYbrightnessReduceVBTSYTSY9Sig" port "consumer" to "brightnessReduceVBTSYTSY8" port "newSYSignalTransformedIn2"
+  edge [moc::sy::SYDataEdge,visualization::VisualConnection] from "brightnessReduceVBTSYunZipxSYtransformedSY" port "newunZipxSYTransformedOut" to "brightnessReduceVBTSYunZipxSYtransformedSYbrightnessReduceVBTSYTSY10Sig" port "producer"
+  edge [moc::sy::SYDataEdge,visualization::VisualConnection] from "brightnessReduceVBTSYunZipxSYtransformedSYbrightnessReduceVBTSYTSY10Sig" port "consumer" to "brightnessReduceVBTSYTSY9" port "newSYSignalTransformedIn2"
+  edge [moc::sy::SYDataEdge,visualization::VisualConnection] from "brightnessReduceVBTSYunZipxSYtransformedSY" port "newunZipxSYTransformedOut" to "brightnessReduceVBTSYunZipxSYtransformedSYbrightnessReduceVBTSYTSY11Sig" port "producer"
+  edge [moc::sy::SYDataEdge,visualization::VisualConnection] from "brightnessReduceVBTSYunZipxSYtransformedSYbrightnessReduceVBTSYTSY11Sig" port "consumer" to "brightnessReduceVBTSYTSY10" port "newSYSignalTransformedIn2"
+  edge [moc::sy::SYDataEdge,visualization::VisualConnection] from "brightnessReduceVBTSYunZipxSYtransformedSY" port "newunZipxSYTransformedOut" to "brightnessReduceVBTSYunZipxSYtransformedSYbrightnessReduceVBTSYTSY12Sig" port "producer"
+  edge [moc::sy::SYDataEdge,visualization::VisualConnection] from "brightnessReduceVBTSYunZipxSYtransformedSYbrightnessReduceVBTSYTSY12Sig" port "consumer" to "brightnessReduceVBTSYTSY11" port "newSYSignalTransformedIn2"
+  edge [moc::sy::SYDataEdge,visualization::VisualConnection] from "brightnessReduceVBTSYunZipxSYtransformedSY" port "newunZipxSYTransformedOut" to "brightnessReduceVBTSYunZipxSYtransformedSYbrightnessReduceVBTSYTSY13Sig" port "producer"
+  edge [moc::sy::SYDataEdge,visualization::VisualConnection] from "brightnessReduceVBTSYunZipxSYtransformedSYbrightnessReduceVBTSYTSY13Sig" port "consumer" to "brightnessReduceVBTSYTSY12" port "newSYSignalTransformedIn2"
+  edge [moc::sy::SYDataEdge,visualization::VisualConnection] from "brightnessReduceVBTSYunZipxSYtransformedSY" port "newunZipxSYTransformedOut" to "brightnessReduceVBTSYunZipxSYtransformedSYbrightnessReduceVBTSYTSY14Sig" port "producer"
+  edge [moc::sy::SYDataEdge,visualization::VisualConnection] from "brightnessReduceVBTSYunZipxSYtransformedSYbrightnessReduceVBTSYTSY14Sig" port "consumer" to "brightnessReduceVBTSYTSY13" port "newSYSignalTransformedIn2"
+  edge [moc::sy::SYDataEdge,visualization::VisualConnection] from "brightnessReduceVBTSYunZipxSYtransformedSY" port "newunZipxSYTransformedOut" to "brightnessReduceVBTSYunZipxSYtransformedSYbrightnessReduceVBTSYTSY15Sig" port "producer"
+  edge [moc::sy::SYDataEdge,visualization::VisualConnection] from "brightnessReduceVBTSYunZipxSYtransformedSYbrightnessReduceVBTSYTSY15Sig" port "consumer" to "brightnessReduceVBTSYTSY14" port "newSYSignalTransformedIn2"
+  edge [moc::sy::SYDataEdge,visualization::VisualConnection] from "brightnessReduceVBTSYunZipxSYtransformedSY" port "newunZipxSYTransformedOut" to "brightnessReduceVBTSYunZipxSYtransformedSYbrightnessReduceVBTSYTSY16Sig" port "producer"
+  edge [moc::sy::SYDataEdge,visualization::VisualConnection] from "brightnessReduceVBTSYunZipxSYtransformedSYbrightnessReduceVBTSYTSY16Sig" port "consumer" to "brightnessReduceVBTSYTSY15" port "newSYSignalTransformedIn2"
+  edge [moc::sy::SYDataEdge,visualization::VisualConnection] from "brightnessReduceVBTSYunZipxSYtransformedSY" port "newunZipxSYTransformedOut" to "brightnessReduceVBTSYunZipxSYtransformedSYbrightnessReduceVBTSYTSY17Sig" port "producer"
+  edge [moc::sy::SYDataEdge,visualization::VisualConnection] from "brightnessReduceVBTSYunZipxSYtransformedSYbrightnessReduceVBTSYTSY17Sig" port "consumer" to "brightnessReduceVBTSYTSY16" port "newSYSignalTransformedIn2"
+  edge [moc::sy::SYDataEdge,visualization::VisualConnection] from "brightnessReduceVBTSYunZipxSYtransformedSY" port "newunZipxSYTransformedOut" to "brightnessReduceVBTSYunZipxSYtransformedSYbrightnessReduceVBTSYTSY18Sig" port "producer"
+  edge [moc::sy::SYDataEdge,visualization::VisualConnection] from "brightnessReduceVBTSYunZipxSYtransformedSYbrightnessReduceVBTSYTSY18Sig" port "consumer" to "brightnessReduceVBTSYTSY17" port "newSYSignalTransformedIn2"
+  edge [moc::sy::SYDataEdge,visualization::VisualConnection] from "brightnessReduceVBTSYunZipxSYtransformedSY" port "newunZipxSYTransformedOut" to "brightnessReduceVBTSYunZipxSYtransformedSYbrightnessReduceVBTSYTSY19Sig" port "producer"
+  edge [moc::sy::SYDataEdge,visualization::VisualConnection] from "brightnessReduceVBTSYunZipxSYtransformedSYbrightnessReduceVBTSYTSY19Sig" port "consumer" to "brightnessReduceVBTSYTSY18" port "newSYSignalTransformedIn2"
+  edge [moc::AbstractionEdge,visualization::VisualConnection] from "brightnessReduceVBTSYTSY0" port "newSYSignalTransformedIn1" to "minmax" port "a"
+  edge [moc::AbstractionEdge,visualization::VisualConnection] from "brightnessReduceVBTSYTSY0" port "newSYSignalTransformedIn2" to "minmax" port "b"
+  edge [moc::AbstractionEdge,visualization::VisualConnection] from "minmax" port "res" to "brightnessReduceVBTSYTSY0" port "newSYMapTransformedOut"
+  edge [moc::AbstractionEdge,visualization::VisualConnection] from "brightnessReduceVBTSYTSY1" port "newSYSignalTransformedIn1" to "minmax" port "a"
+  edge [moc::AbstractionEdge,visualization::VisualConnection] from "brightnessReduceVBTSYTSY1" port "newSYSignalTransformedIn2" to "minmax" port "b"
+  edge [moc::AbstractionEdge,visualization::VisualConnection] from "minmax" port "res" to "brightnessReduceVBTSYTSY1" port "newSYMapTransformedOut"
+  edge [moc::AbstractionEdge,visualization::VisualConnection] from "brightnessReduceVBTSYTSY2" port "newSYSignalTransformedIn1" to "minmax" port "a"
+  edge [moc::AbstractionEdge,visualization::VisualConnection] from "brightnessReduceVBTSYTSY2" port "newSYSignalTransformedIn2" to "minmax" port "b"
+  edge [moc::AbstractionEdge,visualization::VisualConnection] from "minmax" port "res" to "brightnessReduceVBTSYTSY2" port "newSYMapTransformedOut"
+  edge [moc::AbstractionEdge,visualization::VisualConnection] from "brightnessReduceVBTSYTSY3" port "newSYSignalTransformedIn1" to "minmax" port "a"
+  edge [moc::AbstractionEdge,visualization::VisualConnection] from "brightnessReduceVBTSYTSY3" port "newSYSignalTransformedIn2" to "minmax" port "b"
+  edge [moc::AbstractionEdge,visualization::VisualConnection] from "minmax" port "res" to "brightnessReduceVBTSYTSY3" port "newSYMapTransformedOut"
+  edge [moc::AbstractionEdge,visualization::VisualConnection] from "brightnessReduceVBTSYTSY4" port "newSYSignalTransformedIn1" to "minmax" port "a"
+  edge [moc::AbstractionEdge,visualization::VisualConnection] from "brightnessReduceVBTSYTSY4" port "newSYSignalTransformedIn2" to "minmax" port "b"
+  edge [moc::AbstractionEdge,visualization::VisualConnection] from "minmax" port "res" to "brightnessReduceVBTSYTSY4" port "newSYMapTransformedOut"
+  edge [moc::AbstractionEdge,visualization::VisualConnection] from "brightnessReduceVBTSYTSY5" port "newSYSignalTransformedIn1" to "minmax" port "a"
+  edge [moc::AbstractionEdge,visualization::VisualConnection] from "brightnessReduceVBTSYTSY5" port "newSYSignalTransformedIn2" to "minmax" port "b"
+  edge [moc::AbstractionEdge,visualization::VisualConnection] from "minmax" port "res" to "brightnessReduceVBTSYTSY5" port "newSYMapTransformedOut"
+  edge [moc::AbstractionEdge,visualization::VisualConnection] from "brightnessReduceVBTSYTSY6" port "newSYSignalTransformedIn1" to "minmax" port "a"
+  edge [moc::AbstractionEdge,visualization::VisualConnection] from "brightnessReduceVBTSYTSY6" port "newSYSignalTransformedIn2" to "minmax" port "b"
+  edge [moc::AbstractionEdge,visualization::VisualConnection] from "minmax" port "res" to "brightnessReduceVBTSYTSY6" port "newSYMapTransformedOut"
+  edge [moc::AbstractionEdge,visualization::VisualConnection] from "brightnessReduceVBTSYTSY7" port "newSYSignalTransformedIn1" to "minmax" port "a"
+  edge [moc::AbstractionEdge,visualization::VisualConnection] from "brightnessReduceVBTSYTSY7" port "newSYSignalTransformedIn2" to "minmax" port "b"
+  edge [moc::AbstractionEdge,visualization::VisualConnection] from "minmax" port "res" to "brightnessReduceVBTSYTSY7" port "newSYMapTransformedOut"
+  edge [moc::AbstractionEdge,visualization::VisualConnection] from "brightnessReduceVBTSYTSY8" port "newSYSignalTransformedIn1" to "minmax" port "a"
+  edge [moc::AbstractionEdge,visualization::VisualConnection] from "brightnessReduceVBTSYTSY8" port "newSYSignalTransformedIn2" to "minmax" port "b"
+  edge [moc::AbstractionEdge,visualization::VisualConnection] from "minmax" port "res" to "brightnessReduceVBTSYTSY8" port "newSYMapTransformedOut"
+  edge [moc::AbstractionEdge,visualization::VisualConnection] from "brightnessReduceVBTSYTSY9" port "newSYSignalTransformedIn1" to "minmax" port "a"
+  edge [moc::AbstractionEdge,visualization::VisualConnection] from "brightnessReduceVBTSYTSY9" port "newSYSignalTransformedIn2" to "minmax" port "b"
+  edge [moc::AbstractionEdge,visualization::VisualConnection] from "minmax" port "res" to "brightnessReduceVBTSYTSY9" port "newSYMapTransformedOut"
+  edge [moc::AbstractionEdge,visualization::VisualConnection] from "brightnessReduceVBTSYTSY10" port "newSYSignalTransformedIn1" to "minmax" port "a"
+  edge [moc::AbstractionEdge,visualization::VisualConnection] from "brightnessReduceVBTSYTSY10" port "newSYSignalTransformedIn2" to "minmax" port "b"
+  edge [moc::AbstractionEdge,visualization::VisualConnection] from "minmax" port "res" to "brightnessReduceVBTSYTSY10" port "newSYMapTransformedOut"
+  edge [moc::AbstractionEdge,visualization::VisualConnection] from "brightnessReduceVBTSYTSY11" port "newSYSignalTransformedIn1" to "minmax" port "a"
+  edge [moc::AbstractionEdge,visualization::VisualConnection] from "brightnessReduceVBTSYTSY11" port "newSYSignalTransformedIn2" to "minmax" port "b"
+  edge [moc::AbstractionEdge,visualization::VisualConnection] from "minmax" port "res" to "brightnessReduceVBTSYTSY11" port "newSYMapTransformedOut"
+  edge [moc::AbstractionEdge,visualization::VisualConnection] from "brightnessReduceVBTSYTSY12" port "newSYSignalTransformedIn1" to "minmax" port "a"
+  edge [moc::AbstractionEdge,visualization::VisualConnection] from "brightnessReduceVBTSYTSY12" port "newSYSignalTransformedIn2" to "minmax" port "b"
+  edge [moc::AbstractionEdge,visualization::VisualConnection] from "minmax" port "res" to "brightnessReduceVBTSYTSY12" port "newSYMapTransformedOut"
+  edge [moc::AbstractionEdge,visualization::VisualConnection] from "brightnessReduceVBTSYTSY13" port "newSYSignalTransformedIn1" to "minmax" port "a"
+  edge [moc::AbstractionEdge,visualization::VisualConnection] from "brightnessReduceVBTSYTSY13" port "newSYSignalTransformedIn2" to "minmax" port "b"
+  edge [moc::AbstractionEdge,visualization::VisualConnection] from "minmax" port "res" to "brightnessReduceVBTSYTSY13" port "newSYMapTransformedOut"
+  edge [moc::AbstractionEdge,visualization::VisualConnection] from "brightnessReduceVBTSYTSY14" port "newSYSignalTransformedIn1" to "minmax" port "a"
+  edge [moc::AbstractionEdge,visualization::VisualConnection] from "brightnessReduceVBTSYTSY14" port "newSYSignalTransformedIn2" to "minmax" port "b"
+  edge [moc::AbstractionEdge,visualization::VisualConnection] from "minmax" port "res" to "brightnessReduceVBTSYTSY14" port "newSYMapTransformedOut"
+  edge [moc::AbstractionEdge,visualization::VisualConnection] from "brightnessReduceVBTSYTSY15" port "newSYSignalTransformedIn1" to "minmax" port "a"
+  edge [moc::AbstractionEdge,visualization::VisualConnection] from "brightnessReduceVBTSYTSY15" port "newSYSignalTransformedIn2" to "minmax" port "b"
+  edge [moc::AbstractionEdge,visualization::VisualConnection] from "minmax" port "res" to "brightnessReduceVBTSYTSY15" port "newSYMapTransformedOut"
+  edge [moc::AbstractionEdge,visualization::VisualConnection] from "brightnessReduceVBTSYTSY16" port "newSYSignalTransformedIn1" to "minmax" port "a"
+  edge [moc::AbstractionEdge,visualization::VisualConnection] from "brightnessReduceVBTSYTSY16" port "newSYSignalTransformedIn2" to "minmax" port "b"
+  edge [moc::AbstractionEdge,visualization::VisualConnection] from "minmax" port "res" to "brightnessReduceVBTSYTSY16" port "newSYMapTransformedOut"
+  edge [moc::AbstractionEdge,visualization::VisualConnection] from "brightnessReduceVBTSYTSY17" port "newSYSignalTransformedIn1" to "minmax" port "a"
+  edge [moc::AbstractionEdge,visualization::VisualConnection] from "brightnessReduceVBTSYTSY17" port "newSYSignalTransformedIn2" to "minmax" port "b"
+  edge [moc::AbstractionEdge,visualization::VisualConnection] from "minmax" port "res" to "brightnessReduceVBTSYTSY17" port "newSYMapTransformedOut"
+  edge [moc::AbstractionEdge,visualization::VisualConnection] from "brightnessReduceVBTSYTSY18" port "newSYSignalTransformedIn1" to "minmax" port "a"
+  edge [moc::AbstractionEdge,visualization::VisualConnection] from "brightnessReduceVBTSYTSY18" port "newSYSignalTransformedIn2" to "minmax" port "b"
+  edge [moc::AbstractionEdge,visualization::VisualConnection] from "minmax" port "res" to "brightnessReduceVBTSYTSY18" port "newSYMapTransformedOut"
+  edge [visualization::VisualConnection] from "brightnessReduceVBTSYTSY18" port "newSYMapTransformedOut" to "brightnessSig" port "producer"
+  edge [parallel::ParallelComputationEdge,visualization::VisualConnection] from "brightnessMapVTSYbrightnessReduceVBTSYSig" port "maxMapVReduceVVec" to "brightnessMapVTSYbrightnessReduceVBTSYSig" port "maxMapVReduceVVec"
+  edge [parallel::ParallelComputationEdge,visualization::VisualConnection] from "brightnessMapV" port "maxMapVReduceVVec" to "brightnessMapVTSYbrightnessReduceVBTSYSig" port "maxMapVReduceVVec"
+}

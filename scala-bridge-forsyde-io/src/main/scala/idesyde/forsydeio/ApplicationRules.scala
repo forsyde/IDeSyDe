@@ -1,6 +1,7 @@
 package idesyde.forsydeio
 
 import scala.jdk.CollectionConverters._
+import scala.jdk.OptionConverters._
 
 import idesyde.forsydeio.ForSyDeIdentificationUtils
 import idesyde.core.DesignModel
@@ -66,20 +67,22 @@ trait ApplicationRules {
                 .consumers()
                 .asScala
                 .flatMap(dst => {
-                  val src = sig.producer()
-                  if (src != null) {
-                    if (
-                      ForSyDeHierarchy.SYMap
-                        .tryView(src)
-                        .isPresent() && ForSyDeHierarchy.SYMap.tryView(dst).isPresent()
-                    ) {
-                      Some((src, dst, true))
-                    } else if (ForSyDeHierarchy.SYSignal.tryView(src).isPresent()) {
-                      Some((dst, src, true))
-                    } else {
-                      None
-                    }
-                  } else None
+                  sig
+                    .producer()
+                    .asScala
+                    .flatMap(src => {
+                      if (
+                        ForSyDeHierarchy.SYMap
+                          .tryView(src)
+                          .isPresent() && ForSyDeHierarchy.SYMap.tryView(dst).isPresent()
+                      ) {
+                        Some((src, dst, true))
+                      } else if (ForSyDeHierarchy.SYSignal.tryView(src).isPresent()) {
+                        Some((dst, src, true))
+                      } else {
+                        None
+                      }
+                    })
                 })
             })
             .toVector

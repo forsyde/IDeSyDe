@@ -15,11 +15,11 @@ import idesyde.common.SharedMemoryMultiCore
 import idesyde.forsydeio.ForSyDeIdentificationUtils
 import org.jgrapht.graph.AsSubgraph
 import org.jgrapht.alg.connectivity.ConnectivityInspector
-import forsyde.io.lib.platform.hardware.GenericProcessingModule
-import forsyde.io.lib.platform.runtime.AbstractRuntime
-import forsyde.io.lib.ForSyDeHierarchy
-import forsyde.io.lib.platform.hardware.GenericMemoryModule
-import forsyde.io.lib.platform.hardware.GenericCommunicationModule
+import forsyde.io.lib.hierarchy.platform.hardware.GenericProcessingModule
+import forsyde.io.lib.hierarchy.platform.runtime.AbstractRuntime
+import forsyde.io.lib.hierarchy.ForSyDeHierarchy
+import forsyde.io.lib.hierarchy.platform.hardware.GenericMemoryModule
+import forsyde.io.lib.hierarchy.platform.hardware.GenericCommunicationModule
 import idesyde.common.RuntimesAndProcessors
 
 trait PlatformRules {

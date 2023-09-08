@@ -597,7 +597,7 @@ final class CanSolveSDFToTiledMultiCore(using logger: Logger)
     // return both
     (
       full,
-      Map("numMappedElements" -> numMappedElements.getValue().toDouble) ++ invThroughputs
+      Map("nUsedPEs" -> numMappedElements.getValue().toDouble) ++ invThroughputs
         .map(v => v.getName() -> int2double(v.getValue()))
         .toMap
     )

@@ -9,7 +9,7 @@ import java.util.Set;
 import java.util.stream.Collectors;
 
 import forsyde.io.core.SystemGraph;
-import forsyde.io.lib.ForSyDeHierarchy;
+import forsyde.io.lib.hierarchy.ForSyDeHierarchy;
 
 public class AperiodicAsynchronousDataflowToPartitionedMemoryMappableMulticoreReverseIdentification implements ReverseIdentificationRule {
 

@@ -6,9 +6,9 @@ ThisBuild / versionScheme := Some("early-semver")
 ThisBuild / publishMavenStyle := true
 ThisBuild / publishTo := Some(Opts.resolver.sonatypeStaging)
 
-ThisBuild / resolvers += Resolver.mavenLocal
+ThisBuild / resolvers += "jitpack" at "https://jitpack.io"
 
-lazy val forsydeIoVersion              = "0.7.8-1-g05cbf5b.dirty"
+lazy val forsydeIoVersion              = "develop-SNAPSHOT"
 lazy val jgraphtVersion                = "1.5.1"
 lazy val scribeVersion                 = "3.10.2"
 lazy val scalaGraphVersion             = "1.13.5"
@@ -127,10 +127,10 @@ lazy val forsyde = (project in file("scala-bridge-forsyde-io"))
   .settings(
     // name := "idesyde-scala-bridge-forsyde-io",
     libraryDependencies ++= Seq(
-      "io.github.forsyde"  % "forsyde-io-java-core"       % forsydeIoVersion,
-      "io.github.forsyde"  % "forsyde-io-java-libforsyde" % forsydeIoVersion,
-      "io.github.forsyde"  % "forsyde-io-java-sdf3"       % forsydeIoVersion,
-      "org.apache.commons" % "commons-lang3"              % "3.12.0"
+      "com.github.forsyde.forsyde-io" % "forsyde-io-java-core"       % forsydeIoVersion,
+      "com.github.forsyde.forsyde-io" % "forsyde-io-java-libforsyde" % forsydeIoVersion,
+      "com.github.forsyde.forsyde-io" % "forsyde-io-java-sdf3"       % forsydeIoVersion,
+      "org.apache.commons"            % "commons-lang3"              % "3.12.0"
       // "io.github.forsyde"        % "forsyde-io-java-amalthea"          % forsydeIoVersion,
       // "org.eclipse.app4mc"       % "org.eclipse.app4mc.amalthea.model" % "2.2.0",
       // "org.eclipse.birt.runtime" % "org.eclipse.emf.common"            % "2.12.0.v20160420-0247",

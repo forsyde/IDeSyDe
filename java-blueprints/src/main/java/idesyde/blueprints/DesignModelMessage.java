@@ -1,5 +1,6 @@
 package idesyde.blueprints;
 
+import com.fasterxml.jackson.annotation.JsonInclude;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.annotation.JsonSerialize;
@@ -12,10 +13,10 @@ import idesyde.core.headers.DesignModelHeader;
 import java.util.Optional;
 
 @JsonSerialize
+@JsonInclude(JsonInclude.Include.NON_ABSENT)
 public record DesignModelMessage(
         DesignModelHeader header,
-        Optional<String> body
-) {
+        Optional<String> body) {
 
     public static DesignModelMessage from(DesignModel m) {
         return new DesignModelMessage(m.header(), m.bodyAsString());
@@ -37,6 +38,6 @@ public record DesignModelMessage(
         }
     }
 
-    static final ObjectMapper objectMapperCBOR = new ObjectMapper(new CBORFactory()).registerModule(new Jdk8Module());
-    static final ObjectMapper objectMapper = new ObjectMapper().registerModule(new Jdk8Module());
+    public static final ObjectMapper objectMapperCBOR = DesignModelHeader.objectMapperCBOR;
+    public static final ObjectMapper objectMapper = DesignModelHeader.objectMapper;
 }

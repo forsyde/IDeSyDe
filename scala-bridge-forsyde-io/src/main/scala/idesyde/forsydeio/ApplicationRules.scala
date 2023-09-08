@@ -7,10 +7,10 @@ import idesyde.core.DesignModel
 import idesyde.core.DecisionModel
 import idesyde.common.AperiodicAsynchronousDataflow
 import scala.collection.mutable
-import forsyde.io.lib.ForSyDeHierarchy
-import forsyde.io.lib.behavior.moc.sy.SYMap
-import forsyde.io.lib.behavior.moc.sy.SYSignal
-import forsyde.io.lib.behavior.moc.sy.SYDelay
+import forsyde.io.lib.hierarchy.ForSyDeHierarchy
+import forsyde.io.lib.hierarchy.behavior.moc.sy.SYMap
+import forsyde.io.lib.hierarchy.behavior.moc.sy.SYSignal
+import forsyde.io.lib.hierarchy.behavior.moc.sy.SYDelay
 import org.jgrapht.graph.AsSubgraph
 import java.util.stream.Collectors
 import org.jgrapht.alg.connectivity.ConnectivityInspector
@@ -67,17 +67,19 @@ trait ApplicationRules {
                 .asScala
                 .flatMap(dst => {
                   val src = sig.producer()
-                  if (
-                    ForSyDeHierarchy.SYMap
-                      .tryView(src)
-                      .isPresent() && ForSyDeHierarchy.SYMap.tryView(dst).isPresent()
-                  ) {
-                    Some((src, dst, true))
-                  } else if (ForSyDeHierarchy.SYSignal.tryView(src).isPresent()) {
-                    Some((dst, src, true))
-                  } else {
-                    None
-                  }
+                  if (src != null) {
+                    if (
+                      ForSyDeHierarchy.SYMap
+                        .tryView(src)
+                        .isPresent() && ForSyDeHierarchy.SYMap.tryView(dst).isPresent()
+                    ) {
+                      Some((src, dst, true))
+                    } else if (ForSyDeHierarchy.SYSignal.tryView(src).isPresent()) {
+                      Some((dst, src, true))
+                    } else {
+                      None
+                    }
+                  } else None
                 })
             })
             .toVector

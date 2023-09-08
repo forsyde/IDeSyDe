@@ -210,14 +210,30 @@ impl IdentificationModule for ExternalServerIdentificationModule {
             )
             .and_then(|x| x.text())
         {
-            if let Ok(v) = IdentificationResultMessage::try_from(response.as_str()) {
-                return (
-                    v.identified
-                        .iter()
-                        .map(|x| Arc::new(OpaqueDecisionModel::from(x)) as Arc<dyn DecisionModel>)
-                        .collect(),
-                    v.errors,
-                );
+            match IdentificationResultMessage::try_from(response.as_str()) {
+                Ok(v) => {
+                    return (
+                        v.identified
+                            .iter()
+                            .map(|x| {
+                                Arc::new(OpaqueDecisionModel::from(x)) as Arc<dyn DecisionModel>
+                            })
+                            .collect(),
+                        v.errors,
+                    );
+                }
+                Err(e) => {
+                    warn!(
+                        "Module {} produced an error at identification. Check it for correctness",
+                        self.unique_identifier()
+                    );
+                    debug!(
+                        "Module {} error: {}",
+                        self.unique_identifier(),
+                        e.to_string()
+                    );
+                    debug!("Response was: {}", response.as_str());
+                }
             }
         };
         (vec![], HashSet::new())

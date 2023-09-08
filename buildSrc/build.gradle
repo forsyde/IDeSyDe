@@ -3,6 +3,7 @@ plugins {
 }
 
 repositories {
+    mavenCentral()
     gradlePluginPortal()
 }
 
@@ -10,5 +11,6 @@ dependencies {
     implementation 'com.github.johnrengelman:shadow:8.1.1'
     implementation "org.beryx:badass-jlink-plugin:2.26.0"
     implementation 'ch.epfl.scala:gradle-bloop_2.12:1.6.1'
+    implementation 'org.graalvm.buildtools.native:org.graalvm.buildtools.native.gradle.plugin:0.9.25'
 }
 

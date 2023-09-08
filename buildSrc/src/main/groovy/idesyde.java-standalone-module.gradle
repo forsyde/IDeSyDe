@@ -2,6 +2,7 @@ plugins {
     id 'idesyde.java-library'
     id 'application'
     id 'com.github.johnrengelman.shadow'
+    id 'org.graalvm.buildtools.native'
 //  id 'org.jetbrains.kotlin.jvm' version '1.8.20'
 //  id 'org.jetbrains.kotlin.plugin.serialization' version '1.8.20'
 //  id 'org.beryx.jlink'
@@ -12,6 +13,15 @@ archivesBaseName = project.name
 
 shadowJar {
     zip64 true
+}
+
+graalvmNative {
+    binaries {
+        main {
+            sharedLibrary = false
+            buildArgs.add("--enable-preview")
+        }
+    }
 }
 
 //task publishModules(type: Copy, dependsOn: tasks.shadowJar) {

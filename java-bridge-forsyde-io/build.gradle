@@ -2,11 +2,17 @@ plugins {
     id 'idesyde.java-standalone-module'
 }
 
+def forsydeioVersion = "develop-SNAPSHOT"
+
 dependencies {
     testImplementation 'org.junit.jupiter:junit-jupiter-api:5.8.1'
-    implementation "io.github.forsyde:forsyde-io-java-core:0.7.8"
-    implementation "io.github.forsyde:forsyde-io-java-libforsyde:0.7.8"
-    implementation "io.github.forsyde:forsyde-io-java-sdf3:0.7.8"
+    implementation "com.github.forsyde.forsyde-io:forsyde-io-java-core:$forsydeioVersion"
+    implementation "com.github.forsyde.forsyde-io:forsyde-io-java-libforsyde:$forsydeioVersion"
+    implementation "com.github.forsyde.forsyde-io:forsyde-io-java-sdf3:$forsydeioVersion"
+    // for local testing
+    // implementation "io.forsyde.github:forsyde-io-java-core:$forsydeioVersion"
+    // implementation "io.forsyde.github:forsyde-io-java-libforsyde:$forsydeioVersion"
+    // implementation "io.forsyde.github:forsyde-io-java-sdf3:$forsydeioVersion"
     implementation project(":java-core")
     implementation project(":java-common")
     implementation project(":java-blueprints")

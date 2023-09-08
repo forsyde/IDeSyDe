@@ -9,11 +9,11 @@ import idesyde.forsydeio.ForSyDeDesignModel
 import idesyde.common.SDFApplicationWithFunctions
 import scala.collection.mutable.Buffer
 import scala.collection.mutable
-import forsyde.io.lib.behavior.moc.sdf.SDFActor
+import forsyde.io.lib.hierarchy.behavior.moc.sdf.SDFActor
 import forsyde.io.core.SystemGraph
-import forsyde.io.lib.implementation.functional.BufferLike
-import forsyde.io.lib.behavior.moc.sdf.SDFChannel
-import forsyde.io.lib.ForSyDeHierarchy
+import forsyde.io.lib.hierarchy.implementation.functional.BufferLike
+import forsyde.io.lib.hierarchy.behavior.moc.sdf.SDFChannel
+import forsyde.io.lib.hierarchy.ForSyDeHierarchy
 import idesyde.forsydeio.ForSyDeIdentificationUtils
 
 trait SDFRules {

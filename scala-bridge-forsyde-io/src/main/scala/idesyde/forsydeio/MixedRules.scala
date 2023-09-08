@@ -12,10 +12,10 @@ import idesyde.forsydeio.ForSyDeIdentificationUtils
 import spire.math.Rational
 import scala.jdk.CollectionConverters._
 import scala.collection.mutable.Buffer
-import forsyde.io.lib.platform.hardware.GenericMemoryModule
-import forsyde.io.lib.platform.runtime.AbstractRuntime
-import forsyde.io.lib.ForSyDeHierarchy
-import forsyde.io.lib.platform.runtime.SuperLoopRuntime
+import forsyde.io.lib.hierarchy.platform.hardware.GenericMemoryModule
+import forsyde.io.lib.hierarchy.platform.runtime.AbstractRuntime
+import forsyde.io.lib.hierarchy.ForSyDeHierarchy
+import forsyde.io.lib.hierarchy.platform.runtime.SuperLoopRuntime
 import idesyde.common.InstrumentedComputationTimes
 import scala.collection.mutable
 

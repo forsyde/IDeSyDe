@@ -16,12 +16,12 @@ import spire.math._
 import scala.collection.mutable
 import org.jgrapht.traverse.TopologicalOrderIterator
 import java.util.stream.Collectors
-import forsyde.io.lib.behavior.execution.Task
-import forsyde.io.lib.behavior.execution.PeriodicStimulator
-import forsyde.io.lib.behavior.execution.Upsample
-import forsyde.io.lib.behavior.execution.Downsample
-import forsyde.io.lib.implementation.functional.RegisterLike
-import forsyde.io.lib.ForSyDeHierarchy
+import forsyde.io.lib.hierarchy.behavior.execution.Task
+import forsyde.io.lib.hierarchy.behavior.execution.PeriodicStimulator
+import forsyde.io.lib.hierarchy.behavior.execution.Upsample
+import forsyde.io.lib.hierarchy.behavior.execution.Downsample
+import forsyde.io.lib.hierarchy.implementation.functional.RegisterLike
+import forsyde.io.lib.hierarchy.ForSyDeHierarchy
 import forsyde.io.core.SystemGraph
 
 trait WorkloadRules {

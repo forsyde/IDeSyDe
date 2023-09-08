@@ -5,8 +5,8 @@ import forsyde.io.core.EdgeInfo;
 import forsyde.io.core.ModelHandler;
 import forsyde.io.core.SystemGraph;
 import forsyde.io.core.Vertex;
-import forsyde.io.lib.ForSyDeHierarchy;
-import forsyde.io.lib.TraitNamesFrom0_6To0_7;
+import forsyde.io.lib.hierarchy.ForSyDeHierarchy;
+import forsyde.io.lib.LibForSyDeModelHandler;
 import idesyde.core.DesignModel;
 import idesyde.core.headers.DesignModelHeader;
 
@@ -16,15 +16,15 @@ import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
 public record ForSyDeIODesignModel(
-    SystemGraph systemGraph
-) implements DesignModel {
+        SystemGraph systemGraph) implements DesignModel {
+
     @Override
     public DesignModelHeader header() {
         return new DesignModelHeader(
                 "ForSyDeIODesignModel",
-                Stream.concat(systemGraph.vertexSet().stream().map(Vertex::getIdentifier), systemGraph.edgeSet().stream().map(EdgeInfo::toIDString)).collect(Collectors.toSet()),
-                Set.of()
-        );
+                Stream.concat(systemGraph.vertexSet().stream().map(Vertex::getIdentifier),
+                        systemGraph.edgeSet().stream().map(EdgeInfo::toIDString)).collect(Collectors.toSet()),
+                Set.of());
     }
 
     @Override
@@ -37,8 +37,6 @@ public record ForSyDeIODesignModel(
         }
     }
 
-    public static ModelHandler modelHandler = new ModelHandler()
-        .registerDriver(new SDF3Driver())
-        .registerTraitHierarchy(new ForSyDeHierarchy())
-        .registerSystemGraphMigrator(new TraitNamesFrom0_6To0_7());;
+    public static ModelHandler modelHandler = LibForSyDeModelHandler.registerLibForSyDe(new ModelHandler())
+            .registerDriver(new SDF3Driver());
 }

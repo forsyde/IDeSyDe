@@ -45,7 +45,7 @@ build-scala-all:
     END
     
 build-rust-all:
-    FROM alpine:latest
+    FROM debian:latest
     ENV RUSTUP_HOME=/rustup
     ENV CARGO_HOME=/cargo
     WORKDIR /rust-workdir

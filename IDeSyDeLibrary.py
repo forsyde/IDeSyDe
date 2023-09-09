@@ -108,7 +108,7 @@ class IDeSyDeLibrary:
                 logger.info(line)
             if "exploration with" in line:
                 b_idx = line.index("exploration with")
-                e_idx = line.index("solution(s)")
+                e_idx = line.index("total")
                 solutions_found = int(line[(b_idx + 16) : e_idx].strip())
         # if os.name == "nt":
         #     logger.console(subprocess.check_output(args, shell=True))

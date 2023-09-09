@@ -1,0 +1,306 @@
+systemgraph {
+    vertex uBlaze0_hal [forsyde::io::lib::hierarchy::platform::runtime::SuperLoopRuntime, forsyde::io::lib::hierarchy::visualization::Visualizable] (host, managed) {
+      "superLoopEntries": []
+    }
+    vertex uBlaze1_hal [forsyde::io::lib::hierarchy::platform::runtime::SuperLoopRuntime, forsyde::io::lib::hierarchy::visualization::Visualizable] (host, managed) {
+      "superLoopEntries": []
+    }
+    vertex uBlaze2_hal [forsyde::io::lib::hierarchy::platform::runtime::SuperLoopRuntime, forsyde::io::lib::hierarchy::visualization::Visualizable] (host, managed) {
+      "superLoopEntries": []
+    }
+    vertex "ZYNQ_ARM_x2_hal" [forsyde::io::lib::hierarchy::platform::runtime::SuperLoopRuntime, forsyde::io::lib::hierarchy::visualization::Visualizable] (host, managed) {
+      "superLoopEntries": []
+    }
+    vertex "hp_video_ss_hal" [forsyde::io::lib::hierarchy::platform::runtime::SuperLoopRuntime, forsyde::io::lib::hierarchy::visualization::Visualizable] (host, managed) {
+      "superLoopEntries": []
+    }
+    vertex "ZYNQ_ARM_x2"
+    [forsyde::io::lib::hierarchy::platform::hardware::InstrumentedProcessingModule, forsyde::io::lib::hierarchy::visualization::Visualizable]
+    ()
+    {
+      "modalInstructionsPerCycle": {
+        "generic": {
+          "intAdd": 1.0_64,
+          "intSub": 1.0_64,
+          "intDiv": 0.1_64,
+          "intMulti": 0.4_64,
+          "floatAdd": 1.0_64,
+          "floatDiv": 0.1_64,
+          "comparison": 1.0_64,
+          "cpy": 1.0_64,
+          "mooreFSM": 0.5_64,
+          "power2": 0.2_64,
+          "sqrt": 0.001_64
+        }
+      },
+      "maximumComputationParallelism": 2_i,
+      "operatingFrequencyInHertz": 650000000_l
+    }
+    vertex "DRAM"
+    [forsyde::io::lib::hierarchy::platform::hardware::GenericMemoryModule, forsyde::io::lib::hierarchy::visualization::Visualizable]
+    ()
+    {
+      "operatingFrequencyInHertz": 100000000_l,
+      "spaceInBits": 1000000000_l
+    }
+    vertex "ps7_0_axi"
+    [forsyde::io::lib::hierarchy::platform::hardware::GenericCommunicationModule, forsyde::io::lib::hierarchy::visualization::Visualizable]
+    ()
+    {
+      "operatingFrequencyInHertz": 100000000_l,
+      "maxCyclesPerFlit": 8_i,
+      "flitSizeInBits": 128_l,
+      "initialLatency": 0_l,
+      "maxConcurrentFlits": 8_i
+    }
+    vertex "hp_video_axi"
+    [forsyde::io::lib::hierarchy::platform::hardware::GenericCommunicationModule, forsyde::io::lib::hierarchy::visualization::Visualizable]
+    ()
+    {
+      "operatingFrequencyInHertz": 100000000_l
+      
+    }
+    vertex "bram_axi"
+    [forsyde::io::lib::hierarchy::platform::hardware::GenericCommunicationModule, forsyde::io::lib::hierarchy::visualization::Visualizable]
+    ()
+    {
+      "operatingFrequencyInHertz": 100000000_l,
+      "maxCyclesPerFlit": 8_i,
+      "flitSizeInBits": 128_l,
+      "initialLatency": 0_l,
+      "maxConcurrentFlits": 8_i
+    }
+    vertex "Shared_BRAM"
+    [forsyde::io::lib::hierarchy::platform::hardware::GenericMemoryModule, forsyde::io::lib::hierarchy::visualization::Visualizable]
+    ()
+    {
+      "operatingFrequencyInHertz": 100000000_l,
+      "spaceInBits": 32000_l
+    }
+    vertex "hp_video_ss"
+    [forsyde::io::lib::hierarchy::platform::hardware::InstrumentedProcessingModule, forsyde::io::lib::hierarchy::visualization::Visualizable]
+    ()
+    {
+      "modalInstructionsPerCycle": {
+        "default": {
+          "hvss":      142000000.0_64
+        }
+      },
+      "maximumComputationParallelism": 1_i,
+      "operatingFrequencyInHertz": 142000000_l
+    }
+    vertex "uBlaze0_tile"
+    [forsyde::io::lib::hierarchy::visualization::GreyBox]
+    (buses, contained)
+    {}
+    vertex "uBlaze0"
+    [forsyde::io::lib::hierarchy::platform::hardware::InstrumentedProcessingModule, forsyde::io::lib::hierarchy::visualization::Visualizable]
+    ()
+    {
+      "modalInstructionsPerCycle": {
+        "generic": {
+          "intAdd": 1.0_64,
+          "intSub": 1.0_64,
+          "intDiv": 0.1_64,
+          "intMulti": 0.4_64,
+          "floatAdd": 1.0_64,
+          "floatDiv": 0.1_64,
+          "comparison": 1.0_64,
+          "cpy": 1.0_64
+        }
+      },
+      "maximumComputationParallelism": 1_i,
+      "operatingFrequencyInHertz": 100000000_l
+    }
+    vertex "OCM0"
+    [forsyde::io::lib::hierarchy::platform::hardware::GenericMemoryModule, forsyde::io::lib::hierarchy::visualization::Visualizable]
+    ()
+    {
+      "operatingFrequencyInHertz": 100000000_l,
+      "spaceInBits": 8000_l
+    }
+    vertex "uBlaze0_axi"
+    [forsyde::io::lib::hierarchy::platform::hardware::GenericCommunicationModule, forsyde::io::lib::hierarchy::visualization::Visualizable]
+    ()
+    {
+      "operatingFrequencyInHertz": 100000000_l,
+      "maxCyclesPerFlit": 8_i,
+      "flitSizeInBits": 128_l,
+      "initialLatency": 0_l,
+      "maxConcurrentFlits": 8_i
+    }
+    vertex "MBox0"
+    [forsyde::io::lib::hierarchy::platform::hardware::GenericMemoryModule, forsyde::io::lib::hierarchy::visualization::Visualizable]
+    ()
+    {
+      "operatingFrequencyInHertz": 100000000_l,
+      "spaceInBits": 8000_l
+    }
+    vertex "uBlaze1_tile"
+    [forsyde::io::lib::hierarchy::visualization::GreyBox]
+    (buses, contained)
+    {}
+    vertex "uBlaze1"
+    [forsyde::io::lib::hierarchy::platform::hardware::InstrumentedProcessingModule, forsyde::io::lib::hierarchy::visualization::Visualizable]
+    ()
+    {
+      "modalInstructionsPerCycle": {
+        "generic": {
+          "intAdd": 1.0_64,
+          "intSub": 1.0_64,
+          "intDiv": 0.1_64,
+          "intMulti": 0.4_64,
+          "floatAdd": 1.0_64,
+          "floatDiv": 0.1_64,
+          "comparison": 1.0_64,
+          "cpy": 1.0_64
+        }
+      },
+      "maximumComputationParallelism": 1_i,
+      "operatingFrequencyInHertz": 100000000_l
+    }
+    vertex "OCM1"
+    [forsyde::io::lib::hierarchy::platform::hardware::GenericMemoryModule, forsyde::io::lib::hierarchy::visualization::Visualizable]
+    ()
+    {
+      "operatingFrequencyInHertz": 100000000_l,
+      "spaceInBits": 8000_l
+    }
+    vertex "uBlaze1_axi"
+    [forsyde::io::lib::hierarchy::platform::hardware::GenericCommunicationModule, forsyde::io::lib::hierarchy::visualization::Visualizable]
+    ()
+    {
+      "operatingFrequencyInHertz": 100000000_l,
+      "maxCyclesPerFlit": 8_i,
+      "flitSizeInBits": 128_l,
+      "initialLatency": 0_l,
+      "maxConcurrentFlits": 8_i
+    }
+    vertex "MBox1"
+    [forsyde::io::lib::hierarchy::platform::hardware::GenericMemoryModule, forsyde::io::lib::hierarchy::visualization::Visualizable]
+    ()
+    {
+      "operatingFrequencyInHertz": 100000000_l,
+      "spaceInBits": 8000_l
+    }
+    vertex "uBlaze2_tile"
+    [forsyde::io::lib::hierarchy::visualization::GreyBox]
+    (buses, contained)
+    {}
+    vertex "uBlaze2"
+    [forsyde::io::lib::hierarchy::platform::hardware::InstrumentedProcessingModule, forsyde::io::lib::hierarchy::visualization::Visualizable]
+    ()
+    {
+      "modalInstructionsPerCycle": {
+        "generic": {
+          "intAdd": 1.0_64,
+          "intSub": 1.0_64,
+          "intDiv": 0.1_64,
+          "intMulti": 0.4_64,
+          "floatAdd": 1.0_64,
+          "floatDiv": 0.1_64,
+          "comparison": 1.0_64,
+          "cpy": 1.0_64
+        }
+      },
+      "maximumComputationParallelism": 1_i,
+      "operatingFrequencyInHertz": 100000000_l
+    }
+    vertex "OCM2"
+    [forsyde::io::lib::hierarchy::platform::hardware::GenericMemoryModule, forsyde::io::lib::hierarchy::visualization::Visualizable]
+    ()
+    {
+      "operatingFrequencyInHertz": 100000000_l,
+      "spaceInBits": 8000_l
+    }
+    vertex "uBlaze2_axi"
+    [forsyde::io::lib::hierarchy::platform::hardware::GenericCommunicationModule, forsyde::io::lib::hierarchy::visualization::Visualizable]
+    ()
+    {
+      "operatingFrequencyInHertz": 100000000_l,
+      "maxCyclesPerFlit": 8_i,
+      "flitSizeInBits": 128_l,
+      "initialLatency": 0_l,
+      "maxConcurrentFlits": 8_i
+    }
+    vertex "MBox2"
+    [forsyde::io::lib::hierarchy::platform::hardware::GenericMemoryModule, forsyde::io::lib::hierarchy::visualization::Visualizable]
+    ()
+    {
+      "operatingFrequencyInHertz": 100000000_l,
+      "spaceInBits": 8000_l
+    }
+    edge [forsyde::io::lib::hierarchy::platform::hardware::PhysicalConnection,forsyde::io::lib::hierarchy::visualization::VisualConnection] from "ZYNQ_ARM_x2" to "DRAM" 
+    edge [forsyde::io::lib::hierarchy::platform::hardware::PhysicalConnection,forsyde::io::lib::hierarchy::visualization::VisualConnection] from "DRAM" to "ZYNQ_ARM_x2" 
+    edge [forsyde::io::lib::hierarchy::platform::hardware::PhysicalConnection,forsyde::io::lib::hierarchy::visualization::VisualConnection] from "ZYNQ_ARM_x2" to "ps7_0_axi" 
+    edge [forsyde::io::lib::hierarchy::platform::hardware::PhysicalConnection,forsyde::io::lib::hierarchy::visualization::VisualConnection] from "ps7_0_axi" to "ZYNQ_ARM_x2" 
+    edge [forsyde::io::lib::hierarchy::platform::hardware::PhysicalConnection,forsyde::io::lib::hierarchy::visualization::VisualConnection] from "ps7_0_axi" to "hp_video_axi" 
+    edge [forsyde::io::lib::hierarchy::platform::hardware::PhysicalConnection,forsyde::io::lib::hierarchy::visualization::VisualConnection] from "hp_video_axi" to "ps7_0_axi" 
+    edge [forsyde::io::lib::hierarchy::platform::hardware::PhysicalConnection,forsyde::io::lib::hierarchy::visualization::VisualConnection] from "ps7_0_axi" to "bram_axi" 
+    edge [forsyde::io::lib::hierarchy::platform::hardware::PhysicalConnection,forsyde::io::lib::hierarchy::visualization::VisualConnection] from "bram_axi" to "ps7_0_axi" 
+    edge [forsyde::io::lib::hierarchy::platform::hardware::PhysicalConnection,forsyde::io::lib::hierarchy::visualization::VisualConnection] from "Shared_BRAM" to "bram_axi" 
+    edge [forsyde::io::lib::hierarchy::platform::hardware::PhysicalConnection,forsyde::io::lib::hierarchy::visualization::VisualConnection] from "bram_axi" to "Shared_BRAM" 
+    edge [forsyde::io::lib::hierarchy::platform::hardware::PhysicalConnection,forsyde::io::lib::hierarchy::visualization::VisualConnection] from "hp_video_ss" to "hp_video_axi" 
+    edge [forsyde::io::lib::hierarchy::platform::hardware::PhysicalConnection,forsyde::io::lib::hierarchy::visualization::VisualConnection] from "hp_video_axi" to "hp_video_ss" 
+    edge [forsyde::io::lib::hierarchy::visualization::VisualContainment] from "uBlaze0_tile" port "contained" to "uBlaze0" 
+    edge [forsyde::io::lib::hierarchy::visualization::VisualContainment] from "uBlaze0_tile" port "contained" to "OCM0" 
+    edge [forsyde::io::lib::hierarchy::platform::hardware::PhysicalConnection,forsyde::io::lib::hierarchy::visualization::VisualConnection] from "uBlaze0" to "OCM0" 
+    edge [forsyde::io::lib::hierarchy::platform::hardware::PhysicalConnection,forsyde::io::lib::hierarchy::visualization::VisualConnection] from "OCM0" to "uBlaze0" 
+    edge [forsyde::io::lib::hierarchy::visualization::VisualContainment] from "uBlaze0_tile" port "contained" to "uBlaze0_axi" 
+    edge [forsyde::io::lib::hierarchy::platform::hardware::PhysicalConnection,forsyde::io::lib::hierarchy::visualization::VisualConnection] from "uBlaze0" to "uBlaze0_axi" 
+    edge [forsyde::io::lib::hierarchy::platform::hardware::PhysicalConnection,forsyde::io::lib::hierarchy::visualization::VisualConnection] from "uBlaze0_axi" to "uBlaze0" 
+    edge [forsyde::io::lib::hierarchy::platform::hardware::PhysicalConnection,forsyde::io::lib::hierarchy::visualization::VisualConnection] from "bram_axi" to "uBlaze0_axi" 
+    edge [forsyde::io::lib::hierarchy::platform::hardware::PhysicalConnection,forsyde::io::lib::hierarchy::visualization::VisualConnection] from "uBlaze0_axi" to "bram_axi" 
+    edge [forsyde::io::lib::hierarchy::visualization::VisualConnection] from "bram_axi" to "uBlaze0_tile" port "buses"
+    edge [forsyde::io::lib::hierarchy::visualization::VisualConnection] from "uBlaze0_tile" port "buses" to "uBlaze0_axi" 
+    edge [forsyde::io::lib::hierarchy::visualization::VisualConnection] from "uBlaze0_axi" to "uBlaze0_tile" port "buses"
+    edge [forsyde::io::lib::hierarchy::visualization::VisualConnection] from "uBlaze0_tile" port "buses" to "bram_axi" 
+    edge [forsyde::io::lib::hierarchy::platform::hardware::PhysicalConnection,forsyde::io::lib::hierarchy::visualization::VisualConnection] from "MBox0" to "uBlaze0_axi" 
+    edge [forsyde::io::lib::hierarchy::platform::hardware::PhysicalConnection,forsyde::io::lib::hierarchy::visualization::VisualConnection] from "uBlaze0_axi" to "MBox0" 
+    edge [forsyde::io::lib::hierarchy::platform::hardware::PhysicalConnection,forsyde::io::lib::hierarchy::visualization::VisualConnection] from "MBox0" to "ps7_0_axi" 
+    edge [forsyde::io::lib::hierarchy::platform::hardware::PhysicalConnection,forsyde::io::lib::hierarchy::visualization::VisualConnection] from "ps7_0_axi" to "MBox0" 
+    edge [forsyde::io::lib::hierarchy::visualization::VisualContainment] from "uBlaze1_tile" port "contained" to "uBlaze1" 
+    edge [forsyde::io::lib::hierarchy::visualization::VisualContainment] from "uBlaze1_tile" port "contained" to "OCM1" 
+    edge [forsyde::io::lib::hierarchy::platform::hardware::PhysicalConnection,forsyde::io::lib::hierarchy::visualization::VisualConnection] from "uBlaze1" to "OCM1" 
+    edge [forsyde::io::lib::hierarchy::platform::hardware::PhysicalConnection,forsyde::io::lib::hierarchy::visualization::VisualConnection] from "OCM1" to "uBlaze1" 
+    edge [forsyde::io::lib::hierarchy::visualization::VisualContainment] from "uBlaze1_tile" port "contained" to "uBlaze1_axi" 
+    edge [forsyde::io::lib::hierarchy::platform::hardware::PhysicalConnection,forsyde::io::lib::hierarchy::visualization::VisualConnection] from "uBlaze1" to "uBlaze1_axi" 
+    edge [forsyde::io::lib::hierarchy::platform::hardware::PhysicalConnection,forsyde::io::lib::hierarchy::visualization::VisualConnection] from "uBlaze1_axi" to "uBlaze1" 
+    edge [forsyde::io::lib::hierarchy::platform::hardware::PhysicalConnection,forsyde::io::lib::hierarchy::visualization::VisualConnection] from "bram_axi" to "uBlaze1_axi" 
+    edge [forsyde::io::lib::hierarchy::platform::hardware::PhysicalConnection,forsyde::io::lib::hierarchy::visualization::VisualConnection] from "uBlaze1_axi" to "bram_axi" 
+    edge [forsyde::io::lib::hierarchy::visualization::VisualConnection] from "bram_axi" to "uBlaze1_tile" port "buses"
+    edge [forsyde::io::lib::hierarchy::visualization::VisualConnection] from "uBlaze1_tile" port "buses" to "uBlaze1_axi" 
+    edge [forsyde::io::lib::hierarchy::visualization::VisualConnection] from "uBlaze1_axi" to "uBlaze1_tile" port "buses"
+    edge [forsyde::io::lib::hierarchy::visualization::VisualConnection] from "uBlaze1_tile" port "buses" to "bram_axi" 
+    edge [forsyde::io::lib::hierarchy::platform::hardware::PhysicalConnection,forsyde::io::lib::hierarchy::visualization::VisualConnection] from "MBox1" to "uBlaze1_axi" 
+    edge [forsyde::io::lib::hierarchy::platform::hardware::PhysicalConnection,forsyde::io::lib::hierarchy::visualization::VisualConnection] from "uBlaze1_axi" to "MBox1" 
+    edge [forsyde::io::lib::hierarchy::platform::hardware::PhysicalConnection,forsyde::io::lib::hierarchy::visualization::VisualConnection] from "MBox1" to "ps7_0_axi" 
+    edge [forsyde::io::lib::hierarchy::platform::hardware::PhysicalConnection,forsyde::io::lib::hierarchy::visualization::VisualConnection] from "ps7_0_axi" to "MBox1" 
+    edge [forsyde::io::lib::hierarchy::visualization::VisualContainment] from "uBlaze2_tile" port "contained" to "uBlaze2" 
+    edge [forsyde::io::lib::hierarchy::visualization::VisualContainment] from "uBlaze2_tile" port "contained" to "OCM2" 
+    edge [forsyde::io::lib::hierarchy::platform::hardware::PhysicalConnection,forsyde::io::lib::hierarchy::visualization::VisualConnection] from "uBlaze2" to "OCM2" 
+    edge [forsyde::io::lib::hierarchy::platform::hardware::PhysicalConnection,forsyde::io::lib::hierarchy::visualization::VisualConnection] from "OCM2" to "uBlaze2" 
+    edge [forsyde::io::lib::hierarchy::visualization::VisualContainment] from "uBlaze2_tile" port "contained" to "uBlaze2_axi" 
+    edge [forsyde::io::lib::hierarchy::platform::hardware::PhysicalConnection,forsyde::io::lib::hierarchy::visualization::VisualConnection] from "uBlaze2" to "uBlaze2_axi" 
+    edge [forsyde::io::lib::hierarchy::platform::hardware::PhysicalConnection,forsyde::io::lib::hierarchy::visualization::VisualConnection] from "uBlaze2_axi" to "uBlaze2" 
+    edge [forsyde::io::lib::hierarchy::platform::hardware::PhysicalConnection,forsyde::io::lib::hierarchy::visualization::VisualConnection] from "bram_axi" to "uBlaze2_axi" 
+    edge [forsyde::io::lib::hierarchy::platform::hardware::PhysicalConnection,forsyde::io::lib::hierarchy::visualization::VisualConnection] from "uBlaze2_axi" to "bram_axi" 
+    edge [forsyde::io::lib::hierarchy::visualization::VisualConnection] from "bram_axi" to "uBlaze2_tile" port "buses"
+    edge [forsyde::io::lib::hierarchy::visualization::VisualConnection] from "uBlaze2_tile" port "buses" to "uBlaze2_axi" 
+    edge [forsyde::io::lib::hierarchy::visualization::VisualConnection] from "uBlaze2_axi" to "uBlaze2_tile" port "buses"
+    edge [forsyde::io::lib::hierarchy::visualization::VisualConnection] from "uBlaze2_tile" port "buses" to "bram_axi" 
+    edge [forsyde::io::lib::hierarchy::platform::hardware::PhysicalConnection,forsyde::io::lib::hierarchy::visualization::VisualConnection] from "MBox2" to "uBlaze2_axi" 
+    edge [forsyde::io::lib::hierarchy::platform::hardware::PhysicalConnection,forsyde::io::lib::hierarchy::visualization::VisualConnection] from "uBlaze2_axi" to "MBox2" 
+    edge [forsyde::io::lib::hierarchy::platform::hardware::PhysicalConnection,forsyde::io::lib::hierarchy::visualization::VisualConnection] from "MBox2" to "ps7_0_axi" 
+    edge [forsyde::io::lib::hierarchy::platform::hardware::PhysicalConnection,forsyde::io::lib::hierarchy::visualization::VisualConnection] from "ps7_0_axi" to "MBox2" 
+    edge [] from "uBlaze0_hal" port "host" to "uBlaze0"
+    edge [] from "uBlaze1_hal" port "host" to "uBlaze1"
+    edge [] from "uBlaze2_hal" port "host" to "uBlaze2"
+    edge [] from "uBlaze0_hal" port "managed" to "uBlaze0"
+    edge [] from "uBlaze1_hal" port "managed" to "uBlaze1"
+    edge [] from "uBlaze2_hal" port "managed" to "uBlaze2"
+    edge [] from "ZYNQ_ARM_x2_hal" port "managed" to "ZYNQ_ARM_x2"
+    edge [] from "ZYNQ_ARM_x2_hal" port "host" to "ZYNQ_ARM_x2"
+    edge [] from "hp_video_ss_hal" port "managed" to "hp_video_ss"
+    edge [] from "hp_video_ss_hal" port "host" to "hp_video_ss"
+  }

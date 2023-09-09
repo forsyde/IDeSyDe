@@ -3,6 +3,7 @@ package idesyde.core;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.dataformat.cbor.CBORFactory;
+import com.fasterxml.jackson.datatype.jdk8.Jdk8Module;
 import idesyde.core.headers.DecisionModelHeader;
 
 import java.util.Optional;
@@ -39,5 +40,6 @@ public interface DecisionModel {
         }
     };
 
-    static final ObjectMapper objectMapper = new ObjectMapper(new CBORFactory());
+    static final ObjectMapper objectMapper = new ObjectMapper().registerModule(new Jdk8Module());
+    static final ObjectMapper objectMapperCBOR = new ObjectMapper(new CBORFactory()).registerModule(new Jdk8Module());
 }

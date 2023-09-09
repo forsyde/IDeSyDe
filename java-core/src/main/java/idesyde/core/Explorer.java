@@ -44,14 +44,39 @@ public interface Explorer {
         return getClass().getSimpleName();
     }
 
-    record Configuration(
-            long totalExplorationTimeOutInSecs,
-            long maximumSolutions,
-            long timeDiscretizationFactor,
-            long memoryDiscretizationFactor
-    ) {
+    class Configuration{
+        
+        public long totalExplorationTimeOutInSecs;
+        public long maximumSolutions;
+        public long timeDiscretizationFactor;
+        public long memoryDiscretizationFactor;
+
+        public Configuration(long totalExplorationTimeOutInSecs, long maximumSolutions, long timeDiscretizationFactor,
+                long memoryDiscretizationFactor) {
+            this.totalExplorationTimeOutInSecs = totalExplorationTimeOutInSecs;
+            this.maximumSolutions = maximumSolutions;
+            this.timeDiscretizationFactor = timeDiscretizationFactor;
+            this.memoryDiscretizationFactor = memoryDiscretizationFactor;
+        }
+
         static public Configuration unlimited() {
             return new Configuration(0L, 0L, 0L, 0L);
+        }
+
+        public Configuration withTotalExplorationTimeOutInSecs(long newTotalExplorationTimeOutInSecs) {
+            return new Configuration(newTotalExplorationTimeOutInSecs, maximumSolutions, timeDiscretizationFactor, memoryDiscretizationFactor);
+        }
+
+        public Configuration withMaximumSolutions(long newMaximumSolutions) {
+            return new Configuration(totalExplorationTimeOutInSecs, newMaximumSolutions, timeDiscretizationFactor, memoryDiscretizationFactor);
+        }
+
+        public Configuration withTimeDiscretizationFactor(long newTimeDiscretizationFactor) {
+            return new Configuration(totalExplorationTimeOutInSecs, maximumSolutions, newTimeDiscretizationFactor, memoryDiscretizationFactor);
+        }
+
+        public Configuration withMemoryDiscretizationFactor(long newMemoryDiscretizationFactor) {
+            return new Configuration(totalExplorationTimeOutInSecs, maximumSolutions, timeDiscretizationFactor, newMemoryDiscretizationFactor);
         }
     }
 }

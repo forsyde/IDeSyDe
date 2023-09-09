@@ -1,5 +1,6 @@
 package idesyde.core.headers;
 
+import com.fasterxml.jackson.annotation.JsonInclude;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
@@ -12,13 +13,11 @@ import java.util.Optional;
 import java.util.Set;
 
 @JsonSerialize
+@JsonInclude(JsonInclude.Include.NON_ABSENT)
 public record DecisionModelHeader(
-    String category,
-    @JsonProperty("covered_elements")
-    Set<String> coveredElements,
-    @JsonProperty("body_path")
-    Optional<String> bodyPath
-) {
+        String category,
+        @JsonProperty("covered_elements") Set<String> coveredElements,
+        @JsonProperty("body_path") Optional<String> bodyPath) {
 
     public String asString() throws JsonProcessingException {
         return objectMapper.writeValueAsString(this);
@@ -36,6 +35,7 @@ public record DecisionModelHeader(
         return objectMapper.readValue(b, DecisionModelHeader.class);
     }
 
-    static final ObjectMapper objectMapperCBOR = new ObjectMapper(new CBORFactory()).registerModule(new Jdk8Module());
-    static final ObjectMapper objectMapper = new ObjectMapper().registerModule(new Jdk8Module());
+    public static final ObjectMapper objectMapperCBOR = new ObjectMapper(new CBORFactory())
+            .registerModule(new Jdk8Module());
+    public static final ObjectMapper objectMapper = new ObjectMapper().registerModule(new Jdk8Module());
 }

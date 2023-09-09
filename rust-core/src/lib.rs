@@ -33,6 +33,27 @@ pub trait DesignModel: Send + DowncastSync {
     fn body_as_string(&self) -> Option<String> {
         None
     }
+
+    fn write_to_dir(
+        &self,
+        base_path: &Path,
+        prefix_str: &str,
+        suffix_str: &str,
+    ) -> DesignModelHeader {
+        let mut h = self.header();
+        if let Some(j) = self.body_as_string() {
+            let p = base_path.join(format!(
+                "body_{}_{}_{}.txt",
+                prefix_str, h.category, suffix_str
+            ));
+            std::fs::write(&p, j).expect("Failed to write JSON body of decision model.");
+            if let Some(s) = p.to_str().map(|x| x.to_string()) {
+                h.model_paths.push(s);
+            }
+        }
+        h.write_to_dir(base_path, prefix_str, suffix_str);
+        h
+    }
 }
 impl_downcast!(sync DesignModel);
 

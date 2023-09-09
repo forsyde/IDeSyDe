@@ -210,14 +210,30 @@ impl IdentificationModule for ExternalServerIdentificationModule {
             )
             .and_then(|x| x.text())
         {
-            if let Ok(v) = IdentificationResultMessage::try_from(response.as_str()) {
-                return (
-                    v.identified
-                        .iter()
-                        .map(|x| Arc::new(OpaqueDecisionModel::from(x)) as Arc<dyn DecisionModel>)
-                        .collect(),
-                    v.errors,
-                );
+            match IdentificationResultMessage::try_from(response.as_str()) {
+                Ok(v) => {
+                    return (
+                        v.identified
+                            .iter()
+                            .map(|x| {
+                                Arc::new(OpaqueDecisionModel::from(x)) as Arc<dyn DecisionModel>
+                            })
+                            .collect(),
+                        v.errors,
+                    );
+                }
+                Err(e) => {
+                    warn!(
+                        "Module {} produced an error at identification. Check it for correctness",
+                        self.unique_identifier()
+                    );
+                    debug!(
+                        "Module {} error: {}",
+                        self.unique_identifier(),
+                        e.to_string()
+                    );
+                    debug!("Response was: {}", response.as_str());
+                }
             }
         };
         (vec![], HashSet::new())
@@ -269,18 +285,6 @@ impl IdentificationModule for ExternalServerIdentificationModule {
         design_models: &Vec<Arc<dyn DesignModel>>,
     ) -> Vec<Arc<dyn DesignModel>> {
         // let mut integrated: Vec<Box<dyn DesignModel>> = Vec::new();
-        // self.write_line_to_input(
-        //     format!("SET identified-path {}", self.identified_path.display()).as_str(),
-        // );
-        // self.write_line_to_input(
-        //     format!("SET solved-path {}", self.solved_path.display()).as_str(),
-        // );
-        // self.write_line_to_input(
-        //     format!("SET design-path {}", self.inputs_path.display()).as_str(),
-        // );
-        // self.write_line_to_input(
-        //     format!("SET reverse-path {}", self.reverse_path.display()).as_str(),
-        // );
         // save decision models and design models and ask the module to read them
         for design_model in design_models {
             // let message = DesignModelMessage::from_dyn_design_model(design_model.as_ref());

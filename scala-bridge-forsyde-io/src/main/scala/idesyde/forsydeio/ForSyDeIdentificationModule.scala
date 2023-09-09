@@ -21,8 +21,8 @@ import idesyde.common.SDFToTiledMultiCore
 import idesyde.common.PeriodicWorkloadToPartitionedSharedMultiCore
 import java.nio.file.Files
 import forsyde.io.bridge.sdf3.drivers.SDF3Driver
-import forsyde.io.lib.ForSyDeHierarchy
-import forsyde.io.lib.TraitNamesFrom0_6To0_7
+import forsyde.io.lib.hierarchy.ForSyDeHierarchy
+import forsyde.io.lib.LibForSyDeModelHandler
 import idesyde.blueprints.DecisionModelMessage
 import idesyde.blueprints.DesignModelMessage
 import java.io.StringReader
@@ -62,10 +62,9 @@ object ForSyDeIdentificationModule
     }
   }
 
-  val modelHandler = ModelHandler()
+  val modelHandler = LibForSyDeModelHandler
+    .registerLibForSyDe(ModelHandler())
     .registerDriver(SDF3Driver())
-    .registerTraitHierarchy(ForSyDeHierarchy())
-    .registerSystemGraphMigrator(TraitNamesFrom0_6To0_7())
   // .registerDriver(new ForSyDeAmaltheaDriver())
 
   val identificationRules = Set(
@@ -75,7 +74,7 @@ object ForSyDeIdentificationModule
     MarkedIdentificationRule.DesignModelOnlyIdentificationRule(identPeriodicDependentWorkload),
     MarkedIdentificationRule.DesignModelOnlyIdentificationRule(identSharedMemoryMultiCore),
     identPeriodicWorkloadToPartitionedSharedMultiCoreWithUtilization,
-    MarkedIdentificationRule.DesignModelOnlyIdentificationRule(identAperiodicDataflowFromSY),
+    // MarkedIdentificationRule.DesignModelOnlyIdentificationRule(identAperiodicDataflowFromSY),
     MarkedIdentificationRule.DesignModelOnlyIdentificationRule(identRuntimesAndProcessors),
     MarkedIdentificationRule.DesignModelOnlyIdentificationRule(identInstrumentedComputationTimes)
   )

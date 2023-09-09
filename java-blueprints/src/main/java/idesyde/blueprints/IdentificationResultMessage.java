@@ -3,7 +3,6 @@ package idesyde.blueprints;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.annotation.JsonSerialize;
-import com.fasterxml.jackson.dataformat.cbor.CBORFactory;
 
 import java.util.Optional;
 import java.util.Set;
@@ -11,8 +10,7 @@ import java.util.Set;
 @JsonSerialize
 public record IdentificationResultMessage(
         Set<DecisionModelMessage> identified,
-        Set<String> errors
-) {
+        Set<String> errors) {
 
     public Optional<String> toJsonString() {
         try {
@@ -22,6 +20,6 @@ public record IdentificationResultMessage(
         }
     }
 
-    static final ObjectMapper objectMapperCBOR = new ObjectMapper(new CBORFactory());
-    static final ObjectMapper objectMapper = new ObjectMapper();
+    public static final ObjectMapper objectMapperCBOR = DecisionModelMessage.objectMapperCBOR;
+    public static final ObjectMapper objectMapper = DecisionModelMessage.objectMapper;
 }

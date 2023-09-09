@@ -1,20 +1,19 @@
 package idesyde.blueprints;
 
+import com.fasterxml.jackson.annotation.JsonInclude;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.annotation.JsonSerialize;
-import com.fasterxml.jackson.dataformat.cbor.CBORFactory;
-import com.fasterxml.jackson.datatype.jdk8.Jdk8Module;
 import idesyde.core.DecisionModel;
 import idesyde.core.headers.DecisionModelHeader;
 
 import java.util.Optional;
 
 @JsonSerialize
+@JsonInclude(JsonInclude.Include.NON_ABSENT)
 public record DecisionModelMessage(
         DecisionModelHeader header,
-        Optional<String> body
-) {
+        Optional<String> body) {
 
     public Optional<String> toJsonString() {
         try {
@@ -36,6 +35,6 @@ public record DecisionModelMessage(
         return new DecisionModelMessage(model.header(), model.bodyAsText());
     }
 
-    static final ObjectMapper objectMapperCBOR = new ObjectMapper(new CBORFactory()).registerModule(new Jdk8Module());
-    static final ObjectMapper objectMapper = new ObjectMapper().registerModule(new Jdk8Module());
+    public static final ObjectMapper objectMapperCBOR = DecisionModelHeader.objectMapperCBOR;
+    public static final ObjectMapper objectMapper = DecisionModelHeader.objectMapper;
 }

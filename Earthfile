@@ -49,7 +49,7 @@ build-rust-all:
     ENV RUSTUP_HOME=/rustup
     ENV CARGO_HOME=/cargo
     WORKDIR /rust-workdir
-    RUN apk --no-cache add --update curl bash build-base openssl-dev pkgconfig
+    RUN apt install -y curl bash build-essential libssl-dev pkg-config
     RUN curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh -s -- --default-toolchain stable -y 
     COPY Cargo.toml .
     COPY --dir rust-core .

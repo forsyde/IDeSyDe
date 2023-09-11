@@ -60,4 +60,4 @@ jobs:
         cd ${{ github.workspace }}
         curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh -s -- --default-toolchain stable -y 
         rustup target add ${{ matrix.target }}
-        carbo build --release --target ${{ matrix.target }}
+        cargo build --release --target ${{ matrix.target }}

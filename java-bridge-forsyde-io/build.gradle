@@ -23,3 +23,5 @@ test {
 }
 
 mainClassName = "idesyde.forsydeio.ForSyDeIOIdentificationModule"
+
+publishIModules()

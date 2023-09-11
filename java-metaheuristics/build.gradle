@@ -17,3 +17,5 @@ dependencies {
 application {
     mainClassName = "idesyde.metaheuristics.MetaHeuristicsExplorationModule"
 }
+
+publishEModule()

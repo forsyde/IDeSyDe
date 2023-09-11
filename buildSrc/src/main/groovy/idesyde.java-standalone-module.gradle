@@ -24,7 +24,18 @@ graalvmNative {
     }
 }
 
-//task publishModules(type: Copy, dependsOn: tasks.shadowJar) {
-//    from tasks.shadowJar.outputs
-//    into "emodules"
-//}
+def publishIModule() {
+    tasks.register(project.name + "IModulePublish", Copy) {
+        dependsOn tasks.shadowJar
+        from tasks.shadowJar.outputs
+        into "imodules"
+    }
+}
+
+def publishEModule() {
+    tasks.register(project.name + "EModulePublish", Copy) {
+        dependsOn tasks.shadowJar
+        from tasks.shadowJar.outputs
+        into "emodules"
+    }
+}

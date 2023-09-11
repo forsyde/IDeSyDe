@@ -1,7 +1,6 @@
 VERSION 0.7
 
-
-build-scala-all:
+build-jvm-all:
     ARG jabba_jdk='amazon-corretto@1.17.0-0.35.1'
     ARG targets="x86_64-pc-windows-gnu x86_64-unknown-linux-musl"
     FROM debian:latest
@@ -11,6 +10,9 @@ build-scala-all:
     RUN curl -sL https://github.com/Jabba-Team/jabba/raw/main/install.sh | JABBA_COMMAND="install ${jabba_jdk} -o /jdk" bash
     ENV JAVA_HOME /jdk
     ENV PATH $JAVA_HOME/bin:$PATH
+
+build-scala-all:
+    FROM +build-jvm-all
     COPY build.sbt build.sbt
     COPY project/plugins.sbt project/plugins.sbt
     COPY project/build.properties project/build.properties
@@ -43,15 +45,35 @@ build-scala-all:
         SAVE ARTIFACT imodules/* AS LOCAL dist/${target}/imodules/
         SAVE ARTIFACT emodules/* AS LOCAL dist/${target}/emodules/
     END
-    
+
+build-java-all:
+    FROM +build-jvm-all
+    COPY build.gradle .
+    COPY settings.gradle .
+    COPY gradlew .
+    COPY --dir gradle gradle
+    COPY --dir java-core .
+    COPY --dir java-blueprints .
+    COPY --dir java-common .
+    COPY --dir java-bridge-forsyde-io .
+    COPY --dir java-metaheuristics .
+    FOR target IN ${targets}
+        RUN cp java-bridge-forsyde-io/build/libs/java-bridge-forsyde-io-all.jar imodules/
+        RUN cp java-metaheuristics/build/libs/java-metaheuristics-all.jar emodules/
+        SAVE ARTIFACT imodules/java-bridge-forsyde-io-all.jar ${target}/imodules/java-bridge-forsyde-io-all.jar
+        SAVE ARTIFACT emodules/java-metaheuristics-all.jar ${target}/emodules/java-metaheuristics-all.jar
+        SAVE ARTIFACT imodules/java-bridge-forsyde-io-all.jar AS LOCAL dist/${target}/imodules/java-bridge-forsyde-io-all.jar
+        SAVE ARTIFACT emodules/java-metaheuristics-all.jar AS LOCAL dist/${target}/emodules/java-metaheuristics-all.jar
+    END
+
+
 build-rust-all:
     FROM debian:latest
-    ENV RUSTUP_HOME=/rustup
-    ENV CARGO_HOME=/cargo
     WORKDIR /rust-workdir
     RUN apt-get update
-    RUN apt-get install -y curl bash build-essential libssl-dev pkg-config
+    RUN apt-get install -y curl bash build-essential libssl-dev pkg-config mingw-w64 musl-dev
     RUN curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh -s -- --default-toolchain stable -y 
+    ENV PATH="/root/.cargo/bin:${PATH}"
     COPY Cargo.toml .
     COPY --dir rust-core .
     COPY --dir rust-common .
@@ -63,11 +85,8 @@ build-rust-linux-host:
     FROM +build-rust-all
     ARG targets="x86_64-unknown-linux-musl"
     FOR target IN ${targets}
-        IF $(echo "${target}" | grep -q "windows")
-            RUN apk --no-cache add --update mingw-w64-gcc mingw-w64-crt
-        END
-        RUN source "/cargo/env" && rustup target add ${target}
-        RUN source "/cargo/env" && cargo build -r --target ${target}
+        RUN rustup target add ${target}
+        RUN cargo build -r --target ${target}
         IF $(echo "${target}" | grep -q "windows")
             # Took away common module as it is embedded in the orchestrator now
             # SAVE ARTIFACT target/${target}/release/idesyde-common.exe ${target}/imodules/idesyde-rust-common.exe
@@ -121,6 +140,7 @@ dist-linux:
     ARG tag="no-tag"
     ARG jabba_jdk='amazon-corretto@1.17.0-0.35.1'
     BUILD +build-scala-all --targets="x86_64-unknown-linux-musl" --jabba_jdk=${jabba_jdk}
+    BUILD +build-java-all --targets="x86_64-unknown-linux-musl" --jabba_jdk=${jabba_jdk}
     BUILD +build-rust-linux-host --targets="x86_64-unknown-linux-musl"
     BUILD +zip-build --targets="x86_64-unknown-linux-musl" --tag=${tag}
 
@@ -128,6 +148,7 @@ dist-windows-cross:
     ARG tag="no-tag"
     ARG jabba_jdk='amazon-corretto@1.17.0-0.35.1'
     BUILD +build-scala-all --targets="x86_64-pc-windows-gnu" --jabba_jdk=${jabba_jdk}
+    BUILD +build-java-all --targets="x86_64-pc-windows-gnu" --jabba_jdk=${jabba_jdk}
     BUILD +build-rust-linux-host --targets="x86_64-pc-windows-gnu"
     BUILD +zip-build --targets="x86_64-pc-windows-gnu" --tag=${tag}
 
@@ -135,6 +156,7 @@ dist-all:
     ARG tag="no-tag"
     ARG jabba_jdk='amazon-corretto@1.17.0-0.35.1'
     BUILD +build-scala-all --targets="x86_64-unknown-linux-musl x86_64-pc-windows-gnu" --jabba_jdk=${jabba_jdk}
+    BUILD +build-java-all --targets="x86_64-unknown-linux-musl x86_64-pc-windows-gnu" --jabba_jdk=${jabba_jdk}
     BUILD +build-rust-linux-host --targets="x86_64-unknown-linux-musl x86_64-pc-windows-gnu"
     BUILD +zip-build --targets="x86_64-unknown-linux-musl x86_64-pc-windows-gnu" --tag=${tag}
 
@@ -143,6 +165,7 @@ test-case-studies:
     ARG jabba_jdk='amazon-corretto@1.17.0-0.35.1'
     ARG targets="x86_64-unknown-linux-musl"
     BUILD +build-scala-all --targets=${targets} --jdk_base=${jdk_base}
+    BUILD +build-java-all --targets=${targets} --jdk_base=${jdk_base}
     BUILD +build-rust-linux-host --targets=${targets}
     FROM debian:latest
     RUN apt-get update

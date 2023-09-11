@@ -57,6 +57,8 @@ jobs:
     - uses: actions/checkout@v3
     - name: Build rust
       run: |
+        export PKG_CONFIG_ALLOW_CROSS=1
+        export OPENSSL_STATIC=true
         sudo apt-get update
         sudo apt-get install -y curl bash build-essential libssl-dev pkg-config mingw-w64 musl-dev musl-tools
         cd ${{ github.workspace }}

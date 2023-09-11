@@ -26,6 +26,7 @@ jobs:
       run: |
         cd ${{ github.workspace }}
         curl -sL https://github.com/Jabba-Team/jabba/raw/master/install.sh | bash && . ~/.jabba/jabba.sh
+        source "$JABBA_HOME/jabba.sh"
         jabba install ${{ matrix.jdk }}
         jabba alias default ${{ matrix.jdk }}
         curl -fL "https://github.com/coursier/launchers/raw/master/cs-x86_64-pc-linux-static.gz" | gzip -d > cs
@@ -44,6 +45,7 @@ jobs:
       run: |
         cd ${{ github.workspace }}
         curl -sL https://github.com/Jabba-Team/jabba/raw/master/install.sh | bash && . ~/.jabba/jabba.sh
+        source "$JABBA_HOME/jabba.sh"
         jabba install ${{ matrix.jdk }}
         jabba alias default ${{ matrix.jdk }}
         ./gradlew publishModules        

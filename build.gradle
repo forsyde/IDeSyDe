@@ -9,3 +9,7 @@ tasks.register('getVersion') {
         println version
     }
 }
+
+// task publishModules {
+//     dependsOn tasks.collect { task -> task.name.endsWith("IModulePublish") || task.name.endsWith("IModulePublish") }
+// }

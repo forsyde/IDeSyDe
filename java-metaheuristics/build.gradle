@@ -1,5 +1,5 @@
 plugins {
-    id 'idesyde.java-standalone-module'
+    id 'idesyde.java-standalone-emodule'
 }
 
 
@@ -17,5 +17,3 @@ dependencies {
 application {
     mainClassName = "idesyde.metaheuristics.MetaHeuristicsExplorationModule"
 }
-
-publishEModule()

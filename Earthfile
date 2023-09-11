@@ -8,7 +8,7 @@ build-jvm-all:
     RUN apt-get update
     RUN apt-get install -y curl bash wget
     RUN curl -sL https://github.com/Jabba-Team/jabba/raw/main/install.sh | JABBA_COMMAND="install ${jabba_jdk} -o /jdk" bash
-    ENV JAVA_HOME /jdk
+    ENV JAVA_HOME /opt/jdk
     ENV PATH $JAVA_HOME/bin:$PATH
 
 build-scala-all:
@@ -57,13 +57,18 @@ build-java-all:
     COPY --dir java-common .
     COPY --dir java-bridge-forsyde-io .
     COPY --dir java-metaheuristics .
+    RUN ./gradlew publishModules
     FOR target IN ${targets}
-        RUN cp java-bridge-forsyde-io/build/libs/java-bridge-forsyde-io-all.jar imodules/
-        RUN cp java-metaheuristics/build/libs/java-metaheuristics-all.jar emodules/
-        SAVE ARTIFACT imodules/java-bridge-forsyde-io-all.jar ${target}/imodules/java-bridge-forsyde-io-all.jar
-        SAVE ARTIFACT emodules/java-metaheuristics-all.jar ${target}/emodules/java-metaheuristics-all.jar
-        SAVE ARTIFACT imodules/java-bridge-forsyde-io-all.jar AS LOCAL dist/${target}/imodules/java-bridge-forsyde-io-all.jar
-        SAVE ARTIFACT emodules/java-metaheuristics-all.jar AS LOCAL dist/${target}/emodules/java-metaheuristics-all.jar
+        SAVE ARTIFACT imodules/* ${target}/imodules/
+        SAVE ARTIFACT emodules/* ${target}/emodules/
+        SAVE ARTIFACT imodules/* AS LOCAL dist/${target}/imodules/
+        SAVE ARTIFACT emodules/* AS LOCAL dist/${target}/emodules/
+        # RUN cp java-bridge-forsyde-io/build/libs/java-bridge-forsyde-io-all.jar imodules/
+        # RUN cp java-metaheuristics/build/libs/java-metaheuristics-all.jar emodules/
+        # SAVE ARTIFACT imodules/java-bridge-forsyde-io-all.jar ${target}/imodules/java-bridge-forsyde-io-all.jar
+        # SAVE ARTIFACT emodules/java-metaheuristics-all.jar ${target}/emodules/java-metaheuristics-all.jar
+        # SAVE ARTIFACT imodules/java-bridge-forsyde-io-all.jar AS LOCAL dist/${target}/imodules/java-bridge-forsyde-io-all.jar
+        # SAVE ARTIFACT emodules/java-metaheuristics-all.jar AS LOCAL dist/${target}/emodules/java-metaheuristics-all.jar
     END
 
 
@@ -71,9 +76,12 @@ build-rust-all:
     FROM debian:latest
     WORKDIR /rust-workdir
     RUN apt-get update
-    RUN apt-get install -y curl bash build-essential libssl-dev pkg-config mingw-w64 musl-dev
+    RUN apt-get install -y curl bash build-essential libssl-dev pkg-config mingw-w64 musl-dev musl-tools
+    ENV CARGO_HOME = /opt/cargo
+    ENV RUSTUP_HOME = /opt/rustup
+    ENV PKG_CONFIG_ALLOW_CROSS=1
     RUN curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh -s -- --default-toolchain stable -y 
-    ENV PATH="/root/.cargo/bin:${PATH}"
+    ENV PATH="${CARGO_HOME}/bin:${PATH}"
     COPY Cargo.toml .
     COPY --dir rust-core .
     COPY --dir rust-common .

@@ -1,5 +1,5 @@
 plugins {
-    id 'idesyde.java-standalone-module'
+    id 'idesyde.java-standalone-imodule'
 }
 
 def forsydeioVersion = "0.7.12"
@@ -24,4 +24,3 @@ test {
 
 mainClassName = "idesyde.forsydeio.ForSyDeIOIdentificationModule"
 
-publishIModules()

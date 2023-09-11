@@ -24,8 +24,8 @@ jobs:
           python-version: '3.10' 
       - name: Build and Test cases
         run: |
-          apt-get update
-          apt-get install -y curl bash build-essential libssl-dev pkg-config mingw-w64 musl-dev musl-tools
+          sudo apt-get update
+          sudo apt-get install -y curl bash build-essential libssl-dev pkg-config mingw-w64 musl-dev musl-tools
           cd ${{ github.workspace }}
           curl -sL https://github.com/Jabba-Team/jabba/raw/main/install.sh | bash && . ~/.jabba/jabba.sh
           jabba install ${{ matrix.jabba_jdk }}

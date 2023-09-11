@@ -11,5 +11,5 @@ task publishModules(type: Copy) {
 task publishModulesNative(type: Copy) {
     dependsOn tasks.nativeCompile
     from tasks.nativeCompile.outputs
-    into "imodules"
+    into "${rootProject.projectDir}/imodules"
 }

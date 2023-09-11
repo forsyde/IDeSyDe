@@ -22,13 +22,31 @@ jobs:
     runs-on: ubuntu-latest
     steps:
     - uses: actions/checkout@v3
-    - uses: earthly/actions-setup@v1
-      with:
-        version: v0.7.8
     - name: Build scala
       run: |
         cd ${{ github.workspace }}
-        earthly +build-scala-all --jabba_jdk="${{ matrix.jdk }}"
+        curl -sL https://github.com/Jabba-Team/jabba/raw/master/install.sh | bash && . ~/.jabba/jabba.sh
+        jabba install ${{ matrix.jdk }}
+        jabba alias default ${{ matrix.jdk }}
+        curl -fL "https://github.com/coursier/launchers/raw/master/cs-x86_64-pc-linux-static.gz" | gzip -d > cs
+        chmod +x ./cs
+        ./cs setup --yes
+        sbt publishModules
+  test-java-build:
+    strategy:
+      matrix:
+        jdk: [temurin@17, amazon-corretto@17, zulu@17, microsoft@17]
+      fail-fast: false
+    runs-on: ubuntu-latest
+    steps:
+    - uses: actions/checkout@v3
+    - name: Build Java
+      run: |
+        cd ${{ github.workspace }}
+        curl -sL https://github.com/Jabba-Team/jabba/raw/master/install.sh | bash && . ~/.jabba/jabba.sh
+        jabba install ${{ matrix.jdk }}
+        jabba alias default ${{ matrix.jdk }}
+        ./gradlew publishModules        
   test-rust-build:
     strategy:
       matrix:
@@ -37,10 +55,9 @@ jobs:
     runs-on: ubuntu-latest
     steps:
     - uses: actions/checkout@v3
-    - uses: earthly/actions-setup@v1
-      with:
-        version: v0.7.8
     - name: Build rust
       run: |
         cd ${{ github.workspace }}
-        earthly +build-rust-linux-host --targets="${{ matrix.target }}"
+        curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh
+        rustup target add ${{ matrix.target }}
+        carbo build --release --target ${{ matrix.target }}

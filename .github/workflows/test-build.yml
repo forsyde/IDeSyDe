@@ -25,8 +25,7 @@ jobs:
     - name: Build scala
       run: |
         cd ${{ github.workspace }}
-        curl -sL https://github.com/Jabba-Team/jabba/raw/master/install.sh | bash && . ~/.jabba/jabba.sh
-        source "$JABBA_HOME/jabba.sh"
+        curl -sL https://github.com/Jabba-Team/jabba/raw/main/install.sh | bash && . ~/.jabba/jabba.sh
         jabba install ${{ matrix.jdk }}
         jabba alias default ${{ matrix.jdk }}
         curl -fL "https://github.com/coursier/launchers/raw/master/cs-x86_64-pc-linux-static.gz" | gzip -d > cs
@@ -44,8 +43,7 @@ jobs:
     - name: Build Java
       run: |
         cd ${{ github.workspace }}
-        curl -sL https://github.com/Jabba-Team/jabba/raw/master/install.sh | bash && . ~/.jabba/jabba.sh
-        source "$JABBA_HOME/jabba.sh"
+        curl -sL https://github.com/Jabba-Team/jabba/raw/main/install.sh | bash && . ~/.jabba/jabba.sh
         jabba install ${{ matrix.jdk }}
         jabba alias default ${{ matrix.jdk }}
         ./gradlew publishModules        
@@ -60,6 +58,6 @@ jobs:
     - name: Build rust
       run: |
         cd ${{ github.workspace }}
-        curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh
+        curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh -s -- --default-toolchain stable -y 
         rustup target add ${{ matrix.target }}
         carbo build --release --target ${{ matrix.target }}

@@ -50,15 +50,13 @@ jobs:
   test-rust-build-on-linux:
     strategy:
       matrix:
-        target: [x86_64-unknown-linux-musl, x86_64-pc-windows-gnu]
+        target: [x86_64-unknown-linux-gnu, x86_64-pc-windows-gnu]
       fail-fast: false
     runs-on: ubuntu-latest
     steps:
     - uses: actions/checkout@v3
     - name: Build rust
       run: |
-        export PKG_CONFIG_ALLOW_CROSS=1
-        export OPENSSL_STATIC=true
         sudo apt-get update
         sudo apt-get install -y curl bash build-essential libssl-dev pkg-config mingw-w64 musl-dev musl-tools
         cd ${{ github.workspace }}

@@ -5,11 +5,11 @@ plugins {
 task publishModules(type: Copy) {
     dependsOn tasks.shadowJar
     from tasks.shadowJar.outputs
-    into "emodules"
+    into "${rootProject.projectDir}/emodules"
 }
 
 task publishModulesNative(type: Copy) {
     dependsOn tasks.nativeCompile
     from tasks.nativeCompile.outputs
-    into "emodules"
+    into "${rootProject.projectDir}/emodules"
 }

@@ -5,7 +5,7 @@ plugins {
 task publishModules(type: Copy) {
     dependsOn tasks.shadowJar
     from tasks.shadowJar.outputs
-    into "imodules"
+    into "${rootProject.projectDir}/imodules"
 }
 
 task publishModulesNative(type: Copy) {

@@ -4,15 +4,15 @@ build-jvm-all:
     ARG jabba_jdk='amazon-corretto@1.17.0-0.35.1'
     ARG targets="x86_64-pc-windows-gnu x86_64-unknown-linux-musl"
     FROM debian:latest
-    WORKDIR scala-workdir
     RUN apt-get update
     RUN apt-get install -y curl bash wget
-    RUN curl -sL https://github.com/Jabba-Team/jabba/raw/main/install.sh | JABBA_COMMAND="install ${jabba_jdk} -o /jdk" bash
+    RUN curl -sL https://github.com/Jabba-Team/jabba/raw/main/install.sh | JABBA_COMMAND="install ${jabba_jdk} -o /opt/jdk" bash
     ENV JAVA_HOME /opt/jdk
     ENV PATH $JAVA_HOME/bin:$PATH
 
 build-scala-all:
     FROM +build-jvm-all
+    WORKDIR /scala-workdir
     COPY build.sbt build.sbt
     COPY project/plugins.sbt project/plugins.sbt
     COPY project/build.properties project/build.properties
@@ -48,6 +48,7 @@ build-scala-all:
 
 build-java-all:
     FROM +build-jvm-all
+    WORKDIR /java-workdir
     COPY build.gradle .
     COPY settings.gradle .
     COPY gradlew .
@@ -73,10 +74,11 @@ build-java-all:
 
 
 build-rust-all:
-    FROM debian:latest
+    FROM alpine:latest
     WORKDIR /rust-workdir
-    RUN apt-get update
-    RUN apt-get install -y curl bash build-essential libssl-dev pkg-config mingw-w64 musl-dev musl-tools
+    # RUN apt-get update
+    # RUN apt-get install -y curl bash build-essential libssl-dev pkg-config mingw-w64 musl-dev musl-tools
+    RUN apk --no-cache add --update curl bash build-base openssl-dev pkgconfig
     ENV CARGO_HOME = /opt/cargo
     ENV RUSTUP_HOME = /opt/rustup
     ENV PKG_CONFIG_ALLOW_CROSS=1
@@ -102,6 +104,7 @@ build-rust-linux-host:
             SAVE ARTIFACT target/${target}/release/idesyde-orchestration.exe ${target}/idesyde.exe
             SAVE ARTIFACT target/${target}/release/idesyde-orchestration.exe AS LOCAL dist/${target}/idesyde.exe
         ELSE
+            
             # Took away common module as it is embedded in the orchestrator now
             # SAVE ARTIFACT target/${target}/release/idesyde-common ${target}/imodules/idesyde-rust-common 
             # SAVE ARTIFACT target/${target}/release/idesyde-common AS LOCAL dist/${target}/imodules/idesyde-rust-common 

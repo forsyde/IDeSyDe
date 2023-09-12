@@ -10,11 +10,11 @@ use std::{
 
 use idesyde_blueprints::{DecisionModelMessage, ExplorationSolutionMessage, OpaqueDecisionModel};
 use idesyde_core::{
-    headers::ExplorationBid, DecisionModel, ExplorationModule, ExplorationSolution,
+    headers::ExplorationBid, DecisionModel, ExplorationConfiguration, ExplorationModule,
+    ExplorationSolution,
 };
 use log::{debug, warn};
 use serde::{Deserialize, Serialize};
-use websocket::Message;
 
 use crate::HttpServerLike;
 
@@ -169,6 +169,38 @@ impl Drop for ExternalServerExplorationModule {
     }
 }
 
+pub struct HttpServerSolutionIter {
+    pub conn: tungstenite::WebSocket<tungstenite::stream::MaybeTlsStream<std::net::TcpStream>>,
+}
+
+impl HttpServerSolutionIter {
+    /// This creation function assumes that the channel is already sending back solutions
+    pub fn new<I>(c: I) -> HttpServerSolutionIter
+    where
+        I: Into<tungstenite::WebSocket<tungstenite::stream::MaybeTlsStream<std::net::TcpStream>>>,
+    {
+        return HttpServerSolutionIter { conn: c.into() };
+    }
+}
+
+impl Iterator for HttpServerSolutionIter {
+    type Item = ExplorationSolution;
+
+    fn next(&mut self) -> Option<Self::Item> {
+        if self.conn.can_read() {
+            if let Ok(sol_txt) = self.conn.read().and_then(|x| x.into_text()) {
+                if let Some(sol) = ExplorationSolutionMessage::from_json_str(sol_txt.as_str()) {
+                    return Some((
+                        Arc::new(OpaqueDecisionModel::from(&sol)) as Arc<dyn DecisionModel>,
+                        sol.objectives,
+                    ));
+                }
+            }
+        }
+        None
+    }
+}
+
 impl ExplorationModule for ExternalServerExplorationModule {
     fn unique_identifier(&self) -> String {
         self.name.to_owned()
@@ -192,111 +224,9 @@ impl ExplorationModule for ExternalServerExplorationModule {
         &self,
         m: Arc<dyn DecisionModel>,
         explorer_id: &str,
-        max_sols: i64,
-        total_timeout: i64,
-        time_resolution: i64,
-        memory_resolution: i64,
-    ) -> Vec<ExplorationSolution> {
-        if let Err(e) = self
-            .http_post("set", &vec![("parameter", "max-sols")], &max_sols)
-            .and(self.http_post("set", &vec![("parameter", "total-timeout")], &total_timeout))
-            .and(self.http_post(
-                "set",
-                &vec![("parameter", "time-resolution")],
-                &time_resolution,
-            ))
-            .and(self.http_post(
-                "set",
-                &vec![("parameter", "memory-resolution")],
-                &memory_resolution,
-            ))
-        {
-            warn!(
-                "Could not set exploration parameters for module {}. Trying to continue.",
-                self.unique_identifier()
-            );
-            debug!("Error is {}", e.to_string());
-        };
-        match tungstenite::connect(format!("ws://{}:{}/explore", self.address, self.port).as_str())
-        {
-            Ok((mut conn, _)) => {
-                let message = ExplorationRequestMessage::from(explorer_id, m.as_ref());
-                if let Ok(_) = conn.send(tungstenite::Message::text(message.to_json_str())) {
-                    let mut results: Vec<ExplorationSolution> = Vec::new();
-                    while conn.can_read() {
-                        let read = conn
-                            .read()
-                            .ok()
-                            .and_then(|res| res.into_text().ok())
-                            .and_then(|sol_txt| {
-                                if let Some(sol) =
-                                    ExplorationSolutionMessage::from_json_str(sol_txt.as_str())
-                                {
-                                    return Some((
-                                        Arc::new(OpaqueDecisionModel::from(&sol))
-                                            as Arc<dyn DecisionModel>,
-                                        sol.objectives,
-                                    ));
-                                } else {
-                                    warn!(
-                                        "Failed to deserialize exploration solution of module {}",
-                                        self.unique_identifier()
-                                    );
-                                    return None;
-                                }
-                            });
-                        if let Some(m) = read {
-                            results.push(m);
-                        }
-                    }
-            }
-            Err(_) => {}
-        }
-        if let Ok(mut client) = websocket::ClientBuilder::new(
-            format!("ws://{}:{}/explore", self.address, self.port).as_str(),
-        ) {
-            if let Ok(mut conn) = client.connect_insecure() {
-                let message = ExplorationRequestMessage::from(explorer_id, m.as_ref());
-                if let Ok(_) = conn.send_message(&Message::text(message.to_json_str())) {
-                    return conn
-                        .incoming_messages()
-                        .take_while(|x| x.is_ok())
-                        .flat_map(|x| x.ok())
-                        .flat_map(|res| match res {
-                            websocket::OwnedMessage::Text(sol_txt) => {
-                                if let Some(sol) =
-                                    ExplorationSolutionMessage::from_json_str(sol_txt.as_str())
-                                {
-                                    Some((
-                                        Arc::new(OpaqueDecisionModel::from(&sol))
-                                            as Arc<dyn DecisionModel>,
-                                        sol.objectives,
-                                    ))
-                                } else {
-                                    warn!(
-                                        "Failed to deserialize exploration solution of module {}",
-                                        self.unique_identifier()
-                                    );
-                                    None
-                                }
-                            }
-                            _ => None,
-                        })
-                        .collect();
-                };
-            }
-        }
-        vec![]
-    }
-
-    fn iter_explore(
-        &self,
-        m: Arc<dyn DecisionModel>,
-        explorer_id: &str,
-        _currrent_solutions: Vec<idesyde_core::ExplorationSolution>,
-        exploration_configuration: idesyde_core::ExplorationConfiguration,
-        solution_iter: fn(&ExplorationSolution) -> (),
-    ) -> Vec<idesyde_core::ExplorationSolution> {
+        _currrent_solutions: Vec<ExplorationSolution>,
+        exploration_configuration: ExplorationConfiguration,
+    ) -> Box<dyn Iterator<Item = ExplorationSolution> + '_> {
         if let Err(e) = self
             .http_post(
                 "set",
@@ -325,44 +255,154 @@ impl ExplorationModule for ExternalServerExplorationModule {
             );
             debug!("Error is {}", e.to_string());
         };
-        if let Ok(mut client) = websocket::ClientBuilder::new(
-            format!("ws://{}:{}/explore", self.address, self.port).as_str(),
-        ) {
-            if let Ok(mut conn) = client.connect_insecure() {
-                let message = ExplorationRequestMessage::from(explorer_id, m.as_ref());
-                if let Ok(_) = conn.send_message(&Message::text(message.to_json_str())) {
-                    return conn
-                        .incoming_messages()
-                        .take_while(|x| x.is_ok())
-                        .flat_map(|x| x.ok())
-                        .flat_map(|res| match res {
-                            websocket::OwnedMessage::Text(sol_txt) => {
-                                if let Some(sol_message) =
-                                    ExplorationSolutionMessage::from_json_str(sol_txt.as_str())
-                                {
-                                    let sol = (
-                                        Arc::new(OpaqueDecisionModel::from(&sol_message))
-                                            as Arc<dyn DecisionModel>,
-                                        sol_message.objectives,
-                                    );
-                                    solution_iter(&sol);
-                                    Some(sol)
-                                } else {
-                                    warn!(
-                                        "Failed to deserialize exploration solution of module {}",
-                                        self.unique_identifier()
-                                    );
-                                    None
-                                }
-                            }
-                            _ => None,
-                        })
-                        .collect();
-                };
+        if let Ok((mut conn, _)) =
+            tungstenite::connect(format!("ws://{}:{}/explore", self.address, self.port).as_str())
+        {
+            let message = ExplorationRequestMessage::from(explorer_id, m.as_ref());
+            if let Ok(_) = conn.send(tungstenite::Message::text(message.to_json_str())) {
+                return Box::new(HttpServerSolutionIter::new(conn));
             }
         }
-        vec![]
+        // let it = std::iter::once_with(|| {});
+        // let cloned = m.to_owned();
+        // let explorer_id_cloned = explorer_id.to_owned();
+        // let z = it
+        //     .flat_map(|x| x.ok())
+        //     .flat_map(move |(mut conn, _)| {
+        //         let message =
+        //             ExplorationRequestMessage::from(explorer_id_cloned.as_str(), cloned.as_ref());
+        //         if let Ok(_) = conn.send(tungstenite::Message::text(message.to_json_str())) {
+        //             return Some(conn);
+        //         }
+        //         None
+        //     })
+        //     .flat_map(|mut conn| std::iter::repeat_with(move || conn.read()))
+        //     .take_while(|x| x.is_ok())
+        //     .flat_map(|x| x.ok())
+        //     .flat_map(|x| x.into_text())
+        //     .flat_map(|sol_txt| {
+        //         if let Some(sol) = ExplorationSolutionMessage::from_json_str(sol_txt.as_str()) {
+        //             return Some((
+        //                 Arc::new(OpaqueDecisionModel::from(&sol)) as Arc<dyn DecisionModel>,
+        //                 sol.objectives,
+        //             ));
+        //         } else {
+        //             warn!(
+        //                 "Failed to deserialize exploration solution of module {}",
+        //                 self.unique_identifier()
+        //             );
+        //             return None;
+        //         }
+        //     });
+        // return Rc::new(z);
+        // if let Ok((mut conn, _)) =
+        //     tungstenite::connect(format!("ws://{}:{}/explore", self.address, self.port).as_str())
+        // {
+        //     let message = ExplorationRequestMessage::from(explorer_id, m.as_ref());
+        //     if let Ok(_) = conn.send(tungstenite::Message::text(message.to_json_str())) {
+        //         return Rc::new(
+        //             std::iter::repeat_with(move || conn.read())
+        //                 .take_while(|x| x.is_ok())
+        //                 .flat_map(|x| x.ok())
+        //                 .flat_map(|x| x.into_text())
+        //                 .flat_map(|sol_txt| {
+        //                     if let Some(sol) =
+        //                         ExplorationSolutionMessage::from_json_str(sol_txt.as_str())
+        //                     {
+        //                         return Some((
+        //                             Arc::new(OpaqueDecisionModel::from(&sol))
+        //                                 as Arc<dyn DecisionModel>,
+        //                             sol.objectives,
+        //                         ));
+        //                     } else {
+        //                         warn!(
+        //                             "Failed to deserialize exploration solution of module {}",
+        //                             self.unique_identifier()
+        //                         );
+        //                         return None;
+        //                     }
+        //                 }),
+        //         );
+        //     }
+        // }
+        // Rc::new(std::iter::empty())
+        Box::new(std::iter::empty())
     }
+
+    // fn iter_explore(
+    //     &self,
+    //     m: Arc<dyn DecisionModel>,
+    //     explorer_id: &str,
+    //     _currrent_solutions: Vec<idesyde_core::ExplorationSolution>,
+    //     exploration_configuration: idesyde_core::ExplorationConfiguration,
+    //     solution_iter: fn(&ExplorationSolution) -> (),
+    // ) -> Vec<idesyde_core::ExplorationSolution> {
+    //     if let Err(e) = self
+    //         .http_post(
+    //             "set",
+    //             &vec![("parameter", "max-sols")],
+    //             &exploration_configuration.max_sols,
+    //         )
+    //         .and(self.http_post(
+    //             "set",
+    //             &vec![("parameter", "total-timeout")],
+    //             &exploration_configuration.total_timeout,
+    //         ))
+    //         .and(self.http_post(
+    //             "set",
+    //             &vec![("parameter", "time-resolution")],
+    //             &exploration_configuration.time_resolution,
+    //         ))
+    //         .and(self.http_post(
+    //             "set",
+    //             &vec![("parameter", "memory-resolution")],
+    //             &exploration_configuration.memory_resolution,
+    //         ))
+    //     {
+    //         warn!(
+    //             "Could not set exploration parameters for module {}. Trying to continue.",
+    //             self.unique_identifier()
+    //         );
+    //         debug!("Error is {}", e.to_string());
+    //     };
+    //     if let Ok(mut client) = websocket::ClientBuilder::new(
+    //         format!("ws://{}:{}/explore", self.address, self.port).as_str(),
+    //     ) {
+    //         if let Ok(mut conn) = client.connect_insecure() {
+    //             let message = ExplorationRequestMessage::from(explorer_id, m.as_ref());
+    //             if let Ok(_) = conn.send_message(&Message::text(message.to_json_str())) {
+    //                 return conn
+    //                     .incoming_messages()
+    //                     .take_while(|x| x.is_ok())
+    //                     .flat_map(|x| x.ok())
+    //                     .flat_map(|res| match res {
+    //                         websocket::OwnedMessage::Text(sol_txt) => {
+    //                             if let Some(sol_message) =
+    //                                 ExplorationSolutionMessage::from_json_str(sol_txt.as_str())
+    //                             {
+    //                                 let sol = (
+    //                                     Arc::new(OpaqueDecisionModel::from(&sol_message))
+    //                                         as Arc<dyn DecisionModel>,
+    //                                     sol_message.objectives,
+    //                                 );
+    //                                 solution_iter(&sol);
+    //                                 Some(sol)
+    //                             } else {
+    //                                 warn!(
+    //                                     "Failed to deserialize exploration solution of module {}",
+    //                                     self.unique_identifier()
+    //                                 );
+    //                                 None
+    //                             }
+    //                         }
+    //                         _ => None,
+    //                     })
+    //                     .collect();
+    //             };
+    //         }
+    //     }
+    //     vec![]
+    // }
 }
 
 // #[derive(Debug, PartialEq, Eq, Hash)]

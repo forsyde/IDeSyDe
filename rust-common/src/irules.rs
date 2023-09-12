@@ -7,7 +7,7 @@ use idesyde_core::{DecisionModel, DesignModel, IdentificationResult};
 
 use log::debug;
 use petgraph::{
-    visit::{Bfs, GraphBase, IntoNeighbors, IntoNeighborsDirected, IntoNodeIdentifiers, Visitable},
+    visit::{Bfs, GraphBase, IntoNeighbors, IntoNodeIdentifiers, Visitable},
     Direction::{Incoming, Outgoing},
     Graph, Undirected,
 };

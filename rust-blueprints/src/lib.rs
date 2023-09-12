@@ -244,46 +244,14 @@ impl ExplorationModule for StandaloneExplorationModule {
         &self,
         m: Arc<dyn DecisionModel>,
         explorer_id: &str,
-        max_sols: i64,
-        total_timeout: i64,
-        time_resolution: i64,
-        memory_resolution: i64,
-    ) -> Vec<ExplorationSolution> {
-        self.explorers
-            .iter()
-            .find(|e| e.unique_identifier() == explorer_id)
-            .map(|e| {
-                e.explore(
-                    m,
-                    max_sols,
-                    total_timeout,
-                    time_resolution,
-                    memory_resolution,
-                )
-            })
-            .unwrap_or(vec![])
-    }
-
-    fn iter_explore(
-        &self,
-        m: Arc<dyn DecisionModel>,
-        explorer_id: &str,
         currrent_solutions: Vec<ExplorationSolution>,
         exploration_configuration: idesyde_core::ExplorationConfiguration,
-        solution_iter: fn(&ExplorationSolution) -> (),
-    ) -> Vec<idesyde_core::ExplorationSolution> {
+    ) -> Box<dyn Iterator<Item = ExplorationSolution> + '_> {
         self.explorers
             .iter()
             .find(|e| e.unique_identifier() == explorer_id)
-            .map(|e| {
-                e.iter_explore(
-                    m,
-                    currrent_solutions,
-                    solution_iter,
-                    exploration_configuration,
-                )
-            })
-            .unwrap_or(vec![])
+            .map(|e| e.explore(m, currrent_solutions, exploration_configuration))
+            .unwrap_or(Box::new(std::iter::empty()))
     }
 }
 
@@ -403,7 +371,7 @@ impl IdentificationModule for StandaloneIdentificationModule {
         while let Some((idx, opaque)) = identified
             .iter()
             .enumerate()
-            .find(|(i, m)| m.downcast_ref::<OpaqueDecisionModel>().is_some())
+            .find(|(_, m)| m.downcast_ref::<OpaqueDecisionModel>().is_some())
         {
             let non_opaque_exists = identified
                 .iter()
@@ -539,65 +507,65 @@ pub fn execute_standalone_identification_module(module: StandaloneIdentification
                             design_models.push(m);
                         }
                     }
-                    match (
-                        args.identified_path_opt,
-                        args.solved_path_opt,
-                        args.reverse_path_opt,
-                        args.identification_step,
-                    ) {
-                        (_, Some(solved_path), Some(reverse_path), _) => {
-                            std::fs::create_dir_all(&solved_path).expect(
-                                "Failed to create the solved path during reverse identification.",
-                            );
-                            std::fs::create_dir_all(&reverse_path).expect(
-                                "Failed to create the reverse path during reverse identification.",
-                            );
-                            let solved: Vec<Arc<dyn DecisionModel>> = todo!();
-                            // load_decision_model_headers_from_binary(&solved_path)
-                            //     .iter()
-                            //     .flat_map(|(_, x)| module.decision_header_to_model(x))
-                            //     .collect();
-                            let reverse_identified =
-                                module.reverse_identification(&solved, &design_models);
-                            for m in reverse_identified {
-                                for rpath in module.write_design_model(&m, &reverse_path) {
-                                    let mut h = m.header();
-                                    h.model_paths.push(rpath.to_str().expect("Failed to get a string out of the output path during reverse identification").to_string());
-                                    h.write_to_dir(
-                                        &reverse_path,
-                                        "",
-                                        module.unique_identifier().as_str(),
-                                    );
-                                }
-                                if let Some(out_path) = &args.output_path_opt {
-                                    module.write_design_model(&m, out_path);
-                                }
-                            }
-                        }
-                        (Some(identified_path), None, None, Some(ident_step)) => {
-                            std::fs::create_dir_all(&identified_path).expect(
-                                "Failed to create the identified path during reverse identification.",
-                            );
-                            let decision_models: Vec<Arc<dyn DecisionModel>> = todo!();
-                            // load_decision_model_headers_from_binary(&identified_path)
-                            //     .iter()
-                            //     .flat_map(|(_, x)| module.decision_header_to_model(x))
-                            //     .collect();
-                            let (identified, _) = module.identification_step(
-                                ident_step,
-                                &design_models,
-                                &decision_models,
-                            );
-                            for m in identified {
-                                m.write_to_dir(
-                                    &identified_path,
-                                    format!("{:0>16}", ident_step).as_str(),
-                                    module.unique_identifier().as_str(),
-                                );
-                            }
-                        }
-                        _ => (),
-                    }
+                    // match (
+                    //     args.identified_path_opt,
+                    //     args.solved_path_opt,
+                    //     args.reverse_path_opt,
+                    //     args.identification_step,
+                    // ) {
+                    //     (_, Some(solved_path), Some(reverse_path), _) => {
+                    //         // std::fs::create_dir_all(&solved_path).expect(
+                    //         //     "Failed to create the solved path during reverse identification.",
+                    //         // );
+                    //         // std::fs::create_dir_all(&reverse_path).expect(
+                    //         //     "Failed to create the reverse path during reverse identification.",
+                    //         // );
+                    //         // let solved: Vec<Arc<dyn DecisionModel>> = todo!();
+                    //         // // load_decision_model_headers_from_binary(&solved_path)
+                    //         // //     .iter()
+                    //         // //     .flat_map(|(_, x)| module.decision_header_to_model(x))
+                    //         // //     .collect();
+                    //         // let reverse_identified =
+                    //         //     module.reverse_identification(&solved, &design_models);
+                    //         // for m in reverse_identified {
+                    //         //     for rpath in module.write_design_model(&m, &reverse_path) {
+                    //         //         let mut h = m.header();
+                    //         //         h.model_paths.push(rpath.to_str().expect("Failed to get a string out of the output path during reverse identification").to_string());
+                    //         //         h.write_to_dir(
+                    //         //             &reverse_path,
+                    //         //             "",
+                    //         //             module.unique_identifier().as_str(),
+                    //         //         );
+                    //         //     }
+                    //         //     if let Some(out_path) = &args.output_path_opt {
+                    //         //         module.write_design_model(&m, out_path);
+                    //         //     }
+                    //         // }
+                    //     }
+                    //     (Some(identified_path), None, None, Some(ident_step)) => {
+                    //         // std::fs::create_dir_all(&identified_path).expect(
+                    //         //     "Failed to create the identified path during reverse identification.",
+                    //         // );
+                    //         // let decision_models: Vec<Arc<dyn DecisionModel>> = todo!();
+                    //         // // load_decision_model_headers_from_binary(&identified_path)
+                    //         // //     .iter()
+                    //         // //     .flat_map(|(_, x)| module.decision_header_to_model(x))
+                    //         // //     .collect();
+                    //         // let (identified, _) = module.identification_step(
+                    //         //     ident_step,
+                    //         //     &design_models,
+                    //         //     &decision_models,
+                    //         // );
+                    //         // for m in identified {
+                    //         //     m.write_to_dir(
+                    //         //         &identified_path,
+                    //         //         format!("{:0>16}", ident_step).as_str(),
+                    //         //         module.unique_identifier().as_str(),
+                    //         //     );
+                    //         // }
+                    //     }
+                    //     _ => (),
+                    // }
                 }
             }
         }

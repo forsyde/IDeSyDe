@@ -2,10 +2,9 @@ use std::{net::IpAddr, path::Path, sync::Arc};
 
 use clap::Parser;
 use env_logger::WriteStyle;
-use idesyde_blueprints::OpaqueDecisionModel;
 use idesyde_core::{
-    headers::{load_decision_model_headers_from_binary, ExplorationBid},
-    DecisionModel, DesignModel, ExplorationConfiguration, ExplorationModule, ExplorationSolution,
+    headers::ExplorationBid, DecisionModel, DesignModel, ExplorationConfiguration,
+    ExplorationModule, ExplorationSolution,
 };
 use idesyde_orchestration::{
     exploration::ExternalServerExplorationModule,
@@ -444,7 +443,8 @@ fn main() {
             }
             // let (mut tx, rx) = spmc::channel();
             // let mut total_reversed = 0;
-            let mut sols_found = chosen_exploration_module.iter_explore(
+            let mut sols_found = Vec::new();
+            let mut sol_iter = chosen_exploration_module.explore(
                 chosen_decision_model.clone(),
                 &dominant_bid.explorer_unique_identifier,
                 vec![],
@@ -454,17 +454,17 @@ fn main() {
                     time_resolution: args.x_time_resolution.unwrap_or(0),
                     memory_resolution: args.x_memory_resolution.unwrap_or(0),
                 },
-                |(_, sol)| {
-                    debug!(
-                        "Found a new solution with objectives: {}.",
-                        sol.iter()
-                            .map(|(k, v)| format!("{}: {}", k, v))
-                            .reduce(|s1, s2| format!("{}, {}", s1, s2))
-                            .unwrap_or("None".to_owned())
-                    );
-                    // sol.write_to_dir(&explored_path.to_owned(), "latest", "Orchestrator");
-                },
             );
+            while let Some((m, sol)) = sol_iter.next() {
+                debug!(
+                    "Found a new solution with objectives: {}.",
+                    sol.iter()
+                        .map(|(k, v)| format!("{}: {}", k, v))
+                        .reduce(|s1, s2| format!("{}, {}", s1, s2))
+                        .unwrap_or("None".to_owned())
+                );
+                sols_found.push((m, sol));
+            }
             sols_found.dedup_by(|(_, a), (_, b)| a == b);
             let dominant_sols: Vec<ExplorationSolution> = sols_found
                 .iter()

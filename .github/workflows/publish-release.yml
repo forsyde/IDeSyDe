@@ -5,32 +5,77 @@ on:
     types: [created]
 
 jobs:
-  publish-all:
+  publish-on-linux:
     runs-on: ubuntu-latest
     steps:
     - uses: actions/checkout@v3
     - id: get_version
       uses: battila7/get-version-action@v2
-    - uses: earthly/actions-setup@v1
-      with:
-        version: v0.7.8
     - name: Build everything
       run: |
+        sudo apt-get update
+        sudo apt-get install -y curl bash build-essential libssl-dev pkg-config mingw-w64 musl-dev musl-tools
         cd ${{ github.workspace }}
-        earthly +dist-all --tag=${{ steps.get_version.outputs.version }}
-    - name: Upload windows binaries to release
-      uses: svenstaro/upload-release-action@v2
-      with:
-        repo_token: ${{ secrets.GITHUB_TOKEN }}
-        file: "${{ github.workspace }}/dist/idesyde-${{ steps.get_version.outputs.version }}-x86_64-pc-windows-gnu.zip"
-        asset_name: idesyde-${{ steps.get_version.outputs.version }}-x86_64-windows.zip
-        tag: "${{ github.ref }}"
-        overwrite: true
+        curl -sL https://github.com/Jabba-Team/jabba/raw/main/install.sh | bash && . ~/.jabba/jabba.sh
+        jabba install amazon-corretto@17
+        jabba alias default amazon-corretto@17
+        curl -fL "https://github.com/coursier/launchers/raw/master/cs-x86_64-pc-linux-static.gz" | gzip -d > cs
+        chmod +x ./cs
+        ./cs setup --yes
+        curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh -s -- --default-toolchain stable -y 
+        rustup target add x86_64-unknown-linux-gnu
+        cargo build --release --target x86_64-unknown-linux-gnu
+        ./scripts/make-all-linux.sh
+    # - name: Upload windows binaries to release
+    #   uses: svenstaro/upload-release-action@v2
+    #   with:
+    #     repo_token: ${{ secrets.GITHUB_TOKEN }}
+    #     file: "${{ github.workspace }}/dist/idesyde-${{ steps.get_version.outputs.version }}-x86_64-pc-windows-gnu.zip"
+    #     asset_name: idesyde-${{ steps.get_version.outputs.version }}-x86_64-windows.zip
+    #     tag: "${{ github.ref }}"
+    #     overwrite: true
     - name: Upload linux binaries to release
       uses: svenstaro/upload-release-action@v2
       with:
         repo_token: ${{ secrets.GITHUB_TOKEN }}
-        file: "${{ github.workspace }}/dist/idesyde-${{ steps.get_version.outputs.version }}-x86_64-unknown-linux-musl.zip"
-        asset_name: idesyde-${{ steps.get_version.outputs.version }}-x86_64-linux.zip
+        file: "${{ github.workspace }}/idesyde-x86_64-unknown-linux-gnu.zip"
+        asset_name: idesyde-${{ steps.get_version.outputs.version }}-x86_64-unknown-linux-gnu.zip
+        tag: "${{ github.ref }}"
+        overwrite: true
+  publish-on-linux-musl:
+    runs-on: ubuntu-latest
+    steps:
+    - uses: actions/checkout@v3
+    - id: get_version
+      uses: battila7/get-version-action@v2
+    - name: Build everything
+      run: |
+        sudo apt-get update
+        sudo apt-get install -y curl bash build-essential libssl-dev pkg-config mingw-w64 musl-dev musl-tools
+        cd ${{ github.workspace }}
+        curl -sL https://github.com/Jabba-Team/jabba/raw/main/install.sh | bash && . ~/.jabba/jabba.sh
+        jabba install amazon-corretto@17
+        jabba alias default amazon-corretto@17
+        curl -fL "https://github.com/coursier/launchers/raw/master/cs-x86_64-pc-linux-static.gz" | gzip -d > cs
+        chmod +x ./cs
+        ./cs setup --yes
+        curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh -s -- --default-toolchain stable -y 
+        rustup target add x86_64-unknown-linux-musl
+        cargo build --release --target x86_64-unknown-linux-musl
+        ./scripts/make-all-linux-musl.sh
+    # - name: Upload windows binaries to release
+    #   uses: svenstaro/upload-release-action@v2
+    #   with:
+    #     repo_token: ${{ secrets.GITHUB_TOKEN }}
+    #     file: "${{ github.workspace }}/dist/idesyde-${{ steps.get_version.outputs.version }}-x86_64-pc-windows-gnu.zip"
+    #     asset_name: idesyde-${{ steps.get_version.outputs.version }}-x86_64-windows.zip
+    #     tag: "${{ github.ref }}"
+    #     overwrite: true
+    - name: Upload linux binaries to release
+      uses: svenstaro/upload-release-action@v2
+      with:
+        repo_token: ${{ secrets.GITHUB_TOKEN }}
+        file: "${{ github.workspace }}/idesyde-x86_64-unknown-linux-musl.zip"
+        asset_name: idesyde-${{ steps.get_version.outputs.version }}-x86_64-unknown-linux-musl.zip
         tag: "${{ github.ref }}"
         overwrite: true

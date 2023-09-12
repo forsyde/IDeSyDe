@@ -63,3 +63,54 @@ jobs:
         curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh -s -- --default-toolchain stable -y 
         rustup target add ${{ matrix.target }}
         cargo build --release --target ${{ matrix.target }}
+  test-scala-build-on-windows:
+    strategy:
+      matrix:
+        jdk: [temurin@17, amazon-corretto@17, zulu@17, microsoft@17]
+      fail-fast: false
+    runs-on: windows-latest
+    steps:
+    - uses: actions/checkout@v3
+    - name: Build scala
+      run: |
+        [Net.ServicePointManager]::SecurityProtocol = [Net.SecurityProtocolType]::Tls12
+        Invoke-Expression (Invoke-WebRequest https://github.com/Jabba-Team/jabba/raw/main/install.ps1 -UseBasicParsing).Content
+        cd ${{ github.workspace }}
+        jabba install ${{ matrix.jdk }}
+        jabba alias default ${{ matrix.jdk }}
+        Invoke-WebRequest -Uri "https://github.com/coursier/launchers/raw/master/cs-x86_64-pc-win32.zip" -OutFile "cs-x86_64-pc-win32.zip"
+        Expand-Archive -Path "cs-x86_64-pc-win32.zip"
+        Rename-Item -Path "cs-x86_64-pc-win32.exe" -NewName "cs.exe"
+        Remove-Item -Path "cs-x86_64-pc-win32.zip"
+        .\cs setup --yes
+        sbt publishModules
+  test-java-build-on-windows:
+    strategy:
+      matrix:
+        jdk: [temurin@17, amazon-corretto@17, zulu@17, microsoft@17]
+      fail-fast: false
+    runs-on: windows-latest
+    steps:
+    - uses: actions/checkout@v3
+    - name: Build Java
+      run: |
+        [Net.ServicePointManager]::SecurityProtocol = [Net.SecurityProtocolType]::Tls12
+        Invoke-Expression (Invoke-WebRequest https://github.com/Jabba-Team/jabba/raw/main/install.ps1 -UseBasicParsing).Content
+        cd ${{ github.workspace }}
+        jabba install ${{ matrix.jdk }}
+        jabba alias default ${{ matrix.jdk }}
+        .\gradlew.bat publishModules        
+  test-rust-build-on-windows:
+    strategy:
+      matrix:
+        target: [x86_64-pc-windows-gnu]
+      fail-fast: false
+    runs-on: windows-latest
+    steps:
+    - uses: actions/checkout@v3
+    - name: Build rust
+      run: |
+        cd ${{ github.workspace }}
+        curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh -s -- --default-toolchain stable -y 
+        rustup target add ${{ matrix.target }}
+        cargo build --release --target ${{ matrix.target }}

@@ -42,6 +42,39 @@ jobs:
         asset_name: idesyde-${{ steps.get_version.outputs.version }}-x86_64-unknown-linux-gnu.zip
         tag: "${{ github.ref }}"
         overwrite: true
+  publish-on-windows:
+    runs-on: windows-latest
+    steps:
+    - uses: actions/checkout@v3
+    - id: get_version
+      uses: battila7/get-version-action@v2
+    - name: Build everything
+      run: |
+        [Net.ServicePointManager]::SecurityProtocol = [Net.SecurityProtocolType]::Tls12
+        Invoke-Expression (Invoke-WebRequest https://github.com/Jabba-Team/jabba/raw/main/install.ps1 -UseBasicParsing).Content
+        Invoke-WebRequest -Uri "https://static.rust-lang.org/rustup/dist/x86_64-pc-windows-msvc/rustup-init.exe" -OutFile "rustup-init.exe"
+        .\rustup-init.exe -y
+        cd ${{ github.workspace }}
+        jabba install amazon-corretto@17
+        jabba alias default amazon-corretto@17
+        cargo build --release --target x86_64-pc-windows-msvc
+        .\scripts\make-all-windows.ps1
+    # - name: Upload windows binaries to release
+    #   uses: svenstaro/upload-release-action@v2
+    #   with:
+    #     repo_token: ${{ secrets.GITHUB_TOKEN }}
+    #     file: "${{ github.workspace }}/dist/idesyde-${{ steps.get_version.outputs.version }}-x86_64-pc-windows-gnu.zip"
+    #     asset_name: idesyde-${{ steps.get_version.outputs.version }}-x86_64-windows.zip
+    #     tag: "${{ github.ref }}"
+    #     overwrite: true
+    - name: Upload linux binaries to release
+      uses: svenstaro/upload-release-action@v2
+      with:
+        repo_token: ${{ secrets.GITHUB_TOKEN }}
+        file: "${{ github.workspace }}/idesyde-x86_64-pc-windows-msvc.zip"
+        asset_name: idesyde-${{ steps.get_version.outputs.version }}-x86_64-pc-windows-msvc.zip
+        tag: "${{ github.ref }}"
+        overwrite: true
   publish-on-linux-musl:
     runs-on: ubuntu-latest
     steps:

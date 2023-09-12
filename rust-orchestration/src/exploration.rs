@@ -217,6 +217,41 @@ impl ExplorationModule for ExternalServerExplorationModule {
             );
             debug!("Error is {}", e.to_string());
         };
+        match tungstenite::connect(format!("ws://{}:{}/explore", self.address, self.port).as_str())
+        {
+            Ok((mut conn, _)) => {
+                let message = ExplorationRequestMessage::from(explorer_id, m.as_ref());
+                if let Ok(_) = conn.send(tungstenite::Message::text(message.to_json_str())) {
+                    let mut results: Vec<ExplorationSolution> = Vec::new();
+                    while conn.can_read() {
+                        let read = conn
+                            .read()
+                            .ok()
+                            .and_then(|res| res.into_text().ok())
+                            .and_then(|sol_txt| {
+                                if let Some(sol) =
+                                    ExplorationSolutionMessage::from_json_str(sol_txt.as_str())
+                                {
+                                    return Some((
+                                        Arc::new(OpaqueDecisionModel::from(&sol))
+                                            as Arc<dyn DecisionModel>,
+                                        sol.objectives,
+                                    ));
+                                } else {
+                                    warn!(
+                                        "Failed to deserialize exploration solution of module {}",
+                                        self.unique_identifier()
+                                    );
+                                    return None;
+                                }
+                            });
+                        if let Some(m) = read {
+                            results.push(m);
+                        }
+                    }
+            }
+            Err(_) => {}
+        }
         if let Ok(mut client) = websocket::ClientBuilder::new(
             format!("ws://{}:{}/explore", self.address, self.port).as_str(),
         ) {

@@ -13,3 +13,4 @@ serde.workspace = true
 serde_json.workspace = true
 rmp-serde.workspace = true
 websocket.workspace = true
+tungstenite.workspace = true

@@ -18,3 +18,4 @@ sha3 = { workspace = true }
 rayon.workspace = true
 reqwest.workspace = true
 websocket.workspace = true
+tungstenite.workspace = true

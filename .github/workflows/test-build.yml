@@ -111,6 +111,7 @@ jobs:
     - name: Build rust
       run: |
         cd ${{ github.workspace }}
-        curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh -s -- --default-toolchain stable -y 
+        Invoke-WebRequest -Uri "https://static.rust-lang.org/rustup/dist/x86_64-pc-windows-msvc/rustup-init.exe" -OutFile "rustup-init.exe"
+        .\rustup-init.exe -y
         rustup target add ${{ matrix.target }}
         cargo build --release --target ${{ matrix.target }}

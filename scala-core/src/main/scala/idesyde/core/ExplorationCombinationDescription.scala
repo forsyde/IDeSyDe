@@ -9,7 +9,10 @@ import idesyde.core.ExplorationCriteria
 final case class ExplorationCombinationDescription(
     val explorer_unique_identifier: String,
     val can_explore: Boolean,
-    val properties: Map[String, Double]
+    val is_complete: Boolean,
+    val competitiveness: Double,
+    val target_objectives: Set[String],
+    val additional_numeric_properties: Map[String, Double]
 ) derives ReadWriter {
 
 //   lazy val criterias: Map[ExplorationCriteria, Double] = explorer
@@ -39,7 +42,7 @@ final case class ExplorationCombinationDescription(
 object ExplorationCombinationDescription {
 
   def impossible(uniqueIdentifier: String) =
-    ExplorationCombinationDescription(uniqueIdentifier, false, Map())
+    ExplorationCombinationDescription(uniqueIdentifier, false, false, 1.0, Set(), Map())
 
   val partialOrdering = new PartialOrdering[ExplorationCombinationDescription] {
     def lteq(x: ExplorationCombinationDescription, y: ExplorationCombinationDescription): Boolean =
@@ -51,12 +54,17 @@ object ExplorationCombinationDescription {
     def tryCompare(
         x: ExplorationCombinationDescription,
         y: ExplorationCombinationDescription
-    ): Option[Int] = if (x.properties.keySet == y.properties.keySet) {
+    ): Option[Int] = if (
+      x.is_complete == y.is_complete &&
+      Math.abs(x.competitiveness - y.competitiveness) <= 0.001 &&
+      x.target_objectives == y.target_objectives &&
+      x.additional_numeric_properties.keySet == y.additional_numeric_properties.keySet
+    ) {
       var isgt = true
       var islt = true
-      for ((k, v) <- x.properties) {
-        isgt = isgt && v > y.properties(k)
-        islt = islt && v < y.properties(k)
+      for ((k, v) <- x.additional_numeric_properties) {
+        isgt = isgt && v > y.additional_numeric_properties(k)
+        islt = islt && v < y.additional_numeric_properties(k)
       }
       Some(
         if (isgt) 1 else if (islt) -1 else 0

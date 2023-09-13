@@ -321,11 +321,14 @@ impl Hash for DecisionModelHeader {
     }
 }
 
-#[derive(Debug, Deserialize, Serialize, Clone)]
+#[derive(Debug, Deserialize, Serialize, Clone, PartialEq)]
 pub struct ExplorationBid {
     pub explorer_unique_identifier: String,
     pub can_explore: bool,
-    pub properties: HashMap<String, f32>,
+    pub is_complete: bool,
+    pub competitiveness: f32,
+    pub target_objectives: HashSet<String>,
+    pub additional_numeric_properties: HashMap<String, f32>,
 }
 
 impl ExplorationBid {
@@ -338,42 +341,50 @@ impl Hash for ExplorationBid {
     fn hash<H: std::hash::Hasher>(&self, state: &mut H) {
         self.explorer_unique_identifier.hash(state);
         self.can_explore.hash(state);
-        for k in self.properties.keys() {
+        for k in self.additional_numeric_properties.keys() {
             k.hash(state);
         }
     }
 }
 
-impl PartialEq<ExplorationBid> for ExplorationBid {
-    fn eq(&self, other: &ExplorationBid) -> bool {
-        self.explorer_unique_identifier == other.explorer_unique_identifier
-            && self.can_explore == other.can_explore
-            && self.properties == other.properties
-    }
-}
+// impl PartialEq<ExplorationBid> for ExplorationBid {
+//     fn eq(&self, other: &ExplorationBid) -> bool {
+//         self.explorer_unique_identifier == other.explorer_unique_identifier
+//             && self.can_explore == other.can_explore
+//             && self.additional_numeric_properties == other.additional_numeric_properties
+//     }
+// }
 
 impl Eq for ExplorationBid {}
 
 impl PartialOrd<ExplorationBid> for ExplorationBid {
     fn partial_cmp(&self, other: &ExplorationBid) -> Option<Ordering> {
-        if self.can_explore == other.can_explore {
-            if self.properties.keys().eq(other.properties.keys()) {
+        if self.can_explore == other.can_explore
+            && self.is_complete == other.is_complete
+            && self.target_objectives == other.target_objectives
+        {
+            if (self.competitiveness - other.competitiveness).abs() <= 0.0001
+                && self
+                    .additional_numeric_properties
+                    .keys()
+                    .eq(other.additional_numeric_properties.keys())
+            {
                 if self
-                    .properties
+                    .additional_numeric_properties
                     .iter()
-                    .all(|(k, v)| v > other.properties.get(k).unwrap_or(v))
+                    .all(|(k, v)| v > other.additional_numeric_properties.get(k).unwrap_or(v))
                 {
                     return Some(Ordering::Greater);
                 } else if self
-                    .properties
+                    .additional_numeric_properties
                     .iter()
-                    .all(|(k, v)| v == other.properties.get(k).unwrap_or(v))
+                    .all(|(k, v)| v == other.additional_numeric_properties.get(k).unwrap_or(v))
                 {
                     return Some(Ordering::Equal);
                 } else if self
-                    .properties
+                    .additional_numeric_properties
                     .iter()
-                    .all(|(k, v)| v < other.properties.get(k).unwrap_or(v))
+                    .all(|(k, v)| v < other.additional_numeric_properties.get(k).unwrap_or(v))
                 {
                     return Some(Ordering::Less);
                 }

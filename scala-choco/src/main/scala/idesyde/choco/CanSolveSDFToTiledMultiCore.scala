@@ -503,8 +503,10 @@ final class CanSolveSDFToTiledMultiCore(using logger: Logger)
       .map((a, q) => intVars.find(_.getName() == s"jobOrder($a, $q)").get)
       .toVector
     val invThroughputs: Vector[IntVar] =
-      m.sdfApplications.actorsIdentifiers.map(a => intVars.find(_.getName() == s"invTh($a)").get)
-    val numMappedElements = intVars.find(_.getName() == "numMappedElements").get
+      m.sdfApplications.actorsIdentifiers.map(a =>
+        intVars.find(_.getName() == s"invThroughput($a)").get
+      )
+    val numMappedElements = intVars.find(_.getName() == "nUsedPEs").get
     val jobsAndActors =
       m.sdfApplications.jobsAndActors
     val full = m.copy(

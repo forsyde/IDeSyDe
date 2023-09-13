@@ -118,8 +118,8 @@ impl ExplorationSolutionMessage {
     }
 }
 
-impl From<ExplorationSolution> for ExplorationSolutionMessage {
-    fn from(value: ExplorationSolution) -> Self {
+impl From<&ExplorationSolution> for ExplorationSolutionMessage {
+    fn from(value: &ExplorationSolution) -> Self {
         let (sol, objs) = value;
         ExplorationSolutionMessage {
             objectives: objs.clone(),

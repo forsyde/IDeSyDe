@@ -37,9 +37,29 @@ class ChocoExplorer(using logger: Logger) extends Explorer:
       case workloadAndSDF: PeriodicWorkloadAndSDFServerToMultiCore => true
       case c: ChocoDecisionModel                                   => true
       case _                                                       => false
+    val objectives: Set[String] = decisionModel match {
+      case sdf: SDFToTiledMultiCore =>
+        sdf.sdfApplications.minimumActorThroughputs.zipWithIndex
+          .filter((th, i) => th > 0.0)
+          .map((th, i) => "invThroughput(" + sdf.sdfApplications.actorsIdentifiers(i) + ")")
+          .toSet + "nUsedPEs"
+      case workload: PeriodicWorkloadToPartitionedSharedMultiCore => Set("nUsedPEs")
+      case workloadAndSDF: PeriodicWorkloadAndSDFServerToMultiCore =>
+        workloadAndSDF.tasksAndSDFs.sdfApplications.minimumActorThroughputs.zipWithIndex
+          .filter((th, i) => th > 0.0)
+          .map((th, i) =>
+            "invThroughput(" + workloadAndSDF.tasksAndSDFs.sdfApplications
+              .actorsIdentifiers(i) + ")"
+          )
+          .toSet + "nUsedPEs"
+      case _ => Set()
+    }
     ExplorationCombinationDescription(
       uniqueIdentifier,
       canExplore,
+      true,
+      1.0,
+      objectives,
       availableCriterias(decisionModel)
         .map(c => c.identifier -> criteriaValue(decisionModel, c))
         .toMap

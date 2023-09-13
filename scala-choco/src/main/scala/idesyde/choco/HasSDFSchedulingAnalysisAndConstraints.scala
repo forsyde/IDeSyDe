@@ -79,7 +79,7 @@ trait HasSDFSchedulingAnalysisAndConstraints
     val invThroughputs = actors.zipWithIndex
       .map((a, i) =>
         chocoModel.intVar(
-          s"invTh($a)",
+          s"invThroughput($a)",
           durations(i).getLB(),
           maxLength,
           true
@@ -133,7 +133,7 @@ trait HasSDFSchedulingAnalysisAndConstraints
       )
     )
 
-    val numMappedElements = chocoModel.intVar("numMappedElements", 1, schedulers.size, false)
+    val numMappedElements = chocoModel.intVar("nUsedPEs", 1, schedulers.size, false)
 
     chocoModel.nValues(processMappings, numMappedElements).post()
     chocoModel.count(0, jobOrder, numMappedElements).post()

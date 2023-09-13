@@ -9,6 +9,7 @@ import idesyde.core.Explorer;
 import idesyde.core.headers.ExplorationBidding;
 
 import java.util.HashMap;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
@@ -22,8 +23,18 @@ public class JeneticsExplorer implements Explorer, CanExploreAADPMMMWithJenetics
 
     @Override
     public ExplorationBidding bid(DecisionModel decisionModel) {
-        if (decisionModel instanceof AperiodicAsynchronousDataflowToPartitionedMemoryMappableMulticore) {
-            return new ExplorationBidding(uniqueIdentifer(), true, Map.of());
+        if (decisionModel instanceof AperiodicAsynchronousDataflowToPartitionedMemoryMappableMulticore aperiodicAsynchronousDataflowToPartitionedMemoryMappableMulticore) {
+            var objs = new HashSet<String>();
+            objs.add("nUsedPEs");
+            for (var app : aperiodicAsynchronousDataflowToPartitionedMemoryMappableMulticore
+                    .aperiodicAsynchronousDataflows()) {
+                for (var actor : app.processes()) {
+                    if (!app.processMinimumThroughput().containsKey(actor)) {
+                        objs.add("invThroughput(%s)".formatted(actor));
+                    }
+                }
+            }
+            return new ExplorationBidding(uniqueIdentifer(), true, false, 1.3, objs, Map.of());
         }
         return Explorer.super.bid(decisionModel);
     }

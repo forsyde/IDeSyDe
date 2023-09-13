@@ -40,7 +40,7 @@ pub struct ExplorationRequestMessage {
 }
 
 impl ExplorationRequestMessage {
-    fn from<T: DecisionModel + ?Sized>(
+    pub fn from<T: DecisionModel + ?Sized>(
         explorer_name: &str,
         decision_model: &T,
     ) -> ExplorationRequestMessage {
@@ -51,7 +51,19 @@ impl ExplorationRequestMessage {
         }
     }
 
-    fn to_json_str(&self) -> String {
+    pub fn with_previous_solutions<T: DecisionModel + ?Sized>(
+        explorer_name: &str,
+        decision_model: &T,
+        previous_solutions: Vec<ExplorationSolutionMessage>,
+    ) -> ExplorationRequestMessage {
+        ExplorationRequestMessage {
+            explorer_id: explorer_name.to_owned(),
+            model_message: DecisionModelMessage::from(decision_model),
+            previous_solutions: previous_solutions,
+        }
+    }
+
+    pub fn to_json_str(&self) -> String {
         serde_json::to_string(self).expect("Failed to serialize but shoudl always succeed")
     }
 }
@@ -224,7 +236,7 @@ impl ExplorationModule for ExternalServerExplorationModule {
         &self,
         m: Arc<dyn DecisionModel>,
         explorer_id: &str,
-        _currrent_solutions: Vec<ExplorationSolution>,
+        currrent_solutions: Vec<ExplorationSolution>,
         exploration_configuration: ExplorationConfiguration,
     ) -> Box<dyn Iterator<Item = ExplorationSolution> + '_> {
         if let Err(e) = self
@@ -258,325 +270,18 @@ impl ExplorationModule for ExternalServerExplorationModule {
         if let Ok((mut conn, _)) =
             tungstenite::connect(format!("ws://{}:{}/explore", self.address, self.port).as_str())
         {
-            let message = ExplorationRequestMessage::from(explorer_id, m.as_ref());
+            let message = ExplorationRequestMessage::with_previous_solutions(
+                explorer_id,
+                m.as_ref(),
+                currrent_solutions
+                    .iter()
+                    .map(|x| ExplorationSolutionMessage::from(x))
+                    .collect(),
+            );
             if let Ok(_) = conn.send(tungstenite::Message::text(message.to_json_str())) {
                 return Box::new(HttpServerSolutionIter::new(conn));
             }
         }
-        // let it = std::iter::once_with(|| {});
-        // let cloned = m.to_owned();
-        // let explorer_id_cloned = explorer_id.to_owned();
-        // let z = it
-        //     .flat_map(|x| x.ok())
-        //     .flat_map(move |(mut conn, _)| {
-        //         let message =
-        //             ExplorationRequestMessage::from(explorer_id_cloned.as_str(), cloned.as_ref());
-        //         if let Ok(_) = conn.send(tungstenite::Message::text(message.to_json_str())) {
-        //             return Some(conn);
-        //         }
-        //         None
-        //     })
-        //     .flat_map(|mut conn| std::iter::repeat_with(move || conn.read()))
-        //     .take_while(|x| x.is_ok())
-        //     .flat_map(|x| x.ok())
-        //     .flat_map(|x| x.into_text())
-        //     .flat_map(|sol_txt| {
-        //         if let Some(sol) = ExplorationSolutionMessage::from_json_str(sol_txt.as_str()) {
-        //             return Some((
-        //                 Arc::new(OpaqueDecisionModel::from(&sol)) as Arc<dyn DecisionModel>,
-        //                 sol.objectives,
-        //             ));
-        //         } else {
-        //             warn!(
-        //                 "Failed to deserialize exploration solution of module {}",
-        //                 self.unique_identifier()
-        //             );
-        //             return None;
-        //         }
-        //     });
-        // return Rc::new(z);
-        // if let Ok((mut conn, _)) =
-        //     tungstenite::connect(format!("ws://{}:{}/explore", self.address, self.port).as_str())
-        // {
-        //     let message = ExplorationRequestMessage::from(explorer_id, m.as_ref());
-        //     if let Ok(_) = conn.send(tungstenite::Message::text(message.to_json_str())) {
-        //         return Rc::new(
-        //             std::iter::repeat_with(move || conn.read())
-        //                 .take_while(|x| x.is_ok())
-        //                 .flat_map(|x| x.ok())
-        //                 .flat_map(|x| x.into_text())
-        //                 .flat_map(|sol_txt| {
-        //                     if let Some(sol) =
-        //                         ExplorationSolutionMessage::from_json_str(sol_txt.as_str())
-        //                     {
-        //                         return Some((
-        //                             Arc::new(OpaqueDecisionModel::from(&sol))
-        //                                 as Arc<dyn DecisionModel>,
-        //                             sol.objectives,
-        //                         ));
-        //                     } else {
-        //                         warn!(
-        //                             "Failed to deserialize exploration solution of module {}",
-        //                             self.unique_identifier()
-        //                         );
-        //                         return None;
-        //                     }
-        //                 }),
-        //         );
-        //     }
-        // }
-        // Rc::new(std::iter::empty())
         Box::new(std::iter::empty())
     }
-
-    // fn iter_explore(
-    //     &self,
-    //     m: Arc<dyn DecisionModel>,
-    //     explorer_id: &str,
-    //     _currrent_solutions: Vec<idesyde_core::ExplorationSolution>,
-    //     exploration_configuration: idesyde_core::ExplorationConfiguration,
-    //     solution_iter: fn(&ExplorationSolution) -> (),
-    // ) -> Vec<idesyde_core::ExplorationSolution> {
-    //     if let Err(e) = self
-    //         .http_post(
-    //             "set",
-    //             &vec![("parameter", "max-sols")],
-    //             &exploration_configuration.max_sols,
-    //         )
-    //         .and(self.http_post(
-    //             "set",
-    //             &vec![("parameter", "total-timeout")],
-    //             &exploration_configuration.total_timeout,
-    //         ))
-    //         .and(self.http_post(
-    //             "set",
-    //             &vec![("parameter", "time-resolution")],
-    //             &exploration_configuration.time_resolution,
-    //         ))
-    //         .and(self.http_post(
-    //             "set",
-    //             &vec![("parameter", "memory-resolution")],
-    //             &exploration_configuration.memory_resolution,
-    //         ))
-    //     {
-    //         warn!(
-    //             "Could not set exploration parameters for module {}. Trying to continue.",
-    //             self.unique_identifier()
-    //         );
-    //         debug!("Error is {}", e.to_string());
-    //     };
-    //     if let Ok(mut client) = websocket::ClientBuilder::new(
-    //         format!("ws://{}:{}/explore", self.address, self.port).as_str(),
-    //     ) {
-    //         if let Ok(mut conn) = client.connect_insecure() {
-    //             let message = ExplorationRequestMessage::from(explorer_id, m.as_ref());
-    //             if let Ok(_) = conn.send_message(&Message::text(message.to_json_str())) {
-    //                 return conn
-    //                     .incoming_messages()
-    //                     .take_while(|x| x.is_ok())
-    //                     .flat_map(|x| x.ok())
-    //                     .flat_map(|res| match res {
-    //                         websocket::OwnedMessage::Text(sol_txt) => {
-    //                             if let Some(sol_message) =
-    //                                 ExplorationSolutionMessage::from_json_str(sol_txt.as_str())
-    //                             {
-    //                                 let sol = (
-    //                                     Arc::new(OpaqueDecisionModel::from(&sol_message))
-    //                                         as Arc<dyn DecisionModel>,
-    //                                     sol_message.objectives,
-    //                                 );
-    //                                 solution_iter(&sol);
-    //                                 Some(sol)
-    //                             } else {
-    //                                 warn!(
-    //                                     "Failed to deserialize exploration solution of module {}",
-    //                                     self.unique_identifier()
-    //                                 );
-    //                                 None
-    //                             }
-    //                         }
-    //                         _ => None,
-    //                     })
-    //                     .collect();
-    //             };
-    //         }
-    //     }
-    //     vec![]
-    // }
 }
-
-// #[derive(Debug, PartialEq, Eq, Hash)]
-// pub struct ExternalExplorationModule {
-//     pub command_path_: PathBuf,
-//     pub identified_path_: PathBuf,
-//     pub solved_path_: PathBuf,
-// }
-
-// impl ExternalExplorationModule {
-//     pub fn is_java(&self) -> bool {
-//         self.command_path_
-//             .extension()
-//             .and_then(|s| s.to_str())
-//             .map(|s| s == "jar")
-//             .unwrap_or(false)
-//     }
-// }
-
-// impl ExplorationModule for ExternalExplorationModule {
-//     fn unique_identifier(&self) -> String {
-//         self.command_path_.to_str().unwrap().to_string()
-//     }
-
-//     // fn available_criterias(
-//     //     &self,
-//     //     _m: Box<dyn idesyde_core::DecisionModel>,
-//     // ) -> std::collections::HashMap<String, f32> {
-//     //     HashMap::new() // TODO: put interfaces later
-//     // }
-
-//     fn bid(&self, m: Arc<dyn idesyde_core::DecisionModel>) -> Vec<ExplorationBid> {
-//         let headers = load_decision_model_headers_from_binary(&self.identified_path_);
-//         let chosen_path = headers
-//             .iter()
-//             .find(|(_, h)| h == &m.header())
-//             .map(|(p, _)| p)
-//             .unwrap();
-//         let output = match self.is_java() {
-//             true => std::process::Command::new("java")
-//                 .arg("-jar")
-//                 .arg(&self.command_path_)
-//                 .arg("-c")
-//                 .arg(chosen_path)
-//                 .arg("-i")
-//                 .arg(&self.identified_path_)
-//                 .stdout(Stdio::piped())
-//                 .stderr(Stdio::piped())
-//                 .output(),
-//             false => std::process::Command::new(&self.command_path_)
-//                 .arg("-c")
-//                 .arg(chosen_path)
-//                 .arg("-i")
-//                 .arg(&self.identified_path_)
-//                 .stdout(Stdio::piped())
-//                 .stderr(Stdio::piped())
-//                 .output(),
-//         };
-//         let o = output
-//             .expect("Failed to get combination from exploration module.")
-//             .stdout;
-//         o.lines().flat_map(|l_or_err| l_or_err.ok()).map(|l| {
-//             match serde_json::from_str(l.as_str()) {
-//                 Ok(bid) => bid,
-//                 Err(e) => {
-//                     warn!("Failed to deserialize combination from exploration module. Assuming it cannot explore.");
-//                     debug!("Given error is: {}", e.to_string());
-//                     debug!(
-//                         "Return output from the exploration module is: {}",
-//                         std::str::from_utf8(&o).unwrap_or("NOT UTF8")
-//                     );
-//                     ExplorationBid {
-//                         explorer_unique_identifier: self.unique_identifier(),
-//                         decision_model_category: m.category(),
-//                         can_explore: false,
-//                         properties: HashMap::new(),
-//                     }
-//                 }
-//             }
-//         }).collect()
-//     }
-
-//     fn explore(
-//         &self,
-//         m: Arc<dyn idesyde_core::DecisionModel>,
-//         explorer_id: &str,
-//         max_sols: i64,
-//         total_timeout: i64,
-//         time_resolution: i64,
-//         memory_resolution: i64,
-//     ) -> Box<dyn Iterator<Item = Arc<dyn DecisionModel>>> {
-//         let headers = load_decision_model_headers_from_binary(&self.identified_path_);
-//         let chosen_path = headers
-//             .iter()
-//             .find(|(_, h)| h == &m.header())
-//             .map(|(p, _)| p)
-//             .unwrap();
-//         let child_opt = match self.is_java() {
-//             true => std::process::Command::new("java")
-//                 .arg("-jar")
-//                 .arg(&self.command_path_)
-//                 .arg("-e")
-//                 .arg(chosen_path)
-//                 .arg("-i")
-//                 .arg(&self.identified_path_)
-//                 .arg("-o")
-//                 .arg(&self.solved_path_)
-//                 .arg("-n")
-//                 .arg(explorer_id.to_string())
-//                 .arg("--maximum-solutions")
-//                 .arg(format!("{}", max_sols))
-//                 .arg("--total-timeout")
-//                 .arg(format!("{}", total_timeout))
-//                 .arg("--time-resolution")
-//                 .arg(format!("{}", time_resolution))
-//                 .arg("--memory-resolution")
-//                 .arg(format!("{}", memory_resolution))
-//                 .stdout(Stdio::piped())
-//                 .stderr(Stdio::piped())
-//                 .spawn(),
-//             false => std::process::Command::new(&self.command_path_)
-//                 .arg("-e")
-//                 .arg(chosen_path)
-//                 .arg("-i")
-//                 .arg(&self.identified_path_)
-//                 .arg("-o")
-//                 .arg(&self.solved_path_)
-//                 .arg("-n")
-//                 .arg(explorer_id.to_string())
-//                 .arg("--maximum-solutions")
-//                 .arg(format!("{}", max_sols))
-//                 .arg("--total-timeout")
-//                 .arg(format!("{}", total_timeout))
-//                 .arg("--time-resolution")
-//                 .arg(format!("{}", time_resolution))
-//                 .arg("--memory-resolution")
-//                 .arg(format!("{}", memory_resolution))
-//                 .stdout(Stdio::piped())
-//                 .stderr(Stdio::piped())
-//                 .spawn(),
-//         };
-//         let uid = self.unique_identifier().clone();
-//         let child = child_opt.expect("Failed to initiate explorer");
-//         let out = child.stdout.expect("Failed to acquire explorer STDOUT");
-//         let err = child.stderr.expect("Failed to achique explorer STDERR");
-//         if BufReader::new(err).lines().flatten().any(|l| !l.is_empty()) {
-//             warn!(
-//                 "Exploration module {} produced error messages. Please check it for correctness.",
-//                 uid
-//             );
-//         }
-//         let buf = BufReader::new(out);
-//         Box::new(
-//             buf.lines()
-//                 .map(|l| l.expect("Failed to read solution during exploration"))
-//                 .flat_map(move |f| {
-//                     let h = load_decision_model_header_from_path(Path::new(f.as_str()));
-//                     if h.is_none() {
-//                         warn!("Exploration module {} produced non-compliant output '{}' during exploration. Please check it for correctness.", uid, f);
-//                     }
-//                     h
-//                 })
-//                 .map(|m| Arc::new(m) as Arc<dyn DecisionModel>),
-//         )
-//     }
-
-//     fn iter_explore(
-//         &self,
-//         _m: Arc<dyn DecisionModel>,
-//         _explorer_id: &str,
-//         _currrent_solutions: Vec<ExplorationSolution>,
-//         _exploration_configuration: idesyde_core::ExplorationConfiguration,
-//         _solution_iter: fn(ExplorationSolution) -> (),
-//     ) -> Vec<ExplorationSolution> {
-//         vec![]
-//     }
-// }

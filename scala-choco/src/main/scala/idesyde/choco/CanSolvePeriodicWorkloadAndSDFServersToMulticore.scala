@@ -51,7 +51,7 @@ final class CanSolvePeriodicWorkloadAndSDFServersToMulticore(using logger: Logge
     //   )
     def double2int(s: Double) = discretized(
       if (timeResolution > Int.MaxValue) Int.MaxValue
-      else if (timeResolution <= 0L) (timeValues.sum / timeValues.min).ceil.toDouble.toInt / 100
+      else if (timeResolution <= 0L) timeValues.size * 1000
       else timeResolution.toInt,
       timeValues.sum
     )(s)
@@ -162,6 +162,9 @@ final class CanSolvePeriodicWorkloadAndSDFServersToMulticore(using logger: Logge
         )
       )
     )
+
+    val numMappedElements = chocoModel.intVar("nUsedPEs", 0, m.platform.runtimes.isFixedPriority.count(a => a), true)
+    chocoModel.nValues(processExecution.toArray, numMappedElements).post()
 
     val (
       durationsExec,
@@ -307,7 +310,7 @@ final class CanSolvePeriodicWorkloadAndSDFServersToMulticore(using logger: Logge
       jobOrder,
       mappedJobsPerElement,
       invThroughputs,
-      numMappedElements
+      _
     ) = postSDFTimingAnalysis(
       chocoModel,
       m.tasksAndSDFs.sdfApplications.actorsIdentifiers,
@@ -359,11 +362,13 @@ final class CanSolvePeriodicWorkloadAndSDFServersToMulticore(using logger: Logge
     createAndApplyMOOPropagator(
       chocoModel,
       objs,
-      objectivesUpperLimits.map((m, o) =>
+      objectivesUpperLimits
+      .map((s, o) =>
         o.map((k, v) =>
           if (uniqueGoalPerSubGraphThs.exists(_.getName().equals(k))) k -> double2int(v)
           else k                                                           -> v.toInt
         )
+        .filter((k, v) => objs.exists(_.getName().equals(k)))
       )
     )
 
@@ -409,7 +414,7 @@ final class CanSolvePeriodicWorkloadAndSDFServersToMulticore(using logger: Logge
       m.wcets.flatten ++ m.platform.hardware.maxTraversalTimePerBit.flatten
         .map(
           _.toDouble
-        ) ++ m.tasksAndSDFs.workload.periods ++ m.wcets.flatten ++ m.tasksAndSDFs.workload.relativeDeadlines
+        ) ++ m.tasksAndSDFs.workload.periods.zip(m.tasksAndSDFs.workload.relativeDeadlines).map((a, b) => scala.math.max(a, b))
     val memoryValues =
       m.platform.hardware.storageSizes ++ m.tasksAndSDFs.sdfApplications.sdfMessages
         .map((src, _, _, mSize, p, c, tok) =>
@@ -417,7 +422,7 @@ final class CanSolvePeriodicWorkloadAndSDFServersToMulticore(using logger: Logge
         ) ++ m.tasksAndSDFs.workload.messagesMaxSizes ++ m.tasksAndSDFs.workload.processSizes
     def int2double(d: Int) = undiscretized(
       if (timeResolution > Int.MaxValue) Int.MaxValue
-      else if (timeResolution <= 0L) timeValues.size * 100
+      else if (timeResolution <= 0L) timeValues.size * 1000
       else timeResolution.toInt,
       timeValues.sum
     )(d)
@@ -482,8 +487,10 @@ final class CanSolvePeriodicWorkloadAndSDFServersToMulticore(using logger: Logge
           intVars.find(_.getName() == s"vc($src, $ce)").get
         )
       )
-    val numMappedElements = intVars.find(_.getName() == "numMappedElements").get
+    val numMappedElements = intVars.find(_.getName() == "nUsedPEs").get
     val invThs = intVars.filter(_.getName().startsWith("invTh"))
+    println(invThs.mkString(", "))
+    println(invThs.map(v => v.getName() -> int2double(v.getValue())).mkString(", "))
     val dataChannelsSlotAllocations = m.tasksAndSDFs.workload.dataChannels.zipWithIndex.map((c, ci) => c -> {
         // we have to look from the source perpective, since the sending processor is the one that allocates
         val mem = dataChannelsMemoryMapping(ci)
@@ -534,6 +541,6 @@ final class CanSolvePeriodicWorkloadAndSDFServersToMulticore(using logger: Logge
       processesMappings = tasksMemoryMapping.zipWithIndex.map((mi, ti) => m.tasksAndSDFs.workload.processes(ti) -> m.platform.hardware.storageElems(mi))  ++ actorsMemoryMapping.zipWithIndex.map((mi, ti) => m.tasksAndSDFs.sdfApplications.actorsIdentifiers(ti) -> m.platform.hardware.storageElems(mi)),
       messagesMappings = dataChannelsMemoryMapping.zipWithIndex.map((mi, ci) => m.tasksAndSDFs.workload.dataChannels(ci) -> m.platform.hardware.storageElems(mi)) ++ sdfMessageMemoryMappings,
       messageSlotAllocations = dataChannelsSlotAllocations ++ sdfChannelsSlotAllocations
-    ), Map("numMappedElements" -> numMappedElements.getValue().toDouble) ++ invThs.map(v => v.getName() -> int2double(v.getValue())).toMap)
+    ), Map("nUsedPEs" -> numMappedElements.getValue().toDouble) ++ invThs.map(v => v.getName() -> int2double(v.getValue())).toMap)
   }
 }

@@ -532,12 +532,11 @@ trait StandaloneIdentificationModule
             designModels,
             decisionModels
           )
-          val newIdentified = identified -- decisionModels
-          decisionModels ++= newIdentified
+          decisionModels ++= identified
           ctx.result(
             write(
               IdentificationResultMessage(
-                newIdentified.map(DecisionModelMessage.fromDecisionModel(_)),
+                identified.map(DecisionModelMessage.fromDecisionModel(_)),
                 errors
               )
             )

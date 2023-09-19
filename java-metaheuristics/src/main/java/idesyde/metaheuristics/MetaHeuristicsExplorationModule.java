@@ -6,16 +6,18 @@ import idesyde.common.AperiodicAsynchronousDataflowToPartitionedMemoryMappableMu
 import idesyde.core.DecisionModel;
 import idesyde.core.Explorer;
 import io.javalin.Javalin;
+import picocli.CommandLine;
 
 import java.util.Optional;
 import java.util.Set;
 
-public class MetaHeuristicsExplorationModule implements StandaloneExplorationModule  {
+public class MetaHeuristicsExplorationModule implements StandaloneExplorationModule {
     @Override
     public Optional<DecisionModel> decisionMessageToModel(DecisionModelMessage message) {
         switch (message.header().category()) {
             case "AperiodicAsynchronousDataflowToPartitionedMemoryMappableMulticore":
-                return message.body().flatMap(x -> readDecisionModel(x, AperiodicAsynchronousDataflowToPartitionedMemoryMappableMulticore.class));
+                return message.body().flatMap(x -> readDecisionModel(x,
+                        AperiodicAsynchronousDataflowToPartitionedMemoryMappableMulticore.class));
             default:
                 return Optional.empty();
         }
@@ -28,6 +30,8 @@ public class MetaHeuristicsExplorationModule implements StandaloneExplorationMod
 
     public static void main(String[] args) {
         var module = new MetaHeuristicsExplorationModule();
-        module.standaloneExplorationModuleServer(args).ifPresent(x -> x.start(0));
+        var cli = new StandaloneExplorationModule.ExplorationModuleCLI();
+        var res = new CommandLine(cli).execute(args);
+        module.standaloneExplorationModuleServer(cli).ifPresent(x -> x.start(0));
     }
 }

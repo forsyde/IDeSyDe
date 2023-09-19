@@ -1,4 +1,5 @@
 use std::{
+    cmp::Ordering,
     collections::HashMap,
     io::BufRead,
     io::BufReader,
@@ -182,14 +183,14 @@ impl Drop for ExternalServerExplorationModule {
 }
 
 pub struct HttpServerSolutionIter {
-    pub conn: tungstenite::WebSocket<tungstenite::stream::MaybeTlsStream<std::net::TcpStream>>,
+    pub conn: tungstenite::WebSocket<std::net::TcpStream>,
 }
 
 impl HttpServerSolutionIter {
     /// This creation function assumes that the channel is already sending back solutions
     pub fn new<I>(c: I) -> HttpServerSolutionIter
     where
-        I: Into<tungstenite::WebSocket<tungstenite::stream::MaybeTlsStream<std::net::TcpStream>>>,
+        I: Into<tungstenite::WebSocket<std::net::TcpStream>>,
     {
         return HttpServerSolutionIter { conn: c.into() };
     }
@@ -200,12 +201,21 @@ impl Iterator for HttpServerSolutionIter {
 
     fn next(&mut self) -> Option<Self::Item> {
         if self.conn.can_read() {
-            if let Ok(sol_txt) = self.conn.read().and_then(|x| x.into_text()) {
-                if let Some(sol) = ExplorationSolutionMessage::from_json_str(sol_txt.as_str()) {
-                    return Some((
-                        Arc::new(OpaqueDecisionModel::from(&sol)) as Arc<dyn DecisionModel>,
-                        sol.objectives,
-                    ));
+            // while let is here in order to discard keep
+            while let Ok(message) = self.conn.read() {
+                if message.is_ping() {
+                    self.conn
+                        .send(tungstenite::Message::Pong(vec![]))
+                        .expect("Failed to seng pong message to ping.");
+                } else if message.is_text() {
+                    if let Some(sol) = ExplorationSolutionMessage::from_json_str(
+                        message.into_text().unwrap().as_str(),
+                    ) {
+                        return Some((
+                            Arc::new(OpaqueDecisionModel::from(&sol)) as Arc<dyn DecisionModel>,
+                            sol.objectives,
+                        ));
+                    }
                 }
             }
         }
@@ -267,21 +277,184 @@ impl ExplorationModule for ExternalServerExplorationModule {
             );
             debug!("Error is {}", e.to_string());
         };
-        if let Ok((mut conn, _)) =
-            tungstenite::connect(format!("ws://{}:{}/explore", self.address, self.port).as_str())
-        {
-            let message = ExplorationRequestMessage::with_previous_solutions(
-                explorer_id,
-                m.as_ref(),
-                currrent_solutions
-                    .iter()
-                    .map(|x| ExplorationSolutionMessage::from(x))
-                    .collect(),
-            );
-            if let Ok(_) = conn.send(tungstenite::Message::text(message.to_json_str())) {
-                return Box::new(HttpServerSolutionIter::new(conn));
+        match std::net::TcpStream::connect(format!("{}:{}", self.address, self.port).as_str()) {
+            Ok(stream) => {
+                stream
+                    .set_read_timeout(None)
+                    .expect("Failed to set read timeout to infinite. Should never fail.");
+                stream
+                    .set_write_timeout(None)
+                    .expect("Failed to set write timeout to infinite. Should never fail.");
+                match tungstenite::client(
+                    format!("ws://{}:{}/explore", self.address, self.port).as_str(),
+                    stream,
+                ) {
+                    Ok((mut conn, _)) => {
+                        let message = ExplorationRequestMessage::with_previous_solutions(
+                            explorer_id,
+                            m.as_ref(),
+                            currrent_solutions
+                                .iter()
+                                .map(|x| ExplorationSolutionMessage::from(x))
+                                .collect(),
+                        );
+                        if let Ok(_) = conn.send(tungstenite::Message::text(message.to_json_str()))
+                        {
+                            return Box::new(HttpServerSolutionIter::new(conn));
+                        }
+                    }
+                    Err(e) => {
+                        debug!(
+                            "Failed to handshake with {}: {}",
+                            self.unique_identifier(),
+                            e.to_string()
+                        );
+                    }
+                }
+            }
+            Err(e) => {
+                debug!(
+                    "Failed to create connection with {}: {}",
+                    self.unique_identifier(),
+                    e.to_string()
+                );
             }
         }
         Box::new(std::iter::empty())
     }
+}
+
+pub fn compute_pareto_solutions(sols: Vec<ExplorationSolution>) -> Vec<ExplorationSolution> {
+    sols.iter()
+        .filter(|x @ (_, objs)| {
+            sols.iter()
+                .filter(|y| x != y)
+                .all(|(_, other_objs)| objs.iter().any(|(k, v)| v < other_objs.get(k).unwrap()))
+        })
+        .map(|x| x.to_owned())
+        .collect()
+}
+
+pub fn pareto_dominance_partial_cmp(
+    lhs: &HashMap<String, f64>,
+    rhs: &HashMap<String, f64>,
+) -> Option<Ordering> {
+    if lhs.keys().all(|x| rhs.contains_key(x)) && rhs.keys().all(|x| lhs.contains_key(x)) {
+        if lhs.iter().all(|(k, v)| v == rhs.get(k).unwrap()) {
+            Some(Ordering::Equal)
+        } else if lhs.iter().all(|(k, v)| v < rhs.get(k).unwrap()) {
+            Some(Ordering::Less)
+        } else if lhs.iter().all(|(k, v)| v > rhs.get(k).unwrap()) {
+            Some(Ordering::Greater)
+        } else {
+            None
+        }
+    } else {
+        None
+    }
+}
+
+pub fn explore_cooperatively(
+    m: Arc<dyn DecisionModel>,
+    emodules_and_explorer_ids: Vec<(Arc<dyn ExplorationModule>, &str)>,
+    currrent_solutions: Vec<ExplorationSolution>,
+    exploration_configuration: ExplorationConfiguration,
+    // solution_inspector: F,
+) -> Vec<ExplorationSolution>
+// where
+//     F: Fn(ExplorationSolution) -> () + Copy + Send,
+{
+    let mut aggregated_solutions = Vec::new();
+    aggregated_solutions.extend(currrent_solutions.into_iter());
+    let shared_solutions = Arc::new(Mutex::new(aggregated_solutions));
+    let completed = Arc::new(Mutex::new(false));
+    rayon::scope(|s| {
+        // the explorers
+        for (emodule, explorer_id) in emodules_and_explorer_ids {
+            let m_cloned = m.clone();
+            let completed_cloned = completed.clone();
+            let shared_solutions_cloned = shared_solutions.clone();
+            s.spawn(move |_| {
+                while let Ok(false) = completed_cloned.lock().map(|x| *x) {
+                    let previous_solutions = shared_solutions_cloned
+                        .lock()
+                        .map(|x| x.clone())
+                        .unwrap_or(Vec::new());
+                    let mut should_restart = false;
+                    for (solved_model, sol_objs) in emodule.explore(
+                        m_cloned.to_owned(),
+                        explorer_id,
+                        previous_solutions,
+                        exploration_configuration.to_owned(),
+                    ) {
+                        if let Ok(mut sols) = shared_solutions_cloned.lock() {
+                            // no other solution dominates the found one
+                            let sol_not_dominated = sols.len() == 0
+                                || sols.iter().any(|(_, y)| {
+                                    pareto_dominance_partial_cmp(&sol_objs, y)
+                                        != Some(Ordering::Greater)
+                                });
+                            if sol_not_dominated {
+                                // debug info
+                                debug!(
+                                    "Found a new solution with objectives: {}.",
+                                    &sol_objs
+                                        .iter()
+                                        .map(|(k, v)| format!("{}: {}", k, v))
+                                        .reduce(|s1, s2| format!("{}, {}", s1, s2))
+                                        .unwrap_or("None".to_owned())
+                                );
+                                // solution_inspector((solved_model, sol_objs));
+                                // then it is an improvement, take out the solutions that are dominated
+                                sols.retain(|(_, y)| {
+                                    pareto_dominance_partial_cmp(&sol_objs, y)
+                                        != Some(Ordering::Less)
+                                });
+                                //add the new solution
+                                sols.push((solved_model, sol_objs));
+                            } else {
+                                should_restart = true;
+                            }
+                        }
+                        if should_restart {
+                            break;
+                        }
+                    }
+                    if !should_restart {
+                        // if no improvement has been made but the loop finished, mark as complete
+                        if let Ok(mut comp) = completed_cloned.lock() {
+                            *comp = true;
+                        }
+                    }
+                }
+            });
+        }
+        // let explorer_channels: Vec<
+        //     std::sync::mpsc::Sender<(Arc<dyn DecisionModel>, Vec<ExplorationSolution>)>,
+        // > = emodules_and_explorer_ids
+        //     .iter()
+        //     .map(|(emodule, e_id)| {
+        //         let (exp_tx, exp_rx) =
+        //             std::sync::mpsc::channel::<(Arc<dyn DecisionModel>, Vec<ExplorationSolution>)>(
+        //             );
+        //         s.spawn(move |_| {
+        //             while let Ok((in_model, received_sols)) = exp_rx.recv() {
+        //                 for sol in emodule.explore(
+        //                     in_model,
+        //                     *e_id,
+        //                     received_sols,
+        //                     exploration_configuration.to_owned(),
+        //                 ) {
+        //                     if exp_rx.
+        //                 }
+        //             }
+        //         });
+        //         exp_tx
+        //     })
+        //     .collect();
+        // for (emodule, explorer_id) in emodules_and_explorer_ids {}
+        // the main controller for the cooperation
+        // s.spawn(move |_| {});
+    });
+    return shared_solutions.lock().unwrap().to_owned();
 }

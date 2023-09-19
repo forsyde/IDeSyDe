@@ -7,7 +7,7 @@ use idesyde_core::{
     ExplorationModule, ExplorationSolution,
 };
 use idesyde_orchestration::{
-    exploration::ExternalServerExplorationModule,
+    exploration::{explore_cooperatively, ExternalServerExplorationModule},
     identification::{identification_procedure, ExternalServerIdentificationModule},
     models::OpaqueDesignModel,
 };
@@ -51,6 +51,12 @@ struct Args {
         help = "Sets the maximum number of parallel jobs (or threads) for the non-exploration procedures. Default is 1."
     )]
     parallel_jobs: Option<usize>,
+
+    #[arg(
+        long,
+        help = "Inclusion rule of which decision models are to be kept during bidding. \nIf none is given, all are included."
+    )]
+    decision_model: Vec<String>,
 
     #[arg(
         long,
@@ -108,7 +114,7 @@ fn main() {
         .filter(None, verbosity.to_level_filter())
         .write_style(WriteStyle::Always)
         .format_target(false)
-        .format_module_path(false)
+        .format_module_path(true)
         .init();
     if args.inputs.len() > 0 {
         rayon::ThreadPoolBuilder::new()
@@ -418,17 +424,26 @@ fn main() {
                     .map(|b| (e.clone(), m.clone(), b))
             })
             .filter(|(_, _, b)| b.can_explore)
+            .filter(|(_, m, _)| {
+                args.decision_model.len() == 0 || args.decision_model.contains(&m.category())
+            })
             .collect();
         info!("Computed {} bidding(s) ", biddings.len());
-        let dominant_bidding_opt =
-            idesyde_core::compute_dominant_biddings(biddings.iter().map(|(_, _, b)| b));
-
-        if let Some((idx, dominant_bid)) = dominant_bidding_opt {
-            let (chosen_exploration_module, chosen_decision_model, _) = &biddings[idx];
+        // let dominant_bidding_opt =
+        //     idesyde_core::compute_dominant_bidding(biddings.iter().map(|(_, _, b)| b));
+        let dominant_biddings = idesyde_core::compute_dominant_biddings(
+            &biddings.iter().map(|(_, _, b)| b.to_owned()).collect(),
+        );
+        if dominant_biddings.len() > 0 {
+            let (_, chosen_decision_model, _) = &biddings[0];
             debug!(
                 "Proceeding to explore {} with {}",
                 chosen_decision_model.category(),
-                dominant_bid.explorer_unique_identifier
+                dominant_biddings
+                    .iter()
+                    .map(|(_, x)| x.explorer_unique_identifier.to_owned())
+                    .reduce(|a, b| a + ", " + &b)
+                    .unwrap_or("No explorer".to_string())
             );
             match (args.x_total_time_out, args.x_max_solutions) {
                 (Some(t), Some(n)) => info!(
@@ -443,11 +458,13 @@ fn main() {
             }
             // let (mut tx, rx) = spmc::channel();
             // let mut total_reversed = 0;
-            let mut sols_found = Vec::new();
-            let mut sol_iter = chosen_exploration_module.explore(
-                chosen_decision_model.clone(),
-                &dominant_bid.explorer_unique_identifier,
-                vec![],
+            let mut sols_found = explore_cooperatively(
+                chosen_decision_model.to_owned(),
+                biddings
+                    .iter()
+                    .map(|(emod, _, b)| (emod.to_owned(), b.explorer_unique_identifier.as_str()))
+                    .collect(),
+                Vec::new(),
                 ExplorationConfiguration {
                     max_sols: args.x_max_solutions.unwrap_or(0),
                     total_timeout: args.x_total_time_out.unwrap_or(0),
@@ -455,16 +472,6 @@ fn main() {
                     memory_resolution: args.x_memory_resolution.unwrap_or(0),
                 },
             );
-            while let Some((m, sol)) = sol_iter.next() {
-                debug!(
-                    "Found a new solution with objectives: {}.",
-                    sol.iter()
-                        .map(|(k, v)| format!("{}: {}", k, v))
-                        .reduce(|s1, s2| format!("{}, {}", s1, s2))
-                        .unwrap_or("None".to_owned())
-                );
-                sols_found.push((m, sol));
-            }
             sols_found.dedup_by(|(_, a), (_, b)| a == b);
             let dominant_sols: Vec<ExplorationSolution> = sols_found
                 .iter()
@@ -521,31 +528,60 @@ fn main() {
             } else {
                 info!("No solution to reverse identify");
             }
-            // for (i, sol) in exp
-            //     .explore(
-            //         &decision_model,
-            //         args.x_max_solutions.unwrap_or(0),
-            //         args.x_total_time_out.unwrap_or(0),
-            //         args.x_time_resolution.unwrap_or(-1),
-            //         args.x_memory_resolution.unwrap_or(-1),
-            //     )
-            //     .enumerate()
-            // {
-            //     sols_found += 1;
-            //     let solv = vec![sol];
-            //     debug!("Found a new solution. Total count is {}.", i + 1);
-            //     imodules.par_iter().for_each(|imodule| {
-            //         for reverse in imodule.reverse_identification(&solv, &design_models) {
-            //             idesyde_core::write_design_model_header_to_path(
-            //                 &reverse.header(),
-            //                 &reverse_path,
-            //                 format!("{}_{}", "reversed_", i).as_str(),
-            //                 "Orchestrator",
-            //             );
-            //         }
-            //     });
-            // }
-        } else {
+        }
+        // if let Some((idx, dominant_bid)) = dominant_bidding_opt {
+        //     let (chosen_exploration_module, chosen_decision_model, _) = &biddings[idx];
+        //     debug!(
+        //         "Proceeding to explore {} with {}",
+        //         chosen_decision_model.category(),
+        //         dominant_bid.explorer_unique_identifier
+        //     );
+        //     let mut sol_iter = chosen_exploration_module.explore(
+        //         chosen_decision_model.clone(),
+        //         &dominant_bid.explorer_unique_identifier,
+        //         vec![],
+        //         ExplorationConfiguration {
+        //             max_sols: args.x_max_solutions.unwrap_or(0),
+        //             total_timeout: args.x_total_time_out.unwrap_or(0),
+        //             time_resolution: args.x_time_resolution.unwrap_or(0),
+        //             memory_resolution: args.x_memory_resolution.unwrap_or(0),
+        //         },
+        //     );
+        //     while let Some((m, sol)) = sol_iter.next() {
+        //         debug!(
+        //             "Found a new solution with objectives: {}.",
+        //             sol.iter()
+        //                 .map(|(k, v)| format!("{}: {}", k, v))
+        //                 .reduce(|s1, s2| format!("{}, {}", s1, s2))
+        //                 .unwrap_or("None".to_owned())
+        //         );
+        //         sols_found.push((m, sol));
+        //     }
+        // for (i, sol) in exp
+        //     .explore(
+        //         &decision_model,
+        //         args.x_max_solutions.unwrap_or(0),
+        //         args.x_total_time_out.unwrap_or(0),
+        //         args.x_time_resolution.unwrap_or(-1),
+        //         args.x_memory_resolution.unwrap_or(-1),
+        //     )
+        //     .enumerate()
+        // {
+        //     sols_found += 1;
+        //     let solv = vec![sol];
+        //     debug!("Found a new solution. Total count is {}.", i + 1);
+        //     imodules.par_iter().for_each(|imodule| {
+        //         for reverse in imodule.reverse_identification(&solv, &design_models) {
+        //             idesyde_core::write_design_model_header_to_path(
+        //                 &reverse.header(),
+        //                 &reverse_path,
+        //                 format!("{}_{}", "reversed_", i).as_str(),
+        //                 "Orchestrator",
+        //             );
+        //         }
+        //     });
+        // }
+        else {
             info!("No dominant bidding to start exploration. Finished")
         }
     } else {

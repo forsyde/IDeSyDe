@@ -11,6 +11,7 @@ import idesyde.core.CompleteDecisionModel
 import idesyde.core.ExplorationCombinationDescription
 import scala.collection.mutable
 import io.javalin.Javalin
+import java.util.concurrent.TimeUnit
 
 /** The trait/interface for an exploration module that provides the explorers rules required to
   * explored identified design spaces [1].
@@ -366,6 +367,7 @@ trait StandaloneExplorationModule
         "/explore",
         ws => {
           ws.onMessage(ctx => {
+            ctx.enableAutomaticPings(5, TimeUnit.SECONDS)
             val request = ExplorationRequestMessage.fromJsonString(ctx.message())
             // var request = objectMapper.readValue(ctx.message(), classOf[ExplorationRequestMessage]);
             for (

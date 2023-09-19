@@ -285,7 +285,7 @@ pub trait ExplorationModule: Send + Sync {
         exploration_configuration: ExplorationConfiguration,
     ) -> Box<dyn Iterator<Item = ExplorationSolution> + '_> {
         let bids = self.bid(m.clone());
-        match compute_dominant_biddings(bids.iter()) {
+        match compute_dominant_bidding(bids.iter()) {
             Some((_, bid)) => self.explore(
                 m,
                 bid.explorer_unique_identifier.as_str(),
@@ -305,7 +305,7 @@ impl PartialEq<dyn ExplorationModule> for dyn ExplorationModule {
 
 impl Eq for dyn ExplorationModule {}
 
-pub fn compute_dominant_biddings<'a, I>(biddings: I) -> Option<(usize, ExplorationBid)>
+pub fn compute_dominant_bidding<'a, I>(biddings: I) -> Option<(usize, ExplorationBid)>
 where
     I: Iterator<Item = &'a ExplorationBid>,
 {
@@ -316,6 +316,28 @@ where
             _ => (i, b),
         })
         .map(|(i, b)| (i, b.to_owned()))
+}
+
+pub fn compute_dominant_biddings(biddings: &Vec<ExplorationBid>) -> Vec<(usize, ExplorationBid)> {
+    if biddings.len() > 1 {
+        biddings
+            .iter()
+            .enumerate()
+            .filter(|(_, b)| {
+                !biddings
+                    .iter()
+                    .filter(|bb| b != bb)
+                    .all(|bb| b.partial_cmp(&bb) == Some(Ordering::Greater))
+            })
+            .map(|(i, b)| (i, b.to_owned()))
+            .collect()
+    } else {
+        biddings
+            .iter()
+            .enumerate()
+            .map(|(i, b)| (i, b.to_owned()))
+            .collect()
+    }
 }
 
 pub fn load_decision_model<T: DecisionModel + DeserializeOwned>(

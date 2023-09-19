@@ -86,7 +86,7 @@ final case class SharedMemoryMultiCore(
     // val paths = FloydWarshallShortestPaths(directedAndConnectedMinTimeGraph)
     platformElements.zipWithIndex.map((src, i) => {
       platformElements.zipWithIndex.map((dst, j) => {
-        computedPaths(src)(dst)
+        val f = computedPaths(src)(dst)
           .map(ce => {
             val dstIdx = communicationElems.indexOf(ce)
             (communicationElementsBitPerSecPerChannel(dstIdx) * communicationElementsMaxChannels(
@@ -94,6 +94,7 @@ final case class SharedMemoryMultiCore(
             ))
           })
           .foldLeft(Rational.zero)(_ + _)
+        if (f == Rational.zero) then Rational.zero else f.reciprocal
       })
     })
   }
@@ -101,12 +102,13 @@ final case class SharedMemoryMultiCore(
   val minTraversalTimePerBit: Vector[Vector[Rational]] = {
     platformElements.zipWithIndex.map((src, i) => {
       platformElements.zipWithIndex.map((dst, j) => {
-        computedPaths(src)(dst)
+        val f = computedPaths(src)(dst)
           .map(ce => {
             val dstIdx = communicationElems.indexOf(ce)
             (communicationElementsBitPerSecPerChannel(dstIdx))
           })
           .foldLeft(Rational.zero)(_ + _)
+        if (f == Rational.zero) then Rational.zero else f.reciprocal
       })
     })
   }

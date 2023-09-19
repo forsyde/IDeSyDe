@@ -31,7 +31,7 @@ trait CanSolveMultiObjective {
         .filter(o2 => o2 != o1)
         .exists(o2 => o2.forall((k2, v2) => !o1.contains(k2) || v2 <= o1(k2)))
     )
-    // println("using " + dominantUpperBounds.map(_.mkString(", ")).mkString("\n"))
+    println("using " + dominantUpperBounds.map(_.mkString(", ")).mkString("\n"))
     // pareto constraint
     if (dominantUpperBounds.size > 0) {
       for (objMap <- dominantUpperBounds) {

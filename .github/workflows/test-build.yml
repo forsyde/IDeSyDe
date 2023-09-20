@@ -46,6 +46,7 @@ jobs:
         curl -sL https://github.com/Jabba-Team/jabba/raw/main/install.sh | bash && . ~/.jabba/jabba.sh
         jabba install ${{ matrix.jdk }}
         jabba alias default ${{ matrix.jdk }}
+        dos2unix ./gradlew # make sure that gradlew is not with CRLF
         ./gradlew publishModules        
   test-rust-build-on-linux:
     strategy:

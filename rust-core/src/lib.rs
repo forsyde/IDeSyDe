@@ -5,7 +5,7 @@ use std::{
     collections::{HashMap, HashSet},
     hash::Hash,
     path::Path,
-    sync::Arc,
+    sync::Arc, net::Ipv4Addr,
 };
 
 use downcast_rs::{impl_downcast, Downcast, DowncastSync};
@@ -252,6 +252,9 @@ pub type ExplorationSolution = (Arc<dyn DecisionModel>, HashMap<String, f64>);
 ///
 pub trait Explorer: Downcast + Send + Sync {
     fn unique_identifier(&self) -> String;
+    fn location(&self) -> Ipv4Addr {
+        Ipv4Addr::LOCALHOST
+    }
     fn bid(&self, m: Arc<dyn DecisionModel>) -> ExplorationBid;
     fn explore(
         &self,
@@ -270,6 +273,12 @@ impl_downcast!(Explorer);
 ///
 pub trait ExplorationModule: Send + Sync {
     fn unique_identifier(&self) -> String;
+    fn location(&self) -> Ipv4Addr {
+        Ipv4Addr::LOCALHOST
+    }
+    fn explorers(&self) -> Vec<Arc<dyn Explorer>> {
+        vec![]
+    }
     fn bid(&self, m: Arc<dyn DecisionModel>) -> Vec<ExplorationBid>;
     fn explore(
         &self,
@@ -299,7 +308,7 @@ pub trait ExplorationModule: Send + Sync {
 
 impl PartialEq<dyn ExplorationModule> for dyn ExplorationModule {
     fn eq(&self, other: &dyn ExplorationModule) -> bool {
-        self.unique_identifier() == other.unique_identifier()
+        self.unique_identifier() == other.unique_identifier() && self.location() == other.location()
     }
 }
 

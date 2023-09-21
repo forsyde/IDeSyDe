@@ -1,11 +1,12 @@
 package idesyde.blueprints
 
 import upickle.default._
+import idesyde.core.Explorer
 
 final case class ExplorationRequestMessage(
-    explorer_id: String,
     model_message: DecisionModelMessage,
-    previous_solutions: Set[ExplorationSolutionMessage]
+    previous_solutions: Set[ExplorationSolutionMessage],
+    configuration: Explorer.Configuration
 ) derives ReadWriter
 
 object ExplorationRequestMessage {

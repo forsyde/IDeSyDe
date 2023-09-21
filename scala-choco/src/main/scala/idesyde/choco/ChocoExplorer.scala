@@ -210,11 +210,11 @@ class ChocoExplorer(using logger: Logger) extends Explorer:
 
   def explore(
       decisionModel: DecisionModel,
-      previousSolutions: Set[ExplorationSolution] = Set(),
-      explorationTotalTimeOutInSecs: Long = 0L,
-      maximumSolutions: Long = 0L,
-      timeDiscretizationFactor: Long = -1L,
-      memoryDiscretizationFactor: Long = -1L
+      previousSolutions: Set[ExplorationSolution],
+      explorationTotalTimeOutInSecs: Long,
+      maximumSolutions: Long,
+      timeDiscretizationFactor: Long,
+      memoryDiscretizationFactor: Long
   ): LazyList[ExplorationSolution] = {
     decisionModel match
       case sdf: SDFToTiledMultiCore =>

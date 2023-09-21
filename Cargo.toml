@@ -27,6 +27,6 @@ reqwest = { version = "0.11.18", default-features = false, features = ["blocking
 tungstenite = {version = "0.20.0", features = ["rustls"]}
 
 [workspace.package]
-version = "0.6.0"
+version = "0.6.1"
 authors = ["Rodolfo Jordao"]
 edition = "2021"

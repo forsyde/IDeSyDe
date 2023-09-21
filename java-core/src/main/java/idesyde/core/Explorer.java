@@ -6,6 +6,8 @@ import java.util.Map;
 import java.util.Set;
 import java.util.stream.Stream;
 
+import com.fasterxml.jackson.annotation.JsonProperty;
+
 /**
  * This trait is the root for all possible explorers within IDeSyDe. A real
  * explorer should
@@ -40,7 +42,7 @@ import java.util.stream.Stream;
 public interface Explorer {
 
     default ExplorationBidding bid(DecisionModel decisionModel) {
-        return new ExplorationBidding(uniqueIdentifer(), false, false, 10.0, Set.of(), Map.of());
+        return new ExplorationBidding(uniqueIdentifier(), false, false, 10.0, Set.of(), Map.of());
     }
 
     default Stream<? extends ExplorationSolution> explore(DecisionModel decisionModel,
@@ -49,15 +51,19 @@ public interface Explorer {
         return Stream.empty();
     }
 
-    default String uniqueIdentifer() {
+    default String uniqueIdentifier() {
         return getClass().getSimpleName();
     }
 
     class Configuration {
 
+        @JsonProperty("total_timeout")
         public long totalExplorationTimeOutInSecs;
+        @JsonProperty("max_sols")
         public long maximumSolutions;
+        @JsonProperty("time_resolution")
         public long timeDiscretizationFactor;
+        @JsonProperty("memory_resolution")
         public long memoryDiscretizationFactor;
 
         public Configuration(long totalExplorationTimeOutInSecs, long maximumSolutions, long timeDiscretizationFactor,

@@ -34,7 +34,7 @@ public class JeneticsExplorer implements Explorer, CanExploreAADPMMMWithJenetics
                     }
                 }
             }
-            return new ExplorationBidding(uniqueIdentifer(), true, false, 1.3, objs, Map.of());
+            return new ExplorationBidding(uniqueIdentifier(), true, false, 1.3, objs, Map.of());
         }
         return Explorer.super.bid(decisionModel);
     }

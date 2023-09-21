@@ -3,7 +3,7 @@ use std::{
     collections::HashMap,
     io::BufRead,
     io::BufReader,
-    net::Ipv4Addr,
+    net::{IpAddr, Ipv4Addr},
     path::PathBuf,
     process::{Child, Stdio},
     sync::{Arc, Mutex},
@@ -12,12 +12,10 @@ use std::{
 use idesyde_blueprints::{DecisionModelMessage, ExplorationSolutionMessage, OpaqueDecisionModel};
 use idesyde_core::{
     headers::ExplorationBid, DecisionModel, ExplorationConfiguration, ExplorationModule,
-    ExplorationSolution,
+    ExplorationSolution, Explorer,
 };
 use log::{debug, warn};
 use serde::{Deserialize, Serialize};
-
-use crate::HttpServerLike;
 
 #[derive(Deserialize, Serialize, PartialEq, Clone)]
 pub struct ExplorerBidding {
@@ -35,32 +33,40 @@ impl TryFrom<&str> for ExplorerBidding {
 }
 #[derive(Deserialize, Serialize, PartialEq, Clone)]
 pub struct ExplorationRequestMessage {
-    explorer_id: String,
     model_message: DecisionModelMessage,
     previous_solutions: Vec<ExplorationSolutionMessage>,
+    configuration: ExplorationConfiguration,
 }
 
 impl ExplorationRequestMessage {
-    pub fn from<T: DecisionModel + ?Sized>(
-        explorer_name: &str,
-        decision_model: &T,
-    ) -> ExplorationRequestMessage {
+    pub fn from<T: DecisionModel + ?Sized>(decision_model: &T) -> ExplorationRequestMessage {
         ExplorationRequestMessage {
-            explorer_id: explorer_name.to_owned(),
             model_message: DecisionModelMessage::from(decision_model),
             previous_solutions: vec![],
+            configuration: ExplorationConfiguration::default(),
         }
     }
 
     pub fn with_previous_solutions<T: DecisionModel + ?Sized>(
-        explorer_name: &str,
         decision_model: &T,
         previous_solutions: Vec<ExplorationSolutionMessage>,
     ) -> ExplorationRequestMessage {
         ExplorationRequestMessage {
-            explorer_id: explorer_name.to_owned(),
             model_message: DecisionModelMessage::from(decision_model),
             previous_solutions: previous_solutions,
+            configuration: ExplorationConfiguration::default(),
+        }
+    }
+
+    pub fn complete<T: DecisionModel + ?Sized>(
+        decision_model: &T,
+        previous_solutions: Vec<ExplorationSolutionMessage>,
+        configuration: &ExplorationConfiguration,
+    ) -> ExplorationRequestMessage {
+        ExplorationRequestMessage {
+            model_message: DecisionModelMessage::from(decision_model),
+            previous_solutions: previous_solutions,
+            configuration: configuration.to_owned(),
         }
     }
 
@@ -76,6 +82,175 @@ impl TryFrom<&str> for ExplorationRequestMessage {
         serde_json::from_str(value)
     }
 }
+
+pub struct ExternalExplorerSolutionIter {
+    pub conn: tungstenite::WebSocket<std::net::TcpStream>,
+}
+
+impl ExternalExplorerSolutionIter {
+    /// This creation function assumes that the channel is already sending back solutions
+    pub fn new<I>(c: I) -> ExternalExplorerSolutionIter
+    where
+        I: Into<tungstenite::WebSocket<std::net::TcpStream>>,
+    {
+        return ExternalExplorerSolutionIter { conn: c.into() };
+    }
+}
+
+impl Iterator for ExternalExplorerSolutionIter {
+    type Item = ExplorationSolution;
+
+    fn next(&mut self) -> Option<Self::Item> {
+        if self.conn.can_read() {
+            // while let is here in order to discard keep
+            while let Ok(message) = self.conn.read() {
+                if message.is_ping() {
+                    self.conn
+                        .send(tungstenite::Message::Pong(vec![]))
+                        .expect("Failed to seng pong message to ping.");
+                } else if message.is_text() {
+                    if let Some(sol) = ExplorationSolutionMessage::from_json_str(
+                        message.into_text().unwrap().as_str(),
+                    ) {
+                        return Some((
+                            Arc::new(OpaqueDecisionModel::from(&sol)) as Arc<dyn DecisionModel>,
+                            sol.objectives,
+                        ));
+                    }
+                }
+            }
+        }
+        None
+    }
+}
+
+pub struct ExternalExplorer {
+    name: String,
+    address: std::net::IpAddr,
+    port: usize,
+    client: Arc<reqwest::blocking::Client>,
+}
+
+impl Explorer for ExternalExplorer {
+    fn unique_identifier(&self) -> String {
+        self.name.to_owned()
+    }
+
+    fn location_url(&self) -> IpAddr {
+        self.address
+    }
+
+    fn location_port(&self) -> usize {
+        self.port
+    }
+
+    fn bid(&self, m: Arc<dyn DecisionModel>) -> ExplorationBid {
+        match self
+            .client
+            .get(format!(
+                "http://{}:{}/{}/bid",
+                self.location_url(),
+                self.location_port(),
+                self.name
+            ))
+            .body(DecisionModelMessage::from_dyn_decision_model(m.as_ref()).to_json_str())
+            .send()
+        {
+            Ok(result) => match result.text() {
+                Ok(text) => {
+                    if !text.is_empty() {
+                        match ExplorationBid::from_json_str(&text) {
+                            Some(bid) => return bid,
+                            None => {
+                                debug!(
+                                    "Explorer {} failed deserialize message {}",
+                                    self.unique_identifier(),
+                                    &text
+                                );
+                            }
+                        }
+                    }
+                    ExplorationBid::impossible(&self.unique_identifier())
+                }
+                Err(err) => {
+                    debug!(
+                        "Explorer {} failed to transform into text with: {}",
+                        self.unique_identifier(),
+                        err.to_string()
+                    );
+                    ExplorationBid::impossible(&self.unique_identifier())
+                }
+            },
+            Err(err) => {
+                debug!(
+                    "Explorer {} failed to request with: {}",
+                    self.unique_identifier(),
+                    err.to_string()
+                );
+                ExplorationBid::impossible(&self.unique_identifier())
+            }
+        }
+    }
+
+    fn explore(
+        &self,
+        m: Arc<dyn DecisionModel>,
+        currrent_solutions: Vec<ExplorationSolution>,
+        exploration_configuration: ExplorationConfiguration,
+    ) -> Box<dyn Iterator<Item = ExplorationSolution> + '_> {
+        match std::net::TcpStream::connect(format!("{}:{}", self.address, self.port).as_str()) {
+            Ok(stream) => {
+                stream
+                    .set_read_timeout(None)
+                    .expect("Failed to set read timeout to infinite. Should never fail.");
+                stream
+                    .set_write_timeout(None)
+                    .expect("Failed to set write timeout to infinite. Should never fail.");
+                match tungstenite::client(
+                    format!(
+                        "ws://{}:{}/{}/explore",
+                        self.address,
+                        self.port,
+                        self.unique_identifier()
+                    )
+                    .as_str(),
+                    stream,
+                ) {
+                    Ok((mut conn, _)) => {
+                        let message = ExplorationRequestMessage::complete(
+                            m.as_ref(),
+                            currrent_solutions
+                                .iter()
+                                .map(|x| ExplorationSolutionMessage::from(x))
+                                .collect(),
+                            &exploration_configuration,
+                        );
+                        if let Ok(_) = conn.send(tungstenite::Message::text(message.to_json_str()))
+                        {
+                            return Box::new(ExternalExplorerSolutionIter::new(conn));
+                        }
+                    }
+                    Err(e) => {
+                        debug!(
+                            "Failed to handshake with {}: {}",
+                            self.unique_identifier(),
+                            e.to_string()
+                        );
+                    }
+                }
+            }
+            Err(e) => {
+                debug!(
+                    "Failed to create connection with {}: {}",
+                    self.unique_identifier(),
+                    e.to_string()
+                );
+            }
+        }
+        Box::new(std::iter::empty())
+    }
+}
+
 pub struct ExternalServerExplorationModule {
     name: String,
     address: std::net::IpAddr,
@@ -152,20 +327,6 @@ impl ExternalServerExplorationModule {
     }
 }
 
-impl HttpServerLike for ExternalServerExplorationModule {
-    fn get_client(&self) -> Arc<reqwest::blocking::Client> {
-        self.client.clone()
-    }
-
-    fn get_address(&self) -> std::net::IpAddr {
-        self.address.clone()
-    }
-
-    fn get_port(&self) -> usize {
-        self.port
-    }
-}
-
 impl Drop for ExternalServerExplorationModule {
     fn drop(&mut self) {
         if let Some(server) = &self.process {
@@ -182,145 +343,82 @@ impl Drop for ExternalServerExplorationModule {
     }
 }
 
-pub struct HttpServerSolutionIter {
-    pub conn: tungstenite::WebSocket<std::net::TcpStream>,
-}
-
-impl HttpServerSolutionIter {
-    /// This creation function assumes that the channel is already sending back solutions
-    pub fn new<I>(c: I) -> HttpServerSolutionIter
-    where
-        I: Into<tungstenite::WebSocket<std::net::TcpStream>>,
-    {
-        return HttpServerSolutionIter { conn: c.into() };
-    }
-}
-
-impl Iterator for HttpServerSolutionIter {
-    type Item = ExplorationSolution;
-
-    fn next(&mut self) -> Option<Self::Item> {
-        if self.conn.can_read() {
-            // while let is here in order to discard keep
-            while let Ok(message) = self.conn.read() {
-                if message.is_ping() {
-                    self.conn
-                        .send(tungstenite::Message::Pong(vec![]))
-                        .expect("Failed to seng pong message to ping.");
-                } else if message.is_text() {
-                    if let Some(sol) = ExplorationSolutionMessage::from_json_str(
-                        message.into_text().unwrap().as_str(),
-                    ) {
-                        return Some((
-                            Arc::new(OpaqueDecisionModel::from(&sol)) as Arc<dyn DecisionModel>,
-                            sol.objectives,
-                        ));
-                    }
-                }
-            }
-        }
-        None
-    }
-}
-
 impl ExplorationModule for ExternalServerExplorationModule {
     fn unique_identifier(&self) -> String {
         self.name.to_owned()
     }
 
-    fn bid(&self, m: Arc<dyn DecisionModel>) -> Vec<ExplorationBid> {
-        let message = DecisionModelMessage::from_dyn_decision_model(m.as_ref());
-        if let Ok(res) = self.http_get("bid", &vec![], &message) {
-            if let Some(bids) = res
-                .text()
-                .ok()
-                .and_then(|x| serde_json::from_str::<Vec<ExplorationBid>>(&x).ok())
-            {
-                return bids;
-            }
-        }
-        Vec::new()
+    fn location_url(&self) -> IpAddr {
+        self.address
     }
 
-    fn explore(
-        &self,
-        m: Arc<dyn DecisionModel>,
-        explorer_id: &str,
-        currrent_solutions: Vec<ExplorationSolution>,
-        exploration_configuration: ExplorationConfiguration,
-    ) -> Box<dyn Iterator<Item = ExplorationSolution> + '_> {
-        if let Err(e) = self
-            .http_post(
-                "set",
-                &vec![("parameter", "max-sols")],
-                &exploration_configuration.max_sols,
-            )
-            .and(self.http_post(
-                "set",
-                &vec![("parameter", "total-timeout")],
-                &exploration_configuration.total_timeout,
+    fn location_port(&self) -> usize {
+        self.port
+    }
+
+    fn explorers(&self) -> Vec<Arc<dyn Explorer>> {
+        match self
+            .client
+            .get(format!(
+                "http://{}:{}/explorers",
+                self.location_url(),
+                self.location_port()
             ))
-            .and(self.http_post(
-                "set",
-                &vec![("parameter", "time-resolution")],
-                &exploration_configuration.time_resolution,
-            ))
-            .and(self.http_post(
-                "set",
-                &vec![("parameter", "memory-resolution")],
-                &exploration_configuration.memory_resolution,
-            ))
+            .send()
         {
-            warn!(
-                "Could not set exploration parameters for module {}. Trying to continue.",
-                self.unique_identifier()
-            );
-            debug!("Error is {}", e.to_string());
-        };
-        match std::net::TcpStream::connect(format!("{}:{}", self.address, self.port).as_str()) {
-            Ok(stream) => {
-                stream
-                    .set_read_timeout(None)
-                    .expect("Failed to set read timeout to infinite. Should never fail.");
-                stream
-                    .set_write_timeout(None)
-                    .expect("Failed to set write timeout to infinite. Should never fail.");
-                match tungstenite::client(
-                    format!("ws://{}:{}/explore", self.address, self.port).as_str(),
-                    stream,
-                ) {
-                    Ok((mut conn, _)) => {
-                        let message = ExplorationRequestMessage::with_previous_solutions(
-                            explorer_id,
-                            m.as_ref(),
-                            currrent_solutions
-                                .iter()
-                                .map(|x| ExplorationSolutionMessage::from(x))
-                                .collect(),
+            Ok(result) => match result.text() {
+                Ok(text) => match serde_json::from_str::<Vec<String>>(&text) {
+                    Ok(names) => names
+                        .iter()
+                        .map(|name| {
+                            Arc::new(ExternalExplorer {
+                                name: name.to_owned(),
+                                address: self.address,
+                                port: self.port,
+                                client: self.client.clone(),
+                            })
+                        })
+                        .map(|x| x as Arc<dyn Explorer>)
+                        .collect(),
+                    Err(_) => {
+                        warn!(
+                            "Explorer {} failed deserialize its decision model. Trying to proceed anyway.",
+                            self.unique_identifier()
                         );
-                        if let Ok(_) = conn.send(tungstenite::Message::text(message.to_json_str()))
-                        {
-                            return Box::new(HttpServerSolutionIter::new(conn));
-                        }
-                    }
-                    Err(e) => {
                         debug!(
-                            "Failed to handshake with {}: {}",
+                            "Explorer {} failed to deserialize explorer names from {}",
                             self.unique_identifier(),
-                            e.to_string()
+                            &text
                         );
+                        vec![]
                     }
+                },
+                Err(err) => {
+                    warn!(
+                        "Explorer {} failed to process request. Trying to proceed anyway.",
+                        self.unique_identifier()
+                    );
+                    debug!(
+                        "Explorer {} failed to transform into text with: {}",
+                        self.unique_identifier(),
+                        err.to_string()
+                    );
+                    vec![]
                 }
-            }
-            Err(e) => {
-                debug!(
-                    "Failed to create connection with {}: {}",
-                    self.unique_identifier(),
-                    e.to_string()
+            },
+            Err(err) => {
+                warn!(
+                    "Explorer {} failed to accept request. Trying to proceed anyway.",
+                    self.unique_identifier()
                 );
+                debug!(
+                    "Explorer {} failed to request with: {}",
+                    self.unique_identifier(),
+                    err.to_string()
+                );
+                vec![]
             }
         }
-        Box::new(std::iter::empty())
     }
 }
 
@@ -356,7 +454,7 @@ pub fn pareto_dominance_partial_cmp(
 
 pub fn explore_cooperatively(
     m: Arc<dyn DecisionModel>,
-    emodules_and_explorer_ids: Vec<(Arc<dyn ExplorationModule>, &str)>,
+    explorers: Vec<Arc<dyn Explorer>>,
     currrent_solutions: Vec<ExplorationSolution>,
     exploration_configuration: ExplorationConfiguration,
     // solution_inspector: F,
@@ -370,7 +468,7 @@ pub fn explore_cooperatively(
     let completed = Arc::new(Mutex::new(false));
     rayon::scope(|s| {
         // the explorers
-        for (emodule, explorer_id) in emodules_and_explorer_ids {
+        for explorer in explorers {
             let m_cloned = m.clone();
             let completed_cloned = completed.clone();
             let shared_solutions_cloned = shared_solutions.clone();
@@ -381,9 +479,8 @@ pub fn explore_cooperatively(
                         .map(|x| x.clone())
                         .unwrap_or(Vec::new());
                     let mut should_restart = false;
-                    for (solved_model, sol_objs) in emodule.explore(
+                    for (solved_model, sol_objs) in explorer.explore(
                         m_cloned.to_owned(),
-                        explorer_id,
                         previous_solutions,
                         exploration_configuration.to_owned(),
                     ) {

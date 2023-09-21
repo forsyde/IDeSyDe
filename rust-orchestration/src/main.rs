@@ -4,7 +4,7 @@ use clap::Parser;
 use env_logger::WriteStyle;
 use idesyde_core::{
     headers::ExplorationBid, DecisionModel, DesignModel, ExplorationConfiguration,
-    ExplorationModule, ExplorationSolution,
+    ExplorationSolution, Explorer,
 };
 use idesyde_orchestration::{
     exploration::{explore_cooperatively, ExternalServerExplorationModule},
@@ -376,52 +376,15 @@ fn main() {
 
         // let dominant = compute_dominant_decision_models(&identified_refs);
 
-        // for (p, m) in load_decision_model_headers_from_binary(&identified_path) {
-        //     if dominant.iter().all(|dom| {
-        //         let h = dom.header();
-        //         h.partial_cmp(&m)
-        //             .map(|x| match x {
-        //                 Ordering::Greater => true,
-        //                 _ => false,
-        //             })
-        //             .unwrap_or(false)
-        //     }) {
-        //         // m is domianted, proceed to delete its files
-        //         if let Some(bp) = m.header().body_path {
-        //             let jbp = Path::new(&bp).with_extension("json");
-        //             match std::fs::remove_file(jbp) {
-        //                 Err(_) => {
-        //                     warn!("Tried removing JSON decision model body but failed",)
-        //                 }
-        //                 _ => (),
-        //             };
-        //             std::fs::remove_file(bp).expect("Failed to remove body path of dominated decision model during identification. This is a benign error. Continuing");
-        //         }
-        //         match std::fs::remove_file(Path::new(&p.with_extension("json"))) {
-        //             Err(_) => warn!("Tried remove a JSON decision model header but failed. This is a benign error. Continuing"),
-        //             _ => (),
-        //         };
-        //         std::fs::remove_file(p).expect(
-        //             "Failed to remove header of dominated decision model during identification",
-        //         );
-        //     }
-        // }
-
         // let dominant_without_biddings = compute_dominant_decision_models(&identified_refs);
-        let pairs: Vec<(Arc<dyn ExplorationModule>, Arc<dyn DecisionModel>)> = emodules
+        let explorers: Vec<Arc<dyn Explorer>> =
+            emodules.iter().flat_map(|x| x.explorers()).collect();
+        let biddings: Vec<(Arc<dyn Explorer>, Arc<dyn DecisionModel>, ExplorationBid)> = explorers
             .iter()
-            .flat_map(|e| identified.iter().map(move |m| (e.clone(), m.clone())))
-            .collect();
-        let biddings: Vec<(
-            Arc<dyn ExplorationModule>,
-            Arc<dyn DecisionModel>,
-            ExplorationBid,
-        )> = pairs
-            .par_iter()
-            .flat_map(|(e, m)| {
-                e.bid(m.clone())
-                    .into_par_iter()
-                    .map(|b| (e.clone(), m.clone(), b))
+            .flat_map(|explorer| {
+                identified
+                    .iter()
+                    .map(|x| (explorer.clone(), x.clone(), explorer.bid(x.clone())))
             })
             .filter(|(_, _, b)| b.can_explore)
             .filter(|(_, m, _)| {
@@ -460,9 +423,9 @@ fn main() {
             // let mut total_reversed = 0;
             let mut sols_found = explore_cooperatively(
                 chosen_decision_model.to_owned(),
-                biddings
+                dominant_biddings
                     .iter()
-                    .map(|(emod, _, b)| (emod.to_owned(), b.explorer_unique_identifier.as_str()))
+                    .map(|(i, _)| biddings[*i].0.to_owned())
                     .collect(),
                 Vec::new(),
                 ExplorationConfiguration {

@@ -4,8 +4,9 @@ pub mod macros;
 use std::{
     collections::{HashMap, HashSet},
     hash::Hash,
+    net::{IpAddr, Ipv4Addr},
     path::Path,
-    sync::Arc, net::Ipv4Addr,
+    sync::Arc,
 };
 
 use downcast_rs::{impl_downcast, Downcast, DowncastSync};
@@ -252,18 +253,35 @@ pub type ExplorationSolution = (Arc<dyn DecisionModel>, HashMap<String, f64>);
 ///
 pub trait Explorer: Downcast + Send + Sync {
     fn unique_identifier(&self) -> String;
-    fn location(&self) -> Ipv4Addr {
-        Ipv4Addr::LOCALHOST
+    fn location_url(&self) -> IpAddr {
+        std::net::IpAddr::V4(Ipv4Addr::LOCALHOST)
     }
-    fn bid(&self, m: Arc<dyn DecisionModel>) -> ExplorationBid;
+    fn location_port(&self) -> usize {
+        0
+    }
+    fn bid(&self, _m: Arc<dyn DecisionModel>) -> ExplorationBid {
+        ExplorationBid::impossible(&self.unique_identifier())
+    }
     fn explore(
         &self,
-        m: Arc<dyn DecisionModel>,
-        currrent_solutions: Vec<ExplorationSolution>,
-        exploration_configuration: ExplorationConfiguration,
-    ) -> Box<dyn Iterator<Item = ExplorationSolution> + '_>;
+        _m: Arc<dyn DecisionModel>,
+        _currrent_solutions: Vec<ExplorationSolution>,
+        _exploration_configuration: ExplorationConfiguration,
+    ) -> Box<dyn Iterator<Item = ExplorationSolution> + '_> {
+        Box::new(std::iter::empty())
+    }
 }
 impl_downcast!(Explorer);
+
+impl PartialEq<dyn Explorer> for dyn Explorer {
+    fn eq(&self, other: &dyn Explorer) -> bool {
+        self.unique_identifier() == other.unique_identifier()
+            && self.location_url() == other.location_url()
+            && self.location_port() == other.location_port()
+    }
+}
+
+impl Eq for dyn Explorer {}
 
 /// The trait/interface for an exploration module that provides the API for exploration [1].
 ///
@@ -273,42 +291,52 @@ impl_downcast!(Explorer);
 ///
 pub trait ExplorationModule: Send + Sync {
     fn unique_identifier(&self) -> String;
-    fn location(&self) -> Ipv4Addr {
-        Ipv4Addr::LOCALHOST
+    fn location_url(&self) -> IpAddr {
+        std::net::IpAddr::V4(Ipv4Addr::LOCALHOST)
+    }
+    fn location_port(&self) -> usize {
+        0
     }
     fn explorers(&self) -> Vec<Arc<dyn Explorer>> {
         vec![]
     }
-    fn bid(&self, m: Arc<dyn DecisionModel>) -> Vec<ExplorationBid>;
-    fn explore(
-        &self,
-        m: Arc<dyn DecisionModel>,
-        explorer_id: &str,
-        currrent_solutions: Vec<ExplorationSolution>,
-        exploration_configuration: ExplorationConfiguration,
-    ) -> Box<dyn Iterator<Item = ExplorationSolution> + '_>;
-    fn explore_best(
-        &self,
-        m: Arc<dyn DecisionModel>,
-        currrent_solutions: Vec<ExplorationSolution>,
-        exploration_configuration: ExplorationConfiguration,
-    ) -> Box<dyn Iterator<Item = ExplorationSolution> + '_> {
-        let bids = self.bid(m.clone());
-        match compute_dominant_bidding(bids.iter()) {
-            Some((_, bid)) => self.explore(
-                m,
-                bid.explorer_unique_identifier.as_str(),
-                currrent_solutions,
-                exploration_configuration,
-            ),
-            None => Box::new(std::iter::empty()) as Box<dyn Iterator<Item = ExplorationSolution>>,
-        }
+    fn bid(&self, m: Arc<dyn DecisionModel>) -> Vec<(Arc<dyn Explorer>, ExplorationBid)> {
+        self.explorers()
+            .iter()
+            .map(|x| (x.to_owned(), x.bid(m.clone())))
+            .collect()
     }
+    // fn explore(
+    //     &self,
+    //     m: Arc<dyn DecisionModel>,
+    //     explorer_id: &str,
+    //     currrent_solutions: Vec<ExplorationSolution>,
+    //     exploration_configuration: ExplorationConfiguration,
+    // ) -> Box<dyn Iterator<Item = ExplorationSolution> + '_>;
+    // fn explore_best(
+    //     &self,
+    //     m: Arc<dyn DecisionModel>,
+    //     currrent_solutions: Vec<ExplorationSolution>,
+    //     exploration_configuration: ExplorationConfiguration,
+    // ) -> Box<dyn Iterator<Item = ExplorationSolution> + '_> {
+    //     let bids = self.bid(m.clone());
+    //     match compute_dominant_bidding(bids.iter()) {
+    //         Some((_, bid)) => self.explore(
+    //             m,
+    //             bid.explorer_unique_identifier.as_str(),
+    //             currrent_solutions,
+    //             exploration_configuration,
+    //         ),
+    //         None => Box::new(std::iter::empty()) as Box<dyn Iterator<Item = ExplorationSolution>>,
+    //     }
+    // }
 }
 
 impl PartialEq<dyn ExplorationModule> for dyn ExplorationModule {
     fn eq(&self, other: &dyn ExplorationModule) -> bool {
-        self.unique_identifier() == other.unique_identifier() && self.location() == other.location()
+        self.unique_identifier() == other.unique_identifier()
+            && self.location_url() == other.location_url()
+            && self.location_port() == other.location_port()
     }
 }
 

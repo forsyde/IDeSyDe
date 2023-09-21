@@ -363,15 +363,64 @@ trait StandaloneExplorationModule
           ctx.result(write(bids));
         }
       )
+      // .ws(
+      //   "/explore",
+      //   ws => {
+      //     ws.onMessage(ctx => {
+      //       ctx.enableAutomaticPings(5, TimeUnit.SECONDS)
+      //       val request = ExplorationRequestMessage.fromJsonString(ctx.message())
+      //       // var request = objectMapper.readValue(ctx.message(), classOf[ExplorationRequestMessage]);
+      //       for (
+      //         explorer      <- explorers.find(e => e.uniqueIdentifier == request.explorer_id);
+      //         decisionModel <- decisionMessageToModel(request.model_message);
+      //         previousSolutions = request.previous_solutions
+      //           .flatMap(m => decisionMessageToModel(m.solved).map(mm => (mm, m.objectives)));
+      //         (sol, objs) <- explorer.explore(
+      //           decisionModel,
+      //           previousSolutions,
+      //           explorationTotalTimeOutInSecs,
+      //           maximumSolutions,
+      //           timeResolution,
+      //           memoryResolution
+      //         )
+      //       ) {
+      //         val message = ExplorationSolutionMessage.fromSolution(sol, objs)
+      //         solvedDecisionModels += sol
+      //         solvedDecisionObjs(sol) = objs
+      //         ctx.send(message.asText)
+      //       }
+      //       ctx.closeSession()
+      //     });
+      //   }
+      // )
+      .get(
+        "/explorers",
+        ctx => {
+          ctx.result(write(explorers.map(_.uniqueIdentifier)));
+        }
+      )
+      .get(
+        "/{explorerName}/bid",
+        ctx => {
+          explorers
+            .find(e => e.uniqueIdentifier == ctx.pathParam("explorerName"))
+            .foreach(explorer => {
+              decisionMessageToModel(
+                DecisionModelMessage
+                  .fromJsonString(ctx.body())
+              ).foreach(decisionModel => ctx.result(write(explorer.bid(decisionModel))))
+            })
+        }
+      )
       .ws(
-        "/explore",
+        "/{explorerName}/explore",
         ws => {
           ws.onMessage(ctx => {
             ctx.enableAutomaticPings(5, TimeUnit.SECONDS)
             val request = ExplorationRequestMessage.fromJsonString(ctx.message())
             // var request = objectMapper.readValue(ctx.message(), classOf[ExplorationRequestMessage]);
             for (
-              explorer      <- explorers.find(e => e.uniqueIdentifier == request.explorer_id);
+              explorer <- explorers.find(e => e.uniqueIdentifier == ctx.pathParam("explorerName"));
               decisionModel <- decisionMessageToModel(request.model_message);
               previousSolutions = request.previous_solutions
                 .flatMap(m => decisionMessageToModel(m.solved).map(mm => (mm, m.objectives)));

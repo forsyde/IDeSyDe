@@ -8,7 +8,7 @@ use std::{
 
 use clap::Parser;
 use idesyde_core::{
-    headers::{DecisionModelHeader, DesignModelHeader, ExplorationBid},
+    headers::{DecisionModelHeader, DesignModelHeader},
     DecisionModel, DesignModel, ExplorationModule, ExplorationSolution, Explorer,
     IdentificationModule, IdentificationResult, MarkedIdentificationRule,
     ReverseIdentificationRule,
@@ -228,7 +228,7 @@ impl From<&ExplorationSolutionMessage> for OpaqueDecisionModel {
 
 pub struct StandaloneExplorationModule {
     unique_identifier: String,
-    explorers: Vec<Box<dyn Explorer>>,
+    explorers: Vec<Arc<dyn Explorer>>,
 }
 
 impl ExplorationModule for StandaloneExplorationModule {
@@ -236,23 +236,23 @@ impl ExplorationModule for StandaloneExplorationModule {
         self.unique_identifier.to_owned()
     }
 
-    fn bid(&self, m: Arc<dyn DecisionModel>) -> Vec<ExplorationBid> {
-        self.explorers.iter().map(|e| e.bid(m.clone())).collect()
+    fn explorers(&self) -> Vec<Arc<dyn Explorer>> {
+        self.explorers.clone()
     }
 
-    fn explore(
-        &self,
-        m: Arc<dyn DecisionModel>,
-        explorer_id: &str,
-        currrent_solutions: Vec<ExplorationSolution>,
-        exploration_configuration: idesyde_core::ExplorationConfiguration,
-    ) -> Box<dyn Iterator<Item = ExplorationSolution> + '_> {
-        self.explorers
-            .iter()
-            .find(|e| e.unique_identifier() == explorer_id)
-            .map(|e| e.explore(m, currrent_solutions, exploration_configuration))
-            .unwrap_or(Box::new(std::iter::empty()))
-    }
+    // fn explore(
+    //     &self,
+    //     m: Arc<dyn DecisionModel>,
+    //     explorer_id: &str,
+    //     currrent_solutions: Vec<ExplorationSolution>,
+    //     exploration_configuration: idesyde_core::ExplorationConfiguration,
+    // ) -> Box<dyn Iterator<Item = ExplorationSolution> + '_> {
+    //     self.explorers
+    //         .iter()
+    //         .find(|e| e.unique_identifier() == explorer_id)
+    //         .map(|e| e.explore(m, currrent_solutions, exploration_configuration))
+    //         .unwrap_or(Box::new(std::iter::empty()))
+    // }
 }
 
 pub struct StandaloneIdentificationModule {

@@ -335,6 +335,17 @@ impl ExplorationBid {
     pub fn from_json_str(s: &str) -> Option<ExplorationBid> {
         serde_json::from_str(s).ok()
     }
+
+    pub fn impossible(explorer_id: &str) -> ExplorationBid {
+        ExplorationBid {
+            explorer_unique_identifier: explorer_id.to_owned(),
+            can_explore: false,
+            is_complete: false,
+            competitiveness: 1.0,
+            target_objectives: HashSet::new(),
+            additional_numeric_properties: HashMap::new(),
+        }
+    }
 }
 
 impl Hash for ExplorationBid {

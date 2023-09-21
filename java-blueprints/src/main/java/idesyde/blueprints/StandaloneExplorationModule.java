@@ -66,6 +66,12 @@ public interface StandaloneExplorationModule {
                                         .flatMap(this::decisionMessageToModel)
                                         .ifPresent(decisionModels::add))
                         .get(
+                                "/explorers",
+                                ctx -> {
+                                    ctx.result(objectMapper.writeValueAsString(explorers().stream()
+                                            .map(e -> e.uniqueIdentifier()).collect(Collectors.toSet())));
+                                })
+                        .get(
                                 "/bid",
                                 ctx -> {
                                     var bids = DecisionModelMessage.fromJsonString(ctx.body())
@@ -76,8 +82,29 @@ public interface StandaloneExplorationModule {
                                             .orElse(List.of());
                                     ctx.result(objectMapper.writeValueAsString(bids));
                                 })
+                        .get(
+                                "/{explorerName}/bid",
+                                ctx -> {
+                                    explorers().stream()
+                                            .filter(e -> e.uniqueIdentifier().equals(ctx.pathParam("explorerName")))
+                                            .findAny().ifPresentOrElse(explorer -> {
+                                                DecisionModelMessage.fromJsonString(ctx.body())
+                                                        .flatMap(this::decisionMessageToModel)
+                                                        .map(decisionModel -> explorer.bid(decisionModel))
+                                                        .ifPresent(bid -> {
+                                                            try {
+                                                                ctx.result(objectMapper.writeValueAsString(bid));
+                                                            } catch (JsonProcessingException e1) {
+                                                                e1.printStackTrace();
+                                                                ctx.status(500);
+                                                            }
+                                                        });
+                                            }, () -> {
+                                                ctx.status(404);
+                                            });
+                                })
                         .ws(
-                                "/explore",
+                                "/{explorerName}/explore",
                                 ws -> {
                                     ws.onMessage(ctx -> {
                                         ctx.enableAutomaticPings(5, TimeUnit.SECONDS);
@@ -86,7 +113,7 @@ public interface StandaloneExplorationModule {
                                         var request = objectMapper.readValue(ctx.message(),
                                                 ExplorationRequestMessage.class);
                                         explorers().stream().filter(
-                                                e -> e.uniqueIdentifer().equals(request.explorerIdentifier()))
+                                                e -> e.uniqueIdentifier().equals(ctx.pathParam("explorerName")))
                                                 .findAny().ifPresent(explorer -> {
                                                     decisionMessageToModel(request.modelMessage())
                                                             .ifPresent(decisionModel -> {
@@ -122,6 +149,52 @@ public interface StandaloneExplorationModule {
                                         ctx.closeSession();
                                     });
                                 })
+                        // .ws(
+                        // "/explore",
+                        // ws -> {
+                        // ws.onMessage(ctx -> {
+                        // ctx.enableAutomaticPings(5, TimeUnit.SECONDS);
+                        // var found = new HashSet<DecisionModel>();
+                        // var foundObjs = new HashMap<DecisionModel, Map<String, Double>>();
+                        // var request = objectMapper.readValue(ctx.message(),
+                        // ExplorationRequestMessage.class);
+                        // explorers().stream().filter(
+                        // e -> e.uniqueIdentifer().equals(request.explorerIdentifier()))
+                        // .findAny().ifPresent(explorer -> {
+                        // decisionMessageToModel(request.modelMessage())
+                        // .ifPresent(decisionModel -> {
+                        // explorer.explore(decisionModel,
+                        // request.previousSolutions(),
+                        // configuration)
+                        // // keep only non dominated
+                        // .filter(solution -> foundObjs.values()
+                        // .stream()
+                        // .allMatch(other -> solution
+                        // .objectives().entrySet()
+                        // .stream()
+                        // .anyMatch(
+                        // objEntry -> objEntry
+                        // .getValue() < other
+                        // .get(objEntry
+                        // .getKey()))))
+                        // .forEach(solution -> {
+                        // try {
+                        // found.add(solution.solved());
+                        // foundObjs.put(solution.solved(),
+                        // solution.objectives());
+                        // ctx.send(objectMapper
+                        // .writeValueAsString(
+                        // ExplorationSolutionMessage
+                        // .from(solution)));
+                        // } catch (JsonProcessingException e) {
+                        // e.printStackTrace();
+                        // }
+                        // });
+                        // });
+                        // });
+                        // ctx.closeSession();
+                        // });
+                        // })
                         .exception(
                                 Exception.class,
                                 (e, ctx) -> {

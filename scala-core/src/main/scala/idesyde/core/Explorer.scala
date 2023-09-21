@@ -7,6 +7,8 @@ import idesyde.core.ExplorationCriteria
 import idesyde.core.DecisionModel
 import idesyde.core.headers.ExplorerHeader
 
+import upickle.default._
+
 /** This trait is the root for all possible explorers within IDeSyDe. A real explorer should
   * implement this trait by dispatching the real exploration from 'explore'.
   *
@@ -33,12 +35,25 @@ trait Explorer {
 
   def explore(
       decisionModel: DecisionModel,
-      previousSolutions: Set[ExplorationSolution] = Set(),
-      totalExplorationTimeOutInSecs: Long = 0L,
-      maximumSolutions: Long = 0L,
-      timeDiscretizationFactor: Long = -1L,
-      memoryDiscretizationFactor: Long = -1L
+      previousSolutions: Set[ExplorationSolution],
+      totalExplorationTimeOutInSecs: Long,
+      maximumSolutions: Long,
+      timeDiscretizationFactor: Long,
+      memoryDiscretizationFactor: Long
   ): LazyList[ExplorationSolution]
+
+  def explore(
+      decisionModel: DecisionModel,
+      previousSolutions: Set[ExplorationSolution] = Set(),
+      configuration: Explorer.Configuration = Explorer.Configuration(0, 0, 0, 0)
+  ): LazyList[ExplorationSolution] = explore(
+    decisionModel,
+    previousSolutions,
+    configuration.total_timeout,
+    configuration.max_sols,
+    configuration.time_resolution,
+    configuration.memory_resolution
+  )
 
   def availableCriterias(decisionModel: DecisionModel): Set[ExplorationCriteria] = Set()
 
@@ -77,5 +92,15 @@ trait Explorer {
     case _ =>
       false
   }
+
+}
+
+object Explorer {
+  final case class Configuration(
+      max_sols: Long,
+      total_timeout: Long,
+      time_resolution: Long,
+      memory_resolution: Long
+  ) derives ReadWriter {}
 
 }

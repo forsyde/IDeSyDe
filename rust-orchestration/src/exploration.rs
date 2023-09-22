@@ -452,6 +452,41 @@ pub fn pareto_dominance_partial_cmp(
     }
 }
 
+pub struct CombinedExplorerIterator {
+    m: Arc<dyn DecisionModel>,
+    explorers: Vec<Arc<dyn Explorer>>,
+    currrent_solutions: Vec<ExplorationSolution>,
+    exploration_configuration: ExplorationConfiguration,
+    last_elapsed_time: u64,
+}
+
+impl Iterator for CombinedExplorerIterator {
+    type Item = ExplorationSolution;
+
+    fn next(&mut self) -> Option<Self::Item> {
+        let (sol_tx, sol_rx) = std::sync::mpsc::channel::<(usize, ExplorationSolution)>();
+        let handles = self
+            .explorers
+            .iter()
+            .map(|explorer| {
+                explorer.explore(
+                    self.m,
+                    self.currrent_solutions,
+                    self.exploration_configuration,
+                )
+            })
+            .enumerate()
+            .map(|(ei, sols)| {
+                std::thread::spawn(move || {
+                    sols.for_each(move |sol| {
+                        sol_tx.send((ei, sol));
+                    })
+                })
+            });
+        todo!()
+    }
+}
+
 pub fn explore_cooperatively(
     m: Arc<dyn DecisionModel>,
     explorers: Vec<Arc<dyn Explorer>>,

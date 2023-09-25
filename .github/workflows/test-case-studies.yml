@@ -37,7 +37,7 @@ jobs:
           curl -fL "https://github.com/coursier/launchers/raw/master/cs-x86_64-pc-linux-static.gz" | gzip -d > cs
           chmod +x ./cs
           ./cs setup --yes
-          ./scripts/make-all-linux.sh
+          bash ./scripts/make-all-linux.sh
           python -m pip install robotframework
           python -m robot --exclude slow TestsBenchmark.robot
       # - name: Cache-out outputs

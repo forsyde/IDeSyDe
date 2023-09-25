@@ -355,6 +355,25 @@ where
         .map(|(i, b)| (i, b.to_owned()))
 }
 
+pub fn compute_dominant_identification(
+    decision_models: &Vec<Arc<dyn DecisionModel>>,
+) -> Vec<Arc<dyn DecisionModel>> {
+    if decision_models.len() > 1 {
+        decision_models
+            .iter()
+            .filter(|b| {
+                !decision_models
+                    .iter()
+                    .filter(|bb| b != bb)
+                    .all(|bb| b.partial_cmp(&bb) == Some(Ordering::Greater))
+            })
+            .map(|x| x.to_owned())
+            .collect()
+    } else {
+        decision_models.iter().map(|x| x.to_owned()).collect()
+    }
+}
+
 pub fn compute_dominant_biddings(biddings: &Vec<ExplorationBid>) -> Vec<(usize, ExplorationBid)> {
     if biddings.len() > 1 {
         biddings

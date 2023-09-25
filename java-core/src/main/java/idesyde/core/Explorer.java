@@ -58,13 +58,20 @@ public interface Explorer {
     class Configuration {
 
         @JsonProperty("total_timeout")
-        public long totalExplorationTimeOutInSecs;
+        public long totalExplorationTimeOutInSecs = -1L;
         @JsonProperty("max_sols")
-        public long maximumSolutions;
+        public long maximumSolutions = -1L;
         @JsonProperty("time_resolution")
-        public long timeDiscretizationFactor;
+        public long timeDiscretizationFactor = -1L;
         @JsonProperty("memory_resolution")
-        public long memoryDiscretizationFactor;
+        public long memoryDiscretizationFactor = -1L;
+
+        public Configuration() {
+            this.totalExplorationTimeOutInSecs = -1L;
+            this.maximumSolutions = -1L;
+            this.timeDiscretizationFactor = -1L;
+            this.memoryDiscretizationFactor = -1L;
+        }
 
         public Configuration(long totalExplorationTimeOutInSecs, long maximumSolutions, long timeDiscretizationFactor,
                 long memoryDiscretizationFactor) {

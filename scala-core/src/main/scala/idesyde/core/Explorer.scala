@@ -45,7 +45,7 @@ trait Explorer {
   def explore(
       decisionModel: DecisionModel,
       previousSolutions: Set[ExplorationSolution] = Set(),
-      configuration: Explorer.Configuration = Explorer.Configuration(0, 0, 0, 0)
+      configuration: ExplorerConfiguration = ExplorerConfiguration(0, 0, 0, 0)
   ): LazyList[ExplorationSolution] = explore(
     decisionModel,
     previousSolutions,
@@ -92,15 +92,5 @@ trait Explorer {
     case _ =>
       false
   }
-
-}
-
-object Explorer {
-  final case class Configuration(
-      max_sols: Long = 0L,
-      total_timeout: Long = 0L,
-      time_resolution: Long = 0L,
-      memory_resolution: Long = 0L
-  ) derives ReadWriter {}
 
 }

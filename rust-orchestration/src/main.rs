@@ -377,12 +377,14 @@ fn main() {
         // let dominant = compute_dominant_decision_models(&identified_refs);
 
         // let dominant_without_biddings = compute_dominant_decision_models(&identified_refs);
+        let dominant_partial_identification =
+            idesyde_core::compute_dominant_identification(&identified);
         let explorers: Vec<Arc<dyn Explorer>> =
             emodules.iter().flat_map(|x| x.explorers()).collect();
         let biddings: Vec<(Arc<dyn Explorer>, Arc<dyn DecisionModel>, ExplorationBid)> = explorers
             .iter()
             .flat_map(|explorer| {
-                identified
+                dominant_partial_identification
                     .iter()
                     .map(|x| (explorer.clone(), x.clone(), explorer.bid(x.clone())))
             })
@@ -398,16 +400,6 @@ fn main() {
             &biddings.iter().map(|(_, _, b)| b.to_owned()).collect(),
         );
         if dominant_biddings.len() > 0 {
-            let (_, chosen_decision_model, _) = &biddings[0];
-            debug!(
-                "Proceeding to explore {} with {}",
-                chosen_decision_model.category(),
-                dominant_biddings
-                    .iter()
-                    .map(|(_, x)| x.explorer_unique_identifier.to_owned())
-                    .reduce(|a, b| a + ", " + &b)
-                    .unwrap_or("No explorer".to_string())
-            );
             match (args.x_total_time_out, args.x_max_solutions) {
                 (Some(t), Some(n)) => info!(
                     "Starting exploration up to {} total time-out seconds and {} solution(s)",
@@ -421,13 +413,22 @@ fn main() {
             }
             // let (mut tx, rx) = spmc::channel();
             // let mut total_reversed = 0;
+            debug!(
+                "Proceeding to explore {}",
+                dominant_biddings
+                    .iter()
+                    .map(|(i, x)| biddings[*i].1.category()
+                        + " with "
+                        + &x.explorer_unique_identifier.to_owned())
+                    .reduce(|a, b| a + " and " + &b)
+                    .unwrap_or("No explorer".to_string())
+            );
             let mut dominant_sols: Vec<ExplorationSolution> = vec![];
             let mut num_sols = 0;
             for sol in explore_cooperatively(
-                chosen_decision_model.to_owned(),
                 dominant_biddings
                     .iter()
-                    .map(|(i, _)| biddings[*i].0.to_owned())
+                    .map(|(i, _)| (biddings[*i].0.to_owned(), biddings[*i].1.to_owned()))
                     .collect(),
                 Vec::new(),
                 ExplorationConfiguration {

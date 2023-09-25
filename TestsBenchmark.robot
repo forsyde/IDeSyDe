@@ -132,5 +132,6 @@ Test for examples_and_benchmarks/small_and_explainable/yuhan_zhang_thesis
     Should Not Be Equal As Integers    ${NumFound}    0
 
 Test for examples_and_benchmarks/EARLY_BIRD/corrected_summer_project_2023
+    [Tags]    slow
     ${NumFound} =    IDeSyDeLibrary.Try Explore    examples_and_benchmarks/EARLY_BIRD/corrected_summer_project_2023
     Should Not Be Equal As Integers    ${NumFound}    0

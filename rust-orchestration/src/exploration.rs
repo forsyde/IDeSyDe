@@ -1,4 +1,5 @@
 use std::{
+    borrow::BorrowMut,
     cmp::Ordering,
     collections::HashMap,
     io::BufRead,
@@ -457,8 +458,7 @@ pub fn pareto_dominance_partial_cmp(
 }
 
 pub struct CombinedExplorerIterator {
-    m: Arc<dyn DecisionModel>,
-    explorers: Vec<Arc<dyn Explorer>>,
+    explorers_and_models: Vec<(Arc<dyn Explorer>, Arc<dyn DecisionModel>)>,
     currrent_solutions: Arc<Mutex<Vec<ExplorationSolution>>>,
     exploration_configuration: ExplorationConfiguration,
     _last_elapsed_time: u64,
@@ -475,12 +475,12 @@ impl Iterator for CombinedExplorerIterator {
         // create the threads of necessary
         if let None = self.threads {
             let threads = self
-                .explorers
+                .explorers_and_models
                 .iter()
-                .map(|explorer| {
+                .map(|(explorer, m)| {
                     // a copy of all the important thigs to give the thread
                     let this_sol_tx = self.solutions_tx.clone();
-                    let this_m = self.m.clone();
+                    let this_m = m.clone();
                     let this_currrent_solutions = self.currrent_solutions.clone();
                     let this_exploration_configuration = self.exploration_configuration.clone();
                     let this_explorer = explorer.clone();
@@ -515,7 +515,9 @@ impl Iterator for CombinedExplorerIterator {
                                         });
                                         //add the new solution
                                         sols.push((solved_model.clone(), sol_objs.clone()));
-                                        let _ = this_sol_tx.send((solved_model, sol_objs));
+                                        if let Err(e) = this_sol_tx.send((solved_model, sol_objs)) {
+                                            debug!("Could not send solution to control thread because {}", e.to_string());
+                                        };
                                     } else {
                                         should_restart = true;
                                     }
@@ -538,28 +540,28 @@ impl Iterator for CombinedExplorerIterator {
         }
         // now create the reciever logic
         while !self.completed.lock().map(|x| *x).unwrap_or(false) {
-            match self.solutions_rx.try_recv() {
+            match self
+                .solutions_rx
+                .recv_timeout(std::time::Duration::from_millis(300))
+            {
                 Ok(sol) => return Some(sol),
-                Err(_) => {
-                    std::thread::sleep(std::time::Duration::from_millis(300));
-                }
+                Err(_) => {}
             }
         }
-        None
+        // if it is completed, we can simply iterate the channel until completion
+        self.solutions_rx.try_recv().ok()
     }
 }
 
 pub fn explore_cooperatively(
-    m: Arc<dyn DecisionModel>,
-    explorers: Vec<Arc<dyn Explorer>>,
+    explorers_and_models: Vec<(Arc<dyn Explorer>, Arc<dyn DecisionModel>)>,
     currrent_solutions: Vec<ExplorationSolution>,
     exploration_configuration: ExplorationConfiguration,
     // solution_inspector: F,
 ) -> CombinedExplorerIterator {
     let (sols_tx, sols_rx) = std::sync::mpsc::channel();
     CombinedExplorerIterator {
-        m,
-        explorers,
+        explorers_and_models,
         currrent_solutions: Arc::new(Mutex::new(currrent_solutions)),
         exploration_configuration,
         _last_elapsed_time: 0u64,

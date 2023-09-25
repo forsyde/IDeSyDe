@@ -41,9 +41,12 @@ jobs:
       run: |
         sudo apt-get install -y dos2unix
         cd ${{ github.workspace }}
-        curl -sL https://github.com/Jabba-Team/jabba/raw/main/install.sh | JABBA_COMMAND="install ${{ matrix.jdk }}" bash
-        export JAVA_HOME=$USER/.jabba/jdk/${{ matrix.jdk }}
-        export PATH="$PATH:$JAVA_HOME/bin"
+        curl -sL https://github.com/Jabba-Team/jabba/raw/main/install.sh | bash -s -- --skip-rc && . ~/.jabba/jabba.sh
+        [ -s "$JABBA_HOME/jabba.sh" ] && source "$JABBA_HOME/jabba.sh"
+        # export JAVA_HOME=$USER/.jabba/jdk/${{ matrix.jdk }}
+        # export PATH="$PATH:$JAVA_HOME/bin"
+        jabba install ${{ matrix.jdk }}
+        jabba alias default ${{ matrix.jdk }}
         dos2unix ./gradlew # make sure that gradlew is not with CRLF
         ./gradlew publishModules        
   test-rust-build-on-linux:

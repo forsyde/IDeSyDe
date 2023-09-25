@@ -97,10 +97,10 @@ trait Explorer {
 
 object Explorer {
   final case class Configuration(
-      max_sols: Long,
-      total_timeout: Long,
-      time_resolution: Long,
-      memory_resolution: Long
+      max_sols: Long = 0L,
+      total_timeout: Long = 0L,
+      time_resolution: Long = 0L,
+      memory_resolution: Long = 0L
   ) derives ReadWriter {}
 
 }

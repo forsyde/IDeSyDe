@@ -6,7 +6,11 @@ use std::{
     net::{IpAddr, Ipv4Addr},
     path::PathBuf,
     process::{Child, Stdio},
-    sync::{Arc, Mutex},
+    sync::{
+        mpsc::{Receiver, Sender},
+        Arc, Mutex,
+    },
+    thread::JoinHandle,
 };
 
 use idesyde_blueprints::{DecisionModelMessage, ExplorationSolutionMessage, OpaqueDecisionModel};
@@ -455,35 +459,93 @@ pub fn pareto_dominance_partial_cmp(
 pub struct CombinedExplorerIterator {
     m: Arc<dyn DecisionModel>,
     explorers: Vec<Arc<dyn Explorer>>,
-    currrent_solutions: Vec<ExplorationSolution>,
+    currrent_solutions: Arc<Mutex<Vec<ExplorationSolution>>>,
     exploration_configuration: ExplorationConfiguration,
-    last_elapsed_time: u64,
+    _last_elapsed_time: u64,
+    threads: Option<Vec<JoinHandle<()>>>,
+    solutions_rx: Receiver<ExplorationSolution>,
+    solutions_tx: Sender<ExplorationSolution>,
+    completed: Arc<Mutex<bool>>,
 }
 
 impl Iterator for CombinedExplorerIterator {
     type Item = ExplorationSolution;
 
     fn next(&mut self) -> Option<Self::Item> {
-        let (sol_tx, sol_rx) = std::sync::mpsc::channel::<(usize, ExplorationSolution)>();
-        let handles = self
-            .explorers
-            .iter()
-            .map(|explorer| {
-                explorer.explore(
-                    self.m,
-                    self.currrent_solutions,
-                    self.exploration_configuration,
-                )
-            })
-            .enumerate()
-            .map(|(ei, sols)| {
-                std::thread::spawn(move || {
-                    sols.for_each(move |sol| {
-                        sol_tx.send((ei, sol));
+        // create the threads of necessary
+        if let None = self.threads {
+            let threads = self
+                .explorers
+                .iter()
+                .map(|explorer| {
+                    // a copy of all the important thigs to give the thread
+                    let this_sol_tx = self.solutions_tx.clone();
+                    let this_m = self.m.clone();
+                    let this_currrent_solutions = self.currrent_solutions.clone();
+                    let this_exploration_configuration = self.exploration_configuration.clone();
+                    let this_explorer = explorer.clone();
+                    let completed_cloned = self.completed.clone();
+                    // the communiation aspects with the main thread
+                    // finally, the thread logic to keep exploring
+                    std::thread::spawn(move || {
+                        while let Ok(false) = completed_cloned.lock().map(|x| *x) {
+                            let previous_solutions = this_currrent_solutions
+                                .lock()
+                                .map(|x| x.clone())
+                                .unwrap_or(Vec::new());
+                            let mut should_restart = false;
+                            for (solved_model, sol_objs) in this_explorer.explore(
+                                this_m.to_owned(),
+                                previous_solutions,
+                                this_exploration_configuration,
+                            ) {
+                                if let Ok(mut sols) = this_currrent_solutions.lock() {
+                                    // no other solution dominates the found one
+                                    let sol_not_dominated = sols.len() == 0
+                                        || sols.iter().any(|(_, y)| {
+                                            pareto_dominance_partial_cmp(&sol_objs, y)
+                                                != Some(Ordering::Greater)
+                                        });
+                                    if sol_not_dominated {
+                                        // solution_inspector((solved_model, sol_objs));
+                                        // then it is an improvement, take out the solutions that are dominated
+                                        sols.retain(|(_, y)| {
+                                            pareto_dominance_partial_cmp(&sol_objs, y)
+                                                != Some(Ordering::Less)
+                                        });
+                                        //add the new solution
+                                        sols.push((solved_model.clone(), sol_objs.clone()));
+                                        let _ = this_sol_tx.send((solved_model, sol_objs));
+                                    } else {
+                                        should_restart = true;
+                                    }
+                                }
+                                if should_restart {
+                                    break;
+                                }
+                            }
+                            if !should_restart {
+                                // if no improvement has been made but the loop finished, mark as complete
+                                if let Ok(mut comp) = completed_cloned.lock() {
+                                    *comp = true;
+                                }
+                            }
+                        }
                     })
                 })
-            });
-        todo!()
+                .collect();
+            self.threads = Some(threads);
+        }
+        // now create the reciever logic
+        while !self.completed.lock().map(|x| *x).unwrap_or(false) {
+            match self.solutions_rx.try_recv() {
+                Ok(sol) => return Some(sol),
+                Err(_) => {
+                    std::thread::sleep(std::time::Duration::from_millis(300));
+                }
+            }
+        }
+        None
     }
 }
 
@@ -493,100 +555,17 @@ pub fn explore_cooperatively(
     currrent_solutions: Vec<ExplorationSolution>,
     exploration_configuration: ExplorationConfiguration,
     // solution_inspector: F,
-) -> Vec<ExplorationSolution>
-// where
-//     F: Fn(ExplorationSolution) -> () + Copy + Send,
-{
-    let mut aggregated_solutions = Vec::new();
-    aggregated_solutions.extend(currrent_solutions.into_iter());
-    let shared_solutions = Arc::new(Mutex::new(aggregated_solutions));
-    let completed = Arc::new(Mutex::new(false));
-    rayon::scope(|s| {
-        // the explorers
-        for explorer in explorers {
-            let m_cloned = m.clone();
-            let completed_cloned = completed.clone();
-            let shared_solutions_cloned = shared_solutions.clone();
-            s.spawn(move |_| {
-                while let Ok(false) = completed_cloned.lock().map(|x| *x) {
-                    let previous_solutions = shared_solutions_cloned
-                        .lock()
-                        .map(|x| x.clone())
-                        .unwrap_or(Vec::new());
-                    let mut should_restart = false;
-                    for (solved_model, sol_objs) in explorer.explore(
-                        m_cloned.to_owned(),
-                        previous_solutions,
-                        exploration_configuration.to_owned(),
-                    ) {
-                        if let Ok(mut sols) = shared_solutions_cloned.lock() {
-                            // no other solution dominates the found one
-                            let sol_not_dominated = sols.len() == 0
-                                || sols.iter().any(|(_, y)| {
-                                    pareto_dominance_partial_cmp(&sol_objs, y)
-                                        != Some(Ordering::Greater)
-                                });
-                            if sol_not_dominated {
-                                // debug info
-                                debug!(
-                                    "Found a new solution with objectives: {}.",
-                                    &sol_objs
-                                        .iter()
-                                        .map(|(k, v)| format!("{}: {}", k, v))
-                                        .reduce(|s1, s2| format!("{}, {}", s1, s2))
-                                        .unwrap_or("None".to_owned())
-                                );
-                                // solution_inspector((solved_model, sol_objs));
-                                // then it is an improvement, take out the solutions that are dominated
-                                sols.retain(|(_, y)| {
-                                    pareto_dominance_partial_cmp(&sol_objs, y)
-                                        != Some(Ordering::Less)
-                                });
-                                //add the new solution
-                                sols.push((solved_model, sol_objs));
-                            } else {
-                                should_restart = true;
-                            }
-                        }
-                        if should_restart {
-                            break;
-                        }
-                    }
-                    if !should_restart {
-                        // if no improvement has been made but the loop finished, mark as complete
-                        if let Ok(mut comp) = completed_cloned.lock() {
-                            *comp = true;
-                        }
-                    }
-                }
-            });
-        }
-        // let explorer_channels: Vec<
-        //     std::sync::mpsc::Sender<(Arc<dyn DecisionModel>, Vec<ExplorationSolution>)>,
-        // > = emodules_and_explorer_ids
-        //     .iter()
-        //     .map(|(emodule, e_id)| {
-        //         let (exp_tx, exp_rx) =
-        //             std::sync::mpsc::channel::<(Arc<dyn DecisionModel>, Vec<ExplorationSolution>)>(
-        //             );
-        //         s.spawn(move |_| {
-        //             while let Ok((in_model, received_sols)) = exp_rx.recv() {
-        //                 for sol in emodule.explore(
-        //                     in_model,
-        //                     *e_id,
-        //                     received_sols,
-        //                     exploration_configuration.to_owned(),
-        //                 ) {
-        //                     if exp_rx.
-        //                 }
-        //             }
-        //         });
-        //         exp_tx
-        //     })
-        //     .collect();
-        // for (emodule, explorer_id) in emodules_and_explorer_ids {}
-        // the main controller for the cooperation
-        // s.spawn(move |_| {});
-    });
-    return shared_solutions.lock().unwrap().to_owned();
+) -> CombinedExplorerIterator {
+    let (sols_tx, sols_rx) = std::sync::mpsc::channel();
+    CombinedExplorerIterator {
+        m,
+        explorers,
+        currrent_solutions: Arc::new(Mutex::new(currrent_solutions)),
+        exploration_configuration,
+        _last_elapsed_time: 0u64,
+        threads: None,
+        solutions_rx: sols_rx,
+        solutions_tx: sols_tx,
+        completed: Arc::new(Mutex::new(false)),
+    }
 }

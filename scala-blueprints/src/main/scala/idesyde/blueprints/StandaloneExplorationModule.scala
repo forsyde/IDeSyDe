@@ -308,13 +308,9 @@ trait StandaloneExplorationModule
   }
 
   inline def standaloneHttpExplorationModule(port: Int): Unit = {
-    var decisionModels                = mutable.Set[DecisionModel]()
-    var solvedDecisionModels          = mutable.Set[DecisionModel]()
-    var solvedDecisionObjs            = mutable.Map[DecisionModel, Map[String, Double]]()
-    var maximumSolutions              = 0L
-    var explorationTotalTimeOutInSecs = 0L
-    var timeResolution                = 0L
-    var memoryResolution              = 0L
+    var decisionModels       = mutable.Set[DecisionModel]()
+    var solvedDecisionModels = mutable.Set[DecisionModel]()
+    var solvedDecisionObjs   = mutable.Map[DecisionModel, Map[String, Double]]()
     val server = Javalin
       .create()
       .post(
@@ -322,11 +318,6 @@ trait StandaloneExplorationModule
         ctx => {
           if (ctx.queryParamMap().containsKey("parameter")) {
             ctx.queryParam("parameter").toLowerCase() match {
-              case "maximum-solutions" | "max-sols" => maximumSolutions = ctx.body().toLong
-              case "total-timeout" => explorationTotalTimeOutInSecs = ctx.body().toLong
-              case "time-resolution" | "time-res" => timeResolution = ctx.body().toLong
-              case "memory-resolution" | "memory-res" | "mem-res" =>
-                memoryResolution = ctx.body().toLong
               case _ =>
             }
           }
@@ -427,10 +418,10 @@ trait StandaloneExplorationModule
               (sol, objs) <- explorer.explore(
                 decisionModel,
                 previousSolutions,
-                explorationTotalTimeOutInSecs,
-                maximumSolutions,
-                timeResolution,
-                memoryResolution
+                request.configuration.total_timeout,
+                request.configuration.max_sols,
+                request.configuration.time_resolution,
+                request.configuration.memory_resolution
               )
             ) {
               val message = ExplorationSolutionMessage.fromSolution(sol, objs)

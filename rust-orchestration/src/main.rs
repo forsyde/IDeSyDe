@@ -1,4 +1,4 @@
-use std::{net::IpAddr, path::Path, sync::Arc};
+use std::{cmp::Ordering, net::IpAddr, path::Path, sync::Arc};
 
 use clap::Parser;
 use env_logger::WriteStyle;
@@ -421,7 +421,9 @@ fn main() {
             }
             // let (mut tx, rx) = spmc::channel();
             // let mut total_reversed = 0;
-            let mut sols_found = explore_cooperatively(
+            let mut dominant_sols: Vec<ExplorationSolution> = vec![];
+            let mut num_sols = 0;
+            for sol in explore_cooperatively(
                 chosen_decision_model.to_owned(),
                 dominant_biddings
                     .iter()
@@ -434,20 +436,73 @@ fn main() {
                     time_resolution: args.x_time_resolution.unwrap_or(0),
                     memory_resolution: args.x_memory_resolution.unwrap_or(0),
                 },
-            );
-            sols_found.dedup_by(|(_, a), (_, b)| a == b);
-            let dominant_sols: Vec<ExplorationSolution> = sols_found
-                .iter()
-                .filter(|x @ (_, objs)| {
-                    sols_found.iter().filter(|y| x != y).all(|(_, other_objs)| {
-                        objs.iter().any(|(k, v)| v < other_objs.get(k).unwrap())
-                    })
-                })
-                .map(|x| x.to_owned())
-                .collect();
+            ) {
+                debug!(
+                    "Found a new solution with objectives: {}.",
+                    &sol.1
+                        .iter()
+                        .map(|(k, v)| format!("{}: {}", k, v))
+                        .reduce(|s1, s2| format!("{}, {}", s1, s2))
+                        .unwrap_or("None".to_owned())
+                );
+                dominant_sols.push(sol.clone());
+                dominant_sols.retain(|(_, y)| {
+                    idesyde_orchestration::exploration::pareto_dominance_partial_cmp(&sol.1, y)
+                        != Some(Ordering::Less)
+                });
+                sol.0.write_to_dir(
+                    &explored_path,
+                    format!("{}_intermediate", num_sols).as_str(),
+                    "Orchestratror",
+                );
+                imodules.par_iter().for_each(|imodule| {
+                    for reverse in imodule.reverse_identification(
+                        &dominant_sols.iter().map(|(x, _)| x.clone()).collect(),
+                        &design_models,
+                    ) {
+                        // let reverse_header = reverse.header();
+                        reverse.write_to_dir(
+                            &reverse_path,
+                            format!("{}_intermediate", num_sols).as_str(),
+                            "Orchestrator",
+                        );
+                        debug!("Reverse identified a {} design model", reverse.category());
+                    }
+                });
+                num_sols += 1;
+            }
+            // let sols_iter = explore_cooperatively(
+            //     chosen_decision_model.to_owned(),
+            //     dominant_biddings
+            //         .iter()
+            //         .map(|(i, _)| biddings[*i].0.to_owned())
+            //         .collect(),
+            //     Vec::new(),
+            //     ExplorationConfiguration {
+            //         max_sols: args.x_max_solutions.unwrap_or(0),
+            //         total_timeout: args.x_total_time_out.unwrap_or(0),
+            //         time_resolution: args.x_time_resolution.unwrap_or(0),
+            //         memory_resolution: args.x_memory_resolution.unwrap_or(0),
+            //     },
+            // );
+            // let mut sols_found: Vec<ExplorationSolution> = sols_iter
+            //     .into_iter()
+            //     .inspect(|(_, s)| // debug info
+            //     )
+            //     .collect();
+            // sols_found.dedup_by(|(_, a), (_, b)| a == b);
+            // let dominant_sols: Vec<ExplorationSolution> = sols_found
+            //     .iter()
+            //     .filter(|x @ (_, objs)| {
+            //         sols_found.iter().filter(|y| x != y).all(|(_, other_objs)| {
+            //             objs.iter().any(|(k, v)| v < other_objs.get(k).unwrap())
+            //         })
+            //     })
+            //     .map(|x| x.to_owned())
+            //     .collect();
             info!(
                 "Finished exploration with {} total and {} dominant solution(s)",
-                sols_found.len(),
+                num_sols,
                 dominant_sols.len()
             );
             for (i, (m, objs)) in dominant_sols.iter().enumerate() {
@@ -491,60 +546,7 @@ fn main() {
             } else {
                 info!("No solution to reverse identify");
             }
-        }
-        // if let Some((idx, dominant_bid)) = dominant_bidding_opt {
-        //     let (chosen_exploration_module, chosen_decision_model, _) = &biddings[idx];
-        //     debug!(
-        //         "Proceeding to explore {} with {}",
-        //         chosen_decision_model.category(),
-        //         dominant_bid.explorer_unique_identifier
-        //     );
-        //     let mut sol_iter = chosen_exploration_module.explore(
-        //         chosen_decision_model.clone(),
-        //         &dominant_bid.explorer_unique_identifier,
-        //         vec![],
-        //         ExplorationConfiguration {
-        //             max_sols: args.x_max_solutions.unwrap_or(0),
-        //             total_timeout: args.x_total_time_out.unwrap_or(0),
-        //             time_resolution: args.x_time_resolution.unwrap_or(0),
-        //             memory_resolution: args.x_memory_resolution.unwrap_or(0),
-        //         },
-        //     );
-        //     while let Some((m, sol)) = sol_iter.next() {
-        //         debug!(
-        //             "Found a new solution with objectives: {}.",
-        //             sol.iter()
-        //                 .map(|(k, v)| format!("{}: {}", k, v))
-        //                 .reduce(|s1, s2| format!("{}, {}", s1, s2))
-        //                 .unwrap_or("None".to_owned())
-        //         );
-        //         sols_found.push((m, sol));
-        //     }
-        // for (i, sol) in exp
-        //     .explore(
-        //         &decision_model,
-        //         args.x_max_solutions.unwrap_or(0),
-        //         args.x_total_time_out.unwrap_or(0),
-        //         args.x_time_resolution.unwrap_or(-1),
-        //         args.x_memory_resolution.unwrap_or(-1),
-        //     )
-        //     .enumerate()
-        // {
-        //     sols_found += 1;
-        //     let solv = vec![sol];
-        //     debug!("Found a new solution. Total count is {}.", i + 1);
-        //     imodules.par_iter().for_each(|imodule| {
-        //         for reverse in imodule.reverse_identification(&solv, &design_models) {
-        //             idesyde_core::write_design_model_header_to_path(
-        //                 &reverse.header(),
-        //                 &reverse_path,
-        //                 format!("{}_{}", "reversed_", i).as_str(),
-        //                 "Orchestrator",
-        //             );
-        //         }
-        //     });
-        // }
-        else {
+        } else {
             info!("No dominant bidding to start exploration. Finished")
         }
     } else {

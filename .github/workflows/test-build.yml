@@ -42,11 +42,13 @@ jobs:
         sudo apt-get install -y dos2unix
         cd ${{ github.workspace }}
         # for whatever reason, for the moment nothing seems to work except an extreme manual approach.
-        # this should be 
+        # this should be corrected later when misterious external errors stop happening
         wget -c https://github.com/Jabba-Team/jabba/releases/download/0.13.0/jabba-0.13.0-linux-amd64 -O ./jabba-linux-amd64
         chmod +x jabba-linux-amd64
         ./jabba-linux-amd64 install ${{ matrix.jdk }}
         ./jabba-linux-amd64 alias default ${{ matrix.jdk }}
+        export JAVA_HOME=$USER/.jabba/jdk/default
+        export PATH=$PATH:$JAVA_HOME/bin
         dos2unix ./gradlew # make sure that gradlew is not with CRLF
         ./gradlew publishModules        
   test-rust-build-on-linux:

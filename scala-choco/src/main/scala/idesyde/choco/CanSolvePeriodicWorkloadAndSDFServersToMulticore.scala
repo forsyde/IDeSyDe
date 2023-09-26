@@ -434,6 +434,7 @@ final class CanSolvePeriodicWorkloadAndSDFServersToMulticore(using logger: Logge
     //     if (memoryResolution > Int.MaxValue) Int.MaxValue else memoryResolution.toInt
     //   )
     val intVars = solution.retrieveIntVars(true).asScala
+    // println(intVars.filter(v => v.getName().contains("effect") || v.getName().contains("utilization")).mkString(", "))
     val tasksMemoryMapping: Vector[Int] =
       m.tasksAndSDFs.workload.processes.zipWithIndex.map((_, i) =>
         intVars
@@ -481,6 +482,9 @@ final class CanSolvePeriodicWorkloadAndSDFServersToMulticore(using logger: Logge
          ).map(solution.getIntVal(_))
          .get
       )
+    val jobOrder: Vector[IntVar] = m.tasksAndSDFs.sdfApplications.jobsAndActors
+      .map((a, q) => intVars.find(_.getName() == s"jobOrder($a, $q)").get)
+      .toVector
     val numVirtualChannelsForProcElem: Vector[Vector[IntVar]] =
       m.platform.hardware.processingElems.map(src =>
         m.platform.hardware.communicationElems.map(ce =>
@@ -489,8 +493,6 @@ final class CanSolvePeriodicWorkloadAndSDFServersToMulticore(using logger: Logge
       )
     val numMappedElements = intVars.find(_.getName() == "nUsedPEs").get
     val invThs = intVars.filter(_.getName().startsWith("invTh"))
-    println(invThs.mkString(", "))
-    println(invThs.map(v => v.getName() -> int2double(v.getValue())).mkString(", "))
     val dataChannelsSlotAllocations = m.tasksAndSDFs.workload.dataChannels.zipWithIndex.map((c, ci) => c -> {
         // we have to look from the source perpective, since the sending processor is the one that allocates
         val mem = dataChannelsMemoryMapping(ci)
@@ -540,7 +542,15 @@ final class CanSolvePeriodicWorkloadAndSDFServersToMulticore(using logger: Logge
       processesSchedulings = taskExecution.zipWithIndex.map((mi, ti) => m.tasksAndSDFs.workload.processes(ti) -> m.platform.runtimes.schedulers(mi))  ++ actorExecution.zipWithIndex.map((mi, ti) => m.tasksAndSDFs.sdfApplications.actorsIdentifiers(ti) -> m.platform.runtimes.schedulers(mi)),
       processesMappings = tasksMemoryMapping.zipWithIndex.map((mi, ti) => m.tasksAndSDFs.workload.processes(ti) -> m.platform.hardware.storageElems(mi))  ++ actorsMemoryMapping.zipWithIndex.map((mi, ti) => m.tasksAndSDFs.sdfApplications.actorsIdentifiers(ti) -> m.platform.hardware.storageElems(mi)),
       messagesMappings = dataChannelsMemoryMapping.zipWithIndex.map((mi, ci) => m.tasksAndSDFs.workload.dataChannels(ci) -> m.platform.hardware.storageElems(mi)) ++ sdfMessageMemoryMappings,
-      messageSlotAllocations = dataChannelsSlotAllocations ++ sdfChannelsSlotAllocations
+      messageSlotAllocations = dataChannelsSlotAllocations ++ sdfChannelsSlotAllocations,
+      sdfOrderBasedSchedules = m.platform.runtimes.schedulers.zipWithIndex.map((s, si) => {
+        val unordered = for (
+          ((aId, q), i) <- m.tasksAndSDFs.sdfApplications.jobsAndActors.zipWithIndex;
+          a = m.tasksAndSDFs.sdfApplications.actorsIdentifiers.indexOf(aId);
+          if actorExecution(a) == si
+        ) yield (aId, jobOrder(i).getLB())
+        unordered.sortBy((a, o) => o).map((a, _) => a)
+      }),
     ), Map("nUsedPEs" -> numMappedElements.getValue().toDouble) ++ invThs.map(v => v.getName() -> int2double(v.getValue())).toMap)
   }
 }

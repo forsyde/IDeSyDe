@@ -79,7 +79,6 @@ jobs:
         [Net.ServicePointManager]::SecurityProtocol = [Net.SecurityProtocolType]::Tls12
         Invoke-Expression (Invoke-WebRequest https://github.com/Jabba-Team/jabba/raw/main/install.ps1 -UseBasicParsing).Content
         cd ${{ github.workspace }}
-        refreshenv
         jabba install ${{ matrix.jdk }}
         jabba alias default ${{ matrix.jdk }}
         Invoke-WebRequest -Uri "https://github.com/coursier/launchers/raw/master/cs-x86_64-pc-win32.zip" -OutFile "cs-x86_64-pc-win32.zip"

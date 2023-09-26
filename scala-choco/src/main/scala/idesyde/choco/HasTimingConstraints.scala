@@ -52,8 +52,8 @@ trait HasTimingConstraints {
       .binPacking(
         taskExecution,
         durations.zipWithIndex
-          .map((d, i) => (d.getUB(), i))
-          .map((d, i) => d / periods(i)),
+          .map((d, i) => (100 * d.getUB(), periods(i)))
+          .map((d, p) => if (d % p == 0) Math.floorDiv(d, p) else Math.floorDiv(d, p) + 1),
         utilizations,
         0
       )

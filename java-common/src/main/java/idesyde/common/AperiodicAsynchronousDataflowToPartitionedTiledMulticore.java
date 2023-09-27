@@ -27,13 +27,13 @@ import java.util.stream.Stream;
  */
 public record AperiodicAsynchronousDataflowToPartitionedTiledMulticore(
                 @JsonProperty("aperiodic_asynchronous_dataflows") List<AperiodicAsynchronousDataflow> aperiodicAsynchronousDataflows,
-                @JsonProperty("buffer_to_memory_mappings") Map<String, String> bufferToMemoryMappings,
-                @JsonProperty("buffer_to_routers_reservations") Map<String, Map<String, List<Long>>> bufferToRoutersReservations,
-                @JsonProperty("instrumented_computation_times") InstrumentedComputationTimes instrumentedComputationTimes,
                 @JsonProperty("partitioned_tiled_multicore") PartitionedTiledMulticore partitionedTiledMulticore,
-                @JsonProperty("processes_to_memory_mapping") Map<String, String> processesToMemoryMapping,
+                @JsonProperty("instrumented_computation_times") InstrumentedComputationTimes instrumentedComputationTimes,
                 @JsonProperty("processes_to_runtime_scheduling") Map<String, String> processesToRuntimeScheduling,
-                @JsonProperty("super_loop_schedules") Map<String, List<String>> superLoopSchedules)
+                @JsonProperty("processes_to_memory_mapping") Map<String, String> processesToMemoryMapping,
+                @JsonProperty("buffer_to_memory_mappings") Map<String, String> bufferToMemoryMappings,
+                @JsonProperty("super_loop_schedules") Map<String, List<String>> superLoopSchedules,
+                @JsonProperty("processing_elements_to_routers_reservations") Map<String, Map<String, Integer>> processingElementsToRoutersReservations)
                 implements DecisionModel {
         @Override
         public DecisionModelHeader header() {

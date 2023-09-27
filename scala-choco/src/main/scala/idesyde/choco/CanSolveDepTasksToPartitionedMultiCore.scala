@@ -328,8 +328,8 @@ final class CanSolveDepTasksToPartitionedMultiCore(using logger: Logger)
     //   .getSolver()
     //   .plugMonitor(new IMonitorContradiction {
     //     def onContradiction(cex: ContradictionException): Unit = {
-    //       println(cex.toString())
     //       println(chocoModel.getSolver().getDecisionPath().toString())
+    //       println(cex.toString())
     //     }
     //   })
 

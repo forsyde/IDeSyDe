@@ -538,6 +538,9 @@ final class CanSolvePeriodicWorkloadAndSDFServersToMulticore(using logger: Logge
               .toVector
         iter.toMap
       }).toMap
+    val utilizationPerRuntime = m.platform.runtimes.schedulers.zipWithIndex.filter((s, i) => m.platform.runtimes.isFixedPriority(i)).map((s, i) => 
+      intVars.find(_.getName().startsWith(s"utilization($i)")).get.getValue().toDouble / 100.0
+    )
     (m.copy(
       processesSchedulings = taskExecution.zipWithIndex.map((mi, ti) => m.tasksAndSDFs.workload.processes(ti) -> m.platform.runtimes.schedulers(mi))  ++ actorExecution.zipWithIndex.map((mi, ti) => m.tasksAndSDFs.sdfApplications.actorsIdentifiers(ti) -> m.platform.runtimes.schedulers(mi)),
       processesMappings = tasksMemoryMapping.zipWithIndex.map((mi, ti) => m.tasksAndSDFs.workload.processes(ti) -> m.platform.hardware.storageElems(mi))  ++ actorsMemoryMapping.zipWithIndex.map((mi, ti) => m.tasksAndSDFs.sdfApplications.actorsIdentifiers(ti) -> m.platform.hardware.storageElems(mi)),
@@ -551,6 +554,7 @@ final class CanSolvePeriodicWorkloadAndSDFServersToMulticore(using logger: Logge
         ) yield (aId, jobOrder(i).getLB())
         unordered.sortBy((a, o) => o).map((a, _) => a)
       }),
+      sdfServerUtilization = utilizationPerRuntime.map(u => 1.0 - u)
     ), Map("nUsedPEs" -> numMappedElements.getValue().toDouble) ++ invThs.map(v => v.getName() -> int2double(v.getValue())).toMap)
   }
 }

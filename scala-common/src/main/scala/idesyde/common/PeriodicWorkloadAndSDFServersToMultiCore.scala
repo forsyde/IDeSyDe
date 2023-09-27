@@ -11,8 +11,7 @@ final case class PeriodicWorkloadAndSDFServerToMultiCore(
     val processesMappings: Vector[(String, String)],
     val messagesMappings: Vector[(String, String)],
     val messageSlotAllocations: Map[String, Map[String, Vector[Boolean]]],
-    val sdfServerPeriod: Vector[Double],
-    val sdfServerBudget: Vector[Double],
+    val sdfServerUtilization: Vector[Double],
     val sdfOrderBasedSchedules: Vector[Vector[String]]
 ) extends StandardDecisionModel
     with CompleteDecisionModel

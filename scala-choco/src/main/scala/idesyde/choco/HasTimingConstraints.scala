@@ -45,19 +45,49 @@ trait HasTimingConstraints {
       .map(_.floor.toInt)
       .zipWithIndex
       .map((maxU, j) => {
-        chocoModel.intVar(s"pe_${j}_utilization", 0, Math.min(maxU, 100), true)
+        chocoModel.intVar(s"utilization(${j})", 0, Math.min(maxU, 100), true)
       })
     // TODO: find a way to reduce the pessimism here
-    chocoModel
-      .binPacking(
-        taskExecution,
-        durations.zipWithIndex
-          .map((d, i) => (100 * d.getUB(), periods(i)))
-          .map((d, p) => if (d % p == 0) Math.floorDiv(d, p) else Math.floorDiv(d, p) + 1),
-        utilizations,
-        0
-      )
-      .post()
+    for ((u, i) <- utilizations.zipWithIndex) {
+      var mappedUtilizations = for ((d, j) <- durations.zipWithIndex) yield {
+        var utilizationContribution =
+          chocoModel.intVar(
+            s"utilization(${j}, ${i})",
+            0,
+            Math.min(100, Math.floorDiv(100 * d.getUB(), periods(j)) + 1),
+            true
+          )
+        chocoModel.ifThenElse(
+          chocoModel.intEqView(taskExecution(j), i),
+          chocoModel.arithm(
+            chocoModel.intScaleView(d, 100),
+            "<=",
+            chocoModel.intScaleView(utilizationContribution, periods(j))
+          ),
+          chocoModel.arithm(utilizationContribution, "=", 0)
+        )
+        chocoModel.ifThen(
+          chocoModel.intEqView(taskExecution(j), i),
+          chocoModel.arithm(
+            chocoModel.intScaleView(utilizationContribution, periods(j)),
+            "<",
+            chocoModel.intAffineView(100, d, periods(j))
+          )
+        )
+        utilizationContribution
+      }
+      chocoModel.sum(mappedUtilizations, "=", u).post()
+    }
+    // chocoModel
+    //   .binPacking(
+    //     taskExecution,
+    //     durations.zipWithIndex
+    //       .map((d, i) => (100 * d.getUB(), periods(i)))
+    //       .map((d, p) => if (d % p == 0) Math.floorDiv(d, p) else Math.floorDiv(d, p) + 1),
+    //     utilizations,
+    //     0
+    //   )
+    //   .post()
     //   }
     //   maxUtilizations
     //     .map(u => (u * (100)).ceil.toInt)

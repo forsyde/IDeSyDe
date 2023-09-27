@@ -450,7 +450,7 @@ pub struct AperiodicAsynchronousDataflowToPartitionedTiledMulticore {
     pub processes_to_memory_mapping: HashMap<String, String>,
     pub buffer_to_memory_mappings: HashMap<String, String>,
     pub super_loop_schedules: HashMap<String, Vec<String>>,
-    pub buffer_to_routers_reservations: HashMap<String, HashMap<String, HashSet<u16>>>,
+    pub processing_elements_to_routers_reservations: HashMap<String, HashMap<String, u16>>,
 }
 
 impl DecisionModel for AperiodicAsynchronousDataflowToPartitionedTiledMulticore {
@@ -484,10 +484,10 @@ impl DecisionModel for AperiodicAsynchronousDataflowToPartitionedTiledMulticore 
         for (buf, mem) in &self.buffer_to_memory_mappings {
             elems.insert(format!("{}={}:{}-{}:{}", "mapping", buf, "", mem, ""));
         }
-        for (buf, ce_slots) in &self.buffer_to_routers_reservations {
+        for (pe, ce_slots) in &self.processing_elements_to_routers_reservations {
             for (ce, slots) in ce_slots {
-                if !slots.is_empty() {
-                    elems.insert(format!("{}={}:{}-{}:{}", "reservation", buf, "", ce, ""));
+                if *slots > 0 {
+                    elems.insert(format!("{}={}:{}-{}:{}", "reservation", pe, "", ce, ""));
                 }
             }
         }

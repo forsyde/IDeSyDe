@@ -401,7 +401,7 @@ pub fn identify_aperiodic_asynchronous_dataflow_to_partitioned_tiled_multicore(
                         processes_to_memory_mapping: HashMap::new(),
                         buffer_to_memory_mappings: HashMap::new(),
                         super_loop_schedules: HashMap::new(),
-                        buffer_to_routers_reservations: HashMap::new(),
+                        processing_elements_to_routers_reservations: HashMap::new(),
                     },
                 ))
             }

@@ -157,8 +157,7 @@ public interface CanExploreAADPMMMWithJenetics {
                                                                                                         decisionModel.partitionedMemMappableMulticore()
                                                                                                                         .hardware()
                                                                                                                         .communicationElementsMaxChannels()
-                                                                                                                        .get(coms.indexOf(
-                                                                                                                                        ee.getKey())))))
+                                                                                                                        .get(ee.getKey()))))
                                                                         .collect(ISeq.toISeq()));
                                         var orderings = new int[jobs.size()];
                                         Arrays.fill(orderings, -1);

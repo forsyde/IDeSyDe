@@ -175,8 +175,7 @@ trait MixedRules {
             processesMappings = Vector.empty,
             messagesMappings = Vector.empty,
             messageSlotAllocations = Map.empty,
-            sdfServerPeriod = Vector.empty[Double],
-            sdfServerBudget = Vector.empty[Double],
+            sdfServerUtilization = Vector.empty[Double],
             sdfOrderBasedSchedules = p.runtimes.schedulers.map(p => Vector.empty)
           )
         )

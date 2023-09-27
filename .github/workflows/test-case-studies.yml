@@ -67,9 +67,6 @@ jobs:
           path: ${{ github.workspace }}/emodules
           key: ${{ github.ref }}-scala-emodules
   build-rust:
-    strategy:
-      matrix:
-        jabba_jdk: [temurin@17, amazon-corretto@17, zulu@17, microsoft@17]
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v3

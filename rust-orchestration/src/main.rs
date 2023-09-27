@@ -114,7 +114,7 @@ fn main() {
         .filter(None, verbosity.to_level_filter())
         .write_style(WriteStyle::Always)
         .format_target(false)
-        .format_module_path(true)
+        .format_module_path(false)
         .init();
     if args.inputs.len() > 0 {
         rayon::ThreadPoolBuilder::new()

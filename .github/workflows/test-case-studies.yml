@@ -41,6 +41,11 @@ jobs:
           bash ./scripts/make-all-linux.sh
           python -m pip install robotframework
           python -m robot --exclude slow TestsBenchmark.robot
+      - name: Upload Robot Log
+        uses: actions/upload-artifact@v3
+        with:
+          name: test-build-log-${{ github.ref }}.html
+          path: log.html
       # - name: Cache-out outputs
       #   uses: actions/cache@v3
       #   with:

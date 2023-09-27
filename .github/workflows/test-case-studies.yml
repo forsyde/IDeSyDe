@@ -97,22 +97,22 @@ jobs:
       - name: Cache-in java imodules
         uses: actions/cache@v3
         with:
-          path: ${{ github.workspace }}/imodules
+          path: ${{ github.workspace }}/java-imodules
           key: ${{ github.ref }}-${{ matrix.jabba_jdk }}-java-imodules
       - name: Cache-in java emodules
         uses: actions/cache@v3
         with:
-          path: ${{ github.workspace }}/emodules
+          path: ${{ github.workspace }}/java-emodules
           key: ${{ github.ref }}-${{ matrix.jabba_jdk }}-java-emodules
       - name: Cache-in scala imodules
         uses: actions/cache@v3
         with:
-          path: ${{ github.workspace }}/imodules
+          path: ${{ github.workspace }}/scala-imodules
           key: ${{ github.ref }}-scala-imodules
       - name: Cache-in scala emodules
         uses: actions/cache@v3
         with:
-          path: ${{ github.workspace }}/emodules
+          path: ${{ github.workspace }}/scala-emodules
           key: ${{ github.ref }}-scala-emodules
       - name: Cache-in rust
         uses: actions/cache@v3
@@ -125,6 +125,12 @@ jobs:
           sudo apt-get update
           sudo apt-get install -y curl bash build-essential libssl-dev pkg-config mingw-w64 musl-dev musl-tools dos2unix
           cd ${{ github.workspace }}
+          mkdir -p imodules
+          mkdir -p emodules
+          cp -r java-imodules/* imodules/
+          cp -r scala-imodules/* imodules/
+          cp -r java-emodules/* emodules/
+          cp -r scala-emodules/* emodules/
           python -m pip install robotframework
           python -m robot --exclude slow TestsBenchmark.robot
       - name: Upload Robot Log

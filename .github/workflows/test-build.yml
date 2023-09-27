@@ -64,6 +64,7 @@ jobs:
         sudo apt-get install -y curl bash build-essential libssl-dev pkg-config mingw-w64 musl-dev musl-tools
         cd ${{ github.workspace }}
         curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh -s -- --default-toolchain stable -y 
+        source "$HOME/.cargo/env"
         rustup target add ${{ matrix.target }}
         cargo build --release --target ${{ matrix.target }}
   test-scala-build-on-windows:

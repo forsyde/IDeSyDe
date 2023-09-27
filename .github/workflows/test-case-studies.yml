@@ -19,7 +19,7 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v3
-      - name: Build and Test cases
+      - name: Build java
         run: |
           sudo apt-get update
           sudo apt-get install -y curl bash build-essential libssl-dev pkg-config dos2unix
@@ -37,17 +37,17 @@ jobs:
         uses: actions/cache@v3
         with:
           path: ${{ github.workspace }}/imodules
-          key: ${{ github.ref }}-${{ matrix.jabba_jdk }}-java-imodules
+          key: java-imodules-${{ github.ref }}-${{ matrix.jabba_jdk }}
       - name: Cache-out java emodules
         uses: actions/cache@v3
         with:
           path: ${{ github.workspace }}/emodules
-          key: ${{ github.ref }}-${{ matrix.jabba_jdk }}-java-emodules
+          key: java-emodules-${{ github.ref }}-${{ matrix.jabba_jdk }}
   build-scala:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v3
-      - name: Build and Test cases
+      - name: Build scala
         run: |
           sudo apt-get update
           sudo apt-get install -y curl bash build-essential libssl-dev pkg-config dos2unix
@@ -60,29 +60,30 @@ jobs:
         uses: actions/cache@v3
         with:
           path: ${{ github.workspace }}/imodules
-          key: ${{ github.ref }}-scala-imodules
+          key: scala-imodules-${{ github.ref }}
       - name: Cache-out scala emodules
         uses: actions/cache@v3
         with:
           path: ${{ github.workspace }}/emodules
-          key: ${{ github.ref }}-scala-emodules
+          key: scala-emodules-${{ github.ref }}
   build-rust:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v3
-      - name: Build and Test cases
+      - name: Build rust
         run: |
           sudo apt-get update
           sudo apt-get install -y curl bash build-essential libssl-dev pkg-config mingw-w64 musl-dev musl-tools
           cd ${{ github.workspace }}
           curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh -s -- --default-toolchain stable -y 
+          source "$HOME/.cargo/env"
           cargo build --release
           cp ./target/release/idesyde-orchestration idesyde
       - name: Cache-out rust
         uses: actions/cache@v3
         with:
           path: ${{ github.workspace }}/idesyde
-          key: ${{ github.ref }}-idesyde
+          key: idesyde-${{ github.ref }}
   test-on-linux:
     strategy:
       matrix:
@@ -98,27 +99,39 @@ jobs:
         uses: actions/cache@v3
         with:
           path: ${{ github.workspace }}/java-imodules
-          key: ${{ github.ref }}-${{ matrix.jabba_jdk }}-java-imodules
+          key: java-imodules-${{ github.ref }}-${{ matrix.jabba_jdk }}
+          restore-keys: |
+            java-imodules-${{ github.ref }}-
+            java-imodules-
       - name: Cache-in java emodules
         uses: actions/cache@v3
         with:
           path: ${{ github.workspace }}/java-emodules
-          key: ${{ github.ref }}-${{ matrix.jabba_jdk }}-java-emodules
+          key: java-emodules-${{ github.ref }}-${{ matrix.jabba_jdk }}
+          restore-keys: |
+            java-emodules-${{ github.ref }}-
+            java-emodules-
       - name: Cache-in scala imodules
         uses: actions/cache@v3
         with:
           path: ${{ github.workspace }}/scala-imodules
-          key: ${{ github.ref }}-scala-imodules
+          key: scala-imodules-${{ github.ref }}
+          restore-keys: |
+            scala-imodules-${{ github.ref }}
+            scala-imodules-
       - name: Cache-in scala emodules
         uses: actions/cache@v3
         with:
           path: ${{ github.workspace }}/scala-emodules
-          key: ${{ github.ref }}-scala-emodules
+          key: scala-emodules-${{ github.ref }}
+          restore-keys: |
+            scala-emodules-${{ github.ref }}
+            scala-emodules-
       - name: Cache-in rust
         uses: actions/cache@v3
         with:
           path: ${{ github.workspace }}/idesyde
-          key: ${{ github.ref }}-idesyde
+          key: idesyde-${{ github.ref }}
       - name: Build and Test cases
         continue-on-error: true
         run: |
@@ -143,7 +156,7 @@ jobs:
         with:
           enableCrossOsArchive: true
           path: ${{ github.workspace }}/dist
-          key: ${{ github.ref }}-${{ matrix.jabba_jdk }}-dist
+          key: dist-${{ github.ref }}-${{ matrix.jabba_jdk }}
   # test-cases-linux:
   #   strategy:
   #     matrix:
@@ -158,7 +171,7 @@ jobs:
   #       with:
   #         enableCrossOsArchive: true
   #         path: ${{ github.workspace }}/dist
-  #         key: ${{ github.ref }}-${{ matrix.jabba_jdk }}-dist
+  #    dist-     key: ${{ github.ref }}-${{ matrix.jabba_jdk }}
   #     - uses: actions/setup-python@v4
   #       with:
   #         python-version: '3.10' 
@@ -187,7 +200,7 @@ jobs:
   #       with:
   #         enableCrossOsArchive: true
   #         path: ${{ github.workspace }}/dist
-  #         key: ${{ github.ref }}-${{ matrix.jabba_jdk }}-dist
+  #    dist-     key: ${{ github.ref }}-${{ matrix.jabba_jdk }}
   #     - run: |
   #         cd ${{ github.workspace }}
   #         cp -r ${{ github.workspace }}/dist/x86_64-pc-windows-gnu/* .

@@ -20,6 +20,7 @@ use idesyde_core::{
     ExplorationSolution, Explorer,
 };
 use log::{debug, warn};
+use rayon::prelude::IntoParallelRefIterator;
 use serde::{Deserialize, Serialize};
 
 #[derive(Deserialize, Serialize, PartialEq, Clone)]
@@ -471,6 +472,10 @@ pub struct CombinedExplorerIterator {
 impl Iterator for CombinedExplorerIterator {
     type Item = ExplorationSolution;
 
+    // fn next2(&mut self) -> Option<Self::Item> {
+    //     self.explorers_and_models.par_iter()
+    // }
+
     fn next(&mut self) -> Option<Self::Item> {
         // create the threads of necessary
         if let None = self.threads {
@@ -509,6 +514,7 @@ impl Iterator for CombinedExplorerIterator {
                                     if sol_not_dominated {
                                         // solution_inspector((solved_model, sol_objs));
                                         // then it is an improvement, take out the solutions that are dominated
+                                        debug!("Module {} found new solution", this_explorer.unique_identifier());
                                         sols.retain(|(_, y)| {
                                             pareto_dominance_partial_cmp(&sol_objs, y)
                                                 != Some(Ordering::Less)
@@ -519,6 +525,7 @@ impl Iterator for CombinedExplorerIterator {
                                             debug!("Could not send solution to control thread because {}", e.to_string());
                                         };
                                     } else {
+                                        debug!("Restarting explorer {} at {}", this_explorer.unique_identifier(), this_explorer.location_url().to_string());
                                         should_restart = true;
                                     }
                                 }

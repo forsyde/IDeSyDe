@@ -108,10 +108,14 @@ public interface StandaloneExplorationModule {
                                 ws -> {
                                     ws.onMessage(ctx -> {
                                         ctx.enableAutomaticPings(5, TimeUnit.SECONDS);
-                                        var found = new HashSet<DecisionModel>();
-                                        var foundObjs = new HashMap<DecisionModel, Map<String, Double>>();
+                                        var solutions = new HashSet<DecisionModel>();
+                                        var solutionsObjectives = new HashMap<DecisionModel, Map<String, Double>>();
                                         var request = objectMapper.readValue(ctx.message(),
                                                 ExplorationRequestMessage.class);
+                                        for (var prevSol : request.previousSolutions()) {
+                                            solutions.add(prevSol.solved());
+                                            solutionsObjectives.put(prevSol.solved(), prevSol.objectives());
+                                        }
                                         explorers().stream().filter(
                                                 e -> e.uniqueIdentifier().equals(ctx.pathParam("explorerName")))
                                                 .findAny().ifPresent(explorer -> {
@@ -121,20 +125,23 @@ public interface StandaloneExplorationModule {
                                                                         request.previousSolutions(),
                                                                         configuration)
                                                                         // keep only non dominated
-                                                                        .filter(solution -> foundObjs.values()
-                                                                                .stream()
-                                                                                .allMatch(other -> solution
-                                                                                        .objectives().entrySet()
+                                                                        .filter(solution -> !request
+                                                                                .configuration().strict
+                                                                                || solutionsObjectives.values()
                                                                                         .stream()
-                                                                                        .anyMatch(
-                                                                                                objEntry -> objEntry
-                                                                                                        .getValue() < other
-                                                                                                                .get(objEntry
-                                                                                                                        .getKey()))))
+                                                                                        .allMatch(other -> solution
+                                                                                                .objectives().entrySet()
+                                                                                                .stream()
+                                                                                                .anyMatch(
+                                                                                                        objEntry -> objEntry
+                                                                                                                .getValue() < other
+                                                                                                                        .get(objEntry
+                                                                                                                                .getKey()))))
                                                                         .forEach(solution -> {
                                                                             try {
-                                                                                found.add(solution.solved());
-                                                                                foundObjs.put(solution.solved(),
+                                                                                solutions.add(solution.solved());
+                                                                                solutionsObjectives.put(
+                                                                                        solution.solved(),
                                                                                         solution.objectives());
                                                                                 ctx.send(objectMapper
                                                                                         .writeValueAsString(

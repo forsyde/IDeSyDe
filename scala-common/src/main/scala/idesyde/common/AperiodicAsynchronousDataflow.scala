@@ -18,6 +18,8 @@ import idesyde.core.CompleteDecisionModel
 final case class AperiodicAsynchronousDataflow(
     val buffer_max_size_in_bits: Map[String, Long],
     val buffers: Set[String],
+    val job_graph_name: Vector[String],
+    val job_graph_instance: Vector[String],
     val job_graph_dst_instance: Vector[Long],
     val job_graph_dst_name: Vector[String],
     val job_graph_is_strong_precedence: Vector[Boolean],

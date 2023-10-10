@@ -48,7 +48,7 @@ class ForSyDeIOSYNetworkToAADataflowIRule implements IdentificationRule {
         var inspector = new ConnectivityInspector<>(onlySyComponents);
         var wcc = inspector.connectedSets();
         if (wcc.isEmpty())
-            msgs.add("identAperiodicDataflowFromSY: not SY network found");
+            msgs.add("identAperiodicDataflowFromSY: could not find any SY connected components.");
         wcc
                 .stream()
                 .forEach(subModel -> {
@@ -69,6 +69,7 @@ class ForSyDeIOSYNetworkToAADataflowIRule implements IdentificationRule {
                                 .orElse(0L));
                     }
                     var mapsAndDelays = Stream.concat(syMaps.stream(), syDelays.stream()).collect(Collectors.toSet());
+                    var jobGraphName = syMaps.stream().map(x -> x.getIdentifier()).collect(Collectors.toList());
                     var jobGraphSrc = new ArrayList<String>();
                     var jobGraphDst = new ArrayList<String>();
                     var jobGraphStrong = new ArrayList<Boolean>();
@@ -77,8 +78,8 @@ class ForSyDeIOSYNetworkToAADataflowIRule implements IdentificationRule {
                                 .consumers()
                                 .forEach(dst -> {
                                     sig.producer().ifPresent(src -> {
-//                                        System.out.println("%s: %s >- %s".formatted(sig.getIdentifier(),
-//                                                src.getIdentifier(), dst.getIdentifier()));
+                                        // System.out.println("%s: %s >- %s".formatted(sig.getIdentifier(),
+                                        // src.getIdentifier(), dst.getIdentifier()));
                                         if (ForSyDeHierarchy.SYMap
                                                 .tryView(src)
                                                 .isPresent() && ForSyDeHierarchy.SYMap.tryView(dst).isPresent()) {
@@ -96,6 +97,8 @@ class ForSyDeIOSYNetworkToAADataflowIRule implements IdentificationRule {
                     identified.add(new AperiodicAsynchronousDataflow(
                             msgSizes,
                             sySignals.stream().map(s -> s.getIdentifier()).collect(Collectors.toSet()),
+                            jobGraphName,
+                            jobGraphName.stream().map(x -> 1L).collect(Collectors.toList()),
                             jobGraphDst,
                             jobGraphDst.stream().map(x -> 1L).collect(Collectors.toList()),
                             jobGraphStrong,

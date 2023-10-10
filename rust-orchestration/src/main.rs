@@ -95,6 +95,12 @@ struct Args {
         help = "An URL for identification modules that are not created and destroyed by the orchestrator. Currently supported protocols are: http."
     )]
     imodule: Option<Vec<String>>,
+
+    #[arg(
+        long,
+        help = "If set, the exploration only returns solutions that improve the current Pareto set approximation."
+    )]
+    strict: bool,
 }
 
 fn main() {
@@ -436,10 +442,11 @@ fn main() {
                     total_timeout: args.x_total_time_out.unwrap_or(0),
                     time_resolution: args.x_time_resolution.unwrap_or(0),
                     memory_resolution: args.x_memory_resolution.unwrap_or(0),
+                    strict: args.strict,
                 },
             ) {
                 debug!(
-                    "Found a new solution with objectives: {}.",
+                    "New solution with objectives: {}.",
                     &sol.1
                         .iter()
                         .map(|(k, v)| format!("{}: {}", k, v))
@@ -456,20 +463,19 @@ fn main() {
                     format!("{}_intermediate", num_sols).as_str(),
                     "Orchestratror",
                 );
-                imodules.par_iter().for_each(|imodule| {
-                    for reverse in imodule.reverse_identification(
-                        &dominant_sols.iter().map(|(x, _)| x.clone()).collect(),
-                        &design_models,
-                    ) {
-                        // let reverse_header = reverse.header();
-                        reverse.write_to_dir(
-                            &reverse_path,
-                            format!("{}_intermediate", num_sols).as_str(),
-                            "Orchestrator",
-                        );
-                        debug!("Reverse identified a {} design model", reverse.category());
-                    }
-                });
+                // imodules.par_iter().for_each(|imodule| {
+                //     for reverse in
+                //         imodule.reverse_identification(&vec![sol.0.clone()], &design_models)
+                //     {
+                //         // let reverse_header = reverse.header();
+                //         reverse.write_to_dir(
+                //             &reverse_path,
+                //             format!("{}_intermediate", num_sols).as_str(),
+                //             "Orchestrator",
+                //         );
+                //         debug!("Reverse identified a {} design model", reverse.category());
+                //     }
+                // });
                 num_sols += 1;
             }
             // let sols_iter = explore_cooperatively(

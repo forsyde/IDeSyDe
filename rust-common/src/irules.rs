@@ -308,6 +308,11 @@ pub fn identify_asynchronous_aperiodic_dataflow_from_sdf(
                         .map(|s| s.to_string())
                         .collect(),
                     buffer_max_size_in_bits: HashMap::new(),
+                    job_graph_name: jobs_of_processes
+                        .iter()
+                        .map(|(s, _)| s.to_string())
+                        .collect(),
+                    job_graph_instance: jobs_of_processes.iter().map(|(_, q)| *q).collect(),
                     job_graph_src_name: job_graph_edges
                         .iter()
                         .map(|((s, _), _, _)| s.to_string())

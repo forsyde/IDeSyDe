@@ -65,6 +65,7 @@ public interface Explorer {
         public long timeDiscretizationFactor = -1L;
         @JsonProperty("memory_resolution")
         public long memoryDiscretizationFactor = -1L;
+        public boolean strict = false;
 
         public Configuration() {
             this.totalExplorationTimeOutInSecs = -1L;
@@ -81,8 +82,17 @@ public interface Explorer {
             this.memoryDiscretizationFactor = memoryDiscretizationFactor;
         }
 
+        public Configuration(long totalExplorationTimeOutInSecs, long maximumSolutions, long timeDiscretizationFactor,
+                long memoryDiscretizationFactor, boolean strict) {
+            this.totalExplorationTimeOutInSecs = totalExplorationTimeOutInSecs;
+            this.maximumSolutions = maximumSolutions;
+            this.timeDiscretizationFactor = timeDiscretizationFactor;
+            this.memoryDiscretizationFactor = memoryDiscretizationFactor;
+            this.strict = strict;
+        }
+
         static public Configuration unlimited() {
-            return new Configuration(0L, 0L, 0L, 0L);
+            return new Configuration(0L, 0L, 0L, 0L, false);
         }
 
         public Configuration withTotalExplorationTimeOutInSecs(long newTotalExplorationTimeOutInSecs) {
@@ -103,6 +113,11 @@ public interface Explorer {
         public Configuration withMemoryDiscretizationFactor(long newMemoryDiscretizationFactor) {
             return new Configuration(totalExplorationTimeOutInSecs, maximumSolutions, timeDiscretizationFactor,
                     newMemoryDiscretizationFactor);
+        }
+
+        public Configuration withStrict(boolean strict) {
+            return new Configuration(totalExplorationTimeOutInSecs, maximumSolutions, timeDiscretizationFactor,
+                    memoryDiscretizationFactor, strict);
         }
     }
 }

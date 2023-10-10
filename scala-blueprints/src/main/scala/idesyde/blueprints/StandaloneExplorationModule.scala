@@ -411,6 +411,13 @@ trait StandaloneExplorationModule
             val request = ExplorationRequestMessage.fromJsonString(ctx.message())
             // var request = objectMapper.readValue(ctx.message(), classOf[ExplorationRequestMessage]);
             for (
+              prevSol <- request.previous_solutions;
+              solved  <- decisionMessageToModel(prevSol.solved)
+            ) {
+              solvedDecisionModels += solved
+              solvedDecisionObjs(solved) = prevSol.objectives
+            }
+            for (
               explorer <- explorers.find(e => e.uniqueIdentifier == ctx.pathParam("explorerName"));
               decisionModel <- decisionMessageToModel(request.model_message);
               previousSolutions = request.previous_solutions
@@ -424,10 +431,15 @@ trait StandaloneExplorationModule
                 request.configuration.memory_resolution
               )
             ) {
-              val message = ExplorationSolutionMessage.fromSolution(sol, objs)
-              solvedDecisionModels += sol
-              solvedDecisionObjs(sol) = objs
-              ctx.send(message.asText)
+              if (
+                !request.configuration.strict || solvedDecisionObjs.values
+                  .exists(prevSol => objs.forall((k, v) => v < prevSol(k)))
+              ) {
+                val message = ExplorationSolutionMessage.fromSolution(sol, objs)
+                solvedDecisionModels += sol
+                solvedDecisionObjs(sol) = objs
+                ctx.send(message.asText)
+              }
             }
             ctx.closeSession()
           });

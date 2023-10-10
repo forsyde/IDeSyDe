@@ -216,6 +216,7 @@ pub struct ExplorationConfiguration {
     pub total_timeout: u64,
     pub time_resolution: u64,
     pub memory_resolution: u64,
+    pub strict: bool,
 }
 
 impl ExplorationConfiguration {
@@ -225,6 +226,7 @@ impl ExplorationConfiguration {
             total_timeout: 0,
             time_resolution: 0,
             memory_resolution: 0,
+            strict: false,
         }
     }
 }
@@ -383,7 +385,7 @@ pub fn compute_dominant_biddings(biddings: &Vec<ExplorationBid>) -> Vec<(usize, 
                 !biddings
                     .iter()
                     .filter(|bb| b != bb)
-                    .all(|bb| b.partial_cmp(&bb) == Some(Ordering::Greater))
+                    .any(|bb| b.partial_cmp(&bb) == Some(Ordering::Greater))
             })
             .map(|(i, b)| (i, b.to_owned()))
             .collect()

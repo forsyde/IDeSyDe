@@ -72,10 +72,10 @@ public interface CanExploreAADPMMMWithJenetics {
                                                                                         .hardware().communicationElems()
                                                                                         .size());
                                         var jobOrderingChromossome = IntegerChromosome.of(
-                                                        1,
+                                                        0,
                                                         decisionModel.aperiodicAsynchronousDataflows().stream()
-                                                                        .mapToInt(a -> a.jobsOfProcesses().size()).sum()
-                                                                        + 1,
+                                                                        .mapToInt(a -> a.jobsOfProcesses().size())
+                                                                        .sum(),
                                                         jobs.size());
                                         return Genotype.of(taskMappingChromossome, taskSchedulingChromossome,
                                                         bufferMappingChromossome,
@@ -194,12 +194,20 @@ public interface CanExploreAADPMMMWithJenetics {
                 var engine = Engine.builder(this::evaluateAADPMMM, codec)
                                 .offspringSelector(new TournamentSelector<>(5))
                                 .survivorsSelector(UFTournamentSelector.ofVec())
+                                .alterers(new Mutator<>(0.05))
                                 .constraint(new CommunicationConstraint<>(decisionModel))
                                 .constraint(new JobOrderingConstraint<>(decisionModel))
                                 .constraint(RetryConstraint.of(codec, this::mappingIsFeasible))
                                 .minimizing()
                                 .build();
-                var solStream = engine.stream().limit(Limits.byGeneConvergence(0.001, 1.0));
+                var solStream = engine
+                                .stream(previousSolutions.stream().filter(s -> s
+                                                .solved() instanceof AperiodicAsynchronousDataflowToPartitionedMemoryMappableMulticore)
+                                                .map(s -> codec.encode(
+                                                                (AperiodicAsynchronousDataflowToPartitionedMemoryMappableMulticore) s
+                                                                                .solved()))
+                                                .collect(Collectors.toList()))
+                                .limit(Limits.byGeneConvergence(0.001, 0.999));
                 var timedSolStream = configuration.totalExplorationTimeOutInSecs > 0L
                                 ? solStream
                                                 .limit(Limits.byExecutionTime(Duration.ofSeconds(

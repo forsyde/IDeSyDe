@@ -117,7 +117,6 @@ jobs:
           path: ${{ github.workspace }}/scala-imodules
           key: scala-imodules-${{ github.ref }}
           restore-keys: |
-            scala-imodules-${{ github.ref }}
             scala-imodules-
       - name: Cache-in scala emodules
         uses: actions/cache@v3
@@ -125,7 +124,6 @@ jobs:
           path: ${{ github.workspace }}/scala-emodules
           key: scala-emodules-${{ github.ref }}
           restore-keys: |
-            scala-emodules-${{ github.ref }}
             scala-emodules-
       - name: Cache-in rust
         uses: actions/cache@v3

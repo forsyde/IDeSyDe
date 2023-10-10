@@ -371,6 +371,8 @@ pub struct AperiodicAsynchronousDataflow {
     pub buffer_max_size_in_bits: HashMap<String, u64>,
     pub process_put_in_buffer_in_bits: HashMap<String, HashMap<String, u64>>,
     pub process_get_from_buffer_in_bits: HashMap<String, HashMap<String, u64>>,
+    pub job_graph_name: Vec<String>,
+    pub job_graph_instance: Vec<u64>,
     pub job_graph_src_name: Vec<String>,
     pub job_graph_dst_name: Vec<String>,
     pub job_graph_src_instance: Vec<u64>,

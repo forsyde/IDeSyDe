@@ -35,7 +35,7 @@ Therefore, make sure that `java` is available in your machine and that it indeed
     OpenJDK 64-Bit Server VM GraalVM CE 21.1.0 (build 11.0.11+8-jvmci-21.1-b05, mixed mode, sharing)
 
 If you plan to run the simulink example, you must also have `matlab` callable in your PATH. This is typically done automatically by the MATLAB installer
-on Windows, and there is good chance you know how to do it this already if you are running from Linux. 
+on Windows, and there is good chance you know how to do it this already if you are running from Linux.
 Otherwise, follow [this link for windows](https://se.mathworks.com/matlabcentral/answers/94933-how-do-i-edit-my-system-path-in-windows)
 or [this link for Linux](https://unix.stackexchange.com/questions/244941/how-to-add-my-matlab-to-path) to get a good start.
 
@@ -45,38 +45,33 @@ Once you have the pre-requisites, download the [latest IDeSyDe release](https://
 
 ## Fetching the demonstrators
 
-The demonstrators can be fetched from [a repository recently used for a paper](https://github.com/Rojods/memocode-demonstrator-16).
-You could also try directly get many tests from the `exampled_and_benchmarks` folder in IDeSyDe's repo, but let's re-use the information that already existed.
-
+The demonstrators can be fetched from [the `exampled_and_benchmarks` folder in IDeSyDe's repo](https://download-directory.github.io/?url=https://github.com/forsyde/IDeSyDe/tree/master/examples_and_benchmarks).
+<!-- You could also try directly get many tests from , but let's re-use the information that already existed. -->
 Choose a folder to contain the demonstrators and the data that they will generate in your computed. Keep in mind the last observation of the [previous section](#requirements-for-running-the-demonstrators).
-Then issue in the folder:
 
-    git clone https://github.com/Rojods/memocode-demonstrator-16
-
-Now, extract the release zip you fetched in the last step of the [previous section](#requirements-for-running-the-demonstrators) so that everything in contained into this demonstrator folder.
-You can rename the folder, naturally, but you cannot rename the `imodules` and `emodules` folder.
+Now, extract the release zip you fetched in the last step of the [previous section](#requirements-for-running-the-demonstrators) so that everything in contained into this folder.
+You can rename the folder, naturally, but you cannot rename the `imodules` and `emodules` folder as of IDeSyDe 0.6+.
 
 ## Running the provided demonstrators
 
 The orchestrator should **always** run at the top of this folder tree, which is also the IDeSyDe workspace.
 If you move the orchestrator binary around or try to run it from another folder, it might not find the I-modules
-and E-modules in their respective `imodules` and `emodules` folders. 
+and E-modules in their respective `imodules` and `emodules` folders.
 
-Be very mindful of the `run path` that the orchestrator is using. 
-As the tool tries to be incremental due to the DSI techniques, 
+Be very mindful of the `run path` that the orchestrator is using.
+As the tool tries to be incremental due to the DSI techniques,
 if you run multiple case studies in the same `run path` there is a risk that you will hit corner cases where the orchestrator did not clean the workspace properly and composedly identifies design models that do not exist anymore.
-If you _only_ add new inputs there is no problem; if you _change_ inputs there might be a problem.
+If you *only* add new inputs there is no problem; if you *change* inputs there might be a problem.
 
 Use the `--run-path` option of the orchestrator to enable multiple run folders side-by-side to avoid these problems.
 
 Finally, use the `-p` or `--parallel-jobs` option with a number to increase the parallelisation of non-exploration
 procedures. This is mainly done from the orchestrator side, so make sure you have a machine with enough resources to
 support multiple concurrent processes running. If you don't, there is little to no value on using the `-p` option.
-Note that parallel exploration is depends on the capabilities of the explorer being called. 
+Note that parallel exploration is depends on the capabilities of the explorer being called.
 The choco solver currently uses no parallel techniques.
 
 In the following examples, we give the Windows and Linux commands side-by-side.
-
 
 ### 1) Avionics
 
@@ -95,7 +90,7 @@ which should give you:
     [2023-05-23T12:55:40Z INFO ] Starting exploration until completion.
     [2023-05-23T12:55:45Z INFO ] Finished exploration with 1 solution(s).
 
-This one solution is the single-core solution that satisfies all the timing requirements. 
+This one solution is the single-core solution that satisfies all the timing requirements.
 You can open the results `fiodl` file in the `reversed` folder to check its contents, namely the `run_avionics_fif\reversed\reversed_0_YyyYyYyIdentificationModule.fiodl` file:
 
     systemgraph {
@@ -158,7 +153,7 @@ which gives the more detailed output:
 Before starting this case study, make sure the [requirements](#requirements-for-running-the-demonstrators) are satisfied.
 Otherwise, you'll likely get 0 explorable decision models as Matlab may not be callable from your PATH.
 
-Let's inspect the input files to understand how to interpret the exploration results. 
+Let's inspect the input files to understand how to interpret the exploration results.
 The `yaml` file is the "OS Description" in the sense that it binds together the local views of the [DeviceTree](https://www.devicetree.org/) files `tile0.dts` and `tile1.dts`:
 
     oses:
@@ -177,7 +172,7 @@ The `yaml` file is the "OS Description" in the sense that it binds together the 
             policy: 
                 - FP
 
-In this case, it states that there are two runtimes in this platform, aptly name `FreeRTOS(0|1)` which are hosted in the CPUSs `tile0cpu` and `tile1cpu` respectively. 
+In this case, it states that there are two runtimes in this platform, aptly name `FreeRTOS(0|1)` which are hosted in the CPUSs `tile0cpu` and `tile1cpu` respectively.
 The policy that these runtimes can follow is simply Fixed-Priority, shorted to `FP`.
 This acronym is based on the [LITMUS-RT](https://www.litmus-rt.org/tutor16/manual.html) scheduling policies nomeclature.
 
@@ -218,17 +213,17 @@ Now, let's inspect of the [DeviceTree](https://www.devicetree.org/) files, `tile
 
 Where the entries `compatible` and `chassis` are omitted because they play no role for our case study.
 The `bus-*` properties in the root of this file represent the performance characteristics of the "main bus" for this local HW description.
-As mentioned in the paper, this is because every `dts` file represents a local view of the HW; 
-specifically, whatever is gonna be controlled by one runtime. 
+As mentioned in the paper, this is because every `dts` file represents a local view of the HW;
+specifically, whatever is gonna be controlled by one runtime.
 This also means that the OS Description `affinity` and the number of cpus in a `dts` file should match, but this is not enforced now for the sake of simplicity.
 
 There are two important features in the `dts` files that we remark in case the reader wishes to specify their own: using global labels and the `ops-per-cycle` property.
 
-A global label is like the name before `:` in the `dts` specification. 
+A global label is like the name before `:` in the `dts` specification.
 In `tile0.dts`, these are `tile0cpu` and `gbus`.
 Using the global labels is what enables IDeSyDe to cross-reference different parts of the OS and HW descriptions to build a linked and coherent platform model.
 For instance, without the `tile0cpu` label in `tile0.dts`, the `tile0cpu` affinity and host references in the `yaml` file would refer to nothing.
-They are also what enables building a connected HW model out of each `dts` file. 
+They are also what enables building a connected HW model out of each `dts` file.
 For example, we can quickly inspect `tile1.dts` to find:
 
     gbus: bus@0x800A0 {
@@ -239,14 +234,14 @@ For example, we can quickly inspect `tile1.dts` to find:
         bus-clock-per-flit = <32>
     }
 
-That is, the same global bus! 
+That is, the same global bus!
 Therefore, the local platform views defined by `tile0.dts` and `tile1.dts` are connected through a bus identified by `gbus`.
 
 The property `ops-per-cycle` is key to determining the execution time of processes into the CPU in question.
-It consists of different *modes* that are assumed to be constant during the system's operation, which can provide different *operations*. 
-In the `tile0.dts` there are two modes: the `default` and the `proc` mode. 
+It consists of different *modes* that are assumed to be constant during the system's operation, which can provide different *operations*.
+In the `tile0.dts` there are two modes: the `default` and the `proc` mode.
 The `default` mode can supply four operations, e.g. `f64mul` (multiplication of a 64-bit floating-point number) with a 1/1000 opertion-per-clock ratio. In other words, it takes 1000 clock cycles to perform one `f64mul` operation.
-It is **very important** that the supplied operation names *match* the required operation names from the functionality in case you plan to make your own input models. 
+It is **very important** that the supplied operation names *match* the required operation names from the functionality in case you plan to make your own input models.
 The proof-of-concept Simulink identification rule already writes the Simulink model required operations in terms of the `default` mode shown, so it should not be a problem if you "copy-paste-modify".
 We retake this observation in the [SDF use case](#sdf-applications).
 
@@ -276,10 +271,9 @@ For instance,
 As mentioned in the companion paper, this avoids creating a full-fledged M2M transformation from Simulink to OurMDETool.
 Naturally, in the future new reverse identification rules can be created so that Simulink models are back-annotated with the results presented in the `fiodl` file, instead of creating the `fiodl` file ditto.
 
-
 ### Extra) Composing and combining
 
-Since composability is a key elements of DSI and IDeSyDe, it is only natural to expect that combining the previous two case studies is possible. 
+Since composability is a key elements of DSI and IDeSyDe, it is only natural to expect that combining the previous two case studies is possible.
 In fact, it is!
 The reasonable combination, in this case, is the `case_study.fiodl` of the [avionics case study](#1-avionics) with
 *only* the Simulink model of the [previous case study](#2-simulink-and-device-tree).
@@ -292,7 +286,7 @@ To run this combination, we only now have to pass the input files accordingly an
 
      ./orchestrator --x-max-solutions 1 --run-path run_combined ./avionics/flight-information-function/case_study.fiodl ./simulink_devicetree/test_model.slx # Linux
 
-The reason for asking for only 1 solution is that this problem instance is not easy. 
+The reason for asking for only 1 solution is that this problem instance is not easy.
 One solution that satisfies all the timing requirements of both the avionics use case and the Simulink specification can be found rather quickly;
 after that, it takes a very long time to prove that this solution is the optimal, or find another that uses less cores. You check this yourself by directly doing:
 
@@ -356,14 +350,14 @@ In this file, we have the definitions for the SDF topology, as you can notice fo
 For example, it says in the example that `get_pixel` takes 320 units of time in a `proc` machine from start to finish.
 
 With this we return to the discussion for the [operations per cycle initiated in the DeviceTree use case](#2-simulink-and-device-tree).
-The processor type in this file is translated to an *implementation* of a the actor, which is the functional equivalent of the platform *mode*. 
+The processor type in this file is translated to an *implementation* of a the actor, which is the functional equivalent of the platform *mode*.
 However, the actual operation time that is extracted from this specification is *all*.
 Therefore, `get_pixel`, according to this specification, requires 320 units of "all" in its "proc" implementation.
 If you now double check the [DeviceTree section](#2-simulink-and-device-tree), you'll see that there is a "mode" that provides 1/10 "all" operations per clock cycle, i.e. 1 "all" operation every 10 clock cycles.
 This case study is the reason such abstract representation exist, as SDF3 does not allow for a finer-grain specification of the operations which are demanded from the platform the actor is being implemented for.
 
-In any case, we can proceed as expected try to you the use SDF use cases. 
-Note that there are already a handful of combinations cleanly put in folder for the sake of reviewing, 
+In any case, we can proceed as expected try to you the use SDF use cases.
+Note that there are already a handful of combinations cleanly put in folder for the sake of reviewing,
 but you can combine the input SDFs at your leisure.
 
 The simplest one is:
@@ -417,7 +411,6 @@ where the scheduler `micro_blaze_os0` shows the list schedule computed for this 
 Kindly keep in mind that some of these combinations are actually hard problems to be proved optimally, so the `--x-max-solutions` can be handy to limit the amount of time spent looking for better solutions.
 For this same reason, the parameter `-x-total-time-out` can also put a **firm** limit on the total time elapsed by the explorer.
 It can overshoot a bit due to how the limit is realized by the [Choco Solver](https://choco-solver.org/docs/solving/limits/), but it won't be an overshoot of hours. The maximum observed so far was in the range of seconds.
-
 
 Here's a list of the commands to run the other SDF tests of [Experiment IV in this paper](https://dl.acm.org/doi/10.1145/3133210) for the sake of easiness:
 
@@ -504,20 +497,20 @@ to use SDF3 files directly for the sake of comprehension.
 
 ### Periodic Workload
 
-The periodic workload design model is always given in `fiodl` files. 
+The periodic workload design model is always given in `fiodl` files.
 The abstraction follows a separation between triggering and data propagation.
 That is, the activation between different processes follows a rather intuitive multi-rate synchronous ideas, like:
 
     Task1 -> Task2
 
-Implies that every time Task1 finishes, Task2 must start and finish sometime in the future. 
+Implies that every time Task1 finishes, Task2 must start and finish sometime in the future.
 The notable difference here is the possibility of using upsampling and downsampling,
 
     Task1 -> Upsample by 10 -> Task2
 or
     Task1 -> Downsample by 10 -> Task2
 
-Now every 10th Task2 executes _after_ Task1, or, Task2 executes _after_ every 10th execution of Task1.
+Now every 10th Task2 executes *after* Task1, or, Task2 executes *after* every 10th execution of Task1.
 Note the after, which respects the direction of the activation flow between the processes.
 
 The data propagation is decoupled with this, though still living inside the same "graph" design model:
@@ -526,20 +519,20 @@ The data propagation is decoupled with this, though still living inside the same
 
 Now Task1 writes to Data and Task2 reads from Data, but it is not specified in which order, priority or even
 the different rates of reading and write. Naturally, it is a waste to overwrite the data element without
-reading it; keep in mind that this is a _data propagation graph_, which means that Data can come and go
+reading it; keep in mind that this is a *data propagation graph*, which means that Data can come and go
 from multiple producers and consumers, regardless of semantic coherence.
 
     Task1 -> Data -> Task2
     Task3 ---^  |----->Task4
                 |---->Task5
 
-The same graph remark idea applies to the activation discussion, where the name of the activation flow is called _trigger graph_.
+The same graph remark idea applies to the activation discussion, where the name of the activation flow is called *trigger graph*.
 
 In summary, if one would like to have the classic Liu & Layland's independent periodic task design model, it is enough
 to not make any triggering connections. Likewise, the tasks can propagate zero data, and still activate each other.
 
 The `flight-information-function` contains a design model without any triggering between the tasks, with only data propagation;
-The `radar-aesa-function` contains a design model with data propagation _and_ triggering; which can be used as the template for new models.
+The `radar-aesa-function` contains a design model with data propagation *and* triggering; which can be used as the template for new models.
 
 ### Platform
 
@@ -559,4 +552,3 @@ For the sake of blind-reviewing, the tool which performs this conversion is unfo
 given are the results of the tool.
 
 You can visualize it by opening any of the files with the [KIELER extensions for visual code](https://marketplace.visualstudio.com/items?itemName=kieler.keith-vscode), which will then open a diagram view of the KGT file.
-

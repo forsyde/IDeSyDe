@@ -33,27 +33,20 @@ trait Explorer {
 
   type ExplorationSolution = (DecisionModel, Map[String, Double])
 
-  def explore(
-      decisionModel: DecisionModel,
-      previousSolutions: Set[ExplorationSolution],
-      totalExplorationTimeOutInSecs: Long,
-      maximumSolutions: Long,
-      timeDiscretizationFactor: Long,
-      memoryDiscretizationFactor: Long
-  ): LazyList[ExplorationSolution]
+  // def explore(
+  //     decisionModel: DecisionModel,
+  //     previousSolutions: Set[ExplorationSolution],
+  //     totalExplorationTimeOutInSecs: Long,
+  //     maximumSolutions: Long,
+  //     timeDiscretizationFactor: Long,
+  //     memoryDiscretizationFactor: Long
+  // ): LazyList[ExplorationSolution]
 
   def explore(
       decisionModel: DecisionModel,
       previousSolutions: Set[ExplorationSolution] = Set(),
-      configuration: ExplorerConfiguration = ExplorerConfiguration(0, 0, 0, 0)
-  ): LazyList[ExplorationSolution] = explore(
-    decisionModel,
-    previousSolutions,
-    configuration.total_timeout,
-    configuration.max_sols,
-    configuration.time_resolution,
-    configuration.memory_resolution
-  )
+      configuration: ExplorerConfiguration
+  ): LazyList[ExplorationSolution]
 
   def availableCriterias(decisionModel: DecisionModel): Set[ExplorationCriteria] = Set()
 

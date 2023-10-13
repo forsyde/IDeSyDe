@@ -22,14 +22,14 @@ pub struct DecisionModelMessage {
 }
 
 impl DecisionModelMessage {
-    pub fn from_dyn_decision_model(m: &dyn DecisionModel) -> DecisionModelMessage {
-        DecisionModelMessage {
-            header: m.header(),
-            body: m
-                .body_as_json()
-                .map(|x| x.replace("\r\n", "\\r\\n").replace("\n", "\\n")),
-        }
-    }
+    // pub fn from_dyn_decision_model(m: &dyn DecisionModel) -> DecisionModelMessage {
+    //     DecisionModelMessage {
+    //         header: m.header(),
+    //         body: m
+    //             .body_as_json()
+    //             .map(|x| x.replace("\r\n", "\\r\\n").replace("\n", "\\n")),
+    //     }
+    // }
 
     pub fn from_json_str(s: &str) -> Option<DecisionModelMessage> {
         match serde_json::from_str(s) {
@@ -59,6 +59,17 @@ impl DecisionModelMessage {
 
 impl<T: DecisionModel + ?Sized> From<&T> for DecisionModelMessage {
     fn from(value: &T) -> Self {
+        DecisionModelMessage {
+            header: value.header(),
+            body: value
+                .body_as_json()
+                .map(|x| x.replace("\r\n", "\\r\\n").replace("\n", "\\n")),
+        }
+    }
+}
+
+impl<T: DecisionModel + ?Sized> From<Arc<T>> for DecisionModelMessage {
+    fn from(value: Arc<T>) -> Self {
         DecisionModelMessage {
             header: value.header(),
             body: value
@@ -115,6 +126,11 @@ pub struct ExplorationSolutionMessage {
 impl ExplorationSolutionMessage {
     pub fn from_json_str(s: &str) -> Option<ExplorationSolutionMessage> {
         serde_json::from_str(s).ok()
+    }
+
+    pub fn to_json_str(&self) -> String {
+        serde_json::to_string(self)
+            .expect("Failed to serialize a ExplorationSolutionMessage. Should never occur.")
     }
 }
 

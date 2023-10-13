@@ -49,23 +49,23 @@ public interface CanExploreAADPMMMWithJenetics {
                                 .toList();
                 return InvertibleCodec.of(
                                 () -> {
-                                        var taskMappingChromossome = IntegerChromosome.of(1,
+                                        var taskMappingChromossome = IntegerChromosome.of(0,
                                                         decisionModel.partitionedMemMappableMulticore().hardware()
-                                                                        .storageElems().size() + 1,
+                                                                        .storageElems().size(),
                                                         procs.size());
-                                        var taskSchedulingChromossome = IntegerChromosome.of(1,
+                                        var taskSchedulingChromossome = IntegerChromosome.of(0,
                                                         decisionModel.partitionedMemMappableMulticore().runtimes()
-                                                                        .runtimes().size() + 1,
+                                                                        .runtimes().size(),
                                                         procs.size());
-                                        var bufferMappingChromossome = IntegerChromosome.of(1,
+                                        var bufferMappingChromossome = IntegerChromosome.of(0,
                                                         decisionModel.partitionedMemMappableMulticore().hardware()
-                                                                        .storageElems().size() + 1,
+                                                                        .storageElems().size(),
                                                         bufs.size());
                                         var channelReservationsChromossome = IntegerChromosome.of(0,
                                                         decisionModel.partitionedMemMappableMulticore().hardware()
                                                                         .communicationElementsMaxChannels().values()
                                                                         .stream()
-                                                                        .mapToInt(x -> x).max().orElse(0) + 1,
+                                                                        .mapToInt(x -> x).max().orElse(0),
                                                         decisionModel.partitionedMemMappableMulticore().hardware()
                                                                         .processingElems().size()
                                                                         * decisionModel.partitionedMemMappableMulticore()
@@ -85,18 +85,16 @@ public interface CanExploreAADPMMMWithJenetics {
                                         var taskMapping = IntStream.range(0, gt.get(0).length()).boxed()
                                                         .collect(Collectors.toMap(
                                                                         procs::get,
-                                                                        idx -> mems.get(gt.get(0).get(idx).allele()
-                                                                                        - 1)));
+                                                                        idx -> mems.get(gt.get(0).get(idx).allele())));
                                         var taskScheduling = IntStream.range(0, gt.get(1).length()).boxed()
                                                         .collect(Collectors.toMap(
                                                                         procs::get,
-                                                                        idx -> scheds.get(gt.get(1).get(idx).allele()
-                                                                                        - 1)));
+                                                                        idx -> scheds.get(
+                                                                                        gt.get(1).get(idx).allele())));
                                         var bufferMapping = IntStream.range(0, gt.get(2).length()).boxed()
                                                         .collect(Collectors.toMap(
                                                                         bufs::get,
-                                                                        idx -> mems.get(gt.get(2).get(idx).allele()
-                                                                                        - 1)));
+                                                                        idx -> mems.get(gt.get(2).get(idx).allele())));
                                         Map<String, Map<String, Integer>> channelReservations = IntStream
                                                         .range(0, pes.size())
                                                         .boxed()
@@ -133,19 +131,19 @@ public interface CanExploreAADPMMMWithJenetics {
                                         var taskMappingChromossome = IntegerChromosome
                                                         .of(model.processesToMemoryMapping().entrySet().stream()
                                                                         .map(e -> IntegerGene.of(
-                                                                                        mems.indexOf(e.getValue()), 1,
+                                                                                        mems.indexOf(e.getValue()), 0,
                                                                                         mems.size()))
                                                                         .collect(ISeq.toISeq()));
                                         var taskSchedulingChromossome = IntegerChromosome
                                                         .of(model.processesToRuntimeScheduling().entrySet().stream()
                                                                         .map(e -> IntegerGene.of(
-                                                                                        scheds.indexOf(e.getValue()), 1,
+                                                                                        scheds.indexOf(e.getValue()), 0,
                                                                                         scheds.size()))
                                                                         .collect(ISeq.toISeq()));
                                         var bufferMappingChromossome = IntegerChromosome
                                                         .of(model.bufferToMemoryMappings().entrySet().stream()
                                                                         .map(e -> IntegerGene.of(
-                                                                                        mems.indexOf(e.getValue()), 1,
+                                                                                        mems.indexOf(e.getValue()), 0,
                                                                                         mems.size()))
                                                                         .collect(ISeq.toISeq()));
                                         var channelReservationsChromossome = IntegerChromosome
@@ -179,7 +177,7 @@ public interface CanExploreAADPMMMWithJenetics {
                                         }
                                         var jobOrderingChromossome = IntegerChromosome.of(IntStream
                                                         .range(0, jobs.size())
-                                                        .mapToObj(j -> IntegerGene.of(orderings[j], 1, jobs.size()))
+                                                        .mapToObj(j -> IntegerGene.of(orderings[j], 0, jobs.size()))
                                                         .collect(ISeq.toISeq()));
                                         return Genotype.of(taskMappingChromossome, taskSchedulingChromossome,
                                                         bufferMappingChromossome,
@@ -192,9 +190,11 @@ public interface CanExploreAADPMMMWithJenetics {
                         Set<ExplorationSolution> previousSolutions, Explorer.Configuration configuration) {
                 var codec = ofDecisionModel(decisionModel);
                 var engine = Engine.builder(this::evaluateAADPMMM, codec)
+                                .populationSize(decisionModel.partitionedMemMappableMulticore().runtimes().runtimes()
+                                                .size() * decisionModel.aperiodicAsynchronousDataflows().size() * 5)
                                 .offspringSelector(new TournamentSelector<>(5))
                                 .survivorsSelector(UFTournamentSelector.ofVec())
-                                .alterers(new Mutator<>(0.05))
+                                // .alterers(new Mutator<>(0.05))
                                 .constraint(new CommunicationConstraint<>(decisionModel))
                                 .constraint(new JobOrderingConstraint<>(decisionModel))
                                 .constraint(RetryConstraint.of(codec, this::mappingIsFeasible))
@@ -206,33 +206,37 @@ public interface CanExploreAADPMMMWithJenetics {
                                                 .map(s -> codec.encode(
                                                                 (AperiodicAsynchronousDataflowToPartitionedMemoryMappableMulticore) s
                                                                                 .solved()))
-                                                .collect(Collectors.toList()))
-                                .limit(Limits.byGeneConvergence(0.001, 0.999));
+                                                .collect(Collectors.toList()));
+                // .limit(Limits.byGeneConvergence(0.000001, 0.999999));
                 var timedSolStream = configuration.totalExplorationTimeOutInSecs > 0L
                                 ? solStream
                                                 .limit(Limits.byExecutionTime(Duration.ofSeconds(
-                                                                configuration.totalExplorationTimeOutInSecs)))
+                                                                configuration.improvementTimeOutInSecs)))
                                 : solStream;
-                var limitedSolStream = configuration.maximumSolutions > 0L
-                                ? timedSolStream.limit(configuration.maximumSolutions)
+                var limitedImprovementStream = configuration.improvementIterations > 0L
+                                ? timedSolStream.limit(Limits.byFixedGeneration(configuration.improvementIterations))
                                 : timedSolStream;
-                return limitedSolStream
-                                .map(sol -> {
-                                        var solMap = new HashMap<String, Double>(sol.bestFitness().length());
-                                        var bestFit = sol.bestFitness().data();
-                                        solMap.put("nUsedPEs", bestFit[0]);
-                                        var i = 0;
-                                        for (var app : decisionModel.aperiodicAsynchronousDataflows()) {
-                                                for (var actor : app.processes()) {
-                                                        solMap.put("invThroughput(%s)".formatted(actor),
-                                                                        bestFit[i + 1]);
-                                                        i += 1;
-                                                }
-                                        }
-                                        return new ExplorationSolution(
-                                                        solMap,
-                                                        codec.decode(sol.bestPhenotype().genotype()));
-                                });
+                var decodedStream = limitedImprovementStream.map(sol -> {
+                        var solMap = new HashMap<String, Double>(sol.bestFitness().length());
+                        var bestFit = sol.bestFitness().data();
+                        solMap.put("nUsedPEs", bestFit[0]);
+                        var i = 0;
+                        for (var app : decisionModel.aperiodicAsynchronousDataflows()) {
+                                for (var actor : app.processes()) {
+                                        solMap.put("invThroughput(%s)".formatted(actor),
+                                                        bestFit[i + 1]);
+                                        i += 1;
+                                }
+                        }
+                        return new ExplorationSolution(
+                                        solMap,
+                                        codec.decode(sol.bestPhenotype().genotype()));
+                })
+                                .filter(sol -> !previousSolutions.contains(sol));
+                var limitedSolStream = configuration.maximumSolutions > 0L
+                                ? decodedStream.limit(configuration.maximumSolutions)
+                                : decodedStream;
+                return limitedSolStream;
         }
 
         private Vec<double[]> evaluateAADPMMM(

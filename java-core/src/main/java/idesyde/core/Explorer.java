@@ -59,8 +59,12 @@ public interface Explorer {
 
         @JsonProperty("total_timeout")
         public long totalExplorationTimeOutInSecs = -1L;
+        @JsonProperty("improvement_timeout")
+        public long improvementTimeOutInSecs = -1L;
         @JsonProperty("max_sols")
         public long maximumSolutions = -1L;
+        @JsonProperty("improvement_iterations")
+        public long improvementIterations = -1L;
         @JsonProperty("time_resolution")
         public long timeDiscretizationFactor = -1L;
         @JsonProperty("memory_resolution")
@@ -68,56 +72,56 @@ public interface Explorer {
         public boolean strict = false;
 
         public Configuration() {
-            this.totalExplorationTimeOutInSecs = -1L;
-            this.maximumSolutions = -1L;
-            this.timeDiscretizationFactor = -1L;
-            this.memoryDiscretizationFactor = -1L;
+            // this.totalExplorationTimeOutInSecs = -1L;
+            // this.maximumSolutions = -1L;
+            // this.timeDiscretizationFactor = -1L;
+            // this.memoryDiscretizationFactor = -1L;
         }
 
-        public Configuration(long totalExplorationTimeOutInSecs, long maximumSolutions, long timeDiscretizationFactor,
-                long memoryDiscretizationFactor) {
-            this.totalExplorationTimeOutInSecs = totalExplorationTimeOutInSecs;
-            this.maximumSolutions = maximumSolutions;
-            this.timeDiscretizationFactor = timeDiscretizationFactor;
-            this.memoryDiscretizationFactor = memoryDiscretizationFactor;
+        @Override
+        public String toString() {
+            return "Configuration [totalExplorationTimeOutInSecs=" + totalExplorationTimeOutInSecs
+                    + ", improvementTimeOutInSecs=" + improvementTimeOutInSecs + ", maximumSolutions="
+                    + maximumSolutions + ", improvementIterations=" + improvementIterations
+                    + ", timeDiscretizationFactor=" + timeDiscretizationFactor + ", memoryDiscretizationFactor="
+                    + memoryDiscretizationFactor + ", strict=" + strict + "]";
         }
 
-        public Configuration(long totalExplorationTimeOutInSecs, long maximumSolutions, long timeDiscretizationFactor,
-                long memoryDiscretizationFactor, boolean strict) {
-            this.totalExplorationTimeOutInSecs = totalExplorationTimeOutInSecs;
-            this.maximumSolutions = maximumSolutions;
-            this.timeDiscretizationFactor = timeDiscretizationFactor;
-            this.memoryDiscretizationFactor = memoryDiscretizationFactor;
-            this.strict = strict;
-        }
+        // static public Configuration unlimited() {
+        // return new Configuration();
+        // }
 
-        static public Configuration unlimited() {
-            return new Configuration(0L, 0L, 0L, 0L, false);
-        }
+        // public Configuration withTotalExplorationTimeOutInSecs(long
+        // newTotalExplorationTimeOutInSecs) {
+        // return new Configuration(newTotalExplorationTimeOutInSecs, maximumSolutions,
+        // timeDiscretizationFactor,
+        // memoryDiscretizationFactor);
+        // }
 
-        public Configuration withTotalExplorationTimeOutInSecs(long newTotalExplorationTimeOutInSecs) {
-            return new Configuration(newTotalExplorationTimeOutInSecs, maximumSolutions, timeDiscretizationFactor,
-                    memoryDiscretizationFactor);
-        }
+        // public Configuration withMaximumSolutions(long newMaximumSolutions) {
+        // return new Configuration(totalExplorationTimeOutInSecs, newMaximumSolutions,
+        // timeDiscretizationFactor,
+        // memoryDiscretizationFactor);
+        // }
 
-        public Configuration withMaximumSolutions(long newMaximumSolutions) {
-            return new Configuration(totalExplorationTimeOutInSecs, newMaximumSolutions, timeDiscretizationFactor,
-                    memoryDiscretizationFactor);
-        }
+        // public Configuration withTimeDiscretizationFactor(long
+        // newTimeDiscretizationFactor) {
+        // return new Configuration(totalExplorationTimeOutInSecs, maximumSolutions,
+        // newTimeDiscretizationFactor,
+        // memoryDiscretizationFactor);
+        // }
 
-        public Configuration withTimeDiscretizationFactor(long newTimeDiscretizationFactor) {
-            return new Configuration(totalExplorationTimeOutInSecs, maximumSolutions, newTimeDiscretizationFactor,
-                    memoryDiscretizationFactor);
-        }
+        // public Configuration withMemoryDiscretizationFactor(long
+        // newMemoryDiscretizationFactor) {
+        // return new Configuration(totalExplorationTimeOutInSecs, maximumSolutions,
+        // timeDiscretizationFactor,
+        // newMemoryDiscretizationFactor);
+        // }
 
-        public Configuration withMemoryDiscretizationFactor(long newMemoryDiscretizationFactor) {
-            return new Configuration(totalExplorationTimeOutInSecs, maximumSolutions, timeDiscretizationFactor,
-                    newMemoryDiscretizationFactor);
-        }
-
-        public Configuration withStrict(boolean strict) {
-            return new Configuration(totalExplorationTimeOutInSecs, maximumSolutions, timeDiscretizationFactor,
-                    memoryDiscretizationFactor, strict);
-        }
+        // public Configuration withStrict(boolean strict) {
+        // return new Configuration(totalExplorationTimeOutInSecs, maximumSolutions,
+        // timeDiscretizationFactor,
+        // memoryDiscretizationFactor, strict);
+        // }
     }
 }

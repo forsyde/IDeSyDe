@@ -214,24 +214,123 @@ impl Hash for dyn IdentificationModule {
 pub struct ExplorationConfiguration {
     pub max_sols: u64,
     pub total_timeout: u64,
+    pub improvement_timeout: u64,
     pub time_resolution: u64,
     pub memory_resolution: u64,
+    pub improvement_iterations: u64,
     pub strict: bool,
 }
 
-impl ExplorationConfiguration {
-    pub fn default() -> ExplorationConfiguration {
-        ExplorationConfiguration {
+#[derive(Clone, Copy, PartialEq, Eq)]
+pub struct ExplorationConfigurationBuilder {
+    max_sols: u64,
+    total_timeout: u64,
+    improvement_timeout: u64,
+    time_resolution: u64,
+    memory_resolution: u64,
+    improvement_iterations: u64,
+    strict: bool,
+}
+
+impl ExplorationConfigurationBuilder {
+    pub fn new() -> ExplorationConfigurationBuilder {
+        ExplorationConfigurationBuilder {
             max_sols: 0,
             total_timeout: 0,
+            improvement_timeout: 0,
             time_resolution: 0,
             memory_resolution: 0,
+            improvement_iterations: 0,
             strict: false,
         }
+    }
+
+    pub fn build(&self) -> ExplorationConfiguration {
+        ExplorationConfiguration {
+            max_sols: self.max_sols,
+            total_timeout: self.total_timeout,
+            improvement_timeout: self.improvement_timeout,
+            time_resolution: self.time_resolution,
+            memory_resolution: self.memory_resolution,
+            improvement_iterations: self.improvement_iterations,
+            strict: self.strict,
+        }
+    }
+
+    pub fn max_sols(&mut self, val: u64) -> &mut Self {
+        self.max_sols = val;
+        self
+    }
+    pub fn total_timeout(&mut self, val: u64) -> &mut Self {
+        self.total_timeout = val;
+        self
+    }
+    pub fn improvement_timeout(&mut self, val: u64) -> &mut Self {
+        self.improvement_timeout = val;
+        self
+    }
+    pub fn time_resolution(&mut self, val: u64) -> &mut Self {
+        self.time_resolution = val;
+        self
+    }
+    pub fn memory_resolution(&mut self, val: u64) -> &mut Self {
+        self.memory_resolution = val;
+        self
+    }
+    pub fn improvement_iterations(&mut self, val: u64) -> &mut Self {
+        self.improvement_iterations = val;
+        self
+    }
+    pub fn strict(&mut self, val: bool) -> &mut Self {
+        self.strict = val;
+        self
+    }
+}
+
+impl ExplorationConfiguration {
+    pub fn to_json_string(&self) -> String {
+        serde_json::to_string(self)
+            .expect("Failed to serialize a ExplorationConfiguration. Should never happen.")
     }
 }
 
 pub type ExplorationSolution = (Arc<dyn DecisionModel>, HashMap<String, f64>);
+
+pub fn pareto_dominance_partial_cmp(
+    lhs: &HashMap<String, f64>,
+    rhs: &HashMap<String, f64>,
+) -> Option<Ordering> {
+    if lhs.keys().all(|x| rhs.contains_key(x)) && rhs.keys().all(|x| lhs.contains_key(x)) {
+        let mut all_equal = true;
+        let mut less_exists = false;
+        let mut greater_exists = false;
+        for (k, v) in lhs {
+            all_equal = all_equal && v == rhs.get(k).unwrap();
+            less_exists = less_exists || v < rhs.get(k).unwrap();
+            greater_exists = greater_exists || v > rhs.get(k).unwrap();
+        }
+        if all_equal {
+            Some(Ordering::Equal)
+        } else {
+            match (less_exists, greater_exists) {
+                (true, false) => Some(Ordering::Less),
+                (false, true) => Some(Ordering::Greater),
+                _ => None,
+            }
+        }
+        // if lhs.iter().all(|(k, v)| v == rhs.get(k).unwrap()) {
+        //     Some(Ordering::Equal)
+        // } else if lhs.iter().all(|(k, v)| v <= rhs.get(k).unwrap()) {
+        //     Some(Ordering::Less)
+        // } else if lhs.iter().all(|(k, v)| v >= rhs.get(k).unwrap()) {
+        //     Some(Ordering::Greater)
+        // } else {
+        //     None
+        // }
+    } else {
+        None
+    }
+}
 
 /// This trait is the root for all possible explorers within IDeSyDe. A real explorer should
 /// implement this trait by dispatching the real exploration from 'explore'.
@@ -269,11 +368,53 @@ pub trait Explorer: Downcast + Send + Sync {
         _m: Arc<dyn DecisionModel>,
         _currrent_solutions: Vec<ExplorationSolution>,
         _exploration_configuration: ExplorationConfiguration,
-    ) -> Box<dyn Iterator<Item = ExplorationSolution> + '_> {
+    ) -> Box<dyn Iterator<Item = ExplorationSolution> + Send + Sync + '_> {
         Box::new(std::iter::empty())
     }
 }
 impl_downcast!(Explorer);
+
+/// Perform exploration in a non blkcing manner
+///
+/// This function effectively spawns a new thread and only kills it when the completed
+/// signal is given. Note, however, that the thread can run for some time after the signal
+/// is given will check for completion only after a solution has been found or
+/// infeasibility has been proven.
+pub fn explore_non_blocking<T, M>(
+    explorer: &T,
+    _m: &M,
+    _currrent_solutions: Vec<ExplorationSolution>,
+    _exploration_configuration: ExplorationConfiguration,
+) -> (
+    std::sync::mpsc::Receiver<ExplorationSolution>,
+    std::sync::mpsc::Sender<bool>,
+    std::thread::JoinHandle<()>,
+)
+where
+    T: Explorer + Clone + ?Sized,
+    M: Into<Arc<dyn DecisionModel>> + Clone,
+{
+    let (solution_tx, solution_rx) = std::sync::mpsc::channel();
+    let (completed_tx, completed_rx) = std::sync::mpsc::channel();
+    let this_explorer = explorer.clone();
+    let this_decision_model = _m.to_owned().into();
+    let handle = std::thread::spawn(move || {
+        if let Ok(true) = completed_rx.recv_timeout(std::time::Duration::from_millis(300)) {
+            return ();
+        }
+        for (solved_model, sol_objs) in this_explorer.explore(
+            this_decision_model,
+            _currrent_solutions.to_owned(),
+            _exploration_configuration.to_owned(),
+        ) {
+            match solution_tx.send((solved_model, sol_objs)) {
+                Ok(_) => {}
+                Err(_) => return (),
+            };
+        }
+    });
+    (solution_rx, completed_tx, handle)
+}
 
 impl PartialEq<dyn Explorer> for dyn Explorer {
     fn eq(&self, other: &dyn Explorer) -> bool {
@@ -284,6 +425,34 @@ impl PartialEq<dyn Explorer> for dyn Explorer {
 }
 
 impl Eq for dyn Explorer {}
+
+impl Explorer for Arc<dyn Explorer> {
+    fn unique_identifier(&self) -> String {
+        self.as_ref().unique_identifier()
+    }
+
+    fn location_url(&self) -> IpAddr {
+        self.as_ref().location_url()
+    }
+
+    fn location_port(&self) -> usize {
+        self.as_ref().location_port()
+    }
+
+    fn bid(&self, _m: Arc<dyn DecisionModel>) -> ExplorationBid {
+        self.as_ref().bid(_m)
+    }
+
+    fn explore(
+        &self,
+        _m: Arc<dyn DecisionModel>,
+        _currrent_solutions: Vec<ExplorationSolution>,
+        _exploration_configuration: ExplorationConfiguration,
+    ) -> Box<dyn Iterator<Item = ExplorationSolution> + Send + Sync + '_> {
+        self.as_ref()
+            .explore(_m, _currrent_solutions, _exploration_configuration)
+    }
+}
 
 /// The trait/interface for an exploration module that provides the API for exploration [1].
 ///

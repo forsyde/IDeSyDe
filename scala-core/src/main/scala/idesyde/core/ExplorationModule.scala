@@ -33,10 +33,11 @@ trait ExplorationModule {
       decisionModel: DecisionModel,
       explorerId: String,
       previousSolutions: Set[ExplorationSolution] = Set(),
-      totalExplorationTimeOutInSecs: Long = 0L,
-      maximumSolutions: Long = 0L,
-      timeDiscretizationFactor: Long = -1L,
-      memoryDiscretizationFactor: Long = -1L
+      configuration: ExplorerConfiguration
+      // totalExplorationTimeOutInSecs: Long = 0L,
+      // maximumSolutions: Long = 0L,
+      // timeDiscretizationFactor: Long = -1L,
+      // memoryDiscretizationFactor: Long = -1L
   ): LazyList[ExplorationSolution] =
     explorers
       .find(_.uniqueIdentifier == explorerId)
@@ -44,10 +45,7 @@ trait ExplorationModule {
         _.explore(
           decisionModel,
           previousSolutions,
-          totalExplorationTimeOutInSecs,
-          maximumSolutions,
-          timeDiscretizationFactor,
-          memoryDiscretizationFactor
+          configuration
         )
       )
       .getOrElse(LazyList.empty)
@@ -55,10 +53,11 @@ trait ExplorationModule {
   def exploreBest(
       decisionModel: DecisionModel,
       previousSolutions: Set[ExplorationSolution] = Set(),
-      totalExplorationTimeOutInSecs: Long = 0L,
-      maximumSolutions: Long = 0L,
-      timeDiscretizationFactor: Long = -1L,
-      memoryDiscretizationFactor: Long = -1L
+      configuration: ExplorerConfiguration
+      // totalExplorationTimeOutInSecs: Long = 0L,
+      // maximumSolutions: Long = 0L,
+      // timeDiscretizationFactor: Long = -1L,
+      // memoryDiscretizationFactor: Long = -1L
   ): LazyList[ExplorationSolution] = {
     val valid = explorers
       .filter(e => canExplore(decisionModel))
@@ -75,10 +74,11 @@ trait ExplorationModule {
         e.explore(
           decisionModel,
           previousSolutions,
-          totalExplorationTimeOutInSecs,
-          maximumSolutions,
-          timeDiscretizationFactor,
-          memoryDiscretizationFactor
+          configuration
+          // totalExplorationTimeOutInSecs,
+          // maximumSolutions,
+          // timeDiscretizationFactor,
+          // memoryDiscretizationFactor
         )
       case None => LazyList.empty
     }

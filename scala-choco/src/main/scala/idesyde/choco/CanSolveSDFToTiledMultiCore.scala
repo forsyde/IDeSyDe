@@ -220,8 +220,8 @@ final class CanSolveSDFToTiledMultiCore(using logger: Logger)
       )
     )
     // chocoModel.getSolver().setLearningSignedClauses()
-    // chocoModel.getSolver().setRestartOnSolutions()
-    // chocoModel.getSolver().setNoGoodRecordingFromRestarts()
+    chocoModel.getSolver().setRestartOnSolutions()
+    chocoModel.getSolver().setNoGoodRecordingFromRestarts()
     // chocoModel
     //   .getSolver()
     //   .plugMonitor(new IMonitorContradiction {
@@ -414,14 +414,12 @@ final class CanSolveSDFToTiledMultiCore(using logger: Logger)
           .map(jobsAndActors.indexOf)
           .map(jobOrder(_)): _*
       ),
-      Search.intVarSearch(
-        (x) => x.minBy(_.getRange()),
-        (v) => v.getUB(),
+      Search.activityBasedSearch(
         numVirtualChannelsForProcElem.flatten: _*
       ),
+      Search.activityBasedSearch(nUsedPEs),
+      Search.activityBasedSearch(invThroughputs: _*)
       // Search.activityBasedSearch(numVirtualChannelsForProcElem.flatten: _*)
-      Search.minDomLBSearch(nUsedPEs),
-      Search.minDomLBSearch(invThroughputs: _*)
       // Search.minDomLBSearch(indexOfPes: _*)
     )
     chocoModel.getSolver().setSearch(strategies: _*)
@@ -509,6 +507,39 @@ final class CanSolveSDFToTiledMultiCore(using logger: Logger)
     val numMappedElements = intVars.find(_.getName() == "nUsedPEs").get
     val jobsAndActors =
       m.sdfApplications.jobsAndActors
+    val throughputs = recomputeTh(
+      m,
+      jobsAndActors.zipWithIndex
+        .map((j, x) => (m.sdfApplications.actorsIdentifiers.indexOf(j._1), x))
+        .map((ax, i) => m.wcets(ax)(processesMemoryMapping(ax))),
+      jobsAndActors
+        .map((srca, srcq) =>
+          jobsAndActors
+            .map((dsta, dstq) => {
+              val srcax = m.sdfApplications.actorsIdentifiers.indexOf(srca)
+              val dstax = m.sdfApplications.actorsIdentifiers.indexOf(dsta)
+              val mSize = m.sdfApplications.sdfMessages
+                .find((s, t, _, _, _, _, _) => s == srca && t == dsta)
+                .map((_, _, _, m, _, _, _) => m)
+                .getOrElse(0L)
+              val srcM = processesMemoryMapping(srcax)
+              val dstM = processesMemoryMapping(dstax)
+              if (srcM != dstM) {
+                mSize * m.platform.hardware
+                  .minTraversalTimePerBit(srcM)(dstM) * m.platform.hardware
+                  .computedPaths(srcM)(dstM)
+                  .map(ce => m.platform.hardware.communicationElems.indexOf(ce))
+                  .map(cex => numVirtualChannelsForProcElem(srcM)(cex).getLB())
+                  .minOption
+                  .getOrElse(0)
+              } else 0.0
+            })
+        ),
+      jobsAndActors
+        .map((a, _) => processesMemoryMapping(m.sdfApplications.actorsIdentifiers.indexOf(a)))
+        .toArray,
+      jobOrder.toArray
+    )
     val full = m.copy(
       sdfApplications = m.sdfApplications.copy(minimumActorThroughputs =
         invThroughputs.zipWithIndex
@@ -562,45 +593,15 @@ final class CanSolveSDFToTiledMultiCore(using logger: Logger)
               .toVector
         iter.toMap
       }),
-      actorThroughputs = recomputeTh(
-        m,
-        jobsAndActors.zipWithIndex
-          .map((j, x) => (m.sdfApplications.actorsIdentifiers.indexOf(j._1), x))
-          .map((ax, i) => m.wcets(ax)(processesMemoryMapping(ax))),
-        jobsAndActors
-          .map((srca, srcq) =>
-            jobsAndActors
-              .map((dsta, dstq) => {
-                val srcax = m.sdfApplications.actorsIdentifiers.indexOf(srca)
-                val dstax = m.sdfApplications.actorsIdentifiers.indexOf(dsta)
-                val mSize = m.sdfApplications.sdfMessages
-                  .find((s, t, _, _, _, _, _) => s == srca && t == dsta)
-                  .map((_, _, _, m, _, _, _) => m)
-                  .getOrElse(0L)
-                val srcM = processesMemoryMapping(srcax)
-                val dstM = processesMemoryMapping(dstax)
-                if (srcM != dstM) {
-                  mSize * m.platform.hardware
-                    .minTraversalTimePerBit(srcM)(dstM) * m.platform.hardware
-                    .computedPaths(srcM)(dstM)
-                    .map(ce => m.platform.hardware.communicationElems.indexOf(ce))
-                    .map(cex => numVirtualChannelsForProcElem(srcM)(cex).getLB())
-                    .minOption
-                    .getOrElse(0)
-                } else 0.0
-              })
-          ),
-        jobsAndActors
-          .map((a, _) => processesMemoryMapping(m.sdfApplications.actorsIdentifiers.indexOf(a)))
-          .toArray,
-        jobOrder.toArray
-      )
+      actorThroughputs = throughputs
     )
     // return both
     (
       full,
-      Map("nUsedPEs" -> numMappedElements.getValue().toDouble) ++ invThroughputs
-        .map(v => v.getName() -> int2double(v.getValue()))
+      Map(
+        "nUsedPEs" -> numMappedElements.getValue().toDouble
+      ) ++ m.sdfApplications.actorsIdentifiers.zipWithIndex
+        .map((a, i) => s"invThroughput($a)" -> 1.0 / throughputs(i))
         .toMap
     )
   }

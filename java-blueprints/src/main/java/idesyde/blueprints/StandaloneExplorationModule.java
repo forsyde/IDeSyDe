@@ -1,14 +1,18 @@
 package idesyde.blueprints;
 
 import com.fasterxml.jackson.core.JsonProcessingException;
+import com.fasterxml.jackson.databind.DatabindException;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.dataformat.cbor.CBORFactory;
 import com.fasterxml.jackson.datatype.jdk8.Jdk8Module;
 import idesyde.core.DecisionModel;
+import idesyde.core.ExplorationSolution;
 import idesyde.core.Explorer;
 import io.javalin.Javalin;
 import picocli.CommandLine;
 
+import java.io.IOException;
+import java.nio.channels.ClosedChannelException;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
@@ -16,8 +20,11 @@ import java.util.Map;
 import java.util.Optional;
 import java.util.Set;
 import java.util.concurrent.Callable;
+import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.TimeUnit;
 import java.util.stream.Collectors;
+
+import org.eclipse.jetty.io.EofException;
 
 public interface StandaloneExplorationModule {
 
@@ -31,35 +38,35 @@ public interface StandaloneExplorationModule {
     default Optional<Javalin> standaloneExplorationModuleServer(
             ExplorationModuleCLI cli) {
         if (cli.serverType != null && cli.serverType.equalsIgnoreCase("http")) {
-            var configuration = Explorer.Configuration.unlimited();
             var decisionModels = new HashSet<DecisionModel>();
             try (var server = Javalin.create()) {
-                server.post(
-                        "/set",
-                        ctx -> {
-                            if (ctx.queryParamMap().containsKey("parameter")) {
-                                switch (ctx.queryParam("parameter").toLowerCase()) {
-                                    case "maximum-solutions":
-                                    case "max-sols":
-                                        configuration.maximumSolutions = Long.parseLong(ctx.body());
-                                        break;
-                                    case "total-timeout":
-                                        configuration.totalExplorationTimeOutInSecs = Long.parseLong(ctx.body());
-                                        break;
-                                    case "time-resolution":
-                                    case "time-res":
-                                        configuration.timeDiscretizationFactor = Long.parseLong(ctx.body());
-                                        break;
-                                    case "memory-resolution":
-                                    case "memory-res":
-                                    case "mem-res":
-                                        configuration.memoryDiscretizationFactor = Long.parseLong(ctx.body());
-                                        break;
-                                    default:
-                                        break;
-                                }
-                            }
-                        })
+                server
+                        // .post(
+                        // "/set",
+                        // ctx -> {
+                        // if (ctx.queryParamMap().containsKey("parameter")) {
+                        // switch (ctx.queryParam("parameter").toLowerCase()) {
+                        // case "maximum-solutions":
+                        // case "max-sols":
+                        // configuration.maximumSolutions = Long.parseLong(ctx.body());
+                        // break;
+                        // case "total-timeout":
+                        // configuration.totalExplorationTimeOutInSecs = Long.parseLong(ctx.body());
+                        // break;
+                        // case "time-resolution":
+                        // case "time-res":
+                        // configuration.timeDiscretizationFactor = Long.parseLong(ctx.body());
+                        // break;
+                        // case "memory-resolution":
+                        // case "memory-res":
+                        // case "mem-res":
+                        // configuration.memoryDiscretizationFactor = Long.parseLong(ctx.body());
+                        // break;
+                        // default:
+                        // break;
+                        // }
+                        // }
+                        // })
                         .post(
                                 "/decision",
                                 ctx -> DecisionModelMessage.fromJsonString(ctx.body())
@@ -106,106 +113,78 @@ public interface StandaloneExplorationModule {
                         .ws(
                                 "/{explorerName}/explore",
                                 ws -> {
+                                    // var solutions = new Concurrent<DecisionModel>();
+                                    var explorationRequest = new ExplorationRequest();
                                     ws.onMessage(ctx -> {
                                         ctx.enableAutomaticPings(5, TimeUnit.SECONDS);
-                                        var solutions = new HashSet<DecisionModel>();
-                                        var solutionsObjectives = new HashMap<DecisionModel, Map<String, Double>>();
-                                        var request = objectMapper.readValue(ctx.message(),
-                                                ExplorationRequestMessage.class);
-                                        for (var prevSol : request.previousSolutions()) {
-                                            solutions.add(prevSol.solved());
-                                            solutionsObjectives.put(prevSol.solved(), prevSol.objectives());
+                                        // check whether it is a configuration, a solution, or a the decision model
+                                        try {
+                                            var prevSol = objectMapper.readValue(ctx.message(),
+                                                    ExplorationSolutionMessage.class);
+                                            decisionMessageToModel(prevSol.solved()).ifPresent((solution) -> {
+                                                // solutions.add(solution);
+                                                explorationRequest.previousSolutions
+                                                        .add(new ExplorationSolution(prevSol.objectives(), solution));
+                                            });
+                                        } catch (DatabindException ignored) {
                                         }
-                                        explorers().stream().filter(
-                                                e -> e.uniqueIdentifier().equals(ctx.pathParam("explorerName")))
-                                                .findAny().ifPresent(explorer -> {
-                                                    decisionMessageToModel(request.modelMessage())
-                                                            .ifPresent(decisionModel -> {
-                                                                explorer.explore(decisionModel,
-                                                                        request.previousSolutions(),
-                                                                        configuration)
-                                                                        // keep only non dominated
-                                                                        .filter(solution -> !request
-                                                                                .configuration().strict
-                                                                                || solutionsObjectives.values()
-                                                                                        .stream()
-                                                                                        .allMatch(other -> solution
-                                                                                                .objectives().entrySet()
-                                                                                                .stream()
-                                                                                                .anyMatch(
-                                                                                                        objEntry -> objEntry
-                                                                                                                .getValue() < other
-                                                                                                                        .get(objEntry
-                                                                                                                                .getKey()))))
-                                                                        .forEach(solution -> {
-                                                                            try {
-                                                                                solutions.add(solution.solved());
-                                                                                solutionsObjectives.put(
-                                                                                        solution.solved(),
-                                                                                        solution.objectives());
-                                                                                ctx.send(objectMapper
-                                                                                        .writeValueAsString(
-                                                                                                ExplorationSolutionMessage
-                                                                                                        .from(solution)));
-                                                                            } catch (JsonProcessingException e) {
-                                                                                e.printStackTrace();
-                                                                            }
-                                                                        });
-                                                            });
-                                                });
-                                        ctx.closeSession();
+                                        try {
+                                            explorationRequest.configuration = objectMapper.readValue(ctx.message(),
+                                                    Explorer.Configuration.class);
+                                        } catch (DatabindException ignored) {
+                                        }
+                                        try {
+                                            var request = objectMapper.readValue(ctx.message(),
+                                                    DecisionModelMessage.class);
+                                            explorers().stream().filter(
+                                                    e -> e.uniqueIdentifier().equals(ctx.pathParam("explorerName")))
+                                                    .findAny().ifPresent(explorer -> {
+                                                        decisionMessageToModel(request)
+                                                                .ifPresent(decisionModel -> {
+                                                                    explorer.explore(decisionModel,
+                                                                            explorationRequest.previousSolutions,
+                                                                            explorationRequest.configuration)
+                                                                            // keep only non dominated if necessary
+                                                                            .filter(solution -> !explorationRequest.configuration.strict
+                                                                                    || explorationRequest.previousSolutions
+                                                                                            .stream()
+                                                                                            .noneMatch(other -> other
+                                                                                                    .dominates(
+                                                                                                            solution)))
+                                                                            .forEach(solution -> {
+                                                                                try {
+                                                                                    // solutions.add(solution.solved());
+                                                                                    // explorationRequest.previousSolutions
+                                                                                    // .add(solution);
+                                                                                    ctx.send(objectMapper
+                                                                                            .writeValueAsString(
+                                                                                                    ExplorationSolutionMessage
+                                                                                                            .from(solution)));
+                                                                                } catch (JsonProcessingException e) {
+                                                                                    e.printStackTrace();
+                                                                                }
+                                                                            });
+                                                                });
+                                                    });
+                                            ctx.closeSession();
+                                        } catch (DatabindException ignored) {
+                                        } catch (IOException ignored) {
+
+                                        }
                                     });
                                 })
-                        // .ws(
-                        // "/explore",
-                        // ws -> {
-                        // ws.onMessage(ctx -> {
-                        // ctx.enableAutomaticPings(5, TimeUnit.SECONDS);
-                        // var found = new HashSet<DecisionModel>();
-                        // var foundObjs = new HashMap<DecisionModel, Map<String, Double>>();
-                        // var request = objectMapper.readValue(ctx.message(),
-                        // ExplorationRequestMessage.class);
-                        // explorers().stream().filter(
-                        // e -> e.uniqueIdentifer().equals(request.explorerIdentifier()))
-                        // .findAny().ifPresent(explorer -> {
-                        // decisionMessageToModel(request.modelMessage())
-                        // .ifPresent(decisionModel -> {
-                        // explorer.explore(decisionModel,
-                        // request.previousSolutions(),
-                        // configuration)
-                        // // keep only non dominated
-                        // .filter(solution -> foundObjs.values()
-                        // .stream()
-                        // .allMatch(other -> solution
-                        // .objectives().entrySet()
-                        // .stream()
-                        // .anyMatch(
-                        // objEntry -> objEntry
-                        // .getValue() < other
-                        // .get(objEntry
-                        // .getKey()))))
-                        // .forEach(solution -> {
-                        // try {
-                        // found.add(solution.solved());
-                        // foundObjs.put(solution.solved(),
-                        // solution.objectives());
-                        // ctx.send(objectMapper
-                        // .writeValueAsString(
-                        // ExplorationSolutionMessage
-                        // .from(solution)));
-                        // } catch (JsonProcessingException e) {
-                        // e.printStackTrace();
-                        // }
-                        // });
-                        // });
-                        // });
-                        // ctx.closeSession();
-                        // });
-                        // })
                         .exception(
                                 Exception.class,
                                 (e, ctx) -> {
-                                    e.printStackTrace();
+                                    if (e instanceof ClosedChannelException) {
+                                        System.out.println("Client closed channel during execution.");
+                                    } else if (e instanceof EofException) {
+                                        System.out.println("Client closed channel during execution.");
+                                    } else if (e instanceof IOException) {
+                                        System.out.println("Client closed channel during execution.");
+                                    } else {
+                                        e.printStackTrace();
+                                    }
                                 });
                 server.events(es -> {
                     es.serverStarted(() -> {
@@ -229,6 +208,7 @@ public interface StandaloneExplorationModule {
         public Integer call() throws Exception {
             return 0;
         }
+
     }
 
     default <T extends DecisionModel> Optional<T> readDecisionModel(String jsonString, Class<T> cls) {

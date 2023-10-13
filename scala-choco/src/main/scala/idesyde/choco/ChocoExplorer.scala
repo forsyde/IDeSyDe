@@ -27,6 +27,7 @@ import idesyde.choco.ChocoExplorableOps._
 import idesyde.core.ExplorationCombinationDescription
 import idesyde.common.PeriodicWorkloadToPartitionedSharedMultiCore
 import idesyde.common.PeriodicWorkloadAndSDFServerToMultiCore
+import idesyde.core.ExplorerConfiguration
 
 class ChocoExplorer(using logger: Logger) extends Explorer:
 
@@ -122,42 +123,50 @@ class ChocoExplorer(using logger: Logger) extends Explorer:
   def exploreChocoExplorable[T <: DecisionModel](
       m: T,
       previousSolutions: Set[(T, Map[String, Double])],
-      explorationTotalTimeOutInSecs: Long,
-      maximumSolutions: Long,
-      timeResolution: Long = -1L,
-      memoryResolution: Long = -1L
+      configuration: ExplorerConfiguration
   )(using ChocoExplorable[T]): LazyList[(T, Map[String, Double])] = {
-    var (model, objs)     = m.chocoModel(previousSolutions, timeResolution, memoryResolution)
-    var solver            = model.getSolver()
-    var elapsedTimeInSecs = 0L
-    if (explorationTotalTimeOutInSecs > 0L) solver.limitTime(explorationTotalTimeOutInSecs * 1000L)
+    println("exploring with " + configuration.toString())
+    var (model, objs) = m.chocoModel(
+      previousSolutions,
+      configuration.time_resolution,
+      configuration.memory_resolution
+    )
+    var solver = model.getSolver()
+    if (configuration.improvement_timeout > 0L) {
+      solver.limitTime(configuration.improvement_timeout * 1000L)
+    }
+    if (configuration.improvement_iterations > 0L) {
+      solver.limitFail(configuration.improvement_iterations)
+      solver.limitBacktrack(configuration.improvement_iterations)
+    }
     val oneFeasible = solver.solve()
     if (oneFeasible) {
       val solution =
-        m.mergeSolution(solver.defaultSolution().record(), timeResolution, memoryResolution)
+        m.mergeSolution(
+          solver.defaultSolution().record(),
+          configuration.time_resolution,
+          configuration.memory_resolution
+        )
       solution #::
-        (if (maximumSolutions != 1L) {
+        (if (configuration.max_sols != -1) {
            // try to push the pareto frontier more
-           val newTimeOut = (explorationTotalTimeOutInSecs - solver.getTimeCount().toLong) * 1000L
+           //  val newTimeOut = (explorationTotalTimeOutInSecs - solver.getTimeCount().toLong) * 1000L
            val potentialDominant = exploreChocoExplorable(
              m,
              previousSolutions + solution,
-             newTimeOut,
-             maximumSolutions - 1L,
-             timeResolution,
-             memoryResolution
+             configuration.copy(max_sols = configuration.max_sols - 1L)
            )
            if (potentialDominant.isEmpty) {
              LazyList
                .from(0)
-               .takeWhile(i => (maximumSolutions <= 0 || i <= maximumSolutions - 1))
+               .takeWhile(i => (configuration.max_sols <= 0 || i <= configuration.max_sols - 1))
                .map(i => (solver.solve(), i))
                .takeWhile((feasible, i) => feasible)
                .map((_, i) =>
                  m.mergeSolution(
                    solver.defaultSolution().record(),
-                   timeResolution,
-                   memoryResolution
+                   configuration.time_resolution,
+                   configuration.memory_resolution
                  )
                )
            } else {
@@ -211,10 +220,7 @@ class ChocoExplorer(using logger: Logger) extends Explorer:
   def explore(
       decisionModel: DecisionModel,
       previousSolutions: Set[ExplorationSolution],
-      explorationTotalTimeOutInSecs: Long,
-      maximumSolutions: Long,
-      timeDiscretizationFactor: Long,
-      memoryDiscretizationFactor: Long
+      configuration: ExplorerConfiguration
   ): LazyList[ExplorationSolution] = {
     decisionModel match
       case sdf: SDFToTiledMultiCore =>
@@ -223,10 +229,7 @@ class ChocoExplorer(using logger: Logger) extends Explorer:
           previousSolutions
             .filter((m, s) => m.isInstanceOf[SDFToTiledMultiCore])
             .map((m, s) => (m.asInstanceOf[SDFToTiledMultiCore], s)),
-          explorationTotalTimeOutInSecs,
-          maximumSolutions,
-          timeDiscretizationFactor,
-          memoryDiscretizationFactor
+          configuration
         )(using CanSolveSDFToTiledMultiCore())
       case workload: PeriodicWorkloadToPartitionedSharedMultiCore =>
         exploreChocoExplorable(
@@ -234,10 +237,7 @@ class ChocoExplorer(using logger: Logger) extends Explorer:
           previousSolutions
             .filter((m, s) => m.isInstanceOf[PeriodicWorkloadToPartitionedSharedMultiCore])
             .map((m, s) => (m.asInstanceOf[PeriodicWorkloadToPartitionedSharedMultiCore], s)),
-          explorationTotalTimeOutInSecs,
-          maximumSolutions,
-          timeDiscretizationFactor,
-          memoryDiscretizationFactor
+          configuration
         )(using CanSolveDepTasksToPartitionedMultiCore())
       case workloadAndSDF: PeriodicWorkloadAndSDFServerToMultiCore =>
         exploreChocoExplorable(
@@ -245,10 +245,7 @@ class ChocoExplorer(using logger: Logger) extends Explorer:
           previousSolutions
             .filter((m, s) => m.isInstanceOf[PeriodicWorkloadAndSDFServerToMultiCore])
             .map((m, s) => (m.asInstanceOf[PeriodicWorkloadAndSDFServerToMultiCore], s)),
-          explorationTotalTimeOutInSecs,
-          maximumSolutions,
-          timeDiscretizationFactor,
-          memoryDiscretizationFactor
+          configuration
         )(using CanSolvePeriodicWorkloadAndSDFServersToMulticore())
       // case solvable: ChocoDecisionModel =>
       //   val solver          = solvable.chocoModel.getSolver

@@ -9,7 +9,7 @@ import java.util.Set;
 
 @JsonSerialize
 public record ExplorationRequestMessage(
-                @JsonProperty("model_message") DecisionModelMessage modelMessage,
-                @JsonProperty("previous_solutions") Set<ExplorationSolution> previousSolutions,
-                Explorer.Configuration configuration) {
+        @JsonProperty("model_message") DecisionModelMessage modelMessage,
+        @JsonProperty("previous_solutions") Set<ExplorationSolutionMessage> previousSolutions,
+        Explorer.Configuration configuration) {
 }

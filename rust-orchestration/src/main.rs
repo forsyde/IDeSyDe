@@ -67,10 +67,24 @@ struct Args {
 
     #[arg(
         long,
+        help = "Sets the desired maximum number of iterations after each exploration improvement. \nIf non-positive, there is no litmit",
+        long_help = "Sets the desired maximum number of iterations after each exploration improvement. \nIf non-positive, there is no litmit. \nThe identification and integration stages are unnafected."
+    )]
+    x_improvement_iterations: Option<u64>,
+
+    #[arg(
+        long,
         help = "Sets the _total exploration_ time-out in seconds. \nIf non-positive, there is no time-out.",
         long_help = "Sets the _total exploration_ time-out in seconds. \nIf non-positive, there is no time-out. \nThe identification and integration stages are unnafected."
     )]
     x_total_time_out: Option<u64>,
+
+    #[arg(
+        long,
+        help = "Sets the _improvement exploration_ time-out in seconds. That is, the maximum time allowed after a strict improvement is made during exploration. \nIf non-positive, there is no time-out.",
+        long_help = "Sets the _improvement exploration_ time-out in seconds. That is, the maximum time allowed after a strict improvement is made during exploration. \nIf non-positive, there is no time-out. \nThe identification and integration stages are unnafected."
+    )]
+    x_improvement_time_out: Option<u64>,
 
     #[arg(
         long,
@@ -437,32 +451,39 @@ fn main() {
                     .map(|(i, _)| (biddings[*i].0.to_owned(), biddings[*i].1.to_owned()))
                     .collect(),
                 Vec::new(),
-                ExplorationConfiguration {
-                    max_sols: args.x_max_solutions.unwrap_or(0),
-                    total_timeout: args.x_total_time_out.unwrap_or(0),
-                    time_resolution: args.x_time_resolution.unwrap_or(0),
-                    memory_resolution: args.x_memory_resolution.unwrap_or(0),
-                    strict: args.strict,
-                },
+                idesyde_core::ExplorationConfigurationBuilder::new()
+                    .max_sols(args.x_max_solutions.unwrap_or(0))
+                    .total_timeout(args.x_total_time_out.unwrap_or(0))
+                    .time_resolution(args.x_time_resolution.unwrap_or(0))
+                    .memory_resolution(args.x_memory_resolution.unwrap_or(0))
+                    .strict(args.strict)
+                    .improvement_timeout(args.x_improvement_time_out.unwrap_or(0))
+                    .improvement_iterations(args.x_improvement_iterations.unwrap_or(0))
+                    .build(),
             ) {
-                debug!(
-                    "New solution with objectives: {}.",
-                    &sol.1
-                        .iter()
-                        .map(|(k, v)| format!("{}: {}", k, v))
-                        .reduce(|s1, s2| format!("{}, {}", s1, s2))
-                        .unwrap_or("None".to_owned())
-                );
-                dominant_sols.push(sol.clone());
-                dominant_sols.retain(|(_, y)| {
-                    idesyde_orchestration::exploration::pareto_dominance_partial_cmp(&sol.1, y)
-                        != Some(Ordering::Less)
+                let sol_dominated = dominant_sols.iter().any(|(_, y)| {
+                    idesyde_core::pareto_dominance_partial_cmp(&sol.1, y) == Some(Ordering::Greater)
                 });
-                sol.0.write_to_dir(
-                    &explored_path,
-                    format!("{}_intermediate", num_sols).as_str(),
-                    "Orchestratror",
-                );
+                if !sol_dominated && !dominant_sols.contains(&sol) {
+                    debug!(
+                        "New non-dominated solution with objectives: {}.",
+                        &sol.1
+                            .iter()
+                            .map(|(k, v)| format!("{}: {}", k, v))
+                            .reduce(|s1, s2| format!("{}, {}", s1, s2))
+                            .unwrap_or("None".to_owned())
+                    );
+                    dominant_sols.retain(|(_, y)| {
+                        idesyde_core::pareto_dominance_partial_cmp(&sol.1, y)
+                            != Some(Ordering::Less)
+                    });
+                    dominant_sols.push(sol.clone());
+                    sol.0.write_to_dir(
+                        &explored_path,
+                        format!("{}_intermediate", num_sols).as_str(),
+                        "Orchestratror",
+                    );
+                }
                 // imodules.par_iter().for_each(|imodule| {
                 //     for reverse in
                 //         imodule.reverse_identification(&vec![sol.0.clone()], &design_models)
@@ -478,25 +499,6 @@ fn main() {
                 // });
                 num_sols += 1;
             }
-            // let sols_iter = explore_cooperatively(
-            //     chosen_decision_model.to_owned(),
-            //     dominant_biddings
-            //         .iter()
-            //         .map(|(i, _)| biddings[*i].0.to_owned())
-            //         .collect(),
-            //     Vec::new(),
-            //     ExplorationConfiguration {
-            //         max_sols: args.x_max_solutions.unwrap_or(0),
-            //         total_timeout: args.x_total_time_out.unwrap_or(0),
-            //         time_resolution: args.x_time_resolution.unwrap_or(0),
-            //         memory_resolution: args.x_memory_resolution.unwrap_or(0),
-            //     },
-            // );
-            // let mut sols_found: Vec<ExplorationSolution> = sols_iter
-            //     .into_iter()
-            //     .inspect(|(_, s)| // debug info
-            //     )
-            //     .collect();
             // sols_found.dedup_by(|(_, a), (_, b)| a == b);
             // let dominant_sols: Vec<ExplorationSolution> = sols_found
             //     .iter()

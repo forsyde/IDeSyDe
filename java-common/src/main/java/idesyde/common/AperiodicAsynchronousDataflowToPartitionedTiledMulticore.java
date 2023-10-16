@@ -29,6 +29,7 @@ public record AperiodicAsynchronousDataflowToPartitionedTiledMulticore(
                 @JsonProperty("aperiodic_asynchronous_dataflows") List<AperiodicAsynchronousDataflow> aperiodicAsynchronousDataflows,
                 @JsonProperty("partitioned_tiled_multicore") PartitionedTiledMulticore partitionedTiledMulticore,
                 @JsonProperty("instrumented_computation_times") InstrumentedComputationTimes instrumentedComputationTimes,
+                @JsonProperty("instrumented_memory_requirements") InstrumentedMemoryRequirements InstrumentedMemoryRequirements,
                 @JsonProperty("processes_to_runtime_scheduling") Map<String, String> processesToRuntimeScheduling,
                 @JsonProperty("processes_to_memory_mapping") Map<String, String> processesToMemoryMapping,
                 @JsonProperty("buffer_to_memory_mappings") Map<String, String> bufferToMemoryMappings,

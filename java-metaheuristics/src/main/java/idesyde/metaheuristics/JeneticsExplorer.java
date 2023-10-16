@@ -3,6 +3,7 @@ package idesyde.metaheuristics;
 import idesyde.common.AperiodicAsynchronousDataflow;
 import idesyde.common.AperiodicAsynchronousDataflow.Job;
 import idesyde.common.AperiodicAsynchronousDataflowToPartitionedMemoryMappableMulticore;
+import idesyde.common.AperiodicAsynchronousDataflowToPartitionedTiledMulticore;
 import idesyde.core.DecisionModel;
 import idesyde.core.ExplorationSolution;
 import idesyde.core.Explorer;
@@ -16,7 +17,7 @@ import java.util.Set;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
-public class JeneticsExplorer implements Explorer, CanExploreAADPMMMWithJenetics {
+public class JeneticsExplorer implements Explorer, CanExploreAADPMMMWithJenetics, CanExploreAADPTMWithJenetics {
 
     private Map<AperiodicAsynchronousDataflowToPartitionedMemoryMappableMulticore, List<AperiodicAsynchronousDataflow.Job>> _memoizedJobs = new HashMap<>();
     private Map<AperiodicAsynchronousDataflowToPartitionedMemoryMappableMulticore, List<Set<AperiodicAsynchronousDataflow.Job>>> _memoizedFollows = new HashMap<>();
@@ -35,6 +36,18 @@ public class JeneticsExplorer implements Explorer, CanExploreAADPMMMWithJenetics
                 }
             }
             return new ExplorationBidding(uniqueIdentifier(), true, false, 1.3, objs, Map.of());
+        } else if (decisionModel instanceof AperiodicAsynchronousDataflowToPartitionedTiledMulticore aperiodicAsynchronousDataflowToPartitionedTiledMulticore) {
+            var objs = new HashSet<String>();
+            objs.add("nUsedPEs");
+            for (var app : aperiodicAsynchronousDataflowToPartitionedTiledMulticore
+                    .aperiodicAsynchronousDataflows()) {
+                for (var actor : app.processes()) {
+                    if (!app.processMinimumThroughput().containsKey(actor)) {
+                        objs.add("invThroughput(%s)".formatted(actor));
+                    }
+                }
+            }
+            return new ExplorationBidding(uniqueIdentifier(), true, false, 1.3, objs, Map.of());
         }
         return Explorer.super.bid(decisionModel);
     }
@@ -44,6 +57,9 @@ public class JeneticsExplorer implements Explorer, CanExploreAADPMMMWithJenetics
             Set<ExplorationSolution> previousSolutions, Configuration configuration) {
         if (decisionModel instanceof AperiodicAsynchronousDataflowToPartitionedMemoryMappableMulticore aperiodicAsynchronousDataflowToPartitionedMemoryMappableMulticore) {
             return exploreAADPMMM(aperiodicAsynchronousDataflowToPartitionedMemoryMappableMulticore, previousSolutions,
+                    configuration);
+        } else if (decisionModel instanceof AperiodicAsynchronousDataflowToPartitionedTiledMulticore aperiodicAsynchronousDataflowToPartitionedTiledMulticore) {
+            return explore(aperiodicAsynchronousDataflowToPartitionedTiledMulticore, previousSolutions,
                     configuration);
         }
         return Explorer.super.explore(decisionModel, previousSolutions, configuration);

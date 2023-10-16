@@ -461,12 +461,12 @@ fn main() {
                     .improvement_iterations(args.x_improvement_iterations.unwrap_or(0))
                     .build(),
             ) {
-                let sol_dominated = dominant_sols.iter().any(|(_, y)| {
-                    idesyde_core::pareto_dominance_partial_cmp(&sol.1, y) == Some(Ordering::Greater)
-                });
-                if !sol_dominated && !dominant_sols.contains(&sol) {
+                // let sol_dominated = dominant_sols.iter().any(|(_, y)| {
+                //     idesyde_core::pareto_dominance_partial_cmp(&sol.1, y) == Some(Ordering::Greater)
+                // });
+                if !dominant_sols.contains(&sol) {
                     debug!(
-                        "New non-dominated solution with objectives: {}.",
+                        "New solution with objectives: {}.",
                         &sol.1
                             .iter()
                             .map(|(k, v)| format!("{}: {}", k, v))
@@ -483,6 +483,12 @@ fn main() {
                         format!("{}_intermediate", num_sols).as_str(),
                         "Orchestratror",
                     );
+                    num_sols += 1;
+                    if args.x_max_solutions.unwrap_or(0) > 0
+                        && num_sols >= args.x_max_solutions.unwrap_or(0)
+                    {
+                        break;
+                    }
                 }
                 // imodules.par_iter().for_each(|imodule| {
                 //     for reverse in
@@ -497,7 +503,6 @@ fn main() {
                 //         debug!("Reverse identified a {} design model", reverse.category());
                 //     }
                 // });
-                num_sols += 1;
             }
             // sols_found.dedup_by(|(_, a), (_, b)| a == b);
             // let dominant_sols: Vec<ExplorationSolution> = sols_found

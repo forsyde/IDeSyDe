@@ -1,5 +1,4 @@
 use std::{
-    borrow::BorrowMut,
     cmp::Ordering,
     collections::HashMap,
     io::BufRead,
@@ -8,7 +7,6 @@ use std::{
     path::PathBuf,
     process::{Child, Stdio},
     sync::{Arc, Mutex},
-    thread::current,
 };
 
 use idesyde_blueprints::{DecisionModelMessage, ExplorationSolutionMessage, OpaqueDecisionModel};
@@ -527,16 +525,28 @@ impl Iterator for MultiLevelCombinedExplorerIterator {
     fn next(&mut self) -> Option<Self::Item> {
         match self.levels.last_mut() {
             Some(last_level) => {
-                match last_level.find(|x| !self.solutions.contains(x)) {
+                match last_level
+                    .filter(|(_, sol_objs)| {
+                        // solution is not dominated
+                        !self.solutions.iter().any(|(_, y)| {
+                            pareto_dominance_partial_cmp(sol_objs, y) == Some(Ordering::Greater)
+                        })
+                    })
+                    .find(|x| !self.solutions.contains(x))
+                {
                     Some(solution) => {
+                        self.solutions.push(solution.clone());
                         if !self.converged_to_last_level {
                             let (_, sol_objs) = &solution;
                             let sol_dominates = self.solutions.iter().any(|(_, y)| {
                                 pareto_dominance_partial_cmp(sol_objs, y) == Some(Ordering::Less)
                             });
-                            debug!("Dominates? {}", sol_dominates);
                             if sol_dominates {
-                                debug!("Starting new level");
+                                // debug!("Starting new level");
+                                self.solutions.retain(|(_, y)| {
+                                    pareto_dominance_partial_cmp(&solution.1, y)
+                                        != Some(Ordering::Less)
+                                });
                                 self.levels.push(CombinedExplorerIterator::start(
                                     self.explorers_and_models.clone(),
                                     self.solutions.clone(),
@@ -546,11 +556,7 @@ impl Iterator for MultiLevelCombinedExplorerIterator {
                             if self.levels.len() > 2 {
                                 self.levels.remove(0);
                             }
-                            self.solutions.retain(|(_, y)| {
-                                pareto_dominance_partial_cmp(&solution.1, y) != Some(Ordering::Less)
-                            });
                         }
-                        self.solutions.push(solution.clone());
                         // debug!("solutions {}", self.solutions.len());
                         return Some(solution);
                         // self.previous = Some(self.current_level);

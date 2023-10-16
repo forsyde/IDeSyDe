@@ -16,8 +16,8 @@ use crate::models::{
     AnalysedSDFApplication, AperiodicAsynchronousDataflow,
     AperiodicAsynchronousDataflowToPartitionedMemoryMappableMulticore,
     AperiodicAsynchronousDataflowToPartitionedTiledMulticore, InstrumentedComputationTimes,
-    MemoryMappableMultiCore, PartitionedMemoryMappableMulticore, PartitionedTiledMulticore,
-    RuntimesAndProcessors, TiledMultiCore,
+    InstrumentedMemoryRequirements, MemoryMappableMultiCore, PartitionedMemoryMappableMulticore,
+    PartitionedTiledMulticore, RuntimesAndProcessors, TiledMultiCore,
 };
 
 pub fn identify_partitioned_mem_mapped_multicore(
@@ -372,45 +372,57 @@ pub fn identify_aperiodic_asynchronous_dataflow_to_partitioned_tiled_multicore(
             .iter()
             .find_map(|x| x.downcast_ref::<InstrumentedComputationTimes>())
         {
-            let apps: Vec<&AperiodicAsynchronousDataflow> = decision_models
+            if let Some(mem_req) = decision_models
                 .iter()
-                .flat_map(|x| x.downcast_ref::<AperiodicAsynchronousDataflow>())
-                .collect();
-            // check if all processes can be mapped
-            let first_non_mappable = apps
-                .iter()
-                .flat_map(|app| {
-                    app.processes.iter().filter(|p| {
-                        !plat.hardware.processors.iter().any(|pe| {
-                            data.average_execution_times
-                                .get(*p)
-                                .map(|m| m.contains_key(pe))
-                                .unwrap_or(false)
+                .find_map(|x| x.downcast_ref::<InstrumentedMemoryRequirements>())
+            {
+                let apps: Vec<&AperiodicAsynchronousDataflow> = decision_models
+                    .iter()
+                    .flat_map(|x| x.downcast_ref::<AperiodicAsynchronousDataflow>())
+                    .collect();
+                // check if all processes can be mapped
+                let first_non_mappable = apps
+                    .iter()
+                    .flat_map(|app| {
+                        app.processes.iter().filter(|p| {
+                            !plat.hardware.processors.iter().any(|pe| {
+                                data.average_execution_times
+                                    .get(*p)
+                                    .map(|m| m.contains_key(pe))
+                                    .unwrap_or(false)
+                            })
                         })
                     })
-                })
-                .next();
-            if apps.len() > 0 && first_non_mappable.is_some() {
-                errors.insert(format!("identify_aperiodic_asynchronous_dataflow_to_partitioned_tiled_multicore: process {} is not mappable in any processing element.", first_non_mappable.unwrap()));
+                    .next();
+                if apps.len() > 0 && first_non_mappable.is_some() {
+                    errors.insert(format!("identify_aperiodic_asynchronous_dataflow_to_partitioned_tiled_multicore: process {} is not mappable in any processing element.", first_non_mappable.unwrap()));
+                }
+                if apps.len() > 0 && first_non_mappable.is_none() {
+                    identified.push(Arc::new(
+                        AperiodicAsynchronousDataflowToPartitionedTiledMulticore {
+                            aperiodic_asynchronous_dataflows: apps
+                                .into_iter()
+                                .map(|x| x.to_owned())
+                                .collect(),
+                            partitioned_tiled_multicore: plat.to_owned(),
+                            instrumented_computation_times: data.to_owned(),
+                            instrumented_memory_requirements: mem_req.to_owned(),
+                            processes_to_runtime_scheduling: HashMap::new(),
+                            processes_to_memory_mapping: HashMap::new(),
+                            buffer_to_memory_mappings: HashMap::new(),
+                            super_loop_schedules: HashMap::new(),
+                            processing_elements_to_routers_reservations: HashMap::new(),
+                        },
+                    ))
+                }
+            } else {
+                errors.insert("identify_aperiodic_asynchronous_dataflow_to_partitioned_tiled_multicore: no memory instrumentation decision model".to_string());
             }
-            if apps.len() > 0 && first_non_mappable.is_none() {
-                identified.push(Arc::new(
-                    AperiodicAsynchronousDataflowToPartitionedTiledMulticore {
-                        aperiodic_asynchronous_dataflows: apps
-                            .into_iter()
-                            .map(|x| x.to_owned())
-                            .collect(),
-                        partitioned_tiled_multicore: plat.to_owned(),
-                        instrumented_computation_times: data.to_owned(),
-                        processes_to_runtime_scheduling: HashMap::new(),
-                        processes_to_memory_mapping: HashMap::new(),
-                        buffer_to_memory_mappings: HashMap::new(),
-                        super_loop_schedules: HashMap::new(),
-                        processing_elements_to_routers_reservations: HashMap::new(),
-                    },
-                ))
-            }
+        } else {
+            errors.insert("identify_aperiodic_asynchronous_dataflow_to_partitioned_tiled_multicore: no computational instrumentation decision model".to_string());
         }
+    } else {
+        errors.insert("identify_aperiodic_asynchronous_dataflow_to_partitioned_tiled_multicore: no partitioned tiled platform model".to_string());
     }
     (identified, errors)
 }
@@ -429,49 +441,57 @@ pub fn identify_aperiodic_asynchronous_dataflow_to_partitioned_mem_mappable_mult
             .iter()
             .find_map(|x| x.downcast_ref::<InstrumentedComputationTimes>())
         {
-            let apps: Vec<&AperiodicAsynchronousDataflow> = decision_models
+            if let Some(mem_req) = decision_models
                 .iter()
-                .flat_map(|x| x.downcast_ref::<AperiodicAsynchronousDataflow>())
-                .collect();
-            // check if all processes can be mapped
-            let first_non_mappable = apps
-                .iter()
-                .flat_map(|app| {
-                    app.processes.iter().filter(|p| {
-                        !plat.hardware.processing_elems.iter().any(|pe| {
-                            data.average_execution_times
-                                .get(*p)
-                                .map(|m| m.contains_key(pe))
-                                .unwrap_or(false)
+                .find_map(|x| x.downcast_ref::<InstrumentedMemoryRequirements>())
+            {
+                let apps: Vec<&AperiodicAsynchronousDataflow> = decision_models
+                    .iter()
+                    .flat_map(|x| x.downcast_ref::<AperiodicAsynchronousDataflow>())
+                    .collect();
+                // check if all processes can be mapped
+                let first_non_mappable = apps
+                    .iter()
+                    .flat_map(|app| {
+                        app.processes.iter().filter(|p| {
+                            !plat.hardware.processing_elems.iter().any(|pe| {
+                                data.average_execution_times
+                                    .get(*p)
+                                    .map(|m| m.contains_key(pe))
+                                    .unwrap_or(false)
+                            })
                         })
                     })
-                })
-                .next();
-            if apps.len() > 0 && first_non_mappable.is_some() {
-                errors.insert(format!("identify_aperiodic_asynchronous_dataflow_to_partitioned_mem_mappable_multicore: process {} is not mappable in any processing element.", first_non_mappable.unwrap()));
-            }
-            if apps.len() > 0 && first_non_mappable.is_none() {
-                identified.push(Arc::new(
-                    AperiodicAsynchronousDataflowToPartitionedMemoryMappableMulticore {
-                        aperiodic_asynchronous_dataflows: apps
-                            .into_iter()
-                            .map(|x| x.to_owned())
-                            .collect(),
-                        partitioned_mem_mappable_multicore: plat.to_owned(),
-                        instrumented_computation_times: data.to_owned(),
-                        processes_to_runtime_scheduling: HashMap::new(),
-                        processes_to_memory_mapping: HashMap::new(),
-                        buffer_to_memory_mappings: HashMap::new(),
-                        super_loop_schedules: HashMap::new(),
-                        processing_elements_to_routers_reservations: HashMap::new(),
-                    },
-                ))
+                    .next();
+                if apps.len() > 0 && first_non_mappable.is_some() {
+                    errors.insert(format!("identify_aperiodic_asynchronous_dataflow_to_partitioned_mem_mappable_multicore: process {} is not mappable in any processing element.", first_non_mappable.unwrap()));
+                }
+                if apps.len() > 0 && first_non_mappable.is_none() {
+                    identified.push(Arc::new(
+                        AperiodicAsynchronousDataflowToPartitionedMemoryMappableMulticore {
+                            aperiodic_asynchronous_dataflows: apps
+                                .into_iter()
+                                .map(|x| x.to_owned())
+                                .collect(),
+                            partitioned_mem_mappable_multicore: plat.to_owned(),
+                            instrumented_computation_times: data.to_owned(),
+                            instrumented_memory_requirements: mem_req.to_owned(),
+                            processes_to_runtime_scheduling: HashMap::new(),
+                            processes_to_memory_mapping: HashMap::new(),
+                            buffer_to_memory_mappings: HashMap::new(),
+                            super_loop_schedules: HashMap::new(),
+                            processing_elements_to_routers_reservations: HashMap::new(),
+                        },
+                    ))
+                }
+            } else {
+                errors.insert("identify_aperiodic_asynchronous_dataflow_to_partitioned_mem_mappable_multicore: no memory instrumentation decision model".to_string());
             }
         } else {
-            debug!("identify_aperiodic_asynchronous_dataflow_to_partitioned_mem_mappable_multicore: no instrumentation decision model")
+            errors.insert("identify_aperiodic_asynchronous_dataflow_to_partitioned_mem_mappable_multicore: no computational instrumentation decision model".to_string());
         }
     } else {
-        debug!("identify_aperiodic_asynchronous_dataflow_to_partitioned_mem_mappable_multicore: no mem mappable platform model")
+        errors.insert("identify_aperiodic_asynchronous_dataflow_to_partitioned_mem_mappable_multicore: no mem mappable platform model".to_string());
     }
     (identified, errors)
 }

@@ -148,33 +148,31 @@ class ChocoExplorer(using logger: Logger) extends Explorer:
           configuration.memory_resolution
         )
       solution #::
-        (if (configuration.max_sols != -1) {
-           // try to push the pareto frontier more
-           //  val newTimeOut = (explorationTotalTimeOutInSecs - solver.getTimeCount().toLong) * 1000L
-           val potentialDominant = exploreChocoExplorable(
-             m,
-             previousSolutions + solution,
-             configuration.copy(max_sols = configuration.max_sols - 1L)
-           )
-           if (potentialDominant.isEmpty) {
-             LazyList
-               .from(0)
-               .takeWhile(i => (configuration.max_sols <= 0 || i <= configuration.max_sols - 1))
-               .map(i => (solver.solve(), i))
-               .takeWhile((feasible, i) => feasible)
-               .map((_, i) =>
-                 m.mergeSolution(
-                   solver.defaultSolution().record(),
-                   configuration.time_resolution,
-                   configuration.memory_resolution
-                 )
-               )
-           } else {
-             potentialDominant
-           }
-         } else {
-           LazyList.empty
-         })
+        ({
+          val potentialDominant = exploreChocoExplorable(
+            m,
+            previousSolutions + solution,
+            configuration
+          )
+          if (potentialDominant.isEmpty) {
+            LazyList
+              .from(0)
+              // .takeWhile(i => (configuration.max_sols <= 0 || i <= configuration.max_sols - 1))
+              .map(i => (solver.solve(), i))
+              .takeWhile((feasible, i) => feasible)
+              .map((_, i) =>
+                m.mergeSolution(
+                  solver.defaultSolution().record(),
+                  configuration.time_resolution,
+                  configuration.memory_resolution
+                )
+              )
+          } else {
+            potentialDominant
+          }
+          // try to push the pareto frontier more
+          //  val newTimeOut = (explorationTotalTimeOutInSecs - solver.getTimeCount().toLong) * 1000L
+        })
       // val objsMap              = objs.map(v => v.getName() -> v.getValue().toInt).toMap
       // val oneLvlDown           = exploreChocoExplorable(m, objectivesUpperLimits + obj)
     } else {

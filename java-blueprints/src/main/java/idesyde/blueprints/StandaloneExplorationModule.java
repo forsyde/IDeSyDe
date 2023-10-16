@@ -169,7 +169,7 @@ public interface StandaloneExplorationModule {
                                             ctx.closeSession();
                                         } catch (DatabindException ignored) {
                                         } catch (IOException ignored) {
-
+                                            System.out.println("Client closed channel during execution.");
                                         }
                                     });
                                 })
@@ -177,10 +177,6 @@ public interface StandaloneExplorationModule {
                                 Exception.class,
                                 (e, ctx) -> {
                                     if (e instanceof ClosedChannelException) {
-                                        System.out.println("Client closed channel during execution.");
-                                    } else if (e instanceof EofException) {
-                                        System.out.println("Client closed channel during execution.");
-                                    } else if (e instanceof IOException) {
                                         System.out.println("Client closed channel during execution.");
                                     } else {
                                         e.printStackTrace();

@@ -436,6 +436,35 @@ impl DecisionModel for InstrumentedComputationTimes {
     }
 }
 
+/// A decision model to hold memory requirements for processes when executing in processing elements.
+///
+/// As the decision model stores these computation in associative arrays (maps), the lack
+/// of an association between a process and a processing element means that
+/// this process _cannot_ be executed in the processing element.
+///
+///
+#[derive(Debug, PartialEq, Serialize, Deserialize, Clone, JsonSchema)]
+pub struct InstrumentedMemoryRequirements {
+    pub processes: HashSet<String>,
+    pub processing_elements: HashSet<String>,
+    pub memory_requirements: HashMap<String, HashMap<String, u64>>,
+}
+
+impl DecisionModel for InstrumentedMemoryRequirements {
+    impl_decision_model_standard_parts!(InstrumentedmemoryRequirements);
+
+    fn header(&self) -> DecisionModelHeader {
+        let mut elems: HashSet<String> = HashSet::new();
+        elems.extend(self.processes.iter().map(|x| x.to_owned()));
+        elems.extend(self.processing_elements.iter().map(|x| x.to_string()));
+        DecisionModelHeader {
+            category: self.category(),
+            body_path: None,
+            covered_elements: elems.into_iter().collect(),
+        }
+    }
+}
+
 /// A decision model that combines one type of application, platform and information to bind them.
 ///
 /// The assumptions of this decision model are:
@@ -448,6 +477,7 @@ pub struct AperiodicAsynchronousDataflowToPartitionedTiledMulticore {
     pub aperiodic_asynchronous_dataflows: Vec<AperiodicAsynchronousDataflow>,
     pub partitioned_tiled_multicore: PartitionedTiledMulticore,
     pub instrumented_computation_times: InstrumentedComputationTimes,
+    pub instrumented_memory_requirements: InstrumentedMemoryRequirements,
     pub processes_to_runtime_scheduling: HashMap<String, String>,
     pub processes_to_memory_mapping: HashMap<String, String>,
     pub buffer_to_memory_mappings: HashMap<String, String>,
@@ -513,6 +543,7 @@ pub struct AperiodicAsynchronousDataflowToPartitionedMemoryMappableMulticore {
     pub aperiodic_asynchronous_dataflows: Vec<AperiodicAsynchronousDataflow>,
     pub partitioned_mem_mappable_multicore: PartitionedMemoryMappableMulticore,
     pub instrumented_computation_times: InstrumentedComputationTimes,
+    pub instrumented_memory_requirements: InstrumentedMemoryRequirements,
     pub processes_to_runtime_scheduling: HashMap<String, String>,
     pub processes_to_memory_mapping: HashMap<String, String>,
     pub buffer_to_memory_mappings: HashMap<String, String>,

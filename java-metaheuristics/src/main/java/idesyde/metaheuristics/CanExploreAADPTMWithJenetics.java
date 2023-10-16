@@ -1,6 +1,7 @@
 package idesyde.metaheuristics;
 
 import idesyde.common.AperiodicAsynchronousDataflow;
+import idesyde.common.AperiodicAsynchronousDataflowToPartitionedMemoryMappableMulticore;
 import idesyde.common.AperiodicAsynchronousDataflowToPartitionedTiledMulticore;
 import idesyde.core.ExplorationSolution;
 import idesyde.core.Explorer;
@@ -119,6 +120,7 @@ public interface CanExploreAADPTMWithJenetics {
                                                         decisionModel.aperiodicAsynchronousDataflows(),
                                                         decisionModel.partitionedTiledMulticore(),
                                                         decisionModel.instrumentedComputationTimes(),
+                                                        decisionModel.InstrumentedMemoryRequirements(),
                                                         taskScheduling,
                                                         taskMapping,
                                                         bufferMapping,
@@ -171,137 +173,52 @@ public interface CanExploreAADPTMWithJenetics {
                                 });
         }
 
-        // default Stream<ExplorationSolution> exploreAADPMMM(
-        // AperiodicAsynchronousDataflowToPartitionedTiledMulticore decisionModel,
-        // Set<ExplorationSolution> previousSolutions, Explorer.Configuration
-        // configuration) {
-        // var codec = ofDecisionModel(decisionModel);
-        // var engine = Engine.builder(this::evaluateAADPMMM, codec)
-        // .offspringSelector(new TournamentSelector<>(5))
-        // .survivorsSelector(UFTournamentSelector.ofVec())
-        // .constraint(new CommunicationConstraint<>(decisionModel))
-        // .constraint(new JobOrderingConstraint<>(decisionModel))
-        // .constraint(RetryConstraint.of(codec, this::mappingIsFeasible))
-        // .minimizing()
-        // .build();
-        // var solStream = engine.stream().limit(Limits.byGeneConvergence(0.001, 1.0));
-        // var timedSolStream = configuration.totalExplorationTimeOutInSecs > 0L
-        // ? solStream
-        // .limit(Limits.byExecutionTime(Duration.ofSeconds(
-        // configuration.totalExplorationTimeOutInSecs)))
-        // : solStream;
-        // var limitedSolStream = configuration.maximumSolutions > 0L
-        // ? timedSolStream.limit(configuration.maximumSolutions)
-        // : timedSolStream;
-        // return limitedSolStream
-        // .map(sol -> {
-        // var solMap = new HashMap<String, Double>(sol.bestFitness().length());
-        // var bestFit = sol.bestFitness().data();
-        // solMap.put("nUsedPEs", bestFit[0]);
-        // var i = 0;
-        // for (var app : decisionModel.aperiodicAsynchronousDataflows()) {
-        // for (var actor : app.processes()) {
-        // solMap.put("invThroughput(%s)".formatted(actor),
-        // bestFit[i + 1]);
-        // i += 1;
-        // }
-        // }
-        // return new ExplorationSolution(
-        // solMap,
-        // codec.decode(sol.bestPhenotype().genotype()));
-        // });
-        // }
-
-        private Vec<double[]> evaluateAADPTM(
-                        final AperiodicAsynchronousDataflowToPartitionedTiledMulticore decisionModel) {
-                // first, get the number of used PEs
-                var nUsedPEs = decisionModel.processesToRuntimeScheduling().values().stream().distinct().count();
-                // get durations for each process
-                var jobs = decisionModel.aperiodicAsynchronousDataflows().stream()
-                                .flatMap(app -> app.jobsOfProcesses().stream()).toList();
-                var follows = jobs.stream()
-                                .map(src -> IntStream.range(0, jobs.size())
-                                                .filter(dstI -> decisionModel.aperiodicAsynchronousDataflows().stream()
-                                                                .anyMatch(app -> app.isSucessor(src, jobs.get(dstI))))
-                                                .boxed().collect(Collectors.toSet()))
-                                .collect(Collectors.toList());
-                var scheds = decisionModel.partitionedTiledMulticore().runtimes().runtimes().stream().toList();
-                var mappings = IntStream.range(0, jobs.size()).map(
-                                jobI -> scheds.indexOf(decisionModel.processesToRuntimeScheduling()
-                                                .get(jobs.get(jobI).process())))
-                                .toArray();
-                var execTimes = jobs.stream().mapToLong(j -> {
-                        var hostSched = decisionModel.processesToRuntimeScheduling().get(j.process());
-                        var hostPe = decisionModel.partitionedTiledMulticore().runtimes().runtimeHost()
-                                        .get(hostSched);
-                        return decisionModel.instrumentedComputationTimes().worstExecutionTimes()
-                                        .get(j.process()).getOrDefault(hostPe, Long.MAX_VALUE);
-                })
-                                .mapToDouble(
-                                                w -> w != Long.MAX_VALUE
-                                                                ? (double) w / decisionModel
-                                                                                .instrumentedComputationTimes()
-                                                                                .scaleFactor().doubleValue()
-                                                                : Double.POSITIVE_INFINITY)
-                                .toArray();
-                var orderings = new int[jobs.size()];
-                Arrays.fill(orderings, -1);
-                for (var sched : decisionModel.superLoopSchedules().keySet()) {
-                        var schedI = scheds.indexOf(sched);
-                        var looplist = decisionModel.superLoopSchedules().get(sched);
-                        IntStream.range(0, looplist.size()).forEach(entryI -> {
-                                var entry = looplist.get(entryI);
-                                IntStream.range(0, jobs.size())
-                                                .filter(j -> mappings[j] == schedI && orderings[j] == -1
-                                                                && jobs.get(j).process() == entry)
-                                                .boxed()
-                                                .min((a, b) -> (int) jobs.get(a).instance()
-                                                                - (int) jobs.get(b).instance())
-                                                .ifPresent(j -> orderings[j] = entryI);
-                        });
-                }
-
-                var edgeWeights = new double[jobs.size()][jobs.size()];
-                for (int srcI = 0; srcI < jobs.size(); srcI++) {
-                        var src = jobs.get(srcI);
-                        var srcHostSched = decisionModel.processesToRuntimeScheduling().get(src.process());
-                        var srcHostPe = decisionModel.partitionedTiledMulticore().runtimes().runtimeHost()
-                                        .get(srcHostSched);
-                        for (int dstI = 0; dstI < jobs.size(); dstI++) {
-                                var dst = jobs.get(dstI);
-                                var dstHostSched = decisionModel.processesToRuntimeScheduling().get(dst.process());
-                                var dstHostPe = decisionModel.partitionedTiledMulticore().runtimes().runtimeHost()
-                                                .get(dstHostSched);
-                                // var sentDataTime =
-                                // decisionModel.aperiodicAsynchronousDataflows().stream().map(app -> )
-                                edgeWeights[srcI][dstI] = 0.0;
+        default Stream<ExplorationSolution> exploreAADPTM(
+                        AperiodicAsynchronousDataflowToPartitionedTiledMulticore decisionModel,
+                        Set<ExplorationSolution> previousSolutions, Explorer.Configuration configuration) {
+                var codec = ofDecisionModel(decisionModel);
+                var engine = Engine.builder(this::evaluateAADPTM, codec)
+                                .offspringSelector(new TournamentSelector<>(5))
+                                .survivorsSelector(UFTournamentSelector.ofVec())
+                                .constraint(new CommunicationConstraint<>(decisionModel))
+                                .constraint(new JobOrderingConstraint<>(decisionModel))
+                                .constraint(RetryConstraint.of(codec, this::mappingIsFeasible))
+                                .minimizing()
+                                .build();
+                var solStream = engine
+                                .stream(previousSolutions.stream().filter(s -> s
+                                                .solved() instanceof AperiodicAsynchronousDataflowToPartitionedTiledMulticore)
+                                                .map(s -> codec.encode(
+                                                                (AperiodicAsynchronousDataflowToPartitionedTiledMulticore) s
+                                                                                .solved()))
+                                                .collect(Collectors.toList()));
+                // .limit(Limits.byGeneConvergence(0.000001, 0.999999));
+                var timedSolStream = configuration.improvementTimeOutInSecs > 0L
+                                ? solStream
+                                                .limit(Limits.byExecutionTime(Duration.ofSeconds(
+                                                                configuration.improvementTimeOutInSecs)))
+                                : solStream;
+                var limitedImprovementStream = configuration.improvementIterations > 0L
+                                ? timedSolStream.limit(Limits.byFixedGeneration(configuration.improvementIterations))
+                                : timedSolStream;
+                var decodedStream = limitedImprovementStream.map(sol -> {
+                        var solMap = new HashMap<String, Double>(sol.bestFitness().length());
+                        var bestFit = sol.bestFitness().data();
+                        solMap.put("nUsedPEs", bestFit[0]);
+                        var i = 0;
+                        for (var app : decisionModel.aperiodicAsynchronousDataflows()) {
+                                for (var actor : app.processes()) {
+                                        solMap.put("invThroughput(%s)".formatted(actor),
+                                                        bestFit[i + 1]);
+                                        i += 1;
+                                }
                         }
-                }
-                var cycleLengths = recomputeMaximumCycles(follows,
-                                IntStream.range(0, jobs.size()).map(
-                                                jobI -> scheds.indexOf(decisionModel.processesToMemoryMapping()
-                                                                .get(jobs.get(jobI).process())))
-                                                .toArray(),
-                                orderings, execTimes, edgeWeights);
-                var invThroughputs = decisionModel.aperiodicAsynchronousDataflows().stream()
-                                .flatMap(app -> app.processes().stream())
-                                // add the throughputs to the decision model for the sake of later reference
-                                .map(actor -> {
-                                        var maxRepetitions = jobs.stream()
-                                                        .filter(j -> j.process().equals(actor))
-                                                        .mapToLong(j -> j.instance()).max().orElse(1L);
-                                        return IntStream.range(0, jobs.size())
-                                                        .filter(j -> jobs.get(j).process().equals(actor))
-                                                        .mapToDouble(j -> cycleLengths[j] / maxRepetitions)
-                                                        .max().orElse(0.0);
-                                })
-                                .collect(Collectors.toList());
-                var objs = new double[invThroughputs.size() + 1];
-                objs[0] = (double) nUsedPEs;
-                for (int i = 0; i < invThroughputs.size(); i++) {
-                        objs[i + 1] = invThroughputs.get(i);
-                }
-                return Vec.of(objs);
+                        return new ExplorationSolution(
+                                        solMap,
+                                        codec.decode(sol.bestPhenotype().genotype()));
+                })
+                                .filter(sol -> !previousSolutions.contains(sol));
+                return decodedStream;
         }
 
         private double[] recomputeMaximumCycles(
@@ -398,291 +315,287 @@ public interface CanExploreAADPTMWithJenetics {
                 return maxCycles;
         }
 
-        // class CommunicationConstraint<T extends Comparable<? super T>> implements
-        // Constraint<IntegerGene, T> {
+        class CommunicationConstraint<T extends Comparable<? super T>> implements
+                        Constraint<IntegerGene, T> {
 
-        // private final List<String> processors;
-        // private final List<String> memories;
-        // private final List<String> comms;
-        // private final List<String> tasks;
-        // private final List<String> buffers;
-        // public AperiodicAsynchronousDataflowToPartitionedTiledMulticore
-        // decisionModel;
+                private final List<String> processors;
+                private final List<String> memories;
+                private final List<String> comms;
+                private final List<String> tasks;
+                private final List<String> buffers;
+                public AperiodicAsynchronousDataflowToPartitionedTiledMulticore decisionModel;
 
-        // public CommunicationConstraint(
-        // AperiodicAsynchronousDataflowToPartitionedTiledMulticore decisionModel) {
-        // this.decisionModel = decisionModel;
-        // processors =
-        // decisionModel.partitionedTiledMulticore().hardware().processingElems()
-        // .stream().toList();
-        // memories =
-        // decisionModel.partitionedTiledMulticore().hardware().storageElems().stream()
-        // .toList();
-        // comms =
-        // decisionModel.partitionedTiledMulticore().hardware().communicationElems().stream()
-        // .toList();
-        // tasks = decisionModel.aperiodicAsynchronousDataflows().stream()
-        // .flatMap(x -> x.processes().stream())
-        // .collect(Collectors.toList());
-        // buffers = decisionModel.aperiodicAsynchronousDataflows().stream()
-        // .flatMap(x -> x.buffers().stream())
-        // .collect(Collectors.toList());
-        // }
+                public CommunicationConstraint(
+                                AperiodicAsynchronousDataflowToPartitionedTiledMulticore decisionModel) {
+                        this.decisionModel = decisionModel;
+                        processors = decisionModel.partitionedTiledMulticore().hardware().processors()
+                                        .stream().toList();
+                        memories = decisionModel.partitionedTiledMulticore().hardware().memories().stream()
+                                        .toList();
+                        comms = decisionModel.partitionedTiledMulticore().hardware().communicationElements().stream()
+                                        .toList();
+                        tasks = decisionModel.aperiodicAsynchronousDataflows().stream()
+                                        .flatMap(x -> x.processes().stream())
+                                        .collect(Collectors.toList());
+                        buffers = decisionModel.aperiodicAsynchronousDataflows().stream()
+                                        .flatMap(x -> x.buffers().stream())
+                                        .collect(Collectors.toList());
+                }
 
-        // @Override
-        // public boolean test(Phenotype<IntegerGene, T> individual) {
-        // var taskMapping = individual.genotype().get(0);
-        // var taskScheduling = individual.genotype().get(1);
-        // var bufferMapping = individual.genotype().get(2);
-        // var reservations = individual.genotype().get(3);
-        // for (int taskI = 0; taskI < tasks.size(); taskI++) {
-        // var task = tasks.get(taskI);
-        // for (int peI = 0; peI < processors.size(); peI++) {
-        // var pe = processors.get(peI);
-        // if (taskScheduling.get(taskI).allele() == peI) { // a task is mapped in PE i
-        // for (int meI = 0; meI < memories.size(); meI++) {
-        // var me = memories.get(meI);
-        // if (taskMapping.get(taskI).allele() == meI) { // the data is
-        // // mapped to a ME
-        // // j
-        // for (var ce : decisionModel
-        // .partitionedTiledMulticore()
-        // .hardware()
-        // .preComputedPaths()
-        // .getOrDefault(pe, Map.of())
-        // .getOrDefault(me, List.of())) {
-        // // we go through the communication elements in
-        // // the path and ensure they have
-        // // reservations
-        // var k = comms.indexOf(ce);
-        // if (reservations.get(peI * comms.size() + k)
-        // .allele() <= 0) { // should but
-        // // it is
-        // // not
-        // // reserved
-        // return false;
-        // }
-        // }
-        // }
-        // for (int bufferI = 0; bufferI < buffers.size(); bufferI++) {
-        // var buffer = buffers.get(bufferI);
-        // if (decisionModel.aperiodicAsynchronousDataflows()
-        // .stream().anyMatch(app -> app
-        // .processGetFromBufferInBits()
-        // .getOrDefault(task, Map
-        // .of())
-        // .containsKey(buffer))
-        // && bufferMapping.get(bufferI)
-        // .allele() == meI) { // task
-        // // reads
-        // // from
-        // // buffer
-        // for (var ce : decisionModel
-        // .partitionedTiledMulticore()
-        // .hardware()
-        // .preComputedPaths()
-        // .getOrDefault(pe, Map.of())
-        // .getOrDefault(me, List.of())) {
-        // // we go through the communication
-        // // elements in the path and ensure they
-        // // have
-        // // reservations
-        // var k = comms.indexOf(ce);
-        // if (reservations.get(
-        // peI * comms.size() + k)
-        // .allele() <= 0) { // should
-        // // but
-        // // it
-        // // is
-        // // not
-        // // reserved
-        // return false;
-        // }
-        // }
-        // }
-        // }
-        // for (int bufferI = 0; bufferI < buffers.size(); bufferI++) {
-        // var buffer = buffers.get(bufferI);
-        // if (decisionModel.aperiodicAsynchronousDataflows()
-        // .stream().anyMatch(app -> app
-        // .processPutInBufferInBits()
-        // .getOrDefault(task, Map
-        // .of())
-        // .containsKey(buffer))
-        // && bufferMapping.get(bufferI)
-        // .allele() == meI) { // task
-        // // writes
-        // // to
-        // // buffer
-        // for (var ce : decisionModel
-        // .partitionedTiledMulticore()
-        // .hardware()
-        // .preComputedPaths()
-        // .getOrDefault(pe, Map.of())
-        // .getOrDefault(me, List.of())) {
-        // // we go through the communication
-        // // elements in the path and ensure they
-        // // have
-        // // reservations
-        // var k = comms.indexOf(ce);
-        // if (reservations.get(
-        // peI * comms.size() + k)
-        // .allele() <= 0) { // should
-        // // but
-        // // it
-        // // is
-        // // not
-        // // reserved
-        // return false;
-        // }
-        // }
-        // }
-        // }
-        // }
-        // }
-        // }
-        // }
-        // return true;
-        // }
+                @Override
+                public boolean test(Phenotype<IntegerGene, T> individual) {
+                        var taskMapping = individual.genotype().get(0);
+                        var taskScheduling = individual.genotype().get(1);
+                        var bufferMapping = individual.genotype().get(2);
+                        var reservations = individual.genotype().get(3);
+                        for (int taskI = 0; taskI < tasks.size(); taskI++) {
+                                var task = tasks.get(taskI);
+                                for (int peI = 0; peI < processors.size(); peI++) {
+                                        var pe = processors.get(peI);
+                                        if (taskScheduling.get(taskI).allele() == peI) { // a task is mapped in PE i
+                                                for (int meI = 0; meI < memories.size(); meI++) {
+                                                        var me = memories.get(meI);
+                                                        if (taskMapping.get(taskI).allele() == meI) { // the data is
+                                                                // mapped to a ME
+                                                                // j
+                                                                for (var ce : decisionModel
+                                                                                .partitionedTiledMulticore()
+                                                                                .hardware()
+                                                                                .preComputedPaths()
+                                                                                .getOrDefault(pe, Map.of())
+                                                                                .getOrDefault(me, List.of())) {
+                                                                        // we go through the communication elements in
+                                                                        // the path and ensure they have
+                                                                        // reservations
+                                                                        var k = comms.indexOf(ce);
+                                                                        if (reservations.get(peI * comms.size() + k)
+                                                                                        .allele() <= 0) { // should but
+                                                                                // it is
+                                                                                // not
+                                                                                // reserved
+                                                                                return false;
+                                                                        }
+                                                                }
+                                                        }
+                                                        for (int bufferI = 0; bufferI < buffers.size(); bufferI++) {
+                                                                var buffer = buffers.get(bufferI);
+                                                                if (decisionModel.aperiodicAsynchronousDataflows()
+                                                                                .stream().anyMatch(app -> app
+                                                                                                .processGetFromBufferInBits()
+                                                                                                .getOrDefault(task, Map
+                                                                                                                .of())
+                                                                                                .containsKey(buffer))
+                                                                                && bufferMapping.get(bufferI)
+                                                                                                .allele() == meI) { // task
+                                                                        // reads
+                                                                        // from
+                                                                        // buffer
+                                                                        for (var ce : decisionModel
+                                                                                        .partitionedTiledMulticore()
+                                                                                        .hardware()
+                                                                                        .preComputedPaths()
+                                                                                        .getOrDefault(pe, Map.of())
+                                                                                        .getOrDefault(me, List.of())) {
+                                                                                // we go through the communication
+                                                                                // elements in the path and ensure they
+                                                                                // have
+                                                                                // reservations
+                                                                                var k = comms.indexOf(ce);
+                                                                                if (reservations.get(
+                                                                                                peI * comms.size() + k)
+                                                                                                .allele() <= 0) { // should
+                                                                                        // but
+                                                                                        // it
+                                                                                        // is
+                                                                                        // not
+                                                                                        // reserved
+                                                                                        return false;
+                                                                                }
+                                                                        }
+                                                                }
+                                                        }
+                                                        for (int bufferI = 0; bufferI < buffers.size(); bufferI++) {
+                                                                var buffer = buffers.get(bufferI);
+                                                                if (decisionModel.aperiodicAsynchronousDataflows()
+                                                                                .stream().anyMatch(app -> app
+                                                                                                .processPutInBufferInBits()
+                                                                                                .getOrDefault(task, Map
+                                                                                                                .of())
+                                                                                                .containsKey(buffer))
+                                                                                && bufferMapping.get(bufferI)
+                                                                                                .allele() == meI) { // task
+                                                                        // writes
+                                                                        // to
+                                                                        // buffer
+                                                                        for (var ce : decisionModel
+                                                                                        .partitionedTiledMulticore()
+                                                                                        .hardware()
+                                                                                        .preComputedPaths()
+                                                                                        .getOrDefault(pe, Map.of())
+                                                                                        .getOrDefault(me, List.of())) {
+                                                                                // we go through the communication
+                                                                                // elements in the path and ensure they
+                                                                                // have
+                                                                                // reservations
+                                                                                var k = comms.indexOf(ce);
+                                                                                if (reservations.get(
+                                                                                                peI * comms.size() + k)
+                                                                                                .allele() <= 0) { // should
+                                                                                        // but
+                                                                                        // it
+                                                                                        // is
+                                                                                        // not
+                                                                                        // reserved
+                                                                                        return false;
+                                                                                }
+                                                                        }
+                                                                }
+                                                        }
+                                                }
+                                        }
+                                }
+                        }
+                        return true;
+                }
 
-        // @Override
-        // public Phenotype<IntegerGene, T> repair(Phenotype<IntegerGene, T> individual,
-        // long generation) {
-        // var taskMapping = individual.genotype().get(0);
-        // var taskScheduling = individual.genotype().get(1);
-        // var bufferMapping = individual.genotype().get(2);
-        // var reservations = individual.genotype().get(3);
-        // var changeReservations = new java.util.ArrayList<>(
-        // individual.genotype().get(4).stream().map(x -> false).toList());
-        // for (int taskI = 0; taskI < tasks.size(); taskI++) {
-        // var task = tasks.get(taskI);
-        // for (int peI = 0; peI < processors.size(); peI++) {
-        // var pe = processors.get(peI);
-        // if (taskScheduling.get(taskI).allele() == peI) { // a task is mapped in PE i
-        // for (int meI = 0; meI < memories.size(); meI++) {
-        // var me = memories.get(meI);
-        // if (taskMapping.get(taskI).allele() == meI) { // the data is
-        // // mapped to a ME
-        // // j
-        // for (var ce : decisionModel
-        // .partitionedTiledMulticore()
-        // .hardware()
-        // .preComputedPaths()
-        // .getOrDefault(pe, Map.of())
-        // .getOrDefault(me, List.of())) {
-        // // we go through the communication elements in
-        // // the path and ensure they have
-        // // reservations
-        // var k = comms.indexOf(ce);
-        // if (reservations.get(peI * comms.size() + k)
-        // .allele() <= 0) { // should but
-        // // it is
-        // // not
-        // // reserved
-        // changeReservations.set(
-        // peI * comms.size() + k,
-        // true);
-        // }
-        // }
-        // }
-        // for (int bufferI = 0; bufferI < buffers.size(); bufferI++) {
-        // var buffer = buffers.get(bufferI);
-        // if (decisionModel.aperiodicAsynchronousDataflows()
-        // .stream().anyMatch(app -> app
-        // .processGetFromBufferInBits()
-        // .getOrDefault(task, Map
-        // .of())
-        // .containsKey(buffer))
-        // && bufferMapping.get(bufferI)
-        // .allele() == meI) { // task
-        // // reads
-        // // from
-        // // buffer
-        // for (var ce : decisionModel
-        // .partitionedTiledMulticore()
-        // .hardware()
-        // .preComputedPaths()
-        // .getOrDefault(pe, Map.of())
-        // .getOrDefault(me, List.of())) {
-        // // we go through the communication
-        // // elements in the path and ensure they
-        // // have
-        // // reservations
-        // var k = comms.indexOf(ce);
-        // if (reservations.get(
-        // peI * comms.size() + k)
-        // .allele() <= 0) { // should
-        // // but
-        // // it
-        // // is
-        // // not
-        // // reserved
-        // changeReservations.set(peI
-        // * comms.size()
-        // + k, true);
-        // }
-        // }
-        // }
-        // }
-        // for (int bufferI = 0; bufferI < buffers.size(); bufferI++) {
-        // var buffer = buffers.get(bufferI);
-        // if (decisionModel.aperiodicAsynchronousDataflows()
-        // .stream().anyMatch(app -> app
-        // .processPutInBufferInBits()
-        // .getOrDefault(task, Map
-        // .of())
-        // .containsKey(buffer))
-        // && bufferMapping.get(bufferI)
-        // .allele() == meI) { // task
-        // // writes
-        // // to
-        // // buffer
-        // for (var ce : decisionModel
-        // .partitionedTiledMulticore()
-        // .hardware()
-        // .preComputedPaths()
-        // .getOrDefault(pe, Map.of())
-        // .getOrDefault(me, List.of())) {
-        // // we go through the communication
-        // // elements in the path and ensure they
-        // // have
-        // // reservations
-        // var k = comms.indexOf(ce);
-        // if (reservations.get(
-        // peI * comms.size() + k)
-        // .allele() <= 0) { // should
-        // // but
-        // // it
-        // // is
-        // // not
-        // // reserved
-        // changeReservations.set(peI
-        // * comms.size()
-        // + k, true);
-        // }
-        // }
-        // }
-        // }
-        // }
-        // }
-        // }
-        // }
-        // return Phenotype.of(
-        // Genotype.of(
-        // taskMapping,
-        // taskScheduling,
-        // bufferMapping,
-        // IntegerChromosome.of(IntStream.range(0, reservations.length())
-        // .mapToObj(idx -> changeReservations.get(idx)
-        // ? IntegerGene.of(1, reservations
-        // .get(idx).max()
-        // + 1)
-        // : reservations.get(idx))
-        // .collect(ISeq.toISeq())),
-        // individual.genotype().get(4)),
-        // generation);
-        // }
-        // }
+                @Override
+                public Phenotype<IntegerGene, T> repair(Phenotype<IntegerGene, T> individual,
+                                long generation) {
+                        var taskMapping = individual.genotype().get(0);
+                        var taskScheduling = individual.genotype().get(1);
+                        var bufferMapping = individual.genotype().get(2);
+                        var reservations = individual.genotype().get(3);
+                        var changeReservations = new java.util.ArrayList<>(
+                                        individual.genotype().get(4).stream().map(x -> false).toList());
+                        for (int taskI = 0; taskI < tasks.size(); taskI++) {
+                                var task = tasks.get(taskI);
+                                for (int peI = 0; peI < processors.size(); peI++) {
+                                        var pe = processors.get(peI);
+                                        if (taskScheduling.get(taskI).allele() == peI) { // a task is mapped in PE i
+                                                for (int meI = 0; meI < memories.size(); meI++) {
+                                                        var me = memories.get(meI);
+                                                        if (taskMapping.get(taskI).allele() == meI) { // the data is
+                                                                // mapped to a ME
+                                                                // j
+                                                                for (var ce : decisionModel
+                                                                                .partitionedTiledMulticore()
+                                                                                .hardware()
+                                                                                .preComputedPaths()
+                                                                                .getOrDefault(pe, Map.of())
+                                                                                .getOrDefault(me, List.of())) {
+                                                                        // we go through the communication elements in
+                                                                        // the path and ensure they have
+                                                                        // reservations
+                                                                        var k = comms.indexOf(ce);
+                                                                        if (reservations.get(peI * comms.size() + k)
+                                                                                        .allele() <= 0) { // should but
+                                                                                // it is
+                                                                                // not
+                                                                                // reserved
+                                                                                changeReservations.set(
+                                                                                                peI * comms.size() + k,
+                                                                                                true);
+                                                                        }
+                                                                }
+                                                        }
+                                                        for (int bufferI = 0; bufferI < buffers.size(); bufferI++) {
+                                                                var buffer = buffers.get(bufferI);
+                                                                if (decisionModel.aperiodicAsynchronousDataflows()
+                                                                                .stream().anyMatch(app -> app
+                                                                                                .processGetFromBufferInBits()
+                                                                                                .getOrDefault(task, Map
+                                                                                                                .of())
+                                                                                                .containsKey(buffer))
+                                                                                && bufferMapping.get(bufferI)
+                                                                                                .allele() == meI) { // task
+                                                                        // reads
+                                                                        // from
+                                                                        // buffer
+                                                                        for (var ce : decisionModel
+                                                                                        .partitionedTiledMulticore()
+                                                                                        .hardware()
+                                                                                        .preComputedPaths()
+                                                                                        .getOrDefault(pe, Map.of())
+                                                                                        .getOrDefault(me, List.of())) {
+                                                                                // we go through the communication
+                                                                                // elements in the path and ensure they
+                                                                                // have
+                                                                                // reservations
+                                                                                var k = comms.indexOf(ce);
+                                                                                if (reservations.get(
+                                                                                                peI * comms.size() + k)
+                                                                                                .allele() <= 0) { // should
+                                                                                        // but
+                                                                                        // it
+                                                                                        // is
+                                                                                        // not
+                                                                                        // reserved
+                                                                                        changeReservations.set(peI
+                                                                                                        * comms.size()
+                                                                                                        + k, true);
+                                                                                }
+                                                                        }
+                                                                }
+                                                        }
+                                                        for (int bufferI = 0; bufferI < buffers.size(); bufferI++) {
+                                                                var buffer = buffers.get(bufferI);
+                                                                if (decisionModel.aperiodicAsynchronousDataflows()
+                                                                                .stream().anyMatch(app -> app
+                                                                                                .processPutInBufferInBits()
+                                                                                                .getOrDefault(task, Map
+                                                                                                                .of())
+                                                                                                .containsKey(buffer))
+                                                                                && bufferMapping.get(bufferI)
+                                                                                                .allele() == meI) { // task
+                                                                        // writes
+                                                                        // to
+                                                                        // buffer
+                                                                        for (var ce : decisionModel
+                                                                                        .partitionedTiledMulticore()
+                                                                                        .hardware()
+                                                                                        .preComputedPaths()
+                                                                                        .getOrDefault(pe, Map.of())
+                                                                                        .getOrDefault(me, List.of())) {
+                                                                                // we go through the communication
+                                                                                // elements in the path and ensure they
+                                                                                // have
+                                                                                // reservations
+                                                                                var k = comms.indexOf(ce);
+                                                                                if (reservations.get(
+                                                                                                peI * comms.size() + k)
+                                                                                                .allele() <= 0) { // should
+                                                                                        // but
+                                                                                        // it
+                                                                                        // is
+                                                                                        // not
+                                                                                        // reserved
+                                                                                        changeReservations.set(peI
+                                                                                                        * comms.size()
+                                                                                                        + k, true);
+                                                                                }
+                                                                        }
+                                                                }
+                                                        }
+                                                }
+                                        }
+                                }
+                        }
+                        return Phenotype.of(
+                                        Genotype.of(
+                                                        taskMapping,
+                                                        taskScheduling,
+                                                        bufferMapping,
+                                                        IntegerChromosome.of(IntStream.range(0, reservations.length())
+                                                                        .mapToObj(idx -> changeReservations.get(idx)
+                                                                                        ? IntegerGene.of(1, reservations
+                                                                                                        .get(idx).max()
+                                                                                                        + 1)
+                                                                                        : reservations.get(idx))
+                                                                        .collect(ISeq.toISeq())),
+                                                        individual.genotype().get(4)),
+                                        generation);
+                }
+        }
 
         class JobOrderingConstraint<T extends Comparable<? super T>> implements
                         Constraint<IntegerGene, T> {
@@ -792,6 +705,188 @@ public interface CanExploreAADPTMWithJenetics {
                         return decisionModel.instrumentedComputationTimes().worstExecutionTimes().get(process)
                                         .containsKey(hostPe);
                 });
+        }
+
+        private Vec<double[]> evaluateAADPTM(
+                        final AperiodicAsynchronousDataflowToPartitionedTiledMulticore decisionModel) {
+                // first, get the number of used PEs
+                var nUsedPEs = decisionModel.processesToRuntimeScheduling().values().stream().distinct().count();
+                // get durations for each process
+                var jobs = decisionModel.aperiodicAsynchronousDataflows().stream()
+                                .flatMap(app -> app.jobsOfProcesses().stream()).toList();
+                var follows = jobs.stream()
+                                .map(src -> IntStream.range(0, jobs.size())
+                                                .filter(dstI -> decisionModel.aperiodicAsynchronousDataflows().stream()
+                                                                .anyMatch(app -> app.isSucessor(src, jobs.get(dstI))))
+                                                .boxed().collect(Collectors.toSet()))
+                                .collect(Collectors.toList());
+                var scheds = decisionModel.partitionedTiledMulticore().runtimes().runtimes().stream().toList();
+                var mappings = IntStream.range(0, jobs.size()).map(
+                                jobI -> scheds.indexOf(decisionModel.processesToRuntimeScheduling()
+                                                .get(jobs.get(jobI).process())))
+                                .toArray();
+                var execTimes = jobs.stream().mapToDouble(j -> recomputeExecutionTime(decisionModel, j))
+                                .toArray();
+                var orderings = new int[jobs.size()];
+                Arrays.fill(orderings, -1);
+                for (var sched : decisionModel.superLoopSchedules().keySet()) {
+                        var schedI = scheds.indexOf(sched);
+                        var looplist = decisionModel.superLoopSchedules().get(sched);
+                        IntStream.range(0, looplist.size()).forEach(entryI -> {
+                                var entry = looplist.get(entryI);
+                                IntStream.range(0, jobs.size())
+                                                .filter(j -> mappings[j] == schedI && orderings[j] == -1
+                                                                && jobs.get(j).process() == entry)
+                                                .boxed()
+                                                .min((a, b) -> (int) jobs.get(a).instance()
+                                                                - (int) jobs.get(b).instance())
+                                                .ifPresent(j -> orderings[j] = entryI);
+                        });
+                }
+
+                var edgeWeights = new double[jobs.size()][jobs.size()];
+                for (int srcI = 0; srcI < jobs.size(); srcI++) {
+                        for (int dstI = 0; dstI < jobs.size(); dstI++) {
+                                edgeWeights[srcI][dstI] = recomputeExecutionTransferTime(decisionModel, jobs.get(srcI),
+                                                jobs.get(dstI));
+                        }
+                }
+                var cycleLengths = recomputeMaximumCycles(follows,
+                                IntStream.range(0, jobs.size()).map(
+                                                jobI -> scheds.indexOf(decisionModel.processesToMemoryMapping()
+                                                                .get(jobs.get(jobI).process())))
+                                                .toArray(),
+                                orderings, execTimes, edgeWeights);
+                var invThroughputs = decisionModel.aperiodicAsynchronousDataflows().stream()
+                                .flatMap(app -> app.processes().stream())
+                                // add the throughputs to the decision model for the sake of later reference
+                                .map(actor -> {
+                                        var maxRepetitions = jobs.stream()
+                                                        .filter(j -> j.process().equals(actor))
+                                                        .mapToLong(j -> j.instance()).max().orElse(1L);
+                                        return IntStream.range(0, jobs.size())
+                                                        .filter(j -> jobs.get(j).process().equals(actor))
+                                                        .mapToDouble(j -> cycleLengths[j] / maxRepetitions)
+                                                        .max().orElse(0.0);
+                                })
+                                .collect(Collectors.toList());
+                // + 1 is because the obejctives include number of used PEs
+                var objs = new double[invThroughputs.size() + 1];
+                objs[0] = (double) nUsedPEs;
+                for (int i = 0; i < invThroughputs.size(); i++) {
+                        objs[i + 1] = invThroughputs.get(i);
+                }
+                return Vec.of(objs);
+        }
+
+        default double recomputeExecutionTime(
+                        AperiodicAsynchronousDataflowToPartitionedTiledMulticore decisionModel,
+                        AperiodicAsynchronousDataflow.Job job) {
+                var totalTime = 0.0;
+                for (var pe : decisionModel.partitionedTiledMulticore().hardware().processors()) {
+                        var sched = decisionModel.partitionedTiledMulticore().runtimes().processorAffinities()
+                                        .get(pe);
+                        if (decisionModel.processesToRuntimeScheduling().get(job.process()).equals(sched)) { // a task
+                                                                                                             // is
+                                // mapped
+                                // in PE i
+                                totalTime += decisionModel.instrumentedComputationTimes().worstExecutionTimes()
+                                                .get(job.process()).getOrDefault(pe, Long.MAX_VALUE).doubleValue()
+                                                / decisionModel.instrumentedComputationTimes().scaleFactor()
+                                                                .doubleValue();
+                        }
+                }
+                return totalTime;
+
+        }
+
+        default double recomputeExecutionTransferTime(
+                        AperiodicAsynchronousDataflowToPartitionedTiledMulticore decisionModel,
+                        AperiodicAsynchronousDataflow.Job src,
+                        AperiodicAsynchronousDataflow.Job dst) {
+                var totalTime = 0.0;
+                for (var srcPE : decisionModel.partitionedTiledMulticore().hardware().processors()) {
+                        var srcSched = decisionModel.partitionedTiledMulticore().runtimes().processorAffinities()
+                                        .get(srcPE);
+                        if (decisionModel.processesToRuntimeScheduling().get(src.process()).equals(srcSched)) { // a
+                                                                                                                // task
+                                                                                                                // is
+                                // mapped
+                                // in PE i
+                                for (var dstPE : decisionModel.partitionedTiledMulticore().hardware().processors()) {
+                                        var dstSched = decisionModel.partitionedTiledMulticore().runtimes()
+                                                        .processorAffinities()
+                                                        .get(dstPE);
+                                        if (decisionModel.processesToRuntimeScheduling().get(dst.process())
+                                                        .equals(dstSched)) { // a task
+                                                double singleBottleNeckBW = decisionModel
+                                                                .partitionedTiledMulticore()
+                                                                .hardware()
+                                                                .preComputedPaths()
+                                                                .getOrDefault(srcPE, Map.of())
+                                                                .getOrDefault(dstPE, List.of())
+                                                                .stream()
+                                                                .mapToDouble(ce -> decisionModel
+                                                                                .partitionedTiledMulticore()
+                                                                                .hardware()
+                                                                                .communicationElementsBitPerSecPerChannel()
+                                                                                .get(ce) *
+                                                                                decisionModel
+                                                                                                .processingElementsToRoutersReservations()
+                                                                                                .get(srcPE)
+                                                                                                .get(ce).doubleValue())
+                                                                .min()
+                                                                .orElse(1.0);
+                                                totalTime += decisionModel
+                                                                .partitionedTiledMulticore()
+                                                                .hardware()
+                                                                .preComputedPaths()
+                                                                .getOrDefault(srcPE, Map.of())
+                                                                .getOrDefault(dstPE, List.of())
+                                                                .size()
+                                                                * (decisionModel.aperiodicAsynchronousDataflows()
+                                                                                .stream()
+                                                                                .mapToDouble(app -> app
+                                                                                                .processPutInBufferInBits()
+                                                                                                .containsKey(src.process())
+                                                                                                                ? app.processPutInBufferInBits()
+                                                                                                                                .get(src.process())
+                                                                                                                                .values()
+                                                                                                                                .stream()
+                                                                                                                                .mapToDouble(l -> l)
+                                                                                                                                .sum()
+                                                                                                                : 0.0)
+                                                                                .sum()
+                                                                                / singleBottleNeckBW);
+                                                totalTime += decisionModel
+                                                                .partitionedTiledMulticore()
+                                                                .hardware()
+                                                                .preComputedPaths()
+                                                                .getOrDefault(srcPE, Map.of())
+                                                                .getOrDefault(dstPE, List.of())
+                                                                .size()
+                                                                * (decisionModel.aperiodicAsynchronousDataflows()
+                                                                                .stream()
+                                                                                .mapToDouble(app -> app
+                                                                                                .processGetFromBufferInBits()
+                                                                                                .containsKey(dst.process())
+                                                                                                                ? app.processGetFromBufferInBits()
+                                                                                                                                .get(dst.process())
+                                                                                                                                .values()
+                                                                                                                                .stream()
+                                                                                                                                .mapToDouble(l -> l)
+                                                                                                                                .sum()
+                                                                                                                : 0.0)
+                                                                                .sum()
+                                                                                / singleBottleNeckBW);
+                                        }
+                                        // is
+                                        // mapped
+                                        // in PE i
+                                }
+                        }
+                }
+                return totalTime;
         }
 
 }

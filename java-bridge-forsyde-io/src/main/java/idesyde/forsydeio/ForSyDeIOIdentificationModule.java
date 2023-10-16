@@ -4,6 +4,7 @@ import idesyde.blueprints.DecisionModelMessage;
 import idesyde.blueprints.DesignModelMessage;
 import idesyde.blueprints.StandaloneIdentificationModule;
 import idesyde.common.AperiodicAsynchronousDataflowToPartitionedMemoryMappableMulticore;
+import idesyde.common.AperiodicAsynchronousDataflowToPartitionedTiledMulticore;
 import idesyde.core.DecisionModel;
 import idesyde.core.DesignModel;
 import idesyde.core.IdentificationRule;
@@ -41,6 +42,9 @@ public class ForSyDeIOIdentificationModule implements StandaloneIdentificationMo
             case "AperiodicAsynchronousDataflowToPartitionedMemoryMappableMulticore":
                 return message.body().flatMap(b -> readFromString(b,
                         AperiodicAsynchronousDataflowToPartitionedMemoryMappableMulticore.class));
+            case "AperiodicAsynchronousDataflowToPartitionedTiledMulticore":
+                return message.body().flatMap(b -> readFromString(b,
+                        AperiodicAsynchronousDataflowToPartitionedTiledMulticore.class));
             default:
                 return Optional.empty();
         }
@@ -61,7 +65,9 @@ public class ForSyDeIOIdentificationModule implements StandaloneIdentificationMo
     public Set<IdentificationRule> identificationRules() {
         return Set.of(
                 new MemoryMappableMultiCoreIRule(),
-                new ForSyDeIOSYNetworkToAADataflowIRule());
+                new ForSyDeIOSYNetworkToAADataflowIRule(),
+                new ForSyDeIOSYAndSDFInstrumentedToMemReqIRule(),
+                new TiledMultiCoreIRule());
     }
 
     public static void main(String[] args) {

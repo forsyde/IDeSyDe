@@ -120,6 +120,7 @@ public interface CanExploreAADPMMMWithJenetics {
                                                         decisionModel.aperiodicAsynchronousDataflows(),
                                                         decisionModel.partitionedMemMappableMulticore(),
                                                         decisionModel.instrumentedComputationTimes(),
+                                                        decisionModel.InstrumentedMemoryRequirements(),
                                                         taskScheduling,
                                                         taskMapping,
                                                         bufferMapping,
@@ -208,7 +209,7 @@ public interface CanExploreAADPMMMWithJenetics {
                                                                                 .solved()))
                                                 .collect(Collectors.toList()));
                 // .limit(Limits.byGeneConvergence(0.000001, 0.999999));
-                var timedSolStream = configuration.totalExplorationTimeOutInSecs > 0L
+                var timedSolStream = configuration.improvementTimeOutInSecs > 0L
                                 ? solStream
                                                 .limit(Limits.byExecutionTime(Duration.ofSeconds(
                                                                 configuration.improvementTimeOutInSecs)))
@@ -233,10 +234,10 @@ public interface CanExploreAADPMMMWithJenetics {
                                         codec.decode(sol.bestPhenotype().genotype()));
                 })
                                 .filter(sol -> !previousSolutions.contains(sol));
-                var limitedSolStream = configuration.maximumSolutions > 0L
-                                ? decodedStream.limit(configuration.maximumSolutions)
-                                : decodedStream;
-                return limitedSolStream;
+                // var limitedSolStream = configuration.maximumSolutions > 0L
+                // ? decodedStream.limit(configuration.maximumSolutions)
+                // : decodedStream;
+                return decodedStream;
         }
 
         private Vec<double[]> evaluateAADPMMM(
@@ -257,19 +258,7 @@ public interface CanExploreAADPMMMWithJenetics {
                                 jobI -> scheds.indexOf(decisionModel.processesToRuntimeScheduling()
                                                 .get(jobs.get(jobI).process())))
                                 .toArray();
-                var execTimes = jobs.stream().mapToLong(j -> {
-                        var hostSched = decisionModel.processesToRuntimeScheduling().get(j.process());
-                        var hostPe = decisionModel.partitionedMemMappableMulticore().runtimes().runtimeHost()
-                                        .get(hostSched);
-                        return decisionModel.instrumentedComputationTimes().worstExecutionTimes()
-                                        .get(j.process()).getOrDefault(hostPe, Long.MAX_VALUE);
-                })
-                                .mapToDouble(
-                                                w -> w != Long.MAX_VALUE
-                                                                ? (double) w / decisionModel
-                                                                                .instrumentedComputationTimes()
-                                                                                .scaleFactor().doubleValue()
-                                                                : Double.POSITIVE_INFINITY)
+                var execTimes = jobs.stream().mapToDouble(j -> recomputeExecutionTime(decisionModel, j))
                                 .toArray();
                 var orderings = new int[jobs.size()];
                 Arrays.fill(orderings, -1);
@@ -290,17 +279,7 @@ public interface CanExploreAADPMMMWithJenetics {
 
                 var edgeWeights = new double[jobs.size()][jobs.size()];
                 for (int srcI = 0; srcI < jobs.size(); srcI++) {
-                        var src = jobs.get(srcI);
-                        var srcHostSched = decisionModel.processesToRuntimeScheduling().get(src.process());
-                        var srcHostPe = decisionModel.partitionedMemMappableMulticore().runtimes().runtimeHost()
-                                        .get(srcHostSched);
                         for (int dstI = 0; dstI < jobs.size(); dstI++) {
-                                var dst = jobs.get(dstI);
-                                var dstHostSched = decisionModel.processesToRuntimeScheduling().get(dst.process());
-                                var dstHostPe = decisionModel.partitionedMemMappableMulticore().runtimes().runtimeHost()
-                                                .get(dstHostSched);
-                                // var sentDataTime =
-                                // decisionModel.aperiodicAsynchronousDataflows().stream().map(app -> )
                                 edgeWeights[srcI][dstI] = 0.0;
                         }
                 }
@@ -323,6 +302,7 @@ public interface CanExploreAADPMMMWithJenetics {
                                                         .max().orElse(0.0);
                                 })
                                 .collect(Collectors.toList());
+                // + 1 is because the obejctives include number of used PEs
                 var objs = new double[invThroughputs.size() + 1];
                 objs[0] = (double) nUsedPEs;
                 for (int i = 0; i < invThroughputs.size(); i++) {
@@ -341,7 +321,7 @@ public interface CanExploreAADPMMMWithJenetics {
                         return mapping[i] == mapping[j] ? ordering[i] + 1 == ordering[j] : follows.get(i).contains(j);
                 };
                 BiFunction<Integer, Integer, Boolean> mustCycle = (i, j) -> {
-                        return mapping[i] == mapping[j] ? ordering[j] == 1 && ordering[i] > 1 : false;
+                        return mapping[i] == mapping[j] ? ordering[j] == 0 && ordering[i] > 0 : false;
                 };
                 var maxCycles = new double[jobWeights.length];
                 var maximumCycleVector = new double[jobWeights.length];
@@ -359,7 +339,7 @@ public interface CanExploreAADPMMMWithJenetics {
                                 if (!visited[i]) {
                                         visited[i] = true;
                                         for (int j = 0; j < jobWeights.length; j++) {
-                                                if (mustSuceed.apply(i, j) | mustCycle.apply(i, j)) {
+                                                if (mustSuceed.apply(i, j) || mustCycle.apply(i, j)) {
                                                         if (j == src) { // found a cycle
                                                                 maximumCycleVector[i] = jobWeights[i]
                                                                                 + edgeWeigths[i][j];
@@ -810,6 +790,183 @@ public interface CanExploreAADPMMMWithJenetics {
                         return decisionModel.instrumentedComputationTimes().worstExecutionTimes().get(process)
                                         .containsKey(hostPe);
                 });
+        }
+
+        default double recomputeExecutionTime(
+                        AperiodicAsynchronousDataflowToPartitionedMemoryMappableMulticore decisionModel,
+                        AperiodicAsynchronousDataflow.Job job) {
+                var totalTime = 0.0;
+                for (var pe : decisionModel.partitionedMemMappableMulticore().hardware().processingElems()) {
+                        var sched = decisionModel.partitionedMemMappableMulticore().runtimes().processorAffinities()
+                                        .get(pe);
+                        if (decisionModel.processesToRuntimeScheduling().get(job.process()).equals(sched)) { // a task
+                                                                                                             // is
+                                // mapped
+                                // in PE i
+                                totalTime += decisionModel.instrumentedComputationTimes().worstExecutionTimes()
+                                                .get(job.process()).getOrDefault(pe, Long.MAX_VALUE).doubleValue()
+                                                / decisionModel.instrumentedComputationTimes().scaleFactor()
+                                                                .doubleValue();
+                                for (var me : decisionModel.partitionedMemMappableMulticore().hardware()
+                                                .storageElems()) {
+                                        if (decisionModel.processesToMemoryMapping().get(job.process()).equals(me)) { // the
+                                                // data
+                                                // is
+                                                // mapped to a ME
+                                                // j
+                                                double singleBottleNeckBW = decisionModel
+                                                                .partitionedMemMappableMulticore()
+                                                                .hardware()
+                                                                .preComputedPaths()
+                                                                .getOrDefault(pe, Map.of())
+                                                                .getOrDefault(me, List.of())
+                                                                .stream()
+                                                                .mapToDouble(ce -> decisionModel
+                                                                                .partitionedMemMappableMulticore()
+                                                                                .hardware()
+                                                                                .communicationElementsBitPerSecPerChannel()
+                                                                                .get(ce) *
+                                                                                decisionModel
+                                                                                                .processingElementsToRoutersReservations()
+                                                                                                .get(pe)
+                                                                                                .get(ce).doubleValue())
+                                                                .min()
+                                                                .orElse(1.0);
+                                                // fetch time = total links * (memory reqs / bottleneck BW)
+                                                totalTime += decisionModel
+                                                                .partitionedMemMappableMulticore()
+                                                                .hardware()
+                                                                .preComputedPaths()
+                                                                .getOrDefault(pe, Map.of())
+                                                                .getOrDefault(me, List.of())
+                                                                .size()
+                                                                * (decisionModel.InstrumentedMemoryRequirements()
+                                                                                .memoryRequirements().get(job.process())
+                                                                                .get(pe).doubleValue()
+                                                                                / singleBottleNeckBW);
+
+                                        }
+                                        totalTime += decisionModel.aperiodicAsynchronousDataflows().stream()
+                                                        .flatMap(x -> x.buffers().stream())
+                                                        .mapToDouble(buffer -> {
+                                                                var ioTime = 0.0;
+                                                                if (decisionModel.aperiodicAsynchronousDataflows()
+                                                                                .stream().anyMatch(app -> app
+                                                                                                .processGetFromBufferInBits()
+                                                                                                .getOrDefault(job
+                                                                                                                .process(),
+                                                                                                                Map
+                                                                                                                                .of())
+                                                                                                .containsKey(buffer))
+                                                                                && decisionModel.bufferToMemoryMappings()
+                                                                                                .get(buffer)
+                                                                                                .equals(me)) { // task
+                                                                        // reads
+                                                                        // from
+                                                                        // buffer
+                                                                        var singleBottleNeckBW = decisionModel
+                                                                                        .partitionedMemMappableMulticore()
+                                                                                        .hardware()
+                                                                                        .preComputedPaths()
+                                                                                        .getOrDefault(pe, Map.of())
+                                                                                        .getOrDefault(me, List.of())
+                                                                                        .stream()
+                                                                                        .mapToDouble(ce -> decisionModel
+                                                                                                        .partitionedMemMappableMulticore()
+                                                                                                        .hardware()
+                                                                                                        .communicationElementsBitPerSecPerChannel()
+                                                                                                        .get(ce) *
+                                                                                                        decisionModel
+                                                                                                                        .processingElementsToRoutersReservations()
+                                                                                                                        .get(pe)
+                                                                                                                        .get(ce))
+                                                                                        .min()
+                                                                                        .orElse(1.0);
+                                                                        // read time = links * (total data transmitted /
+                                                                        // bottleneck bw)
+                                                                        ioTime += decisionModel
+                                                                                        .partitionedMemMappableMulticore()
+                                                                                        .hardware()
+                                                                                        .preComputedPaths()
+                                                                                        .getOrDefault(pe, Map.of())
+                                                                                        .getOrDefault(me, List.of())
+                                                                                        .size() * (
+
+                                                        decisionModel
+                                                                        .aperiodicAsynchronousDataflows()
+                                                                        .stream()
+                                                                        .mapToLong(app -> app
+                                                                                        .processGetFromBufferInBits()
+                                                                                        .containsKey(job.process())
+                                                                                                        ? app.processGetFromBufferInBits()
+                                                                                                                        .get(job.process())
+                                                                                                                        .getOrDefault(buffer,
+                                                                                                                                        0L)
+                                                                                                        : 0L)
+                                                                        .sum() / singleBottleNeckBW);
+                                                                }
+                                                                if (decisionModel.aperiodicAsynchronousDataflows()
+                                                                                .stream().anyMatch(app -> app
+                                                                                                .processPutInBufferInBits()
+                                                                                                .getOrDefault(job
+                                                                                                                .process(),
+                                                                                                                Map
+                                                                                                                                .of())
+                                                                                                .containsKey(buffer))
+                                                                                && decisionModel.bufferToMemoryMappings()
+                                                                                                .get(buffer)
+                                                                                                .equals(me)) { // task
+                                                                                                               // writes
+                                                                                                               // to
+                                                                                                               // buffer
+                                                                        var singleBottleNeckBW = decisionModel
+                                                                                        .partitionedMemMappableMulticore()
+                                                                                        .hardware()
+                                                                                        .preComputedPaths()
+                                                                                        .getOrDefault(pe, Map.of())
+                                                                                        .getOrDefault(me, List.of())
+                                                                                        .stream()
+                                                                                        .mapToDouble(ce -> decisionModel
+                                                                                                        .partitionedMemMappableMulticore()
+                                                                                                        .hardware()
+                                                                                                        .communicationElementsBitPerSecPerChannel()
+                                                                                                        .get(ce) *
+                                                                                                        decisionModel
+                                                                                                                        .processingElementsToRoutersReservations()
+                                                                                                                        .get(pe)
+                                                                                                                        .get(ce))
+                                                                                        .min()
+                                                                                        .orElse(1.0);
+                                                                        // write nack time = links * (total data
+                                                                        // transmitted /
+                                                                        // bottleneck bw)
+                                                                        ioTime += decisionModel
+                                                                                        .partitionedMemMappableMulticore()
+                                                                                        .hardware()
+                                                                                        .preComputedPaths()
+                                                                                        .getOrDefault(pe, Map.of())
+                                                                                        .getOrDefault(me, List.of())
+                                                                                        .size() * (
+
+                                                        decisionModel
+                                                                        .aperiodicAsynchronousDataflows()
+                                                                        .stream()
+                                                                        .mapToDouble(app -> app
+                                                                                        .processPutInBufferInBits()
+                                                                                        .containsKey(job.process())
+                                                                                                        ? app.processPutInBufferInBits()
+                                                                                                                        .get(job.process())
+                                                                                                                        .getOrDefault(buffer,
+                                                                                                                                        0L)
+                                                                                                        : 0L)
+                                                                        .sum() / singleBottleNeckBW);
+                                                                }
+                                                                return ioTime;
+                                                        }).sum();
+                                }
+                        }
+                }
+                return totalTime;
         }
 
 }

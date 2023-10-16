@@ -6,8 +6,8 @@ use models::{
     AnalysedSDFApplication, AperiodicAsynchronousDataflow,
     AperiodicAsynchronousDataflowToPartitionedMemoryMappableMulticore,
     AperiodicAsynchronousDataflowToPartitionedTiledMulticore, InstrumentedComputationTimes,
-    MemoryMappableMultiCore, PartitionedMemoryMappableMulticore, PartitionedTiledMulticore,
-    RuntimesAndProcessors, SDFApplication, TiledMultiCore,
+    InstrumentedMemoryRequirements, MemoryMappableMultiCore, PartitionedMemoryMappableMulticore,
+    PartitionedTiledMulticore, RuntimesAndProcessors, SDFApplication, TiledMultiCore,
 };
 use schemars::schema_for;
 use std::collections::HashSet;
@@ -44,6 +44,7 @@ pub fn make_common_module() -> StandaloneIdentificationModule {
             PartitionedTiledMulticore,
             AperiodicAsynchronousDataflow,
             InstrumentedComputationTimes,
+            InstrumentedMemoryRequirements,
             AperiodicAsynchronousDataflowToPartitionedTiledMulticore,
             MemoryMappableMultiCore,
             PartitionedMemoryMappableMulticore,
@@ -57,6 +58,7 @@ pub fn make_common_module() -> StandaloneIdentificationModule {
             PartitionedTiledMulticore,
             AperiodicAsynchronousDataflow,
             InstrumentedComputationTimes,
+            InstrumentedMemoryRequirements,
             AperiodicAsynchronousDataflowToPartitionedTiledMulticore,
             MemoryMappableMultiCore,
             PartitionedMemoryMappableMulticore,
@@ -70,6 +72,7 @@ pub fn make_common_module() -> StandaloneIdentificationModule {
             PartitionedTiledMulticore,
             AperiodicAsynchronousDataflow,
             InstrumentedComputationTimes,
+            InstrumentedMemoryRequirements,
             AperiodicAsynchronousDataflowToPartitionedTiledMulticore,
             MemoryMappableMultiCore,
             PartitionedMemoryMappableMulticore,

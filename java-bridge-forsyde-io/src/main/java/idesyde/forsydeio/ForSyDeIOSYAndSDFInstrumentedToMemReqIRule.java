@@ -1,0 +1,63 @@
+package idesyde.forsydeio;
+
+import java.util.HashMap;
+import java.util.Map;
+import java.util.Set;
+import java.util.stream.Collectors;
+
+import forsyde.io.core.SystemGraph;
+import forsyde.io.lib.hierarchy.ForSyDeHierarchy;
+import idesyde.common.InstrumentedMemoryRequirements;
+import idesyde.core.DecisionModel;
+import idesyde.core.DesignModel;
+import idesyde.core.IdentificationResult;
+import idesyde.core.IdentificationRule;
+
+class ForSyDeIOSYAndSDFInstrumentedToMemReqIRule implements IdentificationRule {
+
+    @Override
+    public IdentificationResult apply(Set<? extends DesignModel> designModels,
+            Set<? extends DecisionModel> decisionModels) {
+        var model = new SystemGraph();
+        for (var dm : designModels) {
+            if (dm instanceof ForSyDeIODesignModel m) {
+                model.mergeInPlace(m.systemGraph());
+            }
+        }
+        Map<String, Map<String, Long>> memMapping = new HashMap<>();
+        for (var v : model.vertexSet()) {
+            ForSyDeHierarchy.InstrumentedBehaviour.tryView(model, v).ifPresent(ib -> {
+                for (var peV : model.vertexSet()) {
+                    ForSyDeHierarchy.GenericProcessingModule.tryView(model, peV).ifPresent(pe -> {
+                        if (!memMapping.containsKey(ib.getIdentifier())) {
+                            memMapping.put(ib.getIdentifier(), new HashMap<>());
+                        }
+                        memMapping.get(ib.getIdentifier()).put(pe.getIdentifier(),
+                                ib.maxSizeInBits().values().stream().mapToLong(x -> x.longValue()).max().orElse(0L));
+                    });
+                }
+            });
+        }
+        // accept if all SDF or SY behaviours are instrumented
+        var allSYOk = model.vertexSet().stream().filter(v -> ForSyDeHierarchy.SYProcess.tryView(model, v).isPresent())
+                .allMatch(
+                        v -> memMapping.containsKey(v.getIdentifier()) && memMapping.get(v.getIdentifier()).size() > 0);
+        var allSDFOk = model.vertexSet().stream().filter(v -> ForSyDeHierarchy.SDFActor.tryView(model, v).isPresent())
+                .allMatch(
+                        v -> memMapping.containsKey(v.getIdentifier()) && memMapping.get(v.getIdentifier()).size() > 0);
+        if (!allSYOk) {
+            return new IdentificationResult(Set.of(), Set.of(
+                    "ForSyDeIOSYAndSDFInstrumentedToMemReqIRule: not all SY processes have their memory instrumented"));
+        }
+        if (!allSDFOk) {
+            return new IdentificationResult(Set.of(), Set.of(
+                    "ForSyDeIOSYAndSDFInstrumentedToMemReqIRule: not all SDF actors have their memory instrumented"));
+        }
+        return new IdentificationResult(Set.of(
+                new InstrumentedMemoryRequirements(memMapping.keySet(),
+                        memMapping.values().stream().flatMap(e -> e.keySet().stream()).collect(Collectors.toSet()),
+                        memMapping)),
+                Set.of());
+    }
+
+}

@@ -81,7 +81,9 @@ class IDeSyDeLibrary:
             + "idesyde"
             + (".exe" if os.name == "nt" else "")
         )
-        files = os.listdir(path)
+        files = os.listdir(path) if os.path.isdir(path) else [os.path.basename(path)]
+        # change to base path if itis a file
+        path = os.path.dirname(path) if os.path.isfile(path) else path
         run_path = test_workdir + os.path.sep + path
         os.makedirs(run_path, exist_ok=True)
         args = [

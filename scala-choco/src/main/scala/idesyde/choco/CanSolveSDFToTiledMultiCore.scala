@@ -407,8 +407,8 @@ final class CanSolveSDFToTiledMultiCore(using logger: Logger)
             .isDefined
     )
     val strategies: Array[AbstractStrategy[? <: Variable]] = Array(
-      // compactStrategy,
-      Search.activityBasedSearch(processesMemoryMapping: _*),
+      compactStrategy,
+      // Search.activityBasedSearch(processesMemoryMapping: _*),
       Search.inputOrderLBSearch(
         m.sdfApplications.topologicalAndHeavyJobOrdering
           .map(jobsAndActors.indexOf)
@@ -418,7 +418,7 @@ final class CanSolveSDFToTiledMultiCore(using logger: Logger)
         numVirtualChannelsForProcElem.flatten: _*
       ),
       Search.activityBasedSearch(nUsedPEs),
-      Search.activityBasedSearch(invThroughputs: _*)
+      Search.minDomLBSearch(invThroughputs: _*)
       // Search.activityBasedSearch(numVirtualChannelsForProcElem.flatten: _*)
       // Search.minDomLBSearch(indexOfPes: _*)
     )

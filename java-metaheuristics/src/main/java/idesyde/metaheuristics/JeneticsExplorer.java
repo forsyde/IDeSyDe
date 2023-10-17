@@ -59,7 +59,7 @@ public class JeneticsExplorer implements Explorer, CanExploreAADPMMMWithJenetics
             return exploreAADPMMM(aperiodicAsynchronousDataflowToPartitionedMemoryMappableMulticore, previousSolutions,
                     configuration);
         } else if (decisionModel instanceof AperiodicAsynchronousDataflowToPartitionedTiledMulticore aperiodicAsynchronousDataflowToPartitionedTiledMulticore) {
-            return explore(aperiodicAsynchronousDataflowToPartitionedTiledMulticore, previousSolutions,
+            return exploreAADPTM(aperiodicAsynchronousDataflowToPartitionedTiledMulticore, previousSolutions,
                     configuration);
         }
         return Explorer.super.explore(decisionModel, previousSolutions, configuration);

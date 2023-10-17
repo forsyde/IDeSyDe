@@ -1,0 +1,134 @@
+<?xml version="1.0"?>
+<sdf3 xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" version="1.0" type="sdf" xsi:noNamespaceSchemaLocation="http://www.es.ele.tue.nl/sdf3/xsd/sdf3-sdf.xsd">
+  <applicationGraph name="a_sobel">
+    <sdf name="a_sobel" type="SOBEL">
+      <actor name="get_pixel" type="getPixel">
+        <port name="p0_0" type="out" rate="1"/>
+        <port name="p0_1" type="out" rate="1"/>
+        <port name="p0_2" type="out" rate="1"/>
+        <port name="p0_3" type="out" rate="1"/>
+        <port name="p0_4" type="out" rate="1"/>
+        <port name="p0_5" type="out" rate="1"/>
+        <port name="p1_0" type="out" rate="1"/>
+        <port name="p1_1" type="out" rate="1"/>
+        <port name="p1_2" type="out" rate="1"/>
+        <port name="p1_3" type="out" rate="1"/>
+        <port name="p1_4" type="out" rate="1"/>
+        <port name="p1_5" type="out" rate="1"/>
+      </actor>
+      <actor name="gx" type="GX">
+        <port name="p0_0" type="in" rate="1"/>
+        <port name="p0_1" type="in" rate="1"/>
+        <port name="p0_2" type="in" rate="1"/>
+        <port name="p0_3" type="in" rate="1"/>
+        <port name="p0_4" type="in" rate="1"/>
+        <port name="p0_5" type="in" rate="1"/>
+        <port name="p1_0" type="out" rate="1"/>
+      </actor>
+      <actor name="gy" type="GY">
+        <port name="p0_0" type="in" rate="1"/>
+        <port name="p0_1" type="in" rate="1"/>
+        <port name="p0_2" type="in" rate="1"/>
+        <port name="p0_3" type="in" rate="1"/>
+        <port name="p0_4" type="in" rate="1"/>
+        <port name="p0_5" type="in" rate="1"/>
+        <port name="p1_0" type="out" rate="1"/>
+      </actor>
+      <actor name="abs" type="ABS">
+        <port name="p0_0" type="in" rate="1"/>
+        <port name="p1_0" type="in" rate="1"/>
+      </actor>
+      <channel name="chSo1_0" srcActor="get_pixel" srcPort="p0_0" dstActor="gx" dstPort="p0_0"/>
+      <channel name="chSo1_1" srcActor="get_pixel" srcPort="p0_1" dstActor="gx" dstPort="p0_1"/>
+      <channel name="chSo1_2" srcActor="get_pixel" srcPort="p0_2" dstActor="gx" dstPort="p0_2"/>
+      <channel name="chSo1_3" srcActor="get_pixel" srcPort="p0_3" dstActor="gx" dstPort="p0_3"/>
+      <channel name="chSo1_4" srcActor="get_pixel" srcPort="p0_4" dstActor="gx" dstPort="p0_4"/>
+      <channel name="chSo1_5" srcActor="get_pixel" srcPort="p0_5" dstActor="gx" dstPort="p0_5"/>
+      <channel name="chSo2_0" srcActor="get_pixel" srcPort="p1_0" dstActor="gy" dstPort="p0_0"/>
+      <channel name="chSo2_1" srcActor="get_pixel" srcPort="p1_1" dstActor="gy" dstPort="p0_1"/>
+      <channel name="chSo2_2" srcActor="get_pixel" srcPort="p1_2" dstActor="gy" dstPort="p0_2"/>
+      <channel name="chSo2_3" srcActor="get_pixel" srcPort="p1_3" dstActor="gy" dstPort="p0_3"/>
+      <channel name="chSo2_4" srcActor="get_pixel" srcPort="p1_4" dstActor="gy" dstPort="p0_4"/>
+      <channel name="chSo2_5" srcActor="get_pixel" srcPort="p1_5" dstActor="gy" dstPort="p0_5"/>
+      <channel name="chSo3_0" srcActor="gx" srcPort="p1_0" dstActor="abs" dstPort="p0_0"/>
+      <channel name="chSo4_0" srcActor="gy" srcPort="p1_0" dstActor="abs" dstPort="p1_0"/>
+    </sdf>
+    <sdfProperties>
+      <actorProperties actor="get_pixel">
+        <processor type="proc" default="true">
+          <executionTime time="320"/>
+          <memory>
+            <stateSize max="2"/>
+          </memory>
+        </processor>
+      </actorProperties>
+      <actorProperties actor="gx">
+        <processor type="proc" default="true">
+          <executionTime time="77"/>
+          <memory>
+            <stateSize max="4"/>
+          </memory>
+        </processor>
+      </actorProperties>
+      <actorProperties actor="gy">
+        <processor type="proc" default="true">
+          <executionTime time="77"/>
+          <memory>
+            <stateSize max="4"/>
+          </memory>
+        </processor>
+      </actorProperties>
+      <actorProperties actor="abs">
+        <processor type="proc" default="true">
+          <executionTime time="123"/>
+          <memory>
+            <stateSize max="5"/>
+          </memory>
+        </processor>
+      </actorProperties>
+      <channelProperties channel="chSo1_0">
+        <tokenSize sz="8"/>
+      </channelProperties>
+      <channelProperties channel="chSo1_1">
+        <tokenSize sz="8"/>
+      </channelProperties>
+      <channelProperties channel="chSo1_2">
+        <tokenSize sz="8"/>
+      </channelProperties>
+      <channelProperties channel="chSo1_3">
+        <tokenSize sz="8"/>
+      </channelProperties>
+      <channelProperties channel="chSo1_4">
+        <tokenSize sz="8"/>
+      </channelProperties>
+      <channelProperties channel="chSo1_5">
+        <tokenSize sz="8"/>
+      </channelProperties>
+      <channelProperties channel="chSo2_0">
+        <tokenSize sz="8"/>
+      </channelProperties>
+      <channelProperties channel="chSo2_1">
+        <tokenSize sz="8"/>
+      </channelProperties>
+      <channelProperties channel="chSo2_2">
+        <tokenSize sz="8"/>
+      </channelProperties>
+      <channelProperties channel="chSo2_3">
+        <tokenSize sz="8"/>
+      </channelProperties>
+      <channelProperties channel="chSo2_4">
+        <tokenSize sz="8"/>
+      </channelProperties>
+      <channelProperties channel="chSo2_5">
+        <tokenSize sz="8"/>
+      </channelProperties>
+      <channelProperties channel="chSo3_0">
+        <tokenSize sz="8"/>
+      </channelProperties>
+      <channelProperties channel="chSo4_0">
+        <tokenSize sz="8"/>
+      </channelProperties>
+      <graphProperties/>
+    </sdfProperties>
+  </applicationGraph>
+</sdf3>

@@ -218,20 +218,20 @@ public interface CanExploreAADPMMMWithJenetics {
                                 ? timedSolStream.limit(Limits.byFixedGeneration(configuration.improvementIterations))
                                 : timedSolStream;
                 var decodedStream = limitedImprovementStream.map(sol -> {
+                        var decoded = codec.decode(sol.bestPhenotype().genotype());
                         var solMap = new HashMap<String, Double>(sol.bestFitness().length());
                         var bestFit = sol.bestFitness().data();
                         solMap.put("nUsedPEs", bestFit[0]);
                         var i = 0;
-                        for (var app : decisionModel.aperiodicAsynchronousDataflows()) {
+                        for (var app : decoded.aperiodicAsynchronousDataflows()) {
                                 for (var actor : app.processes()) {
                                         solMap.put("invThroughput(%s)".formatted(actor),
                                                         bestFit[i + 1]);
+                                        app.processMinimumThroughput().put(actor, 1.0 / bestFit[i + 1]);
                                         i += 1;
                                 }
                         }
-                        return new ExplorationSolution(
-                                        solMap,
-                                        codec.decode(sol.bestPhenotype().genotype()));
+                        return new ExplorationSolution(solMap, decoded);
                 })
                                 .filter(sol -> !previousSolutions.contains(sol));
                 // var limitedSolStream = configuration.maximumSolutions > 0L
@@ -318,7 +318,8 @@ public interface CanExploreAADPMMMWithJenetics {
                         final double[] jobWeights,
                         final double[][] edgeWeigths) {
                 BiFunction<Integer, Integer, Boolean> mustSuceed = (i, j) -> {
-                        return mapping[i] == mapping[j] ? ordering[i] + 1 == ordering[j] : follows.get(i).contains(j);
+                        return follows.get(i).contains(j)
+                                        || (mapping[i] == mapping[j] && ordering[i] + 1 == ordering[j]);
                 };
                 BiFunction<Integer, Integer, Boolean> mustCycle = (i, j) -> {
                         return mapping[i] == mapping[j] ? ordering[j] == 0 && ordering[i] > 0 : false;
@@ -384,7 +385,7 @@ public interface CanExploreAADPMMMWithJenetics {
                 }
                 for (int i = 0; i < jobWeights.length; i++) {
                         for (int j = 0; j < jobWeights.length; j++) {
-                                if (mustSuceed.apply(i, j) | mustCycle.apply(i, j)) {
+                                if (mustSuceed.apply(i, j) || mustSuceed.apply(j, i)) {
                                         maxCycles[i] = Math.max(maxCycles[i], maxCycles[j]);
                                         maxCycles[j] = Math.max(maxCycles[i], maxCycles[j]);
                                 }

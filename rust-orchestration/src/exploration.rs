@@ -443,8 +443,8 @@ pub fn compute_pareto_solutions(sols: Vec<ExplorationSolution>) -> Vec<Explorati
 
 pub struct CombinedExplorerIterator {
     sol_channels: Vec<std::sync::mpsc::Receiver<ExplorationSolution>>,
-    completed_channels: Vec<std::sync::mpsc::Sender<bool>>,
-    handles: Vec<std::thread::JoinHandle<()>>,
+    finish_request_channels: Vec<std::sync::mpsc::Sender<bool>>,
+    _handles: Vec<std::thread::JoinHandle<()>>,
 }
 
 impl CombinedExplorerIterator {
@@ -469,8 +469,8 @@ impl CombinedExplorerIterator {
         }
         CombinedExplorerIterator {
             sol_channels,
-            completed_channels,
-            handles,
+            finish_request_channels: completed_channels,
+            _handles: handles,
         }
     }
 }
@@ -478,7 +478,7 @@ impl CombinedExplorerIterator {
 impl Drop for CombinedExplorerIterator {
     fn drop(&mut self) {
         // debug!("Killing iterator");
-        for c in &self.completed_channels {
+        for c in &self.finish_request_channels {
             match c.send(true) {
                 Ok(_) => {}
                 Err(_) => {}

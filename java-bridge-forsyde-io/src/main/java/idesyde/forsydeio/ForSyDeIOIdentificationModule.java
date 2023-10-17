@@ -58,7 +58,8 @@ public class ForSyDeIOIdentificationModule implements StandaloneIdentificationMo
     @Override
     public Set<ReverseIdentificationRule> reverseIdentificationRules() {
         return Set.of(
-                new AperiodicAsynchronousDataflowToPartitionedMemoryMappableMulticoreReverseIdentification());
+                new AperiodicAsynchronousDataflowToPartitionedMemoryMappableMulticoreReverseIdentification(),
+                new AperiodicAsynchronousDataflowToPartitionedTiledMulticoreReverseIdentification());
     }
 
     @Override

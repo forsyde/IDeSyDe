@@ -7,29 +7,68 @@ ${ShouldCompile}    ${False}
 
 
 *** Test Cases ***
-Test for examples_and_benchmarks/CODES_ISSS_2023/RaJp
-    ${NumFound} =    IDeSyDeLibrary.Try Explore    examples_and_benchmarks/CODES_ISSS_2023/RaJp
+Test for examples_and_benchmarks/CODES_ISSS_2023/a_sobel
+    ${NumFound} =    IDeSyDeLibrary.Try Explore    examples_and_benchmarks/CODES_ISSS_2023/a_sobel/idesyde_input.fiodl
     Should Not Be Equal As Integers    ${NumFound}    0
 
-Test for examples_and_benchmarks/CODES_ISSS_2023/SoRaJp
-    ${NumFound} =    IDeSyDeLibrary.Try Explore    examples_and_benchmarks/CODES_ISSS_2023/SoRaJp
+Test for examples_and_benchmarks/CODES_ISSS_2023/a_sobel_b_susan_c_rasta
+    ${NumFound} =    IDeSyDeLibrary.Try Explore
+    ...    examples_and_benchmarks/CODES_ISSS_2023/a_sobel_b_susan_c_rasta/idesyde_input.fiodl
     Should Not Be Equal As Integers    ${NumFound}    0
 
-Test for examples_and_benchmarks/CODES_ISSS_2023/SoSuJp
-    ${NumFound} =    IDeSyDeLibrary.Try Explore    examples_and_benchmarks/CODES_ISSS_2023/SoSuJp
+Test for examples_and_benchmarks/CODES_ISSS_2023/a_sobel_b_susan_c_rasta_d_jpegEnc1
+    ${NumFound} =    IDeSyDeLibrary.Try Explore
+    ...    examples_and_benchmarks/CODES_ISSS_2023/a_sobel_b_susan_c_rasta_d_jpegEnc1/idesyde_input.fiodl
     Should Not Be Equal As Integers    ${NumFound}    0
 
-Test for examples_and_benchmarks/CODES_ISSS_2023/SoSuRa
-    ${NumFound} =    IDeSyDeLibrary.Try Explore    examples_and_benchmarks/CODES_ISSS_2023/SoSuRa
+Test for examples_and_benchmarks/CODES_ISSS_2023/a_sobel_b_susan_d_jpegEnc1
+    ${NumFound} =    IDeSyDeLibrary.Try Explore
+    ...    examples_and_benchmarks/CODES_ISSS_2023/a_sobel_b_susan_d_jpegEnc1/idesyde_input.fiodl
     Should Not Be Equal As Integers    ${NumFound}    0
 
-Test for examples_and_benchmarks/CODES_ISSS_2023/SoSuRaJp
-    ${NumFound} =    IDeSyDeLibrary.Try Explore    examples_and_benchmarks/CODES_ISSS_2023/SoSuRaJp
+Test for examples_and_benchmarks/CODES_ISSS_2023/a_sobel_c_rasta_d_jpegEnc1
+    ${NumFound} =    IDeSyDeLibrary.Try Explore
+    ...    examples_and_benchmarks/CODES_ISSS_2023/a_sobel_c_rasta_d_jpegEnc1/idesyde_input.fiodl
     Should Not Be Equal As Integers    ${NumFound}    0
 
-Test for examples_and_benchmarks/CODES_ISSS_2023/SuRaJp
-    ${NumFound} =    IDeSyDeLibrary.Try Explore    examples_and_benchmarks/CODES_ISSS_2023/SuRaJp
+Test for examples_and_benchmarks/CODES_ISSS_2023/b_susan_c_rasta_d_jpegEnc1
+    ${NumFound} =    IDeSyDeLibrary.Try Explore
+    ...    examples_and_benchmarks/CODES_ISSS_2023/b_susan_c_rasta_d_jpegEnc1/idesyde_input.fiodl
     Should Not Be Equal As Integers    ${NumFound}    0
+
+Test for examples_and_benchmarks/CODES_ISSS_2023/c_rasta_d_jpegEnc1
+    ${NumFound} =    IDeSyDeLibrary.Try Explore
+    ...    examples_and_benchmarks/CODES_ISSS_2023/c_rasta_d_jpegEnc1/idesyde_input.fiodl
+    Should Not Be Equal As Integers    ${NumFound}    0
+
+Test for examples_and_benchmarks/CODES_ISSS_2023/g10_3_cycl
+    ${NumFound} =    IDeSyDeLibrary.Try Explore
+    ...    examples_and_benchmarks/CODES_ISSS_2023/g10_3_cycl/idesyde_input.fiodl
+    Should Not Be Equal As Integers    ${NumFound}    0
+
+# Test for examples_and_benchmarks/CODES_ISSS_2023/RaJp
+#    ${NumFound} =    IDeSyDeLibrary.Try Explore    examples_and_benchmarks/CODES_ISSS_2023/RaJp
+#    Should Not Be Equal As Integers    ${NumFound}    0
+
+# Test for examples_and_benchmarks/CODES_ISSS_2023/SoRaJp
+#    ${NumFound} =    IDeSyDeLibrary.Try Explore    examples_and_benchmarks/CODES_ISSS_2023/SoRaJp
+#    Should Not Be Equal As Integers    ${NumFound}    0
+
+# Test for examples_and_benchmarks/CODES_ISSS_2023/SoSuJp
+#    ${NumFound} =    IDeSyDeLibrary.Try Explore    examples_and_benchmarks/CODES_ISSS_2023/SoSuJp
+#    Should Not Be Equal As Integers    ${NumFound}    0
+
+# Test for examples_and_benchmarks/CODES_ISSS_2023/SoSuRa
+#    ${NumFound} =    IDeSyDeLibrary.Try Explore    examples_and_benchmarks/CODES_ISSS_2023/SoSuRa
+#    Should Not Be Equal As Integers    ${NumFound}    0
+
+# Test for examples_and_benchmarks/CODES_ISSS_2023/SoSuRaJp
+#    ${NumFound} =    IDeSyDeLibrary.Try Explore    examples_and_benchmarks/CODES_ISSS_2023/SoSuRaJp
+#    Should Not Be Equal As Integers    ${NumFound}    0
+
+# Test for examples_and_benchmarks/CODES_ISSS_2023/SuRaJp
+#    ${NumFound} =    IDeSyDeLibrary.Try Explore    examples_and_benchmarks/CODES_ISSS_2023/SuRaJp
+#    Should Not Be Equal As Integers    ${NumFound}    0
 
 Test for examples_and_benchmarks/DASC2023/combination-50-1_5625
     [Tags]    slow

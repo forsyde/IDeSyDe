@@ -5,7 +5,6 @@ use std::{
 
 use idesyde_core::{DecisionModel, DesignModel, IdentificationResult};
 
-use log::debug;
 use petgraph::{
     visit::{Bfs, GraphBase, IntoNeighbors, IntoNodeIdentifiers, Visitable},
     Direction::{Incoming, Outgoing},
@@ -299,10 +298,7 @@ pub fn identify_asynchronous_aperiodic_dataflow_from_sdf(
                 }
                 // we finish by building the decision model
                 identified.push(Arc::new(AperiodicAsynchronousDataflow {
-                    processes: component_actors
-                        .into_iter()
-                        .map(|s| s.to_string())
-                        .collect(),
+                    processes: component_actors.iter().map(|s| s.to_string()).collect(),
                     buffers: component_channels
                         .into_iter()
                         .map(|s| s.to_string())
@@ -337,12 +333,14 @@ pub fn identify_asynchronous_aperiodic_dataflow_from_sdf(
                         .sdf_application
                         .actor_minimum_throughputs
                         .iter()
+                        .filter(|(s, _)| component_actors.contains(&s.as_str()))
                         .map(|(s, f)| (s.to_owned(), *f))
                         .collect(),
                     process_path_maximum_latency: analysed_sdf_application
                         .sdf_application
                         .chain_maximum_latency
                         .iter()
+                        .filter(|(s, m)| component_actors.contains(&s.as_str()))
                         .map(|(s, m)| (s.to_owned(), m.to_owned()))
                         .collect(),
                     process_put_in_buffer_in_bits: data_sent,

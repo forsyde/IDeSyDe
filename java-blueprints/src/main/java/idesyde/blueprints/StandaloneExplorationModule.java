@@ -13,18 +13,13 @@ import picocli.CommandLine;
 
 import java.io.IOException;
 import java.nio.channels.ClosedChannelException;
-import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
-import java.util.Map;
 import java.util.Optional;
 import java.util.Set;
 import java.util.concurrent.Callable;
-import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.TimeUnit;
 import java.util.stream.Collectors;
-
-import org.eclipse.jetty.io.EofException;
 
 public interface StandaloneExplorationModule {
 
@@ -196,7 +191,7 @@ public interface StandaloneExplorationModule {
     }
 
     @CommandLine.Command(mixinStandardHelpOptions = true)
-    class ExplorationModuleCLI implements Callable<Integer> {
+    static class ExplorationModuleCLI implements Callable<Integer> {
         @CommandLine.Option(names = { "--server" }, description = "The type of server to start.")
         public String serverType = "http";
 

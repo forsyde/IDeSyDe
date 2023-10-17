@@ -34,7 +34,7 @@ public interface CanExploreAADPTMWithJenetics {
         default InvertibleCodec<AperiodicAsynchronousDataflowToPartitionedTiledMulticore, IntegerGene> ofDecisionModel(
                         AperiodicAsynchronousDataflowToPartitionedTiledMulticore decisionModel) {
                 // these are up here to try to minimize memory allocations
-                var procs = decisionModel.aperiodicAsynchronousDataflows().stream()
+                var tasks = decisionModel.aperiodicAsynchronousDataflows().stream()
                                 .flatMap(app -> app.processes().stream())
                                 .toList();
                 var bufs = decisionModel.aperiodicAsynchronousDataflows().stream()
@@ -53,10 +53,10 @@ public interface CanExploreAADPTMWithJenetics {
                                 .toList();
                 return InvertibleCodec.of(
                                 () -> {
-                                        var taskMappingAndSchedulingChromossome = IntegerChromosome.of(1,
+                                        var taskMappingAndSchedulingChromossome = IntegerChromosome.of(0,
                                                         decisionModel.partitionedTiledMulticore().runtimes()
-                                                                        .runtimes().size() + 1,
-                                                        procs.size());
+                                                                        .runtimes().size(),
+                                                        tasks.size());
                                         var channelReservationsChromossome = IntegerChromosome.of(0,
                                                         decisionModel.partitionedTiledMulticore().hardware()
                                                                         .communicationElementsMaxChannels().values()
@@ -65,32 +65,31 @@ public interface CanExploreAADPTMWithJenetics {
                                                                         + 1,
                                                         tiles.size() * coms.size());
                                         var jobOrderingChromossome = IntegerChromosome.of(
-                                                        1,
+                                                        0,
                                                         decisionModel.aperiodicAsynchronousDataflows().stream()
-                                                                        .mapToInt(a -> a.jobsOfProcesses().size()).sum()
-                                                                        + 1,
+                                                                        .mapToInt(a -> a.jobsOfProcesses().size())
+                                                                        .sum(),
                                                         jobs.size());
                                         return Genotype.of(taskMappingAndSchedulingChromossome,
                                                         channelReservationsChromossome, jobOrderingChromossome);
                                 },
                                 gt -> {
-                                        Map<String, String> taskMapping = IntStream.range(0, gt.get(0).length()).boxed()
+                                        Map<String, String> taskMapping = IntStream
+                                                        .range(0, gt.get(0).length()).boxed()
                                                         .collect(Collectors.toMap(
-                                                                        procs::get,
-                                                                        idx -> mems.get(gt.get(0).get(idx).allele()
-                                                                                        - 1)));
-                                        Map<String, String> taskScheduling = IntStream.range(0, gt.get(0).length())
-                                                        .boxed()
+                                                                        tasks::get,
+                                                                        idx -> mems.get(gt.get(0).get(idx).allele())));
+                                        Map<String, String> taskScheduling = IntStream
+                                                        .range(0, gt.get(0).length()).boxed()
                                                         .collect(Collectors.toMap(
-                                                                        procs::get,
-                                                                        idx -> scheds.get(gt.get(0).get(idx).allele()
-                                                                                        - 1)));
+                                                                        tasks::get,
+                                                                        idx -> scheds.get(
+                                                                                        gt.get(0).get(idx).allele())));
                                         Map<String, String> bufferMapping = IntStream.range(0, gt.get(0).length())
                                                         .boxed()
                                                         .collect(Collectors.toMap(
                                                                         bufs::get,
-                                                                        idx -> mems.get(gt.get(0).get(idx).allele()
-                                                                                        - 1)));
+                                                                        idx -> mems.get(gt.get(0).get(idx).allele())));
                                         Map<String, Map<String, Integer>> channelReservations = IntStream
                                                         .range(0, tiles.size())
                                                         .boxed()
@@ -107,7 +106,7 @@ public interface CanExploreAADPTMWithJenetics {
                                         Map<String, List<String>> superLoopSchedules = scheds.stream()
                                                         .collect(Collectors.toMap(
                                                                         k -> k,
-                                                                        k -> IntStream.range(0, gt.get(4).length())
+                                                                        k -> IntStream.range(0, gt.get(2).length())
                                                                                         .boxed()
                                                                                         .filter(idx -> taskScheduling
                                                                                                         .get(jobs.get(idx)
@@ -202,20 +201,20 @@ public interface CanExploreAADPTMWithJenetics {
                                 ? timedSolStream.limit(Limits.byFixedGeneration(configuration.improvementIterations))
                                 : timedSolStream;
                 var decodedStream = limitedImprovementStream.map(sol -> {
+                        var decoded = codec.decode(sol.bestPhenotype().genotype());
                         var solMap = new HashMap<String, Double>(sol.bestFitness().length());
                         var bestFit = sol.bestFitness().data();
                         solMap.put("nUsedPEs", bestFit[0]);
                         var i = 0;
-                        for (var app : decisionModel.aperiodicAsynchronousDataflows()) {
+                        for (var app : decoded.aperiodicAsynchronousDataflows()) {
                                 for (var actor : app.processes()) {
                                         solMap.put("invThroughput(%s)".formatted(actor),
                                                         bestFit[i + 1]);
+                                        app.processMinimumThroughput().put(actor, 1.0 / bestFit[i + 1]);
                                         i += 1;
                                 }
                         }
-                        return new ExplorationSolution(
-                                        solMap,
-                                        codec.decode(sol.bestPhenotype().genotype()));
+                        return new ExplorationSolution(solMap, decoded);
                 })
                                 .filter(sol -> !previousSolutions.contains(sol));
                 return decodedStream;
@@ -228,10 +227,11 @@ public interface CanExploreAADPTMWithJenetics {
                         final double[] jobWeights,
                         final double[][] edgeWeigths) {
                 BiFunction<Integer, Integer, Boolean> mustSuceed = (i, j) -> {
-                        return mapping[i] == mapping[j] ? ordering[i] + 1 == ordering[j] : follows.get(i).contains(j);
+                        return follows.get(i).contains(j)
+                                        || (mapping[i] == mapping[j] && ordering[i] + 1 == ordering[j]);
                 };
                 BiFunction<Integer, Integer, Boolean> mustCycle = (i, j) -> {
-                        return mapping[i] == mapping[j] ? ordering[j] == 1 && ordering[i] > 1 : false;
+                        return mapping[i] == mapping[j] ? ordering[j] == 0 && ordering[i] > 0 : false;
                 };
                 var maxCycles = new double[jobWeights.length];
                 var maximumCycleVector = new double[jobWeights.length];
@@ -249,7 +249,7 @@ public interface CanExploreAADPTMWithJenetics {
                                 if (!visited[i]) {
                                         visited[i] = true;
                                         for (int j = 0; j < jobWeights.length; j++) {
-                                                if (mustSuceed.apply(i, j) | mustCycle.apply(i, j)) {
+                                                if (mustSuceed.apply(i, j) || mustCycle.apply(i, j)) {
                                                         if (j == src) { // found a cycle
                                                                 maximumCycleVector[i] = jobWeights[i]
                                                                                 + edgeWeigths[i][j];
@@ -294,7 +294,7 @@ public interface CanExploreAADPTMWithJenetics {
                 }
                 for (int i = 0; i < jobWeights.length; i++) {
                         for (int j = 0; j < jobWeights.length; j++) {
-                                if (mustSuceed.apply(i, j) | mustCycle.apply(i, j)) {
+                                if (mustSuceed.apply(i, j) || mustSuceed.apply(j, i)) {
                                         maxCycles[i] = Math.max(maxCycles[i], maxCycles[j]);
                                         maxCycles[j] = Math.max(maxCycles[i], maxCycles[j]);
                                 }

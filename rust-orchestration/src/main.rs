@@ -3,8 +3,7 @@ use std::{cmp::Ordering, net::IpAddr, path::Path, sync::Arc};
 use clap::Parser;
 use env_logger::WriteStyle;
 use idesyde_core::{
-    headers::ExplorationBid, DecisionModel, DesignModel, ExplorationConfiguration,
-    ExplorationSolution, Explorer,
+    headers::ExplorationBid, DecisionModel, DesignModel, ExplorationSolution, Explorer,
 };
 use idesyde_orchestration::{
     exploration::{explore_cooperatively, ExternalServerExplorationModule},

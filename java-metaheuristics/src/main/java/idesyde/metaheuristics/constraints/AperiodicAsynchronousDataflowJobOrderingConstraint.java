@@ -85,19 +85,34 @@ public class AperiodicAsynchronousDataflowJobOrderingConstraint<T extends Compar
                         // the second checks whether they follow the parial order in the following way:
                         // isSucessor(j, jj) -> order(j) < order(jj)
                         // equivalently,
-                        var isValid = mappedJobs.length == 0 || Arrays.stream(mappedJobs)
-                                        .allMatch(j -> Arrays.stream(mappedJobs)
-                                                        .filter(jj -> j != jj)
-                                                        .allMatch(jj -> (jobOrderings.get(j)
-                                                                        .allele() != jobOrderings.get(jj)
-                                                                                        .allele())
-                                                                        &&
-                                                                        (!memoizedSucessors.get(jobs.get(j))
-                                                                                        .contains(jobs.get(jj))
-                                                                                        || jobOrderings.get(j)
-                                                                                                        .allele() < jobOrderings
-                                                                                                                        .get(jj)
-                                                                                                                        .allele())));
+                        for (var j : mappedJobs) {
+                                for (var jj : mappedJobs) {
+                                        if (j != jj) {
+                                                if (jobOrderings.get(j).allele() == jobOrderings.get(jj).allele()) {
+                                                        return false;
+                                                } else if (memoizedSucessors.get(jobs.get(j)).contains(jobs.get(jj)) && jobOrderings.get(j)
+                                                                .allele() > jobOrderings.get(jj).allele()) {
+                                                        return false;
+                                                } else if (memoizedSucessors.get(jobs.get(jj)).contains(jobs.get(j)) && jobOrderings.get(j)
+                                                                .allele() < jobOrderings.get(jj).allele()) {
+                                                        return false;
+                                                }
+                                        }
+                                }
+                        }
+                        // var isValid = Arrays.stream(mappedJobs)
+                        // .allMatch(j -> Arrays.stream(mappedJobs)
+                        // .filter(jj -> j != jj)
+                        // .allMatch(jj -> (jobOrderings.get(j)
+                        // .allele() != jobOrderings.get(jj)
+                        // .allele())
+                        // &&
+                        // (!memoizedSucessors.get(jobs.get(j))
+                        // .contains(jobs.get(jj))
+                        // || jobOrderings.get(j)
+                        // .allele() < jobOrderings
+                        // .get(jj)
+                        // .allele())));
                         // !isSucessor(j, jj) or order(j) < order(jj)
                         // if (!isValid) {
                         // System.out.println(Arrays.stream(mappedJobs)
@@ -105,7 +120,7 @@ public class AperiodicAsynchronousDataflowJobOrderingConstraint<T extends Compar
                         // .map(a -> "(%s, %s)".formatted(a.process(), a.instance()))
                         // .reduce((a, b) -> a + ", " + b));
                         // }
-                        return isValid;
+                        return true;
                 });
         }
 

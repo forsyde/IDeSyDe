@@ -109,7 +109,7 @@ public interface CanExploreAADPMMMWithJenetics extends AperiodicAsynchronousData
                                         var jobOrderings = gt.get(4);
                                         var superLoopSchedules = scheds.stream().collect(Collectors.toMap(
                                                         k -> k,
-                                                        k -> IntStream.range(0, gt.get(4).length()).boxed()
+                                                        k -> IntStream.range(0, jobOrderings.length()).boxed()
                                                                         .filter(idx -> taskScheduling
                                                                                         .get(jobs.get(idx).process())
                                                                                         .equals(k))
@@ -180,6 +180,8 @@ public interface CanExploreAADPMMMWithJenetics extends AperiodicAsynchronousData
                                                 var looplist = decisionModel.superLoopSchedules().get(sched);
                                                 IntStream.range(0, looplist.size()).forEach(entryI -> {
                                                         var entry = looplist.get(entryI);
+                                                        // this gets the first instance of a process that is still not
+                                                        // scheduled and assigns it to the ordering encoding
                                                         IntStream.range(0, jobs.size())
                                                                         .filter(j -> model
                                                                                         .processesToRuntimeScheduling()

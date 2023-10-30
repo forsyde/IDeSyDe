@@ -542,12 +542,11 @@ fn main() {
             }
             let solved_models: Vec<Arc<dyn DecisionModel>> =
                 dominant_sols.iter().map(|(x, _)| x.clone()).collect();
-            if !dominant_sols.is_empty() {
-                info!("Starting integration");
+            if !solved_models.is_empty() {
+                info!("Starting reverse identification");
                 let total_reversed: usize = imodules
                     .par_iter()
-                    .enumerate()
-                    .map(|(_, imodule)| {
+                    .map(|imodule| {
                         let mut n_reversed = 0;
                         for reverse in
                             imodule.reverse_identification(&solved_models, &design_models)
@@ -556,7 +555,7 @@ fn main() {
                             reverse.write_to_dir(
                                 &reverse_path,
                                 format!("{}", n_reversed).as_str(),
-                                "Orchestrator",
+                                imodule.unique_identifier().as_str(),
                             );
                             n_reversed += 1;
                             debug!("Reverse identified a {} design model", reverse.category());

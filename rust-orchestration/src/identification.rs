@@ -261,7 +261,6 @@ impl IdentificationModule for ExternalServerIdentificationModule {
                 debug!("Recv error is: {}", err.to_string());
             }
         }
-        {};
         // self.write_line_to_input(format!("IDENTIFY {}", iteration).as_str());
         // if let Ok(response) = self
         //     .send_command(
@@ -345,77 +344,65 @@ impl IdentificationModule for ExternalServerIdentificationModule {
         design_models: &Vec<Arc<dyn DesignModel>>,
     ) -> Vec<Arc<dyn DesignModel>> {
         // let mut integrated: Vec<Box<dyn DesignModel>> = Vec::new();
-        // save decision models and design models and ask the module to read them
-        for design_model in design_models {
-            // let message = DesignModelMessage::from_dyn_design_model(design_model.as_ref());
-            // self.write_line_to_input(format!("DESIGN {}", message.to_json_str()).as_str());
-            match self.send_design(design_model.as_ref()) {
-                Ok(a) => {
-                    if !a.status().is_success() {
-                        warn!(
-                            "Module {} raised error at design model input: {}",
-                            self.unique_identifier(),
-                            a.text().unwrap_or("<Empty>".to_string())
-                        )
-                    }
-                }
-                Err(_) => {}
-            };
+        let mut form = reqwest::blocking::multipart::Form::new();
+        for (i, design_model) in design_models.iter().enumerate() {
+            form = form.part(
+                format!("designModel{}", i),
+                reqwest::blocking::multipart::Part::text(
+                    DesignModelMessage::from(design_model).to_json_str(),
+                ),
+            );
         }
-        for decision_model in solved_decision_models {
-            // let message = DecisionModelMessage::from_dyn_decision_model(decision_model.as_ref());
-            // self.write_line_to_input(format!("SOLVED INLINE {}", message.to_json_str()).as_str());
-            match self.send_solved_decision(decision_model.as_ref()) {
-                Ok(a) => {
-                    if !a.status().is_success() {
-                        warn!(
-                            "Module {} raised error at solved model input: {}",
-                            self.unique_identifier(),
-                            a.text().unwrap_or("<Empty>".to_string())
-                        )
-                    }
-                }
-                Err(_) => {}
-            };
+        for (i, decision_model) in solved_decision_models.iter().enumerate() {
+            form = form.part(
+                format!("decisionModel{}", i),
+                reqwest::blocking::multipart::Part::text(
+                    DecisionModelMessage::from(decision_model).to_json_str(),
+                ),
+            );
         }
-        if let Ok(response) = self
-            .send_command("integrate", &vec![])
+        match self
+            .get_client()
+            .post(format!(
+                "http://{}:{}/reverse",
+                self.get_address(),
+                self.get_port()
+            ))
+            .multipart(form)
+            .send()
             .and_then(|x| x.text())
         {
-            if let Ok(v) = serde_json::from_str::<Vec<DesignModelMessage>>(response.as_str()) {
-                return v
-                    .iter()
-                    .map(|x| Arc::new(OpaqueDesignModel::from(x)) as Arc<dyn DesignModel>)
-                    .collect();
+            Ok(response) => {
+                match serde_json::from_str::<Vec<DesignModelMessage>>(response.as_str()) {
+                    Ok(v) => {
+                        return v
+                            .iter()
+                            .map(|x| Arc::new(OpaqueDesignModel::from(x)) as Arc<dyn DesignModel>)
+                            .collect();
+                    }
+                    Err(e) => {
+                        warn!(
+                        "Module {} produced an error at identification. Check it for correctness",
+                        self.unique_identifier()
+                    );
+                        debug!(
+                            "Module {} error: {}",
+                            self.unique_identifier(),
+                            e.to_string()
+                        );
+                        debug!("Response was: {}", response.as_str());
+                    }
+                }
+            }
+            Err(err) => {
+                warn!(
+                    "Had an error while recovering identification results from module {}. Attempting to continue.",
+                    self.unique_identifier()
+                );
+                debug!("Recv error is: {}", err.to_string());
             }
         }
         vec![]
-        // self.write_line_to_input("INTEGRATE");
-        // self.map_output(|buf| {
-        //     buf.lines()
-        //         .flatten()
-        //         .map(|line| {
-        //             if line.contains("DESIGN") {
-        //                 let payload = &line[6..].trim();
-        //                 if let Some(message) = DesignModelMessage::from_json_str(&payload) {
-        //                     let model = OpaqueDesignModel::from(message);
-        //                     let boxed = Arc::new(model) as Arc<dyn DesignModel>;
-        //                     return Some(boxed);
-        //                 };
-        //             } else if !line.trim().eq_ignore_ascii_case("FINISHED") {
-        //                 warn!(
-        //                     "Ignoring non-compliant integration result by module {}: {}",
-        //                     self.unique_identifier(),
-        //                     line
-        //                 );
-        //             }
-        //             None
-        //         })
-        //         .take_while(|x| x.is_some())
-        //         .flatten()
-        //         .collect()
-        // })
-        // .unwrap_or(Vec::new())
     }
 }
 

@@ -105,6 +105,10 @@ public interface CanExploreAADPTMWithJenetics extends AperiodicAsynchronousDataf
                                                                                                                                         + ceI)
                                                                                                                         .allele()))));
                                         var jobOrderings = gt.get(2);
+                                        // System.out.println(taskScheduling.toString());
+                                        // System.out.println(jobs.toString());
+                                        // System.out.println(jobOrderings.stream().map(x -> x.allele())
+                                        // .map(x -> x.toString()).reduce((a, b) -> a + ", " + b));
                                         Map<String, List<String>> superLoopSchedules = scheds.stream()
                                                         .collect(Collectors.toMap(
                                                                         k -> k,
@@ -123,6 +127,7 @@ public interface CanExploreAADPTMWithJenetics extends AperiodicAsynchronousDataf
                                                                                         .map(idx -> jobs.get(idx)
                                                                                                         .process())
                                                                                         .collect(Collectors.toList())));
+                                        // System.out.println(superLoopSchedules.toString());
                                         return new AperiodicAsynchronousDataflowToPartitionedTiledMulticore(
                                                         decisionModel.aperiodicAsynchronousDataflows(),
                                                         decisionModel.partitionedTiledMulticore(),
@@ -139,7 +144,7 @@ public interface CanExploreAADPTMWithJenetics extends AperiodicAsynchronousDataf
                                         var taskMappingChromossome = IntegerChromosome
                                                         .of(model.processesToMemoryMapping().entrySet().stream()
                                                                         .map(e -> IntegerGene.of(
-                                                                                        mems.indexOf(e.getValue()), 1,
+                                                                                        mems.indexOf(e.getValue()), 0,
                                                                                         mems.size()))
                                                                         .collect(ISeq.toISeq()));
                                         var maxReservations = decisionModel.partitionedTiledMulticore().hardware()
@@ -172,12 +177,15 @@ public interface CanExploreAADPTMWithJenetics extends AperiodicAsynchronousDataf
                                                 var looplist = decisionModel.superLoopSchedules().get(sched);
                                                 IntStream.range(0, looplist.size()).forEach(entryI -> {
                                                         var entry = looplist.get(entryI);
+                                                        // this gets the first instance of a process that is still not
+                                                        // scheduled and assigns it to the ordering encoding
                                                         IntStream.range(0, jobs.size())
                                                                         .filter(j -> model
                                                                                         .processesToRuntimeScheduling()
-                                                                                        .get(entry) == sched
+                                                                                        .get(entry).equals(sched)
                                                                                         && orderings[j] == -1
-                                                                                        && jobs.get(j).process() == entry)
+                                                                                        && jobs.get(j).process()
+                                                                                                        .equals(entry))
                                                                         .boxed()
                                                                         .min((a, b) -> (int) jobs.get(a).instance()
                                                                                         - (int) jobs.get(b).instance())
@@ -186,7 +194,7 @@ public interface CanExploreAADPTMWithJenetics extends AperiodicAsynchronousDataf
                                         }
                                         var jobOrderingChromossome = IntegerChromosome.of(IntStream
                                                         .range(0, jobs.size())
-                                                        .mapToObj(j -> IntegerGene.of(orderings[j], 1, jobs.size()))
+                                                        .mapToObj(j -> IntegerGene.of(orderings[j], 0, jobs.size()))
                                                         .collect(ISeq.toISeq()));
                                         return Genotype.of(taskMappingChromossome, channelReservationsChromossome,
                                                         jobOrderingChromossome);
@@ -668,7 +676,7 @@ public interface CanExploreAADPTMWithJenetics extends AperiodicAsynchronousDataf
                                                         .processorAffinities()
                                                         .get(dstPE);
                                         if (decisionModel.processesToRuntimeScheduling().get(dst.process())
-                                                        .equals(dstSched)) { // a task
+                                                        .equals(dstSched) && srcPE != dstPE) { // a task
                                                 double singleBottleNeckBW = decisionModel
                                                                 .partitionedTiledMulticore()
                                                                 .hardware()

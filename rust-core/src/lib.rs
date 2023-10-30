@@ -51,7 +51,7 @@ pub trait DesignModel: Send + DowncastSync {
             let p = base_path.join(format!(
                 "body_{}_{}_{}.{}",
                 prefix_str,
-                h.category,
+                self.category(),
                 suffix_str,
                 self.extensions()
                     .get(0)

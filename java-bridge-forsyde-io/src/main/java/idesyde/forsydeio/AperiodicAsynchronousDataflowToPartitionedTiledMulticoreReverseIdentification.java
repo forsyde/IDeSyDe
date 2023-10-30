@@ -18,104 +18,65 @@ public class AperiodicAsynchronousDataflowToPartitionedTiledMulticoreReverseIden
                         Set<AperiodicAsynchronousDataflowToPartitionedTiledMulticore> solvedModels,
                         Set<ForSyDeIODesignModel> designModels) {
                 return solvedModels.stream().map(model -> {
-                        var reversedSystemGraph = new SystemGraph();
+                        SystemGraph reversedSystemGraph = new SystemGraph();
                         model.processesToMemoryMapping().forEach((process, mem) -> {
-                                designModels.stream().flatMap(m -> m.systemGraph().queryVertex(process).stream())
-                                                .findAny()
-                                                .ifPresent(procVertex -> {
-                                                        designModels.stream()
-                                                                        .flatMap(m -> m.systemGraph().queryVertex(mem)
-                                                                                        .stream())
-                                                                        .findAny()
-                                                                        .ifPresent(memVertex -> {
-                                                                                reversedSystemGraph
-                                                                                                .addVertex(procVertex);
-                                                                                reversedSystemGraph
-                                                                                                .addVertex(memVertex);
-                                                                                var memMapped = ForSyDeHierarchy.MemoryMapped
-                                                                                                .enforce(reversedSystemGraph,
-                                                                                                                procVertex);
-                                                                                memMapped.mappingHost(
-                                                                                                ForSyDeHierarchy.GenericMemoryModule
-                                                                                                                .enforce(reversedSystemGraph,
-                                                                                                                                memVertex));
-                                                                                ForSyDeHierarchy.GreyBox.enforce(
-                                                                                                reversedSystemGraph,
-                                                                                                memVertex)
-                                                                                                .addContained(ForSyDeHierarchy.Visualizable
-                                                                                                                .enforce(memMapped));
-                                                                        });
-                                                });
+                                var procVertex = reversedSystemGraph.newVertex(process);
+                                var memVertex = reversedSystemGraph.newVertex(mem);
+                                var memMapped = ForSyDeHierarchy.MemoryMapped
+                                                .enforce(reversedSystemGraph,
+                                                                procVertex);
+                                memMapped.mappingHost(
+                                                ForSyDeHierarchy.GenericMemoryModule
+                                                                .enforce(reversedSystemGraph,
+                                                                                memVertex));
+                                ForSyDeHierarchy.GreyBox.enforce(
+                                                reversedSystemGraph,
+                                                memVertex)
+                                                .addContained(ForSyDeHierarchy.Visualizable
+                                                                .enforce(memMapped));
                         });
                         model.bufferToMemoryMappings().forEach((buf, mem) -> {
-                                designModels.stream().flatMap(m -> m.systemGraph().queryVertex(buf).stream()).findAny()
-                                                .ifPresent(procVertex -> {
-                                                        designModels.stream()
-                                                                        .flatMap(m -> m.systemGraph().queryVertex(mem)
-                                                                                        .stream())
-                                                                        .findAny()
-                                                                        .ifPresent(memVertex -> {
-                                                                                reversedSystemGraph
-                                                                                                .addVertex(procVertex);
-                                                                                reversedSystemGraph
-                                                                                                .addVertex(memVertex);
-                                                                                var memMapped = ForSyDeHierarchy.MemoryMapped
-                                                                                                .enforce(reversedSystemGraph,
-                                                                                                                procVertex);
-                                                                                memMapped.mappingHost(
-                                                                                                ForSyDeHierarchy.GenericMemoryModule
-                                                                                                                .enforce(reversedSystemGraph,
-                                                                                                                                memVertex));
-                                                                                ForSyDeHierarchy.GreyBox.enforce(
-                                                                                                reversedSystemGraph,
-                                                                                                memVertex)
-                                                                                                .addContained(ForSyDeHierarchy.Visualizable
-                                                                                                                .enforce(memMapped));
-                                                                        });
-                                                });
+                                var bufVertex = reversedSystemGraph.newVertex(buf);
+                                var memVertex = reversedSystemGraph.newVertex(mem);
+                                var memMapped = ForSyDeHierarchy.MemoryMapped
+                                                .enforce(reversedSystemGraph,
+                                                                bufVertex);
+                                memMapped.mappingHost(
+                                                ForSyDeHierarchy.GenericMemoryModule
+                                                                .enforce(reversedSystemGraph,
+                                                                                memVertex));
+                                ForSyDeHierarchy.GreyBox.enforce(
+                                                reversedSystemGraph,
+                                                memVertex)
+                                                .addContained(ForSyDeHierarchy.Visualizable
+                                                                .enforce(memMapped));
                         });
                         model.processesToRuntimeScheduling().forEach((process, sched) -> {
-                                designModels.stream().flatMap(m -> m.systemGraph().queryVertex(process).stream())
-                                                .findAny()
-                                                .ifPresent(procVertex -> {
-                                                        designModels.stream()
-                                                                        .flatMap(m -> m.systemGraph().queryVertex(sched)
-                                                                                        .stream())
-                                                                        .findAny()
-                                                                        .ifPresent(schedVertex -> {
-                                                                                reversedSystemGraph
-                                                                                                .addVertex(procVertex);
-                                                                                reversedSystemGraph
-                                                                                                .addVertex(schedVertex);
-                                                                                var scheduled = ForSyDeHierarchy.Scheduled
-                                                                                                .enforce(reversedSystemGraph,
-                                                                                                                procVertex);
-                                                                                scheduled.runtimeHost(
-                                                                                                ForSyDeHierarchy.AbstractRuntime
-                                                                                                                .enforce(reversedSystemGraph,
-                                                                                                                                schedVertex));
-                                                                                ForSyDeHierarchy.GreyBox.enforce(
-                                                                                                reversedSystemGraph,
-                                                                                                schedVertex)
-                                                                                                .addContained(ForSyDeHierarchy.Visualizable
-                                                                                                                .enforce(scheduled));
-                                                                        });
-                                                });
+                                var procVertex = reversedSystemGraph.newVertex(process);
+                                var schedVertex = reversedSystemGraph.newVertex(sched);
+                                var scheduled = ForSyDeHierarchy.Scheduled
+                                                .enforce(reversedSystemGraph,
+                                                                procVertex);
+                                scheduled.runtimeHost(
+                                                ForSyDeHierarchy.AbstractRuntime
+                                                                .enforce(reversedSystemGraph,
+                                                                                schedVertex));
+                                ForSyDeHierarchy.GreyBox.enforce(
+                                                reversedSystemGraph,
+                                                schedVertex)
+                                                .addContained(ForSyDeHierarchy.Visualizable
+                                                                .enforce(scheduled));
                         });
                         model.superLoopSchedules().forEach((sched, looplist) -> {
-                                designModels.stream().flatMap(m -> m.systemGraph().queryVertex(sched).stream())
-                                                .findAny()
-                                                .ifPresent(schedVertex -> {
-                                                        var scheduler = ForSyDeHierarchy.SuperLoopRuntime
-                                                                        .enforce(reversedSystemGraph, schedVertex);
-                                                        scheduler.superLoopEntries(looplist);
-                                                });
+                                var schedVertex = reversedSystemGraph.newVertex(sched);
+                                var scheduler = ForSyDeHierarchy.SuperLoopRuntime
+                                                .enforce(reversedSystemGraph, schedVertex);
+                                scheduler.superLoopEntries(looplist);
                         });
                         model.aperiodicAsynchronousDataflows()
                                         .forEach(app -> app.processes().forEach(process -> {
                                                 var th = app.processMinimumThroughput().get(process);
-                                                var processVertex = reversedSystemGraph.queryVertex(process)
-                                                                .orElse(reversedSystemGraph.newVertex(process));
+                                                var processVertex = reversedSystemGraph.newVertex(process);
                                                 var behaviour = ForSyDeHierarchy.AnalyzedBehavior
                                                                 .enforce(reversedSystemGraph, processVertex);
                                                 // var scale = 1.0;
@@ -125,6 +86,11 @@ public class AperiodicAsynchronousDataflowToPartitionedTiledMulticoreReverseIden
                                                 behaviour.setThroughputInSecsDenominator(Math.round(th));
                                                 behaviour.setThroughputInSecsNumerator(1L);
                                         }));
+                        // mereg HAS to come here; otherwise the vertex that java has a pointer too will
+                        // be reused.
+                        for (var x : designModels) {
+                                reversedSystemGraph.mergeInPlace(x.systemGraph());
+                        }
                         return new ForSyDeIODesignModel(reversedSystemGraph);
                 }).collect(Collectors.toSet());
         }

@@ -107,7 +107,7 @@ impl DesignModel for OpaqueDesignModel {
     }
 
     fn extensions(&self) -> Vec<String> {
-        return self.extensions.to_owned();
+        self.extensions.to_owned()
     }
 }
 

@@ -606,14 +606,33 @@ trait StandaloneIdentificationModule
           }
         }
       )
-      .get(
-        "/integrate",
+      .post(
+        "/reverse",
         ctx => {
-          val integrated = reverseIdentification(
-            solvedDecisionModels,
-            designModels
-          )
-          ctx.result(write(integrated.map(DesignModelMessage.fromDesignModel(_))))
+          if (ctx.isMultipartFormData()) {
+            var decisionModels = mutable.Set[DecisionModel]();
+            var designModels   = mutable.Set[DesignModel]();
+            ctx
+              .formParamMap()
+              .forEach((name, entries) => {
+                if (name.startsWith("decisionModel")) {
+                  entries.forEach(msg => {
+                    decisionMessageToModel(DecisionModelMessage.fromJsonString(msg))
+                      .foreach(decisionModels.add)
+                  })
+                } else if (name.startsWith("designModel")) {
+                  entries.forEach(msg => {
+                    designMessageToModel(DesignModelMessage.fromJsonString(msg))
+                      .foreach(designModels.add)
+                  })
+                }
+              });
+            var integrated = reverseIdentification(decisionModels.toSet, designModels.toSet);
+            ctx.result(write(integrated.map(DesignModelMessage.fromDesignModel(_))))
+          } else {
+            ctx.status(500);
+          }
+
         }
       )
       .exception(

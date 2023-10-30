@@ -145,16 +145,43 @@ public interface StandaloneIdentificationModule extends IdentificationModule {
                                                                         ctx.status(500);
                                                                 }
                                                         })
-                                        .get(
-                                                        "/integrate",
+                                        .post(
+                                                        "/reverse",
                                                         ctx -> {
-                                                                var integrated = reverseIdentification(
-                                                                                globalSolvedDecisionModels,
-                                                                                globalDesignModels);
-                                                                ctx.result(objectMapper.writeValueAsString(integrated
-                                                                                .stream()
-                                                                                .map(x -> DesignModelMessage.from(x))
-                                                                                .collect(Collectors.toList())));
+                                                                if (ctx.isMultipartFormData()) {
+                                                                        var decisionModels = new HashSet<DecisionModel>();
+                                                                        var designModels = new HashSet<DesignModel>();
+                                                                        ctx.formParamMap().forEach((name, entries) -> {
+                                                                                if (name.startsWith("decisionModel")) {
+                                                                                        for (var msg : entries) {
+                                                                                                DecisionModelMessage
+                                                                                                                .fromJsonString(msg)
+                                                                                                                .flatMap(this::decisionMessageToModel)
+                                                                                                                .ifPresent(decisionModels::add);
+                                                                                        }
+                                                                                } else if (name.startsWith(
+                                                                                                "designModel")) {
+                                                                                        for (var msg : entries) {
+                                                                                                DesignModelMessage
+                                                                                                                .fromJsonString(msg)
+                                                                                                                .flatMap(this::designMessageToModel)
+                                                                                                                .ifPresent(designModels::add);
+
+                                                                                        }
+                                                                                }
+                                                                        });
+                                                                        var integrated = reverseIdentification(
+                                                                                        decisionModels, designModels);
+                                                                        ctx.result(objectMapper
+                                                                                        .writeValueAsString(integrated
+                                                                                                        .stream()
+                                                                                                        .map(x -> DesignModelMessage
+                                                                                                                        .from(x))
+                                                                                                        .collect(Collectors
+                                                                                                                        .toList())));
+                                                                } else {
+                                                                        ctx.status(500);
+                                                                }
                                                         })
                                         .exception(
                                                         Exception.class,

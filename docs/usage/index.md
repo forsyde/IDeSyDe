@@ -72,6 +72,11 @@ The choco solver currently uses no parallel techniques.
 
 In the following examples, we give the Windows and Linux commands side-by-side.
 
+> Kindly keep in mind that some of these demonstrators are actually hard problems to be proved optimally, so the `--x-max-solutions` can be handy to limit the amount of time spent looking for better solutions.
+> For this same reason, the parameter `-x-total-time-out` can also put a **firm** limit on the total time elapsed by the explorer.
+> The total time-out can overshoot a bit due to how the limit is realized by the [Choco Solver](https://choco-solver.org/docs/solving/limits/), but it won't be an overshoot of hours. The maximum observed so far was in the range of seconds.
+> You can find other upper limits on the exploration procedure by calling IDeSyDe with `-h` or `--help`.
+
 ### 1) Avionics
 
 You can run the Flight Function Information through,
@@ -406,10 +411,6 @@ Then, as usual, you can check the resulting `fiodl` files in the `reversed` fold
     }
 
 where the scheduler `micro_blaze_os0` shows the list schedule computed for this solution.
-
-Kindly keep in mind that some of these combinations are actually hard problems to be proved optimally, so the `--x-max-solutions` can be handy to limit the amount of time spent looking for better solutions.
-For this same reason, the parameter `-x-total-time-out` can also put a **firm** limit on the total time elapsed by the explorer.
-It can overshoot a bit due to how the limit is realized by the [Choco Solver](https://choco-solver.org/docs/solving/limits/), but it won't be an overshoot of hours. The maximum observed so far was in the range of seconds.
 
 Here's a list of the commands to run the other SDF tests of [Experiment IV in this paper](https://dl.acm.org/doi/10.1145/3133210) for the sake of easiness:
 

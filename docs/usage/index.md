@@ -488,11 +488,11 @@ but here is some extra information that can be given while maintaining anonymosi
 
 ### SDF applications
 
-Because of the OurMDETools framework, IDeSyDe directly consume [SDF3](https://www.es.ele.tue.nl/sdf3/manuals/xml/sdf/) XML specification files.
+Because of the ForSyDe IO framework, IDeSyDe directly consume [SDF3](https://www.es.ele.tue.nl/sdf3/manuals/xml/sdf/) XML specification files.
 This applies especially to the application graphs. One must be careful when specifying the computational requirements of each actor, since
 the identification rules in IDeSyDe must be able to match them with the computational provisions in the platform decision models available.
 
-SDF applications can also be specified directly as `fiodl` files of the OurMDETools framework, but these are more general than SDF3, so we opt
+SDF applications can also be specified directly as `fiodl` files of the ForSyDe IO framework, but these are more general than SDF3, so we opt
 to use SDF3 files directly for the sake of comprehension.
 
 ### Periodic Workload
@@ -546,7 +546,7 @@ Basically all `fiodl` files contain an example of how the platform is given.
 
 ### KGT files
 
-Because of the OurMDETools framework, `kgt` files of the [KIELER](https://www.rtsys.informatik.uni-kiel.de/en/archive/kieler/welcome-to-the-kieler-project)
+Because of the ForSyDe IO framework, `kgt` files of the [KIELER](https://www.rtsys.informatik.uni-kiel.de/en/archive/kieler/welcome-to-the-kieler-project)
 framework can be generated that enables one to see a bit better the `fiodl` files.
 For the sake of blind-reviewing, the tool which performs this conversion is unfortunately not included in this repository, but some of the demonstrators
 given are the results of the tool.

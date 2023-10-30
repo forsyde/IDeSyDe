@@ -10,3 +10,4 @@ serde_json = { workspace = true }
 rmp-serde = { workspace = true }
 ciborium.workspace = true
 downcast-rs.workspace = true
+flatbuffers.workspace = true

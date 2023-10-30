@@ -14,7 +14,7 @@ jobs:
     - name: Build everything
       run: |
         sudo apt-get update
-        sudo apt-get install -y curl bash build-essential libssl-dev pkg-config mingw-w64 musl-dev musl-tools
+        sudo apt-get install -y curl bash build-essential libssl-dev pkg-config mingw-w64 musl-dev musl-tools dos2unix
         cd ${{ github.workspace }}
         # for whatever reason, for the moment nothing seems to work except an extreme manual approach.
         # this should be corrected later when misterious external errors stop happening
@@ -89,7 +89,7 @@ jobs:
     - name: Build everything
       run: |
         sudo apt-get update
-        sudo apt-get install -y curl bash build-essential libssl-dev pkg-config mingw-w64 musl-dev musl-tools
+        sudo apt-get install -y curl bash build-essential libssl-dev pkg-config mingw-w64 musl-dev musl-tools dos2unix
         cd ${{ github.workspace }}
         curl -sL https://github.com/Jabba-Team/jabba/raw/main/install.sh | bash && . ~/.jabba/jabba.sh
         jabba install amazon-corretto@17

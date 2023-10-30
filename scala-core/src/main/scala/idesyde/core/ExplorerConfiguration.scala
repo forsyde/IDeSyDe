@@ -9,7 +9,8 @@ final case class ExplorerConfiguration(
     memory_resolution: Long,
     improvement_iterations: Long,
     improvement_timeout: Long,
-    strict: Boolean
+    strict: Boolean,
+    target_objectives: Set[String]
 ) derives ReadWriter {}
 
 object ExplorerConfiguration {

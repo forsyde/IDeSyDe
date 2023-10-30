@@ -8,6 +8,8 @@ import java.util.Set;
 import java.util.stream.Collectors;
 
 import org.jgrapht.alg.connectivity.ConnectivityInspector;
+import org.jgrapht.alg.shortestpath.DijkstraManyToManyShortestPaths;
+import org.jgrapht.alg.shortestpath.FloydWarshallShortestPaths;
 import org.jgrapht.graph.AsSubgraph;
 
 import forsyde.io.core.SystemGraph;
@@ -107,6 +109,7 @@ class MemoryMappableMultiCoreIRule implements IdentificationRule {
                                                                                 .isPresent()));
                 // check if all processors are connected to at least one memory element
                 var connecivityInspector = new ConnectivityInspector<>(topology);
+                var shortestPaths = new FloydWarshallShortestPaths<>(topology);
                 var pesConnected = processingElements.stream().allMatch(pe -> memoryElements.stream()
                                 .anyMatch(me -> connecivityInspector.pathExists(pe.getViewedVertex(),
                                                 me.getViewedVertex())));
@@ -199,7 +202,30 @@ class MemoryMappableMultiCoreIRule implements IdentificationRule {
                                                         memSizes,
                                                         maxConcurrentFlits,
                                                         bandwidths,
-                                                        Map.of()));
+                                                        platformElements.stream().collect(
+                                                                        Collectors.toMap(
+                                                                                        src -> src.getIdentifier(),
+                                                                                        src -> platformElements.stream()
+                                                                                                        .filter(dst -> src != dst)
+                                                                                                        .map(dst -> Map.entry(
+                                                                                                                        dst,
+                                                                                                                        shortestPaths.getPath(
+                                                                                                                                        src.getViewedVertex(),
+                                                                                                                                        dst.getViewedVertex())))
+                                                                                                        .filter(e -> e.getValue() != null)
+                                                                                                        .collect(Collectors
+                                                                                                                        .toMap(
+                                                                                                                                        e -> e.getKey().getIdentifier(),
+                                                                                                                                        e -> e.getValue()
+                                                                                                                                                        .getVertexList()
+                                                                                                                                                        .subList(1, e.getValue()
+                                                                                                                                                                        .getVertexList()
+                                                                                                                                                                        .size()
+                                                                                                                                                                        - 1)
+                                                                                                                                                        .stream()
+                                                                                                                                                        .map(x -> x.getIdentifier())
+                                                                                                                                                        .collect(Collectors
+                                                                                                                                                                        .toList())))))));
                 }
                 return new IdentificationResult(identified, errors);
         }

@@ -48,7 +48,11 @@ class ForSyDeIOSYNetworkToAADataflowIRule implements IdentificationRule {
         var inspector = new ConnectivityInspector<>(onlySyComponents);
         var wcc = inspector.connectedSets();
         if (wcc.isEmpty())
-            msgs.add("identAperiodicDataflowFromSY: could not find any SY connected components.");
+            msgs.add("identAperiodicDataflowFromSY: could not find any SY connected components with %d SY elements."
+                    .formatted(onlySyComponents.vertexSet().size()));
+        // System.out.println("identAperiodicDataflowFromSY: found %d SY connected
+        // components with %d SY elements."
+        // .formatted(wcc.size(), onlySyComponents.vertexSet().size()));
         wcc
                 .stream()
                 .forEach(subModel -> {
@@ -66,7 +70,8 @@ class ForSyDeIOSYNetworkToAADataflowIRule implements IdentificationRule {
                         msgSizes.put(sig.getIdentifier(), ForSyDeHierarchy.RegisterArrayLike
                                 .tryView(sig)
                                 .map(s -> s.elementSizeInBits())
-                                .orElse(0L));
+                                .orElseGet(() -> ForSyDeHierarchy.RegisterLike.tryView(sig).map(s -> s.sizeInBits())
+                                        .orElse(0L)));
                     }
                     var mapsAndDelays = Stream.concat(syMaps.stream(), syDelays.stream()).collect(Collectors.toSet());
                     var jobGraphName = syMaps.stream().map(x -> x.getIdentifier()).collect(Collectors.toList());
@@ -125,6 +130,8 @@ class ForSyDeIOSYNetworkToAADataflowIRule implements IdentificationRule {
                                                             sig -> msgSizes.get(sig.getIdentifier()))))),
                             mapsAndDelays.stream().map(x -> x.getIdentifier()).collect(Collectors.toSet())));
                 });
+        // System.out.println("Finished with %d
+        // identified".formatted(identified.size()));
         return new IdentificationResult(identified, msgs);
     }
 

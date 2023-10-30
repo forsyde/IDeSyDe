@@ -9,6 +9,7 @@ import idesyde.core.DecisionModel;
 import idesyde.core.ExplorationSolution;
 import idesyde.core.Explorer;
 import io.javalin.Javalin;
+import io.javalin.config.SizeUnit;
 import picocli.CommandLine;
 
 import java.io.IOException;
@@ -176,7 +177,17 @@ public interface StandaloneExplorationModule {
                                     } else {
                                         e.printStackTrace();
                                     }
-                                });
+                                })
+                        .updateConfig(config -> {
+                            config.jetty.multipartConfig.maxTotalRequestSize(1, SizeUnit.GB);
+                            config.jetty.contextHandlerConfig(ctx -> {
+                                ctx.setMaxFormContentSize(100000000);
+                            });
+                            config.jetty.wsFactoryConfig(wsconfig -> {
+                                wsconfig.setMaxTextMessageSize(1000000000);
+                            });
+                            config.http.maxRequestSize = 1000000000;
+                        });
                 server.events(es -> {
                     es.serverStarted(() -> {
                         System.out.println("INITIALIZED " + server.port());

@@ -5,6 +5,9 @@ import idesyde.common.AperiodicAsynchronousDataflowToPartitionedMemoryMappableMu
 import idesyde.common.AperiodicAsynchronousDataflowToPartitionedTiledMulticore;
 import idesyde.core.ExplorationSolution;
 import idesyde.core.Explorer;
+import idesyde.metaheuristics.constraints.AperiodicAsynchronousDataflowJobOrderingConstraint;
+import idesyde.metaheuristics.constraints.MemoryMappableCommunicationConstraint;
+import idesyde.metaheuristics.constraints.MultiConstraint;
 import io.jenetics.*;
 import io.jenetics.engine.Codec;
 import io.jenetics.engine.Constraint;
@@ -25,11 +28,12 @@ import java.util.List;
 import java.util.Map;
 import java.util.Set;
 import java.util.function.BiFunction;
+import java.util.function.Function;
 import java.util.stream.Collectors;
 import java.util.stream.IntStream;
 import java.util.stream.Stream;
 
-public interface CanExploreAADPTMWithJenetics {
+public interface CanExploreAADPTMWithJenetics extends AperiodicAsynchronousDataflowMethods {
 
         default InvertibleCodec<AperiodicAsynchronousDataflowToPartitionedTiledMulticore, IntegerGene> ofDecisionModel(
                         AperiodicAsynchronousDataflowToPartitionedTiledMulticore decisionModel) {
@@ -46,10 +50,7 @@ public interface CanExploreAADPTMWithJenetics {
                 var scheds = decisionModel.partitionedTiledMulticore().runtimes().runtimes().stream().toList();
                 var jobs = decisionModel.aperiodicAsynchronousDataflows().stream()
                                 .flatMap(app -> app.jobsOfProcesses().stream()).toList();
-                var coms = Stream
-                                .concat(decisionModel.partitionedTiledMulticore().hardware().networkInterfaces()
-                                                .stream(),
-                                                decisionModel.partitionedTiledMulticore().hardware().routers().stream())
+                var coms = decisionModel.partitionedTiledMulticore().hardware().communicationElements().stream()
                                 .toList();
                 return InvertibleCodec.of(
                                 () -> {
@@ -103,15 +104,22 @@ public interface CanExploreAADPTMWithJenetics {
                                                                                                                         coms.size() * bufI
                                                                                                                                         + ceI)
                                                                                                                         .allele()))));
+                                        var jobOrderings = gt.get(2);
                                         Map<String, List<String>> superLoopSchedules = scheds.stream()
                                                         .collect(Collectors.toMap(
                                                                         k -> k,
-                                                                        k -> IntStream.range(0, gt.get(2).length())
+                                                                        k -> IntStream.range(0, jobOrderings.length())
                                                                                         .boxed()
                                                                                         .filter(idx -> taskScheduling
                                                                                                         .get(jobs.get(idx)
                                                                                                                         .process())
                                                                                                         .equals(k))
+                                                                                        .sorted((idxa, idxb) -> jobOrderings
+                                                                                                        .get(idxa)
+                                                                                                        .allele()
+                                                                                                        .compareTo(jobOrderings
+                                                                                                                        .get(idxb)
+                                                                                                                        .allele()))
                                                                                         .map(idx -> jobs.get(idx)
                                                                                                         .process())
                                                                                         .collect(Collectors.toList())));
@@ -134,16 +142,29 @@ public interface CanExploreAADPTMWithJenetics {
                                                                                         mems.indexOf(e.getValue()), 1,
                                                                                         mems.size()))
                                                                         .collect(ISeq.toISeq()));
-                                        var channelReservationsChromossome = IntegerChromosome
-                                                        .of(model.processingElementsToRoutersReservations().entrySet()
+                                        var maxReservations = decisionModel.partitionedTiledMulticore().hardware()
+                                                        .communicationElementsMaxChannels().values()
+                                                        .stream()
+                                                        .mapToInt(x -> x.intValue()).max().orElse(0)
+                                                        + 1;
+                                        IntegerChromosome channelReservationsChromossome = IntegerChromosome
+                                                        .of(model.partitionedTiledMulticore()
+                                                                        .hardware()
+                                                                        .processors()
                                                                         .stream()
-                                                                        .flatMap(e -> e.getValue().entrySet().stream()
-                                                                                        .map(ee -> IntegerGene.of(ee
-                                                                                                        .getValue(), 0,
-                                                                                                        decisionModel.partitionedTiledMulticore()
-                                                                                                                        .hardware()
-                                                                                                                        .communicationElementsMaxChannels()
-                                                                                                                        .get(ee.getKey()))))
+                                                                        .flatMap(pe -> model
+                                                                                        .partitionedTiledMulticore()
+                                                                                        .hardware()
+                                                                                        .communicationElements()
+                                                                                        .stream()
+                                                                                        .map(ce -> IntegerGene.of(
+                                                                                                        decisionModel.processingElementsToRoutersReservations()
+                                                                                                                        .getOrDefault(pe,
+                                                                                                                                        Map.of())
+                                                                                                                        .getOrDefault(ce,
+                                                                                                                                        0),
+                                                                                                        0,
+                                                                                                        maxReservations)))
                                                                         .collect(ISeq.toISeq()));
                                         var orderings = new int[jobs.size()];
                                         Arrays.fill(orderings, -1);
@@ -176,12 +197,13 @@ public interface CanExploreAADPTMWithJenetics {
                         AperiodicAsynchronousDataflowToPartitionedTiledMulticore decisionModel,
                         Set<ExplorationSolution> previousSolutions, Explorer.Configuration configuration) {
                 var codec = ofDecisionModel(decisionModel);
-                var engine = Engine.builder(this::evaluateAADPTM, codec)
+                var engine = Engine.builder(g -> evaluateAADPTM(g, configuration), codec)
                                 .offspringSelector(new TournamentSelector<>(5))
                                 .survivorsSelector(UFTournamentSelector.ofVec())
-                                .constraint(new CommunicationConstraint<>(decisionModel))
-                                .constraint(new JobOrderingConstraint<>(decisionModel))
-                                .constraint(RetryConstraint.of(codec, this::mappingIsFeasible))
+                                .constraint(new MultiConstraint<Integer, IntegerGene, Vec<double[]>>(
+                                                new CommunicationConstraint<>(decisionModel),
+                                                new AperiodicAsynchronousDataflowJobOrderingConstraint<>(decisionModel),
+                                                RetryConstraint.of(codec, this::mappingIsFeasible)))
                                 .minimizing()
                                 .build();
                 var solStream = engine
@@ -220,101 +242,6 @@ public interface CanExploreAADPTMWithJenetics {
                 return decodedStream;
         }
 
-        private double[] recomputeMaximumCycles(
-                        final List<Set<Integer>> follows,
-                        final int[] mapping,
-                        final int[] ordering,
-                        final double[] jobWeights,
-                        final double[][] edgeWeigths) {
-                BiFunction<Integer, Integer, Boolean> mustSuceed = (i, j) -> {
-                        return follows.get(i).contains(j)
-                                        || (mapping[i] == mapping[j] && ordering[i] + 1 == ordering[j]);
-                };
-                BiFunction<Integer, Integer, Boolean> mustCycle = (i, j) -> {
-                        return mapping[i] == mapping[j] ? ordering[j] == 0 && ordering[i] > 0 : false;
-                };
-                var maxCycles = new double[jobWeights.length];
-                var maximumCycleVector = new double[jobWeights.length];
-                var dfsStack = new ArrayDeque<Integer>(jobWeights.length);
-                var visited = new boolean[jobWeights.length];
-                var previous = new int[jobWeights.length];
-                for (int src = 0; src < jobWeights.length; src++) {
-                        dfsStack.clear();
-                        Arrays.fill(visited, false);
-                        Arrays.fill(previous, -1);
-                        Arrays.fill(maximumCycleVector, Double.NEGATIVE_INFINITY);
-                        dfsStack.push(src);
-                        while (!dfsStack.isEmpty()) {
-                                var i = dfsStack.pop();
-                                if (!visited[i]) {
-                                        visited[i] = true;
-                                        for (int j = 0; j < jobWeights.length; j++) {
-                                                if (mustSuceed.apply(i, j) || mustCycle.apply(i, j)) {
-                                                        if (j == src) { // found a cycle
-                                                                maximumCycleVector[i] = jobWeights[i]
-                                                                                + edgeWeigths[i][j];
-                                                                var k = i;
-                                                                // go backwards until the src
-                                                                while (k != src) {
-                                                                        var kprev = previous[k];
-                                                                        maximumCycleVector[kprev] = Math.max(
-                                                                                        maximumCycleVector[kprev],
-                                                                                        jobWeights[kprev]
-                                                                                                        + edgeWeigths[kprev][k]
-                                                                                                        + maximumCycleVector[k]);
-                                                                        k = kprev;
-                                                                }
-                                                        } else if (visited[j]
-                                                                        && maximumCycleVector[j] > Integer.MIN_VALUE) { // found
-                                                                // a
-                                                                // previous
-                                                                // cycle
-                                                                var k = j;
-                                                                // go backwards until the src
-                                                                while (k != src) {
-                                                                        var kprev = previous[k];
-                                                                        maximumCycleVector[kprev] = Math.max(
-                                                                                        maximumCycleVector[kprev],
-                                                                                        jobWeights[kprev]
-                                                                                                        + edgeWeigths[kprev][k]
-                                                                                                        + maximumCycleVector[k]);
-                                                                        k = kprev;
-                                                                }
-                                                        } else if (!visited[j]) {
-                                                                dfsStack.push(j);
-                                                                previous[j] = i;
-                                                        }
-
-                                                }
-                                        }
-                                }
-                        }
-                        maxCycles[src] = maximumCycleVector[src] > Double.NEGATIVE_INFINITY ? maximumCycleVector[src]
-                                        : jobWeights[src];
-                }
-                for (int i = 0; i < jobWeights.length; i++) {
-                        for (int j = 0; j < jobWeights.length; j++) {
-                                if (mustSuceed.apply(i, j) || mustSuceed.apply(j, i)) {
-                                        maxCycles[i] = Math.max(maxCycles[i], maxCycles[j]);
-                                        maxCycles[j] = Math.max(maxCycles[i], maxCycles[j]);
-                                }
-                        }
-                }
-
-                // for (
-                // group <- m.sdfApplications.sdfDisjointComponents; a1 <- group; a2 <- group;
-                // if a1 != a2;
-                // a1i = m.sdfApplications.actorsIdentifiers.indexOf(a1);
-                // a2i = m.sdfApplications.actorsIdentifiers.indexOf(a2);
-                // qa1 = m.sdfApplications.sdfRepetitionVectors(a1i);
-                // qa2 = m.sdfApplications.sdfRepetitionVectors(a2i)
-                // ) {
-                // ths(a1i) = Math.min(ths(a1i), ths(a2i) * qa1 / qa2)
-                // ths(a2i) = Math.min(ths(a1i) * qa2 / qa1, ths(a2i))
-                // }
-                return maxCycles;
-        }
-
         class CommunicationConstraint<T extends Comparable<? super T>> implements
                         Constraint<IntegerGene, T> {
 
@@ -345,9 +272,9 @@ public interface CanExploreAADPTMWithJenetics {
                 @Override
                 public boolean test(Phenotype<IntegerGene, T> individual) {
                         var taskMapping = individual.genotype().get(0);
-                        var taskScheduling = individual.genotype().get(1);
-                        var bufferMapping = individual.genotype().get(2);
-                        var reservations = individual.genotype().get(3);
+                        var taskScheduling = individual.genotype().get(0);
+                        // var bufferMapping = individual.genotype().get(0);
+                        var reservations = individual.genotype().get(1);
                         for (int taskI = 0; taskI < tasks.size(); taskI++) {
                                 var task = tasks.get(taskI);
                                 for (int peI = 0; peI < processors.size(); peI++) {
@@ -377,80 +304,82 @@ public interface CanExploreAADPTMWithJenetics {
                                                                         }
                                                                 }
                                                         }
-                                                        for (int bufferI = 0; bufferI < buffers.size(); bufferI++) {
-                                                                var buffer = buffers.get(bufferI);
-                                                                if (decisionModel.aperiodicAsynchronousDataflows()
-                                                                                .stream().anyMatch(app -> app
-                                                                                                .processGetFromBufferInBits()
-                                                                                                .getOrDefault(task, Map
-                                                                                                                .of())
-                                                                                                .containsKey(buffer))
-                                                                                && bufferMapping.get(bufferI)
-                                                                                                .allele() == meI) { // task
-                                                                        // reads
-                                                                        // from
-                                                                        // buffer
-                                                                        for (var ce : decisionModel
-                                                                                        .partitionedTiledMulticore()
-                                                                                        .hardware()
-                                                                                        .preComputedPaths()
-                                                                                        .getOrDefault(pe, Map.of())
-                                                                                        .getOrDefault(me, List.of())) {
-                                                                                // we go through the communication
-                                                                                // elements in the path and ensure they
-                                                                                // have
-                                                                                // reservations
-                                                                                var k = comms.indexOf(ce);
-                                                                                if (reservations.get(
-                                                                                                peI * comms.size() + k)
-                                                                                                .allele() <= 0) { // should
-                                                                                        // but
-                                                                                        // it
-                                                                                        // is
-                                                                                        // not
-                                                                                        // reserved
-                                                                                        return false;
-                                                                                }
-                                                                        }
-                                                                }
-                                                        }
-                                                        for (int bufferI = 0; bufferI < buffers.size(); bufferI++) {
-                                                                var buffer = buffers.get(bufferI);
-                                                                if (decisionModel.aperiodicAsynchronousDataflows()
-                                                                                .stream().anyMatch(app -> app
-                                                                                                .processPutInBufferInBits()
-                                                                                                .getOrDefault(task, Map
-                                                                                                                .of())
-                                                                                                .containsKey(buffer))
-                                                                                && bufferMapping.get(bufferI)
-                                                                                                .allele() == meI) { // task
-                                                                        // writes
-                                                                        // to
-                                                                        // buffer
-                                                                        for (var ce : decisionModel
-                                                                                        .partitionedTiledMulticore()
-                                                                                        .hardware()
-                                                                                        .preComputedPaths()
-                                                                                        .getOrDefault(pe, Map.of())
-                                                                                        .getOrDefault(me, List.of())) {
-                                                                                // we go through the communication
-                                                                                // elements in the path and ensure they
-                                                                                // have
-                                                                                // reservations
-                                                                                var k = comms.indexOf(ce);
-                                                                                if (reservations.get(
-                                                                                                peI * comms.size() + k)
-                                                                                                .allele() <= 0) { // should
-                                                                                        // but
-                                                                                        // it
-                                                                                        // is
-                                                                                        // not
-                                                                                        // reserved
-                                                                                        return false;
-                                                                                }
-                                                                        }
-                                                                }
-                                                        }
+                                                        // TODO: check later if this is really not necessary.
+                                                        // It seems like no because of the tile-based approach
+                                                        // for (int bufferI = 0; bufferI < buffers.size(); bufferI++) {
+                                                        // var buffer = buffers.get(bufferI);
+                                                        // if (decisionModel.aperiodicAsynchronousDataflows()
+                                                        // .stream().anyMatch(app -> app
+                                                        // .processGetFromBufferInBits()
+                                                        // .getOrDefault(task, Map
+                                                        // .of())
+                                                        // .containsKey(buffer))
+                                                        // && bufferMapping.get(bufferI)
+                                                        // .allele() == meI) { // task
+                                                        // // reads
+                                                        // // from
+                                                        // // buffer
+                                                        // for (var ce : decisionModel
+                                                        // .partitionedTiledMulticore()
+                                                        // .hardware()
+                                                        // .preComputedPaths()
+                                                        // .getOrDefault(pe, Map.of())
+                                                        // .getOrDefault(me, List.of())) {
+                                                        // // we go through the communication
+                                                        // // elements in the path and ensure they
+                                                        // // have
+                                                        // // reservations
+                                                        // var k = comms.indexOf(ce);
+                                                        // if (reservations.get(
+                                                        // peI * comms.size() + k)
+                                                        // .allele() <= 0) { // should
+                                                        // // but
+                                                        // // it
+                                                        // // is
+                                                        // // not
+                                                        // // reserved
+                                                        // return false;
+                                                        // }
+                                                        // }
+                                                        // }
+                                                        // }
+                                                        // for (int bufferI = 0; bufferI < buffers.size(); bufferI++) {
+                                                        // var buffer = buffers.get(bufferI);
+                                                        // if (decisionModel.aperiodicAsynchronousDataflows()
+                                                        // .stream().anyMatch(app -> app
+                                                        // .processPutInBufferInBits()
+                                                        // .getOrDefault(task, Map
+                                                        // .of())
+                                                        // .containsKey(buffer))
+                                                        // && bufferMapping.get(bufferI)
+                                                        // .allele() == meI) { // task
+                                                        // // writes
+                                                        // // to
+                                                        // // buffer
+                                                        // for (var ce : decisionModel
+                                                        // .partitionedTiledMulticore()
+                                                        // .hardware()
+                                                        // .preComputedPaths()
+                                                        // .getOrDefault(pe, Map.of())
+                                                        // .getOrDefault(me, List.of())) {
+                                                        // // we go through the communication
+                                                        // // elements in the path and ensure they
+                                                        // // have
+                                                        // // reservations
+                                                        // var k = comms.indexOf(ce);
+                                                        // if (reservations.get(
+                                                        // peI * comms.size() + k)
+                                                        // .allele() <= 0) { // should
+                                                        // // but
+                                                        // // it
+                                                        // // is
+                                                        // // not
+                                                        // // reserved
+                                                        // return false;
+                                                        // }
+                                                        // }
+                                                        // }
+                                                        // }
                                                 }
                                         }
                                 }
@@ -462,11 +391,11 @@ public interface CanExploreAADPTMWithJenetics {
                 public Phenotype<IntegerGene, T> repair(Phenotype<IntegerGene, T> individual,
                                 long generation) {
                         var taskMapping = individual.genotype().get(0);
-                        var taskScheduling = individual.genotype().get(1);
-                        var bufferMapping = individual.genotype().get(2);
-                        var reservations = individual.genotype().get(3);
+                        var taskScheduling = individual.genotype().get(0);
+                        // var bufferMapping = individual.genotype().get(0);
+                        var reservations = individual.genotype().get(1);
                         var changeReservations = new java.util.ArrayList<>(
-                                        individual.genotype().get(4).stream().map(x -> false).toList());
+                                        reservations.stream().map(x -> false).toList());
                         for (int taskI = 0; taskI < tasks.size(); taskI++) {
                                 var task = tasks.get(taskI);
                                 for (int peI = 0; peI < processors.size(); peI++) {
@@ -498,84 +427,86 @@ public interface CanExploreAADPTMWithJenetics {
                                                                         }
                                                                 }
                                                         }
-                                                        for (int bufferI = 0; bufferI < buffers.size(); bufferI++) {
-                                                                var buffer = buffers.get(bufferI);
-                                                                if (decisionModel.aperiodicAsynchronousDataflows()
-                                                                                .stream().anyMatch(app -> app
-                                                                                                .processGetFromBufferInBits()
-                                                                                                .getOrDefault(task, Map
-                                                                                                                .of())
-                                                                                                .containsKey(buffer))
-                                                                                && bufferMapping.get(bufferI)
-                                                                                                .allele() == meI) { // task
-                                                                        // reads
-                                                                        // from
-                                                                        // buffer
-                                                                        for (var ce : decisionModel
-                                                                                        .partitionedTiledMulticore()
-                                                                                        .hardware()
-                                                                                        .preComputedPaths()
-                                                                                        .getOrDefault(pe, Map.of())
-                                                                                        .getOrDefault(me, List.of())) {
-                                                                                // we go through the communication
-                                                                                // elements in the path and ensure they
-                                                                                // have
-                                                                                // reservations
-                                                                                var k = comms.indexOf(ce);
-                                                                                if (reservations.get(
-                                                                                                peI * comms.size() + k)
-                                                                                                .allele() <= 0) { // should
-                                                                                        // but
-                                                                                        // it
-                                                                                        // is
-                                                                                        // not
-                                                                                        // reserved
-                                                                                        changeReservations.set(peI
-                                                                                                        * comms.size()
-                                                                                                        + k, true);
-                                                                                }
-                                                                        }
-                                                                }
-                                                        }
-                                                        for (int bufferI = 0; bufferI < buffers.size(); bufferI++) {
-                                                                var buffer = buffers.get(bufferI);
-                                                                if (decisionModel.aperiodicAsynchronousDataflows()
-                                                                                .stream().anyMatch(app -> app
-                                                                                                .processPutInBufferInBits()
-                                                                                                .getOrDefault(task, Map
-                                                                                                                .of())
-                                                                                                .containsKey(buffer))
-                                                                                && bufferMapping.get(bufferI)
-                                                                                                .allele() == meI) { // task
-                                                                        // writes
-                                                                        // to
-                                                                        // buffer
-                                                                        for (var ce : decisionModel
-                                                                                        .partitionedTiledMulticore()
-                                                                                        .hardware()
-                                                                                        .preComputedPaths()
-                                                                                        .getOrDefault(pe, Map.of())
-                                                                                        .getOrDefault(me, List.of())) {
-                                                                                // we go through the communication
-                                                                                // elements in the path and ensure they
-                                                                                // have
-                                                                                // reservations
-                                                                                var k = comms.indexOf(ce);
-                                                                                if (reservations.get(
-                                                                                                peI * comms.size() + k)
-                                                                                                .allele() <= 0) { // should
-                                                                                        // but
-                                                                                        // it
-                                                                                        // is
-                                                                                        // not
-                                                                                        // reserved
-                                                                                        changeReservations.set(peI
-                                                                                                        * comms.size()
-                                                                                                        + k, true);
-                                                                                }
-                                                                        }
-                                                                }
-                                                        }
+                                                        // TODO: check later if this is really not necessary.
+                                                        // It seems like no because of the tile-based approach
+                                                        // for (int bufferI = 0; bufferI < buffers.size(); bufferI++) {
+                                                        // var buffer = buffers.get(bufferI);
+                                                        // if (decisionModel.aperiodicAsynchronousDataflows()
+                                                        // .stream().anyMatch(app -> app
+                                                        // .processGetFromBufferInBits()
+                                                        // .getOrDefault(task, Map
+                                                        // .of())
+                                                        // .containsKey(buffer))
+                                                        // && bufferMapping.get(bufferI)
+                                                        // .allele() == meI) { // task
+                                                        // // reads
+                                                        // // from
+                                                        // // buffer
+                                                        // for (var ce : decisionModel
+                                                        // .partitionedTiledMulticore()
+                                                        // .hardware()
+                                                        // .preComputedPaths()
+                                                        // .getOrDefault(pe, Map.of())
+                                                        // .getOrDefault(me, List.of())) {
+                                                        // // we go through the communication
+                                                        // // elements in the path and ensure they
+                                                        // // have
+                                                        // // reservations
+                                                        // var k = comms.indexOf(ce);
+                                                        // if (reservations.get(
+                                                        // peI * comms.size() + k)
+                                                        // .allele() <= 0) { // should
+                                                        // // but
+                                                        // // it
+                                                        // // is
+                                                        // // not
+                                                        // // reserved
+                                                        // changeReservations.set(peI
+                                                        // * comms.size()
+                                                        // + k, true);
+                                                        // }
+                                                        // }
+                                                        // }
+                                                        // }
+                                                        // for (int bufferI = 0; bufferI < buffers.size(); bufferI++) {
+                                                        // var buffer = buffers.get(bufferI);
+                                                        // if (decisionModel.aperiodicAsynchronousDataflows()
+                                                        // .stream().anyMatch(app -> app
+                                                        // .processPutInBufferInBits()
+                                                        // .getOrDefault(task, Map
+                                                        // .of())
+                                                        // .containsKey(buffer))
+                                                        // && bufferMapping.get(bufferI)
+                                                        // .allele() == meI) { // task
+                                                        // // writes
+                                                        // // to
+                                                        // // buffer
+                                                        // for (var ce : decisionModel
+                                                        // .partitionedTiledMulticore()
+                                                        // .hardware()
+                                                        // .preComputedPaths()
+                                                        // .getOrDefault(pe, Map.of())
+                                                        // .getOrDefault(me, List.of())) {
+                                                        // // we go through the communication
+                                                        // // elements in the path and ensure they
+                                                        // // have
+                                                        // // reservations
+                                                        // var k = comms.indexOf(ce);
+                                                        // if (reservations.get(
+                                                        // peI * comms.size() + k)
+                                                        // .allele() <= 0) { // should
+                                                        // // but
+                                                        // // it
+                                                        // // is
+                                                        // // not
+                                                        // // reserved
+                                                        // changeReservations.set(peI
+                                                        // * comms.size()
+                                                        // + k, true);
+                                                        // }
+                                                        // }
+                                                        // }
+                                                        // }
                                                 }
                                         }
                                 }
@@ -583,116 +514,22 @@ public interface CanExploreAADPTMWithJenetics {
                         return Phenotype.of(
                                         Genotype.of(
                                                         taskMapping,
-                                                        taskScheduling,
-                                                        bufferMapping,
                                                         IntegerChromosome.of(IntStream.range(0, reservations.length())
                                                                         .mapToObj(idx -> changeReservations.get(idx)
-                                                                                        ? IntegerGene.of(1, reservations
-                                                                                                        .get(idx).max()
-                                                                                                        + 1)
+                                                                                        ? IntegerGene.of(Math.max(
+                                                                                                        reservations
+                                                                                                                        .get(idx)
+                                                                                                                        .allele(),
+                                                                                                        1),
+                                                                                                        0,
+                                                                                                        reservations
+                                                                                                                        .get(idx)
+                                                                                                                        .max())
                                                                                         : reservations.get(idx))
                                                                         .collect(ISeq.toISeq())),
-                                                        individual.genotype().get(4)),
+                                                        individual.genotype().get(2)),
                                         generation);
                 }
-        }
-
-        class JobOrderingConstraint<T extends Comparable<? super T>> implements
-                        Constraint<IntegerGene, T> {
-
-                private final List<String> runtimes;
-                private final List<String> tasks;
-                private final List<AperiodicAsynchronousDataflow.Job> jobs;
-                private final Map<AperiodicAsynchronousDataflow.Job, Set<AperiodicAsynchronousDataflow.Job>> memoizedSucessors;
-                public AperiodicAsynchronousDataflowToPartitionedTiledMulticore decisionModel;
-
-                public JobOrderingConstraint(
-                                AperiodicAsynchronousDataflowToPartitionedTiledMulticore decisionModel) {
-                        this.decisionModel = decisionModel;
-                        runtimes = decisionModel.partitionedTiledMulticore().runtimes().runtimes().stream()
-                                        .toList();
-                        tasks = decisionModel.aperiodicAsynchronousDataflows().stream()
-                                        .flatMap(x -> x.processes().stream())
-                                        .collect(Collectors.toList());
-                        jobs = decisionModel.aperiodicAsynchronousDataflows().stream()
-                                        .flatMap(x -> x.jobsOfProcesses().stream())
-                                        .collect(Collectors.toList());
-                        memoizedSucessors = jobs.stream().collect(Collectors.toMap(
-                                        j -> j,
-                                        j -> jobs.stream()
-                                                        .filter(jj -> decisionModel.aperiodicAsynchronousDataflows()
-                                                                        .stream()
-                                                                        .anyMatch(app -> app.isSucessor(j, jj)))
-                                                        .collect(Collectors.toSet())));
-                }
-
-                @Override
-                public boolean test(Phenotype<IntegerGene, T> individual) {
-                        var taskScheduling = individual.genotype().get(0);
-                        var jobOrderings = individual.genotype().get(2);
-                        return IntStream.range(0, runtimes.size()).anyMatch(schedI -> {
-                                var mappedJobs = IntStream.range(0, jobs.size())
-                                                .filter(jobI -> taskScheduling
-                                                                .get(tasks.indexOf(jobs.get(jobI).process()))
-                                                                .allele() == schedI)
-                                                .toArray();
-                                // the first condition checks if the jobs are clashing in the same ordering
-                                // position
-                                // the second checks whether they follow the parial order in the following
-                                way:
-                                // isSucessor(j, jj) -> order(j) < order(jj)
-                                // equivalently,
-                                // !isSucessor(j, jj) or order(j) < order(jj)
-                                return Arrays.stream(mappedJobs)
-                                                .anyMatch(j -> Arrays.stream(mappedJobs)
-                                                                .anyMatch(jj -> (jobOrderings.get(j)
-                                                                                .allele() == jobOrderings.get(jj)
-                                                                                                .allele())
-                                                                                ||
-                                                                                (!memoizedSucessors.get(jobs.get(j))
-                                                                                                .contains(jobs.get(jj))
-                                                                                                || jobOrderings.get(j)
-                                                                                                                .allele() < jobOrderings
-                                                                                                                                .get(jj)
-                                                                                                                                .allele())));
-                        });
-                }
-
-                @Override
-                public Phenotype<IntegerGene, T> repair(Phenotype<IntegerGene, T> individual,
-                                long generation) {
-                        var taskScheduling = individual.genotype().get(0);
-                        var jobOrderings = individual.genotype().get(2);
-                        var newJobOrderings = new ArrayList<IntegerGene>(jobs.size());
-                        IntStream.range(0, runtimes.size()).forEach(schedI -> {
-                                var mappedJobs = IntStream.range(0, jobs.size())
-                                                .filter(jobI -> taskScheduling
-                                                                .get(tasks.indexOf(jobs.get(jobI).process()))
-                                                                .allele() == schedI)
-                                                .toArray();
-                                // sor the chromosome so that
-                                var newChromosome = Arrays.stream(mappedJobs)
-                                                .boxed()
-                                                .sorted((j, jj) -> memoizedSucessors.get(jobs.get(j))
-                                                                .contains(jobs.get(jj)) ? -1
-                                                                                : jobOrderings.get(j).compareTo(
-                                                                                                jobOrderings.get(jj)))
-                                                .collect(Collectors.toList());
-                                for (int i = 0; i < mappedJobs.length; i++) {
-                                        newJobOrderings.set(mappedJobs[i],
-                                                        IntegerGene.of(newChromosome.get(i), 1, mappedJobs.length));
-                                }
-                        });
-                        return Phenotype.of(
-                                        Genotype.of(
-                                                        individual.genotype().get(0),
-                                                        taskScheduling,
-                                                        individual.genotype().get(2),
-                                                        individual.genotype().get(3),
-                                                        IntegerChromosome.of(newJobOrderings)),
-                                        generation);
-                }
-
         }
 
         default boolean mappingIsFeasible(
@@ -708,8 +545,11 @@ public interface CanExploreAADPTMWithJenetics {
         }
 
         private Vec<double[]> evaluateAADPTM(
-                        final AperiodicAsynchronousDataflowToPartitionedTiledMulticore decisionModel) {
+                        final AperiodicAsynchronousDataflowToPartitionedTiledMulticore decisionModel,
+                        Explorer.Configuration configuration) {
                 // first, get the number of used PEs
+                Function<Integer, String> taskName = (i) -> decisionModel.aperiodicAsynchronousDataflows().stream()
+                                .flatMap(app -> app.processes().stream()).skip(i - 1).findFirst().get();
                 var nUsedPEs = decisionModel.processesToRuntimeScheduling().values().stream().distinct().count();
                 // get durations for each process
                 var jobs = decisionModel.aperiodicAsynchronousDataflows().stream()
@@ -771,10 +611,20 @@ public interface CanExploreAADPTMWithJenetics {
                                 })
                                 .collect(Collectors.toList());
                 // + 1 is because the obejctives include number of used PEs
-                var objs = new double[invThroughputs.size() + 1];
-                objs[0] = (double) nUsedPEs;
-                for (int i = 0; i < invThroughputs.size(); i++) {
-                        objs[i + 1] = invThroughputs.get(i);
+                var objs = new double[configuration.targetObjectives.isEmpty() ? invThroughputs.size() + 1
+                                : configuration.targetObjectives.size()];
+                var i = 0;
+                if (configuration.targetObjectives.isEmpty() || configuration.targetObjectives.contains("nUsedPEs")) {
+                        objs[i] = (double) nUsedPEs;
+                        i = 1;
+                }
+                for (int j = 0; j < invThroughputs.size(); j++) {
+                        if (configuration.targetObjectives.isEmpty()
+                                        || configuration.targetObjectives
+                                                        .contains("invThroughput(%s)".formatted(taskName.apply(j)))) {
+                                objs[i] = invThroughputs.get(j);
+                                i++;
+                        }
                 }
                 return Vec.of(objs);
         }
@@ -834,7 +684,8 @@ public interface CanExploreAADPTMWithJenetics {
                                                                                 decisionModel
                                                                                                 .processingElementsToRoutersReservations()
                                                                                                 .get(srcPE)
-                                                                                                .get(ce).doubleValue())
+                                                                                                .get(ce)
+                                                                                                .doubleValue())
                                                                 .min()
                                                                 .orElse(1.0);
                                                 totalTime += decisionModel

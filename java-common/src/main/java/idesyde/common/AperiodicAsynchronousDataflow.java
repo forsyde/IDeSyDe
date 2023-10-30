@@ -85,7 +85,9 @@ public record AperiodicAsynchronousDataflow(
             if (jobGraphSrcName.get(i).equals(predecessor.process())
                     && jobGraphSrcInstance.get(i).equals(predecessor.instance())) {
                 var nextJob = new Job(jobGraphDstName.get(i), jobGraphSrcInstance.get(i));
-                return isSucessor(nextJob, potentialSucessor);
+                if (isSucessor(nextJob, potentialSucessor)) {
+                    return true;
+                }
             }
         }
         return false;

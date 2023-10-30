@@ -57,8 +57,8 @@ impl DecisionModelMessage {
     }
 }
 
-impl<T: DecisionModel + ?Sized> From<&T> for DecisionModelMessage {
-    fn from(value: &T) -> Self {
+impl<'a, T: DecisionModel + ?Sized> From<&'a T> for DecisionModelMessage {
+    fn from(value: &'a T) -> Self {
         DecisionModelMessage {
             header: value.header(),
             body: value
@@ -83,6 +83,7 @@ impl<T: DecisionModel + ?Sized> From<Arc<T>> for DecisionModelMessage {
 pub struct DesignModelMessage {
     pub header: DesignModelHeader,
     pub body: Option<String>,
+    pub extensions: Vec<String>,
 }
 
 impl DesignModelMessage {
@@ -90,6 +91,7 @@ impl DesignModelMessage {
         DesignModelMessage {
             header: m.header(),
             body: m.body_as_string(),
+            extensions: m.extensions(),
         }
     }
 
@@ -111,6 +113,7 @@ where
         DesignModelMessage {
             header: value.header(),
             body: value.body_as_string(),
+            extensions: value.extensions(),
         }
     }
 }

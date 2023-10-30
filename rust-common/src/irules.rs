@@ -340,7 +340,7 @@ pub fn identify_asynchronous_aperiodic_dataflow_from_sdf(
                         .sdf_application
                         .chain_maximum_latency
                         .iter()
-                        .filter(|(s, m)| component_actors.contains(&s.as_str()))
+                        .filter(|(s, _)| component_actors.contains(&s.as_str()))
                         .map(|(s, m)| (s.to_owned(), m.to_owned()))
                         .collect(),
                     process_put_in_buffer_in_bits: data_sent,
@@ -394,6 +394,8 @@ pub fn identify_aperiodic_asynchronous_dataflow_to_partitioned_tiled_multicore(
                     .next();
                 if apps.len() > 0 && first_non_mappable.is_some() {
                     errors.insert(format!("identify_aperiodic_asynchronous_dataflow_to_partitioned_tiled_multicore: process {} is not mappable in any processing element.", first_non_mappable.unwrap()));
+                } else if apps.is_empty() {
+                    errors.insert(format!("identify_aperiodic_asynchronous_dataflow_to_partitioned_mem_mappable_multicore: no asynchronous aperiodic application detected."));
                 }
                 if apps.len() > 0 && first_non_mappable.is_none() {
                     identified.push(Arc::new(
@@ -463,6 +465,8 @@ pub fn identify_aperiodic_asynchronous_dataflow_to_partitioned_mem_mappable_mult
                     .next();
                 if apps.len() > 0 && first_non_mappable.is_some() {
                     errors.insert(format!("identify_aperiodic_asynchronous_dataflow_to_partitioned_mem_mappable_multicore: process {} is not mappable in any processing element.", first_non_mappable.unwrap()));
+                } else if apps.is_empty() {
+                    errors.insert(format!("identify_aperiodic_asynchronous_dataflow_to_partitioned_mem_mappable_multicore: no asynchronous aperiodic application detected."));
                 }
                 if apps.len() > 0 && first_non_mappable.is_none() {
                     identified.push(Arc::new(

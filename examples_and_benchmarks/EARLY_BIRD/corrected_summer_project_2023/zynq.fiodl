@@ -18,6 +18,7 @@ systemgraph {
     [forsyde::io::lib::hierarchy::platform::hardware::InstrumentedProcessingModule, forsyde::io::lib::hierarchy::visualization::Visualizable]
     ()
     {
+      "modalInstructionCategory": ["ARM"],
       "modalInstructionsPerCycle": {
         "generic": {
           "intAdd": 1.0_64,
@@ -81,6 +82,7 @@ systemgraph {
     [forsyde::io::lib::hierarchy::platform::hardware::InstrumentedProcessingModule, forsyde::io::lib::hierarchy::visualization::Visualizable]
     ()
     {
+      "modalInstructionCategory": ["ARM"],
       "modalInstructionsPerCycle": {
         "default": {
           "hvss":      142000000.0_64
@@ -97,6 +99,7 @@ systemgraph {
     [forsyde::io::lib::hierarchy::platform::hardware::InstrumentedProcessingModule, forsyde::io::lib::hierarchy::visualization::Visualizable]
     ()
     {
+      "modalInstructionCategory": ["ARM"],
       "modalInstructionsPerCycle": {
         "generic": {
           "intAdd": 1.0_64,
@@ -144,6 +147,7 @@ systemgraph {
     [forsyde::io::lib::hierarchy::platform::hardware::InstrumentedProcessingModule, forsyde::io::lib::hierarchy::visualization::Visualizable]
     ()
     {
+      "modalInstructionCategory": ["ARM"],
       "modalInstructionsPerCycle": {
         "generic": {
           "intAdd": 1.0_64,
@@ -191,6 +195,7 @@ systemgraph {
     [forsyde::io::lib::hierarchy::platform::hardware::InstrumentedProcessingModule, forsyde::io::lib::hierarchy::visualization::Visualizable]
     ()
     {
+      "modalInstructionCategory": ["ARM"],
       "modalInstructionsPerCycle": {
         "generic": {
           "intAdd": 1.0_64,

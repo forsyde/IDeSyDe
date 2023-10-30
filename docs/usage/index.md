@@ -9,7 +9,7 @@ permalink: /usage
 
 ## Requirements for running the demonstrators
 
-Regardless if you are checking this repository from a Linux or Windows OS, you need at least Java 11 to run the I-modules and E-modules.
+Regardless if you are checking this repository from a Linux or Windows OS, you need at least Java 17 to run the I-modules and E-modules.
 On Linux you can use the distrubition's package manager, e.g. `apt-get` or `dnf`, to install the JVM system wide.
 On Windows you can likely find official installer on all major JVM distributions like [Oracle](https://www.oracle.com/java/technologies/downloads/).
 
@@ -27,12 +27,11 @@ If you fail to meet the Java requirement, you might get an output like:
 
 For the case studies where *we know* there should be identifications.
 This is simply the orchestrator being fault tolerant and skipping problematic modules whenever possible.
-Therefore, make sure that `java` is available in your machine and that it indeed 11 or higher. You can check this with:
+Therefore, make sure that `java` is available in your machine and that it indeed 17 or higher. You can check this with:
 
     > java -version
-    openjdk version "11.0.11" 2021-04-20
-    OpenJDK Runtime Environment GraalVM CE 21.1.0 (build 11.0.11+8-jvmci-21.1-b05)
-    OpenJDK 64-Bit Server VM GraalVM CE 21.1.0 (build 11.0.11+8-jvmci-21.1-b05, mixed mode, sharing)
+    openjdk version "17.xxx" 2021-04-20
+    ...
 
 If you plan to run the simulink example, you must also have `matlab` callable in your PATH. This is typically done automatically by the MATLAB installer
 on Windows, and there is good chance you know how to do it this already if you are running from Linux.

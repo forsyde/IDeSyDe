@@ -8,6 +8,7 @@ import idesyde.core.DecisionModel;
 import idesyde.core.DesignModel;
 import idesyde.core.IdentificationModule;
 import io.javalin.Javalin;
+import io.javalin.config.SizeUnit;
 import picocli.CommandLine;
 
 import java.io.IOException;
@@ -29,21 +30,21 @@ public interface StandaloneIdentificationModule extends IdentificationModule {
 
         default Optional<Javalin> standaloneIdentificationModule(
                         String[] args) {
-                var decisionModels = new HashSet<DecisionModel>();
-                var solvedDecisionModels = new HashSet<DecisionModel>();
-                var designModels = new HashSet<DesignModel>();
+                var globalDecisionModels = new HashSet<DecisionModel>();
+                var globalSolvedDecisionModels = new HashSet<DecisionModel>();
+                var globalDesignModels = new HashSet<DesignModel>();
                 try (var server = Javalin.create()) {
                         server.post(
                                         "/decision",
                                         ctx -> DecisionModelMessage.fromJsonString(ctx.body())
                                                         .flatMap(this::decisionMessageToModel)
-                                                        .ifPresent(decisionModels::add))
+                                                        .ifPresent(globalDecisionModels::add))
                                         .post(
                                                         "/solved",
                                                         ctx -> {
                                                                 DecisionModelMessage.fromJsonString(ctx.body())
                                                                                 .flatMap(this::decisionMessageToModel)
-                                                                                .ifPresent(solvedDecisionModels::add);
+                                                                                .ifPresent(globalSolvedDecisionModels::add);
                                                         })
                                         .post(
                                                         "/design",
@@ -60,7 +61,7 @@ public interface StandaloneIdentificationModule extends IdentificationModule {
                                                                                                         DesignModelMessage
                                                                                                                         .fromJsonString(msg)
                                                                                                                         .flatMap(this::designMessageToModel)
-                                                                                                                        .ifPresent(designModels::add);
+                                                                                                                        .ifPresent(globalDesignModels::add);
                                                                                                 } catch (IOException e) {
                                                                                                         throw new RuntimeException(
                                                                                                                         e);
@@ -69,7 +70,7 @@ public interface StandaloneIdentificationModule extends IdentificationModule {
                                                                 } else {
                                                                         DesignModelMessage.fromJsonString(ctx.body())
                                                                                         .flatMap(this::designMessageToModel)
-                                                                                        .ifPresent(designModels::add);
+                                                                                        .ifPresent(globalDesignModels::add);
                                                                 }
                                                         })
                                         .get(
@@ -82,12 +83,12 @@ public interface StandaloneIdentificationModule extends IdentificationModule {
                                                                                                 : 0;
                                                                 var result = identificationStep(
                                                                                 iteration,
-                                                                                designModels,
-                                                                                decisionModels);
+                                                                                globalDesignModels,
+                                                                                globalDecisionModels);
                                                                 // var newIdentified = new
                                                                 // HashSet<>(result.identified());
                                                                 // newIdentified.removeAll(decisionModels);
-                                                                decisionModels.addAll(result.identified());
+                                                                globalDecisionModels.addAll(result.identified());
                                                                 new IdentificationResultMessage(
                                                                                 result.identified().stream()
                                                                                                 .map(x -> DecisionModelMessage
@@ -97,12 +98,59 @@ public interface StandaloneIdentificationModule extends IdentificationModule {
                                                                                 result.errors()).toJsonString()
                                                                                 .ifPresent(ctx::result);
                                                         })
+                                        .post(
+                                                        "/identify",
+                                                        ctx -> {
+                                                                if (ctx.isMultipartFormData()) {
+                                                                        var decisionModels = new HashSet<DecisionModel>();
+                                                                        var designModels = new HashSet<DesignModel>();
+                                                                        var iteration = ctx.queryParamMap()
+                                                                                        .containsKey("iteration")
+                                                                                                        ? Integer.parseInt(
+                                                                                                                        ctx
+                                                                                                                                        .queryParam("iteration"))
+                                                                                                        : 0;
+                                                                        ctx.formParamMap().forEach((name, entries) -> {
+                                                                                if (name.startsWith("decisionModel")) {
+                                                                                        for (var msg : entries) {
+                                                                                                DecisionModelMessage
+                                                                                                                .fromJsonString(msg)
+                                                                                                                .flatMap(this::decisionMessageToModel)
+                                                                                                                .ifPresent(decisionModels::add);
+                                                                                        }
+                                                                                } else if (name.startsWith(
+                                                                                                "designModel")) {
+                                                                                        for (var msg : entries) {
+                                                                                                DesignModelMessage
+                                                                                                                .fromJsonString(msg)
+                                                                                                                .flatMap(this::designMessageToModel)
+                                                                                                                .ifPresent(designModels::add);
+
+                                                                                        }
+                                                                                }
+                                                                        });
+                                                                        var result = identificationStep(
+                                                                                        iteration,
+                                                                                        designModels,
+                                                                                        decisionModels);
+                                                                        new IdentificationResultMessage(
+                                                                                        result.identified().stream()
+                                                                                                        .map(x -> DecisionModelMessage
+                                                                                                                        .from(x))
+                                                                                                        .collect(Collectors
+                                                                                                                        .toSet()),
+                                                                                        result.errors()).toJsonString()
+                                                                                        .ifPresent(ctx::result);
+                                                                } else {
+                                                                        ctx.status(500);
+                                                                }
+                                                        })
                                         .get(
                                                         "/integrate",
                                                         ctx -> {
                                                                 var integrated = reverseIdentification(
-                                                                                solvedDecisionModels,
-                                                                                designModels);
+                                                                                globalSolvedDecisionModels,
+                                                                                globalDesignModels);
                                                                 ctx.result(objectMapper.writeValueAsString(integrated
                                                                                 .stream()
                                                                                 .map(x -> DesignModelMessage.from(x))
@@ -112,7 +160,14 @@ public interface StandaloneIdentificationModule extends IdentificationModule {
                                                         Exception.class,
                                                         (e, ctx) -> {
                                                                 e.printStackTrace();
-                                                        });
+                                                        })
+                                        .updateConfig(config -> {
+                                                config.jetty.multipartConfig.maxTotalRequestSize(1, SizeUnit.GB);
+                                                config.jetty.contextHandlerConfig(ctx -> {
+                                                        ctx.setMaxFormContentSize(100000000);
+                                                });
+                                                config.http.maxRequestSize = 100000000;
+                                        });
                         server.events(es -> {
                                 es.serverStarted(() -> {
                                         System.out.println("INITIALIZED " + server.port());

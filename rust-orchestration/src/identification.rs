@@ -11,7 +11,9 @@ use std::{
 
 use rayon::prelude::*;
 
-use idesyde_blueprints::{DesignModelMessage, IdentificationResultMessage, OpaqueDecisionModel};
+use idesyde_blueprints::{
+    DecisionModelMessage, DesignModelMessage, IdentificationResultMessage, OpaqueDecisionModel,
+};
 use idesyde_core::{
     headers::{DecisionModelHeader, DesignModelHeader},
     DecisionModel, DesignModel, IdentificationModule, IdentificationResult,
@@ -159,7 +161,7 @@ impl IdentificationModule for ExternalServerIdentificationModule {
 
     fn identification_step(
         &self,
-        iteration: i32,
+        _iteration: i32,
         design_models: &Vec<Arc<dyn DesignModel>>,
         decision_models: &Vec<Arc<dyn DecisionModel>>,
     ) -> IdentificationResult {
@@ -175,42 +177,58 @@ impl IdentificationModule for ExternalServerIdentificationModule {
         // self.write_line_to_input(
         //     format!("SET reverse-path {}", self.reverse_path.display()).as_str(),
         // );
-        for design_model in design_models {
+        let mut form = reqwest::blocking::multipart::Form::new();
+        for (i, design_model) in design_models.iter().enumerate() {
             // let message = DesignModelMessage::from_dyn_design_model(design_model.as_ref());
-            match self.send_design(design_model.as_ref()) {
-                Ok(_) => {}
-                Err(e) => warn!(
-                    "Module {} had an error while recieving a design model at {}.",
-                    self.unique_identifier(),
-                    e.url().map(|x| x.as_str()).unwrap_or("<MissingUrl>")
+            form = form.part(
+                format!("designModel{}", i),
+                reqwest::blocking::multipart::Part::text(
+                    DesignModelMessage::from(design_model).to_json_str(),
                 ),
-            }
+            );
+            // match self.send_design(design_model.as_ref()) {
+            //     Ok(_) => {}
+            //     Err(e) => warn!(
+            //         "Module {} had an error while recieving a design model at {}.",
+            //         self.unique_identifier(),
+            //         e.url().map(|x| x.as_str()).unwrap_or("<MissingUrl>")
+            //     ),
+            // }
             // self.write_line_to_input(format!("DESIGN {}", message.to_json_str()).as_str())
             //     .expect("Error at writing");
             // println!("DESIGN {}", message.to_json_str());
         }
-        for decision_model in decision_models {
+        for (i, decision_model) in decision_models.iter().enumerate() {
             // let message = DecisionModelMessage::from_dyn_decision_model(decision_model.as_ref());
-            if let Err(e) = self.send_decision(decision_model.as_ref()) {
-                warn!(
-                    "Module {} had an error while recieving a decision model at {}.",
-                    self.unique_identifier(),
-                    e.url().map(|x| x.as_str()).unwrap_or("<MissingUrl>")
-                );
-            }
+            // if let Err(e) = self.send_decision(decision_model.as_ref()) {
+            //     warn!(
+            //         "Module {} had an error while recieving a decision model at {}.",
+            //         self.unique_identifier(),
+            //         e.url().map(|x| x.as_str()).unwrap_or("<MissingUrl>")
+            //     );
+            // }
+            form = form.part(
+                format!("decisionModel{}", i),
+                reqwest::blocking::multipart::Part::text(
+                    DecisionModelMessage::from(decision_model).to_json_str(),
+                ),
+            );
             // let h = decision_model.header();
             // self.write_line_to_input(format!("DECISION INLINE {}", message.to_json_str()).as_str())
             //     .expect("Error at writing");
         }
-        // self.write_line_to_input(format!("IDENTIFY {}", iteration).as_str());
-        if let Ok(response) = self
-            .send_command(
-                "identify",
-                &vec![("iteration", format!("{}", iteration).as_str())],
-            )
+        match self
+            .get_client()
+            .post(format!(
+                "http://{}:{}/identify",
+                self.get_address(),
+                self.get_port()
+            ))
+            .multipart(form)
+            .send()
             .and_then(|x| x.text())
         {
-            match IdentificationResultMessage::try_from(response.as_str()) {
+            Ok(response) => match IdentificationResultMessage::try_from(response.as_str()) {
                 Ok(v) => {
                     return (
                         v.identified
@@ -234,8 +252,50 @@ impl IdentificationModule for ExternalServerIdentificationModule {
                     );
                     debug!("Response was: {}", response.as_str());
                 }
+            },
+            Err(err) => {
+                warn!(
+                    "Had an error while recovering identification results from module {}. Attempting to continue.",
+                    self.unique_identifier()
+                );
+                debug!("Recv error is: {}", err.to_string());
             }
-        };
+        }
+        {};
+        // self.write_line_to_input(format!("IDENTIFY {}", iteration).as_str());
+        // if let Ok(response) = self
+        //     .send_command(
+        //         "identify",
+        //         &vec![("iteration", format!("{}", iteration).as_str())],
+        //     )
+        //     .and_then(|x| x.text())
+        // {
+        //     match IdentificationResultMessage::try_from(response.as_str()) {
+        //         Ok(v) => {
+        //             return (
+        //                 v.identified
+        //                     .iter()
+        //                     .map(|x| {
+        //                         Arc::new(OpaqueDecisionModel::from(x)) as Arc<dyn DecisionModel>
+        //                     })
+        //                     .collect(),
+        //                 v.errors,
+        //             );
+        //         }
+        //         Err(e) => {
+        //             warn!(
+        //                 "Module {} produced an error at identification. Check it for correctness",
+        //                 self.unique_identifier()
+        //             );
+        //             debug!(
+        //                 "Module {} error: {}",
+        //                 self.unique_identifier(),
+        //                 e.to_string()
+        //             );
+        //             debug!("Response was: {}", response.as_str());
+        //         }
+        //     }
+        // };
         (vec![], HashSet::new())
         // self.map_output(|buf| {
         //     buf.lines()

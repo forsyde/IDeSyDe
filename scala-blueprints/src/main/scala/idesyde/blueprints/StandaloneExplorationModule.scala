@@ -18,6 +18,7 @@ import upickle.core.AbortException
 import java.nio.channels.ClosedChannelException
 import java.{util => ju}
 import org.eclipse.jetty.io.EofException
+import io.javalin.config.SizeUnit
 
 /** The trait/interface for an exploration module that provides the explorers rules required to
   * explored identified design spaces [1].
@@ -384,7 +385,7 @@ trait StandaloneExplorationModule
         ws => {
           var solutions           = mutable.Set[DecisionModel]()
           var solutionsObjectives = mutable.Map[DecisionModel, Map[String, Double]]()
-          var configuration       = ExplorerConfiguration(0, 0, 0, 0, 0, 0, false)
+          var configuration       = ExplorerConfiguration(0, 0, 0, 0, 0, 0, false, Set())
           ws.onMessage(ctx => {
             ctx.enableAutomaticPings(5, TimeUnit.SECONDS)
             try {
@@ -446,7 +447,14 @@ trait StandaloneExplorationModule
             case _                         => e.printStackTrace()
           }
         }
-      );
+      )
+      .updateConfig(config => {
+        config.jetty.multipartConfig.maxTotalRequestSize(1, SizeUnit.GB)
+        config.jetty.contextHandlerConfig(ctx => {
+          ctx.setMaxFormContentSize(100000000)
+        })
+        config.http.maxRequestSize = 100000000
+      })
     server.events(es => {
       es.serverStarted(() => {
         System.out.println("INITIALIZED " + server.port());

@@ -13,6 +13,7 @@ import idesyde.core.headers.DecisionModelHeader;
 
 public record InstrumentedMemoryRequirements(
                 @JsonProperty("processes") Set<String> processes,
+                Set<String> channels,
                 @JsonProperty("processing_elements") Set<String> processingElements,
                 @JsonProperty("memory_requirements") Map<String, Map<String, Long>> memoryRequirements)
                 implements DecisionModel {

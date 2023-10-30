@@ -2,6 +2,7 @@ package idesyde.core;
 
 import idesyde.core.headers.ExplorationBidding;
 
+import java.util.HashSet;
 import java.util.Map;
 import java.util.Set;
 import java.util.stream.Stream;
@@ -70,6 +71,8 @@ public interface Explorer {
         @JsonProperty("memory_resolution")
         public long memoryDiscretizationFactor = -1L;
         public boolean strict = false;
+        @JsonProperty("target_objectives")
+        public Set<String> targetObjectives = new HashSet<>();
 
         public Configuration() {
             // this.totalExplorationTimeOutInSecs = -1L;

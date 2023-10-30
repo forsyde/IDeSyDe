@@ -461,7 +461,7 @@ impl CombinedExplorerIterator {
                 e,
                 m,
                 currrent_solutions.to_owned(),
-                exploration_configuration,
+                exploration_configuration.to_owned(),
             );
             sol_channels.push(sc);
             completed_channels.push(cc);
@@ -586,11 +586,11 @@ pub fn explore_cooperatively(
     MultiLevelCombinedExplorerIterator {
         explorers_and_models: explorers_and_models.clone(),
         solutions: currrent_solutions.clone(),
-        exploration_configuration,
+        exploration_configuration: exploration_configuration.to_owned(),
         levels: vec![CombinedExplorerIterator::start(
             explorers_and_models,
             currrent_solutions,
-            exploration_configuration,
+            exploration_configuration.to_owned(),
         )],
         converged_to_last_level: false,
     }

@@ -11,15 +11,18 @@ import idesyde.core.DesignModel;
 import idesyde.core.headers.DesignModelHeader;
 
 import java.util.Optional;
+import java.util.List;
+import java.util.ArrayList;
 
 @JsonSerialize
 @JsonInclude(JsonInclude.Include.NON_ABSENT)
 public record DesignModelMessage(
         DesignModelHeader header,
-        Optional<String> body) {
+        Optional<String> body,
+        List<String> extensions) {
 
     public static DesignModelMessage from(DesignModel m) {
-        return new DesignModelMessage(m.header(), m.bodyAsString());
+        return new DesignModelMessage(m.header(), m.bodyAsString(), new ArrayList<>());
     }
 
     public Optional<String> toJsonString() {

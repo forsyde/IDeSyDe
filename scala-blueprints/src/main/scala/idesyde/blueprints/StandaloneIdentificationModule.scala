@@ -27,6 +27,8 @@ import java.io.PrintStream
 import ujson.ParsingFailedException
 import io.javalin.Javalin
 import java.nio.charset.StandardCharsets
+import upickle.core.AbortException
+import io.javalin.config.SizeUnit
 
 /** The trait/interface for an identification module that provides the identification and
   * integration rules required to power the design space identification process [1].
@@ -450,7 +452,7 @@ trait StandaloneIdentificationModule
           (m, k) <- integrated.zipWithIndex
           // written <- designModelToOutput(m, integrationPath)
         ) {
-          sendOutputLine("DESIGN " + DesignModelMessage(m.header, m.bodyAsText).asText)
+          // sendOutputLine("DESIGN " + DesignModelMessage(m.header, m.bodyAsText).asText)
           // val header = m.header.copy(model_paths = Set(written.toString))
           // val (hPath, bPath) = header.writeToPath(
           //   integrationPath,
@@ -543,6 +545,67 @@ trait StandaloneIdentificationModule
           )
         }
       )
+      .post(
+        "/identify",
+        ctx => {
+          if (ctx.isMultipartFormData()) {
+            var decisionModels = mutable.Set[DecisionModel]()
+            var designModels   = mutable.Set[DesignModel]()
+            var iteration =
+              if (
+                ctx
+                  .queryParamMap()
+                  .containsKey("iteration")
+              ) then
+                Integer.parseInt(
+                  ctx
+                    .queryParam("iteration")
+                )
+              else 0
+            ctx
+              .formParamMap()
+              .forEach((name, entries) => {
+                if (name.startsWith("decisionModel")) {
+                  entries.forEach(msg =>
+                    try {
+                      decisionMessageToModel(DecisionModelMessage.fromJsonString(msg))
+                        .foreach(decisionModels.add)
+                    } catch {
+                      case e: AbortException =>
+                      case e                 => e.printStackTrace()
+                    }
+                  )
+                } else if (name.startsWith("designModel")) {
+                  entries.forEach(msg =>
+                    try {
+                      designMessageToModel(DesignModelMessage.fromJsonString(msg))
+                        .foreach(designModels.add)
+                    } catch {
+                      case e: AbortException =>
+                      case e                 => e.printStackTrace()
+                    }
+                  )
+                }
+              });
+            val (identified, errors) = identificationStep(
+              iteration,
+              designModels.toSet,
+              decisionModels.toSet
+            )
+            decisionModels ++= identified
+            ctx.result(
+              write(
+                IdentificationResultMessage(
+                  identified.map(DecisionModelMessage.fromDecisionModel(_)),
+                  errors
+                )
+              )
+            )
+          } else {
+            ctx.status(500);
+          }
+        }
+      )
       .get(
         "/integrate",
         ctx => {
@@ -559,6 +622,13 @@ trait StandaloneIdentificationModule
           e.printStackTrace()
         }
       )
+      .updateConfig(config => {
+        config.jetty.multipartConfig.maxTotalRequestSize(1, SizeUnit.GB)
+        config.jetty.contextHandlerConfig(ctx => {
+          ctx.setMaxFormContentSize(100000000)
+        })
+        config.http.maxRequestSize = 100000000
+      })
     server.events(es => {
       es.serverStarted(() => {
         println("INITIALIZED " + server.port())

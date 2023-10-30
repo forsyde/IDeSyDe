@@ -7,7 +7,8 @@ import idesyde.core.DesignModel
 
 final case class DesignModelMessage(
     val header: DesignModelHeader,
-    val body: Option[String]
+    val body: Option[String],
+    val extensions: List[String]
 ) {
 
   def asText: String = write(this)
@@ -27,20 +28,22 @@ object DesignModelMessage {
       x =>
         ujson.Obj(
           "header" -> writeJs(x.header),
-          "body"   -> x.body.map(ujson.Str(_)).getOrElse(ujson.Null)
+          "body"   -> x.body.map(ujson.Str(_)).getOrElse(ujson.Null),
+          "body"   -> writeJs(x.extensions)
         ),
       json =>
         DesignModelMessage(
           json.objOpt
             .flatMap(_.get("header").map(read[DesignModelHeader](_)))
             .get,
-          json.objOpt.flatMap(_.get("body").flatMap(_.strOpt))
+          json.objOpt.flatMap(_.get("body").flatMap(_.strOpt)),
+          json.objOpt.flatMap(_.get("extensions")).map(read[List[String]](_)).getOrElse(List())
         )
     )
 
   def fromJsonString(s: String): DesignModelMessage = read(s)
 
   def fromDesignModel(m: DesignModel): DesignModelMessage =
-    DesignModelMessage(m.header, m.bodyAsText)
+    DesignModelMessage(m.header, m.bodyAsText, List())
 
 }

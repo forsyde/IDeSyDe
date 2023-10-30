@@ -99,6 +99,12 @@ struct Args {
 
     #[arg(
         long,
+        help = "Specifies target optimisation objectives as goal. If none is specified, all possible optimisation objectives are goals."
+    )]
+    x_target_objectives: Vec<String>,
+
+    #[arg(
+        long,
         help = "An URL for exploration modules that are not created and destroyed by the orchestrator. Currently supported protocols are: http."
     )]
     emodule: Option<Vec<String>>,
@@ -341,7 +347,7 @@ fn main() {
         // add an "Opaque" design model header so that all modules are aware of the input models
         let design_models: Vec<Arc<dyn DesignModel>> = sorted_inputs
             .iter()
-            .map(|s| Arc::new(OpaqueDesignModel::from_path_str(s)) as Arc<dyn DesignModel>)
+            .map(|s| Arc::new(OpaqueDesignModel::from(Path::new(s))) as Arc<dyn DesignModel>)
             .collect();
         for m in &design_models {
             if m.body_as_string().is_none() {
@@ -458,6 +464,12 @@ fn main() {
                     .strict(args.strict)
                     .improvement_timeout(args.x_improvement_time_out.unwrap_or(0))
                     .improvement_iterations(args.x_improvement_iterations.unwrap_or(0))
+                    .target_objectives(
+                        args.x_target_objectives
+                            .iter()
+                            .map(|x| x.to_string())
+                            .collect(),
+                    )
                     .build(),
             ) {
                 // let sol_dominated = dominant_sols.iter().any(|(_, y)| {

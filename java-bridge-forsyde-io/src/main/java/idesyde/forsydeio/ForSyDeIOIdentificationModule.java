@@ -68,7 +68,8 @@ public class ForSyDeIOIdentificationModule implements StandaloneIdentificationMo
                 new MemoryMappableMultiCoreIRule(),
                 new ForSyDeIOSYNetworkToAADataflowIRule(),
                 new ForSyDeIOSYAndSDFInstrumentedToMemReqIRule(),
-                new TiledMultiCoreIRule());
+                new TiledMultiCoreIRule(),
+                new InstrumentedComputationTimesIRule());
     }
 
     public static void main(String[] args) {

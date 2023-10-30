@@ -6,6 +6,59 @@ use idesyde_core::{
 use schemars::JsonSchema;
 use serde::{Deserialize, Serialize};
 
+/// A model that abstracts concurrent processes where stimulus and dataflow are separate.
+///
+/// This abstraction encodes any workload as a combination of concurrent tasks and data channels.
+/// The concurrent tasks can be activated in accordance to incoming periodic stimulus.
+/// Whenever these are activated, they read their incoming data channels,
+/// they propagate stimulus to outgoing concurrent tasks and write to outgoing channels.
+/// The network of stimulus propagation can include downsampling and upsamling so that tasks
+/// can working in a multi-rate fashion.
+///
+/// This model also has OR and AND triggering semantics.
+/// If there are multiple incoming stimulae, and the stimulated element follows a OR semantic,
+/// it it must be triggered with *each* incoming stimulae, and propagate them.
+/// Otherwise, if the stimulated element follows a AND semantic, it only triggers *with all*
+/// incoming stimulae, as if the stimulated element is waiting for all incoming stimulae to arrive.
+///
+/// ## Example model
+///
+/// The following diagram exemplifies all the possible connnections.
+///
+/// ```text
+///             ┌──────────────┐     ┌──────┐
+///             │Data channel 1├────►│Task 3│
+///             └──────────────┘     └──────┘
+///                ▲
+///                │
+/// ┌───────┐   ┌──┴───┐   ┌─────────────┐   ┌──────┐
+/// │10 secs├──►│Task 1├──►│Upsample by 3├──►│Task 2│
+/// └───────┘   └┬─┬───┘   └─────────────┘   └──────┘
+///              │ │
+///              │ │ ┌───────────────┐
+///              │ └►│Downsample by 2├──────┐
+///              │   └───────────────┘      ▼
+///              │                       ┌──────┐
+///              │                       │Task 4│
+///              │                       └──────┘
+///              │   ┌──────────────┐       ▲
+///              └──►│Data channel 2├───────┘
+///                  └──────────────┘
+/// ```
+/// Task 1 must be executed every 10 seconds as it is directly stimulated by a 10 second source.
+/// Task 2 executes every 10/3 seconds since it is upsampled from Task 1; yet, Tasks 1 and 2 do *not* communicate.
+/// Task 3 has no periodic activation whatsover in this diagram, but it is known that it recieved data from Task 1 via Data Channel 1.
+/// Task 4 executes every 20 seconds as downsampled from Task 1 *and* consumed data produced by it every 20 seconds;
+/// naturally, the data received is from every other execution of Task 1.
+///
+/// ## References
+///
+/// This model is a small abstraction on top of the extended-dependency periodic task model proposed by Forget
+/// and seemingly used by the PRELUDE synchornous programming language in the following text:
+///
+/// J. Forget, F. Boniol, E. Grolleau, D. Lesens, and C. Pagetti, ‘Scheduling Dependent Periodic Tasks without Synchronization Mechanisms’,
+/// in 2010 16th IEEE Real-Time and Embedded Technology and Applications Symposium, Apr. 2010, pp. 301–310. doi: 10.1109/RTAS.2010.26.
+///
 #[derive(Debug, PartialEq, Eq, Serialize, Deserialize, Clone, JsonSchema)]
 pub struct CommunicatingAndTriggeredReactiveWorkload {
     pub tasks: Vec<String>,
@@ -362,7 +415,7 @@ impl DecisionModel for PartitionedMemoryMappableMulticore {
 ///
 /// 2. executing the job graph as presented guarantees that the dataflow processes are live (never deadlocked).
 ///
-/// 3. The job graph ois weakly connected. If you wish to have multiple "applications", you should generate
+/// 3. The job graph is weakly connected. If you wish to have multiple "applications", you should generate
 /// one decision model for each application.
 #[derive(Debug, PartialEq, Serialize, Deserialize, Clone, JsonSchema)]
 pub struct AperiodicAsynchronousDataflow {
@@ -438,7 +491,7 @@ impl DecisionModel for InstrumentedComputationTimes {
 
 /// A decision model to hold memory requirements for processes when executing in processing elements.
 ///
-/// As the decision model stores these computation in associative arrays (maps), the lack
+/// As the decision model stores these memory requirements in associative arrays (maps), the lack
 /// of an association between a process and a processing element means that
 /// this process _cannot_ be executed in the processing element.
 ///
@@ -446,6 +499,7 @@ impl DecisionModel for InstrumentedComputationTimes {
 #[derive(Debug, PartialEq, Serialize, Deserialize, Clone, JsonSchema)]
 pub struct InstrumentedMemoryRequirements {
     pub processes: HashSet<String>,
+    pub channels: HashSet<String>,
     pub processing_elements: HashSet<String>,
     pub memory_requirements: HashMap<String, HashMap<String, u64>>,
 }

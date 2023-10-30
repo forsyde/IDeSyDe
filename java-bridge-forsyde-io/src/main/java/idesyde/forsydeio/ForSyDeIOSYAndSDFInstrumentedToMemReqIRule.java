@@ -1,6 +1,7 @@
 package idesyde.forsydeio;
 
 import java.util.HashMap;
+import java.util.HashSet;
 import java.util.Map;
 import java.util.Set;
 import java.util.stream.Collectors;
@@ -24,20 +25,48 @@ class ForSyDeIOSYAndSDFInstrumentedToMemReqIRule implements IdentificationRule {
                 model.mergeInPlace(m.systemGraph());
             }
         }
+        Set<String> processes = new HashSet<>();
+        Set<String> channels = new HashSet<>();
         Map<String, Map<String, Long>> memMapping = new HashMap<>();
         for (var v : model.vertexSet()) {
             ForSyDeHierarchy.InstrumentedBehaviour.tryView(model, v).ifPresent(ib -> {
+                processes.add(ib.getIdentifier());
                 for (var peV : model.vertexSet()) {
-                    ForSyDeHierarchy.GenericProcessingModule.tryView(model, peV).ifPresent(pe -> {
+                    ForSyDeHierarchy.InstrumentedProcessingModule.tryView(model, peV).ifPresentOrElse(inspe -> {
                         if (!memMapping.containsKey(ib.getIdentifier())) {
                             memMapping.put(ib.getIdentifier(), new HashMap<>());
                         }
-                        memMapping.get(ib.getIdentifier()).put(pe.getIdentifier(),
-                                ib.maxSizeInBits().values().stream().mapToLong(x -> x.longValue()).max().orElse(0L));
+                        memMapping.get(ib.getIdentifier()).put(inspe.getIdentifier(),
+                                ib.maxSizeInBits().entrySet().stream()
+                                        .filter(e -> inspe.modalInstructionCategory().contains(e.getKey()))
+                                        .mapToLong(e -> e.getValue()).max()
+                                        .orElse(0L));
+                    }, () -> {
+                        ForSyDeHierarchy.GenericProcessingModule.tryView(model, peV).ifPresent(pe -> {
+                            if (!memMapping.containsKey(ib.getIdentifier())) {
+                                memMapping.put(ib.getIdentifier(), new HashMap<>());
+                            }
+                            memMapping.get(ib.getIdentifier()).put(pe.getIdentifier(),
+                                    ib.maxSizeInBits().values().stream().mapToLong(x -> x.longValue()).max()
+                                            .orElse(0L));
+                        });
+                    });
+                }
+            });
+            ForSyDeHierarchy.InstrumentedDataType.tryView(model, v).ifPresent(idt -> {
+                channels.add(idt.getIdentifier());
+                for (var peV : model.vertexSet()) {
+                    ForSyDeHierarchy.GenericProcessingModule.tryView(model, peV).ifPresent(pe -> {
+                        if (!memMapping.containsKey(idt.getIdentifier())) {
+                            memMapping.put(idt.getIdentifier(), new HashMap<>());
+                        }
+                        memMapping.get(idt.getIdentifier()).put(pe.getIdentifier(),
+                                idt.maxSizeInBits().values().stream().mapToLong(x -> x.longValue()).max().orElse(0L));
                     });
                 }
             });
         }
+
         // accept if all SDF or SY behaviours are instrumented
         var allSYOk = model.vertexSet().stream().filter(v -> ForSyDeHierarchy.SYProcess.tryView(model, v).isPresent())
                 .allMatch(
@@ -53,11 +82,9 @@ class ForSyDeIOSYAndSDFInstrumentedToMemReqIRule implements IdentificationRule {
             return new IdentificationResult(Set.of(), Set.of(
                     "ForSyDeIOSYAndSDFInstrumentedToMemReqIRule: not all SDF actors have their memory instrumented"));
         }
-        return new IdentificationResult(Set.of(
-                new InstrumentedMemoryRequirements(memMapping.keySet(),
-                        memMapping.values().stream().flatMap(e -> e.keySet().stream()).collect(Collectors.toSet()),
-                        memMapping)),
-                Set.of());
+        return new IdentificationResult(Set.of(new InstrumentedMemoryRequirements(processes, channels,
+                memMapping.values().stream().flatMap(e -> e.keySet().stream()).collect(Collectors.toSet()),
+                memMapping)), Set.of());
     }
 
 }

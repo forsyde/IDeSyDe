@@ -1,3 +1,4 @@
+pub mod data;
 pub mod headers;
 pub mod macros;
 
@@ -29,6 +30,10 @@ use std::cmp::Ordering;
 pub trait DesignModel: Send + DowncastSync {
     fn category(&self) -> String;
 
+    fn extensions(&self) -> Vec<String> {
+        return vec![];
+    }
+
     fn header(&self) -> DesignModelHeader;
 
     fn body_as_string(&self) -> Option<String> {
@@ -44,8 +49,14 @@ pub trait DesignModel: Send + DowncastSync {
         let mut h = self.header();
         if let Some(j) = self.body_as_string() {
             let p = base_path.join(format!(
-                "body_{}_{}_{}.txt",
-                prefix_str, h.category, suffix_str
+                "body_{}_{}_{}.{}",
+                prefix_str,
+                h.category,
+                suffix_str,
+                self.extensions()
+                    .get(0)
+                    .map(|x| x.to_string())
+                    .unwrap_or("txt".to_string())
             ));
             std::fs::write(&p, j).expect("Failed to write JSON body of decision model.");
             if let Some(s) = p.to_str().map(|x| x.to_string()) {
@@ -65,6 +76,24 @@ impl PartialEq<dyn DesignModel> for dyn DesignModel {
                 .body_as_string()
                 .and_then(|b| other.body_as_string().map(|bb| b == bb))
                 .unwrap_or(false)
+    }
+}
+
+impl DesignModel for Arc<dyn DesignModel> {
+    fn category(&self) -> String {
+        self.as_ref().category()
+    }
+
+    fn header(&self) -> DesignModelHeader {
+        self.as_ref().header()
+    }
+
+    fn extensions(&self) -> Vec<String> {
+        self.as_ref().extensions()
+    }
+
+    fn body_as_string(&self) -> Option<String> {
+        self.as_ref().body_as_string()
     }
 }
 
@@ -142,6 +171,28 @@ pub trait DecisionModel: Send + DowncastSync {
 }
 impl_downcast!(sync DecisionModel);
 
+impl DecisionModel for Arc<dyn DecisionModel> {
+    fn category(&self) -> String {
+        self.as_ref().category()
+    }
+
+    fn header(&self) -> DecisionModelHeader {
+        self.as_ref().header()
+    }
+
+    fn body_as_json(&self) -> Option<String> {
+        self.as_ref().body_as_json()
+    }
+
+    fn body_as_msgpack(&self) -> Option<Vec<u8>> {
+        self.as_ref().body_as_msgpack()
+    }
+
+    fn body_as_cbor(&self) -> Option<Vec<u8>> {
+        self.as_ref().body_as_cbor()
+    }
+}
+
 impl DecisionModel for DecisionModelHeader {
     fn category(&self) -> String {
         self.category.to_owned()
@@ -210,7 +261,7 @@ impl Hash for dyn IdentificationModule {
     }
 }
 
-#[derive(Clone, Copy, PartialEq, Eq, serde::Serialize, serde::Deserialize)]
+#[derive(Clone, PartialEq, Eq, serde::Serialize, serde::Deserialize)]
 pub struct ExplorationConfiguration {
     pub max_sols: u64,
     pub total_timeout: u64,
@@ -219,9 +270,10 @@ pub struct ExplorationConfiguration {
     pub memory_resolution: u64,
     pub improvement_iterations: u64,
     pub strict: bool,
+    pub target_objectives: HashSet<String>,
 }
 
-#[derive(Clone, Copy, PartialEq, Eq)]
+#[derive(Clone, PartialEq, Eq)]
 pub struct ExplorationConfigurationBuilder {
     max_sols: u64,
     total_timeout: u64,
@@ -230,6 +282,7 @@ pub struct ExplorationConfigurationBuilder {
     memory_resolution: u64,
     improvement_iterations: u64,
     strict: bool,
+    target_objectives: HashSet<String>,
 }
 
 impl ExplorationConfigurationBuilder {
@@ -242,6 +295,7 @@ impl ExplorationConfigurationBuilder {
             memory_resolution: 0,
             improvement_iterations: 0,
             strict: false,
+            target_objectives: HashSet::new(),
         }
     }
 
@@ -254,6 +308,7 @@ impl ExplorationConfigurationBuilder {
             memory_resolution: self.memory_resolution,
             improvement_iterations: self.improvement_iterations,
             strict: self.strict,
+            target_objectives: self.target_objectives.clone(),
         }
     }
 
@@ -283,6 +338,16 @@ impl ExplorationConfigurationBuilder {
     }
     pub fn strict(&mut self, val: bool) -> &mut Self {
         self.strict = val;
+        self
+    }
+
+    pub fn target_objectives(&mut self, val: HashSet<String>) -> &mut Self {
+        self.target_objectives = val;
+        self
+    }
+
+    pub fn add_target_objectives(&mut self, val: String) -> &mut Self {
+        self.target_objectives.insert(val);
         self
     }
 }

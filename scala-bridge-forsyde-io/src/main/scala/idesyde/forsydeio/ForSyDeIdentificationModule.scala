@@ -75,8 +75,8 @@ object ForSyDeIdentificationModule
     MarkedIdentificationRule.DesignModelOnlyIdentificationRule(identSharedMemoryMultiCore),
     identPeriodicWorkloadToPartitionedSharedMultiCoreWithUtilization,
     // MarkedIdentificationRule.DesignModelOnlyIdentificationRule(identAperiodicDataflowFromSY),
-    MarkedIdentificationRule.DesignModelOnlyIdentificationRule(identRuntimesAndProcessors),
-    MarkedIdentificationRule.DesignModelOnlyIdentificationRule(identInstrumentedComputationTimes)
+    MarkedIdentificationRule.DesignModelOnlyIdentificationRule(identRuntimesAndProcessors)
+    // MarkedIdentificationRule.DesignModelOnlyIdentificationRule(identInstrumentedComputationTimes)
   )
 
   val reverseIdentificationRules = Set(

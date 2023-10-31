@@ -43,6 +43,12 @@ jobs:
           cp ./target/release/idesyde-orchestration idesyde
           python -m pip install robotframework
           python -m robot --exclude slow TestsBenchmark.robot
+      - uses: actions/upload-artifact@v3
+        with:
+          name: test case logs at @ ${{ github.ref }}
+          path: |
+            log.html
+            report.html
   #     - name: Cache-out java imodules
   #       uses: actions/cache@v3
   #       with:

@@ -46,7 +46,7 @@ jobs:
       - uses: actions/upload-artifact@v3
         if: success() || failure()
         with:
-          name: test case logs at @ ${{ github.ref }}
+          name: test case logs
           path: |
             log.html
             report.html

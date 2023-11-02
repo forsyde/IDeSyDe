@@ -228,12 +228,11 @@ public interface CanExploreAADPMMMWithJenetics extends AperiodicAsynchronousData
             jobIdxGraph.addEdge(src, dst);
         });
         var engine = Engine
-                .builder(g -> evaluateAADPMMM(g, jobs, jobIdxGraph, configuration), codec)
+                .builder(g -> evaluateAADPMMM(g, jobs, jobIdxGraph, configuration), allConstraints.constrain(codec))
                 .populationSize(decisionModel.partitionedMemMappableMulticore().runtimes().runtimes()
                         .size() * decisionModel.aperiodicAsynchronousDataflows().size() * 5)
                 .offspringSelector(new TournamentSelector<>(5))
                 .survivorsSelector(UFTournamentSelector.ofVec())
-                // .alterers(new Mutator<>(0.05))
                 .constraint(allConstraints)
                 .alterers(
                         new UniformCrossover<>(0.2, 0.25),
@@ -261,7 +260,6 @@ public interface CanExploreAADPMMMWithJenetics extends AperiodicAsynchronousData
         // ? decodedStream.limit(configuration.maximumSolutions)
         // : decodedStream;
         return limitedImprovementStream
-                .filter(sol -> allConstraints.test(sol.bestPhenotype()))
                 .map(sol -> {
                     var decoded = codec.decode(sol.bestPhenotype().genotype());
                     var solMap = new HashMap<String, Double>(sol.bestFitness().length());

@@ -19,33 +19,31 @@ public class FeasibleMappingConstraint<T extends Comparable<? super T>>
 
     private final int numMappables;
 
-    private final Random random = new Random();
-
     public FeasibleMappingConstraint(
-            AperiodicAsynchronousDataflowToPartitionedMemoryMappableMulticore decisionModel
-    ) {
+            AperiodicAsynchronousDataflowToPartitionedMemoryMappableMulticore decisionModel) {
         taskSchedulingGenotypeIdx = 1;
-        var processors = decisionModel.partitionedMemMappableMulticore().hardware().processingElems().stream().collect(Collectors.toList());
-        numMappables = processors.size();
-        allowedMappings = decisionModel.aperiodicAsynchronousDataflows().stream().flatMap(app -> app.processes().stream()).map(
-                proc -> decisionModel.instrumentedComputationTimes().worstExecutionTimes().get(proc).keySet().stream().map(
-                        processors::indexOf
-                ).collect(Collectors.toList())
-        )
+        var schedulers = decisionModel.partitionedMemMappableMulticore().runtimes().runtimes().stream().toList();
+        numMappables = schedulers.size();
+        allowedMappings = decisionModel
+                .aperiodicAsynchronousDataflows().stream().flatMap(app -> app.processes().stream()).map(
+                        proc -> decisionModel.instrumentedComputationTimes().worstExecutionTimes().get(proc).keySet()
+                                .stream().map(pe ->
+                                        schedulers.indexOf(decisionModel.partitionedMemMappableMulticore().runtimes().processorAffinities().get(pe)))
+                                .collect(Collectors.toList()))
                 .collect(Collectors.toList());
     }
 
     public FeasibleMappingConstraint(
-            AperiodicAsynchronousDataflowToPartitionedTiledMulticore decisionModel
-    ) {
+            AperiodicAsynchronousDataflowToPartitionedTiledMulticore decisionModel) {
         taskSchedulingGenotypeIdx = 0;
-        var processors = decisionModel.partitionedTiledMulticore().hardware().processors().stream().collect(Collectors.toList());
-        numMappables = processors.size();
-        allowedMappings = decisionModel.aperiodicAsynchronousDataflows().stream().flatMap(app -> app.processes().stream()).map(
-                        proc -> decisionModel.instrumentedComputationTimes().worstExecutionTimes().get(proc).keySet().stream().map(
-                                processors::indexOf
-                        ).collect(Collectors.toList())
-                )
+        var schedulers = decisionModel.partitionedTiledMulticore().runtimes().runtimes().stream().toList();
+        numMappables = schedulers.size();
+        allowedMappings = decisionModel
+                .aperiodicAsynchronousDataflows().stream().flatMap(app -> app.processes().stream()).map(
+                        proc -> decisionModel.instrumentedComputationTimes().worstExecutionTimes().get(proc).keySet()
+                                .stream().map(pe ->
+                                        schedulers.indexOf(decisionModel.partitionedTiledMulticore().runtimes().processorAffinities().get(pe)))
+                                .collect(Collectors.toList()))
                 .collect(Collectors.toList());
     }
 
@@ -67,7 +65,7 @@ public class FeasibleMappingConstraint<T extends Comparable<? super T>>
             var gene = individual.genotype().get(taskSchedulingGenotypeIdx).get(i);
             var processAllowed = allowedMappings.get(i);
             if (!processAllowed.contains(gene.allele())) {
-                var randomPE = processAllowed.get(random.nextInt(processAllowed.size()));
+                var randomPE = processAllowed.get(Math.floorMod(generation, processAllowed.size()));
                 repaired.add(IntegerGene.of(randomPE, 0, numMappables));
             } else {
                 repaired.add(gene);

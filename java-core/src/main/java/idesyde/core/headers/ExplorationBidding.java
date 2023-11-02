@@ -10,7 +10,7 @@ import java.util.Set;
 public record ExplorationBidding(
 		@JsonProperty("explorer_unique_identifier") String explorerUniqueIdentifier,
 		@JsonProperty("can_explore") Boolean canExplore,
-		@JsonProperty("is_complete") Boolean isComplete,
+		@JsonProperty("is_exact") Boolean isExact,
 		Double competitiveness,
 		@JsonProperty("target_objectives") Set<String> targetObjectives,
 		@JsonProperty("additional_numeric_properties") Map<String, Double> additionalNumericProperties) {

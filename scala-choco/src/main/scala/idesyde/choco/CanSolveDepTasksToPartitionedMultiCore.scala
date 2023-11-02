@@ -28,6 +28,7 @@ import idesyde.core.DecisionModel
 import idesyde.identification.choco.ChocoDecisionModel
 import idesyde.choco.HasDiscretizationToIntegers
 import idesyde.utils.Logger
+import idesyde.core.ExplorerConfiguration
 
 // object ConMonitorObj extends IMonitorContradiction {
 
@@ -48,8 +49,7 @@ final class CanSolveDepTasksToPartitionedMultiCore(using logger: Logger)
   override def buildChocoModel(
       m: PeriodicWorkloadToPartitionedSharedMultiCore,
       objectivesUpperLimits: Set[(PeriodicWorkloadToPartitionedSharedMultiCore, Map[String, Double])],
-      timeResolution: Long,
-      memoryResolution: Long
+      configuration: ExplorerConfiguration
   ): (Model, Map[String, IntVar]) = {
     val chocoModel = Model()
     val timeValues =
@@ -59,16 +59,16 @@ final class CanSolveDepTasksToPartitionedMultiCore(using logger: Logger)
       m.workload.processSizes
 
     def double2int(s: Double): Int = discretized(
-      if (timeResolution > Int.MaxValue.toLong) Int.MaxValue
-      else if (timeResolution <= 0L) timeValues.size * 100
-      else timeResolution.toInt,
+      if (configuration.time_resolution > Int.MaxValue.toLong) Int.MaxValue
+      else if (configuration.time_resolution <= 0L) timeValues.size * 100
+      else configuration.time_resolution.toInt,
       timeValues.max
     )(s)
     given Fractional[Long] = HasDiscretizationToIntegers.ceilingLongFractional
     def long2int(l: Long): Int = discretized(
-      if (memoryResolution > Int.MaxValue) Int.MaxValue
-      else if (memoryResolution <= 0L) memoryValues.size * 100
-      else memoryResolution.toInt,
+      if (configuration.memory_resolution > Int.MaxValue) Int.MaxValue
+      else if (configuration.memory_resolution <= 0L) memoryValues.size * 100
+      else configuration.memory_resolution.toInt,
       memoryValues.max
     )(l)
 
@@ -348,8 +348,7 @@ final class CanSolveDepTasksToPartitionedMultiCore(using logger: Logger)
   override def rebuildDecisionModel(
       m: PeriodicWorkloadToPartitionedSharedMultiCore,
       solution: Solution,
-      timeResolution: Long,
-      memoryResolution: Long
+      configuration: ExplorerConfiguration
   ): (PeriodicWorkloadToPartitionedSharedMultiCore, Map[String, Double]) = {
     val timeValues =
       (m.workload.periods ++ m.wcets.flatten ++ m.workload.relativeDeadlines)
@@ -357,17 +356,17 @@ final class CanSolveDepTasksToPartitionedMultiCore(using logger: Logger)
       m.workload.messagesMaxSizes ++
       m.workload.processSizes
     def int2double(d: Int) = undiscretized(
-      if (timeResolution > Int.MaxValue) Int.MaxValue
-      else if (timeResolution <= 0L) timeValues.size * 100
-      else timeResolution.toInt,
+      if (configuration.time_resolution > Int.MaxValue) Int.MaxValue
+      else if (configuration.time_resolution <= 0L) timeValues.size * 100
+      else configuration.time_resolution.toInt,
       timeValues.sum
     )(d)
     // val (discreteTimeValues, discreteMemoryValues) =
     //   computeTimeMultiplierAndMemoryDividerWithResolution(
     //     timeValues,
     //     memoryValues,
-    //     if (timeResolution > Int.MaxValue) Int.MaxValue else timeResolution.toInt,
-    //     if (memoryResolution > Int.MaxValue) Int.MaxValue else memoryResolution.toInt
+    //     if (configuration.time_resolution > Int.MaxValue) Int.MaxValue else configuration.time_resolution.toInt,
+    //     if (configuration.memory_resolution > Int.MaxValue) Int.MaxValue else configuration.memory_resolution.toInt
     //   )
     val intVars = solution.retrieveIntVars(true).asScala
     val processesMemoryMapping: Vector[Int] =

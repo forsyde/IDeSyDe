@@ -12,6 +12,7 @@ import org.chocosolver.solver.variables.IntVar
 import idesyde.exploration.explorers.SimpleWorkloadBalancingDecisionStrategy
 import org.chocosolver.solver.search.strategy.Search
 import idesyde.identification.choco.models.sdf.CompactingMultiCoreMapping
+import idesyde.core.ExplorerConfiguration
 
 final class CanSolvePeriodicWorkloadAndSDFServersToMulticore(using logger: Logger)
     extends ChocoExplorable[PeriodicWorkloadAndSDFServerToMultiCore]
@@ -26,8 +27,7 @@ final class CanSolvePeriodicWorkloadAndSDFServersToMulticore(using logger: Logge
   def buildChocoModel(
       m: PeriodicWorkloadAndSDFServerToMultiCore,
       objectivesUpperLimits: Set[(PeriodicWorkloadAndSDFServerToMultiCore, Map[String, Double])],
-      timeResolution: Long,
-      memoryResolution: Long
+      configuration: ExplorerConfiguration
   ): (Model, Map[String, IntVar]) = {
     val chocoModel = Model()
     val execMax    = m.wcets.flatten.max
@@ -46,20 +46,20 @@ final class CanSolvePeriodicWorkloadAndSDFServersToMulticore(using logger: Logge
     //   computeTimeMultiplierAndMemoryDividerWithResolution(
     //     timeValues,
     //     memoryValues,
-    //     if (timeResolution > Int.MaxValue) Int.MaxValue else timeResolution.toInt,
-    //     if (memoryResolution > Int.MaxValue) Int.MaxValue else memoryResolution.toInt
+    //     if (configuration.time_resolution > Int.MaxValue) Int.MaxValue else configuration.time_resolution.toInt,
+    //     if (configuration.memory_resolution > Int.MaxValue) Int.MaxValue else configuration.memory_resolution.toInt
     //   )
     def double2int(s: Double) = discretized(
-      if (timeResolution > Int.MaxValue) Int.MaxValue
-      else if (timeResolution <= 0L) timeValues.size * 1000
-      else timeResolution.toInt,
+      if (configuration.time_resolution > Int.MaxValue) Int.MaxValue
+      else if (configuration.time_resolution <= 0L) timeValues.size * 1000
+      else configuration.time_resolution.toInt,
       timeValues.sum
     )(s)
     given Fractional[Long] = HasDiscretizationToIntegers.ceilingLongFractional
     def long2int(l: Long) = discretized(
-      if (memoryResolution > Int.MaxValue) Int.MaxValue
-      else if (memoryResolution <= 0L) memoryValues.size * 100
-      else memoryResolution.toInt,
+      if (configuration.memory_resolution > Int.MaxValue) Int.MaxValue
+      else if (configuration.memory_resolution <= 0L) memoryValues.size * 100
+      else configuration.memory_resolution.toInt,
       memoryValues.max
     )(l)
 
@@ -407,8 +407,7 @@ final class CanSolvePeriodicWorkloadAndSDFServersToMulticore(using logger: Logge
   def rebuildDecisionModel(
       m: PeriodicWorkloadAndSDFServerToMultiCore,
       solution: Solution,
-      timeResolution: Long,
-      memoryResolution: Long
+      configuration: ExplorerConfiguration
   ): (PeriodicWorkloadAndSDFServerToMultiCore, Map[String, Double]) = {
     val timeValues =
       m.wcets.flatten ++ m.platform.hardware.maxTraversalTimePerBit.flatten
@@ -421,17 +420,17 @@ final class CanSolvePeriodicWorkloadAndSDFServersToMulticore(using logger: Logge
           mSize
         ) ++ m.tasksAndSDFs.workload.messagesMaxSizes ++ m.tasksAndSDFs.workload.processSizes
     def int2double(d: Int) = undiscretized(
-      if (timeResolution > Int.MaxValue) Int.MaxValue
-      else if (timeResolution <= 0L) timeValues.size * 1000
-      else timeResolution.toInt,
+      if (configuration.time_resolution > Int.MaxValue) Int.MaxValue
+      else if (configuration.time_resolution <= 0L) timeValues.size * 1000
+      else configuration.time_resolution.toInt,
       timeValues.sum
     )(d)
     // val (discreteTimeValues, discreteMemoryValues) =
     //   computeTimeMultiplierAndMemoryDividerWithResolution(
     //     timeValues,
     //     memoryValues,
-    //     if (timeResolution > Int.MaxValue) Int.MaxValue else timeResolution.toInt,
-    //     if (memoryResolution > Int.MaxValue) Int.MaxValue else memoryResolution.toInt
+    //     if (configuration.time_resolution > Int.MaxValue) Int.MaxValue else configuration.time_resolution.toInt,
+    //     if (configuration.memory_resolution > Int.MaxValue) Int.MaxValue else configuration.memory_resolution.toInt
     //   )
     val intVars = solution.retrieveIntVars(true).asScala
     // println(intVars.filter(v => v.getName().contains("effect") || v.getName().contains("utilization")).mkString(", "))

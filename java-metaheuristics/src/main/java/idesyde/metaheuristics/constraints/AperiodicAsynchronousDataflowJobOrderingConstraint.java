@@ -1,22 +1,24 @@
 package idesyde.metaheuristics.constraints;
 
-import java.util.ArrayList;
-import java.util.Arrays;
-import java.util.List;
-import java.util.Map;
-import java.util.Set;
+import java.util.*;
 import java.util.stream.Collectors;
 import java.util.stream.IntStream;
 
 import idesyde.common.AperiodicAsynchronousDataflow;
 import idesyde.common.AperiodicAsynchronousDataflowToPartitionedMemoryMappableMulticore;
 import idesyde.common.AperiodicAsynchronousDataflowToPartitionedTiledMulticore;
-import io.jenetics.Chromosome;
 import io.jenetics.Genotype;
 import io.jenetics.IntegerChromosome;
 import io.jenetics.IntegerGene;
 import io.jenetics.Phenotype;
 import io.jenetics.engine.Constraint;
+import org.jgrapht.Graph;
+import org.jgrapht.alg.TransitiveClosure;
+import org.jgrapht.alg.connectivity.ConnectivityInspector;
+import org.jgrapht.graph.AsSubgraph;
+import org.jgrapht.graph.DefaultEdge;
+import org.jgrapht.graph.SimpleDirectedGraph;
+import org.jgrapht.traverse.TopologicalOrderIterator;
 
 public class AperiodicAsynchronousDataflowJobOrderingConstraint<T extends Comparable<? super T>>
                 implements Constraint<IntegerGene, T> {
@@ -24,9 +26,16 @@ public class AperiodicAsynchronousDataflowJobOrderingConstraint<T extends Compar
         private final List<String> runtimes;
         private final List<String> tasks;
         private final List<AperiodicAsynchronousDataflow.Job> jobs;
-        private final Map<AperiodicAsynchronousDataflow.Job, Set<AperiodicAsynchronousDataflow.Job>> memoizedSucessors;
+        private final SimpleDirectedGraph<AperiodicAsynchronousDataflow.Job, DefaultEdge> jobGraph;
+
+        private final ConnectivityInspector<AperiodicAsynchronousDataflow.Job, DefaultEdge> jobGraphInspector;
         private final int taskSchedulingGenotypeIdx;
         private final int jobOrderingGenotypeIdx;
+        // private final List<List<Integer>> schedulersJobList;
+
+        public Graph<AperiodicAsynchronousDataflow.Job, DefaultEdge> getJobGraph() {
+                return jobGraph;
+        }
 
         public AperiodicAsynchronousDataflowJobOrderingConstraint(
                         AperiodicAsynchronousDataflowToPartitionedMemoryMappableMulticore decisionModel) {
@@ -38,13 +47,15 @@ public class AperiodicAsynchronousDataflowJobOrderingConstraint<T extends Compar
                 jobs = decisionModel.aperiodicAsynchronousDataflows().stream()
                                 .flatMap(x -> x.jobsOfProcesses().stream())
                                 .collect(Collectors.toList());
-                memoizedSucessors = jobs.stream().collect(Collectors.toMap(
-                                j -> j,
-                                j -> jobs.stream()
-                                                .filter(jj -> decisionModel.aperiodicAsynchronousDataflows()
-                                                                .stream()
-                                                                .anyMatch(app -> app.isSucessor(j, jj)))
-                                                .collect(Collectors.toSet())));
+                jobGraph = new SimpleDirectedGraph<>(DefaultEdge.class);
+                decisionModel.aperiodicAsynchronousDataflows().forEach(app -> {
+                        app.jobsOfProcesses().forEach(jobGraph::addVertex);
+                        app.jobSucessors().forEach((job, succs) -> {
+                                succs.forEach(succ -> jobGraph.addEdge(job, succ));
+                        });
+                });
+                TransitiveClosure.INSTANCE.closeSimpleDirectedGraph(jobGraph);
+                jobGraphInspector = new ConnectivityInspector<>(jobGraph);
                 taskSchedulingGenotypeIdx = 1;
                 jobOrderingGenotypeIdx = 4;
         }
@@ -59,13 +70,15 @@ public class AperiodicAsynchronousDataflowJobOrderingConstraint<T extends Compar
                 jobs = decisionModel.aperiodicAsynchronousDataflows().stream()
                                 .flatMap(x -> x.jobsOfProcesses().stream())
                                 .collect(Collectors.toList());
-                memoizedSucessors = jobs.stream().collect(Collectors.toMap(
-                                j -> j,
-                                j -> jobs.stream()
-                                                .filter(jj -> decisionModel.aperiodicAsynchronousDataflows()
-                                                                .stream()
-                                                                .anyMatch(app -> app.isSucessor(j, jj)))
-                                                .collect(Collectors.toSet())));
+                jobGraph = new SimpleDirectedGraph<>(DefaultEdge.class);
+                decisionModel.aperiodicAsynchronousDataflows().forEach(app -> {
+                        app.jobsOfProcesses().forEach(jobGraph::addVertex);
+                        app.jobSucessors().forEach((job, succs) -> {
+                                succs.forEach(succ -> jobGraph.addEdge(job, succ));
+                        });
+                });
+                TransitiveClosure.INSTANCE.closeSimpleDirectedGraph(jobGraph);
+                jobGraphInspector = new ConnectivityInspector<>(jobGraph);
                 taskSchedulingGenotypeIdx = 0;
                 jobOrderingGenotypeIdx = 2;
         }
@@ -74,54 +87,24 @@ public class AperiodicAsynchronousDataflowJobOrderingConstraint<T extends Compar
         public boolean test(Phenotype<IntegerGene, T> individual) {
                 var taskScheduling = individual.genotype().get(taskSchedulingGenotypeIdx);
                 var jobOrderings = individual.genotype().get(jobOrderingGenotypeIdx);
-                return IntStream.range(0, runtimes.size()).allMatch(schedI -> {
-                        var mappedJobs = IntStream.range(0, jobs.size())
-                                        .filter(jobI -> taskScheduling
-                                                        .get(tasks.indexOf(jobs.get(jobI).process()))
-                                                        .allele() == schedI)
-                                        .toArray();
-                        // the first condition checks if the jobs are clashing in the same ordering
-                        // position
-                        // the second checks whether they follow the parial order in the following way:
-                        // isSucessor(j, jj) -> order(j) < order(jj)
-                        // equivalently,
-                        for (var j : mappedJobs) {
-                                for (var jj : mappedJobs) {
-                                        if (j != jj) {
-                                                if (jobOrderings.get(j).allele() == jobOrderings.get(jj).allele()) {
-                                                        return false;
-                                                } else if (memoizedSucessors.get(jobs.get(j)).contains(jobs.get(jj)) && jobOrderings.get(j)
-                                                                .allele() > jobOrderings.get(jj).allele()) {
-                                                        return false;
-                                                } else if (memoizedSucessors.get(jobs.get(jj)).contains(jobs.get(j)) && jobOrderings.get(j)
-                                                                .allele() < jobOrderings.get(jj).allele()) {
-                                                        return false;
-                                                }
+                for (int i = 0; i < jobs.size(); i++) {
+                        var schedI = taskScheduling
+                                .get(tasks.indexOf(jobs.get(i).process()))
+                                .allele();
+                        for (int j = 0; j < jobs.size(); j++) {
+                                var schedJ = taskScheduling
+                                        .get(tasks.indexOf(jobs.get(j).process()))
+                                        .allele();
+                                if (i != j && Objects.equals(schedI, schedJ) && jobGraph.containsEdge(jobs.get(i), jobs.get(j))) {
+                                        if (jobOrderings.get(i)
+                                                .allele() >= jobOrderings.get(j)
+                                                .allele()) {
+                                                return false;
                                         }
                                 }
                         }
-                        // var isValid = Arrays.stream(mappedJobs)
-                        // .allMatch(j -> Arrays.stream(mappedJobs)
-                        // .filter(jj -> j != jj)
-                        // .allMatch(jj -> (jobOrderings.get(j)
-                        // .allele() != jobOrderings.get(jj)
-                        // .allele())
-                        // &&
-                        // (!memoizedSucessors.get(jobs.get(j))
-                        // .contains(jobs.get(jj))
-                        // || jobOrderings.get(j)
-                        // .allele() < jobOrderings
-                        // .get(jj)
-                        // .allele())));
-                        // !isSucessor(j, jj) or order(j) < order(jj)
-                        // if (!isValid) {
-                        // System.out.println(Arrays.stream(mappedJobs)
-                        // .mapToObj(x -> jobs.get(x))
-                        // .map(a -> "(%s, %s)".formatted(a.process(), a.instance()))
-                        // .reduce((a, b) -> a + ", " + b));
-                        // }
-                        return true;
-                });
+                }
+                return true;
         }
 
         @Override
@@ -131,39 +114,24 @@ public class AperiodicAsynchronousDataflowJobOrderingConstraint<T extends Compar
                 var jobOrderings = chromossomes.get(jobOrderingGenotypeIdx);
                 var newJobOrderings = jobOrderings.stream().collect(Collectors.toList());
                 IntStream.range(0, runtimes.size()).forEach(schedI -> {
-                        var mappedJobs = IntStream.range(0, jobs.size())
-                                        .filter(jobI -> taskScheduling
-                                                        .get(tasks.indexOf(jobs.get(jobI).process()))
+                        var mappedJobs = IntStream.range(0, jobs.size()).filter(
+                                        jobI -> taskScheduling.get(tasks.indexOf(jobs.get(jobI).process()))
                                                         .allele() == schedI)
-                                        .toArray();
-                        // System.out.println(Arrays.stream(mappedJobs)
-                        // .mapToObj(a -> String.valueOf(a))
-                        // .reduce((a, b) -> a + ", " + b) + " "
-                        // + Arrays.stream(mappedJobs)
-                        // .mapToObj(x -> jobs.get(x))
-                        // .map(a -> "(%s, %s)".formatted(a.process(), a.instance()))
-                        // .reduce((a, b) -> a + ", " + b));
-                        // sor the chromosome so that
-                        var newChromosome = Arrays.stream(mappedJobs)
-                                        .boxed()
-                                        .sorted((j, jj) -> memoizedSucessors.get(jobs.get(j))
-                                                        .contains(jobs.get(jj)) ? -1
-                                                                        : memoizedSucessors.get(jobs.get(jj))
-                                                                                        .contains(jobs.get(j)) ? 1 : 0)
-                                        .collect(Collectors.toList());
-                        // System.out.println(newChromosome.stream()
-                        // .map(a -> a.toString())
-                        // .reduce((a, b) -> a + ", " + b) + " "
-                        // + newChromosome.stream().map(x -> jobs.get(x))
-                        // .map(a -> "(%s, %s)".formatted(a.process(), a.instance()))
-                        // .reduce((a, b) -> a + ", " + b));
-                        for (int i = 0; i < newChromosome.size(); i++) {
-                                newJobOrderings.set(newChromosome.get(i),
-                                                IntegerGene.of(i, 0, jobs.size()));
+                                .mapToObj(jobs::get)
+                                .collect(Collectors.toSet());
+                        var subgraph = new AsSubgraph<>(jobGraph, mappedJobs);
+                        var topoOrder = new TopologicalOrderIterator<>(subgraph);
+                        var idx = 0;
+                        while (topoOrder.hasNext()) {
+                                var job = topoOrder.next();
+                                var jobIdx = jobs.indexOf(job);
+                                newJobOrderings.set(jobIdx, IntegerGene.of(idx, 0, jobs.size()));
+                                idx += 1;
                         }
                 });
                 chromossomes.set(jobOrderingGenotypeIdx, IntegerChromosome.of(newJobOrderings));
                 return Phenotype.of(Genotype.of(chromossomes), generation);
         }
+
 
 }

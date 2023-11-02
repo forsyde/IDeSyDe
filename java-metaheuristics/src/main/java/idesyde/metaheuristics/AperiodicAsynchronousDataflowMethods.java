@@ -9,101 +9,62 @@ import java.util.function.BiFunction;
 
 import idesyde.common.AperiodicAsynchronousDataflow;
 import idesyde.common.AperiodicAsynchronousDataflowToPartitionedMemoryMappableMulticore;
+import org.jgrapht.Graph;
+import org.jgrapht.alg.connectivity.ConnectivityInspector;
+import org.jgrapht.alg.connectivity.KosarajuStrongConnectivityInspector;
+import org.jgrapht.alg.cycle.TarjanSimpleCycles;
+import org.jgrapht.graph.*;
+import org.jgrapht.graph.builder.GraphBuilder;
 
 interface AperiodicAsynchronousDataflowMethods {
 
     default double[] recomputeMaximumCycles(
-            final List<Set<Integer>> follows,
+            final Graph<Integer, DefaultEdge> follows,
             final int[] mapping,
             final int[] ordering,
             final double[] jobWeights,
             final double[][] edgeWeigths) {
-        BiFunction<Integer, Integer, Boolean> mustSuceed = (i, j) -> {
-            return follows.get(i).contains(j)
-                    || (mapping[i] == mapping[j] && ordering[i] + 1 == ordering[j]);
-        };
-        BiFunction<Integer, Integer, Boolean> mustCycle = (i, j) -> {
-            return mapping[i] == mapping[j] ? ordering[j] == 0 && ordering[i] > 0 : false;
-        };
+        var mappingGraph = new DefaultDirectedGraph<Integer, DefaultEdge>(DefaultEdge.class);
+        for (int i = 0; i < mapping.length; i++) {
+            for (int j = 0; j < mapping.length; j++) {
+                if (mapping[i] == mapping[j] && ordering[i] + 1 == ordering[j]) {
+                    mappingGraph.addVertex(i);
+                    mappingGraph.addVertex(j);
+                    mappingGraph.addEdge(i, j);
+                } else if (mapping[i] == mapping[j] && ordering[j] == 0 && ordering[i] > 0) {
+                    mappingGraph.addVertex(i);
+                    mappingGraph.addVertex(j);
+                    mappingGraph.addEdge(i, j);
+                }
+            }
+        }
+        var mappedGraph = new AsGraphUnion<>(follows, mappingGraph);
         var maxCycles = new double[jobWeights.length];
-        var maximumCycleVector = new double[jobWeights.length];
-        var dfsStack = new ArrayDeque<Integer>(jobWeights.length);
-        var visited = new boolean[jobWeights.length];
-        var previous = new int[jobWeights.length];
-        for (int src = 0; src < jobWeights.length; src++) {
-            dfsStack.clear();
-            Arrays.fill(visited, false);
-            Arrays.fill(previous, -1);
-            Arrays.fill(maximumCycleVector, Double.NEGATIVE_INFINITY);
-            dfsStack.push(src);
-            while (!dfsStack.isEmpty()) {
-                var i = dfsStack.pop();
-                if (!visited[i]) {
-                    visited[i] = true;
-                    for (int j = 0; j < jobWeights.length; j++) {
-                        if (mustSuceed.apply(i, j) || mustCycle.apply(i, j)) {
-                            if (j == src) { // found a cycle
-                                maximumCycleVector[i] = jobWeights[i]
-                                        + edgeWeigths[i][j];
-                                var k = i;
-                                // go backwards until the src
-                                while (k != src) {
-                                    var kprev = previous[k];
-                                    maximumCycleVector[kprev] = Math.max(
-                                            maximumCycleVector[kprev],
-                                            jobWeights[kprev]
-                                                    + edgeWeigths[kprev][k]
-                                                    + maximumCycleVector[k]);
-                                    k = kprev;
-                                }
-                            } else if (visited[j]
-                                    && maximumCycleVector[j] > Integer.MIN_VALUE) { // found
-                                                                                    // a
-                                                                                    // previous
-                                                                                    // cycle
-                                var k = j;
-                                // go backwards until the src
-                                while (k != src) {
-                                    var kprev = previous[k];
-                                    maximumCycleVector[kprev] = Math.max(
-                                            maximumCycleVector[kprev],
-                                            jobWeights[kprev]
-                                                    + edgeWeigths[kprev][k]
-                                                    + maximumCycleVector[k]);
-                                    k = kprev;
-                                }
-                            } else if (!visited[j]) {
-                                dfsStack.push(j);
-                                previous[j] = i;
-                            }
-
-                        }
+        System.arraycopy(jobWeights, 0, maxCycles, 0, jobWeights.length);
+        var sccAlgorithm = new KosarajuStrongConnectivityInspector<>(mappedGraph);
+        sccAlgorithm.stronglyConnectedSets().forEach(scc -> {
+            var cycleValue = 0.0;
+            // add the value in the cycle
+            for (var i: scc) {
+                cycleValue += jobWeights[i];
+                for (var j : scc) {
+                    if (follows.containsEdge(i, j)) {
+                        cycleValue += edgeWeigths[i][j];
                     }
                 }
             }
-            maxCycles[src] = maximumCycleVector[src] > Double.NEGATIVE_INFINITY ? maximumCycleVector[src]
-                    : jobWeights[src];
-        }
-        for (int i = 0; i < jobWeights.length; i++) {
-            for (int j = 0; j < jobWeights.length; j++) {
-                if (mustSuceed.apply(i, j) || mustSuceed.apply(j, i)) {
-                    maxCycles[i] = Math.max(maxCycles[i], maxCycles[j]);
-                    maxCycles[j] = Math.max(maxCycles[i], maxCycles[j]);
-                }
+            for (var jobI: scc) {
+                maxCycles[jobI] = Math.max(maxCycles[jobI], cycleValue);
             }
-        }
-
-        // for (
-        // group <- m.sdfApplications.sdfDisjointComponents; a1 <- group; a2 <- group;
-        // if a1 != a2;
-        // a1i = m.sdfApplications.actorsIdentifiers.indexOf(a1);
-        // a2i = m.sdfApplications.actorsIdentifiers.indexOf(a2);
-        // qa1 = m.sdfApplications.sdfRepetitionVectors(a1i);
-        // qa2 = m.sdfApplications.sdfRepetitionVectors(a2i)
-        // ) {
-        // ths(a1i) = Math.min(ths(a1i), ths(a2i) * qa1 / qa2)
-        // ths(a2i) = Math.min(ths(a1i) * qa2 / qa1, ths(a2i))
-        // }
+        });
+        var mappedInspector = new ConnectivityInspector<>(mappedGraph);
+        mappedInspector.connectedSets().forEach(wcc -> {
+            wcc.stream().mapToDouble(jobI -> jobWeights[jobI]).max().ifPresent(maxCycle -> {
+                for (var jobI : wcc) {
+                    maxCycles[jobI] = Math.max(maxCycles[jobI], maxCycle);
+                }
+            });
+        });
         return maxCycles;
     }
 

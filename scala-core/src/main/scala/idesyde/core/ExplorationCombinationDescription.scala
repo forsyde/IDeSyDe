@@ -9,7 +9,7 @@ import idesyde.core.ExplorationCriteria
 final case class ExplorationCombinationDescription(
     val explorer_unique_identifier: String,
     val can_explore: Boolean,
-    val is_complete: Boolean,
+    val is_exact: Boolean,
     val competitiveness: Double,
     val target_objectives: Set[String],
     val additional_numeric_properties: Map[String, Double]
@@ -55,7 +55,7 @@ object ExplorationCombinationDescription {
         x: ExplorationCombinationDescription,
         y: ExplorationCombinationDescription
     ): Option[Int] = if (
-      x.is_complete == y.is_complete &&
+      x.is_exact == y.is_exact &&
       Math.abs(x.competitiveness - y.competitiveness) <= 0.001 &&
       x.target_objectives == y.target_objectives &&
       x.additional_numeric_properties.keySet == y.additional_numeric_properties.keySet

@@ -128,8 +128,7 @@ class ChocoExplorer(using logger: Logger) extends Explorer:
     println("exploring with " + configuration.toString())
     var (model, objs) = m.chocoModel(
       previousSolutions,
-      configuration.time_resolution,
-      configuration.memory_resolution
+      configuration
     )
     var solver = model.getSolver()
     if (configuration.improvement_timeout > 0L) {
@@ -144,8 +143,7 @@ class ChocoExplorer(using logger: Logger) extends Explorer:
       val solution =
         m.mergeSolution(
           solver.defaultSolution().record(),
-          configuration.time_resolution,
-          configuration.memory_resolution
+          configuration
         )
       solution #::
         ({
@@ -163,8 +161,7 @@ class ChocoExplorer(using logger: Logger) extends Explorer:
               .map((_, i) =>
                 m.mergeSolution(
                   solver.defaultSolution().record(),
-                  configuration.time_resolution,
-                  configuration.memory_resolution
+                  configuration
                 )
               )
           } else {

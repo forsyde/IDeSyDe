@@ -6,6 +6,7 @@ import idesyde.common.AperiodicAsynchronousDataflowToPartitionedTiledMulticore;
 import idesyde.core.ExplorationSolution;
 import idesyde.core.Explorer;
 import idesyde.metaheuristics.constraints.AperiodicAsynchronousDataflowJobOrderingConstraint;
+import idesyde.metaheuristics.constraints.FeasibleMappingConstraint;
 import idesyde.metaheuristics.constraints.MemoryMappableCommunicationConstraint;
 import idesyde.metaheuristics.constraints.MultiConstraint;
 import io.jenetics.*;
@@ -18,16 +19,17 @@ import io.jenetics.engine.RetryConstraint;
 import io.jenetics.ext.moea.UFTournamentSelector;
 import io.jenetics.ext.moea.Vec;
 import io.jenetics.util.ISeq;
+import org.jgrapht.Graph;
+import org.jgrapht.graph.DefaultEdge;
+import org.jgrapht.graph.SimpleDirectedGraph;
+import org.jgrapht.graph.builder.GraphBuilder;
 
 import java.time.Duration;
-import java.util.ArrayDeque;
-import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
-import java.util.function.BiFunction;
 import java.util.function.Function;
 import java.util.stream.Collectors;
 import java.util.stream.IntStream;
@@ -205,13 +207,34 @@ public interface CanExploreAADPTMWithJenetics extends AperiodicAsynchronousDataf
                         AperiodicAsynchronousDataflowToPartitionedTiledMulticore decisionModel,
                         Set<ExplorationSolution> previousSolutions, Explorer.Configuration configuration) {
                 var codec = ofDecisionModel(decisionModel);
-                var engine = Engine.builder(g -> evaluateAADPTM(g, configuration), codec)
+                var orderingConstraint = new AperiodicAsynchronousDataflowJobOrderingConstraint<Vec<double[]>>(
+                                decisionModel);
+                var executableConstraint = new FeasibleMappingConstraint<Vec<double[]>>(decisionModel);
+                var allConstraints = new MultiConstraint<>(
+                        new CommunicationConstraint<>(decisionModel),
+                        orderingConstraint,
+                        executableConstraint
+//                                                RetryConstraint.of(codec, this::mappingIsFeasible))
+                );
+                var jobs = decisionModel.aperiodicAsynchronousDataflows().stream().flatMap(app -> app.jobsOfProcesses().stream()).toList();
+                var jobGraph = orderingConstraint.getJobGraph();
+                SimpleDirectedGraph<Integer, DefaultEdge> jobIdxGraph = new SimpleDirectedGraph<>(DefaultEdge.class);
+                jobGraph.edgeSet().forEach(e -> {
+                        var src = jobs.indexOf(jobGraph.getEdgeSource(e));
+                        var dst = jobs.indexOf(jobGraph.getEdgeTarget(e));
+                        jobIdxGraph.addVertex(src);
+                        jobIdxGraph.addVertex(dst);
+                        jobIdxGraph.addEdge(src, dst);
+                });
+                var engine = Engine
+                                .builder(g -> evaluateAADPTM(g, jobs, jobIdxGraph, configuration), codec)
                                 .offspringSelector(new TournamentSelector<>(5))
                                 .survivorsSelector(UFTournamentSelector.ofVec())
-                                .constraint(new MultiConstraint<Integer, IntegerGene, Vec<double[]>>(
-                                                new CommunicationConstraint<>(decisionModel),
-                                                new AperiodicAsynchronousDataflowJobOrderingConstraint<>(decisionModel),
-                                                RetryConstraint.of(codec, this::mappingIsFeasible)))
+                                .constraint(allConstraints)
+                                .alterers(
+                                                new UniformCrossover<>(0.2, 0.25),
+                                                new Mutator<>(0.2)
+                                )
                                 .minimizing()
                                 .build();
                 var solStream = engine
@@ -221,7 +244,6 @@ public interface CanExploreAADPTMWithJenetics extends AperiodicAsynchronousDataf
                                                                 (AperiodicAsynchronousDataflowToPartitionedTiledMulticore) s
                                                                                 .solved()))
                                                 .collect(Collectors.toList()));
-                // .limit(Limits.byGeneConvergence(0.000001, 0.999999));
                 var timedSolStream = configuration.improvementTimeOutInSecs > 0L
                                 ? solStream
                                                 .limit(Limits.byExecutionTime(Duration.ofSeconds(
@@ -230,24 +252,34 @@ public interface CanExploreAADPTMWithJenetics extends AperiodicAsynchronousDataf
                 var limitedImprovementStream = configuration.improvementIterations > 0L
                                 ? timedSolStream.limit(Limits.byFixedGeneration(configuration.improvementIterations))
                                 : timedSolStream;
-                var decodedStream = limitedImprovementStream.map(sol -> {
+            return limitedImprovementStream
+                        .filter(sol -> allConstraints.test(sol.bestPhenotype()))
+                        .map(sol -> {
                         var decoded = codec.decode(sol.bestPhenotype().genotype());
                         var solMap = new HashMap<String, Double>(sol.bestFitness().length());
                         var bestFit = sol.bestFitness().data();
-                        solMap.put("nUsedPEs", bestFit[0]);
                         var i = 0;
+                        if (configuration.targetObjectives.isEmpty()
+                                        || configuration.targetObjectives.contains("nUsedPEs")) {
+                                solMap.put("nUsedPEs", bestFit[0]);
+                                i = 1;
+                        }
                         for (var app : decoded.aperiodicAsynchronousDataflows()) {
                                 for (var actor : app.processes()) {
-                                        solMap.put("invThroughput(%s)".formatted(actor),
-                                                        bestFit[i + 1]);
-                                        app.processMinimumThroughput().put(actor, 1.0 / bestFit[i + 1]);
-                                        i += 1;
+                                        if (configuration.targetObjectives.isEmpty()
+                                                        || configuration.targetObjectives
+                                                                        .contains("invThroughput(%s)"
+                                                                                        .formatted(actor))) {
+                                                solMap.put("invThroughput(%s)".formatted(actor),
+                                                                bestFit[i]);
+                                                app.processMinimumThroughput().put(actor, 1.0 / bestFit[i]);
+                                                i += 1;
+                                        }
                                 }
                         }
                         return new ExplorationSolution(solMap, decoded);
                 })
                                 .filter(sol -> !previousSolutions.contains(sol));
-                return decodedStream;
         }
 
         class CommunicationConstraint<T extends Comparable<? super T>> implements
@@ -257,7 +289,6 @@ public interface CanExploreAADPTMWithJenetics extends AperiodicAsynchronousDataf
                 private final List<String> memories;
                 private final List<String> comms;
                 private final List<String> tasks;
-                private final List<String> buffers;
                 public AperiodicAsynchronousDataflowToPartitionedTiledMulticore decisionModel;
 
                 public CommunicationConstraint(
@@ -271,9 +302,6 @@ public interface CanExploreAADPTMWithJenetics extends AperiodicAsynchronousDataf
                                         .toList();
                         tasks = decisionModel.aperiodicAsynchronousDataflows().stream()
                                         .flatMap(x -> x.processes().stream())
-                                        .collect(Collectors.toList());
-                        buffers = decisionModel.aperiodicAsynchronousDataflows().stream()
-                                        .flatMap(x -> x.buffers().stream())
                                         .collect(Collectors.toList());
                 }
 
@@ -312,82 +340,6 @@ public interface CanExploreAADPTMWithJenetics extends AperiodicAsynchronousDataf
                                                                         }
                                                                 }
                                                         }
-                                                        // TODO: check later if this is really not necessary.
-                                                        // It seems like no because of the tile-based approach
-                                                        // for (int bufferI = 0; bufferI < buffers.size(); bufferI++) {
-                                                        // var buffer = buffers.get(bufferI);
-                                                        // if (decisionModel.aperiodicAsynchronousDataflows()
-                                                        // .stream().anyMatch(app -> app
-                                                        // .processGetFromBufferInBits()
-                                                        // .getOrDefault(task, Map
-                                                        // .of())
-                                                        // .containsKey(buffer))
-                                                        // && bufferMapping.get(bufferI)
-                                                        // .allele() == meI) { // task
-                                                        // // reads
-                                                        // // from
-                                                        // // buffer
-                                                        // for (var ce : decisionModel
-                                                        // .partitionedTiledMulticore()
-                                                        // .hardware()
-                                                        // .preComputedPaths()
-                                                        // .getOrDefault(pe, Map.of())
-                                                        // .getOrDefault(me, List.of())) {
-                                                        // // we go through the communication
-                                                        // // elements in the path and ensure they
-                                                        // // have
-                                                        // // reservations
-                                                        // var k = comms.indexOf(ce);
-                                                        // if (reservations.get(
-                                                        // peI * comms.size() + k)
-                                                        // .allele() <= 0) { // should
-                                                        // // but
-                                                        // // it
-                                                        // // is
-                                                        // // not
-                                                        // // reserved
-                                                        // return false;
-                                                        // }
-                                                        // }
-                                                        // }
-                                                        // }
-                                                        // for (int bufferI = 0; bufferI < buffers.size(); bufferI++) {
-                                                        // var buffer = buffers.get(bufferI);
-                                                        // if (decisionModel.aperiodicAsynchronousDataflows()
-                                                        // .stream().anyMatch(app -> app
-                                                        // .processPutInBufferInBits()
-                                                        // .getOrDefault(task, Map
-                                                        // .of())
-                                                        // .containsKey(buffer))
-                                                        // && bufferMapping.get(bufferI)
-                                                        // .allele() == meI) { // task
-                                                        // // writes
-                                                        // // to
-                                                        // // buffer
-                                                        // for (var ce : decisionModel
-                                                        // .partitionedTiledMulticore()
-                                                        // .hardware()
-                                                        // .preComputedPaths()
-                                                        // .getOrDefault(pe, Map.of())
-                                                        // .getOrDefault(me, List.of())) {
-                                                        // // we go through the communication
-                                                        // // elements in the path and ensure they
-                                                        // // have
-                                                        // // reservations
-                                                        // var k = comms.indexOf(ce);
-                                                        // if (reservations.get(
-                                                        // peI * comms.size() + k)
-                                                        // .allele() <= 0) { // should
-                                                        // // but
-                                                        // // it
-                                                        // // is
-                                                        // // not
-                                                        // // reserved
-                                                        // return false;
-                                                        // }
-                                                        // }
-                                                        // }
-                                                        // }
                                                 }
                                         }
                                 }
@@ -435,86 +387,6 @@ public interface CanExploreAADPTMWithJenetics extends AperiodicAsynchronousDataf
                                                                         }
                                                                 }
                                                         }
-                                                        // TODO: check later if this is really not necessary.
-                                                        // It seems like no because of the tile-based approach
-                                                        // for (int bufferI = 0; bufferI < buffers.size(); bufferI++) {
-                                                        // var buffer = buffers.get(bufferI);
-                                                        // if (decisionModel.aperiodicAsynchronousDataflows()
-                                                        // .stream().anyMatch(app -> app
-                                                        // .processGetFromBufferInBits()
-                                                        // .getOrDefault(task, Map
-                                                        // .of())
-                                                        // .containsKey(buffer))
-                                                        // && bufferMapping.get(bufferI)
-                                                        // .allele() == meI) { // task
-                                                        // // reads
-                                                        // // from
-                                                        // // buffer
-                                                        // for (var ce : decisionModel
-                                                        // .partitionedTiledMulticore()
-                                                        // .hardware()
-                                                        // .preComputedPaths()
-                                                        // .getOrDefault(pe, Map.of())
-                                                        // .getOrDefault(me, List.of())) {
-                                                        // // we go through the communication
-                                                        // // elements in the path and ensure they
-                                                        // // have
-                                                        // // reservations
-                                                        // var k = comms.indexOf(ce);
-                                                        // if (reservations.get(
-                                                        // peI * comms.size() + k)
-                                                        // .allele() <= 0) { // should
-                                                        // // but
-                                                        // // it
-                                                        // // is
-                                                        // // not
-                                                        // // reserved
-                                                        // changeReservations.set(peI
-                                                        // * comms.size()
-                                                        // + k, true);
-                                                        // }
-                                                        // }
-                                                        // }
-                                                        // }
-                                                        // for (int bufferI = 0; bufferI < buffers.size(); bufferI++) {
-                                                        // var buffer = buffers.get(bufferI);
-                                                        // if (decisionModel.aperiodicAsynchronousDataflows()
-                                                        // .stream().anyMatch(app -> app
-                                                        // .processPutInBufferInBits()
-                                                        // .getOrDefault(task, Map
-                                                        // .of())
-                                                        // .containsKey(buffer))
-                                                        // && bufferMapping.get(bufferI)
-                                                        // .allele() == meI) { // task
-                                                        // // writes
-                                                        // // to
-                                                        // // buffer
-                                                        // for (var ce : decisionModel
-                                                        // .partitionedTiledMulticore()
-                                                        // .hardware()
-                                                        // .preComputedPaths()
-                                                        // .getOrDefault(pe, Map.of())
-                                                        // .getOrDefault(me, List.of())) {
-                                                        // // we go through the communication
-                                                        // // elements in the path and ensure they
-                                                        // // have
-                                                        // // reservations
-                                                        // var k = comms.indexOf(ce);
-                                                        // if (reservations.get(
-                                                        // peI * comms.size() + k)
-                                                        // .allele() <= 0) { // should
-                                                        // // but
-                                                        // // it
-                                                        // // is
-                                                        // // not
-                                                        // // reserved
-                                                        // changeReservations.set(peI
-                                                        // * comms.size()
-                                                        // + k, true);
-                                                        // }
-                                                        // }
-                                                        // }
-                                                        // }
                                                 }
                                         }
                                 }
@@ -540,38 +412,32 @@ public interface CanExploreAADPTMWithJenetics extends AperiodicAsynchronousDataf
                 }
         }
 
-        default boolean mappingIsFeasible(
-                        AperiodicAsynchronousDataflowToPartitionedTiledMulticore decisionModel) {
-                return decisionModel.processesToRuntimeScheduling().entrySet().stream().allMatch(e -> {
-                        var process = e.getKey();
-                        var hostSched = e.getValue();
-                        var hostPe = decisionModel.partitionedTiledMulticore().runtimes().runtimeHost()
-                                        .get(hostSched);
-                        return decisionModel.instrumentedComputationTimes().worstExecutionTimes().get(process)
-                                        .containsKey(hostPe);
-                });
-        }
+//        default boolean mappingIsFeasible(
+//                        AperiodicAsynchronousDataflowToPartitionedTiledMulticore decisionModel) {
+//                return decisionModel.processesToRuntimeScheduling().entrySet().stream().allMatch(e -> {
+//                        var process = e.getKey();
+//                        var hostSched = e.getValue();
+//                        var hostPe = decisionModel.partitionedTiledMulticore().runtimes().runtimeHost()
+//                                        .get(hostSched);
+//                        return decisionModel.instrumentedComputationTimes().worstExecutionTimes().get(process)
+//                                        .containsKey(hostPe);
+//                });
+//        }
 
         private Vec<double[]> evaluateAADPTM(
-                        final AperiodicAsynchronousDataflowToPartitionedTiledMulticore decisionModel,
-                        Explorer.Configuration configuration) {
+                final AperiodicAsynchronousDataflowToPartitionedTiledMulticore decisionModel,
+                final List<AperiodicAsynchronousDataflow.Job> jobs,
+                final Graph<Integer, DefaultEdge> jobIdxGraph,
+                Explorer.Configuration configuration) {
                 // first, get the number of used PEs
                 Function<Integer, String> taskName = (i) -> decisionModel.aperiodicAsynchronousDataflows().stream()
-                                .flatMap(app -> app.processes().stream()).skip(i - 1).findFirst().get();
+                                .flatMap(app -> app.processes().stream()).skip(i <= 0 ? 0 : i - 1)
+                                .findFirst().get();
                 var nUsedPEs = decisionModel.processesToRuntimeScheduling().values().stream().distinct().count();
                 // get durations for each process
-                var jobs = decisionModel.aperiodicAsynchronousDataflows().stream()
-                                .flatMap(app -> app.jobsOfProcesses().stream()).toList();
-                var follows = jobs.stream()
-                                .map(src -> IntStream.range(0, jobs.size())
-                                                .filter(dstI -> decisionModel.aperiodicAsynchronousDataflows().stream()
-                                                                .anyMatch(app -> app.isSucessor(src, jobs.get(dstI))))
-                                                .boxed().collect(Collectors.toSet()))
-                                .collect(Collectors.toList());
                 var scheds = decisionModel.partitionedTiledMulticore().runtimes().runtimes().stream().toList();
-                var mappings = IntStream.range(0, jobs.size()).map(
-                                jobI -> scheds.indexOf(decisionModel.processesToRuntimeScheduling()
-                                                .get(jobs.get(jobI).process())))
+                var mappings = jobs.stream().mapToInt(item -> scheds.indexOf(decisionModel.processesToRuntimeScheduling()
+                                .get(item.process())))
                                 .toArray();
                 var execTimes = jobs.stream().mapToDouble(j -> recomputeExecutionTime(decisionModel, j))
                                 .toArray();
@@ -599,10 +465,9 @@ public interface CanExploreAADPTMWithJenetics extends AperiodicAsynchronousDataf
                                                 jobs.get(dstI));
                         }
                 }
-                var cycleLengths = recomputeMaximumCycles(follows,
-                                IntStream.range(0, jobs.size()).map(
-                                                jobI -> scheds.indexOf(decisionModel.processesToMemoryMapping()
-                                                                .get(jobs.get(jobI).process())))
+                var cycleLengths = recomputeMaximumCycles(jobIdxGraph,
+                        jobs.stream().mapToInt(job -> scheds.indexOf(decisionModel.processesToRuntimeScheduling()
+                                        .get(job.process())))
                                                 .toArray(),
                                 orderings, execTimes, edgeWeights);
                 var invThroughputs = decisionModel.aperiodicAsynchronousDataflows().stream()
@@ -640,21 +505,12 @@ public interface CanExploreAADPTMWithJenetics extends AperiodicAsynchronousDataf
         default double recomputeExecutionTime(
                         AperiodicAsynchronousDataflowToPartitionedTiledMulticore decisionModel,
                         AperiodicAsynchronousDataflow.Job job) {
-                var totalTime = 0.0;
-                for (var pe : decisionModel.partitionedTiledMulticore().hardware().processors()) {
-                        var sched = decisionModel.partitionedTiledMulticore().runtimes().processorAffinities()
-                                        .get(pe);
-                        if (decisionModel.processesToRuntimeScheduling().get(job.process()).equals(sched)) { // a task
-                                                                                                             // is
-                                // mapped
-                                // in PE i
-                                totalTime += decisionModel.instrumentedComputationTimes().worstExecutionTimes()
-                                                .get(job.process()).getOrDefault(pe, Long.MAX_VALUE).doubleValue()
-                                                / decisionModel.instrumentedComputationTimes().scaleFactor()
-                                                                .doubleValue();
-                        }
-                }
-                return totalTime;
+                var sched = decisionModel.processesToRuntimeScheduling().get(job.process());
+                var pe = decisionModel.partitionedTiledMulticore().runtimes().runtimeHost().get(sched);
+                return decisionModel.instrumentedComputationTimes().worstExecutionTimes()
+                        .get(job.process()).getOrDefault(pe, Long.MAX_VALUE).doubleValue()
+                        / decisionModel.instrumentedComputationTimes().scaleFactor()
+                        .doubleValue();
 
         }
 

@@ -449,11 +449,14 @@ trait StandaloneExplorationModule
         }
       )
       .updateConfig(config => {
-        config.jetty.multipartConfig.maxTotalRequestSize(1, SizeUnit.GB)
+        config.jetty.multipartConfig.maxTotalRequestSize(1, SizeUnit.GB);
         config.jetty.contextHandlerConfig(ctx => {
-          ctx.setMaxFormContentSize(100000000)
-        })
-        config.http.maxRequestSize = 100000000
+          ctx.setMaxFormContentSize(100000000);
+        });
+        config.jetty.wsFactoryConfig(wsconfig => {
+          wsconfig.setMaxTextMessageSize(1000000000);
+        });
+        config.http.maxRequestSize = 1000000000;
       })
     server.events(es => {
       es.serverStarted(() => {

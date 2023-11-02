@@ -6,6 +6,7 @@ import idesyde.core.DecisionModel;
 import idesyde.core.headers.DecisionModelHeader;
 
 import java.util.*;
+import java.util.stream.Collectors;
 
 /**
  * This decision model abstract asynchronous dataflow models that can be
@@ -69,23 +70,73 @@ public record AperiodicAsynchronousDataflow(
         return jobs;
     }
 
+    public Map<Job, Set<Job>> jobSucessors() {
+        var jobs = jobsOfProcesses();
+        Map<Job, Set<Job>> sucessorMap = jobs.stream().collect(Collectors.toMap(j -> j, j -> new HashSet<Job>()));
+        for (var j : jobs) {
+            jobSucessorsRecursion(sucessorMap, j);
+        }
+        return sucessorMap;
+    }
+
+    private void jobSucessorsRecursion(Map<Job, Set<Job>> sucessors, Job job) {
+        for (int i = 0; i < jobGraphSrcName.size(); i++) {
+            if (jobGraphSrcName.get(i).equals(job.process())
+                    && jobGraphSrcInstance.get(i).equals(job.instance())) {
+                var dst = new Job(jobGraphDstName.get(i), jobGraphDstInstance.get(i));
+                if (!sucessors.get(job).contains(dst)) {
+                    jobSucessorsRecursion(sucessors, dst);
+                    sucessors.get(job).addAll(sucessors.get(dst));
+                    sucessors.get(job).add(dst);
+                }
+            }
+        }
+    }
+
     public boolean isSucessor(Job predecessor, Job potentialSucessor) {
         // first check if is not an immediate sucessor
+        // for (int i = 0; i < jobGraphSrcName.size(); i++) {
+        // if (jobGraphSrcName.get(i).equals(predecessor.process())
+        // && jobGraphSrcInstance.get(i).equals(predecessor.instance())) {
+        // if (jobGraphDstName.get(i).equals(potentialSucessor.process())
+        // && jobGraphDstInstance.get(i).equals(potentialSucessor.instance())) {
+        // return true;
+        // }
+        // }
+        // }
+        // // if this is not true, now we recurse the graph to if there is any
+        // conneciton
+        // for (int i = 0; i < jobGraphSrcName.size(); i++) {
+        // if (jobGraphSrcName.get(i).equals(predecessor.process())
+        // && jobGraphSrcInstance.get(i).equals(predecessor.instance())) {
+        // var nextJob = new Job(jobGraphDstName.get(i), jobGraphSrcInstance.get(i));
+        // if (isSucessor(nextJob, potentialSucessor)) {
+        // return true;
+        // }
+        // }
+        // }
+        return isSucessor(predecessor.process(), predecessor.instance(), potentialSucessor.process(),
+                potentialSucessor.instance());
+    }
+
+    public boolean isSucessor(String predecessorName, long predecessorInstance, String potentialSucessorName,
+            long potentialSucessorInstance) {
+        // first check if is not an immediate sucessor
         for (int i = 0; i < jobGraphSrcName.size(); i++) {
-            if (jobGraphSrcName.get(i).equals(predecessor.process())
-                    && jobGraphSrcInstance.get(i).equals(predecessor.instance())) {
-                if (jobGraphDstName.get(i).equals(potentialSucessor.process())
-                        && jobGraphDstInstance.get(i).equals(potentialSucessor.instance())) {
+            if (jobGraphSrcName.get(i).equals(predecessorName)
+                    && jobGraphSrcInstance.get(i).equals(predecessorInstance)) {
+                if (jobGraphDstName.get(i).equals(potentialSucessorName)
+                        && jobGraphDstInstance.get(i).equals(potentialSucessorInstance)) {
                     return true;
                 }
             }
         }
         // if this is not true, now we recurse the graph to if there is any conneciton
         for (int i = 0; i < jobGraphSrcName.size(); i++) {
-            if (jobGraphSrcName.get(i).equals(predecessor.process())
-                    && jobGraphSrcInstance.get(i).equals(predecessor.instance())) {
-                var nextJob = new Job(jobGraphDstName.get(i), jobGraphSrcInstance.get(i));
-                if (isSucessor(nextJob, potentialSucessor)) {
+            if (jobGraphSrcName.get(i).equals(predecessorName)
+                    && jobGraphSrcInstance.get(i).equals(predecessorInstance)) {
+                if (isSucessor(jobGraphDstName.get(i), jobGraphSrcInstance.get(i), potentialSucessorName,
+                        potentialSucessorInstance)) {
                     return true;
                 }
             }

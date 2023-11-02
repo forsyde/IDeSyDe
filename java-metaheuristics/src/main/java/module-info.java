@@ -8,6 +8,8 @@ module idesyde.java.metaheuristics {
     // requires jmetal.problem;
     // requires jmetal.parallel;
 
+    requires org.jgrapht.core;
+
     requires io.jenetics.base;
     requires io.jenetics.ext;
 

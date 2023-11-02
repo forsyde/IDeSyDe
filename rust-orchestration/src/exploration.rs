@@ -7,6 +7,7 @@ use std::{
     path::PathBuf,
     process::{Child, Stdio},
     sync::{Arc, Mutex},
+    time::{Duration, Instant},
 };
 
 use idesyde_blueprints::{DecisionModelMessage, ExplorationSolutionMessage, OpaqueDecisionModel};
@@ -163,11 +164,7 @@ impl Explorer for ExternalExplorer {
                         match ExplorationBid::from_json_str(&text) {
                             Some(bid) => return bid,
                             None => {
-                                debug!(
-                                    "Explorer {} failed deserialize message {}",
-                                    self.unique_identifier(),
-                                    &text
-                                );
+                                debug!("failed to deserialize exploration bid message {}", &text);
                             }
                         }
                     }
@@ -443,13 +440,30 @@ pub fn compute_pareto_solutions(sols: Vec<ExplorationSolution>) -> Vec<Explorati
 
 pub struct CombinedExplorerIterator {
     sol_channels: Vec<std::sync::mpsc::Receiver<ExplorationSolution>>,
+    is_exact: Vec<bool>,
     finish_request_channels: Vec<std::sync::mpsc::Sender<bool>>,
+    duration_left: Option<Duration>,
     _handles: Vec<std::thread::JoinHandle<()>>,
 }
 
 impl CombinedExplorerIterator {
     pub fn start(
         explorers_and_models: Vec<(Arc<dyn Explorer>, Arc<dyn DecisionModel>)>,
+        currrent_solutions: Vec<ExplorationSolution>,
+        exploration_configuration: ExplorationConfiguration,
+    ) -> CombinedExplorerIterator {
+        let all_heuristic = explorers_and_models.iter().map(|_| false).collect();
+        CombinedExplorerIterator::start_with_exact(
+            explorers_and_models,
+            all_heuristic,
+            currrent_solutions,
+            exploration_configuration,
+        )
+    }
+
+    pub fn start_with_exact(
+        explorers_and_models: Vec<(Arc<dyn Explorer>, Arc<dyn DecisionModel>)>,
+        is_exact: Vec<bool>,
         currrent_solutions: Vec<ExplorationSolution>,
         exploration_configuration: ExplorationConfiguration,
     ) -> CombinedExplorerIterator {
@@ -469,7 +483,15 @@ impl CombinedExplorerIterator {
         }
         CombinedExplorerIterator {
             sol_channels,
+            is_exact,
             finish_request_channels: completed_channels,
+            duration_left: if exploration_configuration.improvement_timeout > 0u64 {
+                Some(Duration::from_secs(
+                    exploration_configuration.improvement_timeout,
+                ))
+            } else {
+                None
+            },
             _handles: handles,
         }
     }
@@ -492,18 +514,31 @@ impl Iterator for CombinedExplorerIterator {
 
     fn next(&mut self) -> Option<Self::Item> {
         let mut num_disconnected = 0;
+        let start = Instant::now();
         while num_disconnected < self.sol_channels.len() {
             num_disconnected = 0;
             for i in 0..self.sol_channels.len() {
                 match self.sol_channels[i].recv_timeout(std::time::Duration::from_millis(500)) {
                     Ok((explored_decision_model, sol_objs)) => {
                         // debug!("New solution from explorer index {}", i);
+                        self.duration_left = self.duration_left.map(|d| d - start.elapsed());
                         return Some((explored_decision_model, sol_objs));
                     }
                     Err(std::sync::mpsc::RecvTimeoutError::Disconnected) => {
                         num_disconnected += 1;
+                        // finish early if the explorer is exact and ends early
+                        if self.is_exact[i] {
+                            return None;
+                        }
                     }
                     Err(std::sync::mpsc::RecvTimeoutError::Timeout) => {}
+                };
+                if self
+                    .duration_left
+                    .map(|d| d <= start.elapsed())
+                    .unwrap_or(false)
+                {
+                    return None;
                 }
             }
         }
@@ -577,7 +612,7 @@ impl Iterator for MultiLevelCombinedExplorerIterator {
     }
 }
 
-pub fn explore_cooperatively(
+pub fn explore_cooperatively_simple(
     explorers_and_models: Vec<(Arc<dyn Explorer>, Arc<dyn DecisionModel>)>,
     currrent_solutions: Vec<ExplorationSolution>,
     exploration_configuration: ExplorationConfiguration,
@@ -589,6 +624,27 @@ pub fn explore_cooperatively(
         exploration_configuration: exploration_configuration.to_owned(),
         levels: vec![CombinedExplorerIterator::start(
             explorers_and_models,
+            currrent_solutions,
+            exploration_configuration.to_owned(),
+        )],
+        converged_to_last_level: false,
+    }
+}
+
+pub fn explore_cooperatively(
+    explorers_and_models: Vec<(Arc<dyn Explorer>, Arc<dyn DecisionModel>)>,
+    biddings: Vec<ExplorationBid>,
+    currrent_solutions: Vec<ExplorationSolution>,
+    exploration_configuration: ExplorationConfiguration,
+    // solution_inspector: F,
+) -> MultiLevelCombinedExplorerIterator {
+    MultiLevelCombinedExplorerIterator {
+        explorers_and_models: explorers_and_models.clone(),
+        solutions: currrent_solutions.clone(),
+        exploration_configuration: exploration_configuration.to_owned(),
+        levels: vec![CombinedExplorerIterator::start_with_exact(
+            explorers_and_models,
+            biddings.iter().map(|b| b.is_exact).collect(),
             currrent_solutions,
             exploration_configuration.to_owned(),
         )],

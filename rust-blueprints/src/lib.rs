@@ -1,4 +1,5 @@
 pub mod macros;
+pub mod messages;
 
 use std::{
     collections::{HashMap, HashSet},

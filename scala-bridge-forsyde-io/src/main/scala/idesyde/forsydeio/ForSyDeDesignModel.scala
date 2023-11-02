@@ -10,6 +10,7 @@ import forsyde.io.core.Vertex
 import forsyde.io.core.ModelHandler
 import forsyde.io.lib.TraitNamesFrom0_6To0_7
 import idesyde.forsydeio.ForSyDeDesignModel.modelHandler
+import forsyde.io.lib.LibForSyDeModelHandler
 
 final case class ForSyDeDesignModel(val systemGraph: SystemGraph) extends DesignModel {
 
@@ -48,7 +49,7 @@ final case class ForSyDeDesignModel(val systemGraph: SystemGraph) extends Design
 }
 
 object ForSyDeDesignModel {
-  val modelHandler = ModelHandler().registerSystemGraphMigrator(TraitNamesFrom0_6To0_7())
+  val modelHandler = LibForSyDeModelHandler.registerLibForSyDe(ModelHandler())
 
   def fromText(s: String): Option[ForSyDeDesignModel] = {
     try {

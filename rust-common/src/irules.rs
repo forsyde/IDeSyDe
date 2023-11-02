@@ -290,9 +290,9 @@ pub fn identify_asynchronous_aperiodic_dataflow_from_sdf(
                             // or nothing at all.
                             if src != dst && *q_src == (ratio.ceil() as u64) {
                                 job_graph_edges.push(((src, *q_src), (dst, *q_dst), true))
-                            } else if src == dst && *q_dst == *q_src + 1 {
-                                job_graph_edges.push(((src, *q_src), (dst, *q_dst), false))
                             }
+                        } else if src == dst && *q_dst == (*q_src + 1) {
+                            job_graph_edges.push(((src, *q_src), (dst, *q_dst), false))
                         }
                     }
                 }

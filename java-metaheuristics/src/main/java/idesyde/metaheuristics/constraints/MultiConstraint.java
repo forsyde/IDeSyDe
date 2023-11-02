@@ -1,6 +1,7 @@
 package idesyde.metaheuristics.constraints;
 
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.List;
 
 import io.jenetics.Gene;
@@ -12,10 +13,9 @@ public class MultiConstraint<A, G extends Gene<A, G>, T extends Comparable<? sup
 
     List<Constraint<G, T>> constraints = new ArrayList<>();
 
+    @SafeVarargs
     public MultiConstraint(Constraint<G, T>... constraints) {
-        for (Constraint<G, T> c : constraints) {
-            this.constraints.add(c);
-        }
+        this.constraints.addAll(Arrays.asList(constraints));
     }
 
     @Override
@@ -30,12 +30,13 @@ public class MultiConstraint<A, G extends Gene<A, G>, T extends Comparable<? sup
 
     @Override
     public Phenotype<G, T> repair(Phenotype<G, T> individual, long generation) {
+        var repaired = individual;
         for (Constraint<G, T> c : constraints) {
-            if (!c.test(individual)) {
-                return c.repair(individual, generation);
+            if (!c.test(repaired)) {
+                repaired = c.repair(repaired, generation);
             }
         }
-        return individual;
+        return repaired;
     }
 
 }

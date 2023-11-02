@@ -4,6 +4,9 @@ import os
 from typing import Dict, Optional, List, Set, Iterable, Callable
 
 import cbor2
+import flatbuffers
+
+import idesyde.data as data
 
 
 @dataclass
@@ -22,90 +25,90 @@ class ExplorationBid:
             return self.criteria.keys() == o.criteria.keys() and all(o.criteria[k] > v for (k, v) in self.criteria.items())
 
 
-@dataclass
-class DecisionModelHeader:
-    category: str
-    covered_elements: Set[str] = set()
-    body_path: Optional[str] = None
+# @dataclass
+# class DecisionModelHeader:
+#     category: str
+#     covered_elements: Set[str] = set()
+#     body_path: Optional[str] = None
 
-    def dominates(self, other: "DecisionModelHeader") -> bool:
-        return self.category == other.category and all(
-            elem in self.covered_elements for elem in other.covered_elements
-        )
+#     def dominates(self, other: "DecisionModelHeader") -> bool:
+#         return self.category == other.category and all(
+#             elem in self.covered_elements for elem in other.covered_elements
+#         )
 
-    def write_to_path(self, base_path: str, preffix: str = "", suffix: str = ""):
-        with open(
-            base_path
-            + os.path.sep
-            + "header_"
-            + preffix
-            + "_"
-            + self.category
-            + "_"
-            + suffix
-            + ".json",
-            "w",
-        ) as jsonf:
-            json.dump(asdict(self), jsonf)
-        with open(
-            base_path
-            + os.path.sep
-            + "header_"
-            + preffix
-            + "_"
-            + self.category
-            + "_"
-            + suffix
-            + ".cbor",
-            "w",
-        ) as cborf:
-            cbor2.dump(asdict(self), cborf)
+#     def write_to_path(self, base_path: str, preffix: str = "", suffix: str = ""):
+#         with open(
+#             base_path
+#             + os.path.sep
+#             + "header_"
+#             + preffix
+#             + "_"
+#             + self.category
+#             + "_"
+#             + suffix
+#             + ".json",
+#             "w",
+#         ) as jsonf:
+#             json.dump(asdict(self), jsonf)
+#         with open(
+#             base_path
+#             + os.path.sep
+#             + "header_"
+#             + preffix
+#             + "_"
+#             + self.category
+#             + "_"
+#             + suffix
+#             + ".cbor",
+#             "w",
+#         ) as cborf:
+#             cbor2.dump(asdict(self), cborf)
 
-    @classmethod
-    def load_from_path(cls, full_path: str) -> Optional["DecisionModelHeader"]:
-        if full_path.endswith("cbor"):
-            d = cbor2.load(full_path)
-            return DecisionModelHeader(**d)
-        elif full_path.endswith("json"):
-            d = json.load(full_path)
-            return DecisionModelHeader(**d)
-        else:
-            return None
+#     @classmethod
+#     def load_from_path(cls, full_path: str) -> Optional["DecisionModelHeader"]:
+#         if full_path.endswith("cbor"):
+#             d = cbor2.load(full_path)
+#             return DecisionModelHeader(**d)
+#         elif full_path.endswith("json"):
+#             d = json.load(full_path)
+#             return DecisionModelHeader(**d)
+#         else:
+#             return None
 
 
-@dataclass
-class DesignModelHeader:
-    category: str
-    elements: Set[str] = set()
-    model_paths: List[str] = list()
+# @dataclass
+# class DesignModelHeader:
+#     category: str
+#     elements: Set[str] = set()
+#     model_paths: List[str] = list()
 
-    def write_to_path(self, base_path: str, preffix: str = "", suffix: str = ""):
-        with open(
-            base_path
-            + os.path.sep
-            + "header_"
-            + preffix
-            + "_"
-            + self.category
-            + "_"
-            + suffix
-            + ".json",
-            "w",
-        ) as jsonf:
-            json.dump(asdict(self), jsonf)
-        with open(
-            base_path
-            + os.path.sep
-            + "header_"
-            + preffix
-            + "_"
-            + self.category
-            + "_"
-            + suffix
-            + ".cbor",
-            "w",
-        ) as cborf:
-            cbor2.dump(asdict(self), cborf)
+#     def write_to_path(self, base_path: str, preffix: str = "", suffix: str = ""):
+#         with open(
+#             base_path
+#             + os.path.sep
+#             + "header_"
+#             + preffix
+#             + "_"
+#             + self.category
+#             + "_"
+#             + suffix
+#             + ".json",
+#             "w",
+#         ) as jsonf:
+#             json.dump(asdict(self), jsonf)
+#         with open(
+#             base_path
+#             + os.path.sep
+#             + "header_"
+#             + preffix
+#             + "_"
+#             + self.category
+#             + "_"
+#             + suffix
+#             + ".cbor",
+#             "w",
+#         ) as cborf:
+#             cbor2.dump(asdict(self), cborf)
 
 
 class DecisionModel:
@@ -124,11 +127,21 @@ class DecisionModel:
     Exhibition (DATE), 2021, pp. 1204-1207, doi: 10.23919/DATE51398.2021.9474082.
     """
 
-    def unique_identifier(self) -> str:
+    def category(self) -> str:
         return self.__class__.__name__
 
+    def part(self) -> Set[str]:
+        return set()
+
     def header(self) -> DecisionModelHeader:
-        return DecisionModelHeader(category=self.unique_identifier())
+        builder = flatbuffers.Builder(1024)
+        data.DecisionModelHeaderStart(builder)
+        data.DecisionModelHeaderAddCategory(builder, builder.CreateString(self.category()))
+        part_vec = data.DecisionModelHeaderStartPartVector(builder, len(self.part()))
+        for x in self.part():
+            part_vec.AddString()
+        builder.EndVector()
+        return data.DecisionModelHeaderEnd(builder)
 
     def dominates(self, other: "DecisionModel") -> bool:
         return self.header().dominates(other.header())

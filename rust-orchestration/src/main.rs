@@ -455,6 +455,10 @@ fn main() {
                     .iter()
                     .map(|(i, _)| (biddings[*i].0.to_owned(), biddings[*i].1.to_owned()))
                     .collect(),
+                dominant_biddings
+                    .iter()
+                    .map(|(_, b)| b.to_owned())
+                    .collect(),
                 Vec::new(),
                 idesyde_core::ExplorationConfigurationBuilder::new()
                     .max_sols(args.x_max_solutions.unwrap_or(0))

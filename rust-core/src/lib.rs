@@ -34,6 +34,10 @@ pub trait DesignModel: Send + DowncastSync {
         return vec![];
     }
 
+    fn elements(&self) -> Vec<String> {
+        return vec![];
+    }
+
     fn header(&self) -> DesignModelHeader;
 
     fn body_as_string(&self) -> Option<String> {

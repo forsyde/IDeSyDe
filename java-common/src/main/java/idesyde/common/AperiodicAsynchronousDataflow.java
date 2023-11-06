@@ -43,6 +43,7 @@ public record AperiodicAsynchronousDataflow(
         @JsonProperty("process_minimum_throughput") Map<String, Double> processMinimumThroughput,
         @JsonProperty("process_path_maximum_latency") Map<String, Map<String, Double>> processPathMaximumLatency,
         @JsonProperty("process_put_in_buffer_in_bits") Map<String, Map<String, Long>> processPutInBufferInBits,
+        @JsonProperty("buffer_token_size_in_bits") Map<String, Long> bufferTokenSizeInbits,
         Set<String> processes) implements DecisionModel {
 
     public record Job(String process, long instance) {

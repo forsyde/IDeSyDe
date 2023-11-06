@@ -144,6 +144,7 @@ pub struct SDFApplication {
     pub topology_token_size_in_bits: Vec<u64>,
     pub topology_channel_names: Vec<HashSet<String>>,
     pub actor_minimum_throughputs: HashMap<String, f64>,
+    pub channel_token_sizes: HashMap<String, u64>,
     pub chain_maximum_latency: HashMap<String, HashMap<String, f64>>,
 }
 
@@ -422,6 +423,7 @@ pub struct AperiodicAsynchronousDataflow {
     pub processes: HashSet<String>,
     pub buffers: HashSet<String>,
     pub buffer_max_size_in_bits: HashMap<String, u64>,
+    pub buffer_token_size_in_bits: HashMap<String, u64>,
     pub process_put_in_buffer_in_bits: HashMap<String, HashMap<String, u64>>,
     pub process_get_from_buffer_in_bits: HashMap<String, HashMap<String, u64>>,
     pub job_graph_name: Vec<String>,

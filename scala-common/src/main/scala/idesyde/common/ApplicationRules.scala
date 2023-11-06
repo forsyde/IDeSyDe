@@ -29,6 +29,9 @@ trait ApplicationRules {
                   .minimumActorThroughputs(sdfWithFunctions.actorsIdentifiers.indexOf(a))
               )
               .toMap,
+            channel_token_sizes = sdfWithFunctions.channelTokenSizes.zipWithIndex
+              .map((ms, i) => sdfWithFunctions.channelsIdentifiers(i) -> ms)
+              .toMap,
             topology_dsts =
               sdfWithFunctions.sdfMessages.map((src, dst, channel, msize, prod, cons, toks) => dst),
             topology_production = sdfWithFunctions.sdfMessages

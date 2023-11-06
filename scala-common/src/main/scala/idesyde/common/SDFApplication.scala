@@ -5,6 +5,7 @@ import idesyde.core.CompleteDecisionModel
 
 final case class SDFApplication(
     val actor_minimum_throughputs: Map[String, Double],
+    val channel_token_sizes: Map[String, Long],
     val actors_identifiers: Set[String],
     val self_concurrent_actors: Set[String],
     val chain_maximum_latency: Map[String, Map[String, Double]],

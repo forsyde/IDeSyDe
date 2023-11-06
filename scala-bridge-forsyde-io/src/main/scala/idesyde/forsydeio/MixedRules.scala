@@ -357,6 +357,16 @@ trait MixedRules {
         act.setThroughputInSecsNumerator(frac.numeratorAsLong)
         act.setThroughputInSecsDenominator(frac.denominatorAsLong)
       }
+      // and the maximum channel sizes
+      for (
+        (c, ci) <- solved.sdfApplications.channelsIdentifiers.zipWithIndex;
+        maxTokens = solved.sdfApplications.sdfPessimisticTokensPerChannel(ci)
+      ) {
+        val channelVec = rebuilt.newVertex(c)
+        val bounded    = ForSyDeHierarchy.BoundedBufferLike.enforce(rebuilt, channelVec)
+        bounded.elementSizeInBits(solved.sdfApplications.channelTokenSizes(ci))
+        bounded.maxElements(maxTokens)
+      }
       ForSyDeDesignModel(rebuilt)
     }
   }

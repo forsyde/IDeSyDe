@@ -128,6 +128,7 @@ class ForSyDeIOSYNetworkToAADataflowIRule implements IdentificationRule {
                                                     .collect(Collectors.toMap(
                                                             sig -> sig.getIdentifier(),
                                                             sig -> msgSizes.get(sig.getIdentifier()))))),
+                            msgSizes,
                             mapsAndDelays.stream().map(x -> x.getIdentifier()).collect(Collectors.toSet())));
                 });
         // System.out.println("Finished with %d

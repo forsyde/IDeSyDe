@@ -74,18 +74,33 @@ public class AperiodicAsynchronousDataflowToPartitionedTiledMulticoreReverseIden
                                 scheduler.superLoopEntries(looplist);
                         });
                         model.aperiodicAsynchronousDataflows()
-                                        .forEach(app -> app.processes().forEach(process -> {
-                                                var th = app.processMinimumThroughput().get(process);
-                                                var processVertex = reversedSystemGraph.newVertex(process);
-                                                var behaviour = ForSyDeHierarchy.AnalyzedBehavior
-                                                                .enforce(reversedSystemGraph, processVertex);
-                                                // var scale = 1.0;
-                                                // while (Math.ceil(th * scale) - (th * scale) > 0.0001) {
-                                                // scale *= 10.0;
-                                                // }
-                                                behaviour.setThroughputInSecsDenominator(Math.round(th));
-                                                behaviour.setThroughputInSecsNumerator(1L);
-                                        }));
+                                        .forEach(app -> {
+                                                app.processes().forEach(process -> {
+                                                        var th = app.processMinimumThroughput().get(process);
+                                                        var processVertex = reversedSystemGraph.newVertex(process);
+                                                        var behaviour = ForSyDeHierarchy.AnalyzedBehavior
+                                                                        .enforce(reversedSystemGraph, processVertex);
+                                                        // var scale = 1.0;
+                                                        // while (Math.ceil(th * scale) - (th * scale) > 0.0001) {
+                                                        // scale *= 10.0;
+                                                        // }
+                                                        behaviour.setThroughputInSecsDenominator(Math.round(th));
+                                                        behaviour.setThroughputInSecsNumerator(1L);
+                                                });
+                                                app.buffers().forEach(channel -> {
+                                                        var channelVec = reversedSystemGraph.newVertex(channel);
+                                                        var bbuf = ForSyDeHierarchy.BoundedBufferLike
+                                                                        .enforce(reversedSystemGraph, channelVec);
+                                                        var maxElems = app.bufferTokenSizeInbits().get(channel) > 0
+                                                                        ? app.bufferMaxSizeInBits().get(channel)
+                                                                                        / app.bufferTokenSizeInbits()
+                                                                                                        .get(channel)
+                                                                        : 1;
+                                                        bbuf.maxElements((int) maxElems);
+                                                        bbuf.elementSizeInBits(
+                                                                        app.bufferTokenSizeInbits().get(channel));
+                                                });
+                                        });
                         // mereg HAS to come here; otherwise the vertex that java has a pointer too will
                         // be reused.
                         for (var x : designModels) {

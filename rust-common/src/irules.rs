@@ -296,6 +296,10 @@ pub fn identify_asynchronous_aperiodic_dataflow_from_sdf(
                         }
                     }
                 }
+                let channel_token_sizes = analysed_sdf_application
+                    .sdf_application
+                    .channel_token_sizes
+                    .to_owned();
                 // we finish by building the decision model
                 identified.push(Arc::new(AperiodicAsynchronousDataflow {
                     processes: component_actors.iter().map(|s| s.to_string()).collect(),
@@ -303,7 +307,35 @@ pub fn identify_asynchronous_aperiodic_dataflow_from_sdf(
                         .into_iter()
                         .map(|s| s.to_string())
                         .collect(),
-                    buffer_max_size_in_bits: HashMap::new(),
+                    // this construciton takes a look in the topology and applies the maximum
+                    // possible production of tokens to every channel lumped in such topology
+                    buffer_max_size_in_bits: analysed_sdf_application
+                        .sdf_application
+                        .topology_channel_names
+                        .iter()
+                        .enumerate()
+                        .flat_map(|(i, channels)| {
+                            let src = &analysed_sdf_application.sdf_application.topology_srcs[i];
+                            let prod =
+                                analysed_sdf_application.sdf_application.topology_production[i];
+                            let max_tokens = analysed_sdf_application
+                                .repetition_vector
+                                .get(src)
+                                .map(|q_src| q_src * prod)
+                                .unwrap_or(prod);
+                            channels.iter().map(move |channel| (max_tokens, channel))
+                        })
+                        .map(|(max_tokens, channel)| {
+                            (
+                                channel.to_owned(),
+                                channel_token_sizes
+                                    .get(channel)
+                                    .map(|tok| max_tokens * tok)
+                                    .unwrap_or(0),
+                            )
+                        })
+                        .collect(),
+                    buffer_token_size_in_bits: channel_token_sizes,
                     job_graph_name: jobs_of_processes
                         .iter()
                         .map(|(s, _)| s.to_string())

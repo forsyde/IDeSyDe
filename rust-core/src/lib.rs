@@ -236,6 +236,32 @@ pub enum MarkedIdentificationRule {
     GenericIdentificationRule(IdentificationRule),
 }
 
+/// This trait is wrapper around the normal iteration to create a "session"
+/// for identification modules. Via this, we can do more advanced things
+/// that would otherwise be impossible with a simple function call or iterator,
+/// like caching the decision or design models to not send them unnecesarily remotely.
+pub trait IdentificationIterator: Iterator<Item = Vec<Arc<dyn DecisionModel>>> + Sync {
+    fn add_decision_models(&mut self, decision_models: &Vec<Arc<dyn DecisionModel>>) -> &mut Self {
+        return self;
+    }
+
+    fn add_design_models(&mut self, design_models: &Vec<Arc<dyn DesignModel>>) -> &mut Self {
+        return self;
+    }
+
+    fn next_with_models(
+        &mut self,
+        decision_models: &Vec<Arc<dyn DecisionModel>>,
+        design_models: &Vec<Arc<dyn DesignModel>>,
+    ) -> Option<Vec<Arc<dyn DesignModel>>> {
+        return None;
+    }
+
+    fn next(&self) -> Option<Vec<Arc<dyn DesignModel>>> {
+        return None;
+    }
+}
+
 pub trait IdentificationModule: Send + Sync {
     fn unique_identifier(&self) -> String;
     fn identification_step(

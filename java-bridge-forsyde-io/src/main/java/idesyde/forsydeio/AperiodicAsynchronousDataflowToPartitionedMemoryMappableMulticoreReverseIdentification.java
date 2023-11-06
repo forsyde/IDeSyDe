@@ -74,19 +74,36 @@ public class AperiodicAsynchronousDataflowToPartitionedMemoryMappableMulticoreRe
                                 scheduler.superLoopEntries(looplist);
                         });
                         model.aperiodicAsynchronousDataflows()
-                                        .forEach(app -> app.processMinimumThroughput().entrySet().forEach(e -> {
-                                                var process = reversedSystemGraph.queryVertex(e.getKey())
-                                                                .orElse(reversedSystemGraph.newVertex(e.getKey()));
-                                                var behaviour = ForSyDeHierarchy.AnalyzedBehavior
-                                                                .enforce(reversedSystemGraph, process);
-                                                var scale = 1.0;
-                                                while (Math.ceil(e.getValue() * scale)
-                                                                - (e.getValue() * scale) > 0.0001) {
-                                                        scale *= 10.0;
-                                                }
-                                                behaviour.setThroughputInSecsDenominator((long) (e.getValue() * scale));
-                                                behaviour.setThroughputInSecsNumerator((long) scale);
-                                        }));
+                                        .forEach(app -> {
+                                                app.processMinimumThroughput().entrySet().forEach(e -> {
+                                                        var process = reversedSystemGraph.queryVertex(e.getKey())
+                                                                        .orElse(reversedSystemGraph
+                                                                                        .newVertex(e.getKey()));
+                                                        var behaviour = ForSyDeHierarchy.AnalyzedBehavior
+                                                                        .enforce(reversedSystemGraph, process);
+                                                        var scale = 1.0;
+                                                        while (Math.ceil(e.getValue() * scale)
+                                                                        - (e.getValue() * scale) > 0.0001) {
+                                                                scale *= 10.0;
+                                                        }
+                                                        behaviour.setThroughputInSecsDenominator(
+                                                                        (long) (e.getValue() * scale));
+                                                        behaviour.setThroughputInSecsNumerator((long) scale);
+                                                });
+                                                app.buffers().forEach(channel -> {
+                                                        var channelVec = reversedSystemGraph.newVertex(channel);
+                                                        var bbuf = ForSyDeHierarchy.BoundedBufferLike
+                                                                        .enforce(reversedSystemGraph, channelVec);
+                                                        var maxElems = app.bufferTokenSizeInbits().get(channel) > 0
+                                                                        ? app.bufferMaxSizeInBits().get(channel)
+                                                                                        / app.bufferTokenSizeInbits()
+                                                                                                        .get(channel)
+                                                                        : 1;
+                                                        bbuf.maxElements((int) maxElems);
+                                                        bbuf.elementSizeInBits(
+                                                                        app.bufferTokenSizeInbits().get(channel));
+                                                });
+                                        });
                         for (var x : designModels) {
                                 reversedSystemGraph.mergeInPlace(x.systemGraph());
                         }

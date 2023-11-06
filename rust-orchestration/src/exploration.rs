@@ -515,13 +515,24 @@ impl Iterator for CombinedExplorerIterator {
     fn next(&mut self) -> Option<Self::Item> {
         let mut num_disconnected = 0;
         let start = Instant::now();
-        while num_disconnected < self.sol_channels.len() {
+        while num_disconnected < self.sol_channels.len()
+            && self
+                .duration_left
+                .map(|d| d >= start.elapsed())
+                .unwrap_or(true)
+        {
             num_disconnected = 0;
             for i in 0..self.sol_channels.len() {
                 match self.sol_channels[i].recv_timeout(std::time::Duration::from_millis(500)) {
                     Ok((explored_decision_model, sol_objs)) => {
                         // debug!("New solution from explorer index {}", i);
-                        self.duration_left = self.duration_left.map(|d| d - start.elapsed());
+                        self.duration_left = self.duration_left.map(|d| {
+                            if d >= start.elapsed() {
+                                d - start.elapsed()
+                            } else {
+                                Duration::ZERO
+                            }
+                        });
                         return Some((explored_decision_model, sol_objs));
                     }
                     Err(std::sync::mpsc::RecvTimeoutError::Disconnected) => {
@@ -533,13 +544,6 @@ impl Iterator for CombinedExplorerIterator {
                     }
                     Err(std::sync::mpsc::RecvTimeoutError::Timeout) => {}
                 };
-                if self
-                    .duration_left
-                    .map(|d| d <= start.elapsed())
-                    .unwrap_or(false)
-                {
-                    return None;
-                }
             }
         }
         None

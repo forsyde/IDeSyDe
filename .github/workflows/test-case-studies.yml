@@ -42,7 +42,7 @@ jobs:
           cargo build --release
           cp ./target/release/idesyde-orchestration idesyde
           python -m pip install robotframework
-          python -m robot --exclude slow TestsBenchmark.robot
+          python -m robot --loglevel DEBUG --exclude slow TestsBenchmark.robot
       - uses: actions/upload-artifact@v3
         if: success() || failure()
         with:

@@ -147,15 +147,20 @@ impl Explorer for ExternalExplorer {
     }
 
     fn bid(&self, m: Arc<dyn DecisionModel>) -> ExplorationBid {
+        let mut form = reqwest::blocking::multipart::Form::new();
+        form = form.part(
+            format!("decisionModel"),
+            reqwest::blocking::multipart::Part::text(DecisionModelMessage::from(m).to_json_str()),
+        );
         match self
             .client
-            .get(format!(
+            .post(format!(
                 "http://{}:{}/{}/bid",
                 self.location_url(),
                 self.location_port(),
                 self.name
             ))
-            .body(DecisionModelMessage::from(m).to_json_str())
+            .multipart(form)
             .send()
         {
             Ok(result) => match result.text() {

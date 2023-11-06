@@ -367,17 +367,39 @@ trait StandaloneExplorationModule
           ctx.result(write(explorers.map(_.uniqueIdentifier)));
         }
       )
-      .get(
+      .post(
         "/{explorerName}/bid",
         ctx => {
-          explorers
-            .find(e => e.uniqueIdentifier == ctx.pathParam("explorerName"))
-            .foreach(explorer => {
-              decisionMessageToModel(
-                DecisionModelMessage
-                  .fromJsonString(ctx.body())
-              ).foreach(decisionModel => ctx.result(write(explorer.bid(decisionModel))))
-            })
+          if (ctx.isMultipart()) {
+            ctx
+              .formParamMap()
+              .forEach((name, entries) => {
+                if (name.startsWith("decisionModel")) {
+                  explorers
+                    .find(e => e.uniqueIdentifier == ctx.pathParam("explorerName"))
+                    .foreach(explorer => {
+                      entries
+                        .stream()
+                        .findAny()
+                        .ifPresent(msg => {
+                          decisionMessageToModel(
+                            DecisionModelMessage
+                              .fromJsonString(msg)
+                          ).foreach(decisionModel => ctx.result(write(explorer.bid(decisionModel))))
+                        })
+                    })
+                }
+              })
+          } else {
+            explorers
+              .find(e => e.uniqueIdentifier == ctx.pathParam("explorerName"))
+              .foreach(explorer => {
+                decisionMessageToModel(
+                  DecisionModelMessage
+                    .fromJsonString(ctx.body())
+                ).foreach(decisionModel => ctx.result(write(explorer.bid(decisionModel))))
+              })
+          }
         }
       )
       .ws(

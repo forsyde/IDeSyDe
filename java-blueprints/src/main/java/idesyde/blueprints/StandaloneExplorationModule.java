@@ -5,6 +5,8 @@ import com.fasterxml.jackson.databind.DatabindException;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.dataformat.cbor.CBORFactory;
 import com.fasterxml.jackson.datatype.jdk8.Jdk8Module;
+
+import idesyde.blueprints.StandaloneExplorationModule.ExplorationModuleCLI;
 import idesyde.core.DecisionModel;
 import idesyde.core.ExplorationSolution;
 import idesyde.core.Explorer;
@@ -65,43 +67,48 @@ public interface StandaloneExplorationModule {
                         // })
                         .post(
                                 "/decision",
-                                ctx -> DecisionModelMessage.fromJsonString(ctx.body())
-                                        .flatMap(this::decisionMessageToModel)
-                                        .ifPresent(decisionModels::add))
+                                ctx -> {
+                                    if (ctx.isMultipartFormData()) {
+                                    } else {
+                                        DecisionModelMessage.fromJsonString(ctx.body())
+                                                .flatMap(this::decisionMessageToModel)
+                                                .ifPresent(decisionModels::add);
+                                    }
+                                })
                         .get(
                                 "/explorers",
                                 ctx -> {
                                     ctx.result(objectMapper.writeValueAsString(explorers().stream()
                                             .map(e -> e.uniqueIdentifier()).collect(Collectors.toSet())));
                                 })
-                        .get(
-                                "/bid",
-                                ctx -> {
-                                    var bids = DecisionModelMessage.fromJsonString(ctx.body())
-                                            .flatMap(this::decisionMessageToModel)
-                                            .map(decisionModel -> explorers().stream()
-                                                    .map(explorer -> explorer.bid(decisionModel))
-                                                    .collect(Collectors.toList()))
-                                            .orElse(List.of());
-                                    ctx.result(objectMapper.writeValueAsString(bids));
-                                })
-                        .get(
+                        .post(
                                 "/{explorerName}/bid",
                                 ctx -> {
                                     explorers().stream()
                                             .filter(e -> e.uniqueIdentifier().equals(ctx.pathParam("explorerName")))
                                             .findAny().ifPresentOrElse(explorer -> {
-                                                DecisionModelMessage.fromJsonString(ctx.body())
-                                                        .flatMap(this::decisionMessageToModel)
-                                                        .map(decisionModel -> explorer.bid(decisionModel))
-                                                        .ifPresent(bid -> {
-                                                            try {
-                                                                ctx.result(objectMapper.writeValueAsString(bid));
-                                                            } catch (JsonProcessingException e1) {
-                                                                e1.printStackTrace();
-                                                                ctx.status(500);
-                                                            }
-                                                        });
+                                                if (ctx.isMultipartFormData()) {
+                                                    ctx.formParamMap().forEach((name, entries) -> {
+                                                        if (name.startsWith("decisionModel")) {
+                                                            entries.stream().findAny().ifPresent(msg -> {
+                                                                DecisionModelMessage.fromJsonString(msg)
+                                                                        .flatMap(this::decisionMessageToModel)
+                                                                        .map(decisionModel -> explorer
+                                                                                .bid(decisionModel))
+                                                                        .ifPresent(bid -> {
+                                                                            try {
+                                                                                ctx.result(objectMapper
+                                                                                        .writeValueAsString(bid));
+                                                                            } catch (JsonProcessingException e1) {
+                                                                                e1.printStackTrace();
+                                                                                ctx.status(500);
+                                                                            }
+                                                                        });
+                                                            });
+                                                        }
+                                                    });
+                                                } else {
+                                                }
                                             }, () -> {
                                                 ctx.status(404);
                                             });

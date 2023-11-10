@@ -64,12 +64,10 @@ public interface IdentificationModule {
                 .collect(Collectors.toSet());
     }
 
-    default IdentificationResult identificationStep(
-            long stepNumber,
+    default IdentificationResult identification(
             Set<DesignModel> designModels,
             Set<DecisionModel> decisionModels) {
         return identificationRules().stream()
-                .filter(irule -> irule.usesDecisionModels() || (irule.usesDesignModels() && stepNumber == 0L))
                 .map(identificationRule -> identificationRule.apply(designModels, decisionModels))
                 .reduce((res1, res2) -> {
                     var merged = new HashSet<DecisionModel>();

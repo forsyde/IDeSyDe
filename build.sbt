@@ -8,7 +8,7 @@ ThisBuild / publishTo := Some(Opts.resolver.sonatypeStaging)
 
 ThisBuild / resolvers += "jitpack" at "https://jitpack.io"
 
-lazy val forsydeIoVersion              = "0.7.14"
+lazy val forsydeIoVersion              = "0.7.15"
 lazy val jgraphtVersion                = "1.5.1"
 lazy val scribeVersion                 = "3.10.2"
 lazy val scalaGraphVersion             = "1.13.5"
@@ -22,6 +22,7 @@ lazy val scoptVersion                  = "4.1.0"
 lazy val scalaJsonSchemaVersion        = "0.7.8"
 lazy val javalinVersion                = "5.6.1"
 lazy val slf4jVersion                  = "2.0.7"
+lazy val IDeSyDeJavaVersion            = "develop-SNAPSHOT"
 
 lazy val imodulesTarget = file("imodules")
 lazy val emodulesTarget = file("emodules")
@@ -70,31 +71,31 @@ lazy val root = project
 //   target := baseDirectory.value / "sbt-target" / name.value
 // )
 
-lazy val core = (project in file("scala-core"))
-  .settings(
-    // name := "idesyde-scala-core",
-    libraryDependencies ++= Seq("com.lihaoyi" %%% "upickle" % upickleVersion)
-  )
+// lazy val core = (project in file("scala-core"))
+//   .settings(
+//     // name := "idesyde-scala-core",
+//     libraryDependencies ++= Seq("com.lihaoyi" %%% "upickle" % upickleVersion)
+//   )
 
-lazy val blueprints = (project in file("scala-blueprints"))
-  .dependsOn(core)
-  .settings(
-    // name := "idesyde-scala-blueprints",
-    libraryDependencies ++= Seq(
-      "com.lihaoyi"      %%% "os-lib"       % osLibVersion,
-      "com.github.scopt" %%% "scopt"        % scoptVersion,
-      "org.slf4j"          % "slf4j-simple" % slf4jVersion % Runtime,
-      "io.javalin"         % "javalin"      % javalinVersion
-    ),
-    licenses := Seq(
-      "MIT"  -> url("https://opensource.org/license/mit/"),
-      "APL2" -> url("https://www.apache.org/licenses/LICENSE-2.0")
-    )
-  )
+// lazy val blueprints = (project in file("scala-blueprints"))
+//   .dependsOn(core)
+//   .settings(
+//     // name := "idesyde-scala-blueprints",
+//     libraryDependencies ++= Seq(
+//       "com.lihaoyi"      %%% "os-lib"       % osLibVersion,
+//       "com.github.scopt" %%% "scopt"        % scoptVersion,
+//       "org.slf4j"          % "slf4j-simple" % slf4jVersion % Runtime,
+//       "io.javalin"         % "javalin"      % javalinVersion
+//     ),
+//     licenses := Seq(
+//       "MIT"  -> url("https://opensource.org/license/mit/"),
+//       "APL2" -> url("https://www.apache.org/licenses/LICENSE-2.0")
+//     )
+//   )
 
 lazy val common = (project in file("scala-common"))
-  .dependsOn(core)
-  .dependsOn(blueprints)
+  // .dependsOn(core)
+  // .dependsOn(blueprints)
   // .enablePlugins(ScalaNativePlugin)
   .enablePlugins(UniversalPlugin, JavaAppPackaging, JlinkPlugin)
   .enablePlugins(JDKPackagerPlugin)
@@ -102,6 +103,8 @@ lazy val common = (project in file("scala-common"))
   .settings(
     // name := "idesyde-scala-common",
     libraryDependencies ++= Seq(
+      "com.github.forsyde.IDeSyDe" % "java-core"       % IDeSyDeJavaVersion,
+      "com.github.forsyde.IDeSyDe" % "java-blueprints" % IDeSyDeJavaVersion,
       ("org.scala-graph" %% "graph-core" % scalaGraphVersion).cross(CrossVersion.for3Use2_13),
       "org.typelevel"   %%% "spire"      % spireVersion
     ),
@@ -118,7 +121,7 @@ lazy val common = (project in file("scala-common"))
   )
 
 lazy val forsyde = (project in file("scala-bridge-forsyde-io"))
-  .dependsOn(core)
+  // .dependsOn(core)
   .dependsOn(common)
   .dependsOn(blueprints)
   .enablePlugins(UniversalPlugin, JavaAppPackaging, JlinkPlugin)

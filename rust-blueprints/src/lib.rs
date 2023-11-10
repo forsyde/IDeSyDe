@@ -1,129 +1,131 @@
 pub mod macros;
 
 use std::{
-    collections::{HashMap, HashSet},
+    collections::{HashMap, HashSet, LinkedList},
     path::{Path, PathBuf},
     sync::Arc,
 };
 
 use clap::Parser;
+use derive_builder::Builder;
 use idesyde_core::{
-    headers::{DecisionModelHeader, DesignModelHeader},
     DecisionModel, DesignModel, ExplorationModule, ExplorationSolution, Explorer,
-    IdentificationModule, IdentificationResult, MarkedIdentificationRule,
-    ReverseIdentificationRule,
+    IdentificationIterator, IdentificationModule, IdentificationResult, MarkedIdentificationRule,
+    OpaqueDecisionModel, ReverseIdentificationRule,
 };
 use serde::{Deserialize, Serialize};
 
-#[derive(Serialize, Clone, Deserialize, Debug, PartialEq, Eq)]
-pub struct DecisionModelMessage {
-    header: DecisionModelHeader,
-    body: Option<String>,
-}
+use rayon::prelude::*;
 
-impl DecisionModelMessage {
-    // pub fn from_dyn_decision_model(m: &dyn DecisionModel) -> DecisionModelMessage {
-    //     DecisionModelMessage {
-    //         header: m.header(),
-    //         body: m
-    //             .body_as_json()
-    //             .map(|x| x.replace("\r\n", "\\r\\n").replace("\n", "\\n")),
-    //     }
-    // }
+// #[derive(Serialize, Clone, Deserialize, Debug, PartialEq, Eq)]
+// pub struct DecisionModelMessage {
+//     header: DecisionModelHeader,
+//     body: Option<String>,
+// }
 
-    pub fn from_json_str(s: &str) -> Option<DecisionModelMessage> {
-        match serde_json::from_str(s) {
-            Ok(m) => Some(m),
-            Err(e) => {
-                println!("{}", e);
-                None
-            }
-        }
-    }
+// impl DecisionModelMessage {
+//     // pub fn from_dyn_decision_model(m: &dyn DecisionModel) -> DecisionModelMessage {
+//     //     DecisionModelMessage {
+//     //         header: m.header(),
+//     //         body: m
+//     //             .body_as_json()
+//     //             .map(|x| x.replace("\r\n", "\\r\\n").replace("\n", "\\n")),
+//     //     }
+//     // }
 
-    pub fn header(&self) -> DecisionModelHeader {
-        self.header.to_owned()
-    }
+//     pub fn from_json_str(s: &str) -> Option<DecisionModelMessage> {
+//         match serde_json::from_str(s) {
+//             Ok(m) => Some(m),
+//             Err(e) => {
+//                 println!("{}", e);
+//                 None
+//             }
+//         }
+//     }
 
-    pub fn body_with_newlines_unescaped(&self) -> Option<String> {
-        self.body
-            .to_owned()
-            .map(|x| x.replace("\\r\\n", "\r\n").replace("\\n", "\n"))
-    }
+//     pub fn header(&self) -> DecisionModelHeader {
+//         self.header.to_owned()
+//     }
 
-    pub fn to_json_str(&self) -> String {
-        serde_json::to_string(self)
-            .expect("Failed to serialize a DecisionModelMessage, which should always suceed.")
-    }
-}
+//     pub fn body_with_newlines_unescaped(&self) -> Option<String> {
+//         self.body
+//             .to_owned()
+//             .map(|x| x.replace("\\r\\n", "\r\n").replace("\\n", "\n"))
+//     }
 
-impl<'a, T: DecisionModel + ?Sized> From<&'a T> for DecisionModelMessage {
-    fn from(value: &'a T) -> Self {
-        DecisionModelMessage {
-            header: value.header(),
-            body: value
-                .body_as_json()
-                .map(|x| x.replace("\r\n", "\\r\\n").replace("\n", "\\n")),
-        }
-    }
-}
+//     pub fn to_json_str(&self) -> String {
+//         serde_json::to_string(self)
+//             .expect("Failed to serialize a DecisionModelMessage, which should always suceed.")
+//     }
+// }
 
-impl<T: DecisionModel + ?Sized> From<Arc<T>> for DecisionModelMessage {
-    fn from(value: Arc<T>) -> Self {
-        DecisionModelMessage {
-            header: value.header(),
-            body: value
-                .body_as_json()
-                .map(|x| x.replace("\r\n", "\\r\\n").replace("\n", "\\n")),
-        }
-    }
-}
+// impl<'a, T: DecisionModel + ?Sized> From<&'a T> for DecisionModelMessage {
+//     fn from(value: &'a T) -> Self {
+//         DecisionModelMessage {
+//             header: value.header(),
+//             body: value
+//                 .body_as_json()
+//                 .map(|x| x.replace("\r\n", "\\r\\n").replace("\n", "\\n")),
+//         }
+//     }
+// }
 
-#[derive(Serialize, Clone, Deserialize, Debug, PartialEq, Eq)]
-pub struct DesignModelMessage {
-    pub header: DesignModelHeader,
-    pub body: Option<String>,
-    pub extensions: Vec<String>,
-}
+// impl<T: DecisionModel + ?Sized> From<Arc<T>> for DecisionModelMessage {
+//     fn from(value: Arc<T>) -> Self {
+//         DecisionModelMessage {
+//             header: value.header(),
+//             body: value
+//                 .body_as_json()
+//                 .map(|x| x.replace("\r\n", "\\r\\n").replace("\n", "\\n")),
+//         }
+//     }
+// }
 
-impl DesignModelMessage {
-    pub fn from_dyn_design_model(m: &dyn DesignModel) -> DesignModelMessage {
-        DesignModelMessage {
-            header: m.header(),
-            body: m.body_as_string(),
-            extensions: m.extensions(),
-        }
-    }
+// #[derive(Serialize, Clone, Deserialize, Debug, PartialEq, Eq)]
+// pub struct DesignModelMessage {
+//     pub header: DesignModelHeader,
+//     pub body: Option<String>,
+//     pub extensions: Vec<String>,
+// }
 
-    pub fn from_json_str(s: &str) -> Option<DesignModelMessage> {
-        serde_json::from_str(s).ok()
-    }
+// impl DesignModelMessage {
+//     pub fn from_dyn_design_model(m: &dyn DesignModel) -> DesignModelMessage {
+//         DesignModelMessage {
+//             header: m.header(),
+//             body: m.body_as_string(),
+//             extensions: m.extensions(),
+//         }
+//     }
 
-    pub fn to_json_str(&self) -> String {
-        serde_json::to_string(self)
-            .expect("Failed to serialize a DesignModelMessage, which should always suceed.")
-    }
-}
+//     pub fn from_json_str(s: &str) -> Option<DesignModelMessage> {
+//         serde_json::from_str(s).ok()
+//     }
 
-impl<T> From<&T> for DesignModelMessage
-where
-    T: DesignModel + ?Sized,
-{
-    fn from(value: &T) -> Self {
-        DesignModelMessage {
-            header: value.header(),
-            body: value.body_as_string(),
-            extensions: value.extensions(),
-        }
-    }
-}
+//     pub fn to_json_str(&self) -> String {
+//         serde_json::to_string(self)
+//             .expect("Failed to serialize a DesignModelMessage, which should always suceed.")
+//     }
+// }
+
+// impl<T> From<&T> for DesignModelMessage
+// where
+//     T: DesignModel + ?Sized,
+// {
+//     fn from(value: &T) -> Self {
+//         DesignModelMessage {
+//             header: value.header(),
+//             body: value.body_as_string(),
+//             extensions: value.extensions(),
+//         }
+//     }
+// }
 
 // impl From<&dyn DesignModel> for DesignModelMessage {}
 
 #[derive(Clone, PartialEq, Serialize, Deserialize)]
 pub struct ExplorationSolutionMessage {
     pub objectives: HashMap<String, f64>,
-    pub solved: DecisionModelMessage,
+    pub solved: OpaqueDecisionModel,
 }
 
 impl ExplorationSolutionMessage {
@@ -142,15 +144,15 @@ impl From<&ExplorationSolution> for ExplorationSolutionMessage {
         let (sol, objs) = value;
         ExplorationSolutionMessage {
             objectives: objs.clone(),
-            solved: DecisionModelMessage::from(sol.as_ref()),
+            solved: OpaqueDecisionModel::from(sol),
         }
     }
 }
 
 #[derive(Clone, PartialEq, Serialize, Deserialize)]
 pub struct IdentificationResultMessage {
-    pub identified: Vec<DecisionModelMessage>,
-    pub errors: HashSet<String>,
+    pub identified: Vec<OpaqueDecisionModel>,
+    pub messages: HashSet<String>,
 }
 
 impl TryFrom<&str> for IdentificationResultMessage {
@@ -161,86 +163,88 @@ impl TryFrom<&str> for IdentificationResultMessage {
     }
 }
 
-#[derive(Eq, Clone)]
-pub struct OpaqueDecisionModel {
-    header: DecisionModelHeader,
-    body_json: Option<String>,
-    body_msgpack: Option<Vec<u8>>,
-    body_cbor: Option<Vec<u8>>,
-}
+// #[derive(Eq, Clone)]
+// pub struct OpaqueDecisionModel {
+//     header: DecisionModelHeader,
+//     body_json: Option<String>,
+//     body_msgpack: Option<Vec<u8>>,
+//     body_cbor: Option<Vec<u8>>,
+// }
 
-impl OpaqueDecisionModel {
-    pub fn from_json_str(header: &DecisionModelHeader, s: &str) -> OpaqueDecisionModel {
-        OpaqueDecisionModel {
-            header: header.to_owned(),
-            body_json: Some(s.to_string()),
-            body_msgpack: None,
-            body_cbor: None,
-        }
-    }
-}
+// impl OpaqueDecisionModel {
+//     pub fn from_json_str(header: &DecisionModelHeader, s: &str) -> OpaqueDecisionModel {
+//         OpaqueDecisionModel {
+//             header: header.to_owned(),
+//             body_json: Some(s.to_string()),
+//             body_msgpack: None,
+//             body_cbor: None,
+//         }
+//     }
+// }
 
-impl DecisionModel for OpaqueDecisionModel {
-    fn category(&self) -> String {
-        self.header.category.to_owned()
-    }
+// impl DecisionModel for OpaqueDecisionModel {
+//     fn category(&self) -> String {
+//         self.header.category.to_owned()
+//     }
 
-    fn header(&self) -> DecisionModelHeader {
-        self.header.to_owned()
-    }
+//     fn header(&self) -> DecisionModelHeader {
+//         self.header.to_owned()
+//     }
 
-    fn body_as_json(&self) -> Option<String> {
-        self.body_json.to_owned()
-    }
+//     fn body_as_json(&self) -> Option<String> {
+//         self.body_json.to_owned()
+//     }
 
-    fn body_as_msgpack(&self) -> Option<Vec<u8>> {
-        self.body_msgpack.to_owned()
-    }
+//     fn body_as_msgpack(&self) -> Option<Vec<u8>> {
+//         self.body_msgpack.to_owned()
+//     }
 
-    fn body_as_cbor(&self) -> Option<Vec<u8>> {
-        self.body_cbor.to_owned()
-    }
-}
+//     fn body_as_cbor(&self) -> Option<Vec<u8>> {
+//         self.body_cbor.to_owned()
+//     }
+// }
 
-impl PartialEq for OpaqueDecisionModel {
-    fn eq(&self, other: &Self) -> bool {
-        self.header == other.header && self.body_as_json() == other.body_as_json()
-    }
-}
+// impl PartialEq for OpaqueDecisionModel {
+//     fn eq(&self, other: &Self) -> bool {
+//         self.header == other.header && self.body_as_json() == other.body_as_json()
+//     }
+// }
 
-impl From<&DecisionModelMessage> for OpaqueDecisionModel {
-    fn from(value: &DecisionModelMessage) -> Self {
-        OpaqueDecisionModel {
-            header: value.header().to_owned(),
-            body_json: value.body_with_newlines_unescaped().to_owned(),
-            body_msgpack: None,
-            body_cbor: None,
-        }
-    }
-}
+// impl From<&DecisionModelMessage> for OpaqueDecisionModel {
+//     fn from(value: &DecisionModelMessage) -> Self {
+//         OpaqueDecisionModel {
+//             header: value.header().to_owned(),
+//             body_json: value.body_with_newlines_unescaped().to_owned(),
+//             body_msgpack: None,
+//             body_cbor: None,
+//         }
+//     }
+// }
 
-impl From<&DecisionModelHeader> for OpaqueDecisionModel {
-    fn from(value: &DecisionModelHeader) -> Self {
-        OpaqueDecisionModel {
-            header: value.to_owned(),
-            body_json: value
-                .body_path
-                .to_owned()
-                .and_then(|x| std::fs::read_to_string(x).ok())
-                .and_then(|x| serde_json::from_str(&x).ok()),
-            body_msgpack: None,
-            body_cbor: None,
-        }
-    }
-}
+// impl From<&DecisionModelHeader> for OpaqueDecisionModel {
+//     fn from(value: &DecisionModelHeader) -> Self {
+//         OpaqueDecisionModel {
+//             header: value.to_owned(),
+//             body_json: value
+//                 .body_path
+//                 .to_owned()
+//                 .and_then(|x| std::fs::read_to_string(x).ok())
+//                 .and_then(|x| serde_json::from_str(&x).ok()),
+//             body_msgpack: None,
+//             body_cbor: None,
+//         }
+//     }
+// }
 
 impl From<&ExplorationSolutionMessage> for OpaqueDecisionModel {
     fn from(value: &ExplorationSolutionMessage) -> Self {
         OpaqueDecisionModel {
-            header: value.solved.header().to_owned(),
-            body_json: value.solved.body_with_newlines_unescaped(),
-            body_msgpack: None,
-            body_cbor: None,
+            body_json: value.solved.body_json.to_owned(),
+            body_msgpack: value.solved.body_msgpack.to_owned(),
+            body_cbor: value.solved.body_cbor.to_owned(),
+            category: value.solved.category.to_owned(),
+            part: value.solved.part.to_owned(),
+            body_protobuf: value.solved.body_protobuf.to_owned(),
         }
     }
 }
@@ -274,6 +278,7 @@ impl ExplorationModule for StandaloneExplorationModule {
     // }
 }
 
+#[derive(Clone, Builder, PartialEq, Eq)]
 pub struct StandaloneIdentificationModule {
     unique_identifier: String,
     identification_rules: Vec<MarkedIdentificationRule>,
@@ -281,69 +286,59 @@ pub struct StandaloneIdentificationModule {
     read_design_model: fn(path: &Path) -> Option<Arc<dyn DesignModel>>,
     write_design_model: fn(design_model: &Arc<dyn DesignModel>, dest: &Path) -> Vec<PathBuf>,
     opaque_to_model: fn(header: &OpaqueDecisionModel) -> Option<Arc<dyn DecisionModel>>,
-    _decision_message_to_model: fn(header: &DecisionModelMessage) -> Option<Arc<dyn DecisionModel>>,
     pub decision_model_schemas: HashSet<String>,
 }
 
 impl StandaloneIdentificationModule {
-    pub fn minimal(unique_identifier: &str) -> StandaloneIdentificationModule {
-        return StandaloneIdentificationModule {
-            unique_identifier: unique_identifier.to_owned(),
-            identification_rules: vec![],
-            reverse_identification_rules: vec![],
-            read_design_model: |_x| None,
-            write_design_model: |_x, _p| vec![],
-            opaque_to_model: |_x| None,
-            _decision_message_to_model: |_x| None,
-            decision_model_schemas: HashSet::new(),
-        };
-    }
+    //     pub fn minimal(unique_identifier: &str) -> StandaloneIdentificationModule {
+    //         return StandaloneIdentificationModule {
+    //             unique_identifier: unique_identifier.to_owned(),
+    //             identification_rules: vec![],
+    //             reverse_identification_rules: vec![],
+    //             read_design_model: |_x| None,
+    //             write_design_model: |_x, _p| vec![],
+    //             opaque_to_model: |_x| None,
+    //             decision_model_schemas: HashSet::new(),
+    //         };
+    //     }
 
-    pub fn without_design_models(
-        unique_identifier: &str,
-        identification_rules: Vec<MarkedIdentificationRule>,
-        reverse_identification_rules: Vec<ReverseIdentificationRule>,
-        opaque_to_model: fn(&OpaqueDecisionModel) -> Option<Arc<dyn DecisionModel>>,
-        decision_message_to_model: fn(
-            header: &DecisionModelMessage,
-        ) -> Option<Arc<dyn DecisionModel>>,
-        decision_model_schemas: HashSet<String>,
-    ) -> StandaloneIdentificationModule {
-        return StandaloneIdentificationModule {
-            unique_identifier: unique_identifier.to_owned(),
-            identification_rules,
-            reverse_identification_rules,
-            read_design_model: |_x| None,
-            write_design_model: |_x: &Arc<dyn DesignModel>, _p| vec![],
-            opaque_to_model,
-            _decision_message_to_model: decision_message_to_model,
-            decision_model_schemas,
-        };
-    }
+    //     pub fn without_design_models(
+    //         unique_identifier: &str,
+    //         identification_rules: Vec<MarkedIdentificationRule>,
+    //         reverse_identification_rules: Vec<ReverseIdentificationRule>,
+    //         opaque_to_model: fn(&OpaqueDecisionModel) -> Option<Arc<dyn DecisionModel>>,
+    //         decision_model_schemas: HashSet<String>,
+    //     ) -> StandaloneIdentificationModule {
+    //         return StandaloneIdentificationModule {
+    //             unique_identifier: unique_identifier.to_owned(),
+    //             identification_rules,
+    //             reverse_identification_rules,
+    //             read_design_model: |_x| None,
+    //             write_design_model: |_x: &Arc<dyn DesignModel>, _p| vec![],
+    //             opaque_to_model,
+    //             decision_model_schemas,
+    //         };
+    //     }
 
-    pub fn complete(
-        unique_identifier: &str,
-        identification_rules: Vec<MarkedIdentificationRule>,
-        reverse_identification_rules: Vec<ReverseIdentificationRule>,
-        read_design_model: fn(&Path) -> Option<Arc<dyn DesignModel>>,
-        write_design_model: fn(design_model: &Arc<dyn DesignModel>, dest: &Path) -> Vec<PathBuf>,
-        opaque_to_model: fn(&OpaqueDecisionModel) -> Option<Arc<dyn DecisionModel>>,
-        decision_message_to_model: fn(
-            header: &DecisionModelMessage,
-        ) -> Option<Arc<dyn DecisionModel>>,
-        decision_model_schemas: HashSet<String>,
-    ) -> StandaloneIdentificationModule {
-        return StandaloneIdentificationModule {
-            unique_identifier: unique_identifier.to_owned(),
-            identification_rules,
-            reverse_identification_rules,
-            read_design_model,
-            write_design_model,
-            opaque_to_model,
-            _decision_message_to_model: decision_message_to_model,
-            decision_model_schemas,
-        };
-    }
+    //     pub fn complete(
+    //         unique_identifier: &str,
+    //         identification_rules: Vec<MarkedIdentificationRule>,
+    //         reverse_identification_rules: Vec<ReverseIdentificationRule>,
+    //         read_design_model: fn(&Path) -> Option<Arc<dyn DesignModel>>,
+    //         write_design_model: fn(design_model: &Arc<dyn DesignModel>, dest: &Path) -> Vec<PathBuf>,
+    //         opaque_to_model: fn(&OpaqueDecisionModel) -> Option<Arc<dyn DecisionModel>>,
+    //         decision_model_schemas: HashSet<String>,
+    //     ) -> StandaloneIdentificationModule {
+    //         return StandaloneIdentificationModule {
+    //             unique_identifier: unique_identifier.to_owned(),
+    //             identification_rules,
+    //             reverse_identification_rules,
+    //             read_design_model,
+    //             write_design_model,
+    //             opaque_to_model,
+    //             decision_model_schemas,
+    //         };
+    //     }
 
     pub fn read_design_model(&self, path: &Path) -> Option<Arc<dyn DesignModel>> {
         return (self.read_design_model)(path);
@@ -360,98 +355,178 @@ impl StandaloneIdentificationModule {
     }
 }
 
+/// A simple iterator for performing identification in-process.
+#[derive(Builder, PartialEq, Eq, Clone)]
+struct DefaultIdentificationIterator {
+    design_models: HashSet<Arc<dyn DesignModel>>,
+    decision_models: HashSet<Arc<dyn DecisionModel>>,
+    identified: LinkedList<Arc<dyn DecisionModel>>,
+    imodule: Arc<StandaloneIdentificationModule>,
+    messages: Vec<String>,
+}
+
+impl Iterator for DefaultIdentificationIterator {
+    type Item = Arc<dyn DecisionModel>;
+
+    fn next(&mut self) -> Option<Self::Item> {
+        // first, try to see if no element is in the queue to be returned
+        if !self.identified.is_empty() {
+            return self.identified.pop_front();
+        } else {
+            // otehrwise, we proceed to ask for more decision models
+            let mut refined_decision_models = HashSet::new();
+            let mut opaque_to_delete = HashSet::new();
+            for m in &self.decision_models {
+                if let Some(opaque) = m.downcast_ref::<OpaqueDecisionModel>() {
+                    if let Some(recovered) = self.imodule.opaque_to_model(opaque) {
+                        refined_decision_models.insert(recovered);
+                        opaque_to_delete.insert(opaque);
+                    }
+                }
+            }
+            let pairs: Vec<(Arc<dyn DecisionModel>, OpaqueDecisionModel)> = self
+                .decision_models
+                .par_iter()
+                .flat_map(|m| {
+                    m.downcast_ref::<OpaqueDecisionModel>().and_then(|opaque| {
+                        self.imodule
+                            .opaque_to_model(opaque)
+                            .map(|m| (m, opaque.to_owned()))
+                    })
+                })
+                .collect();
+            for (non_opaque, opaque) in pairs {
+                let arc_opaque: Arc<dyn DecisionModel> = Arc::new(opaque); // maybe figure out a way to avoid this later
+                self.decision_models.insert(non_opaque);
+                self.decision_models.remove(&arc_opaque);
+            }
+            // self.decision_models
+            //     .extend(refined_decision_models.into_iter());
+            // self.decision_models.retain(|m| {
+            //     !m.downcast_ref::<OpaqueDecisionModel>()
+            //         .map(|opaque| opaque_to_delete.contains(opaque))
+            //         .unwrap_or(false)
+            // });
+            // now proceed to identification
+            let (tx_model, rx_model) = std::sync::mpsc::channel::<Arc<dyn DecisionModel>>();
+            let (tx_msg, rx_msg) = std::sync::mpsc::channel::<String>();
+            self.imodule
+                .identification_rules
+                .par_iter()
+                .for_each(|irule| {
+                    let f_opt = match irule {
+                        MarkedIdentificationRule::DesignModelOnlyIdentificationRule(f) => {
+                            if !self.design_models.is_empty() {
+                                Some(f)
+                            } else {
+                                None
+                            }
+                        }
+                        MarkedIdentificationRule::DecisionModelOnlyIdentificationRule(f) => {
+                            if !self.decision_models.is_empty() {
+                                Some(f)
+                            } else {
+                                None
+                            }
+                        }
+                        MarkedIdentificationRule::GenericIdentificationRule(f) => Some(f),
+                        MarkedIdentificationRule::SpecificDecisionModelIdentificationRule(
+                            ms,
+                            f,
+                        ) => {
+                            if ms
+                                .iter()
+                                .all(|x| self.decision_models.iter().any(|y| x == &y.category()))
+                            {
+                                Some(f)
+                            } else {
+                                None
+                            }
+                        }
+                    };
+                    if let Some(f) = f_opt {
+                        let (models, msgs) = f(&self.design_models, &self.decision_models);
+                        for m in models {
+                            tx_model.send(m);
+                        }
+                        for msg in msgs {
+                            tx_msg.send(msg);
+                        }
+                    }
+                });
+            self.messages.extend(rx_msg.into_iter());
+            let mut new_added = false;
+            for m in rx_model {
+                let refined = m
+                    .downcast_ref::<OpaqueDecisionModel>()
+                    .and_then(|opaque| self.imodule.opaque_to_model(opaque))
+                    .unwrap_or(m);
+                if !self.decision_models.contains(&refined) {
+                    new_added = true;
+                    self.decision_models.insert(refined.to_owned());
+                    self.identified.push_back(refined);
+                }
+            }
+            if new_added {
+                return self.next();
+            } else {
+                return None;
+            }
+        }
+    }
+}
+
+impl IdentificationIterator for DefaultIdentificationIterator {
+    fn next_with_models(
+        &mut self,
+        decision_models: &Vec<Arc<dyn DecisionModel>>,
+        design_models: &Vec<Arc<dyn DesignModel>>,
+    ) -> Option<Arc<dyn DecisionModel>> {
+        // first, let us try to eliminate as many opaques as possible
+        for m in decision_models {
+            if !self.decision_models.contains(m) {
+                self.decision_models.insert(m.to_owned());
+            }
+        }
+        for m in design_models {
+            if !self.design_models.contains(m) {
+                self.design_models.insert(m.to_owned());
+            }
+        }
+        return self.next();
+    }
+}
+
 impl IdentificationModule for StandaloneIdentificationModule {
     fn unique_identifier(&self) -> String {
         self.unique_identifier.to_owned()
     }
 
-    fn identification_step(
+    fn start_identification(
         &self,
-        iteration: i32,
-        design_models: &Vec<Arc<dyn DesignModel>>,
-        decision_models: &Vec<Arc<dyn DecisionModel>>,
-    ) -> IdentificationResult {
-        let mut identified: Vec<Arc<dyn DecisionModel>> = Vec::new();
-        let mut errors: HashSet<String> = HashSet::new();
-        let mut decision_models_refined = decision_models.clone();
-        for m in decision_models {
-            if let Some(opaque) = m.downcast_ref::<OpaqueDecisionModel>() {
-                if decision_models
-                    .iter()
-                    .all(|x| x != m || x.downcast_ref::<OpaqueDecisionModel>().is_some())
-                {
-                    // there are no other decision models that are equal but are opaque
-                    if let Some(recovered) = self.opaque_to_model(opaque) {
-                        decision_models_refined.push(recovered);
-                    }
-                }
-            }
-        }
-        while let Some((idx, opaque)) = identified
-            .iter()
-            .enumerate()
-            .find(|(_, m)| m.downcast_ref::<OpaqueDecisionModel>().is_some())
-        {
-            let non_opaque_exists = identified
-                .iter()
-                .filter(|x| x == &opaque)
-                .any(|x| x.downcast_ref::<OpaqueDecisionModel>().is_none());
-            if non_opaque_exists {
-                identified.remove(idx);
-            }
-        }
-        for irule in &self.identification_rules {
-            let f_opt = match irule {
-                MarkedIdentificationRule::DesignModelOnlyIdentificationRule(f) => {
-                    if iteration <= 0 {
-                        Some(f)
-                    } else {
-                        None
-                    }
-                }
-                MarkedIdentificationRule::DecisionModelOnlyIdentificationRule(f) => {
-                    if iteration > 0 {
-                        Some(f)
-                    } else {
-                        None
-                    }
-                }
-                MarkedIdentificationRule::GenericIdentificationRule(f) => Some(f),
-                MarkedIdentificationRule::SpecificDecisionModelIdentificationRule(ms, f) => {
-                    let categories: HashSet<String> =
-                        identified.iter().map(|x| x.header().category).collect();
-                    if ms.iter().all(|x| categories.contains(x)) {
-                        Some(f)
-                    } else {
-                        None
-                    }
-                }
-            };
-            if let Some(f) = f_opt {
-                let (models, errs) = f(design_models, &decision_models_refined);
-                for m in models {
-                    if !identified.contains(&m) {
-                        identified.push(m);
-                    }
-                }
-                errors.extend(errs.into_iter());
-            }
-        }
-        (identified, errors)
+        initial_design_models: &HashSet<Arc<dyn DesignModel>>,
+        initial_decision_models: &HashSet<Arc<dyn DecisionModel>>,
+    ) -> Box<dyn idesyde_core::IdentificationIterator> {
+        Box::new(DefaultIdentificationIteratorBuilder::default()
+            .decision_models(initial_decision_models.to_owned())
+            .design_models(initial_design_models.to_owned())
+            .imodule(Arc::new(self.to_owned()))
+            .build()
+            .expect("Failed to create an identification iterator by an identification module. Should never happen."))
     }
 
     fn reverse_identification(
         &self,
-        solved_decision_models: &Vec<Arc<dyn DecisionModel>>,
-        design_models: &Vec<Arc<dyn DesignModel>>,
-    ) -> Vec<Arc<dyn DesignModel>> {
-        let mut reverse_identified: Vec<Arc<dyn DesignModel>> = Vec::new();
-        for f in &self.reverse_identification_rules {
-            for m in f(solved_decision_models, design_models) {
-                reverse_identified.push(m);
-            }
-        }
-        reverse_identified
+        solved_decision_models: &HashSet<Arc<dyn DecisionModel>>,
+        design_models: &HashSet<Arc<dyn DesignModel>>,
+    ) -> Box<dyn Iterator<Item = Arc<dyn DesignModel>>> {
+        let decs = solved_decision_models.to_owned();
+        let dess = design_models.to_owned();
+        Box::new(
+            std::iter::once(self.to_owned())
+                .flat_map(|imodule| imodule.reverse_identification_rules.into_iter())
+                .flat_map(move |f| f(&decs, &dess)),
+        )
     }
 }
 
@@ -514,17 +589,17 @@ pub fn execute_standalone_identification_module(module: StandaloneIdentification
                         .expect("Failed to read design path during start-up.")
                     {
                         let p = pres.expect("Failed to read directory entry during start-up");
-                        if let Some(m) = module.read_design_model(&p.path()) {
-                            let mut h = m.header();
-                            h.model_paths.push(
-                                p.path()
-                                    .to_str()
-                                    .expect("Failed to get OS string during start-up")
-                                    .to_string(),
-                            );
-                            h.write_to_dir(&design_path, "", &module.unique_identifier());
-                            design_models.push(m);
-                        }
+                        // if let Some(m) = module.read_design_model(&p.path()) {
+                        //     let mut h = m.header();
+                        //     h.model_paths.push(
+                        //         p.path()
+                        //             .to_str()
+                        //             .expect("Failed to get OS string during start-up")
+                        //             .to_string(),
+                        //     );
+                        //     h.write_to_dir(&design_path, "", &module.unique_identifier());
+                        //     design_models.push(m);
+                        // }
                     }
                     // match (
                     //     args.identified_path_opt,

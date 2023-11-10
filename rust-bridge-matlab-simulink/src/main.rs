@@ -5,8 +5,7 @@ use std::{
 };
 
 use idesyde_blueprints::{
-    decision_message_to_model_gen, execute_standalone_identification_module, opaque_to_model_gen,
-    StandaloneIdentificationModule,
+    execute_standalone_identification_module, opaque_to_model_gen, StandaloneIdentificationModule, StandaloneIdentificationModuleBuilder,
 };
 use idesyde_core::{
     headers::{self, DesignModelHeader},
@@ -43,7 +42,7 @@ impl DesignModel for SimulinkReactiveDesignModel {
         "SimulinkReactiveDesignModel".to_string()
     }
 
-    fn header(&self) -> headers::DesignModelHeader {
+    fn elements(&self) -> HashSet<String> {
         let mut elems: HashSet<String> = HashSet::new();
         elems.extend(self.processes.iter().map(|x| x.to_owned()));
         elems.extend(self.delays.iter().map(|x| x.to_owned()));
@@ -60,11 +59,7 @@ impl DesignModel for SimulinkReactiveDesignModel {
                 self.links_dst_port[i]
             ));
         }
-        DesignModelHeader {
-            category: self.category(),
-            model_paths: Vec::new(),
-            elements: elems.into_iter().collect(),
-        }
+        elems
     }
 }
 
@@ -128,14 +123,11 @@ fn write_design_model(
 //     }
 // }
 fn main() {
-    execute_standalone_identification_module(StandaloneIdentificationModule::complete(
-        "MatlabIdentificationModule",
-        vec![],
-        vec![],
-        read_design_model,
-        write_design_model,
-        opaque_to_model_gen!(),
-        decision_message_to_model_gen!(),
-        HashSet::new(),
-    ));
+    execute_standalone_identification_module(StandaloneIdentificationModuleBuilder::default()
+        .unique_identifier("MatlabIdentificationModule".to_owned())
+        .read_design_model(read_design_model)
+        .write_design_model(write_design_model)
+        .build()
+        .expect("Failed to build simulink identification module. Should never fail.")
+    );
 }

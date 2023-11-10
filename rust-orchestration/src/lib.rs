@@ -23,8 +23,6 @@ use exploration::ExternalServerExplorationModule;
 use identification::ExternalIdentificationModule;
 use identification::ExternalServerIdentificationModule;
 
-use idesyde_blueprints::DecisionModelMessage;
-use idesyde_blueprints::DesignModelMessage;
 use idesyde_core::DecisionModel;
 use idesyde_core::DesignModel;
 use idesyde_core::ExplorationModule;

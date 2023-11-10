@@ -94,15 +94,15 @@ impl DesignModelHeader {
     }
 }
 
-impl DesignModel for DesignModelHeader {
-    fn category(&self) -> String {
-        self.category.to_owned()
-    }
+// impl DesignModel for DesignModelHeader {
+//     fn category(&self) -> String {
+//         self.category.to_owned()
+//     }
 
-    fn header(&self) -> DesignModelHeader {
-        self.to_owned()
-    }
-}
+//     fn header(&self) -> DesignModelHeader {
+//         self.to_owned()
+//     }
+// }
 
 impl PartialEq<DesignModelHeader> for DesignModelHeader {
     fn eq(&self, o: &DesignModelHeader) -> bool {

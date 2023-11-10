@@ -1,5 +1,6 @@
 package idesyde.core;
 
+import java.util.HashSet;
 import java.util.Optional;
 import java.util.Set;
 
@@ -35,12 +36,14 @@ import idesyde.core.headers.DesignModelHeader;
  */
 public interface DesignModel {
 
-    DesignModelHeader header();
+    default DesignModelHeader header() {
+        return new DesignModelHeader(category(), elements(), new HashSet<>());
+    }
 
     /**
      * The set of identifiers for partially identifiable elements
      */
-    default Set<String> elems() {
+    default Set<String> elements() {
         return Set.of();
     }
 
@@ -51,6 +54,14 @@ public interface DesignModel {
      */
     default String category() {
         return getClass().getSimpleName();
+    }
+
+    /**
+     * The format associated with this decision model. E.g. `fiodl` for ForSyDe IO
+     * files.
+     */
+    default String format() {
+        return "";
     }
 
     default Optional<String> bodyAsString() {

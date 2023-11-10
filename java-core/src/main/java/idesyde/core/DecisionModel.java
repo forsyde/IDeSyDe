@@ -52,7 +52,7 @@ public interface DecisionModel {
         return getClass().getSimpleName();
     }
 
-    default Optional<String> bodyAsText() {
+    default Optional<String> bodyAsJsonString() {
         try {
             return Optional.of(objectMapper.writeValueAsString(this));
         } catch (JsonProcessingException e) {
@@ -60,7 +60,7 @@ public interface DecisionModel {
         }
     };
 
-    default Optional<byte[]> bodyAsBinary() {
+    default Optional<byte[]> bodyAsCBORBinary() {
         try {
             return Optional.of(objectMapper.writeValueAsBytes(this));
         } catch (JsonProcessingException e) {

@@ -20,8 +20,8 @@ use crate::models::{
 };
 
 pub fn identify_partitioned_mem_mapped_multicore(
-    _design_models: &Vec<Arc<dyn DesignModel>>,
-    decision_models: &Vec<Arc<dyn DecisionModel>>,
+    _design_models: &HashSet<Arc<dyn DesignModel>>,
+    decision_models: &HashSet<Arc<dyn DecisionModel>>,
 ) -> IdentificationResult {
     let mut new_models = Vec::new();
     let mut errors: HashSet<String> = HashSet::new();
@@ -65,12 +65,15 @@ pub fn identify_partitioned_mem_mapped_multicore(
             }
         }
     }
-    (new_models, errors)
+    (
+        Box::new(new_models.into_iter()),
+        Box::new(errors.into_iter()),
+    )
 }
 
 pub fn identify_partitioned_tiled_multicore(
-    _design_models: &Vec<Arc<dyn DesignModel>>,
-    decision_models: &Vec<Arc<dyn DecisionModel>>,
+    _design_models: &HashSet<Arc<dyn DesignModel>>,
+    decision_models: &HashSet<Arc<dyn DecisionModel>>,
 ) -> IdentificationResult {
     let mut new_models = Vec::new();
     let mut errors: HashSet<String> = HashSet::new();
@@ -118,7 +121,10 @@ pub fn identify_partitioned_tiled_multicore(
             }
         }
     }
-    (new_models, errors)
+    (
+        Box::new(new_models.into_iter()),
+        Box::new(errors.into_iter()),
+    )
 }
 
 /// Identifies (many) AsynchronousAperiodicDataflow from AnalysedSDFApplication
@@ -132,8 +138,8 @@ pub fn identify_partitioned_tiled_multicore(
 /// 3. build the job graph parameters for each WCC, for each AnalysedSDFApplication,
 /// 4. return all the built AsynchronousAperiodicDataflow.
 pub fn identify_asynchronous_aperiodic_dataflow_from_sdf(
-    _design_models: &Vec<Arc<dyn DesignModel>>,
-    decision_models: &Vec<Arc<dyn DecisionModel>>,
+    _design_models: &HashSet<Arc<dyn DesignModel>>,
+    decision_models: &HashSet<Arc<dyn DecisionModel>>,
 ) -> IdentificationResult {
     let mut identified = Vec::new();
     let mut errors: HashSet<String> = HashSet::new();
@@ -385,12 +391,15 @@ pub fn identify_asynchronous_aperiodic_dataflow_from_sdf(
             errors.insert("identify_asynchronous_aperiodic_dataflow_from_sdf: no AnalyzedSDFApplication detected".to_string());
         }
     }
-    (identified, errors)
+    (
+        Box::new(identified.into_iter()),
+        Box::new(errors.into_iter()),
+    )
 }
 
 pub fn identify_aperiodic_asynchronous_dataflow_to_partitioned_tiled_multicore(
-    _design_models: &Vec<Arc<dyn DesignModel>>,
-    decision_models: &Vec<Arc<dyn DecisionModel>>,
+    _design_models: &HashSet<Arc<dyn DesignModel>>,
+    decision_models: &HashSet<Arc<dyn DecisionModel>>,
 ) -> IdentificationResult {
     let mut identified: Vec<Arc<dyn DecisionModel>> = Vec::new();
     let mut errors: HashSet<String> = HashSet::new();
@@ -456,12 +465,15 @@ pub fn identify_aperiodic_asynchronous_dataflow_to_partitioned_tiled_multicore(
     } else {
         errors.insert("identify_aperiodic_asynchronous_dataflow_to_partitioned_tiled_multicore: no partitioned tiled platform model".to_string());
     }
-    (identified, errors)
+    (
+        Box::new(identified.into_iter()),
+        Box::new(errors.into_iter()),
+    )
 }
 
 pub fn identify_aperiodic_asynchronous_dataflow_to_partitioned_mem_mappable_multicore(
-    _design_models: &Vec<Arc<dyn DesignModel>>,
-    decision_models: &Vec<Arc<dyn DecisionModel>>,
+    _design_models: &HashSet<Arc<dyn DesignModel>>,
+    decision_models: &HashSet<Arc<dyn DecisionModel>>,
 ) -> IdentificationResult {
     let mut identified: Vec<Arc<dyn DecisionModel>> = Vec::new();
     let mut errors: HashSet<String> = HashSet::new();
@@ -527,7 +539,10 @@ pub fn identify_aperiodic_asynchronous_dataflow_to_partitioned_mem_mappable_mult
     } else {
         errors.insert("identify_aperiodic_asynchronous_dataflow_to_partitioned_mem_mappable_multicore: no mem mappable platform model".to_string());
     }
-    (identified, errors)
+    (
+        Box::new(identified.into_iter()),
+        Box::new(errors.into_iter()),
+    )
 }
 
 /// Finds the weakly connected components (WCCs) of a directed graph

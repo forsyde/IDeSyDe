@@ -32,7 +32,7 @@ public record DecisionModelMessage(
     }
 
     public static DecisionModelMessage from(DecisionModel model) {
-        return new DecisionModelMessage(model.header(), model.bodyAsText());
+        return new DecisionModelMessage(model.header(), model.bodyAsJsonString());
     }
 
     public static final ObjectMapper objectMapperCBOR = DecisionModelHeader.objectMapperCBOR;

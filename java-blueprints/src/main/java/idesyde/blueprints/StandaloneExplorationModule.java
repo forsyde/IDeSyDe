@@ -16,13 +16,17 @@ import picocli.CommandLine;
 
 import java.io.IOException;
 import java.nio.channels.ClosedChannelException;
+import java.nio.charset.StandardCharsets;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Optional;
 import java.util.Set;
 import java.util.concurrent.Callable;
+import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.ConcurrentSkipListSet;
 import java.util.concurrent.TimeUnit;
 import java.util.stream.Collectors;
+import java.util.stream.Stream;
 
 public interface StandaloneExplorationModule {
 
@@ -35,46 +39,52 @@ public interface StandaloneExplorationModule {
 
     default Optional<Javalin> standaloneExplorationModuleServer(
             ExplorationModuleCLI cli) {
+        var sessionDecisionModels = new ConcurrentHashMap<String, ConcurrentSkipListSet<DecisionModel>>();
+        var sessionExplorationStream = new ConcurrentHashMap<String, Stream<? extends ExplorationSolution>>();
         if (cli.serverType != null && cli.serverType.equalsIgnoreCase("http")) {
-            var decisionModels = new HashSet<DecisionModel>();
             try (var server = Javalin.create()) {
                 server
-                        // .post(
-                        // "/set",
-                        // ctx -> {
-                        // if (ctx.queryParamMap().containsKey("parameter")) {
-                        // switch (ctx.queryParam("parameter").toLowerCase()) {
-                        // case "maximum-solutions":
-                        // case "max-sols":
-                        // configuration.maximumSolutions = Long.parseLong(ctx.body());
-                        // break;
-                        // case "total-timeout":
-                        // configuration.totalExplorationTimeOutInSecs = Long.parseLong(ctx.body());
-                        // break;
-                        // case "time-resolution":
-                        // case "time-res":
-                        // configuration.timeDiscretizationFactor = Long.parseLong(ctx.body());
-                        // break;
-                        // case "memory-resolution":
-                        // case "memory-res":
-                        // case "mem-res":
-                        // configuration.memoryDiscretizationFactor = Long.parseLong(ctx.body());
-                        // break;
-                        // default:
-                        // break;
-                        // }
-                        // }
-                        // })
-                        .post(
+                        .put(
                                 "/decision",
                                 ctx -> {
-                                    if (ctx.isMultipartFormData()) {
-                                    } else {
-                                        DecisionModelMessage.fromJsonString(ctx.body())
-                                                .flatMap(this::decisionMessageToModel)
-                                                .ifPresent(decisionModels::add);
+                                    if (ctx.isMultipart() && ctx.queryParamMap().containsKey("session")) {
+                                        var session = ctx.queryParam("session");
+                                        if (!sessionDecisionModels.containsKey(session)) {
+                                            sessionDecisionModels.put(session, new ConcurrentSkipListSet<>());
+                                        }
+                                        var decisionModels = sessionExploredModels.get(session);
+                                        Optional<OpaqueDecisionModel> opaque = Optional.empty();
+                                        if (ctx.uploadedFile("cbor") != null) {
+                                            opaque = OpaqueDecisionModel
+                                                    .fromCBORBytes(ctx.uploadedFile("cbor").content().readAllBytes());
+                                        } else if (ctx.uploadedFile("json") != null) {
+                                            opaque = OpaqueDecisionModel
+                                                    .fromJsonString(new String(
+                                                            ctx.uploadedFile("json").content().readAllBytes(),
+                                                            StandardCharsets.UTF_8));
+                                        }
+                                        // if (file != null)
+                                        opaque.flatMap(this::fromOpaqueDecision)
+                                                .ifPresentOrElse(m -> {
+                                                    decisionModels.add(m);
+                                                    ctx.status(200);
+                                                    ctx.result("Added");
+                                                }, () -> {
+                                                    ctx.status(500);
+                                                    ctx.result("Failed to add");
+                                                });
                                     }
                                 })
+                        // .post(
+                        // "/decision",
+                        // ctx -> {
+                        // if (ctx.isMultipartFormData()) {
+                        // } else {
+                        // DecisionModelMessage.fromJsonString(ctx.body())
+                        // .flatMap(this::decisionMessageToModel)
+                        // .ifPresent(decisionModels::add);
+                        // }
+                        // })
                         .get(
                                 "/explorers",
                                 ctx -> {
@@ -91,8 +101,8 @@ public interface StandaloneExplorationModule {
                                                     ctx.formParamMap().forEach((name, entries) -> {
                                                         if (name.startsWith("decisionModel")) {
                                                             entries.stream().findAny().ifPresent(msg -> {
-                                                                DecisionModelMessage.fromJsonString(msg)
-                                                                        .flatMap(this::decisionMessageToModel)
+                                                                OpaqueDecisionModel.fromJsonString(msg)
+                                                                        .flatMap(this::fromOpaqueDecision)
                                                                         .map(decisionModel -> explorer
                                                                                 .bid(decisionModel))
                                                                         .ifPresent(bid -> {
@@ -113,6 +123,20 @@ public interface StandaloneExplorationModule {
                                                 ctx.status(404);
                                             });
                                 })
+                        .sse("/{explorerName}/explored", client -> {
+                            var session = ctx.queryParam("session");
+                            sessionExplorationStream.get(session).forEach(solution -> {
+                                if (ctx.queryParam("encoding") != null
+                                        && ctx.queryParam("encoding").equalsIgnoreCase("cbor")) {
+                                    ExplorationSolutionMessage
+                                            .from(solution).toCBORBytes().ifPresent(ctx::send);
+                                } else {
+                                    ExplorationSolutionMessage
+                                            .from(solution).toJsonString().ifPresent(ctx::send);
+                                }
+                            });
+                            client.close();
+                        })
                         .ws(
                                 "/{explorerName}/explore",
                                 ws -> {

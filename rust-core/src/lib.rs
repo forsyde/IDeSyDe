@@ -4,6 +4,7 @@ pub mod macros;
 use std::{
     collections::{HashMap, HashSet},
     hash::Hash,
+    io::BufWriter,
     path::Path,
     sync::Arc,
 };
@@ -294,8 +295,8 @@ pub enum MarkedIdentificationRule {
 pub trait IdentificationIterator: Iterator<Item = Arc<dyn DecisionModel>> + Sync {
     fn next_with_models(
         &mut self,
-        decision_models: &Vec<Arc<dyn DecisionModel>>,
-        design_models: &Vec<Arc<dyn DesignModel>>,
+        decision_models: &HashSet<Arc<dyn DecisionModel>>,
+        design_models: &HashSet<Arc<dyn DesignModel>>,
     ) -> Option<Arc<dyn DecisionModel>> {
         return None;
     }
@@ -601,7 +602,7 @@ impl Eq for dyn ExplorationModule {}
 #[derive(Clone, PartialEq, Eq, Builder, Serialize, Deserialize)]
 pub struct OpaqueDecisionModel {
     pub category: String,
-    pub part: Vec<String>,
+    pub part: HashSet<String>,
     pub body_json: Option<String>,
     pub body_protobuf: Option<Vec<u8>>,
     pub body_msgpack: Option<Vec<u8>>,
@@ -617,8 +618,24 @@ impl OpaqueDecisionModel {
         rmp_serde::from_slice(b)
     }
 
-    pub fn from_cbor(b: &[u8]) -> Result<OpaqueDecisionModel, ciborium::de::Error<std::io::Error>> {
+    pub fn from_cbor<R>(b: R) -> Result<Self, ciborium::de::Error<std::io::Error>>
+    where
+        R: std::io::Read,
+    {
         ciborium::from_reader(b)
+    }
+
+    pub fn to_json(&self) -> Result<String, serde_json::Error> {
+        serde_json::to_string(self)
+    }
+
+    pub fn to_cbor<O>(&self) -> Result<O, ciborium::ser::Error<std::io::Error>>
+    where
+        O: From<Vec<u8>>,
+    {
+        let mut buf: Vec<u8> = Vec::new();
+        ciborium::into_writer(self, buf.as_mut_slice())?;
+        Ok(buf.into())
     }
 }
 
@@ -660,7 +677,9 @@ impl<T: DecisionModel + ?Sized> From<&T> for OpaqueDecisionModel {
 impl Hash for OpaqueDecisionModel {
     fn hash<H: std::hash::Hasher>(&self, state: &mut H) {
         self.category.hash(state);
-        self.part.hash(state);
+        for x in self.part() {
+            x.hash(state);
+        }
     }
 }
 
@@ -700,6 +719,31 @@ impl OpaqueDesignModel {
     pub fn from_path_str(s: &str) -> OpaqueDesignModel {
         let path = Path::new(s);
         return path.into();
+    }
+
+    pub fn from_json_str(s: &str) -> Result<Self, serde_json::Error> {
+        serde_json::from_str(s)
+    }
+
+    pub fn from_msgpack(b: &[u8]) -> Result<Self, rmp_serde::decode::Error> {
+        rmp_serde::from_slice(b)
+    }
+
+    pub fn from_cbor<R>(b: R) -> Result<Self, ciborium::de::Error<std::io::Error>>
+    where
+        R: std::io::Read,
+    {
+        ciborium::from_reader(b)
+    }
+
+    pub fn to_json(&self) -> Result<String, serde_json::Error> {
+        serde_json::to_string(self)
+    }
+
+    pub fn to_cbor(&self) -> Result<Vec<u8>, ciborium::ser::Error<std::io::Error>> {
+        let mut buf: Vec<u8> = Vec::new();
+        ciborium::into_writer(self, buf.as_mut_slice())?;
+        Ok(buf)
     }
 }
 

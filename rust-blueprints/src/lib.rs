@@ -400,13 +400,6 @@ impl Iterator for DefaultIdentificationIterator {
                 self.decision_models.insert(non_opaque);
                 self.decision_models.remove(&arc_opaque);
             }
-            // self.decision_models
-            //     .extend(refined_decision_models.into_iter());
-            // self.decision_models.retain(|m| {
-            //     !m.downcast_ref::<OpaqueDecisionModel>()
-            //         .map(|opaque| opaque_to_delete.contains(opaque))
-            //         .unwrap_or(false)
-            // });
             // now proceed to identification
             let (tx_model, rx_model) = std::sync::mpsc::channel::<Arc<dyn DecisionModel>>();
             let (tx_msg, rx_msg) = std::sync::mpsc::channel::<String>();
@@ -479,8 +472,8 @@ impl Iterator for DefaultIdentificationIterator {
 impl IdentificationIterator for DefaultIdentificationIterator {
     fn next_with_models(
         &mut self,
-        decision_models: &Vec<Arc<dyn DecisionModel>>,
-        design_models: &Vec<Arc<dyn DesignModel>>,
+        decision_models: &HashSet<Arc<dyn DecisionModel>>,
+        design_models: &HashSet<Arc<dyn DesignModel>>,
     ) -> Option<Arc<dyn DecisionModel>> {
         // first, let us try to eliminate as many opaques as possible
         for m in decision_models {

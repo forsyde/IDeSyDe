@@ -1,6 +1,5 @@
 pub mod exploration;
 pub mod identification;
-pub mod models;
 
 use std::borrow::BorrowMut;
 use std::cmp::Ordering;
@@ -20,7 +19,6 @@ use std::sync::Arc;
 use std::sync::Mutex;
 
 use exploration::ExternalServerExplorationModule;
-use identification::ExternalIdentificationModule;
 use identification::ExternalServerIdentificationModule;
 
 use idesyde_core::DecisionModel;
@@ -32,6 +30,7 @@ use rayon::prelude::*;
 use reqwest::blocking::Response;
 use reqwest::Error;
 use serde::Serialize;
+use url::Url;
 
 trait LocalServerLike {
     fn get_process(&self) -> Arc<Mutex<Child>>;
@@ -104,107 +103,107 @@ trait LocalServerLike {
 }
 
 trait HttpServerLike {
-    fn get_client(&self) -> Arc<reqwest::blocking::Client>;
+    // fn get_client(&self) -> Arc<reqwest::blocking::Client>;
 
-    fn get_address(&self) -> IpAddr;
+    // fn get_url(&self) -> Url;
 
-    fn get_port(&self) -> usize;
+    // fn send_decision<T: DecisionModel + ?Sized>(&self, model: &T) -> Result<Response, Error> {
+    //     let client = self.get_client();
+    //     client
+    //         .post(format!(
+    //             "http://{}:{}/decision",
+    //             self.get_url()
+    //                 .host()
+    //                 .unwrap_or(url::Host::parse("127.0.0.1")),
+    //             self.get_port()
+    //         ))
+    //         .body(DecisionModelMessage::from(model).to_json_str())
+    //         .send()
+    // }
 
-    fn send_decision<T: DecisionModel + ?Sized>(&self, model: &T) -> Result<Response, Error> {
-        let client = self.get_client();
-        client
-            .post(format!(
-                "http://{}:{}/decision",
-                self.get_address(),
-                self.get_port()
-            ))
-            .body(DecisionModelMessage::from(model).to_json_str())
-            .send()
-    }
+    // fn send_design<T: DesignModel + ?Sized>(&self, model: &T) -> Result<Response, Error> {
+    //     let client = self.get_client();
+    //     // println!("{}", DesignModelMessage::from(model).to_json_str());
+    //     client
+    //         .post(format!(
+    //             "http://{}:{}/design",
+    //             self.get_address(),
+    //             self.get_port()
+    //         ))
+    //         .body(DesignModelMessage::from(model).to_json_str())
+    //         .send()
+    // }
 
-    fn send_design<T: DesignModel + ?Sized>(&self, model: &T) -> Result<Response, Error> {
-        let client = self.get_client();
-        // println!("{}", DesignModelMessage::from(model).to_json_str());
-        client
-            .post(format!(
-                "http://{}:{}/design",
-                self.get_address(),
-                self.get_port()
-            ))
-            .body(DesignModelMessage::from(model).to_json_str())
-            .send()
-    }
+    // fn send_solved_decision<T: DecisionModel + ?Sized>(
+    //     &self,
+    //     model: &T,
+    // ) -> Result<Response, Error> {
+    //     let client = self.get_client();
+    //     client
+    //         .post(format!(
+    //             "http://{}:{}/solved",
+    //             self.get_address(),
+    //             self.get_port()
+    //         ))
+    //         .body(DecisionModelMessage::from(model).to_json_str())
+    //         .send()
+    // }
 
-    fn send_solved_decision<T: DecisionModel + ?Sized>(
-        &self,
-        model: &T,
-    ) -> Result<Response, Error> {
-        let client = self.get_client();
-        client
-            .post(format!(
-                "http://{}:{}/solved",
-                self.get_address(),
-                self.get_port()
-            ))
-            .body(DecisionModelMessage::from(model).to_json_str())
-            .send()
-    }
+    // fn send_command(&self, command: &str, query: &Vec<(&str, &str)>) -> Result<Response, Error> {
+    //     let client = self.get_client();
+    //     client
+    //         .get(format!(
+    //             "http://{}:{}/{}",
+    //             self.get_address(),
+    //             self.get_port(),
+    //             command
+    //         ))
+    //         .query(query)
+    //         .send()
+    // }
 
-    fn send_command(&self, command: &str, query: &Vec<(&str, &str)>) -> Result<Response, Error> {
-        let client = self.get_client();
-        client
-            .get(format!(
-                "http://{}:{}/{}",
-                self.get_address(),
-                self.get_port(),
-                command
-            ))
-            .query(query)
-            .send()
-    }
+    // fn http_get<T: Serialize + ?Sized>(
+    //     &self,
+    //     point: &str,
+    //     query: &Vec<(&str, &str)>,
+    //     body: &T,
+    // ) -> Result<Response, Error> {
+    //     let client = self.get_client();
+    //     let m = serde_json::to_string(body)
+    //         .expect("Failed to serialized an object that shoudl always work");
+    //     client
+    //         .get(format!(
+    //             "http://{}:{}/{}",
+    //             self.get_address(),
+    //             self.get_port(),
+    //             point
+    //         ))
+    //         .query(query)
+    //         .body(m)
+    //         .send()
+    // }
 
-    fn http_get<T: Serialize + ?Sized>(
-        &self,
-        point: &str,
-        query: &Vec<(&str, &str)>,
-        body: &T,
-    ) -> Result<Response, Error> {
-        let client = self.get_client();
-        let m = serde_json::to_string(body)
-            .expect("Failed to serialized an object that shoudl always work");
-        client
-            .get(format!(
-                "http://{}:{}/{}",
-                self.get_address(),
-                self.get_port(),
-                point
-            ))
-            .query(query)
-            .body(m)
-            .send()
-    }
-
-    fn http_post<T: Serialize + ?Sized>(
-        &self,
-        point: &str,
-        query: &Vec<(&str, &str)>,
-        body: &T,
-    ) -> Result<Response, Error> {
-        let client = self.get_client();
-        client
-            .post(format!(
-                "http://{}:{}/{}",
-                self.get_address(),
-                self.get_port(),
-                point
-            ))
-            .query(query)
-            .body(
-                serde_json::to_string(body)
-                    .expect("Failed to serialized an object that shoudl always work"),
-            )
-            .send()
-    }
+    // fn http_post<T: Serialize + ?Sized>(
+    //     &self,
+    //     point: &str,
+    //     query: &Vec<(&str, &str)>,
+    //     body: &T,
+    // ) -> Result<Response, Error> {
+    //     let client = self.get_client();
+    //     client
+    //         .post(format!(
+    //             "http://{}:{}/{}",
+    //             self.get_address(),
+    //             self.get_port(),
+    //             point
+    //         ))
+    //         .query(query)
+    //         .body(
+    //             serde_json::to_string(body)
+    //                 .expect("Failed to serialized an object that shoudl always work"),
+    //         )
+    //         .send()
+    // }
 }
 
 // fn stream_lines_from_output<T: LocalServerLike>(module: T) -> Option<impl Iterator<Item = String>> {
@@ -240,17 +239,18 @@ pub fn find_identification_modules(
                             ExternalServerIdentificationModule::try_create_local(prog.clone())
                         {
                             return Some(Arc::new(imodule) as Arc<dyn IdentificationModule>);
-                        } else {
-                            return Some(Arc::new(ExternalIdentificationModule {
-                                command_path_: prog.clone(),
-                                identified_path_: identified_path.to_path_buf(),
-                                inputs_path_: inputs_path.to_path_buf(),
-                                solved_path_: solved_path.to_path_buf(),
-                                reverse_path_: integration_path.to_path_buf(),
-                                output_path_: output_path.to_path_buf(),
-                            })
-                                as Arc<dyn IdentificationModule>);
                         }
+                        //  else {
+                        //     return Some(Arc::new(ExternalIdentificationModule {
+                        //         command_path_: prog.clone(),
+                        //         identified_path_: identified_path.to_path_buf(),
+                        //         inputs_path_: inputs_path.to_path_buf(),
+                        //         solved_path_: solved_path.to_path_buf(),
+                        //         reverse_path_: integration_path.to_path_buf(),
+                        //         output_path_: output_path.to_path_buf(),
+                        //     })
+                        //         as Arc<dyn IdentificationModule>);
+                        // }
                     }
                 }
                 None

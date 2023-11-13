@@ -10,14 +10,16 @@ use std::{
     time::{Duration, Instant},
 };
 
-use idesyde_blueprints::{DecisionModelMessage, ExplorationSolutionMessage, OpaqueDecisionModel};
+use derive_builder::Builder;
+use idesyde_blueprints::ExplorationSolutionMessage;
 use idesyde_core::{
     explore_non_blocking, headers::ExplorationBid, pareto_dominance_partial_cmp, DecisionModel,
     ExplorationConfiguration, ExplorationConfigurationBuilder, ExplorationModule,
-    ExplorationSolution, Explorer,
+    ExplorationSolution, Explorer, OpaqueDecisionModel,
 };
 use log::{debug, warn};
 use serde::{Deserialize, Serialize};
+use url::Url;
 
 #[derive(Deserialize, Serialize, PartialEq, Clone)]
 pub struct ExplorerBidding {
@@ -33,9 +35,9 @@ impl TryFrom<&str> for ExplorerBidding {
         serde_json::from_str(value)
     }
 }
-#[derive(Deserialize, Serialize, PartialEq, Clone)]
+#[derive(Deserialize, Serialize, PartialEq, Clone, Builder)]
 pub struct ExplorationRequestMessage {
-    model_message: DecisionModelMessage,
+    model_message: OpaqueDecisionModel,
     previous_solutions: Vec<ExplorationSolutionMessage>,
     configuration: ExplorationConfiguration,
 }
@@ -43,32 +45,11 @@ pub struct ExplorationRequestMessage {
 impl ExplorationRequestMessage {
     pub fn from<T: DecisionModel + ?Sized>(decision_model: &T) -> ExplorationRequestMessage {
         ExplorationRequestMessage {
-            model_message: DecisionModelMessage::from(decision_model),
+            model_message: OpaqueDecisionModel::from(decision_model),
             previous_solutions: vec![],
-            configuration: ExplorationConfigurationBuilder::new().build(),
-        }
-    }
-
-    pub fn with_previous_solutions<T: DecisionModel + ?Sized>(
-        decision_model: &T,
-        previous_solutions: Vec<ExplorationSolutionMessage>,
-    ) -> ExplorationRequestMessage {
-        ExplorationRequestMessage {
-            model_message: DecisionModelMessage::from(decision_model),
-            previous_solutions: previous_solutions,
-            configuration: ExplorationConfigurationBuilder::new().build(),
-        }
-    }
-
-    pub fn complete<T: DecisionModel + ?Sized>(
-        decision_model: &T,
-        previous_solutions: Vec<ExplorationSolutionMessage>,
-        configuration: &ExplorationConfiguration,
-    ) -> ExplorationRequestMessage {
-        ExplorationRequestMessage {
-            model_message: DecisionModelMessage::from(decision_model),
-            previous_solutions: previous_solutions,
-            configuration: configuration.to_owned(),
+            configuration: ExplorationConfigurationBuilder::default()
+                .build()
+                .expect("Failed to buuild exploration configuraiton. Should never fail."),
         }
     }
 
@@ -128,8 +109,7 @@ impl Iterator for ExternalExplorerSolutionIter {
 
 pub struct ExternalExplorer {
     name: String,
-    address: std::net::IpAddr,
-    port: usize,
+    url: Url,
     client: Arc<reqwest::blocking::Client>,
 }
 
@@ -138,61 +118,58 @@ impl Explorer for ExternalExplorer {
         self.name.to_owned()
     }
 
-    fn location_url(&self) -> IpAddr {
-        self.address
+    fn location_url(&self) -> std::option::Option<url::Url> {
+        Some(self.url.to_owned())
     }
 
-    fn location_port(&self) -> usize {
-        self.port
-    }
-
-    fn bid(&self, m: Arc<dyn DecisionModel>) -> ExplorationBid {
+    fn bid(&self, explorers: &Vec<Arc<dyn Explorer>>, m: Arc<dyn DecisionModel>) -> ExplorationBid {
         let mut form = reqwest::blocking::multipart::Form::new();
         form = form.part(
             format!("decisionModel"),
-            reqwest::blocking::multipart::Part::text(DecisionModelMessage::from(m).to_json_str()),
+            reqwest::blocking::multipart::Part::text(
+                OpaqueDecisionModel::from(m)
+                    .to_json()
+                    .expect("Failed to make Json out of opaque decision model. Should never fail."),
+            ),
         );
-        match self
-            .client
-            .post(format!(
-                "http://{}:{}/{}/bid",
-                self.location_url(),
-                self.location_port(),
-                self.name
-            ))
-            .multipart(form)
-            .send()
+        if let Ok(bid_url) = self
+            .url
+            .join(format!("/{}", self.name).as_str())
+            .and_then(|u| u.join("/bid"))
         {
-            Ok(result) => match result.text() {
-                Ok(text) => {
-                    if !text.is_empty() {
-                        match ExplorationBid::from_json_str(&text) {
-                            Some(bid) => return bid,
-                            None => {
-                                debug!("failed to deserialize exploration bid message {}", &text);
+            match self.client.post(bid_url).multipart(form).send() {
+                Ok(result) => match result.text() {
+                    Ok(text) => {
+                        if !text.is_empty() {
+                            match ExplorationBid::from_json_str(&text) {
+                                Some(bid) => return bid,
+                                None => {
+                                    debug!(
+                                        "failed to deserialize exploration bid message {}",
+                                        &text
+                                    );
+                                }
                             }
                         }
                     }
-                    ExplorationBid::impossible(&self.unique_identifier())
-                }
+                    Err(err) => {
+                        debug!(
+                            "Explorer {} failed to transform into text with: {}",
+                            self.unique_identifier(),
+                            err.to_string()
+                        );
+                    }
+                },
                 Err(err) => {
                     debug!(
-                        "Explorer {} failed to transform into text with: {}",
+                        "Explorer {} failed to request with: {}",
                         self.unique_identifier(),
                         err.to_string()
                     );
-                    ExplorationBid::impossible(&self.unique_identifier())
                 }
-            },
-            Err(err) => {
-                debug!(
-                    "Explorer {} failed to request with: {}",
-                    self.unique_identifier(),
-                    err.to_string()
-                );
-                ExplorationBid::impossible(&self.unique_identifier())
             }
         }
+        ExplorationBid::impossible(&self.unique_identifier())
     }
 
     fn explore(

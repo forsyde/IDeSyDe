@@ -11,6 +11,13 @@ import com.fasterxml.jackson.annotation.JsonProperty;
 import idesyde.core.DecisionModel;
 import idesyde.core.headers.DecisionModelHeader;
 
+/** A decision model to hold memory requirements for processes when executing in processing elements.
+ *
+ * As the decision model stores these memory requirements in associative arrays (maps), the lack
+ * of an association between a process and a processing element means that
+ * this process _cannot_ be executed in the processing element.
+ *
+ */
 public record InstrumentedMemoryRequirements(
                 @JsonProperty("processes") Set<String> processes,
                 Set<String> channels,

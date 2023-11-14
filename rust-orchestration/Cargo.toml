@@ -20,3 +20,4 @@ reqwest.workspace = true
 tungstenite.workspace = true
 url.workspace = true
 derive_builder.workspace = true
+reqwest-eventsource.workspace = true

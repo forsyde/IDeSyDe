@@ -18,14 +18,6 @@ import java.util.stream.Stream;
 public record ForSyDeIODesignModel(
         SystemGraph systemGraph) implements DesignModel {
 
-    @Override
-    public DesignModelHeader header() {
-        return new DesignModelHeader(
-                "ForSyDeIODesignModel",
-                Stream.concat(systemGraph.vertexSet().stream().map(Vertex::getIdentifier),
-                        systemGraph.edgeSet().stream().map(EdgeInfo::toIDString)).collect(Collectors.toSet()),
-                Set.of());
-    }
 
     @Override
     public Optional<String> bodyAsString() {
@@ -35,6 +27,11 @@ public record ForSyDeIODesignModel(
             e.printStackTrace();
             return Optional.empty();
         }
+    }
+
+    @Override
+    public String format() {
+        return "fiodl";
     }
 
     public static ModelHandler modelHandler = LibForSyDeModelHandler.registerLibForSyDe(new ModelHandler())

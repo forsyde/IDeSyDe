@@ -4,9 +4,7 @@ use std::{
     sync::Arc,
 };
 
-use idesyde_blueprints::{
-    execute_standalone_identification_module, opaque_to_model_gen, StandaloneIdentificationModule, StandaloneIdentificationModuleBuilder,
-};
+use idesyde_blueprints::{execute_standalone_module, StandaloneModule, StandaloneModuleBuilder};
 use idesyde_core::{
     headers::{self, DesignModelHeader},
     DesignModel,
@@ -123,11 +121,12 @@ fn write_design_model(
 //     }
 // }
 fn main() {
-    execute_standalone_identification_module(StandaloneIdentificationModuleBuilder::default()
-        .unique_identifier("MatlabIdentificationModule".to_owned())
-        .read_design_model(read_design_model)
-        .write_design_model(write_design_model)
-        .build()
-        .expect("Failed to build simulink identification module. Should never fail.")
+    execute_standalone_module(
+        StandaloneModuleBuilder::default()
+            .unique_identifier("MatlabIdentificationModule".to_owned())
+            .read_design_model(read_design_model)
+            .write_design_model(write_design_model)
+            .build()
+            .expect("Failed to build simulink identification module. Should never fail."),
     );
 }

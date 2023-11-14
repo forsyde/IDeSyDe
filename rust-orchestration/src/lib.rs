@@ -24,7 +24,7 @@ use identification::ExternalServerIdentificationModule;
 use idesyde_core::DecisionModel;
 use idesyde_core::DesignModel;
 use idesyde_core::ExplorationModule;
-use idesyde_core::IdentificationModule;
+use idesyde_core::Module;
 
 use rayon::prelude::*;
 use reqwest::blocking::Response;
@@ -224,10 +224,10 @@ pub fn find_identification_modules(
     solved_path: &Path,
     integration_path: &Path,
     output_path: &Path,
-) -> Vec<Arc<dyn IdentificationModule>> {
-    let mut imodules: Vec<Arc<dyn IdentificationModule>> = Vec::new();
+) -> Vec<Arc<dyn Module>> {
+    let mut imodules: Vec<Arc<dyn Module>> = Vec::new();
     if let Ok(read_dir) = modules_path.read_dir() {
-        let prepared: Vec<Arc<dyn IdentificationModule>> = read_dir
+        let prepared: Vec<Arc<dyn Module>> = read_dir
             .par_bridge()
             .into_par_iter()
             .flat_map(|e| {
@@ -238,7 +238,7 @@ pub fn find_identification_modules(
                         if let Some(imodule) =
                             ExternalServerIdentificationModule::try_create_local(prog.clone())
                         {
-                            return Some(Arc::new(imodule) as Arc<dyn IdentificationModule>);
+                            return Some(Arc::new(imodule) as Arc<dyn Module>);
                         }
                         //  else {
                         //     return Some(Arc::new(ExternalIdentificationModule {

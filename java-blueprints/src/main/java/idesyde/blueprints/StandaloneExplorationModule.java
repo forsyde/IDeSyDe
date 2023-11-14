@@ -44,162 +44,162 @@ public interface StandaloneExplorationModule {
         if (cli.serverType != null && cli.serverType.equalsIgnoreCase("http")) {
             try (var server = Javalin.create()) {
                 server
-                        .put(
-                                "/decision",
-                                ctx -> {
-                                    if (ctx.isMultipart() && ctx.queryParamMap().containsKey("session")) {
-                                        var session = ctx.queryParam("session");
-                                        if (!sessionDecisionModels.containsKey(session)) {
-                                            sessionDecisionModels.put(session, new ConcurrentSkipListSet<>());
-                                        }
-                                        var decisionModels = sessionExploredModels.get(session);
-                                        Optional<OpaqueDecisionModel> opaque = Optional.empty();
-                                        if (ctx.uploadedFile("cbor") != null) {
-                                            opaque = OpaqueDecisionModel
-                                                    .fromCBORBytes(ctx.uploadedFile("cbor").content().readAllBytes());
-                                        } else if (ctx.uploadedFile("json") != null) {
-                                            opaque = OpaqueDecisionModel
-                                                    .fromJsonString(new String(
-                                                            ctx.uploadedFile("json").content().readAllBytes(),
-                                                            StandardCharsets.UTF_8));
-                                        }
-                                        // if (file != null)
-                                        opaque.flatMap(this::fromOpaqueDecision)
-                                                .ifPresentOrElse(m -> {
-                                                    decisionModels.add(m);
-                                                    ctx.status(200);
-                                                    ctx.result("Added");
-                                                }, () -> {
-                                                    ctx.status(500);
-                                                    ctx.result("Failed to add");
-                                                });
-                                    }
-                                })
-                        // .post(
+                        // .put(
                         // "/decision",
                         // ctx -> {
-                        // if (ctx.isMultipartFormData()) {
-                        // } else {
-                        // DecisionModelMessage.fromJsonString(ctx.body())
-                        // .flatMap(this::decisionMessageToModel)
-                        // .ifPresent(decisionModels::add);
+                        // if (ctx.isMultipart() && ctx.queryParamMap().containsKey("session")) {
+                        // var session = ctx.queryParam("session");
+                        // if (!sessionDecisionModels.containsKey(session)) {
+                        // sessionDecisionModels.put(session, new ConcurrentSkipListSet<>());
+                        // }
+                        // var decisionModels = sessionExploredModels.get(session);
+                        // Optional<OpaqueDecisionModel> opaque = Optional.empty();
+                        // if (ctx.uploadedFile("cbor") != null) {
+                        // opaque = OpaqueDecisionModel
+                        // .fromCBORBytes(ctx.uploadedFile("cbor").content().readAllBytes());
+                        // } else if (ctx.uploadedFile("json") != null) {
+                        // opaque = OpaqueDecisionModel
+                        // .fromJsonString(new String(
+                        // ctx.uploadedFile("json").content().readAllBytes(),
+                        // StandardCharsets.UTF_8));
+                        // }
+                        // // if (file != null)
+                        // opaque.flatMap(this::fromOpaqueDecision)
+                        // .ifPresentOrElse(m -> {
+                        // decisionModels.add(m);
+                        // ctx.status(200);
+                        // ctx.result("Added");
+                        // }, () -> {
+                        // ctx.status(500);
+                        // ctx.result("Failed to add");
+                        // });
                         // }
                         // })
-                        .get(
-                                "/explorers",
-                                ctx -> {
-                                    ctx.result(objectMapper.writeValueAsString(explorers().stream()
-                                            .map(e -> e.uniqueIdentifier()).collect(Collectors.toSet())));
-                                })
-                        .post(
-                                "/{explorerName}/bid",
-                                ctx -> {
-                                    explorers().stream()
-                                            .filter(e -> e.uniqueIdentifier().equals(ctx.pathParam("explorerName")))
-                                            .findAny().ifPresentOrElse(explorer -> {
-                                                if (ctx.isMultipartFormData()) {
-                                                    ctx.formParamMap().forEach((name, entries) -> {
-                                                        if (name.startsWith("decisionModel")) {
-                                                            entries.stream().findAny().ifPresent(msg -> {
-                                                                OpaqueDecisionModel.fromJsonString(msg)
-                                                                        .flatMap(this::fromOpaqueDecision)
-                                                                        .map(decisionModel -> explorer
-                                                                                .bid(decisionModel))
-                                                                        .ifPresent(bid -> {
-                                                                            try {
-                                                                                ctx.result(objectMapper
-                                                                                        .writeValueAsString(bid));
-                                                                            } catch (JsonProcessingException e1) {
-                                                                                e1.printStackTrace();
-                                                                                ctx.status(500);
-                                                                            }
-                                                                        });
-                                                            });
-                                                        }
-                                                    });
-                                                } else {
-                                                }
-                                            }, () -> {
-                                                ctx.status(404);
-                                            });
-                                })
-                        .sse("/{explorerName}/explored", client -> {
-                            var session = ctx.queryParam("session");
-                            sessionExplorationStream.get(session).forEach(solution -> {
-                                if (ctx.queryParam("encoding") != null
-                                        && ctx.queryParam("encoding").equalsIgnoreCase("cbor")) {
-                                    ExplorationSolutionMessage
-                                            .from(solution).toCBORBytes().ifPresent(ctx::send);
-                                } else {
-                                    ExplorationSolutionMessage
-                                            .from(solution).toJsonString().ifPresent(ctx::send);
-                                }
-                            });
-                            client.close();
-                        })
-                        .ws(
-                                "/{explorerName}/explore",
-                                ws -> {
-                                    // var solutions = new Concurrent<DecisionModel>();
-                                    var explorationRequest = new ExplorationRequest();
-                                    ws.onMessage(ctx -> {
-                                        ctx.enableAutomaticPings(5, TimeUnit.SECONDS);
-                                        // check whether it is a configuration, a solution, or a the decision model
-                                        try {
-                                            var prevSol = objectMapper.readValue(ctx.message(),
-                                                    ExplorationSolutionMessage.class);
-                                            decisionMessageToModel(prevSol.solved()).ifPresent((solution) -> {
-                                                // solutions.add(solution);
-                                                explorationRequest.previousSolutions
-                                                        .add(new ExplorationSolution(prevSol.objectives(), solution));
-                                            });
-                                        } catch (DatabindException ignored) {
-                                        }
-                                        try {
-                                            explorationRequest.configuration = objectMapper.readValue(ctx.message(),
-                                                    Explorer.Configuration.class);
-                                        } catch (DatabindException ignored) {
-                                        }
-                                        try {
-                                            var request = objectMapper.readValue(ctx.message(),
-                                                    DecisionModelMessage.class);
-                                            explorers().stream().filter(
-                                                    e -> e.uniqueIdentifier().equals(ctx.pathParam("explorerName")))
-                                                    .findAny().ifPresent(explorer -> {
-                                                        decisionMessageToModel(request)
-                                                                .ifPresent(decisionModel -> {
-                                                                    explorer.explore(decisionModel,
-                                                                            explorationRequest.previousSolutions,
-                                                                            explorationRequest.configuration)
-                                                                            // keep only non dominated if necessary
-                                                                            .filter(solution -> !explorationRequest.configuration.strict
-                                                                                    || explorationRequest.previousSolutions
-                                                                                            .stream()
-                                                                                            .noneMatch(other -> other
-                                                                                                    .dominates(
-                                                                                                            solution)))
-                                                                            .forEach(solution -> {
-                                                                                try {
-                                                                                    // solutions.add(solution.solved());
-                                                                                    // explorationRequest.previousSolutions
-                                                                                    // .add(solution);
-                                                                                    ctx.send(objectMapper
-                                                                                            .writeValueAsString(
-                                                                                                    ExplorationSolutionMessage
-                                                                                                            .from(solution)));
-                                                                                } catch (JsonProcessingException e) {
-                                                                                    e.printStackTrace();
-                                                                                }
-                                                                            });
-                                                                });
-                                                    });
-                                            ctx.closeSession();
-                                        } catch (DatabindException ignored) {
-                                        } catch (IOException ignored) {
-                                            System.out.println("Client closed channel during execution.");
-                                        }
-                                    });
-                                })
+                        // // .post(
+                        // // "/decision",
+                        // // ctx -> {
+                        // // if (ctx.isMultipartFormData()) {
+                        // // } else {
+                        // // DecisionModelMessage.fromJsonString(ctx.body())
+                        // // .flatMap(this::decisionMessageToModel)
+                        // // .ifPresent(decisionModels::add);
+                        // // }
+                        // // })
+                        // .get(
+                        // "/explorers",
+                        // ctx -> {
+                        // ctx.result(objectMapper.writeValueAsString(explorers().stream()
+                        // .map(e -> e.uniqueIdentifier()).collect(Collectors.toSet())));
+                        // })
+                        // .post(
+                        // "/{explorerName}/bid",
+                        // ctx -> {
+                        // explorers().stream()
+                        // .filter(e -> e.uniqueIdentifier().equals(ctx.pathParam("explorerName")))
+                        // .findAny().ifPresentOrElse(explorer -> {
+                        // if (ctx.isMultipartFormData()) {
+                        // ctx.formParamMap().forEach((name, entries) -> {
+                        // if (name.startsWith("decisionModel")) {
+                        // entries.stream().findAny().ifPresent(msg -> {
+                        // OpaqueDecisionModel.fromJsonString(msg)
+                        // .flatMap(this::fromOpaqueDecision)
+                        // .map(decisionModel -> explorer
+                        // .bid(decisionModel))
+                        // .ifPresent(bid -> {
+                        // try {
+                        // ctx.result(objectMapper
+                        // .writeValueAsString(bid));
+                        // } catch (JsonProcessingException e1) {
+                        // e1.printStackTrace();
+                        // ctx.status(500);
+                        // }
+                        // });
+                        // });
+                        // }
+                        // });
+                        // } else {
+                        // }
+                        // }, () -> {
+                        // ctx.status(404);
+                        // });
+                        // })
+                        // .sse("/{explorerName}/explored", client -> {
+                        // var session = ctx.queryParam("session");
+                        // sessionExplorationStream.get(session).forEach(solution -> {
+                        // if (ctx.queryParam("encoding") != null
+                        // && ctx.queryParam("encoding").equalsIgnoreCase("cbor")) {
+                        // ExplorationSolutionMessage
+                        // .from(solution).toCBORBytes().ifPresent(ctx::send);
+                        // } else {
+                        // ExplorationSolutionMessage
+                        // .from(solution).toJsonString().ifPresent(ctx::send);
+                        // }
+                        // });
+                        // client.close();
+                        // })
+                        // .ws(
+                        // "/{explorerName}/explore",
+                        // ws -> {
+                        // // var solutions = new Concurrent<DecisionModel>();
+                        // var explorationRequest = new ExplorationRequest();
+                        // ws.onMessage(ctx -> {
+                        // ctx.enableAutomaticPings(5, TimeUnit.SECONDS);
+                        // // check whether it is a configuration, a solution, or a the decision model
+                        // try {
+                        // var prevSol = objectMapper.readValue(ctx.message(),
+                        // ExplorationSolutionMessage.class);
+                        // decisionMessageToModel(prevSol.solved()).ifPresent((solution) -> {
+                        // // solutions.add(solution);
+                        // explorationRequest.previousSolutions
+                        // .add(new ExplorationSolution(prevSol.objectives(), solution));
+                        // });
+                        // } catch (DatabindException ignored) {
+                        // }
+                        // try {
+                        // explorationRequest.configuration = objectMapper.readValue(ctx.message(),
+                        // Explorer.Configuration.class);
+                        // } catch (DatabindException ignored) {
+                        // }
+                        // try {
+                        // var request = objectMapper.readValue(ctx.message(),
+                        // DecisionModelMessage.class);
+                        // explorers().stream().filter(
+                        // e -> e.uniqueIdentifier().equals(ctx.pathParam("explorerName")))
+                        // .findAny().ifPresent(explorer -> {
+                        // decisionMessageToModel(request)
+                        // .ifPresent(decisionModel -> {
+                        // explorer.explore(decisionModel,
+                        // explorationRequest.previousSolutions,
+                        // explorationRequest.configuration)
+                        // // keep only non dominated if necessary
+                        // .filter(solution -> !explorationRequest.configuration.strict
+                        // || explorationRequest.previousSolutions
+                        // .stream()
+                        // .noneMatch(other -> other
+                        // .dominates(
+                        // solution)))
+                        // .forEach(solution -> {
+                        // try {
+                        // // solutions.add(solution.solved());
+                        // // explorationRequest.previousSolutions
+                        // // .add(solution);
+                        // ctx.send(objectMapper
+                        // .writeValueAsString(
+                        // ExplorationSolutionMessage
+                        // .from(solution)));
+                        // } catch (JsonProcessingException e) {
+                        // e.printStackTrace();
+                        // }
+                        // });
+                        // });
+                        // });
+                        // ctx.closeSession();
+                        // } catch (DatabindException ignored) {
+                        // } catch (IOException ignored) {
+                        // System.out.println("Client closed channel during execution.");
+                        // }
+                        // });
+                        // })
                         .exception(
                                 Exception.class,
                                 (e, ctx) -> {

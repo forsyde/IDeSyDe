@@ -1,6 +1,6 @@
 use std::{
     cmp::Ordering,
-    collections::HashMap,
+    collections::{HashMap, HashSet},
     io::BufRead,
     io::BufReader,
     net::{IpAddr, Ipv4Addr},
@@ -18,6 +18,7 @@ use idesyde_core::{
     ExplorationSolution, Explorer, OpaqueDecisionModel,
 };
 use log::{debug, warn};
+use reqwest_eventsource::EventSource;
 use serde::{Deserialize, Serialize};
 use url::Url;
 
@@ -137,7 +138,7 @@ impl Explorer for ExternalExplorer {
             .join(format!("/{}", self.name).as_str())
             .and_then(|u| u.join("/bid"))
         {
-            match self.client.post(bid_url).multipart(form).send() {
+            match self.client.get(bid_url).multipart(form).send() {
                 Ok(result) => match result.text() {
                     Ok(text) => {
                         if !text.is_empty() {
@@ -175,9 +176,43 @@ impl Explorer for ExternalExplorer {
     fn explore(
         &self,
         m: Arc<dyn DecisionModel>,
-        currrent_solutions: Vec<ExplorationSolution>,
+        currrent_solutions: &HashSet<ExplorationSolution>,
         exploration_configuration: ExplorationConfiguration,
     ) -> Box<dyn Iterator<Item = ExplorationSolution> + Send + Sync + '_> {
+        if let Ok(explore_url) = self
+            .url
+            .join(format!("/{}/explore", self.name).as_str())
+            .and_then(|u| u.join("/explore"))
+        {
+            let mut form = reqwest::blocking::multipart::Form::new();
+            form = form.text(
+                "decisionModel",
+                OpaqueDecisionModel::from(m)
+                    .to_json()
+                    .expect("Failed to make Json out of opaque decision model. Should never fail."),
+            );
+            form = form.text("configuration", exploration_configuration.to_json_string());
+            for (i, sol) in currrent_solutions.iter().enumerate() {
+                form = form.text(
+                    format!("previousSolution{}", i),
+                    ExplorationSolutionMessage::from(sol).to_json_str(),
+                );
+            }
+            if self
+                .client
+                .post(explore_url)
+                .multipart(form)
+                .query(&[("session", "0")])
+                .send()
+                .is_ok_and(|r| r.status().is_success())
+            {
+                if let Ok(explored_url) = self.url.join(format!("/{}/explored", self.name).as_str())
+                {
+                }
+            } else {
+                Box::new(std::iter::empty())
+            }
+        }
         match std::net::TcpStream::connect(format!("{}:{}", self.address, self.port).as_str()) {
             Ok(stream) => {
                 stream

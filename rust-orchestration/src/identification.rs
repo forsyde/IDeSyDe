@@ -3,7 +3,7 @@ use std::{
     hash::Hash,
     io::BufRead,
     io::BufReader,
-    net::Ipv4Addr,
+    net::{Ipv4Addr, TcpStream},
     path::PathBuf,
     process::{Child, Stdio},
     sync::{Arc, Mutex},
@@ -15,10 +15,11 @@ use rayon::prelude::*;
 use idesyde_blueprints::IdentificationResultMessage;
 use idesyde_core::{
     headers::{DecisionModelHeader, DesignModelHeader},
-    DecisionModel, DesignModel, IdentificationIterator, IdentificationModule, IdentificationResult,
+    DecisionModel, DesignModel, IdentificationIterator, IdentificationResult, Module,
     OpaqueDecisionModel, OpaqueDesignModel,
 };
 use log::{debug, warn};
+use tungstenite::WebSocket;
 use url::Url;
 
 use crate::HttpServerLike;
@@ -153,14 +154,13 @@ impl Drop for ExternalServerIdentificationModule {
 //     }
 // }
 
-#[derive(Builder, PartialEq, Eq, Clone)]
+#[derive(Builder, Clone)]
 struct ExternalServerIdentifiticationIterator {
     design_models: HashSet<Arc<dyn DesignModel>>,
     decision_models: HashSet<Arc<dyn DecisionModel>>,
     decision_models_to_upload: HashSet<Arc<dyn DecisionModel>>,
     design_models_to_upload: HashSet<Arc<dyn DesignModel>>,
-    identified: LinkedList<Arc<dyn DecisionModel>>,
-    imodule: Arc<ExternalServerIdentificationModule>,
+    websocket: Arc<WebSocket<TcpStream>>,
     messages: Vec<String>,
     waiting: bool,
 }
@@ -169,101 +169,158 @@ impl Iterator for ExternalServerIdentifiticationIterator {
     type Item = Arc<dyn DecisionModel>;
 
     fn next(&mut self) -> Option<Self::Item> {
+        // send the decision models
+        for m in &self.decision_models_to_upload {
+            if let Ok(decision_cbor) = OpaqueDecisionModel::from(m).to_cbor() {
+                self.websocket
+                    .send(tungstenite::Message::Binary(decision_cbor));
+            }
+        }
+        self.decision_models
+            .extend(self.decision_models_to_upload.drain());
+        // same for design models
+        for m in &self.design_models_to_upload {
+            if let Ok(design_cbor) = OpaqueDesignModel::from(m.as_ref()).to_cbor() {
+                self.websocket
+                    .send(tungstenite::Message::Binary(design_cbor));
+            };
+        }
+        self.design_models
+            .extend(self.design_models_to_upload.drain());
+        self.websocket
+            .send(tungstenite::Message::Text("done".to_string()));
+        while let Ok(message) = self.websocket.read() {
+            match message {
+                tungstenite::Message::Text(decision_json) => {
+                    if let Ok(opaque) = OpaqueDecisionModel::from_json_str(decision_json.as_str()) {
+                        let opaquea = Arc::new(opaque);
+                        self.decision_models.insert(opaquea);
+                        return Some(opaquea);
+                    }
+                }
+                tungstenite::Message::Binary(decision_cbor) => {
+                    if let Ok(opaque) = OpaqueDecisionModel::from_cbor(decision_cbor.as_slice()) {
+                        let opaquea = Arc::new(opaque);
+                        self.decision_models.insert(opaquea);
+                        return Some(opaquea);
+                    }
+                }
+                tungstenite::Message::Ping(_) => {
+                    self.websocket.send(tungstenite::Message::Pong(vec![]));
+                }
+                tungstenite::Message::Pong(_) => {
+                    self.websocket.send(tungstenite::Message::Ping(vec![]));
+                }
+                _ => (),
+            }
+        }
+        None
         // first, try to see if no element is in the queue to be returned
-        if self.waiting {
-            if let Ok(identified_url) = self.imodule.url.join("/identified") {
-                while let Some(opaque) = self
-                    .imodule
-                    .client
-                    .get(identified_url)
-                    .query(&[("session", "0", "encoding", "cbor")])
-                    .send()
-                    .ok()
-                    .filter(|r| !r.status().as_str().eq_ignore_ascii_case("204"))
-                    .and_then(|r| r.bytes().ok())
-                    .map(|b| b.to_vec())
-                    .and_then(|v| OpaqueDecisionModel::from_cbor(v.as_slice()).ok())
-                {
-                    let opaquea: Arc<dyn DecisionModel> = Arc::new(opaque);
-                    if !self.decision_models.contains(&opaquea) {
-                        self.identified.push_back(opaquea);
-                        self.decision_models.insert(opaquea);
-                    }
-                }
-                while let Some(opaque) = self
-                    .imodule
-                    .client
-                    .get(identified_url)
-                    .query(&[("session", "0", "encoding", "json")])
-                    .send()
-                    .ok()
-                    .filter(|r| !r.status().as_str().eq_ignore_ascii_case("204"))
-                    .and_then(|r| r.text().ok())
-                    .and_then(|b| OpaqueDecisionModel::from_json_str(b.as_str()).ok())
-                {
-                    let opaquea: Arc<dyn DecisionModel> = Arc::new(opaque);
-                    if !self.decision_models.contains(&opaquea) {
-                        self.identified.push_back(opaquea);
-                        self.decision_models.insert(opaquea);
-                    }
-                }
-                self.waiting = false;
-            }
-        }
-        if !self.identified.is_empty() {
-            return self.identified.pop_front();
-        } else {
-            // otehrwise, we proceed to ask for more decision models
-            // now proceed to identification
-            // send decision models
-            self.decision_models_to_upload.par_iter().for_each(|m| {
-                if let Ok(mut decision_url) = self.imodule.url.join("/decision") {
-                    decision_url.set_query(Some("session=0"));
-                    let opaque = OpaqueDecisionModel::from(m);
-                    let mut form = reqwest::blocking::multipart::Form::new();
-                    if let Ok(cbor_body) = opaque.to_cbor::<Vec<u8>>() {
-                        form.part("cbor", reqwest::blocking::multipart::Part::bytes(cbor_body));
-                    } else if let Ok(json_body) = opaque.to_json() {
-                        form.text("json", json_body);
-                    }
-                    self.imodule.client.put(decision_url).multipart(form).send();
-                };
-            });
-            self.decision_models
-                .extend(self.decision_models_to_upload.drain());
-            // same for design models
-            self.design_models_to_upload.par_iter().for_each(|m| {
-                if let Ok(mut design_url) = self.imodule.url.join("/design") {
-                    design_url.set_query(Some("session=0"));
-                    let mut form = reqwest::blocking::multipart::Form::new();
-                    let opaque = OpaqueDesignModel::from(m.as_ref());
-                    if let Ok(cbor_body) = opaque.to_cbor() {
-                        form.part("cbor", reqwest::blocking::multipart::Part::bytes(cbor_body));
-                    } else if let Ok(json_body) = opaque.to_json() {
-                        form.text("json", json_body);
-                    }
-                    self.imodule.client.put(design_url).multipart(form).send();
-                };
-            });
-            self.design_models
-                .extend(self.design_models_to_upload.drain());
-            if let Ok(identify_url) = self.imodule.url.join("/identify") {
-                if let Ok(msgs) = self
-                    .imodule
-                    .client
-                    .post(identify_url)
-                    .query(&[("session", "0")])
-                    .send()
-                    .and_then(|r| r.text())
-                {
-                    if let Ok(msgs_vec) = serde_json::from_str::<Vec<String>>(msgs.as_str()) {
-                        self.messages.extend(msgs_vec.into_iter());
-                    }
-                };
-            }
-            self.waiting = true;
-            return self.next();
-        }
+        // if self.waiting {
+        //     if let Ok(identified_url) = self.imodule.url.join("/identified") {
+        //         while let Some(opaque) = self
+        //             .imodule
+        //             .client
+        //             .get(identified_url)
+        //             .query(&[("session", "0", "encoding", "cbor")])
+        //             .send()
+        //             .ok()
+        //             .filter(|r| !r.status().as_str().eq_ignore_ascii_case("204"))
+        //             .and_then(|r| r.bytes().ok())
+        //             .map(|b| b.to_vec())
+        //             .and_then(|v| OpaqueDecisionModel::from_cbor(v.as_slice()).ok())
+        //         {
+        //             let opaquea: Arc<dyn DecisionModel> = Arc::new(opaque);
+        //             if !self.decision_models.contains(&opaquea) {
+        //                 self.identified.push_back(opaquea);
+        //                 self.decision_models.insert(opaquea);
+        //             }
+        //         }
+        //         while let Some(opaque) = self
+        //             .imodule
+        //             .client
+        //             .get(identified_url)
+        //             .query(&[("session", "0", "encoding", "json")])
+        //             .send()
+        //             .ok()
+        //             .filter(|r| !r.status().as_str().eq_ignore_ascii_case("204"))
+        //             .and_then(|r| r.text().ok())
+        //             .and_then(|b| OpaqueDecisionModel::from_json_str(b.as_str()).ok())
+        //         {
+        //             let opaquea: Arc<dyn DecisionModel> = Arc::new(opaque);
+        //             if !self.decision_models.contains(&opaquea) {
+        //                 self.identified.push_back(opaquea);
+        //                 self.decision_models.insert(opaquea);
+        //             }
+        //         }
+        //         self.waiting = false;
+        //     }
+        // }
+        // if !self.identified.is_empty() {
+        //     return self.identified.pop_front();
+        // } else {
+        //     // otehrwise, we proceed to ask for more decision models
+        //     // now proceed to identification
+        //     // send decision models
+        //     for m in &self.decision_models_to_upload {
+        //         if let Ok(decision_cbor) = OpaqueDecisionModel::from(m).to_cbor() {
+        //             self.websocket
+        //                 .send(tungstenite::Message::Binary(decision_cbor));
+        //         }
+        //     }
+        //     //     if let Ok(mut decision_url) = self.imodule.url.join("/decision") {
+        //     //         decision_url.set_query(Some("session=0"));
+        //     //         let opaque = OpaqueDecisionModel::from(m);
+        //     //         let mut form = reqwest::blocking::multipart::Form::new();
+        //     //         if let Ok(cbor_body) = opaque.to_cbor::<Vec<u8>>() {
+        //     //             form.part("cbor", reqwest::blocking::multipart::Part::bytes(cbor_body));
+        //     //         } else if let Ok(json_body) = opaque.to_json() {
+        //     //             form.text("json", json_body);
+        //     //         }
+        //     //         self.imodule.client.put(decision_url).multipart(form).send();
+        //     //     };
+        //     // });
+        //     self.decision_models
+        //         .extend(self.decision_models_to_upload.drain());
+        //     // same for design models
+        //     for m in &self.design_models_to_upload {
+        //         if let Ok(design_cbor) = OpaqueDesignModel::from(m.as_ref()).to_cbor() {
+        //             self.websocket
+        //                 .send(tungstenite::Message::Binary(design_cbor));
+        //         };
+        //     }
+        //     // self.design_models_to_upload.par_iter().for_each(|m| {
+        //     //     if let Ok(mut design_url) = self.imodule.url.join("/design") {
+        //     //         design_url.set_query(Some("session=0"));
+        //     //         let mut form = reqwest::blocking::multipart::Form::new();
+        //     //         let opaque = OpaqueDesignModel::from(m.as_ref());
+        //     //         if let Ok(cbor_body) = opaque.to_cbor() {
+        //     //             form.part("cbor", reqwest::blocking::multipart::Part::bytes(cbor_body));
+        //     //         } else if let Ok(json_body) = opaque.to_json() {
+        //     //             form.text("json", json_body);
+        //     //         }
+        //     //         self.imodule.client.put(design_url).multipart(form).send();
+        //     //     };
+        //     // });
+        //     self.design_models
+        //         .extend(self.design_models_to_upload.drain());
+        //     if let Ok(identify_url) = self.imodule.url.join("/identify") {
+        //         if let Ok(msgs) = self
+        //             .imodule
+        //             .client
+        //             .post(identify_url)
+        //             .query(&[("session", "0")])
+        //             .send()
+        //             .and_then(|r| r.text())
+        //         {
+        //             if let Ok(msgs_vec) = serde_json::from_str::<Vec<String>>(msgs.as_str()) {
+        //                 self.messages.extend(msgs_vec.into_iter());
+        //             }
+        //         };
+        //     }
+        //     self.waiting = true;
+        //     return self.next();
+        // }
     }
 }
 
@@ -288,7 +345,7 @@ impl IdentificationIterator for ExternalServerIdentifiticationIterator {
     }
 }
 
-impl IdentificationModule for ExternalServerIdentificationModule {
+impl Module for ExternalServerIdentificationModule {
     fn unique_identifier(&self) -> String {
         self.name.clone()
     }
@@ -298,14 +355,24 @@ impl IdentificationModule for ExternalServerIdentificationModule {
         initial_design_models: &HashSet<Arc<dyn DesignModel>>,
         initial_decision_models: &HashSet<Arc<dyn DecisionModel>>,
     ) -> Box<dyn idesyde_core::IdentificationIterator> {
-        Box::new(
-            ExternalServerIdentifiticationIteratorBuilder::default()
-                .decision_models(initial_decision_models.to_owned())
-                .design_models(initial_design_models.to_owned())
-                .imodule(Arc::new(self.to_owned()))
-                .build()
-                .expect("Failed building external server iterator. Should never fail."),
-        )
+        let mut mut_url = self.url.clone();
+        mut_url.set_scheme("ws");
+        if let Ok(identify_url) = mut_url.join("/identify") {
+            if let Some((ws, _)) = std::net::TcpStream::connect(mut_url.as_str())
+                .ok()
+                .and_then(|stream| tungstenite::client(identify_url, stream).ok())
+            {
+                return Box::new(
+                    ExternalServerIdentifiticationIteratorBuilder::default()
+                        .decision_models(initial_decision_models.to_owned())
+                        .design_models(initial_design_models.to_owned())
+                        .websocket(Arc::new(ws))
+                        .build()
+                        .expect("Failed building external server iterator. Should never fail."),
+                );
+            }
+        }
+        Box::new(idesyde_core::empty_identification_iter())
         // self.write_line_to_input(
         //     format!("SET identified-path {}", self.identified_path.display()).as_str(),
         // );
@@ -654,7 +721,7 @@ impl IdentificationModule for ExternalServerIdentificationModule {
 }
 
 pub fn identification_procedure(
-    imodules: &HashSet<Arc<dyn IdentificationModule>>,
+    imodules: &HashSet<Arc<dyn Module>>,
     design_models: &HashSet<Arc<dyn DesignModel>>,
     pre_identified: &HashSet<Arc<dyn DecisionModel>>,
     starting_iter: i32,

@@ -285,67 +285,6 @@ pub enum MarkedIdentificationRule {
     GenericIdentificationRule(IdentificationRule),
 }
 
-/// This trait is wrapper around the normal iteration to create a "session"
-/// for identification modules. Via this, we can do more advanced things
-/// that would otherwise be impossible with a simple function call or iterator,
-/// like caching the decision or design models to not send them unnecesarily remotely.
-///
-/// Prefer to use `next_with_models` over `next` as it inserts the required models as
-/// necessary in the internal state of this iterator.
-pub trait IdentificationIterator: Iterator<Item = Arc<dyn DecisionModel>> + Sync {
-    fn next_with_models(
-        &mut self,
-        decision_models: &HashSet<Arc<dyn DecisionModel>>,
-        design_models: &HashSet<Arc<dyn DesignModel>>,
-    ) -> Option<Arc<dyn DecisionModel>> {
-        return None;
-    }
-
-    /// This method collect messages possibly produced during the identification session,
-    /// e.g. errors, information or warnings, and returns it to the caller.
-    ///
-    /// The messages come in a (level_string, content_string) format.
-    ///
-    /// The trait shoud ensure that consumed messages are destroyed from the iterator.
-    fn collect_messages(&mut self) -> Vec<(String, String)> {
-        vec![]
-    }
-}
-
-/// Identification modules are a thin layer on top of identification rules that facilitates treating
-/// (reverse) identification rules within the orchestration process or remotely in the same fashion.
-pub trait IdentificationModule: Send + Sync {
-    fn unique_identifier(&self) -> String;
-    fn location_url(&self) -> Option<Url> {
-        None
-    }
-    fn start_identification(
-        &self,
-        initial_design_models: &HashSet<Arc<dyn DesignModel>>,
-        initial_decision_models: &HashSet<Arc<dyn DecisionModel>>,
-    ) -> Box<dyn IdentificationIterator>;
-    fn reverse_identification(
-        &self,
-        solved_decision_model: &HashSet<Arc<dyn DecisionModel>>,
-        design_model: &HashSet<Arc<dyn DesignModel>>,
-    ) -> Box<dyn Iterator<Item = Arc<dyn DesignModel>>>;
-}
-
-impl PartialEq<dyn IdentificationModule> for dyn IdentificationModule {
-    fn eq(&self, other: &dyn IdentificationModule) -> bool {
-        self.unique_identifier() == other.unique_identifier()
-    }
-}
-
-impl Eq for dyn IdentificationModule {}
-
-impl Hash for dyn IdentificationModule {
-    fn hash<H: std::hash::Hasher>(&self, state: &mut H) {
-        self.unique_identifier().hash(state);
-        self.location_url().hash(state);
-    }
-}
-
 #[derive(Clone, PartialEq, Eq, serde::Serialize, serde::Deserialize, derive_builder::Builder)]
 // #[builder(setter(each(name = "target_objectives")))]
 pub struct ExplorationConfiguration {
@@ -487,7 +426,7 @@ pub trait Explorer: Downcast + Send + Sync {
     fn explore(
         &self,
         _m: Arc<dyn DecisionModel>,
-        _currrent_solutions: Vec<ExplorationSolution>,
+        _currrent_solutions: &HashSet<ExplorationSolution>,
         _exploration_configuration: ExplorationConfiguration,
     ) -> Box<dyn Iterator<Item = ExplorationSolution> + Send + Sync + '_> {
         Box::new(std::iter::empty())
@@ -503,6 +442,12 @@ impl PartialEq<dyn Explorer> for dyn Explorer {
 }
 
 impl Eq for dyn Explorer {}
+
+impl Hash for dyn Explorer {
+    fn hash<H: std::hash::Hasher>(&self, state: &mut H) {
+        self.unique_identifier().hash(state);
+    }
+}
 
 impl<T: Explorer> Explorer for Arc<T> {
     fn unique_identifier(&self) -> String {
@@ -524,7 +469,7 @@ impl<T: Explorer> Explorer for Arc<T> {
     fn explore(
         &self,
         _m: Arc<dyn DecisionModel>,
-        _currrent_solutions: Vec<ExplorationSolution>,
+        _currrent_solutions: &HashSet<ExplorationSolution>,
         _exploration_configuration: ExplorationConfiguration,
     ) -> Box<dyn Iterator<Item = ExplorationSolution> + Send + Sync + '_> {
         self.as_ref()
@@ -851,6 +796,83 @@ impl<T: DesignModel + ?Sized> From<Arc<T>> for OpaqueDesignModel {
     }
 }
 
+/// This trait is wrapper around the normal iteration to create a "session"
+/// for identification modules. Via this, we can do more advanced things
+/// that would otherwise be impossible with a simple function call or iterator,
+/// like caching the decision or design models to not send them unnecesarily remotely.
+///
+/// Prefer to use `next_with_models` over `next` as it inserts the required models as
+/// necessary in the internal state of this iterator.
+pub trait IdentificationIterator: Iterator<Item = Arc<dyn DecisionModel>> + Sync {
+    fn next_with_models(
+        &mut self,
+        decision_models: &HashSet<Arc<dyn DecisionModel>>,
+        design_models: &HashSet<Arc<dyn DesignModel>>,
+    ) -> Option<Arc<dyn DecisionModel>> {
+        return None;
+    }
+
+    /// This method collect messages possibly produced during the identification session,
+    /// e.g. errors, information or warnings, and returns it to the caller.
+    ///
+    /// The messages come in a (level_string, content_string) format.
+    ///
+    /// The trait shoud ensure that consumed messages are destroyed from the iterator.
+    fn collect_messages(&mut self) -> Vec<(String, String)> {
+        vec![]
+    }
+}
+
+/// A simple empty unit struct for an empty iterator
+pub struct EmptyIdentificationIterator {}
+
+impl Iterator for EmptyIdentificationIterator {
+    type Item = Arc<dyn DecisionModel>;
+
+    fn next(&mut self) -> Option<Self::Item> {
+        None
+    }
+}
+
+impl IdentificationIterator for EmptyIdentificationIterator {}
+
+/// Identification modules are a thin layer on top of identification rules that facilitates treating
+/// (reverse) identification rules within the orchestration process or remotely in the same fashion.
+pub trait Module: Send + Sync {
+    fn unique_identifier(&self) -> String;
+    fn location_url(&self) -> Option<Url> {
+        None
+    }
+    fn explorers(&self) -> HashSet<Arc<dyn Explorer>> {
+        HashSet::new()
+    }
+    fn start_identification(
+        &self,
+        initial_design_models: &HashSet<Arc<dyn DesignModel>>,
+        initial_decision_models: &HashSet<Arc<dyn DecisionModel>>,
+    ) -> Box<dyn IdentificationIterator>;
+    fn reverse_identification(
+        &self,
+        solved_decision_model: &HashSet<Arc<dyn DecisionModel>>,
+        design_model: &HashSet<Arc<dyn DesignModel>>,
+    ) -> Box<dyn Iterator<Item = Arc<dyn DesignModel>>>;
+}
+
+impl PartialEq<dyn Module> for dyn Module {
+    fn eq(&self, other: &dyn Module) -> bool {
+        self.unique_identifier() == other.unique_identifier()
+    }
+}
+
+impl Eq for dyn Module {}
+
+impl Hash for dyn Module {
+    fn hash<H: std::hash::Hasher>(&self, state: &mut H) {
+        self.unique_identifier().hash(state);
+        self.location_url().hash(state);
+    }
+}
+
 pub fn compute_dominant_bidding<'a, I>(biddings: I) -> Option<(usize, ExplorationBid)>
 where
     I: Iterator<Item = &'a ExplorationBid>,
@@ -931,7 +953,7 @@ pub fn load_decision_model<T: DecisionModel + DeserializeOwned>(
 pub fn explore_non_blocking<T, M>(
     explorer: &T,
     _m: &M,
-    _currrent_solutions: Vec<ExplorationSolution>,
+    _currrent_solutions: &HashSet<ExplorationSolution>,
     _exploration_configuration: ExplorationConfiguration,
 ) -> (
     std::sync::mpsc::Receiver<ExplorationSolution>,
@@ -946,13 +968,14 @@ where
     let (completed_tx, completed_rx) = std::sync::mpsc::channel();
     let this_explorer = explorer.clone();
     let this_decision_model = _m.to_owned().into();
+    let prev_sols = _currrent_solutions.to_owned();
     let handle = std::thread::spawn(move || {
         if let Ok(true) = completed_rx.recv_timeout(std::time::Duration::from_millis(300)) {
             return ();
         }
         for (solved_model, sol_objs) in this_explorer.explore(
             this_decision_model,
-            _currrent_solutions.to_owned(),
+            &prev_sols,
             _exploration_configuration.to_owned(),
         ) {
             match solution_tx.send((solved_model, sol_objs)) {
@@ -998,4 +1021,8 @@ pub fn pareto_dominance_partial_cmp(
     } else {
         None
     }
+}
+
+pub fn empty_identification_iter() -> EmptyIdentificationIterator {
+    EmptyIdentificationIterator {}
 }

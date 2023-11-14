@@ -10,7 +10,7 @@ use clap::Parser;
 use derive_builder::Builder;
 use idesyde_core::{
     DecisionModel, DesignModel, ExplorationModule, ExplorationSolution, Explorer,
-    IdentificationIterator, IdentificationModule, IdentificationResult, MarkedIdentificationRule,
+    IdentificationIterator, IdentificationResult, MarkedIdentificationRule, Module,
     OpaqueDecisionModel, ReverseIdentificationRule,
 };
 use serde::{Deserialize, Serialize};
@@ -249,47 +249,35 @@ impl From<&ExplorationSolutionMessage> for OpaqueDecisionModel {
     }
 }
 
-pub struct StandaloneExplorationModule {
-    unique_identifier: String,
-    explorers: Vec<Arc<dyn Explorer>>,
-}
+// pub struct StandaloneExplorationModule {
+//     unique_identifier: String,
+//     explorers: Vec<Arc<dyn Explorer>>,
+// }
 
-impl ExplorationModule for StandaloneExplorationModule {
-    fn unique_identifier(&self) -> String {
-        self.unique_identifier.to_owned()
-    }
+// impl ExplorationModule for StandaloneExplorationModule {
+//     fn unique_identifier(&self) -> String {
+//         self.unique_identifier.to_owned()
+//     }
 
-    fn explorers(&self) -> Vec<Arc<dyn Explorer>> {
-        self.explorers.clone()
-    }
+//     fn explorers(&self) -> Vec<Arc<dyn Explorer>> {
+//         self.explorers.clone()
+//     }
 
-    // fn explore(
-    //     &self,
-    //     m: Arc<dyn DecisionModel>,
-    //     explorer_id: &str,
-    //     currrent_solutions: Vec<ExplorationSolution>,
-    //     exploration_configuration: idesyde_core::ExplorationConfiguration,
-    // ) -> Box<dyn Iterator<Item = ExplorationSolution> + '_> {
-    //     self.explorers
-    //         .iter()
-    //         .find(|e| e.unique_identifier() == explorer_id)
-    //         .map(|e| e.explore(m, currrent_solutions, exploration_configuration))
-    //         .unwrap_or(Box::new(std::iter::empty()))
-    // }
-}
+// }
 
 #[derive(Clone, Builder, PartialEq, Eq)]
-pub struct StandaloneIdentificationModule {
+pub struct StandaloneModule {
     unique_identifier: String,
+    explorers: HashSet<Arc<dyn Explorer>>,
     identification_rules: Vec<MarkedIdentificationRule>,
     reverse_identification_rules: Vec<ReverseIdentificationRule>,
     read_design_model: fn(path: &Path) -> Option<Arc<dyn DesignModel>>,
     write_design_model: fn(design_model: &Arc<dyn DesignModel>, dest: &Path) -> Vec<PathBuf>,
     opaque_to_model: fn(header: &OpaqueDecisionModel) -> Option<Arc<dyn DecisionModel>>,
-    pub decision_model_schemas: HashSet<String>,
+    pub decision_model_json_schemas: HashSet<String>,
 }
 
-impl StandaloneIdentificationModule {
+impl StandaloneModule {
     //     pub fn minimal(unique_identifier: &str) -> StandaloneIdentificationModule {
     //         return StandaloneIdentificationModule {
     //             unique_identifier: unique_identifier.to_owned(),
@@ -361,7 +349,7 @@ struct DefaultIdentificationIterator {
     design_models: HashSet<Arc<dyn DesignModel>>,
     decision_models: HashSet<Arc<dyn DecisionModel>>,
     identified: LinkedList<Arc<dyn DecisionModel>>,
-    imodule: Arc<StandaloneIdentificationModule>,
+    imodule: Arc<StandaloneModule>,
     messages: Vec<String>,
 }
 
@@ -490,7 +478,7 @@ impl IdentificationIterator for DefaultIdentificationIterator {
     }
 }
 
-impl IdentificationModule for StandaloneIdentificationModule {
+impl Module for StandaloneModule {
     fn unique_identifier(&self) -> String {
         self.unique_identifier.to_owned()
     }
@@ -521,11 +509,15 @@ impl IdentificationModule for StandaloneIdentificationModule {
                 .flat_map(move |f| f(&decs, &dess)),
         )
     }
+
+    fn explorers(&self) -> HashSet<Arc<dyn Explorer>> {
+        self.explorers.to_owned()
+    }
 }
 
 #[derive(Parser, Debug)]
 #[command(author = "Rodolfo Jordao")]
-pub struct IdentificationModuleArgs {
+pub struct ModuleArgs {
     #[arg(
         short = 'm',
         long = "design-path",
@@ -566,11 +558,11 @@ pub struct IdentificationModuleArgs {
     print_schema: bool,
 }
 
-pub fn execute_standalone_identification_module(module: StandaloneIdentificationModule) {
-    match IdentificationModuleArgs::try_parse() {
+pub fn execute_standalone_module(module: StandaloneModule) {
+    match ModuleArgs::try_parse() {
         Ok(args) => {
             if args.print_schema {
-                for schema in &module.decision_model_schemas {
+                for schema in &module.decision_model_json_schemas {
                     println!("{}", schema);
                 }
             } else {

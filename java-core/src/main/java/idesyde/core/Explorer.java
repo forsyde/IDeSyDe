@@ -2,12 +2,15 @@ package idesyde.core;
 
 import idesyde.core.headers.ExplorationBidding;
 
+import java.io.IOException;
 import java.util.HashSet;
 import java.util.Map;
+import java.util.Optional;
 import java.util.Set;
 import java.util.stream.Stream;
 
 import com.fasterxml.jackson.annotation.JsonProperty;
+import com.fasterxml.jackson.core.JsonProcessingException;
 
 /**
  * This trait is the root for all possible explorers within IDeSyDe. A real
@@ -92,6 +95,24 @@ public interface Explorer {
                     + maximumSolutions + ", improvementIterations=" + improvementIterations
                     + ", timeDiscretizationFactor=" + timeDiscretizationFactor + ", memoryDiscretizationFactor="
                     + memoryDiscretizationFactor + ", strict=" + strict + "]";
+        }
+
+        public static Optional<Configuration> fromJsonString(String s) {
+            try {
+                return Optional.of(DecisionModel.objectMapper.readValue(s, Configuration.class));
+            } catch (JsonProcessingException ignored) {
+                return Optional.empty();
+            }
+        }
+
+        public static Optional<Configuration> fromCBORBytes(byte[] b) {
+            try {
+                return Optional.of(DecisionModel.objectMapperCBOR.readValue(b, Configuration.class));
+            } catch (JsonProcessingException ignored) {
+                return Optional.empty();
+            } catch (IOException ignored) {
+                return Optional.empty();
+            }
         }
 
         // static public Configuration unlimited() {

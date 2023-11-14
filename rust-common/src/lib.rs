@@ -1,7 +1,5 @@
-use idesyde_blueprints::{
-    opaque_to_model_gen, StandaloneIdentificationModule, StandaloneIdentificationModuleBuilder,
-};
-use idesyde_core::decision_models_schemas_gen;
+use idesyde_blueprints::{StandaloneModule, StandaloneModuleBuilder};
+use idesyde_core::{decision_models_schemas_gen, opaque_to_model_gen};
 use models::{
     AnalysedSDFApplication, AperiodicAsynchronousDataflow,
     AperiodicAsynchronousDataflowToPartitionedMemoryMappableMulticore,
@@ -15,8 +13,8 @@ use std::collections::HashSet;
 pub mod irules;
 pub mod models;
 
-pub fn make_common_module() -> StandaloneIdentificationModule {
-    StandaloneIdentificationModuleBuilder::default()
+pub fn make_common_module() -> StandaloneModule {
+    StandaloneModuleBuilder::default()
         .unique_identifier("CommonIdentificationModule".to_string())
         .identification_rules(vec![
         idesyde_core::MarkedIdentificationRule::DecisionModelOnlyIdentificationRule(
@@ -35,7 +33,7 @@ pub fn make_common_module() -> StandaloneIdentificationModule {
             irules::identify_aperiodic_asynchronous_dataflow_to_partitioned_mem_mappable_multicore,
         ),
     ])
-        .opaque_to_model(opaque_to_model_gen!(
+        .opaque_to_model(opaque_to_model_gen![
             SDFApplication,
             AnalysedSDFApplication,
             TiledMultiCore,
@@ -48,8 +46,8 @@ pub fn make_common_module() -> StandaloneIdentificationModule {
             MemoryMappableMultiCore,
             PartitionedMemoryMappableMulticore,
             AperiodicAsynchronousDataflowToPartitionedMemoryMappableMulticore
-        ))
-        .decision_model_schemas(decision_models_schemas_gen!(
+        ])
+        .decision_model_json_schemas(decision_models_schemas_gen![
             SDFApplication,
             AnalysedSDFApplication,
             TiledMultiCore,
@@ -62,7 +60,7 @@ pub fn make_common_module() -> StandaloneIdentificationModule {
             MemoryMappableMultiCore,
             PartitionedMemoryMappableMulticore,
             AperiodicAsynchronousDataflowToPartitionedMemoryMappableMulticore
-        ))
+        ])
         .build()
         .expect("Failed to build common standalone identification module. Should never happen.")
 }

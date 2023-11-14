@@ -147,9 +147,9 @@ public interface StandaloneIdentificationModule extends IdentificationModule {
                                 if (ctx.queryParamMap().containsKey("session")) {
                                     String session = ctx.queryParam("session");
                                     Set<DecisionModel> decisionModels = sessionDecisionModels.getOrDefault(session,
-                                            Set.of());
+                                            new ConcurrentSkipListSet<>());
                                     Set<DesignModel> designModels = sessionDesignModels.getOrDefault(session,
-                                            Set.of());
+                                            new ConcurrentSkipListSet<>());
                                     var result = identification(
                                             designModels,
                                             decisionModels);
@@ -258,7 +258,7 @@ public interface StandaloneIdentificationModule extends IdentificationModule {
                                     }
                                     Set<DecisionModel> exploredDecisionModels = sessionExploredModels.getOrDefault(
                                             session,
-                                            Set.of());
+                                            new ConcurrentSkipListSet<>());
                                     Set<DesignModel> designModels = sessionDesignModels.get(session);
                                     var reversed = reverseIdentification(
                                             exploredDecisionModels, designModels);
@@ -269,10 +269,10 @@ public interface StandaloneIdentificationModule extends IdentificationModule {
                                         sessionReversedDesignModels.put(session, new ArrayDeque<>());
                                     }
                                     var reversedDesignModels = sessionReversedDesignModels.get(session);
-                                    identifiedDecisionModels.addAll(reversed);
+                                    reversedDesignModels.addAll(reversed);
                                     designModels.addAll(reversed);
                                     ctx.status(200);
-                                    ctx.text("OK");
+                                    ctx.result("OK");
                                     // new IdentificationResultMessage(
                                     // result.identified().stream()
                                     // .map(x -> DecisionModelMessage
@@ -316,34 +316,34 @@ public interface StandaloneIdentificationModule extends IdentificationModule {
                                 // ctx.status(500);
                                 // }
                             })
-                    .get("/reversed", ctx -> {
-                        if (ctx.queryParamMap().containsKey("session")) {
-                            String session = ctx.queryParam("session");
-                            var exploredDesignModels = sessionExploredDesignModels.getOrDefault(session,
-                                    new ArrayDeque<>());
-                            if (exploredDesignModels.size() > 0) {
-                                if (ctx.queryParam("encoding") != null
-                                        && ctx.queryParam("encoding").equalsIgnoreCase("cbor")) {
-                                    OpaqueDesignModel.from(exploredDesignModels.pop()).toCBORBytes()
-                                            .ifPresent(ctx::result);
-                                } else {
-                                    OpaqueDesignModel.from(exploredDesignModels.pop()).toJsonString()
-                                            .ifPresent(ctx::result);
-                                }
-                            }
-                            ctx.status(200);
-                            // new IdentificationResultMessage(
-                            // result.identified().stream()
-                            // .map(x -> DecisionModelMessage
-                            // .from(x))
-                            // .collect(Collectors
-                            // .toSet()),
-                            // result.errors()).toJsonString()
-                            // .ifPresent(ctx::result);
-                        } else {
-                            ctx.status(204);
-                        }
-                    })
+                    // .get("/reversed", ctx -> {
+                    // if (ctx.queryParamMap().containsKey("session")) {
+                    // String session = ctx.queryParam("session");
+                    // var exploredDesignModels = sessionExploredDesignModels.getOrDefault(session,
+                    // new ArrayDeque<>());
+                    // if (exploredDesignModels.size() > 0) {
+                    // if (ctx.queryParam("encoding") != null
+                    // && ctx.queryParam("encoding").equalsIgnoreCase("cbor")) {
+                    // OpaqueDesignModel.from(exploredDesignModels.pop()).toCBORBytes()
+                    // .ifPresent(ctx::result);
+                    // } else {
+                    // OpaqueDesignModel.from(exploredDesignModels.pop()).toJsonString()
+                    // .ifPresent(ctx::result);
+                    // }
+                    // }
+                    // ctx.status(200);
+                    // // new IdentificationResultMessage(
+                    // // result.identified().stream()
+                    // // .map(x -> DecisionModelMessage
+                    // // .from(x))
+                    // // .collect(Collectors
+                    // // .toSet()),
+                    // // result.errors()).toJsonString()
+                    // // .ifPresent(ctx::result);
+                    // } else {
+                    // ctx.status(204);
+                    // }
+                    // })
                     .exception(
                             Exception.class,
                             (e, ctx) -> {

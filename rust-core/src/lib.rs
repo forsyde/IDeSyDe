@@ -7,6 +7,7 @@ use std::{
     io::BufWriter,
     path::Path,
     sync::Arc,
+    time::{Duration, Instant},
 };
 
 use derive_builder::Builder;
@@ -298,93 +299,111 @@ pub struct ExplorationConfiguration {
     pub target_objectives: HashSet<String>,
 }
 
-// #[derive(Clone, PartialEq, Eq)]
-// pub struct ExplorationConfigurationBuilder {
-//     max_sols: u64,
-//     total_timeout: u64,
-//     improvement_timeout: u64,
-//     time_resolution: u64,
-//     memory_resolution: u64,
-//     improvement_iterations: u64,
-//     strict: bool,
-//     target_objectives: HashSet<String>,
-// }
-
-// impl ExplorationConfigurationBuilder {
-//     pub fn new() -> ExplorationConfigurationBuilder {
-//         ExplorationConfigurationBuilder {
-//             max_sols: 0,
-//             total_timeout: 0,
-//             improvement_timeout: 0,
-//             time_resolution: 0,
-//             memory_resolution: 0,
-//             improvement_iterations: 0,
-//             strict: false,
-//             target_objectives: HashSet::new(),
-//         }
-//     }
-
-//     pub fn build(&self) -> ExplorationConfiguration {
-//         ExplorationConfiguration {
-//             max_sols: self.max_sols,
-//             total_timeout: self.total_timeout,
-//             improvement_timeout: self.improvement_timeout,
-//             time_resolution: self.time_resolution,
-//             memory_resolution: self.memory_resolution,
-//             improvement_iterations: self.improvement_iterations,
-//             strict: self.strict,
-//             target_objectives: self.target_objectives.clone(),
-//         }
-//     }
-
-//     pub fn max_sols(&mut self, val: u64) -> &mut Self {
-//         self.max_sols = val;
-//         self
-//     }
-//     pub fn total_timeout(&mut self, val: u64) -> &mut Self {
-//         self.total_timeout = val;
-//         self
-//     }
-//     pub fn improvement_timeout(&mut self, val: u64) -> &mut Self {
-//         self.improvement_timeout = val;
-//         self
-//     }
-//     pub fn time_resolution(&mut self, val: u64) -> &mut Self {
-//         self.time_resolution = val;
-//         self
-//     }
-//     pub fn memory_resolution(&mut self, val: u64) -> &mut Self {
-//         self.memory_resolution = val;
-//         self
-//     }
-//     pub fn improvement_iterations(&mut self, val: u64) -> &mut Self {
-//         self.improvement_iterations = val;
-//         self
-//     }
-//     pub fn strict(&mut self, val: bool) -> &mut Self {
-//         self.strict = val;
-//         self
-//     }
-
-//     pub fn target_objectives(&mut self, val: HashSet<String>) -> &mut Self {
-//         self.target_objectives = val;
-//         self
-//     }
-
-//     pub fn add_target_objectives(&mut self, val: String) -> &mut Self {
-//         self.target_objectives.insert(val);
-//         self
-//     }
-// }
-
 impl ExplorationConfiguration {
     pub fn to_json_string(&self) -> String {
         serde_json::to_string(self)
             .expect("Failed to serialize a ExplorationConfiguration. Should never happen.")
     }
+
+    pub fn to_cbor<O>(&self) -> Result<O, ciborium::ser::Error<std::io::Error>>
+    where
+        O: From<Vec<u8>>,
+    {
+        let mut buf: Vec<u8> = Vec::new();
+        ciborium::into_writer(self, buf.as_mut_slice())?;
+        Ok(buf.into())
+    }
 }
 
-pub type ExplorationSolution = (Arc<dyn DecisionModel>, HashMap<String, f64>);
+#[derive(Clone)]
+pub struct ExplorationSolution {
+    pub solved: Arc<dyn DecisionModel>,
+    pub objectives: HashMap<String, f64>,
+}
+
+impl PartialEq<ExplorationSolution> for ExplorationSolution {
+    fn eq(&self, other: &ExplorationSolution) -> bool {
+        self.solved.as_ref() == other.solved.as_ref() && self.objectives == other.objectives
+    }
+}
+
+impl Eq for ExplorationSolution {}
+
+impl Hash for ExplorationSolution {
+    fn hash<H: std::hash::Hasher>(&self, state: &mut H) {
+        self.solved.hash(state);
+        for (k, _) in &self.objectives {
+            k.hash(state);
+        }
+    }
+}
+
+impl From<ExplorationSolution> for (Arc<dyn DecisionModel>, HashMap<String, f64>) {
+    fn from(value: ExplorationSolution) -> Self {
+        (value.solved, value.objectives)
+    }
+}
+
+impl From<&ExplorationSolution> for (Arc<dyn DecisionModel>, HashMap<String, f64>) {
+    fn from(value: &ExplorationSolution) -> Self {
+        (value.solved.to_owned(), value.objectives.to_owned())
+    }
+}
+
+impl From<(Arc<dyn DecisionModel>, HashMap<String, f64>)> for ExplorationSolution {
+    fn from(value: (Arc<dyn DecisionModel>, HashMap<String, f64>)) -> Self {
+        ExplorationSolution {
+            solved: value.0,
+            objectives: value.1,
+        }
+    }
+}
+
+impl From<&(Arc<dyn DecisionModel>, HashMap<String, f64>)> for ExplorationSolution {
+    fn from(value: &(Arc<dyn DecisionModel>, HashMap<String, f64>)) -> Self {
+        ExplorationSolution {
+            solved: value.0.to_owned(),
+            objectives: value.1.to_owned(),
+        }
+    }
+}
+
+impl PartialOrd<ExplorationSolution> for ExplorationSolution {
+    fn partial_cmp(&self, other: &ExplorationSolution) -> Option<Ordering> {
+        let (_, lhs) = &self.into();
+        let (_, rhs) = &other.into();
+        if lhs.keys().all(|x| rhs.contains_key(x)) && rhs.keys().all(|x| lhs.contains_key(x)) {
+            let mut all_equal = true;
+            let mut less_exists = false;
+            let mut greater_exists = false;
+            for (k, v) in lhs {
+                all_equal = all_equal && v == rhs.get(k).unwrap();
+                less_exists = less_exists || v < rhs.get(k).unwrap();
+                greater_exists = greater_exists || v > rhs.get(k).unwrap();
+            }
+            if all_equal {
+                Some(Ordering::Equal)
+            } else {
+                match (less_exists, greater_exists) {
+                    (true, false) => Some(Ordering::Less),
+                    (false, true) => Some(Ordering::Greater),
+                    _ => None,
+                }
+            }
+            // if lhs.iter().all(|(k, v)| v == rhs.get(k).unwrap()) {
+            //     Some(Ordering::Equal)
+            // } else if lhs.iter().all(|(k, v)| v <= rhs.get(k).unwrap()) {
+            //     Some(Ordering::Less)
+            // } else if lhs.iter().all(|(k, v)| v >= rhs.get(k).unwrap()) {
+            //     Some(Ordering::Greater)
+            // } else {
+            //     None
+            // }
+        } else {
+            None
+        }
+    }
+}
 
 /// This trait is the root for all possible explorers within IDeSyDe. A real explorer should
 /// implement this trait by dispatching the real exploration from 'explore'.
@@ -449,7 +468,7 @@ impl Hash for dyn Explorer {
     }
 }
 
-impl<T: Explorer> Explorer for Arc<T> {
+impl<T: Explorer + ?Sized> Explorer for Arc<T> {
     fn unique_identifier(&self) -> String {
         self.as_ref().unique_identifier()
     }
@@ -476,62 +495,6 @@ impl<T: Explorer> Explorer for Arc<T> {
             .explore(_m, _currrent_solutions, _exploration_configuration)
     }
 }
-
-/// The trait/interface for an exploration module that provides the API for exploration [1].
-///
-/// [1] R. Jordão, I. Sander and M. Becker, "Formulation of Design Space Exploration Problems by
-/// Composable Design Space Identification," 2021 Design, Automation & Test in Europe Conference &
-/// Exhibition (DATE), 2021, pp. 1204-1207, doi: 10.23919/DATE51398.2021.9474082.
-///
-pub trait ExplorationModule: Send + Sync {
-    fn unique_identifier(&self) -> String;
-    fn location_url(&self) -> Option<Url> {
-        None
-    }
-
-    fn explorers(&self) -> Vec<Arc<dyn Explorer>> {
-        vec![]
-    }
-    // fn bid(&self, m: Arc<dyn DecisionModel>) -> Vec<(Arc<dyn Explorer>, ExplorationBid)> {
-    //     self.explorers()
-    //         .iter()
-    //         .map(|x| (x.to_owned(), x.bid(&self.explorers(), m.clone())))
-    //         .collect()
-    // }
-    // fn explore(
-    //     &self,
-    //     m: Arc<dyn DecisionModel>,
-    //     explorer_id: &str,
-    //     currrent_solutions: Vec<ExplorationSolution>,
-    //     exploration_configuration: ExplorationConfiguration,
-    // ) -> Box<dyn Iterator<Item = ExplorationSolution> + '_>;
-    // fn explore_best(
-    //     &self,
-    //     m: Arc<dyn DecisionModel>,
-    //     currrent_solutions: Vec<ExplorationSolution>,
-    //     exploration_configuration: ExplorationConfiguration,
-    // ) -> Box<dyn Iterator<Item = ExplorationSolution> + '_> {
-    //     let bids = self.bid(m.clone());
-    //     match compute_dominant_bidding(bids.iter()) {
-    //         Some((_, bid)) => self.explore(
-    //             m,
-    //             bid.explorer_unique_identifier.as_str(),
-    //             currrent_solutions,
-    //             exploration_configuration,
-    //         ),
-    //         None => Box::new(std::iter::empty()) as Box<dyn Iterator<Item = ExplorationSolution>>,
-    //     }
-    // }
-}
-
-impl PartialEq<dyn ExplorationModule> for dyn ExplorationModule {
-    fn eq(&self, other: &dyn ExplorationModule) -> bool {
-        self.unique_identifier() == other.unique_identifier()
-            && self.location_url() == other.location_url()
-    }
-}
-
-impl Eq for dyn ExplorationModule {}
 
 /// An opaque model to exchange fundamental data about a decision model between different models in different languages.
 ///
@@ -850,12 +813,16 @@ pub trait Module: Send + Sync {
         &self,
         initial_design_models: &HashSet<Arc<dyn DesignModel>>,
         initial_decision_models: &HashSet<Arc<dyn DecisionModel>>,
-    ) -> Box<dyn IdentificationIterator>;
+    ) -> Box<dyn IdentificationIterator> {
+        Box::new(empty_identification_iter())
+    }
     fn reverse_identification(
         &self,
         solved_decision_model: &HashSet<Arc<dyn DecisionModel>>,
         design_model: &HashSet<Arc<dyn DesignModel>>,
-    ) -> Box<dyn Iterator<Item = Arc<dyn DesignModel>>>;
+    ) -> Box<dyn Iterator<Item = Arc<dyn DesignModel>>> {
+        Box::new(std::iter::empty())
+    }
 }
 
 impl PartialEq<dyn Module> for dyn Module {
@@ -873,6 +840,226 @@ impl Hash for dyn Module {
     }
 }
 
+/// This iterator is able to get a handful of explorers + decision models combination
+/// and make the exploration cooperative. It does so by exchanging the solutions
+/// found between explorers so that the explorers almost always with the latest approximate Pareto set
+/// update between themselves.
+pub struct CombinedExplorerIterator {
+    sol_channels: Vec<std::sync::mpsc::Receiver<ExplorationSolution>>,
+    is_exact: Vec<bool>,
+    finish_request_channels: Vec<std::sync::mpsc::Sender<bool>>,
+    duration_left: Option<Duration>,
+    _handles: Vec<std::thread::JoinHandle<()>>,
+}
+
+impl CombinedExplorerIterator {
+    pub fn start(
+        explorers_and_models: &Vec<(Arc<dyn Explorer>, Arc<dyn DecisionModel>)>,
+        currrent_solutions: &HashSet<ExplorationSolution>,
+        exploration_configuration: ExplorationConfiguration,
+    ) -> CombinedExplorerIterator {
+        let all_heuristic = explorers_and_models.iter().map(|_| false).collect();
+        CombinedExplorerIterator::start_with_exact(
+            explorers_and_models,
+            &all_heuristic,
+            currrent_solutions,
+            exploration_configuration,
+        )
+    }
+
+    pub fn start_with_exact(
+        explorers_and_models: &Vec<(Arc<dyn Explorer>, Arc<dyn DecisionModel>)>,
+        is_exact: &Vec<bool>,
+        currrent_solutions: &HashSet<ExplorationSolution>,
+        exploration_configuration: ExplorationConfiguration,
+    ) -> CombinedExplorerIterator {
+        let mut sol_channels: Vec<std::sync::mpsc::Receiver<ExplorationSolution>> = Vec::new();
+        let mut completed_channels: Vec<std::sync::mpsc::Sender<bool>> = Vec::new();
+        let mut handles: Vec<std::thread::JoinHandle<()>> = Vec::new();
+        for (e, m) in explorers_and_models {
+            let (sc, cc, h) = explore_non_blocking(
+                e,
+                m,
+                currrent_solutions,
+                exploration_configuration.to_owned(),
+            );
+            sol_channels.push(sc);
+            completed_channels.push(cc);
+            handles.push(h);
+        }
+        CombinedExplorerIterator {
+            sol_channels,
+            is_exact: is_exact.to_owned(),
+            finish_request_channels: completed_channels,
+            duration_left: if exploration_configuration.improvement_timeout > 0u64 {
+                Some(Duration::from_secs(
+                    exploration_configuration.improvement_timeout,
+                ))
+            } else {
+                None
+            },
+            _handles: handles,
+        }
+    }
+}
+
+impl Drop for CombinedExplorerIterator {
+    fn drop(&mut self) {
+        // debug!("Killing iterator");
+        for c in &self.finish_request_channels {
+            match c.send(true) {
+                Ok(_) => {}
+                Err(_) => {}
+            };
+        }
+    }
+}
+
+impl Iterator for CombinedExplorerIterator {
+    type Item = ExplorationSolution;
+
+    fn next(&mut self) -> Option<Self::Item> {
+        let mut num_disconnected = 0;
+        let start = Instant::now();
+        while num_disconnected < self.sol_channels.len()
+            && self
+                .duration_left
+                .map(|d| d >= start.elapsed())
+                .unwrap_or(true)
+        {
+            num_disconnected = 0;
+            for i in 0..self.sol_channels.len() {
+                match self.sol_channels[i].recv_timeout(std::time::Duration::from_millis(500)) {
+                    Ok(solution) => {
+                        // debug!("New solution from explorer index {}", i);
+                        self.duration_left = self.duration_left.map(|d| {
+                            if d >= start.elapsed() {
+                                d - start.elapsed()
+                            } else {
+                                Duration::ZERO
+                            }
+                        });
+                        return Some(solution);
+                    }
+                    Err(std::sync::mpsc::RecvTimeoutError::Disconnected) => {
+                        num_disconnected += 1;
+                        // finish early if the explorer is exact and ends early
+                        if self.is_exact[i] {
+                            return None;
+                        }
+                    }
+                    Err(std::sync::mpsc::RecvTimeoutError::Timeout) => {}
+                };
+            }
+        }
+        None
+    }
+}
+
+pub struct MultiLevelCombinedExplorerIterator {
+    explorers_and_models: Vec<(Arc<dyn Explorer>, Arc<dyn DecisionModel>)>,
+    exploration_configuration: ExplorationConfiguration,
+    levels: Vec<CombinedExplorerIterator>,
+    solutions: HashSet<ExplorationSolution>,
+    converged_to_last_level: bool,
+}
+
+impl Iterator for MultiLevelCombinedExplorerIterator {
+    type Item = ExplorationSolution;
+
+    fn next(&mut self) -> Option<Self::Item> {
+        match self.levels.last_mut() {
+            Some(last_level) => {
+                match last_level
+                    .filter(|new_solution| {
+                        // solution is not dominated
+                        !self.solutions.iter().any(|cur_solution| {
+                            new_solution.partial_cmp(cur_solution) == Some(Ordering::Greater)
+                        })
+                    })
+                    .find(|x| !self.solutions.contains(x))
+                {
+                    Some(new_solution) => {
+                        self.solutions.insert(new_solution.clone());
+                        if !self.converged_to_last_level {
+                            let sol_dominates = self.solutions.iter().any(|cur_sol| {
+                                new_solution.partial_cmp(cur_sol) == Some(Ordering::Less)
+                            });
+                            if sol_dominates {
+                                // debug!("Starting new level");
+                                self.solutions.retain(|cur_sol| {
+                                    new_solution.partial_cmp(cur_sol) != Some(Ordering::Less)
+                                });
+                                self.levels.push(CombinedExplorerIterator::start(
+                                    &self.explorers_and_models,
+                                    &self.solutions,
+                                    self.exploration_configuration.to_owned(),
+                                ));
+                            }
+                            if self.levels.len() > 2 {
+                                self.levels.remove(0);
+                            }
+                        }
+                        // debug!("solutions {}", self.solutions.len());
+                        return Some(new_solution);
+                        // self.previous = Some(self.current_level);
+                        // self.current_level
+                    }
+                    None => {
+                        if !self.converged_to_last_level {
+                            self.converged_to_last_level = true;
+                            self.levels.remove(self.levels.len() - 1);
+                            return self.next();
+                        }
+                    }
+                }
+            }
+            None => {}
+        };
+        None
+    }
+}
+
+pub fn explore_cooperatively_simple(
+    explorers_and_models: &Vec<(Arc<dyn Explorer>, Arc<dyn DecisionModel>)>,
+    currrent_solutions: &HashSet<ExplorationSolution>,
+    exploration_configuration: ExplorationConfiguration,
+    // solution_inspector: F,
+) -> MultiLevelCombinedExplorerIterator {
+    MultiLevelCombinedExplorerIterator {
+        explorers_and_models: explorers_and_models.clone(),
+        solutions: currrent_solutions.clone(),
+        exploration_configuration: exploration_configuration.to_owned(),
+        levels: vec![CombinedExplorerIterator::start(
+            explorers_and_models,
+            currrent_solutions,
+            exploration_configuration.to_owned(),
+        )],
+        converged_to_last_level: false,
+    }
+}
+
+pub fn explore_cooperatively(
+    explorers_and_models: &Vec<(Arc<dyn Explorer>, Arc<dyn DecisionModel>)>,
+    biddings: &Vec<ExplorationBid>,
+    currrent_solutions: &HashSet<ExplorationSolution>,
+    exploration_configuration: ExplorationConfiguration,
+    // solution_inspector: F,
+) -> MultiLevelCombinedExplorerIterator {
+    MultiLevelCombinedExplorerIterator {
+        explorers_and_models: explorers_and_models.clone(),
+        solutions: currrent_solutions.clone(),
+        exploration_configuration: exploration_configuration.to_owned(),
+        levels: vec![CombinedExplorerIterator::start_with_exact(
+            explorers_and_models,
+            &biddings.iter().map(|b| b.is_exact).collect(),
+            currrent_solutions,
+            exploration_configuration.to_owned(),
+        )],
+        converged_to_last_level: false,
+    }
+}
+
 pub fn compute_dominant_bidding<'a, I>(biddings: I) -> Option<(usize, ExplorationBid)>
 where
     I: Iterator<Item = &'a ExplorationBid>,
@@ -887,8 +1074,8 @@ where
 }
 
 pub fn compute_dominant_identification(
-    decision_models: &Vec<Arc<dyn DecisionModel>>,
-) -> Vec<Arc<dyn DecisionModel>> {
+    decision_models: &HashSet<Arc<dyn DecisionModel>>,
+) -> HashSet<Arc<dyn DecisionModel>> {
     if decision_models.len() > 1 {
         decision_models
             .iter()
@@ -952,9 +1139,9 @@ pub fn load_decision_model<T: DecisionModel + DeserializeOwned>(
 /// infeasibility has been proven.
 pub fn explore_non_blocking<T, M>(
     explorer: &T,
-    _m: &M,
-    _currrent_solutions: &HashSet<ExplorationSolution>,
-    _exploration_configuration: ExplorationConfiguration,
+    m: &M,
+    currrent_solutions: &HashSet<ExplorationSolution>,
+    exploration_configuration: ExplorationConfiguration,
 ) -> (
     std::sync::mpsc::Receiver<ExplorationSolution>,
     std::sync::mpsc::Sender<bool>,
@@ -967,18 +1154,18 @@ where
     let (solution_tx, solution_rx) = std::sync::mpsc::channel();
     let (completed_tx, completed_rx) = std::sync::mpsc::channel();
     let this_explorer = explorer.clone();
-    let this_decision_model = _m.to_owned().into();
-    let prev_sols = _currrent_solutions.to_owned();
+    let this_decision_model = m.to_owned().into();
+    let prev_sols = currrent_solutions.to_owned();
     let handle = std::thread::spawn(move || {
         if let Ok(true) = completed_rx.recv_timeout(std::time::Duration::from_millis(300)) {
             return ();
         }
-        for (solved_model, sol_objs) in this_explorer.explore(
+        for new_solution in this_explorer.explore(
             this_decision_model,
             &prev_sols,
-            _exploration_configuration.to_owned(),
+            exploration_configuration.to_owned(),
         ) {
-            match solution_tx.send((solved_model, sol_objs)) {
+            match solution_tx.send(new_solution) {
                 Ok(_) => {}
                 Err(_) => return (),
             };

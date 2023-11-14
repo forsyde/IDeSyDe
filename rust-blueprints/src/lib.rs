@@ -9,9 +9,9 @@ use std::{
 use clap::Parser;
 use derive_builder::Builder;
 use idesyde_core::{
-    DecisionModel, DesignModel, ExplorationModule, ExplorationSolution, Explorer,
-    IdentificationIterator, IdentificationResult, MarkedIdentificationRule, Module,
-    OpaqueDecisionModel, ReverseIdentificationRule,
+    DecisionModel, DesignModel, ExplorationSolution, Explorer, IdentificationIterator,
+    IdentificationResult, MarkedIdentificationRule, Module, OpaqueDecisionModel,
+    ReverseIdentificationRule,
 };
 use serde::{Deserialize, Serialize};
 
@@ -137,14 +137,38 @@ impl ExplorationSolutionMessage {
         serde_json::to_string(self)
             .expect("Failed to serialize a ExplorationSolutionMessage. Should never occur.")
     }
+
+    pub fn to_cbor<O>(&self) -> Result<O, ciborium::ser::Error<std::io::Error>>
+    where
+        O: From<Vec<u8>>,
+    {
+        let mut buf: Vec<u8> = Vec::new();
+        ciborium::into_writer(self, buf.as_mut_slice())?;
+        Ok(buf.into())
+    }
+
+    pub fn from_cbor<R>(b: R) -> Result<Self, ciborium::de::Error<std::io::Error>>
+    where
+        R: std::io::Read,
+    {
+        ciborium::from_reader(b)
+    }
+}
+
+impl From<ExplorationSolution> for ExplorationSolutionMessage {
+    fn from(value: ExplorationSolution) -> Self {
+        ExplorationSolutionMessage {
+            objectives: value.objectives,
+            solved: OpaqueDecisionModel::from(value.solved),
+        }
+    }
 }
 
 impl From<&ExplorationSolution> for ExplorationSolutionMessage {
     fn from(value: &ExplorationSolution) -> Self {
-        let (sol, objs) = value;
         ExplorationSolutionMessage {
-            objectives: objs.clone(),
-            solved: OpaqueDecisionModel::from(sol),
+            objectives: value.objectives.to_owned(),
+            solved: OpaqueDecisionModel::from(value.solved.as_ref()),
         }
     }
 }

@@ -1,4 +1,3 @@
-pub mod headers;
 pub mod macros;
 
 use std::{
@@ -12,7 +11,6 @@ use std::{
 
 use derive_builder::Builder;
 use downcast_rs::{impl_downcast, Downcast, DowncastSync};
-use headers::{DecisionModelHeader, DesignModelHeader, ExplorationBid};
 use serde::{
     de::{DeserializeOwned, Visitor},
     ser::{SerializeSeq, SerializeStruct},
@@ -402,6 +400,82 @@ impl PartialOrd<ExplorationSolution> for ExplorationSolution {
         } else {
             None
         }
+    }
+}
+
+#[derive(Debug, Deserialize, Serialize, Clone, PartialEq)]
+pub struct ExplorationBid {
+    pub explorer_unique_identifier: String,
+    pub can_explore: bool,
+    pub is_exact: bool,
+    pub competitiveness: f32,
+    pub target_objectives: HashSet<String>,
+    pub additional_numeric_properties: HashMap<String, f32>,
+}
+
+impl ExplorationBid {
+    pub fn from_json_str(s: &str) -> Option<ExplorationBid> {
+        serde_json::from_str(s).ok()
+    }
+
+    pub fn impossible(explorer_id: &str) -> ExplorationBid {
+        ExplorationBid {
+            explorer_unique_identifier: explorer_id.to_owned(),
+            can_explore: false,
+            is_exact: false,
+            competitiveness: 1.0,
+            target_objectives: HashSet::new(),
+            additional_numeric_properties: HashMap::new(),
+        }
+    }
+}
+
+impl Hash for ExplorationBid {
+    fn hash<H: std::hash::Hasher>(&self, state: &mut H) {
+        self.explorer_unique_identifier.hash(state);
+        self.can_explore.hash(state);
+        for k in self.additional_numeric_properties.keys() {
+            k.hash(state);
+        }
+    }
+}
+
+impl Eq for ExplorationBid {}
+
+impl PartialOrd<ExplorationBid> for ExplorationBid {
+    fn partial_cmp(&self, other: &ExplorationBid) -> Option<Ordering> {
+        if self.can_explore == other.can_explore
+            && self.is_exact == other.is_exact
+            && self.target_objectives == other.target_objectives
+        {
+            if (self.competitiveness - other.competitiveness).abs() <= 0.0001
+                && self
+                    .additional_numeric_properties
+                    .keys()
+                    .eq(other.additional_numeric_properties.keys())
+            {
+                if self
+                    .additional_numeric_properties
+                    .iter()
+                    .all(|(k, v)| v > other.additional_numeric_properties.get(k).unwrap_or(v))
+                {
+                    return Some(Ordering::Greater);
+                } else if self
+                    .additional_numeric_properties
+                    .iter()
+                    .all(|(k, v)| v == other.additional_numeric_properties.get(k).unwrap_or(v))
+                {
+                    return Some(Ordering::Equal);
+                } else if self
+                    .additional_numeric_properties
+                    .iter()
+                    .all(|(k, v)| v < other.additional_numeric_properties.get(k).unwrap_or(v))
+                {
+                    return Some(Ordering::Less);
+                }
+            }
+        }
+        None
     }
 }
 

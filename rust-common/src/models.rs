@@ -1,8 +1,6 @@
 use std::collections::{HashMap, HashSet};
 
-use idesyde_core::{
-    headers::DecisionModelHeader, impl_decision_model_standard_parts, DecisionModel,
-};
+use idesyde_core::{impl_decision_model_standard_parts, DecisionModel};
 use schemars::JsonSchema;
 use serde::{Deserialize, Serialize};
 

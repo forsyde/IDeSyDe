@@ -13,7 +13,7 @@ use std::{
 use derive_builder::Builder;
 use idesyde_blueprints::ExplorationSolutionMessage;
 use idesyde_core::{
-    explore_non_blocking, headers::ExplorationBid, pareto_dominance_partial_cmp, DecisionModel,
+    explore_non_blocking, pareto_dominance_partial_cmp, DecisionModel, ExplorationBid,
     ExplorationConfiguration, ExplorationConfigurationBuilder, ExplorationSolution, Explorer,
     Module, OpaqueDecisionModel,
 };

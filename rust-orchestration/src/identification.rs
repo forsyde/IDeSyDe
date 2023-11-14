@@ -14,7 +14,6 @@ use rayon::prelude::*;
 
 use idesyde_blueprints::IdentificationResultMessage;
 use idesyde_core::{
-    headers::{DecisionModelHeader, DesignModelHeader},
     DecisionModel, DesignModel, IdentificationIterator, IdentificationResult, Module,
     OpaqueDecisionModel, OpaqueDesignModel,
 };

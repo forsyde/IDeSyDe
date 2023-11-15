@@ -25,6 +25,8 @@ import idesyde.blueprints.DecisionModelMessage
 import idesyde.blueprints.DesignModelMessage
 import java.io.StringReader
 import idesyde.common.AperiodicAsynchronousDataflow
+import idesyde.core.OpaqueDesignModel
+import idesyde.core.OpaqueDecisionModel
 
 object ForSyDeIdentificationModule
     extends StandaloneModule
@@ -34,27 +36,29 @@ object ForSyDeIdentificationModule
     with WorkloadRules
     with ApplicationRules {
 
-  def decisionHeaderToModel(m: DecisionModelHeader): Option[DecisionModel] = {
-    m match {
-      case DecisionModelHeader("SDFToTiledMultiCore", body_path, _) =>
-        body_path.flatMap(decodeFromPath[SDFToTiledMultiCore])
-      case DecisionModelHeader("PeriodicWorkloadToPartitionedSharedMultiCore", body_path, _) =>
-        body_path.flatMap(decodeFromPath[PeriodicWorkloadToPartitionedSharedMultiCore])
-      case DecisionModelHeader("AperiodicAsynchronousDataflow", body_path, _) =>
-        body_path.flatMap(decodeFromPath[AperiodicAsynchronousDataflow])
-      case _ => None
-    }
-  }
-
-  def decisionMessageToModel(m: DecisionModelMessage): Option[DecisionModel] = {
-    m.header match {
-      case DecisionModelHeader("SDFToTiledMultiCore", _, _) =>
-        m.body.map(s => read[SDFToTiledMultiCore](s))
-      case DecisionModelHeader("PeriodicWorkloadToPartitionedSharedMultiCore", body_path, _) =>
-        m.body.map(s => read[PeriodicWorkloadToPartitionedSharedMultiCore](s))
-      case DecisionModelHeader("AperiodicAsynchronousDataflow", body_path, _) =>
-        m.body.map(s => read[AperiodicAsynchronousDataflow](s))
-      case _ => None
+  override def fromOpaqueDecision(opaque: OpaqueDecisionModel): ju.Optional[DecisionModel] = {
+    opaque.category() match {
+      case "SDFToTiledMultiCore" =>
+        opaque
+          .bodyCBOR()
+          .map(x => readBinary[SDFToTiledMultiCore](x))
+          .or(() => opaque.bodyJson().map(x => read[SDFToTiledMultiCore](x)))
+          .map(x => x.asInstanceOf[DecisionModel])
+      case "PeriodicWorkloadToPartitionedSharedMultiCore" =>
+        opaque
+          .bodyCBOR()
+          .map(x => readBinary[PeriodicWorkloadToPartitionedSharedMultiCore](x))
+          .or(() =>
+            opaque.bodyJson().map(x => read[PeriodicWorkloadToPartitionedSharedMultiCore](x))
+          )
+          .map(x => x.asInstanceOf[DecisionModel])
+      case "AperiodicAsynchronousDataflow" =>
+        opaque
+          .bodyCBOR()
+          .map(x => readBinary[AperiodicAsynchronousDataflow](x))
+          .or(() => opaque.bodyJson().map(x => read[AperiodicAsynchronousDataflow](x)))
+          .map(x => x.asInstanceOf[DecisionModel])
+      case _ => ju.Optional.empty()
     }
   }
 
@@ -75,76 +79,30 @@ object ForSyDeIdentificationModule
     // MarkedIdentificationRule.DesignModelOnlyIdentificationRule(identInstrumentedComputationTimes)
   ).asJava
 
-  val reverseIdentificationRules = Set(
+  override def reverseIdentificationRules(): ju.Set[ReverseIdentificationRule] = Set(
     integratePeriodicWorkloadToPartitionedSharedMultiCore,
     integrateSDFToTiledMultiCore
-  )
+  ).asJava
 
   def main(args: Array[String]): Unit = standaloneIdentificationModule(args)
 
-  def designHeaderToModel(header: DesignModelHeader): Set[DesignModel] = {
-    header match {
-      case DesignModelHeader("ForSyDeDesignModel", model_paths, _) =>
-        model_paths.flatMap(p => {
-          modelHandler.canLoadModel(Paths.get(p)) match {
-            case true =>
-              Some(ForSyDeDesignModel(modelHandler.loadModel(p)))
-            case false =>
-              None
+  def fromOpaqueDesign(opaque: OpaqueDesignModel): ju.Optional[DesignModel] = {
+    if (modelHandler.canLoadModel(opaque.format())) {
+      return opaque
+        .asString()
+        .flatMap(body -> {
+          try {
+            return ju.Optional.of(modelHandler.readModel(body, opaque.format()));
+          } catch (Exception e) {
+            e.printStackTrace();
+            return ju.Optional.empty();
           }
         })
-      case _ =>
-        Set()
-    }
-  }
-
-  override def inputsToDesignModel(p: os.Path): Option[DesignModelHeader | DesignModel] = {
-    if (!p.last.startsWith("header") && modelHandler.canLoadModel(p.toNIO)) {
-      val m = modelHandler.loadModel(p.toNIO)
-      Some(ForSyDeDesignModel(m))
+        .map(ForSyDeIODesignModel(_));
     } else {
-      None
+      return ju.Optional.empty();
     }
   }
 
-  override def designModelToOutput(m: DesignModel, p: Path): Option[Path] = m match {
-    case ForSyDeDesignModel(systemGraph) =>
-      if (os.isDir(p)) {
-        Files.createDirectories(p.toNIO)
-        var targetIdx = 0
-        var target    = p / s"reversed_${targetIdx}_$uniqueIdentifier.fiodl"
-        while (os.isFile(target) && os.exists(target)) {
-          targetIdx += 1
-          target = p / s"reversed_${targetIdx}_$uniqueIdentifier.fiodl"
-        }
-        modelHandler.writeModel(systemGraph, target.toNIO)
-        Some(target)
-      } else if (modelHandler.canWriteModel(p.toNIO)) {
-        modelHandler.writeModel(systemGraph, p.toNIO)
-        Some(p)
-      } else None
-    case _: DesignModel =>
-      None
-  }
-
-  def designMessageToModel(message: DesignModelMessage): Set[DesignModel] = {
-    // println(message.withEscapedNewLinesText)
-    for (
-      path_str <- message.header.model_paths;
-      path = Paths.get(path_str);
-      if modelHandler.canLoadModel(path);
-      content <- message.body;
-      ext_start = path.getFileName().toString().indexOf(".")
-    )
-      yield {
-        // println(path.getFileName().toString().substring(ext_start + 1))
-        val m = ForSyDeDesignModel(
-          modelHandler.readModel(content, path.getFileName().toString().substring(ext_start + 1))
-        )
-        // println("sucess")
-        m
-      }
-  }
-
-  def uniqueIdentifier: String = "ForSyDeIdentificationModule"
+  def uniqueIdentifier: String = "ForSyDeIOScalaModule"
 }

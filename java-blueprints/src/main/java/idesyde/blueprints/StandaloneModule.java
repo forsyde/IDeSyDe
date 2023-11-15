@@ -163,7 +163,7 @@ public interface StandaloneModule extends Module {
                     });
                 }
             }).ws("/identify", ws -> {
-                // var logger = LoggerFactory.getLogger("main");
+                var logger = LoggerFactory.getLogger("main");
                 Set<DecisionModel> decisionModels = new HashSet<>();
                 Set<DesignModel> designModels = new HashSet<>();
                 ws.onBinaryMessage(ctx -> {
@@ -173,6 +173,8 @@ public interface StandaloneModule extends Module {
                 });
                 ws.onMessage(ctx -> {
                     if (ctx.message().toLowerCase().contains("done")) {
+                        logger.info("Running a identification step with %s and %s decision and design models"
+                                .formatted(decisionModels.size(), designModels.size()));
                         executor.submit(() -> {
                             var results = identification(designModels, decisionModels);
                             for (var result : results.identified()) {
@@ -184,6 +186,8 @@ public interface StandaloneModule extends Module {
                             for (var msg : results.errors()) {
                                 ctx.send(msg);
                             }
+                            logger.info("Finished a identification step with %s decision models identified"
+                                    .formatted(decisionModels.size()));
                             ctx.send("done");
                         });
                     } else {

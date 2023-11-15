@@ -21,7 +21,7 @@ public interface IdentificationRule extends
      * A simple wrapper that signals the wrapper function requires only design models.
      * @param func the wrapped function.
      */
-    record OnlyDesignModel(BiFunction<Set<? extends DesignModel>, Set<? extends DecisionModel>, IdentificationResult> func) implements IdentificationRule {
+    record OnlyDesignModels(BiFunction<Set<? extends DesignModel>, Set<? extends DecisionModel>, IdentificationResult> func) implements IdentificationRule {
 
         @Override
         public IdentificationResult apply(Set<? extends DesignModel> designModels, Set<? extends DecisionModel> decisionModels) {
@@ -38,7 +38,7 @@ public interface IdentificationRule extends
      * A simple wrapper that signals the wrapper function requires only (any) decision models.
      * @param func the wrapped function.
      */
-    record OnlyDecisionModel(BiFunction<Set<? extends DesignModel>, Set<? extends DecisionModel>, IdentificationResult> func) implements IdentificationRule {
+    record OnlyDecisionModels(BiFunction<Set<? extends DesignModel>, Set<? extends DecisionModel>, IdentificationResult> func) implements IdentificationRule {
 
         @Override
         public IdentificationResult apply(Set<? extends DesignModel> designModels, Set<? extends DecisionModel> decisionModels) {
@@ -55,7 +55,7 @@ public interface IdentificationRule extends
      * A simple wrapper that signals the wrapper function requires only certain decision models.
      * @param func the wrapped function.
      */
-    record OnlyCertainDecisionModel(BiFunction<Set<? extends DesignModel>, Set<? extends DecisionModel>, IdentificationResult> func, Set<String> decisionModelCategories) implements IdentificationRule {
+    record OnlyCertainDecisionModels(BiFunction<Set<? extends DesignModel>, Set<? extends DecisionModel>, IdentificationResult> func, Set<String> decisionModelCategories) implements IdentificationRule {
 
         @Override
         public IdentificationResult apply(Set<? extends DesignModel> designModels, Set<? extends DecisionModel> decisionModels) {

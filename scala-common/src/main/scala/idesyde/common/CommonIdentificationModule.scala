@@ -18,7 +18,7 @@ import idesyde.common.CommunicatingAndTriggeredReactiveWorkload
 import idesyde.common.PartitionedSharedMemoryMultiCore
 import idesyde.common.PeriodicWorkloadToPartitionedSharedMultiCore
 import idesyde.common.PeriodicWorkloadAndSDFServers
-import idesyde.core.MarkedIdentificationRule
+import idesyde.core.IdentificationRule
 import idesyde.common.AnalysedSDFApplication
 import idesyde.core.OpaqueDecisionModel
 import java.{util => ju}
@@ -30,103 +30,116 @@ object CommonIdentificationModule
     with WorkloadRules
     with ApplicationRules {
 
-  val identificationRules = Set(
-    MarkedIdentificationRule.SpecificDecisionModelOnlyIdentificationRule(
+  override def identificationRules(): ju.Set[IdentificationRule] = Set(
+    IdentificationRule.OnlyCertainDecisionModels(
       identSchedulableTiledMultiCore,
       Set("PartitionedCoresWithRuntimes", "TiledMultiCoreWithFunctions")
     ),
-    MarkedIdentificationRule.SpecificDecisionModelOnlyIdentificationRule(
+    IdentificationRule.OnlyCertainDecisionModels(
       identPartitionedSharedMemoryMultiCore,
       Set("PartitionedCoresWithRuntimes", "SharedMemoryMultiCore")
     ),
-    MarkedIdentificationRule.DecisionModelOnlyIdentificationRule(identSDFToPartitionedSharedMemory),
-    MarkedIdentificationRule.DecisionModelOnlyIdentificationRule(identSDFToTiledMultiCore),
-    MarkedIdentificationRule.SpecificDecisionModelOnlyIdentificationRule(
+    IdentificationRule.OnlyDecisionModels(identSDFToPartitionedSharedMemory),
+    IdentificationRule.OnlyDecisionModels(identSDFToTiledMultiCore),
+    IdentificationRule.OnlyCertainDecisionModels(
       identAnalysedSDFApplication,
       Set("SDFApplication", "SDFApplicationWithFunctions")
     ),
-    MarkedIdentificationRule.DecisionModelOnlyIdentificationRule(
+    IdentificationRule.OnlyDecisionModels(
       identPeriodicWorkloadToPartitionedSharedMultiCore
     ),
-    MarkedIdentificationRule.DecisionModelOnlyIdentificationRule(identTaksAndSDFServerToMultiCore),
-    MarkedIdentificationRule.DecisionModelOnlyIdentificationRule(identTiledFromShared),
-    MarkedIdentificationRule.DecisionModelOnlyIdentificationRule(identTaskdAndSDFServer),
-    MarkedIdentificationRule.DecisionModelOnlyIdentificationRule(identCommonSDFApplication),
-    MarkedIdentificationRule.SpecificDecisionModelOnlyIdentificationRule(
+    IdentificationRule.OnlyDecisionModels(identTaksAndSDFServerToMultiCore),
+    IdentificationRule.OnlyDecisionModels(identTiledFromShared),
+    IdentificationRule.OnlyDecisionModels(identTaskdAndSDFServer),
+    IdentificationRule.OnlyDecisionModels(identCommonSDFApplication),
+    IdentificationRule.OnlyCertainDecisionModels(
       identAggregatedCommunicatingAndTriggeredReactiveWorkload,
       Set("CommunicatingAndTriggeredReactiveWorkload")
     )
   )
 
-  val reverseIdentificationRules = Set()
-
   def uniqueIdentifier: String = "CommonIdentificationModule"
 
-  def main(args: Array[String]) = standaloneIdentificationModule(args)
+  def main(args: Array[String]) = standaloneModule(args)
 
-  override def fromOpaqueDecision(opaque: OpaqueDecisionModel): ju.Optional[DecisionModel] =
-    m match {
-      case DecisionModelHeader("SDFApplicationWithFunctions", body_path, _) =>
-        body_path.flatMap(decodeFromPath[SDFApplicationWithFunctions])
-      case DecisionModelHeader("SDFApplication", body_path, _) =>
-        body_path.flatMap(decodeFromPath[SDFApplication])
-      case DecisionModelHeader("AnalysedSDFApplication", body_path, _) =>
-        body_path.flatMap(decodeFromPath[AnalysedSDFApplication])
-      case DecisionModelHeader("TiledMultiCoreWithFunctions", body_path, _) =>
-        body_path.flatMap(decodeFromPath[TiledMultiCoreWithFunctions])
-      case DecisionModelHeader("PartitionedCoresWithRuntimes", body_path, _) =>
-        body_path.flatMap(decodeFromPath[PartitionedCoresWithRuntimes])
-      case DecisionModelHeader("SchedulableTiledMultiCore", body_path, _) =>
-        body_path.flatMap(decodeFromPath[SchedulableTiledMultiCore])
-      case DecisionModelHeader("SDFToTiledMultiCore", body_path, _) =>
-        body_path.flatMap(decodeFromPath[SDFToTiledMultiCore])
-      case DecisionModelHeader("SharedMemoryMultiCore", body_path, _) =>
-        body_path.flatMap(decodeFromPath[SharedMemoryMultiCore])
-      case DecisionModelHeader("CommunicatingAndTriggeredReactiveWorkload", body_path, _) =>
-        body_path.flatMap(decodeFromPath[CommunicatingAndTriggeredReactiveWorkload])
-      case DecisionModelHeader("PartitionedSharedMemoryMultiCore", body_path, _) =>
-        body_path.flatMap(decodeFromPath[PartitionedSharedMemoryMultiCore])
-      case DecisionModelHeader("PeriodicWorkloadAndSDFServers", body_path, _) =>
-        body_path.flatMap(decodeFromPath[PeriodicWorkloadAndSDFServers])
-      case DecisionModelHeader("PeriodicWorkloadToPartitionedSharedMultiCore", body_path, _) =>
-        body_path.flatMap(decodeFromPath[PeriodicWorkloadToPartitionedSharedMultiCore])
+  override def fromOpaqueDecision(opaque: OpaqueDecisionModel): ju.Optional[DecisionModel] = {
+    opaque.category() match {
+      case "SDFApplicationWithFunctions" =>
+        opaque
+          .bodyCBOR()
+          .map(x => readBinary[SDFApplicationWithFunctions](x))
+          .or(() => opaque.bodyJson().map(x => read[SDFApplicationWithFunctions](x)))
+          .map(x => x.asInstanceOf[DecisionModel])
+      case "SDFApplication" =>
+        opaque
+          .bodyCBOR()
+          .map(x => readBinary[SDFApplication](x))
+          .or(() => opaque.bodyJson().map(x => read[SDFApplication](x)))
+          .map(x => x.asInstanceOf[DecisionModel])
+      case "AnalysedSDFApplication" =>
+        opaque
+          .bodyCBOR()
+          .map(x => readBinary[AnalysedSDFApplication](x))
+          .or(() => opaque.bodyJson().map(x => read[AnalysedSDFApplication](x)))
+          .map(x => x.asInstanceOf[DecisionModel])
+      case "TiledMultiCoreWithFunctions" =>
+        opaque
+          .bodyCBOR()
+          .map(x => readBinary[TiledMultiCoreWithFunctions](x))
+          .or(() => opaque.bodyJson().map(x => read[TiledMultiCoreWithFunctions](x)))
+          .map(x => x.asInstanceOf[DecisionModel])
+      case "PartitionedCoresWithRuntimes" =>
+        opaque
+          .bodyCBOR()
+          .map(x => readBinary[PartitionedCoresWithRuntimes](x))
+          .or(() => opaque.bodyJson().map(x => read[PartitionedCoresWithRuntimes](x)))
+          .map(x => x.asInstanceOf[DecisionModel])
+      case "SchedulableTiledMultiCore" =>
+        opaque
+          .bodyCBOR()
+          .map(x => readBinary[SchedulableTiledMultiCore](x))
+          .or(() => opaque.bodyJson().map(x => read[SchedulableTiledMultiCore](x)))
+          .map(x => x.asInstanceOf[DecisionModel])
+      case "SDFToTiledMultiCore" =>
+        opaque
+          .bodyCBOR()
+          .map(x => readBinary[SDFToTiledMultiCore](x))
+          .or(() => opaque.bodyJson().map(x => read[SDFToTiledMultiCore](x)))
+          .map(x => x.asInstanceOf[DecisionModel])
+      case "SharedMemoryMultiCore" =>
+        opaque
+          .bodyCBOR()
+          .map(x => readBinary[SharedMemoryMultiCore](x))
+          .or(() => opaque.bodyJson().map(x => read[SharedMemoryMultiCore](x)))
+          .map(x => x.asInstanceOf[DecisionModel])
+      case "CommunicatingAndTriggeredReactiveWorkload" =>
+        opaque
+          .bodyCBOR()
+          .map(x => readBinary[CommunicatingAndTriggeredReactiveWorkload](x))
+          .or(() => opaque.bodyJson().map(x => read[CommunicatingAndTriggeredReactiveWorkload](x)))
+          .map(x => x.asInstanceOf[DecisionModel])
+      case "PartitionedSharedMemoryMultiCore" =>
+        opaque
+          .bodyCBOR()
+          .map(x => readBinary[PartitionedSharedMemoryMultiCore](x))
+          .or(() => opaque.bodyJson().map(x => read[PartitionedSharedMemoryMultiCore](x)))
+          .map(x => x.asInstanceOf[DecisionModel])
+      case "PeriodicWorkloadAndSDFServers" =>
+        opaque
+          .bodyCBOR()
+          .map(x => readBinary[PeriodicWorkloadAndSDFServers](x))
+          .or(() => opaque.bodyJson().map(x => read[PeriodicWorkloadAndSDFServers](x)))
+          .map(x => x.asInstanceOf[DecisionModel])
+      case "PeriodicWorkloadToPartitionedSharedMultiCore" =>
+        opaque
+          .bodyCBOR()
+          .map(x => readBinary[PeriodicWorkloadToPartitionedSharedMultiCore](x))
+          .or(() =>
+            .map(x => x.asInstanceOf[DecisionModel])
+            opaque.bodyJson().map(x => read[PeriodicWorkloadToPartitionedSharedMultiCore](x))
+          )
       case _ => None
     }
   }
-
-  def decisionMessageToModel(m: DecisionModelMessage): Option[DecisionModel] = {
-    m.header match {
-      case DecisionModelHeader("SDFApplicationWithFunctions", body_path, _) =>
-        m.body.map(s => read[SDFApplicationWithFunctions](s))
-      case DecisionModelHeader("SDFApplication", body_path, _) =>
-        m.body.map(s => read[SDFApplication](s))
-      case DecisionModelHeader("AnalysedSDFApplication", body_path, _) =>
-        m.body.map(s => read[AnalysedSDFApplication](s))
-      case DecisionModelHeader("TiledMultiCoreWithFunctions", body_path, _) =>
-        m.body.map(s => read[TiledMultiCoreWithFunctions](s))
-      case DecisionModelHeader("PartitionedCoresWithRuntimes", body_path, _) =>
-        m.body.map(s => read[PartitionedCoresWithRuntimes](s))
-      case DecisionModelHeader("SchedulableTiledMultiCore", body_path, _) =>
-        m.body.map(s => read[SchedulableTiledMultiCore](s))
-      case DecisionModelHeader("SDFToTiledMultiCore", body_path, _) =>
-        m.body.map(s => read[SDFToTiledMultiCore](s))
-      case DecisionModelHeader("SharedMemoryMultiCore", body_path, _) =>
-        m.body.map(s => read[SharedMemoryMultiCore](s))
-      case DecisionModelHeader("RuntimesAndProcessors", body_path, _) =>
-        m.body.map(s => read[RuntimesAndProcessors](s))
-      case DecisionModelHeader("CommunicatingAndTriggeredReactiveWorkload", body_path, _) =>
-        m.body.map(s => read[CommunicatingAndTriggeredReactiveWorkload](s))
-      case DecisionModelHeader("PartitionedSharedMemoryMultiCore", body_path, _) =>
-        m.body.map(s => read[PartitionedSharedMemoryMultiCore](s))
-      case DecisionModelHeader("PeriodicWorkloadAndSDFServers", body_path, _) =>
-        m.body.map(s => read[PeriodicWorkloadAndSDFServers](s))
-      case DecisionModelHeader("PeriodicWorkloadToPartitionedSharedMultiCore", body_path, _) =>
-        m.body.map(s => read[PeriodicWorkloadToPartitionedSharedMultiCore](s))
-      case _ => None
-    }
-  }
-
-  override def decisionModelSchemas: Vector[String] = Vector(
-  )
 
 }

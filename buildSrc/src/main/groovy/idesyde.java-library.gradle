@@ -3,6 +3,7 @@ plugins {
     id 'idea'
     id 'eclipse'
     id 'java-library'
+    id 'publishing'
 }
 
 group = 'io.github.forsyde'
@@ -24,4 +25,41 @@ java {
 
 artifacts {
     archives javadocJar, sourcesJar
+}
+
+
+publishing {
+    publications {
+        mavenJava(MavenPublication) {
+            artifactId = archivesBaseName
+            from components.java
+            pom {
+                name = "IDeSyDe " + project.niceName
+                description = "IDeSyDe " + project.niceName
+                url = 'https://github.com/forsyde/IDeSyDe'
+                packaging = 'jar'
+                scm {
+                    connection = 'scm:git:https://github.com/forsyde/IDeSyDe.git'
+                    developerConnection = 'scm:git:git@github.com:forsyde/IDeSyDe.git'
+                    url = 'https://github.com/forsyde/IDeSyDe'
+                }
+                licenses {
+                    license {
+                        name = 'The MIT License'
+                        url = 'https://choosealicense.com/licenses/mit/'
+                    }
+                }
+                developers {
+                    developer {
+                        id = 'Jordao'
+                        name = 'Rodolfo Jordao'
+                        email = 'jordao@kth.se'
+                    }
+                }
+            }
+        }
+    }
+    repositories {
+
+    }
 }

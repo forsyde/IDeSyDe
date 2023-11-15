@@ -2,7 +2,6 @@ package idesyde.common
 
 import idesyde.core.DecisionModel
 import idesyde.core.DesignModel
-import idesyde.utils.Logger
 import scala.collection.mutable
 
 trait MixedRules {

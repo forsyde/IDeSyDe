@@ -1,8 +1,11 @@
 package idesyde.common
 
+import scala.jdk.CollectionConverters._
+
 import upickle.default._
 
-import idesyde.core.CompleteDecisionModel
+import idesyde.core.DecisionModel
+import java.{util => ju}
 
 final case class PeriodicWorkloadAndSDFServerToMultiCore(
     val tasksAndSDFs: PeriodicWorkloadAndSDFServers,
@@ -13,24 +16,25 @@ final case class PeriodicWorkloadAndSDFServerToMultiCore(
     val messageSlotAllocations: Map[String, Map[String, Vector[Boolean]]],
     val sdfServerUtilization: Vector[Double],
     val sdfOrderBasedSchedules: Vector[Vector[String]]
-) extends StandardDecisionModel
-    with CompleteDecisionModel
+) extends DecisionModel
     with WCETComputationMixin(tasksAndSDFs, platform.hardware)
     derives ReadWriter {
 
-  def bodyAsText: String = write(this)
+  override def asJsonString(): String = write(this)
 
-  def bodyAsBinary: Array[Byte] = writeBinary(this)
+  override def asCBORBinary(): Array[Byte] = writeBinary(this)
 
-  val coveredElements =
-    tasksAndSDFs.coveredElements ++ platform.coveredElements ++ (processesMappings.toSet ++ messagesMappings.toSet ++
+  override def part(): ju.Set[String] =
+    (tasksAndSDFs
+      .part()
+      .asScala ++ platform.part().asScala ++ (processesMappings.toSet ++ messagesMappings.toSet ++
       messageSlotAllocations
         .flatMap((channel, slots) =>
           platform.hardware.communicationElems
             .filter(ce => slots.contains(ce) && slots(ce).exists(b => b))
             .map(ce => (channel, ce))
         )
-        .toSet).map(_.toString)
+        .toSet).map(_.toString)).asJava
 
   val processorsFrequency: Vector[Long] = platform.hardware.processorsFrequency
   val processorsProvisions: Vector[Map[String, Map[String, Double]]] =
@@ -40,5 +44,5 @@ final case class PeriodicWorkloadAndSDFServerToMultiCore(
 
   val wcets = computeWcets
 
-  val category: String = "PeriodicWorkloadAndSDFServerToMultiCore"
+  def category(): String = "PeriodicWorkloadAndSDFServerToMultiCore"
 }

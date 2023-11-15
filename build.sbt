@@ -103,8 +103,9 @@ lazy val common = (project in file("scala-common"))
   .settings(
     // name := "idesyde-scala-common",
     libraryDependencies ++= Seq(
-      "com.github.forsyde.IDeSyDe" % "java-core"       % IDeSyDeJavaVersion,
-      "com.github.forsyde.IDeSyDe" % "java-blueprints" % IDeSyDeJavaVersion,
+      "com.lihaoyi"              %%% "upickle"               % upickleVersion,
+      "com.github.forsyde.IDeSyDe" % "build-java-core"       % IDeSyDeJavaVersion,
+      "com.github.forsyde.IDeSyDe" % "build-java-blueprints" % IDeSyDeJavaVersion,
       ("org.scala-graph" %% "graph-core" % scalaGraphVersion).cross(CrossVersion.for3Use2_13),
       "org.typelevel"   %%% "spire"      % spireVersion
     ),

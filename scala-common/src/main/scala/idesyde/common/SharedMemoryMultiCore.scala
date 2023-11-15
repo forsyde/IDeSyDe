@@ -10,9 +10,10 @@ import scalax.collection.Graph
 import scalax.collection.GraphPredef._
 import scalax.collection.GraphEdge._
 import idesyde.common.InstrumentedPlatformMixin
-import idesyde.core.CompleteDecisionModel
+import idesyde.core.DecisionModel
 import upickle.default._
 import upickle.implicits.key
+import java.{util => ju}
 
 final case class SharedMemoryMultiCore(
     @key("processing_elems") val processingElems: Vector[String],
@@ -30,21 +31,20 @@ final case class SharedMemoryMultiCore(
       "communication_elements_bit_per_sec_per_channel"
     ) val communicationElementsBitPerSecPerChannel: Vector[Double],
     @key("pre_computed_paths") val preComputedPaths: Map[String, Map[String, Iterable[String]]]
-) extends StandardDecisionModel
-    with CompleteDecisionModel
+) extends DecisionModel
     with InstrumentedPlatformMixin[Double]
     derives ReadWriter {
 
-  override def bodyAsText: String = write(this)
+  override def asJsonString(): String = write(this)
 
-  override def bodyAsBinary: Array[Byte] = writeBinary(this)
+  override def asCBORBinary(): Array[Byte] = writeBinary(this)
 
   // #covering_documentation_example
-  val coveredElements =
-    (processingElems ++ communicationElems ++ storageElems).toSet ++ (topologySrcs
+  override def part(): ju.Set[String] =
+    ((processingElems ++ communicationElems ++ storageElems).toSet ++ (topologySrcs
       .zip(topologyDsts)
       .toSet)
-      .map(_.toString)
+      .map(_.toString)).asJava
   // #covering_documentation_example
 
   val platformElements: Vector[String] =
@@ -113,6 +113,6 @@ final case class SharedMemoryMultiCore(
     })
   }
 
-  override val category = "SharedMemoryMultiCore"
+  override def category() = "SharedMemoryMultiCore"
 
 }

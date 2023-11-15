@@ -1,8 +1,11 @@
 package idesyde.common
 
+import scala.jdk.CollectionConverters.*
+
 import upickle.default.*
 
-import idesyde.core.CompleteDecisionModel
+import idesyde.core.DecisionModel
+import java.{util => ju}
 
 final case class SDFToTiledMultiCore(
     val sdfApplications: SDFApplicationWithFunctions,
@@ -12,20 +15,19 @@ final case class SDFToTiledMultiCore(
     val schedulerSchedules: Vector[Vector[String]],
     val messageSlotAllocations: Vector[Map[String, Vector[Boolean]]],
     val actorThroughputs: Vector[Double]
-) extends StandardDecisionModel
-    with CompleteDecisionModel
+) extends DecisionModel
     with WCETComputationMixin(sdfApplications, platform)
     derives ReadWriter {
 
-  val coveredElements =
-    sdfApplications.coveredElements ++ platform.coveredElements ++ (sdfApplications.actorsIdentifiers
-      .zip(processMappings) ++
-      sdfApplications.channelsIdentifiers.zip(messageMappings) ++
-      messageSlotAllocations.zipWithIndex.flatMap((slots, i) =>
-        platform.hardware.communicationElems
-          .filter(ce => slots.contains(ce) && slots(ce).exists(b => b))
-          .map(ce => sdfApplications.channelsIdentifiers(i) -> ce)
-      )).map(_.toString)
+  override def part(): ju.Set[String] = ???
+  (sdfApplications.part().asScala ++ platform.part().asScala ++ (sdfApplications.actorsIdentifiers
+    .zip(processMappings) ++
+    sdfApplications.channelsIdentifiers.zip(messageMappings) ++
+    messageSlotAllocations.zipWithIndex.flatMap((slots, i) =>
+      platform.hardware.communicationElems
+        .filter(ce => slots.contains(ce) && slots(ce).exists(b => b))
+        .map(ce => sdfApplications.channelsIdentifiers(i) -> ce)
+    )).map(_.toString)).asJava
 
   val processorsFrequency: Vector[Long] = platform.hardware.processorsFrequency
   val processorsProvisions: Vector[Map[String, Map[String, Double]]] =
@@ -38,9 +40,9 @@ final case class SDFToTiledMultiCore(
 
   val wcets = computeWcets
 
-  val bodyAsBinary: Array[Byte] = writeBinary(this)
+  override def asJsonString(): String = write(this)
 
-  val bodyAsText: String = write(this)
+  override def asCBORBinary(): Array[Byte] = writeBinary(this)
 
-  val category: String = "SDFToTiledMultiCore"
+  def category(): String = "SDFToTiledMultiCore"
 }

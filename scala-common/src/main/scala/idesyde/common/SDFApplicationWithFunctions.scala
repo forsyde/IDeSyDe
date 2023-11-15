@@ -11,7 +11,8 @@ import scalax.collection.Graph
 import scalax.collection.GraphPredef._
 import scalax.collection.edge.Implicits._
 import scala.collection.mutable.Buffer
-import idesyde.core.CompleteDecisionModel
+import idesyde.core.DecisionModel
+import java.{util => ju}
 
 /** Decision model for synchronous dataflow graphs.
   *
@@ -54,17 +55,17 @@ final case class SDFApplicationWithFunctions(
     val channelNumInitialTokens: Vector[Int],
     val channelTokenSizes: Vector[Long],
     val minimumActorThroughputs: Vector[Double]
-) extends StandardDecisionModel
+) extends DecisionModel
     with ParametricRateDataflowWorkloadMixin
     with InstrumentedWorkloadMixin
-    with CompleteDecisionModel
     derives ReadWriter {
 
   // def dominatesSdf(other: SDFApplication) = repetitionVector.size >= other.repetitionVector.size
-  val coveredElements = (actorsIdentifiers ++ channelsIdentifiers).toSet ++ (topologySrcs
-    .zip(topologyDsts)
-    .toSet)
-    .map(_.toString)
+  override def part(): ju.Set[String] =
+    ((actorsIdentifiers ++ channelsIdentifiers).toSet ++ (topologySrcs
+      .zip(topologyDsts)
+      .toSet)
+      .map(_.toString)).asJava
 
   val dataflowGraphs = Vector(
     topologySrcs
@@ -240,10 +241,10 @@ final case class SDFApplicationWithFunctions(
       topologicalAndHeavyJobOrderingWithExtra.indexWhere((aa, _) => a == aa)
     )
 
-  def bodyAsText: String = write(this)
+  override def asJsonString(): String = write(this)
 
-  def bodyAsBinary: Array[Byte] = writeBinary(this)
+  override def asCBORBinary(): Array[Byte] = writeBinary(this)
 
-  override val category = "SDFApplicationWithFunctions"
+  override def category() = "SDFApplicationWithFunctions"
 
 }

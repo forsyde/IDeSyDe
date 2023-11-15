@@ -1,11 +1,14 @@
 package idesyde.common
 
+import scala.jdk.CollectionConverters._
+
 import upickle.default.*
 
 import idesyde.common.InstrumentedPlatformMixin
 import scalax.collection.Graph
 import scalax.collection.GraphPredef._
-import idesyde.core.CompleteDecisionModel
+import idesyde.core.DecisionModel
+import java.{util => ju}
 
 final case class TiledMultiCoreWithFunctions(
     val processors: Vector[String],
@@ -20,16 +23,15 @@ final case class TiledMultiCoreWithFunctions(
     val communicationElementsMaxChannels: Vector[Int],
     val communicationElementsBitPerSecPerChannel: Vector[Double],
     val preComputedPaths: Map[String, Map[String, Iterable[String]]]
-) extends StandardDecisionModel
+) extends DecisionModel
     with InstrumentedPlatformMixin[Double]
-    with CompleteDecisionModel
     derives ReadWriter {
 
-  val coveredElements =
-    (processors ++ memories ++ networkInterfaces ++ routers).toSet ++ (interconnectTopologySrcs
+  override def part(): ju.Set[String] =
+    ((processors ++ memories ++ networkInterfaces ++ routers).toSet ++ (interconnectTopologySrcs
       .zip(interconnectTopologyDsts)
       .toSet)
-      .map(_.toString)
+      .map(_.toString)).asJava
 
   val communicationElems = networkInterfaces ++ routers
 
@@ -130,9 +132,9 @@ final case class TiledMultiCoreWithFunctions(
     groups.toSet
   }
 
-  def bodyAsText: String = write(this)
+  override def asJsonString(): String = write(this)
 
-  def bodyAsBinary: Array[Byte] = writeBinary(this)
+  override def asCBORBinary(): Array[Byte] = writeBinary(this)
 
-  def category: String = "TiledMultiCoreWithFunctions"
+  def category(): String = "TiledMultiCoreWithFunctions"
 }

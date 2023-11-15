@@ -1,26 +1,27 @@
 package idesyde.common
 
+import scala.jdk.CollectionConverters._
 import upickle.default.*
 
-import idesyde.core.CompleteDecisionModel
+import idesyde.core.DecisionModel
+import java.{util => ju}
 
 final case class SchedulableTiledMultiCore(
     val hardware: TiledMultiCoreWithFunctions,
     val runtimes: PartitionedCoresWithRuntimes
-) extends StandardDecisionModel
+) extends DecisionModel
     with InstrumentedPlatformMixin[Double]
-    with CompleteDecisionModel
     derives ReadWriter {
 
-  val coveredElements = hardware.coveredElements ++ runtimes.coveredElements
+  override def part(): ju.Set[String] = (hardware.part().asScala ++ runtimes.part().asScala).asJava
 
   def processorsFrequency: Vector[Long] = hardware.processorsFrequency
   def processorsProvisions: Vector[Map[String, Map[String, Double]]] =
     hardware.processorsProvisions
 
-  def bodyAsBinary: Array[Byte] = writeBinary(this)
+  override def asJsonString(): String = write(this)
 
-  def bodyAsText: String = write(this)
+  override def asCBORBinary(): Array[Byte] = writeBinary(this)
 
-  val category: String = "SchedulableTiledMultiCore"
+  def category(): String = "SchedulableTiledMultiCore"
 }

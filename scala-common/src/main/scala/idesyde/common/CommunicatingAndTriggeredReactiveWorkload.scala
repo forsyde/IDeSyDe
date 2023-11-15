@@ -6,7 +6,10 @@ import scalax.collection.GraphPredef._
 import scala.collection.mutable
 
 import upickle.default._
-import idesyde.core.CompleteDecisionModel
+import idesyde.core.DecisionModel
+import java.{util => ju}
+
+import scala.jdk.CollectionConverters._
 
 final case class CommunicatingAndTriggeredReactiveWorkload(
     val tasks: Vector[String],
@@ -31,8 +34,7 @@ final case class CommunicatingAndTriggeredReactiveWorkload(
     val triggerGraphSrc: Vector[String],
     val triggerGraphDst: Vector[String],
     val hasORTriggerSemantics: Set[String]
-) extends StandardDecisionModel
-    with CompleteDecisionModel
+) extends DecisionModel
     with CommunicatingExtendedDependenciesPeriodicWorkload
     with InstrumentedWorkloadMixin
     derives ReadWriter {
@@ -41,9 +43,6 @@ final case class CommunicatingAndTriggeredReactiveWorkload(
     for ((s, i) <- dataGraphSrc.zipWithIndex) yield (s, dataGraphDst(i), dataGraphMessageSize(i))
 
   lazy val triggerGraph = triggerGraphSrc.zip(triggerGraphDst)
-  val coveredElements =
-    (tasks ++ upsamples ++ downsamples ++ periodicSources ++ dataChannels).toSet ++ triggerGraph.toSet
-      .map(_.toString)
 
   lazy val stimulusGraph = Graph.from(
     tasks ++ upsamples ++ downsamples ++ periodicSources,
@@ -226,11 +225,15 @@ final case class CommunicatingAndTriggeredReactiveWorkload(
     affineControlGraphEdges.toSet
   }
 
-  def bodyAsText: String = write(this)
+  override def asJsonString(): String = write(this)
 
-  def bodyAsBinary: Array[Byte] = writeBinary(this)
+  override def asCBORBinary(): Array[Byte] = writeBinary(this)
 
   def messagesMaxSizes = dataChannelSizes
 
-  def category = "CommunicatingAndTriggeredReactiveWorkload"
+  def category() = "CommunicatingAndTriggeredReactiveWorkload"
+
+  override def part(): ju.Set[String] =
+    ((tasks ++ upsamples ++ downsamples ++ periodicSources ++ dataChannels).toSet ++ triggerGraph.toSet
+      .map(_.toString)).asJava
 }

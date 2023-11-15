@@ -2,7 +2,6 @@ package idesyde.common
 
 import idesyde.core.DesignModel
 import idesyde.core.DecisionModel
-import idesyde.utils.Logger
 import idesyde.common.AnalysedSDFApplication
 
 trait ApplicationRules {

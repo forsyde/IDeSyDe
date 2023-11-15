@@ -45,6 +45,10 @@ public interface StandaloneModule extends Module {
         return Optional.empty();
     }
 
+    default Set<String> decisionModelSchemas() {
+        return Set.of();
+    }
+
     @Override
     default Set<DesignModel> reverseIdentification(Set<DecisionModel> solvedDecisionModels,
             Set<DesignModel> designModels) {

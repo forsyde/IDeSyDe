@@ -1,20 +1,23 @@
 package idesyde.common
 
+import scala.jdk.CollectionConverters._
+
 import upickle.default._
-import idesyde.core.CompleteDecisionModel
+import idesyde.core.DecisionModel
+import java.{util => ju}
 
 final case class PartitionedSharedMemoryMultiCore(
     val hardware: SharedMemoryMultiCore,
     val runtimes: PartitionedCoresWithRuntimes
-) extends StandardDecisionModel
-    with CompleteDecisionModel
+) extends DecisionModel
     derives ReadWriter {
 
-  override def bodyAsText: String = write(this)
+  override def asJsonString(): String = write(this)
 
-  override def bodyAsBinary: Array[Byte] = writeBinary(this)
+  override def asCBORBinary(): Array[Byte] = writeBinary(this)
 
-  val coveredElements = runtimes.coveredElements ++ hardware.coveredElements
+  override def part(): ju.Set[String] =
+    (runtimes.part().asScala ++ hardware.part().asScala).asJava
 
-  val category: String = "PartitionedSharedMemoryMultiCore"
+  def category(): String = "PartitionedSharedMemoryMultiCore"
 }

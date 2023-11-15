@@ -1,8 +1,11 @@
 package idesyde.common
 
+import scala.jdk.CollectionConverters._
+
 import upickle.default._
 
-import idesyde.core.CompleteDecisionModel
+import idesyde.core.DecisionModel
+import java.{util => ju}
 
 final case class InstrumentedComputationTimes(
     val processes: Set[String],
@@ -11,16 +14,15 @@ final case class InstrumentedComputationTimes(
     val average_execution_times: Map[String, Map[String, Long]],
     val worst_execution_times: Map[String, Map[String, Long]],
     val scale_factor: Long
-) extends StandardDecisionModel
-    with CompleteDecisionModel
+) extends DecisionModel
     derives ReadWriter {
 
-  override def bodyAsBinary: Array[Byte] = writeBinary(this)
+  override def asJsonString(): String = write(this)
 
-  override def category: String = "InstrumentedComputationTimes"
+  override def asCBORBinary(): Array[Byte] = writeBinary(this)
 
-  override def coveredElements: Set[String] = processes ++ processing_elements
+  override def category(): String = "InstrumentedComputationTimes"
 
-  override def bodyAsText: String = write(this)
+  override def part(): ju.Set[String] = (processes ++ processing_elements).asJava
 
 }

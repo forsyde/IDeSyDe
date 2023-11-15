@@ -1,8 +1,11 @@
 package idesyde.common
 
+import scala.jdk.CollectionConverters._
+
 import upickle.default._
 import upickle.implicits.key
-import idesyde.core.CompleteDecisionModel
+import idesyde.core.DecisionModel
+import java.{util => ju}
 
 final case class RuntimesAndProcessors(
     @key("runtimes") val runtimes: Set[String],
@@ -14,16 +17,15 @@ final case class RuntimesAndProcessors(
     @key("is_preemptive") val is_preemptive: Set[String],
     @key("is_earliest_deadline_first") val is_earliest_deadline_first: Set[String],
     @key("is_super_loop") val is_super_loop: Set[String]
-) extends StandardDecisionModel
-    with CompleteDecisionModel
+) extends DecisionModel
     derives ReadWriter {
 
-  override def bodyAsBinary: Array[Byte] = writeBinary(this)
+  override def asJsonString(): String = write(this)
 
-  override def category: String = "RuntimesAndProcessors"
+  override def asCBORBinary(): Array[Byte] = writeBinary(this)
 
-  override def coveredElements: Set[String] = runtimes ++ processors
+  override def category(): String = "RuntimesAndProcessors"
 
-  override def bodyAsText: String = write(this)
+  override def part(): ju.Set[String] = (runtimes ++ processors).asJava
 
 }

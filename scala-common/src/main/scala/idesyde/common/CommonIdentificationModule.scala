@@ -1,14 +1,13 @@
 package idesyde.common
 
+import scala.jdk.OptionConverters._
+import scala.jdk.CollectionConverters._
+
 import upickle.default.*
 
-import idesyde.blueprints.StandaloneIdentificationModule
+import idesyde.blueprints.StandaloneModule
 import idesyde.core.DecisionModel
 import idesyde.core.DesignModel
-import idesyde.core.headers.DesignModelHeader
-import idesyde.core.headers.DecisionModelHeader
-import idesyde.utils.Logger
-import idesyde.blueprints.CanParseIdentificationModuleConfiguration
 import idesyde.common.SDFApplicationWithFunctions
 import idesyde.common.TiledMultiCoreWithFunctions
 import idesyde.common.PartitionedCoresWithRuntimes
@@ -20,23 +19,16 @@ import idesyde.common.PartitionedSharedMemoryMultiCore
 import idesyde.common.PeriodicWorkloadToPartitionedSharedMultiCore
 import idesyde.common.PeriodicWorkloadAndSDFServers
 import idesyde.core.MarkedIdentificationRule
-import idesyde.blueprints.DecisionModelMessage
-import idesyde.blueprints.DesignModelMessage
 import idesyde.common.AnalysedSDFApplication
+import idesyde.core.OpaqueDecisionModel
+import java.{util => ju}
 
 object CommonIdentificationModule
-    extends StandaloneIdentificationModule
-    with CanParseIdentificationModuleConfiguration
+    extends StandaloneModule
     with MixedRules
     with PlatformRules
     with WorkloadRules
     with ApplicationRules {
-
-  given Logger = logger
-
-  def designHeaderToModel(m: DesignModelHeader): Set[DesignModel] = Set()
-
-  def designHeaderToModel: Set[DesignModelHeader => Set[DesignModel]] = Set()
 
   val identificationRules = Set(
     MarkedIdentificationRule.SpecificDecisionModelOnlyIdentificationRule(
@@ -72,7 +64,7 @@ object CommonIdentificationModule
 
   def main(args: Array[String]) = standaloneIdentificationModule(args)
 
-  def decisionHeaderToModel(m: DecisionModelHeader): Option[DecisionModel] = {
+  override def fromOpaqueDecision(opaque: OpaqueDecisionModel): ju.Optional[DecisionModel] =
     m match {
       case DecisionModelHeader("SDFApplicationWithFunctions", body_path, _) =>
         body_path.flatMap(decodeFromPath[SDFApplicationWithFunctions])
@@ -133,8 +125,6 @@ object CommonIdentificationModule
       case _ => None
     }
   }
-
-  def designMessageToModel(message: DesignModelMessage): Set[DesignModel] = Set()
 
   override def decisionModelSchemas: Vector[String] = Vector(
   )

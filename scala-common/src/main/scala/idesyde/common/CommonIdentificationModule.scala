@@ -56,7 +56,7 @@ object CommonIdentificationModule
       identAggregatedCommunicatingAndTriggeredReactiveWorkload,
       Set("CommunicatingAndTriggeredReactiveWorkload")
     )
-  )
+  ).asJava
 
   def uniqueIdentifier: String = "CommonIdentificationModule"
 
@@ -135,10 +135,10 @@ object CommonIdentificationModule
           .bodyCBOR()
           .map(x => readBinary[PeriodicWorkloadToPartitionedSharedMultiCore](x))
           .or(() =>
-            .map(x => x.asInstanceOf[DecisionModel])
             opaque.bodyJson().map(x => read[PeriodicWorkloadToPartitionedSharedMultiCore](x))
           )
-      case _ => None
+          .map(x => x.asInstanceOf[DecisionModel])
+      case _ => None.toJava
     }
   }
 

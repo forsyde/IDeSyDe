@@ -2,12 +2,11 @@ package idesyde.forsydeio
 
 import upickle.default._
 
-import idesyde.core.MarkedIdentificationRule
+import idesyde.core.IdentificationRule
 import idesyde.forsydeio.MixedRules
 import idesyde.forsydeio.SDFRules
 import idesyde.forsydeio.PlatformRules
 import idesyde.forsydeio.WorkloadRules
-import idesyde.utils.Logger
 import idesyde.core.DecisionModel
 import idesyde.core.headers.DecisionModelHeader
 import idesyde.core.DesignModel
@@ -34,8 +33,6 @@ object ForSyDeIdentificationModule
     with PlatformRules
     with WorkloadRules
     with ApplicationRules {
-
-  given Logger = logger
 
   def decisionHeaderToModel(m: DecisionModelHeader): Option[DecisionModel] = {
     m match {
@@ -66,7 +63,7 @@ object ForSyDeIdentificationModule
     .registerDriver(SDF3Driver())
   // .registerDriver(new ForSyDeAmaltheaDriver())
 
-  val identificationRules = Set(
+  override def identificationRules(): ju.Set[IdentificationRule] = Set(
     MarkedIdentificationRule.DesignModelOnlyIdentificationRule(identSDFApplication),
     MarkedIdentificationRule.DesignModelOnlyIdentificationRule(identTiledMultiCore),
     identPartitionedCoresWithRuntimes,
@@ -76,7 +73,7 @@ object ForSyDeIdentificationModule
     // MarkedIdentificationRule.DesignModelOnlyIdentificationRule(identAperiodicDataflowFromSY),
     MarkedIdentificationRule.DesignModelOnlyIdentificationRule(identRuntimesAndProcessors)
     // MarkedIdentificationRule.DesignModelOnlyIdentificationRule(identInstrumentedComputationTimes)
-  )
+  ).asJava
 
   val reverseIdentificationRules = Set(
     integratePeriodicWorkloadToPartitionedSharedMultiCore,

@@ -4,27 +4,39 @@ import java.util.Set;
 import java.util.function.BiFunction;
 
 /**
- * A class that represent an identification rule, including how it partially identifies new DecisionModel s but also
+ * A class that represent an identification rule, including how it partially
+ * identifies new DecisionModel s but also
  * whether it only uses DesignModel s, DecisionModel s or a combination.
  *
  */
 public interface IdentificationRule extends
         BiFunction<Set<? extends DesignModel>, Set<? extends DecisionModel>, IdentificationResult> {
 
-    default boolean usesDesignModels() { return true; }
+    default boolean usesDesignModels() {
+        return true;
+    }
 
-    default boolean usesDecisionModels() { return true; }
+    default boolean usesDecisionModels() {
+        return true;
+    }
 
-    default Set<String> usesParticularDecisionModels() { return Set.of(); }
+    default Set<String> usesParticularDecisionModels() {
+        return Set.of();
+    }
 
     /**
-     * A simple wrapper that signals the wrapper function requires only design models.
+     * A simple wrapper that signals the wrapper function requires only design
+     * models.
+     * 
      * @param func the wrapped function.
      */
-    record OnlyDesignModels(BiFunction<Set<? extends DesignModel>, Set<? extends DecisionModel>, IdentificationResult> func) implements IdentificationRule {
+    static record OnlyDesignModels(
+            BiFunction<Set<? extends DesignModel>, Set<? extends DecisionModel>, IdentificationResult> func)
+            implements IdentificationRule {
 
         @Override
-        public IdentificationResult apply(Set<? extends DesignModel> designModels, Set<? extends DecisionModel> decisionModels) {
+        public IdentificationResult apply(Set<? extends DesignModel> designModels,
+                Set<? extends DecisionModel> decisionModels) {
             return func.apply(designModels, decisionModels);
         }
 
@@ -35,13 +47,18 @@ public interface IdentificationRule extends
     }
 
     /**
-     * A simple wrapper that signals the wrapper function requires only (any) decision models.
+     * A simple wrapper that signals the wrapper function requires only (any)
+     * decision models.
+     * 
      * @param func the wrapped function.
      */
-    record OnlyDecisionModels(BiFunction<Set<? extends DesignModel>, Set<? extends DecisionModel>, IdentificationResult> func) implements IdentificationRule {
+    static record OnlyDecisionModels(
+            BiFunction<Set<? extends DesignModel>, Set<? extends DecisionModel>, IdentificationResult> func)
+            implements IdentificationRule {
 
         @Override
-        public IdentificationResult apply(Set<? extends DesignModel> designModels, Set<? extends DecisionModel> decisionModels) {
+        public IdentificationResult apply(Set<? extends DesignModel> designModels,
+                Set<? extends DecisionModel> decisionModels) {
             return func.apply(designModels, decisionModels);
         }
 
@@ -52,13 +69,18 @@ public interface IdentificationRule extends
     }
 
     /**
-     * A simple wrapper that signals the wrapper function requires only certain decision models.
+     * A simple wrapper that signals the wrapper function requires only certain
+     * decision models.
+     * 
      * @param func the wrapped function.
      */
-    record OnlyCertainDecisionModels(BiFunction<Set<? extends DesignModel>, Set<? extends DecisionModel>, IdentificationResult> func, Set<String> decisionModelCategories) implements IdentificationRule {
+    static record OnlyCertainDecisionModels(
+            BiFunction<Set<? extends DesignModel>, Set<? extends DecisionModel>, IdentificationResult> func,
+            Set<String> decisionModelCategories) implements IdentificationRule {
 
         @Override
-        public IdentificationResult apply(Set<? extends DesignModel> designModels, Set<? extends DecisionModel> decisionModels) {
+        public IdentificationResult apply(Set<? extends DesignModel> designModels,
+                Set<? extends DecisionModel> decisionModels) {
             return func.apply(designModels, decisionModels);
         }
 
@@ -75,11 +97,15 @@ public interface IdentificationRule extends
 
     /**
      * A simple wrapper for a function that can identify decision models.
+     * 
      * @param func the wrapped function.
      */
-    record Generic(BiFunction<Set<? extends DesignModel>, Set<? extends DecisionModel>, IdentificationResult> func, Set<String> decisionModelCategories) implements IdentificationRule {
+    static record Generic(
+            BiFunction<Set<? extends DesignModel>, Set<? extends DecisionModel>, IdentificationResult> func,
+            Set<String> decisionModelCategories) implements IdentificationRule {
         @Override
-        public IdentificationResult apply(Set<? extends DesignModel> designModels, Set<? extends DecisionModel> decisionModels) {
+        public IdentificationResult apply(Set<? extends DesignModel> designModels,
+                Set<? extends DecisionModel> decisionModels) {
             return func.apply(designModels, decisionModels);
         }
     }

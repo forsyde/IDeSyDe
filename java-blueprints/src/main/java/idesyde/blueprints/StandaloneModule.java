@@ -163,17 +163,15 @@ public interface StandaloneModule extends Module {
                     });
                 }
             }).ws("/identify", ws -> {
-                var logger = LoggerFactory.getLogger("main");
+                // var logger = LoggerFactory.getLogger("main");
                 Set<DecisionModel> decisionModels = new HashSet<>();
                 Set<DesignModel> designModels = new HashSet<>();
                 ws.onBinaryMessage(ctx -> {
-                    logger.info("Got binary message");
                     OpaqueDesignModel.fromCBORBytes(ctx.data()).flatMap(this::fromOpaqueDesign)
                             .ifPresentOrElse(designModels::add, () -> OpaqueDecisionModel.fromCBORBytes(ctx.data())
                                     .flatMap(this::fromOpaqueDecision).ifPresent(decisionModels::add));
                 });
                 ws.onMessage(ctx -> {
-                    logger.info("Got string message: %s".formatted(ctx.message()));
                     if (ctx.message().toLowerCase().contains("done")) {
                         executor.submit(() -> {
                             var results = identification(designModels, decisionModels);
@@ -183,7 +181,7 @@ public interface StandaloneModule extends Module {
                                     decisionModels.add(result);
                                 });
                             }
-                            for (var msg: results.errors()) {
+                            for (var msg : results.errors()) {
                                 ctx.send(msg);
                             }
                             ctx.send("done");
@@ -265,14 +263,17 @@ public interface StandaloneModule extends Module {
                 });
                 ws.onMessage(ctx -> {
                     if (ctx.message().toLowerCase().contains("done")) {
-                        executor.submit(() -> explorer.get()
-                                .explore(decisionModel.get(), previousSolutions, configuration.get())
-                                .takeWhile(s -> ctx.session.isOpen())
-                                .filter(solution -> !configuration.get().strict
-                                        || previousSolutions.stream().noneMatch(other -> other.dominates(solution)))
-                                .map(ExplorationSolutionMessage::from).flatMap(s -> s.toCBORBytes().stream())
-                                .forEach(ctx::send));
-
+                        executor.submit(() -> {
+                            explorer.get()
+                                    .explore(decisionModel.get(), previousSolutions, configuration.get())
+                                    .takeWhile(s -> ctx.session.isOpen())
+                                    .filter(solution -> !configuration.get().strict
+                                            || previousSolutions.stream().noneMatch(other -> other.dominates(solution)))
+                                    .map(ExplorationSolutionMessage::from)
+                                    .flatMap(s -> s.toCBORBytes().map(ByteBuffer::wrap).stream())
+                                    .forEach(ctx::send);
+                            ctx.send("done");
+                        });
                     } else {
                         ExplorationSolutionMessage.fromJsonString(ctx.message())
                                 .flatMap(esm -> fromOpaqueDecision(esm.solved())

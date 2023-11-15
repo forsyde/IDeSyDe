@@ -140,7 +140,7 @@ lazy val forsyde = (project in file("scala-bridge-forsyde-io"))
       // "org.eclipse.birt.runtime" % "org.eclipse.emf.common"            % "2.12.0.v20160420-0247",
       // "org.eclipse.birt.runtime" % "org.eclipse.emf.ecore"             % "2.12.0.v20160420-0247"
     ),
-    mainClass := Some("idesyde.forsydeio.ForSyDeIdentificationModule"),
+    mainClass := Some("idesyde.forsydeio.ForSyDeIOScalaModule"),
     publishModules := {
       IO.createDirectory(imodulesTarget)
       val jar    = assembly.value

@@ -3,7 +3,6 @@ package idesyde.common;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.annotation.JsonSerialize;
 import idesyde.core.DecisionModel;
-import idesyde.core.headers.DecisionModelHeader;
 
 import java.util.*;
 import java.util.stream.Collectors;
@@ -34,7 +33,7 @@ public record CommunicatingAndTriggeredReactiveWorkload(
 ) implements DecisionModel {
 
     @Override
-    public DecisionModelHeader header() {
+    public Set<String> part() {
         var elems = new HashSet<String>();
         elems.addAll(tasks);
         elems.addAll(upsamples);
@@ -44,11 +43,7 @@ public record CommunicatingAndTriggeredReactiveWorkload(
         elems.addAll(IntStream.range(0, triggerGraphSrc.size()).mapToObj(i ->
                 "trigger=" + triggerGraphSrc.get(i) + ":->" + triggerGraphDst.get(i)
         ).collect(Collectors.toSet()));
-        return new DecisionModelHeader(
-                "CommunicatingAndTriggeredReactiveWorkload",
-                elems,
-                null
-            );
+        return elems;
     }
 
 }

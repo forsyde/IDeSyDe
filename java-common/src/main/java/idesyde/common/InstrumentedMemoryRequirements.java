@@ -9,7 +9,6 @@ import java.util.stream.Stream;
 import com.fasterxml.jackson.annotation.JsonProperty;
 
 import idesyde.core.DecisionModel;
-import idesyde.core.headers.DecisionModelHeader;
 
 /** A decision model to hold memory requirements for processes when executing in processing elements.
  *
@@ -26,12 +25,9 @@ public record InstrumentedMemoryRequirements(
                 implements DecisionModel {
 
         @Override
-        public DecisionModelHeader header() {
-                return new DecisionModelHeader(
-                                "InstrumentedMemoryRequirements",
-                                Stream.concat(processes.stream(), processingElements.stream())
-                                                .collect(Collectors.toSet()),
-                                Optional.empty());
+        public Set<String> part() {
+                return Stream.concat(processes.stream(), processingElements.stream())
+                                                .collect(Collectors.toSet());
         }
 
 }

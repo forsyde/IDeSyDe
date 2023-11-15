@@ -2,9 +2,9 @@ package idesyde.common;
 
 import com.fasterxml.jackson.databind.annotation.JsonSerialize;
 import idesyde.core.DecisionModel;
-import idesyde.core.headers.DecisionModelHeader;
 
 import java.util.Optional;
+import java.util.Set;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
@@ -21,11 +21,7 @@ public record PartitionedMemoryMappableMulticore(
     RuntimesAndProcessors runtimes
 ) implements DecisionModel {
     @Override
-    public DecisionModelHeader header() {
-        return new DecisionModelHeader(
-                "PartitionedMemoryMappableMulticore",
-                Stream.concat(hardware.header().coveredElements().stream(), runtimes.header().coveredElements().stream()).collect(Collectors.toSet()),
-                Optional.empty()
-        );
+    public Set<String> part() {
+        return Stream.concat(hardware.part().stream(), runtimes.part().stream()).collect(Collectors.toSet());
     }
 }

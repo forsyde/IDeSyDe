@@ -3,7 +3,6 @@ package idesyde.common;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.fasterxml.jackson.databind.annotation.JsonSerialize;
 import idesyde.core.DecisionModel;
-import idesyde.core.headers.DecisionModelHeader;
 
 import java.util.List;
 import java.util.Map;
@@ -35,11 +34,9 @@ public record MemoryMappableMultiCore(@JsonProperty("processing_elems") Set<Stri
         @JsonProperty("pre_computed_paths") Map<String, Map<String, List<String>>> preComputedPaths)
         implements DecisionModel {
     @Override
-    public DecisionModelHeader header() {
-        return new DecisionModelHeader("MemoryMappableMultiCore",
-                Stream.concat(processingElems.stream(),
+    public Set<String> part() {
+        return Stream.concat(processingElems.stream(),
                         Stream.concat(storageElems.stream(), communicationElems.stream()))
-                        .collect(Collectors.toSet()),
-                Optional.empty());
+                        .collect(Collectors.toSet());
     }
 }

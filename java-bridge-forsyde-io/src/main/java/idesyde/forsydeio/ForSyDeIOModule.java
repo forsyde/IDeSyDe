@@ -16,7 +16,7 @@ public class ForSyDeIOModule implements StandaloneModule {
     @Override
     public Optional<DesignModel> fromOpaqueDesign(OpaqueDesignModel opaque) {
         if (modelHandler.canLoadModel(opaque.format())) {
-            return opaque.bodyAsString().flatMap(body -> {
+            return opaque.asString().flatMap(body -> {
                 try {
                     return Optional.of(modelHandler.readModel(body, opaque.format()));
                 } catch (Exception e) {
@@ -46,16 +46,16 @@ public class ForSyDeIOModule implements StandaloneModule {
     public Optional<DecisionModel> fromOpaqueDecision(OpaqueDecisionModel message) {
         return switch (message.category()) {
             case "AperiodicAsynchronousDataflowToPartitionedMemoryMappableMulticore" ->
-                message.bodyAsCBORBinary().flatMap(b -> readFromCBORBytes(b,
+                message.asCBORBinary().flatMap(b -> readFromCBORBytes(b,
                         AperiodicAsynchronousDataflowToPartitionedMemoryMappableMulticore.class))
-                        .or(() -> message.bodyAsJsonString()
+                        .or(() -> message.asJsonString()
                                 .flatMap(s -> readFromString(s,
                                         AperiodicAsynchronousDataflowToPartitionedMemoryMappableMulticore.class)))
                         .map(m -> (DecisionModel) m);
             case "AperiodicAsynchronousDataflowToPartitionedTiledMulticore" ->
-                message.bodyAsCBORBinary().flatMap(b -> readFromCBORBytes(b,
+                message.asCBORBinary().flatMap(b -> readFromCBORBytes(b,
                         AperiodicAsynchronousDataflowToPartitionedTiledMulticore.class))
-                        .or(() -> message.bodyAsJsonString().flatMap(
+                        .or(() -> message.asJsonString().flatMap(
                                 s -> readFromString(s, AperiodicAsynchronousDataflowToPartitionedTiledMulticore.class)))
                         .map(m -> (DecisionModel) m);
             default -> Optional.empty();
@@ -85,7 +85,7 @@ public class ForSyDeIOModule implements StandaloneModule {
     }
 
     public static void main(String[] args) {
-        var server = new ForSyDeIOModule().standaloneIdentificationModule(args);
+        var server = new ForSyDeIOModule().standaloneModule(args);
         server.ifPresent(s -> s.start(0));
     }
 }

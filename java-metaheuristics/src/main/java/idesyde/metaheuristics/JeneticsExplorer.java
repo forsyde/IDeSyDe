@@ -1,20 +1,18 @@
 package idesyde.metaheuristics;
 
 import idesyde.common.AperiodicAsynchronousDataflow;
-import idesyde.common.AperiodicAsynchronousDataflow.Job;
 import idesyde.common.AperiodicAsynchronousDataflowToPartitionedMemoryMappableMulticore;
 import idesyde.common.AperiodicAsynchronousDataflowToPartitionedTiledMulticore;
 import idesyde.core.DecisionModel;
 import idesyde.core.ExplorationSolution;
 import idesyde.core.Explorer;
-import idesyde.core.headers.ExplorationBidding;
+import idesyde.core.ExplorationBidding;
 
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
-import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
 public class JeneticsExplorer implements Explorer, CanExploreAADPMMMWithJenetics, CanExploreAADPTMWithJenetics {

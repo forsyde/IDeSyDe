@@ -14,7 +14,7 @@ import java.util.Set;
  * different models in different languages.
  *
  * <p>
- * This data record captures which elements of the target design models taht can
+ * This data record captures which elements of the target design models that can
  * be partially identified.
  * It provides a `category` to distinguish what type of design model this is, so
  * that different languages
@@ -29,8 +29,8 @@ import java.util.Set;
  * <p>
  * R. Jordão, I. Sander and M. Becker, "Formulation of Design Space Exploration
  * Problems by
- * Composable Design Space Identification," 2021 Design, Automation & Test in
- * Europe Conference &
+ * Composable Design Space Identification," 2021 Design, Automation &amp; Test in
+ * Europe Conference &amp;
  * Exhibition (DATE), 2021, pp. 1204-1207, doi: 10.23919/DATE51398.2021.9474082.
  * </p>
  */
@@ -52,7 +52,7 @@ public record OpaqueDesignModel(
     }
 
     @Override
-    public Optional<String> bodyAsString() {
+    public Optional<String> asString() {
         return Optional.ofNullable(body);
     }
 
@@ -73,7 +73,7 @@ public record OpaqueDesignModel(
     }
 
     public static OpaqueDesignModel from(DesignModel m) {
-        return m.bodyAsString().map(body -> new OpaqueDesignModel(m.category(), m.elements(), m.format(), body))
+        return m.asString().map(body -> new OpaqueDesignModel(m.category(), m.elements(), m.format(), body))
                 .orElse(new OpaqueDesignModel(m.category(), m.elements(), m.format()));
     }
 

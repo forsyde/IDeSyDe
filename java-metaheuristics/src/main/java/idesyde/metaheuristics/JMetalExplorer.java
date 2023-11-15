@@ -1,12 +1,10 @@
 package idesyde.metaheuristics;
 
-import idesyde.common.AperiodicAsynchronousDataflowToPartitionedMemoryMappableMulticore;
 import idesyde.core.DecisionModel;
 import idesyde.core.ExplorationSolution;
 import idesyde.core.Explorer;
-import idesyde.core.headers.ExplorationBidding;
+import idesyde.core.ExplorationBidding;
 
-import java.util.Map;
 import java.util.Set;
 import java.util.stream.Stream;
 

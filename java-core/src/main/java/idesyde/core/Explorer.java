@@ -1,7 +1,5 @@
 package idesyde.core;
 
-import idesyde.core.headers.ExplorationBidding;
-
 import java.io.IOException;
 import java.util.HashSet;
 import java.util.Map;

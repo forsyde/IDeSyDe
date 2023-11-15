@@ -403,6 +403,8 @@ impl PartialOrd<ExplorationSolution> for ExplorationSolution {
     }
 }
 
+/// An exploration bidding captures the characteristics that an explorers
+/// might display when explorer a decision model.
 #[derive(Debug, Deserialize, Serialize, Clone, PartialEq)]
 pub struct ExplorationBid {
     pub explorer_unique_identifier: String,

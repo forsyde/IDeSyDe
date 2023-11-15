@@ -2,7 +2,6 @@ package idesyde.common;
 
 import com.fasterxml.jackson.annotation.JsonProperty;
 import idesyde.core.DecisionModel;
-import idesyde.core.headers.DecisionModelHeader;
 
 import java.util.List;
 import java.util.Map;
@@ -36,11 +35,7 @@ public record InstrumentedComputationTimes(
 ) implements DecisionModel {
 
     @Override
-    public DecisionModelHeader header() {
-        return new DecisionModelHeader(
-                "InstrumentedComputationTimes",
-                Stream.concat(processes.stream(), processingElements.stream()).collect(Collectors.toSet()),
-                Optional.empty()
-        );
+    public Set<String> part() {
+        return Stream.concat(processes.stream(), processingElements.stream()).collect(Collectors.toSet());
     }
 }

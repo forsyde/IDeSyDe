@@ -3,7 +3,7 @@ package idesyde.common;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import idesyde.core.DecisionModel;
-import idesyde.core.headers.DecisionModelHeader;
+
 
 import java.util.*;
 import java.util.stream.Collectors;
@@ -50,14 +50,11 @@ public record AperiodicAsynchronousDataflow(
     }
 
     @Override
-    public DecisionModelHeader header() {
+    public Set<String> part() {
         var s = new HashSet<String>();
         s.addAll(processes);
         s.addAll(buffers);
-        return new DecisionModelHeader(
-                "AperiodicAsynchronousDataflow",
-                s,
-                Optional.empty());
+        return s;
     }
 
     public Set<Job> jobsOfProcesses() {

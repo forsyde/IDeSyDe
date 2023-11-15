@@ -18,7 +18,6 @@ import java.util.*;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentSkipListSet;
 import java.util.concurrent.Executors;
-import java.util.concurrent.FutureTask;
 import java.util.concurrent.atomic.AtomicReference;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
@@ -79,7 +78,7 @@ public interface StandaloneModule extends Module {
         // }
     }
 
-    default Optional<Javalin> standaloneIdentificationModule(String[] args) {
+    default Optional<Javalin> standaloneModule(String[] args) {
         var sessionDesignModels = new ConcurrentHashMap<String, ConcurrentSkipListSet<DesignModel>>();
         var sessionDecisionModels = new ConcurrentHashMap<String, ConcurrentSkipListSet<DecisionModel>>();
         var sessionIdentifiedDecisionModels = new ConcurrentHashMap<String, Deque<DecisionModel>>();
@@ -439,7 +438,7 @@ public interface StandaloneModule extends Module {
     }
 
     @CommandLine.Command(mixinStandardHelpOptions = true)
-    class IdentificationModuleCLI {
+    class ModuleCLI {
         @CommandLine.Option(names = { "m",
                 "design-path" }, description = "The path where the design models (and headers) are stored.")
         Path designPath;

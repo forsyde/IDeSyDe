@@ -19,9 +19,9 @@ final case class PeriodicWorkloadToPartitionedSharedMultiCore(
     with WCETComputationMixin(workload, platform.hardware)
     derives ReadWriter {
 
-  override def asJsonString(): String = write(this)
+  override def asJsonString(): java.util.Optional[String] = try { java.util.Optional.of(write(this)) } catch { case _ => java.util.Optional.empty() }
 
-  override def asCBORBinary(): Array[Byte] = writeBinary(this)
+  override def asCBORBinary(): java.util.Optional[Array[Byte]] = try { java.util.Optional.of(writeBinary(this)) } catch { case _ => java.util.Optional.empty() }
 
   override def part(): ju.Set[String] =
     (workload.part().asScala ++ platform.part().asScala ++ (processSchedulings.toSet ++
@@ -46,5 +46,5 @@ final case class PeriodicWorkloadToPartitionedSharedMultiCore(
   //   case _ => super.dominates(other)
   // }
 
-  def category(): String = "PeriodicWorkloadToPartitionedSharedMultiCore"
+  override def category(): String = "PeriodicWorkloadToPartitionedSharedMultiCore"
 }

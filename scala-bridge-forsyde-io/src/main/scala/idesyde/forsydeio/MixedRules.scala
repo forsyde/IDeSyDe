@@ -113,7 +113,7 @@ trait MixedRules {
   def integratePeriodicWorkloadToPartitionedSharedMultiCore(
       decisionModel: Set[DecisionModel],
       designModel: Set[DesignModel]
-  ): Set[? <: DesignModel] = {
+  ): Set[ForSyDeDesignModel] = {
     val model = designModel
       .flatMap(_ match {
         case ForSyDeDesignModel(forSyDeSystemGraph) =>
@@ -175,7 +175,7 @@ trait MixedRules {
   def integratePeriodicWorkloadToPartitionedSharedMultiCoreFromNothing(
       decisionModel: Set[DecisionModel],
       designModel: Set[DesignModel]
-  ): Set[? <: DesignModel] = {
+  ): Set[ForSyDeDesignModel] = {
     val model = designModel
       .flatMap(_ match {
         case ForSyDeDesignModel(forSyDeSystemGraph) =>
@@ -239,7 +239,7 @@ trait MixedRules {
   def integrateSDFToTiledMultiCore(
       decisionModel: Set[DecisionModel],
       designModel: Set[DesignModel]
-  ): Set[? <: DesignModel] = {
+  ): Set[ForSyDeDesignModel] = {
     val model = designModel
       .flatMap(_ match {
         case ForSyDeDesignModel(forSyDeSystemGraph) =>

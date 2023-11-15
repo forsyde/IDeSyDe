@@ -101,8 +101,8 @@ public interface IdentificationRule extends
      * @param func the wrapped function.
      */
     static record Generic(
-            BiFunction<Set<? extends DesignModel>, Set<? extends DecisionModel>, IdentificationResult> func,
-            Set<String> decisionModelCategories) implements IdentificationRule {
+            BiFunction<Set<? extends DesignModel>, Set<? extends DecisionModel>, IdentificationResult> func)
+            implements IdentificationRule {
         @Override
         public IdentificationResult apply(Set<? extends DesignModel> designModels,
                 Set<? extends DecisionModel> decisionModels) {

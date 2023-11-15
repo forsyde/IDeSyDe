@@ -1,32 +1,32 @@
 package idesyde.forsydeio
 
-import upickle.default._
+import scala.jdk.CollectionConverters._
 
+import upickle.default._
+import java.{util => ju}
 import idesyde.core.IdentificationRule
+import idesyde.core.IdentificationResult
+import idesyde.core.ReverseIdentificationRule
 import idesyde.forsydeio.MixedRules
 import idesyde.forsydeio.SDFRules
 import idesyde.forsydeio.PlatformRules
 import idesyde.forsydeio.WorkloadRules
 import idesyde.core.DecisionModel
-import idesyde.core.headers.DecisionModelHeader
 import idesyde.core.DesignModel
-import idesyde.core.headers.DesignModelHeader
 import forsyde.io.core.ModelHandler
 import idesyde.forsydeio.ForSyDeDesignModel
 import java.nio.file.Paths
-import os.Path
 import idesyde.common.SDFToTiledMultiCore
 import idesyde.common.PeriodicWorkloadToPartitionedSharedMultiCore
 import java.nio.file.Files
 import forsyde.io.bridge.sdf3.drivers.SDF3Driver
 import forsyde.io.lib.hierarchy.ForSyDeHierarchy
 import forsyde.io.lib.LibForSyDeModelHandler
-import idesyde.blueprints.DecisionModelMessage
-import idesyde.blueprints.DesignModelMessage
 import java.io.StringReader
 import idesyde.common.AperiodicAsynchronousDataflow
 import idesyde.core.OpaqueDesignModel
 import idesyde.core.OpaqueDecisionModel
+import idesyde.blueprints.StandaloneModule
 
 object ForSyDeIOScalaModule
     extends StandaloneModule
@@ -35,6 +35,21 @@ object ForSyDeIOScalaModule
     with PlatformRules
     with WorkloadRules
     with ApplicationRules {
+
+  def adaptIRuleToJava[T <: DecisionModel](
+      func: (Set[DesignModel], Set[DecisionModel]) => (Set[T], Set[String])
+  ): ju.function.BiFunction[ju.Set[? <: DesignModel], ju.Set[? <: DecisionModel], IdentificationResult] =
+    (a: ju.Set[? <: DesignModel], b: ju.Set[? <: DecisionModel]) => {
+      val (iden, msgs) = func(a.asScala.toSet, b.asScala.toSet)
+      IdentificationResult(iden.asJava, msgs.asJava)
+    }
+
+  def adaptRevRuleToJava[T <: DesignModel](
+      func: (Set[DecisionModel], Set[DesignModel]) => Set[T]
+  ): ju.function.BiFunction[ju.Set[? <: DecisionModel], ju.Set[? <: DesignModel], ju.Set[DesignModel]] =
+    (a: ju.Set[? <: DecisionModel], b: ju.Set[? <: DesignModel]) => {
+      func(a.asScala.toSet, b.asScala.toSet).map(_.asInstanceOf[DesignModel]).asJava
+    }
 
   override def fromOpaqueDecision(opaque: OpaqueDecisionModel): ju.Optional[DecisionModel] = {
     opaque.category() match {
@@ -68,37 +83,38 @@ object ForSyDeIOScalaModule
   // .registerDriver(new ForSyDeAmaltheaDriver())
 
   override def identificationRules(): ju.Set[IdentificationRule] = Set(
-    MarkedIdentificationRule.DesignModelOnlyIdentificationRule(identSDFApplication),
-    MarkedIdentificationRule.DesignModelOnlyIdentificationRule(identTiledMultiCore),
-    identPartitionedCoresWithRuntimes,
-    MarkedIdentificationRule.DesignModelOnlyIdentificationRule(identPeriodicDependentWorkload),
-    MarkedIdentificationRule.DesignModelOnlyIdentificationRule(identSharedMemoryMultiCore),
-    identPeriodicWorkloadToPartitionedSharedMultiCoreWithUtilization,
-    // MarkedIdentificationRule.DesignModelOnlyIdentificationRule(identAperiodicDataflowFromSY),
-    MarkedIdentificationRule.DesignModelOnlyIdentificationRule(identRuntimesAndProcessors)
-    // MarkedIdentificationRule.DesignModelOnlyIdentificationRule(identInstrumentedComputationTimes)
+    IdentificationRule.OnlyDesignModels(adaptIRuleToJava(identSDFApplication)),
+    IdentificationRule.OnlyDesignModels(adaptIRuleToJava(identTiledMultiCore)),
+    IdentificationRule.Generic(adaptIRuleToJava(identPartitionedCoresWithRuntimes)),
+    IdentificationRule.OnlyDesignModels(adaptIRuleToJava(identPeriodicDependentWorkload)),
+    IdentificationRule.OnlyDesignModels(adaptIRuleToJava(identSharedMemoryMultiCore)),
+    IdentificationRule.Generic(adaptIRuleToJava(identPeriodicWorkloadToPartitionedSharedMultiCoreWithUtilization)),
+    // IdentificationRule.OnlyDesignModels(adaptIRuleToJava(identAperiodicDataflowFromSY)),
+    IdentificationRule.OnlyDesignModels(adaptIRuleToJava(identRuntimesAndProcessors)),
+    IdentificationRule.OnlyDesignModels(adaptIRuleToJava(identInstrumentedComputationTimes))
   ).asJava
 
   override def reverseIdentificationRules(): ju.Set[ReverseIdentificationRule] = Set(
-    integratePeriodicWorkloadToPartitionedSharedMultiCore,
-    integrateSDFToTiledMultiCore
+    ReverseIdentificationRule.Generic(adaptRevRuleToJava(integratePeriodicWorkloadToPartitionedSharedMultiCore)),
+    ReverseIdentificationRule.Generic(adaptRevRuleToJava(integrateSDFToTiledMultiCore))
   ).asJava
 
-  def main(args: Array[String]): Unit = standaloneIdentificationModule(args)
+  def main(args: Array[String]): Unit = standaloneModule(args)
 
   def fromOpaqueDesign(opaque: OpaqueDesignModel): ju.Optional[DesignModel] = {
     if (modelHandler.canLoadModel(opaque.format())) {
       return opaque
         .asString()
-        .flatMap(body -> {
+        .flatMap(body => {
           try {
             return ju.Optional.of(modelHandler.readModel(body, opaque.format()));
-          } catch (Exception e) {
-            e.printStackTrace();
-            return ju.Optional.empty();
+          } catch {
+            case e: Exception =>
+              e.printStackTrace();
+              return ju.Optional.empty();
           }
         })
-        .map(ForSyDeIODesignModel(_));
+        .map(x => ForSyDeDesignModel(x));
     } else {
       return ju.Optional.empty();
     }

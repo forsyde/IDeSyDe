@@ -2,7 +2,6 @@ package idesyde.forsydeio
 
 import scala.jdk.CollectionConverters._
 
-import idesyde.utils.Logger
 import idesyde.core.DesignModel
 import idesyde.core.DecisionModel
 import idesyde.forsydeio.ForSyDeDesignModel

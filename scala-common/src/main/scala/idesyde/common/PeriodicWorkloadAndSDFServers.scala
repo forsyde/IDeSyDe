@@ -14,9 +14,9 @@ final case class PeriodicWorkloadAndSDFServers(
     with InstrumentedWorkloadMixin
     derives ReadWriter {
 
-  override def asJsonString(): String = write(this)
+  override def asJsonString(): java.util.Optional[String] = try { java.util.Optional.of(write(this)) } catch { case _ => java.util.Optional.empty() }
 
-  override def asCBORBinary(): Array[Byte] = writeBinary(this)
+  override def asCBORBinary(): java.util.Optional[Array[Byte]] = try { java.util.Optional.of(writeBinary(this)) } catch { case _ => java.util.Optional.empty() }
 
   override def part(): ju.Set[String] =
     (workload.part().asScala ++ sdfApplications.part().asScala).asJava
@@ -25,5 +25,5 @@ final case class PeriodicWorkloadAndSDFServers(
   val processSizes: Vector[Long] = sdfApplications.actorSizes ++ workload.processSizes
 
   val messagesMaxSizes: Vector[Long] = workload.messagesMaxSizes ++ sdfApplications.messagesMaxSizes
-  def category(): String             = "PeriodicWorkloadAndSDFServers"
+  override def category(): String             = "PeriodicWorkloadAndSDFServers"
 }

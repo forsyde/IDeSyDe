@@ -10,17 +10,17 @@ import java.util.function.BiFunction;
  *
  */
 public interface ReverseIdentificationRule extends
-                BiFunction<Set<? extends DecisionModel>, Set<? extends DesignModel>, Set<DesignModel>> {
+                BiFunction<Set<? extends DecisionModel>, Set<? extends DesignModel>, Set<? extends DesignModel>> {
 
         /**
          * A simple wrapper for a function that satisfies the proper reverse
          * identification rule signature.
          */
-        record Generic(BiFunction<Set<? extends DecisionModel>, Set<? extends DesignModel>, Set<DesignModel>> func)
+        record Generic(BiFunction<Set<? extends DecisionModel>, Set<? extends DesignModel>, Set<? extends DesignModel>> func)
                         implements ReverseIdentificationRule {
 
                 @Override
-                public Set<DesignModel> apply(Set<? extends DecisionModel> t, Set<? extends DesignModel> u) {
+                public Set<? extends DesignModel> apply(Set<? extends DecisionModel> t, Set<? extends DesignModel> u) {
                         return func().apply(t, u);
                 }
 

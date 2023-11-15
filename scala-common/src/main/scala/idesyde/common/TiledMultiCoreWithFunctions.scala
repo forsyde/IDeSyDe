@@ -132,9 +132,9 @@ final case class TiledMultiCoreWithFunctions(
     groups.toSet
   }
 
-  override def asJsonString(): String = write(this)
+  override def asJsonString(): java.util.Optional[String] = try { java.util.Optional.of(write(this)) } catch { case _ => java.util.Optional.empty() }
 
-  override def asCBORBinary(): Array[Byte] = writeBinary(this)
+  override def asCBORBinary(): java.util.Optional[Array[Byte]] = try { java.util.Optional.of(writeBinary(this)) } catch { case _ => java.util.Optional.empty() }
 
-  def category(): String = "TiledMultiCoreWithFunctions"
+  override def category(): String = "TiledMultiCoreWithFunctions"
 }

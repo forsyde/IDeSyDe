@@ -20,9 +20,9 @@ final case class PeriodicWorkloadAndSDFServerToMultiCore(
     with WCETComputationMixin(tasksAndSDFs, platform.hardware)
     derives ReadWriter {
 
-  override def asJsonString(): String = write(this)
+  override def asJsonString(): java.util.Optional[String] = try { java.util.Optional.of(write(this)) } catch { case _ => java.util.Optional.empty() }
 
-  override def asCBORBinary(): Array[Byte] = writeBinary(this)
+  override def asCBORBinary(): java.util.Optional[Array[Byte]] = try { java.util.Optional.of(writeBinary(this)) } catch { case _ => java.util.Optional.empty() }
 
   override def part(): ju.Set[String] =
     (tasksAndSDFs
@@ -44,5 +44,5 @@ final case class PeriodicWorkloadAndSDFServerToMultiCore(
 
   val wcets = computeWcets
 
-  def category(): String = "PeriodicWorkloadAndSDFServerToMultiCore"
+  override def category(): String = "PeriodicWorkloadAndSDFServerToMultiCore"
 }

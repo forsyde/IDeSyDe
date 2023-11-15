@@ -22,6 +22,8 @@ import idesyde.core.IdentificationRule
 import idesyde.common.AnalysedSDFApplication
 import idesyde.core.OpaqueDecisionModel
 import java.{util => ju}
+import idesyde.core.IdentificationResult
+import java.util.function.BiFunction
 
 object CommonIdentificationModule
     extends StandaloneModule
@@ -30,31 +32,39 @@ object CommonIdentificationModule
     with WorkloadRules
     with ApplicationRules {
 
+  def adaptIRuleToJava[T <: DecisionModel](
+      func: (Set[DesignModel], Set[DecisionModel]) => (Set[T], Set[String])
+  ): BiFunction[ju.Set[? <: DesignModel], ju.Set[? <: DecisionModel], IdentificationResult] =
+    (a, b) => {
+      val (iden, msgs) = func(a.asScala.toSet, b.asScala.toSet)
+      IdentificationResult(iden.asJava, msgs.asJava)
+    }
+
   override def identificationRules(): ju.Set[IdentificationRule] = Set(
     IdentificationRule.OnlyCertainDecisionModels(
-      identSchedulableTiledMultiCore,
-      Set("PartitionedCoresWithRuntimes", "TiledMultiCoreWithFunctions")
+      adaptIRuleToJava(identSchedulableTiledMultiCore),
+      Set("PartitionedCoresWithRuntimes", "TiledMultiCoreWithFunctions").asJava
     ),
     IdentificationRule.OnlyCertainDecisionModels(
-      identPartitionedSharedMemoryMultiCore,
-      Set("PartitionedCoresWithRuntimes", "SharedMemoryMultiCore")
+      adaptIRuleToJava(identPartitionedSharedMemoryMultiCore),
+      Set("PartitionedCoresWithRuntimes", "SharedMemoryMultiCore").asJava
     ),
-    IdentificationRule.OnlyDecisionModels(identSDFToPartitionedSharedMemory),
-    IdentificationRule.OnlyDecisionModels(identSDFToTiledMultiCore),
+    IdentificationRule.OnlyDecisionModels(adaptIRuleToJava(identSDFToPartitionedSharedMemory)),
+    IdentificationRule.OnlyDecisionModels(adaptIRuleToJava(identSDFToTiledMultiCore)),
     IdentificationRule.OnlyCertainDecisionModels(
-      identAnalysedSDFApplication,
-      Set("SDFApplication", "SDFApplicationWithFunctions")
+      adaptIRuleToJava(identAnalysedSDFApplication),
+      Set("SDFApplication", "SDFApplicationWithFunctions").asJava
     ),
     IdentificationRule.OnlyDecisionModels(
-      identPeriodicWorkloadToPartitionedSharedMultiCore
+      adaptIRuleToJava(identPeriodicWorkloadToPartitionedSharedMultiCore)
     ),
-    IdentificationRule.OnlyDecisionModels(identTaksAndSDFServerToMultiCore),
-    IdentificationRule.OnlyDecisionModels(identTiledFromShared),
-    IdentificationRule.OnlyDecisionModels(identTaskdAndSDFServer),
-    IdentificationRule.OnlyDecisionModels(identCommonSDFApplication),
+    IdentificationRule.OnlyDecisionModels(adaptIRuleToJava(identTaksAndSDFServerToMultiCore)),
+    IdentificationRule.OnlyDecisionModels(adaptIRuleToJava(identTiledFromShared)),
+    IdentificationRule.OnlyDecisionModels(adaptIRuleToJava(identTaskdAndSDFServer)),
+    IdentificationRule.OnlyDecisionModels(adaptIRuleToJava(identCommonSDFApplication)),
     IdentificationRule.OnlyCertainDecisionModels(
-      identAggregatedCommunicatingAndTriggeredReactiveWorkload,
-      Set("CommunicatingAndTriggeredReactiveWorkload")
+      adaptIRuleToJava(identAggregatedCommunicatingAndTriggeredReactiveWorkload),
+      Set("CommunicatingAndTriggeredReactiveWorkload").asJava
     )
   ).asJava
 

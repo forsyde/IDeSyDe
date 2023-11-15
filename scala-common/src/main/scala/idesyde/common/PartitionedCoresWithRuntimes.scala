@@ -16,12 +16,12 @@ final case class PartitionedCoresWithRuntimes(
 ) extends DecisionModel
     derives ReadWriter {
 
-  override def asJsonString(): String = write(this)
+  override def asJsonString(): java.util.Optional[String] = try { java.util.Optional.of(write(this)) } catch { case _ => java.util.Optional.empty() }
 
-  override def asCBORBinary(): Array[Byte] = writeBinary(this)
+  override def asCBORBinary(): java.util.Optional[Array[Byte]] = try { java.util.Optional.of(writeBinary(this)) } catch { case _ => java.util.Optional.empty() }
   override def part(): ju.Set[String] =
     ((processors ++ schedulers).toSet ++ (processors.zip(schedulers).toSet).map(_.toString)).asJava
 
-  def category(): String = "PartitionedCoresWithRuntimes"
+  override def category(): String = "PartitionedCoresWithRuntimes"
 
 }

@@ -6,7 +6,6 @@ import scala.jdk.OptionConverters._
 
 import idesyde.core.DesignModel
 import idesyde.core.DecisionModel
-import idesyde.utils.Logger
 import idesyde.common.CommunicatingAndTriggeredReactiveWorkload
 import idesyde.forsydeio.ForSyDeIdentificationUtils
 import scala.collection.mutable.Buffer

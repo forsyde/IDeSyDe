@@ -68,6 +68,6 @@ public interface DecisionModel {
         }
     };
 
-    static final ObjectMapper objectMapper = new ObjectMapper().registerModule(new Jdk8Module());
-    static final ObjectMapper objectMapperCBOR = new ObjectMapper(new CBORFactory()).registerModule(new Jdk8Module());
+    static ObjectMapper objectMapper = new ObjectMapper().registerModule(new Jdk8Module());
+    static ObjectMapper objectMapperCBOR = new ObjectMapper(new CBORFactory()).registerModule(new Jdk8Module());
 }

@@ -1,5 +1,5 @@
 plugins {
-    id 'idesyde.java-standalone-emodule'
+    id 'idesyde.java-standalone-module'
 }
 
 

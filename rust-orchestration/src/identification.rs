@@ -1,27 +1,13 @@
-use std::{
-    collections::{HashSet, LinkedList},
-    hash::Hash,
-    io::BufRead,
-    io::BufReader,
-    net::{Ipv4Addr, TcpStream},
-    path::PathBuf,
-    process::{Child, Stdio},
-    sync::{Arc, Mutex},
-};
+use std::{collections::HashSet, net::TcpStream, sync::Arc};
 
-use derive_builder::Builder;
+use idesyde_core::{
+    DecisionModel, DesignModel, IdentificationIterator, Module, OpaqueDecisionModel,
+    OpaqueDesignModel,
+};
 use rayon::prelude::*;
 
-use idesyde_blueprints::IdentificationResultMessage;
-use idesyde_core::{
-    DecisionModel, DesignModel, IdentificationIterator, IdentificationResult, Module,
-    OpaqueDecisionModel, OpaqueDesignModel,
-};
 use log::{debug, warn};
 use tungstenite::WebSocket;
-use url::Url;
-
-use crate::HttpServerLike;
 
 // impl HttpServerLike for ExternalServerIdentificationModule {
 //     fn get_client(&self) -> Arc<reqwest::blocking::Client> {
@@ -44,7 +30,7 @@ pub struct ExternalServerIdentifiticationIterator {
     design_models_to_upload: HashSet<Arc<dyn DesignModel>>,
     websocket: WebSocket<TcpStream>,
     messages: Vec<String>,
-    waiting: bool,
+    done: bool,
 }
 
 impl ExternalServerIdentifiticationIterator {
@@ -60,7 +46,7 @@ impl ExternalServerIdentifiticationIterator {
             design_models_to_upload: design_models.to_owned(),
             websocket,
             messages: vec![],
-            waiting: false,
+            done: false,
         }
     }
 }
@@ -71,50 +57,81 @@ impl Iterator for ExternalServerIdentifiticationIterator {
     fn next(&mut self) -> Option<Self::Item> {
         // send the decision models
         for m in &self.decision_models_to_upload {
-            if let Ok(decision_cbor) = OpaqueDecisionModel::from(m).to_cbor() {
-                self.websocket
-                    .send(tungstenite::Message::Binary(decision_cbor));
+            if let Ok(decision_cbor) = OpaqueDecisionModel::from(m).to_json() {
+                if let Err(e) = self
+                    .websocket
+                    .send(tungstenite::Message::text(decision_cbor))
+                {
+                    debug!("Decision CBOR upload error {}", e.to_string());
+                } else {
+                    debug!("Sent ok ");
+                }
+            } else {
+                debug!("Encode problem ");
             }
         }
         self.decision_models
             .extend(self.decision_models_to_upload.drain());
         // same for design models
         for m in &self.design_models_to_upload {
-            if let Ok(design_cbor) = OpaqueDesignModel::from(m.as_ref()).to_cbor() {
-                self.websocket
-                    .send(tungstenite::Message::Binary(design_cbor));
+            if let Ok(design_cbor) = OpaqueDesignModel::from(m.as_ref()).to_json() {
+                if let Err(e) = self.websocket.send(tungstenite::Message::text(design_cbor)) {
+                    debug!("Design CBOR upload error {}", e.to_string());
+                };
             };
         }
         self.design_models
             .extend(self.design_models_to_upload.drain());
-        self.websocket
-            .send(tungstenite::Message::Text("done".to_string()));
-        while let Ok(message) = self.websocket.read() {
-            match message {
-                tungstenite::Message::Text(decision_json) => {
-                    if let Ok(opaque) = OpaqueDecisionModel::from_json_str(decision_json.as_str()) {
-                        let opaquea = Arc::new(opaque);
-                        self.decision_models.insert(opaquea.to_owned());
-                        return Some(opaquea);
+        if let Err(e) = self
+            .websocket
+            .send(tungstenite::Message::Text("done".to_string()))
+        {
+            debug!("Failed to send 'done': {}", e.to_string());
+        };
+        if self.done {
+            None
+        } else {
+            while let Ok(message) = self.websocket.read() {
+                // besides the answer, also read the module's messages
+                match message {
+                    tungstenite::Message::Text(txt_msg) => {
+                        if txt_msg.eq_ignore_ascii_case("done") {
+                            self.done = true;
+                            return None;
+                        } else if let Ok(opaque) =
+                            OpaqueDecisionModel::from_json_str(txt_msg.as_str())
+                        {
+                            let opaquea = Arc::new(opaque);
+                            self.decision_models.insert(opaquea.to_owned());
+                            return Some(opaquea);
+                        } else {
+                            // debug!("Message: {}", txt_msg.as_str());
+                            self.messages.push(txt_msg);
+                        }
                     }
-                }
-                tungstenite::Message::Binary(decision_cbor) => {
-                    if let Ok(opaque) = OpaqueDecisionModel::from_cbor(decision_cbor.as_slice()) {
-                        let opaquea = Arc::new(opaque);
-                        self.decision_models.insert(opaquea.to_owned());
-                        return Some(opaquea);
+                    tungstenite::Message::Binary(decision_cbor) => {
+                        if let Ok(opaque) = OpaqueDecisionModel::from_cbor(decision_cbor.as_slice())
+                        {
+                            let opaquea = Arc::new(opaque);
+                            self.decision_models.insert(opaquea.to_owned());
+                            return Some(opaquea);
+                        }
                     }
+                    tungstenite::Message::Ping(_) => {
+                        if let Err(_) = self.websocket.send(tungstenite::Message::Pong(vec![])) {
+                            debug!("Failed to send ping message to other end. Trying to proceed anyway.");
+                        };
+                    }
+                    tungstenite::Message::Pong(_) => {
+                        if let Err(_) = self.websocket.send(tungstenite::Message::Ping(vec![])) {
+                            debug!("Failed to send pong message to other end. Trying to proceed anyway.");
+                        };
+                    }
+                    _ => (),
                 }
-                tungstenite::Message::Ping(_) => {
-                    self.websocket.send(tungstenite::Message::Pong(vec![]));
-                }
-                tungstenite::Message::Pong(_) => {
-                    self.websocket.send(tungstenite::Message::Ping(vec![]));
-                }
-                _ => (),
             }
+            None
         }
-        None
         // first, try to see if no element is in the queue to be returned
         // if self.waiting {
         //     if let Ok(identified_url) = self.imodule.url.join("/identified") {
@@ -284,11 +301,10 @@ pub fn identification_procedure(
         // }
         // the step condition forces the procedure to go at least one more, fundamental for incrementability
         fix_point = true;
-        let before = identified.len();
+        // let before = identified.len();
         let identified_step: HashSet<Arc<dyn DecisionModel>> = iterators
             .iter_mut()
-            .map(|iter| iter.next_with_models(&identified, design_models))
-            .flatten()
+            .flat_map(|iter| iter.next_with_models(&identified, design_models))
             .collect();
         // .reduce(
         //     || (vec![], HashSet::new()),
@@ -301,6 +317,7 @@ pub fn identification_procedure(
         for m in identified_step {
             if !identified.contains(&m) {
                 identified.insert(m);
+                fix_point = false;
             }
         }
         let ident_messages: HashSet<(String, String)> = iterators
@@ -323,7 +340,7 @@ pub fn identification_procedure(
             identified.len(),
             step
         );
-        fix_point = fix_point && (identified.len() == before);
+        // fix_point = fix_point && (identified.len() == before);
         step += 1;
     }
     (identified, messages)

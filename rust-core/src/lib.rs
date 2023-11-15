@@ -586,7 +586,6 @@ pub struct OpaqueDecisionModel {
     pub category: String,
     pub part: HashSet<String>,
     pub body_json: Option<String>,
-    pub body_protobuf: Option<Vec<u8>>,
     pub body_msgpack: Option<Vec<u8>>,
     pub body_cbor: Option<Vec<u8>>,
 }
@@ -651,7 +650,6 @@ impl<T: DecisionModel + ?Sized> From<&T> for OpaqueDecisionModel {
             body_json: value.body_as_json(),
             body_msgpack: value.body_as_msgpack(),
             body_cbor: value.body_as_cbor(),
-            body_protobuf: value.body_as_protobuf(),
         }
     }
 }
@@ -673,7 +671,6 @@ impl<T: DecisionModel + ?Sized> From<Arc<T>> for OpaqueDecisionModel {
             body_json: value.body_as_json(),
             body_msgpack: value.body_as_msgpack(),
             body_cbor: value.body_as_cbor(),
-            body_protobuf: value.body_as_protobuf(),
         }
     }
 }

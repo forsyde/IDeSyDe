@@ -1,5 +1,5 @@
 plugins {
-    id 'idesyde.java-standalone-imodule'
+    id 'idesyde.java-standalone-module'
 }
 
 def forsydeioVersion = "develop-SNAPSHOT"
@@ -22,5 +22,5 @@ test {
     useJUnitPlatform()
 }
 
-mainClassName = "idesyde.forsydeio.ForSyDeIOIdentificationModule"
+mainClassName = "idesyde.forsydeio.ForSyDeIOModule"
 

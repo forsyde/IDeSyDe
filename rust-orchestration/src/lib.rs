@@ -350,8 +350,11 @@ impl Module for ExternalServerModule {
             .set_scheme("ws")
             .expect("Failed to set scheme to 'ws'.");
         if let Ok(identify_url) = mut_url.join("/identify") {
-            if let Some((ws, _)) = std::net::TcpStream::connect(mut_url.as_str())
+            if let Some((ws, _)) = mut_url
+                .socket_addrs(|| None)
                 .ok()
+                .and_then(|addrs| addrs.first().cloned())
+                .and_then(|addr| std::net::TcpStream::connect(addr).ok())
                 .and_then(|stream| tungstenite::client(identify_url, stream).ok())
             {
                 return Box::new(ExternalServerIdentifiticationIterator::new(

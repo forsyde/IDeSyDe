@@ -15,19 +15,18 @@ public class ForSyDeIOModule implements StandaloneModule {
 
     @Override
     public Optional<DesignModel> fromOpaqueDesign(OpaqueDesignModel opaque) {
-        return opaque.bodyAsString().flatMap(body -> {
-            if (modelHandler.canLoadModel(opaque.format())) {
+        if (modelHandler.canLoadModel(opaque.format())) {
+            return opaque.bodyAsString().flatMap(body -> {
                 try {
                     return Optional.of(modelHandler.readModel(body, opaque.format()));
                 } catch (Exception e) {
                     e.printStackTrace();
                     return Optional.empty();
                 }
-            } else {
-                return Optional.empty();
-            }
-        })
-                .map(ForSyDeIODesignModel::new);
+            }).map(ForSyDeIODesignModel::new);
+        } else {
+            return Optional.empty();
+        }
         // var pathOpt = opaque.format().modelPaths().stream().map(x -> Paths.get(x))
         // .filter(x -> modelHandler.canLoadModel(x)).findAny();
         // var extIdxOpt = pathOpt.map(x -> x.getFileName().toString().indexOf("."));
@@ -47,15 +46,18 @@ public class ForSyDeIOModule implements StandaloneModule {
     public Optional<DecisionModel> fromOpaqueDecision(OpaqueDecisionModel message) {
         return switch (message.category()) {
             case "AperiodicAsynchronousDataflowToPartitionedMemoryMappableMulticore" ->
-                    message.bodyAsCBORBinary().flatMap(b -> readFromCBORBytes(b,
-                                    AperiodicAsynchronousDataflowToPartitionedMemoryMappableMulticore.class))
-                            .or(() -> message.bodyAsJsonString().flatMap(s -> readFromString(s, AperiodicAsynchronousDataflowToPartitionedMemoryMappableMulticore.class)))
-                            .map(m -> (DecisionModel) m);
+                message.bodyAsCBORBinary().flatMap(b -> readFromCBORBytes(b,
+                        AperiodicAsynchronousDataflowToPartitionedMemoryMappableMulticore.class))
+                        .or(() -> message.bodyAsJsonString()
+                                .flatMap(s -> readFromString(s,
+                                        AperiodicAsynchronousDataflowToPartitionedMemoryMappableMulticore.class)))
+                        .map(m -> (DecisionModel) m);
             case "AperiodicAsynchronousDataflowToPartitionedTiledMulticore" ->
-                    message.bodyAsCBORBinary().flatMap(b -> readFromCBORBytes(b,
-                                    AperiodicAsynchronousDataflowToPartitionedTiledMulticore.class)).or(() ->
-                                    message.bodyAsJsonString().flatMap(s -> readFromString(s, AperiodicAsynchronousDataflowToPartitionedTiledMulticore.class)))
-                            .map(m -> (DecisionModel) m);
+                message.bodyAsCBORBinary().flatMap(b -> readFromCBORBytes(b,
+                        AperiodicAsynchronousDataflowToPartitionedTiledMulticore.class))
+                        .or(() -> message.bodyAsJsonString().flatMap(
+                                s -> readFromString(s, AperiodicAsynchronousDataflowToPartitionedTiledMulticore.class)))
+                        .map(m -> (DecisionModel) m);
             default -> Optional.empty();
         };
     }

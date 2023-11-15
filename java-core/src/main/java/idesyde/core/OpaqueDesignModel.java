@@ -1,12 +1,13 @@
 package idesyde.core;
 
+import com.fasterxml.jackson.annotation.JsonInclude;
+import com.fasterxml.jackson.core.JsonProcessingException;
+import com.fasterxml.jackson.databind.annotation.JsonSerialize;
+
 import java.io.IOException;
+import java.util.HashSet;
 import java.util.Optional;
 import java.util.Set;
-
-import com.fasterxml.jackson.core.JsonProcessingException;
-
-import idesyde.core.headers.DesignModelHeader;
 
 /**
  * An opaque model to exchange fundamental data about a design model between
@@ -33,26 +34,26 @@ import idesyde.core.headers.DesignModelHeader;
  * Exhibition (DATE), 2021, pp. 1204-1207, doi: 10.23919/DATE51398.2021.9474082.
  * </p>
  */
+@JsonSerialize
+@JsonInclude(JsonInclude.Include.NON_ABSENT)
 public record OpaqueDesignModel(
         String category,
         Set<String> elements,
         String format,
-        Optional<String> body) implements DesignModel {
+        String body
+) implements DesignModel {
 
-    public String category() {
-        return this.category;
+    public OpaqueDesignModel(String category) {
+        this(category, new HashSet<>(), "", null);
     }
 
-    public Set<String> elements() {
-        return this.elements;
+    public OpaqueDesignModel(String category, Set<String> elements, String format) {
+        this(category, elements, format, null);
     }
 
-    public String format() {
-        return this.format;
-    }
-
-    public Optional<String> body() {
-        return this.body;
+    @Override
+    public Optional<String> bodyAsString() {
+        return Optional.ofNullable(body);
     }
 
     public Optional<String> toJsonString() {
@@ -72,7 +73,8 @@ public record OpaqueDesignModel(
     }
 
     public static OpaqueDesignModel from(DesignModel m) {
-        return new OpaqueDesignModel(m.category(), m.elements(), m.format(), m.bodyAsString());
+        return m.bodyAsString().map(body -> new OpaqueDesignModel(m.category(), m.elements(), m.format(), body))
+                .orElse(new OpaqueDesignModel(m.category(), m.elements(), m.format()));
     }
 
     public static Optional<OpaqueDesignModel> fromJsonString(String s) {
@@ -92,5 +94,6 @@ public record OpaqueDesignModel(
             return Optional.empty();
         }
     }
+
 
 }

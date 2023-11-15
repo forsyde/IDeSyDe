@@ -61,6 +61,7 @@ pub fn make_common_module() -> StandaloneModule {
             PartitionedMemoryMappableMulticore,
             AperiodicAsynchronousDataflowToPartitionedMemoryMappableMulticore
         ])
+        .explorers(HashSet::new())
         .build()
         .expect("Failed to build common standalone identification module. Should never happen.")
 }

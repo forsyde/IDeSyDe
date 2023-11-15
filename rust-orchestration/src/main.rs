@@ -3,8 +3,8 @@ use std::{cmp::Ordering, collections::HashSet, net::IpAddr, path::Path, sync::Ar
 use clap::Parser;
 use env_logger::WriteStyle;
 use idesyde_core::{
-    explore_cooperatively, headers::ExplorationBid, DecisionModel, DesignModel,
-    ExplorationSolution, Explorer, OpaqueDesignModel,
+    explore_cooperatively, DecisionModel, DesignModel, ExplorationBid, ExplorationSolution,
+    Explorer, OpaqueDesignModel,
 };
 use idesyde_orchestration::{identification::identification_procedure, ExternalServerModule};
 use log::{debug, error, info, warn, Level};
@@ -156,12 +156,9 @@ fn main() {
         let run_path = Path::new(run_path_str);
         let output_path = Path::new(output_path_str);
         let inputs_path = &run_path.join("inputs");
-        let imodules_path = &std::env::current_dir()
+        let modules_path = &std::env::current_dir()
             .expect("Failed to get working directory.")
-            .join("imodules");
-        let emodules_path = &std::env::current_dir()
-            .expect("Failed to get working directory.")
-            .join("emodules");
+            .join("modules");
         let identified_path = run_path.join("identified");
         let explored_path = &run_path.join("explored");
         let reverse_path = &run_path.join("reversed");
@@ -170,10 +167,8 @@ fn main() {
             .expect("Failed to create run path directory during identification.");
         std::fs::create_dir_all(inputs_path)
             .expect("Failed to create input directory during identification.");
-        std::fs::create_dir_all(imodules_path)
+        std::fs::create_dir_all(modules_path)
             .expect("Failed to create imodules directory during identification.");
-        std::fs::create_dir_all(emodules_path)
-            .expect("Failed to create emodules directory during identification.");
         std::fs::create_dir_all(&identified_path)
             .expect("Failed to create identified directory during identification.");
         std::fs::create_dir_all(&explored_path)
@@ -252,7 +247,7 @@ fn main() {
         // let mut imodules: Vec<Arc<dyn IdentificationModule>> = Vec::new();
         // let mut emodules: Vec<Arc<dyn ExplorationModule>> = Vec::new();
         let mut modules = idesyde_orchestration::find_modules(
-            imodules_path,
+            modules_path,
             &identified_path,
             &inputs_path,
             &explored_path,

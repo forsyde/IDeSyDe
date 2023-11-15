@@ -6,8 +6,10 @@ import java.util.List;
 import java.util.Optional;
 import java.util.Set;
 
+import com.fasterxml.jackson.annotation.JsonInclude;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.fasterxml.jackson.core.JsonProcessingException;
+import com.fasterxml.jackson.databind.annotation.JsonSerialize;
 
 /**
  * An opaque model to exchange fundamental data about a decision model between
@@ -34,21 +36,14 @@ import com.fasterxml.jackson.core.JsonProcessingException;
  * Exhibition (DATE), 2021, pp. 1204-1207, doi: 10.23919/DATE51398.2021.9474082.
  * </p>
  */
+@JsonSerialize
+@JsonInclude(JsonInclude.Include.NON_ABSENT)
 public record OpaqueDecisionModel(
         String category,
         Set<String> part,
         @JsonProperty("body_json") Optional<String> bodyJson,
         @JsonProperty("body_msgpack") Optional<byte[]> bodyMsgPack,
-        @JsonProperty("body_cbor") Optional<byte[]> bodyCBOR,
-        @JsonProperty("body_protobuf") Optional<byte[]> bodyProtobuf) implements DecisionModel {
-
-    public String category() {
-        return this.category;
-    }
-
-    public Set<String> part() {
-        return this.part;
-    }
+        @JsonProperty("body_cbor") Optional<byte[]> bodyCBOR) implements DecisionModel {
 
     public Optional<String> bodyAsJsonString() {
         return bodyJson;
@@ -94,7 +89,7 @@ public record OpaqueDecisionModel(
 
     public static OpaqueDecisionModel from(DecisionModel m) {
         return new OpaqueDecisionModel(m.category(), m.part(), m.bodyAsJsonString(), Optional.empty(),
-                m.bodyAsCBORBinary(), Optional.empty());
+                m.bodyAsCBORBinary());
     }
 
     public static Optional<OpaqueDecisionModel> fromJsonString(String s) {

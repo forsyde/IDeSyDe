@@ -13,6 +13,7 @@ use idesyde_core::{
     IdentificationResult, MarkedIdentificationRule, Module, OpaqueDecisionModel,
     ReverseIdentificationRule,
 };
+use log::debug;
 use serde::{Deserialize, Serialize};
 
 use rayon::prelude::*;
@@ -268,7 +269,6 @@ impl From<&ExplorationSolutionMessage> for OpaqueDecisionModel {
             body_cbor: value.solved.body_cbor.to_owned(),
             category: value.solved.category.to_owned(),
             part: value.solved.part.to_owned(),
-            body_protobuf: value.solved.body_protobuf.to_owned(),
         }
     }
 }
@@ -292,12 +292,19 @@ impl From<&ExplorationSolutionMessage> for OpaqueDecisionModel {
 #[derive(Clone, Builder, PartialEq, Eq)]
 pub struct StandaloneModule {
     unique_identifier: String,
+    #[builder(default = "HashSet::new()")]
     explorers: HashSet<Arc<dyn Explorer>>,
+    #[builder(default = "vec![]")]
     identification_rules: Vec<MarkedIdentificationRule>,
+    #[builder(default = "vec![]")]
     reverse_identification_rules: Vec<ReverseIdentificationRule>,
+    #[builder(default = "|_| { None }")]
     read_design_model: fn(path: &Path) -> Option<Arc<dyn DesignModel>>,
+    #[builder(default = "|_, _| { vec![] }")]
     write_design_model: fn(design_model: &Arc<dyn DesignModel>, dest: &Path) -> Vec<PathBuf>,
+    #[builder(default = "|_| { None }")]
     opaque_to_model: fn(header: &OpaqueDecisionModel) -> Option<Arc<dyn DecisionModel>>,
+    #[builder(default = "HashSet::new()")]
     pub decision_model_json_schemas: HashSet<String>,
 }
 
@@ -370,10 +377,12 @@ impl StandaloneModule {
 /// A simple iterator for performing identification in-process.
 #[derive(Builder, PartialEq, Eq, Clone)]
 struct DefaultIdentificationIterator {
+    #[builder(default = "HashSet::new()")]
     design_models: HashSet<Arc<dyn DesignModel>>,
+    #[builder(default = "HashSet::new()")]
     decision_models: HashSet<Arc<dyn DecisionModel>>,
-    identified: LinkedList<Arc<dyn DecisionModel>>,
     imodule: Arc<StandaloneModule>,
+    #[builder(default = "vec![]")]
     messages: Vec<String>,
 }
 
@@ -381,102 +390,92 @@ impl Iterator for DefaultIdentificationIterator {
     type Item = Arc<dyn DecisionModel>;
 
     fn next(&mut self) -> Option<Self::Item> {
-        // first, try to see if no element is in the queue to be returned
-        if !self.identified.is_empty() {
-            return self.identified.pop_front();
-        } else {
-            // otehrwise, we proceed to ask for more decision models
-            let mut refined_decision_models = HashSet::new();
-            let mut opaque_to_delete = HashSet::new();
-            for m in &self.decision_models {
-                if let Some(opaque) = m.downcast_ref::<OpaqueDecisionModel>() {
-                    if let Some(recovered) = self.imodule.opaque_to_model(opaque) {
-                        refined_decision_models.insert(recovered);
-                        opaque_to_delete.insert(opaque);
-                    }
+        let mut refined_decision_models = HashSet::new();
+        let mut opaque_to_delete = HashSet::new();
+        for m in &self.decision_models {
+            if let Some(opaque) = m.downcast_ref::<OpaqueDecisionModel>() {
+                if let Some(recovered) = self.imodule.opaque_to_model(opaque) {
+                    refined_decision_models.insert(recovered);
+                    opaque_to_delete.insert(opaque);
                 }
             }
-            let pairs: Vec<(Arc<dyn DecisionModel>, OpaqueDecisionModel)> = self
-                .decision_models
-                .par_iter()
-                .flat_map(|m| {
-                    m.downcast_ref::<OpaqueDecisionModel>().and_then(|opaque| {
-                        self.imodule
-                            .opaque_to_model(opaque)
-                            .map(|m| (m, opaque.to_owned()))
-                    })
+        }
+        let pairs: Vec<(Arc<dyn DecisionModel>, OpaqueDecisionModel)> = self
+            .decision_models
+            .par_iter()
+            .flat_map(|m| {
+                m.downcast_ref::<OpaqueDecisionModel>().and_then(|opaque| {
+                    self.imodule
+                        .opaque_to_model(opaque)
+                        .map(|m| (m, opaque.to_owned()))
                 })
-                .collect();
-            for (non_opaque, opaque) in pairs {
-                let arc_opaque: Arc<dyn DecisionModel> = Arc::new(opaque); // maybe figure out a way to avoid this later
-                self.decision_models.insert(non_opaque);
-                self.decision_models.remove(&arc_opaque);
-            }
-            // now proceed to identification
-            let (tx_model, rx_model) = std::sync::mpsc::channel::<Arc<dyn DecisionModel>>();
-            let (tx_msg, rx_msg) = std::sync::mpsc::channel::<String>();
-            self.imodule
-                .identification_rules
-                .par_iter()
-                .for_each(|irule| {
-                    let f_opt = match irule {
-                        MarkedIdentificationRule::DesignModelOnlyIdentificationRule(f) => {
-                            if !self.design_models.is_empty() {
-                                Some(f)
-                            } else {
-                                None
-                            }
-                        }
-                        MarkedIdentificationRule::DecisionModelOnlyIdentificationRule(f) => {
-                            if !self.decision_models.is_empty() {
-                                Some(f)
-                            } else {
-                                None
-                            }
-                        }
-                        MarkedIdentificationRule::GenericIdentificationRule(f) => Some(f),
-                        MarkedIdentificationRule::SpecificDecisionModelIdentificationRule(
-                            ms,
-                            f,
-                        ) => {
-                            if ms
-                                .iter()
-                                .all(|x| self.decision_models.iter().any(|y| x == &y.category()))
-                            {
-                                Some(f)
-                            } else {
-                                None
-                            }
-                        }
-                    };
-                    if let Some(f) = f_opt {
-                        let (models, msgs) = f(&self.design_models, &self.decision_models);
-                        for m in models {
-                            tx_model.send(m);
-                        }
-                        for msg in msgs {
-                            tx_msg.send(msg);
+            })
+            .collect();
+        for (non_opaque, opaque) in pairs {
+            let arc_opaque: Arc<dyn DecisionModel> = Arc::new(opaque); // maybe figure out a way to avoid this later
+            self.decision_models.insert(non_opaque);
+            self.decision_models.remove(&arc_opaque);
+        }
+        // now proceed to identification
+        // let (tx_model, rx_model) = std::sync::mpsc::channel::<Arc<dyn DecisionModel>>();
+        let (tx_msg, rx_msg) = std::sync::mpsc::channel::<String>();
+        let first_new = self
+            .imodule
+            .identification_rules
+            .par_iter()
+            .flat_map_iter(|irule| {
+                let f_opt = match irule {
+                    MarkedIdentificationRule::DesignModelOnlyIdentificationRule(f) => {
+                        if !self.design_models.is_empty() {
+                            Some(f)
+                        } else {
+                            None
                         }
                     }
-                });
-            self.messages.extend(rx_msg.into_iter());
-            let mut new_added = false;
-            for m in rx_model {
-                let refined = m
+                    MarkedIdentificationRule::DecisionModelOnlyIdentificationRule(f) => {
+                        if !self.decision_models.is_empty() {
+                            Some(f)
+                        } else {
+                            None
+                        }
+                    }
+                    MarkedIdentificationRule::GenericIdentificationRule(f) => Some(f),
+                    MarkedIdentificationRule::SpecificDecisionModelIdentificationRule(ms, f) => {
+                        if ms
+                            .iter()
+                            .all(|x| self.decision_models.iter().any(|y| x == &y.category()))
+                        {
+                            Some(f)
+                        } else {
+                            None
+                        }
+                    }
+                };
+                if let Some(f) = f_opt {
+                    let (models, msgs) = f(&self.design_models, &self.decision_models);
+                    // for m in models {
+                    //     tx_model.send(m);
+                    // }
+                    for msg in msgs {
+                        tx_msg.send(msg);
+                    }
+                    models
+                } else {
+                    Box::new(std::iter::empty())
+                }
+            })
+            .flat_map(|model| {
+                model
                     .downcast_ref::<OpaqueDecisionModel>()
                     .and_then(|opaque| self.imodule.opaque_to_model(opaque))
-                    .unwrap_or(m);
-                if !self.decision_models.contains(&refined) {
-                    new_added = true;
-                    self.decision_models.insert(refined.to_owned());
-                    self.identified.push_back(refined);
-                }
-            }
-            if new_added {
-                return self.next();
-            } else {
-                return None;
-            }
+            })
+            .find_any(|model| !self.decision_models.contains(model));
+        self.messages.extend(rx_msg.try_iter());
+        if let Some(m) = first_new {
+            self.decision_models.insert(m.to_owned());
+            Some(m)
+        } else {
+            None
         }
     }
 }

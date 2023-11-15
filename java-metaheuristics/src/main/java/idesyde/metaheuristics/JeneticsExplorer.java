@@ -23,7 +23,7 @@ public class JeneticsExplorer implements Explorer, CanExploreAADPMMMWithJenetics
     private Map<AperiodicAsynchronousDataflowToPartitionedMemoryMappableMulticore, List<Set<AperiodicAsynchronousDataflow.Job>>> _memoizedFollows = new HashMap<>();
 
     @Override
-    public ExplorationBidding bid(DecisionModel decisionModel) {
+    public ExplorationBidding bid(Set<Explorer> explorers, DecisionModel decisionModel) {
         if (decisionModel instanceof AperiodicAsynchronousDataflowToPartitionedMemoryMappableMulticore aperiodicAsynchronousDataflowToPartitionedMemoryMappableMulticore) {
             var objs = new HashSet<String>();
             objs.add("nUsedPEs");
@@ -49,7 +49,7 @@ public class JeneticsExplorer implements Explorer, CanExploreAADPMMMWithJenetics
             }
             return new ExplorationBidding(uniqueIdentifier(), true, false, 1.3, objs, Map.of());
         }
-        return Explorer.super.bid(decisionModel);
+        return Explorer.super.bid(explorers, decisionModel);
     }
 
     @Override

@@ -2,7 +2,6 @@ package idesyde.forsydeio
 
 import upickle.default._
 
-import idesyde.blueprints.StandaloneIdentificationModule
 import idesyde.core.MarkedIdentificationRule
 import idesyde.forsydeio.MixedRules
 import idesyde.forsydeio.SDFRules
@@ -29,7 +28,7 @@ import java.io.StringReader
 import idesyde.common.AperiodicAsynchronousDataflow
 
 object ForSyDeIdentificationModule
-    extends StandaloneIdentificationModule
+    extends StandaloneModule
     with MixedRules
     with SDFRules
     with PlatformRules

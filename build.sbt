@@ -22,7 +22,7 @@ lazy val scoptVersion                  = "4.1.0"
 lazy val scalaJsonSchemaVersion        = "0.7.8"
 lazy val javalinVersion                = "5.6.1"
 lazy val slf4jVersion                  = "2.0.7"
-lazy val IDeSyDeJavaVersion            = "develop-SNAPSHOT"
+lazy val IDeSyDeJavaVersion            = "session-based-SNAPSHOT"
 
 lazy val imodulesTarget = file("imodules")
 lazy val emodulesTarget = file("emodules")
@@ -54,7 +54,7 @@ lazy val root = project
     ),
     paradoxRoots := List("index.html")
   )
-  .aggregate(common, choco, forsyde, matlab, devicetree, blueprints)
+  .aggregate(common, choco, forsyde, matlab, devicetree)
 
 // lazy val java_core = (project in file("java-core")).settings(
 //   // name := "idesyde-scala-core",
@@ -123,7 +123,7 @@ lazy val common = (project in file("scala-common"))
 lazy val forsyde = (project in file("scala-bridge-forsyde-io"))
   // .dependsOn(core)
   .dependsOn(common)
-  .dependsOn(blueprints)
+  // .dependsOn(blueprints)
   .enablePlugins(UniversalPlugin, JavaAppPackaging, JlinkPlugin)
   .enablePlugins(JDKPackagerPlugin)
   // .enablePlugins(GraalVMNativeImagePlugin)
@@ -197,10 +197,10 @@ lazy val forsyde = (project in file("scala-bridge-forsyde-io"))
 //   )
 
 lazy val choco = (project in file("scala-choco"))
-  .dependsOn(core)
+  // .dependsOn(core)
   .dependsOn(common)
   .dependsOn(forsyde)
-  .dependsOn(blueprints)
+  // .dependsOn(blueprints)
   .enablePlugins(UniversalPlugin, JavaAppPackaging, JlinkPlugin)
   .enablePlugins(JDKPackagerPlugin)
   // .enablePlugins(GraalVMNativeImagePlugin)
@@ -253,9 +253,9 @@ lazy val choco = (project in file("scala-choco"))
   )
 
 lazy val matlab = (project in file("scala-bridge-matlab"))
-  .dependsOn(core)
+  // .dependsOn(core)
   .dependsOn(common)
-  .dependsOn(blueprints)
+  // .dependsOn(blueprints)
   .settings(
     // name := "idesyde-scala-bridge-matlab",
     libraryDependencies ++= Seq(
@@ -279,9 +279,9 @@ lazy val matlab = (project in file("scala-bridge-matlab"))
   )
 
 lazy val devicetree = (project in file("scala-bridge-device-tree"))
-  .dependsOn(core)
+  // .dependsOn(core)
   .dependsOn(common)
-  .dependsOn(blueprints)
+  // .dependsOn(blueprints)
   .enablePlugins(UniversalPlugin, JavaAppPackaging, JlinkPlugin)
   .enablePlugins(JDKPackagerPlugin)
   .settings(

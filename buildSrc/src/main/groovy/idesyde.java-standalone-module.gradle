@@ -3,6 +3,7 @@ plugins {
     id 'application'
     id 'com.github.johnrengelman.shadow'
     id 'org.graalvm.buildtools.native'
+    id 'publishing'
 //  id 'org.jetbrains.kotlin.jvm' version '1.8.20'
 //  id 'org.jetbrains.kotlin.plugin.serialization' version '1.8.20'
 //  id 'org.beryx.jlink'
@@ -28,4 +29,40 @@ task publishModules(type: Copy) {
     dependsOn tasks.shadowJar
     from tasks.shadowJar.outputs
     into "${rootProject.projectDir}/modules"
+}
+
+publishing {
+    publications {
+        mavenJava(MavenPublication) {
+            artifactId = archivesBaseName
+            from components.java
+            pom {
+                name = "IDeSyDe " + project.niceName
+                description = "IDeSyDe " + project.niceName + " Module"
+                url = 'https://github.com/forsyde/IDeSyDe'
+                packaging = 'jar'
+                scm {
+                    connection = 'scm:git:https://github.com/forsyde/IDeSyDe.git'
+                    developerConnection = 'scm:git:git@github.com:forsyde/IDeSyDe.git'
+                    url = 'https://github.com/forsyde/IDeSyDe'
+                }
+                licenses {
+                    license {
+                        name = 'The MIT License'
+                        url = 'https://choosealicense.com/licenses/mit/'
+                    }
+                }
+                developers {
+                    developer {
+                        id = 'Jordao'
+                        name = 'Rodolfo Jordao'
+                        email = 'jordao@kth.se'
+                    }
+                }
+            }
+        }
+    }
+    repositories {
+
+    }
 }

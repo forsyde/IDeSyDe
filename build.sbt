@@ -108,7 +108,7 @@ lazy val common = (project in file("scala-common"))
       ("org.scala-graph" %% "graph-core" % scalaGraphVersion).cross(CrossVersion.for3Use2_13),
       "org.typelevel"   %%% "spire"      % spireVersion
     ),
-    mainClass := Some("idesyde.common.CommonIdentificationModule"),
+    mainClass := Some("idesyde.common.CommonModule"),
     moduleSettings,
     licenses := Seq(
       "MIT"  -> url("https://opensource.org/license/mit/"),

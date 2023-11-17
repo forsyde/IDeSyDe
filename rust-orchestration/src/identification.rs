@@ -101,9 +101,11 @@ impl Iterator for ExternalServerIdentifiticationIterator {
                         return None;
                     } else if let Ok(opaque) = OpaqueDecisionModel::from_json_str(txt_msg.as_str())
                     {
-                        let opaquea = Arc::new(opaque);
-                        self.decision_models.insert(opaquea.to_owned());
-                        return Some(opaquea);
+                        let opaquea = Arc::new(opaque) as Arc<dyn DecisionModel>;
+                        if !self.decision_models.contains(&opaquea) {
+                            self.decision_models.insert(opaquea.to_owned());
+                            return Some(opaquea);
+                        }
                     } else {
                         // debug!("Message: {}", txt_msg.as_str());
                         self.messages.push(txt_msg);
@@ -111,9 +113,11 @@ impl Iterator for ExternalServerIdentifiticationIterator {
                 }
                 tungstenite::Message::Binary(decision_cbor) => {
                     if let Ok(opaque) = OpaqueDecisionModel::from_cbor(decision_cbor.as_slice()) {
-                        let opaquea = Arc::new(opaque);
-                        self.decision_models.insert(opaquea.to_owned());
-                        return Some(opaquea);
+                        let opaquea = Arc::new(opaque) as Arc<dyn DecisionModel>;
+                        if !self.decision_models.contains(&opaquea) {
+                            self.decision_models.insert(opaquea.to_owned());
+                            return Some(opaquea);
+                        }
                     }
                 }
                 tungstenite::Message::Ping(_) => {

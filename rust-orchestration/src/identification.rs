@@ -1,12 +1,11 @@
-use std::{collections::HashSet, net::TcpStream, sync::Arc};
+use std::{collections::HashSet, f32::consts::E, net::TcpStream, sync::Arc};
 
 use idesyde_core::{
     DecisionModel, DesignModel, IdentificationIterator, Module, OpaqueDecisionModel,
     OpaqueDesignModel,
 };
-use rayon::prelude::*;
 
-use log::{debug, warn};
+use log::debug;
 use tungstenite::WebSocket;
 
 // impl HttpServerLike for ExternalServerIdentificationModule {
@@ -57,25 +56,24 @@ impl Iterator for ExternalServerIdentifiticationIterator {
     fn next(&mut self) -> Option<Self::Item> {
         // send the decision models
         for m in &self.decision_models_to_upload {
-            if let Ok(decision_cbor) = OpaqueDecisionModel::from(m).to_json() {
+            if let Ok(decision_cbor) = OpaqueDecisionModel::from(m).to_cbor::<Vec<u8>>() {
                 if let Err(e) = self
                     .websocket
-                    .send(tungstenite::Message::text(decision_cbor))
+                    .send(tungstenite::Message::binary(decision_cbor))
                 {
                     debug!("Decision CBOR upload error {}", e.to_string());
-                } else {
-                    debug!("Sent ok ");
                 }
-            } else {
-                debug!("Encode problem ");
             }
         }
         self.decision_models
             .extend(self.decision_models_to_upload.drain());
         // same for design models
         for m in &self.design_models_to_upload {
-            if let Ok(design_cbor) = OpaqueDesignModel::from(m.as_ref()).to_json() {
-                if let Err(e) = self.websocket.send(tungstenite::Message::text(design_cbor)) {
+            if let Ok(design_cbor) = OpaqueDesignModel::from(m.as_ref()).to_cbor() {
+                if let Err(e) = self
+                    .websocket
+                    .send(tungstenite::Message::binary(design_cbor))
+                {
                     debug!("Design CBOR upload error {}", e.to_string());
                 };
             };
@@ -97,6 +95,12 @@ impl Iterator for ExternalServerIdentifiticationIterator {
                     tungstenite::Message::Text(txt_msg) => {
                         if txt_msg.eq_ignore_ascii_case("done") {
                             self.done = true;
+                            if let Err(e) = self.websocket.flush() {
+                                debug!(
+                                    "Error found while flushing identificatio websocket: {}",
+                                    e.to_string()
+                                );
+                            }
                             return None;
                         } else if let Ok(opaque) =
                             OpaqueDecisionModel::from_json_str(txt_msg.as_str())

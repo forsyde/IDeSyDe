@@ -77,6 +77,7 @@ object ChocoExplorationModule extends StandaloneModule {
   //   }
   // }
 
-  def main(args: Array[String]): Unit = standaloneModule(args)
+  def main(args: Array[String]): Unit =
+    standaloneModule(args).ifPresent(javalin => javalin.start(0))
 
 }

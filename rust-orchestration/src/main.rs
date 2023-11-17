@@ -1,4 +1,4 @@
-use std::{cmp::Ordering, collections::HashSet, net::IpAddr, path::Path, sync::Arc};
+use std::{cmp::Ordering, collections::HashSet, path::Path, sync::Arc};
 
 use clap::Parser;
 use env_logger::WriteStyle;
@@ -246,14 +246,7 @@ fn main() {
         debug!("Initializing modules");
         // let mut imodules: Vec<Arc<dyn IdentificationModule>> = Vec::new();
         // let mut emodules: Vec<Arc<dyn ExplorationModule>> = Vec::new();
-        let mut modules = idesyde_orchestration::find_modules(
-            modules_path,
-            &identified_path,
-            &inputs_path,
-            &explored_path,
-            &reverse_path,
-            &output_path,
-        );
+        let mut modules = idesyde_orchestration::find_modules(modules_path);
 
         // add embedded modules
         modules.insert(Arc::new(idesyde_common::make_common_module()));
@@ -263,8 +256,8 @@ fn main() {
             for url_str in external_modules {
                 if let Ok(parsed_url) = url::Url::parse(url_str.as_str()) {
                     modules.insert(Arc::new(ExternalServerModule::from(
-                        url_str.as_str(),
                         &parsed_url,
+                        url_str.as_str(),
                     )));
                 }
             }

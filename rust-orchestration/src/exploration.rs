@@ -3,19 +3,16 @@ use std::{
     collections::{HashMap, HashSet},
     io::BufRead,
     io::BufReader,
-    net::{IpAddr, Ipv4Addr},
     path::PathBuf,
     process::{Child, Stdio},
     sync::{Arc, Mutex},
-    time::{Duration, Instant},
 };
 
 use derive_builder::Builder;
 use idesyde_blueprints::ExplorationSolutionMessage;
 use idesyde_core::{
-    explore_non_blocking, pareto_dominance_partial_cmp, DecisionModel, ExplorationBid,
-    ExplorationConfiguration, ExplorationConfigurationBuilder, ExplorationSolution, Explorer,
-    Module, OpaqueDecisionModel,
+    DecisionModel, ExplorationBid, ExplorationConfiguration, ExplorationConfigurationBuilder,
+    ExplorationSolution, Explorer, Module, OpaqueDecisionModel,
 };
 use log::{debug, warn};
 use serde::{Deserialize, Serialize};
@@ -110,10 +107,16 @@ impl Iterator for ExternalExplorerSolutionIter {
                         }
                     }
                     tungstenite::Message::Ping(_) => {
-                        self.websocket.send(tungstenite::Message::Pong(vec![]));
+                        if let Err(e) = self.websocket.send(tungstenite::Message::Pong(vec![])) {
+                            debug!("Failed to send a pong within exploration. Likely a failure occurred.");
+                            debug!("Message was: {}", e.to_string());
+                        };
                     }
                     tungstenite::Message::Pong(_) => {
-                        self.websocket.send(tungstenite::Message::Ping(vec![]));
+                        if let Err(e) = self.websocket.send(tungstenite::Message::Ping(vec![])) {
+                            debug!("Failed to send a ping within exploration. Likely a failure occurred.");
+                            debug!("Message was: {}", e.to_string());
+                        };
                     }
                     _ => (),
                 }
@@ -139,7 +142,11 @@ impl Explorer for ExternalExplorer {
         Some(self.url.to_owned())
     }
 
-    fn bid(&self, explorers: &Vec<Arc<dyn Explorer>>, m: Arc<dyn DecisionModel>) -> ExplorationBid {
+    fn bid(
+        &self,
+        _explorers: &Vec<Arc<dyn Explorer>>,
+        m: Arc<dyn DecisionModel>,
+    ) -> ExplorationBid {
         let mut form = reqwest::blocking::multipart::Form::new();
         form = form.part(
             format!("decisionModel"),
@@ -196,24 +203,41 @@ impl Explorer for ExternalExplorer {
         exploration_configuration: ExplorationConfiguration,
     ) -> Box<dyn Iterator<Item = ExplorationSolution> + Send + Sync + '_> {
         let mut mut_url = self.url.clone();
-        mut_url.set_scheme("ws");
+        if let Err(_) = mut_url.set_scheme("ws") {
+            warn!(
+                "Failed to set up exploration websocket. Module {} is likely to fail exploration.",
+                self.unique_identifier()
+            );
+        };
         if let Ok(explore_url) = mut_url.join("/explore") {
             if let Some((mut ws, _)) = std::net::TcpStream::connect(mut_url.as_str())
                 .ok()
                 .and_then(|stream| tungstenite::client(explore_url, stream).ok())
             {
                 if let Ok(design_cbor) = OpaqueDecisionModel::from(m).to_cbor() {
-                    ws.send(tungstenite::Message::Binary(design_cbor));
+                    if let Err(e) = ws.send(tungstenite::Message::Binary(design_cbor)) {
+                        warn!("Failed to send decision model to {} for exploration. Trying to proceed anyway.", self.unique_identifier());
+                        debug!("Message was: {}", e.to_string());
+                    };
                 };
                 for prev_sol in currrent_solutions {
                     if let Ok(design_cbor) = ExplorationSolutionMessage::from(prev_sol).to_cbor() {
-                        ws.send(tungstenite::Message::Binary(design_cbor));
+                        if let Err(e) = ws.send(tungstenite::Message::Binary(design_cbor)) {
+                            warn!("Failed to send previous solution to {} for exploration. Trying to proceed anyway.", self.unique_identifier());
+                            debug!("Message was: {}", e.to_string());
+                        };
                     };
                 }
                 if let Ok(conf_cbor) = exploration_configuration.to_cbor() {
-                    ws.send(tungstenite::Message::Binary(conf_cbor));
+                    if let Err(e) = ws.send(tungstenite::Message::Binary(conf_cbor)) {
+                        warn!("Failed to send configuration to {} for exploration. Trying to proceed anyway.", self.unique_identifier());
+                        debug!("Message was: {}", e.to_string());
+                    };
                 }
-                ws.send(tungstenite::Message::Text("done".to_string()));
+                if let Err(e) = ws.send(tungstenite::Message::Text("done".to_string())) {
+                    warn!("Failed to send exploration request to {} for exploration. Exploration is likely to fail.", self.unique_identifier());
+                    debug!("Message was: {}", e.to_string());
+                };
                 return Box::new(ExternalExplorerSolutionIter::new(ws));
             }
         }

@@ -4,7 +4,7 @@ use std::{
     sync::Arc,
 };
 
-use idesyde_blueprints::{execute_standalone_module, StandaloneModule, StandaloneModuleBuilder};
+use idesyde_blueprints::{execute_standalone_module, StandaloneModuleBuilder};
 use idesyde_core::DesignModel;
 use serde::{Deserialize, Serialize};
 

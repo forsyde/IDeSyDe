@@ -1,7 +1,7 @@
 pub mod macros;
 
 use std::{
-    collections::{HashMap, HashSet, LinkedList},
+    collections::{HashMap, HashSet},
     path::{Path, PathBuf},
     sync::Arc,
 };
@@ -10,10 +10,8 @@ use clap::Parser;
 use derive_builder::Builder;
 use idesyde_core::{
     DecisionModel, DesignModel, ExplorationSolution, Explorer, IdentificationIterator,
-    IdentificationResult, MarkedIdentificationRule, Module, OpaqueDecisionModel,
-    ReverseIdentificationRule,
+    MarkedIdentificationRule, Module, OpaqueDecisionModel, ReverseIdentificationRule,
 };
-use log::debug;
 use serde::{Deserialize, Serialize};
 
 use rayon::prelude::*;
@@ -457,7 +455,7 @@ impl Iterator for DefaultIdentificationIterator {
                     //     tx_model.send(m);
                     // }
                     for msg in msgs {
-                        tx_msg.send(msg);
+                        let _ = tx_msg.send(msg);
                     }
                     models
                 } else {
@@ -592,23 +590,23 @@ pub fn execute_standalone_module(module: StandaloneModule) {
                 if let Some(design_path) = args.design_path_opt {
                     std::fs::create_dir_all(&design_path)
                         .expect("Failed to create the design path during reverse identification.");
-                    let mut design_models: Vec<Arc<dyn DesignModel>> = Vec::new();
-                    for pres in std::fs::read_dir(&design_path)
-                        .expect("Failed to read design path during start-up.")
-                    {
-                        let p = pres.expect("Failed to read directory entry during start-up");
-                        // if let Some(m) = module.read_design_model(&p.path()) {
-                        //     let mut h = m.header();
-                        //     h.model_paths.push(
-                        //         p.path()
-                        //             .to_str()
-                        //             .expect("Failed to get OS string during start-up")
-                        //             .to_string(),
-                        //     );
-                        //     h.write_to_dir(&design_path, "", &module.unique_identifier());
-                        //     design_models.push(m);
-                        // }
-                    }
+                    // let mut design_models: Vec<Arc<dyn DesignModel>> = Vec::new();
+                    // for pres in std::fs::read_dir(&design_path)
+                    //     .expect("Failed to read design path during start-up.")
+                    // {
+                    // let p = pres.expect("Failed to read directory entry during start-up");
+                    // if let Some(m) = module.read_design_model(&p.path()) {
+                    //     let mut h = m.header();
+                    //     h.model_paths.push(
+                    //         p.path()
+                    //             .to_str()
+                    //             .expect("Failed to get OS string during start-up")
+                    //             .to_string(),
+                    //     );
+                    //     h.write_to_dir(&design_path, "", &module.unique_identifier());
+                    //     design_models.push(m);
+                    // }
+                    // }
                     // match (
                     //     args.identified_path_opt,
                     //     args.solved_path_opt,

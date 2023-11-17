@@ -91,208 +91,230 @@ public interface StandaloneModule extends Module {
         var sessionReversedDesignModels = new ConcurrentHashMap<String, Deque<DesignModel>>();
         var executor = Executors.newWorkStealingPool(Math.max(Runtime.getRuntime().availableProcessors() / 2, 1));
         try (var server = Javalin.create()) {
-            server.put("/decision/{session}", ctx -> {
-                if (ctx.isMultipart() && ctx.queryParamMap().containsKey("session")) {
-                    var session = ctx.queryParam("session");
-                    if (!sessionDecisionModels.containsKey(session)) {
-                        sessionDecisionModels.put(session, new ConcurrentSkipListSet<>());
-                    }
-                    var decisionModels = sessionDecisionModels.get(session);
-                    Optional<OpaqueDecisionModel> opaque = Optional.empty();
-                    if (ctx.formParam("cbor") != null) {
-                        opaque = OpaqueDecisionModel.fromCBORBytes(ctx.formParam("cbor").getBytes());
-                    } else if (ctx.formParam("json") != null) {
-                        opaque = OpaqueDecisionModel.fromJsonString(ctx.formParam("json"));
-                    }
-                    // if (file != null)
-                    opaque.flatMap(this::fromOpaqueDecision).ifPresentOrElse(m -> {
-                        decisionModels.add(m);
-                        ctx.status(200);
-                        ctx.result("Added");
-                    }, () -> {
-                        ctx.status(500);
-                        ctx.result("Failed to add");
-                    });
-                }
-            }).put("/explored/{session}", ctx -> {
-                if (ctx.isMultipart() && ctx.queryParamMap().containsKey("session")) {
-                    var session = ctx.queryParam("session");
-                    if (!sessionExploredModels.containsKey(session)) {
-                        sessionExploredModels.put(session, new ConcurrentSkipListSet<>());
-                    }
-                    var decisionModels = sessionExploredModels.get(session);
-                    Optional<OpaqueDecisionModel> opaque = Optional.empty();
-                    if (ctx.uploadedFile("cbor") != null) {
-                        opaque = OpaqueDecisionModel.fromCBORBytes(ctx.uploadedFile("cbor").content().readAllBytes());
-                    } else if (ctx.uploadedFile("json") != null) {
-                        opaque = OpaqueDecisionModel.fromJsonString(
-                                new String(ctx.uploadedFile("json").content().readAllBytes(), StandardCharsets.UTF_8));
-                    }
-                    // if (file != null)
-                    opaque.flatMap(this::fromOpaqueDecision).ifPresentOrElse(m -> {
-                        decisionModels.add(m);
-                        ctx.status(200);
-                        ctx.result("Added");
-                    }, () -> {
-                        ctx.status(500);
-                        ctx.result("Failed to add");
-                    });
-                }
-            }).put("/design/{session}", ctx -> {
-                if (ctx.isMultipart() && ctx.queryParamMap().containsKey("session")) {
-                    var session = ctx.queryParam("session");
-                    if (!sessionDesignModels.containsKey(session)) {
-                        sessionDesignModels.put(session, new ConcurrentSkipListSet<>());
-                    }
-                    var designModels = sessionDesignModels.get(session);
-                    Optional<OpaqueDesignModel> opaque = Optional.empty();
-                    if (ctx.uploadedFile("cbor") != null) {
-                        opaque = OpaqueDesignModel.fromCBORBytes(ctx.uploadedFile("cbor").content().readAllBytes());
-                    } else if (ctx.uploadedFile("json") != null) {
-                        opaque = OpaqueDesignModel.fromJsonString(
-                                new String(ctx.uploadedFile("json").content().readAllBytes(), StandardCharsets.UTF_8));
-                    }
-                    // if (file != null)
-                    opaque.flatMap(this::fromOpaqueDesign).ifPresentOrElse(m -> {
-                        designModels.add(m);
-                        ctx.status(200);
-                        ctx.result("Added");
-                    }, () -> {
-                        ctx.status(500);
-                        ctx.result("Failed to add");
-                    });
-                }
-            }).ws("/identify", ws -> {
-                var logger = LoggerFactory.getLogger("main");
-                Set<DecisionModel> decisionModels = new HashSet<>();
-                Set<DesignModel> designModels = new HashSet<>();
-                ws.onBinaryMessage(ctx -> {
-                    OpaqueDesignModel.fromCBORBytes(ctx.data()).flatMap(this::fromOpaqueDesign)
-                            .ifPresentOrElse(designModels::add, () -> OpaqueDecisionModel.fromCBORBytes(ctx.data())
-                                    .flatMap(this::fromOpaqueDecision).ifPresent(decisionModels::add));
-                });
-                ws.onMessage(ctx -> {
-                    if (ctx.message().toLowerCase().contains("done")) {
-                        logger.info("Running a identification step with %s and %s decision and design models"
-                                .formatted(decisionModels.size(), designModels.size()));
-                        executor.submit(() -> {
-                            var results = identification(designModels, decisionModels);
-                            for (var result : results.identified()) {
-                                OpaqueDecisionModel.from(result).toCBORBytes().ifPresent(bytes -> {
-                                    ctx.send(ByteBuffer.wrap(bytes));
-                                    decisionModels.add(result);
-                                });
+            server
+                    .get("/info/unique_identifier", ctx -> ctx.result(uniqueIdentifier()))
+                    .put("/decision/{session}", ctx -> {
+                        if (ctx.isMultipart() && ctx.queryParamMap().containsKey("session")) {
+                            var session = ctx.queryParam("session");
+                            if (!sessionDecisionModels.containsKey(session)) {
+                                sessionDecisionModels.put(session, new ConcurrentSkipListSet<>());
                             }
-                            for (var msg : results.errors()) {
-                                ctx.send(msg);
+                            var decisionModels = sessionDecisionModels.get(session);
+                            Optional<OpaqueDecisionModel> opaque = Optional.empty();
+                            if (ctx.formParam("cbor") != null) {
+                                opaque = OpaqueDecisionModel.fromCBORBytes(ctx.formParam("cbor").getBytes());
+                            } else if (ctx.formParam("json") != null) {
+                                opaque = OpaqueDecisionModel.fromJsonString(ctx.formParam("json"));
                             }
-                            logger.info("Finished a identification step with %s decision models identified"
-                                    .formatted(decisionModels.size()));
-                            ctx.send("done");
+                            // if (file != null)
+                            opaque.flatMap(this::fromOpaqueDecision).ifPresentOrElse(m -> {
+                                decisionModels.add(m);
+                                ctx.status(200);
+                                ctx.result("Added");
+                            }, () -> {
+                                ctx.status(500);
+                                ctx.result("Failed to add");
+                            });
+                        }
+                    }).put("/explored/{session}", ctx -> {
+                        if (ctx.isMultipart() && ctx.queryParamMap().containsKey("session")) {
+                            var session = ctx.queryParam("session");
+                            if (!sessionExploredModels.containsKey(session)) {
+                                sessionExploredModels.put(session, new ConcurrentSkipListSet<>());
+                            }
+                            var decisionModels = sessionExploredModels.get(session);
+                            Optional<OpaqueDecisionModel> opaque = Optional.empty();
+                            if (ctx.uploadedFile("cbor") != null) {
+                                opaque = OpaqueDecisionModel
+                                        .fromCBORBytes(ctx.uploadedFile("cbor").content().readAllBytes());
+                            } else if (ctx.uploadedFile("json") != null) {
+                                opaque = OpaqueDecisionModel.fromJsonString(
+                                        new String(ctx.uploadedFile("json").content().readAllBytes(),
+                                                StandardCharsets.UTF_8));
+                            }
+                            // if (file != null)
+                            opaque.flatMap(this::fromOpaqueDecision).ifPresentOrElse(m -> {
+                                decisionModels.add(m);
+                                ctx.status(200);
+                                ctx.result("Added");
+                            }, () -> {
+                                ctx.status(500);
+                                ctx.result("Failed to add");
+                            });
+                        }
+                    }).put("/design/{session}", ctx -> {
+                        if (ctx.isMultipart() && ctx.queryParamMap().containsKey("session")) {
+                            var session = ctx.queryParam("session");
+                            if (!sessionDesignModels.containsKey(session)) {
+                                sessionDesignModels.put(session, new ConcurrentSkipListSet<>());
+                            }
+                            var designModels = sessionDesignModels.get(session);
+                            Optional<OpaqueDesignModel> opaque = Optional.empty();
+                            if (ctx.uploadedFile("cbor") != null) {
+                                opaque = OpaqueDesignModel
+                                        .fromCBORBytes(ctx.uploadedFile("cbor").content().readAllBytes());
+                            } else if (ctx.uploadedFile("json") != null) {
+                                opaque = OpaqueDesignModel.fromJsonString(
+                                        new String(ctx.uploadedFile("json").content().readAllBytes(),
+                                                StandardCharsets.UTF_8));
+                            }
+                            // if (file != null)
+                            opaque.flatMap(this::fromOpaqueDesign).ifPresentOrElse(m -> {
+                                designModels.add(m);
+                                ctx.status(200);
+                                ctx.result("Added");
+                            }, () -> {
+                                ctx.status(500);
+                                ctx.result("Failed to add");
+                            });
+                        }
+                    }).ws("/identify", ws -> {
+                        var logger = LoggerFactory.getLogger("main");
+                        Set<DecisionModel> decisionModels = new HashSet<>();
+                        Set<DesignModel> designModels = new HashSet<>();
+                        ws.onBinaryMessage(ctx -> {
+                            OpaqueDesignModel.fromCBORBytes(ctx.data()).flatMap(this::fromOpaqueDesign)
+                                    .ifPresentOrElse(designModels::add,
+                                            () -> OpaqueDecisionModel.fromCBORBytes(ctx.data())
+                                                    .flatMap(this::fromOpaqueDecision).ifPresent(decisionModels::add));
                         });
-                    } else {
-                        OpaqueDesignModel.fromJsonString(ctx.message()).flatMap(this::fromOpaqueDesign).ifPresentOrElse(
-                                designModels::add, () -> OpaqueDecisionModel.fromJsonString(ctx.message())
-                                        .flatMap(this::fromOpaqueDecision).ifPresent(decisionModels::add));
-                    }
-                });
-                ws.onConnect(ctx -> {
-                    logger.info("A new identification client connected");
-                    ctx.enableAutomaticPings();
-                });
-            }).get("/identified/{session}", ctx -> {
-                String session = ctx.pathParam("session");
-                var identifiedDecisionModels = sessionIdentifiedDecisionModels.getOrDefault(session,
-                        new ArrayDeque<>());
-                if (!identifiedDecisionModels.isEmpty()) {
-                    if (ctx.queryParam("encoding") != null && ctx.queryParam("encoding").equalsIgnoreCase("cbor")) {
-                        OpaqueDecisionModel.from(identifiedDecisionModels.pop()).toCBORBytes().ifPresent(ctx::result);
-                    } else {
-                        OpaqueDecisionModel.from(identifiedDecisionModels.pop()).toJsonString().ifPresent(ctx::result);
-                    }
-                }
-
-            }).get("/explorers", ctx -> {
-                ctx.result(objectMapper.writeValueAsString(
-                        explorers().stream().map(Explorer::uniqueIdentifier).collect(Collectors.toSet())));
-            }).get("/{explorerName}/bid", ctx -> {
-                explorers().stream().filter(e -> e.uniqueIdentifier().equals(ctx.pathParam("explorerName"))).findAny()
-                        .ifPresentOrElse(explorer -> {
-                            if (ctx.isMultipartFormData()) {
-                                ctx.formParamMap().forEach((name, entries) -> {
-                                    if (name.startsWith("decisionModel")) {
-                                        entries.stream().findAny().ifPresent(msg -> {
-                                            OpaqueDecisionModel.fromJsonString(msg).flatMap(this::fromOpaqueDecision)
-                                                    .map(decisionModel -> explorer.bid(explorers(), decisionModel))
-                                                    .ifPresent(bid -> {
-                                                        try {
-                                                            ctx.result(objectMapper.writeValueAsString(bid));
-                                                        } catch (JsonProcessingException e1) {
-                                                            e1.printStackTrace();
-                                                            ctx.status(500);
-                                                        }
-                                                    });
+                        ws.onMessage(ctx -> {
+                            if (ctx.message().toLowerCase().contains("done")) {
+                                logger.info("Running a identification step with %s and %s decision and design models"
+                                        .formatted(decisionModels.size(), designModels.size()));
+                                ctx.enableAutomaticPings();
+                                executor.submit(() -> {
+                                    var results = identification(designModels, decisionModels);
+                                    for (var result : results.identified()) {
+                                        OpaqueDecisionModel.from(result).toCBORBytes().ifPresent(bytes -> {
+                                            ctx.send(ByteBuffer.wrap(bytes));
+                                            decisionModels.add(result);
                                         });
                                     }
+                                    for (var msg : results.errors()) {
+                                        ctx.send(msg);
+                                    }
+                                    logger.info("Finished a identification step with %s decision models identified"
+                                            .formatted(decisionModels.size()));
+                                    ctx.send("done");
                                 });
                             } else {
+                                OpaqueDesignModel.fromJsonString(ctx.message()).flatMap(this::fromOpaqueDesign)
+                                        .ifPresentOrElse(
+                                                designModels::add,
+                                                () -> OpaqueDecisionModel.fromJsonString(ctx.message())
+                                                        .flatMap(this::fromOpaqueDecision)
+                                                        .ifPresent(decisionModels::add));
                             }
-                        }, () -> {
-                            ctx.status(404);
                         });
-            }).get("/{explorerName}/explored", ctx -> {
-                String session = ctx.queryParam("session");
-                sessionExplorationStream.get(session).forEach(solution -> {
-                    if (ctx.queryParam("encoding") != null && ctx.queryParam("encoding").equalsIgnoreCase("cbor")) {
-                        ExplorationSolutionMessage.from(solution).toCBORBytes().ifPresent(ctx::result);
-                    } else {
-                        ExplorationSolutionMessage.from(solution).toJsonString().ifPresent(ctx::result);
-                    }
-                });
-            }).ws("/{explorerName}/explore", ws -> {
-                AtomicReference<Explorer> explorer = new AtomicReference<>();
-                AtomicReference<Explorer.Configuration> configuration = new AtomicReference<>(
-                        new Explorer.Configuration());
-                AtomicReference<DecisionModel> decisionModel = new AtomicReference<>();
-                Set<ExplorationSolution> previousSolutions = new HashSet<>();
-                ws.onBinaryMessage(ctx -> {
-                    ExplorationSolutionMessage.fromCBORBytes(ctx.data())
-                            .flatMap(esm -> fromOpaqueDecision(esm.solved())
-                                    .map(m -> new ExplorationSolution(esm.objectives(), m)))
-                            .ifPresentOrElse(previousSolutions::add,
-                                    () -> OpaqueDecisionModel.fromCBORBytes(ctx.data())
-                                            .flatMap(this::fromOpaqueDecision)
-                                            .ifPresentOrElse(decisionModel::set, () -> Explorer.Configuration
-                                                    .fromCBORBytes(ctx.data()).ifPresent(configuration::set)));
-                });
-                ws.onMessage(ctx -> {
-                    if (ctx.message().toLowerCase().contains("done")) {
-                        executor.submit(() -> {
-                            explorer.get()
-                                    .explore(decisionModel.get(), previousSolutions, configuration.get())
-                                    .takeWhile(s -> ctx.session.isOpen())
-                                    .filter(solution -> !configuration.get().strict
-                                            || previousSolutions.stream().noneMatch(other -> other.dominates(solution)))
-                                    .map(ExplorationSolutionMessage::from)
-                                    .flatMap(s -> s.toCBORBytes().map(ByteBuffer::wrap).stream())
-                                    .forEach(ctx::send);
-                            ctx.send("done");
+                        ws.onConnect(ctx -> {
+                            logger.info("A new identification client connected");
+                            ctx.enableAutomaticPings();
+
                         });
-                    } else {
-                        ExplorationSolutionMessage.fromJsonString(ctx.message())
-                                .flatMap(esm -> fromOpaqueDecision(esm.solved())
-                                        .map(m -> new ExplorationSolution(esm.objectives(), m)))
-                                .ifPresentOrElse(previousSolutions::add,
-                                        () -> OpaqueDecisionModel.fromJsonString(ctx.message())
-                                                .flatMap(this::fromOpaqueDecision)
-                                                .ifPresentOrElse(decisionModel::set, () -> Explorer.Configuration
-                                                        .fromJsonString(ctx.message()).ifPresent(configuration::set)));
-                    }
-                });
-                ws.onConnect(ctx -> explorers().stream()
-                        .filter(e -> e.uniqueIdentifier().equals(ctx.pathParam("explorerName"))).findAny()
-                        .ifPresentOrElse(explorer::set, ctx::closeSession));
-            })
+                    }).get("/identified/{session}", ctx -> {
+                        String session = ctx.pathParam("session");
+                        var identifiedDecisionModels = sessionIdentifiedDecisionModels.getOrDefault(session,
+                                new ArrayDeque<>());
+                        if (!identifiedDecisionModels.isEmpty()) {
+                            if (ctx.queryParam("encoding") != null
+                                    && ctx.queryParam("encoding").equalsIgnoreCase("cbor")) {
+                                OpaqueDecisionModel.from(identifiedDecisionModels.pop()).toCBORBytes()
+                                        .ifPresent(ctx::result);
+                            } else {
+                                OpaqueDecisionModel.from(identifiedDecisionModels.pop()).toJsonString()
+                                        .ifPresent(ctx::result);
+                            }
+                        }
+
+                    }).get("/explorers", ctx -> {
+                        ctx.result(objectMapper.writeValueAsString(
+                                explorers().stream().map(Explorer::uniqueIdentifier).collect(Collectors.toSet())));
+                    }).get("/{explorerName}/bid", ctx -> {
+                        explorers().stream().filter(e -> e.uniqueIdentifier().equals(ctx.pathParam("explorerName")))
+                                .findAny()
+                                .ifPresentOrElse(explorer -> {
+                                    if (ctx.isMultipartFormData()) {
+                                        ctx.formParamMap().forEach((name, entries) -> {
+                                            if (name.startsWith("decisionModel")) {
+                                                entries.stream().findAny().ifPresent(msg -> {
+                                                    OpaqueDecisionModel.fromJsonString(msg)
+                                                            .flatMap(this::fromOpaqueDecision)
+                                                            .map(decisionModel -> explorer.bid(explorers(),
+                                                                    decisionModel))
+                                                            .ifPresent(bid -> {
+                                                                try {
+                                                                    ctx.result(objectMapper.writeValueAsString(bid));
+                                                                } catch (JsonProcessingException e1) {
+                                                                    e1.printStackTrace();
+                                                                    ctx.status(500);
+                                                                }
+                                                            });
+                                                });
+                                            }
+                                        });
+                                    } else {
+                                    }
+                                }, () -> {
+                                    ctx.status(404);
+                                });
+                    }).get("/{explorerName}/explored", ctx -> {
+                        String session = ctx.queryParam("session");
+                        sessionExplorationStream.get(session).forEach(solution -> {
+                            if (ctx.queryParam("encoding") != null
+                                    && ctx.queryParam("encoding").equalsIgnoreCase("cbor")) {
+                                ExplorationSolutionMessage.from(solution).toCBORBytes().ifPresent(ctx::result);
+                            } else {
+                                ExplorationSolutionMessage.from(solution).toJsonString().ifPresent(ctx::result);
+                            }
+                        });
+                    }).ws("/{explorerName}/explore", ws -> {
+                        AtomicReference<Explorer> explorer = new AtomicReference<>();
+                        AtomicReference<Explorer.Configuration> configuration = new AtomicReference<>(
+                                new Explorer.Configuration());
+                        AtomicReference<DecisionModel> decisionModel = new AtomicReference<>();
+                        Set<ExplorationSolution> previousSolutions = new HashSet<>();
+                        ws.onBinaryMessage(ctx -> {
+                            ExplorationSolutionMessage.fromCBORBytes(ctx.data())
+                                    .flatMap(esm -> fromOpaqueDecision(esm.solved())
+                                            .map(m -> new ExplorationSolution(esm.objectives(), m)))
+                                    .ifPresentOrElse(previousSolutions::add,
+                                            () -> OpaqueDecisionModel.fromCBORBytes(ctx.data())
+                                                    .flatMap(this::fromOpaqueDecision)
+                                                    .ifPresentOrElse(decisionModel::set, () -> Explorer.Configuration
+                                                            .fromCBORBytes(ctx.data()).ifPresent(configuration::set)));
+                        });
+                        ws.onMessage(ctx -> {
+                            if (ctx.message().toLowerCase().contains("done")) {
+                                executor.submit(() -> {
+                                    explorer.get()
+                                            .explore(decisionModel.get(), previousSolutions, configuration.get())
+                                            .takeWhile(s -> ctx.session.isOpen())
+                                            .filter(solution -> !configuration.get().strict
+                                                    || previousSolutions.stream()
+                                                            .noneMatch(other -> other.dominates(solution)))
+                                            .map(ExplorationSolutionMessage::from)
+                                            .flatMap(s -> s.toCBORBytes().map(ByteBuffer::wrap).stream())
+                                            .forEach(ctx::send);
+                                    ctx.send("done");
+                                });
+                            } else {
+                                ExplorationSolutionMessage.fromJsonString(ctx.message())
+                                        .flatMap(esm -> fromOpaqueDecision(esm.solved())
+                                                .map(m -> new ExplorationSolution(esm.objectives(), m)))
+                                        .ifPresentOrElse(previousSolutions::add,
+                                                () -> OpaqueDecisionModel.fromJsonString(ctx.message())
+                                                        .flatMap(this::fromOpaqueDecision)
+                                                        .ifPresentOrElse(decisionModel::set,
+                                                                () -> Explorer.Configuration
+                                                                        .fromJsonString(ctx.message())
+                                                                        .ifPresent(configuration::set)));
+                            }
+                        });
+                        ws.onConnect(ctx -> explorers().stream()
+                                .filter(e -> e.uniqueIdentifier().equals(ctx.pathParam("explorerName"))).findAny()
+                                .ifPresentOrElse(explorer::set, ctx::closeSession));
+                    })
                     // .ws(
                     // "/{explorerName}/explore",
                     // ws -> {
@@ -356,6 +378,48 @@ public interface StandaloneModule extends Module {
                     // }
                     // });
                     // })
+                    .ws("/reverse", ws -> {
+                        var logger = LoggerFactory.getLogger("main");
+                        Set<DecisionModel> exploredDecisionModels = new HashSet<>();
+                        Set<DesignModel> designModels = new HashSet<>();
+                        ws.onBinaryMessage(ctx -> {
+                            OpaqueDesignModel.fromCBORBytes(ctx.data()).flatMap(this::fromOpaqueDesign)
+                                    .ifPresentOrElse(designModels::add,
+                                            () -> OpaqueDecisionModel.fromCBORBytes(ctx.data())
+                                                    .flatMap(this::fromOpaqueDecision)
+                                                    .ifPresent(exploredDecisionModels::add));
+                        });
+                        ws.onMessage(ctx -> {
+                            if (ctx.message().toLowerCase().contains("done")) {
+                                logger.info("Running a reverse identification with %s and %s decision and design models"
+                                        .formatted(exploredDecisionModels.size(), designModels.size()));
+                                executor.submit(() -> {
+                                    var reversed = reverseIdentification(exploredDecisionModels, designModels);
+                                    for (var result : reversed) {
+                                        OpaqueDesignModel.from(result).toCBORBytes().ifPresent(bytes -> {
+                                            ctx.send(ByteBuffer.wrap(bytes));
+                                            designModels.add(result);
+                                        });
+                                    }
+
+                                    logger.info("Finished a identification step with %s decision models identified"
+                                            .formatted(designModels.size()));
+                                    ctx.send("done");
+                                });
+                            } else {
+                                OpaqueDesignModel.fromJsonString(ctx.message()).flatMap(this::fromOpaqueDesign)
+                                        .ifPresentOrElse(
+                                                designModels::add,
+                                                () -> OpaqueDecisionModel.fromJsonString(ctx.message())
+                                                        .flatMap(this::fromOpaqueDecision)
+                                                        .ifPresent(exploredDecisionModels::add));
+                            }
+                        });
+                        ws.onConnect(ctx -> {
+                            logger.info("A new reverse identification client connected");
+                            ctx.enableAutomaticPings();
+                        });
+                    })
                     .post("/reverse", ctx -> {
                         if (ctx.queryParamMap().containsKey("session")) {
                             String session = ctx.queryParam("session");
@@ -420,7 +484,7 @@ public interface StandaloneModule extends Module {
                     });
             server.events(es -> {
                 es.serverStarted(() -> {
-                    System.out.println("INITIALIZED " + server.port());
+                    System.out.println("INITIALIZED " + server.port() + " " + uniqueIdentifier());
                 });
             });
             return Optional.of(server);

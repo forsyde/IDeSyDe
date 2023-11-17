@@ -31,6 +31,7 @@ use idesyde_core::Module;
 use idesyde_core::OpaqueDecisionModel;
 use idesyde_core::OpaqueDesignModel;
 use log::debug;
+use log::warn;
 use rayon::prelude::*;
 use url::Url;
 
@@ -257,36 +258,49 @@ impl ExternalServerModule {
         if let Ok(mut server_child) = child_res {
             if let Some(childout) = &mut server_child.stdout {
                 let buf = BufReader::new(childout);
-                let port_opt = buf
+                let initialized_line_opt = buf
                     .lines()
                     .flatten()
                     .filter(|l| l.starts_with("INITIALIZED"))
-                    .map(|l| l[11..].trim().parse::<usize>())
-                    .flatten()
                     .next();
-                if let Some(port) = port_opt {
-                    return Some(ExternalServerModule {
-                        name: command_path_
-                            .clone()
-                            .file_name()
-                            .and_then(|x| x.to_str())
-                            .and_then(|x| x.split('.').next())
-                            .expect("Could not fetch name from imodule file name.")
-                            .to_string(),
-                        url: Url::parse(&format!("http://127.0.0.1:{}", port))
-                            .expect("Failed to build imodule url. Should always succeed."),
-                        client: Arc::new(reqwest::blocking::Client::new()),
-                        process: Some(Arc::new(Mutex::new(server_child))),
-                    });
+                if let Some(initialized_line) = initialized_line_opt {
+                    let mut split = initialized_line[12..].split(" ");
+                    let port_opt = split.next().and_then(|x| x.parse::<usize>().ok());
+                    if let Some(port) = port_opt {
+                        let name = split
+                            .next()
+                            .unwrap_or(
+                                command_path_
+                                    .clone()
+                                    .file_name()
+                                    .and_then(|x| x.to_str())
+                                    .and_then(|x| x.split('.').next())
+                                    .expect("Could not fetch name from imodule file name."),
+                            )
+                            .to_string();
+                        return Some(ExternalServerModule {
+                            name,
+                            url: Url::parse(&format!("http://127.0.0.1:{}", port))
+                                .expect("Failed to build imodule url. Should always succeed."),
+                            client: Arc::new(reqwest::blocking::Client::new()),
+                            process: Some(Arc::new(Mutex::new(server_child))),
+                        });
+                    }
                 }
             }
         }
         None
     }
 
-    pub fn from(name: &str, url: &Url) -> ExternalServerModule {
+    pub fn from(url: &Url, default_name: &str) -> ExternalServerModule {
+        let name = url
+            .join("/info/unique_identifier")
+            .ok()
+            .and_then(|u| reqwest::blocking::get(u).ok())
+            .and_then(|res| res.text().ok())
+            .unwrap_or(default_name.to_string());
         ExternalServerModule {
-            name: name.to_string(),
+            name,
             url: url.to_owned(),
             client: Arc::new(reqwest::blocking::Client::new()),
             process: None,
@@ -384,7 +398,10 @@ impl Module for ExternalServerModule {
                 } else if let Ok(json_body) = opaque.to_json() {
                     form = form.text("json", json_body);
                 }
-                self.client.put(decision_url).multipart(form).send();
+                if let Err(e) = self.client.put(decision_url).multipart(form).send() {
+                    warn!("Failed to send explored decision model to module {}. Trying to proceed anyway.", self.unique_identifier());
+                    debug!("Message was: {}", e.to_string());
+                };
             };
         });
         // same for design models
@@ -398,7 +415,10 @@ impl Module for ExternalServerModule {
                 } else if let Ok(json_body) = opaque.to_json() {
                     form = form.text("json", json_body);
                 }
-                self.client.put(design_url).multipart(form).send();
+                if let Err(e) = self.client.put(design_url).multipart(form).send() {
+                    warn!("Failed to send explored decision model to module {}. Trying to proceed anyway.", self.unique_identifier());
+                    debug!("Message was: {}", e.to_string());
+                };
             };
         });
         // ask to reverse
@@ -442,14 +462,7 @@ impl Module for ExternalServerModule {
     }
 }
 
-pub fn find_modules(
-    modules_path: &Path,
-    identified_path: &Path,
-    inputs_path: &Path,
-    solved_path: &Path,
-    integration_path: &Path,
-    output_path: &Path,
-) -> HashSet<Arc<dyn Module>> {
+pub fn find_modules(modules_path: &Path) -> HashSet<Arc<dyn Module>> {
     let mut imodules: HashSet<Arc<dyn Module>> = HashSet::new();
     if let Ok(read_dir) = modules_path.read_dir() {
         let prepared: Vec<Arc<dyn Module>> = read_dir

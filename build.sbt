@@ -24,16 +24,15 @@ lazy val javalinVersion                = "5.6.1"
 lazy val slf4jVersion                  = "2.0.7"
 lazy val IDeSyDeJavaVersion            = "session-based-SNAPSHOT"
 
-lazy val imodulesTarget = file("imodules")
-lazy val emodulesTarget = file("emodules")
+lazy val modulesTarget = file("modules")
 
 lazy val publishModules = taskKey[File]("Copy and return modules")
 
-lazy val imoduleSettings = Seq(
+lazy val moduleSettings = Seq(
   publishModules := {
-    IO.createDirectory(imodulesTarget)
+    IO.createDirectory(modulesTarget)
     val jar    = assembly.value
-    val target = imodulesTarget / (name.value + ".jar")
+    val target = modulesTarget / (name.value + ".jar")
     IO.copyFile(jar, target)
     target
   }
@@ -110,7 +109,7 @@ lazy val common = (project in file("scala-common"))
       "org.typelevel"   %%% "spire"      % spireVersion
     ),
     mainClass := Some("idesyde.common.CommonIdentificationModule"),
-    imoduleSettings,
+    moduleSettings,
     licenses := Seq(
       "MIT"  -> url("https://opensource.org/license/mit/"),
       "APL2" -> url("https://www.apache.org/licenses/LICENSE-2.0")
@@ -141,13 +140,7 @@ lazy val forsyde = (project in file("scala-bridge-forsyde-io"))
       // "org.eclipse.birt.runtime" % "org.eclipse.emf.ecore"             % "2.12.0.v20160420-0247"
     ),
     mainClass := Some("idesyde.forsydeio.ForSyDeIOScalaModule"),
-    publishModules := {
-      IO.createDirectory(imodulesTarget)
-      val jar    = assembly.value
-      val target = imodulesTarget / (projectInfo.value.nameFormal + ".jar")
-      IO.copyFile(jar, target)
-      target
-    },
+    moduleSettings,
     licenses := Seq(
       "MIT"  -> url("https://opensource.org/license/mit/"),
       "APL2" -> url("https://www.apache.org/licenses/LICENSE-2.0"),
@@ -218,13 +211,7 @@ lazy val choco = (project in file("scala-choco"))
       "EPL2" -> url("https://www.eclipse.org/legal/epl-2.0/")
     ),
     Compile / mainClass := Some("idesyde.choco.ChocoExplorationModule"),
-    publishModules := {
-      IO.createDirectory(emodulesTarget)
-      val jar    = assembly.value
-      val target = emodulesTarget / (projectInfo.value.nameFormal + ".jar")
-      IO.copyFile(jar, target)
-      target
-    },
+    moduleSettings,
     jlinkModulePath := {
       val paths = (jlinkBuildImage / fullClasspath).value
       paths

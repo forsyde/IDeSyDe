@@ -29,7 +29,7 @@ pub struct ExternalServerIdentifiticationIterator {
     design_models_to_upload: HashSet<Arc<dyn DesignModel>>,
     websocket: WebSocket<TcpStream>,
     messages: Vec<String>,
-    done: bool,
+    requesting: bool,
 }
 
 impl ExternalServerIdentifiticationIterator {
@@ -45,7 +45,7 @@ impl ExternalServerIdentifiticationIterator {
             design_models_to_upload: design_models.to_owned(),
             websocket,
             messages: vec![],
-            done: false,
+            requesting: false,
         }
     }
 }
@@ -55,193 +55,86 @@ impl Iterator for ExternalServerIdentifiticationIterator {
 
     fn next(&mut self) -> Option<Self::Item> {
         // send the decision models
-        for m in &self.decision_models_to_upload {
-            if let Ok(decision_cbor) = OpaqueDecisionModel::from(m).to_cbor::<Vec<u8>>() {
-                if let Err(e) = self
-                    .websocket
-                    .send(tungstenite::Message::binary(decision_cbor))
-                {
-                    debug!("Decision CBOR upload error {}", e.to_string());
+        if !self.requesting {
+            for m in &self.decision_models_to_upload {
+                if let Ok(decision_cbor) = OpaqueDecisionModel::from(m).to_json() {
+                    if let Err(e) = self
+                        .websocket
+                        .send(tungstenite::Message::text(decision_cbor))
+                    {
+                        debug!("Decision CBOR upload error {}", e.to_string());
+                    }
                 }
             }
-        }
-        self.decision_models
-            .extend(self.decision_models_to_upload.drain());
-        // same for design models
-        for m in &self.design_models_to_upload {
-            if let Ok(design_cbor) = OpaqueDesignModel::from(m.as_ref()).to_cbor() {
-                if let Err(e) = self
-                    .websocket
-                    .send(tungstenite::Message::binary(design_cbor))
-                {
-                    debug!("Design CBOR upload error {}", e.to_string());
+            self.decision_models
+                .extend(self.decision_models_to_upload.drain());
+            // same for design models
+            for m in &self.design_models_to_upload {
+                if let Ok(design_cbor) = OpaqueDesignModel::from(m.as_ref()).to_json() {
+                    if let Err(e) = self.websocket.send(tungstenite::Message::text(design_cbor)) {
+                        debug!("Design CBOR upload error {}", e.to_string());
+                    };
                 };
-            };
-        }
-        self.design_models
-            .extend(self.design_models_to_upload.drain());
-        if let Err(e) = self
-            .websocket
-            .send(tungstenite::Message::Text("done".to_string()))
-        {
-            debug!("Failed to send 'done': {}", e.to_string());
-        };
-        if self.done {
-            None
-        } else {
-            while let Ok(message) = self.websocket.read() {
-                // besides the answer, also read the module's messages
-                match message {
-                    tungstenite::Message::Text(txt_msg) => {
-                        if txt_msg.eq_ignore_ascii_case("done") {
-                            self.done = true;
-                            if let Err(e) = self.websocket.flush() {
-                                debug!(
-                                    "Error found while flushing identificatio websocket: {}",
-                                    e.to_string()
-                                );
-                            }
-                            return None;
-                        } else if let Ok(opaque) =
-                            OpaqueDecisionModel::from_json_str(txt_msg.as_str())
-                        {
-                            let opaquea = Arc::new(opaque);
-                            self.decision_models.insert(opaquea.to_owned());
-                            return Some(opaquea);
-                        } else {
-                            // debug!("Message: {}", txt_msg.as_str());
-                            self.messages.push(txt_msg);
-                        }
-                    }
-                    tungstenite::Message::Binary(decision_cbor) => {
-                        if let Ok(opaque) = OpaqueDecisionModel::from_cbor(decision_cbor.as_slice())
-                        {
-                            let opaquea = Arc::new(opaque);
-                            self.decision_models.insert(opaquea.to_owned());
-                            return Some(opaquea);
-                        }
-                    }
-                    tungstenite::Message::Ping(_) => {
-                        if let Err(_) = self.websocket.send(tungstenite::Message::Pong(vec![])) {
-                            debug!("Failed to send ping message to other end. Trying to proceed anyway.");
-                        };
-                    }
-                    tungstenite::Message::Pong(_) => {
-                        if let Err(_) = self.websocket.send(tungstenite::Message::Ping(vec![])) {
-                            debug!("Failed to send pong message to other end. Trying to proceed anyway.");
-                        };
-                    }
-                    _ => (),
-                }
             }
-            None
+            self.design_models
+                .extend(self.design_models_to_upload.drain());
+            if let Err(e) = self
+                .websocket
+                .send(tungstenite::Message::Text("done".to_string()))
+            {
+                debug!("Failed to send 'done': {}", e.to_string());
+            };
+            self.requesting = true;
         }
-        // first, try to see if no element is in the queue to be returned
-        // if self.waiting {
-        //     if let Ok(identified_url) = self.imodule.url.join("/identified") {
-        //         while let Some(opaque) = self
-        //             .imodule
-        //             .client
-        //             .get(identified_url)
-        //             .query(&[("session", "0", "encoding", "cbor")])
-        //             .send()
-        //             .ok()
-        //             .filter(|r| !r.status().as_str().eq_ignore_ascii_case("204"))
-        //             .and_then(|r| r.bytes().ok())
-        //             .map(|b| b.to_vec())
-        //             .and_then(|v| OpaqueDecisionModel::from_cbor(v.as_slice()).ok())
-        //         {
-        //             let opaquea: Arc<dyn DecisionModel> = Arc::new(opaque);
-        //             if !self.decision_models.contains(&opaquea) {
-        //                 self.identified.push_back(opaquea);
-        //                 self.decision_models.insert(opaquea);
-        //             }
-        //         }
-        //         while let Some(opaque) = self
-        //             .imodule
-        //             .client
-        //             .get(identified_url)
-        //             .query(&[("session", "0", "encoding", "json")])
-        //             .send()
-        //             .ok()
-        //             .filter(|r| !r.status().as_str().eq_ignore_ascii_case("204"))
-        //             .and_then(|r| r.text().ok())
-        //             .and_then(|b| OpaqueDecisionModel::from_json_str(b.as_str()).ok())
-        //         {
-        //             let opaquea: Arc<dyn DecisionModel> = Arc::new(opaque);
-        //             if !self.decision_models.contains(&opaquea) {
-        //                 self.identified.push_back(opaquea);
-        //                 self.decision_models.insert(opaquea);
-        //             }
-        //         }
-        //         self.waiting = false;
-        //     }
-        // }
-        // if !self.identified.is_empty() {
-        //     return self.identified.pop_front();
-        // } else {
-        //     // otehrwise, we proceed to ask for more decision models
-        //     // now proceed to identification
-        //     // send decision models
-        //     for m in &self.decision_models_to_upload {
-        //         if let Ok(decision_cbor) = OpaqueDecisionModel::from(m).to_cbor() {
-        //             self.websocket
-        //                 .send(tungstenite::Message::Binary(decision_cbor));
-        //         }
-        //     }
-        //     //     if let Ok(mut decision_url) = self.imodule.url.join("/decision") {
-        //     //         decision_url.set_query(Some("session=0"));
-        //     //         let opaque = OpaqueDecisionModel::from(m);
-        //     //         let mut form = reqwest::blocking::multipart::Form::new();
-        //     //         if let Ok(cbor_body) = opaque.to_cbor::<Vec<u8>>() {
-        //     //             form.part("cbor", reqwest::blocking::multipart::Part::bytes(cbor_body));
-        //     //         } else if let Ok(json_body) = opaque.to_json() {
-        //     //             form.text("json", json_body);
-        //     //         }
-        //     //         self.imodule.client.put(decision_url).multipart(form).send();
-        //     //     };
-        //     // });
-        //     self.decision_models
-        //         .extend(self.decision_models_to_upload.drain());
-        //     // same for design models
-        //     for m in &self.design_models_to_upload {
-        //         if let Ok(design_cbor) = OpaqueDesignModel::from(m.as_ref()).to_cbor() {
-        //             self.websocket
-        //                 .send(tungstenite::Message::Binary(design_cbor));
-        //         };
-        //     }
-        //     // self.design_models_to_upload.par_iter().for_each(|m| {
-        //     //     if let Ok(mut design_url) = self.imodule.url.join("/design") {
-        //     //         design_url.set_query(Some("session=0"));
-        //     //         let mut form = reqwest::blocking::multipart::Form::new();
-        //     //         let opaque = OpaqueDesignModel::from(m.as_ref());
-        //     //         if let Ok(cbor_body) = opaque.to_cbor() {
-        //     //             form.part("cbor", reqwest::blocking::multipart::Part::bytes(cbor_body));
-        //     //         } else if let Ok(json_body) = opaque.to_json() {
-        //     //             form.text("json", json_body);
-        //     //         }
-        //     //         self.imodule.client.put(design_url).multipart(form).send();
-        //     //     };
-        //     // });
-        //     self.design_models
-        //         .extend(self.design_models_to_upload.drain());
-        //     if let Ok(identify_url) = self.imodule.url.join("/identify") {
-        //         if let Ok(msgs) = self
-        //             .imodule
-        //             .client
-        //             .post(identify_url)
-        //             .query(&[("session", "0")])
-        //             .send()
-        //             .and_then(|r| r.text())
-        //         {
-        //             if let Ok(msgs_vec) = serde_json::from_str::<Vec<String>>(msgs.as_str()) {
-        //                 self.messages.extend(msgs_vec.into_iter());
-        //             }
-        //         };
-        //     }
-        //     self.waiting = true;
-        //     return self.next();
-        // }
+        while let Ok(message) = self.websocket.read() {
+            if let Err(e) = self.websocket.flush() {
+                debug!(
+                    "Error found while flushing identificatio websocket: {}",
+                    e.to_string()
+                );
+            }
+            // besides the answer, also read the module's messages
+            match message {
+                tungstenite::Message::Text(txt_msg) => {
+                    if txt_msg.eq_ignore_ascii_case("done") {
+                        self.requesting = false;
+                        return None;
+                    } else if let Ok(opaque) = OpaqueDecisionModel::from_json_str(txt_msg.as_str())
+                    {
+                        let opaquea = Arc::new(opaque);
+                        self.decision_models.insert(opaquea.to_owned());
+                        return Some(opaquea);
+                    } else {
+                        // debug!("Message: {}", txt_msg.as_str());
+                        self.messages.push(txt_msg);
+                    }
+                }
+                tungstenite::Message::Binary(decision_cbor) => {
+                    if let Ok(opaque) = OpaqueDecisionModel::from_cbor(decision_cbor.as_slice()) {
+                        let opaquea = Arc::new(opaque);
+                        self.decision_models.insert(opaquea.to_owned());
+                        return Some(opaquea);
+                    }
+                }
+                tungstenite::Message::Ping(_) => {
+                    if let Err(_) = self.websocket.send(tungstenite::Message::Pong(vec![])) {
+                        debug!(
+                            "Failed to send ping message to other end. Trying to proceed anyway."
+                        );
+                    };
+                }
+                tungstenite::Message::Pong(_) => {
+                    if let Err(_) = self.websocket.send(tungstenite::Message::Ping(vec![])) {
+                        debug!(
+                            "Failed to send pong message to other end. Trying to proceed anyway."
+                        );
+                    };
+                }
+                tungstenite::Message::Close(_) => return None,
+                _ => (),
+            }
+        }
+        None
     }
 }
 

@@ -43,19 +43,19 @@ public class ForSyDeIOModule implements StandaloneModule {
     }
 
     @Override
-    public Optional<DecisionModel> fromOpaqueDecision(OpaqueDecisionModel message) {
-        return switch (message.category()) {
+    public Optional<DecisionModel> fromOpaqueDecision(OpaqueDecisionModel opaque) {
+        return switch (opaque.category()) {
             case "AperiodicAsynchronousDataflowToPartitionedMemoryMappableMulticore" ->
-                message.asCBORBinary().flatMap(b -> readFromCBORBytes(b,
+                opaque.asCBORBinary().flatMap(b -> readFromCBORBytes(b,
                         AperiodicAsynchronousDataflowToPartitionedMemoryMappableMulticore.class))
-                        .or(() -> message.asJsonString()
+                        .or(() -> opaque.asJsonString()
                                 .flatMap(s -> readFromString(s,
                                         AperiodicAsynchronousDataflowToPartitionedMemoryMappableMulticore.class)))
                         .map(m -> (DecisionModel) m);
             case "AperiodicAsynchronousDataflowToPartitionedTiledMulticore" ->
-                message.asCBORBinary().flatMap(b -> readFromCBORBytes(b,
+                opaque.asCBORBinary().flatMap(b -> readFromCBORBytes(b,
                         AperiodicAsynchronousDataflowToPartitionedTiledMulticore.class))
-                        .or(() -> message.asJsonString().flatMap(
+                        .or(() -> opaque.asJsonString().flatMap(
                                 s -> readFromString(s, AperiodicAsynchronousDataflowToPartitionedTiledMulticore.class)))
                         .map(m -> (DecisionModel) m);
             default -> Optional.empty();

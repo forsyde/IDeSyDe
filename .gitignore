@@ -423,3 +423,11 @@ gradle-app.setting
 *.hprof
 
 # End of https://www.toptal.com/developers/gitignore/api/sbt,scala,rust,java,gradle,intellij,python,cmake,c++
+
+# Created by https://www.toptal.com/developers/gitignore/api/bloop
+# Edit at https://www.toptal.com/developers/gitignore?templates=bloop
+
+### Bloop ###
+.bloop/
+
+# End of https://www.toptal.com/developers/gitignore/api/bloop

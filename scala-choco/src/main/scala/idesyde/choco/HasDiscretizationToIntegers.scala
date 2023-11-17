@@ -3,8 +3,6 @@ package idesyde.choco
 import math.Ordering.Implicits.infixOrderingOps
 import math.Numeric.Implicits.infixNumericOps
 
-import idesyde.utils.HasUtils
-
 trait HasDiscretizationToIntegers extends HasUtils {
 
   def discretized[T](resolution: Int, maxT: T)(t: T)(using

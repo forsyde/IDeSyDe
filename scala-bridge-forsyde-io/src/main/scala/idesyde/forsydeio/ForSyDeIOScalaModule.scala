@@ -85,10 +85,10 @@ object ForSyDeIOScalaModule
   override def identificationRules(): ju.Set[IdentificationRule] = Set(
     IdentificationRule.OnlyDesignModels(adaptIRuleToJava(identSDFApplication)),
     IdentificationRule.OnlyDesignModels(adaptIRuleToJava(identTiledMultiCore)),
-    IdentificationRule.Generic(adaptIRuleToJava(identPartitionedCoresWithRuntimes)),
+    IdentificationRule.Generic(adaptIRuleToJava(identPartitionedCoresWithRuntimes), ju.Set.of()),
     IdentificationRule.OnlyDesignModels(adaptIRuleToJava(identPeriodicDependentWorkload)),
     IdentificationRule.OnlyDesignModels(adaptIRuleToJava(identSharedMemoryMultiCore)),
-    IdentificationRule.Generic(adaptIRuleToJava(identPeriodicWorkloadToPartitionedSharedMultiCoreWithUtilization)),
+    IdentificationRule.Generic(adaptIRuleToJava(identPeriodicWorkloadToPartitionedSharedMultiCoreWithUtilization), ju.Set.of()),
     // IdentificationRule.OnlyDesignModels(adaptIRuleToJava(identAperiodicDataflowFromSY)),
     IdentificationRule.OnlyDesignModels(adaptIRuleToJava(identRuntimesAndProcessors)),
     IdentificationRule.OnlyDesignModels(adaptIRuleToJava(identInstrumentedComputationTimes))
@@ -101,20 +101,19 @@ object ForSyDeIOScalaModule
 
   def main(args: Array[String]): Unit = standaloneModule(args)
 
-  def fromOpaqueDesign(opaque: OpaqueDesignModel): ju.Optional[DesignModel] = {
+  override def fromOpaqueDesign(opaque: OpaqueDesignModel): ju.Optional[DesignModel] = {
     if (modelHandler.canLoadModel(opaque.format())) {
       return opaque
         .asString()
         .flatMap(body => {
           try {
-            return ju.Optional.of(modelHandler.readModel(body, opaque.format()));
+            return ju.Optional.of(ForSyDeDesignModel(modelHandler.readModel(body, opaque.format())));
           } catch {
             case e: Exception =>
               e.printStackTrace();
               return ju.Optional.empty();
           }
-        })
-        .map(x => ForSyDeDesignModel(x));
+        });
     } else {
       return ju.Optional.empty();
     }

@@ -19,19 +19,21 @@ import org.chocosolver.solver.search.strategy.strategy.AbstractStrategy
 import org.chocosolver.solver.variables.Variable
 import org.chocosolver.solver.search.loop.monitors.IMonitorSolution
 import idesyde.exploration.choco.explorers.ParetoMinimizationBrancher
-import idesyde.core.ExplorationCriteria
-import idesyde.utils.Logger
 import spire.math.Rational
 import idesyde.common.SDFToTiledMultiCore
 import idesyde.choco.ChocoExplorableOps._
-import idesyde.core.ExplorationCombinationDescription
 import idesyde.common.PeriodicWorkloadToPartitionedSharedMultiCore
 import idesyde.common.PeriodicWorkloadAndSDFServerToMultiCore
-import idesyde.core.ExplorerConfiguration
+import idesyde.core.Explorer
+import idesyde.core.ExplorationBidding
+import idesyde.core.ExplorationSolution
 
-class ChocoExplorer(using logger: Logger) extends Explorer:
+class ChocoExplorer extends Explorer:
 
-  override def bid(decisionModel: DecisionModel): ExplorationCombinationDescription = {
+  override def bid(
+      explorers: java.util.Set[Explorer],
+      decisionModel: DecisionModel
+  ): ExplorationBidding = {
     val canExplore = decisionModel match
       case sdf: SDFToTiledMultiCore                                => true
       case workload: PeriodicWorkloadToPartitionedSharedMultiCore  => true
@@ -55,51 +57,49 @@ class ChocoExplorer(using logger: Logger) extends Explorer:
           .toSet + "nUsedPEs"
       case _ => Set()
     }
-    ExplorationCombinationDescription(
+    ExplorationBidding(
       uniqueIdentifier,
       canExplore,
       true,
       1.0,
-      objectives,
-      availableCriterias(decisionModel)
-        .map(c => c.identifier -> criteriaValue(decisionModel, c))
-        .toMap
+      objectives.asJava,
+      java.util.Map.of()
     )
   }
 
-  override def availableCriterias(decisionModel: DecisionModel): Set[ExplorationCriteria] =
-    decisionModel match {
-      case cp: ChocoDecisionModel =>
-        Set(
-          ExplorationCriteria.TimeUntilFeasibility,
-          ExplorationCriteria.TimeUntilOptimality,
-          ExplorationCriteria.MemoryUntilFeasibility,
-          ExplorationCriteria.MemoryUntilOptimality
-        )
-      case _ => Set()
-    }
+  // override def availableCriterias(decisionModel: DecisionModel): Set[ExplorationCriteria] =
+  //   decisionModel match {
+  //     case cp: ChocoDecisionModel =>
+  //       Set(
+  //         ExplorationCriteria.TimeUntilFeasibility,
+  //         ExplorationCriteria.TimeUntilOptimality,
+  //         ExplorationCriteria.MemoryUntilFeasibility,
+  //         ExplorationCriteria.MemoryUntilOptimality
+  //       )
+  //     case _ => Set()
+  //   }
 
-  override def criteriaValue(
-      decisionModel: DecisionModel,
-      criteria: ExplorationCriteria
-  ): Double = {
-    decisionModel match {
-      case cp: ChocoDecisionModel => {
-        criteria match {
-          case ExplorationCriteria.TimeUntilFeasibility =>
-            cp.chocoModel.getVars.size * 60
-          case ExplorationCriteria.TimeUntilOptimality =>
-            cp.chocoModel.getVars.size * 3600
-          case ExplorationCriteria.MemoryUntilFeasibility =>
-            cp.chocoModel.getVars.size * 10
-          case ExplorationCriteria.MemoryUntilOptimality =>
-            cp.chocoModel.getVars.size * 1000
-          case _ => 0.0
-        }
-      }
-      case _ => 0.0
-    }
-  }
+  // override def criteriaValue(
+  //     decisionModel: DecisionModel,
+  //     criteria: ExplorationCriteria
+  // ): Double = {
+  //   decisionModel match {
+  //     case cp: ChocoDecisionModel => {
+  //       criteria match {
+  //         case ExplorationCriteria.TimeUntilFeasibility =>
+  //           cp.chocoModel.getVars.size * 60
+  //         case ExplorationCriteria.TimeUntilOptimality =>
+  //           cp.chocoModel.getVars.size * 3600
+  //         case ExplorationCriteria.MemoryUntilFeasibility =>
+  //           cp.chocoModel.getVars.size * 10
+  //         case ExplorationCriteria.MemoryUntilOptimality =>
+  //           cp.chocoModel.getVars.size * 1000
+  //         case _ => 0.0
+  //       }
+  //     }
+  //     case _ => 0.0
+  //   }
+  // }
 
   private def getLinearizedObj(cpModel: ChocoDecisionModel): IntVar = {
     val normalizedObjs = cpModel.modelMinimizationObjectives.map(o =>
@@ -122,21 +122,21 @@ class ChocoExplorer(using logger: Logger) extends Explorer:
 
   def exploreChocoExplorable[T <: DecisionModel](
       m: T,
-      previousSolutions: Set[(T, Map[String, Double])],
-      configuration: ExplorerConfiguration
-  )(using ChocoExplorable[T]): LazyList[(T, Map[String, Double])] = {
+      previousSolutions: Set[ExplorationSolution],
+      configuration: Explorer.Configuration
+  )(using ChocoExplorable[T]): LazyList[ExplorationSolution] = {
     println("exploring with " + configuration.toString())
     var (model, objs) = m.chocoModel(
       previousSolutions,
       configuration
     )
     var solver = model.getSolver()
-    if (configuration.improvement_timeout > 0L) {
-      solver.limitTime(configuration.improvement_timeout * 1000L)
+    if (configuration.improvementTimeOutInSecs > 0L) {
+      solver.limitTime(configuration.improvementTimeOutInSecs * 1000L)
     }
-    if (configuration.improvement_iterations > 0L) {
-      solver.limitFail(configuration.improvement_iterations)
-      solver.limitBacktrack(configuration.improvement_iterations)
+    if (configuration.improvementTimeOutInSecs > 0L) {
+      solver.limitFail(configuration.improvementIterations)
+      solver.limitBacktrack(configuration.improvementIterations)
     }
     val oneFeasible = solver.solve()
     if (oneFeasible) {
@@ -215,31 +215,43 @@ class ChocoExplorer(using logger: Logger) extends Explorer:
   def explore(
       decisionModel: DecisionModel,
       previousSolutions: Set[ExplorationSolution],
-      configuration: ExplorerConfiguration
+      configuration: Explorer.Configuration
   ): LazyList[ExplorationSolution] = {
     decisionModel match
       case sdf: SDFToTiledMultiCore =>
         exploreChocoExplorable(
           sdf,
           previousSolutions
-            .filter((m, s) => m.isInstanceOf[SDFToTiledMultiCore])
-            .map((m, s) => (m.asInstanceOf[SDFToTiledMultiCore], s)),
+            .filter(sol => sol.solved().isInstanceOf[SDFToTiledMultiCore])
+            .map(sol =>
+              ExplorationSolution(sol.objectives(), sol.solved().asInstanceOf[SDFToTiledMultiCore])
+            ),
           configuration
         )(using CanSolveSDFToTiledMultiCore())
       case workload: PeriodicWorkloadToPartitionedSharedMultiCore =>
         exploreChocoExplorable(
           workload,
           previousSolutions
-            .filter((m, s) => m.isInstanceOf[PeriodicWorkloadToPartitionedSharedMultiCore])
-            .map((m, s) => (m.asInstanceOf[PeriodicWorkloadToPartitionedSharedMultiCore], s)),
+            .filter(sol => sol.solved().isInstanceOf[PeriodicWorkloadToPartitionedSharedMultiCore])
+            .map(sol =>
+              ExplorationSolution(
+                sol.objectives(),
+                sol.solved().asInstanceOf[PeriodicWorkloadToPartitionedSharedMultiCore]
+              )
+            ),
           configuration
         )(using CanSolveDepTasksToPartitionedMultiCore())
       case workloadAndSDF: PeriodicWorkloadAndSDFServerToMultiCore =>
         exploreChocoExplorable(
           workloadAndSDF,
           previousSolutions
-            .filter((m, s) => m.isInstanceOf[PeriodicWorkloadAndSDFServerToMultiCore])
-            .map((m, s) => (m.asInstanceOf[PeriodicWorkloadAndSDFServerToMultiCore], s)),
+            .filter(sol => sol.solved().isInstanceOf[PeriodicWorkloadAndSDFServerToMultiCore])
+            .map(sol =>
+              ExplorationSolution(
+                sol.objectives(),
+                sol.solved().asInstanceOf[PeriodicWorkloadAndSDFServerToMultiCore]
+              )
+            ),
           configuration
         )(using CanSolvePeriodicWorkloadAndSDFServersToMulticore())
       // case solvable: ChocoDecisionModel =>
@@ -293,6 +305,6 @@ class ChocoExplorer(using logger: Logger) extends Explorer:
       case _ => LazyList.empty
   }
 
-  def uniqueIdentifier: String = "ChocoExplorer"
+  override def uniqueIdentifier(): String = "ChocoExplorer"
 
 end ChocoExplorer

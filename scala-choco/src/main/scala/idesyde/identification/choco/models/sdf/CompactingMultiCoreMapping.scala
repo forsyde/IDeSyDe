@@ -8,7 +8,7 @@ import org.chocosolver.solver.search.strategy.decision.Decision
 import org.chocosolver.solver.search.strategy.assignments.DecisionOperatorFactory
 import scala.util.Random
 import org.chocosolver.solver.search.loop.monitors.IMonitorSolution
-import idesyde.utils.HasUtils
+import idesyde.choco.HasUtils
 import org.chocosolver.solver.variables.BoolVar
 import spire._
 import spire.math._

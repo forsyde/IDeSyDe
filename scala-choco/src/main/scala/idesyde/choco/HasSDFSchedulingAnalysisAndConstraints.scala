@@ -10,7 +10,6 @@ import scala.collection.mutable.HashMap
 import org.chocosolver.solver.constraints.Constraint
 import org.chocosolver.solver.exception.ContradictionException
 import org.chocosolver.solver.constraints.`extension`.Tuples
-import idesyde.utils.HasUtils
 import org.chocosolver.solver.Model
 import idesyde.choco.HasTileAsyncInterconnectCommunicationConstraints
 import idesyde.choco.HasSingleProcessSingleMessageMemoryConstraints

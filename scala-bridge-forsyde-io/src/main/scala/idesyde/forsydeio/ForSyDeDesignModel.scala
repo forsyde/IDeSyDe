@@ -14,8 +14,6 @@ import forsyde.io.lib.LibForSyDeModelHandler
 
 final case class ForSyDeDesignModel(val systemGraph: SystemGraph) extends DesignModel {
 
-  type ElementT = Vertex | EdgeInfo
-
   def merge(other: DesignModel): Option[DesignModel] = {
     other match {
       case fOther: ForSyDeDesignModel =>
@@ -39,9 +37,15 @@ final case class ForSyDeDesignModel(val systemGraph: SystemGraph) extends Design
   //     rel.getTargetPort().toScala
   //   )
 
-  val elements = systemGraph.vertexSet().asScala.toSet ++ systemGraph.edgeSet().asScala.toSet
+  override def elements() = (systemGraph.vertexSet().asScala.map(_.getIdentifier()) ++ systemGraph.edgeSet().asScala.map(_.toIDString())).asJava
 
-  def category: String = "ForSyDeDesignModel"
+  override def category(): String = "ForSyDeDesignModel"
+
+  override def format() = "fiodl"
+
+  override def asString(): java.util.Optional[String] = {
+      java.util.Optional.of(modelHandler.printModel(systemGraph, "fiodl"))
+  }
 
   def bodyAsText: Option[String] = {
     Some(modelHandler.printModel(systemGraph, "fiodl"))

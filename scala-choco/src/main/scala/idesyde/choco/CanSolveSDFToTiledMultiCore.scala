@@ -23,22 +23,20 @@ import org.chocosolver.solver.exception.ContradictionException
 import scala.collection.mutable.Buffer
 import idesyde.common.SDFToTiledMultiCore
 import org.chocosolver.solver.objective.OptimizationPolicy
-import idesyde.utils.Logger
 import idesyde.identification.choco.models.sdf.CompactingMultiCoreMapping
 import scalax.collection.GraphEdge.DiEdge
-import idesyde.core.headers.DecisionModelHeader
 import org.jgrapht.graph.SimpleDirectedGraph
 import org.jgrapht.graph.DefaultEdge
 import org.jgrapht.alg.cycle.JohnsonSimpleCycles
 import org.jgrapht.graph.DefaultDirectedGraph
 import scala.collection.mutable.Stack
-import idesyde.utils.HasUtils
 import idesyde.choco.HasDiscretizationToIntegers
 import org.chocosolver.solver.objective.ParetoMaximizer
 import org.chocosolver.solver.constraints.Constraint
-import idesyde.core.ExplorerConfiguration
+import idesyde.core.Explorer
+import idesyde.core.ExplorationSolution
 
-final class CanSolveSDFToTiledMultiCore(using logger: Logger)
+final class CanSolveSDFToTiledMultiCore
     extends ChocoExplorable[SDFToTiledMultiCore]
     with HasUtils
     with HasSingleProcessSingleMessageMemoryConstraints
@@ -49,8 +47,8 @@ final class CanSolveSDFToTiledMultiCore(using logger: Logger)
 
   def buildChocoModel(
       m: SDFToTiledMultiCore,
-      previousSolutions: Set[(SDFToTiledMultiCore, Map[String, Double])],
-      configuration: ExplorerConfiguration
+      previousSolutions: Set[ExplorationSolution],
+      configuration: Explorer.Configuration
   ): (Model, Map[String, IntVar]) = {
     val chocoModel = Model()
     val execMax    = m.wcets.flatten.max
@@ -62,22 +60,22 @@ final class CanSolveSDFToTiledMultiCore(using logger: Logger)
     //   computeTimeMultiplierAndMemoryDividerWithResolution(
     //     timeValues,
     //     memoryValues,
-    //     if (configuration.time_resolution > Int.MaxValue) Int.MaxValue else configuration.time_resolution.toInt,
+    //     if (configuration.timeDiscretizationFactor > Int.MaxValue) Int.MaxValue else configuration.timeDiscretizationFactor.toInt,
     //     if (memoryResolution > Int.MaxValue) Int.MaxValue else memoryResolution.toInt
     //   )
     def log2(x: Double) = scala.math.log10(x) / scala.math.log10(2)
     def double2int(s: Double) = discretized(
-      if (configuration.time_resolution > Int.MaxValue) Int.MaxValue
-      else if (configuration.time_resolution <= 0L)
+      if (configuration.timeDiscretizationFactor > Int.MaxValue) Int.MaxValue
+      else if (configuration.timeDiscretizationFactor <= 0L)
         scala.math.ceil(log2(m.platform.runtimes.schedulers.length) + 5 * log2(10) - 1.0).toInt
-      else configuration.time_resolution.toInt,
+      else configuration.timeDiscretizationFactor.toInt,
       timeValues.sum
     )(s)
     given Fractional[Long] = HasDiscretizationToIntegers.ceilingLongFractional
     def long2int(l: Long) = discretized(
-      if (configuration.memory_resolution > Int.MaxValue) Int.MaxValue
-      else if (configuration.memory_resolution <= 0L) memoryValues.size * 100
-      else configuration.memory_resolution.toInt,
+      if (configuration.memoryDiscretizationFactor > Int.MaxValue) Int.MaxValue
+      else if (configuration.memoryDiscretizationFactor <= 0L) memoryValues.size * 100
+      else configuration.memoryDiscretizationFactor.toInt,
       memoryValues.max
     )(l)
     val messagesSizes = m.sdfApplications.sdfMessages
@@ -210,18 +208,20 @@ final class CanSolveSDFToTiledMultiCore(using logger: Logger)
       numMappedElements
     ) ++ uniqueGoalPerSubGraphInvThs
     val desiredGoals =
-      if (!configuration.target_objectives.isEmpty) then
-        objs.filter(v => configuration.target_objectives.contains(v.getName()))
+      if (!configuration.targetObjectives.isEmpty) then
+        objs.filter(v => configuration.targetObjectives.contains(v.getName()))
       else objs
     createAndApplyMOOPropagator(
       chocoModel,
       desiredGoals,
-      previousSolutions.map((_, o) =>
-        o.map((k, v) =>
-          if (uniqueGoalPerSubGraphInvThs.exists(_.getName().equals(k))) k -> double2int(v)
-          else k                                                           -> v.toInt
+      previousSolutions
+        .map(sol => (sol.solved(), sol.objectives().asScala))
+        .map((_, o) =>
+          o.map((k, v) =>
+            if (uniqueGoalPerSubGraphInvThs.exists(_.getName().equals(k))) k -> double2int(v)
+            else k                                                           -> v.toInt
+          ).toMap
         )
-      )
     )
     // chocoModel.getSolver().setLearningSignedClauses()
     chocoModel.getSolver().setRestartOnSolutions()
@@ -456,24 +456,24 @@ final class CanSolveSDFToTiledMultiCore(using logger: Logger)
   def rebuildDecisionModel(
       m: SDFToTiledMultiCore,
       solution: Solution,
-      configuration: ExplorerConfiguration
-  ): (SDFToTiledMultiCore, Map[String, Double]) = {
+      configuration: Explorer.Configuration
+  ): ExplorationSolution = {
     val timeValues = m.wcets.flatten ++ m.platform.hardware.maxTraversalTimePerBit.flatten
     val memoryValues = m.platform.hardware.tileMemorySizes ++ m.sdfApplications.sdfMessages
       .map((src, _, _, mSize, p, c, tok) => mSize)
     def log2(x: Double) = scala.math.log10(x) / scala.math.log10(2)
     def int2double(d: Int) = undiscretized(
-      if (configuration.time_resolution > Int.MaxValue) Int.MaxValue
-      else if (configuration.time_resolution <= 0L)
+      if (configuration.timeDiscretizationFactor > Int.MaxValue) Int.MaxValue
+      else if (configuration.timeDiscretizationFactor <= 0L)
         scala.math.ceil(log2(m.platform.runtimes.schedulers.length) + 5 * log2(10) - 1.0).toInt
-      else configuration.time_resolution.toInt,
+      else configuration.timeDiscretizationFactor.toInt,
       timeValues.sum
     )(d)
     // val (discreteTimeValues, discreteMemoryValues) =
     //   computeTimeMultiplierAndMemoryDividerWithResolution(
     //     timeValues,
     //     memoryValues,
-    //     if (configuration.time_resolution > Int.MaxValue) Int.MaxValue else configuration.time_resolution.toInt,
+    //     if (configuration.timeDiscretizationFactor > Int.MaxValue) Int.MaxValue else configuration.timeDiscretizationFactor.toInt,
     //     if (memoryResolution > Int.MaxValue) Int.MaxValue else memoryResolution.toInt
     //   )
     val intVars = solution.retrieveIntVars(true).asScala
@@ -604,10 +604,12 @@ final class CanSolveSDFToTiledMultiCore(using logger: Logger)
     ) ++ m.sdfApplications.actorsIdentifiers.zipWithIndex
       .map((a, i) => s"invThroughput($a)" -> 1.0 / throughputs(i))
       .toMap
-    (
-      full,
-      if (configuration.target_objectives.isEmpty) then objs
-      else objs.filter((k, v) => configuration.target_objectives.contains(k))
+    val filteredObjs =
+      if (configuration.targetObjectives.isEmpty) then objs
+      else objs.filter((k, v) => configuration.targetObjectives.contains(k))
+    ExplorationSolution(
+      filteredObjs.map((k, v) => k -> v.asInstanceOf[java.lang.Double]).asJava,
+      full
     )
   }
 

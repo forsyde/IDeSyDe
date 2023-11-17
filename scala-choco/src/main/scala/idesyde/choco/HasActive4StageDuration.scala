@@ -6,7 +6,6 @@ import org.chocosolver.solver.variables.BoolVar
 import org.chocosolver.solver.constraints.`extension`.Tuples
 import org.chocosolver.solver.Model
 import idesyde.common.PeriodicWorkloadToPartitionedSharedMultiCore
-import idesyde.utils.HasUtils
 
 trait HasActive4StageDuration extends HasUtils {
 

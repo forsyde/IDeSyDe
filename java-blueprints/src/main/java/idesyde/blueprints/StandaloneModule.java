@@ -409,6 +409,10 @@ public interface StandaloneModule extends Module {
                         e.printStackTrace();
                     }).updateConfig(config -> {
                         config.jetty.multipartConfig.maxTotalRequestSize(1, SizeUnit.GB);
+                        config.jetty.wsFactoryConfig(cfg -> {
+                            cfg.setMaxTextMessageSize(100000000);
+                            cfg.setMaxBinaryMessageSize(100000000);
+                        });
                         config.jetty.contextHandlerConfig(ctx -> {
                             ctx.setMaxFormContentSize(100000000);
                         });

@@ -1,21 +1,20 @@
 package idesyde.choco
 
+import scala.jdk.CollectionConverters._
+
 import upickle.default._
 
-import idesyde.blueprints.StandaloneExplorationModule
-import idesyde.utils.Logger
+import idesyde.blueprints.StandaloneModule
 import idesyde.core.DecisionModel
-import idesyde.core.headers.DecisionModelHeader
-import idesyde.utils.SimpleStandardIOLogger
 import idesyde.common.SDFToTiledMultiCore
 import idesyde.choco.ChocoExplorer
 import spire.math.Rational
-import idesyde.core.ExplorationCombinationDescription
 import idesyde.common.PeriodicWorkloadToPartitionedSharedMultiCore
 import idesyde.common.PeriodicWorkloadAndSDFServerToMultiCore
-import idesyde.blueprints.DecisionModelMessage
+import idesyde.core.OpaqueDecisionModel
+import java.util.Optional
 
-object ChocoExplorationModule extends StandaloneExplorationModule {
+object ChocoExplorationModule extends StandaloneModule {
 
   // def combination(decisionModel: DecisionModel): ExplorationCombinationDescription = {
   //   val combos = explorers.map(e => e.combination(decisionModel))
@@ -36,38 +35,48 @@ object ChocoExplorationModule extends StandaloneExplorationModule {
 
   given Fractional[Rational] = spire.compat.fractional[Rational]
 
-  val logger = SimpleStandardIOLogger("WARN")
+  override def uniqueIdentifier(): String = "ChocoExplorationModule"
 
-  given Logger = logger
+  override def explorers() = Set(ChocoExplorer()).asJava
 
-  override def uniqueIdentifier: String = "ChocoExplorationModule"
-
-  override def explorers = List(ChocoExplorer())
-
-  def decisionHeaderToModel(m: DecisionModelHeader): Option[DecisionModel] = {
-    m match {
-      case DecisionModelHeader("SDFToTiledMultiCore", body_path, _) =>
-        body_path.flatMap(decodeFromPath[SDFToTiledMultiCore])
-      case DecisionModelHeader("PeriodicWorkloadToPartitionedSharedMultiCore", body_path, _) =>
-        body_path.flatMap(decodeFromPath[PeriodicWorkloadToPartitionedSharedMultiCore])
-      case DecisionModelHeader("PeriodicWorkloadAndSDFServerToMultiCore", body_path, _) =>
-        body_path.flatMap(decodeFromPath[PeriodicWorkloadAndSDFServerToMultiCore])
-      case _ => None
+  override def fromOpaqueDecision(opaque: OpaqueDecisionModel): Optional[DecisionModel] = {
+    opaque.category() match {
+      case "SDFToTiledMultiCore" =>
+        opaque
+          .bodyCBOR()
+          .map(x => readBinary[SDFToTiledMultiCore](x))
+          .or(() => opaque.bodyJson().map(x => read[SDFToTiledMultiCore](x)))
+          .map(x => x.asInstanceOf[DecisionModel])
+      case "PeriodicWorkloadToPartitionedSharedMultiCore" =>
+        opaque
+          .bodyCBOR()
+          .map(x => readBinary[PeriodicWorkloadToPartitionedSharedMultiCore](x))
+          .or(() =>
+            opaque.bodyJson().map(x => read[PeriodicWorkloadToPartitionedSharedMultiCore](x))
+          )
+          .map(x => x.asInstanceOf[DecisionModel])
+      case "PeriodicWorkloadAndSDFServerToMultiCore" =>
+        opaque
+          .bodyCBOR()
+          .map(x => readBinary[PeriodicWorkloadAndSDFServerToMultiCore](x))
+          .or(() => opaque.bodyJson().map(x => read[PeriodicWorkloadAndSDFServerToMultiCore](x)))
+          .map(x => x.asInstanceOf[DecisionModel])
+      case _ => Optional.empty()
     }
   }
 
-  def decisionMessageToModel(m: DecisionModelMessage): Option[DecisionModel] = {
-    m.header match {
-      case DecisionModelHeader("SDFToTiledMultiCore", _, _) =>
-        m.body.map(s => read[SDFToTiledMultiCore](s))
-      case DecisionModelHeader("PeriodicWorkloadToPartitionedSharedMultiCore", _, _) =>
-        m.body.map(s => read[PeriodicWorkloadToPartitionedSharedMultiCore](s))
-      case DecisionModelHeader("PeriodicWorkloadAndSDFServerToMultiCore", _, _) =>
-        m.body.map(s => read[PeriodicWorkloadAndSDFServerToMultiCore](s))
-      case _ => None
-    }
-  }
+  // def decisionMessageToModel(m: DecisionModelMessage): Option[DecisionModel] = {
+  //   m.header match {
+  //     case DecisionModelHeader("SDFToTiledMultiCore", _, _) =>
+  //       m.body.map(s => read[SDFToTiledMultiCore](s))
+  //     case DecisionModelHeader("PeriodicWorkloadToPartitionedSharedMultiCore", _, _) =>
+  //       m.body.map(s => read[PeriodicWorkloadToPartitionedSharedMultiCore](s))
+  //     case DecisionModelHeader("PeriodicWorkloadAndSDFServerToMultiCore", _, _) =>
+  //       m.body.map(s => read[PeriodicWorkloadAndSDFServerToMultiCore](s))
+  //     case _ => None
+  //   }
+  // }
 
-  def main(args: Array[String]): Unit = standaloneExplorationModule(args)
+  def main(args: Array[String]): Unit = standaloneModule(args)
 
 }

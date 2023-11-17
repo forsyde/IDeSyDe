@@ -8,7 +8,7 @@ import org.chocosolver.solver.constraints.Propagator
 import org.chocosolver.solver.constraints.PropagatorPriority
 import org.chocosolver.util.ESat
 
-import idesyde.utils.HasUtils
+import idesyde.choco.HasUtils
 import scala.annotation.tailrec
 import org.chocosolver.util.objects.graphs.DirectedGraph
 import org.jgrapht.graph.SimpleDirectedGraph

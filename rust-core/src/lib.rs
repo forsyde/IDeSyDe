@@ -3,7 +3,6 @@ pub mod macros;
 use std::{
     collections::{HashMap, HashSet},
     hash::Hash,
-    io::BufWriter,
     path::Path,
     sync::Arc,
     time::{Duration, Instant},
@@ -11,11 +10,7 @@ use std::{
 
 use derive_builder::Builder;
 use downcast_rs::{impl_downcast, Downcast, DowncastSync};
-use serde::{
-    de::{DeserializeOwned, Visitor},
-    ser::{SerializeSeq, SerializeStruct},
-    Deserialize, Serialize,
-};
+use serde::{de::DeserializeOwned, Deserialize, Serialize};
 use std::cmp::Ordering;
 use url::Url;
 
@@ -842,8 +837,8 @@ impl<T: DesignModel + ?Sized> From<Arc<T>> for OpaqueDesignModel {
 pub trait IdentificationIterator: Iterator<Item = Arc<dyn DecisionModel>> + Sync {
     fn next_with_models(
         &mut self,
-        decision_models: &HashSet<Arc<dyn DecisionModel>>,
-        design_models: &HashSet<Arc<dyn DesignModel>>,
+        _decision_models: &HashSet<Arc<dyn DecisionModel>>,
+        _design_models: &HashSet<Arc<dyn DesignModel>>,
     ) -> Option<Arc<dyn DecisionModel>> {
         return None;
     }
@@ -884,15 +879,15 @@ pub trait Module: Send + Sync {
     }
     fn start_identification(
         &self,
-        initial_design_models: &HashSet<Arc<dyn DesignModel>>,
-        initial_decision_models: &HashSet<Arc<dyn DecisionModel>>,
+        _initial_design_models: &HashSet<Arc<dyn DesignModel>>,
+        _initial_decision_models: &HashSet<Arc<dyn DecisionModel>>,
     ) -> Box<dyn IdentificationIterator> {
         Box::new(empty_identification_iter())
     }
     fn reverse_identification(
         &self,
-        solved_decision_model: &HashSet<Arc<dyn DecisionModel>>,
-        design_model: &HashSet<Arc<dyn DesignModel>>,
+        _solved_decision_model: &HashSet<Arc<dyn DecisionModel>>,
+        _design_model: &HashSet<Arc<dyn DesignModel>>,
     ) -> Box<dyn Iterator<Item = Arc<dyn DesignModel>>> {
         Box::new(std::iter::empty())
     }

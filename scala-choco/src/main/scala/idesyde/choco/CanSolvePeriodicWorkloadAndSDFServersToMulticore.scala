@@ -5,16 +5,16 @@ package idesyde.choco
 import org.chocosolver.solver.Model
 import org.chocosolver.solver.Solution
 import idesyde.common.PeriodicWorkloadAndSDFServerToMultiCore
-import idesyde.utils.Logger
 import org.chocosolver.solver.search.loop.monitors.IMonitorContradiction
 import org.chocosolver.solver.exception.ContradictionException
 import org.chocosolver.solver.variables.IntVar
 import idesyde.exploration.explorers.SimpleWorkloadBalancingDecisionStrategy
 import org.chocosolver.solver.search.strategy.Search
 import idesyde.identification.choco.models.sdf.CompactingMultiCoreMapping
-import idesyde.core.ExplorerConfiguration
+import idesyde.core.Explorer
+import idesyde.core.ExplorationSolution
 
-final class CanSolvePeriodicWorkloadAndSDFServersToMulticore(using logger: Logger)
+final class CanSolvePeriodicWorkloadAndSDFServersToMulticore
     extends ChocoExplorable[PeriodicWorkloadAndSDFServerToMultiCore]
     with HasDiscretizationToIntegers
     with HasSingleProcessSingleMessageMemoryConstraints
@@ -26,8 +26,8 @@ final class CanSolvePeriodicWorkloadAndSDFServersToMulticore(using logger: Logge
 
   def buildChocoModel(
       m: PeriodicWorkloadAndSDFServerToMultiCore,
-      objectivesUpperLimits: Set[(PeriodicWorkloadAndSDFServerToMultiCore, Map[String, Double])],
-      configuration: ExplorerConfiguration
+      objectivesUpperLimits: Set[ExplorationSolution],
+      configuration: Explorer.Configuration
   ): (Model, Map[String, IntVar]) = {
     val chocoModel = Model()
     val execMax    = m.wcets.flatten.max
@@ -46,20 +46,20 @@ final class CanSolvePeriodicWorkloadAndSDFServersToMulticore(using logger: Logge
     //   computeTimeMultiplierAndMemoryDividerWithResolution(
     //     timeValues,
     //     memoryValues,
-    //     if (configuration.time_resolution > Int.MaxValue) Int.MaxValue else configuration.time_resolution.toInt,
-    //     if (configuration.memory_resolution > Int.MaxValue) Int.MaxValue else configuration.memory_resolution.toInt
+    //     if (configuration.timeDiscretizationFactor > Int.MaxValue) Int.MaxValue else configuration.timeDiscretizationFactor.toInt,
+    //     if (configuration.memoryDiscretizationFactor > Int.MaxValue) Int.MaxValue else configuration.memoryDiscretizationFactor.toInt
     //   )
     def double2int(s: Double) = discretized(
-      if (configuration.time_resolution > Int.MaxValue) Int.MaxValue
-      else if (configuration.time_resolution <= 0L) timeValues.size * 1000
-      else configuration.time_resolution.toInt,
+      if (configuration.timeDiscretizationFactor > Int.MaxValue) Int.MaxValue
+      else if (configuration.timeDiscretizationFactor <= 0L) timeValues.size * 1000
+      else configuration.timeDiscretizationFactor.toInt,
       timeValues.sum
     )(s)
     given Fractional[Long] = HasDiscretizationToIntegers.ceilingLongFractional
     def long2int(l: Long) = discretized(
-      if (configuration.memory_resolution > Int.MaxValue) Int.MaxValue
-      else if (configuration.memory_resolution <= 0L) memoryValues.size * 100
-      else configuration.memory_resolution.toInt,
+      if (configuration.memoryDiscretizationFactor > Int.MaxValue) Int.MaxValue
+      else if (configuration.memoryDiscretizationFactor <= 0L) memoryValues.size * 100
+      else configuration.memoryDiscretizationFactor.toInt,
       memoryValues.max
     )(l)
 
@@ -363,12 +363,14 @@ final class CanSolvePeriodicWorkloadAndSDFServersToMulticore(using logger: Logge
       chocoModel,
       objs,
       objectivesUpperLimits
+      .map(sol => (sol.solved(), sol.objectives().asScala))
       .map((s, o) =>
         o.map((k, v) =>
           if (uniqueGoalPerSubGraphThs.exists(_.getName().equals(k))) k -> double2int(v)
           else k                                                           -> v.toInt
         )
         .filter((k, v) => objs.exists(_.getName().equals(k)))
+        .toMap
       )
     )
 
@@ -407,8 +409,8 @@ final class CanSolvePeriodicWorkloadAndSDFServersToMulticore(using logger: Logge
   def rebuildDecisionModel(
       m: PeriodicWorkloadAndSDFServerToMultiCore,
       solution: Solution,
-      configuration: ExplorerConfiguration
-  ): (PeriodicWorkloadAndSDFServerToMultiCore, Map[String, Double]) = {
+      configuration: Explorer.Configuration
+  ): ExplorationSolution = {
     val timeValues =
       m.wcets.flatten ++ m.platform.hardware.maxTraversalTimePerBit.flatten
         .map(
@@ -420,17 +422,17 @@ final class CanSolvePeriodicWorkloadAndSDFServersToMulticore(using logger: Logge
           mSize
         ) ++ m.tasksAndSDFs.workload.messagesMaxSizes ++ m.tasksAndSDFs.workload.processSizes
     def int2double(d: Int) = undiscretized(
-      if (configuration.time_resolution > Int.MaxValue) Int.MaxValue
-      else if (configuration.time_resolution <= 0L) timeValues.size * 1000
-      else configuration.time_resolution.toInt,
+      if (configuration.timeDiscretizationFactor > Int.MaxValue) Int.MaxValue
+      else if (configuration.timeDiscretizationFactor <= 0L) timeValues.size * 1000
+      else configuration.timeDiscretizationFactor.toInt,
       timeValues.sum
     )(d)
     // val (discreteTimeValues, discreteMemoryValues) =
     //   computeTimeMultiplierAndMemoryDividerWithResolution(
     //     timeValues,
     //     memoryValues,
-    //     if (configuration.time_resolution > Int.MaxValue) Int.MaxValue else configuration.time_resolution.toInt,
-    //     if (configuration.memory_resolution > Int.MaxValue) Int.MaxValue else configuration.memory_resolution.toInt
+    //     if (configuration.timeDiscretizationFactor > Int.MaxValue) Int.MaxValue else configuration.timeDiscretizationFactor.toInt,
+    //     if (configuration.memoryDiscretizationFactor > Int.MaxValue) Int.MaxValue else configuration.memoryDiscretizationFactor.toInt
     //   )
     val intVars = solution.retrieveIntVars(true).asScala
     // println(intVars.filter(v => v.getName().contains("effect") || v.getName().contains("utilization")).mkString(", "))
@@ -540,7 +542,9 @@ final class CanSolvePeriodicWorkloadAndSDFServersToMulticore(using logger: Logge
     val utilizationPerRuntime = m.platform.runtimes.schedulers.zipWithIndex.filter((s, i) => m.platform.runtimes.isFixedPriority(i)).map((s, i) => 
       intVars.find(_.getName().startsWith(s"utilization($i)")).get.getValue().toDouble / 100.0
     )
-    (m.copy(
+    ExplorationSolution(
+      (Map("nUsedPEs" -> numMappedElements.getValue().toDouble.asInstanceOf[java.lang.Double]) ++ invThs.map(v => v.getName() -> int2double(v.getValue()).asInstanceOf[java.lang.Double]).toMap).asJava,
+      m.copy(
       processesSchedulings = taskExecution.zipWithIndex.map((mi, ti) => m.tasksAndSDFs.workload.processes(ti) -> m.platform.runtimes.schedulers(mi))  ++ actorExecution.zipWithIndex.map((mi, ti) => m.tasksAndSDFs.sdfApplications.actorsIdentifiers(ti) -> m.platform.runtimes.schedulers(mi)),
       processesMappings = tasksMemoryMapping.zipWithIndex.map((mi, ti) => m.tasksAndSDFs.workload.processes(ti) -> m.platform.hardware.storageElems(mi))  ++ actorsMemoryMapping.zipWithIndex.map((mi, ti) => m.tasksAndSDFs.sdfApplications.actorsIdentifiers(ti) -> m.platform.hardware.storageElems(mi)),
       messagesMappings = dataChannelsMemoryMapping.zipWithIndex.map((mi, ci) => m.tasksAndSDFs.workload.dataChannels(ci) -> m.platform.hardware.storageElems(mi)) ++ sdfMessageMemoryMappings,
@@ -554,6 +558,7 @@ final class CanSolvePeriodicWorkloadAndSDFServersToMulticore(using logger: Logge
         unordered.sortBy((a, o) => o).map((a, _) => a)
       }),
       sdfServerUtilization = utilizationPerRuntime.map(u => 1.0 - u)
-    ), Map("nUsedPEs" -> numMappedElements.getValue().toDouble) ++ invThs.map(v => v.getName() -> int2double(v.getValue())).toMap)
+    )
+    )
   }
 }

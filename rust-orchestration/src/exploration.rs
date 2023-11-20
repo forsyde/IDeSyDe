@@ -205,7 +205,9 @@ impl Explorer for ExternalExplorer {
                 self.unique_identifier()
             );
         };
-        if let Ok(explore_url) = mut_url.join("/explore") {
+        if let Ok(explore_url) =
+            mut_url.join(format!("/{}/explore", self.unique_identifier()).as_str())
+        {
             if let Some((mut ws, _)) = std::net::TcpStream::connect(mut_url.as_str())
                 .ok()
                 .and_then(|stream| tungstenite::client(explore_url, stream).ok())

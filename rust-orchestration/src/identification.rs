@@ -134,8 +134,6 @@ impl Iterator for ExternalServerIdentifiticationIterator {
                             "Failed to send ping message to other end. Trying to proceed anyway."
                         );
                     };
-                    self.requesting = false;
-                    return None;
                 }
                 tungstenite::Message::Pong(_) => {
                     if let Err(_) = self.websocket.send(tungstenite::Message::Ping(vec![])) {

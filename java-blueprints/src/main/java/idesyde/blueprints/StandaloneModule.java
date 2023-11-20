@@ -195,7 +195,7 @@ public interface StandaloneModule extends Module {
                                     }
                                     logger.info("Finished a identification step with %s decision models identified"
                                             .formatted(decisionModels.size()));
-                                    ctx.sendPing();
+                                    ctx.send("done");
                                 });
                             } else {
                                 OpaqueDesignModel.fromJsonString(ctx.message()).flatMap(this::fromOpaqueDesign)
@@ -208,7 +208,7 @@ public interface StandaloneModule extends Module {
                         });
                         ws.onConnect(ctx -> {
                             logger.info("A new identification client connected");
-                            ctx.disableAutomaticPings();
+                            ctx.enableAutomaticPings();
                         });
                     }).get("/identified/{session}", ctx -> {
                         String session = ctx.pathParam("session");
@@ -310,10 +310,13 @@ public interface StandaloneModule extends Module {
                                                                         .ifPresent(configuration::set)));
                             }
                         });
-                        ws.onConnect(ctx -> explorers().stream()
-                                .filter(e -> e.uniqueIdentifier().equalsIgnoreCase(ctx.pathParam("explorerName")))
-                                .findAny()
-                                .ifPresentOrElse(explorer::set, ctx::closeSession));
+                        ws.onConnect(ctx -> {
+                            ctx.enableAutomaticPings();
+                            explorers().stream()
+                                    .filter(e -> e.uniqueIdentifier().equalsIgnoreCase(ctx.pathParam("explorerName")))
+                                    .findAny()
+                                    .ifPresentOrElse(explorer::set, ctx::closeSession);
+                        });
                     })
                     // .ws(
                     // "/{explorerName}/explore",

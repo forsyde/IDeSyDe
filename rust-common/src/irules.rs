@@ -307,7 +307,6 @@ pub fn identify_asynchronous_aperiodic_dataflow_from_sdf(
                     .channel_token_sizes
                     .to_owned();
                 // we finish by building the decision model
-                println!("REACHED!!!");
                 identified.push(Arc::new(AperiodicAsynchronousDataflow {
                     processes: component_actors.iter().map(|s| s.to_string()).collect(),
                     buffers: component_channels

@@ -229,7 +229,8 @@ public interface StandaloneModule extends Module {
                         ctx.result(objectMapper.writeValueAsString(
                                 explorers().stream().map(Explorer::uniqueIdentifier).collect(Collectors.toSet())));
                     }).get("/{explorerName}/bid", ctx -> {
-                        explorers().stream().filter(e -> e.uniqueIdentifier().equals(ctx.pathParam("explorerName")))
+                        explorers().stream()
+                                .filter(e -> e.uniqueIdentifier().equalsIgnoreCase(ctx.pathParam("explorerName")))
                                 .findAny()
                                 .ifPresentOrElse(explorer -> {
                                     if (ctx.isMultipartFormData()) {
@@ -310,7 +311,8 @@ public interface StandaloneModule extends Module {
                             }
                         });
                         ws.onConnect(ctx -> explorers().stream()
-                                .filter(e -> e.uniqueIdentifier().equals(ctx.pathParam("explorerName"))).findAny()
+                                .filter(e -> e.uniqueIdentifier().equalsIgnoreCase(ctx.pathParam("explorerName")))
+                                .findAny()
                                 .ifPresentOrElse(explorer::set, ctx::closeSession));
                     })
                     // .ws(

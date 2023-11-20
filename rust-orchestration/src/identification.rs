@@ -54,6 +54,10 @@ impl Iterator for ExternalServerIdentifiticationIterator {
     type Item = Arc<dyn DecisionModel>;
 
     fn next(&mut self) -> Option<Self::Item> {
+        // if the websocket is closed, we short-curcuit the function.
+        if !self.websocket.can_read() {
+            return None;
+        }
         // send the decision models
         if !self.requesting {
             for m in &self.decision_models_to_upload {
@@ -100,7 +104,11 @@ impl Iterator for ExternalServerIdentifiticationIterator {
             // besides the answer, also read the module's messages
             match message {
                 tungstenite::Message::Text(txt_msg) => {
-                    if let Ok(opaque) = OpaqueDecisionModel::from_json_str(txt_msg.as_str()) {
+                    if txt_msg.eq_ignore_ascii_case("done") {
+                        self.requesting = false;
+                        return None;
+                    } else if let Ok(opaque) = OpaqueDecisionModel::from_json_str(txt_msg.as_str())
+                    {
                         let opaquea = Arc::new(opaque) as Arc<dyn DecisionModel>;
                         if !self.decision_models.contains(&opaquea) {
                             self.decision_models.push(opaquea.to_owned());

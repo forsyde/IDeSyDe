@@ -154,7 +154,7 @@ fn main() {
         info!("Final output set to {}", output_path_str);
 
         let run_path = Path::new(run_path_str);
-        let output_path = Path::new(output_path_str);
+        // let output_path = Path::new(output_path_str);
         let inputs_path = &run_path.join("inputs");
         let modules_path = &std::env::current_dir()
             .expect("Failed to get working directory.")
@@ -270,6 +270,22 @@ fn main() {
             );
         }
 
+        let explorers: Vec<Arc<dyn Explorer>> =
+            modules.iter().flat_map(|x| x.explorers()).collect();
+
+        for explorer in &explorers {
+            debug!(
+                "Registered explorer with identifier {}",
+                explorer.unique_identifier()
+            );
+        }
+
+        info!(
+            "A total of {} modules and {} explorers were detected.",
+            modules.len(),
+            explorers.len()
+        );
+
         // continue
         debug!("Reading and preparing input files");
         // let design_model_headers = load_design_model_headers_from_binary(&inputs_path);
@@ -335,8 +351,6 @@ fn main() {
         // let dominant_without_biddings = compute_dominant_decision_models(&identified_refs);
         let dominant_partial_identification =
             idesyde_core::compute_dominant_identification(&identified);
-        let explorers: Vec<Arc<dyn Explorer>> =
-            modules.iter().flat_map(|x| x.explorers()).collect();
         let biddings: Vec<(Arc<dyn Explorer>, Arc<dyn DecisionModel>, ExplorationBid)> = explorers
             .iter()
             .flat_map(|explorer| {

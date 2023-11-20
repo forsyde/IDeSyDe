@@ -21,11 +21,12 @@ use std::process::Stdio;
 use std::sync::Arc;
 use std::sync::Mutex;
 
-use exploration::ExternalServerExplorationModule;
+use exploration::ExternalExplorerBuilder;
 
 use identification::ExternalServerIdentifiticationIterator;
 use idesyde_core::DecisionModel;
 use idesyde_core::DesignModel;
+use idesyde_core::Explorer;
 use idesyde_core::Module;
 
 use idesyde_core::OpaqueDecisionModel;
@@ -344,6 +345,67 @@ impl Module for ExternalServerModule {
         } else {
             return Box::new(std::iter::empty());
         }
+    }
+
+    fn explorers(&self) -> Vec<Arc<dyn idesyde_core::Explorer>> {
+        if let Ok(explorers_url) = self.url.join("/explorers") {
+            match self.client.get(explorers_url).send() {
+                Ok(result) => match result.text() {
+                    Ok(text) => match serde_json::from_str::<Vec<String>>(&text) {
+                        Ok(names) => {
+                            return names
+                                .iter()
+                                .map(|name| {
+                                    Arc::new(
+                                        ExternalExplorerBuilder::default()
+                                            .name(name.to_owned())
+                                            .url(self.url.to_owned())
+                                            .client(self.client.to_owned())
+                                            .build()
+                                            .expect("Failed to build an external explorer. Should never fail."),
+                                    )
+                                })
+                                .map(|x| x as Arc<dyn Explorer>)
+                                .collect();
+                        }
+                        Err(_) => {
+                            warn!(
+                                "Explorer {} failed deserialize its decision model. Trying to proceed anyway.",
+                                self.unique_identifier()
+                            );
+                            debug!(
+                                "Explorer {} failed to deserialize explorer names from {}",
+                                self.unique_identifier(),
+                                &text
+                            );
+                        }
+                    },
+                    Err(err) => {
+                        warn!(
+                            "Explorer {} failed to process request. Trying to proceed anyway.",
+                            self.unique_identifier()
+                        );
+                        debug!(
+                            "Explorer {} failed to transform into text with: {}",
+                            self.unique_identifier(),
+                            err.to_string()
+                        );
+                    }
+                },
+                Err(err) => {
+                    warn!(
+                        "Explorer {} failed to accept request. Trying to proceed anyway.",
+                        self.unique_identifier()
+                    );
+                    debug!(
+                        "Explorer {} failed to request with: {}",
+                        self.unique_identifier(),
+                        err.to_string()
+                    );
+                }
+            }
+        }
+        Vec::new()
     }
 }
 

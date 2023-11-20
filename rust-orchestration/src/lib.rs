@@ -272,6 +272,87 @@ impl Module for ExternalServerModule {
         solved_decision_models: &Vec<Arc<dyn DecisionModel>>,
         design_models: &Vec<Arc<dyn DesignModel>>,
     ) -> Box<dyn Iterator<Item = Arc<dyn DesignModel>>> {
+        let mut mut_url = self.url.clone();
+        mut_url
+            .set_scheme("ws")
+            .expect("Failed to set scheme to 'ws'.");
+        if let Ok(reverse_url) = mut_url.join("/reverse") {
+            if let Some((mut ws, _)) = mut_url
+                .socket_addrs(|| None)
+                .ok()
+                .and_then(|addrs| addrs.first().cloned())
+                .and_then(|addr| std::net::TcpStream::connect(addr).ok())
+                .and_then(|stream| tungstenite::client(reverse_url, stream).ok())
+            {
+                // send solved decision models
+                for m in solved_decision_models {
+                    if let Ok(decision_cbor) = OpaqueDecisionModel::from(m).to_json() {
+                        if let Err(e) = ws.send(tungstenite::Message::text(decision_cbor)) {
+                            debug!("Decision CBOR upload error {}", e.to_string());
+                        }
+                    }
+                }
+                // same for design models
+                for m in design_models {
+                    if let Ok(design_cbor) = OpaqueDesignModel::from(m.as_ref()).to_json() {
+                        if let Err(e) = ws.send(tungstenite::Message::text(design_cbor)) {
+                            debug!("Design CBOR upload error {}", e.to_string());
+                        };
+                    };
+                }
+                if let Err(e) = ws.send(tungstenite::Message::text("done")) {
+                    debug!("Failed to send 'done': {}", e.to_string());
+                };
+                return Box::new(std::iter::repeat_with(move || {
+                    while let Ok(message) = ws.read() {
+                        if let Err(e) = ws.flush() {
+                            debug!(
+                                "Error found while flushing reverse identification websocket: {}",
+                                e.to_string()
+                            );
+                        }
+                        // besides the answer, also read the module's messages
+                        match message {
+                            tungstenite::Message::Text(txt_msg) => {
+                                if txt_msg.eq_ignore_ascii_case("done") {
+                                    return None;
+                                } else if let Ok(opaque) =
+                                    OpaqueDesignModel::from_json_str(txt_msg.as_str())
+                                {
+                                    let opaquea = Arc::new(opaque) as Arc<dyn DesignModel>;
+                                    return Some(opaquea);
+                                }
+                            }
+                            tungstenite::Message::Binary(decision_cbor) => {
+                                if let Ok(opaque) =
+                                    OpaqueDesignModel::from_cbor(decision_cbor.as_slice())
+                                {
+                                    let opaquea = Arc::new(opaque) as Arc<dyn DesignModel>;
+                                    return Some(opaquea);
+                                }
+                            }
+                            tungstenite::Message::Ping(_) => {
+                                if let Err(_) = ws.send(tungstenite::Message::Pong(vec![])) {
+                                    debug!(
+                                        "Failed to send ping message to other end. Trying to proceed anyway."
+                                    );
+                                };
+                            }
+                            tungstenite::Message::Pong(_) => {
+                                if let Err(_) = ws.send(tungstenite::Message::Ping(vec![])) {
+                                    debug!(
+                                        "Failed to send pong message to other end. Trying to proceed anyway."
+                                    );
+                                };
+                            }
+                            tungstenite::Message::Close(_) => return None,
+                            _ => (),
+                        }
+                    }
+                    None
+                }).take_while(|x| x.is_some()).flatten());
+            }
+        }
         // let mut integrated: Vec<Box<dyn DesignModel>> = Vec::new();
         // send decision models
         solved_decision_models.par_iter().for_each(|m| {

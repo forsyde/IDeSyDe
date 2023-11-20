@@ -1,20 +1,10 @@
 package idesyde.metaheuristics;
 
-import java.util.ArrayDeque;
-import java.util.Arrays;
-import java.util.List;
-import java.util.Map;
-import java.util.Set;
-import java.util.function.BiFunction;
-
-import idesyde.common.AperiodicAsynchronousDataflow;
 import idesyde.common.AperiodicAsynchronousDataflowToPartitionedMemoryMappableMulticore;
 import org.jgrapht.Graph;
 import org.jgrapht.alg.connectivity.ConnectivityInspector;
 import org.jgrapht.alg.connectivity.KosarajuStrongConnectivityInspector;
-import org.jgrapht.alg.cycle.TarjanSimpleCycles;
 import org.jgrapht.graph.*;
-import org.jgrapht.graph.builder.GraphBuilder;
 
 interface AperiodicAsynchronousDataflowMethods {
 
@@ -45,7 +35,7 @@ interface AperiodicAsynchronousDataflowMethods {
         sccAlgorithm.stronglyConnectedSets().forEach(scc -> {
             var cycleValue = 0.0;
             // add the value in the cycle
-            for (var i: scc) {
+            for (var i : scc) {
                 cycleValue += jobWeights[i];
                 for (var j : scc) {
                     if (follows.containsEdge(i, j)) {
@@ -53,7 +43,7 @@ interface AperiodicAsynchronousDataflowMethods {
                     }
                 }
             }
-            for (var jobI: scc) {
+            for (var jobI : scc) {
                 maxCycles[jobI] = Math.max(maxCycles[jobI], cycleValue);
             }
         });

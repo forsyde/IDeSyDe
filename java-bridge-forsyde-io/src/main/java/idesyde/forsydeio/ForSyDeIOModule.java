@@ -49,14 +49,14 @@ public class ForSyDeIOModule implements StandaloneModule {
                 opaque.asCBORBinary().flatMap(b -> readFromCBORBytes(b,
                         AperiodicAsynchronousDataflowToPartitionedMemoryMappableMulticore.class))
                         .or(() -> opaque.asJsonString()
-                                .flatMap(s -> readFromString(s,
+                                .flatMap(s -> readFromJsonString(s,
                                         AperiodicAsynchronousDataflowToPartitionedMemoryMappableMulticore.class)))
                         .map(m -> (DecisionModel) m);
             case "AperiodicAsynchronousDataflowToPartitionedTiledMulticore" ->
                 opaque.asCBORBinary().flatMap(b -> readFromCBORBytes(b,
                         AperiodicAsynchronousDataflowToPartitionedTiledMulticore.class))
                         .or(() -> opaque.asJsonString().flatMap(
-                                s -> readFromString(s, AperiodicAsynchronousDataflowToPartitionedTiledMulticore.class)))
+                                s -> readFromJsonString(s, AperiodicAsynchronousDataflowToPartitionedTiledMulticore.class)))
                         .map(m -> (DecisionModel) m);
             default -> Optional.empty();
         };

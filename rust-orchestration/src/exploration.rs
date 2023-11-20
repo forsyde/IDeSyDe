@@ -208,35 +208,39 @@ impl Explorer for ExternalExplorer {
         if let Ok(explore_url) =
             mut_url.join(format!("/{}/explore", self.unique_identifier()).as_str())
         {
-            if let Some((mut ws, _)) = std::net::TcpStream::connect(mut_url.as_str())
-                .ok()
-                .and_then(|stream| tungstenite::client(explore_url, stream).ok())
-            {
-                if let Ok(design_cbor) = OpaqueDecisionModel::from(m).to_cbor() {
-                    if let Err(e) = ws.send(tungstenite::Message::Binary(design_cbor)) {
-                        warn!("Failed to send decision model to {} for exploration. Trying to proceed anyway.", self.unique_identifier());
-                        debug!("Message was: {}", e.to_string());
-                    };
-                };
-                for prev_sol in currrent_solutions {
-                    if let Ok(design_cbor) = ExplorationSolutionMessage::from(prev_sol).to_cbor() {
-                        if let Err(e) = ws.send(tungstenite::Message::Binary(design_cbor)) {
-                            warn!("Failed to send previous solution to {} for exploration. Trying to proceed anyway.", self.unique_identifier());
+            if let Ok(explore_sckt) = explore_url.socket_addrs(|| None) {
+                if let Some((mut ws, _)) = std::net::TcpStream::connect(explore_sckt[0])
+                    .ok()
+                    .and_then(|stream| tungstenite::client(explore_url, stream).ok())
+                {
+                    if let Ok(design_cbor) = OpaqueDecisionModel::from(m).to_json() {
+                        if let Err(e) = ws.send(tungstenite::Message::text(design_cbor)) {
+                            warn!("Failed to send decision model to {} for exploration. Trying to proceed anyway.", self.unique_identifier());
                             debug!("Message was: {}", e.to_string());
                         };
                     };
-                }
-                if let Ok(conf_cbor) = exploration_configuration.to_cbor() {
-                    if let Err(e) = ws.send(tungstenite::Message::Binary(conf_cbor)) {
-                        warn!("Failed to send configuration to {} for exploration. Trying to proceed anyway.", self.unique_identifier());
+                    for prev_sol in currrent_solutions {
+                        if let Ok(design_cbor) = ExplorationSolutionMessage::from(prev_sol).to_json_str() {
+                            if let Err(e) = ws.send(tungstenite::Message::text(design_cbor)) {
+                                warn!("Failed to send previous solution to {} for exploration. Trying to proceed anyway.", self.unique_identifier());
+                                debug!("Message was: {}", e.to_string());
+                            };
+                        };
+                    }
+                    if let Ok(conf_cbor) = exploration_configuration.to_json_string() {
+                        if let Err(e) = ws.send(tungstenite::Message::text(conf_cbor)) {
+                            warn!("Failed to send configuration to {} for exploration. Trying to proceed anyway.", self.unique_identifier());
+                            debug!("Message was: {}", e.to_string());
+                        };
+                    }
+                    if let Err(e) = ws.send(tungstenite::Message::text("done")) {
+                        warn!("Failed to send exploration request to {} for exploration. Exploration is likely to fail.", self.unique_identifier());
                         debug!("Message was: {}", e.to_string());
                     };
+                    return Box::new(ExternalExplorerSolutionIter::new(ws));
                 }
-                if let Err(e) = ws.send(tungstenite::Message::Text("done".to_string())) {
-                    warn!("Failed to send exploration request to {} for exploration. Exploration is likely to fail.", self.unique_identifier());
-                    debug!("Message was: {}", e.to_string());
-                };
-                return Box::new(ExternalExplorerSolutionIter::new(ws));
+            } else {
+                warn!("Failed to open exploration connetion. Trying to proceed anyway.");
             }
         }
         // if let Ok(explore_url) = self

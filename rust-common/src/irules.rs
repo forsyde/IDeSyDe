@@ -24,7 +24,7 @@ pub fn identify_partitioned_mem_mapped_multicore(
     decision_models: &Vec<Arc<dyn DecisionModel>>,
 ) -> IdentificationResult {
     let mut new_models = Vec::new();
-    let mut errors: HashSet<String> = HashSet::new();
+    let mut errors: Vec<String> = Vec::new();
     for m2 in decision_models {
         if let Some(runt) = m2.downcast_ref::<RuntimesAndProcessors>() {
             let one_scheduler_per_proc = runt
@@ -38,13 +38,13 @@ pub fn identify_partitioned_mem_mapped_multicore(
                     .is_some()
             });
             if !one_proc_per_scheduler {
-                errors.insert(
+                errors.push(
                     "identify_partitioned_mem_mapped_multicore: more than one processor per scheduler"
                         .to_string(),
                 );
             }
             if !one_scheduler_per_proc {
-                errors.insert(
+                errors.push(
                     "identify_partitioned_mem_mapped_multicore: more than one scheduler per processor"
                         .to_string(),
                 );
@@ -65,10 +65,7 @@ pub fn identify_partitioned_mem_mapped_multicore(
             }
         }
     }
-    (
-        Box::new(new_models.into_iter()),
-        Box::new(errors.into_iter()),
-    )
+    (new_models, errors)
 }
 
 pub fn identify_partitioned_tiled_multicore(
@@ -76,7 +73,7 @@ pub fn identify_partitioned_tiled_multicore(
     decision_models: &Vec<Arc<dyn DecisionModel>>,
 ) -> IdentificationResult {
     let mut new_models = Vec::new();
-    let mut errors: HashSet<String> = HashSet::new();
+    let mut errors: Vec<String> = Vec::new();
     for m2 in decision_models {
         if let Some(runt) = m2.downcast_ref::<RuntimesAndProcessors>() {
             let same_number = runt.processors.len() == runt.runtimes.len();
@@ -91,16 +88,16 @@ pub fn identify_partitioned_tiled_multicore(
                     .is_some()
             });
             if !same_number {
-                errors.insert("identify_partitioned_tiled_multicore: number of schedulers and processores not equal".to_string());
+                errors.push("identify_partitioned_tiled_multicore: number of schedulers and processores not equal".to_string());
             }
             if !one_proc_per_scheduler {
-                errors.insert(
+                errors.push(
                     "identify_partitioned_tiled_multicore: more than one processor per scheduler"
                         .to_string(),
                 );
             }
             if !one_scheduler_per_proc {
-                errors.insert(
+                errors.push(
                     "identify_partitioned_tiled_multicore: more than one scheduler per processor"
                         .to_string(),
                 );
@@ -121,10 +118,7 @@ pub fn identify_partitioned_tiled_multicore(
             }
         }
     }
-    (
-        Box::new(new_models.into_iter()),
-        Box::new(errors.into_iter()),
-    )
+    (new_models, errors)
 }
 
 /// Identifies (many) AsynchronousAperiodicDataflow from AnalysedSDFApplication
@@ -142,7 +136,7 @@ pub fn identify_asynchronous_aperiodic_dataflow_from_sdf(
     decision_models: &Vec<Arc<dyn DecisionModel>>,
 ) -> IdentificationResult {
     let mut identified = Vec::new();
-    let mut errors: HashSet<String> = HashSet::new();
+    let mut errors: Vec<String> = Vec::new();
     for m in decision_models {
         if let Some(analysed_sdf_application) = m.downcast_ref::<AnalysedSDFApplication>() {
             // build a temporary graph for analysis
@@ -388,13 +382,10 @@ pub fn identify_asynchronous_aperiodic_dataflow_from_sdf(
             // Graph::from_edges(edges.into_iter());
             // actors_graph.extend_with_edges(edges.into_iter());
         } else {
-            errors.insert("identify_asynchronous_aperiodic_dataflow_from_sdf: no AnalyzedSDFApplication detected".to_string());
+            errors.push("identify_asynchronous_aperiodic_dataflow_from_sdf: no AnalyzedSDFApplication detected".to_string());
         }
     }
-    (
-        Box::new(identified.into_iter()),
-        Box::new(errors.into_iter()),
-    )
+    (identified, errors)
 }
 
 pub fn identify_aperiodic_asynchronous_dataflow_to_partitioned_tiled_multicore(
@@ -402,7 +393,7 @@ pub fn identify_aperiodic_asynchronous_dataflow_to_partitioned_tiled_multicore(
     decision_models: &Vec<Arc<dyn DecisionModel>>,
 ) -> IdentificationResult {
     let mut identified: Vec<Arc<dyn DecisionModel>> = Vec::new();
-    let mut errors: HashSet<String> = HashSet::new();
+    let mut errors: Vec<String> = Vec::new();
     if let Some(plat) = decision_models
         .iter()
         .find_map(|x| x.downcast_ref::<PartitionedTiledMulticore>())
@@ -434,9 +425,9 @@ pub fn identify_aperiodic_asynchronous_dataflow_to_partitioned_tiled_multicore(
                     })
                     .next();
                 if apps.len() > 0 && first_non_mappable.is_some() {
-                    errors.insert(format!("identify_aperiodic_asynchronous_dataflow_to_partitioned_tiled_multicore: process {} is not mappable in any processing element.", first_non_mappable.unwrap()));
+                    errors.push(format!("identify_aperiodic_asynchronous_dataflow_to_partitioned_tiled_multicore: process {} is not mappable in any processing element.", first_non_mappable.unwrap()));
                 } else if apps.is_empty() {
-                    errors.insert(format!("identify_aperiodic_asynchronous_dataflow_to_partitioned_mem_mappable_multicore: no asynchronous aperiodic application detected."));
+                    errors.push(format!("identify_aperiodic_asynchronous_dataflow_to_partitioned_mem_mappable_multicore: no asynchronous aperiodic application detected."));
                 }
                 if apps.len() > 0 && first_non_mappable.is_none() {
                     identified.push(Arc::new(
@@ -457,18 +448,15 @@ pub fn identify_aperiodic_asynchronous_dataflow_to_partitioned_tiled_multicore(
                     ))
                 }
             } else {
-                errors.insert("identify_aperiodic_asynchronous_dataflow_to_partitioned_tiled_multicore: no memory instrumentation decision model".to_string());
+                errors.push("identify_aperiodic_asynchronous_dataflow_to_partitioned_tiled_multicore: no memory instrumentation decision model".to_string());
             }
         } else {
-            errors.insert("identify_aperiodic_asynchronous_dataflow_to_partitioned_tiled_multicore: no computational instrumentation decision model".to_string());
+            errors.push("identify_aperiodic_asynchronous_dataflow_to_partitioned_tiled_multicore: no computational instrumentation decision model".to_string());
         }
     } else {
-        errors.insert("identify_aperiodic_asynchronous_dataflow_to_partitioned_tiled_multicore: no partitioned tiled platform model".to_string());
+        errors.push("identify_aperiodic_asynchronous_dataflow_to_partitioned_tiled_multicore: no partitioned tiled platform model".to_string());
     }
-    (
-        Box::new(identified.into_iter()),
-        Box::new(errors.into_iter()),
-    )
+    (identified, errors)
 }
 
 pub fn identify_aperiodic_asynchronous_dataflow_to_partitioned_mem_mappable_multicore(
@@ -476,7 +464,7 @@ pub fn identify_aperiodic_asynchronous_dataflow_to_partitioned_mem_mappable_mult
     decision_models: &Vec<Arc<dyn DecisionModel>>,
 ) -> IdentificationResult {
     let mut identified: Vec<Arc<dyn DecisionModel>> = Vec::new();
-    let mut errors: HashSet<String> = HashSet::new();
+    let mut errors: Vec<String> = Vec::new();
     if let Some(plat) = decision_models
         .iter()
         .find_map(|x| x.downcast_ref::<PartitionedMemoryMappableMulticore>())
@@ -508,9 +496,9 @@ pub fn identify_aperiodic_asynchronous_dataflow_to_partitioned_mem_mappable_mult
                     })
                     .next();
                 if apps.len() > 0 && first_non_mappable.is_some() {
-                    errors.insert(format!("identify_aperiodic_asynchronous_dataflow_to_partitioned_mem_mappable_multicore: process {} is not mappable in any processing element.", first_non_mappable.unwrap()));
+                    errors.push(format!("identify_aperiodic_asynchronous_dataflow_to_partitioned_mem_mappable_multicore: process {} is not mappable in any processing element.", first_non_mappable.unwrap()));
                 } else if apps.is_empty() {
-                    errors.insert(format!("identify_aperiodic_asynchronous_dataflow_to_partitioned_mem_mappable_multicore: no asynchronous aperiodic application detected."));
+                    errors.push(format!("identify_aperiodic_asynchronous_dataflow_to_partitioned_mem_mappable_multicore: no asynchronous aperiodic application detected."));
                 }
                 if apps.len() > 0 && first_non_mappable.is_none() {
                     identified.push(Arc::new(
@@ -531,18 +519,15 @@ pub fn identify_aperiodic_asynchronous_dataflow_to_partitioned_mem_mappable_mult
                     ))
                 }
             } else {
-                errors.insert("identify_aperiodic_asynchronous_dataflow_to_partitioned_mem_mappable_multicore: no memory instrumentation decision model".to_string());
+                errors.push("identify_aperiodic_asynchronous_dataflow_to_partitioned_mem_mappable_multicore: no memory instrumentation decision model".to_string());
             }
         } else {
-            errors.insert("identify_aperiodic_asynchronous_dataflow_to_partitioned_mem_mappable_multicore: no computational instrumentation decision model".to_string());
+            errors.push("identify_aperiodic_asynchronous_dataflow_to_partitioned_mem_mappable_multicore: no computational instrumentation decision model".to_string());
         }
     } else {
-        errors.insert("identify_aperiodic_asynchronous_dataflow_to_partitioned_mem_mappable_multicore: no mem mappable platform model".to_string());
+        errors.push("identify_aperiodic_asynchronous_dataflow_to_partitioned_mem_mappable_multicore: no mem mappable platform model".to_string());
     }
-    (
-        Box::new(identified.into_iter()),
-        Box::new(errors.into_iter()),
-    )
+    (identified, errors)
 }
 
 /// Finds the weakly connected components (WCCs) of a directed graph

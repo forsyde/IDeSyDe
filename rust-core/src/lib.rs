@@ -258,18 +258,13 @@ impl Hash for dyn DecisionModel {
     }
 }
 
-pub type IdentificationResult = (
-    Box<dyn Iterator<Item = Arc<dyn DecisionModel>>>,
-    Box<dyn Iterator<Item = String>>,
-);
+pub type IdentificationResult = (Vec<Arc<dyn DecisionModel>>, Vec<String>);
 
 pub type IdentificationRule =
     fn(&Vec<Arc<dyn DesignModel>>, &Vec<Arc<dyn DecisionModel>>) -> IdentificationResult;
 
-pub type ReverseIdentificationRule = fn(
-    &Vec<Arc<dyn DecisionModel>>,
-    &Vec<Arc<dyn DesignModel>>,
-) -> Box<dyn Iterator<Item = Arc<dyn DesignModel>>>;
+pub type ReverseIdentificationRule =
+    fn(&Vec<Arc<dyn DecisionModel>>, &Vec<Arc<dyn DesignModel>>) -> Vec<Arc<dyn DesignModel>>;
 
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub enum MarkedIdentificationRule {
@@ -293,9 +288,8 @@ pub struct ExplorationConfiguration {
 }
 
 impl ExplorationConfiguration {
-    pub fn to_json_string(&self) -> String {
+    pub fn to_json_string(&self) -> Result<String, serde_json::Error> {
         serde_json::to_string(self)
-            .expect("Failed to serialize a ExplorationConfiguration. Should never happen.")
     }
 
     pub fn to_cbor<O>(&self) -> Result<O, ciborium::ser::Error<std::io::Error>>
@@ -842,12 +836,12 @@ impl<T: DesignModel + ?Sized> From<Arc<T>> for OpaqueDesignModel {
 ///
 /// Prefer to use `next_with_models` over `next` as it inserts the required models as
 /// necessary in the internal state of this iterator.
-pub trait IdentificationIterator: Iterator<Item = Arc<dyn DecisionModel>> + Sync {
+pub trait IdentificationIterator: Iterator<Item = IdentificationResult> + Sync {
     fn next_with_models(
         &mut self,
         _decision_models: &Vec<Arc<dyn DecisionModel>>,
         _design_models: &Vec<Arc<dyn DesignModel>>,
-    ) -> Option<Arc<dyn DecisionModel>> {
+    ) -> Option<IdentificationResult> {
         return None;
     }
 
@@ -866,7 +860,7 @@ pub trait IdentificationIterator: Iterator<Item = Arc<dyn DecisionModel>> + Sync
 pub struct EmptyIdentificationIterator {}
 
 impl Iterator for EmptyIdentificationIterator {
-    type Item = Arc<dyn DecisionModel>;
+    type Item = IdentificationResult;
 
     fn next(&mut self) -> Option<Self::Item> {
         None

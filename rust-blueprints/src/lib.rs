@@ -10,7 +10,8 @@ use clap::Parser;
 use derive_builder::Builder;
 use idesyde_core::{
     DecisionModel, DesignModel, ExplorationSolution, Explorer, IdentificationIterator,
-    MarkedIdentificationRule, Module, OpaqueDecisionModel, ReverseIdentificationRule,
+    IdentificationResult, MarkedIdentificationRule, Module, OpaqueDecisionModel,
+    ReverseIdentificationRule,
 };
 use log::debug;
 use serde::{Deserialize, Serialize};
@@ -28,9 +29,8 @@ impl ExplorationSolutionMessage {
         serde_json::from_str(s).ok()
     }
 
-    pub fn to_json_str(&self) -> String {
+    pub fn to_json_str(&self) -> Result<String, serde_json::Error> {
         serde_json::to_string(self)
-            .expect("Failed to serialize a ExplorationSolutionMessage. Should never occur.")
     }
 
     pub fn to_cbor<O>(&self) -> Result<O, ciborium::ser::Error<std::io::Error>>
@@ -142,23 +142,24 @@ struct DefaultIdentificationIterator {
 }
 
 impl Iterator for DefaultIdentificationIterator {
-    type Item = Arc<dyn DecisionModel>;
+    type Item = IdentificationResult;
 
     fn next(&mut self) -> Option<Self::Item> {
-        // let mut refined_decision_models = HashSet::new();
-        // let mut opaque_to_delete = HashSet::new();
-        // for m in &self.decision_models {
-        //     if let Some(opaque) = m.downcast_ref::<OpaqueDecisionModel>() {
-        //         if let Some(recovered) = self.imodule.opaque_to_model(opaque) {
-        //             refined_decision_models.insert(recovered);
-        //             opaque_to_delete.insert(opaque);
-        //         }
-        //     }
-        // }
+        let mut refined = vec![];
+        for i in 0..self.decision_models.len() {
+            if let Some(non_opaque) = self.decision_models[i]
+                .downcast_ref::<OpaqueDecisionModel>()
+                .and_then(|x| self.imodule.opaque_to_model(x))
+            {
+                self.decision_models.remove(i);
+                self.decision_models.push(non_opaque.to_owned());
+                refined.push(non_opaque);
+            }
+        }
         // Assume that all the models which could have been made non-opaque, did.
         // let (tx_model, rx_model) = std::sync::mpsc::channel::<Arc<dyn DecisionModel>>();
-        let (tx_msg, rx_msg) = std::sync::mpsc::channel::<String>();
-        let first_new = self
+        // let (tx_msg, rx_msg) = std::sync::mpsc::channel::<String>();
+        let par_identified: Vec<IdentificationResult> = self
             .imodule
             .identification_rules
             .par_iter()
@@ -190,33 +191,30 @@ impl Iterator for DefaultIdentificationIterator {
                         }
                     }
                 };
-                if let Some(f) = f_opt {
-                    let (models, msgs) = f(&self.design_models, &self.decision_models);
-                    // for m in models {
-                    //     tx_model.send(m);
-                    // }
-                    for msg in msgs {
-                        let _ = tx_msg.send(msg);
-                    }
+                f_opt.map(|f| f(&self.design_models, &self.decision_models))
+            })
+            .map(|(models, msgs)| {
+                (
                     models
-                } else {
-                    Box::new(std::iter::empty())
-                }
+                        .into_iter()
+                        .map(|model| {
+                            model
+                                .downcast_ref::<OpaqueDecisionModel>()
+                                .and_then(|opaque| self.imodule.opaque_to_model(opaque))
+                                .unwrap_or(model)
+                        })
+                        .collect(),
+                    msgs,
+                )
             })
-            .map(|model| {
-                model
-                    .downcast_ref::<OpaqueDecisionModel>()
-                    .and_then(|opaque| self.imodule.opaque_to_model(opaque))
-                    .unwrap_or(model)
-            })
-            .find_any(|model| !self.decision_models.contains(model));
-        self.messages.extend(rx_msg.try_iter());
-        if let Some(m) = first_new {
-            self.decision_models.push(m.to_owned());
-            Some(m)
-        } else {
-            None
+            .collect();
+        let mut total_identified = refined;
+        let mut all_msgs = vec![];
+        for (ms, msgs) in par_identified {
+            total_identified.extend(ms.into_iter());
+            all_msgs.extend(msgs.into_iter());
         }
+        Some((total_identified, all_msgs))
     }
 }
 
@@ -225,7 +223,7 @@ impl IdentificationIterator for DefaultIdentificationIterator {
         &mut self,
         decision_models: &Vec<Arc<dyn DecisionModel>>,
         design_models: &Vec<Arc<dyn DesignModel>>,
-    ) -> Option<Arc<dyn DecisionModel>> {
+    ) -> Option<IdentificationResult> {
         // first, add everything
         for m in design_models {
             if !self.design_models.contains(m) {
@@ -237,63 +235,6 @@ impl IdentificationIterator for DefaultIdentificationIterator {
                 self.decision_models.push(m.to_owned());
             }
         }
-        for i in 0..self.decision_models.len() {
-            if let Some(non_opaque) = self.decision_models[i]
-                .downcast_ref::<OpaqueDecisionModel>()
-                .and_then(|x| self.imodule.opaque_to_model(x))
-            {
-                self.decision_models.remove(i);
-                self.decision_models.push(non_opaque.to_owned());
-                return Some(non_opaque);
-            }
-        }
-        // for m_opaque_or_not in decision_models {
-        //     let m = m_opaque_or_not
-        //         .downcast_ref::<OpaqueDecisionModel>()
-        //         .and_then(|x| self.imodule.opaque_to_model(x))
-        //         .unwrap_or(m_opaque_or_not.to_owned());
-        //     self.decision_models
-        //         .retain(|x| x.partial_cmp(&m) != Some(std::cmp::Ordering::Less));
-        //     if !self.decision_models.contains(&m) {
-        //         debug!(" pushing {}", m.category());
-        //         self.decision_models.push(m.to_owned());
-        //     }
-        //     if m.downcast_ref::<OpaqueDecisionModel>().is_some() {
-        //         return Some(m);
-        //     }
-        //     // // elimiante trivially dominated decision models
-        //     // self.decision_models.retain(|x| match x.partial_cmp(m) {
-        //     //     Some(std::cmp::Ordering::Less) | Some(std::cmp::Ordering::Equal) => true,
-        //     //     _ => false,
-        //     // });
-        //     // // is there already a model there?
-        //     // if let Some(previous_idx) = self.decision_models.iter().position(|x| x == m) {
-        //     //     if let Some(opaque) =
-        //     //         self.decision_models[previous_idx].downcast_ref::<OpaqueDecisionModel>()
-        //     //     {
-        //     //         // is it opaque and can it be made non-opaque?
-        //     //         if let Some(non_opaque) = self.imodule.opaque_to_model(opaque) {
-        //     //             debug!("Specialised and replaced {}", non_opaque.category());
-        //     //             self.decision_models.remove(previous_idx);
-        //     //             self.decision_models.push(non_opaque.to_owned());
-        //     //             return Some(non_opaque);
-        //     //         }
-        //     //     }
-        //     // } else {
-        //     //     // otherwise, try to add it as non-opaque
-        //     //     if let Some(opaque) = m.downcast_ref::<OpaqueDecisionModel>() {
-        //     //         if let Some(non_opaque) = self.imodule.opaque_to_model(opaque) {
-        //     //             self.decision_models.push(non_opaque.to_owned());
-        //     //             debug!("Specialised and added {}", non_opaque.category());
-        //     //             return Some(non_opaque);
-        //     //         } else {
-        //     //             self.decision_models.push(m.to_owned());
-        //     //         }
-        //     //     } else {
-        //     //         self.decision_models.push(m.to_owned());
-        //     //     }
-        //     // }
-        // }
         return self.next();
     }
 

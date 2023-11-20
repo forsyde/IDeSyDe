@@ -268,23 +268,33 @@ public interface StandaloneModule extends Module {
                             }
                         });
                     }).ws("/{explorerName}/explore", ws -> {
+                        var logger = LoggerFactory.getLogger("main");
                         AtomicReference<Explorer> explorer = new AtomicReference<>();
                         AtomicReference<Explorer.Configuration> configuration = new AtomicReference<>(
                                 new Explorer.Configuration());
                         AtomicReference<DecisionModel> decisionModel = new AtomicReference<>();
                         Set<ExplorationSolution> previousSolutions = new HashSet<>();
                         ws.onBinaryMessage(ctx -> {
-                            ExplorationSolutionMessage.fromCBORBytes(ctx.data())
+                            logger.info("Receiving a binary message");
+                            var payload = ctx.data();
+                            ExplorationSolutionMessage.fromCBORBytes(payload)
                                     .flatMap(esm -> fromOpaqueDecision(esm.solved())
                                             .map(m -> new ExplorationSolution(esm.objectives(), m)))
                                     .ifPresentOrElse(previousSolutions::add,
-                                            () -> OpaqueDecisionModel.fromCBORBytes(ctx.data())
+                                            () -> OpaqueDecisionModel.fromCBORBytes(payload)
                                                     .flatMap(this::fromOpaqueDecision)
-                                                    .ifPresentOrElse(decisionModel::set, () -> Explorer.Configuration
-                                                            .fromCBORBytes(ctx.data()).ifPresent(configuration::set)));
+                                                    .ifPresentOrElse(x -> {
+                                                        logger.info("Setting the decision model for exploration");
+                                                        decisionModel.set(x);
+                                                    }, () -> Explorer.Configuration
+                                                            .fromCBORBytes(payload)
+                                                            .ifPresentOrElse(configuration::set, () -> logger.warn(
+                                                                    "Failed to parse a binary message during exploration"))));
                         });
                         ws.onMessage(ctx -> {
                             if (ctx.message().toLowerCase().contains("done")) {
+                                logger.info("Starting exploration of a %s with %s"
+                                        .formatted(decisionModel.get().category(), explorer.get().uniqueIdentifier()));
                                 executor.submit(() -> {
                                     explorer.get()
                                             .explore(decisionModel.get(), previousSolutions, configuration.get())
@@ -294,7 +304,9 @@ public interface StandaloneModule extends Module {
                                                             .noneMatch(other -> other.dominates(solution)))
                                             .map(ExplorationSolutionMessage::from)
                                             .flatMap(s -> s.toCBORBytes().map(ByteBuffer::wrap).stream())
+                                            .peek(x -> logger.info("Found a new solution"))
                                             .forEach(ctx::send);
+                                    logger.info("Finished exploration");
                                     ctx.send("done");
                                 });
                             } else {
@@ -307,80 +319,20 @@ public interface StandaloneModule extends Module {
                                                         .ifPresentOrElse(decisionModel::set,
                                                                 () -> Explorer.Configuration
                                                                         .fromJsonString(ctx.message())
-                                                                        .ifPresent(configuration::set)));
+                                                                        .ifPresentOrElse(configuration::set,
+                                                                                () -> logger.warn(
+                                                                                        "Failed to parse a text message during exploration"))));
                             }
                         });
                         ws.onConnect(ctx -> {
                             ctx.enableAutomaticPings();
+                            logger.info("A client connected to exploration");
                             explorers().stream()
                                     .filter(e -> e.uniqueIdentifier().equalsIgnoreCase(ctx.pathParam("explorerName")))
                                     .findAny()
                                     .ifPresentOrElse(explorer::set, ctx::closeSession);
                         });
                     })
-                    // .ws(
-                    // "/{explorerName}/explore",
-                    // ws -> {
-                    // // var solutions = new Concurrent<DecisionModel>();
-                    // var explorationRequest = new ExplorationRequest();
-                    // ws.onMessage(ctx -> {
-                    // ctx.enableAutomaticPings(5, TimeUnit.SECONDS);
-                    // // check whether it is a configuration, a solution, or a the decision model
-                    // try {
-                    // var prevSol = objectMapper.readValue(ctx.message(),
-                    // ExplorationSolutionMessage.class);
-                    // decisionMessageToModel(prevSol.solved()).ifPresent((solution) -> {
-                    // // solutions.add(solution);
-                    // explorationRequest.previousSolutions
-                    // .add(new ExplorationSolution(prevSol.objectives(), solution));
-                    // });
-                    // } catch (DatabindException ignored) {
-                    // }
-                    // try {
-                    // explorationRequest.configuration = objectMapper.readValue(ctx.message(),
-                    // Explorer.Configuration.class);
-                    // } catch (DatabindException ignored) {
-                    // }
-                    // try {
-                    // var request = objectMapper.readValue(ctx.message(),
-                    // DecisionModelMessage.class);
-                    // explorers().stream().filter(
-                    // e -> e.uniqueIdentifier().equals(ctx.pathParam("explorerName")))
-                    // .findAny().ifPresent(explorer -> {
-                    // decisionMessageToModel(request)
-                    // .ifPresent(decisionModel -> {
-                    // explorer.explore(decisionModel,
-                    // explorationRequest.previousSolutions,
-                    // explorationRequest.configuration)
-                    // // keep only non dominated if necessary
-                    // .filter(solution -> !explorationRequest.configuration.strict
-                    // || explorationRequest.previousSolutions
-                    // .stream()
-                    // .noneMatch(other -> other
-                    // .dominates(
-                    // solution)))
-                    // .forEach(solution -> {
-                    // try {
-                    // // solutions.add(solution.solved());
-                    // // explorationRequest.previousSolutions
-                    // // .add(solution);
-                    // ctx.send(objectMapper
-                    // .writeValueAsString(
-                    // ExplorationSolutionMessage
-                    // .from(solution)));
-                    // } catch (JsonProcessingException e) {
-                    // e.printStackTrace();
-                    // }
-                    // });
-                    // });
-                    // });
-                    // ctx.closeSession();
-                    // } catch (DatabindException ignored) {
-                    // } catch (IOException ignored) {
-                    // System.out.println("Client closed channel during execution.");
-                    // }
-                    // });
-                    // })
                     .ws("/reverse", ws -> {
                         var logger = LoggerFactory.getLogger("main");
                         Set<DecisionModel> exploredDecisionModels = new HashSet<>();
@@ -404,9 +356,9 @@ public interface StandaloneModule extends Module {
                                             designModels.add(result);
                                         });
                                     }
-
-                                    logger.info("Finished a identification step with %s decision models identified"
-                                            .formatted(designModels.size()));
+                                    logger.info(
+                                            "Finished a reverse identification step with %s decision models identified"
+                                                    .formatted(designModels.size()));
                                     ctx.send("done");
                                 });
                             } else {
@@ -499,7 +451,7 @@ public interface StandaloneModule extends Module {
         }
     }
 
-    default <T extends DecisionModel> Optional<T> readFromString(String s, Class<T> cls) {
+    default <T extends DecisionModel> Optional<T> readFromJsonString(String s, Class<T> cls) {
         try {
             return Optional.of(objectMapper.readValue(s, cls));
         } catch (JsonProcessingException e) {

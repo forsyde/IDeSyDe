@@ -1,3 +1,7 @@
+// this plugins HAs to be here because of the scala plugin in certain sub projects. Don t ask me.
+plugins {
+    id 'idea'
+}
 
 // due to how maven central works, the groupId must be the same as the
 // website which we host

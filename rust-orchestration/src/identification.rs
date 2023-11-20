@@ -1,12 +1,14 @@
 use std::{collections::HashSet, f32::consts::E, net::TcpStream, ops::Index, sync::Arc};
 
 use idesyde_core::{
-    DecisionModel, DesignModel, IdentificationIterator, Module, OpaqueDecisionModel,
-    OpaqueDesignModel,
+    DecisionModel, DesignModel, IdentificationIterator, IdentificationResult, Module,
+    OpaqueDecisionModel, OpaqueDesignModel,
 };
 
 use log::debug;
 use tungstenite::WebSocket;
+
+use rayon::prelude::*;
 
 // impl HttpServerLike for ExternalServerIdentificationModule {
 //     fn get_client(&self) -> Arc<reqwest::blocking::Client> {
@@ -51,7 +53,7 @@ impl ExternalServerIdentifiticationIterator {
 }
 
 impl Iterator for ExternalServerIdentifiticationIterator {
-    type Item = Arc<dyn DecisionModel>;
+    type Item = IdentificationResult;
 
     fn next(&mut self) -> Option<Self::Item> {
         // if the websocket is closed, we short-curcuit the function.
@@ -97,7 +99,7 @@ impl Iterator for ExternalServerIdentifiticationIterator {
         while let Ok(message) = self.websocket.read() {
             if let Err(e) = self.websocket.flush() {
                 debug!(
-                    "Error found while flushing identificatio websocket: {}",
+                    "Error found while flushing identification websocket: {}",
                     e.to_string()
                 );
             }
@@ -106,13 +108,15 @@ impl Iterator for ExternalServerIdentifiticationIterator {
                 tungstenite::Message::Text(txt_msg) => {
                     if txt_msg.eq_ignore_ascii_case("done") {
                         self.requesting = false;
-                        return None;
+                        return Some((
+                            self.decision_models.clone(),
+                            self.messages.drain(0..self.messages.len()).collect(),
+                        ));
                     } else if let Ok(opaque) = OpaqueDecisionModel::from_json_str(txt_msg.as_str())
                     {
                         let opaquea = Arc::new(opaque) as Arc<dyn DecisionModel>;
                         if !self.decision_models.contains(&opaquea) {
                             self.decision_models.push(opaquea.to_owned());
-                            return Some(opaquea);
                         }
                     } else {
                         // debug!("Message: {}", txt_msg.as_str());
@@ -124,7 +128,6 @@ impl Iterator for ExternalServerIdentifiticationIterator {
                         let opaquea = Arc::new(opaque) as Arc<dyn DecisionModel>;
                         if !self.decision_models.contains(&opaquea) {
                             self.decision_models.push(opaquea.to_owned());
-                            return Some(opaquea);
                         }
                     }
                 }
@@ -155,7 +158,7 @@ impl IdentificationIterator for ExternalServerIdentifiticationIterator {
         &mut self,
         decision_models: &Vec<Arc<dyn DecisionModel>>,
         design_models: &Vec<Arc<dyn DesignModel>>,
-    ) -> Option<Arc<dyn DecisionModel>> {
+    ) -> Option<IdentificationResult> {
         self.decision_models_to_upload.extend(
             decision_models
                 .iter()
@@ -197,7 +200,7 @@ pub fn identification_procedure(
     while !fix_point {
         fix_point = true;
         // let before = identified.len();
-        let identified_step: Vec<Arc<dyn DecisionModel>> = iterators
+        let identified_step: Vec<IdentificationResult> = iterators
             .iter_mut()
             .flat_map(|iter| iter.next_with_models(&identified, design_models))
             .collect();
@@ -210,18 +213,18 @@ pub fn identification_procedure(
         //     },
         // );
         // add completely new models or replace opaque deicion mdoels for non-opaque ones
-        for m in identified_step {
+        for m in identified_step.iter().flat_map(|(ms, _)| ms) {
             if let Some(previous_idx) = identified.iter().position(|x| {
                 x.partial_cmp(&m) == Some(std::cmp::Ordering::Less)
-                    || (x == &m
+                    || (x == m
                         && x.downcast_ref::<OpaqueDecisionModel>().is_some()
                         && m.downcast_ref::<OpaqueDecisionModel>().is_none())
             }) {
                 identified.remove(previous_idx);
-                identified.push(m);
+                identified.push(m.to_owned());
                 fix_point = false;
-            } else if !identified.contains(&m) {
-                identified.push(m);
+            } else if !identified.contains(m) {
+                identified.push(m.to_owned());
                 fix_point = false;
             };
             // if !identified.contains(&m) {

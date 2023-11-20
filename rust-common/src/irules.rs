@@ -20,8 +20,8 @@ use crate::models::{
 };
 
 pub fn identify_partitioned_mem_mapped_multicore(
-    _design_models: &HashSet<Arc<dyn DesignModel>>,
-    decision_models: &HashSet<Arc<dyn DecisionModel>>,
+    _design_models: &Vec<Arc<dyn DesignModel>>,
+    decision_models: &Vec<Arc<dyn DecisionModel>>,
 ) -> IdentificationResult {
     let mut new_models = Vec::new();
     let mut errors: HashSet<String> = HashSet::new();
@@ -72,8 +72,8 @@ pub fn identify_partitioned_mem_mapped_multicore(
 }
 
 pub fn identify_partitioned_tiled_multicore(
-    _design_models: &HashSet<Arc<dyn DesignModel>>,
-    decision_models: &HashSet<Arc<dyn DecisionModel>>,
+    _design_models: &Vec<Arc<dyn DesignModel>>,
+    decision_models: &Vec<Arc<dyn DecisionModel>>,
 ) -> IdentificationResult {
     let mut new_models = Vec::new();
     let mut errors: HashSet<String> = HashSet::new();
@@ -138,8 +138,8 @@ pub fn identify_partitioned_tiled_multicore(
 /// 3. build the job graph parameters for each WCC, for each AnalysedSDFApplication,
 /// 4. return all the built AsynchronousAperiodicDataflow.
 pub fn identify_asynchronous_aperiodic_dataflow_from_sdf(
-    _design_models: &HashSet<Arc<dyn DesignModel>>,
-    decision_models: &HashSet<Arc<dyn DecisionModel>>,
+    _design_models: &Vec<Arc<dyn DesignModel>>,
+    decision_models: &Vec<Arc<dyn DecisionModel>>,
 ) -> IdentificationResult {
     let mut identified = Vec::new();
     let mut errors: HashSet<String> = HashSet::new();
@@ -307,6 +307,7 @@ pub fn identify_asynchronous_aperiodic_dataflow_from_sdf(
                     .channel_token_sizes
                     .to_owned();
                 // we finish by building the decision model
+                println!("REACHED!!!");
                 identified.push(Arc::new(AperiodicAsynchronousDataflow {
                     processes: component_actors.iter().map(|s| s.to_string()).collect(),
                     buffers: component_channels
@@ -398,8 +399,8 @@ pub fn identify_asynchronous_aperiodic_dataflow_from_sdf(
 }
 
 pub fn identify_aperiodic_asynchronous_dataflow_to_partitioned_tiled_multicore(
-    _design_models: &HashSet<Arc<dyn DesignModel>>,
-    decision_models: &HashSet<Arc<dyn DecisionModel>>,
+    _design_models: &Vec<Arc<dyn DesignModel>>,
+    decision_models: &Vec<Arc<dyn DecisionModel>>,
 ) -> IdentificationResult {
     let mut identified: Vec<Arc<dyn DecisionModel>> = Vec::new();
     let mut errors: HashSet<String> = HashSet::new();
@@ -472,8 +473,8 @@ pub fn identify_aperiodic_asynchronous_dataflow_to_partitioned_tiled_multicore(
 }
 
 pub fn identify_aperiodic_asynchronous_dataflow_to_partitioned_mem_mappable_multicore(
-    _design_models: &HashSet<Arc<dyn DesignModel>>,
-    decision_models: &HashSet<Arc<dyn DecisionModel>>,
+    _design_models: &Vec<Arc<dyn DesignModel>>,
+    decision_models: &Vec<Arc<dyn DecisionModel>>,
 ) -> IdentificationResult {
     let mut identified: Vec<Arc<dyn DecisionModel>> = Vec::new();
     let mut errors: HashSet<String> = HashSet::new();

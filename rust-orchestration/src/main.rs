@@ -249,13 +249,13 @@ fn main() {
         let mut modules = idesyde_orchestration::find_modules(modules_path);
 
         // add embedded modules
-        modules.insert(Arc::new(idesyde_common::make_common_module()));
+        modules.push(Arc::new(idesyde_common::make_common_module()));
 
         // add externally declared modules
         if let Some(external_modules) = args.module {
             for url_str in external_modules {
                 if let Ok(parsed_url) = url::Url::parse(url_str.as_str()) {
-                    modules.insert(Arc::new(ExternalServerModule::from(
+                    modules.push(Arc::new(ExternalServerModule::from(
                         &parsed_url,
                         url_str.as_str(),
                     )));
@@ -278,7 +278,7 @@ fn main() {
         //     .map(|h| Box::new(h.to_owned()) as Box<dyn DesignModel>)
         //     .collect();
         // add an "Opaque" design model header so that all modules are aware of the input models
-        let design_models: HashSet<Arc<dyn DesignModel>> = sorted_inputs
+        let design_models: Vec<Arc<dyn DesignModel>> = sorted_inputs
             .par_iter()
             .map(|s| (s, Arc::new(OpaqueDesignModel::from(Path::new(s)))))
             .flat_map(|(s, m)| {
@@ -298,7 +298,7 @@ fn main() {
         //     model_paths: args.inputs,
         //     elements: HashSet::new(),
         // }));
-        let pre_identified: HashSet<Arc<dyn DecisionModel>> = HashSet::new();
+        let pre_identified: Vec<Arc<dyn DecisionModel>> = Vec::new();
         // load_decision_model_headers_from_binary(&identified_path)
         //     .iter()
         //     .map(|(_, h)| Arc::new(OpaqueDecisionModel::from(h)) as Arc<dyn DecisionModel>)
@@ -480,7 +480,7 @@ fn main() {
                         .unwrap_or("None".to_owned())
                 )
             }
-            let solved_models: HashSet<Arc<dyn DecisionModel>> = dominant_sols
+            let solved_models: Vec<Arc<dyn DecisionModel>> = dominant_sols
                 .iter()
                 .map(|cur_sol| cur_sol.solved.clone())
                 .collect();

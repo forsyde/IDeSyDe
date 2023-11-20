@@ -15,7 +15,7 @@ pub mod models;
 
 pub fn make_common_module() -> StandaloneModule {
     StandaloneModuleBuilder::default()
-        .unique_identifier("CommonIdentificationModule".to_string())
+        .unique_identifier("CommonRustModule".to_string())
         .identification_rules(vec![
         idesyde_core::MarkedIdentificationRule::DecisionModelOnlyIdentificationRule(
             irules::identify_partitioned_tiled_multicore,
@@ -61,7 +61,6 @@ pub fn make_common_module() -> StandaloneModule {
             PartitionedMemoryMappableMulticore,
             AperiodicAsynchronousDataflowToPartitionedMemoryMappableMulticore
         ])
-        .explorers(HashSet::new())
         .build()
         .expect("Failed to build common standalone identification module. Should never happen.")
 }

@@ -1,4 +1,4 @@
-use std::{collections::HashSet, f32::consts::E, net::TcpStream, sync::Arc};
+use std::{collections::HashSet, f32::consts::E, net::TcpStream, ops::Index, sync::Arc};
 
 use idesyde_core::{
     DecisionModel, DesignModel, IdentificationIterator, Module, OpaqueDecisionModel,
@@ -23,10 +23,10 @@ use tungstenite::WebSocket;
 // }
 
 pub struct ExternalServerIdentifiticationIterator {
-    design_models: HashSet<Arc<dyn DesignModel>>,
-    decision_models: HashSet<Arc<dyn DecisionModel>>,
-    decision_models_to_upload: HashSet<Arc<dyn DecisionModel>>,
-    design_models_to_upload: HashSet<Arc<dyn DesignModel>>,
+    design_models: Vec<Arc<dyn DesignModel>>,
+    decision_models: Vec<Arc<dyn DecisionModel>>,
+    decision_models_to_upload: Vec<Arc<dyn DecisionModel>>,
+    design_models_to_upload: Vec<Arc<dyn DesignModel>>,
     websocket: WebSocket<TcpStream>,
     messages: Vec<String>,
     requesting: bool,
@@ -34,8 +34,8 @@ pub struct ExternalServerIdentifiticationIterator {
 
 impl ExternalServerIdentifiticationIterator {
     pub fn new(
-        design_models: &HashSet<Arc<dyn DesignModel>>,
-        decision_models: &HashSet<Arc<dyn DecisionModel>>,
+        design_models: &Vec<Arc<dyn DesignModel>>,
+        decision_models: &Vec<Arc<dyn DecisionModel>>,
         websocket: WebSocket<TcpStream>,
     ) -> ExternalServerIdentifiticationIterator {
         ExternalServerIdentifiticationIterator {
@@ -66,8 +66,10 @@ impl Iterator for ExternalServerIdentifiticationIterator {
                     }
                 }
             }
-            self.decision_models
-                .extend(self.decision_models_to_upload.drain());
+            self.decision_models.extend(
+                self.decision_models_to_upload
+                    .drain(0..self.decision_models_to_upload.len()),
+            );
             // same for design models
             for m in &self.design_models_to_upload {
                 if let Ok(design_cbor) = OpaqueDesignModel::from(m.as_ref()).to_json() {
@@ -76,8 +78,10 @@ impl Iterator for ExternalServerIdentifiticationIterator {
                     };
                 };
             }
-            self.design_models
-                .extend(self.design_models_to_upload.drain());
+            self.design_models.extend(
+                self.design_models_to_upload
+                    .drain(0..self.design_models_to_upload.len()),
+            );
             if let Err(e) = self
                 .websocket
                 .send(tungstenite::Message::Text("done".to_string()))
@@ -96,14 +100,10 @@ impl Iterator for ExternalServerIdentifiticationIterator {
             // besides the answer, also read the module's messages
             match message {
                 tungstenite::Message::Text(txt_msg) => {
-                    if txt_msg.eq_ignore_ascii_case("done") {
-                        self.requesting = false;
-                        return None;
-                    } else if let Ok(opaque) = OpaqueDecisionModel::from_json_str(txt_msg.as_str())
-                    {
+                    if let Ok(opaque) = OpaqueDecisionModel::from_json_str(txt_msg.as_str()) {
                         let opaquea = Arc::new(opaque) as Arc<dyn DecisionModel>;
                         if !self.decision_models.contains(&opaquea) {
-                            self.decision_models.insert(opaquea.to_owned());
+                            self.decision_models.push(opaquea.to_owned());
                             return Some(opaquea);
                         }
                     } else {
@@ -115,7 +115,7 @@ impl Iterator for ExternalServerIdentifiticationIterator {
                     if let Ok(opaque) = OpaqueDecisionModel::from_cbor(decision_cbor.as_slice()) {
                         let opaquea = Arc::new(opaque) as Arc<dyn DecisionModel>;
                         if !self.decision_models.contains(&opaquea) {
-                            self.decision_models.insert(opaquea.to_owned());
+                            self.decision_models.push(opaquea.to_owned());
                             return Some(opaquea);
                         }
                     }
@@ -126,6 +126,8 @@ impl Iterator for ExternalServerIdentifiticationIterator {
                             "Failed to send ping message to other end. Trying to proceed anyway."
                         );
                     };
+                    self.requesting = false;
+                    return None;
                 }
                 tungstenite::Message::Pong(_) => {
                     if let Err(_) = self.websocket.send(tungstenite::Message::Ping(vec![])) {
@@ -145,8 +147,8 @@ impl Iterator for ExternalServerIdentifiticationIterator {
 impl IdentificationIterator for ExternalServerIdentifiticationIterator {
     fn next_with_models(
         &mut self,
-        decision_models: &HashSet<Arc<dyn DecisionModel>>,
-        design_models: &HashSet<Arc<dyn DesignModel>>,
+        decision_models: &Vec<Arc<dyn DecisionModel>>,
+        design_models: &Vec<Arc<dyn DesignModel>>,
     ) -> Option<Arc<dyn DecisionModel>> {
         self.decision_models_to_upload.extend(
             decision_models
@@ -172,14 +174,14 @@ impl IdentificationIterator for ExternalServerIdentifiticationIterator {
 }
 
 pub fn identification_procedure(
-    imodules: &HashSet<Arc<dyn Module>>,
-    design_models: &HashSet<Arc<dyn DesignModel>>,
-    pre_identified: &HashSet<Arc<dyn DecisionModel>>,
+    imodules: &Vec<Arc<dyn Module>>,
+    design_models: &Vec<Arc<dyn DesignModel>>,
+    pre_identified: &Vec<Arc<dyn DecisionModel>>,
     starting_iter: i32,
-) -> (HashSet<Arc<dyn DecisionModel>>, HashSet<(String, String)>) {
+) -> (Vec<Arc<dyn DecisionModel>>, HashSet<(String, String)>) {
     let mut step = starting_iter;
     let mut fix_point = false;
-    let mut identified: HashSet<Arc<dyn DecisionModel>> = HashSet::new();
+    let mut identified: Vec<Arc<dyn DecisionModel>> = Vec::new();
     let mut messages: HashSet<(String, String)> = HashSet::new();
     let mut iterators: Vec<Box<dyn IdentificationIterator>> = imodules
         .iter()
@@ -187,23 +189,9 @@ pub fn identification_procedure(
         .collect();
     identified.extend(pre_identified.iter().map(|x| x.to_owned()));
     while !fix_point {
-        // try to eliminate opaque repeated decision models
-        // while let Some((idx, _)) = identified
-        //     .iter()
-        //     .enumerate()
-        //     .filter(|(_, m)| m.downcast_ref::<OpaqueDecisionModel>().is_some())
-        //     .find(|(_, opaque)| {
-        //         identified
-        //             .iter()
-        //             .any(|x| &x == opaque && x.downcast_ref::<OpaqueDecisionModel>().is_none())
-        //     })
-        // {
-        //     identified.remove(idx);
-        // }
-        // the step condition forces the procedure to go at least one more, fundamental for incrementability
         fix_point = true;
         // let before = identified.len();
-        let identified_step: HashSet<Arc<dyn DecisionModel>> = iterators
+        let identified_step: Vec<Arc<dyn DecisionModel>> = iterators
             .iter_mut()
             .flat_map(|iter| iter.next_with_models(&identified, design_models))
             .collect();
@@ -215,20 +203,30 @@ pub fn identification_procedure(
         //         (m1, e1)
         //     },
         // );
+        // add completely new models or replace opaque deicion mdoels for non-opaque ones
         for m in identified_step {
-            if !identified.contains(&m) {
-                identified.insert(m);
+            if let Some(previous_idx) = identified.iter().position(|x| {
+                x.partial_cmp(&m) == Some(std::cmp::Ordering::Less)
+                    || (x == &m
+                        && x.downcast_ref::<OpaqueDecisionModel>().is_some()
+                        && m.downcast_ref::<OpaqueDecisionModel>().is_none())
+            }) {
+                identified.remove(previous_idx);
+                identified.push(m);
                 fix_point = false;
-            }
+            } else if !identified.contains(&m) {
+                identified.push(m);
+                fix_point = false;
+            };
+            // if !identified.contains(&m) {
+            // }
         }
         let ident_messages: HashSet<(String, String)> = iterators
             .iter_mut()
             .flat_map(|iter| iter.collect_messages())
             .collect();
         for (lvl, msg) in ident_messages {
-            if lvl.contains("DEBUG") || lvl.contains("debug") {
-                debug!("{}", msg);
-            }
+            debug!("{}", msg);
             messages.insert((lvl, msg));
         }
         // .filter(|potential| !identified.contains(potential))

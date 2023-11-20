@@ -440,7 +440,7 @@ pub struct InstrumentedMemoryRequirements {
 }
 
 impl DecisionModel for InstrumentedMemoryRequirements {
-    impl_decision_model_standard_parts!(InstrumentedmemoryRequirements);
+    impl_decision_model_standard_parts!(InstrumentedMemoryRequirements);
 
     fn part(&self) -> HashSet<String> {
         let mut elems: HashSet<String> = HashSet::new();

@@ -105,121 +105,6 @@ trait LocalServerLike {
     }
 }
 
-trait HttpServerLike {
-    // fn get_client(&self) -> Arc<reqwest::blocking::Client>;
-
-    // fn get_url(&self) -> Url;
-
-    // fn send_decision<T: DecisionModel + ?Sized>(&self, model: &T) -> Result<Response, Error> {
-    //     let client = self.get_client();
-    //     client
-    //         .post(format!(
-    //             "http://{}:{}/decision",
-    //             self.get_url()
-    //                 .host()
-    //                 .unwrap_or(url::Host::parse("127.0.0.1")),
-    //             self.get_port()
-    //         ))
-    //         .body(DecisionModelMessage::from(model).to_json_str())
-    //         .send()
-    // }
-
-    // fn send_design<T: DesignModel + ?Sized>(&self, model: &T) -> Result<Response, Error> {
-    //     let client = self.get_client();
-    //     // println!("{}", DesignModelMessage::from(model).to_json_str());
-    //     client
-    //         .post(format!(
-    //             "http://{}:{}/design",
-    //             self.get_address(),
-    //             self.get_port()
-    //         ))
-    //         .body(DesignModelMessage::from(model).to_json_str())
-    //         .send()
-    // }
-
-    // fn send_solved_decision<T: DecisionModel + ?Sized>(
-    //     &self,
-    //     model: &T,
-    // ) -> Result<Response, Error> {
-    //     let client = self.get_client();
-    //     client
-    //         .post(format!(
-    //             "http://{}:{}/solved",
-    //             self.get_address(),
-    //             self.get_port()
-    //         ))
-    //         .body(DecisionModelMessage::from(model).to_json_str())
-    //         .send()
-    // }
-
-    // fn send_command(&self, command: &str, query: &Vec<(&str, &str)>) -> Result<Response, Error> {
-    //     let client = self.get_client();
-    //     client
-    //         .get(format!(
-    //             "http://{}:{}/{}",
-    //             self.get_address(),
-    //             self.get_port(),
-    //             command
-    //         ))
-    //         .query(query)
-    //         .send()
-    // }
-
-    // fn http_get<T: Serialize + ?Sized>(
-    //     &self,
-    //     point: &str,
-    //     query: &Vec<(&str, &str)>,
-    //     body: &T,
-    // ) -> Result<Response, Error> {
-    //     let client = self.get_client();
-    //     let m = serde_json::to_string(body)
-    //         .expect("Failed to serialized an object that shoudl always work");
-    //     client
-    //         .get(format!(
-    //             "http://{}:{}/{}",
-    //             self.get_address(),
-    //             self.get_port(),
-    //             point
-    //         ))
-    //         .query(query)
-    //         .body(m)
-    //         .send()
-    // }
-
-    // fn http_post<T: Serialize + ?Sized>(
-    //     &self,
-    //     point: &str,
-    //     query: &Vec<(&str, &str)>,
-    //     body: &T,
-    // ) -> Result<Response, Error> {
-    //     let client = self.get_client();
-    //     client
-    //         .post(format!(
-    //             "http://{}:{}/{}",
-    //             self.get_address(),
-    //             self.get_port(),
-    //             point
-    //         ))
-    //         .query(query)
-    //         .body(
-    //             serde_json::to_string(body)
-    //                 .expect("Failed to serialized an object that shoudl always work"),
-    //         )
-    //         .send()
-    // }
-}
-
-// fn stream_lines_from_output<T: LocalServerLike>(module: T) -> Option<impl Iterator<Item = String>> {
-//     if let Ok(mut server_guard) = module.get_process().lock() {
-//         let server = server_guard.deref_mut();
-//         if let Some(out) = &mut server.stdout {
-//             let it = BufReader::new(out).lines().flatten();
-//             return Some(it);
-//         }
-//     }
-//     None
-// }
-
 #[derive(Debug, Clone)]
 pub struct ExternalServerModule {
     name: String,
@@ -356,8 +241,8 @@ impl Module for ExternalServerModule {
 
     fn start_identification(
         &self,
-        initial_design_models: &HashSet<Arc<dyn DesignModel>>,
-        initial_decision_models: &HashSet<Arc<dyn DecisionModel>>,
+        initial_design_models: &Vec<Arc<dyn DesignModel>>,
+        initial_decision_models: &Vec<Arc<dyn DecisionModel>>,
     ) -> Box<dyn idesyde_core::IdentificationIterator> {
         let mut mut_url = self.url.clone();
         mut_url
@@ -383,8 +268,8 @@ impl Module for ExternalServerModule {
 
     fn reverse_identification(
         &self,
-        solved_decision_models: &HashSet<Arc<dyn DecisionModel>>,
-        design_models: &HashSet<Arc<dyn DesignModel>>,
+        solved_decision_models: &Vec<Arc<dyn DecisionModel>>,
+        design_models: &Vec<Arc<dyn DesignModel>>,
     ) -> Box<dyn Iterator<Item = Arc<dyn DesignModel>>> {
         // let mut integrated: Vec<Box<dyn DesignModel>> = Vec::new();
         // send decision models
@@ -462,8 +347,8 @@ impl Module for ExternalServerModule {
     }
 }
 
-pub fn find_modules(modules_path: &Path) -> HashSet<Arc<dyn Module>> {
-    let mut imodules: HashSet<Arc<dyn Module>> = HashSet::new();
+pub fn find_modules(modules_path: &Path) -> Vec<Arc<dyn Module>> {
+    let mut imodules: Vec<Arc<dyn Module>> = Vec::new();
     if let Ok(read_dir) = modules_path.read_dir() {
         let prepared: Vec<Arc<dyn Module>> = read_dir
             .par_bridge()
@@ -498,25 +383,25 @@ pub fn find_modules(modules_path: &Path) -> HashSet<Arc<dyn Module>> {
     imodules
 }
 
-pub fn find_exploration_modules(modules_path: &Path) -> HashSet<Arc<dyn Module>> {
-    let mut emodules: HashSet<Arc<dyn Module>> = HashSet::new();
-    if let Ok(read_dir) = modules_path.read_dir() {
-        for e in read_dir {
-            if let Ok(de) = e {
-                let p = de.path();
-                if p.is_file() {
-                    let prog = p.read_link().unwrap_or(p);
-                    if let Some(emodule) =
-                        ExternalServerExplorationModule::try_create_local(prog.clone())
-                    {
-                        emodules.insert(Arc::new(emodule));
-                    }
-                }
-            }
-        }
-    }
-    emodules
-}
+// pub fn find_exploration_modules(modules_path: &Path) -> Vec<Arc<dyn Module>> {
+//     let mut emodules: Vec<Arc<dyn Module>> = Vec::new();
+//     if let Ok(read_dir) = modules_path.read_dir() {
+//         for e in read_dir {
+//             if let Ok(de) = e {
+//                 let p = de.path();
+//                 if p.is_file() {
+//                     let prog = p.read_link().unwrap_or(p);
+//                     if let Some(emodule) =
+//                         ExternalServerExplorationModule::try_create_local(prog.clone())
+//                     {
+//                         emodules.push(Arc::new(emodule));
+//                     }
+//                 }
+//             }
+//         }
+//     }
+//     emodules
+// }
 
 pub fn compute_dominant_decision_models<'a>(
     decision_models: &'a Vec<&'a Arc<dyn DecisionModel>>,

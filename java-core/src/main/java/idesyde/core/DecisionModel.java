@@ -31,14 +31,16 @@ import java.util.Set;
 public interface DecisionModel {
 
     /**
-     * Used to represent a decision model in a exchangeable format. Now this is done solely through opaque models.
+     * Used to represent a decision model in a exchangeable format. Now this is done
+     * solely through opaque models.
+     * 
      * @return the header/
      */
-//    @Deprecated
-//    default DecisionModelHeader header() {
-//        return new DecisionModelHeader(
-//                category(), part(), Optional.empty());
-//    };
+    // @Deprecated
+    // default DecisionModelHeader header() {
+    // return new DecisionModelHeader(
+    // category(), part(), Optional.empty());
+    // };
 
     /**
      * @return The set of identifiers for partially identified elements
@@ -49,7 +51,7 @@ public interface DecisionModel {
 
     /**
      * @return The category that describes this decision model. Default value (and
-     * recommendation) is the class name.
+     *         recommendation) is the class name.
      * 
      */
     default String category() {
@@ -79,11 +81,13 @@ public interface DecisionModel {
     };
 
     /**
-     * The shared and static Jackson object mapper used for (de) serialization to (from) JSON.
+     * The shared and static Jackson object mapper used for (de) serialization to
+     * (from) JSON.
      */
     static ObjectMapper objectMapper = new ObjectMapper().registerModule(new Jdk8Module());
     /**
-     * The shared and static Jackson object mapper used for (de) serialization to (from) CBOR.
+     * The shared and static Jackson object mapper used for (de) serialization to
+     * (from) CBOR.
      */
     static ObjectMapper objectMapperCBOR = new ObjectMapper(new CBORFactory()).registerModule(new Jdk8Module());
 }

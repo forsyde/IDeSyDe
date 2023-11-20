@@ -1,3 +1,7 @@
+### Non auto generated parts
+
+test_runs/
+
 # Created by https://www.toptal.com/developers/gitignore/api/sbt,scala,rust,java,gradle,intellij,python,cmake,c++
 # Edit at https://www.toptal.com/developers/gitignore?templates=sbt,scala,rust,java,gradle,intellij,python,cmake,c++
 

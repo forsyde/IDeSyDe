@@ -22,7 +22,7 @@ lazy val scoptVersion                  = "4.1.0"
 lazy val scalaJsonSchemaVersion        = "0.7.8"
 lazy val javalinVersion                = "5.6.1"
 lazy val slf4jVersion                  = "2.0.7"
-lazy val IDeSyDeJavaVersion            = "session-based-SNAPSHOT"
+lazy val globalIDeSyDeJavaVersion      = "session-based-SNAPSHOT"
 
 lazy val modulesTarget = file("modules")
 
@@ -103,8 +103,8 @@ lazy val common = (project in file("scala-common"))
     // name := "idesyde-scala-common",
     libraryDependencies ++= Seq(
       "com.lihaoyi"              %%% "upickle"               % upickleVersion,
-      "com.github.forsyde.IDeSyDe" % "build-java-core"       % IDeSyDeJavaVersion,
-      "com.github.forsyde.IDeSyDe" % "build-java-blueprints" % IDeSyDeJavaVersion,
+      "com.github.forsyde.IDeSyDe" % "build-java-core"       % globalIDeSyDeJavaVersion,
+      "com.github.forsyde.IDeSyDe" % "build-java-blueprints" % globalIDeSyDeJavaVersion,
       ("org.scala-graph" %% "graph-core" % scalaGraphVersion).cross(CrossVersion.for3Use2_13),
       "org.typelevel"   %%% "spire"      % spireVersion
     ),

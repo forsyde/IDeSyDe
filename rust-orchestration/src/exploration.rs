@@ -422,7 +422,7 @@ impl Module for ExternalServerExplorationModule {
         Some(self.url.to_owned())
     }
 
-    fn explorers(&self) -> HashSet<Arc<dyn Explorer>> {
+    fn explorers(&self) -> Vec<Arc<dyn Explorer>> {
         if let Ok(explorers_url) = self.url.join("/explorers") {
             match self.client.get(explorers_url).send() {
                 Ok(result) => match result.text() {
@@ -480,7 +480,7 @@ impl Module for ExternalServerExplorationModule {
                 }
             }
         }
-        HashSet::new()
+        Vec::new()
     }
 }
 

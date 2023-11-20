@@ -182,7 +182,6 @@ public interface StandaloneModule extends Module {
                             if (ctx.message().toLowerCase().contains("done")) {
                                 logger.info("Running a identification step with %s and %s decision and design models"
                                         .formatted(decisionModels.size(), designModels.size()));
-                                ctx.enableAutomaticPings();
                                 executor.submit(() -> {
                                     var results = identification(designModels, decisionModels);
                                     for (var result : results.identified()) {
@@ -196,7 +195,7 @@ public interface StandaloneModule extends Module {
                                     }
                                     logger.info("Finished a identification step with %s decision models identified"
                                             .formatted(decisionModels.size()));
-                                    ctx.send("done");
+                                    ctx.sendPing();
                                 });
                             } else {
                                 OpaqueDesignModel.fromJsonString(ctx.message()).flatMap(this::fromOpaqueDesign)
@@ -209,8 +208,7 @@ public interface StandaloneModule extends Module {
                         });
                         ws.onConnect(ctx -> {
                             logger.info("A new identification client connected");
-                            ctx.enableAutomaticPings();
-
+                            ctx.disableAutomaticPings();
                         });
                     }).get("/identified/{session}", ctx -> {
                         String session = ctx.pathParam("session");

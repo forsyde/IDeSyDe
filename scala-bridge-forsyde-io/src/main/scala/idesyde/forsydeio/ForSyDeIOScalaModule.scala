@@ -49,7 +49,7 @@ object ForSyDeIOScalaModule
   def adaptRevRuleToJava[T <: DesignModel](
       func: (Set[DecisionModel], Set[DesignModel]) => Set[T]
   ): ju.function.BiFunction[ju.Set[? <: DecisionModel], ju.Set[? <: DesignModel], ju.Set[
-    DesignModel
+    ? <: DesignModel
   ]] =
     (a: ju.Set[? <: DecisionModel], b: ju.Set[? <: DesignModel]) => {
       func(a.asScala.toSet, b.asScala.toSet).map(_.asInstanceOf[DesignModel]).asJava
@@ -89,12 +89,11 @@ object ForSyDeIOScalaModule
   override def identificationRules(): ju.Set[IdentificationRule] = Set(
     IdentificationRule.OnlyDesignModels(adaptIRuleToJava(identSDFApplication)),
     IdentificationRule.OnlyDesignModels(adaptIRuleToJava(identTiledMultiCore)),
-    IdentificationRule.Generic(adaptIRuleToJava(identPartitionedCoresWithRuntimes), ju.Set.of()),
+    IdentificationRule.Generic(adaptIRuleToJava(identPartitionedCoresWithRuntimes)),
     IdentificationRule.OnlyDesignModels(adaptIRuleToJava(identPeriodicDependentWorkload)),
     IdentificationRule.OnlyDesignModels(adaptIRuleToJava(identSharedMemoryMultiCore)),
     IdentificationRule.Generic(
-      adaptIRuleToJava(identPeriodicWorkloadToPartitionedSharedMultiCoreWithUtilization),
-      ju.Set.of()
+      adaptIRuleToJava(identPeriodicWorkloadToPartitionedSharedMultiCoreWithUtilization)
     ),
     // IdentificationRule.OnlyDesignModels(adaptIRuleToJava(identAperiodicDataflowFromSY)),
     IdentificationRule.OnlyDesignModels(adaptIRuleToJava(identRuntimesAndProcessors)),
@@ -117,12 +116,12 @@ object ForSyDeIOScalaModule
         .asString()
         .flatMap(body => {
           try {
-            return ju.Optional
+            ju.Optional
               .of(ForSyDeDesignModel(modelHandler.readModel(body, opaque.format())));
           } catch {
             case e: Exception =>
               e.printStackTrace();
-              return ju.Optional.empty();
+              ju.Optional.empty();
           }
         });
     } else {

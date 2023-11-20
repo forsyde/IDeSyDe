@@ -264,11 +264,11 @@ pub type IdentificationResult = (
 );
 
 pub type IdentificationRule =
-    fn(&HashSet<Arc<dyn DesignModel>>, &HashSet<Arc<dyn DecisionModel>>) -> IdentificationResult;
+    fn(&Vec<Arc<dyn DesignModel>>, &Vec<Arc<dyn DecisionModel>>) -> IdentificationResult;
 
 pub type ReverseIdentificationRule = fn(
-    &HashSet<Arc<dyn DecisionModel>>,
-    &HashSet<Arc<dyn DesignModel>>,
+    &Vec<Arc<dyn DecisionModel>>,
+    &Vec<Arc<dyn DesignModel>>,
 ) -> Box<dyn Iterator<Item = Arc<dyn DesignModel>>>;
 
 #[derive(Debug, Clone, PartialEq, Eq)]
@@ -578,7 +578,7 @@ impl<T: Explorer + ?Sized> Explorer for Arc<T> {
 /// R. Jordão, I. Sander and M. Becker, "Formulation of Design Space Exploration Problems by
 /// Composable Design Space Identification," 2021 Design, Automation & Test in Europe Conference &
 /// Exhibition (DATE), 2021, pp. 1204-1207, doi: 10.23919/DATE51398.2021.9474082.
-#[derive(Clone, PartialEq, Eq, Builder, Serialize, Deserialize)]
+#[derive(Clone, Builder, Serialize, Deserialize)]
 pub struct OpaqueDecisionModel {
     pub category: String,
     pub part: HashSet<String>,
@@ -660,6 +660,14 @@ impl Hash for OpaqueDecisionModel {
     }
 }
 
+impl PartialEq<OpaqueDecisionModel> for OpaqueDecisionModel {
+    fn eq(&self, other: &Self) -> bool {
+        self.category == other.category && self.part == other.part
+    }
+}
+
+impl Eq for OpaqueDecisionModel {}
+
 impl<T: DecisionModel + ?Sized> From<Arc<T>> for OpaqueDecisionModel {
     fn from(value: Arc<T>) -> Self {
         OpaqueDecisionModel {
@@ -683,7 +691,7 @@ impl<T: DecisionModel + ?Sized> From<Arc<T>> for OpaqueDecisionModel {
 /// R. Jordão, I. Sander and M. Becker, "Formulation of Design Space Exploration Problems by
 /// Composable Design Space Identification," 2021 Design, Automation & Test in Europe Conference &
 /// Exhibition (DATE), 2021, pp. 1204-1207, doi: 10.23919/DATE51398.2021.9474082.
-#[derive(Clone, PartialEq, Eq, Builder, Serialize, Deserialize)]
+#[derive(Clone, Builder, Serialize, Deserialize)]
 pub struct OpaqueDesignModel {
     pub category: String,
     pub elements: HashSet<String>,
@@ -837,8 +845,8 @@ impl<T: DesignModel + ?Sized> From<Arc<T>> for OpaqueDesignModel {
 pub trait IdentificationIterator: Iterator<Item = Arc<dyn DecisionModel>> + Sync {
     fn next_with_models(
         &mut self,
-        _decision_models: &HashSet<Arc<dyn DecisionModel>>,
-        _design_models: &HashSet<Arc<dyn DesignModel>>,
+        _decision_models: &Vec<Arc<dyn DecisionModel>>,
+        _design_models: &Vec<Arc<dyn DesignModel>>,
     ) -> Option<Arc<dyn DecisionModel>> {
         return None;
     }
@@ -874,20 +882,20 @@ pub trait Module: Send + Sync {
     fn location_url(&self) -> Option<Url> {
         None
     }
-    fn explorers(&self) -> HashSet<Arc<dyn Explorer>> {
-        HashSet::new()
+    fn explorers(&self) -> Vec<Arc<dyn Explorer>> {
+        Vec::new()
     }
     fn start_identification(
         &self,
-        _initial_design_models: &HashSet<Arc<dyn DesignModel>>,
-        _initial_decision_models: &HashSet<Arc<dyn DecisionModel>>,
+        _initial_design_models: &Vec<Arc<dyn DesignModel>>,
+        _initial_decision_models: &Vec<Arc<dyn DecisionModel>>,
     ) -> Box<dyn IdentificationIterator> {
         Box::new(empty_identification_iter())
     }
     fn reverse_identification(
         &self,
-        _solved_decision_model: &HashSet<Arc<dyn DecisionModel>>,
-        _design_model: &HashSet<Arc<dyn DesignModel>>,
+        _solved_decision_model: &Vec<Arc<dyn DecisionModel>>,
+        _design_model: &Vec<Arc<dyn DesignModel>>,
     ) -> Box<dyn Iterator<Item = Arc<dyn DesignModel>>> {
         Box::new(std::iter::empty())
     }
@@ -1142,8 +1150,8 @@ where
 }
 
 pub fn compute_dominant_identification(
-    decision_models: &HashSet<Arc<dyn DecisionModel>>,
-) -> HashSet<Arc<dyn DecisionModel>> {
+    decision_models: &Vec<Arc<dyn DecisionModel>>,
+) -> Vec<Arc<dyn DecisionModel>> {
     if decision_models.len() > 1 {
         decision_models
             .iter()

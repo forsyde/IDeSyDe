@@ -206,15 +206,18 @@ pub fn identification_procedure(
         // add completely new models or replace opaque deicion mdoels for non-opaque ones
         for m in identified_step.iter().flat_map(|(ms, _)| ms) {
             if let Some(previous_idx) = identified.iter().position(|x| {
-                x.partial_cmp(m) == Some(std::cmp::Ordering::Less)
-                    || (x.partial_cmp(m) == Some(std::cmp::Ordering::Equal)
-                        && x.downcast_ref::<OpaqueDecisionModel>().is_some()
-                        && m.downcast_ref::<OpaqueDecisionModel>().is_none())
+                (x.partial_cmp(m) == Some(std::cmp::Ordering::Less)
+                    || x.partial_cmp(m) == Some(std::cmp::Ordering::Equal))
+                    && x.downcast_ref::<OpaqueDecisionModel>().is_some()
+                    && m.downcast_ref::<OpaqueDecisionModel>().is_none()
             }) {
                 identified.remove(previous_idx);
                 identified.push(m.to_owned());
                 fix_point = false;
-            } else if !identified.contains(m) {
+            } else if !identified.iter().any(|x| {
+                x.partial_cmp(m) == Some(std::cmp::Ordering::Greater)
+                    || x.partial_cmp(m) == Some(std::cmp::Ordering::Equal)
+            }) {
                 identified.push(m.to_owned());
                 fix_point = false;
             };

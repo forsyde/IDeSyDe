@@ -553,3 +553,65 @@ where
     }
     components
 }
+
+/// Computes the kernel vector base of a matrix exactly.
+pub fn compute_kernel_basis(matrix: Vec<Vec<u64>>) -> Vec<Vec<u64>> {
+    let mut kernel_basis: Vec<Vec<u64>> = Vec::new();
+    let num_rows = matrix.len();
+    let num_cols = matrix[0].len();
+
+    // Create an identity matrix of the same size as the input matrix
+    let mut identity_matrix: Vec<Vec<u64>> = vec![vec![0; num_cols]; num_cols];
+    for i in 0..num_cols {
+        identity_matrix[i][i] = 1;
+    }
+
+    // Augment the input matrix with the identity matrix
+    let mut augmented_matrix: Vec<Vec<u64>> = matrix.clone();
+    augmented_matrix.extend(identity_matrix);
+
+    // Perform row reduction using Gaussian elimination
+    let mut pivot_row = 0;
+    for col in 0..num_cols {
+        // Find a non-zero pivot element in the current column
+        let mut pivot_found = false;
+        for row in pivot_row..num_rows {
+            if augmented_matrix[row][col] != 0 {
+                pivot_found = true;
+                // Swap the pivot row with the current row
+                augmented_matrix.swap(pivot_row, row);
+                break;
+            }
+        }
+
+        // If no pivot element is found, move to the next column
+        if !pivot_found {
+            continue;
+        }
+
+        // Reduce the current column to have zeros below the pivot element
+        for row in 0..num_rows {
+            if row != pivot_row && augmented_matrix[row][col] != 0 {
+                let pivot_multiple = augmented_matrix[row][col] / augmented_matrix[pivot_row][col];
+                for col_index in col..(num_cols * 2) {
+                    augmented_matrix[row][col_index] -=
+                        pivot_multiple * augmented_matrix[pivot_row][col_index];
+                }
+            }
+        }
+
+        // Move to the next pivot row
+        pivot_row += 1;
+    }
+
+    // Extract the kernel vector base from the row-reduced augmented matrix
+    for row in pivot_row..num_rows {
+        let mut kernel_vector: Vec<u64> = Vec::new();
+        for col in num_cols..(num_cols * 2) {
+            kernel_vector.push(augmented_matrix[row][col]);
+        }
+        kernel_basis.push(kernel_vector);
+    }
+
+    kernel_basis
+}

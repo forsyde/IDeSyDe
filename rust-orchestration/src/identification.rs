@@ -153,7 +153,12 @@ impl IdentificationIterator for ExternalServerIdentifiticationIterator {
         self.decision_models_to_upload.extend(
             decision_models
                 .iter()
-                .filter(|&x| !self.decision_models.contains(x))
+                .filter(|&m| {
+                    !self.decision_models.iter().any(|x| {
+                        x.partial_cmp(m) == Some(std::cmp::Ordering::Greater)
+                            || x.partial_cmp(m) == Some(std::cmp::Ordering::Equal)
+                    })
+                })
                 .map(|x| x.to_owned()),
         );
         self.design_models_to_upload.extend(
@@ -211,6 +216,7 @@ pub fn identification_procedure(
                     && x.downcast_ref::<OpaqueDecisionModel>().is_some()
                     && m.downcast_ref::<OpaqueDecisionModel>().is_none()
             }) {
+                debug!("Replaced {}", identified[previous_idx].category());
                 identified.remove(previous_idx);
                 identified.push(m.to_owned());
                 fix_point = false;
@@ -218,6 +224,7 @@ pub fn identification_procedure(
                 x.partial_cmp(m) == Some(std::cmp::Ordering::Greater)
                     || x.partial_cmp(m) == Some(std::cmp::Ordering::Equal)
             }) {
+                debug!("added {}", m.category());
                 identified.push(m.to_owned());
                 fix_point = false;
             };

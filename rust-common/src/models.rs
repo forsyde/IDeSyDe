@@ -127,19 +127,19 @@ impl DecisionModel for CommunicatingAndTriggeredReactiveWorkload {
 ///
 #[derive(Debug, PartialEq, Serialize, Deserialize, Clone, JsonSchema)]
 pub struct SDFApplication {
-    pub actors_identifiers: HashSet<String>,
-    pub self_concurrent_actors: HashSet<String>,
-    pub channels_identifiers: HashSet<String>,
-    pub topology_srcs: Vec<String>,
-    pub topology_dsts: Vec<String>,
-    pub topology_production: Vec<u64>,
-    pub topology_consumption: Vec<u64>,
-    pub topology_initial_tokens: Vec<u64>,
-    pub topology_token_size_in_bits: Vec<u64>,
-    pub topology_channel_names: Vec<HashSet<String>>,
     pub actor_minimum_throughputs: HashMap<String, f64>,
-    pub channel_token_sizes: HashMap<String, u64>,
+    pub actors_identifiers: HashSet<String>,
     pub chain_maximum_latency: HashMap<String, HashMap<String, f64>>,
+    pub channel_token_sizes: HashMap<String, u64>,
+    pub channels_identifiers: HashSet<String>,
+    pub self_concurrent_actors: HashSet<String>,
+    pub topology_channel_names: Vec<HashSet<String>>,
+    pub topology_consumption: Vec<u32>,
+    pub topology_dsts: Vec<String>,
+    pub topology_initial_tokens: Vec<u32>,
+    pub topology_production: Vec<u32>,
+    pub topology_srcs: Vec<String>,
+    pub topology_token_size_in_bits: Vec<u64>,
 }
 
 impl DecisionModel for SDFApplication {
@@ -152,9 +152,9 @@ impl DecisionModel for SDFApplication {
         // for i in 0..self.topology_srcs.len() {
         //     elems.insert(format!(
         //         "({}, {}, {})={}:{}-{}:{}",
+        //         self.topology_consumption[i],
         //         self.topology_production[i],
-        //         self.topology_production[i],
-        //         self.topology_initial_token[i],
+        //         self.topology_initial_tokens[i],
         //         self.topology_srcs[i],
         //         "",
         //         self.topology_dsts[i],

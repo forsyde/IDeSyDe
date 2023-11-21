@@ -143,17 +143,7 @@ impl Iterator for DefaultIdentificationIterator {
     type Item = IdentificationResult;
 
     fn next(&mut self) -> Option<Self::Item> {
-        let mut identified = vec![];
-        for i in 0..self.decision_models.len() {
-            if let Some(non_opaque) = self.decision_models[i]
-                .downcast_ref::<OpaqueDecisionModel>()
-                .and_then(|x| self.imodule.opaque_to_model(x))
-            {
-                self.decision_models.remove(i);
-                self.decision_models.push(non_opaque.to_owned());
-                identified.push(non_opaque);
-            }
-        }
+        // let mut identified = vec![];
         // Assume that all the models which could have been made non-opaque, did.
         // let (tx_model, rx_model) = std::sync::mpsc::channel::<Arc<dyn DecisionModel>>();
         // let (tx_msg, rx_msg) = std::sync::mpsc::channel::<String>();
@@ -207,8 +197,8 @@ impl Iterator for DefaultIdentificationIterator {
         let mut messages = vec![];
         for (ms, msgs) in par_identified {
             for m in ms {
-                if !identified.contains(&m) {
-                    identified.push(m);
+                if !self.decision_models.contains(&m) {
+                    self.decision_models.push(m);
                 }
             }
             for msg in msgs {
@@ -217,7 +207,7 @@ impl Iterator for DefaultIdentificationIterator {
                 }
             }
         }
-        Some((identified, messages))
+        Some((self.decision_models.clone(), messages))
     }
 }
 
@@ -234,8 +224,12 @@ impl IdentificationIterator for DefaultIdentificationIterator {
             }
         }
         for m in decision_models {
-            if !self.decision_models.contains(m) {
-                self.decision_models.push(m.to_owned());
+            let refined = m
+                .downcast_ref::<OpaqueDecisionModel>()
+                .and_then(|opaque| self.imodule.opaque_to_model(opaque))
+                .unwrap_or(m.to_owned());
+            if !self.decision_models.contains(&refined) {
+                self.decision_models.push(refined.to_owned());
             }
         }
         return self.next();

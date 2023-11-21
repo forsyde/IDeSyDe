@@ -32,6 +32,9 @@ pub fn make_common_module() -> StandaloneModule {
         idesyde_core::MarkedIdentificationRule::DecisionModelOnlyIdentificationRule(
             irules::identify_aperiodic_asynchronous_dataflow_to_partitioned_mem_mappable_multicore,
         ),
+        idesyde_core::MarkedIdentificationRule::DecisionModelOnlyIdentificationRule(
+            irules::identify_analyzed_sdf_from_common_sdf,
+        )
     ])
         .opaque_to_model(opaque_to_model_gen![
             SDFApplication,

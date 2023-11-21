@@ -16,7 +16,7 @@ use crate::models::{
     AperiodicAsynchronousDataflowToPartitionedMemoryMappableMulticore,
     AperiodicAsynchronousDataflowToPartitionedTiledMulticore, InstrumentedComputationTimes,
     InstrumentedMemoryRequirements, MemoryMappableMultiCore, PartitionedMemoryMappableMulticore,
-    PartitionedTiledMulticore, RuntimesAndProcessors, TiledMultiCore,
+    PartitionedTiledMulticore, RuntimesAndProcessors, SDFApplication, TiledMultiCore,
 };
 
 pub fn identify_partitioned_mem_mapped_multicore(
@@ -211,6 +211,7 @@ pub fn identify_asynchronous_aperiodic_dataflow_from_sdf(
                                             analysed_sdf_application
                                                 .sdf_application
                                                 .topology_production[*e.weight()]
+                                                as u64
                                                 * analysed_sdf_application
                                                     .sdf_application
                                                     .topology_token_size_in_bits[*e.weight()],
@@ -240,6 +241,7 @@ pub fn identify_asynchronous_aperiodic_dataflow_from_sdf(
                                             analysed_sdf_application
                                                 .sdf_application
                                                 .topology_consumption[*e.weight()]
+                                                as u64
                                                 * analysed_sdf_application
                                                     .sdf_application
                                                     .topology_token_size_in_bits[*e.weight()],
@@ -283,8 +285,8 @@ pub fn identify_asynchronous_aperiodic_dataflow_from_sdf(
                             let initial_tokens = analysed_sdf_application
                                 .sdf_application
                                 .topology_initial_tokens[cidx];
-                            let ratio =
-                                ((q_dst * consumed - initial_tokens) as f64) / (produced as f64);
+                            let ratio = ((q_dst * consumed as u64 - initial_tokens as u64) as f64)
+                                / (produced as f64);
                             // if the jobs are different and the ratio of tokens is satisfied, they
                             // have a strong dependency, otherwise, they might only have a weak dependency
                             // or nothing at all.
@@ -321,8 +323,8 @@ pub fn identify_asynchronous_aperiodic_dataflow_from_sdf(
                             let max_tokens = analysed_sdf_application
                                 .repetition_vector
                                 .get(src)
-                                .map(|q_src| q_src * prod)
-                                .unwrap_or(prod);
+                                .map(|q_src| q_src * prod as u64)
+                                .unwrap_or(prod as u64);
                             channels.iter().map(move |channel| (max_tokens, channel))
                         })
                         .map(|(max_tokens, channel)| {
@@ -459,6 +461,98 @@ pub fn identify_aperiodic_asynchronous_dataflow_to_partitioned_tiled_multicore(
     (identified, errors)
 }
 
+/// This identification rule enriches an SDFApplication with the repetition vector and a PASS.
+pub fn identify_analyzed_sdf_from_common_sdf(
+    _design_models: &Vec<Arc<dyn DesignModel>>,
+    decision_models: &Vec<Arc<dyn DecisionModel>>,
+) -> IdentificationResult {
+    let mut identified = Vec::new();
+    let mut msgs: Vec<String> = Vec::new();
+    for m in decision_models {
+        if let Some(sdf_application) = m.downcast_ref::<SDFApplication>() {
+            // build up the matrix that captures the topology matrix
+            let mut topology_matrix: Vec<Vec<i64>> = Vec::new();
+            for (src, dst) in sdf_application
+                .topology_srcs
+                .iter()
+                .zip(sdf_application.topology_dsts.iter())
+            {
+                // TODO: try to optimise this later
+                let mut row = vec![0; sdf_application.actors_identifiers.len()];
+                row[sdf_application
+                    .actors_identifiers
+                    .iter()
+                    .position(|x| x == src)
+                    .unwrap()] = -(sdf_application.topology_consumption[sdf_application
+                    .topology_srcs
+                    .iter()
+                    .zip(sdf_application.topology_dsts.iter())
+                    .position(|(s, t)| s == src && t == dst)
+                    .unwrap()] as i64);
+                row[sdf_application
+                    .actors_identifiers
+                    .iter()
+                    .position(|x| x == dst)
+                    .unwrap()] = sdf_application.topology_production[sdf_application
+                    .topology_srcs
+                    .iter()
+                    .zip(sdf_application.topology_dsts.iter())
+                    .position(|(s, t)| s == src && t == dst)
+                    .unwrap()] as i64;
+                topology_matrix.push(row);
+            }
+            let basis = compute_kernel_basis(&topology_matrix);
+            let repetition_vector: HashMap<String, u64> = sdf_application
+                .actors_identifiers
+                .iter()
+                .map(|a| {
+                    (
+                        a.to_owned(),
+                        basis
+                            .iter()
+                            .map(|x| {
+                                x[sdf_application
+                                    .actors_identifiers
+                                    .iter()
+                                    .position(|y| y == a)
+                                    .unwrap()]
+                            })
+                            .sum(),
+                    )
+                })
+                .collect();
+            if sdf_application
+                .actors_identifiers
+                .iter()
+                .all(|a| repetition_vector.contains_key(a))
+            {
+                let actor_names: Vec<String> = sdf_application
+                    .actors_identifiers
+                    .iter()
+                    .map(|a| a.to_owned())
+                    .collect();
+                let aggregated_repetition_vector: Vec<u64> = (0..actor_names.len())
+                    .map(|i| basis.iter().map(|v| v[i]).sum())
+                    .collect();
+                let schedule = compute_periodic_admissible_static_schedule(
+                    &topology_matrix,
+                    &sdf_application.topology_initial_tokens,
+                    &aggregated_repetition_vector,
+                    &actor_names,
+                );
+                identified.push(Arc::new(AnalysedSDFApplication {
+                    sdf_application: sdf_application.to_owned(),
+                    repetition_vector,
+                    periodic_admissible_static_schedule: schedule,
+                }) as Arc<dyn DecisionModel>);
+            } else {
+                msgs.push("identify_analyzed_sdf_from_common_sdf: repetition vector does not contain all actors".to_string());
+            }
+        }
+    }
+    IdentificationResult::from((identified, msgs))
+}
+
 pub fn identify_aperiodic_asynchronous_dataflow_to_partitioned_mem_mappable_multicore(
     _design_models: &Vec<Arc<dyn DesignModel>>,
     decision_models: &Vec<Arc<dyn DecisionModel>>,
@@ -555,20 +649,28 @@ where
 }
 
 /// Computes the kernel vector base of a matrix exactly.
-pub fn compute_kernel_basis(matrix: Vec<Vec<u64>>) -> Vec<Vec<u64>> {
+pub fn compute_kernel_basis(matrix: &Vec<Vec<i64>>) -> Vec<Vec<u64>> {
     let mut kernel_basis: Vec<Vec<u64>> = Vec::new();
     let num_rows = matrix.len();
     let num_cols = matrix[0].len();
+    let smallest = if num_rows < num_cols {
+        num_rows
+    } else {
+        num_cols
+    };
 
     // Create an identity matrix of the same size as the input matrix
-    let mut identity_matrix: Vec<Vec<u64>> = vec![vec![0; num_cols]; num_cols];
-    for i in 0..num_cols {
-        identity_matrix[i][i] = 1;
+    //  and augment the input matrix with the identity matrix
+    let mut augmented_matrix: Vec<Vec<num::Rational64>> =
+        vec![vec![num::Rational64::from_integer(0); 2 * num_cols]; num_rows];
+    for i in 0..smallest {
+        augmented_matrix[i][i] = num::Rational64::from_integer(1);
     }
-
-    // Augment the input matrix with the identity matrix
-    let mut augmented_matrix: Vec<Vec<u64>> = matrix.clone();
-    augmented_matrix.extend(identity_matrix);
+    for j in num_cols..2 * num_cols {
+        for i in 0..num_rows {
+            augmented_matrix[i][j] = num::Rational64::from_integer(matrix[i][j - num_cols] as i64);
+        }
+    }
 
     // Perform row reduction using Gaussian elimination
     let mut pivot_row = 0;
@@ -576,7 +678,7 @@ pub fn compute_kernel_basis(matrix: Vec<Vec<u64>>) -> Vec<Vec<u64>> {
         // Find a non-zero pivot element in the current column
         let mut pivot_found = false;
         for row in pivot_row..num_rows {
-            if augmented_matrix[row][col] != 0 {
+            if augmented_matrix[row][col] != num::Rational64::from_integer(0) {
                 pivot_found = true;
                 // Swap the pivot row with the current row
                 augmented_matrix.swap(pivot_row, row);
@@ -591,11 +693,11 @@ pub fn compute_kernel_basis(matrix: Vec<Vec<u64>>) -> Vec<Vec<u64>> {
 
         // Reduce the current column to have zeros below the pivot element
         for row in 0..num_rows {
-            if row != pivot_row && augmented_matrix[row][col] != 0 {
+            if row != pivot_row && augmented_matrix[row][col] != num::Rational64::from_integer(0) {
                 let pivot_multiple = augmented_matrix[row][col] / augmented_matrix[pivot_row][col];
                 for col_index in col..(num_cols * 2) {
-                    augmented_matrix[row][col_index] -=
-                        pivot_multiple * augmented_matrix[pivot_row][col_index];
+                    augmented_matrix[row][col_index] = augmented_matrix[row][col_index]
+                        - pivot_multiple * augmented_matrix[pivot_row][col_index];
                 }
             }
         }
@@ -606,12 +708,63 @@ pub fn compute_kernel_basis(matrix: Vec<Vec<u64>>) -> Vec<Vec<u64>> {
 
     // Extract the kernel vector base from the row-reduced augmented matrix
     for row in pivot_row..num_rows {
-        let mut kernel_vector: Vec<u64> = Vec::new();
+        let mut kernel_vector: Vec<num::Rational64> = Vec::new();
         for col in num_cols..(num_cols * 2) {
             kernel_vector.push(augmented_matrix[row][col]);
         }
-        kernel_basis.push(kernel_vector);
+        let dem_lcd = kernel_vector
+            .iter()
+            .map(|x| x.denom().to_owned())
+            .reduce(num::integer::lcm)
+            .unwrap_or(1);
+        let num_gcd = kernel_vector
+            .iter()
+            .map(|x| x.numer().to_owned())
+            .reduce(num::integer::gcd)
+            .unwrap_or(1);
+        let kernel_normalized = kernel_vector
+            .iter()
+            .map(|x| {
+                x * num::Rational64::from_integer(dem_lcd) / num::Rational64::from_integer(num_gcd)
+            })
+            .map(|x| x.to_integer() as u64)
+            .collect();
+        kernel_basis.push(kernel_normalized);
     }
 
     kernel_basis
+}
+
+pub fn compute_periodic_admissible_static_schedule(
+    topology_matrix: &Vec<Vec<i64>>,
+    initial_tokens: &Vec<u32>,
+    repetition_vector: &Vec<u64>,
+    actor_names: &Vec<String>,
+) -> Vec<String> {
+    let mut left = repetition_vector.clone();
+    let mut buffer: Vec<u64> = initial_tokens.iter().map(|t| *t as u64).collect();
+    let mut schedule = Vec::new();
+    while left.iter().any(|x| x > &0) {
+        for j in 0..actor_names.len() {
+            if left[j] > 0 {
+                let mut can_produce = true;
+                for i in 0..initial_tokens.len() {
+                    if topology_matrix[i][j] < 0 && buffer[i] < (-topology_matrix[i][j] as u64) {
+                        can_produce = false;
+                        break;
+                    }
+                }
+                if can_produce {
+                    for i in 0..initial_tokens.len() {
+                        if topology_matrix[i][j] < 0 {
+                            buffer[i] -= (-topology_matrix[i][j]) as u64;
+                        }
+                    }
+                    left[j] -= 1;
+                    schedule.push(actor_names[j].to_owned());
+                }
+            }
+        }
+    }
+    schedule
 }

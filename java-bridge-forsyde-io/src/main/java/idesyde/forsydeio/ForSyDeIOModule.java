@@ -56,7 +56,8 @@ public class ForSyDeIOModule implements StandaloneModule {
                 opaque.asCBORBinary().flatMap(b -> readFromCBORBytes(b,
                         AperiodicAsynchronousDataflowToPartitionedTiledMulticore.class))
                         .or(() -> opaque.asJsonString().flatMap(
-                                s -> readFromJsonString(s, AperiodicAsynchronousDataflowToPartitionedTiledMulticore.class)))
+                                s -> readFromJsonString(s,
+                                        AperiodicAsynchronousDataflowToPartitionedTiledMulticore.class)))
                         .map(m -> (DecisionModel) m);
             default -> Optional.empty();
         };
@@ -81,7 +82,8 @@ public class ForSyDeIOModule implements StandaloneModule {
                 new ForSyDeIOSYNetworkToAADataflowIRule(),
                 new ForSyDeIOSYAndSDFInstrumentedToMemReqIRule(),
                 new TiledMultiCoreIRule(),
-                new InstrumentedComputationTimesIRule());
+                new InstrumentedComputationTimesIRule(),
+                new ForSyDeIOSDFToCommon());
     }
 
     public static void main(String[] args) {

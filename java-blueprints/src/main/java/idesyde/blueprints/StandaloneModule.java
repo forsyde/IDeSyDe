@@ -210,21 +210,6 @@ public interface StandaloneModule extends Module {
                             logger.info("A new identification client connected");
                             ctx.enableAutomaticPings();
                         });
-                    }).get("/identified/{session}", ctx -> {
-                        String session = ctx.pathParam("session");
-                        var identifiedDecisionModels = sessionIdentifiedDecisionModels.getOrDefault(session,
-                                new ArrayDeque<>());
-                        if (!identifiedDecisionModels.isEmpty()) {
-                            if (ctx.queryParam("encoding") != null
-                                    && ctx.queryParam("encoding").equalsIgnoreCase("cbor")) {
-                                OpaqueDecisionModel.from(identifiedDecisionModels.pop()).toCBORBytes()
-                                        .ifPresent(ctx::result);
-                            } else {
-                                OpaqueDecisionModel.from(identifiedDecisionModels.pop()).toJsonString()
-                                        .ifPresent(ctx::result);
-                            }
-                        }
-
                     }).get("/explorers", ctx -> {
                         ctx.result(objectMapper.writeValueAsString(
                                 explorers().stream().map(Explorer::uniqueIdentifier).collect(Collectors.toSet())));

@@ -34,6 +34,7 @@ public record SDFApplication(
                 @JsonProperty("actors_identifiers") Set<String> actorsIdentifiers,
                 @JsonProperty("chain_maximum_latency") Map<String, Map<String, Double>> chainMaximumLatency,
                 @JsonProperty("channels_identifiers") Set<String> channelsIdentifiers,
+                @JsonProperty("channel_token_sizes") Map<String, Long> channelTokenSizes,
                 @JsonProperty("self_concurrent_actors") Set<String> selfConcurrentActors,
                 @JsonProperty("topology_channel_names") List<Set<String>> topologyChannelNames,
                 @JsonProperty("topology_consumption") List<Integer> topologyConsumption,

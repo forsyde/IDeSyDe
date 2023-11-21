@@ -216,7 +216,7 @@ pub fn identification_procedure(
                     && x.downcast_ref::<OpaqueDecisionModel>().is_some()
                     && m.downcast_ref::<OpaqueDecisionModel>().is_none()
             }) {
-                debug!("Replaced {}", identified[previous_idx].category());
+                // debug!("Replaced {}", identified[previous_idx].category());
                 identified.remove(previous_idx);
                 identified.push(m.to_owned());
                 fix_point = false;
@@ -224,7 +224,7 @@ pub fn identification_procedure(
                 x.partial_cmp(m) == Some(std::cmp::Ordering::Greater)
                     || x.partial_cmp(m) == Some(std::cmp::Ordering::Equal)
             }) {
-                debug!("added {}", m.category());
+                // debug!("added {}", m.category());
                 identified.push(m.to_owned());
                 fix_point = false;
             };

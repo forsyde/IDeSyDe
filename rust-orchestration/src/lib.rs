@@ -305,12 +305,6 @@ impl Module for ExternalServerModule {
                 };
                 return Box::new(std::iter::repeat_with(move || {
                     while let Ok(message) = ws.read() {
-                        if let Err(e) = ws.flush() {
-                            debug!(
-                                "Error found while flushing reverse identification websocket: {}",
-                                e.to_string()
-                            );
-                        }
                         // besides the answer, also read the module's messages
                         match message {
                             tungstenite::Message::Text(txt_msg) => {
@@ -348,84 +342,18 @@ impl Module for ExternalServerModule {
                             tungstenite::Message::Close(_) => return None,
                             _ => (),
                         }
+                        if let Err(e) = ws.flush() {
+                            debug!(
+                                "Error found while flushing reverse identification websocket: {}",
+                                e.to_string()
+                            );
+                        }
                     }
                     None
                 }).take_while(|x| x.is_some()).flatten());
             }
         }
-        // let mut integrated: Vec<Box<dyn DesignModel>> = Vec::new();
-        // send decision models
-        solved_decision_models.par_iter().for_each(|m| {
-            if let Ok(mut decision_url) = self.url.join("/explored") {
-                decision_url.set_query(Some("session=0"));
-                let opaque = OpaqueDecisionModel::from(m);
-                let mut form = reqwest::blocking::multipart::Form::new();
-                if let Ok(cbor_body) = opaque.to_cbor::<Vec<u8>>() {
-                    form = form.part("cbor", reqwest::blocking::multipart::Part::bytes(cbor_body));
-                } else if let Ok(json_body) = opaque.to_json() {
-                    form = form.text("json", json_body);
-                }
-                if let Err(e) = self.client.put(decision_url).multipart(form).send() {
-                    warn!("Failed to send explored decision model to module {}. Trying to proceed anyway.", self.unique_identifier());
-                    debug!("Message was: {}", e.to_string());
-                };
-            };
-        });
-        // same for design models
-        design_models.par_iter().for_each(|m| {
-            if let Ok(mut design_url) = self.url.join("/design") {
-                design_url.set_query(Some("session=0"));
-                let mut form = reqwest::blocking::multipart::Form::new();
-                let opaque = OpaqueDesignModel::from(m.as_ref());
-                if let Ok(cbor_body) = opaque.to_cbor() {
-                    form = form.part("cbor", reqwest::blocking::multipart::Part::bytes(cbor_body));
-                } else if let Ok(json_body) = opaque.to_json() {
-                    form = form.text("json", json_body);
-                }
-                if let Err(e) = self.client.put(design_url).multipart(form).send() {
-                    warn!("Failed to send explored decision model to module {}. Trying to proceed anyway.", self.unique_identifier());
-                    debug!("Message was: {}", e.to_string());
-                };
-            };
-        });
-        // ask to reverse
-        if let Ok(reverse_url) = self.url.join("/reverse") {
-            self.client
-                .post(reverse_url)
-                .query(&[("session", "0")])
-                .send();
-        }
-        // now collect the reversed models
-        if let Ok(reversed_url) = self.url.join("/reversed") {
-            let client = self.client.to_owned();
-            return Box::new(
-                std::iter::repeat_with(move || {
-                    client
-                        .get(reversed_url.clone())
-                        .query(&[("session", "0", "encoding", "cbor")])
-                        .send()
-                        .ok()
-                        .filter(|r| !r.status().as_str().eq_ignore_ascii_case("204"))
-                        .and_then(|r| r.bytes().ok())
-                        .map(|b| b.to_vec())
-                        .and_then(|v| OpaqueDesignModel::from_cbor(v.as_slice()).ok())
-                        .or_else(|| {
-                            client
-                                .get(reversed_url.clone())
-                                .query(&[("session", "0", "encoding", "json")])
-                                .send()
-                                .ok()
-                                .filter(|r| !r.status().as_str().eq_ignore_ascii_case("204"))
-                                .and_then(|r| r.text().ok())
-                                .and_then(|b| OpaqueDesignModel::from_json_str(b.as_str()).ok())
-                        })
-                        .map(|x| Arc::new(x) as Arc<dyn DesignModel>)
-                })
-                .flatten(),
-            );
-        } else {
-            return Box::new(std::iter::empty());
-        }
+        Box::new(std::iter::empty())
     }
 
     fn explorers(&self) -> Vec<Arc<dyn idesyde_core::Explorer>> {

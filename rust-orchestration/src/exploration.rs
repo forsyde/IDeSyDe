@@ -87,13 +87,20 @@ impl Iterator for ExternalExplorerSolutionIter {
             // while let is here in order to discard keep
             while let Ok(message) = self.websocket.read() {
                 match message {
-                    tungstenite::Message::Text(sol_json) => {
-                        if let Some(sol) = ExplorationSolutionMessage::from_json_str(&sol_json) {
+                    tungstenite::Message::Text(txt) => {
+                        if txt.eq_ignore_ascii_case("done") {
+                            return None;
+                        } else if let Ok(sol) = ExplorationSolutionMessage::from_json_str(&txt) {
                             return Some(ExplorationSolution {
                                 solved: Arc::new(OpaqueDecisionModel::from(&sol))
                                     as Arc<dyn DecisionModel>,
                                 objectives: sol.objectives,
                             });
+                        } else if let Err(e) = ExplorationSolutionMessage::from_json_str(&txt) {
+                            debug!(
+                                "Failed to deserialize exploration solution message: {}",
+                                e.to_string()
+                            );
                         }
                     }
                     tungstenite::Message::Binary(sol_cbor) => {
@@ -119,6 +126,12 @@ impl Iterator for ExternalExplorerSolutionIter {
                         };
                     }
                     _ => (),
+                }
+                if let Err(e) = self.websocket.flush() {
+                    debug!(
+                        "Error found while flushing exploration websocket: {}",
+                        e.to_string()
+                    );
                 }
             }
         }
@@ -220,7 +233,9 @@ impl Explorer for ExternalExplorer {
                         };
                     };
                     for prev_sol in currrent_solutions {
-                        if let Ok(design_cbor) = ExplorationSolutionMessage::from(prev_sol).to_json_str() {
+                        if let Ok(design_cbor) =
+                            ExplorationSolutionMessage::from(prev_sol).to_json_str()
+                        {
                             if let Err(e) = ws.send(tungstenite::Message::text(design_cbor)) {
                                 warn!("Failed to send previous solution to {} for exploration. Trying to proceed anyway.", self.unique_identifier());
                                 debug!("Message was: {}", e.to_string());

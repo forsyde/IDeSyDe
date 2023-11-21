@@ -18,6 +18,7 @@ import java.util.*;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentSkipListSet;
 import java.util.concurrent.Executors;
+import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicReference;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
@@ -93,82 +94,84 @@ public interface StandaloneModule extends Module {
         try (var server = Javalin.create()) {
             server
                     .get("/info/unique_identifier", ctx -> ctx.result(uniqueIdentifier()))
-                    .put("/decision/{session}", ctx -> {
-                        if (ctx.isMultipart() && ctx.queryParamMap().containsKey("session")) {
-                            var session = ctx.queryParam("session");
-                            if (!sessionDecisionModels.containsKey(session)) {
-                                sessionDecisionModels.put(session, new ConcurrentSkipListSet<>());
-                            }
-                            var decisionModels = sessionDecisionModels.get(session);
-                            Optional<OpaqueDecisionModel> opaque = Optional.empty();
-                            if (ctx.formParam("cbor") != null) {
-                                opaque = OpaqueDecisionModel.fromCBORBytes(ctx.formParam("cbor").getBytes());
-                            } else if (ctx.formParam("json") != null) {
-                                opaque = OpaqueDecisionModel.fromJsonString(ctx.formParam("json"));
-                            }
-                            // if (file != null)
-                            opaque.flatMap(this::fromOpaqueDecision).ifPresentOrElse(m -> {
-                                decisionModels.add(m);
-                                ctx.status(200);
-                                ctx.result("Added");
-                            }, () -> {
-                                ctx.status(500);
-                                ctx.result("Failed to add");
-                            });
-                        }
-                    }).put("/explored/{session}", ctx -> {
-                        if (ctx.isMultipart() && ctx.queryParamMap().containsKey("session")) {
-                            var session = ctx.queryParam("session");
-                            if (!sessionExploredModels.containsKey(session)) {
-                                sessionExploredModels.put(session, new ConcurrentSkipListSet<>());
-                            }
-                            var decisionModels = sessionExploredModels.get(session);
-                            Optional<OpaqueDecisionModel> opaque = Optional.empty();
-                            if (ctx.uploadedFile("cbor") != null) {
-                                opaque = OpaqueDecisionModel
-                                        .fromCBORBytes(ctx.uploadedFile("cbor").content().readAllBytes());
-                            } else if (ctx.uploadedFile("json") != null) {
-                                opaque = OpaqueDecisionModel.fromJsonString(
-                                        new String(ctx.uploadedFile("json").content().readAllBytes(),
-                                                StandardCharsets.UTF_8));
-                            }
-                            // if (file != null)
-                            opaque.flatMap(this::fromOpaqueDecision).ifPresentOrElse(m -> {
-                                decisionModels.add(m);
-                                ctx.status(200);
-                                ctx.result("Added");
-                            }, () -> {
-                                ctx.status(500);
-                                ctx.result("Failed to add");
-                            });
-                        }
-                    }).put("/design/{session}", ctx -> {
-                        if (ctx.isMultipart() && ctx.queryParamMap().containsKey("session")) {
-                            var session = ctx.queryParam("session");
-                            if (!sessionDesignModels.containsKey(session)) {
-                                sessionDesignModels.put(session, new ConcurrentSkipListSet<>());
-                            }
-                            var designModels = sessionDesignModels.get(session);
-                            Optional<OpaqueDesignModel> opaque = Optional.empty();
-                            if (ctx.uploadedFile("cbor") != null) {
-                                opaque = OpaqueDesignModel
-                                        .fromCBORBytes(ctx.uploadedFile("cbor").content().readAllBytes());
-                            } else if (ctx.uploadedFile("json") != null) {
-                                opaque = OpaqueDesignModel.fromJsonString(
-                                        new String(ctx.uploadedFile("json").content().readAllBytes(),
-                                                StandardCharsets.UTF_8));
-                            }
-                            // if (file != null)
-                            opaque.flatMap(this::fromOpaqueDesign).ifPresentOrElse(m -> {
-                                designModels.add(m);
-                                ctx.status(200);
-                                ctx.result("Added");
-                            }, () -> {
-                                ctx.status(500);
-                                ctx.result("Failed to add");
-                            });
-                        }
-                    }).ws("/identify", ws -> {
+                    // .put("/decision/{session}", ctx -> {
+                    // if (ctx.isMultipart() && ctx.queryParamMap().containsKey("session")) {
+                    // var session = ctx.queryParam("session");
+                    // if (!sessionDecisionModels.containsKey(session)) {
+                    // sessionDecisionModels.put(session, new ConcurrentSkipListSet<>());
+                    // }
+                    // var decisionModels = sessionDecisionModels.get(session);
+                    // Optional<OpaqueDecisionModel> opaque = Optional.empty();
+                    // if (ctx.formParam("cbor") != null) {
+                    // opaque = OpaqueDecisionModel.fromCBORBytes(ctx.formParam("cbor").getBytes());
+                    // } else if (ctx.formParam("json") != null) {
+                    // opaque = OpaqueDecisionModel.fromJsonString(ctx.formParam("json"));
+                    // }
+                    // // if (file != null)
+                    // opaque.flatMap(this::fromOpaqueDecision).ifPresentOrElse(m -> {
+                    // decisionModels.add(m);
+                    // ctx.status(200);
+                    // ctx.result("Added");
+                    // }, () -> {
+                    // ctx.status(500);
+                    // ctx.result("Failed to add");
+                    // });
+                    // }
+                    // })
+                    // .put("/explored/{session}", ctx -> {
+                    // if (ctx.isMultipart() && ctx.queryParamMap().containsKey("session")) {
+                    // var session = ctx.queryParam("session");
+                    // if (!sessionExploredModels.containsKey(session)) {
+                    // sessionExploredModels.put(session, new ConcurrentSkipListSet<>());
+                    // }
+                    // var decisionModels = sessionExploredModels.get(session);
+                    // Optional<OpaqueDecisionModel> opaque = Optional.empty();
+                    // if (ctx.uploadedFile("cbor") != null) {
+                    // opaque = OpaqueDecisionModel
+                    // .fromCBORBytes(ctx.uploadedFile("cbor").content().readAllBytes());
+                    // } else if (ctx.uploadedFile("json") != null) {
+                    // opaque = OpaqueDecisionModel.fromJsonString(
+                    // new String(ctx.uploadedFile("json").content().readAllBytes(),
+                    // StandardCharsets.UTF_8));
+                    // }
+                    // // if (file != null)
+                    // opaque.flatMap(this::fromOpaqueDecision).ifPresentOrElse(m -> {
+                    // decisionModels.add(m);
+                    // ctx.status(200);
+                    // ctx.result("Added");
+                    // }, () -> {
+                    // ctx.status(500);
+                    // ctx.result("Failed to add");
+                    // });
+                    // }
+                    // }).put("/design/{session}", ctx -> {
+                    // if (ctx.isMultipart() && ctx.queryParamMap().containsKey("session")) {
+                    // var session = ctx.queryParam("session");
+                    // if (!sessionDesignModels.containsKey(session)) {
+                    // sessionDesignModels.put(session, new ConcurrentSkipListSet<>());
+                    // }
+                    // var designModels = sessionDesignModels.get(session);
+                    // Optional<OpaqueDesignModel> opaque = Optional.empty();
+                    // if (ctx.uploadedFile("cbor") != null) {
+                    // opaque = OpaqueDesignModel
+                    // .fromCBORBytes(ctx.uploadedFile("cbor").content().readAllBytes());
+                    // } else if (ctx.uploadedFile("json") != null) {
+                    // opaque = OpaqueDesignModel.fromJsonString(
+                    // new String(ctx.uploadedFile("json").content().readAllBytes(),
+                    // StandardCharsets.UTF_8));
+                    // }
+                    // // if (file != null)
+                    // opaque.flatMap(this::fromOpaqueDesign).ifPresentOrElse(m -> {
+                    // designModels.add(m);
+                    // ctx.status(200);
+                    // ctx.result("Added");
+                    // }, () -> {
+                    // ctx.status(500);
+                    // ctx.result("Failed to add");
+                    // });
+                    // }
+                    // })
+                    .ws("/identify", ws -> {
                         var logger = LoggerFactory.getLogger("main");
                         Set<DecisionModel> decisionModels = new HashSet<>();
                         Set<DesignModel> designModels = new HashSet<>();
@@ -208,7 +211,7 @@ public interface StandaloneModule extends Module {
                         });
                         ws.onConnect(ctx -> {
                             logger.info("A new identification client connected");
-                            ctx.enableAutomaticPings();
+                            ctx.enableAutomaticPings(4, TimeUnit.SECONDS);
                         });
                     }).get("/explorers", ctx -> {
                         ctx.result(objectMapper.writeValueAsString(
@@ -258,7 +261,7 @@ public interface StandaloneModule extends Module {
                         AtomicReference<Explorer.Configuration> configuration = new AtomicReference<>(
                                 new Explorer.Configuration());
                         AtomicReference<DecisionModel> decisionModel = new AtomicReference<>();
-                        Set<ExplorationSolution> previousSolutions = new HashSet<>();
+                        Set<ExplorationSolution> previousSolutions = new ConcurrentSkipListSet<>();
                         ws.onBinaryMessage(ctx -> {
                             logger.info("Receiving a binary message");
                             var payload = ctx.data();
@@ -283,14 +286,18 @@ public interface StandaloneModule extends Module {
                                 executor.submit(() -> {
                                     explorer.get()
                                             .explore(decisionModel.get(), previousSolutions, configuration.get())
-                                            .takeWhile(s -> ctx.session.isOpen())
+                                            // .takeWhile(s -> ctx.session.isOpen())
                                             .filter(solution -> !configuration.get().strict
                                                     || previousSolutions.stream()
                                                             .noneMatch(other -> other.dominates(solution)))
-                                            .map(ExplorationSolutionMessage::from)
-                                            .flatMap(s -> s.toCBORBytes().map(ByteBuffer::wrap).stream())
-                                            .peek(x -> logger.info("Found a new solution"))
-                                            .forEach(ctx::send);
+                                            .forEach(s -> {
+                                                ExplorationSolutionMessage.from(s).toJsonString()
+                                                        .ifPresentOrElse(txt -> logger
+                                                                .info("managed to make exploratio message"),
+                                                                () -> logger.info("Failed to make the message"));
+                                                ExplorationSolutionMessage.from(s).toJsonString().ifPresent(ctx::send);
+                                                logger.info("Sent a solution");
+                                            });
                                     logger.info("Finished exploration");
                                     ctx.send("done");
                                 });
@@ -310,8 +317,8 @@ public interface StandaloneModule extends Module {
                             }
                         });
                         ws.onConnect(ctx -> {
-                            ctx.enableAutomaticPings();
                             logger.info("A client connected to exploration");
+                            ctx.enableAutomaticPings(4, TimeUnit.SECONDS);
                             explorers().stream()
                                     .filter(e -> e.uniqueIdentifier().equalsIgnoreCase(ctx.pathParam("explorerName")))
                                     .findAny()
@@ -336,9 +343,9 @@ public interface StandaloneModule extends Module {
                                 executor.submit(() -> {
                                     var reversed = reverseIdentification(exploredDecisionModels, designModels);
                                     for (var result : reversed) {
-                                        OpaqueDesignModel.from(result).toCBORBytes().ifPresent(bytes -> {
-                                            ctx.send(ByteBuffer.wrap(bytes));
-                                            designModels.add(result);
+                                        OpaqueDesignModel.from(result).toJsonString().ifPresent(bytes -> {
+                                            ctx.send(bytes);
+                                            // designModels.add(result);
                                         });
                                     }
                                     logger.info(
@@ -357,7 +364,7 @@ public interface StandaloneModule extends Module {
                         });
                         ws.onConnect(ctx -> {
                             logger.info("A new reverse identification client connected");
-                            ctx.enableAutomaticPings();
+                            ctx.enableAutomaticPings(4, TimeUnit.SECONDS);
                         });
                     })
                     .post("/reverse", ctx -> {

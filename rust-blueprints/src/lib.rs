@@ -25,8 +25,8 @@ pub struct ExplorationSolutionMessage {
 }
 
 impl ExplorationSolutionMessage {
-    pub fn from_json_str(s: &str) -> Option<ExplorationSolutionMessage> {
-        serde_json::from_str(s).ok()
+    pub fn from_json_str(s: &str) -> Result<ExplorationSolutionMessage, serde_json::Error> {
+        serde_json::from_str(s)
     }
 
     pub fn to_json_str(&self) -> Result<String, serde_json::Error> {

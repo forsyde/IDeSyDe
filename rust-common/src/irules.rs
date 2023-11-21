@@ -472,33 +472,24 @@ pub fn identify_analyzed_sdf_from_common_sdf(
         if let Some(sdf_application) = m.downcast_ref::<SDFApplication>() {
             // build up the matrix that captures the topology matrix
             let mut topology_matrix: Vec<Vec<i64>> = Vec::new();
-            for (src, dst) in sdf_application
+            for (i, (src, dst)) in sdf_application
                 .topology_srcs
                 .iter()
                 .zip(sdf_application.topology_dsts.iter())
+                .enumerate()
             {
                 // TODO: try to optimise this later
                 let mut row = vec![0; sdf_application.actors_identifiers.len()];
                 row[sdf_application
                     .actors_identifiers
                     .iter()
-                    .position(|x| x == src)
-                    .unwrap()] = -(sdf_application.topology_consumption[sdf_application
-                    .topology_srcs
-                    .iter()
-                    .zip(sdf_application.topology_dsts.iter())
-                    .position(|(s, t)| s == src && t == dst)
-                    .unwrap()] as i64);
+                    .position(|x| x == dst)
+                    .unwrap()] = -(sdf_application.topology_consumption[i] as i64);
                 row[sdf_application
                     .actors_identifiers
                     .iter()
-                    .position(|x| x == dst)
-                    .unwrap()] = sdf_application.topology_production[sdf_application
-                    .topology_srcs
-                    .iter()
-                    .zip(sdf_application.topology_dsts.iter())
-                    .position(|(s, t)| s == src && t == dst)
-                    .unwrap()] as i64;
+                    .position(|x| x == src)
+                    .unwrap()] = sdf_application.topology_production[i] as i64;
                 topology_matrix.push(row);
             }
             let basis = compute_kernel_basis(&topology_matrix);
@@ -661,27 +652,31 @@ pub fn compute_kernel_basis(matrix: &Vec<Vec<i64>>) -> Vec<Vec<u64>> {
 
     // Create an identity matrix of the same size as the input matrix
     //  and augment the input matrix with the identity matrix
-    let mut augmented_matrix: Vec<Vec<num::Rational64>> =
-        vec![vec![num::Rational64::from_integer(0); 2 * num_cols]; num_rows];
-    for i in 0..smallest {
-        augmented_matrix[i][i] = num::Rational64::from_integer(1);
-    }
-    for j in num_cols..2 * num_cols {
-        for i in 0..num_rows {
-            augmented_matrix[i][j] = num::Rational64::from_integer(matrix[i][j - num_cols] as i64);
+    let mut transpose_augmented: Vec<Vec<num::Rational64>> =
+        vec![vec![num::zero(); 2 * num_rows]; num_cols];
+    for j in 0..num_rows {
+        for i in 0..num_cols {
+            transpose_augmented[j][i] = num::Rational64::from_integer(matrix[i][j] as i64);
         }
     }
+    for i in num_rows..(num_rows + smallest) {
+        transpose_augmented[i - num_rows][i] = num::Rational64::from_integer(1);
+    }
+    // println!("augmented matrix {:?}", transpose_augmented);
 
     // Perform row reduction using Gaussian elimination
     let mut pivot_row = 0;
-    for col in 0..num_cols {
+    for col in 0..num_rows {
         // Find a non-zero pivot element in the current column
         let mut pivot_found = false;
-        for row in pivot_row..num_rows {
-            if augmented_matrix[row][col] != num::Rational64::from_integer(0) {
+        for row in pivot_row..num_cols {
+            if transpose_augmented[row][col] != num::zero() {
                 pivot_found = true;
                 // Swap the pivot row with the current row
-                augmented_matrix.swap(pivot_row, row);
+                if pivot_row != row {
+                    // println!("swapping row {} with row {}", pivot_row, row);
+                    transpose_augmented.swap(pivot_row, row);
+                }
                 break;
             }
         }
@@ -690,14 +685,22 @@ pub fn compute_kernel_basis(matrix: &Vec<Vec<i64>>) -> Vec<Vec<u64>> {
         if !pivot_found {
             continue;
         }
+        // println!("reducing a column");
 
+        // normalize the current row
+        for col_index in (pivot_row + 1)..(num_rows * 2) {
+            transpose_augmented[pivot_row][col_index] = transpose_augmented[pivot_row][col_index]
+                / transpose_augmented[pivot_row][pivot_row];
+        }
+        transpose_augmented[pivot_row][pivot_row] = num::one();
         // Reduce the current column to have zeros below the pivot element
-        for row in 0..num_rows {
-            if row != pivot_row && augmented_matrix[row][col] != num::Rational64::from_integer(0) {
-                let pivot_multiple = augmented_matrix[row][col] / augmented_matrix[pivot_row][col];
-                for col_index in col..(num_cols * 2) {
-                    augmented_matrix[row][col_index] = augmented_matrix[row][col_index]
-                        - pivot_multiple * augmented_matrix[pivot_row][col_index];
+        for row in (pivot_row + 1)..num_cols {
+            if transpose_augmented[row][col] != num::zero() {
+                let pivot_multiple =
+                    transpose_augmented[row][col] / transpose_augmented[pivot_row][col];
+                for col_index in col..(num_rows * 2) {
+                    transpose_augmented[row][col_index] = transpose_augmented[row][col_index]
+                        - pivot_multiple * transpose_augmented[pivot_row][col_index];
                 }
             }
         }
@@ -705,12 +708,13 @@ pub fn compute_kernel_basis(matrix: &Vec<Vec<i64>>) -> Vec<Vec<u64>> {
         // Move to the next pivot row
         pivot_row += 1;
     }
+    // println!("augmented matrix {:?}", transpose_augmented);
 
     // Extract the kernel vector base from the row-reduced augmented matrix
     for row in pivot_row..num_rows {
         let mut kernel_vector: Vec<num::Rational64> = Vec::new();
         for col in num_cols..(num_cols * 2) {
-            kernel_vector.push(augmented_matrix[row][col]);
+            kernel_vector.push(transpose_augmented[row][col]);
         }
         let dem_lcd = kernel_vector
             .iter()
@@ -757,7 +761,9 @@ pub fn compute_periodic_admissible_static_schedule(
                 if can_produce {
                     for i in 0..initial_tokens.len() {
                         if topology_matrix[i][j] < 0 {
-                            buffer[i] -= (-topology_matrix[i][j]) as u64;
+                            buffer[i] -= (-topology_matrix[i][j] as u64);
+                        } else if topology_matrix[i][j] > 0 {
+                            buffer[i] += topology_matrix[i][j] as u64;
                         }
                     }
                     left[j] -= 1;

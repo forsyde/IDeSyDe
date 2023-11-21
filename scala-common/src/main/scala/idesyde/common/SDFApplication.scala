@@ -14,11 +14,11 @@ final case class SDFApplication(
     val chain_maximum_latency: Map[String, Map[String, Double]],
     val channels_identifiers: Set[String],
     val topology_channel_names: Vector[Vector[String]],
-    val topology_consumption: Vector[Long],
+    val topology_consumption: Vector[Int],
     val topology_dsts: Vector[String],
-    val topology_initial_tokens: Vector[Long],
+    val topology_initial_tokens: Vector[Int],
     val topology_token_size_in_bits: Vector[Long],
-    val topology_production: Vector[Long],
+    val topology_production: Vector[Int],
     val topology_srcs: Vector[String]
 ) extends DecisionModel
     derives ReadWriter {

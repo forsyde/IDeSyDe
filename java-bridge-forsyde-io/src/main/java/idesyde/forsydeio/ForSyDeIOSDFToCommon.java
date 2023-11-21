@@ -101,6 +101,11 @@ class ForSyDeIOSDFToCommon implements IdentificationRule {
                             sdfActors.stream().map(SDFActor::getIdentifier).collect(Collectors.toSet()),
                             new HashMap<String, Map<String, Double>>(),
                             properSdfChannels.stream().map(SDFChannel::getIdentifier).collect(Collectors.toSet()),
+                            properSdfChannels.stream().collect(Collectors.toMap(
+                                    c -> c.getIdentifier(),
+                                    c -> c.tokenDataType().flatMap(ForSyDeHierarchy.InstrumentedDataType::tryView)
+                                            .flatMap(d -> d.maxSizeInBits().values().stream().max(Long::compare))
+                                            .orElse(0L))),
                             selfConcurrentActors,
                             topologyChannelNames,
                             topologyConsumption,

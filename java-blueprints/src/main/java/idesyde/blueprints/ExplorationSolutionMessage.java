@@ -16,8 +16,15 @@ public record ExplorationSolutionMessage(Map<String, Double> objectives, OpaqueD
 
     public Optional<String> toJsonString() {
         try {
-            return Optional.of(DecisionModel.objectMapper.writeValueAsString(this));
+            // the recreation of the ExplorationSolution object is workaround for a bug in
+            // with the deserialization of CBOR on othe modules. If it is sent in JSON, we
+            // assume the consumer will only care about the JSON representation.
+            return Optional.of(DecisionModel.objectMapper
+                    .writeValueAsString(new ExplorationSolution(objectives, new OpaqueDecisionModel(solved.category(),
+                            solved.part(), solved.bodyJson(), Optional.empty(), Optional.empty()))));
         } catch (JsonProcessingException ignored) {
+            System.out.println("Failed to serialize exploration solution message to JSON string.");
+            ignored.printStackTrace();
             return Optional.empty();
         }
     }

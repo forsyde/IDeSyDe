@@ -29,7 +29,8 @@ import com.fasterxml.jackson.databind.annotation.JsonSerialize;
  * <p>
  * R. Jordão, I. Sander and M. Becker, "Formulation of Design Space Exploration
  * Problems by
- * Composable Design Space Identification," 2021 Design, Automation &amp; Test in
+ * Composable Design Space Identification," 2021 Design, Automation &amp; Test
+ * in
  * Europe Conference &amp;
  * Exhibition (DATE), 2021, pp. 1204-1207, doi: 10.23919/DATE51398.2021.9474082.
  * </p>
@@ -53,7 +54,8 @@ public record OpaqueDecisionModel(
 
     public Optional<String> toJsonString() {
         try {
-            return Optional.of(DecisionModel.objectMapper.writeValueAsString(this));
+            return Optional.of(DecisionModel.objectMapper.writeValueAsString(
+                    new OpaqueDecisionModel(category, part, bodyJson, Optional.empty(), Optional.empty())));
         } catch (JsonProcessingException ignored) {
             return Optional.empty();
         }
@@ -61,7 +63,8 @@ public record OpaqueDecisionModel(
 
     public Optional<byte[]> toCBORBytes() {
         try {
-            return Optional.of(DecisionModel.objectMapperCBOR.writeValueAsBytes(this));
+            return Optional.of(DecisionModel.objectMapperCBOR.writeValueAsBytes(
+                    new OpaqueDecisionModel(category, part, Optional.empty(), Optional.empty(), bodyCBOR)));
         } catch (JsonProcessingException ignored) {
             return Optional.empty();
         }

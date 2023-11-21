@@ -188,8 +188,8 @@ public interface StandaloneModule extends Module {
                                         .formatted(decisionModels.size(), designModels.size()));
                                 var results = identification(designModels, decisionModels);
                                 for (var result : results.identified()) {
-                                    OpaqueDecisionModel.from(result).toCBORBytes().ifPresent(bytes -> {
-                                        ctx.send(ByteBuffer.wrap(bytes));
+                                    OpaqueDecisionModel.from(result).toJsonString().ifPresent(bytes -> {
+                                        ctx.send(bytes);
                                         decisionModels.add(result);
                                     });
                                 }

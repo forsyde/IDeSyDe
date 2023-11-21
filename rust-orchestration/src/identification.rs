@@ -31,7 +31,6 @@ pub struct ExternalServerIdentifiticationIterator {
     design_models_to_upload: Vec<Arc<dyn DesignModel>>,
     websocket: WebSocket<TcpStream>,
     messages: Vec<String>,
-    requesting: bool,
 }
 
 impl ExternalServerIdentifiticationIterator {
@@ -47,7 +46,6 @@ impl ExternalServerIdentifiticationIterator {
             design_models_to_upload: design_models.to_owned(),
             websocket,
             messages: vec![],
-            requesting: false,
         }
     }
 }
@@ -61,53 +59,40 @@ impl Iterator for ExternalServerIdentifiticationIterator {
             return None;
         }
         // send the decision models
-        if !self.requesting {
-            for m in &self.decision_models_to_upload {
-                if let Ok(decision_cbor) = OpaqueDecisionModel::from(m).to_json() {
-                    if let Err(e) = self
-                        .websocket
-                        .send(tungstenite::Message::text(decision_cbor))
-                    {
-                        debug!("Decision CBOR upload error {}", e.to_string());
-                    }
+        for m in &self.decision_models_to_upload {
+            if let Ok(decision_cbor) = OpaqueDecisionModel::from(m).to_json() {
+                if let Err(e) = self
+                    .websocket
+                    .send(tungstenite::Message::text(decision_cbor))
+                {
+                    debug!("Decision CBOR upload error {}", e.to_string());
                 }
             }
-            self.decision_models.extend(
-                self.decision_models_to_upload
-                    .drain(0..self.decision_models_to_upload.len()),
-            );
-            // same for design models
-            for m in &self.design_models_to_upload {
-                if let Ok(design_cbor) = OpaqueDesignModel::from(m.as_ref()).to_json() {
-                    if let Err(e) = self.websocket.send(tungstenite::Message::text(design_cbor)) {
-                        debug!("Design CBOR upload error {}", e.to_string());
-                    };
-                };
-            }
-            self.design_models.extend(
-                self.design_models_to_upload
-                    .drain(0..self.design_models_to_upload.len()),
-            );
-            if let Err(e) = self
-                .websocket
-                .send(tungstenite::Message::Text("done".to_string()))
-            {
-                debug!("Failed to send 'done': {}", e.to_string());
-            };
-            self.requesting = true;
         }
+        self.decision_models.extend(
+            self.decision_models_to_upload
+                .drain(0..self.decision_models_to_upload.len()),
+        );
+        // same for design models
+        for m in &self.design_models_to_upload {
+            if let Ok(design_cbor) = OpaqueDesignModel::from(m.as_ref()).to_json() {
+                if let Err(e) = self.websocket.send(tungstenite::Message::text(design_cbor)) {
+                    debug!("Design CBOR upload error {}", e.to_string());
+                };
+            };
+        }
+        self.design_models.extend(
+            self.design_models_to_upload
+                .drain(0..self.design_models_to_upload.len()),
+        );
+        if let Err(e) = self.websocket.send(tungstenite::Message::text("done")) {
+            debug!("Failed to send 'done': {}", e.to_string());
+        };
         while let Ok(message) = self.websocket.read() {
-            if let Err(e) = self.websocket.flush() {
-                debug!(
-                    "Error found while flushing identification websocket: {}",
-                    e.to_string()
-                );
-            }
             // besides the answer, also read the module's messages
             match message {
                 tungstenite::Message::Text(txt_msg) => {
                     if txt_msg.eq_ignore_ascii_case("done") {
-                        self.requesting = false;
                         return Some((
                             self.decision_models.clone(),
                             self.messages.drain(0..self.messages.len()).collect(),
@@ -148,6 +133,12 @@ impl Iterator for ExternalServerIdentifiticationIterator {
                 tungstenite::Message::Close(_) => return None,
                 _ => (),
             }
+            if let Err(e) = self.websocket.flush() {
+                debug!(
+                    "Error found while flushing identification websocket: {}",
+                    e.to_string()
+                );
+            }
         }
         None
     }
@@ -174,12 +165,12 @@ impl IdentificationIterator for ExternalServerIdentifiticationIterator {
         return self.next();
     }
 
-    fn collect_messages(&mut self) -> Vec<(String, String)> {
-        self.messages
-            .iter()
-            .map(|msg| ("DEBUG".to_owned(), msg.to_owned()))
-            .collect()
-    }
+    // fn collect_messages(&mut self) -> Vec<(String, String)> {
+    //     self.messages
+    //         .iter()
+    //         .map(|msg| ("DEBUG".to_owned(), msg.to_owned()))
+    //         .collect()
+    // }
 }
 
 pub fn identification_procedure(
@@ -187,11 +178,11 @@ pub fn identification_procedure(
     design_models: &Vec<Arc<dyn DesignModel>>,
     pre_identified: &Vec<Arc<dyn DecisionModel>>,
     starting_iter: i32,
-) -> (Vec<Arc<dyn DecisionModel>>, HashSet<(String, String)>) {
+) -> (Vec<Arc<dyn DecisionModel>>, Vec<(String, String)>) {
     let mut step = starting_iter;
     let mut fix_point = false;
     let mut identified: Vec<Arc<dyn DecisionModel>> = Vec::new();
-    let mut messages: HashSet<(String, String)> = HashSet::new();
+    let mut messages: Vec<(String, String)> = Vec::new();
     let mut iterators: Vec<Box<dyn IdentificationIterator>> = imodules
         .iter()
         .map(|imodule| imodule.start_identification(design_models, &identified))
@@ -215,8 +206,8 @@ pub fn identification_procedure(
         // add completely new models or replace opaque deicion mdoels for non-opaque ones
         for m in identified_step.iter().flat_map(|(ms, _)| ms) {
             if let Some(previous_idx) = identified.iter().position(|x| {
-                x.partial_cmp(&m) == Some(std::cmp::Ordering::Less)
-                    || (x == m
+                x.partial_cmp(m) == Some(std::cmp::Ordering::Less)
+                    || (x.partial_cmp(m) == Some(std::cmp::Ordering::Equal)
                         && x.downcast_ref::<OpaqueDecisionModel>().is_some()
                         && m.downcast_ref::<OpaqueDecisionModel>().is_none())
             }) {
@@ -230,14 +221,18 @@ pub fn identification_procedure(
             // if !identified.contains(&m) {
             // }
         }
-        let ident_messages: HashSet<(String, String)> = iterators
-            .iter_mut()
-            .flat_map(|iter| iter.collect_messages())
-            .collect();
-        for (lvl, msg) in ident_messages {
-            debug!("{}", msg);
-            messages.insert((lvl, msg));
+        for (_, msgs) in &identified_step {
+            for msg in msgs {
+                debug!("{}", msg);
+                messages.push(("DEBUG".to_string(), msg.to_owned()));
+            }
         }
+        // let ident_messages: HashSet<(String, String)> = iterators
+        //     .iter_mut()
+        //     .flat_map(|iter| iter.collect_messages())
+        //     .collect();
+        // for (lvl, msg) in ident_messages {
+        // }
         // .filter(|potential| !identified.contains(potential))
         // .collect();
         // this contain check is done again because there might be imodules that identify the same decision model,

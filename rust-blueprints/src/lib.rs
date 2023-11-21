@@ -137,15 +137,13 @@ struct DefaultIdentificationIterator {
     #[builder(default = "Vec::new()")]
     decision_models: Vec<Arc<dyn DecisionModel>>,
     imodule: Arc<StandaloneModule>,
-    #[builder(default = "vec![]")]
-    messages: Vec<String>,
 }
 
 impl Iterator for DefaultIdentificationIterator {
     type Item = IdentificationResult;
 
     fn next(&mut self) -> Option<Self::Item> {
-        let mut refined = vec![];
+        let mut identified = vec![];
         for i in 0..self.decision_models.len() {
             if let Some(non_opaque) = self.decision_models[i]
                 .downcast_ref::<OpaqueDecisionModel>()
@@ -153,7 +151,7 @@ impl Iterator for DefaultIdentificationIterator {
             {
                 self.decision_models.remove(i);
                 self.decision_models.push(non_opaque.to_owned());
-                refined.push(non_opaque);
+                identified.push(non_opaque);
             }
         }
         // Assume that all the models which could have been made non-opaque, did.
@@ -163,36 +161,34 @@ impl Iterator for DefaultIdentificationIterator {
             .imodule
             .identification_rules
             .par_iter()
-            .flat_map_iter(|irule| {
-                let f_opt = match irule {
-                    MarkedIdentificationRule::DesignModelOnlyIdentificationRule(f) => {
-                        if !self.design_models.is_empty() {
-                            Some(f)
-                        } else {
-                            None
-                        }
+            .flat_map_iter(|irule| match irule {
+                MarkedIdentificationRule::DesignModelOnlyIdentificationRule(f) => {
+                    if !self.design_models.is_empty() {
+                        Some(f)
+                    } else {
+                        None
                     }
-                    MarkedIdentificationRule::DecisionModelOnlyIdentificationRule(f) => {
-                        if !self.decision_models.is_empty() {
-                            Some(f)
-                        } else {
-                            None
-                        }
+                }
+                MarkedIdentificationRule::DecisionModelOnlyIdentificationRule(f) => {
+                    if !self.decision_models.is_empty() {
+                        Some(f)
+                    } else {
+                        None
                     }
-                    MarkedIdentificationRule::GenericIdentificationRule(f) => Some(f),
-                    MarkedIdentificationRule::SpecificDecisionModelIdentificationRule(ms, f) => {
-                        if ms
-                            .iter()
-                            .all(|x| self.decision_models.iter().any(|y| x == &y.category()))
-                        {
-                            Some(f)
-                        } else {
-                            None
-                        }
+                }
+                MarkedIdentificationRule::GenericIdentificationRule(f) => Some(f),
+                MarkedIdentificationRule::SpecificDecisionModelIdentificationRule(ms, f) => {
+                    if ms
+                        .iter()
+                        .all(|x| self.decision_models.iter().any(|y| x == &y.category()))
+                    {
+                        Some(f)
+                    } else {
+                        None
                     }
-                };
-                f_opt.map(|f| f(&self.design_models, &self.decision_models))
+                }
             })
+            .map(|f| f(&self.design_models, &self.decision_models))
             .map(|(models, msgs)| {
                 (
                     models
@@ -208,13 +204,20 @@ impl Iterator for DefaultIdentificationIterator {
                 )
             })
             .collect();
-        let mut total_identified = refined;
-        let mut all_msgs = vec![];
+        let mut messages = vec![];
         for (ms, msgs) in par_identified {
-            total_identified.extend(ms.into_iter());
-            all_msgs.extend(msgs.into_iter());
+            for m in ms {
+                if !identified.contains(&m) {
+                    identified.push(m);
+                }
+            }
+            for msg in msgs {
+                if !messages.contains(&msg) {
+                    messages.push(msg);
+                }
+            }
         }
-        Some((total_identified, all_msgs))
+        Some((identified, messages))
     }
 }
 
@@ -238,12 +241,12 @@ impl IdentificationIterator for DefaultIdentificationIterator {
         return self.next();
     }
 
-    fn collect_messages(&mut self) -> Vec<(String, String)> {
-        self.messages
-            .iter()
-            .map(|x| ("DEBUG".to_string(), x.to_owned()))
-            .collect()
-    }
+    // fn collect_messages(&mut self) -> Vec<(String, String)> {
+    //     self.messages
+    //         .iter()
+    //         .map(|x| ("DEBUG".to_string(), x.to_owned()))
+    //         .collect()
+    // }
 }
 
 impl Module for StandaloneModule {

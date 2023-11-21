@@ -845,15 +845,15 @@ pub trait IdentificationIterator: Iterator<Item = IdentificationResult> + Sync {
         return None;
     }
 
-    /// This method collect messages possibly produced during the identification session,
-    /// e.g. errors, information or warnings, and returns it to the caller.
-    ///
-    /// The messages come in a (level_string, content_string) format.
-    ///
-    /// The trait shoud ensure that consumed messages are destroyed from the iterator.
-    fn collect_messages(&mut self) -> Vec<(String, String)> {
-        vec![]
-    }
+    // This method collect messages possibly produced during the identification session,
+    // e.g. errors, information or warnings, and returns it to the caller.
+    //
+    // The messages come in a (level_string, content_string) format.
+    //
+    // The trait shoud ensure that consumed messages are destroyed from the iterator.
+    // fn collect_messages(&mut self) -> Vec<(String, String)> {
+    //     vec![]
+    // }
 }
 
 /// A simple empty unit struct for an empty iterator

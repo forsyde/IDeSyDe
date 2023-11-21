@@ -175,7 +175,7 @@ public interface StandaloneModule extends Module {
                     .ws("/identify", ws -> {
                         var logger = LoggerFactory.getLogger("main");
                         Set<DecisionModel> decisionModels = new CopyOnWriteArraySet<>();
-                        Set<DesignModel> designModels = new HashSet<>();
+                        Set<DesignModel> designModels = new CopyOnWriteArraySet<>();
                         ws.onBinaryMessage(ctx -> {
                             OpaqueDesignModel.fromCBORBytes(ctx.data()).flatMap(this::fromOpaqueDesign)
                                     .ifPresentOrElse(designModels::add,
@@ -188,9 +188,9 @@ public interface StandaloneModule extends Module {
                                         .formatted(decisionModels.size(), designModels.size()));
                                 var results = identification(designModels, decisionModels);
                                 for (var result : results.identified()) {
+                                    decisionModels.add(result);
                                     OpaqueDecisionModel.from(result).toJsonString().ifPresent(bytes -> {
                                         ctx.send(bytes);
-                                        decisionModels.add(result);
                                     });
                                 }
                                 for (var msg : results.errors()) {
@@ -213,6 +213,8 @@ public interface StandaloneModule extends Module {
                         ws.onConnect(ctx -> {
                             logger.info("A new identification client connected");
                             ctx.enableAutomaticPings(4, TimeUnit.SECONDS);
+                            decisionModels.clear();
+                            designModels.clear();
                         });
                     }).get("/explorers", ctx -> {
                         ctx.result(objectMapper.writeValueAsString(
@@ -321,12 +323,13 @@ public interface StandaloneModule extends Module {
                                     .filter(e -> e.uniqueIdentifier().equalsIgnoreCase(ctx.pathParam("explorerName")))
                                     .findAny()
                                     .ifPresentOrElse(explorer::set, ctx::closeSession);
+                            previousSolutions.clear();
                         });
                     })
                     .ws("/reverse", ws -> {
                         var logger = LoggerFactory.getLogger("main");
-                        Set<DecisionModel> exploredDecisionModels = new HashSet<>();
-                        Set<DesignModel> designModels = new HashSet<>();
+                        Set<DecisionModel> exploredDecisionModels = new CopyOnWriteArraySet<>();
+                        Set<DesignModel> designModels = new CopyOnWriteArraySet<>();
                         ws.onBinaryMessage(ctx -> {
                             OpaqueDesignModel.fromCBORBytes(ctx.data()).flatMap(this::fromOpaqueDesign)
                                     .ifPresentOrElse(designModels::add,
@@ -363,6 +366,8 @@ public interface StandaloneModule extends Module {
                         ws.onConnect(ctx -> {
                             logger.info("A new reverse identification client connected");
                             ctx.enableAutomaticPings(4, TimeUnit.SECONDS);
+                            exploredDecisionModels.clear();
+                            designModels.clear();
                         });
                     })
                     .post("/reverse", ctx -> {

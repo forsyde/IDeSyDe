@@ -88,11 +88,13 @@ impl Iterator for ExternalServerIdentifiticationIterator {
         if let Err(e) = self.websocket.send(tungstenite::Message::text("done")) {
             debug!("Failed to send 'done': {}", e.to_string());
         };
+        println!("send done");
         while let Ok(message) = self.websocket.read() {
             // besides the answer, also read the module's messages
             match message {
                 tungstenite::Message::Text(txt_msg) => {
                     if txt_msg.eq_ignore_ascii_case("done") {
+                        println!("got done");
                         return Some((
                             self.decision_models.clone(),
                             self.messages.drain(0..self.messages.len()).collect(),

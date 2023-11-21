@@ -17,6 +17,7 @@ import java.nio.file.Path;
 import java.util.*;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentSkipListSet;
+import java.util.concurrent.CopyOnWriteArraySet;
 import java.util.concurrent.Executors;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicReference;
@@ -173,7 +174,7 @@ public interface StandaloneModule extends Module {
                     // })
                     .ws("/identify", ws -> {
                         var logger = LoggerFactory.getLogger("main");
-                        Set<DecisionModel> decisionModels = new HashSet<>();
+                        Set<DecisionModel> decisionModels = new CopyOnWriteArraySet<>();
                         Set<DesignModel> designModels = new HashSet<>();
                         ws.onBinaryMessage(ctx -> {
                             OpaqueDesignModel.fromCBORBytes(ctx.data()).flatMap(this::fromOpaqueDesign)

@@ -309,6 +309,10 @@ impl Module for ExternalServerModule {
                         match message {
                             tungstenite::Message::Text(txt_msg) => {
                                 if txt_msg.eq_ignore_ascii_case("done") {
+                                    if let Err(e) = ws.close(None) {
+                                        warn!("Failed to reverse identification websocket. Trying to proceed anyway.");
+                                        debug!("Error was {}", e.to_string());
+                                    }
                                     return None;
                                 } else if let Ok(opaque) =
                                     OpaqueDesignModel::from_json_str(txt_msg.as_str())

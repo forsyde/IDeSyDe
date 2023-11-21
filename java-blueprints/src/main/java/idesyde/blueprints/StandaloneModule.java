@@ -299,6 +299,7 @@ public interface StandaloneModule extends Module {
                                         });
                                 logger.info("Finished exploration");
                                 ctx.send("done");
+                                ctx.closeSession();
                                 // executor.submit(() -> {
                                 // });
                             } else {
@@ -341,19 +342,18 @@ public interface StandaloneModule extends Module {
                             if (ctx.message().toLowerCase().contains("done")) {
                                 logger.info("Running a reverse identification with %s and %s decision and design models"
                                         .formatted(exploredDecisionModels.size(), designModels.size()));
-                                executor.submit(() -> {
-                                    var reversed = reverseIdentification(exploredDecisionModels, designModels);
-                                    for (var result : reversed) {
-                                        OpaqueDesignModel.from(result).toJsonString().ifPresent(bytes -> {
-                                            ctx.send(bytes);
-                                            // designModels.add(result);
-                                        });
-                                    }
-                                    logger.info(
-                                            "Finished a reverse identification step with %s decision models identified"
-                                                    .formatted(designModels.size()));
-                                    ctx.send("done");
-                                });
+                                var reversed = reverseIdentification(exploredDecisionModels, designModels);
+                                for (var result : reversed) {
+                                    OpaqueDesignModel.from(result).toJsonString().ifPresent(bytes -> {
+                                        ctx.send(bytes);
+                                        // designModels.add(result);
+                                    });
+                                }
+                                logger.info(
+                                        "Finished a reverse identification step with %s decision models identified"
+                                                .formatted(designModels.size()));
+                                ctx.send("done");
+                                ctx.closeSession();
                             } else {
                                 OpaqueDesignModel.fromJsonString(ctx.message()).flatMap(this::fromOpaqueDesign)
                                         .ifPresentOrElse(

@@ -61,7 +61,7 @@ impl Iterator for ExternalServerIdentifiticationIterator {
         // send the decision models
         for m in &self.decision_models_to_upload {
             if let Ok(decision_cbor) = OpaqueDecisionModel::from(m).to_json() {
-                println!("Uploading decision model {}", m.category());
+                // println!("Uploading decision model {}", m.category());
                 if let Err(e) = self
                     .websocket
                     .send(tungstenite::Message::text(decision_cbor))
@@ -77,7 +77,7 @@ impl Iterator for ExternalServerIdentifiticationIterator {
         // same for design models
         for m in &self.design_models_to_upload {
             if let Ok(design_cbor) = OpaqueDesignModel::from(m.as_ref()).to_json() {
-                println!("Uploading design model {}", m.category());
+                // println!("Uploading design model {}", m.category());
                 if let Err(e) = self.websocket.send(tungstenite::Message::text(design_cbor)) {
                     debug!("Design CBOR upload error {}", e.to_string());
                 };
@@ -90,13 +90,13 @@ impl Iterator for ExternalServerIdentifiticationIterator {
         if let Err(e) = self.websocket.send(tungstenite::Message::text("done")) {
             debug!("Failed to send 'done': {}", e.to_string());
         };
-        println!("send done");
+        // println!("send done");
         while let Ok(message) = self.websocket.read() {
             // besides the answer, also read the module's messages
             match message {
                 tungstenite::Message::Text(txt_msg) => {
                     if txt_msg.eq_ignore_ascii_case("done") {
-                        println!("got done");
+                        // println!("got done");
                         return Some((
                             self.decision_models.clone(),
                             self.messages.drain(0..self.messages.len()).collect(),

@@ -186,21 +186,21 @@ public interface StandaloneModule extends Module {
                             if (ctx.message().toLowerCase().contains("done")) {
                                 logger.info("Running a identification step with %s and %s decision and design models"
                                         .formatted(decisionModels.size(), designModels.size()));
-                                executor.submit(() -> {
-                                    var results = identification(designModels, decisionModels);
-                                    for (var result : results.identified()) {
-                                        OpaqueDecisionModel.from(result).toCBORBytes().ifPresent(bytes -> {
-                                            ctx.send(ByteBuffer.wrap(bytes));
-                                            decisionModels.add(result);
-                                        });
-                                    }
-                                    for (var msg : results.errors()) {
-                                        ctx.send(msg);
-                                    }
-                                    logger.info("Finished a identification step with %s decision models identified"
-                                            .formatted(decisionModels.size()));
-                                    ctx.send("done");
-                                });
+                                var results = identification(designModels, decisionModels);
+                                for (var result : results.identified()) {
+                                    OpaqueDecisionModel.from(result).toCBORBytes().ifPresent(bytes -> {
+                                        ctx.send(ByteBuffer.wrap(bytes));
+                                        decisionModels.add(result);
+                                    });
+                                }
+                                for (var msg : results.errors()) {
+                                    ctx.send(msg);
+                                }
+                                logger.info("Finished a identification step with %s decision models identified"
+                                        .formatted(decisionModels.size()));
+                                ctx.send("done");
+                                // executor.submit(() -> {
+                                // });
                             } else {
                                 OpaqueDesignModel.fromJsonString(ctx.message()).flatMap(this::fromOpaqueDesign)
                                         .ifPresentOrElse(
@@ -262,7 +262,7 @@ public interface StandaloneModule extends Module {
                         AtomicReference<Explorer.Configuration> configuration = new AtomicReference<>(
                                 new Explorer.Configuration());
                         AtomicReference<DecisionModel> decisionModel = new AtomicReference<>();
-                        Set<ExplorationSolution> previousSolutions = new ConcurrentSkipListSet<>();
+                        Set<ExplorationSolution> previousSolutions = new CopyOnWriteArraySet<>();
                         ws.onBinaryMessage(ctx -> {
                             logger.info("Receiving a binary message");
                             var payload = ctx.data();
@@ -284,24 +284,21 @@ public interface StandaloneModule extends Module {
                             if (ctx.message().toLowerCase().contains("done")) {
                                 logger.info("Starting exploration of a %s with %s"
                                         .formatted(decisionModel.get().category(), explorer.get().uniqueIdentifier()));
-                                executor.submit(() -> {
-                                    explorer.get()
-                                            .explore(decisionModel.get(), previousSolutions, configuration.get())
-                                            // .takeWhile(s -> ctx.session.isOpen())
-                                            .filter(solution -> !configuration.get().strict
-                                                    || previousSolutions.stream()
-                                                            .noneMatch(other -> other.dominates(solution)))
-                                            .forEach(s -> {
-                                                ExplorationSolutionMessage.from(s).toJsonString()
-                                                        .ifPresentOrElse(txt -> logger
-                                                                .info("managed to make exploratio message"),
-                                                                () -> logger.info("Failed to make the message"));
-                                                ExplorationSolutionMessage.from(s).toJsonString().ifPresent(ctx::send);
-                                                logger.info("Sent a solution");
-                                            });
-                                    logger.info("Finished exploration");
-                                    ctx.send("done");
-                                });
+                                explorer.get()
+                                        .explore(decisionModel.get(), previousSolutions, configuration.get())
+                                        // .takeWhile(s -> ctx.session.isOpen())
+                                        .filter(solution -> !configuration.get().strict
+                                                || previousSolutions.stream()
+                                                        .noneMatch(other -> other.dominates(solution)))
+                                        .forEach(s -> {
+                                            previousSolutions.add(s);
+                                            ExplorationSolutionMessage.from(s).toJsonString().ifPresent(ctx::send);
+                                            logger.info("Sent a solution");
+                                        });
+                                logger.info("Finished exploration");
+                                ctx.send("done");
+                                // executor.submit(() -> {
+                                // });
                             } else {
                                 ExplorationSolutionMessage.fromJsonString(ctx.message())
                                         .flatMap(esm -> fromOpaqueDecision(esm.solved())

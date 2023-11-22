@@ -212,7 +212,7 @@ public interface StandaloneModule extends Module {
                         });
                         ws.onConnect(ctx -> {
                             logger.info("A new identification client connected");
-                            ctx.enableAutomaticPings(4, TimeUnit.SECONDS);
+                            ctx.enableAutomaticPings(1, TimeUnit.SECONDS);
                             decisionModels.clear();
                             designModels.clear();
                         });
@@ -319,7 +319,7 @@ public interface StandaloneModule extends Module {
                         });
                         ws.onConnect(ctx -> {
                             logger.info("A client connected to exploration");
-                            ctx.enableAutomaticPings(4, TimeUnit.SECONDS);
+                            ctx.enableAutomaticPings(1, TimeUnit.SECONDS);
                             explorers().stream()
                                     .filter(e -> e.uniqueIdentifier().equalsIgnoreCase(ctx.pathParam("explorerName")))
                                     .findAny()
@@ -364,7 +364,7 @@ public interface StandaloneModule extends Module {
                         });
                         ws.onConnect(ctx -> {
                             logger.info("A new reverse identification client connected");
-                            ctx.enableAutomaticPings(4, TimeUnit.SECONDS);
+                            ctx.enableAutomaticPings(1, TimeUnit.SECONDS);
                             exploredDecisionModels.clear();
                             designModels.clear();
                         });

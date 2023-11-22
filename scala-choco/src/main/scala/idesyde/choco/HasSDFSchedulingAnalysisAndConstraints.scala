@@ -17,6 +17,7 @@ import idesyde.choco.HasDiscretizationToIntegers
 import scala.collection.mutable.Buffer
 import idesyde.common.SDFToTiledMultiCore
 import idesyde.identification.choco.models.sdf.StreamingJobsThroughputPropagator
+import org.jgrapht.alg.connectivity.ConnectivityInspector
 
 trait HasSDFSchedulingAnalysisAndConstraints
     extends HasUtils
@@ -267,8 +268,9 @@ trait HasSDFSchedulingAnalysisAndConstraints
         jobsAndActors
           .filter(t =>
             m.sdfApplications.firingsPrecedenceGraph
-              .get(s)
-              .isDirectPredecessorOf(m.sdfApplications.firingsPrecedenceGraph.get(t))
+              .containsEdge(s, t)
+          // .get(s)
+          // .isDirectPredecessorOf(m.sdfApplications.firingsPrecedenceGraph.get(t))
           )
           .map(t => (s, t))
       ),
@@ -276,8 +278,8 @@ trait HasSDFSchedulingAnalysisAndConstraints
         jobsAndActors
           .filter(t =>
             m.sdfApplications.firingsPrecedenceGraphWithCycles
-              .get(s)
-              .isDirectPredecessorOf(m.sdfApplications.firingsPrecedenceGraphWithCycles.get(t))
+              .containsEdge(s, t)
+          // .isDirectPredecessorOf(m.sdfApplications.firingsPrecedenceGraphWithCycles.get(t))
           )
           .map(t => (s, t))
       ),
@@ -297,10 +299,12 @@ trait HasSDFSchedulingAnalysisAndConstraints
 
   def isSuccessor(m: SDFToTiledMultiCore)(jobsAndActors: Vector[(String, Int)])(i: Int)(j: Int) =
     m.sdfApplications.firingsPrecedenceGraph
-      .get(jobsAndActors(i))
-      .isDirectPredecessorOf(
-        m.sdfApplications.firingsPrecedenceGraph.get(jobsAndActors(j))
-      )
+      .containsEdge(jobsAndActors(i), jobsAndActors(j))
+  // .get(jobsAndActors(i))
+
+  // .isDirectPredecessorOf(
+  //   m.sdfApplications.firingsPrecedenceGraph.get(jobsAndActors(j))
+  // )
 
   def hasDataCycle(
       partialOrderWithCycles: Vector[((String, Int), (String, Int))]
@@ -308,17 +312,21 @@ trait HasSDFSchedulingAnalysisAndConstraints
     partialOrderWithCycles.contains((jobsAndActors(i), jobsAndActors(j))) && partialOrderWithCycles
       .contains((jobsAndActors(j), jobsAndActors(i)))
 
-  def hasDataCycle(m: SDFToTiledMultiCore)(jobsAndActors: Vector[(String, Int)])(i: Int)(j: Int) =
-    m.sdfApplications.firingsPrecedenceGraph
-      .get(jobsAndActors(i))
-      .isPredecessorOf(
-        m.sdfApplications.firingsPrecedenceGraph.get(jobsAndActors(j))
-      ) &&
-      m.sdfApplications.firingsPrecedenceGraphWithCycles
-        .get(jobsAndActors(j))
-        .isPredecessorOf(
-          m.sdfApplications.firingsPrecedenceGraphWithCycles.get(jobsAndActors(i))
-        )
+  def hasDataCycle(m: SDFToTiledMultiCore)(jobsAndActors: Vector[(String, Int)])(i: Int)(j: Int) = {
+    val inspector = ConnectivityInspector(m.sdfApplications.firingsPrecedenceGraph)
+    inspector.pathExists(jobsAndActors(i), jobsAndActors(j)) &&
+    // m.sdfApplications.firingsPrecedenceGraph
+    //   .containsEdge(jobsAndActors(i), jobsAndActors(j))
+    // .isPredecessorOf(
+    //   m.sdfApplications.firingsPrecedenceGraph.get(jobsAndActors(j))
+    // )
+    m.sdfApplications.firingsPrecedenceGraphWithCycles
+      .containsEdge(jobsAndActors(j), jobsAndActors(i))
+  }
+  // .get(jobsAndActors(j))
+  // .isPredecessorOf(
+  //   m.sdfApplications.firingsPrecedenceGraphWithCycles.get(jobsAndActors(i))
+  // )
 
   def makeCanonicalOrderingAtScheduleConstraint(
       m: SDFToTiledMultiCore
@@ -329,9 +337,7 @@ trait HasSDFSchedulingAnalysisAndConstraints
       scheduler: Int
   ): Constraint = {
     val jobsAndActors =
-      m.sdfApplications.firingsPrecedenceGraph.nodes
-        .map(v => v.value)
-        .toVector
+      m.sdfApplications.jobsAndActors
     val constraints = for (
       (v, i)  <- jobsAndActors.zipWithIndex;
       (vv, j) <- jobsAndActors.zipWithIndex;

@@ -27,6 +27,15 @@ import idesyde.common.AperiodicAsynchronousDataflow
 import idesyde.core.OpaqueDesignModel
 import idesyde.core.OpaqueDecisionModel
 import idesyde.blueprints.StandaloneModule
+import idesyde.common.SDFApplication
+import idesyde.common.AnalysedSDFApplication
+import idesyde.common.TiledMultiCoreWithFunctions
+import idesyde.common.PartitionedCoresWithRuntimes
+import idesyde.common.SchedulableTiledMultiCore
+import idesyde.common.SharedMemoryMultiCore
+import idesyde.common.CommunicatingAndTriggeredReactiveWorkload
+import idesyde.common.PartitionedSharedMemoryMultiCore
+import idesyde.common.PeriodicWorkloadAndSDFServers
 
 object ForSyDeIOScalaModule
     extends StandaloneModule
@@ -34,7 +43,11 @@ object ForSyDeIOScalaModule
     with SDFRules
     with PlatformRules
     with WorkloadRules
-    with ApplicationRules {
+    with ApplicationRules
+    with idesyde.common.MixedRules
+    with idesyde.common.PlatformRules
+    with idesyde.common.WorkloadRules
+    with idesyde.common.ApplicationRules {
 
   def adaptIRuleToJava[T <: DecisionModel](
       func: (Set[DesignModel], Set[DecisionModel]) => (Set[T], Set[String])
@@ -59,15 +72,63 @@ object ForSyDeIOScalaModule
     opaque.category() match {
       case "SDFToTiledMultiCore" =>
         opaque
-          .bodyJson().map(x => read[SDFToTiledMultiCore](x))
+          .bodyJson()
+          .map(x => read[SDFToTiledMultiCore](x))
           .map(x => x.asInstanceOf[DecisionModel])
       case "PeriodicWorkloadToPartitionedSharedMultiCore" =>
         opaque
-          .bodyJson().map(x => read[PeriodicWorkloadToPartitionedSharedMultiCore](x))
+          .bodyJson()
+          .map(x => read[PeriodicWorkloadToPartitionedSharedMultiCore](x))
           .map(x => x.asInstanceOf[DecisionModel])
       case "AperiodicAsynchronousDataflow" =>
         opaque
-          .bodyJson().map(x => read[AperiodicAsynchronousDataflow](x))
+          .bodyJson()
+          .map(x => read[AperiodicAsynchronousDataflow](x))
+          .map(x => x.asInstanceOf[DecisionModel])
+      case "SDFApplication" =>
+        opaque
+          .bodyJson()
+          .map(x => read[SDFApplication](x))
+          .map(x => x.asInstanceOf[DecisionModel])
+      case "AnalysedSDFApplication" =>
+        opaque
+          .bodyJson()
+          .map(x => read[AnalysedSDFApplication](x))
+          .map(x => x.asInstanceOf[DecisionModel])
+      case "TiledMultiCoreWithFunctions" =>
+        opaque
+          .bodyJson()
+          .map(x => read[TiledMultiCoreWithFunctions](x))
+          .map(x => x.asInstanceOf[DecisionModel])
+      case "PartitionedCoresWithRuntimes" =>
+        opaque
+          .bodyJson()
+          .map(x => read[PartitionedCoresWithRuntimes](x))
+          .map(x => x.asInstanceOf[DecisionModel])
+      case "SchedulableTiledMultiCore" =>
+        opaque
+          .bodyJson()
+          .map(x => read[SchedulableTiledMultiCore](x))
+          .map(x => x.asInstanceOf[DecisionModel])
+      case "SharedMemoryMultiCore" =>
+        opaque
+          .bodyJson()
+          .map(x => read[SharedMemoryMultiCore](x))
+          .map(x => x.asInstanceOf[DecisionModel])
+      case "CommunicatingAndTriggeredReactiveWorkload" =>
+        opaque
+          .bodyJson()
+          .map(x => read[CommunicatingAndTriggeredReactiveWorkload](x))
+          .map(x => x.asInstanceOf[DecisionModel])
+      case "PartitionedSharedMemoryMultiCore" =>
+        opaque
+          .bodyJson()
+          .map(x => read[PartitionedSharedMemoryMultiCore](x))
+          .map(x => x.asInstanceOf[DecisionModel])
+      case "PeriodicWorkloadAndSDFServers" =>
+        opaque
+          .bodyJson()
+          .map(x => read[PeriodicWorkloadAndSDFServers](x))
           .map(x => x.asInstanceOf[DecisionModel])
       case _ => ju.Optional.empty()
     }
@@ -89,7 +150,32 @@ object ForSyDeIOScalaModule
     ),
     // IdentificationRule.OnlyDesignModels(adaptIRuleToJava(identAperiodicDataflowFromSY)),
     IdentificationRule.OnlyDesignModels(adaptIRuleToJava(identRuntimesAndProcessors)),
-    IdentificationRule.OnlyDesignModels(adaptIRuleToJava(identInstrumentedComputationTimes))
+    IdentificationRule.OnlyDesignModels(adaptIRuleToJava(identInstrumentedComputationTimes)),
+    IdentificationRule.OnlyCertainDecisionModels(
+      adaptIRuleToJava(identSchedulableTiledMultiCore),
+      Set("PartitionedCoresWithRuntimes", "TiledMultiCoreWithFunctions").asJava
+    ),
+    IdentificationRule.OnlyCertainDecisionModels(
+      adaptIRuleToJava(identPartitionedSharedMemoryMultiCore),
+      Set("PartitionedCoresWithRuntimes", "SharedMemoryMultiCore").asJava
+    ),
+    IdentificationRule.OnlyDecisionModels(adaptIRuleToJava(identSDFToPartitionedSharedMemory)),
+    IdentificationRule.OnlyDecisionModels(adaptIRuleToJava(identSDFToTiledMultiCore)),
+    IdentificationRule.OnlyCertainDecisionModels(
+      adaptIRuleToJava(identAnalysedSDFApplication),
+      Set("SDFApplication", "SDFApplicationWithFunctions").asJava
+    ),
+    IdentificationRule.OnlyDecisionModels(
+      adaptIRuleToJava(identPeriodicWorkloadToPartitionedSharedMultiCore)
+    ),
+    IdentificationRule.OnlyDecisionModels(adaptIRuleToJava(identTaksAndSDFServerToMultiCore)),
+    IdentificationRule.OnlyDecisionModels(adaptIRuleToJava(identTiledFromShared)),
+    IdentificationRule.OnlyDecisionModels(adaptIRuleToJava(identTaskdAndSDFServer)),
+    IdentificationRule.OnlyDecisionModels(adaptIRuleToJava(identCommonSDFApplication)),
+    IdentificationRule.OnlyCertainDecisionModels(
+      adaptIRuleToJava(identAggregatedCommunicatingAndTriggeredReactiveWorkload),
+      Set("CommunicatingAndTriggeredReactiveWorkload").asJava
+    )
   ).asJava
 
   override def reverseIdentificationRules(): ju.Set[ReverseIdentificationRule] = Set(

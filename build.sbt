@@ -53,7 +53,7 @@ lazy val root = project
     ),
     paradoxRoots := List("index.html")
   )
-  .aggregate(common, choco, forsyde)
+  .aggregate(common, choco, scala_legacy)
 
 // lazy val java_core = (project in file("java-core")).settings(
 //   // name := "idesyde-scala-core",
@@ -105,11 +105,12 @@ lazy val common = (project in file("scala-common"))
       "com.lihaoyi"               %% "upickle"               % upickleVersion,
       "com.github.forsyde.IDeSyDe" % "build-java-core"       % globalIDeSyDeJavaVersion,
       "com.github.forsyde.IDeSyDe" % "build-java-blueprints" % globalIDeSyDeJavaVersion,
+      "org.jgrapht"                % "jgrapht-core"          % jgraphtVersion,
       ("org.scala-graph" %% "graph-core" % scalaGraphVersion).cross(CrossVersion.for3Use2_13),
       "org.typelevel"   %%% "spire"      % spireVersion
     ),
     mainClass := Some("idesyde.common.CommonModule"),
-    moduleSettings,
+    // moduleSettings,
     licenses := Seq(
       "MIT"  -> url("https://opensource.org/license/mit/"),
       "APL2" -> url("https://www.apache.org/licenses/LICENSE-2.0")
@@ -120,7 +121,7 @@ lazy val common = (project in file("scala-common"))
     )
   )
 
-lazy val forsyde = (project in file("scala-bridge-forsyde-io"))
+lazy val scala_legacy = (project in file("scala-bridge-forsyde-io"))
   // .dependsOn(core)
   .dependsOn(common)
   // .dependsOn(blueprints)
@@ -201,6 +202,7 @@ lazy val choco = (project in file("scala-choco"))
   .settings(
     // name := "idesyde-scala-choco",
     libraryDependencies ++= Seq(
+      // "com.github.forsyde.IDeSyDe" % "build-java-common" % globalIDeSyDeJavaVersion,
       "com.novocode"     % "junit-interface" % "0.11" % "test",
       "org.choco-solver" % "choco-solver"    % chocoSolverVersion,
       "org.jgrapht"      % "jgrapht-core"    % jgraphtVersion

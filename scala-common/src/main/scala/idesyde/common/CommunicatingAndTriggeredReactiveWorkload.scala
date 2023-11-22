@@ -225,9 +225,13 @@ final case class CommunicatingAndTriggeredReactiveWorkload(
     affineControlGraphEdges.toSet
   }
 
-  override def asJsonString(): java.util.Optional[String] = try { java.util.Optional.of(write(this)) } catch { case _ => java.util.Optional.empty() }
+  override def asJsonString(): java.util.Optional[String] = try {
+    java.util.Optional.of(write(this))
+  } catch { case _ => java.util.Optional.empty() }
 
-  override def asCBORBinary(): java.util.Optional[Array[Byte]] = try { java.util.Optional.of(writeBinary(this)) } catch { case _ => java.util.Optional.empty() }
+  override def asCBORBinary(): java.util.Optional[Array[Byte]] = try {
+    java.util.Optional.of(writeBinary(this))
+  } catch { case _ => java.util.Optional.empty() }
 
   def messagesMaxSizes = dataChannelSizes
 

@@ -8,13 +8,10 @@ import scala.collection.mutable.Queue
 import java.util.stream.Collectors
 import scala.collection.mutable
 import scala.collection.mutable.Buffer
-import scalax.collection.Graph
-import scalax.collection.GraphPredef._
-import scalax.collection.edge.Implicits._
-import scalax.collection.GraphEdge.DiEdgeLike
-import scalax.collection.edge.WDiEdge
 import scala.collection.immutable.LazyList.cons
-import scalax.collection.GraphTraversal.DepthFirst
+import org.jgrapht.graph.DefaultDirectedGraph
+import org.jgrapht.graph.DefaultEdge
+import org.jgrapht.alg.connectivity.ConnectivityInspector
 
 /** This traits captures the ParametricRateDataflow base MoC from [1]. Then, we hope to be able to
   * use the same code for analysis across different dataflow MoCs, specially the simpler ones like
@@ -93,9 +90,14 @@ trait ParametricRateDataflowWorkloadMixin {
       : scala.collection.immutable.Vector[scala.collection.IndexedSeq[Iterable[String]]] =
     dataflowGraphs.zipWithIndex.map((g, gx) => {
       // val nodes    = g.map((s, _, _) => s).toSet.union(g.map((_, t, _) => t).toSet)
-      val edges    = computeMessagesFromChannels(gx).map((src, dst, _, _, _, _, _) => src ~> dst)
-      val gGraphed = Graph.from(actorsIdentifiers, edges)
-      gGraphed.componentTraverser().map(comp => comp.nodes.map(_.value)).toArray
+      val g = DefaultDirectedGraph[String, DefaultEdge](classOf[DefaultEdge])
+      actorsIdentifiers.foreach(g.addVertex(_))
+      computeMessagesFromChannels(gx).foreach((src, dst, _, _, _, _, _) => g.addEdge(src, dst))
+      // val edges    = computeMessagesFromChannels(gx).map((src, dst, _, _, _, _, _) => src ~> dst)
+      // val gGraphed = Graph.from(actorsIdentifiers, edges)
+      // gGraphed.componentTraverser().map(comp => comp.nodes.map(_.value)).toArray
+      val inspector = ConnectivityInspector(g)
+      inspector.connectedSets().asScala.map(_.asScala).toVector
     })
 
   def computeBalanceMatrices = dataflowGraphs.map(df => {
@@ -142,12 +144,14 @@ trait ParametricRateDataflowWorkloadMixin {
           mat(cIdx)(dstIdx) = -cons
         }
         // val gActors    = Graph.from(actorsIdentifiers, gEdges.map((src, dst) => src ~ dst))
-        val gActorsDir = Graph.from(actorsIdentifiers, gEdges.map((src, dst) => src ~> dst))
+        val gActorsDir = DefaultDirectedGraph[String, DefaultEdge](classOf[DefaultEdge])
+        actorsIdentifiers.foreach(gActorsDir.addVertex(_))
+        gEdges.foreach((src, dst) => gActorsDir.addEdge(src, dst))
         // we iterate on the undirected version as to 'come back'
         // to vertex in feed-forward paths
         // val rates      = actorsIdentifiers.map(_ => minus_one).toBuffer
         val reducedMat  = computeReducedForm(mat)
-        val components  = gActorsDir.componentTraverser()
+        val components  = ConnectivityInspector(gActorsDir).connectedSets().asScala
         val nComponents = components.size
         // count the basis
         val nullBasis = computeRightNullBasisFromReduced(reducedMat)

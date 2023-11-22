@@ -35,6 +35,7 @@ import org.chocosolver.solver.objective.ParetoMaximizer
 import org.chocosolver.solver.constraints.Constraint
 import idesyde.core.Explorer
 import idesyde.core.ExplorationSolution
+import org.jgrapht.alg.connectivity.ConnectivityInspector
 
 final class CanSolveSDFToTiledMultiCore
     extends ChocoExplorable[SDFToTiledMultiCore]
@@ -381,9 +382,8 @@ final class CanSolveSDFToTiledMultiCore
       nUsedPEs: IntVar
   ): Array[AbstractStrategy[? <: Variable]] = {
     val jobsAndActors =
-      m.sdfApplications.firingsPrecedenceGraph.nodes
-        .map(v => v.value)
-        .toVector
+      m.sdfApplications.jobsAndActors
+    val sdfGraphInspector = ConnectivityInspector(m.sdfApplications.sdfGraph)
     val compactStrategy = CompactingMultiCoreMapping[Int](
       tarversalTimesPerBit,
       execTimes,
@@ -402,13 +402,17 @@ final class CanSolveSDFToTiledMultiCore
         .toArray,
       (i: Int) =>
         (j: Int) =>
-          m.sdfApplications.sdfGraph
-            .get(m.sdfApplications.topologicalAndHeavyActorOrdering(i))
-            .pathTo(
-              m.sdfApplications.sdfGraph
-                .get(m.sdfApplications.topologicalAndHeavyActorOrdering(j))
-            )
-            .isDefined
+          sdfGraphInspector.pathExists(
+            m.sdfApplications.topologicalAndHeavyActorOrdering(i),
+            m.sdfApplications.topologicalAndHeavyActorOrdering(j)
+          )
+      // m.sdfApplications.sdfGraph
+      //   .get(m.sdfApplications.topologicalAndHeavyActorOrdering(i))
+      //   .pathTo(
+      //     m.sdfApplications.sdfGraph
+      //       .get(m.sdfApplications.topologicalAndHeavyActorOrdering(j))
+      //   )
+      //   .isDefined
     )
     val strategies: Array[AbstractStrategy[? <: Variable]] = Array(
       // compactStrategy,
@@ -621,9 +625,7 @@ final class CanSolveSDFToTiledMultiCore
       jobOrder: Array[IntVar]
   ): Vector[Double] = {
     val jobsAndActors =
-      m.sdfApplications.firingsPrecedenceGraph.nodes
-        .map(v => v.value)
-        .toVector
+      m.sdfApplications.jobsAndActors
     def mustSuceed(i: Int)(j: Int): Boolean = if (
       jobMapping(i)
         == jobMapping(j)

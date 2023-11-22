@@ -35,11 +35,13 @@ class ChocoExplorer extends Explorer:
       decisionModel: DecisionModel
   ): ExplorationBidding = {
     val canExplore = decisionModel match
-      case sdf: SDFToTiledMultiCore                                => true
-      case workload: PeriodicWorkloadToPartitionedSharedMultiCore  => true
-      case workloadAndSDF: PeriodicWorkloadAndSDFServerToMultiCore => true
-      case c: ChocoDecisionModel                                   => true
-      case _                                                       => false
+      // case sdfToMemMapped: AperiodicAsynchronousDataflowToPartitionedMemoryMappableMulticore => true
+      // case sdfToTiled: AperiodicAsynchronousDataflowToPartitionedTiledMulticore => true
+      case sdf: SDFToTiledMultiCore                                             => true
+      case workload: PeriodicWorkloadToPartitionedSharedMultiCore               => true
+      case workloadAndSDF: PeriodicWorkloadAndSDFServerToMultiCore              => true
+      case c: ChocoDecisionModel                                                => true
+      case _                                                                    => false
     val objectives: Set[String] = decisionModel match {
       case sdf: SDFToTiledMultiCore =>
         sdf.sdfApplications.minimumActorThroughputs.zipWithIndex

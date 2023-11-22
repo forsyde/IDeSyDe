@@ -7,12 +7,14 @@ import upickle.default.*
 import scala.collection.mutable
 import java.util.stream.Collectors
 import spire.math.*
-import scalax.collection.Graph
-import scalax.collection.GraphPredef._
-import scalax.collection.edge.Implicits._
 import scala.collection.mutable.Buffer
 import idesyde.core.DecisionModel
 import java.{util => ju}
+import org.jgrapht.graph.builder.GraphBuilder
+import kotlin.io.encoding.Base64.Default
+import org.jgrapht.graph.DefaultDirectedGraph
+import org.jgrapht.graph.DefaultEdge
+import org.jgrapht.traverse.TopologicalOrderIterator
 
 /** Decision model for synchronous dataflow graphs.
   *
@@ -67,11 +69,12 @@ final case class SDFApplicationWithFunctions(
       .toSet)
       .map(_.toString)).asJava
 
-  val dataflowGraphs = Vector(
+  lazy val dataflowGraphs = Vector(
     topologySrcs
       .zip(topologyDsts)
       .zipWithIndex
       .map((srcdst, i) => (srcdst._1, srcdst._2, topologyEdgeValue(i)))
+      .toVector
   )
 
   def isSelfConcurrent(actor: String): Boolean = !channelsIdentifiers.exists(c =>
@@ -80,11 +83,11 @@ final case class SDFApplicationWithFunctions(
     )
   )
 
-  val configurations = Vector((0, 0, "root"))
+  lazy val configurations = Vector((0, 0, "root"))
 
-  val processComputationalNeeds = actorComputationalNeeds
+  lazy val processComputationalNeeds = actorComputationalNeeds
 
-  val processSizes = actorSizes
+  lazy val processSizes = actorSizes
 
   /** This abstracts the many sdf channels in the sdf multigraph into the form commonly presented in
     * papers and texts: with just a channel between every two actors.
@@ -92,27 +95,33 @@ final case class SDFApplicationWithFunctions(
     * Every tuple in this is given by: (src actors index, dst actors index, lumped SDF channels,
     * size of message, produced, consumed, initial tokens)
     */
-  val sdfMessages = computeMessagesFromChannels(0)
+  lazy val sdfMessages = computeMessagesFromChannels(0)
 
   /** this is a simple shortcut for the balance matrix (originally called topology matrix) as SDFs
     * have only one configuration
     */
-  val sdfBalanceMatrix: Vector[Vector[Int]] = computeBalanceMatrices(0)
+  lazy val sdfBalanceMatrix: Vector[Vector[Int]] = computeBalanceMatrices(0)
 
   /** this is a simple shortcut for the repetition vectors as SDFs have only one configuration */
-  val repetitionVectors                 = computeRepetitionVectors
-  val sdfRepetitionVectors: Vector[Int] = repetitionVectors(0)
+  lazy val repetitionVectors                 = computeRepetitionVectors
+  lazy val sdfRepetitionVectors: Vector[Int] = repetitionVectors(0)
 
-  val sdfDisjointComponents = disjointComponents.head
+  lazy val sdfDisjointComponents = disjointComponents.head
 
-  val sdfPessimisticTokensPerChannel = pessimisticTokensPerChannel(repetitionVectors)
+  lazy val sdfPessimisticTokensPerChannel = pessimisticTokensPerChannel(repetitionVectors)
 
-  val sdfGraph = Graph.from(
-    actorsIdentifiers,
-    sdfMessages.map((s, t, _, _, _, _, _) => s ~> t)
-  )
+  lazy val sdfGraph = {
+    val g = new DefaultDirectedGraph[String, DefaultEdge](classOf[DefaultEdge])
+    for (a <- actorsIdentifiers) {
+      g.addVertex(a)
+    }
+    for ((src, dst) <- sdfMessages.map((s, t, _, _, _, _, _) => (s, t))) {
+      g.addEdge(src, dst)
+    }
+    g
+  }
 
-  val messagesMaxSizes: Vector[Long] =
+  lazy val messagesMaxSizes: Vector[Long] =
     channelsIdentifiers.zipWithIndex.map((c, i) =>
       sdfPessimisticTokensPerChannel(i) * channelTokenSizes(i)
     )
@@ -143,9 +152,17 @@ final case class SDFApplicationWithFunctions(
     for ((a, ai) <- actorsIdentifiers.zipWithIndex; q <- 1 to sdfRepetitionVectors(ai) - 1) {
       edges +:= ((a, q), (a, q + 1))
     }
-    val param = edges.map((s, t) => (s ~> t))
-    val nodes = edges.map((s, t) => s).toSet ++ edges.map((s, t) => t).toSet
-    scalax.collection.Graph.from(nodes, param)
+    val g = new DefaultDirectedGraph[(String, Int), DefaultEdge](classOf[DefaultEdge])
+    for ((a, q) <- edges.map((s, t) => s)) {
+      g.addVertex((a, q))
+    }
+    for ((a, q) <- edges.map((s, t) => t)) {
+      g.addVertex((a, q))
+    }
+    for (e <- edges) {
+      g.addEdge(e._1, e._2)
+    }
+    g
   }
 
   /** Same as [[firingsPrecedenceGraph]], but with one more firings per actors of the next periodic
@@ -174,12 +191,20 @@ final case class SDFApplicationWithFunctions(
     for ((a, ai) <- actorsIdentifiers.zipWithIndex; q <- 1 to sdfRepetitionVectors(ai) - 1) {
       edges +:= ((a, q), (a, q + 1))
     }
-    val param = edges.map((s, t) => (s ~> t))
-    val nodes = edges.map((s, t) => s).toSet ++ edges.map((s, t) => t).toSet
-    scalax.collection.Graph.from(nodes, param)
+    val g = new DefaultDirectedGraph[(String, Int), DefaultEdge](classOf[DefaultEdge])
+    for ((a, q) <- edges.map((s, t) => s)) {
+      g.addVertex((a, q))
+    }
+    for ((a, q) <- edges.map((s, t) => t)) {
+      g.addVertex((a, q))
+    }
+    for (e <- edges) {
+      g.addEdge(e._1, e._2)
+    }
+    g
   }
 
-  lazy val jobsAndActors = firingsPrecedenceGraph.nodes.map(_.value).toVector
+  lazy val jobsAndActors = firingsPrecedenceGraph.vertexSet().asScala.toVector
 
   lazy val decreasingActorConsumptionOrder = actorsIdentifiers.zipWithIndex
     .sortBy((a, ai) => {
@@ -191,47 +216,65 @@ final case class SDFApplicationWithFunctions(
     .map((a, ai) => a)
     .reverse
 
-  lazy val topologicalAndHeavyJobOrdering = firingsPrecedenceGraph
-    .topologicalSort()
-    .fold(
-      cycleNode => {
-        println("CYCLE NODES DETECTED")
-        firingsPrecedenceGraph.nodes.map(_.value).toArray
-      },
-      topo =>
-        topo
-          .withLayerOrdering(
-            firingsPrecedenceGraph.NodeOrdering((v1, v2) =>
-              decreasingActorConsumptionOrder
-                .indexOf(
-                  v1.value._1
-                ) - decreasingActorConsumptionOrder.indexOf(v2.value._1)
-            )
-          )
-          .map(_.value)
-          .toArray
-    )
+  lazy val topologicalAndHeavyJobOrdering = {
+    val sort  = TopologicalOrderIterator(firingsPrecedenceGraph)
+    var order = mutable.Buffer[(String, Int)]()
+    while (sort.hasNext()) {
+      val cur = sort.next()
+      order += cur
+    }
+    // firingsPrecedenceGraph
+    //   .topologicalSort()
+    //   .fold(
+    //     cycleNode => {
+    //       println("CYCLE NODES DETECTED")
+    //       firingsPrecedenceGraph.nodes.map(_.value).toArray
+    //     },
+    //     topo =>
+    //       topo
+    //         .withLayerOrdering(
+    //           firingsPrecedenceGraph.NodeOrdering((v1, v2) =>
+    //             decreasingActorConsumptionOrder
+    //               .indexOf(
+    //                 v1.value._1
+    //               ) - decreasingActorConsumptionOrder.indexOf(v2.value._1)
+    //           )
+    //         )
+    //         .map(_.value)
+    //         .toArray
+    //   )
+    order.toVector
+  }
 
-  lazy val topologicalAndHeavyJobOrderingWithExtra = firingsPrecedenceGraphWithCycles
-    .topologicalSort()
-    .fold(
-      cycleNode => {
-        println("CYCLE NODES DETECTED")
-        firingsPrecedenceGraph.nodes.map(_.value).toArray
-      },
-      topo =>
-        topo
-          .withLayerOrdering(
-            firingsPrecedenceGraphWithCycles.NodeOrdering((v1, v2) =>
-              decreasingActorConsumptionOrder
-                .indexOf(
-                  v1.value._1
-                ) - decreasingActorConsumptionOrder.indexOf(v2.value._1)
-            )
-          )
-          .map(_.value)
-          .toArray
-    )
+  lazy val topologicalAndHeavyJobOrderingWithExtra = {
+    val sort  = TopologicalOrderIterator(firingsPrecedenceGraphWithCycles)
+    var order = mutable.Buffer[(String, Int)]()
+    while (sort.hasNext()) {
+      val cur = sort.next()
+      order += cur
+    }
+    // firingsPrecedenceGraphWithCycles
+    //   .topologicalSort()
+    //   .fold(
+    //     cycleNode => {
+    //       println("CYCLE NODES DETECTED")
+    //       firingsPrecedenceGraph.nodes.map(_.value).toArray
+    //     },
+    //     topo =>
+    //       topo
+    //         .withLayerOrdering(
+    //           firingsPrecedenceGraphWithCycles.NodeOrdering((v1, v2) =>
+    //             decreasingActorConsumptionOrder
+    //               .indexOf(
+    //                 v1.value._1
+    //               ) - decreasingActorConsumptionOrder.indexOf(v2.value._1)
+    //           )
+    //         )
+    //         .map(_.value)
+    //         .toArray
+    //   )
+    order
+  }
 
   lazy val topologicalAndHeavyActorOrdering =
     actorsIdentifiers.sortBy(a => topologicalAndHeavyJobOrdering.indexWhere((aa, _) => a == aa))
@@ -241,9 +284,13 @@ final case class SDFApplicationWithFunctions(
       topologicalAndHeavyJobOrderingWithExtra.indexWhere((aa, _) => a == aa)
     )
 
-  override def asJsonString(): java.util.Optional[String] = try { java.util.Optional.of(write(this)) } catch { case _ => java.util.Optional.empty() }
+  override def asJsonString(): java.util.Optional[String] = try {
+    java.util.Optional.of(write(this))
+  } catch { case _ => java.util.Optional.empty() }
 
-  override def asCBORBinary(): java.util.Optional[Array[Byte]] = try { java.util.Optional.of(writeBinary(this)) } catch { case _ => java.util.Optional.empty() }
+  override def asCBORBinary(): java.util.Optional[Array[Byte]] = try {
+    java.util.Optional.of(writeBinary(this))
+  } catch { case _ => java.util.Optional.empty() }
 
   override def category() = "SDFApplicationWithFunctions"
 

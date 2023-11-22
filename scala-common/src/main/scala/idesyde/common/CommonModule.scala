@@ -74,20 +74,11 @@ object CommonModule
 
   override def fromOpaqueDecision(opaque: OpaqueDecisionModel): ju.Optional[DecisionModel] = {
     opaque.category() match {
-      // case "SDFApplicationWithFunctions" =>
-      //   opaque
-      //     .bodyJson()
-      //     .flatMap(x =>
-      //       try {
-      //         Some(read[SDFApplicationWithFunctions](x)).toJava
-      //       } catch {
-      //         case e => {
-      //           e.printStackTrace()
-      //           None.toJava
-      //         }
-      //       }
-      //     )
-      //     .map(x => x.asInstanceOf[DecisionModel])
+      case "SDFApplicationWithFunctions" =>
+        opaque
+          .bodyJson()
+          .map(x => read[SDFApplicationWithFunctions](x))
+          .map(x => x.asInstanceOf[DecisionModel])
       case "SDFApplication" =>
         opaque
           .bodyJson()

@@ -46,6 +46,9 @@ trait MixedRules {
     val app = identified
       .filter(_.isInstanceOf[SDFApplicationWithFunctions])
       .map(_.asInstanceOf[SDFApplicationWithFunctions])
+    if (app.isEmpty) {
+      errors += "identSDFToTiledMultiCore: no SDFApplicationWithFunctions found"
+    }
     for (a <- app) {
       if (!a.isConsistent) {
         errors += s"identSDFToTiledMultiCore: SDFApplication containing ${a.actorsIdentifiers.head} is inconsistent. Ignoring it."
@@ -54,6 +57,9 @@ trait MixedRules {
     val plat = identified
       .filter(_.isInstanceOf[SchedulableTiledMultiCore])
       .map(_.asInstanceOf[SchedulableTiledMultiCore])
+    if (plat.isEmpty) {
+      errors += "identSDFToTiledMultiCore: no SchedulableTiledMultiCore found"
+    }
     // if ((runtimes.isDefined && plat.isEmpty) || (runtimes.isEmpty && plat.isDefined))
     (
       app

@@ -321,8 +321,9 @@ final class CanSolvePeriodicWorkloadAndSDFServersToMulticore
         m.tasksAndSDFs.sdfApplications.jobsAndActors
           .filter(t =>
             m.tasksAndSDFs.sdfApplications.firingsPrecedenceGraph
-              .get(s)
-              .isDirectPredecessorOf(m.tasksAndSDFs.sdfApplications.firingsPrecedenceGraph.get(t))
+            .containsEdge(s, t)
+              // .get(s)
+              // .isDirectPredecessorOf(m.tasksAndSDFs.sdfApplications.firingsPrecedenceGraph.get(t))
           )
           .map(t => (s, t))
       ),
@@ -330,8 +331,9 @@ final class CanSolvePeriodicWorkloadAndSDFServersToMulticore
         m.tasksAndSDFs.sdfApplications.jobsAndActors
           .filter(t =>
             m.tasksAndSDFs.sdfApplications.firingsPrecedenceGraphWithCycles
-              .get(s)
-              .isDirectPredecessorOf(m.tasksAndSDFs.sdfApplications.firingsPrecedenceGraphWithCycles.get(t))
+            .containsEdge(t, s)
+              // .get(s)
+              // .isDirectPredecessorOf(m.tasksAndSDFs.sdfApplications.firingsPrecedenceGraphWithCycles.get(t))
           )
           .map(t => (s, t))
       ),

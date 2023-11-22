@@ -890,8 +890,8 @@ pub trait Module: Send + Sync {
         &self,
         _solved_decision_model: &Vec<Arc<dyn DecisionModel>>,
         _design_model: &Vec<Arc<dyn DesignModel>>,
-    ) -> Box<dyn Iterator<Item = Arc<dyn DesignModel>>> {
-        Box::new(std::iter::empty())
+    ) -> Vec<Arc<dyn DesignModel>> {
+        vec![]
     }
 }
 

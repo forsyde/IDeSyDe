@@ -14,7 +14,7 @@ lazy val scribeVersion                 = "3.10.2"
 lazy val scalaGraphVersion             = "1.13.5"
 lazy val scalaParserCombinatorsVersion = "2.2.0"
 lazy val spireVersion                  = "0.18.0"
-lazy val upickleVersion                = "3.0.0"
+lazy val upickleVersion                = "3.1.3"
 lazy val chocoSolverVersion            = "4.10.13"
 lazy val osLibVersion                  = "0.9.1"
 lazy val scalaYamlVersion              = "0.0.6"
@@ -102,7 +102,7 @@ lazy val common = (project in file("scala-common"))
   .settings(
     // name := "idesyde-scala-common",
     libraryDependencies ++= Seq(
-      "com.lihaoyi"              %%% "upickle"               % upickleVersion,
+      "com.lihaoyi"               %% "upickle"               % upickleVersion,
       "com.github.forsyde.IDeSyDe" % "build-java-core"       % globalIDeSyDeJavaVersion,
       "com.github.forsyde.IDeSyDe" % "build-java-blueprints" % globalIDeSyDeJavaVersion,
       ("org.scala-graph" %% "graph-core" % scalaGraphVersion).cross(CrossVersion.for3Use2_13),
@@ -193,7 +193,7 @@ lazy val forsyde = (project in file("scala-bridge-forsyde-io"))
 lazy val choco = (project in file("scala-choco"))
   // .dependsOn(core)
   .dependsOn(common)
-  .dependsOn(forsyde)
+  // .dependsOn(forsyde)
   // .dependsOn(blueprints)
   .enablePlugins(UniversalPlugin, JavaAppPackaging, JlinkPlugin)
   .enablePlugins(JDKPackagerPlugin)

@@ -271,7 +271,7 @@ impl Module for ExternalServerModule {
         &self,
         solved_decision_models: &Vec<Arc<dyn DecisionModel>>,
         design_models: &Vec<Arc<dyn DesignModel>>,
-    ) -> Box<dyn Iterator<Item = Arc<dyn DesignModel>>> {
+    ) -> Vec<Arc<dyn DesignModel>> {
         let mut mut_url = self.url.clone();
         mut_url
             .set_scheme("ws")
@@ -303,67 +303,50 @@ impl Module for ExternalServerModule {
                 if let Err(e) = ws.send(tungstenite::Message::text("done")) {
                     debug!("Failed to send 'done': {}", e.to_string());
                 };
-                return Box::new(std::iter::repeat_with(move || {
-                    while let Ok(message) = ws.read() {
-                        // besides the answer, also read the module's messages
-                        match message {
-                            tungstenite::Message::Text(txt_msg) => {
-                                if txt_msg.eq_ignore_ascii_case("done") {
-                                    if let Err(e) = ws.close(None) {
-                                        warn!("Failed to reverse identification websocket. Trying to proceed anyway.");
-                                        debug!("Error was {}", e.to_string());
-                                    }
-                                    if let Err(e) = ws.flush() {
-                                        debug!(
-                                            "Error found while flushing reverse identification websocket: {}",
-                                            e.to_string()
-                                        );
-                                    }
-                                    return None;
-                                } else if let Ok(opaque) =
-                                    OpaqueDesignModel::from_json_str(txt_msg.as_str())
-                                {
-                                    let opaquea = Arc::new(opaque) as Arc<dyn DesignModel>;
-                                    return Some(opaquea);
-                                }
+                let mut reverse_identified = Vec::new();
+                while let Ok(message) = ws.read() {
+                    // besides the answer, also read the module's messages
+                    match message {
+                        tungstenite::Message::Text(txt_msg) => {
+                            if txt_msg.eq_ignore_ascii_case("done") {
+                                break;
+                            } else if let Ok(opaque) =
+                                OpaqueDesignModel::from_json_str(txt_msg.as_str())
+                            {
+                                let opaquea = Arc::new(opaque) as Arc<dyn DesignModel>;
+                                reverse_identified.push(opaquea);
                             }
-                            tungstenite::Message::Binary(decision_cbor) => {
-                                if let Ok(opaque) =
-                                    OpaqueDesignModel::from_cbor(decision_cbor.as_slice())
-                                {
-                                    let opaquea = Arc::new(opaque) as Arc<dyn DesignModel>;
-                                    return Some(opaquea);
-                                }
-                            }
-                            tungstenite::Message::Ping(_) => {
-                                if let Err(_) = ws.send(tungstenite::Message::Pong(vec![])) {
-                                    debug!(
-                                        "Failed to send ping message to other end. Trying to proceed anyway."
-                                    );
-                                };
-                            }
-                            tungstenite::Message::Pong(_) => {
-                                if let Err(_) = ws.send(tungstenite::Message::Ping(vec![])) {
-                                    debug!(
-                                        "Failed to send pong message to other end. Trying to proceed anyway."
-                                    );
-                                };
-                            }
-                            tungstenite::Message::Close(_) => return None,
-                            _ => (),
                         }
-                        if let Err(e) = ws.flush() {
-                            debug!(
-                                "Error found while flushing reverse identification websocket: {}",
-                                e.to_string()
-                            );
+                        tungstenite::Message::Binary(decision_cbor) => {
+                            if let Ok(opaque) =
+                                OpaqueDesignModel::from_cbor(decision_cbor.as_slice())
+                            {
+                                let opaquea = Arc::new(opaque) as Arc<dyn DesignModel>;
+                                reverse_identified.push(opaquea);
+                            }
                         }
+                        tungstenite::Message::Ping(_) => {
+                            if let Err(_) = ws.send(tungstenite::Message::Pong(vec![])) {
+                                debug!(
+                                    "Failed to send ping message to other end. Trying to proceed anyway."
+                                );
+                            };
+                        }
+                        tungstenite::Message::Pong(_) => {
+                            if let Err(_) = ws.send(tungstenite::Message::Ping(vec![])) {
+                                debug!(
+                                    "Failed to send pong message to other end. Trying to proceed anyway."
+                                );
+                            };
+                        }
+                        tungstenite::Message::Close(_) => break,
+                        _ => (),
                     }
-                    None
-                }).take_while(|x| x.is_some()).flatten());
+                }
+                return reverse_identified;
             }
         }
-        Box::new(std::iter::empty())
+        vec![]
     }
 
     fn explorers(&self) -> Vec<Arc<dyn idesyde_core::Explorer>> {

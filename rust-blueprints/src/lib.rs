@@ -265,14 +265,13 @@ impl Module for StandaloneModule {
         &self,
         solved_decision_models: &Vec<Arc<dyn DecisionModel>>,
         design_models: &Vec<Arc<dyn DesignModel>>,
-    ) -> Box<dyn Iterator<Item = Arc<dyn DesignModel>>> {
+    ) -> Vec<Arc<dyn DesignModel>> {
         let decs = solved_decision_models.to_owned();
         let dess = design_models.to_owned();
-        Box::new(
-            std::iter::once(self.to_owned())
-                .flat_map(|imodule| imodule.reverse_identification_rules.into_iter())
-                .flat_map(move |f| f(&decs, &dess)),
-        )
+        self.reverse_identification_rules
+            .par_iter()
+            .flat_map(move |f| f(&decs, &dess))
+            .collect()
     }
 
     fn explorers(&self) -> Vec<Arc<dyn Explorer>> {

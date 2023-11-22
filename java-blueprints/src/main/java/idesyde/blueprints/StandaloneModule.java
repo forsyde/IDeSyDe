@@ -353,7 +353,6 @@ public interface StandaloneModule extends Module {
                                         "Finished a reverse identification step with %s decision models identified"
                                                 .formatted(designModels.size()));
                                 ctx.send("done");
-                                ctx.closeSession();
                             } else {
                                 OpaqueDesignModel.fromJsonString(ctx.message()).flatMap(this::fromOpaqueDesign)
                                         .ifPresentOrElse(

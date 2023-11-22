@@ -74,49 +74,69 @@ object CommonModule
 
   override def fromOpaqueDecision(opaque: OpaqueDecisionModel): ju.Optional[DecisionModel] = {
     opaque.category() match {
-      case "SDFApplicationWithFunctions" =>
-        opaque
-          .bodyJson().map(x => read[SDFApplicationWithFunctions](x))
-          .map(x => x.asInstanceOf[DecisionModel])
+      // case "SDFApplicationWithFunctions" =>
+      //   opaque
+      //     .bodyJson()
+      //     .flatMap(x =>
+      //       try {
+      //         Some(read[SDFApplicationWithFunctions](x)).toJava
+      //       } catch {
+      //         case e => {
+      //           e.printStackTrace()
+      //           None.toJava
+      //         }
+      //       }
+      //     )
+      //     .map(x => x.asInstanceOf[DecisionModel])
       case "SDFApplication" =>
         opaque
-          .bodyJson().map(x => read[SDFApplication](x))
+          .bodyJson()
+          .map(x => read[SDFApplication](x))
           .map(x => x.asInstanceOf[DecisionModel])
       case "AnalysedSDFApplication" =>
         opaque
-          .bodyJson().map(x => read[AnalysedSDFApplication](x))
+          .bodyJson()
+          .map(x => read[AnalysedSDFApplication](x))
           .map(x => x.asInstanceOf[DecisionModel])
       case "TiledMultiCoreWithFunctions" =>
         opaque
-          .bodyJson().map(x => read[TiledMultiCoreWithFunctions](x))
+          .bodyJson()
+          .map(x => read[TiledMultiCoreWithFunctions](x))
           .map(x => x.asInstanceOf[DecisionModel])
       case "PartitionedCoresWithRuntimes" =>
         opaque
-          .bodyJson().map(x => read[PartitionedCoresWithRuntimes](x))
+          .bodyJson()
+          .map(x => read[PartitionedCoresWithRuntimes](x))
           .map(x => x.asInstanceOf[DecisionModel])
       case "SchedulableTiledMultiCore" =>
         opaque
-          .bodyJson().map(x => read[SchedulableTiledMultiCore](x))
+          .bodyJson()
+          .map(x => read[SchedulableTiledMultiCore](x))
           .map(x => x.asInstanceOf[DecisionModel])
       case "SDFToTiledMultiCore" =>
         opaque
-          .bodyJson().map(x => read[SDFToTiledMultiCore](x))
+          .bodyJson()
+          .map(x => read[SDFToTiledMultiCore](x))
           .map(x => x.asInstanceOf[DecisionModel])
       case "SharedMemoryMultiCore" =>
         opaque
-          .bodyJson().map(x => read[SharedMemoryMultiCore](x))
+          .bodyJson()
+          .map(x => read[SharedMemoryMultiCore](x))
           .map(x => x.asInstanceOf[DecisionModel])
       case "CommunicatingAndTriggeredReactiveWorkload" =>
         opaque
-          .bodyJson().map(x => read[CommunicatingAndTriggeredReactiveWorkload](x))
+          .bodyJson()
+          .map(x => read[CommunicatingAndTriggeredReactiveWorkload](x))
           .map(x => x.asInstanceOf[DecisionModel])
       case "PartitionedSharedMemoryMultiCore" =>
         opaque
-          .bodyJson().map(x => read[PartitionedSharedMemoryMultiCore](x))
+          .bodyJson()
+          .map(x => read[PartitionedSharedMemoryMultiCore](x))
           .map(x => x.asInstanceOf[DecisionModel])
       case "PeriodicWorkloadAndSDFServers" =>
         opaque
-          .bodyJson().map(x => read[PeriodicWorkloadAndSDFServers](x))
+          .bodyJson()
+          .map(x => read[PeriodicWorkloadAndSDFServers](x))
           .map(x => x.asInstanceOf[DecisionModel])
       case "PeriodicWorkloadToPartitionedSharedMultiCore" =>
         opaque

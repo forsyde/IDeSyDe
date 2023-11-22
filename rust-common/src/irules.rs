@@ -644,38 +644,34 @@ pub fn compute_kernel_basis(matrix: &Vec<Vec<i64>>) -> Vec<Vec<u64>> {
     let mut kernel_basis: Vec<Vec<u64>> = Vec::new();
     let num_rows = matrix.len();
     let num_cols = matrix[0].len();
-    let smallest = if num_rows < num_cols {
-        num_rows
-    } else {
-        num_cols
-    };
+    let identity_size = num_cols;
+    let total_rows = num_rows + identity_size;
 
     // Create an identity matrix of the same size as the input matrix
     //  and augment the input matrix with the identity matrix
-    let mut transpose_augmented: Vec<Vec<num::Rational64>> =
-        vec![vec![num::zero(); 2 * num_rows]; num_cols];
-    for j in 0..num_rows {
-        for i in 0..num_cols {
-            transpose_augmented[j][i] = num::Rational64::from_integer(matrix[i][j] as i64);
+    let mut augmented_matrix: Vec<Vec<num::Rational64>> =
+        vec![vec![num::zero(); num_cols]; num_rows + identity_size];
+    for i in 0..num_rows {
+        for j in 0..num_cols {
+            augmented_matrix[i][j] = num::Rational64::from_integer(matrix[i][j] as i64);
         }
     }
-    for i in num_rows..(num_rows + smallest) {
-        transpose_augmented[i - num_rows][i] = num::Rational64::from_integer(1);
+    for i in num_rows..(num_rows + identity_size) {
+        augmented_matrix[i][i - num_rows] = num::one();
     }
-    // println!("augmented matrix {:?}", transpose_augmented);
 
     // Perform row reduction using Gaussian elimination
     let mut pivot_row = 0;
-    for col in 0..num_rows {
+    for col in 0..num_cols {
         // Find a non-zero pivot element in the current column
         let mut pivot_found = false;
-        for row in pivot_row..num_cols {
-            if transpose_augmented[row][col] != num::zero() {
+        for row in pivot_row..num_rows {
+            if augmented_matrix[row][col] != num::zero() {
                 pivot_found = true;
                 // Swap the pivot row with the current row
                 if pivot_row != row {
                     // println!("swapping row {} with row {}", pivot_row, row);
-                    transpose_augmented.swap(pivot_row, row);
+                    augmented_matrix.swap(pivot_row, row);
                 }
                 break;
             }
@@ -685,22 +681,22 @@ pub fn compute_kernel_basis(matrix: &Vec<Vec<i64>>) -> Vec<Vec<u64>> {
         if !pivot_found {
             continue;
         }
-        // println!("reducing a column");
+        // println!("reducing a column with pivot {}", pivot_row);
 
         // normalize the current row
-        for col_index in (pivot_row + 1)..(num_rows * 2) {
-            transpose_augmented[pivot_row][col_index] = transpose_augmented[pivot_row][col_index]
-                / transpose_augmented[pivot_row][pivot_row];
+        for col_index in (col + 1)..num_cols {
+            augmented_matrix[pivot_row][col_index] =
+                augmented_matrix[pivot_row][col_index] / augmented_matrix[pivot_row][col];
         }
-        transpose_augmented[pivot_row][pivot_row] = num::one();
+        // println!("pivoting row {}", pivot_row);
+        augmented_matrix[pivot_row][col] = num::one();
         // Reduce the current column to have zeros below the pivot element
-        for row in (pivot_row + 1)..num_cols {
-            if transpose_augmented[row][col] != num::zero() {
-                let pivot_multiple =
-                    transpose_augmented[row][col] / transpose_augmented[pivot_row][col];
-                for col_index in col..(num_rows * 2) {
-                    transpose_augmented[row][col_index] = transpose_augmented[row][col_index]
-                        - pivot_multiple * transpose_augmented[pivot_row][col_index];
+        for row in (pivot_row + 1)..total_rows {
+            if augmented_matrix[row][col] != num::zero() {
+                let pivot_multiple = augmented_matrix[row][col]; // / transpose_augmented[pivot_row][col];
+                for col_index in col..num_cols {
+                    augmented_matrix[row][col_index] = augmented_matrix[row][col_index]
+                        - pivot_multiple * augmented_matrix[pivot_row][col_index];
                 }
             }
         }
@@ -708,22 +704,64 @@ pub fn compute_kernel_basis(matrix: &Vec<Vec<i64>>) -> Vec<Vec<u64>> {
         // Move to the next pivot row
         pivot_row += 1;
     }
-    // println!("augmented matrix {:?}", transpose_augmented);
+    // println!("[");
+    // for row in 0..num_rows {
+    //     for i in 0..num_cols {
+    //         print!(
+    //             "{}/{}, ",
+    //             augmented_matrix[row][i].numer(),
+    //             augmented_matrix[row][i].denom()
+    //         );
+    //     }
+    //     println!()
+    // }
+    // println!("------");
+    // for row in num_rows..(num_rows + identity_size) {
+    //     for i in 0..num_cols {
+    //         print!(
+    //             "{}/{}, ",
+    //             augmented_matrix[row][i].numer(),
+    //             augmented_matrix[row][i].denom()
+    //         );
+    //     }
+    //     println!()
+    // }
+    // println!("]");
+    // permutate columns not in the kernel basis
+    for pivot in 0..pivot_row {
+        if augmented_matrix[pivot][pivot] != num::one() {
+            let reduced_pos_opt = (0..num_cols).find(|i| augmented_matrix[pivot][*i] == num::one());
+            if let Some(reduced_pos) = reduced_pos_opt {
+                // println!("swapping columns {} and {}", reduced_pos, pivot);
+                // swap the columns
+                for i in 0..total_rows {
+                    let temp = augmented_matrix[i][reduced_pos];
+                    augmented_matrix[i][reduced_pos] = augmented_matrix[i][pivot];
+                    augmented_matrix[i][pivot] = temp;
+                }
+            }
+        }
+    }
 
     // Extract the kernel vector base from the row-reduced augmented matrix
-    for row in pivot_row..num_rows {
-        let mut kernel_vector: Vec<num::Rational64> = Vec::new();
-        for col in num_cols..(num_cols * 2) {
-            kernel_vector.push(transpose_augmented[row][col]);
+    // println!("actors: {}, pivot_row {}", num_cols, pivot_row);
+    for col in pivot_row..num_cols {
+        // println!("Building with column {}", col);
+        let mut kernel_vector = vec![num::zero(); num_cols];
+        for row in num_rows..(num_rows + identity_size) {
+            kernel_vector[row - num_rows] = augmented_matrix[row][col];
         }
+        // println!("kernel vector {:?}", kernel_vector);
         let dem_lcd = kernel_vector
             .iter()
             .map(|x| x.denom().to_owned())
+            .filter(|x| x > &0)
             .reduce(num::integer::lcm)
             .unwrap_or(1);
         let num_gcd = kernel_vector
             .iter()
             .map(|x| x.numer().to_owned())
+            .filter(|x| x > &0)
             .reduce(num::integer::gcd)
             .unwrap_or(1);
         let kernel_normalized = kernel_vector
@@ -733,6 +771,7 @@ pub fn compute_kernel_basis(matrix: &Vec<Vec<i64>>) -> Vec<Vec<u64>> {
             })
             .map(|x| x.to_integer() as u64)
             .collect();
+        // println!("kernel normalized {:?}", kernel_normalized);
         kernel_basis.push(kernel_normalized);
     }
 
@@ -748,6 +787,7 @@ pub fn compute_periodic_admissible_static_schedule(
     let mut left = repetition_vector.clone();
     let mut buffer: Vec<u64> = initial_tokens.iter().map(|t| *t as u64).collect();
     let mut schedule = Vec::new();
+    // println!("compute schedule with left {:?}", left);
     while left.iter().any(|x| x > &0) {
         for j in 0..actor_names.len() {
             if left[j] > 0 {
@@ -772,5 +812,6 @@ pub fn compute_periodic_admissible_static_schedule(
             }
         }
     }
+    // println!("done");
     schedule
 }

@@ -1,5 +1,7 @@
 package idesyde.choco
 
+import java.util.stream.Stream
+
 import idesyde.identification.choco.ChocoDecisionModel
 import java.time.Duration
 import scala.concurrent.ExecutionContext
@@ -18,6 +20,7 @@ import org.chocosolver.solver.search.strategy.Search
 import org.chocosolver.solver.search.strategy.strategy.AbstractStrategy
 import org.chocosolver.solver.variables.Variable
 import org.chocosolver.solver.search.loop.monitors.IMonitorSolution
+import org.chocosolver.solver.search.loop.monitors.IMonitorContradiction
 import idesyde.exploration.choco.explorers.ParetoMinimizationBrancher
 import spire.math.Rational
 import idesyde.common.SDFToTiledMultiCore
@@ -27,6 +30,7 @@ import idesyde.common.PeriodicWorkloadAndSDFServerToMultiCore
 import idesyde.core.Explorer
 import idesyde.core.ExplorationBidding
 import idesyde.core.ExplorationSolution
+import org.chocosolver.solver.exception.ContradictionException
 
 class ChocoExplorer extends Explorer:
 
@@ -135,12 +139,12 @@ class ChocoExplorer extends Explorer:
     if (configuration.improvementTimeOutInSecs > 0L) {
       solver.limitTime(configuration.improvementTimeOutInSecs * 1000L)
     }
-    if (configuration.improvementTimeOutInSecs > 0L) {
+    if (configuration.improvementIterations > 0L) {
       solver.limitFail(configuration.improvementIterations)
       solver.limitBacktrack(configuration.improvementIterations)
     }
-    val oneFeasible = solver.solve()
-    if (oneFeasible) {
+    val chocoSolution = solver.findSolution()
+    if (chocoSolution != null) {
       val solution =
         m.mergeSolution(
           solver.defaultSolution().record(),
@@ -213,46 +217,49 @@ class ChocoExplorer extends Explorer:
     //   .map(paretoSolution => m.mergeSolution(paretoSolution, timeResolution, memoryResolution))
   }
 
-  def explore(
+  override def explore(
       decisionModel: DecisionModel,
-      previousSolutions: Set[ExplorationSolution],
+      previousSolutions: java.util.Set[ExplorationSolution],
       configuration: Explorer.Configuration
-  ): LazyList[ExplorationSolution] = {
-    decisionModel match
+  ): Stream[ExplorationSolution] = {
+    var llist = decisionModel match
       case sdf: SDFToTiledMultiCore =>
         exploreChocoExplorable(
           sdf,
-          previousSolutions
+          previousSolutions.asScala
             .filter(sol => sol.solved().isInstanceOf[SDFToTiledMultiCore])
             .map(sol =>
               ExplorationSolution(sol.objectives(), sol.solved().asInstanceOf[SDFToTiledMultiCore])
-            ),
+            )
+            .toSet,
           configuration
         )(using CanSolveSDFToTiledMultiCore())
       case workload: PeriodicWorkloadToPartitionedSharedMultiCore =>
         exploreChocoExplorable(
           workload,
-          previousSolutions
+          previousSolutions.asScala
             .filter(sol => sol.solved().isInstanceOf[PeriodicWorkloadToPartitionedSharedMultiCore])
             .map(sol =>
               ExplorationSolution(
                 sol.objectives(),
                 sol.solved().asInstanceOf[PeriodicWorkloadToPartitionedSharedMultiCore]
               )
-            ),
+            )
+            .toSet,
           configuration
         )(using CanSolveDepTasksToPartitionedMultiCore())
       case workloadAndSDF: PeriodicWorkloadAndSDFServerToMultiCore =>
         exploreChocoExplorable(
           workloadAndSDF,
-          previousSolutions
+          previousSolutions.asScala
             .filter(sol => sol.solved().isInstanceOf[PeriodicWorkloadAndSDFServerToMultiCore])
             .map(sol =>
               ExplorationSolution(
                 sol.objectives(),
                 sol.solved().asInstanceOf[PeriodicWorkloadAndSDFServerToMultiCore]
               )
-            ),
+            )
+            .toSet,
           configuration
         )(using CanSolvePeriodicWorkloadAndSDFServersToMulticore())
       // case solvable: ChocoDecisionModel =>
@@ -304,6 +311,18 @@ class ChocoExplorer extends Explorer:
       //       solvable.rebuildFromChocoOutput(paretoSolution)
       //     })
       case _ => LazyList.empty
+    val iter = llist.iterator
+    Stream
+      .generate(() => {
+        println("next")
+        if (iter.hasNext) {
+          Some(iter.next())
+        } else {
+          None
+        }
+      })
+      .takeWhile(_.isDefined)
+      .map(_.get)
   }
 
   override def uniqueIdentifier(): String = "ChocoExplorer"

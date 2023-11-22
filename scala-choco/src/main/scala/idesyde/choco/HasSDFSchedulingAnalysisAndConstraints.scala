@@ -314,14 +314,18 @@ trait HasSDFSchedulingAnalysisAndConstraints
 
   def hasDataCycle(m: SDFToTiledMultiCore)(jobsAndActors: Vector[(String, Int)])(i: Int)(j: Int) = {
     val inspector = ConnectivityInspector(m.sdfApplications.firingsPrecedenceGraph)
+    val inspectorWithCyles = ConnectivityInspector(
+      m.sdfApplications.firingsPrecedenceGraphWithCycles
+    )
     inspector.pathExists(jobsAndActors(i), jobsAndActors(j)) &&
+    inspectorWithCyles.pathExists(jobsAndActors(j), jobsAndActors(i))
     // m.sdfApplications.firingsPrecedenceGraph
     //   .containsEdge(jobsAndActors(i), jobsAndActors(j))
     // .isPredecessorOf(
     //   m.sdfApplications.firingsPrecedenceGraph.get(jobsAndActors(j))
     // )
-    m.sdfApplications.firingsPrecedenceGraphWithCycles
-      .containsEdge(jobsAndActors(j), jobsAndActors(i))
+    // m.sdfApplications.firingsPrecedenceGraphWithCycles
+    //   .containsEdge(jobsAndActors(j), jobsAndActors(i))
   }
   // .get(jobsAndActors(j))
   // .isPredecessorOf(

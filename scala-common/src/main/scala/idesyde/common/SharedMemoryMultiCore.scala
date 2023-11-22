@@ -87,8 +87,10 @@ final case class SharedMemoryMultiCore(
                   //   .getOrElse(Seq.empty)
                   val subelements = platformElements
                     .filter(e => e == src || e == dst || communicationElems.contains(e))
+                    .toSet
+                    .asJava
                   val paths =
-                    FloydWarshallShortestPaths(AsSubgraph(topology, subelements.toSet.asJava))
+                    FloydWarshallShortestPaths(AsSubgraph(topology, subelements))
                   val path = paths.getPath(src, dst)
                   if (path != null) {
                     path.getVertexList.asScala.drop(1).dropRight(1)

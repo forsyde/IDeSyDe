@@ -376,9 +376,7 @@ public interface StandaloneModule extends Module {
                         });
                         ws.onError(ctx -> {
                             logger.error("An error occurred in the reverse identification websocket");
-                            ctx.send(ctx.error().getMessage());
                             ctx.error().printStackTrace();
-                            ctx.send("done");
                         });
                     })
                     .post("/reverse", ctx -> {

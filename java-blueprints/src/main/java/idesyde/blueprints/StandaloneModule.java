@@ -432,7 +432,11 @@ public interface StandaloneModule extends Module {
                         }
                     }).exception(Exception.class, (e, ctx) -> {
                         e.printStackTrace();
-                    }).updateConfig(config -> {
+                    })
+                    .wsException(Exception.class, (e, ctx) -> {
+                        e.printStackTrace();
+                    })
+                    .updateConfig(config -> {
                         config.jetty.multipartConfig.maxTotalRequestSize(1, SizeUnit.GB);
                         config.jetty.wsFactoryConfig(cfg -> {
                             cfg.setMaxTextMessageSize(100000000);

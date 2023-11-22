@@ -47,20 +47,27 @@ trait CommunicatingExtendedDependenciesPeriodicWorkload {
     *
     * In other words, it is a precedence graph at the instance (sometimes called jobs) level.
     */
-  def affineRelationsGraph = Graph.from(
-    0 until numVirtualTasks,
-    affineControlGraph
-      .map((src, dst, srcRepeat, srcSkip, dstRepeat, dstSkip) =>
-        (src ~+#> dst)(
-          (
-            srcRepeat,
-            srcSkip,
-            dstRepeat,
-            dstSkip
-          )
-        )
-      )
-  )
+  def affineRelationsGraph = {
+    val g = DefaultDirectedGraph[Int, (Int, Int, Int, Int)]();
+    for ((src, dst, srcRepeat, srcSkip, dstRepeat, dstSkip) <- affineControlGraph) {
+      g.addEdge(src, dst, (srcRepeat, srcSkip, dstRepeat, dstSkip))
+    }
+    g
+  //   Graph.from(
+  //   0 until numVirtualTasks,
+  //   affineControlGraph
+  //     .map((src, dst, srcRepeat, srcSkip, dstRepeat, dstSkip) =>
+  //       (src ~+#> dst)(
+  //         (
+  //           srcRepeat,
+  //           srcSkip,
+  //           dstRepeat,
+  //           dstSkip
+  //         )
+  //       )
+  //     )
+  // )
+  }
 
   /** The edges of the communication graph should have numbers describing how much data is
     * transferred from tasks to message queues. The numbering is done so that,

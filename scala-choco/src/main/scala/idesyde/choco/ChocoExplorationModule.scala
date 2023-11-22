@@ -43,23 +43,15 @@ object ChocoExplorationModule extends StandaloneModule {
     opaque.category() match {
       case "SDFToTiledMultiCore" =>
         opaque
-          .bodyCBOR()
-          .map(x => readBinary[SDFToTiledMultiCore](x))
-          .or(() => opaque.bodyJson().map(x => read[SDFToTiledMultiCore](x)))
+          .bodyJson().map(x => read[SDFToTiledMultiCore](x))
           .map(x => x.asInstanceOf[DecisionModel])
       case "PeriodicWorkloadToPartitionedSharedMultiCore" =>
         opaque
-          .bodyCBOR()
-          .map(x => readBinary[PeriodicWorkloadToPartitionedSharedMultiCore](x))
-          .or(() =>
-            opaque.bodyJson().map(x => read[PeriodicWorkloadToPartitionedSharedMultiCore](x))
-          )
+          .bodyJson().map(x => read[PeriodicWorkloadToPartitionedSharedMultiCore](x))
           .map(x => x.asInstanceOf[DecisionModel])
       case "PeriodicWorkloadAndSDFServerToMultiCore" =>
         opaque
-          .bodyCBOR()
-          .map(x => readBinary[PeriodicWorkloadAndSDFServerToMultiCore](x))
-          .or(() => opaque.bodyJson().map(x => read[PeriodicWorkloadAndSDFServerToMultiCore](x)))
+          .bodyJson().map(x => read[PeriodicWorkloadAndSDFServerToMultiCore](x))
           .map(x => x.asInstanceOf[DecisionModel])
       case _ => Optional.empty()
     }

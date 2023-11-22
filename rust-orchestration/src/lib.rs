@@ -313,6 +313,12 @@ impl Module for ExternalServerModule {
                                         warn!("Failed to reverse identification websocket. Trying to proceed anyway.");
                                         debug!("Error was {}", e.to_string());
                                     }
+                                    if let Err(e) = ws.flush() {
+                                        debug!(
+                                            "Error found while flushing reverse identification websocket: {}",
+                                            e.to_string()
+                                        );
+                                    }
                                     return None;
                                 } else if let Ok(opaque) =
                                     OpaqueDesignModel::from_json_str(txt_msg.as_str())

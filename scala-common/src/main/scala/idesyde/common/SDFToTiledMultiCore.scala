@@ -19,15 +19,15 @@ final case class SDFToTiledMultiCore(
     with WCETComputationMixin(sdfApplications, platform)
     derives ReadWriter {
 
-  override def part(): ju.Set[String] = ???
-  (sdfApplications.part().asScala ++ platform.part().asScala ++ (sdfApplications.actorsIdentifiers
-    .zip(processMappings) ++
-    sdfApplications.channelsIdentifiers.zip(messageMappings) ++
-    messageSlotAllocations.zipWithIndex.flatMap((slots, i) =>
-      platform.hardware.communicationElems
-        .filter(ce => slots.contains(ce) && slots(ce).exists(b => b))
-        .map(ce => sdfApplications.channelsIdentifiers(i) -> ce)
-    )).map(_.toString)).asJava
+  override def part(): ju.Set[String] =
+    (sdfApplications.part().asScala ++ platform.part().asScala ++ (sdfApplications.actorsIdentifiers
+      .zip(processMappings) ++
+      sdfApplications.channelsIdentifiers.zip(messageMappings) ++
+      messageSlotAllocations.zipWithIndex.flatMap((slots, i) =>
+        platform.hardware.communicationElems
+          .filter(ce => slots.contains(ce) && slots(ce).exists(b => b))
+          .map(ce => sdfApplications.channelsIdentifiers(i) -> ce)
+      )).map(_.toString)).asJava
 
   val processorsFrequency: Vector[Long] = platform.hardware.processorsFrequency
   val processorsProvisions: Vector[Map[String, Map[String, Double]]] =
@@ -40,9 +40,13 @@ final case class SDFToTiledMultiCore(
 
   val wcets = computeWcets
 
-  override def asJsonString(): java.util.Optional[String] = try { java.util.Optional.of(write(this)) } catch { case _ => java.util.Optional.empty() }
+  override def asJsonString(): java.util.Optional[String] = try {
+    java.util.Optional.of(write(this))
+  } catch { case _ => java.util.Optional.empty() }
 
-  override def asCBORBinary(): java.util.Optional[Array[Byte]] = try { java.util.Optional.of(writeBinary(this)) } catch { case _ => java.util.Optional.empty() }
+  override def asCBORBinary(): java.util.Optional[Array[Byte]] = try {
+    java.util.Optional.of(writeBinary(this))
+  } catch { case _ => java.util.Optional.empty() }
 
   override def category(): String = "SDFToTiledMultiCore"
 }

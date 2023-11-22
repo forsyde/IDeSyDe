@@ -280,13 +280,10 @@ public interface StandaloneModule extends Module {
                                     .ifPresentOrElse(previousSolutions::add,
                                             () -> OpaqueDecisionModel.fromCBORBytes(payload)
                                                     .flatMap(this::fromOpaqueDecision)
-                                                    .ifPresentOrElse(x -> {
-                                                        logger.info("Setting the decision model for exploration");
-                                                        decisionModel.set(x);
-                                                    }, () -> Explorer.Configuration
-                                                            .fromCBORBytes(payload)
-                                                            .ifPresentOrElse(configuration::set, () -> logger.warn(
-                                                                    "Failed to parse a binary message during exploration"))));
+                                                    .ifPresentOrElse(decisionModel::set,
+                                                            () -> Explorer.Configuration
+                                                                    .fromCBORBytes(payload)
+                                                                    .ifPresent(configuration::set)));
                         });
                         ws.onMessage(ctx -> {
                             if (ctx.message().toLowerCase().contains("done")) {
@@ -305,7 +302,6 @@ public interface StandaloneModule extends Module {
                                         });
                                 logger.info("Finished exploration");
                                 ctx.send("done");
-                                ctx.closeSession();
                                 // executor.submit(() -> {
                                 // });
                             } else {
@@ -318,9 +314,7 @@ public interface StandaloneModule extends Module {
                                                         .ifPresentOrElse(decisionModel::set,
                                                                 () -> Explorer.Configuration
                                                                         .fromJsonString(ctx.message())
-                                                                        .ifPresentOrElse(configuration::set,
-                                                                                () -> logger.warn(
-                                                                                        "Failed to parse a text message during exploration"))));
+                                                                        .ifPresent(configuration::set)));
                             }
                         });
                         ws.onConnect(ctx -> {

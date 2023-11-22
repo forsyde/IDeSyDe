@@ -136,12 +136,6 @@ impl Iterator for ExternalServerIdentifiticationIterator {
                 tungstenite::Message::Close(_) => return None,
                 _ => (),
             }
-            if let Err(e) = self.websocket.flush() {
-                debug!(
-                    "Error found while flushing identification websocket: {}",
-                    e.to_string()
-                );
-            }
         }
         None
     }

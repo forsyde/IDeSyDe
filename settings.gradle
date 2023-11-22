@@ -4,7 +4,7 @@ include 'java-common'
 include 'java-blueprints'
 include 'java-bridge-forsyde-io'
 // include 'java-choco'
-// include 'scala-common'
 include 'java-metaheuristics'
+// include 'scala-common'
 // include 'scala-bridge-forsyde-io'
 

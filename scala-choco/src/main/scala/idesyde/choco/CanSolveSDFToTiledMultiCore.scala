@@ -24,7 +24,6 @@ import scala.collection.mutable.Buffer
 import idesyde.common.SDFToTiledMultiCore
 import org.chocosolver.solver.objective.OptimizationPolicy
 import idesyde.identification.choco.models.sdf.CompactingMultiCoreMapping
-import scalax.collection.GraphEdge.DiEdge
 import org.jgrapht.graph.SimpleDirectedGraph
 import org.jgrapht.graph.DefaultEdge
 import org.jgrapht.alg.cycle.JohnsonSimpleCycles

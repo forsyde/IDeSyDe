@@ -216,6 +216,12 @@ public interface StandaloneModule extends Module {
                             decisionModels.clear();
                             designModels.clear();
                         });
+                        ws.onError(ctx -> {
+                            logger.error("An error occurred in the identification websocket");
+                            ctx.send("ERROR " + ctx.error().getMessage());
+                            ctx.error().printStackTrace();
+                            ctx.send("done");
+                        });
                     }).get("/explorers", ctx -> {
                         ctx.result(objectMapper.writeValueAsString(
                                 explorers().stream().map(Explorer::uniqueIdentifier).collect(Collectors.toSet())));
@@ -367,6 +373,12 @@ public interface StandaloneModule extends Module {
                             ctx.enableAutomaticPings(1, TimeUnit.SECONDS);
                             exploredDecisionModels.clear();
                             designModels.clear();
+                        });
+                        ws.onError(ctx -> {
+                            logger.error("An error occurred in the reverse identification websocket");
+                            ctx.send(ctx.error().getMessage());
+                            ctx.error().printStackTrace();
+                            ctx.send("done");
                         });
                     })
                     .post("/reverse", ctx -> {

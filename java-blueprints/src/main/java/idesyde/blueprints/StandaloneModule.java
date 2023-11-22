@@ -218,9 +218,9 @@ public interface StandaloneModule extends Module {
                         });
                         ws.onError(ctx -> {
                             logger.error("An error occurred in the identification websocket");
-                            ctx.send("ERROR " + ctx.error().getMessage());
                             ctx.error().printStackTrace();
-                            ctx.send("done");
+                            // ctx.send("ERROR " + ctx.error().getMessage());
+                            // ctx.send("done");
                         });
                     }).get("/explorers", ctx -> {
                         ctx.result(objectMapper.writeValueAsString(

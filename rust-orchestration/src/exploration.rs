@@ -127,12 +127,6 @@ impl Iterator for ExternalExplorerSolutionIter {
                     }
                     _ => (),
                 }
-                if let Err(e) = self.websocket.flush() {
-                    debug!(
-                        "Error found while flushing exploration websocket: {}",
-                        e.to_string()
-                    );
-                }
             }
         }
         None

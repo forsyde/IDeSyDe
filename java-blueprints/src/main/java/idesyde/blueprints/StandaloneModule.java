@@ -286,6 +286,7 @@ public interface StandaloneModule extends Module {
                                                                     .ifPresent(configuration::set)));
                         });
                         ws.onMessage(ctx -> {
+                            logger.info("Receiving a text message during exploration");
                             if (ctx.message().toLowerCase().contains("done")) {
                                 logger.info("Starting exploration of a %s with %s"
                                         .formatted(decisionModel.get().category(), explorer.get().uniqueIdentifier()));
@@ -325,6 +326,12 @@ public interface StandaloneModule extends Module {
                                     .findAny()
                                     .ifPresentOrElse(explorer::set, ctx::closeSession);
                             previousSolutions.clear();
+                        });
+                        ws.onError(ctx -> {
+                            logger.error("An error occurred during exploration");
+                            ctx.error().printStackTrace();
+                            // ctx.send("ERROR " + ctx.error().getMessage());
+                            // ctx.send("done");
                         });
                     })
                     .ws("/reverse", ws -> {

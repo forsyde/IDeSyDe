@@ -37,11 +37,11 @@ class ChocoExplorer extends Explorer:
     val canExplore = decisionModel match
       // case sdfToMemMapped: AperiodicAsynchronousDataflowToPartitionedMemoryMappableMulticore => true
       // case sdfToTiled: AperiodicAsynchronousDataflowToPartitionedTiledMulticore => true
-      case sdf: SDFToTiledMultiCore                                             => true
-      case workload: PeriodicWorkloadToPartitionedSharedMultiCore               => true
-      case workloadAndSDF: PeriodicWorkloadAndSDFServerToMultiCore              => true
-      case c: ChocoDecisionModel                                                => true
-      case _                                                                    => false
+      case sdf: SDFToTiledMultiCore                                => true
+      case workload: PeriodicWorkloadToPartitionedSharedMultiCore  => true
+      case workloadAndSDF: PeriodicWorkloadAndSDFServerToMultiCore => true
+      case c: ChocoDecisionModel                                   => true
+      case _                                                       => false
     val objectives: Set[String] = decisionModel match {
       case sdf: SDFToTiledMultiCore =>
         sdf.sdfApplications.minimumActorThroughputs.zipWithIndex
@@ -127,7 +127,6 @@ class ChocoExplorer extends Explorer:
       previousSolutions: Set[ExplorationSolution],
       configuration: Explorer.Configuration
   )(using ChocoExplorable[T]): LazyList[ExplorationSolution] = {
-    println("exploring with " + configuration.toString())
     var (model, objs) = m.chocoModel(
       previousSolutions,
       configuration

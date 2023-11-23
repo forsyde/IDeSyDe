@@ -17,7 +17,7 @@ jobs:
   test-scala-build-on-linux:
     strategy:
       matrix:
-        jdk: [temurin@17, amazon-corretto@17, zulu@17, microsoft@17]
+        jdk: [adopt:17, corretto:17, zulu:17]
       fail-fast: false
     runs-on: ubuntu-latest
     steps:
@@ -28,6 +28,7 @@ jobs:
         curl -fL "https://github.com/coursier/launchers/raw/master/cs-x86_64-pc-linux-static.gz" | gzip -d > cs
         chmod +x ./cs
         ./cs setup --yes
+        cs java --jvm ${{ matrix.jdk }} --setup
         sbt publishModules
   test-java-build-on-linux:
     strategy:

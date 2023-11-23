@@ -53,6 +53,9 @@ trait CommunicatingExtendedDependenciesPeriodicWorkload {
     val g = DefaultDirectedGraph[Int, (Int, Int, Int, Int, Int, Int)](
       classOf[(Int, Int, Int, Int, Int, Int)]
     )
+    for (i <- 0 until numVirtualTasks) {
+      g.addVertex(i)
+    }
     for ((src, dst, srcRepeat, srcSkip, dstRepeat, dstSkip) <- affineControlGraph) {
       g.addEdge(src, dst, (src, dst, srcRepeat, srcSkip, dstRepeat, dstSkip))
     }

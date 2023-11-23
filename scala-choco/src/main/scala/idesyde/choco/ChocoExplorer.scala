@@ -31,6 +31,7 @@ import idesyde.core.Explorer
 import idesyde.core.ExplorationBidding
 import idesyde.core.ExplorationSolution
 import org.chocosolver.solver.exception.ContradictionException
+import java.util.concurrent.CopyOnWriteArraySet
 
 class ChocoExplorer extends Explorer:
 
@@ -312,7 +313,8 @@ class ChocoExplorer extends Explorer:
       //       solvable.rebuildFromChocoOutput(paretoSolution)
       //     })
       case _ => LazyList.empty
-    val iter = llist.iterator
+    val iter            = llist.iterator
+    val foundObjectives = CopyOnWriteArraySet[java.util.Map[String, java.lang.Double]]()
     Stream
       .generate(() => {
         if (iter.hasNext) {
@@ -322,6 +324,8 @@ class ChocoExplorer extends Explorer:
         }
       })
       .takeWhile(_.isDefined)
+      .filter(_.map(sol => !foundObjectives.contains(sol.objectives())).getOrElse(false))
+      .peek(_.map(sol => foundObjectives.add(sol.objectives())))
       .map(_.get)
   }
 

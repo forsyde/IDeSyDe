@@ -77,6 +77,9 @@ final class CanSolveDepTasksToPartitionedMultiCore
     val priorities = m.workload.prioritiesRateMonotonic.toArray
     val deadlines  = m.workload.relativeDeadlines.map(double2int)
     val wcets      = m.wcets.map(_.map(double2int))
+    println(deadlines.mkString(", "))
+    println("----")
+    println(wcets.map(_.mkString(",")).mkString("\n"))
     val maxUtilizations =
       m.platform.hardware.processingElems.map(p => m.maxUtilizations.getOrElse(p, 1.0))
 
@@ -336,6 +339,7 @@ final class CanSolveDepTasksToPartitionedMultiCore
 
     // chocoModel.getSolver().setLearningSignedClauses()
     chocoModel.getSolver().setRestarts(FailCounter(chocoModel, m.workload.taskSizes.size * m.platform.runtimes.schedulers.size), LubyCutoff(m.workload.taskSizes.size * m.platform.runtimes.schedulers.size), 0)
+    chocoModel.getSolver().setNoGoodRecordingFromRestarts()
 
     // chocoModel
     //   .getSolver()

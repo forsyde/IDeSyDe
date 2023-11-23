@@ -193,12 +193,14 @@ public interface StandaloneModule extends Module {
                                 for (var result : results.identified()) {
                                     decisionModels.add(result);
                                     OpaqueDecisionModel.from(result).toJsonString().ifPresent(bytes -> {
-                                        if (ctx.session.isOpen()) ctx.send(bytes);
+                                        if (ctx.session.isOpen())
+                                            ctx.send(bytes);
                                     });
                                 }
                                 logger.info("Finished a identification step with %s decision models identified"
                                         .formatted(decisionModels.size()));
-                                if (ctx.session.isOpen()) ctx.send("done");
+                                if (ctx.session.isOpen())
+                                    ctx.send("done");
                                 // executor.submit(() -> {
                                 // });
                             } else {
@@ -291,18 +293,23 @@ public interface StandaloneModule extends Module {
                                 logger.info("Starting exploration of a %s with %s"
                                         .formatted(decisionModel.get().category(), explorer.get().uniqueIdentifier()));
                                 explorer.get()
-                                        .explore(decisionModel.get(), previousSolutions.stream().collect(Collectors.toSet()), configuration.get())
+                                        .explore(decisionModel.get(),
+                                                previousSolutions.stream().collect(Collectors.toSet()),
+                                                configuration.get())
                                         .takeWhile(s -> ctx.session.isOpen())
                                         .filter(solution -> !configuration.get().strict
                                                 || previousSolutions.stream()
                                                         .noneMatch(other -> other.dominates(solution)))
                                         .forEach(s -> {
                                             previousSolutions.add(s);
-                                            if (ctx.session.isOpen()) ExplorationSolutionMessage.from(s).toJsonString().ifPresent(ctx::send);
-                                            logger.info("Sent a solution, total now: %s".formatted(previousSolutions.size()));
+                                            if (ctx.session.isOpen())
+                                                ExplorationSolutionMessage.from(s).toJsonString().ifPresent(ctx::send);
+                                            logger.info("Sent a solution, total now: %s"
+                                                    .formatted(previousSolutions.size()));
                                         });
                                 logger.info("Finished exploration");
-                                if (ctx.session.isOpen()) ctx.send("done");
+                                if (ctx.session.isOpen())
+                                    ctx.send("done");
                                 // ctx.closeSession();
                                 // executor.submit(() -> {
                                 // });
@@ -354,14 +361,16 @@ public interface StandaloneModule extends Module {
                                 for (var result : reversed) {
                                     OpaqueDesignModel.from(result).toJsonString().ifPresent(bytes -> {
                                         logger.info("Sending a reverse identified design model");
-                                        if(ctx.session.isOpen()) ctx.send(bytes);
+                                        if (ctx.session.isOpen())
+                                            ctx.send(bytes);
                                         // designModels.add(result);
                                     });
                                 }
                                 logger.info(
                                         "Finished a reverse identification step with %s decision models identified"
                                                 .formatted(designModels.size()));
-                                if(ctx.session.isOpen()) ctx.send("done");
+                                if (ctx.session.isOpen())
+                                    ctx.send("done");
                                 logger.info("Sent the done request");
                                 // ctx.closeSession();
                             } else {

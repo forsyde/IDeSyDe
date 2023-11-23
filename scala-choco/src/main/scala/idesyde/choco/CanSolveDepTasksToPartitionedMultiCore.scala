@@ -28,6 +28,8 @@ import idesyde.identification.choco.ChocoDecisionModel
 import idesyde.choco.HasDiscretizationToIntegers
 import idesyde.core.Explorer
 import idesyde.core.ExplorationSolution
+import org.chocosolver.solver.search.limits.FailCounter
+import org.chocosolver.solver.search.restart.LubyCutoff
 
 // object ConMonitorObj extends IMonitorContradiction {
 
@@ -332,8 +334,8 @@ final class CanSolveDepTasksToPartitionedMultiCore
     //     }
     //   })
 
-    chocoModel.getSolver().setLearningSignedClauses()
-    // chocoModel.getSolver().setRestarts(FailCounter(chocoModel, m.workload.taskSizes.size * m.platform.runtimes.schedulers.size), LubyCutoffStrategy(m.workload.taskSizes.size * m.platform.runtimes.schedulers.size), 0)
+    // chocoModel.getSolver().setLearningSignedClauses()
+    chocoModel.getSolver().setRestarts(FailCounter(chocoModel, m.workload.taskSizes.size * m.platform.runtimes.schedulers.size), LubyCutoff(m.workload.taskSizes.size * m.platform.runtimes.schedulers.size), 0)
 
     // chocoModel
     //   .getSolver()
@@ -435,7 +437,7 @@ final class CanSolveDepTasksToPartitionedMultiCore
       }).toMap
     // val channelSlotAllocations = ???
     ExplorationSolution(
-Map("nUsedPEs" -> nUsedPEs.getValue().asInstanceOf[java.lang.Double]).asJava,
+Map("nUsedPEs" -> nUsedPEs.getValue().toDouble.asInstanceOf[java.lang.Double]).asJava,
 m.copy(
       processMappings = processMappings,
       processSchedulings = processSchedulings,

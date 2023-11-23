@@ -27,8 +27,7 @@ jobs:
         cd ${{ github.workspace }}
         curl -fL "https://github.com/coursier/launchers/raw/master/cs-x86_64-pc-linux-static.gz" | gzip -d > cs
         chmod +x ./cs
-        ./cs setup --yes
-        cs java --jvm ${{ matrix.jdk }} --setup
+        ./cs setup --jvm ${{ matrix.jdk }} --yes
         sbt publishModules
   test-java-build-on-linux:
     strategy:
@@ -87,7 +86,7 @@ jobs:
         Expand-Archive -Path "cs-x86_64-pc-win32.zip"
         Rename-Item -Path "cs-x86_64-pc-win32.exe" -NewName "cs.exe"
         Remove-Item -Path "cs-x86_64-pc-win32.zip"
-        .\cs setup --yes
+        .\cs setup --jvm ${{ matrix.jdk }} --yes
         sbt publishModules
   test-java-build-on-windows:
     strategy:

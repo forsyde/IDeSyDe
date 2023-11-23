@@ -291,17 +291,15 @@ public interface StandaloneModule extends Module {
                                 logger.info("Starting exploration of a %s with %s"
                                         .formatted(decisionModel.get().category(), explorer.get().uniqueIdentifier()));
                                 explorer.get()
-                                        .explore(decisionModel.get(), previousSolutions, configuration.get())
-                                        // .takeWhile(s -> ctx.session.isOpen())
-                                        .filter(solution -> previousSolutions.stream()
-                                                        .anyMatch(other -> !other.dominates(solution)))
+                                        .explore(decisionModel.get(), previousSolutions.stream().collect(Collectors.toSet()), configuration.get())
+                                        .takeWhile(s -> ctx.session.isOpen())
                                         .filter(solution -> !configuration.get().strict
                                                 || previousSolutions.stream()
                                                         .noneMatch(other -> other.dominates(solution)))
                                         .forEach(s -> {
                                             previousSolutions.add(s);
                                             if (ctx.session.isOpen()) ExplorationSolutionMessage.from(s).toJsonString().ifPresent(ctx::send);
-                                            logger.info("Sent a solution");
+                                            logger.info("Sent a solution, total now: %s".formatted(previousSolutions.size()));
                                         });
                                 logger.info("Finished exploration");
                                 if (ctx.session.isOpen()) ctx.send("done");

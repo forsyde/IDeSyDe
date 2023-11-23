@@ -267,8 +267,7 @@ public interface CanExploreAADPTMWithJenetics extends AperiodicAsynchronousDataf
                                                 }
                                         }
                                         return new ExplorationSolution(solMap, decoded);
-                                })
-                                .filter(sol -> !previousSolutions.contains(sol));
+                                });
         }
 
         private Vec<double[]> evaluateAADPTM(

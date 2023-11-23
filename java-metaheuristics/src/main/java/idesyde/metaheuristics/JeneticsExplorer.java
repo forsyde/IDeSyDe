@@ -13,6 +13,7 @@ import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
+import java.util.concurrent.CopyOnWriteArraySet;
 import java.util.stream.Stream;
 
 public class JeneticsExplorer implements Explorer, CanExploreAADPMMMWithJenetics, CanExploreAADPTMWithJenetics {
@@ -53,14 +54,18 @@ public class JeneticsExplorer implements Explorer, CanExploreAADPMMMWithJenetics
     @Override
     public Stream<? extends ExplorationSolution> explore(DecisionModel decisionModel,
             Set<ExplorationSolution> previousSolutions, Configuration configuration) {
+        Stream<? extends ExplorationSolution> explorationStream = Stream.empty();
+        var foundSolutionObjectives = new CopyOnWriteArraySet<Map<String, Double>>();
         if (decisionModel instanceof AperiodicAsynchronousDataflowToPartitionedMemoryMappableMulticore aperiodicAsynchronousDataflowToPartitionedMemoryMappableMulticore) {
-            return exploreAADPMMM(aperiodicAsynchronousDataflowToPartitionedMemoryMappableMulticore, previousSolutions,
+            explorationStream = exploreAADPMMM(aperiodicAsynchronousDataflowToPartitionedMemoryMappableMulticore, previousSolutions,
                     configuration);
         } else if (decisionModel instanceof AperiodicAsynchronousDataflowToPartitionedTiledMulticore aperiodicAsynchronousDataflowToPartitionedTiledMulticore) {
-            return exploreAADPTM(aperiodicAsynchronousDataflowToPartitionedTiledMulticore, previousSolutions,
+            explorationStream = exploreAADPTM(aperiodicAsynchronousDataflowToPartitionedTiledMulticore, previousSolutions,
                     configuration);
+        } else {
+            explorationStream = Explorer.super.explore(decisionModel, previousSolutions, configuration);
         }
-        return Explorer.super.explore(decisionModel, previousSolutions, configuration);
+        return explorationStream.filter(sol -> !previousSolutions.contains(sol) && !foundSolutionObjectives.contains(sol.objectives())).peek(s -> foundSolutionObjectives.add(s.objectives()));
     }
 
     // @Override

@@ -284,8 +284,7 @@ public interface CanExploreAADPMMMWithJenetics extends AperiodicAsynchronousData
                         }
                     }
                     return new ExplorationSolution(solMap, decoded);
-                })
-                .filter(sol -> !previousSolutions.contains(sol));
+                });
     }
 
     private Vec<double[]> evaluateAADPMMM(

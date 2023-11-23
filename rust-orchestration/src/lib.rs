@@ -304,13 +304,13 @@ impl Module for ExternalServerModule {
                     debug!("Failed to send 'done': {}", e.to_string());
                 };
                 let mut reverse_identified = Vec::new();
-                println!("Asking for reverse {}", self.unique_identifier());
+                // println!("Asking for reverse {}", self.unique_identifier());
                 while let Ok(message) = ws.read() {
                     // besides the answer, also read the module's messages
                     match message {
                         tungstenite::Message::Text(txt_msg) => {
                             if txt_msg.eq_ignore_ascii_case("done") {
-                                println!("got done");
+                                // println!("got done");
                                 break;
                             } else if let Ok(opaque) =
                                 OpaqueDesignModel::from_json_str(txt_msg.as_str())
@@ -345,7 +345,7 @@ impl Module for ExternalServerModule {
                         _ => (),
                     }
                 }
-                println!("Reverse done for {}", self.unique_identifier());
+                // println!("Reverse done for {}", self.unique_identifier());
                 return reverse_identified;
             }
         }

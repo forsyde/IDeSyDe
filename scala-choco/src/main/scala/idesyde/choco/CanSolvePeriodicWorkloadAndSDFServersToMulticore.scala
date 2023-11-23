@@ -317,26 +317,28 @@ final class CanSolvePeriodicWorkloadAndSDFServersToMulticore
       m.tasksAndSDFs.sdfApplications.sdfDisjointComponents.map(_.toVector).toVector,
       m.tasksAndSDFs.sdfApplications.sdfMessages.map((s, t, _, l, p, _, _) => (s, t, l * p)),
       m.tasksAndSDFs.sdfApplications.jobsAndActors,
-      m.tasksAndSDFs.sdfApplications.jobsAndActors.flatMap(s =>
-        m.tasksAndSDFs.sdfApplications.jobsAndActors
-          .filter(t =>
-            m.tasksAndSDFs.sdfApplications.firingsPrecedenceGraph
-            .containsEdge(s, t)
-              // .get(s)
-              // .isDirectPredecessorOf(m.tasksAndSDFs.sdfApplications.firingsPrecedenceGraph.get(t))
-          )
-          .map(t => (s, t))
-      ),
-      m.tasksAndSDFs.sdfApplications.jobsAndActors.flatMap(s =>
-        m.tasksAndSDFs.sdfApplications.jobsAndActors
-          .filter(t =>
-            m.tasksAndSDFs.sdfApplications.firingsPrecedenceGraphWithCycles
-            .containsEdge(t, s)
-              // .get(s)
-              // .isDirectPredecessorOf(m.tasksAndSDFs.sdfApplications.firingsPrecedenceGraphWithCycles.get(t))
-          )
-          .map(t => (s, t))
-      ),
+      m.tasksAndSDFs.sdfApplications.firingsPrecedenceGraph,
+      m.tasksAndSDFs.sdfApplications.firingsPrecedenceGraphWithCycles,
+      // m.tasksAndSDFs.sdfApplications.jobsAndActors.flatMap(s =>
+      //   m.tasksAndSDFs.sdfApplications.jobsAndActors
+      //     .filter(t =>
+      //       m.tasksAndSDFs.sdfApplications.firingsPrecedenceGraph
+      //       .containsEdge(s, t)
+      //         // .get(s)
+      //         // .isDirectPredecessorOf(m.tasksAndSDFs.sdfApplications.firingsPrecedenceGraph.get(t))
+      //     )
+      //     .map(t => (s, t))
+      // ),
+      // m.tasksAndSDFs.sdfApplications.jobsAndActors.flatMap(s =>
+      //   m.tasksAndSDFs.sdfApplications.jobsAndActors
+      //     .filter(t =>
+      //       m.tasksAndSDFs.sdfApplications.firingsPrecedenceGraphWithCycles
+      //       .containsEdge(t, s)
+      //         // .get(s)
+      //         // .isDirectPredecessorOf(m.tasksAndSDFs.sdfApplications.firingsPrecedenceGraphWithCycles.get(t))
+      //     )
+      //     .map(t => (s, t))
+      // ),
       m.platform.runtimes.schedulers,
       m.tasksAndSDFs.sdfApplications.sdfRepetitionVectors,
       (i: Int) => actorExecution(m.tasksAndSDFs.sdfApplications.actorsIdentifiers.indexOf(m.tasksAndSDFs.sdfApplications.jobsAndActors(i)._1)),

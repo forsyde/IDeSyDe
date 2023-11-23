@@ -314,7 +314,6 @@ class ChocoExplorer extends Explorer:
     val iter = llist.iterator
     Stream
       .generate(() => {
-        println("next")
         if (iter.hasNext) {
           Some(iter.next())
         } else {

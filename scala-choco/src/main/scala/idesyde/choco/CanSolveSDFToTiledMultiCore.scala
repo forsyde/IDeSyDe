@@ -35,6 +35,8 @@ import org.chocosolver.solver.constraints.Constraint
 import idesyde.core.Explorer
 import idesyde.core.ExplorationSolution
 import org.jgrapht.alg.connectivity.ConnectivityInspector
+import org.jgrapht.graph.AsGraphUnion
+import org.jgrapht.alg.connectivity.KosarajuStrongConnectivityInspector
 
 final class CanSolveSDFToTiledMultiCore
     extends ChocoExplorable[SDFToTiledMultiCore]
@@ -544,7 +546,7 @@ final class CanSolveSDFToTiledMultiCore
       jobsAndActors
         .map((a, _) => processesMemoryMapping(m.sdfApplications.actorsIdentifiers.indexOf(a)))
         .toArray,
-      jobOrder.toArray
+      jobOrder.map(v => v.getValue()).toArray
     )
     val full = m.copy(
       sdfApplications = m.sdfApplications.copy(minimumActorThroughputs =
@@ -618,97 +620,151 @@ final class CanSolveSDFToTiledMultiCore
 
   private def recomputeTh(
       m: SDFToTiledMultiCore,
-      jobWeights: Vector[Double],
-      edgeWeigths: Vector[Vector[Double]],
+      jobWeight: Vector[Double],
+      edgeWeight: Vector[Vector[Double]],
       jobMapping: Array[Int],
-      jobOrder: Array[IntVar]
+      jobOrder: Array[Int]
   ): Vector[Double] = {
-    val jobsAndActors =
+
+    val maxCycles = Buffer.fill(jobWeight.size)(0.0)
+
+    val jobs =
       m.sdfApplications.jobsAndActors
+    val nJobs = jobs.size
+
+    val mappingGraph = DefaultDirectedGraph[(String, Int), DefaultEdge](classOf[DefaultEdge])
+    jobs.foreach(job => mappingGraph.addVertex(job))
+
     def mustSuceed(i: Int)(j: Int): Boolean = if (
-      jobMapping(i)
-        == jobMapping(j)
+    jobMapping(i) == jobMapping(j)
     ) {
-      jobOrder(i).stream().anyMatch(oi => jobOrder(j).contains(oi + 1))
+      jobOrder(i) + 1 == jobOrder(j)
     } else {
-      isSuccessor(m)(jobsAndActors)(i)(j)
+      m.sdfApplications.firingsPrecedenceGraph.containsEdge(jobs(i), jobs(j))
     }
+
     def mustCycle(i: Int)(j: Int): Boolean =
-      hasDataCycle(m)(jobsAndActors)(i)(j) ||
-        (jobMapping(i)
-          == jobMapping(j) && jobOrder(j)
-            .getUB() == 0 && jobOrder(i).getLB() > 0)
-    var ths = m.wcets.zipWithIndex
-      .map((w, ai) => m.sdfApplications.sdfRepetitionVectors(ai).toDouble / w.filter(_ > 0.0).min)
-      .toBuffer
-    val nJobs                 = jobsAndActors.size
-    val minimumDistanceMatrix = jobWeights.toBuffer
-    var dfsStack              = new Stack[Int](initialSize = nJobs)
-    val visited               = Buffer.fill(nJobs)(false)
-    val previous              = Buffer.fill(nJobs)(-1)
-    wfor(0, _ < nJobs, _ + 1) { src =>
-      // this is used instead of popAll in the hopes that no list is allocated
-      while (!dfsStack.isEmpty) dfsStack.pop()
+      (!m.sdfApplications.firingsPrecedenceGraph.containsEdge(jobs(i), jobs(j)) && m.sdfApplications.firingsPrecedenceGraphWithCycles.containsEdge(jobs(i), jobs(j))) ||
+        (jobMapping(i) == jobMapping(j) && jobOrder(j) == 0 && jobOrder(i) > 0)
+
+    wfor(0, _ < nJobs, _ + 1) { i =>
       wfor(0, _ < nJobs, _ + 1) { j =>
-        visited(j) = false
-        previous(j) = -1
-        minimumDistanceMatrix(j) = Double.NegativeInfinity
-      }
-      dfsStack.push(src)
-      while (!dfsStack.isEmpty) {
-        val i = dfsStack.pop()
-        if (!visited(i)) {
-          visited(i) = true
-          wfor(0, _ < nJobs, _ + 1) { j =>
-            if (mustSuceed(i)(j) || mustCycle(i)(j)) { // adjacents
-              if (j == src) {                          // found a cycle
-                minimumDistanceMatrix(i) = jobWeights(i) + edgeWeigths(i)(j)
-                var k = i
-                // go backwards until the src
-                while (k != src) {
-                  val kprev = previous(k)
-                  minimumDistanceMatrix(kprev) = Math.max(
-                    minimumDistanceMatrix(kprev),
-                    jobWeights(kprev) + edgeWeigths(kprev)(k) + minimumDistanceMatrix(k)
-                  )
-                  k = kprev
-                }
-              } else if (visited(j) && minimumDistanceMatrix(j) > Int.MinValue) { // found a previous cycle
-                var k = j
-                // go backwards until the src
-                while (k != src) {
-                  val kprev = previous(k)
-                  minimumDistanceMatrix(kprev) = Math.max(
-                    minimumDistanceMatrix(kprev),
-                    jobWeights(kprev) + edgeWeigths(kprev)(k) + minimumDistanceMatrix(k)
-                  )
-                  k = kprev
-                }
-              } else if (!visited(j)) {
-                dfsStack.push(j)
-                previous(j) = i
-              }
-            }
-          }
+        if (mustSuceed(i)(j) || mustCycle(i)(j)) {
+          mappingGraph.addEdge(jobs(i), jobs(j))
+        } else if (mappingGraph.containsEdge(jobs(i), jobs(j))) {
+          mappingGraph.removeEdge(jobs(i), jobs(j))
         }
       }
-      val (a, _) = jobsAndActors(src)
-      val adx    = m.sdfApplications.actorsIdentifiers.indexOf(a)
-      val th =
-        m.sdfApplications.sdfRepetitionVectors(adx).toDouble / minimumDistanceMatrix(src)
-      if (minimumDistanceMatrix(src) > Double.NegativeInfinity && ths(adx) > th) ths(adx) = th
     }
-    for (
-      group <- m.sdfApplications.sdfDisjointComponents; a1 <- group; a2 <- group; if a1 != a2;
-      a1i = m.sdfApplications.actorsIdentifiers.indexOf(a1);
-      a2i = m.sdfApplications.actorsIdentifiers.indexOf(a2);
-      qa1 = m.sdfApplications.sdfRepetitionVectors(a1i);
-      qa2 = m.sdfApplications.sdfRepetitionVectors(a2i)
-    ) {
-      ths(a1i) = Math.min(ths(a1i), ths(a2i) * qa1 / qa2)
-      ths(a2i) = Math.min(ths(a1i) * qa2 / qa1, ths(a2i))
-    }
-    ths.toVector
+
+    // merge the mapping graph with the original graph
+    val mergedGraph = AsGraphUnion(
+      m.sdfApplications.firingsPrecedenceGraphWithCycles,
+      mappingGraph
+    )
+
+    // find all strongly connected components
+    var sccAlgorithm = KosarajuStrongConnectivityInspector(mergedGraph);
+    sccAlgorithm.stronglyConnectedSets().forEach(sccJava => {
+        var cycleValue = 0.0
+        val scc = sccJava.asScala
+        // println(scc.mkString(", "))
+        // add the value in the cycle
+        for (jobI <- scc) {
+          val i = jobs.indexOf(jobI)
+            cycleValue = cycleValue + jobWeight(i)
+            for (jobJ <- scc; if m.sdfApplications.firingsPrecedenceGraphWithCycles.containsEdge(jobI, jobJ)) {
+              val j = jobs.indexOf(jobJ)
+              cycleValue = cycleValue + edgeWeight(i)(j)
+            }
+          maxCycles(i) = Math.max(maxCycles(i), cycleValue);
+        }
+    });
+    
+    
+    var mappedInspector = ConnectivityInspector(mergedGraph);
+    mappedInspector.connectedSets().forEach(wccJava => {
+      val wcc = wccJava.asScala
+      val maxCycleValue = wcc.map(jobI => maxCycles(jobs.indexOf(jobI))).max
+      wcc.map(jobs.indexOf).foreach(i => maxCycles(i) = Math.max(maxCycles(i), maxCycleValue))
+    })
+
+    // println(maxCycles.mkString(", "))
+    m.sdfApplications.actorsIdentifiers
+      .map(a => maxCycles.zipWithIndex.filter((l, i) => jobs(i)._1 == a).map((l, i) => jobs(i)._2.toDouble / l).max)
+      .toVector
+
+  //   var ths = m.wcets.zipWithIndex
+  //     .map((w, ai) => m.sdfApplications.sdfRepetitionVectors(ai).toDouble / w.filter(_ > 0.0).min)
+  //     .toBuffer
+  //   val nJobs                 = jobsAndActors.size
+  //   val minimumDistanceMatrix = jobWeights.toBuffer
+  //   var dfsStack              = new Stack[Int](initialSize = nJobs)
+  //   val visited               = Buffer.fill(nJobs)(false)
+  //   val previous              = Buffer.fill(nJobs)(-1)
+  //   wfor(0, _ < nJobs, _ + 1) { src =>
+  //     // this is used instead of popAll in the hopes that no list is allocated
+  //     while (!dfsStack.isEmpty) dfsStack.pop()
+  //     wfor(0, _ < nJobs, _ + 1) { j =>
+  //       visited(j) = false
+  //       previous(j) = -1
+  //       minimumDistanceMatrix(j) = Double.NegativeInfinity
+  //     }
+  //     dfsStack.push(src)
+  //     while (!dfsStack.isEmpty) {
+  //       val i = dfsStack.pop()
+  //       if (!visited(i)) {
+  //         visited(i) = true
+  //         wfor(0, _ < nJobs, _ + 1) { j =>
+  //           if (mustSuceed(i)(j) || mustCycle(i)(j)) { // adjacents
+  //             if (j == src) {                          // found a cycle
+  //               minimumDistanceMatrix(i) = jobWeights(i) + edgeWeigths(i)(j)
+  //               var k = i
+  //               // go backwards until the src
+  //               while (k != src) {
+  //                 val kprev = previous(k)
+  //                 minimumDistanceMatrix(kprev) = Math.max(
+  //                   minimumDistanceMatrix(kprev),
+  //                   jobWeights(kprev) + edgeWeigths(kprev)(k) + minimumDistanceMatrix(k)
+  //                 )
+  //                 k = kprev
+  //               }
+  //             } else if (visited(j) && minimumDistanceMatrix(j) > Int.MinValue) { // found a previous cycle
+  //               var k = j
+  //               // go backwards until the src
+  //               while (k != src) {
+  //                 val kprev = previous(k)
+  //                 minimumDistanceMatrix(kprev) = Math.max(
+  //                   minimumDistanceMatrix(kprev),
+  //                   jobWeights(kprev) + edgeWeigths(kprev)(k) + minimumDistanceMatrix(k)
+  //                 )
+  //                 k = kprev
+  //               }
+  //             } else if (!visited(j)) {
+  //               dfsStack.push(j)
+  //               previous(j) = i
+  //             }
+  //           }
+  //         }
+  //       }
+  //     }
+  //     val (a, _) = jobsAndActors(src)
+  //     val adx    = m.sdfApplications.actorsIdentifiers.indexOf(a)
+  //     val th =
+  //       m.sdfApplications.sdfRepetitionVectors(adx).toDouble / minimumDistanceMatrix(src)
+  //     if (minimumDistanceMatrix(src) > Double.NegativeInfinity && ths(adx) > th) ths(adx) = th
+  //   }
+  //   for (
+  //     group <- m.sdfApplications.sdfDisjointComponents; a1 <- group; a2 <- group; if a1 != a2;
+  //     a1i = m.sdfApplications.actorsIdentifiers.indexOf(a1);
+  //     a2i = m.sdfApplications.actorsIdentifiers.indexOf(a2);
+  //     qa1 = m.sdfApplications.sdfRepetitionVectors(a1i);
+  //     qa2 = m.sdfApplications.sdfRepetitionVectors(a2i)
+  //   ) {
+  //     ths(a1i) = Math.min(ths(a1i), ths(a2i) * qa1 / qa2)
+  //     ths(a2i) = Math.min(ths(a1i) * qa2 / qa1, ths(a2i))
+  //   }
+  //   ths.toVector
   }
 
 }

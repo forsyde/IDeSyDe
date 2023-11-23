@@ -187,14 +187,14 @@ public interface StandaloneModule extends Module {
                                 logger.info("Running a identification step with %s and %s decision and design models"
                                         .formatted(decisionModels.size(), designModels.size()));
                                 var results = identification(designModels, decisionModels);
+                                for (var msg : results.errors()) {
+                                    ctx.send(msg);
+                                }
                                 for (var result : results.identified()) {
                                     decisionModels.add(result);
                                     OpaqueDecisionModel.from(result).toJsonString().ifPresent(bytes -> {
                                         ctx.send(bytes);
                                     });
-                                }
-                                for (var msg : results.errors()) {
-                                    ctx.send(msg);
                                 }
                                 logger.info("Finished a identification step with %s decision models identified"
                                         .formatted(decisionModels.size()));
@@ -293,6 +293,8 @@ public interface StandaloneModule extends Module {
                                 explorer.get()
                                         .explore(decisionModel.get(), previousSolutions, configuration.get())
                                         // .takeWhile(s -> ctx.session.isOpen())
+                                        .filter(solution -> previousSolutions.stream()
+                                                        .anyMatch(other -> !other.dominates(solution)))
                                         .filter(solution -> !configuration.get().strict
                                                 || previousSolutions.stream()
                                                         .noneMatch(other -> other.dominates(solution)))
@@ -303,6 +305,7 @@ public interface StandaloneModule extends Module {
                                         });
                                 logger.info("Finished exploration");
                                 ctx.send("done");
+                                // ctx.closeSession();
                                 // executor.submit(() -> {
                                 // });
                             } else {
@@ -352,6 +355,7 @@ public interface StandaloneModule extends Module {
                                 var reversed = reverseIdentification(exploredDecisionModels, designModels);
                                 for (var result : reversed) {
                                     OpaqueDesignModel.from(result).toJsonString().ifPresent(bytes -> {
+                                        logger.info("Sending a reverse identified design model");
                                         ctx.send(bytes);
                                         // designModels.add(result);
                                     });
@@ -360,6 +364,8 @@ public interface StandaloneModule extends Module {
                                         "Finished a reverse identification step with %s decision models identified"
                                                 .formatted(designModels.size()));
                                 ctx.send("done");
+                                logger.info("Sent the done request");
+                                ctx.closeSession();
                             } else {
                                 OpaqueDesignModel.fromJsonString(ctx.message()).flatMap(this::fromOpaqueDesign)
                                         .ifPresentOrElse(

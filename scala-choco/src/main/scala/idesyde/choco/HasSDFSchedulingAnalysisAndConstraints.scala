@@ -18,6 +18,9 @@ import scala.collection.mutable.Buffer
 import idesyde.common.SDFToTiledMultiCore
 import idesyde.identification.choco.models.sdf.StreamingJobsThroughputPropagator
 import org.jgrapht.alg.connectivity.ConnectivityInspector
+import org.jgrapht.traverse.TopologicalOrderIterator
+import org.jgrapht.Graph
+import org.jgrapht.graph.DefaultEdge
 
 trait HasSDFSchedulingAnalysisAndConstraints
     extends HasUtils
@@ -59,8 +62,10 @@ trait HasSDFSchedulingAnalysisAndConstraints
       actorSubGraphs: Vector[Vector[String]],
       messages: Vector[(String, String, Long)],
       jobsAndActors: Vector[(String, Int)],
-      partialOrder: Vector[((String, Int), (String, Int))],
-      partialOrderWithCycles: Vector[((String, Int), (String, Int))],
+      jobGraphWithoutCycles: Graph[(String, Int), DefaultEdge],
+      jobGraphWithCycles: Graph[(String, Int), DefaultEdge],
+      // partialOrder: Vector[((String, Int), (String, Int))],
+      // partialOrderWithCycles: Vector[((String, Int), (String, Int))],
       schedulers: Vector[String],
       maxRepetitionsPerActors: (Int) => Int,
       jobMapping: (Int) => IntVar,
@@ -160,7 +165,7 @@ trait HasSDFSchedulingAnalysisAndConstraints
     for (
       ((ai, qi), i) <- jobsAndActors.zipWithIndex;
       ((aj, qj), j) <- jobsAndActors.zipWithIndex;
-      if partialOrder.contains(((ai, qi), (aj, qj)));
+      if jobGraphWithoutCycles.containsEdge((ai, qi), (aj, qj));
       aix = actors.indexOf(ai);
       ajx = actors.indexOf(aj)
     ) {
@@ -199,9 +204,11 @@ trait HasSDFSchedulingAnalysisAndConstraints
     // -----/
     // throughput
     val thPropagator = StreamingJobsThroughputPropagator(
-      jobsAndActors.size,
-      isSuccessor(partialOrder)(jobsAndActors),
-      hasDataCycle(partialOrderWithCycles)(jobsAndActors),
+      jobsAndActors,
+      jobGraphWithoutCycles,
+      jobGraphWithCycles,
+      // isSuccessor(partialOrder)(jobsAndActors),
+      // hasDataCycle(partialOrderWithCycles)(jobsAndActors),
       jobOrder,
       (0 until jobsAndActors.size).map(jobMapping(_)).toArray,
       jobsAndActors.map((a, _) => durations(actors.indexOf(a))).toArray,
@@ -257,6 +264,7 @@ trait HasSDFSchedulingAnalysisAndConstraints
     val schedulers = m.platform.runtimes.schedulers
 
     val maxRepetitionsPerActors = m.sdfApplications.sdfRepetitionVectors
+    // val wccs = ConnectivityInspector(m.sdfApplications.firingsPrecedenceGraph)
 
     postSDFTimingAnalysis(
       chocoModel,
@@ -264,25 +272,30 @@ trait HasSDFSchedulingAnalysisAndConstraints
       m.sdfApplications.sdfDisjointComponents.map(_.toVector).toVector,
       m.sdfApplications.sdfMessages.map((s, t, _, l, p, _, _) => (s, t, l * p)),
       jobsAndActors,
-      jobsAndActors.flatMap(s =>
-        jobsAndActors
-          .filter(t =>
-            m.sdfApplications.firingsPrecedenceGraph
-              .containsEdge(s, t)
-          // .get(s)
-          // .isDirectPredecessorOf(m.sdfApplications.firingsPrecedenceGraph.get(t))
-          )
-          .map(t => (s, t))
-      ),
-      jobsAndActors.flatMap(s =>
-        jobsAndActors
-          .filter(t =>
-            m.sdfApplications.firingsPrecedenceGraphWithCycles
-              .containsEdge(s, t)
-          // .isDirectPredecessorOf(m.sdfApplications.firingsPrecedenceGraphWithCycles.get(t))
-          )
-          .map(t => (s, t))
-      ),
+      m.sdfApplications.firingsPrecedenceGraph,
+      m.sdfApplications.firingsPrecedenceGraphWithCycles,
+      // jobsAndActors.flatMap(s =>
+      //   jobsAndActors
+      //     .filter(t =>
+      //       // inspector.pathExists(s, t)
+      //       m.sdfApplications.firingsPrecedenceGraph
+      //         .containsEdge(s, t)
+      //     // .get(s)
+      //     // .isDirectPredecessorOf(m.sdfApplications.firingsPrecedenceGraph.get(t))
+      //     )
+      //     .map(t => (s, t))
+      // ),
+      // jobsAndActors.flatMap(s =>
+      //   jobsAndActors
+      //     .filter(t =>
+      //       !m.sdfApplications.firingsPrecedenceGraph
+      //         .containsEdge(s, t) &&
+      //       m.sdfApplications.firingsPrecedenceGraphWithCycles
+      //         .containsEdge(s, t)
+      //     // .isDirectPredecessorOf(m.sdfApplications.firingsPrecedenceGraphWithCycles.get(t))
+      //     )
+      //     .map(t => (s, t))
+      // ),
       schedulers,
       maxRepetitionsPerActors,
       jobMapping,
@@ -313,11 +326,11 @@ trait HasSDFSchedulingAnalysisAndConstraints
       .contains((jobsAndActors(j), jobsAndActors(i)))
 
   def hasDataCycle(m: SDFToTiledMultiCore)(jobsAndActors: Vector[(String, Int)])(i: Int)(j: Int) = {
-    val inspector = ConnectivityInspector(m.sdfApplications.firingsPrecedenceGraph)
+    // val inspector = ConnectivityInspector(m.sdfApplications.firingsPrecedenceGraph)
     val inspectorWithCyles = ConnectivityInspector(
       m.sdfApplications.firingsPrecedenceGraphWithCycles
     )
-    inspector.pathExists(jobsAndActors(i), jobsAndActors(j)) &&
+    // inspector.pathExists(jobsAndActors(i), jobsAndActors(j)) &&
     inspectorWithCyles.pathExists(jobsAndActors(j), jobsAndActors(i))
     // m.sdfApplications.firingsPrecedenceGraph
     //   .containsEdge(jobsAndActors(i), jobsAndActors(j))

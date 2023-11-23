@@ -516,6 +516,7 @@ systemgraph {
   (consumer, initialTokenValues, producer)
   {
     "numOfInitialTokens": 0_i,
+    "numInitialTokens": 0_i,
     "maxSizeInBits": 0_l,
     "tokenSizeInBits": 256_l
   }
@@ -524,6 +525,7 @@ systemgraph {
   (consumer, initialTokenValues, producer)
   {
     "numOfInitialTokens": 0_i,
+    "numInitialTokens": 0_i,
     "maxSizeInBits": 0_l,
     "tokenSizeInBits": 64_l
   }
@@ -532,6 +534,7 @@ systemgraph {
   (consumer, initialTokenValues, producer)
   {
     "numOfInitialTokens": 1_i,
+    "numInitialTokens": 1_i,
     "maxSizeInBits": 0_l,
     "tokenSizeInBits": 512_l
   }
@@ -540,6 +543,7 @@ systemgraph {
   (consumer, initialTokenValues, producer)
   {
     "numOfInitialTokens": 0_i,
+    "numInitialTokens": 0_i,
     "maxSizeInBits": 0_l,
     "tokenSizeInBits": 64_l
   }
@@ -548,6 +552,7 @@ systemgraph {
   (consumer, initialTokenValues, producer)
   {
     "numOfInitialTokens": 0_i,
+    "numInitialTokens": 0_i,
     "maxSizeInBits": 0_l,
     "tokenSizeInBits": 256_l
   }
@@ -556,6 +561,7 @@ systemgraph {
   (consumer, initialTokenValues, producer)
   {
     "numOfInitialTokens": 1_i,
+    "numInitialTokens": 1_i,
     "maxSizeInBits": 0_l,
     "tokenSizeInBits": 256_l
   }
@@ -564,6 +570,7 @@ systemgraph {
   (consumer, initialTokenValues, producer)
   {
     "numOfInitialTokens": 0_i,
+    "numInitialTokens": 0_i,
     "maxSizeInBits": 0_l,
     "tokenSizeInBits": 64_l
   }
@@ -572,6 +579,7 @@ systemgraph {
   (consumer, initialTokenValues, producer)
   {
     "numOfInitialTokens": 0_i,
+    "numInitialTokens": 0_i,
     "maxSizeInBits": 0_l,
     "tokenSizeInBits": 512_l
   }
@@ -580,6 +588,7 @@ systemgraph {
   (consumer, initialTokenValues, producer)
   {
     "numOfInitialTokens": 0_i,
+    "numInitialTokens": 0_i,
     "maxSizeInBits": 0_l,
     "tokenSizeInBits": 64_l
   }
@@ -588,6 +597,7 @@ systemgraph {
   (consumer, initialTokenValues, producer)
   {
     "numOfInitialTokens": 0_i,
+    "numInitialTokens": 0_i,
     "maxSizeInBits": 0_l,
     "tokenSizeInBits": 256_l
   }
@@ -596,6 +606,7 @@ systemgraph {
   (consumer, initialTokenValues, producer)
   {
     "numOfInitialTokens": 0_i,
+    "numInitialTokens": 0_i,
     "maxSizeInBits": 0_l,
     "tokenSizeInBits": 64_l
   }
@@ -604,6 +615,7 @@ systemgraph {
   (consumer, initialTokenValues, producer)
   {
     "numOfInitialTokens": 0_i,
+    "numInitialTokens": 0_i,
     "maxSizeInBits": 0_l,
     "tokenSizeInBits": 64_l
   }

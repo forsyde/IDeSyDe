@@ -8,10 +8,10 @@ import scala.collection.mutable.Buffer
 import org.chocosolver.solver.constraints.Propagator
 import org.chocosolver.util.ESat
 import org.chocosolver.solver.constraints.PropagatorPriority
-import idesyde.utils.HasUtils
 import java.time.LocalDateTime
 import org.chocosolver.solver.objective.ParetoMaximizer
 import org.chocosolver.solver.learn.ExplanationForSignedClause
+import idesyde.choco.HasUtils
 
 class ParetoMinimizationBrancher(val objectives: Array[IntVar])
     extends Propagator[IntVar](objectives, PropagatorPriority.QUADRATIC, false)

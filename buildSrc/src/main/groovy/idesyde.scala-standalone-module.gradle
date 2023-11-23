@@ -1,0 +1,17 @@
+plugins {
+    id 'idesyde.scala-library'
+    id 'application'
+    id 'com.github.johnrengelman.shadow'
+}
+
+archivesBaseName = project.name
+
+shadowJar {
+    zip64 true
+}
+
+task publishModules(type: Copy) {
+    dependsOn tasks.shadowJar
+    from tasks.shadowJar.outputs
+    into "${rootProject.projectDir}/modules"
+}

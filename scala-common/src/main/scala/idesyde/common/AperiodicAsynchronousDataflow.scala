@@ -1,7 +1,10 @@
 package idesyde.common
 
 import upickle.default.*
-import idesyde.core.CompleteDecisionModel
+import idesyde.core.DecisionModel
+import java.{util => ju}
+
+import scala.jdk.CollectionConverters._
 
 /** This decision model abstract asynchronous dataflow models that can be described by a repeating
   * job-graph of this asynchronous processes. Two illustratives dataflow models fitting this
@@ -31,15 +34,15 @@ final case class AperiodicAsynchronousDataflow(
     val process_path_maximum_latency: Map[String, Map[String, Double]],
     val process_put_in_buffer_in_bits: Map[String, Map[String, Long]],
     val processes: Set[String]
-) extends StandardDecisionModel
-    with CompleteDecisionModel
+) extends DecisionModel
     derives ReadWriter {
 
-  override def bodyAsText: String = write(this)
+  override def asJsonString(): java.util.Optional[String] = try { java.util.Optional.of(write(this)) } catch { case _ => java.util.Optional.empty() }
 
-  override def category: String = "AperiodicAsynchronousDataflow"
+  override def asCBORBinary(): java.util.Optional[Array[Byte]] = try { java.util.Optional.of(writeBinary(this)) } catch { case _ => java.util.Optional.empty() }
 
-  override def coveredElements: Set[String] = processes.toSet ++ buffers.toSet
+  override def category(): String = "AperiodicAsynchronousDataflow"
 
-  override def bodyAsBinary: Array[Byte] = writeBinary(this)
+  override def part(): ju.Set[String] = (processes.toSet ++ buffers.toSet).asJava
+
 }

@@ -5,7 +5,6 @@ import java.util.Set;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.dataformat.cbor.CBORFactory;
-import idesyde.core.headers.DesignModelHeader;
 
 /**
  * The trait/interface for a design model in the design space identification
@@ -35,17 +34,19 @@ import idesyde.core.headers.DesignModelHeader;
  */
 public interface DesignModel {
 
-    DesignModelHeader header();
+//    default DesignModelHeader header() {
+//        return new DesignModelHeader(category(), elements(), new HashSet<>());
+//    }
 
     /**
-     * The set of identifiers for partially identifiable elements
+     * @return The set of identifiers for partially identifiable elements
      */
-    default Set<String> elems() {
+    default Set<String> elements() {
         return Set.of();
     }
 
     /**
-     * The category that describes this design model. Default value (and
+     * @return The category that describes this design model. Default value (and
      * recommendation) is the class name.
      * 
      */
@@ -53,10 +54,27 @@ public interface DesignModel {
         return getClass().getSimpleName();
     }
 
-    default Optional<String> bodyAsString() {
+    /**
+     * @return The format associated with this decision model. E.g. `fiodl` for ForSyDe IO
+     * files.
+     */
+    default String format() {
+        return "";
+    }
+
+    /**
+     * @return this design model as a string, when possible.
+     */
+    default Optional<String> asString() {
         return Optional.empty();
     }
 
+    /**
+     * The shared and static Jackson object mapper used for (de) serialization to (from) JSON.
+     */
     static final ObjectMapper objectMapper = new ObjectMapper();
+    /**
+     * The shared and static Jackson object mapper used for (de) serialization to (from) CBOR.
+     */
     static final ObjectMapper objectMapperCBOR = new ObjectMapper(new CBORFactory());
 }

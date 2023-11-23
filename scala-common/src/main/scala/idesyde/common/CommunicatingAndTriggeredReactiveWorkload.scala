@@ -1,12 +1,18 @@
 package idesyde.common
 
 import spire.math.Rational
-import scalax.collection.immutable.Graph
-import scalax.collection.GraphPredef._
+// import scalax.collection.immutable.Graph
+// import scalax.collection.GraphPredef._
 import scala.collection.mutable
 
 import upickle.default._
-import idesyde.core.CompleteDecisionModel
+import idesyde.core.DecisionModel
+import java.{util => ju}
+
+import scala.jdk.CollectionConverters._
+import org.jgrapht.graph.DefaultEdge
+import org.jgrapht.graph.DefaultDirectedGraph
+import org.jgrapht.traverse.TopologicalOrderIterator
 
 final case class CommunicatingAndTriggeredReactiveWorkload(
     val tasks: Vector[String],
@@ -31,8 +37,7 @@ final case class CommunicatingAndTriggeredReactiveWorkload(
     val triggerGraphSrc: Vector[String],
     val triggerGraphDst: Vector[String],
     val hasORTriggerSemantics: Set[String]
-) extends StandardDecisionModel
-    with CompleteDecisionModel
+) extends DecisionModel
     with CommunicatingExtendedDependenciesPeriodicWorkload
     with InstrumentedWorkloadMixin
     derives ReadWriter {
@@ -41,24 +46,30 @@ final case class CommunicatingAndTriggeredReactiveWorkload(
     for ((s, i) <- dataGraphSrc.zipWithIndex) yield (s, dataGraphDst(i), dataGraphMessageSize(i))
 
   lazy val triggerGraph = triggerGraphSrc.zip(triggerGraphDst)
-  val coveredElements =
-    (tasks ++ upsamples ++ downsamples ++ periodicSources ++ dataChannels).toSet ++ triggerGraph.toSet
-      .map(_.toString)
 
-  lazy val stimulusGraph = Graph.from(
-    tasks ++ upsamples ++ downsamples ++ periodicSources,
-    triggerGraph.map((s, t) => s ~> t)
-  )
+  lazy val stimulusGraph = {
+    val g = DefaultDirectedGraph[String, DefaultEdge](classOf[DefaultEdge])
+    for (v      <- tasks ++ upsamples ++ downsamples ++ periodicSources) g.addVertex(v)
+    for ((s, t) <- triggerGraph) g.addEdge(s, t)
+    // Graph.from(
+    //   tasks ++ upsamples ++ downsamples ++ periodicSources,
+    //   triggerGraph.map((s, t) => s ~> t)
+    // )
+    g
+  }
 
   val (processes, periods, offsets, relativeDeadlines) = {
     var gen              = mutable.Buffer[(String, Double, Double, Double)]()
     var propagatedEvents = mutable.Map[String, Set[(Double, Double, Double)]]()
-    for (
-      topoSort <- stimulusGraph.topologicalSort(); nextInner <- topoSort; next = nextInner.value
-    ) {
+    val topoSort         = TopologicalOrderIterator(stimulusGraph)
+    while (topoSort.hasNext()) {
+      val next = topoSort.next()
       // gather all incomin stimulus
-      val incomingEvents = nextInner.diPredecessors
-        .flatMap(pred => propagatedEvents.get(pred.value))
+      val incomingEvents = stimulusGraph
+        .incomingEdgesOf(next)
+        .asScala
+        .map(stimulusGraph.getEdgeSource)
+        .flatMap(pred => propagatedEvents.get(pred))
         .foldLeft(Set[(Double, Double, Double)]())((s1, s2) => s1 | s2)
       val events = if (periodicSources.contains(next) || hasORTriggerSemantics.contains(next)) {
         incomingEvents
@@ -103,6 +114,9 @@ final case class CommunicatingAndTriggeredReactiveWorkload(
         })
       }
     }
+    // for (
+    //   topoSort <- stimulusGraph.topologicalSort(); nextInner <- topoSort; next = nextInner.value
+    // ) {}
     (
       gen.map((t, p, o, d) => t).toVector,
       gen.map((t, p, o, d) => p).toVector,
@@ -120,7 +134,9 @@ final case class CommunicatingAndTriggeredReactiveWorkload(
     // first consider task-to-task connections
     var affineControlGraphEdges = mutable.Buffer[(Int, Int, Int, Int, Int, Int)]()
     for (
-      srcTask <- tasks; dst <- stimulusGraph.get(srcTask).diSuccessors; dstTask = dst.value;
+      srcTask <- tasks; dst <- stimulusGraph.outgoingEdgesOf(srcTask).asScala;
+      dstTask = stimulusGraph
+        .getEdgeTarget(dst);
       if tasks.contains(dstTask)
     ) {
       if (hasORTriggerSemantics.contains(dstTask)) {
@@ -147,9 +163,9 @@ final case class CommunicatingAndTriggeredReactiveWorkload(
     // now consider upsampling connections
     for (
       (upsample, idxUpsample) <- upsamples.zipWithIndex;
-      src                     <- stimulusGraph.get(upsample).diPredecessors;
-      dst                     <- stimulusGraph.get(upsample).diSuccessors;
-      srcTask = src.value; dstTask = dst.value;
+      src                     <- stimulusGraph.incomingEdgesOf(upsample).asScala;
+      dst                     <- stimulusGraph.outgoingEdgesOf(upsample).asScala;
+      srcTask = stimulusGraph.getEdgeSource(src); dstTask = stimulusGraph.getEdgeTarget(dst);
       if tasks.contains(srcTask) && tasks.contains(dstTask)
     ) {
       if (hasORTriggerSemantics.contains(dstTask)) {
@@ -186,9 +202,9 @@ final case class CommunicatingAndTriggeredReactiveWorkload(
     // now finally consider downsample connections
     for (
       (downsample, idxDownsample) <- downsamples.zipWithIndex;
-      src                         <- stimulusGraph.get(downsample).diPredecessors;
-      dst                         <- stimulusGraph.get(downsample).diSuccessors;
-      srcTask = src.value; dstTask = dst.value;
+      src                         <- stimulusGraph.incomingEdgesOf(downsample).asScala;
+      dst                         <- stimulusGraph.outgoingEdgesOf(downsample).asScala;
+      srcTask = stimulusGraph.getEdgeSource(src); dstTask = stimulusGraph.getEdgeTarget(dst);
       if tasks.contains(srcTask) && tasks.contains(dstTask)
     ) {
       if (hasORTriggerSemantics.contains(dstTask)) {
@@ -226,11 +242,19 @@ final case class CommunicatingAndTriggeredReactiveWorkload(
     affineControlGraphEdges.toSet
   }
 
-  def bodyAsText: String = write(this)
+  override def asJsonString(): java.util.Optional[String] = try {
+    java.util.Optional.of(write(this))
+  } catch { case _ => java.util.Optional.empty() }
 
-  def bodyAsBinary: Array[Byte] = writeBinary(this)
+  override def asCBORBinary(): java.util.Optional[Array[Byte]] = try {
+    java.util.Optional.of(writeBinary(this))
+  } catch { case _ => java.util.Optional.empty() }
 
   def messagesMaxSizes = dataChannelSizes
 
-  def category = "CommunicatingAndTriggeredReactiveWorkload"
+  override def category() = "CommunicatingAndTriggeredReactiveWorkload"
+
+  override def part(): ju.Set[String] =
+    ((tasks ++ upsamples ++ downsamples ++ periodicSources ++ dataChannels).toSet ++ triggerGraph.toSet
+      .map(_.toString)).asJava
 }

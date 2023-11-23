@@ -1,8 +1,6 @@
 use std::collections::{HashMap, HashSet};
 
-use idesyde_core::{
-    headers::DecisionModelHeader, impl_decision_model_standard_parts, DecisionModel,
-};
+use idesyde_core::{impl_decision_model_standard_parts, DecisionModel};
 use schemars::JsonSchema;
 use serde::{Deserialize, Serialize};
 
@@ -88,7 +86,7 @@ pub struct CommunicatingAndTriggeredReactiveWorkload {
 impl DecisionModel for CommunicatingAndTriggeredReactiveWorkload {
     impl_decision_model_standard_parts!(CommunicatingAndTriggeredReactiveWorkload);
 
-    fn header(&self) -> idesyde_core::headers::DecisionModelHeader {
+    fn part(&self) -> HashSet<String> {
         let mut elems: HashSet<String> = HashSet::new();
         elems.extend(self.tasks.iter().map(|x| x.to_owned()));
         elems.extend(self.data_channels.iter().map(|x| x.to_owned()));
@@ -111,11 +109,7 @@ impl DecisionModel for CommunicatingAndTriggeredReactiveWorkload {
                 "trigger", self.trigger_graph_src[i], "", self.trigger_graph_dst[i], ""
             ));
         }
-        DecisionModelHeader {
-            category: self.category(),
-            body_path: None,
-            covered_elements: elems.into_iter().collect(),
-        }
+        elems
     }
 }
 
@@ -133,45 +127,41 @@ impl DecisionModel for CommunicatingAndTriggeredReactiveWorkload {
 ///
 #[derive(Debug, PartialEq, Serialize, Deserialize, Clone, JsonSchema)]
 pub struct SDFApplication {
-    pub actors_identifiers: HashSet<String>,
-    pub self_concurrent_actors: HashSet<String>,
-    pub channels_identifiers: HashSet<String>,
-    pub topology_srcs: Vec<String>,
-    pub topology_dsts: Vec<String>,
-    pub topology_production: Vec<u64>,
-    pub topology_consumption: Vec<u64>,
-    pub topology_initial_tokens: Vec<u64>,
-    pub topology_token_size_in_bits: Vec<u64>,
-    pub topology_channel_names: Vec<HashSet<String>>,
     pub actor_minimum_throughputs: HashMap<String, f64>,
-    pub channel_token_sizes: HashMap<String, u64>,
+    pub actors_identifiers: HashSet<String>,
     pub chain_maximum_latency: HashMap<String, HashMap<String, f64>>,
+    pub channel_token_sizes: HashMap<String, u64>,
+    pub channels_identifiers: HashSet<String>,
+    pub self_concurrent_actors: HashSet<String>,
+    pub topology_channel_names: Vec<HashSet<String>>,
+    pub topology_consumption: Vec<u32>,
+    pub topology_dsts: Vec<String>,
+    pub topology_initial_tokens: Vec<u32>,
+    pub topology_production: Vec<u32>,
+    pub topology_srcs: Vec<String>,
+    pub topology_token_size_in_bits: Vec<u64>,
 }
 
 impl DecisionModel for SDFApplication {
     impl_decision_model_standard_parts!(SDFApplication);
 
-    fn header(&self) -> DecisionModelHeader {
+    fn part(&self) -> HashSet<String> {
         let mut elems: HashSet<String> = HashSet::new();
         elems.extend(self.actors_identifiers.iter().map(|x| x.to_owned()));
         elems.extend(self.channels_identifiers.iter().map(|x| x.to_owned()));
         // for i in 0..self.topology_srcs.len() {
         //     elems.insert(format!(
         //         "({}, {}, {})={}:{}-{}:{}",
+        //         self.topology_consumption[i],
         //         self.topology_production[i],
-        //         self.topology_production[i],
-        //         self.topology_initial_token[i],
+        //         self.topology_initial_tokens[i],
         //         self.topology_srcs[i],
         //         "",
         //         self.topology_dsts[i],
         //         ""
         //     ));
         // }
-        DecisionModelHeader {
-            category: self.category(),
-            body_path: None,
-            covered_elements: elems.into_iter().collect(),
-        }
+        elems
     }
 }
 
@@ -190,15 +180,10 @@ pub struct AnalysedSDFApplication {
 impl DecisionModel for AnalysedSDFApplication {
     impl_decision_model_standard_parts!(AnalysedSDFApplication);
 
-    fn header(&self) -> DecisionModelHeader {
+    fn part(&self) -> HashSet<String> {
         let mut elems: HashSet<String> = HashSet::new();
-        let sdfheader = self.sdf_application.header();
-        elems.extend(sdfheader.covered_elements.iter().map(|x| x.to_owned()));
-        DecisionModelHeader {
-            category: self.category(),
-            body_path: None,
-            covered_elements: elems.into_iter().collect(),
-        }
+        elems.extend(self.sdf_application.part().iter().map(|x| x.to_owned()));
+        elems
     }
 }
 
@@ -221,7 +206,7 @@ pub struct TiledMultiCore {
 impl DecisionModel for TiledMultiCore {
     impl_decision_model_standard_parts!(TiledMultiCore);
 
-    fn header(&self) -> DecisionModelHeader {
+    fn part(&self) -> HashSet<String> {
         let mut elems: HashSet<String> = HashSet::new();
         elems.extend(self.processors.iter().map(|x| x.to_owned()));
         elems.extend(self.memories.iter().map(|x| x.to_owned()));
@@ -237,11 +222,7 @@ impl DecisionModel for TiledMultiCore {
                 ""
             ));
         }
-        DecisionModelHeader {
-            category: self.category(),
-            body_path: None,
-            covered_elements: elems.into_iter().collect(),
-        }
+        elems
     }
 }
 
@@ -270,7 +251,7 @@ pub struct MemoryMappableMultiCore {
 impl DecisionModel for MemoryMappableMultiCore {
     impl_decision_model_standard_parts!(MemoryMappableMultiCore);
 
-    fn header(&self) -> DecisionModelHeader {
+    fn part(&self) -> HashSet<String> {
         let mut elems: HashSet<String> = HashSet::new();
         elems.extend(self.processing_elems.iter().map(|x| x.to_owned()));
         elems.extend(self.storage_elems.iter().map(|x| x.to_owned()));
@@ -281,11 +262,7 @@ impl DecisionModel for MemoryMappableMultiCore {
                 self.topology_srcs[i], "", self.topology_dsts[i], ""
             ));
         }
-        DecisionModelHeader {
-            category: self.category(),
-            body_path: None,
-            covered_elements: elems.into_iter().collect(),
-        }
+        elems
     }
 }
 
@@ -312,7 +289,7 @@ pub struct RuntimesAndProcessors {
 impl DecisionModel for RuntimesAndProcessors {
     impl_decision_model_standard_parts!(RuntimesAndProcessors);
 
-    fn header(&self) -> DecisionModelHeader {
+    fn part(&self) -> HashSet<String> {
         let mut elems: HashSet<String> = HashSet::new();
         elems.extend(self.processors.iter().map(|x| x.to_owned()));
         elems.extend(self.runtimes.iter().map(|x| x.to_owned()));
@@ -322,11 +299,7 @@ impl DecisionModel for RuntimesAndProcessors {
         for (pe, sched) in &self.processor_affinities {
             elems.insert(format!("{}={}:{}-{}:{}", "scheduler", pe, "", sched, ""));
         }
-        DecisionModelHeader {
-            category: self.category(),
-            body_path: None,
-            covered_elements: elems.into_iter().collect(),
-        }
+        elems
     }
 }
 
@@ -344,27 +317,11 @@ pub struct PartitionedTiledMulticore {
 impl DecisionModel for PartitionedTiledMulticore {
     impl_decision_model_standard_parts!(PartitionedTiledMulticore);
 
-    fn header(&self) -> DecisionModelHeader {
+    fn part(&self) -> HashSet<String> {
         let mut elems: HashSet<String> = HashSet::new();
-        elems.extend(
-            self.hardware
-                .header()
-                .covered_elements
-                .iter()
-                .map(|x| x.to_owned()),
-        );
-        elems.extend(
-            self.runtimes
-                .header()
-                .covered_elements
-                .iter()
-                .map(|x| x.to_owned()),
-        );
-        DecisionModelHeader {
-            category: self.category(),
-            body_path: None,
-            covered_elements: elems.into_iter().collect(),
-        }
+        elems.extend(self.hardware.part().iter().map(|x| x.to_owned()));
+        elems.extend(self.runtimes.part().iter().map(|x| x.to_owned()));
+        elems
     }
 }
 
@@ -382,27 +339,11 @@ pub struct PartitionedMemoryMappableMulticore {
 impl DecisionModel for PartitionedMemoryMappableMulticore {
     impl_decision_model_standard_parts!(PartitionedMemoryMappableMulticore);
 
-    fn header(&self) -> DecisionModelHeader {
+    fn part(&self) -> HashSet<String> {
         let mut elems: HashSet<String> = HashSet::new();
-        elems.extend(
-            self.hardware
-                .header()
-                .covered_elements
-                .iter()
-                .map(|x| x.to_owned()),
-        );
-        elems.extend(
-            self.runtimes
-                .header()
-                .covered_elements
-                .iter()
-                .map(|x| x.to_owned()),
-        );
-        DecisionModelHeader {
-            category: self.category(),
-            body_path: None,
-            covered_elements: elems.into_iter().collect(),
-        }
+        elems.extend(self.hardware.part().iter().map(|x| x.to_owned()));
+        elems.extend(self.runtimes.part().iter().map(|x| x.to_owned()));
+        elems
     }
 }
 
@@ -440,15 +381,11 @@ pub struct AperiodicAsynchronousDataflow {
 impl DecisionModel for AperiodicAsynchronousDataflow {
     impl_decision_model_standard_parts!(AsynchronousAperiodicDataflow);
 
-    fn header(&self) -> DecisionModelHeader {
+    fn part(&self) -> HashSet<String> {
         let mut elems: HashSet<String> = HashSet::new();
         elems.extend(self.processes.iter().map(|x| x.to_owned()));
         elems.extend(self.buffers.iter().map(|x| x.to_string()));
-        DecisionModelHeader {
-            category: self.category(),
-            body_path: None,
-            covered_elements: elems.into_iter().collect(),
-        }
+        elems
     }
 }
 
@@ -479,15 +416,11 @@ pub struct InstrumentedComputationTimes {
 impl DecisionModel for InstrumentedComputationTimes {
     impl_decision_model_standard_parts!(InstrumentedComputationTimes);
 
-    fn header(&self) -> DecisionModelHeader {
+    fn part(&self) -> HashSet<String> {
         let mut elems: HashSet<String> = HashSet::new();
         elems.extend(self.processes.iter().map(|x| x.to_owned()));
         elems.extend(self.processing_elements.iter().map(|x| x.to_string()));
-        DecisionModelHeader {
-            category: self.category(),
-            body_path: None,
-            covered_elements: elems.into_iter().collect(),
-        }
+        elems
     }
 }
 
@@ -507,17 +440,13 @@ pub struct InstrumentedMemoryRequirements {
 }
 
 impl DecisionModel for InstrumentedMemoryRequirements {
-    impl_decision_model_standard_parts!(InstrumentedmemoryRequirements);
+    impl_decision_model_standard_parts!(InstrumentedMemoryRequirements);
 
-    fn header(&self) -> DecisionModelHeader {
+    fn part(&self) -> HashSet<String> {
         let mut elems: HashSet<String> = HashSet::new();
         elems.extend(self.processes.iter().map(|x| x.to_owned()));
         elems.extend(self.processing_elements.iter().map(|x| x.to_string()));
-        DecisionModelHeader {
-            category: self.category(),
-            body_path: None,
-            covered_elements: elems.into_iter().collect(),
-        }
+        elems
     }
 }
 
@@ -544,22 +473,20 @@ pub struct AperiodicAsynchronousDataflowToPartitionedTiledMulticore {
 impl DecisionModel for AperiodicAsynchronousDataflowToPartitionedTiledMulticore {
     impl_decision_model_standard_parts!(AperiodicAsynchronousDataflowToPartitionedTiledMulticore);
 
-    fn header(&self) -> DecisionModelHeader {
+    fn part(&self) -> HashSet<String> {
         let mut elems: HashSet<String> = HashSet::new();
         for app in &self.aperiodic_asynchronous_dataflows {
-            elems.extend(app.header().covered_elements.iter().map(|x| x.to_owned()));
+            elems.extend(app.part().iter().map(|x| x.to_owned()));
         }
         elems.extend(
             self.partitioned_tiled_multicore
-                .header()
-                .covered_elements
+                .part()
                 .iter()
                 .map(|x| x.to_owned()),
         );
         elems.extend(
             self.instrumented_computation_times
-                .header()
-                .covered_elements
+                .part()
                 .iter()
                 .map(|x| x.to_owned()),
         );
@@ -579,11 +506,7 @@ impl DecisionModel for AperiodicAsynchronousDataflowToPartitionedTiledMulticore 
                 }
             }
         }
-        DecisionModelHeader {
-            category: self.category(),
-            body_path: None,
-            covered_elements: elems.into_iter().collect(),
-        }
+        elems
     }
 }
 
@@ -612,22 +535,20 @@ impl DecisionModel for AperiodicAsynchronousDataflowToPartitionedMemoryMappableM
         AperiodicAsynchronousDataflowToPartitionedMemoryMappableMulticore
     );
 
-    fn header(&self) -> DecisionModelHeader {
+    fn part(&self) -> HashSet<String> {
         let mut elems: HashSet<String> = HashSet::new();
         for app in &self.aperiodic_asynchronous_dataflows {
-            elems.extend(app.header().covered_elements.iter().map(|x| x.to_owned()));
+            elems.extend(app.part().iter().map(|x| x.to_owned()));
         }
         elems.extend(
             self.partitioned_mem_mappable_multicore
-                .header()
-                .covered_elements
+                .part()
                 .iter()
                 .map(|x| x.to_owned()),
         );
         elems.extend(
             self.instrumented_computation_times
-                .header()
-                .covered_elements
+                .part()
                 .iter()
                 .map(|x| x.to_owned()),
         );
@@ -647,10 +568,6 @@ impl DecisionModel for AperiodicAsynchronousDataflowToPartitionedMemoryMappableM
                 }
             }
         }
-        DecisionModelHeader {
-            category: self.category(),
-            body_path: None,
-            covered_elements: elems.into_iter().collect(),
-        }
+        elems
     }
 }

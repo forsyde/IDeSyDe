@@ -1,10 +1,12 @@
 package idesyde.common
 
 import spire.math.Rational
-import scalax.collection.Graph
-import scalax.collection.GraphPredef._
-import scalax.collection.edge.Implicits._
+// import scalax.collection.Graph
+// import scalax.collection.GraphPredef._
+// import scalax.collection.edge.Implicits._
 import scala.collection.mutable.Buffer
+import org.jgrapht.graph.DefaultDirectedGraph
+import org.jgrapht.traverse.TopologicalOrderIterator
 
 /** A decision model for communicating periodically activated processes.
   *
@@ -47,20 +49,32 @@ trait CommunicatingExtendedDependenciesPeriodicWorkload {
     *
     * In other words, it is a precedence graph at the instance (sometimes called jobs) level.
     */
-  def affineRelationsGraph = Graph.from(
-    0 until numVirtualTasks,
-    affineControlGraph
-      .map((src, dst, srcRepeat, srcSkip, dstRepeat, dstSkip) =>
-        (src ~+#> dst)(
-          (
-            srcRepeat,
-            srcSkip,
-            dstRepeat,
-            dstSkip
-          )
-        )
-      )
-  )
+  def affineRelationsGraph = {
+    val g = DefaultDirectedGraph[Int, (Int, Int, Int, Int, Int, Int)](
+      classOf[(Int, Int, Int, Int, Int, Int)]
+    )
+    for (i <- 0 until numVirtualTasks) {
+      g.addVertex(i)
+    }
+    for ((src, dst, srcRepeat, srcSkip, dstRepeat, dstSkip) <- affineControlGraph) {
+      g.addEdge(src, dst, (src, dst, srcRepeat, srcSkip, dstRepeat, dstSkip))
+    }
+    g
+    // Graph.from(
+    //   0 until numVirtualTasks,
+    //   affineControlGraph
+    //     .map((src, dst, srcRepeat, srcSkip, dstRepeat, dstSkip) =>
+    //       (src ~+#> dst)(
+    //         (
+    //           srcRepeat,
+    //           srcSkip,
+    //           dstRepeat,
+    //           dstSkip
+    //         )
+    //       )
+    //     )
+    // )
+  }
 
   /** The edges of the communication graph should have numbers describing how much data is
     * transferred from tasks to message queues. The numbering is done so that,
@@ -101,34 +115,55 @@ trait CommunicatingExtendedDependenciesPeriodicWorkload {
 
   def offsetsWithDependencies = {
     val g          = affineRelationsGraph
+    val topoSort   = TopologicalOrderIterator(g)
     var offsetsMut = offsets.toBuffer
-    for (
-      sorted <- g.topologicalSort();
-      innerI <- sorted;
-      i = innerI.value
-    ) {
+    while (topoSort.hasNext()) {
+      val i = topoSort.next()
       // offsetsMut(i) = innerI.diPredecessors.flatMap(predecessor => predecessor.)
-      offsetsMut(i) = innerI.diPredecessors
-        .flatMap(pred => {
-          val predIdx = pred.value
-          pred
-            .connectionsWith(innerI)
-            .map(e => {
-              val (ni: Int, oi: Int, nj: Int, oj: Int) = e.label: @unchecked
-              val offsetDelta = offsetsMut(i) - offsetsMut(predIdx) +
-                (periods(i) * oj - periods(predIdx) * oi)
-              val periodDelta = periods(i) * nj - periods(predIdx) * ni
-              if (periodDelta > Rational.zero) offsetsMut(i) - offsetDelta
-              else {
-                val maxIncrementCoef =
-                  Math.max(tasksNumInstances(i) / nj, tasksNumInstances(predIdx) / ni)
-                offsetsMut(i) - offsetDelta - periodDelta * maxIncrementCoef
-              }
-            })
+      offsetsMut(i) = affineRelationsGraph
+        .incomingEdgesOf(i)
+        .stream()
+        .mapToDouble(edge => {
+          val (_, _, ni: Int, oi: Int, nj: Int, oj: Int) = edge
+          val offsetDelta = offsetsMut(i) - offsetsMut(ni) +
+            (periods(i) * oj - periods(ni) * oi)
+          val periodDelta = periods(i) * nj - periods(ni) * ni
+          if (periodDelta > Rational.zero) offsetsMut(i) - offsetDelta
+          else {
+            val maxIncrementCoef =
+              Math.max(tasksNumInstances(i) / nj, tasksNumInstances(ni) / ni)
+            offsetsMut(i) - offsetDelta - periodDelta * maxIncrementCoef
+          }
         })
-        .maxOption
-        .getOrElse(offsetsMut(i))
+        .max()
+        .orElse(offsetsMut(i))
+      // })
+      //   .flatMap(pred => {
+      //     val predIdx = pred.value
+      //     pred
+      //       .connectionsWith(innerI)
+      //       .map(e => {
+      //         val (ni: Int, oi: Int, nj: Int, oj: Int) = e.label: @unchecked
+      //         val offsetDelta = offsetsMut(i) - offsetsMut(predIdx) +
+      //           (periods(i) * oj - periods(predIdx) * oi)
+      //         val periodDelta = periods(i) * nj - periods(predIdx) * ni
+      //         if (periodDelta > Rational.zero) offsetsMut(i) - offsetDelta
+      //         else {
+      //           val maxIncrementCoef =
+      //             Math.max(tasksNumInstances(i) / nj, tasksNumInstances(predIdx) / ni)
+      //           offsetsMut(i) - offsetDelta - periodDelta * maxIncrementCoef
+      //         }
+      //       })
+      //   })
+      //   .maxOption
+      //   .getOrElse(offsetsMut(i))
     }
+    // for (
+    //   sorted <- g.topologicalSort();
+    //   innerI <- sorted;
+    //   i = innerI.value
+    // ) {
+    // }
     offsetsMut.toVector
   }
 
@@ -137,47 +172,77 @@ trait CommunicatingExtendedDependenciesPeriodicWorkload {
 
   def interTaskOccasionalBlock = {
     val g              = affineRelationsGraph
+    val topoSort       = TopologicalOrderIterator(g)
     val numTasks       = numVirtualTasks
     var canBlockMatrix = Array.fill(numTasks)(Array.fill(numTasks)(false))
-    for (
-      sorted <- g.topologicalSort();
-      node   <- sorted;
-      pred   <- node.diPredecessors;
-      edge   <- pred.connectionsWith(node);
-      nodeIdx = node.value;
-      predIdx = pred.value
-    ) {
-      // first look one behind to see immediate predecessors
-      canBlockMatrix(predIdx)(nodeIdx) = true
-      // now look to see all tasks that might send an
-      // stimulus to this current next tasl
-      for (i <- 0 until numTasks) {
-        if (canBlockMatrix(i)(predIdx)) canBlockMatrix(i)(nodeIdx) = true
-      }
+    while (topoSort.hasNext()) {
+      val node = topoSort.next()
+      g.incomingEdgesOf(node)
+        .stream()
+        .forEach(edge => {
+          val (src, _, _, _, _, _) = edge
+          canBlockMatrix(src)(node) = true
+          // now look to see all tasks that might send an
+          // stimulus to this current next tasl
+          for (i <- 0 until numTasks) {
+            if (canBlockMatrix(i)(src)) canBlockMatrix(i)(node) = true
+          }
+        })
     }
+    // for (
+    //   sorted <- g.topologicalSort();
+    //   node   <- sorted;
+    //   pred   <- node.diPredecessors;
+    //   edge   <- pred.connectionsWith(node);
+    //   nodeIdx = node.value;
+    //   predIdx = pred.value
+    // ) {
+    //   // first look one behind to see immediate predecessors
+    //   canBlockMatrix(predIdx)(nodeIdx) = true
+    //   // now look to see all tasks that might send an
+    //   // stimulus to this current next tasl
+    //   for (i <- 0 until numTasks) {
+    //     if (canBlockMatrix(i)(predIdx)) canBlockMatrix(i)(nodeIdx) = true
+    //   }
+    // }
     canBlockMatrix
   }
 
   def interTaskAlwaysBlocks = {
     val g                 = affineRelationsGraph
+    val topoSort          = TopologicalOrderIterator(g)
     val numTasks          = numVirtualTasks
     var alwaysBlockMatrix = Array.fill(numTasks)(Array.fill(numTasks)(false))
-    for (
-      sorted <- g.topologicalSort();
-      node   <- sorted;
-      pred   <- node.diPredecessors;
-      edge   <- pred.connectionsWith(node);
-      nodeIdx = node.value;
-      predIdx = pred.value
-    ) {
-      // first look one behind to see immediate predecessors
-      if (edge.label == (1, 0, 1, 0)) alwaysBlockMatrix(nodeIdx)(predIdx) = true
-      // now look to see all tasks that might send an
-      // stimulus to this current next tasl
-      for (i <- 0 until numTasks) {
-        if (alwaysBlockMatrix(i)(predIdx)) alwaysBlockMatrix(i)(nodeIdx) = true
-      }
+    while (topoSort.hasNext()) {
+      val node = topoSort.next()
+      g.incomingEdgesOf(node)
+        .stream()
+        .forEach(edge => {
+          val (src, _, pi, oi, pj, oj) = edge
+          if (pi == 1 && oi == 0 && pj == 1 && oj == 0) then alwaysBlockMatrix(src)(node) = true
+          // now look to see all tasks that might send an
+          // stimulus to this current next tasl
+          for (i <- 0 until numTasks) {
+            if (alwaysBlockMatrix(i)(src)) alwaysBlockMatrix(i)(node) = true
+          }
+        })
     }
+    // for (
+    //   sorted <- g.topologicalSort();
+    //   node   <- sorted;
+    //   pred   <- node.diPredecessors;
+    //   edge   <- pred.connectionsWith(node);
+    //   nodeIdx = node.value;
+    //   predIdx = pred.value
+    // ) {
+    //   // first look one behind to see immediate predecessors
+    //   if (edge.label == (1, 0, 1, 0)) alwaysBlockMatrix(nodeIdx)(predIdx) = true
+    //   // now look to see all tasks that might send an
+    //   // stimulus to this current next tasl
+    //   for (i <- 0 until numTasks) {
+    //     if (alwaysBlockMatrix(i)(predIdx)) alwaysBlockMatrix(i)(nodeIdx) = true
+    //   }
+    // }
     alwaysBlockMatrix
   }
 
@@ -190,17 +255,29 @@ trait CommunicatingExtendedDependenciesPeriodicWorkload {
   def prioritiesForDependencies = {
     val g             = affineRelationsGraph
     val numTasks      = numVirtualTasks
+    val topoSort      = TopologicalOrderIterator(g)
     var prioritiesMut = Buffer.fill(numTasks)(numTasks)
-    for (
-      sorted <- g.topologicalSort();
-      node   <- sorted;
-      pred   <- node.diPredecessors;
-      nodeIdx = node.value;
-      predIdx = pred.value;
-      if prioritiesMut(nodeIdx) <= prioritiesMut(predIdx)
-    ) {
-      prioritiesMut(nodeIdx) = prioritiesMut(predIdx) - 1
+    while (topoSort.hasNext()) {
+      val node = topoSort.next()
+      g.incomingEdgesOf(node)
+        .stream()
+        .forEach(edge => {
+          val (src, _, _, _, _, _) = edge
+          if (prioritiesMut(node) <= prioritiesMut(src) - 1) {
+            prioritiesMut(node) = Math.min(prioritiesMut(node), prioritiesMut(src) - 1)
+          }
+        })
     }
+    // for (
+    //   sorted <- g.topologicalSort();
+    //   node   <- sorted;
+    //   pred   <- node.diPredecessors;
+    //   nodeIdx = node.value;
+    //   predIdx = pred.value;
+    //   if prioritiesMut(nodeIdx) <= prioritiesMut(predIdx)
+    // ) {
+    //   prioritiesMut(nodeIdx) = prioritiesMut(predIdx) - 1
+    // }
     // scribe.debug(prioritiesMut.mkString("[", ",", "]"))
     prioritiesMut
   }

@@ -8,31 +8,31 @@ ThisBuild / publishTo := Some(Opts.resolver.sonatypeStaging)
 
 ThisBuild / resolvers += "jitpack" at "https://jitpack.io"
 
-lazy val forsydeIoVersion              = "0.7.14"
+lazy val forsydeIoVersion              = "develop-SNAPSHOT"
 lazy val jgraphtVersion                = "1.5.1"
 lazy val scribeVersion                 = "3.10.2"
 lazy val scalaGraphVersion             = "1.13.5"
 lazy val scalaParserCombinatorsVersion = "2.2.0"
 lazy val spireVersion                  = "0.18.0"
-lazy val upickleVersion                = "3.0.0"
-lazy val chocoSolverVersion            = "4.10.13"
+lazy val upickleVersion                = "3.1.3"
+lazy val chocoSolverVersion            = "4.10.14"
 lazy val osLibVersion                  = "0.9.1"
 lazy val scalaYamlVersion              = "0.0.6"
 lazy val scoptVersion                  = "4.1.0"
 lazy val scalaJsonSchemaVersion        = "0.7.8"
 lazy val javalinVersion                = "5.6.1"
 lazy val slf4jVersion                  = "2.0.7"
+lazy val globalIDeSyDeJavaVersion      = "develop-SNAPSHOT"
 
-lazy val imodulesTarget = file("imodules")
-lazy val emodulesTarget = file("emodules")
+lazy val modulesTarget = file("modules")
 
 lazy val publishModules = taskKey[File]("Copy and return modules")
 
-lazy val imoduleSettings = Seq(
+lazy val moduleSettings = Seq(
   publishModules := {
-    IO.createDirectory(imodulesTarget)
+    IO.createDirectory(modulesTarget)
     val jar    = assembly.value
-    val target = imodulesTarget / (name.value + ".jar")
+    val target = modulesTarget / (name.value + ".jar")
     IO.copyFile(jar, target)
     target
   }
@@ -53,7 +53,7 @@ lazy val root = project
     ),
     paradoxRoots := List("index.html")
   )
-  .aggregate(common, choco, forsyde, matlab, devicetree, blueprints)
+  .aggregate(common, choco, scala_legacy)
 
 // lazy val java_core = (project in file("java-core")).settings(
 //   // name := "idesyde-scala-core",
@@ -70,31 +70,31 @@ lazy val root = project
 //   target := baseDirectory.value / "sbt-target" / name.value
 // )
 
-lazy val core = (project in file("scala-core"))
-  .settings(
-    // name := "idesyde-scala-core",
-    libraryDependencies ++= Seq("com.lihaoyi" %%% "upickle" % upickleVersion)
-  )
+// lazy val core = (project in file("scala-core"))
+//   .settings(
+//     // name := "idesyde-scala-core",
+//     libraryDependencies ++= Seq("com.lihaoyi" %%% "upickle" % upickleVersion)
+//   )
 
-lazy val blueprints = (project in file("scala-blueprints"))
-  .dependsOn(core)
-  .settings(
-    // name := "idesyde-scala-blueprints",
-    libraryDependencies ++= Seq(
-      "com.lihaoyi"      %%% "os-lib"       % osLibVersion,
-      "com.github.scopt" %%% "scopt"        % scoptVersion,
-      "org.slf4j"          % "slf4j-simple" % slf4jVersion % Runtime,
-      "io.javalin"         % "javalin"      % javalinVersion
-    ),
-    licenses := Seq(
-      "MIT"  -> url("https://opensource.org/license/mit/"),
-      "APL2" -> url("https://www.apache.org/licenses/LICENSE-2.0")
-    )
-  )
+// lazy val blueprints = (project in file("scala-blueprints"))
+//   .dependsOn(core)
+//   .settings(
+//     // name := "idesyde-scala-blueprints",
+//     libraryDependencies ++= Seq(
+//       "com.lihaoyi"      %%% "os-lib"       % osLibVersion,
+//       "com.github.scopt" %%% "scopt"        % scoptVersion,
+//       "org.slf4j"          % "slf4j-simple" % slf4jVersion % Runtime,
+//       "io.javalin"         % "javalin"      % javalinVersion
+//     ),
+//     licenses := Seq(
+//       "MIT"  -> url("https://opensource.org/license/mit/"),
+//       "APL2" -> url("https://www.apache.org/licenses/LICENSE-2.0")
+//     )
+//   )
 
 lazy val common = (project in file("scala-common"))
-  .dependsOn(core)
-  .dependsOn(blueprints)
+  // .dependsOn(core)
+  // .dependsOn(blueprints)
   // .enablePlugins(ScalaNativePlugin)
   .enablePlugins(UniversalPlugin, JavaAppPackaging, JlinkPlugin)
   .enablePlugins(JDKPackagerPlugin)
@@ -102,11 +102,15 @@ lazy val common = (project in file("scala-common"))
   .settings(
     // name := "idesyde-scala-common",
     libraryDependencies ++= Seq(
-      ("org.scala-graph" %% "graph-core" % scalaGraphVersion).cross(CrossVersion.for3Use2_13),
-      "org.typelevel"   %%% "spire"      % spireVersion
+      "com.lihaoyi"               %% "upickle"               % upickleVersion,
+      "com.github.forsyde.IDeSyDe" % "build-java-core"       % globalIDeSyDeJavaVersion,
+      "com.github.forsyde.IDeSyDe" % "build-java-blueprints" % globalIDeSyDeJavaVersion,
+      "org.jgrapht"                % "jgrapht-core"          % jgraphtVersion,
+      // ("org.scala-graph" %% "graph-core" % scalaGraphVersion).cross(CrossVersion.for3Use2_13),
+      "org.typelevel" %%% "spire" % spireVersion
     ),
-    mainClass := Some("idesyde.common.CommonIdentificationModule"),
-    imoduleSettings,
+    mainClass := Some("idesyde.common.CommonModule"),
+    // moduleSettings,
     licenses := Seq(
       "MIT"  -> url("https://opensource.org/license/mit/"),
       "APL2" -> url("https://www.apache.org/licenses/LICENSE-2.0")
@@ -117,10 +121,10 @@ lazy val common = (project in file("scala-common"))
     )
   )
 
-lazy val forsyde = (project in file("scala-bridge-forsyde-io"))
-  .dependsOn(core)
+lazy val scala_legacy = (project in file("scala-bridge-forsyde-io"))
+  // .dependsOn(core)
   .dependsOn(common)
-  .dependsOn(blueprints)
+  // .dependsOn(blueprints)
   .enablePlugins(UniversalPlugin, JavaAppPackaging, JlinkPlugin)
   .enablePlugins(JDKPackagerPlugin)
   // .enablePlugins(GraalVMNativeImagePlugin)
@@ -136,14 +140,8 @@ lazy val forsyde = (project in file("scala-bridge-forsyde-io"))
       // "org.eclipse.birt.runtime" % "org.eclipse.emf.common"            % "2.12.0.v20160420-0247",
       // "org.eclipse.birt.runtime" % "org.eclipse.emf.ecore"             % "2.12.0.v20160420-0247"
     ),
-    mainClass := Some("idesyde.forsydeio.ForSyDeIdentificationModule"),
-    publishModules := {
-      IO.createDirectory(imodulesTarget)
-      val jar    = assembly.value
-      val target = imodulesTarget / (projectInfo.value.nameFormal + ".jar")
-      IO.copyFile(jar, target)
-      target
-    },
+    mainClass := Some("idesyde.forsydeio.ForSyDeIOScalaModule"),
+    moduleSettings,
     licenses := Seq(
       "MIT"  -> url("https://opensource.org/license/mit/"),
       "APL2" -> url("https://www.apache.org/licenses/LICENSE-2.0"),
@@ -194,16 +192,17 @@ lazy val forsyde = (project in file("scala-bridge-forsyde-io"))
 //   )
 
 lazy val choco = (project in file("scala-choco"))
-  .dependsOn(core)
+  // .dependsOn(core)
   .dependsOn(common)
-  .dependsOn(forsyde)
-  .dependsOn(blueprints)
+  // .dependsOn(forsyde)
+  // .dependsOn(blueprints)
   .enablePlugins(UniversalPlugin, JavaAppPackaging, JlinkPlugin)
   .enablePlugins(JDKPackagerPlugin)
   // .enablePlugins(GraalVMNativeImagePlugin)
   .settings(
     // name := "idesyde-scala-choco",
     libraryDependencies ++= Seq(
+      // "com.github.forsyde.IDeSyDe" % "build-java-common" % globalIDeSyDeJavaVersion,
       "com.novocode"     % "junit-interface" % "0.11" % "test",
       "org.choco-solver" % "choco-solver"    % chocoSolverVersion,
       "org.jgrapht"      % "jgrapht-core"    % jgraphtVersion
@@ -214,13 +213,7 @@ lazy val choco = (project in file("scala-choco"))
       "EPL2" -> url("https://www.eclipse.org/legal/epl-2.0/")
     ),
     Compile / mainClass := Some("idesyde.choco.ChocoExplorationModule"),
-    publishModules := {
-      IO.createDirectory(emodulesTarget)
-      val jar    = assembly.value
-      val target = emodulesTarget / (projectInfo.value.nameFormal + ".jar")
-      IO.copyFile(jar, target)
-      target
-    },
+    moduleSettings,
     jlinkModulePath := {
       val paths = (jlinkBuildImage / fullClasspath).value
       paths
@@ -249,59 +242,59 @@ lazy val choco = (project in file("scala-choco"))
     )
   )
 
-lazy val matlab = (project in file("scala-bridge-matlab"))
-  .dependsOn(core)
-  .dependsOn(common)
-  .dependsOn(blueprints)
-  .settings(
-    // name := "idesyde-scala-bridge-matlab",
-    libraryDependencies ++= Seq(
-      "org.scala-lang.modules" %%% "scala-parser-combinators" % scalaParserCombinatorsVersion,
-      "com.lihaoyi"             %% "os-lib"                   % osLibVersion,
-      "org.virtuslab"           %% "scala-yaml"               % scalaYamlVersion
-    ),
-    licenses := Seq(
-      "MIT"  -> url("https://opensource.org/license/mit/"),
-      "APL2" -> url("https://www.apache.org/licenses/LICENSE-2.0"),
-      "EPL2" -> url("https://www.eclipse.org/legal/epl-2.0/")
-    ),
-    Compile / mainClass := Some("idesyde.matlab.SimulinkMatlabIdentificationModule"),
-    publishModules := {
-      IO.createDirectory(imodulesTarget)
-      val jar    = assembly.value
-      val target = imodulesTarget / (projectInfo.value.nameFormal + ".jar")
-      IO.copyFile(jar, target)
-      target
-    }
-  )
+// lazy val matlab = (project in file("scala-bridge-matlab"))
+//   // .dependsOn(core)
+//   .dependsOn(common)
+//   // .dependsOn(blueprints)
+//   .settings(
+//     // name := "idesyde-scala-bridge-matlab",
+//     libraryDependencies ++= Seq(
+//       "org.scala-lang.modules" %%% "scala-parser-combinators" % scalaParserCombinatorsVersion,
+//       "com.lihaoyi"             %% "os-lib"                   % osLibVersion,
+//       "org.virtuslab"           %% "scala-yaml"               % scalaYamlVersion
+//     ),
+//     licenses := Seq(
+//       "MIT"  -> url("https://opensource.org/license/mit/"),
+//       "APL2" -> url("https://www.apache.org/licenses/LICENSE-2.0"),
+//       "EPL2" -> url("https://www.eclipse.org/legal/epl-2.0/")
+//     ),
+//     Compile / mainClass := Some("idesyde.matlab.SimulinkMatlabIdentificationModule"),
+//     publishModules := {
+//       IO.createDirectory(imodulesTarget)
+//       val jar    = assembly.value
+//       val target = imodulesTarget / (projectInfo.value.nameFormal + ".jar")
+//       IO.copyFile(jar, target)
+//       target
+//     }
+//   )
 
-lazy val devicetree = (project in file("scala-bridge-device-tree"))
-  .dependsOn(core)
-  .dependsOn(common)
-  .dependsOn(blueprints)
-  .enablePlugins(UniversalPlugin, JavaAppPackaging, JlinkPlugin)
-  .enablePlugins(JDKPackagerPlugin)
-  .settings(
-    // name := "idesyde-scala-bridge-device-tree",
-    libraryDependencies ++= Seq(
-      "org.scala-lang.modules" %%% "scala-parser-combinators" % scalaParserCombinatorsVersion,
-      "com.lihaoyi"             %% "os-lib"                   % osLibVersion,
-      "org.virtuslab"           %% "scala-yaml"               % scalaYamlVersion
-    ),
-    licenses := Seq(
-      "MIT"  -> url("https://opensource.org/license/mit/"),
-      "APL2" -> url("https://www.apache.org/licenses/LICENSE-2.0"),
-      "EPL2" -> url("https://www.eclipse.org/legal/epl-2.0/")
-    ),
-    Compile / mainClass := Some("idesyde.devicetree.DeviceTreeIdentificationModule"),
-    publishModules := {
-      IO.createDirectory(imodulesTarget)
-      val jar    = assembly.value
-      val target = imodulesTarget / (projectInfo.value.nameFormal + ".jar")
-      IO.copyFile(jar, target)
-      target
-    }
-  )
+// lazy val devicetree = (project in file("scala-bridge-device-tree"))
+//   // .dependsOn(core)
+//   .dependsOn(common)
+//   // .dependsOn(blueprints)
+//   .enablePlugins(UniversalPlugin, JavaAppPackaging, JlinkPlugin)
+//   .enablePlugins(JDKPackagerPlugin)
+//   .settings(
+//     // name := "idesyde-scala-bridge-device-tree",
+//     libraryDependencies ++= Seq(
+//       "org.scala-lang.modules" %%% "scala-parser-combinators" % scalaParserCombinatorsVersion,
+//       "com.lihaoyi"             %% "os-lib"                   % osLibVersion,
+//       "org.virtuslab"           %% "scala-yaml"               % scalaYamlVersion
+//     ),
+//     licenses := Seq(
+//       "MIT"  -> url("https://opensource.org/license/mit/"),
+//       "APL2" -> url("https://www.apache.org/licenses/LICENSE-2.0"),
+//       "EPL2" -> url("https://www.eclipse.org/legal/epl-2.0/")
+//     ),
+//     Compile / mainClass := Some("idesyde.devicetree.DeviceTreeIdentificationModule"),
+//     publishModules := {
+//       IO.createDirectory(imodulesTarget)
+//       val jar    = assembly.value
+//       val target = imodulesTarget / (projectInfo.value.nameFormal + ".jar")
+//       IO.copyFile(jar, target)
+//       target
+//     }
+//   )
 
 // lazy val cli = (project in file("scala-cli"))
 //   .dependsOn(core)

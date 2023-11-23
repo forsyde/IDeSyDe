@@ -5,7 +5,6 @@ import org.chocosolver.solver.constraints.Propagator
 import org.chocosolver.solver.variables.IntVar
 import org.chocosolver.solver.variables.BoolVar
 import org.chocosolver.solver.constraints.PropagatorPriority
-import idesyde.utils.HasUtils
 
 class FixedPriorityPreemptivePropagator(
     val schedulerIdx: Int,

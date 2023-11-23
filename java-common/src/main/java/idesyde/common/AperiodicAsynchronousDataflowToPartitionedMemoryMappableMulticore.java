@@ -3,7 +3,6 @@ package idesyde.common;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.fasterxml.jackson.databind.annotation.JsonSerialize;
 import idesyde.core.DecisionModel;
-import idesyde.core.headers.DecisionModelHeader;
 
 import java.util.List;
 import java.util.Map;
@@ -25,11 +24,10 @@ public record AperiodicAsynchronousDataflowToPartitionedMemoryMappableMulticore(
 		@JsonProperty("processing_elements_to_routers_reservations") Map<String, Map<String, Integer>> processingElementsToRoutersReservations)
 		implements DecisionModel {
 	@Override
-	public DecisionModelHeader header() {
-		return new DecisionModelHeader("AperiodicAsynchronousDataflowToPartitionedMemoryMappableMulticore", Stream
-				.concat(aperiodicAsynchronousDataflows.stream().flatMap(x -> x.header().coveredElements().stream()),
-						Stream.concat(partitionedMemMappableMulticore.header().coveredElements().stream(),
-								instrumentedComputationTimes.header().coveredElements().stream()))
-				.collect(Collectors.toSet()), Optional.empty());
+	public Set<String> part() {
+		return Stream.concat(aperiodicAsynchronousDataflows.stream().flatMap(x -> x.part().stream()),
+						Stream.concat(partitionedMemMappableMulticore.part().stream(),
+								instrumentedComputationTimes.part().stream()))
+				.collect(Collectors.toSet());
 	}
 }

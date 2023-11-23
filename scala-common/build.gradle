@@ -2,3 +2,15 @@ plugins {
     id 'idesyde.scala-library'
 }
 
+def forsydeioVersion = "develop-SNAPSHOT"
+
+dependencies {
+    implementation "com.lihaoyi:upickle_3:3.0.0"
+    // implementation 'org.scala-graph:graph-core_2.13:2.0.0' 
+    implementation "org.jgrapht:jgrapht-core:1.5.1"
+    implementation 'org.typelevel:spire_3:0.18.0'
+
+    implementation project(":java-core")
+    implementation project(":java-common")
+    implementation project(":java-blueprints")
+}

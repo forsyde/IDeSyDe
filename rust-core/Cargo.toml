@@ -5,9 +5,13 @@ authors.workspace = true
 edition.workspace = true
 
 [dependencies]
+ciborium.workspace = true
+derive_builder.workspace = true
+downcast-rs.workspace = true
+rmp-serde = { workspace = true }
 serde = { workspace = true }
 serde_json = { workspace = true }
-rmp-serde = { workspace = true }
-ciborium.workspace = true
-downcast-rs.workspace = true
-flatbuffers.workspace = true
+url.workspace = true
+
+[build-dependencies]
+prost-build.workspace = true

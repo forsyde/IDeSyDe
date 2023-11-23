@@ -154,16 +154,18 @@ Test for examples_and_benchmarks/PANORAMA/flight-information-function
 Test for examples_and_benchmarks/PANORAMA/radar-aesa-function
     ${NumFound} =    IDeSyDeLibrary.Try Explore    examples_and_benchmarks/PANORAMA/radar-aesa-function
     Should Be Equal As Integers    ${NumFound}    0
-
-Test for examples_and_benchmarks/small_and_explainable/sobel_and_2core_devicetree
-    ${NumFound} =    IDeSyDeLibrary.Try Explore
-    ...    examples_and_benchmarks/small_and_explainable/sobel_and_2core_devicetree
-    Should Not Be Equal As Integers    ${NumFound}    0
-
-Test for examples_and_benchmarks/small_and_explainable/sobel_to_bus_multicore
-    ${NumFound} =    IDeSyDeLibrary.Try Explore
-    ...    examples_and_benchmarks/small_and_explainable/sobel_to_bus_multicore
-    Should Not Be Equal As Integers    ${NumFound}    0
+#
+# the following lines should be uncommented once device tree support is brought back
+#
+#Test for examples_and_benchmarks/small_and_explainable/sobel_and_2core_devicetree
+#    ${NumFound} =    IDeSyDeLibrary.Try Explore
+#    ...    examples_and_benchmarks/small_and_explainable/sobel_and_2core_devicetree
+#    Should Not Be Equal As Integers    ${NumFound}    0
+#
+#Test for examples_and_benchmarks/small_and_explainable/sobel_to_bus_multicore
+#    ${NumFound} =    IDeSyDeLibrary.Try Explore
+#    ...    examples_and_benchmarks/small_and_explainable/sobel_to_bus_multicore
+#    Should Not Be Equal As Integers    ${NumFound}    0
 
 Test for examples_and_benchmarks/small_and_explainable/yuhan_zhang_thesis
     [Tags]    slow

@@ -1,8 +1,8 @@
 plugins {
-    id 'idesyde.java-standalone-imodule'
+    id 'idesyde.java-standalone-module'
 }
 
-def forsydeioVersion = "0.7.14"
+def forsydeioVersion = "develop-SNAPSHOT"
 
 dependencies {
     testImplementation 'org.junit.jupiter:junit-jupiter-api:5.8.1'
@@ -22,5 +22,5 @@ test {
     useJUnitPlatform()
 }
 
-mainClassName = "idesyde.forsydeio.ForSyDeIOIdentificationModule"
+mainClassName = "idesyde.forsydeio.ForSyDeIOModule"
 

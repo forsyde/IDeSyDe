@@ -17,7 +17,6 @@ import org.chocosolver.solver.constraints.Constraint
 import org.jgrapht.graph.SimpleGraph
 import idesyde.identification.choco.models.platform.ContentionFreeTiledCommunicationPropagator
 import org.chocosolver.solver.Model
-import idesyde.utils.HasUtils
 
 trait HasTileAsyncInterconnectCommunicationConstraints(
     // val commElemsMustShareChannel: Array[Array[Boolean]],

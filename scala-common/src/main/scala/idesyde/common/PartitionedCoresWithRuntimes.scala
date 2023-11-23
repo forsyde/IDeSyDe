@@ -1,8 +1,11 @@
 package idesyde.common
 
+import scala.jdk.CollectionConverters._
+
 import upickle.default.*
 
-import idesyde.core.CompleteDecisionModel
+import idesyde.core.DecisionModel
+import java.{util => ju}
 
 final case class PartitionedCoresWithRuntimes(
     val processors: Vector[String],
@@ -10,16 +13,15 @@ final case class PartitionedCoresWithRuntimes(
     val isBareMetal: Vector[Boolean],
     val isFixedPriority: Vector[Boolean],
     val isCyclicExecutive: Vector[Boolean]
-) extends StandardDecisionModel
-    with CompleteDecisionModel
+) extends DecisionModel
     derives ReadWriter {
 
-  val coveredElements =
-    (processors ++ schedulers).toSet ++ (processors.zip(schedulers).toSet).map(_.toString)
+  override def asJsonString(): java.util.Optional[String] = try { java.util.Optional.of(write(this)) } catch { case _ => java.util.Optional.empty() }
 
-  def bodyAsBinary: Array[Byte] = writeBinary(this)
+  override def asCBORBinary(): java.util.Optional[Array[Byte]] = try { java.util.Optional.of(writeBinary(this)) } catch { case _ => java.util.Optional.empty() }
+  override def part(): ju.Set[String] =
+    ((processors ++ schedulers).toSet ++ (processors.zip(schedulers).toSet).map(_.toString)).asJava
 
-  def bodyAsText: String = write(this)
-  val category: String   = "PartitionedCoresWithRuntimes"
+  override def category(): String = "PartitionedCoresWithRuntimes"
 
 }

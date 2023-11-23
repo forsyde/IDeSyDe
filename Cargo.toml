@@ -9,23 +9,30 @@ members = [
 description = "IDeSyDe Rust suite"
 
 [workspace.dependencies]
+ciborium = "0.2.1"
+clap = { version = "4.2.1", features = ["derive"] }
+derive_builder = "0.12.0"
+downcast-rs = "1.2.0"
+env_logger = "0.10.0"
+log = "0.4.17"
+num = "0.4.1"
+petgraph = "0.6.3"
+prost = "0.12"
+prost-build = "0.12"
+quote = "1.0.27"
+rayon = "1.7"
+reqwest = { version = "0.11.18", default-features = false, features = ["blocking", "rustls-tls", "json", "multipart"] }  
+reqwest-eventsource = "0.5.0"
+rmp-serde = "1.1"
+schemars = "0.8.12"
 serde = { version = "1.0", features = ["derive"] }
 serde_json = "1.0"
-rmp-serde = "1.1"
-clap = { version = "4.2.1", features = ["derive"] }
 sha3 = "0.10.6"
-log = "0.4.17"
-env_logger = "0.10.0"
-quote = "1.0.27"
 syn = "2.0.15"
-ciborium = "0.2.1"
-rayon = "1.7"
-downcast-rs = "1.2.0"
-schemars = "0.8.12"
-petgraph = "0.6.3"
-reqwest = { version = "0.11.18", default-features = false, features = ["blocking", "rustls-tls", "json", "multipart"] }  
 tungstenite = {version = "0.20.0", features = ["rustls"]}
-flatbuffers = {version = "23.5.26", features = ["serde", "serialize"]}
+url = "2.4.1"
+
+
 
 [workspace.package]
 version = "0.6.2"

@@ -1,16 +1,13 @@
-use std::{cmp::Ordering, net::IpAddr, path::Path, sync::Arc};
+use std::{cmp::Ordering, collections::HashSet, path::Path, sync::Arc};
 
 use clap::Parser;
 use env_logger::WriteStyle;
 use idesyde_core::{
-    headers::ExplorationBid, DecisionModel, DesignModel, ExplorationSolution, Explorer,
+    explore_cooperatively, DecisionModel, DesignModel, ExplorationBid, ExplorationSolution,
+    Explorer, OpaqueDesignModel,
 };
-use idesyde_orchestration::{
-    exploration::{explore_cooperatively, ExternalServerExplorationModule},
-    identification::{identification_procedure, ExternalServerIdentificationModule},
-    models::OpaqueDesignModel,
-};
-use log::{debug, error, info, Level};
+use idesyde_orchestration::{identification::identification_procedure, ExternalServerModule};
+use log::{debug, error, info, warn, Level};
 use rayon::prelude::*;
 
 #[derive(Parser, Debug)]
@@ -105,15 +102,9 @@ struct Args {
 
     #[arg(
         long,
-        help = "An URL for exploration modules that are not created and destroyed by the orchestrator. Currently supported protocols are: http."
+        help = "An URL for external modules that are not created and destroyed by the orchestrator. Currently supported schemas are: http."
     )]
-    emodule: Option<Vec<String>>,
-
-    #[arg(
-        long,
-        help = "An URL for identification modules that are not created and destroyed by the orchestrator. Currently supported protocols are: http."
-    )]
-    imodule: Option<Vec<String>>,
+    module: Option<Vec<String>>,
 
     #[arg(
         long,
@@ -163,14 +154,11 @@ fn main() {
         info!("Final output set to {}", output_path_str);
 
         let run_path = Path::new(run_path_str);
-        let output_path = Path::new(output_path_str);
+        // let output_path = Path::new(output_path_str);
         let inputs_path = &run_path.join("inputs");
-        let imodules_path = &std::env::current_dir()
+        let modules_path = &std::env::current_dir()
             .expect("Failed to get working directory.")
-            .join("imodules");
-        let emodules_path = &std::env::current_dir()
-            .expect("Failed to get working directory.")
-            .join("emodules");
+            .join("modules");
         let identified_path = run_path.join("identified");
         let explored_path = &run_path.join("explored");
         let reverse_path = &run_path.join("reversed");
@@ -179,10 +167,8 @@ fn main() {
             .expect("Failed to create run path directory during identification.");
         std::fs::create_dir_all(inputs_path)
             .expect("Failed to create input directory during identification.");
-        std::fs::create_dir_all(imodules_path)
+        std::fs::create_dir_all(modules_path)
             .expect("Failed to create imodules directory during identification.");
-        std::fs::create_dir_all(emodules_path)
-            .expect("Failed to create emodules directory during identification.");
         std::fs::create_dir_all(&identified_path)
             .expect("Failed to create identified directory during identification.");
         std::fs::create_dir_all(&explored_path)
@@ -260,82 +246,45 @@ fn main() {
         debug!("Initializing modules");
         // let mut imodules: Vec<Arc<dyn IdentificationModule>> = Vec::new();
         // let mut emodules: Vec<Arc<dyn ExplorationModule>> = Vec::new();
-        let (mut imodules, mut emodules) = rayon::join(
-            || {
-                idesyde_orchestration::find_identification_modules(
-                    imodules_path,
-                    &identified_path,
-                    &inputs_path,
-                    &explored_path,
-                    &reverse_path,
-                    &output_path,
-                )
-            },
-            || idesyde_orchestration::find_exploration_modules(emodules_path),
-        );
+        let mut modules = idesyde_orchestration::find_modules(modules_path);
 
         // add embedded modules
-        imodules.push(Arc::new(idesyde_common::make_common_module()));
+        modules.push(Arc::new(idesyde_common::make_common_module()));
 
         // add externally declared modules
-        if let Some(external_modules) = args.imodule {
-            for url in external_modules {
-                if url.starts_with("http://") {
-                    let mut splitted = url[7..].split(":");
-                    if let Some(ip) = splitted.next().and_then(|x| x.parse::<IpAddr>().ok()) {
-                        match ip {
-                            IpAddr::V4(ipv4) => {
-                                imodules.push(Arc::new(ExternalServerIdentificationModule::from(
-                                    ipv4.to_string().as_str(),
-                                    &ipv4,
-                                    splitted
-                                        .next()
-                                        .and_then(|p| p.parse::<usize>().ok())
-                                        .unwrap_or(80usize),
-                                )))
-                            }
-                            _ => (),
-                        }
-                    }
+        if let Some(external_modules) = args.module {
+            for url_str in external_modules {
+                if let Ok(parsed_url) = url::Url::parse(url_str.as_str()) {
+                    modules.push(Arc::new(ExternalServerModule::from(
+                        &parsed_url,
+                        url_str.as_str(),
+                    )));
                 }
             }
         }
 
-        if let Some(external_modules) = args.emodule {
-            for url in external_modules {
-                if url.starts_with("http://") {
-                    let mut splitted = url[7..].split(":");
-                    if let Some(ip) = splitted.next().and_then(|x| x.parse::<IpAddr>().ok()) {
-                        match ip {
-                            IpAddr::V4(ipv4) => {
-                                emodules.push(Arc::new(ExternalServerExplorationModule::from(
-                                    ipv4.to_string().as_str(),
-                                    &ipv4,
-                                    splitted
-                                        .next()
-                                        .and_then(|p| p.parse::<usize>().ok())
-                                        .unwrap_or(80usize),
-                                )))
-                            }
-                            _ => (),
-                        }
-                    }
-                }
-            }
-        }
-
-        for eximod in &imodules {
+        for eximod in &modules {
             debug!(
-                "Registered identification module with identifier {}",
+                "Registered module with identifier {}",
                 &eximod.unique_identifier()
             );
         }
-        for exemod in &emodules {
+
+        let explorers: Vec<Arc<dyn Explorer>> =
+            modules.iter().flat_map(|x| x.explorers()).collect();
+
+        for explorer in &explorers {
             debug!(
-                "Registered exploration module with identifier {}",
-                &exemod.unique_identifier()
+                "Registered explorer with identifier {}",
+                explorer.unique_identifier()
             );
         }
+
+        info!(
+            "A total of {} modules and {} explorers were detected.",
+            modules.len(),
+            explorers.len()
+        );
 
         // continue
         debug!("Reading and preparing input files");
@@ -346,28 +295,26 @@ fn main() {
         //     .collect();
         // add an "Opaque" design model header so that all modules are aware of the input models
         let design_models: Vec<Arc<dyn DesignModel>> = sorted_inputs
-            .iter()
-            .map(|s| Arc::new(OpaqueDesignModel::from(Path::new(s))) as Arc<dyn DesignModel>)
+            .par_iter()
+            .map(|s| (s, Arc::new(OpaqueDesignModel::from(Path::new(s)))))
+            .flat_map(|(s, m)| {
+                if m.body_as_string().is_none() {
+                    warn!(
+                        "Failed to read and prepare input {}. Trying to proceed anyway.",
+                        s
+                    );
+                    None
+                } else {
+                    Some(m as Arc<dyn DesignModel>)
+                }
+            })
             .collect();
-        for m in &design_models {
-            if m.body_as_string().is_none() {
-                error!(
-                    "Failed to read and prepare input {}",
-                    m.header()
-                        .model_paths
-                        .first()
-                        .map(|x| x.to_owned())
-                        .unwrap_or("NO_FILE".to_string())
-                );
-                return;
-            }
-        }
         // design_models.push(Box::new(DesignModelHeader {
         //     category: "Any".to_string(),
         //     model_paths: args.inputs,
         //     elements: HashSet::new(),
         // }));
-        let pre_identified: Vec<Arc<dyn DecisionModel>> = vec![];
+        let pre_identified: Vec<Arc<dyn DecisionModel>> = Vec::new();
         // load_decision_model_headers_from_binary(&identified_path)
         //     .iter()
         //     .map(|(_, h)| Arc::new(OpaqueDecisionModel::from(h)) as Arc<dyn DecisionModel>)
@@ -377,7 +324,7 @@ fn main() {
             pre_identified.len()
         );
         let (identified, _) =
-            identification_procedure(&imodules, &design_models, &pre_identified, 0);
+            identification_procedure(&modules, &design_models, &pre_identified, 0);
         info!("Identified {} decision model(s)", identified.len());
         debug!(
             "identified categories: {}",
@@ -404,14 +351,16 @@ fn main() {
         // let dominant_without_biddings = compute_dominant_decision_models(&identified_refs);
         let dominant_partial_identification =
             idesyde_core::compute_dominant_identification(&identified);
-        let explorers: Vec<Arc<dyn Explorer>> =
-            emodules.iter().flat_map(|x| x.explorers()).collect();
         let biddings: Vec<(Arc<dyn Explorer>, Arc<dyn DecisionModel>, ExplorationBid)> = explorers
             .iter()
             .flat_map(|explorer| {
-                dominant_partial_identification
-                    .iter()
-                    .map(|x| (explorer.clone(), x.clone(), explorer.bid(x.clone())))
+                dominant_partial_identification.iter().map(|x| {
+                    (
+                        explorer.clone(),
+                        x.clone(),
+                        explorer.bid(&explorers, x.clone()),
+                    )
+                })
             })
             .filter(|(_, _, b)| b.can_explore)
             .filter(|(_, m, _)| {
@@ -451,16 +400,16 @@ fn main() {
             let mut dominant_sols: Vec<ExplorationSolution> = vec![];
             let mut num_sols = 0;
             for sol in explore_cooperatively(
-                dominant_biddings
+                &dominant_biddings
                     .iter()
                     .map(|(i, _)| (biddings[*i].0.to_owned(), biddings[*i].1.to_owned()))
                     .collect(),
-                dominant_biddings
+                &dominant_biddings
                     .iter()
                     .map(|(_, b)| b.to_owned())
                     .collect(),
-                Vec::new(),
-                idesyde_core::ExplorationConfigurationBuilder::new()
+                &HashSet::new(),
+                idesyde_core::ExplorationConfigurationBuilder::default()
                     .max_sols(args.x_max_solutions.unwrap_or(0))
                     .total_timeout(args.x_total_time_out.unwrap_or(0))
                     .time_resolution(args.x_time_resolution.unwrap_or(0))
@@ -474,7 +423,8 @@ fn main() {
                             .map(|x| x.to_string())
                             .collect(),
                     )
-                    .build(),
+                    .build()
+                    .expect("Failed to build explorer configuration. Should never fail."),
             ) {
                 // let sol_dominated = dominant_sols.iter().any(|(_, y)| {
                 //     idesyde_core::pareto_dominance_partial_cmp(&sol.1, y) == Some(Ordering::Greater)
@@ -482,18 +432,16 @@ fn main() {
                 if !dominant_sols.contains(&sol) {
                     debug!(
                         "New solution with objectives: {}.",
-                        &sol.1
+                        &sol.objectives
                             .iter()
                             .map(|(k, v)| format!("{}: {}", k, v))
                             .reduce(|s1, s2| format!("{}, {}", s1, s2))
                             .unwrap_or("None".to_owned())
                     );
-                    dominant_sols.retain(|(_, y)| {
-                        idesyde_core::pareto_dominance_partial_cmp(&sol.1, y)
-                            != Some(Ordering::Less)
-                    });
+                    dominant_sols
+                        .retain(|cur_sol| sol.partial_cmp(cur_sol) != Some(Ordering::Less));
                     dominant_sols.push(sol.clone());
-                    sol.0.write_to_dir(
+                    sol.solved.write_to_dir(
                         &explored_path,
                         format!("{}_intermediate", num_sols).as_str(),
                         "Orchestratror",
@@ -534,21 +482,25 @@ fn main() {
                 num_sols,
                 dominant_sols.len()
             );
-            for (i, (m, objs)) in dominant_sols.iter().enumerate() {
-                m.write_to_dir(&explored_path, format!("{}", i).as_str(), "Orchestratror");
+            for (i, sol) in dominant_sols.iter().enumerate() {
+                sol.solved
+                    .write_to_dir(&explored_path, format!("{}", i).as_str(), "Orchestratror");
                 debug!(
                     "Written dominant with objectives: {}",
-                    objs.iter()
+                    sol.objectives
+                        .iter()
                         .map(|(k, v)| format!("{}: {}", k, v))
                         .reduce(|s1, s2| format!("{}, {}", s1, s2))
                         .unwrap_or("None".to_owned())
                 )
             }
-            let solved_models: Vec<Arc<dyn DecisionModel>> =
-                dominant_sols.iter().map(|(x, _)| x.clone()).collect();
+            let solved_models: Vec<Arc<dyn DecisionModel>> = dominant_sols
+                .iter()
+                .map(|cur_sol| cur_sol.solved.clone())
+                .collect();
             if !solved_models.is_empty() {
                 info!("Starting reverse identification");
-                let total_reversed: usize = imodules
+                let total_reversed: usize = modules
                     .par_iter()
                     .map(|imodule| {
                         let mut n_reversed = 0;

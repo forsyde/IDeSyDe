@@ -3,7 +3,6 @@ package idesyde.common;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import idesyde.core.DecisionModel;
-import idesyde.core.headers.DecisionModelHeader;
 
 import java.util.List;
 import java.util.Map;
@@ -34,11 +33,7 @@ public record RuntimesAndProcessors(
 ) implements DecisionModel {
 
     @Override
-    public DecisionModelHeader header() {
-        return new DecisionModelHeader(
-                "RuntimesAndProcessors",
-                Stream.concat(processors.stream(), runtimes.stream()).collect(Collectors.toSet()), 
-                Optional.empty()
-        );
+    public Set<String> part() {
+        return Stream.concat(processors.stream(), runtimes.stream()).collect(Collectors.toSet());
     }
 }

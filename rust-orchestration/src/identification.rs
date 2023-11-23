@@ -1,459 +1,245 @@
-use std::{
-    collections::HashSet,
-    hash::Hash,
-    io::BufRead,
-    io::BufReader,
-    net::Ipv4Addr,
-    path::PathBuf,
-    process::{Child, Stdio},
-    sync::{Arc, Mutex},
+use std::{collections::HashSet, f32::consts::E, net::TcpStream, ops::Index, sync::Arc};
+
+use idesyde_core::{
+    DecisionModel, DesignModel, IdentificationIterator, IdentificationResult, Module,
+    OpaqueDecisionModel, OpaqueDesignModel,
 };
+
+use log::debug;
+use tungstenite::WebSocket;
 
 use rayon::prelude::*;
 
-use idesyde_blueprints::{
-    DecisionModelMessage, DesignModelMessage, IdentificationResultMessage, OpaqueDecisionModel,
-};
-use idesyde_core::{
-    headers::{DecisionModelHeader, DesignModelHeader},
-    DecisionModel, DesignModel, IdentificationModule, IdentificationResult,
-};
-use log::{debug, warn};
+// impl HttpServerLike for ExternalServerIdentificationModule {
+//     fn get_client(&self) -> Arc<reqwest::blocking::Client> {
+//         self.client.clone()
+//     }
 
-use crate::{models::OpaqueDesignModel, HttpServerLike};
+//     fn get_address(&self) -> std::net::IpAddr {
+//         self.address.to_owned()
+//     }
 
-#[derive(Debug)]
-pub struct ExternalServerIdentificationModule {
-    name: String,
-    address: std::net::IpAddr,
-    port: usize,
-    client: Arc<reqwest::blocking::Client>,
-    process: Option<Arc<Mutex<Child>>>,
+//     fn get_port(&self) -> usize {
+//         self.port
+//     }
+// }
+
+pub struct ExternalServerIdentifiticationIterator {
+    design_models: Vec<Arc<dyn DesignModel>>,
+    decision_models: Vec<Arc<dyn DecisionModel>>,
+    decision_models_to_upload: Vec<Arc<dyn DecisionModel>>,
+    design_models_to_upload: Vec<Arc<dyn DesignModel>>,
+    websocket: WebSocket<TcpStream>,
+    messages: Vec<String>,
 }
 
-impl ExternalServerIdentificationModule {
-    pub fn try_create_local(command_path_: PathBuf) -> Option<ExternalServerIdentificationModule> {
-        // first check if it is indeed a serve-able module
-        let is_java = command_path_
-            .extension()
-            .and_then(|s| s.to_str())
-            .map(|s| s == "jar")
-            .unwrap_or(false);
-        let child_res = match is_java {
-            true => std::process::Command::new("java")
-                .arg("-jar")
-                .arg(&command_path_)
-                .arg("--server")
-                .arg("http")
-                .stdin(Stdio::piped())
-                .stdout(Stdio::piped())
-                .stderr(Stdio::piped())
-                .spawn(),
-            false => std::process::Command::new(&command_path_)
-                .arg("--server")
-                .arg("http")
-                .stdin(Stdio::piped())
-                .stdout(Stdio::piped())
-                .stderr(Stdio::piped())
-                .spawn(),
-        };
-        // the test involves just exitting it
-        if let Ok(mut server_child) = child_res {
-            if let Some(childout) = &mut server_child.stdout {
-                let buf = BufReader::new(childout);
-                let port_opt = buf
-                    .lines()
-                    .flatten()
-                    .filter(|l| l.starts_with("INITIALIZED"))
-                    .map(|l| l[11..].trim().parse::<usize>())
-                    .flatten()
-                    .next();
-                if let Some(port) = port_opt {
-                    return Some(ExternalServerIdentificationModule {
-                        name: command_path_
-                            .clone()
-                            .file_name()
-                            .and_then(|x| x.to_str())
-                            .and_then(|x| x.split('.').next())
-                            .expect("Could not fetch name from imodule file name.")
-                            .to_string(),
-                        address: std::net::IpAddr::V4(Ipv4Addr::new(127, 0, 0, 1)),
-                        port: port,
-                        client: Arc::new(reqwest::blocking::Client::new()),
-                        process: Some(Arc::new(Mutex::new(server_child))),
-                    });
+impl ExternalServerIdentifiticationIterator {
+    pub fn new(
+        design_models: &Vec<Arc<dyn DesignModel>>,
+        decision_models: &Vec<Arc<dyn DecisionModel>>,
+        websocket: WebSocket<TcpStream>,
+    ) -> ExternalServerIdentifiticationIterator {
+        ExternalServerIdentifiticationIterator {
+            design_models: design_models.to_owned(),
+            decision_models: decision_models.to_owned(),
+            decision_models_to_upload: decision_models.to_owned(),
+            design_models_to_upload: design_models.to_owned(),
+            websocket,
+            messages: vec![],
+        }
+    }
+}
+
+impl Iterator for ExternalServerIdentifiticationIterator {
+    type Item = IdentificationResult;
+
+    fn next(&mut self) -> Option<Self::Item> {
+        // if the websocket is closed, we short-curcuit the function.
+        if !self.websocket.can_read() {
+            return None;
+        }
+        // send the decision models
+        for m in &self.decision_models_to_upload {
+            if let Ok(decision_cbor) = OpaqueDecisionModel::from(m).to_json() {
+                // println!("Uploading decision model {}", m.category());
+                if let Err(e) = self
+                    .websocket
+                    .send(tungstenite::Message::text(decision_cbor))
+                {
+                    debug!("Decision CBOR upload error {}", e.to_string());
                 }
+            }
+        }
+        self.decision_models.extend(
+            self.decision_models_to_upload
+                .drain(0..self.decision_models_to_upload.len()),
+        );
+        // same for design models
+        for m in &self.design_models_to_upload {
+            if let Ok(design_cbor) = OpaqueDesignModel::from(m.as_ref()).to_json() {
+                // println!("Uploading design model {}", m.category());
+                if let Err(e) = self.websocket.send(tungstenite::Message::text(design_cbor)) {
+                    debug!("Design CBOR upload error {}", e.to_string());
+                };
+            };
+        }
+        self.design_models.extend(
+            self.design_models_to_upload
+                .drain(0..self.design_models_to_upload.len()),
+        );
+        if let Err(e) = self.websocket.send(tungstenite::Message::text("done")) {
+            debug!("Failed to send 'done': {}", e.to_string());
+        };
+        // println!("send done");
+        while let Ok(message) = self.websocket.read() {
+            // besides the answer, also read the module's messages
+            match message {
+                tungstenite::Message::Text(txt_msg) => {
+                    if txt_msg.eq_ignore_ascii_case("done") {
+                        return Some((
+                            self.decision_models.clone(),
+                            self.messages.drain(0..self.messages.len()).collect(),
+                        ));
+                    } else if let Ok(opaque) = OpaqueDecisionModel::from_json_str(txt_msg.as_str())
+                    {
+                        let opaquea = Arc::new(opaque) as Arc<dyn DecisionModel>;
+                        if !self.decision_models.contains(&opaquea) {
+                            self.decision_models.push(opaquea.to_owned());
+                        }
+                    } else {
+                        // debug!("Message: {}", txt_msg.as_str());
+                        self.messages.push(txt_msg);
+                    }
+                }
+                tungstenite::Message::Binary(decision_cbor) => {
+                    if let Ok(opaque) = OpaqueDecisionModel::from_cbor(decision_cbor.as_slice()) {
+                        let opaquea = Arc::new(opaque) as Arc<dyn DecisionModel>;
+                        if !self.decision_models.contains(&opaquea) {
+                            self.decision_models.push(opaquea.to_owned());
+                        }
+                    }
+                }
+                tungstenite::Message::Ping(_) => {
+                    if let Err(_) = self.websocket.send(tungstenite::Message::Pong(vec![])) {
+                        debug!(
+                            "Failed to send ping message to other end. Trying to proceed anyway."
+                        );
+                    };
+                }
+                tungstenite::Message::Pong(_) => {
+                    if let Err(_) = self.websocket.send(tungstenite::Message::Ping(vec![])) {
+                        debug!(
+                            "Failed to send pong message to other end. Trying to proceed anyway."
+                        );
+                    };
+                }
+                tungstenite::Message::Close(_) => return None,
+                _ => (),
             }
         }
         None
     }
-
-    pub fn from(name: &str, ipv4: &Ipv4Addr, port: usize) -> ExternalServerIdentificationModule {
-        ExternalServerIdentificationModule {
-            name: name.to_string(),
-            address: std::net::IpAddr::V4(ipv4.to_owned()),
-            port: port,
-            client: Arc::new(reqwest::blocking::Client::new()),
-            process: None,
-        }
-    }
 }
 
-// impl LocalServerLike for ExternalServerIdentificationModule {
-//     fn get_process(&self) -> Arc<Mutex<Child>> {
-//         self.process.clone()
-//     }
-// }
-
-impl PartialEq for ExternalServerIdentificationModule {
-    fn eq(&self, other: &Self) -> bool {
-        self.name == other.name && self.address == other.address && self.port == other.port
-        // && self.inputs_path == other.inputs_path
-        // && self.identified_path == other.identified_path
-        // && self.solved_path == other.solved_path
-        // && self.reverse_path == other.reverse_path
-        // && self.output_path_ == other.output_path_
-    }
-}
-
-impl Eq for ExternalServerIdentificationModule {}
-
-impl Hash for ExternalServerIdentificationModule {
-    fn hash<H: std::hash::Hasher>(&self, state: &mut H) {
-        self.name.hash(state);
-    }
-}
-
-impl Drop for ExternalServerIdentificationModule {
-    fn drop(&mut self) {
-        if let Some(local_process) = self.process.clone() {
-            if let Ok(mut server_guard) = local_process.lock() {
-                if let Err(e) = server_guard.kill() {
-                    debug!(
-                        "Ignoring error whilst killing imodule {}: {}",
-                        self.unique_identifier(),
-                        e.to_string(),
-                    );
-                }
-            }
-        }
-    }
-}
-
-impl HttpServerLike for ExternalServerIdentificationModule {
-    fn get_client(&self) -> Arc<reqwest::blocking::Client> {
-        self.client.clone()
-    }
-
-    fn get_address(&self) -> std::net::IpAddr {
-        self.address.to_owned()
-    }
-
-    fn get_port(&self) -> usize {
-        self.port
-    }
-}
-
-impl IdentificationModule for ExternalServerIdentificationModule {
-    fn unique_identifier(&self) -> String {
-        self.name.clone()
-    }
-
-    fn identification_step(
-        &self,
-        _iteration: i32,
-        design_models: &Vec<Arc<dyn DesignModel>>,
+impl IdentificationIterator for ExternalServerIdentifiticationIterator {
+    fn next_with_models(
+        &mut self,
         decision_models: &Vec<Arc<dyn DecisionModel>>,
-    ) -> IdentificationResult {
-        // self.write_line_to_input(
-        //     format!("SET identified-path {}", self.identified_path.display()).as_str(),
-        // );
-        // self.write_line_to_input(
-        //     format!("SET solved-path {}", self.solved_path.display()).as_str(),
-        // );
-        // self.write_line_to_input(
-        //     format!("SET design-path {}", self.inputs_path.display()).as_str(),
-        // );
-        // self.write_line_to_input(
-        //     format!("SET reverse-path {}", self.reverse_path.display()).as_str(),
-        // );
-        let mut form = reqwest::blocking::multipart::Form::new();
-        for (i, design_model) in design_models.iter().enumerate() {
-            // let message = DesignModelMessage::from_dyn_design_model(design_model.as_ref());
-            form = form.part(
-                format!("designModel{}", i),
-                reqwest::blocking::multipart::Part::text(
-                    DesignModelMessage::from(design_model).to_json_str(),
-                ),
-            );
-            // match self.send_design(design_model.as_ref()) {
-            //     Ok(_) => {}
-            //     Err(e) => warn!(
-            //         "Module {} had an error while recieving a design model at {}.",
-            //         self.unique_identifier(),
-            //         e.url().map(|x| x.as_str()).unwrap_or("<MissingUrl>")
-            //     ),
-            // }
-            // self.write_line_to_input(format!("DESIGN {}", message.to_json_str()).as_str())
-            //     .expect("Error at writing");
-            // println!("DESIGN {}", message.to_json_str());
-        }
-        for (i, decision_model) in decision_models.iter().enumerate() {
-            // let message = DecisionModelMessage::from_dyn_decision_model(decision_model.as_ref());
-            // if let Err(e) = self.send_decision(decision_model.as_ref()) {
-            //     warn!(
-            //         "Module {} had an error while recieving a decision model at {}.",
-            //         self.unique_identifier(),
-            //         e.url().map(|x| x.as_str()).unwrap_or("<MissingUrl>")
-            //     );
-            // }
-            form = form.part(
-                format!("decisionModel{}", i),
-                reqwest::blocking::multipart::Part::text(
-                    DecisionModelMessage::from(decision_model).to_json_str(),
-                ),
-            );
-            // let h = decision_model.header();
-            // self.write_line_to_input(format!("DECISION INLINE {}", message.to_json_str()).as_str())
-            //     .expect("Error at writing");
-        }
-        match self
-            .get_client()
-            .post(format!(
-                "http://{}:{}/identify",
-                self.get_address(),
-                self.get_port()
-            ))
-            .multipart(form)
-            .send()
-            .and_then(|x| x.text())
-        {
-            Ok(response) => match IdentificationResultMessage::try_from(response.as_str()) {
-                Ok(v) => {
-                    return (
-                        v.identified
-                            .iter()
-                            .map(|x| {
-                                Arc::new(OpaqueDecisionModel::from(x)) as Arc<dyn DecisionModel>
-                            })
-                            .collect(),
-                        v.errors,
-                    );
-                }
-                Err(e) => {
-                    warn!(
-                        "Module {} produced an error at identification. Check it for correctness",
-                        self.unique_identifier()
-                    );
-                    debug!(
-                        "Module {} error: {}",
-                        self.unique_identifier(),
-                        e.to_string()
-                    );
-                    debug!("Response was: {}", response.as_str());
-                }
-            },
-            Err(err) => {
-                warn!(
-                    "Had an error while recovering identification results from module {}. Attempting to continue.",
-                    self.unique_identifier()
-                );
-                debug!("Recv error is: {}", err.to_string());
-            }
-        }
-        // self.write_line_to_input(format!("IDENTIFY {}", iteration).as_str());
-        // if let Ok(response) = self
-        //     .send_command(
-        //         "identify",
-        //         &vec![("iteration", format!("{}", iteration).as_str())],
-        //     )
-        //     .and_then(|x| x.text())
-        // {
-        //     match IdentificationResultMessage::try_from(response.as_str()) {
-        //         Ok(v) => {
-        //             return (
-        //                 v.identified
-        //                     .iter()
-        //                     .map(|x| {
-        //                         Arc::new(OpaqueDecisionModel::from(x)) as Arc<dyn DecisionModel>
-        //                     })
-        //                     .collect(),
-        //                 v.errors,
-        //             );
-        //         }
-        //         Err(e) => {
-        //             warn!(
-        //                 "Module {} produced an error at identification. Check it for correctness",
-        //                 self.unique_identifier()
-        //             );
-        //             debug!(
-        //                 "Module {} error: {}",
-        //                 self.unique_identifier(),
-        //                 e.to_string()
-        //             );
-        //             debug!("Response was: {}", response.as_str());
-        //         }
-        //     }
-        // };
-        (vec![], HashSet::new())
-        // self.map_output(|buf| {
-        //     buf.lines()
-        //         .flatten()
-        //         // .inspect(|l| {
-        //         //     println!("{}", l);
-        //         //     println!("{},", self.read_all_err().unwrap_or("nothing".to_string()));
-        //         // })
-        //         .take_while(|line| !line.trim().eq_ignore_ascii_case("FINISHED"))
-        //         .filter(|line| {
-        //             if line.trim().starts_with("DECISION") {
-        //                 true
-        //             } else {
-        //                 warn!(
-        //                     "Ignoring non-compliant identification result by module {}: {}",
-        //                     self.unique_identifier(),
-        //                     line
-        //                 );
-        //                 debug!(
-        //                     "module {} error: {}",
-        //                     self.unique_identifier(),
-        //                     self.read_line_from_err()
-        //                         .unwrap_or("Unable to capture".to_string())
-        //                 );
-        //                 false
-        //             }
-        //         })
-        //         .map(|line| {
-        //             let payload = &line[15..].trim();
-        //             let mes = DecisionModelMessage::from_json_str(payload);
-        //             if let Some(message) = mes {
-        //                 let boxed = Arc::new(OpaqueDecisionModel::from_decision_message(&message))
-        //                     as Arc<dyn DecisionModel>;
-        //                 return Some(boxed);
-        //             }
-        //             None
-        //         })
-        //         .flatten()
-        //         .collect()
-        // })
-        // .unwrap_or(Vec::new())
+        design_models: &Vec<Arc<dyn DesignModel>>,
+    ) -> Option<IdentificationResult> {
+        self.decision_models_to_upload.extend(
+            decision_models
+                .iter()
+                .filter(|&m| {
+                    !self.decision_models.iter().any(|x| {
+                        x.partial_cmp(m) == Some(std::cmp::Ordering::Greater)
+                            || x.partial_cmp(m) == Some(std::cmp::Ordering::Equal)
+                    })
+                })
+                .map(|x| x.to_owned()),
+        );
+        self.design_models_to_upload.extend(
+            design_models
+                .iter()
+                .filter(|&x| !self.design_models.contains(x))
+                .map(|x| x.to_owned()),
+        );
+        return self.next();
     }
 
-    fn reverse_identification(
-        &self,
-        solved_decision_models: &Vec<Arc<dyn DecisionModel>>,
-        design_models: &Vec<Arc<dyn DesignModel>>,
-    ) -> Vec<Arc<dyn DesignModel>> {
-        // let mut integrated: Vec<Box<dyn DesignModel>> = Vec::new();
-        let mut form = reqwest::blocking::multipart::Form::new();
-        for (i, design_model) in design_models.iter().enumerate() {
-            form = form.part(
-                format!("designModel{}", i),
-                reqwest::blocking::multipart::Part::text(
-                    DesignModelMessage::from(design_model).to_json_str(),
-                ),
-            );
-        }
-        for (i, decision_model) in solved_decision_models.iter().enumerate() {
-            form = form.part(
-                format!("decisionModel{}", i),
-                reqwest::blocking::multipart::Part::text(
-                    DecisionModelMessage::from(decision_model).to_json_str(),
-                ),
-            );
-        }
-        match self
-            .get_client()
-            .post(format!(
-                "http://{}:{}/reverse",
-                self.get_address(),
-                self.get_port()
-            ))
-            .multipart(form)
-            .send()
-            .and_then(|x| x.text())
-        {
-            Ok(response) => {
-                match serde_json::from_str::<Vec<DesignModelMessage>>(response.as_str()) {
-                    Ok(v) => {
-                        return v
-                            .iter()
-                            .map(|x| Arc::new(OpaqueDesignModel::from(x)) as Arc<dyn DesignModel>)
-                            .collect();
-                    }
-                    Err(e) => {
-                        warn!(
-                        "Module {} produced an error at identification. Check it for correctness",
-                        self.unique_identifier()
-                    );
-                        debug!(
-                            "Module {} error: {}",
-                            self.unique_identifier(),
-                            e.to_string()
-                        );
-                        debug!("Response was: {}", response.as_str());
-                    }
-                }
-            }
-            Err(err) => {
-                warn!(
-                    "Had an error while recovering identification results from module {}. Attempting to continue.",
-                    self.unique_identifier()
-                );
-                debug!("Recv error is: {}", err.to_string());
-            }
-        }
-        vec![]
-    }
+    // fn collect_messages(&mut self) -> Vec<(String, String)> {
+    //     self.messages
+    //         .iter()
+    //         .map(|msg| ("DEBUG".to_owned(), msg.to_owned()))
+    //         .collect()
+    // }
 }
 
 pub fn identification_procedure(
-    imodules: &Vec<Arc<dyn IdentificationModule>>,
+    imodules: &Vec<Arc<dyn Module>>,
     design_models: &Vec<Arc<dyn DesignModel>>,
     pre_identified: &Vec<Arc<dyn DecisionModel>>,
     starting_iter: i32,
-) -> IdentificationResult {
+) -> (Vec<Arc<dyn DecisionModel>>, Vec<(String, String)>) {
     let mut step = starting_iter;
     let mut fix_point = false;
     let mut identified: Vec<Arc<dyn DecisionModel>> = Vec::new();
-    let mut errors: HashSet<String> = HashSet::new();
-    identified.extend_from_slice(pre_identified);
+    let mut messages: Vec<(String, String)> = Vec::new();
+    let mut iterators: Vec<Box<dyn IdentificationIterator>> = imodules
+        .iter()
+        .map(|imodule| imodule.start_identification(design_models, &identified))
+        .collect();
+    identified.extend(pre_identified.iter().map(|x| x.to_owned()));
     while !fix_point {
-        // try to eliminate opaque repeated decision models
-        while let Some((idx, _)) = identified
-            .iter()
-            .enumerate()
-            .filter(|(_, m)| m.downcast_ref::<OpaqueDecisionModel>().is_some())
-            .find(|(_, opaque)| {
-                identified
-                    .iter()
-                    .any(|x| &x == opaque && x.downcast_ref::<OpaqueDecisionModel>().is_none())
-            })
-        {
-            identified.remove(idx);
-        }
-        // the step condition forces the procedure to go at least one more, fundamental for incrementability
         fix_point = true;
-        let before = identified.len();
-        let (identified_step, errors_step) = imodules
-            .par_iter()
-            .map(|imodule| imodule.identification_step(step, &design_models, &identified))
-            .reduce(
-                || (vec![], HashSet::new()),
-                |(mut m1, mut e1), (m2, e2)| {
-                    m1.extend(m2);
-                    e1.extend(e2);
-                    (m1, e1)
-                },
-            );
-        for m in identified_step {
-            if !identified.contains(&m) {
-                identified.push(m);
+        // let before = identified.len();
+        let identified_step: Vec<IdentificationResult> = iterators
+            .iter_mut()
+            .flat_map(|iter| iter.next_with_models(&identified, design_models))
+            .collect();
+        // .reduce(
+        //     || (vec![], HashSet::new()),
+        //     |(mut m1, mut e1), (m2, e2)| {
+        //         m1.extend(m2);
+        //         e1.extend(e2);
+        //         (m1, e1)
+        //     },
+        // );
+        // add completely new models or replace opaque deicion mdoels for non-opaque ones
+        for m in identified_step.iter().flat_map(|(ms, _)| ms) {
+            if let Some(previous_idx) = identified.iter().position(|x| {
+                (x.partial_cmp(m) == Some(std::cmp::Ordering::Less)
+                    || x.partial_cmp(m) == Some(std::cmp::Ordering::Equal))
+                    && x.downcast_ref::<OpaqueDecisionModel>().is_some()
+                    && m.downcast_ref::<OpaqueDecisionModel>().is_none()
+            }) {
+                // debug!("Replaced {}", identified[previous_idx].category());
+                identified.remove(previous_idx);
+                identified.push(m.to_owned());
+                fix_point = false;
+            } else if !identified.iter().any(|x| {
+                x.partial_cmp(m) == Some(std::cmp::Ordering::Greater)
+                    || x.partial_cmp(m) == Some(std::cmp::Ordering::Equal)
+            }) {
+                // debug!("added {}", m.category());
+                identified.push(m.to_owned());
+                fix_point = false;
+            };
+            // if !identified.contains(&m) {
+            // }
+        }
+        for (_, msgs) in &identified_step {
+            for msg in msgs {
+                debug!("{}", msg);
+                messages.push(("DEBUG".to_string(), msg.to_owned()));
             }
         }
-        for e in errors_step {
-            debug!("{}", e);
-            errors.insert(e);
-        }
+        // let ident_messages: HashSet<(String, String)> = iterators
+        //     .iter_mut()
+        //     .flat_map(|iter| iter.collect_messages())
+        //     .collect();
+        // for (lvl, msg) in ident_messages {
+        // }
         // .filter(|potential| !identified.contains(potential))
         // .collect();
         // this contain check is done again because there might be imodules that identify the same decision model,
@@ -464,152 +250,152 @@ pub fn identification_procedure(
             identified.len(),
             step
         );
-        fix_point = fix_point && (identified.len() == before);
+        // fix_point = fix_point && (identified.len() == before);
         step += 1;
     }
-    (identified, errors)
+    (identified, messages)
 }
 
-#[derive(Debug, PartialEq, Eq, Hash)]
-pub struct ExternalIdentificationModule {
-    pub command_path_: PathBuf,
-    pub inputs_path_: PathBuf,
-    pub identified_path_: PathBuf,
-    pub solved_path_: PathBuf,
-    pub reverse_path_: PathBuf,
-    pub output_path_: PathBuf,
-}
+// #[derive(Debug, PartialEq, Eq, Hash)]
+// pub struct ExternalIdentificationModule {
+//     pub command_path_: PathBuf,
+//     pub inputs_path_: PathBuf,
+//     pub identified_path_: PathBuf,
+//     pub solved_path_: PathBuf,
+//     pub reverse_path_: PathBuf,
+//     pub output_path_: PathBuf,
+// }
 
-impl ExternalIdentificationModule {
-    pub fn is_java(&self) -> bool {
-        self.command_path_
-            .extension()
-            .and_then(|s| s.to_str())
-            .map(|s| s == "jar")
-            .unwrap_or(false)
-    }
-}
+// impl ExternalIdentificationModule {
+//     pub fn is_java(&self) -> bool {
+//         self.command_path_
+//             .extension()
+//             .and_then(|s| s.to_str())
+//             .map(|s| s == "jar")
+//             .unwrap_or(false)
+//     }
+// }
 
-impl IdentificationModule for ExternalIdentificationModule {
-    fn unique_identifier(&self) -> String {
-        self.command_path_.to_str().unwrap().to_string()
-    }
+// impl IdentificationModule for ExternalIdentificationModule {
+//     fn unique_identifier(&self) -> String {
+//         self.command_path_.to_str().unwrap().to_string()
+//     }
 
-    fn identification_step(
-        &self,
-        iteration: i32,
-        _design_models: &Vec<Arc<dyn DesignModel>>,
-        _decision_models: &Vec<Arc<dyn DecisionModel>>,
-    ) -> IdentificationResult {
-        let is_java = self
-            .command_path_
-            .extension()
-            .and_then(|s| s.to_str())
-            .map(|s| s == "jar")
-            .unwrap_or(false);
-        let output = match is_java {
-            true => std::process::Command::new("java")
-                .arg("-jar")
-                .arg(&self.command_path_)
-                .arg("-m")
-                .arg(&self.inputs_path_)
-                .arg("-i")
-                .arg(&self.identified_path_)
-                .arg("-t")
-                .arg(iteration.to_string())
-                .stdout(Stdio::piped())
-                .stderr(Stdio::piped())
-                .output(),
-            false => std::process::Command::new(&self.command_path_)
-                .arg("-m")
-                .arg(&self.inputs_path_)
-                .arg("-i")
-                .arg(&self.identified_path_)
-                .arg("-t")
-                .arg(iteration.to_string())
-                .stdout(Stdio::piped())
-                .stderr(Stdio::piped())
-                .output(),
-        };
-        if let Ok(out) = output {
-            if let Ok(s) = String::from_utf8(out.stdout) {
-                let identified: Vec<Arc<dyn DecisionModel>> = s
-                    .lines()
-                    .flat_map(|p| {
-                        if let Ok(b) = std::fs::read(p) {
-                            if let Ok(header) = rmp_serde::from_slice::<DecisionModelHeader>(b.as_slice()) {
-                                return Some(Arc::new(header) as Arc<dyn DecisionModel>);
-                            } else {
-                                warn!("Failed to deserialize header coming from {}. Check this module for correctness.", self.unique_identifier());
-                            }
-                        } else {
-                            warn!("Unexpected header file from module {}. Check this module for correctness.", self.unique_identifier())
-                        }
-                        None
-                    })
-                    .collect();
-                return (identified, HashSet::new());
-            }
-        }
-        (Vec::new(), HashSet::new())
-    }
+//     fn identification_step(
+//         &self,
+//         iteration: i32,
+//         _design_models: &Vec<Arc<dyn DesignModel>>,
+//         _decision_models: &Vec<Arc<dyn DecisionModel>>,
+//     ) -> IdentificationResult {
+//         let is_java = self
+//             .command_path_
+//             .extension()
+//             .and_then(|s| s.to_str())
+//             .map(|s| s == "jar")
+//             .unwrap_or(false);
+//         let output = match is_java {
+//             true => std::process::Command::new("java")
+//                 .arg("-jar")
+//                 .arg(&self.command_path_)
+//                 .arg("-m")
+//                 .arg(&self.inputs_path_)
+//                 .arg("-i")
+//                 .arg(&self.identified_path_)
+//                 .arg("-t")
+//                 .arg(iteration.to_string())
+//                 .stdout(Stdio::piped())
+//                 .stderr(Stdio::piped())
+//                 .output(),
+//             false => std::process::Command::new(&self.command_path_)
+//                 .arg("-m")
+//                 .arg(&self.inputs_path_)
+//                 .arg("-i")
+//                 .arg(&self.identified_path_)
+//                 .arg("-t")
+//                 .arg(iteration.to_string())
+//                 .stdout(Stdio::piped())
+//                 .stderr(Stdio::piped())
+//                 .output(),
+//         };
+//         if let Ok(out) = output {
+//             if let Ok(s) = String::from_utf8(out.stdout) {
+//                 let identified: Vec<Arc<dyn DecisionModel>> = s
+//                     .lines()
+//                     .flat_map(|p| {
+//                         if let Ok(b) = std::fs::read(p) {
+//                             if let Ok(header) = rmp_serde::from_slice::<DecisionModelHeader>(b.as_slice()) {
+//                                 return Some(Arc::new(header) as Arc<dyn DecisionModel>);
+//                             } else {
+//                                 warn!("Failed to deserialize header coming from {}. Check this module for correctness.", self.unique_identifier());
+//                             }
+//                         } else {
+//                             warn!("Unexpected header file from module {}. Check this module for correctness.", self.unique_identifier())
+//                         }
+//                         None
+//                     })
+//                     .collect();
+//                 return (identified, HashSet::new());
+//             }
+//         }
+//         (Vec::new(), HashSet::new())
+//     }
 
-    fn reverse_identification(
-        &self,
-        _decision_model: &Vec<Arc<dyn DecisionModel>>,
-        _design_model: &Vec<Arc<dyn DesignModel>>,
-    ) -> Vec<Arc<dyn DesignModel>> {
-        let is_java = self
-            .command_path_
-            .extension()
-            .and_then(|s| s.to_str())
-            .map(|s| s == "jar")
-            .unwrap_or(false);
-        let output = match is_java {
-            true => std::process::Command::new("java")
-                .arg("-jar")
-                .arg(&self.command_path_)
-                .arg("-m")
-                .arg(&self.inputs_path_)
-                .arg("-s")
-                .arg(&self.solved_path_)
-                .arg("-r")
-                .arg(&self.reverse_path_)
-                .arg("-o")
-                .arg(&self.output_path_)
-                .stdout(Stdio::piped())
-                .stderr(Stdio::piped())
-                .output(),
-            false => std::process::Command::new(&self.command_path_)
-                .arg("-m")
-                .arg(&self.inputs_path_)
-                .arg("-s")
-                .arg(&self.solved_path_)
-                .arg("-r")
-                .arg(&self.reverse_path_)
-                .arg("-o")
-                .arg(&self.output_path_)
-                .stdout(Stdio::piped())
-                .stderr(Stdio::piped())
-                .output(),
-        };
-        if let Ok(out) = output {
-            if let Ok(s) = String::from_utf8(out.stdout) {
-                let reversed: Vec<Arc<dyn DesignModel>> = s
-                    .lines()
-                    .map(|p| {
-                        let b = std::fs::read(p)
-                            .expect("Failed to read header file from disk during identification");
-                        let header = rmp_serde::from_slice::<DesignModelHeader>(b.as_slice())
-                            .expect(
-                            "Failed to deserialize header file from disk during identification.",
-                        );
-                        Arc::new(header) as Arc<dyn DesignModel>
-                    })
-                    .collect();
-                return reversed;
-            }
-        }
-        Vec::new()
-    }
-}
+//     fn reverse_identification(
+//         &self,
+//         _decision_model: &Vec<Arc<dyn DecisionModel>>,
+//         _design_model: &Vec<Arc<dyn DesignModel>>,
+//     ) -> Vec<Arc<dyn DesignModel>> {
+//         let is_java = self
+//             .command_path_
+//             .extension()
+//             .and_then(|s| s.to_str())
+//             .map(|s| s == "jar")
+//             .unwrap_or(false);
+//         let output = match is_java {
+//             true => std::process::Command::new("java")
+//                 .arg("-jar")
+//                 .arg(&self.command_path_)
+//                 .arg("-m")
+//                 .arg(&self.inputs_path_)
+//                 .arg("-s")
+//                 .arg(&self.solved_path_)
+//                 .arg("-r")
+//                 .arg(&self.reverse_path_)
+//                 .arg("-o")
+//                 .arg(&self.output_path_)
+//                 .stdout(Stdio::piped())
+//                 .stderr(Stdio::piped())
+//                 .output(),
+//             false => std::process::Command::new(&self.command_path_)
+//                 .arg("-m")
+//                 .arg(&self.inputs_path_)
+//                 .arg("-s")
+//                 .arg(&self.solved_path_)
+//                 .arg("-r")
+//                 .arg(&self.reverse_path_)
+//                 .arg("-o")
+//                 .arg(&self.output_path_)
+//                 .stdout(Stdio::piped())
+//                 .stderr(Stdio::piped())
+//                 .output(),
+//         };
+//         if let Ok(out) = output {
+//             if let Ok(s) = String::from_utf8(out.stdout) {
+//                 let reversed: Vec<Arc<dyn DesignModel>> = s
+//                     .lines()
+//                     .map(|p| {
+//                         let b = std::fs::read(p)
+//                             .expect("Failed to read header file from disk during identification");
+//                         let header = rmp_serde::from_slice::<DesignModelHeader>(b.as_slice())
+//                             .expect(
+//                             "Failed to deserialize header file from disk during identification.",
+//                         );
+//                         Arc::new(header) as Arc<dyn DesignModel>
+//                     })
+//                     .collect();
+//                 return reversed;
+//             }
+//         }
+//         Vec::new()
+//     }
+// }

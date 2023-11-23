@@ -4,7 +4,6 @@ import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.dataformat.cbor.CBORFactory;
 import com.fasterxml.jackson.datatype.jdk8.Jdk8Module;
-import idesyde.core.headers.DecisionModelHeader;
 
 import java.util.Optional;
 import java.util.Set;
@@ -31,28 +30,38 @@ import java.util.Set;
  */
 public interface DecisionModel {
 
-    default DecisionModelHeader header() {
-        return new DecisionModelHeader(
-                category(), part(), Optional.empty());
-    };
+    /**
+     * Used to represent a decision model in a exchangeable format. Now this is done
+     * solely through opaque models.
+     * 
+     * @return the header/
+     */
+    // @Deprecated
+    // default DecisionModelHeader header() {
+    // return new DecisionModelHeader(
+    // category(), part(), Optional.empty());
+    // };
 
     /**
-     * The set of identifiers for partially identified elements
+     * @return The set of identifiers for partially identified elements
      */
     default Set<String> part() {
         return Set.of();
     }
 
     /**
-     * The category that describes this decision model. Default value (and
-     * recommendation) is the class name.
+     * @return The category that describes this decision model. Default value (and
+     *         recommendation) is the class name.
      * 
      */
     default String category() {
         return getClass().getSimpleName();
     }
 
-    default Optional<String> bodyAsText() {
+    /**
+     * @return The "body" of the model as a string, when possible.
+     */
+    default Optional<String> asJsonString() {
         try {
             return Optional.of(objectMapper.writeValueAsString(this));
         } catch (JsonProcessingException e) {
@@ -60,7 +69,10 @@ public interface DecisionModel {
         }
     };
 
-    default Optional<byte[]> bodyAsBinary() {
+    /**
+     * @return The "body" of the model as a CBOR byte array, when possible.
+     */
+    default Optional<byte[]> asCBORBinary() {
         try {
             return Optional.of(objectMapper.writeValueAsBytes(this));
         } catch (JsonProcessingException e) {
@@ -68,6 +80,14 @@ public interface DecisionModel {
         }
     };
 
-    static final ObjectMapper objectMapper = new ObjectMapper().registerModule(new Jdk8Module());
-    static final ObjectMapper objectMapperCBOR = new ObjectMapper(new CBORFactory()).registerModule(new Jdk8Module());
+    /**
+     * The shared and static Jackson object mapper used for (de) serialization to
+     * (from) JSON.
+     */
+    static ObjectMapper objectMapper = new ObjectMapper().registerModule(new Jdk8Module());
+    /**
+     * The shared and static Jackson object mapper used for (de) serialization to
+     * (from) CBOR.
+     */
+    static ObjectMapper objectMapperCBOR = new ObjectMapper(new CBORFactory()).registerModule(new Jdk8Module());
 }

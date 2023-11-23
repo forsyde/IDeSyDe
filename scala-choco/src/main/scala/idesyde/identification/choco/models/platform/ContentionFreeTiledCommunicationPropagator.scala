@@ -4,7 +4,7 @@ import org.chocosolver.solver.variables.IntVar
 import org.chocosolver.solver.constraints.Propagator
 import org.jgrapht.graph.SimpleGraph
 import org.jgrapht.graph.DefaultEdge
-import idesyde.utils.HasUtils
+import idesyde.choco.HasUtils
 import org.chocosolver.solver.constraints.PropagatorPriority
 import org.jgrapht.alg.color.LargestDegreeFirstColoring
 import org.chocosolver.util.ESat

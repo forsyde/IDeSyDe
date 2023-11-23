@@ -1,11 +1,16 @@
 package idesyde.common
 
+import scala.jdk.CollectionConverters._
+
 import upickle.default.*
 
 import idesyde.common.InstrumentedPlatformMixin
-import scalax.collection.Graph
-import scalax.collection.GraphPredef._
-import idesyde.core.CompleteDecisionModel
+import idesyde.core.DecisionModel
+import java.{util => ju}
+import org.jgrapht.graph.DefaultDirectedGraph
+import org.jgrapht.graph.DefaultEdge
+import org.jgrapht.alg.shortestpath.FloydWarshallShortestPaths
+import org.jgrapht.graph.AsSubgraph
 
 final case class TiledMultiCoreWithFunctions(
     val processors: Vector[String],
@@ -20,32 +25,54 @@ final case class TiledMultiCoreWithFunctions(
     val communicationElementsMaxChannels: Vector[Int],
     val communicationElementsBitPerSecPerChannel: Vector[Double],
     val preComputedPaths: Map[String, Map[String, Iterable[String]]]
-) extends StandardDecisionModel
+) extends DecisionModel
     with InstrumentedPlatformMixin[Double]
-    with CompleteDecisionModel
     derives ReadWriter {
 
-  val coveredElements =
-    (processors ++ memories ++ networkInterfaces ++ routers).toSet ++ (interconnectTopologySrcs
+  override def part(): ju.Set[String] =
+    ((processors ++ memories ++ networkInterfaces ++ routers).toSet ++ (interconnectTopologySrcs
       .zip(interconnectTopologyDsts)
       .toSet)
-      .map(_.toString)
+      .map(_.toString)).asJava
 
   val communicationElems = networkInterfaces ++ routers
 
   val platformElements: Vector[String] =
     processors ++ memories ++ communicationElems
 
-  val topology = Graph.from(
-    platformElements,
-    interconnectTopologySrcs.zip(interconnectTopologyDsts).map((src, dst) => src ~> dst) ++
-      processors.zip(memories).map((src, dst) => src ~> dst) ++ processors
-        .zip(memories)
-        .map((src, dst) => dst ~> src) ++
-      processors.zip(networkInterfaces).map((src, dst) => src ~> dst) ++ processors
-        .zip(networkInterfaces)
-        .map((src, dst) => dst ~> src)
-  )
+  val topology = {
+    // Graph.from(
+    //   platformElements,
+    //   interconnectTopologySrcs.zip(interconnectTopologyDsts).map((src, dst) => src ~> dst) ++
+    //     processors.zip(memories).map((src, dst) => src ~> dst) ++ processors
+    //       .zip(memories)
+    //       .map((src, dst) => dst ~> src) ++
+    //     processors.zip(networkInterfaces).map((src, dst) => src ~> dst) ++ processors
+    //       .zip(networkInterfaces)
+    //       .map((src, dst) => dst ~> src)
+    // )
+    val g = DefaultDirectedGraph[String, DefaultEdge](classOf[DefaultEdge])
+    platformElements.foreach(g.addVertex)
+    interconnectTopologySrcs
+      .zip(interconnectTopologyDsts)
+      .foreach((src, dst) => {
+        g.addEdge(src, dst)
+        g.addEdge(dst, src)
+      })
+    processors
+      .zip(memories)
+      .foreach((src, dst) => {
+        g.addEdge(src, dst)
+        g.addEdge(dst, src)
+      })
+    processors
+      .zip(networkInterfaces)
+      .foreach((src, dst) => {
+        g.addEdge(src, dst)
+        g.addEdge(dst, src)
+      })
+    g
+  }
 
   val computedPaths =
     platformElements.map(src =>
@@ -56,15 +83,25 @@ final case class TiledMultiCoreWithFunctions(
         ) {
           preComputedPaths(src)(dst)
         } else {
-          topology
-            .get(src)
-            .withSubgraph(nodes =
-              v => v.value == src || v.value == dst || communicationElems.contains(v.value)
-            )
-            .shortestPathTo(topology.get(dst), e => 1)
-            .map(path => path.nodes.map(_.value.toString()))
-            .map(_.drop(1).dropRight(1))
-            .getOrElse(Seq.empty)
+          // topology
+          //   .get(src)
+          //   .withSubgraph(nodes =
+          //     v => v.value == src || v.value == dst || communicationElems.contains(v.value)
+          //   )
+          //   .shortestPathTo(topology.get(dst), e => 1)
+          //   .map(path => path.nodes.map(_.value.toString()))
+          //   .map(_.drop(1).dropRight(1))
+          //   .getOrElse(Seq.empty)
+          val subelements = platformElements
+            .filter(e => e == src || e == dst || communicationElems.contains(e))
+          val paths =
+            FloydWarshallShortestPaths(AsSubgraph(topology, subelements.toSet.asJava))
+          val path = paths.getPath(src, dst)
+          if (path != null) {
+            path.getVertexList.asScala.drop(1).dropRight(1)
+          } else {
+            Seq.empty
+          }
         }
       )
     )
@@ -130,9 +167,13 @@ final case class TiledMultiCoreWithFunctions(
     groups.toSet
   }
 
-  def bodyAsText: String = write(this)
+  override def asJsonString(): java.util.Optional[String] = try {
+    java.util.Optional.of(write(this))
+  } catch { case _ => java.util.Optional.empty() }
 
-  def bodyAsBinary: Array[Byte] = writeBinary(this)
+  override def asCBORBinary(): java.util.Optional[Array[Byte]] = try {
+    java.util.Optional.of(writeBinary(this))
+  } catch { case _ => java.util.Optional.empty() }
 
-  def category: String = "TiledMultiCoreWithFunctions"
+  override def category(): String = "TiledMultiCoreWithFunctions"
 }

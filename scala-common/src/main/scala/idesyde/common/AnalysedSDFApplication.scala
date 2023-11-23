@@ -2,7 +2,9 @@ package idesyde.common
 
 import upickle.default.*
 import idesyde.core.DecisionModel
-import idesyde.core.CompleteDecisionModel
+import java.{util => ju}
+
+import scala.jdk.CollectionConverters._
 
 /** Decision model for analysed synchronous dataflow graphs.
   *
@@ -13,16 +15,15 @@ final case class AnalysedSDFApplication(
     val periodic_admissible_static_schedule: Seq[String],
     val repetition_vector: Map[String, Long],
     val sdf_application: SDFApplication
-) extends StandardDecisionModel
-    with CompleteDecisionModel
+) extends DecisionModel
     derives ReadWriter {
 
-  override def bodyAsText: String = write(this)
+  override def asJsonString(): java.util.Optional[String] = try { java.util.Optional.of(write(this)) } catch { case _ => java.util.Optional.empty() }
 
-  override def bodyAsBinary: Array[Byte] = writeBinary(this)
+  override def asCBORBinary(): java.util.Optional[Array[Byte]] = try { java.util.Optional.of(writeBinary(this)) } catch { case _ => java.util.Optional.empty() }
 
-  override def coveredElements: Set[String] = sdf_application.coveredElements
+  override def part(): ju.Set[String] = sdf_application.part()
 
-  override def category: String = "AnalysedSDFApplication"
+  override def category(): String = "AnalysedSDFApplication"
 
 }

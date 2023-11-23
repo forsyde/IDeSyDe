@@ -2,11 +2,11 @@ package idesyde.common;
 
 import com.fasterxml.jackson.annotation.JsonProperty;
 import idesyde.core.DecisionModel;
-import idesyde.core.headers.DecisionModelHeader;
 
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
+import java.util.Set;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
@@ -37,16 +37,13 @@ public record AperiodicAsynchronousDataflowToPartitionedTiledMulticore(
                 @JsonProperty("processing_elements_to_routers_reservations") Map<String, Map<String, Integer>> processingElementsToRoutersReservations)
                 implements DecisionModel {
         @Override
-        public DecisionModelHeader header() {
-                return new DecisionModelHeader(
-                                "AperiodicAsynchronousDataflowToPartitionedTiledMulticore",
-                                Stream.concat(aperiodicAsynchronousDataflows.stream()
-                                                .flatMap(x -> x.header().coveredElements().stream()),
-                                                Stream.concat(partitionedTiledMulticore.header().coveredElements()
+        public Set<String> part() {
+                return Stream.concat(aperiodicAsynchronousDataflows.stream()
+                                                .flatMap(x -> x.part().stream()),
+                                                Stream.concat(partitionedTiledMulticore.part()
                                                                 .stream(),
-                                                                instrumentedComputationTimes.header().coveredElements()
+                                                                instrumentedComputationTimes.part()
                                                                                 .stream()))
-                                                .collect(Collectors.toSet()),
-                                Optional.empty());
+                                                .collect(Collectors.toSet());
         }
 }

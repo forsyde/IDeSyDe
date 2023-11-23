@@ -6,13 +6,15 @@ import scala.jdk.StreamConverters.*
 import spire.math.Rational
 import spire.implicits.*
 import idesyde.core.DecisionModel
-import scalax.collection.Graph
-import scalax.collection.GraphPredef._
-import scalax.collection.GraphEdge._
 import idesyde.common.InstrumentedPlatformMixin
-import idesyde.core.CompleteDecisionModel
+import idesyde.core.DecisionModel
 import upickle.default._
 import upickle.implicits.key
+import java.{util => ju}
+import org.jgrapht.graph.DefaultDirectedGraph
+import org.jgrapht.graph.DefaultEdge
+import org.jgrapht.alg.shortestpath.FloydWarshallShortestPaths
+import org.jgrapht.graph.AsSubgraph
 
 final case class SharedMemoryMultiCore(
     @key("processing_elems") val processingElems: Vector[String],
@@ -30,28 +32,36 @@ final case class SharedMemoryMultiCore(
       "communication_elements_bit_per_sec_per_channel"
     ) val communicationElementsBitPerSecPerChannel: Vector[Double],
     @key("pre_computed_paths") val preComputedPaths: Map[String, Map[String, Iterable[String]]]
-) extends StandardDecisionModel
-    with CompleteDecisionModel
+) extends DecisionModel
     with InstrumentedPlatformMixin[Double]
     derives ReadWriter {
 
-  override def bodyAsText: String = write(this)
+  override def asJsonString(): java.util.Optional[String] = try {
+    java.util.Optional.of(write(this))
+  } catch { case _ => java.util.Optional.empty() }
 
-  override def bodyAsBinary: Array[Byte] = writeBinary(this)
+  override def asCBORBinary(): java.util.Optional[Array[Byte]] = try {
+    java.util.Optional.of(writeBinary(this))
+  } catch { case _ => java.util.Optional.empty() }
 
   // #covering_documentation_example
-  val coveredElements =
-    (processingElems ++ communicationElems ++ storageElems).toSet ++ (topologySrcs
+  override def part(): ju.Set[String] =
+    ((processingElems ++ communicationElems ++ storageElems).toSet ++ (topologySrcs
       .zip(topologyDsts)
       .toSet)
-      .map(_.toString)
+      .map(_.toString)).asJava
   // #covering_documentation_example
 
   val platformElements: Vector[String] =
     processingElems ++ communicationElems ++ storageElems
 
-  val topology =
-    Graph.from(platformElements, topologySrcs.zip(topologyDsts).map((src, dst) => src ~> dst))
+  val topology = {
+    // Graph.from(platformElements, topologySrcs.zip(topologyDsts).map((src, dst) => src ~> dst))
+    val g = DefaultDirectedGraph[String, DefaultEdge](classOf[DefaultEdge])
+    platformElements.foreach(g.addVertex)
+    topologySrcs.zip(topologyDsts).foreach((src, dst) => g.addEdge(src, dst))
+    g
+  }
 
   val computedPaths =
     platformElements
@@ -66,15 +76,27 @@ final case class SharedMemoryMultiCore(
                 ) {
                   preComputedPaths(src)(dst)
                 } else {
-                  topology
-                    .get(src)
-                    .withSubgraph(nodes =
-                      v => v.value == src || v.value == dst || communicationElems.contains(v.value)
-                    )
-                    .shortestPathTo(topology.get(dst), e => 1)
-                    .map(path => path.nodes.map(_.value.toString()))
-                    .map(_.drop(1).dropRight(1))
-                    .getOrElse(Seq.empty)
+                  // topology
+                  //   .get(src)
+                  //   .withSubgraph(nodes =
+                  //     v => v.value == src || v.value == dst || communicationElems.contains(v.value)
+                  //   )
+                  //   .shortestPathTo(topology.get(dst), e => 1)
+                  //   .map(path => path.nodes.map(_.value.toString()))
+                  //   .map(_.drop(1).dropRight(1))
+                  //   .getOrElse(Seq.empty)
+                  val subelements = platformElements
+                    .filter(e => e == src || e == dst || communicationElems.contains(e))
+                    .toSet
+                    .asJava
+                  val paths =
+                    FloydWarshallShortestPaths(AsSubgraph(topology, subelements))
+                  val path = paths.getPath(src, dst)
+                  if (path != null) {
+                    path.getVertexList.asScala.drop(1).dropRight(1)
+                  } else {
+                    Seq.empty
+                  }
                 }
               }
             )
@@ -113,6 +135,6 @@ final case class SharedMemoryMultiCore(
     })
   }
 
-  override val category = "SharedMemoryMultiCore"
+  override def category() = "SharedMemoryMultiCore"
 
 }

@@ -1,29 +1,35 @@
 package idesyde.metaheuristics;
 
-import idesyde.blueprints.DecisionModelMessage;
-import idesyde.blueprints.StandaloneExplorationModule;
+import idesyde.blueprints.StandaloneModule;
 import idesyde.common.AperiodicAsynchronousDataflowToPartitionedMemoryMappableMulticore;
 import idesyde.common.AperiodicAsynchronousDataflowToPartitionedTiledMulticore;
 import idesyde.core.DecisionModel;
 import idesyde.core.Explorer;
-import picocli.CommandLine;
+import idesyde.core.OpaqueDecisionModel;
 
 import java.util.Optional;
 import java.util.Set;
 
-public class MetaHeuristicsExplorationModule implements StandaloneExplorationModule {
+public class MetaHeuristicsExplorationModule implements StandaloneModule {
     @Override
-    public Optional<DecisionModel> decisionMessageToModel(DecisionModelMessage message) {
-        switch (message.header().category()) {
+    public Optional<DecisionModel> fromOpaqueDecision(OpaqueDecisionModel message) {
+        switch (message.category()) {
             case "AperiodicAsynchronousDataflowToPartitionedMemoryMappableMulticore":
-                return message.body().flatMap(x -> readDecisionModel(x,
-                        AperiodicAsynchronousDataflowToPartitionedMemoryMappableMulticore.class));
+                return message.bodyCBOR().flatMap(x -> readFromCBORBytes(x, AperiodicAsynchronousDataflowToPartitionedMemoryMappableMulticore.class))
+                        .or(() -> message.bodyJson().flatMap(x -> readFromJsonString(x, AperiodicAsynchronousDataflowToPartitionedMemoryMappableMulticore.class)))
+                        .map(x -> (DecisionModel) x);
             case "AperiodicAsynchronousDataflowToPartitionedTiledMulticore":
-                return message.body().flatMap(b -> readDecisionModel(b,
-                        AperiodicAsynchronousDataflowToPartitionedTiledMulticore.class));
+                return message.bodyCBOR().flatMap(x -> readFromCBORBytes(x, AperiodicAsynchronousDataflowToPartitionedTiledMulticore.class))
+                        .or(() -> message.bodyJson().flatMap(x -> readFromJsonString(x, AperiodicAsynchronousDataflowToPartitionedTiledMulticore.class)))
+                        .map(x -> (DecisionModel) x);
             default:
                 return Optional.empty();
         }
+    }
+
+    @Override
+    public String uniqueIdentifier() {
+        return "MetaHeuristicsExplorationModule";
     }
 
     @Override
@@ -32,9 +38,7 @@ public class MetaHeuristicsExplorationModule implements StandaloneExplorationMod
     }
 
     public static void main(String[] args) {
-        var module = new MetaHeuristicsExplorationModule();
-        var cli = new StandaloneExplorationModule.ExplorationModuleCLI();
-        new CommandLine(cli).execute(args);
-        module.standaloneExplorationModuleServer(cli).ifPresent(x -> x.start(0));
+        var server = new MetaHeuristicsExplorationModule().standaloneModule(args);
+        server.ifPresent(s -> s.start(0));
     }
 }

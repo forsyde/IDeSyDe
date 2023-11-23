@@ -3,13 +3,15 @@ package idesyde.blueprints;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.annotation.JsonSerialize;
+import idesyde.core.DecisionModel;
+import idesyde.core.OpaqueDecisionModel;
 
 import java.util.Optional;
 import java.util.Set;
 
 @JsonSerialize
 public record IdentificationResultMessage(
-        Set<DecisionModelMessage> identified,
+        Set<OpaqueDecisionModel> identified,
         Set<String> errors) {
 
     public Optional<String> toJsonString() {
@@ -20,6 +22,6 @@ public record IdentificationResultMessage(
         }
     }
 
-    public static final ObjectMapper objectMapperCBOR = DecisionModelMessage.objectMapperCBOR;
-    public static final ObjectMapper objectMapper = DecisionModelMessage.objectMapper;
+    public static final ObjectMapper objectMapperCBOR = DecisionModel.objectMapperCBOR;
+    public static final ObjectMapper objectMapper = DecisionModel.objectMapper;
 }

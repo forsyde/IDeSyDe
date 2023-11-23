@@ -2,13 +2,12 @@ package idesyde.identification.choco.rules
 
 import idesyde.core.DesignModel
 import idesyde.core.DecisionModel
-import idesyde.utils.Logger
 import spire.math.Rational
 import idesyde.common.SDFToTiledMultiCore
 import idesyde.choco.CanSolveDepTasksToPartitionedMultiCore
 import idesyde.common.PeriodicWorkloadToPartitionedSharedMultiCore
 
-trait ChocoRules(using Logger) {
+trait ChocoRules {
 
   given Fractional[Rational] = spire.compat.fractional[Rational]
 

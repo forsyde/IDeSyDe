@@ -23,22 +23,22 @@ import org.chocosolver.solver.exception.ContradictionException
 import scala.collection.mutable.Buffer
 import idesyde.common.SDFToTiledMultiCore
 import org.chocosolver.solver.objective.OptimizationPolicy
-import idesyde.utils.Logger
 import idesyde.identification.choco.models.sdf.CompactingMultiCoreMapping
-import scalax.collection.GraphEdge.DiEdge
-import idesyde.core.headers.DecisionModelHeader
 import org.jgrapht.graph.SimpleDirectedGraph
 import org.jgrapht.graph.DefaultEdge
 import org.jgrapht.alg.cycle.JohnsonSimpleCycles
 import org.jgrapht.graph.DefaultDirectedGraph
 import scala.collection.mutable.Stack
-import idesyde.utils.HasUtils
 import idesyde.choco.HasDiscretizationToIntegers
 import org.chocosolver.solver.objective.ParetoMaximizer
 import org.chocosolver.solver.constraints.Constraint
-import idesyde.core.ExplorerConfiguration
+import idesyde.core.Explorer
+import idesyde.core.ExplorationSolution
+import org.jgrapht.alg.connectivity.ConnectivityInspector
+import org.jgrapht.graph.AsGraphUnion
+import org.jgrapht.alg.connectivity.KosarajuStrongConnectivityInspector
 
-final class CanSolveSDFToTiledMultiCore(using logger: Logger)
+final class CanSolveSDFToTiledMultiCore
     extends ChocoExplorable[SDFToTiledMultiCore]
     with HasUtils
     with HasSingleProcessSingleMessageMemoryConstraints
@@ -49,8 +49,8 @@ final class CanSolveSDFToTiledMultiCore(using logger: Logger)
 
   def buildChocoModel(
       m: SDFToTiledMultiCore,
-      previousSolutions: Set[(SDFToTiledMultiCore, Map[String, Double])],
-      configuration: ExplorerConfiguration
+      previousSolutions: Set[ExplorationSolution],
+      configuration: Explorer.Configuration
   ): (Model, Map[String, IntVar]) = {
     val chocoModel = Model()
     val execMax    = m.wcets.flatten.max
@@ -62,22 +62,22 @@ final class CanSolveSDFToTiledMultiCore(using logger: Logger)
     //   computeTimeMultiplierAndMemoryDividerWithResolution(
     //     timeValues,
     //     memoryValues,
-    //     if (configuration.time_resolution > Int.MaxValue) Int.MaxValue else configuration.time_resolution.toInt,
+    //     if (configuration.timeDiscretizationFactor > Int.MaxValue) Int.MaxValue else configuration.timeDiscretizationFactor.toInt,
     //     if (memoryResolution > Int.MaxValue) Int.MaxValue else memoryResolution.toInt
     //   )
     def log2(x: Double) = scala.math.log10(x) / scala.math.log10(2)
     def double2int(s: Double) = discretized(
-      if (configuration.time_resolution > Int.MaxValue) Int.MaxValue
-      else if (configuration.time_resolution <= 0L)
+      if (configuration.timeDiscretizationFactor > Int.MaxValue) Int.MaxValue
+      else if (configuration.timeDiscretizationFactor <= 0L)
         scala.math.ceil(log2(m.platform.runtimes.schedulers.length) + 5 * log2(10) - 1.0).toInt
-      else configuration.time_resolution.toInt,
+      else configuration.timeDiscretizationFactor.toInt,
       timeValues.sum
     )(s)
     given Fractional[Long] = HasDiscretizationToIntegers.ceilingLongFractional
     def long2int(l: Long) = discretized(
-      if (configuration.memory_resolution > Int.MaxValue) Int.MaxValue
-      else if (configuration.memory_resolution <= 0L) memoryValues.size * 100
-      else configuration.memory_resolution.toInt,
+      if (configuration.memoryDiscretizationFactor > Int.MaxValue) Int.MaxValue
+      else if (configuration.memoryDiscretizationFactor <= 0L) memoryValues.size * 100
+      else configuration.memoryDiscretizationFactor.toInt,
       memoryValues.max
     )(l)
     val messagesSizes = m.sdfApplications.sdfMessages
@@ -155,13 +155,13 @@ final class CanSolveSDFToTiledMultiCore(using logger: Logger)
       procElemSendsDataToAnother
     )
     // createAndApplyMOOPropagator(chocoModel, Array(numMappedElements, globalInvThroughput))
-    val (computedOnlineIndexOfPe, _) = postSymmetryBreakingConstraints(
-      m,
-      chocoModel,
-      processMappings,
-      procElemSendsDataToAnother,
-      jobOrder
-    )
+    // val (computedOnlineIndexOfPe, _) = postSymmetryBreakingConstraints(
+    //   m,
+    //   chocoModel,
+    //   processMappings,
+    //   procElemSendsDataToAnother,
+    //   jobOrder
+    // )
     createAndApplySearchStrategies(
       m,
       chocoModel,
@@ -203,37 +203,39 @@ final class CanSolveSDFToTiledMultiCore(using logger: Logger)
       .groupBy((v, i) =>
         m.sdfApplications.sdfDisjointComponents
           .map(_.toVector)
-          .indexWhere(as => as.contains(m.sdfApplications.actorsIdentifiers(i)))
+          .indexWhere(component => component.contains(m.sdfApplications.actorsIdentifiers(i)))
       )
       .map((k, v) => v.head._1)
     val objs = Array(
       numMappedElements
     ) ++ uniqueGoalPerSubGraphInvThs
     val desiredGoals =
-      if (!configuration.target_objectives.isEmpty) then
-        objs.filter(v => configuration.target_objectives.contains(v.getName()))
+      if (!configuration.targetObjectives.isEmpty) then
+        objs.filter(v => configuration.targetObjectives.contains(v.getName()))
       else objs
     createAndApplyMOOPropagator(
       chocoModel,
       desiredGoals,
-      previousSolutions.map((_, o) =>
-        o.map((k, v) =>
-          if (uniqueGoalPerSubGraphInvThs.exists(_.getName().equals(k))) k -> double2int(v)
-          else k                                                           -> v.toInt
+      previousSolutions
+        .map(sol => (sol.solved(), sol.objectives().asScala))
+        .map((_, o) =>
+          o.map((k, v) =>
+            if (uniqueGoalPerSubGraphInvThs.exists(_.getName().equals(k))) k -> double2int(v)
+            else k                                                           -> v.toInt
+          ).toMap
         )
-      )
     )
     // chocoModel.getSolver().setLearningSignedClauses()
     chocoModel.getSolver().setRestartOnSolutions()
     chocoModel.getSolver().setNoGoodRecordingFromRestarts()
-    // chocoModel
-    //   .getSolver()
-    //   .plugMonitor(new IMonitorContradiction {
-    //     def onContradiction(cex: ContradictionException): Unit = {
-    //       println(cex.toString())
-    //       println(chocoModel.getSolver().getDecisionPath().toString())
-    //     }
-    //   })
+    chocoModel
+      .getSolver()
+      .plugMonitor(new IMonitorContradiction {
+        def onContradiction(cex: ContradictionException): Unit = {
+          println(cex.toString())
+          println(chocoModel.getSolver().getDecisionPath().toString())
+        }
+      })
     (chocoModel, desiredGoals.map(o => o.getName() -> o).toMap)
   }
 
@@ -381,9 +383,8 @@ final class CanSolveSDFToTiledMultiCore(using logger: Logger)
       nUsedPEs: IntVar
   ): Array[AbstractStrategy[? <: Variable]] = {
     val jobsAndActors =
-      m.sdfApplications.firingsPrecedenceGraph.nodes
-        .map(v => v.value)
-        .toVector
+      m.sdfApplications.jobsAndActors
+    val sdfGraphInspector = ConnectivityInspector(m.sdfApplications.sdfGraph)
     val compactStrategy = CompactingMultiCoreMapping[Int](
       tarversalTimesPerBit,
       execTimes,
@@ -402,13 +403,17 @@ final class CanSolveSDFToTiledMultiCore(using logger: Logger)
         .toArray,
       (i: Int) =>
         (j: Int) =>
-          m.sdfApplications.sdfGraph
-            .get(m.sdfApplications.topologicalAndHeavyActorOrdering(i))
-            .pathTo(
-              m.sdfApplications.sdfGraph
-                .get(m.sdfApplications.topologicalAndHeavyActorOrdering(j))
-            )
-            .isDefined
+          sdfGraphInspector.pathExists(
+            m.sdfApplications.topologicalAndHeavyActorOrdering(i),
+            m.sdfApplications.topologicalAndHeavyActorOrdering(j)
+          )
+      // m.sdfApplications.sdfGraph
+      //   .get(m.sdfApplications.topologicalAndHeavyActorOrdering(i))
+      //   .pathTo(
+      //     m.sdfApplications.sdfGraph
+      //       .get(m.sdfApplications.topologicalAndHeavyActorOrdering(j))
+      //   )
+      //   .isDefined
     )
     val strategies: Array[AbstractStrategy[? <: Variable]] = Array(
       // compactStrategy,
@@ -456,24 +461,24 @@ final class CanSolveSDFToTiledMultiCore(using logger: Logger)
   def rebuildDecisionModel(
       m: SDFToTiledMultiCore,
       solution: Solution,
-      configuration: ExplorerConfiguration
-  ): (SDFToTiledMultiCore, Map[String, Double]) = {
+      configuration: Explorer.Configuration
+  ): ExplorationSolution = {
     val timeValues = m.wcets.flatten ++ m.platform.hardware.maxTraversalTimePerBit.flatten
     val memoryValues = m.platform.hardware.tileMemorySizes ++ m.sdfApplications.sdfMessages
       .map((src, _, _, mSize, p, c, tok) => mSize)
     def log2(x: Double) = scala.math.log10(x) / scala.math.log10(2)
     def int2double(d: Int) = undiscretized(
-      if (configuration.time_resolution > Int.MaxValue) Int.MaxValue
-      else if (configuration.time_resolution <= 0L)
+      if (configuration.timeDiscretizationFactor > Int.MaxValue) Int.MaxValue
+      else if (configuration.timeDiscretizationFactor <= 0L)
         scala.math.ceil(log2(m.platform.runtimes.schedulers.length) + 5 * log2(10) - 1.0).toInt
-      else configuration.time_resolution.toInt,
+      else configuration.timeDiscretizationFactor.toInt,
       timeValues.sum
     )(d)
     // val (discreteTimeValues, discreteMemoryValues) =
     //   computeTimeMultiplierAndMemoryDividerWithResolution(
     //     timeValues,
     //     memoryValues,
-    //     if (configuration.time_resolution > Int.MaxValue) Int.MaxValue else configuration.time_resolution.toInt,
+    //     if (configuration.timeDiscretizationFactor > Int.MaxValue) Int.MaxValue else configuration.timeDiscretizationFactor.toInt,
     //     if (memoryResolution > Int.MaxValue) Int.MaxValue else memoryResolution.toInt
     //   )
     val intVars = solution.retrieveIntVars(true).asScala
@@ -541,7 +546,7 @@ final class CanSolveSDFToTiledMultiCore(using logger: Logger)
       jobsAndActors
         .map((a, _) => processesMemoryMapping(m.sdfApplications.actorsIdentifiers.indexOf(a)))
         .toArray,
-      jobOrder.toArray
+      jobOrder.map(v => v.getValue()).toArray
     )
     val full = m.copy(
       sdfApplications = m.sdfApplications.copy(minimumActorThroughputs =
@@ -604,108 +609,162 @@ final class CanSolveSDFToTiledMultiCore(using logger: Logger)
     ) ++ m.sdfApplications.actorsIdentifiers.zipWithIndex
       .map((a, i) => s"invThroughput($a)" -> 1.0 / throughputs(i))
       .toMap
-    (
-      full,
-      if (configuration.target_objectives.isEmpty) then objs
-      else objs.filter((k, v) => configuration.target_objectives.contains(k))
+    val filteredObjs =
+      if (configuration.targetObjectives.isEmpty) then objs
+      else objs.filter((k, v) => configuration.targetObjectives.contains(k))
+    ExplorationSolution(
+      filteredObjs.map((k, v) => k -> v.asInstanceOf[java.lang.Double]).asJava,
+      full
     )
   }
 
   private def recomputeTh(
       m: SDFToTiledMultiCore,
-      jobWeights: Vector[Double],
-      edgeWeigths: Vector[Vector[Double]],
+      jobWeight: Vector[Double],
+      edgeWeight: Vector[Vector[Double]],
       jobMapping: Array[Int],
-      jobOrder: Array[IntVar]
+      jobOrder: Array[Int]
   ): Vector[Double] = {
-    val jobsAndActors =
-      m.sdfApplications.firingsPrecedenceGraph.nodes
-        .map(v => v.value)
-        .toVector
+
+    val maxCycles = Buffer.fill(jobWeight.size)(0.0)
+
+    val jobs =
+      m.sdfApplications.jobsAndActors
+    val nJobs = jobs.size
+
+    val mappingGraph = DefaultDirectedGraph[(String, Int), DefaultEdge](classOf[DefaultEdge])
+    jobs.foreach(job => mappingGraph.addVertex(job))
+
     def mustSuceed(i: Int)(j: Int): Boolean = if (
-      jobMapping(i)
-        == jobMapping(j)
+    jobMapping(i) == jobMapping(j)
     ) {
-      jobOrder(i).stream().anyMatch(oi => jobOrder(j).contains(oi + 1))
+      jobOrder(i) + 1 == jobOrder(j)
     } else {
-      isSuccessor(m)(jobsAndActors)(i)(j)
+      m.sdfApplications.firingsPrecedenceGraph.containsEdge(jobs(i), jobs(j))
     }
+
     def mustCycle(i: Int)(j: Int): Boolean =
-      hasDataCycle(m)(jobsAndActors)(i)(j) ||
-        (jobMapping(i)
-          == jobMapping(j) && jobOrder(j)
-            .getUB() == 0 && jobOrder(i).getLB() > 0)
-    var ths = m.wcets.zipWithIndex
-      .map((w, ai) => m.sdfApplications.sdfRepetitionVectors(ai).toDouble / w.filter(_ > 0.0).min)
-      .toBuffer
-    val nJobs                 = jobsAndActors.size
-    val minimumDistanceMatrix = jobWeights.toBuffer
-    var dfsStack              = new Stack[Int](initialSize = nJobs)
-    val visited               = Buffer.fill(nJobs)(false)
-    val previous              = Buffer.fill(nJobs)(-1)
-    wfor(0, _ < nJobs, _ + 1) { src =>
-      // this is used instead of popAll in the hopes that no list is allocated
-      while (!dfsStack.isEmpty) dfsStack.pop()
+      (!m.sdfApplications.firingsPrecedenceGraph.containsEdge(jobs(i), jobs(j)) && m.sdfApplications.firingsPrecedenceGraphWithCycles.containsEdge(jobs(i), jobs(j))) ||
+        (jobMapping(i) == jobMapping(j) && jobOrder(j) == 0 && jobOrder(i) > 0)
+
+    wfor(0, _ < nJobs, _ + 1) { i =>
       wfor(0, _ < nJobs, _ + 1) { j =>
-        visited(j) = false
-        previous(j) = -1
-        minimumDistanceMatrix(j) = Double.NegativeInfinity
-      }
-      dfsStack.push(src)
-      while (!dfsStack.isEmpty) {
-        val i = dfsStack.pop()
-        if (!visited(i)) {
-          visited(i) = true
-          wfor(0, _ < nJobs, _ + 1) { j =>
-            if (mustSuceed(i)(j) || mustCycle(i)(j)) { // adjacents
-              if (j == src) {                          // found a cycle
-                minimumDistanceMatrix(i) = jobWeights(i) + edgeWeigths(i)(j)
-                var k = i
-                // go backwards until the src
-                while (k != src) {
-                  val kprev = previous(k)
-                  minimumDistanceMatrix(kprev) = Math.max(
-                    minimumDistanceMatrix(kprev),
-                    jobWeights(kprev) + edgeWeigths(kprev)(k) + minimumDistanceMatrix(k)
-                  )
-                  k = kprev
-                }
-              } else if (visited(j) && minimumDistanceMatrix(j) > Int.MinValue) { // found a previous cycle
-                var k = j
-                // go backwards until the src
-                while (k != src) {
-                  val kprev = previous(k)
-                  minimumDistanceMatrix(kprev) = Math.max(
-                    minimumDistanceMatrix(kprev),
-                    jobWeights(kprev) + edgeWeigths(kprev)(k) + minimumDistanceMatrix(k)
-                  )
-                  k = kprev
-                }
-              } else if (!visited(j)) {
-                dfsStack.push(j)
-                previous(j) = i
-              }
-            }
-          }
+        if (mustSuceed(i)(j) || mustCycle(i)(j)) {
+          mappingGraph.addEdge(jobs(i), jobs(j))
+        } else if (mappingGraph.containsEdge(jobs(i), jobs(j))) {
+          mappingGraph.removeEdge(jobs(i), jobs(j))
         }
       }
-      val (a, _) = jobsAndActors(src)
-      val adx    = m.sdfApplications.actorsIdentifiers.indexOf(a)
-      val th =
-        m.sdfApplications.sdfRepetitionVectors(adx).toDouble / minimumDistanceMatrix(src)
-      if (minimumDistanceMatrix(src) > Double.NegativeInfinity && ths(adx) > th) ths(adx) = th
     }
-    for (
-      group <- m.sdfApplications.sdfDisjointComponents; a1 <- group; a2 <- group; if a1 != a2;
-      a1i = m.sdfApplications.actorsIdentifiers.indexOf(a1);
-      a2i = m.sdfApplications.actorsIdentifiers.indexOf(a2);
-      qa1 = m.sdfApplications.sdfRepetitionVectors(a1i);
-      qa2 = m.sdfApplications.sdfRepetitionVectors(a2i)
-    ) {
-      ths(a1i) = Math.min(ths(a1i), ths(a2i) * qa1 / qa2)
-      ths(a2i) = Math.min(ths(a1i) * qa2 / qa1, ths(a2i))
-    }
-    ths.toVector
+
+    // merge the mapping graph with the original graph
+    val mergedGraph = AsGraphUnion(
+      m.sdfApplications.firingsPrecedenceGraphWithCycles,
+      mappingGraph
+    )
+
+    // find all strongly connected components
+    var sccAlgorithm = KosarajuStrongConnectivityInspector(mergedGraph);
+    sccAlgorithm.stronglyConnectedSets().forEach(sccJava => {
+        var cycleValue = 0.0
+        val scc = sccJava.asScala
+        // println(scc.mkString(", "))
+        // add the value in the cycle
+        for (jobI <- scc) {
+          val i = jobs.indexOf(jobI)
+            cycleValue = cycleValue + jobWeight(i)
+            for (jobJ <- scc; if m.sdfApplications.firingsPrecedenceGraphWithCycles.containsEdge(jobI, jobJ)) {
+              val j = jobs.indexOf(jobJ)
+              cycleValue = cycleValue + edgeWeight(i)(j)
+            }
+          maxCycles(i) = Math.max(maxCycles(i), cycleValue);
+        }
+    });
+    
+    
+    var mappedInspector = ConnectivityInspector(mergedGraph);
+    mappedInspector.connectedSets().forEach(wccJava => {
+      val wcc = wccJava.asScala
+      val maxCycleValue = wcc.map(jobI => maxCycles(jobs.indexOf(jobI))).max
+      wcc.map(jobs.indexOf).foreach(i => maxCycles(i) = Math.max(maxCycles(i), maxCycleValue))
+    })
+
+    // println(maxCycles.mkString(", "))
+    m.sdfApplications.actorsIdentifiers
+      .map(a => maxCycles.zipWithIndex.filter((l, i) => jobs(i)._1 == a).map((l, i) => jobs(i)._2.toDouble / l).max)
+      .toVector
+
+  //   var ths = m.wcets.zipWithIndex
+  //     .map((w, ai) => m.sdfApplications.sdfRepetitionVectors(ai).toDouble / w.filter(_ > 0.0).min)
+  //     .toBuffer
+  //   val nJobs                 = jobsAndActors.size
+  //   val minimumDistanceMatrix = jobWeights.toBuffer
+  //   var dfsStack              = new Stack[Int](initialSize = nJobs)
+  //   val visited               = Buffer.fill(nJobs)(false)
+  //   val previous              = Buffer.fill(nJobs)(-1)
+  //   wfor(0, _ < nJobs, _ + 1) { src =>
+  //     // this is used instead of popAll in the hopes that no list is allocated
+  //     while (!dfsStack.isEmpty) dfsStack.pop()
+  //     wfor(0, _ < nJobs, _ + 1) { j =>
+  //       visited(j) = false
+  //       previous(j) = -1
+  //       minimumDistanceMatrix(j) = Double.NegativeInfinity
+  //     }
+  //     dfsStack.push(src)
+  //     while (!dfsStack.isEmpty) {
+  //       val i = dfsStack.pop()
+  //       if (!visited(i)) {
+  //         visited(i) = true
+  //         wfor(0, _ < nJobs, _ + 1) { j =>
+  //           if (mustSuceed(i)(j) || mustCycle(i)(j)) { // adjacents
+  //             if (j == src) {                          // found a cycle
+  //               minimumDistanceMatrix(i) = jobWeights(i) + edgeWeigths(i)(j)
+  //               var k = i
+  //               // go backwards until the src
+  //               while (k != src) {
+  //                 val kprev = previous(k)
+  //                 minimumDistanceMatrix(kprev) = Math.max(
+  //                   minimumDistanceMatrix(kprev),
+  //                   jobWeights(kprev) + edgeWeigths(kprev)(k) + minimumDistanceMatrix(k)
+  //                 )
+  //                 k = kprev
+  //               }
+  //             } else if (visited(j) && minimumDistanceMatrix(j) > Int.MinValue) { // found a previous cycle
+  //               var k = j
+  //               // go backwards until the src
+  //               while (k != src) {
+  //                 val kprev = previous(k)
+  //                 minimumDistanceMatrix(kprev) = Math.max(
+  //                   minimumDistanceMatrix(kprev),
+  //                   jobWeights(kprev) + edgeWeigths(kprev)(k) + minimumDistanceMatrix(k)
+  //                 )
+  //                 k = kprev
+  //               }
+  //             } else if (!visited(j)) {
+  //               dfsStack.push(j)
+  //               previous(j) = i
+  //             }
+  //           }
+  //         }
+  //       }
+  //     }
+  //     val (a, _) = jobsAndActors(src)
+  //     val adx    = m.sdfApplications.actorsIdentifiers.indexOf(a)
+  //     val th =
+  //       m.sdfApplications.sdfRepetitionVectors(adx).toDouble / minimumDistanceMatrix(src)
+  //     if (minimumDistanceMatrix(src) > Double.NegativeInfinity && ths(adx) > th) ths(adx) = th
+  //   }
+  //   for (
+  //     group <- m.sdfApplications.sdfDisjointComponents; a1 <- group; a2 <- group; if a1 != a2;
+  //     a1i = m.sdfApplications.actorsIdentifiers.indexOf(a1);
+  //     a2i = m.sdfApplications.actorsIdentifiers.indexOf(a2);
+  //     qa1 = m.sdfApplications.sdfRepetitionVectors(a1i);
+  //     qa2 = m.sdfApplications.sdfRepetitionVectors(a2i)
+  //   ) {
+  //     ths(a1i) = Math.min(ths(a1i), ths(a2i) * qa1 / qa2)
+  //     ths(a2i) = Math.min(ths(a1i) * qa2 / qa1, ths(a2i))
+  //   }
+  //   ths.toVector
   }
 
 }

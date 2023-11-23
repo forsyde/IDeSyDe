@@ -1,8 +1,11 @@
 package idesyde.common
 
+import scala.jdk.CollectionConverters._
+
 import idesyde.core.DesignModel
 import idesyde.core.DecisionModel
 import scala.collection.mutable
+import org.jgrapht.alg.shortestpath.FloydWarshallShortestPaths
 
 trait PlatformRules {
 
@@ -54,33 +57,46 @@ trait PlatformRules {
     for (plat <- plats) {
       val isTiled = plat.communicationElems.forall(p =>
         plat.topology
-          .get(p)
-          .neighbors
-          .map(_.value)
+          .outgoingEdgesOf(p)
+          .asScala
+          .map(plat.topology.getEdgeTarget)
           .count(e => plat.storageElems.contains(e) || plat.processingElems.contains(e)) <= 2
       ) &&
         plat.storageElems.forall(p =>
           plat.topology
-            .get(p)
-            .neighbors
-            .map(_.value)
+            .outgoingEdgesOf(p)
+            .asScala
+            .map(plat.topology.getEdgeTarget)
             .count(e => plat.communicationElems.contains(e)) <= 1
         ) &&
         plat.processingElems.length == plat.storageElems.length
       if (isTiled) {
+        val shortestPaths = FloydWarshallShortestPaths(plat.topology)
         val tiledMemories = plat.processingElems.map(pe =>
           plat.storageElems.minBy(me =>
-            plat.topology.get(pe).shortestPathTo(plat.topology.get(me)) match {
-              case Some(path) => path.size
-              case None       => plat.communicationElems.length + 1
+            // plat.topology.get(pe).shortestPathTo(plat.topology.get(me)) match {
+            //   case Some(path) => path.size
+            //   case None       => plat.communicationElems.length + 1
+            // }
+            val path = shortestPaths.getPath(pe, me)
+            if (path != null) {
+              path.getLength()
+            } else {
+              plat.communicationElems.length + 1
             }
           )
         )
         val tiledNI = plat.processingElems.map(pe =>
           plat.communicationElems.minBy(ce =>
-            plat.topology.get(pe).shortestPathTo(plat.topology.get(ce)) match {
-              case Some(value) => value.size
-              case None        => plat.topology.nodes.size
+            // plat.topology.get(pe).shortestPathTo(plat.topology.get(ce)) match {
+            //   case Some(value) => value.size
+            //   case None        => plat.topology.nodes.size
+            // }
+            val path = shortestPaths.getPath(pe, ce)
+            if (path != null) {
+              path.getLength()
+            } else {
+              plat.communicationElems.length + 1
             }
           )
         )

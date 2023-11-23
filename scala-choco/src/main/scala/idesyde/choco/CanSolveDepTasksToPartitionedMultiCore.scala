@@ -21,14 +21,15 @@ import org.chocosolver.solver.search.loop.monitors.IMonitorContradiction
 import org.chocosolver.solver.exception.ContradictionException
 import idesyde.choco.HasSingleProcessSingleMessageMemoryConstraints
 import idesyde.choco.HasActive4StageDuration
-import idesyde.utils.HasUtils
 import idesyde.identification.choco.interfaces.ChocoModelMixin
 import idesyde.common.PeriodicWorkloadToPartitionedSharedMultiCore
 import idesyde.core.DecisionModel
 import idesyde.identification.choco.ChocoDecisionModel
 import idesyde.choco.HasDiscretizationToIntegers
-import idesyde.utils.Logger
-import idesyde.core.ExplorerConfiguration
+import idesyde.core.Explorer
+import idesyde.core.ExplorationSolution
+import org.chocosolver.solver.search.limits.FailCounter
+import org.chocosolver.solver.search.restart.LubyCutoff
 
 // object ConMonitorObj extends IMonitorContradiction {
 
@@ -37,7 +38,7 @@ import idesyde.core.ExplorerConfiguration
 //   }
 // }
 
-final class CanSolveDepTasksToPartitionedMultiCore(using logger: Logger)
+final class CanSolveDepTasksToPartitionedMultiCore
     extends ChocoExplorable[PeriodicWorkloadToPartitionedSharedMultiCore]
     with HasUtils
     with HasSingleProcessSingleMessageMemoryConstraints
@@ -48,8 +49,8 @@ final class CanSolveDepTasksToPartitionedMultiCore(using logger: Logger)
 
   override def buildChocoModel(
       m: PeriodicWorkloadToPartitionedSharedMultiCore,
-      objectivesUpperLimits: Set[(PeriodicWorkloadToPartitionedSharedMultiCore, Map[String, Double])],
-      configuration: ExplorerConfiguration
+      objectivesUpperLimits: Set[ExplorationSolution],
+      configuration: Explorer.Configuration
   ): (Model, Map[String, IntVar]) = {
     val chocoModel = Model()
     val timeValues =
@@ -59,16 +60,16 @@ final class CanSolveDepTasksToPartitionedMultiCore(using logger: Logger)
       m.workload.processSizes
 
     def double2int(s: Double): Int = discretized(
-      if (configuration.time_resolution > Int.MaxValue.toLong) Int.MaxValue
-      else if (configuration.time_resolution <= 0L) timeValues.size * 100
-      else configuration.time_resolution.toInt,
+      if (configuration.timeDiscretizationFactor > Int.MaxValue.toLong) Int.MaxValue
+      else if (configuration.timeDiscretizationFactor <= 0L) timeValues.size * 100
+      else configuration.timeDiscretizationFactor.toInt,
       timeValues.max
     )(s)
     given Fractional[Long] = HasDiscretizationToIntegers.ceilingLongFractional
     def long2int(l: Long): Int = discretized(
-      if (configuration.memory_resolution > Int.MaxValue) Int.MaxValue
-      else if (configuration.memory_resolution <= 0L) memoryValues.size * 100
-      else configuration.memory_resolution.toInt,
+      if (configuration.memoryDiscretizationFactor > Int.MaxValue) Int.MaxValue
+      else if (configuration.memoryDiscretizationFactor <= 0L) memoryValues.size * 100
+      else configuration.memoryDiscretizationFactor.toInt,
       memoryValues.max
     )(l)
 
@@ -76,6 +77,9 @@ final class CanSolveDepTasksToPartitionedMultiCore(using logger: Logger)
     val priorities = m.workload.prioritiesRateMonotonic.toArray
     val deadlines  = m.workload.relativeDeadlines.map(double2int)
     val wcets      = m.wcets.map(_.map(double2int))
+    println(deadlines.mkString(", "))
+    println("----")
+    println(wcets.map(_.mkString(",")).mkString("\n"))
     val maxUtilizations =
       m.platform.hardware.processingElems.map(p => m.maxUtilizations.getOrElse(p, 1.0))
 
@@ -295,7 +299,7 @@ final class CanSolveDepTasksToPartitionedMultiCore(using logger: Logger)
     val solver = chocoModel.getSolver()
     chocoModel.setObjective(false, nUsedPEs)
     // if there is already a previous solution
-    val minPrevSol = objectivesUpperLimits.minByOption((_, s) => s.values.min).foreach((_, sol) => {
+    val minPrevSol = objectivesUpperLimits.map(sol => sol.objectives().asScala).minByOption(s => s.values.min).foreach(sol => {
       chocoModel.arithm(nUsedPEs, "<", sol.values.min.toInt).post() // there is only one in this case
     })
     solver.setSearch(
@@ -333,8 +337,9 @@ final class CanSolveDepTasksToPartitionedMultiCore(using logger: Logger)
     //     }
     //   })
 
-    chocoModel.getSolver().setLearningSignedClauses()
-    // chocoModel.getSolver().setRestarts(FailCounter(chocoModel, m.workload.taskSizes.size * m.platform.runtimes.schedulers.size), LubyCutoffStrategy(m.workload.taskSizes.size * m.platform.runtimes.schedulers.size), 0)
+    // chocoModel.getSolver().setLearningSignedClauses()
+    chocoModel.getSolver().setRestarts(FailCounter(chocoModel, m.workload.taskSizes.size * m.platform.runtimes.schedulers.size), LubyCutoff(m.workload.taskSizes.size * m.platform.runtimes.schedulers.size), 0)
+    chocoModel.getSolver().setNoGoodRecordingFromRestarts()
 
     // chocoModel
     //   .getSolver()
@@ -348,25 +353,25 @@ final class CanSolveDepTasksToPartitionedMultiCore(using logger: Logger)
   override def rebuildDecisionModel(
       m: PeriodicWorkloadToPartitionedSharedMultiCore,
       solution: Solution,
-      configuration: ExplorerConfiguration
-  ): (PeriodicWorkloadToPartitionedSharedMultiCore, Map[String, Double]) = {
+      configuration: Explorer.Configuration
+  ): ExplorationSolution = {
     val timeValues =
       (m.workload.periods ++ m.wcets.flatten ++ m.workload.relativeDeadlines)
     val memoryValues = m.platform.hardware.storageSizes ++
       m.workload.messagesMaxSizes ++
       m.workload.processSizes
     def int2double(d: Int) = undiscretized(
-      if (configuration.time_resolution > Int.MaxValue) Int.MaxValue
-      else if (configuration.time_resolution <= 0L) timeValues.size * 100
-      else configuration.time_resolution.toInt,
+      if (configuration.timeDiscretizationFactor > Int.MaxValue) Int.MaxValue
+      else if (configuration.timeDiscretizationFactor <= 0L) timeValues.size * 100
+      else configuration.timeDiscretizationFactor.toInt,
       timeValues.sum
     )(d)
     // val (discreteTimeValues, discreteMemoryValues) =
-    //   computeTimeMultiplierAndMemoryDividerWithResolution(
+    //   computeTimeMultiplierAndMemoryDividerWithDiscretizationFactor(
     //     timeValues,
     //     memoryValues,
-    //     if (configuration.time_resolution > Int.MaxValue) Int.MaxValue else configuration.time_resolution.toInt,
-    //     if (configuration.memory_resolution > Int.MaxValue) Int.MaxValue else configuration.memory_resolution.toInt
+    //     if (configuration.timeDiscretizationFactor > Int.MaxValue) Int.MaxValue else configuration.timeDiscretizationFactor.toInt,
+    //     if (configuration.memoryDiscretizationFactor > Int.MaxValue) Int.MaxValue else configuration.memoryDiscretizationFactor.toInt
     //   )
     val intVars = solution.retrieveIntVars(true).asScala
     val processesMemoryMapping: Vector[Int] =
@@ -435,12 +440,15 @@ final class CanSolveDepTasksToPartitionedMultiCore(using logger: Logger)
         iter.toMap
       }).toMap
     // val channelSlotAllocations = ???
-    (m.copy(
+    ExplorationSolution(
+Map("nUsedPEs" -> nUsedPEs.getValue().toDouble.asInstanceOf[java.lang.Double]).asJava,
+m.copy(
       processMappings = processMappings,
       processSchedulings = processSchedulings,
       channelMappings = channelMappings,
       channelSlotAllocations = messageSlotAllocations
-    ), Map("nUsedPEs" -> nUsedPEs.getValue().toDouble))
+    )
+    )
   }
 
   // chocoModel.getSolver().plugMonitor(ConMonitorObj)

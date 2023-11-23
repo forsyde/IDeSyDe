@@ -92,6 +92,8 @@ class IDeSyDeLibrary:
             run_path,
             "--x-max-solutions",
             "1",
+            "--x-improvement-time-out",
+            "60",
             "-p",
             str(self.parallel_lvl),
             "-v",

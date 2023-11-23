@@ -2,7 +2,6 @@ package idesyde.common;
 
 import com.fasterxml.jackson.annotation.JsonProperty;
 import idesyde.core.DecisionModel;
-import idesyde.core.headers.DecisionModelHeader;
 
 import java.util.HashSet;
 import java.util.List;
@@ -26,15 +25,12 @@ public record TiledMultiCore(
                 Set<String> routers,
                 @JsonProperty("tile_memory_sizes") Map<String, Long> tileMemorySizes) implements DecisionModel {
         @Override
-        public DecisionModelHeader header() {
-                return new DecisionModelHeader(
-                                "TiledMultiCore",
-                                Stream.concat(memories.stream(),
+        public Set<String> part() {
+                return Stream.concat(memories.stream(),
                                                 Stream.concat(processors.stream(),
                                                                 Stream.concat(routers.stream(),
                                                                                 networkInterfaces.stream())))
-                                                .collect(Collectors.toSet()),
-                                Optional.empty());
+                                                .collect(Collectors.toSet());
         }
 
         public Set<String> communicationElements() {

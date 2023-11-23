@@ -1,20 +1,19 @@
 package idesyde.metaheuristics;
 
 import idesyde.common.AperiodicAsynchronousDataflow;
-import idesyde.common.AperiodicAsynchronousDataflow.Job;
 import idesyde.common.AperiodicAsynchronousDataflowToPartitionedMemoryMappableMulticore;
 import idesyde.common.AperiodicAsynchronousDataflowToPartitionedTiledMulticore;
 import idesyde.core.DecisionModel;
 import idesyde.core.ExplorationSolution;
 import idesyde.core.Explorer;
-import idesyde.core.headers.ExplorationBidding;
+import idesyde.core.ExplorationBidding;
 
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
-import java.util.stream.Collectors;
+import java.util.concurrent.CopyOnWriteArraySet;
 import java.util.stream.Stream;
 
 public class JeneticsExplorer implements Explorer, CanExploreAADPMMMWithJenetics, CanExploreAADPTMWithJenetics {
@@ -23,7 +22,7 @@ public class JeneticsExplorer implements Explorer, CanExploreAADPMMMWithJenetics
     private Map<AperiodicAsynchronousDataflowToPartitionedMemoryMappableMulticore, List<Set<AperiodicAsynchronousDataflow.Job>>> _memoizedFollows = new HashMap<>();
 
     @Override
-    public ExplorationBidding bid(DecisionModel decisionModel) {
+    public ExplorationBidding bid(Set<Explorer> explorers, DecisionModel decisionModel) {
         if (decisionModel instanceof AperiodicAsynchronousDataflowToPartitionedMemoryMappableMulticore aperiodicAsynchronousDataflowToPartitionedMemoryMappableMulticore) {
             var objs = new HashSet<String>();
             objs.add("nUsedPEs");
@@ -49,20 +48,24 @@ public class JeneticsExplorer implements Explorer, CanExploreAADPMMMWithJenetics
             }
             return new ExplorationBidding(uniqueIdentifier(), true, false, 1.3, objs, Map.of());
         }
-        return Explorer.super.bid(decisionModel);
+        return Explorer.super.bid(explorers, decisionModel);
     }
 
     @Override
     public Stream<? extends ExplorationSolution> explore(DecisionModel decisionModel,
             Set<ExplorationSolution> previousSolutions, Configuration configuration) {
+        Stream<? extends ExplorationSolution> explorationStream = Stream.empty();
+        var foundSolutionObjectives = new CopyOnWriteArraySet<Map<String, Double>>();
         if (decisionModel instanceof AperiodicAsynchronousDataflowToPartitionedMemoryMappableMulticore aperiodicAsynchronousDataflowToPartitionedMemoryMappableMulticore) {
-            return exploreAADPMMM(aperiodicAsynchronousDataflowToPartitionedMemoryMappableMulticore, previousSolutions,
+            explorationStream = exploreAADPMMM(aperiodicAsynchronousDataflowToPartitionedMemoryMappableMulticore, previousSolutions,
                     configuration);
         } else if (decisionModel instanceof AperiodicAsynchronousDataflowToPartitionedTiledMulticore aperiodicAsynchronousDataflowToPartitionedTiledMulticore) {
-            return exploreAADPTM(aperiodicAsynchronousDataflowToPartitionedTiledMulticore, previousSolutions,
+            explorationStream = exploreAADPTM(aperiodicAsynchronousDataflowToPartitionedTiledMulticore, previousSolutions,
                     configuration);
+        } else {
+            explorationStream = Explorer.super.explore(decisionModel, previousSolutions, configuration);
         }
-        return Explorer.super.explore(decisionModel, previousSolutions, configuration);
+        return explorationStream.filter(sol -> !previousSolutions.contains(sol) && !foundSolutionObjectives.contains(sol.objectives())).peek(s -> foundSolutionObjectives.add(s.objectives()));
     }
 
     // @Override

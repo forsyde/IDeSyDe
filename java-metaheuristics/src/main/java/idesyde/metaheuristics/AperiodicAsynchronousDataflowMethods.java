@@ -1,20 +1,13 @@
 package idesyde.metaheuristics;
 
-import java.util.ArrayDeque;
-import java.util.Arrays;
-import java.util.List;
-import java.util.Map;
-import java.util.Set;
-import java.util.function.BiFunction;
-
-import idesyde.common.AperiodicAsynchronousDataflow;
 import idesyde.common.AperiodicAsynchronousDataflowToPartitionedMemoryMappableMulticore;
+
+import java.util.Arrays;
+
 import org.jgrapht.Graph;
 import org.jgrapht.alg.connectivity.ConnectivityInspector;
 import org.jgrapht.alg.connectivity.KosarajuStrongConnectivityInspector;
-import org.jgrapht.alg.cycle.TarjanSimpleCycles;
 import org.jgrapht.graph.*;
-import org.jgrapht.graph.builder.GraphBuilder;
 
 interface AperiodicAsynchronousDataflowMethods {
 
@@ -38,14 +31,14 @@ interface AperiodicAsynchronousDataflowMethods {
                 }
             }
         }
-        var mappedGraph = new AsGraphUnion<>(follows, mappingGraph);
+        var mergedGraph = new AsGraphUnion<>(follows, mappingGraph);
         var maxCycles = new double[jobWeights.length];
         System.arraycopy(jobWeights, 0, maxCycles, 0, jobWeights.length);
-        var sccAlgorithm = new KosarajuStrongConnectivityInspector<>(mappedGraph);
+        var sccAlgorithm = new KosarajuStrongConnectivityInspector<>(mergedGraph);
         sccAlgorithm.stronglyConnectedSets().forEach(scc -> {
             var cycleValue = 0.0;
             // add the value in the cycle
-            for (var i: scc) {
+            for (var i : scc) {
                 cycleValue += jobWeights[i];
                 for (var j : scc) {
                     if (follows.containsEdge(i, j)) {
@@ -53,15 +46,15 @@ interface AperiodicAsynchronousDataflowMethods {
                     }
                 }
             }
-            for (var jobI: scc) {
+            for (var jobI : scc) {
                 maxCycles[jobI] = Math.max(maxCycles[jobI], cycleValue);
             }
         });
-        var mappedInspector = new ConnectivityInspector<>(mappedGraph);
+        var mappedInspector = new ConnectivityInspector<>(mergedGraph);
         mappedInspector.connectedSets().forEach(wcc -> {
-            wcc.stream().mapToDouble(jobI -> jobWeights[jobI]).max().ifPresent(maxCycle -> {
+            wcc.stream().mapToDouble(jobI -> jobWeights[jobI]).max().ifPresent(maxValue -> {
                 for (var jobI : wcc) {
-                    maxCycles[jobI] = Math.max(maxCycles[jobI], maxCycle);
+                    maxCycles[jobI] = maxValue;
                 }
             });
         });

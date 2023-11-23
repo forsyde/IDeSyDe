@@ -17,7 +17,7 @@ jobs:
   test-scala-build-on-linux:
     strategy:
       matrix:
-        jdk: [adopt:17, corretto:17, zulu:17]
+        jdk: ["adopt:17", "corretto:17", "zulu:17"]
       fail-fast: false
     runs-on: ubuntu-latest
     steps:

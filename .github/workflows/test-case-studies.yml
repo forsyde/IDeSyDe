@@ -35,7 +35,7 @@ jobs:
           ./gradlew publishModules
           curl -fL "https://github.com/coursier/launchers/raw/master/cs-x86_64-pc-linux-static.gz" | gzip -d > cs
           chmod +x ./cs
-          ./cs setup --yes
+          ./cs setup --jvm "adoptium:1.17" --yes
           sbt publishModules
           curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh -s -- --default-toolchain stable -y 
           source "$HOME/.cargo/env"

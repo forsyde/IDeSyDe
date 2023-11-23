@@ -531,11 +531,15 @@ pub fn identify_analyzed_sdf_from_common_sdf(
                     &aggregated_repetition_vector,
                     &actor_names,
                 );
-                identified.push(Arc::new(AnalysedSDFApplication {
-                    sdf_application: sdf_application.to_owned(),
-                    repetition_vector,
-                    periodic_admissible_static_schedule: schedule,
-                }) as Arc<dyn DecisionModel>);
+                if schedule.is_empty() {
+                    msgs.push("identify_analyzed_sdf_from_common_sdf: no periodic admissible static schedule found".to_string());
+                } else {
+                    identified.push(Arc::new(AnalysedSDFApplication {
+                        sdf_application: sdf_application.to_owned(),
+                        repetition_vector,
+                        periodic_admissible_static_schedule: schedule,
+                    }) as Arc<dyn DecisionModel>);
+                }
             } else {
                 msgs.push("identify_analyzed_sdf_from_common_sdf: repetition vector does not contain all actors".to_string());
             }
@@ -787,8 +791,10 @@ pub fn compute_periodic_admissible_static_schedule(
     let mut left = repetition_vector.clone();
     let mut buffer: Vec<u64> = initial_tokens.iter().map(|t| *t as u64).collect();
     let mut schedule = Vec::new();
+    // println!("Initial buffer {:?}", buffer);
     // println!("compute schedule with left {:?}", left);
     while left.iter().any(|x| x > &0) {
+        let mut can_schedule = false;
         for j in 0..actor_names.len() {
             if left[j] > 0 {
                 let mut can_produce = true;
@@ -807,9 +813,14 @@ pub fn compute_periodic_admissible_static_schedule(
                         }
                     }
                     left[j] -= 1;
+                    can_schedule = true;
                     schedule.push(actor_names[j].to_owned());
                 }
             }
+        }
+        if !can_schedule {
+            // println!("Can t schedule");
+            return vec![];
         }
     }
     // println!("done");

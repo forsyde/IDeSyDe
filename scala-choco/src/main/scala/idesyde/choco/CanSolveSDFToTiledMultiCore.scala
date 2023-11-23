@@ -155,13 +155,13 @@ final class CanSolveSDFToTiledMultiCore
       procElemSendsDataToAnother
     )
     // createAndApplyMOOPropagator(chocoModel, Array(numMappedElements, globalInvThroughput))
-    val (computedOnlineIndexOfPe, _) = postSymmetryBreakingConstraints(
-      m,
-      chocoModel,
-      processMappings,
-      procElemSendsDataToAnother,
-      jobOrder
-    )
+    // val (computedOnlineIndexOfPe, _) = postSymmetryBreakingConstraints(
+    //   m,
+    //   chocoModel,
+    //   processMappings,
+    //   procElemSendsDataToAnother,
+    //   jobOrder
+    // )
     createAndApplySearchStrategies(
       m,
       chocoModel,
@@ -203,7 +203,7 @@ final class CanSolveSDFToTiledMultiCore
       .groupBy((v, i) =>
         m.sdfApplications.sdfDisjointComponents
           .map(_.toVector)
-          .indexWhere(as => as.contains(m.sdfApplications.actorsIdentifiers(i)))
+          .indexWhere(component => component.contains(m.sdfApplications.actorsIdentifiers(i)))
       )
       .map((k, v) => v.head._1)
     val objs = Array(
@@ -228,14 +228,14 @@ final class CanSolveSDFToTiledMultiCore
     // chocoModel.getSolver().setLearningSignedClauses()
     chocoModel.getSolver().setRestartOnSolutions()
     chocoModel.getSolver().setNoGoodRecordingFromRestarts()
-    // chocoModel
-    //   .getSolver()
-    //   .plugMonitor(new IMonitorContradiction {
-    //     def onContradiction(cex: ContradictionException): Unit = {
-    //       println(cex.toString())
-    //       println(chocoModel.getSolver().getDecisionPath().toString())
-    //     }
-    //   })
+    chocoModel
+      .getSolver()
+      .plugMonitor(new IMonitorContradiction {
+        def onContradiction(cex: ContradictionException): Unit = {
+          println(cex.toString())
+          println(chocoModel.getSolver().getDecisionPath().toString())
+        }
+      })
     (chocoModel, desiredGoals.map(o => o.getName() -> o).toMap)
   }
 

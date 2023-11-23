@@ -1,6 +1,9 @@
 package idesyde.metaheuristics;
 
 import idesyde.common.AperiodicAsynchronousDataflowToPartitionedMemoryMappableMulticore;
+
+import java.util.Arrays;
+
 import org.jgrapht.Graph;
 import org.jgrapht.alg.connectivity.ConnectivityInspector;
 import org.jgrapht.alg.connectivity.KosarajuStrongConnectivityInspector;
@@ -28,10 +31,10 @@ interface AperiodicAsynchronousDataflowMethods {
                 }
             }
         }
-        var mappedGraph = new AsGraphUnion<>(follows, mappingGraph);
+        var mergedGraph = new AsGraphUnion<>(follows, mappingGraph);
         var maxCycles = new double[jobWeights.length];
         System.arraycopy(jobWeights, 0, maxCycles, 0, jobWeights.length);
-        var sccAlgorithm = new KosarajuStrongConnectivityInspector<>(mappedGraph);
+        var sccAlgorithm = new KosarajuStrongConnectivityInspector<>(mergedGraph);
         sccAlgorithm.stronglyConnectedSets().forEach(scc -> {
             var cycleValue = 0.0;
             // add the value in the cycle
@@ -47,11 +50,11 @@ interface AperiodicAsynchronousDataflowMethods {
                 maxCycles[jobI] = Math.max(maxCycles[jobI], cycleValue);
             }
         });
-        var mappedInspector = new ConnectivityInspector<>(mappedGraph);
+        var mappedInspector = new ConnectivityInspector<>(mergedGraph);
         mappedInspector.connectedSets().forEach(wcc -> {
-            wcc.stream().mapToDouble(jobI -> jobWeights[jobI]).max().ifPresent(maxCycle -> {
+            wcc.stream().mapToDouble(jobI -> jobWeights[jobI]).max().ifPresent(maxValue -> {
                 for (var jobI : wcc) {
-                    maxCycles[jobI] = Math.max(maxCycles[jobI], maxCycle);
+                    maxCycles[jobI] = maxValue;
                 }
             });
         });

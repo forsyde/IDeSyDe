@@ -143,6 +143,7 @@ class ChocoExplorer extends Explorer:
       solver.limitFail(configuration.improvementIterations)
       solver.limitBacktrack(configuration.improvementIterations)
     }
+
     val chocoSolution = solver.findSolution()
     if (chocoSolution != null) {
       val solution =

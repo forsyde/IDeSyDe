@@ -51,17 +51,17 @@ object CommonModule
     ),
     IdentificationRule.OnlyDecisionModels(adaptIRuleToJava(identSDFToPartitionedSharedMemory)),
     IdentificationRule.OnlyDecisionModels(adaptIRuleToJava(identSDFToTiledMultiCore)),
-    IdentificationRule.OnlyCertainDecisionModels(
-      adaptIRuleToJava(identAnalysedSDFApplication),
-      Set("SDFApplication", "SDFApplicationWithFunctions").asJava
-    ),
+    // IdentificationRule.OnlyCertainDecisionModels(
+    //   adaptIRuleToJava(identAnalysedSDFApplication),
+    //   Set("SDFApplication", "SDFApplicationWithFunctions").asJava
+    // ),
     IdentificationRule.OnlyDecisionModels(
       adaptIRuleToJava(identPeriodicWorkloadToPartitionedSharedMultiCore)
     ),
     IdentificationRule.OnlyDecisionModels(adaptIRuleToJava(identTaksAndSDFServerToMultiCore)),
     IdentificationRule.OnlyDecisionModels(adaptIRuleToJava(identTiledFromShared)),
     IdentificationRule.OnlyDecisionModels(adaptIRuleToJava(identTaskdAndSDFServer)),
-    IdentificationRule.OnlyDecisionModels(adaptIRuleToJava(identCommonSDFApplication)),
+    // IdentificationRule.OnlyDecisionModels(adaptIRuleToJava(identCommonSDFApplication)),
     IdentificationRule.OnlyCertainDecisionModels(
       adaptIRuleToJava(identAggregatedCommunicatingAndTriggeredReactiveWorkload),
       Set("CommunicatingAndTriggeredReactiveWorkload").asJava

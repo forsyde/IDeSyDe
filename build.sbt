@@ -22,7 +22,7 @@ lazy val scoptVersion                  = "4.1.0"
 lazy val scalaJsonSchemaVersion        = "0.7.8"
 lazy val javalinVersion                = "5.6.1"
 lazy val slf4jVersion                  = "2.0.7"
-lazy val globalIDeSyDeJavaVersion      = "session-based-SNAPSHOT"
+lazy val globalIDeSyDeJavaVersion      = "develop-SNAPSHOT"
 
 lazy val modulesTarget = file("modules")
 

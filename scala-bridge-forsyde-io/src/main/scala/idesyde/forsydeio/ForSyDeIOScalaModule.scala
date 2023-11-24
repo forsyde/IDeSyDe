@@ -1,6 +1,9 @@
 package idesyde.forsydeio
 
 import scala.jdk.CollectionConverters._
+import scala.jdk.OptionConverters._
+
+import org.virtuslab.yaml.*
 
 import upickle.default._
 import java.{util => ju}
@@ -36,6 +39,10 @@ import idesyde.common.SharedMemoryMultiCore
 import idesyde.common.CommunicatingAndTriggeredReactiveWorkload
 import idesyde.common.PartitionedSharedMemoryMultiCore
 import idesyde.common.PeriodicWorkloadAndSDFServers
+import idesyde.devicetree.OSDescription
+import idesyde.devicetree.identification.OSDescriptionDesignModel
+import idesyde.devicetree.identification.CanParseDeviceTree
+import idesyde.devicetree.identification.DeviceTreeDesignModel
 
 object ForSyDeIOScalaModule
     extends StandaloneModule
@@ -47,7 +54,9 @@ object ForSyDeIOScalaModule
     with idesyde.common.MixedRules
     with idesyde.common.PlatformRules
     with idesyde.common.WorkloadRules
-    with idesyde.common.ApplicationRules {
+    with idesyde.common.ApplicationRules
+    with idesyde.devicetree.identification.PlatformRules
+    with CanParseDeviceTree {
 
   def adaptIRuleToJava[T <: DecisionModel](
       func: (Set[DesignModel], Set[DecisionModel]) => (Set[T], Set[String])
@@ -140,6 +149,8 @@ object ForSyDeIOScalaModule
   // .registerDriver(new ForSyDeAmaltheaDriver())
 
   override def identificationRules(): ju.Set[IdentificationRule] = Set(
+    IdentificationRule.OnlyDesignModels(adaptIRuleToJava(identSharedMemoryMultiCoreFromDeviceTree)),
+    IdentificationRule.OnlyDesignModels(adaptIRuleToJava(identPartitionedCoresWithRuntimesFromDeviceTree)),
     IdentificationRule.OnlyDesignModels(adaptIRuleToJava(identSDFApplication)),
     IdentificationRule.OnlyDesignModels(adaptIRuleToJava(identTiledMultiCore)),
     IdentificationRule.Generic(adaptIRuleToJava(identPartitionedCoresWithRuntimes)),
@@ -202,10 +213,27 @@ object ForSyDeIOScalaModule
               ju.Optional.empty();
           }
         });
-    } else {
-      return ju.Optional.empty();
+    } else if (opaque.format() == "yaml") {
+      opaque.asString().flatMap(body => 
+        body.as[OSDescription] match {
+          case Right(value) => Some(OSDescriptionDesignModel(value)).asJava
+          case Left(value)  => None.asJava
+        };
+      )
+    } else if (opaque.format() == "dts") {
+      {
+        val root = ("""\w.dts""".r).findFirstIn(opaque.category()).getOrElse("")
+        opaque.asString().flatMap(body => 
+        parseDeviceTreeWithPrefix(body, root) match {
+          case Success(result, next) => Some(DeviceTreeDesignModel(List(result))).asJava
+          case _                     => None.asJava
+        }
+      )
     }
+    } else {
+    return ju.Optional.empty();
   }
+}
 
   def uniqueIdentifier: String = "ForSyDeIOScalaModule"
 }

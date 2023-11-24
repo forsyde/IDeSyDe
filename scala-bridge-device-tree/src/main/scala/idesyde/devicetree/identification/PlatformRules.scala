@@ -9,15 +9,14 @@ import spire.math.Rational
 import scala.collection.mutable
 import idesyde.common.PartitionedCoresWithRuntimes
 import idesyde.devicetree.RootNode
-import idesyde.utils.HasUtils
 
-trait PlatformRules extends HasDeviceTreeUtils with HasUtils {
+trait PlatformRules extends HasDeviceTreeUtils {
 
-  def identSharedMemoryMultiCore(
+  def identSharedMemoryMultiCoreFromDeviceTree(
       models: Set[DesignModel],
       identified: Set[DecisionModel]
-  ): (Set[SharedMemoryMultiCore], Set[String]) =
-    mergedDesignModel[DeviceTreeDesignModel, SharedMemoryMultiCore](models) { dtm =>
+  ): (Set[SharedMemoryMultiCore], Set[String]) = 
+    toDeviceTreeDesignModel[SharedMemoryMultiCore](models) { dtm =>
       val roots                 = dtm.crossLinked
       var peIDs                 = mutable.Set[String]()
       var peOps                 = Map[String, Map[String, Map[String, Double]]]()
@@ -97,11 +96,11 @@ trait PlatformRules extends HasDeviceTreeUtils with HasUtils {
       )
     }
 
-  def identPartitionedCoresWithRuntimes(
+  def identPartitionedCoresWithRuntimesFromDeviceTree(
       models: Set[DesignModel],
       identified: Set[DecisionModel]
   ): (Set[PartitionedCoresWithRuntimes], Set[String]) =
-    mergedDesignModel[OSDescriptionDesignModel, PartitionedCoresWithRuntimes](models) { dm =>
+    toOSDescriptionDesignModel[PartitionedCoresWithRuntimes](models) { dm =>
       val isPartitioned = dm.description.oses.values.forall(_.affinity.size == 1)
       if (isPartitioned) {
         (

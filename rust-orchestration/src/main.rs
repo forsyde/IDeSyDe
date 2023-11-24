@@ -309,6 +309,11 @@ fn main() {
                 }
             })
             .collect();
+        // for m in &design_models {
+        //     if !m.category().contains("/") && !m.category().contains("\\") && !m.category().contains("Opaque") {
+        //         m.write_to_dir(&inputs_path, "input", "Orchestratror");
+        //     }
+        // }
         // design_models.push(Box::new(DesignModelHeader {
         //     category: "Any".to_string(),
         //     model_paths: args.inputs,

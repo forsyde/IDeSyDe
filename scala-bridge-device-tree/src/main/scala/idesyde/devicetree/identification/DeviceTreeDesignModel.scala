@@ -1,15 +1,13 @@
 package idesyde.devicetree.identification
 
+import scala.jdk.CollectionConverters._
+
 import idesyde.core.DesignModel
 import idesyde.devicetree.{DeviceTreeLink, DeviceTreeComponent, RootNode}
 
 final case class DeviceTreeDesignModel(
     val roots: List[RootNode]
 ) extends DesignModel {
-
-  type ElementT = String
-
-  override def elementID(elem: String): String = elem
 
   lazy val crossLinked: List[RootNode] = {
     val locallyLinked = roots.map(_.linked)
@@ -26,7 +24,7 @@ final case class DeviceTreeDesignModel(
     locallyLinked
   }
 
-  lazy val elements: Set[String] = {
+  override def elements(): java.util.Set[String] = {
     val nodes = crossLinked.flatMap(_.allChildren).toSet.map(_.fullId)
     // root connects all of its elements in a memory mapped way
     val rootLinks = for (
@@ -41,10 +39,10 @@ final case class DeviceTreeDesignModel(
       l <- src.connected;
       if l == dst
     ) yield s"${src.fullId}->${dst.fullId}"
-    nodes ++ rootLinks.toSet ++ moreLinks.toSet
+    (nodes ++ rootLinks.toSet ++ moreLinks.toSet).asJava
   }
 
-  override def merge(other: DesignModel): Option[DesignModel] = other match {
+  def merge(other: DesignModel): Option[DesignModel] = other match {
     case o: DeviceTreeDesignModel => {
       Some(
         DeviceTreeDesignModel(roots ++ o.roots)
@@ -60,7 +58,7 @@ final case class DeviceTreeDesignModel(
   //     .getOrElse(elem.fullId)
   // )
 
-  def category: String = "DeviceTreeDesignModel"
+  override def category(): String = "DeviceTreeDesignModel"
 
   def bodyAsText: Option[String] = None
 }

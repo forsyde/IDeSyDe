@@ -739,8 +739,10 @@ impl<'a> From<&'a Path> for OpaqueDesignModel {
             elements: HashSet::new(),
             category: format!("Opaque({})", path.to_str().unwrap_or("")),
             format: path
-                .extension()
+                .file_name()
                 .and_then(|x| x.to_str())
+                .and_then(|x| x.split_once("."))
+                .map(|(_, y)| y)
                 .unwrap_or("")
                 .to_string(),
             body: std::fs::read_to_string(path).ok(),

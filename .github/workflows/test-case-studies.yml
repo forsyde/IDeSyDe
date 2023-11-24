@@ -15,18 +15,18 @@ jobs:
   build-and-test:
     strategy:
       matrix:
-        distributions: [temurin, corretto, zulu, microsoft]
-        jdk_version: [17, 19]
+        sbt_distributions: [temurin, corretto, zulu]
+        jdk_version: ["17+", "19+"]
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v3
       - uses: coursier/setup-action@v1
         with:
-          jvm: ${{ matrix.distributions }}:${{ matrix.jdk_version }}
+          jvm: ${{ matrix.sbt_distributions }}:${{ matrix.jdk_version }}
           apps: cs sbt bloop
       - uses: actions/setup-java@v3
         with:
-          distribution: ${{ matrix.distributions }}
+          distribution: ${{ matrix.sbt_distributions }}
           java-version: '${{ matrix.jdk_version }}'
       - name: Build java
         run: |

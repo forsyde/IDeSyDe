@@ -17,8 +17,8 @@ jobs:
   test-scala-build-on-linux:
     strategy:
       matrix:
-        distributions: [temurin, corretto, zulu, microsoft]
-        jdk_version: [17, 19]
+        distributions: [temurin, corretto, zulu]
+        jdk_version: ["17+", "19+"]
       fail-fast: false
     runs-on: ubuntu-latest
     steps:

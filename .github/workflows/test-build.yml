@@ -28,6 +28,8 @@ jobs:
         curl -fL "https://github.com/coursier/launchers/raw/master/cs-x86_64-pc-linux-static.gz" | gzip -d > cs
         chmod +x ./cs
         ./cs setup --jvm ${{ matrix.jdk }} --yes
+        source ~/.profile
+        source ~/.bash_profile
         cs java --jvm ${{ matrix.jdk }} --setup
         sbt publishModules
   test-java-build-on-linux:

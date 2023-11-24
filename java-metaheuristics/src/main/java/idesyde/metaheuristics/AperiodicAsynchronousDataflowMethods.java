@@ -52,12 +52,14 @@ interface AperiodicAsynchronousDataflowMethods {
         });
         var mappedInspector = new ConnectivityInspector<>(mergedGraph);
         mappedInspector.connectedSets().forEach(wcc -> {
+            // System.out.println("wcc: " + wcc);
             wcc.stream().mapToDouble(jobI -> jobWeights[jobI]).max().ifPresent(maxValue -> {
                 for (var jobI : wcc) {
                     maxCycles[jobI] = maxValue;
                 }
             });
         });
+        // System.out.println("maxCycles: " + Arrays.toString(maxCycles));
         return maxCycles;
     }
 

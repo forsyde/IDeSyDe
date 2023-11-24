@@ -207,7 +207,6 @@ public interface CanExploreAADPTMWithJenetics extends AperiodicAsynchronousDataf
                 var jobs = decisionModel.aperiodicAsynchronousDataflows().stream()
                                 .flatMap(app -> app.jobsOfProcesses().stream()).toList();
                 var jobGraph = orderingConstraint.getJobGraph();
-                System.out.println(jobGraph.toString());
                 SimpleDirectedGraph<Integer, DefaultEdge> jobIdxGraph = new SimpleDirectedGraph<>(DefaultEdge.class);
                 jobGraph.edgeSet().forEach(e -> {
                         var src = jobs.indexOf(jobGraph.getEdgeSource(e));

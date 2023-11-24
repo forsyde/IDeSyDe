@@ -1,5 +1,7 @@
 package idesyde.devicetree.identification
 
+import scala.jdk.CollectionConverters._
+
 import org.virtuslab.yaml.*
 
 import idesyde.devicetree.OSDescription
@@ -12,23 +14,21 @@ final case class OSDescriptionDesignModel(
 
   type ElementT = String
 
-  lazy val elements: Set[String] =
-    description.oses.keySet ++ description.oses.values.map(_.host).toSet ++ description.oses.values
+  override def elements(): java.util.Set[String] =
+    (description.oses.keySet ++ description.oses.values.map(_.host).toSet ++ description.oses.values
       .flatMap(_.affinity)
       .toSet ++ description.oses
       .flatMap((k, v) => v.affinity.map(o => k -> o))
       .toSet
-      .map(_.toString)
+      .map(_.toString)).asJava
 
-  override def merge(other: DesignModel): Option[DesignModel] = other match {
+  def merge(other: DesignModel): Option[DesignModel] = other match {
     case o: OSDescriptionDesignModel =>
       Some(OSDescriptionDesignModel(description.mergeLeft(o.description)))
     case _ => None
   }
 
-  override def elementID(elem: ElementT): String = elem
+  override def category(): String = "OSDescriptionDesignModel"
 
-  def category: String = "OSDescriptionDesignModel"
-
-  def bodyAsText: Option[String] = Some(description.asYaml)
+  
 }

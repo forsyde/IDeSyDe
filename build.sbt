@@ -53,7 +53,7 @@ lazy val root = project
     ),
     paradoxRoots := List("index.html")
   )
-  .aggregate(common, choco, scala_legacy)
+  .aggregate(common, choco, devicetree, scala_legacy)
 
 // lazy val java_core = (project in file("java-core")).settings(
 //   // name := "idesyde-scala-core",
@@ -124,6 +124,7 @@ lazy val common = (project in file("scala-common"))
 lazy val scala_legacy = (project in file("scala-bridge-forsyde-io"))
   // .dependsOn(core)
   .dependsOn(common)
+  .dependsOn(devicetree)
   // .dependsOn(blueprints)
   .enablePlugins(UniversalPlugin, JavaAppPackaging, JlinkPlugin)
   .enablePlugins(JDKPackagerPlugin)
@@ -134,11 +135,10 @@ lazy val scala_legacy = (project in file("scala-bridge-forsyde-io"))
       "com.github.forsyde.forsyde-io" % "forsyde-io-java-core"       % forsydeIoVersion,
       "com.github.forsyde.forsyde-io" % "forsyde-io-java-libforsyde" % forsydeIoVersion,
       "com.github.forsyde.forsyde-io" % "forsyde-io-java-sdf3"       % forsydeIoVersion,
-      "org.apache.commons"            % "commons-lang3"              % "3.12.0"
-      // "io.github.forsyde"        % "forsyde-io-java-amalthea"          % forsydeIoVersion,
-      // "org.eclipse.app4mc"       % "org.eclipse.app4mc.amalthea.model" % "2.2.0",
-      // "org.eclipse.birt.runtime" % "org.eclipse.emf.common"            % "2.12.0.v20160420-0247",
-      // "org.eclipse.birt.runtime" % "org.eclipse.emf.ecore"             % "2.12.0.v20160420-0247"
+      "org.apache.commons"            % "commons-lang3"              % "3.12.0",
+      "org.scala-lang.modules" %%% "scala-parser-combinators" % scalaParserCombinatorsVersion,
+      "com.lihaoyi"             %% "os-lib"                   % osLibVersion,
+      "org.virtuslab"           %% "scala-yaml"               % scalaYamlVersion
     ),
     mainClass := Some("idesyde.forsydeio.ForSyDeIOScalaModule"),
     moduleSettings,
@@ -268,33 +268,25 @@ lazy val choco = (project in file("scala-choco"))
 //     }
 //   )
 
-// lazy val devicetree = (project in file("scala-bridge-device-tree"))
-//   // .dependsOn(core)
-//   .dependsOn(common)
-//   // .dependsOn(blueprints)
-//   .enablePlugins(UniversalPlugin, JavaAppPackaging, JlinkPlugin)
-//   .enablePlugins(JDKPackagerPlugin)
-//   .settings(
-//     // name := "idesyde-scala-bridge-device-tree",
-//     libraryDependencies ++= Seq(
-//       "org.scala-lang.modules" %%% "scala-parser-combinators" % scalaParserCombinatorsVersion,
-//       "com.lihaoyi"             %% "os-lib"                   % osLibVersion,
-//       "org.virtuslab"           %% "scala-yaml"               % scalaYamlVersion
-//     ),
-//     licenses := Seq(
-//       "MIT"  -> url("https://opensource.org/license/mit/"),
-//       "APL2" -> url("https://www.apache.org/licenses/LICENSE-2.0"),
-//       "EPL2" -> url("https://www.eclipse.org/legal/epl-2.0/")
-//     ),
-//     Compile / mainClass := Some("idesyde.devicetree.DeviceTreeIdentificationModule"),
-//     publishModules := {
-//       IO.createDirectory(imodulesTarget)
-//       val jar    = assembly.value
-//       val target = imodulesTarget / (projectInfo.value.nameFormal + ".jar")
-//       IO.copyFile(jar, target)
-//       target
-//     }
-//   )
+lazy val devicetree = (project in file("scala-bridge-device-tree"))
+  // .dependsOn(core)
+  .dependsOn(common)
+  // .dependsOn(blueprints)
+  .enablePlugins(UniversalPlugin, JavaAppPackaging, JlinkPlugin)
+  .enablePlugins(JDKPackagerPlugin)
+  .settings(
+    // name := "idesyde-scala-bridge-device-tree",
+    libraryDependencies ++= Seq(
+      "org.scala-lang.modules" %%% "scala-parser-combinators" % scalaParserCombinatorsVersion,
+      "com.lihaoyi"             %% "os-lib"                   % osLibVersion,
+      "org.virtuslab"           %% "scala-yaml"               % scalaYamlVersion
+    ),
+    licenses := Seq(
+      "MIT"  -> url("https://opensource.org/license/mit/"),
+      "APL2" -> url("https://www.apache.org/licenses/LICENSE-2.0"),
+      "EPL2" -> url("https://www.eclipse.org/legal/epl-2.0/")
+    )
+  )
 
 // lazy val cli = (project in file("scala-cli"))
 //   .dependsOn(core)

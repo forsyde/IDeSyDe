@@ -16,7 +16,7 @@ jobs:
     strategy:
       matrix:
         sbt_distributions: [temurin, corretto, zulu]
-        jdk_version: ["17+", "19+"]
+        jdk_version: ["17", "19"]
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v3

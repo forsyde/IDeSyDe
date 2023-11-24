@@ -18,7 +18,7 @@ jobs:
     strategy:
       matrix:
         distributions: [temurin, corretto, zulu]
-        jdk_version: ["17+", "19+"]
+        jdk_version: ["17", "19"]
       fail-fast: false
     runs-on: ubuntu-latest
     steps:

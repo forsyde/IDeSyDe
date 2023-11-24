@@ -28,6 +28,7 @@ jobs:
         curl -fL "https://github.com/coursier/launchers/raw/master/cs-x86_64-pc-linux-static.gz" | gzip -d > cs
         chmod +x ./cs
         ./cs setup --jvm ${{ matrix.jdk }} --yes
+        coursier java --jvm ${{ matrix.jdk }} --setup
         sbt publishModules
   test-java-build-on-linux:
     strategy:

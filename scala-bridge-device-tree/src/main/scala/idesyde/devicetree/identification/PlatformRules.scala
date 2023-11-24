@@ -12,7 +12,7 @@ import idesyde.devicetree.RootNode
 
 trait PlatformRules extends HasDeviceTreeUtils {
 
-  def identSharedMemoryMultiCore(
+  def identSharedMemoryMultiCoreFromDeviceTree(
       models: Set[DesignModel],
       identified: Set[DecisionModel]
   ): (Set[SharedMemoryMultiCore], Set[String]) = 
@@ -96,7 +96,7 @@ trait PlatformRules extends HasDeviceTreeUtils {
       )
     }
 
-  def identPartitionedCoresWithRuntimes(
+  def identPartitionedCoresWithRuntimesFromDeviceTree(
       models: Set[DesignModel],
       identified: Set[DecisionModel]
   ): (Set[PartitionedCoresWithRuntimes], Set[String]) =

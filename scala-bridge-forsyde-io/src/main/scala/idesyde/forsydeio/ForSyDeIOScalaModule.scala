@@ -55,6 +55,7 @@ object ForSyDeIOScalaModule
     with idesyde.common.PlatformRules
     with idesyde.common.WorkloadRules
     with idesyde.common.ApplicationRules
+    with idesyde.devicetree.identification.PlatformRules
     with CanParseDeviceTree {
 
   def adaptIRuleToJava[T <: DecisionModel](
@@ -148,6 +149,8 @@ object ForSyDeIOScalaModule
   // .registerDriver(new ForSyDeAmaltheaDriver())
 
   override def identificationRules(): ju.Set[IdentificationRule] = Set(
+    IdentificationRule.OnlyDesignModels(adaptIRuleToJava(identSharedMemoryMultiCoreFromDeviceTree)),
+    IdentificationRule.OnlyDesignModels(adaptIRuleToJava(identPartitionedCoresWithRuntimesFromDeviceTree)),
     IdentificationRule.OnlyDesignModels(adaptIRuleToJava(identSDFApplication)),
     IdentificationRule.OnlyDesignModels(adaptIRuleToJava(identTiledMultiCore)),
     IdentificationRule.Generic(adaptIRuleToJava(identPartitionedCoresWithRuntimes)),

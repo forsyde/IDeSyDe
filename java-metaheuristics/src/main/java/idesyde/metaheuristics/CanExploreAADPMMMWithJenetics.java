@@ -68,8 +68,8 @@ public interface CanExploreAADPMMMWithJenetics extends AperiodicAsynchronousData
                             decisionModel.partitionedMemMappableMulticore().hardware()
                                     .processingElems().size()
                                     * decisionModel.partitionedMemMappableMulticore()
-                                    .hardware().communicationElems()
-                                    .size());
+                                            .hardware().communicationElems()
+                                            .size());
                     var jobOrderingChromossome = IntegerChromosome.of(
                             0,
                             jobs.size(),
@@ -96,14 +96,14 @@ public interface CanExploreAADPMMMWithJenetics extends AperiodicAsynchronousData
                             .range(0, pes.size())
                             .boxed()
                             .collect(Collectors.toMap(
-                                    bufI -> pes.get(bufI),
-                                    bufI -> IntStream.range(0, coms.size())
+                                    peI -> pes.get(peI),
+                                    peI -> IntStream.range(0, coms.size())
                                             .boxed()
                                             .collect(Collectors.toMap(
                                                     ceI -> coms.get(ceI),
                                                     ceI -> gt.get(3).get(
-                                                                    coms.size() * bufI
-                                                                            + ceI)
+                                                            coms.size() * peI
+                                                                    + ceI)
                                                             .allele()))));
                     var jobOrderings = gt.get(4);
                     var superLoopSchedules = scheds.stream().collect(Collectors.toMap(
@@ -215,9 +215,10 @@ public interface CanExploreAADPMMMWithJenetics extends AperiodicAsynchronousData
                 RetryConstraint.of(codec, this::mappingIsFeasible),
                 orderingConstraint,
                 executableConstraint
-//                                                RetryConstraint.of(codec, this::mappingIsFeasible))
+        // RetryConstraint.of(codec, this::mappingIsFeasible))
         );
-        var jobs = decisionModel.aperiodicAsynchronousDataflows().stream().flatMap(app -> app.jobsOfProcesses().stream()).toList();
+        var jobs = decisionModel.aperiodicAsynchronousDataflows().stream()
+                .flatMap(app -> app.jobsOfProcesses().stream()).toList();
         var jobGraph = orderingConstraint.getJobGraph();
         SimpleDirectedGraph<Integer, DefaultEdge> jobIdxGraph = new SimpleDirectedGraph<>(DefaultEdge.class);
         jobGraph.edgeSet().forEach(e -> {
@@ -228,7 +229,8 @@ public interface CanExploreAADPMMMWithJenetics extends AperiodicAsynchronousData
             jobIdxGraph.addEdge(src, dst);
         });
         var engine = Engine
-                .builder(g -> evaluateAADPMMM(g, jobs, jobIdxGraph, configuration), allConstraints.constrain(codec))
+                .builder(g -> evaluateAADPMMM(g, jobs, jobIdxGraph, configuration),
+                        allConstraints.constrain(codec))
                 .populationSize(decisionModel.partitionedMemMappableMulticore().runtimes().runtimes()
                         .size() * decisionModel.aperiodicAsynchronousDataflows().size() * 5)
                 .offspringSelector(new TournamentSelector<>(5))
@@ -236,13 +238,12 @@ public interface CanExploreAADPMMMWithJenetics extends AperiodicAsynchronousData
                 .constraint(allConstraints)
                 .alterers(
                         new UniformCrossover<>(0.2, 0.25),
-                        new Mutator<>(0.2)
-                )
+                        new Mutator<>(0.2))
                 .minimizing()
                 .build();
         var solStream = engine
                 .stream(previousSolutions.stream().filter(s -> s
-                                .solved() instanceof AperiodicAsynchronousDataflowToPartitionedMemoryMappableMulticore)
+                        .solved() instanceof AperiodicAsynchronousDataflowToPartitionedMemoryMappableMulticore)
                         .map(s -> codec.encode(
                                 (AperiodicAsynchronousDataflowToPartitionedMemoryMappableMulticore) s
                                         .solved()))
@@ -250,8 +251,8 @@ public interface CanExploreAADPMMMWithJenetics extends AperiodicAsynchronousData
         // .limit(Limits.byGeneConvergence(0.000001, 0.999999));
         var timedSolStream = configuration.improvementTimeOutInSecs > 0L
                 ? solStream
-                .limit(Limits.byExecutionTime(Duration.ofSeconds(
-                        configuration.improvementTimeOutInSecs)))
+                        .limit(Limits.byExecutionTime(Duration.ofSeconds(
+                                configuration.improvementTimeOutInSecs)))
                 : solStream;
         var limitedImprovementStream = configuration.improvementIterations > 0L
                 ? timedSolStream.limit(Limits.byFixedGeneration(configuration.improvementIterations))
@@ -274,11 +275,12 @@ public interface CanExploreAADPMMMWithJenetics extends AperiodicAsynchronousData
                         for (var actor : app.processes()) {
                             if (configuration.targetObjectives.isEmpty()
                                     || (configuration.targetObjectives
-                                    .contains("invThroughput(%s)"
-                                            .formatted(actor)))) {
+                                            .contains("invThroughput(%s)"
+                                                    .formatted(actor)))) {
                                 solMap.put("invThroughput(%s)".formatted(actor),
                                         bestFit[i]);
-                                app.processMinimumThroughput().put(actor, 1.0 / bestFit[i]);
+                                app.processMinimumThroughput().put(actor,
+                                        1.0 / bestFit[i]);
                                 i += 1;
                             }
                         }
@@ -301,8 +303,8 @@ public interface CanExploreAADPMMMWithJenetics extends AperiodicAsynchronousData
                 .findFirst().get();
         var scheds = decisionModel.partitionedMemMappableMulticore().runtimes().runtimes().stream().toList();
         var mappings = IntStream.range(0, jobs.size()).map(
-                        jobI -> scheds.indexOf(decisionModel.processesToRuntimeScheduling()
-                                .get(jobs.get(jobI).process())))
+                jobI -> scheds.indexOf(decisionModel.processesToRuntimeScheduling()
+                        .get(jobs.get(jobI).process())))
                 .toArray();
         var execTimes = jobs.stream().mapToDouble(j -> recomputeExecutionTime(decisionModel, j))
                 .toArray();
@@ -330,7 +332,8 @@ public interface CanExploreAADPMMMWithJenetics extends AperiodicAsynchronousData
             }
         }
         var cycleLengths = recomputeMaximumCycles(jobIdxGraph,
-                jobs.stream().mapToInt(job -> scheds.indexOf(decisionModel.processesToRuntimeScheduling()
+                jobs.stream().mapToInt(
+                        job -> scheds.indexOf(decisionModel.processesToRuntimeScheduling()
                                 .get(job.process())))
                         .toArray(),
                 orderings, execTimes, edgeWeights);
@@ -360,7 +363,7 @@ public interface CanExploreAADPMMMWithJenetics extends AperiodicAsynchronousData
         for (int j = 0; j < invThroughputs.size(); j++) {
             if (configuration.targetObjectives.isEmpty()
                     || configuration.targetObjectives
-                    .contains("invThroughput(%s)".formatted(taskName.apply(j)))) {
+                            .contains("invThroughput(%s)".formatted(taskName.apply(j)))) {
                 objs[i] = invThroughputs.get(j);
                 i++;
             }
@@ -403,10 +406,11 @@ public interface CanExploreAADPMMMWithJenetics extends AperiodicAsynchronousData
             AperiodicAsynchronousDataflow.Job job) {
         var sched = decisionModel.processesToRuntimeScheduling().get(job.process());
         var pe = decisionModel.partitionedMemMappableMulticore().runtimes().runtimeHost().get(sched);
+
         var totalTime = decisionModel.instrumentedComputationTimes().worstExecutionTimes()
                 .get(job.process()).getOrDefault(pe, Long.MAX_VALUE).doubleValue()
                 / decisionModel.instrumentedComputationTimes().scaleFactor()
-                .doubleValue();
+                        .doubleValue();
         for (var me : decisionModel.partitionedMemMappableMulticore().hardware()
                 .storageElems()) {
             if (decisionModel.processesToMemoryMapping().get(job.process()).equals(me)) { // the
@@ -426,11 +430,11 @@ public interface CanExploreAADPMMMWithJenetics extends AperiodicAsynchronousData
                                 .hardware()
                                 .communicationElementsBitPerSecPerChannel()
                                 .get(ce) *
-                                decisionModel
+                                Math.max(decisionModel
                                         .processingElementsToRoutersReservations()
                                         .get(pe)
                                         .get(ce)
-                                        .doubleValue())
+                                        .doubleValue(), 1))
                         .min()
                         .orElse(1.0);
                 // fetch time = total links * (memory reqs / bottleneck BW)
@@ -442,9 +446,9 @@ public interface CanExploreAADPMMMWithJenetics extends AperiodicAsynchronousData
                         .getOrDefault(me, List.of())
                         .size()
                         * (decisionModel.instrumentedMemoryRequirements()
-                        .memoryRequirements().get(job.process())
-                        .get(pe).doubleValue()
-                        / singleBottleNeckBW);
+                                .memoryRequirements().get(job.process())
+                                .get(pe).doubleValue()
+                                / singleBottleNeckBW);
 
             }
             totalTime += decisionModel.aperiodicAsynchronousDataflows().stream()
@@ -455,13 +459,13 @@ public interface CanExploreAADPMMMWithJenetics extends AperiodicAsynchronousData
                                 .stream().anyMatch(app -> app
                                         .processGetFromBufferInBits()
                                         .getOrDefault(job
-                                                        .process(),
+                                                .process(),
                                                 Map
                                                         .of())
                                         .containsKey(buffer))
                                 && decisionModel.bufferToMemoryMappings()
-                                .get(buffer)
-                                .equals(me)) { // task
+                                        .get(buffer)
+                                        .equals(me)) { // task
                             // reads
                             // from
                             // buffer
@@ -477,46 +481,50 @@ public interface CanExploreAADPMMMWithJenetics extends AperiodicAsynchronousData
                                             .hardware()
                                             .communicationElementsBitPerSecPerChannel()
                                             .get(ce) *
-                                            decisionModel
+                                            Math.max(decisionModel
                                                     .processingElementsToRoutersReservations()
                                                     .get(pe)
-                                                    .get(ce))
+                                                    .get(ce), 1))
                                     .min()
                                     .orElse(1.0);
                             // read time = links * (total data transmitted /
                             // bottleneck bw)
-                            ioTime += decisionModel
+                            var summed = decisionModel
                                     .partitionedMemMappableMulticore()
                                     .hardware()
                                     .preComputedPaths()
                                     .getOrDefault(pe, Map.of())
                                     .getOrDefault(me, List.of())
-                                    .size() * (
-
-                                    decisionModel
+                                    .size()
+                                    * (decisionModel
                                             .aperiodicAsynchronousDataflows()
                                             .stream()
                                             .mapToLong(app -> app
                                                     .processGetFromBufferInBits()
                                                     .containsKey(job.process())
-                                                    ? app.processGetFromBufferInBits()
-                                                    .get(job.process())
-                                                    .getOrDefault(buffer,
-                                                            0L)
-                                                    : 0L)
-                                            .sum() / singleBottleNeckBW);
+                                                            ? app.processGetFromBufferInBits()
+                                                                    .get(job.process())
+                                                                    .getOrDefault(buffer,
+                                                                            0L)
+                                                            : 0L)
+                                            .sum());
+                            ioTime += summed / singleBottleNeckBW;
+                            // if (Double.isNaN(ioTime))
+                            // System.out.println(
+                            // "read io time for job %s at %s, %s is %f = %d / %f".formatted(job, pe, sched,
+                            // ioTime, summed, singleBottleNeckBW));
                         }
                         if (decisionModel.aperiodicAsynchronousDataflows()
                                 .stream().anyMatch(app -> app
                                         .processPutInBufferInBits()
                                         .getOrDefault(job
-                                                        .process(),
+                                                .process(),
                                                 Map
                                                         .of())
                                         .containsKey(buffer))
                                 && decisionModel.bufferToMemoryMappings()
-                                .get(buffer)
-                                .equals(me)) { // task
+                                        .get(buffer)
+                                        .equals(me)) { // task
                             // writes
                             // to
                             // buffer
@@ -532,35 +540,39 @@ public interface CanExploreAADPMMMWithJenetics extends AperiodicAsynchronousData
                                             .hardware()
                                             .communicationElementsBitPerSecPerChannel()
                                             .get(ce) *
-                                            decisionModel
+                                            Math.max(decisionModel
                                                     .processingElementsToRoutersReservations()
                                                     .get(pe)
-                                                    .get(ce))
+                                                    .get(ce), 1))
                                     .min()
                                     .orElse(1.0);
                             // write nack time = links * (total data
                             // transmitted /
                             // bottleneck bw)
-                            ioTime += decisionModel
+                            var summed = decisionModel
                                     .partitionedMemMappableMulticore()
                                     .hardware()
                                     .preComputedPaths()
                                     .getOrDefault(pe, Map.of())
                                     .getOrDefault(me, List.of())
-                                    .size() * (
-
-                                    decisionModel
+                                    .size()
+                                    * (decisionModel
                                             .aperiodicAsynchronousDataflows()
                                             .stream()
-                                            .mapToDouble(app -> app
+                                            .mapToLong(app -> app
                                                     .processPutInBufferInBits()
                                                     .containsKey(job.process())
-                                                    ? app.processPutInBufferInBits()
-                                                    .get(job.process())
-                                                    .getOrDefault(buffer,
-                                                            0L)
-                                                    : 0L)
-                                            .sum() / singleBottleNeckBW);
+                                                            ? app.processPutInBufferInBits()
+                                                                    .get(job.process())
+                                                                    .getOrDefault(buffer,
+                                                                            0L)
+                                                            : 0L)
+                                            .sum());
+                            ioTime += summed / singleBottleNeckBW;
+                            // if (Double.isNaN(ioTime))
+                            // System.out.println(
+                            // "wb io time for job %s at %s, %s is %f = %d / %f".formatted(job, pe, sched,
+                            // ioTime, summed, singleBottleNeckBW));
                         }
                         return ioTime;
                     }).sum();

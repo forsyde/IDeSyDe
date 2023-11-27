@@ -27,8 +27,9 @@ public class FeasibleMappingConstraint<T extends Comparable<? super T>>
         allowedMappings = decisionModel
                 .aperiodicAsynchronousDataflows().stream().flatMap(app -> app.processes().stream()).map(
                         proc -> decisionModel.instrumentedComputationTimes().worstExecutionTimes().get(proc).keySet()
-                                .stream().map(pe ->
-                                        schedulers.indexOf(decisionModel.partitionedMemMappableMulticore().runtimes().processorAffinities().get(pe)))
+                                .stream()
+                                .map(pe -> schedulers.indexOf(decisionModel.partitionedMemMappableMulticore().runtimes()
+                                        .processorAffinities().get(pe)))
                                 .collect(Collectors.toList()))
                 .collect(Collectors.toList());
     }
@@ -41,10 +42,13 @@ public class FeasibleMappingConstraint<T extends Comparable<? super T>>
         allowedMappings = decisionModel
                 .aperiodicAsynchronousDataflows().stream().flatMap(app -> app.processes().stream()).map(
                         proc -> decisionModel.instrumentedComputationTimes().worstExecutionTimes().get(proc).keySet()
-                                .stream().map(pe ->
-                                        schedulers.indexOf(decisionModel.partitionedTiledMulticore().runtimes().processorAffinities().get(pe)))
+                                .stream()
+                                .map(pe -> schedulers.indexOf(decisionModel.partitionedTiledMulticore().runtimes()
+                                        .processorAffinities().get(pe)))
                                 .collect(Collectors.toList()))
                 .collect(Collectors.toList());
+        System.out.println("allowedMappings: " + allowedMappings);
+        System.out.println("scheduers: " + schedulers);
     }
 
     @Override

@@ -31,6 +31,10 @@ interface AperiodicAsynchronousDataflowMethods {
                 }
             }
         }
+        // System.out.println(
+        // "mappings is %s and weights is %s and edges are
+        // ".formatted(Arrays.toString(mapping),
+        // Arrays.toString(jobWeights), Arrays.toString(edgeWeigths)));
         var mergedGraph = new AsGraphUnion<>(follows, mappingGraph);
         var maxCycles = new double[jobWeights.length];
         System.arraycopy(jobWeights, 0, maxCycles, 0, jobWeights.length);
@@ -46,20 +50,22 @@ interface AperiodicAsynchronousDataflowMethods {
                     }
                 }
             }
+            // System.out.println("scc %s has %f".formatted(scc.toString(), cycleValue));
             for (var jobI : scc) {
                 maxCycles[jobI] = Math.max(maxCycles[jobI], cycleValue);
             }
         });
+        // System.out.println("A maxCycles: " + Arrays.toString(maxCycles));
         var mappedInspector = new ConnectivityInspector<>(mergedGraph);
         mappedInspector.connectedSets().forEach(wcc -> {
             // System.out.println("wcc: " + wcc);
-            wcc.stream().mapToDouble(jobI -> jobWeights[jobI]).max().ifPresent(maxValue -> {
+            wcc.stream().mapToDouble(jobI -> maxCycles[jobI]).max().ifPresent(maxValue -> {
                 for (var jobI : wcc) {
                     maxCycles[jobI] = maxValue;
                 }
             });
         });
-        // System.out.println("maxCycles: " + Arrays.toString(maxCycles));
+        // System.out.println("B maxCycles: " + Arrays.toString(maxCycles));
         return maxCycles;
     }
 

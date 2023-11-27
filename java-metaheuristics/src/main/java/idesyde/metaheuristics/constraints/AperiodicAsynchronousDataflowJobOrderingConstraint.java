@@ -28,7 +28,6 @@ public class AperiodicAsynchronousDataflowJobOrderingConstraint<T extends Compar
         private final List<AperiodicAsynchronousDataflow.Job> jobs;
         private final SimpleDirectedGraph<AperiodicAsynchronousDataflow.Job, DefaultEdge> jobGraph;
 
-        private final ConnectivityInspector<AperiodicAsynchronousDataflow.Job, DefaultEdge> jobGraphInspector;
         private final int taskSchedulingGenotypeIdx;
         private final int jobOrderingGenotypeIdx;
         // private final List<List<Integer>> schedulersJobList;
@@ -55,7 +54,6 @@ public class AperiodicAsynchronousDataflowJobOrderingConstraint<T extends Compar
                         });
                 });
                 TransitiveClosure.INSTANCE.closeSimpleDirectedGraph(jobGraph);
-                jobGraphInspector = new ConnectivityInspector<>(jobGraph);
                 taskSchedulingGenotypeIdx = 1;
                 jobOrderingGenotypeIdx = 4;
         }
@@ -78,7 +76,6 @@ public class AperiodicAsynchronousDataflowJobOrderingConstraint<T extends Compar
                         });
                 });
                 TransitiveClosure.INSTANCE.closeSimpleDirectedGraph(jobGraph);
-                jobGraphInspector = new ConnectivityInspector<>(jobGraph);
                 taskSchedulingGenotypeIdx = 0;
                 jobOrderingGenotypeIdx = 2;
         }
@@ -89,16 +86,17 @@ public class AperiodicAsynchronousDataflowJobOrderingConstraint<T extends Compar
                 var jobOrderings = individual.genotype().get(jobOrderingGenotypeIdx);
                 for (int i = 0; i < jobs.size(); i++) {
                         var schedI = taskScheduling
-                                .get(tasks.indexOf(jobs.get(i).process()))
-                                .allele();
+                                        .get(tasks.indexOf(jobs.get(i).process()))
+                                        .allele();
                         for (int j = 0; j < jobs.size(); j++) {
                                 var schedJ = taskScheduling
-                                        .get(tasks.indexOf(jobs.get(j).process()))
-                                        .allele();
-                                if (i != j && Objects.equals(schedI, schedJ) && jobGraph.containsEdge(jobs.get(i), jobs.get(j))) {
+                                                .get(tasks.indexOf(jobs.get(j).process()))
+                                                .allele();
+                                if (i != j && Objects.equals(schedI, schedJ)
+                                                && jobGraph.containsEdge(jobs.get(i), jobs.get(j))) {
                                         if (jobOrderings.get(i)
-                                                .allele() >= jobOrderings.get(j)
-                                                .allele()) {
+                                                        .allele() >= jobOrderings.get(j)
+                                                                        .allele()) {
                                                 return false;
                                         }
                                 }
@@ -117,8 +115,8 @@ public class AperiodicAsynchronousDataflowJobOrderingConstraint<T extends Compar
                         var mappedJobs = IntStream.range(0, jobs.size()).filter(
                                         jobI -> taskScheduling.get(tasks.indexOf(jobs.get(jobI).process()))
                                                         .allele() == schedI)
-                                .mapToObj(jobs::get)
-                                .collect(Collectors.toSet());
+                                        .mapToObj(jobs::get)
+                                        .collect(Collectors.toSet());
                         var subgraph = new AsSubgraph<>(jobGraph, mappedJobs);
                         var topoOrder = new TopologicalOrderIterator<>(subgraph);
                         var idx = 0;
@@ -132,6 +130,5 @@ public class AperiodicAsynchronousDataflowJobOrderingConstraint<T extends Compar
                 chromossomes.set(jobOrderingGenotypeIdx, IntegerChromosome.of(newJobOrderings));
                 return Phenotype.of(Genotype.of(chromossomes), generation);
         }
-
 
 }

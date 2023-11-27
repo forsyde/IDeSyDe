@@ -371,10 +371,11 @@ public interface CanExploreAADPTMWithJenetics extends AperiodicAsynchronousDataf
                         AperiodicAsynchronousDataflow.Job job) {
                 var sched = decisionModel.processesToRuntimeScheduling().get(job.process());
                 var pe = decisionModel.partitionedTiledMulticore().runtimes().runtimeHost().get(sched);
-                return decisionModel.instrumentedComputationTimes().worstExecutionTimes()
+                var t = decisionModel.instrumentedComputationTimes().worstExecutionTimes()
                                 .get(job.process()).getOrDefault(pe, Long.MAX_VALUE).doubleValue()
                                 / decisionModel.instrumentedComputationTimes().scaleFactor()
                                                 .doubleValue();
+                return t;
 
         }
 
@@ -409,11 +410,11 @@ public interface CanExploreAADPTMWithJenetics extends AperiodicAsynchronousDataf
                                                                                 .hardware()
                                                                                 .communicationElementsBitPerSecPerChannel()
                                                                                 .get(ce) *
-                                                                                decisionModel
+                                                                                Math.max(decisionModel
                                                                                                 .processingElementsToRoutersReservations()
                                                                                                 .get(srcPE)
                                                                                                 .get(ce)
-                                                                                                .doubleValue())
+                                                                                                .doubleValue(), 1))
                                                                 .min()
                                                                 .orElse(1.0);
                                                 totalTime += decisionModel

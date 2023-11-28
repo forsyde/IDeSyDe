@@ -16,17 +16,17 @@ import org.jgrapht.traverse.TopologicalOrderIterator
 
 final case class CommunicatingAndTriggeredReactiveWorkload(
     val tasks: Vector[String],
-    val taskSizes: Vector[Long],
-    val taskComputationalNeeds: Vector[Map[String, Map[String, Long]]],
-    val dataChannels: Vector[String],
-    val dataChannelSizes: Vector[Long],
-    val dataGraphSrc: Vector[String],
-    val dataGraphDst: Vector[String],
-    val dataGraphMessageSize: Vector[Long],
-    val periodicSources: Vector[String],
-    val periodsNumerator: Vector[Long],
-    val periodsDenominator: Vector[Long],
-    val offsetsNumerator: Vector[Long],
+    val task_sizes: Vector[Long],
+    val task_computational_needs: Vector[Map[String, Map[String, Long]]],
+    val data_channels: Vector[String],
+    val data_channel_sizes: Vector[Long],
+    val data_graph_src: Vector[String],
+    val data_graph_dst: Vector[String],
+    val data_graph_message_size: Vector[Long],
+    val periodic_sources: Vector[String],
+    val periods_numerator: Vector[Long],
+    val periods_denominator: Vector[Long],
+    val offsets_numerator: Vector[Long],
     val offsetsDenominator: Vector[Long],
     val upsamples: Vector[String],
     val upsampleRepetitiveHolds: Vector[Long],
@@ -43,13 +43,14 @@ final case class CommunicatingAndTriggeredReactiveWorkload(
     derives ReadWriter {
 
   lazy val dataGraph =
-    for ((s, i) <- dataGraphSrc.zipWithIndex) yield (s, dataGraphDst(i), dataGraphMessageSize(i))
+    for ((s, i) <- data_graph_src.zipWithIndex)
+      yield (s, data_graph_dst(i), data_graph_message_size(i))
 
   lazy val triggerGraph = triggerGraphSrc.zip(triggerGraphDst)
 
   lazy val stimulusGraph = {
     val g = DefaultDirectedGraph[String, DefaultEdge](classOf[DefaultEdge])
-    for (v      <- tasks ++ upsamples ++ downsamples ++ periodicSources) g.addVertex(v)
+    for (v      <- tasks ++ upsamples ++ downsamples ++ periodic_sources) g.addVertex(v)
     for ((s, t) <- triggerGraph) g.addEdge(s, t)
     // Graph.from(
     //   tasks ++ upsamples ++ downsamples ++ periodicSources,
@@ -58,7 +59,7 @@ final case class CommunicatingAndTriggeredReactiveWorkload(
     g
   }
 
-  val (processes, periods, offsets, relativeDeadlines) = {
+  val (processes, periods, offsets, relative_deadlines) = {
     var gen              = mutable.Buffer[(String, Double, Double, Double)]()
     var propagatedEvents = mutable.Map[String, Set[(Double, Double, Double)]]()
     val topoSort         = TopologicalOrderIterator(stimulusGraph)
@@ -71,7 +72,7 @@ final case class CommunicatingAndTriggeredReactiveWorkload(
         .map(stimulusGraph.getEdgeSource)
         .flatMap(pred => propagatedEvents.get(pred))
         .foldLeft(Set[(Double, Double, Double)]())((s1, s2) => s1 | s2)
-      val events = if (periodicSources.contains(next) || hasORTriggerSemantics.contains(next)) {
+      val events = if (periodic_sources.contains(next) || hasORTriggerSemantics.contains(next)) {
         incomingEvents
       } else {
         val maxP = incomingEvents.map((p, o, d) => p).max
@@ -80,13 +81,17 @@ final case class CommunicatingAndTriggeredReactiveWorkload(
         Set((maxP, minO, minD))
       }
       // decide what to do next based on the vertex type and its event merge semantics
-      if (periodicSources.contains(next)) {
-        val idxSource = periodicSources.indexOf(next)
+      if (periodic_sources.contains(next)) {
+        val idxSource = periodic_sources.indexOf(next)
         propagatedEvents(next) = Set(
           (
-            periodsNumerator(idxSource).toDouble / periodsDenominator(idxSource).toDouble, // period
-            offsetsNumerator(idxSource).toDouble / offsetsDenominator(idxSource).toDouble, // offset
-            periodsNumerator(idxSource).toDouble / periodsDenominator(
+            periods_numerator(idxSource).toDouble / periods_denominator(
+              idxSource
+            ).toDouble, // period
+            offsets_numerator(idxSource).toDouble / offsetsDenominator(
+              idxSource
+            ).toDouble, // offset
+            periods_numerator(idxSource).toDouble / periods_denominator(
               idxSource
             ).toDouble // rel. deadline
           )
@@ -126,9 +131,9 @@ final case class CommunicatingAndTriggeredReactiveWorkload(
   }
 
   lazy val processComputationalNeeds =
-    processes.map(name => taskComputationalNeeds(tasks.indexOf(name)))
+    processes.map(name => task_computational_needs(tasks.indexOf(name)))
 
-  lazy val processSizes = processes.map(name => taskSizes(tasks.indexOf(name)))
+  lazy val processSizes = processes.map(name => task_sizes(tasks.indexOf(name)))
 
   lazy val affineControlGraph = {
     // first consider task-to-task connections
@@ -250,11 +255,11 @@ final case class CommunicatingAndTriggeredReactiveWorkload(
     java.util.Optional.of(writeBinary(this))
   } catch { case _ => java.util.Optional.empty() }
 
-  def messagesMaxSizes = dataChannelSizes
+  def messagesMaxSizes = data_channel_sizes
 
   override def category() = "CommunicatingAndTriggeredReactiveWorkload"
 
   override def part(): ju.Set[String] =
-    ((tasks ++ upsamples ++ downsamples ++ periodicSources ++ dataChannels).toSet ++ triggerGraph.toSet
+    ((tasks ++ upsamples ++ downsamples ++ periodic_sources ++ data_channels).toSet ++ triggerGraph.toSet
       .map(_.toString)).asJava
 }

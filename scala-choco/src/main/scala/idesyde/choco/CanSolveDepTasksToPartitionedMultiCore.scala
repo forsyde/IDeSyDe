@@ -54,7 +54,7 @@ final class CanSolveDepTasksToPartitionedMultiCore
   ): (Model, Map[String, IntVar]) = {
     val chocoModel = Model()
     val timeValues =
-      (m.workload.periods ++ m.wcets.flatten ++ m.workload.relativeDeadlines)
+      (m.workload.periods ++ m.wcets.flatten ++ m.workload.relative_deadlines)
     val memoryValues = m.platform.hardware.storageSizes ++
       m.workload.messagesMaxSizes ++
       m.workload.processSizes
@@ -75,7 +75,7 @@ final class CanSolveDepTasksToPartitionedMultiCore
 
     val periods    = m.workload.periods.map(double2int)
     val priorities = m.workload.prioritiesRateMonotonic.toArray
-    val deadlines  = m.workload.relativeDeadlines.map(double2int)
+    val deadlines  = m.workload.relative_deadlines.map(double2int)
     val wcets      = m.wcets.map(_.map(double2int))
     println(deadlines.mkString(", "))
     println("----")
@@ -195,7 +195,7 @@ final class CanSolveDepTasksToPartitionedMultiCore
           m.workload.dataGraph
             .find((a, b, _) =>
               b == m.workload.tasks(t) && a == m.workload
-                .dataChannels(c)
+                .data_channels(c)
             )
             .map((_, _, l) => long2int(l) / double2int(m.platform.hardware.communicationElementsBitPerSecPerChannel(ce)))
             .getOrElse(0),
@@ -205,7 +205,7 @@ final class CanSolveDepTasksToPartitionedMultiCore
             m.workload.dataGraph
             .find((a, b, _) =>
               a == m.workload.tasks(t) && b == m.workload
-              .dataChannels(c)
+              .data_channels(c)
             )
             .map((_, _, l) => long2int(l) / double2int(m.platform.hardware.communicationElementsBitPerSecPerChannel(ce)))
             .getOrElse(0),
@@ -338,7 +338,7 @@ final class CanSolveDepTasksToPartitionedMultiCore
     //   })
 
     // chocoModel.getSolver().setLearningSignedClauses()
-    chocoModel.getSolver().setRestarts(FailCounter(chocoModel, m.workload.taskSizes.size * m.platform.runtimes.schedulers.size), LubyCutoff(m.workload.taskSizes.size * m.platform.runtimes.schedulers.size), 0)
+    chocoModel.getSolver().setRestarts(FailCounter(chocoModel, m.workload.task_sizes.size * m.platform.runtimes.schedulers.size), LubyCutoff(m.workload.task_sizes.size * m.platform.runtimes.schedulers.size), 0)
     chocoModel.getSolver().setNoGoodRecordingFromRestarts()
 
     // chocoModel
@@ -356,7 +356,7 @@ final class CanSolveDepTasksToPartitionedMultiCore
       configuration: Explorer.Configuration
   ): ExplorationSolution = {
     val timeValues =
-      (m.workload.periods ++ m.wcets.flatten ++ m.workload.relativeDeadlines)
+      (m.workload.periods ++ m.wcets.flatten ++ m.workload.relative_deadlines)
     val memoryValues = m.platform.hardware.storageSizes ++
       m.workload.messagesMaxSizes ++
       m.workload.processSizes
@@ -382,7 +382,7 @@ final class CanSolveDepTasksToPartitionedMultiCore
           .get
       )
     val messagesMemoryMapping: Vector[Int] =
-      m.workload.dataChannels.zipWithIndex.map((_, i) =>
+      m.workload.data_channels.zipWithIndex.map((_, i) =>
         intVars
           .find(_.getName() == s"mapMessage($i)")
           .map(solution.getIntVal(_))
@@ -412,10 +412,10 @@ final class CanSolveDepTasksToPartitionedMultiCore
       .toVector
     val channelMappings = messagesMemoryMapping.zipWithIndex
       .map((v, i) =>
-        m.workload.dataChannels(i) -> m.platform.hardware.storageElems(messagesMemoryMapping(i))
+        m.workload.data_channels(i) -> m.platform.hardware.storageElems(messagesMemoryMapping(i))
       )
       .toVector
-    val messageSlotAllocations = m.workload.dataChannels.zipWithIndex.map((c, ci) => c -> {
+    val messageSlotAllocations = m.workload.data_channels.zipWithIndex.map((c, ci) => c -> {
         // we have to look from the source perpective, since the sending processor is the one that allocates
         val mem = messagesMemoryMapping(ci)
         // TODO: this must be fixed later, it might clash correct slots

@@ -396,7 +396,6 @@ impl PartialOrd<ExplorationSolution> for ExplorationSolution {
 /// might display when exploring a decision model.
 #[derive(Debug, Deserialize, Serialize, Clone, PartialEq)]
 pub struct ExplorationBid {
-    pub explorer_unique_identifier: String,
     pub can_explore: bool,
     pub is_exact: bool,
     pub competitiveness: f32,
@@ -411,7 +410,6 @@ impl ExplorationBid {
 
     pub fn impossible(explorer_id: &str) -> ExplorationBid {
         ExplorationBid {
-            explorer_unique_identifier: explorer_id.to_owned(),
             can_explore: false,
             is_exact: false,
             competitiveness: 1.0,
@@ -423,7 +421,6 @@ impl ExplorationBid {
 
 impl Hash for ExplorationBid {
     fn hash<H: std::hash::Hasher>(&self, state: &mut H) {
-        self.explorer_unique_identifier.hash(state);
         self.can_explore.hash(state);
         for k in self.additional_numeric_properties.keys() {
             k.hash(state);

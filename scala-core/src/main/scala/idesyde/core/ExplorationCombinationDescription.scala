@@ -7,7 +7,6 @@ import idesyde.core.headers.ExplorerHeader
 import idesyde.core.ExplorationCriteria
 
 final case class ExplorationCombinationDescription(
-    val explorer_unique_identifier: String,
     val can_explore: Boolean,
     val is_exact: Boolean,
     val competitiveness: Double,

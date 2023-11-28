@@ -375,10 +375,13 @@ fn main() {
         info!("Computed {} bidding(s) ", biddings.len());
         // let dominant_bidding_opt =
         //     idesyde_core::compute_dominant_bidding(biddings.iter().map(|(_, _, b)| b));
-        let dominant_biddings = idesyde_core::compute_dominant_biddings(
+        let dominant_biddings_idx: Vec<usize> = idesyde_core::compute_dominant_biddings(
             &biddings.iter().map(|(_, _, b)| b.to_owned()).collect(),
-        );
-        if dominant_biddings.len() > 0 {
+        )
+        .iter()
+        .map(|(i, b)| *i)
+        .collect();
+        if dominant_biddings_idx.len() > 0 {
             match (args.x_total_time_out, args.x_max_solutions) {
                 (Some(t), Some(n)) => info!(
                     "Starting exploration up to {} total time-out seconds and {} solution(s)",
@@ -394,24 +397,24 @@ fn main() {
             // let mut total_reversed = 0;
             debug!(
                 "Proceeding to explore {}",
-                dominant_biddings
+                dominant_biddings_idx
                     .iter()
-                    .map(|(i, x)| biddings[*i].1.category()
+                    .map(|i| biddings[*i].1.category()
                         + " with "
-                        + &x.explorer_unique_identifier.to_owned())
+                        + &biddings[*i].0.unique_identifier())
                     .reduce(|a, b| a + " and " + &b)
                     .unwrap_or("No explorer".to_string())
             );
             let mut dominant_sols: Vec<ExplorationSolution> = vec![];
             let mut num_sols = 0;
             for sol in explore_cooperatively(
-                &dominant_biddings
+                &dominant_biddings_idx
                     .iter()
-                    .map(|(i, _)| (biddings[*i].0.to_owned(), biddings[*i].1.to_owned()))
+                    .map(|i| (biddings[*i].0.to_owned(), biddings[*i].1.to_owned()))
                     .collect(),
-                &dominant_biddings
+                &dominant_biddings_idx
                     .iter()
-                    .map(|(_, b)| b.to_owned())
+                    .map(|i| biddings[*i].2.to_owned())
                     .collect(),
                 &HashSet::new(),
                 idesyde_core::ExplorationConfigurationBuilder::default()

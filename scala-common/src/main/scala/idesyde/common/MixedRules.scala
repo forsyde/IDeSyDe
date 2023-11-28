@@ -142,7 +142,7 @@ trait MixedRules {
             )
             if (
               potential.wcets.zipWithIndex
-                .forall((wi, i) => wi.exists(w => w > 0.0 && w <= a.relativeDeadlines(i)))
+                .forall((wi, i) => wi.exists(w => w > 0.0 && w <= a.relative_deadlines(i)))
             ) {
               (Some(potential), None)
             } else {

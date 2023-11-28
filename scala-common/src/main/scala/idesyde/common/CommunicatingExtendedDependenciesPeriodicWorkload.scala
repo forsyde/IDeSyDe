@@ -28,7 +28,7 @@ trait CommunicatingExtendedDependenciesPeriodicWorkload {
 
   def periods: Vector[Double]
   def offsets: Vector[Double]
-  def relativeDeadlines: Vector[Double]
+  def relative_deadlines: Vector[Double]
   def affineControlGraph: Set[(Int, Int, Int, Int, Int, Int)]
   // def affineControlGraphSrcs: Vector[String]
   // def affineControlGraphDsts: Vector[String]
@@ -168,7 +168,7 @@ trait CommunicatingExtendedDependenciesPeriodicWorkload {
   }
 
   def relativeDeadlinesWithDependencies =
-    relativeDeadlines.zipWithIndex.map((d, i) => d + offsets(i) - offsetsWithDependencies(i))
+    relative_deadlines.zipWithIndex.map((d, i) => d + offsets(i) - offsetsWithDependencies(i))
 
   def interTaskOccasionalBlock = {
     val g              = affineRelationsGraph

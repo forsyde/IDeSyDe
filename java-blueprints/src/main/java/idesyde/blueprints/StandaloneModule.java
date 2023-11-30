@@ -372,7 +372,7 @@ public interface StandaloneModule extends Module {
                                 if (ctx.session.isOpen())
                                     ctx.send("done");
                                 logger.info("Sent the done request");
-                                // ctx.closeSession();
+                                ctx.closeSession();
                             } else {
                                 OpaqueDesignModel.fromJsonString(ctx.message()).flatMap(this::fromOpaqueDesign)
                                         .ifPresentOrElse(

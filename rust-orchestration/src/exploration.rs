@@ -134,6 +134,15 @@ impl Iterator for ExternalExplorerSolutionIter {
     }
 }
 
+impl Drop for ExternalExplorerSolutionIter {
+    fn drop(&mut self) {
+        if let Err(e) = self.websocket.close(None) {
+            debug!("Failed to close websocket. Likely a failure occurred.");
+            debug!("Message was: {}", e.to_string());
+        };
+    }
+}
+
 #[derive(Builder, Clone)]
 pub struct ExternalExplorer {
     name: String,

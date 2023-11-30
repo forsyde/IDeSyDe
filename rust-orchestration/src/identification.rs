@@ -91,6 +91,7 @@ impl Iterator for ExternalServerIdentifiticationIterator {
             debug!("Failed to send 'done': {}", e.to_string());
         };
         // println!("send done");
+        std::thread::sleep(Duration::from_millis(100)); // sleep a bit to make sure all is working
         while let Ok(message) = self.websocket.read() {
             // besides the answer, also read the module's messages
             match message {
@@ -173,6 +174,14 @@ impl IdentificationIterator for ExternalServerIdentifiticationIterator {
     //         .map(|msg| ("DEBUG".to_owned(), msg.to_owned()))
     //         .collect()
     // }
+}
+
+impl Drop for ExternalServerIdentifiticationIterator {
+    fn drop(&mut self) {
+        if let Err(e) = self.websocket.close(None) {
+            debug!("Failed to close identification websocket: {}", e.to_string());
+        }
+    }
 }
 
 pub fn identification_procedure(

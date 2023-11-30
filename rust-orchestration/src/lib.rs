@@ -20,6 +20,7 @@ use std::process::ChildStdout;
 use std::process::Stdio;
 use std::sync::Arc;
 use std::sync::Mutex;
+use std::time::Duration;
 
 use exploration::ExternalExplorerBuilder;
 
@@ -34,6 +35,7 @@ use idesyde_core::OpaqueDesignModel;
 use log::debug;
 use log::warn;
 use rayon::prelude::*;
+use tungstenite::protocol::WebSocketConfig;
 use url::Url;
 
 trait LocalServerLike {
@@ -281,7 +283,7 @@ impl Module for ExternalServerModule {
                 .socket_addrs(|| None)
                 .ok()
                 .and_then(|addrs| addrs.first().cloned())
-                .and_then(|addr| std::net::TcpStream::connect(addr).ok())
+                .and_then(|addr| std::net::TcpStream::connect_timeout(&addr, Duration::from_millis(200)).ok())
                 .and_then(|stream| tungstenite::client(reverse_url, stream).ok())
             {
                 // send solved decision models
@@ -304,13 +306,13 @@ impl Module for ExternalServerModule {
                     debug!("Failed to send 'done': {}", e.to_string());
                 };
                 let mut reverse_identified = Vec::new();
-                // println!("Asking for reverse {}", self.unique_identifier());
+                println!("Asking for reverse {}", self.unique_identifier());
                 while let Ok(message) = ws.read() {
                     // besides the answer, also read the module's messages
                     match message {
                         tungstenite::Message::Text(txt_msg) => {
                             if txt_msg.eq_ignore_ascii_case("done") {
-                                // println!("got done");
+                                println!("got done from {}", self.unique_identifier());
                                 break;
                             } else if let Ok(opaque) =
                                 OpaqueDesignModel::from_json_str(txt_msg.as_str())
@@ -341,8 +343,7 @@ impl Module for ExternalServerModule {
                                 );
                             };
                         }
-                        tungstenite::Message::Close(_) => break,
-                        _ => (),
+                        _ => break,
                     }
                 }
                 // println!("Reverse done for {}", self.unique_identifier());

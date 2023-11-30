@@ -228,14 +228,14 @@ final class CanSolveSDFToTiledMultiCore
     // chocoModel.getSolver().setLearningSignedClauses()
     chocoModel.getSolver().setRestartOnSolutions()
     chocoModel.getSolver().setNoGoodRecordingFromRestarts()
-    chocoModel
-      .getSolver()
-      .plugMonitor(new IMonitorContradiction {
-        def onContradiction(cex: ContradictionException): Unit = {
-          println(cex.toString())
-          println(chocoModel.getSolver().getDecisionPath().toString())
-        }
-      })
+    // chocoModel
+    //   .getSolver()
+    //   .plugMonitor(new IMonitorContradiction {
+    //     def onContradiction(cex: ContradictionException): Unit = {
+    //       println(cex.toString())
+    //       println(chocoModel.getSolver().getDecisionPath().toString())
+    //     }
+    //   })
     (chocoModel, desiredGoals.map(o => o.getName() -> o).toMap)
   }
 

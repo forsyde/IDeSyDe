@@ -1031,12 +1031,17 @@ pub struct MultiLevelCombinedExplorerIterator {
     levels: Vec<CombinedExplorerIterator>,
     solutions: HashSet<ExplorationSolution>,
     converged_to_last_level: bool,
+    start: Instant,
 }
 
 impl Iterator for MultiLevelCombinedExplorerIterator {
     type Item = ExplorationSolution;
 
     fn next(&mut self) -> Option<Self::Item> {
+        if self.exploration_configuration.total_timeout > 0 && self.start.elapsed() > Duration::from_secs(self.exploration_configuration.total_timeout)
+        {
+            return None;
+        }
         match self.levels.last_mut() {
             Some(last_level) => {
                 match last_level
@@ -1105,6 +1110,7 @@ pub fn explore_cooperatively_simple(
             exploration_configuration.to_owned(),
         )],
         converged_to_last_level: false,
+        start: Instant::now(),
     }
 }
 
@@ -1126,6 +1132,7 @@ pub fn explore_cooperatively(
             exploration_configuration.to_owned(),
         )],
         converged_to_last_level: false,
+        start: Instant::now(),
     }
 }
 

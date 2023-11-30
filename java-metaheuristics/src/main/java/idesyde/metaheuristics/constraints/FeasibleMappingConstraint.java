@@ -47,8 +47,8 @@ public class FeasibleMappingConstraint<T extends Comparable<? super T>>
                                         .processorAffinities().get(pe)))
                                 .collect(Collectors.toList()))
                 .collect(Collectors.toList());
-        System.out.println("allowedMappings: " + allowedMappings);
-        System.out.println("scheduers: " + schedulers);
+        // System.out.println("allowedMappings: " + allowedMappings);
+        // System.out.println("scheduers: " + schedulers);
     }
 
     @Override

@@ -125,6 +125,7 @@ lazy val scala_legacy = (project in file("scala-bridge-forsyde-io"))
   // .dependsOn(core)
   .dependsOn(common)
   .dependsOn(devicetree)
+  .dependsOn(choco)
   // .dependsOn(blueprints)
   .enablePlugins(UniversalPlugin, JavaAppPackaging, JlinkPlugin)
   .enablePlugins(JDKPackagerPlugin)
@@ -213,7 +214,7 @@ lazy val choco = (project in file("scala-choco"))
       "EPL2" -> url("https://www.eclipse.org/legal/epl-2.0/")
     ),
     Compile / mainClass := Some("idesyde.choco.ChocoExplorationModule"),
-    moduleSettings,
+    // moduleSettings,
     jlinkModulePath := {
       val paths = (jlinkBuildImage / fullClasspath).value
       paths

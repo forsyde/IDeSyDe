@@ -34,7 +34,7 @@ public class JeneticsExplorer implements Explorer, CanExploreAADPMMMWithJenetics
                     }
                 }
             }
-            return new ExplorationBidding(uniqueIdentifier(), true, false, 1.3, objs, Map.of());
+            return new ExplorationBidding(true, false, 1.1, objs, Map.of("time-to-first", 10.0));
         } else if (decisionModel instanceof AperiodicAsynchronousDataflowToPartitionedTiledMulticore aperiodicAsynchronousDataflowToPartitionedTiledMulticore) {
             var objs = new HashSet<String>();
             objs.add("nUsedPEs");
@@ -46,7 +46,7 @@ public class JeneticsExplorer implements Explorer, CanExploreAADPMMMWithJenetics
                     }
                 }
             }
-            return new ExplorationBidding(uniqueIdentifier(), true, false, 1.3, objs, Map.of());
+            return new ExplorationBidding(true, false, 1.1, objs, Map.of("time-to-first", 10.0));
         }
         return Explorer.super.bid(explorers, decisionModel);
     }

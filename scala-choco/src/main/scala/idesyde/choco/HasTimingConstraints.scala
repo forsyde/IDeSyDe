@@ -42,19 +42,21 @@ trait HasTimingConstraints {
   ): Array[IntVar] = {
     val utilizations = maxUtilizations
       .map(_ * (100))
-      .map(_.floor.toInt)
+      .map(_.floor.toInt + 1)
       .zipWithIndex
       .map((maxU, j) => {
         chocoModel.intVar(s"utilization(${j})", 0, Math.min(maxU, 100), true)
       })
     // TODO: find a way to reduce the pessimism here
     for ((u, i) <- utilizations.zipWithIndex) {
-      var mappedUtilizations = for ((d, j) <- durations.zipWithIndex) yield {
+      // println(u.toString())
+      var mappedUtilizations = for ((d, j) <- durations.zipWithIndex; if taskExecution(j).contains(i)) yield {
+        println(d.getUB() + " " + periods(j) + " " + Math.floorDiv(100 * d.getUB(), periods(j)))
         var utilizationContribution =
           chocoModel.intVar(
             s"utilization(${j}, ${i})",
             0,
-            Math.min(100, Math.floorDiv(100 * d.getUB(), periods(j)) + 1),
+            if (taskExecution(j).contains(i)) Math.min(100, Math.floorDiv(100 * d.getUB(), periods(j)) + 1) else 0,
             true
           )
         chocoModel.ifThenElse(
@@ -123,7 +125,7 @@ trait HasTimingConstraints {
   ): Array[Array[IntVar]] = {
     val preemptionInterference = responseTimes.zipWithIndex.map((ri, i) => {
       responseTimes.zipWithIndex.map((rj, j) => {
-        if (i != j && priorities(i) >= priorities(j)) {
+        if (i != j && priorities(i) >= priorities(j) && taskExecution(i).stream().anyMatch(taskExecution(j).contains)) {
           chocoModel.intVar(
             s"preemptionInterference($i, $j)",
             0,

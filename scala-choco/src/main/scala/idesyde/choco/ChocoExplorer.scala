@@ -65,12 +65,11 @@ class ChocoExplorer extends Explorer:
       case _ => Set()
     }
     ExplorationBidding(
-      uniqueIdentifier,
       canExplore,
       true,
       1.0,
       objectives.asJava,
-      java.util.Map.of()
+      java.util.Map.of("time-to-first", 100.0)
     )
   }
 

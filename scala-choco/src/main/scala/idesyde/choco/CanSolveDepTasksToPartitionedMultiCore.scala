@@ -54,14 +54,14 @@ final class CanSolveDepTasksToPartitionedMultiCore
   ): (Model, Map[String, IntVar]) = {
     val chocoModel = Model()
     val timeValues =
-      (m.workload.periods ++ m.wcets.flatten ++ m.workload.relative_deadlines)
+      (m.workload.periods ++ m.wcets.flatten.filter(_ > 0) ++ m.workload.relative_deadlines).sorted
     val memoryValues = m.platform.hardware.storageSizes ++
       m.workload.messagesMaxSizes ++
       m.workload.processSizes
 
     def double2int(s: Double): Int = discretized(
       if (configuration.timeDiscretizationFactor > Int.MaxValue.toLong) Int.MaxValue
-      else if (configuration.timeDiscretizationFactor <= 0L) timeValues.size * 100
+      else if (configuration.timeDiscretizationFactor <= 0L) 100 * timeValues.size
       else configuration.timeDiscretizationFactor.toInt,
       timeValues.max
     )(s)
@@ -77,9 +77,10 @@ final class CanSolveDepTasksToPartitionedMultiCore
     val priorities = m.workload.prioritiesRateMonotonic.toArray
     val deadlines  = m.workload.relative_deadlines.map(double2int)
     val wcets      = m.wcets.map(_.map(double2int))
-    println(deadlines.mkString(", "))
-    println("----")
-    println(wcets.map(_.mkString(",")).mkString("\n"))
+    // println(deadlines.mkString(", "))
+    // println(priorities.mkString(", "))
+    // println("----")
+    // println(wcets.map(_.mkString(",")).mkString("\n"))
     val maxUtilizations =
       m.platform.hardware.processingElems.map(p => m.maxUtilizations.getOrElse(p, 1.0))
 
@@ -119,6 +120,7 @@ final class CanSolveDepTasksToPartitionedMultiCore
         s"task_exec($t)",
         m.platform.hardware.processingElems.zipWithIndex
           .filter((_, j) => m.wcets(i)(j) > -1)
+          .filter((p, j) => m.wcets(i)(j) <= periods(i))
           .map((m, j) => j)
           .toArray
       )
@@ -229,16 +231,16 @@ final class CanSolveDepTasksToPartitionedMultiCore
       responseTimes.toArray
     )
 
-    val utilizations = postMaximumUtilizations(
-      chocoModel,
-      priorities,
-      periods.toArray,
-      maxUtilizations.toArray,
-      durations,
-      taskExecution.toArray,
-      blockingTimes.toArray,
-      responseTimes.toArray
-    )
+    // val utilizations = postMaximumUtilizations(
+    //   chocoModel,
+    //   priorities,
+    //   periods.toArray,
+    //   maxUtilizations.toArray,
+    //   durations,
+    //   taskExecution.toArray,
+    //   blockingTimes.toArray,
+    //   responseTimes.toArray
+    // )
 
     // val fixedPriorityConstraintsModule = FixedPriorityConstraintsModule(
     //   chocoModel,
@@ -334,6 +336,7 @@ final class CanSolveDepTasksToPartitionedMultiCore
     //     def onContradiction(cex: ContradictionException): Unit = {
     //       println(chocoModel.getSolver().getDecisionPath().toString())
     //       println(cex.toString())
+    //       println(chocoModel.getVars().filter(_.getName().startsWith("utilization")).map(_.toString()).mkString(", "))
     //     }
     //   })
 
@@ -356,15 +359,15 @@ final class CanSolveDepTasksToPartitionedMultiCore
       configuration: Explorer.Configuration
   ): ExplorationSolution = {
     val timeValues =
-      (m.workload.periods ++ m.wcets.flatten ++ m.workload.relative_deadlines)
+      (m.workload.periods ++ m.wcets.flatten.filter(_ > 0) ++ m.workload.relative_deadlines)
     val memoryValues = m.platform.hardware.storageSizes ++
       m.workload.messagesMaxSizes ++
       m.workload.processSizes
     def int2double(d: Int) = undiscretized(
       if (configuration.timeDiscretizationFactor > Int.MaxValue) Int.MaxValue
-      else if (configuration.timeDiscretizationFactor <= 0L) timeValues.size * 100
+      else if (configuration.timeDiscretizationFactor <= 0L) 100 * timeValues.size
       else configuration.timeDiscretizationFactor.toInt,
-      timeValues.sum
+      timeValues.max
     )(d)
     // val (discreteTimeValues, discreteMemoryValues) =
     //   computeTimeMultiplierAndMemoryDividerWithDiscretizationFactor(

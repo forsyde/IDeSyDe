@@ -6,7 +6,7 @@ use idesyde_core::{
     explore_cooperatively, DecisionModel, DesignModel, ExplorationBid, ExplorationSolution,
     Explorer, OpaqueDesignModel,
 };
-use idesyde_orchestration::{identification::identification_procedure, ExternalServerModule};
+use idesyde_orchestration::{identification::identification_procedure, ExternalServerModule, exploration};
 use log::{debug, error, info, warn, Level};
 use rayon::prelude::*;
 
@@ -328,8 +328,13 @@ fn main() {
             "Starting identification with {} pre-identified decision models",
             pre_identified.len()
         );
+        let identification_time = std::time::Instant::now();
         let (identified, _) =
             identification_procedure(&modules, &design_models, &pre_identified, 0);
+        debug!(
+            "Time spent identifying (ms): {}",
+            identification_time.elapsed().as_millis()
+        );
         info!("Identified {} decision model(s)", identified.len());
         debug!(
             "identified categories: {}",
@@ -354,6 +359,7 @@ fn main() {
         // let dominant = compute_dominant_decision_models(&identified_refs);
 
         // let dominant_without_biddings = compute_dominant_decision_models(&identified_refs);
+        let bidding_time = std::time::Instant::now();
         let dominant_partial_identification =
             idesyde_core::compute_dominant_identification(&identified);
         let biddings: Vec<(Arc<dyn Explorer>, Arc<dyn DecisionModel>, ExplorationBid)> = explorers
@@ -372,6 +378,10 @@ fn main() {
                 args.decision_model.len() == 0 || args.decision_model.contains(&m.category())
             })
             .collect();
+        debug!(
+            "Time spent bidding (ms): {}",
+            bidding_time.elapsed().as_millis()
+        );
         info!("Computed {} bidding(s) ", biddings.len());
         // let dominant_bidding_opt =
         //     idesyde_core::compute_dominant_bidding(biddings.iter().map(|(_, _, b)| b));
@@ -407,6 +417,7 @@ fn main() {
             );
             let mut dominant_sols: Vec<ExplorationSolution> = vec![];
             let mut num_sols = 0;
+            let exploration_time = std::time::Instant::now();
             for sol in explore_cooperatively(
                 &dominant_biddings_idx
                     .iter()
@@ -485,6 +496,10 @@ fn main() {
             //     })
             //     .map(|x| x.to_owned())
             //     .collect();
+            debug!(
+                "Time spent exploring (ms): {}",
+                exploration_time.elapsed().as_millis()
+            );
             info!(
                 "Finished exploration with {} total and {} dominant solution(s)",
                 num_sols,
@@ -508,6 +523,7 @@ fn main() {
                 .collect();
             if !solved_models.is_empty() {
                 info!("Starting reverse identification");
+                let reverse_time = std::time::Instant::now();
                 let total_reversed: usize = modules
                     .par_iter()
                     .map(|imodule| {
@@ -527,6 +543,10 @@ fn main() {
                         n_reversed
                     })
                     .sum();
+                debug!(
+                    "Time spent reversing (ms): {}",
+                    reverse_time.elapsed().as_millis()
+                );
                 info!(
                     "Finished reverse identification of {} design model(s)",
                     total_reversed

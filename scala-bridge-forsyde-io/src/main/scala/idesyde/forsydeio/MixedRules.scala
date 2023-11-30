@@ -114,13 +114,12 @@ trait MixedRules {
       decisionModel: Set[DecisionModel],
       designModel: Set[DesignModel]
   ): Set[ForSyDeDesignModel] = {
-    val model = designModel
-      .flatMap(_ match {
-        case ForSyDeDesignModel(forSyDeSystemGraph) =>
-          Some(forSyDeSystemGraph)
-        case _ => None
-      })
-      .foldRight(SystemGraph())((a, b) => b.merge(a))
+      // .flatMap(_ match {
+      //   case ForSyDeDesignModel(forSyDeSystemGraph) =>
+      //     Some(forSyDeSystemGraph)
+      //   case _ => None
+      // })
+      // .foldRight(SystemGraph())((a, b) => b.merge(a))
     val solveds = decisionModel.flatMap(_ match {
       case dse: PeriodicWorkloadToPartitionedSharedMultiCore => {
         if (
@@ -131,15 +130,15 @@ trait MixedRules {
       }
       case _ => None
     })
-    for (solved <- solveds; rebuilt = SystemGraph().merge(model)) yield {
+    for (solved <- solveds; rebuilt = SystemGraph()) yield {
       for (
         (taskId, schedId) <- solved.processSchedulings;
         // ok for now because it is a 1-to-many situation wit the current Decision Models (2023-01-16)
         // TODO: fix it to be stable later
         task = ForSyDeHierarchy.Scheduled
-          .enforce(rebuilt, rebuilt.queryVertex(taskId).orElse(rebuilt.newVertex(taskId)));
+          .enforce(rebuilt, rebuilt.newVertex(taskId));
         sched = ForSyDeHierarchy.AbstractRuntime
-          .enforce(rebuilt, rebuilt.queryVertex(schedId).orElse(rebuilt.newVertex(schedId)))
+          .enforce(rebuilt, rebuilt.newVertex(schedId))
       ) {
         task.runtimeHost(sched)
         ForSyDeHierarchy.GreyBox
@@ -151,9 +150,9 @@ trait MixedRules {
         // ok for now because it is a 1-to-many situation wit the current Decision Models (2023-01-16)
         // TODO: fix it to be stable later
         task = ForSyDeHierarchy.MemoryMapped
-          .enforce(rebuilt, rebuilt.queryVertex(taskId).orElse(rebuilt.newVertex(taskId)));
+          .enforce(rebuilt, rebuilt.newVertex(taskId));
         mem = ForSyDeHierarchy.GenericMemoryModule
-          .enforce(rebuilt, rebuilt.queryVertex(memId).orElse(rebuilt.newVertex(memId)))
+          .enforce(rebuilt, rebuilt.newVertex(memId))
       ) {
         task.mappingHost(mem)
       }
@@ -162,11 +161,12 @@ trait MixedRules {
         // ok for now because it is a 1-to-many situation wit the current Decision Models (2023-01-16)
         // TODO: fix it to be stable later
         channel = ForSyDeHierarchy.MemoryMapped
-          .enforce(rebuilt, rebuilt.queryVertex(channelId).orElse(rebuilt.newVertex(channelId)));
+          .enforce(rebuilt, rebuilt.newVertex(channelId));
         mem = ForSyDeHierarchy.GenericMemoryModule
-          .enforce(rebuilt, rebuilt.queryVertex(memId).orElse(rebuilt.newVertex(memId)))
+          .enforce(rebuilt, rebuilt.newVertex(memId))
       ) {
         channel.mappingHost(mem)
+        ForSyDeHierarchy.GreyBox.enforce(mem).addContained(ForSyDeHierarchy.Visualizable.enforce(channel))
       }
       ForSyDeDesignModel(rebuilt)
     }
@@ -240,13 +240,6 @@ trait MixedRules {
       decisionModel: Set[DecisionModel],
       designModel: Set[DesignModel]
   ): Set[ForSyDeDesignModel] = {
-    val model = designModel
-      .flatMap(_ match {
-        case ForSyDeDesignModel(forSyDeSystemGraph) =>
-          Some(forSyDeSystemGraph)
-        case _ => None
-      })
-      .foldRight(SystemGraph())((a, b) => b.merge(a))
     val solveds = decisionModel.flatMap(_ match {
       case dse: SDFToTiledMultiCore => {
         if (!dse.messageMappings.isEmpty && !dse.processMappings.isEmpty)
@@ -255,7 +248,7 @@ trait MixedRules {
       }
       case _ => None
     })
-    for (solved <- solveds; rebuilt = SystemGraph().merge(model)) yield {
+    for (solved <- solveds; rebuilt = SystemGraph()) yield {
       // first, we take care of the process mappings
       for (
         (mem, i) <- solved.processMappings.zipWithIndex;
@@ -267,25 +260,24 @@ trait MixedRules {
         val v =
           ForSyDeHierarchy.MemoryMapped.enforce(
             rebuilt,
-            rebuilt.queryVertex(actorId).orElse(rebuilt.newVertex(actorId))
+            rebuilt.newVertex(actorId)
           )
         val m =
           ForSyDeHierarchy.GenericMemoryModule.enforce(
             rebuilt,
-            rebuilt.queryVertex(mem).orElse(rebuilt.newVertex(mem))
+            rebuilt.newVertex(mem)
           )
         v.mappingHost(
           m
         )
         val s = ForSyDeHierarchy.AbstractRuntime.enforce(
           rebuilt,
-          rebuilt
-            .queryVertex(scheduler)
-            .orElse(rebuilt.newVertex(scheduler))
+          rebuilt.newVertex(scheduler)
         )
         ForSyDeHierarchy.Scheduled
           .enforce(v)
           .runtimeHost(s)
+        ForSyDeHierarchy.GreyBox.enforce(s).addContained(ForSyDeHierarchy.Visualizable.enforce(v))
       }
       // now, we take care of the memory mappings
       for (
@@ -296,14 +288,15 @@ trait MixedRules {
         val v =
           ForSyDeHierarchy.MemoryMapped.enforce(
             rebuilt,
-            rebuilt.queryVertex(channelID).orElse(rebuilt.newVertex(channelID))
+            rebuilt.newVertex(channelID)
           )
         val m =
           ForSyDeHierarchy.GenericMemoryModule.enforce(
             rebuilt,
-            rebuilt.queryVertex(mem).orElse(rebuilt.newVertex(mem))
+            rebuilt.newVertex(mem)
           )
         v.mappingHost(m)
+        ForSyDeHierarchy.GreyBox.enforce(m).addContained(ForSyDeHierarchy.Visualizable.enforce(v))
       }
       // now, we put the schedule in each scheduler
       for (
@@ -313,9 +306,7 @@ trait MixedRules {
       ) {
         val scs = ForSyDeHierarchy.SuperLoopRuntime.enforce(
           rebuilt,
-          rebuilt
-            .queryVertex(scheduler)
-            .orElse(rebuilt.newVertex(scheduler))
+          rebuilt.newVertex(scheduler)
         )
         scs.superLoopEntries(list.asJava)
       }
@@ -336,9 +327,7 @@ trait MixedRules {
       for ((ce, i) <- solved.platform.hardware.communicationElems.zipWithIndex) {
         val comm = ForSyDeHierarchy.ConcurrentSlotsReserved.enforce(
           rebuilt,
-          rebuilt
-            .queryVertex(ce)
-            .orElse(rebuilt.newVertex(ce))
+          rebuilt.newVertex(ce)
         )
         comm.slotReservations(commAllocs(i).map(_.asJava).asJava)
       }
@@ -349,9 +338,7 @@ trait MixedRules {
       ) {
         val act = ForSyDeHierarchy.AnalyzedActor.enforce(
           rebuilt,
-          rebuilt
-            .queryVertex(a)
-            .orElse(rebuilt.newVertex(a))
+          rebuilt.newVertex(a)
         )
         val frac = Rational(th)
         act.setThroughputInSecsNumerator(frac.numeratorAsLong)

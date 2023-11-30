@@ -7,6 +7,8 @@ import spire.math.Rational
 import scala.collection.mutable.Buffer
 import org.jgrapht.graph.DefaultDirectedGraph
 import org.jgrapht.traverse.TopologicalOrderIterator
+import org.jgrapht.graph.AsGraphUnion
+import org.jgrapht.alg.connectivity.ConnectivityInspector
 
 /** A decision model for communicating periodically activated processes.
   *
@@ -259,15 +261,17 @@ trait CommunicatingExtendedDependenciesPeriodicWorkload {
     var prioritiesMut = Buffer.fill(numTasks)(numTasks)
     while (topoSort.hasNext()) {
       val node = topoSort.next()
-      g.incomingEdgesOf(node)
+      g.outgoingEdgesOf(node)
         .stream()
         .forEach(edge => {
-          val (src, _, _, _, _, _) = edge
-          if (prioritiesMut(node) <= prioritiesMut(src) - 1) {
-            prioritiesMut(node) = Math.min(prioritiesMut(node), prioritiesMut(src) - 1)
+          val (_, dst, _, _, _, _) = edge
+          // println(s"dst: $dst, node: $node")
+          if (prioritiesMut(dst) >= prioritiesMut(node)) {
+            prioritiesMut(dst) = Math.min(prioritiesMut(node) - 1, prioritiesMut(dst))
           }
         })
     }
+    // println(prioritiesMut.mkString("[", ",", "]"))
     // for (
     //   sorted <- g.topologicalSort();
     //   node   <- sorted;
@@ -283,17 +287,44 @@ trait CommunicatingExtendedDependenciesPeriodicWorkload {
   }
 
   def prioritiesRateMonotonic = {
-    var prioritiesMut = prioritiesForDependencies
-    for (
-      i <- 0 until prioritiesMut.size;
-      j <- 0 until prioritiesMut.size;
-      if i != j;
-      if prioritiesMut(i) > prioritiesMut(j) || (prioritiesMut(i) == prioritiesMut(j) && periods(
-        i
-      ) < periods(j))
-    ) {
-      prioritiesMut(j) -= 1
+    val g             = affineRelationsGraph
+    val ratesGraph = DefaultDirectedGraph[Int, (Int, Int, Int, Int, Int, Int)](
+      classOf[(Int, Int, Int, Int, Int, Int)]
+    )
+    val existingComponents = ConnectivityInspector(g)
+    // TODO: this can be made more efficient in the future
+    for (i <- 0 until numVirtualTasks; j <- 0 until numVirtualTasks; if i != j && periods(i) < periods(j) && !existingComponents.pathExists(i, j)) {
+      ratesGraph.addVertex(i)
+      ratesGraph.addVertex(j)
+      ratesGraph.addEdge(i, j, (i, j, 0, 0, 0, 0))
     }
+    val numTasks      = numVirtualTasks
+    val union = AsGraphUnion(g, ratesGraph)
+    val topoSort      = TopologicalOrderIterator(union)
+    var prioritiesMut = Buffer.fill(numTasks)(numTasks)
+    while (topoSort.hasNext()) {
+      val node = topoSort.next()
+      union.outgoingEdgesOf(node)
+        .stream()
+        .forEach(edge => {
+          val (_, dst, _, _, _, _) = edge
+          // println(s"dst: $dst, node: $node")
+          if (prioritiesMut(dst) >= prioritiesMut(node)) {
+            prioritiesMut(dst) = Math.min(prioritiesMut(node) - 1, prioritiesMut(dst))
+          }
+        })
+    }
+    // for (
+    //   i <- 0 until prioritiesMut.size;
+    //   j <- 0 until prioritiesMut.size;
+    //   if i != j;
+    //   if prioritiesMut(i) > prioritiesMut(j) || (prioritiesMut(i) == prioritiesMut(j) && periods(
+    //     i
+    //   ) < periods(j))
+    // ) {
+    //   prioritiesMut(j) -= 1
+    // }
+    println(prioritiesMut.mkString("[", ",", "]"))
     prioritiesMut
   }
 

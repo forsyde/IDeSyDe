@@ -43,6 +43,7 @@ import idesyde.devicetree.OSDescription
 import idesyde.devicetree.identification.OSDescriptionDesignModel
 import idesyde.devicetree.identification.CanParseDeviceTree
 import idesyde.devicetree.identification.DeviceTreeDesignModel
+import idesyde.choco.ChocoExplorer
 
 object ForSyDeIOScalaModule
     extends StandaloneModule
@@ -150,7 +151,9 @@ object ForSyDeIOScalaModule
 
   override def identificationRules(): ju.Set[IdentificationRule] = Set(
     IdentificationRule.OnlyDesignModels(adaptIRuleToJava(identSharedMemoryMultiCoreFromDeviceTree)),
-    IdentificationRule.OnlyDesignModels(adaptIRuleToJava(identPartitionedCoresWithRuntimesFromDeviceTree)),
+    IdentificationRule.OnlyDesignModels(
+      adaptIRuleToJava(identPartitionedCoresWithRuntimesFromDeviceTree)
+    ),
     IdentificationRule.OnlyDesignModels(adaptIRuleToJava(identSDFApplication)),
     IdentificationRule.OnlyDesignModels(adaptIRuleToJava(identTiledMultiCore)),
     IdentificationRule.Generic(adaptIRuleToJava(identPartitionedCoresWithRuntimes)),
@@ -196,6 +199,8 @@ object ForSyDeIOScalaModule
     ReverseIdentificationRule.Generic(adaptRevRuleToJava(integrateSDFToTiledMultiCore))
   ).asJava
 
+  override def explorers() = Set(ChocoExplorer()).asJava
+
   def main(args: Array[String]): Unit =
     standaloneModule(args).ifPresent(javalin => javalin.start(0))
 
@@ -214,26 +219,30 @@ object ForSyDeIOScalaModule
           }
         });
     } else if (opaque.format() == "yaml") {
-      opaque.asString().flatMap(body => 
-        body.as[OSDescription] match {
-          case Right(value) => Some(OSDescriptionDesignModel(value)).asJava
-          case Left(value)  => None.asJava
-        };
-      )
+      opaque
+        .asString()
+        .flatMap(body =>
+          body.as[OSDescription] match {
+            case Right(value) => Some(OSDescriptionDesignModel(value)).asJava
+            case Left(value)  => None.asJava
+          };
+        )
     } else if (opaque.format() == "dts") {
       {
         val root = ("""\w.dts""".r).findFirstIn(opaque.category()).getOrElse("")
-        opaque.asString().flatMap(body => 
-        parseDeviceTreeWithPrefix(body, root) match {
-          case Success(result, next) => Some(DeviceTreeDesignModel(List(result))).asJava
-          case _                     => None.asJava
-        }
-      )
-    }
+        opaque
+          .asString()
+          .flatMap(body =>
+            parseDeviceTreeWithPrefix(body, root) match {
+              case Success(result, next) => Some(DeviceTreeDesignModel(List(result))).asJava
+              case _                     => None.asJava
+            }
+          )
+      }
     } else {
-    return ju.Optional.empty();
+      return ju.Optional.empty();
+    }
   }
-}
 
   def uniqueIdentifier: String = "ForSyDeIOScalaModule"
 }

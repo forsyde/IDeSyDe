@@ -89,6 +89,7 @@ impl Iterator for ExternalExplorerSolutionIter {
                 match message {
                     tungstenite::Message::Text(txt) => {
                         if txt.eq_ignore_ascii_case("done") {
+                            // debug!("Received done");
                             return None;
                         } else if let Ok(sol) = ExplorationSolutionMessage::from_json_str(&txt) {
                             return Some(ExplorationSolution {

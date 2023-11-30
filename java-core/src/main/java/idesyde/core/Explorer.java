@@ -48,7 +48,7 @@ public interface Explorer {
      * explorer for a decision model given that other explorers are present.
      */
     default ExplorationBidding bid(Set<Explorer> explorers, DecisionModel decisionModel) {
-        return new ExplorationBidding(uniqueIdentifier(), false, false, 10.0, Set.of(), Map.of());
+        return new ExplorationBidding(false, false, 10.0, Set.of(), Map.of());
     }
 
     default Stream<? extends ExplorationSolution> explore(DecisionModel decisionModel,

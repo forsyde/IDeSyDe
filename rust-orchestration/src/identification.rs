@@ -1,4 +1,4 @@
-use std::{collections::HashSet, f32::consts::E, net::TcpStream, ops::Index, sync::Arc};
+use std::{collections::HashSet, f32::consts::E, net::TcpStream, ops::Index, sync::{Arc, Mutex}, time::Duration};
 
 use idesyde_core::{
     DecisionModel, DesignModel, IdentificationIterator, IdentificationResult, Module,
@@ -182,22 +182,102 @@ pub fn identification_procedure(
     starting_iter: i32,
 ) -> (Vec<Arc<dyn DecisionModel>>, Vec<(String, String)>) {
     let mut step = starting_iter;
-    let mut fix_point = false;
-    let mut identified: Vec<Arc<dyn DecisionModel>> = Vec::new();
+    let mut identified: Vec<Arc<dyn DecisionModel>> = pre_identified.clone();
     let mut messages: Vec<(String, String)> = Vec::new();
+    let mut fix_point = false;
     let mut iterators: Vec<Box<dyn IdentificationIterator>> = imodules
         .iter()
         .map(|imodule| imodule.start_identification(design_models, &identified))
         .collect();
-    identified.extend(pre_identified.iter().map(|x| x.to_owned()));
+    // let (final_sol_tx, final_sol_rx) = std::sync::mpsc::channel::<Arc<dyn DecisionModel>>();
+    // let (final_msg_tx, final_msg_rx) = std::sync::mpsc::channel::<(String, String)>();
+    // rayon::scope(|s| {
+    //     let (inputs_txs, sols_rxs): (Vec<std::sync::mpsc::Sender::<Vec<Arc<dyn DecisionModel>>>>, Vec<std::sync::mpsc::Receiver::<IdentificationResult>>) = imodules.iter().map(move |imodule| {
+    //         let (inputs_tx, inputs_rx) = std::sync::mpsc::channel::<Vec<Arc<dyn DecisionModel>>>();
+    //         let (sols_tx, sols_rx) = std::sync::mpsc::channel::<IdentificationResult>();
+    //         s.spawn(move |_| {
+    //             let mut iter = imodule.start_identification(design_models, pre_identified);
+    //             // initial step
+    //             if let Some(result) = iter.next_with_models(pre_identified, design_models) {
+    //                 sols_tx.send(result).expect("problem sending initial result");
+    //             }
+    //             // now keep checking
+    //             while let Ok(inputs) = inputs_rx.recv_timeout(Duration::from_millis(1000)) {
+    //                 if let Some(result) = iter.next_with_models(&inputs, design_models) {
+    //                     sols_tx.send(result).expect("problem sending result");
+    //                 }
+    //             }
+    //         });
+    //         (inputs_tx, sols_rx)
+    //     }).unzip();
+    //     s.spawn(move |_| {
+    //         let mut fix_points: Vec<bool> = sols_rxs.iter().map(|_| false).collect();
+    //         while fix_points.iter().any(|x| !(*x)) {
+    //             for (i, sol_rx) in sols_rxs.iter().enumerate() {
+    //                 fix_points[i] = true;
+    //                 if let Ok((ms, msgs)) = sol_rx.recv_timeout(Duration::from_millis(1000)) {
+    //                     for m in &ms {
+    //                         if let Some(previous_idx) = identified.iter().position(|x| {
+    //                             (x.partial_cmp(m) == Some(std::cmp::Ordering::Less)
+    //                                 || x.partial_cmp(m) == Some(std::cmp::Ordering::Equal))
+    //                                 && x.downcast_ref::<OpaqueDecisionModel>().is_some()
+    //                                 && m.downcast_ref::<OpaqueDecisionModel>().is_none()
+    //                         }) {
+    //                             // debug!("Replaced {}", identified[previous_idx].category());
+    //                             identified.remove(previous_idx);
+    //                             identified.push(m.to_owned());
+    //                             fix_points[i] = false;
+    //                         } else if !identified.iter().any(|x| {
+    //                             x.partial_cmp(m) == Some(std::cmp::Ordering::Greater)
+    //                                 || x.partial_cmp(m) == Some(std::cmp::Ordering::Equal)
+    //                         }) {
+    //                             // debug!("added {}", m.category());
+    //                             identified.push(m.to_owned());
+    //                             fix_points[i] = false;
+    //                         };
+    //                         // if !identified.contains(&m) {
+    //                         // }
+    //                     }
+    //                     for msg in msgs {
+    //                         debug!("{}", msg);
+    //                         messages.push(("DEBUG".to_string(), msg.to_owned()));
+    //                     }
+    //                     for j in 0..sols_rxs.len() {
+    //                         if i != j {
+    //                             match inputs_txs[j].send(identified.clone()) {
+    //                                 Ok(_) => {},
+    //                                 Err(e) => {println!("Failed to send inputs to module {} with {}", j, e)},
+    //                             };
+    //                         }
+    //                     }
+    //                 }
+    //             }
+    //         }
+    //         for m in identified {
+    //             final_sol_tx.send(m).unwrap();
+    //         }
+    //         for msg in messages {
+    //             final_msg_tx.send(msg).unwrap();
+    //         }
+    //     });
+    // });
+    // (final_sol_rx.iter().collect(), final_msg_rx.iter().collect())
     while !fix_point {
         fix_point = true;
         // let before = identified.len();
+        // let identified_step: Vec<IdentificationResult> = (0..iterators.len()).into_par_iter().map(|i| {
+        //     if let Ok(mut iter) = iterators[i].lock() {
+        //         iter.next_with_models(&identified, design_models)
+        //     } else {
+        //         None
+        //     }
+        // }).flatten().collect();
+        
         let identified_step: Vec<IdentificationResult> = iterators
             .iter_mut()
             .flat_map(|iter| iter.next_with_models(&identified, design_models))
             .collect();
-        // .reduce(
+        // .reduce(o
         //     || (vec![], HashSet::new()),
         //     |(mut m1, mut e1), (m2, e2)| {
         //         m1.extend(m2);

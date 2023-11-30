@@ -104,7 +104,7 @@ final case class CommunicatingAndTriggeredReactiveWorkload(
         propagatedEvents(next) = events.map(e => {
           (
             e._1 / upsampleRepetitiveHolds(idxUpsample).toDouble,
-            e._2 + (e._1 / upsampleInitialHolds(idxUpsample).toDouble),
+            e._2 + e._1, // / upsampleInitialHolds(idxUpsample).toDouble),
             e._3 / upsampleRepetitiveHolds(idxUpsample).toDouble
           )
         })
@@ -113,7 +113,7 @@ final case class CommunicatingAndTriggeredReactiveWorkload(
         propagatedEvents(next) = events.map(e => {
           (
             e._1 * downampleRepetitiveSkips(idxDownsample).toDouble,
-            e._2 + (e._1 * (downampleInitialSkips(idxDownsample).toDouble)),
+            e._2 + e._1, // * (downampleInitialSkips(idxDownsample).toDouble)),
             e._3 * (downampleRepetitiveSkips(idxDownsample).toDouble)
           )
         })
@@ -182,9 +182,7 @@ final case class CommunicatingAndTriggeredReactiveWorkload(
           if periods(j) * Rational(
             upsampleRepetitiveHolds(idxUpsample)
           ) == periods(i) &&
-            offsets(j) - (periods(j) * Rational(
-              upsampleInitialHolds(idxUpsample)
-            )) == offsets(i)
+            offsets(j) - (periods(j)) == offsets(i)
         ) {
           affineControlGraphEdges :+= (i, j, upsampleRepetitiveHolds(
             idxUpsample
@@ -196,9 +194,12 @@ final case class CommunicatingAndTriggeredReactiveWorkload(
             .filter((p, i) => p == srcTask);
           (dstEvent, j) <- processes.zipWithIndex
             .filter((p, j) => p == dstTask);
-          pRatio = (periods(j) / periods(i));
-          offset = ((offsets(j) - offsets(i)) / periods(i))
+          pRatio = (periods(i) / periods(j));
+          offset = ((offsets(j) - offsets(i)) / periods(j))
         ) {
+          // println("srcEvent: " + srcEvent + " dstEvent: " + dstEvent)
+          // println("upsample: " + upsample + " " + pRatio + " " + offset)
+          // println("offsets: " + offsets(j) + " " + offsets(i))
           affineControlGraphEdges :+= (i, j, pRatio.ceil.toInt, offset.ceil.toInt, 1, 0)
         }
       }
@@ -221,9 +222,7 @@ final case class CommunicatingAndTriggeredReactiveWorkload(
           if periods(j) / Rational(
             downampleRepetitiveSkips(idxDownsample)
           ) == periods(i) &&
-            offsets(j) + (periods(j) / Rational(
-              downampleInitialSkips(idxDownsample)
-            )) == offsets(i)
+            offsets(j) + (periods(j) ) == offsets(i)
         )
           affineControlGraphEdges :+= (
             i,
@@ -241,7 +240,7 @@ final case class CommunicatingAndTriggeredReactiveWorkload(
             .filter((p, j) => p == dstTask);
           pRatio = (periods(i) / periods(j)).ceil.toInt;
           offset = ((offsets(j) - offsets(i)) / periods(j)).toDouble.toInt
-        ) affineControlGraphEdges :+= (i, j, 1, 0, pRatio, offset)
+        ) affineControlGraphEdges :+= (i, j, 1 ,0, pRatio, offset)
       }
     }
     affineControlGraphEdges.toSet

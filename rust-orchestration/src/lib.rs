@@ -307,7 +307,9 @@ impl Module for ExternalServerModule {
                     debug!("Failed to send 'done': {}", e.to_string());
                 };
                 let (identified_tx, identified_rx) = std::sync::mpsc::channel::<Arc<dyn DesignModel>>();
-                println!("Asking for reverse {}", self.unique_identifier());
+                // the way in which the things are being reversed is currently a bit hacky.
+                // in the future it is best if the reciever does NOT depend on any time-outs.
+                // Currently it seems like the websocket connetions are a bit janky, so we do this workaround.
                 ws.flush().expect("Failed to flush info for reversing");
                 let imodule_name = self.unique_identifier().to_owned();
                 std::thread::spawn(move || {
@@ -322,7 +324,9 @@ impl Module for ExternalServerModule {
                                     OpaqueDesignModel::from_json_str(txt_msg.as_str())
                                 {
                                     let opaquea = Arc::new(opaque) as Arc<dyn DesignModel>;
-                                    identified_tx.send(opaquea);
+                                    if let Err(e) = identified_tx.send(opaquea) {
+                                        debug!("Failed to recover an identified design model with: {}", e.to_string());
+                                    };
                                 }
                             }
                             tungstenite::Message::Binary(decision_cbor) => {
@@ -330,7 +334,9 @@ impl Module for ExternalServerModule {
                                     OpaqueDesignModel::from_cbor(decision_cbor.as_slice())
                                 {
                                     let opaquea = Arc::new(opaque) as Arc<dyn DesignModel>;
-                                    identified_tx.send(opaquea);
+                                    if let Err(e) = identified_tx.send(opaquea) {
+                                        debug!("Failed to recover an identified design model with: {}", e.to_string());
+                                    };
                                 }
                             }
                             tungstenite::Message::Ping(_) => {
@@ -353,7 +359,7 @@ impl Module for ExternalServerModule {
                 });
                 let mut reverse_identified = Vec::new();
                 // println!("Reverse done for {}", self.unique_identifier());
-                while let Ok(m) = identified_rx.recv_timeout(Duration::from_secs(1)) {
+                while let Ok(m) = identified_rx.recv_timeout(Duration::from_millis(200 * ((solved_decision_models.len() + design_models.len()) as u64))) {
                     reverse_identified.push(m);
                 }
                 // get all last without blocking

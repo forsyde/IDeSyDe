@@ -220,8 +220,10 @@ public interface StandaloneModule extends Module {
                         });
                         ws.onError(ctx -> {
                             logger.error("An error occurred in the identification websocket");
-                            if (ctx.session.isOpen()) ctx.send("done");
-                            ctx.closeSession();
+                            if (ctx.session.isOpen()) {
+                                ctx.send("done");
+                                ctx.closeSession();
+                            }
                             // ctx.send("ERROR " + ctx.error().getMessage());
                             // ctx.send("done");
                         });
@@ -339,8 +341,10 @@ public interface StandaloneModule extends Module {
                         ws.onError(ctx -> {
                             logger.error("An error occurred during exploration");
                             // ctx.error().printStackTrace();
-                            if (ctx.session.isOpen()) ctx.send("done");
-                            ctx.closeSession();
+                            if (ctx.session.isOpen()) {
+                                ctx.send("done");
+                                ctx.closeSession();
+                            }
                             // ctx.send("ERROR " + ctx.error().getMessage());
                         });
                     })
@@ -392,9 +396,10 @@ public interface StandaloneModule extends Module {
                         });
                         ws.onError(ctx -> {
                             logger.error("An error occurred in the reverse identification websocket");
-                            if (ctx.session.isOpen())
-                                    ctx.send("done");
-                            ctx.closeSession();
+                            if (ctx.session.isOpen()) {
+                                ctx.send("done");
+                                ctx.closeSession();
+                            }
                         });
                     })
                     .post("/reverse", ctx -> {

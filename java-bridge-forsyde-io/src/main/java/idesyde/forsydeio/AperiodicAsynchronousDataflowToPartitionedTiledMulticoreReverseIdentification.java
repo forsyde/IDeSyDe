@@ -101,11 +101,6 @@ public class AperiodicAsynchronousDataflowToPartitionedTiledMulticoreReverseIden
                                                                         app.bufferTokenSizeInbits().get(channel));
                                                 });
                                         });
-                        // mereg HAS to come here; otherwise the vertex that java has a pointer too will
-                        // be reused.
-                        for (var x : designModels) {
-                                reversedSystemGraph.mergeInPlace(x.systemGraph());
-                        }
                         return new ForSyDeIODesignModel(reversedSystemGraph);
                 }).collect(Collectors.toSet());
         }

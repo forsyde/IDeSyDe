@@ -104,9 +104,6 @@ public class AperiodicAsynchronousDataflowToPartitionedMemoryMappableMulticoreRe
                                                                         app.bufferTokenSizeInbits().get(channel));
                                                 });
                                         });
-                        for (var x : designModels) {
-                                reversedSystemGraph.mergeInPlace(x.systemGraph());
-                        }
                         return new ForSyDeIODesignModel(reversedSystemGraph);
                 }).collect(Collectors.toSet());
         }

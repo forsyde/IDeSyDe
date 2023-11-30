@@ -27,7 +27,7 @@ final case class CommunicatingAndTriggeredReactiveWorkload(
     val periods_numerator: Vector[Long],
     val periods_denominator: Vector[Long],
     val offsets_numerator: Vector[Long],
-    val offsetsDenominator: Vector[Long],
+    val offsets_denominator: Vector[Long],
     val upsamples: Vector[String],
     val upsampleRepetitiveHolds: Vector[Long],
     val upsampleInitialHolds: Vector[Long],
@@ -88,7 +88,7 @@ final case class CommunicatingAndTriggeredReactiveWorkload(
             periods_numerator(idxSource).toDouble / periods_denominator(
               idxSource
             ).toDouble, // period
-            offsets_numerator(idxSource).toDouble / offsetsDenominator(
+            offsets_numerator(idxSource).toDouble / offsets_denominator(
               idxSource
             ).toDouble, // offset
             periods_numerator(idxSource).toDouble / periods_denominator(

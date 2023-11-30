@@ -29,7 +29,7 @@ trait WorkloadRules {
             periods_numerator = m1.periods_numerator ++ m2.periods_numerator,
             periods_denominator = m1.periods_denominator ++ m2.periods_denominator,
             offsets_numerator = m1.offsets_numerator ++ m2.offsets_numerator,
-            offsetsDenominator = m1.offsetsDenominator ++ m2.offsetsDenominator,
+            offsets_denominator = m1.offsets_denominator ++ m2.offsets_denominator,
             upsamples = m1.upsamples ++ m2.upsamples,
             upsampleRepetitiveHolds = m1.upsampleRepetitiveHolds ++ m2.upsampleRepetitiveHolds,
             upsampleInitialHolds = m1.upsampleInitialHolds ++ m2.upsampleInitialHolds,

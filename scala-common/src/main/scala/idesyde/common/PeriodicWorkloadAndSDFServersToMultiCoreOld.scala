@@ -7,7 +7,7 @@ import upickle.default._
 import idesyde.core.DecisionModel
 import java.{util => ju}
 
-final case class PeriodicWorkloadAndSDFServerToMultiCore(
+final case class PeriodicWorkloadAndSDFServerToMultiCoreOld(
     val tasksAndSDFs: PeriodicWorkloadAndSDFServers,
     val platform: PartitionedSharedMemoryMultiCore,
     val processesSchedulings: Vector[(String, String)],
@@ -44,5 +44,5 @@ final case class PeriodicWorkloadAndSDFServerToMultiCore(
 
   val wcets = computeWcets
 
-  override def category(): String = "PeriodicWorkloadAndSDFServerToMultiCore"
+  override def category(): String = "PeriodicWorkloadAndSDFServerToMultiCoreOld"
 }

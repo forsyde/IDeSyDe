@@ -340,7 +340,7 @@ public interface StandaloneModule extends Module {
                         });
                         ws.onError(ctx -> {
                             logger.error("An error occurred during exploration");
-                            // ctx.error().printStackTrace();
+                            ctx.error().printStackTrace();
                             if (ctx.session.isOpen()) {
                                 ctx.send("done");
                                 ctx.closeSession();

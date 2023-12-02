@@ -1,12 +1,13 @@
 systemgraph {
   vertex "tile_0"
-  [platform::AbstractStructure, visualization::GreyBox]
+  [forsyde::io::lib::hierarchy::visualization::GreyBox, platform::AbstractStructure, visualization::GreyBox]
   (contained, submodules)
   {}
   vertex "micro_blaze_0"
-  [platform::InstrumentedProcessingModule, visualization::GreyBox, visualization::Visualizable]
+  [forsyde::io::lib::hierarchy::platform::hardware::DigitalModule, forsyde::io::lib::hierarchy::platform::hardware::HardwareModule, forsyde::io::lib::hierarchy::platform::hardware::InstrumentedProcessingModule, forsyde::io::lib::hierarchy::visualization::GreyBox, forsyde::io::lib::hierarchy::visualization::Visualizable, platform::InstrumentedProcessingModule, visualization::GreyBox, visualization::Visualizable]
   (contained, defaultMemory, networkInterface)
   {
+    "maximumComputationParallelism": 1_i,
     "operatingFrequencyInHertz": 50000000_l,
     "modalInstructionsPerCycle": {
       "eco": {
@@ -18,14 +19,14 @@ systemgraph {
     }
   }
   vertex "micro_blaze_mem0"
-  [platform::GenericMemoryModule, visualization::Visualizable]
+  [forsyde::io::lib::hierarchy::platform::hardware::GenericMemoryModule, forsyde::io::lib::hierarchy::visualization::Visualizable, platform::GenericMemoryModule, visualization::Visualizable]
   (instructionsAndData, networkInterface)
   {
     "spaceInBits": 8388608_l,
     "operatingFrequencyInHertz": 50000000_l
   }
   vertex "micro_blaze_ni0"
-  [platform::InstrumentedCommunicationModule, visualization::Visualizable]
+  [forsyde::io::lib::hierarchy::platform::hardware::InstrumentedCommunicationModule, forsyde::io::lib::hierarchy::visualization::Visualizable, platform::InstrumentedCommunicationModule, visualization::Visualizable]
   (bus, tileMemory, tileProcessor)
   {
     "maxCyclesPerFlit": 8_i,
@@ -35,21 +36,24 @@ systemgraph {
     "maxConcurrentFlits": 8_i
   }
   vertex "micro_blaze_os0"
-  [decision::Allocated, platform::runtime::StaticCyclicScheduler, visualization::Visualizable]
-  (allocationHosts)
-  {}
-  vertex "micro_blaze_ni_slots0"
-  [decision::Allocated, platform::runtime::StaticCyclicScheduler]
-  (allocationHosts)
-  {}
+  [forsyde::io::lib::hierarchy::platform::runtime::AbstractRuntime, forsyde::io::lib::hierarchy::platform::runtime::FixedPriorityScheduledRuntime, forsyde::io::lib::hierarchy::visualization::Visualizable, platform::runtime::FixedPriorityScheduler, visualization::Visualizable]
+  (host, managed)
+  {
+    "minimumActivationInSecsNumerator": 0_i,
+    "minimumActivationInSecsDenominator": 1_i,
+    "allowsInterCoreMigration": 0_b,
+    "priorityAssignments": {},
+    "supportsPreemption": 1_b
+  }
   vertex "tile_1"
-  [platform::AbstractStructure, visualization::GreyBox]
+  [forsyde::io::lib::hierarchy::visualization::GreyBox, platform::AbstractStructure, visualization::GreyBox]
   (contained, submodules)
   {}
   vertex "micro_blaze_1"
-  [platform::InstrumentedProcessingModule, visualization::GreyBox, visualization::Visualizable]
+  [forsyde::io::lib::hierarchy::platform::hardware::DigitalModule, forsyde::io::lib::hierarchy::platform::hardware::HardwareModule, forsyde::io::lib::hierarchy::platform::hardware::InstrumentedProcessingModule, forsyde::io::lib::hierarchy::visualization::GreyBox, forsyde::io::lib::hierarchy::visualization::Visualizable, platform::InstrumentedProcessingModule, visualization::GreyBox, visualization::Visualizable]
   (contained, defaultMemory, networkInterface)
   {
+    "maximumComputationParallelism": 1_i,
     "operatingFrequencyInHertz": 50000000_l,
     "modalInstructionsPerCycle": {
       "eco": {
@@ -61,14 +65,14 @@ systemgraph {
     }
   }
   vertex "micro_blaze_mem1"
-  [platform::GenericMemoryModule, visualization::Visualizable]
+  [forsyde::io::lib::hierarchy::platform::hardware::GenericMemoryModule, forsyde::io::lib::hierarchy::visualization::Visualizable, platform::GenericMemoryModule, visualization::Visualizable]
   (instructionsAndData, networkInterface)
   {
     "spaceInBits": 8388608_l,
     "operatingFrequencyInHertz": 50000000_l
   }
   vertex "micro_blaze_ni1"
-  [platform::InstrumentedCommunicationModule, visualization::Visualizable]
+  [forsyde::io::lib::hierarchy::platform::hardware::InstrumentedCommunicationModule, forsyde::io::lib::hierarchy::visualization::Visualizable, platform::InstrumentedCommunicationModule, visualization::Visualizable]
   (bus, tileMemory, tileProcessor)
   {
     "maxCyclesPerFlit": 8_i,
@@ -78,21 +82,24 @@ systemgraph {
     "maxConcurrentFlits": 8_i
   }
   vertex "micro_blaze_os1"
-  [decision::Allocated, platform::runtime::StaticCyclicScheduler, visualization::Visualizable]
-  (allocationHosts)
-  {}
-  vertex "micro_blaze_ni_slots1"
-  [decision::Allocated, platform::runtime::StaticCyclicScheduler]
-  (allocationHosts)
-  {}
+  [forsyde::io::lib::hierarchy::platform::runtime::AbstractRuntime, forsyde::io::lib::hierarchy::platform::runtime::FixedPriorityScheduledRuntime, forsyde::io::lib::hierarchy::visualization::Visualizable, platform::runtime::FixedPriorityScheduler, visualization::Visualizable]
+  (host, managed)
+  {
+    "minimumActivationInSecsNumerator": 0_i,
+    "minimumActivationInSecsDenominator": 1_i,
+    "allowsInterCoreMigration": 0_b,
+    "priorityAssignments": {},
+    "supportsPreemption": 1_b
+  }
   vertex "tile_2"
-  [platform::AbstractStructure, visualization::GreyBox]
+  [forsyde::io::lib::hierarchy::visualization::GreyBox, platform::AbstractStructure, visualization::GreyBox]
   (contained, submodules)
   {}
   vertex "micro_blaze_2"
-  [platform::InstrumentedProcessingModule, visualization::GreyBox, visualization::Visualizable]
+  [forsyde::io::lib::hierarchy::platform::hardware::DigitalModule, forsyde::io::lib::hierarchy::platform::hardware::HardwareModule, forsyde::io::lib::hierarchy::platform::hardware::InstrumentedProcessingModule, forsyde::io::lib::hierarchy::visualization::GreyBox, forsyde::io::lib::hierarchy::visualization::Visualizable, platform::InstrumentedProcessingModule, visualization::GreyBox, visualization::Visualizable]
   (contained, defaultMemory, networkInterface)
   {
+    "maximumComputationParallelism": 1_i,
     "operatingFrequencyInHertz": 50000000_l,
     "modalInstructionsPerCycle": {
       "eco": {
@@ -104,14 +111,14 @@ systemgraph {
     }
   }
   vertex "micro_blaze_mem2"
-  [platform::GenericMemoryModule, visualization::Visualizable]
+  [forsyde::io::lib::hierarchy::platform::hardware::GenericMemoryModule, forsyde::io::lib::hierarchy::visualization::Visualizable, platform::GenericMemoryModule, visualization::Visualizable]
   (instructionsAndData, networkInterface)
   {
     "spaceInBits": 8388608_l,
     "operatingFrequencyInHertz": 50000000_l
   }
   vertex "micro_blaze_ni2"
-  [platform::InstrumentedCommunicationModule, visualization::Visualizable]
+  [forsyde::io::lib::hierarchy::platform::hardware::InstrumentedCommunicationModule, forsyde::io::lib::hierarchy::visualization::Visualizable, platform::InstrumentedCommunicationModule, visualization::Visualizable]
   (bus, tileMemory, tileProcessor)
   {
     "maxCyclesPerFlit": 8_i,
@@ -121,21 +128,24 @@ systemgraph {
     "maxConcurrentFlits": 8_i
   }
   vertex "micro_blaze_os2"
-  [decision::Allocated, platform::runtime::StaticCyclicScheduler, visualization::Visualizable]
-  (allocationHosts)
-  {}
-  vertex "micro_blaze_ni_slots2"
-  [decision::Allocated, platform::runtime::StaticCyclicScheduler]
-  (allocationHosts)
-  {}
+  [forsyde::io::lib::hierarchy::platform::runtime::AbstractRuntime, forsyde::io::lib::hierarchy::platform::runtime::FixedPriorityScheduledRuntime, forsyde::io::lib::hierarchy::visualization::Visualizable, platform::runtime::FixedPriorityScheduler, visualization::Visualizable]
+  (host, managed)
+  {
+    "minimumActivationInSecsNumerator": 0_i,
+    "minimumActivationInSecsDenominator": 1_i,
+    "allowsInterCoreMigration": 0_b,
+    "priorityAssignments": {},
+    "supportsPreemption": 1_b
+  }
   vertex "tile_3"
-  [platform::AbstractStructure, visualization::GreyBox]
+  [forsyde::io::lib::hierarchy::visualization::GreyBox, platform::AbstractStructure, visualization::GreyBox]
   (contained, submodules)
   {}
   vertex "micro_blaze_3"
-  [platform::InstrumentedProcessingModule, visualization::GreyBox, visualization::Visualizable]
+  [forsyde::io::lib::hierarchy::platform::hardware::DigitalModule, forsyde::io::lib::hierarchy::platform::hardware::HardwareModule, forsyde::io::lib::hierarchy::platform::hardware::InstrumentedProcessingModule, forsyde::io::lib::hierarchy::visualization::GreyBox, forsyde::io::lib::hierarchy::visualization::Visualizable, platform::InstrumentedProcessingModule, visualization::GreyBox, visualization::Visualizable]
   (contained, defaultMemory, networkInterface)
   {
+    "maximumComputationParallelism": 1_i,
     "operatingFrequencyInHertz": 50000000_l,
     "modalInstructionsPerCycle": {
       "eco": {
@@ -147,14 +157,14 @@ systemgraph {
     }
   }
   vertex "micro_blaze_mem3"
-  [platform::GenericMemoryModule, visualization::Visualizable]
+  [forsyde::io::lib::hierarchy::platform::hardware::GenericMemoryModule, forsyde::io::lib::hierarchy::visualization::Visualizable, platform::GenericMemoryModule, visualization::Visualizable]
   (instructionsAndData, networkInterface)
   {
     "spaceInBits": 8388608_l,
     "operatingFrequencyInHertz": 50000000_l
   }
   vertex "micro_blaze_ni3"
-  [platform::InstrumentedCommunicationModule, visualization::Visualizable]
+  [forsyde::io::lib::hierarchy::platform::hardware::InstrumentedCommunicationModule, forsyde::io::lib::hierarchy::visualization::Visualizable, platform::InstrumentedCommunicationModule, visualization::Visualizable]
   (bus, tileMemory, tileProcessor)
   {
     "maxCyclesPerFlit": 8_i,
@@ -164,21 +174,24 @@ systemgraph {
     "maxConcurrentFlits": 8_i
   }
   vertex "micro_blaze_os3"
-  [decision::Allocated, platform::runtime::StaticCyclicScheduler, visualization::Visualizable]
-  (allocationHosts)
-  {}
-  vertex "micro_blaze_ni_slots3"
-  [decision::Allocated, platform::runtime::StaticCyclicScheduler]
-  (allocationHosts)
-  {}
+  [forsyde::io::lib::hierarchy::platform::runtime::AbstractRuntime, forsyde::io::lib::hierarchy::platform::runtime::FixedPriorityScheduledRuntime, forsyde::io::lib::hierarchy::visualization::Visualizable, platform::runtime::FixedPriorityScheduler, visualization::Visualizable]
+  (host, managed)
+  {
+    "minimumActivationInSecsNumerator": 0_i,
+    "minimumActivationInSecsDenominator": 1_i,
+    "allowsInterCoreMigration": 0_b,
+    "priorityAssignments": {},
+    "supportsPreemption": 1_b
+  }
   vertex "tile_4"
-  [platform::AbstractStructure, visualization::GreyBox]
+  [forsyde::io::lib::hierarchy::visualization::GreyBox, platform::AbstractStructure, visualization::GreyBox]
   (contained, submodules)
   {}
   vertex "micro_blaze_4"
-  [platform::InstrumentedProcessingModule, visualization::GreyBox, visualization::Visualizable]
+  [forsyde::io::lib::hierarchy::platform::hardware::DigitalModule, forsyde::io::lib::hierarchy::platform::hardware::HardwareModule, forsyde::io::lib::hierarchy::platform::hardware::InstrumentedProcessingModule, forsyde::io::lib::hierarchy::visualization::GreyBox, forsyde::io::lib::hierarchy::visualization::Visualizable, platform::InstrumentedProcessingModule, visualization::GreyBox, visualization::Visualizable]
   (contained, defaultMemory, networkInterface)
   {
+    "maximumComputationParallelism": 1_i,
     "operatingFrequencyInHertz": 50000000_l,
     "modalInstructionsPerCycle": {
       "eco": {
@@ -190,14 +203,14 @@ systemgraph {
     }
   }
   vertex "micro_blaze_mem4"
-  [platform::GenericMemoryModule, visualization::Visualizable]
+  [forsyde::io::lib::hierarchy::platform::hardware::GenericMemoryModule, forsyde::io::lib::hierarchy::visualization::Visualizable, platform::GenericMemoryModule, visualization::Visualizable]
   (instructionsAndData, networkInterface)
   {
     "spaceInBits": 8388608_l,
     "operatingFrequencyInHertz": 50000000_l
   }
   vertex "micro_blaze_ni4"
-  [platform::InstrumentedCommunicationModule, visualization::Visualizable]
+  [forsyde::io::lib::hierarchy::platform::hardware::InstrumentedCommunicationModule, forsyde::io::lib::hierarchy::visualization::Visualizable, platform::InstrumentedCommunicationModule, visualization::Visualizable]
   (bus, tileMemory, tileProcessor)
   {
     "maxCyclesPerFlit": 8_i,
@@ -207,21 +220,24 @@ systemgraph {
     "maxConcurrentFlits": 8_i
   }
   vertex "micro_blaze_os4"
-  [decision::Allocated, platform::runtime::StaticCyclicScheduler, visualization::Visualizable]
-  (allocationHosts)
-  {}
-  vertex "micro_blaze_ni_slots4"
-  [decision::Allocated, platform::runtime::StaticCyclicScheduler]
-  (allocationHosts)
-  {}
+  [forsyde::io::lib::hierarchy::platform::runtime::AbstractRuntime, forsyde::io::lib::hierarchy::platform::runtime::FixedPriorityScheduledRuntime, forsyde::io::lib::hierarchy::visualization::Visualizable, platform::runtime::FixedPriorityScheduler, visualization::Visualizable]
+  (host, managed)
+  {
+    "minimumActivationInSecsNumerator": 0_i,
+    "minimumActivationInSecsDenominator": 1_i,
+    "allowsInterCoreMigration": 0_b,
+    "priorityAssignments": {},
+    "supportsPreemption": 1_b
+  }
   vertex "tile_5"
-  [platform::AbstractStructure, visualization::GreyBox]
+  [forsyde::io::lib::hierarchy::visualization::GreyBox, platform::AbstractStructure, visualization::GreyBox]
   (contained, submodules)
   {}
   vertex "micro_blaze_5"
-  [platform::InstrumentedProcessingModule, visualization::GreyBox, visualization::Visualizable]
+  [forsyde::io::lib::hierarchy::platform::hardware::DigitalModule, forsyde::io::lib::hierarchy::platform::hardware::HardwareModule, forsyde::io::lib::hierarchy::platform::hardware::InstrumentedProcessingModule, forsyde::io::lib::hierarchy::visualization::GreyBox, forsyde::io::lib::hierarchy::visualization::Visualizable, platform::InstrumentedProcessingModule, visualization::GreyBox, visualization::Visualizable]
   (contained, defaultMemory, networkInterface)
   {
+    "maximumComputationParallelism": 1_i,
     "operatingFrequencyInHertz": 50000000_l,
     "modalInstructionsPerCycle": {
       "eco": {
@@ -233,14 +249,14 @@ systemgraph {
     }
   }
   vertex "micro_blaze_mem5"
-  [platform::GenericMemoryModule, visualization::Visualizable]
+  [forsyde::io::lib::hierarchy::platform::hardware::GenericMemoryModule, forsyde::io::lib::hierarchy::visualization::Visualizable, platform::GenericMemoryModule, visualization::Visualizable]
   (instructionsAndData, networkInterface)
   {
     "spaceInBits": 8388608_l,
     "operatingFrequencyInHertz": 50000000_l
   }
   vertex "micro_blaze_ni5"
-  [platform::InstrumentedCommunicationModule, visualization::Visualizable]
+  [forsyde::io::lib::hierarchy::platform::hardware::InstrumentedCommunicationModule, forsyde::io::lib::hierarchy::visualization::Visualizable, platform::InstrumentedCommunicationModule, visualization::Visualizable]
   (bus, tileMemory, tileProcessor)
   {
     "maxCyclesPerFlit": 8_i,
@@ -250,21 +266,24 @@ systemgraph {
     "maxConcurrentFlits": 8_i
   }
   vertex "micro_blaze_os5"
-  [decision::Allocated, platform::runtime::StaticCyclicScheduler, visualization::Visualizable]
-  (allocationHosts)
-  {}
-  vertex "micro_blaze_ni_slots5"
-  [decision::Allocated, platform::runtime::StaticCyclicScheduler]
-  (allocationHosts)
-  {}
+  [forsyde::io::lib::hierarchy::platform::runtime::AbstractRuntime, forsyde::io::lib::hierarchy::platform::runtime::FixedPriorityScheduledRuntime, forsyde::io::lib::hierarchy::visualization::Visualizable, platform::runtime::FixedPriorityScheduler, visualization::Visualizable]
+  (host, managed)
+  {
+    "minimumActivationInSecsNumerator": 0_i,
+    "minimumActivationInSecsDenominator": 1_i,
+    "allowsInterCoreMigration": 0_b,
+    "priorityAssignments": {},
+    "supportsPreemption": 1_b
+  }
   vertex "tile_6"
-  [platform::AbstractStructure, visualization::GreyBox]
+  [forsyde::io::lib::hierarchy::visualization::GreyBox, platform::AbstractStructure, visualization::GreyBox]
   (contained, submodules)
   {}
   vertex "micro_blaze_6"
-  [platform::InstrumentedProcessingModule, visualization::GreyBox, visualization::Visualizable]
+  [forsyde::io::lib::hierarchy::platform::hardware::DigitalModule, forsyde::io::lib::hierarchy::platform::hardware::HardwareModule, forsyde::io::lib::hierarchy::platform::hardware::InstrumentedProcessingModule, forsyde::io::lib::hierarchy::visualization::GreyBox, forsyde::io::lib::hierarchy::visualization::Visualizable, platform::InstrumentedProcessingModule, visualization::GreyBox, visualization::Visualizable]
   (contained, defaultMemory, networkInterface)
   {
+    "maximumComputationParallelism": 1_i,
     "operatingFrequencyInHertz": 50000000_l,
     "modalInstructionsPerCycle": {
       "eco": {
@@ -276,14 +295,14 @@ systemgraph {
     }
   }
   vertex "micro_blaze_mem6"
-  [platform::GenericMemoryModule, visualization::Visualizable]
+  [forsyde::io::lib::hierarchy::platform::hardware::GenericMemoryModule, forsyde::io::lib::hierarchy::visualization::Visualizable, platform::GenericMemoryModule, visualization::Visualizable]
   (instructionsAndData, networkInterface)
   {
     "spaceInBits": 8388608_l,
     "operatingFrequencyInHertz": 50000000_l
   }
   vertex "micro_blaze_ni6"
-  [platform::InstrumentedCommunicationModule, visualization::Visualizable]
+  [forsyde::io::lib::hierarchy::platform::hardware::InstrumentedCommunicationModule, forsyde::io::lib::hierarchy::visualization::Visualizable, platform::InstrumentedCommunicationModule, visualization::Visualizable]
   (bus, tileMemory, tileProcessor)
   {
     "maxCyclesPerFlit": 8_i,
@@ -293,21 +312,22 @@ systemgraph {
     "maxConcurrentFlits": 8_i
   }
   vertex "micro_blaze_os6"
-  [decision::Allocated, platform::runtime::StaticCyclicScheduler, visualization::Visualizable]
-  (allocationHosts)
-  {}
-  vertex "micro_blaze_ni_slots6"
-  [decision::Allocated, platform::runtime::StaticCyclicScheduler]
-  (allocationHosts)
-  {}
+  [forsyde::io::lib::hierarchy::platform::runtime::AbstractRuntime, forsyde::io::lib::hierarchy::platform::runtime::SuperLoopRuntime, forsyde::io::lib::hierarchy::visualization::Visualizable, platform::runtime::StaticCyclicScheduler, visualization::Visualizable]
+  (host, managed)
+  {
+    "superLoopEntries": [
+
+    ]
+  }
   vertex "tile_7"
-  [platform::AbstractStructure, visualization::GreyBox]
+  [forsyde::io::lib::hierarchy::visualization::GreyBox, platform::AbstractStructure, visualization::GreyBox]
   (contained, submodules)
   {}
   vertex "micro_blaze_7"
-  [platform::InstrumentedProcessingModule, visualization::GreyBox, visualization::Visualizable]
+  [forsyde::io::lib::hierarchy::platform::hardware::DigitalModule, forsyde::io::lib::hierarchy::platform::hardware::HardwareModule, forsyde::io::lib::hierarchy::platform::hardware::InstrumentedProcessingModule, forsyde::io::lib::hierarchy::visualization::GreyBox, forsyde::io::lib::hierarchy::visualization::Visualizable, platform::InstrumentedProcessingModule, visualization::GreyBox, visualization::Visualizable]
   (contained, defaultMemory, networkInterface)
   {
+    "maximumComputationParallelism": 1_i,
     "operatingFrequencyInHertz": 50000000_l,
     "modalInstructionsPerCycle": {
       "eco": {
@@ -319,14 +339,14 @@ systemgraph {
     }
   }
   vertex "micro_blaze_mem7"
-  [platform::GenericMemoryModule, visualization::Visualizable]
+  [forsyde::io::lib::hierarchy::platform::hardware::GenericMemoryModule, forsyde::io::lib::hierarchy::visualization::Visualizable, platform::GenericMemoryModule, visualization::Visualizable]
   (instructionsAndData, networkInterface)
   {
     "spaceInBits": 8388608_l,
     "operatingFrequencyInHertz": 50000000_l
   }
   vertex "micro_blaze_ni7"
-  [platform::InstrumentedCommunicationModule, visualization::Visualizable]
+  [forsyde::io::lib::hierarchy::platform::hardware::InstrumentedCommunicationModule, forsyde::io::lib::hierarchy::visualization::Visualizable, platform::InstrumentedCommunicationModule, visualization::Visualizable]
   (bus, tileMemory, tileProcessor)
   {
     "maxCyclesPerFlit": 8_i,
@@ -336,15 +356,15 @@ systemgraph {
     "maxConcurrentFlits": 8_i
   }
   vertex "micro_blaze_os7"
-  [decision::Allocated, platform::runtime::StaticCyclicScheduler, visualization::Visualizable]
-  (allocationHosts)
-  {}
-  vertex "micro_blaze_ni_slots7"
-  [decision::Allocated, platform::runtime::StaticCyclicScheduler]
-  (allocationHosts)
-  {}
+  [forsyde::io::lib::hierarchy::platform::runtime::AbstractRuntime, forsyde::io::lib::hierarchy::platform::runtime::SuperLoopRuntime, forsyde::io::lib::hierarchy::visualization::Visualizable, platform::runtime::StaticCyclicScheduler, visualization::Visualizable]
+  (host, managed)
+  {
+    "superLoopEntries": [
+
+    ]
+  }
   vertex "TDMBus"
-  [platform::InstrumentedCommunicationModule, visualization::Visualizable]
+  [forsyde::io::lib::hierarchy::platform::hardware::InstrumentedCommunicationModule, forsyde::io::lib::hierarchy::visualization::Visualizable, platform::InstrumentedCommunicationModule, visualization::Visualizable]
   (ni_0, ni_1, ni_2, ni_3, ni_4, ni_5, ni_6, ni_7)
   {
     "maxCyclesPerFlit": 8_i,
@@ -354,144 +374,148 @@ systemgraph {
     "maxConcurrentFlits": 8_i
   }
   vertex "busSched"
-  [decision::Allocated, platform::runtime::StaticCyclicScheduler]
-  (allocationHosts)
-  {}
+  [forsyde::io::lib::hierarchy::platform::runtime::AbstractRuntime, forsyde::io::lib::hierarchy::platform::runtime::SuperLoopRuntime, platform::runtime::StaticCyclicScheduler]
+  (host, managed)
+  {
+    "superLoopEntries": [
+
+    ]
+  }
   edge [] from "tile_0" port "submodules" to "micro_blaze_0" 
-  edge [visualization::VisualContainment] from "tile_0" port "contained" to "micro_blaze_0" 
+  edge [forsyde::io::lib::hierarchy::visualization::VisualContainment,visualization::VisualContainment] from "tile_0" port "contained" to "micro_blaze_0" 
   edge [] from "tile_0" port "submodules" to "micro_blaze_mem0" 
-  edge [visualization::VisualContainment] from "tile_0" port "contained" to "micro_blaze_mem0" 
+  edge [forsyde::io::lib::hierarchy::visualization::VisualContainment,visualization::VisualContainment] from "tile_0" port "contained" to "micro_blaze_mem0" 
   edge [] from "tile_0" port "submodules" to "micro_blaze_ni0" 
-  edge [visualization::VisualContainment] from "tile_0" port "contained" to "micro_blaze_ni0" 
-  edge [platform::PhysicalConnection,visualization::VisualConnection] from "micro_blaze_0" port "networkInterface" to "micro_blaze_ni0" port "tileProcessor"
-  edge [platform::PhysicalConnection,visualization::VisualConnection] from "micro_blaze_ni0" port "tileProcessor" to "micro_blaze_0" port "networkInterface"
-  edge [platform::PhysicalConnection,visualization::VisualConnection] from "micro_blaze_0" port "defaultMemory" to "micro_blaze_mem0" port "instructionsAndData"
-  edge [platform::PhysicalConnection,visualization::VisualConnection] from "micro_blaze_mem0" port "instructionsAndData" to "micro_blaze_0" port "defaultMemory"
-  edge [platform::PhysicalConnection,visualization::VisualConnection] from "micro_blaze_mem0" port "networkInterface" to "micro_blaze_ni0" port "tileMemory"
-  edge [platform::PhysicalConnection,visualization::VisualConnection] from "micro_blaze_ni0" port "tileMemory" to "micro_blaze_mem0" port "networkInterface"
-  edge [visualization::VisualContainment] from "micro_blaze_0" port "contained" to "micro_blaze_os0" 
-  edge [decision::AbstractAllocation] from "micro_blaze_os0" port "allocationHosts" to "micro_blaze_0" 
-  edge [decision::AbstractAllocation] from "micro_blaze_ni_slots0" port "allocationHosts" to "micro_blaze_ni0" 
+  edge [forsyde::io::lib::hierarchy::visualization::VisualContainment,visualization::VisualContainment] from "tile_0" port "contained" to "micro_blaze_ni0" 
+  edge [forsyde::io::lib::hierarchy::platform::hardware::PhysicalConnection,forsyde::io::lib::hierarchy::visualization::VisualConnection,platform::PhysicalConnection,visualization::VisualConnection] from "micro_blaze_0" port "networkInterface" to "micro_blaze_ni0" port "tileProcessor"
+  edge [forsyde::io::lib::hierarchy::platform::hardware::PhysicalConnection,forsyde::io::lib::hierarchy::visualization::VisualConnection,platform::PhysicalConnection,visualization::VisualConnection] from "micro_blaze_ni0" port "tileProcessor" to "micro_blaze_0" port "networkInterface"
+  edge [forsyde::io::lib::hierarchy::platform::hardware::PhysicalConnection,forsyde::io::lib::hierarchy::visualization::VisualConnection,platform::PhysicalConnection,visualization::VisualConnection] from "micro_blaze_0" port "defaultMemory" to "micro_blaze_mem0" port "instructionsAndData"
+  edge [forsyde::io::lib::hierarchy::platform::hardware::PhysicalConnection,forsyde::io::lib::hierarchy::visualization::VisualConnection,platform::PhysicalConnection,visualization::VisualConnection] from "micro_blaze_mem0" port "instructionsAndData" to "micro_blaze_0" port "defaultMemory"
+  edge [forsyde::io::lib::hierarchy::platform::hardware::PhysicalConnection,forsyde::io::lib::hierarchy::visualization::VisualConnection,platform::PhysicalConnection,visualization::VisualConnection] from "micro_blaze_mem0" port "networkInterface" to "micro_blaze_ni0" port "tileMemory"
+  edge [forsyde::io::lib::hierarchy::platform::hardware::PhysicalConnection,forsyde::io::lib::hierarchy::visualization::VisualConnection,platform::PhysicalConnection,visualization::VisualConnection] from "micro_blaze_ni0" port "tileMemory" to "micro_blaze_mem0" port "networkInterface"
+  edge [forsyde::io::lib::hierarchy::visualization::VisualContainment,visualization::VisualContainment] from "micro_blaze_0" port "contained" to "micro_blaze_os0" 
+  edge [decision::AbstractAllocation] from "micro_blaze_os0" port "host" to "micro_blaze_0" 
+  edge [decision::AbstractAllocation] from "micro_blaze_os0" port "managed" to "micro_blaze_0" 
   edge [] from "tile_1" port "submodules" to "micro_blaze_1" 
-  edge [visualization::VisualContainment] from "tile_1" port "contained" to "micro_blaze_1" 
+  edge [forsyde::io::lib::hierarchy::visualization::VisualContainment,visualization::VisualContainment] from "tile_1" port "contained" to "micro_blaze_1" 
   edge [] from "tile_1" port "submodules" to "micro_blaze_mem1" 
-  edge [visualization::VisualContainment] from "tile_1" port "contained" to "micro_blaze_mem1" 
+  edge [forsyde::io::lib::hierarchy::visualization::VisualContainment,visualization::VisualContainment] from "tile_1" port "contained" to "micro_blaze_mem1" 
   edge [] from "tile_1" port "submodules" to "micro_blaze_ni1" 
-  edge [visualization::VisualContainment] from "tile_1" port "contained" to "micro_blaze_ni1" 
-  edge [platform::PhysicalConnection,visualization::VisualConnection] from "micro_blaze_1" port "networkInterface" to "micro_blaze_ni1" port "tileProcessor"
-  edge [platform::PhysicalConnection,visualization::VisualConnection] from "micro_blaze_ni1" port "tileProcessor" to "micro_blaze_1" port "networkInterface"
-  edge [platform::PhysicalConnection,visualization::VisualConnection] from "micro_blaze_1" port "defaultMemory" to "micro_blaze_mem1" port "instructionsAndData"
-  edge [platform::PhysicalConnection,visualization::VisualConnection] from "micro_blaze_mem1" port "instructionsAndData" to "micro_blaze_1" port "defaultMemory"
-  edge [platform::PhysicalConnection,visualization::VisualConnection] from "micro_blaze_mem1" port "networkInterface" to "micro_blaze_ni1" port "tileMemory"
-  edge [platform::PhysicalConnection,visualization::VisualConnection] from "micro_blaze_ni1" port "tileMemory" to "micro_blaze_mem1" port "networkInterface"
-  edge [visualization::VisualContainment] from "micro_blaze_1" port "contained" to "micro_blaze_os1" 
-  edge [decision::AbstractAllocation] from "micro_blaze_os1" port "allocationHosts" to "micro_blaze_1" 
-  edge [decision::AbstractAllocation] from "micro_blaze_ni_slots1" port "allocationHosts" to "micro_blaze_ni1" 
+  edge [forsyde::io::lib::hierarchy::visualization::VisualContainment,visualization::VisualContainment] from "tile_1" port "contained" to "micro_blaze_ni1" 
+  edge [forsyde::io::lib::hierarchy::platform::hardware::PhysicalConnection,forsyde::io::lib::hierarchy::visualization::VisualConnection,platform::PhysicalConnection,visualization::VisualConnection] from "micro_blaze_1" port "networkInterface" to "micro_blaze_ni1" port "tileProcessor"
+  edge [forsyde::io::lib::hierarchy::platform::hardware::PhysicalConnection,forsyde::io::lib::hierarchy::visualization::VisualConnection,platform::PhysicalConnection,visualization::VisualConnection] from "micro_blaze_ni1" port "tileProcessor" to "micro_blaze_1" port "networkInterface"
+  edge [forsyde::io::lib::hierarchy::platform::hardware::PhysicalConnection,forsyde::io::lib::hierarchy::visualization::VisualConnection,platform::PhysicalConnection,visualization::VisualConnection] from "micro_blaze_1" port "defaultMemory" to "micro_blaze_mem1" port "instructionsAndData"
+  edge [forsyde::io::lib::hierarchy::platform::hardware::PhysicalConnection,forsyde::io::lib::hierarchy::visualization::VisualConnection,platform::PhysicalConnection,visualization::VisualConnection] from "micro_blaze_mem1" port "instructionsAndData" to "micro_blaze_1" port "defaultMemory"
+  edge [forsyde::io::lib::hierarchy::platform::hardware::PhysicalConnection,forsyde::io::lib::hierarchy::visualization::VisualConnection,platform::PhysicalConnection,visualization::VisualConnection] from "micro_blaze_mem1" port "networkInterface" to "micro_blaze_ni1" port "tileMemory"
+  edge [forsyde::io::lib::hierarchy::platform::hardware::PhysicalConnection,forsyde::io::lib::hierarchy::visualization::VisualConnection,platform::PhysicalConnection,visualization::VisualConnection] from "micro_blaze_ni1" port "tileMemory" to "micro_blaze_mem1" port "networkInterface"
+  edge [forsyde::io::lib::hierarchy::visualization::VisualContainment,visualization::VisualContainment] from "micro_blaze_1" port "contained" to "micro_blaze_os1" 
+  edge [decision::AbstractAllocation] from "micro_blaze_os1" port "host" to "micro_blaze_1" 
+  edge [decision::AbstractAllocation] from "micro_blaze_os1" port "managed" to "micro_blaze_1" 
   edge [] from "tile_2" port "submodules" to "micro_blaze_2" 
-  edge [visualization::VisualContainment] from "tile_2" port "contained" to "micro_blaze_2" 
+  edge [forsyde::io::lib::hierarchy::visualization::VisualContainment,visualization::VisualContainment] from "tile_2" port "contained" to "micro_blaze_2" 
   edge [] from "tile_2" port "submodules" to "micro_blaze_mem2" 
-  edge [visualization::VisualContainment] from "tile_2" port "contained" to "micro_blaze_mem2" 
+  edge [forsyde::io::lib::hierarchy::visualization::VisualContainment,visualization::VisualContainment] from "tile_2" port "contained" to "micro_blaze_mem2" 
   edge [] from "tile_2" port "submodules" to "micro_blaze_ni2" 
-  edge [visualization::VisualContainment] from "tile_2" port "contained" to "micro_blaze_ni2" 
-  edge [platform::PhysicalConnection,visualization::VisualConnection] from "micro_blaze_2" port "networkInterface" to "micro_blaze_ni2" port "tileProcessor"
-  edge [platform::PhysicalConnection,visualization::VisualConnection] from "micro_blaze_ni2" port "tileProcessor" to "micro_blaze_2" port "networkInterface"
-  edge [platform::PhysicalConnection,visualization::VisualConnection] from "micro_blaze_2" port "defaultMemory" to "micro_blaze_mem2" port "instructionsAndData"
-  edge [platform::PhysicalConnection,visualization::VisualConnection] from "micro_blaze_mem2" port "instructionsAndData" to "micro_blaze_2" port "defaultMemory"
-  edge [platform::PhysicalConnection,visualization::VisualConnection] from "micro_blaze_mem2" port "networkInterface" to "micro_blaze_ni2" port "tileMemory"
-  edge [platform::PhysicalConnection,visualization::VisualConnection] from "micro_blaze_ni2" port "tileMemory" to "micro_blaze_mem2" port "networkInterface"
-  edge [visualization::VisualContainment] from "micro_blaze_2" port "contained" to "micro_blaze_os2" 
-  edge [decision::AbstractAllocation] from "micro_blaze_os2" port "allocationHosts" to "micro_blaze_2" 
-  edge [decision::AbstractAllocation] from "micro_blaze_ni_slots2" port "allocationHosts" to "micro_blaze_ni2" 
+  edge [forsyde::io::lib::hierarchy::visualization::VisualContainment,visualization::VisualContainment] from "tile_2" port "contained" to "micro_blaze_ni2" 
+  edge [forsyde::io::lib::hierarchy::platform::hardware::PhysicalConnection,forsyde::io::lib::hierarchy::visualization::VisualConnection,platform::PhysicalConnection,visualization::VisualConnection] from "micro_blaze_2" port "networkInterface" to "micro_blaze_ni2" port "tileProcessor"
+  edge [forsyde::io::lib::hierarchy::platform::hardware::PhysicalConnection,forsyde::io::lib::hierarchy::visualization::VisualConnection,platform::PhysicalConnection,visualization::VisualConnection] from "micro_blaze_ni2" port "tileProcessor" to "micro_blaze_2" port "networkInterface"
+  edge [forsyde::io::lib::hierarchy::platform::hardware::PhysicalConnection,forsyde::io::lib::hierarchy::visualization::VisualConnection,platform::PhysicalConnection,visualization::VisualConnection] from "micro_blaze_2" port "defaultMemory" to "micro_blaze_mem2" port "instructionsAndData"
+  edge [forsyde::io::lib::hierarchy::platform::hardware::PhysicalConnection,forsyde::io::lib::hierarchy::visualization::VisualConnection,platform::PhysicalConnection,visualization::VisualConnection] from "micro_blaze_mem2" port "instructionsAndData" to "micro_blaze_2" port "defaultMemory"
+  edge [forsyde::io::lib::hierarchy::platform::hardware::PhysicalConnection,forsyde::io::lib::hierarchy::visualization::VisualConnection,platform::PhysicalConnection,visualization::VisualConnection] from "micro_blaze_mem2" port "networkInterface" to "micro_blaze_ni2" port "tileMemory"
+  edge [forsyde::io::lib::hierarchy::platform::hardware::PhysicalConnection,forsyde::io::lib::hierarchy::visualization::VisualConnection,platform::PhysicalConnection,visualization::VisualConnection] from "micro_blaze_ni2" port "tileMemory" to "micro_blaze_mem2" port "networkInterface"
+  edge [forsyde::io::lib::hierarchy::visualization::VisualContainment,visualization::VisualContainment] from "micro_blaze_2" port "contained" to "micro_blaze_os2" 
+  edge [decision::AbstractAllocation] from "micro_blaze_os2" port "host" to "micro_blaze_2" 
+  edge [decision::AbstractAllocation] from "micro_blaze_os2" port "managed" to "micro_blaze_2" 
   edge [] from "tile_3" port "submodules" to "micro_blaze_3" 
-  edge [visualization::VisualContainment] from "tile_3" port "contained" to "micro_blaze_3" 
+  edge [forsyde::io::lib::hierarchy::visualization::VisualContainment,visualization::VisualContainment] from "tile_3" port "contained" to "micro_blaze_3" 
   edge [] from "tile_3" port "submodules" to "micro_blaze_mem3" 
-  edge [visualization::VisualContainment] from "tile_3" port "contained" to "micro_blaze_mem3" 
+  edge [forsyde::io::lib::hierarchy::visualization::VisualContainment,visualization::VisualContainment] from "tile_3" port "contained" to "micro_blaze_mem3" 
   edge [] from "tile_3" port "submodules" to "micro_blaze_ni3" 
-  edge [visualization::VisualContainment] from "tile_3" port "contained" to "micro_blaze_ni3" 
-  edge [platform::PhysicalConnection,visualization::VisualConnection] from "micro_blaze_3" port "networkInterface" to "micro_blaze_ni3" port "tileProcessor"
-  edge [platform::PhysicalConnection,visualization::VisualConnection] from "micro_blaze_ni3" port "tileProcessor" to "micro_blaze_3" port "networkInterface"
-  edge [platform::PhysicalConnection,visualization::VisualConnection] from "micro_blaze_3" port "defaultMemory" to "micro_blaze_mem3" port "instructionsAndData"
-  edge [platform::PhysicalConnection,visualization::VisualConnection] from "micro_blaze_mem3" port "instructionsAndData" to "micro_blaze_3" port "defaultMemory"
-  edge [platform::PhysicalConnection,visualization::VisualConnection] from "micro_blaze_mem3" port "networkInterface" to "micro_blaze_ni3" port "tileMemory"
-  edge [platform::PhysicalConnection,visualization::VisualConnection] from "micro_blaze_ni3" port "tileMemory" to "micro_blaze_mem3" port "networkInterface"
-  edge [visualization::VisualContainment] from "micro_blaze_3" port "contained" to "micro_blaze_os3" 
-  edge [decision::AbstractAllocation] from "micro_blaze_os3" port "allocationHosts" to "micro_blaze_3" 
-  edge [decision::AbstractAllocation] from "micro_blaze_ni_slots3" port "allocationHosts" to "micro_blaze_ni3" 
+  edge [forsyde::io::lib::hierarchy::visualization::VisualContainment,visualization::VisualContainment] from "tile_3" port "contained" to "micro_blaze_ni3" 
+  edge [forsyde::io::lib::hierarchy::platform::hardware::PhysicalConnection,forsyde::io::lib::hierarchy::visualization::VisualConnection,platform::PhysicalConnection,visualization::VisualConnection] from "micro_blaze_3" port "networkInterface" to "micro_blaze_ni3" port "tileProcessor"
+  edge [forsyde::io::lib::hierarchy::platform::hardware::PhysicalConnection,forsyde::io::lib::hierarchy::visualization::VisualConnection,platform::PhysicalConnection,visualization::VisualConnection] from "micro_blaze_ni3" port "tileProcessor" to "micro_blaze_3" port "networkInterface"
+  edge [forsyde::io::lib::hierarchy::platform::hardware::PhysicalConnection,forsyde::io::lib::hierarchy::visualization::VisualConnection,platform::PhysicalConnection,visualization::VisualConnection] from "micro_blaze_3" port "defaultMemory" to "micro_blaze_mem3" port "instructionsAndData"
+  edge [forsyde::io::lib::hierarchy::platform::hardware::PhysicalConnection,forsyde::io::lib::hierarchy::visualization::VisualConnection,platform::PhysicalConnection,visualization::VisualConnection] from "micro_blaze_mem3" port "instructionsAndData" to "micro_blaze_3" port "defaultMemory"
+  edge [forsyde::io::lib::hierarchy::platform::hardware::PhysicalConnection,forsyde::io::lib::hierarchy::visualization::VisualConnection,platform::PhysicalConnection,visualization::VisualConnection] from "micro_blaze_mem3" port "networkInterface" to "micro_blaze_ni3" port "tileMemory"
+  edge [forsyde::io::lib::hierarchy::platform::hardware::PhysicalConnection,forsyde::io::lib::hierarchy::visualization::VisualConnection,platform::PhysicalConnection,visualization::VisualConnection] from "micro_blaze_ni3" port "tileMemory" to "micro_blaze_mem3" port "networkInterface"
+  edge [forsyde::io::lib::hierarchy::visualization::VisualContainment,visualization::VisualContainment] from "micro_blaze_3" port "contained" to "micro_blaze_os3" 
+  edge [decision::AbstractAllocation] from "micro_blaze_os3" port "host" to "micro_blaze_3" 
+  edge [decision::AbstractAllocation] from "micro_blaze_os3" port "managed" to "micro_blaze_3" 
   edge [] from "tile_4" port "submodules" to "micro_blaze_4" 
-  edge [visualization::VisualContainment] from "tile_4" port "contained" to "micro_blaze_4" 
+  edge [forsyde::io::lib::hierarchy::visualization::VisualContainment,visualization::VisualContainment] from "tile_4" port "contained" to "micro_blaze_4" 
   edge [] from "tile_4" port "submodules" to "micro_blaze_mem4" 
-  edge [visualization::VisualContainment] from "tile_4" port "contained" to "micro_blaze_mem4" 
+  edge [forsyde::io::lib::hierarchy::visualization::VisualContainment,visualization::VisualContainment] from "tile_4" port "contained" to "micro_blaze_mem4" 
   edge [] from "tile_4" port "submodules" to "micro_blaze_ni4" 
-  edge [visualization::VisualContainment] from "tile_4" port "contained" to "micro_blaze_ni4" 
-  edge [platform::PhysicalConnection,visualization::VisualConnection] from "micro_blaze_4" port "networkInterface" to "micro_blaze_ni4" port "tileProcessor"
-  edge [platform::PhysicalConnection,visualization::VisualConnection] from "micro_blaze_ni4" port "tileProcessor" to "micro_blaze_4" port "networkInterface"
-  edge [platform::PhysicalConnection,visualization::VisualConnection] from "micro_blaze_4" port "defaultMemory" to "micro_blaze_mem4" port "instructionsAndData"
-  edge [platform::PhysicalConnection,visualization::VisualConnection] from "micro_blaze_mem4" port "instructionsAndData" to "micro_blaze_4" port "defaultMemory"
-  edge [platform::PhysicalConnection,visualization::VisualConnection] from "micro_blaze_mem4" port "networkInterface" to "micro_blaze_ni4" port "tileMemory"
-  edge [platform::PhysicalConnection,visualization::VisualConnection] from "micro_blaze_ni4" port "tileMemory" to "micro_blaze_mem4" port "networkInterface"
-  edge [visualization::VisualContainment] from "micro_blaze_4" port "contained" to "micro_blaze_os4" 
-  edge [decision::AbstractAllocation] from "micro_blaze_os4" port "allocationHosts" to "micro_blaze_4" 
-  edge [decision::AbstractAllocation] from "micro_blaze_ni_slots4" port "allocationHosts" to "micro_blaze_ni4" 
+  edge [forsyde::io::lib::hierarchy::visualization::VisualContainment,visualization::VisualContainment] from "tile_4" port "contained" to "micro_blaze_ni4" 
+  edge [forsyde::io::lib::hierarchy::platform::hardware::PhysicalConnection,forsyde::io::lib::hierarchy::visualization::VisualConnection,platform::PhysicalConnection,visualization::VisualConnection] from "micro_blaze_4" port "networkInterface" to "micro_blaze_ni4" port "tileProcessor"
+  edge [forsyde::io::lib::hierarchy::platform::hardware::PhysicalConnection,forsyde::io::lib::hierarchy::visualization::VisualConnection,platform::PhysicalConnection,visualization::VisualConnection] from "micro_blaze_ni4" port "tileProcessor" to "micro_blaze_4" port "networkInterface"
+  edge [forsyde::io::lib::hierarchy::platform::hardware::PhysicalConnection,forsyde::io::lib::hierarchy::visualization::VisualConnection,platform::PhysicalConnection,visualization::VisualConnection] from "micro_blaze_4" port "defaultMemory" to "micro_blaze_mem4" port "instructionsAndData"
+  edge [forsyde::io::lib::hierarchy::platform::hardware::PhysicalConnection,forsyde::io::lib::hierarchy::visualization::VisualConnection,platform::PhysicalConnection,visualization::VisualConnection] from "micro_blaze_mem4" port "instructionsAndData" to "micro_blaze_4" port "defaultMemory"
+  edge [forsyde::io::lib::hierarchy::platform::hardware::PhysicalConnection,forsyde::io::lib::hierarchy::visualization::VisualConnection,platform::PhysicalConnection,visualization::VisualConnection] from "micro_blaze_mem4" port "networkInterface" to "micro_blaze_ni4" port "tileMemory"
+  edge [forsyde::io::lib::hierarchy::platform::hardware::PhysicalConnection,forsyde::io::lib::hierarchy::visualization::VisualConnection,platform::PhysicalConnection,visualization::VisualConnection] from "micro_blaze_ni4" port "tileMemory" to "micro_blaze_mem4" port "networkInterface"
+  edge [forsyde::io::lib::hierarchy::visualization::VisualContainment,visualization::VisualContainment] from "micro_blaze_4" port "contained" to "micro_blaze_os4" 
+  edge [decision::AbstractAllocation] from "micro_blaze_os4" port "host" to "micro_blaze_4" 
+  edge [decision::AbstractAllocation] from "micro_blaze_os4" port "managed" to "micro_blaze_4" 
   edge [] from "tile_5" port "submodules" to "micro_blaze_5" 
-  edge [visualization::VisualContainment] from "tile_5" port "contained" to "micro_blaze_5" 
+  edge [forsyde::io::lib::hierarchy::visualization::VisualContainment,visualization::VisualContainment] from "tile_5" port "contained" to "micro_blaze_5" 
   edge [] from "tile_5" port "submodules" to "micro_blaze_mem5" 
-  edge [visualization::VisualContainment] from "tile_5" port "contained" to "micro_blaze_mem5" 
+  edge [forsyde::io::lib::hierarchy::visualization::VisualContainment,visualization::VisualContainment] from "tile_5" port "contained" to "micro_blaze_mem5" 
   edge [] from "tile_5" port "submodules" to "micro_blaze_ni5" 
-  edge [visualization::VisualContainment] from "tile_5" port "contained" to "micro_blaze_ni5" 
-  edge [platform::PhysicalConnection,visualization::VisualConnection] from "micro_blaze_5" port "networkInterface" to "micro_blaze_ni5" port "tileProcessor"
-  edge [platform::PhysicalConnection,visualization::VisualConnection] from "micro_blaze_ni5" port "tileProcessor" to "micro_blaze_5" port "networkInterface"
-  edge [platform::PhysicalConnection,visualization::VisualConnection] from "micro_blaze_5" port "defaultMemory" to "micro_blaze_mem5" port "instructionsAndData"
-  edge [platform::PhysicalConnection,visualization::VisualConnection] from "micro_blaze_mem5" port "instructionsAndData" to "micro_blaze_5" port "defaultMemory"
-  edge [platform::PhysicalConnection,visualization::VisualConnection] from "micro_blaze_mem5" port "networkInterface" to "micro_blaze_ni5" port "tileMemory"
-  edge [platform::PhysicalConnection,visualization::VisualConnection] from "micro_blaze_ni5" port "tileMemory" to "micro_blaze_mem5" port "networkInterface"
-  edge [visualization::VisualContainment] from "micro_blaze_5" port "contained" to "micro_blaze_os5" 
-  edge [decision::AbstractAllocation] from "micro_blaze_os5" port "allocationHosts" to "micro_blaze_5" 
-  edge [decision::AbstractAllocation] from "micro_blaze_ni_slots5" port "allocationHosts" to "micro_blaze_ni5" 
+  edge [forsyde::io::lib::hierarchy::visualization::VisualContainment,visualization::VisualContainment] from "tile_5" port "contained" to "micro_blaze_ni5" 
+  edge [forsyde::io::lib::hierarchy::platform::hardware::PhysicalConnection,forsyde::io::lib::hierarchy::visualization::VisualConnection,platform::PhysicalConnection,visualization::VisualConnection] from "micro_blaze_5" port "networkInterface" to "micro_blaze_ni5" port "tileProcessor"
+  edge [forsyde::io::lib::hierarchy::platform::hardware::PhysicalConnection,forsyde::io::lib::hierarchy::visualization::VisualConnection,platform::PhysicalConnection,visualization::VisualConnection] from "micro_blaze_ni5" port "tileProcessor" to "micro_blaze_5" port "networkInterface"
+  edge [forsyde::io::lib::hierarchy::platform::hardware::PhysicalConnection,forsyde::io::lib::hierarchy::visualization::VisualConnection,platform::PhysicalConnection,visualization::VisualConnection] from "micro_blaze_5" port "defaultMemory" to "micro_blaze_mem5" port "instructionsAndData"
+  edge [forsyde::io::lib::hierarchy::platform::hardware::PhysicalConnection,forsyde::io::lib::hierarchy::visualization::VisualConnection,platform::PhysicalConnection,visualization::VisualConnection] from "micro_blaze_mem5" port "instructionsAndData" to "micro_blaze_5" port "defaultMemory"
+  edge [forsyde::io::lib::hierarchy::platform::hardware::PhysicalConnection,forsyde::io::lib::hierarchy::visualization::VisualConnection,platform::PhysicalConnection,visualization::VisualConnection] from "micro_blaze_mem5" port "networkInterface" to "micro_blaze_ni5" port "tileMemory"
+  edge [forsyde::io::lib::hierarchy::platform::hardware::PhysicalConnection,forsyde::io::lib::hierarchy::visualization::VisualConnection,platform::PhysicalConnection,visualization::VisualConnection] from "micro_blaze_ni5" port "tileMemory" to "micro_blaze_mem5" port "networkInterface"
+  edge [forsyde::io::lib::hierarchy::visualization::VisualContainment,visualization::VisualContainment] from "micro_blaze_5" port "contained" to "micro_blaze_os5" 
+  edge [decision::AbstractAllocation] from "micro_blaze_os5" port "host" to "micro_blaze_5" 
+  edge [decision::AbstractAllocation] from "micro_blaze_os5" port "managed" to "micro_blaze_5" 
   edge [] from "tile_6" port "submodules" to "micro_blaze_6" 
-  edge [visualization::VisualContainment] from "tile_6" port "contained" to "micro_blaze_6" 
+  edge [forsyde::io::lib::hierarchy::visualization::VisualContainment,visualization::VisualContainment] from "tile_6" port "contained" to "micro_blaze_6" 
   edge [] from "tile_6" port "submodules" to "micro_blaze_mem6" 
-  edge [visualization::VisualContainment] from "tile_6" port "contained" to "micro_blaze_mem6" 
+  edge [forsyde::io::lib::hierarchy::visualization::VisualContainment,visualization::VisualContainment] from "tile_6" port "contained" to "micro_blaze_mem6" 
   edge [] from "tile_6" port "submodules" to "micro_blaze_ni6" 
-  edge [visualization::VisualContainment] from "tile_6" port "contained" to "micro_blaze_ni6" 
-  edge [platform::PhysicalConnection,visualization::VisualConnection] from "micro_blaze_6" port "networkInterface" to "micro_blaze_ni6" port "tileProcessor"
-  edge [platform::PhysicalConnection,visualization::VisualConnection] from "micro_blaze_ni6" port "tileProcessor" to "micro_blaze_6" port "networkInterface"
-  edge [platform::PhysicalConnection,visualization::VisualConnection] from "micro_blaze_6" port "defaultMemory" to "micro_blaze_mem6" port "instructionsAndData"
-  edge [platform::PhysicalConnection,visualization::VisualConnection] from "micro_blaze_mem6" port "instructionsAndData" to "micro_blaze_6" port "defaultMemory"
-  edge [platform::PhysicalConnection,visualization::VisualConnection] from "micro_blaze_mem6" port "networkInterface" to "micro_blaze_ni6" port "tileMemory"
-  edge [platform::PhysicalConnection,visualization::VisualConnection] from "micro_blaze_ni6" port "tileMemory" to "micro_blaze_mem6" port "networkInterface"
-  edge [visualization::VisualContainment] from "micro_blaze_6" port "contained" to "micro_blaze_os6" 
-  edge [decision::AbstractAllocation] from "micro_blaze_os6" port "allocationHosts" to "micro_blaze_6" 
-  edge [decision::AbstractAllocation] from "micro_blaze_ni_slots6" port "allocationHosts" to "micro_blaze_ni6" 
+  edge [forsyde::io::lib::hierarchy::visualization::VisualContainment,visualization::VisualContainment] from "tile_6" port "contained" to "micro_blaze_ni6" 
+  edge [forsyde::io::lib::hierarchy::platform::hardware::PhysicalConnection,forsyde::io::lib::hierarchy::visualization::VisualConnection,platform::PhysicalConnection,visualization::VisualConnection] from "micro_blaze_6" port "networkInterface" to "micro_blaze_ni6" port "tileProcessor"
+  edge [forsyde::io::lib::hierarchy::platform::hardware::PhysicalConnection,forsyde::io::lib::hierarchy::visualization::VisualConnection,platform::PhysicalConnection,visualization::VisualConnection] from "micro_blaze_ni6" port "tileProcessor" to "micro_blaze_6" port "networkInterface"
+  edge [forsyde::io::lib::hierarchy::platform::hardware::PhysicalConnection,forsyde::io::lib::hierarchy::visualization::VisualConnection,platform::PhysicalConnection,visualization::VisualConnection] from "micro_blaze_6" port "defaultMemory" to "micro_blaze_mem6" port "instructionsAndData"
+  edge [forsyde::io::lib::hierarchy::platform::hardware::PhysicalConnection,forsyde::io::lib::hierarchy::visualization::VisualConnection,platform::PhysicalConnection,visualization::VisualConnection] from "micro_blaze_mem6" port "instructionsAndData" to "micro_blaze_6" port "defaultMemory"
+  edge [forsyde::io::lib::hierarchy::platform::hardware::PhysicalConnection,forsyde::io::lib::hierarchy::visualization::VisualConnection,platform::PhysicalConnection,visualization::VisualConnection] from "micro_blaze_mem6" port "networkInterface" to "micro_blaze_ni6" port "tileMemory"
+  edge [forsyde::io::lib::hierarchy::platform::hardware::PhysicalConnection,forsyde::io::lib::hierarchy::visualization::VisualConnection,platform::PhysicalConnection,visualization::VisualConnection] from "micro_blaze_ni6" port "tileMemory" to "micro_blaze_mem6" port "networkInterface"
+  edge [forsyde::io::lib::hierarchy::visualization::VisualContainment,visualization::VisualContainment] from "micro_blaze_6" port "contained" to "micro_blaze_os6" 
+  edge [decision::AbstractAllocation] from "micro_blaze_os6" port "host" to "micro_blaze_6" 
+  edge [decision::AbstractAllocation] from "micro_blaze_os6" port "managed" to "micro_blaze_6" 
   edge [] from "tile_7" port "submodules" to "micro_blaze_7" 
-  edge [visualization::VisualContainment] from "tile_7" port "contained" to "micro_blaze_7" 
+  edge [forsyde::io::lib::hierarchy::visualization::VisualContainment,visualization::VisualContainment] from "tile_7" port "contained" to "micro_blaze_7" 
   edge [] from "tile_7" port "submodules" to "micro_blaze_mem7" 
-  edge [visualization::VisualContainment] from "tile_7" port "contained" to "micro_blaze_mem7" 
+  edge [forsyde::io::lib::hierarchy::visualization::VisualContainment,visualization::VisualContainment] from "tile_7" port "contained" to "micro_blaze_mem7" 
   edge [] from "tile_7" port "submodules" to "micro_blaze_ni7" 
-  edge [visualization::VisualContainment] from "tile_7" port "contained" to "micro_blaze_ni7" 
-  edge [platform::PhysicalConnection,visualization::VisualConnection] from "micro_blaze_7" port "networkInterface" to "micro_blaze_ni7" port "tileProcessor"
-  edge [platform::PhysicalConnection,visualization::VisualConnection] from "micro_blaze_ni7" port "tileProcessor" to "micro_blaze_7" port "networkInterface"
-  edge [platform::PhysicalConnection,visualization::VisualConnection] from "micro_blaze_7" port "defaultMemory" to "micro_blaze_mem7" port "instructionsAndData"
-  edge [platform::PhysicalConnection,visualization::VisualConnection] from "micro_blaze_mem7" port "instructionsAndData" to "micro_blaze_7" port "defaultMemory"
-  edge [platform::PhysicalConnection,visualization::VisualConnection] from "micro_blaze_mem7" port "networkInterface" to "micro_blaze_ni7" port "tileMemory"
-  edge [platform::PhysicalConnection,visualization::VisualConnection] from "micro_blaze_ni7" port "tileMemory" to "micro_blaze_mem7" port "networkInterface"
-  edge [visualization::VisualContainment] from "micro_blaze_7" port "contained" to "micro_blaze_os7" 
-  edge [decision::AbstractAllocation] from "micro_blaze_os7" port "allocationHosts" to "micro_blaze_7" 
-  edge [decision::AbstractAllocation] from "micro_blaze_ni_slots7" port "allocationHosts" to "micro_blaze_ni7" 
-  edge [decision::AbstractAllocation] from "busSched" port "allocationHosts" to "TDMBus" 
-  edge [platform::PhysicalConnection,visualization::VisualConnection] from "micro_blaze_ni0" port "bus" to "TDMBus" port "ni_0"
-  edge [platform::PhysicalConnection,visualization::VisualConnection] from "TDMBus" port "ni_0" to "micro_blaze_ni0" port "bus"
-  edge [platform::PhysicalConnection,visualization::VisualConnection] from "micro_blaze_ni1" port "bus" to "TDMBus" port "ni_1"
-  edge [platform::PhysicalConnection,visualization::VisualConnection] from "TDMBus" port "ni_1" to "micro_blaze_ni1" port "bus"
-  edge [platform::PhysicalConnection,visualization::VisualConnection] from "micro_blaze_ni2" port "bus" to "TDMBus" port "ni_2"
-  edge [platform::PhysicalConnection,visualization::VisualConnection] from "TDMBus" port "ni_2" to "micro_blaze_ni2" port "bus"
-  edge [platform::PhysicalConnection,visualization::VisualConnection] from "micro_blaze_ni3" port "bus" to "TDMBus" port "ni_3"
-  edge [platform::PhysicalConnection,visualization::VisualConnection] from "TDMBus" port "ni_3" to "micro_blaze_ni3" port "bus"
-  edge [platform::PhysicalConnection,visualization::VisualConnection] from "micro_blaze_ni4" port "bus" to "TDMBus" port "ni_4"
-  edge [platform::PhysicalConnection,visualization::VisualConnection] from "TDMBus" port "ni_4" to "micro_blaze_ni4" port "bus"
-  edge [platform::PhysicalConnection,visualization::VisualConnection] from "micro_blaze_ni5" port "bus" to "TDMBus" port "ni_5"
-  edge [platform::PhysicalConnection,visualization::VisualConnection] from "TDMBus" port "ni_5" to "micro_blaze_ni5" port "bus"
-  edge [platform::PhysicalConnection,visualization::VisualConnection] from "micro_blaze_ni6" port "bus" to "TDMBus" port "ni_6"
-  edge [platform::PhysicalConnection,visualization::VisualConnection] from "TDMBus" port "ni_6" to "micro_blaze_ni6" port "bus"
-  edge [platform::PhysicalConnection,visualization::VisualConnection] from "micro_blaze_ni7" port "bus" to "TDMBus" port "ni_7"
-  edge [platform::PhysicalConnection,visualization::VisualConnection] from "TDMBus" port "ni_7" to "micro_blaze_ni7" port "bus"
+  edge [forsyde::io::lib::hierarchy::visualization::VisualContainment,visualization::VisualContainment] from "tile_7" port "contained" to "micro_blaze_ni7" 
+  edge [forsyde::io::lib::hierarchy::platform::hardware::PhysicalConnection,forsyde::io::lib::hierarchy::visualization::VisualConnection,platform::PhysicalConnection,visualization::VisualConnection] from "micro_blaze_7" port "networkInterface" to "micro_blaze_ni7" port "tileProcessor"
+  edge [forsyde::io::lib::hierarchy::platform::hardware::PhysicalConnection,forsyde::io::lib::hierarchy::visualization::VisualConnection,platform::PhysicalConnection,visualization::VisualConnection] from "micro_blaze_ni7" port "tileProcessor" to "micro_blaze_7" port "networkInterface"
+  edge [forsyde::io::lib::hierarchy::platform::hardware::PhysicalConnection,forsyde::io::lib::hierarchy::visualization::VisualConnection,platform::PhysicalConnection,visualization::VisualConnection] from "micro_blaze_7" port "defaultMemory" to "micro_blaze_mem7" port "instructionsAndData"
+  edge [forsyde::io::lib::hierarchy::platform::hardware::PhysicalConnection,forsyde::io::lib::hierarchy::visualization::VisualConnection,platform::PhysicalConnection,visualization::VisualConnection] from "micro_blaze_mem7" port "instructionsAndData" to "micro_blaze_7" port "defaultMemory"
+  edge [forsyde::io::lib::hierarchy::platform::hardware::PhysicalConnection,forsyde::io::lib::hierarchy::visualization::VisualConnection,platform::PhysicalConnection,visualization::VisualConnection] from "micro_blaze_mem7" port "networkInterface" to "micro_blaze_ni7" port "tileMemory"
+  edge [forsyde::io::lib::hierarchy::platform::hardware::PhysicalConnection,forsyde::io::lib::hierarchy::visualization::VisualConnection,platform::PhysicalConnection,visualization::VisualConnection] from "micro_blaze_ni7" port "tileMemory" to "micro_blaze_mem7" port "networkInterface"
+  edge [forsyde::io::lib::hierarchy::visualization::VisualContainment,visualization::VisualContainment] from "micro_blaze_7" port "contained" to "micro_blaze_os7" 
+  edge [decision::AbstractAllocation] from "micro_blaze_os7" port "host" to "micro_blaze_7" 
+  edge [decision::AbstractAllocation] from "micro_blaze_os7" port "managed" to "micro_blaze_7" 
+  edge [decision::AbstractAllocation] from "busSched" port "host" to "TDMBus" 
+  edge [forsyde::io::lib::hierarchy::platform::hardware::PhysicalConnection,forsyde::io::lib::hierarchy::visualization::VisualConnection,platform::PhysicalConnection,visualization::VisualConnection] from "micro_blaze_ni0" port "bus" to "TDMBus" port "ni_0"
+  edge [forsyde::io::lib::hierarchy::platform::hardware::PhysicalConnection,forsyde::io::lib::hierarchy::visualization::VisualConnection,platform::PhysicalConnection,visualization::VisualConnection] from "TDMBus" port "ni_0" to "micro_blaze_ni0" port "bus"
+  edge [forsyde::io::lib::hierarchy::platform::hardware::PhysicalConnection,forsyde::io::lib::hierarchy::visualization::VisualConnection,platform::PhysicalConnection,visualization::VisualConnection] from "micro_blaze_ni1" port "bus" to "TDMBus" port "ni_1"
+  edge [forsyde::io::lib::hierarchy::platform::hardware::PhysicalConnection,forsyde::io::lib::hierarchy::visualization::VisualConnection,platform::PhysicalConnection,visualization::VisualConnection] from "TDMBus" port "ni_1" to "micro_blaze_ni1" port "bus"
+  edge [forsyde::io::lib::hierarchy::platform::hardware::PhysicalConnection,forsyde::io::lib::hierarchy::visualization::VisualConnection,platform::PhysicalConnection,visualization::VisualConnection] from "micro_blaze_ni2" port "bus" to "TDMBus" port "ni_2"
+  edge [forsyde::io::lib::hierarchy::platform::hardware::PhysicalConnection,forsyde::io::lib::hierarchy::visualization::VisualConnection,platform::PhysicalConnection,visualization::VisualConnection] from "TDMBus" port "ni_2" to "micro_blaze_ni2" port "bus"
+  edge [forsyde::io::lib::hierarchy::platform::hardware::PhysicalConnection,forsyde::io::lib::hierarchy::visualization::VisualConnection,platform::PhysicalConnection,visualization::VisualConnection] from "micro_blaze_ni3" port "bus" to "TDMBus" port "ni_3"
+  edge [forsyde::io::lib::hierarchy::platform::hardware::PhysicalConnection,forsyde::io::lib::hierarchy::visualization::VisualConnection,platform::PhysicalConnection,visualization::VisualConnection] from "TDMBus" port "ni_3" to "micro_blaze_ni3" port "bus"
+  edge [forsyde::io::lib::hierarchy::platform::hardware::PhysicalConnection,forsyde::io::lib::hierarchy::visualization::VisualConnection,platform::PhysicalConnection,visualization::VisualConnection] from "micro_blaze_ni4" port "bus" to "TDMBus" port "ni_4"
+  edge [forsyde::io::lib::hierarchy::platform::hardware::PhysicalConnection,forsyde::io::lib::hierarchy::visualization::VisualConnection,platform::PhysicalConnection,visualization::VisualConnection] from "TDMBus" port "ni_4" to "micro_blaze_ni4" port "bus"
+  edge [forsyde::io::lib::hierarchy::platform::hardware::PhysicalConnection,forsyde::io::lib::hierarchy::visualization::VisualConnection,platform::PhysicalConnection,visualization::VisualConnection] from "micro_blaze_ni5" port "bus" to "TDMBus" port "ni_5"
+  edge [forsyde::io::lib::hierarchy::platform::hardware::PhysicalConnection,forsyde::io::lib::hierarchy::visualization::VisualConnection,platform::PhysicalConnection,visualization::VisualConnection] from "TDMBus" port "ni_5" to "micro_blaze_ni5" port "bus"
+  edge [forsyde::io::lib::hierarchy::platform::hardware::PhysicalConnection,forsyde::io::lib::hierarchy::visualization::VisualConnection,platform::PhysicalConnection,visualization::VisualConnection] from "micro_blaze_ni6" port "bus" to "TDMBus" port "ni_6"
+  edge [forsyde::io::lib::hierarchy::platform::hardware::PhysicalConnection,forsyde::io::lib::hierarchy::visualization::VisualConnection,platform::PhysicalConnection,visualization::VisualConnection] from "TDMBus" port "ni_6" to "micro_blaze_ni6" port "bus"
+  edge [forsyde::io::lib::hierarchy::platform::hardware::PhysicalConnection,forsyde::io::lib::hierarchy::visualization::VisualConnection,platform::PhysicalConnection,visualization::VisualConnection] from "micro_blaze_ni7" port "bus" to "TDMBus" port "ni_7"
+  edge [forsyde::io::lib::hierarchy::platform::hardware::PhysicalConnection,forsyde::io::lib::hierarchy::visualization::VisualConnection,platform::PhysicalConnection,visualization::VisualConnection] from "TDMBus" port "ni_7" to "micro_blaze_ni7" port "bus"
 }

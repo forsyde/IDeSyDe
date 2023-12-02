@@ -344,8 +344,8 @@ fn main() {
                 .reduce(|s1, s2| s1.clone() + ", " + &s2)
                 .unwrap_or("None".to_string())
         );
-        for (_, m) in identified.iter().enumerate() {
-            m.write_to_dir(&identified_path, "final", "Orchestratror");
+        for (i, m) in identified.iter().enumerate() {
+            m.write_to_dir(&identified_path, format!("final_{}", i).as_str(), "Orchestratror");
         }
         // println!(
         //     "{}",
@@ -382,15 +382,18 @@ fn main() {
             "Time spent bidding (ms): {}",
             bidding_time.elapsed().as_millis()
         );
-        info!("Computed {} bidding(s) ", biddings.len());
+        let dominant_biddings_idx: Vec<usize> = idesyde_core::compute_dominant_biddings(&biddings);
+        info!("Acquired {} dominant bidding(s) out of {} bidding(s)", dominant_biddings_idx.len(), biddings.len());
         // let dominant_bidding_opt =
         //     idesyde_core::compute_dominant_bidding(biddings.iter().map(|(_, _, b)| b));
-        let dominant_biddings_idx: Vec<usize> = idesyde_core::compute_dominant_biddings(
-            &biddings.iter().map(|(_, _, b)| b.to_owned()).collect(),
-        )
-        .iter()
-        .map(|(i, b)| *i)
-        .collect();
+        let total_identified_elements: HashSet<String> = identified
+            .iter()
+            .map(|x| x.part())
+            .flatten()
+            .collect();
+        if !dominant_biddings_idx.iter().any(|i| biddings[*i].1.part() == total_identified_elements) {
+            warn!("No dominant bidding captures all partially identified elements. Double-check the final reversed models if any is produced.");
+        }
         if dominant_biddings_idx.len() > 0 {
             match (args.x_total_time_out, args.x_max_solutions) {
                 (Some(t), Some(n)) => info!(
@@ -509,7 +512,8 @@ fn main() {
                 sol.solved
                     .write_to_dir(&explored_path, format!("{}", i).as_str(), "Orchestratror");
                 debug!(
-                    "Written dominant with objectives: {}",
+                    "Written dominant {} with objectives: {}",
+                    sol.solved.category(),
                     sol.objectives
                         .iter()
                         .map(|(k, v)| format!("{}: {}", k, v))

@@ -162,18 +162,19 @@ trait MixedRules {
   def identTaksAndSDFServerToMultiCore(
       models: Set[DesignModel],
       identified: Set[DecisionModel]
-  ): (Set[PeriodicWorkloadAndSDFServerToMultiCore], Set[String]) = {
+  ): (Set[PeriodicWorkloadAndSDFServerToMultiCoreOld], Set[String]) = {
     val app = identified
       .filter(_.isInstanceOf[PeriodicWorkloadAndSDFServers])
       .map(_.asInstanceOf[PeriodicWorkloadAndSDFServers])
     val plat = identified
       .filter(_.isInstanceOf[PartitionedSharedMemoryMultiCore])
       .map(_.asInstanceOf[PartitionedSharedMemoryMultiCore])
+      .filter(_.runtimes.isFixedPriority.count(_ == true) > 0)
     // if ((runtimes.isDefined && plat.isEmpty) || (runtimes.isEmpty && plat.isDefined))
     (
       app.flatMap(a =>
         plat.map(p =>
-          PeriodicWorkloadAndSDFServerToMultiCore(
+          PeriodicWorkloadAndSDFServerToMultiCoreOld(
             tasksAndSDFs = a,
             platform = p,
             processesSchedulings = Vector.empty,

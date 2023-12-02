@@ -68,6 +68,7 @@ public record AperiodicAsynchronousDataflow(
         return jobs;
     }
 
+    @Deprecated
     public Map<Job, Set<Job>> jobSucessors() {
         var jobs = jobsOfProcesses();
         Map<Job, Set<Job>> sucessorMap = jobs.stream().collect(Collectors.toMap(j -> j, j -> new HashSet<Job>()));
@@ -91,6 +92,7 @@ public record AperiodicAsynchronousDataflow(
         }
     }
 
+    @Deprecated
     public boolean isSucessor(Job predecessor, Job potentialSucessor) {
         // first check if is not an immediate sucessor
         // for (int i = 0; i < jobGraphSrcName.size(); i++) {
@@ -117,6 +119,7 @@ public record AperiodicAsynchronousDataflow(
                 potentialSucessor.instance());
     }
 
+    @Deprecated
     public boolean isSucessor(String predecessorName, long predecessorInstance, String potentialSucessorName,
             long potentialSucessorInstance) {
         // first check if is not an immediate sucessor
@@ -140,6 +143,22 @@ public record AperiodicAsynchronousDataflow(
             }
         }
         return false;
+    }
+
+    public boolean isDirectSucessor(String predecessorName, long predecessorInstance, String potentialSucessorName,
+            long potentialSucessorInstance) {
+        // first check if is not an immediate sucessor
+        for (int i = 0; i < jobGraphSrcName.size(); i++) {
+            if (jobGraphSrcName.get(i).equals(predecessorName)
+                    && jobGraphSrcInstance.get(i).equals(predecessorInstance)) {
+                if (jobGraphDstName.get(i).equals(potentialSucessorName)
+                        && jobGraphDstInstance.get(i).equals(potentialSucessorInstance)) {
+                    return true;
+                }
+            }
+        }
+        return false;
+        
     }
 
 }

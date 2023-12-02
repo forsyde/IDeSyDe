@@ -82,7 +82,9 @@ class ForSyDeIOSYNetworkToAADataflowIRule implements IdentificationRule {
                         sig
                                 .consumers()
                                 .forEach(dst -> {
-                                    sig.producer().ifPresent(src -> {
+                                    sig.producer()
+                                    .filter(src -> !src.getIdentifier().equals(dst.getIdentifier())) // TODO: this is basically a hack for now. Fix it later.
+                                    .ifPresent(src -> {
                                         // System.out.println("%s: %s >- %s".formatted(sig.getIdentifier(),
                                         // src.getIdentifier(), dst.getIdentifier()));
                                         if (ForSyDeHierarchy.SYMap

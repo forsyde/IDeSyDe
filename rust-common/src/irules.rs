@@ -384,7 +384,7 @@ pub fn identify_asynchronous_aperiodic_dataflow_from_sdf(
             // Graph::from_edges(edges.into_iter());
             // actors_graph.extend_with_edges(edges.into_iter());
         } else {
-            errors.push("identify_asynchronous_aperiodic_dataflow_from_sdf: no AnalyzedSDFApplication detected".to_string());
+            errors.push("identify_asynchronous_aperiodic_dataflow_from_sdf: no AnalysedSDFApplication detected".to_string());
         }
     }
     (identified, errors)

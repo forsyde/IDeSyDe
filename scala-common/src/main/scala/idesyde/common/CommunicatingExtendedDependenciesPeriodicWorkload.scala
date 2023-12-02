@@ -324,7 +324,7 @@ trait CommunicatingExtendedDependenciesPeriodicWorkload {
     // ) {
     //   prioritiesMut(j) -= 1
     // }
-    println(prioritiesMut.mkString("[", ",", "]"))
+    // println(prioritiesMut.mkString("[", ",", "]"))
     prioritiesMut
   }
 

@@ -177,8 +177,10 @@ impl IdentificationIterator for ExternalServerIdentifiticationIterator {
 
 impl Drop for ExternalServerIdentifiticationIterator {
     fn drop(&mut self) {
-        if let Err(e) = self.websocket.close(None) {
-            debug!("Failed to close identification websocket: {}", e.to_string());
+        if self.websocket.can_write() {
+            if let Err(e) = self.websocket.close(None) {
+                debug!("Failed to close identification websocket: {}", e.to_string());
+            }
         }
     }
 }

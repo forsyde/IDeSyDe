@@ -359,7 +359,7 @@ impl Module for ExternalServerModule {
                 });
                 let mut reverse_identified = Vec::new();
                 // println!("Reverse done for {}", self.unique_identifier());
-                while let Ok(m) = identified_rx.recv_timeout(Duration::from_millis(200 * ((solved_decision_models.len() + design_models.len()) as u64))) {
+                while let Ok(m) = identified_rx.recv_timeout(Duration::from_millis(250 * ((solved_decision_models.len() + design_models.len()) as u64))) {
                     reverse_identified.push(m);
                 }
                 // get all last without blocking

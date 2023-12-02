@@ -10,7 +10,7 @@ import idesyde.common.SDFToTiledMultiCore
 import idesyde.choco.ChocoExplorer
 import spire.math.Rational
 import idesyde.common.PeriodicWorkloadToPartitionedSharedMultiCore
-import idesyde.common.PeriodicWorkloadAndSDFServerToMultiCore
+import idesyde.common.PeriodicWorkloadAndSDFServerToMultiCoreOld
 import idesyde.core.OpaqueDecisionModel
 import java.util.Optional
 
@@ -49,9 +49,9 @@ object ChocoExplorationModule extends StandaloneModule {
         opaque
           .bodyJson().map(x => read[PeriodicWorkloadToPartitionedSharedMultiCore](x))
           .map(x => x.asInstanceOf[DecisionModel])
-      case "PeriodicWorkloadAndSDFServerToMultiCore" =>
+      case "PeriodicWorkloadAndSDFServerToMultiCoreOld" =>
         opaque
-          .bodyJson().map(x => read[PeriodicWorkloadAndSDFServerToMultiCore](x))
+          .bodyJson().map(x => read[PeriodicWorkloadAndSDFServerToMultiCoreOld](x))
           .map(x => x.asInstanceOf[DecisionModel])
       case _ => Optional.empty()
     }
@@ -63,8 +63,8 @@ object ChocoExplorationModule extends StandaloneModule {
   //       m.body.map(s => read[SDFToTiledMultiCore](s))
   //     case DecisionModelHeader("PeriodicWorkloadToPartitionedSharedMultiCore", _, _) =>
   //       m.body.map(s => read[PeriodicWorkloadToPartitionedSharedMultiCore](s))
-  //     case DecisionModelHeader("PeriodicWorkloadAndSDFServerToMultiCore", _, _) =>
-  //       m.body.map(s => read[PeriodicWorkloadAndSDFServerToMultiCore](s))
+  //     case DecisionModelHeader("PeriodicWorkloadAndSDFServerToMultiCoreOld", _, _) =>
+  //       m.body.map(s => read[PeriodicWorkloadAndSDFServerToMultiCoreOld](s))
   //     case _ => None
   //   }
   // }

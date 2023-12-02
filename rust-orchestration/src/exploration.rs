@@ -136,10 +136,12 @@ impl Iterator for ExternalExplorerSolutionIter {
 
 impl Drop for ExternalExplorerSolutionIter {
     fn drop(&mut self) {
-        if let Err(e) = self.websocket.close(None) {
-            debug!("Failed to close websocket. Likely a failure occurred.");
-            debug!("Message was: {}", e.to_string());
-        };
+        if self.websocket.can_write() {
+            if let Err(e) = self.websocket.close(None) {
+                debug!("Failed to close websocket. Likely a failure occurred.");
+                debug!("Message was: {}", e.to_string());
+            };
+        }
     }
 }
 

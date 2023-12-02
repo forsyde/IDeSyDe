@@ -1038,7 +1038,9 @@ impl Iterator for MultiLevelCombinedExplorerIterator {
     type Item = ExplorationSolution;
 
     fn next(&mut self) -> Option<Self::Item> {
-        if self.exploration_configuration.total_timeout > 0 && self.start.elapsed() > Duration::from_secs(self.exploration_configuration.total_timeout)
+        if self.exploration_configuration.total_timeout > 0
+            && self.start.elapsed()
+                > Duration::from_secs(self.exploration_configuration.total_timeout)
         {
             return None;
         }
@@ -1168,24 +1170,37 @@ pub fn compute_dominant_identification(
     }
 }
 
-pub fn compute_dominant_biddings(biddings: &Vec<ExplorationBid>) -> Vec<(usize, ExplorationBid)> {
+pub fn compute_dominant_biddings<M, E>(
+    biddings: &Vec<(Arc<E>, Arc<M>, ExplorationBid)>,
+) -> Vec<usize>
+where
+    M: DecisionModel + PartialOrd + ?Sized,
+    E: Explorer + PartialEq + ?Sized,
+{
     if biddings.len() > 1 {
         biddings
             .iter()
             .enumerate()
-            .filter(|(_, b)| {
-                !biddings
-                    .iter()
-                    .filter(|bb| b != bb)
-                    .any(|bb| b.partial_cmp(&bb) == Some(Ordering::Greater))
+            .filter(|(_, (_, m, b))| {
+                b.can_explore
+                    && !biddings
+                        .iter()
+                        // .filter(|(_, mm, bb)| b != bb)
+                        .any(|(_, mm, bb)| {
+                            bb.can_explore
+                                && (m.partial_cmp(&mm) == Some(Ordering::Less)
+                                    || (m.partial_cmp(&mm) != Some(Ordering::Less)
+                                        && b.partial_cmp(&bb) == Some(Ordering::Greater)))
+                        })
             })
-            .map(|(i, b)| (i, b.to_owned()))
+            .map(|(i, _)| i)
             .collect()
     } else {
         biddings
             .iter()
             .enumerate()
-            .map(|(i, b)| (i, b.to_owned()))
+            .filter(|(_, (_, _, b))| b.can_explore)
+            .map(|(i, _)| i)
             .collect()
     }
 }

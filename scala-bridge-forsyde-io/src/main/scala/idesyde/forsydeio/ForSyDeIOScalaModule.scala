@@ -44,6 +44,7 @@ import idesyde.devicetree.identification.OSDescriptionDesignModel
 import idesyde.devicetree.identification.CanParseDeviceTree
 import idesyde.devicetree.identification.DeviceTreeDesignModel
 import idesyde.choco.ChocoExplorer
+import idesyde.common.PeriodicWorkloadAndSDFServerToMultiCoreOld
 
 object ForSyDeIOScalaModule
     extends StandaloneModule
@@ -140,6 +141,11 @@ object ForSyDeIOScalaModule
           .bodyJson()
           .map(x => read[PeriodicWorkloadAndSDFServers](x))
           .map(x => x.asInstanceOf[DecisionModel])
+      case "PeriodicWorkloadAndSDFServerToMultiCoreOld" =>
+        opaque
+          .bodyJson()
+          .map(x => read[PeriodicWorkloadAndSDFServerToMultiCoreOld](x))
+          .map(x => x.asInstanceOf[DecisionModel])
       case _ => ju.Optional.empty()
     }
   }
@@ -196,7 +202,10 @@ object ForSyDeIOScalaModule
     ReverseIdentificationRule.Generic(
       adaptRevRuleToJava(integratePeriodicWorkloadToPartitionedSharedMultiCore)
     ),
-    ReverseIdentificationRule.Generic(adaptRevRuleToJava(integrateSDFToTiledMultiCore))
+    ReverseIdentificationRule.Generic(adaptRevRuleToJava(integrateSDFToTiledMultiCore)),
+    ReverseIdentificationRule.Generic(
+      adaptRevRuleToJava(integratePeriodicWorkloadAndSDFServerToMultiCoreOld)
+    ),
   ).asJava
 
   override def explorers() = Set(ChocoExplorer()).asJava

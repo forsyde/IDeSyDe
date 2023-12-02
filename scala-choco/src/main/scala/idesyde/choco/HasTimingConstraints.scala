@@ -51,7 +51,7 @@ trait HasTimingConstraints {
     for ((u, i) <- utilizations.zipWithIndex) {
       // println(u.toString())
       var mappedUtilizations = for ((d, j) <- durations.zipWithIndex; if taskExecution(j).contains(i)) yield {
-        println(d.getUB() + " " + periods(j) + " " + Math.floorDiv(100 * d.getUB(), periods(j)))
+        // println(d.getUB() + " " + periods(j) + " " + Math.floorDiv(100 * d.getUB(), periods(j)))
         var utilizationContribution =
           chocoModel.intVar(
             s"utilization(${j}, ${i})",

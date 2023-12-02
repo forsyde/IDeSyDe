@@ -26,7 +26,7 @@ import spire.math.Rational
 import idesyde.common.SDFToTiledMultiCore
 import idesyde.choco.ChocoExplorableOps._
 import idesyde.common.PeriodicWorkloadToPartitionedSharedMultiCore
-import idesyde.common.PeriodicWorkloadAndSDFServerToMultiCore
+import idesyde.common.PeriodicWorkloadAndSDFServerToMultiCoreOld
 import idesyde.core.Explorer
 import idesyde.core.ExplorationBidding
 import idesyde.core.ExplorationSolution
@@ -44,7 +44,7 @@ class ChocoExplorer extends Explorer:
       // case sdfToTiled: AperiodicAsynchronousDataflowToPartitionedTiledMulticore => true
       case sdf: SDFToTiledMultiCore                                => true
       case workload: PeriodicWorkloadToPartitionedSharedMultiCore  => true
-      case workloadAndSDF: PeriodicWorkloadAndSDFServerToMultiCore => true
+      case workloadAndSDF: PeriodicWorkloadAndSDFServerToMultiCoreOld => true
       case c: ChocoDecisionModel                                   => true
       case _                                                       => false
     val objectives: Set[String] = decisionModel match {
@@ -54,7 +54,7 @@ class ChocoExplorer extends Explorer:
           .map((th, i) => "invThroughput(" + sdf.sdfApplications.actorsIdentifiers(i) + ")")
           .toSet + "nUsedPEs"
       case workload: PeriodicWorkloadToPartitionedSharedMultiCore => Set("nUsedPEs")
-      case workloadAndSDF: PeriodicWorkloadAndSDFServerToMultiCore =>
+      case workloadAndSDF: PeriodicWorkloadAndSDFServerToMultiCoreOld =>
         workloadAndSDF.tasksAndSDFs.sdfApplications.minimumActorThroughputs.zipWithIndex
           .filter((th, i) => th > 0.0)
           .map((th, i) =>
@@ -64,6 +64,14 @@ class ChocoExplorer extends Explorer:
           .toSet + "nUsedPEs"
       case _ => Set()
     }
+    // println(decisionModel.category())
+    // println(ExplorationBidding(
+    //   canExplore,
+    //   true,
+    //   1.0,
+    //   objectives.asJava,
+    //   java.util.Map.of("time-to-first", 100.0)
+    // ))
     ExplorationBidding(
       canExplore,
       true,
@@ -249,15 +257,15 @@ class ChocoExplorer extends Explorer:
             .toSet,
           configuration
         )(using CanSolveDepTasksToPartitionedMultiCore())
-      case workloadAndSDF: PeriodicWorkloadAndSDFServerToMultiCore =>
+      case workloadAndSDF: PeriodicWorkloadAndSDFServerToMultiCoreOld =>
         exploreChocoExplorable(
           workloadAndSDF,
           previousSolutions.asScala
-            .filter(sol => sol.solved().isInstanceOf[PeriodicWorkloadAndSDFServerToMultiCore])
+            .filter(sol => sol.solved().isInstanceOf[PeriodicWorkloadAndSDFServerToMultiCoreOld])
             .map(sol =>
               ExplorationSolution(
                 sol.objectives(),
-                sol.solved().asInstanceOf[PeriodicWorkloadAndSDFServerToMultiCore]
+                sol.solved().asInstanceOf[PeriodicWorkloadAndSDFServerToMultiCoreOld]
               )
             )
             .toSet,

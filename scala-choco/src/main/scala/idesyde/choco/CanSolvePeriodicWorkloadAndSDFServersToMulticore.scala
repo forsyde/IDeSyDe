@@ -4,7 +4,7 @@ package idesyde.choco
 
 import org.chocosolver.solver.Model
 import org.chocosolver.solver.Solution
-import idesyde.common.PeriodicWorkloadAndSDFServerToMultiCore
+import idesyde.common.PeriodicWorkloadAndSDFServerToMultiCoreOld
 import org.chocosolver.solver.search.loop.monitors.IMonitorContradiction
 import org.chocosolver.solver.exception.ContradictionException
 import org.chocosolver.solver.variables.IntVar
@@ -13,9 +13,22 @@ import org.chocosolver.solver.search.strategy.Search
 import idesyde.identification.choco.models.sdf.CompactingMultiCoreMapping
 import idesyde.core.Explorer
 import idesyde.core.ExplorationSolution
+import org.chocosolver.solver.search.limits.FailCounter
+import org.chocosolver.solver.search.restart.LubyCutoff
+import org.jgrapht.alg.connectivity.ConnectivityInspector
+import org.jgrapht.alg.connectivity.KosarajuStrongConnectivityInspector
+import org.jgrapht.graph.AsGraphUnion
+import org.jgrapht.graph.DefaultDirectedGraph
+import org.jgrapht.graph.DefaultEdge
+import scala.collection.mutable.Buffer
+import org.jgrapht.Graph
+import idesyde.common.PartitionedSharedMemoryMultiCore
+import idesyde.common.SDFApplicationWithFunctions
+import org.chocosolver.solver.constraints.extension.Tuples
+import org.jgrapht.alg.shortestpath.FloydWarshallShortestPaths
 
 final class CanSolvePeriodicWorkloadAndSDFServersToMulticore
-    extends ChocoExplorable[PeriodicWorkloadAndSDFServerToMultiCore]
+    extends ChocoExplorable[PeriodicWorkloadAndSDFServerToMultiCoreOld]
     with HasDiscretizationToIntegers
     with HasSingleProcessSingleMessageMemoryConstraints
     with HasActive4StageDuration
@@ -25,7 +38,7 @@ final class CanSolvePeriodicWorkloadAndSDFServersToMulticore
     with CanSolveMultiObjective {
 
   def buildChocoModel(
-      m: PeriodicWorkloadAndSDFServerToMultiCore,
+      m: PeriodicWorkloadAndSDFServerToMultiCoreOld,
       objectivesUpperLimits: Set[ExplorationSolution],
       configuration: Explorer.Configuration
   ): (Model, Map[String, IntVar]) = {
@@ -77,11 +90,6 @@ final class CanSolvePeriodicWorkloadAndSDFServersToMulticore
         long2int(s)
       )
       .toArray
-    val sdfMessagesMaxSizes = m.tasksAndSDFs.sdfApplications.sdfMessages
-      .map((src, _, _, mSize, p, c, tok) =>
-        long2int(p * mSize)
-      )
-      .toArray
 
     // build the model so that it can be acessed later
     // memory module
@@ -92,6 +100,7 @@ final class CanSolvePeriodicWorkloadAndSDFServersToMulticore
             s"processExecution($t)",
             m.platform.hardware.processingElems.zipWithIndex
               .filter((_, j) => m.wcets(i)(j) > -1)
+              .filter((_, j) => m.platform.runtimes.isFixedPriority(j))
               .map((m, j) => j)
               .toArray
           ))
@@ -102,10 +111,12 @@ final class CanSolvePeriodicWorkloadAndSDFServersToMulticore
             s"processExecution($t)",
             m.platform.hardware.processingElems.zipWithIndex
               .filter((_, j) => m.wcets(i)(j) > -1)
+              .filter((_, j) => m.platform.runtimes.isFixedPriority(j) || m.platform.runtimes.isBareMetal(j))
               .map((m, j) => j)
               .toArray
           )
         )
+    // println(taskExecution.mkString(", "))
         
     val processExecution =
       taskExecution ++ actorExecution
@@ -163,7 +174,7 @@ final class CanSolvePeriodicWorkloadAndSDFServersToMulticore
       )
     )
 
-    val numMappedElements = chocoModel.intVar("nUsedPEs", 0, m.platform.runtimes.isFixedPriority.count(a => a), true)
+    val numMappedElements = chocoModel.intVar("nUsedPEs", 0, m.platform.runtimes.schedulers.size, true)
     chocoModel.nValues(processExecution.toArray, numMappedElements).post()
 
     val (
@@ -232,6 +243,14 @@ final class CanSolvePeriodicWorkloadAndSDFServersToMulticore
 
     val taskDurations = durations.take(m.tasksAndSDFs.workload.tasks.size)
     val actorDurations = durations.drop(m.tasksAndSDFs.workload.tasks.size)
+
+    postMapChannelsWithConsumers(
+      m.platform,
+      m.tasksAndSDFs.sdfApplications,
+      chocoModel,
+      actorExecution.toArray,
+      messageMapping.drop(m.tasksAndSDFs.workload.messagesMaxSizes.size).toArray
+    )
 
     postInterProcessorJitters(
       chocoModel,
@@ -378,7 +397,9 @@ final class CanSolvePeriodicWorkloadAndSDFServersToMulticore
       )
     )
 
-    chocoModel.getSolver().setLearningSignedClauses()
+    // chocoModel.getSolver().setLearningSignedClauses()
+    chocoModel.getSolver().setRestarts(FailCounter(chocoModel, processExecution.size * m.platform.runtimes.schedulers.size), LubyCutoff(processExecution.size * m.platform.runtimes.schedulers.size), 0)
+    chocoModel.getSolver().setNoGoodRecordingFromRestarts()
 
     chocoModel.getSolver().setSearch(
       Array(
@@ -411,7 +432,7 @@ final class CanSolvePeriodicWorkloadAndSDFServersToMulticore
   }
 
   def rebuildDecisionModel(
-      m: PeriodicWorkloadAndSDFServerToMultiCore,
+      m: PeriodicWorkloadAndSDFServerToMultiCoreOld,
       solution: Solution,
       configuration: Explorer.Configuration
   ): ExplorationSolution = {
@@ -561,8 +582,35 @@ final class CanSolvePeriodicWorkloadAndSDFServersToMulticore
         ) yield (aId, jobOrder(i).getLB())
         unordered.sortBy((a, o) => o).map((a, _) => a)
       }),
-      sdfServerUtilization = utilizationPerRuntime.map(u => 1.0 - u)
+      sdfServerUtilization = utilizationPerRuntime.map(u => 1.0 - u),
+      tasksAndSDFs = m.tasksAndSDFs.copy(sdfApplications = m.tasksAndSDFs.sdfApplications.copy(minimumActorThroughputs = m.tasksAndSDFs.sdfApplications.actorsIdentifiers.zipWithIndex.map((a, i) => invThs.find(_.getName().startsWith(s"invTh($a)")).map(_.getValue()).map(int2double).map(ith => 1.0 / ith * m.tasksAndSDFs.sdfApplications.sdfRepetitionVectors(i)).getOrElse(0.0))))
     )
     )
   }
+
+  def postMapChannelsWithConsumers(
+      m: PartitionedSharedMemoryMultiCore,
+      sdf: SDFApplicationWithFunctions,
+      chocoModel: Model,
+      actorsMemoryMapping: Array[IntVar],
+      messagesMemoryMapping: Array[IntVar]
+  ): Unit = {
+    // we make sure that the input messages are always mapped with the consumers so that
+    // it would be synthetizeable later. Otherwise the model becomes irrealistic
+    val shortestPath = FloydWarshallShortestPaths(m.hardware.topology)
+    val closestMemory = m.hardware.processingElems.map(pe => pe -> m.hardware.storageElems.minBy(me => shortestPath.getPathWeight(pe, me)))
+    actorsMemoryMapping.zipWithIndex.foreach((aMap, a) => {
+      messagesMemoryMapping.zipWithIndex.foreach((cMap, c) => {
+        val (s, t, cs, _, _, _, _) = sdf.sdfMessages(c)
+        if (sdf.actorsIdentifiers(a) == t) {
+          var tuples = Tuples()
+          for ((pe, me) <- closestMemory) {
+            tuples.add(m.hardware.processingElems.indexOf(pe), m.hardware.storageElems.indexOf(me))
+          }
+          chocoModel.table(Array(aMap, cMap), tuples).post()
+        }
+      })
+    })
+  }
+
 }

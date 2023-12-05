@@ -279,10 +279,10 @@ impl Module for ExternalServerModule {
         solved_decision_models: &Vec<Arc<dyn DecisionModel>>,
         design_models: &Vec<Arc<dyn DesignModel>>,
     ) -> Vec<Arc<dyn DesignModel>> {
-        let mut mut_url = self.url.clone();
-        mut_url
-            .set_scheme("ws")
-            .expect("Failed to set scheme to 'ws'.");
+        // let mut mut_url = self.url.clone();
+        // mut_url
+        //     .set_scheme("ws")
+        //     .expect("Failed to set scheme to 'ws'.");
         if let Ok(reverse_url) = self.url.join("/reverse") {
             let mut form = Form::new();
             let opaques: Vec<OpaqueDesignModel> = design_models

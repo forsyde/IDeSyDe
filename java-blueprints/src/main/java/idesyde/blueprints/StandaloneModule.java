@@ -412,60 +412,61 @@ public interface StandaloneModule extends Module {
                             // ctx.send("ERROR " + ctx.error().getMessage());
                         });
                     })
-                    .ws("/reverse", ws -> {
-                        var logger = LoggerFactory.getLogger("main");
-                        Set<DecisionModel> exploredDecisionModels = new CopyOnWriteArraySet<>();
-                        Set<DesignModel> designModels = new CopyOnWriteArraySet<>();
-                        ws.onBinaryMessage(ctx -> {
-                            OpaqueDesignModel.fromCBORBytes(ctx.data()).flatMap(this::fromOpaqueDesign)
-                                    .ifPresentOrElse(designModels::add,
-                                            () -> OpaqueDecisionModel.fromCBORBytes(ctx.data())
-                                                    .flatMap(this::fromOpaqueDecision)
-                                                    .ifPresent(exploredDecisionModels::add));
-                        });
-                        ws.onMessage(ctx -> {
-                            if (ctx.message().toLowerCase().contains("done")) {
-                                logger.info("Running a reverse identification with %s and %s decision and design models"
-                                        .formatted(exploredDecisionModels.size(), designModels.size()));
-                                var reversed = reverseIdentification(exploredDecisionModels, designModels);
-                                for (var result : reversed) {
-                                    OpaqueDesignModel.from(result).toJsonString().ifPresent(bytes -> {
-                                        logger.info("Sending a reverse identified design model");
-                                        if (ctx.session.isOpen())
-                                            ctx.send(bytes);
-                                        // designModels.add(result);
-                                    });
-                                }
-                                logger.info(
-                                        "Finished a reverse identification step with %s design models identified"
-                                                .formatted(designModels.size()));
-                                if (ctx.session.isOpen())
-                                    ctx.send("done");
-                                logger.info("Sent the done request");
-                                ctx.closeSession();
-                            } else {
-                                OpaqueDesignModel.fromJsonString(ctx.message()).flatMap(this::fromOpaqueDesign)
-                                        .ifPresentOrElse(
-                                                designModels::add,
-                                                () -> OpaqueDecisionModel.fromJsonString(ctx.message())
-                                                        .flatMap(this::fromOpaqueDecision)
-                                                        .ifPresent(exploredDecisionModels::add));
-                            }
-                        });
-                        ws.onConnect(ctx -> {
-                            logger.info("A new reverse identification client connected");
-                            ctx.enableAutomaticPings(1, TimeUnit.SECONDS);
-                            exploredDecisionModels.clear();
-                            designModels.clear();
-                        });
-                        ws.onError(ctx -> {
-                            logger.error("An error occurred in the reverse identification websocket");
-                            if (ctx.session.isOpen()) {
-                                ctx.send("done");
-                                ctx.closeSession();
-                            }
-                        });
-                    })
+                    // .ws("/reverse", ws -> {
+                    // var logger = LoggerFactory.getLogger("main");
+                    // Set<DecisionModel> exploredDecisionModels = new CopyOnWriteArraySet<>();
+                    // Set<DesignModel> designModels = new CopyOnWriteArraySet<>();
+                    // ws.onBinaryMessage(ctx -> {
+                    // OpaqueDesignModel.fromCBORBytes(ctx.data()).flatMap(this::fromOpaqueDesign)
+                    // .ifPresentOrElse(designModels::add,
+                    // () -> OpaqueDecisionModel.fromCBORBytes(ctx.data())
+                    // .flatMap(this::fromOpaqueDecision)
+                    // .ifPresent(exploredDecisionModels::add));
+                    // });
+                    // ws.onMessage(ctx -> {
+                    // if (ctx.message().toLowerCase().contains("done")) {
+                    // logger.info("Running a reverse identification with %s and %s decision and
+                    // design models"
+                    // .formatted(exploredDecisionModels.size(), designModels.size()));
+                    // var reversed = reverseIdentification(exploredDecisionModels, designModels);
+                    // for (var result : reversed) {
+                    // OpaqueDesignModel.from(result).toJsonString().ifPresent(bytes -> {
+                    // logger.info("Sending a reverse identified design model");
+                    // if (ctx.session.isOpen())
+                    // ctx.send(bytes);
+                    // // designModels.add(result);
+                    // });
+                    // }
+                    // logger.info(
+                    // "Finished a reverse identification step with %s design models identified"
+                    // .formatted(designModels.size()));
+                    // if (ctx.session.isOpen())
+                    // ctx.send("done");
+                    // logger.info("Sent the done request");
+                    // ctx.closeSession();
+                    // } else {
+                    // OpaqueDesignModel.fromJsonString(ctx.message()).flatMap(this::fromOpaqueDesign)
+                    // .ifPresentOrElse(
+                    // designModels::add,
+                    // () -> OpaqueDecisionModel.fromJsonString(ctx.message())
+                    // .flatMap(this::fromOpaqueDecision)
+                    // .ifPresent(exploredDecisionModels::add));
+                    // }
+                    // });
+                    // ws.onConnect(ctx -> {
+                    // logger.info("A new reverse identification client connected");
+                    // ctx.enableAutomaticPings(1, TimeUnit.SECONDS);
+                    // exploredDecisionModels.clear();
+                    // designModels.clear();
+                    // });
+                    // ws.onError(ctx -> {
+                    // logger.error("An error occurred in the reverse identification websocket");
+                    // if (ctx.session.isOpen()) {
+                    // ctx.send("done");
+                    // ctx.closeSession();
+                    // }
+                    // });
+                    // })
                     .post("/reverse", ctx -> {
                         if (ctx.isMultipartFormData()) {
                             Set<DecisionModel> exploredDecisionModels = new HashSet<>();

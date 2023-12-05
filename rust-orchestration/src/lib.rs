@@ -35,9 +35,13 @@ use idesyde_core::OpaqueDesignModel;
 use log::debug;
 use log::warn;
 use rayon::prelude::*;
+use reqwest::blocking::multipart::Form;
+use reqwest::blocking::multipart::Part;
 use serde::de;
 use tungstenite::protocol::WebSocketConfig;
 use url::Url;
+
+use base64::{engine::general_purpose, Engine as _};
 
 trait LocalServerLike {
     fn get_process(&self) -> Arc<Mutex<Child>>;
@@ -279,93 +283,189 @@ impl Module for ExternalServerModule {
         mut_url
             .set_scheme("ws")
             .expect("Failed to set scheme to 'ws'.");
-        if let Ok(reverse_url) = mut_url.join("/reverse") {
-            if let Some((mut ws, _)) = mut_url
-                .socket_addrs(|| None)
-                .ok()
-                .and_then(|addrs| addrs.first().cloned())
-                .and_then(|addr| std::net::TcpStream::connect_timeout(&addr, Duration::from_millis(200)).ok())
-                .and_then(|stream| tungstenite::client(reverse_url, stream).ok())
-            {
-                // send solved decision models
-                for m in solved_decision_models {
-                    if let Ok(decision_json) = OpaqueDecisionModel::from(m).to_json() {
-                        if let Err(e) = ws.send(tungstenite::Message::text(decision_json)) {
-                            debug!("Decision JSON upload error {}", e.to_string());
-                        }
+        if let Ok(reverse_url) = self.url.join("/reverse") {
+            let mut form = Form::new();
+            let opaques: Vec<OpaqueDesignModel> = design_models
+                .par_iter()
+                .filter(|m| {
+                    let hash = m.global_md5_hash();
+                    if let Ok(cache_url) = self.url.join("/design/cache/exists") {
+                        return self
+                            .client
+                            .get(cache_url)
+                            .body(hash)
+                            .send()
+                            .ok()
+                            .and_then(|r| r.text().ok())
+                            .map(|x| x.eq_ignore_ascii_case("true"))
+                            .unwrap_or(true);
                     }
-                }
-                // same for design models
-                for m in design_models {
-                    if let Ok(design_json) = OpaqueDesignModel::from(m.as_ref()).to_json() {
-                        if let Err(e) = ws.send(tungstenite::Message::text(design_json)) {
-                            debug!("Design JSON upload error {}", e.to_string());
-                        };
-                    };
-                }
-                if let Err(e) = ws.send(tungstenite::Message::text("done")) {
-                    debug!("Failed to send 'done': {}", e.to_string());
-                };
-                let (identified_tx, identified_rx) = std::sync::mpsc::channel::<Arc<dyn DesignModel>>();
-                // the way in which the things are being reversed is currently a bit hacky.
-                // in the future it is best if the reciever does NOT depend on any time-outs.
-                // Currently it seems like the websocket connetions are a bit janky, so we do this workaround.
-                ws.flush().expect("Failed to flush info for reversing");
-                let imodule_name = self.unique_identifier().to_owned();
-                std::thread::spawn(move || {
-                    while let Ok(message) = ws.read() {
-                        // besides the answer, also read the module's messages
-                        match message {
-                            tungstenite::Message::Text(txt_msg) => {
-                                if txt_msg.eq_ignore_ascii_case("done") {
-                                    debug!("Reverse done for {}", imodule_name);
-                                    break;
-                                } else if let Ok(opaque) =
-                                    OpaqueDesignModel::from_json_str(txt_msg.as_str())
-                                {
-                                    let opaquea = Arc::new(opaque) as Arc<dyn DesignModel>;
-                                    if let Err(e) = identified_tx.send(opaquea) {
-                                        debug!("Failed to recover an identified design model with: {}", e.to_string());
-                                    };
-                                }
-                            }
-                            tungstenite::Message::Binary(decision_cbor) => {
-                                if let Ok(opaque) =
-                                    OpaqueDesignModel::from_cbor(decision_cbor.as_slice())
-                                {
-                                    let opaquea = Arc::new(opaque) as Arc<dyn DesignModel>;
-                                    if let Err(e) = identified_tx.send(opaquea) {
-                                        debug!("Failed to recover an identified design model with: {}", e.to_string());
-                                    };
-                                }
-                            }
-                            tungstenite::Message::Ping(_) => {
-                                if let Err(_) = ws.send(tungstenite::Message::Pong(vec![])) {
-                                    debug!(
-                                        "Failed to send ping message to other end. Trying to proceed anyway."
-                                    );
-                                };
-                            }
-                            tungstenite::Message::Pong(_) => {
-                                if let Err(_) = ws.send(tungstenite::Message::Ping(vec![])) {
-                                    debug!(
-                                        "Failed to send pong message to other end. Trying to proceed anyway."
-                                    );
-                                };
-                            }
-                            _ => break,
-                        }
+                    true
+                })
+                .map(|m| OpaqueDesignModel::from(m.as_ref()))
+                .collect();
+            let solved: Vec<OpaqueDecisionModel> = solved_decision_models
+                .par_iter()
+                .filter(|m| {
+                    let hash = m.global_md5_hash();
+                    if let Ok(cache_url) = self.url.join("/solved/cache/exists") {
+                        return self
+                            .client
+                            .get(cache_url)
+                            .body(hash)
+                            .send()
+                            .ok()
+                            .and_then(|r| r.text().ok())
+                            .map(|x| x.eq_ignore_ascii_case("true"))
+                            .unwrap_or(true);
                     }
-                });
-                let mut reverse_identified = Vec::new();
-                // println!("Reverse done for {}", self.unique_identifier());
-                while let Ok(m) = identified_rx.recv_timeout(Duration::from_millis(250 * ((solved_decision_models.len() + design_models.len()) as u64))) {
-                    reverse_identified.push(m);
+                    true
+                })
+                .map(|m| OpaqueDecisionModel::from(m.as_ref()))
+                .collect();
+            for m in opaques {
+                if let Ok(bodyj) = m.to_json() {
+                    let part = Part::text(bodyj);
+                    form = form.part(format!("design{}", m.category()), part);
                 }
-                // get all last without blocking
-                identified_rx.try_iter().for_each(|m| reverse_identified.push(m));
-                return reverse_identified;
             }
+            for m in solved {
+                if let Ok(bodyj) = m.to_json() {
+                    let part = Part::text(bodyj);
+                    form = form.part(format!("solved{}", m.category()), part);
+                }
+            }
+            let reversed_hash_str: Vec<String> = self
+                .client
+                .post(reverse_url)
+                .multipart(form)
+                .send()
+                .ok()
+                .and_then(|res| res.text().ok())
+                .and_then(|txt| serde_json::from_str::<Vec<String>>(txt.as_str()).ok())
+                .unwrap_or(vec![]);
+            let reversed_hashes = reversed_hash_str
+                .iter()
+                .map(|s| general_purpose::STANDARD_NO_PAD.decode(s).ok())
+                .flatten()
+                .collect::<Vec<Vec<u8>>>();
+            let reversed_models = reversed_hashes
+                .into_par_iter()
+                .flat_map(|hash| {
+                    if let Ok(cache_url) = self.url.join("/reverse/cache/fetch") {
+                        return self
+                            .client
+                            .get(cache_url)
+                            .body(hash)
+                            .send()
+                            .ok()
+                            .and_then(|r| r.text().ok())
+                            .and_then(|txt| OpaqueDesignModel::from_json_str(txt.as_str()).ok())
+                            .map(|x| Arc::new(x) as Arc<dyn DesignModel>);
+                    }
+                    None
+                })
+                .collect();
+            return reversed_models;
+            // if let Some((mut ws, _)) = mut_url
+            //     .socket_addrs(|| None)
+            //     .ok()
+            //     .and_then(|addrs| addrs.first().cloned())
+            //     .and_then(|addr| {
+            //         std::net::TcpStream::connect_timeout(&addr, Duration::from_millis(200)).ok()
+            //     })
+            //     .and_then(|stream| tungstenite::client(reverse_url, stream).ok())
+            // {
+            //     // send solved decision models
+            //     for m in solved_decision_models {
+            //         if let Ok(decision_json) = OpaqueDecisionModel::from(m).to_json() {
+            //             if let Err(e) = ws.send(tungstenite::Message::text(decision_json)) {
+            //                 debug!("Decision JSON upload error {}", e.to_string());
+            //             }
+            //         }
+            //     }
+            //     // same for design models
+            //     for m in design_models {
+            //         if let Ok(design_json) = OpaqueDesignModel::from(m.as_ref()).to_json() {
+            //             if let Err(e) = ws.send(tungstenite::Message::text(design_json)) {
+            //                 debug!("Design JSON upload error {}", e.to_string());
+            //             };
+            //         };
+            //     }
+            //     if let Err(e) = ws.send(tungstenite::Message::text("done")) {
+            //         debug!("Failed to send 'done': {}", e.to_string());
+            //     };
+            //     let (identified_tx, identified_rx) =
+            //         std::sync::mpsc::channel::<Arc<dyn DesignModel>>();
+            //     // the way in which the things are being reversed is currently a bit hacky.
+            //     // in the future it is best if the reciever does NOT depend on any time-outs.
+            //     // Currently it seems like the websocket connetions are a bit janky, so we do this workaround.
+            //     ws.flush().expect("Failed to flush info for reversing");
+            //     let imodule_name = self.unique_identifier().to_owned();
+            //     std::thread::spawn(move || {
+            //         while let Ok(message) = ws.read() {
+            //             // besides the answer, also read the module's messages
+            //             match message {
+            //                 tungstenite::Message::Text(txt_msg) => {
+            //                     if txt_msg.eq_ignore_ascii_case("done") {
+            //                         debug!("Reverse done for {}", imodule_name);
+            //                         break;
+            //                     } else if let Ok(opaque) =
+            //                         OpaqueDesignModel::from_json_str(txt_msg.as_str())
+            //                     {
+            //                         let opaquea = Arc::new(opaque) as Arc<dyn DesignModel>;
+            //                         if let Err(e) = identified_tx.send(opaquea) {
+            //                             debug!(
+            //                                 "Failed to recover an identified design model with: {}",
+            //                                 e.to_string()
+            //                             );
+            //                         };
+            //                     }
+            //                 }
+            //                 tungstenite::Message::Binary(decision_cbor) => {
+            //                     if let Ok(opaque) =
+            //                         OpaqueDesignModel::from_cbor(decision_cbor.as_slice())
+            //                     {
+            //                         let opaquea = Arc::new(opaque) as Arc<dyn DesignModel>;
+            //                         if let Err(e) = identified_tx.send(opaquea) {
+            //                             debug!(
+            //                                 "Failed to recover an identified design model with: {}",
+            //                                 e.to_string()
+            //                             );
+            //                         };
+            //                     }
+            //                 }
+            //                 tungstenite::Message::Ping(_) => {
+            //                     if let Err(_) = ws.send(tungstenite::Message::Pong(vec![])) {
+            //                         debug!(
+            //                             "Failed to send ping message to other end. Trying to proceed anyway."
+            //                         );
+            //                     };
+            //                 }
+            //                 tungstenite::Message::Pong(_) => {
+            //                     if let Err(_) = ws.send(tungstenite::Message::Ping(vec![])) {
+            //                         debug!(
+            //                             "Failed to send pong message to other end. Trying to proceed anyway."
+            //                         );
+            //                     };
+            //                 }
+            //                 _ => break,
+            //             }
+            //         }
+            //     });
+            //     let mut reverse_identified = Vec::new();
+            //     // println!("Reverse done for {}", self.unique_identifier());
+            //     while let Ok(m) = identified_rx.recv_timeout(Duration::from_millis(
+            //         250 * ((solved_decision_models.len() + design_models.len()) as u64),
+            //     )) {
+            //         reverse_identified.push(m);
+            //     }
+            //     // get all last without blocking
+            //     identified_rx
+            //         .try_iter()
+            //         .for_each(|m| reverse_identified.push(m));
+            //     return reverse_identified;
+            // }
         }
         vec![]
     }

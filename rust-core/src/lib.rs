@@ -61,6 +61,16 @@ pub trait DesignModel: Send + DowncastSync {
         // h.write_to_dir(base_path, prefix_str, suffix_str);
         // h
     }
+
+    fn global_md5_hash(&self) -> Vec<u8> {
+        let mut hasher = md5::Context::new();
+        hasher.consume(self.format().as_bytes());
+        hasher.consume(self.category().as_bytes());
+        for e in self.elements() {
+            hasher.consume(e.as_bytes());
+        }
+        hasher.compute().to_vec()
+    }
 }
 impl_downcast!(sync DesignModel);
 
@@ -177,6 +187,15 @@ pub trait DecisionModel: Send + DowncastSync {
         }
         // h.write_to_dir(base_path, prefix_str, suffix_str);
         // h
+    }
+
+    fn global_md5_hash(&self) -> Vec<u8> {
+        let mut hasher = md5::Context::new();
+        hasher.consume(self.category().as_bytes());
+        for e in self.part() {
+            hasher.consume(e.as_bytes());
+        }
+        hasher.compute().to_vec()
     }
 }
 impl_downcast!(sync DecisionModel);
@@ -875,6 +894,7 @@ pub trait Module: Send + Sync {
     fn location_url(&self) -> Option<Url> {
         None
     }
+
     fn explorers(&self) -> Vec<Arc<dyn Explorer>> {
         Vec::new()
     }

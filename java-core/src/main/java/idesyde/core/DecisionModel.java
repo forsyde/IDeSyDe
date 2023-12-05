@@ -5,6 +5,8 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.dataformat.cbor.CBORFactory;
 import com.fasterxml.jackson.datatype.jdk8.Jdk8Module;
 
+import java.security.MessageDigest;
+import java.security.NoSuchAlgorithmException;
 import java.util.Optional;
 import java.util.Set;
 
@@ -79,6 +81,18 @@ public interface DecisionModel {
             return Optional.empty();
         }
     };
+
+    default Optional<byte[]> globalMD5Hash() {
+        MessageDigest md5;
+        try {
+            md5 = MessageDigest.getInstance("MD5");
+            md5.update(category().getBytes());
+            part().stream().sorted().forEachOrdered(s -> md5.update(s.getBytes()));
+            return Optional.of(md5.digest());
+        } catch (NoSuchAlgorithmException e) {
+            return Optional.empty();
+        }
+    }
 
     /**
      * The shared and static Jackson object mapper used for (de) serialization to

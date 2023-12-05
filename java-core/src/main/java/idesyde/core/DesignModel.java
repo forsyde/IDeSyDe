@@ -1,5 +1,7 @@
 package idesyde.core;
 
+import java.security.MessageDigest;
+import java.security.NoSuchAlgorithmException;
 import java.util.Optional;
 import java.util.Set;
 
@@ -34,9 +36,9 @@ import com.fasterxml.jackson.dataformat.cbor.CBORFactory;
  */
 public interface DesignModel {
 
-//    default DesignModelHeader header() {
-//        return new DesignModelHeader(category(), elements(), new HashSet<>());
-//    }
+    // default DesignModelHeader header() {
+    // return new DesignModelHeader(category(), elements(), new HashSet<>());
+    // }
 
     /**
      * @return The set of identifiers for partially identifiable elements
@@ -47,7 +49,7 @@ public interface DesignModel {
 
     /**
      * @return The category that describes this design model. Default value (and
-     * recommendation) is the class name.
+     *         recommendation) is the class name.
      * 
      */
     default String category() {
@@ -55,8 +57,9 @@ public interface DesignModel {
     }
 
     /**
-     * @return The format associated with this decision model. E.g. `fiodl` for ForSyDe IO
-     * files.
+     * @return The format associated with this decision model. E.g. `fiodl` for
+     *         ForSyDe IO
+     *         files.
      */
     default String format() {
         return "";
@@ -69,12 +72,27 @@ public interface DesignModel {
         return Optional.empty();
     }
 
+    default Optional<byte[]> globalMD5Hash() {
+        MessageDigest md5;
+        try {
+            md5 = MessageDigest.getInstance("MD5");
+            md5.update(format().getBytes());
+            md5.update(category().getBytes());
+            elements().stream().sorted().forEachOrdered(s -> md5.update(s.getBytes()));
+            return Optional.of(md5.digest());
+        } catch (NoSuchAlgorithmException e) {
+            return Optional.empty();
+        }
+    }
+
     /**
-     * The shared and static Jackson object mapper used for (de) serialization to (from) JSON.
+     * The shared and static Jackson object mapper used for (de) serialization to
+     * (from) JSON.
      */
     static final ObjectMapper objectMapper = new ObjectMapper();
     /**
-     * The shared and static Jackson object mapper used for (de) serialization to (from) CBOR.
+     * The shared and static Jackson object mapper used for (de) serialization to
+     * (from) CBOR.
      */
     static final ObjectMapper objectMapperCBOR = new ObjectMapper(new CBORFactory());
 }

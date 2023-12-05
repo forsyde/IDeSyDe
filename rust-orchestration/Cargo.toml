@@ -21,3 +21,4 @@ tungstenite.workspace = true
 url.workspace = true
 derive_builder.workspace = true
 reqwest-eventsource.workspace = true
+base64 = "0.21.5"

@@ -284,8 +284,7 @@ impl Module for ExternalServerModule {
         //     .set_scheme("ws")
         //     .expect("Failed to set scheme to 'ws'.");
         if let Ok(reverse_url) = self.url.join("/reverse") {
-            let mut form = Form::new();
-            let opaques: Vec<OpaqueDesignModel> = design_models
+            design_models
                 .par_iter()
                 .filter(|m| {
                     let hash = m.global_md5_hash();
@@ -297,14 +296,22 @@ impl Module for ExternalServerModule {
                             .send()
                             .ok()
                             .and_then(|r| r.text().ok())
-                            .map(|x| x.eq_ignore_ascii_case("true"))
+                            .map(|x| x.eq_ignore_ascii_case("false"))
                             .unwrap_or(true);
                     }
                     true
                 })
                 .map(|m| OpaqueDesignModel::from(m.as_ref()))
-                .collect();
-            let solved: Vec<OpaqueDecisionModel> = solved_decision_models
+                .for_each(|m| {
+                    if let Ok(bodyj) = m.to_json() {
+                        if let Ok(design_add_url) = self.url.join("/design/cache/add") {
+                            if let Err(e) = self.client.put(design_add_url).body(bodyj).send() {
+                                debug!("Failed to send design model to reverse with: {}", e.to_string());
+                            };
+                        }
+                    }
+                });
+            solved_decision_models
                 .par_iter()
                 .filter(|m| {
                     let hash = m.global_md5_hash();
@@ -316,33 +323,43 @@ impl Module for ExternalServerModule {
                             .send()
                             .ok()
                             .and_then(|r| r.text().ok())
-                            .map(|x| x.eq_ignore_ascii_case("true"))
+                            .map(|x| x.eq_ignore_ascii_case("false"))
                             .unwrap_or(true);
                     }
                     true
                 })
                 .map(|m| OpaqueDecisionModel::from(m.as_ref()))
-                .collect();
-            for m in opaques {
-                if let Ok(bodyj) = m.to_json() {
-                    let part = Part::text(bodyj);
-                    form = form.part(format!("design{}", m.category()), part);
-                }
-            }
-            for m in solved {
-                if let Ok(bodyj) = m.to_json() {
-                    let part = Part::text(bodyj);
-                    form = form.part(format!("solved{}", m.category()), part);
-                }
-            }
+                .for_each(|m| {
+                    if let Ok(bodyj) = m.to_json() {
+                        if let Ok(decision_add_url) = self.url.join("/solved/cache/add") {
+                            if let Err(e) = self.client.put(decision_add_url).body(bodyj).send() {
+                                debug!("Failed to send design model to reverse with: {}", e.to_string());
+                            };
+                        }
+                    }
+                });
+            // let mut form = Form::new();
+            // for m in opaques {
+            //     if let Ok(bodyj) = m.to_json() {
+            //         form = form.text(format!("design{}", m.category()), bodyj);
+            //     }
+            // }
+            // for m in solved {
+            //     if let Ok(bodyj) = m.to_json() {
+            //         // let part = Part::text(bodyj);
+            //         form = form.text(format!("solved{}", m.category()), bodyj);
+            //     }
+            // }
             let reversed_hash_str: Vec<String> = self
                 .client
                 .post(reverse_url)
-                .multipart(form)
+                // .multipart(form)
                 .send()
                 .ok()
                 .and_then(|res| res.text().ok())
-                .and_then(|txt| serde_json::from_str::<Vec<String>>(txt.as_str()).ok())
+                .and_then(|txt| {
+                    serde_json::from_str::<Vec<String>>(txt.as_str()).ok()
+                })
                 .unwrap_or(vec![]);
             let reversed_hashes = reversed_hash_str
                 .iter()
@@ -352,14 +369,17 @@ impl Module for ExternalServerModule {
             let reversed_models = reversed_hashes
                 .into_par_iter()
                 .flat_map(|hash| {
-                    if let Ok(cache_url) = self.url.join("/reverse/cache/fetch") {
+                    // let hash_str = general_purpose::STANDARD.encode(hash);
+                    if let Ok(cache_url) = self.url.join("/reversed/cache/fetch") {
                         return self
                             .client
                             .get(cache_url)
                             .body(hash)
                             .send()
                             .ok()
-                            .and_then(|r| r.text().ok())
+                            .and_then(|r| {
+                                r.text().ok()
+                            })
                             .and_then(|txt| OpaqueDesignModel::from_json_str(txt.as_str()).ok())
                             .map(|x| Arc::new(x) as Arc<dyn DesignModel>);
                     }

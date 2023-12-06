@@ -85,10 +85,10 @@ public interface StandaloneModule extends Module {
     }
 
     default Optional<Javalin> standaloneModule(String[] args) {
-        var cachedDecisionModels = new ConcurrentHashMap<byte[], DecisionModel>();
-        var cachedSolvedDecisionModels = new ConcurrentHashMap<byte[], DecisionModel>();
-        var cachedDesignModels = new ConcurrentHashMap<byte[], DesignModel>();
-        var cachedReversedDesignModels = new ConcurrentHashMap<byte[], DesignModel>();
+        var cachedDecisionModels = new ConcurrentHashMap<ByteBuffer, DecisionModel>();
+        var cachedSolvedDecisionModels = new ConcurrentHashMap<ByteBuffer, DecisionModel>();
+        var cachedDesignModels = new ConcurrentHashMap<ByteBuffer, DesignModel>();
+        var cachedReversedDesignModels = new ConcurrentHashMap<ByteBuffer, DesignModel>();
         var sessionDesignModels = new ConcurrentHashMap<String, ConcurrentSkipListSet<DesignModel>>();
         var sessionDecisionModels = new ConcurrentHashMap<String, ConcurrentSkipListSet<DecisionModel>>();
         var sessionIdentifiedDecisionModels = new ConcurrentHashMap<String, Deque<DecisionModel>>();
@@ -148,13 +148,24 @@ public interface StandaloneModule extends Module {
                         }
                     })
                     .get("/reversed/cache/fetch", ctx -> {
-                        if (cachedReversedDesignModels.containsKey(ctx.bodyAsBytes())) {
-                            OpaqueDesignModel.from(cachedReversedDesignModels.get(ctx.bodyAsBytes()))
+                        var logger = LoggerFactory.getLogger("main");
+                        // logger.info("Sought model: %s".formatted(ctx.body()));
+                        var bb = ByteBuffer.wrap(ctx.bodyAsBytes());
+                        if (cachedReversedDesignModels.containsKey(bb)) {
+                            OpaqueDesignModel.from(cachedReversedDesignModels.get(bb))
                                     .toJsonString().ifPresent(ctx::result);
                         } else {
                             ctx.status(404);
                         }
                     })
+                    .put("/decision/cache/add", ctx -> OpaqueDecisionModel.fromJsonString(ctx.body()).flatMap(this::fromOpaqueDecision)
+                                                .ifPresent(m -> m.globalMD5Hash().ifPresent(hash -> cachedDecisionModels.put(ByteBuffer.wrap(hash), m))))
+                    .put("/solved/cache/add", ctx -> OpaqueDecisionModel.fromJsonString(ctx.body()).flatMap(this::fromOpaqueDecision)
+                                                .ifPresent(m -> m.globalMD5Hash().ifPresent(hash -> cachedSolvedDecisionModels.put(ByteBuffer.wrap(hash), m))))
+                    .put("/design/cache/add", ctx -> OpaqueDesignModel.fromJsonString(ctx.body()).flatMap(this::fromOpaqueDesign)
+                                                .ifPresent(m -> m.globalMD5Hash().ifPresent(hash -> cachedDesignModels.put(ByteBuffer.wrap(hash), m))))
+                    .put("/reversed/cache/add", ctx -> OpaqueDesignModel.fromJsonString(ctx.body()).flatMap(this::fromOpaqueDesign)
+                                                .ifPresent(m -> m.globalMD5Hash().ifPresent(hash -> cachedReversedDesignModels.put(ByteBuffer.wrap(hash), m))))
                     .post("/decision/cache/clear", ctx -> cachedDecisionModels.clear())
                     .post("/design/cache/clear", ctx -> cachedDesignModels.clear())
                     .post("/solved/cache/clear", ctx -> cachedSolvedDecisionModels.clear())
@@ -468,36 +479,41 @@ public interface StandaloneModule extends Module {
                     // });
                     // })
                     .post("/reverse", ctx -> {
-                        if (ctx.isMultipartFormData()) {
-                            Set<DecisionModel> exploredDecisionModels = new HashSet<>();
-                            Set<DesignModel> designModels = new HashSet<>();
-                            cachedSolvedDecisionModels.values().forEach(exploredDecisionModels::add);
-                            cachedDesignModels.values().forEach(designModels::add);
-                            ctx.formParamMap().forEach((name, entries) -> {
-                                if (name.startsWith("solved")) {
-                                    entries.stream().findAny().ifPresent(msg -> {
-                                        OpaqueDecisionModel.fromJsonString(msg).flatMap(this::fromOpaqueDecision)
-                                                .ifPresent(exploredDecisionModels::add);
-                                    });
-                                } else if (name.startsWith("design")) {
-                                    entries.stream().findAny().ifPresent(msg -> {
-                                        OpaqueDesignModel.fromJsonString(msg).flatMap(this::fromOpaqueDesign)
-                                                .ifPresent(designModels::add);
-                                    });
-                                }
+                        var logger = LoggerFactory.getLogger("main");
+                        Set<DecisionModel> exploredDecisionModels = new HashSet<>();
+                        Set<DesignModel> designModels = new HashSet<>();
+                        cachedSolvedDecisionModels.values().forEach(exploredDecisionModels::add);
+                        cachedDesignModels.values().forEach(designModels::add);
+                        logger.info("Running a reverse identification with %s and %s decision and design models"
+                                .formatted(exploredDecisionModels.size(), designModels.size()));
+                        // ctx.formParamMap().forEach((name, entries) -> {
+                        //     if (name.startsWith("solved")) {
+                        //         entries.stream().findAny().ifPresent(msg -> {
+                        //             OpaqueDecisionModel.fromJsonString(msg).flatMap(this::fromOpaqueDecision)
+                        //                     .ifPresent(exploredDecisionModels::add);
+                        //         });
+                        //     } else if (name.startsWith("design")) {
+                        //         entries.stream().findAny().ifPresent(msg -> {
+                        //             OpaqueDesignModel.fromJsonString(msg).flatMap(this::fromOpaqueDesign)
+                        //                     .ifPresent(designModels::add);
+                        //         });
+                        //     }
+                        // });
+                        var reversed = reverseIdentification(exploredDecisionModels, designModels);
+                        var reverseResponse = new ArrayList<String>();
+                        for (var result : reversed) {
+                            result.globalMD5Hash().ifPresent(hash -> {
+                                cachedReversedDesignModels.put(ByteBuffer.wrap(hash), result);
+                                reverseResponse.add(Base64.getEncoder().withoutPadding().encodeToString(hash));
+                                // System.out.println(Arrays.toString(hash));
                             });
-                            var reversed = reverseIdentification(exploredDecisionModels, designModels);
-                            var reverseResponse = new ArrayList<String>();
-                            for (var result : reversed) {
-                                result.globalMD5Hash().ifPresent(hash -> {
-                                    if (!cachedReversedDesignModels.containsKey(hash)) {
-                                        cachedReversedDesignModels.put(hash, result);
-                                        reverseResponse.add(Base64.getEncoder().encodeToString(hash));
-                                    }
-                                });
-                            }
-                            ctx.result("[ %s ]".formatted(String.join(", ", reverseResponse)));
                         }
+                        // ctx.result("[ %s ]".formatted(String.join(", ", reverseResponse.stream().map(s -> "\"" + s + "\"").collect(Collectors.toList()))));
+                        ctx.json(reverseResponse);
+                        logger.info("Finished a reverse identification with %s design models reverse identified"
+                                .formatted(reverseResponse.size()));
+                        // if (ctx.isMultipart()) {
+                        // }
                     }).get("/reversed", ctx -> {
                         if (ctx.queryParamMap().containsKey("session")) {
                             String session = ctx.queryParam("session");

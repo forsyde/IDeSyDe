@@ -104,12 +104,12 @@ public interface StandaloneModule extends Module {
                             ctx -> {
                                 var bb = ByteBuffer.wrap(ctx.bodyAsBytes());
                                 if (cachedDecisionModelHashes.contains(bb)) {
-                                    System.out.println("YES decision cache exists of "
-                                            + Arrays.toString(ctx.bodyAsBytes()));
+                                    // System.out.println("YES decision cache exists of "
+                                    //         + Arrays.toString(ctx.bodyAsBytes()));
                                     ctx.result("true");
                                 } else {
-                                    System.out.println("NO decision cache exists of "
-                                            + Arrays.toString(ctx.bodyAsBytes()));
+                                    // System.out.println("NO decision cache exists of "
+                                    //         + Arrays.toString(ctx.bodyAsBytes()));
                                     ctx.result("false");
                                 }
                             })
@@ -169,7 +169,7 @@ public interface StandaloneModule extends Module {
                     })
                     .put("/decision/cache/add",
                             ctx -> {
-                                System.out.println("Adding to decision cache: " + ctx.body());
+                                // System.out.println("Adding to decision cache: " + ctx.body());
                                 OpaqueDecisionModel.fromJsonString(ctx.body()).ifPresent(opaque -> {
                                     opaque.globalMD5Hash().ifPresent(hash -> cachedDecisionModels
                                             .put(ByteBuffer.wrap(hash), fromOpaqueDecision(opaque)));

@@ -898,12 +898,12 @@ pub trait Module: Send + Sync {
     fn explorers(&self) -> Vec<Arc<dyn Explorer>> {
         Vec::new()
     }
-    fn start_identification(
+    fn identification_step(
         &self,
-        _initial_design_models: &Vec<Arc<dyn DesignModel>>,
-        _initial_decision_models: &Vec<Arc<dyn DecisionModel>>,
-    ) -> Box<dyn IdentificationIterator> {
-        Box::new(empty_identification_iter())
+        _decision_models: &Vec<Arc<dyn DecisionModel>>,
+        _design_models: &Vec<Arc<dyn DesignModel>>,
+    ) -> IdentificationResult {
+        (vec![], vec![])
     }
     fn reverse_identification(
         &self,

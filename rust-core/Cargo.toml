@@ -5,6 +5,7 @@ authors.workspace = true
 edition.workspace = true
 
 [dependencies]
+base64.workspace = true
 ciborium.workspace = true
 derive_builder.workspace = true
 downcast-rs.workspace = true

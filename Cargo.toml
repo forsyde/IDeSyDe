@@ -9,6 +9,7 @@ members = [
 description = "IDeSyDe Rust suite"
 
 [workspace.dependencies]
+base64 = "0.21.5"
 ciborium = "0.2.1"
 clap = { version = "4.2.1", features = ["derive"] }
 derive_builder = "0.12.0"

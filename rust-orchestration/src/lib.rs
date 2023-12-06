@@ -25,9 +25,11 @@ use std::time::Duration;
 use exploration::ExternalExplorerBuilder;
 
 use identification::ExternalServerIdentifiticationIterator;
+use idesyde_blueprints::IdentificationResultCompactMessage;
 use idesyde_core::DecisionModel;
 use idesyde_core::DesignModel;
 use idesyde_core::Explorer;
+use idesyde_core::IdentificationResult;
 use idesyde_core::Module;
 
 use idesyde_core::OpaqueDecisionModel;
@@ -247,31 +249,150 @@ impl Module for ExternalServerModule {
         self.name.clone()
     }
 
-    fn start_identification(
+    fn identification_step(
         &self,
-        initial_design_models: &Vec<Arc<dyn DesignModel>>,
-        initial_decision_models: &Vec<Arc<dyn DecisionModel>>,
-    ) -> Box<dyn idesyde_core::IdentificationIterator> {
-        let mut mut_url = self.url.clone();
-        mut_url
-            .set_scheme("ws")
-            .expect("Failed to set scheme to 'ws'.");
-        if let Ok(identify_url) = mut_url.join("/identify") {
-            if let Some((ws, _)) = mut_url
-                .socket_addrs(|| None)
+        decision_models: &Vec<Arc<dyn DecisionModel>>,
+        design_models: &Vec<Arc<dyn DesignModel>>,
+    ) -> IdentificationResult {
+        // let mut mut_url = self.url.clone();
+        // mut_url
+        //     .set_scheme("ws")
+        //     .expect("Failed to set scheme to 'ws'.");
+        // if let Ok(identify_url) = mut_url.join("/identify") {
+        //     if let Some((ws, _)) = mut_url
+        //         .socket_addrs(|| None)
+        //         .ok()
+        //         .and_then(|addrs| addrs.first().cloned())
+        //         .and_then(|addr| std::net::TcpStream::connect(addr).ok())
+        //         .and_then(|stream| tungstenite::client(identify_url, stream).ok())
+        //     {
+        //         return Box::new(ExternalServerIdentifiticationIterator::new(
+        //             initial_design_models,
+        //             initial_decision_models,
+        //             ws,
+        //         ));
+        //     }
+        // }
+        // Box::new(idesyde_core::empty_identification_iter())
+        design_models
+            .par_iter()
+            .filter(|m| {
+                let hash = m.global_md5_hash();
+                if let Ok(cache_url) = self.url.join("/design/cache/exists") {
+                    return self
+                        .client
+                        .get(cache_url)
+                        .body(hash)
+                        .send()
+                        .ok()
+                        .and_then(|r| r.text().ok())
+                        .map(|x| x.eq_ignore_ascii_case("false"))
+                        .unwrap_or(true);
+                }
+                true
+            })
+            .map(|m| OpaqueDesignModel::from(m.as_ref()))
+            .for_each(|m| {
+                if let Ok(bodyj) = m.to_json() {
+                    if let Ok(design_add_url) = self.url.join("/design/cache/add") {
+                        if let Err(e) = self.client.put(design_add_url).body(bodyj).send() {
+                            debug!(
+                                "Failed to send design model to identify with: {}",
+                                e.to_string()
+                            );
+                        };
+                    }
+                }
+            });
+        decision_models
+            .par_iter()
+            .filter(|m| {
+                let hash = m.global_md5_hash();
+                if let Ok(cache_url) = self.url.join("/decision/cache/exists") {
+                    return self
+                        .client
+                        .get(cache_url)
+                        .body(hash)
+                        .send()
+                        .ok()
+                        .and_then(|r| r.text().ok())
+                        .map(|x| x.eq_ignore_ascii_case("false"))
+                        .unwrap_or(true);
+                }
+                true
+            })
+            .map(|m| OpaqueDecisionModel::from(m.as_ref()))
+            .for_each(|m| {
+                if let Ok(bodyj) = m.to_json() {
+                    if let Ok(decision_add_url) = self.url.join("/decision/cache/add") {
+                        if let Err(e) = self.client.put(decision_add_url).body(bodyj).send() {
+                            debug!(
+                                "Failed to send design model to identify  with: {}",
+                                e.to_string()
+                            );
+                        };
+                    }
+                }
+            });
+        // let mut form = Form::new();
+        // for m in opaques {
+        //     if let Ok(bodyj) = m.to_json() {
+        //         form = form.text(format!("design{}", m.category()), bodyj);
+        //     }
+        // }
+        // for m in solved {
+        //     if let Ok(bodyj) = m.to_json() {
+        //         // let part = Part::text(bodyj);
+        //         form = form.text(format!("solved{}", m.category()), bodyj);
+        //     }
+        // }
+        if let Ok(identify) = self.url.join("/identify") {
+            if let Some(identified_message) = self
+                .client
+                .post(identify)
+                // .multipart(form)
+                .send()
                 .ok()
-                .and_then(|addrs| addrs.first().cloned())
-                .and_then(|addr| std::net::TcpStream::connect(addr).ok())
-                .and_then(|stream| tungstenite::client(identify_url, stream).ok())
+                .and_then(|res| res.text().ok())
+                .and_then(|txt| {
+                    debug!("Received identification result: {}", txt.as_str());
+                    serde_json::from_str::<IdentificationResultCompactMessage>(txt.as_str()).ok()
+                })
             {
-                return Box::new(ExternalServerIdentifiticationIterator::new(
-                    initial_design_models,
-                    initial_decision_models,
-                    ws,
-                ));
+                let reversed_hashes = identified_message
+                    .identified
+                    .iter()
+                    .map(|s| general_purpose::STANDARD_NO_PAD.decode(s).ok())
+                    .flatten()
+                    .collect::<Vec<Vec<u8>>>();
+                debug!("Reversed hashes: {:?}", reversed_hashes);
+                let identified_models = reversed_hashes
+                    .into_par_iter()
+                    .flat_map(|hash| {
+                        // let hash_str = general_purpose::STANDARD.encode(hash);
+                        if let Ok(cache_url) = self.url.join("/decision/cache/fetch") {
+                            return self
+                                .client
+                                .get(cache_url)
+                                .body(hash)
+                                .send()
+                                .ok()
+                                .and_then(|r| r.text().ok())
+                                .and_then(|txt| {
+                                    OpaqueDecisionModel::from_json_str(txt.as_str()).ok()
+                                })
+                                .map(|x| Arc::new(x) as Arc<dyn DecisionModel>);
+                        }
+                        None
+                    })
+                    .collect();
+                return (
+                    identified_models,
+                    identified_message.messages.into_iter().collect(),
+                );
             }
         }
-        Box::new(idesyde_core::empty_identification_iter())
+        (vec![], vec![])
     }
 
     fn reverse_identification(
@@ -306,7 +427,10 @@ impl Module for ExternalServerModule {
                     if let Ok(bodyj) = m.to_json() {
                         if let Ok(design_add_url) = self.url.join("/design/cache/add") {
                             if let Err(e) = self.client.put(design_add_url).body(bodyj).send() {
-                                debug!("Failed to send design model to reverse with: {}", e.to_string());
+                                debug!(
+                                    "Failed to send design model to reverse with: {}",
+                                    e.to_string()
+                                );
                             };
                         }
                     }
@@ -333,7 +457,10 @@ impl Module for ExternalServerModule {
                     if let Ok(bodyj) = m.to_json() {
                         if let Ok(decision_add_url) = self.url.join("/solved/cache/add") {
                             if let Err(e) = self.client.put(decision_add_url).body(bodyj).send() {
-                                debug!("Failed to send design model to reverse with: {}", e.to_string());
+                                debug!(
+                                    "Failed to send design model to reverse with: {}",
+                                    e.to_string()
+                                );
                             };
                         }
                     }
@@ -357,9 +484,7 @@ impl Module for ExternalServerModule {
                 .send()
                 .ok()
                 .and_then(|res| res.text().ok())
-                .and_then(|txt| {
-                    serde_json::from_str::<Vec<String>>(txt.as_str()).ok()
-                })
+                .and_then(|txt| serde_json::from_str::<Vec<String>>(txt.as_str()).ok())
                 .unwrap_or(vec![]);
             let reversed_hashes = reversed_hash_str
                 .iter()
@@ -377,9 +502,7 @@ impl Module for ExternalServerModule {
                             .body(hash)
                             .send()
                             .ok()
-                            .and_then(|r| {
-                                r.text().ok()
-                            })
+                            .and_then(|r| r.text().ok())
                             .and_then(|txt| OpaqueDesignModel::from_json_str(txt.as_str()).ok())
                             .map(|x| Arc::new(x) as Arc<dyn DesignModel>);
                     }

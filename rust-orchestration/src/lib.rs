@@ -275,7 +275,7 @@ impl Module for ExternalServerModule {
         // }
         // Box::new(idesyde_core::empty_identification_iter())
         design_models
-            .iter()
+            .par_iter()
             .filter(|m| {
                 let hash = m.global_md5_hash();
                 if let Ok(cache_url) = self.url.join("/design/cache/exists") {
@@ -305,7 +305,7 @@ impl Module for ExternalServerModule {
                 }
             });
         decision_models
-            .iter()
+            .par_iter()
             .filter(|m| {
                 let hash = m.global_md5_hash();
                 if let Ok(cache_url) = self.url.join("/decision/cache/exists") {

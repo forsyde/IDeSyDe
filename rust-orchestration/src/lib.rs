@@ -323,6 +323,11 @@ impl Module for ExternalServerModule {
             })
             .map(|m| OpaqueDecisionModel::from(m.as_ref()))
             .for_each(|m| {
+                debug!(
+                    "Sending {:?} to module {:?}",
+                    m.category(),
+                    self.unique_identifier()
+                );
                 if let Ok(bodyj) = m.to_json() {
                     if let Ok(decision_add_url) = self.url.join("/decision/cache/add") {
                         if let Err(e) = self.client.put(decision_add_url).body(bodyj).send() {
@@ -334,18 +339,6 @@ impl Module for ExternalServerModule {
                     }
                 }
             });
-        // let mut form = Form::new();
-        // for m in opaques {
-        //     if let Ok(bodyj) = m.to_json() {
-        //         form = form.text(format!("design{}", m.category()), bodyj);
-        //     }
-        // }
-        // for m in solved {
-        //     if let Ok(bodyj) = m.to_json() {
-        //         // let part = Part::text(bodyj);
-        //         form = form.text(format!("solved{}", m.category()), bodyj);
-        //     }
-        // }
         if let Ok(identify) = self.url.join("/identify") {
             if let Some(identified_message) = self
                 .client

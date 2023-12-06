@@ -85,10 +85,10 @@ public interface StandaloneModule extends Module {
     }
 
     default Optional<Javalin> standaloneModule(String[] args) {
-        var cachedDecisionModels = new ConcurrentHashMap<ByteBuffer, DecisionModel>();
-        var cachedExplorationSolutions = new ConcurrentHashMap<ByteBuffer, ExplorationSolution>();
+        var cachedDecisionModels = new ConcurrentHashMap<ByteBuffer, Optional<DecisionModel>>();
+        var cachedDecisionModelHashes = new ConcurrentSkipListSet<ByteBuffer>();
         var cachedSolvedDecisionModels = new ConcurrentHashMap<ByteBuffer, DecisionModel>();
-        var cachedDesignModels = new ConcurrentHashMap<ByteBuffer, DesignModel>();
+        var cachedDesignModels = new ConcurrentHashMap<ByteBuffer, Optional<DesignModel>>();
         var cachedReversedDesignModels = new ConcurrentHashMap<ByteBuffer, DesignModel>();
         var sessionDesignModels = new ConcurrentHashMap<String, ConcurrentSkipListSet<DesignModel>>();
         var sessionDecisionModels = new ConcurrentHashMap<String, ConcurrentSkipListSet<DecisionModel>>();
@@ -103,16 +103,20 @@ public interface StandaloneModule extends Module {
                     .get("/decision/cache/exists",
                             ctx -> {
                                 var bb = ByteBuffer.wrap(ctx.bodyAsBytes());
-                                if (cachedDecisionModels.containsKey(bb)) {
+                                if (cachedDecisionModelHashes.contains(bb)) {
+                                    System.out.println("YES decision cache exists of "
+                                            + Arrays.toString(ctx.bodyAsBytes()));
                                     ctx.result("true");
                                 } else {
+                                    System.out.println("NO decision cache exists of "
+                                            + Arrays.toString(ctx.bodyAsBytes()));
                                     ctx.result("false");
                                 }
                             })
                     .get("/design/cache/exists",
                             ctx -> {
                                 var bb = ByteBuffer.wrap(ctx.bodyAsBytes());
-                                if (cachedDesignModels.containsKey(bb)) {
+                                if (cachedDesignModels.contains(bb)) {
                                     ctx.result("true");
                                 } else {
                                     ctx.result("false");
@@ -130,8 +134,8 @@ public interface StandaloneModule extends Module {
                     .get("/decision/cache/fetch", ctx -> {
                         var bb = ByteBuffer.wrap(ctx.bodyAsBytes());
                         if (cachedDecisionModels.containsKey(bb)) {
-                            OpaqueDecisionModel.from(cachedDecisionModels.get(bb))
-                                    .toJsonString().ifPresent(ctx::result);
+                            cachedDecisionModels.get(bb).map(OpaqueDecisionModel::from)
+                                    .flatMap(OpaqueDecisionModel::toJsonString).ifPresent(ctx::result);
                         } else {
                             ctx.status(404);
                         }
@@ -139,8 +143,8 @@ public interface StandaloneModule extends Module {
                     .get("/design/cache/fetch", ctx -> {
                         var bb = ByteBuffer.wrap(ctx.bodyAsBytes());
                         if (cachedDesignModels.containsKey(bb)) {
-                            OpaqueDesignModel.from(cachedDesignModels.get(bb))
-                                    .toJsonString().ifPresent(ctx::result);
+                            cachedDesignModels.get(bb).map(OpaqueDesignModel::from)
+                                    .flatMap(OpaqueDesignModel::toJsonString).ifPresent(ctx::result);
                         } else {
                             ctx.status(404);
                         }
@@ -164,17 +168,27 @@ public interface StandaloneModule extends Module {
                         }
                     })
                     .put("/decision/cache/add",
-                            ctx -> OpaqueDecisionModel.fromJsonString(ctx.body()).flatMap(this::fromOpaqueDecision)
-                                    .ifPresent(m -> m.globalMD5Hash()
-                                            .ifPresent(hash -> cachedDecisionModels.put(ByteBuffer.wrap(hash), m))))
+                            ctx -> {
+                                System.out.println("Adding to decision cache: " + ctx.body());
+                                OpaqueDecisionModel.fromJsonString(ctx.body()).ifPresent(opaque -> {
+                                    opaque.globalMD5Hash().ifPresent(hash -> cachedDecisionModels
+                                            .put(ByteBuffer.wrap(hash), fromOpaqueDecision(opaque)));
+                                });
+                                ctx.status(200);
+
+                            })
                     .put("/solved/cache/add",
                             ctx -> OpaqueDecisionModel.fromJsonString(ctx.body()).flatMap(this::fromOpaqueDecision)
                                     .ifPresent(m -> m.globalMD5Hash().ifPresent(
                                             hash -> cachedSolvedDecisionModels.put(ByteBuffer.wrap(hash), m))))
                     .put("/design/cache/add",
-                            ctx -> OpaqueDesignModel.fromJsonString(ctx.body()).flatMap(this::fromOpaqueDesign)
-                                    .ifPresent(m -> m.globalMD5Hash()
-                                            .ifPresent(hash -> cachedDesignModels.put(ByteBuffer.wrap(hash), m))))
+                            ctx -> {
+                                OpaqueDesignModel.fromJsonString(ctx.body()).ifPresent(opaque -> {
+                                    opaque.globalMD5Hash().map(ByteBuffer::wrap)
+                                            .ifPresent(hash -> cachedDesignModels.put(hash, fromOpaqueDesign(opaque)));
+                                });
+                                ctx.status(200);
+                            })
                     .put("/reversed/cache/add",
                             ctx -> OpaqueDesignModel.fromJsonString(ctx.body()).flatMap(this::fromOpaqueDesign)
                                     .ifPresent(m -> m.globalMD5Hash().ifPresent(
@@ -264,14 +278,14 @@ public interface StandaloneModule extends Module {
                         var logger = LoggerFactory.getLogger("main");
                         Set<DecisionModel> decisionModels = new HashSet<>();
                         Set<DesignModel> designModels = new HashSet<>();
-                        cachedDecisionModels.values().forEach(decisionModels::add);
-                        cachedDesignModels.values().forEach(designModels::add);
+                        cachedDecisionModels.values().stream().flatMap(Optional::stream).forEach(decisionModels::add);
+                        cachedDesignModels.values().stream().flatMap(Optional::stream).forEach(designModels::add);
                         logger.info("Running a identification step with %s and %s decision and design models"
                                 .formatted(decisionModels.size(), designModels.size()));
                         var results = identification(designModels, decisionModels);
                         for (var result : results.identified()) {
                             result.globalMD5Hash().ifPresent(hash -> {
-                                cachedDecisionModels.put(ByteBuffer.wrap(hash), result);
+                                cachedDecisionModels.put(ByteBuffer.wrap(hash), Optional.of(result));
                             });
                         }
                         logger.info("Finished a identification step with %s decision models identified".formatted(
@@ -361,6 +375,22 @@ public interface StandaloneModule extends Module {
                                             }
                                         });
                                     } else {
+                                        var bb = ByteBuffer.wrap(ctx.bodyAsBytes());
+                                        if (cachedDecisionModels.containsKey(bb)) {
+                                            cachedDecisionModels.get(bb)
+                                                    .map(decisionModel -> explorer.bid(explorers(), decisionModel))
+                                                    .ifPresentOrElse(bid -> {
+                                                        try {
+                                                            ctx.result(objectMapper.writeValueAsString(bid));
+                                                            objectMapper.writeValueAsString(bid);
+                                                        } catch (JsonProcessingException e1) {
+                                                            e1.printStackTrace();
+                                                            ctx.status(500);
+                                                        }
+                                                    }, () -> ctx.status(404));
+                                        } else {
+                                            ctx.status(404);
+                                        }
                                     }
                                 }, () -> {
                                     ctx.status(404);
@@ -514,7 +544,7 @@ public interface StandaloneModule extends Module {
                         Set<DecisionModel> exploredDecisionModels = new HashSet<>();
                         Set<DesignModel> designModels = new HashSet<>();
                         cachedSolvedDecisionModels.values().forEach(exploredDecisionModels::add);
-                        cachedDesignModels.values().forEach(designModels::add);
+                        cachedDesignModels.values().stream().flatMap(Optional::stream).forEach(designModels::add);
                         logger.info("Running a reverse identification with %s and %s decision and design models"
                                 .formatted(exploredDecisionModels.size(), designModels.size()));
                         // ctx.formParamMap().forEach((name, entries) -> {

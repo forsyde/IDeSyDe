@@ -224,10 +224,21 @@ pub fn identification_procedure(
             .par_iter()
             .map(|imodule| imodule.identification_step(&identified, design_models))
             .reduce_with(|(models1, msgs1), (models2, msgs2)| {
-                let mut models = models1.clone();
-                models.extend(models2.into_iter().filter(|m| !models1.contains(m)));
-                let mut msgs = msgs1.clone();
-                msgs.extend(msgs2.into_iter().filter(|m| !msgs1.contains(m)));
+                let mut models = Vec::new();
+                models.extend(models1.into_iter());
+                for m in models2 {
+                    if !models.contains(&m) {
+                        models.push(m);
+                    }
+                }
+                // models.extend(models2.into_iter().filter(|m| !models.contains(m)));
+                let mut msgs = Vec::new();
+                msgs.extend(msgs1.into_iter());
+                for msg in msgs2 {
+                    if !msgs.contains(&msg) {
+                        msgs.push(msg);
+                    }
+                }
                 (models, msgs)
             })
             .unwrap_or((vec![], vec![]));

@@ -284,6 +284,7 @@ impl Module for StandaloneModule {
         // Assume that all the models which could have been made non-opaque, did.
         // let (tx_model, rx_model) = std::sync::mpsc::channel::<Arc<dyn DecisionModel>>();
         // let (tx_msg, rx_msg) = std::sync::mpsc::channel::<String>();
+        
         let par_identified: Vec<IdentificationResult> = self
             .identification_rules
             .par_iter()

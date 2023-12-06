@@ -21,7 +21,8 @@ import java.util.stream.Stream;
  * elements; the latter that form the 'interconnect'.
  */
 @JsonSerialize
-public record MemoryMappableMultiCore(@JsonProperty("processing_elems") Set<String> processingElems,
+public record MemoryMappableMultiCore(
+        @JsonProperty("processing_elems") Set<String> processingElems,
         @JsonProperty("storage_elems") Set<String> storageElems,
         @JsonProperty("communication_elems") Set<String> communicationElems,
         @JsonProperty("topology_srcs") List<String> topologySrcs,
@@ -36,7 +37,7 @@ public record MemoryMappableMultiCore(@JsonProperty("processing_elems") Set<Stri
     @Override
     public Set<String> part() {
         return Stream.concat(processingElems.stream(),
-                        Stream.concat(storageElems.stream(), communicationElems.stream()))
-                        .collect(Collectors.toSet());
+                Stream.concat(storageElems.stream(), communicationElems.stream()))
+                .collect(Collectors.toSet());
     }
 }

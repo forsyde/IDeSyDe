@@ -175,7 +175,7 @@ public interface StandaloneModule extends Module {
                                             .put(ByteBuffer.wrap(hash), fromOpaqueDecision(opaque)));
                                 });
                                 ctx.status(200);
-
+                                ctx.result("OK");
                             })
                     .put("/solved/cache/add",
                             ctx -> OpaqueDecisionModel.fromJsonString(ctx.body()).flatMap(this::fromOpaqueDecision)
@@ -188,6 +188,7 @@ public interface StandaloneModule extends Module {
                                             .ifPresent(hash -> cachedDesignModels.put(hash, fromOpaqueDesign(opaque)));
                                 });
                                 ctx.status(200);
+                                ctx.result("OK");
                             })
                     .put("/reversed/cache/add",
                             ctx -> OpaqueDesignModel.fromJsonString(ctx.body()).flatMap(this::fromOpaqueDesign)

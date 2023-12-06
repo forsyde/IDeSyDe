@@ -12,7 +12,7 @@ import java.util.Set;
 @JsonSerialize
 public record IdentificationResultMessage(
         Set<OpaqueDecisionModel> identified,
-        Set<String> errors) {
+        Set<String> messages) {
 
     public Optional<String> toJsonString() {
         try {

@@ -68,8 +68,8 @@ public interface StandaloneModule extends Module {
                     var errs = new HashSet<String>();
                     merged.addAll(res1.identified());
                     merged.addAll(res2.identified());
-                    errs.addAll(res1.errors());
-                    errs.addAll(res2.errors());
+                    errs.addAll(res1.messages());
+                    errs.addAll(res2.messages());
                     return new IdentificationResult(merged, errs);
                 }).orElse(new IdentificationResult(Set.of(), Set.of()));
         // .filter(m -> !decisionModels.containsAll(m.identified()))
@@ -293,7 +293,7 @@ public interface StandaloneModule extends Module {
                                 logger.info("Running a identification step with %s and %s decision and design models"
                                         .formatted(decisionModels.size(), designModels.size()));
                                 var results = identification(designModels, decisionModels);
-                                for (var msg : results.errors()) {
+                                for (var msg : results.messages()) {
                                     ctx.send(msg);
                                 }
                                 for (var result : results.identified()) {

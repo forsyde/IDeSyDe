@@ -281,7 +281,7 @@ public interface StandaloneModule extends Module {
                         Set<DesignModel> designModels = new HashSet<>();
                         cachedDecisionModels.values().stream().flatMap(Optional::stream).forEach(decisionModels::add);
                         cachedDesignModels.values().stream().flatMap(Optional::stream).forEach(designModels::add);
-                        logger.info("Running a identification step with %s and %s decision and design models"
+                        logger.debug("Running a identification step with %s and %s decision and design models"
                                 .formatted(decisionModels.size(), designModels.size()));
                         var results = identification(designModels, decisionModels);
                         for (var result : results.identified()) {
@@ -289,7 +289,7 @@ public interface StandaloneModule extends Module {
                                 cachedDecisionModels.put(ByteBuffer.wrap(hash), Optional.of(result));
                             });
                         }
-                        logger.info("Finished a identification step with %s decision models identified".formatted(
+                        logger.debug("Finished a identification step with %s decision models identified".formatted(
                                 results.identified().size()));
                         ctx.json(IdentificationResultCompactMessage.from(results));
                     })
@@ -305,7 +305,7 @@ public interface StandaloneModule extends Module {
                         });
                         ws.onMessage(ctx -> {
                             if (ctx.message().toLowerCase().contains("done")) {
-                                logger.info("Running a identification step with %s and %s decision and design models"
+                                logger.debug("Running a identification step with %s and %s decision and design models"
                                         .formatted(decisionModels.size(), designModels.size()));
                                 var results = identification(designModels, decisionModels);
                                 for (var msg : results.messages()) {
@@ -318,7 +318,7 @@ public interface StandaloneModule extends Module {
                                             ctx.send(bytes);
                                     });
                                 }
-                                logger.info("Finished a identification step with %s decision models identified"
+                                logger.debug("Finished a identification step with %s decision models identified"
                                         .formatted(decisionModels.size()));
                                 if (ctx.session.isOpen())
                                     ctx.send("done");
@@ -334,7 +334,7 @@ public interface StandaloneModule extends Module {
                             }
                         });
                         ws.onConnect(ctx -> {
-                            logger.info("A new identification client connected");
+                            logger.debug("A new identification client connected");
                             ctx.enableAutomaticPings(1, TimeUnit.SECONDS);
                             decisionModels.clear();
                             designModels.clear();
@@ -414,7 +414,7 @@ public interface StandaloneModule extends Module {
                         AtomicReference<DecisionModel> decisionModel = new AtomicReference<>();
                         Set<ExplorationSolution> previousSolutions = new CopyOnWriteArraySet<>();
                         ws.onBinaryMessage(ctx -> {
-                            logger.info("Receiving a binary message");
+                            logger.debug("Receiving a binary message");
                             var payload = ctx.data();
                             ExplorationSolutionMessage.fromCBORBytes(payload)
                                     .flatMap(esm -> fromOpaqueDecision(esm.solved())
@@ -428,9 +428,9 @@ public interface StandaloneModule extends Module {
                                                                     .ifPresent(configuration::set)));
                         });
                         ws.onMessage(ctx -> {
-                            logger.info("Receiving a text message during exploration");
+                            logger.debug("Receiving a text message during exploration");
                             if (ctx.message().toLowerCase().contains("done")) {
-                                logger.info("Starting exploration of a %s with %s"
+                                logger.debug("Starting exploration of a %s with %s"
                                         .formatted(decisionModel.get().category(), explorer.get().uniqueIdentifier()));
                                 explorer.get()
                                         .explore(decisionModel.get(),
@@ -444,10 +444,10 @@ public interface StandaloneModule extends Module {
                                             previousSolutions.add(s);
                                             if (ctx.session.isOpen())
                                                 ExplorationSolutionMessage.from(s).toJsonString().ifPresent(ctx::send);
-                                            logger.info("Sent a solution, total now: %s"
+                                            logger.debug("Sent a solution, total now: %s"
                                                     .formatted(previousSolutions.size()));
                                         });
-                                logger.info("Finished exploration");
+                                logger.debug("Finished exploration");
                                 if (ctx.session.isOpen())
                                     ctx.send("done");
                                 // ctx.closeSession();
@@ -467,7 +467,7 @@ public interface StandaloneModule extends Module {
                             }
                         });
                         ws.onConnect(ctx -> {
-                            logger.info("A client connected to exploration");
+                            logger.debug("A client connected to exploration");
                             ctx.enableAutomaticPings(1, TimeUnit.SECONDS);
                             explorers().stream()
                                     .filter(e -> e.uniqueIdentifier().equalsIgnoreCase(ctx.pathParam("explorerName")))
@@ -498,24 +498,24 @@ public interface StandaloneModule extends Module {
                     // });
                     // ws.onMessage(ctx -> {
                     // if (ctx.message().toLowerCase().contains("done")) {
-                    // logger.info("Running a reverse identification with %s and %s decision and
+                    // logger.debug("Running a reverse identification with %s and %s decision and
                     // design models"
                     // .formatted(exploredDecisionModels.size(), designModels.size()));
                     // var reversed = reverseIdentification(exploredDecisionModels, designModels);
                     // for (var result : reversed) {
                     // OpaqueDesignModel.from(result).toJsonString().ifPresent(bytes -> {
-                    // logger.info("Sending a reverse identified design model");
+                    // logger.debug("Sending a reverse identified design model");
                     // if (ctx.session.isOpen())
                     // ctx.send(bytes);
                     // // designModels.add(result);
                     // });
                     // }
-                    // logger.info(
+                    // logger.debug(
                     // "Finished a reverse identification step with %s design models identified"
                     // .formatted(designModels.size()));
                     // if (ctx.session.isOpen())
                     // ctx.send("done");
-                    // logger.info("Sent the done request");
+                    // logger.debug("Sent the done request");
                     // ctx.closeSession();
                     // } else {
                     // OpaqueDesignModel.fromJsonString(ctx.message()).flatMap(this::fromOpaqueDesign)
@@ -527,7 +527,7 @@ public interface StandaloneModule extends Module {
                     // }
                     // });
                     // ws.onConnect(ctx -> {
-                    // logger.info("A new reverse identification client connected");
+                    // logger.debug("A new reverse identification client connected");
                     // ctx.enableAutomaticPings(1, TimeUnit.SECONDS);
                     // exploredDecisionModels.clear();
                     // designModels.clear();
@@ -546,7 +546,7 @@ public interface StandaloneModule extends Module {
                         Set<DesignModel> designModels = new HashSet<>();
                         cachedSolvedDecisionModels.values().forEach(exploredDecisionModels::add);
                         cachedDesignModels.values().stream().flatMap(Optional::stream).forEach(designModels::add);
-                        logger.info("Running a reverse identification with %s and %s decision and design models"
+                        logger.debug("Running a reverse identification with %s and %s decision and design models"
                                 .formatted(exploredDecisionModels.size(), designModels.size()));
                         // ctx.formParamMap().forEach((name, entries) -> {
                         // if (name.startsWith("solved")) {
@@ -574,7 +574,7 @@ public interface StandaloneModule extends Module {
                         // reverseResponse.stream().map(s -> "\"" + s +
                         // "\"").collect(Collectors.toList()))));
                         ctx.json(reverseResponse);
-                        logger.info("Finished a reverse identification with %s design models reverse identified"
+                        logger.debug("Finished a reverse identification with %s design models reverse identified"
                                 .formatted(reverseResponse.size()));
                         // if (ctx.isMultipart()) {
                         // }

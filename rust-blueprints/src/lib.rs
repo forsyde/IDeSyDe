@@ -284,7 +284,13 @@ impl Module for StandaloneModule {
         // Assume that all the models which could have been made non-opaque, did.
         // let (tx_model, rx_model) = std::sync::mpsc::channel::<Arc<dyn DecisionModel>>();
         // let (tx_msg, rx_msg) = std::sync::mpsc::channel::<String>();
-        
+        let mut identified_models = vec![];
+        for m in decision_models {
+            if let Some(refined) = m.downcast_ref::<OpaqueDecisionModel>().and_then(self.opaque_to_model) {
+                // debug!("Refining a {}", refined.category());
+                identified_models.push(refined);
+            }
+        }
         let par_identified: Vec<IdentificationResult> = self
             .identification_rules
             .par_iter()
@@ -331,7 +337,6 @@ impl Module for StandaloneModule {
                 )
             })
             .collect();
-        let mut identified_models = vec![];
         let mut messages = vec![];
         for (ms, msgs) in par_identified {
             for m in ms {

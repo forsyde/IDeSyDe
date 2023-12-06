@@ -137,16 +137,16 @@ impl ExternalServerModule {
                 .arg(&command_path_)
                 .arg("--server")
                 .arg("http")
-                .stdin(Stdio::piped())
+                .stdin(Stdio::null())
                 .stdout(Stdio::piped())
-                .stderr(Stdio::piped())
+                .stderr(Stdio::null())
                 .spawn(),
             false => std::process::Command::new(&command_path_)
                 .arg("--server")
                 .arg("http")
-                .stdin(Stdio::piped())
+                .stdin(Stdio::null())
                 .stdout(Stdio::piped())
-                .stderr(Stdio::piped())
+                .stderr(Stdio::null())
                 .spawn(),
         };
         // the test involves just exitting it
@@ -275,7 +275,7 @@ impl Module for ExternalServerModule {
         // }
         // Box::new(idesyde_core::empty_identification_iter())
         design_models
-            .par_iter()
+            .iter()
             .filter(|m| {
                 let hash = m.global_md5_hash();
                 if let Ok(cache_url) = self.url.join("/design/cache/exists") {
@@ -305,7 +305,7 @@ impl Module for ExternalServerModule {
                 }
             });
         decision_models
-            .par_iter()
+            .iter()
             .filter(|m| {
                 let hash = m.global_md5_hash();
                 if let Ok(cache_url) = self.url.join("/decision/cache/exists") {
@@ -348,7 +348,7 @@ impl Module for ExternalServerModule {
                 .ok()
                 .and_then(|res| res.text().ok())
                 .and_then(|txt| {
-                    debug!("Received identification result: {}", txt.as_str());
+                    // debug!("Received identification result: {}", txt.as_str());
                     serde_json::from_str::<IdentificationResultCompactMessage>(txt.as_str()).ok()
                 })
             {
@@ -358,7 +358,7 @@ impl Module for ExternalServerModule {
                     .map(|s| general_purpose::STANDARD_NO_PAD.decode(s).ok())
                     .flatten()
                     .collect::<Vec<Vec<u8>>>();
-                debug!("Reversed hashes: {:?}", reversed_hashes);
+                // debug!("Reversed hashes: {:?}", reversed_hashes);
                 let identified_models = reversed_hashes
                     .into_par_iter()
                     .flat_map(|hash| {

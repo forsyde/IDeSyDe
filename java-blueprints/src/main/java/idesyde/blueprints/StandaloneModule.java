@@ -86,15 +86,10 @@ public interface StandaloneModule extends Module {
 
     default Optional<Javalin> standaloneModule(String[] args) {
         var cachedDecisionModels = new ConcurrentHashMap<ByteBuffer, Optional<DecisionModel>>();
-        var cachedDecisionModelHashes = new ConcurrentSkipListSet<ByteBuffer>();
         var cachedSolvedDecisionModels = new ConcurrentHashMap<ByteBuffer, DecisionModel>();
         var cachedDesignModels = new ConcurrentHashMap<ByteBuffer, Optional<DesignModel>>();
         var cachedReversedDesignModels = new ConcurrentHashMap<ByteBuffer, DesignModel>();
-        var sessionDesignModels = new ConcurrentHashMap<String, ConcurrentSkipListSet<DesignModel>>();
-        var sessionDecisionModels = new ConcurrentHashMap<String, ConcurrentSkipListSet<DecisionModel>>();
-        var sessionIdentifiedDecisionModels = new ConcurrentHashMap<String, Deque<DecisionModel>>();
         var sessionExplorationStream = new ConcurrentHashMap<String, Stream<? extends ExplorationSolution>>();
-        var sessionExploredModels = new ConcurrentHashMap<String, ConcurrentSkipListSet<DecisionModel>>();
         var sessionReversedDesignModels = new ConcurrentHashMap<String, Deque<DesignModel>>();
         try (var server = Javalin.create()) {
             server
@@ -103,7 +98,7 @@ public interface StandaloneModule extends Module {
                     .get("/decision/cache/exists",
                             ctx -> {
                                 var bb = ByteBuffer.wrap(ctx.bodyAsBytes());
-                                if (cachedDecisionModelHashes.contains(bb)) {
+                                if (cachedDecisionModels.contains(bb)) {
                                     // System.out.println("YES decision cache exists of "
                                     //         + Arrays.toString(ctx.bodyAsBytes()));
                                     ctx.result("true");
@@ -171,6 +166,7 @@ public interface StandaloneModule extends Module {
                             ctx -> {
                                 // System.out.println("Adding to decision cache: " + ctx.body());
                                 OpaqueDecisionModel.fromJsonString(ctx.body()).ifPresent(opaque -> {
+                                    System.out.println("Adding to decision cache: " + opaque.globalMD5Hash().map(Arrays::toString).orElse("NO HASH"));
                                     opaque.globalMD5Hash().ifPresent(hash -> cachedDecisionModels
                                             .put(ByteBuffer.wrap(hash), fromOpaqueDecision(opaque)));
                                 });
@@ -352,6 +348,7 @@ public interface StandaloneModule extends Module {
                         ctx.result(objectMapper.writeValueAsString(
                                 explorers().stream().map(Explorer::uniqueIdentifier).collect(Collectors.toSet())));
                     }).get("/{explorerName}/bid", ctx -> {
+                        System.out.println("Bidding with %s".formatted(ctx.pathParam("explorerName")));
                         explorers().stream()
                                 .filter(e -> e.uniqueIdentifier().equalsIgnoreCase(ctx.pathParam("explorerName")))
                                 .findAny()
@@ -376,20 +373,26 @@ public interface StandaloneModule extends Module {
                                             }
                                         });
                                     } else {
+                                        System.out.println("Not multipart");
                                         var bb = ByteBuffer.wrap(ctx.bodyAsBytes());
+                                        System.out.println("Bidding with %s and %s".formatted(Arrays.toString(ctx.bodyAsBytes()),
+                                                explorer.uniqueIdentifier()));
                                         if (cachedDecisionModels.containsKey(bb)) {
                                             cachedDecisionModels.get(bb)
-                                                    .map(decisionModel -> explorer.bid(explorers(), decisionModel))
+                                                    .map(decisionModel -> {
+                                                        System.out.println("Bidding with %s and %s".formatted(decisionModel.category(), explorer.uniqueIdentifier()));
+                                                        return explorer.bid(explorers(), decisionModel);
+                                                    })
                                                     .ifPresentOrElse(bid -> {
                                                         try {
                                                             ctx.result(objectMapper.writeValueAsString(bid));
-                                                            objectMapper.writeValueAsString(bid);
                                                         } catch (JsonProcessingException e1) {
                                                             e1.printStackTrace();
                                                             ctx.status(500);
                                                         }
                                                     }, () -> ctx.status(404));
                                         } else {
+                                            System.out.println("Decision model not found in cache");
                                             ctx.status(404);
                                         }
                                     }

@@ -66,7 +66,10 @@ pub trait DesignModel: Send + DowncastSync {
         let mut hasher = md5::Context::new();
         hasher.consume(self.format().as_bytes());
         hasher.consume(self.category().as_bytes());
-        for e in self.elements() {
+        let elements = self.elements();
+        let mut sorted = elements.iter().collect::<Vec<&String>>();
+        sorted.sort();
+        for e in sorted {
             hasher.consume(e.as_bytes());
         }
         hasher.compute().to_vec()
@@ -192,7 +195,10 @@ pub trait DecisionModel: Send + DowncastSync {
     fn global_md5_hash(&self) -> Vec<u8> {
         let mut hasher = md5::Context::new();
         hasher.consume(self.category().as_bytes());
-        for e in self.part() {
+        let part = self.part();
+        let mut sorted: Vec<&String> = part.iter().collect();
+        sorted.sort();
+        for e in sorted {
             hasher.consume(e.as_bytes());
         }
         hasher.compute().to_vec()

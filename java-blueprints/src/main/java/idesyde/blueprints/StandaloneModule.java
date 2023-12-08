@@ -87,7 +87,7 @@ public interface StandaloneModule extends Module {
     default Optional<Javalin> standaloneModule(String[] args) {
         var cachedDecisionModels = new ConcurrentHashMap<ByteBuffer, DecisionModel>();
         var cachedSolvedDecisionModels = new ConcurrentHashMap<ByteBuffer, DecisionModel>();
-        var cachedDesignModels = new ConcurrentHashMap<ByteBuffer, Optional<DesignModel>>();
+        var cachedDesignModels = new ConcurrentHashMap<ByteBuffer, DesignModel>();
         var cachedReversedDesignModels = new ConcurrentHashMap<ByteBuffer, DesignModel>();
         var sessionExplorationStream = new ConcurrentHashMap<String, Stream<? extends ExplorationSolution>>();
         var sessionReversedDesignModels = new ConcurrentHashMap<String, Deque<DesignModel>>();
@@ -140,7 +140,8 @@ public interface StandaloneModule extends Module {
                         //         .flatMap(OpaqueDecisionModel::toJsonString)
                         //         .ifPresentOrElse(ctx::result, () -> ctx.result("Not in cache"));
                         if (cachedDecisionModels.containsKey(bb)) {
-                            cachedDecisionModels.get(bb).globalMD5Hash().ifPresent(ctx::result);
+                            OpaqueDecisionModel.from(cachedDecisionModels.get(bb)).toJsonString()
+                                .ifPresentOrElse(ctx::result, () -> ctx.result("Not in cache"));
                         } else {
                             ctx.result("Not in cache");
                             ctx.status(404);
@@ -149,8 +150,8 @@ public interface StandaloneModule extends Module {
                     .get("/design/cache/fetch", ctx -> {
                         var bb = ByteBuffer.wrap(ctx.bodyAsBytes());
                         if (cachedDesignModels.containsKey(bb)) {
-                            cachedDesignModels.get(bb).map(OpaqueDesignModel::from)
-                                    .flatMap(OpaqueDesignModel::toJsonString).ifPresent(ctx::result);
+                            OpaqueDesignModel.from(cachedDesignModels.get(bb)).toJsonString()
+                                .ifPresentOrElse(ctx::result, () -> ctx.result("Not in cache"));
                         } else {
                             ctx.status(404);
                         }
@@ -199,9 +200,9 @@ public interface StandaloneModule extends Module {
                                             hash -> cachedSolvedDecisionModels.put(ByteBuffer.wrap(hash), m))))
                     .put("/design/cache/add",
                             ctx -> {
+                                var bb = ByteBuffer.wrap(ctx.bodyAsBytes());
                                 OpaqueDesignModel.fromJsonString(ctx.body()).ifPresent(opaque -> {
-                                    opaque.globalMD5Hash().map(ByteBuffer::wrap)
-                                            .ifPresent(hash -> cachedDesignModels.put(hash, fromOpaqueDesign(opaque)));
+                                    fromOpaqueDesign(opaque).ifPresentOrElse(m -> cachedDesignModels.put(bb, m), () -> cachedDesignModels.put(bb, opaque));
                                 });
                                 ctx.status(200);
                                 ctx.result("OK");
@@ -295,8 +296,8 @@ public interface StandaloneModule extends Module {
                         var logger = LoggerFactory.getLogger("main");
                         Set<DecisionModel> decisionModels = new HashSet<>();
                         Set<DesignModel> designModels = new HashSet<>();
-                        cachedDecisionModels.values().stream().forEach(decisionModels::add);
-                        cachedDesignModels.values().stream().flatMap(Optional::stream).forEach(designModels::add);
+                        cachedDecisionModels.values().forEach(decisionModels::add);
+                        cachedDesignModels.values().forEach(designModels::add);
                         logger.debug("Running a identification step with %s and %s decision and design models"
                                 .formatted(decisionModels.size(), designModels.size()));
                         var results = identification(designModels, decisionModels);
@@ -558,7 +559,7 @@ public interface StandaloneModule extends Module {
                         Set<DecisionModel> exploredDecisionModels = new HashSet<>();
                         Set<DesignModel> designModels = new HashSet<>();
                         cachedSolvedDecisionModels.values().forEach(exploredDecisionModels::add);
-                        cachedDesignModels.values().stream().flatMap(Optional::stream).forEach(designModels::add);
+                        cachedDesignModels.values().forEach(designModels::add);
                         logger.debug("Running a reverse identification with %s and %s decision and design models"
                                 .formatted(exploredDecisionModels.size(), designModels.size()));
                         // ctx.formParamMap().forEach((name, entries) -> {

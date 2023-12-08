@@ -102,7 +102,7 @@ public interface StandaloneModule extends Module {
                                 //                 .map(hash -> Arrays.equals(hash, ctx.bodyAsBytes())).orElse(false))
                                 //         .findAny().ifPresentOrElse(m -> ctx.result("true"), () -> ctx.result("false"));
                                 var bb = ByteBuffer.wrap(ctx.bodyAsBytes());
-                                if (cachedDecisionModels.contains(bb)) {
+                                if (cachedDecisionModels.containsKey(bb)) {
                                 // System.out.println("YES decision cache exists of "
                                 // + Arrays.toString(ctx.bodyAsBytes()));
                                 ctx.result("true");
@@ -115,7 +115,7 @@ public interface StandaloneModule extends Module {
                     .get("/design/cache/exists",
                             ctx -> {
                                 var bb = ByteBuffer.wrap(ctx.bodyAsBytes());
-                                if (cachedDesignModels.contains(bb)) {
+                                if (cachedDesignModels.containsKey(bb)) {
                                     ctx.result("true");
                                 } else {
                                     ctx.result("false");

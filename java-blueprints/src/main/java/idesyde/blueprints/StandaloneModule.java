@@ -105,11 +105,11 @@ public interface StandaloneModule extends Module {
                                 if (cachedDecisionModels.containsKey(bb)) {
                                 // System.out.println("YES decision cache exists of "
                                 // + Arrays.toString(ctx.bodyAsBytes()));
-                                ctx.result("true");
+                                    ctx.result("true");
                                 } else {
                                 // System.out.println("NO decision cache exists of "
                                 // + Arrays.toString(ctx.bodyAsBytes()));
-                                ctx.result("false");
+                                    ctx.result("false");
                                 }
                             })
                     .get("/design/cache/exists",
@@ -162,6 +162,7 @@ public interface StandaloneModule extends Module {
                             OpaqueDecisionModel.from(cachedSolvedDecisionModels.get(bb))
                                     .toJsonString().ifPresent(ctx::result);
                         } else {
+                            ctx.result("Not in cache");
                             ctx.status(404);
                         }
                     })
@@ -202,7 +203,10 @@ public interface StandaloneModule extends Module {
                             ctx -> {
                                 var bb = ByteBuffer.wrap(ctx.bodyAsBytes());
                                 OpaqueDesignModel.fromJsonString(ctx.body()).ifPresent(opaque -> {
-                                    fromOpaqueDesign(opaque).ifPresentOrElse(m -> cachedDesignModels.put(bb, m), () -> cachedDesignModels.put(bb, opaque));
+                                    fromOpaqueDesign(opaque).ifPresentOrElse(m -> {
+                                        System.out.println("Adding non opaque design model to cache: " + m.category());
+                                        cachedDesignModels.put(bb, m);
+                                    }, () -> cachedDesignModels.put(bb, opaque));
                                 });
                                 ctx.status(200);
                                 ctx.result("OK");

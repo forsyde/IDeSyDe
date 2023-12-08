@@ -34,7 +34,7 @@ import com.fasterxml.jackson.dataformat.cbor.CBORFactory;
  * Exhibition (DATE), 2021, pp. 1204-1207, doi: 10.23919/DATE51398.2021.9474082.
  *
  */
-public interface DesignModel {
+public interface DesignModel extends Comparable<DesignModel> {
 
     // default DesignModelHeader header() {
     // return new DesignModelHeader(category(), elements(), new HashSet<>());
@@ -83,6 +83,20 @@ public interface DesignModel {
         } catch (NoSuchAlgorithmException e) {
             return Optional.empty();
         }
+    }
+
+    
+
+    @Override
+    default int compareTo(DesignModel o) {
+        return globalMD5Hash().flatMap(hash -> o.globalMD5Hash().map(hash2 -> {
+            for (int i = 0; i < hash.length; i++) {
+                if (hash[i] != hash2[i]) {
+                    return Byte.compare(hash[i], hash2[i]);
+                }
+            }
+            return 0;
+        })).orElse(0);
     }
 
     /**

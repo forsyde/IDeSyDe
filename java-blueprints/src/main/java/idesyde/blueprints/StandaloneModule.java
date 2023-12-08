@@ -85,7 +85,7 @@ public interface StandaloneModule extends Module {
     }
 
     default Optional<Javalin> standaloneModule(String[] args) {
-        var cachedDecisionModels = new ConcurrentSkipListSet<DecisionModel>();
+        var cachedDecisionModels = new ConcurrentHashMap<ByteBuffer, DecisionModel>();
         var cachedSolvedDecisionModels = new ConcurrentHashMap<ByteBuffer, DecisionModel>();
         var cachedDesignModels = new ConcurrentHashMap<ByteBuffer, Optional<DesignModel>>();
         var cachedReversedDesignModels = new ConcurrentHashMap<ByteBuffer, DesignModel>();
@@ -97,20 +97,20 @@ public interface StandaloneModule extends Module {
                     .get("/info/is_caching", ctx -> ctx.result("true"))
                     .get("/decision/cache/exists",
                             ctx -> {
-                                cachedDecisionModels.stream()
-                                        .filter(m -> m.globalMD5Hash()
-                                                .map(hash -> Arrays.equals(hash, ctx.bodyAsBytes())).orElse(false))
-                                        .findAny().ifPresentOrElse(m -> ctx.result("true"), () -> ctx.result("false"));
-                                // var bb = ByteBuffer.wrap(ctx.bodyAsBytes());
-                                // if (cachedDecisionModels.contains(bb)) {
-                                // // System.out.println("YES decision cache exists of "
-                                // // + Arrays.toString(ctx.bodyAsBytes()));
-                                // ctx.result("true");
-                                // } else {
-                                // // System.out.println("NO decision cache exists of "
-                                // // + Arrays.toString(ctx.bodyAsBytes()));
-                                // ctx.result("false");
-                                // }
+                                // cachedDecisionModels.stream()
+                                //         .filter(m -> m.globalMD5Hash()
+                                //                 .map(hash -> Arrays.equals(hash, ctx.bodyAsBytes())).orElse(false))
+                                //         .findAny().ifPresentOrElse(m -> ctx.result("true"), () -> ctx.result("false"));
+                                var bb = ByteBuffer.wrap(ctx.bodyAsBytes());
+                                if (cachedDecisionModels.contains(bb)) {
+                                // System.out.println("YES decision cache exists of "
+                                // + Arrays.toString(ctx.bodyAsBytes()));
+                                ctx.result("true");
+                                } else {
+                                // System.out.println("NO decision cache exists of "
+                                // + Arrays.toString(ctx.bodyAsBytes()));
+                                ctx.result("false");
+                                }
                             })
                     .get("/design/cache/exists",
                             ctx -> {
@@ -131,17 +131,20 @@ public interface StandaloneModule extends Module {
                                 }
                             })
                     .get("/decision/cache/fetch", ctx -> {
-                        cachedDecisionModels.stream()
-                                .filter(m -> m.globalMD5Hash().map(hash -> Arrays.equals(hash, ctx.bodyAsBytes()))
-                                        .orElse(false))
-                                .findAny()
-                                .map(OpaqueDecisionModel::from)
-                                .flatMap(OpaqueDecisionModel::toJsonString)
-                                .ifPresentOrElse(ctx::result, () -> ctx.result("Not in cache"));
-                        // if (cachedDecisionModels.containsKey(bb)) {
-                        // } else {
-                        // ctx.status(404);
-                        // }
+                        var bb = ByteBuffer.wrap(ctx.bodyAsBytes());
+                        // cachedDecisionModels.stream()
+                        //         .filter(m -> m.globalMD5Hash().map(hash -> Arrays.equals(hash, ctx.bodyAsBytes()))
+                        //                 .orElse(false))
+                        //         .findAny()
+                        //         .map(OpaqueDecisionModel::from)
+                        //         .flatMap(OpaqueDecisionModel::toJsonString)
+                        //         .ifPresentOrElse(ctx::result, () -> ctx.result("Not in cache"));
+                        if (cachedDecisionModels.containsKey(bb)) {
+                            cachedDecisionModels.get(bb).globalMD5Hash().ifPresent(ctx::result);
+                        } else {
+                            ctx.result("Not in cache");
+                            ctx.status(404);
+                        }
                     })
                     .get("/design/cache/fetch", ctx -> {
                         var bb = ByteBuffer.wrap(ctx.bodyAsBytes());
@@ -173,12 +176,19 @@ public interface StandaloneModule extends Module {
                     .put("/decision/cache/add",
                             ctx -> {
                                 // System.out.println("Adding to decision cache: " + ctx.body());
+                                var bb = ByteBuffer.wrap(ctx.bodyAsBytes());
                                 OpaqueDecisionModel.fromJsonString(ctx.body()).ifPresentOrElse(opaque -> {
-                                    System.out.println("Adding to decision cache: "
+                                    fromOpaqueDecision(opaque).ifPresentOrElse(m -> {
+                                        System.out.println("Adding non-opaque to decision cache: "
+                                            + m.globalMD5Hash().map(Arrays::toString).orElse("NO HASH"));
+                                        cachedDecisionModels.put(bb, m);
+                                    }, () -> {
+                                        System.out.println("Adding opaque to decision cache: "
                                             + opaque.globalMD5Hash().map(Arrays::toString).orElse("NO HASH"));
-                                    fromOpaqueDecision(opaque).ifPresentOrElse(cachedDecisionModels::add, () -> cachedDecisionModels.add(opaque));
+                                        cachedDecisionModels.put(bb, opaque);
+                                    });
                                     ctx.status(200);
-                                    ctx.result("OK");
+                                    ctx.result(opaque.globalMD5Hash().map(Arrays::toString).orElse("NO HASH"));
                                     // opaque.globalMD5Hash().ifPresent(hash -> cachedDecisionModels
                                     //         .put(ByteBuffer.wrap(hash), fromOpaqueDecision(opaque)));
                                 }, () -> ctx.status(500));
@@ -285,13 +295,15 @@ public interface StandaloneModule extends Module {
                         var logger = LoggerFactory.getLogger("main");
                         Set<DecisionModel> decisionModels = new HashSet<>();
                         Set<DesignModel> designModels = new HashSet<>();
-                        cachedDecisionModels.stream().forEach(decisionModels::add);
+                        cachedDecisionModels.values().stream().forEach(decisionModels::add);
                         cachedDesignModels.values().stream().flatMap(Optional::stream).forEach(designModels::add);
                         logger.debug("Running a identification step with %s and %s decision and design models"
                                 .formatted(decisionModels.size(), designModels.size()));
                         var results = identification(designModels, decisionModels);
                         for (var result : results.identified()) {
-                            cachedDecisionModels.add(OpaqueDecisionModel.from(result));
+                            result.globalMD5Hash().ifPresent(hash -> {
+                                cachedDecisionModels.put(ByteBuffer.wrap(hash), result);
+                            });
                         }
                         logger.debug("Finished a identification step with %s decision models identified".formatted(
                                 results.identified().size()));
@@ -356,7 +368,6 @@ public interface StandaloneModule extends Module {
                         ctx.result(objectMapper.writeValueAsString(
                                 explorers().stream().map(Explorer::uniqueIdentifier).collect(Collectors.toSet())));
                     }).get("/{explorerName}/bid", ctx -> {
-                        System.out.println("Bidding with %s".formatted(ctx.pathParam("explorerName")));
                         explorers().stream()
                                 .filter(e -> e.uniqueIdentifier().equalsIgnoreCase(ctx.pathParam("explorerName")))
                                 .findAny()
@@ -381,24 +392,19 @@ public interface StandaloneModule extends Module {
                                             }
                                         });
                                     } else {
-                                        System.out.println("Not multipart");
+                                        var bb = ByteBuffer.wrap(ctx.bodyAsBytes());
                                         System.out.println(
                                                 "Bidding with %s and %s".formatted(Arrays.toString(ctx.bodyAsBytes()),
                                                         explorer.uniqueIdentifier()));
-                                        cachedDecisionModels.stream().filter(m -> m.globalMD5Hash().map(hash -> Arrays
-                                                .equals(hash, ctx.bodyAsBytes())).orElse(false)).findAny()
-                                                .ifPresentOrElse(decisionModel -> {
-                                                    var bid = explorer.bid(explorers(), decisionModel);
-                                                    try {
-                                                        ctx.result(objectMapper.writeValueAsString(bid));
-                                                    } catch (JsonProcessingException e1) {
-                                                        e1.printStackTrace();
-                                                        ctx.status(500);
-                                                    }
-                                                }, () -> {
-                                                    System.out.println("Decision model not found in cache");
-                                                    ctx.status(200);
-                                                });
+                                        var decisionModel = cachedDecisionModels.get(bb);
+                                        var bid = explorer.bid(explorers(), decisionModel);
+                                        try {
+                                            System.out.println("returning bidding value");
+                                            ctx.result(objectMapper.writeValueAsString(bid));
+                                        } catch (JsonProcessingException e1) {
+                                            e1.printStackTrace();
+                                            ctx.status(500);
+                                        }
                                     }
                                 }, () -> {
                                     ctx.status(404);

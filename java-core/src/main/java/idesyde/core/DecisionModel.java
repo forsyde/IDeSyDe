@@ -5,6 +5,7 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.dataformat.cbor.CBORFactory;
 import com.fasterxml.jackson.datatype.jdk8.Jdk8Module;
 
+import java.nio.charset.StandardCharsets;
 import java.security.MessageDigest;
 import java.security.NoSuchAlgorithmException;
 import java.util.Optional;
@@ -86,8 +87,8 @@ public interface DecisionModel extends Comparable<DecisionModel> {
         MessageDigest md5;
         try {
             md5 = MessageDigest.getInstance("MD5");
-            md5.update(category().getBytes());
-            part().stream().sorted().forEachOrdered(s -> md5.update(s.getBytes()));
+            md5.update(category().getBytes(StandardCharsets.UTF_8));
+            part().stream().sorted().forEachOrdered(s -> md5.update(s.getBytes(StandardCharsets.UTF_8)));
             return Optional.of(md5.digest());
         } catch (NoSuchAlgorithmException e) {
             return Optional.empty();

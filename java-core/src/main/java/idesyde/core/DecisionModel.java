@@ -30,7 +30,7 @@ import java.util.Set;
  * in Europe Conference &amp;
  * Exhibition (DATE), 2021, pp. 1204-1207, doi: 10.23919/DATE51398.2021.9474082.
  */
-public interface DecisionModel {
+public interface DecisionModel extends Comparable<DecisionModel> {
 
     /**
      * Used to represent a decision model in a exchangeable format. Now this is done
@@ -93,6 +93,21 @@ public interface DecisionModel {
             return Optional.empty();
         }
     }
+
+    
+
+    @Override
+    default int compareTo(DecisionModel o) {
+        return globalMD5Hash().flatMap(hash -> o.globalMD5Hash().map(hash2 -> {
+            for (int i = 0; i < hash.length; i++) {
+                if (hash[i] != hash2[i]) {
+                    return Byte.compare(hash[i], hash2[i]);
+                }
+            }
+            return 0;
+        })).orElse(0);
+    }
+
 
     /**
      * The shared and static Jackson object mapper used for (de) serialization to

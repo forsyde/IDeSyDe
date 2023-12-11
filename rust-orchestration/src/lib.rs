@@ -282,7 +282,7 @@ impl Module for ExternalServerModule {
                 // for e in m.elements() {
                 //     form = form.text("elements", e);
                 // }
-                let hash = m.global_md5_hash();
+                let hash = m.global_sha2_hash();
                 if let Ok(cache_url) = self.url.join("/design/cache/exists") {
                     return self
                         .client
@@ -317,7 +317,7 @@ impl Module for ExternalServerModule {
                 // for e in m.part() {
                 //     form = form.text("part", e);
                 // }
-                let hash = m.global_md5_hash();
+                let hash = m.global_sha2_hash();
                 if let Ok(cache_url) = self.url.join("/decision/cache/exists") {
                     return self
                         .client
@@ -411,7 +411,7 @@ impl Module for ExternalServerModule {
             design_models
                 .par_iter()
                 .filter(|m| {
-                    let hash = m.global_md5_hash();
+                    let hash = m.global_sha2_hash();
                     if let Ok(cache_url) = self.url.join("/design/cache/exists") {
                         return self
                             .client
@@ -441,7 +441,7 @@ impl Module for ExternalServerModule {
             solved_decision_models
                 .par_iter()
                 .filter(|m| {
-                    let hash = m.global_md5_hash();
+                    let hash = m.global_sha2_hash();
                     if let Ok(cache_url) = self.url.join("/solved/cache/exists") {
                         return self
                             .client

@@ -243,12 +243,11 @@ public interface StandaloneModule extends Module {
                                             hash -> cachedSolvedDecisionModels.put(ByteBuffer.wrap(hash), m))))
                     .put("/design/cache/add",
                             ctx -> {
-                                var bb = ByteBuffer.wrap(ctx.bodyAsBytes());
                                 OpaqueDesignModel.fromJsonString(ctx.body()).ifPresent(opaque -> {
                                     fromOpaqueDesign(opaque).ifPresentOrElse(m -> {
                                         // System.out.println("Adding non opaque design model to cache: " + m.category());
-                                        cachedDesignModels.put(bb, m);
-                                    }, () -> cachedDesignModels.put(bb, opaque));
+                                        cachedDesignModels.put(ByteBuffer.wrap(opaque.globalSHA2Hash().get()), m);
+                                    }, () -> cachedDesignModels.put(ByteBuffer.wrap(opaque.globalSHA2Hash().get()), opaque));
                                 });
                                 ctx.status(200);
                                 ctx.result("OK");

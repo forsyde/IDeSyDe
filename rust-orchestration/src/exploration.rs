@@ -175,7 +175,7 @@ impl Explorer for ExternalExplorer {
         //             .expect("Failed to make Json out of opaque decision model. Should never fail."),
         //     ),
         // );
-        let model_hash = m.global_md5_hash();
+        let model_hash = m.global_sha2_hash();
         let exists = self
             .url
             .join("/decision/cache/exists")
@@ -185,7 +185,7 @@ impl Explorer for ExternalExplorer {
             .map(|t| t.eq_ignore_ascii_case("true"))
             .unwrap_or(false);
         if !exists {
-            // debug!("{} is not in cache for {}. Adding it with {:?}.", m.category(), self.unique_identifier(), m.global_md5_hash());
+            // debug!("{} is not in cache for {}. Adding it with {:?}.", m.category(), self.unique_identifier(), m.global_sha2_hash());
             if let Ok(json_str) = OpaqueDecisionModel::from(m).to_json() {
                 if let Ok(r) = self.client
                                     .put(self.url.join("/decision/cache/add").unwrap())

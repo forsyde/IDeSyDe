@@ -175,7 +175,7 @@ public interface StandaloneModule extends Module {
                     .get("/decision/cache/fetch", ctx -> {
                         var bb = ByteBuffer.wrap(ctx.bodyAsBytes());
                         // cachedDecisionModels.stream()
-                        //         .filter(m -> m.globalMD5Hash().map(hash -> Arrays.equals(hash, ctx.bodyAsBytes()))
+                        //         .filter(m -> m.globalSHA2Hash().map(hash -> Arrays.equals(hash, ctx.bodyAsBytes()))
                         //                 .orElse(false))
                         //         .findAny()
                         //         .map(OpaqueDecisionModel::from)
@@ -221,25 +221,25 @@ public interface StandaloneModule extends Module {
                             ctx -> {
                                 // System.out.println("Adding to decision cache: " + ctx.body());
                                 OpaqueDecisionModel.fromJsonString(ctx.body()).ifPresentOrElse(opaque -> {
-                                    var bb = ByteBuffer.wrap(opaque.globalMD5Hash().get()); // TODO: fix possibl NPE later
+                                    var bb = ByteBuffer.wrap(opaque.globalSHA2Hash().get()); // TODO: fix possibl NPE later
                                     fromOpaqueDecision(opaque).ifPresentOrElse(m -> {
                                         // System.out.println("Adding non-opaque to decision cache: "
-                                        //     + m.globalMD5Hash().map(Arrays::toString).orElse("NO HASH"));
+                                        //     + m.globalSHA2Hash().map(Arrays::toString).orElse("NO HASH"));
                                         cachedDecisionModels.put(bb, m);
                                     }, () -> {
                                         // System.out.println("Adding opaque to decision cache: "
-                                        //     + opaque.globalMD5Hash().map(Arrays::toString).orElse("NO HASH"));
+                                        //     + opaque.globalSHA2Hash().map(Arrays::toString).orElse("NO HASH"));
                                         cachedDecisionModels.put(bb, opaque);
                                     });
                                     ctx.status(200);
-                                    ctx.result(opaque.globalMD5Hash().map(Arrays::toString).orElse("NO HASH"));
-                                    // opaque.globalMD5Hash().ifPresent(hash -> cachedDecisionModels
+                                    ctx.result(opaque.globalSHA2Hash().map(Arrays::toString).orElse("NO HASH"));
+                                    // opaque.globalSHA2Hash().ifPresent(hash -> cachedDecisionModels
                                     //         .put(ByteBuffer.wrap(hash), fromOpaqueDecision(opaque)));
                                 }, () -> ctx.status(500));
                             })
                     .put("/solved/cache/add",
                             ctx -> OpaqueDecisionModel.fromJsonString(ctx.body()).flatMap(this::fromOpaqueDecision)
-                                    .ifPresent(m -> m.globalMD5Hash().ifPresent(
+                                    .ifPresent(m -> m.globalSHA2Hash().ifPresent(
                                             hash -> cachedSolvedDecisionModels.put(ByteBuffer.wrap(hash), m))))
                     .put("/design/cache/add",
                             ctx -> {
@@ -255,7 +255,7 @@ public interface StandaloneModule extends Module {
                             })
                     .put("/reversed/cache/add",
                             ctx -> OpaqueDesignModel.fromJsonString(ctx.body()).flatMap(this::fromOpaqueDesign)
-                                    .ifPresent(m -> m.globalMD5Hash().ifPresent(
+                                    .ifPresent(m -> m.globalSHA2Hash().ifPresent(
                                             hash -> cachedReversedDesignModels.put(ByteBuffer.wrap(hash), m))))
                     .post("/decision/cache/clear", ctx -> cachedDecisionModels.clear())
                     .post("/design/cache/clear", ctx -> cachedDesignModels.clear())
@@ -348,7 +348,7 @@ public interface StandaloneModule extends Module {
                                 .formatted(decisionModels.size(), designModels.size()));
                         var results = identification(designModels, decisionModels);
                         for (var result : results.identified()) {
-                            result.globalMD5Hash().ifPresent(hash -> {
+                            result.globalSHA2Hash().ifPresent(hash -> {
                                 // System.out.println("Adding a %s decision model with hash %s to cache".formatted(result.category(), Arrays.toString(hash)));
                                 cachedDecisionModels.put(ByteBuffer.wrap(hash), result);
                             });
@@ -625,7 +625,7 @@ public interface StandaloneModule extends Module {
                         var reversed = reverseIdentification(exploredDecisionModels, designModels);
                         var reverseResponse = new ArrayList<String>();
                         for (var result : reversed) {
-                            result.globalMD5Hash().ifPresent(hash -> {
+                            result.globalSHA2Hash().ifPresent(hash -> {
                                 cachedReversedDesignModels.put(ByteBuffer.wrap(hash), result);
                                 reverseResponse.add(Base64.getEncoder().withoutPadding().encodeToString(hash));
                                 // System.out.println(Arrays.toString(hash));

@@ -95,7 +95,17 @@ public interface DecisionModel extends Comparable<DecisionModel> {
         }
     }
 
-    
+    default Optional<byte[]> globalSHA2Hash() {
+        MessageDigest sha2;
+        try {
+            sha2 = MessageDigest.getInstance("SHA-512");
+            sha2.update(category().getBytes(StandardCharsets.UTF_8));
+            part().stream().sorted().forEachOrdered(s -> sha2.update(s.getBytes(StandardCharsets.UTF_8)));
+            return Optional.of(sha2.digest());
+        } catch (NoSuchAlgorithmException e) {
+            return Optional.empty();
+        }
+    }
 
     @Override
     default int compareTo(DecisionModel o) {

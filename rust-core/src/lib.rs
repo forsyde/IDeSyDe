@@ -11,6 +11,7 @@ use std::{
 use derive_builder::Builder;
 use downcast_rs::{impl_downcast, Downcast, DowncastSync};
 use serde::{de::DeserializeOwned, Deserialize, Serialize};
+use sha2::{Sha512, Digest};
 use std::cmp::Ordering;
 use url::Url;
 
@@ -73,6 +74,18 @@ pub trait DesignModel: Send + DowncastSync {
             hasher.consume(e.as_bytes());
         }
         hasher.compute().to_vec()
+    }
+
+    fn global_sha2_hash(&self) -> Vec<u8> {
+        let mut hasher = Sha512::new();
+        hasher.update(self.category().as_bytes());
+        let part = self.elements();
+        let mut sorted: Vec<&String> = part.iter().collect();
+        sorted.sort();
+        for e in sorted {
+            hasher.update(e.as_bytes());
+        }
+        hasher.finalize().to_vec()
     }
 }
 impl_downcast!(sync DesignModel);
@@ -202,6 +215,18 @@ pub trait DecisionModel: Send + DowncastSync {
             hasher.consume(e.as_bytes());
         }
         hasher.compute().to_vec()
+    }
+
+    fn global_sha2_hash(&self) -> Vec<u8> {
+        let mut hasher = Sha512::new();
+        hasher.update(self.category().as_bytes());
+        let part = self.part();
+        let mut sorted: Vec<&String> = part.iter().collect();
+        sorted.sort();
+        for e in sorted {
+            hasher.update(e.as_bytes());
+        }
+        hasher.finalize().to_vec()
     }
 }
 impl_downcast!(sync DecisionModel);

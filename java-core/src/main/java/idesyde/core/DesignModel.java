@@ -1,5 +1,6 @@
 package idesyde.core;
 
+import java.nio.charset.StandardCharsets;
 import java.security.MessageDigest;
 import java.security.NoSuchAlgorithmException;
 import java.util.Optional;
@@ -85,6 +86,17 @@ public interface DesignModel extends Comparable<DesignModel> {
         }
     }
 
+    default Optional<byte[]> globalSHA2Hash() {
+        MessageDigest sha2;
+        try {
+            sha2 = MessageDigest.getInstance("SHA-512");
+            sha2.update(category().getBytes(StandardCharsets.UTF_8));
+            elements().stream().sorted().forEachOrdered(s -> sha2.update(s.getBytes(StandardCharsets.UTF_8)));
+            return Optional.of(sha2.digest());
+        } catch (NoSuchAlgorithmException e) {
+            return Optional.empty();
+        }
+    }
     
 
     @Override

@@ -441,13 +441,13 @@ public interface StandaloneModule extends Module {
                                         });
                                     } else {
                                         var bb = ByteBuffer.wrap(ctx.bodyAsBytes());
-                                        System.out.println(
-                                                "Bidding with %s and %s".formatted(Arrays.toString(ctx.bodyAsBytes()),
-                                                        explorer.uniqueIdentifier()));
+                                        // System.out.println(
+                                        //         "Bidding with %s and %s".formatted(Arrays.toString(ctx.bodyAsBytes()),
+                                        //                 explorer.uniqueIdentifier()));
                                         var decisionModel = cachedDecisionModels.get(bb);
                                         var bid = explorer.bid(explorers(), decisionModel);
                                         try {
-                                            System.out.println("returning bidding value");
+                                            // System.out.println("returning bidding value");
                                             ctx.result(objectMapper.writeValueAsString(bid));
                                         } catch (JsonProcessingException e1) {
                                             e1.printStackTrace();

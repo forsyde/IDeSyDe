@@ -28,7 +28,7 @@ public record IdentificationResultCompactMessage(
 
     public static IdentificationResultCompactMessage from(IdentificationResultMessage irm) {
         return new IdentificationResultCompactMessage(
-                irm.identified().stream().flatMap(x -> x.globalMD5Hash().stream())
+                irm.identified().stream().flatMap(x -> x.globalSHA2Hash().stream())
                         .map(hash -> Base64.getEncoder().withoutPadding().encodeToString(hash))
                         .collect(java.util.stream.Collectors.toSet()),
                 irm.messages());
@@ -36,7 +36,7 @@ public record IdentificationResultCompactMessage(
 
     public static IdentificationResultCompactMessage from(IdentificationResult ir) {
         return new IdentificationResultCompactMessage(
-                ir.identified().stream().flatMap(x -> x.globalMD5Hash().stream())
+                ir.identified().stream().flatMap(x -> x.globalSHA2Hash().stream())
                         .map(hash -> Base64.getEncoder().withoutPadding().encodeToString(hash))
                         .collect(java.util.stream.Collectors.toSet()),
                 ir.messages());

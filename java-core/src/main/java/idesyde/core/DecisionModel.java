@@ -109,7 +109,7 @@ public interface DecisionModel extends Comparable<DecisionModel> {
 
     @Override
     default int compareTo(DecisionModel o) {
-        return globalMD5Hash().flatMap(hash -> o.globalMD5Hash().map(hash2 -> {
+        return globalSHA2Hash().flatMap(hash -> o.globalSHA2Hash().map(hash2 -> {
             for (int i = 0; i < hash.length; i++) {
                 if (hash[i] != hash2[i]) {
                     return Byte.compare(hash[i], hash2[i]);

@@ -277,12 +277,16 @@ impl Module for ExternalServerModule {
         design_models
             .par_iter()
             .filter(|m| {
-                let hash = m.global_md5_hash();
+                let mut form = Form::new();
+                form = form.text("category", m.category());
+                for e in m.elements() {
+                    form = form.text("elements", e);
+                }
                 if let Ok(cache_url) = self.url.join("/design/cache/exists") {
                     return self
                         .client
                         .get(cache_url)
-                        .body(hash)
+                        .multipart(form)
                         .send()
                         .ok()
                         .and_then(|r| r.text().ok())
@@ -307,12 +311,17 @@ impl Module for ExternalServerModule {
         decision_models
             .par_iter()
             .filter(|m| {
-                let hash = m.global_md5_hash();
+                let mut form = Form::new();
+                form = form.text("category", m.category());
+                for e in m.part() {
+                    form = form.text("part", e);
+                }
+                // let hash = m.global_md5_hash();
                 if let Ok(cache_url) = self.url.join("/decision/cache/exists") {
                     return self
                         .client
                         .get(cache_url)
-                        .body(hash)
+                        .multipart(form)
                         .send()
                         .ok()
                         .and_then(|r| r.text().ok())

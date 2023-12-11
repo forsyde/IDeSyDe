@@ -287,7 +287,7 @@ impl Module for StandaloneModule {
         let mut identified_models = vec![];
         for m in decision_models {
             if let Some(refined) = m.downcast_ref::<OpaqueDecisionModel>().and_then(self.opaque_to_model) {
-                debug!("Refining a {}", refined.category());
+                // debug!("Refining a {}", refined.category());
                 identified_models.push(refined);
             } else {
                 identified_models.push(m.clone());

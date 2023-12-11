@@ -30,4 +30,18 @@ public record ExplorationSolution(
                         return java.util.Optional.empty();
                 }
         }
+
+        public java.util.Optional<byte[]> globalSHA2Hash() {
+                try {
+                        var md5 = java.security.MessageDigest.getInstance("MD5");
+                        md5.update(solved().globalSHA2Hash().orElse(new byte[0]));
+                        objectives().keySet().stream().sorted().forEach(k -> {
+                                md5.update(k.getBytes());
+                                md5.update(Double.toString(objectives().get(k)).getBytes());
+                        });
+                        return java.util.Optional.of(md5.digest());
+                } catch (java.security.NoSuchAlgorithmException e) {
+                        return java.util.Optional.empty();
+                }
+        }
 }

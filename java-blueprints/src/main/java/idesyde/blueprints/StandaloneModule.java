@@ -130,7 +130,6 @@ public interface StandaloneModule extends Module {
                                     if (cachedDesignModels.values().stream().anyMatch(m -> m.category().equals(ctx.formParam("category")))) {
                                         var elements = cachedDesignModels.values().stream().map(DesignModel::elements).collect(Collectors.toSet());
                                         for (var e : ctx.formParams("elements")) {
-                                            System.out.println("Checking if " + e + " is in parts for category " + ctx.formParam("category"));
                                             if (elements.stream().noneMatch(s -> s.contains(e))) {
                                                 ctx.result("false");
                                                 return;
@@ -151,11 +150,26 @@ public interface StandaloneModule extends Module {
                             })
                     .get("/solved/cache/exists",
                             ctx -> {
-                                var bb = ByteBuffer.wrap(ctx.bodyAsBytes());
-                                if (cachedSolvedDecisionModels.containsKey(bb)) {
-                                    ctx.result("true");
+                                if (ctx.isMultipartFormData()) {
+                                    if (cachedSolvedDecisionModels.values().stream().anyMatch(m -> m.category().equals(ctx.formParam("category")))) {
+                                        var elements = cachedSolvedDecisionModels.values().stream().map(DecisionModel::part).collect(Collectors.toSet());
+                                        for (var e : ctx.formParams("part")) {
+                                            if (elements.stream().noneMatch(s -> s.contains(e))) {
+                                                ctx.result("false");
+                                                return;
+                                            }
+                                        }
+                                        ctx.result("true");
+                                    } else {
+                                        ctx.result("false");
+                                    }
                                 } else {
-                                    ctx.result("false");
+                                    var bb = ByteBuffer.wrap(ctx.bodyAsBytes());
+                                    if (cachedSolvedDecisionModels.containsKey(bb)) {
+                                        ctx.result("true");
+                                    } else {
+                                        ctx.result("false");
+                                    }
                                 }
                             })
                     .get("/decision/cache/fetch", ctx -> {

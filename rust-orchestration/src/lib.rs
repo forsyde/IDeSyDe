@@ -277,16 +277,17 @@ impl Module for ExternalServerModule {
         design_models
             .par_iter()
             .filter(|m| {
-                let mut form = Form::new();
-                form = form.text("category", m.category());
-                for e in m.elements() {
-                    form = form.text("elements", e);
-                }
+                // let mut form = Form::new();
+                // form = form.text("category", m.category());
+                // for e in m.elements() {
+                //     form = form.text("elements", e);
+                // }
+                let hash = m.global_md5_hash();
                 if let Ok(cache_url) = self.url.join("/design/cache/exists") {
                     return self
                         .client
                         .get(cache_url)
-                        .multipart(form)
+                        .body(hash)
                         .send()
                         .ok()
                         .and_then(|r| r.text().ok())
@@ -311,17 +312,17 @@ impl Module for ExternalServerModule {
         decision_models
             .par_iter()
             .filter(|m| {
-                let mut form = Form::new();
-                form = form.text("category", m.category());
-                for e in m.part() {
-                    form = form.text("part", e);
-                }
-                // let hash = m.global_md5_hash();
+                // let mut form = Form::new();
+                // form = form.text("category", m.category());
+                // for e in m.part() {
+                //     form = form.text("part", e);
+                // }
+                let hash = m.global_md5_hash();
                 if let Ok(cache_url) = self.url.join("/decision/cache/exists") {
                     return self
                         .client
                         .get(cache_url)
-                        .multipart(form)
+                        .body(hash)
                         .send()
                         .ok()
                         .and_then(|r| r.text().ok())
@@ -332,11 +333,11 @@ impl Module for ExternalServerModule {
             })
             .map(|m| OpaqueDecisionModel::from(m.as_ref()))
             .for_each(|m| {
-                debug!(
-                    "Sending {:?} to module {:?}",
-                    m.category(),
-                    self.unique_identifier()
-                );
+                // debug!(
+                //     "Sending {:?} to module {:?}",
+                //     m.category(),
+                //     self.unique_identifier()
+                // );
                 if let Ok(bodyj) = m.to_json() {
                     if let Ok(decision_add_url) = self.url.join("/decision/cache/add") {
                         if let Err(e) = self.client.put(decision_add_url).body(bodyj).send() {

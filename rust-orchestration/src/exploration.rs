@@ -185,13 +185,13 @@ impl Explorer for ExternalExplorer {
             .map(|t| t.eq_ignore_ascii_case("true"))
             .unwrap_or(false);
         if !exists {
-            debug!("{} is not in cache for {}. Adding it with {:?}.", m.category(), self.unique_identifier(), m.global_md5_hash());
+            // debug!("{} is not in cache for {}. Adding it with {:?}.", m.category(), self.unique_identifier(), m.global_md5_hash());
             if let Ok(json_str) = OpaqueDecisionModel::from(m).to_json() {
                 if let Ok(r) = self.client
                                     .put(self.url.join("/decision/cache/add").unwrap())
                                     .body(json_str)
                                     .send() {
-                    debug!("Added decision model to cache: {:?}", r.bytes().unwrap());
+                    // debug!("Added decision model to cache: {:?}", r.bytes().unwrap());
                 };
             }
         }

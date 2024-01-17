@@ -43,6 +43,21 @@ public record OpaqueDesignModel(
         String body
 ) implements DesignModel {
 
+    @Override
+    public String category() {
+        return category;
+    }
+
+    @Override
+    public String format() {
+        return format;
+    }
+
+    @Override
+    public Set<String> elements() {
+        return elements;
+    }
+
     public OpaqueDesignModel(String category) {
         this(category, new HashSet<>(), "", null);
     }

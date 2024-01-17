@@ -44,6 +44,16 @@ public record OpaqueDecisionModel(
         @JsonProperty("body_msgpack") Optional<byte[]> bodyMsgPack,
         @JsonProperty("body_cbor") Optional<byte[]> bodyCBOR) implements DecisionModel {
 
+    @Override
+    public String category() {
+        return category;
+    }
+
+    @Override
+    public Set<String> part() {
+        return part;
+    }
+
     public Optional<String> asJsonString() {
         return bodyJson;
     }

@@ -1,5 +1,6 @@
 package idesyde.core;
 
+import java.nio.charset.StandardCharsets;
 import java.security.MessageDigest;
 import java.security.NoSuchAlgorithmException;
 import java.util.Optional;
@@ -34,7 +35,7 @@ import com.fasterxml.jackson.dataformat.cbor.CBORFactory;
  * Exhibition (DATE), 2021, pp. 1204-1207, doi: 10.23919/DATE51398.2021.9474082.
  *
  */
-public interface DesignModel {
+public interface DesignModel extends Comparable<DesignModel> {
 
     // default DesignModelHeader header() {
     // return new DesignModelHeader(category(), elements(), new HashSet<>());
@@ -83,6 +84,31 @@ public interface DesignModel {
         } catch (NoSuchAlgorithmException e) {
             return Optional.empty();
         }
+    }
+
+    default Optional<byte[]> globalSHA2Hash() {
+        MessageDigest sha2;
+        try {
+            sha2 = MessageDigest.getInstance("SHA-512");
+            sha2.update(category().getBytes(StandardCharsets.UTF_8));
+            elements().stream().sorted().forEachOrdered(s -> sha2.update(s.getBytes(StandardCharsets.UTF_8)));
+            return Optional.of(sha2.digest());
+        } catch (NoSuchAlgorithmException e) {
+            return Optional.empty();
+        }
+    }
+    
+
+    @Override
+    default int compareTo(DesignModel o) {
+        return globalSHA2Hash().flatMap(hash -> o.globalSHA2Hash().map(hash2 -> {
+            for (int i = 0; i < hash.length; i++) {
+                if (hash[i] != hash2[i]) {
+                    return Byte.compare(hash[i], hash2[i]);
+                }
+            }
+            return 0;
+        })).orElse(0);
     }
 
     /**

@@ -166,17 +166,37 @@ impl Explorer for ExternalExplorer {
         _explorers: &Vec<Arc<dyn Explorer>>,
         m: Arc<dyn DecisionModel>,
     ) -> ExplorationBid {
-        let mut form = reqwest::blocking::multipart::Form::new();
-        form = form.part(
-            format!("decisionModel"),
-            reqwest::blocking::multipart::Part::text(
-                OpaqueDecisionModel::from(m)
-                    .to_json()
-                    .expect("Failed to make Json out of opaque decision model. Should never fail."),
-            ),
-        );
+        // let mut form = reqwest::blocking::multipart::Form::new();
+        // form = form.part(
+        //     format!("decisionModel"),
+        //     reqwest::blocking::multipart::Part::text(
+        //         OpaqueDecisionModel::from(m)
+        //             .to_json()
+        //             .expect("Failed to make Json out of opaque decision model. Should never fail."),
+        //     ),
+        // );
+        let model_hash = m.global_sha2_hash();
+        let exists = self
+            .url
+            .join("/decision/cache/exists")
+            .ok()
+            .and_then(|u| self.client.get(u).body(model_hash.clone()).send().ok())
+            .and_then(|r| r.text().ok())
+            .map(|t| t.eq_ignore_ascii_case("true"))
+            .unwrap_or(false);
+        if !exists {
+            // debug!("{} is not in cache for {}. Adding it with {:?}.", m.category(), self.unique_identifier(), m.global_sha2_hash());
+            if let Ok(json_str) = OpaqueDecisionModel::from(m).to_json() {
+                if let Ok(r) = self.client
+                                    .put(self.url.join("/decision/cache/add").unwrap())
+                                    .body(json_str)
+                                    .send() {
+                    // debug!("Added decision model to cache: {:?}", r.bytes().unwrap());
+                };
+            }
+        }
         if let Ok(bid_url) = self.url.join(format!("/{}/bid", self.name).as_str()) {
-            match self.client.get(bid_url).multipart(form).send() {
+            match self.client.get(bid_url).body(model_hash).send() {
                 Ok(result) => match result.text() {
                     Ok(text) => {
                         if !text.is_empty() {

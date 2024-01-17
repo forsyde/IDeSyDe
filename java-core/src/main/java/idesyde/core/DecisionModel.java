@@ -5,6 +5,7 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.dataformat.cbor.CBORFactory;
 import com.fasterxml.jackson.datatype.jdk8.Jdk8Module;
 
+import java.nio.charset.StandardCharsets;
 import java.security.MessageDigest;
 import java.security.NoSuchAlgorithmException;
 import java.util.Optional;
@@ -30,7 +31,7 @@ import java.util.Set;
  * in Europe Conference &amp;
  * Exhibition (DATE), 2021, pp. 1204-1207, doi: 10.23919/DATE51398.2021.9474082.
  */
-public interface DecisionModel {
+public interface DecisionModel extends Comparable<DecisionModel> {
 
     /**
      * Used to represent a decision model in a exchangeable format. Now this is done
@@ -86,13 +87,38 @@ public interface DecisionModel {
         MessageDigest md5;
         try {
             md5 = MessageDigest.getInstance("MD5");
-            md5.update(category().getBytes());
-            part().stream().sorted().forEachOrdered(s -> md5.update(s.getBytes()));
+            md5.update(category().getBytes(StandardCharsets.UTF_8));
+            part().stream().sorted().forEachOrdered(s -> md5.update(s.getBytes(StandardCharsets.UTF_8)));
             return Optional.of(md5.digest());
         } catch (NoSuchAlgorithmException e) {
             return Optional.empty();
         }
     }
+
+    default Optional<byte[]> globalSHA2Hash() {
+        MessageDigest sha2;
+        try {
+            sha2 = MessageDigest.getInstance("SHA-512");
+            sha2.update(category().getBytes(StandardCharsets.UTF_8));
+            part().stream().sorted().forEachOrdered(s -> sha2.update(s.getBytes(StandardCharsets.UTF_8)));
+            return Optional.of(sha2.digest());
+        } catch (NoSuchAlgorithmException e) {
+            return Optional.empty();
+        }
+    }
+
+    @Override
+    default int compareTo(DecisionModel o) {
+        return globalSHA2Hash().flatMap(hash -> o.globalSHA2Hash().map(hash2 -> {
+            for (int i = 0; i < hash.length; i++) {
+                if (hash[i] != hash2[i]) {
+                    return Byte.compare(hash[i], hash2[i]);
+                }
+            }
+            return 0;
+        })).orElse(0);
+    }
+
 
     /**
      * The shared and static Jackson object mapper used for (de) serialization to

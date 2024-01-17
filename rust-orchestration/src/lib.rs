@@ -137,16 +137,16 @@ impl ExternalServerModule {
                 .arg(&command_path_)
                 .arg("--server")
                 .arg("http")
-                .stdin(Stdio::piped())
+                .stdin(Stdio::null())
                 .stdout(Stdio::piped())
-                .stderr(Stdio::piped())
+                .stderr(Stdio::null())
                 .spawn(),
             false => std::process::Command::new(&command_path_)
                 .arg("--server")
                 .arg("http")
-                .stdin(Stdio::piped())
+                .stdin(Stdio::null())
                 .stdout(Stdio::piped())
-                .stderr(Stdio::piped())
+                .stderr(Stdio::null())
                 .spawn(),
         };
         // the test involves just exitting it
@@ -277,7 +277,12 @@ impl Module for ExternalServerModule {
         design_models
             .par_iter()
             .filter(|m| {
-                let hash = m.global_md5_hash();
+                // let mut form = Form::new();
+                // form = form.text("category", m.category());
+                // for e in m.elements() {
+                //     form = form.text("elements", e);
+                // }
+                let hash = m.global_sha2_hash();
                 if let Ok(cache_url) = self.url.join("/design/cache/exists") {
                     return self
                         .client
@@ -307,7 +312,12 @@ impl Module for ExternalServerModule {
         decision_models
             .par_iter()
             .filter(|m| {
-                let hash = m.global_md5_hash();
+                // let mut form = Form::new();
+                // form = form.text("category", m.category());
+                // for e in m.part() {
+                //     form = form.text("part", e);
+                // }
+                let hash = m.global_sha2_hash();
                 if let Ok(cache_url) = self.url.join("/decision/cache/exists") {
                     return self
                         .client
@@ -323,11 +333,11 @@ impl Module for ExternalServerModule {
             })
             .map(|m| OpaqueDecisionModel::from(m.as_ref()))
             .for_each(|m| {
-                debug!(
-                    "Sending {:?} to module {:?}",
-                    m.category(),
-                    self.unique_identifier()
-                );
+                // debug!(
+                //     "Sending {:?} to module {:?}",
+                //     m.category(),
+                //     self.unique_identifier()
+                // );
                 if let Ok(bodyj) = m.to_json() {
                     if let Ok(decision_add_url) = self.url.join("/decision/cache/add") {
                         if let Err(e) = self.client.put(decision_add_url).body(bodyj).send() {
@@ -348,7 +358,7 @@ impl Module for ExternalServerModule {
                 .ok()
                 .and_then(|res| res.text().ok())
                 .and_then(|txt| {
-                    debug!("Received identification result: {}", txt.as_str());
+                    // debug!("Received identification result: {}", txt.as_str());
                     serde_json::from_str::<IdentificationResultCompactMessage>(txt.as_str()).ok()
                 })
             {
@@ -358,7 +368,7 @@ impl Module for ExternalServerModule {
                     .map(|s| general_purpose::STANDARD_NO_PAD.decode(s).ok())
                     .flatten()
                     .collect::<Vec<Vec<u8>>>();
-                debug!("Reversed hashes: {:?}", reversed_hashes);
+                // debug!("Reversed hashes: {:?}", reversed_hashes);
                 let identified_models = reversed_hashes
                     .into_par_iter()
                     .flat_map(|hash| {
@@ -401,7 +411,7 @@ impl Module for ExternalServerModule {
             design_models
                 .par_iter()
                 .filter(|m| {
-                    let hash = m.global_md5_hash();
+                    let hash = m.global_sha2_hash();
                     if let Ok(cache_url) = self.url.join("/design/cache/exists") {
                         return self
                             .client
@@ -431,7 +441,7 @@ impl Module for ExternalServerModule {
             solved_decision_models
                 .par_iter()
                 .filter(|m| {
-                    let hash = m.global_md5_hash();
+                    let hash = m.global_sha2_hash();
                     if let Ok(cache_url) = self.url.join("/solved/cache/exists") {
                         return self
                             .client

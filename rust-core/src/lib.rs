@@ -4,14 +4,14 @@ use std::{
     collections::{HashMap, HashSet},
     hash::Hash,
     path::Path,
-    sync::Arc,
+    sync::{mpsc::Receiver, Arc},
     time::{Duration, Instant},
 };
 
 use derive_builder::Builder;
 use downcast_rs::{impl_downcast, Downcast, DowncastSync};
 use serde::{de::DeserializeOwned, Deserialize, Serialize};
-use sha2::{Sha512, Digest};
+use sha2::{Digest, Sha512};
 use std::cmp::Ordering;
 use url::Url;
 
@@ -1079,7 +1079,12 @@ impl Iterator for CombinedExplorerIterator {
 pub struct MultiLevelCombinedExplorerIterator {
     explorers_and_models: Vec<(Arc<dyn Explorer>, Arc<dyn DecisionModel>)>,
     exploration_configuration: ExplorationConfiguration,
-    levels: Vec<CombinedExplorerIterator>,
+    // levels: Vec<CombinedExplorerIterator>,
+    // levels_tuple: (Option<CombinedExplorerIterator>, CombinedExplorerIterator),
+    levels_stream: (
+        Option<Arc<Receiver<ExplorationSolution>>>,
+        Arc<Receiver<ExplorationSolution>>,
+    ),
     solutions: HashSet<ExplorationSolution>,
     converged_to_last_level: bool,
     start: Instant,
@@ -1089,61 +1094,120 @@ impl Iterator for MultiLevelCombinedExplorerIterator {
     type Item = ExplorationSolution;
 
     fn next(&mut self) -> Option<Self::Item> {
-        if self.exploration_configuration.total_timeout > 0
-            && self.start.elapsed()
-                > Duration::from_secs(self.exploration_configuration.total_timeout)
-        {
-            return None;
-        }
-        match self.levels.last_mut() {
-            Some(last_level) => {
-                match last_level
-                    .filter(|new_solution| {
-                        // solution is not dominated
-                        !self.solutions.iter().any(|cur_solution| {
-                            new_solution.partial_cmp(cur_solution) == Some(Ordering::Greater)
-                        })
-                    })
-                    .find(|x| !self.solutions.contains(x))
-                {
-                    Some(new_solution) => {
-                        self.solutions.insert(new_solution.clone());
-                        if !self.converged_to_last_level {
-                            let sol_dominates = self.solutions.iter().any(|cur_sol| {
-                                new_solution.partial_cmp(cur_sol) == Some(Ordering::Less)
-                            });
-                            if sol_dominates {
-                                // debug!("Starting new level");
-                                self.solutions.retain(|cur_sol| {
-                                    new_solution.partial_cmp(cur_sol) != Some(Ordering::Less)
-                                });
-                                self.levels.push(CombinedExplorerIterator::start(
-                                    &self.explorers_and_models,
-                                    &self.solutions,
-                                    self.exploration_configuration.to_owned(),
-                                ));
+        loop {
+            if self.exploration_configuration.total_timeout > 0
+                && self.start.elapsed()
+                    > Duration::from_secs(self.exploration_configuration.total_timeout)
+            {
+                return None;
+            }
+            let (_, last_level) = &self.levels_stream;
+            match last_level.recv_timeout(Duration::from_millis(500)) {
+                Ok(solution) => {
+                    self.solutions.insert(solution.clone());
+                    let sol_dominates = self
+                        .solutions
+                        .iter()
+                        .any(|cur_sol| solution.partial_cmp(cur_sol) == Some(Ordering::Less));
+                    if sol_dominates {
+                        // debug!("Starting new level");
+                        self.solutions.retain(|cur_sol| {
+                            solution.partial_cmp(cur_sol) != Some(Ordering::Less)
+                        });
+                        let combined_explorer = CombinedExplorerIterator::start(
+                            &self.explorers_and_models,
+                            &self.solutions,
+                            self.exploration_configuration.to_owned(),
+                        );
+                        let (sender, receiver) = std::sync::mpsc::channel::<ExplorationSolution>();
+                        // move the data structures to contain new explorers
+                        self.levels_stream = (Some(last_level.to_owned()), Arc::new(receiver));
+                        // self.levels_tuple = (Some(self.levels_tuple.1), combined_explorer);
+                        std::thread::spawn(move || {
+                            for sol in combined_explorer {
+                                match sender.send(sol) {
+                                    Ok(_) => {}
+                                    Err(_) => {
+                                        break;
+                                    }
+                                };
                             }
-                            if self.levels.len() > 2 {
-                                self.levels.remove(0);
-                            }
-                        }
-                        // debug!("solutions {}", self.solutions.len());
-                        return Some(new_solution);
-                        // self.previous = Some(self.current_level);
-                        // self.current_level
+                        });
                     }
-                    None => {
-                        if !self.converged_to_last_level {
-                            self.converged_to_last_level = true;
-                            self.levels.remove(self.levels.len() - 1);
-                            return self.next();
-                        }
+                    return Some(solution);
+                }
+                Err(std::sync::mpsc::RecvTimeoutError::Disconnected) => {
+                    if let (Some(prev_level), _) = &self.levels_stream {
+                        self.levels_stream = (None, prev_level.to_owned());
+                        // self.levels_tuple = (
+                        //     None,
+                        //     self.levels_tuple
+                        //         .0
+                        //         .expect("Combined explorer should always exist."),
+                        // );
+                    } else {
+                        return None;
                     }
                 }
-            }
-            None => {}
-        };
-        None
+                _ => (),
+            };
+        }
+        // None
+        //     match self.levels_tuple {
+        //         (_, Some(last_level)) => {
+
+        //         }
+        //     }
+        // }
+        // match self.levels.last_mut() {
+        //     Some(last_level) => {
+        //         match last_level
+        //             .filter(|new_solution| {
+        //                 // solution is not dominated
+        //                 !self.solutions.iter().any(|cur_solution| {
+        //                     new_solution.partial_cmp(cur_solution) == Some(Ordering::Greater)
+        //                 })
+        //             })
+        //             .find(|x| !self.solutions.contains(x))
+        //         {
+        //             Some(new_solution) => {
+        //                 self.solutions.insert(new_solution.clone());
+        //                 if !self.converged_to_last_level {
+        //                     let sol_dominates = self.solutions.iter().any(|cur_sol| {
+        //                         new_solution.partial_cmp(cur_sol) == Some(Ordering::Less)
+        //                     });
+        //                     if sol_dominates {
+        //                         // debug!("Starting new level");
+        //                         self.solutions.retain(|cur_sol| {
+        //                             new_solution.partial_cmp(cur_sol) != Some(Ordering::Less)
+        //                         });
+        //                         self.levels.push(CombinedExplorerIterator::start(
+        //                             &self.explorers_and_models,
+        //                             &self.solutions,
+        //                             self.exploration_configuration.to_owned(),
+        //                         ));
+        //                     }
+        //                     if self.levels.len() > 2 {
+        //                         self.levels.remove(0);
+        //                     }
+        //                 }
+        //                 // debug!("solutions {}", self.solutions.len());
+        //                 return Some(new_solution);
+        //                 // self.previous = Some(self.current_level);
+        //                 // self.current_level
+        //             }
+        //             None => {
+        //                 if !self.converged_to_last_level {
+        //                     self.converged_to_last_level = true;
+        //                     self.levels.remove(self.levels.len() - 1);
+        //                     return self.next();
+        //                 }
+        //             }
+        //         }
+        //     }
+        //     None => {}
+        // };
+        // None
     }
 }
 
@@ -1153,15 +1217,34 @@ pub fn explore_cooperatively_simple(
     exploration_configuration: ExplorationConfiguration,
     // solution_inspector: F,
 ) -> MultiLevelCombinedExplorerIterator {
+    let combined_explorer = CombinedExplorerIterator::start(
+        &explorers_and_models,
+        &currrent_solutions,
+        exploration_configuration.to_owned(),
+    );
+    let (sender, receiver) = std::sync::mpsc::channel::<ExplorationSolution>();
+    // move the data structures to contain new explorers
+    let levels_stream = (None, Arc::new(receiver));
+    // let levels_tuple = (None, combined_explorer);
+    std::thread::spawn(move || {
+        for sol in combined_explorer {
+            match sender.send(sol) {
+                Ok(_) => {}
+                Err(_) => {}
+            };
+        }
+    });
     MultiLevelCombinedExplorerIterator {
         explorers_and_models: explorers_and_models.clone(),
         solutions: currrent_solutions.clone(),
         exploration_configuration: exploration_configuration.to_owned(),
-        levels: vec![CombinedExplorerIterator::start(
-            explorers_and_models,
-            currrent_solutions,
-            exploration_configuration.to_owned(),
-        )],
+        // levels: vec![CombinedExplorerIterator::start_with_exact(
+        //     explorers_and_models,
+        //     &biddings.iter().map(|b| b.is_exact).collect(),
+        //     currrent_solutions,
+        //     exploration_configuration.to_owned(),
+        // )],
+        levels_stream,
         converged_to_last_level: false,
         start: Instant::now(),
     }
@@ -1174,16 +1257,34 @@ pub fn explore_cooperatively(
     exploration_configuration: ExplorationConfiguration,
     // solution_inspector: F,
 ) -> MultiLevelCombinedExplorerIterator {
+    let combined_explorer = CombinedExplorerIterator::start(
+        &explorers_and_models,
+        &currrent_solutions,
+        exploration_configuration.to_owned(),
+    );
+    let (sender, receiver) = std::sync::mpsc::channel::<ExplorationSolution>();
+    // move the data structures to contain new explorers
+    let levels_stream = (None, Arc::new(receiver));
+    // let levels_tuple = (None, combined_explorer);
+    std::thread::spawn(move || {
+        for sol in combined_explorer {
+            match sender.send(sol) {
+                Ok(_) => {}
+                Err(_) => {}
+            };
+        }
+    });
     MultiLevelCombinedExplorerIterator {
         explorers_and_models: explorers_and_models.clone(),
         solutions: currrent_solutions.clone(),
         exploration_configuration: exploration_configuration.to_owned(),
-        levels: vec![CombinedExplorerIterator::start_with_exact(
-            explorers_and_models,
-            &biddings.iter().map(|b| b.is_exact).collect(),
-            currrent_solutions,
-            exploration_configuration.to_owned(),
-        )],
+        // levels: vec![CombinedExplorerIterator::start_with_exact(
+        //     explorers_and_models,
+        //     &biddings.iter().map(|b| b.is_exact).collect(),
+        //     currrent_solutions,
+        //     exploration_configuration.to_owned(),
+        // )],
+        levels_stream,
         converged_to_last_level: false,
         start: Instant::now(),
     }

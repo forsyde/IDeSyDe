@@ -70,7 +70,7 @@ jobs:
   test-scala-build-on-windows:
     strategy:
       matrix:
-        jdk: [temurin@17, amazon-corretto@17, zulu@17, microsoft@17]
+        jdk: [temurin@17, amazon-corretto@17, zulu@17]
       fail-fast: false
     runs-on: windows-latest
     steps:

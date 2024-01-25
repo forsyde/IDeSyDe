@@ -289,6 +289,48 @@ pub fn identification_procedure(
     (identified, messages)
 }
 
+pub fn get_sqlite_for_identification(url: &str) -> Result<rusqlite::Connection, rusqlite::Error> {
+    let conn = rusqlite::Connection::open(url)?;
+    conn.execute(
+        "CREATE TABLE IF NOT EXISTS decision_models (
+            id INTEGER PRIMARY KEY,
+            category TEXT NOT NULL,
+            body_cbor BLOB,
+            body_msgpack BLOB,
+            body_json JSON NOT NULL,
+        )",
+        [],
+    )?;
+    conn.execute(
+        "CREATE TABLE IF NOT EXISTS design_models (
+            id INTEGER PRIMARY KEY,
+            category TEXT NOT NULL,
+            format TEXT NOT NULL,
+            body TEXT NOT NULL
+        )",
+        [],
+    )?;
+    conn.execute(
+        "CREATE TABLE IF NOT EXISTS part (
+            decision_model_id INTEGER NOT NULL,
+            element_name TEXT NOT NULL,
+            FOREIGN KEY (decision_model_id) REFERENCES decision_models (id),
+            UNIQUE (decision_model_id, element_name)
+        )",
+        [],
+    )?;
+    conn.execute(
+        "CREATE TABLE IF NOT EXISTS elems (
+            design_model_id INTEGER NOT NULL,
+            element_name TEXT NOT NULL,
+            FOREIGN KEY (design_model_id) REFERENCES decision_models (id),
+            UNIQUE (design_model_id, element_name)
+        )",
+        [],
+    )?;
+    Ok(conn)
+}
+
 // #[derive(Debug, PartialEq, Eq, Hash)]
 // pub struct ExternalIdentificationModule {
 //     pub command_path_: PathBuf,

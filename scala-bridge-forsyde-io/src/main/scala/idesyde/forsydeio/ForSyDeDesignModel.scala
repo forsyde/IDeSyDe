@@ -37,14 +37,18 @@ final case class ForSyDeDesignModel(val systemGraph: SystemGraph) extends Design
   //     rel.getTargetPort().toScala
   //   )
 
-  override def elements() = (systemGraph.vertexSet().asScala.map(_.getIdentifier()) ++ systemGraph.edgeSet().asScala.map(_.toIDString())).asJava
+  override def elements() = (systemGraph
+    .vertexSet()
+    .asScala
+    .map(_.getIdentifier())
+    .asJava) // ++ systemGraph.edgeSet().asScala.map(_.toIDString())).asJava
 
   override def category(): String = "ForSyDeDesignModel"
 
   override def format() = "fiodl"
 
   override def asString(): java.util.Optional[String] = {
-      java.util.Optional.of(modelHandler.printModel(systemGraph, "fiodl"))
+    java.util.Optional.of(modelHandler.printModel(systemGraph, "fiodl"))
   }
 
   def bodyAsText: Option[String] = {

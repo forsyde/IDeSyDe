@@ -15,13 +15,14 @@ import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
 /**
- * This design model wraps ForSyDe IO system graphs in order to make it usable in the DSI conceptual framework
+ * This design model wraps ForSyDe IO system graphs in order to make it usable
+ * in the DSI conceptual framework
  * and IDeSyDe framework.
+ * 
  * @param systemGraph the ForSyDe IO system graph wrapped.
  */
 public record ForSyDeIODesignModel(
         SystemGraph systemGraph) implements DesignModel {
-
 
     @Override
     public Optional<String> asString() {
@@ -36,6 +37,14 @@ public record ForSyDeIODesignModel(
     @Override
     public String format() {
         return "fiodl";
+    }
+
+    @Override
+    public Set<String> elements() {
+        return systemGraph.vertexSet().stream().map(Vertex::getIdentifier).collect(Collectors.toSet());
+        // return
+        // Stream.concat(systemGraph.vertexSet().stream().map(Vertex::getIdentifier),
+        // systemGraph().edgeSet().stream().map(EdgeInfo::toIDString)).collect(Collectors.toSet());
     }
 
     public static ModelHandler modelHandler = LibForSyDeModelHandler.registerLibForSyDe(new ModelHandler())

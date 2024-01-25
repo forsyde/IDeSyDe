@@ -6,7 +6,9 @@ use idesyde_core::{
     explore_cooperatively, DecisionModel, DesignModel, ExplorationBid, ExplorationSolution,
     Explorer, OpaqueDesignModel,
 };
-use idesyde_orchestration::{identification::identification_procedure, ExternalServerModule, exploration};
+use idesyde_orchestration::{
+    exploration, identification::identification_procedure, ExternalServerModule,
+};
 use log::{debug, error, info, warn, Level};
 use rayon::prelude::*;
 
@@ -345,7 +347,11 @@ fn main() {
                 .unwrap_or("None".to_string())
         );
         for (i, m) in identified.iter().enumerate() {
-            m.write_to_dir(&identified_path, format!("final_{}", i).as_str(), "Orchestratror");
+            m.write_to_dir(
+                &identified_path,
+                format!("final_{}", i).as_str(),
+                "Orchestratror",
+            );
         }
         // println!(
         //     "{}",
@@ -383,16 +389,39 @@ fn main() {
             bidding_time.elapsed().as_millis()
         );
         let dominant_biddings_idx: Vec<usize> = idesyde_core::compute_dominant_biddings(&biddings);
-        info!("Acquired {} dominant bidding(s) out of {} bidding(s)", dominant_biddings_idx.len(), biddings.len());
+        info!(
+            "Acquired {} dominant bidding(s) out of {} bidding(s)",
+            dominant_biddings_idx.len(),
+            biddings.len()
+        );
         // let dominant_bidding_opt =
         //     idesyde_core::compute_dominant_bidding(biddings.iter().map(|(_, _, b)| b));
-        let total_identified_elements: HashSet<String> = identified
+        let total_identifieable_elements: HashSet<String> = design_models
             .iter()
-            .map(|x| x.part())
+            .map(|x| x.elements())
             .flatten()
             .collect();
-        if !dominant_biddings_idx.iter().any(|i| biddings[*i].1.part() == total_identified_elements) {
-            warn!("No dominant bidding captures all partially identified elements. Double-check the final reversed models if any is produced.");
+        if !dominant_biddings_idx.iter().any(|i| {
+            biddings[*i]
+                .1
+                .part()
+                .is_superset(&total_identifieable_elements)
+        }) {
+            warn!("No dominant bidding captures all partially identified elements. Double-check any final reversed models if any is produced. You can see the non-identified elements by setting using DEBUG verbosity.");
+            debug!(
+                "Elements that are not covered are: {:?}",
+                total_identifieable_elements
+                    .difference(
+                        &dominant_biddings_idx
+                            .iter()
+                            .map(|i| biddings[*i].1.part())
+                            .flatten()
+                            .collect()
+                    )
+                    .map(|s| s.to_owned())
+                    .reduce(|s1, s2| format!("{}, {}", s1, s2))
+                    .unwrap_or("{}".to_string())
+            );
         }
         if dominant_biddings_idx.len() > 0 {
             match (args.x_total_time_out, args.x_max_solutions) {

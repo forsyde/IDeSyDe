@@ -300,7 +300,8 @@ impl Module for ExternalServerModule {
             .for_each(|m| {
                 if let Ok(bodyj) = m.to_json() {
                     if let Ok(design_add_url) = self.url.join("/design/cache/add") {
-                        if let Err(e) = self.client.put(design_add_url).body(bodyj).send() {
+                        let form = Form::new().text("designModel", bodyj);
+                        if let Err(e) = self.client.post(design_add_url).multipart(form).send() {
                             debug!(
                                 "Failed to send design model to identify with: {}",
                                 e.to_string()
@@ -340,7 +341,8 @@ impl Module for ExternalServerModule {
                 // );
                 if let Ok(bodyj) = m.to_json() {
                     if let Ok(decision_add_url) = self.url.join("/decision/cache/add") {
-                        if let Err(e) = self.client.put(decision_add_url).body(bodyj).send() {
+                        let form = Form::new().text("decisionModel", bodyj);
+                        if let Err(e) = self.client.post(decision_add_url).multipart(form).send() {
                             debug!(
                                 "Failed to send design model to identify  with: {}",
                                 e.to_string()
@@ -429,7 +431,9 @@ impl Module for ExternalServerModule {
                 .for_each(|m| {
                     if let Ok(bodyj) = m.to_json() {
                         if let Ok(design_add_url) = self.url.join("/design/cache/add") {
-                            if let Err(e) = self.client.put(design_add_url).body(bodyj).send() {
+                            let form = Form::new().text("designModel", bodyj);
+                            if let Err(e) = self.client.post(design_add_url).multipart(form).send()
+                            {
                                 debug!(
                                     "Failed to send design model to reverse with: {}",
                                     e.to_string()
@@ -459,7 +463,10 @@ impl Module for ExternalServerModule {
                 .for_each(|m| {
                     if let Ok(bodyj) = m.to_json() {
                         if let Ok(decision_add_url) = self.url.join("/solved/cache/add") {
-                            if let Err(e) = self.client.put(decision_add_url).body(bodyj).send() {
+                            let form = Form::new().text("solvedModel", bodyj);
+                            if let Err(e) =
+                                self.client.post(decision_add_url).multipart(form).send()
+                            {
                                 debug!(
                                     "Failed to send design model to reverse with: {}",
                                     e.to_string()

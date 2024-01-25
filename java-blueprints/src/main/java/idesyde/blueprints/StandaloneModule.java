@@ -225,48 +225,66 @@ public interface StandaloneModule extends Module {
                             ctx.status(404);
                         }
                     })
-                    .put("/decision/cache/add",
+                    .post("/decision/cache/add",
                             ctx -> {
                                 // System.out.println("Adding to decision cache: " + ctx.body());
-                                OpaqueDecisionModel.fromJsonString(ctx.body()).ifPresentOrElse(opaque -> {
-                                    var bb = ByteBuffer.wrap(opaque.globalSHA2Hash().get()); // TODO: fix possibl NPE
-                                                                                             // later
-                                    fromOpaqueDecision(opaque).ifPresentOrElse(m -> {
-                                        // System.out.println("Adding non-opaque to decision cache: "
-                                        // + m.globalSHA2Hash().map(Arrays::toString).orElse("NO HASH"));
-                                        cachedDecisionModels.put(bb, m);
-                                    }, () -> {
-                                        // System.out.println("Adding opaque to decision cache: "
-                                        // + opaque.globalSHA2Hash().map(Arrays::toString).orElse("NO HASH"));
-                                        cachedDecisionModels.put(bb, opaque);
+                                if (ctx.isMultipartFormData()) {
+                                    OpaqueDecisionModel.fromJsonString(ctx.formParam("decisionModel"))
+                                            .ifPresentOrElse(opaque -> {
+                                                var bb = ByteBuffer.wrap(opaque.globalSHA2Hash().get()); // TODO: fix
+                                                                                                         // possibl NPE
+                                                                                                         // later
+                                                fromOpaqueDecision(opaque).ifPresentOrElse(m -> {
+                                                    // System.out.println("Adding non-opaque to decision cache: "
+                                                    // + m.globalSHA2Hash().map(Arrays::toString).orElse("NO HASH"));
+                                                    cachedDecisionModels.put(bb, m);
+                                                }, () -> {
+                                                    // System.out.println("Adding opaque to decision cache: "
+                                                    // + opaque.globalSHA2Hash().map(Arrays::toString).orElse("NO
+                                                    // HASH"));
+                                                    cachedDecisionModels.put(bb, opaque);
+                                                });
+                                                ctx.status(200);
+                                                ctx.result(opaque.globalSHA2Hash().map(Arrays::toString)
+                                                        .orElse("NO HASH"));
+                                                // opaque.globalSHA2Hash().ifPresent(hash -> cachedDecisionModels
+                                                // .put(ByteBuffer.wrap(hash), fromOpaqueDecision(opaque)));
+                                            }, () -> ctx.status(500));
+                                }
+                            })
+                    .post("/solved/cache/add",
+                            ctx -> {
+                                if (ctx.isMultipartFormData()) {
+                                    OpaqueDecisionModel.fromJsonString(ctx.formParam("solvedModel"))
+                                            .flatMap(this::fromOpaqueDecision)
+                                            .ifPresent(m -> m.globalSHA2Hash().ifPresent(
+                                                    hash -> cachedSolvedDecisionModels.put(ByteBuffer.wrap(hash), m)));
+                                }
+                            })
+                    .post("/design/cache/add",
+                            ctx -> {
+                                if (ctx.isMultipartFormData()) {
+                                    OpaqueDesignModel.fromJsonString(ctx.formParam("designModel")).ifPresent(opaque -> {
+                                        fromOpaqueDesign(opaque).ifPresentOrElse(m -> {
+                                            // System.out.println("Adding non opaque design model to cache: " +
+                                            // m.category());
+                                            cachedDesignModels.put(ByteBuffer.wrap(opaque.globalSHA2Hash().get()), m);
+                                        }, () -> cachedDesignModels.put(ByteBuffer.wrap(opaque.globalSHA2Hash().get()),
+                                                opaque));
                                     });
                                     ctx.status(200);
-                                    ctx.result(opaque.globalSHA2Hash().map(Arrays::toString).orElse("NO HASH"));
-                                    // opaque.globalSHA2Hash().ifPresent(hash -> cachedDecisionModels
-                                    // .put(ByteBuffer.wrap(hash), fromOpaqueDecision(opaque)));
-                                }, () -> ctx.status(500));
+                                    ctx.result("OK");
+                                }
                             })
-                    .put("/solved/cache/add",
-                            ctx -> OpaqueDecisionModel.fromJsonString(ctx.body()).flatMap(this::fromOpaqueDecision)
-                                    .ifPresent(m -> m.globalSHA2Hash().ifPresent(
-                                            hash -> cachedSolvedDecisionModels.put(ByteBuffer.wrap(hash), m))))
-                    .put("/design/cache/add",
+                    .post("/reversed/cache/add",
                             ctx -> {
-                                OpaqueDesignModel.fromJsonString(ctx.body()).ifPresent(opaque -> {
-                                    fromOpaqueDesign(opaque).ifPresentOrElse(m -> {
-                                        // System.out.println("Adding non opaque design model to cache: " +
-                                        // m.category());
-                                        cachedDesignModels.put(ByteBuffer.wrap(opaque.globalSHA2Hash().get()), m);
-                                    }, () -> cachedDesignModels.put(ByteBuffer.wrap(opaque.globalSHA2Hash().get()),
-                                            opaque));
-                                });
-                                ctx.status(200);
-                                ctx.result("OK");
+                                if (ctx.isMultipartFormData()) {
+                                    OpaqueDesignModel.fromJsonString(ctx.formParam("reversedModel"))
+                                            .flatMap(this::fromOpaqueDesign)
+                                            .ifPresent(m -> m.globalSHA2Hash().ifPresent(
+                                                    hash -> cachedReversedDesignModels.put(ByteBuffer.wrap(hash), m)));
+                                }
                             })
-                    .put("/reversed/cache/add",
-                            ctx -> OpaqueDesignModel.fromJsonString(ctx.body()).flatMap(this::fromOpaqueDesign)
-                                    .ifPresent(m -> m.globalSHA2Hash().ifPresent(
-                                            hash -> cachedReversedDesignModels.put(ByteBuffer.wrap(hash), m))))
                     .post("/decision/cache/clear", ctx -> cachedDecisionModels.clear())
                     .post("/design/cache/clear", ctx -> cachedDesignModels.clear())
                     .post("/solved/cache/clear", ctx -> cachedSolvedDecisionModels.clear())
@@ -685,6 +703,7 @@ public interface StandaloneModule extends Module {
                     })
                     .updateConfig(config -> {
                         config.jetty.multipartConfig.maxTotalRequestSize(1, SizeUnit.GB);
+                        config.jetty.multipartConfig.maxFileSize(1, SizeUnit.GB);
                         config.jetty.wsFactoryConfig(cfg -> {
                             cfg.setMaxTextMessageSize(1000000000);
                             cfg.setMaxBinaryMessageSize(1000000000);

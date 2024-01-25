@@ -15,6 +15,7 @@ use idesyde_core::{
     ExplorationSolution, Explorer, Module, OpaqueDecisionModel,
 };
 use log::{debug, warn};
+use reqwest::blocking::multipart::Form;
 use serde::{Deserialize, Serialize};
 use url::Url;
 
@@ -187,11 +188,14 @@ impl Explorer for ExternalExplorer {
         if !exists {
             // debug!("{} is not in cache for {}. Adding it with {:?}.", m.category(), self.unique_identifier(), m.global_sha2_hash());
             if let Ok(json_str) = OpaqueDecisionModel::from(m).to_json() {
-                if let Ok(r) = self.client
-                                    .put(self.url.join("/decision/cache/add").unwrap())
-                                    .body(json_str)
-                                    .send() {
+                if let Ok(r) = self
+                    .client
+                    .post(self.url.join("/decision/cache/add").unwrap())
+                    .multipart(Form::new().text("decisionModel", json_str))
+                    .send()
+                {
                     // debug!("Added decision model to cache: {:?}", r.bytes().unwrap());
+                    debug!("{}", r.text().unwrap());
                 };
             }
         }

@@ -401,29 +401,29 @@ fn main() {
             .map(|x| x.elements())
             .flatten()
             .collect();
-        if !dominant_biddings_idx.iter().any(|i| {
-            biddings[*i]
-                .1
-                .part()
-                .is_superset(&total_identifieable_elements)
-        }) {
-            warn!("No dominant bidding captures all partially identified elements. Double-check any final reversed models if any is produced. You can see the non-identified elements by setting using DEBUG verbosity.");
-            debug!(
-                "Elements that are not covered are: {:?}",
-                total_identifieable_elements
-                    .difference(
-                        &dominant_biddings_idx
-                            .iter()
-                            .map(|i| biddings[*i].1.part())
-                            .flatten()
-                            .collect()
-                    )
-                    .map(|s| s.to_owned())
-                    .reduce(|s1, s2| format!("{}, {}", s1, s2))
-                    .unwrap_or("{}".to_string())
-            );
-        }
         if dominant_biddings_idx.len() > 0 {
+            if !dominant_biddings_idx.iter().any(|i| {
+                biddings[*i]
+                    .1
+                    .part()
+                    .is_superset(&total_identifieable_elements)
+            }) {
+                warn!("No dominant bidding captures all partially identified elements. Double-check any final reversed models if any is produced. You can see the non-identified elements by setting using DEBUG verbosity.");
+                debug!(
+                    "Elements that are not covered are: {:?}",
+                    total_identifieable_elements
+                        .difference(
+                            &dominant_biddings_idx
+                                .iter()
+                                .map(|i| biddings[*i].1.part())
+                                .flatten()
+                                .collect()
+                        )
+                        .map(|s| s.to_owned())
+                        .reduce(|s1, s2| format!("{}, {}", s1, s2))
+                        .unwrap_or("{}".to_string())
+                );
+            }
             match (args.x_total_time_out, args.x_max_solutions) {
                 (Some(t), Some(n)) => info!(
                     "Starting exploration up to {} total time-out seconds and {} solution(s)",

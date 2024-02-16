@@ -13,6 +13,8 @@ use idesyde_core::{
 };
 
 use log::debug;
+use rusqlite::{params, Connection};
+use serde::de;
 use tungstenite::WebSocket;
 
 use rayon::prelude::*;
@@ -298,6 +300,7 @@ pub fn get_sqlite_for_identification(url: &str) -> Result<rusqlite::Connection, 
             body_cbor BLOB,
             body_msgpack BLOB,
             body_json JSON NOT NULL,
+            UNIQUE (category, body_json)
         )",
         [],
     )?;
@@ -306,7 +309,8 @@ pub fn get_sqlite_for_identification(url: &str) -> Result<rusqlite::Connection, 
             id INTEGER PRIMARY KEY,
             category TEXT NOT NULL,
             format TEXT NOT NULL,
-            body TEXT NOT NULL
+            body TEXT NOT NULL,
+            UNIQUE (format, category, body)
         )",
         [],
     )?;
@@ -329,6 +333,48 @@ pub fn get_sqlite_for_identification(url: &str) -> Result<rusqlite::Connection, 
         [],
     )?;
     Ok(conn)
+}
+
+pub fn save_decision_model_sqlite<T: DecisionModel + ?Sized>(
+    url: &str,
+    decision_model: &T,
+) -> Result<usize, rusqlite::Error> {
+    let conn = get_sqlite_for_identification(url)?;
+    let id = conn.execute(
+            "INSERT INTO decision_models (category, body_cbor, body_msgpack, body_json) VALUES (?1, ?2, ?3, ?4)", params![
+                decision_model.category(),
+                decision_model.body_as_cbor(),
+                decision_model.body_as_msgpack(),
+                decision_model.body_as_json()
+            ]
+        )?;
+    let mut stmt =
+        conn.prepare("INSERT INTO part (decision_model_id, element_name) VALUES (?1, ?2)")?;
+    for elem in decision_model.part() {
+        stmt.execute(params![id, elem])?;
+    }
+    Ok(id)
+}
+
+pub fn save_design_model_sqlite<T: DesignModel + ?Sized>(
+    url: &str,
+    design_model: &T,
+) -> Result<usize, rusqlite::Error> {
+    let conn = get_sqlite_for_identification(url)?;
+    let id = conn.execute(
+        "INSERT INTO design_models (category, format, body) VALUES (?1, ?2, ?3)",
+        params![
+            design_model.category(),
+            design_model.format(),
+            design_model.body_as_string()
+        ],
+    )?;
+    let mut stmt =
+        conn.prepare("INSERT INTO elems (design_model_id, element_name) VALUES (?1, ?2)")?;
+    for elem in design_model.elements() {
+        stmt.execute(params![id, elem])?;
+    }
+    Ok(id)
 }
 
 // #[derive(Debug, PartialEq, Eq, Hash)]

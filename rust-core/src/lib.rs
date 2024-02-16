@@ -4,7 +4,10 @@ use std::{
     collections::{HashMap, HashSet},
     hash::Hash,
     path::Path,
-    sync::{mpsc::Receiver, Arc},
+    sync::{
+        mpsc::{Receiver, Sender},
+        Arc,
+    },
     time::{Duration, Instant},
 };
 
@@ -310,6 +313,11 @@ impl Hash for dyn DecisionModel {
 
 pub type IdentificationResult = (Vec<Arc<dyn DecisionModel>>, Vec<String>);
 
+pub trait IdentificationRuleLike { // : Fn(&Vec<Arc<dyn DesignModel>>, &Vec<Arc<dyn DecisionModel>>) -> (Vec<Arc<dyn DecisionModel>>, Vec<String>) {
+
+    fn identify(&self, design_models: &Vec<Arc<dyn DesignModel>>, decision_models: &Vec<Arc<dyn DecisionModel>>) -> (Vec<Arc<dyn DecisionModel>>, Vec<String>); 
+}
+
 pub type IdentificationRule =
     fn(&Vec<Arc<dyn DesignModel>>, &Vec<Arc<dyn DecisionModel>>) -> IdentificationResult;
 
@@ -458,7 +466,7 @@ impl ExplorationBid {
         serde_json::from_str(s).ok()
     }
 
-    pub fn impossible(explorer_id: &str) -> ExplorationBid {
+    pub fn impossible(_explorer_id: &str) -> ExplorationBid {
         ExplorationBid {
             can_explore: false,
             is_exact: false,
@@ -929,6 +937,12 @@ pub trait Module: Send + Sync {
     fn explorers(&self) -> Vec<Arc<dyn Explorer>> {
         Vec::new()
     }
+    fn identification_rules(&self) -> Vec<Arc<dyn Fn(&Vec<Arc<dyn DesignModel>>, &Vec<Arc<dyn DecisionModel>>) -> Vec<Arc<dyn DecisionModel>>>> {
+        vec![]
+    }
+    fn reverse_identification_rules(&self) -> Vec<Arc<dyn Fn(&Vec<Arc<dyn DecisionModel>>, &Vec<Arc<dyn DesignModel>>) -> Vec<Arc<dyn DesignModel>>>> {
+        vec![]
+    }
     fn identification_step(
         &self,
         _decision_models: &Vec<Arc<dyn DecisionModel>>,
@@ -965,9 +979,9 @@ impl Hash for dyn Module {
 /// found between explorers so that the explorers almost always with the latest approximate Pareto set
 /// update between themselves.
 pub struct CombinedExplorerIterator {
-    sol_channels: Vec<std::sync::mpsc::Receiver<ExplorationSolution>>,
+    sol_channels: Vec<Receiver<ExplorationSolution>>,
     is_exact: Vec<bool>,
-    finish_request_channels: Vec<std::sync::mpsc::Sender<bool>>,
+    finish_request_channels: Vec<Sender<bool>>,
     duration_left: Option<Duration>,
     _handles: Vec<std::thread::JoinHandle<()>>,
 }
@@ -993,8 +1007,8 @@ impl CombinedExplorerIterator {
         currrent_solutions: &HashSet<ExplorationSolution>,
         exploration_configuration: ExplorationConfiguration,
     ) -> CombinedExplorerIterator {
-        let mut sol_channels: Vec<std::sync::mpsc::Receiver<ExplorationSolution>> = Vec::new();
-        let mut completed_channels: Vec<std::sync::mpsc::Sender<bool>> = Vec::new();
+        let mut sol_channels: Vec<Receiver<ExplorationSolution>> = Vec::new();
+        let mut completed_channels: Vec<Sender<bool>> = Vec::new();
         let mut handles: Vec<std::thread::JoinHandle<()>> = Vec::new();
         for (e, m) in explorers_and_models {
             let (sc, cc, h) = explore_non_blocking(
@@ -1086,7 +1100,7 @@ pub struct MultiLevelCombinedExplorerIterator {
         Arc<Receiver<ExplorationSolution>>,
     ),
     solutions: HashSet<ExplorationSolution>,
-    converged_to_last_level: bool,
+    // converged_to_last_level: bool,
     start: Instant,
 }
 
@@ -1134,7 +1148,14 @@ impl Iterator for MultiLevelCombinedExplorerIterator {
                             }
                         });
                     }
-                    return Some(solution);
+                    // return if the solution is not dominated
+                    if self
+                        .solutions
+                        .iter()
+                        .all(|cur_sol| solution.partial_cmp(cur_sol) != Some(Ordering::Greater))
+                    {
+                        return Some(solution);
+                    }
                 }
                 Err(std::sync::mpsc::RecvTimeoutError::Disconnected) => {
                     if let (Some(prev_level), _) = &self.levels_stream {
@@ -1245,14 +1266,14 @@ pub fn explore_cooperatively_simple(
         //     exploration_configuration.to_owned(),
         // )],
         levels_stream,
-        converged_to_last_level: false,
+        // converged_to_last_level: false,
         start: Instant::now(),
     }
 }
 
 pub fn explore_cooperatively(
     explorers_and_models: &Vec<(Arc<dyn Explorer>, Arc<dyn DecisionModel>)>,
-    biddings: &Vec<ExplorationBid>,
+    _biddings: &Vec<ExplorationBid>,
     currrent_solutions: &HashSet<ExplorationSolution>,
     exploration_configuration: ExplorationConfiguration,
     // solution_inspector: F,
@@ -1285,7 +1306,7 @@ pub fn explore_cooperatively(
         //     exploration_configuration.to_owned(),
         // )],
         levels_stream,
-        converged_to_last_level: false,
+        // converged_to_last_level: false,
         start: Instant::now(),
     }
 }
@@ -1386,8 +1407,8 @@ pub fn explore_non_blocking<T, M>(
     currrent_solutions: &HashSet<ExplorationSolution>,
     exploration_configuration: ExplorationConfiguration,
 ) -> (
-    std::sync::mpsc::Receiver<ExplorationSolution>,
-    std::sync::mpsc::Sender<bool>,
+    Receiver<ExplorationSolution>,
+    Sender<bool>,
     std::thread::JoinHandle<()>,
 )
 where

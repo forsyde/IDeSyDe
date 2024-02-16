@@ -37,9 +37,7 @@ tungstenite = {version = "0.20.0", features = ["rustls"]}
 url = "2.4.1"
 rusqlite = {version = "0.30.0", features = ["bundled", "blob", "functions"]}
 
-
-
 [workspace.package]
-version = "0.6.2"
+version = "0.7.6"
 authors = ["Rodolfo Jordao"]
 edition = "2021"

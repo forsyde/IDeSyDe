@@ -62,3 +62,26 @@ macro_rules! impl_decision_model_standard_parts {
         }
     };
 }
+
+#[macro_export]
+macro_rules! cast_dyn_decision_model {
+    ($b:ident,$x:ty) => {
+        if let Some(opaque) = $b.downcast_ref::<OpaqueDecisionModel>() {
+            if idesyde_core::DecisionModel::category(m).as_str() == stringify!($x) {
+                        idesyde_core::DecisionModel::body_as_cbor(m)
+                        .and_then(|b| ciborium::from_reader::<$x, &[u8]>(b.as_slice()).ok())
+                        .or_else(||
+                            idesyde_core::DecisionModel::body_as_json(m)
+                            .and_then(|j| serde_json::from_str::<$x>(&j).ok())
+                        )
+                        .or_else(||
+                            idesyde_core::DecisionModel::body_as_msgpack(m)
+                            .and_then(|j| rmp_serde::from_slice::<$x>(&j).ok())
+                        )
+                        .map(|m| std::sync::Arc::new(m))
+            }
+        } else {
+            &b.downcast_ref::<$x>().map(|m| std::sync::Arc::new(m))
+        }
+    }
+}

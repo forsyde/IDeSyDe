@@ -4,7 +4,8 @@ members = [
     "rust-orchestration",
     "rust-blueprints",
     "rust-common",
-    "rust-bridge-matlab-simulink"
+    "rust-bridge-matlab-simulink",
+    "rust-bridge-ortools"
 ]
 description = "IDeSyDe Rust suite"
 resolver = "2"
@@ -13,6 +14,8 @@ resolver = "2"
 base64 = "0.21.5"
 ciborium = "0.2.1"
 clap = { version = "4.2.1", features = ["derive"] }
+cxx = "1.0"
+cxx-build = "1.0"
 derive_builder = "0.12.0"
 downcast-rs = "1.2.0"
 env_logger = "0.10.0"

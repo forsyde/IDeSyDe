@@ -317,7 +317,7 @@ pub type ReverseIdentificationResult = (Vec<Arc<dyn DesignModel>>, Vec<String>);
 
 pub trait IdentificationRuleLike {
 
-    fn identify(&self, design_models: &Vec<Arc<dyn DesignModel>>, decision_models: &Vec<Arc<dyn DecisionModel>>) -> IdentificationResult;
+    fn identify(&self, design_models: &[Arc<dyn DesignModel>], decision_models: &[Arc<dyn DecisionModel>]) -> IdentificationResult;
 
     fn uses_design_models(&self) -> bool {
         return true;
@@ -335,7 +335,7 @@ pub trait IdentificationRuleLike {
 
 pub trait ReverseIdentificationRuleLike {
 
-    fn reverse_identify(&self, decision_models: &Vec<Arc<dyn DecisionModel>>, design_models: &Vec<Arc<dyn DesignModel>>) -> ReverseIdentificationResult;
+    fn reverse_identify(&self, decision_models: &[Arc<dyn DecisionModel>], design_models: &[Arc<dyn DesignModel>]) -> ReverseIdentificationResult;
 
 }
 

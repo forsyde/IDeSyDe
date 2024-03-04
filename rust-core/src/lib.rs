@@ -51,12 +51,12 @@ pub trait DesignModel: Send + DowncastSync {
     fn write_to_dir(&self, base_path: &Path, prefix_str: &str, suffix_str: &str) {
         if let Some(j) = self.body_as_string() {
             let p = base_path.join(format!(
-                    "body_{}_{}_{}.{}",
-                    prefix_str,
-                    self.category(),
-                    suffix_str,
-                    self.format()
-                    ));
+                "body_{}_{}_{}.{}",
+                prefix_str,
+                self.category(),
+                suffix_str,
+                self.format()
+            ));
             std::fs::write(&p, j).expect("Failed to write body of design model.");
             // if let Some(s) = p.to_str().map(|x| x.to_string()) {
             //     h.model_paths.push(s);
@@ -96,10 +96,10 @@ impl_downcast!(sync DesignModel);
 impl PartialEq<dyn DesignModel> for dyn DesignModel {
     fn eq(&self, other: &Self) -> bool {
         self.category() == other.category() && self.elements() == other.elements()
-            // && self
-            //     .body_as_string()
-            //     .and_then(|b| other.body_as_string().map(|bb| b == bb))
-            //     .unwrap_or(false)
+        // && self
+        //     .body_as_string()
+        //     .and_then(|b| other.body_as_string().map(|bb| b == bb))
+        //     .unwrap_or(false)
     }
 }
 
@@ -176,31 +176,31 @@ pub trait DecisionModel: Send + DowncastSync {
         // let mut h = self.header();
         if let Some(j) = self.body_as_json() {
             let p = base_path.join(format!(
-                    "body_{}_{}_{}.json",
-                    prefix_str,
-                    self.category(),
-                    suffix_str
-                    ));
+                "body_{}_{}_{}.json",
+                prefix_str,
+                self.category(),
+                suffix_str
+            ));
             std::fs::write(&p, j).expect("Failed to write JSON body of decision model.");
             // h.body_path = p.to_str().map(|x| x.to_string());
         }
         if let Some(b) = self.body_as_msgpack() {
             let p = base_path.join(format!(
-                    "body_{}_{}_{}.msgpack",
-                    prefix_str,
-                    self.category(),
-                    suffix_str
-                    ));
+                "body_{}_{}_{}.msgpack",
+                prefix_str,
+                self.category(),
+                suffix_str
+            ));
             std::fs::write(&p, b).expect("Failed to write MsgPack body of decision model.");
             // h.body_path = p.to_str().map(|x| x.to_string());
         }
         if let Some(b) = self.body_as_cbor() {
             let p = base_path.join(format!(
-                    "body_{}_{}_{}.cbor",
-                    prefix_str,
-                    self.category(),
-                    suffix_str
-                    ));
+                "body_{}_{}_{}.cbor",
+                prefix_str,
+                self.category(),
+                suffix_str
+            ));
             std::fs::write(&p, b).expect("Failed to write CBOR body of decision model.");
             // h.body_path = p.to_str().map(|x| x.to_string());
         }
@@ -273,10 +273,10 @@ impl DecisionModel for Arc<dyn DecisionModel> {
 impl PartialEq<dyn DecisionModel> for dyn DecisionModel {
     fn eq(&self, other: &dyn DecisionModel) -> bool {
         self.category() == other.category() && self.part() == other.part()
-            // && self.body_as_json() == other.body_as_json()
-            // && self.body_as_cbor() == other.body_as_cbor()
-            // && self.body_as_msgpack() == other.body_as_msgpack()
-            // && self.body_as_protobuf() == other.body_as_protobuf()
+        // && self.body_as_json() == other.body_as_json()
+        // && self.body_as_cbor() == other.body_as_cbor()
+        // && self.body_as_msgpack() == other.body_as_msgpack()
+        // && self.body_as_protobuf() == other.body_as_protobuf()
     }
 }
 
@@ -316,8 +316,11 @@ pub type IdentificationResult = (Vec<Arc<dyn DecisionModel>>, Vec<String>);
 pub type ReverseIdentificationResult = (Vec<Arc<dyn DesignModel>>, Vec<String>);
 
 pub trait IdentificationRuleLike {
-
-    fn identify(&self, design_models: &[Arc<dyn DesignModel>], decision_models: &[Arc<dyn DecisionModel>]) -> IdentificationResult;
+    fn identify(
+        &self,
+        design_models: &[Arc<dyn DesignModel>],
+        decision_models: &[Arc<dyn DecisionModel>],
+    ) -> IdentificationResult;
 
     fn uses_design_models(&self) -> bool {
         return true;
@@ -330,20 +333,21 @@ pub trait IdentificationRuleLike {
     fn uses_specific_decision_models(&self) -> Option<Vec<String>> {
         return None;
     }
-
 }
 
 pub trait ReverseIdentificationRuleLike {
-
-    fn reverse_identify(&self, decision_models: &[Arc<dyn DecisionModel>], design_models: &[Arc<dyn DesignModel>]) -> ReverseIdentificationResult;
-
+    fn reverse_identify(
+        &self,
+        decision_models: &[Arc<dyn DecisionModel>],
+        design_models: &[Arc<dyn DesignModel>],
+    ) -> ReverseIdentificationResult;
 }
 
 pub type IdentificationRule =
-fn(&Vec<Arc<dyn DesignModel>>, &Vec<Arc<dyn DecisionModel>>) -> IdentificationResult;
+    fn(&Vec<Arc<dyn DesignModel>>, &Vec<Arc<dyn DecisionModel>>) -> IdentificationResult;
 
 pub type ReverseIdentificationRule =
-fn(&Vec<Arc<dyn DecisionModel>>, &Vec<Arc<dyn DesignModel>>) -> Vec<Arc<dyn DesignModel>>;
+    fn(&Vec<Arc<dyn DecisionModel>>, &Vec<Arc<dyn DesignModel>>) -> Vec<Arc<dyn DesignModel>>;
 
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub enum MarkedIdentificationRule {
@@ -372,13 +376,13 @@ impl ExplorationConfiguration {
     }
 
     pub fn to_cbor<O>(&self) -> Result<O, ciborium::ser::Error<std::io::Error>>
-        where
+    where
         O: From<Vec<u8>>,
-        {
-            let mut buf: Vec<u8> = Vec::new();
-            ciborium::into_writer(self, buf.as_mut_slice())?;
-            Ok(buf.into())
-        }
+    {
+        let mut buf: Vec<u8> = Vec::new();
+        ciborium::into_writer(self, buf.as_mut_slice())?;
+        Ok(buf.into())
+    }
 }
 
 #[derive(Clone)]
@@ -513,35 +517,35 @@ impl PartialOrd<ExplorationBid> for ExplorationBid {
     fn partial_cmp(&self, other: &ExplorationBid) -> Option<Ordering> {
         if self.can_explore == other.can_explore
             && self.is_exact == other.is_exact
-                && self.target_objectives == other.target_objectives
+            && self.target_objectives == other.target_objectives
+        {
+            if (self.competitiveness - other.competitiveness).abs() <= 0.0001
+                && self
+                    .additional_numeric_properties
+                    .keys()
+                    .eq(other.additional_numeric_properties.keys())
+            {
+                if self
+                    .additional_numeric_properties
+                    .iter()
+                    .all(|(k, v)| v > other.additional_numeric_properties.get(k).unwrap_or(v))
                 {
-                    if (self.competitiveness - other.competitiveness).abs() <= 0.0001
-                        && self
-                            .additional_numeric_properties
-                            .keys()
-                            .eq(other.additional_numeric_properties.keys())
-                            {
-                                if self
-                                    .additional_numeric_properties
-                                        .iter()
-                                        .all(|(k, v)| v > other.additional_numeric_properties.get(k).unwrap_or(v))
-                                        {
-                                            return Some(Ordering::Greater);
-                                        } else if self
-                                            .additional_numeric_properties
-                                                .iter()
-                                                .all(|(k, v)| v == other.additional_numeric_properties.get(k).unwrap_or(v))
-                                                {
-                                                    return Some(Ordering::Equal);
-                                                } else if self
-                                                    .additional_numeric_properties
-                                                        .iter()
-                                                        .all(|(k, v)| v < other.additional_numeric_properties.get(k).unwrap_or(v))
-                                                        {
-                                                            return Some(Ordering::Less);
-                                                        }
-                            }
+                    return Some(Ordering::Greater);
+                } else if self
+                    .additional_numeric_properties
+                    .iter()
+                    .all(|(k, v)| v == other.additional_numeric_properties.get(k).unwrap_or(v))
+                {
+                    return Some(Ordering::Equal);
+                } else if self
+                    .additional_numeric_properties
+                    .iter()
+                    .all(|(k, v)| v < other.additional_numeric_properties.get(k).unwrap_or(v))
+                {
+                    return Some(Ordering::Less);
                 }
+            }
+        }
         None
     }
 }
@@ -580,7 +584,7 @@ pub trait Explorer: Downcast + Send + Sync {
         &self,
         _other_explorers: &Vec<Arc<dyn Explorer>>,
         _m: Arc<dyn DecisionModel>,
-        ) -> ExplorationBid {
+    ) -> ExplorationBid {
         ExplorationBid::impossible(&self.unique_identifier())
     }
     fn explore(
@@ -588,7 +592,7 @@ pub trait Explorer: Downcast + Send + Sync {
         _m: Arc<dyn DecisionModel>,
         _currrent_solutions: &HashSet<ExplorationSolution>,
         _exploration_configuration: ExplorationConfiguration,
-        ) -> Box<dyn Iterator<Item = ExplorationSolution> + Send + Sync + '_> {
+    ) -> Box<dyn Iterator<Item = ExplorationSolution> + Send + Sync + '_> {
         Box::new(std::iter::empty())
     }
 }
@@ -622,7 +626,7 @@ impl<T: Explorer + ?Sized> Explorer for Arc<T> {
         &self,
         _other_explorers: &Vec<Arc<dyn Explorer>>,
         _m: Arc<dyn DecisionModel>,
-        ) -> ExplorationBid {
+    ) -> ExplorationBid {
         self.as_ref().bid(_other_explorers, _m)
     }
 
@@ -631,7 +635,7 @@ impl<T: Explorer + ?Sized> Explorer for Arc<T> {
         _m: Arc<dyn DecisionModel>,
         _currrent_solutions: &HashSet<ExplorationSolution>,
         _exploration_configuration: ExplorationConfiguration,
-        ) -> Box<dyn Iterator<Item = ExplorationSolution> + Send + Sync + '_> {
+    ) -> Box<dyn Iterator<Item = ExplorationSolution> + Send + Sync + '_> {
         self.as_ref()
             .explore(_m, _currrent_solutions, _exploration_configuration)
     }
@@ -658,6 +662,9 @@ pub struct OpaqueDecisionModel {
 }
 
 impl OpaqueDecisionModel {
+    pub fn builder() -> OpaqueDecisionModelBuilder {
+        OpaqueDecisionModelBuilder::default()
+    }
     pub fn from_json_str(s: &str) -> Result<Self, serde_json::Error> {
         serde_json::from_str(s)
     }
@@ -667,24 +674,24 @@ impl OpaqueDecisionModel {
     }
 
     pub fn from_cbor<R>(b: R) -> Result<Self, ciborium::de::Error<std::io::Error>>
-        where
+    where
         R: std::io::Read,
-        {
-            ciborium::from_reader(b)
-        }
+    {
+        ciborium::from_reader(b)
+    }
 
     pub fn to_json(&self) -> Result<String, serde_json::Error> {
         serde_json::to_string(self)
     }
 
     pub fn to_cbor<O>(&self) -> Result<O, ciborium::ser::Error<std::io::Error>>
-        where
+    where
         O: From<Vec<u8>>,
-        {
-            let mut buf: Vec<u8> = Vec::new();
-            ciborium::into_writer(self, buf.as_mut_slice())?;
-            Ok(buf.into())
-        }
+    {
+        let mut buf: Vec<u8> = Vec::new();
+        ciborium::into_writer(self, buf.as_mut_slice())?;
+        Ok(buf.into())
+    }
 }
 
 impl DecisionModel for OpaqueDecisionModel {
@@ -784,11 +791,11 @@ impl OpaqueDesignModel {
     }
 
     pub fn from_cbor<R>(b: R) -> Result<Self, ciborium::de::Error<std::io::Error>>
-        where
+    where
         R: std::io::Read,
-        {
-            ciborium::from_reader(b)
-        }
+    {
+        ciborium::from_reader(b)
+    }
 
     pub fn to_json(&self) -> Result<String, serde_json::Error> {
         serde_json::to_string(self)
@@ -821,11 +828,11 @@ impl<'a> From<&'a Path> for OpaqueDesignModel {
                 .map(|(_, y)| y)
                 .unwrap_or("")
                 .to_string(),
-                body: std::fs::read_to_string(path).ok(),
-                // .and_then(|f|
-                // }),
+            body: std::fs::read_to_string(path).ok(),
+            // .and_then(|f|
+            // }),
+        }
     }
-}
 }
 
 // impl Serialize for OpaqueDesignModel {
@@ -869,12 +876,12 @@ impl DesignModel for OpaqueDesignModel {
     fn write_to_dir(&self, base_path: &Path, prefix_str: &str, suffix_str: &str) {
         if let Some(j) = self.body_as_string() {
             let p = base_path.join(format!(
-                    "body_{}_{}_{}.{}",
-                    prefix_str,
-                    self.category(),
-                    suffix_str,
-                    self.format()
-                    ));
+                "body_{}_{}_{}.{}",
+                prefix_str,
+                self.category(),
+                suffix_str,
+                self.format()
+            ));
             std::fs::write(&p, j).expect("Failed to write body of design model.");
             // if let Some(s) = p.to_str().map(|x| x.to_string()) {
             //     h.model_paths.push(s);
@@ -907,7 +914,6 @@ impl<T: DesignModel + ?Sized> From<Arc<T>> for OpaqueDesignModel {
     }
 }
 
-
 /// This trait is wrapper around the normal iteration to create a "session"
 /// for identification modules. Via this, we can do more advanced things
 /// that would otherwise be impossible with a simple function call or iterator,
@@ -920,7 +926,7 @@ pub trait IdentificationIterator: Iterator<Item = IdentificationResult> + Sync {
         &mut self,
         _decision_models: &Vec<Arc<dyn DecisionModel>>,
         _design_models: &Vec<Arc<dyn DesignModel>>,
-        ) -> Option<IdentificationResult> {
+    ) -> Option<IdentificationResult> {
         return None;
     }
 
@@ -969,14 +975,14 @@ pub trait Module: Send + Sync {
         &self,
         _decision_models: &Vec<Arc<dyn DecisionModel>>,
         _design_models: &Vec<Arc<dyn DesignModel>>,
-        ) -> IdentificationResult {
+    ) -> IdentificationResult {
         (vec![], vec![])
     }
     fn reverse_identification(
         &self,
         _solved_decision_model: &Vec<Arc<dyn DecisionModel>>,
         _design_model: &Vec<Arc<dyn DesignModel>>,
-        ) -> Vec<Arc<dyn DesignModel>> {
+    ) -> Vec<Arc<dyn DesignModel>> {
         vec![]
     }
 }
@@ -1013,14 +1019,14 @@ impl CombinedExplorerIterator {
         explorers_and_models: &Vec<(Arc<dyn Explorer>, Arc<dyn DecisionModel>)>,
         currrent_solutions: &HashSet<ExplorationSolution>,
         exploration_configuration: ExplorationConfiguration,
-        ) -> CombinedExplorerIterator {
+    ) -> CombinedExplorerIterator {
         let all_heuristic = explorers_and_models.iter().map(|_| false).collect();
         CombinedExplorerIterator::start_with_exact(
             explorers_and_models,
             &all_heuristic,
             currrent_solutions,
             exploration_configuration,
-            )
+        )
     }
 
     pub fn start_with_exact(
@@ -1028,7 +1034,7 @@ impl CombinedExplorerIterator {
         is_exact: &Vec<bool>,
         currrent_solutions: &HashSet<ExplorationSolution>,
         exploration_configuration: ExplorationConfiguration,
-        ) -> CombinedExplorerIterator {
+    ) -> CombinedExplorerIterator {
         let mut sol_channels: Vec<Receiver<ExplorationSolution>> = Vec::new();
         let mut completed_channels: Vec<Sender<bool>> = Vec::new();
         let mut handles: Vec<std::thread::JoinHandle<()>> = Vec::new();
@@ -1038,7 +1044,7 @@ impl CombinedExplorerIterator {
                 m,
                 currrent_solutions,
                 exploration_configuration.to_owned(),
-                );
+            );
             sol_channels.push(sc);
             completed_channels.push(cc);
             handles.push(h);
@@ -1049,8 +1055,8 @@ impl CombinedExplorerIterator {
             finish_request_channels: completed_channels,
             duration_left: if exploration_configuration.improvement_timeout > 0u64 {
                 Some(Duration::from_secs(
-                        exploration_configuration.improvement_timeout,
-                        ))
+                    exploration_configuration.improvement_timeout,
+                ))
             } else {
                 None
             },
@@ -1082,32 +1088,32 @@ impl Iterator for CombinedExplorerIterator {
                 .duration_left
                 .map(|d| d >= start.elapsed())
                 .unwrap_or(true)
-                {
-                    num_disconnected = 0;
-                    for i in 0..self.sol_channels.len() {
-                        match self.sol_channels[i].recv_timeout(std::time::Duration::from_millis(500)) {
-                            Ok(solution) => {
-                                // debug!("New solution from explorer index {}", i);
-                                self.duration_left = self.duration_left.map(|d| {
-                                    if d >= start.elapsed() {
-                                        d - start.elapsed()
-                                    } else {
-                                        Duration::ZERO
-                                    }
-                                });
-                                return Some(solution);
+        {
+            num_disconnected = 0;
+            for i in 0..self.sol_channels.len() {
+                match self.sol_channels[i].recv_timeout(std::time::Duration::from_millis(500)) {
+                    Ok(solution) => {
+                        // debug!("New solution from explorer index {}", i);
+                        self.duration_left = self.duration_left.map(|d| {
+                            if d >= start.elapsed() {
+                                d - start.elapsed()
+                            } else {
+                                Duration::ZERO
                             }
-                            Err(std::sync::mpsc::RecvTimeoutError::Disconnected) => {
-                                num_disconnected += 1;
-                                // finish early if the explorer is exact and ends early
-                                if self.is_exact[i] {
-                                    return None;
-                                }
-                            }
-                            Err(std::sync::mpsc::RecvTimeoutError::Timeout) => {}
-                        };
+                        });
+                        return Some(solution);
                     }
-                }
+                    Err(std::sync::mpsc::RecvTimeoutError::Disconnected) => {
+                        num_disconnected += 1;
+                        // finish early if the explorer is exact and ends early
+                        if self.is_exact[i] {
+                            return None;
+                        }
+                    }
+                    Err(std::sync::mpsc::RecvTimeoutError::Timeout) => {}
+                };
+            }
+        }
         None
     }
 }
@@ -1120,10 +1126,10 @@ pub struct MultiLevelCombinedExplorerIterator {
     levels_stream: (
         Option<Arc<Receiver<ExplorationSolution>>>,
         Arc<Receiver<ExplorationSolution>>,
-        ),
-        solutions: HashSet<ExplorationSolution>,
-        // converged_to_last_level: bool,
-        start: Instant,
+    ),
+    solutions: HashSet<ExplorationSolution>,
+    // converged_to_last_level: bool,
+    start: Instant,
 }
 
 impl Iterator for MultiLevelCombinedExplorerIterator {
@@ -1134,9 +1140,9 @@ impl Iterator for MultiLevelCombinedExplorerIterator {
             if self.exploration_configuration.total_timeout > 0
                 && self.start.elapsed()
                     > Duration::from_secs(self.exploration_configuration.total_timeout)
-                    {
-                        return None;
-                    }
+            {
+                return None;
+            }
             let (_, last_level) = &self.levels_stream;
             match last_level.recv_timeout(Duration::from_millis(500)) {
                 Ok(solution) => {
@@ -1154,7 +1160,7 @@ impl Iterator for MultiLevelCombinedExplorerIterator {
                             &self.explorers_and_models,
                             &self.solutions,
                             self.exploration_configuration.to_owned(),
-                            );
+                        );
                         let (sender, receiver) = std::sync::mpsc::channel::<ExplorationSolution>();
                         // move the data structures to contain new explorers
                         self.levels_stream = (Some(last_level.to_owned()), Arc::new(receiver));
@@ -1173,11 +1179,11 @@ impl Iterator for MultiLevelCombinedExplorerIterator {
                     // return if the solution is not dominated
                     if self
                         .solutions
-                            .iter()
-                            .all(|cur_sol| solution.partial_cmp(cur_sol) != Some(Ordering::Greater))
-                            {
-                                return Some(solution);
-                            }
+                        .iter()
+                        .all(|cur_sol| solution.partial_cmp(cur_sol) != Some(Ordering::Greater))
+                    {
+                        return Some(solution);
+                    }
                 }
                 Err(std::sync::mpsc::RecvTimeoutError::Disconnected) => {
                     if let (Some(prev_level), _) = &self.levels_stream {
@@ -1251,7 +1257,7 @@ impl Iterator for MultiLevelCombinedExplorerIterator {
         //     None => {}
         // };
         // None
-}
+    }
 }
 
 pub fn explore_cooperatively_simple(
@@ -1259,12 +1265,12 @@ pub fn explore_cooperatively_simple(
     currrent_solutions: &HashSet<ExplorationSolution>,
     exploration_configuration: ExplorationConfiguration,
     // solution_inspector: F,
-    ) -> MultiLevelCombinedExplorerIterator {
+) -> MultiLevelCombinedExplorerIterator {
     let combined_explorer = CombinedExplorerIterator::start(
         &explorers_and_models,
         &currrent_solutions,
         exploration_configuration.to_owned(),
-        );
+    );
     let (sender, receiver) = std::sync::mpsc::channel::<ExplorationSolution>();
     // move the data structures to contain new explorers
     let levels_stream = (None, Arc::new(receiver));
@@ -1299,12 +1305,12 @@ pub fn explore_cooperatively(
     currrent_solutions: &HashSet<ExplorationSolution>,
     exploration_configuration: ExplorationConfiguration,
     // solution_inspector: F,
-    ) -> MultiLevelCombinedExplorerIterator {
+) -> MultiLevelCombinedExplorerIterator {
     let combined_explorer = CombinedExplorerIterator::start(
         &explorers_and_models,
         &currrent_solutions,
         exploration_configuration.to_owned(),
-        );
+    );
     let (sender, receiver) = std::sync::mpsc::channel::<ExplorationSolution>();
     // move the data structures to contain new explorers
     let levels_stream = (None, Arc::new(receiver));
@@ -1335,7 +1341,7 @@ pub fn explore_cooperatively(
 
 pub fn compute_dominant_bidding<'a, I>(biddings: I) -> Option<(usize, ExplorationBid)>
 where
-I: Iterator<Item = &'a ExplorationBid>,
+    I: Iterator<Item = &'a ExplorationBid>,
 {
     biddings
         .enumerate()
@@ -1343,12 +1349,12 @@ I: Iterator<Item = &'a ExplorationBid>,
             Some(Ordering::Less) => (j, bb),
             _ => (i, b),
         })
-    .map(|(i, b)| (i, b.to_owned()))
+        .map(|(i, b)| (i, b.to_owned()))
 }
 
 pub fn compute_dominant_identification(
     decision_models: &Vec<Arc<dyn DecisionModel>>,
-    ) -> Vec<Arc<dyn DecisionModel>> {
+) -> Vec<Arc<dyn DecisionModel>> {
     if decision_models.len() > 1 {
         decision_models
             .iter()
@@ -1358,7 +1364,7 @@ pub fn compute_dominant_identification(
                     .filter(|bb| b != bb)
                     .all(|bb| b.partial_cmp(&bb) == Some(Ordering::Greater))
             })
-        .map(|x| x.to_owned())
+            .map(|x| x.to_owned())
             .collect()
     } else {
         decision_models.iter().map(|x| x.to_owned()).collect()
@@ -1367,10 +1373,10 @@ pub fn compute_dominant_identification(
 
 pub fn compute_dominant_biddings<M, E>(
     biddings: &Vec<(Arc<E>, Arc<M>, ExplorationBid)>,
-    ) -> Vec<usize>
+) -> Vec<usize>
 where
-M: DecisionModel + PartialOrd + ?Sized,
-E: Explorer + PartialEq + ?Sized,
+    M: DecisionModel + PartialOrd + ?Sized,
+    E: Explorer + PartialEq + ?Sized,
 {
     if biddings.len() > 1 {
         biddings
@@ -1379,16 +1385,16 @@ E: Explorer + PartialEq + ?Sized,
             .filter(|(_, (_, m, b))| {
                 b.can_explore
                     && !biddings
-                    .iter()
-                    // .filter(|(_, mm, bb)| b != bb)
-                    .any(|(_, mm, bb)| {
-                        bb.can_explore
-                            && (m.partial_cmp(&mm) == Some(Ordering::Less)
-                                || (m.partial_cmp(&mm) != Some(Ordering::Less)
-                                    && b.partial_cmp(&bb) == Some(Ordering::Greater)))
-                    })
+                        .iter()
+                        // .filter(|(_, mm, bb)| b != bb)
+                        .any(|(_, mm, bb)| {
+                            bb.can_explore
+                                && (m.partial_cmp(&mm) == Some(Ordering::Less)
+                                    || (m.partial_cmp(&mm) != Some(Ordering::Less)
+                                        && b.partial_cmp(&bb) == Some(Ordering::Greater)))
+                        })
             })
-        .map(|(i, _)| i)
+            .map(|(i, _)| i)
             .collect()
     } else {
         biddings
@@ -1402,7 +1408,7 @@ E: Explorer + PartialEq + ?Sized,
 
 pub fn load_decision_model<T: DecisionModel + DeserializeOwned>(
     path: &std::path::PathBuf,
-    ) -> Option<T> {
+) -> Option<T> {
     if let Ok(f) = std::fs::File::open(path) {
         if let Some(ext) = path.extension() {
             if ext.eq_ignore_ascii_case("cbor") {
@@ -1428,12 +1434,12 @@ pub fn explore_non_blocking<T, M>(
     m: &M,
     currrent_solutions: &HashSet<ExplorationSolution>,
     exploration_configuration: ExplorationConfiguration,
-    ) -> (
-        Receiver<ExplorationSolution>,
-        Sender<bool>,
-        std::thread::JoinHandle<()>,
-        )
-    where
+) -> (
+    Receiver<ExplorationSolution>,
+    Sender<bool>,
+    std::thread::JoinHandle<()>,
+)
+where
     T: Explorer + Clone + ?Sized,
     M: Into<Arc<dyn DecisionModel>> + Clone,
 {
@@ -1450,7 +1456,7 @@ pub fn explore_non_blocking<T, M>(
             this_decision_model,
             &prev_sols,
             exploration_configuration.to_owned(),
-            ) {
+        ) {
             match solution_tx.send(new_solution) {
                 Ok(_) => {}
                 Err(_) => return (),
@@ -1463,7 +1469,7 @@ pub fn explore_non_blocking<T, M>(
 pub fn pareto_dominance_partial_cmp(
     lhs: &HashMap<String, f64>,
     rhs: &HashMap<String, f64>,
-    ) -> Option<Ordering> {
+) -> Option<Ordering> {
     if lhs.keys().all(|x| rhs.contains_key(x)) && rhs.keys().all(|x| lhs.contains_key(x)) {
         let mut all_equal = true;
         let mut less_exists = false;

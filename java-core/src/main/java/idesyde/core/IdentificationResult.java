@@ -8,4 +8,12 @@ import com.fasterxml.jackson.annotation.JsonInclude;
 public record IdentificationResult(
                 Set<? extends DecisionModel> identified,
                 Set<String> messages) {
+
+    public DecisionModel[] identifiedAsArray() {
+        return identified().toArray(new DecisionModel[0]);
+    }
+
+    public String[] messagesAsArray() {
+        return messages().toArray(new String[0]);
+    }
 }

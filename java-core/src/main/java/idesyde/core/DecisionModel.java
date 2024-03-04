@@ -52,6 +52,10 @@ public interface DecisionModel extends Comparable<DecisionModel> {
         return Set.of();
     }
 
+    default String[] partAsArray() {
+        return part().toArray(new String[0]);
+    }
+
     /**
      * @return The category that describes this decision model. Default value (and
      *         recommendation) is the class name.

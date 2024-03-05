@@ -323,15 +323,15 @@ pub trait IdentificationRuleLike {
     ) -> IdentificationResult;
 
     fn uses_design_models(&self) -> bool {
-        return true;
+        true
     }
 
     fn uses_decision_models(&self) -> bool {
-        return true;
+        true
     }
 
     fn uses_specific_decision_models(&self) -> Option<Vec<String>> {
-        return None;
+        None
     }
 }
 
@@ -777,6 +777,9 @@ pub struct OpaqueDesignModel {
 }
 
 impl OpaqueDesignModel {
+    pub fn builder() -> OpaqueDesignModelBuilder {
+        OpaqueDesignModelBuilder::default()
+    }
     pub fn from_path_str(s: &str) -> OpaqueDesignModel {
         let path = Path::new(s);
         return path.into();

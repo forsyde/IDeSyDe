@@ -1,15 +1,18 @@
 use std::{borrow::Borrow, collections::HashSet, sync::Arc};
 
 use idesyde_core::{
-    DecisionModel, DesignModel, IdentificationResult, IdentificationRuleLike,
-    MarkedIdentificationRule, Module, OpaqueDecisionModel, OpaqueDecisionModelBuilder,
+    DecisionModel, DesignModel, IdentificationResult, IdentificationRuleLike, MarkedIdentificationRule, Module, OpaqueDecisionModel, OpaqueDecisionModelBuilder, OpaqueDesignModel, ReverseIdentificationRuleLike
 };
 use jni::{
-    objects::{JByteArray, JObject, JObjectArray, JPrimitiveArray, JString, JValue},
-    AttachGuard, JavaVM,
+    objects::{JByteArray, JObject, JObjectArray, JPrimitiveArray, JString, JValue}, AttachGuard, InitArgsBuilder, JNIVersion, JavaVM
 };
 
 struct JavaModuleIdentificationRule {
+    pub java_vm: JavaVM,
+    pub class_canonical_name: String,
+}
+
+struct JavaModuleReverseIdentificationRule {
     pub java_vm: JavaVM,
     pub class_canonical_name: String,
 }
@@ -49,6 +52,65 @@ fn design_to_java_opaque<'a>(
     Ok(obj)
 }
 
+fn from_java_design_to_native<'a>(
+    env: &mut AttachGuard<'a>,
+    java_result: &JObject<'a>,
+) -> Result<OpaqueDesignModel, jni::errors::Error> {
+    let mut builder = OpaqueDesignModel::builder();
+    let category_obj = env.call_method(java_result, "category", "()Ljava/lang/String;", &[])?;
+    let category = env
+        .get_string(&JString::from(category_obj.l()?))?
+        .to_str()
+        .map(|x| x.to_string())
+        .expect("Failed to convert Java string to Rust string through UTF8 problems");
+    builder.category(category);
+    let format_obj = env.call_method(java_result, "format", "()Ljava/lang/String;", &[])?;
+    let format = env
+        .get_string(&JString::from(format_obj.l()?))?
+        .to_str()
+        .map(|x| x.to_string())
+        .expect("Failed to convert Java string to Rust string through UTF8 problems");
+    builder.format(format);
+    let mut elems: HashSet<String> = HashSet::new();
+    let part_array_obj =
+    env.call_method(java_result, "elementsAsArray", "()[Ljava/util/String;", &[])?;
+    let elems_array = JObjectArray::from(part_array_obj.l()?);
+    let elems_array_size = env.get_array_length(elems_array.borrow())?;
+    for i in 0..elems_array_size {
+        let elem = env.get_object_array_element(&elems_array, i)?;
+        let elem_string_java = JString::from(elem);
+        let rust_str = env
+            .get_string(&elem_string_java)?
+            .to_str()
+            .map(|x| x.to_owned());
+        if let Ok(elem_str) = rust_str {
+            elems.insert(elem_str.to_string());
+        } else {
+            panic!("Failed to convert Java string to Rust string through UTF8 problems")
+        }
+    }
+    builder.elements(elems);
+    let text_body = env
+        .call_method(java_result, "asString", "()Ljava/util/Optional;", &[])?
+        .l()?;
+    let text_is_present = env.call_method(&text_body, "isPresent", "()Z", &[])?;
+    builder.body(None);
+    if let Ok(true) = text_is_present.z() {
+        let json_body_inner = env
+            .call_method(&text_body, "get", "()Ljava/lang/Object;", &[])?
+            .l()?;
+        let json_body = env
+            .get_string(&JString::from(json_body_inner))?
+            .to_str()
+            .map(|x| x.to_string());
+        builder.body(json_body.ok());
+    }
+    Ok(builder
+        .build()
+        .expect("Failed to build opaque decision model. Should not happen"))
+}
+
+
 fn from_java_decision_to_native<'a>(
     env: &mut AttachGuard<'a>,
     java_result: &JObject<'a>,
@@ -63,7 +125,7 @@ fn from_java_decision_to_native<'a>(
     builder.category(category);
     let mut part: HashSet<String> = HashSet::new();
     let part_array_obj =
-        env.call_method(java_result, "partAsArray", "()[Ljava/util/String;", &[])?;
+    env.call_method(java_result, "partAsArray", "()[Ljava/util/String;", &[])?;
     let part_array = JObjectArray::from(part_array_obj.l()?);
     let part_array_size = env.get_array_length(part_array.borrow())?;
     for i in 0..part_array_size {
@@ -198,11 +260,71 @@ fn from_design_slice_to_java_set<'a>(
     Ok(design_set)
 }
 
+fn from_java_string_set_to_rust<'a>(
+    env: &mut AttachGuard<'a>,
+    java_set: JObject<'a>,
+) ->Result<HashSet<Arc<dyn DesignModel>>, jni::errors::Error> {
+    let mut set: HashSet<Arc<dyn DesignModel>> = HashSet::new();
+    let string_cls = env.find_class("java/lang/String")?;
+    let initial_string = env.new_string("")?;
+    let num_reversed_models = env.call_method(&java_set, "size", "()I", &[])?;
+    let string_array = env.new_object_array(0, string_cls, &initial_string)?;
+    let array_of_set = JObjectArray::from(env.call_method(&java_set, "toArray", "()[Ljava/lang/Object;", &[
+        JValue::Object(string_array.as_ref())
+    ])?.l()?);
+    for i in 0..num_reversed_models.i()? {
+        let elem = env.get_object_array_element(&array_of_set, i)?;
+        let rust_design = from_java_design_to_native(env, &elem)?;
+        set.insert(Arc::new(rust_design));
+    }
+    Ok(set)
+}
+
 fn java_result_to_result<'a>(
     env: &mut AttachGuard<'a>,
     java_result: JObject<'a>,
 ) -> IdentificationResult {
-    (vec![], vec![])
+    let mut identified: Vec<Arc<dyn DecisionModel>> = vec![];
+    if let Ok(identified_array) = env
+        .call_method(
+            &java_result,
+            "identifiedAsArray",
+            "()[Lidesyde/core/DecisionModel;",
+            &[],
+        )
+        .and_then(|x| x.l())
+        .map(|x| JObjectArray::from(x))
+    {
+        if let Ok(identified_array_size) = env.get_array_length(identified_array.borrow()) {
+            identified = (0..identified_array_size)
+                .map(|i| {
+                    let elem = env.get_object_array_element(&identified_array, i).unwrap();
+                    from_java_decision_to_native(env, &elem)
+                })
+                .flatten()
+                .map(|x| Arc::new(x) as Arc<dyn DecisionModel>)
+                .collect();
+        }
+    }
+    let mut messages: Vec<String> = vec![];
+    if let Ok(messages_array) = env
+        .call_method(&java_result, "messagesAsArray", "()[java/util/String;", &[])
+        .and_then(|x| x.l())
+        .map(|x| JObjectArray::from(x))
+    {
+        if let Ok(identified_array_size) = env.get_array_length(messages_array.borrow()) {
+            messages = (0..identified_array_size)
+                .map(|i| {
+                    let elem = env.get_object_array_element(&messages_array, i).unwrap();
+                    env.get_string(&JString::from(elem))
+                        .map(|x| x.to_str().map(|x| x.to_owned()))
+                        .map(|x| x.unwrap())
+                })
+                .flatten()
+                .collect();
+        }
+    }
+    (identified, messages)
 }
 
 impl IdentificationRuleLike for JavaModuleIdentificationRule {
@@ -229,7 +351,11 @@ impl IdentificationRuleLike for JavaModuleIdentificationRule {
                                             JValue::Object(jdecisions.as_ref()),
                                         ],
                                     ) {
-                                            Ok(irecord) => (),
+                                            Ok(irecord) => if let Ok(java_result) = irecord.l() {
+                                                let (ms, msgs) = java_result_to_result(&mut env,java_result);   
+                                                identified.extend(ms.into_iter());
+                                                messages.extend(msgs.into_iter());
+                                            }
                                             Err(e) => messages.push(format!("[<ERROR>]{}", e)),
                                         }
                                 }
@@ -244,7 +370,7 @@ impl IdentificationRuleLike for JavaModuleIdentificationRule {
             },
             Err(e) => messages.push(format!("[<ERROR>]{}", e)),
         };
-        IdentificationResult::from((identified, messages))
+        (identified, messages)
     }
 
     fn uses_design_models(&self) -> bool {
@@ -260,17 +386,98 @@ impl IdentificationRuleLike for JavaModuleIdentificationRule {
     }
 }
 
+impl ReverseIdentificationRuleLike for JavaModuleReverseIdentificationRule {
+    fn reverse_identify(
+        &self,
+        decision_models: &[Arc<dyn DecisionModel>],
+        design_models: &[Arc<dyn DesignModel>],
+    ) -> idesyde_core::ReverseIdentificationResult {
+        let mut reversed: Vec<Arc<dyn DesignModel>> = vec![];
+        let mut messages: Vec<String> = vec![];
+        match self.java_vm.attach_current_thread() {
+            Ok(mut env) => match env.find_class(&self.class_canonical_name) {
+                Ok(cls) => match env.new_object(cls, "()V", &[]) {
+                    Ok(obj) => match from_design_slice_to_java_set(&mut env, design_models) {
+                        Ok(jdesigns) => {
+                            match from_decision_slice_to_java_set(&mut env, decision_models) {
+                                Ok(jdecisions) => {
+                                    match env.call_method(
+                                        obj,
+                                        "apply",
+                                        "(Ljava/util/Set;Ljava/util/Set;)Ljava/util/Set;",
+                                        &[
+                                            JValue::Object(jdesigns.as_ref()),
+                                            JValue::Object(jdecisions.as_ref()),
+                                        ],
+                                    ) {
+                                            Ok(irecord) => if let Ok(java_result) = irecord.l() {
+                                                if let Ok(java_reversed) = from_java_string_set_to_rust(&mut env,java_result) {
+                                                    reversed.extend(java_reversed.into_iter());
+                                                }
+                                            }
+                                            Err(e) => messages.push(format!("[<ERROR>]{}", e)),
+                                        }
+                                }
+                                Err(e) => messages.push(format!("[<ERROR>]{}", e)),
+                            }
+                        }
+                        Err(e) => messages.push(format!("[<ERROR>]{}", e)),
+                    },
+                    Err(e) => messages.push(format!("[<ERROR>]{}", e)),
+                },
+                Err(e) => messages.push(format!("[<ERROR>]{}", e)),
+            },
+            Err(e) => messages.push(format!("[<ERROR>]{}", e)),
+        };
+        (reversed, messages)
+    }
+}
+
+fn instantiate_java_vm_debug() -> Option<JavaVM> {
+    InitArgsBuilder::new()
+        // Pass the JNI API version (default is 8)
+        .version(JNIVersion::V8)
+        // You can additionally pass any JVM options (standard, like a system property,
+        // or VM-specific).
+        // Here we enable some extra JNI checks useful during development
+        .option("-Xcheck:jni")
+        .build().ok().and_then(|args| JavaVM::new(args).ok())
+}
+
 pub struct JavaModule {
+    pub uid: String,
     pub java_vm: JavaVM,
-    pub module_classes_canonical_names: Vec<String>,
+    pub module_classes_canonical_name: String,
 }
 
 impl Module for JavaModule {
     fn unique_identifier(&self) -> String {
-        "JavaModule".to_string()
+        self.uid.clone()
     }
 
     fn identification_rules(&self) -> Vec<Arc<dyn IdentificationRuleLike>> {
+        if let Ok(mut env) = self.java_vm.attach_current_thread() {
+            if let Ok(module_class) = env.find_class(&self.module_classes_canonical_name) {
+                if let Ok(module) = env.new_object(module_class,"()V", &[]) {
+                    if let Ok(irules_classes_names) = env.call_method(module, "identicationRulesCanonicalClassNames", "()[L/java/util/String;", &[]).and_then(|x| x.l()) {
+                        let classes_names_array = JObjectArray::from(irules_classes_names);
+                        let class_names_length = env.get_array_length(classes_names_array.borrow()).unwrap_or(0);
+                        let mut irules: Vec<Arc<dyn IdentificationRuleLike>> = vec![];
+                        for i in 0..class_names_length {
+                            if let Ok(irule) = env.get_object_array_element(&classes_names_array, i).map(|x| JString::from(x)).map(|x| JavaModuleIdentificationRule {
+                                java_vm: instantiate_java_vm_debug().unwrap(),
+                                class_canonical_name: env.get_string(&x).map(|s| s.to_str().unwrap_or("").to_owned()).unwrap()
+                            }) {
+                                irules.push(Arc::new(irule));
+                            }
+                        }
+                        return irules;
+                    }
+
+                }
+            }
+            // let irules_classes_names = env.call
+        }
         vec![]
     }
 }

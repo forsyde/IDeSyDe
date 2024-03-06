@@ -7,17 +7,8 @@ use jni::{
     objects::{JByteArray, JObject, JObjectArray, JPrimitiveArray, JString, JValue}, AttachGuard, InitArgsBuilder, JNIVersion, JavaVM
 };
 
-struct JavaModuleIdentificationRule {
-    pub java_vm: JavaVM,
-    pub class_canonical_name: String,
-}
 
-struct JavaModuleReverseIdentificationRule {
-    pub java_vm: JavaVM,
-    pub class_canonical_name: String,
-}
-
-fn design_to_java_opaque<'a>(
+fn design_model_to_java_opaque<'a>(
     env: &mut AttachGuard<'a>,
     m: &dyn DesignModel,
 ) -> Result<JObject<'a>, jni::errors::Error> {
@@ -52,7 +43,7 @@ fn design_to_java_opaque<'a>(
     Ok(obj)
 }
 
-fn from_java_design_to_native<'a>(
+fn java_to_rust_design_model<'a>(
     env: &mut AttachGuard<'a>,
     java_result: &JObject<'a>,
 ) -> Result<OpaqueDesignModel, jni::errors::Error> {
@@ -111,7 +102,7 @@ fn from_java_design_to_native<'a>(
 }
 
 
-fn from_java_decision_to_native<'a>(
+fn java_to_rust_decision_model<'a>(
     env: &mut AttachGuard<'a>,
     java_result: &JObject<'a>,
 ) -> Result<OpaqueDecisionModel, jni::errors::Error> {
@@ -224,7 +215,7 @@ fn decision_to_java_opaque<'a>(
     Ok(obj)
 }
 
-fn from_decision_slice_to_java_set<'a>(
+fn decision_slide_to_java_set<'a>(
     env: &mut AttachGuard<'a>,
     decision_models: &[Arc<dyn idesyde_core::DecisionModel>],
 ) -> Result<JObject<'a>, jni::errors::Error> {
@@ -242,14 +233,14 @@ fn from_decision_slice_to_java_set<'a>(
     Ok(decision_set)
 }
 
-fn from_design_slice_to_java_set<'a>(
+fn design_slice_to_java_set<'a>(
     env: &mut AttachGuard<'a>,
     design_models: &[Arc<dyn idesyde_core::DesignModel>],
 ) -> Result<JObject<'a>, jni::errors::Error> {
     let set_class = env.find_class("java/util/HashSet")?;
     let design_set = env.new_object(set_class, "()V", &[])?;
     for m in design_models {
-        let opaque = design_to_java_opaque(env, m.as_ref())?;
+        let opaque = design_model_to_java_opaque(env, m.as_ref())?;
         env.call_method(
             &design_set,
             "add",
@@ -260,7 +251,7 @@ fn from_design_slice_to_java_set<'a>(
     Ok(design_set)
 }
 
-fn from_java_string_set_to_rust<'a>(
+fn java_design_set_to_rust<'a>(
     env: &mut AttachGuard<'a>,
     java_set: JObject<'a>,
 ) ->Result<HashSet<Arc<dyn DesignModel>>, jni::errors::Error> {
@@ -274,13 +265,13 @@ fn from_java_string_set_to_rust<'a>(
     ])?.l()?);
     for i in 0..num_reversed_models.i()? {
         let elem = env.get_object_array_element(&array_of_set, i)?;
-        let rust_design = from_java_design_to_native(env, &elem)?;
+        let rust_design = java_to_rust_design_model(env, &elem)?;
         set.insert(Arc::new(rust_design));
     }
     Ok(set)
 }
 
-fn java_result_to_result<'a>(
+fn java_to_rust_identification_result<'a>(
     env: &mut AttachGuard<'a>,
     java_result: JObject<'a>,
 ) -> IdentificationResult {
@@ -299,7 +290,7 @@ fn java_result_to_result<'a>(
             identified = (0..identified_array_size)
                 .map(|i| {
                     let elem = env.get_object_array_element(&identified_array, i).unwrap();
-                    from_java_decision_to_native(env, &elem)
+                    java_to_rust_decision_model(env, &elem)
                 })
                 .flatten()
                 .map(|x| Arc::new(x) as Arc<dyn DecisionModel>)
@@ -308,7 +299,7 @@ fn java_result_to_result<'a>(
     }
     let mut messages: Vec<String> = vec![];
     if let Ok(messages_array) = env
-        .call_method(&java_result, "messagesAsArray", "()[java/util/String;", &[])
+        .call_method(&java_result, "messagesAsArray", "()[Ljava/util/String;", &[])
         .and_then(|x| x.l())
         .map(|x| JObjectArray::from(x))
     {
@@ -327,6 +318,11 @@ fn java_result_to_result<'a>(
     (identified, messages)
 }
 
+struct JavaModuleIdentificationRule {
+    pub java_vm: Arc<JavaVM>,
+    pub class_canonical_name: String,
+}
+
 impl IdentificationRuleLike for JavaModuleIdentificationRule {
     fn identify(
         &self,
@@ -338,9 +334,9 @@ impl IdentificationRuleLike for JavaModuleIdentificationRule {
         match self.java_vm.attach_current_thread() {
             Ok(mut env) => match env.find_class(&self.class_canonical_name) {
                 Ok(cls) => match env.new_object(cls, "()V", &[]) {
-                    Ok(obj) => match from_design_slice_to_java_set(&mut env, design_models) {
+                    Ok(obj) => match design_slice_to_java_set(&mut env, design_models) {
                         Ok(jdesigns) => {
-                            match from_decision_slice_to_java_set(&mut env, decision_models) {
+                            match decision_slide_to_java_set(&mut env, decision_models) {
                                 Ok(jdecisions) => {
                                     match env.call_method(
                                         obj,
@@ -352,7 +348,7 @@ impl IdentificationRuleLike for JavaModuleIdentificationRule {
                                         ],
                                     ) {
                                             Ok(irecord) => if let Ok(java_result) = irecord.l() {
-                                                let (ms, msgs) = java_result_to_result(&mut env,java_result);   
+                                                let (ms, msgs) = java_to_rust_identification_result(&mut env,java_result);   
                                                 identified.extend(ms.into_iter());
                                                 messages.extend(msgs.into_iter());
                                             }
@@ -385,6 +381,10 @@ impl IdentificationRuleLike for JavaModuleIdentificationRule {
         None
     }
 }
+struct JavaModuleReverseIdentificationRule {
+    pub java_vm: Arc<JavaVM>,
+    pub class_canonical_name: String,
+}
 
 impl ReverseIdentificationRuleLike for JavaModuleReverseIdentificationRule {
     fn reverse_identify(
@@ -397,9 +397,9 @@ impl ReverseIdentificationRuleLike for JavaModuleReverseIdentificationRule {
         match self.java_vm.attach_current_thread() {
             Ok(mut env) => match env.find_class(&self.class_canonical_name) {
                 Ok(cls) => match env.new_object(cls, "()V", &[]) {
-                    Ok(obj) => match from_design_slice_to_java_set(&mut env, design_models) {
+                    Ok(obj) => match design_slice_to_java_set(&mut env, design_models) {
                         Ok(jdesigns) => {
-                            match from_decision_slice_to_java_set(&mut env, decision_models) {
+                            match decision_slide_to_java_set(&mut env, decision_models) {
                                 Ok(jdecisions) => {
                                     match env.call_method(
                                         obj,
@@ -411,7 +411,7 @@ impl ReverseIdentificationRuleLike for JavaModuleReverseIdentificationRule {
                                         ],
                                     ) {
                                             Ok(irecord) => if let Ok(java_result) = irecord.l() {
-                                                if let Ok(java_reversed) = from_java_string_set_to_rust(&mut env,java_result) {
+                                                if let Ok(java_reversed) = java_design_set_to_rust(&mut env,java_result) {
                                                     reversed.extend(java_reversed.into_iter());
                                                 }
                                             }
@@ -446,7 +446,7 @@ fn instantiate_java_vm_debug() -> Option<JavaVM> {
 
 pub struct JavaModule {
     pub uid: String,
-    pub java_vm: JavaVM,
+    pub java_vm: Arc<JavaVM>,
     pub module_classes_canonical_name: String,
 }
 
@@ -456,28 +456,70 @@ impl Module for JavaModule {
     }
 
     fn identification_rules(&self) -> Vec<Arc<dyn IdentificationRuleLike>> {
+        let mut irules: Vec<Arc<dyn IdentificationRuleLike>> = vec![];
         if let Ok(mut env) = self.java_vm.attach_current_thread() {
             if let Ok(module_class) = env.find_class(&self.module_classes_canonical_name) {
                 if let Ok(module) = env.new_object(module_class,"()V", &[]) {
                     if let Ok(irules_classes_names) = env.call_method(module, "identicationRulesCanonicalClassNames", "()[L/java/util/String;", &[]).and_then(|x| x.l()) {
                         let classes_names_array = JObjectArray::from(irules_classes_names);
                         let class_names_length = env.get_array_length(classes_names_array.borrow()).unwrap_or(0);
-                        let mut irules: Vec<Arc<dyn IdentificationRuleLike>> = vec![];
                         for i in 0..class_names_length {
                             if let Ok(irule) = env.get_object_array_element(&classes_names_array, i).map(|x| JString::from(x)).map(|x| JavaModuleIdentificationRule {
-                                java_vm: instantiate_java_vm_debug().unwrap(),
+                                java_vm: self.java_vm.clone(),
                                 class_canonical_name: env.get_string(&x).map(|s| s.to_str().unwrap_or("").to_owned()).unwrap()
                             }) {
                                 irules.push(Arc::new(irule));
                             }
                         }
-                        return irules;
                     }
-
                 }
             }
-            // let irules_classes_names = env.call
         }
+        irules
+    }
+    
+    fn explorers(&self) -> Vec<Arc<dyn idesyde_core::Explorer>> {
+        Vec::new()
+    }
+    
+    fn reverse_identification_rules(&self) -> Vec<Arc<dyn ReverseIdentificationRuleLike>> {
+        let mut irules: Vec<Arc<dyn ReverseIdentificationRuleLike>> = vec![];
+        if let Ok(mut env) = self.java_vm.attach_current_thread() {
+            if let Ok(module_class) = env.find_class(&self.module_classes_canonical_name) {
+                if let Ok(module) = env.new_object(module_class,"()V", &[]) {
+                    if let Ok(irules_classes_names) = env.call_method(module, "identicationRulesCanonicalClassNames", "()[L/java/util/String;", &[]).and_then(|x| x.l()) {
+                        let classes_names_array = JObjectArray::from(irules_classes_names);
+                        let class_names_length = env.get_array_length(classes_names_array.borrow()).unwrap_or(0);
+                        for i in 0..class_names_length {
+                            if let Ok(irule) = env.get_object_array_element(&classes_names_array, i).map(|x| JString::from(x)).map(|x| JavaModuleReverseIdentificationRule {
+                                java_vm: self.java_vm.clone(),
+                                class_canonical_name: env.get_string(&x).map(|s| s.to_str().unwrap_or("").to_owned()).unwrap()
+                            }) {
+                                irules.push(Arc::new(irule));
+                            }
+                        }
+                    }
+                }
+            }
+        }
+        irules
+    }
+    
+    fn identification_step(
+        &self,
+        _decision_models: &Vec<Arc<dyn DecisionModel>>,
+        _design_models: &Vec<Arc<dyn DesignModel>>,
+    ) -> IdentificationResult {
+        (vec![], vec![])
+    }
+    
+    fn reverse_identification(
+        &self,
+        _solved_decision_model: &Vec<Arc<dyn DecisionModel>>,
+        _design_model: &Vec<Arc<dyn DesignModel>>,
+    ) -> Vec<Arc<dyn DesignModel>> {
         vec![]
     }
+
+
 }

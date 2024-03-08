@@ -1,10 +1,13 @@
 package idesyde.core;
 
 import com.fasterxml.jackson.core.JsonProcessingException;
+import com.fasterxml.jackson.core.exc.StreamReadException;
+import com.fasterxml.jackson.databind.DatabindException;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.dataformat.cbor.CBORFactory;
 import com.fasterxml.jackson.datatype.jdk8.Jdk8Module;
 
+import java.io.IOException;
 import java.nio.charset.StandardCharsets;
 import java.security.MessageDigest;
 import java.security.NoSuchAlgorithmException;
@@ -123,6 +126,41 @@ public interface DecisionModel extends Comparable<DecisionModel> {
         })).orElse(0);
     }
 
+    static <T extends DecisionModel> Optional<T> fromCBOR(byte[] bytes, Class<T> cls) {
+        try {
+            return Optional.of(objectMapperCBOR.readValue(bytes, cls));
+        } catch (IOException e) {
+            return Optional.empty();
+        }
+    }
+
+    static <T extends DecisionModel> Optional<T> fromJsonString(String str, Class<T> cls) {
+        try {
+            return Optional.of(objectMapper.readValue(str, cls));
+        } catch (IOException e) {
+            return Optional.empty();
+        }
+    }
+
+    public static <T extends DecisionModel> Optional<T> fromOpaque(OpaqueDecisionModel opaqueDecisionModel,
+            Class<T> cls) {
+        if (opaqueDecisionModel.category().equals(cls.getName())
+                || opaqueDecisionModel.category().equals(cls.getCanonicalName())) {
+            return opaqueDecisionModel.asCBORBinary().flatMap(bs -> DecisionModel.fromCBOR(bs, cls)).or(
+                    () -> opaqueDecisionModel.asJsonString().flatMap(str -> DecisionModel.fromJsonString(str, cls)));
+        }
+        return Optional.empty();
+    }
+
+    @SuppressWarnings("unchecked")
+    public static <T extends DecisionModel> Optional<T> cast(DecisionModel m, Class<T> cls) {
+        if (m instanceof OpaqueDecisionModel opaqueDecisionModel) {
+            return fromOpaque(opaqueDecisionModel, cls);
+        } else if (cls.isAssignableFrom(m.getClass())) {
+            return (Optional<T>) Optional.of(m);
+        }
+        return Optional.empty();
+    }
 
     /**
      * The shared and static Jackson object mapper used for (de) serialization to

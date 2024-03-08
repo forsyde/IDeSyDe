@@ -13,6 +13,8 @@ dependencies {
     implementation 'io.jenetics:jenetics:7.1.3'
     implementation 'io.jenetics:jenetics.ext:7.1.3'
     implementation 'org.jgrapht:jgrapht-core:1.5.2'
+    compileOnly project(":java-core-generator")
+    annotationProcessor project(":java-core-generator")
 }
 
 application {

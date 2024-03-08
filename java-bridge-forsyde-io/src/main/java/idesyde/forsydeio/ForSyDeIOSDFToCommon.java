@@ -14,11 +14,9 @@ import forsyde.io.lib.hierarchy.ForSyDeHierarchy;
 import forsyde.io.lib.hierarchy.behavior.moc.sdf.SDFActor;
 import forsyde.io.lib.hierarchy.behavior.moc.sdf.SDFChannel;
 import idesyde.common.SDFApplication;
-import idesyde.core.DecisionModel;
-import idesyde.core.DesignModel;
-import idesyde.core.IdentificationResult;
-import idesyde.core.IdentificationRule;
+import idesyde.core.*;
 
+@AutoRegister(ForSyDeIOModule.class)
 class ForSyDeIOSDFToCommon implements IdentificationRule {
 
     @Override

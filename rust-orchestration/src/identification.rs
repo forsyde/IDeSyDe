@@ -8,8 +8,8 @@ use std::{
 };
 
 use idesyde_core::{
-    DecisionModel, DesignModel, IdentificationIterator, IdentificationResult, Module,
-    OpaqueDecisionModel, OpaqueDesignModel,
+    merge_identification_results, DecisionModel, DesignModel, IdentificationIterator,
+    IdentificationResult, IdentificationRuleLike, Module, OpaqueDecisionModel, OpaqueDesignModel,
 };
 
 use log::debug;
@@ -207,42 +207,16 @@ pub fn identification_procedure(
     let mut identified: Vec<Arc<dyn DecisionModel>> = pre_identified.clone();
     let mut messages: Vec<(String, String)> = Vec::new();
     let mut fix_point = false;
-    // let mut iterators: Vec<Box<dyn IdentificationIterator>> = imodules
-    //     .iter()
-    //     .map(|imodule| imodule.identification_step(design_models, &identified))
-    //     .collect();
+    let irules: Vec<Arc<dyn IdentificationRuleLike>> = imodules
+        .iter()
+        .flat_map(|imodule| imodule.identification_rules().into_iter())
+        .collect();
     while !fix_point {
         fix_point = true;
-        // let before = identified.len();
-        // let identified_step: Vec<IdentificationResult> = (0..iterators.len()).into_par_iter().map(|i| {
-        //     if let Ok(mut iter) = iterators[i].lock() {
-        //         iter.next_with_models(&identified, design_models)
-        //     } else {
-        //         None
-        //     }
-        // }).flatten().collect();
-
-        let (identified_models, msgs) = imodules
+        let (identified_models, msgs) = irules
             .par_iter()
-            .map(|imodule| imodule.identification_step(&identified, design_models))
-            .reduce_with(|(models1, msgs1), (models2, msgs2)| {
-                let mut models = Vec::new();
-                models.extend(models1.into_iter());
-                for m in models2 {
-                    if !models.contains(&m) {
-                        models.push(m);
-                    }
-                }
-                // models.extend(models2.into_iter().filter(|m| !models.contains(m)));
-                let mut msgs = Vec::new();
-                msgs.extend(msgs1.into_iter());
-                for msg in msgs2 {
-                    if !msgs.contains(&msg) {
-                        msgs.push(msg);
-                    }
-                }
-                (models, msgs)
-            })
+            .map(|irule| irule.identify(&design_models.as_slice(), identified.as_slice()))
+            .reduce_with(merge_identification_results)
             .unwrap_or((vec![], vec![]));
         // add completely new models or replace opaque deicion mdoels for non-opaque ones
         for m in &identified_models {
@@ -269,23 +243,11 @@ pub fn identification_procedure(
             debug!("{}", msg);
             messages.push(("DEBUG".to_string(), msg.to_owned()));
         }
-        // let ident_messages: HashSet<(String, String)> = iterators
-        //     .iter_mut()
-        //     .flat_map(|iter| iter.collect_messages())
-        //     .collect();
-        // for (lvl, msg) in ident_messages {
-        // }
-        // .filter(|potential| !identified.contains(potential))
-        // .collect();
-        // this contain check is done again because there might be imodules that identify the same decision model,
-        // and since the filtering before is step-based, it would add both identical decision models.
-        // This new for-if fixes this by checking every model of this step.
         debug!(
             "{} total decision models identified at step {}",
             identified.len(),
             step
         );
-        // fix_point = fix_point && (identified.len() == before);
         step += 1;
     }
     (identified, messages)

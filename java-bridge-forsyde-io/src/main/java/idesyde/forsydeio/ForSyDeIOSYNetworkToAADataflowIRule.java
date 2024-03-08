@@ -8,6 +8,7 @@ import java.util.Set;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
+import idesyde.core.*;
 import org.jgrapht.alg.connectivity.ConnectivityInspector;
 import org.jgrapht.graph.AsSubgraph;
 
@@ -17,11 +18,8 @@ import forsyde.io.lib.hierarchy.behavior.moc.sy.SYDelay;
 import forsyde.io.lib.hierarchy.behavior.moc.sy.SYMap;
 import forsyde.io.lib.hierarchy.behavior.moc.sy.SYSignal;
 import idesyde.common.AperiodicAsynchronousDataflow;
-import idesyde.core.DecisionModel;
-import idesyde.core.DesignModel;
-import idesyde.core.IdentificationResult;
-import idesyde.core.IdentificationRule;
 
+@AutoRegister(ForSyDeIOModule.class)
 class ForSyDeIOSYNetworkToAADataflowIRule implements IdentificationRule {
 
     @Override

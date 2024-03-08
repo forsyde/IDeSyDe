@@ -1,6 +1,7 @@
 package idesyde.core;
 
 import java.util.Arrays;
+import java.util.Optional;
 import java.util.Set;
 import java.util.function.BiFunction;
 import java.util.stream.Collectors;
@@ -15,7 +16,8 @@ public interface IdentificationRule extends
         BiFunction<Set<? extends DesignModel>, Set<? extends DecisionModel>, IdentificationResult> {
 
     default PlainIdentificationResult fromArraysToPlain(DesignModel[] designModels, DecisionModel[] decisionModels) {
-        IdentificationResult result = apply(Arrays.stream(designModels).collect(Collectors.toSet()), Arrays.stream(decisionModels).collect(Collectors.toSet()));
+        IdentificationResult result = apply(Arrays.stream(designModels).collect(Collectors.toSet()),
+                Arrays.stream(decisionModels).collect(Collectors.toSet()));
         DecisionModel[] identified = new DecisionModel[result.identified().size()];
         String[] messages = new String[result.messages().size()];
         int i = 0;

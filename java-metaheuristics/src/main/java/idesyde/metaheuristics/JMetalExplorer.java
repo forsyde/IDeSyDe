@@ -1,5 +1,6 @@
 package idesyde.metaheuristics;
 
+import idesyde.core.AutoRegister;
 import idesyde.core.DecisionModel;
 import idesyde.core.ExplorationSolution;
 import idesyde.core.Explorer;

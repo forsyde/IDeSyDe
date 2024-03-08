@@ -1,5 +1,5 @@
 [package]
-name = "rust-bridge-java"
+name = "idesyde-bridge-java"
 version.workspace = true
 authors.workspace = true
 edition.workspace = true
@@ -13,3 +13,4 @@ idesyde-common = { path = "../rust-common" }
 derive_builder.workspace = true
 jni.workspace = true
 zip.workspace = true
+jars.workspace = true

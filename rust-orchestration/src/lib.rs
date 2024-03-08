@@ -26,6 +26,7 @@ use exploration::ExternalExplorerBuilder;
 
 use identification::ExternalServerIdentifiticationIterator;
 use idesyde_blueprints::IdentificationResultCompactMessage;
+use idesyde_bridge_java::java_modules_from_jar_paths;
 use idesyde_core::DecisionModel;
 use idesyde_core::DesignModel;
 use idesyde_core::Explorer;
@@ -688,35 +689,51 @@ impl Module for ExternalServerModule {
 pub fn find_modules(modules_path: &Path) -> Vec<Arc<dyn Module>> {
     let mut imodules: Vec<Arc<dyn Module>> = Vec::new();
     if let Ok(read_dir) = modules_path.read_dir() {
-        let prepared: Vec<Arc<dyn Module>> = read_dir
-            .par_bridge()
-            .into_par_iter()
-            .flat_map(|e| {
-                if let Ok(de) = e {
-                    let p = de.path();
-                    if p.is_file() {
-                        let prog = p.read_link().unwrap_or(p);
-                        if let Some(imodule) = ExternalServerModule::try_create_local(prog.clone())
-                        {
-                            return Some(Arc::new(imodule) as Arc<dyn Module>);
-                        }
-                        //  else {
-                        //     return Some(Arc::new(ExternalIdentificationModule {
-                        //         command_path_: prog.clone(),
-                        //         identified_path_: identified_path.to_path_buf(),
-                        //         inputs_path_: inputs_path.to_path_buf(),
-                        //         solved_path_: solved_path.to_path_buf(),
-                        //         reverse_path_: integration_path.to_path_buf(),
-                        //         output_path_: output_path.to_path_buf(),
-                        //     })
-                        //         as Arc<dyn IdentificationModule>);
-                        // }
-                    }
-                }
-                None
+        let jar_modules: Vec<PathBuf> = read_dir
+            .filter_map(|e| e.ok())
+            .map(|e| e.path())
+            .filter(|p| p.is_file())
+            .map(|p| p.read_link().unwrap_or(p))
+            .filter(|p| {
+                p.extension()
+                    .map(|ext| ext.eq_ignore_ascii_case("jar"))
+                    .unwrap_or(false)
             })
             .collect();
-        imodules.extend(prepared.into_iter());
+        imodules.extend(
+            java_modules_from_jar_paths(jar_modules.as_slice())
+                .into_iter()
+                .map(|x| Arc::new(x) as Arc<dyn Module>),
+        );
+        // let prepared: Vec<Arc<dyn Module>> = read_dir
+        //     .par_bridge()
+        //     .into_par_iter()
+        //     .flat_map(|e| {
+        //         if let Ok(de) = e {
+        //             let p = de.path();
+        //             if p.is_file() {
+        //                 let prog = p.read_link().unwrap_or(p);
+        //                 if let Some(imodule) = ExternalServerModule::try_create_local(prog.clone())
+        //                 {
+        //                     return Some(Arc::new(imodule) as Arc<dyn Module>);
+        //                 }
+        //                 //  else {
+        //                 //     return Some(Arc::new(ExternalIdentificationModule {
+        //                 //         command_path_: prog.clone(),
+        //                 //         identified_path_: identified_path.to_path_buf(),
+        //                 //         inputs_path_: inputs_path.to_path_buf(),
+        //                 //         solved_path_: solved_path.to_path_buf(),
+        //                 //         reverse_path_: integration_path.to_path_buf(),
+        //                 //         output_path_: output_path.to_path_buf(),
+        //                 //     })
+        //                 //         as Arc<dyn IdentificationModule>);
+        //                 // }
+        //             }
+        //         }
+        //         None
+        //     })
+        //     .collect();
+        // imodules.extend(prepared.into_iter());
     }
     imodules
 }

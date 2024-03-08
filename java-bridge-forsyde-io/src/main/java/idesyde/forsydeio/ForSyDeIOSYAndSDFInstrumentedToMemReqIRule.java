@@ -9,21 +9,17 @@ import java.util.stream.Collectors;
 import forsyde.io.core.SystemGraph;
 import forsyde.io.lib.hierarchy.ForSyDeHierarchy;
 import idesyde.common.InstrumentedMemoryRequirements;
-import idesyde.core.DecisionModel;
-import idesyde.core.DesignModel;
-import idesyde.core.IdentificationResult;
-import idesyde.core.IdentificationRule;
+import idesyde.core.*;
 
-class ForSyDeIOSYAndSDFInstrumentedToMemReqIRule implements IdentificationRule {
+@AutoRegister(ForSyDeIOModule.class)
+public class ForSyDeIOSYAndSDFInstrumentedToMemReqIRule implements IdentificationRule {
 
     @Override
     public IdentificationResult apply(Set<? extends DesignModel> designModels,
             Set<? extends DecisionModel> decisionModels) {
         var model = new SystemGraph();
         for (var dm : designModels) {
-            if (dm instanceof ForSyDeIODesignModel m) {
-                model.mergeInPlace(m.systemGraph());
-            }
+            ForSyDeIODesignModel.tryFrom(dm).map(ForSyDeIODesignModel::systemGraph).ifPresent(model::mergeInPlace);
         }
         Set<String> processes = new HashSet<>();
         Set<String> channels = new HashSet<>();
@@ -39,7 +35,7 @@ class ForSyDeIOSYAndSDFInstrumentedToMemReqIRule implements IdentificationRule {
                         memMapping.get(ib.getIdentifier()).put(inspe.getIdentifier(),
                                 ib.maxSizeInBits().entrySet().stream()
                                         .filter(e -> inspe.modalInstructionCategory().contains(e.getKey()))
-                                        .mapToLong(e -> e.getValue()).max()
+                                        .mapToLong(Map.Entry::getValue).max()
                                         .orElse(0L));
                     }, () -> {
                         ForSyDeHierarchy.GenericProcessingModule.tryView(model, peV).ifPresent(pe -> {
@@ -47,7 +43,7 @@ class ForSyDeIOSYAndSDFInstrumentedToMemReqIRule implements IdentificationRule {
                                 memMapping.put(ib.getIdentifier(), new HashMap<>());
                             }
                             memMapping.get(ib.getIdentifier()).put(pe.getIdentifier(),
-                                    ib.maxSizeInBits().values().stream().mapToLong(x -> x.longValue()).max()
+                                    ib.maxSizeInBits().values().stream().mapToLong(Long::longValue).max()
                                             .orElse(0L));
                         });
                     });
@@ -61,7 +57,7 @@ class ForSyDeIOSYAndSDFInstrumentedToMemReqIRule implements IdentificationRule {
                             memMapping.put(idt.getIdentifier(), new HashMap<>());
                         }
                         memMapping.get(idt.getIdentifier()).put(pe.getIdentifier(),
-                                idt.maxSizeInBits().values().stream().mapToLong(x -> x.longValue()).max().orElse(0L));
+                                idt.maxSizeInBits().values().stream().mapToLong(x -> x).max().orElse(0L));
                     });
                 }
             });

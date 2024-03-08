@@ -3,6 +3,7 @@ pub mod macros;
 use std::{
     collections::{HashMap, HashSet},
     hash::Hash,
+    ops::Add,
     path::Path,
     sync::{
         mpsc::{Receiver, Sender},
@@ -17,6 +18,18 @@ use serde::{de::DeserializeOwned, Deserialize, Serialize};
 use sha2::{Digest, Sha512};
 use std::cmp::Ordering;
 use url::Url;
+
+/// A simple structure to contain a result and accumulate information regarding its computation
+#[derive(
+    Debug, Clone, PartialEq, Eq, serde::Serialize, serde::Deserialize, derive_builder::Builder,
+)]
+struct LoggedResult<T> {
+    result: T,
+    info: Vec<String>,
+    warn: Vec<String>,
+    err: Vec<String>,
+    debug: Vec<String>,
+}
 
 /// The trait/interface for a design model in the design space identification methodology, as
 /// defined in [1].
@@ -315,7 +328,7 @@ pub type IdentificationResult = (Vec<Arc<dyn DecisionModel>>, Vec<String>);
 
 pub type ReverseIdentificationResult = (Vec<Arc<dyn DesignModel>>, Vec<String>);
 
-pub trait IdentificationRuleLike {
+pub trait IdentificationRuleLike: Send + Sync {
     fn identify(
         &self,
         design_models: &[Arc<dyn DesignModel>],
@@ -976,11 +989,19 @@ pub trait Module: Send + Sync {
     }
     fn identification_step(
         &self,
-        _decision_models: &Vec<Arc<dyn DecisionModel>>,
-        _design_models: &Vec<Arc<dyn DesignModel>>,
+        decision_models: &Vec<Arc<dyn DecisionModel>>,
+        design_models: &Vec<Arc<dyn DesignModel>>,
     ) -> IdentificationResult {
-        (vec![], vec![])
+        let mut identified = Vec::new();
+        let mut messages = Vec::new();
+        for irule in self.identification_rules() {
+            let (i, m) = irule.identify(design_models, decision_models);
+            identified.extend(i);
+            messages.extend(m);
+        }
+        (identified, messages)
     }
+
     fn reverse_identification(
         &self,
         _solved_decision_model: &Vec<Arc<dyn DecisionModel>>,
@@ -1507,4 +1528,28 @@ pub fn pareto_dominance_partial_cmp(
 
 pub fn empty_identification_iter() -> EmptyIdentificationIterator {
     EmptyIdentificationIterator {}
+}
+
+pub fn merge_identification_results(
+    result1: IdentificationResult,
+    result2: IdentificationResult,
+) -> IdentificationResult {
+    let (models1, msgs1) = result1;
+    let (models2, msgs2) = result2;
+    let mut models = Vec::new();
+    models.extend(models1.into_iter());
+    for m in models2 {
+        if !models.contains(&m) {
+            models.push(m);
+        }
+    }
+    // models.extend(models2.into_iter().filter(|m| !models.contains(m)));
+    let mut msgs = Vec::new();
+    msgs.extend(msgs1.into_iter());
+    for msg in msgs2 {
+        if !msgs.contains(&msg) {
+            msgs.push(msg);
+        }
+    }
+    (models, msgs)
 }

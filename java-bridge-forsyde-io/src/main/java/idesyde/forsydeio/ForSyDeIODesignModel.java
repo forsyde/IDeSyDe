@@ -8,6 +8,7 @@ import forsyde.io.core.Vertex;
 import forsyde.io.lib.hierarchy.ForSyDeHierarchy;
 import forsyde.io.lib.LibForSyDeModelHandler;
 import idesyde.core.DesignModel;
+import idesyde.core.OpaqueDesignModel;
 
 import java.util.Optional;
 import java.util.Set;
@@ -45,6 +46,31 @@ public record ForSyDeIODesignModel(
         // return
         // Stream.concat(systemGraph.vertexSet().stream().map(Vertex::getIdentifier),
         // systemGraph().edgeSet().stream().map(EdgeInfo::toIDString)).collect(Collectors.toSet());
+    }
+
+    public static Optional<ForSyDeIODesignModel> fromOpaque(OpaqueDesignModel opaque) {
+        if (modelHandler.canLoadModel(opaque.format())) {
+            return opaque.asString().flatMap(body -> {
+                try {
+                    return Optional.of(modelHandler.readModel(body, opaque.format()));
+                } catch (Exception e) {
+                    e.printStackTrace();
+                    return Optional.empty();
+                }
+            }).map(ForSyDeIODesignModel::new);
+        } else {
+            return Optional.empty();
+        }
+    }
+
+    public static Optional<ForSyDeIODesignModel> tryFrom(DesignModel model) {
+        if (model instanceof OpaqueDesignModel opaque) {
+            return fromOpaque(opaque);
+        } else if (model instanceof ForSyDeIODesignModel forSyDeIODesignModel) {
+            return Optional.of(forSyDeIODesignModel);
+        } else {
+            return Optional.empty();
+        }
     }
 
     public static ModelHandler modelHandler = LibForSyDeModelHandler.registerLibForSyDe(new ModelHandler())

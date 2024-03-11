@@ -489,7 +489,10 @@ pub fn from_java_to_rust_exploration_bidding<'a>(
     jobject: JObject<'a>,
 ) -> ExplorationBid {
     let mut objs: HashSet<String> = HashSet::new();
-    if let Ok(objs_set) = env.call_method(&jobject, "targetObjectives", "()Ljava/util/Set", &[]).and_then(|x| x.l()) {
+    if let Ok(objs_set) = env
+        .call_method(&jobject, "targetObjectives", "()Ljava/util/Set", &[])
+        .and_then(|x| x.l())
+    {
         let iter = env
             .call_method(&objs_set, "iterator", "()Ljava/util/Iterator;", &[])
             .and_then(|x| x.l())
@@ -505,26 +508,28 @@ pub fn from_java_to_rust_exploration_bidding<'a>(
                 .expect("Failed to call next")
                 .l()
                 .expect("Failed to get object from next");
-            if let Ok(obj_str) = env.get_string(&JString::from(obj))
+            if let Ok(obj_str) = env
+                .get_string(&JString::from(obj))
                 .map(|x| x.to_str().map(|x| x.to_owned()))
-                .map(|x| x.unwrap()) {
-                    objs.insert(obj_str);
-                }
+                .map(|x| x.unwrap())
+            {
+                objs.insert(obj_str);
+            }
         }
     }
     ExplorationBid::builder()
         .can_explore(
-            env.get_field(&jobject, "canExplore", "Z")
+            env.call_method(&jobject, "canExplore", "()Ljava/lang/Boolean;", &[])
                 .and_then(|x| x.z())
                 .unwrap_or(false),
         )
         .is_exact(
-            env.get_field(&jobject, "isExact", "Z")
+            env.call_method(&jobject, "isExact", "()Ljava/lang/Boolean;", &[])
                 .and_then(|x| x.z())
                 .unwrap_or(false),
         )
         .competitiveness(
-            env.get_field(&jobject, "competitiveness", "D")
+            env.call_method(&jobject, "competitiveness", "()Ljava/lang/Double;", &[])
                 .and_then(|x| x.d())
                 .map(|f| f as f32)
                 .unwrap_or(1.0f32),
@@ -578,7 +583,6 @@ impl Explorer for JavaModuleExplorer {
                 .and_then(|x| x.l())
             });
             if let Ok(java_bid) = java_bid_opt {
-                println!("Got a bid from Java");
                 return from_java_to_rust_exploration_bidding(&mut root_env, java_bid);
             }
         }
@@ -727,12 +731,7 @@ impl Module for JavaModule {
         let mut explorers: Vec<Arc<dyn idesyde_core::Explorer>> = vec![];
         if let Ok(mut env) = self.java_vm.attach_current_thread() {
             match env
-                .call_method(
-                    &self.module_jobject,
-                    "explorers",
-                    "()Ljava/util/Set;",
-                    &[],
-                )
+                .call_method(&self.module_jobject, "explorers", "()Ljava/util/Set;", &[])
                 .and_then(|x| x.l())
             {
                 Ok(explorers_objs) => {

@@ -455,8 +455,7 @@ public interface StandaloneModule extends Module {
                                                 entries.stream().findAny().ifPresent(msg -> {
                                                     OpaqueDecisionModel.fromJsonString(msg)
                                                             .flatMap(this::fromOpaqueDecision)
-                                                            .map(decisionModel -> explorer.bid(explorers(),
-                                                                    decisionModel))
+                                                            .map(decisionModel -> explorer.bid(decisionModel))
                                                             .ifPresent(bid -> {
                                                                 try {
                                                                     ctx.result(objectMapper.writeValueAsString(bid));
@@ -474,7 +473,7 @@ public interface StandaloneModule extends Module {
                                         // "Bidding with %s and %s".formatted(Arrays.toString(ctx.bodyAsBytes()),
                                         // explorer.uniqueIdentifier()));
                                         var decisionModel = cachedDecisionModels.get(bb);
-                                        var bid = explorer.bid(explorers(), decisionModel);
+                                        var bid = explorer.bid(decisionModel);
                                         try {
                                             // System.out.println("returning bidding value");
                                             ctx.result(objectMapper.writeValueAsString(bid));

@@ -512,12 +512,17 @@ impl PartialOrd<ExplorationSolution> for ExplorationSolution {
 
 /// An exploration bidding captures the characteristics that an explorer
 /// might display when exploring a decision model.
-#[derive(Debug, Deserialize, Serialize, Clone, PartialEq)]
+#[derive(Debug, Deserialize, Serialize, Clone, PartialEq, derive_builder::Builder)]
 pub struct ExplorationBid {
+    #[builder(default = "false")]
     pub can_explore: bool,
+    #[builder(default = "false")]
     pub is_exact: bool,
+    #[builder(default = "1.0")]
     pub competitiveness: f32,
+    #[builder(default = "HashSet::new()")]
     pub target_objectives: HashSet<String>,
+    #[builder(default = "HashMap::new()")]
     pub additional_numeric_properties: HashMap<String, f32>,
 }
 
@@ -526,7 +531,7 @@ impl ExplorationBid {
         serde_json::from_str(s).ok()
     }
 
-    pub fn impossible(_explorer_id: &str) -> ExplorationBid {
+    pub fn impossible() -> ExplorationBid {
         ExplorationBid {
             can_explore: false,
             is_exact: false,
@@ -534,6 +539,10 @@ impl ExplorationBid {
             target_objectives: HashSet::new(),
             additional_numeric_properties: HashMap::new(),
         }
+    }
+
+    pub fn builder() -> ExplorationBidBuilder {
+        ExplorationBidBuilder::default()
     }
 }
 
@@ -619,7 +628,7 @@ pub trait Explorer: Downcast + Send + Sync {
         &self,
         _m: Arc<dyn DecisionModel>,
     ) -> ExplorationBid {
-        ExplorationBid::impossible(&self.unique_identifier())
+        ExplorationBid::impossible()
     }
     fn explore(
         &self,

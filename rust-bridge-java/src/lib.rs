@@ -6,11 +6,16 @@ use std::{
 };
 
 use idesyde_core::{
-    DecisionModel, DesignModel, Explorer, IdentificationResult, IdentificationRuleLike, LoggedResult, MarkedIdentificationRule, Module, OpaqueDecisionModel, OpaqueDecisionModelBuilder, OpaqueDesignModel, ReverseIdentificationResult, ReverseIdentificationRuleLike
+    DecisionModel, DesignModel, ExplorationBid, Explorer, IdentificationResult,
+    IdentificationRuleLike, LoggedResult, MarkedIdentificationRule, Module, OpaqueDecisionModel,
+    OpaqueDecisionModelBuilder, OpaqueDesignModel, ReverseIdentificationResult,
+    ReverseIdentificationRuleLike,
 };
 use jars::JarOptionBuilder;
 use jni::{
-    objects::{GlobalRef, JByteArray, JObject, JObjectArray, JPrimitiveArray, JString, JValue}, strings::JavaStr, AttachGuard, InitArgs, InitArgsBuilder, JNIEnv, JNIVersion, JavaVM
+    objects::{GlobalRef, JByteArray, JObject, JObjectArray, JPrimitiveArray, JString, JValue},
+    strings::JavaStr,
+    AttachGuard, InitArgs, InitArgsBuilder, JNIEnv, JNIVersion, JavaVM,
 };
 use zip::ZipArchive;
 
@@ -344,7 +349,6 @@ struct JavaModuleIdentificationRule {
     pub irule_jobject: GlobalRef,
 }
 
-
 impl IdentificationRuleLike for JavaModuleIdentificationRule {
     fn identify(
         &self,
@@ -416,7 +420,6 @@ struct JavaModuleReverseIdentificationRule {
     pub irule_jobject: Arc<GlobalRef>,
 }
 
-
 impl ReverseIdentificationRuleLike for JavaModuleReverseIdentificationRule {
     fn reverse_identify(
         &self,
@@ -481,6 +484,56 @@ fn instantiate_java_vm_debug(
     )
 }
 
+pub fn from_java_to_rust_exploration_bidding<'a>(
+    env: &mut JNIEnv<'a>,
+    jobject: JObject<'a>,
+) -> ExplorationBid {
+    let mut objs: HashSet<String> = HashSet::new();
+    if let Ok(objs_set) = env.call_method(&jobject, "targetObjectives", "()Ljava/util/Set", &[]).and_then(|x| x.l()) {
+        let iter = env
+            .call_method(&objs_set, "iterator", "()Ljava/util/Iterator;", &[])
+            .and_then(|x| x.l())
+            .expect("Set to iterator should never fail");
+        while env
+            .call_method(&iter, "hasNext", "()Z", &[])
+            .and_then(|x| x.z())
+            .expect("Failed to get boolean from hasNext")
+            == true
+        {
+            let obj = env
+                .call_method(&iter, "next", "()Ljava/lang/Object;", &[])
+                .expect("Failed to call next")
+                .l()
+                .expect("Failed to get object from next");
+            if let Ok(obj_str) = env.get_string(&JString::from(obj))
+                .map(|x| x.to_str().map(|x| x.to_owned()))
+                .map(|x| x.unwrap()) {
+                    objs.insert(obj_str);
+                }
+        }
+    }
+    ExplorationBid::builder()
+        .can_explore(
+            env.get_field(&jobject, "canExplore", "Z")
+                .and_then(|x| x.z())
+                .unwrap_or(false),
+        )
+        .is_exact(
+            env.get_field(&jobject, "isExact", "Z")
+                .and_then(|x| x.z())
+                .unwrap_or(false),
+        )
+        .competitiveness(
+            env.get_field(&jobject, "competitiveness", "D")
+                .and_then(|x| x.d())
+                .map(|f| f as f32)
+                .unwrap_or(1.0f32),
+        )
+        .target_objectives(objs)
+        .build()
+        .unwrap_or(ExplorationBid::impossible())
+}
+
 #[derive(Clone)]
 pub struct JavaModuleExplorer {
     pub java_vm: Arc<JavaVM>,
@@ -489,29 +542,49 @@ pub struct JavaModuleExplorer {
 
 impl Explorer for JavaModuleExplorer {
     fn unique_identifier(&self) -> String {
-        self.java_vm.attach_current_thread().and_then(|mut env| {
-            env.call_method(&self.explorer_jobject, "uniqueIdentifier", "()Ljava/lang/String;", &[])
-            .and_then(|x| x.l())
-            .and_then(|x| env.get_string(&JString::from(x)).map(|s| s.to_str().expect("[<ERROR>] Failed converting name to UTF8").to_string()))
-        })
-        .expect("[<ERROR>] Could not load java module explorer's unique identifier.")
+        self.java_vm
+            .attach_current_thread()
+            .and_then(|mut env| {
+                env.call_method(
+                    &self.explorer_jobject,
+                    "uniqueIdentifier",
+                    "()Ljava/lang/String;",
+                    &[],
+                )
+                .and_then(|x| x.l())
+                .and_then(|x| {
+                    env.get_string(&JString::from(x)).map(|s| {
+                        s.to_str()
+                            .expect("[<ERROR>] Failed converting name to UTF8")
+                            .to_string()
+                    })
+                })
+            })
+            .expect("[<ERROR>] Could not load java module explorer's unique identifier.")
     }
-    
-    fn bid(
-        &self,
-        m: Arc<dyn DecisionModel>,
-    ) -> idesyde_core::ExplorationBid {
+
+    fn bid(&self, m: Arc<dyn DecisionModel>) -> idesyde_core::ExplorationBid {
         if let Ok(mut root_env) = self.java_vm.attach_current_thread() {
             let size_estimate = 2 * m.part().len() as i32;
-            let java_bid = root_env.with_local_frame_returning_local(size_estimate, |env| {
-                let jmodel = decision_to_java_opaque(env, m.as_ref()).expect("Failed to convert decision model to java opaque");
-                env.call_method(&self.explorer_jobject, "bid", "(Ljava/util/Set;Lidesyde/core/DecisionModel;)Lidesyde/core/ExplorationBid;", &[JValue::Object(jmodel.as_ref())])
+            let java_bid_opt = root_env.with_local_frame_returning_local(size_estimate, |env| {
+                let jmodel = decision_to_java_opaque(env, m.as_ref())
+                    .expect("Failed to convert decision model to java opaque");
+                env.call_method(
+                    &self.explorer_jobject,
+                    "bid",
+                    "(Lidesyde/core/DecisionModel;)Lidesyde/core/ExplorationBidding;",
+                    &[JValue::Object(jmodel.as_ref())],
+                )
                 .and_then(|x| x.l())
             });
+            if let Ok(java_bid) = java_bid_opt {
+                println!("Got a bid from Java");
+                return from_java_to_rust_exploration_bidding(&mut root_env, java_bid);
+            }
         }
-        idesyde_core::ExplorationBid::impossible(&self.unique_identifier())
+        idesyde_core::ExplorationBid::impossible()
     }
-    
+
     fn explore(
         &self,
         _m: Arc<dyn DecisionModel>,
@@ -520,8 +593,6 @@ impl Explorer for JavaModuleExplorer {
     ) -> Box<dyn Iterator<Item = idesyde_core::ExplorationSolution> + Send + Sync + '_> {
         Box::new(std::iter::empty())
     }
-
-
 }
 
 #[derive(Clone)]
@@ -588,19 +659,37 @@ pub fn java_modules_from_jar_paths(paths: &[std::path::PathBuf]) -> LoggedResult
 
 impl Module for JavaModule {
     fn unique_identifier(&self) -> String {
-        self.java_vm.attach_current_thread().and_then(|mut env| {
-            env.call_method(&self.module_jobject, "uniqueIdentifier", "()Ljava/lang/String;", &[])
-            .and_then(|x| x.l())
-            .and_then(|x| env.get_string(&JString::from(x)).map(|s| s.to_str().expect("[<ERROR>] Failed converting name to UTF8").to_string()))
-        })
-        .expect("[<ERROR>] Could not load java module explorer's unique identifier.")
+        self.java_vm
+            .attach_current_thread()
+            .and_then(|mut env| {
+                env.call_method(
+                    &self.module_jobject,
+                    "uniqueIdentifier",
+                    "()Ljava/lang/String;",
+                    &[],
+                )
+                .and_then(|x| x.l())
+                .and_then(|x| {
+                    env.get_string(&JString::from(x)).map(|s| {
+                        s.to_str()
+                            .expect("[<ERROR>] Failed converting name to UTF8")
+                            .to_string()
+                    })
+                })
+            })
+            .expect("[<ERROR>] Could not load java module explorer's unique identifier.")
     }
 
     fn identification_rules(&self) -> Vec<Arc<dyn IdentificationRuleLike>> {
         let mut irules: Vec<Arc<dyn IdentificationRuleLike>> = vec![];
         if let Ok(mut env) = self.java_vm.attach_current_thread() {
             match env
-                .call_method(&self.module_jobject, "identificationRules", "()Ljava/util/Set;", &[])
+                .call_method(
+                    &self.module_jobject,
+                    "identificationRules",
+                    "()Ljava/util/Set;",
+                    &[],
+                )
                 .and_then(|x| x.l())
             {
                 Ok(irules_objs) => {
@@ -621,7 +710,9 @@ impl Module for JavaModule {
                             .expect("Failed to get object from next");
                         let irule = JavaModuleIdentificationRule {
                             java_vm: self.java_vm.clone(),
-                            irule_jobject: env.new_global_ref(irule_obj).expect("Failed to make an irule a global variable. Should not happen."),
+                            irule_jobject: env.new_global_ref(irule_obj).expect(
+                                "Failed to make an irule a global variable. Should not happen.",
+                            ),
                         };
                         irules.push(Arc::new(irule));
                     }
@@ -633,7 +724,46 @@ impl Module for JavaModule {
     }
 
     fn explorers(&self) -> Vec<Arc<dyn idesyde_core::Explorer>> {
-        Vec::new()
+        let mut explorers: Vec<Arc<dyn idesyde_core::Explorer>> = vec![];
+        if let Ok(mut env) = self.java_vm.attach_current_thread() {
+            match env
+                .call_method(
+                    &self.module_jobject,
+                    "explorers",
+                    "()Ljava/util/Set;",
+                    &[],
+                )
+                .and_then(|x| x.l())
+            {
+                Ok(explorers_objs) => {
+                    let iter = env
+                        .call_method(explorers_objs, "iterator", "()Ljava/util/Iterator;", &[])
+                        .and_then(|x| x.l())
+                        .expect("Set to iterator should never fail");
+                    while env
+                        .call_method(&iter, "hasNext", "()Z", &[])
+                        .and_then(|x| x.z())
+                        .expect("Failed to get boolean from hasNext")
+                        == true
+                    {
+                        let explorer_obj = env
+                            .call_method(&iter, "next", "()Ljava/lang/Object;", &[])
+                            .expect("Failed to call next")
+                            .l()
+                            .expect("Failed to get object from next");
+                        let explorer = JavaModuleExplorer {
+                            java_vm: self.java_vm.clone(),
+                            explorer_jobject: env.new_global_ref(explorer_obj).expect(
+                                "Failed to make an irule a global variable. Should not happen.",
+                            ),
+                        };
+                        explorers.push(Arc::new(explorer));
+                    }
+                }
+                Err(e) => println!("Error: {}", e),
+            }
+        }
+        explorers
     }
 
     fn reverse_identification_rules(&self) -> Vec<Arc<dyn ReverseIdentificationRuleLike>> {

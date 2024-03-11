@@ -375,7 +375,7 @@ fn main() {
                     (
                         explorer.clone(),
                         x.clone(),
-                        explorer.bid(&explorers, x.clone()),
+                        explorer.bid(x.clone()),
                     )
                 })
             })

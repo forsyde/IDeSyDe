@@ -32,52 +32,56 @@ import idesyde.core.ExplorationBidding
 import idesyde.core.ExplorationSolution
 import org.chocosolver.solver.exception.ContradictionException
 import java.util.concurrent.CopyOnWriteArraySet
+import idesyde.common.legacy.CommonModule.tryCast
 
 class ChocoExplorer extends Explorer:
 
   override def bid(
       decisionModel: DecisionModel
   ): ExplorationBidding = {
-    val canExplore = decisionModel match
-      // case sdfToMemMapped: AperiodicAsynchronousDataflowToPartitionedMemoryMappableMulticore => true
-      // case sdfToTiled: AperiodicAsynchronousDataflowToPartitionedTiledMulticore => true
-      case sdf: SDFToTiledMultiCore                                => true
-      case workload: PeriodicWorkloadToPartitionedSharedMultiCore  => true
-      case workloadAndSDF: PeriodicWorkloadAndSDFServerToMultiCoreOld => true
-      case c: ChocoDecisionModel                                   => true
-      case _                                                       => false
-    val objectives: Set[String] = decisionModel match {
-      case sdf: SDFToTiledMultiCore =>
-        sdf.sdfApplications.minimumActorThroughputs.zipWithIndex
-          .filter((th, i) => th > 0.0)
-          .map((th, i) => "invThroughput(" + sdf.sdfApplications.actorsIdentifiers(i) + ")")
-          .toSet + "nUsedPEs"
-      case workload: PeriodicWorkloadToPartitionedSharedMultiCore => Set("nUsedPEs")
-      case workloadAndSDF: PeriodicWorkloadAndSDFServerToMultiCoreOld =>
-        workloadAndSDF.tasksAndSDFs.sdfApplications.minimumActorThroughputs.zipWithIndex
-          .filter((th, i) => th > 0.0)
-          .map((th, i) =>
-            "invThroughput(" + workloadAndSDF.tasksAndSDFs.sdfApplications
-              .actorsIdentifiers(i) + ")"
+    val bidding = decisionModel.category() match {
+      case "SDFToTiledMultiCore"                                => {
+        tryCast(decisionModel, classOf[SDFToTiledMultiCore]) { sdf =>
+          ExplorationBidding(
+            true,
+            true,
+            1.0,
+            (sdf.sdfApplications.minimumActorThroughputs.zipWithIndex
+              .filter((th, i) => th > 0.0)
+              .map((th, i) => "invThroughput(" + sdf.sdfApplications.actorsIdentifiers(i) + ")")
+              .toSet + "nUsedPEs").asJava,
+            java.util.Map.of("time-to-first", 100.0)
           )
-          .toSet + "nUsedPEs"
-      case _ => Set()
+        }
+      }
+      case "PeriodicWorkloadToPartitionedSharedMultiCore"  => {
+        tryCast(decisionModel, classOf[PeriodicWorkloadToPartitionedSharedMultiCore]) { workload =>
+          ExplorationBidding(
+            true,
+            true,
+            1.0,
+            Set("nUsedPEs").asJava,
+            java.util.Map.of("time-to-first", 100.0)
+          )
+        }
+      }
+      case "PeriodicWorkloadAndSDFServerToMultiCoreOld" => {
+        tryCast(decisionModel, classOf[PeriodicWorkloadAndSDFServerToMultiCoreOld]) { workloadAndSDF =>
+          ExplorationBidding(
+            true,
+            true,
+            1.0,
+            (workloadAndSDF.tasksAndSDFs.sdfApplications.minimumActorThroughputs.zipWithIndex
+              .filter((th, i) => th > 0.0)
+              .map((th, i) => "invThroughput(" + workloadAndSDF.tasksAndSDFs.sdfApplications.actorsIdentifiers(i) + ")")
+              .toSet + "nUsedPEs").asJava,
+            java.util.Map.of("time-to-first", 100.0)
+          )
+        }
+      }
+      case _                                                       => None
     }
-    // println(decisionModel.category())
-    // println(ExplorationBidding(
-    //   canExplore,
-    //   true,
-    //   1.0,
-    //   objectives.asJava,
-    //   java.util.Map.of("time-to-first", 100.0)
-    // ))
-    ExplorationBidding(
-      canExplore,
-      true,
-      1.0,
-      objectives.asJava,
-      java.util.Map.of("time-to-first", 100.0)
-    )
+    bidding.getOrElse(ExplorationBidding(false, false, 0.0, Set().asJava, java.util.Map.of()))
   }
 
   // override def availableCriterias(decisionModel: DecisionModel): Set[ExplorationCriteria] =

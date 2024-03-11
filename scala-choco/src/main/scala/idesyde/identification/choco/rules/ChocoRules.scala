@@ -3,9 +3,9 @@ package idesyde.identification.choco.rules
 import idesyde.core.DesignModel
 import idesyde.core.DecisionModel
 import spire.math.Rational
-import idesyde.common.SDFToTiledMultiCore
+import idesyde.common.legacy.SDFToTiledMultiCore
 import idesyde.choco.CanSolveDepTasksToPartitionedMultiCore
-import idesyde.common.PeriodicWorkloadToPartitionedSharedMultiCore
+import idesyde.common.legacy.PeriodicWorkloadToPartitionedSharedMultiCore
 
 trait ChocoRules {
 

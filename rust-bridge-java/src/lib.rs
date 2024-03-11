@@ -6,14 +6,11 @@ use std::{
 };
 
 use idesyde_core::{
-    DecisionModel, DesignModel, IdentificationResult, IdentificationRuleLike,
-    MarkedIdentificationRule, Module, OpaqueDecisionModel, OpaqueDecisionModelBuilder,
-    OpaqueDesignModel, ReverseIdentificationRuleLike,
+    DecisionModel, DesignModel, Explorer, IdentificationResult, IdentificationRuleLike, LoggedResult, MarkedIdentificationRule, Module, OpaqueDecisionModel, OpaqueDecisionModelBuilder, OpaqueDesignModel, ReverseIdentificationResult, ReverseIdentificationRuleLike
 };
 use jars::JarOptionBuilder;
 use jni::{
-    objects::{JByteArray, JObject, JObjectArray, JPrimitiveArray, JString, JValue},
-    AttachGuard, InitArgs, InitArgsBuilder, JNIEnv, JNIVersion, JavaVM,
+    objects::{GlobalRef, JByteArray, JObject, JObjectArray, JPrimitiveArray, JString, JValue}, strings::JavaStr, AttachGuard, InitArgs, InitArgsBuilder, JNIEnv, JNIVersion, JavaVM
 };
 use zip::ZipArchive;
 
@@ -293,7 +290,10 @@ fn java_to_rust_identification_result<'a>(
     java_result: JObject<'a>,
 ) -> IdentificationResult {
     // TODO: fix this conservative memory allocation here
-    let max_local_references = 2* env.call_method(&java_result, "part", "()I", &[]).and_then(|x| x.i()).unwrap_or(0i32);
+    let max_local_references = 3 * env
+        .call_method(&java_result, "part", "()I", &[])
+        .and_then(|x| x.i())
+        .unwrap_or(0i32);
     env.with_local_frame(max_local_references, |env_inner| {
         let identified_array = env_inner
             .call_method(
@@ -304,7 +304,7 @@ fn java_to_rust_identification_result<'a>(
             )
             .and_then(|x| x.l())
             .map(|x| JObjectArray::from(x))?;
-        let identified_array_size = env_inner.get_array_length(identified_array.borrow())?; 
+        let identified_array_size = env_inner.get_array_length(identified_array.borrow())?;
         let identified = (0..identified_array_size)
             .map(|i| {
                 let elem = env_inner.get_object_array_element(&identified_array, i)?;
@@ -326,20 +326,24 @@ fn java_to_rust_identification_result<'a>(
         let messages = (0..identified_array_size)
             .map(|i| {
                 let elem = env_inner.get_object_array_element(&messages_array, i)?;
-                env_inner.get_string(&JString::from(elem))
+                env_inner
+                    .get_string(&JString::from(elem))
                     .map(|x| x.to_str().map(|x| x.to_owned()))
                     .map(|x| x.unwrap())
             })
             .flatten()
             .collect();
         Ok::<IdentificationResult, jni::errors::Error>((identified, messages))
-    }).unwrap_or((vec![], vec![]))
+    })
+    .unwrap_or((vec![], vec![]))
 }
 
+#[derive(Clone)]
 struct JavaModuleIdentificationRule {
     pub java_vm: Arc<JavaVM>,
-    pub class_canonical_name: String,
+    pub irule_jobject: GlobalRef,
 }
+
 
 impl IdentificationRuleLike for JavaModuleIdentificationRule {
     fn identify(
@@ -350,25 +354,44 @@ impl IdentificationRuleLike for JavaModuleIdentificationRule {
         let mut identified: Vec<Arc<dyn DecisionModel>> = vec![];
         let mut messages: Vec<String> = vec![];
         if let Ok(mut env_root) = self.java_vm.attach_current_thread() {
-            let required_references = 2 + 9 + decision_models.iter().flat_map(DecisionModel::part).count() as i32 + 6 + design_models.iter().map(|x| x.elements().len()).sum::<usize>() as i32;
-            let jresult = env_root.with_local_frame(required_references, |mut env| {
-                    if let Ok(jirule) = env.find_class(&self.class_canonical_name.replace(".", "/")).and_then(|cls| env.new_object(cls, "()V", &[])) {
-                        let jdesings_opt = design_slice_to_java_set(&mut env, design_models);
-                        let jdecisions_opt = decision_slide_to_java_set(&mut env, decision_models);
-                        match (jdesings_opt, jdecisions_opt) {
-                            (Ok(jdesigns), Ok(jdecisions)) => {
-                                match env.call_method(jirule, "apply", "(Ljava/util/Set;Ljava/util/Set;)Lidesyde/core/IdentificationResult;", &[JValue::Object(jdesigns.as_ref()), JValue::Object(jdecisions.as_ref())]) {
-                                    Ok(irecord) => return irecord.l().map(|result| java_to_rust_identification_result(env, result)),
-                                    Err(e) => {
-                                        messages.push(format!("[<ERROR>]{}", e));
-                                    }
-                                }
+            let required_references = 2
+                + 9
+                + decision_models.iter().flat_map(DecisionModel::part).count() as i32
+                + 6
+                + design_models
+                    .iter()
+                    .map(|x| x.elements().len())
+                    .sum::<usize>() as i32;
+            let jresult = env_root.with_local_frame(3 * required_references, |mut env| {
+                let jdesings_opt = design_slice_to_java_set(&mut env, design_models);
+                let jdecisions_opt = decision_slide_to_java_set(&mut env, decision_models);
+                match (jdesings_opt, jdecisions_opt) {
+                    (Ok(jdesigns), Ok(jdecisions)) => {
+                        match env.call_method(
+                            &self.irule_jobject,
+                            "apply",
+                            "(Ljava/util/Set;Ljava/util/Set;)Lidesyde/core/IdentificationResult;",
+                            &[
+                                JValue::Object(jdesigns.as_ref()),
+                                JValue::Object(jdecisions.as_ref()),
+                            ],
+                        ) {
+                            Ok(irecord) => {
+                                return irecord
+                                    .l()
+                                    .map(|result| java_to_rust_identification_result(env, result))
                             }
-                            _ => println!("Failed to convert Rust to Java and apply irule. Trying to proceed anyway.")
+                            Err(e) => {
+                                messages.push(format!("[<ERROR>]{}", e));
+                            }
                         }
                     }
-                    Err(jni::errors::Error::JavaException)
-                });
+                    _ => println!(
+                        "Failed to convert Rust to Java and apply irule. Trying to proceed anyway."
+                    ),
+                }
+                Err(jni::errors::Error::JavaException)
+            });
             let (ms, msgs) = jresult.unwrap_or((vec![], vec![]));
             identified.extend(ms.into_iter());
             messages.extend(msgs.into_iter());
@@ -390,8 +413,9 @@ impl IdentificationRuleLike for JavaModuleIdentificationRule {
 }
 struct JavaModuleReverseIdentificationRule {
     pub java_vm: Arc<JavaVM>,
-    pub class_canonical_name: String,
+    pub irule_jobject: Arc<GlobalRef>,
 }
+
 
 impl ReverseIdentificationRuleLike for JavaModuleReverseIdentificationRule {
     fn reverse_identify(
@@ -401,45 +425,36 @@ impl ReverseIdentificationRuleLike for JavaModuleReverseIdentificationRule {
     ) -> idesyde_core::ReverseIdentificationResult {
         let mut reversed: Vec<Arc<dyn DesignModel>> = vec![];
         let mut messages: Vec<String> = vec![];
-        match self.java_vm.attach_current_thread() {
-            Ok(mut env) => match env.find_class(&self.class_canonical_name.replace(".", "/")) {
-                Ok(cls) => match env.new_object(cls, "()V", &[]) {
-                    Ok(obj) => match design_slice_to_java_set(&mut env, design_models) {
-                        Ok(jdesigns) => {
-                            match decision_slide_to_java_set(&mut env, decision_models) {
-                                Ok(jdecisions) => {
-                                    match env.call_method(
-                                        obj,
-                                        "apply",
-                                        "(Ljava/util/Set;Ljava/util/Set;)Ljava/util/Set;",
-                                        &[
-                                            JValue::Object(jdesigns.as_ref()),
-                                            JValue::Object(jdecisions.as_ref()),
-                                        ],
-                                    ) {
-                                        Ok(irecord) => {
-                                            if let Ok(java_result) = irecord.l() {
-                                                if let Ok(java_reversed) =
-                                                    java_design_set_to_rust(&mut env, java_result)
-                                                {
-                                                    reversed.extend(java_reversed.into_iter());
-                                                }
-                                            }
-                                        }
-                                        Err(e) => messages.push(format!("[<ERROR>]{}", e)),
-                                    }
-                                }
-                                Err(e) => messages.push(format!("[<ERROR>]{}", e)),
-                            }
-                        }
-                        Err(e) => messages.push(format!("[<ERROR>]{}", e)),
-                    },
-                    Err(e) => messages.push(format!("[<ERROR>]{}", e)),
-                },
-                Err(e) => messages.push(format!("[<ERROR>]{}", e)),
-            },
-            Err(e) => messages.push(format!("[<ERROR>]{}", e)),
-        };
+        if let Ok(mut env_root) = self.java_vm.attach_current_thread() {
+            let required_references = 2
+                + 9
+                + decision_models.iter().flat_map(DecisionModel::part).count() as i32
+                + 6
+                + design_models
+                    .iter()
+                    .map(|x| x.elements().len())
+                    .sum::<usize>() as i32;
+            let jresult = env_root.with_local_frame(required_references, |mut env| {
+                design_slice_to_java_set(&mut env, design_models).and_then(|jdesigns| {
+                    decision_slide_to_java_set(&mut env, decision_models).and_then(|jdecisions| {
+                        env.call_method(
+                            self.irule_jobject.as_ref(),
+                            "apply",
+                            "(Ljava/util/Set;Ljava/util/Set;)Ljava/util/Set;",
+                            &[
+                                JValue::Object(jdecisions.as_ref()),
+                                JValue::Object(jdesigns.as_ref()),
+                            ],
+                        )
+                        .and_then(|x| x.l())
+                        .and_then(|set| java_design_set_to_rust(&mut env, set))
+                    })
+                })
+            });
+            if let Ok(reversed_set) = jresult {
+                reversed.extend(reversed_set.into_iter());
+            }
+        }
         (reversed, messages)
     }
 }
@@ -466,16 +481,62 @@ fn instantiate_java_vm_debug(
     )
 }
 
+#[derive(Clone)]
+pub struct JavaModuleExplorer {
+    pub java_vm: Arc<JavaVM>,
+    pub explorer_jobject: GlobalRef,
+}
+
+impl Explorer for JavaModuleExplorer {
+    fn unique_identifier(&self) -> String {
+        self.java_vm.attach_current_thread().and_then(|mut env| {
+            env.call_method(&self.explorer_jobject, "uniqueIdentifier", "()Ljava/lang/String;", &[])
+            .and_then(|x| x.l())
+            .and_then(|x| env.get_string(&JString::from(x)).map(|s| s.to_str().expect("[<ERROR>] Failed converting name to UTF8").to_string()))
+        })
+        .expect("[<ERROR>] Could not load java module explorer's unique identifier.")
+    }
+    
+    fn bid(
+        &self,
+        m: Arc<dyn DecisionModel>,
+    ) -> idesyde_core::ExplorationBid {
+        if let Ok(mut root_env) = self.java_vm.attach_current_thread() {
+            let size_estimate = 2 * m.part().len() as i32;
+            let java_bid = root_env.with_local_frame_returning_local(size_estimate, |env| {
+                let jmodel = decision_to_java_opaque(env, m.as_ref()).expect("Failed to convert decision model to java opaque");
+                env.call_method(&self.explorer_jobject, "bid", "(Ljava/util/Set;Lidesyde/core/DecisionModel;)Lidesyde/core/ExplorationBid;", &[JValue::Object(jmodel.as_ref())])
+                .and_then(|x| x.l())
+            });
+        }
+        idesyde_core::ExplorationBid::impossible(&self.unique_identifier())
+    }
+    
+    fn explore(
+        &self,
+        _m: Arc<dyn DecisionModel>,
+        _currrent_solutions: &HashSet<idesyde_core::ExplorationSolution>,
+        _exploration_configuration: idesyde_core::ExplorationConfiguration,
+    ) -> Box<dyn Iterator<Item = idesyde_core::ExplorationSolution> + Send + Sync + '_> {
+        Box::new(std::iter::empty())
+    }
+
+
+}
+
+#[derive(Clone)]
 pub struct JavaModule {
     pub java_vm: Arc<JavaVM>,
+    pub module_jobject: GlobalRef,
     pub module_classes_canonical_name: String,
 }
 
-pub fn java_modules_from_jar_paths(paths: &[std::path::PathBuf]) -> Vec<JavaModule> {
+pub fn java_modules_from_jar_paths(paths: &[std::path::PathBuf]) -> LoggedResult<Vec<JavaModule>> {
+    let mut modules = vec![];
+    let mut warns = vec![];
     match instantiate_java_vm_debug(paths) {
         Ok(java_vm) => {
             let java_vm_arc = Arc::new(java_vm);
-            let mut modules: Vec<JavaModule> = vec![];
             for path in paths {
                 match std::fs::File::open(path) {
                     Ok(f) => match ZipArchive::new(f) {
@@ -484,85 +545,88 @@ pub fn java_modules_from_jar_paths(paths: &[std::path::PathBuf]) -> Vec<JavaModu
                                 let mut contents = String::new();
                                 if automodules.read_to_string(&mut contents).is_ok() {
                                     for line in contents.lines() {
-                                        modules.push(JavaModule {
-                                            java_vm: java_vm_arc.clone(),
-                                            module_classes_canonical_name: line.to_string(),
-                                        });
+                                        let module_jobject = java_vm_arc
+                                            .attach_current_thread()
+                                            .and_then(|mut env| {
+                                                env.find_class(line.replace('.', "/"))
+                                                    .and_then(|module_class| {
+                                                        env.new_object(module_class, "()V", &[])
+                                                    })
+                                                    .and_then(|module| env.new_global_ref(module))
+                                            });
+                                        if let Ok(global_ref) = module_jobject {
+                                            modules.push(JavaModule {
+                                                java_vm: java_vm_arc.clone(),
+                                                module_classes_canonical_name: line.to_string(),
+                                                module_jobject: global_ref,
+                                            });
+                                        }
                                     }
                                 };
                             }
-                            Err(e) => println!("Error: {}", e),
+                            Err(_) => warns.push(format!(
+                                "Could not open Manifest marker for JAR {}.",
+                                path.display()
+                            )),
                         },
-                        Err(e) => println!("Error: {}", e),
+                        Err(_) => {
+                            warns.push(format!("Failed to open as a JAR {}.", path.display()))
+                        }
                     },
-                    Err(e) => println!("Error: {}", e),
+                    Err(_) => warns.push(format!("Failed to open file {}.", path.display())),
                 }
             }
-            // for jarfile in paths.into_iter().map(|p| jars::jar(p, JarOptionBuilder::default())).flat_map(Result::ok) {
-            //     println!("Jar opened");
-            //     if let Some(automodules) = jarfile.files.get("META-INF/idesyde/automodules").map(|x| x.to_owned()).and_then(|x| String::from_utf8(x).ok()) {
-            //         println!("Automodules found");
-            //         for line in automodules.lines() {
-            //             println!("Found module: {}", line);
-            //             modules.push(JavaModule {
-            //                 java_vm: java_vm_arc.clone(),
-            //                 module_classes_canonical_name: line.to_string()
-            //             });
-            //         }
-            //     }
-            // }
-            return modules;
         }
-        Err(e) => println!("Error: {}", e),
+        Err(_) => warns.push("Failed to instantiate Java VM".to_string()),
     }
-    vec![]
+    LoggedResult::builder()
+        .result(modules)
+        .warn(warns)
+        .build()
+        .expect("LoggedResult should never fail to be built")
 }
 
 impl Module for JavaModule {
     fn unique_identifier(&self) -> String {
-        self.module_classes_canonical_name.replace("AutoModule", "")
+        self.java_vm.attach_current_thread().and_then(|mut env| {
+            env.call_method(&self.module_jobject, "uniqueIdentifier", "()Ljava/lang/String;", &[])
+            .and_then(|x| x.l())
+            .and_then(|x| env.get_string(&JString::from(x)).map(|s| s.to_str().expect("[<ERROR>] Failed converting name to UTF8").to_string()))
+        })
+        .expect("[<ERROR>] Could not load java module explorer's unique identifier.")
     }
 
     fn identification_rules(&self) -> Vec<Arc<dyn IdentificationRuleLike>> {
         let mut irules: Vec<Arc<dyn IdentificationRuleLike>> = vec![];
         if let Ok(mut env) = self.java_vm.attach_current_thread() {
-            if let Ok(module_class) =
-                env.find_class(&self.module_classes_canonical_name.replace('.', "/"))
+            match env
+                .call_method(&self.module_jobject, "identificationRules", "()Ljava/util/Set;", &[])
+                .and_then(|x| x.l())
             {
-                if let Ok(module) = env.new_object(module_class, "()V", &[]) {
-                    match env
-                        .call_method(
-                            module,
-                            "identicationRulesCanonicalClassNames",
-                            "()[Ljava/lang/String;",
-                            &[],
-                        )
+                Ok(irules_objs) => {
+                    let iter = env
+                        .call_method(irules_objs, "iterator", "()Ljava/util/Iterator;", &[])
                         .and_then(|x| x.l())
+                        .expect("Set to iterator should never fail");
+                    while env
+                        .call_method(&iter, "hasNext", "()Z", &[])
+                        .and_then(|x| x.z())
+                        .expect("Failed to get boolean from hasNext")
+                        == true
                     {
-                        Ok(irules_classes_names) => {
-                            let classes_names_array = JObjectArray::from(irules_classes_names);
-                            let class_names_length = env
-                                .get_array_length(classes_names_array.borrow())
-                                .unwrap_or(0);
-                            for i in 0..class_names_length {
-                                if let Ok(irule) = env
-                                    .get_object_array_element(&classes_names_array, i)
-                                    .map(JString::from)
-                                    .map(|x| JavaModuleIdentificationRule {
-                                        java_vm: self.java_vm.clone(),
-                                        class_canonical_name: env
-                                            .get_string(&x)
-                                            .map(|s| s.to_str().unwrap_or("").to_owned())
-                                            .unwrap(),
-                                    })
-                                {
-                                    irules.push(Arc::new(irule));
-                                }
-                            }
-                        }
-                        Err(e) => println!("Error: {}", e),
+                        let irule_obj = env
+                            .call_method(&iter, "next", "()Ljava/lang/Object;", &[])
+                            .expect("Failed to call next")
+                            .l()
+                            .expect("Failed to get object from next");
+                        let irule = JavaModuleIdentificationRule {
+                            java_vm: self.java_vm.clone(),
+                            irule_jobject: env.new_global_ref(irule_obj).expect("Failed to make an irule a global variable. Should not happen."),
+                        };
+                        irules.push(Arc::new(irule));
                     }
                 }
+                Err(e) => println!("Error: {}", e),
             }
         }
         irules
@@ -573,48 +637,43 @@ impl Module for JavaModule {
     }
 
     fn reverse_identification_rules(&self) -> Vec<Arc<dyn ReverseIdentificationRuleLike>> {
-        let mut irules: Vec<Arc<dyn ReverseIdentificationRuleLike>> = vec![];
+        let mut rrules: Vec<Arc<dyn ReverseIdentificationRuleLike>> = vec![];
         if let Ok(mut env) = self.java_vm.attach_current_thread() {
-            if let Ok(module_class) =
-                env.find_class(&self.module_classes_canonical_name.replace('.', "/"))
+            if let Ok(irules_set_obj) = env
+                .call_method(
+                    &self.module_jobject,
+                    "reverseIdentificationRules",
+                    "()Ljava/util/Set;",
+                    &[],
+                )
+                .and_then(|x| x.l())
             {
-                if let Ok(module) = env.new_object(module_class, "()V", &[]) {
-                    match env
-                        .call_method(
-                            module,
-                            "identicationRulesCanonicalClassNames",
-                            "()[Ljava/lang/String;",
-                            &[],
-                        )
-                        .and_then(|x| x.l())
-                    {
-                        Ok(irules_classes_names) => {
-                            let classes_names_array = JObjectArray::from(irules_classes_names);
-                            let class_names_length = env
-                                .get_array_length(classes_names_array.borrow())
-                                .unwrap_or(0);
-                            for i in 0..class_names_length {
-                                if let Ok(irule) = env
-                                    .get_object_array_element(&classes_names_array, i)
-                                    .map(|x| JString::from(x))
-                                    .map(|x| JavaModuleReverseIdentificationRule {
-                                        java_vm: self.java_vm.clone(),
-                                        class_canonical_name: env
-                                            .get_string(&x)
-                                            .map(|s| s.to_str().unwrap_or("").to_owned())
-                                            .unwrap(),
-                                    })
-                                {
-                                    irules.push(Arc::new(irule));
-                                }
-                            }
-                        }
-                        Err(e) => println!("Error: {}", e),
-                    }
+                let iter = env
+                    .call_method(&irules_set_obj, "iterator", "()Ljava/util/Iterator;", &[])
+                    .and_then(|x| x.l())
+                    .expect("Set to iterator should never fail");
+                while env
+                    .call_method(&iter, "hasNext", "()Z", &[])
+                    .and_then(|x| x.z())
+                    .expect("Failed to get boolean from hasNext")
+                    == true
+                {
+                    let rrule_obj = env
+                        .call_method(&iter, "next", "()Ljava/lang/Object;", &[])
+                        .expect("Failed to call next")
+                        .l()
+                        .expect("Failed to get object from next");
+                    let rrule = JavaModuleReverseIdentificationRule {
+                        java_vm: self.java_vm.clone(),
+                        irule_jobject: Arc::new(env.new_global_ref(rrule_obj).expect(
+                            "Failed to make an irule a global variable. Should not happen.",
+                        )),
+                    };
+                    rrules.push(Arc::new(rrule));
                 }
             }
         }
-        irules
+        rrules
     }
 
     fn identification_step(

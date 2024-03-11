@@ -211,6 +211,7 @@ pub fn identification_procedure(
         .iter()
         .flat_map(|imodule| imodule.identification_rules().into_iter())
         .collect();
+    debug!("Using {} identification rules", irules.len());
     while !fix_point {
         fix_point = true;
         let (identified_models, msgs) = irules

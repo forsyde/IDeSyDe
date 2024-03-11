@@ -80,7 +80,7 @@ macro_rules! impl_decision_model_standard_parts {
 #[macro_export]
 macro_rules! cast_dyn_decision_model {
     ($b:ident,$x:ty) => {
-        $b.downcast_ref::<OpaqueDecisionModel>()
+        $b.downcast_ref::<idesyde_core::OpaqueDecisionModel>()
             .and_then(|opaque| {
                 if idesyde_core::DecisionModel::category(opaque).as_str() == stringify!($x) {
                     idesyde_core::DecisionModel::body_as_cbor(opaque)
@@ -93,11 +93,11 @@ macro_rules! cast_dyn_decision_model {
                             idesyde_core::DecisionModel::body_as_msgpack(opaque)
                                 .and_then(|j| rmp_serde::from_slice::<$x>(&j).ok())
                         })
-                        .map(|m| std::sync::Arc::new(m) as Arc<$x>)
+                        // .map(|m| std::sync::Arc::new(m) as Arc<$x>)
                 } else {
-                    None as Option<Arc<$x>>
+                    None as Option<$x>
                 }
             })
-            .or_else(|| $b.downcast_arc::<$x>().ok())
+            .or_else(|| $b.downcast_ref::<$x>().map(|x| x.to_owned()))
     };
 }

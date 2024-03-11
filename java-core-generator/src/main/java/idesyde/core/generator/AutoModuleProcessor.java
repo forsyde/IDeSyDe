@@ -141,7 +141,7 @@ public class AutoModuleProcessor extends AbstractProcessor {
                 }
             }
         } catch (IOException e) {
-            processingEnv.getMessager().printMessage(Diagnostic.Kind.NOTE, "No IDeSyDe META-INF found. Creating one");
+            processingEnv.getMessager().printMessage(Diagnostic.Kind.OTHER, "No IDeSyDe META-INF found. Creating one");
         }
         // the only reason the modules still exist is if the file did not exist. We create it now.
         if (!modulesForMetaINF.isEmpty()) {

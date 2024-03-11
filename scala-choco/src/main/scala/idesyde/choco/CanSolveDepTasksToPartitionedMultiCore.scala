@@ -22,7 +22,7 @@ import org.chocosolver.solver.exception.ContradictionException
 import idesyde.choco.HasSingleProcessSingleMessageMemoryConstraints
 import idesyde.choco.HasActive4StageDuration
 import idesyde.identification.choco.interfaces.ChocoModelMixin
-import idesyde.common.PeriodicWorkloadToPartitionedSharedMultiCore
+import idesyde.common.legacy.PeriodicWorkloadToPartitionedSharedMultiCore
 import idesyde.core.DecisionModel
 import idesyde.identification.choco.ChocoDecisionModel
 import idesyde.choco.HasDiscretizationToIntegers
@@ -258,7 +258,7 @@ final class CanSolveDepTasksToPartitionedMultiCore
     // for each FP scheduler
     // rt >= bt + sum of all higher prio tasks in the same CPU
     postPartitionedFixedPrioriPreemtpiveConstraint(m.platform.runtimes.schedulers.zipWithIndex
-      .filter((s, j) => m.platform.runtimes.isFixedPriority(j))
+      .filter((s, j) => m.platform.runtimes.is_fixed_priority(j))
       .map((s, j) => j), 
       chocoModel,
     priorities,
@@ -275,7 +275,7 @@ final class CanSolveDepTasksToPartitionedMultiCore
     // for each SC scheduler
     m.workload.tasks.zipWithIndex.foreach((task, i) => {
       m.platform.runtimes.schedulers.zipWithIndex
-          .filter((s, j) => m.platform.runtimes.isCyclicExecutive(j))
+          .filter((s, j) => m.platform.runtimes.is_cyclic_executive(j))
           .foreach((s, j) => {
             postStaticCyclicExecutiveConstraint(
               chocoModel,

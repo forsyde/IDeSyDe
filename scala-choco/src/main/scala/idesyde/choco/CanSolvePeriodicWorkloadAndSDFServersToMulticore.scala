@@ -4,7 +4,7 @@ package idesyde.choco
 
 import org.chocosolver.solver.Model
 import org.chocosolver.solver.Solution
-import idesyde.common.PeriodicWorkloadAndSDFServerToMultiCoreOld
+import idesyde.common.legacy.PeriodicWorkloadAndSDFServerToMultiCoreOld
 import org.chocosolver.solver.search.loop.monitors.IMonitorContradiction
 import org.chocosolver.solver.exception.ContradictionException
 import org.chocosolver.solver.variables.IntVar
@@ -22,8 +22,8 @@ import org.jgrapht.graph.DefaultDirectedGraph
 import org.jgrapht.graph.DefaultEdge
 import scala.collection.mutable.Buffer
 import org.jgrapht.Graph
-import idesyde.common.PartitionedSharedMemoryMultiCore
-import idesyde.common.SDFApplicationWithFunctions
+import idesyde.common.legacy.PartitionedSharedMemoryMultiCore
+import idesyde.common.legacy.SDFApplicationWithFunctions
 import org.chocosolver.solver.constraints.extension.Tuples
 import org.jgrapht.alg.shortestpath.FloydWarshallShortestPaths
 
@@ -100,7 +100,7 @@ final class CanSolvePeriodicWorkloadAndSDFServersToMulticore
             s"processExecution($t)",
             m.platform.hardware.processingElems.zipWithIndex
               .filter((_, j) => m.wcets(i)(j) > -1)
-              .filter((_, j) => m.platform.runtimes.isFixedPriority(j))
+              .filter((_, j) => m.platform.runtimes.is_fixed_priority(j))
               .map((m, j) => j)
               .toArray
           ))
@@ -111,7 +111,7 @@ final class CanSolvePeriodicWorkloadAndSDFServersToMulticore
             s"processExecution($t)",
             m.platform.hardware.processingElems.zipWithIndex
               .filter((_, j) => m.wcets(i)(j) > -1)
-              .filter((_, j) => m.platform.runtimes.isFixedPriority(j) || m.platform.runtimes.isBareMetal(j))
+              .filter((_, j) => m.platform.runtimes.is_fixed_priority(j) || m.platform.runtimes.is_bare_metal(j))
               .map((m, j) => j)
               .toArray
           )
@@ -285,7 +285,7 @@ final class CanSolvePeriodicWorkloadAndSDFServersToMulticore
 
     postPartitionedFixedPrioriPreemtpiveConstraint(
       m.platform.runtimes.schedulers.zipWithIndex
-      .filter((s, j) => m.platform.runtimes.isFixedPriority(j))
+      .filter((s, j) => m.platform.runtimes.is_fixed_priority(j))
       .map((s, j) => j), 
     chocoModel,
   priorities,
@@ -300,7 +300,7 @@ final class CanSolvePeriodicWorkloadAndSDFServersToMulticore
   responseTimes.toArray)
     // for each SC scheduler
     m.platform.runtimes.schedulers.zipWithIndex
-        .filter((s, j) => m.platform.runtimes.isCyclicExecutive(j))
+        .filter((s, j) => m.platform.runtimes.is_cyclic_executive(j))
         .foreach((s, j) => {
           postStaticCyclicExecutiveConstraint(
             chocoModel,
@@ -564,7 +564,7 @@ final class CanSolvePeriodicWorkloadAndSDFServersToMulticore
               .toVector
         iter.toMap
       }).toMap
-    val utilizationPerRuntime = m.platform.runtimes.schedulers.zipWithIndex.filter((s, i) => m.platform.runtimes.isFixedPriority(i)).map((s, i) => 
+    val utilizationPerRuntime = m.platform.runtimes.schedulers.zipWithIndex.filter((s, i) => m.platform.runtimes.is_fixed_priority(i)).map((s, i) => 
       intVars.find(_.getName().startsWith(s"utilization($i)")).get.getValue().toDouble / 100.0
     )
     ExplorationSolution(

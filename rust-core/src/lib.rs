@@ -23,12 +23,34 @@ use url::Url;
 #[derive(
     Debug, Clone, PartialEq, Eq, serde::Serialize, serde::Deserialize, derive_builder::Builder,
 )]
-struct LoggedResult<T> {
-    result: T,
-    info: Vec<String>,
-    warn: Vec<String>,
-    err: Vec<String>,
-    debug: Vec<String>,
+pub struct LoggedResult<T> {
+    pub result: T,
+    #[builder(default = "Vec::new()")]
+    pub info: Vec<String>,
+    #[builder(default = "Vec::new()")]
+    pub warn: Vec<String>,
+    #[builder(default = "Vec::new()")]
+    pub err: Vec<String>,
+    #[builder(default = "Vec::new()")]
+    pub debug: Vec<String>,
+}
+
+impl<T: Clone> LoggedResult<T> {
+    pub fn builder() -> LoggedResultBuilder<T> {
+        LoggedResultBuilder::default()
+    }
+}
+
+impl<T: Clone> From<T> for LoggedResult<T> {
+    fn from(value: T) -> Self {
+        LoggedResult {
+            result: value,
+            info: Vec::new(),
+            warn: Vec::new(),
+            err: Vec::new(),
+            debug: Vec::new(),
+        }
+    }
 }
 
 /// The trait/interface for a design model in the design space identification methodology, as
@@ -595,7 +617,6 @@ pub trait Explorer: Downcast + Send + Sync {
     /// explorer for a decision model given that other explorers are present.
     fn bid(
         &self,
-        _other_explorers: &Vec<Arc<dyn Explorer>>,
         _m: Arc<dyn DecisionModel>,
     ) -> ExplorationBid {
         ExplorationBid::impossible(&self.unique_identifier())
@@ -637,10 +658,9 @@ impl<T: Explorer + ?Sized> Explorer for Arc<T> {
 
     fn bid(
         &self,
-        _other_explorers: &Vec<Arc<dyn Explorer>>,
         _m: Arc<dyn DecisionModel>,
     ) -> ExplorationBid {
-        self.as_ref().bid(_other_explorers, _m)
+        self.as_ref().bid(_m)
     }
 
     fn explore(

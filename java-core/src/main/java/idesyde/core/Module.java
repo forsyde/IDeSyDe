@@ -75,7 +75,7 @@ public interface Module {
      * and annotation processing.
      */
     default String[] identicationRulesCanonicalClassNames() {
-        return new String[0];
+        return identificationRules().stream().map(Object::getClass).map(Class::getCanonicalName).collect(Collectors.toSet()).toArray(new String[0]);
     }
 
     /**
@@ -84,7 +84,7 @@ public interface Module {
      * and annotation processing.
      */
     default String[] reverseIdenticationRulesCanonicalClassNames() {
-        return new String[0];
+        return reverseIdentificationRules().stream().map(Object::getClass).map(Class::getCanonicalName).collect(Collectors.toSet()).toArray(new String[0]);
     }
 
 }

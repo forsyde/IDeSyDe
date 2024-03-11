@@ -21,7 +21,7 @@ import java.util.stream.Stream;
 public class JeneticsExplorer implements Explorer, CanExploreAADPMMMWithJenetics, CanExploreAADPTMWithJenetics {
 
     @Override
-    public ExplorationBidding bid(Set<Explorer> explorers, DecisionModel decisionModel) {
+    public ExplorationBidding bid(DecisionModel decisionModel) {
         return DecisionModel
                 .cast(decisionModel, AperiodicAsynchronousDataflowToPartitionedMemoryMappableMulticore.class)
                 .map(aperiodicAsynchronousDataflowToPartitionedMemoryMappableMulticore -> {
@@ -52,7 +52,7 @@ public class JeneticsExplorer implements Explorer, CanExploreAADPMMMWithJenetics
                             }
                             return new ExplorationBidding(true, false, 1.1, objs, Map.of("time-to-first", 10.0));
                         }))
-                .orElse(Explorer.super.bid(explorers, decisionModel));
+                .orElse(Explorer.super.bid(decisionModel));
         // if (decisionModel instanceof
         // AperiodicAsynchronousDataflowToPartitionedMemoryMappableMulticore
         // aperiodicAsynchronousDataflowToPartitionedMemoryMappableMulticore) {

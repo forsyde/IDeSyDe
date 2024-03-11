@@ -23,10 +23,10 @@ import org.chocosolver.solver.search.loop.monitors.IMonitorSolution
 import org.chocosolver.solver.search.loop.monitors.IMonitorContradiction
 import idesyde.exploration.choco.explorers.ParetoMinimizationBrancher
 import spire.math.Rational
-import idesyde.common.SDFToTiledMultiCore
+import idesyde.common.legacy.SDFToTiledMultiCore
 import idesyde.choco.ChocoExplorableOps._
-import idesyde.common.PeriodicWorkloadToPartitionedSharedMultiCore
-import idesyde.common.PeriodicWorkloadAndSDFServerToMultiCoreOld
+import idesyde.common.legacy.PeriodicWorkloadToPartitionedSharedMultiCore
+import idesyde.common.legacy.PeriodicWorkloadAndSDFServerToMultiCoreOld
 import idesyde.core.Explorer
 import idesyde.core.ExplorationBidding
 import idesyde.core.ExplorationSolution
@@ -36,7 +36,6 @@ import java.util.concurrent.CopyOnWriteArraySet
 class ChocoExplorer extends Explorer:
 
   override def bid(
-      explorers: java.util.Set[Explorer],
       decisionModel: DecisionModel
   ): ExplorationBidding = {
     val canExplore = decisionModel match

@@ -15,7 +15,7 @@ import idesyde.choco.HasTileAsyncInterconnectCommunicationConstraints
 import idesyde.choco.HasSingleProcessSingleMessageMemoryConstraints
 import idesyde.choco.HasDiscretizationToIntegers
 import scala.collection.mutable.Buffer
-import idesyde.common.SDFToTiledMultiCore
+import idesyde.common.legacy.SDFToTiledMultiCore
 import idesyde.identification.choco.models.sdf.StreamingJobsThroughputPropagator
 import org.jgrapht.alg.connectivity.ConnectivityInspector
 import org.jgrapht.traverse.TopologicalOrderIterator

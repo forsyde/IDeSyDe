@@ -3,7 +3,7 @@ use std::{
     sync::Arc,
 };
 
-use idesyde_core::{DecisionModel, DesignModel, IdentificationResult};
+use idesyde_core::{DecisionModel, DesignModel, IdentificationResult, cast_dyn_decision_model};
 
 use petgraph::{
     visit::{Bfs, GraphBase, IntoNeighbors, IntoNodeIdentifiers, Visitable},
@@ -26,7 +26,7 @@ pub fn identify_partitioned_mem_mapped_multicore(
     let mut new_models = Vec::new();
     let mut errors: Vec<String> = Vec::new();
     for m2 in decision_models {
-        if let Some(runt) = m2.downcast_ref::<RuntimesAndProcessors>() {
+        if let Some(runt) = cast_dyn_decision_model!(m2, RuntimesAndProcessors) {
             let one_scheduler_per_proc = runt
                 .processors
                 .iter()
@@ -51,7 +51,7 @@ pub fn identify_partitioned_mem_mapped_multicore(
             }
             if one_proc_per_scheduler && one_scheduler_per_proc {
                 for m1 in decision_models {
-                    if let Some(plat) = m1.downcast_ref::<MemoryMappableMultiCore>() {
+                    if let Some(plat) = cast_dyn_decision_model!(m1, MemoryMappableMultiCore) {
                         let potential = Arc::new(PartitionedMemoryMappableMulticore {
                             hardware: plat.to_owned(),
                             runtimes: runt.to_owned(),
@@ -75,7 +75,7 @@ pub fn identify_partitioned_tiled_multicore(
     let mut new_models = Vec::new();
     let mut errors: Vec<String> = Vec::new();
     for m2 in decision_models {
-        if let Some(runt) = m2.downcast_ref::<RuntimesAndProcessors>() {
+        if let Some(runt) = cast_dyn_decision_model!(m2, RuntimesAndProcessors) {
             let same_number = runt.processors.len() == runt.runtimes.len();
             let one_scheduler_per_proc = runt
                 .processors
@@ -104,7 +104,7 @@ pub fn identify_partitioned_tiled_multicore(
             }
             if same_number && one_proc_per_scheduler && one_scheduler_per_proc {
                 for m1 in decision_models {
-                    if let Some(plat) = m1.downcast_ref::<TiledMultiCore>() {
+                    if let Some(plat) = cast_dyn_decision_model!(m1, TiledMultiCore) {
                         let potential = Arc::new(PartitionedTiledMulticore {
                             hardware: plat.to_owned(),
                             runtimes: runt.to_owned(),
@@ -138,8 +138,9 @@ pub fn identify_asynchronous_aperiodic_dataflow_from_sdf(
     let mut identified = Vec::new();
     let mut errors: Vec<String> = Vec::new();
     for m in decision_models {
-        if let Some(analysed_sdf_application) = m.downcast_ref::<AnalysedSDFApplication>() {
+        if let Some(analysed_sdf_application_val) = cast_dyn_decision_model!(m, AnalysedSDFApplication) {
             // build a temporary graph for analysis
+            let analysed_sdf_application = &analysed_sdf_application_val;
             let mut total_actors_graph: Graph<&str, usize, petgraph::Directed> = Graph::new();
             let mut nodes = HashMap::new();
             for a in &analysed_sdf_application.sdf_application.actors_identifiers {
@@ -398,19 +399,19 @@ pub fn identify_aperiodic_asynchronous_dataflow_to_partitioned_tiled_multicore(
     let mut errors: Vec<String> = Vec::new();
     if let Some(plat) = decision_models
         .iter()
-        .find_map(|x| x.downcast_ref::<PartitionedTiledMulticore>())
+        .find_map(|x| cast_dyn_decision_model!(x, PartitionedTiledMulticore))
     {
         if let Some(data) = decision_models
             .iter()
-            .find_map(|x| x.downcast_ref::<InstrumentedComputationTimes>())
+            .find_map(|x| cast_dyn_decision_model!(x, InstrumentedComputationTimes))
         {
             if let Some(mem_req) = decision_models
                 .iter()
-                .find_map(|x| x.downcast_ref::<InstrumentedMemoryRequirements>())
+                .find_map(|x| cast_dyn_decision_model!(x, InstrumentedMemoryRequirements))
             {
-                let apps: Vec<&AperiodicAsynchronousDataflow> = decision_models
+                let apps: Vec<AperiodicAsynchronousDataflow> = decision_models
                     .iter()
-                    .flat_map(|x| x.downcast_ref::<AperiodicAsynchronousDataflow>())
+                    .flat_map(|x| cast_dyn_decision_model!(x, AperiodicAsynchronousDataflow))
                     .collect();
                 // check if all processes can be mapped
                 let first_non_mappable = apps
@@ -469,7 +470,7 @@ pub fn identify_analyzed_sdf_from_common_sdf(
     let mut identified = Vec::new();
     let mut msgs: Vec<String> = Vec::new();
     for m in decision_models {
-        if let Some(sdf_application) = m.downcast_ref::<SDFApplication>() {
+        if let Some(sdf_application) = cast_dyn_decision_model!(m, SDFApplication) {
             // build up the matrix that captures the topology matrix
             let mut topology_matrix: Vec<Vec<i64>> = Vec::new();
             for (i, (src, dst)) in sdf_application
@@ -556,19 +557,19 @@ pub fn identify_aperiodic_asynchronous_dataflow_to_partitioned_mem_mappable_mult
     let mut errors: Vec<String> = Vec::new();
     if let Some(plat) = decision_models
         .iter()
-        .find_map(|x| x.downcast_ref::<PartitionedMemoryMappableMulticore>())
+        .find_map(|x| cast_dyn_decision_model!(x, PartitionedMemoryMappableMulticore))
     {
         if let Some(data) = decision_models
             .iter()
-            .find_map(|x| x.downcast_ref::<InstrumentedComputationTimes>())
+            .find_map(|x| cast_dyn_decision_model!(x, InstrumentedComputationTimes))
         {
             if let Some(mem_req) = decision_models
                 .iter()
-                .find_map(|x| x.downcast_ref::<InstrumentedMemoryRequirements>())
+                .find_map(|x| cast_dyn_decision_model!(x, InstrumentedMemoryRequirements))
             {
-                let apps: Vec<&AperiodicAsynchronousDataflow> = decision_models
+                let apps: Vec<AperiodicAsynchronousDataflow> = decision_models
                     .iter()
-                    .flat_map(|x| x.downcast_ref::<AperiodicAsynchronousDataflow>())
+                    .flat_map(|x| cast_dyn_decision_model!(x, AperiodicAsynchronousDataflow))
                     .collect();
                 // check if all processes can be mapped
                 let first_non_mappable = apps

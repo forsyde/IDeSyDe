@@ -700,11 +700,13 @@ pub fn find_modules(modules_path: &Path) -> Vec<Arc<dyn Module>> {
                     .unwrap_or(false)
             })
             .collect();
-        imodules.extend(
-            java_modules_from_jar_paths(jar_modules.as_slice())
-                .into_iter()
-                .map(|x| Arc::new(x) as Arc<dyn Module>),
-        );
+        let modules_result = java_modules_from_jar_paths(jar_modules.as_slice());
+        for module in modules_result.result {
+            imodules.push(Arc::new(module) as Arc<dyn Module>);
+        }
+        for warn_msg in modules_result.warn {
+            warn!("{}", warn_msg);
+        }
         // let prepared: Vec<Arc<dyn Module>> = read_dir
         //     .par_bridge()
         //     .into_par_iter()

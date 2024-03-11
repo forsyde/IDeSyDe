@@ -12,12 +12,12 @@ import java.util.stream.Stream;
 public class JMetalExplorer implements Explorer {
 
     @Override
-    public ExplorationBidding bid(Set<Explorer> explorers, DecisionModel decisionModel) {
+    public ExplorationBidding bid(DecisionModel decisionModel) {
         // if (decisionModel instanceof
         // AperiodicAsynchronousDataflowToPartitionedMemoryMappableMulticore) {
         // return new ExplorationBidding(uniqueIdentifer(), true, Map.of());
         // }
-        return Explorer.super.bid(explorers, decisionModel);
+        return Explorer.super.bid(decisionModel);
     }
 
     @Override

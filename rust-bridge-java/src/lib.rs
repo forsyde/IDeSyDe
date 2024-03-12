@@ -1,5 +1,10 @@
 use std::{
-    borrow::Borrow, collections::HashSet, hash::Hash, io::{BufRead, Read}, sync::Arc
+    borrow::Borrow,
+    collections::HashSet,
+    hash::Hash,
+    io::{BufRead, Read},
+    sync::Arc,
+    time::Duration,
 };
 
 use idesyde_core::{
@@ -10,13 +15,19 @@ use idesyde_core::{
 };
 use jars::JarOptionBuilder;
 use jni::{
-    objects::{AsJArrayRaw, GlobalRef, JByteArray, JByteBuffer, JObject, JObjectArray, JPrimitiveArray, JString, JValue},
+    objects::{
+        AsJArrayRaw, GlobalRef, JByteArray, JByteBuffer, JObject, JObjectArray, JPrimitiveArray,
+        JString, JValue,
+    },
     strings::JavaStr,
     AttachGuard, InitArgs, InitArgsBuilder, JNIEnv, JNIVersion, JavaVM,
 };
 use zip::ZipArchive;
 
-trait FromJava<'a, T>: Sized where T: Into<JObject<'a>> {
+trait FromJava<'a, T>: Sized
+where
+    T: Into<JObject<'a>>,
+{
     fn from_java(env: &mut JNIEnv<'a>, obj: T) -> Result<Self, jni::errors::Error>;
 }
 
@@ -27,69 +38,74 @@ where
     fn into_java(&self, env: &mut JNIEnv<'a>) -> Result<T, jni::errors::Error>;
 }
 
-impl<'a, T> IntoJava<'a, T> for String where T: From<JObject<'a>> {
+impl<'a, T> IntoJava<'a, T> for String
+where
+    T: From<JObject<'a>>,
+{
     fn into_java(&self, env: &mut JNIEnv<'a>) -> Result<T, jni::errors::Error> {
-        env.with_local_frame_returning_local(2, |inner| {
+        env.with_local_frame_returning_local(self.len() as i32, |inner| {
             inner.new_string(self).map(|s| JObject::from(s))
         })
         .map(|x| T::from(x))
     }
 }
 
-impl<'a, T> IntoJava<'a, T> for &[u8] where T: From<JObject<'a>> {
+impl<'a, T> IntoJava<'a, T> for &[u8]
+where
+    T: From<JObject<'a>>,
+{
     fn into_java(&self, env: &mut JNIEnv<'a>) -> Result<T, jni::errors::Error> {
-        env.with_local_frame_returning_local(2, |inner| {
-            inner.byte_array_from_slice(
-                self
-            ).map(|x| JObject::from(x))
+        env.with_local_frame_returning_local(2 + 2 * self.len() as i32, |inner| {
+            inner.byte_array_from_slice(self).map(|x| JObject::from(x))
         })
         .map(|o| T::from(o))
     }
 }
 
-impl<'a, T> IntoJava<'a, T> for Vec<u8> where T: From<JObject<'a>> {
+impl<'a, T> IntoJava<'a, T> for Vec<u8>
+where
+    T: From<JObject<'a>>,
+{
     fn into_java(&self, env: &mut JNIEnv<'a>) -> Result<T, jni::errors::Error> {
         self.as_slice().into_java(env)
     }
 }
 
-
-impl <'a, T> IntoJava<'a, JObject<'a>> for Option<T> 
-where 
-    T: IntoJava<'a, JObject<'a>>, {
+impl<'a, T> IntoJava<'a, JObject<'a>> for Option<T>
+where
+    T: IntoJava<'a, JObject<'a>>,
+{
     fn into_java(&self, env: &mut JNIEnv<'a>) -> Result<JObject<'a>, jni::errors::Error> {
         let optional_class = env.find_class("java/util/Optional")?;
         match self {
-            Some(x) => {
-                x.into_java(env).and_then(|javax| {
-                    env.with_local_frame_returning_local(2, |inner| {
-                        inner.call_static_method(
+            Some(x) => x.into_java(env).and_then(|javax| {
+                env.with_local_frame_returning_local(32, |inner| {
+                    inner
+                        .call_static_method(
                             optional_class,
                             "of",
                             "(Ljava/lang/Object;)Ljava/util/Optional;",
-                            &[JValue::Object(&javax.into())]
-                        ).and_then(|y| y.l())
-                    })
+                            &[JValue::Object(&javax.into())],
+                        )
+                        .and_then(|y| y.l())
                 })
-            },
-            None => {
-                env.with_local_frame_returning_local(2, |inner| {
-                    inner.call_static_method(
-                        optional_class,
-                        "empty",
-                        "()Ljava/util/Optional;",
-                        &[]
-                    ).and_then(|x| x.l())
-                })
-            }
+            }),
+            None => env.with_local_frame_returning_local(32, |inner| {
+                inner
+                    .call_static_method(optional_class, "empty", "()Ljava/util/Optional;", &[])
+                    .and_then(|x| x.l())
+            }),
         }
     }
 }
 
-impl<'a, T> IntoJava<'a, JObject<'a>> for HashSet<T> where T: IntoJava<'a, JObject<'a>> {
+impl<'a, T> IntoJava<'a, JObject<'a>> for HashSet<T>
+where
+    T: IntoJava<'a, JObject<'a>>,
+{
     fn into_java(&self, env: &mut JNIEnv<'a>) -> Result<JObject<'a>, jni::errors::Error> {
         let set_class = env.find_class("java/util/HashSet")?;
-        let set = env.with_local_frame_returning_local(1 + self.len() as i32, |inner| {
+        let set = env.with_local_frame_returning_local(16 + 2 * self.len() as i32, |inner| {
             inner.new_object(set_class, "()V", &[])
         })?;
         for elem in self {
@@ -105,18 +121,21 @@ impl<'a, T> IntoJava<'a, JObject<'a>> for HashSet<T> where T: IntoJava<'a, JObje
     }
 }
 
-impl<'a, T> IntoJava<'a, JObjectArray<'a>> for &[T] where T: IntoJava<'a, JObject<'a>> {
+impl<'a, T> IntoJava<'a, JObjectArray<'a>> for &[T]
+where
+    T: IntoJava<'a, JObject<'a>>,
+{
     fn into_java(&self, env: &mut JNIEnv<'a>) -> Result<JObjectArray<'a>, jni::errors::Error> {
         let cls = env.find_class("java/lang/Object")?;
         if let Some(fst) = self.first() {
             let fst_java = fst.into_java(env)?;
-            let array = env.with_local_frame_returning_local(2* self.len() as i32, |inner| {
-                inner.new_object_array(
-                    self.len() as i32,
-                    cls,
-                    fst_java
-                ).map(|o| JObject::from(o))
-            }).map(|x| JObjectArray::from(x))?;
+            let array = env
+                .with_local_frame_returning_local(2 * self.len() as i32, |inner| {
+                    inner
+                        .new_object_array(self.len() as i32, &cls, fst_java)
+                        .map(|o| JObject::from(o))
+                })
+                .map(|x| JObjectArray::from(x))?;
             for i in 1..self.len() {
                 let x = &self[i];
                 let elem = x.into_java(env)?;
@@ -127,7 +146,7 @@ impl<'a, T> IntoJava<'a, JObjectArray<'a>> for &[T] where T: IntoJava<'a, JObjec
             }
             Ok(array)
         } else {
-            env.new_object_array(0,cls, jni::objects::JObject::null())
+            env.new_object_array(0, &cls, jni::objects::JObject::null())
                 .map(|x| JObjectArray::from(x))
         }
     }
@@ -136,29 +155,35 @@ impl<'a, T> IntoJava<'a, JObjectArray<'a>> for &[T] where T: IntoJava<'a, JObjec
 impl<'a> IntoJava<'a, JObject<'a>> for OpaqueDesignModel {
     fn into_java(&self, env: &mut JNIEnv<'a>) -> Result<JObject<'a>, jni::errors::Error> {
         let opaque_class = env.find_class("idesyde/core/OpaqueDesignModel")?;
-        env.with_local_frame_returning_local(4, |inner| {
-            let category: JString = self.category().into_java(inner)?;
-            let format: JString = self.format().into_java(inner)?;
-            let body = self
-                .body_as_string()
-                .and_then(|x| x.into_java(inner).ok())
-                .unwrap_or(
-                    inner
-                        .new_string("")
-                        .expect("Should not fail to create an empty string."),
-                );
-            let elems = self.elements().into_java(inner)?;
-            inner.new_object(
-                opaque_class,
-                "(Ljava/lang/String;Ljava/util/Set;Ljava/lang/String;Ljava/lang/String;)V",
-                &[
-                    JValue::Object(category.as_ref()),
-                    JValue::Object(elems.as_ref()),
-                    JValue::Object(format.as_ref()),
-                    JValue::Object(body.as_ref()),
-                ],
-            )
-        })
+        env.with_local_frame_returning_local(
+            10 as i32
+                + self.category().len() as i32
+                + self.format().len() as i32
+                + self.elements().len() as i32,
+            |inner| {
+                let category: JString = self.category().into_java(inner)?;
+                let format: JString = self.format().into_java(inner)?;
+                let body = self
+                    .body_as_string()
+                    .and_then(|x| x.into_java(inner).ok())
+                    .unwrap_or(
+                        inner
+                            .new_string("")
+                            .expect("Should not fail to create an empty string."),
+                    );
+                let elems = self.elements().into_java(inner)?;
+                inner.new_object(
+                    opaque_class,
+                    "(Ljava/lang/String;Ljava/util/Set;Ljava/lang/String;Ljava/lang/String;)V",
+                    &[
+                        JValue::Object(category.as_ref()),
+                        JValue::Object(elems.as_ref()),
+                        JValue::Object(format.as_ref()),
+                        JValue::Object(body.as_ref()),
+                    ],
+                )
+            },
+        )
     }
 }
 
@@ -170,8 +195,8 @@ impl<'a> IntoJava<'a, JObject<'a>> for dyn DesignModel {
 
 impl<'a> IntoJava<'a, JObject<'a>> for OpaqueDecisionModel {
     fn into_java(&self, env: &mut JNIEnv<'a>) -> Result<JObject<'a>, jni::errors::Error> {
-        let opaque_class = env.find_class("idesyde/core/OpaqueDesignModel")?;
-        env.with_local_frame_returning_local(5, |inner| {
+        let opaque_class = env.find_class("idesyde/core/OpaqueDecisionModel")?;
+        env.with_local_frame_returning_local(self.category().len() as i32 + self.part().len() as i32 + 10, |inner| {
             let category: JString = self.category().into_java(inner)?;
             let part = self.part().into_java(inner)?;
             let body_json = self.body_as_json().into_java(inner)?;
@@ -194,7 +219,10 @@ impl<'a> IntoJava<'a, JObject<'a>> for dyn DecisionModel {
     }
 }
 
-impl<'a, T> IntoJava<'a, JObject<'a>> for Arc<T> where T: IntoJava<'a, JObject<'a>> + ?Sized{
+impl<'a, T> IntoJava<'a, JObject<'a>> for Arc<T>
+where
+    T: IntoJava<'a, JObject<'a>> + ?Sized,
+{
     fn into_java(&self, env: &mut JNIEnv<'a>) -> Result<JObject<'a>, jni::errors::Error> {
         self.as_ref().into_java(env)
     }
@@ -202,23 +230,32 @@ impl<'a, T> IntoJava<'a, JObject<'a>> for Arc<T> where T: IntoJava<'a, JObject<'
 
 impl<'a> FromJava<'a, JObject<'a>> for String {
     fn from_java(env: &mut JNIEnv<'a>, obj: JObject<'a>) -> Result<String, jni::errors::Error> {
-        env.with_local_frame_returning_local(2, |inner| {
-            inner.call_method(&obj, "toString", "()Ljava/lang/String;", &[])
-            .and_then(|x| x.l())
+        env.with_local_frame_returning_local(256, |inner| {
+            inner
+                .call_method(&obj, "toString", "()Ljava/lang/String;", &[])
+                .and_then(|x| x.l())
         })
         .map(|s| JString::from(s))
-        .and_then(|s| env.get_string(&s).map(|ins| ins.to_str().map(|x| x.to_owned()).unwrap_or("".to_string())))
+        .and_then(|s| {
+            env.get_string(&s)
+                .map(|ins| ins.to_str().map(|x| x.to_owned()).unwrap_or("".to_string()))
+        })
     }
 }
 
 impl<'a> FromJava<'a, JString<'a>> for String {
     fn from_java(env: &mut JNIEnv<'a>, obj: JString<'a>) -> Result<String, jni::errors::Error> {
-        env.get_string(&obj).map(|x| x.to_str().map(|x| x.to_owned()).unwrap_or("".to_string()))
+        env.get_string(&obj)
+            .map(|x| x.to_str().map(|x| x.to_owned()).unwrap_or("".to_string()))
     }
 }
 
-impl <'a, T> FromJava<'a, JObject<'a>> for Option<T> where T: Sized + FromJava<'a, JObject<'a>> {
+impl<'a, T> FromJava<'a, JObject<'a>> for Option<T>
+where
+    T: Sized + FromJava<'a, JObject<'a>>,
+{
     fn from_java(env: &mut JNIEnv<'a>, obj: JObject<'a>) -> Result<Option<T>, jni::errors::Error> {
+        env.ensure_local_capacity(16 as i32)?;
         let is_present = env.call_method(&obj, "isPresent", "()Z", &[])?;
         if let Ok(true) = is_present.z() {
             let opt = env
@@ -232,9 +269,23 @@ impl <'a, T> FromJava<'a, JObject<'a>> for Option<T> where T: Sized + FromJava<'
     }
 }
 
-impl<'a, T> FromJava<'a, JObject<'a>> for HashSet<T> where T: Eq + PartialEq + Hash + FromJava<'a, JObject<'a>> {
+impl<'a, T> FromJava<'a, JObject<'a>> for Arc<T>
+where
+    T: FromJava<'a, JObject<'a>> + ?Sized,
+{
+    fn from_java(env: &mut JNIEnv<'a>, obj: JObject<'a>) -> Result<Arc<T>, jni::errors::Error> {
+        T::from_java(env, obj).map(|x| Arc::new(x))
+    }
+}
+
+impl<'a, T> FromJava<'a, JObject<'a>> for HashSet<T>
+where
+    T: Eq + PartialEq + Hash + FromJava<'a, JObject<'a>>,
+{
     fn from_java(env: &mut JNIEnv<'a>, obj: JObject<'a>) -> Result<HashSet<T>, jni::errors::Error> {
         let mut set: HashSet<T> = HashSet::new();
+        let set_size = env.call_method(&obj, "size", "()I", &[])?.i()?;
+        env.ensure_local_capacity(10 as i32 + set_size)?;
         let iter = env
             .call_method(&obj, "iterator", "()Ljava/util/Iterator;", &[])
             .and_then(|x| x.l())?;
@@ -253,6 +304,32 @@ impl<'a, T> FromJava<'a, JObject<'a>> for HashSet<T> where T: Eq + PartialEq + H
     }
 }
 
+impl<'a, T> FromJava<'a, JObject<'a>> for Vec<T>
+where
+    T: PartialEq + FromJava<'a, JObject<'a>>,
+{
+    fn from_java(env: &mut JNIEnv<'a>, obj: JObject<'a>) -> Result<Vec<T>, jni::errors::Error> {
+        let mut vector: Vec<T> = vec![];
+        let vec_size = env.call_method(&obj, "size", "()I", &[])?.i()?;
+        env.ensure_local_capacity(10 as i32 + vec_size)?;
+        let iter = env
+            .call_method(&obj, "iterator", "()Ljava/util/Iterator;", &[])
+            .and_then(|x| x.l())?;
+        while env
+            .call_method(&iter, "hasNext", "()Z", &[])
+            .and_then(|x| x.z())?
+            == true
+        {
+            let elem = env
+                .call_method(&iter, "next", "()Ljava/lang/Object;", &[])?
+                .l()?;
+            let elem = T::from_java(env, elem)?;
+            vector.push(elem);
+        }
+        Ok(vector)
+    }
+}
+
 impl<'a> FromJava<'a, JObject<'a>> for Vec<u8> {
     fn from_java(env: &mut JNIEnv<'a>, obj: JObject<'a>) -> Result<Vec<u8>, jni::errors::Error> {
         let arr = JPrimitiveArray::from(obj);
@@ -260,20 +337,31 @@ impl<'a> FromJava<'a, JObject<'a>> for Vec<u8> {
     }
 }
 
-
 impl<'a> FromJava<'a, JObject<'a>> for OpaqueDecisionModel {
-    fn from_java(env: &mut JNIEnv<'a>, obj: JObject<'a>) -> Result<OpaqueDecisionModel, jni::errors::Error> {
+    fn from_java(
+        env: &mut JNIEnv<'a>,
+        obj: JObject<'a>,
+    ) -> Result<OpaqueDecisionModel, jni::errors::Error> {
         let mut builder = OpaqueDecisionModel::builder();
-        env.with_local_frame(5, |inner| {
-            let category_obj = inner.call_method(&obj, "category", "()Ljava/lang/String;", &[])?.l()?;
+        env.with_local_frame(512, |inner| {
+            let category_obj = inner
+                .call_method(&obj, "category", "()Ljava/lang/String;", &[])?
+                .l()?;
             builder.category(String::from_java(inner, JString::from(category_obj))?);
-            let json_obj = inner.call_method(&obj, "asJsonString", "()Ljava/util/Optional;", &[])?.l()?;
+            let json_obj = inner
+                .call_method(&obj, "asJsonString", "()Ljava/util/Optional;", &[])?
+                .l()?;
             builder.body_json(Option::from_java(inner, json_obj)?);
-            let cbor_obj = inner.call_method(&obj, "asCBORBinary", "()Ljava/util/Optional;", &[])?.l()?;
+            let cbor_obj = inner
+                .call_method(&obj, "asCBORBinary", "()Ljava/util/Optional;", &[])?
+                .l()?;
             builder.body_cbor(Option::from_java(inner, cbor_obj)?);
-            let part = inner.call_method(&obj, "part", "()[Ljava/util/Set;", &[])?.l()?;
+            let part = inner
+                .call_method(&obj, "part", "()Ljava/util/Set;", &[])?
+                .l()?;
             builder.part(HashSet::from_java(inner, part)?);
             Ok(builder
+                .body_msgpack(None)
                 .build()
                 .expect("Failed to build opaque decision model. Should not happen"))
         })
@@ -281,16 +369,27 @@ impl<'a> FromJava<'a, JObject<'a>> for OpaqueDecisionModel {
 }
 
 impl<'a> FromJava<'a, JObject<'a>> for OpaqueDesignModel {
-    fn from_java(env: &mut JNIEnv<'a>, obj: JObject<'a>) -> Result<OpaqueDesignModel, jni::errors::Error> {
+    fn from_java(
+        env: &mut JNIEnv<'a>,
+        obj: JObject<'a>,
+    ) -> Result<OpaqueDesignModel, jni::errors::Error> {
         let mut builder = OpaqueDesignModel::builder();
-        env.with_local_frame(5, |inner| {
-            let category_obj = inner.call_method(&obj, "category", "()Ljava/lang/String;", &[])?.l()?;
+        env.with_local_frame(512, |inner| {
+            let category_obj = inner
+                .call_method(&obj, "category", "()Ljava/lang/String;", &[])?
+                .l()?;
             builder.category(String::from_java(inner, JString::from(category_obj))?);
-            let format_obj = inner.call_method(&obj, "format", "()Ljava/util/Optional;", &[])?.l()?;
-            builder.format(String::from_java(inner, format_obj)?);
-            let body_obj = inner.call_method(&obj, "asString", "()Ljava/util/Optional;", &[])?.l()?;
+            let format_obj = inner
+                .call_method(&obj, "format", "()Ljava/util/Optional;", &[])?
+                .l()?;
+            builder.format(Option::from_java(inner, format_obj)?.unwrap_or("".to_string()));
+            let body_obj = inner
+                .call_method(&obj, "asString", "()Ljava/util/Optional;", &[])?
+                .l()?;
             builder.body(Option::from_java(inner, body_obj)?);
-            let elems = inner.call_method(&obj, "elements", "()[Ljava/util/Set;", &[])?.l()?;
+            let elems = inner
+                .call_method(&obj, "elements", "()[Ljava/util/Set;", &[])?
+                .l()?;
             builder.elements(HashSet::from_java(inner, elems)?);
             Ok(builder
                 .build()
@@ -298,6 +397,37 @@ impl<'a> FromJava<'a, JObject<'a>> for OpaqueDesignModel {
         })
     }
 }
+
+impl<'a> FromJava<'a, JObject<'a>> for IdentificationResult {
+    fn from_java(env: &mut JNIEnv<'a>, obj: JObject<'a>) -> Result<Self, jni::errors::Error> {
+        // TODO: fix this conservative memory allocation here
+        let decisions: HashSet<OpaqueDecisionModel> = env
+            .call_method(&obj, "identified", "()Ljava/util/Set;", &[])
+            .and_then(|x| x.l())
+            .and_then(|x| HashSet::from_java(env, x))?;
+        let dyn_decisions = decisions
+            .into_iter()
+            .map(|x| Arc::new(x) as Arc<dyn DecisionModel>)
+            .collect();
+        let messages: HashSet<String> = env
+            .call_method(&obj, "messages", "()Ljava/util/Set;", &[])
+            .and_then(|x| x.l())
+            .and_then(|x| HashSet::from_java(env, x))?;
+        Ok((dyn_decisions, messages.into_iter().collect()))
+    }
+}
+
+// impl<'a> FromJava<'a, JObject<'a>> for dyn DecisionModel {
+//     fn from_java(env: &mut JNIEnv<'a>, obj: JObject<'a>) -> Result<Self, jni::errors::Error> {
+//         OpaqueDecisionModel::from_java(env, obj).map(|x| &x as &dyn DecisionModel)
+//     }
+// }
+
+// impl<'a> FromJava<'a, JObject<'a>> for dyn DesignModel {
+//     fn from_java(env: &mut JNIEnv<'a>, obj: JObject<'a>) -> Result<Self, jni::errors::Error> {
+//         OpaqueDesignModel::from_java(env, obj).map(|x| &x as &dyn DesignModel)
+//     }
+// }
 
 fn java_to_rust_design_model<'a>(
     env: &mut JNIEnv<'a>,
@@ -422,7 +552,6 @@ fn java_to_rust_decision_model<'a>(
         .expect("Failed to build opaque decision model. Should not happen"))
 }
 
-
 fn java_design_set_to_rust<'a>(
     env: &mut JNIEnv<'a>,
     java_set: JObject<'a>,
@@ -449,59 +578,6 @@ fn java_design_set_to_rust<'a>(
     Ok(set)
 }
 
-fn java_to_rust_identification_result<'a>(
-    env: &mut JNIEnv<'a>,
-    java_result: JObject<'a>,
-) -> IdentificationResult {
-    // TODO: fix this conservative memory allocation here
-    let max_local_references = 3 * env
-        .call_method(&java_result, "part", "()I", &[])
-        .and_then(|x| x.i())
-        .unwrap_or(0i32);
-    env.with_local_frame(max_local_references, |env_inner| {
-        let identified_array = env_inner
-            .call_method(
-                &java_result,
-                "identifiedAsArray",
-                "()[Lidesyde/core/DecisionModel;",
-                &[],
-            )
-            .and_then(|x| x.l())
-            .map(|x| JObjectArray::from(x))?;
-        let identified_array_size = env_inner.get_array_length(identified_array.borrow())?;
-        let identified = (0..identified_array_size)
-            .map(|i| {
-                let elem = env_inner.get_object_array_element(&identified_array, i)?;
-                java_to_rust_decision_model(env_inner, &elem)
-            })
-            .flatten()
-            .map(|x| Arc::new(x) as Arc<dyn DecisionModel>)
-            .collect();
-        let messages_array = env_inner
-            .call_method(
-                &java_result,
-                "messagesAsArray",
-                "()[Ljava/lang/String;",
-                &[],
-            )
-            .and_then(|x| x.l())
-            .map(|x| JObjectArray::from(x))?;
-        let identified_array_size = env_inner.get_array_length(messages_array.borrow())?;
-        let messages = (0..identified_array_size)
-            .map(|i| {
-                let elem = env_inner.get_object_array_element(&messages_array, i)?;
-                env_inner
-                    .get_string(&JString::from(elem))
-                    .map(|x| x.to_str().map(|x| x.to_owned()))
-                    .map(|x| x.unwrap())
-            })
-            .flatten()
-            .collect();
-        Ok::<IdentificationResult, jni::errors::Error>((identified, messages))
-    })
-    .unwrap_or((vec![], vec![]))
-}
-
 #[derive(Clone)]
 struct JavaModuleIdentificationRule {
     pub java_vm: Arc<JavaVM>,
@@ -517,10 +593,8 @@ impl IdentificationRuleLike for JavaModuleIdentificationRule {
         let mut identified: Vec<Arc<dyn DecisionModel>> = vec![];
         let mut messages: Vec<String> = vec![];
         if let Ok(mut env_root) = self.java_vm.attach_current_thread_permanently() {
-            let jresult = env_root.with_local_frame(10, |mut env| {
-                println!("To designs");
+            let jresult = env_root.with_local_frame(128 + identified.iter().map(|x| x.part().len()).sum::<usize>() as i32, |env| {
                 let jdesigns = design_models.into_java(env)?;
-                println!("To decisions");
                 let jdecisions = decision_models.into_java(env)?;
                 match env.call_method(
                     &self.irule_jobject,
@@ -534,7 +608,7 @@ impl IdentificationRuleLike for JavaModuleIdentificationRule {
                     Ok(irecord) => {
                         return irecord
                             .l()
-                            .map(|result| java_to_rust_identification_result(env, result))
+                            .and_then(|result| IdentificationResult::from_java(env, result))
                     }
                     Err(e) => {
                         messages.push(format!("[<ERROR>]{}", e));
@@ -542,47 +616,15 @@ impl IdentificationRuleLike for JavaModuleIdentificationRule {
                 }
                 Err(jni::errors::Error::JavaException)
             });
-            // let required_references = 2
-            //     + 9
-            //     + decision_models.iter().flat_map(DecisionModel::part).count() as i32
-            //     + 6
-            //     + design_models
-            //         .iter()
-            //         .map(|x| x.elements().len())
-            //         .sum::<usize>() as i32;
-            // let jresult = env_root.with_local_frame(3 * required_references, |mut env| {
-            //     let jdesings_opt = design_slice_to_java_set(&mut env, design_models);
-            //     let jdecisions_opt = decision_slide_to_java_set(&mut env, decision_models);
-            //     match (jdesings_opt, jdecisions_opt) {
-            //         (Ok(jdesigns), Ok(jdecisions)) => {
-            //             match env.call_method(
-            //                 &self.irule_jobject,
-            //                 "apply",
-            //                 "(Ljava/util/Set;Ljava/util/Set;)Lidesyde/core/IdentificationResult;",
-            //                 &[
-            //                     JValue::Object(jdesigns.as_ref()),
-            //                     JValue::Object(jdecisions.as_ref()),
-            //                 ],
-            //             ) {
-            //                 Ok(irecord) => {
-            //                     return irecord
-            //                         .l()
-            //                         .map(|result| java_to_rust_identification_result(env, result))
-            //                 }
-            //                 Err(e) => {
-            //                     messages.push(format!("[<ERROR>]{}", e));
-            //                 }
-            //             }
-            //         }
-            //         _ => println!(
-            //             "Failed to convert Rust to Java and apply irule. Trying to proceed anyway."
-            //         ),
-            //     }
-            //     Err(jni::errors::Error::JavaException)
-            // });
-            let (ms, msgs) = jresult.unwrap_or((vec![], vec![]));
-            identified.extend(ms.into_iter());
-            messages.extend(msgs.into_iter());
+            match jresult {
+                Ok((ms, msgs)) => {
+                    identified.extend(ms.into_iter());
+                    messages.extend(msgs.into_iter());
+                }
+                Err(e) => {
+                    messages.push(format!("[<ERROR>] {}", e));
+                }
+            }
         }
         (identified, messages)
     }
@@ -610,8 +652,8 @@ impl ReverseIdentificationRuleLike for JavaModuleReverseIdentificationRule {
         decision_models: &[Arc<dyn DecisionModel>],
         design_models: &[Arc<dyn DesignModel>],
     ) -> idesyde_core::ReverseIdentificationResult {
-        let mut reversed: Vec<Arc<dyn DesignModel>> = vec![];
-        let mut messages: Vec<String> = vec![];
+        let mut reversed: Vec<OpaqueDesignModel> = vec![];
+        let messages: Vec<String> = vec![];
         if let Ok(mut env_root) = self.java_vm.attach_current_thread_permanently() {
             // let required_references = 2
             //     + 9
@@ -621,7 +663,7 @@ impl ReverseIdentificationRuleLike for JavaModuleReverseIdentificationRule {
             //         .iter()
             //         .map(|x| x.elements().len())
             //         .sum::<usize>() as i32;
-            let jresult = env_root.with_local_frame(5, |mut env| {
+            let jresult = env_root.with_local_frame(128, |env| {
                 let jdesigns = design_models.into_java(env)?;
                 let jdecisions = decision_models.into_java(env)?;
                 env.call_method(
@@ -634,13 +676,19 @@ impl ReverseIdentificationRuleLike for JavaModuleReverseIdentificationRule {
                     ],
                 )
                 .and_then(|x| x.l())
-                .and_then(|set| java_design_set_to_rust(&mut env, set))
+                .and_then(|set| Vec::from_java(env, set))
             });
             if let Ok(reversed_set) = jresult {
                 reversed.extend(reversed_set.into_iter());
             }
         }
-        (reversed, messages)
+        (
+            reversed
+                .into_iter()
+                .map(|x| Arc::new(x) as Arc<dyn DesignModel>)
+                .collect(),
+            messages,
+        )
     }
 }
 
@@ -776,7 +824,8 @@ impl Explorer for JavaModuleExplorer {
         if let Ok(mut root_env) = self.java_vm.attach_current_thread_permanently() {
             let size_estimate = 3 * m.part().len() as i32;
             let java_bid_opt = root_env.with_local_frame_returning_local(size_estimate, |env| {
-                let jmodel = m.into_java(env)
+                let jmodel = m
+                    .into_java(env)
                     .expect("Failed to convert decision model to java opaque");
                 env.call_method(
                     &self.explorer_jobject,
@@ -827,6 +876,7 @@ pub fn java_modules_from_jar_paths(paths: &[std::path::PathBuf]) -> LoggedResult
                                         let module_jobject = java_vm_arc
                                             .attach_current_thread_permanently()
                                             .and_then(|mut env| {
+                                                env.ensure_local_capacity(100 as i32)?;
                                                 env.find_class(line.replace('.', "/"))
                                                     .and_then(|module_class| {
                                                         env.new_object(module_class, "()V", &[])

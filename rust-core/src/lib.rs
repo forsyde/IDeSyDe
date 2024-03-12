@@ -959,6 +959,14 @@ impl<T: DesignModel + ?Sized> From<Arc<T>> for OpaqueDesignModel {
     }
 }
 
+impl PartialEq<OpaqueDesignModel> for OpaqueDesignModel {
+    fn eq(&self, other: &OpaqueDesignModel) -> bool {
+        self.category == other.category && self.elements == other.elements
+    }
+}
+
+impl Eq for OpaqueDesignModel {}
+
 /// This trait is wrapper around the normal iteration to create a "session"
 /// for identification modules. Via this, we can do more advanced things
 /// that would otherwise be impossible with a simple function call or iterator,

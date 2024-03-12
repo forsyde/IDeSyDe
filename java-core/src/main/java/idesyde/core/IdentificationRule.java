@@ -15,22 +15,9 @@ import java.util.stream.Collectors;
 public interface IdentificationRule extends
         BiFunction<Set<? extends DesignModel>, Set<? extends DecisionModel>, IdentificationResult> {
 
-    default PlainIdentificationResult fromArraysToPlain(DesignModel[] designModels, DecisionModel[] decisionModels) {
-        IdentificationResult result = apply(Arrays.stream(designModels).collect(Collectors.toSet()),
+    default IdentificationResult fromArrays(DesignModel[] designModels, DecisionModel[] decisionModels) {
+        return apply(Arrays.stream(designModels).collect(Collectors.toSet()),
                 Arrays.stream(decisionModels).collect(Collectors.toSet()));
-        DecisionModel[] identified = new DecisionModel[result.identified().size()];
-        String[] messages = new String[result.messages().size()];
-        int i = 0;
-        for (var m : result.identified()) {
-            identified[i] = m;
-            i++;
-        }
-        i = 0;
-        for (var s : result.messages()) {
-            messages[i] = s;
-            i++;
-        }
-        return new PlainIdentificationResult(identified, messages);
     }
 
     default boolean usesDesignModels() {

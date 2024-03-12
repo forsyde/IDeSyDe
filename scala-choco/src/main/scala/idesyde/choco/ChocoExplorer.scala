@@ -40,7 +40,7 @@ class ChocoExplorer extends Explorer:
       decisionModel: DecisionModel
   ): ExplorationBidding = {
     val bidding = decisionModel.category() match {
-      case "SDFToTiledMultiCore"                                => {
+      case "SDFToTiledMultiCore" => {
         tryCast(decisionModel, classOf[SDFToTiledMultiCore]) { sdf =>
           ExplorationBidding(
             true,
@@ -54,7 +54,7 @@ class ChocoExplorer extends Explorer:
           )
         }
       }
-      case "PeriodicWorkloadToPartitionedSharedMultiCore"  => {
+      case "PeriodicWorkloadToPartitionedSharedMultiCore" => {
         tryCast(decisionModel, classOf[PeriodicWorkloadToPartitionedSharedMultiCore]) { workload =>
           ExplorationBidding(
             true,
@@ -66,20 +66,24 @@ class ChocoExplorer extends Explorer:
         }
       }
       case "PeriodicWorkloadAndSDFServerToMultiCoreOld" => {
-        tryCast(decisionModel, classOf[PeriodicWorkloadAndSDFServerToMultiCoreOld]) { workloadAndSDF =>
-          ExplorationBidding(
-            true,
-            true,
-            1.0,
-            (workloadAndSDF.tasksAndSDFs.sdfApplications.minimumActorThroughputs.zipWithIndex
-              .filter((th, i) => th > 0.0)
-              .map((th, i) => "invThroughput(" + workloadAndSDF.tasksAndSDFs.sdfApplications.actorsIdentifiers(i) + ")")
-              .toSet + "nUsedPEs").asJava,
-            java.util.Map.of("time-to-first", 100.0)
-          )
+        tryCast(decisionModel, classOf[PeriodicWorkloadAndSDFServerToMultiCoreOld]) {
+          workloadAndSDF =>
+            ExplorationBidding(
+              true,
+              true,
+              1.0,
+              (workloadAndSDF.tasksAndSDFs.sdfApplications.minimumActorThroughputs.zipWithIndex
+                .filter((th, i) => th > 0.0)
+                .map((th, i) =>
+                  "invThroughput(" + workloadAndSDF.tasksAndSDFs.sdfApplications
+                    .actorsIdentifiers(i) + ")"
+                )
+                .toSet + "nUsedPEs").asJava,
+              java.util.Map.of("time-to-first", 100.0)
+            )
         }
       }
-      case _                                                       => None
+      case _ => None
     }
     bidding.getOrElse(ExplorationBidding(false, false, 0.0, Set().asJava, java.util.Map.of()))
   }

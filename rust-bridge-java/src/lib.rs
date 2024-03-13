@@ -1,26 +1,19 @@
 use std::{
-    borrow::Borrow,
-    collections::HashSet,
+    collections::{HashMap, HashSet},
     hash::Hash,
-    io::{BufRead, Read},
+    io::Read,
     sync::Arc,
-    time::Duration,
 };
 
 use idesyde_core::{
-    DecisionModel, DesignModel, ExplorationBid, Explorer, IdentificationResult,
-    IdentificationRuleLike, LoggedResult, MarkedIdentificationRule, Module, OpaqueDecisionModel,
-    OpaqueDecisionModelBuilder, OpaqueDesignModel, ReverseIdentificationResult,
+    DecisionModel, DesignModel, ExplorationBid, ExplorationConfiguration, ExplorationSolution,
+    Explorer, IdentificationResult, IdentificationRuleLike, LoggedResult, Module,
+    OpaqueDecisionModel, OpaqueDesignModel, ReverseIdentificationResult,
     ReverseIdentificationRuleLike,
 };
-use jars::JarOptionBuilder;
 use jni::{
-    objects::{
-        AsJArrayRaw, GlobalRef, JByteArray, JByteBuffer, JObject, JObjectArray, JPrimitiveArray,
-        JString, JValue,
-    },
-    strings::JavaStr,
-    AttachGuard, InitArgs, InitArgsBuilder, JNIEnv, JNIVersion, JavaVM,
+    objects::{GlobalRef, JObject, JObjectArray, JPrimitiveArray, JString, JValue},
+    InitArgsBuilder, JNIEnv, JNIVersion, JavaVM,
 };
 use zip::ZipArchive;
 
@@ -36,6 +29,66 @@ where
     T: From<JObject<'a>>,
 {
     fn into_java(&self, env: &mut JNIEnv<'a>) -> Result<T, jni::errors::Error>;
+}
+
+impl<'a, T> IntoJava<'a, T> for f64
+where
+    T: From<JObject<'a>>,
+{
+    fn into_java(&self, env: &mut JNIEnv<'a>) -> Result<T, jni::errors::Error> {
+        env.with_local_frame_returning_local(32, |inner| {
+            let cls = inner.find_class("java/lang/Double")?;
+            inner
+                .call_static_method(
+                    cls,
+                    "valueOf",
+                    "(D)Ljava/lang/Double;",
+                    &[JValue::Double(*self)],
+                )
+                .and_then(|x| x.l())
+        })
+        .map(|x| T::from(x))
+    }
+}
+
+impl<'a, T> IntoJava<'a, T> for u64
+where
+    T: From<JObject<'a>>,
+{
+    fn into_java(&self, env: &mut JNIEnv<'a>) -> Result<T, jni::errors::Error> {
+        env.with_local_frame_returning_local(32, |inner| {
+            let cls = inner.find_class("java/lang/Long")?;
+            inner
+                .call_static_method(
+                    cls,
+                    "valueOf",
+                    "(I)Ljava/lang/Long;",
+                    &[JValue::Long(*self as i64)],
+                )
+                .and_then(|x| x.l())
+        })
+        .map(|x| T::from(x))
+    }
+}
+
+impl<'a, T> IntoJava<'a, T> for bool
+where
+    T: From<JObject<'a>>,
+{
+    fn into_java(&self, env: &mut JNIEnv<'a>) -> Result<T, jni::errors::Error> {
+        env.with_local_frame_returning_local(32, |inner| {
+            let cls = inner.find_class("java/lang/Boolean")?;
+            inner
+                .call_static_method(
+                    cls,
+                    "valueOf",
+                    "(I)Ljava/lang/Boolean;",
+                    &[JValue::Bool(*self as u8)],
+                )
+                .and_then(|x| x.l())
+        })
+        .map(|x| T::from(x))
+    }
 }
 
 impl<'a, T> IntoJava<'a, T> for String
@@ -118,6 +171,31 @@ where
             )?;
         }
         Ok(set)
+    }
+}
+
+impl<'a, K, V> IntoJava<'a, JObject<'a>> for HashMap<K, V>
+where
+    K: IntoJava<'a, JObject<'a>>,
+    V: IntoJava<'a, JObject<'a>>,
+{
+    fn into_java(&self, env: &mut JNIEnv<'a>) -> Result<JObject<'a>, jni::errors::Error> {
+        let map_cls = env.find_class("java/util/HashMap")?;
+        let mapping = env
+            .with_local_frame_returning_local(16 + 2 * self.len() as i32, |inner| {
+                inner.new_object(map_cls, "()V", &[])
+            })?;
+        for (key, val) in self {
+            let java_key = key.into_java(env)?;
+            let elem = val.into_java(env)?;
+            env.call_method(
+                &mapping,
+                "put",
+                "(Ljava/lang/Object;Ljava/lang/Object;)Z",
+                &[JValue::Object(&java_key), JValue::Object(&elem)],
+            )?;
+        }
+        Ok(mapping)
     }
 }
 
@@ -228,6 +306,97 @@ where
     }
 }
 
+impl<'a> IntoJava<'a, JObject<'a>> for ExplorationSolution {
+    fn into_java(&self, env: &mut JNIEnv<'a>) -> Result<JObject<'a>, jni::errors::Error> {
+        let sols = self.objectives.into_java(env)?;
+        let decision = self.solved.into_java(env)?;
+        env.with_local_frame_returning_local(128, |inner| {
+            let cls = inner.find_class("idesyde/core/ExplorationSolution")?;
+            inner.new_object(
+                cls,
+                "(Ljava/util/Map;Lidesyde/core/DecisionModel;)V",
+                &[JValue::Object(&sols), JValue::Object(&decision)],
+            )
+        })
+    }
+}
+
+impl<'a> IntoJava<'a, JObject<'a>> for ExplorationConfiguration {
+    fn into_java(&self, env: &mut JNIEnv<'a>) -> Result<JObject<'a>, jni::errors::Error> {
+        let cls = env.find_class("idesyde/core/Explorer$Configuration")?;
+        // let max_sols: JObject = self.max_sols.into_java(env)?;
+        // let total_timeout: JObject = self.total_timeout.into_java(env)?;
+        // let improvement_timeout: JObject = self.improvement_timeout.into_java(env)?;
+        // let time_resolution: JObject = self.time_resolution.into_java(env)?;
+        // let memory_resolution: JObject = self.memory_resolution.into_java(env)?;
+        // let improvement_iterations: JObject = self.improvement_iterations.into_java(env)?;
+        // let strict: JObject = self.strict.into_java(env)?;
+        let target_objectives = self.target_objectives.into_java(env)?;
+        env.with_local_frame_returning_local(32, |inner| {
+            let conf = inner.new_object(cls, "()V", &[])?;
+            inner.set_field(
+                &conf,
+                "totalExplorationTimeOutInSecs",
+                "J",
+                JValue::Long(self.total_timeout as i64),
+            )?;
+            inner.set_field(
+                &conf,
+                "improvementTimeOutInSecs",
+                "J",
+                JValue::Long(self.improvement_timeout as i64),
+            )?;
+            inner.set_field(
+                &conf,
+                "maximumSolutions",
+                "J",
+                JValue::Long(self.max_sols as i64),
+            )?;
+            inner.set_field(
+                &conf,
+                "improvementIterations",
+                "J",
+                JValue::Long(self.improvement_iterations as i64),
+            )?;
+            inner.set_field(
+                &conf,
+                "timeDiscretizationFactor",
+                "J",
+                JValue::Long(self.time_resolution as i64),
+            )?;
+            inner.set_field(
+                &conf,
+                "memoryDiscretizationFactor",
+                "J",
+                JValue::Long(self.memory_resolution as i64),
+            )?;
+            inner.set_field(
+                &conf,
+                "strict",
+                "Z",
+                JValue::Bool(self.strict as u8),
+            )?;
+            inner.set_field(
+                &conf,
+                "targetObjectives",
+                "Ljava/util/Set;",
+                JValue::Object(&target_objectives),
+            )?;
+            Ok(conf)
+        })
+    }
+}
+
+impl<'a> FromJava<'a, JObject<'a>> for f64 {
+    fn from_java(env: &mut JNIEnv<'a>, obj: JObject<'a>) -> Result<f64, jni::errors::Error> {
+        env.with_local_frame(256, |inner| {
+            inner
+                .call_method(&obj, "doubleValue", "()D", &[])
+                .and_then(|x| x.d())
+        })
+    }
+}
+
 impl<'a> FromJava<'a, JObject<'a>> for String {
     fn from_java(env: &mut JNIEnv<'a>, obj: JObject<'a>) -> Result<String, jni::errors::Error> {
         env.with_local_frame_returning_local(256, |inner| {
@@ -301,6 +470,46 @@ where
             set.insert(elem);
         }
         Ok(set)
+    }
+}
+
+impl<'a, K, V> FromJava<'a, JObject<'a>> for HashMap<K, V>
+where
+    K: Eq + PartialEq + Hash + FromJava<'a, JObject<'a>>,
+    V: FromJava<'a, JObject<'a>>,
+{
+    fn from_java(
+        env: &mut JNIEnv<'a>,
+        obj: JObject<'a>,
+    ) -> Result<HashMap<K, V>, jni::errors::Error> {
+        let mut mapping: HashMap<K, V> = HashMap::new();
+        let iter = env.with_local_frame_returning_local(16, |inner| {
+            let entry_set = inner
+                .call_method(&obj, "entrySet", "()Ljava/util/Set;", &[])
+                .and_then(|x| x.l())?;
+            inner
+                .call_method(&entry_set, "iterator", "()Ljava/util/Iterator;", &[])
+                .and_then(|x| x.l())
+        })?;
+        while env
+            .call_method(&iter, "hasNext", "()Z", &[])
+            .and_then(|x| x.z())?
+            == true
+        {
+            let elem = env
+                .call_method(&iter, "next", "()Ljava/lang/Object;", &[])?
+                .l()?;
+            let key_java = env
+                .call_method(&elem, "getKey", "()Ljava/lang/Object;", &[])
+                .and_then(|x| x.l())?;
+            let key = K::from_java(env, key_java)?;
+            let val_java = env
+                .call_method(&elem, "getValue", "()Ljava/lang/Object;", &[])
+                .and_then(|x| x.l())?;
+            let val = V::from_java(env, val_java)?;
+            mapping.insert(key, val);
+        }
+        Ok(mapping)
     }
 }
 
@@ -429,153 +638,65 @@ impl<'a> FromJava<'a, JObject<'a>> for IdentificationResult {
 //     }
 // }
 
-fn java_to_rust_design_model<'a>(
-    env: &mut JNIEnv<'a>,
-    java_result: &JObject<'a>,
-) -> Result<OpaqueDesignModel, jni::errors::Error> {
-    let mut builder = OpaqueDesignModel::builder();
-    let category_obj = env.call_method(java_result, "category", "()Ljava/lang/String;", &[])?;
-    let category = env
-        .get_string(&JString::from(category_obj.l()?))?
-        .to_str()
-        .map(|x| x.to_string())
-        .expect("Failed to convert Java string to Rust string through UTF8 problems");
-    builder.category(category);
-    let format_obj = env.call_method(java_result, "format", "()Ljava/lang/String;", &[])?;
-    let format = env
-        .get_string(&JString::from(format_obj.l()?))?
-        .to_str()
-        .map(|x| x.to_string())
-        .expect("Failed to convert Java string to Rust string through UTF8 problems");
-    builder.format(format);
-    let mut elems: HashSet<String> = HashSet::new();
-    let part_array_obj =
-        env.call_method(java_result, "elementsAsArray", "()[Ljava/lang/String;", &[])?;
-    let elems_array = JObjectArray::from(part_array_obj.l()?);
-    let elems_array_size = env.get_array_length(elems_array.borrow())?;
-    for i in 0..elems_array_size {
-        let elem = env.get_object_array_element(&elems_array, i)?;
-        let elem_string_java = JString::from(elem);
-        let rust_str = env
-            .get_string(&elem_string_java)?
-            .to_str()
-            .map(|x| x.to_owned());
-        if let Ok(elem_str) = rust_str {
-            elems.insert(elem_str.to_string());
-        } else {
-            panic!("Failed to convert Java string to Rust string through UTF8 problems")
-        }
+impl<'a> FromJava<'a, JObject<'a>> for ExplorationBid {
+    fn from_java(env: &mut JNIEnv<'a>, obj: JObject<'a>) -> Result<Self, jni::errors::Error> {
+        let mut builder = ExplorationBid::builder();
+        env.with_local_frame(512, |inner| {
+            let objs_set: HashSet<String> = inner
+                .call_method(&obj, "targetObjectives", "()Ljava/util/Set;", &[])
+                .and_then(|x| x.l())
+                .and_then(|x| HashSet::from_java(inner, x))?;
+            builder.target_objectives(objs_set);
+            let can_explore = inner
+                .call_method(&obj, "canExplore", "()Ljava/lang/Boolean;", &[])
+                .and_then(|x| x.l())
+                .and_then(|x| inner.call_method(&x, "booleanValue", "()Z", &[]))
+                .and_then(|x| x.z())
+                .unwrap_or(false);
+            builder.can_explore(can_explore);
+            let competitiveness = inner
+                .call_method(&obj, "competitiveness", "()Ljava/lang/Double;", &[])
+                .and_then(|x| x.l())
+                .and_then(|x| inner.call_method(&x, "doubleValue", "()D", &[]))
+                .and_then(|x| x.d())
+                .map(|f| f as f32)
+                .unwrap_or(100.0f32);
+            builder.competitiveness(competitiveness);
+            let is_exact = inner
+                .call_method(&obj, "isExact", "()Ljava/lang/Boolean;", &[])
+                .and_then(|x| x.l())
+                .and_then(|x| inner.call_method(&x, "booleanValue", "()Z", &[]))
+                .and_then(|x| x.z())
+                .unwrap_or(false);
+            builder.is_exact(is_exact);
+            Ok(builder
+                .build()
+                .expect("Should never fail to build a bidding."))
+        })
     }
-    builder.elements(elems);
-    let text_body = env
-        .call_method(java_result, "asString", "()Ljava/util/Optional;", &[])?
-        .l()?;
-    let text_is_present = env.call_method(&text_body, "isPresent", "()Z", &[])?;
-    builder.body(None);
-    if let Ok(true) = text_is_present.z() {
-        let json_body_inner = env
-            .call_method(&text_body, "get", "()Ljava/lang/Object;", &[])?
-            .l()?;
-        let json_body = env
-            .get_string(&JString::from(json_body_inner))?
-            .to_str()
-            .map(|x| x.to_string());
-        builder.body(json_body.ok());
-    }
-    Ok(builder
-        .build()
-        .expect("Failed to build opaque decision model. Should not happen"))
 }
 
-fn java_to_rust_decision_model<'a>(
-    env: &mut JNIEnv<'a>,
-    java_result: &JObject<'a>,
-) -> Result<OpaqueDecisionModel, jni::errors::Error> {
-    let mut builder = OpaqueDecisionModel::builder();
-    let category_obj = env.call_method(java_result, "category", "()Ljava/lang/String;", &[])?;
-    let category = env
-        .get_string(&JString::from(category_obj.l()?))?
-        .to_str()
-        .map(|x| x.to_string())
-        .expect("Failed to convert Java string to Rust string through UTF8 problems");
-    builder.category(category);
-    let mut part: HashSet<String> = HashSet::new();
-    let part_array_obj =
-        env.call_method(java_result, "partAsArray", "()[Ljava/lang/String;", &[])?;
-    let part_array = JObjectArray::from(part_array_obj.l()?);
-    let part_array_size = env.get_array_length(part_array.borrow())?;
-    for i in 0..part_array_size {
-        let elem = env.get_object_array_element(&part_array, i)?;
-        let elem_string_java = JString::from(elem);
-        let rust_str = env
-            .get_string(&elem_string_java)?
-            .to_str()
-            .map(|x| x.to_owned());
-        if let Ok(elem_str) = rust_str {
-            part.insert(elem_str.to_string());
-        } else {
-            panic!("Failed to convert Java string to Rust string through UTF8 problems")
-        }
+impl<'a> FromJava<'a, JObject<'a>> for ExplorationSolution {
+    fn from_java(env: &mut JNIEnv<'a>, obj: JObject<'a>) -> Result<Self, jni::errors::Error> {
+        let java_model: JObject = env
+            .call_method(&obj, "solved", "()Lidesyde/core/DecisionModel;", &[])
+            ?.l()?;
+        let java_opaque = env.call_static_method(
+            "idesyde/core/OpaqueDecisionModel",
+            "from",
+            "(Lidesyde/core/DecisionModel;)Lidesyde/core/OpaqueDecisionModel;",
+            &[JValue::Object(&java_model)],
+            )?.l()?;
+        let solved = Arc::new(OpaqueDecisionModel::from_java(env, java_opaque)?);
+        let objectives: HashMap<String, f64> = env
+            .call_method(&obj, "objectives", "()Ljava/util/Map;", &[])
+            .and_then(|x| x.l())
+            .and_then(|x| HashMap::from_java(env, x))?;
+        Ok(ExplorationSolution {
+            solved: solved,
+            objectives: objectives,
+        })
     }
-    builder.part(part);
-    let json_body_obj = env
-        .call_method(java_result, "asJsonString", "()Ljava/util/Optional;", &[])?
-        .l()?;
-    let json_is_present = env.call_method(&json_body_obj, "isPresent", "()Z", &[])?;
-    builder.body_json(None);
-    if let Ok(true) = json_is_present.z() {
-        let json_body_inner = env
-            .call_method(&json_body_obj, "get", "()Ljava/lang/Object;", &[])?
-            .l()?;
-        let json_body = env
-            .get_string(&JString::from(json_body_inner))?
-            .to_str()
-            .map(|x| x.to_string());
-        builder.body_json(json_body.ok());
-    }
-    let cbor_body_obj = env
-        .call_method(java_result, "asCBORBinary", "()Ljava/util/Optional;", &[])?
-        .l()?;
-    let cbor_is_present = env.call_method(&cbor_body_obj, "isPresent", "()Z", &[])?;
-    builder.body_cbor(None);
-    if let Ok(true) = cbor_is_present.z() {
-        let cbor_body_inner = env
-            .call_method(&cbor_body_obj, "get", "()Ljava/lang/Object;", &[])?
-            .l()?;
-        let cbor_array: JByteArray = JPrimitiveArray::from(cbor_body_inner);
-        let native_cbor = env.convert_byte_array(cbor_array)?;
-        builder.body_cbor(Some(native_cbor));
-    }
-    Ok(builder
-        .body_msgpack(None)
-        .build()
-        .expect("Failed to build opaque decision model. Should not happen"))
-}
-
-fn java_design_set_to_rust<'a>(
-    env: &mut JNIEnv<'a>,
-    java_set: JObject<'a>,
-) -> Result<HashSet<Arc<dyn DesignModel>>, jni::errors::Error> {
-    let mut set: HashSet<Arc<dyn DesignModel>> = HashSet::new();
-    let string_cls = env.find_class("java/lang/String")?;
-    let initial_string = env.new_string("")?;
-    let num_reversed_models = env.call_method(&java_set, "size", "()I", &[])?;
-    let string_array = env.new_object_array(0, string_cls, &initial_string)?;
-    let array_of_set = JObjectArray::from(
-        env.call_method(
-            &java_set,
-            "toArray",
-            "()[Ljava/lang/Object;",
-            &[JValue::Object(string_array.as_ref())],
-        )?
-        .l()?,
-    );
-    for i in 0..num_reversed_models.i()? {
-        let elem = env.get_object_array_element(&array_of_set, i)?;
-        let rust_design = java_to_rust_design_model(env, &elem)?;
-        set.insert(Arc::new(rust_design));
-    }
-    Ok(set)
 }
 
 #[derive(Clone)]
@@ -643,7 +764,7 @@ impl IdentificationRuleLike for JavaModuleIdentificationRule {
 }
 struct JavaModuleReverseIdentificationRule {
     pub java_vm: Arc<JavaVM>,
-    pub irule_jobject: Arc<GlobalRef>,
+    pub rrule_jobject: Arc<GlobalRef>,
 }
 
 impl ReverseIdentificationRuleLike for JavaModuleReverseIdentificationRule {
@@ -667,9 +788,9 @@ impl ReverseIdentificationRuleLike for JavaModuleReverseIdentificationRule {
                 let jdesigns = design_models.into_java(env)?;
                 let jdecisions = decision_models.into_java(env)?;
                 env.call_method(
-                    self.irule_jobject.as_ref(),
-                    "apply",
-                    "(Ljava/util/Set;Ljava/util/Set;)Ljava/util/Set;",
+                    self.rrule_jobject.as_ref(),
+                    "fromArrays",
+                    "([Lidesyde/core/DecisionModel;[Lidesyde/core/DesignModel;)Ljava/util/Set;",
                     &[
                         JValue::Object(jdecisions.as_ref()),
                         JValue::Object(jdesigns.as_ref()),
@@ -712,83 +833,6 @@ fn instantiate_java_vm_debug(
             .build()
             .expect("Init args should not fail to be built"),
     )
-}
-
-pub fn from_java_to_rust_exploration_bidding<'a>(
-    root_env: &mut JNIEnv<'a>,
-    jobject: JObject<'a>,
-) -> ExplorationBid {
-    if let Ok(objs_set) = root_env
-        .call_method(&jobject, "targetObjectives", "()Ljava/util/Set", &[])
-        .and_then(|x| x.l())
-    {
-        let obj_size = root_env
-            .call_method(&objs_set, "size", "()I", &[])
-            .and_then(|x| x.i())
-            .unwrap_or(0);
-        let bidding = root_env
-            .with_local_frame(10 + 2 * obj_size, |env| {
-                let mut objs: HashSet<String> = HashSet::new();
-                if let Ok(objs_set) = env
-                    .call_method(&jobject, "targetObjectives", "()Ljava/util/Set", &[])
-                    .and_then(|x| x.l())
-                {
-                    let iter = env
-                        .call_method(&objs_set, "iterator", "()Ljava/util/Iterator;", &[])
-                        .and_then(|x| x.l())
-                        .expect("Set to iterator should never fail");
-                    while env
-                        .call_method(&iter, "hasNext", "()Z", &[])
-                        .and_then(|x| x.z())
-                        .expect("Failed to get boolean from hasNext")
-                        == true
-                    {
-                        let obj = env
-                            .call_method(&iter, "next", "()Ljava/lang/Object;", &[])
-                            .expect("Failed to call next")
-                            .l()
-                            .expect("Failed to get object from next");
-                        if let Ok(obj_str) = env
-                            .get_string(&JString::from(obj))
-                            .map(|x| x.to_str().map(|x| x.to_owned()))
-                            .map(|x| x.unwrap())
-                        {
-                            objs.insert(obj_str);
-                        }
-                    }
-                }
-                let inner_bid = ExplorationBid::builder()
-                    .can_explore(
-                        env.call_method(&jobject, "canExplore", "()Ljava/lang/Boolean;", &[])
-                            .and_then(|x| x.l())
-                            .and_then(|x| env.call_method(&x, "booleanValue", "()Z", &[]))
-                            .and_then(|x| x.z())
-                            .unwrap_or(false),
-                    )
-                    .is_exact(
-                        env.call_method(&jobject, "isExact", "()Ljava/lang/Boolean;", &[])
-                            .and_then(|x| x.l())
-                            .and_then(|x| env.call_method(&x, "booleanValue", "()Z", &[]))
-                            .and_then(|x| x.z())
-                            .unwrap_or(false),
-                    )
-                    .competitiveness(
-                        env.call_method(&jobject, "competitiveness", "()Ljava/lang/Double;", &[])
-                            .and_then(|x| x.l())
-                            .and_then(|x| env.call_method(&x, "doubleValue", "()D", &[]))
-                            .and_then(|x| x.d())
-                            .map(|f| f as f32)
-                            .unwrap_or(1.0f32),
-                    )
-                    .target_objectives(objs)
-                    .build()
-                    .expect("Should never fail to build a bidding.");
-                Ok::<ExplorationBid, jni::errors::Error>(inner_bid)
-            })
-            .unwrap_or(ExplorationBid::impossible());
-        return bidding;
-    }
-    ExplorationBid::impossible()
 }
 
 #[derive(Clone)]
@@ -836,7 +880,8 @@ impl Explorer for JavaModuleExplorer {
                 .and_then(|x| x.l())
             });
             if let Ok(java_bid) = java_bid_opt {
-                return from_java_to_rust_exploration_bidding(&mut root_env, java_bid);
+                return ExplorationBid::from_java(&mut root_env, java_bid)
+                    .unwrap_or(ExplorationBid::impossible());
             }
         }
         idesyde_core::ExplorationBid::impossible()
@@ -844,11 +889,49 @@ impl Explorer for JavaModuleExplorer {
 
     fn explore(
         &self,
-        _m: Arc<dyn DecisionModel>,
-        _currrent_solutions: &HashSet<idesyde_core::ExplorationSolution>,
-        _exploration_configuration: idesyde_core::ExplorationConfiguration,
+        m: Arc<dyn DecisionModel>,
+        currrent_solutions: &HashSet<idesyde_core::ExplorationSolution>,
+        exploration_configuration: idesyde_core::ExplorationConfiguration,
     ) -> Box<dyn Iterator<Item = idesyde_core::ExplorationSolution> + Send + Sync + '_> {
-        Box::new(std::iter::empty())
+        let java_vm = self.java_vm.clone();
+        let exploration_iter = java_vm.attach_current_thread_permanently().and_then(|mut top_env| {
+            let java_m = m.into_java(&mut top_env)?;
+            let java_sols = currrent_solutions.into_java(&mut top_env)?;
+            let java_conf = exploration_configuration.into_java(&mut top_env)?;
+            let iter = top_env.with_local_frame_returning_local(256, |env| {
+                let stream = env.call_method(&self.explorer_jobject, "explore", "(Lidesyde/core/DecisionModel;Ljava/util/Set;Lidesyde/core/Explorer$Configuration;)Ljava/util/stream/Stream;", &[
+                    JValue::Object(&java_m),
+                    JValue::Object(&java_sols),
+                    JValue::Object(&java_conf)
+                ])?.l()?;
+                env.call_method(&stream, "iterator", "()Ljava/util/Iterator;", &[])?.l()
+            })?;
+            top_env.new_global_ref(iter)
+        });
+        if let Ok(iter) = exploration_iter {
+            Box::new(
+                std::iter::repeat_with(move || {
+                    if let Ok(mut top_env) = java_vm.attach_current_thread_permanently() {
+                        let has_next = top_env
+                            .call_method(&iter, "hasNext", "()Z", &[])
+                            .and_then(|x| x.z());
+                        if let Ok(true) = has_next {
+                            let next_java_maybe = top_env
+                                .call_method(&iter, "next", "()Ljava/lang/Object;", &[])
+                                .and_then(|x| x.l());
+                            if let Ok(next_java) = next_java_maybe {
+                                return ExplorationSolution::from_java(&mut top_env, next_java).ok();
+                            }
+                        }
+                    }
+                    None
+                })
+                .take_while(|x| x.is_some())
+                .flatten(),
+            )
+        } else {
+            Box::new(std::iter::empty())
+        }
     }
 }
 
@@ -1048,7 +1131,7 @@ impl Module for JavaModule {
                         .expect("Failed to get object from next");
                     let rrule = JavaModuleReverseIdentificationRule {
                         java_vm: self.java_vm.clone(),
-                        irule_jobject: Arc::new(env.new_global_ref(rrule_obj).expect(
+                        rrule_jobject: Arc::new(env.new_global_ref(rrule_obj).expect(
                             "Failed to make an irule a global variable. Should not happen.",
                         )),
                     };

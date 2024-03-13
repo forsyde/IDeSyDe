@@ -238,8 +238,9 @@ class ChocoExplorer extends Explorer:
       previousSolutions: java.util.Set[ExplorationSolution],
       configuration: Explorer.Configuration
   ): Stream[ExplorationSolution] = {
-    var llist = decisionModel match
-      case sdf: SDFToTiledMultiCore =>
+    var llist = decisionModel.category() match
+      case "SDFToTiledMultiCore" =>
+        tryCast(decisionModel, classOf[SDFToTiledMultiCore]) { sdf =>
         exploreChocoExplorable(
           sdf,
           previousSolutions.asScala
@@ -250,7 +251,9 @@ class ChocoExplorer extends Explorer:
             .toSet,
           configuration
         )(using CanSolveSDFToTiledMultiCore())
-      case workload: PeriodicWorkloadToPartitionedSharedMultiCore =>
+        }
+      case "PeriodicWorkloadToPartitionedSharedMultiCore" =>
+        tryCast(decisionModel, classOf[PeriodicWorkloadToPartitionedSharedMultiCore]) { workload =>
         exploreChocoExplorable(
           workload,
           previousSolutions.asScala
@@ -264,7 +267,9 @@ class ChocoExplorer extends Explorer:
             .toSet,
           configuration
         )(using CanSolveDepTasksToPartitionedMultiCore())
-      case workloadAndSDF: PeriodicWorkloadAndSDFServerToMultiCoreOld =>
+        }
+      case "PeriodicWorkloadAndSDFServerToMultiCoreOld" =>
+        tryCast(decisionModel, classOf[PeriodicWorkloadAndSDFServerToMultiCoreOld]) { workloadAndSDF =>
         exploreChocoExplorable(
           workloadAndSDF,
           previousSolutions.asScala
@@ -278,56 +283,9 @@ class ChocoExplorer extends Explorer:
             .toSet,
           configuration
         )(using CanSolvePeriodicWorkloadAndSDFServersToMulticore())
-      // case solvable: ChocoDecisionModel =>
-      //   val solver          = solvable.chocoModel.getSolver
-      //   val isOptimization  = solvable.modelMinimizationObjectives.size > 0
-      //   val paretoMinimizer = ParetoMinimizationBrancher(solvable.modelMinimizationObjectives)
-      //   // lazy val paretoMaximizer = ParetoMaximizer(
-      //   //   solvable.modelMinimizationObjectives.map(o => solvable.chocoModel.intMinusView(o))
-      //   // )
-      //   // var lastParetoFrontValues = solvable.modelMinimizationObjectives.map(_.getUB())
-      //   // var lastParetoFrontSize = 0
-      //   if (isOptimization) {
-      //     if (solvable.modelMinimizationObjectives.size == 1) {
-      //       solvable.chocoModel.setObjective(
-      //         false,
-      //         solvable.modelMinimizationObjectives.head
-      //       )
-      //     }
-      //     solver.plugMonitor(paretoMinimizer)
-      //     solvable.chocoModel.post(new Constraint("paretoOptConstraint", paretoMinimizer))
-      //     // val objFunc = getLinearizedObj(solvable)
-      //     // solvable.chocoModel.setObjective(false, objFunc)
-      //     // strategies +:= Search.bestBound(Search.minDomLBSearch(objFunc))
-      //   }
-      //   // solver.addStopCriterion(SolutionCounter(solvable.chocoModel, 2L))
-      //   if (!solvable.strategies.isEmpty) {
-      //     solver.setSearch(solvable.strategies: _*)
-      //   }
-      //   if (solvable.shouldLearnSignedClauses) {
-      //     solver.setLearningSignedClauses
-      //   }
-      //   if (solvable.shouldRestartOnSolution) {
-      //     solver.setNoGoodRecordingFromRestarts
-      //     solver.setRestartOnSolutions
-      //   }
-      //   if (explorationTotalTimeOutInSecs > 0L) {
-      //     logger.debug(
-      //       s"setting total exploration timeout to ${explorationTotalTimeOutInSecs} seconds"
-      //     )
-      //     solver.limitTime(explorationTotalTimeOutInSecs * 1000L)
-      //   }
-      //   LazyList
-      //     .continually(solver.solve())
-      //     .takeWhile(feasible => feasible)
-      //     .map(_ => {
-      //       solver.defaultSolution()
-      //     })
-      //     .flatMap(paretoSolution => {
-      //       solvable.rebuildFromChocoOutput(paretoSolution)
-      //     })
-      case _ => LazyList.empty
-    val iter            = llist.iterator
+        }
+      case _ => None
+    val iter            = llist.map(_.iterator).getOrElse(Iterator.empty)
     val foundObjectives = CopyOnWriteArraySet[java.util.Map[String, java.lang.Double]]()
     Stream
       .generate(() => {

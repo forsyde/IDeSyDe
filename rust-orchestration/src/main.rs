@@ -3,14 +3,17 @@ use std::{cmp::Ordering, collections::HashSet, path::Path, sync::Arc};
 use clap::Parser;
 use env_logger::WriteStyle;
 use idesyde_core::{
-    explore_cooperatively, DecisionModel, DesignModel, ExplorationBid, ExplorationSolution,
-    Explorer, OpaqueDesignModel,
+    DecisionModel, DesignModel, ExplorationBid, ExplorationSolution, Explorer, OpaqueDesignModel,
+    ReverseIdentificationRuleLike,
 };
 use idesyde_orchestration::{
-    exploration, identification::identification_procedure, ExternalServerModule,
+    exploration::{self, explore_cooperatively},
+    identification::identification_procedure,
+    ExternalServerModule,
 };
 use log::{debug, error, info, warn, Level};
 use rayon::prelude::*;
+use serde::de;
 
 #[derive(Parser, Debug)]
 #[command(
@@ -61,14 +64,14 @@ struct Args {
         help = "Sets the desired maximum number of solutions. \nIf non-positive, there is no litmit",
         long_help = "Sets the desired maximum number of solutions. \nIf non-positive, there is no litmit. \nThe identification and integration stages are unnafected."
     )]
-    x_max_solutions: Option<u64>,
+    x_max_solutions: Option<i64>,
 
     #[arg(
         long,
         help = "Sets the desired maximum number of iterations after each exploration improvement. \nIf non-positive, there is no litmit",
         long_help = "Sets the desired maximum number of iterations after each exploration improvement. \nIf non-positive, there is no litmit. \nThe identification and integration stages are unnafected."
     )]
-    x_improvement_iterations: Option<u64>,
+    x_improvement_iterations: Option<i64>,
 
     #[arg(
         long,
@@ -371,13 +374,9 @@ fn main() {
         let biddings: Vec<(Arc<dyn Explorer>, Arc<dyn DecisionModel>, ExplorationBid)> = explorers
             .iter()
             .flat_map(|explorer| {
-                dominant_partial_identification.iter().map(|x| {
-                    (
-                        explorer.clone(),
-                        x.clone(),
-                        explorer.bid(x.clone()),
-                    )
-                })
+                dominant_partial_identification
+                    .iter()
+                    .map(|x| (explorer.clone(), x.clone(), explorer.bid(x.clone())))
             })
             .filter(|(_, _, b)| b.can_explore)
             .filter(|(_, m, _)| {
@@ -450,32 +449,36 @@ fn main() {
             let mut dominant_sols: Vec<ExplorationSolution> = vec![];
             let mut num_sols = 0;
             let exploration_time = std::time::Instant::now();
-            for sol in explore_cooperatively(
-                &dominant_biddings_idx
+            let explorers_and_models: Vec<(Arc<dyn Explorer>, Arc<dyn DecisionModel>)> =
+                dominant_biddings_idx
                     .iter()
                     .map(|i| (biddings[*i].0.to_owned(), biddings[*i].1.to_owned()))
-                    .collect(),
-                &dominant_biddings_idx
-                    .iter()
-                    .map(|i| biddings[*i].2.to_owned())
-                    .collect(),
+                    .collect();
+            let dominant_biddings: Vec<ExplorationBid> = dominant_biddings_idx
+                .iter()
+                .map(|i| biddings[*i].2.to_owned())
+                .collect();
+            let conf = idesyde_core::ExplorationConfigurationBuilder::default()
+                .max_sols(args.x_max_solutions.unwrap_or(0))
+                .total_timeout(args.x_total_time_out.unwrap_or(0))
+                .time_resolution(args.x_time_resolution.unwrap_or(0))
+                .memory_resolution(args.x_memory_resolution.unwrap_or(0))
+                .strict(args.strict)
+                .improvement_timeout(args.x_improvement_time_out.unwrap_or(0))
+                .improvement_iterations(args.x_improvement_iterations.unwrap_or(0))
+                .target_objectives(
+                    args.x_target_objectives
+                        .iter()
+                        .map(|x| x.to_string())
+                        .collect(),
+                )
+                .build()
+                .expect("Failed to build explorer configuration. Should never fail.");
+            for sol in explore_cooperatively(
+                explorers_and_models.as_slice(),
+                dominant_biddings.as_slice(),
                 &HashSet::new(),
-                idesyde_core::ExplorationConfigurationBuilder::default()
-                    .max_sols(args.x_max_solutions.unwrap_or(0))
-                    .total_timeout(args.x_total_time_out.unwrap_or(0))
-                    .time_resolution(args.x_time_resolution.unwrap_or(0))
-                    .memory_resolution(args.x_memory_resolution.unwrap_or(0))
-                    .strict(args.strict)
-                    .improvement_timeout(args.x_improvement_time_out.unwrap_or(0))
-                    .improvement_iterations(args.x_improvement_iterations.unwrap_or(0))
-                    .target_objectives(
-                        args.x_target_objectives
-                            .iter()
-                            .map(|x| x.to_string())
-                            .collect(),
-                    )
-                    .build()
-                    .expect("Failed to build explorer configuration. Should never fail."),
+                &conf,
             ) {
                 // let sol_dominated = dominant_sols.iter().any(|(_, y)| {
                 //     idesyde_core::pareto_dominance_partial_cmp(&sol.1, y) == Some(Ordering::Greater)
@@ -557,23 +560,34 @@ fn main() {
             if !solved_models.is_empty() {
                 info!("Starting reverse identification");
                 let reverse_time = std::time::Instant::now();
-                let total_reversed: usize = modules
+                let all_reversed: usize = modules
                     .par_iter()
-                    .map(|imodule| {
-                        let mut n_reversed = 0;
-                        for reverse in
-                            imodule.reverse_identification(&solved_models, &design_models)
-                        {
-                            // let reverse_header = reverse.header();
-                            reverse.write_to_dir(
-                                &reverse_path,
-                                format!("{}", n_reversed).as_str(),
-                                imodule.unique_identifier().as_str(),
-                            );
-                            n_reversed += 1;
-                            debug!("Reverse identified a {} design model", reverse.category());
-                        }
-                        n_reversed
+                    .map(|module| {
+                        module
+                            .reverse_identification_rules()
+                            .par_iter()
+                            .map(|rrule| {
+                                let (models, msgs) =
+                                    rrule.reverse_identify(&solved_models, &design_models);
+                                for msg in msgs {
+                                    debug!("{}", msg);
+                                }
+                                let mut n_reversed = 0;
+                                for model in &models {
+                                    model.write_to_dir(
+                                        &reverse_path,
+                                        format!("{}", n_reversed).as_str(),
+                                        module.unique_identifier().as_str(),
+                                    );
+                                    n_reversed += 1;
+                                    debug!(
+                                        "Reverse identified a {} design model",
+                                        model.category()
+                                    );
+                                }
+                                n_reversed
+                            })
+                            .sum::<usize>()
                     })
                     .sum();
                 debug!(
@@ -582,7 +596,7 @@ fn main() {
                 );
                 info!(
                     "Finished reverse identification of {} design model(s)",
-                    total_reversed
+                    all_reversed
                 );
             } else {
                 info!("No solution to reverse identify");

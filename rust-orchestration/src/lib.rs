@@ -687,7 +687,7 @@ impl Module for ExternalServerModule {
 }
 
 pub fn find_modules(modules_path: &Path) -> Vec<Arc<dyn Module>> {
-    let mut imodules: Vec<Arc<dyn Module>> = Vec::new();
+    let mut modules: Vec<Arc<dyn Module>> = Vec::new();
     if let Ok(read_dir) = modules_path.read_dir() {
         let jar_modules: Vec<PathBuf> = read_dir
             .filter_map(|e| e.ok())
@@ -702,42 +702,13 @@ pub fn find_modules(modules_path: &Path) -> Vec<Arc<dyn Module>> {
             .collect();
         let modules_result = java_modules_from_jar_paths(jar_modules.as_slice());
         for module in modules_result.result {
-            imodules.push(Arc::new(module) as Arc<dyn Module>);
+            modules.push(Arc::new(module) as Arc<dyn Module>);
         }
         for warn_msg in modules_result.warn {
             warn!("{}", warn_msg);
         }
-        // let prepared: Vec<Arc<dyn Module>> = read_dir
-        //     .par_bridge()
-        //     .into_par_iter()
-        //     .flat_map(|e| {
-        //         if let Ok(de) = e {
-        //             let p = de.path();
-        //             if p.is_file() {
-        //                 let prog = p.read_link().unwrap_or(p);
-        //                 if let Some(imodule) = ExternalServerModule::try_create_local(prog.clone())
-        //                 {
-        //                     return Some(Arc::new(imodule) as Arc<dyn Module>);
-        //                 }
-        //                 //  else {
-        //                 //     return Some(Arc::new(ExternalIdentificationModule {
-        //                 //         command_path_: prog.clone(),
-        //                 //         identified_path_: identified_path.to_path_buf(),
-        //                 //         inputs_path_: inputs_path.to_path_buf(),
-        //                 //         solved_path_: solved_path.to_path_buf(),
-        //                 //         reverse_path_: integration_path.to_path_buf(),
-        //                 //         output_path_: output_path.to_path_buf(),
-        //                 //     })
-        //                 //         as Arc<dyn IdentificationModule>);
-        //                 // }
-        //             }
-        //         }
-        //         None
-        //     })
-        //     .collect();
-        // imodules.extend(prepared.into_iter());
     }
-    imodules
+    modules
 }
 
 // pub fn find_exploration_modules(modules_path: &Path) -> Vec<Arc<dyn Module>> {

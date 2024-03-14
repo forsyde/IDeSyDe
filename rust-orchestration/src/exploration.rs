@@ -1,11 +1,12 @@
 use std::{
     cmp::Ordering,
-    collections::{HashMap, HashSet},
-    io::BufRead,
-    io::BufReader,
+    collections::{HashMap, HashSet, VecDeque},
+    io::{BufRead, BufReader},
     path::PathBuf,
     process::{Child, Stdio},
+    rc::Rc,
     sync::{Arc, Mutex},
+    time::{Duration, Instant},
 };
 
 use derive_builder::Builder;
@@ -16,8 +17,10 @@ use idesyde_core::{
 };
 use log::{debug, warn};
 use reqwest::blocking::multipart::Form;
-use serde::{Deserialize, Serialize};
+use serde::{de, Deserialize, Serialize};
 use url::Url;
+
+use rayon::prelude::*;
 
 #[derive(Deserialize, Serialize, PartialEq, Clone)]
 pub struct ExplorerBidding {
@@ -162,10 +165,7 @@ impl Explorer for ExternalExplorer {
         Some(self.url.to_owned())
     }
 
-    fn bid(
-        &self,
-        m: Arc<dyn DecisionModel>,
-    ) -> ExplorationBid {
+    fn bid(&self, m: Arc<dyn DecisionModel>) -> ExplorationBid {
         let model_hash = m.global_sha2_hash();
         let exists = self
             .url
@@ -230,7 +230,7 @@ impl Explorer for ExternalExplorer {
         m: Arc<dyn DecisionModel>,
         currrent_solutions: &HashSet<ExplorationSolution>,
         exploration_configuration: ExplorationConfiguration,
-    ) -> Box<dyn Iterator<Item = ExplorationSolution> + Send + Sync + '_> {
+    ) -> Arc<Mutex<dyn Iterator<Item = ExplorationSolution> + Send + Sync>> {
         let mut mut_url = self.url.clone();
         if let Err(_) = mut_url.set_scheme("ws") {
             warn!(
@@ -272,7 +272,7 @@ impl Explorer for ExternalExplorer {
                         warn!("Failed to send exploration request to {} for exploration. Exploration is likely to fail.", self.unique_identifier());
                         debug!("Message was: {}", e.to_string());
                     };
-                    return Box::new(ExternalExplorerSolutionIter::new(ws));
+                    return Arc::new(Mutex::new(ExternalExplorerSolutionIter::new(ws)));
                 }
             } else {
                 warn!("Failed to open exploration connetion. Trying to proceed anyway.");
@@ -354,7 +354,153 @@ impl Explorer for ExternalExplorer {
         //         );
         //     }
         // }
-        Box::new(std::iter::empty())
+        Arc::new(Mutex::new(std::iter::empty()))
+    }
+}
+
+/// This iterator is able to get a handful of explorers + decision models combination
+/// and make the exploration cooperative. It does so by exchanging the solutions
+/// found between explorers so that the explorers almost always with the latest approximate Pareto set
+/// update between themselves.
+#[derive(Clone)]
+pub struct CombinedExplorerIterator2 {
+    iterators: Vec<Arc<Mutex<dyn Iterator<Item = ExplorationSolution> + Send + Sync>>>,
+    is_exact: Vec<bool>,
+    duration_left: Option<Duration>,
+    solutions_left: Option<u64>,
+}
+
+impl CombinedExplorerIterator2 {
+    pub fn create(
+        explorers_and_models: &[(Arc<dyn Explorer>, Arc<dyn DecisionModel>)],
+        biddings: &[ExplorationBid],
+        solutions: &HashSet<ExplorationSolution>,
+        exploration_configuration: &ExplorationConfiguration,
+        solutions_found: u64,
+    ) -> Self {
+        let new_duration = if exploration_configuration.total_timeout > 0 {
+            Some(Duration::from_secs(
+                exploration_configuration.total_timeout - Instant::now().elapsed().as_secs(),
+            ))
+        } else {
+            None
+        };
+        let new_solution_limit = if exploration_configuration.max_sols >= 0 {
+            if exploration_configuration.max_sols as u64 > solutions_found {
+                Some(exploration_configuration.max_sols as u64 - solutions_found)
+            } else {
+                Some(0)
+            }
+        } else {
+            None
+        };
+        CombinedExplorerIterator2 {
+            iterators: explorers_and_models
+                .iter()
+                .map(|(e, m)| e.explore(m.to_owned(), solutions, exploration_configuration.clone()))
+                .collect(),
+            is_exact: biddings.iter().map(|b| b.is_exact).collect(),
+            duration_left: new_duration,
+            solutions_left: new_solution_limit,
+        }
+    }
+}
+
+impl Iterator for CombinedExplorerIterator2 {
+    type Item = ExplorationSolution;
+
+    fn next(&mut self) -> Option<Self::Item> {
+        let start = Instant::now();
+        self.duration_left = self.duration_left.map(|d| {
+            if d >= start.elapsed() {
+                d - start.elapsed()
+            } else {
+                Duration::ZERO
+            }
+        });
+        if self.solutions_left.map(|x| x > 0).unwrap_or(true)
+            && self
+                .duration_left
+                .map(|d| d > Duration::ZERO)
+                .unwrap_or(true)
+        {
+            return self
+                .iterators
+                .par_iter_mut()
+                .enumerate()
+                .map(|(i, iter_mutex)| {
+                    if let Ok(mut iter) = iter_mutex.lock() {
+                        return (i, iter.next());
+                    }
+                    (i, None)
+                })
+                .take_any_while(|(i, x)| x.is_some() || !self.is_exact[*i])
+                .flat_map(|(_, x)| x)
+                .find_any(|_| true);
+        }
+        None
+    }
+}
+
+pub struct MultiLevelCombinedExplorerIterator2 {
+    explorers_and_models: Vec<(Arc<dyn Explorer>, Arc<dyn DecisionModel>)>,
+    biddings: Vec<ExplorationBid>,
+    exploration_configuration: ExplorationConfiguration,
+    // levels: Vec<CombinedExplorerIterator>,
+    // levels_tuple: (Option<CombinedExplorerIterator>, CombinedExplorerIterator),
+    iterators: VecDeque<CombinedExplorerIterator2>,
+    solutions: HashSet<ExplorationSolution>,
+    num_found: u64,
+    // converged_to_last_level: bool,
+    start: Instant,
+}
+
+impl Iterator for MultiLevelCombinedExplorerIterator2 {
+    type Item = ExplorationSolution;
+
+    fn next(&mut self) -> Option<Self::Item> {
+        if self.exploration_configuration.total_timeout > 0
+            && self.start.elapsed()
+                > Duration::from_secs(self.exploration_configuration.total_timeout)
+        {
+            return None;
+        }
+        if self.iterators.len() > 2 {
+            self.iterators.pop_back();
+        }
+        if let Some(current_level) = self.iterators.front_mut() {
+            if let Some(non_dominated) = current_level.find(|x| {
+                !self
+                    .solutions
+                    .iter()
+                    .any(|s| s.partial_cmp(&x) == Some(Ordering::Less))
+            }) {
+                self.num_found += 1;
+                self.solutions.insert(non_dominated.clone());
+                let sol_dominates = self
+                    .solutions
+                    .iter()
+                    .any(|cur_sol| non_dominated.partial_cmp(cur_sol) == Some(Ordering::Less));
+                if sol_dominates {
+                    self.solutions.retain(|cur_sol| {
+                        non_dominated.partial_cmp(cur_sol) != Some(Ordering::Less)
+                    });
+                    let mut new_iterator = CombinedExplorerIterator2::create(
+                        self.explorers_and_models.as_slice(),
+                        self.biddings.as_slice(),
+                        &self.solutions,
+                        &self.exploration_configuration,
+                        self.num_found,
+                    );
+                    self.iterators.push_front(new_iterator);
+                };
+                return Some(non_dominated);
+            } else {
+                self.iterators.pop_front();
+                return self.next();
+            }
+        };
+        None
     }
 }
 
@@ -368,4 +514,34 @@ pub fn compute_pareto_solutions(sols: Vec<ExplorationSolution>) -> Vec<Explorati
         })
         .map(|x| x.to_owned())
         .collect()
+}
+
+pub fn explore_cooperatively(
+    explorers_and_models: &[(Arc<dyn Explorer>, Arc<dyn DecisionModel>)],
+    biddings: &[ExplorationBid],
+    currrent_solutions: &HashSet<ExplorationSolution>,
+    exploration_configuration: &ExplorationConfiguration,
+    // solution_inspector: F,
+) -> MultiLevelCombinedExplorerIterator2 {
+    let combined_explorer = CombinedExplorerIterator2::create(
+        explorers_and_models,
+        biddings,
+        currrent_solutions,
+        exploration_configuration,
+        0,
+    );
+    let mut deque = VecDeque::new();
+    deque.push_front(combined_explorer);
+    MultiLevelCombinedExplorerIterator2 {
+        explorers_and_models: explorers_and_models
+            .iter()
+            .map(|(e, m)| (e.to_owned(), m.to_owned()))
+            .collect(),
+        biddings: biddings.to_owned(),
+        solutions: currrent_solutions.clone(),
+        exploration_configuration: exploration_configuration.to_owned(),
+        iterators: deque,
+        start: Instant::now(),
+        num_found: 0,
+    }
 }

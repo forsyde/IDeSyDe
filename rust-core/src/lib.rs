@@ -7,7 +7,7 @@ use std::{
     path::Path,
     sync::{
         mpsc::{Receiver, Sender},
-        Arc,
+        Arc, Mutex,
     },
     time::{Duration, Instant},
 };
@@ -370,7 +370,7 @@ pub trait IdentificationRuleLike: Send + Sync {
     }
 }
 
-pub trait ReverseIdentificationRuleLike {
+pub trait ReverseIdentificationRuleLike: Send + Sync {
     fn reverse_identify(
         &self,
         decision_models: &[Arc<dyn DecisionModel>],
@@ -395,12 +395,12 @@ pub enum MarkedIdentificationRule {
 #[derive(Clone, PartialEq, Eq, serde::Serialize, serde::Deserialize, derive_builder::Builder)]
 // #[builder(setter(each(name = "target_objectives")))]
 pub struct ExplorationConfiguration {
-    pub max_sols: u64,
+    pub max_sols: i64,
     pub total_timeout: u64,
     pub improvement_timeout: u64,
     pub time_resolution: u64,
     pub memory_resolution: u64,
-    pub improvement_iterations: u64,
+    pub improvement_iterations: i64,
     pub strict: bool,
     pub target_objectives: HashSet<String>,
 }
@@ -624,10 +624,7 @@ pub trait Explorer: Downcast + Send + Sync {
 
     /// Give information about the exploration capabilities of this
     /// explorer for a decision model given that other explorers are present.
-    fn bid(
-        &self,
-        _m: Arc<dyn DecisionModel>,
-    ) -> ExplorationBid {
+    fn bid(&self, _m: Arc<dyn DecisionModel>) -> ExplorationBid {
         ExplorationBid::impossible()
     }
     fn explore(
@@ -635,8 +632,8 @@ pub trait Explorer: Downcast + Send + Sync {
         _m: Arc<dyn DecisionModel>,
         _currrent_solutions: &HashSet<ExplorationSolution>,
         _exploration_configuration: ExplorationConfiguration,
-    ) -> Box<dyn Iterator<Item = ExplorationSolution> + Send + Sync + '_> {
-        Box::new(std::iter::empty())
+    ) -> Arc<Mutex<dyn Iterator<Item = ExplorationSolution> + Send + Sync>> {
+        Arc::new(Mutex::new(std::iter::empty()))
     }
 }
 impl_downcast!(Explorer);
@@ -665,10 +662,7 @@ impl<T: Explorer + ?Sized> Explorer for Arc<T> {
         self.as_ref().location_url()
     }
 
-    fn bid(
-        &self,
-        _m: Arc<dyn DecisionModel>,
-    ) -> ExplorationBid {
+    fn bid(&self, _m: Arc<dyn DecisionModel>) -> ExplorationBid {
         self.as_ref().bid(_m)
     }
 
@@ -677,7 +671,7 @@ impl<T: Explorer + ?Sized> Explorer for Arc<T> {
         _m: Arc<dyn DecisionModel>,
         _currrent_solutions: &HashSet<ExplorationSolution>,
         _exploration_configuration: ExplorationConfiguration,
-    ) -> Box<dyn Iterator<Item = ExplorationSolution> + Send + Sync + '_> {
+    ) -> Arc<Mutex<dyn Iterator<Item = ExplorationSolution> + Send + Sync>> {
         self.as_ref()
             .explore(_m, _currrent_solutions, _exploration_configuration)
     }
@@ -966,6 +960,15 @@ impl PartialEq<OpaqueDesignModel> for OpaqueDesignModel {
 }
 
 impl Eq for OpaqueDesignModel {}
+
+impl Hash for OpaqueDesignModel {
+    fn hash<H: std::hash::Hasher>(&self, state: &mut H) {
+        self.category.hash(state);
+        for x in &self.elements {
+            x.hash(state);
+        }
+    }
+}
 
 /// This trait is wrapper around the normal iteration to create a "session"
 /// for identification modules. Via this, we can do more advanced things
@@ -1513,14 +1516,17 @@ where
         if let Ok(true) = completed_rx.recv_timeout(std::time::Duration::from_millis(300)) {
             return ();
         }
-        for new_solution in this_explorer.explore(
-            this_decision_model,
-            &prev_sols,
-            exploration_configuration.to_owned(),
-        ) {
-            match solution_tx.send(new_solution) {
-                Ok(_) => {}
-                Err(_) => return (),
+        if let Ok(mut iter) = this_explorer
+            .explore(
+                this_decision_model,
+                &prev_sols,
+                exploration_configuration.to_owned(),
+            )
+            .lock()
+        {
+            match iter.next().and_then(|x| solution_tx.send(x).ok()) {
+                Some(_) => {}
+                None => return (),
             };
         }
     });

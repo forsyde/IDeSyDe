@@ -2,7 +2,7 @@ use std::{
     collections::{HashMap, HashSet},
     hash::Hash,
     io::Read,
-    sync::Arc,
+    sync::{Arc, Mutex},
 };
 
 use idesyde_core::{
@@ -191,7 +191,7 @@ where
             env.call_method(
                 &mapping,
                 "put",
-                "(Ljava/lang/Object;Ljava/lang/Object;)Z",
+                "(Ljava/lang/Object;Ljava/lang/Object;)Ljava/lang/Object;",
                 &[JValue::Object(&java_key), JValue::Object(&elem)],
             )?;
         }
@@ -208,7 +208,7 @@ where
         if let Some(fst) = self.first() {
             let fst_java = fst.into_java(env)?;
             let array = env
-                .with_local_frame_returning_local(2 * self.len() as i32, |inner| {
+                .with_local_frame_returning_local(16 + 2 * self.len() as i32, |inner| {
                     inner
                         .new_object_array(self.len() as i32, &cls, fst_java)
                         .map(|o| JObject::from(o))
@@ -233,35 +233,29 @@ where
 impl<'a> IntoJava<'a, JObject<'a>> for OpaqueDesignModel {
     fn into_java(&self, env: &mut JNIEnv<'a>) -> Result<JObject<'a>, jni::errors::Error> {
         let opaque_class = env.find_class("idesyde/core/OpaqueDesignModel")?;
-        env.with_local_frame_returning_local(
-            10 as i32
-                + self.category().len() as i32
-                + self.format().len() as i32
-                + self.elements().len() as i32,
-            |inner| {
-                let category: JString = self.category().into_java(inner)?;
-                let format: JString = self.format().into_java(inner)?;
-                let body = self
-                    .body_as_string()
-                    .and_then(|x| x.into_java(inner).ok())
-                    .unwrap_or(
-                        inner
-                            .new_string("")
-                            .expect("Should not fail to create an empty string."),
-                    );
-                let elems = self.elements().into_java(inner)?;
-                inner.new_object(
-                    opaque_class,
-                    "(Ljava/lang/String;Ljava/util/Set;Ljava/lang/String;Ljava/lang/String;)V",
-                    &[
-                        JValue::Object(category.as_ref()),
-                        JValue::Object(elems.as_ref()),
-                        JValue::Object(format.as_ref()),
-                        JValue::Object(body.as_ref()),
-                    ],
-                )
-            },
-        )
+        env.with_local_frame_returning_local(128 as i32, |inner| {
+            let category: JString = self.category().into_java(inner)?;
+            let format: JString = self.format().into_java(inner)?;
+            let body = self
+                .body_as_string()
+                .and_then(|x| x.into_java(inner).ok())
+                .unwrap_or(
+                    inner
+                        .new_string("")
+                        .expect("Should not fail to create an empty string."),
+                );
+            let elems = self.elements().into_java(inner)?;
+            inner.new_object(
+                opaque_class,
+                "(Ljava/lang/String;Ljava/util/Set;Ljava/lang/String;Ljava/lang/String;)V",
+                &[
+                    JValue::Object(category.as_ref()),
+                    JValue::Object(elems.as_ref()),
+                    JValue::Object(format.as_ref()),
+                    JValue::Object(body.as_ref()),
+                ],
+            )
+        })
     }
 }
 
@@ -274,7 +268,7 @@ impl<'a> IntoJava<'a, JObject<'a>> for dyn DesignModel {
 impl<'a> IntoJava<'a, JObject<'a>> for OpaqueDecisionModel {
     fn into_java(&self, env: &mut JNIEnv<'a>) -> Result<JObject<'a>, jni::errors::Error> {
         let opaque_class = env.find_class("idesyde/core/OpaqueDecisionModel")?;
-        env.with_local_frame_returning_local(self.category().len() as i32 + self.part().len() as i32 + 10, |inner| {
+        env.with_local_frame_returning_local(self.part().len() as i32 + 128, |inner| {
             let category: JString = self.category().into_java(inner)?;
             let part = self.part().into_java(inner)?;
             let body_json = self.body_as_json().into_java(inner)?;
@@ -332,7 +326,7 @@ impl<'a> IntoJava<'a, JObject<'a>> for ExplorationConfiguration {
         // let improvement_iterations: JObject = self.improvement_iterations.into_java(env)?;
         // let strict: JObject = self.strict.into_java(env)?;
         let target_objectives = self.target_objectives.into_java(env)?;
-        env.with_local_frame_returning_local(32, |inner| {
+        env.with_local_frame_returning_local(128, |inner| {
             let conf = inner.new_object(cls, "()V", &[])?;
             inner.set_field(
                 &conf,
@@ -370,12 +364,7 @@ impl<'a> IntoJava<'a, JObject<'a>> for ExplorationConfiguration {
                 "J",
                 JValue::Long(self.memory_resolution as i64),
             )?;
-            inner.set_field(
-                &conf,
-                "strict",
-                "Z",
-                JValue::Bool(self.strict as u8),
-            )?;
+            inner.set_field(&conf, "strict", "Z", JValue::Bool(self.strict as u8))?;
             inner.set_field(
                 &conf,
                 "targetObjectives",
@@ -389,7 +378,7 @@ impl<'a> IntoJava<'a, JObject<'a>> for ExplorationConfiguration {
 
 impl<'a> FromJava<'a, JObject<'a>> for f64 {
     fn from_java(env: &mut JNIEnv<'a>, obj: JObject<'a>) -> Result<f64, jni::errors::Error> {
-        env.with_local_frame(256, |inner| {
+        env.with_local_frame(32, |inner| {
             inner
                 .call_method(&obj, "doubleValue", "()D", &[])
                 .and_then(|x| x.d())
@@ -454,7 +443,7 @@ where
     fn from_java(env: &mut JNIEnv<'a>, obj: JObject<'a>) -> Result<HashSet<T>, jni::errors::Error> {
         let mut set: HashSet<T> = HashSet::new();
         let set_size = env.call_method(&obj, "size", "()I", &[])?.i()?;
-        env.ensure_local_capacity(10 as i32 + set_size)?;
+        env.ensure_local_capacity(128 as i32 + 2 * set_size)?;
         let iter = env
             .call_method(&obj, "iterator", "()Ljava/util/Iterator;", &[])
             .and_then(|x| x.l())?;
@@ -483,7 +472,7 @@ where
         obj: JObject<'a>,
     ) -> Result<HashMap<K, V>, jni::errors::Error> {
         let mut mapping: HashMap<K, V> = HashMap::new();
-        let iter = env.with_local_frame_returning_local(16, |inner| {
+        let iter = env.with_local_frame_returning_local(32, |inner| {
             let entry_set = inner
                 .call_method(&obj, "entrySet", "()Ljava/util/Set;", &[])
                 .and_then(|x| x.l())?;
@@ -520,7 +509,7 @@ where
     fn from_java(env: &mut JNIEnv<'a>, obj: JObject<'a>) -> Result<Vec<T>, jni::errors::Error> {
         let mut vector: Vec<T> = vec![];
         let vec_size = env.call_method(&obj, "size", "()I", &[])?.i()?;
-        env.ensure_local_capacity(10 as i32 + vec_size)?;
+        env.ensure_local_capacity(128 as i32 + 2 * vec_size)?;
         let iter = env
             .call_method(&obj, "iterator", "()Ljava/util/Iterator;", &[])
             .and_then(|x| x.l())?;
@@ -589,15 +578,15 @@ impl<'a> FromJava<'a, JObject<'a>> for OpaqueDesignModel {
                 .l()?;
             builder.category(String::from_java(inner, JString::from(category_obj))?);
             let format_obj = inner
-                .call_method(&obj, "format", "()Ljava/util/Optional;", &[])?
+                .call_method(&obj, "format", "()Ljava/lang/String;", &[])?
                 .l()?;
-            builder.format(Option::from_java(inner, format_obj)?.unwrap_or("".to_string()));
+            builder.format(String::from_java(inner, JString::from(format_obj))?);
             let body_obj = inner
                 .call_method(&obj, "asString", "()Ljava/util/Optional;", &[])?
                 .l()?;
             builder.body(Option::from_java(inner, body_obj)?);
             let elems = inner
-                .call_method(&obj, "elements", "()[Ljava/util/Set;", &[])?
+                .call_method(&obj, "elements", "()Ljava/util/Set;", &[])?
                 .l()?;
             builder.elements(HashSet::from_java(inner, elems)?);
             Ok(builder
@@ -679,14 +668,16 @@ impl<'a> FromJava<'a, JObject<'a>> for ExplorationBid {
 impl<'a> FromJava<'a, JObject<'a>> for ExplorationSolution {
     fn from_java(env: &mut JNIEnv<'a>, obj: JObject<'a>) -> Result<Self, jni::errors::Error> {
         let java_model: JObject = env
-            .call_method(&obj, "solved", "()Lidesyde/core/DecisionModel;", &[])
-            ?.l()?;
-        let java_opaque = env.call_static_method(
-            "idesyde/core/OpaqueDecisionModel",
-            "from",
-            "(Lidesyde/core/DecisionModel;)Lidesyde/core/OpaqueDecisionModel;",
-            &[JValue::Object(&java_model)],
-            )?.l()?;
+            .call_method(&obj, "solved", "()Lidesyde/core/DecisionModel;", &[])?
+            .l()?;
+        let java_opaque = env
+            .call_static_method(
+                "idesyde/core/OpaqueDecisionModel",
+                "from",
+                "(Lidesyde/core/DecisionModel;)Lidesyde/core/OpaqueDecisionModel;",
+                &[JValue::Object(&java_model)],
+            )?
+            .l()?;
         let solved = Arc::new(OpaqueDecisionModel::from_java(env, java_opaque)?);
         let objectives: HashMap<String, f64> = env
             .call_method(&obj, "objectives", "()Ljava/util/Map;", &[])
@@ -714,7 +705,7 @@ impl IdentificationRuleLike for JavaModuleIdentificationRule {
         let mut identified: Vec<Arc<dyn DecisionModel>> = vec![];
         let mut messages: Vec<String> = vec![];
         if let Ok(mut env_root) = self.java_vm.attach_current_thread_permanently() {
-            let jresult = env_root.with_local_frame(128 + identified.iter().map(|x| x.part().len()).sum::<usize>() as i32, |env| {
+            let jresult = env_root.with_local_frame(128 + 2 * design_models.iter().map(|x| x.elements().len()).sum::<usize>() as i32, |env| {
                 let jdesigns = design_models.into_java(env)?;
                 let jdecisions = decision_models.into_java(env)?;
                 match env.call_method(
@@ -776,18 +767,11 @@ impl ReverseIdentificationRuleLike for JavaModuleReverseIdentificationRule {
         let mut reversed: Vec<OpaqueDesignModel> = vec![];
         let messages: Vec<String> = vec![];
         if let Ok(mut env_root) = self.java_vm.attach_current_thread_permanently() {
-            // let required_references = 2
-            //     + 9
-            //     + decision_models.iter().flat_map(DecisionModel::part).count() as i32
-            //     + 6
-            //     + design_models
-            //         .iter()
-            //         .map(|x| x.elements().len())
-            //         .sum::<usize>() as i32;
-            let jresult = env_root.with_local_frame(128, |env| {
-                let jdesigns = design_models.into_java(env)?;
-                let jdecisions = decision_models.into_java(env)?;
-                env.call_method(
+            let jresult =
+                env_root.with_local_frame(128, |env| {
+                    let jdesigns = design_models.into_java(env)?;
+                    let jdecisions = decision_models.into_java(env)?;
+                    let set_obj = env.call_method(
                     self.rrule_jobject.as_ref(),
                     "fromArrays",
                     "([Lidesyde/core/DecisionModel;[Lidesyde/core/DesignModel;)Ljava/util/Set;",
@@ -795,12 +779,14 @@ impl ReverseIdentificationRuleLike for JavaModuleReverseIdentificationRule {
                         JValue::Object(jdecisions.as_ref()),
                         JValue::Object(jdesigns.as_ref()),
                     ],
-                )
-                .and_then(|x| x.l())
-                .and_then(|set| Vec::from_java(env, set))
-            });
-            if let Ok(reversed_set) = jresult {
-                reversed.extend(reversed_set.into_iter());
+                )?.l()?;
+                    HashSet::from_java(env, set_obj)
+                });
+            match jresult {
+                Ok(reversed_set) => {
+                    reversed.extend(reversed_set.into_iter());
+                }
+                Err(e) => println!("[<ERROR>] {}", e),
             }
         }
         (
@@ -818,8 +804,10 @@ fn instantiate_java_vm_debug(
 ) -> Result<JavaVM, jni::errors::StartJvmError> {
     let mut builder = InitArgsBuilder::new()
         // Pass the JNI API version (default is 8)
-        .version(JNIVersion::V8)
-        .option("-Xcheck:jni");
+        .version(JNIVersion::V8);
+    if cfg!(debug_assertions) {
+        builder = builder.option("-Xcheck:jni");
+    }
     if !jar_files.is_empty() {
         let path_str = jar_files
             .iter()
@@ -892,13 +880,13 @@ impl Explorer for JavaModuleExplorer {
         m: Arc<dyn DecisionModel>,
         currrent_solutions: &HashSet<idesyde_core::ExplorationSolution>,
         exploration_configuration: idesyde_core::ExplorationConfiguration,
-    ) -> Box<dyn Iterator<Item = idesyde_core::ExplorationSolution> + Send + Sync + '_> {
+    ) -> Arc<Mutex<dyn Iterator<Item = idesyde_core::ExplorationSolution> + Send + Sync>> {
         let java_vm = self.java_vm.clone();
         let exploration_iter = java_vm.attach_current_thread_permanently().and_then(|mut top_env| {
             let java_m = m.into_java(&mut top_env)?;
             let java_sols = currrent_solutions.into_java(&mut top_env)?;
             let java_conf = exploration_configuration.into_java(&mut top_env)?;
-            let iter = top_env.with_local_frame_returning_local(256, |env| {
+            let iter = top_env.with_local_frame_returning_local(1024, |env| {
                 let stream = env.call_method(&self.explorer_jobject, "explore", "(Lidesyde/core/DecisionModel;Ljava/util/Set;Lidesyde/core/Explorer$Configuration;)Ljava/util/stream/Stream;", &[
                     JValue::Object(&java_m),
                     JValue::Object(&java_sols),
@@ -909,18 +897,19 @@ impl Explorer for JavaModuleExplorer {
             top_env.new_global_ref(iter)
         });
         if let Ok(iter) = exploration_iter {
-            Box::new(
+            Arc::new(Mutex::new(
                 std::iter::repeat_with(move || {
                     if let Ok(mut top_env) = java_vm.attach_current_thread_permanently() {
                         let has_next = top_env
                             .call_method(&iter, "hasNext", "()Z", &[])
-                            .and_then(|x| x.z());
-                        if let Ok(true) = has_next {
-                            let next_java_maybe = top_env
-                                .call_method(&iter, "next", "()Ljava/lang/Object;", &[])
-                                .and_then(|x| x.l());
-                            if let Ok(next_java) = next_java_maybe {
-                                return ExplorationSolution::from_java(&mut top_env, next_java).ok();
+                                .and_then(|x| x.z());
+                        if has_next.map(|x| x == true).unwrap_or(false) {
+                            let next_java_opt = top_env.with_local_frame_returning_local(1024, |env| {
+                                env.call_method(&iter, "next", "()Ljava/lang/Object;", &[])?.l()
+                            });
+                            if let Ok(next_java) = next_java_opt {
+                                return ExplorationSolution::from_java(&mut top_env, next_java)
+                                    .ok();
                             }
                         }
                     }
@@ -928,9 +917,9 @@ impl Explorer for JavaModuleExplorer {
                 })
                 .take_while(|x| x.is_some())
                 .flatten(),
-            )
+            ))
         } else {
-            Box::new(std::iter::empty())
+            Arc::new(Mutex::new(std::iter::empty()))
         }
     }
 }

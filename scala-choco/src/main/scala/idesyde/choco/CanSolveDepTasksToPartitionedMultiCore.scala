@@ -54,7 +54,7 @@ final class CanSolveDepTasksToPartitionedMultiCore
   ): (Model, Map[String, IntVar]) = {
     val chocoModel = Model()
     val timeValues =
-      (m.workload.periods ++ m.wcets.flatten.filter(_ > 0) ++ m.workload.relative_deadlines).sorted
+      (m.workload.periods ++ m.wcets.flatten.filter(_ > 0) ++ m.workload.relative_deadlines).sorted.filter(_ < Double.PositiveInfinity)
     val memoryValues = m.platform.hardware.storageSizes ++
       m.workload.messagesMaxSizes ++
       m.workload.processSizes
@@ -120,7 +120,7 @@ final class CanSolveDepTasksToPartitionedMultiCore
         s"task_exec($t)",
         m.platform.hardware.processingElems.zipWithIndex
           .filter((_, j) => m.wcets(i)(j) > -1)
-          .filter((p, j) => m.wcets(i)(j) <= periods(i))
+          .filter((p, j) => m.wcets(i)(j) <= m.workload.periods(i))
           .map((m, j) => j)
           .toArray
       )
@@ -359,7 +359,7 @@ final class CanSolveDepTasksToPartitionedMultiCore
       configuration: Explorer.Configuration
   ): ExplorationSolution = {
     val timeValues =
-      (m.workload.periods ++ m.wcets.flatten.filter(_ > 0) ++ m.workload.relative_deadlines)
+      (m.workload.periods ++ m.wcets.flatten.filter(_ > 0) ++ m.workload.relative_deadlines).filter(_ < Double.PositiveInfinity)
     val memoryValues = m.platform.hardware.storageSizes ++
       m.workload.messagesMaxSizes ++
       m.workload.processSizes

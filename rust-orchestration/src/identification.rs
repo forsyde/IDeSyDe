@@ -1,37 +1,18 @@
 use std::{
-    collections::HashSet,
-    f32::consts::E,
     net::TcpStream,
-    ops::Index,
-    sync::{Arc, Mutex},
-    time::Duration,
+    sync::Arc,
 };
 
 use idesyde_core::{
-    merge_identification_results, DecisionModel, DesignModel, IdentificationIterator,
+    merge_identification_results, DecisionModel, DesignModel, 
     IdentificationResult, IdentificationRuleLike, Module, OpaqueDecisionModel, OpaqueDesignModel,
 };
 
 use log::debug;
-use rusqlite::{params, Connection};
-use serde::de;
+use rusqlite::params;
 use tungstenite::WebSocket;
 
 use rayon::prelude::*;
-
-// impl HttpServerLike for ExternalServerIdentificationModule {
-//     fn get_client(&self) -> Arc<reqwest::blocking::Client> {
-//         self.client.clone()
-//     }
-
-//     fn get_address(&self) -> std::net::IpAddr {
-//         self.address.to_owned()
-//     }
-
-//     fn get_port(&self) -> usize {
-//         self.port
-//     }
-// }
 
 pub struct ExternalServerIdentifiticationIterator {
     design_models: Vec<Arc<dyn DesignModel>>,
@@ -150,39 +131,6 @@ impl Iterator for ExternalServerIdentifiticationIterator {
     }
 }
 
-impl IdentificationIterator for ExternalServerIdentifiticationIterator {
-    fn next_with_models(
-        &mut self,
-        decision_models: &Vec<Arc<dyn DecisionModel>>,
-        design_models: &Vec<Arc<dyn DesignModel>>,
-    ) -> Option<IdentificationResult> {
-        self.decision_models_to_upload.extend(
-            decision_models
-                .iter()
-                .filter(|&m| {
-                    !self.decision_models.iter().any(|x| {
-                        x.partial_cmp(m) == Some(std::cmp::Ordering::Greater)
-                            || x.partial_cmp(m) == Some(std::cmp::Ordering::Equal)
-                    })
-                })
-                .map(|x| x.to_owned()),
-        );
-        self.design_models_to_upload.extend(
-            design_models
-                .iter()
-                .filter(|&x| !self.design_models.contains(x))
-                .map(|x| x.to_owned()),
-        );
-        return self.next();
-    }
-
-    // fn collect_messages(&mut self) -> Vec<(String, String)> {
-    //     self.messages
-    //         .iter()
-    //         .map(|msg| ("DEBUG".to_owned(), msg.to_owned()))
-    //         .collect()
-    // }
-}
 
 impl Drop for ExternalServerIdentifiticationIterator {
     fn drop(&mut self) {

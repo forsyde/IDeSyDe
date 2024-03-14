@@ -26,19 +26,6 @@ public interface ForSyDeIOModule extends StandaloneModule {
         } else {
             return Optional.empty();
         }
-        // var pathOpt = opaque.format().modelPaths().stream().map(x -> Paths.get(x))
-        // .filter(x -> modelHandler.canLoadModel(x)).findAny();
-        // var extIdxOpt = pathOpt.map(x -> x.getFileName().toString().indexOf("."));
-        // var extOpt = extIdxOpt.flatMap(x -> pathOpt.map(p ->
-        // p.getFileName().toString().substring(x + 1)));
-        // return opaque.body().flatMap(b -> extOpt.flatMap(ext -> {
-        // try {
-        // return Optional.of(new ForSyDeIODesignModel(modelHandler.readModel(b, ext)));
-        // } catch (Exception e) {
-        // e.printStackTrace();
-        // return Optional.empty();
-        // }
-        // }));
     }
 
     @Override

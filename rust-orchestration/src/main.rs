@@ -254,7 +254,7 @@ fn main() {
         let mut modules = idesyde_orchestration::find_modules(modules_path);
 
         // add embedded modules
-        modules.push(Arc::new(idesyde_common::make_common_module()));
+        modules.push(Arc::new(idesyde_common::make_module()));
 
         // add externally declared modules
         if let Some(external_modules) = args.module {

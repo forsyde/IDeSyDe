@@ -20,8 +20,8 @@ use crate::models::{
 };
 
 pub fn identify_partitioned_mem_mapped_multicore(
-    _design_models: &Vec<Arc<dyn DesignModel>>,
-    decision_models: &Vec<Arc<dyn DecisionModel>>,
+    _design_models: &[Arc<dyn DesignModel>],
+    decision_models: &[Arc<dyn DecisionModel>],
 ) -> IdentificationResult {
     let mut new_models = Vec::new();
     let mut errors: Vec<String> = Vec::new();
@@ -69,8 +69,8 @@ pub fn identify_partitioned_mem_mapped_multicore(
 }
 
 pub fn identify_partitioned_tiled_multicore(
-    _design_models: &Vec<Arc<dyn DesignModel>>,
-    decision_models: &Vec<Arc<dyn DecisionModel>>,
+    _design_models: &[Arc<dyn DesignModel>],
+    decision_models: &[Arc<dyn DecisionModel>],
 ) -> IdentificationResult {
     let mut new_models = Vec::new();
     let mut errors: Vec<String> = Vec::new();
@@ -132,8 +132,8 @@ pub fn identify_partitioned_tiled_multicore(
 /// 3. build the job graph parameters for each WCC, for each AnalysedSDFApplication,
 /// 4. return all the built AsynchronousAperiodicDataflow.
 pub fn identify_asynchronous_aperiodic_dataflow_from_sdf(
-    _design_models: &Vec<Arc<dyn DesignModel>>,
-    decision_models: &Vec<Arc<dyn DecisionModel>>,
+    _design_models: &[Arc<dyn DesignModel>],
+    decision_models: &[Arc<dyn DecisionModel>],
 ) -> IdentificationResult {
     let mut identified = Vec::new();
     let mut errors: Vec<String> = Vec::new();
@@ -392,8 +392,8 @@ pub fn identify_asynchronous_aperiodic_dataflow_from_sdf(
 }
 
 pub fn identify_aperiodic_asynchronous_dataflow_to_partitioned_tiled_multicore(
-    _design_models: &Vec<Arc<dyn DesignModel>>,
-    decision_models: &Vec<Arc<dyn DecisionModel>>,
+    _design_models: &[Arc<dyn DesignModel>],
+    decision_models: &[Arc<dyn DecisionModel>],
 ) -> IdentificationResult {
     let mut identified: Vec<Arc<dyn DecisionModel>> = Vec::new();
     let mut errors: Vec<String> = Vec::new();
@@ -464,8 +464,8 @@ pub fn identify_aperiodic_asynchronous_dataflow_to_partitioned_tiled_multicore(
 
 /// This identification rule enriches an SDFApplication with the repetition vector and a PASS.
 pub fn identify_analyzed_sdf_from_common_sdf(
-    _design_models: &Vec<Arc<dyn DesignModel>>,
-    decision_models: &Vec<Arc<dyn DecisionModel>>,
+    _design_models: &[Arc<dyn DesignModel>],
+    decision_models: &[Arc<dyn DecisionModel>],
 ) -> IdentificationResult {
     let mut identified = Vec::new();
     let mut msgs: Vec<String> = Vec::new();
@@ -550,8 +550,8 @@ pub fn identify_analyzed_sdf_from_common_sdf(
 }
 
 pub fn identify_aperiodic_asynchronous_dataflow_to_partitioned_mem_mappable_multicore(
-    _design_models: &Vec<Arc<dyn DesignModel>>,
-    decision_models: &Vec<Arc<dyn DecisionModel>>,
+    _design_models: &[Arc<dyn DesignModel>],
+    decision_models: &[Arc<dyn DecisionModel>],
 ) -> IdentificationResult {
     let mut identified: Vec<Arc<dyn DecisionModel>> = Vec::new();
     let mut errors: Vec<String> = Vec::new();

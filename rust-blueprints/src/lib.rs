@@ -9,9 +9,7 @@ use std::{
 use clap::Parser;
 use derive_builder::Builder;
 use idesyde_core::{
-    DecisionModel, DesignModel, ExplorationSolution, Explorer, IdentificationIterator,
-    IdentificationResult, MarkedIdentificationRule, Module, OpaqueDecisionModel,
-    ReverseIdentificationRule,
+    DecisionModel, DesignModel, ExplorationSolution, Explorer, IdentificationResult, IdentificationRuleLike, MarkedIdentificationRule, Module, OpaqueDecisionModel, ReverseIdentificationRule
 };
 use log::debug;
 use serde::{Deserialize, Serialize};
@@ -116,13 +114,13 @@ impl From<&ExplorationSolutionMessage> for OpaqueDecisionModel {
     }
 }
 
-#[derive(Clone, Builder, PartialEq, Eq)]
+#[derive(Clone, Builder)]
 pub struct StandaloneModule {
     unique_identifier: String,
     #[builder(default = "Vec::new()")]
     explorers: Vec<Arc<dyn Explorer>>,
     #[builder(default = "vec![]")]
-    identification_rules: Vec<MarkedIdentificationRule>,
+    identification_rules: Vec<Arc<dyn IdentificationRuleLike>>,
     #[builder(default = "vec![]")]
     reverse_identification_rules: Vec<ReverseIdentificationRule>,
     #[builder(default = "|_| { None }")]
@@ -148,228 +146,6 @@ impl StandaloneModule {
     }
     pub fn opaque_to_model(&self, opaque: &OpaqueDecisionModel) -> Option<Arc<dyn DecisionModel>> {
         return (self.opaque_to_model)(opaque);
-    }
-}
-
-/// A simple iterator for performing identification in-process.
-#[derive(Builder, PartialEq, Eq, Clone)]
-struct DefaultIdentificationIterator {
-    #[builder(default = "Vec::new()")]
-    design_models: Vec<Arc<dyn DesignModel>>,
-    #[builder(default = "Vec::new()")]
-    decision_models: Vec<Arc<dyn DecisionModel>>,
-    imodule: Arc<StandaloneModule>,
-}
-
-impl Iterator for DefaultIdentificationIterator {
-    type Item = IdentificationResult;
-
-    fn next(&mut self) -> Option<Self::Item> {
-        // let mut identified = vec![];
-        // Assume that all the models which could have been made non-opaque, did.
-        // let (tx_model, rx_model) = std::sync::mpsc::channel::<Arc<dyn DecisionModel>>();
-        // let (tx_msg, rx_msg) = std::sync::mpsc::channel::<String>();
-        let par_identified: Vec<IdentificationResult> = self
-            .imodule
-            .identification_rules
-            .par_iter()
-            .flat_map_iter(|irule| match irule {
-                MarkedIdentificationRule::DesignModelOnlyIdentificationRule(f) => {
-                    if !self.design_models.is_empty() {
-                        Some(f)
-                    } else {
-                        None
-                    }
-                }
-                MarkedIdentificationRule::DecisionModelOnlyIdentificationRule(f) => {
-                    if !self.decision_models.is_empty() {
-                        Some(f)
-                    } else {
-                        None
-                    }
-                }
-                MarkedIdentificationRule::GenericIdentificationRule(f) => Some(f),
-                MarkedIdentificationRule::SpecificDecisionModelIdentificationRule(ms, f) => {
-                    if ms
-                        .iter()
-                        .all(|x| self.decision_models.iter().any(|y| x == &y.category()))
-                    {
-                        Some(f)
-                    } else {
-                        None
-                    }
-                }
-            })
-            .map(|f| f(&self.design_models, &self.decision_models))
-            .map(|(models, msgs)| {
-                (
-                    models
-                        .into_iter()
-                        .map(|model| {
-                            model
-                                .downcast_ref::<OpaqueDecisionModel>()
-                                .and_then(|opaque| self.imodule.opaque_to_model(opaque))
-                                .unwrap_or(model)
-                        })
-                        .collect(),
-                    msgs,
-                )
-            })
-            .collect();
-        let mut messages = vec![];
-        for (ms, msgs) in par_identified {
-            for m in ms {
-                if !self.decision_models.contains(&m) {
-                    self.decision_models.push(m);
-                }
-            }
-            for msg in msgs {
-                if !messages.contains(&msg) {
-                    messages.push(msg);
-                }
-            }
-        }
-        Some((self.decision_models.clone(), messages))
-    }
-}
-
-impl IdentificationIterator for DefaultIdentificationIterator {
-    fn next_with_models(
-        &mut self,
-        decision_models: &Vec<Arc<dyn DecisionModel>>,
-        design_models: &Vec<Arc<dyn DesignModel>>,
-    ) -> Option<IdentificationResult> {
-        // first, add everything
-        for m in design_models {
-            if !self.design_models.contains(m) {
-                self.design_models.push(m.to_owned());
-            }
-        }
-        for m in decision_models {
-            let refined = m
-                .downcast_ref::<OpaqueDecisionModel>()
-                .and_then(|opaque| self.imodule.opaque_to_model(opaque))
-                .unwrap_or(m.to_owned());
-            if !self.decision_models.contains(&refined) {
-                self.decision_models.push(refined.to_owned());
-            }
-        }
-        return self.next();
-    }
-
-    // fn collect_messages(&mut self) -> Vec<(String, String)> {
-    //     self.messages
-    //         .iter()
-    //         .map(|x| ("DEBUG".to_string(), x.to_owned()))
-    //         .collect()
-    // }
-}
-
-impl Module for StandaloneModule {
-    fn unique_identifier(&self) -> String {
-        self.unique_identifier.to_owned()
-    }
-
-    fn identification_step(
-        &self,
-        decision_models: &Vec<Arc<dyn DecisionModel>>,
-        design_models: &Vec<Arc<dyn DesignModel>>,
-    ) -> IdentificationResult {
-        // Box::new(DefaultIdentificationIteratorBuilder::default()
-        //     .decision_models(initial_decision_models.to_owned())
-        //     .design_models(initial_design_models.to_owned())
-        //     .imodule(Arc::new(self.to_owned()))
-        //     .build()
-        //     .expect("Failed to create an identification iterator by an identification module. Should never happen."))
-        // Assume that all the models which could have been made non-opaque, did.
-        // let (tx_model, rx_model) = std::sync::mpsc::channel::<Arc<dyn DecisionModel>>();
-        // let (tx_msg, rx_msg) = std::sync::mpsc::channel::<String>();
-        let mut identified_models = vec![];
-        for m in decision_models {
-            if let Some(refined) = m.downcast_ref::<OpaqueDecisionModel>().and_then(self.opaque_to_model) {
-                // debug!("Refining a {}", refined.category());
-                identified_models.push(refined);
-            } else {
-                identified_models.push(m.clone());
-            }
-        }
-        let par_identified: Vec<IdentificationResult> = self
-            .identification_rules
-            .par_iter()
-            .flat_map_iter(|irule| match irule {
-                MarkedIdentificationRule::DesignModelOnlyIdentificationRule(f) => {
-                    if !design_models.is_empty() {
-                        Some(f)
-                    } else {
-                        None
-                    }
-                }
-                MarkedIdentificationRule::DecisionModelOnlyIdentificationRule(f) => {
-                    if !decision_models.is_empty() {
-                        Some(f)
-                    } else {
-                        None
-                    }
-                }
-                MarkedIdentificationRule::GenericIdentificationRule(f) => Some(f),
-                MarkedIdentificationRule::SpecificDecisionModelIdentificationRule(ms, f) => {
-                    if ms
-                        .iter()
-                        .all(|x| decision_models.iter().any(|y| x == &y.category()))
-                    {
-                        Some(f)
-                    } else {
-                        None
-                    }
-                }
-            })
-            .map(|f| f(&design_models, &identified_models))
-            .map(|(models, msgs)| {
-                (
-                    models
-                        .into_iter()
-                        .map(|model| {
-                            model
-                                .downcast_ref::<OpaqueDecisionModel>()
-                                .and_then(self.opaque_to_model)
-                                .unwrap_or(model)
-                        })
-                        .collect(),
-                    msgs,
-                )
-            })
-            .collect();
-        let mut messages = vec![];
-        for (ms, msgs) in par_identified {
-            for m in ms {
-                if !identified_models.contains(&m) {
-                    identified_models.push(m);
-                }
-            }
-            for msg in msgs {
-                if !messages.contains(&msg) {
-                    messages.push(msg);
-                }
-            }
-        }
-        (identified_models, messages)
-    }
-
-    fn reverse_identification(
-        &self,
-        solved_decision_models: &Vec<Arc<dyn DecisionModel>>,
-        design_models: &Vec<Arc<dyn DesignModel>>,
-    ) -> Vec<Arc<dyn DesignModel>> {
-        let decs = solved_decision_models.to_owned();
-        let dess = design_models.to_owned();
-        self.reverse_identification_rules
-            .par_iter()
-            .flat_map(move |f| f(&decs, &dess))
-            .collect()
-    }
-
-    fn explorers(&self) -> Vec<Arc<dyn Explorer>> {
-        self.explorers.to_owned()
     }
 }
 

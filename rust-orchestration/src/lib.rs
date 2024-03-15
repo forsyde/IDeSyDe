@@ -3,7 +3,6 @@ pub mod identification;
 
 use std::borrow::BorrowMut;
 use std::cmp::Ordering;
-use std::collections::HashSet;
 use std::hash::Hash;
 
 use std::io::BufRead;
@@ -20,11 +19,9 @@ use std::process::ChildStdout;
 use std::process::Stdio;
 use std::sync::Arc;
 use std::sync::Mutex;
-use std::time::Duration;
 
 use exploration::ExternalExplorerBuilder;
 
-use identification::ExternalServerIdentifiticationIterator;
 use idesyde_blueprints::IdentificationResultCompactMessage;
 use idesyde_bridge_java::java_modules_from_jar_paths;
 use idesyde_core::DecisionModel;
@@ -39,9 +36,6 @@ use log::debug;
 use log::warn;
 use rayon::prelude::*;
 use reqwest::blocking::multipart::Form;
-use reqwest::blocking::multipart::Part;
-use serde::de;
-use tungstenite::protocol::WebSocketConfig;
 use url::Url;
 
 use base64::{engine::general_purpose, Engine as _};

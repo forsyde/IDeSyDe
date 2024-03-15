@@ -20,7 +20,6 @@ cxx = "1.0"
 cxx-build = "1.0"
 derive_builder = "0.20.0"
 downcast-rs = "1.2.0"
-jars = "0.1.1"
 jni = { version = "0.21.1", features = ["invocation"] }
 log = "0.4.17"
 md5 = "0.7.0"
@@ -36,7 +35,6 @@ reqwest = { version = "0.11.18", default-features = false, features = [
   "json",
   "multipart",
 ] }
-reqwest-eventsource = "0.5.0"
 rmp-serde = "1.1"
 schemars = "0.8.12"
 serde = { version = "1.0", features = ["derive"] }
@@ -50,6 +48,6 @@ rusqlite = { version = "0.31.0", features = ["bundled", "blob", "functions"] }
 zip = "0.6.6"
 
 [workspace.package]
-version = "0.7.6"
+version = "0.8.0"
 authors = ["Rodolfo Jordao"]
 edition = "2021"

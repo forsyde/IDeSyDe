@@ -13,4 +13,3 @@ idesyde-common = { path = "../rust-common" }
 derive_builder.workspace = true
 jni.workspace = true
 zip.workspace = true
-jars.workspace = true

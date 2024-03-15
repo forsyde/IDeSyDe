@@ -2,12 +2,12 @@ package idesyde.devicetree.identification
 
 import idesyde.core.DesignModel
 import idesyde.core.DecisionModel
-import idesyde.common.SharedMemoryMultiCore
+import idesyde.common.legacy.SharedMemoryMultiCore
 import idesyde.devicetree.utils.HasDeviceTreeUtils
 import scala.collection.mutable.Buffer
 import spire.math.Rational
 import scala.collection.mutable
-import idesyde.common.PartitionedCoresWithRuntimes
+import idesyde.common.legacy.PartitionedCoresWithRuntimes
 import idesyde.devicetree.RootNode
 
 trait PlatformRules extends HasDeviceTreeUtils {
@@ -108,11 +108,11 @@ trait PlatformRules extends HasDeviceTreeUtils {
             PartitionedCoresWithRuntimes(
               processors = dm.description.oses.values.map(_.affinity.head).toVector,
               schedulers = dm.description.oses.keySet.toVector,
-              isBareMetal =
+              is_bare_metal =
                 dm.description.oses.values.map(o => o.policy.exists(_ == "standalone")).toVector,
-              isFixedPriority =
+              is_fixed_priority =
                 dm.description.oses.values.map(o => o.policy.exists(_.contains("FP"))).toVector,
-              isCyclicExecutive =
+              is_cyclic_executive =
                 dm.description.oses.values.map(o => o.policy.exists(_.contains("SCS"))).toVector
             )
           ),

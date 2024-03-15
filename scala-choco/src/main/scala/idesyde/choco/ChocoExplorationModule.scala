@@ -6,11 +6,11 @@ import upickle.default._
 
 import idesyde.blueprints.StandaloneModule
 import idesyde.core.DecisionModel
-import idesyde.common.SDFToTiledMultiCore
+import idesyde.common.legacy.SDFToTiledMultiCore
 import idesyde.choco.ChocoExplorer
 import spire.math.Rational
-import idesyde.common.PeriodicWorkloadToPartitionedSharedMultiCore
-import idesyde.common.PeriodicWorkloadAndSDFServerToMultiCoreOld
+import idesyde.common.legacy.PeriodicWorkloadToPartitionedSharedMultiCore
+import idesyde.common.legacy.PeriodicWorkloadAndSDFServerToMultiCoreOld
 import idesyde.core.OpaqueDecisionModel
 import java.util.Optional
 

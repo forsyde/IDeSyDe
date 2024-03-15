@@ -1,7 +1,10 @@
 package idesyde.core;
 
+import java.util.Arrays;
+import java.util.Optional;
 import java.util.Set;
 import java.util.function.BiFunction;
+import java.util.stream.Collectors;
 
 /**
  * A class that represent an identification rule, including how it partially
@@ -11,6 +14,11 @@ import java.util.function.BiFunction;
  */
 public interface IdentificationRule extends
         BiFunction<Set<? extends DesignModel>, Set<? extends DecisionModel>, IdentificationResult> {
+
+    default IdentificationResult fromArrays(DesignModel[] designModels, DecisionModel[] decisionModels) {
+        return apply(Arrays.stream(designModels).collect(Collectors.toSet()),
+                Arrays.stream(decisionModels).collect(Collectors.toSet()));
+    }
 
     default boolean usesDesignModels() {
         return true;

@@ -1,7 +1,10 @@
 package idesyde.core;
 
+import java.util.Arrays;
 import java.util.Set;
 import java.util.function.BiFunction;
+import java.util.stream.Collector;
+import java.util.stream.Collectors;
 
 /**
  * A class that represents reverse identification rules. It is not more than a
@@ -11,6 +14,10 @@ import java.util.function.BiFunction;
  */
 public interface ReverseIdentificationRule extends
                 BiFunction<Set<? extends DecisionModel>, Set<? extends DesignModel>, Set<? extends DesignModel>> {
+
+        default Set<? extends DesignModel> fromArrays(DecisionModel[] decisionModels, DesignModel[] designModels) {
+                return this.apply(Arrays.stream(decisionModels).collect(Collectors.toSet()), Arrays.stream(designModels).collect(Collectors.toSet()));
+        }
 
         /**
          * A simple wrapper for a function that satisfies the proper reverse

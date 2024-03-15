@@ -1,0 +1,8 @@
+plugins {
+    id 'idesyde.java-library'
+}
+
+dependencies {
+    implementation project(":java-core")
+    implementation 'com.squareup:javapoet:1.13.0'
+}

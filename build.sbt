@@ -1,7 +1,7 @@
-maintainer := "jordao@kth.se"
+// maintainer := "jordao@kth.se"
 organization := "io.forsyde.github"
 
-ThisBuild / scalaVersion := "3.3.0"
+ThisBuild / scalaVersion := "3.4.0"
 ThisBuild / versionScheme := Some("early-semver")
 ThisBuild / publishMavenStyle := true
 ThisBuild / publishTo := Some(Opts.resolver.sonatypeStaging)
@@ -96,8 +96,8 @@ lazy val common = (project in file("scala-common"))
   // .dependsOn(core)
   // .dependsOn(blueprints)
   // .enablePlugins(ScalaNativePlugin)
-  .enablePlugins(UniversalPlugin, JavaAppPackaging, JlinkPlugin)
-  .enablePlugins(JDKPackagerPlugin)
+  // .enablePlugins(UniversalPlugin, JavaAppPackaging, JlinkPlugin)
+  // .enablePlugins(JDKPackagerPlugin)
   // .enablePlugins(GraalVMNativeImagePlugin)
   .settings(
     // name := "idesyde-scala-common",
@@ -115,10 +115,10 @@ lazy val common = (project in file("scala-common"))
       "MIT"  -> url("https://opensource.org/license/mit/"),
       "APL2" -> url("https://www.apache.org/licenses/LICENSE-2.0")
     ),
-    jlinkIgnoreMissingDependency := JlinkIgnore.byPackagePrefix(
-      "scala.quoted"                -> "scala",
-      "scalax.collection.generator" -> "org.scalacheck"
-    )
+    // jlinkIgnoreMissingDependency := JlinkIgnore.byPackagePrefix(
+    //   "scala.quoted"                -> "scala",
+    //   "scalax.collection.generator" -> "org.scalacheck"
+    // )
   )
 
 lazy val scala_legacy = (project in file("scala-bridge-forsyde-io"))
@@ -127,8 +127,8 @@ lazy val scala_legacy = (project in file("scala-bridge-forsyde-io"))
   .dependsOn(devicetree)
   .dependsOn(choco)
   // .dependsOn(blueprints)
-  .enablePlugins(UniversalPlugin, JavaAppPackaging, JlinkPlugin)
-  .enablePlugins(JDKPackagerPlugin)
+  // .enablePlugins(UniversalPlugin, JavaAppPackaging, JlinkPlugin)
+  // .enablePlugins(JDKPackagerPlugin)
   // .enablePlugins(GraalVMNativeImagePlugin)
   .settings(
     // name := "idesyde-scala-bridge-forsyde-io",
@@ -148,32 +148,32 @@ lazy val scala_legacy = (project in file("scala-bridge-forsyde-io"))
       "APL2" -> url("https://www.apache.org/licenses/LICENSE-2.0"),
       "EPL2" -> url("https://www.eclipse.org/legal/epl-2.0/")
     ),
-    jlinkModulePath := {
-      val paths = (jlinkBuildImage / fullClasspath).value
-      paths
-        .filter(f => {
-          f.get(moduleID.key)
-            .exists(mID =>
-              mID.name.contains("jheaps") ||
-                mID.name.contains("antlr4") ||
-                mID.name.contains("automaton") ||
-                mID.name.contains("xchart") ||
-                mID.name == "commons-lang3" ||
-                mID.name.contains("trove4j")
-            )
-          // f.get(moduleID.key).exists(mID => mID.name.contains("amalthea")) ||
-          // f.get(moduleID.key).exists(mID => mID.name.contains("emf")) ||
-          // f.get(moduleID.key).exists(mID => mID.name.contains("lang3"))
-        })
-        .map(_.data)
-    },
-    jlinkIgnoreMissingDependency := JlinkIgnore.byPackagePrefix(
-      "scala.quoted"                          -> "scala",
-      "scalax.collection.generator"           -> "org.scalacheck",
-      "org.glassfish.jaxb.runtime.v2.runtime" -> "com.sun.xml",
-      "org.glassfish.jaxb.runtime.v2.runtime" -> "org.jvnet",
-      "org.antlr.runtime"                     -> "org.antlr.stringtemplate"
-    )
+    // jlinkModulePath := {
+    //   val paths = (jlinkBuildImage / fullClasspath).value
+    //   paths
+    //     .filter(f => {
+    //       f.get(moduleID.key)
+    //         .exists(mID =>
+    //           mID.name.contains("jheaps") ||
+    //             mID.name.contains("antlr4") ||
+    //             mID.name.contains("automaton") ||
+    //             mID.name.contains("xchart") ||
+    //             mID.name == "commons-lang3" ||
+    //             mID.name.contains("trove4j")
+    //         )
+    //       // f.get(moduleID.key).exists(mID => mID.name.contains("amalthea")) ||
+    //       // f.get(moduleID.key).exists(mID => mID.name.contains("emf")) ||
+    //       // f.get(moduleID.key).exists(mID => mID.name.contains("lang3"))
+    //     })
+    //     .map(_.data)
+    // },
+    // jlinkIgnoreMissingDependency := JlinkIgnore.byPackagePrefix(
+    //   "scala.quoted"                          -> "scala",
+    //   "scalax.collection.generator"           -> "org.scalacheck",
+    //   "org.glassfish.jaxb.runtime.v2.runtime" -> "com.sun.xml",
+    //   "org.glassfish.jaxb.runtime.v2.runtime" -> "org.jvnet",
+    //   "org.antlr.runtime"                     -> "org.antlr.stringtemplate"
+    // )
   )
 
 // lazy val minizinc = (project in file("scala-minizinc"))
@@ -197,8 +197,8 @@ lazy val choco = (project in file("scala-choco"))
   .dependsOn(common)
   // .dependsOn(forsyde)
   // .dependsOn(blueprints)
-  .enablePlugins(UniversalPlugin, JavaAppPackaging, JlinkPlugin)
-  .enablePlugins(JDKPackagerPlugin)
+  // .enablePlugins(UniversalPlugin, JavaAppPackaging, JlinkPlugin)
+  // .enablePlugins(JDKPackagerPlugin)
   // .enablePlugins(GraalVMNativeImagePlugin)
   .settings(
     // name := "idesyde-scala-choco",
@@ -215,32 +215,32 @@ lazy val choco = (project in file("scala-choco"))
     ),
     Compile / mainClass := Some("idesyde.choco.ChocoExplorationModule"),
     // moduleSettings,
-    jlinkModulePath := {
-      val paths = (jlinkBuildImage / fullClasspath).value
-      paths
-        .filter(f => {
-          f.get(moduleID.key).exists(mID => mID.name.contains("jheaps")) ||
-          // f.get(moduleID.key).exists(mID => mID.name.contains("fastutil")) ||
-          // f.get(moduleID.key).exists(mID => mID.name.contains("commons-text")) ||
-          f.get(moduleID.key).exists(mID => mID.name.contains("antlr4")) ||
-          f.get(moduleID.key).exists(mID => mID.name.contains("automaton")) ||
-          f.get(moduleID.key).exists(mID => mID.name.contains("xchart")) ||
-          f.get(moduleID.key).exists(mID => mID.name.contains("trove4j"))
-        })
-        .map(_.data)
-    },
-    graalVMNativeImageOptions := Seq("--no-fallback", "-H:+ReportExceptionStackTraces"),
-    jlinkIgnoreMissingDependency := JlinkIgnore.byPackagePrefix(
-      "scala.quoted"                          -> "scala",
-      "scalax.collection.generator"           -> "org.scalacheck",
-      "org.glassfish.jaxb.runtime.v2.runtime" -> "com.sun.xml",
-      "org.glassfish.jaxb.runtime.v2.runtime" -> "org.jvnet",
-      "org.antlr.runtime"                     -> "org.antlr.stringtemplate",
-      "org.knowm.xchart"                      -> "org.apache.pdfbox",
-      "org.knowm.xchart"                      -> "de.rototor",
-      "org.knowm.xchart"                      -> "de.erichseifert",
-      "org.knowm.xchart"                      -> "com.madgag"
-    )
+    // jlinkModulePath := {
+    //   val paths = (jlinkBuildImage / fullClasspath).value
+    //   paths
+    //     .filter(f => {
+    //       f.get(moduleID.key).exists(mID => mID.name.contains("jheaps")) ||
+    //       // f.get(moduleID.key).exists(mID => mID.name.contains("fastutil")) ||
+    //       // f.get(moduleID.key).exists(mID => mID.name.contains("commons-text")) ||
+    //       f.get(moduleID.key).exists(mID => mID.name.contains("antlr4")) ||
+    //       f.get(moduleID.key).exists(mID => mID.name.contains("automaton")) ||
+    //       f.get(moduleID.key).exists(mID => mID.name.contains("xchart")) ||
+    //       f.get(moduleID.key).exists(mID => mID.name.contains("trove4j"))
+    //     })
+    //     .map(_.data)
+    // },
+    // graalVMNativeImageOptions := Seq("--no-fallback", "-H:+ReportExceptionStackTraces"),
+    // jlinkIgnoreMissingDependency := JlinkIgnore.byPackagePrefix(
+    //   "scala.quoted"                          -> "scala",
+    //   "scalax.collection.generator"           -> "org.scalacheck",
+    //   "org.glassfish.jaxb.runtime.v2.runtime" -> "com.sun.xml",
+    //   "org.glassfish.jaxb.runtime.v2.runtime" -> "org.jvnet",
+    //   "org.antlr.runtime"                     -> "org.antlr.stringtemplate",
+    //   "org.knowm.xchart"                      -> "org.apache.pdfbox",
+    //   "org.knowm.xchart"                      -> "de.rototor",
+    //   "org.knowm.xchart"                      -> "de.erichseifert",
+    //   "org.knowm.xchart"                      -> "com.madgag"
+    // )
   )
 
 // lazy val matlab = (project in file("scala-bridge-matlab"))
@@ -273,8 +273,8 @@ lazy val devicetree = (project in file("scala-bridge-device-tree"))
   // .dependsOn(core)
   .dependsOn(common)
   // .dependsOn(blueprints)
-  .enablePlugins(UniversalPlugin, JavaAppPackaging, JlinkPlugin)
-  .enablePlugins(JDKPackagerPlugin)
+  // .enablePlugins(UniversalPlugin, JavaAppPackaging, JlinkPlugin)
+  // .enablePlugins(JDKPackagerPlugin)
   .settings(
     // name := "idesyde-scala-bridge-device-tree",
     libraryDependencies ++= Seq(
@@ -348,6 +348,8 @@ ThisBuild / assembly / assemblyMergeStrategy := {
   case PathList("META-INF", xs @ _*) =>
     (xs map { _.toLowerCase }) match {
       case "services" :: xs =>
+        MergeStrategy.filterDistinctLines
+      case "idesyde" :: xs =>
         MergeStrategy.filterDistinctLines
       case _ => MergeStrategy.discard
     }

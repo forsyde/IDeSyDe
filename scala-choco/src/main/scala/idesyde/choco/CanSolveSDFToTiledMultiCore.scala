@@ -21,7 +21,7 @@ import idesyde.identification.choco.interfaces.ChocoModelMixin
 import org.chocosolver.solver.search.loop.monitors.IMonitorContradiction
 import org.chocosolver.solver.exception.ContradictionException
 import scala.collection.mutable.Buffer
-import idesyde.common.SDFToTiledMultiCore
+import idesyde.common.legacy.SDFToTiledMultiCore
 import org.chocosolver.solver.objective.OptimizationPolicy
 import idesyde.identification.choco.models.sdf.CompactingMultiCoreMapping
 import org.jgrapht.graph.SimpleDirectedGraph

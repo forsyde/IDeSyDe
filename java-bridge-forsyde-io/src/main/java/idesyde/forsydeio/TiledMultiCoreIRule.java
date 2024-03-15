@@ -7,6 +7,7 @@ import java.util.Map;
 import java.util.Set;
 import java.util.stream.Collectors;
 
+import idesyde.core.*;
 import org.jgrapht.alg.shortestpath.FloydWarshallShortestPaths;
 import org.jgrapht.graph.AsSubgraph;
 
@@ -18,12 +19,9 @@ import forsyde.io.lib.hierarchy.platform.hardware.GenericMemoryModule;
 import forsyde.io.lib.hierarchy.platform.hardware.GenericProcessingModule;
 import idesyde.common.MemoryMappableMultiCore;
 import idesyde.common.TiledMultiCore;
-import idesyde.core.DecisionModel;
-import idesyde.core.DesignModel;
-import idesyde.core.IdentificationResult;
-import idesyde.core.IdentificationRule;
 
-class TiledMultiCoreIRule implements IdentificationRule {
+@AutoRegister(ForSyDeIOModule.class)
+public class TiledMultiCoreIRule implements IdentificationRule {
 
     private record Pair<A, B>(A fst, B snd) {
     };

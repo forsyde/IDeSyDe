@@ -474,6 +474,7 @@ trait StandaloneExplorationModule
         config.jetty.multipartConfig.maxTotalRequestSize(1, SizeUnit.GB);
         config.jetty.contextHandlerConfig(ctx => {
           ctx.setMaxFormContentSize(100000000);
+
         });
         config.jetty.wsFactoryConfig(wsconfig => {
           wsconfig.setMaxTextMessageSize(1000000000);

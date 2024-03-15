@@ -1,20 +1,26 @@
 [workspace]
 members = [
-    "rust-core",
-    "rust-orchestration",
-    "rust-blueprints",
-    "rust-common",
-    "rust-bridge-matlab-simulink"
+  "rust-core",
+  "rust-orchestration",
+  "rust-blueprints",
+  "rust-common",
+  "rust-bridge-matlab-simulink",
+  "rust-bridge-java",
+  # "rust-bridge-ortools"
 ]
 description = "IDeSyDe Rust suite"
+resolver = "2"
 
 [workspace.dependencies]
-base64 = "0.21.5"
+env_logger = "0.11.2"
+base64 = "0.22.0"
 ciborium = "0.2.1"
 clap = { version = "4.2.1", features = ["derive"] }
-derive_builder = "0.12.0"
+cxx = "1.0"
+cxx-build = "1.0"
+derive_builder = "0.20.0"
 downcast-rs = "1.2.0"
-env_logger = "0.10.0"
+jni = { version = "0.21.1", features = ["invocation"] }
 log = "0.4.17"
 md5 = "0.7.0"
 num = "0.4.1"
@@ -23,8 +29,12 @@ prost = "0.12"
 prost-build = "0.12"
 quote = "1.0.27"
 rayon = "1.7"
-reqwest = { version = "0.11.18", default-features = false, features = ["blocking", "rustls-tls", "json", "multipart"] }  
-reqwest-eventsource = "0.5.0"
+reqwest = { version = "0.11.18", default-features = false, features = [
+  "blocking",
+  "rustls-tls",
+  "json",
+  "multipart",
+] }
 rmp-serde = "1.1"
 schemars = "0.8.12"
 serde = { version = "1.0", features = ["derive"] }
@@ -32,12 +42,12 @@ serde_json = "1.0"
 sha2 = "0.10.8"
 sha3 = "0.10.6"
 syn = "2.0.15"
-tungstenite = {version = "0.20.0", features = ["rustls"]}
+tungstenite = { version = "0.21.0", features = ["rustls"] }
 url = "2.4.1"
-
-
+rusqlite = { version = "0.31.0", features = ["bundled", "blob", "functions"] }
+zip = "0.6.6"
 
 [workspace.package]
-version = "0.6.2"
+version = "0.8.0"
 authors = ["Rodolfo Jordao"]
 edition = "2021"

@@ -3,7 +3,6 @@ pub mod identification;
 
 use std::borrow::BorrowMut;
 use std::cmp::Ordering;
-use std::collections::HashSet;
 use std::hash::Hash;
 
 use std::io::BufRead;
@@ -20,12 +19,11 @@ use std::process::ChildStdout;
 use std::process::Stdio;
 use std::sync::Arc;
 use std::sync::Mutex;
-use std::time::Duration;
 
 use exploration::ExternalExplorerBuilder;
 
-use identification::ExternalServerIdentifiticationIterator;
 use idesyde_blueprints::IdentificationResultCompactMessage;
+use idesyde_bridge_java::java_modules_from_jar_paths;
 use idesyde_core::DecisionModel;
 use idesyde_core::DesignModel;
 use idesyde_core::Explorer;
@@ -38,9 +36,6 @@ use log::debug;
 use log::warn;
 use rayon::prelude::*;
 use reqwest::blocking::multipart::Form;
-use reqwest::blocking::multipart::Part;
-use serde::de;
-use tungstenite::protocol::WebSocketConfig;
 use url::Url;
 
 use base64::{engine::general_purpose, Engine as _};
@@ -300,7 +295,8 @@ impl Module for ExternalServerModule {
             .for_each(|m| {
                 if let Ok(bodyj) = m.to_json() {
                     if let Ok(design_add_url) = self.url.join("/design/cache/add") {
-                        if let Err(e) = self.client.put(design_add_url).body(bodyj).send() {
+                        let form = Form::new().text("designModel", bodyj);
+                        if let Err(e) = self.client.post(design_add_url).multipart(form).send() {
                             debug!(
                                 "Failed to send design model to identify with: {}",
                                 e.to_string()
@@ -340,7 +336,8 @@ impl Module for ExternalServerModule {
                 // );
                 if let Ok(bodyj) = m.to_json() {
                     if let Ok(decision_add_url) = self.url.join("/decision/cache/add") {
-                        if let Err(e) = self.client.put(decision_add_url).body(bodyj).send() {
+                        let form = Form::new().text("decisionModel", bodyj);
+                        if let Err(e) = self.client.post(decision_add_url).multipart(form).send() {
                             debug!(
                                 "Failed to send design model to identify  with: {}",
                                 e.to_string()
@@ -429,7 +426,9 @@ impl Module for ExternalServerModule {
                 .for_each(|m| {
                     if let Ok(bodyj) = m.to_json() {
                         if let Ok(design_add_url) = self.url.join("/design/cache/add") {
-                            if let Err(e) = self.client.put(design_add_url).body(bodyj).send() {
+                            let form = Form::new().text("designModel", bodyj);
+                            if let Err(e) = self.client.post(design_add_url).multipart(form).send()
+                            {
                                 debug!(
                                     "Failed to send design model to reverse with: {}",
                                     e.to_string()
@@ -459,7 +458,10 @@ impl Module for ExternalServerModule {
                 .for_each(|m| {
                     if let Ok(bodyj) = m.to_json() {
                         if let Ok(decision_add_url) = self.url.join("/solved/cache/add") {
-                            if let Err(e) = self.client.put(decision_add_url).body(bodyj).send() {
+                            let form = Form::new().text("solvedModel", bodyj);
+                            if let Err(e) =
+                                self.client.post(decision_add_url).multipart(form).send()
+                            {
                                 debug!(
                                     "Failed to send design model to reverse with: {}",
                                     e.to_string()
@@ -679,39 +681,28 @@ impl Module for ExternalServerModule {
 }
 
 pub fn find_modules(modules_path: &Path) -> Vec<Arc<dyn Module>> {
-    let mut imodules: Vec<Arc<dyn Module>> = Vec::new();
+    let mut modules: Vec<Arc<dyn Module>> = Vec::new();
     if let Ok(read_dir) = modules_path.read_dir() {
-        let prepared: Vec<Arc<dyn Module>> = read_dir
-            .par_bridge()
-            .into_par_iter()
-            .flat_map(|e| {
-                if let Ok(de) = e {
-                    let p = de.path();
-                    if p.is_file() {
-                        let prog = p.read_link().unwrap_or(p);
-                        if let Some(imodule) = ExternalServerModule::try_create_local(prog.clone())
-                        {
-                            return Some(Arc::new(imodule) as Arc<dyn Module>);
-                        }
-                        //  else {
-                        //     return Some(Arc::new(ExternalIdentificationModule {
-                        //         command_path_: prog.clone(),
-                        //         identified_path_: identified_path.to_path_buf(),
-                        //         inputs_path_: inputs_path.to_path_buf(),
-                        //         solved_path_: solved_path.to_path_buf(),
-                        //         reverse_path_: integration_path.to_path_buf(),
-                        //         output_path_: output_path.to_path_buf(),
-                        //     })
-                        //         as Arc<dyn IdentificationModule>);
-                        // }
-                    }
-                }
-                None
+        let jar_modules: Vec<PathBuf> = read_dir
+            .filter_map(|e| e.ok())
+            .map(|e| e.path())
+            .filter(|p| p.is_file())
+            .map(|p| p.read_link().unwrap_or(p))
+            .filter(|p| {
+                p.extension()
+                    .map(|ext| ext.eq_ignore_ascii_case("jar"))
+                    .unwrap_or(false)
             })
             .collect();
-        imodules.extend(prepared.into_iter());
+        let modules_result = java_modules_from_jar_paths(jar_modules.as_slice());
+        for module in modules_result.result {
+            modules.push(Arc::new(module) as Arc<dyn Module>);
+        }
+        for warn_msg in modules_result.warn {
+            warn!("{}", warn_msg);
+        }
     }
-    imodules
+    modules
 }
 
 // pub fn find_exploration_modules(modules_path: &Path) -> Vec<Arc<dyn Module>> {

@@ -1,0 +1,15 @@
+[package]
+name = "idesyde-bridge-java"
+version.workspace = true
+authors.workspace = true
+edition.workspace = true
+
+# See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
+
+[dependencies]
+idesyde-core = { path = "../rust-core" }
+idesyde-blueprints = { path = "../rust-blueprints" }
+idesyde-common = { path = "../rust-common" }
+derive_builder.workspace = true
+jni.workspace = true
+zip.workspace = true

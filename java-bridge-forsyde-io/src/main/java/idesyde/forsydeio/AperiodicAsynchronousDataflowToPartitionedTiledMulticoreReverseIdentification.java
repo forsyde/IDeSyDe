@@ -1,6 +1,7 @@
 package idesyde.forsydeio;
 
 import idesyde.common.AperiodicAsynchronousDataflowToPartitionedTiledMulticore;
+import idesyde.core.AutoRegister;
 import idesyde.core.DecisionModel;
 import idesyde.core.DesignModel;
 import idesyde.core.ReverseIdentificationRule;
@@ -10,7 +11,7 @@ import java.util.stream.Collectors;
 
 import forsyde.io.core.SystemGraph;
 import forsyde.io.lib.hierarchy.ForSyDeHierarchy;
-
+@AutoRegister(ForSyDeIOModule.class)
 public class AperiodicAsynchronousDataflowToPartitionedTiledMulticoreReverseIdentification
                 implements ReverseIdentificationRule {
 

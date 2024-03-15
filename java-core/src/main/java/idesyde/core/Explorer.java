@@ -47,7 +47,7 @@ public interface Explorer {
      * Give information about the exploration capabilities of this
      * explorer for a decision model given that other explorers are present.
      */
-    default ExplorationBidding bid(Set<Explorer> explorers, DecisionModel decisionModel) {
+    default ExplorationBidding bid(DecisionModel decisionModel) {
         return new ExplorationBidding(false, false, 10.0, Set.of(), Map.of());
     }
 

@@ -8,11 +8,9 @@ import java.util.Set;
 import forsyde.io.core.SystemGraph;
 import forsyde.io.lib.hierarchy.ForSyDeHierarchy;
 import idesyde.common.InstrumentedComputationTimes;
-import idesyde.core.DecisionModel;
-import idesyde.core.DesignModel;
-import idesyde.core.IdentificationResult;
-import idesyde.core.IdentificationRule;
+import idesyde.core.*;
 
+@AutoRegister(ForSyDeIOModule.class)
 class InstrumentedComputationTimesIRule implements IdentificationRule {
     @Override
     public IdentificationResult apply(Set<? extends DesignModel> designModels,

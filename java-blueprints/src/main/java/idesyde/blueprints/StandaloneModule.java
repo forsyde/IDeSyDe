@@ -98,10 +98,13 @@ public interface StandaloneModule extends Module {
                     .get("/decision/cache/exists",
                             ctx -> {
                                 if (ctx.isMultipartFormData()) {
-                                    if (cachedDecisionModels.values().stream().anyMatch(m -> m.category().equals(ctx.formParam("category")))) {
-                                        var parts = cachedDecisionModels.values().stream().map(DecisionModel::part).collect(Collectors.toSet());
+                                    if (cachedDecisionModels.values().stream()
+                                            .anyMatch(m -> m.category().equals(ctx.formParam("category")))) {
+                                        var parts = cachedDecisionModels.values().stream().map(DecisionModel::part)
+                                                .collect(Collectors.toSet());
                                         for (var e : ctx.formParams("part")) {
-                                            // System.out.println("Checking if " + e + " is in parts for category " + ctx.formParam("category"));
+                                            // System.out.println("Checking if " + e + " is in parts for category " +
+                                            // ctx.formParam("category"));
                                             if (parts.stream().noneMatch(s -> s.contains(e))) {
                                                 ctx.result("false");
                                                 return;
@@ -114,21 +117,23 @@ public interface StandaloneModule extends Module {
                                 } else {
                                     var bb = ByteBuffer.wrap(ctx.bodyAsBytes());
                                     if (cachedDecisionModels.containsKey(bb)) {
-                                    // System.out.println("YES decision cache exists of "
-                                    // + Arrays.toString(ctx.bodyAsBytes()));
+                                        // System.out.println("YES decision cache exists of "
+                                        // + Arrays.toString(ctx.bodyAsBytes()));
                                         ctx.result("true");
                                     } else {
-                                    // System.out.println("NO decision cache exists of "
-                                    // + Arrays.toString(ctx.bodyAsBytes()));
+                                        // System.out.println("NO decision cache exists of "
+                                        // + Arrays.toString(ctx.bodyAsBytes()));
                                         ctx.result("false");
                                     }
-                                } 
+                                }
                             })
                     .get("/design/cache/exists",
                             ctx -> {
                                 if (ctx.isMultipartFormData()) {
-                                    if (cachedDesignModels.values().stream().anyMatch(m -> m.category().equals(ctx.formParam("category")))) {
-                                        var elements = cachedDesignModels.values().stream().map(DesignModel::elements).collect(Collectors.toSet());
+                                    if (cachedDesignModels.values().stream()
+                                            .anyMatch(m -> m.category().equals(ctx.formParam("category")))) {
+                                        var elements = cachedDesignModels.values().stream().map(DesignModel::elements)
+                                                .collect(Collectors.toSet());
                                         for (var e : ctx.formParams("elements")) {
                                             if (elements.stream().noneMatch(s -> s.contains(e))) {
                                                 ctx.result("false");
@@ -151,8 +156,10 @@ public interface StandaloneModule extends Module {
                     .get("/solved/cache/exists",
                             ctx -> {
                                 if (ctx.isMultipartFormData()) {
-                                    if (cachedSolvedDecisionModels.values().stream().anyMatch(m -> m.category().equals(ctx.formParam("category")))) {
-                                        var elements = cachedSolvedDecisionModels.values().stream().map(DecisionModel::part).collect(Collectors.toSet());
+                                    if (cachedSolvedDecisionModels.values().stream()
+                                            .anyMatch(m -> m.category().equals(ctx.formParam("category")))) {
+                                        var elements = cachedSolvedDecisionModels.values().stream()
+                                                .map(DecisionModel::part).collect(Collectors.toSet());
                                         for (var e : ctx.formParams("part")) {
                                             if (elements.stream().noneMatch(s -> s.contains(e))) {
                                                 ctx.result("false");
@@ -175,15 +182,16 @@ public interface StandaloneModule extends Module {
                     .get("/decision/cache/fetch", ctx -> {
                         var bb = ByteBuffer.wrap(ctx.bodyAsBytes());
                         // cachedDecisionModels.stream()
-                        //         .filter(m -> m.globalSHA2Hash().map(hash -> Arrays.equals(hash, ctx.bodyAsBytes()))
-                        //                 .orElse(false))
-                        //         .findAny()
-                        //         .map(OpaqueDecisionModel::from)
-                        //         .flatMap(OpaqueDecisionModel::toJsonString)
-                        //         .ifPresentOrElse(ctx::result, () -> ctx.result("Not in cache"));
+                        // .filter(m -> m.globalSHA2Hash().map(hash -> Arrays.equals(hash,
+                        // ctx.bodyAsBytes()))
+                        // .orElse(false))
+                        // .findAny()
+                        // .map(OpaqueDecisionModel::from)
+                        // .flatMap(OpaqueDecisionModel::toJsonString)
+                        // .ifPresentOrElse(ctx::result, () -> ctx.result("Not in cache"));
                         if (cachedDecisionModels.containsKey(bb)) {
                             OpaqueDecisionModel.from(cachedDecisionModels.get(bb)).toJsonString()
-                                .ifPresentOrElse(ctx::result, () -> ctx.result("Not in cache"));
+                                    .ifPresentOrElse(ctx::result, () -> ctx.result("Not in cache"));
                         } else {
                             ctx.result("Not in cache");
                             ctx.status(404);
@@ -193,7 +201,7 @@ public interface StandaloneModule extends Module {
                         var bb = ByteBuffer.wrap(ctx.bodyAsBytes());
                         if (cachedDesignModels.containsKey(bb)) {
                             OpaqueDesignModel.from(cachedDesignModels.get(bb)).toJsonString()
-                                .ifPresentOrElse(ctx::result, () -> ctx.result("Not in cache"));
+                                    .ifPresentOrElse(ctx::result, () -> ctx.result("Not in cache"));
                         } else {
                             ctx.status(404);
                         }
@@ -217,45 +225,66 @@ public interface StandaloneModule extends Module {
                             ctx.status(404);
                         }
                     })
-                    .put("/decision/cache/add",
+                    .post("/decision/cache/add",
                             ctx -> {
                                 // System.out.println("Adding to decision cache: " + ctx.body());
-                                OpaqueDecisionModel.fromJsonString(ctx.body()).ifPresentOrElse(opaque -> {
-                                    var bb = ByteBuffer.wrap(opaque.globalSHA2Hash().get()); // TODO: fix possibl NPE later
-                                    fromOpaqueDecision(opaque).ifPresentOrElse(m -> {
-                                        // System.out.println("Adding non-opaque to decision cache: "
-                                        //     + m.globalSHA2Hash().map(Arrays::toString).orElse("NO HASH"));
-                                        cachedDecisionModels.put(bb, m);
-                                    }, () -> {
-                                        // System.out.println("Adding opaque to decision cache: "
-                                        //     + opaque.globalSHA2Hash().map(Arrays::toString).orElse("NO HASH"));
-                                        cachedDecisionModels.put(bb, opaque);
+                                if (ctx.isMultipartFormData()) {
+                                    OpaqueDecisionModel.fromJsonString(ctx.formParam("decisionModel"))
+                                            .ifPresentOrElse(opaque -> {
+                                                var bb = ByteBuffer.wrap(opaque.globalSHA2Hash().get()); // TODO: fix
+                                                                                                         // possibl NPE
+                                                                                                         // later
+                                                fromOpaqueDecision(opaque).ifPresentOrElse(m -> {
+                                                    // System.out.println("Adding non-opaque to decision cache: "
+                                                    // + m.globalSHA2Hash().map(Arrays::toString).orElse("NO HASH"));
+                                                    cachedDecisionModels.put(bb, m);
+                                                }, () -> {
+                                                    // System.out.println("Adding opaque to decision cache: "
+                                                    // + opaque.globalSHA2Hash().map(Arrays::toString).orElse("NO
+                                                    // HASH"));
+                                                    cachedDecisionModels.put(bb, opaque);
+                                                });
+                                                ctx.status(200);
+                                                ctx.result(opaque.globalSHA2Hash().map(Arrays::toString)
+                                                        .orElse("NO HASH"));
+                                                // opaque.globalSHA2Hash().ifPresent(hash -> cachedDecisionModels
+                                                // .put(ByteBuffer.wrap(hash), fromOpaqueDecision(opaque)));
+                                            }, () -> ctx.status(500));
+                                }
+                            })
+                    .post("/solved/cache/add",
+                            ctx -> {
+                                if (ctx.isMultipartFormData()) {
+                                    OpaqueDecisionModel.fromJsonString(ctx.formParam("solvedModel"))
+                                            .flatMap(this::fromOpaqueDecision)
+                                            .ifPresent(m -> m.globalSHA2Hash().ifPresent(
+                                                    hash -> cachedSolvedDecisionModels.put(ByteBuffer.wrap(hash), m)));
+                                }
+                            })
+                    .post("/design/cache/add",
+                            ctx -> {
+                                if (ctx.isMultipartFormData()) {
+                                    OpaqueDesignModel.fromJsonString(ctx.formParam("designModel")).ifPresent(opaque -> {
+                                        fromOpaqueDesign(opaque).ifPresentOrElse(m -> {
+                                            // System.out.println("Adding non opaque design model to cache: " +
+                                            // m.category());
+                                            cachedDesignModels.put(ByteBuffer.wrap(opaque.globalSHA2Hash().get()), m);
+                                        }, () -> cachedDesignModels.put(ByteBuffer.wrap(opaque.globalSHA2Hash().get()),
+                                                opaque));
                                     });
                                     ctx.status(200);
-                                    ctx.result(opaque.globalSHA2Hash().map(Arrays::toString).orElse("NO HASH"));
-                                    // opaque.globalSHA2Hash().ifPresent(hash -> cachedDecisionModels
-                                    //         .put(ByteBuffer.wrap(hash), fromOpaqueDecision(opaque)));
-                                }, () -> ctx.status(500));
+                                    ctx.result("OK");
+                                }
                             })
-                    .put("/solved/cache/add",
-                            ctx -> OpaqueDecisionModel.fromJsonString(ctx.body()).flatMap(this::fromOpaqueDecision)
-                                    .ifPresent(m -> m.globalSHA2Hash().ifPresent(
-                                            hash -> cachedSolvedDecisionModels.put(ByteBuffer.wrap(hash), m))))
-                    .put("/design/cache/add",
+                    .post("/reversed/cache/add",
                             ctx -> {
-                                OpaqueDesignModel.fromJsonString(ctx.body()).ifPresent(opaque -> {
-                                    fromOpaqueDesign(opaque).ifPresentOrElse(m -> {
-                                        // System.out.println("Adding non opaque design model to cache: " + m.category());
-                                        cachedDesignModels.put(ByteBuffer.wrap(opaque.globalSHA2Hash().get()), m);
-                                    }, () -> cachedDesignModels.put(ByteBuffer.wrap(opaque.globalSHA2Hash().get()), opaque));
-                                });
-                                ctx.status(200);
-                                ctx.result("OK");
+                                if (ctx.isMultipartFormData()) {
+                                    OpaqueDesignModel.fromJsonString(ctx.formParam("reversedModel"))
+                                            .flatMap(this::fromOpaqueDesign)
+                                            .ifPresent(m -> m.globalSHA2Hash().ifPresent(
+                                                    hash -> cachedReversedDesignModels.put(ByteBuffer.wrap(hash), m)));
+                                }
                             })
-                    .put("/reversed/cache/add",
-                            ctx -> OpaqueDesignModel.fromJsonString(ctx.body()).flatMap(this::fromOpaqueDesign)
-                                    .ifPresent(m -> m.globalSHA2Hash().ifPresent(
-                                            hash -> cachedReversedDesignModels.put(ByteBuffer.wrap(hash), m))))
                     .post("/decision/cache/clear", ctx -> cachedDecisionModels.clear())
                     .post("/design/cache/clear", ctx -> cachedDesignModels.clear())
                     .post("/solved/cache/clear", ctx -> cachedSolvedDecisionModels.clear())
@@ -348,7 +377,8 @@ public interface StandaloneModule extends Module {
                         var results = identification(designModels, decisionModels);
                         for (var result : results.identified()) {
                             result.globalSHA2Hash().ifPresent(hash -> {
-                                // System.out.println("Adding a %s decision model with hash %s to cache".formatted(result.category(), Arrays.toString(hash)));
+                                // System.out.println("Adding a %s decision model with hash %s to
+                                // cache".formatted(result.category(), Arrays.toString(hash)));
                                 cachedDecisionModels.put(ByteBuffer.wrap(hash), result);
                             });
                         }
@@ -425,8 +455,7 @@ public interface StandaloneModule extends Module {
                                                 entries.stream().findAny().ifPresent(msg -> {
                                                     OpaqueDecisionModel.fromJsonString(msg)
                                                             .flatMap(this::fromOpaqueDecision)
-                                                            .map(decisionModel -> explorer.bid(explorers(),
-                                                                    decisionModel))
+                                                            .map(decisionModel -> explorer.bid(decisionModel))
                                                             .ifPresent(bid -> {
                                                                 try {
                                                                     ctx.result(objectMapper.writeValueAsString(bid));
@@ -441,10 +470,10 @@ public interface StandaloneModule extends Module {
                                     } else {
                                         var bb = ByteBuffer.wrap(ctx.bodyAsBytes());
                                         // System.out.println(
-                                        //         "Bidding with %s and %s".formatted(Arrays.toString(ctx.bodyAsBytes()),
-                                        //                 explorer.uniqueIdentifier()));
+                                        // "Bidding with %s and %s".formatted(Arrays.toString(ctx.bodyAsBytes()),
+                                        // explorer.uniqueIdentifier()));
                                         var decisionModel = cachedDecisionModels.get(bb);
-                                        var bid = explorer.bid(explorers(), decisionModel);
+                                        var bid = explorer.bid(decisionModel);
                                         try {
                                             // System.out.println("returning bidding value");
                                             ctx.result(objectMapper.writeValueAsString(bid));
@@ -673,14 +702,15 @@ public interface StandaloneModule extends Module {
                     })
                     .updateConfig(config -> {
                         config.jetty.multipartConfig.maxTotalRequestSize(1, SizeUnit.GB);
+                        config.jetty.multipartConfig.maxFileSize(1, SizeUnit.GB);
                         config.jetty.wsFactoryConfig(cfg -> {
-                            cfg.setMaxTextMessageSize(100000000);
-                            cfg.setMaxBinaryMessageSize(100000000);
+                            cfg.setMaxTextMessageSize(1000000000);
+                            cfg.setMaxBinaryMessageSize(1000000000);
                         });
                         config.jetty.contextHandlerConfig(ctx -> {
-                            ctx.setMaxFormContentSize(100000000);
+                            ctx.setMaxFormContentSize(1000000000);
                         });
-                        config.http.maxRequestSize = 100000000;
+                        config.http.maxRequestSize = 1000000000;
                     });
             server.events(es -> {
                 es.serverStarted(() -> {

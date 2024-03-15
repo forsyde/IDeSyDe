@@ -3,8 +3,12 @@ pub mod macros;
 use std::{
     collections::{HashMap, HashSet},
     hash::Hash,
+    ops::Add,
     path::Path,
-    sync::{mpsc::Receiver, Arc},
+    sync::{
+        mpsc::{Receiver, Sender},
+        Arc, Mutex,
+    },
     time::{Duration, Instant},
 };
 
@@ -14,6 +18,40 @@ use serde::{de::DeserializeOwned, Deserialize, Serialize};
 use sha2::{Digest, Sha512};
 use std::cmp::Ordering;
 use url::Url;
+
+/// A simple structure to contain a result and accumulate information regarding its computation
+#[derive(
+    Debug, Clone, PartialEq, Eq, serde::Serialize, serde::Deserialize, derive_builder::Builder,
+)]
+pub struct LoggedResult<T> {
+    pub result: T,
+    #[builder(default = "Vec::new()")]
+    pub info: Vec<String>,
+    #[builder(default = "Vec::new()")]
+    pub warn: Vec<String>,
+    #[builder(default = "Vec::new()")]
+    pub err: Vec<String>,
+    #[builder(default = "Vec::new()")]
+    pub debug: Vec<String>,
+}
+
+impl<T: Clone> LoggedResult<T> {
+    pub fn builder() -> LoggedResultBuilder<T> {
+        LoggedResultBuilder::default()
+    }
+}
+
+impl<T: Clone> From<T> for LoggedResult<T> {
+    fn from(value: T) -> Self {
+        LoggedResult {
+            result: value,
+            info: Vec::new(),
+            warn: Vec::new(),
+            err: Vec::new(),
+            debug: Vec::new(),
+        }
+    }
+}
 
 /// The trait/interface for a design model in the design space identification methodology, as
 /// defined in [1].
@@ -310,6 +348,58 @@ impl Hash for dyn DecisionModel {
 
 pub type IdentificationResult = (Vec<Arc<dyn DecisionModel>>, Vec<String>);
 
+pub type ReverseIdentificationResult = (Vec<Arc<dyn DesignModel>>, Vec<String>);
+
+pub trait IdentificationRuleLike: Send + Sync {
+    fn identify(
+        &self,
+        design_models: &[Arc<dyn DesignModel>],
+        decision_models: &[Arc<dyn DecisionModel>],
+    ) -> IdentificationResult;
+
+    fn uses_design_models(&self) -> bool {
+        true
+    }
+
+    fn uses_decision_models(&self) -> bool {
+        true
+    }
+
+    fn uses_specific_decision_models(&self) -> Option<Vec<String>> {
+        None
+    }
+}
+
+impl<T: IdentificationRuleLike> IdentificationRuleLike for Arc<T> {
+    fn identify(
+        &self,
+        design_models: &[Arc<dyn DesignModel>],
+        decision_models: &[Arc<dyn DecisionModel>],
+    ) -> IdentificationResult {
+        self.as_ref().identify(design_models, decision_models)
+    }
+
+    fn uses_design_models(&self) -> bool {
+        self.as_ref().uses_design_models()
+    }
+
+    fn uses_decision_models(&self) -> bool {
+        self.as_ref().uses_decision_models()
+    }
+
+    fn uses_specific_decision_models(&self) -> Option<Vec<String>> {
+        self.as_ref().uses_specific_decision_models()
+    }
+}
+
+pub trait ReverseIdentificationRuleLike: Send + Sync {
+    fn reverse_identify(
+        &self,
+        decision_models: &[Arc<dyn DecisionModel>],
+        design_models: &[Arc<dyn DesignModel>],
+    ) -> ReverseIdentificationResult;
+}
+
 pub type IdentificationRule =
     fn(&Vec<Arc<dyn DesignModel>>, &Vec<Arc<dyn DecisionModel>>) -> IdentificationResult;
 
@@ -317,22 +407,68 @@ pub type ReverseIdentificationRule =
     fn(&Vec<Arc<dyn DecisionModel>>, &Vec<Arc<dyn DesignModel>>) -> Vec<Arc<dyn DesignModel>>;
 
 #[derive(Debug, Clone, PartialEq, Eq)]
-pub enum MarkedIdentificationRule {
-    DesignModelOnlyIdentificationRule(IdentificationRule),
-    DecisionModelOnlyIdentificationRule(IdentificationRule),
-    SpecificDecisionModelIdentificationRule(HashSet<String>, IdentificationRule),
-    GenericIdentificationRule(IdentificationRule),
+pub enum MarkedIdentificationRule<T> where
+T : Fn(&[Arc<dyn DesignModel>], &[Arc<dyn DecisionModel>]) -> IdentificationResult + Send + Sync {
+    DesignModelOnlyIdentificationRule(T),
+    DecisionModelOnlyIdentificationRule(T),
+    SpecificDecisionModelIdentificationRule(HashSet<String>, T),
+    GenericIdentificationRule(T),
+}
+
+impl<T> IdentificationRuleLike for MarkedIdentificationRule<T> 
+where T : Fn(&[Arc<dyn DesignModel>], &[Arc<dyn DecisionModel>]) -> IdentificationResult + Send + Sync {
+    fn identify(
+        &self,
+        design_models: &[Arc<dyn DesignModel>],
+        decision_models: &[Arc<dyn DecisionModel>],
+    ) -> IdentificationResult {
+        match self {
+            MarkedIdentificationRule::DesignModelOnlyIdentificationRule(r) => r(design_models, decision_models),
+            MarkedIdentificationRule::DecisionModelOnlyIdentificationRule(r) => r(design_models, decision_models),
+            MarkedIdentificationRule::SpecificDecisionModelIdentificationRule(_, r) => r(design_models, decision_models),
+            MarkedIdentificationRule::GenericIdentificationRule(r) => r(design_models, decision_models)
+        }
+    }
+    
+    fn uses_design_models(&self) -> bool {
+        match self {
+            MarkedIdentificationRule::DesignModelOnlyIdentificationRule(_) => true,
+            MarkedIdentificationRule::DecisionModelOnlyIdentificationRule(_) => false,
+            MarkedIdentificationRule::SpecificDecisionModelIdentificationRule(_, _) => false,
+            MarkedIdentificationRule::GenericIdentificationRule(_) => true,
+        }
+    }
+    
+    fn uses_decision_models(&self) -> bool {
+        match self {
+            MarkedIdentificationRule::DesignModelOnlyIdentificationRule(_) => false,
+            MarkedIdentificationRule::DecisionModelOnlyIdentificationRule(_) => true,
+            MarkedIdentificationRule::SpecificDecisionModelIdentificationRule(_, _) => true,
+            MarkedIdentificationRule::GenericIdentificationRule(_) => true,
+        }
+    }
+    
+    fn uses_specific_decision_models(&self) -> Option<Vec<String>> {
+        match self {
+            MarkedIdentificationRule::DesignModelOnlyIdentificationRule(_) => None,
+            MarkedIdentificationRule::DecisionModelOnlyIdentificationRule(_) => None,
+            MarkedIdentificationRule::SpecificDecisionModelIdentificationRule(x, _) => Some(x.iter().map(|x| x.to_string()).collect()),
+            MarkedIdentificationRule::GenericIdentificationRule(_) => None,
+        }
+    }
+
+
 }
 
 #[derive(Clone, PartialEq, Eq, serde::Serialize, serde::Deserialize, derive_builder::Builder)]
 // #[builder(setter(each(name = "target_objectives")))]
 pub struct ExplorationConfiguration {
-    pub max_sols: u64,
+    pub max_sols: i64,
     pub total_timeout: u64,
     pub improvement_timeout: u64,
     pub time_resolution: u64,
     pub memory_resolution: u64,
-    pub improvement_iterations: u64,
+    pub improvement_iterations: i64,
     pub strict: bool,
     pub target_objectives: HashSet<String>,
 }
@@ -444,12 +580,17 @@ impl PartialOrd<ExplorationSolution> for ExplorationSolution {
 
 /// An exploration bidding captures the characteristics that an explorer
 /// might display when exploring a decision model.
-#[derive(Debug, Deserialize, Serialize, Clone, PartialEq)]
+#[derive(Debug, Deserialize, Serialize, Clone, PartialEq, derive_builder::Builder)]
 pub struct ExplorationBid {
+    #[builder(default = "false")]
     pub can_explore: bool,
+    #[builder(default = "false")]
     pub is_exact: bool,
+    #[builder(default = "1.0")]
     pub competitiveness: f32,
+    #[builder(default = "HashSet::new()")]
     pub target_objectives: HashSet<String>,
+    #[builder(default = "HashMap::new()")]
     pub additional_numeric_properties: HashMap<String, f32>,
 }
 
@@ -458,7 +599,7 @@ impl ExplorationBid {
         serde_json::from_str(s).ok()
     }
 
-    pub fn impossible(explorer_id: &str) -> ExplorationBid {
+    pub fn impossible() -> ExplorationBid {
         ExplorationBid {
             can_explore: false,
             is_exact: false,
@@ -466,6 +607,10 @@ impl ExplorationBid {
             target_objectives: HashSet::new(),
             additional_numeric_properties: HashMap::new(),
         }
+    }
+
+    pub fn builder() -> ExplorationBidBuilder {
+        ExplorationBidBuilder::default()
     }
 }
 
@@ -547,20 +692,16 @@ pub trait Explorer: Downcast + Send + Sync {
 
     /// Give information about the exploration capabilities of this
     /// explorer for a decision model given that other explorers are present.
-    fn bid(
-        &self,
-        _other_explorers: &Vec<Arc<dyn Explorer>>,
-        _m: Arc<dyn DecisionModel>,
-    ) -> ExplorationBid {
-        ExplorationBid::impossible(&self.unique_identifier())
+    fn bid(&self, _m: Arc<dyn DecisionModel>) -> ExplorationBid {
+        ExplorationBid::impossible()
     }
     fn explore(
         &self,
         _m: Arc<dyn DecisionModel>,
         _currrent_solutions: &HashSet<ExplorationSolution>,
         _exploration_configuration: ExplorationConfiguration,
-    ) -> Box<dyn Iterator<Item = ExplorationSolution> + Send + Sync + '_> {
-        Box::new(std::iter::empty())
+    ) -> Arc<Mutex<dyn Iterator<Item = ExplorationSolution> + Send + Sync>> {
+        Arc::new(Mutex::new(std::iter::empty()))
     }
 }
 impl_downcast!(Explorer);
@@ -589,12 +730,8 @@ impl<T: Explorer + ?Sized> Explorer for Arc<T> {
         self.as_ref().location_url()
     }
 
-    fn bid(
-        &self,
-        _other_explorers: &Vec<Arc<dyn Explorer>>,
-        _m: Arc<dyn DecisionModel>,
-    ) -> ExplorationBid {
-        self.as_ref().bid(_other_explorers, _m)
+    fn bid(&self, _m: Arc<dyn DecisionModel>) -> ExplorationBid {
+        self.as_ref().bid(_m)
     }
 
     fn explore(
@@ -602,7 +739,7 @@ impl<T: Explorer + ?Sized> Explorer for Arc<T> {
         _m: Arc<dyn DecisionModel>,
         _currrent_solutions: &HashSet<ExplorationSolution>,
         _exploration_configuration: ExplorationConfiguration,
-    ) -> Box<dyn Iterator<Item = ExplorationSolution> + Send + Sync + '_> {
+    ) -> Arc<Mutex<dyn Iterator<Item = ExplorationSolution> + Send + Sync>> {
         self.as_ref()
             .explore(_m, _currrent_solutions, _exploration_configuration)
     }
@@ -629,6 +766,9 @@ pub struct OpaqueDecisionModel {
 }
 
 impl OpaqueDecisionModel {
+    pub fn builder() -> OpaqueDecisionModelBuilder {
+        OpaqueDecisionModelBuilder::default()
+    }
     pub fn from_json_str(s: &str) -> Result<Self, serde_json::Error> {
         serde_json::from_str(s)
     }
@@ -741,6 +881,9 @@ pub struct OpaqueDesignModel {
 }
 
 impl OpaqueDesignModel {
+    pub fn builder() -> OpaqueDesignModelBuilder {
+        OpaqueDesignModelBuilder::default()
+    }
     pub fn from_path_str(s: &str) -> OpaqueDesignModel {
         let path = Path::new(s);
         return path.into();
@@ -878,45 +1021,23 @@ impl<T: DesignModel + ?Sized> From<Arc<T>> for OpaqueDesignModel {
     }
 }
 
-/// This trait is wrapper around the normal iteration to create a "session"
-/// for identification modules. Via this, we can do more advanced things
-/// that would otherwise be impossible with a simple function call or iterator,
-/// like caching the decision or design models to not send them unnecesarily remotely.
-///
-/// Prefer to use `next_with_models` over `next` as it inserts the required models as
-/// necessary in the internal state of this iterator.
-pub trait IdentificationIterator: Iterator<Item = IdentificationResult> + Sync {
-    fn next_with_models(
-        &mut self,
-        _decision_models: &Vec<Arc<dyn DecisionModel>>,
-        _design_models: &Vec<Arc<dyn DesignModel>>,
-    ) -> Option<IdentificationResult> {
-        return None;
-    }
-
-    // This method collect messages possibly produced during the identification session,
-    // e.g. errors, information or warnings, and returns it to the caller.
-    //
-    // The messages come in a (level_string, content_string) format.
-    //
-    // The trait shoud ensure that consumed messages are destroyed from the iterator.
-    // fn collect_messages(&mut self) -> Vec<(String, String)> {
-    //     vec![]
-    // }
-}
-
-/// A simple empty unit struct for an empty iterator
-pub struct EmptyIdentificationIterator {}
-
-impl Iterator for EmptyIdentificationIterator {
-    type Item = IdentificationResult;
-
-    fn next(&mut self) -> Option<Self::Item> {
-        None
+impl PartialEq<OpaqueDesignModel> for OpaqueDesignModel {
+    fn eq(&self, other: &OpaqueDesignModel) -> bool {
+        self.category == other.category && self.elements == other.elements
     }
 }
 
-impl IdentificationIterator for EmptyIdentificationIterator {}
+impl Eq for OpaqueDesignModel {}
+
+impl Hash for OpaqueDesignModel {
+    fn hash<H: std::hash::Hasher>(&self, state: &mut H) {
+        self.category.hash(state);
+        for x in &self.elements {
+            x.hash(state);
+        }
+    }
+}
+
 
 /// Identification modules are a thin layer on top of identification rules that facilitates treating
 /// (reverse) identification rules within the orchestration process or remotely in the same fashion.
@@ -929,13 +1050,27 @@ pub trait Module: Send + Sync {
     fn explorers(&self) -> Vec<Arc<dyn Explorer>> {
         Vec::new()
     }
+    fn identification_rules(&self) -> Vec<Arc<dyn IdentificationRuleLike>> {
+        vec![]
+    }
+    fn reverse_identification_rules(&self) -> Vec<Arc<dyn ReverseIdentificationRuleLike>> {
+        vec![]
+    }
     fn identification_step(
         &self,
-        _decision_models: &Vec<Arc<dyn DecisionModel>>,
-        _design_models: &Vec<Arc<dyn DesignModel>>,
+        decision_models: &Vec<Arc<dyn DecisionModel>>,
+        design_models: &Vec<Arc<dyn DesignModel>>,
     ) -> IdentificationResult {
-        (vec![], vec![])
+        let mut identified = Vec::new();
+        let mut messages = Vec::new();
+        for irule in self.identification_rules() {
+            let (i, m) = irule.identify(design_models, decision_models);
+            identified.extend(i);
+            messages.extend(m);
+        }
+        (identified, messages)
     }
+
     fn reverse_identification(
         &self,
         _solved_decision_model: &Vec<Arc<dyn DecisionModel>>,
@@ -960,14 +1095,51 @@ impl Hash for dyn Module {
     }
 }
 
+#[derive(Clone, Builder)]
+pub struct RustEmbeddedModule {
+    unique_identifier: String,
+    #[builder(default = "Vec::new()")]
+    explorers: Vec<Arc<dyn Explorer>>,
+    #[builder(default = "vec![]")]
+    identification_rules: Vec<Arc<dyn IdentificationRuleLike>>,
+    #[builder(default = "vec![]")]
+    reverse_identification_rules: Vec<Arc<dyn ReverseIdentificationRuleLike>>,
+    #[builder(default = "HashSet::new()")]
+    pub decision_model_json_schemas: HashSet<String>,
+}
+
+impl RustEmbeddedModule {
+    pub fn builder() -> RustEmbeddedModuleBuilder {
+        RustEmbeddedModuleBuilder::default()
+    }
+}
+
+impl Module for RustEmbeddedModule {
+    fn unique_identifier(&self) -> String {
+        self.unique_identifier.to_owned()
+    }
+
+    fn explorers(&self) -> Vec<Arc<dyn Explorer>> {
+        self.explorers.to_owned()
+    }
+
+    fn identification_rules(&self) -> Vec<Arc<dyn IdentificationRuleLike>> {
+        self.identification_rules.to_owned()
+    }
+
+    fn reverse_identification_rules(&self) -> Vec<Arc<dyn ReverseIdentificationRuleLike>> {
+        self.reverse_identification_rules.to_owned()
+    }
+}
+
 /// This iterator is able to get a handful of explorers + decision models combination
 /// and make the exploration cooperative. It does so by exchanging the solutions
 /// found between explorers so that the explorers almost always with the latest approximate Pareto set
 /// update between themselves.
 pub struct CombinedExplorerIterator {
-    sol_channels: Vec<std::sync::mpsc::Receiver<ExplorationSolution>>,
+    sol_channels: Vec<Receiver<ExplorationSolution>>,
     is_exact: Vec<bool>,
-    finish_request_channels: Vec<std::sync::mpsc::Sender<bool>>,
+    finish_request_channels: Vec<Sender<bool>>,
     duration_left: Option<Duration>,
     _handles: Vec<std::thread::JoinHandle<()>>,
 }
@@ -993,8 +1165,8 @@ impl CombinedExplorerIterator {
         currrent_solutions: &HashSet<ExplorationSolution>,
         exploration_configuration: ExplorationConfiguration,
     ) -> CombinedExplorerIterator {
-        let mut sol_channels: Vec<std::sync::mpsc::Receiver<ExplorationSolution>> = Vec::new();
-        let mut completed_channels: Vec<std::sync::mpsc::Sender<bool>> = Vec::new();
+        let mut sol_channels: Vec<Receiver<ExplorationSolution>> = Vec::new();
+        let mut completed_channels: Vec<Sender<bool>> = Vec::new();
         let mut handles: Vec<std::thread::JoinHandle<()>> = Vec::new();
         for (e, m) in explorers_and_models {
             let (sc, cc, h) = explore_non_blocking(
@@ -1086,7 +1258,7 @@ pub struct MultiLevelCombinedExplorerIterator {
         Arc<Receiver<ExplorationSolution>>,
     ),
     solutions: HashSet<ExplorationSolution>,
-    converged_to_last_level: bool,
+    // converged_to_last_level: bool,
     start: Instant,
 }
 
@@ -1134,7 +1306,14 @@ impl Iterator for MultiLevelCombinedExplorerIterator {
                             }
                         });
                     }
-                    return Some(solution);
+                    // return if the solution is not dominated
+                    if self
+                        .solutions
+                        .iter()
+                        .all(|cur_sol| solution.partial_cmp(cur_sol) != Some(Ordering::Greater))
+                    {
+                        return Some(solution);
+                    }
                 }
                 Err(std::sync::mpsc::RecvTimeoutError::Disconnected) => {
                     if let (Some(prev_level), _) = &self.levels_stream {
@@ -1211,84 +1390,84 @@ impl Iterator for MultiLevelCombinedExplorerIterator {
     }
 }
 
-pub fn explore_cooperatively_simple(
-    explorers_and_models: &Vec<(Arc<dyn Explorer>, Arc<dyn DecisionModel>)>,
-    currrent_solutions: &HashSet<ExplorationSolution>,
-    exploration_configuration: ExplorationConfiguration,
-    // solution_inspector: F,
-) -> MultiLevelCombinedExplorerIterator {
-    let combined_explorer = CombinedExplorerIterator::start(
-        &explorers_and_models,
-        &currrent_solutions,
-        exploration_configuration.to_owned(),
-    );
-    let (sender, receiver) = std::sync::mpsc::channel::<ExplorationSolution>();
-    // move the data structures to contain new explorers
-    let levels_stream = (None, Arc::new(receiver));
-    // let levels_tuple = (None, combined_explorer);
-    std::thread::spawn(move || {
-        for sol in combined_explorer {
-            match sender.send(sol) {
-                Ok(_) => {}
-                Err(_) => {}
-            };
-        }
-    });
-    MultiLevelCombinedExplorerIterator {
-        explorers_and_models: explorers_and_models.clone(),
-        solutions: currrent_solutions.clone(),
-        exploration_configuration: exploration_configuration.to_owned(),
-        // levels: vec![CombinedExplorerIterator::start_with_exact(
-        //     explorers_and_models,
-        //     &biddings.iter().map(|b| b.is_exact).collect(),
-        //     currrent_solutions,
-        //     exploration_configuration.to_owned(),
-        // )],
-        levels_stream,
-        converged_to_last_level: false,
-        start: Instant::now(),
-    }
-}
+// pub fn explore_cooperatively_simple(
+//     explorers_and_models: &Vec<(Arc<dyn Explorer>, Arc<dyn DecisionModel>)>,
+//     currrent_solutions: &HashSet<ExplorationSolution>,
+//     exploration_configuration: ExplorationConfiguration,
+//     // solution_inspector: F,
+// ) -> MultiLevelCombinedExplorerIterator {
+//     let combined_explorer = CombinedExplorerIterator::start(
+//         &explorers_and_models,
+//         &currrent_solutions,
+//         exploration_configuration.to_owned(),
+//     );
+//     let (sender, receiver) = std::sync::mpsc::channel::<ExplorationSolution>();
+//     // move the data structures to contain new explorers
+//     let levels_stream = (None, Arc::new(receiver));
+//     // let levels_tuple = (None, combined_explorer);
+//     std::thread::spawn(move || {
+//         for sol in combined_explorer {
+//             match sender.send(sol) {
+//                 Ok(_) => {}
+//                 Err(_) => {}
+//             };
+//         }
+//     });
+//     MultiLevelCombinedExplorerIterator {
+//         explorers_and_models: explorers_and_models.clone(),
+//         solutions: currrent_solutions.clone(),
+//         exploration_configuration: exploration_configuration.to_owned(),
+//         // levels: vec![CombinedExplorerIterator::start_with_exact(
+//         //     explorers_and_models,
+//         //     &biddings.iter().map(|b| b.is_exact).collect(),
+//         //     currrent_solutions,
+//         //     exploration_configuration.to_owned(),
+//         // )],
+//         levels_stream,
+//         // converged_to_last_level: false,
+//         start: Instant::now(),
+//     }
+// }
 
-pub fn explore_cooperatively(
-    explorers_and_models: &Vec<(Arc<dyn Explorer>, Arc<dyn DecisionModel>)>,
-    biddings: &Vec<ExplorationBid>,
-    currrent_solutions: &HashSet<ExplorationSolution>,
-    exploration_configuration: ExplorationConfiguration,
-    // solution_inspector: F,
-) -> MultiLevelCombinedExplorerIterator {
-    let combined_explorer = CombinedExplorerIterator::start(
-        &explorers_and_models,
-        &currrent_solutions,
-        exploration_configuration.to_owned(),
-    );
-    let (sender, receiver) = std::sync::mpsc::channel::<ExplorationSolution>();
-    // move the data structures to contain new explorers
-    let levels_stream = (None, Arc::new(receiver));
-    // let levels_tuple = (None, combined_explorer);
-    std::thread::spawn(move || {
-        for sol in combined_explorer {
-            match sender.send(sol) {
-                Ok(_) => {}
-                Err(_) => {}
-            };
-        }
-    });
-    MultiLevelCombinedExplorerIterator {
-        explorers_and_models: explorers_and_models.clone(),
-        solutions: currrent_solutions.clone(),
-        exploration_configuration: exploration_configuration.to_owned(),
-        // levels: vec![CombinedExplorerIterator::start_with_exact(
-        //     explorers_and_models,
-        //     &biddings.iter().map(|b| b.is_exact).collect(),
-        //     currrent_solutions,
-        //     exploration_configuration.to_owned(),
-        // )],
-        levels_stream,
-        converged_to_last_level: false,
-        start: Instant::now(),
-    }
-}
+// pub fn explore_cooperatively(
+//     explorers_and_models: &Vec<(Arc<dyn Explorer>, Arc<dyn DecisionModel>)>,
+//     _biddings: &Vec<ExplorationBid>,
+//     currrent_solutions: &HashSet<ExplorationSolution>,
+//     exploration_configuration: ExplorationConfiguration,
+//     // solution_inspector: F,
+// ) -> MultiLevelCombinedExplorerIterator {
+//     let combined_explorer = CombinedExplorerIterator::start(
+//         &explorers_and_models,
+//         &currrent_solutions,
+//         exploration_configuration.to_owned(),
+//     );
+//     let (sender, receiver) = std::sync::mpsc::channel::<ExplorationSolution>();
+//     // move the data structures to contain new explorers
+//     let levels_stream = (None, Arc::new(receiver));
+//     // let levels_tuple = (None, combined_explorer);
+//     std::thread::spawn(move || {
+//         for sol in combined_explorer {
+//             match sender.send(sol) {
+//                 Ok(_) => {}
+//                 Err(_) => {}
+//             };
+//         }
+//     });
+//     MultiLevelCombinedExplorerIterator {
+//         explorers_and_models: explorers_and_models.clone(),
+//         solutions: currrent_solutions.clone(),
+//         exploration_configuration: exploration_configuration.to_owned(),
+//         // levels: vec![CombinedExplorerIterator::start_with_exact(
+//         //     explorers_and_models,
+//         //     &biddings.iter().map(|b| b.is_exact).collect(),
+//         //     currrent_solutions,
+//         //     exploration_configuration.to_owned(),
+//         // )],
+//         levels_stream,
+//         // converged_to_last_level: false,
+//         start: Instant::now(),
+//     }
+// }
 
 pub fn compute_dominant_bidding<'a, I>(biddings: I) -> Option<(usize, ExplorationBid)>
 where
@@ -1386,8 +1565,8 @@ pub fn explore_non_blocking<T, M>(
     currrent_solutions: &HashSet<ExplorationSolution>,
     exploration_configuration: ExplorationConfiguration,
 ) -> (
-    std::sync::mpsc::Receiver<ExplorationSolution>,
-    std::sync::mpsc::Sender<bool>,
+    Receiver<ExplorationSolution>,
+    Sender<bool>,
     std::thread::JoinHandle<()>,
 )
 where
@@ -1403,14 +1582,17 @@ where
         if let Ok(true) = completed_rx.recv_timeout(std::time::Duration::from_millis(300)) {
             return ();
         }
-        for new_solution in this_explorer.explore(
-            this_decision_model,
-            &prev_sols,
-            exploration_configuration.to_owned(),
-        ) {
-            match solution_tx.send(new_solution) {
-                Ok(_) => {}
-                Err(_) => return (),
+        if let Ok(mut iter) = this_explorer
+            .explore(
+                this_decision_model,
+                &prev_sols,
+                exploration_configuration.to_owned(),
+            )
+            .lock()
+        {
+            match iter.next().and_then(|x| solution_tx.send(x).ok()) {
+                Some(_) => {}
+                None => return (),
             };
         }
     });
@@ -1453,6 +1635,26 @@ pub fn pareto_dominance_partial_cmp(
     }
 }
 
-pub fn empty_identification_iter() -> EmptyIdentificationIterator {
-    EmptyIdentificationIterator {}
+pub fn merge_identification_results(
+    result1: IdentificationResult,
+    result2: IdentificationResult,
+) -> IdentificationResult {
+    let (models1, msgs1) = result1;
+    let (models2, msgs2) = result2;
+    let mut models = Vec::new();
+    models.extend(models1.into_iter());
+    for m in models2 {
+        if !models.contains(&m) {
+            models.push(m);
+        }
+    }
+    // models.extend(models2.into_iter().filter(|m| !models.contains(m)));
+    let mut msgs = Vec::new();
+    msgs.extend(msgs1.into_iter());
+    for msg in msgs2 {
+        if !msgs.contains(&msg) {
+            msgs.push(msg);
+        }
+    }
+    (models, msgs)
 }

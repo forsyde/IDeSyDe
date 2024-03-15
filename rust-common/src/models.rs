@@ -552,6 +552,12 @@ impl DecisionModel for AperiodicAsynchronousDataflowToPartitionedMemoryMappableM
                 .iter()
                 .map(|x| x.to_owned()),
         );
+        elems.extend(
+            self.instrumented_memory_requirements
+                .part()
+                .iter()
+                .map(|x| x.to_owned()),
+        );
         for (pe, sched) in &self.processes_to_runtime_scheduling {
             elems.insert(format!("{}={}:{}-{}:{}", "scheduling", pe, "", sched, ""));
         }
@@ -567,6 +573,51 @@ impl DecisionModel for AperiodicAsynchronousDataflowToPartitionedMemoryMappableM
                     elems.insert(format!("{}={}:{}-{}:{}", "reservation", pe, "", ce, ""));
                 }
             }
+        }
+        elems
+    }
+}
+
+#[derive(Debug, PartialEq, Serialize, Deserialize, Clone, JsonSchema)]
+pub struct PeriodicWorkloadToPartitionedSharedMultiCore {
+    pub workload: CommunicatingAndTriggeredReactiveWorkload,
+    pub platform: PartitionedMemoryMappableMulticore,
+    pub instrumented_computation_times: InstrumentedComputationTimes,
+    pub instrumented_memory_requirements: InstrumentedMemoryRequirements,
+    pub process_mapping: Vec<(String, String)>,
+    pub process_schedulings: Vec<(String, String)>,
+    pub channel_mappings: Vec<(String, String)>,
+    pub channel_slot_allocations: HashMap<String, HashMap<String, Vec<bool>>>,
+    pub max_utilizations: HashMap<String, f64>,
+}
+
+impl DecisionModel for PeriodicWorkloadToPartitionedSharedMultiCore {
+    impl_decision_model_standard_parts!(PeriodicWorkloadToPartitionedSharedMultiCore);
+
+    fn part(&self) -> HashSet<String> {
+        let mut elems: HashSet<String> = HashSet::new();
+        elems.extend(self.workload.part().iter().map(|x| x.to_owned()));
+        elems.extend(self.platform.part().iter().map(|x| x.to_owned()));
+        elems.extend(
+            self.instrumented_computation_times
+                .part()
+                .iter()
+                .map(|x| x.to_owned()),
+        );
+        elems.extend(
+            self.instrumented_memory_requirements
+                .part()
+                .iter()
+                .map(|x| x.to_owned()),
+        );
+        for (pe, sched) in &self.process_schedulings {
+            elems.insert(format!("{}={}:{}-{}:{}", "scheduling", pe, "", sched, ""));
+        }
+        for (pe, mem) in &self.process_mapping {
+            elems.insert(format!("{}={}:{}-{}:{}", "mapping", pe, "", mem, ""));
+        }
+        for (buf, mem) in &self.channel_mappings {
+            elems.insert(format!("{}={}:{}-{}:{}", "mapping", buf, "", mem, ""));
         }
         elems
     }

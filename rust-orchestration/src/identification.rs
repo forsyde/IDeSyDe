@@ -1,35 +1,18 @@
 use std::{
-    collections::HashSet,
-    f32::consts::E,
     net::TcpStream,
-    ops::Index,
-    sync::{Arc, Mutex},
-    time::Duration,
+    sync::Arc,
 };
 
 use idesyde_core::{
-    DecisionModel, DesignModel, IdentificationIterator, IdentificationResult, Module,
-    OpaqueDecisionModel, OpaqueDesignModel,
+    merge_identification_results, DecisionModel, DesignModel, 
+    IdentificationResult, IdentificationRuleLike, Module, OpaqueDecisionModel, OpaqueDesignModel,
 };
 
 use log::debug;
+use rusqlite::params;
 use tungstenite::WebSocket;
 
 use rayon::prelude::*;
-
-// impl HttpServerLike for ExternalServerIdentificationModule {
-//     fn get_client(&self) -> Arc<reqwest::blocking::Client> {
-//         self.client.clone()
-//     }
-
-//     fn get_address(&self) -> std::net::IpAddr {
-//         self.address.to_owned()
-//     }
-
-//     fn get_port(&self) -> usize {
-//         self.port
-//     }
-// }
 
 pub struct ExternalServerIdentifiticationIterator {
     design_models: Vec<Arc<dyn DesignModel>>,
@@ -148,39 +131,6 @@ impl Iterator for ExternalServerIdentifiticationIterator {
     }
 }
 
-impl IdentificationIterator for ExternalServerIdentifiticationIterator {
-    fn next_with_models(
-        &mut self,
-        decision_models: &Vec<Arc<dyn DecisionModel>>,
-        design_models: &Vec<Arc<dyn DesignModel>>,
-    ) -> Option<IdentificationResult> {
-        self.decision_models_to_upload.extend(
-            decision_models
-                .iter()
-                .filter(|&m| {
-                    !self.decision_models.iter().any(|x| {
-                        x.partial_cmp(m) == Some(std::cmp::Ordering::Greater)
-                            || x.partial_cmp(m) == Some(std::cmp::Ordering::Equal)
-                    })
-                })
-                .map(|x| x.to_owned()),
-        );
-        self.design_models_to_upload.extend(
-            design_models
-                .iter()
-                .filter(|&x| !self.design_models.contains(x))
-                .map(|x| x.to_owned()),
-        );
-        return self.next();
-    }
-
-    // fn collect_messages(&mut self) -> Vec<(String, String)> {
-    //     self.messages
-    //         .iter()
-    //         .map(|msg| ("DEBUG".to_owned(), msg.to_owned()))
-    //         .collect()
-    // }
-}
 
 impl Drop for ExternalServerIdentifiticationIterator {
     fn drop(&mut self) {
@@ -205,42 +155,17 @@ pub fn identification_procedure(
     let mut identified: Vec<Arc<dyn DecisionModel>> = pre_identified.clone();
     let mut messages: Vec<(String, String)> = Vec::new();
     let mut fix_point = false;
-    // let mut iterators: Vec<Box<dyn IdentificationIterator>> = imodules
-    //     .iter()
-    //     .map(|imodule| imodule.identification_step(design_models, &identified))
-    //     .collect();
+    let irules: Vec<Arc<dyn IdentificationRuleLike>> = imodules
+        .iter()
+        .flat_map(|imodule| imodule.identification_rules().into_iter())
+        .collect();
+    debug!("Using {} identification rules", irules.len());
     while !fix_point {
         fix_point = true;
-        // let before = identified.len();
-        // let identified_step: Vec<IdentificationResult> = (0..iterators.len()).into_par_iter().map(|i| {
-        //     if let Ok(mut iter) = iterators[i].lock() {
-        //         iter.next_with_models(&identified, design_models)
-        //     } else {
-        //         None
-        //     }
-        // }).flatten().collect();
-
-        let (identified_models, msgs) = imodules
+        let (identified_models, msgs) = irules
             .par_iter()
-            .map(|imodule| imodule.identification_step(&identified, design_models))
-            .reduce_with(|(models1, msgs1), (models2, msgs2)| {
-                let mut models = Vec::new();
-                models.extend(models1.into_iter());
-                for m in models2 {
-                    if !models.contains(&m) {
-                        models.push(m);
-                    }
-                }
-                // models.extend(models2.into_iter().filter(|m| !models.contains(m)));
-                let mut msgs = Vec::new();
-                msgs.extend(msgs1.into_iter());
-                for msg in msgs2 {
-                    if !msgs.contains(&msg) {
-                        msgs.push(msg);
-                    }
-                }
-                (models, msgs)
-            })
+            .map(|irule| irule.identify(&design_models.as_slice(), identified.as_slice()))
+            .reduce_with(merge_identification_results)
             .unwrap_or((vec![], vec![]));
         // add completely new models or replace opaque deicion mdoels for non-opaque ones
         for m in &identified_models {
@@ -267,26 +192,100 @@ pub fn identification_procedure(
             debug!("{}", msg);
             messages.push(("DEBUG".to_string(), msg.to_owned()));
         }
-        // let ident_messages: HashSet<(String, String)> = iterators
-        //     .iter_mut()
-        //     .flat_map(|iter| iter.collect_messages())
-        //     .collect();
-        // for (lvl, msg) in ident_messages {
-        // }
-        // .filter(|potential| !identified.contains(potential))
-        // .collect();
-        // this contain check is done again because there might be imodules that identify the same decision model,
-        // and since the filtering before is step-based, it would add both identical decision models.
-        // This new for-if fixes this by checking every model of this step.
         debug!(
             "{} total decision models identified at step {}",
             identified.len(),
             step
         );
-        // fix_point = fix_point && (identified.len() == before);
         step += 1;
     }
     (identified, messages)
+}
+
+pub fn get_sqlite_for_identification(url: &str) -> Result<rusqlite::Connection, rusqlite::Error> {
+    let conn = rusqlite::Connection::open(url)?;
+    conn.execute(
+        "CREATE TABLE IF NOT EXISTS decision_models (
+            id INTEGER PRIMARY KEY,
+            category TEXT NOT NULL,
+            body_cbor BLOB,
+            body_msgpack BLOB,
+            body_json JSON NOT NULL,
+            UNIQUE (category, body_json)
+        )",
+        [],
+    )?;
+    conn.execute(
+        "CREATE TABLE IF NOT EXISTS design_models (
+            id INTEGER PRIMARY KEY,
+            category TEXT NOT NULL,
+            format TEXT NOT NULL,
+            body TEXT NOT NULL,
+            UNIQUE (format, category, body)
+        )",
+        [],
+    )?;
+    conn.execute(
+        "CREATE TABLE IF NOT EXISTS part (
+            decision_model_id INTEGER NOT NULL,
+            element_name TEXT NOT NULL,
+            FOREIGN KEY (decision_model_id) REFERENCES decision_models (id),
+            UNIQUE (decision_model_id, element_name)
+        )",
+        [],
+    )?;
+    conn.execute(
+        "CREATE TABLE IF NOT EXISTS elems (
+            design_model_id INTEGER NOT NULL,
+            element_name TEXT NOT NULL,
+            FOREIGN KEY (design_model_id) REFERENCES decision_models (id),
+            UNIQUE (design_model_id, element_name)
+        )",
+        [],
+    )?;
+    Ok(conn)
+}
+
+pub fn save_decision_model_sqlite<T: DecisionModel + ?Sized>(
+    url: &str,
+    decision_model: &T,
+) -> Result<usize, rusqlite::Error> {
+    let conn = get_sqlite_for_identification(url)?;
+    let id = conn.execute(
+            "INSERT INTO decision_models (category, body_cbor, body_msgpack, body_json) VALUES (?1, ?2, ?3, ?4)", params![
+                decision_model.category(),
+                decision_model.body_as_cbor(),
+                decision_model.body_as_msgpack(),
+                decision_model.body_as_json()
+            ]
+        )?;
+    let mut stmt =
+        conn.prepare("INSERT INTO part (decision_model_id, element_name) VALUES (?1, ?2)")?;
+    for elem in decision_model.part() {
+        stmt.execute(params![id, elem])?;
+    }
+    Ok(id)
+}
+
+pub fn save_design_model_sqlite<T: DesignModel + ?Sized>(
+    url: &str,
+    design_model: &T,
+) -> Result<usize, rusqlite::Error> {
+    let conn = get_sqlite_for_identification(url)?;
+    let id = conn.execute(
+        "INSERT INTO design_models (category, format, body) VALUES (?1, ?2, ?3)",
+        params![
+            design_model.category(),
+            design_model.format(),
+            design_model.body_as_string()
+        ],
+    )?;
+    let mut stmt =
+        conn.prepare("INSERT INTO elems (design_model_id, element_name) VALUES (?1, ?2)")?;
+    for elem in design_model.elements() {
+        stmt.execute(params![id, elem])?;
+    }
+    Ok(id)
 }
 
 // #[derive(Debug, PartialEq, Eq, Hash)]

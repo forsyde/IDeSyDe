@@ -23,62 +23,70 @@ import org.chocosolver.solver.search.loop.monitors.IMonitorSolution
 import org.chocosolver.solver.search.loop.monitors.IMonitorContradiction
 import idesyde.exploration.choco.explorers.ParetoMinimizationBrancher
 import spire.math.Rational
-import idesyde.common.SDFToTiledMultiCore
+import idesyde.common.legacy.SDFToTiledMultiCore
 import idesyde.choco.ChocoExplorableOps._
-import idesyde.common.PeriodicWorkloadToPartitionedSharedMultiCore
-import idesyde.common.PeriodicWorkloadAndSDFServerToMultiCoreOld
+import idesyde.common.legacy.PeriodicWorkloadToPartitionedSharedMultiCore
+import idesyde.common.legacy.PeriodicWorkloadAndSDFServerToMultiCoreOld
 import idesyde.core.Explorer
 import idesyde.core.ExplorationBidding
 import idesyde.core.ExplorationSolution
 import org.chocosolver.solver.exception.ContradictionException
 import java.util.concurrent.CopyOnWriteArraySet
+import idesyde.common.legacy.CommonModule.tryCast
+import org.chocosolver.solver.search.loop.monitors.SearchMonitorList
 
 class ChocoExplorer extends Explorer:
 
   override def bid(
-      explorers: java.util.Set[Explorer],
       decisionModel: DecisionModel
   ): ExplorationBidding = {
-    val canExplore = decisionModel match
-      // case sdfToMemMapped: AperiodicAsynchronousDataflowToPartitionedMemoryMappableMulticore => true
-      // case sdfToTiled: AperiodicAsynchronousDataflowToPartitionedTiledMulticore => true
-      case sdf: SDFToTiledMultiCore                                => true
-      case workload: PeriodicWorkloadToPartitionedSharedMultiCore  => true
-      case workloadAndSDF: PeriodicWorkloadAndSDFServerToMultiCoreOld => true
-      case c: ChocoDecisionModel                                   => true
-      case _                                                       => false
-    val objectives: Set[String] = decisionModel match {
-      case sdf: SDFToTiledMultiCore =>
-        sdf.sdfApplications.minimumActorThroughputs.zipWithIndex
-          .filter((th, i) => th > 0.0)
-          .map((th, i) => "invThroughput(" + sdf.sdfApplications.actorsIdentifiers(i) + ")")
-          .toSet + "nUsedPEs"
-      case workload: PeriodicWorkloadToPartitionedSharedMultiCore => Set("nUsedPEs")
-      case workloadAndSDF: PeriodicWorkloadAndSDFServerToMultiCoreOld =>
-        workloadAndSDF.tasksAndSDFs.sdfApplications.minimumActorThroughputs.zipWithIndex
-          .filter((th, i) => th > 0.0)
-          .map((th, i) =>
-            "invThroughput(" + workloadAndSDF.tasksAndSDFs.sdfApplications
-              .actorsIdentifiers(i) + ")"
+    val bidding = decisionModel.category() match {
+      case "SDFToTiledMultiCore" => {
+        tryCast(decisionModel, classOf[SDFToTiledMultiCore]) { sdf =>
+          ExplorationBidding(
+            true,
+            true,
+            1.0,
+            (sdf.sdfApplications.minimumActorThroughputs.zipWithIndex
+              .filter((th, i) => th > 0.0)
+              .map((th, i) => "invThroughput(" + sdf.sdfApplications.actorsIdentifiers(i) + ")")
+              .toSet + "nUsedPEs").asJava,
+            java.util.Map.of("time-to-first", 100.0)
           )
-          .toSet + "nUsedPEs"
-      case _ => Set()
+        }
+      }
+      case "PeriodicWorkloadToPartitionedSharedMultiCore" => {
+        tryCast(decisionModel, classOf[PeriodicWorkloadToPartitionedSharedMultiCore]) { workload =>
+          ExplorationBidding(
+            true,
+            true,
+            1.0,
+            Set("nUsedPEs").asJava,
+            java.util.Map.of("time-to-first", 100.0)
+          )
+        }
+      }
+      case "PeriodicWorkloadAndSDFServerToMultiCoreOld" => {
+        tryCast(decisionModel, classOf[PeriodicWorkloadAndSDFServerToMultiCoreOld]) {
+          workloadAndSDF =>
+            ExplorationBidding(
+              true,
+              true,
+              1.0,
+              (workloadAndSDF.tasksAndSDFs.sdfApplications.minimumActorThroughputs.zipWithIndex
+                .filter((th, i) => th > 0.0)
+                .map((th, i) =>
+                  "invThroughput(" + workloadAndSDF.tasksAndSDFs.sdfApplications
+                    .actorsIdentifiers(i) + ")"
+                )
+                .toSet + "nUsedPEs").asJava,
+              java.util.Map.of("time-to-first", 100.0)
+            )
+        }
+      }
+      case _ => None
     }
-    // println(decisionModel.category())
-    // println(ExplorationBidding(
-    //   canExplore,
-    //   true,
-    //   1.0,
-    //   objectives.asJava,
-    //   java.util.Map.of("time-to-first", 100.0)
-    // ))
-    ExplorationBidding(
-      canExplore,
-      true,
-      1.0,
-      objectives.asJava,
-      java.util.Map.of("time-to-first", 100.0)
-    )
+    bidding.getOrElse(ExplorationBidding(false, false, 0.0, Set().asJava, java.util.Map.of()))
   }
 
   // override def availableCriterias(decisionModel: DecisionModel): Set[ExplorationCriteria] =
@@ -144,12 +152,12 @@ class ChocoExplorer extends Explorer:
       configuration
     )
     var solver = model.getSolver()
-    if (configuration.improvementTimeOutInSecs > 0L) {
-      solver.limitTime(configuration.improvementTimeOutInSecs * 1000L)
-    }
     if (configuration.improvementIterations > 0L) {
       solver.limitFail(configuration.improvementIterations)
       solver.limitBacktrack(configuration.improvementIterations)
+    }
+    if (configuration.improvementTimeOutInSecs > 0L) {
+      solver.limitTime(configuration.improvementTimeOutInSecs * 1000L)
     }
 
     val chocoSolution = solver.findSolution()
@@ -231,96 +239,62 @@ class ChocoExplorer extends Explorer:
       previousSolutions: java.util.Set[ExplorationSolution],
       configuration: Explorer.Configuration
   ): Stream[ExplorationSolution] = {
-    var llist = decisionModel match
-      case sdf: SDFToTiledMultiCore =>
-        exploreChocoExplorable(
-          sdf,
-          previousSolutions.asScala
-            .filter(sol => sol.solved().isInstanceOf[SDFToTiledMultiCore])
-            .map(sol =>
-              ExplorationSolution(sol.objectives(), sol.solved().asInstanceOf[SDFToTiledMultiCore])
-            )
-            .toSet,
-          configuration
-        )(using CanSolveSDFToTiledMultiCore())
-      case workload: PeriodicWorkloadToPartitionedSharedMultiCore =>
-        exploreChocoExplorable(
-          workload,
-          previousSolutions.asScala
-            .filter(sol => sol.solved().isInstanceOf[PeriodicWorkloadToPartitionedSharedMultiCore])
-            .map(sol =>
-              ExplorationSolution(
-                sol.objectives(),
-                sol.solved().asInstanceOf[PeriodicWorkloadToPartitionedSharedMultiCore]
+    var llist = decisionModel.category() match
+      case "SDFToTiledMultiCore" =>
+        tryCast(decisionModel, classOf[SDFToTiledMultiCore]) { sdf =>
+          exploreChocoExplorable(
+            sdf,
+            previousSolutions.asScala
+              .filter(sol => sol.solved().isInstanceOf[SDFToTiledMultiCore])
+              .map(sol =>
+                ExplorationSolution(
+                  sol.objectives(),
+                  sol.solved().asInstanceOf[SDFToTiledMultiCore]
+                )
               )
-            )
-            .toSet,
-          configuration
-        )(using CanSolveDepTasksToPartitionedMultiCore())
-      case workloadAndSDF: PeriodicWorkloadAndSDFServerToMultiCoreOld =>
-        exploreChocoExplorable(
-          workloadAndSDF,
-          previousSolutions.asScala
-            .filter(sol => sol.solved().isInstanceOf[PeriodicWorkloadAndSDFServerToMultiCoreOld])
-            .map(sol =>
-              ExplorationSolution(
-                sol.objectives(),
-                sol.solved().asInstanceOf[PeriodicWorkloadAndSDFServerToMultiCoreOld]
+              .toSet,
+            configuration
+          )(using CanSolveSDFToTiledMultiCore())
+        }
+      case "PeriodicWorkloadToPartitionedSharedMultiCore" =>
+        tryCast(decisionModel, classOf[PeriodicWorkloadToPartitionedSharedMultiCore]) { workload =>
+          exploreChocoExplorable(
+            workload,
+            previousSolutions.asScala
+              .filter(sol =>
+                sol.solved().isInstanceOf[PeriodicWorkloadToPartitionedSharedMultiCore]
               )
-            )
-            .toSet,
-          configuration
-        )(using CanSolvePeriodicWorkloadAndSDFServersToMulticore())
-      // case solvable: ChocoDecisionModel =>
-      //   val solver          = solvable.chocoModel.getSolver
-      //   val isOptimization  = solvable.modelMinimizationObjectives.size > 0
-      //   val paretoMinimizer = ParetoMinimizationBrancher(solvable.modelMinimizationObjectives)
-      //   // lazy val paretoMaximizer = ParetoMaximizer(
-      //   //   solvable.modelMinimizationObjectives.map(o => solvable.chocoModel.intMinusView(o))
-      //   // )
-      //   // var lastParetoFrontValues = solvable.modelMinimizationObjectives.map(_.getUB())
-      //   // var lastParetoFrontSize = 0
-      //   if (isOptimization) {
-      //     if (solvable.modelMinimizationObjectives.size == 1) {
-      //       solvable.chocoModel.setObjective(
-      //         false,
-      //         solvable.modelMinimizationObjectives.head
-      //       )
-      //     }
-      //     solver.plugMonitor(paretoMinimizer)
-      //     solvable.chocoModel.post(new Constraint("paretoOptConstraint", paretoMinimizer))
-      //     // val objFunc = getLinearizedObj(solvable)
-      //     // solvable.chocoModel.setObjective(false, objFunc)
-      //     // strategies +:= Search.bestBound(Search.minDomLBSearch(objFunc))
-      //   }
-      //   // solver.addStopCriterion(SolutionCounter(solvable.chocoModel, 2L))
-      //   if (!solvable.strategies.isEmpty) {
-      //     solver.setSearch(solvable.strategies: _*)
-      //   }
-      //   if (solvable.shouldLearnSignedClauses) {
-      //     solver.setLearningSignedClauses
-      //   }
-      //   if (solvable.shouldRestartOnSolution) {
-      //     solver.setNoGoodRecordingFromRestarts
-      //     solver.setRestartOnSolutions
-      //   }
-      //   if (explorationTotalTimeOutInSecs > 0L) {
-      //     logger.debug(
-      //       s"setting total exploration timeout to ${explorationTotalTimeOutInSecs} seconds"
-      //     )
-      //     solver.limitTime(explorationTotalTimeOutInSecs * 1000L)
-      //   }
-      //   LazyList
-      //     .continually(solver.solve())
-      //     .takeWhile(feasible => feasible)
-      //     .map(_ => {
-      //       solver.defaultSolution()
-      //     })
-      //     .flatMap(paretoSolution => {
-      //       solvable.rebuildFromChocoOutput(paretoSolution)
-      //     })
-      case _ => LazyList.empty
-    val iter            = llist.iterator
+              .map(sol =>
+                ExplorationSolution(
+                  sol.objectives(),
+                  sol.solved().asInstanceOf[PeriodicWorkloadToPartitionedSharedMultiCore]
+                )
+              )
+              .toSet,
+            configuration
+          )(using CanSolveDepTasksToPartitionedMultiCore())
+        }
+      case "PeriodicWorkloadAndSDFServerToMultiCoreOld" =>
+        tryCast(decisionModel, classOf[PeriodicWorkloadAndSDFServerToMultiCoreOld]) {
+          workloadAndSDF =>
+            exploreChocoExplorable(
+              workloadAndSDF,
+              previousSolutions.asScala
+                .filter(sol =>
+                  sol.solved().isInstanceOf[PeriodicWorkloadAndSDFServerToMultiCoreOld]
+                )
+                .map(sol =>
+                  ExplorationSolution(
+                    sol.objectives(),
+                    sol.solved().asInstanceOf[PeriodicWorkloadAndSDFServerToMultiCoreOld]
+                  )
+                )
+                .toSet,
+              configuration
+            )(using CanSolvePeriodicWorkloadAndSDFServersToMulticore())
+        }
+      case _ => None
+    val iter            = llist.map(_.iterator).getOrElse(Iterator.empty)
     val foundObjectives = CopyOnWriteArraySet[java.util.Map[String, java.lang.Double]]()
     Stream
       .generate(() => {

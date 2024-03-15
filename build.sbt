@@ -1,7 +1,7 @@
 // maintainer := "jordao@kth.se"
 organization := "io.forsyde.github"
 
-ThisBuild / scalaVersion := "3.3.0"
+ThisBuild / scalaVersion := "3.4.0"
 ThisBuild / versionScheme := Some("early-semver")
 ThisBuild / publishMavenStyle := true
 ThisBuild / publishTo := Some(Opts.resolver.sonatypeStaging)
@@ -22,7 +22,7 @@ lazy val scoptVersion                  = "4.1.0"
 lazy val scalaJsonSchemaVersion        = "0.7.8"
 lazy val javalinVersion                = "5.6.1"
 lazy val slf4jVersion                  = "2.0.7"
-lazy val globalIDeSyDeJavaVersion      = "inmemory-SNAPSHOT"
+lazy val globalIDeSyDeJavaVersion      = "develop-SNAPSHOT"
 
 lazy val modulesTarget = file("modules")
 

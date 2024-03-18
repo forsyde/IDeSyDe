@@ -8,8 +8,7 @@ use std::{
 use idesyde_core::{
     DecisionModel, DesignModel, ExplorationBid, ExplorationConfiguration, ExplorationSolution,
     Explorer, IdentificationResult, IdentificationRuleLike, LoggedResult, Module,
-    OpaqueDecisionModel, OpaqueDesignModel, 
-    ReverseIdentificationRuleLike,
+    OpaqueDecisionModel, OpaqueDesignModel, ReverseIdentificationRuleLike,
 };
 use jni::{
     objects::{GlobalRef, JObject, JObjectArray, JPrimitiveArray, JString, JValue},
@@ -744,12 +743,7 @@ impl IdentificationRuleLike for JavaModuleIdentificationRule {
     fn uses_design_models(&self) -> bool {
         if let Ok(mut env_root) = self.java_vm.attach_current_thread_permanently() {
             return env_root
-                .call_method(
-                    &self.irule_jobject,
-                    "usesDesignModels",
-                    "()Z",
-                    &[],
-                )
+                .call_method(&self.irule_jobject, "usesDesignModels", "()Z", &[])
                 .and_then(|x| x.z())
                 .unwrap_or(true);
         }
@@ -759,12 +753,7 @@ impl IdentificationRuleLike for JavaModuleIdentificationRule {
     fn uses_decision_models(&self) -> bool {
         if let Ok(mut env_root) = self.java_vm.attach_current_thread_permanently() {
             return env_root
-                .call_method(
-                    &self.irule_jobject,
-                    "usesDecisionModels",
-                    "()Z",
-                    &[],
-                )
+                .call_method(&self.irule_jobject, "usesDecisionModels", "()Z", &[])
                 .and_then(|x| x.z())
                 .unwrap_or(true);
         }
@@ -835,7 +824,7 @@ fn instantiate_java_vm_debug(
             .iter()
             .map(|x| x.to_str().unwrap_or("."))
             .collect::<Vec<&str>>()
-            .join(":");
+            .join(if cfg!(windows) { ";" } else { ":" });
         builder = builder.option(format!("-Djava.class.path={}", path_str));
     }
     JavaVM::new(
@@ -879,17 +868,20 @@ impl Explorer for JavaModuleExplorer {
             let size_estimate = 3 * m.part().len() as i32;
             let java_bid_opt = root_env.with_local_frame_returning_local(size_estimate, |env| {
                 match m.into_java(env) {
-                    Ok(jmodel) => {
-                env.call_method(
-                    &self.explorer_jobject,
-                    "bid",
-                    "(Lidesyde/core/DecisionModel;)Lidesyde/core/ExplorationBidding;",
-                    &[JValue::Object(jmodel.as_ref())],
-                )
-                .and_then(|x| x.l())
-                    }
+                    Ok(jmodel) => env
+                        .call_method(
+                            &self.explorer_jobject,
+                            "bid",
+                            "(Lidesyde/core/DecisionModel;)Lidesyde/core/ExplorationBidding;",
+                            &[JValue::Object(jmodel.as_ref())],
+                        )
+                        .and_then(|x| x.l()),
                     Err(e) => {
-                        println!("[<ERROR>] failed to convert {} to opaque with: {}", m.category(), e);
+                        println!(
+                            "[<ERROR>] failed to convert {} to opaque with: {}",
+                            m.category(),
+                            e
+                        );
                         Err(e)
                     }
                 }
@@ -929,11 +921,13 @@ impl Explorer for JavaModuleExplorer {
                     if let Ok(mut top_env) = java_vm.attach_current_thread_permanently() {
                         let has_next = top_env
                             .call_method(&iter, "hasNext", "()Z", &[])
-                                .and_then(|x| x.z());
+                            .and_then(|x| x.z());
                         if has_next.map(|x| x == true).unwrap_or(false) {
-                            let next_java_opt = top_env.with_local_frame_returning_local(1024, |env| {
-                                env.call_method(&iter, "next", "()Ljava/lang/Object;", &[])?.l()
-                            });
+                            let next_java_opt =
+                                top_env.with_local_frame_returning_local(1024, |env| {
+                                    env.call_method(&iter, "next", "()Ljava/lang/Object;", &[])?
+                                        .l()
+                                });
                             if let Ok(next_java) = next_java_opt {
                                 return ExplorationSolution::from_java(&mut top_env, next_java)
                                     .ok();

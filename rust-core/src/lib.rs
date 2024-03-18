@@ -406,29 +406,41 @@ pub type ReverseIdentificationRule =
     fn(&Vec<Arc<dyn DecisionModel>>, &Vec<Arc<dyn DesignModel>>) -> Vec<Arc<dyn DesignModel>>;
 
 #[derive(Debug, Clone, PartialEq, Eq)]
-pub enum MarkedIdentificationRule<T> where
-T : Fn(&[Arc<dyn DesignModel>], &[Arc<dyn DecisionModel>]) -> IdentificationResult + Send + Sync {
+pub enum MarkedIdentificationRule<T>
+where
+    T: Fn(&[Arc<dyn DesignModel>], &[Arc<dyn DecisionModel>]) -> IdentificationResult + Send + Sync,
+{
     DesignModelOnlyIdentificationRule(T),
     DecisionModelOnlyIdentificationRule(T),
     SpecificDecisionModelIdentificationRule(HashSet<String>, T),
     GenericIdentificationRule(T),
 }
 
-impl<T> IdentificationRuleLike for MarkedIdentificationRule<T> 
-where T : Fn(&[Arc<dyn DesignModel>], &[Arc<dyn DecisionModel>]) -> IdentificationResult + Send + Sync {
+impl<T> IdentificationRuleLike for MarkedIdentificationRule<T>
+where
+    T: Fn(&[Arc<dyn DesignModel>], &[Arc<dyn DecisionModel>]) -> IdentificationResult + Send + Sync,
+{
     fn identify(
         &self,
         design_models: &[Arc<dyn DesignModel>],
         decision_models: &[Arc<dyn DecisionModel>],
     ) -> IdentificationResult {
         match self {
-            MarkedIdentificationRule::DesignModelOnlyIdentificationRule(r) => r(design_models, decision_models),
-            MarkedIdentificationRule::DecisionModelOnlyIdentificationRule(r) => r(design_models, decision_models),
-            MarkedIdentificationRule::SpecificDecisionModelIdentificationRule(_, r) => r(design_models, decision_models),
-            MarkedIdentificationRule::GenericIdentificationRule(r) => r(design_models, decision_models)
+            MarkedIdentificationRule::DesignModelOnlyIdentificationRule(r) => {
+                r(design_models, decision_models)
+            }
+            MarkedIdentificationRule::DecisionModelOnlyIdentificationRule(r) => {
+                r(design_models, decision_models)
+            }
+            MarkedIdentificationRule::SpecificDecisionModelIdentificationRule(_, r) => {
+                r(design_models, decision_models)
+            }
+            MarkedIdentificationRule::GenericIdentificationRule(r) => {
+                r(design_models, decision_models)
+            }
         }
     }
-    
+
     fn uses_design_models(&self) -> bool {
         match self {
             MarkedIdentificationRule::DesignModelOnlyIdentificationRule(_) => true,
@@ -437,7 +449,7 @@ where T : Fn(&[Arc<dyn DesignModel>], &[Arc<dyn DecisionModel>]) -> Identificati
             MarkedIdentificationRule::GenericIdentificationRule(_) => true,
         }
     }
-    
+
     fn uses_decision_models(&self) -> bool {
         match self {
             MarkedIdentificationRule::DesignModelOnlyIdentificationRule(_) => false,
@@ -446,17 +458,17 @@ where T : Fn(&[Arc<dyn DesignModel>], &[Arc<dyn DecisionModel>]) -> Identificati
             MarkedIdentificationRule::GenericIdentificationRule(_) => true,
         }
     }
-    
+
     fn uses_specific_decision_models(&self) -> Option<Vec<String>> {
         match self {
             MarkedIdentificationRule::DesignModelOnlyIdentificationRule(_) => None,
             MarkedIdentificationRule::DecisionModelOnlyIdentificationRule(_) => None,
-            MarkedIdentificationRule::SpecificDecisionModelIdentificationRule(x, _) => Some(x.iter().map(|x| x.to_string()).collect()),
+            MarkedIdentificationRule::SpecificDecisionModelIdentificationRule(x, _) => {
+                Some(x.iter().map(|x| x.to_string()).collect())
+            }
             MarkedIdentificationRule::GenericIdentificationRule(_) => None,
         }
     }
-
-
 }
 
 #[derive(Clone, PartialEq, Eq, serde::Serialize, serde::Deserialize, derive_builder::Builder)]
@@ -887,10 +899,6 @@ impl OpaqueDesignModel {
     pub fn builder() -> OpaqueDesignModelBuilder {
         OpaqueDesignModelBuilder::default()
     }
-    pub fn from_path_str(s: &str) -> OpaqueDesignModel {
-        let path = Path::new(s);
-        return path.into();
-    }
 
     pub fn from_json_str(s: &str) -> Result<Self, serde_json::Error> {
         serde_json::from_str(s)
@@ -918,31 +926,35 @@ impl OpaqueDesignModel {
     }
 }
 
-impl<'a> From<&'a Path> for OpaqueDesignModel {
-    fn from(value: &'a Path) -> Self {
+impl<'a> TryFrom<&'a Path> for OpaqueDesignModel {
+    fn try_from(value: &'a Path) -> Result<Self, Self::Error> {
         let path = if value.is_symlink() {
-            value
-                .read_link()
-                .expect("Should not fail due to a symlink check condition.")
+            value.read_link()?
         } else {
             value.to_path_buf()
         };
         // let paths = path.map(|x| vec![x.to_string()]).unwrap_or(Vec::new());
-        OpaqueDesignModel {
-            elements: HashSet::new(),
-            category: format!("Opaque({})", path.to_str().unwrap_or("")),
-            format: path
-                .file_name()
-                .and_then(|x| x.to_str())
-                .and_then(|x| x.split_once("."))
-                .map(|(_, y)| y)
-                .unwrap_or("")
-                .to_string(),
-            body: std::fs::read_to_string(path).ok(),
-            // .and_then(|f|
-            // }),
+        if let Some((basename, ext)) = path
+            .file_name()
+            .and_then(|x| x.to_str())
+            .and_then(|x| x.split_once("."))
+        {
+            return Ok(OpaqueDesignModel {
+                elements: HashSet::new(),
+                category: format!("Opaque({})", basename),
+                format: ext.to_string(),
+                body: std::fs::read_to_string(path).ok(),
+                // .and_then(|f|
+                // }),
+            });
         }
+        Err(std::io::Error::new(
+            std::io::ErrorKind::Other,
+            "Failed to read file.",
+        ))
     }
+
+    type Error = std::io::Error;
 }
 
 // impl Serialize for OpaqueDesignModel {
@@ -960,11 +972,11 @@ impl<'a> From<&'a Path> for OpaqueDesignModel {
 //     }
 // }
 
-impl<'a> From<&'a str> for OpaqueDesignModel {
-    fn from(value: &'a str) -> Self {
-        return OpaqueDesignModel::from_path_str(value);
-    }
-}
+// impl<'a> From<&'a str> for OpaqueDesignModel {
+//     fn from(value: &'a str) -> Self {
+//         return OpaqueDesignModel::from_path_str(value);
+//     }
+// }
 
 impl DesignModel for OpaqueDesignModel {
     fn category(&self) -> String {
@@ -1040,7 +1052,6 @@ impl Hash for OpaqueDesignModel {
         }
     }
 }
-
 
 /// Identification modules are a thin layer on top of identification rules that facilitates treating
 /// (reverse) identification rules within the orchestration process or remotely in the same fashion.

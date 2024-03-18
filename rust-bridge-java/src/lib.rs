@@ -61,7 +61,7 @@ where
                 .call_static_method(
                     cls,
                     "valueOf",
-                    "(I)Ljava/lang/Long;",
+                    "(J)Ljava/lang/Long;",
                     &[JValue::Long(*self as i64)],
                 )
                 .and_then(|x| x.l())
@@ -101,7 +101,7 @@ where
                 .call_static_method(
                     cls,
                     "valueOf",
-                    "(I)Ljava/lang/Boolean;",
+                    "(Z)Ljava/lang/Boolean;",
                     &[JValue::Bool(*self as u8)],
                 )
                 .and_then(|x| x.l())

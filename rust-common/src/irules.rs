@@ -1,9 +1,6 @@
-use std::{
-    collections::{HashMap, HashSet},
-    sync::Arc,
-};
+use std::{collections::HashMap, sync::Arc};
 
-use idesyde_core::{DecisionModel, DesignModel, IdentificationResult, cast_dyn_decision_model};
+use idesyde_core::{cast_dyn_decision_model, DecisionModel, DesignModel, IdentificationResult};
 
 use petgraph::{
     visit::{Bfs, GraphBase, IntoNeighbors, IntoNodeIdentifiers, Visitable},
@@ -138,7 +135,9 @@ pub fn identify_asynchronous_aperiodic_dataflow_from_sdf(
     let mut identified = Vec::new();
     let mut errors: Vec<String> = Vec::new();
     for m in decision_models {
-        if let Some(analysed_sdf_application_val) = cast_dyn_decision_model!(m, AnalysedSDFApplication) {
+        if let Some(analysed_sdf_application_val) =
+            cast_dyn_decision_model!(m, AnalysedSDFApplication)
+        {
             // build a temporary graph for analysis
             let analysed_sdf_application = &analysed_sdf_application_val;
             let mut total_actors_graph: Graph<&str, usize, petgraph::Directed> = Graph::new();
@@ -808,7 +807,7 @@ pub fn compute_periodic_admissible_static_schedule(
                 if can_produce {
                     for i in 0..initial_tokens.len() {
                         if topology_matrix[i][j] < 0 {
-                            buffer[i] -= (-topology_matrix[i][j] as u64);
+                            buffer[i] -= -topology_matrix[i][j] as u64;
                         } else if topology_matrix[i][j] > 0 {
                             buffer[i] += topology_matrix[i][j] as u64;
                         }

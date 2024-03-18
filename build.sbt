@@ -8,7 +8,7 @@ ThisBuild / publishTo := Some(Opts.resolver.sonatypeStaging)
 
 ThisBuild / resolvers += "jitpack" at "https://jitpack.io"
 
-lazy val forsydeIoVersion              = "0.7.19"
+lazy val forsydeIoVersion              = "develop-SNAPSHOT"
 lazy val jgraphtVersion                = "1.5.1"
 lazy val scribeVersion                 = "3.10.2"
 lazy val scalaGraphVersion             = "1.13.5"
@@ -114,7 +114,7 @@ lazy val common = (project in file("scala-common"))
     licenses := Seq(
       "MIT"  -> url("https://opensource.org/license/mit/"),
       "APL2" -> url("https://www.apache.org/licenses/LICENSE-2.0")
-    ),
+    )
     // jlinkIgnoreMissingDependency := JlinkIgnore.byPackagePrefix(
     //   "scala.quoted"                -> "scala",
     //   "scalax.collection.generator" -> "org.scalacheck"
@@ -147,7 +147,7 @@ lazy val scala_legacy = (project in file("scala-bridge-forsyde-io"))
       "MIT"  -> url("https://opensource.org/license/mit/"),
       "APL2" -> url("https://www.apache.org/licenses/LICENSE-2.0"),
       "EPL2" -> url("https://www.eclipse.org/legal/epl-2.0/")
-    ),
+    )
     // jlinkModulePath := {
     //   val paths = (jlinkBuildImage / fullClasspath).value
     //   paths
@@ -213,7 +213,7 @@ lazy val choco = (project in file("scala-choco"))
       "APL2" -> url("https://www.apache.org/licenses/LICENSE-2.0"),
       "EPL2" -> url("https://www.eclipse.org/legal/epl-2.0/")
     ),
-    Compile / mainClass := Some("idesyde.choco.ChocoExplorationModule"),
+    Compile / mainClass := Some("idesyde.choco.ChocoExplorationModule")
     // moduleSettings,
     // jlinkModulePath := {
     //   val paths = (jlinkBuildImage / fullClasspath).value

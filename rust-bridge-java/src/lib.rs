@@ -115,7 +115,7 @@ where
     T: From<JObject<'a>>,
 {
     fn into_java(&self, env: &mut JNIEnv<'a>) -> Result<T, jni::errors::Error> {
-        env.with_local_frame_returning_local(2 + 2 * self.len() as i32, |inner| {
+        env.with_local_frame_returning_local(8, |inner| {
             inner.new_string(self).map(|s| JObject::from(s))
         })
         .map(|x| T::from(x))
@@ -127,7 +127,7 @@ where
     T: From<JObject<'a>>,
 {
     fn into_java(&self, env: &mut JNIEnv<'a>) -> Result<T, jni::errors::Error> {
-        env.with_local_frame_returning_local(2 + 2 * self.len() as i32, |inner| {
+        env.with_local_frame_returning_local(8, |inner| {
             inner.byte_array_from_slice(self).map(|x| JObject::from(x))
         })
         .map(|o| T::from(o))
@@ -177,7 +177,7 @@ where
 {
     fn into_java(&self, env: &mut JNIEnv<'a>) -> Result<JObject<'a>, jni::errors::Error> {
         let set_class = env.find_class("java/util/HashSet")?;
-        let set = env.with_local_frame_returning_local(16 + 2 * self.len() as i32, |inner| {
+        let set = env.with_local_frame_returning_local(16, |inner| {
             inner.new_object(set_class, "()V", &[])
         })?;
         for elem in self {
@@ -201,9 +201,7 @@ where
     fn into_java(&self, env: &mut JNIEnv<'a>) -> Result<JObject<'a>, jni::errors::Error> {
         let map_cls = env.find_class("java/util/HashMap")?;
         let mapping = env
-            .with_local_frame_returning_local(16 + 2 * self.len() as i32, |inner| {
-                inner.new_object(map_cls, "()V", &[])
-            })?;
+            .with_local_frame_returning_local(16, |inner| inner.new_object(map_cls, "()V", &[]))?;
         for (key, val) in self {
             let java_key = key.into_java(env)?;
             let elem = val.into_java(env)?;
@@ -461,8 +459,8 @@ where
 {
     fn from_java(env: &mut JNIEnv<'a>, obj: JObject<'a>) -> Result<HashSet<T>, jni::errors::Error> {
         let mut set: HashSet<T> = HashSet::new();
-        let set_size = env.call_method(&obj, "size", "()I", &[])?.i()?;
-        env.ensure_local_capacity(128 as i32 + 2 * set_size)?;
+        // let set_size = env.call_method(&obj, "size", "()I", &[])?.i()?;
+        // env.ensure_local_capacity(128 as i32 + 2 * set_size)?;
         let iter = env
             .call_method(&obj, "iterator", "()Ljava/util/Iterator;", &[])
             .and_then(|x| x.l())?;
@@ -527,8 +525,8 @@ where
 {
     fn from_java(env: &mut JNIEnv<'a>, obj: JObject<'a>) -> Result<Vec<T>, jni::errors::Error> {
         let mut vector: Vec<T> = vec![];
-        let vec_size = env.call_method(&obj, "size", "()I", &[])?.i()?;
-        env.ensure_local_capacity(128 as i32 + 2 * vec_size)?;
+        // let vec_size = env.call_method(&obj, "size", "()I", &[])?.i()?;
+        // env.ensure_local_capacity(128 as i32 + 2 * vec_size)?;
         let iter = env
             .call_method(&obj, "iterator", "()Ljava/util/Iterator;", &[])
             .and_then(|x| x.l())?;
@@ -560,7 +558,7 @@ impl<'a> FromJava<'a, JObject<'a>> for OpaqueDecisionModel {
         obj: JObject<'a>,
     ) -> Result<OpaqueDecisionModel, jni::errors::Error> {
         let mut builder = OpaqueDecisionModel::builder();
-        env.with_local_frame(512, |inner| {
+        env.with_local_frame(16, |inner| {
             let category_obj = inner
                 .call_method(&obj, "category", "()Ljava/lang/String;", &[])?
                 .l()?;
@@ -591,7 +589,7 @@ impl<'a> FromJava<'a, JObject<'a>> for OpaqueDesignModel {
         obj: JObject<'a>,
     ) -> Result<OpaqueDesignModel, jni::errors::Error> {
         let mut builder = OpaqueDesignModel::builder();
-        env.with_local_frame(512, |inner| {
+        env.with_local_frame(16, |inner| {
             let category_obj = inner
                 .call_method(&obj, "category", "()Ljava/lang/String;", &[])?
                 .l()?;
@@ -649,7 +647,7 @@ impl<'a> FromJava<'a, JObject<'a>> for IdentificationResult {
 impl<'a> FromJava<'a, JObject<'a>> for ExplorationBid {
     fn from_java(env: &mut JNIEnv<'a>, obj: JObject<'a>) -> Result<Self, jni::errors::Error> {
         let mut builder = ExplorationBid::builder();
-        env.with_local_frame(512, |inner| {
+        env.with_local_frame(8, |inner| {
             let objs_set: HashSet<String> = inner
                 .call_method(&obj, "targetObjectives", "()Ljava/util/Set;", &[])
                 .and_then(|x| x.l())

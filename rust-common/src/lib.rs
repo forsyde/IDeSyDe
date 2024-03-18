@@ -1,4 +1,4 @@
-use idesyde_core::{decision_models_schemas_gen, opaque_to_model_gen, RustEmbeddedModule};
+use idesyde_core::{decision_models_schemas_gen, RustEmbeddedModule};
 use models::{
     AnalysedSDFApplication, AperiodicAsynchronousDataflow,
     AperiodicAsynchronousDataflowToPartitionedMemoryMappableMulticore,

@@ -4,16 +4,13 @@ use clap::Parser;
 use env_logger::WriteStyle;
 use idesyde_core::{
     DecisionModel, DesignModel, ExplorationBid, ExplorationSolution, Explorer, OpaqueDesignModel,
-    ReverseIdentificationRuleLike,
 };
 use idesyde_orchestration::{
-    exploration::{self, explore_cooperatively},
-    identification::identification_procedure,
+    exploration::explore_cooperatively, identification::identification_procedure,
     ExternalServerModule,
 };
-use log::{debug, error, info, warn, Level};
+use log::{debug, info, warn, Level};
 use rayon::prelude::*;
-use serde::de;
 
 #[derive(Parser, Debug)]
 #[command(
@@ -234,20 +231,6 @@ fn main() {
         //     warn!("Failed to create increment stamps. Incremetability might not work")
         // }
 
-        // debug!("Reading and preparing input files");
-        // for input in &sorted_inputs {
-        //     let p = Path::new(input);
-        //     if !p.is_file() {
-        //         error!("Input {} does not exist or is not a file!", input);
-        //         return;
-        //     }
-        //     if let Some(fname) = p.file_name() {
-        //         let fpath = Path::new(fname);
-        //         std::fs::copy(p, run_path.join("inputs").join(fpath))
-        //             .expect("Failed to copy input models during identification.");
-        //     }
-        // }
-
         debug!("Initializing modules");
         // let mut imodules: Vec<Arc<dyn IdentificationModule>> = Vec::new();
         // let mut emodules: Vec<Arc<dyn ExplorationModule>> = Vec::new();
@@ -293,21 +276,16 @@ fn main() {
 
         // continue
         debug!("Reading and preparing input files");
-        // let design_model_headers = load_design_model_headers_from_binary(&inputs_path);
-        // let mut design_models: Vec<Box<dyn DesignModel>> = design_model_headers
-        //     .iter()
-        //     .map(|h| Box::new(h.to_owned()) as Box<dyn DesignModel>)
-        //     .collect();
         // add an "Opaque" design model header so that all modules are aware of the input models
         let design_models: Vec<Arc<dyn DesignModel>> = sorted_inputs
             .par_iter()
-            .flat_map(|s| OpaqueDesignModel::try_from(&Path::new(s)))
-            .map(|s| (s, Arc::new(OpaqueDesignModel::from(Path::new(s)))))
-            .flat_map(|(s, m)| {
+            .flat_map(|s| OpaqueDesignModel::try_from(Path::new(s)))
+            .map(|s| Arc::new(s))
+            .flat_map(|m| {
                 if m.body_as_string().is_none() {
                     warn!(
                         "Failed to read and prepare input {}. Trying to proceed anyway.",
-                        s
+                        m.category()
                     );
                     None
                 } else {
@@ -318,16 +296,7 @@ fn main() {
         for m in &design_models {
             m.write_to_dir(&inputs_path, "input", "Orchestratror");
         }
-        // design_models.push(Box::new(DesignModelHeader {
-        //     category: "Any".to_string(),
-        //     model_paths: args.inputs,
-        //     elements: HashSet::new(),
-        // }));
         let pre_identified: Vec<Arc<dyn DecisionModel>> = Vec::new();
-        // load_decision_model_headers_from_binary(&identified_path)
-        //     .iter()
-        //     .map(|(_, h)| Arc::new(OpaqueDecisionModel::from(h)) as Arc<dyn DecisionModel>)
-        //     .collect();
         info!(
             "Starting identification with {} pre-identified decision models",
             pre_identified.len()

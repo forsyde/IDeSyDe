@@ -936,14 +936,14 @@ impl<'a> TryFrom<&'a Path> for OpaqueDesignModel {
         // let paths = path.map(|x| vec![x.to_string()]).unwrap_or(Vec::new());
         if let Some((basename, ext)) = path
             .file_name()
-            .and_then(|x| x.to_str())
+            .and_then(|s| s.to_str())
             .and_then(|x| x.split_once("."))
         {
             return Ok(OpaqueDesignModel {
                 elements: HashSet::new(),
                 category: format!("Opaque({})", basename),
                 format: ext.to_string(),
-                body: std::fs::read_to_string(path).ok(),
+                body: Some(std::fs::read_to_string(path)?),
                 // .and_then(|f|
                 // }),
             });
@@ -1515,9 +1515,7 @@ pub fn compute_dominant_identification(
     }
 }
 
-pub fn compute_dominant_biddings<M, E>(
-    biddings: &Vec<(Arc<E>, Arc<M>, ExplorationBid)>,
-) -> Vec<usize>
+pub fn compute_dominant_biddings<M, E>(biddings: &[(Arc<E>, Arc<M>, ExplorationBid)]) -> Vec<usize>
 where
     M: DecisionModel + PartialOrd + ?Sized,
     E: Explorer + PartialEq + ?Sized,
@@ -1530,7 +1528,7 @@ where
                 b.can_explore
                     && !biddings
                         .iter()
-                        // .filter(|(_, mm, bb)| b != bb)
+                        .filter(|(_, mm, bb)| b != bb && m != mm)
                         .any(|(_, mm, bb)| {
                             bb.can_explore
                                 && (m.partial_cmp(&mm) == Some(Ordering::Less)

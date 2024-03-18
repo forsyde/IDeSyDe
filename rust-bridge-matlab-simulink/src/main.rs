@@ -1,10 +1,5 @@
-use std::{
-    collections::{HashMap, HashSet},
-    path::PathBuf,
-    sync::Arc,
-};
+use std::collections::{HashMap, HashSet};
 
-use idesyde_blueprints::{execute_standalone_module, StandaloneModuleBuilder};
 use idesyde_core::DesignModel;
 use serde::{Deserialize, Serialize};
 
@@ -79,36 +74,36 @@ impl DesignModel for SimulinkReactiveDesignModel {
 //         "MatlabIdentificationModule".to_string()
 //     }
 
-fn read_design_model(path: &std::path::Path) -> Option<Arc<dyn idesyde_core::DesignModel>> {
-    match path.extension().and_then(|x| x.to_str()) {
-        Some("json") => {
-            if path
-                .file_name()
-                .and_then(|x| x.to_str())
-                .map(|x| !x.starts_with("header"))
-                .unwrap_or(false)
-            {
-                if let Ok(s) = std::fs::read_to_string(&path) {
-                    let m: SimulinkReactiveDesignModel =
-                        serde_json::from_str(s.as_str()).expect("something");
-                    Some(Arc::new(m) as Arc<dyn DesignModel>)
-                } else {
-                    None
-                }
-            } else {
-                None
-            }
-        }
-        _ => None,
-    }
-}
+// fn read_design_model(path: &std::path::Path) -> Option<Arc<dyn idesyde_core::DesignModel>> {
+//     match path.extension().and_then(|x| x.to_str()) {
+//         Some("json") => {
+//             if path
+//                 .file_name()
+//                 .and_then(|x| x.to_str())
+//                 .map(|x| !x.starts_with("header"))
+//                 .unwrap_or(false)
+//             {
+//                 if let Ok(s) = std::fs::read_to_string(&path) {
+//                     let m: SimulinkReactiveDesignModel =
+//                         serde_json::from_str(s.as_str()).expect("something");
+//                     Some(Arc::new(m) as Arc<dyn DesignModel>)
+//                 } else {
+//                     None
+//                 }
+//             } else {
+//                 None
+//             }
+//         }
+//         _ => None,
+//     }
+// }
 
-fn write_design_model(
-    _design_model: &Arc<dyn idesyde_core::DesignModel>,
-    _dest: &std::path::Path,
-) -> Vec<PathBuf> {
-    vec![]
-}
+// fn write_design_model(
+//     _design_model: &Arc<dyn idesyde_core::DesignModel>,
+//     _dest: &std::path::Path,
+// ) -> Vec<PathBuf> {
+//     vec![]
+// }
 
 //     fn identification_rules(&self) -> Vec<idesyde_core::MarkedIdentificationRule> {
 //     }
@@ -117,13 +112,4 @@ fn write_design_model(
 //         Vec::new()
 //     }
 // }
-fn main() {
-    execute_standalone_module(
-        StandaloneModuleBuilder::default()
-            .unique_identifier("MatlabIdentificationModule".to_owned())
-            .read_design_model(read_design_model)
-            .write_design_model(write_design_model)
-            .build()
-            .expect("Failed to build simulink identification module. Should never fail."),
-    );
-}
+fn main() {}

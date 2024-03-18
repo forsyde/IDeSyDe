@@ -1,7 +1,6 @@
 module idesyde.java.metaheuristics {
     requires transitive idesyde.core;
     requires transitive idesyde.common;
-    requires transitive idesyde.blueprints;
     requires static idesyde.core.generator;
 
     // requires jmetal.core;

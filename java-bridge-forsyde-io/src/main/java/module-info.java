@@ -1,6 +1,5 @@
 module idesyde.forsyde.io {
 
-    requires transitive idesyde.blueprints;
     requires transitive idesyde.common;
     requires static idesyde.core.generator;
 

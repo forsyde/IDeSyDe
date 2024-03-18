@@ -70,6 +70,26 @@ where
     }
 }
 
+impl<'a, T> IntoJava<'a, T> for u32
+where
+    T: From<JObject<'a>>,
+{
+    fn into_java(&self, env: &mut JNIEnv<'a>) -> Result<T, jni::errors::Error> {
+        env.with_local_frame_returning_local(32, |inner| {
+            let cls = inner.find_class("java/lang/Integer")?;
+            inner
+                .call_static_method(
+                    cls,
+                    "valueOf",
+                    "(I)Ljava/lang/Integer;",
+                    &[JValue::Int(*self as i32)],
+                )
+                .and_then(|x| x.l())
+        })
+        .map(|x| T::from(x))
+    }
+}
+
 impl<'a, T> IntoJava<'a, T> for bool
 where
     T: From<JObject<'a>>,

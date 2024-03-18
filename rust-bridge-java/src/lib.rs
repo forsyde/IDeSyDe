@@ -115,7 +115,7 @@ where
     T: From<JObject<'a>>,
 {
     fn into_java(&self, env: &mut JNIEnv<'a>) -> Result<T, jni::errors::Error> {
-        env.with_local_frame_returning_local(self.len() as i32, |inner| {
+        env.with_local_frame_returning_local(2 + 2 * self.len() as i32, |inner| {
             inner.new_string(self).map(|s| JObject::from(s))
         })
         .map(|x| T::from(x))

@@ -301,6 +301,7 @@ fn main() {
         // add an "Opaque" design model header so that all modules are aware of the input models
         let design_models: Vec<Arc<dyn DesignModel>> = sorted_inputs
             .par_iter()
+            .flat_map(|s| OpaqueDesignModel::try_from(&Path::new(s)))
             .map(|s| (s, Arc::new(OpaqueDesignModel::from(Path::new(s)))))
             .flat_map(|(s, m)| {
                 if m.body_as_string().is_none() {
@@ -314,11 +315,9 @@ fn main() {
                 }
             })
             .collect();
-        // for m in &design_models {
-        //     if !m.category().contains("/") && !m.category().contains("\\") && !m.category().contains("Opaque") {
-        //         m.write_to_dir(&inputs_path, "input", "Orchestratror");
-        //     }
-        // }
+        for m in &design_models {
+            m.write_to_dir(&inputs_path, "input", "Orchestratror");
+        }
         // design_models.push(Box::new(DesignModelHeader {
         //     category: "Any".to_string(),
         //     model_paths: args.inputs,

@@ -75,7 +75,7 @@ final class CanSolveDepTasksToPartitionedMultiCore
 
     val periods    = m.workload.periods.map(double2int)
     val priorities = m.workload.prioritiesRateMonotonic.toArray
-    val deadlines  = m.workload.relative_deadlines.map(double2int)
+    val relativeDeadlines  = m.workload.relative_deadlines.map(double2int)
     val wcets      = m.wcets.map(_.map(double2int))
     // println(deadlines.mkString(", "))
     // println(priorities.mkString(", "))
@@ -87,25 +87,6 @@ final class CanSolveDepTasksToPartitionedMultiCore
     // println(wcets.map(_.mkString(",")).mkString("\n"))
     // println(deadlines.mkString(", "))
     // build the model so that it can be acessed later
-    // memory module
-    // val taskMapping = m.workload.processes.zipWithIndex.map((t, i) =>
-    //   chocoModel.intVar(
-    //     s"task_map($t)",
-    //     m.platform.hardware.storageSizes.zipWithIndex
-    //       .filter((ub, j) => m.workload.processSizes(i) <= ub)
-    //       .map((m, j) => j)
-    //       .toArray
-    //   )
-    // )
-    // val dataBlockMapping = m.workload.dataChannels.zipWithIndex.map((c, i) =>
-    //   chocoModel.intVar(
-    //     s"data_map($c)",
-    //     m.platform.hardware.storageSizes.zipWithIndex
-    //       .filter((ub, j) => m.workload.messagesMaxSizes(i) <= ub)
-    //       .map((m, j) => j)
-    //       .toArray
-    //   )
-    // )
     val (taskMapping, dataBlockMapping, _) =
       postSingleProcessSingleMessageMemoryConstraints(
         chocoModel,
@@ -120,7 +101,7 @@ final class CanSolveDepTasksToPartitionedMultiCore
         s"task_exec($t)",
         m.platform.hardware.processingElems.zipWithIndex
           .filter((_, j) => m.wcets(i)(j) > -1)
-          .filter((p, j) => m.wcets(i)(j) <= m.workload.periods(i))
+          .filter((p, j) => wcets(i)(j) <= relativeDeadlines(i))
           .map((m, j) => j)
           .toArray
       )
@@ -133,7 +114,7 @@ final class CanSolveDepTasksToPartitionedMultiCore
           wcets(i)
             .filter(p => p > -1)
             .min,
-          deadlines(i),
+          relativeDeadlines(i),
           true // keeping only bounds for the response time is enough and better
         )
       )
@@ -153,7 +134,7 @@ final class CanSolveDepTasksToPartitionedMultiCore
           s"releaseJitters($t)",
           // minimum WCET possible
           0,
-          deadlines(i) - wcets(i).filter(_ > 0).minOption.getOrElse(0),
+          relativeDeadlines(i) - wcets(i).filter(_ > 0).minOption.getOrElse(0),
           true // keeping only bounds for the response time is enough and better
         )
       )
@@ -263,7 +244,7 @@ final class CanSolveDepTasksToPartitionedMultiCore
       chocoModel,
     priorities,
     periods.toArray,
-    deadlines.toArray,
+    relativeDeadlines.toArray,
     wcets.map(_.toArray).toArray,
     maxUtilizations.toArray,
     durations,
@@ -336,7 +317,6 @@ final class CanSolveDepTasksToPartitionedMultiCore
     //     def onContradiction(cex: ContradictionException): Unit = {
     //       println(chocoModel.getSolver().getDecisionPath().toString())
     //       println(cex.toString())
-    //       println(chocoModel.getVars().filter(_.getName().startsWith("utilization")).map(_.toString()).mkString(", "))
     //     }
     //   })
 

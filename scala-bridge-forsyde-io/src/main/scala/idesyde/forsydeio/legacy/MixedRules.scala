@@ -48,10 +48,10 @@ trait MixedRules {
       model
         .vertexSet()
         .forEach(task =>
-          ForSyDeHierarchy.InstrumentedBehaviour
+          ForSyDeHierarchy.InstrumentedSoftwareBehaviour
             .tryView(model, task)
-            .ifPresent(instrumentedBehaviour => {
-              val taskName = instrumentedBehaviour.getIdentifier()
+            .ifPresent(InstrumentedSoftwareBehaviour => {
+              val taskName = InstrumentedSoftwareBehaviour.getIdentifier()
               processes += taskName
               best_execution_times(taskName) = mutable.Map()
               average_execution_times(taskName) = mutable.Map()
@@ -64,7 +64,7 @@ trait MixedRules {
                     .ifPresent(instrumentedProc => {
                       val peName = instrumentedProc.getIdentifier()
                       processing_elements += peName
-                      instrumentedBehaviour
+                      InstrumentedSoftwareBehaviour
                         .computationalRequirements()
                         .values()
                         .stream()
@@ -96,6 +96,7 @@ trait MixedRules {
                 )
             })
         )
+      if (!processes.isEmpty && !processing_elements.isEmpty) {
       (
         Set(
           InstrumentedComputationTimes(
@@ -109,6 +110,9 @@ trait MixedRules {
         ),
         Set()
       )
+      } else {
+        (Set(), Set("No instrumentation could be identified due to missing processes or PEs"))
+      }
     }
   }
 

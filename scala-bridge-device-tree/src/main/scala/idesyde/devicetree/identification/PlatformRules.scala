@@ -76,6 +76,7 @@ trait PlatformRules extends HasDeviceTreeUtils {
       val peVec                = peIDs.toVector
       val meVec                = meIDs.toVector
       val ceVec                = ceIDs.toVector
+      if (!peVec.isEmpty && !meVec.isEmpty) {
       (
         Set(
           SharedMemoryMultiCore(
@@ -94,6 +95,9 @@ trait PlatformRules extends HasDeviceTreeUtils {
         ),
         Set()
       )
+      } else {
+        (Set(), Set("identSharedMemoryMultiCoreFromDeviceTree: no PEs or no MEs found"))
+      }
     }
 
   def identPartitionedCoresWithRuntimesFromDeviceTree(

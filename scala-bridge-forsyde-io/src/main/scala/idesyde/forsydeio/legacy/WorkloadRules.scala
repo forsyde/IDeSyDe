@@ -275,7 +275,7 @@ trait WorkloadRules {
               tasks.map(_.getIdentifier()).toVector,
               tasks
                 .map(t =>
-                  ForSyDeHierarchy.InstrumentedBehaviour
+                  ForSyDeHierarchy.InstrumentedSoftwareBehaviour
                     .tryView(t)
                     .map(
                       _.maxSizeInBits().values().asScala.max.toLong
@@ -287,7 +287,7 @@ trait WorkloadRules {
                         lt.initSequence()
                           .stream()
                           .mapToLong(r =>
-                            ForSyDeHierarchy.InstrumentedBehaviour
+                            ForSyDeHierarchy.InstrumentedSoftwareBehaviour
                               .tryView(r)
                               .map(_.maxSizeInBits().values().asScala.max.toLong)
                               .orElse(0L)
@@ -296,7 +296,7 @@ trait WorkloadRules {
                           .loopSequence()
                           .stream()
                           .mapToLong(r =>
-                            ForSyDeHierarchy.InstrumentedBehaviour
+                            ForSyDeHierarchy.InstrumentedSoftwareBehaviour
                               .tryView(r)
                               .map(_.maxSizeInBits().values().asScala.max.toLong)
                               .orElse(0L)
@@ -361,7 +361,7 @@ trait WorkloadRules {
         java.util.stream.Stream
           .concat(lt.initSequence().stream(), lt.loopSequence().stream())
           .forEach(exec => {
-            ForSyDeHierarchy.InstrumentedBehaviour
+            ForSyDeHierarchy.InstrumentedSoftwareBehaviour
               .tryView(exec)
               .ifPresent(iexec => {
                 iexec
@@ -376,7 +376,7 @@ trait WorkloadRules {
               })
           })
       })
-    ForSyDeHierarchy.InstrumentedBehaviour
+    ForSyDeHierarchy.InstrumentedSoftwareBehaviour
       .tryView(task)
       .ifPresent(itask => {
         itask

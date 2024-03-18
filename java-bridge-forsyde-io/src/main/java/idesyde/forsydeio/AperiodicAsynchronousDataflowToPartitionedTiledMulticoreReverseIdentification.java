@@ -109,11 +109,11 @@ public class AperiodicAsynchronousDataflowToPartitionedTiledMulticoreReverseIden
         @Override
         public Set<DesignModel> apply(Set<? extends DecisionModel> t, Set<? extends DesignModel> u) {
                 var filteredSolved = t.stream()
-                                .filter(x -> x instanceof AperiodicAsynchronousDataflowToPartitionedTiledMulticore)
-                                .map(x -> (AperiodicAsynchronousDataflowToPartitionedTiledMulticore) x)
+                                .flatMap(x -> DecisionModel.cast(x, AperiodicAsynchronousDataflowToPartitionedTiledMulticore.class).stream())
                                 .collect(Collectors.toSet());
-                var filteredDesign = u.stream().filter(x -> x instanceof ForSyDeIODesignModel)
-                                .map(x -> (ForSyDeIODesignModel) x).collect(Collectors.toSet());
+                var filteredDesign = u.stream()
+                                .flatMap(x -> ForSyDeIODesignModel.tryFrom(x).stream())
+                                .collect(Collectors.toSet());
                 return innerReverseIdentifyAperiodicAsynchronousDataflowToPartitionedTiledMulticore(filteredSolved,
                                 filteredDesign);
         }

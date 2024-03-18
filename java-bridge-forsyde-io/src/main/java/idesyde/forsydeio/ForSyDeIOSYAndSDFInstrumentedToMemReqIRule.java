@@ -25,7 +25,7 @@ public class ForSyDeIOSYAndSDFInstrumentedToMemReqIRule implements Identificatio
         Set<String> channels = new HashSet<>();
         Map<String, Map<String, Long>> memMapping = new HashMap<>();
         for (var v : model.vertexSet()) {
-            ForSyDeHierarchy.InstrumentedBehaviour.tryView(model, v).ifPresent(ib -> {
+            ForSyDeHierarchy.InstrumentedSoftwareBehaviour.tryView(model, v).ifPresent(ib -> {
                 processes.add(ib.getIdentifier());
                 for (var peV : model.vertexSet()) {
                     ForSyDeHierarchy.InstrumentedProcessingModule.tryView(model, peV).ifPresentOrElse(inspe -> {
@@ -64,6 +64,10 @@ public class ForSyDeIOSYAndSDFInstrumentedToMemReqIRule implements Identificatio
         }
 
         // accept if all SDF or SY behaviours are instrumented
+        if (processes.isEmpty() || channels.isEmpty() || memMapping.isEmpty()) {
+            return new IdentificationResult(Set.of(), Set.of(
+                    "ForSyDeIOSYAndSDFInstrumentedToMemReqIRule: no instrumented processes or channels found"));
+        }
         var allSYOk = model.vertexSet().stream().filter(v -> ForSyDeHierarchy.SYProcess.tryView(model, v).isPresent())
                 .allMatch(
                         v -> memMapping.containsKey(v.getIdentifier()) && memMapping.get(v.getIdentifier()).size() > 0);

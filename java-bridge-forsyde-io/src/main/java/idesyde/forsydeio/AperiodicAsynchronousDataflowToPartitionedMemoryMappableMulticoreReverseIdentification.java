@@ -112,11 +112,11 @@ public class AperiodicAsynchronousDataflowToPartitionedMemoryMappableMulticoreRe
         @Override
         public Set<DesignModel> apply(Set<? extends DecisionModel> t, Set<? extends DesignModel> u) {
                 var filteredSolved = t.stream()
-                                .filter(x -> x instanceof AperiodicAsynchronousDataflowToPartitionedMemoryMappableMulticore)
-                                .map(x -> (AperiodicAsynchronousDataflowToPartitionedMemoryMappableMulticore) x)
+                                .flatMap(x -> DecisionModel.cast(x, AperiodicAsynchronousDataflowToPartitionedMemoryMappableMulticore.class).stream())
                                 .collect(Collectors.toSet());
-                var filteredDesign = u.stream().filter(x -> x instanceof ForSyDeIODesignModel)
-                                .map(x -> (ForSyDeIODesignModel) x).collect(Collectors.toSet());
+                var filteredDesign = u.stream()
+                                .flatMap(x -> ForSyDeIODesignModel.tryFrom(x).stream())
+                                .collect(Collectors.toSet());
                 return innerReverseIdentifyAperiodicAsynchronousDataflowToPartitionedMemoryMappableMulticore(
                                 filteredSolved,
                                 filteredDesign);

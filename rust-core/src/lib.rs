@@ -3,7 +3,6 @@ pub mod macros;
 use std::{
     collections::{HashMap, HashSet},
     hash::Hash,
-    ops::Add,
     path::Path,
     sync::{
         mpsc::{Receiver, Sender},
@@ -463,13 +462,17 @@ where T : Fn(&[Arc<dyn DesignModel>], &[Arc<dyn DecisionModel>]) -> Identificati
 #[derive(Clone, PartialEq, Eq, serde::Serialize, serde::Deserialize, derive_builder::Builder)]
 // #[builder(setter(each(name = "target_objectives")))]
 pub struct ExplorationConfiguration {
+    #[builder(default = "-1")]
     pub max_sols: i64,
     pub total_timeout: u64,
     pub improvement_timeout: u64,
     pub time_resolution: u64,
     pub memory_resolution: u64,
+    #[builder(default = "-1")]
     pub improvement_iterations: i64,
+    #[builder(default = "false")]
     pub strict: bool,
+    #[builder(default = "HashSet::new()")]
     pub target_objectives: HashSet<String>,
 }
 

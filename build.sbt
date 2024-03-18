@@ -8,7 +8,7 @@ ThisBuild / publishTo := Some(Opts.resolver.sonatypeStaging)
 
 ThisBuild / resolvers += "jitpack" at "https://jitpack.io"
 
-lazy val forsydeIoVersion              = "0.7.17"
+lazy val forsydeIoVersion              = "0.7.19"
 lazy val jgraphtVersion                = "1.5.1"
 lazy val scribeVersion                 = "3.10.2"
 lazy val scalaGraphVersion             = "1.13.5"

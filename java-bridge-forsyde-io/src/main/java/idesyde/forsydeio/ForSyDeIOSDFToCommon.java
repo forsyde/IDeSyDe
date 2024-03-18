@@ -25,9 +25,7 @@ class ForSyDeIOSDFToCommon implements IdentificationRule {
         var msgs = new HashSet<String>();
         var identified = new HashSet<DecisionModel>();
         for (var dm : designModels) {
-            if (dm instanceof ForSyDeIODesignModel m) {
-                model.mergeInPlace(m.systemGraph());
-            }
+            ForSyDeIODesignModel.tryFrom(dm).map(ForSyDeIODesignModel::systemGraph).ifPresent(model::mergeInPlace);
         }
         var sdfActors = new ArrayList<SDFActor>();
         var selfConcurrentActors = new HashSet<String>();
@@ -161,7 +159,7 @@ class ForSyDeIOSDFToCommon implements IdentificationRule {
     private Map<String, Map<String, Long>> fromSDFActorToNeeds(SystemGraph model, SDFActor actor) {
         var mutMap = new HashMap<String, HashMap<String, Long>>();
         actor.combFunctions().forEach(func -> {
-            ForSyDeHierarchy.InstrumentedBehaviour.tryView(func).ifPresent(ifunc -> {
+            ForSyDeHierarchy.InstrumentedSoftwareBehaviour.tryView(func).ifPresent(ifunc -> {
                 ifunc.computationalRequirements().forEach((k, v) -> {
                     if (mutMap.containsKey(k)) {
                         v.forEach((innerK, innerV) -> {
@@ -179,7 +177,7 @@ class ForSyDeIOSDFToCommon implements IdentificationRule {
         // check also the actor, just in case, this might be best
         // in case the functions don't exist, but the actors is instrumented
         // anyway
-        ForSyDeHierarchy.InstrumentedBehaviour.tryView(actor).ifPresent(iactor -> {
+        ForSyDeHierarchy.InstrumentedSoftwareBehaviour.tryView(actor).ifPresent(iactor -> {
             iactor.computationalRequirements().forEach((k, v) -> {
                 if (mutMap.containsKey(k)) {
                     v.forEach((innerK, innerV) -> {

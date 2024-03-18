@@ -2,7 +2,6 @@
 members = [
   "rust-core",
   "rust-orchestration",
-  "rust-blueprints",
   "rust-common",
   "rust-bridge-matlab-simulink",
   "rust-bridge-java",
@@ -48,6 +47,6 @@ rusqlite = { version = "0.31.0", features = ["bundled", "blob", "functions"] }
 zip = "0.6.6"
 
 [workspace.package]
-version = "0.8.0"
+version = "0.8.1"
 authors = ["Rodolfo Jordao"]
 edition = "2021"

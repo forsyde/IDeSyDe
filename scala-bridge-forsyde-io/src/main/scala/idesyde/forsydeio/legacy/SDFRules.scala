@@ -97,14 +97,14 @@ trait SDFRules {
       })
       val processSizes = sdfActors.zipWithIndex
         .map((a, i) =>
-          ForSyDeHierarchy.InstrumentedBehaviour
+          ForSyDeHierarchy.InstrumentedSoftwareBehaviour
             .tryView(a)
             .map(_.maxSizeInBits().values().asScala.max)
             .orElse(0L) +
             a.combFunctions()
               .stream()
               .mapToLong(fs =>
-                ForSyDeHierarchy.InstrumentedBehaviour
+                ForSyDeHierarchy.InstrumentedSoftwareBehaviour
                   .tryView(fs)
                   .map(_.maxSizeInBits().values().asScala.max)
                   .orElse(0L)
@@ -163,7 +163,7 @@ trait SDFRules {
     actor
       .combFunctions()
       .forEach(func => {
-        ForSyDeHierarchy.InstrumentedBehaviour
+        ForSyDeHierarchy.InstrumentedSoftwareBehaviour
           .tryView(func)
           .ifPresent(ifunc => {
             // now they have to be aggregated
@@ -185,7 +185,7 @@ trait SDFRules {
     // check also the actor, just in case, this might be best
     // in case the functions don't exist, but the actors is instrumented
     // anyway
-    ForSyDeHierarchy.InstrumentedBehaviour
+    ForSyDeHierarchy.InstrumentedSoftwareBehaviour
       .tryView(actor)
       .ifPresent(ia => {
         // now they have to be aggregated

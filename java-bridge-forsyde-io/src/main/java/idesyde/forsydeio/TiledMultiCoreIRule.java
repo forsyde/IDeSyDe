@@ -20,7 +20,7 @@ import forsyde.io.lib.hierarchy.platform.hardware.GenericProcessingModule;
 import idesyde.common.MemoryMappableMultiCore;
 import idesyde.common.TiledMultiCore;
 
-@AutoRegister(ForSyDeIOModule.class)
+// @AutoRegister(ForSyDeIOModule.class)
 public class TiledMultiCoreIRule implements IdentificationRule {
 
     private record Pair<A, B>(A fst, B snd) {
@@ -33,9 +33,7 @@ public class TiledMultiCoreIRule implements IdentificationRule {
         var errors = new HashSet<String>();
         var model = new SystemGraph();
         for (var dm : designModels) {
-            if (dm instanceof ForSyDeIODesignModel m) {
-                model.mergeInPlace(m.systemGraph());
-            }
+            ForSyDeIODesignModel.tryFrom(dm).map(ForSyDeIODesignModel::systemGraph).ifPresent(model::mergeInPlace);
         }
         var processingElements = new ArrayList<GenericProcessingModule>();
         var memoryElements = new ArrayList<GenericMemoryModule>();

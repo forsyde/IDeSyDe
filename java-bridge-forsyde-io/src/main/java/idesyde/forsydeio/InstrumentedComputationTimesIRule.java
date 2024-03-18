@@ -19,9 +19,7 @@ class InstrumentedComputationTimesIRule implements IdentificationRule {
         var errors = new HashSet<String>();
         var model = new SystemGraph();
         for (var dm : designModels) {
-            if (dm instanceof ForSyDeIODesignModel m) {
-                model.mergeInPlace(m.systemGraph());
-            }
+            ForSyDeIODesignModel.tryFrom(dm).map(ForSyDeIODesignModel::systemGraph).ifPresent(model::mergeInPlace);
         }
         var processes = new HashSet<String>();
         var processing_elements = new HashSet<String>();
@@ -39,7 +37,7 @@ class InstrumentedComputationTimesIRule implements IdentificationRule {
         // alll executables of task are instrumented
         model
                 .vertexSet()
-                .forEach(task -> ForSyDeHierarchy.InstrumentedBehaviour
+                .forEach(task -> ForSyDeHierarchy.InstrumentedSoftwareBehaviour
                         .tryView(model, task)
                         .ifPresent(instrumentedBehaviour -> {
                             var taskName = instrumentedBehaviour.getIdentifier();
@@ -73,7 +71,8 @@ class InstrumentedComputationTimesIRule implements IdentificationRule {
                                                                         .stream()
                                                                         .mapToLong(needEntry -> 1L
                                                                                 + Math.floorDiv(
-                                                                                        Math.round(needEntry.getValue()
+                                                                                        Math.round(needEntry
+                                                                                                .getValue()
                                                                                                 .doubleValue()
                                                                                                 / ops.get(
                                                                                                         needEntry
@@ -97,14 +96,18 @@ class InstrumentedComputationTimesIRule implements IdentificationRule {
                                                         });
                                             }));
                         }));
-        identified.add(
-                new InstrumentedComputationTimes(
-                        average_execution_times,
-                        best_execution_times,
-                        processes,
-                        processing_elements,
-                        scale_factor,
-                        worst_execution_times));
+        if (!processes.isEmpty() && !processing_elements.isEmpty()) {
+            identified.add(
+                    new InstrumentedComputationTimes(
+                            average_execution_times,
+                            best_execution_times,
+                            processes,
+                            processing_elements,
+                            scale_factor,
+                            worst_execution_times));
+        } else {
+            errors.add("No instrumented processing elements and processes found");
+        }
         return new IdentificationResult(
                 identified, errors);
     }

@@ -29,9 +29,7 @@ class ForSyDeIOSYNetworkToAADataflowIRule implements IdentificationRule {
         var msgs = new HashSet<String>();
         var model = new SystemGraph();
         for (var dm : designModels) {
-            if (dm instanceof ForSyDeIODesignModel m) {
-                model.mergeInPlace(m.systemGraph());
-            }
+            ForSyDeIODesignModel.tryFrom(dm).map(ForSyDeIODesignModel::systemGraph).ifPresent(model::mergeInPlace);
         }
         var onlySyComponents = new AsSubgraph<>(
                 model,

@@ -1,10 +1,6 @@
 use std::{
     cmp::Ordering,
     collections::{HashMap, HashSet, VecDeque},
-    io::{BufRead, BufReader},
-    path::PathBuf,
-    process::{Child, Stdio},
-    rc::Rc,
     sync::{Arc, Mutex},
     time::{Duration, Instant},
 };
@@ -13,11 +9,11 @@ use derive_builder::Builder;
 use idesyde_blueprints::ExplorationSolutionMessage;
 use idesyde_core::{
     DecisionModel, ExplorationBid, ExplorationConfiguration, ExplorationConfigurationBuilder,
-    ExplorationSolution, Explorer, Module, OpaqueDecisionModel,
+    ExplorationSolution, Explorer, OpaqueDecisionModel,
 };
 use log::{debug, warn};
 use reqwest::blocking::multipart::Form;
-use serde::{de, Deserialize, Serialize};
+use serde::{Deserialize, Serialize};
 use url::Url;
 
 use rayon::prelude::*;
@@ -278,82 +274,6 @@ impl Explorer for ExternalExplorer {
                 warn!("Failed to open exploration connetion. Trying to proceed anyway.");
             }
         }
-        // if let Ok(explore_url) = self
-        //     .url
-        //     .join(format!("/{}/explore", self.name).as_str())
-        //     .and_then(|u| u.join("/explore"))
-        // {
-        //     let mut form = reqwest::blocking::multipart::Form::new();
-        //     form = form.text(
-        //         "decisionModel",
-        //         OpaqueDecisionModel::from(m)
-        //             .to_json()
-        //             .expect("Failed to make Json out of opaque decision model. Should never fail."),
-        //     );
-        //     form = form.text("configuration", exploration_configuration.to_json_string());
-        //     for (i, sol) in currrent_solutions.iter().enumerate() {
-        //         form = form.text(
-        //             format!("previousSolution{}", i),
-        //             ExplorationSolutionMessage::from(sol).to_json_str(),
-        //         );
-        //     }
-        // }
-        // match std::net::TcpStream::connect(format!("{}:{}", self.address, self.port).as_str()) {
-        //     Ok(stream) => {
-        //         stream
-        //             .set_read_timeout(None)
-        //             .expect("Failed to set read timeout to infinite. Should never fail.");
-        //         stream
-        //             .set_write_timeout(None)
-        //             .expect("Failed to set write timeout to infinite. Should never fail.");
-        //         match tungstenite::client(
-        //             format!(
-        //                 "ws://{}:{}/{}/explore",
-        //                 self.address,
-        //                 self.port,
-        //                 self.unique_identifier()
-        //             )
-        //             .as_str(),
-        //             stream,
-        //         ) {
-        //             Ok((mut conn, _)) => {
-        //                 for sol in &currrent_solutions {
-        //                     if let Err(e) = conn.send(tungstenite::Message::text(
-        //                         ExplorationSolutionMessage::from(sol).to_json_str(),
-        //                     )) {
-        //                         warn!("Failed to send previous solution to explorer {}. Trying to continue anyway.", self.unique_identifier());
-        //                         debug!("Sending error: {}", e.to_string());
-        //                     };
-        //                 }
-        //                 if let Err(e) = conn.send(tungstenite::Message::text(
-        //                     exploration_configuration.to_json_string(),
-        //                 )) {
-        //                     warn!("Failed to send exploration configuration to explorer {}. Trying to continue anyway.", self.unique_identifier());
-        //                     debug!("Sending error: {}", e.to_string());
-        //                 }
-        //                 if let Ok(_) = conn.send(tungstenite::Message::text(
-        //                     DecisionModelMessage::from(m).to_json_str(),
-        //                 )) {
-        //                     return Box::new(ExternalExplorerSolutionIter::new(conn));
-        //                 }
-        //             }
-        //             Err(e) => {
-        //                 debug!(
-        //                     "Failed to handshake with {}: {}",
-        //                     self.unique_identifier(),
-        //                     e.to_string()
-        //                 );
-        //             }
-        //         }
-        //     }
-        //     Err(e) => {
-        //         debug!(
-        //             "Failed to create connection with {}: {}",
-        //             self.unique_identifier(),
-        //             e.to_string()
-        //         );
-        //     }
-        // }
         Arc::new(Mutex::new(std::iter::empty()))
     }
 }
@@ -366,8 +286,9 @@ impl Explorer for ExternalExplorer {
 pub struct CombinedExplorerIterator2 {
     iterators: Vec<Arc<Mutex<dyn Iterator<Item = ExplorationSolution> + Send + Sync>>>,
     is_exact: Vec<bool>,
-    duration_left: Option<Duration>,
-    solutions_left: Option<u64>,
+    configuration: ExplorationConfiguration,
+    solutions_found: u64,
+    start: Instant,
 }
 
 impl CombinedExplorerIterator2 {
@@ -376,32 +297,32 @@ impl CombinedExplorerIterator2 {
         biddings: &[ExplorationBid],
         solutions: &HashSet<ExplorationSolution>,
         exploration_configuration: &ExplorationConfiguration,
-        solutions_found: u64,
     ) -> Self {
-        let new_duration = if exploration_configuration.total_timeout > 0 {
-            Some(Duration::from_secs(
-                exploration_configuration.total_timeout - Instant::now().elapsed().as_secs(),
-            ))
-        } else {
-            None
-        };
-        let new_solution_limit = if exploration_configuration.max_sols >= 0 {
-            if exploration_configuration.max_sols as u64 > solutions_found {
-                Some(exploration_configuration.max_sols as u64 - solutions_found)
-            } else {
-                Some(0)
-            }
-        } else {
-            None
-        };
+        // let new_duration = if exploration_configuration.total_timeout > 0 {
+        //     Some(Duration::from_secs(
+        //         exploration_configuration.total_timeout - Instant::now().elapsed().as_secs(),
+        //     ))
+        // } else {
+        //     None
+        // };
+        // let new_solution_limit = if exploration_configuration.max_sols >= 0 {
+        //     if exploration_configuration.max_sols as u64 > solutions_found {
+        //         Some(exploration_configuration.max_sols as u64 - solutions_found)
+        //     } else {
+        //         Some(0)
+        //     }
+        // } else {
+        //     None
+        // };
         CombinedExplorerIterator2 {
             iterators: explorers_and_models
                 .iter()
                 .map(|(e, m)| e.explore(m.to_owned(), solutions, exploration_configuration.clone()))
                 .collect(),
             is_exact: biddings.iter().map(|b| b.is_exact).collect(),
-            duration_left: new_duration,
-            solutions_left: new_solution_limit,
+            configuration: exploration_configuration.to_owned(),
+            solutions_found: 0,
+            start: Instant::now(),
         }
     }
 }
@@ -410,20 +331,12 @@ impl Iterator for CombinedExplorerIterator2 {
     type Item = ExplorationSolution;
 
     fn next(&mut self) -> Option<Self::Item> {
-        let start = Instant::now();
-        self.duration_left = self.duration_left.map(|d| {
-            if d >= start.elapsed() {
-                d - start.elapsed()
-            } else {
-                Duration::ZERO
-            }
-        });
-        if self.solutions_left.map(|x| x > 0).unwrap_or(true)
-            && self
-                .duration_left
-                .map(|d| d > Duration::ZERO)
-                .unwrap_or(true)
+        if self.configuration.improvement_timeout > 0
+            && self.start.elapsed() > Duration::from_secs(self.configuration.improvement_timeout)
         {
+            return None;
+        }
+        if self.configuration.max_sols == -1 || self.solutions_found < self.configuration.max_sols as u64 {
             return self
                 .iterators
                 .par_iter_mut()
@@ -485,12 +398,11 @@ impl Iterator for MultiLevelCombinedExplorerIterator2 {
                     self.solutions.retain(|cur_sol| {
                         non_dominated.partial_cmp(cur_sol) != Some(Ordering::Less)
                     });
-                    let mut new_iterator = CombinedExplorerIterator2::create(
+                    let new_iterator = CombinedExplorerIterator2::create(
                         self.explorers_and_models.as_slice(),
                         self.biddings.as_slice(),
                         &self.solutions,
                         &self.exploration_configuration,
-                        self.num_found,
                     );
                     self.iterators.push_front(new_iterator);
                 };
@@ -528,7 +440,6 @@ pub fn explore_cooperatively(
         biddings,
         currrent_solutions,
         exploration_configuration,
-        0,
     );
     let mut deque = VecDeque::new();
     deque.push_front(combined_explorer);

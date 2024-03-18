@@ -8,7 +8,6 @@ edition.workspace = true
 
 [dependencies]
 idesyde-core = { path = "../rust-core" }
-idesyde-blueprints = { path = "../rust-blueprints" }
 idesyde-common = { path = "../rust-common" }
 derive_builder.workspace = true
 jni.workspace = true

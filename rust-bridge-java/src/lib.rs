@@ -8,7 +8,7 @@ use std::{
 use idesyde_core::{
     DecisionModel, DesignModel, ExplorationBid, ExplorationConfiguration, ExplorationSolution,
     Explorer, IdentificationResult, IdentificationRuleLike, LoggedResult, Module,
-    OpaqueDecisionModel, OpaqueDesignModel, ReverseIdentificationResult,
+    OpaqueDecisionModel, OpaqueDesignModel, 
     ReverseIdentificationRuleLike,
 };
 use jni::{
@@ -742,10 +742,32 @@ impl IdentificationRuleLike for JavaModuleIdentificationRule {
     }
 
     fn uses_design_models(&self) -> bool {
+        if let Ok(mut env_root) = self.java_vm.attach_current_thread_permanently() {
+            return env_root
+                .call_method(
+                    &self.irule_jobject,
+                    "usesDesignModels",
+                    "()Z",
+                    &[],
+                )
+                .and_then(|x| x.z())
+                .unwrap_or(true);
+        }
         true
     }
 
     fn uses_decision_models(&self) -> bool {
+        if let Ok(mut env_root) = self.java_vm.attach_current_thread_permanently() {
+            return env_root
+                .call_method(
+                    &self.irule_jobject,
+                    "usesDecisionModels",
+                    "()Z",
+                    &[],
+                )
+                .and_then(|x| x.z())
+                .unwrap_or(true);
+        }
         true
     }
 
@@ -856,9 +878,8 @@ impl Explorer for JavaModuleExplorer {
         if let Ok(mut root_env) = self.java_vm.attach_current_thread_permanently() {
             let size_estimate = 3 * m.part().len() as i32;
             let java_bid_opt = root_env.with_local_frame_returning_local(size_estimate, |env| {
-                let jmodel = m
-                    .into_java(env)
-                    .expect("Failed to convert decision model to java opaque");
+                match m.into_java(env) {
+                    Ok(jmodel) => {
                 env.call_method(
                     &self.explorer_jobject,
                     "bid",
@@ -866,6 +887,12 @@ impl Explorer for JavaModuleExplorer {
                     &[JValue::Object(jmodel.as_ref())],
                 )
                 .and_then(|x| x.l())
+                    }
+                    Err(e) => {
+                        println!("[<ERROR>] failed to convert {} to opaque with: {}", m.category(), e);
+                        Err(e)
+                    }
+                }
             });
             if let Ok(java_bid) = java_bid_opt {
                 return ExplorationBid::from_java(&mut root_env, java_bid)

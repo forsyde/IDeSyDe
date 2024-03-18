@@ -459,13 +459,13 @@ fn main() {
                 .map(|i| biddings[*i].2.to_owned())
                 .collect();
             let conf = idesyde_core::ExplorationConfigurationBuilder::default()
-                .max_sols(args.x_max_solutions.unwrap_or(0))
+                .max_sols(args.x_max_solutions.unwrap_or(-1))
                 .total_timeout(args.x_total_time_out.unwrap_or(0))
                 .time_resolution(args.x_time_resolution.unwrap_or(0))
                 .memory_resolution(args.x_memory_resolution.unwrap_or(0))
                 .strict(args.strict)
                 .improvement_timeout(args.x_improvement_time_out.unwrap_or(0))
-                .improvement_iterations(args.x_improvement_iterations.unwrap_or(0))
+                .improvement_iterations(args.x_improvement_iterations.unwrap_or(-1))
                 .target_objectives(
                     args.x_target_objectives
                         .iter()

@@ -6,7 +6,6 @@ edition.workspace = true
 
 [dependencies]
 idesyde-core = { path = "../rust-core" }
-idesyde-blueprints = { path = "../rust-blueprints" }
 serde = { workspace = true }
 serde_json = { workspace = true }
 rmp-serde = { workspace = true }

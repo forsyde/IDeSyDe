@@ -146,20 +146,15 @@ public interface DecisionModel extends Comparable<DecisionModel> {
             Class<T> cls) {
         if (opaqueDecisionModel.category().equals(cls.getSimpleName())
                 || opaqueDecisionModel.category().equals(cls.getName())) {
-            System.out.println("Passed check for opaque");
             return opaqueDecisionModel.asCBORBinary().flatMap(bs -> DecisionModel.fromCBOR(bs, cls)).or(
                     () -> opaqueDecisionModel.asJsonString().flatMap(str -> DecisionModel.fromJsonString(str, cls)));
-        } else {
-            System.out.println("Failed to convert the opaque");
         }
         return Optional.empty();
     }
 
     // @SuppressWarnings("unchecked")
     public static <T extends DecisionModel> Optional<T> cast(DecisionModel m, Class<T> cls) {
-        System.out.println("Trying to cast");
         if (m instanceof OpaqueDecisionModel opaqueDecisionModel) {
-            System.out.println("Got an opaque");
             return fromOpaque(opaqueDecisionModel, cls);
         } else if (cls.isInstance(m)) {
             return (Optional<T>) Optional.of(m);

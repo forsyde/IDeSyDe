@@ -151,7 +151,7 @@ where
         let optional_class = env.find_class("java/util/Optional")?;
         match self {
             Some(x) => x.into_java(env).and_then(|javax| {
-                env.with_local_frame_returning_local(32, |inner| {
+                env.with_local_frame_returning_local(16, |inner| {
                     inner
                         .call_static_method(
                             optional_class,
@@ -162,7 +162,7 @@ where
                         .and_then(|y| y.l())
                 })
             }),
-            None => env.with_local_frame_returning_local(32, |inner| {
+            None => env.with_local_frame_returning_local(16, |inner| {
                 inner
                     .call_static_method(optional_class, "empty", "()Ljava/util/Optional;", &[])
                     .and_then(|x| x.l())
@@ -225,7 +225,7 @@ where
         if let Some(fst) = self.first() {
             let fst_java = fst.into_java(env)?;
             let array = env
-                .with_local_frame_returning_local(16 + 2 * self.len() as i32, |inner| {
+                .with_local_frame_returning_local(16, |inner| {
                     inner
                         .new_object_array(self.len() as i32, &cls, fst_java)
                         .map(|o| JObject::from(o))
@@ -285,7 +285,7 @@ impl<'a> IntoJava<'a, JObject<'a>> for dyn DesignModel {
 impl<'a> IntoJava<'a, JObject<'a>> for OpaqueDecisionModel {
     fn into_java(&self, env: &mut JNIEnv<'a>) -> Result<JObject<'a>, jni::errors::Error> {
         let opaque_class = env.find_class("idesyde/core/OpaqueDecisionModel")?;
-        env.with_local_frame_returning_local(self.part().len() as i32 + 128, |inner| {
+        env.with_local_frame_returning_local(128, |inner| {
             let category: JString = self.category().into_java(inner)?;
             let part = self.part().into_java(inner)?;
             let body_json = self.body_as_json().into_java(inner)?;
@@ -722,7 +722,7 @@ impl IdentificationRuleLike for JavaModuleIdentificationRule {
         let mut identified: Vec<Arc<dyn DecisionModel>> = vec![];
         let mut messages: Vec<String> = vec![];
         if let Ok(mut env_root) = self.java_vm.attach_current_thread_permanently() {
-            let jresult = env_root.with_local_frame(128 + 2 * design_models.iter().map(|x| x.elements().len()).sum::<usize>() as i32, |env| {
+            let jresult = env_root.with_local_frame(128, |env| {
                 let jdesigns = design_models.into_java(env)?;
                 let jdecisions = decision_models.into_java(env)?;
                 match env.call_method(
@@ -883,9 +883,9 @@ impl Explorer for JavaModuleExplorer {
 
     fn bid(&self, m: Arc<dyn DecisionModel>) -> idesyde_core::ExplorationBid {
         if let Ok(mut root_env) = self.java_vm.attach_current_thread_permanently() {
-            let size_estimate = 3 * m.part().len() as i32;
-            let java_bid_opt = root_env.with_local_frame_returning_local(size_estimate, |env| {
-                match m.into_java(env) {
+            // let size_estimate = 3 * m.part().len() as i32;
+            let java_bid_opt =
+                root_env.with_local_frame_returning_local(128, |env| match m.into_java(env) {
                     Ok(jmodel) => env
                         .call_method(
                             &self.explorer_jobject,
@@ -902,8 +902,7 @@ impl Explorer for JavaModuleExplorer {
                         );
                         Err(e)
                     }
-                }
-            });
+                });
             if let Ok(java_bid) = java_bid_opt {
                 return ExplorationBid::from_java(&mut root_env, java_bid)
                     .unwrap_or(ExplorationBid::impossible());
@@ -923,7 +922,7 @@ impl Explorer for JavaModuleExplorer {
             let java_m = m.into_java(&mut top_env)?;
             let java_sols = currrent_solutions.into_java(&mut top_env)?;
             let java_conf = exploration_configuration.into_java(&mut top_env)?;
-            let iter = top_env.with_local_frame_returning_local(1024, |env| {
+            let iter = top_env.with_local_frame_returning_local(128, |env| {
                 let stream = env.call_method(&self.explorer_jobject, "explore", "(Lidesyde/core/DecisionModel;Ljava/util/Set;Lidesyde/core/Explorer$Configuration;)Ljava/util/stream/Stream;", &[
                     JValue::Object(&java_m),
                     JValue::Object(&java_sols),
@@ -942,7 +941,7 @@ impl Explorer for JavaModuleExplorer {
                             .and_then(|x| x.z());
                         if has_next.map(|x| x == true).unwrap_or(false) {
                             let next_java_opt =
-                                top_env.with_local_frame_returning_local(1024, |env| {
+                                top_env.with_local_frame_returning_local(128, |env| {
                                     env.call_method(&iter, "next", "()Ljava/lang/Object;", &[])?
                                         .l()
                                 });

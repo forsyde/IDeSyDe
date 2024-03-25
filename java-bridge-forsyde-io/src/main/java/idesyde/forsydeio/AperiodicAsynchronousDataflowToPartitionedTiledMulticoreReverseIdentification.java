@@ -86,10 +86,14 @@ public class AperiodicAsynchronousDataflowToPartitionedTiledMulticoreReverseIden
                                                                 var process = reversedSystemGraph.newVertex(actor);
                                                                 var behaviour = ForSyDeHierarchy.AnalyzedBehavior
                                                                                 .enforce(reversedSystemGraph, process);
+                                                                if (behaviour.setThroughputInSecsDenominator() == null || behaviour.setThroughputInSecsNumerator() == null) {
+                                                                        behaviour.setThroughputInSecsDenominator(1L);
+                                                                        behaviour.setThroughputInSecsNumerator(0L);
+                                                                }
                                                                 if ((double) behaviour.setThroughputInSecsNumerator() / (double) behaviour.setThroughputInSecsDenominator() >= e.getValue() || behaviour.setThroughputInSecsNumerator() == 0) {
-                                                                behaviour.setThroughputInSecsNumerator(
-                                                                                (long) (e.getValue() * scale));
-                                                                behaviour.setThroughputInSecsDenominator((long) scale);
+                                                                        behaviour.setThroughputInSecsNumerator(
+                                                                                        (long) (e.getValue() * scale));
+                                                                        behaviour.setThroughputInSecsDenominator((long) scale);
                                                                 }
                                                         }
                                                 });

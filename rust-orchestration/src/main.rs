@@ -538,7 +538,7 @@ fn main() {
                     .map(|module| {
                         module
                             .reverse_identification_rules()
-                            .par_iter()
+                            .iter()
                             .map(|rrule| {
                                 let (models, msgs) =
                                     rrule.reverse_identify(&solved_models, &design_models);

@@ -201,6 +201,7 @@ final class CanSolveSDFToTiledMultiCore
         .post()
     }
     val uniqueGoalPerSubGraphInvThs = goalInvThs
+      .filter((v, i) => configuration.targetObjectives.isEmpty || configuration.targetObjectives.contains(v.getName()))
       .groupBy((v, i) =>
         m.sdfApplications.sdfDisjointComponents
           .map(_.toVector)

@@ -299,7 +299,7 @@ public interface CanExploreAADPMMMWithJenetics extends AperiodicAsynchronousData
         // get durations for each process
         Function<Integer, String> taskName = (i) -> decisionModel.aperiodicAsynchronousDataflows().stream()
                 .sequential()
-                .flatMap(app -> app.processes().stream().sequential()).skip(i <= 0 ? 0 : i - 1)
+                .flatMap(app -> app.processes().stream().sequential()).skip(i <= 0 ? 0 : i)
                 .findFirst().get();
         var scheds = decisionModel.partitionedMemMappableMulticore().runtimes().runtimes().stream().toList();
         var mappings = IntStream.range(0, jobs.size()).map(

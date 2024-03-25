@@ -1,7 +1,7 @@
 use std::{
     cmp::Ordering,
     collections::{HashMap, HashSet, VecDeque},
-    sync::{Arc, Mutex},
+    sync::{mpsc::{Receiver, Sender}, Arc, Mutex},
     time::{Duration, Instant},
 };
 
@@ -16,7 +16,7 @@ use reqwest::blocking::multipart::Form;
 use serde::{Deserialize, Serialize};
 use url::Url;
 
-use rayon::prelude::*;
+// use rayon::prelude::*;
 
 #[derive(Deserialize, Serialize, PartialEq, Clone)]
 pub struct ExplorerBidding {
@@ -289,6 +289,8 @@ pub struct CombinedExplorerIterator2 {
     configuration: ExplorationConfiguration,
     current_solutions: HashSet<ExplorationSolution>,
     start: Instant,
+    sol_tx: Arc<Sender<ExplorationSolution>>,
+    sol_rx: Arc<Receiver<ExplorationSolution>>,
 }
 
 impl CombinedExplorerIterator2 {
@@ -314,6 +316,7 @@ impl CombinedExplorerIterator2 {
         // } else {
         //     None
         // };
+        let (sol_tx, sol_rx) = std::sync::mpsc::channel::<ExplorationSolution>();
         CombinedExplorerIterator2 {
             iterators: explorers_and_models
                 .iter()
@@ -323,6 +326,8 @@ impl CombinedExplorerIterator2 {
             configuration: exploration_configuration.to_owned(),
             current_solutions: solutions.to_owned(),
             start: Instant::now(),
+            sol_tx: Arc::new(sol_tx),
+            sol_rx: Arc::new(sol_rx)
         }
     }
 }
@@ -336,20 +341,39 @@ impl Iterator for CombinedExplorerIterator2 {
         {
             return None;
         }
-        return self
-            .iterators
-            .par_iter_mut()
-            .enumerate()
-            .find_map_any(|(_, iter_mutex)| {
+        for iter_mutex_ref in &self.iterators {
+            let iter_mutex = iter_mutex_ref.to_owned();
+            let sol_tx = self.sol_tx.clone();
+            let current_solutions = self.current_solutions.clone();
+            rayon::spawn(move || {
                 if let Ok(mut iter) = iter_mutex.lock() {
                     while let Some(sol) = iter.next() {
-                        if self.current_solutions.iter().all(|cur| cur.partial_cmp(&sol) != Some(Ordering::Less)) && !self.current_solutions.contains(&sol) {
-                            return Some(sol);
+                        if current_solutions.iter().all(|cur| cur.partial_cmp(&sol) != Some(Ordering::Less)) && !current_solutions.contains(&sol) {
+                            let _ = sol_tx.send(sol);
                         }
                     }
                 }
-                None
             });
+        }
+        if self.configuration.improvement_timeout > 0 {
+            self.sol_rx.recv_timeout(Duration::from_secs(self.configuration.improvement_timeout)).ok()
+        } else {
+            self.sol_rx.recv().ok()
+        }
+        // return self
+        //     .iterators
+        //     .par_iter_mut()
+        //     .enumerate()
+        //     .find_map_any(|(_, iter_mutex)| {
+        //         if let Ok(mut iter) = iter_mutex.lock() {
+        //             while let Some(sol) = iter.next() {
+        //                 if self.current_solutions.iter().all(|cur| cur.partial_cmp(&sol) != Some(Ordering::Less)) && !self.current_solutions.contains(&sol) {
+        //                     return Some(sol);
+        //                 }
+        //             }
+        //         }
+        //         None
+        //     });
             // .take_any_while(|(i, x)| {
             //     x.is_some() || self.is_exact[*i]
             // })

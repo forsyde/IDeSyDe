@@ -1,8 +1,5 @@
 use std::{
-    collections::{HashMap, HashSet},
-    hash::Hash,
-    io::Read,
-    sync::{Arc, Mutex},
+    collections::{HashMap, HashSet}, hash::Hash, io::Read, sync::{Arc, Mutex}
 };
 
 use idesyde_core::{
@@ -834,7 +831,6 @@ fn instantiate_java_vm_debug(
     let mut builder = InitArgsBuilder::new()
         // Pass the JNI API version (default is 8)
         .version(JNIVersion::V8);
-    builder = builder.option("-Xcheck:jni");
     if cfg!(debug_assertions) {
         builder = builder.option("-Xcheck:jni");
     }
@@ -854,9 +850,36 @@ fn instantiate_java_vm_debug(
 }
 
 #[derive(Clone)]
+pub struct JavaModuleExplorerationIter {
+    java_vm: Arc<JavaVM>,
+    iter: GlobalRef,
+}
+
+#[derive(Clone)]
 pub struct JavaModuleExplorer {
     pub java_vm: Arc<JavaVM>,
     pub explorer_jobject: GlobalRef,
+}
+
+impl Iterator for JavaModuleExplorerationIter {
+    type Item = idesyde_core::ExplorationSolution;
+
+    fn next(&mut self) -> Option<Self::Item> {
+        if let Ok(mut env) = self.java_vm.attach_current_thread_permanently() {
+            let has_next = env
+                .call_method(&self.iter, "hasNext", "()Z", &[])
+                .and_then(|x| x.z());
+            if has_next.map(|x| x == true).unwrap_or(false) {
+                let next_java_opt = env
+                    .call_method(&self.iter, "next", "()Ljava/lang/Object;", &[])
+                    .and_then(|x| x.l());
+                if let Ok(next_java) = next_java_opt {
+                    return ExplorationSolution::from_java(&mut env, next_java).ok();
+                }
+            }
+        }
+        None
+    }
 }
 
 impl Explorer for JavaModuleExplorer {
@@ -935,27 +958,10 @@ impl Explorer for JavaModuleExplorer {
         });
         if let Ok(iter) = exploration_iter {
             Arc::new(Mutex::new(
-                std::iter::repeat_with(move || {
-                    if let Ok(mut top_env) = java_vm.attach_current_thread_permanently() {
-                        let has_next = top_env
-                            .call_method(&iter, "hasNext", "()Z", &[])
-                            .and_then(|x| x.z());
-                        if has_next.map(|x| x == true).unwrap_or(false) {
-                            let next_java_opt =
-                                top_env.with_local_frame_returning_local(128, |env| {
-                                    env.call_method(&iter, "next", "()Ljava/lang/Object;", &[])?
-                                        .l()
-                                });
-                            if let Ok(next_java) = next_java_opt {
-                                return ExplorationSolution::from_java(&mut top_env, next_java)
-                                    .ok();
-                            }
-                        }
-                    }
-                    None
-                })
-                .take_while(|x| x.is_some())
-                .flatten(),
+                JavaModuleExplorerationIter {
+                    java_vm,
+                    iter,
+                }
             ))
         } else {
             Arc::new(Mutex::new(std::iter::empty()))

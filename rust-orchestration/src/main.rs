@@ -529,8 +529,12 @@ fn main() {
             if !solved_models.is_empty() {
                 info!("Starting reverse identification");
                 let reverse_time = std::time::Instant::now();
+                // note that the reverse identification is NOT done in parallel
+                // this is because the current exploration implementation can stall a bit the rayon
+                // threadpool, so that parallel iteration becomes slower than sequential;
+                // plus, the reverse identification is usually a very small part of the whole process
                 let all_reversed: usize = modules
-                    .par_iter()
+                    .iter()
                     .map(|module| {
                         module
                             .reverse_identification_rules()

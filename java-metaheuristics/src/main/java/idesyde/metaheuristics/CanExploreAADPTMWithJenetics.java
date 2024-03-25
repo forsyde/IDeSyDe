@@ -277,7 +277,7 @@ public interface CanExploreAADPTMWithJenetics extends AperiodicAsynchronousDataf
                         Explorer.Configuration configuration) {
                 // first, get the number of used PEs
                 Function<Integer, String> taskName = (i) -> decisionModel.aperiodicAsynchronousDataflows().stream()
-                                .flatMap(app -> app.processes().stream()).skip(i <= 0 ? 0 : i - 1)
+                                .flatMap(app -> app.processes().stream()).skip(i <= 0 ? 0 : i)
                                 .findFirst().get();
                 var nUsedPEs = decisionModel.processesToRuntimeScheduling().values().stream().distinct().count();
                 // get durations for each process

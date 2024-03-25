@@ -453,7 +453,8 @@ fn main() {
                 // });
                 if !dominant_sols.contains(&sol) {
                     debug!(
-                        "New solution with objectives: {}.",
+                        "New solution {} with objectives: {}.",
+                        sol.solved.category(),
                         &sol.objectives
                             .iter()
                             .map(|(k, v)| format!("{}: {}", k, v))

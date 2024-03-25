@@ -285,9 +285,9 @@ impl Explorer for ExternalExplorer {
 #[derive(Clone)]
 pub struct CombinedExplorerIterator2 {
     iterators: Vec<Arc<Mutex<dyn Iterator<Item = ExplorationSolution> + Send + Sync>>>,
-    is_exact: Vec<bool>,
+    _is_exact: Vec<bool>,
     configuration: ExplorationConfiguration,
-    solutions_found: u64,
+    current_solutions: HashSet<ExplorationSolution>,
     start: Instant,
 }
 
@@ -319,9 +319,9 @@ impl CombinedExplorerIterator2 {
                 .iter()
                 .map(|(e, m)| e.explore(m.to_owned(), solutions, exploration_configuration.clone()))
                 .collect(),
-            is_exact: biddings.iter().map(|b| b.is_exact).collect(),
+            _is_exact: biddings.iter().map(|b| b.is_exact).collect(),
             configuration: exploration_configuration.to_owned(),
-            solutions_found: 0,
+            current_solutions: solutions.to_owned(),
             start: Instant::now(),
         }
     }
@@ -336,22 +336,25 @@ impl Iterator for CombinedExplorerIterator2 {
         {
             return None;
         }
-        if self.configuration.max_sols == -1 || self.solutions_found < self.configuration.max_sols as u64 {
-            return self
-                .iterators
-                .par_iter_mut()
-                .enumerate()
-                .map(|(i, iter_mutex)| {
-                    if let Ok(mut iter) = iter_mutex.lock() {
-                        return (i, iter.next());
+        return self
+            .iterators
+            .par_iter_mut()
+            .enumerate()
+            .find_map_any(|(_, iter_mutex)| {
+                if let Ok(mut iter) = iter_mutex.lock() {
+                    while let Some(sol) = iter.next() {
+                        if self.current_solutions.iter().all(|cur| cur.partial_cmp(&sol) != Some(Ordering::Less)) && !self.current_solutions.contains(&sol) {
+                            return Some(sol);
+                        }
                     }
-                    (i, None)
-                })
-                .take_any_while(|(i, x)| x.is_some() || !self.is_exact[*i])
-                .flat_map(|(_, x)| x)
-                .find_any(|_| true);
-        }
-        None
+                }
+                None
+            });
+            // .take_any_while(|(i, x)| {
+            //     x.is_some() || self.is_exact[*i]
+            // })
+            // .flat_map(|(_, x)| x)
+            // .find_any(|_| true);
     }
 }
 
@@ -409,6 +412,10 @@ impl Iterator for MultiLevelCombinedExplorerIterator2 {
                 return Some(non_dominated);
             } else {
                 self.iterators.pop_front();
+                // restart improvement time out of previous level
+                if let Some(prev_level) = self.iterators.front_mut() {
+                    prev_level.start = Instant::now();
+                }
                 return self.next();
             }
         };

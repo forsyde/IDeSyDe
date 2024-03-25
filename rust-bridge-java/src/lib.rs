@@ -834,6 +834,7 @@ fn instantiate_java_vm_debug(
     let mut builder = InitArgsBuilder::new()
         // Pass the JNI API version (default is 8)
         .version(JNIVersion::V8);
+    builder = builder.option("-Xcheck:jni");
     if cfg!(debug_assertions) {
         builder = builder.option("-Xcheck:jni");
     }

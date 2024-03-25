@@ -63,22 +63,22 @@ public class JeneticsExplorer implements Explorer, CanExploreAADPMMMWithJenetics
     @Override
     public Stream<? extends ExplorationSolution> explore(DecisionModel decisionModel,
             Set<ExplorationSolution> previousSolutions, Configuration configuration) {
-        var foundSolutionObjectives = new CopyOnWriteArraySet<Map<String, Double>>();
+        var totalSolutions = new CopyOnWriteArraySet<ExplorationSolution>();
         switch (decisionModel.category()) {
             case "AperiodicAsynchronousDataflowToPartitionedMemoryMappableMulticore":
                 return DecisionModel
                         .cast(decisionModel, AperiodicAsynchronousDataflowToPartitionedMemoryMappableMulticore.class)
                         .map(m -> exploreAADPMMM(m, previousSolutions, configuration)).orElse(Stream.empty())
-                        .filter(sol -> !previousSolutions.contains(sol) &&
-                                !foundSolutionObjectives.contains(sol.objectives()))
-                        .peek(s -> foundSolutionObjectives.add(s.objectives()));
+                        .dropWhile(sol -> previousSolutions.contains(sol) ||
+                                previousSolutions.stream().anyMatch(prev -> prev.dominates(sol)));
+                        // .peek(s -> totalSolutions.add(s));
             case "AperiodicAsynchronousDataflowToPartitionedTiledMulticore":
                 return DecisionModel
                         .cast(decisionModel, AperiodicAsynchronousDataflowToPartitionedTiledMulticore.class)
                         .map(m -> exploreAADPTM(m, previousSolutions, configuration)).orElse(Stream.empty())
-                        .filter(sol -> !previousSolutions.contains(sol) &&
-                                !foundSolutionObjectives.contains(sol.objectives()))
-                        .peek(s -> foundSolutionObjectives.add(s.objectives()));
+                        .dropWhile(sol -> previousSolutions.contains(sol) ||
+                                previousSolutions.stream().anyMatch(prev -> prev.dominates(sol)));
+                        // .peek(s -> totalSolutions.add(s));
             default:
                 return Stream.empty();
         }

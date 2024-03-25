@@ -20,7 +20,7 @@ import forsyde.io.lib.hierarchy.platform.hardware.GenericProcessingModule;
 import idesyde.common.MemoryMappableMultiCore;
 import idesyde.common.TiledMultiCore;
 
-// @AutoRegister(ForSyDeIOModule.class)
+@AutoRegister(ForSyDeIOModule.class)
 public class TiledMultiCoreIRule implements IdentificationRule {
 
     private record Pair<A, B>(A fst, B snd) {

@@ -76,18 +76,35 @@ public class AperiodicAsynchronousDataflowToPartitionedTiledMulticoreReverseIden
                         });
                         model.aperiodicAsynchronousDataflows()
                                         .forEach(app -> {
-                                                app.processes().forEach(process -> {
-                                                        var th = app.processMinimumThroughput().get(process);
-                                                        var processVertex = reversedSystemGraph.newVertex(process);
-                                                        var behaviour = ForSyDeHierarchy.AnalyzedBehavior
-                                                                        .enforce(reversedSystemGraph, processVertex);
-                                                        // var scale = 1.0;
-                                                        // while (Math.ceil(th * scale) - (th * scale) > 0.0001) {
-                                                        // scale *= 10.0;
-                                                        // }
-                                                        behaviour.setThroughputInSecsDenominator(Math.round(th));
-                                                        behaviour.setThroughputInSecsNumerator(1L);
+                                                app.processMinimumThroughput().entrySet().forEach(e -> {
+                                                        var scale = 1.0;
+                                                        while (Math.ceil(e.getValue() * scale)
+                                                                        - (e.getValue() * scale) > 0.0001) {
+                                                                scale *= 10.0;
+                                                        }
+                                                        for (var actor : app.processes()) {
+                                                                var process = reversedSystemGraph.newVertex(actor);
+                                                                var behaviour = ForSyDeHierarchy.AnalyzedBehavior
+                                                                                .enforce(reversedSystemGraph, process);
+                                                                if ((double) behaviour.setThroughputInSecsNumerator() / (double) behaviour.setThroughputInSecsDenominator() >= e.getValue() || behaviour.setThroughputInSecsNumerator() == 0) {
+                                                                behaviour.setThroughputInSecsNumerator(
+                                                                                (long) (e.getValue() * scale));
+                                                                behaviour.setThroughputInSecsDenominator((long) scale);
+                                                                }
+                                                        }
                                                 });
+                                                // app.processes().forEach(process -> {
+                                                //         var th = app.processMinimumThroughput().get(process);
+                                                //         var processVertex = reversedSystemGraph.newVertex(process);
+                                                //         var behaviour = ForSyDeHierarchy.AnalyzedBehavior
+                                                //                         .enforce(reversedSystemGraph, processVertex);
+                                                //         // var scale = 1.0;
+                                                //         // while (Math.ceil(th * scale) - (th * scale) > 0.0001) {
+                                                //         // scale *= 10.0;
+                                                //         // }
+                                                //         behaviour.setThroughputInSecsDenominator(Math.round(th));
+                                                //         behaviour.setThroughputInSecsNumerator(1L);
+                                                // });
                                                 app.buffers().forEach(channel -> {
                                                         var channelVec = reversedSystemGraph.newVertex(channel);
                                                         var bbuf = ForSyDeHierarchy.BoundedBufferLike

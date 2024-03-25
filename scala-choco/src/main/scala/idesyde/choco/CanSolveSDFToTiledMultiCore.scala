@@ -37,6 +37,7 @@ import idesyde.core.ExplorationSolution
 import org.jgrapht.alg.connectivity.ConnectivityInspector
 import org.jgrapht.graph.AsGraphUnion
 import org.jgrapht.alg.connectivity.KosarajuStrongConnectivityInspector
+import org.chocosolver.solver.search.limits.FailCounter
 
 final class CanSolveSDFToTiledMultiCore
     extends ChocoExplorable[SDFToTiledMultiCore]
@@ -218,7 +219,7 @@ final class CanSolveSDFToTiledMultiCore
       desiredGoals,
       previousSolutions
         .map(sol => (sol.solved(), sol.objectives().asScala))
-        .map((_, o) =>
+        .map((_, o) => 
           o.map((k, v) =>
             if (uniqueGoalPerSubGraphInvThs.exists(_.getName().equals(k))) k -> double2int(v)
             else k                                                           -> v.toInt
@@ -228,6 +229,7 @@ final class CanSolveSDFToTiledMultiCore
     // chocoModel.getSolver().setLearningSignedClauses()
     chocoModel.getSolver().setRestartOnSolutions()
     chocoModel.getSolver().setNoGoodRecordingFromRestarts()
+    chocoModel.getSolver().setLubyRestart(1, FailCounter(chocoModel, m.actorThroughputs.size), m.actorThroughputs.size * m.sdfApplications.channelsIdentifiers.size * m.platform.runtimes.schedulers.length)
     // chocoModel
     //   .getSolver()
     //   .plugMonitor(new IMonitorContradiction {

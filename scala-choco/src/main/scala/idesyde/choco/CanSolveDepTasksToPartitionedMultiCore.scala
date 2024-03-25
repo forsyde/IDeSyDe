@@ -321,8 +321,9 @@ final class CanSolveDepTasksToPartitionedMultiCore
     //   })
 
     // chocoModel.getSolver().setLearningSignedClauses()
-    chocoModel.getSolver().setRestarts(FailCounter(chocoModel, m.workload.task_sizes.size * m.platform.runtimes.schedulers.size), LubyCutoff(m.workload.task_sizes.size * m.platform.runtimes.schedulers.size), 0)
+    chocoModel.getSolver().setRestartOnSolutions()
     chocoModel.getSolver().setNoGoodRecordingFromRestarts()
+    chocoModel.getSolver().setLubyRestart(1, FailCounter(chocoModel, m.workload.task_sizes.size), m.workload.task_sizes.size * m.workload.data_channel_sizes.size * m.platform.runtimes.schedulers.length)
 
     // chocoModel
     //   .getSolver()

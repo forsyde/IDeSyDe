@@ -77,19 +77,21 @@ public class AperiodicAsynchronousDataflowToPartitionedMemoryMappableMulticoreRe
                         model.aperiodicAsynchronousDataflows()
                                         .forEach(app -> {
                                                 app.processMinimumThroughput().entrySet().forEach(e -> {
-                                                        var process = reversedSystemGraph.queryVertex(e.getKey())
-                                                                        .orElse(reversedSystemGraph
-                                                                                        .newVertex(e.getKey()));
-                                                        var behaviour = ForSyDeHierarchy.AnalyzedBehavior
-                                                                        .enforce(reversedSystemGraph, process);
                                                         var scale = 1.0;
                                                         while (Math.ceil(e.getValue() * scale)
                                                                         - (e.getValue() * scale) > 0.0001) {
                                                                 scale *= 10.0;
                                                         }
-                                                        behaviour.setThroughputInSecsDenominator(
-                                                                        (long) (e.getValue() * scale));
-                                                        behaviour.setThroughputInSecsNumerator((long) scale);
+                                                        for (var actor : app.processes()) {
+                                                                var process = reversedSystemGraph.newVertex(actor);
+                                                                var behaviour = ForSyDeHierarchy.AnalyzedBehavior
+                                                                                .enforce(reversedSystemGraph, process);
+                                                                if ((double) behaviour.setThroughputInSecsNumerator() / (double) behaviour.setThroughputInSecsDenominator() >= 1.0 / e.getValue() || behaviour.setThroughputInSecsNumerator() == 0) {
+                                                                behaviour.setThroughputInSecsDenominator(
+                                                                                (long) (e.getValue() * scale));
+                                                                behaviour.setThroughputInSecsNumerator((long) scale);
+                                                                }
+                                                        }
                                                 });
                                                 app.buffers().forEach(channel -> {
                                                         var channelVec = reversedSystemGraph.newVertex(channel);

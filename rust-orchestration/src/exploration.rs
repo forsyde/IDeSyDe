@@ -1,7 +1,11 @@
+
 use std::{
     cmp::Ordering,
     collections::{HashMap, HashSet, VecDeque},
-    sync::{mpsc::{Receiver, Sender}, Arc, Mutex},
+    sync::{
+        mpsc::{Receiver, Sender},
+        Arc, Mutex,
+    },
     time::{Duration, Instant},
 };
 
@@ -278,6 +282,134 @@ impl Explorer for ExternalExplorer {
     }
 }
 
+pub fn non_blocking_explore_level(
+    explorers_and_models: &[(Arc<dyn Explorer>, Arc<dyn DecisionModel>)],
+    biddings: &[ExplorationBid],
+    configuration: &ExplorationConfiguration,
+    solutions: &HashSet<ExplorationSolution>,
+) -> (Arc<Mutex<bool>>, Receiver<ExplorationSolution>) {
+    let is_dominated = Arc::new(Mutex::new(false));
+    let (level_tx, level_rx) = std::sync::mpsc::channel::<ExplorationSolution>();
+    for ((explorer, model), b) in explorers_and_models.iter().zip(biddings.iter()) {
+        let current_solutions = solutions.clone();
+        let iter_mutex = explorer.explore(model.to_owned(), solutions, configuration.to_owned());
+        let level_tx = level_tx.clone();
+        let is_dominated = is_dominated.clone();
+        let is_exact = b.is_exact;
+        let time_out_duration = if configuration.improvement_timeout > 0 {
+            Some(Duration::from_secs(configuration.improvement_timeout))
+        } else {
+            None
+        };
+        rayon::spawn(move || loop {
+            if let Some(duration) = time_out_duration {
+                if Instant::now().elapsed() > duration {
+                    return;
+                }
+            }
+            if is_dominated.lock().map(|x| *x == true).unwrap_or(true) {
+                return;
+            }
+            if let Ok(mut iter) = iter_mutex.lock() {
+                while let Some(sol) = iter.next() {
+                    if current_solutions
+                        .iter()
+                        .all(|cur| cur.partial_cmp(&sol) != Some(Ordering::Less))
+                        && !current_solutions.contains(&sol)
+                    {
+                        let _ = level_tx.send(sol);
+                    }
+                }
+                if iter.next().is_none() {
+                    if is_exact {
+                        let _ = is_dominated.lock().map(|mut x| *x = true);
+                    }
+                    return;
+                }
+            }
+        });
+    }
+    (is_dominated, level_rx)
+}
+
+pub struct MultiLevelCombinedExplorerIterator3 {
+    explorers_and_models: Vec<(Arc<dyn Explorer>, Arc<dyn DecisionModel>)>,
+    biddings: Vec<ExplorationBid>,
+    exploration_configuration: ExplorationConfiguration,
+    // levels: Vec<CombinedExplorerIterator>,
+    // levels_tuple: (Option<CombinedExplorerIterator>, CombinedExplorerIterator),
+    current_solutions: HashSet<ExplorationSolution>,
+    level_streams: VecDeque<Receiver<ExplorationSolution>>,
+    is_dominated_flags: VecDeque<Arc<Mutex<bool>>>,
+    num_found: u64,
+    // converged_to_last_level: bool,
+    start: Instant,
+}
+
+impl Iterator for MultiLevelCombinedExplorerIterator3 {
+    type Item = ExplorationSolution;
+
+    fn next(&mut self) -> Option<Self::Item> {
+        loop {
+            if self.exploration_configuration.total_timeout > 0
+                && self.start.elapsed()
+                    > Duration::from_secs(self.exploration_configuration.total_timeout)
+            {
+                return None;
+            }
+            if self.level_streams.len() == 0 {
+                return None;
+            }
+            for i in (0..self.level_streams.len()).rev() {
+                if let Some(level) = self.level_streams.get(i) {
+                    match level.recv_timeout(Duration::from_millis(500)) {
+                        Ok(solution) => {
+                            if !self
+                                .current_solutions
+                                .iter()
+                                .any(|s| s.partial_cmp(&solution) == Some(Ordering::Less))
+                            {
+                                self.num_found += 1;
+                                self.current_solutions.insert(solution.clone());
+                                let sol_dominates = self.current_solutions.iter().any(|cur_sol| {
+                                    solution.partial_cmp(cur_sol) == Some(Ordering::Less)
+                                });
+                                if sol_dominates {
+                                    self.current_solutions.retain(|cur_sol| {
+                                        solution.partial_cmp(cur_sol) != Some(Ordering::Less)
+                                    });
+                                    let (is_dominated, new_level) = non_blocking_explore_level(
+                                        &self.explorers_and_models,
+                                        self.biddings.as_slice(),
+                                        &self.exploration_configuration,
+                                        &self.current_solutions,
+                                    );
+                                    self.level_streams.push_front(new_level);
+                                    self.is_dominated_flags.push_front(is_dominated);
+                                    for j in 0..i {
+                                        let _ = self.is_dominated_flags[j]
+                                            .lock()
+                                            .map(|mut x| *x = true);
+                                        self.level_streams.remove(j);
+                                        self.is_dominated_flags.remove(j);
+                                    }
+                                }
+                                return Some(solution);
+                            }
+                        }
+                        Err(std::sync::mpsc::RecvTimeoutError::Timeout) => {}
+                        Err(std::sync::mpsc::RecvTimeoutError::Disconnected) => {
+                            self.level_streams.remove(i);
+                            self.is_dominated_flags.remove(i);
+                            break;
+                        }
+                    }
+                }
+            }
+        }
+    }
+}
+
 /// This iterator is able to get a handful of explorers + decision models combination
 /// and make the exploration cooperative. It does so by exchanging the solutions
 /// found between explorers so that the explorers almost always with the latest approximate Pareto set
@@ -327,7 +459,7 @@ impl CombinedExplorerIterator2 {
             current_solutions: solutions.to_owned(),
             start: Instant::now(),
             sol_tx: Arc::new(sol_tx),
-            sol_rx: Arc::new(sol_rx)
+            sol_rx: Arc::new(sol_rx),
         }
     }
 }
@@ -348,7 +480,11 @@ impl Iterator for CombinedExplorerIterator2 {
             rayon::spawn(move || {
                 if let Ok(mut iter) = iter_mutex.lock() {
                     while let Some(sol) = iter.next() {
-                        if current_solutions.iter().all(|cur| cur.partial_cmp(&sol) != Some(Ordering::Less)) && !current_solutions.contains(&sol) {
+                        if current_solutions
+                            .iter()
+                            .all(|cur| cur.partial_cmp(&sol) != Some(Ordering::Less))
+                            && !current_solutions.contains(&sol)
+                        {
                             let _ = sol_tx.send(sol);
                         }
                     }
@@ -356,7 +492,9 @@ impl Iterator for CombinedExplorerIterator2 {
             });
         }
         if self.configuration.improvement_timeout > 0 {
-            self.sol_rx.recv_timeout(Duration::from_secs(self.configuration.improvement_timeout)).ok()
+            self.sol_rx
+                .recv_timeout(Duration::from_secs(self.configuration.improvement_timeout))
+                .ok()
         } else {
             self.sol_rx.recv().ok()
         }
@@ -374,11 +512,11 @@ impl Iterator for CombinedExplorerIterator2 {
         //         }
         //         None
         //     });
-            // .take_any_while(|(i, x)| {
-            //     x.is_some() || self.is_exact[*i]
-            // })
-            // .flat_map(|(_, x)| x)
-            // .find_any(|_| true);
+        // .take_any_while(|(i, x)| {
+        //     x.is_some() || self.is_exact[*i]
+        // })
+        // .flat_map(|(_, x)| x)
+        // .find_any(|_| true);
     }
 }
 
@@ -462,28 +600,32 @@ pub fn compute_pareto_solutions(sols: Vec<ExplorationSolution>) -> Vec<Explorati
 pub fn explore_cooperatively(
     explorers_and_models: &[(Arc<dyn Explorer>, Arc<dyn DecisionModel>)],
     biddings: &[ExplorationBid],
-    currrent_solutions: &HashSet<ExplorationSolution>,
+    current_solutions: &HashSet<ExplorationSolution>,
     exploration_configuration: &ExplorationConfiguration,
     // solution_inspector: F,
-) -> MultiLevelCombinedExplorerIterator2 {
-    let combined_explorer = CombinedExplorerIterator2::create(
+) -> MultiLevelCombinedExplorerIterator3 {
+    let (is_dominated, new_level) = non_blocking_explore_level(
         explorers_and_models,
         biddings,
-        currrent_solutions,
         exploration_configuration,
+        current_solutions,
     );
-    let mut deque = VecDeque::new();
-    deque.push_front(combined_explorer);
-    MultiLevelCombinedExplorerIterator2 {
-        explorers_and_models: explorers_and_models
-            .iter()
-            .map(|(e, m)| (e.to_owned(), m.to_owned()))
-            .collect(),
+    // let combined_explorer = CombinedExplorerIterator2::create(
+    //     explorers_and_models,
+    //     biddings,
+    //     currrent_solutions,
+    //     exploration_configuration,
+    // );
+    // let mut deque = VecDeque::new();
+    // deque.push_front(combined_explorer);
+    MultiLevelCombinedExplorerIterator3 {
+        explorers_and_models: Vec::from(explorers_and_models),
         biddings: biddings.to_owned(),
-        solutions: currrent_solutions.clone(),
+        current_solutions: current_solutions.clone(),
         exploration_configuration: exploration_configuration.to_owned(),
-        iterators: deque,
         start: Instant::now(),
         num_found: 0,
+        level_streams: VecDeque::from(vec![new_level]),
+        is_dominated_flags: VecDeque::from(vec![is_dominated]),
     }
 }

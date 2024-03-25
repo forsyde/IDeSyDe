@@ -534,11 +534,11 @@ fn main() {
                 // threadpool, so that parallel iteration becomes slower than sequential;
                 // plus, the reverse identification is usually a very small part of the whole process
                 let all_reversed: usize = modules
-                    .iter()
+                    .par_iter()
                     .map(|module| {
                         module
                             .reverse_identification_rules()
-                            .iter()
+                            .par_iter()
                             .map(|rrule| {
                                 let (models, msgs) =
                                     rrule.reverse_identify(&solved_models, &design_models);

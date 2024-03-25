@@ -338,17 +338,21 @@ public interface CanExploreAADPMMMWithJenetics extends AperiodicAsynchronousData
                         .toArray(),
                 orderings, execTimes, edgeWeights);
         var invThroughputs = decisionModel.aperiodicAsynchronousDataflows().stream()
-                .flatMap(app -> app.processes().stream())
-                // add the throughputs to the decision model for the sake of later reference
-                .map(actor -> {
-                    var maxRepetitions = jobs.stream()
-                            .filter(j -> j.process().equals(actor))
-                            .mapToLong(AperiodicAsynchronousDataflow.Job::instance).max()
-                            .orElse(1L);
-                    return IntStream.range(0, jobs.size())
-                            .filter(j -> jobs.get(j).process().equals(actor))
-                            .mapToDouble(j -> cycleLengths[j] / maxRepetitions)
-                            .max().orElse(0.0);
+                .flatMap(app -> {
+                    var maxInvTh = app.processes().stream()
+                            .mapToDouble(actor -> {
+                                var maxRepetitions = jobs.stream()
+                                        .filter(j -> j.process().equals(actor))
+                                        .mapToLong(j -> j.instance()).max()
+                                        .orElse(1L);
+                                return IntStream.range(0, jobs.size())
+                                        .filter(j -> jobs.get(j).process()
+                                                .equals(actor))
+                                        .mapToDouble(j -> cycleLengths[j]
+                                                / maxRepetitions)
+                                        .max().orElse(1.0);
+                            }).max().orElse(1.0);
+                    return app.processes().stream().map(a -> maxInvTh);
                 })
                 .collect(Collectors.toList());
         // + 1 is because the obejctives include number of used PEs
@@ -511,7 +515,8 @@ public interface CanExploreAADPMMMWithJenetics extends AperiodicAsynchronousData
                             ioTime += summed / singleBottleNeckBW;
                             // if (Double.isNaN(ioTime))
                             // System.out.println(
-                            // "read io time for job %s at %s, %s is %f = %d / %f".formatted(job, pe, sched,
+                            // "read io time for job %s at %s, %s is %f = %d /
+                            // %f".formatted(job, pe, sched,
                             // ioTime, summed, singleBottleNeckBW));
                         }
                         if (decisionModel.aperiodicAsynchronousDataflows()
@@ -571,7 +576,8 @@ public interface CanExploreAADPMMMWithJenetics extends AperiodicAsynchronousData
                             ioTime += summed / singleBottleNeckBW;
                             // if (Double.isNaN(ioTime))
                             // System.out.println(
-                            // "wb io time for job %s at %s, %s is %f = %d / %f".formatted(job, pe, sched,
+                            // "wb io time for job %s at %s, %s is %f = %d /
+                            // %f".formatted(job, pe, sched,
                             // ioTime, summed, singleBottleNeckBW));
                         }
                         return ioTime;

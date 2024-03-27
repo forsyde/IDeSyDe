@@ -1,5 +1,8 @@
 use std::{
-    collections::{HashMap, HashSet}, hash::Hash, io::Read, sync::{Arc, Mutex}
+    collections::{HashMap, HashSet},
+    hash::Hash,
+    io::Read,
+    sync::{Arc, Mutex},
 };
 
 use idesyde_core::{
@@ -834,6 +837,7 @@ fn instantiate_java_vm_debug(
     if cfg!(debug_assertions) {
         builder = builder.option("-Xcheck:jni");
     }
+    builder = builder.option("-Xcheck:jni");
     if !jar_files.is_empty() {
         let path_str = jar_files
             .iter()
@@ -957,12 +961,7 @@ impl Explorer for JavaModuleExplorer {
             top_env.new_global_ref(iter)
         });
         if let Ok(iter) = exploration_iter {
-            Arc::new(Mutex::new(
-                JavaModuleExplorerationIter {
-                    java_vm,
-                    iter,
-                }
-            ))
+            Arc::new(Mutex::new(JavaModuleExplorerationIter { java_vm, iter }))
         } else {
             Arc::new(Mutex::new(std::iter::empty()))
         }

@@ -354,12 +354,12 @@ systemgraph {
     "consumption": {
 
     },
-    "sizeInBits": 2_l,
     "operationRequirements": {
       "proc": {
         "all": 320_l
       }
-    }
+    },
+    "sizeInBits": 2_l
   }
   vertex "gx"
   [impl::InstrumentedExecutable, moc::sdf::SDFActor, visualization::Visualizable]
@@ -376,12 +376,12 @@ systemgraph {
       "p0_4": 1_i,
       "p0_3": 1_i
     },
-    "sizeInBits": 4_l,
     "operationRequirements": {
       "proc": {
         "all": 77_l
       }
-    }
+    },
+    "sizeInBits": 4_l
   }
   vertex "gy"
   [impl::InstrumentedExecutable, moc::sdf::SDFActor, visualization::Visualizable]
@@ -398,12 +398,12 @@ systemgraph {
       "p0_4": 1_i,
       "p0_3": 1_i
     },
-    "sizeInBits": 4_l,
     "operationRequirements": {
       "proc": {
         "all": 77_l
       }
-    }
+    },
+    "sizeInBits": 4_l
   }
   vertex "abs"
   [impl::InstrumentedExecutable, moc::sdf::SDFActor, visualization::Visualizable]
@@ -416,12 +416,12 @@ systemgraph {
       "p1_0": 1_i,
       "p0_0": 1_i
     },
-    "sizeInBits": 5_l,
     "operationRequirements": {
       "proc": {
         "all": 123_l
       }
-    }
+    },
+    "sizeInBits": 5_l
   }
   vertex "chSo1_0"
   [impl::TokenizableDataBlock, moc::sdf::SDFChannel, visualization::Visualizable]

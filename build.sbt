@@ -135,7 +135,7 @@ lazy val scala_legacy = (project in file("scala-bridge-forsyde-io"))
     libraryDependencies ++= Seq(
       "com.github.forsyde.forsyde-io" % "forsyde-io-java-core"       % forsydeIoVersion,
       "com.github.forsyde.forsyde-io" % "forsyde-io-java-libforsyde" % forsydeIoVersion,
-      "com.github.forsyde.forsyde-io" % "forsyde-io-java-sdf3"       % forsydeIoVersion,
+      "com.github.forsyde.forsyde-io" % "forsyde-io-java-bridge-sdf3"       % forsydeIoVersion,
       "org.apache.commons"            % "commons-lang3"              % "3.12.0",
       "org.scala-lang.modules" %%% "scala-parser-combinators" % scalaParserCombinatorsVersion,
       "com.lihaoyi"             %% "os-lib"                   % osLibVersion,

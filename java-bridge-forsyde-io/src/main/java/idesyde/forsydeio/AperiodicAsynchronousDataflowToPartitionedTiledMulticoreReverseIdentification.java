@@ -86,14 +86,14 @@ public class AperiodicAsynchronousDataflowToPartitionedTiledMulticoreReverseIden
                                                                 var process = reversedSystemGraph.newVertex(actor);
                                                                 var behaviour = ForSyDeHierarchy.AnalyzedBehavior
                                                                                 .enforce(reversedSystemGraph, process);
-                                                                if (behaviour.setThroughputInSecsDenominator() == null || behaviour.setThroughputInSecsNumerator() == null) {
-                                                                        behaviour.setThroughputInSecsDenominator(1L);
-                                                                        behaviour.setThroughputInSecsNumerator(0L);
+                                                                if (behaviour.throughputInSecsDenominator() == null || behaviour.throughputInSecsNumerator() == null) {
+                                                                        behaviour.throughputInSecsDenominator(1L);
+                                                                        behaviour.throughputInSecsNumerator(0L);
                                                                 }
-                                                                if ((double) behaviour.setThroughputInSecsNumerator() / (double) behaviour.setThroughputInSecsDenominator() >= e.getValue() || behaviour.setThroughputInSecsNumerator() == 0) {
-                                                                        behaviour.setThroughputInSecsNumerator(
+                                                                if ((double) behaviour.throughputInSecsNumerator() / (double) behaviour.throughputInSecsDenominator() >= e.getValue() || behaviour.throughputInSecsNumerator() == 0) {
+                                                                        behaviour.throughputInSecsNumerator(
                                                                                         (long) (e.getValue() * scale));
-                                                                        behaviour.setThroughputInSecsDenominator((long) scale);
+                                                                        behaviour.throughputInSecsDenominator((long) scale);
                                                                 }
                                                         }
                                                 });
@@ -106,8 +106,8 @@ public class AperiodicAsynchronousDataflowToPartitionedTiledMulticoreReverseIden
                                                 //         // while (Math.ceil(th * scale) - (th * scale) > 0.0001) {
                                                 //         // scale *= 10.0;
                                                 //         // }
-                                                //         behaviour.setThroughputInSecsDenominator(Math.round(th));
-                                                //         behaviour.setThroughputInSecsNumerator(1L);
+                                                //         behaviour.throughputInSecsDenominator(Math.round(th));
+                                                //         behaviour.throughputInSecsNumerator(1L);
                                                 // });
                                                 app.buffers().forEach(channel -> {
                                                         var channelVec = reversedSystemGraph.newVertex(channel);

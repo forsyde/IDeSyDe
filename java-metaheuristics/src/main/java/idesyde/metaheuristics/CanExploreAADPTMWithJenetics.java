@@ -54,7 +54,7 @@ public interface CanExploreAADPTMWithJenetics extends AperiodicAsynchronousDataf
                             decisionModel.partitionedTiledMulticore().hardware()
                                     .communicationElementsMaxChannels().values()
                                     .stream()
-                                    .mapToInt(x -> x.intValue()).max().orElse(0)
+                                    .mapToInt(x -> x).max().orElse(0)
                                     + 1,
                             tiles.size() * coms.size());
                     var jobOrderingChromossome = IntegerChromosome.of(
@@ -140,7 +140,7 @@ public interface CanExploreAADPTMWithJenetics extends AperiodicAsynchronousDataf
                     var maxReservations = decisionModel.partitionedTiledMulticore().hardware()
                             .communicationElementsMaxChannels().values()
                             .stream()
-                            .mapToInt(x -> x.intValue()).max().orElse(0)
+                            .mapToInt(x -> x).max().orElse(0)
                             + 1;
                     IntegerChromosome channelReservationsChromossome = IntegerChromosome
                             .of(model.partitionedTiledMulticore()
@@ -223,7 +223,7 @@ public interface CanExploreAADPTMWithJenetics extends AperiodicAsynchronousDataf
                 .constraint(allConstraints)
                 .alterers(
                         new UniformCrossover<>(0.2, 0.25),
-                        new Mutator<>(0.2))
+                        new Mutator<>(0.25))
                 .minimizing()
                 .build();
         var solStream = engine

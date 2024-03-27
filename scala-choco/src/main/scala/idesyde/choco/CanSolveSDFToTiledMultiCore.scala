@@ -230,7 +230,7 @@ final class CanSolveSDFToTiledMultiCore
     // chocoModel.getSolver().setLearningSignedClauses()
     chocoModel.getSolver().setRestartOnSolutions()
     chocoModel.getSolver().setNoGoodRecordingFromRestarts()
-    chocoModel.getSolver().setLubyRestart(1, FailCounter(chocoModel, m.actorThroughputs.size), m.actorThroughputs.size * m.sdfApplications.channelsIdentifiers.size * m.platform.runtimes.schedulers.length)
+    chocoModel.getSolver().setLubyRestart(2, FailCounter(chocoModel, m.actorThroughputs.size), m.actorThroughputs.size * m.sdfApplications.channelsIdentifiers.size * m.platform.runtimes.schedulers.length)
     // chocoModel
     //   .getSolver()
     //   .plugMonitor(new IMonitorContradiction {
@@ -420,6 +420,7 @@ final class CanSolveSDFToTiledMultiCore
     )
     val strategies: Array[AbstractStrategy[? <: Variable]] = Array(
       // compactStrategy,
+      Search.activityBasedSearch(nUsedPEs),
       Search.activityBasedSearch(processesMemoryMapping: _*),
       Search.inputOrderLBSearch(
         m.sdfApplications.topologicalAndHeavyJobOrdering
@@ -429,7 +430,6 @@ final class CanSolveSDFToTiledMultiCore
       Search.activityBasedSearch(
         numVirtualChannelsForProcElem.flatten: _*
       ),
-      Search.activityBasedSearch(nUsedPEs),
       Search.minDomLBSearch(invThroughputs: _*)
       // Search.activityBasedSearch(numVirtualChannelsForProcElem.flatten: _*)
       // Search.minDomLBSearch(indexOfPes: _*)

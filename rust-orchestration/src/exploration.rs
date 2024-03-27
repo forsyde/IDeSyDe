@@ -1,4 +1,3 @@
-
 use std::{
     cmp::Ordering,
     collections::{HashMap, HashSet, VecDeque},
@@ -292,7 +291,21 @@ pub fn non_blocking_explore_level(
     let (level_tx, level_rx) = std::sync::mpsc::channel::<ExplorationSolution>();
     for ((explorer, model), b) in explorers_and_models.iter().zip(biddings.iter()) {
         let current_solutions = solutions.clone();
-        let iter_mutex = explorer.explore(model.to_owned(), solutions, configuration.to_owned());
+        let mut iters_mutex = VecDeque::from(vec![]);
+        let mut time_out = 1u64;
+        while time_out <= configuration.improvement_timeout {
+            time_out *= 2;
+            let modified_configuration = ExplorationConfiguration {
+                improvement_timeout: time_out,
+                target_objectives: configuration.target_objectives.clone(),
+                ..*configuration
+            };
+            let iter = explorer.explore(model.to_owned(), solutions, modified_configuration);
+            iters_mutex.push_back(iter);
+        }
+        let last_iter_mutex =
+            explorer.explore(model.to_owned(), solutions, configuration.to_owned());
+        iters_mutex.push_back(last_iter_mutex);
         let level_tx = level_tx.clone();
         let is_dominated = is_dominated.clone();
         let is_exact = b.is_exact;
@@ -310,22 +323,27 @@ pub fn non_blocking_explore_level(
             if is_dominated.lock().map(|x| *x == true).unwrap_or(true) {
                 return;
             }
-            if let Ok(mut iter) = iter_mutex.lock() {
-                while let Some(sol) = iter.next() {
-                    if current_solutions
-                        .iter()
-                        .all(|cur| cur.partial_cmp(&sol) != Some(Ordering::Less))
-                        && !current_solutions.contains(&sol)
-                    {
-                        let _ = level_tx.send(sol);
+            if let Some(iter_mutex) = iters_mutex.pop_front() {
+                if let Ok(mut iter) = iter_mutex.lock() {
+                    while let Some(sol) = iter.next() {
+                        if current_solutions
+                            .iter()
+                            .all(|cur| cur.partial_cmp(&sol) != Some(Ordering::Less))
+                            && !current_solutions.contains(&sol)
+                        {
+                            let _ = level_tx.send(sol);
+                        }
+                        if is_dominated.lock().map(|x| *x == true).unwrap_or(true) {
+                            return;
+                        }
                     }
-                }
-                if iter.next().is_none() {
-                    if is_exact {
+                    if is_exact && iters_mutex.len() == 0 {
                         let _ = is_dominated.lock().map(|mut x| *x = true);
+                        return;
                     }
-                    return;
                 }
+            } else {
+                return;
             }
         });
     }
@@ -339,8 +357,8 @@ pub struct MultiLevelCombinedExplorerIterator3 {
     // levels: Vec<CombinedExplorerIterator>,
     // levels_tuple: (Option<CombinedExplorerIterator>, CombinedExplorerIterator),
     current_solutions: HashSet<ExplorationSolution>,
-    level_streams: VecDeque<Receiver<ExplorationSolution>>,
-    is_dominated_flags: VecDeque<Arc<Mutex<bool>>>,
+    level_streams: Vec<Receiver<ExplorationSolution>>,
+    is_dominated_flags: Vec<Arc<Mutex<bool>>>,
     num_found: u64,
     // converged_to_last_level: bool,
     start: Instant,
@@ -384,8 +402,8 @@ impl Iterator for MultiLevelCombinedExplorerIterator3 {
                                         &self.exploration_configuration,
                                         &self.current_solutions,
                                     );
-                                    self.level_streams.push_front(new_level);
-                                    self.is_dominated_flags.push_front(is_dominated);
+                                    self.level_streams.push(new_level);
+                                    self.is_dominated_flags.push(is_dominated);
                                     for j in 0..i {
                                         let _ = self.is_dominated_flags[j]
                                             .lock()
@@ -625,7 +643,7 @@ pub fn explore_cooperatively(
         exploration_configuration: exploration_configuration.to_owned(),
         start: Instant::now(),
         num_found: 0,
-        level_streams: VecDeque::from(vec![new_level]),
-        is_dominated_flags: VecDeque::from(vec![is_dominated]),
+        level_streams: vec![new_level],
+        is_dominated_flags: vec![is_dominated],
     }
 }

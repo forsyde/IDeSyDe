@@ -8,7 +8,7 @@ dependencies {
     testImplementation 'org.junit.jupiter:junit-jupiter-api:5.8.1'
     implementation "com.github.forsyde.forsyde-io:forsyde-io-java-core:$forsydeioVersion"
     implementation "com.github.forsyde.forsyde-io:forsyde-io-java-libforsyde:$forsydeioVersion"
-    implementation "com.github.forsyde.forsyde-io:forsyde-io-java-sdf3:$forsydeioVersion"
+    implementation "com.github.forsyde.forsyde-io:forsyde-io-java-bridge-sdf3:$forsydeioVersion"
     // for local testing
     // implementation "io.forsyde.github:forsyde-io-java-core:$forsydeioVersion"
     // implementation "io.forsyde.github:forsyde-io-java-libforsyde:$forsydeioVersion"

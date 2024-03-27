@@ -238,7 +238,7 @@ public interface CanExploreAADPMMMWithJenetics extends AperiodicAsynchronousData
                 .constraint(allConstraints)
                 .alterers(
                         new UniformCrossover<>(0.2, 0.25),
-                        new Mutator<>(0.2))
+                        new Mutator<>(0.25))
                 .minimizing()
                 .build();
         var solStream = engine

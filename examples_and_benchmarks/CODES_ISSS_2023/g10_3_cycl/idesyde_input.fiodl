@@ -344,12 +344,12 @@ systemgraph {
     "consumption": {
       "p0": 1_i
     },
-    "sizeInBits": 2_l,
     "operationRequirements": {
       "proc_0": {
         "all": 4_l
       }
-    }
+    },
+    "sizeInBits": 2_l
   }
   vertex "a1"
   [impl::InstrumentedExecutable, moc::sdf::SDFActor, visualization::Visualizable]
@@ -363,12 +363,12 @@ systemgraph {
       "p0": 1_i,
       "p1": 1_i
     },
-    "sizeInBits": 4_l,
     "operationRequirements": {
       "proc_0": {
         "all": 7_l
       }
-    }
+    },
+    "sizeInBits": 4_l
   }
   vertex "a2"
   [impl::InstrumentedExecutable, moc::sdf::SDFActor, visualization::Visualizable]
@@ -380,12 +380,12 @@ systemgraph {
     "consumption": {
       "p0": 1_i
     },
-    "sizeInBits": 3_l,
     "operationRequirements": {
       "proc_0": {
         "all": 9_l
       }
-    }
+    },
+    "sizeInBits": 3_l
   }
   vertex "a3"
   [impl::InstrumentedExecutable, moc::sdf::SDFActor, visualization::Visualizable]
@@ -399,12 +399,12 @@ systemgraph {
     "consumption": {
       "p0": 1_i
     },
-    "sizeInBits": 4_l,
     "operationRequirements": {
       "proc_0": {
         "all": 7_l
       }
-    }
+    },
+    "sizeInBits": 4_l
   }
   vertex "a4"
   [impl::InstrumentedExecutable, moc::sdf::SDFActor, visualization::Visualizable]
@@ -417,12 +417,12 @@ systemgraph {
     "consumption": {
       "p0": 1_i
     },
-    "sizeInBits": 2_l,
     "operationRequirements": {
       "proc_0": {
         "all": 7_l
       }
-    }
+    },
+    "sizeInBits": 2_l
   }
   vertex "a5"
   [impl::InstrumentedExecutable, moc::sdf::SDFActor, visualization::Visualizable]
@@ -435,12 +435,12 @@ systemgraph {
       "p0": 1_i,
       "p1": 1_i
     },
-    "sizeInBits": 2_l,
     "operationRequirements": {
       "proc_0": {
         "all": 4_l
       }
-    }
+    },
+    "sizeInBits": 2_l
   }
   vertex "a6"
   [impl::InstrumentedExecutable, moc::sdf::SDFActor, visualization::Visualizable]
@@ -452,12 +452,12 @@ systemgraph {
     "consumption": {
       "p0": 1_i
     },
-    "sizeInBits": 2_l,
     "operationRequirements": {
       "proc_0": {
         "all": 6_l
       }
-    }
+    },
+    "sizeInBits": 2_l
   }
   vertex "a7"
   [impl::InstrumentedExecutable, moc::sdf::SDFActor, visualization::Visualizable]
@@ -469,12 +469,12 @@ systemgraph {
     "consumption": {
       "p0": 1_i
     },
-    "sizeInBits": 3_l,
     "operationRequirements": {
       "proc_0": {
         "all": 2_l
       }
-    }
+    },
+    "sizeInBits": 3_l
   }
   vertex "a8"
   [impl::InstrumentedExecutable, moc::sdf::SDFActor, visualization::Visualizable]
@@ -487,12 +487,12 @@ systemgraph {
       "p0": 1_i,
       "p1": 1_i
     },
-    "sizeInBits": 5_l,
     "operationRequirements": {
       "proc_0": {
         "all": 2_l
       }
-    }
+    },
+    "sizeInBits": 5_l
   }
   vertex "a9"
   [impl::InstrumentedExecutable, moc::sdf::SDFActor, visualization::Visualizable]
@@ -504,19 +504,18 @@ systemgraph {
     "consumption": {
       "p1": 1_i
     },
-    "sizeInBits": 4_l,
     "operationRequirements": {
       "proc_0": {
         "all": 6_l
       }
-    }
+    },
+    "sizeInBits": 4_l
   }
   vertex "ch0"
   [impl::TokenizableDataBlock, moc::sdf::SDFChannel, visualization::Visualizable]
   (consumer, initialTokenValues, producer)
   {
     "numOfInitialTokens": 0_i,
-    "numInitialTokens": 0_i,
     "maxSizeInBits": 0_l,
     "tokenSizeInBits": 256_l
   }
@@ -525,7 +524,6 @@ systemgraph {
   (consumer, initialTokenValues, producer)
   {
     "numOfInitialTokens": 0_i,
-    "numInitialTokens": 0_i,
     "maxSizeInBits": 0_l,
     "tokenSizeInBits": 64_l
   }
@@ -534,7 +532,6 @@ systemgraph {
   (consumer, initialTokenValues, producer)
   {
     "numOfInitialTokens": 1_i,
-    "numInitialTokens": 1_i,
     "maxSizeInBits": 0_l,
     "tokenSizeInBits": 512_l
   }
@@ -543,7 +540,6 @@ systemgraph {
   (consumer, initialTokenValues, producer)
   {
     "numOfInitialTokens": 0_i,
-    "numInitialTokens": 0_i,
     "maxSizeInBits": 0_l,
     "tokenSizeInBits": 64_l
   }
@@ -552,7 +548,6 @@ systemgraph {
   (consumer, initialTokenValues, producer)
   {
     "numOfInitialTokens": 0_i,
-    "numInitialTokens": 0_i,
     "maxSizeInBits": 0_l,
     "tokenSizeInBits": 256_l
   }
@@ -561,7 +556,6 @@ systemgraph {
   (consumer, initialTokenValues, producer)
   {
     "numOfInitialTokens": 1_i,
-    "numInitialTokens": 1_i,
     "maxSizeInBits": 0_l,
     "tokenSizeInBits": 256_l
   }
@@ -570,7 +564,6 @@ systemgraph {
   (consumer, initialTokenValues, producer)
   {
     "numOfInitialTokens": 0_i,
-    "numInitialTokens": 0_i,
     "maxSizeInBits": 0_l,
     "tokenSizeInBits": 64_l
   }
@@ -579,7 +572,6 @@ systemgraph {
   (consumer, initialTokenValues, producer)
   {
     "numOfInitialTokens": 0_i,
-    "numInitialTokens": 0_i,
     "maxSizeInBits": 0_l,
     "tokenSizeInBits": 512_l
   }
@@ -588,7 +580,6 @@ systemgraph {
   (consumer, initialTokenValues, producer)
   {
     "numOfInitialTokens": 0_i,
-    "numInitialTokens": 0_i,
     "maxSizeInBits": 0_l,
     "tokenSizeInBits": 64_l
   }
@@ -597,7 +588,6 @@ systemgraph {
   (consumer, initialTokenValues, producer)
   {
     "numOfInitialTokens": 0_i,
-    "numInitialTokens": 0_i,
     "maxSizeInBits": 0_l,
     "tokenSizeInBits": 256_l
   }
@@ -606,7 +596,6 @@ systemgraph {
   (consumer, initialTokenValues, producer)
   {
     "numOfInitialTokens": 0_i,
-    "numInitialTokens": 0_i,
     "maxSizeInBits": 0_l,
     "tokenSizeInBits": 64_l
   }
@@ -615,7 +604,6 @@ systemgraph {
   (consumer, initialTokenValues, producer)
   {
     "numOfInitialTokens": 0_i,
-    "numInitialTokens": 0_i,
     "maxSizeInBits": 0_l,
     "tokenSizeInBits": 64_l
   }

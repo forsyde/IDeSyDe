@@ -86,14 +86,14 @@ public class AperiodicAsynchronousDataflowToPartitionedMemoryMappableMulticoreRe
                                                                 var process = reversedSystemGraph.newVertex(actor);
                                                                 var behaviour = ForSyDeHierarchy.AnalyzedBehavior
                                                                                 .enforce(reversedSystemGraph, process);
-                                                                if (behaviour.setThroughputInSecsDenominator() == null || behaviour.setThroughputInSecsNumerator() == null) {
-                                                                        behaviour.setThroughputInSecsDenominator(1L);
-                                                                        behaviour.setThroughputInSecsNumerator(0L);
+                                                                if (behaviour.throughputInSecsDenominator() == null || behaviour.throughputInSecsNumerator() == null) {
+                                                                        behaviour.throughputInSecsDenominator(1L);
+                                                                        behaviour.throughputInSecsNumerator(0L);
                                                                 }
-                                                                if ((double) behaviour.setThroughputInSecsNumerator() / (double) behaviour.setThroughputInSecsDenominator() >= 1.0 / e.getValue() || behaviour.setThroughputInSecsNumerator() == 0) {
-                                                                behaviour.setThroughputInSecsDenominator(
+                                                                if ((double) behaviour.throughputInSecsNumerator() / (double) behaviour.throughputInSecsDenominator() >= 1.0 / e.getValue() || behaviour.throughputInSecsNumerator() == 0) {
+                                                                behaviour.throughputInSecsDenominator(
                                                                                 (long) (e.getValue() * scale));
-                                                                behaviour.setThroughputInSecsNumerator((long) scale);
+                                                                behaviour.throughputInSecsNumerator((long) scale);
                                                                 }
                                                         }
                                                 });

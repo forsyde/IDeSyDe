@@ -34,6 +34,7 @@ import org.chocosolver.solver.exception.ContradictionException
 import java.util.concurrent.CopyOnWriteArraySet
 import idesyde.common.legacy.CommonModule.tryCast
 import org.chocosolver.solver.search.loop.monitors.SearchMonitorList
+import idesyde.core.OpaqueDecisionModel
 
 class ChocoExplorer extends Explorer:
 
@@ -245,13 +246,7 @@ class ChocoExplorer extends Explorer:
           exploreChocoExplorable(
             sdf,
             previousSolutions.asScala
-              .filter(sol => sol.solved().isInstanceOf[SDFToTiledMultiCore])
-              .map(sol =>
-                ExplorationSolution(
-                  sol.objectives(),
-                  sol.solved().asInstanceOf[SDFToTiledMultiCore]
-                )
-              )
+              .filter(sol => configuration.targetObjectives.stream().allMatch(s => sol.objectives().keySet().contains(s)))
               .toSet,
             configuration
           )(using CanSolveSDFToTiledMultiCore())
@@ -261,15 +256,7 @@ class ChocoExplorer extends Explorer:
           exploreChocoExplorable(
             workload,
             previousSolutions.asScala
-              .filter(sol =>
-                sol.solved().isInstanceOf[PeriodicWorkloadToPartitionedSharedMultiCore]
-              )
-              .map(sol =>
-                ExplorationSolution(
-                  sol.objectives(),
-                  sol.solved().asInstanceOf[PeriodicWorkloadToPartitionedSharedMultiCore]
-                )
-              )
+              .filter(sol => configuration.targetObjectives.stream().allMatch(s => sol.objectives().keySet().contains(s)))
               .toSet,
             configuration
           )(using CanSolveDepTasksToPartitionedMultiCore())
@@ -280,22 +267,14 @@ class ChocoExplorer extends Explorer:
             exploreChocoExplorable(
               workloadAndSDF,
               previousSolutions.asScala
-                .filter(sol =>
-                  sol.solved().isInstanceOf[PeriodicWorkloadAndSDFServerToMultiCoreOld]
-                )
-                .map(sol =>
-                  ExplorationSolution(
-                    sol.objectives(),
-                    sol.solved().asInstanceOf[PeriodicWorkloadAndSDFServerToMultiCoreOld]
-                  )
-                )
+              .filter(sol => configuration.targetObjectives.stream().allMatch(s => sol.objectives().keySet().contains(s)))
                 .toSet,
               configuration
             )(using CanSolvePeriodicWorkloadAndSDFServersToMulticore())
         }
       case _ => None
     val iter            = llist.map(_.iterator).getOrElse(Iterator.empty)
-    val foundObjectives = CopyOnWriteArraySet[java.util.Map[String, java.lang.Double]]()
+    // val foundObjectives = CopyOnWriteArraySet[java.util.Map[String, java.lang.Double]]()
     Stream
       .generate(() => {
         if (iter.hasNext) {
@@ -305,8 +284,8 @@ class ChocoExplorer extends Explorer:
         }
       })
       .takeWhile(_.isDefined)
-      .filter(_.map(sol => !foundObjectives.contains(sol.objectives())).getOrElse(false))
-      .peek(_.map(sol => foundObjectives.add(sol.objectives())))
+    //   .filter(_.map(sol => !foundObjectives.contains(sol.objectives())).getOrElse(false))
+    //   .peek(_.map(sol => foundObjectives.add(sol.objectives())))
       .map(_.get)
   }
 

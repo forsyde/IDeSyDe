@@ -295,21 +295,21 @@ final class CanSolveDepTasksToPartitionedMultiCore
         //   durations,
         //   wcets.map(_.toArray).toArray
         // ),
-        Search.activityBasedSearch(taskExecution: _*),
-        Search.activityBasedSearch(taskMapping: _*),
-        Search.activityBasedSearch(dataBlockMapping: _*),
+        Search.activityBasedSearch(taskExecution*),
+        Search.activityBasedSearch(taskMapping*),
+        Search.activityBasedSearch(dataBlockMapping*),
         Search.inputOrderLBSearch(nUsedPEs),
         // Search.activityBasedSearch(processingElemsVirtualChannelInCommElem.flatten:_*)
-        // Search.minDomLBSearch(responseTimes: _*),
-        // Search.minDomLBSearch(blockingTimes: _*)
+        // Search.minDomLBSearch(responseTimes*),
+        // Search.minDomLBSearch(blockingTimes*)
         // Search.intVarSearch(
         //   FirstFail(chocoModel),
         //   IntDomainMin(),
         //   DecisionOperatorFactory.makeIntEq,
         //   (durationsRead.flatten ++ durationsWrite.flatten ++ durationsFetch.flatten ++
-        //     durations.flatten ++ utilizations ++ taskCommunicationMapping.flatten ++ dataBlockCommMapping.flatten): _*
+        //     durations.flatten ++ utilizations ++ taskCommunicationMapping.flatten ++ dataBlockCommMapping.flatten)*
         // )
-      ): _*
+      )*
     )
     // chocoModel
     //   .getSolver()
@@ -320,7 +320,7 @@ final class CanSolveDepTasksToPartitionedMultiCore
     //     }
     //   })
 
-    // chocoModel.getSolver().setLearningSignedClauses()
+    chocoModel.getSolver().setLearningSignedClauses()
     chocoModel.getSolver().setRestartOnSolutions()
     chocoModel.getSolver().setNoGoodRecordingFromRestarts()
     chocoModel.getSolver().setLubyRestart(2, FailCounter(chocoModel, m.workload.task_sizes.size), m.workload.task_sizes.size * m.workload.data_channel_sizes.size * m.platform.runtimes.schedulers.length)

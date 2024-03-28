@@ -1,6 +1,7 @@
 use std::{
     cmp::Ordering,
     collections::{HashMap, HashSet, VecDeque},
+    ops::Sub,
     sync::{
         mpsc::{Receiver, Sender},
         Arc, Mutex,
@@ -281,33 +282,38 @@ impl Explorer for ExternalExplorer {
     }
 }
 
-pub fn non_blocking_explore_level(
+#[derive(PartialEq, Eq, Copy, Clone, Debug)]
+pub enum ExplorationStatus {
+    Optimal,
+    Dominated,
+    Unknown,
+}
+
+pub fn explore_level_non_blocking(
     explorers_and_models: &[(Arc<dyn Explorer>, Arc<dyn DecisionModel>)],
     biddings: &[ExplorationBid],
     configuration: &ExplorationConfiguration,
     solutions: &HashSet<ExplorationSolution>,
-) -> (Arc<Mutex<bool>>, Receiver<ExplorationSolution>) {
-    let is_dominated = Arc::new(Mutex::new(false));
+) -> (Arc<Mutex<ExplorationStatus>>, Receiver<ExplorationSolution>) {
+    let status = Arc::new(Mutex::new(ExplorationStatus::Unknown));
     let (level_tx, level_rx) = std::sync::mpsc::channel::<ExplorationSolution>();
     for ((explorer, model), b) in explorers_and_models.iter().zip(biddings.iter()) {
-        let current_solutions = solutions.clone();
-        let mut iters_mutex = VecDeque::from(vec![]);
+        let explorer = explorer.clone();
+        let model = model.clone();
+        let mut configurations = VecDeque::new();
         let mut time_out = 1u64;
-        while time_out <= configuration.improvement_timeout {
-            time_out *= 2;
-            let modified_configuration = ExplorationConfiguration {
+        while time_out < configuration.improvement_timeout {
+            configurations.push_back(ExplorationConfiguration {
                 improvement_timeout: time_out,
                 target_objectives: configuration.target_objectives.clone(),
-                ..*configuration
-            };
-            let iter = explorer.explore(model.to_owned(), solutions, modified_configuration);
-            iters_mutex.push_back(iter);
+                ..configuration.clone()
+            });
+            time_out *= 2;
         }
-        let last_iter_mutex =
-            explorer.explore(model.to_owned(), solutions, configuration.to_owned());
-        iters_mutex.push_back(last_iter_mutex);
+        configurations.push_back(configuration.clone());
+        let current_solutions = solutions.clone();
         let level_tx = level_tx.clone();
-        let is_dominated = is_dominated.clone();
+        let this_status = status.clone();
         let is_exact = b.is_exact;
         let time_out_duration = if configuration.improvement_timeout > 0 {
             Some(Duration::from_secs(configuration.improvement_timeout))
@@ -320,10 +326,17 @@ pub fn non_blocking_explore_level(
                     return;
                 }
             }
-            if is_dominated.lock().map(|x| *x == true).unwrap_or(true) {
+            if this_status
+                .lock()
+                .map(|x| *x == ExplorationStatus::Dominated || *x == ExplorationStatus::Optimal)
+                .unwrap_or(true)
+            {
                 return;
             }
-            if let Some(iter_mutex) = iters_mutex.pop_front() {
+            if let Some(conf) = configurations.pop_front() {
+                let tout = conf.improvement_timeout;
+                let iter_mutex = explorer.explore(model.to_owned(), &current_solutions, conf);
+                let start = Instant::now();
                 if let Ok(mut iter) = iter_mutex.lock() {
                     while let Some(sol) = iter.next() {
                         if current_solutions
@@ -333,21 +346,30 @@ pub fn non_blocking_explore_level(
                         {
                             let _ = level_tx.send(sol);
                         }
-                        if is_dominated.lock().map(|x| *x == true).unwrap_or(true) {
+                        if this_status
+                            .lock()
+                            .map(|x| {
+                                *x == ExplorationStatus::Dominated
+                                    || *x == ExplorationStatus::Optimal
+                            })
+                            .unwrap_or(true)
+                        {
                             return;
                         }
                     }
-                    if is_exact && iters_mutex.len() == 0 {
-                        let _ = is_dominated.lock().map(|mut x| *x = true);
+                    if is_exact && Instant::now().sub(start).as_secs() < tout {
+                        let _ = this_status
+                            .lock()
+                            .map(|mut x| *x = ExplorationStatus::Optimal);
                         return;
                     }
-                }
+                };
             } else {
                 return;
             }
         });
     }
-    (is_dominated, level_rx)
+    (status, level_rx)
 }
 
 pub struct MultiLevelCombinedExplorerIterator3 {
@@ -358,7 +380,7 @@ pub struct MultiLevelCombinedExplorerIterator3 {
     // levels_tuple: (Option<CombinedExplorerIterator>, CombinedExplorerIterator),
     current_solutions: HashSet<ExplorationSolution>,
     level_streams: Vec<Receiver<ExplorationSolution>>,
-    is_dominated_flags: Vec<Arc<Mutex<bool>>>,
+    levels_status: Vec<Arc<Mutex<ExplorationStatus>>>,
     num_found: u64,
     // converged_to_last_level: bool,
     start: Instant,
@@ -378,38 +400,49 @@ impl Iterator for MultiLevelCombinedExplorerIterator3 {
             if self.level_streams.len() == 0 {
                 return None;
             }
+            let optimal = self.levels_status.iter().any(|it| {
+                it.lock()
+                    .map(|x| *x == ExplorationStatus::Optimal)
+                    .unwrap_or(false)
+            });
+            if optimal {
+                self.level_streams.clear();
+                self.levels_status.clear();
+                return None;
+            }
+            // debug!("Current levels: {:?}", self.levels_status);
             for i in (0..self.level_streams.len()).rev() {
                 if let Some(level) = self.level_streams.get(i) {
                     match level.recv_timeout(Duration::from_millis(500)) {
                         Ok(solution) => {
-                            if !self
-                                .current_solutions
-                                .iter()
-                                .any(|s| s.partial_cmp(&solution) == Some(Ordering::Less))
-                            {
+                            if !self.current_solutions.iter().any(|s| {
+                                s.partial_cmp(&solution) == Some(Ordering::Less)
+                                    || s.partial_cmp(&solution) == Some(Ordering::Equal)
+                            }) {
                                 self.num_found += 1;
+                                let sol_dominates = self.current_solutions.is_empty()
+                                    || self.current_solutions.iter().any(|cur_sol| {
+                                        solution.partial_cmp(cur_sol) == Some(Ordering::Less)
+                                    });
                                 self.current_solutions.insert(solution.clone());
-                                let sol_dominates = self.current_solutions.iter().any(|cur_sol| {
-                                    solution.partial_cmp(cur_sol) == Some(Ordering::Less)
-                                });
                                 if sol_dominates {
                                     self.current_solutions.retain(|cur_sol| {
                                         solution.partial_cmp(cur_sol) != Some(Ordering::Less)
                                     });
-                                    let (is_dominated, new_level) = non_blocking_explore_level(
+                                    let (is_dominated, new_level) = explore_level_non_blocking(
                                         &self.explorers_and_models,
                                         self.biddings.as_slice(),
                                         &self.exploration_configuration,
                                         &self.current_solutions,
                                     );
                                     self.level_streams.push(new_level);
-                                    self.is_dominated_flags.push(is_dominated);
+                                    self.levels_status.push(is_dominated);
                                     for j in 0..i {
-                                        let _ = self.is_dominated_flags[j]
+                                        let _ = self.levels_status[j]
                                             .lock()
-                                            .map(|mut x| *x = true);
+                                            .map(|mut x| *x = ExplorationStatus::Dominated);
                                         self.level_streams.remove(j);
-                                        self.is_dominated_flags.remove(j);
+                                        self.levels_status.remove(j);
                                     }
                                 }
                                 return Some(solution);
@@ -418,7 +451,7 @@ impl Iterator for MultiLevelCombinedExplorerIterator3 {
                         Err(std::sync::mpsc::RecvTimeoutError::Timeout) => {}
                         Err(std::sync::mpsc::RecvTimeoutError::Disconnected) => {
                             self.level_streams.remove(i);
-                            self.is_dominated_flags.remove(i);
+                            self.levels_status.remove(i);
                             break;
                         }
                     }
@@ -622,7 +655,7 @@ pub fn explore_cooperatively(
     exploration_configuration: &ExplorationConfiguration,
     // solution_inspector: F,
 ) -> MultiLevelCombinedExplorerIterator3 {
-    let (is_dominated, new_level) = non_blocking_explore_level(
+    let (is_dominated, new_level) = explore_level_non_blocking(
         explorers_and_models,
         biddings,
         exploration_configuration,
@@ -644,6 +677,6 @@ pub fn explore_cooperatively(
         start: Instant::now(),
         num_found: 0,
         level_streams: vec![new_level],
-        is_dominated_flags: vec![is_dominated],
+        levels_status: vec![is_dominated],
     }
 }

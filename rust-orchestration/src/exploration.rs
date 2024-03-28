@@ -400,18 +400,25 @@ impl Iterator for MultiLevelCombinedExplorerIterator3 {
             if self.level_streams.len() == 0 {
                 return None;
             }
-            let optimal = self.levels_status.iter().any(|it| {
-                it.lock()
-                    .map(|x| *x == ExplorationStatus::Optimal)
-                    .unwrap_or(false)
-            });
-            if optimal {
-                self.level_streams.clear();
-                self.levels_status.clear();
-                return None;
-            }
+            // let optimal = self.levels_status.iter().any(|it| {
+            //     it.lock()
+            //         .map(|x| *x == ExplorationStatus::Optimal)
+            //         .unwrap_or(false)
+            // });
+            // if optimal {
+            //     self.level_streams.clear();
+            //     self.levels_status.clear();
+            //     return None;
+            // }
             // debug!("Current levels: {:?}", self.levels_status);
             for i in (0..self.level_streams.len()).rev() {
+                let optimal = self.levels_status[i]
+                    .lock()
+                    .map(|x| *x == ExplorationStatus::Optimal)
+                    .unwrap_or(false);
+                if optimal {
+                    return self.level_streams.get(i).and_then(|s| s.recv().ok());
+                }
                 if let Some(level) = self.level_streams.get(i) {
                     match level.recv_timeout(Duration::from_millis(500)) {
                         Ok(solution) => {

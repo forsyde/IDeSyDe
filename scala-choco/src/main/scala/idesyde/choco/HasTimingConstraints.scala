@@ -157,7 +157,7 @@ trait HasTimingConstraints {
               responseTimes(i).add(releaseJitters(j)).intVar(),
               "*",
               durations(j),
-              ">",
+              ">=",
               chocoModel.intAffineView(periods(j), preemptionInterference(j)(i), 0)
             )
         )
@@ -229,7 +229,7 @@ trait HasTimingConstraints {
                       interTaskAlwaysBlocks(taskIdx)(k)
                     )
                     .map((w, k) => w)
-                    .toArray: _*
+                    .toArray*
                 )
             )
         )

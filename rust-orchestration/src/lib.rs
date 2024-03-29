@@ -679,8 +679,14 @@ impl Module for ExternalServerModule {
         Vec::new()
     }
 }
-
 pub fn find_modules(modules_path: &Path) -> Vec<Arc<dyn Module>> {
+    find_modules_with_config(modules_path, 0)
+}
+
+pub fn find_modules_with_config(
+    modules_path: &Path,
+    jvm_max_heap_in_mb: usize,
+) -> Vec<Arc<dyn Module>> {
     let mut modules: Vec<Arc<dyn Module>> = Vec::new();
     if let Ok(read_dir) = modules_path.read_dir() {
         let jar_modules: Vec<PathBuf> = read_dir
@@ -694,7 +700,8 @@ pub fn find_modules(modules_path: &Path) -> Vec<Arc<dyn Module>> {
                     .unwrap_or(false)
             })
             .collect();
-        let modules_result = java_modules_from_jar_paths(jar_modules.as_slice());
+        let modules_result =
+            java_modules_from_jar_paths(jar_modules.as_slice(), jvm_max_heap_in_mb);
         for module in modules_result.result {
             modules.push(Arc::new(module) as Arc<dyn Module>);
         }

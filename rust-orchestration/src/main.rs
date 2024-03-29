@@ -58,6 +58,13 @@ struct Args {
 
     #[arg(
         long,
+        default_value = "0",
+        help = "The maximum JVM heap size in bytes. Default is 0, which means no limit."
+    )]
+    jvm_max_heap: usize,
+
+    #[arg(
+        long,
         help = "Sets the desired maximum number of solutions. \nIf non-positive, there is no litmit",
         long_help = "Sets the desired maximum number of solutions. \nIf non-positive, there is no litmit. \nThe identification and integration stages are unnafected."
     )]
@@ -234,7 +241,8 @@ fn main() {
         debug!("Initializing modules");
         // let mut imodules: Vec<Arc<dyn IdentificationModule>> = Vec::new();
         // let mut emodules: Vec<Arc<dyn ExplorationModule>> = Vec::new();
-        let mut modules = idesyde_orchestration::find_modules(modules_path);
+        let mut modules =
+            idesyde_orchestration::find_modules_with_config(modules_path, args.jvm_max_heap);
 
         // add embedded modules
         modules.push(Arc::new(idesyde_common::make_module()));

@@ -1,3 +1,4 @@
+use core::time;
 use std::{
     cmp::Ordering,
     collections::{HashMap, HashSet, VecDeque},
@@ -302,13 +303,17 @@ pub fn explore_level_non_blocking(
         let model = model.clone();
         let mut configurations = VecDeque::new();
         let mut time_out = 1u64;
+        let mut time_out_step = 1u64;
         while time_out < configuration.improvement_timeout {
             configurations.push_back(ExplorationConfiguration {
                 improvement_timeout: time_out,
                 target_objectives: configuration.target_objectives.clone(),
                 ..configuration.clone()
             });
-            time_out *= 2;
+            if time_out / time_out_step == 10 {
+                time_out_step *= 10;
+            }
+            time_out = time_out + time_out_step;
         }
         configurations.push_back(configuration.clone());
         let current_solutions = solutions.clone();
@@ -335,8 +340,8 @@ pub fn explore_level_non_blocking(
             }
             if let Some(conf) = configurations.pop_front() {
                 let tout = conf.improvement_timeout;
-                let iter_mutex = explorer.explore(model.to_owned(), &current_solutions, conf);
                 let start = Instant::now();
+                let iter_mutex = explorer.explore(model.to_owned(), &current_solutions, conf);
                 if let Ok(mut iter) = iter_mutex.lock() {
                     while let Some(sol) = iter.next() {
                         if current_solutions
@@ -357,7 +362,13 @@ pub fn explore_level_non_blocking(
                             return;
                         }
                     }
-                    if is_exact && Instant::now().sub(start).as_secs() < tout {
+                    if this_status
+                        .lock()
+                        .map(|x| *x != ExplorationStatus::Dominated)
+                        .unwrap_or(false)
+                        && is_exact
+                        && Instant::now().sub(start).as_secs() < tout
+                    {
                         let _ = this_status
                             .lock()
                             .map(|mut x| *x = ExplorationStatus::Optimal);
@@ -399,6 +410,13 @@ impl Iterator for MultiLevelCombinedExplorerIterator3 {
             }
             if self.level_streams.len() == 0 {
                 return None;
+            }
+            while self.level_streams.len() > 2 {
+                let _ = self.levels_status[0]
+                    .lock()
+                    .map(|mut x| *x = ExplorationStatus::Dominated);
+                self.levels_status.remove(0);
+                self.level_streams.remove(0);
             }
             // let optimal = self.levels_status.iter().any(|it| {
             //     it.lock()
@@ -444,13 +462,6 @@ impl Iterator for MultiLevelCombinedExplorerIterator3 {
                                     );
                                     self.level_streams.push(new_level);
                                     self.levels_status.push(is_dominated);
-                                    for j in 0..i {
-                                        let _ = self.levels_status[j]
-                                            .lock()
-                                            .map(|mut x| *x = ExplorationStatus::Dominated);
-                                        self.level_streams.remove(j);
-                                        self.levels_status.remove(j);
-                                    }
                                 }
                                 return Some(solution);
                             }

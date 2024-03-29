@@ -830,6 +830,7 @@ impl ReverseIdentificationRuleLike for JavaModuleReverseIdentificationRule {
 
 fn instantiate_java_vm_debug(
     jar_files: &[std::path::PathBuf],
+    jvm_max_heap_in_mb: usize,
 ) -> Result<JavaVM, jni::errors::StartJvmError> {
     let mut builder = InitArgsBuilder::new()
         // Pass the JNI API version (default is 8)
@@ -838,6 +839,9 @@ fn instantiate_java_vm_debug(
         builder = builder.option("-Xcheck:jni");
     }
     builder = builder.option("-Xcheck:jni");
+    if jvm_max_heap_in_mb > 0 {
+        builder = builder.option(format!("-Xmx{}m", jvm_max_heap_in_mb));
+    }
     if !jar_files.is_empty() {
         let path_str = jar_files
             .iter()
@@ -975,10 +979,13 @@ pub struct JavaModule {
     pub module_classes_canonical_name: String,
 }
 
-pub fn java_modules_from_jar_paths(paths: &[std::path::PathBuf]) -> LoggedResult<Vec<JavaModule>> {
+pub fn java_modules_from_jar_paths(
+    paths: &[std::path::PathBuf],
+    jvm_max_heap_in_mb: usize,
+) -> LoggedResult<Vec<JavaModule>> {
     let mut modules = vec![];
     let mut warns = vec![];
-    match instantiate_java_vm_debug(paths) {
+    match instantiate_java_vm_debug(paths, jvm_max_heap_in_mb) {
         Ok(java_vm) => {
             let java_vm_arc = Arc::new(java_vm);
             for path in paths {

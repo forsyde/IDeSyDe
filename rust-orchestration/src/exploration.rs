@@ -1,4 +1,3 @@
-use core::time;
 use std::{
     cmp::Ordering,
     collections::{HashMap, HashSet, VecDeque},
@@ -301,21 +300,22 @@ pub fn explore_level_non_blocking(
     for ((explorer, model), b) in explorers_and_models.iter().zip(biddings.iter()) {
         let explorer = explorer.clone();
         let model = model.clone();
-        let mut configurations = VecDeque::new();
-        let mut time_out = 1u64;
-        let mut time_out_step = 1u64;
-        while time_out < configuration.improvement_timeout {
-            configurations.push_back(ExplorationConfiguration {
-                improvement_timeout: time_out,
-                target_objectives: configuration.target_objectives.clone(),
-                ..configuration.clone()
-            });
-            if time_out / time_out_step == 10 {
-                time_out_step *= 10;
-            }
-            time_out = time_out + time_out_step;
-        }
-        configurations.push_back(configuration.clone());
+        let conf = configuration.to_owned();
+        // let mut time_out = 1u64;
+        // let mut time_out_step = 1u64;
+        // while time_out < configuration.improvement_timeout {
+        //     configurations.push_back(ExplorationConfiguration {
+        //         improvement_timeout: time_out,
+        //         target_objectives: configuration.target_objectives.clone(),
+        //         ..configuration.clone()
+        //     });
+        //     // if time_out / time_out_step == 10 {
+        //     //     time_out_step *= 10;
+        //     // }
+        //     time_out_step *= 2;
+        //     time_out = time_out + time_out_step;
+        // }
+        // configurations.push_back(configuration.clone());
         let current_solutions = solutions.clone();
         let level_tx = level_tx.clone();
         let this_status = status.clone();
@@ -338,46 +338,55 @@ pub fn explore_level_non_blocking(
             {
                 return;
             }
-            if let Some(conf) = configurations.pop_front() {
-                let tout = conf.improvement_timeout;
-                let start = Instant::now();
-                let iter_mutex = explorer.explore(model.to_owned(), &current_solutions, conf);
-                if let Ok(mut iter) = iter_mutex.lock() {
-                    while let Some(sol) = iter.next() {
-                        if current_solutions
-                            .iter()
-                            .all(|cur| cur.partial_cmp(&sol) != Some(Ordering::Less))
-                            && !current_solutions.contains(&sol)
-                        {
-                            let _ = level_tx.send(sol);
-                        }
-                        if this_status
-                            .lock()
-                            .map(|x| {
-                                *x == ExplorationStatus::Dominated
-                                    || *x == ExplorationStatus::Optimal
-                            })
-                            .unwrap_or(true)
-                        {
-                            return;
+            // if let Some(conf) = configurations.pop_front() {
+            // let tout = conf.improvement_timeout.to_owned();
+            let start = Instant::now();
+            let iter_mutex =
+                explorer.explore(model.to_owned(), &current_solutions, conf.to_owned());
+            if let Ok(mut iter) = iter_mutex.lock() {
+                while let Some(sol) = iter.next() {
+                    if current_solutions
+                        .iter()
+                        .all(|cur| cur.partial_cmp(&sol) != Some(Ordering::Less))
+                        && !current_solutions.contains(&sol)
+                    {
+                        match level_tx.send(sol) {
+                            Ok(_) => (),
+                            Err(_) => return,
                         }
                     }
                     if this_status
                         .lock()
-                        .map(|x| *x != ExplorationStatus::Dominated)
-                        .unwrap_or(false)
-                        && is_exact
-                        && Instant::now().sub(start).as_secs() < tout
+                        .map(|x| {
+                            *x == ExplorationStatus::Dominated || *x == ExplorationStatus::Optimal
+                        })
+                        .unwrap_or(true)
                     {
-                        let _ = this_status
-                            .lock()
-                            .map(|mut x| *x = ExplorationStatus::Optimal);
                         return;
                     }
-                };
-            } else {
-                return;
-            }
+                }
+                if this_status
+                    .lock()
+                    .map(|x| *x != ExplorationStatus::Dominated)
+                    .unwrap_or(false)
+                    && is_exact
+                    && time_out_duration
+                        .map(|improv_tout| improv_tout > Instant::now().sub(start))
+                        .unwrap_or(true)
+                {
+                    // debug!(
+                    //     "Explorer {} proven it is optimal",
+                    //     explorer.unique_identifier()
+                    // );
+                    let _ = this_status
+                        .lock()
+                        .map(|mut x| *x = ExplorationStatus::Optimal);
+                    return;
+                }
+            };
+            // } else {
+            //     return;
+            // }
         });
     }
     (status, level_rx)
@@ -418,25 +427,7 @@ impl Iterator for MultiLevelCombinedExplorerIterator3 {
                 self.levels_status.remove(0);
                 self.level_streams.remove(0);
             }
-            // let optimal = self.levels_status.iter().any(|it| {
-            //     it.lock()
-            //         .map(|x| *x == ExplorationStatus::Optimal)
-            //         .unwrap_or(false)
-            // });
-            // if optimal {
-            //     self.level_streams.clear();
-            //     self.levels_status.clear();
-            //     return None;
-            // }
-            // debug!("Current levels: {:?}", self.levels_status);
             for i in (0..self.level_streams.len()).rev() {
-                let optimal = self.levels_status[i]
-                    .lock()
-                    .map(|x| *x == ExplorationStatus::Optimal)
-                    .unwrap_or(false);
-                if optimal {
-                    return self.level_streams.get(i).and_then(|s| s.recv().ok());
-                }
                 if let Some(level) = self.level_streams.get(i) {
                     match level.recv_timeout(Duration::from_millis(500)) {
                         Ok(solution) => {
@@ -468,8 +459,16 @@ impl Iterator for MultiLevelCombinedExplorerIterator3 {
                         }
                         Err(std::sync::mpsc::RecvTimeoutError::Timeout) => {}
                         Err(std::sync::mpsc::RecvTimeoutError::Disconnected) => {
-                            self.level_streams.remove(i);
-                            self.levels_status.remove(i);
+                            let optimal = self.levels_status[i]
+                                .lock()
+                                .map(|x| *x == ExplorationStatus::Optimal)
+                                .unwrap_or(false);
+                            if optimal {
+                                return None;
+                            } else {
+                                self.level_streams.remove(i);
+                                self.levels_status.remove(i);
+                            }
                             break;
                         }
                     }

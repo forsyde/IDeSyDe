@@ -1,7 +1,6 @@
 use std::{
     cmp::Ordering,
     collections::{HashMap, HashSet, VecDeque},
-    ops::Sub,
     sync::{
         mpsc::{Receiver, Sender},
         Arc, Mutex,
@@ -55,7 +54,7 @@ impl ExplorationRequestMessage {
     }
 
     pub fn to_json_str(&self) -> String {
-        serde_json::to_string(self).expect("Failed to serialize but shoudl always succeed")
+        serde_json::to_string(self).expect("Failed to serialize but should always succeed")
     }
 }
 
@@ -325,24 +324,24 @@ pub fn explore_level_non_blocking(
         } else {
             None
         };
-        rayon::spawn(move || loop {
-            if let Some(duration) = time_out_duration {
-                if Instant::now().elapsed() > duration {
-                    return;
-                }
-            }
-            if this_status
-                .lock()
-                .map(|x| *x == ExplorationStatus::Dominated || *x == ExplorationStatus::Optimal)
-                .unwrap_or(true)
-            {
-                return;
-            }
+        rayon::spawn(move || {
+            // if let Some(duration) = time_out_duration {
+            //     if Instant::now().elapsed() >= duration {
+            //         return;
+            //     }
+            // }
+            // if this_status
+            //     .lock()
+            //     .map(|x| *x == ExplorationStatus::Dominated || *x == ExplorationStatus::Optimal)
+            //     .unwrap_or(true)
+            // {
+            //     return;
+            // }
             // if let Some(conf) = configurations.pop_front() {
             // let tout = conf.improvement_timeout.to_owned();
-            let start = Instant::now();
             let iter_mutex =
                 explorer.explore(model.to_owned(), &current_solutions, conf.to_owned());
+            let start = Instant::now();
             if let Ok(mut iter) = iter_mutex.lock() {
                 while let Some(sol) = iter.next() {
                     if current_solutions
@@ -353,6 +352,11 @@ pub fn explore_level_non_blocking(
                         match level_tx.send(sol) {
                             Ok(_) => (),
                             Err(_) => return,
+                        }
+                    }
+                    if let Some(duration) = time_out_duration {
+                        if start.elapsed() >= duration {
+                            return;
                         }
                     }
                     if this_status
@@ -371,7 +375,7 @@ pub fn explore_level_non_blocking(
                     .unwrap_or(false)
                     && is_exact
                     && time_out_duration
-                        .map(|improv_tout| improv_tout > Instant::now().sub(start))
+                        .map(|improv_tout| improv_tout > start.elapsed())
                         .unwrap_or(true)
                 {
                     // debug!(
@@ -401,6 +405,7 @@ pub struct MultiLevelCombinedExplorerIterator3 {
     current_solutions: HashSet<ExplorationSolution>,
     level_streams: Vec<Receiver<ExplorationSolution>>,
     levels_status: Vec<Arc<Mutex<ExplorationStatus>>>,
+    levels_start: Vec<Instant>,
     num_found: u64,
     // converged_to_last_level: bool,
     start: Instant,
@@ -426,6 +431,7 @@ impl Iterator for MultiLevelCombinedExplorerIterator3 {
                     .map(|mut x| *x = ExplorationStatus::Dominated);
                 self.levels_status.remove(0);
                 self.level_streams.remove(0);
+                self.levels_start.remove(0);
             }
             for i in (0..self.level_streams.len()).rev() {
                 if let Some(level) = self.level_streams.get(i) {
@@ -453,11 +459,26 @@ impl Iterator for MultiLevelCombinedExplorerIterator3 {
                                     );
                                     self.level_streams.push(new_level);
                                     self.levels_status.push(is_dominated);
+                                    self.levels_start.push(Instant::now());
                                 }
                                 return Some(solution);
                             }
                         }
-                        Err(std::sync::mpsc::RecvTimeoutError::Timeout) => {}
+                        Err(std::sync::mpsc::RecvTimeoutError::Timeout) => {
+                            let improv_timed_out =
+                                if self.exploration_configuration.improvement_timeout > 0 {
+                                    self.levels_start[i].elapsed().as_secs()
+                                        >= self.exploration_configuration.improvement_timeout
+                                } else {
+                                    false
+                                };
+                            if improv_timed_out {
+                                self.level_streams.remove(i);
+                                self.levels_status.remove(i);
+                                self.levels_start.remove(i);
+                                break;
+                            }
+                        }
                         Err(std::sync::mpsc::RecvTimeoutError::Disconnected) => {
                             let optimal = self.levels_status[i]
                                 .lock()
@@ -468,6 +489,7 @@ impl Iterator for MultiLevelCombinedExplorerIterator3 {
                             } else {
                                 self.level_streams.remove(i);
                                 self.levels_status.remove(i);
+                                self.levels_start.remove(i);
                             }
                             break;
                         }
@@ -695,5 +717,6 @@ pub fn explore_cooperatively(
         num_found: 0,
         level_streams: vec![new_level],
         levels_status: vec![is_dominated],
+        levels_start: vec![Instant::now()],
     }
 }

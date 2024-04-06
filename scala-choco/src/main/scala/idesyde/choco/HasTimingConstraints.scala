@@ -4,6 +4,8 @@ import org.chocosolver.solver.variables.IntVar
 import org.chocosolver.solver.Model
 import org.chocosolver.solver.constraints.Constraint
 
+import spire.implicits.IntAlgebra
+
 trait HasTimingConstraints {
 
   def postMinimalResponseTimesByBlocking(
@@ -36,9 +38,7 @@ trait HasTimingConstraints {
       periods: Array[Int],
       maxUtilizations: Array[Double],
       durations: Array[IntVar],
-      taskExecution: Array[IntVar],
-      blockingTimes: Array[IntVar],
-      responseTimes: Array[IntVar]
+      taskExecution: Array[IntVar]
   ): Array[IntVar] = {
     val utilizations = maxUtilizations
       .map(_ * (100))
@@ -47,16 +47,20 @@ trait HasTimingConstraints {
       .map((maxU, j) => {
         chocoModel.intVar(s"utilization(${j})", 0, Math.min(maxU, 100), true)
       })
+    // val allLcm = periods.reduce((a, b) => spire.math.lcm(a, b))
+    // val scaledUtilizations = utilizations.map(chocoModel.intScaleView(_, allLcm))
+    // val coefficients = durations.zip(periods).map((d, p) => (d.getLB() + d.getUB()) * allLcm / p / 2)
+    // chocoModel.binPacking(taskExecution, coefficients, scaledUtilizations, 0).post()
     // TODO: find a way to reduce the pessimism here
     for ((u, i) <- utilizations.zipWithIndex) {
-      // println(u.toString())
-      var mappedUtilizations = for ((d, j) <- durations.zipWithIndex; if taskExecution(j).contains(i)) yield {
-        // println(d.getUB() + " " + periods(j) + " " + Math.floorDiv(100 * d.getUB(), periods(j)))
+      val mappedUtilizations = for (
+        (d, j) <- durations.zipWithIndex; if taskExecution(j).contains(i)
+      ) yield {
         var utilizationContribution =
           chocoModel.intVar(
             s"utilization(${j}, ${i})",
             0,
-            if (taskExecution(j).contains(i)) Math.min(100, Math.floorDiv(100 * d.getUB(), periods(j)) + 1) else 0,
+            if (taskExecution(j).contains(i)) 100 else 0,
             true
           )
         chocoModel.ifThenElse(
@@ -78,6 +82,7 @@ trait HasTimingConstraints {
         )
         utilizationContribution
       }
+      // println(mappedUtilizations.mkString(", "))
       chocoModel.sum(mappedUtilizations, "=", u).post()
     }
     // chocoModel
@@ -125,7 +130,11 @@ trait HasTimingConstraints {
   ): Array[Array[IntVar]] = {
     val preemptionInterference = responseTimes.zipWithIndex.map((ri, i) => {
       responseTimes.zipWithIndex.map((rj, j) => {
-        if (i != j && priorities(i) >= priorities(j) && taskExecution(i).stream().anyMatch(taskExecution(j).contains)) {
+        if (
+          i != j && priorities(i) >= priorities(j) && taskExecution(i)
+            .stream()
+            .anyMatch(taskExecution(j).contains)
+        ) {
           chocoModel.intVar(
             s"preemptionInterference($i, $j)",
             0,

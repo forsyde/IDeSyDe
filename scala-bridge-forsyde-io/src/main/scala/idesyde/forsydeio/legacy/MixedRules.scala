@@ -223,123 +223,115 @@ trait MixedRules {
       decisionModel: Set[DecisionModel],
       designModel: Set[DesignModel]
   ): Set[ForSyDeDesignModel] = {
-    val solveds = decisionModel.flatMap(_ match {
-      case dse: PeriodicWorkloadAndSDFServerToMultiCoreOld => {
-        if (
-          !dse.processesMappings.isEmpty && !dse.processesMappings.isEmpty && !dse.messagesMappings.isEmpty
-        )
-          Some(dse)
-        else None
-      }
-      case _ => None
-    })
-    for (solved <- solveds; rebuilt = SystemGraph()) yield {
-      val priorities = solved.tasksAndSDFs.workload.prioritiesRateMonotonic
-      for (
-        (taskId, schedId) <- solved.processesSchedulings;
-        // ok for now because it is a 1-to-many situation wit the current Decision Models (2023-01-16)
-        // TODO: fix it to be stable later
-        task = ForSyDeHierarchy.Scheduled
-          .enforce(rebuilt, rebuilt.queryVertex(taskId).orElse(rebuilt.newVertex(taskId)));
-        sched = ForSyDeHierarchy.AbstractRuntime
-          .enforce(rebuilt, rebuilt.queryVertex(schedId).orElse(rebuilt.newVertex(schedId)))
-      ) {
-        task.runtimeHost(sched)
-        ForSyDeHierarchy.GreyBox
-          .enforce(sched)
-          .addContained(ForSyDeHierarchy.Visualizable.enforce(task))
-        val taskIdx = solved.tasksAndSDFs.workload.tasks.indexOf(taskId)
-        if (taskIdx > -1) {
-          ForSyDeHierarchy.FixedPriorityScheduledRuntime
+    tryCast(decisionModel, classOf[PeriodicWorkloadAndSDFServerToMultiCoreOld]) { solveds =>
+      for (solved <- solveds; rebuilt = SystemGraph()) yield {
+        val priorities = solved.tasksAndSDFs.workload.prioritiesRateMonotonic
+        for (
+          (taskId, schedId) <- solved.processesSchedulings;
+          // ok for now because it is a 1-to-many situation wit the current Decision Models (2023-01-16)
+          // TODO: fix it to be stable later
+          task = ForSyDeHierarchy.Scheduled
+            .enforce(rebuilt, rebuilt.queryVertex(taskId).orElse(rebuilt.newVertex(taskId)));
+          sched = ForSyDeHierarchy.AbstractRuntime
+            .enforce(rebuilt, rebuilt.queryVertex(schedId).orElse(rebuilt.newVertex(schedId)))
+        ) {
+          task.runtimeHost(sched)
+          ForSyDeHierarchy.GreyBox
             .enforce(sched)
-            .priorityAssignments()
-            .put(
-              taskId,
-              priorities(taskIdx)
-            )
+            .addContained(ForSyDeHierarchy.Visualizable.enforce(task))
+          val taskIdx = solved.tasksAndSDFs.workload.tasks.indexOf(taskId)
+          if (taskIdx > -1) {
+            ForSyDeHierarchy.FixedPriorityScheduledRuntime
+              .enforce(sched)
+              .priorityAssignments()
+              .put(
+                taskId,
+                priorities(taskIdx)
+              )
+          }
         }
-      }
-      for (
-        (taskId, memId) <- solved.processesMappings;
-        // ok for now because it is a 1-to-many situation wit the current Decision Models (2023-01-16)
-        // TODO: fix it to be stable later
-        task = ForSyDeHierarchy.MemoryMapped
-          .enforce(rebuilt, rebuilt.queryVertex(taskId).orElse(rebuilt.newVertex(taskId)));
-        mem = ForSyDeHierarchy.GenericMemoryModule
-          .enforce(rebuilt, rebuilt.queryVertex(memId).orElse(rebuilt.newVertex(memId)))
-      ) {
-        task.mappingHost(mem)
-      }
-      for (
-        (channelId, memId) <- solved.messagesMappings;
-        // ok for now because it is a 1-to-many situation wit the current Decision Models (2023-01-16)
-        // TODO: fix it to be stable later
-        channel = ForSyDeHierarchy.MemoryMapped
-          .enforce(rebuilt, rebuilt.queryVertex(channelId).orElse(rebuilt.newVertex(channelId)));
-        mem = ForSyDeHierarchy.GenericMemoryModule
-          .enforce(rebuilt, rebuilt.queryVertex(memId).orElse(rebuilt.newVertex(memId)))
-      ) {
-        channel.mappingHost(mem)
-        ForSyDeHierarchy.GreyBox
-          .enforce(mem)
-          .addContained(ForSyDeHierarchy.Visualizable.enforce(channel))
-      }
-      // now, we put the schedule in each scheduler
-      for (
-        (list, si) <- solved.sdfOrderBasedSchedules.zipWithIndex;
-        proc      = solved.platform.hardware.processingElems(si);
-        scheduler = solved.platform.runtimes.schedulers(si)
-      ) {
-        val scs = ForSyDeHierarchy.SuperLoopRuntime.enforce(
-          rebuilt,
-          rebuilt.newVertex(scheduler)
+        for (
+          (taskId, memId) <- solved.processesMappings;
+          // ok for now because it is a 1-to-many situation wit the current Decision Models (2023-01-16)
+          // TODO: fix it to be stable later
+          task = ForSyDeHierarchy.MemoryMapped
+            .enforce(rebuilt, rebuilt.queryVertex(taskId).orElse(rebuilt.newVertex(taskId)));
+          mem = ForSyDeHierarchy.GenericMemoryModule
+            .enforce(rebuilt, rebuilt.queryVertex(memId).orElse(rebuilt.newVertex(memId)))
+        ) {
+          task.mappingHost(mem)
+        }
+        for (
+          (channelId, memId) <- solved.messagesMappings;
+          // ok for now because it is a 1-to-many situation wit the current Decision Models (2023-01-16)
+          // TODO: fix it to be stable later
+          channel = ForSyDeHierarchy.MemoryMapped
+            .enforce(rebuilt, rebuilt.queryVertex(channelId).orElse(rebuilt.newVertex(channelId)));
+          mem = ForSyDeHierarchy.GenericMemoryModule
+            .enforce(rebuilt, rebuilt.queryVertex(memId).orElse(rebuilt.newVertex(memId)))
+        ) {
+          channel.mappingHost(mem)
+          ForSyDeHierarchy.GreyBox
+            .enforce(mem)
+            .addContained(ForSyDeHierarchy.Visualizable.enforce(channel))
+        }
+        // now, we put the schedule in each scheduler
+        for (
+          (list, si) <- solved.sdfOrderBasedSchedules.zipWithIndex;
+          proc      = solved.platform.hardware.processingElems(si);
+          scheduler = solved.platform.runtimes.schedulers(si)
+        ) {
+          val scs = ForSyDeHierarchy.SuperLoopRuntime.enforce(
+            rebuilt,
+            rebuilt.newVertex(scheduler)
+          )
+          scs.superLoopEntries(list.asJava)
+        }
+        // finally, the channel comm allocations
+        var commAllocs = solved.platform.hardware.communicationElementsMaxChannels.map(maxVc =>
+          Buffer.fill(maxVc)(Buffer.empty[String])
         )
-        scs.superLoopEntries(list.asJava)
+        for (
+          (maxVc, ce) <- solved.platform.hardware.communicationElementsMaxChannels.zipWithIndex;
+          (c, dict)   <- solved.messageSlotAllocations;
+          vc          <- 0 until maxVc;
+          commElem = solved.platform.hardware.communicationElems(ce);
+          if dict.getOrElse(commElem, Vector.fill(maxVc)(false))(vc)
+        ) {
+          commAllocs(ce)(vc) += c
+        }
+        for ((ce, i) <- solved.platform.hardware.communicationElems.zipWithIndex) {
+          val comm = ForSyDeHierarchy.ConcurrentSlotsReserved.enforce(
+            rebuilt,
+            rebuilt.newVertex(ce)
+          )
+          comm.slotReservations(commAllocs(i).map(_.asJava).asJava)
+        }
+        // add the throughputs for good measure
+        for (
+          (a, ai) <- solved.tasksAndSDFs.sdfApplications.actorsIdentifiers.zipWithIndex;
+          th = solved.tasksAndSDFs.sdfApplications.minimumActorThroughputs(ai)
+        ) {
+          val act = ForSyDeHierarchy.AnalyzedActor.enforce(
+            rebuilt,
+            rebuilt.newVertex(a)
+          )
+          val frac = Rational(th)
+          act.setThroughputInSecsNumerator(frac.numeratorAsLong)
+          act.setThroughputInSecsDenominator(frac.denominatorAsLong)
+        }
+        // and the maximum channel sizes
+        for (
+          (c, ci) <- solved.tasksAndSDFs.sdfApplications.channelsIdentifiers.zipWithIndex;
+          maxTokens = solved.tasksAndSDFs.sdfApplications.sdfPessimisticTokensPerChannel(ci)
+        ) {
+          val channelVec = rebuilt.newVertex(c)
+          val bounded    = ForSyDeHierarchy.BoundedBufferLike.enforce(rebuilt, channelVec)
+          bounded.elementSizeInBits(solved.tasksAndSDFs.sdfApplications.channelTokenSizes(ci))
+          bounded.maxElements(maxTokens)
+        }
+        ForSyDeDesignModel(rebuilt)
       }
-      // finally, the channel comm allocations
-      var commAllocs = solved.platform.hardware.communicationElementsMaxChannels.map(maxVc =>
-        Buffer.fill(maxVc)(Buffer.empty[String])
-      )
-      for (
-        (maxVc, ce) <- solved.platform.hardware.communicationElementsMaxChannels.zipWithIndex;
-        (c, dict)   <- solved.messageSlotAllocations;
-        vc          <- 0 until maxVc;
-        commElem = solved.platform.hardware.communicationElems(ce);
-        if dict.getOrElse(commElem, Vector.fill(maxVc)(false))(vc)
-      ) {
-        commAllocs(ce)(vc) += c
-      }
-      for ((ce, i) <- solved.platform.hardware.communicationElems.zipWithIndex) {
-        val comm = ForSyDeHierarchy.ConcurrentSlotsReserved.enforce(
-          rebuilt,
-          rebuilt.newVertex(ce)
-        )
-        comm.slotReservations(commAllocs(i).map(_.asJava).asJava)
-      }
-      // add the throughputs for good measure
-      for (
-        (a, ai) <- solved.tasksAndSDFs.sdfApplications.actorsIdentifiers.zipWithIndex;
-        th = solved.tasksAndSDFs.sdfApplications.minimumActorThroughputs(ai)
-      ) {
-        val act = ForSyDeHierarchy.AnalyzedActor.enforce(
-          rebuilt,
-          rebuilt.newVertex(a)
-        )
-        val frac = Rational(th)
-        act.setThroughputInSecsNumerator(frac.numeratorAsLong)
-        act.setThroughputInSecsDenominator(frac.denominatorAsLong)
-      }
-      // and the maximum channel sizes
-      for (
-        (c, ci) <- solved.tasksAndSDFs.sdfApplications.channelsIdentifiers.zipWithIndex;
-        maxTokens = solved.tasksAndSDFs.sdfApplications.sdfPessimisticTokensPerChannel(ci)
-      ) {
-        val channelVec = rebuilt.newVertex(c)
-        val bounded    = ForSyDeHierarchy.BoundedBufferLike.enforce(rebuilt, channelVec)
-        bounded.elementSizeInBits(solved.tasksAndSDFs.sdfApplications.channelTokenSizes(ci))
-        bounded.maxElements(maxTokens)
-      }
-      ForSyDeDesignModel(rebuilt)
     }
   }
 

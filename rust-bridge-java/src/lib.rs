@@ -838,7 +838,6 @@ fn instantiate_java_vm_debug(
     if cfg!(debug_assertions) {
         builder = builder.option("-Xcheck:jni");
     }
-    builder = builder.option("-Xcheck:jni");
     if jvm_max_heap_in_mb > 0 {
         builder = builder.option(format!("-Xmx{}m", jvm_max_heap_in_mb));
     }

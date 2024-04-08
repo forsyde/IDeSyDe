@@ -25,5 +25,10 @@ application {
 
 test {
     useJUnitPlatform()
+    testLogging {
+        exceptionFormat = 'full'
+        showStandardStreams = true
+    }
 }
+
 

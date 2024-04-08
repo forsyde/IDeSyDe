@@ -2,6 +2,7 @@ package idesyde.metaheuristics;
 
 import idesyde.common.AperiodicAsynchronousDataflow;
 import idesyde.common.AperiodicAsynchronousDataflowToPartitionedMemoryMappableMulticore;
+import idesyde.core.DecisionModel;
 import idesyde.core.ExplorationSolution;
 import idesyde.core.Explorer;
 import idesyde.metaheuristics.constraints.AperiodicAsynchronousDataflowJobOrderingConstraint;
@@ -242,12 +243,9 @@ public interface CanExploreAADPMMMWithJenetics extends AperiodicAsynchronousData
                 .minimizing()
                 .build();
         var solStream = engine
-                .stream(previousSolutions.stream().filter(s -> s
-                        .solved() instanceof AperiodicAsynchronousDataflowToPartitionedMemoryMappableMulticore)
-                        .map(s -> codec.encode(
-                                (AperiodicAsynchronousDataflowToPartitionedMemoryMappableMulticore) s
-                                        .solved()))
-                        .collect(Collectors.toList()));
+                .stream(previousSolutions.stream().flatMap(s -> DecisionModel.cast(s.solved(),
+                        AperiodicAsynchronousDataflowToPartitionedMemoryMappableMulticore.class)
+                        .stream()).map(s -> codec.encode(s)).collect(Collectors.toList()));
         // .limit(Limits.byGeneConvergence(0.000001, 0.999999));
         var timedSolStream = configuration.improvementTimeOutInSecs > 0L
                 ? solStream
@@ -410,7 +408,6 @@ public interface CanExploreAADPMMMWithJenetics extends AperiodicAsynchronousData
             AperiodicAsynchronousDataflow.Job job) {
         var sched = decisionModel.processesToRuntimeScheduling().get(job.process());
         var pe = decisionModel.partitionedMemMappableMulticore().runtimes().runtimeHost().get(sched);
-
         var totalTime = decisionModel.instrumentedComputationTimes().worstExecutionTimes()
                 .get(job.process()).getOrDefault(pe, Long.MAX_VALUE).doubleValue()
                 / decisionModel.instrumentedComputationTimes().scaleFactor()
@@ -432,27 +429,27 @@ public interface CanExploreAADPMMMWithJenetics extends AperiodicAsynchronousData
                         .mapToDouble(ce -> decisionModel
                                 .partitionedMemMappableMulticore()
                                 .hardware()
-                                .communicationElementsBitPerSecPerChannel()
-                                .get(ce) *
+                                .communicationElementsBitPerSecPerChannel().getOrDefault(ce, 1.0) *
                                 Math.max(decisionModel
                                         .processingElementsToRoutersReservations()
                                         .get(pe)
-                                        .get(ce)
-                                        .doubleValue(), 1))
+                                        .getOrDefault(ce, 1), 1))
                         .min()
-                        .orElse(1.0);
+                        .orElse(0.0);
                 // fetch time = total links * (memory reqs / bottleneck BW)
-                totalTime += decisionModel
-                        .partitionedMemMappableMulticore()
-                        .hardware()
-                        .preComputedPaths()
-                        .getOrDefault(pe, Map.of())
-                        .getOrDefault(me, List.of())
-                        .size()
-                        * (decisionModel.instrumentedMemoryRequirements()
-                                .memoryRequirements().get(job.process())
-                                .get(pe).doubleValue()
-                                / singleBottleNeckBW);
+                if (singleBottleNeckBW > 0.0) {
+                    totalTime += decisionModel
+                            .partitionedMemMappableMulticore()
+                            .hardware()
+                            .preComputedPaths()
+                            .getOrDefault(pe, Map.of())
+                            .getOrDefault(me, List.of())
+                            .size()
+                            * (decisionModel.instrumentedMemoryRequirements()
+                            .memoryRequirements().get(job.process())
+                            .get(pe).doubleValue()
+                            / singleBottleNeckBW);
+                }
 
             }
             totalTime += decisionModel.aperiodicAsynchronousDataflows().stream()
@@ -484,15 +481,16 @@ public interface CanExploreAADPMMMWithJenetics extends AperiodicAsynchronousData
                                             .partitionedMemMappableMulticore()
                                             .hardware()
                                             .communicationElementsBitPerSecPerChannel()
-                                            .get(ce) *
-                                            Math.max(decisionModel
+                                            .getOrDefault(ce, 0.0) *
+                                            decisionModel
                                                     .processingElementsToRoutersReservations()
                                                     .get(pe)
-                                                    .get(ce), 1))
+                                                    .getOrDefault(ce, 0))
                                     .min()
-                                    .orElse(1.0);
+                                    .orElse(0.0);
                             // read time = links * (total data transmitted /
                             // bottleneck bw)
+                            if (singleBottleNeckBW > 0.0) {
                             var summed = decisionModel
                                     .partitionedMemMappableMulticore()
                                     .hardware()
@@ -512,7 +510,8 @@ public interface CanExploreAADPMMMWithJenetics extends AperiodicAsynchronousData
                                                                             0L)
                                                             : 0L)
                                             .sum());
-                            ioTime += summed / singleBottleNeckBW;
+                                ioTime += summed / singleBottleNeckBW;
+                            }
                             // if (Double.isNaN(ioTime))
                             // System.out.println(
                             // "read io time for job %s at %s, %s is %f = %d /
@@ -544,17 +543,18 @@ public interface CanExploreAADPMMMWithJenetics extends AperiodicAsynchronousData
                                             .partitionedMemMappableMulticore()
                                             .hardware()
                                             .communicationElementsBitPerSecPerChannel()
-                                            .get(ce) *
-                                            Math.max(decisionModel
+                                            .getOrDefault(ce, 0.0) *
+                                            decisionModel
                                                     .processingElementsToRoutersReservations()
                                                     .get(pe)
-                                                    .get(ce), 1))
+                                                    .getOrDefault(ce, 0))
                                     .min()
                                     .orElse(1.0);
                             // write nack time = links * (total data
                             // transmitted /
                             // bottleneck bw)
-                            var summed = decisionModel
+                            if (singleBottleNeckBW > 0.0) {
+                                var summed = decisionModel
                                     .partitionedMemMappableMulticore()
                                     .hardware()
                                     .preComputedPaths()
@@ -573,7 +573,8 @@ public interface CanExploreAADPMMMWithJenetics extends AperiodicAsynchronousData
                                                                             0L)
                                                             : 0L)
                                             .sum());
-                            ioTime += summed / singleBottleNeckBW;
+                                ioTime += summed / singleBottleNeckBW;
+                            }
                             // if (Double.isNaN(ioTime))
                             // System.out.println(
                             // "wb io time for job %s at %s, %s is %f = %d /

@@ -58,7 +58,11 @@ systemgraph {
     [forsyde::io::lib::hierarchy::platform::hardware::GenericCommunicationModule, forsyde::io::lib::hierarchy::visualization::Visualizable]
     ()
     {
-      "operatingFrequencyInHertz": 100000000_l
+      "operatingFrequencyInHertz": 100000000_l,
+      "maxCyclesPerFlit": 8_i,
+      "flitSizeInBits": 128_l,
+      "initialLatency": 0_l,
+      "maxConcurrentFlits": 8_i
       
     }
     vertex "bram_axi"

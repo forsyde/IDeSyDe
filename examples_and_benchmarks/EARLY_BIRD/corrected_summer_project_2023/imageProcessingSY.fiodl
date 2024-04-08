@@ -420,7 +420,7 @@ vertex "max"
         "all": 1_l
       },
       "impl1": {
-        "comparision": 1_l
+        "comparison": 1_l
       }
     },
     "maxSizeInBits": {
@@ -597,8 +597,8 @@ vertex "rescale"
         "all": 1_l
       },
       "impl1": {
-        "comparision": 4_l,
-        "subtraction": 8_l,
+        "comparison": 4_l,
+        "intSub": 8_l,
         "intMulti": 4_l
       }
     },
@@ -626,7 +626,7 @@ vertex "sobelSY"
         "intAdd": 55296_l,
         "intMulti": 18432_l,
         "power2": 2048_l,
-        "sqr": 1024_l
+        "sqrt": 1024_l
       }
     },
     "visualizedPropertiesNames": [],

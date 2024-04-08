@@ -524,7 +524,7 @@ public interface CanExploreAADPTMWithJenetics extends AperiodicAsynchronousDataf
                                     // the path and ensure they have
                                     // reservations
                                     var k = comms.indexOf(ce);
-                                    if (reservations.get(peI * comms.size() + k)
+                                    if (k > -1 && reservations.get(peI * comms.size() + k)
                                             .allele() <= 0) { // should but
                                         // it is
                                         // not

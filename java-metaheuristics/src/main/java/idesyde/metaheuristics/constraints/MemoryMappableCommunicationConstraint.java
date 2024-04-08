@@ -69,7 +69,7 @@ public class MemoryMappableCommunicationConstraint<T extends Comparable<? super 
                                                                 // the path and ensure they have
                                                                 // reservations
                                                                 var k = comms.indexOf(ce);
-                                                                if (reservations.get(peI * comms.size() + k)
+                                                                if (k > -1 && reservations.get(peI * comms.size() + k)
                                                                                 .allele() <= 0) { // should but
                                                                                                   // it is
                                                                                                   // not
@@ -99,7 +99,7 @@ public class MemoryMappableCommunicationConstraint<T extends Comparable<? super 
                                                                         // have
                                                                         // reservations
                                                                         var k = comms.indexOf(ce);
-                                                                        if (reservations.get(
+                                                                        if (k > -1 && reservations.get(
                                                                                         peI * comms.size() + k)
                                                                                         .allele() <= 0) { // should
                                                                                                           // but
@@ -133,7 +133,7 @@ public class MemoryMappableCommunicationConstraint<T extends Comparable<? super 
                                                                         // have
                                                                         // reservations
                                                                         var k = comms.indexOf(ce);
-                                                                        if (reservations.get(
+                                                                        if (k > -1 && reservations.get(
                                                                                         peI * comms.size() + k)
                                                                                         .allele() <= 0) { // should
                                                                                                           // but
@@ -178,7 +178,7 @@ public class MemoryMappableCommunicationConstraint<T extends Comparable<? super 
                                                                 // the path and ensure they have
                                                                 // reservations
                                                                 var k = comms.indexOf(ce);
-                                                                if (reservations.get(peI * comms.size() + k)
+                                                                if (k > -1 && reservations.get(peI * comms.size() + k)
                                                                                 .allele() <= 0) { // should but
                                                                                                   // it is
                                                                                                   // not
@@ -210,7 +210,7 @@ public class MemoryMappableCommunicationConstraint<T extends Comparable<? super 
                                                                         // have
                                                                         // reservations
                                                                         var k = comms.indexOf(ce);
-                                                                        if (reservations.get(
+                                                                        if (k > -1 && reservations.get(
                                                                                         peI * comms.size() + k)
                                                                                         .allele() <= 0) { // should
                                                                                                           // but
@@ -246,7 +246,7 @@ public class MemoryMappableCommunicationConstraint<T extends Comparable<? super 
                                                                         // have
                                                                         // reservations
                                                                         var k = comms.indexOf(ce);
-                                                                        if (reservations.get(
+                                                                        if (k > -1 && reservations.get(
                                                                                         peI * comms.size() + k)
                                                                                         .allele() <= 0) { // should
                                                                                                           // but

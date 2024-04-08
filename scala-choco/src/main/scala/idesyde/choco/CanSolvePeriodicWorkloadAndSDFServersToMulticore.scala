@@ -373,6 +373,9 @@ final class CanSolvePeriodicWorkloadAndSDFServersToMulticore
       chocoModel
         .arithm(remainingUtilization, "*", effectiveD, ">=", chocoModel.intScaleView(d, 100))
         .post()
+    //   chocoModel
+    //     .arithm(chocoModel.intOffsetView(remainingUtilization, 1), "*", effectiveD, "<", chocoModel.intScaleView(d, 100))
+    //     .post()
       effectiveD
     })
 
@@ -452,15 +455,21 @@ final class CanSolvePeriodicWorkloadAndSDFServersToMulticore
         FailCounter(chocoModel, processExecution.size),
         processExecution.size * m.platform.runtimes.schedulers.length
       )
+    val jobsAndActors =
+      m.tasksAndSDFs.sdfApplications.jobsAndActors
     chocoModel.getSolver().setSearch(
       Array(
+        Search.activityBasedSearch(numMappedElements),
         Search.activityBasedSearch(processExecution*),
         Search.activityBasedSearch(processMapping*),
         Search.activityBasedSearch(messageMapping*),
-        Search.minDomLBSearch(jobOrder*),
+        Search.inputOrderLBSearch(
+            m.tasksAndSDFs.sdfApplications.topologicalAndHeavyJobOrdering
+            .map(jobsAndActors.indexOf)
+            .map(jobOrder(_))*
+        ),
         Search.activityBasedSearch(processingElemsVirtualChannelInCommElem.flatten*),
     //     Search.defaultSearch(chocoModel),
-        // Search.minDomLBSearch(numMappedElements),
         Search.minDomLBSearch(goalThs.map((v, i) => v)*),
       )*
     )

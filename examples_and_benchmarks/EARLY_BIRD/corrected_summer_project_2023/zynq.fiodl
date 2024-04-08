@@ -15,8 +15,8 @@ systemgraph {
       "superLoopEntries": []
     }
     vertex "ZYNQ_ARM_x2"
-    [forsyde::io::lib::hierarchy::platform::hardware::InstrumentedProcessingModule, forsyde::io::lib::hierarchy::visualization::Visualizable]
-    ()
+    [forsyde::io::lib::hierarchy::platform::hardware::InstrumentedProcessingModule, forsyde::io::lib::hierarchy::visualization::GreyBox]
+    (contained)
     {
       "modalInstructionCategory": ["ARM"],
       "modalInstructionsPerCycle": {
@@ -79,8 +79,8 @@ systemgraph {
       "spaceInBits": 32000_l
     }
     vertex "hp_video_ss"
-    [forsyde::io::lib::hierarchy::platform::hardware::InstrumentedProcessingModule, forsyde::io::lib::hierarchy::visualization::Visualizable]
-    ()
+    [forsyde::io::lib::hierarchy::platform::hardware::InstrumentedProcessingModule, forsyde::io::lib::hierarchy::visualization::GreyBox]
+    (contained)
     {
       "modalInstructionCategory": ["ARM"],
       "modalInstructionsPerCycle": {
@@ -96,8 +96,8 @@ systemgraph {
     (buses, contained)
     {}
     vertex "uBlaze0"
-    [forsyde::io::lib::hierarchy::platform::hardware::InstrumentedProcessingModule, forsyde::io::lib::hierarchy::visualization::Visualizable]
-    ()
+    [forsyde::io::lib::hierarchy::platform::hardware::InstrumentedProcessingModule, forsyde::io::lib::hierarchy::visualization::GreyBox]
+    (contained)
     {
       "modalInstructionCategory": ["ARM"],
       "modalInstructionsPerCycle": {
@@ -144,8 +144,8 @@ systemgraph {
     (buses, contained)
     {}
     vertex "uBlaze1"
-    [forsyde::io::lib::hierarchy::platform::hardware::InstrumentedProcessingModule, forsyde::io::lib::hierarchy::visualization::Visualizable]
-    ()
+    [forsyde::io::lib::hierarchy::platform::hardware::InstrumentedProcessingModule, forsyde::io::lib::hierarchy::visualization::GreyBox]
+    (contained)
     {
       "modalInstructionCategory": ["ARM"],
       "modalInstructionsPerCycle": {
@@ -192,8 +192,8 @@ systemgraph {
     (buses, contained)
     {}
     vertex "uBlaze2"
-    [forsyde::io::lib::hierarchy::platform::hardware::InstrumentedProcessingModule, forsyde::io::lib::hierarchy::visualization::Visualizable]
-    ()
+    [forsyde::io::lib::hierarchy::platform::hardware::InstrumentedProcessingModule, forsyde::io::lib::hierarchy::visualization::GreyBox]
+    (contained)
     {
       "modalInstructionCategory": ["ARM"],
       "modalInstructionsPerCycle": {
@@ -308,4 +308,9 @@ systemgraph {
     edge [] from "ZYNQ_ARM_x2_hal" port "host" to "ZYNQ_ARM_x2"
     edge [] from "hp_video_ss_hal" port "managed" to "hp_video_ss"
     edge [] from "hp_video_ss_hal" port "host" to "hp_video_ss"
+    edge [forsyde::io::lib::hierarchy::visualization::VisualContainment] from "uBlaze0" port "contained" to "uBlaze0_hal"
+    edge [forsyde::io::lib::hierarchy::visualization::VisualContainment] from "uBlaze1" port "contained" to "uBlaze1_hal"
+    edge [forsyde::io::lib::hierarchy::visualization::VisualContainment] from "uBlaze2" port "contained" to "uBlaze2_hal"
+    edge [forsyde::io::lib::hierarchy::visualization::VisualContainment] from "ZYNQ_ARM_x2" port "contained" to "ZYNQ_ARM_x2_hal"
+    edge [forsyde::io::lib::hierarchy::visualization::VisualContainment] from "hp_video_ss" port "contained" to "hp_video_ss_hal"
   }

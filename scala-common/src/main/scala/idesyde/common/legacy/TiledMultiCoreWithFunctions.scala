@@ -149,7 +149,7 @@ final case class TiledMultiCoreWithFunctions(
           .map((k, v) => k -> v.length)
       )
     var groups      = Set[Set[String]]()
-    var toBeMatched = Set(processors: _*)
+    var toBeMatched = Set(processors*)
     while (!toBeMatched.isEmpty) {
       val t = toBeMatched.head
       val otherSymmetric = toBeMatched.tail

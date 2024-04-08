@@ -26,10 +26,10 @@ vertex "grayMapVA"
   }
 
 vertex "grayInterliveV"
-  [impl::InstrumentedExecutable, impl::Executable, parallel::InterleaveV, visualization::GreyBox]
+  [forsyde::io::lib::hierarchy::implementation::functional::InstrumentedSoftwareBehaviour, impl::Executable, forsyde::io::lib::hierarchy::behaviour::parallel::InterleaveV, visualization::GreyBox]
   (kernels,inSig,interleavedVec, contained)
   {
-    "operationRequirements": {
+    "computationalRequirements": {
       "default": {
         "all": 1_l
       },
@@ -37,7 +37,10 @@ vertex "grayInterliveV"
             "cpy": 96_l
         }
     },
-    "sizeInBits": 0_l,
+    "maxSizeInBits": {
+      "default": 0_l,
+      "impl1": 0_l
+    },
     "inputPorts": [
       "inSig"
     ],
@@ -104,7 +107,7 @@ vertex "grayMapMapReduceV"
   }
 
 vertex "intDivisionto3"
-    [impl::InstrumentedExecutable, impl::ANSICBlackBoxExecutable, visualization::VisualizableWithProperties]
+    [forsyde::io::lib::hierarchy::implementation::functional::InstrumentedSoftwareBehaviour, impl::ANSICBlackBoxExecutable, visualization::VisualizableWithProperties]
     (a, res)
   {
     "inlinedCode": "res = a/3;",
@@ -112,7 +115,7 @@ vertex "intDivisionto3"
     "outputArgumentPorts": [],
     "returnPort": "res",
     "visualizedPropertiesNames": ["inlinedCode"],
-    "operationRequirements": {
+    "computationalRequirements": {
       "default": {
         "all": 1_l
       },
@@ -120,7 +123,10 @@ vertex "intDivisionto3"
         "intDiv": 1_l
       }
     },
-    "sizeInBits": 0_l
+    "maxSizeInBits": {
+      "default": 0_l,
+      "impl1": 0_l
+    }
   }
 
 vertex "resizeSY"
@@ -164,7 +170,7 @@ vertex "resizeMapMapV"
   }
   
 vertex "floatDivisionto4"
-    [impl::InstrumentedExecutable, impl::ANSICBlackBoxExecutable, visualization::VisualizableWithProperties]
+    [forsyde::io::lib::hierarchy::implementation::functional::InstrumentedSoftwareBehaviour, impl::ANSICBlackBoxExecutable, visualization::VisualizableWithProperties]
     (rgb, res)
   {
     "inlinedCode": "res = a/4;",
@@ -172,7 +178,7 @@ vertex "floatDivisionto4"
     "outputArgumentPorts": [],
     "returnPort": "res",
     "visualizedPropertiesNames": ["inlinedCode"],
-    "operationRequirements": {
+    "computationalRequirements": {
       "default": {
         "all": 1_l
       },
@@ -180,7 +186,10 @@ vertex "floatDivisionto4"
         "floatDiv": 1_l
       }
     },
-    "sizeInBits": 0_l
+    "maxSizeInBits": {
+      "default": 0_l,
+      "impl1": 0_l
+    }
   }
 
 
@@ -239,10 +248,10 @@ vertex "sumColsMapV"
   }
 
 vertex "sumColsMapVInterliveV"
-  [impl::InstrumentedExecutable, parallel::InterleaveV, visualization::GreyBox]
+  [forsyde::io::lib::hierarchy::implementation::functional::InstrumentedSoftwareBehaviour, forsyde::io::lib::hierarchy::behaviour::parallel::InterleaveV, visualization::GreyBox]
   (kernels,graySig,sumColsInterleavedVec, contained)
   {
-  "operationRequirements": {
+  "computationalRequirements": {
     "default": {
       "all": 1_l
     },
@@ -250,7 +259,10 @@ vertex "sumColsMapVInterliveV"
               "cpy": 96_l
           }
       },
-      "sizeInBits": 0_l,
+      "maxSizeInBits": {
+        "default": 0_l,
+        "impl1": 0_l
+      },
     "inputPorts": [
       "graySig"
     ],
@@ -291,10 +303,10 @@ vertex "sumClosMapMapVReduceV"
   }
 
 vertex "resizeInterleaveV"
-  [impl::InstrumentedExecutable, parallel::InterleaveV, visualization::GreyBox]
+  [forsyde::io::lib::hierarchy::implementation::functional::InstrumentedSoftwareBehaviour, forsyde::io::lib::hierarchy::behaviour::parallel::InterleaveV, visualization::GreyBox]
   (kernels,sumColsVec,resizeInterleaveVec, contained)
   {
-  "operationRequirements": {
+  "computationalRequirements": {
     "default": {
       "all": 1_l
     },
@@ -302,7 +314,10 @@ vertex "resizeInterleaveV"
               "cpy": 96_l
           }
       },
-      "sizeInBits": 0_l,
+    "maxSizeInBits": {
+      "default": 0_l,
+      "impl1": 0_l
+    },
     "inputPorts": [
       "sumColsVec"
     ],
@@ -316,7 +331,7 @@ vertex "resizeInterleaveV"
   
   
 vertex "floatAdd"
-    [impl::InstrumentedExecutable, impl::ANSICBlackBoxExecutable, visualization::VisualizableWithProperties]
+    [forsyde::io::lib::hierarchy::implementation::functional::InstrumentedSoftwareBehaviour, impl::ANSICBlackBoxExecutable, visualization::VisualizableWithProperties]
     (rgb, res)
   {
     "inlinedCode": "res = a+b;",
@@ -324,7 +339,7 @@ vertex "floatAdd"
     "outputArgumentPorts": [],
     "returnPort": "res",
     "visualizedPropertiesNames": ["inlinedCode"],
-    "operationRequirements": {
+    "computationalRequirements": {
       "default": {
         "all": 1_l
       },
@@ -332,7 +347,10 @@ vertex "floatAdd"
         "floatAdd": 1_l
       }
     },
-    "sizeInBits": 0_l
+    "maxSizeInBits": {
+      "default": 0_l,
+      "impl1": 0_l
+    }
   }
 
   
@@ -389,7 +407,7 @@ vertex "maxBrightnessReduceVB"
   }
 
 vertex "max"
-    [impl::InstrumentedExecutable, impl::ANSICBlackBoxExecutable, visualization::VisualizableWithProperties]
+    [forsyde::io::lib::hierarchy::implementation::functional::InstrumentedSoftwareBehaviour, impl::ANSICBlackBoxExecutable, visualization::VisualizableWithProperties]
     (a, b, res)
   {
     "inlinedCode": "res = a > b ? a : b;",
@@ -397,7 +415,7 @@ vertex "max"
     "outputArgumentPorts": [],
     "returnPort": "res",
     "visualizedPropertiesNames": ["inlinedCode"],
-    "operationRequirements": {
+    "computationalRequirements": {
       "default": {
         "all": 1_l
       },
@@ -405,7 +423,10 @@ vertex "max"
         "comparision": 1_l
       }
     },
-    "sizeInBits": 0_l
+    "maxSizeInBits": {
+      "default": 0_l,
+      "impl1": 0_l
+    }
   }
 
 vertex "minBrightnessSY"
@@ -461,7 +482,7 @@ vertex "minBrightnessReduceVB"
   }
 
 vertex "min"
-    [impl::InstrumentedExecutable, impl::ANSICBlackBoxExecutable, visualization::VisualizableWithProperties]
+    [forsyde::io::lib::hierarchy::implementation::functional::InstrumentedSoftwareBehaviour, impl::ANSICBlackBoxExecutable, visualization::VisualizableWithProperties]
     (a, b, res)
   {
     "inlinedCode": "res = a < b ? a : b;",
@@ -469,7 +490,7 @@ vertex "min"
     "outputArgumentPorts": [],
     "returnPort": "res",
     "visualizedPropertiesNames": ["inlinedCode"],
-    "operationRequirements": {
+    "computationalRequirements": {
       "default": {
         "all": 1_l
       },
@@ -477,11 +498,14 @@ vertex "min"
         "comparison": 1_l
       }
     },
-    "sizeInBits": 0_l
+    "maxSizeInBits": {
+      "default": 0_l,
+      "impl1": 0_l
+    }
   }
 
 vertex "controlSY"
-  [impl::InstrumentedExecutable, moc::sy::SYMap, visualization::VisualizableWithProperties]
+  [forsyde::io::lib::hierarchy::implementation::functional::InstrumentedSoftwareBehaviour, moc::sy::SYMap, visualization::VisualizableWithProperties]
   (combFunctions, maxBrightnessSig, minBrightnessSig, controlSig)
   {
     "inputPorts": [
@@ -491,7 +515,7 @@ vertex "controlSY"
     "outputPorts": [
       "controlSig"
     ],
-    "operationRequirements": {
+    "computationalRequirements": {
       "default": {
         "all": 1_l
       },
@@ -499,7 +523,10 @@ vertex "controlSY"
         "mooreFSM": 1_l
       }
     },
-    "sizeInBits": 0_l,
+    "maxSizeInBits": {
+      "default": 0_l,
+      "all": 0_l
+    },
     "visualizedPropertiesNames": []
   }
 
@@ -553,7 +580,7 @@ vertex "correctionMapMapV"
   
 
 vertex "rescale"
-    [impl::InstrumentedExecutable, impl::ANSICBlackBoxExecutable, visualization::VisualizableWithProperties]
+    [forsyde::io::lib::hierarchy::implementation::functional::InstrumentedSoftwareBehaviour, impl::ANSICBlackBoxExecutable, visualization::VisualizableWithProperties]
     (a, b, c, res)
   {
     "inlinedCode": "res = (hmax - hmin > 127) ? h 
@@ -565,7 +592,7 @@ vertex "rescale"
     "outputArgumentPorts": [],
     "returnPort": "res",
     "visualizedPropertiesNames": ["inlinedCode"],
-    "operationRequirements": {
+    "computationalRequirements": {
       "default": {
         "all": 1_l
       },
@@ -575,11 +602,14 @@ vertex "rescale"
         "intMulti": 4_l
       }
     },
-    "sizeInBits": 0_l
+    "maxSizeInBits": {
+      "default": 0_l,
+      "impl1": 0_l
+    }
   }
   
 vertex "sobelSY"
-  [impl::InstrumentedExecutable, moc::sy::SYMap, visualization::VisualizableWithProperties]
+  [forsyde::io::lib::hierarchy::implementation::functional::InstrumentedSoftwareBehaviour, moc::sy::SYMap, visualization::VisualizableWithProperties]
   (combFunctions, correctedSig, sobelSig)
   {
     "inputPorts": [
@@ -588,7 +618,7 @@ vertex "sobelSY"
     "outputPorts": [
       "sobelSig"
     ],
-    "operationRequirements": {
+    "computationalRequirements": {
       "default": {
         "all": 1_l
       },
@@ -600,7 +630,10 @@ vertex "sobelSY"
       }
     },
     "visualizedPropertiesNames": [],
-    "sizeInBits": 0_l
+    "maxSizeInBits": {
+      "default": 0_l,
+      "impl1": 0_l
+    }
   }
   
 vertex "asciiSY"
@@ -644,7 +677,7 @@ vertex "asciiMapMapV"
   
 
 vertex "num2char"
-    [impl::InstrumentedExecutable, impl::ANSICBlackBoxExecutable, visualization::VisualizableWithProperties]
+    [forsyde::io::lib::hierarchy::implementation::functional::InstrumentedSoftwareBehaviour, impl::ANSICBlackBoxExecutable, visualization::VisualizableWithProperties]
     (a, b, res)
   {
     "inlinedCode": "
@@ -656,7 +689,7 @@ vertex "num2char"
     "outputArgumentPorts": [],
     "returnPort": "res",
     "visualizedPropertiesNames": ["inlinedCode"],
-    "operationRequirements": {
+    "computationalRequirements": {
       "default": {
         "all": 1_l
       },
@@ -666,7 +699,10 @@ vertex "num2char"
         "intSub": 1_l
       }
     },
-    "sizeInBits": 0_l
+    "maxSizeInBits": {
+      "default": 0_l,
+      "impl1": 0_l
+    }
   }
 
 vertex "inSig"

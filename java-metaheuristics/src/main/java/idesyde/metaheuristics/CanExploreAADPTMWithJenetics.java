@@ -2,6 +2,7 @@ package idesyde.metaheuristics;
 
 import idesyde.common.AperiodicAsynchronousDataflow;
 import idesyde.common.AperiodicAsynchronousDataflowToPartitionedTiledMulticore;
+import idesyde.core.DecisionModel;
 import idesyde.core.ExplorationSolution;
 import idesyde.core.Explorer;
 import idesyde.metaheuristics.constraints.AperiodicAsynchronousDataflowJobOrderingConstraint;
@@ -227,12 +228,9 @@ public interface CanExploreAADPTMWithJenetics extends AperiodicAsynchronousDataf
                 .minimizing()
                 .build();
         var solStream = engine
-                .stream(previousSolutions.stream().filter(s -> s
-                        .solved() instanceof AperiodicAsynchronousDataflowToPartitionedTiledMulticore)
-                        .map(s -> codec.encode(
-                                (AperiodicAsynchronousDataflowToPartitionedTiledMulticore) s
-                                        .solved()))
-                        .collect(Collectors.toList()));
+                .stream(previousSolutions.stream().flatMap(s -> DecisionModel.cast(s.solved(),
+                         AperiodicAsynchronousDataflowToPartitionedTiledMulticore.class)
+                        .stream()).map(s -> codec.encode(s)).collect(Collectors.toList()));
         var timedSolStream = configuration.improvementTimeOutInSecs > 0L
                 ? solStream
                         .limit(Limits.byExecutionTime(Duration.ofSeconds(

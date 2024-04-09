@@ -525,7 +525,7 @@ vertex "controlSY"
     },
     "maxSizeInBits": {
       "default": 0_l,
-      "all": 0_l
+      "impl1": 0_l
     },
     "visualizedPropertiesNames": []
   }

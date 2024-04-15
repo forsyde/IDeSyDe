@@ -43,7 +43,6 @@ sha3 = "0.10.6"
 syn = "2.0.15"
 tungstenite = { version = "0.21.0", features = ["rustls"] }
 url = "2.4.1"
-rusqlite = { version = "0.31.0", features = ["bundled", "blob", "functions"] }
 zip = "0.6.6"
 
 [workspace.package]

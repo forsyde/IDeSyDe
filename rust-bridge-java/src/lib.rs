@@ -740,7 +740,8 @@ impl IdentificationRuleLike for JavaModuleIdentificationRule {
                             .and_then(|result| IdentificationResult::from_java(env, result))
                     }
                     Err(e) => {
-                        messages.push(format!("[<ERROR>]{}", e));
+                        messages.push(format!("[<ERROR>] {}", e));
+                        let _ = env.exception_describe();
                     }
                 }
                 Err(jni::errors::Error::JavaException)
@@ -752,6 +753,7 @@ impl IdentificationRuleLike for JavaModuleIdentificationRule {
                 }
                 Err(e) => {
                     messages.push(format!("[<ERROR>] {}", e));
+                    let _ = env_root.exception_describe();
                 }
             }
         }

@@ -8,6 +8,10 @@ configurations.all {
 
 def forsydeioVersion = "develop-SNAPSHOT"
 
+configurations.all {
+    resolutionStrategy.cacheChangingModulesFor 0, 'seconds'  
+}
+
 dependencies {
     testImplementation 'org.junit.jupiter:junit-jupiter-api:5.8.1'
     implementation "com.github.forsyde.forsyde-io:forsyde-io-java-core:$forsydeioVersion"

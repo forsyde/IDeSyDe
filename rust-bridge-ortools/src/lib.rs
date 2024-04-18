@@ -1,32 +1,24 @@
-use std::collections::HashMap;
+use std::{
+    collections::{HashMap, HashSet},
+    sync::{Arc, Mutex},
+};
 
 use idesyde_common::models::PeriodicWorkloadToPartitionedSharedMultiCore;
 use idesyde_core::{
-    cast_dyn_decision_model, ExplorationBid, Explorer, Module, OpaqueDecisionModel,
+    cast_dyn_decision_model, ExplorationBid, ExplorationSolution, Explorer, Module,
+    OpaqueDecisionModel,
 };
 
-#[cxx::bridge]
-mod ffi {
+use autocxx::prelude::*; // use all the main autocxx functions
 
-    struct WorkloadDSEInput<'a> {
-        pe_targets: &'a [u32],
-        process_me_targets: &'a [u32],
-        buffer_me_targets: &'a [u32],
-        buffer_ce_targets: &'a [u32],
-        memory_limits: &'a [u64],
-        process_sizes: &'a [u64],
-        buffer_sizes: &'a [u64],
-        ce_max_slots: &'a [u32],
-        wcets: &'a [&'a [u32]],
-        pe_and_me_paths: &'a [&'a [&'a [u32]]],
-    }
-
-    unsafe extern "C++" {
-        include!("rust-bridge-ortools/include/solutions.hh");
-
-        fn prepare_workload_dse_model(input: &WorkloadDSEInput);
-
-    }
+include_cpp! {
+    #include "ortools/base/logging.h"
+    #include "ortools/sat/cp_model.h"
+    #include "ortools/sat/cp_model.pb.h"
+    #include "ortools/sat/cp_model_solver.h"
+    #include "ortools/util/sorted_interval_list.h"
+    safety!(unsafe) // see details of unsafety policies described in the 'safety' section of the book
+    // generate!("CpModelBuilder") // add this line for each function or type you wish to generate
 }
 
 struct ORToolExplorer;
@@ -36,25 +28,22 @@ impl Explorer for ORToolExplorer {
         "ORToolExplorer".to_string()
     }
 
-    fn location_url(&self) -> Option<Url> {
-        None
-    }
-
     fn bid(
         &self,
-        _other_explorers: &Vec<std::sync::Arc<dyn Explorer>>,
         m: std::sync::Arc<dyn idesyde_core::DecisionModel>,
     ) -> idesyde_core::ExplorationBid {
-        if let Some(m) = cast_dyn_decision_model!(m, PeriodicWorkloadToPartitionedSharedMultiCore) {
-            ExplorationBid {
+        if let Ok(_) = PeriodicWorkloadToPartitionedSharedMultiCore::try_from(m.as_ref()) {
+            let mut objs = HashSet::new();
+            objs.insert("nUsedPEs".to_string());
+            return ExplorationBid {
                 can_explore: true,
                 is_exact: true,
                 competitiveness: 1.0,
-                target_objectives: "nUsedPEs",
+                target_objectives: objs,
                 additional_numeric_properties: HashMap::new(),
-            }
+            };
         }
-        idesyde_core::ExplorationBid::impossible(self.unique_identifier().as_str())
+        ExplorationBid::impossible()
     }
 
     fn explore(
@@ -62,10 +51,9 @@ impl Explorer for ORToolExplorer {
         m: std::sync::Arc<dyn idesyde_core::DecisionModel>,
         _currrent_solutions: &std::collections::HashSet<idesyde_core::ExplorationSolution>,
         _exploration_configuration: idesyde_core::ExplorationConfiguration,
-    ) -> Box<dyn Iterator<Item = idesyde_core::ExplorationSolution> + Send + Sync + '_> {
-        if let Some(m) = cast_dyn_decision_model!(m, PeriodicWorkloadToPartitionedSharedMultiCore) {
-        }
-        Box::new(std::iter::empty())
+    ) -> Arc<Mutex<dyn Iterator<Item = ExplorationSolution> + Send + Sync>> {
+        if let Ok(_) = PeriodicWorkloadToPartitionedSharedMultiCore::try_from(m.as_ref()) {}
+        Arc::new(Mutex::new(std::iter::empty()))
     }
 }
 

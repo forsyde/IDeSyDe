@@ -1,6 +1,8 @@
 use std::collections::{HashMap, HashSet};
 
-use idesyde_core::{impl_decision_model_standard_parts, DecisionModel};
+use idesyde_core::{
+    impl_decision_model_conversion, impl_decision_model_standard_parts, DecisionModel,
+};
 use schemars::JsonSchema;
 use serde::{Deserialize, Serialize};
 
@@ -83,6 +85,7 @@ pub struct CommunicatingAndTriggeredReactiveWorkload {
     pub has_or_trigger_semantics: HashSet<String>,
 }
 
+impl_decision_model_conversion!(CommunicatingAndTriggeredReactiveWorkload);
 impl DecisionModel for CommunicatingAndTriggeredReactiveWorkload {
     impl_decision_model_standard_parts!(CommunicatingAndTriggeredReactiveWorkload);
 
@@ -142,6 +145,7 @@ pub struct SDFApplication {
     pub topology_token_size_in_bits: Vec<u64>,
 }
 
+impl_decision_model_conversion!(SDFApplication);
 impl DecisionModel for SDFApplication {
     impl_decision_model_standard_parts!(SDFApplication);
 
@@ -177,6 +181,7 @@ pub struct AnalysedSDFApplication {
     pub periodic_admissible_static_schedule: Vec<String>,
 }
 
+impl_decision_model_conversion!(AnalysedSDFApplication);
 impl DecisionModel for AnalysedSDFApplication {
     impl_decision_model_standard_parts!(AnalysedSDFApplication);
 
@@ -203,6 +208,7 @@ pub struct TiledMultiCore {
     pub pre_computed_paths: HashMap<String, HashMap<String, Vec<String>>>,
 }
 
+impl_decision_model_conversion!(TiledMultiCore);
 impl DecisionModel for TiledMultiCore {
     impl_decision_model_standard_parts!(TiledMultiCore);
 
@@ -248,6 +254,7 @@ pub struct MemoryMappableMultiCore {
     pub pre_computed_paths: HashMap<String, HashMap<String, Vec<String>>>,
 }
 
+impl_decision_model_conversion!(MemoryMappableMultiCore);
 impl DecisionModel for MemoryMappableMultiCore {
     impl_decision_model_standard_parts!(MemoryMappableMultiCore);
 
@@ -286,6 +293,7 @@ pub struct RuntimesAndProcessors {
     pub is_super_loop: HashSet<String>,
 }
 
+impl_decision_model_conversion!(RuntimesAndProcessors);
 impl DecisionModel for RuntimesAndProcessors {
     impl_decision_model_standard_parts!(RuntimesAndProcessors);
 
@@ -314,6 +322,7 @@ pub struct PartitionedTiledMulticore {
     pub runtimes: RuntimesAndProcessors,
 }
 
+impl_decision_model_conversion!(PartitionedTiledMulticore);
 impl DecisionModel for PartitionedTiledMulticore {
     impl_decision_model_standard_parts!(PartitionedTiledMulticore);
 
@@ -336,6 +345,7 @@ pub struct PartitionedMemoryMappableMulticore {
     pub runtimes: RuntimesAndProcessors,
 }
 
+impl_decision_model_conversion!(PartitionedMemoryMappableMulticore);
 impl DecisionModel for PartitionedMemoryMappableMulticore {
     impl_decision_model_standard_parts!(PartitionedMemoryMappableMulticore);
 
@@ -378,6 +388,7 @@ pub struct AperiodicAsynchronousDataflow {
     pub process_path_maximum_latency: HashMap<String, HashMap<String, f64>>,
 }
 
+impl_decision_model_conversion!(AperiodicAsynchronousDataflow);
 impl DecisionModel for AperiodicAsynchronousDataflow {
     impl_decision_model_standard_parts!(AsynchronousAperiodicDataflow);
 
@@ -413,6 +424,7 @@ pub struct InstrumentedComputationTimes {
     pub scale_factor: u64,
 }
 
+impl_decision_model_conversion!(InstrumentedComputationTimes);
 impl DecisionModel for InstrumentedComputationTimes {
     impl_decision_model_standard_parts!(InstrumentedComputationTimes);
 
@@ -439,6 +451,7 @@ pub struct InstrumentedMemoryRequirements {
     pub memory_requirements: HashMap<String, HashMap<String, u64>>,
 }
 
+impl_decision_model_conversion!(InstrumentedMemoryRequirements);
 impl DecisionModel for InstrumentedMemoryRequirements {
     impl_decision_model_standard_parts!(InstrumentedMemoryRequirements);
 
@@ -470,6 +483,7 @@ pub struct AperiodicAsynchronousDataflowToPartitionedTiledMulticore {
     pub processing_elements_to_routers_reservations: HashMap<String, HashMap<String, u16>>,
 }
 
+impl_decision_model_conversion!(AperiodicAsynchronousDataflowToPartitionedTiledMulticore);
 impl DecisionModel for AperiodicAsynchronousDataflowToPartitionedTiledMulticore {
     impl_decision_model_standard_parts!(AperiodicAsynchronousDataflowToPartitionedTiledMulticore);
 
@@ -530,6 +544,7 @@ pub struct AperiodicAsynchronousDataflowToPartitionedMemoryMappableMulticore {
     pub processing_elements_to_routers_reservations: HashMap<String, HashMap<String, u16>>,
 }
 
+impl_decision_model_conversion!(AperiodicAsynchronousDataflowToPartitionedMemoryMappableMulticore);
 impl DecisionModel for AperiodicAsynchronousDataflowToPartitionedMemoryMappableMulticore {
     impl_decision_model_standard_parts!(
         AperiodicAsynchronousDataflowToPartitionedMemoryMappableMulticore
@@ -591,6 +606,7 @@ pub struct PeriodicWorkloadToPartitionedSharedMultiCore {
     pub max_utilizations: HashMap<String, f64>,
 }
 
+impl_decision_model_conversion!(PeriodicWorkloadToPartitionedSharedMultiCore);
 impl DecisionModel for PeriodicWorkloadToPartitionedSharedMultiCore {
     impl_decision_model_standard_parts!(PeriodicWorkloadToPartitionedSharedMultiCore);
 

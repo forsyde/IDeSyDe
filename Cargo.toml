@@ -5,7 +5,7 @@ members = [
   "rust-common",
   "rust-bridge-matlab-simulink",
   "rust-bridge-java",
-  # "rust-bridge-ortools"
+  "rust-bridge-ortools"
 ]
 description = "IDeSyDe Rust suite"
 resolver = "2"
@@ -17,6 +17,8 @@ ciborium = "0.2.1"
 clap = { version = "4.2.1", features = ["derive"] }
 cxx = "1.0"
 cxx-build = "1.0"
+autocxx = "0.26.0"
+autocxx-build = "0.26.0"
 derive_builder = "0.20.0"
 downcast-rs = "1.2.0"
 jni = { version = "0.21.1", features = ["invocation"] }
@@ -43,7 +45,6 @@ sha3 = "0.10.6"
 syn = "2.0.15"
 tungstenite = { version = "0.21.0", features = ["rustls"] }
 url = "2.4.1"
-rusqlite = { version = "0.31.0", features = ["bundled", "blob", "functions"] }
 zip = "0.6.6"
 
 [workspace.package]

@@ -22,4 +22,3 @@ tungstenite.workspace = true
 url.workspace = true
 derive_builder.workspace = true
 base64.workspace = true
-rusqlite.workspace = true

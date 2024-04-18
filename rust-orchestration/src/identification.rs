@@ -1,15 +1,11 @@
-use std::{
-    net::TcpStream,
-    sync::Arc,
-};
+use std::{net::TcpStream, sync::Arc};
 
 use idesyde_core::{
-    merge_identification_results, DecisionModel, DesignModel, 
-    IdentificationResult, IdentificationRuleLike, Module, OpaqueDecisionModel, OpaqueDesignModel,
+    merge_identification_results, DecisionModel, DesignModel, IdentificationResult,
+    IdentificationRuleLike, Module, OpaqueDecisionModel, OpaqueDesignModel,
 };
 
 use log::debug;
-use rusqlite::params;
 use tungstenite::WebSocket;
 
 use rayon::prelude::*;
@@ -131,7 +127,6 @@ impl Iterator for ExternalServerIdentifiticationIterator {
     }
 }
 
-
 impl Drop for ExternalServerIdentifiticationIterator {
     fn drop(&mut self) {
         if self.websocket.can_write() {
@@ -202,91 +197,91 @@ pub fn identification_procedure(
     (identified, messages)
 }
 
-pub fn get_sqlite_for_identification(url: &str) -> Result<rusqlite::Connection, rusqlite::Error> {
-    let conn = rusqlite::Connection::open(url)?;
-    conn.execute(
-        "CREATE TABLE IF NOT EXISTS decision_models (
-            id INTEGER PRIMARY KEY,
-            category TEXT NOT NULL,
-            body_cbor BLOB,
-            body_msgpack BLOB,
-            body_json JSON NOT NULL,
-            UNIQUE (category, body_json)
-        )",
-        [],
-    )?;
-    conn.execute(
-        "CREATE TABLE IF NOT EXISTS design_models (
-            id INTEGER PRIMARY KEY,
-            category TEXT NOT NULL,
-            format TEXT NOT NULL,
-            body TEXT NOT NULL,
-            UNIQUE (format, category, body)
-        )",
-        [],
-    )?;
-    conn.execute(
-        "CREATE TABLE IF NOT EXISTS part (
-            decision_model_id INTEGER NOT NULL,
-            element_name TEXT NOT NULL,
-            FOREIGN KEY (decision_model_id) REFERENCES decision_models (id),
-            UNIQUE (decision_model_id, element_name)
-        )",
-        [],
-    )?;
-    conn.execute(
-        "CREATE TABLE IF NOT EXISTS elems (
-            design_model_id INTEGER NOT NULL,
-            element_name TEXT NOT NULL,
-            FOREIGN KEY (design_model_id) REFERENCES decision_models (id),
-            UNIQUE (design_model_id, element_name)
-        )",
-        [],
-    )?;
-    Ok(conn)
-}
+// pub fn get_sqlite_for_identification(url: &str) -> Result<rusqlite::Connection, rusqlite::Error> {
+//     let conn = rusqlite::Connection::open(url)?;
+//     conn.execute(
+//         "CREATE TABLE IF NOT EXISTS decision_models (
+//             id INTEGER PRIMARY KEY,
+//             category TEXT NOT NULL,
+//             body_cbor BLOB,
+//             body_msgpack BLOB,
+//             body_json JSON NOT NULL,
+//             UNIQUE (category, body_json)
+//         )",
+//         [],
+//     )?;
+//     conn.execute(
+//         "CREATE TABLE IF NOT EXISTS design_models (
+//             id INTEGER PRIMARY KEY,
+//             category TEXT NOT NULL,
+//             format TEXT NOT NULL,
+//             body TEXT NOT NULL,
+//             UNIQUE (format, category, body)
+//         )",
+//         [],
+//     )?;
+//     conn.execute(
+//         "CREATE TABLE IF NOT EXISTS part (
+//             decision_model_id INTEGER NOT NULL,
+//             element_name TEXT NOT NULL,
+//             FOREIGN KEY (decision_model_id) REFERENCES decision_models (id),
+//             UNIQUE (decision_model_id, element_name)
+//         )",
+//         [],
+//     )?;
+//     conn.execute(
+//         "CREATE TABLE IF NOT EXISTS elems (
+//             design_model_id INTEGER NOT NULL,
+//             element_name TEXT NOT NULL,
+//             FOREIGN KEY (design_model_id) REFERENCES decision_models (id),
+//             UNIQUE (design_model_id, element_name)
+//         )",
+//         [],
+//     )?;
+//     Ok(conn)
+// }
 
-pub fn save_decision_model_sqlite<T: DecisionModel + ?Sized>(
-    url: &str,
-    decision_model: &T,
-) -> Result<usize, rusqlite::Error> {
-    let conn = get_sqlite_for_identification(url)?;
-    let id = conn.execute(
-            "INSERT INTO decision_models (category, body_cbor, body_msgpack, body_json) VALUES (?1, ?2, ?3, ?4)", params![
-                decision_model.category(),
-                decision_model.body_as_cbor(),
-                decision_model.body_as_msgpack(),
-                decision_model.body_as_json()
-            ]
-        )?;
-    let mut stmt =
-        conn.prepare("INSERT INTO part (decision_model_id, element_name) VALUES (?1, ?2)")?;
-    for elem in decision_model.part() {
-        stmt.execute(params![id, elem])?;
-    }
-    Ok(id)
-}
+// pub fn save_decision_model_sqlite<T: DecisionModel + ?Sized>(
+//     url: &str,
+//     decision_model: &T,
+// ) -> Result<usize, rusqlite::Error> {
+//     let conn = get_sqlite_for_identification(url)?;
+//     let id = conn.execute(
+//             "INSERT INTO decision_models (category, body_cbor, body_msgpack, body_json) VALUES (?1, ?2, ?3, ?4)", params![
+//                 decision_model.category(),
+//                 decision_model.body_as_cbor(),
+//                 decision_model.body_as_msgpack(),
+//                 decision_model.body_as_json()
+//             ]
+//         )?;
+//     let mut stmt =
+//         conn.prepare("INSERT INTO part (decision_model_id, element_name) VALUES (?1, ?2)")?;
+//     for elem in decision_model.part() {
+//         stmt.execute(params![id, elem])?;
+//     }
+//     Ok(id)
+// }
 
-pub fn save_design_model_sqlite<T: DesignModel + ?Sized>(
-    url: &str,
-    design_model: &T,
-) -> Result<usize, rusqlite::Error> {
-    let conn = get_sqlite_for_identification(url)?;
-    let id = conn.execute(
-        "INSERT INTO design_models (category, format, body) VALUES (?1, ?2, ?3)",
-        params![
-            design_model.category(),
-            design_model.format(),
-            design_model.body_as_string()
-        ],
-    )?;
-    let mut stmt =
-        conn.prepare("INSERT INTO elems (design_model_id, element_name) VALUES (?1, ?2)")?;
-    for elem in design_model.elements() {
-        stmt.execute(params![id, elem])?;
-    }
-    Ok(id)
-}
+// pub fn save_design_model_sqlite<T: DesignModel + ?Sized>(
+//     url: &str,
+//     design_model: &T,
+// ) -> Result<usize, rusqlite::Error> {
+//     let conn = get_sqlite_for_identification(url)?;
+//     let id = conn.execute(
+//         "INSERT INTO design_models (category, format, body) VALUES (?1, ?2, ?3)",
+//         params![
+//             design_model.category(),
+//             design_model.format(),
+//             design_model.body_as_string()
+//         ],
+//     )?;
+//     let mut stmt =
+//         conn.prepare("INSERT INTO elems (design_model_id, element_name) VALUES (?1, ?2)")?;
+//     for elem in design_model.elements() {
+//         stmt.execute(params![id, elem])?;
+//     }
+//     Ok(id)
+// }
 
 // #[derive(Debug, PartialEq, Eq, Hash)]
 // pub struct ExternalIdentificationModule {

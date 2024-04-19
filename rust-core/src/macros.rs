@@ -63,6 +63,53 @@ macro_rules! impl_decision_model_standard_parts {
     };
 }
 
+#[macro_export]
+macro_rules! impl_decision_model_conversion {
+    ($x:ty) => {
+        impl TryFrom<&dyn DecisionModel> for $x {
+            type Error = &'static str;
+
+            fn try_from(m: &dyn DecisionModel) -> Result<$x, Self::Error> {
+                if let Some(opaque) = m.downcast_ref::<idesyde_core::OpaqueDecisionModel>() {
+                    if idesyde_core::DecisionModel::category(opaque).as_str() == stringify!($x) {
+                        if let Some(b) = idesyde_core::DecisionModel::body_as_cbor(opaque) {
+                            match ciborium::from_reader::<$x, &[u8]>(b.as_slice()) {
+                                Ok(r) => return Ok(r),
+                                Err(_) => (),
+                            }
+                        }
+                        if let Some(j) = idesyde_core::DecisionModel::body_as_json(opaque) {
+                            match serde_json::from_str::<$x>(&j) {
+                                Ok(r) => return Ok(r),
+                                Err(_) => (),
+                            }
+                        }
+                        if let Some(j) = idesyde_core::DecisionModel::body_as_msgpack(opaque) {
+                            match rmp_serde::from_slice::<$x>(&j) {
+                                Ok(r) => return Ok(r),
+                                Err(_) => (),
+                            }
+                        }
+                        // .map(|m| std::sync::Arc::new(m) as Arc<$x>)
+                        return Err("Could not convert input (opaque) decision model");
+                    }
+                } else if let Some(dcasted) = m.downcast_ref::<$x>().map(|x| x.to_owned()) {
+                    return Ok(dcasted);
+                }
+                Err("Could not convert input decision model")
+            }
+        }
+
+        // impl<T: idesyde_core::DecisionModel + ?Sized> TryFrom<std::sync::Arc<T>> for $x {
+        //     type Error = &'static str;
+
+        //     fn try_from(m: std::sync::Arc<T>) -> Result<$x, Self::Error> {
+        //         $x::try_from(m.as_ref())
+        //     }
+        // }
+    };
+}
+
 /// This macro takes a reference to a DecisionModel trait object
 /// and tries to downcast to a specific decision model.
 ///
@@ -93,7 +140,7 @@ macro_rules! cast_dyn_decision_model {
                             idesyde_core::DecisionModel::body_as_msgpack(opaque)
                                 .and_then(|j| rmp_serde::from_slice::<$x>(&j).ok())
                         })
-                        // .map(|m| std::sync::Arc::new(m) as Arc<$x>)
+                    // .map(|m| std::sync::Arc::new(m) as Arc<$x>)
                 } else {
                     None as Option<$x>
                 }

@@ -151,11 +151,7 @@ class MM_McoreAndPL_IRule implements IdentificationRule {
 		if (!pesConnected) {
 			errors.add("MM_McoreAndPL_IRule: not all processing elements reach a memory element");
 		}
-		if (processingElements.size() > 0 &&
-				memoryElements.size() > 0 &&
-				processingOnlyValidLinks &&
-				memoryOnlyValidLinks &&
-				pesConnected) {
+		if (errors.isEmpty()) {
 			var interconnectTopologySrcs = new ArrayList<String>();
 			var interconnectTopologyDsts = new ArrayList<String>();
 			topology

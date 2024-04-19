@@ -2,8 +2,10 @@ use idesyde_core::{decision_models_schemas_gen, RustEmbeddedModule};
 use models::{
     AnalysedSDFApplication, AperiodicAsynchronousDataflow,
     AperiodicAsynchronousDataflowToPartitionedMemoryMappableMulticore,
+    AperiodicAsynchronousDataflowToPartitionedMemoryMappableMulticoreAndPL,
     AperiodicAsynchronousDataflowToPartitionedTiledMulticore, InstrumentedComputationTimes,
-    InstrumentedMemoryRequirements, MemoryMappableMultiCore, PartitionedMemoryMappableMulticore,
+    InstrumentedMemoryRequirements, MM_MCoreAndPL, MemoryMappableMultiCore,
+    PartitionedMemoryMappableMulticore, PartitionedMemoryMappableMulticoreAndPL,
     PartitionedTiledMulticore, RuntimesAndProcessors, SDFApplication, TiledMultiCore,
 };
 use schemars::schema_for;
@@ -29,7 +31,13 @@ pub fn make_module() -> RustEmbeddedModule {
             irules::identify_partitioned_mem_mapped_multicore,
         )),
         Arc::new(idesyde_core::MarkedIdentificationRule::DecisionModelOnlyIdentificationRule(
+            irules::identify_partitioned_mem_mapped_multicore_and_pl,
+        )),
+        Arc::new(idesyde_core::MarkedIdentificationRule::DecisionModelOnlyIdentificationRule(
             irules::identify_aperiodic_asynchronous_dataflow_to_partitioned_mem_mappable_multicore,
+        )),
+        Arc::new(idesyde_core::MarkedIdentificationRule::DecisionModelOnlyIdentificationRule(
+            irules::identify_aperiodic_asynchronous_dataflow_to_partitioned_mem_mappable_multicore_and_pl,
         )),
         Arc::new(idesyde_core::MarkedIdentificationRule::DecisionModelOnlyIdentificationRule(
             irules::identify_analyzed_sdf_from_common_sdf,
@@ -60,8 +68,11 @@ pub fn make_module() -> RustEmbeddedModule {
             InstrumentedMemoryRequirements,
             AperiodicAsynchronousDataflowToPartitionedTiledMulticore,
             MemoryMappableMultiCore,
+            MM_MCoreAndPL,
             PartitionedMemoryMappableMulticore,
-            AperiodicAsynchronousDataflowToPartitionedMemoryMappableMulticore
+            PartitionedMemoryMappableMulticoreAndPL,
+            AperiodicAsynchronousDataflowToPartitionedMemoryMappableMulticore,
+            AperiodicAsynchronousDataflowToPartitionedMemoryMappableMulticoreAndPL
         ])
         .build()
         .expect("Failed to build common standalone identification module. Should never happen.")

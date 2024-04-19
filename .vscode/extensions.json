@@ -1,0 +1,11 @@
+{
+    "recommendations": [
+        "vscjava.vscode-java-pack",
+        "rust-lang.rust-analyzer",
+        "vscjava.vscode-gradle",
+        "scalameta.metals",
+        "ms-python.python",
+        "redhat.java",
+        "vadimcn.vscode-lldb"
+    ]
+}

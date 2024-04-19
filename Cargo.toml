@@ -4,8 +4,9 @@ members = [
   "rust-orchestration",
   "rust-common",
   "rust-bridge-matlab-simulink",
-  "rust-bridge-java",
-  "rust-bridge-ortools"
+  "rust-bridge-java", 
+  "rust-bridge-minizinc"
+#  "rust-bridge-ortools"
 ]
 description = "IDeSyDe Rust suite"
 resolver = "2"

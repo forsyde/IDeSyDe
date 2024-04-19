@@ -297,6 +297,7 @@ pub struct MM_MCoreAndPL {
     pub pre_computed_paths: HashMap<String, HashMap<String, Vec<String>>>,
 }
 
+impl_decision_model_conversion!(MM_MCoreAndPL);
 impl DecisionModel for MM_MCoreAndPL {
     impl_decision_model_standard_parts!(MM_MCoreAndPL);
 
@@ -304,7 +305,11 @@ impl DecisionModel for MM_MCoreAndPL {
         let mut elems: HashSet<String> = HashSet::new();
         elems.extend(self.processing_elems.iter().map(|x: &String| x.to_owned()));
         elems.extend(self.storage_elems.iter().map(|x: &String| x.to_owned()));
-        elems.extend(self.communication_elems.iter().map(|x: &String| x.to_owned()));
+        elems.extend(
+            self.communication_elems
+                .iter()
+                .map(|x: &String| x.to_owned()),
+        );
         for i in 0..self.topology_dsts.len() {
             elems.insert(format!(
                 "{}:{}-{}:{}",
@@ -410,6 +415,7 @@ pub struct PartitionedMemoryMappableMulticoreAndPL {
     pub runtimes: RuntimesAndProcessors,
 }
 
+impl_decision_model_conversion!(PartitionedMemoryMappableMulticoreAndPL);
 impl DecisionModel for PartitionedMemoryMappableMulticoreAndPL {
     impl_decision_model_standard_parts!(PartitionedMemoryMappableMulticoreAndPL);
 
@@ -678,6 +684,9 @@ pub struct AperiodicAsynchronousDataflowToPartitionedMemoryMappableMulticoreAndP
     pub processing_elements_to_routers_reservations: HashMap<String, HashMap<String, u16>>,
 }
 
+impl_decision_model_conversion!(
+    AperiodicAsynchronousDataflowToPartitionedMemoryMappableMulticoreAndPL
+);
 impl DecisionModel for AperiodicAsynchronousDataflowToPartitionedMemoryMappableMulticoreAndPL {
     impl_decision_model_standard_parts!(
         AperiodicAsynchronousDataflowToPartitionedMemoryMappableMulticoreAndPL

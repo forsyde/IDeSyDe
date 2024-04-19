@@ -4,9 +4,9 @@ use models::{
     AperiodicAsynchronousDataflowToPartitionedMemoryMappableMulticore,
     AperiodicAsynchronousDataflowToPartitionedMemoryMappableMulticoreAndPL,
     AperiodicAsynchronousDataflowToPartitionedTiledMulticore, InstrumentedComputationTimes,
-    InstrumentedMemoryRequirements, MemoryMappableMultiCore, MM_MCoreAndPL,
-    PartitionedMemoryMappableMulticore, PartitionedMemoryMappableMulticoreAndPL, TiledMultiCore, 
-    PartitionedTiledMulticore, RuntimesAndProcessors, SDFApplication,
+    InstrumentedMemoryRequirements, MM_MCoreAndPL, MemoryMappableMultiCore,
+    PartitionedMemoryMappableMulticore, PartitionedMemoryMappableMulticoreAndPL,
+    PartitionedTiledMulticore, RuntimesAndProcessors, SDFApplication, TiledMultiCore,
 };
 use schemars::schema_for;
 use std::{collections::HashSet, sync::Arc};

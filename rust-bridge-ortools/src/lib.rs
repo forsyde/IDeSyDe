@@ -1,25 +1,18 @@
+pub mod solutions;
+
 use std::{
     collections::{HashMap, HashSet},
     sync::{Arc, Mutex},
 };
 
-use idesyde_common::models::PeriodicWorkloadToPartitionedSharedMultiCore;
+use idesyde_common::models::{
+    AperiodicAsynchronousDataflowToPartitionedMemoryMappableMulticoreAndPL,
+    PeriodicWorkloadToPartitionedSharedMultiCore,
+};
 use idesyde_core::{
     cast_dyn_decision_model, ExplorationBid, ExplorationSolution, Explorer, Module,
     OpaqueDecisionModel,
 };
-
-use autocxx::prelude::*; // use all the main autocxx functions
-
-include_cpp! {
-    #include "ortools/base/logging.h"
-    #include "ortools/sat/cp_model.h"
-    #include "ortools/sat/cp_model.pb.h"
-    #include "ortools/sat/cp_model_solver.h"
-    #include "ortools/util/sorted_interval_list.h"
-    safety!(unsafe) // see details of unsafety policies described in the 'safety' section of the book
-    // generate!("CpModelBuilder") // add this line for each function or type you wish to generate
-}
 
 struct ORToolExplorer;
 
@@ -53,6 +46,11 @@ impl Explorer for ORToolExplorer {
         _exploration_configuration: idesyde_core::ExplorationConfiguration,
     ) -> Arc<Mutex<dyn Iterator<Item = ExplorationSolution> + Send + Sync>> {
         if let Ok(_) = PeriodicWorkloadToPartitionedSharedMultiCore::try_from(m.as_ref()) {}
+        if let Ok(aad2pmmmap) =
+            AperiodicAsynchronousDataflowToPartitionedMemoryMappableMulticoreAndPL::try_from(
+                m.as_ref(),
+            )
+        {}
         Arc::new(Mutex::new(std::iter::empty()))
     }
 }

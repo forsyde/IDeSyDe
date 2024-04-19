@@ -246,6 +246,7 @@ fn main() {
 
         // add embedded modules
         modules.push(Arc::new(idesyde_common::make_module()));
+        modules.push(Arc::new(idesyde_bridge_minizinc::make_module()));
 
         // add externally declared modules
         if let Some(external_modules) = args.module {

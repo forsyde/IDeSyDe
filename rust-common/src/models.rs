@@ -1,4 +1,4 @@
-use std::collections::{HashMap, HashSet};
+use std::{collections::{HashMap, HashSet}, hash::Hash};
 
 use idesyde_core::{
     impl_decision_model_conversion, impl_decision_model_standard_parts, DecisionModel,
@@ -404,6 +404,21 @@ impl DecisionModel for PartitionedMemoryMappableMulticore {
     }
 }
 
+/// A decision model to hold the required area that a hardware implementation needs.
+#[derive(Debug, PartialEq, Serialize, Deserialize, Clone, JsonSchema)]
+pub struct HardwareImplementationAreas {
+    pub required_areas: HashMap<String, u32>,
+}
+
+impl_decision_model_conversion!(HardwareImplementationAreas);
+impl DecisionModel for HardwareImplementationAreas {
+    impl_decision_model_standard_parts!(HardwareImplementationArea);
+
+    fn part(&self) -> HashSet<String> {
+        HashSet::new()
+    }
+}
+
 /// A decision model that captures a paritioned-scheduled memory mappable multicore machine
 ///
 /// This means that every processing element hosts and has affinity for one and only one runtime element.
@@ -674,6 +689,7 @@ impl DecisionModel for AperiodicAsynchronousDataflowToPartitionedMemoryMappableM
 #[derive(Debug, PartialEq, Serialize, Deserialize, Clone, JsonSchema)]
 pub struct AperiodicAsynchronousDataflowToPartitionedMemoryMappableMulticoreAndPL {
     pub aperiodic_asynchronous_dataflows: Vec<AperiodicAsynchronousDataflow>,
+    pub hardware_impl_areas: HardwareImplementationAreas,
     pub partitioned_mem_mappable_multicore: PartitionedMemoryMappableMulticoreAndPL,
     pub instrumented_computation_times: InstrumentedComputationTimes,
     pub instrumented_memory_requirements: InstrumentedMemoryRequirements,

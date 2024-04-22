@@ -11,7 +11,7 @@ import java.util.stream.Stream;
 /**
  * A decision model to hold the required area that a hardware implementation needs.
  */
-public record HardwareImplementationArea(
+public record HardwareImplementationAreas(
         @JsonProperty("required_areas") Map<String, Long> requiredAreas
 ) implements DecisionModel {
     @Override

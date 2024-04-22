@@ -5,7 +5,7 @@ import java.util.HashSet;
 import java.util.Set;
 
 import forsyde.io.core.SystemGraph;
-import idesyde.common.HardwareImplementationArea;
+import idesyde.common.HardwareImplementationAreas;
 import idesyde.core.*;
 import forsyde.io.lib.hierarchy.ForSyDeHierarchy.*;
 
@@ -49,7 +49,7 @@ class HardwareImplementationAreasIRule implements IdentificationRule {
         }
 
         return new IdentificationResult(
-            Set.of(new HardwareImplementationArea(requiredAreas)), errors
+            Set.of(new HardwareImplementationAreas(requiredAreas)), errors
         );
     }
 }

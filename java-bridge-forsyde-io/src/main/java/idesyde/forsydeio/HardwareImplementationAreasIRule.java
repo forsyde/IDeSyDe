@@ -16,6 +16,7 @@ class HardwareImplementationAreasIRule implements IdentificationRule {
         Set<? extends DesignModel> designModels,
         Set<? extends DecisionModel> decisionModels
     ) {
+        var processes = new HashSet<String>();
         var requiredAreas = new HashMap<String, Long>();
         var errors = new HashSet<String>();
         var model = new SystemGraph();
@@ -31,6 +32,7 @@ class HardwareImplementationAreasIRule implements IdentificationRule {
                 .ifPresent(hw -> {
                     long area = hw.requiredHardwareImplementationArea();
                     if (area > 0) {
+                        processes.add(hw.getIdentifier());
                         requiredAreas.put(hw.getIdentifier(), area);
                     } else {
                         errors.add(
@@ -49,7 +51,7 @@ class HardwareImplementationAreasIRule implements IdentificationRule {
         }
 
         return new IdentificationResult(
-            Set.of(new HardwareImplementationAreas(requiredAreas)), errors
+            Set.of(new HardwareImplementationAreas(processes, requiredAreas)), errors
         );
     }
 }

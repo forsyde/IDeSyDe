@@ -407,6 +407,7 @@ impl DecisionModel for PartitionedMemoryMappableMulticore {
 /// A decision model to hold the required area that a hardware implementation needs.
 #[derive(Debug, PartialEq, Serialize, Deserialize, Clone, JsonSchema)]
 pub struct HardwareImplementationAreas {
+    pub processes: HashSet<String>,
     pub required_areas: HashMap<String, u32>,
 }
 
@@ -415,7 +416,9 @@ impl DecisionModel for HardwareImplementationAreas {
     impl_decision_model_standard_parts!(HardwareImplementationArea);
 
     fn part(&self) -> HashSet<String> {
-        HashSet::new()
+        let mut elems: HashSet<String> = HashSet::new();
+        elems.extend(self.processes.iter().map(|x| x.to_owned()));
+        elems
     }
 }
 

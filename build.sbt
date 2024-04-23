@@ -6,6 +6,9 @@ ThisBuild / versionScheme := Some("early-semver")
 ThisBuild / publishMavenStyle := true
 ThisBuild / publishTo := Some(Opts.resolver.sonatypeStaging)
 
+// https://www.scala-sbt.org/1.x/docs/Cached-Resolution.html
+updateOptions := updateOptions.value.withCachedResolution(true)
+
 ThisBuild / resolvers += "jitpack" at "https://jitpack.io"
 
 lazy val forsydeIoVersion              = "develop-SNAPSHOT"

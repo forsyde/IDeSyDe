@@ -17,6 +17,7 @@ class HardwareImplementationAreasIRule implements IdentificationRule {
     public IdentificationResult apply(
             Set<? extends DesignModel> designModels,
             Set<? extends DecisionModel> decisionModels) {
+        var identified = new HashSet<HardwareImplementationArea>();
         var processes = new HashSet<String>();
         var programmableAreas = new HashSet<String>();
         var requiredAreas = new HashMap<String, Map<String, Long>>();
@@ -27,25 +28,27 @@ class HardwareImplementationAreasIRule implements IdentificationRule {
                     .map(ForSyDeIODesignModel::systemGraph)
                     .ifPresent(model::mergeInPlace);
         }
-        for (Vertex maybePA : model.vertexSet()) {
+        for (Vertex maybeHWInstr : model.vertexSet()) {
             InstrumentedHardwareBehaviour
-                    .tryView(model, maybePA)
-                    .ifPresent(hw -> {
-                        programmableAreas.add(hw.getIdentifier());
+                    .tryView(model, maybeHWInstr)
+                    .ifPresent(hwInstr -> {
+                        var hwIdent = hwInstr.getIdentifier();
+                        processes.add(hwIdent);
                         for (Vertex maybeProc : model.vertexSet()) {
-                            if (!requiredAreas.containsKey(hw.getIdentifier())) {
-                                requiredAreas.put(hw.getIdentifier(), new HashMap<>());
+                            if (!requiredAreas.containsKey(hwIdent)) {
+                                requiredAreas.put(hwIdent, new HashMap<>());
                             }
                             LogicProgrammableModule.tryView(model, maybeProc).ifPresent(proc -> {
-                                processes.add(proc.getIdentifier());
-                                long area = hw.requiredHardwareImplementationArea();
+                                var procIdent = proc.getIdentifier();
+                                programmableAreas.add(procIdent);
+                                long area = hwInstr.requiredHardwareImplementationArea();
                                 if (area > 0) {
-                                    requiredAreas.get(hw.getIdentifier()).put(proc.getIdentifier(), area);
+                                    requiredAreas.get(hwIdent).put(procIdent, area);
                                 } else {
                                     errors.add(
                                             "HardwareImplementationAreasIRule: Could not " +
                                                     "identify hardware implementation area, or <= 0 for " +
-                                                    hw.getIdentifier());
+                                                    hwIdent);
                                 }
                             });
                         }
@@ -54,9 +57,10 @@ class HardwareImplementationAreasIRule implements IdentificationRule {
         if (requiredAreas.isEmpty()) {
             errors.add(
                     "Error: No implementations of actors in hardware identified");
+        } else {
+            identified.add(new HardwareImplementationArea(processes, programmableAreas, requiredAreas));
         }
 
-        return new IdentificationResult(
-                Set.of(new HardwareImplementationArea(processes, programmableAreas, requiredAreas)), errors);
+        return new IdentificationResult(identified, errors);
     }
 }

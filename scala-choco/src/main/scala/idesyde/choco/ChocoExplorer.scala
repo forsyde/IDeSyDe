@@ -38,7 +38,7 @@ import idesyde.core.OpaqueDecisionModel
 
 class ChocoExplorer extends Explorer:
 
-  override def bid(
+  def bid(
       decisionModel: DecisionModel
   ): ExplorationBidding = {
     val bidding = decisionModel.category() match {

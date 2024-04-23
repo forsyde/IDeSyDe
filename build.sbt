@@ -105,14 +105,14 @@ lazy val common = (project in file("scala-common"))
   .settings(
     // name := "idesyde-scala-common",
     libraryDependencies ++= Seq(
-      "com.lihaoyi"               %% "upickle"               % upickleVersion,
-      "com.github.forsyde.IDeSyDe" % "build-java-core"       % globalIDeSyDeJavaVersion,
-      "com.github.forsyde.IDeSyDe" % "build-java-blueprints" % globalIDeSyDeJavaVersion,
-      "org.jgrapht"                % "jgrapht-core"          % jgraphtVersion,
+      "com.lihaoyi"               %% "upickle"         % upickleVersion,
+      "com.github.forsyde.IDeSyDe" % "build-java-core" % globalIDeSyDeJavaVersion,
+      // "com.github.forsyde.IDeSyDe" % "build-java-blueprints" % globalIDeSyDeJavaVersion,
+      "org.jgrapht" % "jgrapht-core" % jgraphtVersion,
       // ("org.scala-graph" %% "graph-core" % scalaGraphVersion).cross(CrossVersion.for3Use2_13),
       "org.typelevel" %%% "spire" % spireVersion
     ),
-    mainClass := Some("idesyde.common.CommonModule"),
+    // mainClass := Some("idesyde.common.CommonModule"),
     // moduleSettings,
     licenses := Seq(
       "MIT"  -> url("https://opensource.org/license/mit/"),
@@ -215,8 +215,8 @@ lazy val choco = (project in file("scala-choco"))
       "MIT"  -> url("https://opensource.org/license/mit/"),
       "APL2" -> url("https://www.apache.org/licenses/LICENSE-2.0"),
       "EPL2" -> url("https://www.eclipse.org/legal/epl-2.0/")
-    ),
-    Compile / mainClass := Some("idesyde.choco.ChocoExplorationModule")
+    )
+    // Compile / mainClass := Some("idesyde.choco.ChocoExplorationModule")
     // moduleSettings,
     // jlinkModulePath := {
     //   val paths = (jlinkBuildImage / fullClasspath).value

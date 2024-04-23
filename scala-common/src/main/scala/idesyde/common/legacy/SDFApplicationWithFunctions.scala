@@ -11,7 +11,6 @@ import scala.collection.mutable.Buffer
 import idesyde.core.DecisionModel
 import java.{util => ju}
 import org.jgrapht.graph.builder.GraphBuilder
-import kotlin.io.encoding.Base64.Default
 import org.jgrapht.graph.DefaultDirectedGraph
 import org.jgrapht.graph.DefaultEdge
 import org.jgrapht.traverse.TopologicalOrderIterator

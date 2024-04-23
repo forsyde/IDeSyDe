@@ -11,7 +11,7 @@ updateOptions := updateOptions.value.withCachedResolution(true)
 
 ThisBuild / resolvers += "jitpack" at "https://jitpack.io"
 
-lazy val forsydeIoVersion              = "develop-SNAPSHOT"
+lazy val forsydeIoVersion              = "proglogic-SNAPSHOT"
 lazy val jgraphtVersion                = "1.5.1"
 lazy val scribeVersion                 = "3.10.2"
 lazy val scalaGraphVersion             = "1.13.5"
@@ -136,10 +136,10 @@ lazy val scala_legacy = (project in file("scala-bridge-forsyde-io"))
   .settings(
     // name := "idesyde-scala-bridge-forsyde-io",
     libraryDependencies ++= Seq(
-      "com.github.forsyde.forsyde-io" % "forsyde-io-java-core"       % forsydeIoVersion,
-      "com.github.forsyde.forsyde-io" % "forsyde-io-java-libforsyde" % forsydeIoVersion,
-      "com.github.forsyde.forsyde-io" % "forsyde-io-java-bridge-sdf3"       % forsydeIoVersion,
-      "org.apache.commons"            % "commons-lang3"              % "3.12.0",
+      "com.github.forsyde.forsyde-io" % "forsyde-io-java-core"        % forsydeIoVersion,
+      "com.github.forsyde.forsyde-io" % "forsyde-io-java-libforsyde"  % forsydeIoVersion,
+      "com.github.forsyde.forsyde-io" % "forsyde-io-java-bridge-sdf3" % forsydeIoVersion,
+      "org.apache.commons"            % "commons-lang3"               % "3.12.0",
       "org.scala-lang.modules" %%% "scala-parser-combinators" % scalaParserCombinatorsVersion,
       "com.lihaoyi"             %% "os-lib"                   % osLibVersion,
       "org.virtuslab"           %% "scala-yaml"               % scalaYamlVersion

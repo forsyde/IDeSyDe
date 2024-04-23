@@ -9,3 +9,10 @@ include 'java-metaheuristics'
 // include 'scala-common'
 // include 'scala-bridge-forsyde-io'
 
+dependencyResolutionManagement {
+    repositoriesMode.set(RepositoriesMode.FAIL_ON_PROJECT_REPOS)
+    repositories {
+        mavenCentral()
+        maven { url 'https://jitpack.io' }
+    }
+}

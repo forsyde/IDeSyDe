@@ -11,9 +11,8 @@ group = 'io.github.forsyde'
 archivesBaseName = rootProject.name + '-' + project.name
 version = rootProject.version
 
-repositories {
-    mavenCentral()
-    maven { url 'https://jitpack.io' }
+configurations.all {
+    resolutionStrategy.cacheChangingModulesFor 0, 'seconds'  
 }
 
 java {

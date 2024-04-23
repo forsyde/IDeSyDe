@@ -533,6 +533,27 @@ impl DecisionModel for InstrumentedMemoryRequirements {
     }
 }
 
+/// A decision model to hold the required area that a hardware implementation needs.
+///
+#[derive(Debug, PartialEq, Serialize, Deserialize, Clone, JsonSchema)]
+pub struct HardwareImplementationArea {
+    pub processes: HashSet<String>,
+    pub programmable_areas: HashSet<String>,
+    pub required_areas: HashMap<String, HashMap<String, u64>>,
+}
+
+impl_decision_model_conversion!(HardwareImplementationArea);
+impl DecisionModel for HardwareImplementationArea {
+    impl_decision_model_standard_parts!(InstrumentedMemoryRequirements);
+
+    fn part(&self) -> HashSet<String> {
+        let mut elems: HashSet<String> = HashSet::new();
+        elems.extend(self.processes.iter().map(|x| x.to_owned()));
+        elems.extend(self.programmable_areas.iter().map(|x| x.to_string()));
+        elems
+    }
+}
+
 /// A decision model that combines one type of application, platform and information to bind them.
 ///
 /// The assumptions of this decision model are:
@@ -677,6 +698,7 @@ pub struct AperiodicAsynchronousDataflowToPartitionedMemoryMappableMulticoreAndP
     pub partitioned_mem_mappable_multicore: PartitionedMemoryMappableMulticoreAndPL,
     pub instrumented_computation_times: InstrumentedComputationTimes,
     pub instrumented_memory_requirements: InstrumentedMemoryRequirements,
+    pub hardware_implementation_area: HardwareImplementationArea,
     pub processes_to_runtime_scheduling: HashMap<String, String>,
     pub processes_to_memory_mapping: HashMap<String, String>,
     pub buffer_to_memory_mappings: HashMap<String, String>,

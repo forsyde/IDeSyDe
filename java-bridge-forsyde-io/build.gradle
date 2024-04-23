@@ -6,7 +6,7 @@ configurations.all {
     resolutionStrategy.cacheChangingModulesFor 0, 'seconds'  
 }
 
-def forsydeioVersion = "develop-SNAPSHOT"
+def forsydeioVersion = "proglogic-SNAPSHOT"
 
 configurations.all {
     resolutionStrategy.cacheChangingModulesFor 0, 'seconds'  

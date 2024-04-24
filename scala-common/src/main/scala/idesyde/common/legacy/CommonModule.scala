@@ -40,7 +40,7 @@ object CommonModule
       IdentificationResult(iden.asJava, msgs.asJava)
     }
 
-  def identificationRules(): ju.Set[IdentificationRule] = Set(
+  override def identificationRules(): ju.Set[IdentificationRule] = Set(
     IdentificationRule.OnlyCertainDecisionModels(
       adaptIRuleToJava(identSchedulableTiledMultiCore),
       Set("PartitionedCoresWithRuntimes", "TiledMultiCoreWithFunctions").asJava

@@ -154,7 +154,7 @@ class ForSyDeIOScalaModule
     .registerDriver(SDF3Driver())
   // .registerDriver(new ForSyDeAmaltheaDriver())
 
-  def identificationRules(): ju.Set[IdentificationRule] = Set(
+  override def identificationRules(): ju.Set[IdentificationRule] = Set(
     IdentificationRule.OnlyDesignModels(adaptIRuleToJava(identSharedMemoryMultiCoreFromDeviceTree)),
     IdentificationRule.OnlyDesignModels(
       adaptIRuleToJava(identPartitionedCoresWithRuntimesFromDeviceTree)
@@ -199,7 +199,7 @@ class ForSyDeIOScalaModule
   def identificationRulesCanonicalClassesNames(): Array[String] =
     identificationRules().asScala.map(cls => cls.getClass().getCanonicalName()).toArray
 
-  def reverseIdentificationRules(): ju.Set[ReverseIdentificationRule] = Set(
+  override def reverseIdentificationRules(): ju.Set[ReverseIdentificationRule] = Set(
     ReverseIdentificationRule.Generic(
       adaptRevRuleToJava(integratePeriodicWorkloadToPartitionedSharedMultiCore)
     ),

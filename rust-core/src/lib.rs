@@ -1525,14 +1525,16 @@ where
             .iter()
             .enumerate()
             .filter(|(_, (_, m, b))| {
+                let left_part = m.part();
                 b.can_explore
                     && !biddings
                         .iter()
                         .filter(|(_, mm, bb)| b != bb && m != mm)
                         .any(|(_, mm, bb)| {
+                            let right_part = mm.part();
                             bb.can_explore
-                                && (m.partial_cmp(&mm) == Some(Ordering::Less)
-                                    || (m.partial_cmp(&mm) != Some(Ordering::Less)
+                                && ((left_part != right_part && left_part.is_subset(&right_part))
+                                    || (left_part == right_part
                                         && b.partial_cmp(&bb) == Some(Ordering::Greater)))
                         })
             })

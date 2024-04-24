@@ -49,6 +49,6 @@ url = "2.4.1"
 zip = "0.6.6"
 
 [workspace.package]
-version = "0.8.1"
+version = "0.8.3"
 authors = ["Rodolfo Jordao"]
 edition = "2021"

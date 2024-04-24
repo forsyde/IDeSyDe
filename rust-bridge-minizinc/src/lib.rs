@@ -184,18 +184,19 @@ struct MiniZincSolutionOutput<T> {
     sections: Vec<String>,
 }
 
-const AADPMMMPL_MZN: &'static str = include_str!("AperiodicAsynchronousDataflowToPartitionedMemoryMappableMulticoreAndPL.mzn");
+const AADPMMMPL_MZN: &'static str =
+    include_str!("AperiodicAsynchronousDataflowToPartitionedMemoryMappableMulticoreAndPL.mzn");
 
 #[derive(Debug, Clone, PartialEq, Eq, Deserialize)]
 struct AADPMMMPLMznOutput {
-    #[serde(rename = "processExecution")]
+    #[serde(rename = "processesExecution")]
     process_execution: Vec<u64>,
-    #[serde(rename = "processMapping")]
+    #[serde(rename = "processesMapping")]
     process_mapping: Vec<u64>,
     #[serde(rename = "buffersMapping")]
     buffers_mapping: Vec<u64>,
     #[serde(rename = "communicationReservation")]
-    communication_reservation: Vec<u64>,
+    communication_reservation: Vec<Vec<u64>>,
     #[serde(rename = "invThroughput")]
     inv_throughput: Vec<u64>,
     #[serde(rename = "nUsedPEs")]
@@ -299,7 +300,7 @@ fn solve_aad2pmmmap(
     );
     let (_, firings_graph_closure) =
         petgraph::algo::tred::dag_transitive_reduction_closure::<(), DefaultIx>(&res);
-    let firings_follows: Vec<Vec<u64>> = firings_graph_idx
+    let firings_follows: Vec<HashSet<u64>> = firings_graph_idx
         .iter()
         .map(|fidx| {
             firings_graph_closure
@@ -313,6 +314,40 @@ fn solve_aad2pmmmap(
                 .collect()
         })
         .collect();
+    let execution_times: Vec<Vec<i64>> = all_processes
+    .iter()
+    .map(|f| {
+        m.partitioned_mem_mappable_multicore
+            .hardware
+            .processing_elems
+            .iter()
+            .filter(|pe| 
+                m.partitioned_mem_mappable_multicore.runtimes.processor_affinities.get(*pe).map(|r| m.partitioned_mem_mappable_multicore.runtimes.is_super_loop.contains(r)).unwrap_or(false)
+                )
+            .map(|pe| {
+                m.instrumented_computation_times
+                    .average_execution_times
+                    .get(f)
+                    .and_then(|inner| inner.get(pe))
+                    .map(|x| x.to_owned() as i64)
+                    .unwrap_or(-1)
+            })
+            .chain(
+                m.partitioned_mem_mappable_multicore
+                .hardware
+                .pl_module_available_areas.keys()
+                .map(|pla| {
+                    m.instrumented_computation_times
+                        .average_execution_times
+                        .get(f)
+                        .and_then(|inner| inner.get(pla))
+                        .map(|x| x.to_owned() as i64)
+                        .unwrap_or(-1)
+                })
+            )
+            .collect()
+    })
+    .collect();
     input_data.push((
         "Processes",
         MiniZincData::from(
@@ -400,6 +435,8 @@ fn solve_aad2pmmmap(
                 .collect::<Vec<u64>>(),
         ),
     ));
+    input_data.push(("executionTime", MiniZincData::from(execution_times)));
+    
     let temp_dir = std::env::temp_dir().join("idesyde").join("minizinc");
     let model_file = temp_dir.join("AADPMMMPL.mzn");
     let data_file = temp_dir.join("AADPMMMPL.json");
@@ -445,12 +482,7 @@ fn solve_aad2pmmmap(
                         .process_mapping
                         .iter()
                         .enumerate()
-                        .map(|(p, r)| {
-                            (
-                                all_processes[p].clone(),
-                                memories[*r as usize].clone(),
-                            )
-                        })
+                        .map(|(p, r)| (all_processes[p].clone(), memories[*r as usize].clone()))
                         .collect();
                     explored.buffer_to_memory_mappings = out
                         .output
@@ -459,15 +491,16 @@ fn solve_aad2pmmmap(
                         .buffers_mapping
                         .iter()
                         .enumerate()
-                        .map(|(b, m)| {
-                            (
-                                all_buffers[b].clone(),
-                                memories[*m as usize].clone(),
-                            )
-                        })
+                        .map(|(b, m)| (all_buffers[b].clone(), memories[*m as usize].clone()))
                         .collect();
                     let mut objs = HashMap::new();
-                    objs.insert("nUsedPEs".to_string(), out.output.get("json").expect("Could not find processMapping").n_used_pes as f64);
+                    objs.insert(
+                        "nUsedPEs".to_string(),
+                        out.output
+                            .get("json")
+                            .expect("Could not find processMapping")
+                            .n_used_pes as f64,
+                    );
                     for (p, inv) in out
                         .output
                         .get("json")
@@ -476,10 +509,7 @@ fn solve_aad2pmmmap(
                         .iter()
                         .enumerate()
                     {
-                        objs.insert(
-                            format!("invThroughput({})", all_processes[p]),
-                            *inv as f64,
-                        );
+                        objs.insert(format!("invThroughput({})", all_processes[p]), *inv as f64);
                     }
                     println!("{:?}", out);
                     return Some(ExplorationSolution {
@@ -493,7 +523,6 @@ fn solve_aad2pmmmap(
     };
     Arc::new(Mutex::new(std::iter::empty::<ExplorationSolution>()))
 }
-
 
 pub fn make_module() -> RustEmbeddedModule {
     RustEmbeddedModule::builder()

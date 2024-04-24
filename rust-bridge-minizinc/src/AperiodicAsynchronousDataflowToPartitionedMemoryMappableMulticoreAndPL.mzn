@@ -16,14 +16,14 @@ set of int: Mappable = ListSchedulers union LogicAreas;
 
 % array[Mappable, Memories] of set of Communications: interconnectToMemories;
 % array[Memories, Mappable] of set of Communications: interconnectFromMemories;
-% array[Processes, Mappable] of int: executionTime;
+array[Processes, Mappable] of int: executionTime;
 
 array[Processes] of var Mappable: processesExecution;
 array[Processes] of var Memories: processesMapping;
 array[Buffers] of var Memories: buffersMapping;
 array[Mappable, Communications] of var 0..max(slots): communicationReservation;
 
-array[Processes] of var int: invThroughput;
-var int: nUsedPEs;
+array[Processes] of var 0..max([sum([executionTime[a, p] | a in Processes where executionTime[a, p] >= 0]) | p in Mappable]): invThroughput;
+var 0..card(Mappable): nUsedPEs;
 
 solve satisfy;

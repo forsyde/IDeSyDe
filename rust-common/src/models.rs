@@ -737,6 +737,12 @@ impl DecisionModel for AperiodicAsynchronousDataflowToPartitionedMemoryMappableM
                 .iter()
                 .map(|x| x.to_owned()),
         );
+        elems.extend(
+            self.hardware_implementation_area
+                .part()
+                .iter()
+                .map(|x| x.to_owned()),
+        );
         for (pe, sched) in &self.processes_to_runtime_scheduling {
             elems.insert(format!("{}={}:{}-{}:{}", "scheduling", pe, "", sched, ""));
         }

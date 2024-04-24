@@ -270,50 +270,60 @@ fn solve_aad2pmmmap(
         .map(|s| s.as_str())
         .zip(all_firings_instances.iter().map(|i| i.to_owned()))
         .collect();
-    let mut firings_graph: Graph<u64, (), petgraph::Directed> = Graph::new();
-    let mut firings_graph_idx = vec![];
-    for i in 0..all_firings.len() {
-        firings_graph_idx.push(firings_graph.add_node(i as u64));
-    }
-    for app in &m.aperiodic_asynchronous_dataflows {
-        for i in 0..app.job_graph_src_name.len() {
-            if let Some(src_idx) = all_firings.iter().position(|(a, q)| {
-                *a == app.job_graph_src_name[i] && *q == app.job_graph_src_instance[i]
-            }) {
-                if let Some(dst_idx) = all_firings.iter().position(|(a, q)| {
-                    *a == app.job_graph_dst_name[i] && *q == app.job_graph_dst_instance[i]
-                }) {
-                    firings_graph.add_edge(
-                        firings_graph_idx[src_idx],
-                        firings_graph_idx[dst_idx],
-                        (),
-                    );
-                }
-            }
-        }
-    }
-    let firings_graph_toposort = petgraph::algo::toposort(&firings_graph, None)
-        .expect("Firings graph has a cycle. Should never happen.");
-    let (res, revmap) = petgraph::algo::tred::dag_to_toposorted_adjacency_list(
-        &firings_graph,
-        &firings_graph_toposort,
-    );
-    let (_, firings_graph_closure) =
-        petgraph::algo::tred::dag_transitive_reduction_closure::<(), DefaultIx>(&res);
-    let firings_follows: Vec<HashSet<u64>> = firings_graph_idx
+    // let mut firings_graph: Graph<u64, (), petgraph::Directed> = Graph::new();
+    // let mut firings_graph_idx = vec![];
+    // for i in 0..all_firings.len() {
+    //     firings_graph_idx.push(firings_graph.add_node(i as u64));
+    // }
+    // for app in &m.aperiodic_asynchronous_dataflows {
+    //     for i in 0..app.job_graph_src_name.len() {
+    //         if let Some(src_idx) = all_firings.iter().position(|(a, q)| {
+    //             *a == app.job_graph_src_name[i] && *q == app.job_graph_src_instance[i]
+    //         }) {
+    //             if let Some(dst_idx) = all_firings.iter().position(|(a, q)| {
+    //                 *a == app.job_graph_dst_name[i] && *q == app.job_graph_dst_instance[i]
+    //             }) {
+    //                 firings_graph.add_edge(
+    //                     firings_graph_idx[src_idx],
+    //                     firings_graph_idx[dst_idx],
+    //                     (),
+    //                 );
+    //             }
+    //         }
+    //     }
+    // }
+    // let firings_graph_toposort = petgraph::algo::toposort(&firings_graph, None)
+    //     .expect("Firings graph has a cycle. Should never happen.");
+    // let (res, revmap) = petgraph::algo::tred::dag_to_toposorted_adjacency_list(
+    //     &firings_graph,
+    //     &firings_graph_toposort,
+    // );
+    // let (_, firings_graph_closure) =
+    //     petgraph::algo::tred::dag_transitive_reduction_closure::<(), DefaultIx>(&res);
+    let mut firings_follows: Vec<HashSet<u64>> = all_firings
         .iter()
-        .map(|fidx| {
-            firings_graph_closure
-                .neighbors(revmap[fidx.index()])
-                .flat_map(|e| {
-                    firings_graph
-                        .node_weight(firings_graph_toposort[e.index()])
-                        .into_iter()
-                })
-                .map(|i| *i)
-                .collect()
+        .map(|_| {
+            HashSet::new()
+            // firings_graph_closure
+            //     .neighbors(revmap[fidx.index()])
+            //     .flat_map(|e| {
+            //         firings_graph
+            //             .node_weight(firings_graph_toposort[e.index()])
+            //             .into_iter()
+            //     })
+            //     .map(|i| *i)
+            //     .collect()
         })
         .collect();
+    for app in &m.aperiodic_asynchronous_dataflows {
+        let app_follows = app.job_follows();
+        for (f, f_follows) in app_follows {
+            if let Some(fidx) = all_firings.iter().position(|ff| f == *ff) {
+                firings_follows[fidx].extend(f_follows.iter().map(|tgt| all_firings.iter().position(|ff| ff == tgt).unwrap() as u64));
+            }
+        
+        }
+    }
     let execution_times: Vec<Vec<i64>> = all_processes
     .iter()
     .map(|f| {
@@ -335,10 +345,11 @@ fn solve_aad2pmmmap(
             .chain(
                 m.partitioned_mem_mappable_multicore
                 .hardware
-                .pl_module_available_areas.keys()
+                .programmable_logic_elems
+                .iter()
                 .map(|pla| {
-                    m.instrumented_computation_times
-                        .average_execution_times
+                    m.hardware_implementation_area
+                        .latencies_numerators
                         .get(f)
                         .and_then(|inner| inner.get(pla))
                         .map(|x| x.to_owned() as i64)

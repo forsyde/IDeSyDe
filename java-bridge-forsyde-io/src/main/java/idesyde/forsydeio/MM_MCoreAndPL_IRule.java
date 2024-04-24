@@ -16,7 +16,7 @@ import org.jgrapht.graph.AsSubgraph;
 
 import forsyde.io.core.SystemGraph;
 import forsyde.io.lib.hierarchy.ForSyDeHierarchy;
-import forsyde.io.lib.hierarchy.ForSyDeHierarchy.LogicProgrammableModule;
+import forsyde.io.lib.hierarchy.platform.hardware.LogicProgrammableModule;
 import forsyde.io.lib.hierarchy.platform.hardware.DigitalModule;
 import forsyde.io.lib.hierarchy.platform.hardware.GenericCommunicationModule;
 import forsyde.io.lib.hierarchy.platform.hardware.GenericMemoryModule;
@@ -41,7 +41,7 @@ class MM_McoreAndPL_IRule implements IdentificationRule {
 		var processingElements = new HashSet<GenericProcessingModule>();
 		var memoryElements = new HashSet<GenericMemoryModule>();
 		var communicationElements = new HashSet<GenericCommunicationModule>();
-		var plElements = new HashSet<LogicProgrammableModuleViewer>(); //! TODO don't use the viewer
+		var plElements = new HashSet<LogicProgrammableModule>(); //! TODO don't use the viewer
 		model.vertexSet().stream()
 				.forEach(v -> {
 					ForSyDeHierarchy.GenericProcessingModule
@@ -195,6 +195,9 @@ class MM_McoreAndPL_IRule implements IdentificationRule {
 			identified.add(
 					new MM_MCoreAndPL(
 							processingElements.stream()
+									.map(x -> x.getIdentifier())
+									.collect(Collectors.toSet()),
+							plElements.stream()
 									.map(x -> x.getIdentifier())
 									.collect(Collectors.toSet()),
 							totalAvailablePLAreas,

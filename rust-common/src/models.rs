@@ -3,6 +3,7 @@ use std::collections::{HashMap, HashSet};
 use idesyde_core::{
     impl_decision_model_conversion, impl_decision_model_standard_parts, DecisionModel,
 };
+use petgraph::{visit::{IntoNeighbors, NodeIndexable}, Graph};
 use schemars::JsonSchema;
 use serde::{Deserialize, Serialize};
 
@@ -284,6 +285,7 @@ impl DecisionModel for MemoryMappableMultiCore {
 #[derive(Debug, Deserialize, Serialize, Clone, PartialEq, JsonSchema)]
 pub struct MM_MCoreAndPL {
     pub processing_elems: HashSet<String>,
+    pub programmable_logic_elems: HashSet<String>,
     pub pl_module_available_areas: HashMap<String, u32>,
     pub storage_elems: HashSet<String>,
     pub communication_elems: HashSet<String>,
@@ -305,6 +307,7 @@ impl DecisionModel for MM_MCoreAndPL {
         let mut elems: HashSet<String> = HashSet::new();
         elems.extend(self.processing_elems.iter().map(|x: &String| x.to_owned()));
         elems.extend(self.storage_elems.iter().map(|x: &String| x.to_owned()));
+        elems.extend(self.programmable_logic_elems.iter().map(|x: &String| x.to_owned()));
         elems.extend(
             self.communication_elems
                 .iter()
@@ -317,6 +320,31 @@ impl DecisionModel for MM_MCoreAndPL {
             ));
         }
         elems
+    }
+}
+
+impl MM_MCoreAndPL {
+    pub fn platform_as_graph(&self) -> Graph<String, ()> {
+        let mut graph = Graph::new();
+        let mut nodes = HashMap::new();
+        for pe in &self.processing_elems {
+            nodes.insert(pe.clone(), graph.add_node(pe.clone()));
+        }
+        for pe in &self.programmable_logic_elems {
+            nodes.insert(pe.clone(), graph.add_node(pe.clone()));
+        }
+        for mem in &self.storage_elems {
+            nodes.insert(mem.clone(), graph.add_node(mem.clone()));
+        }
+        for ce in &self.communication_elems {
+            nodes.insert(ce.clone(), graph.add_node(ce.clone()));
+        }
+        for (src, dst) in self.topology_srcs.iter().zip(self.topology_dsts.iter()) {
+            let src_node = nodes.get(src).unwrap();
+            let dst_node = nodes.get(dst).unwrap();
+            graph.add_edge(src_node.clone(), dst_node.clone(), ());
+        }
+        graph
     }
 }
 
@@ -470,6 +498,47 @@ impl DecisionModel for AperiodicAsynchronousDataflow {
     }
 }
 
+impl AperiodicAsynchronousDataflow {
+    pub fn job_follows(&self) -> HashMap<(&str, u64), Vec<(&str, u64)>> {
+        let mut follows = HashMap::new();
+        let mut firings_graph: Graph<(&str, u64), (), petgraph::Directed> = Graph::new();
+        let mut firings_graph_idx = HashMap::new();
+        for (a, q) in self.job_graph_name.iter().zip(self.job_graph_instance.iter()) {
+            let _ = firings_graph_idx.insert((a.as_str(), *q), firings_graph.add_node((a.as_str(), *q)));
+        }
+        for i in 0..self.job_graph_src_name.len() {
+            let src_a = self.job_graph_src_name[i].as_str();
+            let src_q = self.job_graph_src_instance[i];
+            let dst_a = self.job_graph_dst_name[i].as_str();
+            let dst_q = self.job_graph_dst_instance[i];
+            let src_index = firings_graph_idx.get(&(src_a, src_q)).unwrap();
+            let dst_index = firings_graph_idx.get(&(dst_a, dst_q)).unwrap();
+            firings_graph.add_edge(*src_index, *dst_index, ());
+        }
+        let firings_graph_toposort = petgraph::algo::toposort(&firings_graph, None)
+            .expect("Firings graph has a cycle. Should never happen.");
+        let (res, revmap) = petgraph::algo::tred::dag_to_toposorted_adjacency_list(
+            &firings_graph,
+            &firings_graph_toposort,
+        );
+        let (_, firings_graph_closure) =
+            petgraph::algo::tred::dag_transitive_reduction_closure::<(), petgraph::graph::DefaultIx>(&res);
+        for (src_a, src_q) in self.job_graph_name.iter().zip(self.job_graph_instance.iter()) {
+            let src_index = firings_graph_idx.get(&(src_a.as_str(), *src_q)).unwrap();
+            let mut follows_vec: Vec<(&str, u64)> = vec![];
+            for e in firings_graph_closure.neighbors(revmap[src_index.index()]) {
+                if let Some(og_idx) = revmap.iter().position(|x| *x == e) {
+                    if let Some(f) = firings_graph.node_weight(firings_graph.from_index(og_idx)).map(|x| *x) {
+                        follows_vec.push(f);
+                    };
+                };
+            };
+            follows.insert((src_a.as_str(), *src_q), follows_vec);
+        }
+        follows
+    }
+}
+
 /// A decision model to hold computation times between processsables and processing elements.
 ///
 /// As the decision model stores these computation in associative arrays (maps), the lack
@@ -540,6 +609,8 @@ pub struct HardwareImplementationArea {
     pub processes: HashSet<String>,
     pub programmable_areas: HashSet<String>,
     pub required_areas: HashMap<String, HashMap<String, u64>>,
+    pub latencies_numerators: HashMap<String, HashMap<String, u64>> ,
+    pub latencies_denominators: HashMap<String, HashMap<String, u64>> 
 }
 
 impl_decision_model_conversion!(HardwareImplementationArea);

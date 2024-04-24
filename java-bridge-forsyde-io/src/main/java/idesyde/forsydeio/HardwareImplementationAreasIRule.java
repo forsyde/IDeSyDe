@@ -21,6 +21,8 @@ class HardwareImplementationAreasIRule implements IdentificationRule {
         var processes = new HashSet<String>();
         var programmableAreas = new HashSet<String>();
         var requiredAreas = new HashMap<String, Map<String, Long>>();
+        var latNumerators = new HashMap<String, Map<String, Long>>();
+        var latDenominators = new HashMap<String, Map<String, Long>>();
         var errors = new HashSet<String>();
         var model = new SystemGraph();
         for (var dm : designModels) {
@@ -31,34 +33,42 @@ class HardwareImplementationAreasIRule implements IdentificationRule {
         for (Vertex maybeHWInstr : model.vertexSet()) {
             InstrumentedHardwareBehaviour
                     .tryView(model, maybeHWInstr)
-                    .ifPresent(hwInstr -> {
-                        var hwIdent = hwInstr.getIdentifier();
-                        processes.add(hwIdent);
-                        for (Vertex maybeProc : model.vertexSet()) {
-                            if (!requiredAreas.containsKey(hwIdent)) {
-                                requiredAreas.put(hwIdent, new HashMap<>());
+                    .ifPresent(instrumentedProcessForHardware -> {
+                        var processIdent2HW = instrumentedProcessForHardware.getIdentifier();
+                        processes.add(processIdent2HW);
+                        for (Vertex maybePLA : model.vertexSet()) {
+                            if (!requiredAreas.containsKey(processIdent2HW)) {
+                                requiredAreas.put(processIdent2HW, new HashMap<>());
                             }
-                            LogicProgrammableModule.tryView(model, maybeProc).ifPresent(proc -> {
-                                var procIdent = proc.getIdentifier();
+                            if (!latNumerators.containsKey(processIdent2HW)) {
+                                latNumerators.put(processIdent2HW, new HashMap<>());
+                            }
+                            if (!latDenominators.containsKey(processIdent2HW)) {
+                                latDenominators.put(processIdent2HW, new HashMap<>());
+                            }
+                            LogicProgrammableModule.tryView(model, maybePLA).ifPresent(programmableLogicArea -> {
+                                var procIdent = programmableLogicArea.getIdentifier();
                                 programmableAreas.add(procIdent);
-                                long area = hwInstr.requiredHardwareImplementationArea();
+                                long area = instrumentedProcessForHardware.resourceRequirements().getOrDefault("FPGA", Map.of()).getOrDefault("Area", 0L); // we can bring back the nice methods for FPGA area later
                                 if (area > 0) {
-                                    requiredAreas.get(hwIdent).put(procIdent, area);
+                                    requiredAreas.get(processIdent2HW).put(procIdent, area);
                                 } else {
                                     errors.add(
                                             "HardwareImplementationAreasIRule: Could not " +
                                                     "identify hardware implementation area, or <= 0 for " +
-                                                    hwIdent);
+                                                    processIdent2HW);
                                 }
+                                latNumerators.get(processIdent2HW).put(procIdent, instrumentedProcessForHardware.latencyInSecsNumerators().getOrDefault("FPGA", 0L));
+                                latDenominators.get(processIdent2HW).put(procIdent, instrumentedProcessForHardware.latencyInSecsDenominators().getOrDefault("FPGA", 1L));
                             });
                         }
                     });
         }
-        if (requiredAreas.isEmpty()) {
+        if (requiredAreas.values().stream().mapToLong(x -> x.values().stream().filter(y -> y > 0).count()).sum() == 0L) {
             errors.add(
-                    "Error: No implementations of actors in hardware identified");
+                    "HardwareImplementationAreasIRule: No implementations of actors in hardware identified");
         } else {
-            identified.add(new HardwareImplementationArea(processes, programmableAreas, requiredAreas));
+            identified.add(new HardwareImplementationArea(processes, programmableAreas, requiredAreas, latNumerators, latDenominators));
         }
 
         return new IdentificationResult(identified, errors);

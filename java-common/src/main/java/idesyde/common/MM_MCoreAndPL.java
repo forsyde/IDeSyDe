@@ -23,6 +23,7 @@ import java.util.stream.Stream;
 @JsonSerialize
 public record MM_MCoreAndPL(
 		@JsonProperty("processing_elems") Set<String> processingElems,
+		@JsonProperty("programmable_logic_elems") Set<String> programmableLogicElems,
 		@JsonProperty("pl_module_available_areas") Map<String, Integer> plModuleSizes,
 		@JsonProperty("storage_elems") Set<String> storageElems,
 		@JsonProperty("communication_elems") Set<String> communicationElems,
@@ -38,7 +39,8 @@ public record MM_MCoreAndPL(
 	@Override
 	public Set<String> part() {
 		return Stream.concat(processingElems.stream(),
-				Stream.concat(storageElems.stream(), communicationElems.stream()))
+		Stream.concat(programmableLogicElems.stream(),
+				Stream.concat(storageElems.stream(), communicationElems.stream())))
 				.collect(Collectors.toSet());
 	}
 }

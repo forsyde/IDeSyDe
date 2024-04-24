@@ -15,7 +15,9 @@ import java.util.stream.Stream;
 public record HardwareImplementationArea(
     Set<String> processes,
     @JsonProperty("programmable_areas") Set<String> programmableAreas,
-    @JsonProperty("required_areas") Map<String, Map<String, Long>> requiredAreas
+    @JsonProperty("required_areas") Map<String, Map<String, Long>> requiredAreas,
+    @JsonProperty("latencies_numerators") Map<String, Map<String, Long>> latenciesNumerators,
+    @JsonProperty("latencies_denominators") Map<String, Map<String, Long>> latenciesDenominators
 ) implements DecisionModel {
     @Override
     public Set<String> part() {

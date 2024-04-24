@@ -32,8 +32,10 @@ class GeneralDSETests {
                 "body_final_19_AperiodicAsynchronousDataflowToPartitionedTiledMulticore_Orchestratror.json");
         AperiodicAsynchronousDataflowToPartitionedTiledMulticore aadtpm = objectMapper.readValue(is,
                 AperiodicAsynchronousDataflowToPartitionedTiledMulticore.class);
-        var len = explorer.explore(aadtpm, Set.of(), config).limit(1).count();
-        assertEquals(len, 1);
+        var found = explorer.explore(aadtpm, Set.of(), config)
+                .limit(1)
+                .count();
+        assertEquals(found, 1);
     }
 
     @Test
@@ -46,7 +48,9 @@ class GeneralDSETests {
                 "body_final_9_AperiodicAsynchronousDataflowToPartitionedMemoryMappableMulticore_Orchestratror.json");
         AperiodicAsynchronousDataflowToPartitionedMemoryMappableMulticore aadpmm = objectMapper.readValue(is,
                 AperiodicAsynchronousDataflowToPartitionedMemoryMappableMulticore.class);
-        var len = explorer.explore(aadpmm, Set.of(), config).limit(1).count();
-        assertEquals(len, 1);
+        var found = explorer.explore(aadpmm, Set.of(), config)
+                .limit(1)
+                .count();
+        assertEquals(found, 1);
     }
 }

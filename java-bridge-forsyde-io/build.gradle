@@ -2,28 +2,19 @@ plugins {
     id 'idesyde.java-standalone-module'
 }
 
-configurations.all {
-    resolutionStrategy.cacheChangingModulesFor 0, 'seconds'  
-}
-
 def forsydeioVersion = "proglogic-SNAPSHOT"
-
-configurations.all {
-    resolutionStrategy.cacheChangingModulesFor 0, 'seconds'  
-}
 
 dependencies {
     testImplementation 'org.junit.jupiter:junit-jupiter-api:5.8.1'
     implementation "com.github.forsyde.forsyde-io:forsyde-io-java-core:$forsydeioVersion"
-    implementation "com.github.forsyde.forsyde-io:forsyde-io-java-libforsyde:proglogic-SNAPSHOT"
-    implementation "com.github.forsyde.forsyde-io:forsyde-io-java-bridge-sdf3:proglogic-SNAPSHOT"
+    implementation "com.github.forsyde.forsyde-io:forsyde-io-java-libforsyde:$forsydeioVersion"
+    implementation "com.github.forsyde.forsyde-io:forsyde-io-java-bridge-sdf3:$forsydeioVersion"
     // for local testing
     // implementation "io.forsyde.github:forsyde-io-java-core:$forsydeioVersion"
     // implementation "io.forsyde.github:forsyde-io-java-libforsyde:$forsydeioVersion"
     // implementation "io.forsyde.github:forsyde-io-java-sdf3:$forsydeioVersion"
     implementation project(":java-core")
     implementation project(":java-common")
-    implementation project(":java-blueprints")
     compileOnly project(":java-core-generator")
     annotationProcessor project(":java-core-generator")
 }

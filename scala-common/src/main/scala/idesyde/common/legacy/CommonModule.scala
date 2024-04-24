@@ -5,9 +5,9 @@ import scala.jdk.CollectionConverters._
 
 import upickle.default.*
 
-import idesyde.blueprints.StandaloneModule
 import idesyde.core.DecisionModel
 import idesyde.core.DesignModel
+import idesyde.core.Module
 import idesyde.common.legacy.SDFApplicationWithFunctions
 import idesyde.common.legacy.TiledMultiCoreWithFunctions
 import idesyde.common.legacy.PartitionedCoresWithRuntimes
@@ -26,7 +26,7 @@ import idesyde.core.IdentificationResult
 import java.util.function.BiFunction
 
 object CommonModule
-    extends StandaloneModule
+    extends Module
     with MixedRules
     with PlatformRules
     with WorkloadRules
@@ -70,9 +70,9 @@ object CommonModule
 
   def uniqueIdentifier: String = "CommonScalaModule"
 
-  def main(args: Array[String]) = standaloneModule(args).ifPresent(javalin => javalin.start(0))
+  // def main(args: Array[String]) = standaloneModule(args).ifPresent(javalin => javalin.start(0))
 
-  override def fromOpaqueDecision(opaque: OpaqueDecisionModel): ju.Optional[DecisionModel] = {
+  def fromOpaqueDecision(opaque: OpaqueDecisionModel): ju.Optional[DecisionModel] = {
     opaque.category() match {
       case "SDFApplicationWithFunctions" =>
         opaque
@@ -161,17 +161,17 @@ object CommonModule
       inline body: M => B
   )(using ReadWriter[M]): Option[B] = {
     val relevant = model match {
-        case model: M => Some(model)
-        case opaqueModel: OpaqueDecisionModel =>
-          if (opaqueModel.category() == cls.getSimpleName()) {
-            try {
-              opaqueModel.asJsonString().map(read[M](_)).toScala
-            } catch {
-              case _: Throwable => None
-            }
-          } else None
-        case _ => None
-      }
+      case model: M => Some(model)
+      case opaqueModel: OpaqueDecisionModel =>
+        if (opaqueModel.category() == cls.getSimpleName()) {
+          try {
+            opaqueModel.asJsonString().map(read[M](_)).toScala
+          } catch {
+            case _: Throwable => None
+          }
+        } else None
+      case _ => None
+    }
     relevant.map(body(_))
   }
 

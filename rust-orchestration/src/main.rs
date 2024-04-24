@@ -109,12 +109,11 @@ struct Args {
     )]
     x_target_objectives: Vec<String>,
 
-    #[arg(
-        long,
-        help = "An URL for external modules that are not created and destroyed by the orchestrator. Currently supported schemas are: http."
-    )]
-    module: Option<Vec<String>>,
-
+    // #[arg(
+    //     long,
+    //     help = "An URL for external modules that are not created and destroyed by the orchestrator. Currently supported schemas are: http."
+    // )]
+    // module: Option<Vec<String>>,
     #[arg(
         long,
         help = "If set, the exploration only returns solutions that improve the current Pareto set approximation."
@@ -249,16 +248,16 @@ fn main() {
         modules.push(Arc::new(idesyde_bridge_minizinc::make_module()));
 
         // add externally declared modules
-        if let Some(external_modules) = args.module {
-            for url_str in external_modules {
-                if let Ok(parsed_url) = url::Url::parse(url_str.as_str()) {
-                    modules.push(Arc::new(ExternalServerModule::from(
-                        &parsed_url,
-                        url_str.as_str(),
-                    )));
-                }
-            }
-        }
+        // if let Some(external_modules) = args.module {
+        //     for url_str in external_modules {
+        //         if let Ok(parsed_url) = url::Url::parse(url_str.as_str()) {
+        //             modules.push(Arc::new(ExternalServerModule::from(
+        //                 &parsed_url,
+        //                 url_str.as_str(),
+        //             )));
+        //         }
+        //     }
+        // }
 
         for eximod in &modules {
             debug!(

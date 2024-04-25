@@ -226,26 +226,26 @@ fn solve_aad2pmmmap(
         .map(|x| x.to_string())
         .collect();
     let memories: Vec<String> = m
-        .partitioned_mem_mappable_multicore
+        .partitioned_mem_mappable_multicore_and_pl
         .hardware
         .storage_elems
         .iter()
         .map(|x| x.to_string())
         .collect();
     let communications: Vec<String> = m
-        .partitioned_mem_mappable_multicore
+        .partitioned_mem_mappable_multicore_and_pl
         .hardware
         .communication_elems
         .iter()
         .map(|x| x.to_string())
         .collect();
     let list_schedulers: Vec<String> = m
-        .partitioned_mem_mappable_multicore
+        .partitioned_mem_mappable_multicore_and_pl
         .runtimes
         .runtimes
         .iter()
         .filter(|x| {
-            m.partitioned_mem_mappable_multicore
+            m.partitioned_mem_mappable_multicore_and_pl
                 .runtimes
                 .is_super_loop
                 .contains(*x)
@@ -253,7 +253,7 @@ fn solve_aad2pmmmap(
         .map(|x| x.to_string())
         .collect();
     let logic_areas: Vec<String> = m
-        .partitioned_mem_mappable_multicore
+        .partitioned_mem_mappable_multicore_and_pl
         .hardware
         .pl_module_available_areas
         .keys()
@@ -327,12 +327,12 @@ fn solve_aad2pmmmap(
     let execution_times: Vec<Vec<i64>> = all_processes
     .iter()
     .map(|f| {
-        m.partitioned_mem_mappable_multicore
+        m.partitioned_mem_mappable_multicore_and_pl
             .hardware
             .processing_elems
             .iter()
             .filter(|pe| 
-                m.partitioned_mem_mappable_multicore.runtimes.processor_affinities.get(*pe).map(|r| m.partitioned_mem_mappable_multicore.runtimes.is_super_loop.contains(r)).unwrap_or(false)
+                m.partitioned_mem_mappable_multicore_and_pl.runtimes.processor_affinities.get(*pe).map(|r| m.partitioned_mem_mappable_multicore_and_pl.runtimes.is_super_loop.contains(r)).unwrap_or(false)
                 )
             .map(|pe| {
                 m.instrumented_computation_times
@@ -343,7 +343,7 @@ fn solve_aad2pmmmap(
                     .unwrap_or(-1)
             })
             .chain(
-                m.partitioned_mem_mappable_multicore
+                m.partitioned_mem_mappable_multicore_and_pl
                 .hardware
                 .programmable_logic_elems
                 .iter()
@@ -437,7 +437,7 @@ fn solve_aad2pmmmap(
             communications
                 .iter()
                 .map(|c| {
-                    m.partitioned_mem_mappable_multicore
+                    m.partitioned_mem_mappable_multicore_and_pl
                         .hardware
                         .communication_elements_max_channels
                         .get(c)

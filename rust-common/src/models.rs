@@ -766,7 +766,7 @@ impl DecisionModel for AperiodicAsynchronousDataflowToPartitionedMemoryMappableM
 #[derive(Debug, PartialEq, Serialize, Deserialize, Clone, JsonSchema)]
 pub struct AperiodicAsynchronousDataflowToPartitionedMemoryMappableMulticoreAndPL {
     pub aperiodic_asynchronous_dataflows: Vec<AperiodicAsynchronousDataflow>,
-    pub partitioned_mem_mappable_multicore: PartitionedMemoryMappableMulticoreAndPL,
+    pub partitioned_mem_mappable_multicore_and_pl: PartitionedMemoryMappableMulticoreAndPL,
     pub instrumented_computation_times: InstrumentedComputationTimes,
     pub instrumented_memory_requirements: InstrumentedMemoryRequirements,
     pub hardware_implementation_area: HardwareImplementationArea,
@@ -791,7 +791,7 @@ impl DecisionModel for AperiodicAsynchronousDataflowToPartitionedMemoryMappableM
             elems.extend(app.part().iter().map(|x| x.to_owned()));
         }
         elems.extend(
-            self.partitioned_mem_mappable_multicore
+            self.partitioned_mem_mappable_multicore_and_pl
                 .part()
                 .iter()
                 .map(|x| x.to_owned()),

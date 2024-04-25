@@ -727,7 +727,7 @@ pub fn identify_aperiodic_asynchronous_dataflow_to_partitioned_mem_mappable_mult
                                 .into_iter()
                                 .map(|x| x.to_owned())
                                 .collect(),
-                            partitioned_mem_mappable_multicore: plat.to_owned(),
+                            partitioned_mem_mappable_multicore_and_pl: plat.to_owned(),
                             instrumented_computation_times: data.to_owned(),
                             instrumented_memory_requirements: mem_req.to_owned(),
                             hardware_implementation_area: hw_area.to_owned(),

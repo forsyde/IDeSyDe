@@ -1,0 +1,550 @@
+systemgraph {
+  vertex "MPSoC"
+  [forsyde::io::lib::hierarchy::platform::hardware::HardwareModule, forsyde::io::lib::hierarchy::platform::hardware::Structure, forsyde::io::lib::hierarchy::visualization::GreyBox, forsyde::io::lib::hierarchy::visualization::Visualizable]
+  (contained, containedModules)
+  {}
+  vertex "OCM"
+  [forsyde::io::lib::hierarchy::platform::hardware::DigitalModule, forsyde::io::lib::hierarchy::platform::hardware::GenericMemoryModule, forsyde::io::lib::hierarchy::platform::hardware::HardwareModule, forsyde::io::lib::hierarchy::visualization::Visualizable]
+  (OCM_to_OCM_FPD_SWITCH_SWITCH, OCM_to_OCM_RPU_SWITCH_SWITCH)
+  {
+    "spaceInBits": 32000000000_l,
+    "operatingFrequencyInHertz": 600000000_l
+  }
+  vertex "PS_DDR4"
+  [forsyde::io::lib::hierarchy::platform::hardware::DigitalModule, forsyde::io::lib::hierarchy::platform::hardware::GenericMemoryModule, forsyde::io::lib::hierarchy::platform::hardware::HardwareModule, forsyde::io::lib::hierarchy::visualization::Visualizable]
+  (PS_DDR4_to_PS_DDR4_CCI_SWITCH_SWITCH, PS_DDR4_to_PS_DDR4_OCM_RPU_SWITCH_SWITCH_SWITCH, PS_DDR4_to_PS_DDR4_RPU_SWITCH_SWITCH)
+  {
+    "spaceInBits": 32000000000_l,
+    "operatingFrequencyInHertz": 600000000_l
+  }
+  vertex "PL_DDR4"
+  [forsyde::io::lib::hierarchy::platform::hardware::DigitalModule, forsyde::io::lib::hierarchy::platform::hardware::GenericMemoryModule, forsyde::io::lib::hierarchy::platform::hardware::HardwareModule, forsyde::io::lib::hierarchy::visualization::Visualizable]
+  (PL_DDR4_to_PL_DDR4_PL_SWITCH_SWITCH)
+  {
+    "spaceInBits": 32000000000_l,
+    "operatingFrequencyInHertz": 600000000_l
+  }
+  vertex "APU_C0"
+  [forsyde::io::lib::hierarchy::platform::hardware::DigitalModule, forsyde::io::lib::hierarchy::platform::hardware::GenericProcessingModule, forsyde::io::lib::hierarchy::platform::hardware::HardwareModule, forsyde::io::lib::hierarchy::platform::hardware::InstrumentedProcessingModule, forsyde::io::lib::hierarchy::visualization::Visualizable]
+  (APU_C0_to_CCI_SWITCH)
+  {
+    "modalInstructionCategory": [
+
+    ],
+    "maximumComputationParallelism": 1_i,
+    "operatingFrequencyInHertz": 1000000000_l,
+    "modalInstructionsPerCycle": {
+      "SW_Instructions": {
+        "FloatOp":      0.04000000000_64
+      }
+    }
+  }
+  vertex "APU_C0_Scheduler"
+  [forsyde::io::lib::hierarchy::platform::runtime::AbstractRuntime, forsyde::io::lib::hierarchy::platform::runtime::SuperLoopRuntime, forsyde::io::lib::hierarchy::visualization::Visualizable]
+  (host, managed)
+  {
+    "frameSizeInClockCycles": 0_l,
+    "maximumTimeSliceInClockCycles": 0_l,
+    "timeSliceProcess": [
+
+    ],
+    "timeSlicesSizesInClockCycles": [
+
+    ],
+    "minimumTimeSliceInClockCycles": 1_l
+  }
+  vertex "APU_C1"
+  [forsyde::io::lib::hierarchy::platform::hardware::DigitalModule, forsyde::io::lib::hierarchy::platform::hardware::GenericProcessingModule, forsyde::io::lib::hierarchy::platform::hardware::HardwareModule, forsyde::io::lib::hierarchy::platform::hardware::InstrumentedProcessingModule, forsyde::io::lib::hierarchy::visualization::Visualizable]
+  (APU_C1_to_CCI_SWITCH)
+  {
+    "modalInstructionCategory": [
+
+    ],
+    "maximumComputationParallelism": 1_i,
+    "operatingFrequencyInHertz": 1000000000_l,
+    "modalInstructionsPerCycle": {
+      "SW_Instructions": {
+        "FloatOp":      0.04000000000_64
+      }
+    }
+  }
+  vertex "APU_C1_Scheduler"
+  [forsyde::io::lib::hierarchy::platform::runtime::AbstractRuntime, forsyde::io::lib::hierarchy::platform::runtime::SuperLoopRuntime, forsyde::io::lib::hierarchy::visualization::Visualizable]
+  (host, managed)
+  {
+    "frameSizeInClockCycles": 0_l,
+    "maximumTimeSliceInClockCycles": 0_l,
+    "timeSliceProcess": [
+
+    ],
+    "timeSlicesSizesInClockCycles": [
+
+    ],
+    "minimumTimeSliceInClockCycles": 1_l
+  }
+  vertex "APU_C2"
+  [forsyde::io::lib::hierarchy::platform::hardware::DigitalModule, forsyde::io::lib::hierarchy::platform::hardware::GenericProcessingModule, forsyde::io::lib::hierarchy::platform::hardware::HardwareModule, forsyde::io::lib::hierarchy::platform::hardware::InstrumentedProcessingModule, forsyde::io::lib::hierarchy::visualization::Visualizable]
+  (APU_C2_to_CCI_SWITCH)
+  {
+    "modalInstructionCategory": [
+
+    ],
+    "maximumComputationParallelism": 1_i,
+    "operatingFrequencyInHertz": 1000000000_l,
+    "modalInstructionsPerCycle": {
+      "SW_Instructions": {
+        "FloatOp":      0.04000000000_64
+      }
+    }
+  }
+  vertex "APU_C2_Scheduler"
+  [forsyde::io::lib::hierarchy::platform::runtime::AbstractRuntime, forsyde::io::lib::hierarchy::platform::runtime::SuperLoopRuntime, forsyde::io::lib::hierarchy::visualization::Visualizable]
+  (host, managed)
+  {
+    "frameSizeInClockCycles": 0_l,
+    "maximumTimeSliceInClockCycles": 0_l,
+    "timeSliceProcess": [
+
+    ],
+    "timeSlicesSizesInClockCycles": [
+
+    ],
+    "minimumTimeSliceInClockCycles": 1_l
+  }
+  vertex "APU_C3"
+  [forsyde::io::lib::hierarchy::platform::hardware::DigitalModule, forsyde::io::lib::hierarchy::platform::hardware::GenericProcessingModule, forsyde::io::lib::hierarchy::platform::hardware::HardwareModule, forsyde::io::lib::hierarchy::platform::hardware::InstrumentedProcessingModule, forsyde::io::lib::hierarchy::visualization::Visualizable]
+  (APU_C3_to_CCI_SWITCH)
+  {
+    "modalInstructionCategory": [
+
+    ],
+    "maximumComputationParallelism": 1_i,
+    "operatingFrequencyInHertz": 1000000000_l,
+    "modalInstructionsPerCycle": {
+      "SW_Instructions": {
+        "FloatOp":      0.04000000000_64
+      }
+    }
+  }
+  vertex "APU_C3_Scheduler"
+  [forsyde::io::lib::hierarchy::platform::runtime::AbstractRuntime, forsyde::io::lib::hierarchy::platform::runtime::SuperLoopRuntime, forsyde::io::lib::hierarchy::visualization::Visualizable]
+  (host, managed)
+  {
+    "frameSizeInClockCycles": 0_l,
+    "maximumTimeSliceInClockCycles": 0_l,
+    "timeSliceProcess": [
+
+    ],
+    "timeSlicesSizesInClockCycles": [
+
+    ],
+    "minimumTimeSliceInClockCycles": 1_l
+  }
+  vertex "RPU_C0"
+  [forsyde::io::lib::hierarchy::platform::hardware::DigitalModule, forsyde::io::lib::hierarchy::platform::hardware::GenericProcessingModule, forsyde::io::lib::hierarchy::platform::hardware::HardwareModule, forsyde::io::lib::hierarchy::platform::hardware::InstrumentedProcessingModule, forsyde::io::lib::hierarchy::visualization::Visualizable]
+  (RPU_C0_to_RPU_SWITCH, RPU_C0_to_TCM_RPU_C0_RPU_C0_SWITCH)
+  {
+    "modalInstructionCategory": [
+
+    ],
+    "maximumComputationParallelism": 1_i,
+    "operatingFrequencyInHertz": 6000000_l,
+    "modalInstructionsPerCycle": {
+      "SW_Instructions": {
+        "FloatOp":      0.04000000000_64
+      }
+    }
+  }
+  vertex "RPU_C0_Scheduler"
+  [forsyde::io::lib::hierarchy::platform::runtime::AbstractRuntime, forsyde::io::lib::hierarchy::platform::runtime::SuperLoopRuntime, forsyde::io::lib::hierarchy::visualization::Visualizable]
+  (host, managed)
+  {
+    "frameSizeInClockCycles": 0_l,
+    "maximumTimeSliceInClockCycles": 0_l,
+    "timeSliceProcess": [
+
+    ],
+    "timeSlicesSizesInClockCycles": [
+
+    ],
+    "minimumTimeSliceInClockCycles": 1_l
+  }
+  vertex "RPU_C1"
+  [forsyde::io::lib::hierarchy::platform::hardware::DigitalModule, forsyde::io::lib::hierarchy::platform::hardware::GenericProcessingModule, forsyde::io::lib::hierarchy::platform::hardware::HardwareModule, forsyde::io::lib::hierarchy::platform::hardware::InstrumentedProcessingModule, forsyde::io::lib::hierarchy::visualization::Visualizable]
+  (RPU_C1_to_RPU_SWITCH, RPU_C1_to_TCM_RPU_C1_RPU_C1_SWITCH)
+  {
+    "modalInstructionCategory": [
+
+    ],
+    "maximumComputationParallelism": 1_i,
+    "operatingFrequencyInHertz": 6000000_l,
+    "modalInstructionsPerCycle": {
+      "SW_Instructions": {
+        "FloatOp":      0.04000000000_64
+      }
+    }
+  }
+  vertex "RPU_C1_Scheduler"
+  [forsyde::io::lib::hierarchy::platform::runtime::AbstractRuntime, forsyde::io::lib::hierarchy::platform::runtime::SuperLoopRuntime, forsyde::io::lib::hierarchy::visualization::Visualizable]
+  (host, managed)
+  {
+    "frameSizeInClockCycles": 0_l,
+    "maximumTimeSliceInClockCycles": 0_l,
+    "timeSliceProcess": [
+
+    ],
+    "timeSlicesSizesInClockCycles": [
+
+    ],
+    "minimumTimeSliceInClockCycles": 1_l
+  }
+  vertex "RPU_SWITCH"
+  [forsyde::io::lib::hierarchy::platform::hardware::DigitalModule, forsyde::io::lib::hierarchy::platform::hardware::GenericCommunicationModule, forsyde::io::lib::hierarchy::platform::hardware::HardwareModule, forsyde::io::lib::hierarchy::platform::hardware::InstrumentedCommunicationModule, forsyde::io::lib::hierarchy::visualization::Visualizable]
+  (RPU_SWITCH_to_LPD_SWITCH, RPU_SWITCH_to_OCM_RPU_SWITCH_SWITCH, RPU_SWITCH_to_PS_DDR4_RPU_SWITCH_SWITCH, RPU_SWITCH_to_RPU_C0, RPU_SWITCH_to_RPU_C1, RPU_SWITCH_to_RPU_SWITCH)
+  {
+    "maxCyclesPerFlit": 1_i,
+    "flitSizeInBits": 8_l,
+    "operatingFrequencyInHertz": 600000000_l,
+    "initialLatency": 0_l,
+    "maxConcurrentFlits": 1_i
+  }
+  vertex "OCM_RPU_SWITCH_SWITCH"
+  [forsyde::io::lib::hierarchy::platform::hardware::DigitalModule, forsyde::io::lib::hierarchy::platform::hardware::GenericCommunicationModule, forsyde::io::lib::hierarchy::platform::hardware::HardwareModule, forsyde::io::lib::hierarchy::platform::hardware::InstrumentedCommunicationModule, forsyde::io::lib::hierarchy::visualization::Visualizable]
+  (OCM_RPU_SWITCH_SWITCH_to_OCM, OCM_RPU_SWITCH_SWITCH_to_PS_DDR4_OCM_RPU_SWITCH_SWITCH_SWITCH, OCM_RPU_SWITCH_SWITCH_to_RPU_SWITCH)
+  {
+    "maxCyclesPerFlit": 1_i,
+    "flitSizeInBits": 8_l,
+    "operatingFrequencyInHertz": 600000000_l,
+    "initialLatency": 0_l,
+    "maxConcurrentFlits": 1_i
+  }
+  vertex "PS_DDR4_RPU_SWITCH_SWITCH"
+  [forsyde::io::lib::hierarchy::platform::hardware::DigitalModule, forsyde::io::lib::hierarchy::platform::hardware::GenericCommunicationModule, forsyde::io::lib::hierarchy::platform::hardware::HardwareModule, forsyde::io::lib::hierarchy::platform::hardware::InstrumentedCommunicationModule, forsyde::io::lib::hierarchy::visualization::Visualizable]
+  (PS_DDR4_RPU_SWITCH_SWITCH_to_PS_DDR4, PS_DDR4_RPU_SWITCH_SWITCH_to_RPU_SWITCH)
+  {
+    "maxCyclesPerFlit": 1_i,
+    "flitSizeInBits": 8_l,
+    "operatingFrequencyInHertz": 600000000_l,
+    "initialLatency": 0_l,
+    "maxConcurrentFlits": 1_i
+  }
+  vertex "PS_DDR4_OCM_RPU_SWITCH_SWITCH_SWITCH"
+  [forsyde::io::lib::hierarchy::platform::hardware::DigitalModule, forsyde::io::lib::hierarchy::platform::hardware::GenericCommunicationModule, forsyde::io::lib::hierarchy::platform::hardware::HardwareModule, forsyde::io::lib::hierarchy::platform::hardware::InstrumentedCommunicationModule, forsyde::io::lib::hierarchy::visualization::Visualizable]
+  (PS_DDR4_OCM_RPU_SWITCH_SWITCH_SWITCH_to_OCM_RPU_SWITCH_SWITCH, PS_DDR4_OCM_RPU_SWITCH_SWITCH_SWITCH_to_PS_DDR4)
+  {
+    "maxCyclesPerFlit": 1_i,
+    "flitSizeInBits": 8_l,
+    "operatingFrequencyInHertz": 600000000_l,
+    "initialLatency": 0_l,
+    "maxConcurrentFlits": 1_i
+  }
+  vertex "TCM_RPU_C0"
+  [forsyde::io::lib::hierarchy::platform::hardware::DigitalModule, forsyde::io::lib::hierarchy::platform::hardware::GenericMemoryModule, forsyde::io::lib::hierarchy::platform::hardware::HardwareModule, forsyde::io::lib::hierarchy::visualization::Visualizable]
+  (TCM_RPU_C0_to_TCM_RPU_C0_RPU_C0_SWITCH, TCM_RPU_C0_to_TCM_RPU_C0_TCM_RPU_C0_SWITCH)
+  {
+    "spaceInBits": 32000000000_l,
+    "operatingFrequencyInHertz": 600000000_l
+  }
+  vertex "TCM_RPU_C0_RPU_C0_SWITCH"
+  [forsyde::io::lib::hierarchy::platform::hardware::DigitalModule, forsyde::io::lib::hierarchy::platform::hardware::GenericCommunicationModule, forsyde::io::lib::hierarchy::platform::hardware::HardwareModule, forsyde::io::lib::hierarchy::platform::hardware::InstrumentedCommunicationModule, forsyde::io::lib::hierarchy::visualization::Visualizable]
+  (TCM_RPU_C0_RPU_C0_SWITCH_to_RPU_C0, TCM_RPU_C0_RPU_C0_SWITCH_to_TCM_RPU_C0)
+  {
+    "maxCyclesPerFlit": 1_i,
+    "flitSizeInBits": 8_l,
+    "operatingFrequencyInHertz": 600000000_l,
+    "initialLatency": 0_l,
+    "maxConcurrentFlits": 1_i
+  }
+  vertex "TCM_RPU_C0_TCM_RPU_C0_SWITCH"
+  [forsyde::io::lib::hierarchy::platform::hardware::DigitalModule, forsyde::io::lib::hierarchy::platform::hardware::GenericCommunicationModule, forsyde::io::lib::hierarchy::platform::hardware::HardwareModule, forsyde::io::lib::hierarchy::platform::hardware::InstrumentedCommunicationModule, forsyde::io::lib::hierarchy::visualization::Visualizable]
+  (TCM_RPU_C0_TCM_RPU_C0_SWITCH_to_TCM_RPU_C0)
+  {
+    "maxCyclesPerFlit": 1_i,
+    "flitSizeInBits": 8_l,
+    "operatingFrequencyInHertz": 600000000_l,
+    "initialLatency": 0_l,
+    "maxConcurrentFlits": 1_i
+  }
+  vertex "TCM_RPU_C1"
+  [forsyde::io::lib::hierarchy::platform::hardware::DigitalModule, forsyde::io::lib::hierarchy::platform::hardware::GenericMemoryModule, forsyde::io::lib::hierarchy::platform::hardware::HardwareModule, forsyde::io::lib::hierarchy::visualization::Visualizable]
+  (TCM_RPU_C1_to_TCM_RPU_C1_RPU_C1_SWITCH, TCM_RPU_C1_to_TCM_RPU_C1_TCM_RPU_C1_SWITCH)
+  {
+    "spaceInBits": 32000000000_l,
+    "operatingFrequencyInHertz": 600000000_l
+  }
+  vertex "TCM_RPU_C1_RPU_C1_SWITCH"
+  [forsyde::io::lib::hierarchy::platform::hardware::DigitalModule, forsyde::io::lib::hierarchy::platform::hardware::GenericCommunicationModule, forsyde::io::lib::hierarchy::platform::hardware::HardwareModule, forsyde::io::lib::hierarchy::platform::hardware::InstrumentedCommunicationModule, forsyde::io::lib::hierarchy::visualization::Visualizable]
+  (TCM_RPU_C1_RPU_C1_SWITCH_to_RPU_C1, TCM_RPU_C1_RPU_C1_SWITCH_to_TCM_RPU_C1)
+  {
+    "maxCyclesPerFlit": 1_i,
+    "flitSizeInBits": 8_l,
+    "operatingFrequencyInHertz": 600000000_l,
+    "initialLatency": 0_l,
+    "maxConcurrentFlits": 1_i
+  }
+  vertex "TCM_RPU_C1_TCM_RPU_C1_SWITCH"
+  [forsyde::io::lib::hierarchy::platform::hardware::DigitalModule, forsyde::io::lib::hierarchy::platform::hardware::GenericCommunicationModule, forsyde::io::lib::hierarchy::platform::hardware::HardwareModule, forsyde::io::lib::hierarchy::platform::hardware::InstrumentedCommunicationModule, forsyde::io::lib::hierarchy::visualization::Visualizable]
+  (TCM_RPU_C1_TCM_RPU_C1_SWITCH_to_TCM_RPU_C1)
+  {
+    "maxCyclesPerFlit": 1_i,
+    "flitSizeInBits": 8_l,
+    "operatingFrequencyInHertz": 600000000_l,
+    "initialLatency": 0_l,
+    "maxConcurrentFlits": 1_i
+  }
+  vertex "CCI_SWITCH"
+  [forsyde::io::lib::hierarchy::platform::hardware::DigitalModule, forsyde::io::lib::hierarchy::platform::hardware::GenericCommunicationModule, forsyde::io::lib::hierarchy::platform::hardware::HardwareModule, forsyde::io::lib::hierarchy::platform::hardware::InstrumentedCommunicationModule, forsyde::io::lib::hierarchy::visualization::Visualizable]
+  (CCI_SWITCH_to_APU_C0, CCI_SWITCH_to_APU_C1, CCI_SWITCH_to_APU_C2, CCI_SWITCH_to_APU_C3, CCI_SWITCH_to_FPD_SWITCH, CCI_SWITCH_to_PL_DDR4_PL_SWITCH_SWITCH, CCI_SWITCH_to_PL_SWITCH, CCI_SWITCH_to_PS_DDR4_CCI_SWITCH_SWITCH)
+  {
+    "maxCyclesPerFlit": 1_i,
+    "flitSizeInBits": 8_l,
+    "operatingFrequencyInHertz": 600000000_l,
+    "initialLatency": 0_l,
+    "maxConcurrentFlits": 1_i
+  }
+  vertex "PS_DDR4_CCI_SWITCH_SWITCH"
+  [forsyde::io::lib::hierarchy::platform::hardware::DigitalModule, forsyde::io::lib::hierarchy::platform::hardware::GenericCommunicationModule, forsyde::io::lib::hierarchy::platform::hardware::HardwareModule, forsyde::io::lib::hierarchy::platform::hardware::InstrumentedCommunicationModule, forsyde::io::lib::hierarchy::visualization::Visualizable]
+  (PS_DDR4_CCI_SWITCH_SWITCH_to_CCI_SWITCH, PS_DDR4_CCI_SWITCH_SWITCH_to_PS_DDR4)
+  {
+    "maxCyclesPerFlit": 1_i,
+    "flitSizeInBits": 8_l,
+    "operatingFrequencyInHertz": 600000000_l,
+    "initialLatency": 0_l,
+    "maxConcurrentFlits": 1_i
+  }
+  vertex "FPD_SWITCH"
+  [forsyde::io::lib::hierarchy::platform::hardware::DigitalModule, forsyde::io::lib::hierarchy::platform::hardware::GenericCommunicationModule, forsyde::io::lib::hierarchy::platform::hardware::HardwareModule, forsyde::io::lib::hierarchy::platform::hardware::InstrumentedCommunicationModule, forsyde::io::lib::hierarchy::visualization::Visualizable]
+  (FPD_SWITCH_to_CCI_SWITCH, FPD_SWITCH_to_LPD_SWITCH, FPD_SWITCH_to_OCM_FPD_SWITCH_SWITCH, FPD_SWITCH_to_PL_DDR4_PL_SWITCH_SWITCH, FPD_SWITCH_to_PL_SWITCH)
+  {
+    "maxCyclesPerFlit": 1_i,
+    "flitSizeInBits": 8_l,
+    "operatingFrequencyInHertz": 600000000_l,
+    "initialLatency": 0_l,
+    "maxConcurrentFlits": 1_i
+  }
+  vertex "OCM_FPD_SWITCH_SWITCH"
+  [forsyde::io::lib::hierarchy::platform::hardware::DigitalModule, forsyde::io::lib::hierarchy::platform::hardware::GenericCommunicationModule, forsyde::io::lib::hierarchy::platform::hardware::HardwareModule, forsyde::io::lib::hierarchy::platform::hardware::InstrumentedCommunicationModule, forsyde::io::lib::hierarchy::visualization::Visualizable]
+  (OCM_FPD_SWITCH_SWITCH_to_FPD_SWITCH, OCM_FPD_SWITCH_SWITCH_to_OCM)
+  {
+    "maxCyclesPerFlit": 1_i,
+    "flitSizeInBits": 8_l,
+    "operatingFrequencyInHertz": 600000000_l,
+    "initialLatency": 0_l,
+    "maxConcurrentFlits": 1_i
+  }
+  vertex "LPD_SWITCH"
+  [forsyde::io::lib::hierarchy::platform::hardware::DigitalModule, forsyde::io::lib::hierarchy::platform::hardware::GenericCommunicationModule, forsyde::io::lib::hierarchy::platform::hardware::HardwareModule, forsyde::io::lib::hierarchy::platform::hardware::InstrumentedCommunicationModule, forsyde::io::lib::hierarchy::visualization::Visualizable]
+  (LPD_SWITCH_to_FPD_SWITCH, LPD_SWITCH_to_PL_DDR4_PL_SWITCH_SWITCH, LPD_SWITCH_to_PL_SWITCH, LPD_SWITCH_to_RPU_SWITCH)
+  {
+    "maxCyclesPerFlit": 1_i,
+    "flitSizeInBits": 8_l,
+    "operatingFrequencyInHertz": 600000000_l,
+    "initialLatency": 0_l,
+    "maxConcurrentFlits": 1_i
+  }
+  vertex "PL_SWITCH"
+  [forsyde::io::lib::hierarchy::platform::hardware::DigitalModule, forsyde::io::lib::hierarchy::platform::hardware::GenericCommunicationModule, forsyde::io::lib::hierarchy::platform::hardware::HardwareModule, forsyde::io::lib::hierarchy::platform::hardware::InstrumentedCommunicationModule, forsyde::io::lib::hierarchy::visualization::Visualizable]
+  (PL_SWITCH_to_CCI_SWITCH, PL_SWITCH_to_FPD_SWITCH, PL_SWITCH_to_FPGA_SWITCH, PL_SWITCH_to_LPD_SWITCH, PL_SWITCH_to_PL_DDR4_PL_SWITCH_SWITCH)
+  {
+    "maxCyclesPerFlit": 1_i,
+    "flitSizeInBits": 8_l,
+    "operatingFrequencyInHertz": 600000000_l,
+    "initialLatency": 0_l,
+    "maxConcurrentFlits": 1_i
+  }
+  vertex "PL_DDR4_PL_SWITCH_SWITCH"
+  [forsyde::io::lib::hierarchy::platform::hardware::DigitalModule, forsyde::io::lib::hierarchy::platform::hardware::GenericCommunicationModule, forsyde::io::lib::hierarchy::platform::hardware::HardwareModule, forsyde::io::lib::hierarchy::platform::hardware::InstrumentedCommunicationModule, forsyde::io::lib::hierarchy::visualization::Visualizable]
+  (PL_DDR4_PL_SWITCH_SWITCH_to_CCI_SWITCH, PL_DDR4_PL_SWITCH_SWITCH_to_FPD_SWITCH, PL_DDR4_PL_SWITCH_SWITCH_to_LPD_SWITCH, PL_DDR4_PL_SWITCH_SWITCH_to_PL_DDR4, PL_DDR4_PL_SWITCH_SWITCH_to_PL_SWITCH)
+  {
+    "maxCyclesPerFlit": 1_i,
+    "flitSizeInBits": 8_l,
+    "operatingFrequencyInHertz": 600000000_l,
+    "initialLatency": 0_l,
+    "maxConcurrentFlits": 1_i
+  }
+  vertex "FPGA"
+  [forsyde::io::lib::hierarchy::platform::hardware::HardwareModule, forsyde::io::lib::hierarchy::platform::hardware::LogicProgrammableModule, forsyde::io::lib::hierarchy::visualization::Visualizable]
+  (FPGA_to_FPGA_SWITCH)
+  {
+    "availableLogicArea": 600000_i
+  }
+  vertex "FPGA_BRAM"
+  [forsyde::io::lib::hierarchy::platform::hardware::DigitalModule, forsyde::io::lib::hierarchy::platform::hardware::GenericMemoryModule, forsyde::io::lib::hierarchy::platform::hardware::HardwareModule, forsyde::io::lib::hierarchy::visualization::Visualizable]
+  (FPGA_BRAM_to_FPGA_SWITCH)
+  {
+    "spaceInBits": 32000000000_l,
+    "operatingFrequencyInHertz": 600000000_l
+  }
+  vertex "FPGA_SWITCH"
+  [forsyde::io::lib::hierarchy::platform::hardware::DigitalModule, forsyde::io::lib::hierarchy::platform::hardware::GenericCommunicationModule, forsyde::io::lib::hierarchy::platform::hardware::HardwareModule, forsyde::io::lib::hierarchy::platform::hardware::InstrumentedCommunicationModule, forsyde::io::lib::hierarchy::visualization::Visualizable]
+  (FPGA_SWITCH_to_FPGA, FPGA_SWITCH_to_FPGA_BRAM, FPGA_SWITCH_to_FPGA_HW_Impl_Actor_A, FPGA_SWITCH_to_PL_SWITCH)
+  {
+    "maxCyclesPerFlit": 1_i,
+    "flitSizeInBits": 8_l,
+    "operatingFrequencyInHertz": 600000000_l,
+    "initialLatency": 0_l,
+    "maxConcurrentFlits": 1_i
+  }
+  vertex "FPGA_HW_Impl_Actor_A"
+  [forsyde::io::lib::hierarchy::platform::hardware::DigitalModule, forsyde::io::lib::hierarchy::platform::hardware::GenericProcessingModule, forsyde::io::lib::hierarchy::platform::hardware::HardwareModule, forsyde::io::lib::hierarchy::platform::hardware::InstrumentedProcessingModule, forsyde::io::lib::hierarchy::visualization::Visualizable]
+  (FPGA_HW_Impl_Actor_A_to_FPGA_SWITCH)
+  {
+    "modalInstructionCategory": [
+
+    ],
+    "maximumComputationParallelism": 1_i,
+    "operatingFrequencyInHertz": 100000000_l,
+    "modalInstructionsPerCycle": {
+      "FPGA_HW_Instructions_Actor_A": {
+        "FPGA_FloatOp":      1.00000000000_64
+      }
+    }
+  }
+  vertex "FPGA_HW_Impl_Actor_A_Scheduler"
+  [forsyde::io::lib::hierarchy::platform::runtime::AbstractRuntime, forsyde::io::lib::hierarchy::platform::runtime::TimeDivisionMultiplexingRuntime, forsyde::io::lib::hierarchy::visualization::Visualizable]
+  (host, managed)
+  {
+    "frameSizeInClockCycles": 0_l,
+    "maximumTimeSliceInClockCycles": 0_l,
+    "timeSliceProcess": [
+
+    ],
+    "timeSlicesSizesInClockCycles": [
+
+    ],
+    "minimumTimeSliceInClockCycles": 1_l
+  }
+  edge [forsyde::io::lib::hierarchy::visualization::VisualContainment] from "MPSoC" port "contained" to "OCM" 
+  edge [forsyde::io::lib::hierarchy::visualization::VisualContainment] from "MPSoC" port "contained" to "PS_DDR4" 
+  edge [forsyde::io::lib::hierarchy::visualization::VisualContainment] from "MPSoC" port "contained" to "PL_DDR4" 
+  edge [forsyde::io::lib::hierarchy::visualization::VisualContainment] from "MPSoC" port "contained" to "APU_C0" 
+  edge [forsyde::io::lib::hierarchy::visualization::VisualContainment] from "MPSoC" port "contained" to "APU_C0_Scheduler" 
+  edge [] from "APU_C0_Scheduler" port "managed" to "APU_C0" 
+  edge [forsyde::io::lib::hierarchy::platform::hardware::StructuralContainment,forsyde::io::lib::hierarchy::visualization::VisualConnection] from "APU_C0" to "APU_C0_Scheduler" 
+  edge [forsyde::io::lib::hierarchy::platform::hardware::StructuralContainment,forsyde::io::lib::hierarchy::visualization::VisualConnection] from "APU_C0_Scheduler" to "APU_C0" 
+  edge [forsyde::io::lib::hierarchy::visualization::VisualContainment] from "MPSoC" port "contained" to "APU_C1" 
+  edge [forsyde::io::lib::hierarchy::visualization::VisualContainment] from "MPSoC" port "contained" to "APU_C1_Scheduler" 
+  edge [] from "APU_C1_Scheduler" port "managed" to "APU_C1" 
+  edge [forsyde::io::lib::hierarchy::platform::hardware::StructuralContainment,forsyde::io::lib::hierarchy::visualization::VisualConnection] from "APU_C1" to "APU_C1_Scheduler" 
+  edge [forsyde::io::lib::hierarchy::platform::hardware::StructuralContainment,forsyde::io::lib::hierarchy::visualization::VisualConnection] from "APU_C1_Scheduler" to "APU_C1" 
+  edge [forsyde::io::lib::hierarchy::visualization::VisualContainment] from "MPSoC" port "contained" to "APU_C2" 
+  edge [forsyde::io::lib::hierarchy::visualization::VisualContainment] from "MPSoC" port "contained" to "APU_C2_Scheduler" 
+  edge [] from "APU_C2_Scheduler" port "managed" to "APU_C2" 
+  edge [forsyde::io::lib::hierarchy::platform::hardware::StructuralContainment,forsyde::io::lib::hierarchy::visualization::VisualConnection] from "APU_C2" to "APU_C2_Scheduler" 
+  edge [forsyde::io::lib::hierarchy::platform::hardware::StructuralContainment,forsyde::io::lib::hierarchy::visualization::VisualConnection] from "APU_C2_Scheduler" to "APU_C2" 
+  edge [forsyde::io::lib::hierarchy::visualization::VisualContainment] from "MPSoC" port "contained" to "APU_C3" 
+  edge [forsyde::io::lib::hierarchy::visualization::VisualContainment] from "MPSoC" port "contained" to "APU_C3_Scheduler" 
+  edge [] from "APU_C3_Scheduler" port "managed" to "APU_C3" 
+  edge [forsyde::io::lib::hierarchy::platform::hardware::StructuralContainment,forsyde::io::lib::hierarchy::visualization::VisualConnection] from "APU_C3" to "APU_C3_Scheduler" 
+  edge [forsyde::io::lib::hierarchy::platform::hardware::StructuralContainment,forsyde::io::lib::hierarchy::visualization::VisualConnection] from "APU_C3_Scheduler" to "APU_C3" 
+  edge [forsyde::io::lib::hierarchy::visualization::VisualContainment] from "MPSoC" port "contained" to "RPU_C0" 
+  edge [forsyde::io::lib::hierarchy::visualization::VisualContainment] from "MPSoC" port "contained" to "RPU_C0_Scheduler" 
+  edge [] from "RPU_C0_Scheduler" port "managed" to "RPU_C0" 
+  edge [forsyde::io::lib::hierarchy::platform::hardware::StructuralContainment,forsyde::io::lib::hierarchy::visualization::VisualConnection] from "RPU_C0" to "RPU_C0_Scheduler" 
+  edge [forsyde::io::lib::hierarchy::platform::hardware::StructuralContainment,forsyde::io::lib::hierarchy::visualization::VisualConnection] from "RPU_C0_Scheduler" to "RPU_C0" 
+  edge [forsyde::io::lib::hierarchy::visualization::VisualContainment] from "MPSoC" port "contained" to "RPU_C1" 
+  edge [forsyde::io::lib::hierarchy::visualization::VisualContainment] from "MPSoC" port "contained" to "RPU_C1_Scheduler" 
+  edge [] from "RPU_C1_Scheduler" port "managed" to "RPU_C1" 
+  edge [forsyde::io::lib::hierarchy::platform::hardware::StructuralContainment,forsyde::io::lib::hierarchy::visualization::VisualConnection] from "RPU_C1" to "RPU_C1_Scheduler" 
+  edge [forsyde::io::lib::hierarchy::platform::hardware::StructuralContainment,forsyde::io::lib::hierarchy::visualization::VisualConnection] from "RPU_C1_Scheduler" to "RPU_C1" 
+  edge [forsyde::io::lib::hierarchy::visualization::VisualContainment] from "MPSoC" port "contained" to "RPU_SWITCH" 
+  edge [forsyde::io::lib::hierarchy::platform::hardware::StructuralContainment,forsyde::io::lib::hierarchy::visualization::VisualConnection] from "RPU_SWITCH" port "RPU_SWITCH_to_RPU_SWITCH" to "RPU_SWITCH" port "RPU_SWITCH_to_RPU_SWITCH"
+  edge [forsyde::io::lib::hierarchy::platform::hardware::StructuralContainment,forsyde::io::lib::hierarchy::visualization::VisualConnection] from "RPU_C0" port "RPU_C0_to_RPU_SWITCH" to "RPU_SWITCH" port "RPU_SWITCH_to_RPU_C0"
+  edge [forsyde::io::lib::hierarchy::platform::hardware::StructuralContainment,forsyde::io::lib::hierarchy::visualization::VisualConnection] from "RPU_SWITCH" port "RPU_SWITCH_to_RPU_C0" to "RPU_C0" port "RPU_C0_to_RPU_SWITCH"
+  edge [forsyde::io::lib::hierarchy::platform::hardware::StructuralContainment,forsyde::io::lib::hierarchy::visualization::VisualConnection] from "RPU_C1" port "RPU_C1_to_RPU_SWITCH" to "RPU_SWITCH" port "RPU_SWITCH_to_RPU_C1"
+  edge [forsyde::io::lib::hierarchy::platform::hardware::StructuralContainment,forsyde::io::lib::hierarchy::visualization::VisualConnection] from "RPU_SWITCH" port "RPU_SWITCH_to_RPU_C1" to "RPU_C1" port "RPU_C1_to_RPU_SWITCH"
+  edge [forsyde::io::lib::hierarchy::visualization::VisualContainment] from "MPSoC" port "contained" to "OCM_RPU_SWITCH_SWITCH" 
+  edge [forsyde::io::lib::hierarchy::platform::hardware::StructuralContainment,forsyde::io::lib::hierarchy::visualization::VisualConnection] from "OCM_RPU_SWITCH_SWITCH" port "OCM_RPU_SWITCH_SWITCH_to_RPU_SWITCH" to "RPU_SWITCH" port "RPU_SWITCH_to_OCM_RPU_SWITCH_SWITCH"
+  edge [forsyde::io::lib::hierarchy::platform::hardware::StructuralContainment,forsyde::io::lib::hierarchy::visualization::VisualConnection] from "RPU_SWITCH" port "RPU_SWITCH_to_OCM_RPU_SWITCH_SWITCH" to "OCM_RPU_SWITCH_SWITCH" port "OCM_RPU_SWITCH_SWITCH_to_RPU_SWITCH"
+  edge [forsyde::io::lib::hierarchy::platform::hardware::StructuralContainment,forsyde::io::lib::hierarchy::visualization::VisualConnection] from "OCM_RPU_SWITCH_SWITCH" port "OCM_RPU_SWITCH_SWITCH_to_OCM" to "OCM" port "OCM_to_OCM_RPU_SWITCH_SWITCH"
+  edge [forsyde::io::lib::hierarchy::platform::hardware::StructuralContainment,forsyde::io::lib::hierarchy::visualization::VisualConnection] from "OCM" port "OCM_to_OCM_RPU_SWITCH_SWITCH" to "OCM_RPU_SWITCH_SWITCH" port "OCM_RPU_SWITCH_SWITCH_to_OCM"
+  edge [forsyde::io::lib::hierarchy::visualization::VisualContainment] from "MPSoC" port "contained" to "PS_DDR4_RPU_SWITCH_SWITCH" 
+  edge [forsyde::io::lib::hierarchy::platform::hardware::StructuralContainment,forsyde::io::lib::hierarchy::visualization::VisualConnection] from "PS_DDR4_RPU_SWITCH_SWITCH" port "PS_DDR4_RPU_SWITCH_SWITCH_to_RPU_SWITCH" to "RPU_SWITCH" port "RPU_SWITCH_to_PS_DDR4_RPU_SWITCH_SWITCH"
+  edge [forsyde::io::lib::hierarchy::platform::hardware::StructuralContainment,forsyde::io::lib::hierarchy::visualization::VisualConnection] from "RPU_SWITCH" port "RPU_SWITCH_to_PS_DDR4_RPU_SWITCH_SWITCH" to "PS_DDR4_RPU_SWITCH_SWITCH" port "PS_DDR4_RPU_SWITCH_SWITCH_to_RPU_SWITCH"
+  edge [forsyde::io::lib::hierarchy::platform::hardware::StructuralContainment,forsyde::io::lib::hierarchy::visualization::VisualConnection] from "PS_DDR4_RPU_SWITCH_SWITCH" port "PS_DDR4_RPU_SWITCH_SWITCH_to_PS_DDR4" to "PS_DDR4" port "PS_DDR4_to_PS_DDR4_RPU_SWITCH_SWITCH"
+  edge [forsyde::io::lib::hierarchy::platform::hardware::StructuralContainment,forsyde::io::lib::hierarchy::visualization::VisualConnection] from "PS_DDR4" port "PS_DDR4_to_PS_DDR4_RPU_SWITCH_SWITCH" to "PS_DDR4_RPU_SWITCH_SWITCH" port "PS_DDR4_RPU_SWITCH_SWITCH_to_PS_DDR4"
+  edge [forsyde::io::lib::hierarchy::visualization::VisualContainment] from "MPSoC" port "contained" to "PS_DDR4_OCM_RPU_SWITCH_SWITCH_SWITCH" 
+  edge [forsyde::io::lib::hierarchy::platform::hardware::StructuralContainment,forsyde::io::lib::hierarchy::visualization::VisualConnection] from "PS_DDR4_OCM_RPU_SWITCH_SWITCH_SWITCH" port "PS_DDR4_OCM_RPU_SWITCH_SWITCH_SWITCH_to_OCM_RPU_SWITCH_SWITCH" to "OCM_RPU_SWITCH_SWITCH" port "OCM_RPU_SWITCH_SWITCH_to_PS_DDR4_OCM_RPU_SWITCH_SWITCH_SWITCH"
+  edge [forsyde::io::lib::hierarchy::platform::hardware::StructuralContainment,forsyde::io::lib::hierarchy::visualization::VisualConnection] from "OCM_RPU_SWITCH_SWITCH" port "OCM_RPU_SWITCH_SWITCH_to_PS_DDR4_OCM_RPU_SWITCH_SWITCH_SWITCH" to "PS_DDR4_OCM_RPU_SWITCH_SWITCH_SWITCH" port "PS_DDR4_OCM_RPU_SWITCH_SWITCH_SWITCH_to_OCM_RPU_SWITCH_SWITCH"
+  edge [forsyde::io::lib::hierarchy::platform::hardware::StructuralContainment,forsyde::io::lib::hierarchy::visualization::VisualConnection] from "PS_DDR4_OCM_RPU_SWITCH_SWITCH_SWITCH" port "PS_DDR4_OCM_RPU_SWITCH_SWITCH_SWITCH_to_PS_DDR4" to "PS_DDR4" port "PS_DDR4_to_PS_DDR4_OCM_RPU_SWITCH_SWITCH_SWITCH"
+  edge [forsyde::io::lib::hierarchy::platform::hardware::StructuralContainment,forsyde::io::lib::hierarchy::visualization::VisualConnection] from "PS_DDR4" port "PS_DDR4_to_PS_DDR4_OCM_RPU_SWITCH_SWITCH_SWITCH" to "PS_DDR4_OCM_RPU_SWITCH_SWITCH_SWITCH" port "PS_DDR4_OCM_RPU_SWITCH_SWITCH_SWITCH_to_PS_DDR4"
+  edge [forsyde::io::lib::hierarchy::visualization::VisualContainment] from "MPSoC" port "contained" to "TCM_RPU_C0" 
+  edge [forsyde::io::lib::hierarchy::visualization::VisualContainment] from "MPSoC" port "contained" to "TCM_RPU_C0_RPU_C0_SWITCH" 
+  edge [forsyde::io::lib::hierarchy::platform::hardware::StructuralContainment,forsyde::io::lib::hierarchy::visualization::VisualConnection] from "TCM_RPU_C0_RPU_C0_SWITCH" port "TCM_RPU_C0_RPU_C0_SWITCH_to_RPU_C0" to "RPU_C0" port "RPU_C0_to_TCM_RPU_C0_RPU_C0_SWITCH"
+  edge [forsyde::io::lib::hierarchy::platform::hardware::StructuralContainment,forsyde::io::lib::hierarchy::visualization::VisualConnection] from "RPU_C0" port "RPU_C0_to_TCM_RPU_C0_RPU_C0_SWITCH" to "TCM_RPU_C0_RPU_C0_SWITCH" port "TCM_RPU_C0_RPU_C0_SWITCH_to_RPU_C0"
+  edge [forsyde::io::lib::hierarchy::platform::hardware::StructuralContainment,forsyde::io::lib::hierarchy::visualization::VisualConnection] from "TCM_RPU_C0_RPU_C0_SWITCH" port "TCM_RPU_C0_RPU_C0_SWITCH_to_TCM_RPU_C0" to "TCM_RPU_C0" port "TCM_RPU_C0_to_TCM_RPU_C0_RPU_C0_SWITCH"
+  edge [forsyde::io::lib::hierarchy::platform::hardware::StructuralContainment,forsyde::io::lib::hierarchy::visualization::VisualConnection] from "TCM_RPU_C0" port "TCM_RPU_C0_to_TCM_RPU_C0_RPU_C0_SWITCH" to "TCM_RPU_C0_RPU_C0_SWITCH" port "TCM_RPU_C0_RPU_C0_SWITCH_to_TCM_RPU_C0"
+  edge [forsyde::io::lib::hierarchy::visualization::VisualContainment] from "MPSoC" port "contained" to "TCM_RPU_C0_TCM_RPU_C0_SWITCH" 
+  edge [forsyde::io::lib::hierarchy::platform::hardware::StructuralContainment,forsyde::io::lib::hierarchy::visualization::VisualConnection] from "TCM_RPU_C0_TCM_RPU_C0_SWITCH" port "TCM_RPU_C0_TCM_RPU_C0_SWITCH_to_TCM_RPU_C0" to "TCM_RPU_C0" port "TCM_RPU_C0_to_TCM_RPU_C0_TCM_RPU_C0_SWITCH"
+  edge [forsyde::io::lib::hierarchy::platform::hardware::StructuralContainment,forsyde::io::lib::hierarchy::visualization::VisualConnection] from "TCM_RPU_C0" port "TCM_RPU_C0_to_TCM_RPU_C0_TCM_RPU_C0_SWITCH" to "TCM_RPU_C0_TCM_RPU_C0_SWITCH" port "TCM_RPU_C0_TCM_RPU_C0_SWITCH_to_TCM_RPU_C0"
+  edge [forsyde::io::lib::hierarchy::visualization::VisualContainment] from "MPSoC" port "contained" to "TCM_RPU_C1" 
+  edge [forsyde::io::lib::hierarchy::visualization::VisualContainment] from "MPSoC" port "contained" to "TCM_RPU_C1_RPU_C1_SWITCH" 
+  edge [forsyde::io::lib::hierarchy::platform::hardware::StructuralContainment,forsyde::io::lib::hierarchy::visualization::VisualConnection] from "TCM_RPU_C1_RPU_C1_SWITCH" port "TCM_RPU_C1_RPU_C1_SWITCH_to_RPU_C1" to "RPU_C1" port "RPU_C1_to_TCM_RPU_C1_RPU_C1_SWITCH"
+  edge [forsyde::io::lib::hierarchy::platform::hardware::StructuralContainment,forsyde::io::lib::hierarchy::visualization::VisualConnection] from "RPU_C1" port "RPU_C1_to_TCM_RPU_C1_RPU_C1_SWITCH" to "TCM_RPU_C1_RPU_C1_SWITCH" port "TCM_RPU_C1_RPU_C1_SWITCH_to_RPU_C1"
+  edge [forsyde::io::lib::hierarchy::platform::hardware::StructuralContainment,forsyde::io::lib::hierarchy::visualization::VisualConnection] from "TCM_RPU_C1_RPU_C1_SWITCH" port "TCM_RPU_C1_RPU_C1_SWITCH_to_TCM_RPU_C1" to "TCM_RPU_C1" port "TCM_RPU_C1_to_TCM_RPU_C1_RPU_C1_SWITCH"
+  edge [forsyde::io::lib::hierarchy::platform::hardware::StructuralContainment,forsyde::io::lib::hierarchy::visualization::VisualConnection] from "TCM_RPU_C1" port "TCM_RPU_C1_to_TCM_RPU_C1_RPU_C1_SWITCH" to "TCM_RPU_C1_RPU_C1_SWITCH" port "TCM_RPU_C1_RPU_C1_SWITCH_to_TCM_RPU_C1"
+  edge [forsyde::io::lib::hierarchy::visualization::VisualContainment] from "MPSoC" port "contained" to "TCM_RPU_C1_TCM_RPU_C1_SWITCH" 
+  edge [forsyde::io::lib::hierarchy::platform::hardware::StructuralContainment,forsyde::io::lib::hierarchy::visualization::VisualConnection] from "TCM_RPU_C1_TCM_RPU_C1_SWITCH" port "TCM_RPU_C1_TCM_RPU_C1_SWITCH_to_TCM_RPU_C1" to "TCM_RPU_C1" port "TCM_RPU_C1_to_TCM_RPU_C1_TCM_RPU_C1_SWITCH"
+  edge [forsyde::io::lib::hierarchy::platform::hardware::StructuralContainment,forsyde::io::lib::hierarchy::visualization::VisualConnection] from "TCM_RPU_C1" port "TCM_RPU_C1_to_TCM_RPU_C1_TCM_RPU_C1_SWITCH" to "TCM_RPU_C1_TCM_RPU_C1_SWITCH" port "TCM_RPU_C1_TCM_RPU_C1_SWITCH_to_TCM_RPU_C1"
+  edge [forsyde::io::lib::hierarchy::visualization::VisualContainment] from "MPSoC" port "contained" to "CCI_SWITCH" 
+  edge [forsyde::io::lib::hierarchy::platform::hardware::StructuralContainment,forsyde::io::lib::hierarchy::visualization::VisualConnection] from "APU_C2" port "APU_C2_to_CCI_SWITCH" to "CCI_SWITCH" port "CCI_SWITCH_to_APU_C2"
+  edge [forsyde::io::lib::hierarchy::platform::hardware::StructuralContainment,forsyde::io::lib::hierarchy::visualization::VisualConnection] from "CCI_SWITCH" port "CCI_SWITCH_to_APU_C2" to "APU_C2" port "APU_C2_to_CCI_SWITCH"
+  edge [forsyde::io::lib::hierarchy::platform::hardware::StructuralContainment,forsyde::io::lib::hierarchy::visualization::VisualConnection] from "APU_C3" port "APU_C3_to_CCI_SWITCH" to "CCI_SWITCH" port "CCI_SWITCH_to_APU_C3"
+  edge [forsyde::io::lib::hierarchy::platform::hardware::StructuralContainment,forsyde::io::lib::hierarchy::visualization::VisualConnection] from "CCI_SWITCH" port "CCI_SWITCH_to_APU_C3" to "APU_C3" port "APU_C3_to_CCI_SWITCH"
+  edge [forsyde::io::lib::hierarchy::platform::hardware::StructuralContainment,forsyde::io::lib::hierarchy::visualization::VisualConnection] from "APU_C0" port "APU_C0_to_CCI_SWITCH" to "CCI_SWITCH" port "CCI_SWITCH_to_APU_C0"
+  edge [forsyde::io::lib::hierarchy::platform::hardware::StructuralContainment,forsyde::io::lib::hierarchy::visualization::VisualConnection] from "CCI_SWITCH" port "CCI_SWITCH_to_APU_C0" to "APU_C0" port "APU_C0_to_CCI_SWITCH"
+  edge [forsyde::io::lib::hierarchy::platform::hardware::StructuralContainment,forsyde::io::lib::hierarchy::visualization::VisualConnection] from "APU_C1" port "APU_C1_to_CCI_SWITCH" to "CCI_SWITCH" port "CCI_SWITCH_to_APU_C1"
+  edge [forsyde::io::lib::hierarchy::platform::hardware::StructuralContainment,forsyde::io::lib::hierarchy::visualization::VisualConnection] from "CCI_SWITCH" port "CCI_SWITCH_to_APU_C1" to "APU_C1" port "APU_C1_to_CCI_SWITCH"
+  edge [forsyde::io::lib::hierarchy::visualization::VisualContainment] from "MPSoC" port "contained" to "PS_DDR4_CCI_SWITCH_SWITCH" 
+  edge [forsyde::io::lib::hierarchy::platform::hardware::StructuralContainment,forsyde::io::lib::hierarchy::visualization::VisualConnection] from "PS_DDR4_CCI_SWITCH_SWITCH" port "PS_DDR4_CCI_SWITCH_SWITCH_to_CCI_SWITCH" to "CCI_SWITCH" port "CCI_SWITCH_to_PS_DDR4_CCI_SWITCH_SWITCH"
+  edge [forsyde::io::lib::hierarchy::platform::hardware::StructuralContainment,forsyde::io::lib::hierarchy::visualization::VisualConnection] from "CCI_SWITCH" port "CCI_SWITCH_to_PS_DDR4_CCI_SWITCH_SWITCH" to "PS_DDR4_CCI_SWITCH_SWITCH" port "PS_DDR4_CCI_SWITCH_SWITCH_to_CCI_SWITCH"
+  edge [forsyde::io::lib::hierarchy::platform::hardware::StructuralContainment,forsyde::io::lib::hierarchy::visualization::VisualConnection] from "PS_DDR4_CCI_SWITCH_SWITCH" port "PS_DDR4_CCI_SWITCH_SWITCH_to_PS_DDR4" to "PS_DDR4" port "PS_DDR4_to_PS_DDR4_CCI_SWITCH_SWITCH"
+  edge [forsyde::io::lib::hierarchy::platform::hardware::StructuralContainment,forsyde::io::lib::hierarchy::visualization::VisualConnection] from "PS_DDR4" port "PS_DDR4_to_PS_DDR4_CCI_SWITCH_SWITCH" to "PS_DDR4_CCI_SWITCH_SWITCH" port "PS_DDR4_CCI_SWITCH_SWITCH_to_PS_DDR4"
+  edge [forsyde::io::lib::hierarchy::visualization::VisualContainment] from "MPSoC" port "contained" to "FPD_SWITCH" 
+  edge [forsyde::io::lib::hierarchy::platform::hardware::StructuralContainment,forsyde::io::lib::hierarchy::visualization::VisualConnection] from "FPD_SWITCH" port "FPD_SWITCH_to_CCI_SWITCH" to "CCI_SWITCH" port "CCI_SWITCH_to_FPD_SWITCH"
+  edge [forsyde::io::lib::hierarchy::platform::hardware::StructuralContainment,forsyde::io::lib::hierarchy::visualization::VisualConnection] from "CCI_SWITCH" port "CCI_SWITCH_to_FPD_SWITCH" to "FPD_SWITCH" port "FPD_SWITCH_to_CCI_SWITCH"
+  edge [forsyde::io::lib::hierarchy::visualization::VisualContainment] from "MPSoC" port "contained" to "OCM_FPD_SWITCH_SWITCH" 
+  edge [forsyde::io::lib::hierarchy::platform::hardware::StructuralContainment,forsyde::io::lib::hierarchy::visualization::VisualConnection] from "OCM_FPD_SWITCH_SWITCH" port "OCM_FPD_SWITCH_SWITCH_to_FPD_SWITCH" to "FPD_SWITCH" port "FPD_SWITCH_to_OCM_FPD_SWITCH_SWITCH"
+  edge [forsyde::io::lib::hierarchy::platform::hardware::StructuralContainment,forsyde::io::lib::hierarchy::visualization::VisualConnection] from "FPD_SWITCH" port "FPD_SWITCH_to_OCM_FPD_SWITCH_SWITCH" to "OCM_FPD_SWITCH_SWITCH" port "OCM_FPD_SWITCH_SWITCH_to_FPD_SWITCH"
+  edge [forsyde::io::lib::hierarchy::platform::hardware::StructuralContainment,forsyde::io::lib::hierarchy::visualization::VisualConnection] from "OCM_FPD_SWITCH_SWITCH" port "OCM_FPD_SWITCH_SWITCH_to_OCM" to "OCM" port "OCM_to_OCM_FPD_SWITCH_SWITCH"
+  edge [forsyde::io::lib::hierarchy::platform::hardware::StructuralContainment,forsyde::io::lib::hierarchy::visualization::VisualConnection] from "OCM" port "OCM_to_OCM_FPD_SWITCH_SWITCH" to "OCM_FPD_SWITCH_SWITCH" port "OCM_FPD_SWITCH_SWITCH_to_OCM"
+  edge [forsyde::io::lib::hierarchy::visualization::VisualContainment] from "MPSoC" port "contained" to "LPD_SWITCH" 
+  edge [forsyde::io::lib::hierarchy::platform::hardware::StructuralContainment,forsyde::io::lib::hierarchy::visualization::VisualConnection] from "LPD_SWITCH" port "LPD_SWITCH_to_FPD_SWITCH" to "FPD_SWITCH" port "FPD_SWITCH_to_LPD_SWITCH"
+  edge [forsyde::io::lib::hierarchy::platform::hardware::StructuralContainment,forsyde::io::lib::hierarchy::visualization::VisualConnection] from "FPD_SWITCH" port "FPD_SWITCH_to_LPD_SWITCH" to "LPD_SWITCH" port "LPD_SWITCH_to_FPD_SWITCH"
+  edge [forsyde::io::lib::hierarchy::platform::hardware::StructuralContainment,forsyde::io::lib::hierarchy::visualization::VisualConnection] from "LPD_SWITCH" port "LPD_SWITCH_to_RPU_SWITCH" to "RPU_SWITCH" port "RPU_SWITCH_to_LPD_SWITCH"
+  edge [forsyde::io::lib::hierarchy::platform::hardware::StructuralContainment,forsyde::io::lib::hierarchy::visualization::VisualConnection] from "RPU_SWITCH" port "RPU_SWITCH_to_LPD_SWITCH" to "LPD_SWITCH" port "LPD_SWITCH_to_RPU_SWITCH"
+  edge [forsyde::io::lib::hierarchy::visualization::VisualContainment] from "MPSoC" port "contained" to "PL_SWITCH" 
+  edge [forsyde::io::lib::hierarchy::visualization::VisualContainment] from "MPSoC" port "contained" to "PL_DDR4_PL_SWITCH_SWITCH" 
+  edge [forsyde::io::lib::hierarchy::platform::hardware::StructuralContainment,forsyde::io::lib::hierarchy::visualization::VisualConnection] from "PL_DDR4_PL_SWITCH_SWITCH" port "PL_DDR4_PL_SWITCH_SWITCH_to_PL_SWITCH" to "PL_SWITCH" port "PL_SWITCH_to_PL_DDR4_PL_SWITCH_SWITCH"
+  edge [forsyde::io::lib::hierarchy::platform::hardware::StructuralContainment,forsyde::io::lib::hierarchy::visualization::VisualConnection] from "PL_SWITCH" port "PL_SWITCH_to_PL_DDR4_PL_SWITCH_SWITCH" to "PL_DDR4_PL_SWITCH_SWITCH" port "PL_DDR4_PL_SWITCH_SWITCH_to_PL_SWITCH"
+  edge [forsyde::io::lib::hierarchy::platform::hardware::StructuralContainment,forsyde::io::lib::hierarchy::visualization::VisualConnection] from "PL_DDR4_PL_SWITCH_SWITCH" port "PL_DDR4_PL_SWITCH_SWITCH_to_PL_DDR4" to "PL_DDR4" port "PL_DDR4_to_PL_DDR4_PL_SWITCH_SWITCH"
+  edge [forsyde::io::lib::hierarchy::platform::hardware::StructuralContainment,forsyde::io::lib::hierarchy::visualization::VisualConnection] from "PL_DDR4" port "PL_DDR4_to_PL_DDR4_PL_SWITCH_SWITCH" to "PL_DDR4_PL_SWITCH_SWITCH" port "PL_DDR4_PL_SWITCH_SWITCH_to_PL_DDR4"
+  edge [forsyde::io::lib::hierarchy::platform::hardware::StructuralContainment,forsyde::io::lib::hierarchy::visualization::VisualConnection] from "PL_SWITCH" port "PL_SWITCH_to_FPD_SWITCH" to "FPD_SWITCH" port "FPD_SWITCH_to_PL_SWITCH"
+  edge [forsyde::io::lib::hierarchy::platform::hardware::StructuralContainment,forsyde::io::lib::hierarchy::visualization::VisualConnection] from "FPD_SWITCH" port "FPD_SWITCH_to_PL_SWITCH" to "PL_SWITCH" port "PL_SWITCH_to_FPD_SWITCH"
+  edge [forsyde::io::lib::hierarchy::platform::hardware::StructuralContainment,forsyde::io::lib::hierarchy::visualization::VisualConnection] from "PL_DDR4_PL_SWITCH_SWITCH" port "PL_DDR4_PL_SWITCH_SWITCH_to_FPD_SWITCH" to "FPD_SWITCH" port "FPD_SWITCH_to_PL_DDR4_PL_SWITCH_SWITCH"
+  edge [forsyde::io::lib::hierarchy::platform::hardware::StructuralContainment,forsyde::io::lib::hierarchy::visualization::VisualConnection] from "FPD_SWITCH" port "FPD_SWITCH_to_PL_DDR4_PL_SWITCH_SWITCH" to "PL_DDR4_PL_SWITCH_SWITCH" port "PL_DDR4_PL_SWITCH_SWITCH_to_FPD_SWITCH"
+  edge [forsyde::io::lib::hierarchy::platform::hardware::StructuralContainment,forsyde::io::lib::hierarchy::visualization::VisualConnection] from "PL_SWITCH" port "PL_SWITCH_to_LPD_SWITCH" to "LPD_SWITCH" port "LPD_SWITCH_to_PL_SWITCH"
+  edge [forsyde::io::lib::hierarchy::platform::hardware::StructuralContainment,forsyde::io::lib::hierarchy::visualization::VisualConnection] from "LPD_SWITCH" port "LPD_SWITCH_to_PL_SWITCH" to "PL_SWITCH" port "PL_SWITCH_to_LPD_SWITCH"
+  edge [forsyde::io::lib::hierarchy::platform::hardware::StructuralContainment,forsyde::io::lib::hierarchy::visualization::VisualConnection] from "PL_DDR4_PL_SWITCH_SWITCH" port "PL_DDR4_PL_SWITCH_SWITCH_to_LPD_SWITCH" to "LPD_SWITCH" port "LPD_SWITCH_to_PL_DDR4_PL_SWITCH_SWITCH"
+  edge [forsyde::io::lib::hierarchy::platform::hardware::StructuralContainment,forsyde::io::lib::hierarchy::visualization::VisualConnection] from "LPD_SWITCH" port "LPD_SWITCH_to_PL_DDR4_PL_SWITCH_SWITCH" to "PL_DDR4_PL_SWITCH_SWITCH" port "PL_DDR4_PL_SWITCH_SWITCH_to_LPD_SWITCH"
+  edge [forsyde::io::lib::hierarchy::platform::hardware::StructuralContainment,forsyde::io::lib::hierarchy::visualization::VisualConnection] from "PL_SWITCH" port "PL_SWITCH_to_CCI_SWITCH" to "CCI_SWITCH" port "CCI_SWITCH_to_PL_SWITCH"
+  edge [forsyde::io::lib::hierarchy::platform::hardware::StructuralContainment,forsyde::io::lib::hierarchy::visualization::VisualConnection] from "CCI_SWITCH" port "CCI_SWITCH_to_PL_SWITCH" to "PL_SWITCH" port "PL_SWITCH_to_CCI_SWITCH"
+  edge [forsyde::io::lib::hierarchy::platform::hardware::StructuralContainment,forsyde::io::lib::hierarchy::visualization::VisualConnection] from "PL_DDR4_PL_SWITCH_SWITCH" port "PL_DDR4_PL_SWITCH_SWITCH_to_CCI_SWITCH" to "CCI_SWITCH" port "CCI_SWITCH_to_PL_DDR4_PL_SWITCH_SWITCH"
+  edge [forsyde::io::lib::hierarchy::platform::hardware::StructuralContainment,forsyde::io::lib::hierarchy::visualization::VisualConnection] from "CCI_SWITCH" port "CCI_SWITCH_to_PL_DDR4_PL_SWITCH_SWITCH" to "PL_DDR4_PL_SWITCH_SWITCH" port "PL_DDR4_PL_SWITCH_SWITCH_to_CCI_SWITCH"
+  edge [forsyde::io::lib::hierarchy::visualization::VisualContainment] from "MPSoC" port "contained" to "FPGA" 
+  edge [forsyde::io::lib::hierarchy::visualization::VisualContainment] from "MPSoC" port "contained" to "FPGA_BRAM" 
+  edge [forsyde::io::lib::hierarchy::visualization::VisualContainment] from "MPSoC" port "contained" to "FPGA_SWITCH" 
+  edge [forsyde::io::lib::hierarchy::platform::hardware::StructuralContainment,forsyde::io::lib::hierarchy::visualization::VisualConnection] from "FPGA_SWITCH" port "FPGA_SWITCH_to_FPGA" to "FPGA" port "FPGA_to_FPGA_SWITCH"
+  edge [forsyde::io::lib::hierarchy::platform::hardware::StructuralContainment,forsyde::io::lib::hierarchy::visualization::VisualConnection] from "FPGA" port "FPGA_to_FPGA_SWITCH" to "FPGA_SWITCH" port "FPGA_SWITCH_to_FPGA"
+  edge [forsyde::io::lib::hierarchy::platform::hardware::StructuralContainment,forsyde::io::lib::hierarchy::visualization::VisualConnection] from "FPGA_SWITCH" port "FPGA_SWITCH_to_PL_SWITCH" to "PL_SWITCH" port "PL_SWITCH_to_FPGA_SWITCH"
+  edge [forsyde::io::lib::hierarchy::platform::hardware::StructuralContainment,forsyde::io::lib::hierarchy::visualization::VisualConnection] from "PL_SWITCH" port "PL_SWITCH_to_FPGA_SWITCH" to "FPGA_SWITCH" port "FPGA_SWITCH_to_PL_SWITCH"
+  edge [forsyde::io::lib::hierarchy::platform::hardware::StructuralContainment,forsyde::io::lib::hierarchy::visualization::VisualConnection] from "FPGA_SWITCH" port "FPGA_SWITCH_to_FPGA_BRAM" to "FPGA_BRAM" port "FPGA_BRAM_to_FPGA_SWITCH"
+  edge [forsyde::io::lib::hierarchy::platform::hardware::StructuralContainment,forsyde::io::lib::hierarchy::visualization::VisualConnection] from "FPGA_BRAM" port "FPGA_BRAM_to_FPGA_SWITCH" to "FPGA_SWITCH" port "FPGA_SWITCH_to_FPGA_BRAM"
+  edge [forsyde::io::lib::hierarchy::visualization::VisualContainment] from "MPSoC" port "contained" to "FPGA_HW_Impl_Actor_A" 
+  edge [forsyde::io::lib::hierarchy::visualization::VisualContainment] from "MPSoC" port "contained" to "FPGA_HW_Impl_Actor_A_Scheduler" 
+  edge [] from "FPGA_HW_Impl_Actor_A_Scheduler" port "managed" to "FPGA_HW_Impl_Actor_A" 
+  edge [forsyde::io::lib::hierarchy::platform::hardware::StructuralContainment,forsyde::io::lib::hierarchy::visualization::VisualConnection] from "FPGA_HW_Impl_Actor_A" to "FPGA_HW_Impl_Actor_A_Scheduler" 
+  edge [forsyde::io::lib::hierarchy::platform::hardware::StructuralContainment,forsyde::io::lib::hierarchy::visualization::VisualConnection] from "FPGA_HW_Impl_Actor_A_Scheduler" to "FPGA_HW_Impl_Actor_A" 
+  edge [forsyde::io::lib::hierarchy::platform::hardware::StructuralContainment,forsyde::io::lib::hierarchy::visualization::VisualConnection] from "FPGA_HW_Impl_Actor_A" port "FPGA_HW_Impl_Actor_A_to_FPGA_SWITCH" to "FPGA_SWITCH" port "FPGA_SWITCH_to_FPGA_HW_Impl_Actor_A"
+  edge [forsyde::io::lib::hierarchy::platform::hardware::StructuralContainment,forsyde::io::lib::hierarchy::visualization::VisualConnection] from "FPGA_SWITCH" port "FPGA_SWITCH_to_FPGA_HW_Impl_Actor_A" to "FPGA_HW_Impl_Actor_A" port "FPGA_HW_Impl_Actor_A_to_FPGA_SWITCH"
+}

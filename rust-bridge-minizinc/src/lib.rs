@@ -197,6 +197,8 @@ struct AADPMMMPLMznOutput {
     buffers_mapping: Vec<u64>,
     #[serde(rename = "communicationReservation")]
     communication_reservation: Vec<Vec<u64>>,
+    #[serde(rename = "firingsOrdering")]
+    firings_ordering: Vec<u64>,
     #[serde(rename = "invThroughput")]
     inv_throughput: Vec<u64>,
     #[serde(rename = "nUsedPEs")]
@@ -319,46 +321,59 @@ fn solve_aad2pmmmap(
         let app_follows = app.job_follows();
         for (f, f_follows) in app_follows {
             if let Some(fidx) = all_firings.iter().position(|ff| f == *ff) {
-                firings_follows[fidx].extend(f_follows.iter().map(|tgt| all_firings.iter().position(|ff| ff == tgt).unwrap() as u64));
+                firings_follows[fidx].extend(
+                    f_follows
+                        .iter()
+                        .map(|tgt| all_firings.iter().position(|ff| ff == tgt).unwrap() as u64),
+                );
             }
-        
         }
     }
     let execution_times: Vec<Vec<i64>> = all_processes
-    .iter()
-    .map(|f| {
-        m.partitioned_mem_mappable_multicore_and_pl
-            .hardware
-            .processing_elems
-            .iter()
-            .filter(|pe| 
-                m.partitioned_mem_mappable_multicore_and_pl.runtimes.processor_affinities.get(*pe).map(|r| m.partitioned_mem_mappable_multicore_and_pl.runtimes.is_super_loop.contains(r)).unwrap_or(false)
-                )
-            .map(|pe| {
-                m.instrumented_computation_times
-                    .average_execution_times
-                    .get(f)
-                    .and_then(|inner| inner.get(pe))
-                    .map(|x| x.to_owned() as i64)
-                    .unwrap_or(-1)
-            })
-            .chain(
-                m.partitioned_mem_mappable_multicore_and_pl
+        .iter()
+        .map(|f| {
+            m.partitioned_mem_mappable_multicore_and_pl
                 .hardware
-                .programmable_logic_elems
+                .processing_elems
                 .iter()
-                .map(|pla| {
-                    m.hardware_implementation_area
-                        .latencies_numerators
+                .filter(|pe| {
+                    m.partitioned_mem_mappable_multicore_and_pl
+                        .runtimes
+                        .processor_affinities
+                        .get(*pe)
+                        .map(|r| {
+                            m.partitioned_mem_mappable_multicore_and_pl
+                                .runtimes
+                                .is_super_loop
+                                .contains(r)
+                        })
+                        .unwrap_or(false)
+                })
+                .map(|pe| {
+                    m.instrumented_computation_times
+                        .average_execution_times
                         .get(f)
-                        .and_then(|inner| inner.get(pla))
+                        .and_then(|inner| inner.get(pe))
                         .map(|x| x.to_owned() as i64)
                         .unwrap_or(-1)
                 })
-            )
-            .collect()
-    })
-    .collect();
+                .chain(
+                    m.partitioned_mem_mappable_multicore_and_pl
+                        .hardware
+                        .programmable_logic_elems
+                        .iter()
+                        .map(|pla| {
+                            m.hardware_implementation_area
+                                .latencies_numerators
+                                .get(f)
+                                .and_then(|inner| inner.get(pla))
+                                .map(|x| x.to_owned() as i64)
+                                .unwrap_or(-1)
+                        }),
+                )
+                .collect()
+        })
+        .collect();
     input_data.push((
         "Processes",
         MiniZincData::from(
@@ -447,7 +462,7 @@ fn solve_aad2pmmmap(
         ),
     ));
     input_data.push(("executionTime", MiniZincData::from(execution_times)));
-    
+
     let temp_dir = std::env::temp_dir().join("idesyde").join("minizinc");
     let model_file = temp_dir.join("AADPMMMPL.mzn");
     let data_file = temp_dir.join("AADPMMMPL.json");
@@ -468,6 +483,7 @@ fn solve_aad2pmmmap(
             let input = m.clone();
             return Arc::new(Mutex::new(bufreader.lines().flat_map(move |line_r| {
                 if let Ok(line) = line_r {
+                    println!("{}", line.as_str());
                     let out: MiniZincSolutionOutput<AADPMMMPLMznOutput> =
                         serde_json::from_str(line.as_str())
                             .expect("Should not fail to parse the output of minizinc");

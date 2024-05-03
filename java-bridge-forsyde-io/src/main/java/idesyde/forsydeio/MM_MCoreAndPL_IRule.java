@@ -113,6 +113,7 @@ class MM_McoreAndPL_IRule implements IdentificationRule {
 										.tryView(model, v)
 										.isPresent()));
 		// check if all processors are connected to at least one memory element
+		// TODO: If every port becomes a vertex, this can be simplified and these library algorithms used
 		var connecivityInspector = new ConnectivityInspector<>(topology);
 		var shortestPaths = new FloydWarshallShortestPaths<>(topology);
 		var pesConnected = processingElements.stream().allMatch(pe -> memoryElements.stream()

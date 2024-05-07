@@ -4,11 +4,15 @@ import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.Map;
+import java.util.Optional;
 import java.util.Set;
 import java.util.stream.Collectors;
+import java.util.stream.Stream;
 
+import forsyde.io.core.VertexViewer;
 import idesyde.common.MM_MCoreAndPL;
 import idesyde.core.*;
+import org.jgrapht.Graph;
 import org.jgrapht.alg.connectivity.ConnectivityInspector;
 import org.jgrapht.alg.shortestpath.DijkstraManyToManyShortestPaths;
 import org.jgrapht.alg.shortestpath.FloydWarshallShortestPaths;
@@ -22,6 +26,8 @@ import forsyde.io.lib.hierarchy.platform.hardware.GenericCommunicationModule;
 import forsyde.io.lib.hierarchy.platform.hardware.GenericMemoryModule;
 import forsyde.io.lib.hierarchy.platform.hardware.GenericProcessingModule;
 import forsyde.io.lib.hierarchy.platform.hardware.LogicProgrammableModuleViewer;
+import org.jgrapht.graph.DefaultEdge;
+import org.jgrapht.graph.SimpleDirectedGraph;
 
 @AutoRegister(ForSyDeIOModule.class)
 class MM_McoreAndPL_IRule implements IdentificationRule {
@@ -41,7 +47,7 @@ class MM_McoreAndPL_IRule implements IdentificationRule {
 		var processingElements = new HashSet<GenericProcessingModule>();
 		var memoryElements = new HashSet<GenericMemoryModule>();
 		var communicationElements = new HashSet<GenericCommunicationModule>();
-		var plElements = new HashSet<LogicProgrammableModule>(); //! TODO don't use the viewer
+		var plElements = new HashSet<LogicProgrammableModule>(); // ! TODO don't use the viewer
 		model.vertexSet().stream()
 				.forEach(v -> {
 					ForSyDeHierarchy.GenericProcessingModule
@@ -113,11 +119,46 @@ class MM_McoreAndPL_IRule implements IdentificationRule {
 										.tryView(model, v)
 										.isPresent()));
 		// check if all processors are connected to at least one memory element
-		var connecivityInspector = new ConnectivityInspector<>(topology);
-		var shortestPaths = new FloydWarshallShortestPaths<>(topology);
+		var portAwareTopology = new SimpleDirectedGraph<Pair<String, String>, DefaultEdge>(DefaultEdge.class);
+		for (var v : topology.vertexSet()) {
+			portAwareTopology.addVertex(new Pair<>(v.getIdentifier(), null));
+			for (var p : v.getPorts()) {
+				portAwareTopology.addVertex(new Pair<>(v.getIdentifier(), p));
+			}
+			ForSyDeHierarchy.CommunicationModulePortSpecification.tryView(model, v).ifPresentOrElse(portedCommModule -> {
+				portedCommModule.portConnections().forEach((src, dsts) -> {
+					for (var dst: dsts) {
+						portAwareTopology.addEdge(new Pair<>(v.getIdentifier(), src), new Pair<>(v.getIdentifier(), dst));
+						portAwareTopology.addEdge(new Pair<>(v.getIdentifier(), dst), new Pair<>(v.getIdentifier(), src));
+					}
+				});
+			}, () -> {
+				for (var p : v.getPorts()) {
+					portAwareTopology.addEdge(new Pair<>(v.getIdentifier(), null), new Pair<>(v.getIdentifier(), p));
+					portAwareTopology.addEdge(new Pair<>(v.getIdentifier(), p), new Pair<>(v.getIdentifier(), null));
+				}
+			});
+		}
+		for (var e : topology.edgeSet()) {
+			if (e.hasTrait(ForSyDeHierarchy.EdgeTraits.PhysicalConnection)) {
+				e.getSourcePort().ifPresentOrElse(src -> {
+					e.getTargetPort().ifPresentOrElse(dst -> {
+						portAwareTopology.addEdge(new Pair<>(e.getSource(), src), new Pair<>(e.getTarget(), dst));
+					}, () -> errors.add("MM_McoreAndPL_IRule: %s to %s is not vertex-to-vertex or port-to-port.".formatted(e.getSource(), e.getTarget())));
+				}, () -> {
+					if (e.getTargetPort().isEmpty()) {
+						portAwareTopology.addEdge(new Pair<>(e.getSource(), null), new Pair<>(e.getTarget(), null));
+					} else {
+						errors.add("MM_McoreAndPL_IRule: %s to %s is not vertex-to-vertex or port-to-port.".formatted(e.getSource(), e.getTarget()));
+					}
+				});
+			}
+		}
+		var connecivityInspector = new ConnectivityInspector<>(portAwareTopology);
+		var shortestPaths = new FloydWarshallShortestPaths<>(portAwareTopology);
 		var pesConnected = processingElements.stream().allMatch(pe -> memoryElements.stream()
-				.anyMatch(me -> connecivityInspector.pathExists(pe.getViewedVertex(),
-						me.getViewedVertex())));
+				.anyMatch(me -> connecivityInspector.pathExists(new Pair<>(pe.getIdentifier(), null),
+						new Pair<>(me.getIdentifier(), null))));
 		// basically this check to see if there are always neighboring
 		// pe, mem and ce
 		// and also the subset of only communication elements
@@ -190,8 +231,39 @@ class MM_McoreAndPL_IRule implements IdentificationRule {
 									.orElse(0.0)));
 			var totalAvailablePLAreas = plElements.stream()
 					.collect(Collectors.toMap(
-							pl -> pl.getIdentifier(),
-							pl -> pl.availableLogicArea()));
+							VertexViewer::getIdentifier,
+							LogicProgrammableModule::availableLogicArea));
+			var computedPlatformPaths = platformElements.stream().collect(
+					Collectors.toMap(
+							VertexViewer::getIdentifier,
+							src -> platformElements.stream()
+									.filter(dst -> src != dst)
+									.flatMap(dst -> {
+										var path = 	shortestPaths.getPath(
+												new Pair<>(src.getIdentifier(), null),
+												new Pair<>(dst.getIdentifier(), null));
+										if (path != null) {
+											var filteredPath = new ArrayList<String>();
+											filteredPath.add(src.getIdentifier());
+											for (int i = 0; i <= path.getLength(); i++) {
+												var len = filteredPath.size();
+												if (len == 0 || !filteredPath.get(len - 1).equals(path.getVertexList().get(i).fst())) {
+													filteredPath.add(path.getVertexList().get(i).fst());
+												}
+											}
+											return Stream.of(new Pair<>(dst, filteredPath));
+										} else {
+											return Stream.empty();
+										}
+									})
+									.collect(Collectors
+											.toMap(
+													e -> e.fst().getIdentifier(),
+													e -> e.snd()
+															.subList(1, e.snd()
+																	.size()
+																	- 1)
+															))));
 			identified.add(
 					new MM_MCoreAndPL(
 							processingElements.stream()
@@ -214,28 +286,7 @@ class MM_McoreAndPL_IRule implements IdentificationRule {
 							memSizes,
 							maxConcurrentFlits,
 							bandwidths,
-							platformElements.stream().collect(
-									Collectors.toMap(
-											src -> src.getIdentifier(),
-											src -> platformElements.stream()
-													.filter(dst -> src != dst)
-													.map(dst -> new Pair<>(dst, shortestPaths.getPath(
-															src.getViewedVertex(),
-															dst.getViewedVertex())))
-													.filter(pair -> pair.snd() != null)
-													.collect(Collectors
-															.toMap(
-																	e -> e.fst().getIdentifier(),
-																	e -> e.snd()
-																			.getVertexList()
-																			.subList(1, e.snd()
-																					.getVertexList()
-																					.size()
-																					- 1)
-																			.stream()
-																			.map(x -> x.getIdentifier())
-																			.collect(Collectors
-																					.toList())))))));
+							computedPlatformPaths));
 		}
 		return new IdentificationResult(identified, errors);
 	}

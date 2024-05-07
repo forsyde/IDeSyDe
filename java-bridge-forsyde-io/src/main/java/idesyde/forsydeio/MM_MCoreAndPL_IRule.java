@@ -26,6 +26,7 @@ import forsyde.io.lib.hierarchy.platform.hardware.GenericCommunicationModule;
 import forsyde.io.lib.hierarchy.platform.hardware.GenericMemoryModule;
 import forsyde.io.lib.hierarchy.platform.hardware.GenericProcessingModule;
 import forsyde.io.lib.hierarchy.platform.hardware.LogicProgrammableModuleViewer;
+import org.jgrapht.graph.DefaultDirectedGraph;
 import org.jgrapht.graph.DefaultEdge;
 import org.jgrapht.graph.SimpleDirectedGraph;
 
@@ -119,7 +120,7 @@ class MM_McoreAndPL_IRule implements IdentificationRule {
 										.tryView(model, v)
 										.isPresent()));
 		// check if all processors are connected to at least one memory element
-		var portAwareTopology = new SimpleDirectedGraph<Pair<String, String>, DefaultEdge>(DefaultEdge.class);
+		var portAwareTopology = new DefaultDirectedGraph<Pair<String, String>, DefaultEdge>(DefaultEdge.class);
 		for (var v : topology.vertexSet()) {
 			portAwareTopology.addVertex(new Pair<>(v.getIdentifier(), null));
 			for (var p : v.getPorts()) {
@@ -156,9 +157,14 @@ class MM_McoreAndPL_IRule implements IdentificationRule {
 		}
 		var connecivityInspector = new ConnectivityInspector<>(portAwareTopology);
 		var shortestPaths = new FloydWarshallShortestPaths<>(portAwareTopology);
-		var pesConnected = processingElements.stream().allMatch(pe -> memoryElements.stream()
-				.anyMatch(me -> connecivityInspector.pathExists(new Pair<>(pe.getIdentifier(), null),
-						new Pair<>(me.getIdentifier(), null))));
+		for (var pe: processingElements) {
+			if (memoryElements.stream()
+					.noneMatch(me -> connecivityInspector.pathExists(new Pair<>(pe.getIdentifier(), null),
+							new Pair<>(me.getIdentifier(), null)))) {
+				errors.add("MM_McoreAndPL_IRule: %s does not reach any memory element".formatted(pe.getIdentifier()));
+			}
+		}
+
 		// basically this check to see if there are always neighboring
 		// pe, mem and ce
 		// and also the subset of only communication elements
@@ -188,9 +194,6 @@ class MM_McoreAndPL_IRule implements IdentificationRule {
 		}
 		if (!processingOnlyValidLinks || !memoryOnlyValidLinks) {
 			errors.add("MM_McoreAndPL_IRule: processing or memory have invalid links");
-		}
-		if (!pesConnected) {
-			errors.add("MM_McoreAndPL_IRule: not all processing elements reach a memory element");
 		}
 		if (errors.isEmpty()) {
 			var interconnectTopologySrcs = new ArrayList<String>();

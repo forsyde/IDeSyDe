@@ -40,6 +40,12 @@ impl From<i32> for MiniZincData {
     }
 }
 
+impl From<u32> for MiniZincData {
+    fn from(value: u32) -> Self {
+        MiniZincData::MznLitInt(value as i32)
+    }
+}
+
 impl From<i64> for MiniZincData {
     fn from(value: i64) -> Self {
         MiniZincData::MznLitLong(value)
@@ -48,6 +54,12 @@ impl From<i64> for MiniZincData {
 
 impl From<u64> for MiniZincData {
     fn from(value: u64) -> Self {
+        MiniZincData::MznLitLong(value as i64)
+    }
+}
+
+impl From<usize> for MiniZincData {
+    fn from(value: usize) -> Self {
         MiniZincData::MznLitLong(value as i64)
     }
 }
@@ -123,9 +135,9 @@ fn to_mzn_input(d: Vec<(&str, MiniZincData)>) -> String {
     )
 }
 
-struct MiniZincExplorer;
+struct MiniZincGecodeExplorer;
 
-impl Explorer for MiniZincExplorer {
+impl Explorer for MiniZincGecodeExplorer {
     fn unique_identifier(&self) -> String {
         "MiniZincExplorer".to_string()
     }
@@ -162,7 +174,7 @@ impl Explorer for MiniZincExplorer {
     fn explore(
         &self,
         m: std::sync::Arc<dyn idesyde_core::DecisionModel>,
-        _currrent_solutions: &std::collections::HashSet<idesyde_core::ExplorationSolution>,
+        currrent_solutions: &std::collections::HashSet<idesyde_core::ExplorationSolution>,
         _exploration_configuration: idesyde_core::ExplorationConfiguration,
     ) -> Arc<Mutex<dyn Iterator<Item = ExplorationSolution> + Send + Sync>> {
         if let Ok(aad2pmmmap) =
@@ -170,7 +182,7 @@ impl Explorer for MiniZincExplorer {
                 m.as_ref(),
             )
         {
-            return solve_aad2pmmmap(&aad2pmmmap);
+            return solve_aad2pmmmap(&aad2pmmmap, currrent_solutions, "gecode");
         }
         Arc::new(Mutex::new(std::iter::empty()))
     }
@@ -207,6 +219,8 @@ struct AADPMMMPLMznOutput {
 
 fn solve_aad2pmmmap(
     m: &AperiodicAsynchronousDataflowToPartitionedMemoryMappableMulticoreAndPL,
+    current_solutions: &HashSet<ExplorationSolution>,
+    explorer_name: &str,
 ) -> Arc<Mutex<dyn Iterator<Item = ExplorationSolution> + Send + Sync>> {
     let mut input_data = vec![];
     let all_processes: Vec<String> = m
@@ -221,12 +235,18 @@ fn solve_aad2pmmmap(
         .flat_map(|app| app.job_graph_name.iter())
         .map(|x| x.to_string())
         .collect();
-    let all_buffers: Vec<String> = m
+    let (all_buffers, all_buffer_max_sizes): (Vec<String>, Vec<u64>) = m
         .aperiodic_asynchronous_dataflows
         .iter()
-        .flat_map(|app| app.buffers.iter())
-        .map(|x| x.to_string())
-        .collect();
+        .flat_map(|app| {
+            app.buffers.iter().map(|b| {
+                (
+                    b.to_string(),
+                    app.buffer_max_size_in_bits.get(b).map(|x| *x).unwrap_or(0),
+                )
+            })
+        })
+        .unzip();
     let memories: Vec<String> = m
         .partitioned_mem_mappable_multicore_and_pl
         .hardware
@@ -272,52 +292,25 @@ fn solve_aad2pmmmap(
         .map(|s| s.as_str())
         .zip(all_firings_instances.iter().map(|i| i.to_owned()))
         .collect();
-    // let mut firings_graph: Graph<u64, (), petgraph::Directed> = Graph::new();
-    // let mut firings_graph_idx = vec![];
-    // for i in 0..all_firings.len() {
-    //     firings_graph_idx.push(firings_graph.add_node(i as u64));
-    // }
-    // for app in &m.aperiodic_asynchronous_dataflows {
-    //     for i in 0..app.job_graph_src_name.len() {
-    //         if let Some(src_idx) = all_firings.iter().position(|(a, q)| {
-    //             *a == app.job_graph_src_name[i] && *q == app.job_graph_src_instance[i]
-    //         }) {
-    //             if let Some(dst_idx) = all_firings.iter().position(|(a, q)| {
-    //                 *a == app.job_graph_dst_name[i] && *q == app.job_graph_dst_instance[i]
-    //             }) {
-    //                 firings_graph.add_edge(
-    //                     firings_graph_idx[src_idx],
-    //                     firings_graph_idx[dst_idx],
-    //                     (),
-    //                 );
-    //             }
-    //         }
-    //     }
-    // }
-    // let firings_graph_toposort = petgraph::algo::toposort(&firings_graph, None)
-    //     .expect("Firings graph has a cycle. Should never happen.");
-    // let (res, revmap) = petgraph::algo::tred::dag_to_toposorted_adjacency_list(
-    //     &firings_graph,
-    //     &firings_graph_toposort,
-    // );
-    // let (_, firings_graph_closure) =
-    //     petgraph::algo::tred::dag_transitive_reduction_closure::<(), DefaultIx>(&res);
-    let mut firings_follows: Vec<HashSet<u64>> = all_firings
+    let mut connected: Vec<Vec<bool>> = all_processes
         .iter()
-        .map(|_| {
-            HashSet::new()
-            // firings_graph_closure
-            //     .neighbors(revmap[fidx.index()])
-            //     .flat_map(|e| {
-            //         firings_graph
-            //             .node_weight(firings_graph_toposort[e.index()])
-            //             .into_iter()
-            //     })
-            //     .map(|i| *i)
-            //     .collect()
-        })
+        .map(|_| vec![false; all_processes.len()])
         .collect();
+    let mut firings_follows: Vec<HashSet<u64>> =
+        all_firings.iter().map(|_| HashSet::new()).collect();
     for app in &m.aperiodic_asynchronous_dataflows {
+        for a in &app.processes {
+            for aa in &app.processes {
+                if a != aa {
+                    if let Some(aidx) = all_processes.iter().position(|x| x == a) {
+                        if let Some(aaidx) = all_processes.iter().position(|x| x == aa) {
+                            connected[aidx][aaidx] = true;
+                            connected[aaidx][aidx] = true;
+                        }
+                    }
+                }
+            }
+        }
         let app_follows = app.job_follows();
         for (f, f_follows) in app_follows {
             if let Some(fidx) = all_firings.iter().position(|ff| f == *ff) {
@@ -371,6 +364,101 @@ fn solve_aad2pmmmap(
                                 .unwrap_or(-1)
                         }),
                 )
+                .collect()
+        })
+        .collect();
+    let mappable_to_comm: Vec<Vec<HashSet<usize>>> = list_schedulers
+        .iter()
+        .flat_map(|s| {
+            m.partitioned_mem_mappable_multicore_and_pl
+                .runtimes
+                .runtime_host
+                .get(s)
+        })
+        .chain(logic_areas.iter())
+        .map(|pe| {
+            memories
+                .iter()
+                .map(|me| {
+                    m.partitioned_mem_mappable_multicore_and_pl
+                        .hardware
+                        .pre_computed_paths
+                        .get(pe)
+                        .and_then(|xs| xs.get(me))
+                        .map(|xs| {
+                            xs.iter()
+                                .flat_map(|x| communications.iter().position(|ce| ce == x))
+                                .collect()
+                        })
+                        .unwrap_or(HashSet::new())
+                })
+                .collect()
+        })
+        .collect();
+    let comm_to_mappable: Vec<Vec<HashSet<usize>>> = memories
+        .iter()
+        .map(|me| {
+            list_schedulers
+                .iter()
+                .flat_map(|s| {
+                    m.partitioned_mem_mappable_multicore_and_pl
+                        .runtimes
+                        .runtime_host
+                        .get(s)
+                })
+                .chain(logic_areas.iter())
+                .map(|pe| {
+                    m.partitioned_mem_mappable_multicore_and_pl
+                        .hardware
+                        .pre_computed_paths
+                        .get(pe)
+                        .and_then(|xs| xs.get(me))
+                        .map(|xs| {
+                            xs.iter()
+                                .flat_map(|x| communications.iter().position(|ce| ce == x))
+                                .collect()
+                        })
+                        .unwrap_or(HashSet::new())
+                })
+                .collect()
+        })
+        .collect();
+    let processes_mem_size: Vec<Vec<u64>> = all_processes
+        .iter()
+        .map(|p| {
+            list_schedulers
+                .iter()
+                .flat_map(|s| {
+                    m.partitioned_mem_mappable_multicore_and_pl
+                        .runtimes
+                        .runtime_host
+                        .get(s)
+                })
+                .chain(logic_areas.iter())
+                .map(|pe| {
+                    m.instrumented_memory_requirements
+                        .memory_requirements
+                        .get(p)
+                        .and_then(|inner| inner.get(pe))
+                        .map(|x| *x)
+                        .unwrap_or(0)
+                })
+                .collect()
+        })
+        .collect();
+    let processes_area_size: Vec<Vec<u64>> = all_processes
+        .iter()
+        .map(|p| {
+            logic_areas
+                .iter()
+                .map(|pla| {
+                    m.hardware_implementation_area
+                        .required_areas
+                        .get(p)
+                        .and_then(|inner| inner.get(pla))
+                        .map(|x| *x)
+                        .unwrap_or(0)
+                })
                 .collect()
         })
         .collect();
@@ -461,7 +549,139 @@ fn solve_aad2pmmmap(
                 .collect::<Vec<u64>>(),
         ),
     ));
+    input_data.push((
+        "memorySize",
+        MiniZincData::from(
+            memories
+                .iter()
+                .map(|me| {
+                    m.partitioned_mem_mappable_multicore_and_pl
+                        .hardware
+                        .storage_sizes
+                        .get(me)
+                        .map(|x| *x as i32)
+                        .unwrap_or(0)
+                })
+                .collect::<Vec<i32>>(),
+        ),
+    ));
+    input_data.push((
+        "logicAreaSize",
+        MiniZincData::from(
+            logic_areas
+                .iter()
+                .map(|pla| {
+                    m.partitioned_mem_mappable_multicore_and_pl
+                        .hardware
+                        .pl_module_available_areas
+                        .get(pla)
+                        .map(|x| *x)
+                        .unwrap_or(0)
+                })
+                .collect::<Vec<u32>>(),
+        ),
+    ));
+    input_data.push(("bufferSize", MiniZincData::from(all_buffer_max_sizes)));
+    input_data.push(("processesMemSize", MiniZincData::from(processes_mem_size)));
+    input_data.push(("processesAreaSize", MiniZincData::from(processes_area_size)));
+    input_data.push((
+        "processesReadBuffer",
+        MiniZincData::from(
+            all_processes
+                .iter()
+                .map(|p| {
+                    all_buffers
+                        .iter()
+                        .map(|b| {
+                            m.aperiodic_asynchronous_dataflows
+                                .iter()
+                                .flat_map(|app| {
+                                    app.process_get_from_buffer_in_bits
+                                        .get(p)
+                                        .and_then(|x| x.get(b).map(|y| *y))
+                                })
+                                .sum::<u64>()
+                        })
+                        .collect::<Vec<u64>>()
+                })
+                .collect::<Vec<Vec<u64>>>(),
+        ),
+    ));
+    input_data.push((
+        "processesWriteBuffer",
+        MiniZincData::from(
+            all_processes
+                .iter()
+                .map(|p| {
+                    all_buffers
+                        .iter()
+                        .map(|b| {
+                            m.aperiodic_asynchronous_dataflows
+                                .iter()
+                                .flat_map(|app| {
+                                    app.process_put_in_buffer_in_bits
+                                        .get(p)
+                                        .and_then(|x| x.get(b).map(|y| *y))
+                                })
+                                .sum::<u64>()
+                        })
+                        .collect::<Vec<u64>>()
+                })
+                .collect::<Vec<Vec<u64>>>(),
+        ),
+    ));
+
+    input_data.push((
+        "interconnectToMemories",
+        MiniZincData::from(mappable_to_comm),
+    ));
+    input_data.push((
+        "interconnectFromMemories",
+        MiniZincData::from(comm_to_mappable),
+    ));
     input_data.push(("executionTime", MiniZincData::from(execution_times)));
+    input_data.push((
+        "bandwidthPerChannel",
+        MiniZincData::from(
+            communications
+                .iter()
+                .map(|ce| {
+                    m.partitioned_mem_mappable_multicore_and_pl
+                        .hardware
+                        .communication_elements_bit_per_sec_per_channel
+                        .get(ce)
+                        .map(|x| x.ceil() as i32) // TODO: this must be fixed with noramlization later
+                        .map(|x| x - 10)
+                        .unwrap_or(0)
+                })
+                .collect::<Vec<i32>>(),
+        ),
+    ));
+    input_data.push((
+        "nPareto",
+        MiniZincData::from(current_solutions.len() as u64),
+    ));
+    input_data.push((
+        "previousSolutions",
+        MiniZincData::from(
+            current_solutions
+                .iter()
+                .map(|s| {
+                    let mut objs = vec![];
+                    objs.push((*s.objectives.get("nUsedPEs").unwrap_or(&0.0)) as u64);
+                    for p in &all_processes {
+                        objs.push(
+                            *s.objectives
+                                .get(&format!("invThroughput({})", p))
+                                .unwrap_or(&0.0) as u64,
+                        );
+                    }
+                    objs
+                })
+                .collect::<Vec<Vec<u64>>>(),
+        ),
+    ));
+    input_data.push(("connected", MiniZincData::from(connected)));
 
     let temp_dir = std::env::temp_dir().join("idesyde").join("minizinc");
     let model_file = temp_dir.join("AADPMMMPL.mzn");
@@ -470,6 +690,10 @@ fn solve_aad2pmmmap(
     std::fs::write(&model_file, AADPMMMPL_MZN).expect("Could not write the model file");
     std::fs::write(&data_file, to_mzn_input(input_data)).expect("Could not write the data file");
     if let Ok(proc) = std::process::Command::new("minizinc")
+        .arg("-a")
+        // .arg("1")
+        .arg("--solver")
+        .arg(explorer_name)
         .arg("--json-stream")
         .arg("--output-mode")
         .arg("json")
@@ -481,71 +705,88 @@ fn solve_aad2pmmmap(
         if let Some(stdout) = proc.stdout {
             let bufreader = BufReader::new(stdout);
             let input = m.clone();
-            return Arc::new(Mutex::new(bufreader.lines().flat_map(move |line_r| {
-                if let Ok(line) = line_r {
-                    println!("{}", line.as_str());
-                    let out: MiniZincSolutionOutput<AADPMMMPLMznOutput> =
-                        serde_json::from_str(line.as_str())
-                            .expect("Should not fail to parse the output of minizinc");
-                    let mut explored = input.clone();
-                    explored.processes_to_runtime_scheduling = out
-                        .output
-                        .get("json")
-                        .expect("Could not find processMapping")
-                        .process_execution
-                        .iter()
-                        .enumerate()
-                        .map(|(p, r)| {
-                            (
-                                all_processes[p].clone(),
-                                list_schedulers[*r as usize].clone(),
-                            )
-                        })
-                        .collect();
-                    explored.processes_to_memory_mapping = out
-                        .output
-                        .get("json")
-                        .expect("Could not find processMapping")
-                        .process_mapping
-                        .iter()
-                        .enumerate()
-                        .map(|(p, r)| (all_processes[p].clone(), memories[*r as usize].clone()))
-                        .collect();
-                    explored.buffer_to_memory_mappings = out
-                        .output
-                        .get("json")
-                        .expect("Could not find processMapping")
-                        .buffers_mapping
-                        .iter()
-                        .enumerate()
-                        .map(|(b, m)| (all_buffers[b].clone(), memories[*m as usize].clone()))
-                        .collect();
-                    let mut objs = HashMap::new();
-                    objs.insert(
-                        "nUsedPEs".to_string(),
-                        out.output
-                            .get("json")
-                            .expect("Could not find processMapping")
-                            .n_used_pes as f64,
-                    );
-                    for (p, inv) in out
-                        .output
-                        .get("json")
-                        .expect("Could not find processMapping")
-                        .inv_throughput
-                        .iter()
-                        .enumerate()
-                    {
-                        objs.insert(format!("invThroughput({})", all_processes[p]), *inv as f64);
-                    }
-                    println!("{:?}", out);
-                    return Some(ExplorationSolution {
-                        solved: Arc::new(explored),
-                        objectives: objs,
-                    });
-                }
-                None
-            })));
+            return Arc::new(Mutex::new(
+                bufreader
+                    .lines()
+                    // .inspect(|l| if let Ok(line) = l {
+                    //     println!("{}", line);
+                    //     })
+                    .flat_map(move |line_r| {
+                        if let Ok(line) = line_r {
+                            if line.contains("UNSATISFIABLE") {
+                                return None;
+                            }
+                            let mzn_out: MiniZincSolutionOutput<AADPMMMPLMznOutput> =
+                                serde_json::from_str(line.as_str())
+                                    .expect("Should not fail to parse the output of minizinc");
+                            let mut explored = input.clone();
+                            explored.processes_to_runtime_scheduling = mzn_out
+                                .output
+                                .get("json")
+                                .expect("Could not find processMapping")
+                                .process_execution
+                                .iter()
+                                .filter(|r| **r < list_schedulers.len() as u64)
+                                .enumerate()
+                                .map(|(p, r)| {
+                                    (
+                                        all_processes[p].clone(),
+                                        list_schedulers[*r as usize].clone(),
+                                    )
+                                })
+                                .collect();
+                            explored.processes_to_memory_mapping = mzn_out
+                                .output
+                                .get("json")
+                                .expect("Could not find processMapping")
+                                .process_mapping
+                                .iter()
+                                .enumerate()
+                                .map(|(p, r)| {
+                                    (all_processes[p].clone(), memories[*r as usize].clone())
+                                })
+                                .collect();
+                            explored.buffer_to_memory_mappings = mzn_out
+                                .output
+                                .get("json")
+                                .expect("Could not find processMapping")
+                                .buffers_mapping
+                                .iter()
+                                .enumerate()
+                                .map(|(b, m)| {
+                                    (all_buffers[b].clone(), memories[*m as usize].clone())
+                                })
+                                .collect();
+                            let mut objs = HashMap::new();
+                            objs.insert(
+                                "nUsedPEs".to_string(),
+                                mzn_out
+                                    .output
+                                    .get("json")
+                                    .expect("Could not find processMapping")
+                                    .n_used_pes as f64,
+                            );
+                            for (p, inv) in mzn_out
+                                .output
+                                .get("json")
+                                .expect("Could not find processMapping")
+                                .inv_throughput
+                                .iter()
+                                .enumerate()
+                            {
+                                objs.insert(
+                                    format!("invThroughput({})", all_processes[p]),
+                                    *inv as f64,
+                                );
+                            }
+                            return Some(ExplorationSolution {
+                                solved: Arc::new(explored),
+                                objectives: objs,
+                            });
+                        }
+                        None
+                    }),
+            ));
         }
     };
     Arc::new(Mutex::new(std::iter::empty::<ExplorationSolution>()))
@@ -555,7 +796,7 @@ pub fn make_module() -> RustEmbeddedModule {
     RustEmbeddedModule::builder()
         .unique_identifier("MiniZincModule".to_string())
         .identification_rules(vec![])
-        .explorers(vec![Arc::new(MiniZincExplorer)])
+        .explorers(vec![Arc::new(MiniZincGecodeExplorer)])
         .build()
         .expect("Failed to build MiniZincModule. Should never happen.")
 }

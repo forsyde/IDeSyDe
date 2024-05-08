@@ -690,8 +690,8 @@ fn solve_aad2pmmmap(
     std::fs::write(&model_file, AADPMMMPL_MZN).expect("Could not write the model file");
     std::fs::write(&data_file, to_mzn_input(input_data)).expect("Could not write the data file");
     if let Ok(proc) = std::process::Command::new("minizinc")
-        .arg("-a")
-        // .arg("1")
+        .arg("-n")
+        .arg("10")
         .arg("--solver")
         .arg(explorer_name)
         .arg("--json-stream")
@@ -708,9 +708,12 @@ fn solve_aad2pmmmap(
             return Arc::new(Mutex::new(
                 bufreader
                     .lines()
-                    // .inspect(|l| if let Ok(line) = l {
-                    //     println!("{}", line);
-                    //     })
+                    .take_while(|l| l.is_ok())
+                    // .inspect(|l| {
+                    //     if let Ok(line) = l {
+                    //         println!("{}", line);
+                    //     }
+                    // })
                     .flat_map(move |line_r| {
                         if let Ok(line) = line_r {
                             if line.contains("UNSATISFIABLE") {

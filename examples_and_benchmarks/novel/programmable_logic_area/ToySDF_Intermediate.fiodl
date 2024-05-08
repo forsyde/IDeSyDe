@@ -24,7 +24,8 @@ systemgraph {
       }
     },
     "maxSizeInBits": {
-      "codeSize": 40000_l
+      "SW_Instructions": 40000_l,
+      "FPGA_HW_Instructions_Actor_A": 0_l
     },
     "production": {
       "to_Actor_B": 1_i
@@ -50,7 +51,7 @@ systemgraph {
       }
     },
     "maxSizeInBits": {
-      "codeSize": 32000_l
+      "SW_Instructions": 32000_l
     },
     "production": {
       "to_Actor_C": 1_i
@@ -69,7 +70,7 @@ systemgraph {
       }
     },
     "maxSizeInBits": {
-      "codeSize": 13400_l
+      "SW_Instructions": 13400_l
     },
     "production": {
       "to_Actor_D": 1_i,
@@ -89,7 +90,7 @@ systemgraph {
       }
     },
     "maxSizeInBits": {
-      "codeSize": 13400_l
+      "SW_Instructions": 13400_l
     },
     "production": {},
     "consumption": {

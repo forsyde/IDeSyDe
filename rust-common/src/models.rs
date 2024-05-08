@@ -771,6 +771,7 @@ pub struct AperiodicAsynchronousDataflowToPartitionedMemoryMappableMulticoreAndP
     pub instrumented_memory_requirements: InstrumentedMemoryRequirements,
     pub hardware_implementation_area: HardwareImplementationArea,
     pub processes_to_runtime_scheduling: HashMap<String, String>,
+    pub processes_to_logic_programmable_areas: HashMap<String, String>,
     pub processes_to_memory_mapping: HashMap<String, String>,
     pub buffer_to_memory_mappings: HashMap<String, String>,
     pub super_loop_schedules: HashMap<String, Vec<String>>,

@@ -732,6 +732,7 @@ pub fn identify_aperiodic_asynchronous_dataflow_to_partitioned_mem_mappable_mult
                             instrumented_memory_requirements: mem_req.to_owned(),
                             hardware_implementation_area: hw_area.to_owned(),
                             processes_to_runtime_scheduling: HashMap::new(),
+                            processes_to_logic_programmable_areas: HashMap::new(),
                             processes_to_memory_mapping: HashMap::new(),
                             buffer_to_memory_mappings: HashMap::new(),
                             super_loop_schedules: HashMap::new(),

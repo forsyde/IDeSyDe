@@ -700,6 +700,7 @@ fn solve_aad2pmmmap(
         .arg(data_file.as_path())
         .arg(model_file.as_path())
         .stdout(std::process::Stdio::piped())
+        .stderr(std::process::Stdio::null())
         .spawn()
     {
         if let Some(stdout) = proc.stdout {

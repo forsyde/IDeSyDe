@@ -768,13 +768,7 @@ fn solve_aad2pmmmap(
                                 let mut objs = HashMap::new();
                                 objs.insert(
                                     "nUsedPEs".to_string(),
-                                    mzn_out
-                                        .output
-                                        .get("json")
-                                        .expect(
-                                            "Could not get the JSON solutio out of minizinc output",
-                                        )
-                                        .n_used_pes as f64,
+                                    mzn_vars.n_used_pes as f64,
                                 );
                                 for (p, inv) in mzn_vars
                                     .inv_throughput

@@ -711,6 +711,8 @@ pub fn identify_aperiodic_asynchronous_dataflow_to_partitioned_mem_mappable_mult
                                         .get(*p)
                                         .map(|m| m.contains_key(pe))
                                         .unwrap_or(false)
+                                }) || !plat.hardware.programmable_logic_elems.iter().any(|pla| {
+                                    hw_area.latencies_numerators.get(*p).map(|m| m.contains_key(pla)).unwrap_or(false)
                                 })
                             })
                         })

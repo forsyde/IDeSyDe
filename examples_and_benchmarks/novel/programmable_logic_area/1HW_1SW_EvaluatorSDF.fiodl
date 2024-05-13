@@ -1,0 +1,62 @@
+systemgraph {
+  vertex "EvaluatorSDF"
+  [forsyde::io::lib::hierarchy::visualization::GreyBox, forsyde::io::lib::hierarchy::visualization::Visualizable]
+  (contained)
+  {}
+  vertex "Actor_A"
+  [forsyde::io::lib::hierarchy::behavior::BehaviourEntity, forsyde::io::lib::hierarchy::behavior::moc::MoCEntity, forsyde::io::lib::hierarchy::behavior::moc::sdf::SDFActor, forsyde::io::lib::hierarchy::implementation::functional::InstrumentedHardwareBehaviour, forsyde::io::lib::hierarchy::visualization::Visualizable]
+  (combFunctions, in_Actor_A, to_Actor_B)
+  {
+    "resourceRequirements": {
+      "FPGA": {
+        "Area": 2000_l,
+        "Bram": 40000_l
+      }
+    },
+    "production": {
+      "to_Actor_B": 1_i
+    },
+    "latencyInSecsDenominators": {
+      "FPGA": 300000000_l
+    },
+    "latencyInSecsNumerators": {
+      "FPGA": 100_l
+    },
+    "consumption": {
+      "in_Actor_A": 1_i
+    },
+    "energyPerExecutionInJoules": {}
+  }
+  vertex "Actor_B"
+  [forsyde::io::lib::hierarchy::behavior::BehaviourEntity, forsyde::io::lib::hierarchy::behavior::moc::MoCEntity, forsyde::io::lib::hierarchy::behavior::moc::sdf::SDFActor, forsyde::io::lib::hierarchy::implementation::functional::InstrumentedSoftwareBehaviour, forsyde::io::lib::hierarchy::visualization::Visualizable]
+  (combFunctions, from_Actor_A, out_Actor_B)
+  {
+    "computationalRequirements": {
+      "SW_Instructions": {
+        "Flop": 1000_l
+      }
+    },
+    "maxSizeInBits": {
+      "SW_Instructions": 32000_l
+    },
+    "production": {
+      "out_Actor_B": 1_i
+    },
+    "consumption": {
+      "from_Actor_A": 1_i
+    }
+  }
+  vertex "CH_Actor_A_Actor_B"
+  [forsyde::io::lib::hierarchy::behavior::moc::MoCEntity, forsyde::io::lib::hierarchy::behavior::moc::sdf::SDFChannel, forsyde::io::lib::hierarchy::visualization::Visualizable]
+  (consumer, from_Actor_A, producer, to_Actor_B, tokenDataType)
+  {
+    "numInitialTokens": 0_i
+  }
+  edge [forsyde::io::lib::hierarchy::visualization::VisualContainment] from "EvaluatorSDF" port "contained" to "Actor_A" 
+  edge [forsyde::io::lib::hierarchy::visualization::VisualContainment] from "EvaluatorSDF" port "contained" to "Actor_B" 
+  edge [forsyde::io::lib::hierarchy::visualization::VisualContainment] from "EvaluatorSDF" port "contained" to "CH_Actor_A_Actor_B" 
+  edge [forsyde::io::lib::hierarchy::behavior::moc::sdf::SDFNetworkEdge] from "Actor_A" to "CH_Actor_A_Actor_B" port "producer"
+  edge [forsyde::io::lib::hierarchy::behavior::moc::sdf::SDFNetworkEdge] from "CH_Actor_A_Actor_B" port "consumer" to "Actor_B" 
+  edge [forsyde::io::lib::hierarchy::behavior::moc::sdf::SDFNetworkEdge,forsyde::io::lib::hierarchy::visualization::VisualConnection] from "Actor_A" port "to_Actor_B" to "CH_Actor_A_Actor_B" 
+  edge [forsyde::io::lib::hierarchy::behavior::moc::sdf::SDFNetworkEdge,forsyde::io::lib::hierarchy::visualization::VisualConnection] from "CH_Actor_A_Actor_B" port "to_Actor_B" to "Actor_B" port "from_Actor_A"
+}

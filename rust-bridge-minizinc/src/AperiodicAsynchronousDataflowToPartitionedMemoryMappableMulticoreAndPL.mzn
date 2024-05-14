@@ -7,6 +7,7 @@ set of int: Memories;
 set of int: Communications;
 set of int: ListSchedulers;
 set of int: LogicAreas;
+set of int: LogicAreaRequirements;
 
 array[Firings] of int: firingsActor;
 array[Firings] of int: firingsNumber;
@@ -14,17 +15,17 @@ array[Firings] of set of Firings: follows; % equivalent to f_i < f_j is precedes
 
 array[Communications] of int: slots;
 array[Memories] of int: memorySize;
-array[LogicAreas] of int: logicAreaSize;
+array[LogicAreas, LogicAreaRequirements] of int: logicAreaCapacity;
 array[Buffers] of int: bufferSize;
 array[Processes, Mappable] of int: processesMemSize;
-array[Processes, LogicAreas] of int: processesAreaSize;
+array[Processes, LogicAreas, LogicAreaRequirements] of int: processesAreaRequirements;
 array[Processes, Buffers] of int: processesReadBuffer;
 array[Processes, Buffers] of int: processesWriteBuffer;
 
 set of int: Mappable = ListSchedulers union LogicAreas;
 
-array[Mappable, Memories] of set of Communications: interconnectToMemories;
-array[Memories, Mappable] of set of Communications: interconnectFromMemories;
+array[Mappable, Memories] of opt set of Communications: interconnectToMemories;
+array[Memories, Mappable] of opt set of Communications: interconnectFromMemories;
 array[Processes, Mappable] of int: executionTime;
 array[Communications] of int: invBandwidthPerChannel;
 
@@ -51,7 +52,20 @@ array[Processes] of var int: invThroughput;
 var 0..card(Mappable): nUsedPEs;
 
 constraint forall(p in Processes) (durationFetch[p] >= 0);
-constraint forall(p in Processes) (duration[p] >= min([e | e in executionTime[p, ..] where e > 0]));
+constraint forall(p in Processes) (durationRead[p] >= 0);
+constraint forall(p in Processes) (durationWrite[p] >= 0);
+constraint forall(p in Processes) (duration[p] >= min([e | e in executionTime[p, ..] where e >= 0]));
+
+constraint forall(p in Processes, pe in ListSchedulers, me in Memories) (
+  absent(interconnectFromMemories[me, pe]) -> processesExecution[p] != pe \/ processesMapping[p] != me
+);
+
+constraint forall(b in Buffers, p in Processes, pe in Mappable, me in Memories where processesReadBuffer[p, b] > 0) (
+  absent(interconnectFromMemories[me, pe]) -> processesExecution[p] != pe \/ buffersMapping[p] != me
+);
+constraint forall(b in Buffers, p in Processes, pe in Mappable, me in Memories where processesWriteBuffer[p, b] > 0) (
+  absent(interconnectToMemories[pe, me]) -> processesExecution[p] != pe \/ buffersMapping[p] != me
+);
 
 constraint forall(m in Memories) (
   sum(p in Processes where processesMapping[p] = m) (processesMemSize[p, processesExecution[p]]) +
@@ -60,50 +74,54 @@ constraint forall(m in Memories) (
   memorySize[m]
 );
 
-constraint forall(pla in LogicAreas) (
-  sum(p in Processes where processesExecution[p] = pla) (processesAreaSize[p, pla])
+constraint forall(pla in LogicAreas, req in LogicAreaRequirements where occurs(logicAreaCapacity[pla, req])) (
+  sum(p in Processes where processesExecution[p] = pla) (processesAreaRequirements[p, pla, req])
   <= 
-  logicAreaSize[pla]
+  logicAreaCapacity[pla, req]
 );
 
-constraint forall(pe in Mappable, me in Memories) (
+constraint forall(pe in Mappable, me in Memories where occurs(interconnectFromMemories[me, pe])) (
   exists(p in Processes) (processesExecution[p] = pe /\ processesMapping[p] = me) -> 
-  forall(ce in interconnectFromMemories[me, pe]) (communicationReservation[pe, ce] > 0)
+  forall(ce in deopt(interconnectFromMemories[me, pe])) (communicationReservation[pe, ce] > 0)
 );
-constraint forall(pe in Mappable, me in Memories) (
+constraint forall(pe in Mappable, me in Memories where occurs(interconnectFromMemories[me, pe])) (
   exists(p in Processes, b in Buffers where processesReadBuffer[p, b] > 0) (processesExecution[p] = pe /\ buffersMapping[b] = me) -> 
-  forall(ce in interconnectFromMemories[me, pe]) (communicationReservation[pe, ce] > 0)
+  forall(ce in deopt(interconnectFromMemories[me, pe])) (communicationReservation[pe, ce] > 0)
 );
-constraint forall(pe in Mappable, me in Memories) (
+constraint forall(pe in Mappable, me in Memories where occurs(interconnectToMemories[pe, me])) (
   exists(p in Processes, b in Buffers where processesWriteBuffer[p, b] > 0) (processesExecution[p] = pe /\ buffersMapping[b] = me) -> 
-  forall(ce in interconnectToMemories[pe, me]) (communicationReservation[pe, ce] > 0)
+  forall(ce in deopt(interconnectToMemories[pe, me])) (communicationReservation[pe, ce] > 0)
+);
+
+constraint forall(ce in Communications) (
+  sum(pe in Mappable) (communicationReservation[pe, ce]) <= slots[ce]
 );
 
 constraint forall(p in Processes, pe in Mappable) (executionTime[p, pe] < 0 -> processesExecution[p] != pe);
 
-constraint forall(p in Processes) (
-    let { var int: pe = processesExecution[p]; var int: me = processesMapping[p] } in
+constraint forall(p in Processes, pe in ListSchedulers, me in Memories where processesExecution[p] = pe /\ processesMapping[p] = me) (
     durationFetch[p] = 
-      processesMemSize[p, pe] * sum(ce in interconnectFromMemories[pe, me]) (1) * min(ce in interconnectFromMemories[pe, me]) (invBandwidthPerChannel[ce] / communicationReservation[pe, ce])
+        processesMemSize[p, pe] * sum(ce in deopt(interconnectFromMemories[pe, me])) (1) * min(ce in deopt(interconnectFromMemories[pe, me])) (invBandwidthPerChannel[ce] div max(communicationReservation[pe, ce], 1))
+);
+constraint forall(p in Processes, pe in LogicAreas where processesExecution[p] = pe) (
+    durationFetch[p] = 0
 );
 
-constraint forall(p in Processes) (
-    let { var int: pe = processesExecution[p] } in
-    durationRead[p] = sum(b in Buffers where processesReadBuffer[p, b] > 0) (
-        let { var int: me = buffersMapping[b] } in
-        processesReadBuffer[p, b] * sum(ce in interconnectFromMemories[pe, me]) (1) / min(ce in interconnectFromMemories[pe, me]) (communicationReservation[pe, ce] *bandwidthPerChannel[ce])
+constraint forall(p in Processes, pe in ListSchedulers where processesExecution[p] = pe) (
+    durationRead[p] = sum(b in Buffers, me in Memories where processesReadBuffer[p, b] > 0 /\ me = buffersMapping[b]) (
+        let { set of int: path = deopt(interconnectFromMemories[pe, me]); } in
+        processesReadBuffer[p, b] * sum(ce in path) (1) * min(ce in path) (invBandwidthPerChannel[ce] div communicationReservation[pe, ce])
     )
 );
 
-constraint forall(p in Processes) (
-    let { var int: pe = processesExecution[p] } in
-    durationWrite[p] = sum(b in Buffers where processesWriteBuffer[p, b] > 0) (
-        let { var int: me = buffersMapping[b] } in
-        processesWriteBuffer[p, b] * sum(ce in interconnectToMemories[pe, me]) (1) / min(ce in interconnectToMemories[pe, me]) (communicationReservation[pe, ce] *bandwidthPerChannel[ce])
+constraint forall(p in Processes, pe in ListSchedulers where processesExecution[p] = pe) (
+    durationWrite[p] = sum(b in Buffers, me in Memories where processesWriteBuffer[p, b] > 0 /\ me = buffersMapping[b]) (
+        let { set of int: path = deopt(interconnectToMemories[pe, me]); } in
+        processesWriteBuffer[p, b] * sum(ce in path) (1) * min(ce in path) (invBandwidthPerChannel[ce] div communicationReservation[pe, ce])
     )
 );
 
-constraint forall(p in Processes)(duration[p] = durationFetch[p] + executionTime[p, processesExecution[p]]); % this must be improved later with communication
+constraint forall(p in Processes)(duration[p] = durationFetch[p] + executionTime[p, processesExecution[p]] + durationRead[p] + durationWrite[p]); % this must be improved later with communication
 
 constraint forall(f, ff in Firings where f != ff /\ ff in follows[f]) (processesExecution[firingsActor[f]] = processesExecution[firingsActor[ff]] -> firingsOrdering[f] < firingsOrdering[ff]);
 
@@ -134,7 +152,7 @@ constraint forall(p, pp in Processes where p != pp) (processesExecution[p] = pro
 constraint forall(p, pp in Processes where p != pp) (connected[p, pp] -> invThroughput[p] = invThroughput[pp]);
 
 constraint forall(a in Processes) (
-    invThroughput[a] >= min([executionTime[a, p] | p in Mappable where executionTime[a, p] >= 0])
+    invThroughput[a] >= duration[a]
 );
 
 constraint forall(f, ff in Firings where f != ff /\ processesExecution[firingsActor[f]] = processesExecution[firingsActor[ff]] /\ firingsOrdering[f] < firingsOrdering[ff]) (

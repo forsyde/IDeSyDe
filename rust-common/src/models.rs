@@ -632,6 +632,8 @@ pub struct HardwareImplementationArea {
     pub processes: HashSet<String>,
     pub programmable_areas: HashSet<String>,
     pub required_areas: HashMap<String, HashMap<String, u64>>,
+    pub required_resources: HashMap<String, HashMap<String, HashMap<String, u64>>>,
+    pub provided_resources: HashMap<String, HashMap<String, u64>>,
     pub latencies_numerators: HashMap<String, HashMap<String, u64>>,
     pub latencies_denominators: HashMap<String, HashMap<String, u64>>,
 }
@@ -916,8 +918,7 @@ impl AperiodicAsynchronousDataflowToPartitionedMemoryMappableMulticoreAndPL {
                     .map(|x| *x as f32 / self.instrumented_computation_times.scale_factor as f32)
             })
             .reduce(f32::max)
-            .unwrap_or(0.0)
-            / self.instrumented_computation_times.scale_factor as f32;
+            .unwrap_or(0.0);
         original_max_pes.max(original_max_plas)
     }
 
@@ -953,6 +954,36 @@ impl AperiodicAsynchronousDataflowToPartitionedMemoryMappableMulticoreAndPL {
             .filter(|x| x > &&0)
             .min()
             .unwrap_or(&1)
+    }
+
+    pub fn get_requirements_scale_factors(&self) -> HashMap<String, u64> {
+        let programmable_resources_set: Vec<String> = self
+            .hardware_implementation_area
+            .provided_resources
+            .values()
+            .flat_map(|x| x.keys())
+            .map(|x| x.to_string())
+            .collect();
+        let mut scale_factors = HashMap::new();
+        for req in programmable_resources_set {
+            let factor = *self
+                .hardware_implementation_area
+                .provided_resources
+                .values()
+                .flat_map(|x| x.values())
+                .chain(
+                    self.hardware_implementation_area
+                        .required_resources
+                        .values()
+                        .flat_map(|x| x.values())
+                        .flat_map(|x| x.values()),
+                )
+                .filter(|x| x > &&0)
+                .min()
+                .unwrap_or(&1);
+            scale_factors.insert(req, factor);
+        }
+        scale_factors
     }
 }
 

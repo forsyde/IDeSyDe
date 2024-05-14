@@ -23,6 +23,7 @@ enum MiniZincData {
     MznLitLong(i64),
     MznLitString(String),
     MznLitBool(bool),
+    MznOpt(Box<Option<MiniZincData>>),
     MznArray(Vec<MiniZincData>),
     MznSet(Vec<MiniZincData>),
     MznEnum(Vec<String>),
@@ -88,6 +89,12 @@ impl<T: Into<MiniZincData>> From<HashSet<T>> for MiniZincData {
     }
 }
 
+impl<T: Into<MiniZincData>> From<Option<T>> for MiniZincData {
+    fn from(value: Option<T>) -> Self {
+        MiniZincData::MznOpt(Box::new(value.map(|x| x.into())))
+    }
+}
+
 fn to_string(d: &MiniZincData) -> String {
     match d {
         MiniZincData::MznLitDouble(f) => f.to_string(),
@@ -122,6 +129,10 @@ fn to_string(d: &MiniZincData) -> String {
                     .join(",")
             )
         }
+        MiniZincData::MznOpt(o) => match o.as_ref() {
+            Some(v) => to_string(v),
+            None => "null".to_string(),
+        },
     }
 }
 
@@ -350,9 +361,9 @@ fn solve_aad2pmmmap(
                         .get(f)
                         .and_then(|inner| inner.get(pe))
                         .map(|x| {
-                            (((*x / m.instrumented_computation_times.scale_factor) as f32)
-                                / average_max
-                                * discrete_max)
+                            ((*x as f32) / (m.instrumented_computation_times.scale_factor as f32)
+                                * discrete_max
+                                / average_max)
                                 .ceil() as i32
                         })
                         .unwrap_or(-1)
@@ -363,29 +374,38 @@ fn solve_aad2pmmmap(
                         .programmable_logic_elems
                         .iter()
                         .map(|pla| {
-                            m.hardware_implementation_area
-                                .latencies_numerators
+                            if m.hardware_implementation_area
+                                .required_resources
                                 .get(f)
-                                .and_then(|inner| inner.get(pla))
-                                .map(|x| {
-                                    ((*x as f32)
-                                        / *m.hardware_implementation_area
-                                            .latencies_denominators
-                                            .get(f)
-                                            .and_then(|x| x.get(pla))
-                                            .unwrap_or(&1)
-                                            as f32
-                                        * discrete_max
-                                        / average_max)
-                                        .ceil() as i32
-                                })
-                                .unwrap_or(-1)
+                                .and_then(|x| x.get(pla))
+                                .is_some()
+                            {
+                                m.hardware_implementation_area
+                                    .latencies_numerators
+                                    .get(f)
+                                    .and_then(|inner| inner.get(pla))
+                                    .map(|x| {
+                                        ((*x as f32)
+                                            / *m.hardware_implementation_area
+                                                .latencies_denominators
+                                                .get(f)
+                                                .and_then(|x| x.get(pla))
+                                                .unwrap_or(&1)
+                                                as f32
+                                            * discrete_max
+                                            / average_max)
+                                            .ceil() as i32
+                                    })
+                                    .unwrap_or(-1)
+                            } else {
+                                -1
+                            }
                         }),
                 )
                 .collect()
         })
         .collect();
-    let mappable_to_comm: Vec<Vec<HashSet<usize>>> = list_schedulers
+    let mappable_to_comm: Vec<Vec<Option<HashSet<usize>>>> = list_schedulers
         .iter()
         .flat_map(|s| {
             m.partitioned_mem_mappable_multicore_and_pl
@@ -408,12 +428,11 @@ fn solve_aad2pmmmap(
                                 .flat_map(|x| communications.iter().position(|ce| ce == x))
                                 .collect()
                         })
-                        .unwrap_or(HashSet::new())
                 })
                 .collect()
         })
         .collect();
-    let comm_to_mappable: Vec<Vec<HashSet<usize>>> = memories
+    let comm_to_mappable: Vec<Vec<Option<HashSet<usize>>>> = memories
         .iter()
         .map(|me| {
             list_schedulers
@@ -436,7 +455,6 @@ fn solve_aad2pmmmap(
                                 .flat_map(|x| communications.iter().position(|ce| ce == x))
                                 .collect()
                         })
-                        .unwrap_or(HashSet::new())
                 })
                 .collect()
         })
@@ -465,18 +483,29 @@ fn solve_aad2pmmmap(
                 .collect()
         })
         .collect();
-    let processes_area_size: Vec<Vec<u64>> = all_processes
+    let programmable_scale_factors = m.get_requirements_scale_factors();
+    let programmable_resources_set: Vec<String> = programmable_scale_factors
+        .keys()
+        .map(String::to_string)
+        .collect();
+    let processes_area_requirements: Vec<Vec<Vec<u64>>> = all_processes
         .iter()
         .map(|p| {
             logic_areas
                 .iter()
                 .map(|pla| {
-                    m.hardware_implementation_area
-                        .required_areas
-                        .get(p)
-                        .and_then(|inner| inner.get(pla))
-                        .map(|x| *x / memory_scale)
-                        .unwrap_or(0)
+                    programmable_resources_set
+                        .iter()
+                        .map(|req| {
+                            m.hardware_implementation_area
+                                .required_resources
+                                .get(p)
+                                .and_then(|inner| inner.get(pla))
+                                .and_then(|x| x.get(req))
+                                .map(|x| *x / programmable_scale_factors.get(req).unwrap_or(&1))
+                                .unwrap_or(0)
+                        })
+                        .collect()
                 })
                 .collect()
         })
@@ -534,6 +563,14 @@ fn solve_aad2pmmmap(
         ),
     ));
     input_data.push((
+        "LogicAreaRequirements",
+        MiniZincData::from(
+            (0..programmable_resources_set.len())
+                .map(|x| x as i32)
+                .collect::<Vec<i32>>(),
+        ),
+    ));
+    input_data.push((
         "firingsActor",
         MiniZincData::from(
             all_firings_actor
@@ -585,24 +622,36 @@ fn solve_aad2pmmmap(
         ),
     ));
     input_data.push((
-        "logicAreaSize",
+        "logicAreaCapacity",
         MiniZincData::from(
             logic_areas
                 .iter()
                 .map(|pla| {
-                    m.partitioned_mem_mappable_multicore_and_pl
-                        .hardware
-                        .pl_module_available_areas
-                        .get(pla)
-                        .map(|x| *x)
-                        .unwrap_or(0)
+                    programmable_resources_set
+                        .iter()
+                        .map(|req| {
+                            m.hardware_implementation_area
+                                .provided_resources
+                                .get(pla)
+                                .and_then(|x| {
+                                    x.get(req).map(|y| {
+                                        (*y as u64)
+                                            / programmable_scale_factors.get(req).unwrap_or(&1)
+                                    })
+                                })
+                                .unwrap_or(0)
+                        })
+                        .collect::<Vec<u64>>()
                 })
-                .collect::<Vec<u32>>(),
+                .collect::<Vec<Vec<u64>>>(),
         ),
     ));
     input_data.push(("bufferSize", MiniZincData::from(all_buffer_max_sizes)));
     input_data.push(("processesMemSize", MiniZincData::from(processes_mem_size)));
-    input_data.push(("processesAreaSize", MiniZincData::from(processes_area_size)));
+    input_data.push((
+        "processesAreaRequirements",
+        MiniZincData::from(processes_area_requirements),
+    ));
     input_data.push((
         "processesReadBuffer",
         MiniZincData::from(
@@ -766,7 +815,8 @@ fn solve_aad2pmmmap(
                                     .map(|(p, r)| {
                                         (
                                             all_processes[p].clone(),
-                                            logic_areas[(*r as usize) - list_schedulers.len()].clone(),
+                                            logic_areas[(*r as usize) - list_schedulers.len()]
+                                                .clone(),
                                         )
                                     })
                                     .collect();
@@ -787,15 +837,8 @@ fn solve_aad2pmmmap(
                                     })
                                     .collect();
                                 let mut objs = HashMap::new();
-                                objs.insert(
-                                    "nUsedPEs".to_string(),
-                                    mzn_vars.n_used_pes as f64,
-                                );
-                                for (p, inv) in mzn_vars
-                                    .inv_throughput
-                                    .iter()
-                                    .enumerate()
-                                {
+                                objs.insert("nUsedPEs".to_string(), mzn_vars.n_used_pes as f64);
+                                for (p, inv) in mzn_vars.inv_throughput.iter().enumerate() {
                                     objs.insert(
                                         format!("invThroughput({})", all_processes[p]),
                                         *inv as f64,

@@ -3,9 +3,14 @@ use std::collections::{HashMap, HashSet};
 use idesyde_core::{
     impl_decision_model_conversion, impl_decision_model_standard_parts, DecisionModel,
 };
-use petgraph::{visit::{IntoNeighbors, NodeIndexable}, Graph};
+use petgraph::{
+    visit::{IntoNeighbors, NodeIndexable},
+    Graph,
+};
 use schemars::JsonSchema;
 use serde::{Deserialize, Serialize};
+
+const numerical_relative_error: f64 = 0.02;
 
 /// A model that abstracts concurrent processes where stimulus and dataflow are separate.
 ///
@@ -307,7 +312,11 @@ impl DecisionModel for MM_MCoreAndPL {
         let mut elems: HashSet<String> = HashSet::new();
         elems.extend(self.processing_elems.iter().map(|x: &String| x.to_owned()));
         elems.extend(self.storage_elems.iter().map(|x: &String| x.to_owned()));
-        elems.extend(self.programmable_logic_elems.iter().map(|x: &String| x.to_owned()));
+        elems.extend(
+            self.programmable_logic_elems
+                .iter()
+                .map(|x: &String| x.to_owned()),
+        );
         elems.extend(
             self.communication_elems
                 .iter()
@@ -503,8 +512,13 @@ impl AperiodicAsynchronousDataflow {
         let mut follows = HashMap::new();
         let mut firings_graph: Graph<(&str, u64), (), petgraph::Directed> = Graph::new();
         let mut firings_graph_idx = HashMap::new();
-        for (a, q) in self.job_graph_name.iter().zip(self.job_graph_instance.iter()) {
-            let _ = firings_graph_idx.insert((a.as_str(), *q), firings_graph.add_node((a.as_str(), *q)));
+        for (a, q) in self
+            .job_graph_name
+            .iter()
+            .zip(self.job_graph_instance.iter())
+        {
+            let _ = firings_graph_idx
+                .insert((a.as_str(), *q), firings_graph.add_node((a.as_str(), *q)));
         }
         for i in 0..self.job_graph_src_name.len() {
             let src_a = self.job_graph_src_name[i].as_str();
@@ -521,18 +535,27 @@ impl AperiodicAsynchronousDataflow {
             &firings_graph,
             &firings_graph_toposort,
         );
-        let (_, firings_graph_closure) =
-            petgraph::algo::tred::dag_transitive_reduction_closure::<(), petgraph::graph::DefaultIx>(&res);
-        for (src_a, src_q) in self.job_graph_name.iter().zip(self.job_graph_instance.iter()) {
+        let (_, firings_graph_closure) = petgraph::algo::tred::dag_transitive_reduction_closure::<
+            (),
+            petgraph::graph::DefaultIx,
+        >(&res);
+        for (src_a, src_q) in self
+            .job_graph_name
+            .iter()
+            .zip(self.job_graph_instance.iter())
+        {
             let src_index = firings_graph_idx.get(&(src_a.as_str(), *src_q)).unwrap();
             let mut follows_vec: Vec<(&str, u64)> = vec![];
             for e in firings_graph_closure.neighbors(revmap[src_index.index()]) {
                 if let Some(og_idx) = revmap.iter().position(|x| *x == e) {
-                    if let Some(f) = firings_graph.node_weight(firings_graph.from_index(og_idx)).map(|x| *x) {
+                    if let Some(f) = firings_graph
+                        .node_weight(firings_graph.from_index(og_idx))
+                        .map(|x| *x)
+                    {
                         follows_vec.push(f);
                     };
                 };
-            };
+            }
             follows.insert((src_a.as_str(), *src_q), follows_vec);
         }
         follows
@@ -609,8 +632,8 @@ pub struct HardwareImplementationArea {
     pub processes: HashSet<String>,
     pub programmable_areas: HashSet<String>,
     pub required_areas: HashMap<String, HashMap<String, u64>>,
-    pub latencies_numerators: HashMap<String, HashMap<String, u64>> ,
-    pub latencies_denominators: HashMap<String, HashMap<String, u64>> 
+    pub latencies_numerators: HashMap<String, HashMap<String, u64>>,
+    pub latencies_denominators: HashMap<String, HashMap<String, u64>>,
 }
 
 impl_decision_model_conversion!(HardwareImplementationArea);
@@ -831,6 +854,104 @@ impl DecisionModel for AperiodicAsynchronousDataflowToPartitionedMemoryMappableM
             }
         }
         elems
+    }
+}
+
+impl AperiodicAsynchronousDataflowToPartitionedMemoryMappableMulticoreAndPL {
+    pub fn get_max_discrete_value(&self) -> u64 {
+        let biggest_path: u64 = self
+            .partitioned_mem_mappable_multicore_and_pl
+            .hardware
+            .pre_computed_paths
+            .values()
+            .flat_map(|dsts| dsts.values().map(|path| path.len() as u64))
+            .max()
+            .unwrap_or(0)
+            + 1;
+        let number_jobs: u64 = self
+            .aperiodic_asynchronous_dataflows
+            .iter()
+            .map(|app| app.processes.len() as u64)
+            .sum();
+        let num_mappables: u64 = self
+            .partitioned_mem_mappable_multicore_and_pl
+            .hardware
+            .processing_elems
+            .len() as u64
+            + (self
+                .partitioned_mem_mappable_multicore_and_pl
+                .hardware
+                .programmable_logic_elems
+                .len() as u64);
+        let relative_constant = (-(numerical_relative_error.log2().ceil())) as u32;
+        let problem_constant = (biggest_path * number_jobs * num_mappables) as f64;
+        let resolution = (problem_constant.log2().ceil() as u32) + relative_constant;
+        2u64.pow(resolution)
+    }
+
+    pub fn get_max_average_execution_time(&self) -> f32 {
+        let original_max_plas = self
+            .hardware_implementation_area
+            .latencies_numerators
+            .iter()
+            .flat_map(|(proc, nums)| {
+                nums.iter().flat_map(|(pla, num)| {
+                    self.hardware_implementation_area
+                        .latencies_denominators
+                        .get(proc)
+                        .and_then(|x| x.get(pla))
+                        .map(|den| *num as f32 / *den as f32)
+                })
+            })
+            .reduce(f32::max)
+            .unwrap_or(0.0);
+        let original_max_pes = self
+            .instrumented_computation_times
+            .average_execution_times
+            .iter()
+            .flat_map(|(_, times)| {
+                times
+                    .values()
+                    .map(|x| *x as f32 / self.instrumented_computation_times.scale_factor as f32)
+            })
+            .reduce(f32::max)
+            .unwrap_or(0.0)
+            / self.instrumented_computation_times.scale_factor as f32;
+        original_max_pes.max(original_max_plas)
+    }
+
+    pub fn get_memory_scale_factor(&self) -> u64 {
+        *self
+            .instrumented_memory_requirements
+            .memory_requirements
+            .values()
+            .flat_map(|x| x.values())
+            .chain(
+                self.partitioned_mem_mappable_multicore_and_pl
+                    .hardware
+                    .storage_sizes
+                    .values(),
+            )
+            .chain(self.aperiodic_asynchronous_dataflows.iter().flat_map(
+                |app: &AperiodicAsynchronousDataflow| app.buffer_max_size_in_bits.values(),
+            ))
+            .chain(self.aperiodic_asynchronous_dataflows.iter().flat_map(
+                |app: &AperiodicAsynchronousDataflow| {
+                    app.process_get_from_buffer_in_bits
+                        .values()
+                        .flat_map(|x| x.values())
+                },
+            ))
+            .chain(self.aperiodic_asynchronous_dataflows.iter().flat_map(
+                |app: &AperiodicAsynchronousDataflow| {
+                    app.process_get_from_buffer_in_bits
+                        .values()
+                        .flat_map(|x| x.values())
+                },
+            ))
+            .filter(|x| x > &&0)
+            .min()
+            .unwrap_or(&1)
     }
 }
 

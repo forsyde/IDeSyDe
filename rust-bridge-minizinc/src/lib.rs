@@ -298,6 +298,8 @@ fn solve_aad2pmmmap(
         .collect();
     let mut firings_follows: Vec<HashSet<u64>> =
         all_firings.iter().map(|_| HashSet::new()).collect();
+    let discrete_max = m.get_max_discrete_value() as f32;
+    let average_max = m.get_max_average_execution_time();
     for app in &m.aperiodic_asynchronous_dataflows {
         for a in &app.processes {
             for aa in &app.processes {
@@ -322,7 +324,7 @@ fn solve_aad2pmmmap(
             }
         }
     }
-    let execution_times: Vec<Vec<i64>> = all_processes
+    let execution_times: Vec<Vec<i32>> = all_processes
         .iter()
         .map(|f| {
             m.partitioned_mem_mappable_multicore_and_pl
@@ -347,7 +349,12 @@ fn solve_aad2pmmmap(
                         .average_execution_times
                         .get(f)
                         .and_then(|inner| inner.get(pe))
-                        .map(|x| x.to_owned() as i64)
+                        .map(|x| {
+                            (((*x / m.instrumented_computation_times.scale_factor) as f32)
+                                / average_max
+                                * discrete_max)
+                                .ceil() as i32
+                        })
                         .unwrap_or(-1)
                 })
                 .chain(
@@ -360,7 +367,18 @@ fn solve_aad2pmmmap(
                                 .latencies_numerators
                                 .get(f)
                                 .and_then(|inner| inner.get(pla))
-                                .map(|x| x.to_owned() as i64)
+                                .map(|x| {
+                                    ((*x as f32)
+                                        / *m.hardware_implementation_area
+                                            .latencies_denominators
+                                            .get(f)
+                                            .and_then(|x| x.get(pla))
+                                            .unwrap_or(&1)
+                                            as f32
+                                        * discrete_max
+                                        / average_max)
+                                        .ceil() as i32
+                                })
                                 .unwrap_or(-1)
                         }),
                 )
@@ -423,6 +441,7 @@ fn solve_aad2pmmmap(
                 .collect()
         })
         .collect();
+    let memory_scale = m.get_memory_scale_factor();
     let processes_mem_size: Vec<Vec<u64>> = all_processes
         .iter()
         .map(|p| {
@@ -440,7 +459,7 @@ fn solve_aad2pmmmap(
                         .memory_requirements
                         .get(p)
                         .and_then(|inner| inner.get(pe))
-                        .map(|x| *x)
+                        .map(|x| *x / memory_scale)
                         .unwrap_or(0)
                 })
                 .collect()
@@ -456,7 +475,7 @@ fn solve_aad2pmmmap(
                         .required_areas
                         .get(p)
                         .and_then(|inner| inner.get(pla))
-                        .map(|x| *x)
+                        .map(|x| *x / memory_scale)
                         .unwrap_or(0)
                 })
                 .collect()
@@ -559,7 +578,7 @@ fn solve_aad2pmmmap(
                         .hardware
                         .storage_sizes
                         .get(me)
-                        .map(|x| *x as i32)
+                        .map(|x| (*x / memory_scale) as i32)
                         .unwrap_or(0)
                 })
                 .collect::<Vec<i32>>(),
@@ -598,7 +617,7 @@ fn solve_aad2pmmmap(
                                 .flat_map(|app| {
                                     app.process_get_from_buffer_in_bits
                                         .get(p)
-                                        .and_then(|x| x.get(b).map(|y| *y))
+                                        .and_then(|x| x.get(b).map(|y| *y / memory_scale))
                                 })
                                 .sum::<u64>()
                         })
@@ -621,7 +640,7 @@ fn solve_aad2pmmmap(
                                 .flat_map(|app| {
                                     app.process_put_in_buffer_in_bits
                                         .get(p)
-                                        .and_then(|x| x.get(b).map(|y| *y))
+                                        .and_then(|x| x.get(b).map(|y| *y / memory_scale))
                                 })
                                 .sum::<u64>()
                         })
@@ -641,7 +660,7 @@ fn solve_aad2pmmmap(
     ));
     input_data.push(("executionTime", MiniZincData::from(execution_times)));
     input_data.push((
-        "bandwidthPerChannel",
+        "invBandwidthPerChannel",
         MiniZincData::from(
             communications
                 .iter()
@@ -650,8 +669,10 @@ fn solve_aad2pmmmap(
                         .hardware
                         .communication_elements_bit_per_sec_per_channel
                         .get(ce)
-                        .map(|x| x.ceil() as i32) // TODO: this must be fixed with noramlization later
-                        .map(|x| x - 10)
+                        .map(|x| {
+                            (discrete_max as f64 / (x * average_max as f64) / memory_scale as f64)
+                                .ceil() as i32
+                        }) // TODO: this must be fixed with noramlization later
                         .unwrap_or(0)
                 })
                 .collect::<Vec<i32>>(),

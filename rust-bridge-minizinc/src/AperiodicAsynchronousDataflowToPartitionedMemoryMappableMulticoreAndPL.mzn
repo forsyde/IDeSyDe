@@ -26,7 +26,7 @@ set of int: Mappable = ListSchedulers union LogicAreas;
 array[Mappable, Memories] of set of Communications: interconnectToMemories;
 array[Memories, Mappable] of set of Communications: interconnectFromMemories;
 array[Processes, Mappable] of int: executionTime;
-array[Communications] of int: bandwidthPerChannel;
+array[Communications] of int: invBandwidthPerChannel;
 
 array[Processes, Processes] of bool: connected;
 
@@ -84,7 +84,7 @@ constraint forall(p in Processes, pe in Mappable) (executionTime[p, pe] < 0 -> p
 constraint forall(p in Processes) (
     let { var int: pe = processesExecution[p]; var int: me = processesMapping[p] } in
     durationFetch[p] = 
-      processesMemSize[p, pe] * sum(ce in interconnectFromMemories[pe, me]) (1) / min(ce in interconnectFromMemories[pe, me]) (communicationReservation[pe, ce] * bandwidthPerChannel[ce])
+      processesMemSize[p, pe] * sum(ce in interconnectFromMemories[pe, me]) (1) * min(ce in interconnectFromMemories[pe, me]) (invBandwidthPerChannel[ce] / communicationReservation[pe, ce])
 );
 
 constraint forall(p in Processes) (

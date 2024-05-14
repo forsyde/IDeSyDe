@@ -18,6 +18,7 @@ public record AperiodicAsynchronousDataflowToPartitionedMemoryMappableMulticoreA
 		@JsonProperty("instrumented_memory_requirements") InstrumentedMemoryRequirements instrumentedMemoryRequirements,
 		@JsonProperty("hardware_implementation_area") HardwareImplementationArea hardwareImplementationArea,
 		@JsonProperty("processes_to_runtime_scheduling") Map<String, String> processesToRuntimeScheduling,
+		@JsonProperty("processes_to_logic_programmable_areas") Map<String, String> processesToLogicProgrammableAreas,
 		@JsonProperty("processes_to_memory_mapping") Map<String, String> processesToMemoryMapping,
 		@JsonProperty("buffer_to_memory_mappings") Map<String, String> bufferToMemoryMappings,
 		@JsonProperty("super_loop_schedules") Map<String, List<String>> superLoopSchedules,

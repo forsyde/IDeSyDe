@@ -72,7 +72,10 @@ public class AperiodicAsynchronousDataflowToPartitionedMemoryMappableMulticoreAn
                                 } else {
                                         var procVertex = reversedSystemGraph.newVertex(process);
                                         var plaVertex = reversedSystemGraph.newVertex(sched);
-                                        
+                                        ForSyDeHierarchy.LogicProgrammableSynthetized.enforce(reversedSystemGraph, procVertex).hostLogicProgrammableModule(
+                                                ForSyDeHierarchy.LogicProgrammableModule.enforce(reversedSystemGraph,plaVertex)
+                                        );
+                                        ForSyDeHierarchy.GreyBox.enforce(reversedSystemGraph, plaVertex).addContained(ForSyDeHierarchy.Visualizable.enforce(reversedSystemGraph, procVertex));
                                 }
                         });
                         model.superLoopSchedules().forEach((sched, looplist) -> {

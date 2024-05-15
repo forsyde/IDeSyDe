@@ -308,47 +308,89 @@ pub fn identify_asynchronous_aperiodic_dataflow_from_sdf(
                 let jobs_of_processes: Vec<(&str, u64)> = component_actors
                     .iter()
                     .flat_map(|a| {
-                        (1..=*analysed_sdf_application.repetition_vector.get(*a).unwrap())
+                        (1..=*analysed_sdf_application
+                            .repetition_vector
+                            .get(*a)
+                            .unwrap_or(&1))
                             .map(|q| (*a, q))
                     })
                     .collect();
-                let mut job_graph_edges: Vec<((&str, u64), (&str, u64), bool)> = Vec::new();
-                for (src, q_src) in &jobs_of_processes {
-                    for (dst, q_dst) in &jobs_of_processes {
-                        if let Some((cidx, _)) = analysed_sdf_application
+                let mut job_graph_edges: Vec<((&str, u64), (&str, u64), bool)> = Vec::with_capacity(
+                    jobs_of_processes.len()
+                        * analysed_sdf_application
                             .sdf_application
-                            .topology_srcs
-                            .iter()
-                            .zip(
-                                analysed_sdf_application
-                                    .sdf_application
-                                    .topology_dsts
-                                    .iter(),
-                            )
-                            .enumerate()
-                            .find(|(_, (s, t))| s == src && t == dst)
-                        {
-                            // let q_src_max = analysed_sdf_application.repetition_vector.get(*src).expect("Impossible empty entry for repetition vector during identification rule");
-                            let consumed = analysed_sdf_application
-                                .sdf_application
-                                .topology_consumption[cidx];
-                            let produced =
-                                analysed_sdf_application.sdf_application.topology_production[cidx];
-                            let initial_tokens = analysed_sdf_application
-                                .sdf_application
-                                .topology_initial_tokens[cidx];
-                            let ratio = ((q_dst * consumed as u64 - initial_tokens as u64) as f64)
-                                / (produced as f64);
-                            // if the jobs are different and the ratio of tokens is satisfied, they
-                            // have a strong dependency, otherwise, they might only have a weak dependency
-                            // or nothing at all.
-                            if src != dst && *q_src == (ratio.ceil() as u64) {
-                                job_graph_edges.push(((src, *q_src), (dst, *q_dst), true))
-                            }
-                        } else if src == dst && *q_dst == (*q_src + 1) {
-                            job_graph_edges.push(((src, *q_src), (dst, *q_dst), false))
+                            .channels_identifiers
+                            .len(),
+                );
+                for (cidx, dst) in analysed_sdf_application
+                    .sdf_application
+                    .topology_dsts
+                    .iter()
+                    .enumerate()
+                {
+                    let q_dst_max = *analysed_sdf_application.repetition_vector.get(dst).expect(
+                        "Impossible empty entry for repetition vector during identification rule",
+                    );
+                    for q_dst in 1..=q_dst_max {
+                        let src = &analysed_sdf_application.sdf_application.topology_srcs[cidx];
+                        let q_src_max = *analysed_sdf_application
+                            .repetition_vector
+                            .get(src)
+                            .expect("Impossible empty entry for repetition vector during identification rule");
+                        let consumed = analysed_sdf_application
+                            .sdf_application
+                            .topology_consumption[cidx]
+                            as u64;
+                        let produced = analysed_sdf_application.sdf_application.topology_production
+                            [cidx] as u64;
+                        let initial_tokens = analysed_sdf_application
+                            .sdf_application
+                            .topology_initial_tokens[cidx]
+                            as u64;
+                        let q_src_ub = (q_dst * consumed - initial_tokens).div_ceil(produced);
+                        // let q_src_lb = ((q_dst - 1) * consumed - initial_tokens).div_ceil(produced);
+                        job_graph_edges.push(((src, q_src_ub), (dst, q_dst), true));
+                        // for q_src in q_src_lb.max(1)..=q_src_ub.min(q_src_max) {
+                        // }
+                        if q_dst > 1 {
+                            job_graph_edges.push(((dst, q_dst - 1), (dst, q_dst), false));
                         }
                     }
+                    // for (src, q_src) in &jobs_of_processes {
+                    //     if let Some((cidx, _)) = analysed_sdf_application
+                    //         .sdf_application
+                    //         .topology_srcs
+                    //         .iter()
+                    //         .zip(
+                    //             analysed_sdf_application
+                    //                 .sdf_application
+                    //                 .topology_dsts
+                    //                 .iter(),
+                    //         )
+                    //         .enumerate()
+                    //         .find(|(_, (s, t))| s == src && t == dst)
+                    //     {
+                    //         // let q_src_max = analysed_sdf_application.repetition_vector.get(*src).expect("Impossible empty entry for repetition vector during identification rule");
+                    //         let consumed = analysed_sdf_application
+                    //             .sdf_application
+                    //             .topology_consumption[cidx];
+                    //         let produced =
+                    //             analysed_sdf_application.sdf_application.topology_production[cidx];
+                    //         let initial_tokens = analysed_sdf_application
+                    //             .sdf_application
+                    //             .topology_initial_tokens[cidx];
+                    //         let ratio = ((q_dst * consumed as u64 - initial_tokens as u64) as f64)
+                    //             / (produced as f64);
+                    //         // if the jobs are different and the ratio of tokens is satisfied, they
+                    //         // have a strong dependency, otherwise, they might only have a weak dependency
+                    //         // or nothing at all.
+                    //         if src != dst && *q_src == (ratio.ceil() as u64) {
+                    //             job_graph_edges.push(((src, *q_src), (dst, *q_dst), true))
+                    //         }
+                    //     } else if src == dst && *q_dst == (*q_src + 1) {
+                    //         job_graph_edges.push(((src, *q_src), (dst, *q_dst), false))
+                    //     }
+                    // }
                 }
                 let channel_token_sizes = analysed_sdf_application
                     .sdf_application

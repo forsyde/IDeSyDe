@@ -10,7 +10,7 @@ use petgraph::{
 use schemars::JsonSchema;
 use serde::{Deserialize, Serialize};
 
-const numerical_relative_error: f64 = 0.02;
+const NUMERICAL_RELATIVE_ERROR: f64 = 0.02;
 
 /// A model that abstracts concurrent processes where stimulus and dataflow are separate.
 ///
@@ -886,7 +886,7 @@ impl AperiodicAsynchronousDataflowToPartitionedMemoryMappableMulticoreAndPL {
                 .hardware
                 .programmable_logic_elems
                 .len() as u64);
-        let relative_constant = (-(numerical_relative_error.log2().ceil())) as u32;
+        let relative_constant = (-(NUMERICAL_RELATIVE_ERROR.log2().ceil())) as u32;
         let problem_constant = (biggest_path * number_jobs * num_mappables) as f64;
         let resolution = (problem_constant.log2().ceil() as u32) + relative_constant;
         2u64.pow(resolution)

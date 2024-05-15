@@ -8,12 +8,7 @@ use std::{
 };
 
 use idesyde_common::models::AperiodicAsynchronousDataflowToPartitionedMemoryMappableMulticoreAndPL;
-use idesyde_core::{ExplorationBid, ExplorationSolution, Explorer, Module, RustEmbeddedModule};
-use petgraph::{
-    stable_graph::{DefaultIx, IndexType},
-    visit::IntoNeighbors,
-    Graph,
-};
+use idesyde_core::{ExplorationBid, ExplorationSolution, Explorer, RustEmbeddedModule};
 use serde::Deserialize;
 
 #[derive(Debug, Clone, PartialEq)]

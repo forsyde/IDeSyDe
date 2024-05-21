@@ -54,29 +54,31 @@ public class AperiodicAsynchronousDataflowToPartitionedMemoryMappableMulticoreAn
                                                                 .enforce(memMapped));
                         });
                         model.processesToRuntimeScheduling().forEach((process, sched) -> {
-                                if (!model.partitionedMemMappableMulticoreAndPl().hardware().programmableLogicElems().contains(sched)) {
-                                        var procVertex = reversedSystemGraph.newVertex(process);
-                                        var schedVertex = reversedSystemGraph.newVertex(sched);
-                                        var scheduled = ForSyDeHierarchy.Scheduled
+                                var procVertex = reversedSystemGraph.newVertex(process);
+                                var schedVertex = reversedSystemGraph.newVertex(sched);
+                                var scheduled = ForSyDeHierarchy.Scheduled
                                                 .enforce(reversedSystemGraph,
-                                                        procVertex);
-                                        scheduled.runtimeHost(
+                                                                procVertex);
+                                scheduled.runtimeHost(
                                                 ForSyDeHierarchy.AbstractRuntime
-                                                        .enforce(reversedSystemGraph,
-                                                                schedVertex));
-                                        ForSyDeHierarchy.GreyBox.enforce(
-                                                        reversedSystemGraph,
-                                                        schedVertex)
+                                                                .enforce(reversedSystemGraph,
+                                                                                schedVertex));
+                                ForSyDeHierarchy.GreyBox.enforce(
+                                                reversedSystemGraph,
+                                                schedVertex)
                                                 .addContained(ForSyDeHierarchy.Visualizable
-                                                        .enforce(scheduled));
-                                } else {
-                                        var procVertex = reversedSystemGraph.newVertex(process);
-                                        var plaVertex = reversedSystemGraph.newVertex(sched);
-                                        ForSyDeHierarchy.LogicProgrammableSynthetized.enforce(reversedSystemGraph, procVertex).hostLogicProgrammableModule(
-                                                ForSyDeHierarchy.LogicProgrammableModule.enforce(reversedSystemGraph,plaVertex)
-                                        );
-                                        ForSyDeHierarchy.GreyBox.enforce(reversedSystemGraph, plaVertex).addContained(ForSyDeHierarchy.Visualizable.enforce(reversedSystemGraph, procVertex));
-                                }
+                                                                .enforce(scheduled));
+
+                        });
+                        model.processesToLogicProgrammableAreas().forEach((process, pla) -> {
+                                var procVertex = reversedSystemGraph.newVertex(process);
+                                var plaVertex = reversedSystemGraph.newVertex(pla);
+                                ForSyDeHierarchy.LogicProgrammableSynthetized.enforce(reversedSystemGraph, procVertex)
+                                                .hostLogicProgrammableModule(
+                                                                ForSyDeHierarchy.LogicProgrammableModule.enforce(
+                                                                                reversedSystemGraph, plaVertex));
+                                ForSyDeHierarchy.GreyBox.enforce(reversedSystemGraph, plaVertex).addContained(
+                                                ForSyDeHierarchy.Visualizable.enforce(reversedSystemGraph, procVertex));
                         });
                         model.superLoopSchedules().forEach((sched, looplist) -> {
                                 var schedVertex = reversedSystemGraph.newVertex(sched);
@@ -96,14 +98,20 @@ public class AperiodicAsynchronousDataflowToPartitionedMemoryMappableMulticoreAn
                                                                 var process = reversedSystemGraph.newVertex(actor);
                                                                 var behaviour = ForSyDeHierarchy.AnalyzedBehavior
                                                                                 .enforce(reversedSystemGraph, process);
-                                                                if (behaviour.throughputInSecsDenominator() == null || behaviour.throughputInSecsNumerator() == null) {
+                                                                if (behaviour.throughputInSecsDenominator() == null
+                                                                                || behaviour.throughputInSecsNumerator() == null) {
                                                                         behaviour.throughputInSecsDenominator(1L);
                                                                         behaviour.throughputInSecsNumerator(0L);
                                                                 }
-                                                                if ((double) behaviour.throughputInSecsNumerator() / (double) behaviour.throughputInSecsDenominator() >= 1.0 / e.getValue() || behaviour.throughputInSecsNumerator() == 0) {
-                                                                behaviour.throughputInSecsDenominator(
-                                                                                (long) (e.getValue() * scale));
-                                                                behaviour.throughputInSecsNumerator((long) scale);
+                                                                if ((double) behaviour.throughputInSecsNumerator()
+                                                                                / (double) behaviour
+                                                                                                .throughputInSecsDenominator() >= 1.0
+                                                                                                                / e.getValue()
+                                                                                || behaviour.throughputInSecsNumerator() == 0) {
+                                                                        behaviour.throughputInSecsDenominator(
+                                                                                        (long) (e.getValue() * scale));
+                                                                        behaviour.throughputInSecsNumerator(
+                                                                                        (long) scale);
                                                                 }
                                                         }
                                                 });
@@ -128,7 +136,9 @@ public class AperiodicAsynchronousDataflowToPartitionedMemoryMappableMulticoreAn
         @Override
         public Set<DesignModel> apply(Set<? extends DecisionModel> t, Set<? extends DesignModel> u) {
                 var filteredSolved = t.stream()
-                                .flatMap(x -> DecisionModel.cast(x, AperiodicAsynchronousDataflowToPartitionedMemoryMappableMulticoreAndPL.class).stream())
+                                .flatMap(x -> DecisionModel.cast(x,
+                                                AperiodicAsynchronousDataflowToPartitionedMemoryMappableMulticoreAndPL.class)
+                                                .stream())
                                 .collect(Collectors.toSet());
                 var filteredDesign = u.stream()
                                 .flatMap(x -> ForSyDeIODesignModel.tryFrom(x).stream())

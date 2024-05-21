@@ -1,0 +1,131 @@
+systemgraph {
+  vertex "3s"
+  [execution::PeriodicStimulus, visualization::Visualizable]
+  (activated)
+  {
+    "offsetDenominator": 1_l,
+    "periodDenominator": 1_l,
+    "offsetNumerator": 0_l,
+    "periodNumerator": 3_l
+  }
+  vertex "5s"
+  [execution::PeriodicStimulus, visualization::Visualizable]
+  (activated)
+  {
+    "offsetDenominator": 1_l,
+    "periodDenominator": 1_l,
+    "offsetNumerator": 0_l,
+    "periodNumerator": 5_l
+  }
+ vertex "10s"
+  [execution::PeriodicStimulus, visualization::Visualizable]
+  (activated)
+  {
+    "offsetDenominator": 1_l,
+    "periodDenominator": 1_l,
+    "offsetNumerator": 0_l,
+    "periodNumerator": 10_l
+  }
+
+   vertex "30s"
+  [execution::PeriodicStimulus, visualization::Visualizable]
+  (activated)
+  {
+    "offsetDenominator": 1_l,
+    "periodDenominator": 1_l,
+    "offsetNumerator": 0_l,
+    "periodNumerator": 30_l
+  }
+ 
+  vertex "Task_1"
+  [impl::InstrumentedExecutable, execution::LoopingTask, visualization::GreyBox]
+  (activated, activators, contained, initSequence, loopSequence)
+  {
+    "__loopSequence_ordering__": {
+    },
+    "portDataReadSize": {
+      "ADC1AltitudeSignal": 1600_l,
+      "AccSignal": 4000_l
+    },
+    "hasORSemantics": 0_b,
+    "portDataWrittenSize": {
+      "AltitudeSignal": 1600_l
+    },
+    "operationRequirements": {
+      "defaultNeeds": {
+        "all": 1_l
+      }
+    },
+    "sizeInBits": 1_l
+  }
+  vertex "Task_2"
+  [impl::InstrumentedExecutable, execution::LoopingTask, visualization::GreyBox]
+  (activated, activators, contained, initSequence, loopSequence)
+  {
+    "__loopSequence_ordering__": {
+    },
+    "portDataReadSize": {
+      "INS1SpeedVectorSignal": 8000_l,
+      "INS2SpeedVectorSignal": 8000_l
+    },
+    "hasORSemantics": 0_b,
+    "portDataWrittenSize": {
+      "InternalSpeedVectorSignal": 8000_l
+    },
+    "operationRequirements": {
+      "defaultNeeds": {
+        "all": 1_l
+      }
+    },
+    "sizeInBits": 1_l
+  }
+  vertex "Task_3"
+  [impl::InstrumentedExecutable, execution::LoopingTask, visualization::GreyBox]
+  (activated, activators, contained, initSequence, loopSequence)
+  {
+    "__loopSequence_ordering__": {
+    },
+    "portDataReadSize": {
+      "InternalSpeedVectorSignal": 8000_l
+    },
+    "hasORSemantics": 0_b,
+    "portDataWrittenSize": {
+      "SpeedSignal": 8000_l,
+      "SpeedVectorSignal": 8000_l
+    },
+    "operationRequirements": {
+      "defaultNeeds": {
+        "all": 4_l
+      }
+    },
+    "sizeInBits": 1_l
+  }
+  vertex "Task_4"
+  [impl::InstrumentedExecutable, execution::LoopingTask, visualization::GreyBox]
+  (activated, activators, contained, initSequence, loopSequence)
+  {
+    "__loopSequence_ordering__": {
+    },
+    "portDataReadSize": {
+      "SpeedVectorSignal": 8000_l
+    },
+    "hasORSemantics": 0_b,
+    "portDataWrittenSize": {
+      "HeadingSignal": 4000_l
+    },
+    "operationRequirements": {
+      "defaultNeeds": {
+        "all": 5_l
+      }
+    },
+    "sizeInBits": 1_l
+  }
+  
+ 
+  edge [execution::EventEdge,visualization::VisualConnection] from "3s" port "activated" to "Task_1" port "activators"
+  edge [execution::EventEdge,visualization::VisualConnection] from "5s" port "activated" to "Task_2" port "activators"
+  edge [execution::EventEdge,visualization::VisualConnection] from "10s" port "activated" to "Task_3" port "activators"
+  edge [execution::EventEdge,visualization::VisualConnection] from "30s" port "activated" to "Task_4" port "activators"
+
+  
+}

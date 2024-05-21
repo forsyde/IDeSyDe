@@ -1,0 +1,17 @@
+plugins {
+    id 'idesyde.java-standalone-module'
+}
+
+dependencies {
+    testImplementation 'org.junit.jupiter:junit-jupiter-api:5.8.1'
+    implementation project(":java-core")
+    implementation project(":java-blueprints")
+    implementation project(":java-common")
+
+    implementation "org.choco-solver:choco-solver:4.10.13"
+    implementation "org.jgrapht:jgrapht-core:1.5.1"
+}
+
+application {
+    mainClassName = "idesyde.choco.ChocoJavaModule"
+}

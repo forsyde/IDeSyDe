@@ -1,0 +1,41 @@
+syntax = "proto3";
+
+package idesyde.opaque;
+
+/// An opaque model to exchange fundamental data about a decision model between different models in different languages.
+///
+/// This data record captures which elements of the target design models have been partially identified.
+/// It provides a `category` to distinguish what type of decision model this is, so that different languages
+/// can know which of their own data structures they should deserialize the decision model into.
+///
+/// Check the following paper for more in-depth definitions:
+///
+/// R. Jordão, I. Sander and M. Becker, "Formulation of Design Space Exploration Problems by
+/// Composable Design Space Identification," 2021 Design, Automation & Test in Europe Conference &
+/// Exhibition (DATE), 2021, pp. 1204-1207, doi: 10.23919/DATE51398.2021.9474082.
+message OpaqueDecisionModel {
+    string category = 1;
+    repeated string part = 2;
+    optional string body_json = 3;
+    optional bytes body_protobuf = 4;
+    optional bytes body_msgpack = 5;
+    optional bytes body_cbor = 6;
+}
+
+/// An opaque model to exchange fundamental data about a design model between different models in different languages.
+///
+/// This data record captures which elements of the target design models taht can be partially identified.
+/// It provides a `category` to distinguish what type of design model this is, so that different languages
+/// can know which of their own data structures they should deserialize the design model into.
+///
+/// Check the following paper for more in-depth definitions:
+///
+/// R. Jordão, I. Sander and M. Becker, "Formulation of Design Space Exploration Problems by
+/// Composable Design Space Identification," 2021 Design, Automation & Test in Europe Conference &
+/// Exhibition (DATE), 2021, pp. 1204-1207, doi: 10.23919/DATE51398.2021.9474082.
+message OpaqueDesignModel {
+    string category = 1;
+    repeated string elements = 2;
+    string format = 3;
+    optional string body = 4;
+}

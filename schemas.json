@@ -1,0 +1,2260 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "title": "InstrumentedMemoryRequirements",
+  "description": "A decision model to hold memory requirements for processes when executing in processing elements.\n\nAs the decision model stores these memory requirements in associative arrays (maps), the lack of an association between a process and a processing element means that this process _cannot_ be executed in the processing element.",
+  "type": "object",
+  "required": [
+    "channels",
+    "memory_requirements",
+    "processes",
+    "processing_elements"
+  ],
+  "properties": {
+    "channels": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      },
+      "uniqueItems": true
+    },
+    "memory_requirements": {
+      "type": "object",
+      "additionalProperties": {
+        "type": "object",
+        "additionalProperties": {
+          "type": "integer",
+          "format": "uint64",
+          "minimum": 0.0
+        }
+      }
+    },
+    "processes": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      },
+      "uniqueItems": true
+    },
+    "processing_elements": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      },
+      "uniqueItems": true
+    }
+  }
+}
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "title": "PartitionedTiledMulticore",
+  "description": "A decision model that captures a paritioned-scheduled tiled multicore machine\n\nThis means that every processing element hosts and has affinity for one and only one runtime element. This runtime element can execute according to any scheduling policy, but it must control only its host.",
+  "type": "object",
+  "required": [
+    "hardware",
+    "runtimes"
+  ],
+  "properties": {
+    "hardware": {
+      "$ref": "#/definitions/TiledMultiCore"
+    },
+    "runtimes": {
+      "$ref": "#/definitions/RuntimesAndProcessors"
+    }
+  },
+  "definitions": {
+    "RuntimesAndProcessors": {
+      "description": "A decision model capturing the binding between procesing element and runtimes.\n\nA runtime here is used in a loose sense: it can be simply a programmable bare-metal environment. The assumption is that every runtime has one processing element host and all processing elements might have only one runtime that it is affine to. A processing element having affinity to a runtime simply means that this runtime is managing the processing element according to any policy.",
+      "type": "object",
+      "required": [
+        "is_bare_metal",
+        "is_earliest_deadline_first",
+        "is_fixed_priority",
+        "is_preemptive",
+        "is_super_loop",
+        "processor_affinities",
+        "processors",
+        "runtime_host",
+        "runtimes"
+      ],
+      "properties": {
+        "is_bare_metal": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          },
+          "uniqueItems": true
+        },
+        "is_earliest_deadline_first": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          },
+          "uniqueItems": true
+        },
+        "is_fixed_priority": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          },
+          "uniqueItems": true
+        },
+        "is_preemptive": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          },
+          "uniqueItems": true
+        },
+        "is_super_loop": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          },
+          "uniqueItems": true
+        },
+        "processor_affinities": {
+          "type": "object",
+          "additionalProperties": {
+            "type": "string"
+          }
+        },
+        "processors": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          },
+          "uniqueItems": true
+        },
+        "runtime_host": {
+          "type": "object",
+          "additionalProperties": {
+            "type": "string"
+          }
+        },
+        "runtimes": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          },
+          "uniqueItems": true
+        }
+      }
+    },
+    "TiledMultiCore": {
+      "type": "object",
+      "required": [
+        "communication_elements_bit_per_sec_per_channel",
+        "communication_elements_max_channels",
+        "interconnect_topology_dsts",
+        "interconnect_topology_srcs",
+        "memories",
+        "network_interfaces",
+        "pre_computed_paths",
+        "processors",
+        "processors_frequency",
+        "processors_provisions",
+        "routers",
+        "tile_memory_sizes"
+      ],
+      "properties": {
+        "communication_elements_bit_per_sec_per_channel": {
+          "type": "object",
+          "additionalProperties": {
+            "type": "number",
+            "format": "double"
+          }
+        },
+        "communication_elements_max_channels": {
+          "type": "object",
+          "additionalProperties": {
+            "type": "integer",
+            "format": "uint32",
+            "minimum": 0.0
+          }
+        },
+        "interconnect_topology_dsts": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        },
+        "interconnect_topology_srcs": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        },
+        "memories": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        },
+        "network_interfaces": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        },
+        "pre_computed_paths": {
+          "type": "object",
+          "additionalProperties": {
+            "type": "object",
+            "additionalProperties": {
+              "type": "array",
+              "items": {
+                "type": "string"
+              }
+            }
+          }
+        },
+        "processors": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        },
+        "processors_frequency": {
+          "type": "object",
+          "additionalProperties": {
+            "type": "integer",
+            "format": "uint64",
+            "minimum": 0.0
+          }
+        },
+        "processors_provisions": {
+          "type": "object",
+          "additionalProperties": {
+            "type": "object",
+            "additionalProperties": {
+              "type": "object",
+              "additionalProperties": {
+                "type": "number",
+                "format": "double"
+              }
+            }
+          }
+        },
+        "routers": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        },
+        "tile_memory_sizes": {
+          "type": "object",
+          "additionalProperties": {
+            "type": "integer",
+            "format": "uint64",
+            "minimum": 0.0
+          }
+        }
+      }
+    }
+  }
+}
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "title": "AperiodicAsynchronousDataflowToPartitionedMemoryMappableMulticore",
+  "description": "A decision model that combines aperiodic dataflows to partitioned memory mappable platforms.\n\nThe assumptions of this decision model are: 1. For every process, there is at least one processing element in the platform that can run it. Otherwise, even the trivial mapping is impossible. 2. Super loop schedules are self-timed and stall the processing element that is hosting them. That is, if we have a poor schedule, the processing element will get \"blocked\" often.",
+  "type": "object",
+  "required": [
+    "aperiodic_asynchronous_dataflows",
+    "buffer_to_memory_mappings",
+    "instrumented_computation_times",
+    "instrumented_memory_requirements",
+    "partitioned_mem_mappable_multicore",
+    "processes_to_memory_mapping",
+    "processes_to_runtime_scheduling",
+    "processing_elements_to_routers_reservations",
+    "super_loop_schedules"
+  ],
+  "properties": {
+    "aperiodic_asynchronous_dataflows": {
+      "type": "array",
+      "items": {
+        "$ref": "#/definitions/AperiodicAsynchronousDataflow"
+      }
+    },
+    "buffer_to_memory_mappings": {
+      "type": "object",
+      "additionalProperties": {
+        "type": "string"
+      }
+    },
+    "instrumented_computation_times": {
+      "$ref": "#/definitions/InstrumentedComputationTimes"
+    },
+    "instrumented_memory_requirements": {
+      "$ref": "#/definitions/InstrumentedMemoryRequirements"
+    },
+    "partitioned_mem_mappable_multicore": {
+      "$ref": "#/definitions/PartitionedMemoryMappableMulticore"
+    },
+    "processes_to_memory_mapping": {
+      "type": "object",
+      "additionalProperties": {
+        "type": "string"
+      }
+    },
+    "processes_to_runtime_scheduling": {
+      "type": "object",
+      "additionalProperties": {
+        "type": "string"
+      }
+    },
+    "processing_elements_to_routers_reservations": {
+      "type": "object",
+      "additionalProperties": {
+        "type": "object",
+        "additionalProperties": {
+          "type": "integer",
+          "format": "uint16",
+          "minimum": 0.0
+        }
+      }
+    },
+    "super_loop_schedules": {
+      "type": "object",
+      "additionalProperties": {
+        "type": "array",
+        "items": {
+          "type": "string"
+        }
+      }
+    }
+  },
+  "definitions": {
+    "AperiodicAsynchronousDataflow": {
+      "description": "This decision model abstract asynchronous dataflow models that can be described by a repeating job-graph of this asynchronous processes. Two illustratives dataflow models fitting this category are synchronous dataflow models (despite the name) and cyclo-static dataflow models.\n\nAssumptions: 1. the job graph is always ready to be executed; or, the model is aperiodic.\n\n2. executing the job graph as presented guarantees that the dataflow processes are live (never deadlocked).\n\n3. The job graph is weakly connected. If you wish to have multiple \"applications\", you should generate one decision model for each application.",
+      "type": "object",
+      "required": [
+        "buffer_max_size_in_bits",
+        "buffers",
+        "job_graph_dst_instance",
+        "job_graph_dst_name",
+        "job_graph_instance",
+        "job_graph_is_strong_precedence",
+        "job_graph_name",
+        "job_graph_src_instance",
+        "job_graph_src_name",
+        "process_get_from_buffer_in_bits",
+        "process_minimum_throughput",
+        "process_path_maximum_latency",
+        "process_put_in_buffer_in_bits",
+        "processes"
+      ],
+      "properties": {
+        "buffer_max_size_in_bits": {
+          "type": "object",
+          "additionalProperties": {
+            "type": "integer",
+            "format": "uint64",
+            "minimum": 0.0
+          }
+        },
+        "buffers": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          },
+          "uniqueItems": true
+        },
+        "job_graph_dst_instance": {
+          "type": "array",
+          "items": {
+            "type": "integer",
+            "format": "uint64",
+            "minimum": 0.0
+          }
+        },
+        "job_graph_dst_name": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        },
+        "job_graph_instance": {
+          "type": "array",
+          "items": {
+            "type": "integer",
+            "format": "uint64",
+            "minimum": 0.0
+          }
+        },
+        "job_graph_is_strong_precedence": {
+          "type": "array",
+          "items": {
+            "type": "boolean"
+          }
+        },
+        "job_graph_name": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        },
+        "job_graph_src_instance": {
+          "type": "array",
+          "items": {
+            "type": "integer",
+            "format": "uint64",
+            "minimum": 0.0
+          }
+        },
+        "job_graph_src_name": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        },
+        "process_get_from_buffer_in_bits": {
+          "type": "object",
+          "additionalProperties": {
+            "type": "object",
+            "additionalProperties": {
+              "type": "integer",
+              "format": "uint64",
+              "minimum": 0.0
+            }
+          }
+        },
+        "process_minimum_throughput": {
+          "type": "object",
+          "additionalProperties": {
+            "type": "number",
+            "format": "double"
+          }
+        },
+        "process_path_maximum_latency": {
+          "type": "object",
+          "additionalProperties": {
+            "type": "object",
+            "additionalProperties": {
+              "type": "number",
+              "format": "double"
+            }
+          }
+        },
+        "process_put_in_buffer_in_bits": {
+          "type": "object",
+          "additionalProperties": {
+            "type": "object",
+            "additionalProperties": {
+              "type": "integer",
+              "format": "uint64",
+              "minimum": 0.0
+            }
+          }
+        },
+        "processes": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          },
+          "uniqueItems": true
+        }
+      }
+    },
+    "InstrumentedComputationTimes": {
+      "description": "A decision model to hold computation times between processsables and processing elements.\n\nAs the decision model stores these computation in associative arrays (maps), the lack of an association between a processable and a processing element means that this processable _cannot_ be executed in the processing element.\n\nIn order to maintain the precision as pristine as possible, the values are stored in a \"scaled\" manner. That is, there is a scaling factor that denotes the denominator in which all the stored values must be divided by. This enables us to move the computational numbers around as integers. Therefore, for any value in this decision model:\n\nactual_value = integer_value / scale_factor",
+      "type": "object",
+      "required": [
+        "average_execution_times",
+        "best_execution_times",
+        "processes",
+        "processing_elements",
+        "scale_factor",
+        "worst_execution_times"
+      ],
+      "properties": {
+        "average_execution_times": {
+          "type": "object",
+          "additionalProperties": {
+            "type": "object",
+            "additionalProperties": {
+              "type": "integer",
+              "format": "uint64",
+              "minimum": 0.0
+            }
+          }
+        },
+        "best_execution_times": {
+          "type": "object",
+          "additionalProperties": {
+            "type": "object",
+            "additionalProperties": {
+              "type": "integer",
+              "format": "uint64",
+              "minimum": 0.0
+            }
+          }
+        },
+        "processes": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          },
+          "uniqueItems": true
+        },
+        "processing_elements": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          },
+          "uniqueItems": true
+        },
+        "scale_factor": {
+          "type": "integer",
+          "format": "uint64",
+          "minimum": 0.0
+        },
+        "worst_execution_times": {
+          "type": "object",
+          "additionalProperties": {
+            "type": "object",
+            "additionalProperties": {
+              "type": "integer",
+              "format": "uint64",
+              "minimum": 0.0
+            }
+          }
+        }
+      }
+    },
+    "InstrumentedMemoryRequirements": {
+      "description": "A decision model to hold memory requirements for processes when executing in processing elements.\n\nAs the decision model stores these memory requirements in associative arrays (maps), the lack of an association between a process and a processing element means that this process _cannot_ be executed in the processing element.",
+      "type": "object",
+      "required": [
+        "channels",
+        "memory_requirements",
+        "processes",
+        "processing_elements"
+      ],
+      "properties": {
+        "channels": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          },
+          "uniqueItems": true
+        },
+        "memory_requirements": {
+          "type": "object",
+          "additionalProperties": {
+            "type": "object",
+            "additionalProperties": {
+              "type": "integer",
+              "format": "uint64",
+              "minimum": 0.0
+            }
+          }
+        },
+        "processes": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          },
+          "uniqueItems": true
+        },
+        "processing_elements": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          },
+          "uniqueItems": true
+        }
+      }
+    },
+    "MemoryMappableMultiCore": {
+      "description": "A decision model capturing the memory mappable platform abstraction.\n\nThis type of platform is what one would expect from most COTS platforms and hardware designs, which completely or partially follows a von neumman architecture. This means that the storage elements store both data and instructions and the processors access them going through the communication elements; the latter that form the 'interconnect'.",
+      "type": "object",
+      "required": [
+        "communication_elements_bit_per_sec_per_channel",
+        "communication_elements_max_channels",
+        "communication_elems",
+        "pre_computed_paths",
+        "processing_elems",
+        "processors_frequency",
+        "processors_provisions",
+        "storage_elems",
+        "storage_sizes",
+        "topology_dsts",
+        "topology_srcs"
+      ],
+      "properties": {
+        "communication_elements_bit_per_sec_per_channel": {
+          "type": "object",
+          "additionalProperties": {
+            "type": "number",
+            "format": "double"
+          }
+        },
+        "communication_elements_max_channels": {
+          "type": "object",
+          "additionalProperties": {
+            "type": "integer",
+            "format": "uint32",
+            "minimum": 0.0
+          }
+        },
+        "communication_elems": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          },
+          "uniqueItems": true
+        },
+        "pre_computed_paths": {
+          "type": "object",
+          "additionalProperties": {
+            "type": "object",
+            "additionalProperties": {
+              "type": "array",
+              "items": {
+                "type": "string"
+              }
+            }
+          }
+        },
+        "processing_elems": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          },
+          "uniqueItems": true
+        },
+        "processors_frequency": {
+          "type": "object",
+          "additionalProperties": {
+            "type": "integer",
+            "format": "uint64",
+            "minimum": 0.0
+          }
+        },
+        "processors_provisions": {
+          "type": "object",
+          "additionalProperties": {
+            "type": "object",
+            "additionalProperties": {
+              "type": "object",
+              "additionalProperties": {
+                "type": "number",
+                "format": "double"
+              }
+            }
+          }
+        },
+        "storage_elems": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          },
+          "uniqueItems": true
+        },
+        "storage_sizes": {
+          "type": "object",
+          "additionalProperties": {
+            "type": "integer",
+            "format": "uint64",
+            "minimum": 0.0
+          }
+        },
+        "topology_dsts": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        },
+        "topology_srcs": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        }
+      }
+    },
+    "PartitionedMemoryMappableMulticore": {
+      "description": "A decision model that captures a paritioned-scheduled memory mappable multicore machine\n\nThis means that every processing element hosts and has affinity for one and only one runtime element. This runtime element can execute according to any scheduling policy, but it must control only its host.",
+      "type": "object",
+      "required": [
+        "hardware",
+        "runtimes"
+      ],
+      "properties": {
+        "hardware": {
+          "$ref": "#/definitions/MemoryMappableMultiCore"
+        },
+        "runtimes": {
+          "$ref": "#/definitions/RuntimesAndProcessors"
+        }
+      }
+    },
+    "RuntimesAndProcessors": {
+      "description": "A decision model capturing the binding between procesing element and runtimes.\n\nA runtime here is used in a loose sense: it can be simply a programmable bare-metal environment. The assumption is that every runtime has one processing element host and all processing elements might have only one runtime that it is affine to. A processing element having affinity to a runtime simply means that this runtime is managing the processing element according to any policy.",
+      "type": "object",
+      "required": [
+        "is_bare_metal",
+        "is_earliest_deadline_first",
+        "is_fixed_priority",
+        "is_preemptive",
+        "is_super_loop",
+        "processor_affinities",
+        "processors",
+        "runtime_host",
+        "runtimes"
+      ],
+      "properties": {
+        "is_bare_metal": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          },
+          "uniqueItems": true
+        },
+        "is_earliest_deadline_first": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          },
+          "uniqueItems": true
+        },
+        "is_fixed_priority": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          },
+          "uniqueItems": true
+        },
+        "is_preemptive": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          },
+          "uniqueItems": true
+        },
+        "is_super_loop": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          },
+          "uniqueItems": true
+        },
+        "processor_affinities": {
+          "type": "object",
+          "additionalProperties": {
+            "type": "string"
+          }
+        },
+        "processors": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          },
+          "uniqueItems": true
+        },
+        "runtime_host": {
+          "type": "object",
+          "additionalProperties": {
+            "type": "string"
+          }
+        },
+        "runtimes": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          },
+          "uniqueItems": true
+        }
+      }
+    }
+  }
+}
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "title": "SDFApplication",
+  "description": "Decision model for synchronous dataflow graphs.\n\nThis decision model encodes a synchronous dataflow graphs without its explicit topology matrix,  also known as balance matrix in some newer texts. This is achieved by encoding the graph as (A + C, E) where A is the set of actors, and C is the set of channels. Every edge in E connects an actor to a channel or a channel to an actor, i.e. e = (a,c,m) or e = (c,a.m) where m is the amount of token produced or consumed. For example, if e = (a, c, 2), then the edge e is the production of 2 tokens from the actor a to channel c.\n\nThis decision model is already analised, and provides the repetition vector for the SDF graphs contained as well as a schedule if these SDF graphs are consistent.",
+  "type": "object",
+  "required": [
+    "actor_minimum_throughputs",
+    "actors_identifiers",
+    "chain_maximum_latency",
+    "channels_identifiers",
+    "self_concurrent_actors",
+    "topology_channel_names",
+    "topology_consumption",
+    "topology_dsts",
+    "topology_initial_tokens",
+    "topology_production",
+    "topology_srcs",
+    "topology_token_size_in_bits"
+  ],
+  "properties": {
+    "actor_minimum_throughputs": {
+      "type": "object",
+      "additionalProperties": {
+        "type": "number",
+        "format": "double"
+      }
+    },
+    "actors_identifiers": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      },
+      "uniqueItems": true
+    },
+    "chain_maximum_latency": {
+      "type": "object",
+      "additionalProperties": {
+        "type": "object",
+        "additionalProperties": {
+          "type": "number",
+          "format": "double"
+        }
+      }
+    },
+    "channels_identifiers": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      },
+      "uniqueItems": true
+    },
+    "self_concurrent_actors": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      },
+      "uniqueItems": true
+    },
+    "topology_channel_names": {
+      "type": "array",
+      "items": {
+        "type": "array",
+        "items": {
+          "type": "string"
+        },
+        "uniqueItems": true
+      }
+    },
+    "topology_consumption": {
+      "type": "array",
+      "items": {
+        "type": "integer",
+        "format": "uint64",
+        "minimum": 0.0
+      }
+    },
+    "topology_dsts": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      }
+    },
+    "topology_initial_tokens": {
+      "type": "array",
+      "items": {
+        "type": "integer",
+        "format": "uint64",
+        "minimum": 0.0
+      }
+    },
+    "topology_production": {
+      "type": "array",
+      "items": {
+        "type": "integer",
+        "format": "uint64",
+        "minimum": 0.0
+      }
+    },
+    "topology_srcs": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      }
+    },
+    "topology_token_size_in_bits": {
+      "type": "array",
+      "items": {
+        "type": "integer",
+        "format": "uint64",
+        "minimum": 0.0
+      }
+    }
+  }
+}
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "title": "PartitionedMemoryMappableMulticore",
+  "description": "A decision model that captures a paritioned-scheduled memory mappable multicore machine\n\nThis means that every processing element hosts and has affinity for one and only one runtime element. This runtime element can execute according to any scheduling policy, but it must control only its host.",
+  "type": "object",
+  "required": [
+    "hardware",
+    "runtimes"
+  ],
+  "properties": {
+    "hardware": {
+      "$ref": "#/definitions/MemoryMappableMultiCore"
+    },
+    "runtimes": {
+      "$ref": "#/definitions/RuntimesAndProcessors"
+    }
+  },
+  "definitions": {
+    "MemoryMappableMultiCore": {
+      "description": "A decision model capturing the memory mappable platform abstraction.\n\nThis type of platform is what one would expect from most COTS platforms and hardware designs, which completely or partially follows a von neumman architecture. This means that the storage elements store both data and instructions and the processors access them going through the communication elements; the latter that form the 'interconnect'.",
+      "type": "object",
+      "required": [
+        "communication_elements_bit_per_sec_per_channel",
+        "communication_elements_max_channels",
+        "communication_elems",
+        "pre_computed_paths",
+        "processing_elems",
+        "processors_frequency",
+        "processors_provisions",
+        "storage_elems",
+        "storage_sizes",
+        "topology_dsts",
+        "topology_srcs"
+      ],
+      "properties": {
+        "communication_elements_bit_per_sec_per_channel": {
+          "type": "object",
+          "additionalProperties": {
+            "type": "number",
+            "format": "double"
+          }
+        },
+        "communication_elements_max_channels": {
+          "type": "object",
+          "additionalProperties": {
+            "type": "integer",
+            "format": "uint32",
+            "minimum": 0.0
+          }
+        },
+        "communication_elems": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          },
+          "uniqueItems": true
+        },
+        "pre_computed_paths": {
+          "type": "object",
+          "additionalProperties": {
+            "type": "object",
+            "additionalProperties": {
+              "type": "array",
+              "items": {
+                "type": "string"
+              }
+            }
+          }
+        },
+        "processing_elems": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          },
+          "uniqueItems": true
+        },
+        "processors_frequency": {
+          "type": "object",
+          "additionalProperties": {
+            "type": "integer",
+            "format": "uint64",
+            "minimum": 0.0
+          }
+        },
+        "processors_provisions": {
+          "type": "object",
+          "additionalProperties": {
+            "type": "object",
+            "additionalProperties": {
+              "type": "object",
+              "additionalProperties": {
+                "type": "number",
+                "format": "double"
+              }
+            }
+          }
+        },
+        "storage_elems": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          },
+          "uniqueItems": true
+        },
+        "storage_sizes": {
+          "type": "object",
+          "additionalProperties": {
+            "type": "integer",
+            "format": "uint64",
+            "minimum": 0.0
+          }
+        },
+        "topology_dsts": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        },
+        "topology_srcs": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        }
+      }
+    },
+    "RuntimesAndProcessors": {
+      "description": "A decision model capturing the binding between procesing element and runtimes.\n\nA runtime here is used in a loose sense: it can be simply a programmable bare-metal environment. The assumption is that every runtime has one processing element host and all processing elements might have only one runtime that it is affine to. A processing element having affinity to a runtime simply means that this runtime is managing the processing element according to any policy.",
+      "type": "object",
+      "required": [
+        "is_bare_metal",
+        "is_earliest_deadline_first",
+        "is_fixed_priority",
+        "is_preemptive",
+        "is_super_loop",
+        "processor_affinities",
+        "processors",
+        "runtime_host",
+        "runtimes"
+      ],
+      "properties": {
+        "is_bare_metal": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          },
+          "uniqueItems": true
+        },
+        "is_earliest_deadline_first": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          },
+          "uniqueItems": true
+        },
+        "is_fixed_priority": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          },
+          "uniqueItems": true
+        },
+        "is_preemptive": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          },
+          "uniqueItems": true
+        },
+        "is_super_loop": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          },
+          "uniqueItems": true
+        },
+        "processor_affinities": {
+          "type": "object",
+          "additionalProperties": {
+            "type": "string"
+          }
+        },
+        "processors": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          },
+          "uniqueItems": true
+        },
+        "runtime_host": {
+          "type": "object",
+          "additionalProperties": {
+            "type": "string"
+          }
+        },
+        "runtimes": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          },
+          "uniqueItems": true
+        }
+      }
+    }
+  }
+}
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "title": "InstrumentedComputationTimes",
+  "description": "A decision model to hold computation times between processsables and processing elements.\n\nAs the decision model stores these computation in associative arrays (maps), the lack of an association between a processable and a processing element means that this processable _cannot_ be executed in the processing element.\n\nIn order to maintain the precision as pristine as possible, the values are stored in a \"scaled\" manner. That is, there is a scaling factor that denotes the denominator in which all the stored values must be divided by. This enables us to move the computational numbers around as integers. Therefore, for any value in this decision model:\n\nactual_value = integer_value / scale_factor",
+  "type": "object",
+  "required": [
+    "average_execution_times",
+    "best_execution_times",
+    "processes",
+    "processing_elements",
+    "scale_factor",
+    "worst_execution_times"
+  ],
+  "properties": {
+    "average_execution_times": {
+      "type": "object",
+      "additionalProperties": {
+        "type": "object",
+        "additionalProperties": {
+          "type": "integer",
+          "format": "uint64",
+          "minimum": 0.0
+        }
+      }
+    },
+    "best_execution_times": {
+      "type": "object",
+      "additionalProperties": {
+        "type": "object",
+        "additionalProperties": {
+          "type": "integer",
+          "format": "uint64",
+          "minimum": 0.0
+        }
+      }
+    },
+    "processes": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      },
+      "uniqueItems": true
+    },
+    "processing_elements": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      },
+      "uniqueItems": true
+    },
+    "scale_factor": {
+      "type": "integer",
+      "format": "uint64",
+      "minimum": 0.0
+    },
+    "worst_execution_times": {
+      "type": "object",
+      "additionalProperties": {
+        "type": "object",
+        "additionalProperties": {
+          "type": "integer",
+          "format": "uint64",
+          "minimum": 0.0
+        }
+      }
+    }
+  }
+}
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "title": "AnalysedSDFApplication",
+  "description": "Decision model for analysed synchronous dataflow graphs.\n\nAside from the same information in the original SDF application, it also includes liveness information like its repetition vector.",
+  "type": "object",
+  "required": [
+    "periodic_admissible_static_schedule",
+    "repetition_vector",
+    "sdf_application"
+  ],
+  "properties": {
+    "periodic_admissible_static_schedule": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      }
+    },
+    "repetition_vector": {
+      "type": "object",
+      "additionalProperties": {
+        "type": "integer",
+        "format": "uint64",
+        "minimum": 0.0
+      }
+    },
+    "sdf_application": {
+      "$ref": "#/definitions/SDFApplication"
+    }
+  },
+  "definitions": {
+    "SDFApplication": {
+      "description": "Decision model for synchronous dataflow graphs.\n\nThis decision model encodes a synchronous dataflow graphs without its explicit topology matrix,  also known as balance matrix in some newer texts. This is achieved by encoding the graph as (A + C, E) where A is the set of actors, and C is the set of channels. Every edge in E connects an actor to a channel or a channel to an actor, i.e. e = (a,c,m) or e = (c,a.m) where m is the amount of token produced or consumed. For example, if e = (a, c, 2), then the edge e is the production of 2 tokens from the actor a to channel c.\n\nThis decision model is already analised, and provides the repetition vector for the SDF graphs contained as well as a schedule if these SDF graphs are consistent.",
+      "type": "object",
+      "required": [
+        "actor_minimum_throughputs",
+        "actors_identifiers",
+        "chain_maximum_latency",
+        "channels_identifiers",
+        "self_concurrent_actors",
+        "topology_channel_names",
+        "topology_consumption",
+        "topology_dsts",
+        "topology_initial_tokens",
+        "topology_production",
+        "topology_srcs",
+        "topology_token_size_in_bits"
+      ],
+      "properties": {
+        "actor_minimum_throughputs": {
+          "type": "object",
+          "additionalProperties": {
+            "type": "number",
+            "format": "double"
+          }
+        },
+        "actors_identifiers": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          },
+          "uniqueItems": true
+        },
+        "chain_maximum_latency": {
+          "type": "object",
+          "additionalProperties": {
+            "type": "object",
+            "additionalProperties": {
+              "type": "number",
+              "format": "double"
+            }
+          }
+        },
+        "channels_identifiers": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          },
+          "uniqueItems": true
+        },
+        "self_concurrent_actors": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          },
+          "uniqueItems": true
+        },
+        "topology_channel_names": {
+          "type": "array",
+          "items": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            },
+            "uniqueItems": true
+          }
+        },
+        "topology_consumption": {
+          "type": "array",
+          "items": {
+            "type": "integer",
+            "format": "uint64",
+            "minimum": 0.0
+          }
+        },
+        "topology_dsts": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        },
+        "topology_initial_tokens": {
+          "type": "array",
+          "items": {
+            "type": "integer",
+            "format": "uint64",
+            "minimum": 0.0
+          }
+        },
+        "topology_production": {
+          "type": "array",
+          "items": {
+            "type": "integer",
+            "format": "uint64",
+            "minimum": 0.0
+          }
+        },
+        "topology_srcs": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        },
+        "topology_token_size_in_bits": {
+          "type": "array",
+          "items": {
+            "type": "integer",
+            "format": "uint64",
+            "minimum": 0.0
+          }
+        }
+      }
+    }
+  }
+}
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "title": "TiledMultiCore",
+  "type": "object",
+  "required": [
+    "communication_elements_bit_per_sec_per_channel",
+    "communication_elements_max_channels",
+    "interconnect_topology_dsts",
+    "interconnect_topology_srcs",
+    "memories",
+    "network_interfaces",
+    "pre_computed_paths",
+    "processors",
+    "processors_frequency",
+    "processors_provisions",
+    "routers",
+    "tile_memory_sizes"
+  ],
+  "properties": {
+    "communication_elements_bit_per_sec_per_channel": {
+      "type": "object",
+      "additionalProperties": {
+        "type": "number",
+        "format": "double"
+      }
+    },
+    "communication_elements_max_channels": {
+      "type": "object",
+      "additionalProperties": {
+        "type": "integer",
+        "format": "uint32",
+        "minimum": 0.0
+      }
+    },
+    "interconnect_topology_dsts": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      }
+    },
+    "interconnect_topology_srcs": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      }
+    },
+    "memories": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      }
+    },
+    "network_interfaces": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      }
+    },
+    "pre_computed_paths": {
+      "type": "object",
+      "additionalProperties": {
+        "type": "object",
+        "additionalProperties": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        }
+      }
+    },
+    "processors": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      }
+    },
+    "processors_frequency": {
+      "type": "object",
+      "additionalProperties": {
+        "type": "integer",
+        "format": "uint64",
+        "minimum": 0.0
+      }
+    },
+    "processors_provisions": {
+      "type": "object",
+      "additionalProperties": {
+        "type": "object",
+        "additionalProperties": {
+          "type": "object",
+          "additionalProperties": {
+            "type": "number",
+            "format": "double"
+          }
+        }
+      }
+    },
+    "routers": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      }
+    },
+    "tile_memory_sizes": {
+      "type": "object",
+      "additionalProperties": {
+        "type": "integer",
+        "format": "uint64",
+        "minimum": 0.0
+      }
+    }
+  }
+}
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "title": "AperiodicAsynchronousDataflowToPartitionedTiledMulticore",
+  "description": "A decision model that combines one type of application, platform and information to bind them.\n\nThe assumptions of this decision model are: 1. For every process, there is at least one processing element in the platform that can run it. Otherwise, even the trivial mapping is impossible. 2. Super loop schedules are self-timed and stall the processing element that is hosting them. That is, if we have a poor schedule, the processing element will get \"blocked\" often.",
+  "type": "object",
+  "required": [
+    "aperiodic_asynchronous_dataflows",
+    "buffer_to_memory_mappings",
+    "instrumented_computation_times",
+    "instrumented_memory_requirements",
+    "partitioned_tiled_multicore",
+    "processes_to_memory_mapping",
+    "processes_to_runtime_scheduling",
+    "processing_elements_to_routers_reservations",
+    "super_loop_schedules"
+  ],
+  "properties": {
+    "aperiodic_asynchronous_dataflows": {
+      "type": "array",
+      "items": {
+        "$ref": "#/definitions/AperiodicAsynchronousDataflow"
+      }
+    },
+    "buffer_to_memory_mappings": {
+      "type": "object",
+      "additionalProperties": {
+        "type": "string"
+      }
+    },
+    "instrumented_computation_times": {
+      "$ref": "#/definitions/InstrumentedComputationTimes"
+    },
+    "instrumented_memory_requirements": {
+      "$ref": "#/definitions/InstrumentedMemoryRequirements"
+    },
+    "partitioned_tiled_multicore": {
+      "$ref": "#/definitions/PartitionedTiledMulticore"
+    },
+    "processes_to_memory_mapping": {
+      "type": "object",
+      "additionalProperties": {
+        "type": "string"
+      }
+    },
+    "processes_to_runtime_scheduling": {
+      "type": "object",
+      "additionalProperties": {
+        "type": "string"
+      }
+    },
+    "processing_elements_to_routers_reservations": {
+      "type": "object",
+      "additionalProperties": {
+        "type": "object",
+        "additionalProperties": {
+          "type": "integer",
+          "format": "uint16",
+          "minimum": 0.0
+        }
+      }
+    },
+    "super_loop_schedules": {
+      "type": "object",
+      "additionalProperties": {
+        "type": "array",
+        "items": {
+          "type": "string"
+        }
+      }
+    }
+  },
+  "definitions": {
+    "AperiodicAsynchronousDataflow": {
+      "description": "This decision model abstract asynchronous dataflow models that can be described by a repeating job-graph of this asynchronous processes. Two illustratives dataflow models fitting this category are synchronous dataflow models (despite the name) and cyclo-static dataflow models.\n\nAssumptions: 1. the job graph is always ready to be executed; or, the model is aperiodic.\n\n2. executing the job graph as presented guarantees that the dataflow processes are live (never deadlocked).\n\n3. The job graph is weakly connected. If you wish to have multiple \"applications\", you should generate one decision model for each application.",
+      "type": "object",
+      "required": [
+        "buffer_max_size_in_bits",
+        "buffers",
+        "job_graph_dst_instance",
+        "job_graph_dst_name",
+        "job_graph_instance",
+        "job_graph_is_strong_precedence",
+        "job_graph_name",
+        "job_graph_src_instance",
+        "job_graph_src_name",
+        "process_get_from_buffer_in_bits",
+        "process_minimum_throughput",
+        "process_path_maximum_latency",
+        "process_put_in_buffer_in_bits",
+        "processes"
+      ],
+      "properties": {
+        "buffer_max_size_in_bits": {
+          "type": "object",
+          "additionalProperties": {
+            "type": "integer",
+            "format": "uint64",
+            "minimum": 0.0
+          }
+        },
+        "buffers": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          },
+          "uniqueItems": true
+        },
+        "job_graph_dst_instance": {
+          "type": "array",
+          "items": {
+            "type": "integer",
+            "format": "uint64",
+            "minimum": 0.0
+          }
+        },
+        "job_graph_dst_name": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        },
+        "job_graph_instance": {
+          "type": "array",
+          "items": {
+            "type": "integer",
+            "format": "uint64",
+            "minimum": 0.0
+          }
+        },
+        "job_graph_is_strong_precedence": {
+          "type": "array",
+          "items": {
+            "type": "boolean"
+          }
+        },
+        "job_graph_name": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        },
+        "job_graph_src_instance": {
+          "type": "array",
+          "items": {
+            "type": "integer",
+            "format": "uint64",
+            "minimum": 0.0
+          }
+        },
+        "job_graph_src_name": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        },
+        "process_get_from_buffer_in_bits": {
+          "type": "object",
+          "additionalProperties": {
+            "type": "object",
+            "additionalProperties": {
+              "type": "integer",
+              "format": "uint64",
+              "minimum": 0.0
+            }
+          }
+        },
+        "process_minimum_throughput": {
+          "type": "object",
+          "additionalProperties": {
+            "type": "number",
+            "format": "double"
+          }
+        },
+        "process_path_maximum_latency": {
+          "type": "object",
+          "additionalProperties": {
+            "type": "object",
+            "additionalProperties": {
+              "type": "number",
+              "format": "double"
+            }
+          }
+        },
+        "process_put_in_buffer_in_bits": {
+          "type": "object",
+          "additionalProperties": {
+            "type": "object",
+            "additionalProperties": {
+              "type": "integer",
+              "format": "uint64",
+              "minimum": 0.0
+            }
+          }
+        },
+        "processes": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          },
+          "uniqueItems": true
+        }
+      }
+    },
+    "InstrumentedComputationTimes": {
+      "description": "A decision model to hold computation times between processsables and processing elements.\n\nAs the decision model stores these computation in associative arrays (maps), the lack of an association between a processable and a processing element means that this processable _cannot_ be executed in the processing element.\n\nIn order to maintain the precision as pristine as possible, the values are stored in a \"scaled\" manner. That is, there is a scaling factor that denotes the denominator in which all the stored values must be divided by. This enables us to move the computational numbers around as integers. Therefore, for any value in this decision model:\n\nactual_value = integer_value / scale_factor",
+      "type": "object",
+      "required": [
+        "average_execution_times",
+        "best_execution_times",
+        "processes",
+        "processing_elements",
+        "scale_factor",
+        "worst_execution_times"
+      ],
+      "properties": {
+        "average_execution_times": {
+          "type": "object",
+          "additionalProperties": {
+            "type": "object",
+            "additionalProperties": {
+              "type": "integer",
+              "format": "uint64",
+              "minimum": 0.0
+            }
+          }
+        },
+        "best_execution_times": {
+          "type": "object",
+          "additionalProperties": {
+            "type": "object",
+            "additionalProperties": {
+              "type": "integer",
+              "format": "uint64",
+              "minimum": 0.0
+            }
+          }
+        },
+        "processes": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          },
+          "uniqueItems": true
+        },
+        "processing_elements": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          },
+          "uniqueItems": true
+        },
+        "scale_factor": {
+          "type": "integer",
+          "format": "uint64",
+          "minimum": 0.0
+        },
+        "worst_execution_times": {
+          "type": "object",
+          "additionalProperties": {
+            "type": "object",
+            "additionalProperties": {
+              "type": "integer",
+              "format": "uint64",
+              "minimum": 0.0
+            }
+          }
+        }
+      }
+    },
+    "InstrumentedMemoryRequirements": {
+      "description": "A decision model to hold memory requirements for processes when executing in processing elements.\n\nAs the decision model stores these memory requirements in associative arrays (maps), the lack of an association between a process and a processing element means that this process _cannot_ be executed in the processing element.",
+      "type": "object",
+      "required": [
+        "channels",
+        "memory_requirements",
+        "processes",
+        "processing_elements"
+      ],
+      "properties": {
+        "channels": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          },
+          "uniqueItems": true
+        },
+        "memory_requirements": {
+          "type": "object",
+          "additionalProperties": {
+            "type": "object",
+            "additionalProperties": {
+              "type": "integer",
+              "format": "uint64",
+              "minimum": 0.0
+            }
+          }
+        },
+        "processes": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          },
+          "uniqueItems": true
+        },
+        "processing_elements": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          },
+          "uniqueItems": true
+        }
+      }
+    },
+    "PartitionedTiledMulticore": {
+      "description": "A decision model that captures a paritioned-scheduled tiled multicore machine\n\nThis means that every processing element hosts and has affinity for one and only one runtime element. This runtime element can execute according to any scheduling policy, but it must control only its host.",
+      "type": "object",
+      "required": [
+        "hardware",
+        "runtimes"
+      ],
+      "properties": {
+        "hardware": {
+          "$ref": "#/definitions/TiledMultiCore"
+        },
+        "runtimes": {
+          "$ref": "#/definitions/RuntimesAndProcessors"
+        }
+      }
+    },
+    "RuntimesAndProcessors": {
+      "description": "A decision model capturing the binding between procesing element and runtimes.\n\nA runtime here is used in a loose sense: it can be simply a programmable bare-metal environment. The assumption is that every runtime has one processing element host and all processing elements might have only one runtime that it is affine to. A processing element having affinity to a runtime simply means that this runtime is managing the processing element according to any policy.",
+      "type": "object",
+      "required": [
+        "is_bare_metal",
+        "is_earliest_deadline_first",
+        "is_fixed_priority",
+        "is_preemptive",
+        "is_super_loop",
+        "processor_affinities",
+        "processors",
+        "runtime_host",
+        "runtimes"
+      ],
+      "properties": {
+        "is_bare_metal": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          },
+          "uniqueItems": true
+        },
+        "is_earliest_deadline_first": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          },
+          "uniqueItems": true
+        },
+        "is_fixed_priority": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          },
+          "uniqueItems": true
+        },
+        "is_preemptive": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          },
+          "uniqueItems": true
+        },
+        "is_super_loop": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          },
+          "uniqueItems": true
+        },
+        "processor_affinities": {
+          "type": "object",
+          "additionalProperties": {
+            "type": "string"
+          }
+        },
+        "processors": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          },
+          "uniqueItems": true
+        },
+        "runtime_host": {
+          "type": "object",
+          "additionalProperties": {
+            "type": "string"
+          }
+        },
+        "runtimes": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          },
+          "uniqueItems": true
+        }
+      }
+    },
+    "TiledMultiCore": {
+      "type": "object",
+      "required": [
+        "communication_elements_bit_per_sec_per_channel",
+        "communication_elements_max_channels",
+        "interconnect_topology_dsts",
+        "interconnect_topology_srcs",
+        "memories",
+        "network_interfaces",
+        "pre_computed_paths",
+        "processors",
+        "processors_frequency",
+        "processors_provisions",
+        "routers",
+        "tile_memory_sizes"
+      ],
+      "properties": {
+        "communication_elements_bit_per_sec_per_channel": {
+          "type": "object",
+          "additionalProperties": {
+            "type": "number",
+            "format": "double"
+          }
+        },
+        "communication_elements_max_channels": {
+          "type": "object",
+          "additionalProperties": {
+            "type": "integer",
+            "format": "uint32",
+            "minimum": 0.0
+          }
+        },
+        "interconnect_topology_dsts": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        },
+        "interconnect_topology_srcs": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        },
+        "memories": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        },
+        "network_interfaces": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        },
+        "pre_computed_paths": {
+          "type": "object",
+          "additionalProperties": {
+            "type": "object",
+            "additionalProperties": {
+              "type": "array",
+              "items": {
+                "type": "string"
+              }
+            }
+          }
+        },
+        "processors": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        },
+        "processors_frequency": {
+          "type": "object",
+          "additionalProperties": {
+            "type": "integer",
+            "format": "uint64",
+            "minimum": 0.0
+          }
+        },
+        "processors_provisions": {
+          "type": "object",
+          "additionalProperties": {
+            "type": "object",
+            "additionalProperties": {
+              "type": "object",
+              "additionalProperties": {
+                "type": "number",
+                "format": "double"
+              }
+            }
+          }
+        },
+        "routers": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        },
+        "tile_memory_sizes": {
+          "type": "object",
+          "additionalProperties": {
+            "type": "integer",
+            "format": "uint64",
+            "minimum": 0.0
+          }
+        }
+      }
+    }
+  }
+}
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "title": "RuntimesAndProcessors",
+  "description": "A decision model capturing the binding between procesing element and runtimes.\n\nA runtime here is used in a loose sense: it can be simply a programmable bare-metal environment. The assumption is that every runtime has one processing element host and all processing elements might have only one runtime that it is affine to. A processing element having affinity to a runtime simply means that this runtime is managing the processing element according to any policy.",
+  "type": "object",
+  "required": [
+    "is_bare_metal",
+    "is_earliest_deadline_first",
+    "is_fixed_priority",
+    "is_preemptive",
+    "is_super_loop",
+    "processor_affinities",
+    "processors",
+    "runtime_host",
+    "runtimes"
+  ],
+  "properties": {
+    "is_bare_metal": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      },
+      "uniqueItems": true
+    },
+    "is_earliest_deadline_first": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      },
+      "uniqueItems": true
+    },
+    "is_fixed_priority": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      },
+      "uniqueItems": true
+    },
+    "is_preemptive": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      },
+      "uniqueItems": true
+    },
+    "is_super_loop": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      },
+      "uniqueItems": true
+    },
+    "processor_affinities": {
+      "type": "object",
+      "additionalProperties": {
+        "type": "string"
+      }
+    },
+    "processors": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      },
+      "uniqueItems": true
+    },
+    "runtime_host": {
+      "type": "object",
+      "additionalProperties": {
+        "type": "string"
+      }
+    },
+    "runtimes": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      },
+      "uniqueItems": true
+    }
+  }
+}
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "title": "AperiodicAsynchronousDataflow",
+  "description": "This decision model abstract asynchronous dataflow models that can be described by a repeating job-graph of this asynchronous processes. Two illustratives dataflow models fitting this category are synchronous dataflow models (despite the name) and cyclo-static dataflow models.\n\nAssumptions: 1. the job graph is always ready to be executed; or, the model is aperiodic.\n\n2. executing the job graph as presented guarantees that the dataflow processes are live (never deadlocked).\n\n3. The job graph is weakly connected. If you wish to have multiple \"applications\", you should generate one decision model for each application.",
+  "type": "object",
+  "required": [
+    "buffer_max_size_in_bits",
+    "buffers",
+    "job_graph_dst_instance",
+    "job_graph_dst_name",
+    "job_graph_instance",
+    "job_graph_is_strong_precedence",
+    "job_graph_name",
+    "job_graph_src_instance",
+    "job_graph_src_name",
+    "process_get_from_buffer_in_bits",
+    "process_minimum_throughput",
+    "process_path_maximum_latency",
+    "process_put_in_buffer_in_bits",
+    "processes"
+  ],
+  "properties": {
+    "buffer_max_size_in_bits": {
+      "type": "object",
+      "additionalProperties": {
+        "type": "integer",
+        "format": "uint64",
+        "minimum": 0.0
+      }
+    },
+    "buffers": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      },
+      "uniqueItems": true
+    },
+    "job_graph_dst_instance": {
+      "type": "array",
+      "items": {
+        "type": "integer",
+        "format": "uint64",
+        "minimum": 0.0
+      }
+    },
+    "job_graph_dst_name": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      }
+    },
+    "job_graph_instance": {
+      "type": "array",
+      "items": {
+        "type": "integer",
+        "format": "uint64",
+        "minimum": 0.0
+      }
+    },
+    "job_graph_is_strong_precedence": {
+      "type": "array",
+      "items": {
+        "type": "boolean"
+      }
+    },
+    "job_graph_name": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      }
+    },
+    "job_graph_src_instance": {
+      "type": "array",
+      "items": {
+        "type": "integer",
+        "format": "uint64",
+        "minimum": 0.0
+      }
+    },
+    "job_graph_src_name": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      }
+    },
+    "process_get_from_buffer_in_bits": {
+      "type": "object",
+      "additionalProperties": {
+        "type": "object",
+        "additionalProperties": {
+          "type": "integer",
+          "format": "uint64",
+          "minimum": 0.0
+        }
+      }
+    },
+    "process_minimum_throughput": {
+      "type": "object",
+      "additionalProperties": {
+        "type": "number",
+        "format": "double"
+      }
+    },
+    "process_path_maximum_latency": {
+      "type": "object",
+      "additionalProperties": {
+        "type": "object",
+        "additionalProperties": {
+          "type": "number",
+          "format": "double"
+        }
+      }
+    },
+    "process_put_in_buffer_in_bits": {
+      "type": "object",
+      "additionalProperties": {
+        "type": "object",
+        "additionalProperties": {
+          "type": "integer",
+          "format": "uint64",
+          "minimum": 0.0
+        }
+      }
+    },
+    "processes": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      },
+      "uniqueItems": true
+    }
+  }
+}
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "title": "MemoryMappableMultiCore",
+  "description": "A decision model capturing the memory mappable platform abstraction.\n\nThis type of platform is what one would expect from most COTS platforms and hardware designs, which completely or partially follows a von neumman architecture. This means that the storage elements store both data and instructions and the processors access them going through the communication elements; the latter that form the 'interconnect'.",
+  "type": "object",
+  "required": [
+    "communication_elements_bit_per_sec_per_channel",
+    "communication_elements_max_channels",
+    "communication_elems",
+    "pre_computed_paths",
+    "processing_elems",
+    "processors_frequency",
+    "processors_provisions",
+    "storage_elems",
+    "storage_sizes",
+    "topology_dsts",
+    "topology_srcs"
+  ],
+  "properties": {
+    "communication_elements_bit_per_sec_per_channel": {
+      "type": "object",
+      "additionalProperties": {
+        "type": "number",
+        "format": "double"
+      }
+    },
+    "communication_elements_max_channels": {
+      "type": "object",
+      "additionalProperties": {
+        "type": "integer",
+        "format": "uint32",
+        "minimum": 0.0
+      }
+    },
+    "communication_elems": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      },
+      "uniqueItems": true
+    },
+    "pre_computed_paths": {
+      "type": "object",
+      "additionalProperties": {
+        "type": "object",
+        "additionalProperties": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        }
+      }
+    },
+    "processing_elems": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      },
+      "uniqueItems": true
+    },
+    "processors_frequency": {
+      "type": "object",
+      "additionalProperties": {
+        "type": "integer",
+        "format": "uint64",
+        "minimum": 0.0
+      }
+    },
+    "processors_provisions": {
+      "type": "object",
+      "additionalProperties": {
+        "type": "object",
+        "additionalProperties": {
+          "type": "object",
+          "additionalProperties": {
+            "type": "number",
+            "format": "double"
+          }
+        }
+      }
+    },
+    "storage_elems": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      },
+      "uniqueItems": true
+    },
+    "storage_sizes": {
+      "type": "object",
+      "additionalProperties": {
+        "type": "integer",
+        "format": "uint64",
+        "minimum": 0.0
+      }
+    },
+    "topology_dsts": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      }
+    },
+    "topology_srcs": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      }
+    }
+  }
+}

@@ -1,0 +1,36 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<robot generator="Robot 6.1 (Python 3.11.4 on win32)" generated="20230911 14:10:52.855" rpa="false" schemaversion="4">
+<suite id="s1" name="Robot Interactive Console" source="c:\Users\JordaoRodolfo\.vscode\extensions\robocorp.robotframework-lsp-1.11.0\src\robotframework_ls\vendored\robotframework_interactive\robot_interactive_console.robot">
+<test id="s1-t1" name="Default Task/Test" line="5">
+<kw name="Interpreter Main Loop" library="MainLoop">
+<kw name="IDeSyDeLibrary.Try Explore">
+<var>${NumFound}</var>
+<arg>examples_and_benchmarks/small_and_explainable/sobel_to_bus_multicore</arg>
+<msg timestamp="20230911 14:10:54.554" level="FAIL">No keyword with name 'IDeSyDeLibrary.Try Explore' found.</msg>
+<status status="FAIL" starttime="20230911 14:10:54.554" endtime="20230911 14:10:54.554"/>
+</kw>
+<kw name="Should Not Be Equal As Integers" library="BuiltIn">
+<arg>${NumFound}</arg>
+<arg>0</arg>
+<doc>Fails if objects are equal after converting them to integers.</doc>
+<status status="NOT RUN" starttime="20230911 14:10:54.554" endtime="20230911 14:10:54.555"/>
+</kw>
+<status status="PASS" starttime="20230911 14:10:52.905" endtime="20230911 14:11:11.449"/>
+</kw>
+<status status="PASS" starttime="20230911 14:10:52.904" endtime="20230911 14:11:11.449"/>
+</test>
+<status status="PASS" starttime="20230911 14:10:52.857" endtime="20230911 14:11:11.450"/>
+</suite>
+<statistics>
+<total>
+<stat pass="1" fail="0" skip="0">All Tests</stat>
+</total>
+<tag>
+</tag>
+<suite>
+<stat pass="1" fail="0" skip="0" id="s1" name="Robot Interactive Console">Robot Interactive Console</stat>
+</suite>
+</statistics>
+<errors>
+</errors>
+</robot>

@@ -1,0 +1,585 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "title": "TiledMultiCore",
+  "type": "object",
+  "required": [
+    "communication_elements_bit_per_sec_per_channel",
+    "communication_elements_max_channels",
+    "interconnect_topology_dsts",
+    "interconnect_topology_srcs",
+    "memories",
+    "network_interfaces",
+    "pre_computed_paths",
+    "processors",
+    "processors_frequency",
+    "processors_provisions",
+    "routers",
+    "tile_memory_sizes"
+  ],
+  "properties": {
+    "communication_elements_bit_per_sec_per_channel": {
+      "type": "object",
+      "additionalProperties": {
+        "type": "number",
+        "format": "double"
+      }
+    },
+    "communication_elements_max_channels": {
+      "type": "object",
+      "additionalProperties": {
+        "type": "integer",
+        "format": "uint32",
+        "minimum": 0.0
+      }
+    },
+    "interconnect_topology_dsts": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      }
+    },
+    "interconnect_topology_srcs": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      }
+    },
+    "memories": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      }
+    },
+    "network_interfaces": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      }
+    },
+    "pre_computed_paths": {
+      "type": "object",
+      "additionalProperties": {
+        "type": "object",
+        "additionalProperties": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        }
+      }
+    },
+    "processors": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      }
+    },
+    "processors_frequency": {
+      "type": "object",
+      "additionalProperties": {
+        "type": "integer",
+        "format": "uint64",
+        "minimum": 0.0
+      }
+    },
+    "processors_provisions": {
+      "type": "object",
+      "additionalProperties": {
+        "type": "object",
+        "additionalProperties": {
+          "type": "object",
+          "additionalProperties": {
+            "type": "number",
+            "format": "double"
+          }
+        }
+      }
+    },
+    "routers": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      }
+    },
+    "tile_memory_sizes": {
+      "type": "object",
+      "additionalProperties": {
+        "type": "integer",
+        "format": "uint64",
+        "minimum": 0.0
+      }
+    }
+  }
+}
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "title": "PartitionedTiledMulticore",
+  "type": "object",
+  "required": [
+    "hardware",
+    "runtimes"
+  ],
+  "properties": {
+    "hardware": {
+      "$ref": "#/definitions/TiledMultiCore"
+    },
+    "runtimes": {
+      "$ref": "#/definitions/RuntimesAndProcessors"
+    }
+  },
+  "definitions": {
+    "RuntimesAndProcessors": {
+      "type": "object",
+      "required": [
+        "is_bare_metal",
+        "is_cyclic_executive",
+        "is_earliest_deadline_first",
+        "is_fixed_priority",
+        "processor_affinities",
+        "processors",
+        "runtime_host",
+        "runtimes"
+      ],
+      "properties": {
+        "is_bare_metal": {
+          "type": "array",
+          "items": {
+            "type": "boolean"
+          }
+        },
+        "is_cyclic_executive": {
+          "type": "array",
+          "items": {
+            "type": "boolean"
+          }
+        },
+        "is_earliest_deadline_first": {
+          "type": "array",
+          "items": {
+            "type": "boolean"
+          }
+        },
+        "is_fixed_priority": {
+          "type": "array",
+          "items": {
+            "type": "boolean"
+          }
+        },
+        "processor_affinities": {
+          "type": "object",
+          "additionalProperties": {
+            "type": "string"
+          }
+        },
+        "processors": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        },
+        "runtime_host": {
+          "type": "object",
+          "additionalProperties": {
+            "type": "string"
+          }
+        },
+        "runtimes": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        }
+      }
+    },
+    "TiledMultiCore": {
+      "type": "object",
+      "required": [
+        "communication_elements_bit_per_sec_per_channel",
+        "communication_elements_max_channels",
+        "interconnect_topology_dsts",
+        "interconnect_topology_srcs",
+        "memories",
+        "network_interfaces",
+        "pre_computed_paths",
+        "processors",
+        "processors_frequency",
+        "processors_provisions",
+        "routers",
+        "tile_memory_sizes"
+      ],
+      "properties": {
+        "communication_elements_bit_per_sec_per_channel": {
+          "type": "object",
+          "additionalProperties": {
+            "type": "number",
+            "format": "double"
+          }
+        },
+        "communication_elements_max_channels": {
+          "type": "object",
+          "additionalProperties": {
+            "type": "integer",
+            "format": "uint32",
+            "minimum": 0.0
+          }
+        },
+        "interconnect_topology_dsts": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        },
+        "interconnect_topology_srcs": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        },
+        "memories": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        },
+        "network_interfaces": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        },
+        "pre_computed_paths": {
+          "type": "object",
+          "additionalProperties": {
+            "type": "object",
+            "additionalProperties": {
+              "type": "array",
+              "items": {
+                "type": "string"
+              }
+            }
+          }
+        },
+        "processors": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        },
+        "processors_frequency": {
+          "type": "object",
+          "additionalProperties": {
+            "type": "integer",
+            "format": "uint64",
+            "minimum": 0.0
+          }
+        },
+        "processors_provisions": {
+          "type": "object",
+          "additionalProperties": {
+            "type": "object",
+            "additionalProperties": {
+              "type": "object",
+              "additionalProperties": {
+                "type": "number",
+                "format": "double"
+              }
+            }
+          }
+        },
+        "routers": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        },
+        "tile_memory_sizes": {
+          "type": "object",
+          "additionalProperties": {
+            "type": "integer",
+            "format": "uint64",
+            "minimum": 0.0
+          }
+        }
+      }
+    }
+  }
+}
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "title": "AsynchronousAperiodicDataflow",
+  "description": "This decision model abstract asynchronous dataflow models that can be described by a repeating job-graph of this asynchronous processes. Two illustratives dataflow models fitting this category are synchronous dataflow models (despite the name) and cyclo-static dataflow models.\n\nAssumptions: 1. the job graph is always ready to be executed; or, the model is aperiodic.\n\n2. executing the job graph as presented guarantees that the dataflow processes are live (never deadlocked).\n\n3. The job graph ois weakly connected. If you wish to have multiple \"applications\", you should generate one decision model for each application.",
+  "type": "object",
+  "required": [
+    "buffer_max_sizes",
+    "job_graph_buffer_name",
+    "job_graph_data_read",
+    "job_graph_data_sent",
+    "job_graph_dst",
+    "job_graph_src",
+    "jobs_of_processes",
+    "process_minimum_throughput",
+    "process_path_maximum_latency",
+    "processes"
+  ],
+  "properties": {
+    "buffer_max_sizes": {
+      "type": "object",
+      "additionalProperties": {
+        "type": "integer",
+        "format": "uint64",
+        "minimum": 0.0
+      }
+    },
+    "job_graph_buffer_name": {
+      "type": "array",
+      "items": {
+        "type": "array",
+        "items": {
+          "type": "string"
+        }
+      }
+    },
+    "job_graph_data_read": {
+      "type": "array",
+      "items": {
+        "type": "array",
+        "items": {
+          "type": "integer",
+          "format": "uint64",
+          "minimum": 0.0
+        }
+      }
+    },
+    "job_graph_data_sent": {
+      "type": "array",
+      "items": {
+        "type": "array",
+        "items": {
+          "type": "integer",
+          "format": "uint64",
+          "minimum": 0.0
+        }
+      }
+    },
+    "job_graph_dst": {
+      "type": "array",
+      "items": {
+        "type": "integer",
+        "format": "uint32",
+        "minimum": 0.0
+      }
+    },
+    "job_graph_src": {
+      "type": "array",
+      "items": {
+        "type": "integer",
+        "format": "uint32",
+        "minimum": 0.0
+      }
+    },
+    "jobs_of_processes": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      }
+    },
+    "process_minimum_throughput": {
+      "type": "object",
+      "additionalProperties": {
+        "type": "number",
+        "format": "double"
+      }
+    },
+    "process_path_maximum_latency": {
+      "type": "object",
+      "additionalProperties": {
+        "type": "object",
+        "additionalProperties": {
+          "type": "number",
+          "format": "double"
+        }
+      }
+    },
+    "processes": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      },
+      "uniqueItems": true
+    }
+  }
+}
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "title": "SDFApplication",
+  "description": "Decision model for synchronous dataflow graphs.\n\nThis decision model encodes a synchronous dataflow graphs without its explicit topology matrix,  also known as balance matrix in some newer texts. This is achieved by encoding the graph as (A + C, E) where A is the set of actors, and C is the set of channels. Every edge in E connects an actor to a channel or a channel to an actor, i.e. e = (a,c,m) or e = (c,a.m) where m is the amount of token produced or consumed. For example, if e = (a, c, 2), then the edge e is the production of 2 tokens from the actor a to channel c.\n\nThis decision model is already analised, and provides the repetition vector for the SDF graphs contained as well as a schedule if these SDF graphs are consistent.",
+  "type": "object",
+  "required": [
+    "actor_computational_needs",
+    "actor_sizes",
+    "actors_identifiers",
+    "channel_num_initial_tokens",
+    "channel_token_sizes",
+    "channels_identifiers",
+    "minimum_actor_throughputs",
+    "repetition_vector",
+    "topological_and_heavy_job_ordering",
+    "topology_dsts",
+    "topology_edge_value",
+    "topology_srcs"
+  ],
+  "properties": {
+    "actor_computational_needs": {
+      "type": "object",
+      "additionalProperties": {
+        "type": "object",
+        "additionalProperties": {
+          "type": "object",
+          "additionalProperties": {
+            "type": "integer",
+            "format": "uint64",
+            "minimum": 0.0
+          }
+        }
+      }
+    },
+    "actor_sizes": {
+      "type": "object",
+      "additionalProperties": {
+        "type": "integer",
+        "format": "uint64",
+        "minimum": 0.0
+      }
+    },
+    "actors_identifiers": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      }
+    },
+    "channel_num_initial_tokens": {
+      "type": "object",
+      "additionalProperties": {
+        "type": "integer",
+        "format": "int64"
+      }
+    },
+    "channel_token_sizes": {
+      "type": "object",
+      "additionalProperties": {
+        "type": "integer",
+        "format": "uint64",
+        "minimum": 0.0
+      }
+    },
+    "channels_identifiers": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      }
+    },
+    "minimum_actor_throughputs": {
+      "type": "object",
+      "additionalProperties": {
+        "type": "number",
+        "format": "double"
+      }
+    },
+    "repetition_vector": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      }
+    },
+    "topological_and_heavy_job_ordering": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      }
+    },
+    "topology_dsts": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      }
+    },
+    "topology_edge_value": {
+      "type": "array",
+      "items": {
+        "type": "integer",
+        "format": "int64"
+      }
+    },
+    "topology_srcs": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      }
+    }
+  }
+}
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "title": "RuntimesAndProcessors",
+  "type": "object",
+  "required": [
+    "is_bare_metal",
+    "is_cyclic_executive",
+    "is_earliest_deadline_first",
+    "is_fixed_priority",
+    "processor_affinities",
+    "processors",
+    "runtime_host",
+    "runtimes"
+  ],
+  "properties": {
+    "is_bare_metal": {
+      "type": "array",
+      "items": {
+        "type": "boolean"
+      }
+    },
+    "is_cyclic_executive": {
+      "type": "array",
+      "items": {
+        "type": "boolean"
+      }
+    },
+    "is_earliest_deadline_first": {
+      "type": "array",
+      "items": {
+        "type": "boolean"
+      }
+    },
+    "is_fixed_priority": {
+      "type": "array",
+      "items": {
+        "type": "boolean"
+      }
+    },
+    "processor_affinities": {
+      "type": "object",
+      "additionalProperties": {
+        "type": "string"
+      }
+    },
+    "processors": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      }
+    },
+    "runtime_host": {
+      "type": "object",
+      "additionalProperties": {
+        "type": "string"
+      }
+    },
+    "runtimes": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      }
+    }
+  }
+}

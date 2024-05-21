@@ -1,0 +1,1 @@
+{"processors":["APU_C0","APU_C1","APU_C2","APU_C3","RPU_C0","RPU_C1"],"schedulers":["APU_C0_Scheduler","APU_C1_Scheduler","APU_C2_Scheduler","APU_C3_Scheduler","RPU_C0_Scheduler","RPU_C1_Scheduler"],"is_bare_metal":[false,false,false,false,false,false],"is_fixed_priority":[false,false,false,false,false,false],"is_cyclic_executive":[true,true,true,true,true,true]}

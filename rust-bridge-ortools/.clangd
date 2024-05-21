@@ -1,0 +1,8 @@
+CompileFlags:
+  Add:
+    - "-std=c++17"
+    - "-Iortools/include"
+    - "-Iinclude"
+    - "-IC:/users/jordaorodolfo/gits/idesyde/rust-bridge-ortools/ortools/include"
+    - "-IC:/users/jordaorodolfo/gits/idesyde/rust-bridge-ortools/../"
+    - "-IC:/users/jordaorodolfo/gits/idesyde/rust-bridge-ortools/../target/cxxbridge"

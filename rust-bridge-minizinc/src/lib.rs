@@ -793,8 +793,8 @@ fn solve_aad2pmmmap(
                                 explored.processes_to_runtime_scheduling = mzn_vars
                                     .process_execution
                                     .iter()
-                                    .filter(|r| **r < list_schedulers.len() as u64)
                                     .enumerate()
+                                    .filter(|(_, r)| **r < list_schedulers.len() as u64)
                                     .map(|(p, r)| {
                                         (
                                             all_processes[p].clone(),
@@ -805,8 +805,8 @@ fn solve_aad2pmmmap(
                                 explored.processes_to_logic_programmable_areas = mzn_vars
                                     .process_execution
                                     .iter()
-                                    .filter(|r| **r >= list_schedulers.len() as u64)
                                     .enumerate()
+                                    .filter(|(_, r)| **r >= list_schedulers.len() as u64)
                                     .map(|(p, r)| {
                                         (
                                             all_processes[p].clone(),

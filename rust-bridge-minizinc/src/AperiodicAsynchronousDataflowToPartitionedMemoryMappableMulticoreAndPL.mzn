@@ -56,15 +56,15 @@ constraint forall(p in Processes) (durationRead[p] >= 0);
 constraint forall(p in Processes) (durationWrite[p] >= 0);
 constraint forall(p in Processes) (duration[p] >= min([e | e in executionTime[p, ..] where e >= 0]));
 
-constraint forall(p in Processes, pe in ListSchedulers, me in Memories) (
-  absent(interconnectFromMemories[me, pe]) -> processesExecution[p] != pe \/ processesMapping[p] != me
+constraint forall(p in Processes, pe in ListSchedulers, me in Memories where absent(interconnectFromMemories[me, pe])) (
+  processesExecution[p] != pe \/ processesMapping[p] != me
 );
 
-constraint forall(b in Buffers, p in Processes, pe in Mappable, me in Memories where processesReadBuffer[p, b] > 0) (
-  absent(interconnectFromMemories[me, pe]) -> processesExecution[p] != pe \/ buffersMapping[p] != me
+constraint forall(b in Buffers, p in Processes, pe in Mappable, me in Memories where processesReadBuffer[p, b] > 0 /\ absent(interconnectFromMemories[me, pe])) (
+  processesExecution[p] != pe \/ buffersMapping[b] != me
 );
-constraint forall(b in Buffers, p in Processes, pe in Mappable, me in Memories where processesWriteBuffer[p, b] > 0) (
-  absent(interconnectToMemories[pe, me]) -> processesExecution[p] != pe \/ buffersMapping[p] != me
+constraint forall(b in Buffers, p in Processes, pe in Mappable, me in Memories where processesWriteBuffer[p, b] > 0 /\ absent(interconnectToMemories[pe, me])) (
+  processesExecution[p] != pe \/ buffersMapping[b] != me
 );
 
 constraint forall(m in Memories) (

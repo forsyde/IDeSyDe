@@ -790,6 +790,7 @@ fn solve_aad2pmmmap(
                                     .expect("Should not fail to parse the output of minizinc");
                             let mut explored = input.clone();
                             if let Some(mzn_vars) = mzn_out.output.get("json") {
+                                println!("{:?}", mzn_vars);
                                 explored.processes_to_runtime_scheduling = mzn_vars
                                     .process_execution
                                     .iter()

@@ -925,7 +925,7 @@ impl AperiodicAsynchronousDataflowToPartitionedMemoryMappableMulticoreAndPL {
             .communication_elements_bit_per_sec_per_channel
             .values()
             .map(|x| 1.0 / x)
-            .reduce(|x, y| x.max(y))
+            .reduce(f64::max)
             .unwrap_or(0.0) as f32;
         original_max_pes
             .max(original_max_plas)

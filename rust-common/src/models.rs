@@ -919,7 +919,17 @@ impl AperiodicAsynchronousDataflowToPartitionedMemoryMappableMulticoreAndPL {
             })
             .reduce(f32::max)
             .unwrap_or(0.0);
-        original_max_pes.max(original_max_plas)
+        let original_max_traversal = self
+            .partitioned_mem_mappable_multicore_and_pl
+            .hardware
+            .communication_elements_bit_per_sec_per_channel
+            .values()
+            .map(|x| 1.0 / x)
+            .reduce(|x, y| x.max(y))
+            .unwrap_or(0.0) as f32;
+        original_max_pes
+            .max(original_max_plas)
+            .max(original_max_traversal)
     }
 
     pub fn get_memory_scale_factor(&self) -> u64 {

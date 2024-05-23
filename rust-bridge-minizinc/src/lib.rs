@@ -714,9 +714,9 @@ fn solve_aad2pmmmap(
                         .communication_elements_bit_per_sec_per_channel
                         .get(ce)
                         .map(|x| {
-                            (discrete_max as f64 / (x * average_max as f64) / memory_scale as f64)
+                            (average_max as f64 / x / discrete_max as f64 / memory_scale as f64)
                                 .ceil() as i32
-                        }) // TODO: this must be fixed with noramlization later
+                        })
                         .unwrap_or(0)
                 })
                 .collect::<Vec<i32>>(),

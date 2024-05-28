@@ -7,7 +7,7 @@ systemgraph {
   [forsyde::io::lib::hierarchy::platform::hardware::DigitalModule, forsyde::io::lib::hierarchy::platform::hardware::GenericMemoryModule, forsyde::io::lib::hierarchy::platform::hardware::HardwareModule, forsyde::io::lib::hierarchy::visualization::Visualizable]
   (to_from_OCM_SWITCH)
   {
-    "spaceInBits": 32000000000_l,
+    "spaceInBits": 2048000_l,
     "operatingFrequencyInHertz": 600000000_l
   }
   vertex "OCM_SWITCH"
@@ -25,7 +25,6 @@ systemgraph {
     "maxCyclesPerFlit": 1_i,
     "flitSizeInBits": 64_l,
     "operatingFrequencyInHertz": 200000000_l,
-    "initialLatency": 0_l,
     "maxConcurrentFlits": 1_i
   }
   vertex "PS_DDR4"
@@ -50,14 +49,13 @@ systemgraph {
     "maxCyclesPerFlit": 1_i,
     "flitSizeInBits": 64_l,
     "operatingFrequencyInHertz": 333000000_l,
-    "initialLatency": 0_l,
     "maxConcurrentFlits": 1_i
   }
   vertex "PL_DDR4"
   [forsyde::io::lib::hierarchy::platform::hardware::DigitalModule, forsyde::io::lib::hierarchy::platform::hardware::GenericMemoryModule, forsyde::io::lib::hierarchy::platform::hardware::HardwareModule, forsyde::io::lib::hierarchy::visualization::Visualizable]
   (to_from_PL_DDR4_SWITCH)
   {
-    "spaceInBits": 32000000000_l,
+    "spaceInBits": 4096000000_l,
     "operatingFrequencyInHertz": 600000000_l
   }
   vertex "PL_DDR4_SWITCH"
@@ -67,7 +65,6 @@ systemgraph {
     "maxCyclesPerFlit": 1_i,
     "flitSizeInBits": 16_l,
     "operatingFrequencyInHertz": 333000000_l,
-    "initialLatency": 0_l,
     "maxConcurrentFlits": 1_i
   }
   vertex "APU_C0"
@@ -173,7 +170,6 @@ systemgraph {
     "maxCyclesPerFlit": 1_i,
     "flitSizeInBits": 128_l,
     "operatingFrequencyInHertz": 200000000_l,
-    "initialLatency": 0_l,
     "maxConcurrentFlits": 1_i
   }
   vertex "RPU_C0"
@@ -231,14 +227,13 @@ systemgraph {
     "maxCyclesPerFlit": 1_i,
     "flitSizeInBits": 64_l,
     "operatingFrequencyInHertz": 200000000_l,
-    "initialLatency": 0_l,
     "maxConcurrentFlits": 1_i
   }
   vertex "TCM_RPU_C0"
   [forsyde::io::lib::hierarchy::platform::hardware::DigitalModule, forsyde::io::lib::hierarchy::platform::hardware::GenericMemoryModule, forsyde::io::lib::hierarchy::platform::hardware::HardwareModule, forsyde::io::lib::hierarchy::visualization::Visualizable]
   (to_from_TCM_RPU_C0_SWITCH)
   {
-    "spaceInBits": 32000000000_l,
+    "spaceInBits": 1024000_l,
     "operatingFrequencyInHertz": 600000000_l
   }
   vertex "TCM_RPU_C0_SWITCH"
@@ -248,14 +243,13 @@ systemgraph {
     "maxCyclesPerFlit": 1_i,
     "flitSizeInBits": 64_l,
     "operatingFrequencyInHertz": 200000000_l,
-    "initialLatency": 0_l,
     "maxConcurrentFlits": 1_i
   }
   vertex "TCM_RPU_C1"
   [forsyde::io::lib::hierarchy::platform::hardware::DigitalModule, forsyde::io::lib::hierarchy::platform::hardware::GenericMemoryModule, forsyde::io::lib::hierarchy::platform::hardware::HardwareModule, forsyde::io::lib::hierarchy::visualization::Visualizable]
   (to_from_TCM_RPU_C1_SWITCH)
   {
-    "spaceInBits": 32000000000_l,
+    "spaceInBits": 1024000_l,
     "operatingFrequencyInHertz": 600000000_l
   }
   vertex "TCM_RPU_C1_SWITCH"
@@ -265,7 +259,6 @@ systemgraph {
     "maxCyclesPerFlit": 1_i,
     "flitSizeInBits": 64_l,
     "operatingFrequencyInHertz": 200000000_l,
-    "initialLatency": 0_l,
     "maxConcurrentFlits": 1_i
   }
   vertex "FPGA"
@@ -283,15 +276,14 @@ systemgraph {
     "maxCyclesPerFlit": 1_i,
     "flitSizeInBits": 128_l,
     "operatingFrequencyInHertz": 200000000_l,
-    "initialLatency": 0_l,
     "maxConcurrentFlits": 1_i
   }
   vertex "FPGA_BRAM"
   [forsyde::io::lib::hierarchy::platform::hardware::DigitalModule, forsyde::io::lib::hierarchy::platform::hardware::GenericMemoryModule, forsyde::io::lib::hierarchy::platform::hardware::HardwareModule, forsyde::io::lib::hierarchy::visualization::Visualizable]
   (to_from_FPD_SWITCH, to_from_FPGA_BRAM_SWITCH, to_from_LPD_SWITCH, to_from_PL_DDR4_SWITCH)
   {
-    "spaceInBits": 32000000000_l,
-    "operatingFrequencyInHertz": 600000000_l
+    "spaceInBits": 32000000_l,
+    "operatingFrequencyInHertz": 200000000_l
   }
   vertex "CCI_SWITCH"
   [forsyde::io::lib::hierarchy::platform::hardware::DigitalModule, forsyde::io::lib::hierarchy::platform::hardware::GenericCommunicationModule, forsyde::io::lib::hierarchy::platform::hardware::HardwareModule, forsyde::io::lib::hierarchy::platform::hardware::InstrumentedCommunicationModule, forsyde::io::lib::hierarchy::visualization::Visualizable]
@@ -300,7 +292,6 @@ systemgraph {
     "maxCyclesPerFlit": 1_i,
     "flitSizeInBits": 128_l,
     "operatingFrequencyInHertz": 200000000_l,
-    "initialLatency": 0_l,
     "maxConcurrentFlits": 1_i
   }
   vertex "FPD_SWITCH"
@@ -310,7 +301,6 @@ systemgraph {
     "maxCyclesPerFlit": 1_i,
     "flitSizeInBits": 128_l,
     "operatingFrequencyInHertz": 200000000_l,
-    "initialLatency": 0_l,
     "maxConcurrentFlits": 1_i
   }
   vertex "LPD_SWITCH"
@@ -320,7 +310,6 @@ systemgraph {
     "maxCyclesPerFlit": 1_i,
     "flitSizeInBits": 128_l,
     "operatingFrequencyInHertz": 200000000_l,
-    "initialLatency": 0_l,
     "maxConcurrentFlits": 1_i
   }
   edge [forsyde::io::lib::hierarchy::visualization::VisualContainment] from "MPSoC" port "contained" to "OCM" 

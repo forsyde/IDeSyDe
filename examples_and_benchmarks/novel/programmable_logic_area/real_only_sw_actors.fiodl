@@ -1,0 +1,544 @@
+systemgraph {
+  vertex "RealisticSDF"
+  [forsyde::io::lib::hierarchy::visualization::GreyBox, forsyde::io::lib::hierarchy::visualization::Visualizable]
+  (contained)
+  {}
+  vertex "SplitInput"
+  [forsyde::io::lib::hierarchy::behavior::BehaviourEntity, forsyde::io::lib::hierarchy::behavior::moc::MoCEntity, forsyde::io::lib::hierarchy::behavior::moc::sdf::SDFActor, forsyde::io::lib::hierarchy::implementation::functional::InstrumentedSoftwareBehaviour, forsyde::io::lib::hierarchy::visualization::Visualizable]
+  (combFunctions, in_SplitInput, to_Grayscale0, to_Grayscale1, to_Grayscale2, to_Grayscale3, to_Grayscale4, to_Grayscale5)
+  {
+    "computationalRequirements": {
+      "SW_Instructions": {
+        "IntegerOperation": 1_l
+      }
+    },
+    "maxSizeInBits": {
+      "SW_Instructions": 24_l
+    },
+    "production": {
+      "to_Grayscale0": 4147200_i,
+      "to_Grayscale1": 4147200_i,
+      "to_Grayscale2": 4147200_i,
+      "to_Grayscale3": 4147200_i,
+      "to_Grayscale4": 4147200_i,
+      "to_Grayscale5": 4147200_i
+    },
+    "consumption": {
+      "in_SplitInput": 24883200_i
+    }
+  }
+  vertex "SyncAndResize"
+  [forsyde::io::lib::hierarchy::behavior::BehaviourEntity, forsyde::io::lib::hierarchy::behavior::moc::MoCEntity, forsyde::io::lib::hierarchy::behavior::moc::sdf::SDFActor, forsyde::io::lib::hierarchy::implementation::functional::InstrumentedSoftwareBehaviour, forsyde::io::lib::hierarchy::visualization::Visualizable]
+  (combFunctions, from_Sobel0, from_Sobel1, from_Sobel2, from_Sobel3, from_Sobel4, from_Sobel5, to_ObjectDetection)
+  {
+    "computationalRequirements": {
+      "SW_Instructions": {
+        "IntegerOperation": 1000_l
+      }
+    },
+    "maxSizeInBits": {
+      "SW_Instructions": 24_l
+    },
+    "production": {
+      "to_ObjectDetection": 8294400_i
+    },
+    "consumption": {
+      "from_Sobel0": 1382400_i,
+      "from_Sobel1": 1382400_i,
+      "from_Sobel2": 1382400_i,
+      "from_Sobel3": 1382400_i,
+      "from_Sobel4": 1382400_i,
+      "from_Sobel5": 1382400_i
+    }
+  }
+  vertex "Grayscale0"
+  [forsyde::io::lib::hierarchy::behavior::BehaviourEntity, forsyde::io::lib::hierarchy::behavior::moc::MoCEntity, forsyde::io::lib::hierarchy::behavior::moc::sdf::SDFActor, forsyde::io::lib::hierarchy::implementation::functional::InstrumentedSoftwareBehaviour, forsyde::io::lib::hierarchy::visualization::Visualizable]
+  (combFunctions, from_SplitInput, to_Sobel0)
+  {
+    "computationalRequirements": {
+      "SW_Instructions": {
+        "Flop": 11059200_l
+      }
+    },
+    "maxSizeInBits": {
+      "SW_Instructions": 800_l
+    },
+    "production": {
+      "to_Sobel0": 1382400_i
+    },
+    "consumption": {
+      "from_SplitInput": 4147200_i
+    }
+  }
+  vertex "Sobel0"
+  [forsyde::io::lib::hierarchy::behavior::BehaviourEntity, forsyde::io::lib::hierarchy::behavior::moc::MoCEntity, forsyde::io::lib::hierarchy::behavior::moc::sdf::SDFActor, forsyde::io::lib::hierarchy::implementation::functional::InstrumentedSoftwareBehaviour, forsyde::io::lib::hierarchy::visualization::Visualizable]
+  (combFunctions, from_Grayscale0, to_SyncAndResize)
+  {
+    "computationalRequirements": {
+      "SW_Instructions": {
+        "IntegerOperation": 24883200_l
+      }
+    },
+    "maxSizeInBits": {
+      "SW_Instructions": 48000_l
+    },
+    "production": {
+      "to_SyncAndResize": 1382400_i
+    },
+    "consumption": {
+      "from_Grayscale0": 1382400_i
+    }
+  }
+  vertex "CH_SplitInput_Grayscale0"
+  [forsyde::io::lib::hierarchy::behavior::moc::MoCEntity, forsyde::io::lib::hierarchy::behavior::moc::sdf::SDFChannel, forsyde::io::lib::hierarchy::implementation::functional::BufferLike, forsyde::io::lib::hierarchy::visualization::Visualizable]
+  (consumer, from_SplitInput, producer, to_Grayscale0, tokenDataType)
+  {
+    "elementSizeInBits": 8_l,
+    "numInitialTokens": 0_i
+  }
+  vertex "CH_Grayscale0_Sobel0"
+  [forsyde::io::lib::hierarchy::behavior::moc::MoCEntity, forsyde::io::lib::hierarchy::behavior::moc::sdf::SDFChannel, forsyde::io::lib::hierarchy::implementation::functional::BufferLike, forsyde::io::lib::hierarchy::visualization::Visualizable]
+  (consumer, from_Grayscale0, producer, to_Sobel0, tokenDataType)
+  {
+    "elementSizeInBits": 8_l,
+    "numInitialTokens": 0_i
+  }
+  vertex "CH_Sobel0_SyncAndResize"
+  [forsyde::io::lib::hierarchy::behavior::moc::MoCEntity, forsyde::io::lib::hierarchy::behavior::moc::sdf::SDFChannel, forsyde::io::lib::hierarchy::implementation::functional::BufferLike, forsyde::io::lib::hierarchy::visualization::Visualizable]
+  (consumer, from_Sobel0, producer, to_SyncAndResize, tokenDataType)
+  {
+    "elementSizeInBits": 8_l,
+    "numInitialTokens": 0_i
+  }
+  vertex "Grayscale1"
+  [forsyde::io::lib::hierarchy::behavior::BehaviourEntity, forsyde::io::lib::hierarchy::behavior::moc::MoCEntity, forsyde::io::lib::hierarchy::behavior::moc::sdf::SDFActor, forsyde::io::lib::hierarchy::implementation::functional::InstrumentedSoftwareBehaviour, forsyde::io::lib::hierarchy::visualization::Visualizable]
+  (combFunctions, from_SplitInput, to_Sobel1)
+  {
+    "computationalRequirements": {
+      "SW_Instructions": {
+        "Flop": 11059200_l
+      }
+    },
+    "maxSizeInBits": {
+      "SW_Instructions": 800_l
+    },
+    "production": {
+      "to_Sobel1": 1382400_i
+    },
+    "consumption": {
+      "from_SplitInput": 4147200_i
+    }
+  }
+  vertex "Sobel1"
+  [forsyde::io::lib::hierarchy::behavior::BehaviourEntity, forsyde::io::lib::hierarchy::behavior::moc::MoCEntity, forsyde::io::lib::hierarchy::behavior::moc::sdf::SDFActor, forsyde::io::lib::hierarchy::implementation::functional::InstrumentedSoftwareBehaviour, forsyde::io::lib::hierarchy::visualization::Visualizable]
+  (combFunctions, from_Grayscale1, to_SyncAndResize)
+  {
+    "computationalRequirements": {
+      "SW_Instructions": {
+        "IntegerOperation": 24883200_l
+      }
+    },
+    "maxSizeInBits": {
+      "SW_Instructions": 48000_l
+    },
+    "production": {
+      "to_SyncAndResize": 1382400_i
+    },
+    "consumption": {
+      "from_Grayscale1": 1382400_i
+    }
+  }
+  vertex "CH_SplitInput_Grayscale1"
+  [forsyde::io::lib::hierarchy::behavior::moc::MoCEntity, forsyde::io::lib::hierarchy::behavior::moc::sdf::SDFChannel, forsyde::io::lib::hierarchy::implementation::functional::BufferLike, forsyde::io::lib::hierarchy::visualization::Visualizable]
+  (consumer, from_SplitInput, producer, to_Grayscale1, tokenDataType)
+  {
+    "elementSizeInBits": 8_l,
+    "numInitialTokens": 0_i
+  }
+  vertex "CH_Grayscale1_Sobel1"
+  [forsyde::io::lib::hierarchy::behavior::moc::MoCEntity, forsyde::io::lib::hierarchy::behavior::moc::sdf::SDFChannel, forsyde::io::lib::hierarchy::implementation::functional::BufferLike, forsyde::io::lib::hierarchy::visualization::Visualizable]
+  (consumer, from_Grayscale1, producer, to_Sobel1, tokenDataType)
+  {
+    "elementSizeInBits": 8_l,
+    "numInitialTokens": 0_i
+  }
+  vertex "CH_Sobel1_SyncAndResize"
+  [forsyde::io::lib::hierarchy::behavior::moc::MoCEntity, forsyde::io::lib::hierarchy::behavior::moc::sdf::SDFChannel, forsyde::io::lib::hierarchy::implementation::functional::BufferLike, forsyde::io::lib::hierarchy::visualization::Visualizable]
+  (consumer, from_Sobel1, producer, to_SyncAndResize, tokenDataType)
+  {
+    "elementSizeInBits": 8_l,
+    "numInitialTokens": 0_i
+  }
+  vertex "Grayscale2"
+  [forsyde::io::lib::hierarchy::behavior::BehaviourEntity, forsyde::io::lib::hierarchy::behavior::moc::MoCEntity, forsyde::io::lib::hierarchy::behavior::moc::sdf::SDFActor, forsyde::io::lib::hierarchy::implementation::functional::InstrumentedSoftwareBehaviour, forsyde::io::lib::hierarchy::visualization::Visualizable]
+  (combFunctions, from_SplitInput, to_Sobel2)
+  {
+    "computationalRequirements": {
+      "SW_Instructions": {
+        "Flop": 11059200_l
+      }
+    },
+    "maxSizeInBits": {
+      "SW_Instructions": 800_l
+    },
+    "production": {
+      "to_Sobel2": 1382400_i
+    },
+    "consumption": {
+      "from_SplitInput": 4147200_i
+    }
+  }
+  vertex "Sobel2"
+  [forsyde::io::lib::hierarchy::behavior::BehaviourEntity, forsyde::io::lib::hierarchy::behavior::moc::MoCEntity, forsyde::io::lib::hierarchy::behavior::moc::sdf::SDFActor, forsyde::io::lib::hierarchy::implementation::functional::InstrumentedSoftwareBehaviour, forsyde::io::lib::hierarchy::visualization::Visualizable]
+  (combFunctions, from_Grayscale2, to_SyncAndResize)
+  {
+    "computationalRequirements": {
+      "SW_Instructions": {
+        "IntegerOperation": 24883200_l
+      }
+    },
+    "maxSizeInBits": {
+      "SW_Instructions": 48000_l
+    },
+    "production": {
+      "to_SyncAndResize": 1382400_i
+    },
+    "consumption": {
+      "from_Grayscale2": 1382400_i
+    }
+  }
+  vertex "CH_SplitInput_Grayscale2"
+  [forsyde::io::lib::hierarchy::behavior::moc::MoCEntity, forsyde::io::lib::hierarchy::behavior::moc::sdf::SDFChannel, forsyde::io::lib::hierarchy::implementation::functional::BufferLike, forsyde::io::lib::hierarchy::visualization::Visualizable]
+  (consumer, from_SplitInput, producer, to_Grayscale2, tokenDataType)
+  {
+    "elementSizeInBits": 8_l,
+    "numInitialTokens": 0_i
+  }
+  vertex "CH_Grayscale2_Sobel2"
+  [forsyde::io::lib::hierarchy::behavior::moc::MoCEntity, forsyde::io::lib::hierarchy::behavior::moc::sdf::SDFChannel, forsyde::io::lib::hierarchy::implementation::functional::BufferLike, forsyde::io::lib::hierarchy::visualization::Visualizable]
+  (consumer, from_Grayscale2, producer, to_Sobel2, tokenDataType)
+  {
+    "elementSizeInBits": 8_l,
+    "numInitialTokens": 0_i
+  }
+  vertex "CH_Sobel2_SyncAndResize"
+  [forsyde::io::lib::hierarchy::behavior::moc::MoCEntity, forsyde::io::lib::hierarchy::behavior::moc::sdf::SDFChannel, forsyde::io::lib::hierarchy::implementation::functional::BufferLike, forsyde::io::lib::hierarchy::visualization::Visualizable]
+  (consumer, from_Sobel2, producer, to_SyncAndResize, tokenDataType)
+  {
+    "elementSizeInBits": 8_l,
+    "numInitialTokens": 0_i
+  }
+  vertex "Grayscale3"
+  [forsyde::io::lib::hierarchy::behavior::BehaviourEntity, forsyde::io::lib::hierarchy::behavior::moc::MoCEntity, forsyde::io::lib::hierarchy::behavior::moc::sdf::SDFActor, forsyde::io::lib::hierarchy::implementation::functional::InstrumentedSoftwareBehaviour, forsyde::io::lib::hierarchy::visualization::Visualizable]
+  (combFunctions, from_SplitInput, to_Sobel3)
+  {
+    "computationalRequirements": {
+      "SW_Instructions": {
+        "Flop": 11059200_l
+      }
+    },
+    "maxSizeInBits": {
+      "SW_Instructions": 800_l
+    },
+    "production": {
+      "to_Sobel3": 1382400_i
+    },
+    "consumption": {
+      "from_SplitInput": 4147200_i
+    }
+  }
+  vertex "Sobel3"
+  [forsyde::io::lib::hierarchy::behavior::BehaviourEntity, forsyde::io::lib::hierarchy::behavior::moc::MoCEntity, forsyde::io::lib::hierarchy::behavior::moc::sdf::SDFActor, forsyde::io::lib::hierarchy::implementation::functional::InstrumentedSoftwareBehaviour, forsyde::io::lib::hierarchy::visualization::Visualizable]
+  (combFunctions, from_Grayscale3, to_SyncAndResize)
+  {
+    "computationalRequirements": {
+      "SW_Instructions": {
+        "IntegerOperation": 24883200_l
+      }
+    },
+    "maxSizeInBits": {
+      "SW_Instructions": 48000_l
+    },
+    "production": {
+      "to_SyncAndResize": 1382400_i
+    },
+    "consumption": {
+      "from_Grayscale3": 1382400_i
+    }
+  }
+  vertex "CH_SplitInput_Grayscale3"
+  [forsyde::io::lib::hierarchy::behavior::moc::MoCEntity, forsyde::io::lib::hierarchy::behavior::moc::sdf::SDFChannel, forsyde::io::lib::hierarchy::implementation::functional::BufferLike, forsyde::io::lib::hierarchy::visualization::Visualizable]
+  (consumer, from_SplitInput, producer, to_Grayscale3, tokenDataType)
+  {
+    "elementSizeInBits": 8_l,
+    "numInitialTokens": 0_i
+  }
+  vertex "CH_Grayscale3_Sobel3"
+  [forsyde::io::lib::hierarchy::behavior::moc::MoCEntity, forsyde::io::lib::hierarchy::behavior::moc::sdf::SDFChannel, forsyde::io::lib::hierarchy::implementation::functional::BufferLike, forsyde::io::lib::hierarchy::visualization::Visualizable]
+  (consumer, from_Grayscale3, producer, to_Sobel3, tokenDataType)
+  {
+    "elementSizeInBits": 8_l,
+    "numInitialTokens": 0_i
+  }
+  vertex "CH_Sobel3_SyncAndResize"
+  [forsyde::io::lib::hierarchy::behavior::moc::MoCEntity, forsyde::io::lib::hierarchy::behavior::moc::sdf::SDFChannel, forsyde::io::lib::hierarchy::implementation::functional::BufferLike, forsyde::io::lib::hierarchy::visualization::Visualizable]
+  (consumer, from_Sobel3, producer, to_SyncAndResize, tokenDataType)
+  {
+    "elementSizeInBits": 8_l,
+    "numInitialTokens": 0_i
+  }
+  vertex "Grayscale4"
+  [forsyde::io::lib::hierarchy::behavior::BehaviourEntity, forsyde::io::lib::hierarchy::behavior::moc::MoCEntity, forsyde::io::lib::hierarchy::behavior::moc::sdf::SDFActor, forsyde::io::lib::hierarchy::implementation::functional::InstrumentedSoftwareBehaviour, forsyde::io::lib::hierarchy::visualization::Visualizable]
+  (combFunctions, from_SplitInput, to_Sobel4)
+  {
+    "computationalRequirements": {
+      "SW_Instructions": {
+        "Flop": 11059200_l
+      }
+    },
+    "maxSizeInBits": {
+      "SW_Instructions": 800_l
+    },
+    "production": {
+      "to_Sobel4": 1382400_i
+    },
+    "consumption": {
+      "from_SplitInput": 4147200_i
+    }
+  }
+  vertex "Sobel4"
+  [forsyde::io::lib::hierarchy::behavior::BehaviourEntity, forsyde::io::lib::hierarchy::behavior::moc::MoCEntity, forsyde::io::lib::hierarchy::behavior::moc::sdf::SDFActor, forsyde::io::lib::hierarchy::implementation::functional::InstrumentedSoftwareBehaviour, forsyde::io::lib::hierarchy::visualization::Visualizable]
+  (combFunctions, from_Grayscale4, to_SyncAndResize)
+  {
+    "computationalRequirements": {
+      "SW_Instructions": {
+        "IntegerOperation": 24883200_l
+      }
+    },
+    "maxSizeInBits": {
+      "SW_Instructions": 48000_l
+    },
+    "production": {
+      "to_SyncAndResize": 1382400_i
+    },
+    "consumption": {
+      "from_Grayscale4": 1382400_i
+    }
+  }
+  vertex "CH_SplitInput_Grayscale4"
+  [forsyde::io::lib::hierarchy::behavior::moc::MoCEntity, forsyde::io::lib::hierarchy::behavior::moc::sdf::SDFChannel, forsyde::io::lib::hierarchy::implementation::functional::BufferLike, forsyde::io::lib::hierarchy::visualization::Visualizable]
+  (consumer, from_SplitInput, producer, to_Grayscale4, tokenDataType)
+  {
+    "elementSizeInBits": 8_l,
+    "numInitialTokens": 0_i
+  }
+  vertex "CH_Grayscale4_Sobel4"
+  [forsyde::io::lib::hierarchy::behavior::moc::MoCEntity, forsyde::io::lib::hierarchy::behavior::moc::sdf::SDFChannel, forsyde::io::lib::hierarchy::implementation::functional::BufferLike, forsyde::io::lib::hierarchy::visualization::Visualizable]
+  (consumer, from_Grayscale4, producer, to_Sobel4, tokenDataType)
+  {
+    "elementSizeInBits": 8_l,
+    "numInitialTokens": 0_i
+  }
+  vertex "CH_Sobel4_SyncAndResize"
+  [forsyde::io::lib::hierarchy::behavior::moc::MoCEntity, forsyde::io::lib::hierarchy::behavior::moc::sdf::SDFChannel, forsyde::io::lib::hierarchy::implementation::functional::BufferLike, forsyde::io::lib::hierarchy::visualization::Visualizable]
+  (consumer, from_Sobel4, producer, to_SyncAndResize, tokenDataType)
+  {
+    "elementSizeInBits": 8_l,
+    "numInitialTokens": 0_i
+  }
+  vertex "Grayscale5"
+  [forsyde::io::lib::hierarchy::behavior::BehaviourEntity, forsyde::io::lib::hierarchy::behavior::moc::MoCEntity, forsyde::io::lib::hierarchy::behavior::moc::sdf::SDFActor, forsyde::io::lib::hierarchy::implementation::functional::InstrumentedSoftwareBehaviour, forsyde::io::lib::hierarchy::visualization::Visualizable]
+  (combFunctions, from_SplitInput, to_Sobel5)
+  {
+    "computationalRequirements": {
+      "SW_Instructions": {
+        "Flop": 11059200_l
+      }
+    },
+    "maxSizeInBits": {
+      "SW_Instructions": 800_l
+    },
+    "production": {
+      "to_Sobel5": 1382400_i
+    },
+    "consumption": {
+      "from_SplitInput": 4147200_i
+    }
+  }
+  vertex "Sobel5"
+  [forsyde::io::lib::hierarchy::behavior::BehaviourEntity, forsyde::io::lib::hierarchy::behavior::moc::MoCEntity, forsyde::io::lib::hierarchy::behavior::moc::sdf::SDFActor, forsyde::io::lib::hierarchy::implementation::functional::InstrumentedSoftwareBehaviour, forsyde::io::lib::hierarchy::visualization::Visualizable]
+  (combFunctions, from_Grayscale5, to_SyncAndResize)
+  {
+    "computationalRequirements": {
+      "SW_Instructions": {
+        "IntegerOperation": 24883200_l
+      }
+    },
+    "maxSizeInBits": {
+      "SW_Instructions": 48000_l
+    },
+    "production": {
+      "to_SyncAndResize": 1382400_i
+    },
+    "consumption": {
+      "from_Grayscale5": 1382400_i
+    }
+  }
+  vertex "CH_SplitInput_Grayscale5"
+  [forsyde::io::lib::hierarchy::behavior::moc::MoCEntity, forsyde::io::lib::hierarchy::behavior::moc::sdf::SDFChannel, forsyde::io::lib::hierarchy::implementation::functional::BufferLike, forsyde::io::lib::hierarchy::visualization::Visualizable]
+  (consumer, from_SplitInput, producer, to_Grayscale5, tokenDataType)
+  {
+    "elementSizeInBits": 8_l,
+    "numInitialTokens": 0_i
+  }
+  vertex "CH_Grayscale5_Sobel5"
+  [forsyde::io::lib::hierarchy::behavior::moc::MoCEntity, forsyde::io::lib::hierarchy::behavior::moc::sdf::SDFChannel, forsyde::io::lib::hierarchy::implementation::functional::BufferLike, forsyde::io::lib::hierarchy::visualization::Visualizable]
+  (consumer, from_Grayscale5, producer, to_Sobel5, tokenDataType)
+  {
+    "elementSizeInBits": 8_l,
+    "numInitialTokens": 0_i
+  }
+  vertex "CH_Sobel5_SyncAndResize"
+  [forsyde::io::lib::hierarchy::behavior::moc::MoCEntity, forsyde::io::lib::hierarchy::behavior::moc::sdf::SDFChannel, forsyde::io::lib::hierarchy::implementation::functional::BufferLike, forsyde::io::lib::hierarchy::visualization::Visualizable]
+  (consumer, from_Sobel5, producer, to_SyncAndResize, tokenDataType)
+  {
+    "elementSizeInBits": 8_l,
+    "numInitialTokens": 0_i
+  }
+  vertex "ObjectDetection"
+  [forsyde::io::lib::hierarchy::behavior::BehaviourEntity, forsyde::io::lib::hierarchy::behavior::moc::MoCEntity, forsyde::io::lib::hierarchy::behavior::moc::sdf::SDFActor, forsyde::io::lib::hierarchy::implementation::functional::InstrumentedSoftwareBehaviour, forsyde::io::lib::hierarchy::visualization::Visualizable]
+  (combFunctions, from_SyncAndResize, out_ObjectDetection)
+  {
+    "computationalRequirements": {
+      "SW_Instructions": {
+        "Flop": 21000000_l
+      }
+    },
+    "maxSizeInBits": {
+      "SW_Instructions": 6048000_l
+    },
+    "production": {
+      "out_ObjectDetection": 10_i
+    },
+    "consumption": {
+      "from_SyncAndResize": 8294400_i
+    }
+  }
+  vertex "CH_SyncAndResize_ObjectDetection"
+  [forsyde::io::lib::hierarchy::behavior::moc::MoCEntity, forsyde::io::lib::hierarchy::behavior::moc::sdf::SDFChannel, forsyde::io::lib::hierarchy::implementation::functional::BufferLike, forsyde::io::lib::hierarchy::visualization::Visualizable]
+  (consumer, from_SyncAndResize, producer, to_ObjectDetection, tokenDataType)
+  {
+    "elementSizeInBits": 8_l,
+    "numInitialTokens": 0_i
+  }
+  edge [forsyde::io::lib::hierarchy::visualization::VisualContainment] from "RealisticSDF" port "contained" to "SplitInput" 
+  edge [forsyde::io::lib::hierarchy::visualization::VisualContainment] from "RealisticSDF" port "contained" to "SyncAndResize" 
+  edge [forsyde::io::lib::hierarchy::visualization::VisualContainment] from "RealisticSDF" port "contained" to "Grayscale0" 
+  edge [forsyde::io::lib::hierarchy::visualization::VisualContainment] from "RealisticSDF" port "contained" to "Sobel0" 
+  edge [forsyde::io::lib::hierarchy::visualization::VisualContainment] from "RealisticSDF" port "contained" to "CH_SplitInput_Grayscale0" 
+  edge [forsyde::io::lib::hierarchy::behavior::moc::sdf::SDFNetworkEdge] from "SplitInput" to "CH_SplitInput_Grayscale0" port "producer"
+  edge [forsyde::io::lib::hierarchy::behavior::moc::sdf::SDFNetworkEdge] from "CH_SplitInput_Grayscale0" port "consumer" to "Grayscale0" 
+  edge [forsyde::io::lib::hierarchy::behavior::moc::sdf::SDFNetworkEdge,forsyde::io::lib::hierarchy::visualization::VisualConnection] from "SplitInput" port "to_Grayscale0" to "CH_SplitInput_Grayscale0" 
+  edge [forsyde::io::lib::hierarchy::behavior::moc::sdf::SDFNetworkEdge,forsyde::io::lib::hierarchy::visualization::VisualConnection] from "CH_SplitInput_Grayscale0" port "to_Grayscale0" to "Grayscale0" port "from_SplitInput"
+  edge [forsyde::io::lib::hierarchy::visualization::VisualContainment] from "RealisticSDF" port "contained" to "CH_Grayscale0_Sobel0" 
+  edge [forsyde::io::lib::hierarchy::behavior::moc::sdf::SDFNetworkEdge] from "Grayscale0" to "CH_Grayscale0_Sobel0" port "producer"
+  edge [forsyde::io::lib::hierarchy::behavior::moc::sdf::SDFNetworkEdge] from "CH_Grayscale0_Sobel0" port "consumer" to "Sobel0" 
+  edge [forsyde::io::lib::hierarchy::behavior::moc::sdf::SDFNetworkEdge,forsyde::io::lib::hierarchy::visualization::VisualConnection] from "Grayscale0" port "to_Sobel0" to "CH_Grayscale0_Sobel0" 
+  edge [forsyde::io::lib::hierarchy::behavior::moc::sdf::SDFNetworkEdge,forsyde::io::lib::hierarchy::visualization::VisualConnection] from "CH_Grayscale0_Sobel0" port "to_Sobel0" to "Sobel0" port "from_Grayscale0"
+  edge [forsyde::io::lib::hierarchy::visualization::VisualContainment] from "RealisticSDF" port "contained" to "CH_Sobel0_SyncAndResize" 
+  edge [forsyde::io::lib::hierarchy::behavior::moc::sdf::SDFNetworkEdge] from "Sobel0" to "CH_Sobel0_SyncAndResize" port "producer"
+  edge [forsyde::io::lib::hierarchy::behavior::moc::sdf::SDFNetworkEdge] from "CH_Sobel0_SyncAndResize" port "consumer" to "SyncAndResize" 
+  edge [forsyde::io::lib::hierarchy::behavior::moc::sdf::SDFNetworkEdge,forsyde::io::lib::hierarchy::visualization::VisualConnection] from "Sobel0" port "to_SyncAndResize" to "CH_Sobel0_SyncAndResize" 
+  edge [forsyde::io::lib::hierarchy::behavior::moc::sdf::SDFNetworkEdge,forsyde::io::lib::hierarchy::visualization::VisualConnection] from "CH_Sobel0_SyncAndResize" port "to_SyncAndResize" to "SyncAndResize" port "from_Sobel0"
+  edge [forsyde::io::lib::hierarchy::visualization::VisualContainment] from "RealisticSDF" port "contained" to "Grayscale1" 
+  edge [forsyde::io::lib::hierarchy::visualization::VisualContainment] from "RealisticSDF" port "contained" to "Sobel1" 
+  edge [forsyde::io::lib::hierarchy::visualization::VisualContainment] from "RealisticSDF" port "contained" to "CH_SplitInput_Grayscale1" 
+  edge [forsyde::io::lib::hierarchy::behavior::moc::sdf::SDFNetworkEdge] from "SplitInput" to "CH_SplitInput_Grayscale1" port "producer"
+  edge [forsyde::io::lib::hierarchy::behavior::moc::sdf::SDFNetworkEdge] from "CH_SplitInput_Grayscale1" port "consumer" to "Grayscale1" 
+  edge [forsyde::io::lib::hierarchy::behavior::moc::sdf::SDFNetworkEdge,forsyde::io::lib::hierarchy::visualization::VisualConnection] from "SplitInput" port "to_Grayscale1" to "CH_SplitInput_Grayscale1" 
+  edge [forsyde::io::lib::hierarchy::behavior::moc::sdf::SDFNetworkEdge,forsyde::io::lib::hierarchy::visualization::VisualConnection] from "CH_SplitInput_Grayscale1" port "to_Grayscale1" to "Grayscale1" port "from_SplitInput"
+  edge [forsyde::io::lib::hierarchy::visualization::VisualContainment] from "RealisticSDF" port "contained" to "CH_Grayscale1_Sobel1" 
+  edge [forsyde::io::lib::hierarchy::behavior::moc::sdf::SDFNetworkEdge] from "Grayscale1" to "CH_Grayscale1_Sobel1" port "producer"
+  edge [forsyde::io::lib::hierarchy::behavior::moc::sdf::SDFNetworkEdge] from "CH_Grayscale1_Sobel1" port "consumer" to "Sobel1" 
+  edge [forsyde::io::lib::hierarchy::behavior::moc::sdf::SDFNetworkEdge,forsyde::io::lib::hierarchy::visualization::VisualConnection] from "Grayscale1" port "to_Sobel1" to "CH_Grayscale1_Sobel1" 
+  edge [forsyde::io::lib::hierarchy::behavior::moc::sdf::SDFNetworkEdge,forsyde::io::lib::hierarchy::visualization::VisualConnection] from "CH_Grayscale1_Sobel1" port "to_Sobel1" to "Sobel1" port "from_Grayscale1"
+  edge [forsyde::io::lib::hierarchy::visualization::VisualContainment] from "RealisticSDF" port "contained" to "CH_Sobel1_SyncAndResize" 
+  edge [forsyde::io::lib::hierarchy::behavior::moc::sdf::SDFNetworkEdge] from "Sobel1" to "CH_Sobel1_SyncAndResize" port "producer"
+  edge [forsyde::io::lib::hierarchy::behavior::moc::sdf::SDFNetworkEdge] from "CH_Sobel1_SyncAndResize" port "consumer" to "SyncAndResize" 
+  edge [forsyde::io::lib::hierarchy::behavior::moc::sdf::SDFNetworkEdge,forsyde::io::lib::hierarchy::visualization::VisualConnection] from "Sobel1" port "to_SyncAndResize" to "CH_Sobel1_SyncAndResize" 
+  edge [forsyde::io::lib::hierarchy::behavior::moc::sdf::SDFNetworkEdge,forsyde::io::lib::hierarchy::visualization::VisualConnection] from "CH_Sobel1_SyncAndResize" port "to_SyncAndResize" to "SyncAndResize" port "from_Sobel1"
+  edge [forsyde::io::lib::hierarchy::visualization::VisualContainment] from "RealisticSDF" port "contained" to "Grayscale2" 
+  edge [forsyde::io::lib::hierarchy::visualization::VisualContainment] from "RealisticSDF" port "contained" to "Sobel2" 
+  edge [forsyde::io::lib::hierarchy::visualization::VisualContainment] from "RealisticSDF" port "contained" to "CH_SplitInput_Grayscale2" 
+  edge [forsyde::io::lib::hierarchy::behavior::moc::sdf::SDFNetworkEdge] from "SplitInput" to "CH_SplitInput_Grayscale2" port "producer"
+  edge [forsyde::io::lib::hierarchy::behavior::moc::sdf::SDFNetworkEdge] from "CH_SplitInput_Grayscale2" port "consumer" to "Grayscale2" 
+  edge [forsyde::io::lib::hierarchy::behavior::moc::sdf::SDFNetworkEdge,forsyde::io::lib::hierarchy::visualization::VisualConnection] from "SplitInput" port "to_Grayscale2" to "CH_SplitInput_Grayscale2" 
+  edge [forsyde::io::lib::hierarchy::behavior::moc::sdf::SDFNetworkEdge,forsyde::io::lib::hierarchy::visualization::VisualConnection] from "CH_SplitInput_Grayscale2" port "to_Grayscale2" to "Grayscale2" port "from_SplitInput"
+  edge [forsyde::io::lib::hierarchy::visualization::VisualContainment] from "RealisticSDF" port "contained" to "CH_Grayscale2_Sobel2" 
+  edge [forsyde::io::lib::hierarchy::behavior::moc::sdf::SDFNetworkEdge] from "Grayscale2" to "CH_Grayscale2_Sobel2" port "producer"
+  edge [forsyde::io::lib::hierarchy::behavior::moc::sdf::SDFNetworkEdge] from "CH_Grayscale2_Sobel2" port "consumer" to "Sobel2" 
+  edge [forsyde::io::lib::hierarchy::behavior::moc::sdf::SDFNetworkEdge,forsyde::io::lib::hierarchy::visualization::VisualConnection] from "Grayscale2" port "to_Sobel2" to "CH_Grayscale2_Sobel2" 
+  edge [forsyde::io::lib::hierarchy::behavior::moc::sdf::SDFNetworkEdge,forsyde::io::lib::hierarchy::visualization::VisualConnection] from "CH_Grayscale2_Sobel2" port "to_Sobel2" to "Sobel2" port "from_Grayscale2"
+  edge [forsyde::io::lib::hierarchy::visualization::VisualContainment] from "RealisticSDF" port "contained" to "CH_Sobel2_SyncAndResize" 
+  edge [forsyde::io::lib::hierarchy::behavior::moc::sdf::SDFNetworkEdge] from "Sobel2" to "CH_Sobel2_SyncAndResize" port "producer"
+  edge [forsyde::io::lib::hierarchy::behavior::moc::sdf::SDFNetworkEdge] from "CH_Sobel2_SyncAndResize" port "consumer" to "SyncAndResize" 
+  edge [forsyde::io::lib::hierarchy::behavior::moc::sdf::SDFNetworkEdge,forsyde::io::lib::hierarchy::visualization::VisualConnection] from "Sobel2" port "to_SyncAndResize" to "CH_Sobel2_SyncAndResize" 
+  edge [forsyde::io::lib::hierarchy::behavior::moc::sdf::SDFNetworkEdge,forsyde::io::lib::hierarchy::visualization::VisualConnection] from "CH_Sobel2_SyncAndResize" port "to_SyncAndResize" to "SyncAndResize" port "from_Sobel2"
+  edge [forsyde::io::lib::hierarchy::visualization::VisualContainment] from "RealisticSDF" port "contained" to "Grayscale3" 
+  edge [forsyde::io::lib::hierarchy::visualization::VisualContainment] from "RealisticSDF" port "contained" to "Sobel3" 
+  edge [forsyde::io::lib::hierarchy::visualization::VisualContainment] from "RealisticSDF" port "contained" to "CH_SplitInput_Grayscale3" 
+  edge [forsyde::io::lib::hierarchy::behavior::moc::sdf::SDFNetworkEdge] from "SplitInput" to "CH_SplitInput_Grayscale3" port "producer"
+  edge [forsyde::io::lib::hierarchy::behavior::moc::sdf::SDFNetworkEdge] from "CH_SplitInput_Grayscale3" port "consumer" to "Grayscale3" 
+  edge [forsyde::io::lib::hierarchy::behavior::moc::sdf::SDFNetworkEdge,forsyde::io::lib::hierarchy::visualization::VisualConnection] from "SplitInput" port "to_Grayscale3" to "CH_SplitInput_Grayscale3" 
+  edge [forsyde::io::lib::hierarchy::behavior::moc::sdf::SDFNetworkEdge,forsyde::io::lib::hierarchy::visualization::VisualConnection] from "CH_SplitInput_Grayscale3" port "to_Grayscale3" to "Grayscale3" port "from_SplitInput"
+  edge [forsyde::io::lib::hierarchy::visualization::VisualContainment] from "RealisticSDF" port "contained" to "CH_Grayscale3_Sobel3" 
+  edge [forsyde::io::lib::hierarchy::behavior::moc::sdf::SDFNetworkEdge] from "Grayscale3" to "CH_Grayscale3_Sobel3" port "producer"
+  edge [forsyde::io::lib::hierarchy::behavior::moc::sdf::SDFNetworkEdge] from "CH_Grayscale3_Sobel3" port "consumer" to "Sobel3" 
+  edge [forsyde::io::lib::hierarchy::behavior::moc::sdf::SDFNetworkEdge,forsyde::io::lib::hierarchy::visualization::VisualConnection] from "Grayscale3" port "to_Sobel3" to "CH_Grayscale3_Sobel3" 
+  edge [forsyde::io::lib::hierarchy::behavior::moc::sdf::SDFNetworkEdge,forsyde::io::lib::hierarchy::visualization::VisualConnection] from "CH_Grayscale3_Sobel3" port "to_Sobel3" to "Sobel3" port "from_Grayscale3"
+  edge [forsyde::io::lib::hierarchy::visualization::VisualContainment] from "RealisticSDF" port "contained" to "CH_Sobel3_SyncAndResize" 
+  edge [forsyde::io::lib::hierarchy::behavior::moc::sdf::SDFNetworkEdge] from "Sobel3" to "CH_Sobel3_SyncAndResize" port "producer"
+  edge [forsyde::io::lib::hierarchy::behavior::moc::sdf::SDFNetworkEdge] from "CH_Sobel3_SyncAndResize" port "consumer" to "SyncAndResize" 
+  edge [forsyde::io::lib::hierarchy::behavior::moc::sdf::SDFNetworkEdge,forsyde::io::lib::hierarchy::visualization::VisualConnection] from "Sobel3" port "to_SyncAndResize" to "CH_Sobel3_SyncAndResize" 
+  edge [forsyde::io::lib::hierarchy::behavior::moc::sdf::SDFNetworkEdge,forsyde::io::lib::hierarchy::visualization::VisualConnection] from "CH_Sobel3_SyncAndResize" port "to_SyncAndResize" to "SyncAndResize" port "from_Sobel3"
+  edge [forsyde::io::lib::hierarchy::visualization::VisualContainment] from "RealisticSDF" port "contained" to "Grayscale4" 
+  edge [forsyde::io::lib::hierarchy::visualization::VisualContainment] from "RealisticSDF" port "contained" to "Sobel4" 
+  edge [forsyde::io::lib::hierarchy::visualization::VisualContainment] from "RealisticSDF" port "contained" to "CH_SplitInput_Grayscale4" 
+  edge [forsyde::io::lib::hierarchy::behavior::moc::sdf::SDFNetworkEdge] from "SplitInput" to "CH_SplitInput_Grayscale4" port "producer"
+  edge [forsyde::io::lib::hierarchy::behavior::moc::sdf::SDFNetworkEdge] from "CH_SplitInput_Grayscale4" port "consumer" to "Grayscale4" 
+  edge [forsyde::io::lib::hierarchy::behavior::moc::sdf::SDFNetworkEdge,forsyde::io::lib::hierarchy::visualization::VisualConnection] from "SplitInput" port "to_Grayscale4" to "CH_SplitInput_Grayscale4" 
+  edge [forsyde::io::lib::hierarchy::behavior::moc::sdf::SDFNetworkEdge,forsyde::io::lib::hierarchy::visualization::VisualConnection] from "CH_SplitInput_Grayscale4" port "to_Grayscale4" to "Grayscale4" port "from_SplitInput"
+  edge [forsyde::io::lib::hierarchy::visualization::VisualContainment] from "RealisticSDF" port "contained" to "CH_Grayscale4_Sobel4" 
+  edge [forsyde::io::lib::hierarchy::behavior::moc::sdf::SDFNetworkEdge] from "Grayscale4" to "CH_Grayscale4_Sobel4" port "producer"
+  edge [forsyde::io::lib::hierarchy::behavior::moc::sdf::SDFNetworkEdge] from "CH_Grayscale4_Sobel4" port "consumer" to "Sobel4" 
+  edge [forsyde::io::lib::hierarchy::behavior::moc::sdf::SDFNetworkEdge,forsyde::io::lib::hierarchy::visualization::VisualConnection] from "Grayscale4" port "to_Sobel4" to "CH_Grayscale4_Sobel4" 
+  edge [forsyde::io::lib::hierarchy::behavior::moc::sdf::SDFNetworkEdge,forsyde::io::lib::hierarchy::visualization::VisualConnection] from "CH_Grayscale4_Sobel4" port "to_Sobel4" to "Sobel4" port "from_Grayscale4"
+  edge [forsyde::io::lib::hierarchy::visualization::VisualContainment] from "RealisticSDF" port "contained" to "CH_Sobel4_SyncAndResize" 
+  edge [forsyde::io::lib::hierarchy::behavior::moc::sdf::SDFNetworkEdge] from "Sobel4" to "CH_Sobel4_SyncAndResize" port "producer"
+  edge [forsyde::io::lib::hierarchy::behavior::moc::sdf::SDFNetworkEdge] from "CH_Sobel4_SyncAndResize" port "consumer" to "SyncAndResize" 
+  edge [forsyde::io::lib::hierarchy::behavior::moc::sdf::SDFNetworkEdge,forsyde::io::lib::hierarchy::visualization::VisualConnection] from "Sobel4" port "to_SyncAndResize" to "CH_Sobel4_SyncAndResize" 
+  edge [forsyde::io::lib::hierarchy::behavior::moc::sdf::SDFNetworkEdge,forsyde::io::lib::hierarchy::visualization::VisualConnection] from "CH_Sobel4_SyncAndResize" port "to_SyncAndResize" to "SyncAndResize" port "from_Sobel4"
+  edge [forsyde::io::lib::hierarchy::visualization::VisualContainment] from "RealisticSDF" port "contained" to "Grayscale5" 
+  edge [forsyde::io::lib::hierarchy::visualization::VisualContainment] from "RealisticSDF" port "contained" to "Sobel5" 
+  edge [forsyde::io::lib::hierarchy::visualization::VisualContainment] from "RealisticSDF" port "contained" to "CH_SplitInput_Grayscale5" 
+  edge [forsyde::io::lib::hierarchy::behavior::moc::sdf::SDFNetworkEdge] from "SplitInput" to "CH_SplitInput_Grayscale5" port "producer"
+  edge [forsyde::io::lib::hierarchy::behavior::moc::sdf::SDFNetworkEdge] from "CH_SplitInput_Grayscale5" port "consumer" to "Grayscale5" 
+  edge [forsyde::io::lib::hierarchy::behavior::moc::sdf::SDFNetworkEdge,forsyde::io::lib::hierarchy::visualization::VisualConnection] from "SplitInput" port "to_Grayscale5" to "CH_SplitInput_Grayscale5" 
+  edge [forsyde::io::lib::hierarchy::behavior::moc::sdf::SDFNetworkEdge,forsyde::io::lib::hierarchy::visualization::VisualConnection] from "CH_SplitInput_Grayscale5" port "to_Grayscale5" to "Grayscale5" port "from_SplitInput"
+  edge [forsyde::io::lib::hierarchy::visualization::VisualContainment] from "RealisticSDF" port "contained" to "CH_Grayscale5_Sobel5" 
+  edge [forsyde::io::lib::hierarchy::behavior::moc::sdf::SDFNetworkEdge] from "Grayscale5" to "CH_Grayscale5_Sobel5" port "producer"
+  edge [forsyde::io::lib::hierarchy::behavior::moc::sdf::SDFNetworkEdge] from "CH_Grayscale5_Sobel5" port "consumer" to "Sobel5" 
+  edge [forsyde::io::lib::hierarchy::behavior::moc::sdf::SDFNetworkEdge,forsyde::io::lib::hierarchy::visualization::VisualConnection] from "Grayscale5" port "to_Sobel5" to "CH_Grayscale5_Sobel5" 
+  edge [forsyde::io::lib::hierarchy::behavior::moc::sdf::SDFNetworkEdge,forsyde::io::lib::hierarchy::visualization::VisualConnection] from "CH_Grayscale5_Sobel5" port "to_Sobel5" to "Sobel5" port "from_Grayscale5"
+  edge [forsyde::io::lib::hierarchy::visualization::VisualContainment] from "RealisticSDF" port "contained" to "CH_Sobel5_SyncAndResize" 
+  edge [forsyde::io::lib::hierarchy::behavior::moc::sdf::SDFNetworkEdge] from "Sobel5" to "CH_Sobel5_SyncAndResize" port "producer"
+  edge [forsyde::io::lib::hierarchy::behavior::moc::sdf::SDFNetworkEdge] from "CH_Sobel5_SyncAndResize" port "consumer" to "SyncAndResize" 
+  edge [forsyde::io::lib::hierarchy::behavior::moc::sdf::SDFNetworkEdge,forsyde::io::lib::hierarchy::visualization::VisualConnection] from "Sobel5" port "to_SyncAndResize" to "CH_Sobel5_SyncAndResize" 
+  edge [forsyde::io::lib::hierarchy::behavior::moc::sdf::SDFNetworkEdge,forsyde::io::lib::hierarchy::visualization::VisualConnection] from "CH_Sobel5_SyncAndResize" port "to_SyncAndResize" to "SyncAndResize" port "from_Sobel5"
+  edge [forsyde::io::lib::hierarchy::visualization::VisualContainment] from "RealisticSDF" port "contained" to "ObjectDetection" 
+  edge [forsyde::io::lib::hierarchy::visualization::VisualContainment] from "RealisticSDF" port "contained" to "CH_SyncAndResize_ObjectDetection" 
+  edge [forsyde::io::lib::hierarchy::behavior::moc::sdf::SDFNetworkEdge] from "SyncAndResize" to "CH_SyncAndResize_ObjectDetection" port "producer"
+  edge [forsyde::io::lib::hierarchy::behavior::moc::sdf::SDFNetworkEdge] from "CH_SyncAndResize_ObjectDetection" port "consumer" to "ObjectDetection" 
+  edge [forsyde::io::lib::hierarchy::behavior::moc::sdf::SDFNetworkEdge,forsyde::io::lib::hierarchy::visualization::VisualConnection] from "SyncAndResize" port "to_ObjectDetection" to "CH_SyncAndResize_ObjectDetection" 
+  edge [forsyde::io::lib::hierarchy::behavior::moc::sdf::SDFNetworkEdge,forsyde::io::lib::hierarchy::visualization::VisualConnection] from "CH_SyncAndResize_ObjectDetection" port "to_ObjectDetection" to "ObjectDetection" port "from_SyncAndResize"
+}

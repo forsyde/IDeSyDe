@@ -13,7 +13,7 @@ use crate::models::{
     AperiodicAsynchronousDataflowToPartitionedMemoryMappableMulticore,
     AperiodicAsynchronousDataflowToPartitionedMemoryMappableMulticoreAndPL,
     AperiodicAsynchronousDataflowToPartitionedTiledMulticore, HardwareImplementationArea,
-    InstrumentedComputationTimes, InstrumentedMemoryRequirements, MM_MCoreAndPL,
+    InstrumentedComputationTimes, InstrumentedMemoryRequirements, MemoryMappableMulticoreWithPL,
     MemoryMappableMultiCore, PartitionedMemoryMappableMulticore,
     PartitionedMemoryMappableMulticoreAndPL, PartitionedTiledMulticore, RuntimesAndProcessors,
     SDFApplication, TiledMultiCore,
@@ -100,7 +100,7 @@ pub fn identify_partitioned_mem_mapped_multicore_and_pl(
             }
             if one_proc_per_scheduler && one_scheduler_per_proc {
                 for m1 in decision_models {
-                    if let Some(plat) = cast_dyn_decision_model!(m1, MM_MCoreAndPL) {
+                    if let Some(plat) = cast_dyn_decision_model!(m1, MemoryMappableMulticoreWithPL) {
                         let potential = Arc::new(PartitionedMemoryMappableMulticoreAndPL {
                             hardware: plat.to_owned(),
                             runtimes: runt.to_owned(),
@@ -333,10 +333,10 @@ pub fn identify_asynchronous_aperiodic_dataflow_from_sdf(
                     );
                     for q_dst in 1..=q_dst_max {
                         let src = &analysed_sdf_application.sdf_application.topology_srcs[cidx];
-                        let q_src_max = *analysed_sdf_application
-                            .repetition_vector
-                            .get(src)
-                            .expect("Impossible empty entry for repetition vector during identification rule");
+                        // let q_src_max = *analysed_sdf_application
+                        //     .repetition_vector
+                        //     .get(src)
+                        //     .expect("Impossible empty entry for repetition vector during identification rule");
                         let consumed = analysed_sdf_application
                             .sdf_application
                             .topology_consumption[cidx]

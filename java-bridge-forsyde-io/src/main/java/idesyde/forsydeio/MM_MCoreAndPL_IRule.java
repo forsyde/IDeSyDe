@@ -10,7 +10,7 @@ import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
 import forsyde.io.core.VertexViewer;
-import idesyde.common.MM_MCoreAndPL;
+import idesyde.common.MemoryMappableMulticoreWithPL;
 import idesyde.core.*;
 import org.jgrapht.Graph;
 import org.jgrapht.alg.connectivity.ConnectivityInspector;
@@ -31,7 +31,7 @@ import org.jgrapht.graph.DefaultEdge;
 import org.jgrapht.graph.SimpleDirectedGraph;
 
 @AutoRegister(ForSyDeIOModule.class)
-class MM_McoreAndPL_IRule implements IdentificationRule {
+class MemoryMappableMulticoreWithPL_IRule implements IdentificationRule {
 
     private record Pair<A, B>(A fst, B snd) {
     };
@@ -39,7 +39,7 @@ class MM_McoreAndPL_IRule implements IdentificationRule {
     @Override
     public IdentificationResult apply(Set<? extends DesignModel> designModels,
             Set<? extends DecisionModel> decisionModels) {
-        var identified = new HashSet<MM_MCoreAndPL>();
+        var identified = new HashSet<MemoryMappableMulticoreWithPL>();
         var errors = new HashSet<String>();
         var model = new SystemGraph();
         for (var dm : designModels) {
@@ -151,13 +151,13 @@ class MM_McoreAndPL_IRule implements IdentificationRule {
                 e.getSourcePort().ifPresentOrElse(src -> {
                     e.getTargetPort().ifPresentOrElse(dst -> {
                         portAwareTopology.addEdge(new Pair<>(e.getSource(), src), new Pair<>(e.getTarget(), dst));
-                    }, () -> errors.add("MM_McoreAndPL_IRule: %s to %s is not vertex-to-vertex or port-to-port."
+                    }, () -> errors.add("MemoryMappableMulticoreWithPL_IRule: %s to %s is not vertex-to-vertex or port-to-port."
                             .formatted(e.getSource(), e.getTarget())));
                 }, () -> {
                     if (e.getTargetPort().isEmpty()) {
                         portAwareTopology.addEdge(new Pair<>(e.getSource(), null), new Pair<>(e.getTarget(), null));
                     } else {
-                        errors.add("MM_McoreAndPL_IRule: %s to %s is not vertex-to-vertex or port-to-port."
+                        errors.add("MemoryMappableMulticoreWithPL_IRule: %s to %s is not vertex-to-vertex or port-to-port."
                                 .formatted(e.getSource(), e.getTarget()));
                     }
                 });
@@ -169,7 +169,7 @@ class MM_McoreAndPL_IRule implements IdentificationRule {
             if (memoryElements.stream()
                     .noneMatch(me -> connecivityInspector.pathExists(new Pair<>(pe.getIdentifier(), null),
                             new Pair<>(me.getIdentifier(), null)))) {
-                errors.add("MM_McoreAndPL_IRule: %s does not reach any memory element".formatted(pe.getIdentifier()));
+                errors.add("MemoryMappableMulticoreWithPL_IRule: %s does not reach any memory element".formatted(pe.getIdentifier()));
             }
         }
 
@@ -192,16 +192,16 @@ class MM_McoreAndPL_IRule implements IdentificationRule {
         // return mutMap;
         // });
         if (processingElements.size() <= 0) {
-            errors.add("MM_McoreAndPL_IRule: no processing elements");
+            errors.add("MemoryMappableMulticoreWithPL_IRule: no processing elements");
         }
         if (memoryElements.size() <= 0) {
-            errors.add("MM_McoreAndPL_IRule: no memory elements");
+            errors.add("MemoryMappableMulticoreWithPL_IRule: no memory elements");
         }
         if (plElements.size() <= 0) {
-            errors.add("MM_McoreAndPL_IRule: no logic programmable elements");
+            errors.add("MemoryMappableMulticoreWithPL_IRule: no logic programmable elements");
         }
         if (!processingOnlyValidLinks || !memoryOnlyValidLinks) {
-            errors.add("MM_McoreAndPL_IRule: processing or memory have invalid links");
+            errors.add("MemoryMappableMulticoreWithPL_IRule: processing or memory have invalid links");
         }
         if (errors.isEmpty()) {
             var interconnectTopologySrcs = new ArrayList<String>();
@@ -276,7 +276,7 @@ class MM_McoreAndPL_IRule implements IdentificationRule {
                                                                     .size()
                                                                     - 1)))));
             identified.add(
-                    new MM_MCoreAndPL(
+                    new MemoryMappableMulticoreWithPL(
                             processingElements.stream()
                                     .map(x -> x.getIdentifier())
                                     .collect(Collectors.toSet()),

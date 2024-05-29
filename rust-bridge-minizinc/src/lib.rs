@@ -1,4 +1,4 @@
-use std::borrow::Borrow;
+
 use std::io::BufRead;
 use std::process::Command;
 use std::sync::{Arc, Mutex};
@@ -13,6 +13,7 @@ use idesyde_core::{ExplorationBid, ExplorationSolution, Explorer, RustEmbeddedMo
 use serde::Deserialize;
 
 #[derive(Debug, Clone, PartialEq)]
+#[allow(dead_code)]
 enum MiniZincData {
     MznLitDouble(f64),
     MznLitInt(i32),

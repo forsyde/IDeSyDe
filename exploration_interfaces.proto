@@ -1,0 +1,57 @@
+syntax = "proto3";
+
+/// The bidding information an explorer should return for a decision model.
+///
+/// The most important entry in this record is the `can_explore` boolean.
+/// If true, the explorer who returned this bidding can indeed explorer the decision model queried,
+/// regardless of efficiency, possible goals etc.
+///
+/// The `is_exact` entry signals that once the explorer finishes the exploration for queried decision model,
+/// the design space is _fully explored_. 
+/// This is the opposite of an heuristic explorer.
+///
+/// The `competitiveness` entry is an optimization-related number useful for heuristic explorers (is_exact == false).
+/// It describes the discrepancy between the optimal solution returned by this explorer and the problem's actual optimal solution.
+/// In terms os Pareto optimality, this factor represents the worst difference between the resulting approximate Pareto set and
+/// the actual Pareto set. 
+/// There are two ways to acquire this parameter. The first is to have a mathematical proof of competitiveness,
+/// like https://en.wikipedia.org/wiki/Christofides_algorithm or https://en.wikipedia.org/wiki/List_scheduling.
+/// The second is to perform _a lot_ of empirical test and assert a rough distance between the explorer results and 
+/// the known actual Pareto set.
+///
+/// The last entry, `target_objectives` simply contains all the possible target objectives that the explorer can minimize
+/// for during its exploration.
+message ExplorationBid {
+    string explorer_unique_identifier = 0;
+    bool can_explore = 1;
+    bool is_exact = 2;
+    float32 competitiveness = 3;
+    repeated string target_objectives = 4;
+}
+
+/// The exchangeable configuration between explorers.
+///
+/// This configuration is a superset of the configurations possible for all explorers;
+/// that is, the explorers do not need to use all paramters present here.
+///
+/// At a minimum, all explorers should honor:
+///  - max_sols: the maximum amount of solutions returned.
+///  - total_timeout: the maximum accumulated amount of time elapsed, in seconds.
+///  - improvement_timeout: the maximum amount of time elapsed between improvements, in seconds.
+///    An improvement can both be a new dominant Pareto solution a new optimal solution in case of just one objective.
+///  - improvement_iterations: the maximum amount of improvement steps tried between improvements.
+///    This is specific to each explorer, but give a general gist on the effort spent to improve the current solution set.
+///    For example, genetic algorithm explorers can use the generation age as the improvement step; constriant programming explorers
+///    can use the amount of backtracks as improvement steps.
+///  - strict: whether only new dominating solution are returned.
+///  - target_objectives: the names of the optimisation objectives that the explorer should make its goal.
+message ExplorationConfiguration {
+    uint64 max_sols = 0;
+    uint64 total_timeout = 1;
+    uint64 improvement_timeout = 2;
+    uint64 time_resolution = 3;
+    uint64 memory_resolution = 4;
+    uint64 improvement_iterations = 5;
+    bool strict = 6;
+    repeated string target_objectives = 7;
+}

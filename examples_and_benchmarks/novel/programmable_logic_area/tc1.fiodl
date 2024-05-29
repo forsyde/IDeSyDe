@@ -1,0 +1,63 @@
+systemgraph {
+  vertex "TC1"
+  [forsyde::io::lib::hierarchy::visualization::GreyBox, forsyde::io::lib::hierarchy::visualization::Visualizable]
+  (contained)
+  {}
+  vertex "Actor_1"
+  [forsyde::io::lib::hierarchy::behavior::BehaviourEntity, forsyde::io::lib::hierarchy::behavior::moc::MoCEntity, forsyde::io::lib::hierarchy::behavior::moc::sdf::SDFActor, forsyde::io::lib::hierarchy::implementation::functional::InstrumentedHardwareBehaviour, forsyde::io::lib::hierarchy::visualization::Visualizable]
+  (combFunctions, in_Actor_1, to_Actor_2)
+  {
+    "resourceRequirements": {
+      "FPGA": {
+        "Area": 110_l,
+        "Bram": 16000_l
+      }
+    },
+    "production": {
+      "to_Actor_2": 15_i
+    },
+    "latencyInSecsDenominators": {
+      "FPGA": 300000000_l
+    },
+    "latencyInSecsNumerators": {
+      "FPGA": 10_l
+    },
+    "consumption": {
+      "in_Actor_1": 5_i
+    },
+    "energyPerExecutionInJoules": {}
+  }
+  vertex "Actor_2"
+  [forsyde::io::lib::hierarchy::behavior::BehaviourEntity, forsyde::io::lib::hierarchy::behavior::moc::MoCEntity, forsyde::io::lib::hierarchy::behavior::moc::sdf::SDFActor, forsyde::io::lib::hierarchy::implementation::functional::InstrumentedSoftwareBehaviour, forsyde::io::lib::hierarchy::visualization::Visualizable]
+  (combFunctions, from_Actor_1, out_Actor_2)
+  {
+    "computationalRequirements": {
+      "SW_Instructions": {
+        "Flop": 8_l
+      }
+    },
+    "maxSizeInBits": {
+      "SW_Instructions": 32000_l
+    },
+    "production": {
+      "out_Actor_2": 1_i
+    },
+    "consumption": {
+      "from_Actor_1": 3_i
+    }
+  }
+  vertex "CH_Actor_1_Actor_2"
+  [forsyde::io::lib::hierarchy::behavior::moc::MoCEntity, forsyde::io::lib::hierarchy::behavior::moc::sdf::SDFChannel, forsyde::io::lib::hierarchy::implementation::functional::BufferLike, forsyde::io::lib::hierarchy::visualization::Visualizable]
+  (consumer, from_Actor_1, producer, to_Actor_2, tokenDataType)
+  {
+    "elementSizeInBits": 8_l,
+    "numInitialTokens": 0_i
+  }
+  edge [forsyde::io::lib::hierarchy::visualization::VisualContainment] from "TC1" port "contained" to "Actor_1" 
+  edge [forsyde::io::lib::hierarchy::visualization::VisualContainment] from "TC1" port "contained" to "Actor_2" 
+  edge [forsyde::io::lib::hierarchy::visualization::VisualContainment] from "TC1" port "contained" to "CH_Actor_1_Actor_2" 
+  edge [forsyde::io::lib::hierarchy::behavior::moc::sdf::SDFNetworkEdge] from "Actor_1" to "CH_Actor_1_Actor_2" port "producer"
+  edge [forsyde::io::lib::hierarchy::behavior::moc::sdf::SDFNetworkEdge] from "CH_Actor_1_Actor_2" port "consumer" to "Actor_2" 
+  edge [forsyde::io::lib::hierarchy::behavior::moc::sdf::SDFNetworkEdge,forsyde::io::lib::hierarchy::visualization::VisualConnection] from "Actor_1" port "to_Actor_2" to "CH_Actor_1_Actor_2" 
+  edge [forsyde::io::lib::hierarchy::behavior::moc::sdf::SDFNetworkEdge,forsyde::io::lib::hierarchy::visualization::VisualConnection] from "CH_Actor_1_Actor_2" port "to_Actor_2" to "Actor_2" port "from_Actor_1"
+}

@@ -30,7 +30,6 @@ import java.io.StringReader
 import idesyde.common.legacy.AperiodicAsynchronousDataflow
 import idesyde.core.OpaqueDesignModel
 import idesyde.core.OpaqueDecisionModel
-import idesyde.blueprints.StandaloneModule
 import idesyde.common.legacy.SDFApplication
 import idesyde.common.legacy.AnalysedSDFApplication
 import idesyde.common.legacy.TiledMultiCoreWithFunctions
@@ -79,7 +78,7 @@ class ForSyDeIOScalaModule
       func(a.asScala.toSet, b.asScala.toSet).map(_.asInstanceOf[DesignModel]).asJava
     }
 
-   def fromOpaqueDecision(opaque: OpaqueDecisionModel): ju.Optional[DecisionModel] = {
+  def fromOpaqueDecision(opaque: OpaqueDecisionModel): ju.Optional[DecisionModel] = {
     opaque.category() match {
       case "SDFToTiledMultiCore" =>
         opaque
@@ -197,7 +196,8 @@ class ForSyDeIOScalaModule
     )
   ).asJava
 
-  def identificationRulesCanonicalClassesNames(): Array[String] = identificationRules().asScala.map(cls => cls.getClass().getCanonicalName()).toArray
+  def identificationRulesCanonicalClassesNames(): Array[String] =
+    identificationRules().asScala.map(cls => cls.getClass().getCanonicalName()).toArray
 
   override def reverseIdentificationRules(): ju.Set[ReverseIdentificationRule] = Set(
     ReverseIdentificationRule.Generic(
@@ -206,7 +206,7 @@ class ForSyDeIOScalaModule
     ReverseIdentificationRule.Generic(adaptRevRuleToJava(integrateSDFToTiledMultiCore)),
     ReverseIdentificationRule.Generic(
       adaptRevRuleToJava(integratePeriodicWorkloadAndSDFServerToMultiCoreOld)
-    ),
+    )
   ).asJava
 
   override def explorers() = Set(ChocoExplorer()).asJava

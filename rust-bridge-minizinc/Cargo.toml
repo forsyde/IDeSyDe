@@ -1,0 +1,15 @@
+[package]
+name = "idesyde-bridge-minizinc"
+version.workspace = true
+authors.workspace = true
+edition.workspace = true
+
+# See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
+
+[dependencies]
+idesyde-core = { path = "../rust-core" }
+idesyde-blueprints = { path = "../rust-blueprints" }
+idesyde-common = { path = "../rust-common" }
+petgraph.workspace = true
+serde = { workspace = true }
+serde_json = { workspace = true }

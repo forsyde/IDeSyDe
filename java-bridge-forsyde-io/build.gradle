@@ -15,7 +15,6 @@ dependencies {
     // implementation "io.forsyde.github:forsyde-io-java-sdf3:$forsydeioVersion"
     implementation project(":java-core")
     implementation project(":java-common")
-    implementation project(":java-blueprints")
     compileOnly project(":java-core-generator")
     annotationProcessor project(":java-core-generator")
 }

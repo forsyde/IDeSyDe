@@ -442,25 +442,25 @@ impl Iterator for MultiLevelCombinedExplorerIterator3 {
                                     || s.partial_cmp(&solution) == Some(Ordering::Equal)
                             }) {
                                 self.num_found += 1;
-                                let sol_dominates = self.current_solutions.is_empty()
-                                    || self.current_solutions.iter().any(|cur_sol| {
-                                        solution.partial_cmp(cur_sol) == Some(Ordering::Less)
-                                    });
+                                // let sol_dominates = self.current_solutions.is_empty()
+                                //     || self.current_solutions.iter().any(|cur_sol| {
+                                //         solution.partial_cmp(cur_sol) == Some(Ordering::Less)
+                                //     });
                                 self.current_solutions.insert(solution.clone());
-                                if sol_dominates {
-                                    self.current_solutions.retain(|cur_sol| {
-                                        solution.partial_cmp(cur_sol) != Some(Ordering::Less)
-                                    });
-                                    let (is_dominated, new_level) = explore_level_non_blocking(
-                                        &self.explorers_and_models,
-                                        self.biddings.as_slice(),
-                                        &self.exploration_configuration,
-                                        &self.current_solutions,
-                                    );
-                                    self.level_streams.push(new_level);
-                                    self.levels_status.push(is_dominated);
-                                    self.levels_start.push(Instant::now());
-                                }
+                                self.current_solutions.retain(|cur_sol| {
+                                    solution.partial_cmp(cur_sol) != Some(Ordering::Less)
+                                });
+                                let (is_dominated, new_level) = explore_level_non_blocking(
+                                    &self.explorers_and_models,
+                                    self.biddings.as_slice(),
+                                    &self.exploration_configuration,
+                                    &self.current_solutions,
+                                );
+                                self.level_streams.push(new_level);
+                                self.levels_status.push(is_dominated);
+                                self.levels_start.push(Instant::now());
+                                // if sol_dominates {
+                                // }
                                 return Some(solution);
                             }
                         }

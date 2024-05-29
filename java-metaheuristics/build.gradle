@@ -6,7 +6,7 @@ plugins {
 dependencies {
     implementation project(":java-core")
     implementation project(":java-common")
-    implementation project(":java-blueprints")
+    // implementation project(":java-blueprints")
 //    implementation 'org.uma.jmetal:jmetal-core:6.1'
 //    implementation 'org.uma.jmetal:jmetal-algorithm:6.1'
 //    implementation 'org.uma.jmetal:jmetal-parallel:6.1'

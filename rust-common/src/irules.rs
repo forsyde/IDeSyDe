@@ -11,9 +11,12 @@ use petgraph::{
 use crate::models::{
     AnalysedSDFApplication, AperiodicAsynchronousDataflow,
     AperiodicAsynchronousDataflowToPartitionedMemoryMappableMulticore,
-    AperiodicAsynchronousDataflowToPartitionedTiledMulticore, InstrumentedComputationTimes,
-    InstrumentedMemoryRequirements, MemoryMappableMultiCore, PartitionedMemoryMappableMulticore,
-    PartitionedTiledMulticore, RuntimesAndProcessors, SDFApplication, TiledMultiCore,
+    AperiodicAsynchronousDataflowToPartitionedMemoryMappableMulticoreAndPL,
+    AperiodicAsynchronousDataflowToPartitionedTiledMulticore, HardwareImplementationArea,
+    InstrumentedComputationTimes, InstrumentedMemoryRequirements, MemoryMappableMulticoreWithPL,
+    MemoryMappableMultiCore, PartitionedMemoryMappableMulticore,
+    PartitionedMemoryMappableMulticoreAndPL, PartitionedTiledMulticore, RuntimesAndProcessors,
+    SDFApplication, TiledMultiCore,
 };
 
 pub fn identify_partitioned_mem_mapped_multicore(
@@ -50,6 +53,55 @@ pub fn identify_partitioned_mem_mapped_multicore(
                 for m1 in decision_models {
                     if let Some(plat) = cast_dyn_decision_model!(m1, MemoryMappableMultiCore) {
                         let potential = Arc::new(PartitionedMemoryMappableMulticore {
+                            hardware: plat.to_owned(),
+                            runtimes: runt.to_owned(),
+                        });
+                        let upcast = potential as Arc<dyn DecisionModel>;
+                        if !decision_models.contains(&upcast) {
+                            new_models.push(upcast);
+                        }
+                    }
+                }
+            }
+        }
+    }
+    (new_models, errors)
+}
+
+pub fn identify_partitioned_mem_mapped_multicore_and_pl(
+    _design_models: &[Arc<dyn DesignModel>],
+    decision_models: &[Arc<dyn DecisionModel>],
+) -> IdentificationResult {
+    let mut new_models = Vec::new();
+    let mut errors: Vec<String> = Vec::new();
+    for m2 in decision_models {
+        if let Some(runt) = cast_dyn_decision_model!(m2, RuntimesAndProcessors) {
+            let one_scheduler_per_proc = runt
+                .processors
+                .iter()
+                .all(|p| runt.runtime_host.values().find(|y| y == &p).is_some());
+            let one_proc_per_scheduler = runt.runtimes.iter().all(|s| {
+                runt.processor_affinities
+                    .values()
+                    .find(|y| y == &s)
+                    .is_some()
+            });
+            if !one_proc_per_scheduler {
+                errors.push(
+                    "identify_partitioned_mem_mapped_multicore_and_pl: more than one processor per scheduler"
+                        .to_string(),
+                );
+            }
+            if !one_scheduler_per_proc {
+                errors.push(
+                    "identify_partitioned_mem_mapped_multicore_and_pl: more than one scheduler per processor"
+                        .to_string(),
+                );
+            }
+            if one_proc_per_scheduler && one_scheduler_per_proc {
+                for m1 in decision_models {
+                    if let Some(plat) = cast_dyn_decision_model!(m1, MemoryMappableMulticoreWithPL) {
+                        let potential = Arc::new(PartitionedMemoryMappableMulticoreAndPL {
                             hardware: plat.to_owned(),
                             runtimes: runt.to_owned(),
                         });
@@ -256,47 +308,89 @@ pub fn identify_asynchronous_aperiodic_dataflow_from_sdf(
                 let jobs_of_processes: Vec<(&str, u64)> = component_actors
                     .iter()
                     .flat_map(|a| {
-                        (1..=*analysed_sdf_application.repetition_vector.get(*a).unwrap())
+                        (1..=*analysed_sdf_application
+                            .repetition_vector
+                            .get(*a)
+                            .unwrap_or(&1))
                             .map(|q| (*a, q))
                     })
                     .collect();
-                let mut job_graph_edges: Vec<((&str, u64), (&str, u64), bool)> = Vec::new();
-                for (src, q_src) in &jobs_of_processes {
-                    for (dst, q_dst) in &jobs_of_processes {
-                        if let Some((cidx, _)) = analysed_sdf_application
+                let mut job_graph_edges: Vec<((&str, u64), (&str, u64), bool)> = Vec::with_capacity(
+                    jobs_of_processes.len()
+                        * analysed_sdf_application
                             .sdf_application
-                            .topology_srcs
-                            .iter()
-                            .zip(
-                                analysed_sdf_application
-                                    .sdf_application
-                                    .topology_dsts
-                                    .iter(),
-                            )
-                            .enumerate()
-                            .find(|(_, (s, t))| s == src && t == dst)
-                        {
-                            // let q_src_max = analysed_sdf_application.repetition_vector.get(*src).expect("Impossible empty entry for repetition vector during identification rule");
-                            let consumed = analysed_sdf_application
-                                .sdf_application
-                                .topology_consumption[cidx];
-                            let produced =
-                                analysed_sdf_application.sdf_application.topology_production[cidx];
-                            let initial_tokens = analysed_sdf_application
-                                .sdf_application
-                                .topology_initial_tokens[cidx];
-                            let ratio = ((q_dst * consumed as u64 - initial_tokens as u64) as f64)
-                                / (produced as f64);
-                            // if the jobs are different and the ratio of tokens is satisfied, they
-                            // have a strong dependency, otherwise, they might only have a weak dependency
-                            // or nothing at all.
-                            if src != dst && *q_src == (ratio.ceil() as u64) {
-                                job_graph_edges.push(((src, *q_src), (dst, *q_dst), true))
-                            }
-                        } else if src == dst && *q_dst == (*q_src + 1) {
-                            job_graph_edges.push(((src, *q_src), (dst, *q_dst), false))
+                            .channels_identifiers
+                            .len(),
+                );
+                for (cidx, dst) in analysed_sdf_application
+                    .sdf_application
+                    .topology_dsts
+                    .iter()
+                    .enumerate()
+                {
+                    let q_dst_max = *analysed_sdf_application.repetition_vector.get(dst).expect(
+                        "Impossible empty entry for repetition vector during identification rule",
+                    );
+                    for q_dst in 1..=q_dst_max {
+                        let src = &analysed_sdf_application.sdf_application.topology_srcs[cidx];
+                        // let q_src_max = *analysed_sdf_application
+                        //     .repetition_vector
+                        //     .get(src)
+                        //     .expect("Impossible empty entry for repetition vector during identification rule");
+                        let consumed = analysed_sdf_application
+                            .sdf_application
+                            .topology_consumption[cidx]
+                            as u64;
+                        let produced = analysed_sdf_application.sdf_application.topology_production
+                            [cidx] as u64;
+                        let initial_tokens = analysed_sdf_application
+                            .sdf_application
+                            .topology_initial_tokens[cidx]
+                            as u64;
+                        let q_src_ub = (q_dst * consumed - initial_tokens).div_ceil(produced);
+                        // let q_src_lb = ((q_dst - 1) * consumed - initial_tokens).div_ceil(produced);
+                        job_graph_edges.push(((src, q_src_ub), (dst, q_dst), true));
+                        // for q_src in q_src_lb.max(1)..=q_src_ub.min(q_src_max) {
+                        // }
+                        if q_dst > 1 {
+                            job_graph_edges.push(((dst, q_dst - 1), (dst, q_dst), false));
                         }
                     }
+                    // for (src, q_src) in &jobs_of_processes {
+                    //     if let Some((cidx, _)) = analysed_sdf_application
+                    //         .sdf_application
+                    //         .topology_srcs
+                    //         .iter()
+                    //         .zip(
+                    //             analysed_sdf_application
+                    //                 .sdf_application
+                    //                 .topology_dsts
+                    //                 .iter(),
+                    //         )
+                    //         .enumerate()
+                    //         .find(|(_, (s, t))| s == src && t == dst)
+                    //     {
+                    //         // let q_src_max = analysed_sdf_application.repetition_vector.get(*src).expect("Impossible empty entry for repetition vector during identification rule");
+                    //         let consumed = analysed_sdf_application
+                    //             .sdf_application
+                    //             .topology_consumption[cidx];
+                    //         let produced =
+                    //             analysed_sdf_application.sdf_application.topology_production[cidx];
+                    //         let initial_tokens = analysed_sdf_application
+                    //             .sdf_application
+                    //             .topology_initial_tokens[cidx];
+                    //         let ratio = ((q_dst * consumed as u64 - initial_tokens as u64) as f64)
+                    //             / (produced as f64);
+                    //         // if the jobs are different and the ratio of tokens is satisfied, they
+                    //         // have a strong dependency, otherwise, they might only have a weak dependency
+                    //         // or nothing at all.
+                    //         if src != dst && *q_src == (ratio.ceil() as u64) {
+                    //             job_graph_edges.push(((src, *q_src), (dst, *q_dst), true))
+                    //         }
+                    //     } else if src == dst && *q_dst == (*q_src + 1) {
+                    //         job_graph_edges.push(((src, *q_src), (dst, *q_dst), false))
+                    //     }
+                    // }
                 }
                 let channel_token_sizes = analysed_sdf_application
                     .sdf_application
@@ -556,7 +650,9 @@ pub fn identify_aperiodic_asynchronous_dataflow_to_partitioned_mem_mappable_mult
     let mut errors: Vec<String> = Vec::new();
     if let Some(plat) = decision_models
         .iter()
-        .find_map(|x| cast_dyn_decision_model!(x, PartitionedMemoryMappableMulticore))
+        .find_map(|x: &Arc<dyn DecisionModel>| {
+            cast_dyn_decision_model!(x, PartitionedMemoryMappableMulticore)
+        })
     {
         if let Some(data) = decision_models
             .iter()
@@ -615,6 +711,94 @@ pub fn identify_aperiodic_asynchronous_dataflow_to_partitioned_mem_mappable_mult
         }
     } else {
         errors.push("identify_aperiodic_asynchronous_dataflow_to_partitioned_mem_mappable_multicore: no mem mappable platform model".to_string());
+    }
+    (identified, errors)
+}
+
+pub fn identify_aperiodic_asynchronous_dataflow_to_partitioned_mem_mappable_multicore_and_pl(
+    _design_models: &[Arc<dyn DesignModel>],
+    decision_models: &[Arc<dyn DecisionModel>],
+) -> IdentificationResult {
+    let mut identified: Vec<Arc<dyn DecisionModel>> = Vec::new();
+    let mut errors: Vec<String> = Vec::new();
+    if let Some(plat) = decision_models
+        .iter()
+        .find_map(|x: &Arc<dyn DecisionModel>| {
+            cast_dyn_decision_model!(x, PartitionedMemoryMappableMulticoreAndPL)
+        })
+    {
+        if let Some(data) = decision_models
+            .iter()
+            .find_map(|x| cast_dyn_decision_model!(x, InstrumentedComputationTimes))
+        {
+            if let Some(mem_req) = decision_models
+                .iter()
+                .find_map(|x| cast_dyn_decision_model!(x, InstrumentedMemoryRequirements))
+            {
+                if let Some(hw_area) = decision_models
+                    .iter()
+                    .find_map(|x| cast_dyn_decision_model!(x, HardwareImplementationArea))
+                {
+                    let apps: Vec<AperiodicAsynchronousDataflow> = decision_models
+                        .iter()
+                        .flat_map(|x| cast_dyn_decision_model!(x, AperiodicAsynchronousDataflow))
+                        .collect();
+                    // check if all processes can be mapped
+                    let first_non_mappable = apps
+                        .iter()
+                        .flat_map(|app| {
+                            app.processes.iter().filter(|p| {
+                                !plat.hardware.processing_elems.iter().any(|pe| {
+                                    data.average_execution_times
+                                        .get(*p)
+                                        .map(|m| m.contains_key(pe))
+                                        .unwrap_or(false)
+                                }) && !plat.hardware.programmable_logic_elems.iter().any(|pla| {
+                                    hw_area
+                                        .latencies_numerators
+                                        .get(*p)
+                                        .map(|m| m.contains_key(pla))
+                                        .unwrap_or(false)
+                                })
+                            })
+                        })
+                        .next();
+                    if apps.len() > 0 && first_non_mappable.is_some() {
+                        errors.push(format!("identify_aperiodic_asynchronous_dataflow_to_partitioned_mem_mappable_multicore_and_pl: process {} is not mappable in any processing element.", first_non_mappable.unwrap()));
+                    } else if apps.is_empty() {
+                        errors.push(format!("identify_aperiodic_asynchronous_dataflow_to_partitioned_mem_mappable_multicore_and_pl: no asynchronous aperiodic application detected."));
+                    }
+                    if apps.len() > 0 && first_non_mappable.is_none() {
+                        identified.push(Arc::new(
+                        AperiodicAsynchronousDataflowToPartitionedMemoryMappableMulticoreAndPL {
+                            aperiodic_asynchronous_dataflows: apps
+                                .into_iter()
+                                .map(|x| x.to_owned())
+                                .collect(),
+                            partitioned_mem_mappable_multicore_and_pl: plat.to_owned(),
+                            instrumented_computation_times: data.to_owned(),
+                            instrumented_memory_requirements: mem_req.to_owned(),
+                            hardware_implementation_area: hw_area.to_owned(),
+                            processes_to_runtime_scheduling: HashMap::new(),
+                            processes_to_logic_programmable_areas: HashMap::new(),
+                            processes_to_memory_mapping: HashMap::new(),
+                            buffer_to_memory_mappings: HashMap::new(),
+                            super_loop_schedules: HashMap::new(),
+                            processing_elements_to_routers_reservations: HashMap::new(),
+                        },
+                    ))
+                    }
+                } else {
+                    errors.push("identify_aperiodic_asynchronous_dataflow_to_partitioned_mem_mappable_multicore_and_pl: no hardware instrumentation decision model".to_string());
+                }
+            } else {
+                errors.push("identify_aperiodic_asynchronous_dataflow_to_partitioned_mem_mappable_multicore_and_pl: no memory instrumentation decision model".to_string());
+            }
+        } else {
+            errors.push("identify_aperiodic_asynchronous_dataflow_to_partitioned_mem_mappable_multicore_and_pl: no computational instrumentation decision model".to_string());
+        }
+    } else {
+        errors.push("identify_aperiodic_asynchronous_dataflow_to_partitioned_mem_mappable_multicore_and_pl: no mem mappable (pl) platform model".to_string());
     }
     (identified, errors)
 }

@@ -1,0 +1,183 @@
+{
+    // Use IntelliSense to learn about possible attributes.
+    // Hover to view descriptions of existing attributes.
+    // For more information, visit: https://go.microsoft.com/fwlink/?linkid=830387
+    "version": "0.2.0",
+    "configurations": [
+        {
+            "type": "lldb",
+            "request": "launch",
+            "name": "Debug unit tests in library 'idesyde-core'",
+            "cargo": {
+                "args": [
+                    "test",
+                    "--no-run",
+                    "--lib",
+                    "--package=idesyde-core"
+                ],
+                "filter": {
+                    "name": "idesyde-core",
+                    "kind": "lib"
+                }
+            },
+            "args": [],
+            "cwd": "${workspaceFolder}"
+        },
+        {
+            "type": "lldb",
+            "request": "launch",
+            "name": "Debug unit tests in library 'idesyde-orchestration'",
+            "cargo": {
+                "args": [
+                    "test",
+                    "--no-run",
+                    "--lib",
+                    "--package=idesyde-orchestration"
+                ],
+                "filter": {
+                    "name": "idesyde-orchestration",
+                    "kind": "lib"
+                }
+            },
+            "args": [],
+            "cwd": "${workspaceFolder}"
+        },
+        {
+            "type": "lldb",
+            "request": "launch",
+            "name": "Debug executable 'idesyde-orchestration'",
+            "cargo": {
+                "args": [
+                    "build",
+                    "--bin=idesyde-orchestration",
+                    "--package=idesyde-orchestration"
+                ],
+                "filter": {
+                    "name": "idesyde-orchestration",
+                    "kind": "bin"
+                }
+            },
+            "args": [
+                "-v",
+                "DEBUG",
+                "-p",
+                "10",
+                ".\\examples_and_benchmarks\\CODES_ISSS_2023\\a_sobel\\idesyde_input.fiodl"
+            ],
+            "cwd": "${workspaceFolder}"
+        },
+        {
+            "type": "lldb",
+            "request": "launch",
+            "name": "Debug unit tests in executable 'idesyde-orchestration'",
+            "cargo": {
+                "args": [
+                    "test",
+                    "--no-run",
+                    "--bin=idesyde-orchestration",
+                    "--package=idesyde-orchestration"
+                ],
+                "filter": {
+                    "name": "idesyde-orchestration",
+                    "kind": "bin"
+                }
+            },
+            "args": [],
+            "cwd": "${workspaceFolder}"
+        },
+        {
+            "type": "lldb",
+            "request": "launch",
+            "name": "Debug unit tests in library 'idesyde-blueprints'",
+            "cargo": {
+                "args": [
+                    "test",
+                    "--no-run",
+                    "--lib",
+                    "--package=idesyde-blueprints"
+                ],
+                "filter": {
+                    "name": "idesyde-blueprints",
+                    "kind": "lib"
+                }
+            },
+            "args": [],
+            "cwd": "${workspaceFolder}"
+        },
+        {
+            "type": "lldb",
+            "request": "launch",
+            "name": "Debug unit tests in library 'idesyde-bridge-java'",
+            "cargo": {
+                "args": [
+                    "test",
+                    "--no-run",
+                    "--lib",
+                    "--package=idesyde-bridge-java"
+                ],
+                "filter": {
+                    "name": "idesyde-bridge-java",
+                    "kind": "lib"
+                }
+            },
+            "args": [],
+            "cwd": "${workspaceFolder}"
+        },
+        {
+            "type": "lldb",
+            "request": "launch",
+            "name": "Debug unit tests in library 'idesyde-common'",
+            "cargo": {
+                "args": [
+                    "test",
+                    "--no-run",
+                    "--lib",
+                    "--package=idesyde-common"
+                ],
+                "filter": {
+                    "name": "idesyde-common",
+                    "kind": "lib"
+                }
+            },
+            "args": [],
+            "cwd": "${workspaceFolder}"
+        },
+        {
+            "type": "lldb",
+            "request": "launch",
+            "name": "Debug executable 'idesyde-bridge-matlab-simulink'",
+            "cargo": {
+                "args": [
+                    "build",
+                    "--bin=idesyde-bridge-matlab-simulink",
+                    "--package=idesyde-bridge-matlab-simulink"
+                ],
+                "filter": {
+                    "name": "idesyde-bridge-matlab-simulink",
+                    "kind": "bin"
+                }
+            },
+            "args": [],
+            "cwd": "${workspaceFolder}"
+        },
+        {
+            "type": "lldb",
+            "request": "launch",
+            "name": "Debug unit tests in executable 'idesyde-bridge-matlab-simulink'",
+            "cargo": {
+                "args": [
+                    "test",
+                    "--no-run",
+                    "--bin=idesyde-bridge-matlab-simulink",
+                    "--package=idesyde-bridge-matlab-simulink"
+                ],
+                "filter": {
+                    "name": "idesyde-bridge-matlab-simulink",
+                    "kind": "bin"
+                }
+            },
+            "args": [],
+            "cwd": "${workspaceFolder}"
+        }
+    ]
+}

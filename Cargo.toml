@@ -4,8 +4,9 @@ members = [
   "rust-orchestration",
   "rust-common",
   "rust-bridge-matlab-simulink",
-  "rust-bridge-java",
-  # "rust-bridge-ortools"
+  "rust-bridge-java", 
+  "rust-bridge-minizinc"
+#  "rust-bridge-ortools"
 ]
 description = "IDeSyDe Rust suite"
 resolver = "2"
@@ -17,6 +18,8 @@ ciborium = "0.2.1"
 clap = { version = "4.2.1", features = ["derive"] }
 cxx = "1.0"
 cxx-build = "1.0"
+autocxx = "0.26.0"
+autocxx-build = "0.26.0"
 derive_builder = "0.20.0"
 downcast-rs = "1.2.0"
 jni = { version = "0.21.1", features = ["invocation"] }
@@ -46,6 +49,6 @@ url = "2.4.1"
 zip = "0.6.6"
 
 [workspace.package]
-version = "0.8.1"
+version = "0.8.3"
 authors = ["Rodolfo Jordao"]
 edition = "2021"

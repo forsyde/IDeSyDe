@@ -159,7 +159,9 @@ pub fn identification_procedure(
         fix_point = true;
         let (identified_models, msgs) = irules
             .par_iter()
-            .map(|irule| irule.identify(&design_models.as_slice(), identified.as_slice()))
+            .map(|irule| {
+                irule.identify(&design_models.as_slice(), identified.as_slice())
+            })
             .reduce_with(merge_identification_results)
             .unwrap_or((vec![], vec![]));
         // add completely new models or replace opaque deicion mdoels for non-opaque ones

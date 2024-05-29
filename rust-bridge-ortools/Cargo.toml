@@ -11,6 +11,7 @@ idesyde-core = { path = "../rust-core" }
 idesyde-blueprints = { path = "../rust-blueprints" }
 idesyde-common = { path = "../rust-common" }
 cxx.workspace = true
+autocxx.workspace = true
 
 [build-dependencies]
-cxx-build.workspace = true
+autocxx-build.workspace = true

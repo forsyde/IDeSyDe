@@ -96,18 +96,18 @@ class InstrumentedComputationTimesIRule implements IdentificationRule {
                                                         });
                                             }));
                         }));
-        if (!processes.isEmpty() && !processing_elements.isEmpty()) {
-            identified.add(
-                    new InstrumentedComputationTimes(
-                            average_execution_times,
-                            best_execution_times,
-                            processes,
-                            processing_elements,
-                            scale_factor,
-                            worst_execution_times));
-        } else {
-            errors.add("No instrumented processing elements and processes found");
-        }
+        identified.add(
+                new InstrumentedComputationTimes(
+                        average_execution_times,
+                        best_execution_times,
+                        processes,
+                        processing_elements,
+                        scale_factor,
+                        worst_execution_times));
+        // if (!processes.isEmpty() && !processing_elements.isEmpty()) {
+        // } else {
+        // errors.add("No instrumented processing elements and processes found");
+        // }
         return new IdentificationResult(
                 identified, errors);
     }

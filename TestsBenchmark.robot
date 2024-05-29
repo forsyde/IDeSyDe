@@ -174,3 +174,23 @@ Test for examples_and_benchmarks/EARLY_BIRD/corrected_summer_project_2023
     [Tags]    slow
     ${NumFound} =    IDeSyDeLibrary.Try Explore    examples_and_benchmarks/EARLY_BIRD/corrected_summer_project_2023
     Should Not Be Equal As Integers    ${NumFound}    0
+
+Test for examples_and_benchmarks/novel/programmable_logic_area/tc1
+    ${NumFound} =    IDeSyDeLibrary.Try Explore    examples_and_benchmarks/novel/programmable_logic_area/MPSoC.fiodl,examples_and_benchmarks/novel/programmable_logic_area/tc1.fiodl
+    Should Not Be Equal As Integers    ${NumFound}    0
+
+Test for examples_and_benchmarks/novel/programmable_logic_area/tc2
+    ${NumFound} =    IDeSyDeLibrary.Try Explore    examples_and_benchmarks/novel/programmable_logic_area/tc2.fiodl,examples_and_benchmarks/novel/programmable_logic_area/MPSoC.fiodl
+    Should Not Be Equal As Integers    ${NumFound}    0
+
+Test for examples_and_benchmarks/novel/programmable_logic_area/tc3
+    ${NumFound} =    IDeSyDeLibrary.Try Explore    examples_and_benchmarks/novel/programmable_logic_area/tc3.fiodl,examples_and_benchmarks/novel/programmable_logic_area/MPSoC.fiodl
+    Should Be Equal As Integers    ${NumFound}    0
+
+Test for examples_and_benchmarks/novel/programmable_logic_area/tc3_feasible
+    ${NumFound} =    IDeSyDeLibrary.Try Explore    examples_and_benchmarks/novel/programmable_logic_area/tc3_feasible.fiodl,examples_and_benchmarks/novel/programmable_logic_area/MPSoC.fiodl
+    Should Not Be Equal As Integers    ${NumFound}    0
+
+Test for examples_and_benchmarks/novel/programmable_logic_area/tc45
+    ${NumFound} =    IDeSyDeLibrary.Try Explore    examples_and_benchmarks/novel/programmable_logic_area/tc45.fiodl,examples_and_benchmarks/novel/programmable_logic_area/MPSoC.fiodl
+    Should Not Be Equal As Integers    ${NumFound}    0

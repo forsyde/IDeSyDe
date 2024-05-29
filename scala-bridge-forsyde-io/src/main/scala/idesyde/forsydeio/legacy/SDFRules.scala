@@ -99,14 +99,18 @@ trait SDFRules {
         .map((a, i) =>
           ForSyDeHierarchy.InstrumentedSoftwareBehaviour
             .tryView(a)
-            .map(_.maxSizeInBits().values().asScala.max)
+            .stream()
+            .flatMapToLong(_.maxSizeInBits().values().stream().mapToLong(_.longValue()))
+            .max()
             .orElse(0L) +
             a.combFunctions()
               .stream()
               .mapToLong(fs =>
                 ForSyDeHierarchy.InstrumentedSoftwareBehaviour
                   .tryView(fs)
-                  .map(_.maxSizeInBits().values().asScala.max)
+                  .stream()
+                  .flatMapToLong(_.maxSizeInBits().values().stream().mapToLong(_.longValue()))
+                  .max()
                   .orElse(0L)
               )
               .sum

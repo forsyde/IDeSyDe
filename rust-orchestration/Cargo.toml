@@ -9,6 +9,7 @@ idesyde-core = { path = "../rust-core" }
 idesyde-common = { path = "../rust-common" }
 idesyde-blueprints = { path = "../rust-blueprints" }
 idesyde-bridge-java = { path = "../rust-bridge-java" }
+idesyde-bridge-minizinc = { path = "../rust-bridge-minizinc" }
 clap = { workspace = true }
 env_logger.workspace = true
 log.workspace = true

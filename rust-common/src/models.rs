@@ -1,8 +1,16 @@
 use std::collections::{HashMap, HashSet};
 
-use idesyde_core::{impl_decision_model_standard_parts, DecisionModel};
+use idesyde_core::{
+    impl_decision_model_conversion, impl_decision_model_standard_parts, DecisionModel,
+};
+use petgraph::{
+    visit::{IntoNeighbors, NodeIndexable},
+    Graph,
+};
 use schemars::JsonSchema;
 use serde::{Deserialize, Serialize};
+
+const NUMERICAL_RELATIVE_ERROR: f64 = 0.02;
 
 /// A model that abstracts concurrent processes where stimulus and dataflow are separate.
 ///
@@ -83,6 +91,7 @@ pub struct CommunicatingAndTriggeredReactiveWorkload {
     pub has_or_trigger_semantics: HashSet<String>,
 }
 
+impl_decision_model_conversion!(CommunicatingAndTriggeredReactiveWorkload);
 impl DecisionModel for CommunicatingAndTriggeredReactiveWorkload {
     impl_decision_model_standard_parts!(CommunicatingAndTriggeredReactiveWorkload);
 
@@ -142,6 +151,7 @@ pub struct SDFApplication {
     pub topology_token_size_in_bits: Vec<u64>,
 }
 
+impl_decision_model_conversion!(SDFApplication);
 impl DecisionModel for SDFApplication {
     impl_decision_model_standard_parts!(SDFApplication);
 
@@ -177,6 +187,7 @@ pub struct AnalysedSDFApplication {
     pub periodic_admissible_static_schedule: Vec<String>,
 }
 
+impl_decision_model_conversion!(AnalysedSDFApplication);
 impl DecisionModel for AnalysedSDFApplication {
     impl_decision_model_standard_parts!(AnalysedSDFApplication);
 
@@ -203,6 +214,7 @@ pub struct TiledMultiCore {
     pub pre_computed_paths: HashMap<String, HashMap<String, Vec<String>>>,
 }
 
+impl_decision_model_conversion!(TiledMultiCore);
 impl DecisionModel for TiledMultiCore {
     impl_decision_model_standard_parts!(TiledMultiCore);
 
@@ -248,6 +260,7 @@ pub struct MemoryMappableMultiCore {
     pub pre_computed_paths: HashMap<String, HashMap<String, Vec<String>>>,
 }
 
+impl_decision_model_conversion!(MemoryMappableMultiCore);
 impl DecisionModel for MemoryMappableMultiCore {
     impl_decision_model_standard_parts!(MemoryMappableMultiCore);
 
@@ -263,6 +276,84 @@ impl DecisionModel for MemoryMappableMultiCore {
             ));
         }
         elems
+    }
+}
+
+/// A decision model capturing the memory mappable platform abstraction.
+///
+/// This type of platform is what one would expect from most COTS platforms
+/// and hardware designs, which completely or partially follows a von neumman
+/// architecture. This means that the storage elements store both data and instructions
+/// and the processors access them going through the communication elements; the latter
+/// that form the 'interconnect'. In addition to standard software processing elements,
+/// this decision model also includes programmable logic capacities on the platform.
+#[derive(Debug, Deserialize, Serialize, Clone, PartialEq, JsonSchema)]
+pub struct MemoryMappableMulticoreWithPL {
+    pub processing_elems: HashSet<String>,
+    pub programmable_logic_elems: HashSet<String>,
+    pub pl_module_available_areas: HashMap<String, u32>,
+    pub storage_elems: HashSet<String>,
+    pub communication_elems: HashSet<String>,
+    pub topology_srcs: Vec<String>,
+    pub topology_dsts: Vec<String>,
+    pub processors_frequency: HashMap<String, u64>,
+    pub processors_provisions: HashMap<String, HashMap<String, HashMap<String, f64>>>,
+    pub storage_sizes: HashMap<String, u64>,
+    pub communication_elements_max_channels: HashMap<String, u32>,
+    pub communication_elements_bit_per_sec_per_channel: HashMap<String, f64>,
+    pub pre_computed_paths: HashMap<String, HashMap<String, Vec<String>>>,
+}
+
+impl_decision_model_conversion!(MemoryMappableMulticoreWithPL);
+impl DecisionModel for MemoryMappableMulticoreWithPL {
+    impl_decision_model_standard_parts!(MM_MCoreAndPL);
+
+    fn part(&self) -> HashSet<String> {
+        let mut elems: HashSet<String> = HashSet::new();
+        elems.extend(self.processing_elems.iter().map(|x: &String| x.to_owned()));
+        elems.extend(self.storage_elems.iter().map(|x: &String| x.to_owned()));
+        elems.extend(
+            self.programmable_logic_elems
+                .iter()
+                .map(|x: &String| x.to_owned()),
+        );
+        elems.extend(
+            self.communication_elems
+                .iter()
+                .map(|x: &String| x.to_owned()),
+        );
+        for i in 0..self.topology_dsts.len() {
+            elems.insert(format!(
+                "{}:{}-{}:{}",
+                self.topology_srcs[i], "", self.topology_dsts[i], ""
+            ));
+        }
+        elems
+    }
+}
+
+impl MemoryMappableMulticoreWithPL {
+    pub fn platform_as_graph(&self) -> Graph<String, ()> {
+        let mut graph = Graph::new();
+        let mut nodes = HashMap::new();
+        for pe in &self.processing_elems {
+            nodes.insert(pe.clone(), graph.add_node(pe.clone()));
+        }
+        for pe in &self.programmable_logic_elems {
+            nodes.insert(pe.clone(), graph.add_node(pe.clone()));
+        }
+        for mem in &self.storage_elems {
+            nodes.insert(mem.clone(), graph.add_node(mem.clone()));
+        }
+        for ce in &self.communication_elems {
+            nodes.insert(ce.clone(), graph.add_node(ce.clone()));
+        }
+        for (src, dst) in self.topology_srcs.iter().zip(self.topology_dsts.iter()) {
+            let src_node = nodes.get(src).unwrap();
+            let dst_node = nodes.get(dst).unwrap();
+            graph.add_edge(src_node.clone(), dst_node.clone(), ());
+        }
+        graph
     }
 }
 
@@ -286,6 +377,7 @@ pub struct RuntimesAndProcessors {
     pub is_super_loop: HashSet<String>,
 }
 
+impl_decision_model_conversion!(RuntimesAndProcessors);
 impl DecisionModel for RuntimesAndProcessors {
     impl_decision_model_standard_parts!(RuntimesAndProcessors);
 
@@ -314,6 +406,7 @@ pub struct PartitionedTiledMulticore {
     pub runtimes: RuntimesAndProcessors,
 }
 
+impl_decision_model_conversion!(PartitionedTiledMulticore);
 impl DecisionModel for PartitionedTiledMulticore {
     impl_decision_model_standard_parts!(PartitionedTiledMulticore);
 
@@ -336,8 +429,32 @@ pub struct PartitionedMemoryMappableMulticore {
     pub runtimes: RuntimesAndProcessors,
 }
 
+impl_decision_model_conversion!(PartitionedMemoryMappableMulticore);
 impl DecisionModel for PartitionedMemoryMappableMulticore {
     impl_decision_model_standard_parts!(PartitionedMemoryMappableMulticore);
+
+    fn part(&self) -> HashSet<String> {
+        let mut elems: HashSet<String> = HashSet::new();
+        elems.extend(self.hardware.part().iter().map(|x| x.to_owned()));
+        elems.extend(self.runtimes.part().iter().map(|x| x.to_owned()));
+        elems
+    }
+}
+
+/// A decision model that captures a paritioned-scheduled memory mappable multicore machine
+///
+/// This means that every processing element hosts and has affinity for one and only one runtime element.
+/// This runtime element can execute according to any scheduling policy, but it must control only
+/// its host.
+#[derive(Debug, PartialEq, Serialize, Deserialize, Clone, JsonSchema)]
+pub struct PartitionedMemoryMappableMulticoreAndPL {
+    pub hardware: MemoryMappableMulticoreWithPL,
+    pub runtimes: RuntimesAndProcessors,
+}
+
+impl_decision_model_conversion!(PartitionedMemoryMappableMulticoreAndPL);
+impl DecisionModel for PartitionedMemoryMappableMulticoreAndPL {
+    impl_decision_model_standard_parts!(PartitionedMemoryMappableMulticoreAndPL);
 
     fn part(&self) -> HashSet<String> {
         let mut elems: HashSet<String> = HashSet::new();
@@ -378,6 +495,7 @@ pub struct AperiodicAsynchronousDataflow {
     pub process_path_maximum_latency: HashMap<String, HashMap<String, f64>>,
 }
 
+impl_decision_model_conversion!(AperiodicAsynchronousDataflow);
 impl DecisionModel for AperiodicAsynchronousDataflow {
     impl_decision_model_standard_parts!(AsynchronousAperiodicDataflow);
 
@@ -386,6 +504,61 @@ impl DecisionModel for AperiodicAsynchronousDataflow {
         elems.extend(self.processes.iter().map(|x| x.to_owned()));
         elems.extend(self.buffers.iter().map(|x| x.to_string()));
         elems
+    }
+}
+
+impl AperiodicAsynchronousDataflow {
+    pub fn job_follows(&self) -> HashMap<(&str, u64), Vec<(&str, u64)>> {
+        let mut follows = HashMap::new();
+        let mut firings_graph: Graph<(&str, u64), (), petgraph::Directed> = Graph::new();
+        let mut firings_graph_idx = HashMap::new();
+        for (a, q) in self
+            .job_graph_name
+            .iter()
+            .zip(self.job_graph_instance.iter())
+        {
+            let _ = firings_graph_idx
+                .insert((a.as_str(), *q), firings_graph.add_node((a.as_str(), *q)));
+        }
+        for i in 0..self.job_graph_src_name.len() {
+            let src_a = self.job_graph_src_name[i].as_str();
+            let src_q = self.job_graph_src_instance[i];
+            let dst_a = self.job_graph_dst_name[i].as_str();
+            let dst_q = self.job_graph_dst_instance[i];
+            let src_index = firings_graph_idx.get(&(src_a, src_q)).unwrap();
+            let dst_index = firings_graph_idx.get(&(dst_a, dst_q)).unwrap();
+            firings_graph.add_edge(*src_index, *dst_index, ());
+        }
+        let firings_graph_toposort = petgraph::algo::toposort(&firings_graph, None)
+            .expect("Firings graph has a cycle. Should never happen.");
+        let (res, revmap) = petgraph::algo::tred::dag_to_toposorted_adjacency_list(
+            &firings_graph,
+            &firings_graph_toposort,
+        );
+        let (_, firings_graph_closure) = petgraph::algo::tred::dag_transitive_reduction_closure::<
+            (),
+            petgraph::graph::DefaultIx,
+        >(&res);
+        for (src_a, src_q) in self
+            .job_graph_name
+            .iter()
+            .zip(self.job_graph_instance.iter())
+        {
+            let src_index = firings_graph_idx.get(&(src_a.as_str(), *src_q)).unwrap();
+            let mut follows_vec: Vec<(&str, u64)> = vec![];
+            for e in firings_graph_closure.neighbors(revmap[src_index.index()]) {
+                if let Some(og_idx) = revmap.iter().position(|x| *x == e) {
+                    if let Some(f) = firings_graph
+                        .node_weight(firings_graph.from_index(og_idx))
+                        .map(|x| *x)
+                    {
+                        follows_vec.push(f);
+                    };
+                };
+            }
+            follows.insert((src_a.as_str(), *src_q), follows_vec);
+        }
+        follows
     }
 }
 
@@ -413,6 +586,7 @@ pub struct InstrumentedComputationTimes {
     pub scale_factor: u64,
 }
 
+impl_decision_model_conversion!(InstrumentedComputationTimes);
 impl DecisionModel for InstrumentedComputationTimes {
     impl_decision_model_standard_parts!(InstrumentedComputationTimes);
 
@@ -439,6 +613,7 @@ pub struct InstrumentedMemoryRequirements {
     pub memory_requirements: HashMap<String, HashMap<String, u64>>,
 }
 
+impl_decision_model_conversion!(InstrumentedMemoryRequirements);
 impl DecisionModel for InstrumentedMemoryRequirements {
     impl_decision_model_standard_parts!(InstrumentedMemoryRequirements);
 
@@ -446,6 +621,31 @@ impl DecisionModel for InstrumentedMemoryRequirements {
         let mut elems: HashSet<String> = HashSet::new();
         elems.extend(self.processes.iter().map(|x| x.to_owned()));
         elems.extend(self.processing_elements.iter().map(|x| x.to_string()));
+        elems
+    }
+}
+
+/// A decision model to hold the required area that a hardware implementation needs.
+///
+#[derive(Debug, PartialEq, Serialize, Deserialize, Clone, JsonSchema)]
+pub struct HardwareImplementationArea {
+    pub processes: HashSet<String>,
+    pub programmable_areas: HashSet<String>,
+    pub required_areas: HashMap<String, HashMap<String, u64>>,
+    pub required_resources: HashMap<String, HashMap<String, HashMap<String, u64>>>,
+    pub provided_resources: HashMap<String, HashMap<String, u64>>,
+    pub latencies_numerators: HashMap<String, HashMap<String, u64>>,
+    pub latencies_denominators: HashMap<String, HashMap<String, u64>>,
+}
+
+impl_decision_model_conversion!(HardwareImplementationArea);
+impl DecisionModel for HardwareImplementationArea {
+    impl_decision_model_standard_parts!(InstrumentedMemoryRequirements);
+
+    fn part(&self) -> HashSet<String> {
+        let mut elems: HashSet<String> = HashSet::new();
+        elems.extend(self.processes.iter().map(|x| x.to_owned()));
+        elems.extend(self.programmable_areas.iter().map(|x| x.to_string()));
         elems
     }
 }
@@ -470,6 +670,7 @@ pub struct AperiodicAsynchronousDataflowToPartitionedTiledMulticore {
     pub processing_elements_to_routers_reservations: HashMap<String, HashMap<String, u16>>,
 }
 
+impl_decision_model_conversion!(AperiodicAsynchronousDataflowToPartitionedTiledMulticore);
 impl DecisionModel for AperiodicAsynchronousDataflowToPartitionedTiledMulticore {
     impl_decision_model_standard_parts!(AperiodicAsynchronousDataflowToPartitionedTiledMulticore);
 
@@ -530,6 +731,7 @@ pub struct AperiodicAsynchronousDataflowToPartitionedMemoryMappableMulticore {
     pub processing_elements_to_routers_reservations: HashMap<String, HashMap<String, u16>>,
 }
 
+impl_decision_model_conversion!(AperiodicAsynchronousDataflowToPartitionedMemoryMappableMulticore);
 impl DecisionModel for AperiodicAsynchronousDataflowToPartitionedMemoryMappableMulticore {
     impl_decision_model_standard_parts!(
         AperiodicAsynchronousDataflowToPartitionedMemoryMappableMulticore
@@ -578,6 +780,223 @@ impl DecisionModel for AperiodicAsynchronousDataflowToPartitionedMemoryMappableM
     }
 }
 
+/// A decision model that combines aperiodic dataflows to partitioned memory mappable platforms with
+/// both software and hardware processing elements.
+///
+/// The assumptions of this decision model are:
+///  1. For every process, there is at least one processing element in the platform that can run it.
+///     Otherwise, even the trivial mapping is impossible.
+///  2. Super loop schedules are self-timed and stall the processing element that is hosting them.
+///     That is, if we have a poor schedule, the processing element will get "blocked" often.
+#[derive(Debug, PartialEq, Serialize, Deserialize, Clone, JsonSchema)]
+pub struct AperiodicAsynchronousDataflowToPartitionedMemoryMappableMulticoreAndPL {
+    pub aperiodic_asynchronous_dataflows: Vec<AperiodicAsynchronousDataflow>,
+    pub partitioned_mem_mappable_multicore_and_pl: PartitionedMemoryMappableMulticoreAndPL,
+    pub instrumented_computation_times: InstrumentedComputationTimes,
+    pub instrumented_memory_requirements: InstrumentedMemoryRequirements,
+    pub hardware_implementation_area: HardwareImplementationArea,
+    pub processes_to_runtime_scheduling: HashMap<String, String>,
+    pub processes_to_logic_programmable_areas: HashMap<String, String>,
+    pub processes_to_memory_mapping: HashMap<String, String>,
+    pub buffer_to_memory_mappings: HashMap<String, String>,
+    pub super_loop_schedules: HashMap<String, Vec<String>>,
+    pub processing_elements_to_routers_reservations: HashMap<String, HashMap<String, u16>>,
+}
+
+impl_decision_model_conversion!(
+    AperiodicAsynchronousDataflowToPartitionedMemoryMappableMulticoreAndPL
+);
+impl DecisionModel for AperiodicAsynchronousDataflowToPartitionedMemoryMappableMulticoreAndPL {
+    impl_decision_model_standard_parts!(
+        AperiodicAsynchronousDataflowToPartitionedMemoryMappableMulticoreAndPL
+    );
+
+    fn part(&self) -> HashSet<String> {
+        let mut elems: HashSet<String> = HashSet::new();
+        for app in &self.aperiodic_asynchronous_dataflows {
+            elems.extend(app.part().iter().map(|x| x.to_owned()));
+        }
+        elems.extend(
+            self.partitioned_mem_mappable_multicore_and_pl
+                .part()
+                .iter()
+                .map(|x| x.to_owned()),
+        );
+        elems.extend(
+            self.instrumented_computation_times
+                .part()
+                .iter()
+                .map(|x| x.to_owned()),
+        );
+        elems.extend(
+            self.instrumented_memory_requirements
+                .part()
+                .iter()
+                .map(|x| x.to_owned()),
+        );
+        elems.extend(
+            self.hardware_implementation_area
+                .part()
+                .iter()
+                .map(|x| x.to_owned()),
+        );
+        for (pe, sched) in &self.processes_to_runtime_scheduling {
+            elems.insert(format!("{}={}:{}-{}:{}", "scheduling", pe, "", sched, ""));
+        }
+        for (pe, mem) in &self.processes_to_memory_mapping {
+            elems.insert(format!("{}={}:{}-{}:{}", "mapping", pe, "", mem, ""));
+        }
+        for (buf, mem) in &self.buffer_to_memory_mappings {
+            elems.insert(format!("{}={}:{}-{}:{}", "mapping", buf, "", mem, ""));
+        }
+        for (pe, ce_slots) in &self.processing_elements_to_routers_reservations {
+            for (ce, slots) in ce_slots {
+                if *slots > 0 {
+                    elems.insert(format!("{}={}:{}-{}:{}", "reservation", pe, "", ce, ""));
+                }
+            }
+        }
+        elems
+    }
+}
+
+impl AperiodicAsynchronousDataflowToPartitionedMemoryMappableMulticoreAndPL {
+    pub fn get_max_discrete_value(&self) -> u64 {
+        let biggest_path: u64 = self
+            .partitioned_mem_mappable_multicore_and_pl
+            .hardware
+            .pre_computed_paths
+            .values()
+            .flat_map(|dsts| dsts.values().map(|path| path.len() as u64))
+            .max()
+            .unwrap_or(0)
+            + 1;
+        let number_jobs: u64 = self
+            .aperiodic_asynchronous_dataflows
+            .iter()
+            .map(|app| app.processes.len() as u64)
+            .sum();
+        let num_mappables: u64 = self
+            .partitioned_mem_mappable_multicore_and_pl
+            .hardware
+            .processing_elems
+            .len() as u64
+            + (self
+                .partitioned_mem_mappable_multicore_and_pl
+                .hardware
+                .programmable_logic_elems
+                .len() as u64);
+        let relative_constant = (-(NUMERICAL_RELATIVE_ERROR.log2().ceil())) as u32;
+        let problem_constant = (biggest_path * number_jobs * num_mappables) as f64;
+        let resolution = (problem_constant.log2().ceil() as u32) + relative_constant;
+        2u64.pow(resolution)
+    }
+
+    pub fn get_max_average_execution_time(&self) -> f32 {
+        let original_max_plas = self
+            .hardware_implementation_area
+            .latencies_numerators
+            .iter()
+            .flat_map(|(proc, nums)| {
+                nums.iter().flat_map(|(pla, num)| {
+                    self.hardware_implementation_area
+                        .latencies_denominators
+                        .get(proc)
+                        .and_then(|x| x.get(pla))
+                        .map(|den| *num as f32 / *den as f32)
+                })
+            })
+            .reduce(f32::max)
+            .unwrap_or(0.0);
+        let original_max_pes = self
+            .instrumented_computation_times
+            .average_execution_times
+            .iter()
+            .flat_map(|(_, times)| {
+                times
+                    .values()
+                    .map(|x| *x as f32 / self.instrumented_computation_times.scale_factor as f32)
+            })
+            .reduce(f32::max)
+            .unwrap_or(0.0);
+        let original_max_traversal = self
+            .partitioned_mem_mappable_multicore_and_pl
+            .hardware
+            .communication_elements_bit_per_sec_per_channel
+            .values()
+            .map(|x| 1.0 / x)
+            .reduce(f64::max)
+            .unwrap_or(0.0) as f32;
+        original_max_pes
+            .max(original_max_plas)
+            .max(original_max_traversal)
+    }
+
+    pub fn get_memory_scale_factor(&self) -> u64 {
+        *self
+            .instrumented_memory_requirements
+            .memory_requirements
+            .values()
+            .flat_map(|x| x.values())
+            .chain(
+                self.partitioned_mem_mappable_multicore_and_pl
+                    .hardware
+                    .storage_sizes
+                    .values(),
+            )
+            .chain(self.aperiodic_asynchronous_dataflows.iter().flat_map(
+                |app: &AperiodicAsynchronousDataflow| app.buffer_max_size_in_bits.values(),
+            ))
+            .chain(self.aperiodic_asynchronous_dataflows.iter().flat_map(
+                |app: &AperiodicAsynchronousDataflow| {
+                    app.process_get_from_buffer_in_bits
+                        .values()
+                        .flat_map(|x| x.values())
+                },
+            ))
+            .chain(self.aperiodic_asynchronous_dataflows.iter().flat_map(
+                |app: &AperiodicAsynchronousDataflow| {
+                    app.process_get_from_buffer_in_bits
+                        .values()
+                        .flat_map(|x| x.values())
+                },
+            ))
+            .filter(|x| x > &&0)
+            .min()
+            .unwrap_or(&1)
+    }
+
+    pub fn get_requirements_scale_factors(&self) -> HashMap<String, u64> {
+        let programmable_resources_set: Vec<String> = self
+            .hardware_implementation_area
+            .provided_resources
+            .values()
+            .flat_map(|x| x.keys())
+            .map(|x| x.to_string())
+            .collect();
+        let mut scale_factors = HashMap::new();
+        for req in programmable_resources_set {
+            let factor = *self
+                .hardware_implementation_area
+                .provided_resources
+                .values()
+                .flat_map(|x| x.values())
+                .chain(
+                    self.hardware_implementation_area
+                        .required_resources
+                        .values()
+                        .flat_map(|x| x.values())
+                        .flat_map(|x| x.values()),
+                )
+                .filter(|x| x > &&0)
+                .min()
+                .unwrap_or(&1);
+            scale_factors.insert(req, factor);
+        }
+        scale_factors
+    }
+}
+
 #[derive(Debug, PartialEq, Serialize, Deserialize, Clone, JsonSchema)]
 pub struct PeriodicWorkloadToPartitionedSharedMultiCore {
     pub workload: CommunicatingAndTriggeredReactiveWorkload,
@@ -591,6 +1010,7 @@ pub struct PeriodicWorkloadToPartitionedSharedMultiCore {
     pub max_utilizations: HashMap<String, f64>,
 }
 
+impl_decision_model_conversion!(PeriodicWorkloadToPartitionedSharedMultiCore);
 impl DecisionModel for PeriodicWorkloadToPartitionedSharedMultiCore {
     impl_decision_model_standard_parts!(PeriodicWorkloadToPartitionedSharedMultiCore);
 

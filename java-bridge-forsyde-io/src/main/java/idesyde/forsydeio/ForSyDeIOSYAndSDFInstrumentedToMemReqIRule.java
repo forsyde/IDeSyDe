@@ -64,24 +64,31 @@ public class ForSyDeIOSYAndSDFInstrumentedToMemReqIRule implements Identificatio
         }
 
         // accept if all SDF or SY behaviours are instrumented
-        if (processes.isEmpty() || channels.isEmpty() || memMapping.isEmpty()) {
-            return new IdentificationResult(Set.of(), Set.of(
-                    "ForSyDeIOSYAndSDFInstrumentedToMemReqIRule: no instrumented processes or channels found"));
-        }
-        var allSYOk = model.vertexSet().stream().filter(v -> ForSyDeHierarchy.SYProcess.tryView(model, v).isPresent())
-                .allMatch(
-                        v -> memMapping.containsKey(v.getIdentifier()) && memMapping.get(v.getIdentifier()).size() > 0);
-        var allSDFOk = model.vertexSet().stream().filter(v -> ForSyDeHierarchy.SDFActor.tryView(model, v).isPresent())
-                .allMatch(
-                        v -> memMapping.containsKey(v.getIdentifier()) && memMapping.get(v.getIdentifier()).size() > 0);
-        if (!allSYOk) {
-            return new IdentificationResult(Set.of(), Set.of(
-                    "ForSyDeIOSYAndSDFInstrumentedToMemReqIRule: not all SY processes have their memory instrumented"));
-        }
-        if (!allSDFOk) {
-            return new IdentificationResult(Set.of(), Set.of(
-                    "ForSyDeIOSYAndSDFInstrumentedToMemReqIRule: not all SDF actors have their memory instrumented"));
-        }
+        // if (processes.isEmpty() || channels.isEmpty() || memMapping.isEmpty()) {
+        // return new IdentificationResult(Set.of(), Set.of(
+        // "ForSyDeIOSYAndSDFInstrumentedToMemReqIRule: no instrumented processes or
+        // channels found"));
+        // }
+        // var allSYOk = model.vertexSet().stream().filter(v ->
+        // ForSyDeHierarchy.SYProcess.tryView(model, v).isPresent())
+        // .allMatch(
+        // v -> memMapping.containsKey(v.getIdentifier()) &&
+        // memMapping.get(v.getIdentifier()).size() > 0);
+        // var allSDFOk = model.vertexSet().stream().filter(v ->
+        // ForSyDeHierarchy.SDFActor.tryView(model, v).isPresent())
+        // .allMatch(
+        // v -> memMapping.containsKey(v.getIdentifier()) &&
+        // memMapping.get(v.getIdentifier()).size() > 0);
+        // if (!allSYOk) {
+        // return new IdentificationResult(Set.of(), Set.of(
+        // "ForSyDeIOSYAndSDFInstrumentedToMemReqIRule: not all SY processes have their
+        // memory instrumented"));
+        // }
+        // if (!allSDFOk) {
+        // return new IdentificationResult(Set.of(), Set.of(
+        // "ForSyDeIOSYAndSDFInstrumentedToMemReqIRule: not all SDF actors have their
+        // memory instrumented"));
+        // }
         return new IdentificationResult(Set.of(new InstrumentedMemoryRequirements(processes, channels,
                 memMapping.values().stream().flatMap(e -> e.keySet().stream()).collect(Collectors.toSet()),
                 memMapping)), Set.of());

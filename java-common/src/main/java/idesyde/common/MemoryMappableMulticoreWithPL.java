@@ -21,7 +21,7 @@ import java.util.stream.Stream;
  * elements; the latter that form the 'interconnect'.
  */
 @JsonSerialize
-public record MM_MCoreAndPL(
+public record MemoryMappableMulticoreWithPL(
 		@JsonProperty("processing_elems") Set<String> processingElems,
 		@JsonProperty("programmable_logic_elems") Set<String> programmableLogicElems,
 		@JsonProperty("pl_module_available_areas") Map<String, Integer> plModuleSizes,

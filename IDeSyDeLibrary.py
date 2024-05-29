@@ -75,16 +75,21 @@ class IDeSyDeLibrary:
     ) -> int:
         # bin_path = next(f for f in os.listdir(".") if "idesyde" in f)
         # bin_path = "idesyde-orchestrator"
-        path = path_unix_like.replace("/", os.path.sep)
+        paths = [p.replace("/", os.path.sep) for p in  path_unix_like.split(",")]
         bin_path = (
             (".\\" if os.name == "nt" else "./")
             + "idesyde"
             + (".exe" if os.name == "nt" else "")
         )
-        files = os.listdir(path) if os.path.isdir(path) else [os.path.basename(path)]
+        files = [
+            p for p in paths if not os.path.isdir(p) 
+        ] + [
+            path + os.path.sep + p for path in paths if os.path.isdir(path) for p in os.listdir(path) 
+        ]
+
         # change to base path if itis a file
-        path = os.path.dirname(path) if os.path.isfile(path) else path
-        run_path = test_workdir + os.path.sep + path
+        # path = os.path.dirname(path) if os.path.isfile(path) else path
+        run_path = test_workdir #+ os.path.sep + path
         os.makedirs(run_path, exist_ok=True)
         args = [
             bin_path,
@@ -98,7 +103,7 @@ class IDeSyDeLibrary:
             str(self.parallel_lvl),
             "-v",
             log_level,
-        ] + [path + os.path.sep + f for f in files]
+        ] + files #[path + os.path.sep + f for f in files]
         solutions_found = 0
         out = subprocess.check_output(
             args,

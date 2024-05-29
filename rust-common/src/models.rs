@@ -288,7 +288,7 @@ impl DecisionModel for MemoryMappableMultiCore {
 /// that form the 'interconnect'. In addition to standard software processing elements,
 /// this decision model also includes programmable logic capacities on the platform.
 #[derive(Debug, Deserialize, Serialize, Clone, PartialEq, JsonSchema)]
-pub struct MM_MCoreAndPL {
+pub struct MemoryMappableMulticoreWithPL {
     pub processing_elems: HashSet<String>,
     pub programmable_logic_elems: HashSet<String>,
     pub pl_module_available_areas: HashMap<String, u32>,
@@ -304,8 +304,8 @@ pub struct MM_MCoreAndPL {
     pub pre_computed_paths: HashMap<String, HashMap<String, Vec<String>>>,
 }
 
-impl_decision_model_conversion!(MM_MCoreAndPL);
-impl DecisionModel for MM_MCoreAndPL {
+impl_decision_model_conversion!(MemoryMappableMulticoreWithPL);
+impl DecisionModel for MemoryMappableMulticoreWithPL {
     impl_decision_model_standard_parts!(MM_MCoreAndPL);
 
     fn part(&self) -> HashSet<String> {
@@ -332,7 +332,7 @@ impl DecisionModel for MM_MCoreAndPL {
     }
 }
 
-impl MM_MCoreAndPL {
+impl MemoryMappableMulticoreWithPL {
     pub fn platform_as_graph(&self) -> Graph<String, ()> {
         let mut graph = Graph::new();
         let mut nodes = HashMap::new();
@@ -448,7 +448,7 @@ impl DecisionModel for PartitionedMemoryMappableMulticore {
 /// its host.
 #[derive(Debug, PartialEq, Serialize, Deserialize, Clone, JsonSchema)]
 pub struct PartitionedMemoryMappableMulticoreAndPL {
-    pub hardware: MM_MCoreAndPL,
+    pub hardware: MemoryMappableMulticoreWithPL,
     pub runtimes: RuntimesAndProcessors,
 }
 

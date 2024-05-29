@@ -4,7 +4,7 @@ use models::{
     AperiodicAsynchronousDataflowToPartitionedMemoryMappableMulticore,
     AperiodicAsynchronousDataflowToPartitionedMemoryMappableMulticoreAndPL,
     AperiodicAsynchronousDataflowToPartitionedTiledMulticore, InstrumentedComputationTimes,
-    InstrumentedMemoryRequirements, MM_MCoreAndPL, MemoryMappableMultiCore,
+    InstrumentedMemoryRequirements, MemoryMappableMulticoreWithPL, MemoryMappableMultiCore,
     PartitionedMemoryMappableMulticore, PartitionedMemoryMappableMulticoreAndPL,
     PartitionedTiledMulticore, RuntimesAndProcessors, SDFApplication, TiledMultiCore,
 };
@@ -68,7 +68,7 @@ pub fn make_module() -> RustEmbeddedModule {
             InstrumentedMemoryRequirements,
             AperiodicAsynchronousDataflowToPartitionedTiledMulticore,
             MemoryMappableMultiCore,
-            MM_MCoreAndPL,
+            MemoryMappableMulticoreWithPL,
             PartitionedMemoryMappableMulticore,
             PartitionedMemoryMappableMulticoreAndPL,
             AperiodicAsynchronousDataflowToPartitionedMemoryMappableMulticore,

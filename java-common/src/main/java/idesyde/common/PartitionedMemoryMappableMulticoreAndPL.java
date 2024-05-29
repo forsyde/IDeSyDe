@@ -16,7 +16,7 @@ import java.util.stream.Stream;
  */
 @JsonSerialize
 public record PartitionedMemoryMappableMulticoreAndPL(
-    MM_MCoreAndPL hardware,
+    MemoryMappableMulticoreWithPL hardware,
     RuntimesAndProcessors runtimes
 ) implements DecisionModel {
     @Override

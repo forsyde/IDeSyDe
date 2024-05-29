@@ -7,7 +7,6 @@ use idesyde_core::{
 };
 use idesyde_orchestration::{
     exploration::explore_cooperatively, identification::identification_procedure,
-    ExternalServerModule,
 };
 use log::{debug, info, warn, Level};
 use rayon::prelude::*;

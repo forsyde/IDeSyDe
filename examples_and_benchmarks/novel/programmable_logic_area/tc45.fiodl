@@ -25,10 +25,10 @@ systemgraph {
       "to_Actor_2": 15_i
     },
     "latencyInSecsDenominators": {
-      "FPGA": 200000000_l
+      "FPGA": 100000000_l
     },
     "latencyInSecsNumerators": {
-      "FPGA": 200000000_l
+      "FPGA": 1000000_l
     },
     "consumption": {
       "in_Actor_1": 5_i

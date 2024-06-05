@@ -15,8 +15,10 @@ import idesyde.core.*;
 import org.jgrapht.Graph;
 import org.jgrapht.alg.connectivity.ConnectivityInspector;
 import org.jgrapht.alg.shortestpath.DijkstraManyToManyShortestPaths;
+import org.jgrapht.alg.shortestpath.DijkstraShortestPath;
 import org.jgrapht.alg.shortestpath.FloydWarshallShortestPaths;
 import org.jgrapht.graph.AsSubgraph;
+import org.jgrapht.graph.AsWeightedGraph;
 
 import forsyde.io.core.SystemGraph;
 import forsyde.io.lib.hierarchy.ForSyDeHierarchy;
@@ -120,6 +122,19 @@ class MemoryMappableMulticoreWithPL_IRule implements IdentificationRule {
                                 || ForSyDeHierarchy.GenericProcessingModule
                                         .tryView(model, v)
                                         .isPresent()));
+        // created earlier for easier use
+        var bandwidths = communicationElements.stream()
+                .collect(Collectors.toMap(
+                        ce -> ce.getIdentifier(),
+                        ce -> ForSyDeHierarchy.InstrumentedCommunicationModule
+                                .tryView(ce)
+                                .stream()
+                                .mapToDouble(ice -> (double) ice
+                                        .flitSizeInBits()
+                                        * (double) ice.operatingFrequencyInHertz()
+                                        / (double) ice.maxCyclesPerFlit())
+                                .max()
+                                .orElse(0.0)));
         // check if all processors are connected to at least one memory element
         var portAwareTopology = new DefaultDirectedGraph<Pair<String, String>, DefaultEdge>(DefaultEdge.class);
         for (var v : topology.vertexSet()) {
@@ -151,25 +166,52 @@ class MemoryMappableMulticoreWithPL_IRule implements IdentificationRule {
                 e.getSourcePort().ifPresentOrElse(src -> {
                     e.getTargetPort().ifPresentOrElse(dst -> {
                         portAwareTopology.addEdge(new Pair<>(e.getSource(), src), new Pair<>(e.getTarget(), dst));
-                    }, () -> errors.add("MemoryMappableMulticoreWithPL_IRule: %s to %s is not vertex-to-vertex or port-to-port."
-                            .formatted(e.getSource(), e.getTarget())));
+                    }, () -> errors.add(
+                            "MemoryMappableMulticoreWithPL_IRule: %s to %s is not vertex-to-vertex or port-to-port."
+                                    .formatted(e.getSource(), e.getTarget())));
                 }, () -> {
                     if (e.getTargetPort().isEmpty()) {
                         portAwareTopology.addEdge(new Pair<>(e.getSource(), null), new Pair<>(e.getTarget(), null));
                     } else {
-                        errors.add("MemoryMappableMulticoreWithPL_IRule: %s to %s is not vertex-to-vertex or port-to-port."
-                                .formatted(e.getSource(), e.getTarget()));
+                        errors.add(
+                                "MemoryMappableMulticoreWithPL_IRule: %s to %s is not vertex-to-vertex or port-to-port."
+                                        .formatted(e.getSource(), e.getTarget()));
                     }
                 });
             }
         }
-        var connecivityInspector = new ConnectivityInspector<>(portAwareTopology);
-        var shortestPaths = new FloydWarshallShortestPaths<>(portAwareTopology);
         for (var pe : processingElements) {
-            if (memoryElements.stream()
-                    .noneMatch(me -> connecivityInspector.pathExists(new Pair<>(pe.getIdentifier(), null),
-                            new Pair<>(me.getIdentifier(), null)))) {
-                errors.add("MemoryMappableMulticoreWithPL_IRule: %s does not reach any memory element".formatted(pe.getIdentifier()));
+            var atLeastOneMemoryTo = false;
+            var atLeastOneMemoryFrom = false;
+            for (var me : memoryElements) {
+                var vertices = portAwareTopology.vertexSet().stream()
+                        .filter(pair -> pair.fst().equals(pe.getIdentifier()) || pair.fst().equals(me.getIdentifier())
+                                || model.queryVertex(pair.fst).flatMap(
+                                        x -> forsyde.io.lib.hierarchy.ForSyDeHierarchy.GenericCommunicationModule
+                                                .tryView(model, x))
+                                        .isPresent())
+                        .collect(Collectors.toSet());
+                var subset = new AsSubgraph<>(portAwareTopology, vertices);
+                var connecivityInspector = new ConnectivityInspector<>(subset);
+                if (connecivityInspector.pathExists(new Pair<>(pe.getIdentifier(), null),
+                        new Pair<>(me.getIdentifier(), null))) {
+                    atLeastOneMemoryTo = true;
+                }
+                if (connecivityInspector.pathExists(new Pair<>(me.getIdentifier(), null),
+                        new Pair<>(pe.getIdentifier(), null))) {
+                    atLeastOneMemoryFrom = true;
+                }
+                if (atLeastOneMemoryFrom && atLeastOneMemoryTo) {
+                    break;
+                }
+            }
+            if (!atLeastOneMemoryTo) {
+                errors.add("MemoryMappableMulticoreWithPL_IRule: %s does not reach any memory element"
+                        .formatted(pe.getIdentifier()));
+            }
+            if (!atLeastOneMemoryFrom) {
+                errors.add("MemoryMappableMulticoreWithPL_IRule: %s is not reached by any memory element"
+                        .formatted(pe.getIdentifier()));
             }
         }
 
@@ -228,18 +270,6 @@ class MemoryMappableMulticoreWithPL_IRule implements IdentificationRule {
                                     .tryView(ce)
                                     .map(ice -> ice.maxConcurrentFlits())
                                     .orElse(1)));
-            var bandwidths = communicationElements.stream()
-                    .collect(Collectors.toMap(
-                            ce -> ce.getIdentifier(),
-                            ce -> ForSyDeHierarchy.InstrumentedCommunicationModule
-                                    .tryView(ce)
-                                    .stream()
-                                    .mapToDouble(ice -> (double) ice
-                                            .flitSizeInBits()
-                                            * (double) ice.operatingFrequencyInHertz()
-                                            / (double) ice.maxCyclesPerFlit())
-                                    .max()
-                                    .orElse(0.0)));
             var totalAvailablePLAreas = plElements.stream()
                     .collect(Collectors.toMap(
                             VertexViewer::getIdentifier,
@@ -250,6 +280,18 @@ class MemoryMappableMulticoreWithPL_IRule implements IdentificationRule {
                             src -> platformElements.stream()
                                     .filter(dst -> src != dst)
                                     .flatMap(dst -> {
+                                        var vertices = portAwareTopology.vertexSet().stream()
+                                                .filter(pair -> pair.fst().equals(src.getIdentifier())
+                                                        || pair.fst().equals(dst.getIdentifier())
+                                                        || model.queryVertex(pair.fst).flatMap(
+                                                                x -> forsyde.io.lib.hierarchy.ForSyDeHierarchy.GenericCommunicationModule
+                                                                        .tryView(model, x))
+                                                                .isPresent())
+                                                .collect(Collectors.toSet());
+                                        // System.out.println("src: " + src.getIdentifier() + " dst: " + dst.getIdentifier() + " vertices: " + vertices.toString());
+                                        var subset = new AsSubgraph<>(portAwareTopology, vertices);
+                                        var weighted = new AsWeightedGraph<>(subset, e -> bandwidths.getOrDefault(subset.getEdgeTarget(e).fst, 0.0), false, false);
+                                        var shortestPaths = new DijkstraShortestPath<>(weighted);
                                         var path = shortestPaths.getPath(
                                                 new Pair<>(src.getIdentifier(), null),
                                                 new Pair<>(dst.getIdentifier(), null));
@@ -271,10 +313,7 @@ class MemoryMappableMulticoreWithPL_IRule implements IdentificationRule {
                                     .collect(Collectors
                                             .toMap(
                                                     e -> e.fst().getIdentifier(),
-                                                    e -> e.snd()
-                                                            .subList(1, e.snd()
-                                                                    .size()
-                                                                    - 1)))));
+                                                    e -> e.snd().subList(1, e.snd().size()- 1)))));
             identified.add(
                     new MemoryMappableMulticoreWithPL(
                             processingElements.stream()

@@ -124,8 +124,8 @@ public class AperiodicAsynchronousDataflowToPartitionedMemoryMappableMulticoreAn
                                 }
                                 var procVertex = reversedSystemGraph.newVertex(process);
                                 var plaVertex = reversedSystemGraph.newVertex(pla);
-                                ForSyDeHierarchy.LogicProgrammableSynthetized.enforce(reversedSystemGraph, procVertex)
-                                                .hostLogicProgrammableModule(
+                                ForSyDeHierarchy.LogicProgrammableAreaMapped.enforce(reversedSystemGraph, procVertex)
+                                                .hostLogicProgrammableArea(
                                                                 ForSyDeHierarchy.LogicProgrammableModule.enforce(
                                                                                 reversedSystemGraph, plaVertex));
                                 ForSyDeHierarchy.GreyBox.enforce(reversedSystemGraph, plaVertex).addContained(

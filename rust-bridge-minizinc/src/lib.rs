@@ -8,7 +8,7 @@ use std::{
     io::BufReader,
 };
 
-use idesyde_common::models::AperiodicAsynchronousDataflowToPartitionedMemoryMappableMulticoreAndPL;
+use idesyde_common::models::{AperiodicAsynchronousDataflowToPartitionedMemoryMappableMulticoreAndPL, AperiodicAsynchronousDataflowToPartitionedTiledMulticore};
 use idesyde_core::{ExplorationBid, ExplorationSolution, Explorer, RustEmbeddedModule};
 use serde::Deserialize;
 
@@ -147,7 +147,7 @@ struct MiniZincGecodeExplorer;
 
 impl Explorer for MiniZincGecodeExplorer {
     fn unique_identifier(&self) -> String {
-        "MiniZincExplorer".to_string()
+        "MiniZincGecodeExplorer".to_string()
     }
 
     fn bid(
@@ -163,6 +163,26 @@ impl Explorer for MiniZincGecodeExplorer {
                 let mut objs = HashSet::new();
                 objs.insert("nUsedPEs".to_string());
                 for app in &aad2pmmmap.aperiodic_asynchronous_dataflows {
+                    for p in app.processes.iter() {
+                        objs.insert(format!("invThroughput({})", p));
+                    }
+                }
+                return ExplorationBid {
+                    can_explore: true,
+                    is_exact: true,
+                    competitiveness: 1.0,
+                    target_objectives: objs,
+                    additional_numeric_properties: HashMap::new(),
+                };
+            }
+            if let Ok(aad2ptm) =
+                AperiodicAsynchronousDataflowToPartitionedTiledMulticore::try_from(
+                    m.as_ref(),
+                )
+            {
+                let mut objs = HashSet::new();
+                objs.insert("nUsedPEs".to_string());
+                for app in &aad2ptm.aperiodic_asynchronous_dataflows {
                     for p in app.processes.iter() {
                         objs.insert(format!("invThroughput({})", p));
                     }
@@ -191,6 +211,13 @@ impl Explorer for MiniZincGecodeExplorer {
             )
         {
             return solve_aad2pmmmap(&aad2pmmmap, currrent_solutions, "gecode");
+        }
+        if let Ok(aad2ptm) =
+            AperiodicAsynchronousDataflowToPartitionedTiledMulticore::try_from(
+                m.as_ref(),
+            )
+        {
+            return solve_aad2ptm(&aad2ptm, currrent_solutions, "gecode");
         }
         Arc::new(Mutex::new(std::iter::empty()))
     }
@@ -868,6 +895,588 @@ fn solve_aad2pmmmap(
                                         list_schedulers
                                             .iter()
                                             .chain(logic_areas.iter())
+                                            .zip(mzn_vars.communication_reservation.iter())
+                                            .map(|(pe, res)| {
+                                                (
+                                                    pe.clone(),
+                                                    communications
+                                                        .iter()
+                                                        .zip(res.iter())
+                                                        .filter(|(_, r)| **r > 0)
+                                                        .map(|(c, r)| (c.clone(), *r as u16))
+                                                        .collect(),
+                                                )
+                                            })
+                                            .collect();
+                                    let mut objs = HashMap::new();
+                                    objs.insert("nUsedPEs".to_string(), mzn_vars.n_used_pes as f64);
+                                    for (p, inv) in mzn_vars.inv_throughput.iter().enumerate() {
+                                        objs.insert(
+                                            format!("invThroughput({})", all_processes[p]),
+                                            *inv as f64,
+                                        );
+                                    }
+                                    return Some(ExplorationSolution {
+                                        solved: Arc::new(explored),
+                                        objectives: objs,
+                                    });
+                                }
+                            }
+                        }
+                        None
+                    }),
+            ));
+        }
+    };
+    Arc::new(Mutex::new(std::iter::empty::<ExplorationSolution>()))
+}
+
+const AADPTM_MZN: &'static str =
+    include_str!("AperiodicAsynchronousDataflowToPartitionedTiledMulticore.mzn");
+
+#[derive(Debug, Clone, PartialEq, Eq, Deserialize)]
+struct AADPTMMznOutput {
+    #[serde(rename = "processMapping")]
+    process_mapping: Vec<u64>,
+    #[serde(rename = "buffersMapping")]
+    buffers_mapping: Vec<u64>,
+    #[serde(rename = "communicationReservation")]
+    communication_reservation: Vec<Vec<u64>>,
+    #[serde(rename = "firingsOrdering")]
+    firings_ordering: Vec<u64>,
+    #[serde(rename = "invThroughput")]
+    inv_throughput: Vec<u64>,
+    #[serde(rename = "nUsedPEs")]
+    n_used_pes: u64,
+}
+
+fn solve_aad2ptm(
+    m: &AperiodicAsynchronousDataflowToPartitionedTiledMulticore,
+    current_solutions: &HashSet<ExplorationSolution>,
+    explorer_name: &str,
+) -> Arc<Mutex<dyn Iterator<Item = ExplorationSolution> + Send + Sync>> {
+    let mut input_data = vec![];
+    let mut messages: Vec<String> = vec![];
+    let mut messages_sender: Vec<usize> = vec![];
+    let mut messages_receiver: Vec<usize> = vec![];
+    let all_firings_actor: Vec<String> = m
+        .aperiodic_asynchronous_dataflows
+        .iter()
+        .flat_map(|app| app.job_graph_name.iter())
+        .map(|x| x.to_string())
+        .collect();
+    let all_firings_instances: Vec<u64> = m
+        .aperiodic_asynchronous_dataflows
+        .iter()
+        .flat_map(|app| app.job_graph_instance.iter())
+        .map(|i| i.to_owned())
+        .collect();
+    let all_firings: Vec<(&str, u64)> = all_firings_actor
+        .iter()
+        .map(|s| s.as_str())
+        .zip(all_firings_instances.iter().map(|i| i.to_owned()))
+        .collect();
+    for app in &m.aperiodic_asynchronous_dataflows {
+        for (((srca, srcq), dsta), dstq) in app.job_graph_src_name.iter().zip(app.job_graph_src_instance.iter()).zip(app.job_graph_dst_name.iter()).zip(app.job_graph_dst_instance.iter()) {
+            let firing_src_idx = all_firings.iter().position(|(f, i)| f == srca && i == srcq).unwrap();
+            let firings_dst_idx = all_firings.iter().position(|(f, i)| f == dsta && i == dstq).unwrap();
+            for c in &app.buffers {
+                if app.process_put_in_buffer_in_bits.get(srca).and_then(|x| x.get(c)).unwrap_or(&0) > &0
+                    && app.process_get_from_buffer_in_bits.get(dsta).and_then(|x| x.get(c)).unwrap_or(&0) > &0
+                {
+                    messages.push(c.clone());
+                    messages_sender.push(firing_src_idx);
+                    messages_receiver.push(firings_dst_idx);
+                }
+            }
+        }
+    }
+    let all_processes: Vec<String> = m
+        .aperiodic_asynchronous_dataflows
+        .iter()
+        .flat_map(|app| app.processes.iter())
+        .map(|x| x.to_string())
+        .collect();
+    let (all_buffers, all_buffer_max_sizes): (Vec<String>, Vec<u64>) = m
+        .aperiodic_asynchronous_dataflows
+        .iter()
+        .flat_map(|app| {
+            app.buffers.iter().map(|b| {
+                (
+                    b.to_string(),
+                    app.buffer_max_size_in_bits.get(b).map(|x| *x).unwrap_or(0),
+                )
+            })
+        })
+        .unzip();
+    let communications: Vec<String> = m
+        .partitioned_tiled_multicore
+        .hardware
+        .routers
+        .iter()
+        .chain(m
+            .partitioned_tiled_multicore
+            .hardware
+            .network_interfaces.iter())
+        .map(|x| x.to_string())
+        .collect();
+    let list_schedulers: Vec<String> = m
+        .partitioned_tiled_multicore
+        .runtimes
+        .runtimes
+        .iter()
+        .filter(|x| {
+            m.partitioned_tiled_multicore
+                .runtimes
+                .is_super_loop
+                .contains(*x)
+        })
+        .map(|x| x.to_string())
+        .collect();
+    let mut connected: Vec<Vec<bool>> = all_processes
+        .iter()
+        .map(|_| vec![false; all_processes.len()])
+        .collect();
+    let mut firings_follows: Vec<HashSet<u64>> =
+        all_firings.iter().map(|_| HashSet::new()).collect();
+    let memories = m.partitioned_tiled_multicore.hardware.memories.clone();
+    let discrete_max = m.get_max_discrete_value() as f32;
+    let average_max = m.get_max_average_execution_time();
+    for app in &m.aperiodic_asynchronous_dataflows {
+        for a in &app.processes {
+            for aa in &app.processes {
+                if a != aa {
+                    if let Some(aidx) = all_processes.iter().position(|x| x == a) {
+                        if let Some(aaidx) = all_processes.iter().position(|x| x == aa) {
+                            connected[aidx][aaidx] = true;
+                            connected[aaidx][aidx] = true;
+                        }
+                    }
+                }
+            }
+        }
+        let app_follows = app.job_follows();
+        for (f, f_follows) in app_follows {
+            if let Some(fidx) = all_firings.iter().position(|ff| f == *ff) {
+                firings_follows[fidx].extend(
+                    f_follows
+                        .iter()
+                        .map(|tgt| all_firings.iter().position(|ff| ff == tgt).unwrap() as u64),
+                );
+            }
+        }
+    }
+    let execution_times: Vec<Vec<i32>> = all_processes
+        .iter()
+        .map(|f| {
+            m.partitioned_tiled_multicore
+                .hardware
+                .processors
+                .iter()
+                .filter(|pe| {
+                    m.partitioned_tiled_multicore
+                        .runtimes
+                        .processor_affinities
+                        .get(*pe)
+                        .map(|r| {
+                            m.partitioned_tiled_multicore
+                                .runtimes
+                                .is_super_loop
+                                .contains(r)
+                        })
+                        .unwrap_or(false)
+                })
+                .map(|pe| {
+                    m.instrumented_computation_times
+                        .average_execution_times
+                        .get(f)
+                        .and_then(|inner| inner.get(pe))
+                        .map(|x| {
+                            ((*x as f32) / (m.instrumented_computation_times.scale_factor as f32)
+                                * discrete_max
+                                / average_max)
+                                .ceil() as i32
+                        })
+                        .unwrap_or(-1)
+                })
+                .collect()
+        })
+        .collect();
+    let mappable_to_mappable: Vec<Vec<Option<HashSet<usize>>>> = list_schedulers
+        .iter()
+        .flat_map(|s: &String| {
+            m.partitioned_tiled_multicore
+                .runtimes
+                .runtime_host
+                .get(s)
+        })
+        .map(|src| {
+            list_schedulers
+                .iter()
+                .flat_map(|t: &String| 
+                    m.partitioned_tiled_multicore
+                        .runtimes
+                        .runtime_host
+                        .get(t))
+                .map(|tgt| {
+                    m.partitioned_tiled_multicore
+                        .hardware
+                        .pre_computed_paths
+                        .get(src)
+                        .and_then(|xs| xs.get(tgt))
+                        .map(|xs| {
+                            xs.iter()
+                                .flat_map(|x| communications.iter().position(|ce| ce == x))
+                                .collect()
+                        })
+                })
+                .collect()
+        })
+        .collect();
+    let memory_scale = m.get_memory_scale_factor();
+    let processes_mem_size: Vec<Vec<u64>> = all_processes
+        .iter()
+        .map(|p| {
+            list_schedulers
+                .iter()
+                .flat_map(|s| {
+                    m.partitioned_tiled_multicore
+                        .runtimes
+                        .runtime_host
+                        .get(s)
+                })
+                .map(|pe| {
+                    m.instrumented_memory_requirements
+                        .memory_requirements
+                        .get(p)
+                        .and_then(|inner| inner.get(pe))
+                        .map(|x| *x / memory_scale)
+                        .unwrap_or(0)
+                })
+                .collect()
+        })
+        .collect();
+    input_data.push((
+        "Processes",
+        MiniZincData::from(
+            (0..all_processes.len())
+                .map(|x| x as i32)
+                .collect::<Vec<i32>>(),
+        ),
+    ));
+    input_data.push((
+        "Buffers",
+        MiniZincData::from(
+            (0..all_buffers.len())
+                .map(|x| x as i32)
+                .collect::<Vec<i32>>(),
+        ),
+    ));
+    input_data.push((
+        "Firings",
+        MiniZincData::from(
+            (0..all_firings_actor.len())
+                .map(|x| x as i32)
+                .collect::<Vec<i32>>(),
+        ),
+    ));
+    input_data.push((
+        "Messages",
+        MiniZincData::from(
+            (0..messages.len())
+                .map(|x| x as i32)
+                .collect::<Vec<i32>>(),
+        ),
+    ));
+    input_data.push((
+        "Communications",
+        MiniZincData::from(
+            (0..communications.len())
+                .map(|x| x as i32)
+                .collect::<Vec<i32>>(),
+        ),
+    ));
+    input_data.push((
+        "Tiles",
+        MiniZincData::from(
+            (0..list_schedulers.len())
+                .map(|x| x as i32)
+                .collect::<Vec<i32>>(),
+        ),
+    ));
+    input_data.push((
+        "firingsActor",
+        MiniZincData::from(
+            all_firings_actor
+                .iter()
+                .map(|f| {
+                    all_processes
+                        .iter()
+                        .position(|a| a == f)
+                        .expect("Firings could not find actors with its name")
+                })
+                .map(|x| x as u64)
+                .collect::<Vec<u64>>(),
+        ),
+    ));
+    input_data.push((
+        "firingsNumber",
+        MiniZincData::from(all_firings_instances.clone()),
+    ));
+    input_data.push(("follows", MiniZincData::from(firings_follows)));
+    input_data.push(("receiver", MiniZincData::from(messages_receiver)));
+    input_data.push(("sender", MiniZincData::from(messages_sender)));
+    input_data.push(("messageBuffer", MiniZincData::from(messages.iter().map(|x| all_buffers.iter().position(|y| y == x).unwrap() as u64).collect::<Vec<u64>>())));
+    input_data.push((
+        "slots",
+        MiniZincData::from(
+            communications
+                .iter()
+                .map(|c| {
+                    m.partitioned_tiled_multicore
+                        .hardware
+                        .communication_elements_max_channels
+                        .get(c)
+                })
+                .map(|x| x.map(|y| *y as u64).unwrap_or(0))
+                .collect::<Vec<u64>>(),
+        ),
+    ));
+    input_data.push((
+        "frameSize",
+        MiniZincData::from(
+            communications
+                .iter()
+                .map(|_| {
+                    0
+                })
+                // .map(|x| x.map(|y| *y as u64).unwrap_or(0))
+                .collect::<Vec<u64>>(),
+        ),
+    ));
+    input_data.push((
+        "memorySize",
+        MiniZincData::from(
+            m.partitioned_tiled_multicore.hardware.processors
+                .iter()
+                .map(|pe| {
+                    m.partitioned_tiled_multicore
+                        .hardware
+                        .tile_memory_sizes
+                        .get(pe)
+                        .map(|x| (*x / memory_scale) as i32)
+                        .unwrap_or(0)
+                })
+                .collect::<Vec<i32>>(),
+        ),
+    ));
+    input_data.push(("bufferSize", MiniZincData::from(all_buffer_max_sizes)));
+    input_data.push(("processesMemSize", MiniZincData::from(processes_mem_size)));
+    input_data.push((
+        "processesReadBuffer",
+        MiniZincData::from(
+            all_processes
+                .iter()
+                .map(|p| {
+                    all_buffers
+                        .iter()
+                        .map(|b| {
+                            m.aperiodic_asynchronous_dataflows
+                                .iter()
+                                .flat_map(|app| {
+                                    app.process_get_from_buffer_in_bits
+                                        .get(p)
+                                        .and_then(|x| x.get(b).map(|y| *y / memory_scale))
+                                })
+                                .sum::<u64>()
+                        })
+                        .collect::<Vec<u64>>()
+                })
+                .collect::<Vec<Vec<u64>>>(),
+        ),
+    ));
+    input_data.push((
+        "processesWriteBuffer",
+        MiniZincData::from(
+            all_processes
+                .iter()
+                .map(|p| {
+                    all_buffers
+                        .iter()
+                        .map(|b| {
+                            m.aperiodic_asynchronous_dataflows
+                                .iter()
+                                .flat_map(|app| {
+                                    app.process_put_in_buffer_in_bits
+                                        .get(p)
+                                        .and_then(|x| x.get(b).map(|y| *y / memory_scale))
+                                })
+                                .sum::<u64>()
+                        })
+                        .collect::<Vec<u64>>()
+                })
+                .collect::<Vec<Vec<u64>>>(),
+        ),
+    ));
+
+    input_data.push((
+        "hasInterconnectTo",
+        MiniZincData::from(mappable_to_mappable.iter().map(|x| x.iter().map(|y| y.is_some()).collect()).collect::<Vec<Vec<bool>>>()),
+    ));
+    input_data.push((
+        "interconnectTo",
+        MiniZincData::from(mappable_to_mappable.iter().map(|x| x.iter().map(|y| y.clone().unwrap_or(HashSet::new())).collect()).collect::<Vec<Vec<HashSet<usize>>>>()),
+    ));
+    input_data.push(("executionTime", MiniZincData::from(execution_times)));
+    input_data.push((
+        "invBandwidthPerChannel",
+        MiniZincData::from(
+            communications
+                .iter()
+                .map(|ce| {
+                    m.partitioned_tiled_multicore
+                        .hardware
+                        .communication_elements_bit_per_sec_per_channel
+                        .get(ce)
+                        .map(|x| {
+                            (average_max as f64 / x / discrete_max as f64 / memory_scale as f64)
+                                .ceil() as i32
+                        })
+                        .unwrap_or(0)
+                })
+                .collect::<Vec<i32>>(),
+        ),
+    ));
+    input_data.push((
+        "nPareto",
+        MiniZincData::from(current_solutions.len() as u64),
+    ));
+    input_data.push((
+        "previousSolutions",
+        MiniZincData::from(
+            current_solutions
+                .iter()
+                .map(|s| {
+                    let mut objs = vec![];
+                    objs.push((*s.objectives.get("nUsedPEs").unwrap_or(&0.0)) as u64);
+                    for p in &all_processes {
+                        objs.push(
+                            *s.objectives
+                                .get(&format!("invThroughput({})", p))
+                                .unwrap_or(&0.0) as u64,
+                        );
+                    }
+                    objs
+                })
+                .collect::<Vec<Vec<u64>>>(),
+        ),
+    ));
+    input_data.push(("connected", MiniZincData::from(connected)));
+
+    let temp_dir = std::env::temp_dir().join("idesyde").join("minizinc");
+    let model_file = temp_dir.join("ADDPTM.mzn");
+    let data_file = temp_dir.join("ADDPTM.json");
+    std::fs::create_dir_all(&temp_dir).expect("Could not create the temporary directory");
+    std::fs::write(&model_file, AADPTM_MZN).expect("Could not write the model file");
+    std::fs::write(&data_file, to_mzn_input(input_data)).expect("Could not write the data file");
+    if let Ok(proc) = std::process::Command::new("minizinc")
+        .arg("-n")
+        .arg("10")
+        .arg("--solver")
+        .arg(explorer_name)
+        .arg("--json-stream")
+        .arg("--output-mode")
+        .arg("json")
+        .arg(data_file.as_path())
+        .arg(model_file.as_path())
+        .stdout(std::process::Stdio::piped())
+        .stderr(std::process::Stdio::null())
+        .spawn()
+    {
+        if let Some(stdout) = proc.stdout {
+            let bufreader = BufReader::new(stdout);
+            let input = m.clone();
+            return Arc::new(Mutex::new(
+                bufreader
+                    .lines()
+                    .take_while(|l| l.is_ok())
+                    // .inspect(|l| {
+                    //     if let Ok(line) = l {
+                    //         println!("{}", line);
+                    //     }
+                    // })
+                    .flat_map(move |line_r| {
+                        if let Ok(line) = line_r {
+                            if line.contains("UNSATISFIABLE") {
+                                return None;
+                            } else if line.contains("output") {
+                                let mzn_out: MiniZincSolutionOutput<AADPTMMznOutput> =
+                                    serde_json::from_str(line.as_str())
+                                        .expect("Should not fail to parse the output of minizinc");
+                                let mut explored = input.clone();
+                                if let Some(mzn_vars) = mzn_out.output.get("json") {
+                                    let list_schedulers_mapping: HashMap<String, String> = mzn_vars
+                                        .process_mapping
+                                        .iter()
+                                        .enumerate()
+                                        .filter(|(_, r)| **r < list_schedulers.len() as u64)
+                                        .map(|(p, r)| {
+                                            (
+                                                all_processes[p].clone(),
+                                                list_schedulers[*r as usize].clone(),
+                                            )
+                                        })
+                                        .collect();
+                                    explored.processes_to_runtime_scheduling =
+                                        list_schedulers_mapping.clone();
+                                    explored.processes_to_memory_mapping = mzn_vars
+                                        .process_mapping
+                                        .iter()
+                                        .enumerate()
+                                        .map(|(p, r)| {
+                                            (
+                                                all_processes[p].clone(),
+                                                memories[*r as usize].clone(),
+                                            )
+                                        })
+                                        .collect();
+                                    explored.buffer_to_memory_mappings = mzn_vars
+                                        .buffers_mapping
+                                        .iter()
+                                        .enumerate()
+                                        .map(|(b, i)| {
+                                            (all_buffers[b].clone(), memories[*i as usize].clone())
+                                        })
+                                        .collect();
+                                    let firings: Vec<(&str, u64)> = all_firings_actor
+                                        .iter()
+                                        .map(|s| s.as_str())
+                                        .zip(all_firings_instances.iter().map(|i| i.to_owned()))
+                                        .collect();
+                                    explored.super_loop_schedules = list_schedulers
+                                        .iter()
+                                        .map(|pe| {
+                                            let mut looplist: Vec<(String, u64)> = firings
+                                                .iter()
+                                                .zip(mzn_vars.firings_ordering.iter())
+                                                .filter(|((a, _), _)| {
+                                                    list_schedulers_mapping
+                                                        .get(*a)
+                                                        .map(|x| pe == x)
+                                                        .unwrap_or(false)
+                                                })
+                                                .map(|((a, _), idx)| (a.to_string(), *idx))
+                                                .collect();
+                                            looplist.sort_by_key(|(_, idx)| *idx);
+                                            (
+                                                pe.clone(),
+                                                looplist.into_iter().map(|(a, _)| a).collect(),
+                                            )
+                                        })
+                                        .collect();
+                                    explored.processing_elements_to_routers_reservations =
+                                        list_schedulers
+                                            .iter()
                                             .zip(mzn_vars.communication_reservation.iter())
                                             .map(|(pe, res)| {
                                                 (

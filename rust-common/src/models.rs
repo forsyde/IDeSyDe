@@ -10,7 +10,7 @@ use petgraph::{
 use schemars::JsonSchema;
 use serde::{Deserialize, Serialize};
 
-const NUMERICAL_RELATIVE_ERROR: f64 = 0.0001;
+const NUMERICAL_RELATIVE_ERROR: f64 = 0.001;
 
 /// A model that abstracts concurrent processes where stimulus and dataflow are separate.
 ///
@@ -668,6 +668,93 @@ pub struct AperiodicAsynchronousDataflowToPartitionedTiledMulticore {
     pub buffer_to_memory_mappings: HashMap<String, String>,
     pub super_loop_schedules: HashMap<String, Vec<String>>,
     pub processing_elements_to_routers_reservations: HashMap<String, HashMap<String, u16>>,
+}
+
+impl AperiodicAsynchronousDataflowToPartitionedTiledMulticore {
+    pub fn get_max_discrete_value(&self) -> u64 {
+        let biggest_path: u64 = self
+            .partitioned_tiled_multicore
+            .hardware
+            .pre_computed_paths
+            .values()
+            .flat_map(|dsts| dsts.values().map(|path| path.len() as u64))
+            .max()
+            .unwrap_or(0)
+            + 1;
+        let number_jobs: u64 = self
+            .aperiodic_asynchronous_dataflows
+            .iter()
+            .map(|app| app.processes.len() as u64)
+            .sum();
+        let num_mappables: u64 = self
+            .partitioned_tiled_multicore
+            .hardware
+            .processors
+            .len() as u64;
+        let relative_constant = (-(NUMERICAL_RELATIVE_ERROR.log2().ceil())) as u32;
+        let problem_constant = (biggest_path * number_jobs * num_mappables) as f64;
+        let resolution = (problem_constant.log2().ceil() as u32) + relative_constant;
+        2u64.pow(resolution)
+    }
+
+    pub fn get_max_average_execution_time(&self) -> f32 {
+        let original_max_pes = self
+            .instrumented_computation_times
+            .average_execution_times
+            .iter()
+            .flat_map(|(_, times)| {
+                times
+                    .values()
+                    .map(|x| *x as f32 / self.instrumented_computation_times.scale_factor as f32)
+            })
+            .reduce(f32::max)
+            .unwrap_or(0.0);
+        let original_max_traversal = self
+            .partitioned_tiled_multicore
+            .hardware
+            .communication_elements_bit_per_sec_per_channel
+            .values()
+            .map(|x| 1.0 / x)
+            .reduce(f64::max)
+            .unwrap_or(0.0) as f32;
+        original_max_pes
+            .max(original_max_traversal)
+    }
+
+    pub fn get_memory_scale_factor(&self) -> u64 {
+        *self
+            .instrumented_memory_requirements
+            .memory_requirements
+            .values()
+            .flat_map(|x| x.values())
+            .chain(
+                self.partitioned_tiled_multicore
+                    .hardware
+                    .tile_memory_sizes
+                    .values(),
+            )
+            .chain(self.aperiodic_asynchronous_dataflows.iter().flat_map(
+                |app: &AperiodicAsynchronousDataflow| app.buffer_max_size_in_bits.values(),
+            ))
+            .chain(self.aperiodic_asynchronous_dataflows.iter().flat_map(
+                |app: &AperiodicAsynchronousDataflow| {
+                    app.process_get_from_buffer_in_bits
+                        .values()
+                        .flat_map(|x| x.values())
+                },
+            ))
+            .chain(self.aperiodic_asynchronous_dataflows.iter().flat_map(
+                |app: &AperiodicAsynchronousDataflow| {
+                    app.process_get_from_buffer_in_bits
+                        .values()
+                        .flat_map(|x| x.values())
+                },
+            ))
+            .filter(|x| x > &&0)
+            .min()
+            .unwrap_or(&1)
+    }
+
 }
 
 impl_decision_model_conversion!(AperiodicAsynchronousDataflowToPartitionedTiledMulticore);

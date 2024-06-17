@@ -327,6 +327,7 @@ pub fn identify_asynchronous_aperiodic_dataflow_from_sdf(
                     .topology_dsts
                     .iter()
                     .enumerate()
+                    .filter(|(_, x)| component_actors.contains(&x.as_str()))
                 {
                     let q_dst_max = *analysed_sdf_application.repetition_vector.get(dst).expect(
                         "Impossible empty entry for repetition vector during identification rule",

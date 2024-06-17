@@ -68,7 +68,7 @@ class ForSyDeIOSDFToCommon implements IdentificationRule {
                                 .mapToInt(e -> e.getSourcePort().map(sp -> src.production().get(sp)).orElse(0)).sum();
                         var cons = model.getAllEdges(c.getViewedVertex(), dst.getViewedVertex()).stream()
                                 .mapToInt(e -> e.getTargetPort().map(tp -> dst.consumption().get(tp)).orElse(0)).sum();
-                        var size = ForSyDeHierarchy.BufferLike.tryView(c).map(b -> b.elementSizeInBits().longValue())
+                        var size = ForSyDeHierarchy.RegisterArrayLike.tryView(c).map(b -> b.elementSizeInBits().longValue())
                                 .orElse(0L);
                         if (idx > -1) {
                             topologyProduction.set(idx, topologyProduction.get(idx) + prod);

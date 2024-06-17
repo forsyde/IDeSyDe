@@ -57,6 +57,12 @@ struct Args {
 
     #[arg(
         long,
+        help = "Inclusion rule of which explorers are to be kept during bidding. \nIf none is given, all are included."
+    )]
+    explorer: Vec<String>,
+
+    #[arg(
+        long,
         default_value = "0",
         help = "The maximum JVM heap size in bytes. Default is 0, which means no limit."
     )]
@@ -356,6 +362,9 @@ fn main() {
             .filter(|(_, _, b)| b.can_explore)
             .filter(|(_, m, _)| {
                 args.decision_model.len() == 0 || args.decision_model.contains(&m.category())
+            })
+            .filter(|(e, _, _)| {
+                args.explorer.len() == 0 || args.explorer.contains(&e.unique_identifier())
             })
             .collect();
         debug!(

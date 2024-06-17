@@ -420,3 +420,5 @@ fabric.properties
 project/**/metals.sbt
 
 # End of https://www.toptal.com/developers/gitignore/api/metals,intellij+all
+
+run/

@@ -1,4 +1,7 @@
-use std::collections::{HashMap, HashSet};
+use std::{
+    collections::{HashMap, HashSet},
+    ptr::eq,
+};
 
 use idesyde_core::{
     impl_decision_model_conversion, impl_decision_model_standard_parts, DecisionModel,
@@ -686,11 +689,7 @@ impl AperiodicAsynchronousDataflowToPartitionedTiledMulticore {
             .iter()
             .map(|app| app.processes.len() as u64)
             .sum();
-        let num_mappables: u64 = self
-            .partitioned_tiled_multicore
-            .hardware
-            .processors
-            .len() as u64;
+        let num_mappables: u64 = self.partitioned_tiled_multicore.hardware.processors.len() as u64;
         let relative_constant = (-(NUMERICAL_RELATIVE_ERROR.log2().ceil())) as u32;
         let problem_constant = (biggest_path * number_jobs * num_mappables) as f64;
         let resolution = (problem_constant.log2().ceil() as u32) + relative_constant;
@@ -717,8 +716,7 @@ impl AperiodicAsynchronousDataflowToPartitionedTiledMulticore {
             .map(|x| 1.0 / x)
             .reduce(f64::max)
             .unwrap_or(0.0) as f32;
-        original_max_pes
-            .max(original_max_traversal)
+        original_max_pes.max(original_max_traversal)
     }
 
     pub fn get_memory_scale_factor(&self) -> u64 {
@@ -755,6 +753,114 @@ impl AperiodicAsynchronousDataflowToPartitionedTiledMulticore {
             .unwrap_or(&1)
     }
 
+    pub fn recompute_throughputs(&self) -> HashMap<String, f64> {
+        let mut full_graph: Graph<(&str, u64), f64> = petgraph::Graph::new();
+        let mut messages_idx: HashMap<&str, u64> = self
+            .aperiodic_asynchronous_dataflows
+            .iter()
+            .flat_map(|app| app.buffers.iter())
+            .map(|b| (b.as_str(), 1u64))
+            .collect();
+        for app in &self.aperiodic_asynchronous_dataflows {
+            for (src, q) in app.job_graph_name.iter().zip(app.job_graph_instance.iter()) {
+                full_graph.add_node((src.as_str(), *q));
+            }
+            for (((srca, srcq), dsta), dstq) in app
+                .job_graph_src_name
+                .iter()
+                .zip(app.job_graph_src_instance.iter())
+                .zip(app.job_graph_dst_name.iter())
+                .zip(app.job_graph_dst_instance.iter())
+            {
+                let tile_src = self
+                    .processes_to_runtime_scheduling
+                    .get(srca)
+                    .and_then(|x| {
+                        self.partitioned_tiled_multicore
+                            .runtimes
+                            .runtime_host
+                            .get(x)
+                    })
+                    .expect(format!("No tile for source {}", srca).as_str());
+                let tile_dst = self
+                    .processes_to_runtime_scheduling
+                    .get(dsta)
+                    .and_then(|x| {
+                        self.partitioned_tiled_multicore
+                            .runtimes
+                            .runtime_host
+                            .get(x)
+                    })
+                    .expect(format!("No tile for destination {}", dsta).as_str());
+                let srcf = full_graph
+                    .node_indices()
+                    .find(|x| full_graph.node_weight(*x) == Some(&(srca.as_str(), *srcq)))
+                    .unwrap_or(full_graph.add_node((srca, *srcq)));
+                let dstf = full_graph
+                    .node_indices()
+                    .find(|x| full_graph.node_weight(*x) == Some(&(dsta.as_str(), *dstq)))
+                    .unwrap_or(full_graph.add_node((dsta, *dstq)));
+                for b in &app.buffers {
+                    if let Some(m) = app
+                        .process_put_in_buffer_in_bits
+                        .get(srca)
+                        .and_then(|x| x.get(b))
+                    {
+                        if app
+                            .process_get_from_buffer_in_bits
+                            .get(dsta)
+                            .and_then(|x| x.get(b))
+                            .is_some()
+                        {
+                            let cur_idx = *messages_idx.get(b.as_str()).unwrap_or(&1);
+                            let midx = full_graph.add_node((b.as_str(), cur_idx));
+                            full_graph.add_edge(
+                                srcf,
+                                midx,
+                                self.instrumented_computation_times
+                                    .average_execution_times
+                                    .get(srca)
+                                    .and_then(|x| x.get(tile_src))
+                                    .map(|x| {
+                                        *x as f64
+                                            / self.instrumented_computation_times.scale_factor
+                                                as f64
+                                    })
+                                    .unwrap_or(0.0),
+                            );
+                            let traversal_time = self
+                                .partitioned_tiled_multicore
+                                .hardware
+                                .pre_computed_paths
+                                .get(tile_src)
+                                .and_then(|x| x.get(tile_dst))
+                                .map(|path| {
+                                    path.iter()
+                                        .map(|ce| {
+                                            *self
+                                                .processing_elements_to_routers_reservations
+                                                .get(tile_src)
+                                                .and_then(|t| t.get(ce))
+                                                .unwrap_or(&1) as f64 / 
+                                                *self.partitioned_tiled_multicore
+                                                .hardware
+                                                .communication_elements_bit_per_sec_per_channel
+                                                .get(ce)
+                                                .unwrap_or(&1.0)
+                                        })
+                                        .reduce(|x, y| x.max(y))
+                                        .unwrap_or(0.0)
+                                })
+                                .unwrap_or(0.0);
+                            full_graph.add_edge(midx, dstf, traversal_time);
+                            messages_idx.insert(b.as_str(), cur_idx + 1);
+                        }
+                    }
+                }
+            }
+        }
+        HashMap::new()
+    }
 }
 
 impl_decision_model_conversion!(AperiodicAsynchronousDataflowToPartitionedTiledMulticore);

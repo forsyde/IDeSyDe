@@ -867,7 +867,7 @@ impl AperiodicAsynchronousDataflowToPartitionedTiledMulticore {
                     job_idx.insert(f.as_str(), cur + 1);
                 }
                 let pe = self.partitioned_tiled_multicore.runtimes.runtime_host.get(sched).unwrap();
-                for i in (0..list.len()-1) {
+                for i in 0..list.len()-1 {
                     let cur = job_list[i];
                     let next = job_list[i+1];
                     let srcf = full_graph
@@ -951,21 +951,23 @@ impl AperiodicAsynchronousDataflowToPartitionedTiledMulticore {
             );
             let start = scc_graph.node_indices().next().unwrap();
             let (a, q) = scc_graph.node_weight(start).unwrap();
-            for k in 1..scc.len() {
+            for k in 1..=scc.len() {
                 let k_longest_paths = petgraph::algo::k_shortest_path(
                     &scc_graph,
                     start,
-                    None,
+                    Some(start),
                     k,
                     |e| total_weights - *e.weight(),
                 );
-                for e in scc_graph.edges_directed(start, Incoming) {
-                    let incoming = e.source();
-                    if let Some(l) = k_longest_paths.get(&incoming) {
-                        let invth = (total_weights * ((k - 1) as f64) + e.weight() - *l) / *q as f64;
-                        inv_throughput.insert(*a, inv_throughput.get(*a).unwrap_or(&0.0).max(invth));
+                if let Some(l) = k_longest_paths.get(&start) {
+                    let invth = (total_weights * ((k) as f64) - *l) / *q as f64;
+                    if invth > 0.0 {
+                        inv_throughput.insert(*a, inv_throughput.get(*a).unwrap_or(&f64::INFINITY).min(invth));
                     }
                 }
+                // for e in scc_graph.edges_directed(start, Incoming) {
+                //     let incoming = e.source();
+                // }
             }
             for i in scc_graph.node_indices().skip(1) {
                 let (othera, otherq) = scc_graph.node_weight(i).unwrap();

@@ -1492,9 +1492,10 @@ fn solve_aad2ptm(
                                             .collect();
                                     let mut objs = HashMap::new();
                                     objs.insert("nUsedPEs".to_string(), mzn_vars.n_used_pes as f64);
-                                    for (p, inv) in mzn_vars.inv_throughput.iter().enumerate() {
+                                    let inv_throughputs = explored.recompute_throughputs();
+                                    for (p, inv) in &inv_throughputs {
                                         objs.insert(
-                                            format!("invThroughput({})", all_processes[p]),
+                                            format!("invThroughput({})", p),
                                             *inv as f64,
                                         );
                                     }

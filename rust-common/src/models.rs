@@ -1,14 +1,12 @@
 use std::{
-    collections::{HashMap, HashSet},
-    ptr::eq,
+    collections::{HashMap, HashSet}
 };
 
 use idesyde_core::{
     impl_decision_model_conversion, impl_decision_model_standard_parts, DecisionModel,
 };
 use petgraph::{
-    visit::{IntoNeighbors, NodeIndexable},
-    Graph,
+    algo::tarjan_scc, visit::{Dfs, EdgeRef, IntoNeighbors, NodeIndexable}, Direction::Incoming, Graph
 };
 use schemars::JsonSchema;
 use serde::{Deserialize, Serialize};
@@ -828,7 +826,7 @@ impl AperiodicAsynchronousDataflowToPartitionedTiledMulticore {
                                     })
                                     .unwrap_or(0.0),
                             );
-                            let traversal_time = self
+                            let traversal_time = *m as f64 * self
                                 .partitioned_tiled_multicore
                                 .hardware
                                 .pre_computed_paths
@@ -859,7 +857,154 @@ impl AperiodicAsynchronousDataflowToPartitionedTiledMulticore {
                 }
             }
         }
-        HashMap::new()
+        let mut job_idx: HashMap<&str, u64> = self.aperiodic_asynchronous_dataflows.iter().flat_map(|app| app.processes.iter()).map(|a| (a.as_str(), 1)).collect();
+        for (sched, list) in &self.super_loop_schedules {
+            if !list.is_empty() {
+                let mut job_list = vec![];
+                for f in list {
+                    let cur = *job_idx.get(f.as_str()).unwrap_or(&1);
+                    job_list.push((f.as_str(), cur));
+                    job_idx.insert(f.as_str(), cur + 1);
+                }
+                let pe = self.partitioned_tiled_multicore.runtimes.runtime_host.get(sched).unwrap();
+                for i in (0..list.len()-1) {
+                    let cur = job_list[i];
+                    let next = job_list[i+1];
+                    let srcf = full_graph
+                        .node_indices()
+                        .find(|x| full_graph.node_weight(*x) == Some(&cur))
+                        .unwrap_or(full_graph.add_node(cur));
+                    let dstf = full_graph
+                        .node_indices()
+                        .find(|x| full_graph.node_weight(*x) == Some(&next))
+                        .unwrap_or(full_graph.add_node(next));
+                    full_graph.add_edge(
+                        srcf,
+                        dstf,
+                        self.instrumented_computation_times
+                            .average_execution_times
+                            .get(list[i].as_str())
+                            .and_then(|x| x.get(pe))
+                            .map(|x| {
+                                *x as f64
+                                    / self.instrumented_computation_times.scale_factor as f64
+                            })
+                            .unwrap_or(0.0),
+                    );
+                }
+                let srcf = full_graph
+                        .node_indices()
+                        .find(|x| full_graph.node_weight(*x) == Some(&job_list[job_list.len()-1]))
+                        .unwrap_or(full_graph.add_node(job_list[job_list.len()-1]));
+                let dstf = full_graph
+                    .node_indices()
+                    .find(|x| full_graph.node_weight(*x) == Some(&job_list[0]))
+                    .unwrap_or(full_graph.add_node(job_list[0]));
+                full_graph.add_edge(
+                    srcf,
+                    dstf,
+                    self.instrumented_computation_times
+                        .average_execution_times
+                        .get(list[list.len()-1].as_str())
+                        .and_then(|x| x.get(pe))
+                        .map(|x| {
+                            *x as f64
+                                / self.instrumented_computation_times.scale_factor as f64
+                        })
+                        .unwrap_or(0.0),
+                );
+            }
+        }
+        let total_weights: f64 = full_graph.edge_weights().sum();
+        let mut inv_throughput: HashMap<&str, f64> = HashMap::new();
+        // let longest_paths = petgraph::algo::floyd_warshall(&full_graph, |e| total_weights - *e.weight()).expect("Should not have negative cycles by construction.");
+        // for ((srci, dsti), l) in longest_paths {
+        //     let (srca, srcq) = full_graph.node_weight(srci).unwrap();
+        //     let (dsta, dstq) = full_graph.node_weight(dsti).unwrap();
+        //     let actors_in_same_tile = self.aperiodic_asynchronous_dataflows.iter().any(|app| app.processes.contains(*srca)) && self.aperiodic_asynchronous_dataflows.iter().any(|app| app.processes.contains(*dsta))
+        //         && self.processes_to_runtime_scheduling.get(*srca).and_then(|x| self.processes_to_runtime_scheduling.get(*dsta).map(|y| x == y)).unwrap_or(false);
+        //     let buffers_in_same_tile = self.aperiodic_asynchronous_dataflows.iter().any(|app| app.buffers.contains(*srca)) && self.aperiodic_asynchronous_dataflows.iter().any(|app| app.buffers.contains(*dsta))
+        //         && self.buffer_to_memory_mappings.get(*srca).and_then(|x| self.buffer_to_memory_mappings.get(*dsta).map(|y| x == y)).unwrap_or(false);
+        //     if actors_in_same_tile || buffers_in_same_tile {
+        //         let invth = (l / *srcq as f64).max(l / *dstq as f64);
+        //         inv_throughput.insert(
+        //             srca,
+        //             inv_throughput.get(srca).unwrap_or(&0.0).max(invth),
+        //         );
+        //         inv_throughput.insert(
+        //             dsta,
+        //             inv_throughput.get(dsta).unwrap_or(&0.0).max(invth),
+        //         );
+        //     }
+        // }
+        let sccs = tarjan_scc(&full_graph);
+        for scc in sccs {
+            let scc_graph = full_graph.filter_map(
+                |idx, w| {
+                    if scc.contains(&idx) {
+                        Some(*w)
+                    } else {
+                        None
+                    }
+                },
+                |_, w| Some(*w),
+            );
+            let start = scc_graph.node_indices().next().unwrap();
+            let (a, q) = scc_graph.node_weight(start).unwrap();
+            for k in 1..scc.len() {
+                let k_longest_paths = petgraph::algo::k_shortest_path(
+                    &scc_graph,
+                    start,
+                    None,
+                    k,
+                    |e| total_weights - *e.weight(),
+                );
+                for e in scc_graph.edges_directed(start, Incoming) {
+                    let incoming = e.source();
+                    if let Some(l) = k_longest_paths.get(&incoming) {
+                        let invth = (total_weights * ((k - 1) as f64) + e.weight() - *l) / *q as f64;
+                        inv_throughput.insert(*a, inv_throughput.get(*a).unwrap_or(&0.0).max(invth));
+                    }
+                }
+            }
+            for i in scc_graph.node_indices().skip(1) {
+                let (othera, otherq) = scc_graph.node_weight(i).unwrap();
+                let invth = inv_throughput.get(othera).unwrap_or(&0.0).max(*inv_throughput.get(*a).unwrap_or(&0.0) * (*otherq as f64));
+                inv_throughput.insert(
+                    othera,
+                    invth,
+                );
+            }
+        }
+        for app in &self.aperiodic_asynchronous_dataflows {
+            for srca in &app.processes {
+                for buf in &app.buffers {
+                    let invth = inv_throughput.get(srca.as_str()).unwrap_or(&0.0).max(*inv_throughput.get(buf.as_str()).unwrap_or(&0.0));
+                    inv_throughput.insert(
+                        srca,
+                        inv_throughput.get(srca.as_str()).unwrap_or(&0.0).max(invth),
+                    );
+                    inv_throughput.insert(
+                        buf,
+                        inv_throughput.get(buf.as_str()).unwrap_or(&0.0).max(invth),
+                    );
+                }
+            }
+            for srca in &app.processes {
+                for dsta in &app.processes {
+                    let invth = inv_throughput.get(srca.as_str()).unwrap_or(&0.0).max(*inv_throughput.get(dsta.as_str()).unwrap_or(&0.0));
+                    inv_throughput.insert(
+                        srca,
+                        inv_throughput.get(srca.as_str()).unwrap_or(&0.0).max(invth),
+                    );
+                    inv_throughput.insert(
+                        dsta,
+                        inv_throughput.get(dsta.as_str()).unwrap_or(&0.0).max(invth),
+                    );
+                }
+            }
+        }
+        inv_throughput.iter().filter(|(a, _)| self.aperiodic_asynchronous_dataflows.iter().any(|app| app.processes.contains(**a))).map(|(a, q)| (a.to_string(), *q)).collect()
     }
 }
 

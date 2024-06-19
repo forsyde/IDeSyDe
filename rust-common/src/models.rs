@@ -6,7 +6,7 @@ use idesyde_core::{
     impl_decision_model_conversion, impl_decision_model_standard_parts, DecisionModel,
 };
 use petgraph::{
-    algo::tarjan_scc, visit::{Dfs, EdgeRef, IntoNeighbors, NodeIndexable}, Direction::Incoming, Graph
+    algo::tarjan_scc, graph::NodeIndex, visit::{Bfs, Dfs, EdgeRef, IntoNeighbors, NodeIndexable}, Direction::{Incoming, Outgoing}, Graph
 };
 use schemars::JsonSchema;
 use serde::{Deserialize, Serialize};
@@ -752,6 +752,7 @@ impl AperiodicAsynchronousDataflowToPartitionedTiledMulticore {
     }
 
     pub fn recompute_throughputs(&self) -> HashMap<String, f64> {
+        let all_actors: HashSet<String> = self.aperiodic_asynchronous_dataflows.iter().flat_map(|app| app.processes.iter()).map(|a| a.to_owned()).collect();
         let mut full_graph: Graph<(&str, u64), f64> = petgraph::Graph::new();
         let mut messages_idx: HashMap<&str, u64> = self
             .aperiodic_asynchronous_dataflows
@@ -891,6 +892,15 @@ impl AperiodicAsynchronousDataflowToPartitionedTiledMulticore {
                             })
                             .unwrap_or(0.0),
                     );
+                    // do the same for the messages
+                    let sending_messages: Vec<NodeIndex> = full_graph.neighbors_directed(srcf, Outgoing)
+                        .filter(|x| full_graph.node_weight(*x).map(|(n, _)| !all_actors.contains(*n)).unwrap_or(false)).collect();
+                    let later_messages: Vec<NodeIndex> = full_graph.neighbors_directed(dstf, Outgoing)
+                        .filter(|x| full_graph.node_weight(*x).map(|(n, _)| !all_actors.contains(*n)).unwrap_or(false)).collect();
+                    let timings: Vec<f64> = sending_messages.iter().map(|v| full_graph.edges_directed(*v, Outgoing).map(|e| *e.weight()).reduce(f64::max).unwrap_or(0.0)).collect();
+                    for ((src, dst), time) in sending_messages.iter().zip(later_messages.iter()).zip(timings.iter()) {
+                        full_graph.add_edge(*src, *dst, *time);
+                    }
                 }
                 let srcf = full_graph
                         .node_indices()
@@ -913,30 +923,17 @@ impl AperiodicAsynchronousDataflowToPartitionedTiledMulticore {
                         })
                         .unwrap_or(0.0),
                 );
+                let sending_messages: Vec<NodeIndex> = full_graph.neighbors_directed(srcf, Outgoing)
+                    .filter(|x| full_graph.node_weight(*x).map(|(n, _)| !all_actors.contains(*n)).unwrap_or(false)).collect();
+                let later_messages: Vec<NodeIndex> = full_graph.neighbors_directed(dstf, Outgoing)
+                    .filter(|x| full_graph.node_weight(*x).map(|(n, _)| !all_actors.contains(*n)).unwrap_or(false)).collect();
+                let timings: Vec<f64> = sending_messages.iter().map(|v| full_graph.edges_directed(*v, Outgoing).map(|e| *e.weight()).reduce(f64::max).unwrap_or(0.0)).collect();
+                for ((src, dst), time) in sending_messages.iter().zip(later_messages.iter()).zip(timings.iter()) {
+                    full_graph.add_edge(*src, *dst, *time);
+                }
             }
         }
-        let total_weights: f64 = full_graph.edge_weights().sum();
         let mut inv_throughput: HashMap<&str, f64> = HashMap::new();
-        // let longest_paths = petgraph::algo::floyd_warshall(&full_graph, |e| total_weights - *e.weight()).expect("Should not have negative cycles by construction.");
-        // for ((srci, dsti), l) in longest_paths {
-        //     let (srca, srcq) = full_graph.node_weight(srci).unwrap();
-        //     let (dsta, dstq) = full_graph.node_weight(dsti).unwrap();
-        //     let actors_in_same_tile = self.aperiodic_asynchronous_dataflows.iter().any(|app| app.processes.contains(*srca)) && self.aperiodic_asynchronous_dataflows.iter().any(|app| app.processes.contains(*dsta))
-        //         && self.processes_to_runtime_scheduling.get(*srca).and_then(|x| self.processes_to_runtime_scheduling.get(*dsta).map(|y| x == y)).unwrap_or(false);
-        //     let buffers_in_same_tile = self.aperiodic_asynchronous_dataflows.iter().any(|app| app.buffers.contains(*srca)) && self.aperiodic_asynchronous_dataflows.iter().any(|app| app.buffers.contains(*dsta))
-        //         && self.buffer_to_memory_mappings.get(*srca).and_then(|x| self.buffer_to_memory_mappings.get(*dsta).map(|y| x == y)).unwrap_or(false);
-        //     if actors_in_same_tile || buffers_in_same_tile {
-        //         let invth = (l / *srcq as f64).max(l / *dstq as f64);
-        //         inv_throughput.insert(
-        //             srca,
-        //             inv_throughput.get(srca).unwrap_or(&0.0).max(invth),
-        //         );
-        //         inv_throughput.insert(
-        //             dsta,
-        //             inv_throughput.get(dsta).unwrap_or(&0.0).max(invth),
-        //         );
-        //     }
-        // }
         let sccs = tarjan_scc(&full_graph);
         for scc in sccs {
             let scc_graph = full_graph.filter_map(
@@ -951,23 +948,24 @@ impl AperiodicAsynchronousDataflowToPartitionedTiledMulticore {
             );
             let start = scc_graph.node_indices().next().unwrap();
             let (a, q) = scc_graph.node_weight(start).unwrap();
-            for k in 1..=scc.len() {
-                let k_longest_paths = petgraph::algo::k_shortest_path(
-                    &scc_graph,
-                    start,
-                    Some(start),
-                    k,
-                    |e| total_weights - *e.weight(),
-                );
-                if let Some(l) = k_longest_paths.get(&start) {
-                    let invth = (total_weights * ((k) as f64) - *l) / *q as f64;
-                    if invth > 0.0 {
-                        inv_throughput.insert(*a, inv_throughput.get(*a).unwrap_or(&f64::INFINITY).min(invth));
-                    }
+            let mut max_paths: HashMap<usize, f64> = HashMap::new();
+            let mut bfs = Bfs::new(&scc_graph, start);
+            // skip the initial one
+            bfs.next(&scc_graph);
+            while let Some(idx) = bfs.next(&scc_graph) {
+                for incoming in scc_graph.edges_directed(idx, Incoming) {
+                    let path_val = max_paths.get(&incoming.source().index()).unwrap_or(&0.0) + *incoming.weight();
+                    max_paths.insert(idx.index(), path_val.max(*max_paths.get(&idx.index()).unwrap_or(&0.0)));
                 }
-                // for e in scc_graph.edges_directed(start, Incoming) {
-                //     let incoming = e.source();
-                // }
+            }
+            for incoming in scc_graph.edges_directed(start, Incoming) {
+                let path_val = max_paths.get(&incoming.source().index()).unwrap_or(&0.0) + *incoming.weight();
+                let maxq = *scc_graph.node_weights().filter(|(aa, _)| a == aa).map(|(_, q)| q).max().unwrap_or(&1u64);
+                let invth = path_val / maxq as f64;
+                inv_throughput.insert(
+                    a,
+                    inv_throughput.get(a).unwrap_or(&0.0).max(invth),
+                );
             }
             for i in scc_graph.node_indices().skip(1) {
                 let (othera, otherq) = scc_graph.node_weight(i).unwrap();

@@ -28,7 +28,7 @@ systemgraph {
     "maxCyclesPerFlit": 8_i,
     "flitSizeInBits": 32_l,
     "initialLatency": 0_l,
-    "operatingFrequencyInHertz": 1_l,
+    "operatingFrequencyInHertz": 100_l,
     "maxConcurrentFlits": 8_i
   }
   vertex "micro_blaze_os0"
@@ -68,7 +68,7 @@ systemgraph {
     "maxCyclesPerFlit": 8_i,
     "flitSizeInBits": 32_l,
     "initialLatency": 0_l,
-    "operatingFrequencyInHertz": 1_l,
+    "operatingFrequencyInHertz": 100_l,
     "maxConcurrentFlits": 8_i
   }
   vertex "micro_blaze_os1"
@@ -108,7 +108,7 @@ systemgraph {
     "maxCyclesPerFlit": 8_i,
     "flitSizeInBits": 32_l,
     "initialLatency": 0_l,
-    "operatingFrequencyInHertz": 1_l,
+    "operatingFrequencyInHertz": 100_l,
     "maxConcurrentFlits": 8_i
   }
   vertex "micro_blaze_os2"
@@ -148,7 +148,7 @@ systemgraph {
     "maxCyclesPerFlit": 8_i,
     "flitSizeInBits": 32_l,
     "initialLatency": 0_l,
-    "operatingFrequencyInHertz": 1_l,
+    "operatingFrequencyInHertz": 100_l,
     "maxConcurrentFlits": 8_i
   }
   vertex "micro_blaze_os3"
@@ -188,7 +188,7 @@ systemgraph {
     "maxCyclesPerFlit": 8_i,
     "flitSizeInBits": 32_l,
     "initialLatency": 0_l,
-    "operatingFrequencyInHertz": 1_l,
+    "operatingFrequencyInHertz": 100_l,
     "maxConcurrentFlits": 8_i
   }
   vertex "micro_blaze_os4"
@@ -228,7 +228,7 @@ systemgraph {
     "maxCyclesPerFlit": 8_i,
     "flitSizeInBits": 32_l,
     "initialLatency": 0_l,
-    "operatingFrequencyInHertz": 1_l,
+    "operatingFrequencyInHertz": 100_l,
     "maxConcurrentFlits": 8_i
   }
   vertex "micro_blaze_os5"
@@ -268,7 +268,7 @@ systemgraph {
     "maxCyclesPerFlit": 8_i,
     "flitSizeInBits": 32_l,
     "initialLatency": 0_l,
-    "operatingFrequencyInHertz": 1_l,
+    "operatingFrequencyInHertz": 100_l,
     "maxConcurrentFlits": 8_i
   }
   vertex "micro_blaze_os6"
@@ -308,7 +308,7 @@ systemgraph {
     "maxCyclesPerFlit": 8_i,
     "flitSizeInBits": 32_l,
     "initialLatency": 0_l,
-    "operatingFrequencyInHertz": 1_l,
+    "operatingFrequencyInHertz": 100_l,
     "maxConcurrentFlits": 8_i
   }
   vertex "micro_blaze_os7"
@@ -326,7 +326,7 @@ systemgraph {
     "maxCyclesPerFlit": 8_i,
     "flitSizeInBits": 32_l,
     "initialLatency": 0_l,
-    "operatingFrequencyInHertz": 1_l,
+    "operatingFrequencyInHertz": 100_l,
     "maxConcurrentFlits": 8_i
   }
   vertex "busSched"

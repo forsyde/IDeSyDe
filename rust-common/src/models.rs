@@ -759,67 +759,55 @@ impl AperiodicAsynchronousDataflowToPartitionedTiledMulticore {
             .flat_map(|app| app.buffers.iter())
             .map(|b| (b.as_str(), 1u64))
             .collect();
-        for app in &self.aperiodic_asynchronous_dataflows {
-            for (src, q) in app.job_graph_name.iter().zip(app.job_graph_instance.iter()) {
-                jobs_to_idx.insert((src.as_str(), *q), full_graph.add_node((src.as_str(), *q)));
-            }
-            for (((srca, srcq), dsta), dstq) in app
-                .job_graph_src_name
-                .iter()
-                .zip(app.job_graph_src_instance.iter())
-                .zip(app.job_graph_dst_name.iter())
-                .zip(app.job_graph_dst_instance.iter())
-            {
+        let actor_times: HashMap<&str, f64> = self.aperiodic_asynchronous_dataflows.iter().flat_map(|app| 
+            app.processes.iter().map(|a| {
+                let tile = self
+                        .processes_to_runtime_scheduling
+                        .get(a)
+                        .and_then(|x| {
+                            self.partitioned_tiled_multicore
+                                .runtimes
+                                .runtime_host
+                                .get(x)
+                        })
+                        .expect(format!("No tile for source {}", a).as_str());
+                let w = self.instrumented_computation_times
+                                .average_execution_times
+                                .get(a)
+                                .and_then(|x| x.get(tile))
+                                .map(|x| {
+                                    *x as f64
+                                        / self.instrumented_computation_times.scale_factor
+                                            as f64
+                                }).expect(format!("No computation time for source {} in {}", a, tile).as_str());
+                (a.as_str(), w)
+            })
+        ).collect();
+        let buffer_times: HashMap<&str, f64> = self.aperiodic_asynchronous_dataflows.iter().flat_map(|app|
+            app.buffers.iter().map(|b| {
+                let producer = app.processes.iter().find(|a| app.process_put_in_buffer_in_bits.get(*a).and_then(|x| x.get(b)).is_some()).expect("Buffer should have a producer.");
+                let consumer = app.processes.iter().find(|a| app.process_get_from_buffer_in_bits.get(*a).and_then(|x| x.get(b)).is_some()).expect("Buffer should have a consumer.");
                 let tile_src = self
-                    .processes_to_runtime_scheduling
-                    .get(srca)
-                    .and_then(|x| {
-                        self.partitioned_tiled_multicore
-                            .runtimes
-                            .runtime_host
-                            .get(x)
-                    })
-                    .expect(format!("No tile for source {}", srca).as_str());
+                .processes_to_runtime_scheduling
+                .get(producer)
+                .and_then(|x| {
+                    self.partitioned_tiled_multicore
+                        .runtimes
+                        .runtime_host
+                        .get(x)
+                })
+                .expect(format!("No tile for source {}", producer).as_str());
                 let tile_dst = self
-                    .processes_to_runtime_scheduling
-                    .get(dsta)
-                    .and_then(|x| {
-                        self.partitioned_tiled_multicore
-                            .runtimes
-                            .runtime_host
-                            .get(x)
-                    })
-                    .expect(format!("No tile for destination {}", dsta).as_str());
-                let srcf = *jobs_to_idx.get(&(srca.as_str(), *srcq)).expect("Should have all jobs added. Impossible error.");
-                let dstf = *jobs_to_idx.get(&(dsta.as_str(), *dstq)).expect("Should have all jobs added. Impossible error.");
-                for b in &app.buffers {
-                    if let Some(m) = app
-                        .process_put_in_buffer_in_bits
-                        .get(srca)
-                        .and_then(|x| x.get(b))
-                    {
-                        if app
-                            .process_get_from_buffer_in_bits
-                            .get(dsta)
-                            .and_then(|x| x.get(b))
-                            .is_some()
-                        {
-                            let cur_idx = *messages_max_idx.get(b.as_str()).unwrap_or(&1);
-                            let midx = full_graph.add_node((b.as_str(), cur_idx));
-                            full_graph.add_edge(
-                                srcf,
-                                midx,
-                                self.instrumented_computation_times
-                                    .average_execution_times
-                                    .get(srca)
-                                    .and_then(|x| x.get(tile_src))
-                                    .map(|x| {
-                                        *x as f64
-                                            / self.instrumented_computation_times.scale_factor
-                                                as f64
-                                    }).expect(format!("No computation time for source {} in {}", srca, tile_src).as_str()),
-                            );
-                            let traversal_time = *m as f64 * self
+                        .processes_to_runtime_scheduling
+                        .get(consumer)
+                        .and_then(|x| {
+                            self.partitioned_tiled_multicore
+                                .runtimes
+                                .runtime_host
+                                .get(x)
+                        })
+                        .expect(format!("No tile for source {}", consumer).as_str());
+                let traversal_time = *app.process_put_in_buffer_in_bits.get(producer).and_then(|x| x.get(b)).unwrap_or(&0) as f64 * self
                                 .partitioned_tiled_multicore
                                 .hardware
                                 .pre_computed_paths
@@ -843,7 +831,43 @@ impl AperiodicAsynchronousDataflowToPartitionedTiledMulticore {
                                         .unwrap_or(0.0)
                                 })
                                 .unwrap_or(0.0);
-                            full_graph.add_edge(midx, dstf, traversal_time);
+                (b.as_str(), traversal_time)
+            })
+        ).collect();
+        for app in &self.aperiodic_asynchronous_dataflows {
+            for (src, q) in app.job_graph_name.iter().zip(app.job_graph_instance.iter()) {
+                jobs_to_idx.insert((src.as_str(), *q), full_graph.add_node((src.as_str(), *q)));
+            }
+            for (((srca, srcq), dsta), dstq) in app
+                .job_graph_src_name
+                .iter()
+                .zip(app.job_graph_src_instance.iter())
+                .zip(app.job_graph_dst_name.iter())
+                .zip(app.job_graph_dst_instance.iter())
+            {
+                let srcf = *jobs_to_idx.get(&(srca.as_str(), *srcq)).expect("Should have all jobs added. Impossible error.");
+                let dstf = *jobs_to_idx.get(&(dsta.as_str(), *dstq)).expect("Should have all jobs added. Impossible error.");
+                for b in &app.buffers {
+                    if app
+                        .process_put_in_buffer_in_bits
+                        .get(srca)
+                        .and_then(|x| x.get(b))
+                        .is_some()
+                    {
+                        if app
+                            .process_get_from_buffer_in_bits
+                            .get(dsta)
+                            .and_then(|x| x.get(b))
+                            .is_some()
+                        {
+                            let cur_idx = *messages_max_idx.get(b.as_str()).unwrap_or(&1);
+                            let midx = full_graph.add_node((b.as_str(), cur_idx));
+                            full_graph.add_edge(
+                                srcf,
+                                midx,
+                                *actor_times.get(srca.as_str()).unwrap_or(&0.0),
+                            );
+                            full_graph.add_edge(midx, dstf, *buffer_times.get(b.as_str()).unwrap_or(&0.0));
                             messages_max_idx.insert(b.as_str(), cur_idx + 1);
                         }
                     }
@@ -913,7 +937,12 @@ impl AperiodicAsynchronousDataflowToPartitionedTiledMulticore {
                 }
             }
         }
-        let mut inv_throughput: HashMap<&str, f64> = HashMap::new();
+        let mut inv_throughput: HashMap<&str, f64> = self.aperiodic_asynchronous_dataflows.iter().flat_map(|app| 
+            app.processes.iter().map(|a| (a.as_str(), 
+                *actor_times.get(a.as_str()).unwrap_or(&0.0)
+                + app.buffers.iter().filter(|b| app.process_put_in_buffer_in_bits.get(a).map(|x| x.contains_key(*b)).unwrap_or(false)).map(|b| *buffer_times.get(b.as_str()).unwrap_or(&0.0)).sum::<f64>()
+            ))
+        ).collect();
         let sccs = tarjan_scc(&full_graph);
         for scc in sccs {
             let scc_graph = full_graph.filter_map(

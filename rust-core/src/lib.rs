@@ -482,6 +482,8 @@ pub struct ExplorationConfiguration {
     pub memory_resolution: u64,
     #[builder(default = "-1")]
     pub improvement_iterations: i64,
+    #[builder(default = "1")]
+    pub parallelism: u32,
     #[builder(default = "false")]
     pub strict: bool,
     #[builder(default = "HashSet::new()")]

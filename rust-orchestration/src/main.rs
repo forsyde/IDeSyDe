@@ -450,6 +450,7 @@ fn main() {
                 .strict(args.strict)
                 .improvement_timeout(args.x_improvement_time_out.unwrap_or(0))
                 .improvement_iterations(args.x_improvement_iterations.unwrap_or(-1))
+                .parallelism(args.parallel_jobs.unwrap_or(1) as u32)
                 .target_objectives(
                     args.x_target_objectives
                         .iter()

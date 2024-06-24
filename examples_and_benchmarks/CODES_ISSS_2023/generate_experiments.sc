@@ -592,7 +592,7 @@ def generate_idesyde_3(cores: Int = 8): Unit = {
     val combinationFolder = rootFolder / comb.map(_.split("\\.").head).reduce(_ + "_" + _)
     val idesydeFullInput = (combinationFolder / "idesyde_input.fiodl").toNIO
     val idesydePlatform =
-      generate_platform.makeTDMASingleBusPlatform(cores, 32L, 1L, 1.0)
+      generate_platform.makeTDMASingleBusPlatform(cores, 32L, 1L, 1.0, 100L)
     // make the last core an accelerator which supports only CS
     idesydePlatform.queryVertex(s"micro_blaze_${cores - 1}").flatMap(InstrumentedProcessingModule.safeCast(_)).ifPresent(ipe => {
       ipe.setModalInstructionsPerCycle(Map("default" -> Map("CS" -> (1.0).asInstanceOf[java.lang.Double]).asJava).asJava)

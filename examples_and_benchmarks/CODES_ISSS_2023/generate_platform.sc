@@ -14,7 +14,7 @@ import forsyde.io.java.typed.viewers.visualization.GreyBox
 import forsyde.io.java.typed.viewers.platform.runtime.StaticCyclicScheduler
 import forsyde.io.java.typed.viewers.decision.Allocated
 
-def makeTDMASingleBusPlatform(nCores: Int = 8, flitSize: Long = 32L, cpuFreq: Long = 50000000, cpuOpsPerSec: Double = 1.0 / 65.0): ForSyDeSystemGraph = {
+def makeTDMASingleBusPlatform(nCores: Int = 8, flitSize: Long = 32L, cpuFreq: Long = 50000000, cpuOpsPerSec: Double = 1.0 / 65.0, intercomFreq: Long = 50000000): ForSyDeSystemGraph = {
     val m      = new ForSyDeSystemGraph()
     var niMesh = Array.fill[InstrumentedCommunicationModule](nCores)(null)
     // put the microblaze elements
@@ -33,7 +33,7 @@ def makeTDMASingleBusPlatform(nCores: Int = 8, flitSize: Long = 32L, cpuFreq: Lo
       proc.setOperatingFrequencyInHertz(cpuFreq)
       mem.setOperatingFrequencyInHertz(cpuFreq)
       mem.setSpaceInBits(1048576L * 8L)
-      ni.setOperatingFrequencyInHertz(cpuFreq)
+      ni.setOperatingFrequencyInHertz(intercomFreq)
       ni.setFlitSizeInBits(flitSize)
       ni.setMaxConcurrentFlits(nCores)
       ni.setMaxCyclesPerFlit(nCores)
@@ -111,7 +111,7 @@ def makeTDMASingleBusPlatform(nCores: Int = 8, flitSize: Long = 32L, cpuFreq: Lo
     // and now the bus
     val bus      = InstrumentedCommunicationModule.enforce(m.newVertex("TDMBus"))
     val busSched = StaticCyclicScheduler.enforce(m.newVertex("busSched"))
-    bus.setOperatingFrequencyInHertz(cpuFreq)
+    bus.setOperatingFrequencyInHertz(intercomFreq)
     bus.setFlitSizeInBits(flitSize)
     bus.setMaxConcurrentFlits(nCores)
     bus.setMaxCyclesPerFlit(nCores)

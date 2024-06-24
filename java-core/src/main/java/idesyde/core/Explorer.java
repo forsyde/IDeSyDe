@@ -75,6 +75,7 @@ public interface Explorer {
         public long timeDiscretizationFactor = -1L;
         @JsonProperty("memory_resolution")
         public long memoryDiscretizationFactor = -1L;
+        public int parallelism = 1;
         public boolean strict = false;
         @JsonProperty("target_objectives")
         public Set<String> targetObjectives = new HashSet<>();

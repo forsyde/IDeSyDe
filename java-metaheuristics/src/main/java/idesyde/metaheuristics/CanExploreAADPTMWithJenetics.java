@@ -22,6 +22,7 @@ import org.jgrapht.graph.SimpleDirectedGraph;
 
 import java.time.Duration;
 import java.util.*;
+import java.util.concurrent.Executors;
 import java.util.function.Function;
 import java.util.stream.Collectors;
 import java.util.stream.IntStream;
@@ -219,6 +220,7 @@ public interface CanExploreAADPTMWithJenetics extends AperiodicAsynchronousDataf
         var engine = Engine
                 .builder(g -> evaluateAADPTM(g, jobs, jobIdxGraph, configuration),
                         allConstraints.constrain(codec))
+                .executor(Executors.newWorkStealingPool(configuration.parallelism))
                 .offspringSelector(new TournamentSelector<>(5))
                 .survivorsSelector(UFTournamentSelector.ofVec())
                 .constraint(allConstraints)
@@ -388,87 +390,88 @@ public interface CanExploreAADPTMWithJenetics extends AperiodicAsynchronousDataf
             AperiodicAsynchronousDataflow.Job src,
             AperiodicAsynchronousDataflow.Job dst) {
         var totalTime = 0.0;
-        for (var srcPE : decisionModel.partitionedTiledMulticore().hardware().processors()) {
-            var srcSched = decisionModel.partitionedTiledMulticore().runtimes().processorAffinities()
-                    .get(srcPE);
-            if (decisionModel.processesToRuntimeScheduling().get(src.process()).equals(srcSched)) { // a
-                // task
-                // is
-                // mapped
-                // in PE i
-                for (var dstPE : decisionModel.partitionedTiledMulticore().hardware().processors()) {
-                    var dstSched = decisionModel.partitionedTiledMulticore().runtimes()
-                            .processorAffinities()
-                            .get(dstPE);
-                    if (decisionModel.processesToRuntimeScheduling().get(dst.process())
-                            .equals(dstSched) && srcPE != dstPE) { // a task
-                        double singleBottleNeckBW = decisionModel
-                                .partitionedTiledMulticore()
-                                .hardware()
-                                .preComputedPaths()
-                                .getOrDefault(srcPE, Map.of())
-                                .getOrDefault(dstPE, List.of())
-                                .stream()
-                                .mapToDouble(ce -> decisionModel
+        var messageSizeSent = decisionModel.aperiodicAsynchronousDataflows()
+                .stream()
+                .mapToDouble(app -> 
+                        app.buffers().stream()
+                                .filter(b -> app.processPutInBufferInBits().get(src.process()).containsKey(b) && app.processGetFromBufferInBits().get(dst.process()).containsKey(b))
+                                .mapToDouble(b -> app.processPutInBufferInBits().get(src.process()).get(b))
+                                .sum()
+                )
+                .sum();
+        if (messageSizeSent > 0) {
+                for (var srcPE : decisionModel.partitionedTiledMulticore().hardware().processors()) {
+                    var srcSched = decisionModel.partitionedTiledMulticore().runtimes().processorAffinities()
+                            .get(srcPE);
+                    if (decisionModel.processesToRuntimeScheduling().get(src.process()).equals(srcSched)) { // a
+                        // task
+                        // is
+                        // mapped
+                        // in PE i
+                        for (var dstPE : decisionModel.partitionedTiledMulticore().hardware().processors()) {
+                            var dstSched = decisionModel.partitionedTiledMulticore().runtimes()
+                                    .processorAffinities()
+                                    .get(dstPE);
+                            if (decisionModel.processesToRuntimeScheduling().get(dst.process())
+                                    .equals(dstSched) && srcPE != dstPE) { // a task
+                                        double singleBottleNeckBW = decisionModel
                                         .partitionedTiledMulticore()
                                         .hardware()
-                                        .communicationElementsBitPerSecPerChannel()
-                                        .get(ce) *
-                                        Math.max(decisionModel
-                                                .processingElementsToRoutersReservations()
-                                                .get(srcPE)
-                                                .get(ce)
-                                                .doubleValue(), 1))
-                                .min()
-                                .orElse(1.0);
-                        totalTime += decisionModel
-                                .partitionedTiledMulticore()
-                                .hardware()
-                                .preComputedPaths()
-                                .getOrDefault(srcPE, Map.of())
-                                .getOrDefault(dstPE, List.of())
-                                .size()
-                                * (decisionModel.aperiodicAsynchronousDataflows()
+                                        .preComputedPaths()
+                                        .getOrDefault(srcPE, Map.of())
+                                        .getOrDefault(dstPE, List.of())
                                         .stream()
-                                        .mapToDouble(app -> app
-                                                .processPutInBufferInBits()
-                                                .containsKey(src.process())
-                                                        ? app.processPutInBufferInBits()
-                                                                .get(src.process())
-                                                                .values()
-                                                                .stream()
-                                                                .mapToDouble(l -> l)
-                                                                .sum()
-                                                        : 0.0)
-                                        .sum()
-                                        / singleBottleNeckBW);
-                        totalTime += decisionModel
-                                .partitionedTiledMulticore()
-                                .hardware()
-                                .preComputedPaths()
-                                .getOrDefault(srcPE, Map.of())
-                                .getOrDefault(dstPE, List.of())
-                                .size()
-                                * (decisionModel.aperiodicAsynchronousDataflows()
+                                        .mapToDouble(ce -> decisionModel
+                                                .partitionedTiledMulticore()
+                                                .hardware()
+                                                .communicationElementsBitPerSecPerChannel()
+                                                .get(ce) *
+                                                Math.max(decisionModel
+                                                        .processingElementsToRoutersReservations()
+                                                        .get(srcPE)
+                                                        .get(ce)
+                                                        .doubleValue(), 1))
+                                                        .min()
+                                                        .orElse(1.0);
+                                // System.out.println("From %s:%s to %s:%s BW is %f, transfer is %f".formatted(src.process(), srcPE, dst.process(), dstPE, singleBottleNeckBW, messageSizeSent));
+                                totalTime += decisionModel
+                                        .partitionedTiledMulticore()
+                                        .hardware()
+                                        .preComputedPaths()
+                                        .getOrDefault(srcPE, Map.of())
+                                        .getOrDefault(dstPE, List.of())
                                         .stream()
-                                        .mapToDouble(app -> app
-                                                .processGetFromBufferInBits()
-                                                .containsKey(dst.process())
-                                                        ? app.processGetFromBufferInBits()
-                                                                .get(dst.process())
-                                                                .values()
-                                                                .stream()
-                                                                .mapToDouble(l -> l)
-                                                                .sum()
-                                                        : 0.0)
-                                        .sum()
-                                        / singleBottleNeckBW);
+                                        .mapToDouble(ce -> 0.0).sum() // TODO: fix this lack of initial latencies later at the decision model level
+                                        + (messageSizeSent / singleBottleNeckBW);
+                                // totalTime += decisionModel
+                                //         .partitionedTiledMulticore()
+                                //         .hardware()
+                                //         .preComputedPaths()
+                                //         .getOrDefault(srcPE, Map.of())
+                                //         .getOrDefault(dstPE, List.of())
+                                //         .stream()
+                                //         .mapToDouble(ce -> 0.0).sum() // TODO: fix this lack of initial latencies later at the decision model level
+                                //         + (decisionModel.aperiodicAsynchronousDataflows()
+                                //                 .stream()
+                                //                 .mapToDouble(app -> app
+                                //                         .processGetFromBufferInBits()
+                                //                         .containsKey(dst.process())
+                                //                                 ? app.processGetFromBufferInBits()
+                                //                                         .get(dst.process())
+                                //                                         .values()
+                                //                                         .stream()
+                                //                                         .mapToDouble(l -> l)
+                                //                                         .sum()
+                                //                                 : 0.0)
+                                //                 .sum()
+                                //                 / singleBottleNeckBW);
+                            }
+                            // is
+                            // mapped
+                            // in PE i
+                        }
                     }
-                    // is
-                    // mapped
-                    // in PE i
                 }
-            }
         }
         return totalTime;
     }

@@ -67,6 +67,8 @@ constraint forall(b in Buffers, p in Processes, pe in Mappable, me in Memories w
   processesExecution[p] != pe \/ buffersMapping[b] != me
 );
 
+constraint forall(p in Processes, pe in Mappable where executionTime[p, pe] < 0) (processesExecution[p] != pe);
+
 constraint forall(m in Memories) (
   sum(p in Processes where processesMapping[p] = m) (processesMemSize[p, processesExecution[p]]) +
   sum(b in Buffers where buffersMapping[b] = m) (bufferSize[b])

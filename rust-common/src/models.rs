@@ -1,12 +1,10 @@
-use std::{
-    collections::{HashMap, HashSet}
-};
+use std::collections::{HashMap, HashSet};
 
 use idesyde_core::{
     impl_decision_model_conversion, impl_decision_model_standard_parts, DecisionModel,
 };
 use petgraph::{
-    algo::tarjan_scc, graph::NodeIndex, visit::{Bfs, Dfs, EdgeRef, IntoNeighbors, NodeIndexable}, Direction::{Incoming, Outgoing}, Graph
+    algo::tarjan_scc, graph::NodeIndex, visit::{Bfs, EdgeRef, IntoNeighbors, NodeIndexable}, Direction::{Incoming, Outgoing}, Graph
 };
 use schemars::JsonSchema;
 use serde::{Deserialize, Serialize};
@@ -754,7 +752,8 @@ impl AperiodicAsynchronousDataflowToPartitionedTiledMulticore {
     pub fn recompute_throughputs(&self) -> HashMap<String, f64> {
         let all_actors: HashSet<String> = self.aperiodic_asynchronous_dataflows.iter().flat_map(|app| app.processes.iter()).map(|a| a.to_owned()).collect();
         let mut full_graph: Graph<(&str, u64), f64> = petgraph::Graph::new();
-        let mut messages_idx: HashMap<&str, u64> = self
+        let mut jobs_to_idx: HashMap<(&str, u64), NodeIndex> = HashMap::new();
+        let mut messages_max_idx: HashMap<&str, u64> = self
             .aperiodic_asynchronous_dataflows
             .iter()
             .flat_map(|app| app.buffers.iter())
@@ -762,7 +761,7 @@ impl AperiodicAsynchronousDataflowToPartitionedTiledMulticore {
             .collect();
         for app in &self.aperiodic_asynchronous_dataflows {
             for (src, q) in app.job_graph_name.iter().zip(app.job_graph_instance.iter()) {
-                full_graph.add_node((src.as_str(), *q));
+                jobs_to_idx.insert((src.as_str(), *q), full_graph.add_node((src.as_str(), *q)));
             }
             for (((srca, srcq), dsta), dstq) in app
                 .job_graph_src_name
@@ -791,14 +790,8 @@ impl AperiodicAsynchronousDataflowToPartitionedTiledMulticore {
                             .get(x)
                     })
                     .expect(format!("No tile for destination {}", dsta).as_str());
-                let srcf = full_graph
-                    .node_indices()
-                    .find(|x| full_graph.node_weight(*x) == Some(&(srca.as_str(), *srcq)))
-                    .unwrap_or(full_graph.add_node((srca, *srcq)));
-                let dstf = full_graph
-                    .node_indices()
-                    .find(|x| full_graph.node_weight(*x) == Some(&(dsta.as_str(), *dstq)))
-                    .unwrap_or(full_graph.add_node((dsta, *dstq)));
+                let srcf = *jobs_to_idx.get(&(srca.as_str(), *srcq)).expect("Should have all jobs added. Impossible error.");
+                let dstf = *jobs_to_idx.get(&(dsta.as_str(), *dstq)).expect("Should have all jobs added. Impossible error.");
                 for b in &app.buffers {
                     if let Some(m) = app
                         .process_put_in_buffer_in_bits
@@ -811,7 +804,7 @@ impl AperiodicAsynchronousDataflowToPartitionedTiledMulticore {
                             .and_then(|x| x.get(b))
                             .is_some()
                         {
-                            let cur_idx = *messages_idx.get(b.as_str()).unwrap_or(&1);
+                            let cur_idx = *messages_max_idx.get(b.as_str()).unwrap_or(&1);
                             let midx = full_graph.add_node((b.as_str(), cur_idx));
                             full_graph.add_edge(
                                 srcf,
@@ -824,8 +817,7 @@ impl AperiodicAsynchronousDataflowToPartitionedTiledMulticore {
                                         *x as f64
                                             / self.instrumented_computation_times.scale_factor
                                                 as f64
-                                    })
-                                    .unwrap_or(0.0),
+                                    }).expect(format!("No computation time for source {} in {}", srca, tile_src).as_str()),
                             );
                             let traversal_time = *m as f64 * self
                                 .partitioned_tiled_multicore
@@ -852,7 +844,7 @@ impl AperiodicAsynchronousDataflowToPartitionedTiledMulticore {
                                 })
                                 .unwrap_or(0.0);
                             full_graph.add_edge(midx, dstf, traversal_time);
-                            messages_idx.insert(b.as_str(), cur_idx + 1);
+                            messages_max_idx.insert(b.as_str(), cur_idx + 1);
                         }
                     }
                 }
@@ -871,14 +863,8 @@ impl AperiodicAsynchronousDataflowToPartitionedTiledMulticore {
                 for i in 0..list.len()-1 {
                     let cur = job_list[i];
                     let next = job_list[i+1];
-                    let srcf = full_graph
-                        .node_indices()
-                        .find(|x| full_graph.node_weight(*x) == Some(&cur))
-                        .unwrap_or(full_graph.add_node(cur));
-                    let dstf = full_graph
-                        .node_indices()
-                        .find(|x| full_graph.node_weight(*x) == Some(&next))
-                        .unwrap_or(full_graph.add_node(next));
+                    let srcf = *jobs_to_idx.get(&cur).expect("Should have all jobs added. Impossible error.");
+                    let dstf = *jobs_to_idx.get(&next).expect("Should have all jobs added. Impossible error.");
                     full_graph.add_edge(
                         srcf,
                         dstf,
@@ -902,14 +888,8 @@ impl AperiodicAsynchronousDataflowToPartitionedTiledMulticore {
                         full_graph.add_edge(*src, *dst, *time);
                     }
                 }
-                let srcf = full_graph
-                        .node_indices()
-                        .find(|x| full_graph.node_weight(*x) == Some(&job_list[job_list.len()-1]))
-                        .unwrap_or(full_graph.add_node(job_list[job_list.len()-1]));
-                let dstf = full_graph
-                    .node_indices()
-                    .find(|x| full_graph.node_weight(*x) == Some(&job_list[0]))
-                    .unwrap_or(full_graph.add_node(job_list[0]));
+                let srcf = *jobs_to_idx.get(&job_list[job_list.len()-1]).expect("Should have all jobs added. Impossible error.");
+                let dstf = *jobs_to_idx.get(&job_list[0]).expect("Should have all jobs added. Impossible error.");
                 full_graph.add_edge(
                     srcf,
                     dstf,
@@ -921,7 +901,7 @@ impl AperiodicAsynchronousDataflowToPartitionedTiledMulticore {
                             *x as f64
                                 / self.instrumented_computation_times.scale_factor as f64
                         })
-                        .unwrap_or(0.0),
+                        .expect(format!("No computation time for source {} in {}", list[list.len()-1].as_str(), pe).as_str()),
                 );
                 let sending_messages: Vec<NodeIndex> = full_graph.neighbors_directed(srcf, Outgoing)
                     .filter(|x| full_graph.node_weight(*x).map(|(n, _)| !all_actors.contains(*n)).unwrap_or(false)).collect();
@@ -947,7 +927,7 @@ impl AperiodicAsynchronousDataflowToPartitionedTiledMulticore {
                 |_, w| Some(*w),
             );
             let start = scc_graph.node_indices().next().unwrap();
-            let (a, q) = scc_graph.node_weight(start).unwrap();
+            let (a, _) = scc_graph.node_weight(start).unwrap();
             let mut max_paths: HashMap<usize, f64> = HashMap::new();
             let mut bfs = Bfs::new(&scc_graph, start);
             // skip the initial one

@@ -1069,22 +1069,13 @@ fn solve_aad2ptm(
     let execution_times: Vec<Vec<i32>> = all_processes
         .iter()
         .map(|f| {
-            m.partitioned_tiled_multicore
-                .hardware
-                .processors
+            list_schedulers
                 .iter()
-                .filter(|pe| {
+                .flat_map(|r| {
                     m.partitioned_tiled_multicore
                         .runtimes
-                        .processor_affinities
-                        .get(*pe)
-                        .map(|r| {
-                            m.partitioned_tiled_multicore
-                                .runtimes
-                                .is_super_loop
-                                .contains(r)
-                        })
-                        .unwrap_or(false)
+                        .runtime_host
+                        .get(r)
                 })
                 .map(|pe| {
                     m.instrumented_computation_times

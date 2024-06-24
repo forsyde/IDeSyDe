@@ -65,6 +65,8 @@ constraint forall(b in Buffers) (durationBufferMessage[b] <= max(src in Processe
 constraint forall(p in Processes, l in AllCycles) (maxPath[p, l] >= 0);
 constraint forall(m in Messages, l in AllCycles) (maxPathMessages[m, l] >= 0);
 
+constraint forall(p in Processes, pe in Tiles where executionTime[p, pe] < 0) (processMapping[p] != pe);
+
 constraint forall(m in Tiles) (
   sum(p in Processes where processMapping[p] = m) (processesMemSize[p, processMapping[p]]) +
   sum(b in Buffers where buffersMapping[b] = m) (bufferSize[b])

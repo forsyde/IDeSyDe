@@ -33,9 +33,9 @@ class GeneralDSETests {
         AperiodicAsynchronousDataflowToPartitionedTiledMulticore aadtpm = objectMapper.readValue(is,
                 AperiodicAsynchronousDataflowToPartitionedTiledMulticore.class);
         var found = explorer.explore(aadtpm, Set.of(), config)
-                .limit(1)
+                .limit(2)
                 .count();
-        assertEquals(found, 1);
+        assertEquals(found, 2);
     }
 
 //     @Test

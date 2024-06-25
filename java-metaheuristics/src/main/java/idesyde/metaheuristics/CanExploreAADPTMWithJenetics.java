@@ -220,7 +220,7 @@ public interface CanExploreAADPTMWithJenetics extends AperiodicAsynchronousDataf
         var engine = Engine
                 .builder(g -> evaluateAADPTM(g, jobs, jobIdxGraph, configuration),
                         allConstraints.constrain(codec))
-                .executor(Executors.newWorkStealingPool(configuration.parallelism))
+                // .executor(Executors.newSingleThreadExecutor())
                 .offspringSelector(new TournamentSelector<>(5))
                 .survivorsSelector(UFTournamentSelector.ofVec())
                 .constraint(allConstraints)
@@ -400,40 +400,32 @@ public interface CanExploreAADPTMWithJenetics extends AperiodicAsynchronousDataf
                 )
                 .sum();
         if (messageSizeSent > 0) {
-                for (var srcPE : decisionModel.partitionedTiledMulticore().hardware().processors()) {
-                    var srcSched = decisionModel.partitionedTiledMulticore().runtimes().processorAffinities()
-                            .get(srcPE);
-                    if (decisionModel.processesToRuntimeScheduling().get(src.process()).equals(srcSched)) { // a
-                        // task
-                        // is
-                        // mapped
-                        // in PE i
-                        for (var dstPE : decisionModel.partitionedTiledMulticore().hardware().processors()) {
-                            var dstSched = decisionModel.partitionedTiledMulticore().runtimes()
-                                    .processorAffinities()
-                                    .get(dstPE);
-                            if (decisionModel.processesToRuntimeScheduling().get(dst.process())
-                                    .equals(dstSched) && srcPE != dstPE) { // a task
-                                        double singleBottleNeckBW = decisionModel
-                                        .partitionedTiledMulticore()
-                                        .hardware()
-                                        .preComputedPaths()
-                                        .getOrDefault(srcPE, Map.of())
-                                        .getOrDefault(dstPE, List.of())
-                                        .stream()
-                                        .mapToDouble(ce -> decisionModel
-                                                .partitionedTiledMulticore()
-                                                .hardware()
-                                                .communicationElementsBitPerSecPerChannel()
-                                                .get(ce) *
-                                                Math.max(decisionModel
-                                                        .processingElementsToRoutersReservations()
-                                                        .get(srcPE)
-                                                        .get(ce)
-                                                        .doubleValue(), 1))
-                                                        .min()
-                                                        .orElse(1.0);
-                                // System.out.println("From %s:%s to %s:%s BW is %f, transfer is %f".formatted(src.process(), srcPE, dst.process(), dstPE, singleBottleNeckBW, messageSizeSent));
+                var srcSched = decisionModel.processesToRuntimeScheduling().get(src.process());
+                var srcPE = decisionModel.partitionedTiledMulticore().runtimes().runtimeHost().get(srcSched);
+                var dstSched = decisionModel.processesToRuntimeScheduling().get(dst.process());
+                var dstPE = decisionModel.partitionedTiledMulticore().runtimes().runtimeHost().get(dstSched);
+                if (srcPE != dstPE) {
+
+                        double singleBottleNeckBW = decisionModel
+                        .partitionedTiledMulticore()
+                        .hardware()
+                        .preComputedPaths()
+                        .getOrDefault(srcPE, Map.of())
+                        .getOrDefault(dstPE, List.of())
+                        .stream()
+                        .mapToDouble(ce -> decisionModel
+                                .partitionedTiledMulticore()
+                                .hardware()
+                                .communicationElementsBitPerSecPerChannel()
+                                .get(ce) *
+                                Math.max(decisionModel
+                                        .processingElementsToRoutersReservations()
+                                        .get(srcPE)
+                                        .get(ce)
+                                        .doubleValue(), 1))
+                                        .min()
+                                        .orElse(1.0);
+                // System.out.println("From %s:%s to %s:%s BW is %f, transfer is %f".formatted(src.process(), srcPE, dst.process(), dstPE, singleBottleNeckBW, messageSizeSent));
                                 totalTime += decisionModel
                                         .partitionedTiledMulticore()
                                         .hardware()
@@ -465,12 +457,6 @@ public interface CanExploreAADPTMWithJenetics extends AperiodicAsynchronousDataf
                                 //                                 : 0.0)
                                 //                 .sum()
                                 //                 / singleBottleNeckBW);
-                            }
-                            // is
-                            // mapped
-                            // in PE i
-                        }
-                    }
                 }
         }
         return totalTime;

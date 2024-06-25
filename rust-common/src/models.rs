@@ -9,7 +9,7 @@ use petgraph::{
 use schemars::JsonSchema;
 use serde::{Deserialize, Serialize};
 
-const NUMERICAL_RELATIVE_ERROR: f64 = 0.001;
+const NUMERICAL_RELATIVE_ERROR: f64 = 0.0001;
 
 /// A model that abstracts concurrent processes where stimulus and dataflow are separate.
 ///

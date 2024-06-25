@@ -8,6 +8,8 @@ import java.util.stream.IntStream;
 import org.jgrapht.Graph;
 import org.jgrapht.alg.connectivity.ConnectivityInspector;
 import org.jgrapht.alg.connectivity.KosarajuStrongConnectivityInspector;
+import org.jgrapht.alg.cycle.JohnsonSimpleCycles;
+import org.jgrapht.alg.cycle.TarjanSimpleCycles;
 import org.jgrapht.graph.*;
 import org.jgrapht.traverse.BreadthFirstIterator;
 
@@ -72,38 +74,80 @@ interface AperiodicAsynchronousDataflowMethods {
         // System.out.println("edge weights are %s".formatted(Arrays.stream(edgeWeigths).map(Arrays::toString).reduce("", (a, b) -> a + "," + b)));
         // var mergedGraph = new AsGraphUnion<>(follows, mappingGraph);
         var maxCycles = new double[numJobs * (numJobs + 1)];
+        // var invThroughputs = new double[numJobs * (numJobs + 1)];
         for (int i = 0; i < numJobs; i++) {
-            var finalI = i;
-            maxCycles[i] = jobWeights[i] + IntStream.range(0, numJobs).mapToDouble(j -> edgeWeigths[finalI][j]).sum();
+            maxCycles[i] = 0.0;
+            // invThroughputs[i] = jobWeights[i] + IntStream.range(0, numJobs).mapToDouble(j -> edgeWeigths[finalI][j]).sum();
         }
         for (int i = numJobs; i < numJobs; i++) {
             for (int j = 0; j < numJobs; j++) {
-                maxCycles[numJobs* (i + 1) + j] = edgeWeigths[i][j];
+                maxCycles[numJobs* (i + 1) + j] = 0.0;
+                // invThroughputs[numJobs* (i + 1) + j] = edgeWeigths[i][j];
             }
         }
         var sccAlgorithm = new KosarajuStrongConnectivityInspector<>(mappingGraph);
         sccAlgorithm.stronglyConnectedSets().forEach(scc -> {
             // System.out.println("scc: " + scc);
-            var pivot = scc.stream().findFirst().get(); // there should be at least one
-            var sccGraph = new AsSubgraph<>(mappingGraph, scc);
-            var bfs = new BreadthFirstIterator<>(sccGraph, pivot);
-            bfs.next(); // skip the first one
-            // System.out.println("Pivot is %d".formatted(pivot));
-            while (bfs.hasNext()) {
-                var next = bfs.next();
-                // System.out.println("Next is %d".formatted(next));
-                for (var e : sccGraph.incomingEdgesOf(next)) {
-                    var prev = sccGraph.getEdgeSource(e);
-                    // System.out.println("Prev is %d with edge %f".formatted(prev, sccGraph.getEdgeWeight(e)));
-                    maxCycles[next] = Math.max(maxCycles[next], maxCycles[prev] + sccGraph.getEdgeWeight(e));
-                }
-            }
-            // add the value in the cycle
-            for (var e : sccGraph.incomingEdgesOf(pivot)) {
-                var prev = sccGraph.getEdgeSource(e);
-                maxCycles[pivot] = Math.max(maxCycles[pivot], maxCycles[prev] + sccGraph.getEdgeWeight(e));
+            if (scc.size() > 1) {
+                var sccGraph = new AsSubgraph<>(mappingGraph, scc);
+                var simpleCycles = new JohnsonSimpleCycles<>(sccGraph);
+                var cycles = simpleCycles.findSimpleCycles();
+                cycles.forEach(cycle -> {
+                    // System.out.println("Cycle is %s".formatted(cycle));
+                    var cycleVal = sccGraph.getEdgeWeight(sccGraph.getEdge(cycle.get(cycle.size() - 1), cycle.get(0)));
+                    for (int i = 0; i < cycle.size() - 1; i++) {
+                        // System.out.println("Edge is %s".formatted(sccGraph.getEdge(cycle.get(i), cycle.get(i + 1))));
+                        cycleVal += sccGraph.getEdgeWeight(sccGraph.getEdge(cycle.get(i), cycle.get(i + 1)));
+                    }
+                    // System.out.println("Cycle is %s with value %f".formatted(cycle, cycleVal));
+                    for (int v : cycle) {
+                        maxCycles[v] = Math.max(maxCycles[v], cycleVal);
+                    }
+                });
+        //         // var pivotOpt = scc.stream().filter(x -> x < numJobs).findFirst(); // there should be at least one
+        //         // pivotOpt.ifPresent(pivot -> {
+                
+        //         //     var bfs = new BreadthFirstIterator<>(sccGraph, pivot);
+        //         //     // bfs.next(); // skip the first one
+        //         //     // System.out.println("Pivot is %d".formatted(pivot));
+        //         //     while (bfs.hasNext()) {
+        //         //         var next = bfs.next();
+        //         //         // try to find the maximum cycle
+        //         //         if (sccGraph.containsEdge(next, pivot)) {
+        //         //             var cur = next;
+        //         //             var prev = bfs.getParent(next);
+        //         //             var cycleVal = sccGraph.getEdgeWeight(sccGraph.getEdge(cur, pivot));
+        //         //             // System.out.println("Itearting closed cycle in %s".formatted(cur));
+        //         //             // System.out.println("Cur is %d, Prev is %s".formatted(cur, prev));
+        //         //             while (cur != pivot) {
+        //         //                 // System.out.println("Cur is %d, Prev is %s".formatted(cur, prev));
+        //         //                 cycleVal += sccGraph.getEdgeWeight(sccGraph.getEdge(prev, cur));
+        //         //                 cur = prev;
+        //         //                 prev = bfs.getParent(cur);
+        //         //             }
+        //         //             maxCycles[pivot] = Math.max(maxCycles[pivot], cycleVal);
+        //         //         }
+        //         //         // System.out.println("Next is %d".formatted(next));
+        //         //         // for (var e : sccGraph.incomingEdgesOf(next)) {
+        //         //         //     var prev = sccGraph.getEdgeSource(e);
+        //         //         //     System.out.println("Prev is %d with edge %f, cur is %f".formatted(prev, sccGraph.getEdgeWeight(e), maxCycles[prev]));
+        //         //         //     maxCycles[next] = Math.max(maxCycles[next], maxCycles[prev] + sccGraph.getEdgeWeight(e));
+        //         //         // }
+        //         //     }
+        //         //     // add the value in the cycle
+        //         //     // for (var e : sccGraph.incomingEdgesOf(pivot)) {
+        //         //     //     var prev = sccGraph.getEdgeSource(e);
+        //         //     //     System.out.println("Closing cycle with %d and edge %f".formatted(prev, sccGraph.getEdgeWeight(e)));
+        //         //     //     maxCycles[pivot] = Math.max(maxCycles[pivot], maxCycles[prev] + sccGraph.getEdgeWeight(e));
+        //         //     // }
+        //         // });
             }
         });
+        // now add cycles created by the transmission of messages
+        for (int i = 0; i < numJobs; i++) {
+            var finalI = i;
+            maxCycles[i] = Math.max(maxCycles[i], jobWeights[i] + IntStream.range(0, numJobs).mapToDouble(j -> edgeWeigths[finalI][j]).sum());
+        }
         // System.out.println("A maxCycles: " + Arrays.toString(maxCycles));
         var mappedInspector = new ConnectivityInspector<>(mappingGraph);
         mappedInspector.connectedSets().forEach(wcc -> {

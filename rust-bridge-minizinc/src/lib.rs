@@ -290,14 +290,14 @@ impl Explorer for MiniZincORToolsExplorer {
                 m.as_ref(),
             )
         {
-            return solve_aad2pmmmap(&aad2pmmmap, currrent_solutions, "gecode");
+            return solve_aad2pmmmap(&aad2pmmmap, currrent_solutions, "com.google.ortools.sat");
         }
         if let Ok(aad2ptm) =
             AperiodicAsynchronousDataflowToPartitionedTiledMulticore::try_from(
                 m.as_ref(),
             )
         {
-            return solve_aad2ptm(&aad2ptm, currrent_solutions, "gecode");
+            return solve_aad2ptm(&aad2ptm, currrent_solutions, "com.google.ortools.sat");
         }
         Arc::new(Mutex::new(std::iter::empty()))
     }
